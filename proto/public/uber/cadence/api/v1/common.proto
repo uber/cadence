@@ -22,13 +22,12 @@ syntax = "proto3";
 
 package uber.cadence.api.v1;
 
-option go_package = "apiv1";
+option go_package = "github.com/uber/cadence/.gen/proto/api/v1;apiv1";
 option java_multiple_files = true;
 option java_outer_classname = "ApiProto";
 option java_package = "com.uber.cadence.api.v1";
 
 import "google/protobuf/duration.proto";
-import "dependencies/gogoproto.proto";
 
 message WorkflowExecution {
   string workflow_id = 1;
@@ -90,7 +89,7 @@ message SupportedClientVersions {
 
 message RetryPolicy {
   // Interval of the first retry. If backoffCoefficient is 1.0 then it is used for all retries.
-  google.protobuf.Duration initial_interval = 1 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration initial_interval = 1;
 
   // Coefficient used to calculate the next retry interval.
   // The next retry interval is previous interval multiplied by the coefficient.
@@ -99,7 +98,7 @@ message RetryPolicy {
 
   // Maximum interval between retries. Exponential backoff leads to interval increase.
   // This value is the cap of the increase. Default is 100x of initial interval.
-  google.protobuf.Duration maximum_interval = 3 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration maximum_interval = 3;
 
   // Maximum number of attempts. When exceeded the retries stop even if not expired yet.
   // Must be 1 or bigger. Default is unlimited.
@@ -109,5 +108,5 @@ message RetryPolicy {
   repeated string non_retryable_error_reasons = 5;
 
   // Expiration time for the whole retry process.
-  google.protobuf.Duration expiration_interval = 6 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration expiration_interval = 6;
 }

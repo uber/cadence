@@ -15,17 +15,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       python-pip \
       python-setuptools \
       time \
+      unzip \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl https://bootstrap.pypa.io/get-pip.py | python
+# pip 21+ drops support for python2 entirely, we seem to need at least 19 to build cqlsh
+RUN pip install -U 'pip<21'
 RUN pip install PyYAML==3.13 cqlsh==5.0.4
 
-RUN go get -u github.com/golang/dep/cmd/dep
-RUN go get -u github.com/Masterminds/glide
-RUN go get -u golang.org/x/lint/golint
-RUN go get github.com/axw/gocov/gocov
-RUN go get github.com/dmetzgar/goveralls
-RUN go get golang.org/x/tools/cmd/cover
+# verbose test output from `make`, can be disabled with VERBOSE=0
+ENV VERBOSE=1
 
 # https://github.com/docker-library/golang/blob/c1baf037d71331eb0b8d4c70cff4c29cf124c5e0/1.4/Dockerfile
 RUN mkdir -p /cadence

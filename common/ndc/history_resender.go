@@ -28,7 +28,6 @@ import (
 	"time"
 
 	adminClient "github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
@@ -237,10 +236,10 @@ func (n *HistoryResenderImpl) createReplicationRawRequest(
 ) *types.ReplicateEventsV2Request {
 
 	request := &types.ReplicateEventsV2Request{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		Events:              historyBlob,
 		VersionHistoryItems: versionHistoryItems,
@@ -273,26 +272,25 @@ func (n *HistoryResenderImpl) getHistory(
 
 	logger := n.logger.WithTags(tag.WorkflowRunID(runID))
 
-	domainEntry, err := n.domainCache.GetDomainByID(domainID)
+	domainName, err := n.domainCache.GetDomainName(domainID)
 	if err != nil {
 		logger.Error("error getting domain", tag.Error(err))
 		return nil, err
 	}
-	domainName := domainEntry.GetInfo().Name
 
 	ctx, cancel := context.WithTimeout(ctx, resendContextTimeout)
 	defer cancel()
 	response, err := n.adminClient.GetWorkflowExecutionRawHistoryV2(ctx, &types.GetWorkflowExecutionRawHistoryV2Request{
-		Domain: common.StringPtr(domainName),
+		Domain: domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		StartEventID:      startEventID,
 		StartEventVersion: startEventVersion,
 		EndEventID:        endEventID,
 		EndEventVersion:   endEventVersion,
-		MaximumPageSize:   common.Int32Ptr(pageSize),
+		MaximumPageSize:   pageSize,
 		NextPageToken:     token,
 	})
 	if err != nil {

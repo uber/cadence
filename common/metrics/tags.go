@@ -20,7 +20,9 @@
 
 package metrics
 
-import "strconv"
+import (
+	"strconv"
+)
 
 const (
 	revisionTag     = "revision"
@@ -34,167 +36,69 @@ const (
 	targetCluster  = "target_cluster"
 	activeCluster  = "active_cluster"
 	taskList       = "tasklist"
+	taskListType   = "tasklistType"
 	workflowType   = "workflowType"
 	activityType   = "activityType"
 	decisionType   = "decisionType"
 	invariantType  = "invariantType"
 	kafkaPartition = "kafkaPartition"
+	transport      = "transport"
 
 	domainAllValue = "all"
 	unknownValue   = "_unknown_"
+
+	transportThrift = "thrift"
+	transportGRPC   = "grpc"
 )
 
 // Tag is an interface to define metrics tags
-type Tag interface {
-	Key() string
-	Value() string
-}
-
 type (
-	domainTag struct {
-		value string
+	Tag interface {
+		Key() string
+		Value() string
 	}
 
-	domainUnknownTag struct{}
-
-	taskListUnknownTag struct{}
-
-	instanceTag struct {
-		value string
-	}
-
-	targetClusterTag struct {
-		value string
-	}
-
-	activeClusterTag struct {
-		value string
-	}
-
-	taskListTag struct {
-		value string
-	}
-
-	workflowTypeTag struct {
-		value string
-	}
-
-	activityTypeTag struct {
-		value string
-	}
-
-	decisionTypeTag struct {
-		value string
-	}
-
-	invariantTypeTag struct {
-		value string
-	}
-
-	kafkaPartitionTag struct {
+	simpleMetric struct {
+		key   string
 		value string
 	}
 )
+
+func (s simpleMetric) Key() string   { return s.key }
+func (s simpleMetric) Value() string { return s.value }
+
+func metricWithUnknown(key, value string) Tag {
+	if len(value) == 0 {
+		value = unknownValue
+	}
+	return simpleMetric{key: key, value: value}
+}
 
 // DomainTag returns a new domain tag. For timers, this also ensures that we
 // dual emit the metric with the all tag. If a blank domain is provided then
 // this converts that to an unknown domain.
 func DomainTag(value string) Tag {
-	if len(value) == 0 {
-		value = unknownValue
-	}
-	return domainTag{value}
-}
-
-// Key returns the key of the domain tag
-func (d domainTag) Key() string {
-	return domain
-}
-
-// Value returns the value of a domain tag
-func (d domainTag) Value() string {
-	return d.value
+	return metricWithUnknown(domain, value)
 }
 
 // DomainUnknownTag returns a new domain:unknown tag-value
 func DomainUnknownTag() Tag {
-	return domainUnknownTag{}
-}
-
-// Key returns the key of the domain unknown tag
-func (d taskListUnknownTag) Key() string {
-	return domain
-}
-
-// Value returns the value of the domain unknown tag
-func (d taskListUnknownTag) Value() string {
-	return unknownValue
-}
-
-// TaskListUnknownTag returns a new tasklist:unknown tag-value
-func TaskListUnknownTag() Tag {
-	return taskListUnknownTag{}
-}
-
-// Key returns the key of the domain unknown tag
-func (d domainUnknownTag) Key() string {
-	return domain
-}
-
-// Value returns the value of the domain unknown tag
-func (d domainUnknownTag) Value() string {
-	return unknownValue
+	return DomainTag("")
 }
 
 // InstanceTag returns a new instance tag
 func InstanceTag(value string) Tag {
-	return instanceTag{value}
-}
-
-// Key returns the key of the instance tag
-func (i instanceTag) Key() string {
-	return instance
-}
-
-// Value returns the value of a instance tag
-func (i instanceTag) Value() string {
-	return i.value
+	return simpleMetric{key: instance, value: value}
 }
 
 // TargetClusterTag returns a new target cluster tag.
 func TargetClusterTag(value string) Tag {
-	if len(value) == 0 {
-		value = unknownValue
-	}
-	return targetClusterTag{value}
-}
-
-// Key returns the key of the target cluster tag
-func (d targetClusterTag) Key() string {
-	return targetCluster
-}
-
-// Key returns the key of the active cluster tag
-func (ac activeClusterTag) Key() string {
-	return activeCluster
-}
-
-// Value returns the value of the active cluster tag
-func (ac activeClusterTag) Value() string {
-	return ac.value
+	return metricWithUnknown(targetCluster, value)
 }
 
 // ActiveClusterTag returns a new active cluster type tag.
 func ActiveClusterTag(value string) Tag {
-	if len(value) == 0 {
-		value = unknownValue
-	}
-	return activeClusterTag{value}
-}
-
-// Value returns the value of a target cluster tag
-func (d targetClusterTag) Value() string {
-	return d.value
+	return metricWithUnknown(activeCluster, value)
 }
 
 // TaskListTag returns a new task list tag.
@@ -202,102 +106,50 @@ func TaskListTag(value string) Tag {
 	if len(value) == 0 {
 		value = unknownValue
 	}
-	return taskListTag{sanitizer.Value(value)}
+	return simpleMetric{key: taskList, value: sanitizer.Value(value)}
 }
 
-// Key returns the key of the task list tag
-func (d taskListTag) Key() string {
-	return taskList
+// TaskListUnknownTag returns a new tasklist:unknown tag-value
+func TaskListUnknownTag() Tag {
+	return simpleMetric{key: taskList, value: unknownValue}
 }
 
-// Value returns the value of the task list tag
-func (d taskListTag) Value() string {
-	return d.value
+// TaskListTypeTag returns a new task list type tag.
+func TaskListTypeTag(value string) Tag {
+	return metricWithUnknown(taskListType, value)
 }
 
 // WorkflowTypeTag returns a new workflow type tag.
 func WorkflowTypeTag(value string) Tag {
-	if len(value) == 0 {
-		value = unknownValue
-	}
-	return workflowTypeTag{value}
-}
-
-// Key returns the key of the workflow type tag
-func (d workflowTypeTag) Key() string {
-	return workflowType
-}
-
-// Value returns the value of the workflow type tag
-func (d workflowTypeTag) Value() string {
-	return d.value
+	return metricWithUnknown(workflowType, value)
 }
 
 // ActivityTypeTag returns a new activity type tag.
 func ActivityTypeTag(value string) Tag {
-	if len(value) == 0 {
-		value = unknownValue
-	}
-	return activityTypeTag{value}
-}
-
-// Key returns the key of the activity type tag
-func (d activityTypeTag) Key() string {
-	return activityType
-}
-
-// Value returns the value of the activity type tag
-func (d activityTypeTag) Value() string {
-	return d.value
+	return metricWithUnknown(activityType, value)
 }
 
 // DecisionTypeTag returns a new decision type tag.
 func DecisionTypeTag(value string) Tag {
-	if len(value) == 0 {
-		value = unknownValue
-	}
-	return decisionTypeTag{value}
-}
-
-// Key returns the key of the decision type tag
-func (d decisionTypeTag) Key() string {
-	return decisionType
-}
-
-// Value returns the value of the decision type tag
-func (d decisionTypeTag) Value() string {
-	return d.value
+	return metricWithUnknown(decisionType, value)
 }
 
 // InvariantTypeTag returns a new invariant type tag.
 func InvariantTypeTag(value string) Tag {
-	if len(value) == 0 {
-		value = unknownValue
-	}
-	return invariantTypeTag{value}
-}
-
-// Key returns the key of invariant type tag
-func (d invariantTypeTag) Key() string {
-	return invariantType
-}
-
-// Value returns the value of invariant type tag
-func (d invariantTypeTag) Value() string {
-	return d.value
+	return metricWithUnknown(invariantType, value)
 }
 
 // KafkaPartitionTag returns a new KafkaPartition type tag.
 func KafkaPartitionTag(value int32) Tag {
-	return kafkaPartitionTag{strconv.Itoa(int(value))}
+	return simpleMetric{key: kafkaPartition, value: strconv.Itoa(int(value))}
 }
 
-// Key returns the key of the decision type tag
-func (d kafkaPartitionTag) Key() string {
-	return kafkaPartition
+// ThriftTransportTag returns a new Thrift transport type tag.
+func ThriftTransportTag() Tag {
+	return simpleMetric{key: transport, value: transportThrift}
 }
 
-// Value returns the value of the decision type tag
-func (d kafkaPartitionTag) Value() string {
-	return d.value
+// GPRCTransportTag returns a new GRPC transport type tag.
+func GPRCTransportTag() Tag {
+	return simpleMetric{key: transport, value: transportGRPC}
 }

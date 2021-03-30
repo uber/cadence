@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,33 +26,22 @@
 package adminv1
 
 import (
-	bytes "bytes"
-	context "context"
 	fmt "fmt"
 	io "io"
 	math "math"
 	math_bits "math/bits"
-	reflect "reflect"
-	strings "strings"
-	time "time"
 
-	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
-	github_com_gogo_protobuf_sortkeys "github.com/gogo/protobuf/sortkeys"
-	github_com_gogo_protobuf_types "github.com/gogo/protobuf/types"
-	_ "github.com/golang/protobuf/ptypes/timestamp"
+	types "github.com/gogo/protobuf/types"
+
 	v1 "github.com/uber/cadence/.gen/proto/api/v1"
 	v11 "github.com/uber/cadence/.gen/proto/shared/v1"
-	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = time.Kitchen
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -61,12 +50,16 @@ var _ = time.Kitchen
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type DescribeWorkflowExecutionRequest struct {
-	Domain            string                `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *v1.WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	Domain               string                `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *v1.WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
-func (m *DescribeWorkflowExecutionRequest) Reset()      { *m = DescribeWorkflowExecutionRequest{} }
-func (*DescribeWorkflowExecutionRequest) ProtoMessage() {}
+func (m *DescribeWorkflowExecutionRequest) Reset()         { *m = DescribeWorkflowExecutionRequest{} }
+func (m *DescribeWorkflowExecutionRequest) String() string { return proto.CompactTextString(m) }
+func (*DescribeWorkflowExecutionRequest) ProtoMessage()    {}
 func (*DescribeWorkflowExecutionRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{0}
 }
@@ -112,14 +105,18 @@ func (m *DescribeWorkflowExecutionRequest) GetWorkflowExecution() *v1.WorkflowEx
 }
 
 type DescribeWorkflowExecutionResponse struct {
-	ShardId                int32  `protobuf:"varint,1,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
-	HistoryAddr            string `protobuf:"bytes,2,opt,name=history_addr,json=historyAddr,proto3" json:"history_addr,omitempty"`
-	MutableStateInCache    string `protobuf:"bytes,3,opt,name=mutable_state_in_cache,json=mutableStateInCache,proto3" json:"mutable_state_in_cache,omitempty"`
-	MutableStateInDatabase string `protobuf:"bytes,4,opt,name=mutable_state_in_database,json=mutableStateInDatabase,proto3" json:"mutable_state_in_database,omitempty"`
+	ShardId                int32    `protobuf:"varint,1,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
+	HistoryAddr            string   `protobuf:"bytes,2,opt,name=history_addr,json=historyAddr,proto3" json:"history_addr,omitempty"`
+	MutableStateInCache    string   `protobuf:"bytes,3,opt,name=mutable_state_in_cache,json=mutableStateInCache,proto3" json:"mutable_state_in_cache,omitempty"`
+	MutableStateInDatabase string   `protobuf:"bytes,4,opt,name=mutable_state_in_database,json=mutableStateInDatabase,proto3" json:"mutable_state_in_database,omitempty"`
+	XXX_NoUnkeyedLiteral   struct{} `json:"-"`
+	XXX_unrecognized       []byte   `json:"-"`
+	XXX_sizecache          int32    `json:"-"`
 }
 
-func (m *DescribeWorkflowExecutionResponse) Reset()      { *m = DescribeWorkflowExecutionResponse{} }
-func (*DescribeWorkflowExecutionResponse) ProtoMessage() {}
+func (m *DescribeWorkflowExecutionResponse) Reset()         { *m = DescribeWorkflowExecutionResponse{} }
+func (m *DescribeWorkflowExecutionResponse) String() string { return proto.CompactTextString(m) }
+func (*DescribeWorkflowExecutionResponse) ProtoMessage()    {}
 func (*DescribeWorkflowExecutionResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{1}
 }
@@ -179,13 +176,19 @@ func (m *DescribeWorkflowExecutionResponse) GetMutableStateInDatabase() string {
 }
 
 type DescribeHistoryHostRequest struct {
-	HostAddress       string                `protobuf:"bytes,1,opt,name=host_address,json=hostAddress,proto3" json:"host_address,omitempty"`
-	ShardId           int32                 `protobuf:"varint,2,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
-	WorkflowExecution *v1.WorkflowExecution `protobuf:"bytes,3,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	// Types that are valid to be assigned to DescribeBy:
+	//	*DescribeHistoryHostRequest_HostAddress
+	//	*DescribeHistoryHostRequest_ShardId
+	//	*DescribeHistoryHostRequest_WorkflowExecution
+	DescribeBy           isDescribeHistoryHostRequest_DescribeBy `protobuf_oneof:"describe_by"`
+	XXX_NoUnkeyedLiteral struct{}                                `json:"-"`
+	XXX_unrecognized     []byte                                  `json:"-"`
+	XXX_sizecache        int32                                   `json:"-"`
 }
 
-func (m *DescribeHistoryHostRequest) Reset()      { *m = DescribeHistoryHostRequest{} }
-func (*DescribeHistoryHostRequest) ProtoMessage() {}
+func (m *DescribeHistoryHostRequest) Reset()         { *m = DescribeHistoryHostRequest{} }
+func (m *DescribeHistoryHostRequest) String() string { return proto.CompactTextString(m) }
+func (*DescribeHistoryHostRequest) ProtoMessage()    {}
 func (*DescribeHistoryHostRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{2}
 }
@@ -216,25 +219,61 @@ func (m *DescribeHistoryHostRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_DescribeHistoryHostRequest proto.InternalMessageInfo
 
-func (m *DescribeHistoryHostRequest) GetHostAddress() string {
+type isDescribeHistoryHostRequest_DescribeBy interface {
+	isDescribeHistoryHostRequest_DescribeBy()
+	MarshalTo([]byte) (int, error)
+	Size() int
+}
+
+type DescribeHistoryHostRequest_HostAddress struct {
+	HostAddress string `protobuf:"bytes,1,opt,name=host_address,json=hostAddress,proto3,oneof" json:"host_address,omitempty"`
+}
+type DescribeHistoryHostRequest_ShardId struct {
+	ShardId int32 `protobuf:"varint,2,opt,name=shard_id,json=shardId,proto3,oneof" json:"shard_id,omitempty"`
+}
+type DescribeHistoryHostRequest_WorkflowExecution struct {
+	WorkflowExecution *v1.WorkflowExecution `protobuf:"bytes,3,opt,name=workflow_execution,json=workflowExecution,proto3,oneof" json:"workflow_execution,omitempty"`
+}
+
+func (*DescribeHistoryHostRequest_HostAddress) isDescribeHistoryHostRequest_DescribeBy()       {}
+func (*DescribeHistoryHostRequest_ShardId) isDescribeHistoryHostRequest_DescribeBy()           {}
+func (*DescribeHistoryHostRequest_WorkflowExecution) isDescribeHistoryHostRequest_DescribeBy() {}
+
+func (m *DescribeHistoryHostRequest) GetDescribeBy() isDescribeHistoryHostRequest_DescribeBy {
 	if m != nil {
-		return m.HostAddress
+		return m.DescribeBy
+	}
+	return nil
+}
+
+func (m *DescribeHistoryHostRequest) GetHostAddress() string {
+	if x, ok := m.GetDescribeBy().(*DescribeHistoryHostRequest_HostAddress); ok {
+		return x.HostAddress
 	}
 	return ""
 }
 
 func (m *DescribeHistoryHostRequest) GetShardId() int32 {
-	if m != nil {
-		return m.ShardId
+	if x, ok := m.GetDescribeBy().(*DescribeHistoryHostRequest_ShardId); ok {
+		return x.ShardId
 	}
 	return 0
 }
 
 func (m *DescribeHistoryHostRequest) GetWorkflowExecution() *v1.WorkflowExecution {
-	if m != nil {
-		return m.WorkflowExecution
+	if x, ok := m.GetDescribeBy().(*DescribeHistoryHostRequest_WorkflowExecution); ok {
+		return x.WorkflowExecution
 	}
 	return nil
+}
+
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*DescribeHistoryHostRequest) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
+		(*DescribeHistoryHostRequest_HostAddress)(nil),
+		(*DescribeHistoryHostRequest_ShardId)(nil),
+		(*DescribeHistoryHostRequest_WorkflowExecution)(nil),
+	}
 }
 
 type DescribeHistoryHostResponse struct {
@@ -243,10 +282,14 @@ type DescribeHistoryHostResponse struct {
 	DomainCache           *v11.DomainCacheInfo `protobuf:"bytes,3,opt,name=domain_cache,json=domainCache,proto3" json:"domain_cache,omitempty"`
 	ShardControllerStatus string               `protobuf:"bytes,4,opt,name=shard_controller_status,json=shardControllerStatus,proto3" json:"shard_controller_status,omitempty"`
 	Address               string               `protobuf:"bytes,5,opt,name=address,proto3" json:"address,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{}             `json:"-"`
+	XXX_unrecognized      []byte               `json:"-"`
+	XXX_sizecache         int32                `json:"-"`
 }
 
-func (m *DescribeHistoryHostResponse) Reset()      { *m = DescribeHistoryHostResponse{} }
-func (*DescribeHistoryHostResponse) ProtoMessage() {}
+func (m *DescribeHistoryHostResponse) Reset()         { *m = DescribeHistoryHostResponse{} }
+func (m *DescribeHistoryHostResponse) String() string { return proto.CompactTextString(m) }
+func (*DescribeHistoryHostResponse) ProtoMessage()    {}
 func (*DescribeHistoryHostResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{3}
 }
@@ -313,11 +356,15 @@ func (m *DescribeHistoryHostResponse) GetAddress() string {
 }
 
 type CloseShardRequest struct {
-	ShardId int32 `protobuf:"varint,1,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
+	ShardId              int32    `protobuf:"varint,1,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *CloseShardRequest) Reset()      { *m = CloseShardRequest{} }
-func (*CloseShardRequest) ProtoMessage() {}
+func (m *CloseShardRequest) Reset()         { *m = CloseShardRequest{} }
+func (m *CloseShardRequest) String() string { return proto.CompactTextString(m) }
+func (*CloseShardRequest) ProtoMessage()    {}
 func (*CloseShardRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{4}
 }
@@ -356,10 +403,14 @@ func (m *CloseShardRequest) GetShardId() int32 {
 }
 
 type CloseShardResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *CloseShardResponse) Reset()      { *m = CloseShardResponse{} }
-func (*CloseShardResponse) ProtoMessage() {}
+func (m *CloseShardResponse) Reset()         { *m = CloseShardResponse{} }
+func (m *CloseShardResponse) String() string { return proto.CompactTextString(m) }
+func (*CloseShardResponse) ProtoMessage()    {}
 func (*CloseShardResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{5}
 }
@@ -391,14 +442,18 @@ func (m *CloseShardResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_CloseShardResponse proto.InternalMessageInfo
 
 type RemoveTaskRequest struct {
-	ShardId        int32        `protobuf:"varint,1,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
-	TaskType       v11.TaskType `protobuf:"varint,2,opt,name=task_type,json=taskType,proto3,enum=uber.cadence.shared.v1.TaskType" json:"task_type,omitempty"`
-	TaskId         int64        `protobuf:"varint,3,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	VisibilityTime *time.Time   `protobuf:"bytes,4,opt,name=visibility_time,json=visibilityTime,proto3,stdtime" json:"visibility_time,omitempty"`
+	ShardId              int32            `protobuf:"varint,1,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
+	TaskType             v11.TaskType     `protobuf:"varint,2,opt,name=task_type,json=taskType,proto3,enum=uber.cadence.shared.v1.TaskType" json:"task_type,omitempty"`
+	TaskId               int64            `protobuf:"varint,3,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	VisibilityTime       *types.Timestamp `protobuf:"bytes,4,opt,name=visibility_time,json=visibilityTime,proto3" json:"visibility_time,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
+	XXX_unrecognized     []byte           `json:"-"`
+	XXX_sizecache        int32            `json:"-"`
 }
 
-func (m *RemoveTaskRequest) Reset()      { *m = RemoveTaskRequest{} }
-func (*RemoveTaskRequest) ProtoMessage() {}
+func (m *RemoveTaskRequest) Reset()         { *m = RemoveTaskRequest{} }
+func (m *RemoveTaskRequest) String() string { return proto.CompactTextString(m) }
+func (*RemoveTaskRequest) ProtoMessage()    {}
 func (*RemoveTaskRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{6}
 }
@@ -440,7 +495,7 @@ func (m *RemoveTaskRequest) GetTaskType() v11.TaskType {
 	if m != nil {
 		return m.TaskType
 	}
-	return v11.TASK_TYPE_INVALID
+	return v11.TaskType_TASK_TYPE_INVALID
 }
 
 func (m *RemoveTaskRequest) GetTaskId() int64 {
@@ -450,7 +505,7 @@ func (m *RemoveTaskRequest) GetTaskId() int64 {
 	return 0
 }
 
-func (m *RemoveTaskRequest) GetVisibilityTime() *time.Time {
+func (m *RemoveTaskRequest) GetVisibilityTime() *types.Timestamp {
 	if m != nil {
 		return m.VisibilityTime
 	}
@@ -458,10 +513,14 @@ func (m *RemoveTaskRequest) GetVisibilityTime() *time.Time {
 }
 
 type RemoveTaskResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RemoveTaskResponse) Reset()      { *m = RemoveTaskResponse{} }
-func (*RemoveTaskResponse) ProtoMessage() {}
+func (m *RemoveTaskResponse) Reset()         { *m = RemoveTaskResponse{} }
+func (m *RemoveTaskResponse) String() string { return proto.CompactTextString(m) }
+func (*RemoveTaskResponse) ProtoMessage()    {}
 func (*RemoveTaskResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{7}
 }
@@ -493,13 +552,17 @@ func (m *RemoveTaskResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_RemoveTaskResponse proto.InternalMessageInfo
 
 type ResetQueueRequest struct {
-	ShardId     int32        `protobuf:"varint,1,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
-	ClusterName string       `protobuf:"bytes,2,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
-	TaskType    v11.TaskType `protobuf:"varint,3,opt,name=task_type,json=taskType,proto3,enum=uber.cadence.shared.v1.TaskType" json:"task_type,omitempty"`
+	ShardId              int32        `protobuf:"varint,1,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
+	ClusterName          string       `protobuf:"bytes,2,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
+	TaskType             v11.TaskType `protobuf:"varint,3,opt,name=task_type,json=taskType,proto3,enum=uber.cadence.shared.v1.TaskType" json:"task_type,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
 }
 
-func (m *ResetQueueRequest) Reset()      { *m = ResetQueueRequest{} }
-func (*ResetQueueRequest) ProtoMessage() {}
+func (m *ResetQueueRequest) Reset()         { *m = ResetQueueRequest{} }
+func (m *ResetQueueRequest) String() string { return proto.CompactTextString(m) }
+func (*ResetQueueRequest) ProtoMessage()    {}
 func (*ResetQueueRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{8}
 }
@@ -548,14 +611,18 @@ func (m *ResetQueueRequest) GetTaskType() v11.TaskType {
 	if m != nil {
 		return m.TaskType
 	}
-	return v11.TASK_TYPE_INVALID
+	return v11.TaskType_TASK_TYPE_INVALID
 }
 
 type ResetQueueResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ResetQueueResponse) Reset()      { *m = ResetQueueResponse{} }
-func (*ResetQueueResponse) ProtoMessage() {}
+func (m *ResetQueueResponse) Reset()         { *m = ResetQueueResponse{} }
+func (m *ResetQueueResponse) String() string { return proto.CompactTextString(m) }
+func (*ResetQueueResponse) ProtoMessage()    {}
 func (*ResetQueueResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{9}
 }
@@ -587,13 +654,17 @@ func (m *ResetQueueResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_ResetQueueResponse proto.InternalMessageInfo
 
 type DescribeQueueRequest struct {
-	ShardId     int32        `protobuf:"varint,1,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
-	ClusterName string       `protobuf:"bytes,2,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
-	TaskType    v11.TaskType `protobuf:"varint,3,opt,name=task_type,json=taskType,proto3,enum=uber.cadence.shared.v1.TaskType" json:"task_type,omitempty"`
+	ShardId              int32        `protobuf:"varint,1,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
+	ClusterName          string       `protobuf:"bytes,2,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
+	TaskType             v11.TaskType `protobuf:"varint,3,opt,name=task_type,json=taskType,proto3,enum=uber.cadence.shared.v1.TaskType" json:"task_type,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
 }
 
-func (m *DescribeQueueRequest) Reset()      { *m = DescribeQueueRequest{} }
-func (*DescribeQueueRequest) ProtoMessage() {}
+func (m *DescribeQueueRequest) Reset()         { *m = DescribeQueueRequest{} }
+func (m *DescribeQueueRequest) String() string { return proto.CompactTextString(m) }
+func (*DescribeQueueRequest) ProtoMessage()    {}
 func (*DescribeQueueRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{10}
 }
@@ -642,15 +713,19 @@ func (m *DescribeQueueRequest) GetTaskType() v11.TaskType {
 	if m != nil {
 		return m.TaskType
 	}
-	return v11.TASK_TYPE_INVALID
+	return v11.TaskType_TASK_TYPE_INVALID
 }
 
 type DescribeQueueResponse struct {
 	ProcessingQueueStates []string `protobuf:"bytes,1,rep,name=processing_queue_states,json=processingQueueStates,proto3" json:"processing_queue_states,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{} `json:"-"`
+	XXX_unrecognized      []byte   `json:"-"`
+	XXX_sizecache         int32    `json:"-"`
 }
 
-func (m *DescribeQueueResponse) Reset()      { *m = DescribeQueueResponse{} }
-func (*DescribeQueueResponse) ProtoMessage() {}
+func (m *DescribeQueueResponse) Reset()         { *m = DescribeQueueResponse{} }
+func (m *DescribeQueueResponse) String() string { return proto.CompactTextString(m) }
+func (*DescribeQueueResponse) ProtoMessage()    {}
 func (*DescribeQueueResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{11}
 }
@@ -689,18 +764,22 @@ func (m *DescribeQueueResponse) GetProcessingQueueStates() []string {
 }
 
 type GetWorkflowExecutionRawHistoryV2Request struct {
-	Domain            string                  `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *v1.WorkflowExecution   `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	StartEvent        *v11.VersionHistoryItem `protobuf:"bytes,3,opt,name=start_event,json=startEvent,proto3" json:"start_event,omitempty"`
-	EndEvent          *v11.VersionHistoryItem `protobuf:"bytes,4,opt,name=end_event,json=endEvent,proto3" json:"end_event,omitempty"`
-	PageSize          int32                   `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	NextPageToken     []byte                  `protobuf:"bytes,6,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Domain               string                  `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *v1.WorkflowExecution   `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	StartEvent           *v11.VersionHistoryItem `protobuf:"bytes,3,opt,name=start_event,json=startEvent,proto3" json:"start_event,omitempty"`
+	EndEvent             *v11.VersionHistoryItem `protobuf:"bytes,4,opt,name=end_event,json=endEvent,proto3" json:"end_event,omitempty"`
+	PageSize             int32                   `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	NextPageToken        []byte                  `protobuf:"bytes,6,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                `json:"-"`
+	XXX_unrecognized     []byte                  `json:"-"`
+	XXX_sizecache        int32                   `json:"-"`
 }
 
 func (m *GetWorkflowExecutionRawHistoryV2Request) Reset() {
 	*m = GetWorkflowExecutionRawHistoryV2Request{}
 }
-func (*GetWorkflowExecutionRawHistoryV2Request) ProtoMessage() {}
+func (m *GetWorkflowExecutionRawHistoryV2Request) String() string { return proto.CompactTextString(m) }
+func (*GetWorkflowExecutionRawHistoryV2Request) ProtoMessage()    {}
 func (*GetWorkflowExecutionRawHistoryV2Request) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{12}
 }
@@ -774,15 +853,19 @@ func (m *GetWorkflowExecutionRawHistoryV2Request) GetNextPageToken() []byte {
 }
 
 type GetWorkflowExecutionRawHistoryV2Response struct {
-	NextPageToken  []byte              `protobuf:"bytes,1,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	HistoryBatches []*v1.DataBlob      `protobuf:"bytes,2,rep,name=history_batches,json=historyBatches,proto3" json:"history_batches,omitempty"`
-	VersionHistory *v11.VersionHistory `protobuf:"bytes,3,opt,name=version_history,json=versionHistory,proto3" json:"version_history,omitempty"`
+	NextPageToken        []byte              `protobuf:"bytes,1,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	HistoryBatches       []*v1.DataBlob      `protobuf:"bytes,2,rep,name=history_batches,json=historyBatches,proto3" json:"history_batches,omitempty"`
+	VersionHistory       *v11.VersionHistory `protobuf:"bytes,3,opt,name=version_history,json=versionHistory,proto3" json:"version_history,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
+	XXX_unrecognized     []byte              `json:"-"`
+	XXX_sizecache        int32               `json:"-"`
 }
 
 func (m *GetWorkflowExecutionRawHistoryV2Response) Reset() {
 	*m = GetWorkflowExecutionRawHistoryV2Response{}
 }
-func (*GetWorkflowExecutionRawHistoryV2Response) ProtoMessage() {}
+func (m *GetWorkflowExecutionRawHistoryV2Response) String() string { return proto.CompactTextString(m) }
+func (*GetWorkflowExecutionRawHistoryV2Response) ProtoMessage()    {}
 func (*GetWorkflowExecutionRawHistoryV2Response) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{13}
 }
@@ -835,12 +918,16 @@ func (m *GetWorkflowExecutionRawHistoryV2Response) GetVersionHistory() *v11.Vers
 }
 
 type GetReplicationMessagesRequest struct {
-	Tokens      []*v11.ReplicationToken `protobuf:"bytes,1,rep,name=tokens,proto3" json:"tokens,omitempty"`
-	ClusterName string                  `protobuf:"bytes,2,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
+	Tokens               []*v11.ReplicationToken `protobuf:"bytes,1,rep,name=tokens,proto3" json:"tokens,omitempty"`
+	ClusterName          string                  `protobuf:"bytes,2,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                `json:"-"`
+	XXX_unrecognized     []byte                  `json:"-"`
+	XXX_sizecache        int32                   `json:"-"`
 }
 
-func (m *GetReplicationMessagesRequest) Reset()      { *m = GetReplicationMessagesRequest{} }
-func (*GetReplicationMessagesRequest) ProtoMessage() {}
+func (m *GetReplicationMessagesRequest) Reset()         { *m = GetReplicationMessagesRequest{} }
+func (m *GetReplicationMessagesRequest) String() string { return proto.CompactTextString(m) }
+func (*GetReplicationMessagesRequest) ProtoMessage()    {}
 func (*GetReplicationMessagesRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{14}
 }
@@ -886,11 +973,15 @@ func (m *GetReplicationMessagesRequest) GetClusterName() string {
 }
 
 type GetReplicationMessagesResponse struct {
-	ShardMessages map[int32]*v11.ReplicationMessages `protobuf:"bytes,1,rep,name=shard_messages,json=shardMessages,proto3" json:"shard_messages,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	ShardMessages        map[int32]*v11.ReplicationMessages `protobuf:"bytes,1,rep,name=shard_messages,json=shardMessages,proto3" json:"shard_messages,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}                           `json:"-"`
+	XXX_unrecognized     []byte                             `json:"-"`
+	XXX_sizecache        int32                              `json:"-"`
 }
 
-func (m *GetReplicationMessagesResponse) Reset()      { *m = GetReplicationMessagesResponse{} }
-func (*GetReplicationMessagesResponse) ProtoMessage() {}
+func (m *GetReplicationMessagesResponse) Reset()         { *m = GetReplicationMessagesResponse{} }
+func (m *GetReplicationMessagesResponse) String() string { return proto.CompactTextString(m) }
+func (*GetReplicationMessagesResponse) ProtoMessage()    {}
 func (*GetReplicationMessagesResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{15}
 }
@@ -929,11 +1020,15 @@ func (m *GetReplicationMessagesResponse) GetShardMessages() map[int32]*v11.Repli
 }
 
 type GetDLQReplicationMessagesRequest struct {
-	TaskInfos []*v11.ReplicationTaskInfo `protobuf:"bytes,1,rep,name=task_infos,json=taskInfos,proto3" json:"task_infos,omitempty"`
+	TaskInfos            []*v11.ReplicationTaskInfo `protobuf:"bytes,1,rep,name=task_infos,json=taskInfos,proto3" json:"task_infos,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                   `json:"-"`
+	XXX_unrecognized     []byte                     `json:"-"`
+	XXX_sizecache        int32                      `json:"-"`
 }
 
-func (m *GetDLQReplicationMessagesRequest) Reset()      { *m = GetDLQReplicationMessagesRequest{} }
-func (*GetDLQReplicationMessagesRequest) ProtoMessage() {}
+func (m *GetDLQReplicationMessagesRequest) Reset()         { *m = GetDLQReplicationMessagesRequest{} }
+func (m *GetDLQReplicationMessagesRequest) String() string { return proto.CompactTextString(m) }
+func (*GetDLQReplicationMessagesRequest) ProtoMessage()    {}
 func (*GetDLQReplicationMessagesRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{16}
 }
@@ -972,11 +1067,15 @@ func (m *GetDLQReplicationMessagesRequest) GetTaskInfos() []*v11.ReplicationTask
 }
 
 type GetDLQReplicationMessagesResponse struct {
-	ReplicationTasks []*v11.ReplicationTask `protobuf:"bytes,1,rep,name=replication_tasks,json=replicationTasks,proto3" json:"replication_tasks,omitempty"`
+	ReplicationTasks     []*v11.ReplicationTask `protobuf:"bytes,1,rep,name=replication_tasks,json=replicationTasks,proto3" json:"replication_tasks,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}               `json:"-"`
+	XXX_unrecognized     []byte                 `json:"-"`
+	XXX_sizecache        int32                  `json:"-"`
 }
 
-func (m *GetDLQReplicationMessagesResponse) Reset()      { *m = GetDLQReplicationMessagesResponse{} }
-func (*GetDLQReplicationMessagesResponse) ProtoMessage() {}
+func (m *GetDLQReplicationMessagesResponse) Reset()         { *m = GetDLQReplicationMessagesResponse{} }
+func (m *GetDLQReplicationMessagesResponse) String() string { return proto.CompactTextString(m) }
+func (*GetDLQReplicationMessagesResponse) ProtoMessage()    {}
 func (*GetDLQReplicationMessagesResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{17}
 }
@@ -1016,16 +1115,20 @@ func (m *GetDLQReplicationMessagesResponse) GetReplicationTasks() []*v11.Replica
 
 type GetDomainReplicationMessagesRequest struct {
 	// last_retrieved_message_id is where the next fetch should begin with.
-	LastRetrievedMessageId int64 `protobuf:"varint,1,opt,name=last_retrieved_message_id,json=lastRetrievedMessageId,proto3" json:"last_retrieved_message_id,omitempty"`
+	LastRetrievedMessageId *types.Int64Value `protobuf:"bytes,1,opt,name=last_retrieved_message_id,json=lastRetrievedMessageId,proto3" json:"last_retrieved_message_id,omitempty"`
 	// last_processed_message_id is the last messageId that is processed on the passive side.
-	// This can be different than lastRetrievedMessageId if passive side supports prefetching messages.
-	LastProcessedMessageId int64 `protobuf:"varint,2,opt,name=last_processed_message_id,json=lastProcessedMessageId,proto3" json:"last_processed_message_id,omitempty"`
+	// This can be different than last_retrieved_message_id if passive side supports prefetching messages.
+	LastProcessedMessageId *types.Int64Value `protobuf:"bytes,2,opt,name=last_processed_message_id,json=lastProcessedMessageId,proto3" json:"last_processed_message_id,omitempty"`
 	// cluster_name is the name of the pulling cluster.
-	ClusterName string `protobuf:"bytes,3,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
+	ClusterName          string   `protobuf:"bytes,3,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *GetDomainReplicationMessagesRequest) Reset()      { *m = GetDomainReplicationMessagesRequest{} }
-func (*GetDomainReplicationMessagesRequest) ProtoMessage() {}
+func (m *GetDomainReplicationMessagesRequest) Reset()         { *m = GetDomainReplicationMessagesRequest{} }
+func (m *GetDomainReplicationMessagesRequest) String() string { return proto.CompactTextString(m) }
+func (*GetDomainReplicationMessagesRequest) ProtoMessage()    {}
 func (*GetDomainReplicationMessagesRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{18}
 }
@@ -1056,18 +1159,18 @@ func (m *GetDomainReplicationMessagesRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GetDomainReplicationMessagesRequest proto.InternalMessageInfo
 
-func (m *GetDomainReplicationMessagesRequest) GetLastRetrievedMessageId() int64 {
+func (m *GetDomainReplicationMessagesRequest) GetLastRetrievedMessageId() *types.Int64Value {
 	if m != nil {
 		return m.LastRetrievedMessageId
 	}
-	return 0
+	return nil
 }
 
-func (m *GetDomainReplicationMessagesRequest) GetLastProcessedMessageId() int64 {
+func (m *GetDomainReplicationMessagesRequest) GetLastProcessedMessageId() *types.Int64Value {
 	if m != nil {
 		return m.LastProcessedMessageId
 	}
-	return 0
+	return nil
 }
 
 func (m *GetDomainReplicationMessagesRequest) GetClusterName() string {
@@ -1078,11 +1181,15 @@ func (m *GetDomainReplicationMessagesRequest) GetClusterName() string {
 }
 
 type GetDomainReplicationMessagesResponse struct {
-	Messages *v11.ReplicationMessages `protobuf:"bytes,1,opt,name=messages,proto3" json:"messages,omitempty"`
+	Messages             *v11.ReplicationMessages `protobuf:"bytes,1,opt,name=messages,proto3" json:"messages,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                 `json:"-"`
+	XXX_unrecognized     []byte                   `json:"-"`
+	XXX_sizecache        int32                    `json:"-"`
 }
 
-func (m *GetDomainReplicationMessagesResponse) Reset()      { *m = GetDomainReplicationMessagesResponse{} }
-func (*GetDomainReplicationMessagesResponse) ProtoMessage() {}
+func (m *GetDomainReplicationMessagesResponse) Reset()         { *m = GetDomainReplicationMessagesResponse{} }
+func (m *GetDomainReplicationMessagesResponse) String() string { return proto.CompactTextString(m) }
+func (*GetDomainReplicationMessagesResponse) ProtoMessage()    {}
 func (*GetDomainReplicationMessagesResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{19}
 }
@@ -1122,13 +1229,17 @@ func (m *GetDomainReplicationMessagesResponse) GetMessages() *v11.ReplicationMes
 
 // ReapplyEventsRequest is the request for reapply events API.
 type ReapplyEventsRequest struct {
-	Domain            string                `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *v1.WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	Events            *v1.DataBlob          `protobuf:"bytes,3,opt,name=events,proto3" json:"events,omitempty"`
+	Domain               string                `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *v1.WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	Events               *v1.DataBlob          `protobuf:"bytes,3,opt,name=events,proto3" json:"events,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
-func (m *ReapplyEventsRequest) Reset()      { *m = ReapplyEventsRequest{} }
-func (*ReapplyEventsRequest) ProtoMessage() {}
+func (m *ReapplyEventsRequest) Reset()         { *m = ReapplyEventsRequest{} }
+func (m *ReapplyEventsRequest) String() string { return proto.CompactTextString(m) }
+func (*ReapplyEventsRequest) ProtoMessage()    {}
 func (*ReapplyEventsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{20}
 }
@@ -1181,10 +1292,14 @@ func (m *ReapplyEventsRequest) GetEvents() *v1.DataBlob {
 }
 
 type ReapplyEventsResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ReapplyEventsResponse) Reset()      { *m = ReapplyEventsResponse{} }
-func (*ReapplyEventsResponse) ProtoMessage() {}
+func (m *ReapplyEventsResponse) Reset()         { *m = ReapplyEventsResponse{} }
+func (m *ReapplyEventsResponse) String() string { return proto.CompactTextString(m) }
+func (*ReapplyEventsResponse) ProtoMessage()    {}
 func (*ReapplyEventsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{21}
 }
@@ -1216,12 +1331,16 @@ func (m *ReapplyEventsResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_ReapplyEventsResponse proto.InternalMessageInfo
 
 type AddSearchAttributeRequest struct {
-	SearchAttribute map[string]v1.IndexedValueType `protobuf:"bytes,1,rep,name=search_attribute,json=searchAttribute,proto3" json:"search_attribute,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3,enum=uber.cadence.api.v1.IndexedValueType"`
-	SecurityToken   string                         `protobuf:"bytes,2,opt,name=security_token,json=securityToken,proto3" json:"security_token,omitempty"`
+	SearchAttribute      map[string]v1.IndexedValueType `protobuf:"bytes,1,rep,name=search_attribute,json=searchAttribute,proto3" json:"search_attribute,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3,enum=uber.cadence.api.v1.IndexedValueType"`
+	SecurityToken        string                         `protobuf:"bytes,2,opt,name=security_token,json=securityToken,proto3" json:"security_token,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                       `json:"-"`
+	XXX_unrecognized     []byte                         `json:"-"`
+	XXX_sizecache        int32                          `json:"-"`
 }
 
-func (m *AddSearchAttributeRequest) Reset()      { *m = AddSearchAttributeRequest{} }
-func (*AddSearchAttributeRequest) ProtoMessage() {}
+func (m *AddSearchAttributeRequest) Reset()         { *m = AddSearchAttributeRequest{} }
+func (m *AddSearchAttributeRequest) String() string { return proto.CompactTextString(m) }
+func (*AddSearchAttributeRequest) ProtoMessage()    {}
 func (*AddSearchAttributeRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{22}
 }
@@ -1267,10 +1386,14 @@ func (m *AddSearchAttributeRequest) GetSecurityToken() string {
 }
 
 type AddSearchAttributeResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *AddSearchAttributeResponse) Reset()      { *m = AddSearchAttributeResponse{} }
-func (*AddSearchAttributeResponse) ProtoMessage() {}
+func (m *AddSearchAttributeResponse) Reset()         { *m = AddSearchAttributeResponse{} }
+func (m *AddSearchAttributeResponse) String() string { return proto.CompactTextString(m) }
+func (*AddSearchAttributeResponse) ProtoMessage()    {}
 func (*AddSearchAttributeResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{23}
 }
@@ -1302,10 +1425,14 @@ func (m *AddSearchAttributeResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_AddSearchAttributeResponse proto.InternalMessageInfo
 
 type DescribeClusterRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *DescribeClusterRequest) Reset()      { *m = DescribeClusterRequest{} }
-func (*DescribeClusterRequest) ProtoMessage() {}
+func (m *DescribeClusterRequest) Reset()         { *m = DescribeClusterRequest{} }
+func (m *DescribeClusterRequest) String() string { return proto.CompactTextString(m) }
+func (*DescribeClusterRequest) ProtoMessage()    {}
 func (*DescribeClusterRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{24}
 }
@@ -1339,10 +1466,14 @@ var xxx_messageInfo_DescribeClusterRequest proto.InternalMessageInfo
 type DescribeClusterResponse struct {
 	SupportedClientVersions *v1.SupportedClientVersions `protobuf:"bytes,1,opt,name=supported_client_versions,json=supportedClientVersions,proto3" json:"supported_client_versions,omitempty"`
 	MembershipInfo          *v11.MembershipInfo         `protobuf:"bytes,2,opt,name=membership_info,json=membershipInfo,proto3" json:"membership_info,omitempty"`
+	XXX_NoUnkeyedLiteral    struct{}                    `json:"-"`
+	XXX_unrecognized        []byte                      `json:"-"`
+	XXX_sizecache           int32                       `json:"-"`
 }
 
-func (m *DescribeClusterResponse) Reset()      { *m = DescribeClusterResponse{} }
-func (*DescribeClusterResponse) ProtoMessage() {}
+func (m *DescribeClusterResponse) Reset()         { *m = DescribeClusterResponse{} }
+func (m *DescribeClusterResponse) String() string { return proto.CompactTextString(m) }
+func (*DescribeClusterResponse) ProtoMessage()    {}
 func (*DescribeClusterResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{25}
 }
@@ -1388,16 +1519,20 @@ func (m *DescribeClusterResponse) GetMembershipInfo() *v11.MembershipInfo {
 }
 
 type ReadDLQMessagesRequest struct {
-	Type                  v11.DLQType `protobuf:"varint,1,opt,name=type,proto3,enum=uber.cadence.shared.v1.DLQType" json:"type,omitempty"`
-	ShardId               int32       `protobuf:"varint,2,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
-	SourceCluster         string      `protobuf:"bytes,3,opt,name=source_cluster,json=sourceCluster,proto3" json:"source_cluster,omitempty"`
-	InclusiveEndMessageId int64       `protobuf:"varint,4,opt,name=inclusive_end_message_id,json=inclusiveEndMessageId,proto3" json:"inclusive_end_message_id,omitempty"`
-	PageSize              int32       `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	NextPageToken         []byte      `protobuf:"bytes,6,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Type                  v11.DLQType       `protobuf:"varint,1,opt,name=type,proto3,enum=uber.cadence.shared.v1.DLQType" json:"type,omitempty"`
+	ShardId               int32             `protobuf:"varint,2,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
+	SourceCluster         string            `protobuf:"bytes,3,opt,name=source_cluster,json=sourceCluster,proto3" json:"source_cluster,omitempty"`
+	InclusiveEndMessageId *types.Int64Value `protobuf:"bytes,4,opt,name=inclusive_end_message_id,json=inclusiveEndMessageId,proto3" json:"inclusive_end_message_id,omitempty"`
+	PageSize              int32             `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	NextPageToken         []byte            `protobuf:"bytes,6,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{}          `json:"-"`
+	XXX_unrecognized      []byte            `json:"-"`
+	XXX_sizecache         int32             `json:"-"`
 }
 
-func (m *ReadDLQMessagesRequest) Reset()      { *m = ReadDLQMessagesRequest{} }
-func (*ReadDLQMessagesRequest) ProtoMessage() {}
+func (m *ReadDLQMessagesRequest) Reset()         { *m = ReadDLQMessagesRequest{} }
+func (m *ReadDLQMessagesRequest) String() string { return proto.CompactTextString(m) }
+func (*ReadDLQMessagesRequest) ProtoMessage()    {}
 func (*ReadDLQMessagesRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{26}
 }
@@ -1432,7 +1567,7 @@ func (m *ReadDLQMessagesRequest) GetType() v11.DLQType {
 	if m != nil {
 		return m.Type
 	}
-	return v11.DLQ_TYPE_INVALID
+	return v11.DLQType_DLQ_TYPE_INVALID
 }
 
 func (m *ReadDLQMessagesRequest) GetShardId() int32 {
@@ -1449,11 +1584,11 @@ func (m *ReadDLQMessagesRequest) GetSourceCluster() string {
 	return ""
 }
 
-func (m *ReadDLQMessagesRequest) GetInclusiveEndMessageId() int64 {
+func (m *ReadDLQMessagesRequest) GetInclusiveEndMessageId() *types.Int64Value {
 	if m != nil {
 		return m.InclusiveEndMessageId
 	}
-	return 0
+	return nil
 }
 
 func (m *ReadDLQMessagesRequest) GetPageSize() int32 {
@@ -1471,13 +1606,18 @@ func (m *ReadDLQMessagesRequest) GetNextPageToken() []byte {
 }
 
 type ReadDLQMessagesResponse struct {
-	Type             v11.DLQType            `protobuf:"varint,1,opt,name=type,proto3,enum=uber.cadence.shared.v1.DLQType" json:"type,omitempty"`
-	ReplicationTasks []*v11.ReplicationTask `protobuf:"bytes,2,rep,name=replication_tasks,json=replicationTasks,proto3" json:"replication_tasks,omitempty"`
-	NextPageToken    []byte                 `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Type                 v11.DLQType                `protobuf:"varint,1,opt,name=type,proto3,enum=uber.cadence.shared.v1.DLQType" json:"type,omitempty"`
+	ReplicationTasks     []*v11.ReplicationTask     `protobuf:"bytes,2,rep,name=replication_tasks,json=replicationTasks,proto3" json:"replication_tasks,omitempty"`
+	ReplicationTasksInfo []*v11.ReplicationTaskInfo `protobuf:"bytes,3,rep,name=replication_tasks_info,json=replicationTasksInfo,proto3" json:"replication_tasks_info,omitempty"`
+	NextPageToken        []byte                     `protobuf:"bytes,4,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                   `json:"-"`
+	XXX_unrecognized     []byte                     `json:"-"`
+	XXX_sizecache        int32                      `json:"-"`
 }
 
-func (m *ReadDLQMessagesResponse) Reset()      { *m = ReadDLQMessagesResponse{} }
-func (*ReadDLQMessagesResponse) ProtoMessage() {}
+func (m *ReadDLQMessagesResponse) Reset()         { *m = ReadDLQMessagesResponse{} }
+func (m *ReadDLQMessagesResponse) String() string { return proto.CompactTextString(m) }
+func (*ReadDLQMessagesResponse) ProtoMessage()    {}
 func (*ReadDLQMessagesResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{27}
 }
@@ -1512,12 +1652,19 @@ func (m *ReadDLQMessagesResponse) GetType() v11.DLQType {
 	if m != nil {
 		return m.Type
 	}
-	return v11.DLQ_TYPE_INVALID
+	return v11.DLQType_DLQ_TYPE_INVALID
 }
 
 func (m *ReadDLQMessagesResponse) GetReplicationTasks() []*v11.ReplicationTask {
 	if m != nil {
 		return m.ReplicationTasks
+	}
+	return nil
+}
+
+func (m *ReadDLQMessagesResponse) GetReplicationTasksInfo() []*v11.ReplicationTaskInfo {
+	if m != nil {
+		return m.ReplicationTasksInfo
 	}
 	return nil
 }
@@ -1530,14 +1677,18 @@ func (m *ReadDLQMessagesResponse) GetNextPageToken() []byte {
 }
 
 type PurgeDLQMessagesRequest struct {
-	Type                  v11.DLQType `protobuf:"varint,1,opt,name=type,proto3,enum=uber.cadence.shared.v1.DLQType" json:"type,omitempty"`
-	ShardId               int32       `protobuf:"varint,2,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
-	SourceCluster         string      `protobuf:"bytes,3,opt,name=source_cluster,json=sourceCluster,proto3" json:"source_cluster,omitempty"`
-	InclusiveEndMessageId int64       `protobuf:"varint,4,opt,name=inclusive_end_message_id,json=inclusiveEndMessageId,proto3" json:"inclusive_end_message_id,omitempty"`
+	Type                  v11.DLQType       `protobuf:"varint,1,opt,name=type,proto3,enum=uber.cadence.shared.v1.DLQType" json:"type,omitempty"`
+	ShardId               int32             `protobuf:"varint,2,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
+	SourceCluster         string            `protobuf:"bytes,3,opt,name=source_cluster,json=sourceCluster,proto3" json:"source_cluster,omitempty"`
+	InclusiveEndMessageId *types.Int64Value `protobuf:"bytes,4,opt,name=inclusive_end_message_id,json=inclusiveEndMessageId,proto3" json:"inclusive_end_message_id,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{}          `json:"-"`
+	XXX_unrecognized      []byte            `json:"-"`
+	XXX_sizecache         int32             `json:"-"`
 }
 
-func (m *PurgeDLQMessagesRequest) Reset()      { *m = PurgeDLQMessagesRequest{} }
-func (*PurgeDLQMessagesRequest) ProtoMessage() {}
+func (m *PurgeDLQMessagesRequest) Reset()         { *m = PurgeDLQMessagesRequest{} }
+func (m *PurgeDLQMessagesRequest) String() string { return proto.CompactTextString(m) }
+func (*PurgeDLQMessagesRequest) ProtoMessage()    {}
 func (*PurgeDLQMessagesRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{28}
 }
@@ -1572,7 +1723,7 @@ func (m *PurgeDLQMessagesRequest) GetType() v11.DLQType {
 	if m != nil {
 		return m.Type
 	}
-	return v11.DLQ_TYPE_INVALID
+	return v11.DLQType_DLQ_TYPE_INVALID
 }
 
 func (m *PurgeDLQMessagesRequest) GetShardId() int32 {
@@ -1589,18 +1740,22 @@ func (m *PurgeDLQMessagesRequest) GetSourceCluster() string {
 	return ""
 }
 
-func (m *PurgeDLQMessagesRequest) GetInclusiveEndMessageId() int64 {
+func (m *PurgeDLQMessagesRequest) GetInclusiveEndMessageId() *types.Int64Value {
 	if m != nil {
 		return m.InclusiveEndMessageId
 	}
-	return 0
+	return nil
 }
 
 type PurgeDLQMessagesResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *PurgeDLQMessagesResponse) Reset()      { *m = PurgeDLQMessagesResponse{} }
-func (*PurgeDLQMessagesResponse) ProtoMessage() {}
+func (m *PurgeDLQMessagesResponse) Reset()         { *m = PurgeDLQMessagesResponse{} }
+func (m *PurgeDLQMessagesResponse) String() string { return proto.CompactTextString(m) }
+func (*PurgeDLQMessagesResponse) ProtoMessage()    {}
 func (*PurgeDLQMessagesResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{29}
 }
@@ -1632,16 +1787,20 @@ func (m *PurgeDLQMessagesResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_PurgeDLQMessagesResponse proto.InternalMessageInfo
 
 type MergeDLQMessagesRequest struct {
-	Type                  v11.DLQType `protobuf:"varint,1,opt,name=type,proto3,enum=uber.cadence.shared.v1.DLQType" json:"type,omitempty"`
-	ShardId               int32       `protobuf:"varint,2,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
-	SourceCluster         string      `protobuf:"bytes,3,opt,name=source_cluster,json=sourceCluster,proto3" json:"source_cluster,omitempty"`
-	InclusiveEndMessageId int64       `protobuf:"varint,4,opt,name=inclusive_end_message_id,json=inclusiveEndMessageId,proto3" json:"inclusive_end_message_id,omitempty"`
-	PageSize              int32       `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	NextPageToken         []byte      `protobuf:"bytes,6,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Type                  v11.DLQType       `protobuf:"varint,1,opt,name=type,proto3,enum=uber.cadence.shared.v1.DLQType" json:"type,omitempty"`
+	ShardId               int32             `protobuf:"varint,2,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
+	SourceCluster         string            `protobuf:"bytes,3,opt,name=source_cluster,json=sourceCluster,proto3" json:"source_cluster,omitempty"`
+	InclusiveEndMessageId *types.Int64Value `protobuf:"bytes,4,opt,name=inclusive_end_message_id,json=inclusiveEndMessageId,proto3" json:"inclusive_end_message_id,omitempty"`
+	PageSize              int32             `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	NextPageToken         []byte            `protobuf:"bytes,6,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{}          `json:"-"`
+	XXX_unrecognized      []byte            `json:"-"`
+	XXX_sizecache         int32             `json:"-"`
 }
 
-func (m *MergeDLQMessagesRequest) Reset()      { *m = MergeDLQMessagesRequest{} }
-func (*MergeDLQMessagesRequest) ProtoMessage() {}
+func (m *MergeDLQMessagesRequest) Reset()         { *m = MergeDLQMessagesRequest{} }
+func (m *MergeDLQMessagesRequest) String() string { return proto.CompactTextString(m) }
+func (*MergeDLQMessagesRequest) ProtoMessage()    {}
 func (*MergeDLQMessagesRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{30}
 }
@@ -1676,7 +1835,7 @@ func (m *MergeDLQMessagesRequest) GetType() v11.DLQType {
 	if m != nil {
 		return m.Type
 	}
-	return v11.DLQ_TYPE_INVALID
+	return v11.DLQType_DLQ_TYPE_INVALID
 }
 
 func (m *MergeDLQMessagesRequest) GetShardId() int32 {
@@ -1693,11 +1852,11 @@ func (m *MergeDLQMessagesRequest) GetSourceCluster() string {
 	return ""
 }
 
-func (m *MergeDLQMessagesRequest) GetInclusiveEndMessageId() int64 {
+func (m *MergeDLQMessagesRequest) GetInclusiveEndMessageId() *types.Int64Value {
 	if m != nil {
 		return m.InclusiveEndMessageId
 	}
-	return 0
+	return nil
 }
 
 func (m *MergeDLQMessagesRequest) GetPageSize() int32 {
@@ -1715,11 +1874,15 @@ func (m *MergeDLQMessagesRequest) GetNextPageToken() []byte {
 }
 
 type MergeDLQMessagesResponse struct {
-	NextPageToken []byte `protobuf:"bytes,1,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	NextPageToken        []byte   `protobuf:"bytes,1,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *MergeDLQMessagesResponse) Reset()      { *m = MergeDLQMessagesResponse{} }
-func (*MergeDLQMessagesResponse) ProtoMessage() {}
+func (m *MergeDLQMessagesResponse) Reset()         { *m = MergeDLQMessagesResponse{} }
+func (m *MergeDLQMessagesResponse) String() string { return proto.CompactTextString(m) }
+func (*MergeDLQMessagesResponse) ProtoMessage()    {}
 func (*MergeDLQMessagesResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{31}
 }
@@ -1758,12 +1921,16 @@ func (m *MergeDLQMessagesResponse) GetNextPageToken() []byte {
 }
 
 type RefreshWorkflowTasksRequest struct {
-	Domain            string                `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *v1.WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	Domain               string                `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *v1.WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
-func (m *RefreshWorkflowTasksRequest) Reset()      { *m = RefreshWorkflowTasksRequest{} }
-func (*RefreshWorkflowTasksRequest) ProtoMessage() {}
+func (m *RefreshWorkflowTasksRequest) Reset()         { *m = RefreshWorkflowTasksRequest{} }
+func (m *RefreshWorkflowTasksRequest) String() string { return proto.CompactTextString(m) }
+func (*RefreshWorkflowTasksRequest) ProtoMessage()    {}
 func (*RefreshWorkflowTasksRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{32}
 }
@@ -1809,10 +1976,14 @@ func (m *RefreshWorkflowTasksRequest) GetWorkflowExecution() *v1.WorkflowExecuti
 }
 
 type RefreshWorkflowTasksResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RefreshWorkflowTasksResponse) Reset()      { *m = RefreshWorkflowTasksResponse{} }
-func (*RefreshWorkflowTasksResponse) ProtoMessage() {}
+func (m *RefreshWorkflowTasksResponse) Reset()         { *m = RefreshWorkflowTasksResponse{} }
+func (m *RefreshWorkflowTasksResponse) String() string { return proto.CompactTextString(m) }
+func (*RefreshWorkflowTasksResponse) ProtoMessage()    {}
 func (*RefreshWorkflowTasksResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{33}
 }
@@ -1844,15 +2015,19 @@ func (m *RefreshWorkflowTasksResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_RefreshWorkflowTasksResponse proto.InternalMessageInfo
 
 type ResendReplicationTasksRequest struct {
-	DomainId          string                  `protobuf:"bytes,1,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
-	WorkflowExecution *v1.WorkflowExecution   `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	RemoteCluster     string                  `protobuf:"bytes,3,opt,name=remote_cluster,json=remoteCluster,proto3" json:"remote_cluster,omitempty"`
-	StartEvent        *v11.VersionHistoryItem `protobuf:"bytes,4,opt,name=start_event,json=startEvent,proto3" json:"start_event,omitempty"`
-	EndEvent          *v11.VersionHistoryItem `protobuf:"bytes,5,opt,name=end_event,json=endEvent,proto3" json:"end_event,omitempty"`
+	DomainId             string                  `protobuf:"bytes,1,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
+	WorkflowExecution    *v1.WorkflowExecution   `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	RemoteCluster        string                  `protobuf:"bytes,3,opt,name=remote_cluster,json=remoteCluster,proto3" json:"remote_cluster,omitempty"`
+	StartEvent           *v11.VersionHistoryItem `protobuf:"bytes,4,opt,name=start_event,json=startEvent,proto3" json:"start_event,omitempty"`
+	EndEvent             *v11.VersionHistoryItem `protobuf:"bytes,5,opt,name=end_event,json=endEvent,proto3" json:"end_event,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                `json:"-"`
+	XXX_unrecognized     []byte                  `json:"-"`
+	XXX_sizecache        int32                   `json:"-"`
 }
 
-func (m *ResendReplicationTasksRequest) Reset()      { *m = ResendReplicationTasksRequest{} }
-func (*ResendReplicationTasksRequest) ProtoMessage() {}
+func (m *ResendReplicationTasksRequest) Reset()         { *m = ResendReplicationTasksRequest{} }
+func (m *ResendReplicationTasksRequest) String() string { return proto.CompactTextString(m) }
+func (*ResendReplicationTasksRequest) ProtoMessage()    {}
 func (*ResendReplicationTasksRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{34}
 }
@@ -1919,10 +2094,14 @@ func (m *ResendReplicationTasksRequest) GetEndEvent() *v11.VersionHistoryItem {
 }
 
 type ResendReplicationTasksResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ResendReplicationTasksResponse) Reset()      { *m = ResendReplicationTasksResponse{} }
-func (*ResendReplicationTasksResponse) ProtoMessage() {}
+func (m *ResendReplicationTasksResponse) Reset()         { *m = ResendReplicationTasksResponse{} }
+func (m *ResendReplicationTasksResponse) String() string { return proto.CompactTextString(m) }
+func (*ResendReplicationTasksResponse) ProtoMessage()    {}
 func (*ResendReplicationTasksResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c6fc96d64a8b67fd, []int{35}
 }
@@ -1995,2388 +2174,140 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("github.com/uber/cadence/.gen/proto/admin/v1/service.proto", fileDescriptor_c6fc96d64a8b67fd)
+	proto.RegisterFile("uber/cadence/admin/v1/service.proto", fileDescriptor_c6fc96d64a8b67fd)
 }
 
 var fileDescriptor_c6fc96d64a8b67fd = []byte{
-	// 2030 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xdc, 0x59, 0xcd, 0x6f, 0x1c, 0x49,
-	0x15, 0x77, 0xcf, 0xd8, 0x8e, 0xfd, 0x9c, 0x8c, 0xed, 0x5a, 0x7f, 0x8c, 0xdb, 0xc9, 0xc4, 0xe9,
-	0xdd, 0x6c, 0x0c, 0xbb, 0x8c, 0xf1, 0x84, 0xfd, 0xd6, 0x02, 0xfe, 0xc2, 0x99, 0x25, 0x21, 0x49,
-	0xdb, 0x04, 0x89, 0x4b, 0xab, 0x67, 0xfa, 0x79, 0xdc, 0x78, 0xa6, 0xbb, 0xb7, 0xab, 0x66, 0x12,
-	0xaf, 0x90, 0x58, 0x21, 0xb8, 0xc1, 0x2a, 0x88, 0x03, 0x47, 0x0e, 0x5c, 0xb8, 0x72, 0x47, 0xdc,
-	0x90, 0x40, 0xe2, 0x10, 0x24, 0x0e, 0x7b, 0x83, 0x38, 0x17, 0x24, 0x2e, 0x2b, 0xf1, 0x0f, 0xa0,
-	0xaa, 0xae, 0x9e, 0xcf, 0xae, 0xf9, 0x70, 0x22, 0x05, 0xb8, 0x4d, 0xbf, 0x7a, 0xaf, 0xde, 0x47,
-	0xbd, 0xf7, 0xab, 0xf7, 0x6a, 0xe0, 0xd5, 0x7a, 0x09, 0xc3, 0x8d, 0xb2, 0xed, 0xa0, 0x57, 0xc6,
-	0x0d, 0xdb, 0xa9, 0xb9, 0xde, 0x46, 0x63, 0x73, 0x83, 0x62, 0xd8, 0x70, 0xcb, 0x98, 0x0f, 0x42,
-	0x9f, 0xf9, 0x64, 0x91, 0x33, 0xe5, 0x25, 0x53, 0x5e, 0x30, 0xe5, 0x1b, 0x9b, 0xfa, 0xd5, 0x8a,
-	0xef, 0x57, 0xaa, 0xb8, 0x21, 0x98, 0x4a, 0xf5, 0xa3, 0x0d, 0xe6, 0xd6, 0x90, 0x32, 0xbb, 0x16,
-	0x44, 0x72, 0xfa, 0x65, 0x07, 0x03, 0xf4, 0xb8, 0x94, 0x8b, 0x74, 0xa3, 0xe2, 0x57, 0x7c, 0x41,
-	0x97, 0xab, 0x6b, 0x9d, 0xaa, 0x03, 0x97, 0x2b, 0x2e, 0xfb, 0xb5, 0x9a, 0xef, 0x49, 0x8e, 0xd7,
-	0x92, 0x38, 0x1a, 0x2e, 0x75, 0x4b, 0x6e, 0xd5, 0x65, 0xa7, 0x89, 0x5c, 0xf4, 0xd8, 0x0e, 0xd1,
-	0x11, 0x5b, 0x55, 0xeb, 0x94, 0x61, 0x38, 0x80, 0xeb, 0xd8, 0xa5, 0xcc, 0x0f, 0xe3, 0xbd, 0x0c,
-	0x05, 0xd7, 0xc7, 0x75, 0xac, 0xcb, 0x68, 0xe8, 0xeb, 0x0a, 0x9e, 0x10, 0x83, 0xaa, 0x5b, 0xb6,
-	0x99, 0x1b, 0xdb, 0x6f, 0xfc, 0x42, 0x83, 0xb5, 0x5d, 0xa4, 0xe5, 0xd0, 0x2d, 0xe1, 0xf7, 0xfc,
-	0xf0, 0xe4, 0xa8, 0xea, 0x3f, 0xdc, 0x7b, 0x84, 0xe5, 0x3a, 0xe7, 0x31, 0xf1, 0xe3, 0x3a, 0x52,
-	0x46, 0x96, 0x60, 0xd2, 0xf1, 0x6b, 0xb6, 0xeb, 0x65, 0xb5, 0x35, 0x6d, 0x7d, 0xda, 0x94, 0x5f,
-	0xe4, 0xbb, 0x40, 0x1e, 0x4a, 0x19, 0x0b, 0x63, 0xa1, 0x6c, 0x6a, 0x4d, 0x5b, 0x9f, 0x29, 0xbc,
-	0x9e, 0xef, 0x3c, 0x91, 0xc0, 0xcd, 0x37, 0x36, 0xf3, 0xbd, 0x2a, 0xe6, 0x1f, 0x76, 0x93, 0x8c,
-	0xbf, 0x6a, 0x70, 0xad, 0x8f, 0x4d, 0x34, 0xf0, 0x3d, 0x8a, 0x64, 0x05, 0xa6, 0xb8, 0x63, 0x8e,
-	0xe5, 0x3a, 0xc2, 0xac, 0x09, 0xf3, 0x82, 0xf8, 0x2e, 0x3a, 0xe4, 0x1a, 0x5c, 0x94, 0x31, 0xb3,
-	0x6c, 0xc7, 0x09, 0x85, 0x45, 0xd3, 0xe6, 0x8c, 0xa4, 0x6d, 0x39, 0x4e, 0x48, 0x6e, 0xc2, 0x52,
-	0xad, 0xce, 0xec, 0x52, 0x15, 0x2d, 0xca, 0x6c, 0x86, 0x96, 0xeb, 0x59, 0x65, 0xbb, 0x7c, 0x8c,
-	0xd9, 0xb4, 0x60, 0x7e, 0x45, 0xae, 0x1e, 0xf0, 0xc5, 0xa2, 0xb7, 0xc3, 0x97, 0xc8, 0x7b, 0xb0,
-	0xd2, 0x23, 0xe4, 0xd8, 0xcc, 0x2e, 0xd9, 0x14, 0xb3, 0xe3, 0x42, 0x6e, 0xa9, 0x53, 0x6e, 0x57,
-	0xae, 0x1a, 0xbf, 0xd3, 0x40, 0x8f, 0x7d, 0xba, 0x15, 0xd9, 0x71, 0xcb, 0xa7, 0x2c, 0x8e, 0x30,
-	0xb7, 0xd8, 0xa7, 0x4c, 0x98, 0x8b, 0x94, 0xca, 0x38, 0xcf, 0x70, 0xda, 0x56, 0x44, 0xea, 0xf0,
-	0x37, 0xd5, 0xe9, 0x6f, 0xf2, 0x39, 0xa4, 0x9f, 0xf7, 0x1c, 0x7e, 0x9c, 0x82, 0xd5, 0x44, 0x9b,
-	0xe5, 0x09, 0xac, 0xc3, 0x9c, 0x57, 0xaf, 0x95, 0x30, 0xb4, 0xfc, 0x23, 0x4b, 0xd8, 0x42, 0xe5,
-	0x49, 0x64, 0x22, 0xfa, 0xdd, 0xa3, 0x03, 0x41, 0x25, 0xab, 0x30, 0x1d, 0xdb, 0x4e, 0xb3, 0xa9,
-	0xb5, 0xf4, 0xfa, 0x84, 0x39, 0x25, 0x8d, 0xa7, 0xe4, 0x23, 0xb8, 0x18, 0xe5, 0x53, 0xdb, 0x01,
-	0xcc, 0x14, 0x6e, 0x74, 0xda, 0x1d, 0xe5, 0x30, 0x37, 0x7d, 0x57, 0xf0, 0x8a, 0x03, 0x29, 0x7a,
-	0x47, 0xbe, 0x39, 0xe3, 0xb4, 0x08, 0xe4, 0x6d, 0x58, 0x8e, 0x14, 0x95, 0x7d, 0x8f, 0x85, 0x7e,
-	0xb5, 0x8a, 0xa1, 0x38, 0xaa, 0x3a, 0x95, 0xe7, 0xb3, 0x28, 0x96, 0x77, 0x9a, 0xab, 0x07, 0x62,
-	0x91, 0x64, 0xe1, 0x42, 0x1c, 0xfa, 0x09, 0xc1, 0x17, 0x7f, 0x1a, 0x79, 0x98, 0xdf, 0xa9, 0xfa,
-	0x14, 0x85, 0x27, 0xf1, 0x71, 0xa9, 0x73, 0xcf, 0x58, 0x00, 0xd2, 0xce, 0x1f, 0x85, 0x8a, 0xa7,
-	0xf4, 0xbc, 0x89, 0x35, 0xbf, 0x81, 0x87, 0x36, 0x3d, 0x19, 0xbc, 0x0d, 0xf9, 0x10, 0xa6, 0x99,
-	0x4d, 0x4f, 0x2c, 0x76, 0x1a, 0xa0, 0x38, 0xee, 0x4c, 0x61, 0x4d, 0x15, 0x11, 0xbe, 0xe5, 0xe1,
-	0x69, 0x80, 0xe6, 0x14, 0x93, 0xbf, 0xc8, 0x32, 0x5c, 0x10, 0xe2, 0xae, 0x23, 0xc2, 0x99, 0x36,
-	0x27, 0xf9, 0x67, 0xd1, 0x21, 0x45, 0x98, 0x6d, 0xa1, 0x93, 0xc5, 0xd1, 0x50, 0x04, 0x66, 0xa6,
-	0xa0, 0xe7, 0x23, 0xa8, 0xcc, 0xc7, 0x50, 0x99, 0x3f, 0x8c, 0xa1, 0x72, 0x7b, 0xfc, 0xf1, 0xdf,
-	0xaf, 0x6a, 0x66, 0xa6, 0x25, 0xc8, 0x97, 0xb8, 0xa7, 0xed, 0x2e, 0x49, 0x4f, 0x1f, 0x0b, 0x4f,
-	0x29, 0xb2, 0xfb, 0x1c, 0x8f, 0x86, 0xf0, 0xf4, 0x1a, 0x5c, 0x94, 0x30, 0x68, 0x79, 0x76, 0x0d,
-	0xe3, 0x62, 0x95, 0xb4, 0xef, 0xd8, 0x35, 0xec, 0x0c, 0x46, 0x7a, 0xd4, 0x60, 0x44, 0x86, 0xb6,
-	0x2c, 0x92, 0x86, 0xfe, 0x52, 0x83, 0x85, 0x38, 0xbb, 0xff, 0x7b, 0x6c, 0xbd, 0x0b, 0x8b, 0x5d,
-	0x46, 0xc9, 0x62, 0x7b, 0x1b, 0x96, 0x83, 0xd0, 0x2f, 0x23, 0xa5, 0xae, 0x57, 0xb1, 0x04, 0xd8,
-	0x47, 0x20, 0xc4, 0x6b, 0x2e, 0xcd, 0x33, 0xbb, 0xb5, 0x2c, 0x24, 0x05, 0x02, 0x51, 0xe3, 0xdf,
-	0x29, 0xb8, 0xb1, 0x8f, 0xac, 0xb7, 0xe0, 0xed, 0x87, 0xb2, 0xa6, 0x1f, 0x14, 0x5e, 0x0e, 0xce,
-	0x93, 0x6f, 0xc3, 0x0c, 0x65, 0x76, 0xc8, 0x2c, 0x6c, 0xa0, 0xc7, 0x64, 0xdd, 0x7f, 0x59, 0x15,
-	0xac, 0x07, 0x18, 0x52, 0xd7, 0xf7, 0xa4, 0xd1, 0x45, 0x86, 0x35, 0x13, 0x84, 0xf8, 0x1e, 0x97,
-	0x26, 0xfb, 0x30, 0x8d, 0x9e, 0x23, 0xb7, 0x1a, 0x1f, 0x79, 0xab, 0x29, 0xf4, 0x9c, 0x68, 0xa3,
-	0x55, 0x98, 0x0e, 0xec, 0x0a, 0x5a, 0xd4, 0xfd, 0x04, 0x05, 0x18, 0x4c, 0x98, 0x53, 0x9c, 0x70,
-	0xe0, 0x7e, 0x82, 0xe4, 0x75, 0x98, 0xf5, 0xf0, 0x11, 0xb3, 0x04, 0x07, 0xf3, 0x4f, 0xd0, 0xcb,
-	0x4e, 0xae, 0x69, 0xeb, 0x17, 0xcd, 0x4b, 0x9c, 0x7c, 0xcf, 0xae, 0xe0, 0x21, 0x27, 0x1a, 0xff,
-	0xd2, 0x60, 0x7d, 0x70, 0xd4, 0xe5, 0xd1, 0x26, 0x6c, 0xaa, 0x25, 0x6c, 0x4a, 0xbe, 0x05, 0xb3,
-	0xf1, 0xb5, 0x56, 0xb2, 0x59, 0xf9, 0x18, 0x23, 0x2c, 0x9d, 0x29, 0x5c, 0x49, 0x3c, 0x03, 0x7e,
-	0xf7, 0x6c, 0x57, 0xfd, 0x92, 0x99, 0x91, 0x52, 0xdb, 0x91, 0x10, 0xb9, 0x0b, 0xb3, 0x8d, 0x28,
-	0x02, 0x96, 0x5c, 0x49, 0xbe, 0x2b, 0x54, 0x01, 0x33, 0x33, 0x8d, 0x8e, 0x6f, 0xe3, 0x27, 0x1a,
-	0x5c, 0xd9, 0x47, 0x66, 0xb6, 0xba, 0x8b, 0x3b, 0x48, 0xa9, 0x5d, 0x41, 0x1a, 0x67, 0xd6, 0x37,
-	0x61, 0x52, 0x38, 0x16, 0x25, 0xeb, 0x4c, 0x61, 0x5d, 0xa5, 0xa9, 0x6d, 0x0f, 0xe1, 0xb4, 0x29,
-	0xe5, 0x86, 0x28, 0x3d, 0xe3, 0xd3, 0x14, 0xe4, 0x54, 0x66, 0xc8, 0x50, 0xfb, 0x90, 0x89, 0x6a,
-	0xbb, 0x26, 0x57, 0xa4, 0x3d, 0xb7, 0xf2, 0x89, 0xfd, 0x63, 0xbe, 0xff, 0x76, 0x79, 0x01, 0xf2,
-	0x31, 0x75, 0xcf, 0x63, 0xe1, 0xa9, 0x79, 0x89, 0xb6, 0xd3, 0xf4, 0x1a, 0x90, 0x5e, 0x26, 0x32,
-	0x07, 0xe9, 0x13, 0x3c, 0x95, 0xe8, 0xc2, 0x7f, 0x92, 0x2d, 0x98, 0x68, 0xd8, 0xd5, 0x3a, 0xca,
-	0xaa, 0x7a, 0x63, 0x88, 0xf8, 0x34, 0xad, 0x89, 0x24, 0xdf, 0x4f, 0xbd, 0xab, 0x19, 0x1e, 0xac,
-	0xed, 0x23, 0xdb, 0xbd, 0x7d, 0xbf, 0xcf, 0x59, 0x7c, 0x04, 0x10, 0xdd, 0x0d, 0xde, 0x91, 0x1f,
-	0xfb, 0x3f, 0x8c, 0x3e, 0x8e, 0x56, 0xe2, 0xc6, 0x15, 0x00, 0xc7, 0x7f, 0x51, 0xe3, 0x14, 0xae,
-	0xf5, 0xd1, 0x27, 0x83, 0x7e, 0x08, 0xf3, 0x6d, 0x8d, 0xa7, 0xc5, 0xa5, 0x63, 0xbd, 0x37, 0x86,
-	0xd4, 0x6b, 0xce, 0x85, 0x9d, 0x04, 0x6a, 0xfc, 0x41, 0x83, 0x57, 0xb9, 0x6e, 0x01, 0x51, 0x7d,
-	0xdc, 0x7d, 0x0f, 0x56, 0xaa, 0x36, 0x65, 0x56, 0x88, 0x2c, 0x74, 0xb1, 0x81, 0xcd, 0xb3, 0x8f,
-	0xf1, 0x3d, 0x6d, 0x2e, 0x71, 0x06, 0x33, 0x5e, 0x97, 0x1b, 0x14, 0x9d, 0xa6, 0xa8, 0x44, 0xd6,
-	0x4e, 0xd1, 0x54, 0x4b, 0xf4, 0x5e, 0xbc, 0xde, 0x12, 0xed, 0x4e, 0xd7, 0x74, 0x6f, 0xba, 0xfa,
-	0xf0, 0x5a, 0x7f, 0xfb, 0x65, 0xf8, 0xf6, 0x61, 0xaa, 0x2d, 0x5b, 0x47, 0xce, 0x8e, 0xa6, 0xb0,
-	0xf1, 0x7b, 0x0d, 0x16, 0x4c, 0xb4, 0x83, 0xa0, 0x7a, 0x2a, 0xa0, 0x8e, 0xbe, 0x24, 0xdc, 0x7f,
-	0x0b, 0x26, 0x05, 0x4c, 0x53, 0x09, 0x3b, 0x03, 0xe0, 0x4b, 0x32, 0x1b, 0xcb, 0xb0, 0xd8, 0x65,
-	0xbd, 0xbc, 0xc9, 0x7f, 0x9d, 0x82, 0x95, 0x2d, 0xc7, 0x39, 0x40, 0x3b, 0x2c, 0x1f, 0x6f, 0x31,
-	0x16, 0xba, 0xa5, 0x3a, 0x6b, 0x5e, 0xe7, 0x01, 0xcc, 0x51, 0xb1, 0x62, 0xd9, 0xf1, 0x92, 0x4c,
-	0xbe, 0x3d, 0x45, 0xd1, 0x2b, 0xf7, 0xca, 0x77, 0x91, 0xa3, 0x8a, 0x9f, 0xa5, 0x9d, 0x54, 0x72,
-	0x1d, 0x32, 0x14, 0xcb, 0xf5, 0x50, 0x74, 0x58, 0x02, 0xce, 0x23, 0xb0, 0xba, 0x14, 0x53, 0x05,
-	0xb2, 0xe9, 0x2e, 0x2c, 0x24, 0xed, 0xd7, 0x0e, 0x0e, 0xd3, 0x11, 0x38, 0x7c, 0xd0, 0x0e, 0x0e,
-	0x99, 0xc2, 0xf5, 0xc4, 0x78, 0x15, 0x3d, 0x07, 0x1f, 0xa1, 0xf3, 0x80, 0x33, 0x8a, 0xa6, 0xa2,
-	0x0d, 0x16, 0x2e, 0x83, 0x9e, 0xe4, 0x94, 0x8c, 0x5f, 0x16, 0x96, 0xe2, 0x9e, 0x63, 0x27, 0xca,
-	0x4f, 0xe9, 0xaf, 0xf1, 0x37, 0x0d, 0x96, 0x7b, 0x96, 0x64, 0x5a, 0x1e, 0xc3, 0x0a, 0xad, 0x07,
-	0x81, 0x1f, 0x32, 0x74, 0xac, 0x72, 0xd5, 0x45, 0x8f, 0x59, 0xf2, 0x5e, 0x88, 0xf3, 0xf4, 0xcd,
-	0x44, 0x43, 0x0f, 0x62, 0xa9, 0x1d, 0x21, 0x24, 0xef, 0x16, 0x6a, 0x2e, 0xd3, 0xe4, 0x05, 0x7e,
-	0x5f, 0xd5, 0x90, 0xcf, 0x13, 0xf4, 0xd8, 0x0d, 0x04, 0x6c, 0x25, 0xe7, 0x60, 0xab, 0x0e, 0xee,
-	0x34, 0xd9, 0x05, 0x60, 0x65, 0x6a, 0x1d, 0xdf, 0xc6, 0xcf, 0x53, 0xb0, 0x64, 0xa2, 0xed, 0xec,
-	0xde, 0xbe, 0xdf, 0x8d, 0x16, 0x37, 0x61, 0x5c, 0x74, 0x6e, 0x9a, 0x88, 0xf4, 0x55, 0xe5, 0x10,
-	0x72, 0xfb, 0xbe, 0x88, 0xb1, 0x60, 0xee, 0x37, 0x9a, 0xf1, 0x5c, 0xf0, 0xeb, 0x61, 0x19, 0x2d,
-	0x59, 0xfa, 0x12, 0x09, 0x2e, 0x45, 0x54, 0x19, 0x54, 0xf2, 0x0e, 0x64, 0x5d, 0x8f, 0x73, 0xb8,
-	0x0d, 0xb4, 0x78, 0x1f, 0xd3, 0x06, 0x34, 0xe3, 0x02, 0x68, 0x16, 0x9b, 0xeb, 0x7b, 0x5e, 0x1b,
-	0xce, 0xbc, 0x90, 0x6e, 0xe5, 0x2f, 0x1a, 0x2c, 0xf7, 0xc4, 0x43, 0x1e, 0xf3, 0xb9, 0x02, 0x92,
-	0x88, 0xf8, 0xa9, 0xe7, 0x44, 0xfc, 0x24, 0x77, 0xd2, 0x49, 0xee, 0xfc, 0x59, 0x83, 0xe5, 0x7b,
-	0xf5, 0xb0, 0x82, 0xff, 0xfb, 0xe7, 0x6b, 0xe8, 0x90, 0xed, 0x75, 0x45, 0xd6, 0xed, 0x67, 0x29,
-	0x58, 0xbe, 0x83, 0xff, 0x17, 0x7e, 0xbe, 0x98, 0x3c, 0xde, 0x86, 0x6c, 0x6f, 0x3c, 0x46, 0x6b,
-	0xb2, 0x8d, 0x9f, 0x69, 0xb0, 0x6a, 0xe2, 0x51, 0x88, 0xf4, 0x38, 0xbe, 0xcc, 0x44, 0xf6, 0xbd,
-	0xa4, 0xb7, 0xb0, 0x1c, 0x5c, 0x4e, 0xb6, 0x46, 0xe6, 0xc0, 0x93, 0x14, 0x5c, 0xe1, 0xc3, 0xad,
-	0xe7, 0x74, 0xd5, 0x4f, 0xd3, 0xe0, 0x55, 0x98, 0x96, 0xcf, 0x2b, 0xb2, 0xdf, 0x99, 0x36, 0xa7,
-	0x22, 0x82, 0xf2, 0xe5, 0xe8, 0xb9, 0x6f, 0xf8, 0xeb, 0x90, 0x09, 0xb1, 0xe6, 0xb3, 0x9e, 0x6c,
-	0x89, 0xa8, 0x71, 0xb6, 0x74, 0x0d, 0x80, 0xe3, 0x2f, 0x6e, 0x00, 0x9c, 0x38, 0xff, 0x00, 0x68,
-	0xac, 0x41, 0x4e, 0x15, 0xd1, 0x28, 0xe8, 0x85, 0x3f, 0xce, 0xc3, 0xd4, 0x16, 0xef, 0x16, 0xb6,
-	0xee, 0x15, 0xc9, 0x67, 0x1a, 0xac, 0x28, 0x5f, 0x2b, 0xc9, 0x3b, 0x8a, 0x1e, 0x63, 0xd0, 0x9b,
-	0xab, 0xfe, 0xee, 0xe8, 0x82, 0x32, 0xd3, 0x7f, 0x08, 0xaf, 0x24, 0xbc, 0xda, 0x91, 0xcd, 0x01,
-	0x1b, 0xf6, 0xbe, 0x4a, 0xea, 0x85, 0x51, 0x44, 0xa4, 0x76, 0x1b, 0xa0, 0xf5, 0xfe, 0x45, 0xd6,
-	0x15, 0x3b, 0xf4, 0x3c, 0xa9, 0xe9, 0x5f, 0x1a, 0x82, 0xb3, 0xa5, 0xa2, 0xf5, 0xf0, 0xa4, 0x54,
-	0xd1, 0xf3, 0xdc, 0xa6, 0x54, 0xd1, 0xfb, 0x8a, 0x15, 0xa9, 0x88, 0x9f, 0x8c, 0xfa, 0xa8, 0xe8,
-	0x7a, 0xe7, 0xea, 0xa3, 0xa2, 0xfb, 0xfd, 0x89, 0xfc, 0x00, 0x2e, 0x75, 0xbc, 0xf4, 0x90, 0x37,
-	0x06, 0x44, 0xbb, 0x43, 0xd1, 0x9b, 0xc3, 0x31, 0x4b, 0x5d, 0xbf, 0xd1, 0xc4, 0x5c, 0xd8, 0xf7,
-	0x39, 0x82, 0x7c, 0x5d, 0x3d, 0x03, 0x0f, 0xf3, 0x7a, 0xa4, 0x7f, 0xe3, 0xdc, 0xf2, 0xd2, 0xca,
-	0x9f, 0x6a, 0xb0, 0x94, 0x3c, 0x70, 0x93, 0xaf, 0x8d, 0x38, 0x9f, 0x47, 0x16, 0xbd, 0x75, 0xae,
-	0xa9, 0x5e, 0x54, 0xb4, 0x72, 0xaa, 0x55, 0x56, 0xf4, 0xa0, 0xb9, 0x5b, 0x59, 0xd1, 0x83, 0x07,
-	0xe8, 0x5f, 0x69, 0x70, 0xb9, 0xdf, 0xa8, 0x48, 0xde, 0xef, 0xb3, 0xf5, 0x80, 0xf9, 0x58, 0xff,
-	0xe0, 0x5c, 0xb2, 0xad, 0x24, 0xee, 0x98, 0xc9, 0x94, 0x49, 0x9c, 0x34, 0x77, 0x2a, 0x93, 0x38,
-	0x71, 0xcc, 0x23, 0xa7, 0x40, 0x7a, 0x87, 0x18, 0xf2, 0xd5, 0x51, 0x87, 0x38, 0x7d, 0x73, 0x04,
-	0x09, 0xa9, 0x3a, 0x80, 0xd9, 0xae, 0x31, 0x88, 0x7c, 0x65, 0x40, 0x01, 0x76, 0x4e, 0x52, 0x7a,
-	0x7e, 0x58, 0xf6, 0x96, 0xc6, 0xae, 0x8e, 0x5c, 0xa9, 0x31, 0x79, 0x92, 0x51, 0x6a, 0x54, 0x35,
-	0xfa, 0x14, 0xe6, 0xba, 0x3b, 0x4d, 0xa2, 0xda, 0x43, 0xd1, 0x5d, 0xeb, 0x1b, 0x43, 0xf3, 0xb7,
-	0x94, 0x76, 0x77, 0x6c, 0x4a, 0xa5, 0x8a, 0x56, 0x57, 0xa9, 0x54, 0xd9, 0x0a, 0xfe, 0x08, 0x16,
-	0x92, 0x7a, 0x2a, 0x52, 0x50, 0x46, 0x4c, 0xd9, 0x0e, 0xea, 0x37, 0x47, 0x92, 0x69, 0x03, 0xba,
-	0xe4, 0x16, 0x43, 0x09, 0x74, 0x7d, 0x7b, 0x3c, 0x25, 0xd0, 0xf5, 0xef, 0x63, 0xb6, 0x3f, 0x7c,
-	0xf2, 0x34, 0x37, 0xf6, 0xf9, 0xd3, 0xdc, 0xd8, 0x17, 0x4f, 0x73, 0xda, 0xa7, 0x67, 0x39, 0xed,
-	0xb7, 0x67, 0x39, 0xed, 0x4f, 0x67, 0x39, 0xed, 0xc9, 0x59, 0x4e, 0xfb, 0xc7, 0x59, 0x4e, 0xfb,
-	0xe7, 0x59, 0x6e, 0xec, 0x8b, 0xb3, 0x9c, 0xf6, 0xf8, 0x59, 0x6e, 0xec, 0xc9, 0xb3, 0xdc, 0xd8,
-	0xe7, 0xcf, 0x72, 0x63, 0xdf, 0xbf, 0x20, 0xb6, 0x6f, 0x6c, 0x96, 0x26, 0xc5, 0x5f, 0x45, 0x37,
-	0xff, 0x13, 0x00, 0x00, 0xff, 0xff, 0xf8, 0x1d, 0x5e, 0xf8, 0xa1, 0x1f, 0x00, 0x00,
-}
-
-func (this *DescribeWorkflowExecutionRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DescribeWorkflowExecutionRequest)
-	if !ok {
-		that2, ok := that.(DescribeWorkflowExecutionRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	return true
-}
-func (this *DescribeWorkflowExecutionResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DescribeWorkflowExecutionResponse)
-	if !ok {
-		that2, ok := that.(DescribeWorkflowExecutionResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ShardId != that1.ShardId {
-		return false
-	}
-	if this.HistoryAddr != that1.HistoryAddr {
-		return false
-	}
-	if this.MutableStateInCache != that1.MutableStateInCache {
-		return false
-	}
-	if this.MutableStateInDatabase != that1.MutableStateInDatabase {
-		return false
-	}
-	return true
-}
-func (this *DescribeHistoryHostRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DescribeHistoryHostRequest)
-	if !ok {
-		that2, ok := that.(DescribeHistoryHostRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.HostAddress != that1.HostAddress {
-		return false
-	}
-	if this.ShardId != that1.ShardId {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	return true
-}
-func (this *DescribeHistoryHostResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DescribeHistoryHostResponse)
-	if !ok {
-		that2, ok := that.(DescribeHistoryHostResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.NumberOfShards != that1.NumberOfShards {
-		return false
-	}
-	if len(this.ShardIds) != len(that1.ShardIds) {
-		return false
-	}
-	for i := range this.ShardIds {
-		if this.ShardIds[i] != that1.ShardIds[i] {
-			return false
-		}
-	}
-	if !this.DomainCache.Equal(that1.DomainCache) {
-		return false
-	}
-	if this.ShardControllerStatus != that1.ShardControllerStatus {
-		return false
-	}
-	if this.Address != that1.Address {
-		return false
-	}
-	return true
-}
-func (this *CloseShardRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*CloseShardRequest)
-	if !ok {
-		that2, ok := that.(CloseShardRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ShardId != that1.ShardId {
-		return false
-	}
-	return true
-}
-func (this *CloseShardResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*CloseShardResponse)
-	if !ok {
-		that2, ok := that.(CloseShardResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *RemoveTaskRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RemoveTaskRequest)
-	if !ok {
-		that2, ok := that.(RemoveTaskRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ShardId != that1.ShardId {
-		return false
-	}
-	if this.TaskType != that1.TaskType {
-		return false
-	}
-	if this.TaskId != that1.TaskId {
-		return false
-	}
-	if that1.VisibilityTime == nil {
-		if this.VisibilityTime != nil {
-			return false
-		}
-	} else if !this.VisibilityTime.Equal(*that1.VisibilityTime) {
-		return false
-	}
-	return true
-}
-func (this *RemoveTaskResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RemoveTaskResponse)
-	if !ok {
-		that2, ok := that.(RemoveTaskResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *ResetQueueRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ResetQueueRequest)
-	if !ok {
-		that2, ok := that.(ResetQueueRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ShardId != that1.ShardId {
-		return false
-	}
-	if this.ClusterName != that1.ClusterName {
-		return false
-	}
-	if this.TaskType != that1.TaskType {
-		return false
-	}
-	return true
-}
-func (this *ResetQueueResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ResetQueueResponse)
-	if !ok {
-		that2, ok := that.(ResetQueueResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *DescribeQueueRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DescribeQueueRequest)
-	if !ok {
-		that2, ok := that.(DescribeQueueRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ShardId != that1.ShardId {
-		return false
-	}
-	if this.ClusterName != that1.ClusterName {
-		return false
-	}
-	if this.TaskType != that1.TaskType {
-		return false
-	}
-	return true
-}
-func (this *DescribeQueueResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DescribeQueueResponse)
-	if !ok {
-		that2, ok := that.(DescribeQueueResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.ProcessingQueueStates) != len(that1.ProcessingQueueStates) {
-		return false
-	}
-	for i := range this.ProcessingQueueStates {
-		if this.ProcessingQueueStates[i] != that1.ProcessingQueueStates[i] {
-			return false
-		}
-	}
-	return true
-}
-func (this *GetWorkflowExecutionRawHistoryV2Request) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*GetWorkflowExecutionRawHistoryV2Request)
-	if !ok {
-		that2, ok := that.(GetWorkflowExecutionRawHistoryV2Request)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if !this.StartEvent.Equal(that1.StartEvent) {
-		return false
-	}
-	if !this.EndEvent.Equal(that1.EndEvent) {
-		return false
-	}
-	if this.PageSize != that1.PageSize {
-		return false
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	return true
-}
-func (this *GetWorkflowExecutionRawHistoryV2Response) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*GetWorkflowExecutionRawHistoryV2Response)
-	if !ok {
-		that2, ok := that.(GetWorkflowExecutionRawHistoryV2Response)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	if len(this.HistoryBatches) != len(that1.HistoryBatches) {
-		return false
-	}
-	for i := range this.HistoryBatches {
-		if !this.HistoryBatches[i].Equal(that1.HistoryBatches[i]) {
-			return false
-		}
-	}
-	if !this.VersionHistory.Equal(that1.VersionHistory) {
-		return false
-	}
-	return true
-}
-func (this *GetReplicationMessagesRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*GetReplicationMessagesRequest)
-	if !ok {
-		that2, ok := that.(GetReplicationMessagesRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.Tokens) != len(that1.Tokens) {
-		return false
-	}
-	for i := range this.Tokens {
-		if !this.Tokens[i].Equal(that1.Tokens[i]) {
-			return false
-		}
-	}
-	if this.ClusterName != that1.ClusterName {
-		return false
-	}
-	return true
-}
-func (this *GetReplicationMessagesResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*GetReplicationMessagesResponse)
-	if !ok {
-		that2, ok := that.(GetReplicationMessagesResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.ShardMessages) != len(that1.ShardMessages) {
-		return false
-	}
-	for i := range this.ShardMessages {
-		if !this.ShardMessages[i].Equal(that1.ShardMessages[i]) {
-			return false
-		}
-	}
-	return true
-}
-func (this *GetDLQReplicationMessagesRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*GetDLQReplicationMessagesRequest)
-	if !ok {
-		that2, ok := that.(GetDLQReplicationMessagesRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.TaskInfos) != len(that1.TaskInfos) {
-		return false
-	}
-	for i := range this.TaskInfos {
-		if !this.TaskInfos[i].Equal(that1.TaskInfos[i]) {
-			return false
-		}
-	}
-	return true
-}
-func (this *GetDLQReplicationMessagesResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*GetDLQReplicationMessagesResponse)
-	if !ok {
-		that2, ok := that.(GetDLQReplicationMessagesResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.ReplicationTasks) != len(that1.ReplicationTasks) {
-		return false
-	}
-	for i := range this.ReplicationTasks {
-		if !this.ReplicationTasks[i].Equal(that1.ReplicationTasks[i]) {
-			return false
-		}
-	}
-	return true
-}
-func (this *GetDomainReplicationMessagesRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*GetDomainReplicationMessagesRequest)
-	if !ok {
-		that2, ok := that.(GetDomainReplicationMessagesRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.LastRetrievedMessageId != that1.LastRetrievedMessageId {
-		return false
-	}
-	if this.LastProcessedMessageId != that1.LastProcessedMessageId {
-		return false
-	}
-	if this.ClusterName != that1.ClusterName {
-		return false
-	}
-	return true
-}
-func (this *GetDomainReplicationMessagesResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*GetDomainReplicationMessagesResponse)
-	if !ok {
-		that2, ok := that.(GetDomainReplicationMessagesResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Messages.Equal(that1.Messages) {
-		return false
-	}
-	return true
-}
-func (this *ReapplyEventsRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ReapplyEventsRequest)
-	if !ok {
-		that2, ok := that.(ReapplyEventsRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if !this.Events.Equal(that1.Events) {
-		return false
-	}
-	return true
-}
-func (this *ReapplyEventsResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ReapplyEventsResponse)
-	if !ok {
-		that2, ok := that.(ReapplyEventsResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *AddSearchAttributeRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*AddSearchAttributeRequest)
-	if !ok {
-		that2, ok := that.(AddSearchAttributeRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.SearchAttribute) != len(that1.SearchAttribute) {
-		return false
-	}
-	for i := range this.SearchAttribute {
-		if this.SearchAttribute[i] != that1.SearchAttribute[i] {
-			return false
-		}
-	}
-	if this.SecurityToken != that1.SecurityToken {
-		return false
-	}
-	return true
-}
-func (this *AddSearchAttributeResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*AddSearchAttributeResponse)
-	if !ok {
-		that2, ok := that.(AddSearchAttributeResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *DescribeClusterRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DescribeClusterRequest)
-	if !ok {
-		that2, ok := that.(DescribeClusterRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *DescribeClusterResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DescribeClusterResponse)
-	if !ok {
-		that2, ok := that.(DescribeClusterResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.SupportedClientVersions.Equal(that1.SupportedClientVersions) {
-		return false
-	}
-	if !this.MembershipInfo.Equal(that1.MembershipInfo) {
-		return false
-	}
-	return true
-}
-func (this *ReadDLQMessagesRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ReadDLQMessagesRequest)
-	if !ok {
-		that2, ok := that.(ReadDLQMessagesRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Type != that1.Type {
-		return false
-	}
-	if this.ShardId != that1.ShardId {
-		return false
-	}
-	if this.SourceCluster != that1.SourceCluster {
-		return false
-	}
-	if this.InclusiveEndMessageId != that1.InclusiveEndMessageId {
-		return false
-	}
-	if this.PageSize != that1.PageSize {
-		return false
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	return true
-}
-func (this *ReadDLQMessagesResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ReadDLQMessagesResponse)
-	if !ok {
-		that2, ok := that.(ReadDLQMessagesResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Type != that1.Type {
-		return false
-	}
-	if len(this.ReplicationTasks) != len(that1.ReplicationTasks) {
-		return false
-	}
-	for i := range this.ReplicationTasks {
-		if !this.ReplicationTasks[i].Equal(that1.ReplicationTasks[i]) {
-			return false
-		}
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	return true
-}
-func (this *PurgeDLQMessagesRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*PurgeDLQMessagesRequest)
-	if !ok {
-		that2, ok := that.(PurgeDLQMessagesRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Type != that1.Type {
-		return false
-	}
-	if this.ShardId != that1.ShardId {
-		return false
-	}
-	if this.SourceCluster != that1.SourceCluster {
-		return false
-	}
-	if this.InclusiveEndMessageId != that1.InclusiveEndMessageId {
-		return false
-	}
-	return true
-}
-func (this *PurgeDLQMessagesResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*PurgeDLQMessagesResponse)
-	if !ok {
-		that2, ok := that.(PurgeDLQMessagesResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *MergeDLQMessagesRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*MergeDLQMessagesRequest)
-	if !ok {
-		that2, ok := that.(MergeDLQMessagesRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Type != that1.Type {
-		return false
-	}
-	if this.ShardId != that1.ShardId {
-		return false
-	}
-	if this.SourceCluster != that1.SourceCluster {
-		return false
-	}
-	if this.InclusiveEndMessageId != that1.InclusiveEndMessageId {
-		return false
-	}
-	if this.PageSize != that1.PageSize {
-		return false
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	return true
-}
-func (this *MergeDLQMessagesResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*MergeDLQMessagesResponse)
-	if !ok {
-		that2, ok := that.(MergeDLQMessagesResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	return true
-}
-func (this *RefreshWorkflowTasksRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RefreshWorkflowTasksRequest)
-	if !ok {
-		that2, ok := that.(RefreshWorkflowTasksRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	return true
-}
-func (this *RefreshWorkflowTasksResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RefreshWorkflowTasksResponse)
-	if !ok {
-		that2, ok := that.(RefreshWorkflowTasksResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *ResendReplicationTasksRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ResendReplicationTasksRequest)
-	if !ok {
-		that2, ok := that.(ResendReplicationTasksRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.DomainId != that1.DomainId {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if this.RemoteCluster != that1.RemoteCluster {
-		return false
-	}
-	if !this.StartEvent.Equal(that1.StartEvent) {
-		return false
-	}
-	if !this.EndEvent.Equal(that1.EndEvent) {
-		return false
-	}
-	return true
-}
-func (this *ResendReplicationTasksResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ResendReplicationTasksResponse)
-	if !ok {
-		that2, ok := that.(ResendReplicationTasksResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *DescribeWorkflowExecutionRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&adminv1.DescribeWorkflowExecutionRequest{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DescribeWorkflowExecutionResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&adminv1.DescribeWorkflowExecutionResponse{")
-	s = append(s, "ShardId: "+fmt.Sprintf("%#v", this.ShardId)+",\n")
-	s = append(s, "HistoryAddr: "+fmt.Sprintf("%#v", this.HistoryAddr)+",\n")
-	s = append(s, "MutableStateInCache: "+fmt.Sprintf("%#v", this.MutableStateInCache)+",\n")
-	s = append(s, "MutableStateInDatabase: "+fmt.Sprintf("%#v", this.MutableStateInDatabase)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DescribeHistoryHostRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&adminv1.DescribeHistoryHostRequest{")
-	s = append(s, "HostAddress: "+fmt.Sprintf("%#v", this.HostAddress)+",\n")
-	s = append(s, "ShardId: "+fmt.Sprintf("%#v", this.ShardId)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DescribeHistoryHostResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&adminv1.DescribeHistoryHostResponse{")
-	s = append(s, "NumberOfShards: "+fmt.Sprintf("%#v", this.NumberOfShards)+",\n")
-	s = append(s, "ShardIds: "+fmt.Sprintf("%#v", this.ShardIds)+",\n")
-	if this.DomainCache != nil {
-		s = append(s, "DomainCache: "+fmt.Sprintf("%#v", this.DomainCache)+",\n")
-	}
-	s = append(s, "ShardControllerStatus: "+fmt.Sprintf("%#v", this.ShardControllerStatus)+",\n")
-	s = append(s, "Address: "+fmt.Sprintf("%#v", this.Address)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *CloseShardRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&adminv1.CloseShardRequest{")
-	s = append(s, "ShardId: "+fmt.Sprintf("%#v", this.ShardId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *CloseShardResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&adminv1.CloseShardResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RemoveTaskRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&adminv1.RemoveTaskRequest{")
-	s = append(s, "ShardId: "+fmt.Sprintf("%#v", this.ShardId)+",\n")
-	s = append(s, "TaskType: "+fmt.Sprintf("%#v", this.TaskType)+",\n")
-	s = append(s, "TaskId: "+fmt.Sprintf("%#v", this.TaskId)+",\n")
-	s = append(s, "VisibilityTime: "+fmt.Sprintf("%#v", this.VisibilityTime)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RemoveTaskResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&adminv1.RemoveTaskResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ResetQueueRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&adminv1.ResetQueueRequest{")
-	s = append(s, "ShardId: "+fmt.Sprintf("%#v", this.ShardId)+",\n")
-	s = append(s, "ClusterName: "+fmt.Sprintf("%#v", this.ClusterName)+",\n")
-	s = append(s, "TaskType: "+fmt.Sprintf("%#v", this.TaskType)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ResetQueueResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&adminv1.ResetQueueResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DescribeQueueRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&adminv1.DescribeQueueRequest{")
-	s = append(s, "ShardId: "+fmt.Sprintf("%#v", this.ShardId)+",\n")
-	s = append(s, "ClusterName: "+fmt.Sprintf("%#v", this.ClusterName)+",\n")
-	s = append(s, "TaskType: "+fmt.Sprintf("%#v", this.TaskType)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DescribeQueueResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&adminv1.DescribeQueueResponse{")
-	s = append(s, "ProcessingQueueStates: "+fmt.Sprintf("%#v", this.ProcessingQueueStates)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *GetWorkflowExecutionRawHistoryV2Request) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&adminv1.GetWorkflowExecutionRawHistoryV2Request{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	if this.StartEvent != nil {
-		s = append(s, "StartEvent: "+fmt.Sprintf("%#v", this.StartEvent)+",\n")
-	}
-	if this.EndEvent != nil {
-		s = append(s, "EndEvent: "+fmt.Sprintf("%#v", this.EndEvent)+",\n")
-	}
-	s = append(s, "PageSize: "+fmt.Sprintf("%#v", this.PageSize)+",\n")
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *GetWorkflowExecutionRawHistoryV2Response) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&adminv1.GetWorkflowExecutionRawHistoryV2Response{")
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	if this.HistoryBatches != nil {
-		s = append(s, "HistoryBatches: "+fmt.Sprintf("%#v", this.HistoryBatches)+",\n")
-	}
-	if this.VersionHistory != nil {
-		s = append(s, "VersionHistory: "+fmt.Sprintf("%#v", this.VersionHistory)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *GetReplicationMessagesRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&adminv1.GetReplicationMessagesRequest{")
-	if this.Tokens != nil {
-		s = append(s, "Tokens: "+fmt.Sprintf("%#v", this.Tokens)+",\n")
-	}
-	s = append(s, "ClusterName: "+fmt.Sprintf("%#v", this.ClusterName)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *GetReplicationMessagesResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&adminv1.GetReplicationMessagesResponse{")
-	keysForShardMessages := make([]int32, 0, len(this.ShardMessages))
-	for k, _ := range this.ShardMessages {
-		keysForShardMessages = append(keysForShardMessages, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Int32s(keysForShardMessages)
-	mapStringForShardMessages := "map[int32]*v11.ReplicationMessages{"
-	for _, k := range keysForShardMessages {
-		mapStringForShardMessages += fmt.Sprintf("%#v: %#v,", k, this.ShardMessages[k])
-	}
-	mapStringForShardMessages += "}"
-	if this.ShardMessages != nil {
-		s = append(s, "ShardMessages: "+mapStringForShardMessages+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *GetDLQReplicationMessagesRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&adminv1.GetDLQReplicationMessagesRequest{")
-	if this.TaskInfos != nil {
-		s = append(s, "TaskInfos: "+fmt.Sprintf("%#v", this.TaskInfos)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *GetDLQReplicationMessagesResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&adminv1.GetDLQReplicationMessagesResponse{")
-	if this.ReplicationTasks != nil {
-		s = append(s, "ReplicationTasks: "+fmt.Sprintf("%#v", this.ReplicationTasks)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *GetDomainReplicationMessagesRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&adminv1.GetDomainReplicationMessagesRequest{")
-	s = append(s, "LastRetrievedMessageId: "+fmt.Sprintf("%#v", this.LastRetrievedMessageId)+",\n")
-	s = append(s, "LastProcessedMessageId: "+fmt.Sprintf("%#v", this.LastProcessedMessageId)+",\n")
-	s = append(s, "ClusterName: "+fmt.Sprintf("%#v", this.ClusterName)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *GetDomainReplicationMessagesResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&adminv1.GetDomainReplicationMessagesResponse{")
-	if this.Messages != nil {
-		s = append(s, "Messages: "+fmt.Sprintf("%#v", this.Messages)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ReapplyEventsRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&adminv1.ReapplyEventsRequest{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	if this.Events != nil {
-		s = append(s, "Events: "+fmt.Sprintf("%#v", this.Events)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ReapplyEventsResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&adminv1.ReapplyEventsResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *AddSearchAttributeRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&adminv1.AddSearchAttributeRequest{")
-	keysForSearchAttribute := make([]string, 0, len(this.SearchAttribute))
-	for k, _ := range this.SearchAttribute {
-		keysForSearchAttribute = append(keysForSearchAttribute, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForSearchAttribute)
-	mapStringForSearchAttribute := "map[string]v1.IndexedValueType{"
-	for _, k := range keysForSearchAttribute {
-		mapStringForSearchAttribute += fmt.Sprintf("%#v: %#v,", k, this.SearchAttribute[k])
-	}
-	mapStringForSearchAttribute += "}"
-	if this.SearchAttribute != nil {
-		s = append(s, "SearchAttribute: "+mapStringForSearchAttribute+",\n")
-	}
-	s = append(s, "SecurityToken: "+fmt.Sprintf("%#v", this.SecurityToken)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *AddSearchAttributeResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&adminv1.AddSearchAttributeResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DescribeClusterRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&adminv1.DescribeClusterRequest{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DescribeClusterResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&adminv1.DescribeClusterResponse{")
-	if this.SupportedClientVersions != nil {
-		s = append(s, "SupportedClientVersions: "+fmt.Sprintf("%#v", this.SupportedClientVersions)+",\n")
-	}
-	if this.MembershipInfo != nil {
-		s = append(s, "MembershipInfo: "+fmt.Sprintf("%#v", this.MembershipInfo)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ReadDLQMessagesRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&adminv1.ReadDLQMessagesRequest{")
-	s = append(s, "Type: "+fmt.Sprintf("%#v", this.Type)+",\n")
-	s = append(s, "ShardId: "+fmt.Sprintf("%#v", this.ShardId)+",\n")
-	s = append(s, "SourceCluster: "+fmt.Sprintf("%#v", this.SourceCluster)+",\n")
-	s = append(s, "InclusiveEndMessageId: "+fmt.Sprintf("%#v", this.InclusiveEndMessageId)+",\n")
-	s = append(s, "PageSize: "+fmt.Sprintf("%#v", this.PageSize)+",\n")
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ReadDLQMessagesResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&adminv1.ReadDLQMessagesResponse{")
-	s = append(s, "Type: "+fmt.Sprintf("%#v", this.Type)+",\n")
-	if this.ReplicationTasks != nil {
-		s = append(s, "ReplicationTasks: "+fmt.Sprintf("%#v", this.ReplicationTasks)+",\n")
-	}
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *PurgeDLQMessagesRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&adminv1.PurgeDLQMessagesRequest{")
-	s = append(s, "Type: "+fmt.Sprintf("%#v", this.Type)+",\n")
-	s = append(s, "ShardId: "+fmt.Sprintf("%#v", this.ShardId)+",\n")
-	s = append(s, "SourceCluster: "+fmt.Sprintf("%#v", this.SourceCluster)+",\n")
-	s = append(s, "InclusiveEndMessageId: "+fmt.Sprintf("%#v", this.InclusiveEndMessageId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *PurgeDLQMessagesResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&adminv1.PurgeDLQMessagesResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *MergeDLQMessagesRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&adminv1.MergeDLQMessagesRequest{")
-	s = append(s, "Type: "+fmt.Sprintf("%#v", this.Type)+",\n")
-	s = append(s, "ShardId: "+fmt.Sprintf("%#v", this.ShardId)+",\n")
-	s = append(s, "SourceCluster: "+fmt.Sprintf("%#v", this.SourceCluster)+",\n")
-	s = append(s, "InclusiveEndMessageId: "+fmt.Sprintf("%#v", this.InclusiveEndMessageId)+",\n")
-	s = append(s, "PageSize: "+fmt.Sprintf("%#v", this.PageSize)+",\n")
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *MergeDLQMessagesResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&adminv1.MergeDLQMessagesResponse{")
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RefreshWorkflowTasksRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&adminv1.RefreshWorkflowTasksRequest{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RefreshWorkflowTasksResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&adminv1.RefreshWorkflowTasksResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ResendReplicationTasksRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&adminv1.ResendReplicationTasksRequest{")
-	s = append(s, "DomainId: "+fmt.Sprintf("%#v", this.DomainId)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "RemoteCluster: "+fmt.Sprintf("%#v", this.RemoteCluster)+",\n")
-	if this.StartEvent != nil {
-		s = append(s, "StartEvent: "+fmt.Sprintf("%#v", this.StartEvent)+",\n")
-	}
-	if this.EndEvent != nil {
-		s = append(s, "EndEvent: "+fmt.Sprintf("%#v", this.EndEvent)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ResendReplicationTasksResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&adminv1.ResendReplicationTasksResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func valueToGoStringService(v interface{}, typ string) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
-}
-
-// Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConn
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion4
-
-// AdminAPIClient is the client API for AdminAPI service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type AdminAPIClient interface {
-	// DescribeWorkflowExecution returns information about the internal states of workflow execution.
-	DescribeWorkflowExecution(ctx context.Context, in *DescribeWorkflowExecutionRequest, opts ...grpc.CallOption) (*DescribeWorkflowExecutionResponse, error)
-	// DescribeHistoryHost returns information about the internal states of a history host.
-	DescribeHistoryHost(ctx context.Context, in *DescribeHistoryHostRequest, opts ...grpc.CallOption) (*DescribeHistoryHostResponse, error)
-	// CloseShard closes shard.
-	CloseShard(ctx context.Context, in *CloseShardRequest, opts ...grpc.CallOption) (*CloseShardResponse, error)
-	// RemoveTask removes task.
-	RemoveTask(ctx context.Context, in *RemoveTaskRequest, opts ...grpc.CallOption) (*RemoveTaskResponse, error)
-	// ResetQueue resets queue.
-	ResetQueue(ctx context.Context, in *ResetQueueRequest, opts ...grpc.CallOption) (*ResetQueueResponse, error)
-	// DescribeQueue describes queue.
-	DescribeQueue(ctx context.Context, in *DescribeQueueRequest, opts ...grpc.CallOption) (*DescribeQueueResponse, error)
-	// Returns the raw history of specified workflow execution.
-	// It fails with 'EntityNotExistError' if specified workflow execution in unknown to the service.
-	// StartEventId defines the beginning of the event to fetch. The first event is inclusive.
-	// EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.
-	GetWorkflowExecutionRawHistoryV2(ctx context.Context, in *GetWorkflowExecutionRawHistoryV2Request, opts ...grpc.CallOption) (*GetWorkflowExecutionRawHistoryV2Response, error)
-	// GetReplicationMessages returns new replication tasks since the read level provided in the token.
-	GetReplicationMessages(ctx context.Context, in *GetReplicationMessagesRequest, opts ...grpc.CallOption) (*GetReplicationMessagesResponse, error)
-	// GetDLQReplicationMessages return replication messages based on DLQ info.
-	GetDLQReplicationMessages(ctx context.Context, in *GetDLQReplicationMessagesRequest, opts ...grpc.CallOption) (*GetDLQReplicationMessagesResponse, error)
-	// GetDomainReplicationMessages returns new domain replication tasks since last retrieved task id.
-	GetDomainReplicationMessages(ctx context.Context, in *GetDomainReplicationMessagesRequest, opts ...grpc.CallOption) (*GetDomainReplicationMessagesResponse, error)
-	// ReapplyEvents applies stale events to the current workflow and current run.
-	ReapplyEvents(ctx context.Context, in *ReapplyEventsRequest, opts ...grpc.CallOption) (*ReapplyEventsResponse, error)
-	// AddSearchAttribute whitelist search attribute in request.
-	AddSearchAttribute(ctx context.Context, in *AddSearchAttributeRequest, opts ...grpc.CallOption) (*AddSearchAttributeResponse, error)
-	// DescribeCluster returns information about Cadence cluster.
-	DescribeCluster(ctx context.Context, in *DescribeClusterRequest, opts ...grpc.CallOption) (*DescribeClusterResponse, error)
-	// ReadDLQMessages returns messages from DLQ.
-	ReadDLQMessages(ctx context.Context, in *ReadDLQMessagesRequest, opts ...grpc.CallOption) (*ReadDLQMessagesResponse, error)
-	// PurgeDLQMessages purges messages from DLQ.
-	PurgeDLQMessages(ctx context.Context, in *PurgeDLQMessagesRequest, opts ...grpc.CallOption) (*PurgeDLQMessagesResponse, error)
-	// MergeDLQMessages merges messages from DLQ.
-	MergeDLQMessages(ctx context.Context, in *MergeDLQMessagesRequest, opts ...grpc.CallOption) (*MergeDLQMessagesResponse, error)
-	// RefreshWorkflowTasks refreshes all tasks of a workflow.
-	RefreshWorkflowTasks(ctx context.Context, in *RefreshWorkflowTasksRequest, opts ...grpc.CallOption) (*RefreshWorkflowTasksResponse, error)
-	// ResendReplicationTasks requests replication tasks from remote cluster and apply tasks to current cluster.
-	ResendReplicationTasks(ctx context.Context, in *ResendReplicationTasksRequest, opts ...grpc.CallOption) (*ResendReplicationTasksResponse, error)
-}
-
-type adminAPIClient struct {
-	cc *grpc.ClientConn
-}
-
-func NewAdminAPIClient(cc *grpc.ClientConn) AdminAPIClient {
-	return &adminAPIClient{cc}
-}
-
-func (c *adminAPIClient) DescribeWorkflowExecution(ctx context.Context, in *DescribeWorkflowExecutionRequest, opts ...grpc.CallOption) (*DescribeWorkflowExecutionResponse, error) {
-	out := new(DescribeWorkflowExecutionResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/DescribeWorkflowExecution", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) DescribeHistoryHost(ctx context.Context, in *DescribeHistoryHostRequest, opts ...grpc.CallOption) (*DescribeHistoryHostResponse, error) {
-	out := new(DescribeHistoryHostResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/DescribeHistoryHost", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) CloseShard(ctx context.Context, in *CloseShardRequest, opts ...grpc.CallOption) (*CloseShardResponse, error) {
-	out := new(CloseShardResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/CloseShard", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) RemoveTask(ctx context.Context, in *RemoveTaskRequest, opts ...grpc.CallOption) (*RemoveTaskResponse, error) {
-	out := new(RemoveTaskResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/RemoveTask", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) ResetQueue(ctx context.Context, in *ResetQueueRequest, opts ...grpc.CallOption) (*ResetQueueResponse, error) {
-	out := new(ResetQueueResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/ResetQueue", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) DescribeQueue(ctx context.Context, in *DescribeQueueRequest, opts ...grpc.CallOption) (*DescribeQueueResponse, error) {
-	out := new(DescribeQueueResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/DescribeQueue", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) GetWorkflowExecutionRawHistoryV2(ctx context.Context, in *GetWorkflowExecutionRawHistoryV2Request, opts ...grpc.CallOption) (*GetWorkflowExecutionRawHistoryV2Response, error) {
-	out := new(GetWorkflowExecutionRawHistoryV2Response)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/GetWorkflowExecutionRawHistoryV2", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) GetReplicationMessages(ctx context.Context, in *GetReplicationMessagesRequest, opts ...grpc.CallOption) (*GetReplicationMessagesResponse, error) {
-	out := new(GetReplicationMessagesResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/GetReplicationMessages", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) GetDLQReplicationMessages(ctx context.Context, in *GetDLQReplicationMessagesRequest, opts ...grpc.CallOption) (*GetDLQReplicationMessagesResponse, error) {
-	out := new(GetDLQReplicationMessagesResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/GetDLQReplicationMessages", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) GetDomainReplicationMessages(ctx context.Context, in *GetDomainReplicationMessagesRequest, opts ...grpc.CallOption) (*GetDomainReplicationMessagesResponse, error) {
-	out := new(GetDomainReplicationMessagesResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/GetDomainReplicationMessages", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) ReapplyEvents(ctx context.Context, in *ReapplyEventsRequest, opts ...grpc.CallOption) (*ReapplyEventsResponse, error) {
-	out := new(ReapplyEventsResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/ReapplyEvents", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) AddSearchAttribute(ctx context.Context, in *AddSearchAttributeRequest, opts ...grpc.CallOption) (*AddSearchAttributeResponse, error) {
-	out := new(AddSearchAttributeResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/AddSearchAttribute", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) DescribeCluster(ctx context.Context, in *DescribeClusterRequest, opts ...grpc.CallOption) (*DescribeClusterResponse, error) {
-	out := new(DescribeClusterResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/DescribeCluster", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) ReadDLQMessages(ctx context.Context, in *ReadDLQMessagesRequest, opts ...grpc.CallOption) (*ReadDLQMessagesResponse, error) {
-	out := new(ReadDLQMessagesResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/ReadDLQMessages", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) PurgeDLQMessages(ctx context.Context, in *PurgeDLQMessagesRequest, opts ...grpc.CallOption) (*PurgeDLQMessagesResponse, error) {
-	out := new(PurgeDLQMessagesResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/PurgeDLQMessages", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) MergeDLQMessages(ctx context.Context, in *MergeDLQMessagesRequest, opts ...grpc.CallOption) (*MergeDLQMessagesResponse, error) {
-	out := new(MergeDLQMessagesResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/MergeDLQMessages", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) RefreshWorkflowTasks(ctx context.Context, in *RefreshWorkflowTasksRequest, opts ...grpc.CallOption) (*RefreshWorkflowTasksResponse, error) {
-	out := new(RefreshWorkflowTasksResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/RefreshWorkflowTasks", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *adminAPIClient) ResendReplicationTasks(ctx context.Context, in *ResendReplicationTasksRequest, opts ...grpc.CallOption) (*ResendReplicationTasksResponse, error) {
-	out := new(ResendReplicationTasksResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.admin.v1.AdminAPI/ResendReplicationTasks", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// AdminAPIServer is the server API for AdminAPI service.
-type AdminAPIServer interface {
-	// DescribeWorkflowExecution returns information about the internal states of workflow execution.
-	DescribeWorkflowExecution(context.Context, *DescribeWorkflowExecutionRequest) (*DescribeWorkflowExecutionResponse, error)
-	// DescribeHistoryHost returns information about the internal states of a history host.
-	DescribeHistoryHost(context.Context, *DescribeHistoryHostRequest) (*DescribeHistoryHostResponse, error)
-	// CloseShard closes shard.
-	CloseShard(context.Context, *CloseShardRequest) (*CloseShardResponse, error)
-	// RemoveTask removes task.
-	RemoveTask(context.Context, *RemoveTaskRequest) (*RemoveTaskResponse, error)
-	// ResetQueue resets queue.
-	ResetQueue(context.Context, *ResetQueueRequest) (*ResetQueueResponse, error)
-	// DescribeQueue describes queue.
-	DescribeQueue(context.Context, *DescribeQueueRequest) (*DescribeQueueResponse, error)
-	// Returns the raw history of specified workflow execution.
-	// It fails with 'EntityNotExistError' if specified workflow execution in unknown to the service.
-	// StartEventId defines the beginning of the event to fetch. The first event is inclusive.
-	// EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.
-	GetWorkflowExecutionRawHistoryV2(context.Context, *GetWorkflowExecutionRawHistoryV2Request) (*GetWorkflowExecutionRawHistoryV2Response, error)
-	// GetReplicationMessages returns new replication tasks since the read level provided in the token.
-	GetReplicationMessages(context.Context, *GetReplicationMessagesRequest) (*GetReplicationMessagesResponse, error)
-	// GetDLQReplicationMessages return replication messages based on DLQ info.
-	GetDLQReplicationMessages(context.Context, *GetDLQReplicationMessagesRequest) (*GetDLQReplicationMessagesResponse, error)
-	// GetDomainReplicationMessages returns new domain replication tasks since last retrieved task id.
-	GetDomainReplicationMessages(context.Context, *GetDomainReplicationMessagesRequest) (*GetDomainReplicationMessagesResponse, error)
-	// ReapplyEvents applies stale events to the current workflow and current run.
-	ReapplyEvents(context.Context, *ReapplyEventsRequest) (*ReapplyEventsResponse, error)
-	// AddSearchAttribute whitelist search attribute in request.
-	AddSearchAttribute(context.Context, *AddSearchAttributeRequest) (*AddSearchAttributeResponse, error)
-	// DescribeCluster returns information about Cadence cluster.
-	DescribeCluster(context.Context, *DescribeClusterRequest) (*DescribeClusterResponse, error)
-	// ReadDLQMessages returns messages from DLQ.
-	ReadDLQMessages(context.Context, *ReadDLQMessagesRequest) (*ReadDLQMessagesResponse, error)
-	// PurgeDLQMessages purges messages from DLQ.
-	PurgeDLQMessages(context.Context, *PurgeDLQMessagesRequest) (*PurgeDLQMessagesResponse, error)
-	// MergeDLQMessages merges messages from DLQ.
-	MergeDLQMessages(context.Context, *MergeDLQMessagesRequest) (*MergeDLQMessagesResponse, error)
-	// RefreshWorkflowTasks refreshes all tasks of a workflow.
-	RefreshWorkflowTasks(context.Context, *RefreshWorkflowTasksRequest) (*RefreshWorkflowTasksResponse, error)
-	// ResendReplicationTasks requests replication tasks from remote cluster and apply tasks to current cluster.
-	ResendReplicationTasks(context.Context, *ResendReplicationTasksRequest) (*ResendReplicationTasksResponse, error)
-}
-
-// UnimplementedAdminAPIServer can be embedded to have forward compatible implementations.
-type UnimplementedAdminAPIServer struct {
-}
-
-func (*UnimplementedAdminAPIServer) DescribeWorkflowExecution(ctx context.Context, req *DescribeWorkflowExecutionRequest) (*DescribeWorkflowExecutionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DescribeWorkflowExecution not implemented")
-}
-func (*UnimplementedAdminAPIServer) DescribeHistoryHost(ctx context.Context, req *DescribeHistoryHostRequest) (*DescribeHistoryHostResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DescribeHistoryHost not implemented")
-}
-func (*UnimplementedAdminAPIServer) CloseShard(ctx context.Context, req *CloseShardRequest) (*CloseShardResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CloseShard not implemented")
-}
-func (*UnimplementedAdminAPIServer) RemoveTask(ctx context.Context, req *RemoveTaskRequest) (*RemoveTaskResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RemoveTask not implemented")
-}
-func (*UnimplementedAdminAPIServer) ResetQueue(ctx context.Context, req *ResetQueueRequest) (*ResetQueueResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ResetQueue not implemented")
-}
-func (*UnimplementedAdminAPIServer) DescribeQueue(ctx context.Context, req *DescribeQueueRequest) (*DescribeQueueResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DescribeQueue not implemented")
-}
-func (*UnimplementedAdminAPIServer) GetWorkflowExecutionRawHistoryV2(ctx context.Context, req *GetWorkflowExecutionRawHistoryV2Request) (*GetWorkflowExecutionRawHistoryV2Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetWorkflowExecutionRawHistoryV2 not implemented")
-}
-func (*UnimplementedAdminAPIServer) GetReplicationMessages(ctx context.Context, req *GetReplicationMessagesRequest) (*GetReplicationMessagesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetReplicationMessages not implemented")
-}
-func (*UnimplementedAdminAPIServer) GetDLQReplicationMessages(ctx context.Context, req *GetDLQReplicationMessagesRequest) (*GetDLQReplicationMessagesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetDLQReplicationMessages not implemented")
-}
-func (*UnimplementedAdminAPIServer) GetDomainReplicationMessages(ctx context.Context, req *GetDomainReplicationMessagesRequest) (*GetDomainReplicationMessagesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetDomainReplicationMessages not implemented")
-}
-func (*UnimplementedAdminAPIServer) ReapplyEvents(ctx context.Context, req *ReapplyEventsRequest) (*ReapplyEventsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReapplyEvents not implemented")
-}
-func (*UnimplementedAdminAPIServer) AddSearchAttribute(ctx context.Context, req *AddSearchAttributeRequest) (*AddSearchAttributeResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddSearchAttribute not implemented")
-}
-func (*UnimplementedAdminAPIServer) DescribeCluster(ctx context.Context, req *DescribeClusterRequest) (*DescribeClusterResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DescribeCluster not implemented")
-}
-func (*UnimplementedAdminAPIServer) ReadDLQMessages(ctx context.Context, req *ReadDLQMessagesRequest) (*ReadDLQMessagesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReadDLQMessages not implemented")
-}
-func (*UnimplementedAdminAPIServer) PurgeDLQMessages(ctx context.Context, req *PurgeDLQMessagesRequest) (*PurgeDLQMessagesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PurgeDLQMessages not implemented")
-}
-func (*UnimplementedAdminAPIServer) MergeDLQMessages(ctx context.Context, req *MergeDLQMessagesRequest) (*MergeDLQMessagesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method MergeDLQMessages not implemented")
-}
-func (*UnimplementedAdminAPIServer) RefreshWorkflowTasks(ctx context.Context, req *RefreshWorkflowTasksRequest) (*RefreshWorkflowTasksResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RefreshWorkflowTasks not implemented")
-}
-func (*UnimplementedAdminAPIServer) ResendReplicationTasks(ctx context.Context, req *ResendReplicationTasksRequest) (*ResendReplicationTasksResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ResendReplicationTasks not implemented")
-}
-
-func RegisterAdminAPIServer(s *grpc.Server, srv AdminAPIServer) {
-	s.RegisterService(&_AdminAPI_serviceDesc, srv)
-}
-
-func _AdminAPI_DescribeWorkflowExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DescribeWorkflowExecutionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).DescribeWorkflowExecution(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/DescribeWorkflowExecution",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).DescribeWorkflowExecution(ctx, req.(*DescribeWorkflowExecutionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_DescribeHistoryHost_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DescribeHistoryHostRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).DescribeHistoryHost(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/DescribeHistoryHost",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).DescribeHistoryHost(ctx, req.(*DescribeHistoryHostRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_CloseShard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CloseShardRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).CloseShard(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/CloseShard",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).CloseShard(ctx, req.(*CloseShardRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_RemoveTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RemoveTaskRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).RemoveTask(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/RemoveTask",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).RemoveTask(ctx, req.(*RemoveTaskRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_ResetQueue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ResetQueueRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).ResetQueue(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/ResetQueue",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).ResetQueue(ctx, req.(*ResetQueueRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_DescribeQueue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DescribeQueueRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).DescribeQueue(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/DescribeQueue",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).DescribeQueue(ctx, req.(*DescribeQueueRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_GetWorkflowExecutionRawHistoryV2_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetWorkflowExecutionRawHistoryV2Request)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).GetWorkflowExecutionRawHistoryV2(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/GetWorkflowExecutionRawHistoryV2",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).GetWorkflowExecutionRawHistoryV2(ctx, req.(*GetWorkflowExecutionRawHistoryV2Request))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_GetReplicationMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetReplicationMessagesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).GetReplicationMessages(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/GetReplicationMessages",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).GetReplicationMessages(ctx, req.(*GetReplicationMessagesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_GetDLQReplicationMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetDLQReplicationMessagesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).GetDLQReplicationMessages(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/GetDLQReplicationMessages",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).GetDLQReplicationMessages(ctx, req.(*GetDLQReplicationMessagesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_GetDomainReplicationMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetDomainReplicationMessagesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).GetDomainReplicationMessages(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/GetDomainReplicationMessages",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).GetDomainReplicationMessages(ctx, req.(*GetDomainReplicationMessagesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_ReapplyEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ReapplyEventsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).ReapplyEvents(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/ReapplyEvents",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).ReapplyEvents(ctx, req.(*ReapplyEventsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_AddSearchAttribute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddSearchAttributeRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).AddSearchAttribute(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/AddSearchAttribute",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).AddSearchAttribute(ctx, req.(*AddSearchAttributeRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_DescribeCluster_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DescribeClusterRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).DescribeCluster(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/DescribeCluster",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).DescribeCluster(ctx, req.(*DescribeClusterRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_ReadDLQMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ReadDLQMessagesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).ReadDLQMessages(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/ReadDLQMessages",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).ReadDLQMessages(ctx, req.(*ReadDLQMessagesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_PurgeDLQMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PurgeDLQMessagesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).PurgeDLQMessages(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/PurgeDLQMessages",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).PurgeDLQMessages(ctx, req.(*PurgeDLQMessagesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_MergeDLQMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MergeDLQMessagesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).MergeDLQMessages(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/MergeDLQMessages",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).MergeDLQMessages(ctx, req.(*MergeDLQMessagesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_RefreshWorkflowTasks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RefreshWorkflowTasksRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).RefreshWorkflowTasks(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/RefreshWorkflowTasks",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).RefreshWorkflowTasks(ctx, req.(*RefreshWorkflowTasksRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AdminAPI_ResendReplicationTasks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ResendReplicationTasksRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminAPIServer).ResendReplicationTasks(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.admin.v1.AdminAPI/ResendReplicationTasks",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).ResendReplicationTasks(ctx, req.(*ResendReplicationTasksRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _AdminAPI_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "uber.cadence.admin.v1.AdminAPI",
-	HandlerType: (*AdminAPIServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "DescribeWorkflowExecution",
-			Handler:    _AdminAPI_DescribeWorkflowExecution_Handler,
-		},
-		{
-			MethodName: "DescribeHistoryHost",
-			Handler:    _AdminAPI_DescribeHistoryHost_Handler,
-		},
-		{
-			MethodName: "CloseShard",
-			Handler:    _AdminAPI_CloseShard_Handler,
-		},
-		{
-			MethodName: "RemoveTask",
-			Handler:    _AdminAPI_RemoveTask_Handler,
-		},
-		{
-			MethodName: "ResetQueue",
-			Handler:    _AdminAPI_ResetQueue_Handler,
-		},
-		{
-			MethodName: "DescribeQueue",
-			Handler:    _AdminAPI_DescribeQueue_Handler,
-		},
-		{
-			MethodName: "GetWorkflowExecutionRawHistoryV2",
-			Handler:    _AdminAPI_GetWorkflowExecutionRawHistoryV2_Handler,
-		},
-		{
-			MethodName: "GetReplicationMessages",
-			Handler:    _AdminAPI_GetReplicationMessages_Handler,
-		},
-		{
-			MethodName: "GetDLQReplicationMessages",
-			Handler:    _AdminAPI_GetDLQReplicationMessages_Handler,
-		},
-		{
-			MethodName: "GetDomainReplicationMessages",
-			Handler:    _AdminAPI_GetDomainReplicationMessages_Handler,
-		},
-		{
-			MethodName: "ReapplyEvents",
-			Handler:    _AdminAPI_ReapplyEvents_Handler,
-		},
-		{
-			MethodName: "AddSearchAttribute",
-			Handler:    _AdminAPI_AddSearchAttribute_Handler,
-		},
-		{
-			MethodName: "DescribeCluster",
-			Handler:    _AdminAPI_DescribeCluster_Handler,
-		},
-		{
-			MethodName: "ReadDLQMessages",
-			Handler:    _AdminAPI_ReadDLQMessages_Handler,
-		},
-		{
-			MethodName: "PurgeDLQMessages",
-			Handler:    _AdminAPI_PurgeDLQMessages_Handler,
-		},
-		{
-			MethodName: "MergeDLQMessages",
-			Handler:    _AdminAPI_MergeDLQMessages_Handler,
-		},
-		{
-			MethodName: "RefreshWorkflowTasks",
-			Handler:    _AdminAPI_RefreshWorkflowTasks_Handler,
-		},
-		{
-			MethodName: "ResendReplicationTasks",
-			Handler:    _AdminAPI_ResendReplicationTasks_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "github.com/uber/cadence/.gen/proto/admin/v1/service.proto",
+	// 2056 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xdc, 0x5a, 0x4b, 0x6f, 0x1c, 0x59,
+	0xf5, 0x4f, 0xb5, 0x1f, 0xb1, 0x4f, 0xdb, 0x6d, 0xfb, 0x8e, 0x1f, 0xed, 0x76, 0xe2, 0x71, 0x2a,
+	0x93, 0x89, 0xff, 0xff, 0x19, 0xca, 0xb8, 0x3d, 0x13, 0x86, 0x89, 0x78, 0xf8, 0x85, 0xdd, 0x43,
+	0x42, 0x92, 0xb2, 0xc9, 0x48, 0x6c, 0x4a, 0xd5, 0x5d, 0xc7, 0xee, 0xc2, 0x5d, 0x8f, 0xa9, 0x7b,
+	0xbb, 0x1d, 0x8f, 0x90, 0x40, 0x08, 0x76, 0x08, 0x81, 0x58, 0xb0, 0x64, 0xc1, 0x0e, 0x16, 0x7c,
+	0x01, 0xb6, 0x20, 0x24, 0x36, 0x83, 0xc4, 0x07, 0x40, 0x59, 0xb0, 0x61, 0xc9, 0x86, 0x25, 0xba,
+	0xb7, 0x6e, 0xf5, 0xb3, 0x6e, 0x3f, 0x4c, 0x50, 0xd0, 0xec, 0xba, 0xce, 0x3d, 0xef, 0x7b, 0xee,
+	0xef, 0x9e, 0x7b, 0x6c, 0xb8, 0x5b, 0x2f, 0x63, 0xb4, 0x55, 0xb1, 0x1d, 0xf4, 0x2b, 0xb8, 0x65,
+	0x3b, 0x9e, 0xeb, 0x6f, 0x35, 0xb6, 0xb7, 0x28, 0x46, 0x0d, 0xb7, 0x82, 0x46, 0x18, 0x05, 0x2c,
+	0x20, 0x4b, 0x9c, 0xc9, 0x90, 0x4c, 0x86, 0x60, 0x32, 0x1a, 0xdb, 0x85, 0x37, 0xcf, 0x83, 0xe0,
+	0xbc, 0x86, 0x5b, 0x82, 0xa9, 0x5c, 0x3f, 0xdb, 0x62, 0xae, 0x87, 0x94, 0xd9, 0x5e, 0x18, 0xcb,
+	0x15, 0xd6, 0xbb, 0x19, 0x2e, 0x23, 0x3b, 0x0c, 0x31, 0xa2, 0x72, 0x7d, 0xa3, 0xd3, 0x78, 0xe8,
+	0x72, 0xd3, 0x95, 0xc0, 0xf3, 0x02, 0x5f, 0x72, 0xbc, 0x95, 0xc6, 0xd1, 0x70, 0xa9, 0x5b, 0x76,
+	0x6b, 0x2e, 0xbb, 0x4a, 0xe5, 0xa2, 0x55, 0x3b, 0x42, 0x47, 0xa8, 0xaa, 0xd5, 0x29, 0xc3, 0x68,
+	0x00, 0x57, 0xd5, 0xa5, 0x2c, 0x88, 0x12, 0x5d, 0xba, 0x82, 0xeb, 0x93, 0x3a, 0xd6, 0x65, 0x3e,
+	0x0a, 0x9b, 0x0a, 0x9e, 0x08, 0xc3, 0x9a, 0x5b, 0xb1, 0x99, 0x9b, 0xf8, 0xaf, 0xff, 0x5c, 0x83,
+	0x8d, 0x03, 0xa4, 0x95, 0xc8, 0x2d, 0xe3, 0xc7, 0x41, 0x74, 0x71, 0x56, 0x0b, 0x2e, 0x0f, 0x5f,
+	0x60, 0xa5, 0xce, 0x79, 0x4c, 0xfc, 0xa4, 0x8e, 0x94, 0x91, 0x65, 0x98, 0x74, 0x02, 0xcf, 0x76,
+	0xfd, 0xbc, 0xb6, 0xa1, 0x6d, 0x4e, 0x9b, 0xf2, 0x8b, 0x7c, 0x1b, 0xc8, 0xa5, 0x94, 0xb1, 0x30,
+	0x11, 0xca, 0x67, 0x36, 0xb4, 0xcd, 0x6c, 0xf1, 0x6d, 0xa3, 0x73, 0x4f, 0x42, 0xd7, 0x68, 0x6c,
+	0x1b, 0xbd, 0x26, 0x16, 0x2e, 0xbb, 0x49, 0xfa, 0x5f, 0x34, 0xb8, 0xd3, 0xc7, 0x27, 0x1a, 0x06,
+	0x3e, 0x45, 0xb2, 0x0a, 0x53, 0x3c, 0x30, 0xc7, 0x72, 0x1d, 0xe1, 0xd6, 0x84, 0x79, 0x53, 0x7c,
+	0x97, 0x1c, 0x72, 0x07, 0x66, 0x64, 0xce, 0x2c, 0xdb, 0x71, 0x22, 0xe1, 0xd1, 0xb4, 0x99, 0x95,
+	0xb4, 0x5d, 0xc7, 0x89, 0xc8, 0x0e, 0x2c, 0x7b, 0x75, 0x66, 0x97, 0x6b, 0x68, 0x51, 0x66, 0x33,
+	0xb4, 0x5c, 0xdf, 0xaa, 0xd8, 0x95, 0x2a, 0xe6, 0xc7, 0x04, 0xf3, 0x1b, 0x72, 0xf5, 0x84, 0x2f,
+	0x96, 0xfc, 0x7d, 0xbe, 0x44, 0xbe, 0x0c, 0xab, 0x3d, 0x42, 0x8e, 0xcd, 0xec, 0xb2, 0x4d, 0x31,
+	0x3f, 0x2e, 0xe4, 0x96, 0x3b, 0xe5, 0x0e, 0xe4, 0xaa, 0xfe, 0x47, 0x0d, 0x0a, 0x49, 0x4c, 0xc7,
+	0xb1, 0x1f, 0xc7, 0x01, 0x65, 0x49, 0x86, 0xef, 0xc2, 0x4c, 0x35, 0xa0, 0x4c, 0xb8, 0x8b, 0x94,
+	0xc6, 0x79, 0x3e, 0xbe, 0x61, 0x66, 0x39, 0x75, 0x37, 0x26, 0x92, 0xb5, 0xb6, 0x88, 0x79, 0x48,
+	0x13, 0xc7, 0x37, 0x5a, 0x31, 0x7f, 0x9c, 0xba, 0x17, 0x63, 0xa3, 0xec, 0xc5, 0xf1, 0x8d, 0x94,
+	0xdd, 0xd8, 0x9b, 0x85, 0xac, 0x23, 0x1d, 0xb7, 0xca, 0x57, 0xfa, 0x0f, 0x33, 0xb0, 0x96, 0x1a,
+	0x88, 0xdc, 0x96, 0x4d, 0x98, 0xf7, 0xeb, 0x5e, 0x19, 0x23, 0x2b, 0x38, 0xb3, 0x84, 0x73, 0x54,
+	0x6e, 0x4f, 0x2e, 0xa6, 0x3f, 0x39, 0x3b, 0x11, 0x54, 0xb2, 0x06, 0xd3, 0x49, 0x38, 0x34, 0x9f,
+	0xd9, 0x18, 0xdb, 0x9c, 0x30, 0xa7, 0x64, 0x34, 0x94, 0x7c, 0x04, 0x33, 0x71, 0x91, 0xb5, 0xed,
+	0x4a, 0xb6, 0x78, 0xbf, 0x33, 0x90, 0xb8, 0xb0, 0x79, 0x2c, 0x07, 0x82, 0x57, 0xec, 0x52, 0xc9,
+	0x3f, 0x0b, 0xcc, 0xac, 0xd3, 0x22, 0x90, 0x07, 0xb0, 0x12, 0x1b, 0xaa, 0x04, 0x3e, 0x8b, 0x82,
+	0x5a, 0x0d, 0x23, 0xb1, 0x7f, 0x75, 0x2a, 0x37, 0x6d, 0x49, 0x2c, 0xef, 0x37, 0x57, 0x4f, 0xc4,
+	0x22, 0xc9, 0xc3, 0xcd, 0x64, 0x3f, 0x26, 0x04, 0x5f, 0xf2, 0xa9, 0x1b, 0xb0, 0xb0, 0x5f, 0x0b,
+	0x28, 0x8a, 0x48, 0x92, 0x3d, 0x54, 0x17, 0xa4, 0xbe, 0x08, 0xa4, 0x9d, 0x3f, 0x4e, 0x95, 0xfe,
+	0x67, 0x0d, 0x16, 0x4c, 0xf4, 0x82, 0x06, 0x9e, 0xda, 0xf4, 0x62, 0xb0, 0x1a, 0xf2, 0x15, 0x98,
+	0x66, 0x36, 0xbd, 0xb0, 0xd8, 0x55, 0x88, 0xa2, 0x02, 0x72, 0xc5, 0x0d, 0x55, 0x46, 0xb8, 0xca,
+	0xd3, 0xab, 0x10, 0xcd, 0x29, 0x26, 0x7f, 0x91, 0x15, 0xb8, 0x29, 0xc4, 0x5d, 0x47, 0xa4, 0x73,
+	0xcc, 0x9c, 0xe4, 0x9f, 0x25, 0x87, 0xec, 0xc3, 0x5c, 0x0b, 0xb2, 0x2c, 0x0e, 0x92, 0x22, 0x31,
+	0xd9, 0x62, 0xc1, 0x88, 0x01, 0xd2, 0x48, 0x00, 0xd2, 0x38, 0x4d, 0x10, 0xd4, 0xcc, 0xb5, 0x44,
+	0x38, 0x91, 0xc7, 0xd8, 0x1e, 0x8c, 0x8c, 0xf1, 0x67, 0x22, 0x46, 0x8a, 0xec, 0x19, 0x87, 0xa7,
+	0x21, 0x62, 0xbc, 0x03, 0x33, 0x12, 0x15, 0x2d, 0xdf, 0xf6, 0x30, 0x39, 0xbb, 0x92, 0xf6, 0x2d,
+	0xdb, 0xc3, 0xce, 0x34, 0x8c, 0x8d, 0x9a, 0x86, 0xd8, 0xd1, 0x96, 0x47, 0xd2, 0xd1, 0x5f, 0x68,
+	0xb0, 0x98, 0xd4, 0xf5, 0xff, 0x8e, 0xaf, 0x4f, 0x60, 0xa9, 0xcb, 0x29, 0x79, 0xcc, 0x1e, 0xc0,
+	0x4a, 0x18, 0x05, 0x15, 0xa4, 0xd4, 0xf5, 0xcf, 0x2d, 0x81, 0xfd, 0x31, 0x26, 0xf1, 0xd3, 0x36,
+	0xc6, 0x6b, 0xba, 0xb5, 0x2c, 0x24, 0x05, 0x20, 0x51, 0xfd, 0x9f, 0x19, 0xb8, 0x7f, 0x84, 0xac,
+	0x17, 0x56, 0xed, 0x4b, 0x79, 0x9a, 0x9f, 0x17, 0x5f, 0x0f, 0xec, 0x93, 0x6f, 0x42, 0x96, 0x32,
+	0x3b, 0x62, 0x16, 0x36, 0xd0, 0x67, 0xf2, 0xc4, 0xff, 0xbf, 0x2a, 0x59, 0xcf, 0x31, 0xa2, 0x1c,
+	0xb3, 0x62, 0xa7, 0x4b, 0x0c, 0x3d, 0x13, 0x84, 0xf8, 0x21, 0x97, 0x26, 0x47, 0x30, 0x8d, 0xbe,
+	0x23, 0x55, 0x8d, 0x8f, 0xac, 0x6a, 0x0a, 0x7d, 0x27, 0x56, 0xb4, 0x06, 0xd3, 0xa1, 0x7d, 0x8e,
+	0x16, 0x75, 0x3f, 0x45, 0x01, 0x03, 0x13, 0xe6, 0x14, 0x27, 0x9c, 0xb8, 0x9f, 0x22, 0x79, 0x1b,
+	0xe6, 0x7c, 0x7c, 0xc1, 0x2c, 0xc1, 0xc1, 0x82, 0x0b, 0xf4, 0xf3, 0x93, 0x1b, 0xda, 0xe6, 0x8c,
+	0x39, 0xcb, 0xc9, 0x4f, 0xed, 0x73, 0x3c, 0xe5, 0x44, 0xfd, 0x1f, 0x1a, 0x6c, 0x0e, 0xce, 0xba,
+	0xdc, 0xda, 0x14, 0xa5, 0x5a, 0x8a, 0x52, 0xf2, 0x0d, 0x98, 0x4b, 0x6e, 0xb9, 0xb2, 0xcd, 0x2a,
+	0x55, 0x8c, 0x51, 0x34, 0x5b, 0xbc, 0x9d, 0xba, 0x07, 0xfc, 0x2a, 0xda, 0xab, 0x05, 0x65, 0x33,
+	0x27, 0xa5, 0xf6, 0x62, 0x21, 0xf2, 0x04, 0xe6, 0x1a, 0x71, 0x06, 0x2c, 0xb9, 0x92, 0x7e, 0x6d,
+	0xa8, 0x12, 0x66, 0xe6, 0x1a, 0x1d, 0xdf, 0xfa, 0x8f, 0x34, 0xb8, 0x7d, 0x84, 0xcc, 0x6c, 0x35,
+	0x1b, 0x8f, 0x91, 0x52, 0xfb, 0x1c, 0x69, 0x52, 0x59, 0x5f, 0x87, 0x49, 0x11, 0x58, 0x5c, 0xac,
+	0xd9, 0xe2, 0xa6, 0xca, 0x52, 0x9b, 0x0e, 0x11, 0xb4, 0x29, 0xe5, 0x86, 0x38, 0x7a, 0xfa, 0x0f,
+	0x32, 0xb0, 0xae, 0x72, 0x43, 0xa6, 0x3a, 0x80, 0x5c, 0x7c, 0xb6, 0x3d, 0xb9, 0x22, 0xfd, 0x39,
+	0x36, 0x52, 0x1b, 0x4a, 0xa3, 0xbf, 0x3a, 0x43, 0xc0, 0x7b, 0x42, 0x3d, 0xf4, 0x59, 0x74, 0x65,
+	0xce, 0xd2, 0x76, 0x5a, 0xc1, 0x03, 0xd2, 0xcb, 0x44, 0xe6, 0x61, 0xec, 0x02, 0xaf, 0x24, 0xba,
+	0xf0, 0x9f, 0x64, 0x17, 0x26, 0x1a, 0x76, 0xad, 0x8e, 0xf2, 0x54, 0xbd, 0x33, 0x44, 0x7e, 0x9a,
+	0xde, 0xc4, 0x92, 0x1f, 0x66, 0x3e, 0xd0, 0x74, 0x1f, 0x36, 0x8e, 0x90, 0x1d, 0x3c, 0x7a, 0xd6,
+	0x67, 0x2f, 0x3e, 0x02, 0x88, 0x6f, 0x05, 0xff, 0x2c, 0x48, 0xe2, 0x1f, 0xc6, 0x1e, 0x47, 0x2b,
+	0x71, 0xd7, 0x0a, 0x80, 0xe3, 0xbf, 0xa8, 0x7e, 0x05, 0x77, 0xfa, 0xd8, 0x93, 0x49, 0x3f, 0x85,
+	0x85, 0xb6, 0x3e, 0xd4, 0xe2, 0xd2, 0x89, 0xdd, 0xfb, 0x43, 0xda, 0x35, 0xe7, 0xa3, 0x4e, 0x02,
+	0xd5, 0xff, 0xa5, 0xc1, 0x5d, 0x6e, 0x5b, 0x40, 0x54, 0x9f, 0x70, 0x9f, 0xc3, 0x6a, 0xcd, 0xa6,
+	0xcc, 0x8a, 0x90, 0x45, 0x2e, 0x36, 0xb0, 0xb9, 0xf7, 0x09, 0xbe, 0x67, 0x8b, 0x6b, 0x3d, 0xb7,
+	0x5e, 0xc9, 0x67, 0x0f, 0xde, 0x7b, 0xce, 0xd3, 0x6a, 0x2e, 0x73, 0x69, 0x33, 0x11, 0x96, 0xda,
+	0x4b, 0x4e, 0x53, 0xaf, 0x84, 0xdd, 0x4e, 0xbd, 0x99, 0x21, 0xf5, 0x3e, 0x4d, 0x84, 0x5b, 0x7a,
+	0xbb, 0x0b, 0x7d, 0xac, 0xb7, 0xd0, 0x03, 0x78, 0xab, 0x7f, 0xe4, 0x32, 0xf1, 0x47, 0x30, 0xd5,
+	0x56, 0xe7, 0x23, 0xd7, 0x55, 0x53, 0x58, 0xff, 0xbd, 0x06, 0x8b, 0x26, 0xda, 0x61, 0x58, 0xbb,
+	0x12, 0x20, 0x49, 0x5f, 0xd3, 0x8d, 0xf1, 0x3e, 0x4c, 0x0a, 0x80, 0xa7, 0x12, 0xb0, 0x06, 0x00,
+	0x9f, 0x64, 0xd6, 0x57, 0x60, 0xa9, 0xcb, 0x7b, 0xd9, 0x03, 0xfc, 0x2a, 0x03, 0xab, 0xbb, 0x8e,
+	0x73, 0x82, 0x76, 0x54, 0xa9, 0xee, 0x32, 0x16, 0xb9, 0xe5, 0x3a, 0x6b, 0x36, 0x02, 0x21, 0xcc,
+	0x53, 0xb1, 0x62, 0xd9, 0xc9, 0x92, 0x2c, 0xdb, 0x43, 0x05, 0x5c, 0x28, 0x75, 0x19, 0x5d, 0xe4,
+	0x18, 0x2b, 0xe6, 0x68, 0x27, 0x95, 0xdc, 0x83, 0x1c, 0xc5, 0x4a, 0x3d, 0x12, 0x5d, 0x99, 0xb8,
+	0x08, 0x62, 0x98, 0x9b, 0x4d, 0xa8, 0x02, 0x13, 0x0b, 0x2e, 0x2c, 0xa6, 0xe9, 0x6b, 0x87, 0x95,
+	0xe9, 0x18, 0x56, 0x1e, 0xb6, 0xc3, 0x4a, 0xae, 0x78, 0x2f, 0x35, 0x5f, 0x25, 0xdf, 0xc1, 0x17,
+	0xe8, 0x88, 0xb2, 0x14, 0xed, 0x48, 0x1b, 0xa0, 0xdc, 0x82, 0x42, 0x5a, 0x50, 0x32, 0x7f, 0x79,
+	0x58, 0x4e, 0xba, 0x95, 0xfd, 0xb8, 0x3e, 0x65, 0xbc, 0xfa, 0x5f, 0x35, 0x58, 0xe9, 0x59, 0x92,
+	0x65, 0x59, 0x85, 0x55, 0x5a, 0x0f, 0xc3, 0x20, 0x62, 0xe8, 0x58, 0x95, 0x9a, 0x8b, 0x3e, 0xb3,
+	0xe4, 0x8d, 0x92, 0xd4, 0xe9, 0xbb, 0xa9, 0x8e, 0x9e, 0x24, 0x52, 0xfb, 0x42, 0x48, 0xde, 0x4a,
+	0xd4, 0x5c, 0xa1, 0xe9, 0x0b, 0xfc, 0xa6, 0xf3, 0x90, 0xbf, 0x41, 0x68, 0xd5, 0x0d, 0x05, 0xe0,
+	0xa5, 0xd7, 0x60, 0xeb, 0x1c, 0x3c, 0x6e, 0xb2, 0x0b, 0xa8, 0xcb, 0x79, 0x1d, 0xdf, 0xfa, 0x6f,
+	0x32, 0xb0, 0x6c, 0xa2, 0xed, 0x1c, 0x3c, 0x7a, 0xd6, 0x8d, 0x33, 0x3b, 0x30, 0x2e, 0x7a, 0x3e,
+	0x4d, 0x64, 0xfa, 0x4d, 0xe5, 0xc3, 0xe5, 0xd1, 0x33, 0x91, 0x63, 0xc1, 0xdc, 0xd1, 0x6b, 0x66,
+	0x3a, 0x7b, 0x4d, 0x5e, 0x0b, 0x41, 0x3d, 0xaa, 0xa0, 0x25, 0x8f, 0xbe, 0x44, 0x82, 0xd9, 0x98,
+	0x2a, 0x93, 0x4a, 0x4e, 0x21, 0xef, 0xfa, 0x9c, 0xc3, 0x6d, 0xa0, 0xc5, 0x3b, 0xa0, 0x36, 0x14,
+	0x1a, 0x1f, 0x8c, 0x42, 0x4b, 0x4d, 0xe1, 0x43, 0xbf, 0x0d, 0x84, 0x5e, 0x49, 0x13, 0xf4, 0xbb,
+	0x0c, 0xac, 0xf4, 0x24, 0x4b, 0xd6, 0xc0, 0xb5, 0xb2, 0x95, 0x7a, 0x91, 0x64, 0xfe, 0xc3, 0x8b,
+	0x84, 0xd8, 0xb0, 0xdc, 0xa3, 0x35, 0xae, 0x95, 0xb1, 0xd1, 0xef, 0xc6, 0xc5, 0x6e, 0xf5, 0x9c,
+	0x9a, 0x96, 0xb1, 0xf1, 0xb4, 0x8c, 0xfd, 0x5d, 0x83, 0x95, 0xa7, 0xf5, 0xe8, 0x1c, 0x3f, 0xe7,
+	0xf5, 0xa5, 0x17, 0x20, 0xdf, 0x1b, 0xa7, 0x04, 0x95, 0xdf, 0x66, 0x60, 0xe5, 0x31, 0x7e, 0xfe,
+	0x93, 0xf0, 0x6a, 0x0e, 0xd9, 0x1e, 0xe4, 0x7b, 0x93, 0x35, 0xda, 0xc3, 0x42, 0xff, 0x89, 0x06,
+	0x6b, 0x26, 0x9e, 0x45, 0x48, 0xab, 0xc9, 0x35, 0x2c, 0x6a, 0xf7, 0x35, 0x8d, 0x03, 0xd7, 0xe1,
+	0x56, 0xba, 0x37, 0xb2, 0x40, 0x3e, 0xcb, 0xc0, 0x6d, 0xfe, 0xa0, 0xf7, 0x9d, 0xae, 0x13, 0xd8,
+	0x74, 0x78, 0x0d, 0xa6, 0xe5, 0x30, 0x49, 0xf6, 0x78, 0xd3, 0xe6, 0x54, 0x4c, 0x28, 0x39, 0xff,
+	0xad, 0xde, 0xe4, 0x1e, 0xe4, 0x22, 0xf4, 0x02, 0xd6, 0x53, 0x4a, 0x31, 0x35, 0x29, 0xa5, 0xae,
+	0x47, 0xef, 0xf8, 0xab, 0x7b, 0xf4, 0x4e, 0x5c, 0xff, 0xd1, 0xab, 0x6f, 0xc0, 0xba, 0x2a, 0xa3,
+	0x71, 0xd2, 0x8b, 0x7f, 0x58, 0x80, 0xa9, 0x5d, 0xde, 0xe7, 0xec, 0x3e, 0x2d, 0x91, 0x9f, 0x6a,
+	0xb0, 0xaa, 0x1c, 0xd8, 0x92, 0x2f, 0x29, 0xba, 0xa3, 0x41, 0x63, 0xe7, 0xc2, 0x07, 0xa3, 0x0b,
+	0xca, 0x4a, 0xff, 0x1e, 0xbc, 0x91, 0x32, 0xa3, 0x24, 0xdb, 0x03, 0x14, 0xf6, 0x0e, 0x66, 0x0b,
+	0xc5, 0x51, 0x44, 0xa4, 0x75, 0x1b, 0xa0, 0x35, 0xed, 0x23, 0x9b, 0x0a, 0x0d, 0x3d, 0x03, 0xc4,
+	0xc2, 0xff, 0x0d, 0xc1, 0xd9, 0x32, 0xd1, 0x1a, 0xb6, 0x29, 0x4d, 0xf4, 0x0c, 0x17, 0x95, 0x26,
+	0x7a, 0x27, 0x77, 0xb1, 0x89, 0x64, 0x4c, 0xd6, 0xc7, 0x44, 0xd7, 0x6c, 0xaf, 0x8f, 0x89, 0xee,
+	0x99, 0x1b, 0xf9, 0x2e, 0xcc, 0x76, 0x4c, 0xb7, 0xc8, 0x3b, 0x03, 0xb2, 0xdd, 0x61, 0xe8, 0xdd,
+	0xe1, 0x98, 0xa5, 0xad, 0x5f, 0x6b, 0xe2, 0x2d, 0xdc, 0x77, 0x04, 0x43, 0xbe, 0xaa, 0x7e, 0xf7,
+	0x0f, 0x33, 0x31, 0x2b, 0x7c, 0xed, 0xda, 0xf2, 0xd2, 0xcb, 0x1f, 0x6b, 0xb0, 0x9c, 0x3e, 0x64,
+	0x20, 0xef, 0x8d, 0x38, 0x93, 0x88, 0x3d, 0x7a, 0xff, 0x5a, 0x93, 0x0c, 0x71, 0xa2, 0x95, 0x2f,
+	0x79, 0xe5, 0x89, 0x1e, 0x34, 0x6b, 0x50, 0x9e, 0xe8, 0xc1, 0x43, 0x83, 0x5f, 0x6a, 0x70, 0xab,
+	0xdf, 0x23, 0x97, 0x7c, 0xd8, 0x47, 0xf5, 0x80, 0x99, 0x40, 0xe1, 0xe1, 0xb5, 0x64, 0x5b, 0x45,
+	0xdc, 0xf1, 0x9a, 0x54, 0x16, 0x71, 0xda, 0x8b, 0x59, 0x59, 0xc4, 0xa9, 0x0f, 0x54, 0x72, 0x05,
+	0xa4, 0xf7, 0xf9, 0x45, 0xbe, 0x38, 0xea, 0xf3, 0xb3, 0xb0, 0x3d, 0x82, 0x84, 0x34, 0x1d, 0xc2,
+	0x5c, 0xd7, 0x03, 0x8e, 0x7c, 0x61, 0xc0, 0x01, 0xec, 0x7c, 0x03, 0x16, 0x8c, 0x61, 0xd9, 0x5b,
+	0x16, 0xbb, 0x9e, 0x0b, 0x4a, 0x8b, 0xe9, 0x6f, 0x30, 0xa5, 0x45, 0xd5, 0x2b, 0x84, 0xc2, 0x7c,
+	0x77, 0x1b, 0x4a, 0x54, 0x3a, 0x14, 0x7d, 0x79, 0x61, 0x6b, 0x68, 0xfe, 0x96, 0xd1, 0xee, 0x8e,
+	0x4d, 0x69, 0x54, 0xd1, 0x07, 0x2b, 0x8d, 0x2a, 0x5b, 0xc1, 0xef, 0xc3, 0x62, 0x5a, 0x4f, 0x45,
+	0x8a, 0xca, 0x8c, 0x29, 0xdb, 0xc1, 0xc2, 0xce, 0x48, 0x32, 0x6d, 0x40, 0x97, 0xde, 0x62, 0x28,
+	0x81, 0xae, 0x6f, 0x8f, 0xa7, 0x04, 0xba, 0xfe, 0x7d, 0xcc, 0xde, 0xee, 0x9f, 0x5e, 0xae, 0x6b,
+	0x9f, 0xbd, 0x5c, 0xd7, 0xfe, 0xf6, 0x72, 0x5d, 0xfb, 0xce, 0xce, 0xb9, 0xcb, 0xaa, 0xf5, 0xb2,
+	0x51, 0x09, 0xbc, 0xad, 0x8e, 0x3f, 0xa1, 0x1b, 0xe7, 0xe8, 0xc7, 0xff, 0x25, 0xd0, 0xfc, 0x17,
+	0x84, 0x87, 0xe2, 0x47, 0x63, 0xbb, 0x3c, 0x29, 0xe8, 0x3b, 0xff, 0x0e, 0x00, 0x00, 0xff, 0xff,
+	0x9d, 0x9d, 0x29, 0x2d, 0xaa, 0x20, 0x00, 0x00,
 }
 
 func (m *DescribeWorkflowExecutionRequest) Marshal() (dAtA []byte, err error) {
@@ -4399,6 +2330,10 @@ func (m *DescribeWorkflowExecutionRequest) MarshalToSizedBuffer(dAtA []byte) (in
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.WorkflowExecution != nil {
 		{
 			size, err := m.WorkflowExecution.MarshalToSizedBuffer(dAtA[:i])
@@ -4441,6 +2376,10 @@ func (m *DescribeWorkflowExecutionResponse) MarshalToSizedBuffer(dAtA []byte) (i
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.MutableStateInDatabase) > 0 {
 		i -= len(m.MutableStateInDatabase)
 		copy(dAtA[i:], m.MutableStateInDatabase)
@@ -4490,6 +2429,55 @@ func (m *DescribeHistoryHostRequest) MarshalToSizedBuffer(dAtA []byte) (int, err
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.DescribeBy != nil {
+		{
+			size := m.DescribeBy.Size()
+			i -= size
+			if _, err := m.DescribeBy.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *DescribeHistoryHostRequest_HostAddress) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DescribeHistoryHostRequest_HostAddress) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	i -= len(m.HostAddress)
+	copy(dAtA[i:], m.HostAddress)
+	i = encodeVarintService(dAtA, i, uint64(len(m.HostAddress)))
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+func (m *DescribeHistoryHostRequest_ShardId) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DescribeHistoryHostRequest_ShardId) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	i = encodeVarintService(dAtA, i, uint64(m.ShardId))
+	i--
+	dAtA[i] = 0x10
+	return len(dAtA) - i, nil
+}
+func (m *DescribeHistoryHostRequest_WorkflowExecution) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DescribeHistoryHostRequest_WorkflowExecution) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	if m.WorkflowExecution != nil {
 		{
 			size, err := m.WorkflowExecution.MarshalToSizedBuffer(dAtA[:i])
@@ -4502,21 +2490,8 @@ func (m *DescribeHistoryHostRequest) MarshalToSizedBuffer(dAtA []byte) (int, err
 		i--
 		dAtA[i] = 0x1a
 	}
-	if m.ShardId != 0 {
-		i = encodeVarintService(dAtA, i, uint64(m.ShardId))
-		i--
-		dAtA[i] = 0x10
-	}
-	if len(m.HostAddress) > 0 {
-		i -= len(m.HostAddress)
-		copy(dAtA[i:], m.HostAddress)
-		i = encodeVarintService(dAtA, i, uint64(len(m.HostAddress)))
-		i--
-		dAtA[i] = 0xa
-	}
 	return len(dAtA) - i, nil
 }
-
 func (m *DescribeHistoryHostResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -4537,6 +2512,10 @@ func (m *DescribeHistoryHostResponse) MarshalToSizedBuffer(dAtA []byte) (int, er
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Address) > 0 {
 		i -= len(m.Address)
 		copy(dAtA[i:], m.Address)
@@ -4610,6 +2589,10 @@ func (m *CloseShardRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.ShardId != 0 {
 		i = encodeVarintService(dAtA, i, uint64(m.ShardId))
 		i--
@@ -4638,6 +2621,10 @@ func (m *CloseShardResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -4661,13 +2648,19 @@ func (m *RemoveTaskRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.VisibilityTime != nil {
-		n6, err6 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.VisibilityTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.VisibilityTime):])
-		if err6 != nil {
-			return 0, err6
+		{
+			size, err := m.VisibilityTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintService(dAtA, i, uint64(size))
 		}
-		i -= n6
-		i = encodeVarintService(dAtA, i, uint64(n6))
 		i--
 		dAtA[i] = 0x22
 	}
@@ -4709,6 +2702,10 @@ func (m *RemoveTaskResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -4732,6 +2729,10 @@ func (m *ResetQueueRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.TaskType != 0 {
 		i = encodeVarintService(dAtA, i, uint64(m.TaskType))
 		i--
@@ -4772,6 +2773,10 @@ func (m *ResetQueueResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -4795,6 +2800,10 @@ func (m *DescribeQueueRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.TaskType != 0 {
 		i = encodeVarintService(dAtA, i, uint64(m.TaskType))
 		i--
@@ -4835,6 +2844,10 @@ func (m *DescribeQueueResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.ProcessingQueueStates) > 0 {
 		for iNdEx := len(m.ProcessingQueueStates) - 1; iNdEx >= 0; iNdEx-- {
 			i -= len(m.ProcessingQueueStates[iNdEx])
@@ -4867,6 +2880,10 @@ func (m *GetWorkflowExecutionRawHistoryV2Request) MarshalToSizedBuffer(dAtA []by
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.NextPageToken) > 0 {
 		i -= len(m.NextPageToken)
 		copy(dAtA[i:], m.NextPageToken)
@@ -4945,6 +2962,10 @@ func (m *GetWorkflowExecutionRawHistoryV2Response) MarshalToSizedBuffer(dAtA []b
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.VersionHistory != nil {
 		{
 			size, err := m.VersionHistory.MarshalToSizedBuffer(dAtA[:i])
@@ -5001,6 +3022,10 @@ func (m *GetReplicationMessagesRequest) MarshalToSizedBuffer(dAtA []byte) (int, 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.ClusterName) > 0 {
 		i -= len(m.ClusterName)
 		copy(dAtA[i:], m.ClusterName)
@@ -5045,6 +3070,10 @@ func (m *GetReplicationMessagesResponse) MarshalToSizedBuffer(dAtA []byte) (int,
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.ShardMessages) > 0 {
 		for k := range m.ShardMessages {
 			v := m.ShardMessages[k]
@@ -5092,6 +3121,10 @@ func (m *GetDLQReplicationMessagesRequest) MarshalToSizedBuffer(dAtA []byte) (in
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.TaskInfos) > 0 {
 		for iNdEx := len(m.TaskInfos) - 1; iNdEx >= 0; iNdEx-- {
 			{
@@ -5129,6 +3162,10 @@ func (m *GetDLQReplicationMessagesResponse) MarshalToSizedBuffer(dAtA []byte) (i
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.ReplicationTasks) > 0 {
 		for iNdEx := len(m.ReplicationTasks) - 1; iNdEx >= 0; iNdEx-- {
 			{
@@ -5166,6 +3203,10 @@ func (m *GetDomainReplicationMessagesRequest) MarshalToSizedBuffer(dAtA []byte) 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.ClusterName) > 0 {
 		i -= len(m.ClusterName)
 		copy(dAtA[i:], m.ClusterName)
@@ -5173,15 +3214,29 @@ func (m *GetDomainReplicationMessagesRequest) MarshalToSizedBuffer(dAtA []byte) 
 		i--
 		dAtA[i] = 0x1a
 	}
-	if m.LastProcessedMessageId != 0 {
-		i = encodeVarintService(dAtA, i, uint64(m.LastProcessedMessageId))
+	if m.LastProcessedMessageId != nil {
+		{
+			size, err := m.LastProcessedMessageId.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintService(dAtA, i, uint64(size))
+		}
 		i--
-		dAtA[i] = 0x10
+		dAtA[i] = 0x12
 	}
-	if m.LastRetrievedMessageId != 0 {
-		i = encodeVarintService(dAtA, i, uint64(m.LastRetrievedMessageId))
+	if m.LastRetrievedMessageId != nil {
+		{
+			size, err := m.LastRetrievedMessageId.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintService(dAtA, i, uint64(size))
+		}
 		i--
-		dAtA[i] = 0x8
+		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
@@ -5206,6 +3261,10 @@ func (m *GetDomainReplicationMessagesResponse) MarshalToSizedBuffer(dAtA []byte)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Messages != nil {
 		{
 			size, err := m.Messages.MarshalToSizedBuffer(dAtA[:i])
@@ -5241,6 +3300,10 @@ func (m *ReapplyEventsRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Events != nil {
 		{
 			size, err := m.Events.MarshalToSizedBuffer(dAtA[:i])
@@ -5295,6 +3358,10 @@ func (m *ReapplyEventsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -5318,6 +3385,10 @@ func (m *AddSearchAttributeRequest) MarshalToSizedBuffer(dAtA []byte) (int, erro
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.SecurityToken) > 0 {
 		i -= len(m.SecurityToken)
 		copy(dAtA[i:], m.SecurityToken)
@@ -5365,6 +3436,10 @@ func (m *AddSearchAttributeResponse) MarshalToSizedBuffer(dAtA []byte) (int, err
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -5388,6 +3463,10 @@ func (m *DescribeClusterRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -5411,6 +3490,10 @@ func (m *DescribeClusterResponse) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.MembershipInfo != nil {
 		{
 			size, err := m.MembershipInfo.MarshalToSizedBuffer(dAtA[:i])
@@ -5458,6 +3541,10 @@ func (m *ReadDLQMessagesRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.NextPageToken) > 0 {
 		i -= len(m.NextPageToken)
 		copy(dAtA[i:], m.NextPageToken)
@@ -5470,10 +3557,17 @@ func (m *ReadDLQMessagesRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) 
 		i--
 		dAtA[i] = 0x28
 	}
-	if m.InclusiveEndMessageId != 0 {
-		i = encodeVarintService(dAtA, i, uint64(m.InclusiveEndMessageId))
+	if m.InclusiveEndMessageId != nil {
+		{
+			size, err := m.InclusiveEndMessageId.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintService(dAtA, i, uint64(size))
+		}
 		i--
-		dAtA[i] = 0x20
+		dAtA[i] = 0x22
 	}
 	if len(m.SourceCluster) > 0 {
 		i -= len(m.SourceCluster)
@@ -5515,12 +3609,30 @@ func (m *ReadDLQMessagesResponse) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.NextPageToken) > 0 {
 		i -= len(m.NextPageToken)
 		copy(dAtA[i:], m.NextPageToken)
 		i = encodeVarintService(dAtA, i, uint64(len(m.NextPageToken)))
 		i--
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x22
+	}
+	if len(m.ReplicationTasksInfo) > 0 {
+		for iNdEx := len(m.ReplicationTasksInfo) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.ReplicationTasksInfo[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintService(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x1a
+		}
 	}
 	if len(m.ReplicationTasks) > 0 {
 		for iNdEx := len(m.ReplicationTasks) - 1; iNdEx >= 0; iNdEx-- {
@@ -5564,10 +3676,21 @@ func (m *PurgeDLQMessagesRequest) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	_ = i
 	var l int
 	_ = l
-	if m.InclusiveEndMessageId != 0 {
-		i = encodeVarintService(dAtA, i, uint64(m.InclusiveEndMessageId))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.InclusiveEndMessageId != nil {
+		{
+			size, err := m.InclusiveEndMessageId.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintService(dAtA, i, uint64(size))
+		}
 		i--
-		dAtA[i] = 0x20
+		dAtA[i] = 0x22
 	}
 	if len(m.SourceCluster) > 0 {
 		i -= len(m.SourceCluster)
@@ -5609,6 +3732,10 @@ func (m *PurgeDLQMessagesResponse) MarshalToSizedBuffer(dAtA []byte) (int, error
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -5632,6 +3759,10 @@ func (m *MergeDLQMessagesRequest) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.NextPageToken) > 0 {
 		i -= len(m.NextPageToken)
 		copy(dAtA[i:], m.NextPageToken)
@@ -5644,10 +3775,17 @@ func (m *MergeDLQMessagesRequest) MarshalToSizedBuffer(dAtA []byte) (int, error)
 		i--
 		dAtA[i] = 0x28
 	}
-	if m.InclusiveEndMessageId != 0 {
-		i = encodeVarintService(dAtA, i, uint64(m.InclusiveEndMessageId))
+	if m.InclusiveEndMessageId != nil {
+		{
+			size, err := m.InclusiveEndMessageId.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintService(dAtA, i, uint64(size))
+		}
 		i--
-		dAtA[i] = 0x20
+		dAtA[i] = 0x22
 	}
 	if len(m.SourceCluster) > 0 {
 		i -= len(m.SourceCluster)
@@ -5689,6 +3827,10 @@ func (m *MergeDLQMessagesResponse) MarshalToSizedBuffer(dAtA []byte) (int, error
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.NextPageToken) > 0 {
 		i -= len(m.NextPageToken)
 		copy(dAtA[i:], m.NextPageToken)
@@ -5719,6 +3861,10 @@ func (m *RefreshWorkflowTasksRequest) MarshalToSizedBuffer(dAtA []byte) (int, er
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.WorkflowExecution != nil {
 		{
 			size, err := m.WorkflowExecution.MarshalToSizedBuffer(dAtA[:i])
@@ -5761,6 +3907,10 @@ func (m *RefreshWorkflowTasksResponse) MarshalToSizedBuffer(dAtA []byte) (int, e
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -5784,6 +3934,10 @@ func (m *ResendReplicationTasksRequest) MarshalToSizedBuffer(dAtA []byte) (int, 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.EndEvent != nil {
 		{
 			size, err := m.EndEvent.MarshalToSizedBuffer(dAtA[:i])
@@ -5857,6 +4011,10 @@ func (m *ResendReplicationTasksResponse) MarshalToSizedBuffer(dAtA []byte) (int,
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -5885,6 +4043,9 @@ func (m *DescribeWorkflowExecutionRequest) Size() (n int) {
 		l = m.WorkflowExecution.Size()
 		n += 1 + l + sovService(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -5909,6 +4070,9 @@ func (m *DescribeWorkflowExecutionResponse) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovService(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -5918,20 +4082,46 @@ func (m *DescribeHistoryHostRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.DescribeBy != nil {
+		n += m.DescribeBy.Size()
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *DescribeHistoryHostRequest_HostAddress) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
 	l = len(m.HostAddress)
-	if l > 0 {
-		n += 1 + l + sovService(uint64(l))
+	n += 1 + l + sovService(uint64(l))
+	return n
+}
+func (m *DescribeHistoryHostRequest_ShardId) Size() (n int) {
+	if m == nil {
+		return 0
 	}
-	if m.ShardId != 0 {
-		n += 1 + sovService(uint64(m.ShardId))
+	var l int
+	_ = l
+	n += 1 + sovService(uint64(m.ShardId))
+	return n
+}
+func (m *DescribeHistoryHostRequest_WorkflowExecution) Size() (n int) {
+	if m == nil {
+		return 0
 	}
+	var l int
+	_ = l
 	if m.WorkflowExecution != nil {
 		l = m.WorkflowExecution.Size()
 		n += 1 + l + sovService(uint64(l))
 	}
 	return n
 }
-
 func (m *DescribeHistoryHostResponse) Size() (n int) {
 	if m == nil {
 		return 0
@@ -5960,6 +4150,9 @@ func (m *DescribeHistoryHostResponse) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovService(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -5972,6 +4165,9 @@ func (m *CloseShardRequest) Size() (n int) {
 	if m.ShardId != 0 {
 		n += 1 + sovService(uint64(m.ShardId))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -5981,6 +4177,9 @@ func (m *CloseShardResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6000,8 +4199,11 @@ func (m *RemoveTaskRequest) Size() (n int) {
 		n += 1 + sovService(uint64(m.TaskId))
 	}
 	if m.VisibilityTime != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.VisibilityTime)
+		l = m.VisibilityTime.Size()
 		n += 1 + l + sovService(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -6012,6 +4214,9 @@ func (m *RemoveTaskResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6031,6 +4236,9 @@ func (m *ResetQueueRequest) Size() (n int) {
 	if m.TaskType != 0 {
 		n += 1 + sovService(uint64(m.TaskType))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6040,6 +4248,9 @@ func (m *ResetQueueResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6059,6 +4270,9 @@ func (m *DescribeQueueRequest) Size() (n int) {
 	if m.TaskType != 0 {
 		n += 1 + sovService(uint64(m.TaskType))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6073,6 +4287,9 @@ func (m *DescribeQueueResponse) Size() (n int) {
 			l = len(s)
 			n += 1 + l + sovService(uint64(l))
 		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -6106,6 +4323,9 @@ func (m *GetWorkflowExecutionRawHistoryV2Request) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovService(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6129,6 +4349,9 @@ func (m *GetWorkflowExecutionRawHistoryV2Response) Size() (n int) {
 		l = m.VersionHistory.Size()
 		n += 1 + l + sovService(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6147,6 +4370,9 @@ func (m *GetReplicationMessagesRequest) Size() (n int) {
 	l = len(m.ClusterName)
 	if l > 0 {
 		n += 1 + l + sovService(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -6170,6 +4396,9 @@ func (m *GetReplicationMessagesResponse) Size() (n int) {
 			n += mapEntrySize + 1 + sovService(uint64(mapEntrySize))
 		}
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6184,6 +4413,9 @@ func (m *GetDLQReplicationMessagesRequest) Size() (n int) {
 			l = e.Size()
 			n += 1 + l + sovService(uint64(l))
 		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -6200,6 +4432,9 @@ func (m *GetDLQReplicationMessagesResponse) Size() (n int) {
 			n += 1 + l + sovService(uint64(l))
 		}
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6209,15 +4444,20 @@ func (m *GetDomainReplicationMessagesRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.LastRetrievedMessageId != 0 {
-		n += 1 + sovService(uint64(m.LastRetrievedMessageId))
+	if m.LastRetrievedMessageId != nil {
+		l = m.LastRetrievedMessageId.Size()
+		n += 1 + l + sovService(uint64(l))
 	}
-	if m.LastProcessedMessageId != 0 {
-		n += 1 + sovService(uint64(m.LastProcessedMessageId))
+	if m.LastProcessedMessageId != nil {
+		l = m.LastProcessedMessageId.Size()
+		n += 1 + l + sovService(uint64(l))
 	}
 	l = len(m.ClusterName)
 	if l > 0 {
 		n += 1 + l + sovService(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -6231,6 +4471,9 @@ func (m *GetDomainReplicationMessagesResponse) Size() (n int) {
 	if m.Messages != nil {
 		l = m.Messages.Size()
 		n += 1 + l + sovService(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -6253,6 +4496,9 @@ func (m *ReapplyEventsRequest) Size() (n int) {
 		l = m.Events.Size()
 		n += 1 + l + sovService(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6262,6 +4508,9 @@ func (m *ReapplyEventsResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6283,6 +4532,9 @@ func (m *AddSearchAttributeRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovService(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6292,6 +4544,9 @@ func (m *AddSearchAttributeResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6301,6 +4556,9 @@ func (m *DescribeClusterRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6317,6 +4575,9 @@ func (m *DescribeClusterResponse) Size() (n int) {
 	if m.MembershipInfo != nil {
 		l = m.MembershipInfo.Size()
 		n += 1 + l + sovService(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -6337,8 +4598,9 @@ func (m *ReadDLQMessagesRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovService(uint64(l))
 	}
-	if m.InclusiveEndMessageId != 0 {
-		n += 1 + sovService(uint64(m.InclusiveEndMessageId))
+	if m.InclusiveEndMessageId != nil {
+		l = m.InclusiveEndMessageId.Size()
+		n += 1 + l + sovService(uint64(l))
 	}
 	if m.PageSize != 0 {
 		n += 1 + sovService(uint64(m.PageSize))
@@ -6346,6 +4608,9 @@ func (m *ReadDLQMessagesRequest) Size() (n int) {
 	l = len(m.NextPageToken)
 	if l > 0 {
 		n += 1 + l + sovService(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -6365,9 +4630,18 @@ func (m *ReadDLQMessagesResponse) Size() (n int) {
 			n += 1 + l + sovService(uint64(l))
 		}
 	}
+	if len(m.ReplicationTasksInfo) > 0 {
+		for _, e := range m.ReplicationTasksInfo {
+			l = e.Size()
+			n += 1 + l + sovService(uint64(l))
+		}
+	}
 	l = len(m.NextPageToken)
 	if l > 0 {
 		n += 1 + l + sovService(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -6388,8 +4662,12 @@ func (m *PurgeDLQMessagesRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovService(uint64(l))
 	}
-	if m.InclusiveEndMessageId != 0 {
-		n += 1 + sovService(uint64(m.InclusiveEndMessageId))
+	if m.InclusiveEndMessageId != nil {
+		l = m.InclusiveEndMessageId.Size()
+		n += 1 + l + sovService(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -6400,6 +4678,9 @@ func (m *PurgeDLQMessagesResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6419,8 +4700,9 @@ func (m *MergeDLQMessagesRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovService(uint64(l))
 	}
-	if m.InclusiveEndMessageId != 0 {
-		n += 1 + sovService(uint64(m.InclusiveEndMessageId))
+	if m.InclusiveEndMessageId != nil {
+		l = m.InclusiveEndMessageId.Size()
+		n += 1 + l + sovService(uint64(l))
 	}
 	if m.PageSize != 0 {
 		n += 1 + sovService(uint64(m.PageSize))
@@ -6428,6 +4710,9 @@ func (m *MergeDLQMessagesRequest) Size() (n int) {
 	l = len(m.NextPageToken)
 	if l > 0 {
 		n += 1 + l + sovService(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -6441,6 +4726,9 @@ func (m *MergeDLQMessagesResponse) Size() (n int) {
 	l = len(m.NextPageToken)
 	if l > 0 {
 		n += 1 + l + sovService(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -6459,6 +4747,9 @@ func (m *RefreshWorkflowTasksRequest) Size() (n int) {
 		l = m.WorkflowExecution.Size()
 		n += 1 + l + sovService(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6468,6 +4759,9 @@ func (m *RefreshWorkflowTasksResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6497,6 +4791,9 @@ func (m *ResendReplicationTasksRequest) Size() (n int) {
 		l = m.EndEvent.Size()
 		n += 1 + l + sovService(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6506,6 +4803,9 @@ func (m *ResendReplicationTasksResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6514,461 +4814,6 @@ func sovService(x uint64) (n int) {
 }
 func sozService(x uint64) (n int) {
 	return sovService(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (this *DescribeWorkflowExecutionRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DescribeWorkflowExecutionRequest{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "v1.WorkflowExecution", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DescribeWorkflowExecutionResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DescribeWorkflowExecutionResponse{`,
-		`ShardId:` + fmt.Sprintf("%v", this.ShardId) + `,`,
-		`HistoryAddr:` + fmt.Sprintf("%v", this.HistoryAddr) + `,`,
-		`MutableStateInCache:` + fmt.Sprintf("%v", this.MutableStateInCache) + `,`,
-		`MutableStateInDatabase:` + fmt.Sprintf("%v", this.MutableStateInDatabase) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DescribeHistoryHostRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DescribeHistoryHostRequest{`,
-		`HostAddress:` + fmt.Sprintf("%v", this.HostAddress) + `,`,
-		`ShardId:` + fmt.Sprintf("%v", this.ShardId) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "v1.WorkflowExecution", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DescribeHistoryHostResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DescribeHistoryHostResponse{`,
-		`NumberOfShards:` + fmt.Sprintf("%v", this.NumberOfShards) + `,`,
-		`ShardIds:` + fmt.Sprintf("%v", this.ShardIds) + `,`,
-		`DomainCache:` + strings.Replace(fmt.Sprintf("%v", this.DomainCache), "DomainCacheInfo", "v11.DomainCacheInfo", 1) + `,`,
-		`ShardControllerStatus:` + fmt.Sprintf("%v", this.ShardControllerStatus) + `,`,
-		`Address:` + fmt.Sprintf("%v", this.Address) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *CloseShardRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&CloseShardRequest{`,
-		`ShardId:` + fmt.Sprintf("%v", this.ShardId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *CloseShardResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&CloseShardResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RemoveTaskRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RemoveTaskRequest{`,
-		`ShardId:` + fmt.Sprintf("%v", this.ShardId) + `,`,
-		`TaskType:` + fmt.Sprintf("%v", this.TaskType) + `,`,
-		`TaskId:` + fmt.Sprintf("%v", this.TaskId) + `,`,
-		`VisibilityTime:` + strings.Replace(fmt.Sprintf("%v", this.VisibilityTime), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RemoveTaskResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RemoveTaskResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ResetQueueRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ResetQueueRequest{`,
-		`ShardId:` + fmt.Sprintf("%v", this.ShardId) + `,`,
-		`ClusterName:` + fmt.Sprintf("%v", this.ClusterName) + `,`,
-		`TaskType:` + fmt.Sprintf("%v", this.TaskType) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ResetQueueResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ResetQueueResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DescribeQueueRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DescribeQueueRequest{`,
-		`ShardId:` + fmt.Sprintf("%v", this.ShardId) + `,`,
-		`ClusterName:` + fmt.Sprintf("%v", this.ClusterName) + `,`,
-		`TaskType:` + fmt.Sprintf("%v", this.TaskType) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DescribeQueueResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DescribeQueueResponse{`,
-		`ProcessingQueueStates:` + fmt.Sprintf("%v", this.ProcessingQueueStates) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *GetWorkflowExecutionRawHistoryV2Request) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&GetWorkflowExecutionRawHistoryV2Request{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "v1.WorkflowExecution", 1) + `,`,
-		`StartEvent:` + strings.Replace(fmt.Sprintf("%v", this.StartEvent), "VersionHistoryItem", "v11.VersionHistoryItem", 1) + `,`,
-		`EndEvent:` + strings.Replace(fmt.Sprintf("%v", this.EndEvent), "VersionHistoryItem", "v11.VersionHistoryItem", 1) + `,`,
-		`PageSize:` + fmt.Sprintf("%v", this.PageSize) + `,`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *GetWorkflowExecutionRawHistoryV2Response) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForHistoryBatches := "[]*DataBlob{"
-	for _, f := range this.HistoryBatches {
-		repeatedStringForHistoryBatches += strings.Replace(fmt.Sprintf("%v", f), "DataBlob", "v1.DataBlob", 1) + ","
-	}
-	repeatedStringForHistoryBatches += "}"
-	s := strings.Join([]string{`&GetWorkflowExecutionRawHistoryV2Response{`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`HistoryBatches:` + repeatedStringForHistoryBatches + `,`,
-		`VersionHistory:` + strings.Replace(fmt.Sprintf("%v", this.VersionHistory), "VersionHistory", "v11.VersionHistory", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *GetReplicationMessagesRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForTokens := "[]*ReplicationToken{"
-	for _, f := range this.Tokens {
-		repeatedStringForTokens += strings.Replace(fmt.Sprintf("%v", f), "ReplicationToken", "v11.ReplicationToken", 1) + ","
-	}
-	repeatedStringForTokens += "}"
-	s := strings.Join([]string{`&GetReplicationMessagesRequest{`,
-		`Tokens:` + repeatedStringForTokens + `,`,
-		`ClusterName:` + fmt.Sprintf("%v", this.ClusterName) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *GetReplicationMessagesResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	keysForShardMessages := make([]int32, 0, len(this.ShardMessages))
-	for k, _ := range this.ShardMessages {
-		keysForShardMessages = append(keysForShardMessages, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Int32s(keysForShardMessages)
-	mapStringForShardMessages := "map[int32]*v11.ReplicationMessages{"
-	for _, k := range keysForShardMessages {
-		mapStringForShardMessages += fmt.Sprintf("%v: %v,", k, this.ShardMessages[k])
-	}
-	mapStringForShardMessages += "}"
-	s := strings.Join([]string{`&GetReplicationMessagesResponse{`,
-		`ShardMessages:` + mapStringForShardMessages + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *GetDLQReplicationMessagesRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForTaskInfos := "[]*ReplicationTaskInfo{"
-	for _, f := range this.TaskInfos {
-		repeatedStringForTaskInfos += strings.Replace(fmt.Sprintf("%v", f), "ReplicationTaskInfo", "v11.ReplicationTaskInfo", 1) + ","
-	}
-	repeatedStringForTaskInfos += "}"
-	s := strings.Join([]string{`&GetDLQReplicationMessagesRequest{`,
-		`TaskInfos:` + repeatedStringForTaskInfos + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *GetDLQReplicationMessagesResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForReplicationTasks := "[]*ReplicationTask{"
-	for _, f := range this.ReplicationTasks {
-		repeatedStringForReplicationTasks += strings.Replace(fmt.Sprintf("%v", f), "ReplicationTask", "v11.ReplicationTask", 1) + ","
-	}
-	repeatedStringForReplicationTasks += "}"
-	s := strings.Join([]string{`&GetDLQReplicationMessagesResponse{`,
-		`ReplicationTasks:` + repeatedStringForReplicationTasks + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *GetDomainReplicationMessagesRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&GetDomainReplicationMessagesRequest{`,
-		`LastRetrievedMessageId:` + fmt.Sprintf("%v", this.LastRetrievedMessageId) + `,`,
-		`LastProcessedMessageId:` + fmt.Sprintf("%v", this.LastProcessedMessageId) + `,`,
-		`ClusterName:` + fmt.Sprintf("%v", this.ClusterName) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *GetDomainReplicationMessagesResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&GetDomainReplicationMessagesResponse{`,
-		`Messages:` + strings.Replace(fmt.Sprintf("%v", this.Messages), "ReplicationMessages", "v11.ReplicationMessages", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ReapplyEventsRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ReapplyEventsRequest{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "v1.WorkflowExecution", 1) + `,`,
-		`Events:` + strings.Replace(fmt.Sprintf("%v", this.Events), "DataBlob", "v1.DataBlob", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ReapplyEventsResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ReapplyEventsResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *AddSearchAttributeRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	keysForSearchAttribute := make([]string, 0, len(this.SearchAttribute))
-	for k, _ := range this.SearchAttribute {
-		keysForSearchAttribute = append(keysForSearchAttribute, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForSearchAttribute)
-	mapStringForSearchAttribute := "map[string]v1.IndexedValueType{"
-	for _, k := range keysForSearchAttribute {
-		mapStringForSearchAttribute += fmt.Sprintf("%v: %v,", k, this.SearchAttribute[k])
-	}
-	mapStringForSearchAttribute += "}"
-	s := strings.Join([]string{`&AddSearchAttributeRequest{`,
-		`SearchAttribute:` + mapStringForSearchAttribute + `,`,
-		`SecurityToken:` + fmt.Sprintf("%v", this.SecurityToken) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *AddSearchAttributeResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&AddSearchAttributeResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DescribeClusterRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DescribeClusterRequest{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DescribeClusterResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DescribeClusterResponse{`,
-		`SupportedClientVersions:` + strings.Replace(fmt.Sprintf("%v", this.SupportedClientVersions), "SupportedClientVersions", "v1.SupportedClientVersions", 1) + `,`,
-		`MembershipInfo:` + strings.Replace(fmt.Sprintf("%v", this.MembershipInfo), "MembershipInfo", "v11.MembershipInfo", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ReadDLQMessagesRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ReadDLQMessagesRequest{`,
-		`Type:` + fmt.Sprintf("%v", this.Type) + `,`,
-		`ShardId:` + fmt.Sprintf("%v", this.ShardId) + `,`,
-		`SourceCluster:` + fmt.Sprintf("%v", this.SourceCluster) + `,`,
-		`InclusiveEndMessageId:` + fmt.Sprintf("%v", this.InclusiveEndMessageId) + `,`,
-		`PageSize:` + fmt.Sprintf("%v", this.PageSize) + `,`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ReadDLQMessagesResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForReplicationTasks := "[]*ReplicationTask{"
-	for _, f := range this.ReplicationTasks {
-		repeatedStringForReplicationTasks += strings.Replace(fmt.Sprintf("%v", f), "ReplicationTask", "v11.ReplicationTask", 1) + ","
-	}
-	repeatedStringForReplicationTasks += "}"
-	s := strings.Join([]string{`&ReadDLQMessagesResponse{`,
-		`Type:` + fmt.Sprintf("%v", this.Type) + `,`,
-		`ReplicationTasks:` + repeatedStringForReplicationTasks + `,`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *PurgeDLQMessagesRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&PurgeDLQMessagesRequest{`,
-		`Type:` + fmt.Sprintf("%v", this.Type) + `,`,
-		`ShardId:` + fmt.Sprintf("%v", this.ShardId) + `,`,
-		`SourceCluster:` + fmt.Sprintf("%v", this.SourceCluster) + `,`,
-		`InclusiveEndMessageId:` + fmt.Sprintf("%v", this.InclusiveEndMessageId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *PurgeDLQMessagesResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&PurgeDLQMessagesResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *MergeDLQMessagesRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&MergeDLQMessagesRequest{`,
-		`Type:` + fmt.Sprintf("%v", this.Type) + `,`,
-		`ShardId:` + fmt.Sprintf("%v", this.ShardId) + `,`,
-		`SourceCluster:` + fmt.Sprintf("%v", this.SourceCluster) + `,`,
-		`InclusiveEndMessageId:` + fmt.Sprintf("%v", this.InclusiveEndMessageId) + `,`,
-		`PageSize:` + fmt.Sprintf("%v", this.PageSize) + `,`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *MergeDLQMessagesResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&MergeDLQMessagesResponse{`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RefreshWorkflowTasksRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RefreshWorkflowTasksRequest{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "v1.WorkflowExecution", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RefreshWorkflowTasksResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RefreshWorkflowTasksResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ResendReplicationTasksRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ResendReplicationTasksRequest{`,
-		`DomainId:` + fmt.Sprintf("%v", this.DomainId) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "v1.WorkflowExecution", 1) + `,`,
-		`RemoteCluster:` + fmt.Sprintf("%v", this.RemoteCluster) + `,`,
-		`StartEvent:` + strings.Replace(fmt.Sprintf("%v", this.StartEvent), "VersionHistoryItem", "v11.VersionHistoryItem", 1) + `,`,
-		`EndEvent:` + strings.Replace(fmt.Sprintf("%v", this.EndEvent), "VersionHistoryItem", "v11.VersionHistoryItem", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ResendReplicationTasksResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ResendReplicationTasksResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func valueToStringService(v interface{}) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("*%v", pv)
 }
 func (m *DescribeWorkflowExecutionRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -7082,6 +4927,7 @@ func (m *DescribeWorkflowExecutionRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -7250,6 +5096,7 @@ func (m *DescribeWorkflowExecutionResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -7318,13 +5165,13 @@ func (m *DescribeHistoryHostRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.HostAddress = string(dAtA[iNdEx:postIndex])
+			m.DescribeBy = &DescribeHistoryHostRequest_HostAddress{string(dAtA[iNdEx:postIndex])}
 			iNdEx = postIndex
 		case 2:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ShardId", wireType)
 			}
-			m.ShardId = 0
+			var v int32
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowService
@@ -7334,11 +5181,12 @@ func (m *DescribeHistoryHostRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.ShardId |= int32(b&0x7F) << shift
+				v |= int32(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			m.DescribeBy = &DescribeHistoryHostRequest_ShardId{v}
 		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field WorkflowExecution", wireType)
@@ -7368,12 +5216,11 @@ func (m *DescribeHistoryHostRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.WorkflowExecution == nil {
-				m.WorkflowExecution = &v1.WorkflowExecution{}
-			}
-			if err := m.WorkflowExecution.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			v := &v1.WorkflowExecution{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			m.DescribeBy = &DescribeHistoryHostRequest_WorkflowExecution{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -7390,6 +5237,7 @@ func (m *DescribeHistoryHostRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -7638,6 +5486,7 @@ func (m *DescribeHistoryHostResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -7710,6 +5559,7 @@ func (m *CloseShardRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -7763,6 +5613,7 @@ func (m *CloseShardResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -7888,9 +5739,9 @@ func (m *RemoveTaskRequest) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.VisibilityTime == nil {
-				m.VisibilityTime = new(time.Time)
+				m.VisibilityTime = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.VisibilityTime, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.VisibilityTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -7909,6 +5760,7 @@ func (m *RemoveTaskRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -7962,6 +5814,7 @@ func (m *RemoveTaskResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -8085,6 +5938,7 @@ func (m *ResetQueueRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -8138,6 +5992,7 @@ func (m *ResetQueueResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -8261,6 +6116,7 @@ func (m *DescribeQueueRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -8346,6 +6202,7 @@ func (m *DescribeQueueResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -8592,6 +6449,7 @@ func (m *GetWorkflowExecutionRawHistoryV2Request) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -8749,6 +6607,7 @@ func (m *GetWorkflowExecutionRawHistoryV2Response) Unmarshal(dAtA []byte) error 
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -8868,6 +6727,7 @@ func (m *GetReplicationMessagesRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -9036,6 +6896,7 @@ func (m *GetReplicationMessagesResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -9123,6 +6984,7 @@ func (m *GetDLQReplicationMessagesRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -9210,6 +7072,7 @@ func (m *GetDLQReplicationMessagesResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -9249,10 +7112,10 @@ func (m *GetDomainReplicationMessagesRequest) Unmarshal(dAtA []byte) error {
 		}
 		switch fieldNum {
 		case 1:
-			if wireType != 0 {
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field LastRetrievedMessageId", wireType)
 			}
-			m.LastRetrievedMessageId = 0
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowService
@@ -9262,16 +7125,33 @@ func (m *GetDomainReplicationMessagesRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.LastRetrievedMessageId |= int64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.LastRetrievedMessageId == nil {
+				m.LastRetrievedMessageId = &types.Int64Value{}
+			}
+			if err := m.LastRetrievedMessageId.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		case 2:
-			if wireType != 0 {
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field LastProcessedMessageId", wireType)
 			}
-			m.LastProcessedMessageId = 0
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowService
@@ -9281,11 +7161,28 @@ func (m *GetDomainReplicationMessagesRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.LastProcessedMessageId |= int64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.LastProcessedMessageId == nil {
+				m.LastProcessedMessageId = &types.Int64Value{}
+			}
+			if err := m.LastProcessedMessageId.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ClusterName", wireType)
@@ -9333,6 +7230,7 @@ func (m *GetDomainReplicationMessagesRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -9422,6 +7320,7 @@ func (m *GetDomainReplicationMessagesResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -9579,6 +7478,7 @@ func (m *ReapplyEventsRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -9632,6 +7532,7 @@ func (m *ReapplyEventsResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -9830,6 +7731,7 @@ func (m *AddSearchAttributeRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -9883,6 +7785,7 @@ func (m *AddSearchAttributeResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -9936,6 +7839,7 @@ func (m *DescribeClusterRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -10061,6 +7965,7 @@ func (m *DescribeClusterResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -10170,10 +8075,10 @@ func (m *ReadDLQMessagesRequest) Unmarshal(dAtA []byte) error {
 			m.SourceCluster = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 4:
-			if wireType != 0 {
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field InclusiveEndMessageId", wireType)
 			}
-			m.InclusiveEndMessageId = 0
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowService
@@ -10183,11 +8088,28 @@ func (m *ReadDLQMessagesRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.InclusiveEndMessageId |= int64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.InclusiveEndMessageId == nil {
+				m.InclusiveEndMessageId = &types.Int64Value{}
+			}
+			if err := m.InclusiveEndMessageId.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		case 5:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PageSize", wireType)
@@ -10256,6 +8178,7 @@ func (m *ReadDLQMessagesRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -10349,6 +8272,40 @@ func (m *ReadDLQMessagesResponse) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ReplicationTasksInfo", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ReplicationTasksInfo = append(m.ReplicationTasksInfo, &v11.ReplicationTaskInfo{})
+			if err := m.ReplicationTasksInfo[len(m.ReplicationTasksInfo)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field NextPageToken", wireType)
 			}
 			var byteLen int
@@ -10396,6 +8353,7 @@ func (m *ReadDLQMessagesResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -10505,10 +8463,10 @@ func (m *PurgeDLQMessagesRequest) Unmarshal(dAtA []byte) error {
 			m.SourceCluster = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 4:
-			if wireType != 0 {
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field InclusiveEndMessageId", wireType)
 			}
-			m.InclusiveEndMessageId = 0
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowService
@@ -10518,11 +8476,28 @@ func (m *PurgeDLQMessagesRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.InclusiveEndMessageId |= int64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.InclusiveEndMessageId == nil {
+				m.InclusiveEndMessageId = &types.Int64Value{}
+			}
+			if err := m.InclusiveEndMessageId.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipService(dAtA[iNdEx:])
@@ -10538,6 +8513,7 @@ func (m *PurgeDLQMessagesRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -10591,6 +8567,7 @@ func (m *PurgeDLQMessagesResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -10700,10 +8677,10 @@ func (m *MergeDLQMessagesRequest) Unmarshal(dAtA []byte) error {
 			m.SourceCluster = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 4:
-			if wireType != 0 {
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field InclusiveEndMessageId", wireType)
 			}
-			m.InclusiveEndMessageId = 0
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowService
@@ -10713,11 +8690,28 @@ func (m *MergeDLQMessagesRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.InclusiveEndMessageId |= int64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.InclusiveEndMessageId == nil {
+				m.InclusiveEndMessageId = &types.Int64Value{}
+			}
+			if err := m.InclusiveEndMessageId.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		case 5:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PageSize", wireType)
@@ -10786,6 +8780,7 @@ func (m *MergeDLQMessagesRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -10873,6 +8868,7 @@ func (m *MergeDLQMessagesResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -10994,6 +8990,7 @@ func (m *RefreshWorkflowTasksRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -11047,6 +9044,7 @@ func (m *RefreshWorkflowTasksResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -11272,6 +9270,7 @@ func (m *ResendReplicationTasksRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -11325,6 +9324,7 @@ func (m *ResendReplicationTasksResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}

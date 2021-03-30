@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,32 +26,19 @@
 package apiv1
 
 import (
-	bytes "bytes"
-	context "context"
 	fmt "fmt"
 	io "io"
 	math "math"
 	math_bits "math/bits"
-	reflect "reflect"
-	strings "strings"
-	time "time"
 
-	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
-	github_com_gogo_protobuf_sortkeys "github.com/gogo/protobuf/sortkeys"
-	github_com_gogo_protobuf_types "github.com/gogo/protobuf/types"
-	_ "github.com/golang/protobuf/ptypes/duration"
-	_ "github.com/golang/protobuf/ptypes/timestamp"
-	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
+	types "github.com/gogo/protobuf/types"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = time.Kitchen
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -60,14 +47,18 @@ var _ = time.Kitchen
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type PollForDecisionTaskRequest struct {
-	Domain         string    `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	TaskList       *TaskList `protobuf:"bytes,2,opt,name=task_list,json=taskList,proto3" json:"task_list,omitempty"`
-	Identity       string    `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
-	BinaryChecksum string    `protobuf:"bytes,4,opt,name=binary_checksum,json=binaryChecksum,proto3" json:"binary_checksum,omitempty"`
+	Domain               string    `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	TaskList             *TaskList `protobuf:"bytes,2,opt,name=task_list,json=taskList,proto3" json:"task_list,omitempty"`
+	Identity             string    `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
+	BinaryChecksum       string    `protobuf:"bytes,4,opt,name=binary_checksum,json=binaryChecksum,proto3" json:"binary_checksum,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
+	XXX_unrecognized     []byte    `json:"-"`
+	XXX_sizecache        int32     `json:"-"`
 }
 
-func (m *PollForDecisionTaskRequest) Reset()      { *m = PollForDecisionTaskRequest{} }
-func (*PollForDecisionTaskRequest) ProtoMessage() {}
+func (m *PollForDecisionTaskRequest) Reset()         { *m = PollForDecisionTaskRequest{} }
+func (m *PollForDecisionTaskRequest) String() string { return proto.CompactTextString(m) }
+func (*PollForDecisionTaskRequest) ProtoMessage()    {}
 func (*PollForDecisionTaskRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{0}
 }
@@ -130,7 +121,7 @@ type PollForDecisionTaskResponse struct {
 	TaskToken                 []byte                    `protobuf:"bytes,1,opt,name=task_token,json=taskToken,proto3" json:"task_token,omitempty"`
 	WorkflowExecution         *WorkflowExecution        `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
 	WorkflowType              *WorkflowType             `protobuf:"bytes,3,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
-	PreviousStartedEventId    int64                     `protobuf:"varint,4,opt,name=previous_started_event_id,json=previousStartedEventId,proto3" json:"previous_started_event_id,omitempty"`
+	PreviousStartedEventId    *types.Int64Value         `protobuf:"bytes,4,opt,name=previous_started_event_id,json=previousStartedEventId,proto3" json:"previous_started_event_id,omitempty"`
 	StartedEventId            int64                     `protobuf:"varint,5,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
 	Attempt                   int64                     `protobuf:"varint,6,opt,name=attempt,proto3" json:"attempt,omitempty"`
 	BacklogCountHint          int64                     `protobuf:"varint,7,opt,name=backlog_count_hint,json=backlogCountHint,proto3" json:"backlog_count_hint,omitempty"`
@@ -138,13 +129,17 @@ type PollForDecisionTaskResponse struct {
 	NextPageToken             []byte                    `protobuf:"bytes,9,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	Query                     *WorkflowQuery            `protobuf:"bytes,10,opt,name=query,proto3" json:"query,omitempty"`
 	WorkflowExecutionTaskList *TaskList                 `protobuf:"bytes,11,opt,name=workflow_execution_task_list,json=workflowExecutionTaskList,proto3" json:"workflow_execution_task_list,omitempty"`
-	ScheduledTime             *time.Time                `protobuf:"bytes,12,opt,name=scheduled_time,json=scheduledTime,proto3,stdtime" json:"scheduled_time,omitempty"`
-	StartedTime               *time.Time                `protobuf:"bytes,13,opt,name=started_time,json=startedTime,proto3,stdtime" json:"started_time,omitempty"`
+	ScheduledTime             *types.Timestamp          `protobuf:"bytes,12,opt,name=scheduled_time,json=scheduledTime,proto3" json:"scheduled_time,omitempty"`
+	StartedTime               *types.Timestamp          `protobuf:"bytes,13,opt,name=started_time,json=startedTime,proto3" json:"started_time,omitempty"`
 	Queries                   map[string]*WorkflowQuery `protobuf:"bytes,14,rep,name=queries,proto3" json:"queries,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral      struct{}                  `json:"-"`
+	XXX_unrecognized          []byte                    `json:"-"`
+	XXX_sizecache             int32                     `json:"-"`
 }
 
-func (m *PollForDecisionTaskResponse) Reset()      { *m = PollForDecisionTaskResponse{} }
-func (*PollForDecisionTaskResponse) ProtoMessage() {}
+func (m *PollForDecisionTaskResponse) Reset()         { *m = PollForDecisionTaskResponse{} }
+func (m *PollForDecisionTaskResponse) String() string { return proto.CompactTextString(m) }
+func (*PollForDecisionTaskResponse) ProtoMessage()    {}
 func (*PollForDecisionTaskResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{1}
 }
@@ -196,11 +191,11 @@ func (m *PollForDecisionTaskResponse) GetWorkflowType() *WorkflowType {
 	return nil
 }
 
-func (m *PollForDecisionTaskResponse) GetPreviousStartedEventId() int64 {
+func (m *PollForDecisionTaskResponse) GetPreviousStartedEventId() *types.Int64Value {
 	if m != nil {
 		return m.PreviousStartedEventId
 	}
-	return 0
+	return nil
 }
 
 func (m *PollForDecisionTaskResponse) GetStartedEventId() int64 {
@@ -252,14 +247,14 @@ func (m *PollForDecisionTaskResponse) GetWorkflowExecutionTaskList() *TaskList {
 	return nil
 }
 
-func (m *PollForDecisionTaskResponse) GetScheduledTime() *time.Time {
+func (m *PollForDecisionTaskResponse) GetScheduledTime() *types.Timestamp {
 	if m != nil {
 		return m.ScheduledTime
 	}
 	return nil
 }
 
-func (m *PollForDecisionTaskResponse) GetStartedTime() *time.Time {
+func (m *PollForDecisionTaskResponse) GetStartedTime() *types.Timestamp {
 	if m != nil {
 		return m.StartedTime
 	}
@@ -283,10 +278,14 @@ type RespondDecisionTaskCompletedRequest struct {
 	ForceCreateNewDecisionTask bool                            `protobuf:"varint,7,opt,name=force_create_new_decision_task,json=forceCreateNewDecisionTask,proto3" json:"force_create_new_decision_task,omitempty"`
 	BinaryChecksum             string                          `protobuf:"bytes,8,opt,name=binary_checksum,json=binaryChecksum,proto3" json:"binary_checksum,omitempty"`
 	QueryResults               map[string]*WorkflowQueryResult `protobuf:"bytes,9,rep,name=query_results,json=queryResults,proto3" json:"query_results,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral       struct{}                        `json:"-"`
+	XXX_unrecognized           []byte                          `json:"-"`
+	XXX_sizecache              int32                           `json:"-"`
 }
 
-func (m *RespondDecisionTaskCompletedRequest) Reset()      { *m = RespondDecisionTaskCompletedRequest{} }
-func (*RespondDecisionTaskCompletedRequest) ProtoMessage() {}
+func (m *RespondDecisionTaskCompletedRequest) Reset()         { *m = RespondDecisionTaskCompletedRequest{} }
+func (m *RespondDecisionTaskCompletedRequest) String() string { return proto.CompactTextString(m) }
+func (*RespondDecisionTaskCompletedRequest) ProtoMessage()    {}
 func (*RespondDecisionTaskCompletedRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{2}
 }
@@ -383,10 +382,14 @@ func (m *RespondDecisionTaskCompletedRequest) GetQueryResults() map[string]*Work
 type RespondDecisionTaskCompletedResponse struct {
 	DecisionTask                *PollForDecisionTaskResponse          `protobuf:"bytes,1,opt,name=decision_task,json=decisionTask,proto3" json:"decision_task,omitempty"`
 	ActivitiesToDispatchLocally map[string]*ActivityLocalDispatchInfo `protobuf:"bytes,2,rep,name=activities_to_dispatch_locally,json=activitiesToDispatchLocally,proto3" json:"activities_to_dispatch_locally,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral        struct{}                              `json:"-"`
+	XXX_unrecognized            []byte                                `json:"-"`
+	XXX_sizecache               int32                                 `json:"-"`
 }
 
-func (m *RespondDecisionTaskCompletedResponse) Reset()      { *m = RespondDecisionTaskCompletedResponse{} }
-func (*RespondDecisionTaskCompletedResponse) ProtoMessage() {}
+func (m *RespondDecisionTaskCompletedResponse) Reset()         { *m = RespondDecisionTaskCompletedResponse{} }
+func (m *RespondDecisionTaskCompletedResponse) String() string { return proto.CompactTextString(m) }
+func (*RespondDecisionTaskCompletedResponse) ProtoMessage()    {}
 func (*RespondDecisionTaskCompletedResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{3}
 }
@@ -432,15 +435,19 @@ func (m *RespondDecisionTaskCompletedResponse) GetActivitiesToDispatchLocally() 
 }
 
 type RespondDecisionTaskFailedRequest struct {
-	TaskToken      []byte                  `protobuf:"bytes,1,opt,name=task_token,json=taskToken,proto3" json:"task_token,omitempty"`
-	Cause          DecisionTaskFailedCause `protobuf:"varint,2,opt,name=cause,proto3,enum=uber.cadence.api.v1.DecisionTaskFailedCause" json:"cause,omitempty"`
-	Details        *Payload                `protobuf:"bytes,3,opt,name=details,proto3" json:"details,omitempty"`
-	Identity       string                  `protobuf:"bytes,4,opt,name=identity,proto3" json:"identity,omitempty"`
-	BinaryChecksum string                  `protobuf:"bytes,5,opt,name=binary_checksum,json=binaryChecksum,proto3" json:"binary_checksum,omitempty"`
+	TaskToken            []byte                  `protobuf:"bytes,1,opt,name=task_token,json=taskToken,proto3" json:"task_token,omitempty"`
+	Cause                DecisionTaskFailedCause `protobuf:"varint,2,opt,name=cause,proto3,enum=uber.cadence.api.v1.DecisionTaskFailedCause" json:"cause,omitempty"`
+	Details              *Payload                `protobuf:"bytes,3,opt,name=details,proto3" json:"details,omitempty"`
+	Identity             string                  `protobuf:"bytes,4,opt,name=identity,proto3" json:"identity,omitempty"`
+	BinaryChecksum       string                  `protobuf:"bytes,5,opt,name=binary_checksum,json=binaryChecksum,proto3" json:"binary_checksum,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                `json:"-"`
+	XXX_unrecognized     []byte                  `json:"-"`
+	XXX_sizecache        int32                   `json:"-"`
 }
 
-func (m *RespondDecisionTaskFailedRequest) Reset()      { *m = RespondDecisionTaskFailedRequest{} }
-func (*RespondDecisionTaskFailedRequest) ProtoMessage() {}
+func (m *RespondDecisionTaskFailedRequest) Reset()         { *m = RespondDecisionTaskFailedRequest{} }
+func (m *RespondDecisionTaskFailedRequest) String() string { return proto.CompactTextString(m) }
+func (*RespondDecisionTaskFailedRequest) ProtoMessage()    {}
 func (*RespondDecisionTaskFailedRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{4}
 }
@@ -482,7 +489,7 @@ func (m *RespondDecisionTaskFailedRequest) GetCause() DecisionTaskFailedCause {
 	if m != nil {
 		return m.Cause
 	}
-	return DECISION_TASK_FAILED_CAUSE_INVALID
+	return DecisionTaskFailedCause_DECISION_TASK_FAILED_CAUSE_INVALID
 }
 
 func (m *RespondDecisionTaskFailedRequest) GetDetails() *Payload {
@@ -507,10 +514,14 @@ func (m *RespondDecisionTaskFailedRequest) GetBinaryChecksum() string {
 }
 
 type RespondDecisionTaskFailedResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RespondDecisionTaskFailedResponse) Reset()      { *m = RespondDecisionTaskFailedResponse{} }
-func (*RespondDecisionTaskFailedResponse) ProtoMessage() {}
+func (m *RespondDecisionTaskFailedResponse) Reset()         { *m = RespondDecisionTaskFailedResponse{} }
+func (m *RespondDecisionTaskFailedResponse) String() string { return proto.CompactTextString(m) }
+func (*RespondDecisionTaskFailedResponse) ProtoMessage()    {}
 func (*RespondDecisionTaskFailedResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{5}
 }
@@ -542,14 +553,18 @@ func (m *RespondDecisionTaskFailedResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_RespondDecisionTaskFailedResponse proto.InternalMessageInfo
 
 type PollForActivityTaskRequest struct {
-	Domain           string            `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	TaskList         *TaskList         `protobuf:"bytes,2,opt,name=task_list,json=taskList,proto3" json:"task_list,omitempty"`
-	Identity         string            `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
-	TaskListMetadata *TaskListMetadata `protobuf:"bytes,4,opt,name=task_list_metadata,json=taskListMetadata,proto3" json:"task_list_metadata,omitempty"`
+	Domain               string            `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	TaskList             *TaskList         `protobuf:"bytes,2,opt,name=task_list,json=taskList,proto3" json:"task_list,omitempty"`
+	Identity             string            `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
+	TaskListMetadata     *TaskListMetadata `protobuf:"bytes,4,opt,name=task_list_metadata,json=taskListMetadata,proto3" json:"task_list_metadata,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
+	XXX_unrecognized     []byte            `json:"-"`
+	XXX_sizecache        int32             `json:"-"`
 }
 
-func (m *PollForActivityTaskRequest) Reset()      { *m = PollForActivityTaskRequest{} }
-func (*PollForActivityTaskRequest) ProtoMessage() {}
+func (m *PollForActivityTaskRequest) Reset()         { *m = PollForActivityTaskRequest{} }
+func (m *PollForActivityTaskRequest) String() string { return proto.CompactTextString(m) }
+func (*PollForActivityTaskRequest) ProtoMessage()    {}
 func (*PollForActivityTaskRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{6}
 }
@@ -614,21 +629,25 @@ type PollForActivityTaskResponse struct {
 	ActivityId                 string             `protobuf:"bytes,3,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
 	ActivityType               *ActivityType      `protobuf:"bytes,4,opt,name=activity_type,json=activityType,proto3" json:"activity_type,omitempty"`
 	Input                      *Payload           `protobuf:"bytes,5,opt,name=input,proto3" json:"input,omitempty"`
-	ScheduledTime              *time.Time         `protobuf:"bytes,6,opt,name=scheduled_time,json=scheduledTime,proto3,stdtime" json:"scheduled_time,omitempty"`
-	StartedTime                *time.Time         `protobuf:"bytes,7,opt,name=started_time,json=startedTime,proto3,stdtime" json:"started_time,omitempty"`
-	ScheduleToCloseTimeout     *time.Duration     `protobuf:"bytes,8,opt,name=schedule_to_close_timeout,json=scheduleToCloseTimeout,proto3,stdduration" json:"schedule_to_close_timeout,omitempty"`
-	StartToCloseTimeout        *time.Duration     `protobuf:"bytes,9,opt,name=start_to_close_timeout,json=startToCloseTimeout,proto3,stdduration" json:"start_to_close_timeout,omitempty"`
-	HeartbeatTimeout           *time.Duration     `protobuf:"bytes,10,opt,name=heartbeat_timeout,json=heartbeatTimeout,proto3,stdduration" json:"heartbeat_timeout,omitempty"`
+	ScheduledTime              *types.Timestamp   `protobuf:"bytes,6,opt,name=scheduled_time,json=scheduledTime,proto3" json:"scheduled_time,omitempty"`
+	StartedTime                *types.Timestamp   `protobuf:"bytes,7,opt,name=started_time,json=startedTime,proto3" json:"started_time,omitempty"`
+	ScheduleToCloseTimeout     *types.Duration    `protobuf:"bytes,8,opt,name=schedule_to_close_timeout,json=scheduleToCloseTimeout,proto3" json:"schedule_to_close_timeout,omitempty"`
+	StartToCloseTimeout        *types.Duration    `protobuf:"bytes,9,opt,name=start_to_close_timeout,json=startToCloseTimeout,proto3" json:"start_to_close_timeout,omitempty"`
+	HeartbeatTimeout           *types.Duration    `protobuf:"bytes,10,opt,name=heartbeat_timeout,json=heartbeatTimeout,proto3" json:"heartbeat_timeout,omitempty"`
 	Attempt                    int32              `protobuf:"varint,11,opt,name=attempt,proto3" json:"attempt,omitempty"`
-	ScheduledTimeOfThisAttempt *time.Time         `protobuf:"bytes,12,opt,name=scheduled_time_of_this_attempt,json=scheduledTimeOfThisAttempt,proto3,stdtime" json:"scheduled_time_of_this_attempt,omitempty"`
+	ScheduledTimeOfThisAttempt *types.Timestamp   `protobuf:"bytes,12,opt,name=scheduled_time_of_this_attempt,json=scheduledTimeOfThisAttempt,proto3" json:"scheduled_time_of_this_attempt,omitempty"`
 	HeartbeatDetails           *Payload           `protobuf:"bytes,13,opt,name=heartbeat_details,json=heartbeatDetails,proto3" json:"heartbeat_details,omitempty"`
 	WorkflowType               *WorkflowType      `protobuf:"bytes,14,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
 	WorkflowDomain             string             `protobuf:"bytes,15,opt,name=workflow_domain,json=workflowDomain,proto3" json:"workflow_domain,omitempty"`
 	Header                     *Header            `protobuf:"bytes,16,opt,name=header,proto3" json:"header,omitempty"`
+	XXX_NoUnkeyedLiteral       struct{}           `json:"-"`
+	XXX_unrecognized           []byte             `json:"-"`
+	XXX_sizecache              int32              `json:"-"`
 }
 
-func (m *PollForActivityTaskResponse) Reset()      { *m = PollForActivityTaskResponse{} }
-func (*PollForActivityTaskResponse) ProtoMessage() {}
+func (m *PollForActivityTaskResponse) Reset()         { *m = PollForActivityTaskResponse{} }
+func (m *PollForActivityTaskResponse) String() string { return proto.CompactTextString(m) }
+func (*PollForActivityTaskResponse) ProtoMessage()    {}
 func (*PollForActivityTaskResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{7}
 }
@@ -694,35 +713,35 @@ func (m *PollForActivityTaskResponse) GetInput() *Payload {
 	return nil
 }
 
-func (m *PollForActivityTaskResponse) GetScheduledTime() *time.Time {
+func (m *PollForActivityTaskResponse) GetScheduledTime() *types.Timestamp {
 	if m != nil {
 		return m.ScheduledTime
 	}
 	return nil
 }
 
-func (m *PollForActivityTaskResponse) GetStartedTime() *time.Time {
+func (m *PollForActivityTaskResponse) GetStartedTime() *types.Timestamp {
 	if m != nil {
 		return m.StartedTime
 	}
 	return nil
 }
 
-func (m *PollForActivityTaskResponse) GetScheduleToCloseTimeout() *time.Duration {
+func (m *PollForActivityTaskResponse) GetScheduleToCloseTimeout() *types.Duration {
 	if m != nil {
 		return m.ScheduleToCloseTimeout
 	}
 	return nil
 }
 
-func (m *PollForActivityTaskResponse) GetStartToCloseTimeout() *time.Duration {
+func (m *PollForActivityTaskResponse) GetStartToCloseTimeout() *types.Duration {
 	if m != nil {
 		return m.StartToCloseTimeout
 	}
 	return nil
 }
 
-func (m *PollForActivityTaskResponse) GetHeartbeatTimeout() *time.Duration {
+func (m *PollForActivityTaskResponse) GetHeartbeatTimeout() *types.Duration {
 	if m != nil {
 		return m.HeartbeatTimeout
 	}
@@ -736,7 +755,7 @@ func (m *PollForActivityTaskResponse) GetAttempt() int32 {
 	return 0
 }
 
-func (m *PollForActivityTaskResponse) GetScheduledTimeOfThisAttempt() *time.Time {
+func (m *PollForActivityTaskResponse) GetScheduledTimeOfThisAttempt() *types.Timestamp {
 	if m != nil {
 		return m.ScheduledTimeOfThisAttempt
 	}
@@ -772,13 +791,17 @@ func (m *PollForActivityTaskResponse) GetHeader() *Header {
 }
 
 type RespondActivityTaskCompletedRequest struct {
-	TaskToken []byte   `protobuf:"bytes,1,opt,name=task_token,json=taskToken,proto3" json:"task_token,omitempty"`
-	Result    *Payload `protobuf:"bytes,2,opt,name=result,proto3" json:"result,omitempty"`
-	Identity  string   `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
+	TaskToken            []byte   `protobuf:"bytes,1,opt,name=task_token,json=taskToken,proto3" json:"task_token,omitempty"`
+	Result               *Payload `protobuf:"bytes,2,opt,name=result,proto3" json:"result,omitempty"`
+	Identity             string   `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RespondActivityTaskCompletedRequest) Reset()      { *m = RespondActivityTaskCompletedRequest{} }
-func (*RespondActivityTaskCompletedRequest) ProtoMessage() {}
+func (m *RespondActivityTaskCompletedRequest) Reset()         { *m = RespondActivityTaskCompletedRequest{} }
+func (m *RespondActivityTaskCompletedRequest) String() string { return proto.CompactTextString(m) }
+func (*RespondActivityTaskCompletedRequest) ProtoMessage()    {}
 func (*RespondActivityTaskCompletedRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{8}
 }
@@ -831,10 +854,14 @@ func (m *RespondActivityTaskCompletedRequest) GetIdentity() string {
 }
 
 type RespondActivityTaskCompletedResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RespondActivityTaskCompletedResponse) Reset()      { *m = RespondActivityTaskCompletedResponse{} }
-func (*RespondActivityTaskCompletedResponse) ProtoMessage() {}
+func (m *RespondActivityTaskCompletedResponse) Reset()         { *m = RespondActivityTaskCompletedResponse{} }
+func (m *RespondActivityTaskCompletedResponse) String() string { return proto.CompactTextString(m) }
+func (*RespondActivityTaskCompletedResponse) ProtoMessage()    {}
 func (*RespondActivityTaskCompletedResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{9}
 }
@@ -866,17 +893,21 @@ func (m *RespondActivityTaskCompletedResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_RespondActivityTaskCompletedResponse proto.InternalMessageInfo
 
 type RespondActivityTaskCompletedByIDRequest struct {
-	Domain            string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	ActivityId        string             `protobuf:"bytes,3,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
-	Result            *Payload           `protobuf:"bytes,4,opt,name=result,proto3" json:"result,omitempty"`
-	Identity          string             `protobuf:"bytes,5,opt,name=identity,proto3" json:"identity,omitempty"`
+	Domain               string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	ActivityId           string             `protobuf:"bytes,3,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
+	Result               *Payload           `protobuf:"bytes,4,opt,name=result,proto3" json:"result,omitempty"`
+	Identity             string             `protobuf:"bytes,5,opt,name=identity,proto3" json:"identity,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
 }
 
 func (m *RespondActivityTaskCompletedByIDRequest) Reset() {
 	*m = RespondActivityTaskCompletedByIDRequest{}
 }
-func (*RespondActivityTaskCompletedByIDRequest) ProtoMessage() {}
+func (m *RespondActivityTaskCompletedByIDRequest) String() string { return proto.CompactTextString(m) }
+func (*RespondActivityTaskCompletedByIDRequest) ProtoMessage()    {}
 func (*RespondActivityTaskCompletedByIDRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{10}
 }
@@ -943,12 +974,16 @@ func (m *RespondActivityTaskCompletedByIDRequest) GetIdentity() string {
 }
 
 type RespondActivityTaskCompletedByIDResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *RespondActivityTaskCompletedByIDResponse) Reset() {
 	*m = RespondActivityTaskCompletedByIDResponse{}
 }
-func (*RespondActivityTaskCompletedByIDResponse) ProtoMessage() {}
+func (m *RespondActivityTaskCompletedByIDResponse) String() string { return proto.CompactTextString(m) }
+func (*RespondActivityTaskCompletedByIDResponse) ProtoMessage()    {}
 func (*RespondActivityTaskCompletedByIDResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{11}
 }
@@ -980,13 +1015,17 @@ func (m *RespondActivityTaskCompletedByIDResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_RespondActivityTaskCompletedByIDResponse proto.InternalMessageInfo
 
 type RespondActivityTaskFailedRequest struct {
-	TaskToken []byte   `protobuf:"bytes,1,opt,name=task_token,json=taskToken,proto3" json:"task_token,omitempty"`
-	Failure   *Failure `protobuf:"bytes,2,opt,name=failure,proto3" json:"failure,omitempty"`
-	Identity  string   `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
+	TaskToken            []byte   `protobuf:"bytes,1,opt,name=task_token,json=taskToken,proto3" json:"task_token,omitempty"`
+	Failure              *Failure `protobuf:"bytes,2,opt,name=failure,proto3" json:"failure,omitempty"`
+	Identity             string   `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RespondActivityTaskFailedRequest) Reset()      { *m = RespondActivityTaskFailedRequest{} }
-func (*RespondActivityTaskFailedRequest) ProtoMessage() {}
+func (m *RespondActivityTaskFailedRequest) Reset()         { *m = RespondActivityTaskFailedRequest{} }
+func (m *RespondActivityTaskFailedRequest) String() string { return proto.CompactTextString(m) }
+func (*RespondActivityTaskFailedRequest) ProtoMessage()    {}
 func (*RespondActivityTaskFailedRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{12}
 }
@@ -1039,10 +1078,14 @@ func (m *RespondActivityTaskFailedRequest) GetIdentity() string {
 }
 
 type RespondActivityTaskFailedResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RespondActivityTaskFailedResponse) Reset()      { *m = RespondActivityTaskFailedResponse{} }
-func (*RespondActivityTaskFailedResponse) ProtoMessage() {}
+func (m *RespondActivityTaskFailedResponse) Reset()         { *m = RespondActivityTaskFailedResponse{} }
+func (m *RespondActivityTaskFailedResponse) String() string { return proto.CompactTextString(m) }
+func (*RespondActivityTaskFailedResponse) ProtoMessage()    {}
 func (*RespondActivityTaskFailedResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{13}
 }
@@ -1074,15 +1117,19 @@ func (m *RespondActivityTaskFailedResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_RespondActivityTaskFailedResponse proto.InternalMessageInfo
 
 type RespondActivityTaskFailedByIDRequest struct {
-	Domain            string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	ActivityId        string             `protobuf:"bytes,3,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
-	Failure           *Failure           `protobuf:"bytes,4,opt,name=failure,proto3" json:"failure,omitempty"`
-	Identity          string             `protobuf:"bytes,5,opt,name=identity,proto3" json:"identity,omitempty"`
+	Domain               string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	ActivityId           string             `protobuf:"bytes,3,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
+	Failure              *Failure           `protobuf:"bytes,4,opt,name=failure,proto3" json:"failure,omitempty"`
+	Identity             string             `protobuf:"bytes,5,opt,name=identity,proto3" json:"identity,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
 }
 
-func (m *RespondActivityTaskFailedByIDRequest) Reset()      { *m = RespondActivityTaskFailedByIDRequest{} }
-func (*RespondActivityTaskFailedByIDRequest) ProtoMessage() {}
+func (m *RespondActivityTaskFailedByIDRequest) Reset()         { *m = RespondActivityTaskFailedByIDRequest{} }
+func (m *RespondActivityTaskFailedByIDRequest) String() string { return proto.CompactTextString(m) }
+func (*RespondActivityTaskFailedByIDRequest) ProtoMessage()    {}
 func (*RespondActivityTaskFailedByIDRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{14}
 }
@@ -1149,10 +1196,14 @@ func (m *RespondActivityTaskFailedByIDRequest) GetIdentity() string {
 }
 
 type RespondActivityTaskFailedByIDResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RespondActivityTaskFailedByIDResponse) Reset()      { *m = RespondActivityTaskFailedByIDResponse{} }
-func (*RespondActivityTaskFailedByIDResponse) ProtoMessage() {}
+func (m *RespondActivityTaskFailedByIDResponse) Reset()         { *m = RespondActivityTaskFailedByIDResponse{} }
+func (m *RespondActivityTaskFailedByIDResponse) String() string { return proto.CompactTextString(m) }
+func (*RespondActivityTaskFailedByIDResponse) ProtoMessage()    {}
 func (*RespondActivityTaskFailedByIDResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{15}
 }
@@ -1184,13 +1235,17 @@ func (m *RespondActivityTaskFailedByIDResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_RespondActivityTaskFailedByIDResponse proto.InternalMessageInfo
 
 type RespondActivityTaskCanceledRequest struct {
-	TaskToken []byte   `protobuf:"bytes,1,opt,name=task_token,json=taskToken,proto3" json:"task_token,omitempty"`
-	Details   *Payload `protobuf:"bytes,2,opt,name=details,proto3" json:"details,omitempty"`
-	Identity  string   `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
+	TaskToken            []byte   `protobuf:"bytes,1,opt,name=task_token,json=taskToken,proto3" json:"task_token,omitempty"`
+	Details              *Payload `protobuf:"bytes,2,opt,name=details,proto3" json:"details,omitempty"`
+	Identity             string   `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RespondActivityTaskCanceledRequest) Reset()      { *m = RespondActivityTaskCanceledRequest{} }
-func (*RespondActivityTaskCanceledRequest) ProtoMessage() {}
+func (m *RespondActivityTaskCanceledRequest) Reset()         { *m = RespondActivityTaskCanceledRequest{} }
+func (m *RespondActivityTaskCanceledRequest) String() string { return proto.CompactTextString(m) }
+func (*RespondActivityTaskCanceledRequest) ProtoMessage()    {}
 func (*RespondActivityTaskCanceledRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{16}
 }
@@ -1243,10 +1298,14 @@ func (m *RespondActivityTaskCanceledRequest) GetIdentity() string {
 }
 
 type RespondActivityTaskCanceledResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RespondActivityTaskCanceledResponse) Reset()      { *m = RespondActivityTaskCanceledResponse{} }
-func (*RespondActivityTaskCanceledResponse) ProtoMessage() {}
+func (m *RespondActivityTaskCanceledResponse) Reset()         { *m = RespondActivityTaskCanceledResponse{} }
+func (m *RespondActivityTaskCanceledResponse) String() string { return proto.CompactTextString(m) }
+func (*RespondActivityTaskCanceledResponse) ProtoMessage()    {}
 func (*RespondActivityTaskCanceledResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{17}
 }
@@ -1278,17 +1337,21 @@ func (m *RespondActivityTaskCanceledResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_RespondActivityTaskCanceledResponse proto.InternalMessageInfo
 
 type RespondActivityTaskCanceledByIDRequest struct {
-	Domain            string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	ActivityId        string             `protobuf:"bytes,3,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
-	Details           *Payload           `protobuf:"bytes,4,opt,name=details,proto3" json:"details,omitempty"`
-	Identity          string             `protobuf:"bytes,5,opt,name=identity,proto3" json:"identity,omitempty"`
+	Domain               string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	ActivityId           string             `protobuf:"bytes,3,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
+	Details              *Payload           `protobuf:"bytes,4,opt,name=details,proto3" json:"details,omitempty"`
+	Identity             string             `protobuf:"bytes,5,opt,name=identity,proto3" json:"identity,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
 }
 
 func (m *RespondActivityTaskCanceledByIDRequest) Reset() {
 	*m = RespondActivityTaskCanceledByIDRequest{}
 }
-func (*RespondActivityTaskCanceledByIDRequest) ProtoMessage() {}
+func (m *RespondActivityTaskCanceledByIDRequest) String() string { return proto.CompactTextString(m) }
+func (*RespondActivityTaskCanceledByIDRequest) ProtoMessage()    {}
 func (*RespondActivityTaskCanceledByIDRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{18}
 }
@@ -1355,12 +1418,16 @@ func (m *RespondActivityTaskCanceledByIDRequest) GetIdentity() string {
 }
 
 type RespondActivityTaskCanceledByIDResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *RespondActivityTaskCanceledByIDResponse) Reset() {
 	*m = RespondActivityTaskCanceledByIDResponse{}
 }
-func (*RespondActivityTaskCanceledByIDResponse) ProtoMessage() {}
+func (m *RespondActivityTaskCanceledByIDResponse) String() string { return proto.CompactTextString(m) }
+func (*RespondActivityTaskCanceledByIDResponse) ProtoMessage()    {}
 func (*RespondActivityTaskCanceledByIDResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{19}
 }
@@ -1392,13 +1459,17 @@ func (m *RespondActivityTaskCanceledByIDResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_RespondActivityTaskCanceledByIDResponse proto.InternalMessageInfo
 
 type RecordActivityTaskHeartbeatRequest struct {
-	TaskToken []byte   `protobuf:"bytes,1,opt,name=task_token,json=taskToken,proto3" json:"task_token,omitempty"`
-	Details   *Payload `protobuf:"bytes,2,opt,name=details,proto3" json:"details,omitempty"`
-	Identity  string   `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
+	TaskToken            []byte   `protobuf:"bytes,1,opt,name=task_token,json=taskToken,proto3" json:"task_token,omitempty"`
+	Details              *Payload `protobuf:"bytes,2,opt,name=details,proto3" json:"details,omitempty"`
+	Identity             string   `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RecordActivityTaskHeartbeatRequest) Reset()      { *m = RecordActivityTaskHeartbeatRequest{} }
-func (*RecordActivityTaskHeartbeatRequest) ProtoMessage() {}
+func (m *RecordActivityTaskHeartbeatRequest) Reset()         { *m = RecordActivityTaskHeartbeatRequest{} }
+func (m *RecordActivityTaskHeartbeatRequest) String() string { return proto.CompactTextString(m) }
+func (*RecordActivityTaskHeartbeatRequest) ProtoMessage()    {}
 func (*RecordActivityTaskHeartbeatRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{20}
 }
@@ -1451,11 +1522,15 @@ func (m *RecordActivityTaskHeartbeatRequest) GetIdentity() string {
 }
 
 type RecordActivityTaskHeartbeatResponse struct {
-	CancelRequested bool `protobuf:"varint,1,opt,name=cancel_requested,json=cancelRequested,proto3" json:"cancel_requested,omitempty"`
+	CancelRequested      bool     `protobuf:"varint,1,opt,name=cancel_requested,json=cancelRequested,proto3" json:"cancel_requested,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RecordActivityTaskHeartbeatResponse) Reset()      { *m = RecordActivityTaskHeartbeatResponse{} }
-func (*RecordActivityTaskHeartbeatResponse) ProtoMessage() {}
+func (m *RecordActivityTaskHeartbeatResponse) Reset()         { *m = RecordActivityTaskHeartbeatResponse{} }
+func (m *RecordActivityTaskHeartbeatResponse) String() string { return proto.CompactTextString(m) }
+func (*RecordActivityTaskHeartbeatResponse) ProtoMessage()    {}
 func (*RecordActivityTaskHeartbeatResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{21}
 }
@@ -1494,17 +1569,21 @@ func (m *RecordActivityTaskHeartbeatResponse) GetCancelRequested() bool {
 }
 
 type RecordActivityTaskHeartbeatByIDRequest struct {
-	Domain            string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	ActivityId        string             `protobuf:"bytes,3,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
-	Details           *Payload           `protobuf:"bytes,4,opt,name=details,proto3" json:"details,omitempty"`
-	Identity          string             `protobuf:"bytes,5,opt,name=identity,proto3" json:"identity,omitempty"`
+	Domain               string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	ActivityId           string             `protobuf:"bytes,3,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
+	Details              *Payload           `protobuf:"bytes,4,opt,name=details,proto3" json:"details,omitempty"`
+	Identity             string             `protobuf:"bytes,5,opt,name=identity,proto3" json:"identity,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
 }
 
 func (m *RecordActivityTaskHeartbeatByIDRequest) Reset() {
 	*m = RecordActivityTaskHeartbeatByIDRequest{}
 }
-func (*RecordActivityTaskHeartbeatByIDRequest) ProtoMessage() {}
+func (m *RecordActivityTaskHeartbeatByIDRequest) String() string { return proto.CompactTextString(m) }
+func (*RecordActivityTaskHeartbeatByIDRequest) ProtoMessage()    {}
 func (*RecordActivityTaskHeartbeatByIDRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{22}
 }
@@ -1571,13 +1650,17 @@ func (m *RecordActivityTaskHeartbeatByIDRequest) GetIdentity() string {
 }
 
 type RecordActivityTaskHeartbeatByIDResponse struct {
-	CancelRequested bool `protobuf:"varint,1,opt,name=cancel_requested,json=cancelRequested,proto3" json:"cancel_requested,omitempty"`
+	CancelRequested      bool     `protobuf:"varint,1,opt,name=cancel_requested,json=cancelRequested,proto3" json:"cancel_requested,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *RecordActivityTaskHeartbeatByIDResponse) Reset() {
 	*m = RecordActivityTaskHeartbeatByIDResponse{}
 }
-func (*RecordActivityTaskHeartbeatByIDResponse) ProtoMessage() {}
+func (m *RecordActivityTaskHeartbeatByIDResponse) String() string { return proto.CompactTextString(m) }
+func (*RecordActivityTaskHeartbeatByIDResponse) ProtoMessage()    {}
 func (*RecordActivityTaskHeartbeatByIDResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{23}
 }
@@ -1616,13 +1699,17 @@ func (m *RecordActivityTaskHeartbeatByIDResponse) GetCancelRequested() bool {
 }
 
 type RespondQueryTaskCompletedRequest struct {
-	TaskToken         []byte               `protobuf:"bytes,1,opt,name=task_token,json=taskToken,proto3" json:"task_token,omitempty"`
-	Result            *WorkflowQueryResult `protobuf:"bytes,2,opt,name=result,proto3" json:"result,omitempty"`
-	WorkerVersionInfo *WorkerVersionInfo   `protobuf:"bytes,3,opt,name=worker_version_info,json=workerVersionInfo,proto3" json:"worker_version_info,omitempty"`
+	TaskToken            []byte               `protobuf:"bytes,1,opt,name=task_token,json=taskToken,proto3" json:"task_token,omitempty"`
+	Result               *WorkflowQueryResult `protobuf:"bytes,2,opt,name=result,proto3" json:"result,omitempty"`
+	WorkerVersionInfo    *WorkerVersionInfo   `protobuf:"bytes,3,opt,name=worker_version_info,json=workerVersionInfo,proto3" json:"worker_version_info,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
 }
 
-func (m *RespondQueryTaskCompletedRequest) Reset()      { *m = RespondQueryTaskCompletedRequest{} }
-func (*RespondQueryTaskCompletedRequest) ProtoMessage() {}
+func (m *RespondQueryTaskCompletedRequest) Reset()         { *m = RespondQueryTaskCompletedRequest{} }
+func (m *RespondQueryTaskCompletedRequest) String() string { return proto.CompactTextString(m) }
+func (*RespondQueryTaskCompletedRequest) ProtoMessage()    {}
 func (*RespondQueryTaskCompletedRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{24}
 }
@@ -1675,10 +1762,14 @@ func (m *RespondQueryTaskCompletedRequest) GetWorkerVersionInfo() *WorkerVersion
 }
 
 type RespondQueryTaskCompletedResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RespondQueryTaskCompletedResponse) Reset()      { *m = RespondQueryTaskCompletedResponse{} }
-func (*RespondQueryTaskCompletedResponse) ProtoMessage() {}
+func (m *RespondQueryTaskCompletedResponse) Reset()         { *m = RespondQueryTaskCompletedResponse{} }
+func (m *RespondQueryTaskCompletedResponse) String() string { return proto.CompactTextString(m) }
+func (*RespondQueryTaskCompletedResponse) ProtoMessage()    {}
 func (*RespondQueryTaskCompletedResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{25}
 }
@@ -1710,14 +1801,18 @@ func (m *RespondQueryTaskCompletedResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_RespondQueryTaskCompletedResponse proto.InternalMessageInfo
 
 type RequestCancelWorkflowExecutionRequest struct {
-	Domain            string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	Identity          string             `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
-	RequestId         string             `protobuf:"bytes,4,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	Domain               string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	Identity             string             `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
+	RequestId            string             `protobuf:"bytes,4,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
 }
 
-func (m *RequestCancelWorkflowExecutionRequest) Reset()      { *m = RequestCancelWorkflowExecutionRequest{} }
-func (*RequestCancelWorkflowExecutionRequest) ProtoMessage() {}
+func (m *RequestCancelWorkflowExecutionRequest) Reset()         { *m = RequestCancelWorkflowExecutionRequest{} }
+func (m *RequestCancelWorkflowExecutionRequest) String() string { return proto.CompactTextString(m) }
+func (*RequestCancelWorkflowExecutionRequest) ProtoMessage()    {}
 func (*RequestCancelWorkflowExecutionRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{26}
 }
@@ -1777,12 +1872,16 @@ func (m *RequestCancelWorkflowExecutionRequest) GetRequestId() string {
 }
 
 type RequestCancelWorkflowExecutionResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *RequestCancelWorkflowExecutionResponse) Reset() {
 	*m = RequestCancelWorkflowExecutionResponse{}
 }
-func (*RequestCancelWorkflowExecutionResponse) ProtoMessage() {}
+func (m *RequestCancelWorkflowExecutionResponse) String() string { return proto.CompactTextString(m) }
+func (*RequestCancelWorkflowExecutionResponse) ProtoMessage()    {}
 func (*RequestCancelWorkflowExecutionResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00684e887839a48c, []int{27}
 }
@@ -1848,2213 +1947,136 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("github.com/uber/cadence/.gen/proto/api/v1/service_worker.proto", fileDescriptor_00684e887839a48c)
+	proto.RegisterFile("uber/cadence/api/v1/service_worker.proto", fileDescriptor_00684e887839a48c)
 }
 
 var fileDescriptor_00684e887839a48c = []byte{
-	// 2025 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe4, 0x59, 0xcd, 0x6f, 0x1c, 0x49,
-	0x15, 0x77, 0xdb, 0x1e, 0xdb, 0xf3, 0xfc, 0x35, 0xae, 0x88, 0x30, 0x9e, 0x24, 0x1d, 0x67, 0x96,
-	0x24, 0x5e, 0x58, 0x8d, 0x89, 0x17, 0xb2, 0xf9, 0xd8, 0x45, 0xf8, 0x23, 0x21, 0x46, 0x01, 0xbc,
-	0x9d, 0xd9, 0x5d, 0x29, 0x48, 0xdb, 0x94, 0xbb, 0xcb, 0x9e, 0x96, 0x7b, 0xba, 0x26, 0xdd, 0xd5,
-	0xe3, 0xcc, 0x05, 0x21, 0x8e, 0x0b, 0x48, 0x91, 0x10, 0x0b, 0x48, 0x48, 0xb9, 0xc2, 0x89, 0x13,
-	0xff, 0x03, 0xdc, 0xc2, 0x6d, 0x25, 0x0e, 0x60, 0xe7, 0xc2, 0x71, 0xff, 0x04, 0xd4, 0x55, 0xd5,
-	0x3d, 0x3d, 0x33, 0x35, 0x3d, 0x1f, 0x42, 0x72, 0xa4, 0xbd, 0x79, 0xaa, 0x7e, 0xef, 0x57, 0xaf,
-	0xde, 0x7b, 0xf5, 0xea, 0xd7, 0x65, 0x58, 0x0f, 0x0f, 0x88, 0xbf, 0x61, 0x61, 0x9b, 0x78, 0x16,
-	0xd9, 0xc0, 0x0d, 0x67, 0xa3, 0x79, 0x6b, 0x23, 0x20, 0x7e, 0xd3, 0xb1, 0x88, 0x79, 0x42, 0xfd,
-	0x63, 0xe2, 0x57, 0x1a, 0x3e, 0x65, 0x14, 0x5d, 0x88, 0x90, 0x15, 0x89, 0xac, 0xe0, 0x86, 0x53,
-	0x69, 0xde, 0x2a, 0xe9, 0x47, 0x94, 0x1e, 0xb9, 0x64, 0x83, 0x43, 0x0e, 0xc2, 0xc3, 0x0d, 0x3b,
-	0xf4, 0x31, 0x73, 0xa8, 0x27, 0x8c, 0x4a, 0x57, 0xbb, 0xe7, 0x99, 0x53, 0x27, 0x01, 0xc3, 0xf5,
-	0x86, 0x04, 0x5c, 0xb6, 0x49, 0x83, 0x78, 0x11, 0xa7, 0x43, 0x82, 0x8d, 0x23, 0x7a, 0x44, 0xf9,
-	0xb8, 0x9c, 0x5d, 0x53, 0x79, 0x67, 0xd1, 0x7a, 0x3d, 0x59, 0xa0, 0xac, 0x42, 0xd8, 0xc4, 0x72,
-	0x82, 0xb6, 0x13, 0xd7, 0x54, 0x98, 0x9a, 0x13, 0x30, 0xea, 0xb7, 0x62, 0x3f, 0x55, 0x90, 0x67,
-	0x21, 0x49, 0x00, 0xca, 0x75, 0x18, 0x0e, 0x8e, 0x5d, 0x27, 0x60, 0x59, 0x98, 0x28, 0x86, 0x87,
-	0x2e, 0x3d, 0x11, 0x98, 0xf2, 0xdf, 0x34, 0x28, 0xed, 0x53, 0xd7, 0x7d, 0x48, 0xfd, 0x5d, 0xe9,
-	0x65, 0x15, 0x07, 0xc7, 0x06, 0x79, 0x16, 0x92, 0x80, 0xa1, 0x8b, 0x30, 0x63, 0xd3, 0x3a, 0x76,
-	0xbc, 0xa2, 0xb6, 0xa6, 0xad, 0xe7, 0x0d, 0xf9, 0x0b, 0xdd, 0x83, 0x7c, 0xb4, 0x98, 0x19, 0xad,
-	0x56, 0x9c, 0x5c, 0xd3, 0xd6, 0xe7, 0x37, 0xaf, 0x54, 0x14, 0x09, 0xa9, 0x44, 0x64, 0x8f, 0x9d,
-	0x80, 0x19, 0x73, 0x4c, 0xfe, 0x85, 0x4a, 0x30, 0xe7, 0xd8, 0xc4, 0x63, 0x0e, 0x6b, 0x15, 0xa7,
-	0x38, 0x6b, 0xf2, 0x1b, 0xdd, 0x84, 0xe5, 0x03, 0xc7, 0xc3, 0x7e, 0xcb, 0xb4, 0x6a, 0xc4, 0x3a,
-	0x0e, 0xc2, 0x7a, 0x71, 0x9a, 0x43, 0x96, 0xc4, 0xf0, 0x8e, 0x1c, 0x2d, 0xff, 0x63, 0x16, 0x2e,
-	0x29, 0xfd, 0x0e, 0x1a, 0xd4, 0x0b, 0x08, 0xba, 0x02, 0xc0, 0x1d, 0x64, 0xf4, 0x98, 0x08, 0xe7,
-	0x17, 0x0c, 0xee, 0x72, 0x35, 0x1a, 0x40, 0x1f, 0x01, 0x8a, 0x03, 0x61, 0x92, 0xe7, 0xc4, 0x0a,
-	0xa3, 0x1a, 0x91, 0x1b, 0xb9, 0xa1, 0xdc, 0xc8, 0x27, 0x12, 0xfe, 0x20, 0x46, 0x1b, 0x2b, 0x27,
-	0xdd, 0x43, 0xe8, 0x21, 0x2c, 0x26, 0xb4, 0xac, 0xd5, 0x20, 0x7c, 0x7f, 0xf3, 0x9b, 0xd7, 0x32,
-	0x19, 0xab, 0xad, 0x06, 0x31, 0x16, 0x4e, 0x52, 0xbf, 0xd0, 0x5d, 0x58, 0x6d, 0xf8, 0xa4, 0xe9,
-	0xd0, 0x30, 0x30, 0x03, 0x86, 0x7d, 0x46, 0x6c, 0x93, 0x34, 0x89, 0xc7, 0x4c, 0xc7, 0xe6, 0x01,
-	0x99, 0x32, 0x2e, 0xc6, 0x80, 0x27, 0x62, 0xfe, 0x41, 0x34, 0xbd, 0x67, 0xa3, 0x75, 0x28, 0xf4,
-	0x58, 0xe4, 0xb8, 0xc5, 0x52, 0xd0, 0x89, 0x2c, 0xc2, 0x2c, 0x66, 0x8c, 0xd4, 0x1b, 0xac, 0x38,
-	0xc3, 0x01, 0xf1, 0x4f, 0xf4, 0x0e, 0xa0, 0x03, 0x6c, 0x1d, 0xbb, 0xf4, 0xc8, 0xb4, 0x68, 0xe8,
-	0x31, 0xb3, 0xe6, 0x78, 0xac, 0x38, 0xcb, 0x41, 0x05, 0x39, 0xb3, 0x13, 0x4d, 0x3c, 0x72, 0x3c,
-	0x86, 0x6e, 0xc3, 0xac, 0x2c, 0xde, 0xe2, 0x1c, 0xdf, 0xee, 0x65, 0xe5, 0x76, 0x1f, 0x09, 0x8c,
-	0x11, 0x83, 0xd1, 0x0d, 0x58, 0xf6, 0xc8, 0x73, 0x66, 0x36, 0xf0, 0x11, 0x91, 0x79, 0xca, 0xf3,
-	0x3c, 0x2d, 0x46, 0xc3, 0xfb, 0xf8, 0x88, 0x88, 0x5c, 0xdd, 0x81, 0x1c, 0xaf, 0xfc, 0x22, 0x70,
-	0xf6, 0x72, 0x66, 0x30, 0x3f, 0x8c, 0x90, 0x86, 0x30, 0x40, 0x9f, 0xc2, 0xe5, 0xde, 0x2c, 0x9b,
-	0xed, 0xc2, 0x9d, 0x1f, 0xa6, 0x70, 0x57, 0x7b, 0xd2, 0x1c, 0x4f, 0xa1, 0x1f, 0xc0, 0x52, 0x60,
-	0xd5, 0x88, 0x1d, 0xba, 0xc4, 0x36, 0xa3, 0x4e, 0x52, 0x5c, 0xe0, 0x8c, 0xa5, 0x8a, 0x68, 0x33,
-	0x95, 0xb8, 0xcd, 0x54, 0xaa, 0x71, 0x9b, 0xd9, 0x9e, 0x7e, 0xf1, 0xef, 0xab, 0x9a, 0xb1, 0x98,
-	0xd8, 0x45, 0x33, 0x68, 0x07, 0x16, 0xe2, 0xa4, 0x71, 0x9a, 0xc5, 0x21, 0x69, 0xe6, 0xa5, 0x15,
-	0x27, 0xf9, 0x04, 0x66, 0xa3, 0x6d, 0x3b, 0x24, 0x28, 0x2e, 0xad, 0x4d, 0xad, 0xcf, 0x6f, 0x7e,
-	0xa0, 0xdc, 0x58, 0xc6, 0xa9, 0xa9, 0x7c, 0x28, 0xec, 0x1f, 0x78, 0x2c, 0x4a, 0x94, 0x64, 0x2b,
-	0x7d, 0x0a, 0x0b, 0xe9, 0x09, 0x54, 0x80, 0xa9, 0x63, 0xd2, 0x92, 0x1d, 0x21, 0xfa, 0x33, 0x4a,
-	0x51, 0x13, 0xbb, 0x21, 0x91, 0x27, 0x68, 0xa8, 0x14, 0x71, 0x83, 0x7b, 0x93, 0x77, 0xb4, 0xf2,
-	0x5f, 0x72, 0xf0, 0x96, 0x70, 0xc1, 0x4e, 0x7b, 0xb5, 0x43, 0xeb, 0x0d, 0x97, 0x30, 0x62, 0xc7,
-	0xcd, 0x68, 0xc0, 0x99, 0xbe, 0x0f, 0xf9, 0xb8, 0xd1, 0x06, 0xc5, 0x49, 0x1e, 0x01, 0x75, 0x6a,
-	0xe3, 0x45, 0x8c, 0x36, 0x1e, 0x7d, 0x0b, 0x56, 0xda, 0x15, 0x62, 0x51, 0x8f, 0x91, 0xe7, 0x8c,
-	0x9f, 0xde, 0x05, 0xa3, 0x90, 0x4c, 0xec, 0x88, 0xf1, 0x8e, 0x0e, 0x36, 0xdd, 0xd5, 0xc1, 0x7e,
-	0x0a, 0x2b, 0x01, 0x73, 0xac, 0xe3, 0x96, 0x89, 0x19, 0xf3, 0x9d, 0x83, 0x90, 0x91, 0x80, 0x1f,
-	0xc0, 0xf9, 0xcd, 0x8a, 0xd2, 0x9b, 0x27, 0x1c, 0x9d, 0x14, 0xd7, 0x56, 0x62, 0x65, 0x14, 0x04,
-	0x51, 0x7b, 0x04, 0xbd, 0x07, 0x45, 0x9f, 0xb0, 0xd0, 0xf7, 0x4c, 0x8f, 0x9c, 0x98, 0xb1, 0xf7,
-	0xbc, 0xa2, 0xf9, 0x19, 0x9e, 0x33, 0xbe, 0x26, 0xe6, 0x7f, 0x4c, 0x4e, 0xd2, 0xa1, 0x44, 0xdb,
-	0xa0, 0x1f, 0x52, 0xdf, 0x22, 0xa6, 0xe5, 0x13, 0xcc, 0x88, 0xc2, 0x7c, 0x96, 0x9b, 0x97, 0x38,
-	0x6a, 0x87, 0x83, 0xba, 0x39, 0x14, 0xbd, 0x79, 0x4e, 0xd5, 0x9b, 0x11, 0x85, 0x45, 0x7e, 0xfe,
-	0x4c, 0x9f, 0x04, 0xa1, 0xcb, 0x82, 0x62, 0x9e, 0x27, 0xe3, 0x87, 0xca, 0xed, 0x0f, 0x91, 0xf8,
-	0x8a, 0xa8, 0x18, 0x41, 0x26, 0x6a, 0x73, 0xe1, 0x59, 0x6a, 0xa8, 0xe4, 0xc0, 0x4a, 0x0f, 0x44,
-	0x51, 0xa5, 0xdf, 0xeb, 0xac, 0xd2, 0xf5, 0x21, 0xaa, 0x94, 0x13, 0xa6, 0x6b, 0xf5, 0xe5, 0x14,
-	0x7c, 0x23, 0xdb, 0x65, 0x79, 0x01, 0x7d, 0x04, 0x8b, 0x9d, 0x01, 0xd6, 0xf8, 0xa2, 0xdf, 0x1e,
-	0xf5, 0x4c, 0x1a, 0x0b, 0x76, 0x3a, 0x09, 0x2f, 0x35, 0xd0, 0xb1, 0xc5, 0x9c, 0xa6, 0xc3, 0x1c,
-	0x12, 0x98, 0x8c, 0x9a, 0xb6, 0x13, 0x34, 0x30, 0xb3, 0x6a, 0xa6, 0x4b, 0x2d, 0xec, 0xba, 0x2d,
-	0x59, 0xfa, 0x4f, 0xc7, 0x88, 0xb6, 0xec, 0x02, 0x5b, 0x09, 0x7f, 0x95, 0xee, 0x4a, 0xf6, 0xc7,
-	0x82, 0x5c, 0x44, 0xff, 0x12, 0xee, 0x8f, 0x28, 0xfd, 0x1c, 0xd6, 0x06, 0x11, 0x28, 0x72, 0xb3,
-	0xdb, 0x99, 0x1b, 0xf5, 0x51, 0x91, 0xbc, 0x2d, 0xce, 0x15, 0x13, 0xef, 0x79, 0x87, 0x34, 0x9d,
-	0xa1, 0x5f, 0x4e, 0xc2, 0x9a, 0x62, 0x9b, 0x0f, 0xb1, 0xe3, 0x0e, 0xdd, 0x4a, 0xb6, 0x21, 0x67,
-	0xe1, 0x30, 0x10, 0xde, 0x2c, 0x6d, 0xbe, 0x93, 0xd9, 0x46, 0xda, 0xec, 0x3b, 0x91, 0x8d, 0x21,
-	0x4c, 0xa3, 0x6b, 0xd1, 0x26, 0x0c, 0x3b, 0x6e, 0x20, 0x55, 0x80, 0xfa, 0x5a, 0xdc, 0xc7, 0x2d,
-	0x97, 0x62, 0xdb, 0x88, 0xc1, 0x99, 0xcd, 0x45, 0x71, 0x04, 0x73, 0x4a, 0x79, 0xf4, 0x16, 0x5c,
-	0xcb, 0x88, 0x81, 0xc8, 0x73, 0xf9, 0xb4, 0xad, 0xfd, 0xe2, 0xc8, 0x9e, 0xa7, 0xf6, 0x7b, 0x02,
-	0x28, 0xe1, 0x35, 0xeb, 0x84, 0x61, 0x1b, 0x33, 0xcc, 0x43, 0x30, 0xbf, 0x79, 0x3d, 0x73, 0x81,
-	0x1f, 0x49, 0xb0, 0x51, 0x60, 0x5d, 0x23, 0xe5, 0xbf, 0xce, 0x25, 0x3a, 0xb1, 0x73, 0x8f, 0xe7,
-	0xaa, 0x13, 0xaf, 0xc2, 0xbc, 0x3c, 0x42, 0xad, 0x48, 0x9f, 0x89, 0x48, 0x40, 0x3c, 0xb4, 0x67,
-	0x47, 0x42, 0x32, 0x01, 0x70, 0x21, 0x39, 0x9d, 0x21, 0x24, 0x93, 0x8d, 0x71, 0x21, 0x89, 0x53,
-	0xbf, 0xd0, 0x26, 0xe4, 0x1c, 0xaf, 0x11, 0x32, 0x79, 0x03, 0x65, 0x97, 0xa0, 0x80, 0x2a, 0x54,
-	0xcd, 0xcc, 0xff, 0x47, 0xd5, 0xcc, 0x8e, 0xa3, 0x6a, 0x9e, 0xc2, 0x6a, 0xcc, 0x1a, 0x75, 0x3b,
-	0xcb, 0xa5, 0x01, 0xe1, 0x74, 0x34, 0x64, 0x52, 0x6f, 0xae, 0xf6, 0x30, 0xee, 0xca, 0xaf, 0xbe,
-	0xed, 0xe9, 0x3f, 0x44, 0x84, 0x17, 0x63, 0x86, 0x2a, 0xdd, 0x89, 0xec, 0xab, 0xc2, 0x1c, 0x55,
-	0xe1, 0x22, 0x5f, 0xaa, 0x97, 0x38, 0x3f, 0x1c, 0xf1, 0x05, 0x6e, 0xde, 0xc5, 0xfa, 0x18, 0x56,
-	0x6a, 0x04, 0xfb, 0xec, 0x80, 0x60, 0x96, 0x10, 0xc2, 0x70, 0x84, 0x85, 0xc4, 0x32, 0x66, 0x4b,
-	0xa9, 0xf4, 0x48, 0xae, 0xe6, 0xda, 0x2a, 0xdd, 0x06, 0xbd, 0x33, 0x4f, 0x26, 0x3d, 0x34, 0x59,
-	0xcd, 0x09, 0xcc, 0xd8, 0x60, 0x58, 0x35, 0x5a, 0xea, 0xc8, 0xdb, 0x4f, 0x0e, 0xab, 0x35, 0x27,
-	0xd8, 0x92, 0xab, 0xec, 0xa5, 0x77, 0x13, 0x37, 0xb4, 0xc5, 0x21, 0xaa, 0xa9, 0xbd, 0x95, 0x5d,
-	0xd9, 0xd9, 0x7a, 0xbe, 0x8e, 0x96, 0xc6, 0xfb, 0x3a, 0xba, 0x09, 0xcb, 0x09, 0x8f, 0xec, 0x50,
-	0xcb, 0xa2, 0x0b, 0xc6, 0xc3, 0xbb, 0xa2, 0x53, 0xbd, 0x0b, 0x33, 0x35, 0x82, 0x6d, 0xe2, 0x17,
-	0x0b, 0x7c, 0xa5, 0x4b, 0xea, 0x0f, 0x13, 0x0e, 0x31, 0x24, 0xb4, 0xfc, 0xb9, 0x96, 0xa8, 0xd1,
-	0x74, 0xc7, 0x18, 0x55, 0x8d, 0x7e, 0x07, 0x66, 0x84, 0xfc, 0x91, 0xdd, 0x22, 0x3b, 0x58, 0x12,
-	0x9b, 0xd5, 0x1f, 0xcb, 0x37, 0x12, 0xe5, 0xd1, 0xc7, 0x2f, 0xd9, 0xd6, 0x7f, 0x35, 0x09, 0x37,
-	0xb3, 0x80, 0xdb, 0xad, 0xbd, 0xdd, 0x41, 0x3d, 0xfe, 0xbc, 0xfa, 0x5e, 0x3b, 0x6a, 0xd3, 0x63,
-	0x46, 0x2d, 0xd7, 0x15, 0xb5, 0x6f, 0xc2, 0xfa, 0xe0, 0x60, 0xc8, 0xc8, 0xfd, 0x4e, 0x4b, 0xa4,
-	0x43, 0x1a, 0x3c, 0x92, 0x74, 0xb8, 0x0d, 0xb3, 0x87, 0xd8, 0x71, 0x43, 0x9f, 0x64, 0x26, 0xfe,
-	0xa1, 0xc0, 0x18, 0x31, 0x38, 0x33, 0xf3, 0xed, 0xdb, 0x5c, 0xe5, 0x96, 0x74, 0xfe, 0xb3, 0x49,
-	0x65, 0x7d, 0x08, 0xd4, 0x9b, 0x9c, 0xf3, 0x54, 0xc4, 0xa6, 0xc7, 0x8d, 0x58, 0x77, 0xd6, 0x6f,
-	0xc2, 0xf5, 0x01, 0xb1, 0x90, 0x51, 0xfb, 0xbd, 0x06, 0x65, 0x55, 0x7d, 0x60, 0xcf, 0x22, 0x23,
-	0x25, 0x3d, 0x6e, 0x8d, 0x93, 0xe3, 0x6a, 0xbd, 0xee, 0xa4, 0x5f, 0x57, 0xb7, 0xa1, 0xc4, 0x31,
-	0xb9, 0x81, 0x5f, 0x4f, 0xc2, 0x8d, 0x0c, 0xdc, 0x1b, 0x9e, 0xf8, 0x38, 0x6a, 0xd3, 0xe3, 0x46,
-	0xad, 0x3b, 0xf1, 0x6f, 0xab, 0x7b, 0x5f, 0x47, 0x34, 0x3a, 0x52, 0x6f, 0x51, 0xbf, 0x03, 0xfa,
-	0x28, 0xbe, 0xb5, 0xce, 0x31, 0xf5, 0xfb, 0x51, 0xea, 0x33, 0x1c, 0x93, 0xda, 0xf5, 0x6d, 0x28,
-	0x58, 0x7c, 0x63, 0xa6, 0x2f, 0x7c, 0x25, 0x36, 0xf7, 0x6f, 0xce, 0x58, 0x16, 0xe3, 0x46, 0x3c,
-	0x2c, 0xab, 0xa4, 0x2f, 0xe5, 0x57, 0xad, 0x4a, 0xaa, 0x51, 0x95, 0x0c, 0x88, 0xc6, 0xe8, 0x41,
-	0xfe, 0x57, 0xfb, 0xfa, 0xe0, 0xaf, 0x07, 0xe3, 0xc8, 0x86, 0xef, 0x77, 0xc9, 0x86, 0xe1, 0x1f,
-	0x29, 0xe2, 0xcb, 0xf0, 0x63, 0xb8, 0x20, 0xfe, 0x4f, 0x62, 0x36, 0x89, 0xcf, 0x9f, 0x1f, 0x1c,
-	0xef, 0x90, 0xca, 0x6f, 0xd0, 0xfe, 0x89, 0x22, 0xfe, 0xc7, 0x02, 0xce, 0xbf, 0xa7, 0x57, 0x4e,
-	0xba, 0x87, 0x52, 0x97, 0x90, 0x6a, 0x73, 0xf2, 0x4c, 0xfd, 0x53, 0x8b, 0x1a, 0x2f, 0xdf, 0xa9,
-	0x38, 0x73, 0xbd, 0x35, 0x70, 0x3e, 0x65, 0x96, 0xf5, 0xe1, 0x79, 0x05, 0x40, 0xe6, 0x36, 0x7e,
-	0x5e, 0xcf, 0x1b, 0x79, 0x39, 0xb2, 0x67, 0x97, 0xd7, 0xa3, 0xa3, 0x93, 0xbd, 0x25, 0xb1, 0xfb,
-	0xcd, 0xdf, 0x14, 0x20, 0x2f, 0x62, 0xb9, 0xb5, 0xbf, 0x87, 0x9e, 0xc3, 0x05, 0xc5, 0xbb, 0x0e,
-	0xda, 0x18, 0xfe, 0x05, 0x88, 0x2f, 0x5a, 0x1a, 0xf9, 0xc9, 0x08, 0xfd, 0x56, 0x83, 0xcb, 0x59,
-	0x2f, 0x3d, 0xe8, 0xce, 0xb8, 0x4f, 0x71, 0xa5, 0xbb, 0x63, 0x3f, 0x2b, 0xa1, 0xcf, 0x34, 0x58,
-	0xed, 0xfb, 0x28, 0x81, 0xbe, 0x3b, 0x2c, 0x71, 0x87, 0x1a, 0x2b, 0xdd, 0x1e, 0xd5, 0x4c, 0x3a,
-	0xd3, 0x4e, 0x4e, 0xba, 0x05, 0x64, 0x27, 0x47, 0xf1, 0x48, 0x92, 0x9d, 0x1c, 0xe5, 0x8b, 0x43,
-	0x2a, 0x39, 0x4a, 0x45, 0x9a, 0x9d, 0x9c, 0xac, 0x4f, 0x92, 0xec, 0xe4, 0x64, 0x7e, 0x34, 0xa0,
-	0x97, 0x6a, 0xe9, 0xdb, 0xa1, 0x93, 0xd1, 0xfb, 0x23, 0xf3, 0xa7, 0x2e, 0x96, 0xd2, 0x07, 0x63,
-	0x5a, 0xf7, 0x96, 0x4f, 0xaf, 0xa6, 0xcb, 0x2e, 0x9f, 0xbe, 0x62, 0x3e, 0xbb, 0x7c, 0xfa, 0x8b,
-	0x6d, 0xf4, 0xb9, 0x06, 0x57, 0x32, 0x05, 0x26, 0xba, 0x3b, 0x1a, 0x73, 0x3a, 0x50, 0xf7, 0xc6,
-	0x31, 0x95, 0x8e, 0xbd, 0xd0, 0xe0, 0x52, 0x86, 0x00, 0x42, 0xef, 0x0d, 0x9d, 0x84, 0x4e, 0x05,
-	0x5c, 0xba, 0x33, 0xba, 0xa1, 0x74, 0xe9, 0x4f, 0x1a, 0x5c, 0x1d, 0xa0, 0xc9, 0xd0, 0xfd, 0x51,
-	0xd9, 0xd3, 0xf1, 0x7a, 0x7f, 0x3c, 0xe3, 0x8e, 0x88, 0xf5, 0x15, 0x03, 0x7d, 0x23, 0x36, 0x48,
-	0x38, 0xf6, 0x8d, 0xd8, 0x60, 0x61, 0x27, 0x22, 0x96, 0xa9, 0x4f, 0xfa, 0x46, 0x6c, 0x18, 0x8d,
-	0xd7, 0x37, 0x62, 0xc3, 0x49, 0xa2, 0xd4, 0x49, 0xec, 0x95, 0x02, 0xd9, 0x27, 0xb1, 0xaf, 0x2e,
-	0xca, 0x3e, 0x89, 0xfd, 0x15, 0x07, 0xfa, 0xa3, 0x06, 0x7a, 0xf6, 0xf5, 0x8c, 0xfa, 0x9d, 0xa7,
-	0x21, 0x64, 0x4a, 0xe9, 0xfe, 0x58, 0xb6, 0xc2, 0xb7, 0xed, 0x9f, 0xbd, 0x3a, 0xd5, 0x27, 0xbe,
-	0x38, 0xd5, 0x27, 0xbe, 0x3c, 0xd5, 0xb5, 0x5f, 0x9c, 0xe9, 0xda, 0x9f, 0xcf, 0x74, 0xed, 0xef,
-	0x67, 0xba, 0xf6, 0xea, 0x4c, 0xd7, 0xfe, 0x73, 0xa6, 0x6b, 0xff, 0x3d, 0xd3, 0x27, 0xbe, 0x3c,
-	0xd3, 0xb5, 0x17, 0xaf, 0xf5, 0x89, 0x57, 0xaf, 0xf5, 0x89, 0x2f, 0x5e, 0xeb, 0x13, 0xf0, 0x75,
-	0x8b, 0xd6, 0x55, 0xab, 0x6e, 0xcf, 0x6d, 0x35, 0x9c, 0x7d, 0x9f, 0x32, 0xba, 0xaf, 0x3d, 0xcd,
-	0xe1, 0x86, 0xd3, 0xbc, 0x75, 0x30, 0xc3, 0xdf, 0xf4, 0xde, 0xfd, 0x5f, 0x00, 0x00, 0x00, 0xff,
-	0xff, 0x61, 0xd9, 0x0f, 0x6c, 0x37, 0x23, 0x00, 0x00,
-}
-
-func (this *PollForDecisionTaskRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*PollForDecisionTaskRequest)
-	if !ok {
-		that2, ok := that.(PollForDecisionTaskRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.TaskList.Equal(that1.TaskList) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	if this.BinaryChecksum != that1.BinaryChecksum {
-		return false
-	}
-	return true
-}
-func (this *PollForDecisionTaskResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*PollForDecisionTaskResponse)
-	if !ok {
-		that2, ok := that.(PollForDecisionTaskResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.TaskToken, that1.TaskToken) {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if !this.WorkflowType.Equal(that1.WorkflowType) {
-		return false
-	}
-	if this.PreviousStartedEventId != that1.PreviousStartedEventId {
-		return false
-	}
-	if this.StartedEventId != that1.StartedEventId {
-		return false
-	}
-	if this.Attempt != that1.Attempt {
-		return false
-	}
-	if this.BacklogCountHint != that1.BacklogCountHint {
-		return false
-	}
-	if !this.History.Equal(that1.History) {
-		return false
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	if !this.Query.Equal(that1.Query) {
-		return false
-	}
-	if !this.WorkflowExecutionTaskList.Equal(that1.WorkflowExecutionTaskList) {
-		return false
-	}
-	if that1.ScheduledTime == nil {
-		if this.ScheduledTime != nil {
-			return false
-		}
-	} else if !this.ScheduledTime.Equal(*that1.ScheduledTime) {
-		return false
-	}
-	if that1.StartedTime == nil {
-		if this.StartedTime != nil {
-			return false
-		}
-	} else if !this.StartedTime.Equal(*that1.StartedTime) {
-		return false
-	}
-	if len(this.Queries) != len(that1.Queries) {
-		return false
-	}
-	for i := range this.Queries {
-		if !this.Queries[i].Equal(that1.Queries[i]) {
-			return false
-		}
-	}
-	return true
-}
-func (this *RespondDecisionTaskCompletedRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondDecisionTaskCompletedRequest)
-	if !ok {
-		that2, ok := that.(RespondDecisionTaskCompletedRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.TaskToken, that1.TaskToken) {
-		return false
-	}
-	if len(this.Decisions) != len(that1.Decisions) {
-		return false
-	}
-	for i := range this.Decisions {
-		if !this.Decisions[i].Equal(that1.Decisions[i]) {
-			return false
-		}
-	}
-	if !bytes.Equal(this.ExecutionContext, that1.ExecutionContext) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	if !this.StickyAttributes.Equal(that1.StickyAttributes) {
-		return false
-	}
-	if this.ReturnNewDecisionTask != that1.ReturnNewDecisionTask {
-		return false
-	}
-	if this.ForceCreateNewDecisionTask != that1.ForceCreateNewDecisionTask {
-		return false
-	}
-	if this.BinaryChecksum != that1.BinaryChecksum {
-		return false
-	}
-	if len(this.QueryResults) != len(that1.QueryResults) {
-		return false
-	}
-	for i := range this.QueryResults {
-		if !this.QueryResults[i].Equal(that1.QueryResults[i]) {
-			return false
-		}
-	}
-	return true
-}
-func (this *RespondDecisionTaskCompletedResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondDecisionTaskCompletedResponse)
-	if !ok {
-		that2, ok := that.(RespondDecisionTaskCompletedResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.DecisionTask.Equal(that1.DecisionTask) {
-		return false
-	}
-	if len(this.ActivitiesToDispatchLocally) != len(that1.ActivitiesToDispatchLocally) {
-		return false
-	}
-	for i := range this.ActivitiesToDispatchLocally {
-		if !this.ActivitiesToDispatchLocally[i].Equal(that1.ActivitiesToDispatchLocally[i]) {
-			return false
-		}
-	}
-	return true
-}
-func (this *RespondDecisionTaskFailedRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondDecisionTaskFailedRequest)
-	if !ok {
-		that2, ok := that.(RespondDecisionTaskFailedRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.TaskToken, that1.TaskToken) {
-		return false
-	}
-	if this.Cause != that1.Cause {
-		return false
-	}
-	if !this.Details.Equal(that1.Details) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	if this.BinaryChecksum != that1.BinaryChecksum {
-		return false
-	}
-	return true
-}
-func (this *RespondDecisionTaskFailedResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondDecisionTaskFailedResponse)
-	if !ok {
-		that2, ok := that.(RespondDecisionTaskFailedResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *PollForActivityTaskRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*PollForActivityTaskRequest)
-	if !ok {
-		that2, ok := that.(PollForActivityTaskRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.TaskList.Equal(that1.TaskList) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	if !this.TaskListMetadata.Equal(that1.TaskListMetadata) {
-		return false
-	}
-	return true
-}
-func (this *PollForActivityTaskResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*PollForActivityTaskResponse)
-	if !ok {
-		that2, ok := that.(PollForActivityTaskResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.TaskToken, that1.TaskToken) {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if this.ActivityId != that1.ActivityId {
-		return false
-	}
-	if !this.ActivityType.Equal(that1.ActivityType) {
-		return false
-	}
-	if !this.Input.Equal(that1.Input) {
-		return false
-	}
-	if that1.ScheduledTime == nil {
-		if this.ScheduledTime != nil {
-			return false
-		}
-	} else if !this.ScheduledTime.Equal(*that1.ScheduledTime) {
-		return false
-	}
-	if that1.StartedTime == nil {
-		if this.StartedTime != nil {
-			return false
-		}
-	} else if !this.StartedTime.Equal(*that1.StartedTime) {
-		return false
-	}
-	if this.ScheduleToCloseTimeout != nil && that1.ScheduleToCloseTimeout != nil {
-		if *this.ScheduleToCloseTimeout != *that1.ScheduleToCloseTimeout {
-			return false
-		}
-	} else if this.ScheduleToCloseTimeout != nil {
-		return false
-	} else if that1.ScheduleToCloseTimeout != nil {
-		return false
-	}
-	if this.StartToCloseTimeout != nil && that1.StartToCloseTimeout != nil {
-		if *this.StartToCloseTimeout != *that1.StartToCloseTimeout {
-			return false
-		}
-	} else if this.StartToCloseTimeout != nil {
-		return false
-	} else if that1.StartToCloseTimeout != nil {
-		return false
-	}
-	if this.HeartbeatTimeout != nil && that1.HeartbeatTimeout != nil {
-		if *this.HeartbeatTimeout != *that1.HeartbeatTimeout {
-			return false
-		}
-	} else if this.HeartbeatTimeout != nil {
-		return false
-	} else if that1.HeartbeatTimeout != nil {
-		return false
-	}
-	if this.Attempt != that1.Attempt {
-		return false
-	}
-	if that1.ScheduledTimeOfThisAttempt == nil {
-		if this.ScheduledTimeOfThisAttempt != nil {
-			return false
-		}
-	} else if !this.ScheduledTimeOfThisAttempt.Equal(*that1.ScheduledTimeOfThisAttempt) {
-		return false
-	}
-	if !this.HeartbeatDetails.Equal(that1.HeartbeatDetails) {
-		return false
-	}
-	if !this.WorkflowType.Equal(that1.WorkflowType) {
-		return false
-	}
-	if this.WorkflowDomain != that1.WorkflowDomain {
-		return false
-	}
-	if !this.Header.Equal(that1.Header) {
-		return false
-	}
-	return true
-}
-func (this *RespondActivityTaskCompletedRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondActivityTaskCompletedRequest)
-	if !ok {
-		that2, ok := that.(RespondActivityTaskCompletedRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.TaskToken, that1.TaskToken) {
-		return false
-	}
-	if !this.Result.Equal(that1.Result) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	return true
-}
-func (this *RespondActivityTaskCompletedResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondActivityTaskCompletedResponse)
-	if !ok {
-		that2, ok := that.(RespondActivityTaskCompletedResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *RespondActivityTaskCompletedByIDRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondActivityTaskCompletedByIDRequest)
-	if !ok {
-		that2, ok := that.(RespondActivityTaskCompletedByIDRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if this.ActivityId != that1.ActivityId {
-		return false
-	}
-	if !this.Result.Equal(that1.Result) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	return true
-}
-func (this *RespondActivityTaskCompletedByIDResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondActivityTaskCompletedByIDResponse)
-	if !ok {
-		that2, ok := that.(RespondActivityTaskCompletedByIDResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *RespondActivityTaskFailedRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondActivityTaskFailedRequest)
-	if !ok {
-		that2, ok := that.(RespondActivityTaskFailedRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.TaskToken, that1.TaskToken) {
-		return false
-	}
-	if !this.Failure.Equal(that1.Failure) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	return true
-}
-func (this *RespondActivityTaskFailedResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondActivityTaskFailedResponse)
-	if !ok {
-		that2, ok := that.(RespondActivityTaskFailedResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *RespondActivityTaskFailedByIDRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondActivityTaskFailedByIDRequest)
-	if !ok {
-		that2, ok := that.(RespondActivityTaskFailedByIDRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if this.ActivityId != that1.ActivityId {
-		return false
-	}
-	if !this.Failure.Equal(that1.Failure) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	return true
-}
-func (this *RespondActivityTaskFailedByIDResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondActivityTaskFailedByIDResponse)
-	if !ok {
-		that2, ok := that.(RespondActivityTaskFailedByIDResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *RespondActivityTaskCanceledRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondActivityTaskCanceledRequest)
-	if !ok {
-		that2, ok := that.(RespondActivityTaskCanceledRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.TaskToken, that1.TaskToken) {
-		return false
-	}
-	if !this.Details.Equal(that1.Details) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	return true
-}
-func (this *RespondActivityTaskCanceledResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondActivityTaskCanceledResponse)
-	if !ok {
-		that2, ok := that.(RespondActivityTaskCanceledResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *RespondActivityTaskCanceledByIDRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondActivityTaskCanceledByIDRequest)
-	if !ok {
-		that2, ok := that.(RespondActivityTaskCanceledByIDRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if this.ActivityId != that1.ActivityId {
-		return false
-	}
-	if !this.Details.Equal(that1.Details) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	return true
-}
-func (this *RespondActivityTaskCanceledByIDResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondActivityTaskCanceledByIDResponse)
-	if !ok {
-		that2, ok := that.(RespondActivityTaskCanceledByIDResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *RecordActivityTaskHeartbeatRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RecordActivityTaskHeartbeatRequest)
-	if !ok {
-		that2, ok := that.(RecordActivityTaskHeartbeatRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.TaskToken, that1.TaskToken) {
-		return false
-	}
-	if !this.Details.Equal(that1.Details) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	return true
-}
-func (this *RecordActivityTaskHeartbeatResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RecordActivityTaskHeartbeatResponse)
-	if !ok {
-		that2, ok := that.(RecordActivityTaskHeartbeatResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.CancelRequested != that1.CancelRequested {
-		return false
-	}
-	return true
-}
-func (this *RecordActivityTaskHeartbeatByIDRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RecordActivityTaskHeartbeatByIDRequest)
-	if !ok {
-		that2, ok := that.(RecordActivityTaskHeartbeatByIDRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if this.ActivityId != that1.ActivityId {
-		return false
-	}
-	if !this.Details.Equal(that1.Details) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	return true
-}
-func (this *RecordActivityTaskHeartbeatByIDResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RecordActivityTaskHeartbeatByIDResponse)
-	if !ok {
-		that2, ok := that.(RecordActivityTaskHeartbeatByIDResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.CancelRequested != that1.CancelRequested {
-		return false
-	}
-	return true
-}
-func (this *RespondQueryTaskCompletedRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondQueryTaskCompletedRequest)
-	if !ok {
-		that2, ok := that.(RespondQueryTaskCompletedRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.TaskToken, that1.TaskToken) {
-		return false
-	}
-	if !this.Result.Equal(that1.Result) {
-		return false
-	}
-	if !this.WorkerVersionInfo.Equal(that1.WorkerVersionInfo) {
-		return false
-	}
-	return true
-}
-func (this *RespondQueryTaskCompletedResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RespondQueryTaskCompletedResponse)
-	if !ok {
-		that2, ok := that.(RespondQueryTaskCompletedResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *RequestCancelWorkflowExecutionRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RequestCancelWorkflowExecutionRequest)
-	if !ok {
-		that2, ok := that.(RequestCancelWorkflowExecutionRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	if this.RequestId != that1.RequestId {
-		return false
-	}
-	return true
-}
-func (this *RequestCancelWorkflowExecutionResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RequestCancelWorkflowExecutionResponse)
-	if !ok {
-		that2, ok := that.(RequestCancelWorkflowExecutionResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *PollForDecisionTaskRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&apiv1.PollForDecisionTaskRequest{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.TaskList != nil {
-		s = append(s, "TaskList: "+fmt.Sprintf("%#v", this.TaskList)+",\n")
-	}
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "BinaryChecksum: "+fmt.Sprintf("%#v", this.BinaryChecksum)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *PollForDecisionTaskResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 18)
-	s = append(s, "&apiv1.PollForDecisionTaskResponse{")
-	s = append(s, "TaskToken: "+fmt.Sprintf("%#v", this.TaskToken)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	if this.WorkflowType != nil {
-		s = append(s, "WorkflowType: "+fmt.Sprintf("%#v", this.WorkflowType)+",\n")
-	}
-	s = append(s, "PreviousStartedEventId: "+fmt.Sprintf("%#v", this.PreviousStartedEventId)+",\n")
-	s = append(s, "StartedEventId: "+fmt.Sprintf("%#v", this.StartedEventId)+",\n")
-	s = append(s, "Attempt: "+fmt.Sprintf("%#v", this.Attempt)+",\n")
-	s = append(s, "BacklogCountHint: "+fmt.Sprintf("%#v", this.BacklogCountHint)+",\n")
-	if this.History != nil {
-		s = append(s, "History: "+fmt.Sprintf("%#v", this.History)+",\n")
-	}
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	if this.Query != nil {
-		s = append(s, "Query: "+fmt.Sprintf("%#v", this.Query)+",\n")
-	}
-	if this.WorkflowExecutionTaskList != nil {
-		s = append(s, "WorkflowExecutionTaskList: "+fmt.Sprintf("%#v", this.WorkflowExecutionTaskList)+",\n")
-	}
-	s = append(s, "ScheduledTime: "+fmt.Sprintf("%#v", this.ScheduledTime)+",\n")
-	s = append(s, "StartedTime: "+fmt.Sprintf("%#v", this.StartedTime)+",\n")
-	keysForQueries := make([]string, 0, len(this.Queries))
-	for k, _ := range this.Queries {
-		keysForQueries = append(keysForQueries, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForQueries)
-	mapStringForQueries := "map[string]*WorkflowQuery{"
-	for _, k := range keysForQueries {
-		mapStringForQueries += fmt.Sprintf("%#v: %#v,", k, this.Queries[k])
-	}
-	mapStringForQueries += "}"
-	if this.Queries != nil {
-		s = append(s, "Queries: "+mapStringForQueries+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondDecisionTaskCompletedRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 13)
-	s = append(s, "&apiv1.RespondDecisionTaskCompletedRequest{")
-	s = append(s, "TaskToken: "+fmt.Sprintf("%#v", this.TaskToken)+",\n")
-	if this.Decisions != nil {
-		s = append(s, "Decisions: "+fmt.Sprintf("%#v", this.Decisions)+",\n")
-	}
-	s = append(s, "ExecutionContext: "+fmt.Sprintf("%#v", this.ExecutionContext)+",\n")
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	if this.StickyAttributes != nil {
-		s = append(s, "StickyAttributes: "+fmt.Sprintf("%#v", this.StickyAttributes)+",\n")
-	}
-	s = append(s, "ReturnNewDecisionTask: "+fmt.Sprintf("%#v", this.ReturnNewDecisionTask)+",\n")
-	s = append(s, "ForceCreateNewDecisionTask: "+fmt.Sprintf("%#v", this.ForceCreateNewDecisionTask)+",\n")
-	s = append(s, "BinaryChecksum: "+fmt.Sprintf("%#v", this.BinaryChecksum)+",\n")
-	keysForQueryResults := make([]string, 0, len(this.QueryResults))
-	for k, _ := range this.QueryResults {
-		keysForQueryResults = append(keysForQueryResults, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForQueryResults)
-	mapStringForQueryResults := "map[string]*WorkflowQueryResult{"
-	for _, k := range keysForQueryResults {
-		mapStringForQueryResults += fmt.Sprintf("%#v: %#v,", k, this.QueryResults[k])
-	}
-	mapStringForQueryResults += "}"
-	if this.QueryResults != nil {
-		s = append(s, "QueryResults: "+mapStringForQueryResults+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondDecisionTaskCompletedResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.RespondDecisionTaskCompletedResponse{")
-	if this.DecisionTask != nil {
-		s = append(s, "DecisionTask: "+fmt.Sprintf("%#v", this.DecisionTask)+",\n")
-	}
-	keysForActivitiesToDispatchLocally := make([]string, 0, len(this.ActivitiesToDispatchLocally))
-	for k, _ := range this.ActivitiesToDispatchLocally {
-		keysForActivitiesToDispatchLocally = append(keysForActivitiesToDispatchLocally, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForActivitiesToDispatchLocally)
-	mapStringForActivitiesToDispatchLocally := "map[string]*ActivityLocalDispatchInfo{"
-	for _, k := range keysForActivitiesToDispatchLocally {
-		mapStringForActivitiesToDispatchLocally += fmt.Sprintf("%#v: %#v,", k, this.ActivitiesToDispatchLocally[k])
-	}
-	mapStringForActivitiesToDispatchLocally += "}"
-	if this.ActivitiesToDispatchLocally != nil {
-		s = append(s, "ActivitiesToDispatchLocally: "+mapStringForActivitiesToDispatchLocally+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondDecisionTaskFailedRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&apiv1.RespondDecisionTaskFailedRequest{")
-	s = append(s, "TaskToken: "+fmt.Sprintf("%#v", this.TaskToken)+",\n")
-	s = append(s, "Cause: "+fmt.Sprintf("%#v", this.Cause)+",\n")
-	if this.Details != nil {
-		s = append(s, "Details: "+fmt.Sprintf("%#v", this.Details)+",\n")
-	}
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "BinaryChecksum: "+fmt.Sprintf("%#v", this.BinaryChecksum)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondDecisionTaskFailedResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.RespondDecisionTaskFailedResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *PollForActivityTaskRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&apiv1.PollForActivityTaskRequest{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.TaskList != nil {
-		s = append(s, "TaskList: "+fmt.Sprintf("%#v", this.TaskList)+",\n")
-	}
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	if this.TaskListMetadata != nil {
-		s = append(s, "TaskListMetadata: "+fmt.Sprintf("%#v", this.TaskListMetadata)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *PollForActivityTaskResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 20)
-	s = append(s, "&apiv1.PollForActivityTaskResponse{")
-	s = append(s, "TaskToken: "+fmt.Sprintf("%#v", this.TaskToken)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "ActivityId: "+fmt.Sprintf("%#v", this.ActivityId)+",\n")
-	if this.ActivityType != nil {
-		s = append(s, "ActivityType: "+fmt.Sprintf("%#v", this.ActivityType)+",\n")
-	}
-	if this.Input != nil {
-		s = append(s, "Input: "+fmt.Sprintf("%#v", this.Input)+",\n")
-	}
-	s = append(s, "ScheduledTime: "+fmt.Sprintf("%#v", this.ScheduledTime)+",\n")
-	s = append(s, "StartedTime: "+fmt.Sprintf("%#v", this.StartedTime)+",\n")
-	s = append(s, "ScheduleToCloseTimeout: "+fmt.Sprintf("%#v", this.ScheduleToCloseTimeout)+",\n")
-	s = append(s, "StartToCloseTimeout: "+fmt.Sprintf("%#v", this.StartToCloseTimeout)+",\n")
-	s = append(s, "HeartbeatTimeout: "+fmt.Sprintf("%#v", this.HeartbeatTimeout)+",\n")
-	s = append(s, "Attempt: "+fmt.Sprintf("%#v", this.Attempt)+",\n")
-	s = append(s, "ScheduledTimeOfThisAttempt: "+fmt.Sprintf("%#v", this.ScheduledTimeOfThisAttempt)+",\n")
-	if this.HeartbeatDetails != nil {
-		s = append(s, "HeartbeatDetails: "+fmt.Sprintf("%#v", this.HeartbeatDetails)+",\n")
-	}
-	if this.WorkflowType != nil {
-		s = append(s, "WorkflowType: "+fmt.Sprintf("%#v", this.WorkflowType)+",\n")
-	}
-	s = append(s, "WorkflowDomain: "+fmt.Sprintf("%#v", this.WorkflowDomain)+",\n")
-	if this.Header != nil {
-		s = append(s, "Header: "+fmt.Sprintf("%#v", this.Header)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondActivityTaskCompletedRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&apiv1.RespondActivityTaskCompletedRequest{")
-	s = append(s, "TaskToken: "+fmt.Sprintf("%#v", this.TaskToken)+",\n")
-	if this.Result != nil {
-		s = append(s, "Result: "+fmt.Sprintf("%#v", this.Result)+",\n")
-	}
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondActivityTaskCompletedResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.RespondActivityTaskCompletedResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondActivityTaskCompletedByIDRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&apiv1.RespondActivityTaskCompletedByIDRequest{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "ActivityId: "+fmt.Sprintf("%#v", this.ActivityId)+",\n")
-	if this.Result != nil {
-		s = append(s, "Result: "+fmt.Sprintf("%#v", this.Result)+",\n")
-	}
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondActivityTaskCompletedByIDResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.RespondActivityTaskCompletedByIDResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondActivityTaskFailedRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&apiv1.RespondActivityTaskFailedRequest{")
-	s = append(s, "TaskToken: "+fmt.Sprintf("%#v", this.TaskToken)+",\n")
-	if this.Failure != nil {
-		s = append(s, "Failure: "+fmt.Sprintf("%#v", this.Failure)+",\n")
-	}
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondActivityTaskFailedResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.RespondActivityTaskFailedResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondActivityTaskFailedByIDRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&apiv1.RespondActivityTaskFailedByIDRequest{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "ActivityId: "+fmt.Sprintf("%#v", this.ActivityId)+",\n")
-	if this.Failure != nil {
-		s = append(s, "Failure: "+fmt.Sprintf("%#v", this.Failure)+",\n")
-	}
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondActivityTaskFailedByIDResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.RespondActivityTaskFailedByIDResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondActivityTaskCanceledRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&apiv1.RespondActivityTaskCanceledRequest{")
-	s = append(s, "TaskToken: "+fmt.Sprintf("%#v", this.TaskToken)+",\n")
-	if this.Details != nil {
-		s = append(s, "Details: "+fmt.Sprintf("%#v", this.Details)+",\n")
-	}
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondActivityTaskCanceledResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.RespondActivityTaskCanceledResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondActivityTaskCanceledByIDRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&apiv1.RespondActivityTaskCanceledByIDRequest{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "ActivityId: "+fmt.Sprintf("%#v", this.ActivityId)+",\n")
-	if this.Details != nil {
-		s = append(s, "Details: "+fmt.Sprintf("%#v", this.Details)+",\n")
-	}
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondActivityTaskCanceledByIDResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.RespondActivityTaskCanceledByIDResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RecordActivityTaskHeartbeatRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&apiv1.RecordActivityTaskHeartbeatRequest{")
-	s = append(s, "TaskToken: "+fmt.Sprintf("%#v", this.TaskToken)+",\n")
-	if this.Details != nil {
-		s = append(s, "Details: "+fmt.Sprintf("%#v", this.Details)+",\n")
-	}
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RecordActivityTaskHeartbeatResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&apiv1.RecordActivityTaskHeartbeatResponse{")
-	s = append(s, "CancelRequested: "+fmt.Sprintf("%#v", this.CancelRequested)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RecordActivityTaskHeartbeatByIDRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&apiv1.RecordActivityTaskHeartbeatByIDRequest{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "ActivityId: "+fmt.Sprintf("%#v", this.ActivityId)+",\n")
-	if this.Details != nil {
-		s = append(s, "Details: "+fmt.Sprintf("%#v", this.Details)+",\n")
-	}
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RecordActivityTaskHeartbeatByIDResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&apiv1.RecordActivityTaskHeartbeatByIDResponse{")
-	s = append(s, "CancelRequested: "+fmt.Sprintf("%#v", this.CancelRequested)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondQueryTaskCompletedRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&apiv1.RespondQueryTaskCompletedRequest{")
-	s = append(s, "TaskToken: "+fmt.Sprintf("%#v", this.TaskToken)+",\n")
-	if this.Result != nil {
-		s = append(s, "Result: "+fmt.Sprintf("%#v", this.Result)+",\n")
-	}
-	if this.WorkerVersionInfo != nil {
-		s = append(s, "WorkerVersionInfo: "+fmt.Sprintf("%#v", this.WorkerVersionInfo)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RespondQueryTaskCompletedResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.RespondQueryTaskCompletedResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RequestCancelWorkflowExecutionRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&apiv1.RequestCancelWorkflowExecutionRequest{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "RequestId: "+fmt.Sprintf("%#v", this.RequestId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RequestCancelWorkflowExecutionResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.RequestCancelWorkflowExecutionResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func valueToGoStringServiceWorker(v interface{}, typ string) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
-}
-
-// Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConn
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion4
-
-// WorkerAPIClient is the client API for WorkerAPI service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type WorkerAPIClient interface {
-	// PollForDecisionTask is called by application worker to process DecisionTask from a specific taskList.
-	// A DecisionTask is dispatched to callers for active workflow executions, with pending decisions.
-	// Application is then expected to call 'RespondDecisionTaskCompleted' API when it is done processing the DecisionTask.
-	// It will also create a 'DecisionTaskStarted' event in the history for that session before handing off DecisionTask to
-	// application worker.
-	PollForDecisionTask(ctx context.Context, in *PollForDecisionTaskRequest, opts ...grpc.CallOption) (*PollForDecisionTaskResponse, error)
-	// RespondDecisionTaskCompleted is called by application worker to complete a DecisionTask handed as a result of
-	// 'PollForDecisionTask' API call.  Completing a DecisionTask will result in new events for the workflow execution and
-	// potentially new ActivityTask being created for corresponding decisions.  It will also create a DecisionTaskCompleted
-	// event in the history for that session.  Use the 'taskToken' provided as response of PollForDecisionTask API call
-	// for completing the DecisionTask.
-	// The response could contain a new decision task if there is one or if the request asking for one.
-	RespondDecisionTaskCompleted(ctx context.Context, in *RespondDecisionTaskCompletedRequest, opts ...grpc.CallOption) (*RespondDecisionTaskCompletedResponse, error)
-	// RespondDecisionTaskFailed is called by application worker to indicate failure.  This results in
-	// DecisionTaskFailedEvent written to the history and a new DecisionTask created.  This API can be used by client to
-	// either clear sticky tasklist or report any panics during DecisionTask processing.  Cadence will only append first
-	// DecisionTaskFailed event to the history of workflow execution for consecutive failures.
-	RespondDecisionTaskFailed(ctx context.Context, in *RespondDecisionTaskFailedRequest, opts ...grpc.CallOption) (*RespondDecisionTaskFailedResponse, error)
-	// PollForActivityTask is called by application worker to process ActivityTask from a specific taskList.  ActivityTask
-	// is dispatched to callers whenever a ScheduleTask decision is made for a workflow execution.
-	// Application is expected to call 'RespondActivityTaskCompleted' or 'RespondActivityTaskFailed' once it is done
-	// processing the task.
-	// Application also needs to call 'RecordActivityTaskHeartbeat' API within 'heartbeatTimeoutSeconds' interval to
-	// prevent the task from getting timed out.  An event 'ActivityTaskStarted' event is also written to workflow execution
-	// history before the ActivityTask is dispatched to application worker.
-	PollForActivityTask(ctx context.Context, in *PollForActivityTaskRequest, opts ...grpc.CallOption) (*PollForActivityTaskResponse, error)
-	// RespondActivityTaskCompleted is called by application worker when it is done processing an ActivityTask.  It will
-	// result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask
-	// created for the workflow so new decisions could be made.  Use the 'taskToken' provided as response of
-	// PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
-	// anymore due to activity timeout.
-	RespondActivityTaskCompleted(ctx context.Context, in *RespondActivityTaskCompletedRequest, opts ...grpc.CallOption) (*RespondActivityTaskCompletedResponse, error)
-	// RespondActivityTaskCompletedByID is called by application worker when it is done processing an ActivityTask.
-	// It will result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask
-	// created for the workflow so new decisions could be made.  Similar to RespondActivityTaskCompleted but use Domain,
-	// WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'
-	// if the these IDs are not valid anymore due to activity timeout.
-	RespondActivityTaskCompletedByID(ctx context.Context, in *RespondActivityTaskCompletedByIDRequest, opts ...grpc.CallOption) (*RespondActivityTaskCompletedByIDResponse, error)
-	// RespondActivityTaskFailed is called by application worker when it is done processing an ActivityTask.  It will
-	// result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask
-	// created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of
-	// PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
-	// anymore due to activity timeout.
-	RespondActivityTaskFailed(ctx context.Context, in *RespondActivityTaskFailedRequest, opts ...grpc.CallOption) (*RespondActivityTaskFailedResponse, error)
-	// RespondActivityTaskFailedByID is called by application worker when it is done processing an ActivityTask.
-	// It will result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask
-	// created for the workflow instance so new decisions could be made.  Similar to RespondActivityTaskFailed but use
-	// Domain, WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'
-	// if the these IDs are not valid anymore due to activity timeout.
-	RespondActivityTaskFailedByID(ctx context.Context, in *RespondActivityTaskFailedByIDRequest, opts ...grpc.CallOption) (*RespondActivityTaskFailedByIDResponse, error)
-	// RespondActivityTaskCanceled is called by application worker when it is successfully canceled an ActivityTask.
-	// It will result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask
-	// created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of
-	// PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
-	// anymore due to activity timeout.
-	RespondActivityTaskCanceled(ctx context.Context, in *RespondActivityTaskCanceledRequest, opts ...grpc.CallOption) (*RespondActivityTaskCanceledResponse, error)
-	// RespondActivityTaskCanceledByID is called by application worker when it is successfully canceled an ActivityTask.
-	// It will result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask
-	// created for the workflow instance so new decisions could be made.  Similar to RespondActivityTaskCanceled but use
-	// Domain, WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'
-	// if the these IDs are not valid anymore due to activity timeout.
-	RespondActivityTaskCanceledByID(ctx context.Context, in *RespondActivityTaskCanceledByIDRequest, opts ...grpc.CallOption) (*RespondActivityTaskCanceledByIDResponse, error)
-	// RecordActivityTaskHeartbeat is called by application worker while it is processing an ActivityTask.  If worker fails
-	// to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as timedout and
-	// 'ActivityTaskTimedOut' event will be written to the workflow history.  Calling 'RecordActivityTaskHeartbeat' will
-	// fail with 'EntityNotExistsError' in such situations.  Use the 'taskToken' provided as response of
-	// PollForActivityTask API call for heartbeating.
-	RecordActivityTaskHeartbeat(ctx context.Context, in *RecordActivityTaskHeartbeatRequest, opts ...grpc.CallOption) (*RecordActivityTaskHeartbeatResponse, error)
-	// RecordActivityTaskHeartbeatByID is called by application worker while it is processing an ActivityTask.  If worker
-	// fails to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as
-	// timed out and 'ActivityTaskTimedOut' event will be written to the workflow history.
-	// Calling 'RecordActivityTaskHeartbeatByID' will fail with 'EntityNotExistsError' in such situations.  Instead of
-	// using 'taskToken' like in RecordActivityTaskHeartbeat, use Domain, WorkflowID and ActivityID.
-	RecordActivityTaskHeartbeatByID(ctx context.Context, in *RecordActivityTaskHeartbeatByIDRequest, opts ...grpc.CallOption) (*RecordActivityTaskHeartbeatByIDResponse, error)
-	// RespondQueryTaskCompleted is called by application worker to complete a QueryTask (which is a DecisionTask for query)
-	// as a result of 'PollForDecisionTask' API call. Completing a QueryTask will unblock the client call to 'QueryWorkflow'
-	// API and return the query result to client as a response to 'QueryWorkflow' API call.
-	RespondQueryTaskCompleted(ctx context.Context, in *RespondQueryTaskCompletedRequest, opts ...grpc.CallOption) (*RespondQueryTaskCompletedResponse, error)
-	// RequestCancelWorkflowExecution is called by application worker when it wants to request cancellation of a workflow
-	// instance. It will result in a new 'WorkflowExecutionCancelRequested' event being written to the workflow history
-	// and a new DecisionTask created for the workflow instance so new decisions could be made. It fails with
-	// 'EntityNotExistsError' if the workflow is not valid anymore due to completion or doesn't exist.
-	RequestCancelWorkflowExecution(ctx context.Context, in *RequestCancelWorkflowExecutionRequest, opts ...grpc.CallOption) (*RequestCancelWorkflowExecutionResponse, error)
-}
-
-type workerAPIClient struct {
-	cc *grpc.ClientConn
-}
-
-func NewWorkerAPIClient(cc *grpc.ClientConn) WorkerAPIClient {
-	return &workerAPIClient{cc}
-}
-
-func (c *workerAPIClient) PollForDecisionTask(ctx context.Context, in *PollForDecisionTaskRequest, opts ...grpc.CallOption) (*PollForDecisionTaskResponse, error) {
-	out := new(PollForDecisionTaskResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.WorkerAPI/PollForDecisionTask", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerAPIClient) RespondDecisionTaskCompleted(ctx context.Context, in *RespondDecisionTaskCompletedRequest, opts ...grpc.CallOption) (*RespondDecisionTaskCompletedResponse, error) {
-	out := new(RespondDecisionTaskCompletedResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.WorkerAPI/RespondDecisionTaskCompleted", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerAPIClient) RespondDecisionTaskFailed(ctx context.Context, in *RespondDecisionTaskFailedRequest, opts ...grpc.CallOption) (*RespondDecisionTaskFailedResponse, error) {
-	out := new(RespondDecisionTaskFailedResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.WorkerAPI/RespondDecisionTaskFailed", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerAPIClient) PollForActivityTask(ctx context.Context, in *PollForActivityTaskRequest, opts ...grpc.CallOption) (*PollForActivityTaskResponse, error) {
-	out := new(PollForActivityTaskResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.WorkerAPI/PollForActivityTask", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerAPIClient) RespondActivityTaskCompleted(ctx context.Context, in *RespondActivityTaskCompletedRequest, opts ...grpc.CallOption) (*RespondActivityTaskCompletedResponse, error) {
-	out := new(RespondActivityTaskCompletedResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.WorkerAPI/RespondActivityTaskCompleted", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerAPIClient) RespondActivityTaskCompletedByID(ctx context.Context, in *RespondActivityTaskCompletedByIDRequest, opts ...grpc.CallOption) (*RespondActivityTaskCompletedByIDResponse, error) {
-	out := new(RespondActivityTaskCompletedByIDResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.WorkerAPI/RespondActivityTaskCompletedByID", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerAPIClient) RespondActivityTaskFailed(ctx context.Context, in *RespondActivityTaskFailedRequest, opts ...grpc.CallOption) (*RespondActivityTaskFailedResponse, error) {
-	out := new(RespondActivityTaskFailedResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.WorkerAPI/RespondActivityTaskFailed", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerAPIClient) RespondActivityTaskFailedByID(ctx context.Context, in *RespondActivityTaskFailedByIDRequest, opts ...grpc.CallOption) (*RespondActivityTaskFailedByIDResponse, error) {
-	out := new(RespondActivityTaskFailedByIDResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.WorkerAPI/RespondActivityTaskFailedByID", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerAPIClient) RespondActivityTaskCanceled(ctx context.Context, in *RespondActivityTaskCanceledRequest, opts ...grpc.CallOption) (*RespondActivityTaskCanceledResponse, error) {
-	out := new(RespondActivityTaskCanceledResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.WorkerAPI/RespondActivityTaskCanceled", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerAPIClient) RespondActivityTaskCanceledByID(ctx context.Context, in *RespondActivityTaskCanceledByIDRequest, opts ...grpc.CallOption) (*RespondActivityTaskCanceledByIDResponse, error) {
-	out := new(RespondActivityTaskCanceledByIDResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.WorkerAPI/RespondActivityTaskCanceledByID", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerAPIClient) RecordActivityTaskHeartbeat(ctx context.Context, in *RecordActivityTaskHeartbeatRequest, opts ...grpc.CallOption) (*RecordActivityTaskHeartbeatResponse, error) {
-	out := new(RecordActivityTaskHeartbeatResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.WorkerAPI/RecordActivityTaskHeartbeat", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerAPIClient) RecordActivityTaskHeartbeatByID(ctx context.Context, in *RecordActivityTaskHeartbeatByIDRequest, opts ...grpc.CallOption) (*RecordActivityTaskHeartbeatByIDResponse, error) {
-	out := new(RecordActivityTaskHeartbeatByIDResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.WorkerAPI/RecordActivityTaskHeartbeatByID", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerAPIClient) RespondQueryTaskCompleted(ctx context.Context, in *RespondQueryTaskCompletedRequest, opts ...grpc.CallOption) (*RespondQueryTaskCompletedResponse, error) {
-	out := new(RespondQueryTaskCompletedResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.WorkerAPI/RespondQueryTaskCompleted", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workerAPIClient) RequestCancelWorkflowExecution(ctx context.Context, in *RequestCancelWorkflowExecutionRequest, opts ...grpc.CallOption) (*RequestCancelWorkflowExecutionResponse, error) {
-	out := new(RequestCancelWorkflowExecutionResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.WorkerAPI/RequestCancelWorkflowExecution", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// WorkerAPIServer is the server API for WorkerAPI service.
-type WorkerAPIServer interface {
-	// PollForDecisionTask is called by application worker to process DecisionTask from a specific taskList.
-	// A DecisionTask is dispatched to callers for active workflow executions, with pending decisions.
-	// Application is then expected to call 'RespondDecisionTaskCompleted' API when it is done processing the DecisionTask.
-	// It will also create a 'DecisionTaskStarted' event in the history for that session before handing off DecisionTask to
-	// application worker.
-	PollForDecisionTask(context.Context, *PollForDecisionTaskRequest) (*PollForDecisionTaskResponse, error)
-	// RespondDecisionTaskCompleted is called by application worker to complete a DecisionTask handed as a result of
-	// 'PollForDecisionTask' API call.  Completing a DecisionTask will result in new events for the workflow execution and
-	// potentially new ActivityTask being created for corresponding decisions.  It will also create a DecisionTaskCompleted
-	// event in the history for that session.  Use the 'taskToken' provided as response of PollForDecisionTask API call
-	// for completing the DecisionTask.
-	// The response could contain a new decision task if there is one or if the request asking for one.
-	RespondDecisionTaskCompleted(context.Context, *RespondDecisionTaskCompletedRequest) (*RespondDecisionTaskCompletedResponse, error)
-	// RespondDecisionTaskFailed is called by application worker to indicate failure.  This results in
-	// DecisionTaskFailedEvent written to the history and a new DecisionTask created.  This API can be used by client to
-	// either clear sticky tasklist or report any panics during DecisionTask processing.  Cadence will only append first
-	// DecisionTaskFailed event to the history of workflow execution for consecutive failures.
-	RespondDecisionTaskFailed(context.Context, *RespondDecisionTaskFailedRequest) (*RespondDecisionTaskFailedResponse, error)
-	// PollForActivityTask is called by application worker to process ActivityTask from a specific taskList.  ActivityTask
-	// is dispatched to callers whenever a ScheduleTask decision is made for a workflow execution.
-	// Application is expected to call 'RespondActivityTaskCompleted' or 'RespondActivityTaskFailed' once it is done
-	// processing the task.
-	// Application also needs to call 'RecordActivityTaskHeartbeat' API within 'heartbeatTimeoutSeconds' interval to
-	// prevent the task from getting timed out.  An event 'ActivityTaskStarted' event is also written to workflow execution
-	// history before the ActivityTask is dispatched to application worker.
-	PollForActivityTask(context.Context, *PollForActivityTaskRequest) (*PollForActivityTaskResponse, error)
-	// RespondActivityTaskCompleted is called by application worker when it is done processing an ActivityTask.  It will
-	// result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask
-	// created for the workflow so new decisions could be made.  Use the 'taskToken' provided as response of
-	// PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
-	// anymore due to activity timeout.
-	RespondActivityTaskCompleted(context.Context, *RespondActivityTaskCompletedRequest) (*RespondActivityTaskCompletedResponse, error)
-	// RespondActivityTaskCompletedByID is called by application worker when it is done processing an ActivityTask.
-	// It will result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask
-	// created for the workflow so new decisions could be made.  Similar to RespondActivityTaskCompleted but use Domain,
-	// WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'
-	// if the these IDs are not valid anymore due to activity timeout.
-	RespondActivityTaskCompletedByID(context.Context, *RespondActivityTaskCompletedByIDRequest) (*RespondActivityTaskCompletedByIDResponse, error)
-	// RespondActivityTaskFailed is called by application worker when it is done processing an ActivityTask.  It will
-	// result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask
-	// created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of
-	// PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
-	// anymore due to activity timeout.
-	RespondActivityTaskFailed(context.Context, *RespondActivityTaskFailedRequest) (*RespondActivityTaskFailedResponse, error)
-	// RespondActivityTaskFailedByID is called by application worker when it is done processing an ActivityTask.
-	// It will result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask
-	// created for the workflow instance so new decisions could be made.  Similar to RespondActivityTaskFailed but use
-	// Domain, WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'
-	// if the these IDs are not valid anymore due to activity timeout.
-	RespondActivityTaskFailedByID(context.Context, *RespondActivityTaskFailedByIDRequest) (*RespondActivityTaskFailedByIDResponse, error)
-	// RespondActivityTaskCanceled is called by application worker when it is successfully canceled an ActivityTask.
-	// It will result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask
-	// created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of
-	// PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
-	// anymore due to activity timeout.
-	RespondActivityTaskCanceled(context.Context, *RespondActivityTaskCanceledRequest) (*RespondActivityTaskCanceledResponse, error)
-	// RespondActivityTaskCanceledByID is called by application worker when it is successfully canceled an ActivityTask.
-	// It will result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask
-	// created for the workflow instance so new decisions could be made.  Similar to RespondActivityTaskCanceled but use
-	// Domain, WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'
-	// if the these IDs are not valid anymore due to activity timeout.
-	RespondActivityTaskCanceledByID(context.Context, *RespondActivityTaskCanceledByIDRequest) (*RespondActivityTaskCanceledByIDResponse, error)
-	// RecordActivityTaskHeartbeat is called by application worker while it is processing an ActivityTask.  If worker fails
-	// to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as timedout and
-	// 'ActivityTaskTimedOut' event will be written to the workflow history.  Calling 'RecordActivityTaskHeartbeat' will
-	// fail with 'EntityNotExistsError' in such situations.  Use the 'taskToken' provided as response of
-	// PollForActivityTask API call for heartbeating.
-	RecordActivityTaskHeartbeat(context.Context, *RecordActivityTaskHeartbeatRequest) (*RecordActivityTaskHeartbeatResponse, error)
-	// RecordActivityTaskHeartbeatByID is called by application worker while it is processing an ActivityTask.  If worker
-	// fails to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as
-	// timed out and 'ActivityTaskTimedOut' event will be written to the workflow history.
-	// Calling 'RecordActivityTaskHeartbeatByID' will fail with 'EntityNotExistsError' in such situations.  Instead of
-	// using 'taskToken' like in RecordActivityTaskHeartbeat, use Domain, WorkflowID and ActivityID.
-	RecordActivityTaskHeartbeatByID(context.Context, *RecordActivityTaskHeartbeatByIDRequest) (*RecordActivityTaskHeartbeatByIDResponse, error)
-	// RespondQueryTaskCompleted is called by application worker to complete a QueryTask (which is a DecisionTask for query)
-	// as a result of 'PollForDecisionTask' API call. Completing a QueryTask will unblock the client call to 'QueryWorkflow'
-	// API and return the query result to client as a response to 'QueryWorkflow' API call.
-	RespondQueryTaskCompleted(context.Context, *RespondQueryTaskCompletedRequest) (*RespondQueryTaskCompletedResponse, error)
-	// RequestCancelWorkflowExecution is called by application worker when it wants to request cancellation of a workflow
-	// instance. It will result in a new 'WorkflowExecutionCancelRequested' event being written to the workflow history
-	// and a new DecisionTask created for the workflow instance so new decisions could be made. It fails with
-	// 'EntityNotExistsError' if the workflow is not valid anymore due to completion or doesn't exist.
-	RequestCancelWorkflowExecution(context.Context, *RequestCancelWorkflowExecutionRequest) (*RequestCancelWorkflowExecutionResponse, error)
-}
-
-// UnimplementedWorkerAPIServer can be embedded to have forward compatible implementations.
-type UnimplementedWorkerAPIServer struct {
-}
-
-func (*UnimplementedWorkerAPIServer) PollForDecisionTask(ctx context.Context, req *PollForDecisionTaskRequest) (*PollForDecisionTaskResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PollForDecisionTask not implemented")
-}
-func (*UnimplementedWorkerAPIServer) RespondDecisionTaskCompleted(ctx context.Context, req *RespondDecisionTaskCompletedRequest) (*RespondDecisionTaskCompletedResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RespondDecisionTaskCompleted not implemented")
-}
-func (*UnimplementedWorkerAPIServer) RespondDecisionTaskFailed(ctx context.Context, req *RespondDecisionTaskFailedRequest) (*RespondDecisionTaskFailedResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RespondDecisionTaskFailed not implemented")
-}
-func (*UnimplementedWorkerAPIServer) PollForActivityTask(ctx context.Context, req *PollForActivityTaskRequest) (*PollForActivityTaskResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PollForActivityTask not implemented")
-}
-func (*UnimplementedWorkerAPIServer) RespondActivityTaskCompleted(ctx context.Context, req *RespondActivityTaskCompletedRequest) (*RespondActivityTaskCompletedResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RespondActivityTaskCompleted not implemented")
-}
-func (*UnimplementedWorkerAPIServer) RespondActivityTaskCompletedByID(ctx context.Context, req *RespondActivityTaskCompletedByIDRequest) (*RespondActivityTaskCompletedByIDResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RespondActivityTaskCompletedByID not implemented")
-}
-func (*UnimplementedWorkerAPIServer) RespondActivityTaskFailed(ctx context.Context, req *RespondActivityTaskFailedRequest) (*RespondActivityTaskFailedResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RespondActivityTaskFailed not implemented")
-}
-func (*UnimplementedWorkerAPIServer) RespondActivityTaskFailedByID(ctx context.Context, req *RespondActivityTaskFailedByIDRequest) (*RespondActivityTaskFailedByIDResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RespondActivityTaskFailedByID not implemented")
-}
-func (*UnimplementedWorkerAPIServer) RespondActivityTaskCanceled(ctx context.Context, req *RespondActivityTaskCanceledRequest) (*RespondActivityTaskCanceledResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RespondActivityTaskCanceled not implemented")
-}
-func (*UnimplementedWorkerAPIServer) RespondActivityTaskCanceledByID(ctx context.Context, req *RespondActivityTaskCanceledByIDRequest) (*RespondActivityTaskCanceledByIDResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RespondActivityTaskCanceledByID not implemented")
-}
-func (*UnimplementedWorkerAPIServer) RecordActivityTaskHeartbeat(ctx context.Context, req *RecordActivityTaskHeartbeatRequest) (*RecordActivityTaskHeartbeatResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RecordActivityTaskHeartbeat not implemented")
-}
-func (*UnimplementedWorkerAPIServer) RecordActivityTaskHeartbeatByID(ctx context.Context, req *RecordActivityTaskHeartbeatByIDRequest) (*RecordActivityTaskHeartbeatByIDResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RecordActivityTaskHeartbeatByID not implemented")
-}
-func (*UnimplementedWorkerAPIServer) RespondQueryTaskCompleted(ctx context.Context, req *RespondQueryTaskCompletedRequest) (*RespondQueryTaskCompletedResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RespondQueryTaskCompleted not implemented")
-}
-func (*UnimplementedWorkerAPIServer) RequestCancelWorkflowExecution(ctx context.Context, req *RequestCancelWorkflowExecutionRequest) (*RequestCancelWorkflowExecutionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RequestCancelWorkflowExecution not implemented")
-}
-
-func RegisterWorkerAPIServer(s *grpc.Server, srv WorkerAPIServer) {
-	s.RegisterService(&_WorkerAPI_serviceDesc, srv)
-}
-
-func _WorkerAPI_PollForDecisionTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PollForDecisionTaskRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerAPIServer).PollForDecisionTask(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.WorkerAPI/PollForDecisionTask",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerAPIServer).PollForDecisionTask(ctx, req.(*PollForDecisionTaskRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _WorkerAPI_RespondDecisionTaskCompleted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RespondDecisionTaskCompletedRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerAPIServer).RespondDecisionTaskCompleted(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.WorkerAPI/RespondDecisionTaskCompleted",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerAPIServer).RespondDecisionTaskCompleted(ctx, req.(*RespondDecisionTaskCompletedRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _WorkerAPI_RespondDecisionTaskFailed_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RespondDecisionTaskFailedRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerAPIServer).RespondDecisionTaskFailed(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.WorkerAPI/RespondDecisionTaskFailed",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerAPIServer).RespondDecisionTaskFailed(ctx, req.(*RespondDecisionTaskFailedRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _WorkerAPI_PollForActivityTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PollForActivityTaskRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerAPIServer).PollForActivityTask(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.WorkerAPI/PollForActivityTask",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerAPIServer).PollForActivityTask(ctx, req.(*PollForActivityTaskRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _WorkerAPI_RespondActivityTaskCompleted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RespondActivityTaskCompletedRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerAPIServer).RespondActivityTaskCompleted(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.WorkerAPI/RespondActivityTaskCompleted",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerAPIServer).RespondActivityTaskCompleted(ctx, req.(*RespondActivityTaskCompletedRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _WorkerAPI_RespondActivityTaskCompletedByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RespondActivityTaskCompletedByIDRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerAPIServer).RespondActivityTaskCompletedByID(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.WorkerAPI/RespondActivityTaskCompletedByID",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerAPIServer).RespondActivityTaskCompletedByID(ctx, req.(*RespondActivityTaskCompletedByIDRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _WorkerAPI_RespondActivityTaskFailed_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RespondActivityTaskFailedRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerAPIServer).RespondActivityTaskFailed(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.WorkerAPI/RespondActivityTaskFailed",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerAPIServer).RespondActivityTaskFailed(ctx, req.(*RespondActivityTaskFailedRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _WorkerAPI_RespondActivityTaskFailedByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RespondActivityTaskFailedByIDRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerAPIServer).RespondActivityTaskFailedByID(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.WorkerAPI/RespondActivityTaskFailedByID",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerAPIServer).RespondActivityTaskFailedByID(ctx, req.(*RespondActivityTaskFailedByIDRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _WorkerAPI_RespondActivityTaskCanceled_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RespondActivityTaskCanceledRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerAPIServer).RespondActivityTaskCanceled(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.WorkerAPI/RespondActivityTaskCanceled",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerAPIServer).RespondActivityTaskCanceled(ctx, req.(*RespondActivityTaskCanceledRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _WorkerAPI_RespondActivityTaskCanceledByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RespondActivityTaskCanceledByIDRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerAPIServer).RespondActivityTaskCanceledByID(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.WorkerAPI/RespondActivityTaskCanceledByID",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerAPIServer).RespondActivityTaskCanceledByID(ctx, req.(*RespondActivityTaskCanceledByIDRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _WorkerAPI_RecordActivityTaskHeartbeat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RecordActivityTaskHeartbeatRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerAPIServer).RecordActivityTaskHeartbeat(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.WorkerAPI/RecordActivityTaskHeartbeat",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerAPIServer).RecordActivityTaskHeartbeat(ctx, req.(*RecordActivityTaskHeartbeatRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _WorkerAPI_RecordActivityTaskHeartbeatByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RecordActivityTaskHeartbeatByIDRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerAPIServer).RecordActivityTaskHeartbeatByID(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.WorkerAPI/RecordActivityTaskHeartbeatByID",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerAPIServer).RecordActivityTaskHeartbeatByID(ctx, req.(*RecordActivityTaskHeartbeatByIDRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _WorkerAPI_RespondQueryTaskCompleted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RespondQueryTaskCompletedRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerAPIServer).RespondQueryTaskCompleted(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.WorkerAPI/RespondQueryTaskCompleted",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerAPIServer).RespondQueryTaskCompleted(ctx, req.(*RespondQueryTaskCompletedRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _WorkerAPI_RequestCancelWorkflowExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestCancelWorkflowExecutionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkerAPIServer).RequestCancelWorkflowExecution(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.WorkerAPI/RequestCancelWorkflowExecution",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerAPIServer).RequestCancelWorkflowExecution(ctx, req.(*RequestCancelWorkflowExecutionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _WorkerAPI_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "uber.cadence.api.v1.WorkerAPI",
-	HandlerType: (*WorkerAPIServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "PollForDecisionTask",
-			Handler:    _WorkerAPI_PollForDecisionTask_Handler,
-		},
-		{
-			MethodName: "RespondDecisionTaskCompleted",
-			Handler:    _WorkerAPI_RespondDecisionTaskCompleted_Handler,
-		},
-		{
-			MethodName: "RespondDecisionTaskFailed",
-			Handler:    _WorkerAPI_RespondDecisionTaskFailed_Handler,
-		},
-		{
-			MethodName: "PollForActivityTask",
-			Handler:    _WorkerAPI_PollForActivityTask_Handler,
-		},
-		{
-			MethodName: "RespondActivityTaskCompleted",
-			Handler:    _WorkerAPI_RespondActivityTaskCompleted_Handler,
-		},
-		{
-			MethodName: "RespondActivityTaskCompletedByID",
-			Handler:    _WorkerAPI_RespondActivityTaskCompletedByID_Handler,
-		},
-		{
-			MethodName: "RespondActivityTaskFailed",
-			Handler:    _WorkerAPI_RespondActivityTaskFailed_Handler,
-		},
-		{
-			MethodName: "RespondActivityTaskFailedByID",
-			Handler:    _WorkerAPI_RespondActivityTaskFailedByID_Handler,
-		},
-		{
-			MethodName: "RespondActivityTaskCanceled",
-			Handler:    _WorkerAPI_RespondActivityTaskCanceled_Handler,
-		},
-		{
-			MethodName: "RespondActivityTaskCanceledByID",
-			Handler:    _WorkerAPI_RespondActivityTaskCanceledByID_Handler,
-		},
-		{
-			MethodName: "RecordActivityTaskHeartbeat",
-			Handler:    _WorkerAPI_RecordActivityTaskHeartbeat_Handler,
-		},
-		{
-			MethodName: "RecordActivityTaskHeartbeatByID",
-			Handler:    _WorkerAPI_RecordActivityTaskHeartbeatByID_Handler,
-		},
-		{
-			MethodName: "RespondQueryTaskCompleted",
-			Handler:    _WorkerAPI_RespondQueryTaskCompleted_Handler,
-		},
-		{
-			MethodName: "RequestCancelWorkflowExecution",
-			Handler:    _WorkerAPI_RequestCancelWorkflowExecution_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "github.com/uber/cadence/.gen/proto/api/v1/service_worker.proto",
+	// 1991 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe4, 0x5a, 0x5b, 0x6f, 0x1b, 0xc7,
+	0x15, 0xc6, 0xca, 0xba, 0x1e, 0xdd, 0xa8, 0x31, 0xea, 0x52, 0xb4, 0x2d, 0xcb, 0x4c, 0x6d, 0x2b,
+	0x6d, 0x40, 0xd6, 0x4a, 0xea, 0x38, 0x76, 0x5c, 0x54, 0x17, 0x0b, 0x56, 0x91, 0xa6, 0xca, 0x9a,
+	0x71, 0x80, 0x14, 0xf0, 0x62, 0xb8, 0x3b, 0x12, 0x07, 0x5a, 0xee, 0xd0, 0xbb, 0xb3, 0x94, 0xf9,
+	0xd2, 0x87, 0x3e, 0x26, 0x2d, 0x50, 0xa0, 0x68, 0x8a, 0x02, 0x05, 0xfc, 0xdc, 0x1f, 0xd0, 0xff,
+	0xd0, 0xc7, 0xf6, 0xb5, 0x7d, 0x69, 0xfd, 0x4b, 0x8a, 0x9d, 0x99, 0x5d, 0x2e, 0xc9, 0xe1, 0xf0,
+	0xd2, 0x07, 0x05, 0xc8, 0x9b, 0x76, 0xf6, 0x3b, 0xdf, 0x9e, 0x39, 0xe7, 0xcc, 0x99, 0x6f, 0x46,
+	0x84, 0x9d, 0xb8, 0x4e, 0xc2, 0xaa, 0x8b, 0x3d, 0x12, 0xb8, 0xa4, 0x8a, 0x5b, 0xb4, 0xda, 0xbe,
+	0x5f, 0x8d, 0x48, 0xd8, 0xa6, 0x2e, 0x71, 0x2e, 0x58, 0x78, 0x4e, 0xc2, 0x4a, 0x2b, 0x64, 0x9c,
+	0xa1, 0xab, 0x09, 0xb2, 0xa2, 0x90, 0x15, 0xdc, 0xa2, 0x95, 0xf6, 0xfd, 0xd2, 0xd6, 0x19, 0x63,
+	0x67, 0x3e, 0xa9, 0x0a, 0x48, 0x3d, 0x3e, 0xad, 0x7a, 0x71, 0x88, 0x39, 0x65, 0x81, 0x34, 0x2a,
+	0xdd, 0xea, 0x7f, 0xcf, 0x69, 0x93, 0x44, 0x1c, 0x37, 0x5b, 0x0a, 0x30, 0x40, 0x70, 0x11, 0xe2,
+	0x56, 0x8b, 0x84, 0x91, 0x7a, 0xbf, 0xad, 0xf3, 0xcf, 0x65, 0xcd, 0x66, 0xf6, 0x89, 0xb2, 0x0e,
+	0xe1, 0x11, 0x97, 0x46, 0x5d, 0x37, 0x6e, 0xeb, 0x30, 0x0d, 0x1a, 0x71, 0x16, 0x76, 0x52, 0x4f,
+	0x75, 0x90, 0x57, 0x31, 0xc9, 0x00, 0xda, 0xef, 0x70, 0x1c, 0x9d, 0xfb, 0x34, 0xe2, 0x26, 0x4c,
+	0x12, 0xc5, 0x53, 0x9f, 0x5d, 0x48, 0x4c, 0xf9, 0x6f, 0x16, 0x94, 0x4e, 0x98, 0xef, 0x1f, 0xb1,
+	0xf0, 0x50, 0x79, 0x59, 0xc3, 0xd1, 0xb9, 0x4d, 0x5e, 0xc5, 0x24, 0xe2, 0xe8, 0x1a, 0xcc, 0x7b,
+	0xac, 0x89, 0x69, 0x50, 0xb4, 0xb6, 0xad, 0x9d, 0x25, 0x5b, 0x3d, 0xa1, 0x47, 0xb0, 0x94, 0x7c,
+	0xcc, 0x49, 0xbe, 0x56, 0x9c, 0xd9, 0xb6, 0x76, 0x96, 0x77, 0x6f, 0x56, 0x34, 0x29, 0xa9, 0x24,
+	0x64, 0x9f, 0xd0, 0x88, 0xdb, 0x8b, 0x5c, 0xfd, 0x85, 0x4a, 0xb0, 0x48, 0x3d, 0x12, 0x70, 0xca,
+	0x3b, 0xc5, 0x2b, 0x82, 0x35, 0x7b, 0x46, 0xf7, 0x60, 0xbd, 0x4e, 0x03, 0x1c, 0x76, 0x1c, 0xb7,
+	0x41, 0xdc, 0xf3, 0x28, 0x6e, 0x16, 0x67, 0x05, 0x64, 0x4d, 0x0e, 0x1f, 0xa8, 0xd1, 0xf2, 0xbf,
+	0x16, 0xe0, 0xba, 0xd6, 0xef, 0xa8, 0xc5, 0x82, 0x88, 0xa0, 0x9b, 0x00, 0xc2, 0x41, 0xce, 0xce,
+	0x89, 0x74, 0x7e, 0xc5, 0x16, 0x2e, 0xd7, 0x92, 0x01, 0xf4, 0x39, 0xa0, 0x34, 0x10, 0x0e, 0x79,
+	0x4d, 0xdc, 0x38, 0xa9, 0x12, 0x35, 0x91, 0xbb, 0xda, 0x89, 0x7c, 0xa1, 0xe0, 0x4f, 0x53, 0xb4,
+	0xbd, 0x71, 0xd1, 0x3f, 0x84, 0x8e, 0x60, 0x35, 0xa3, 0xe5, 0x9d, 0x16, 0x11, 0xf3, 0x5b, 0xde,
+	0xbd, 0x6d, 0x64, 0xac, 0x75, 0x5a, 0xc4, 0x5e, 0xb9, 0xc8, 0x3d, 0xa1, 0x17, 0xb0, 0xd9, 0x0a,
+	0x49, 0x9b, 0xb2, 0x38, 0x72, 0x22, 0x8e, 0x43, 0x4e, 0x3c, 0x87, 0xb4, 0x49, 0xc0, 0x1d, 0xea,
+	0x89, 0x80, 0x2c, 0xef, 0x5e, 0xaf, 0xc8, 0x5a, 0xad, 0xa4, 0xb5, 0x5a, 0x39, 0x0e, 0xf8, 0x83,
+	0x0f, 0x5e, 0x60, 0x3f, 0x26, 0xf6, 0xb5, 0xd4, 0xfa, 0xb9, 0x34, 0x7e, 0x9a, 0xd8, 0x1e, 0x7b,
+	0x68, 0x07, 0x0a, 0x03, 0x74, 0x73, 0xdb, 0xd6, 0xce, 0x15, 0x7b, 0x2d, 0xea, 0x45, 0x16, 0x61,
+	0x01, 0x73, 0x4e, 0x9a, 0x2d, 0x5e, 0x9c, 0x17, 0x80, 0xf4, 0x11, 0xbd, 0x07, 0xa8, 0x8e, 0xdd,
+	0x73, 0x9f, 0x9d, 0x39, 0x2e, 0x8b, 0x03, 0xee, 0x34, 0x68, 0xc0, 0x8b, 0x0b, 0x02, 0x54, 0x50,
+	0x6f, 0x0e, 0x92, 0x17, 0xcf, 0x68, 0xc0, 0xd1, 0x03, 0x58, 0x50, 0x95, 0x5d, 0x5c, 0x14, 0x7e,
+	0xdf, 0xd0, 0xc6, 0xe2, 0x99, 0xc4, 0xd8, 0x29, 0x18, 0xdd, 0x85, 0xf5, 0x80, 0xbc, 0xe6, 0x4e,
+	0x0b, 0x9f, 0x11, 0x95, 0xc4, 0x25, 0x91, 0xc4, 0xd5, 0x64, 0xf8, 0x04, 0x9f, 0x11, 0x99, 0xc8,
+	0x87, 0x30, 0x27, 0x96, 0x45, 0x11, 0x04, 0x7b, 0xd9, 0x18, 0xe9, 0xcf, 0x12, 0xa4, 0x2d, 0x0d,
+	0xd0, 0x4b, 0xb8, 0x31, 0x58, 0x02, 0x4e, 0xb7, 0xaa, 0x97, 0xc7, 0xa9, 0xea, 0xcd, 0x81, 0x1a,
+	0x48, 0x5f, 0xa1, 0x3d, 0x58, 0x8b, 0xdc, 0x06, 0xf1, 0x62, 0x9f, 0x78, 0x4e, 0xd2, 0x68, 0x8a,
+	0x2b, 0x82, 0xb1, 0x34, 0x90, 0xb8, 0x5a, 0xda, 0x85, 0xec, 0xd5, 0xcc, 0x22, 0x19, 0x43, 0x4f,
+	0x60, 0x25, 0x4d, 0x97, 0x20, 0x58, 0x1d, 0x49, 0xb0, 0xac, 0xf0, 0xc2, 0xfc, 0x0b, 0x58, 0x48,
+	0xa6, 0x4a, 0x49, 0x54, 0x5c, 0xdb, 0xbe, 0xb2, 0xb3, 0xbc, 0xfb, 0x44, 0x3b, 0x19, 0xc3, 0x32,
+	0xaa, 0x7c, 0x26, 0xed, 0x9f, 0x06, 0x3c, 0x49, 0x8e, 0x62, 0x2b, 0xbd, 0x84, 0x95, 0xfc, 0x0b,
+	0x54, 0x80, 0x2b, 0xe7, 0xa4, 0xa3, 0x5a, 0x44, 0xf2, 0x67, 0x92, 0x96, 0x76, 0x52, 0x89, 0x6a,
+	0x49, 0x8d, 0x95, 0x16, 0x61, 0xf0, 0x68, 0xe6, 0xa1, 0x55, 0xfe, 0xeb, 0x1c, 0xbc, 0x23, 0x5d,
+	0xf0, 0xf2, 0x5e, 0x1d, 0xb0, 0x66, 0xcb, 0x27, 0x9c, 0x78, 0x69, 0x77, 0x1a, 0xb1, 0xc8, 0x1f,
+	0xc3, 0x52, 0xda, 0x79, 0xa3, 0xe2, 0x8c, 0x88, 0x80, 0x3e, 0x9d, 0xe9, 0x47, 0xec, 0x2e, 0x1e,
+	0xfd, 0x08, 0x36, 0xba, 0x55, 0xe1, 0xb2, 0x80, 0x93, 0xd7, 0x5c, 0x2c, 0xe7, 0x15, 0xbb, 0x90,
+	0xbd, 0x38, 0x90, 0xe3, 0x3d, 0x2d, 0x6d, 0xb6, 0xaf, 0xa5, 0xfd, 0x0a, 0x36, 0x22, 0x4e, 0xdd,
+	0xf3, 0x8e, 0x83, 0x39, 0x0f, 0x69, 0x3d, 0xe6, 0x24, 0x12, 0x8b, 0x6e, 0x79, 0xb7, 0xa2, 0xf5,
+	0xe6, 0xb9, 0x40, 0x67, 0x05, 0xb5, 0x97, 0x59, 0xd9, 0x05, 0x49, 0xd4, 0x1d, 0x41, 0x1f, 0x42,
+	0x31, 0x24, 0x3c, 0x0e, 0x03, 0x27, 0x20, 0x17, 0x4e, 0xea, 0xbd, 0xa8, 0x62, 0xb1, 0x6e, 0x17,
+	0xed, 0xef, 0xc9, 0xf7, 0x9f, 0x92, 0x8b, 0x7c, 0x28, 0xd1, 0x3e, 0x6c, 0x9d, 0xb2, 0xd0, 0x25,
+	0x8e, 0x1b, 0x12, 0xcc, 0x89, 0xc6, 0x7c, 0x41, 0x98, 0x97, 0x04, 0xea, 0x40, 0x80, 0xfa, 0x39,
+	0x34, 0xcd, 0x7a, 0x51, 0xd7, 0xac, 0x11, 0x83, 0x55, 0xb1, 0xe6, 0x9c, 0x90, 0x44, 0xb1, 0xcf,
+	0xa3, 0xe2, 0x92, 0x48, 0xc6, 0xcf, 0xb5, 0xd3, 0x1f, 0x23, 0xf1, 0x15, 0x59, 0x31, 0x92, 0x4c,
+	0xd6, 0xe6, 0xca, 0xab, 0xdc, 0x50, 0x89, 0xc2, 0xc6, 0x00, 0x44, 0x53, 0xa5, 0x3f, 0xed, 0xad,
+	0xd2, 0x9d, 0x31, 0xaa, 0x54, 0x10, 0xe6, 0x6b, 0xf5, 0xcd, 0x15, 0xf8, 0x81, 0xd9, 0x65, 0xb5,
+	0x23, 0x7d, 0x0e, 0xab, 0xbd, 0x01, 0xb6, 0xc4, 0x47, 0x7f, 0x3c, 0xe9, 0x9a, 0xb4, 0x57, 0xbc,
+	0x7c, 0x12, 0xde, 0x58, 0xb0, 0x85, 0x5d, 0x4e, 0xdb, 0x94, 0x53, 0x12, 0x39, 0x9c, 0x39, 0x1e,
+	0x8d, 0x5a, 0x98, 0xbb, 0x0d, 0xc7, 0x67, 0x2e, 0xf6, 0xfd, 0x8e, 0x2a, 0xfd, 0x2f, 0xa7, 0x88,
+	0xb6, 0xea, 0x02, 0x7b, 0x19, 0x7f, 0x8d, 0x1d, 0x2a, 0xf6, 0x4f, 0x24, 0xb9, 0x8c, 0xfe, 0x75,
+	0x3c, 0x1c, 0x51, 0xfa, 0x35, 0x6c, 0x8f, 0x22, 0xd0, 0xe4, 0xe6, 0xb0, 0x37, 0x37, 0xfa, 0xa5,
+	0xa2, 0x78, 0x3b, 0x82, 0x2b, 0x25, 0x3e, 0x0e, 0x4e, 0x59, 0x3e, 0x43, 0xbf, 0x99, 0x81, 0x6d,
+	0xcd, 0x34, 0x8f, 0x30, 0xf5, 0xc7, 0x6e, 0x25, 0xfb, 0x30, 0xe7, 0xe2, 0x38, 0x92, 0xde, 0xac,
+	0xed, 0xbe, 0x67, 0x6c, 0x23, 0x5d, 0xf6, 0x83, 0xc4, 0xc6, 0x96, 0xa6, 0xc9, 0x56, 0xe8, 0x11,
+	0x8e, 0xa9, 0x1f, 0x29, 0x59, 0xa0, 0xdf, 0x0a, 0x4f, 0x70, 0xc7, 0x67, 0xd8, 0xb3, 0x53, 0xb0,
+	0xb1, 0xb9, 0x68, 0x96, 0xe0, 0x9c, 0x56, 0x2f, 0xbd, 0x03, 0xb7, 0x0d, 0x31, 0x90, 0x79, 0x2e,
+	0xff, 0xb7, 0x2b, 0x06, 0xd3, 0xc8, 0x5e, 0xa6, 0x18, 0x7c, 0x0e, 0x28, 0xe3, 0x75, 0x9a, 0x84,
+	0x63, 0x0f, 0x73, 0xac, 0xe4, 0xcf, 0x1d, 0xe3, 0x07, 0x7e, 0xa1, 0xc0, 0x76, 0x81, 0xf7, 0x8d,
+	0x94, 0xbf, 0x5e, 0xcc, 0x84, 0x63, 0xef, 0x1c, 0x2f, 0x55, 0x38, 0xde, 0x82, 0x65, 0xb5, 0x84,
+	0x3a, 0x89, 0x26, 0x93, 0x91, 0x80, 0x74, 0xe8, 0xd8, 0x4b, 0x94, 0x65, 0x06, 0x10, 0xca, 0x72,
+	0xd6, 0xa0, 0x2c, 0xb3, 0x89, 0x09, 0x65, 0x89, 0x73, 0x4f, 0x68, 0x17, 0xe6, 0x68, 0xd0, 0x8a,
+	0xb9, 0xda, 0x81, 0xcc, 0x25, 0x28, 0xa1, 0x1a, 0x25, 0x33, 0xff, 0xff, 0x2a, 0x99, 0x85, 0xc9,
+	0x94, 0x4c, 0x0d, 0x36, 0x53, 0xbe, 0xa4, 0xc3, 0xb9, 0x3e, 0x8b, 0x88, 0x20, 0x62, 0x31, 0x57,
+	0xba, 0x72, 0x73, 0x80, 0xeb, 0x50, 0x1d, 0xfe, 0xec, 0x6b, 0xa9, 0x6d, 0x8d, 0x1d, 0x24, 0x96,
+	0x35, 0x69, 0x88, 0x3e, 0x85, 0x6b, 0xe2, 0x23, 0x83, 0x94, 0x4b, 0xa3, 0x28, 0xaf, 0x0a, 0xc3,
+	0x3e, 0xbe, 0x23, 0xd8, 0x68, 0x10, 0x1c, 0xf2, 0x3a, 0xc1, 0x3c, 0xa3, 0x82, 0x51, 0x54, 0x85,
+	0xcc, 0x26, 0xe5, 0xc9, 0x69, 0xef, 0x44, 0x84, 0xce, 0x75, 0xb5, 0xf7, 0x4b, 0xd8, 0xea, 0xcd,
+	0x84, 0xc3, 0x4e, 0x1d, 0xde, 0xa0, 0x91, 0x93, 0x1a, 0x8c, 0xd6, 0x98, 0xa5, 0x9e, 0xcc, 0xfc,
+	0xf2, 0xb4, 0xd6, 0xa0, 0xd1, 0x9e, 0xe2, 0x3f, 0xce, 0xcf, 0x20, 0x6d, 0x56, 0xab, 0x63, 0x54,
+	0x4a, 0x77, 0x12, 0x87, 0xaa, 0x6b, 0x0d, 0x1c, 0x85, 0xd6, 0xa6, 0x3b, 0x0a, 0xdd, 0x83, 0xf5,
+	0x8c, 0x47, 0x75, 0x9f, 0x75, 0xd9, 0xe1, 0xd2, 0xe1, 0x43, 0xd9, 0x85, 0xde, 0x87, 0xf9, 0x06,
+	0xc1, 0x1e, 0x09, 0x8b, 0x05, 0x75, 0x40, 0xd2, 0x1e, 0x34, 0x04, 0xc4, 0x56, 0xd0, 0xf2, 0x37,
+	0x56, 0xa6, 0x34, 0xf3, 0xdd, 0x60, 0x52, 0xa5, 0xf9, 0x01, 0xcc, 0x4b, 0x69, 0xa3, 0x3a, 0x81,
+	0x39, 0x58, 0x0a, 0x6b, 0xea, 0x7d, 0xe5, 0xbb, 0x99, 0xaa, 0x18, 0xe2, 0x97, 0x6a, 0xd9, 0x5f,
+	0xcf, 0xc0, 0x3d, 0x13, 0x70, 0xbf, 0x73, 0x7c, 0x38, 0xaa, 0x7f, 0x5f, 0x56, 0x4f, 0xeb, 0x46,
+	0x6d, 0x76, 0xca, 0xa8, 0xcd, 0xf5, 0x45, 0xed, 0x87, 0xb0, 0x33, 0x3a, 0x18, 0x2a, 0x72, 0x7f,
+	0xb4, 0x32, 0x59, 0x90, 0x07, 0x4f, 0x24, 0x0b, 0x1e, 0xc0, 0xc2, 0x29, 0xa6, 0x7e, 0x1c, 0x12,
+	0x63, 0xe2, 0x8f, 0x24, 0xc6, 0x4e, 0xc1, 0xc6, 0xcc, 0x77, 0x77, 0x6a, 0x9d, 0x5b, 0xca, 0xf9,
+	0xaf, 0x66, 0xb4, 0xf5, 0x21, 0x51, 0xdf, 0xe6, 0x9c, 0xe7, 0x22, 0x36, 0x3b, 0x6d, 0xc4, 0xfa,
+	0xb3, 0x7e, 0x0f, 0xee, 0x8c, 0x88, 0x85, 0x8a, 0xda, 0x9f, 0x2c, 0x28, 0xeb, 0xea, 0x03, 0x07,
+	0x2e, 0x99, 0x28, 0xe9, 0x69, 0x6b, 0x9c, 0x99, 0x56, 0xc7, 0xf5, 0x27, 0xfd, 0x8e, 0xbe, 0x0d,
+	0x65, 0x8e, 0xa9, 0x09, 0xfc, 0x76, 0x06, 0xee, 0x1a, 0x70, 0xdf, 0xf2, 0xc4, 0xa7, 0x51, 0x9b,
+	0x9d, 0x36, 0x6a, 0xfd, 0x89, 0x7f, 0x57, 0xdf, 0xfb, 0x7a, 0xa2, 0xd1, 0x93, 0x7a, 0x97, 0x85,
+	0x3d, 0xd0, 0x67, 0xe9, 0xae, 0x75, 0x89, 0xa9, 0x3f, 0x49, 0x52, 0x6f, 0x70, 0x4c, 0xe9, 0xd2,
+	0x77, 0xa1, 0xe0, 0x8a, 0x89, 0x39, 0xa1, 0xf4, 0x95, 0x78, 0xc2, 0xbf, 0x45, 0x7b, 0x5d, 0x8e,
+	0xdb, 0xe9, 0xb0, 0xaa, 0x92, 0xa1, 0x94, 0xdf, 0xb5, 0x2a, 0xa9, 0x25, 0x55, 0x32, 0x22, 0x1a,
+	0x93, 0x07, 0xf9, 0xdf, 0xdd, 0xed, 0x43, 0xdc, 0x0c, 0x4c, 0x23, 0x1b, 0x7e, 0xd6, 0x27, 0x1b,
+	0xc6, 0xbf, 0x80, 0x48, 0x37, 0xc3, 0x17, 0x70, 0x55, 0xfe, 0x5b, 0xc4, 0x69, 0x93, 0x50, 0x5c,
+	0x2d, 0xd0, 0xe0, 0x94, 0xa9, 0xf3, 0xe5, 0xf0, 0x44, 0x91, 0xf0, 0x85, 0x84, 0x8b, 0xb3, 0xf2,
+	0xc6, 0x45, 0xff, 0x50, 0x6e, 0x13, 0xd2, 0x4d, 0x4e, 0xad, 0xa9, 0x7f, 0x5a, 0x49, 0xe3, 0x15,
+	0x33, 0x95, 0x6b, 0x6e, 0xb0, 0x06, 0x2e, 0xa7, 0xcc, 0x4c, 0x87, 0xca, 0x9b, 0x00, 0x2a, 0xb7,
+	0xe9, 0x5d, 0xfa, 0x92, 0xbd, 0xa4, 0x46, 0x8e, 0xbd, 0xf2, 0x4e, 0xb2, 0x74, 0xcc, 0x53, 0x92,
+	0xb3, 0xdf, 0xfd, 0x5d, 0x01, 0x96, 0x64, 0x2c, 0xf7, 0x4e, 0x8e, 0xd1, 0x6b, 0xb8, 0xaa, 0xb9,
+	0xb3, 0x41, 0xd5, 0xf1, 0x6f, 0x77, 0xc4, 0x47, 0x4b, 0x13, 0x5f, 0x07, 0xa1, 0x3f, 0x58, 0x70,
+	0xc3, 0x74, 0x8b, 0x83, 0x1e, 0x4e, 0x7b, 0xcd, 0x56, 0xfa, 0x68, 0xea, 0x2b, 0x23, 0xf4, 0x95,
+	0x05, 0x9b, 0x43, 0x2f, 0x1c, 0xd0, 0x4f, 0xc6, 0x25, 0xee, 0x51, 0x63, 0xa5, 0x07, 0x93, 0x9a,
+	0x29, 0x67, 0xba, 0xc9, 0xc9, 0xb7, 0x00, 0x73, 0x72, 0x34, 0x17, 0x20, 0xe6, 0xe4, 0x68, 0x6f,
+	0x13, 0x72, 0xc9, 0xd1, 0x2a, 0x52, 0x73, 0x72, 0x4c, 0x47, 0x12, 0x73, 0x72, 0x8c, 0x87, 0x06,
+	0xf4, 0x46, 0x2f, 0x7d, 0x7b, 0x74, 0x32, 0xfa, 0x78, 0x62, 0xfe, 0xdc, 0xc6, 0x52, 0x7a, 0x32,
+	0xa5, 0xf5, 0x60, 0xf9, 0x0c, 0x6a, 0x3a, 0x73, 0xf9, 0x0c, 0x15, 0xf3, 0xe6, 0xf2, 0x19, 0x2e,
+	0xb6, 0xd1, 0x37, 0x16, 0xdc, 0x34, 0x0a, 0x4c, 0xf4, 0xd1, 0x64, 0xcc, 0xf9, 0x40, 0x3d, 0x9a,
+	0xc6, 0x54, 0x39, 0xf6, 0x7b, 0x0b, 0xae, 0x1b, 0x04, 0x10, 0xfa, 0x70, 0xec, 0x24, 0xf4, 0x2a,
+	0xe0, 0xd2, 0xc3, 0xc9, 0x0d, 0x95, 0x4b, 0x7f, 0xb1, 0xe0, 0xd6, 0x08, 0x4d, 0x86, 0x1e, 0x4f,
+	0xca, 0x9e, 0x8f, 0xd7, 0xc7, 0xd3, 0x19, 0xf7, 0x44, 0x6c, 0xa8, 0x18, 0x18, 0x1a, 0xb1, 0x51,
+	0xc2, 0x71, 0x68, 0xc4, 0x46, 0x0b, 0x3b, 0x19, 0x31, 0xa3, 0x3e, 0x19, 0x1a, 0xb1, 0x71, 0x34,
+	0xde, 0xd0, 0x88, 0x8d, 0x27, 0x89, 0x72, 0x2b, 0x71, 0x50, 0x0a, 0x98, 0x57, 0xe2, 0x50, 0x5d,
+	0x64, 0x5e, 0x89, 0xc3, 0x15, 0x07, 0xfa, 0xb3, 0x05, 0x5b, 0xe6, 0xed, 0x19, 0x0d, 0x5b, 0x4f,
+	0x63, 0xc8, 0x94, 0xd2, 0xe3, 0xa9, 0x6c, 0xa5, 0x6f, 0xfb, 0xf5, 0xbf, 0xbf, 0xdd, 0xb2, 0xfe,
+	0xf1, 0x76, 0xcb, 0xfa, 0xcf, 0xdb, 0x2d, 0x0b, 0xbe, 0xef, 0xb2, 0xa6, 0x8e, 0x6d, 0x7f, 0x71,
+	0xaf, 0x45, 0x4f, 0x42, 0xc6, 0xd9, 0x89, 0xf5, 0x65, 0xf5, 0x8c, 0xf2, 0x46, 0x5c, 0xaf, 0xb8,
+	0xac, 0x59, 0xed, 0xf9, 0xad, 0x46, 0xe5, 0x8c, 0x04, 0xf2, 0x47, 0x28, 0xea, 0x67, 0x1b, 0x8f,
+	0x71, 0x8b, 0xb6, 0xef, 0xd7, 0xe7, 0xc5, 0xd8, 0xfb, 0xff, 0x0b, 0x00, 0x00, 0xff, 0xff, 0x13,
+	0xb7, 0xa1, 0xd4, 0x28, 0x23, 0x00, 0x00,
 }
 
 func (m *PollForDecisionTaskRequest) Marshal() (dAtA []byte, err error) {
@@ -4077,6 +2099,10 @@ func (m *PollForDecisionTaskRequest) MarshalToSizedBuffer(dAtA []byte) (int, err
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.BinaryChecksum) > 0 {
 		i -= len(m.BinaryChecksum)
 		copy(dAtA[i:], m.BinaryChecksum)
@@ -4133,6 +2159,10 @@ func (m *PollForDecisionTaskResponse) MarshalToSizedBuffer(dAtA []byte) (int, er
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Queries) > 0 {
 		for k := range m.Queries {
 			v := m.Queries[k]
@@ -4160,22 +2190,26 @@ func (m *PollForDecisionTaskResponse) MarshalToSizedBuffer(dAtA []byte) (int, er
 		}
 	}
 	if m.StartedTime != nil {
-		n3, err3 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.StartedTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.StartedTime):])
-		if err3 != nil {
-			return 0, err3
+		{
+			size, err := m.StartedTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintServiceWorker(dAtA, i, uint64(size))
 		}
-		i -= n3
-		i = encodeVarintServiceWorker(dAtA, i, uint64(n3))
 		i--
 		dAtA[i] = 0x6a
 	}
 	if m.ScheduledTime != nil {
-		n4, err4 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.ScheduledTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.ScheduledTime):])
-		if err4 != nil {
-			return 0, err4
+		{
+			size, err := m.ScheduledTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintServiceWorker(dAtA, i, uint64(size))
 		}
-		i -= n4
-		i = encodeVarintServiceWorker(dAtA, i, uint64(n4))
 		i--
 		dAtA[i] = 0x62
 	}
@@ -4237,10 +2271,17 @@ func (m *PollForDecisionTaskResponse) MarshalToSizedBuffer(dAtA []byte) (int, er
 		i--
 		dAtA[i] = 0x28
 	}
-	if m.PreviousStartedEventId != 0 {
-		i = encodeVarintServiceWorker(dAtA, i, uint64(m.PreviousStartedEventId))
+	if m.PreviousStartedEventId != nil {
+		{
+			size, err := m.PreviousStartedEventId.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintServiceWorker(dAtA, i, uint64(size))
+		}
 		i--
-		dAtA[i] = 0x20
+		dAtA[i] = 0x22
 	}
 	if m.WorkflowType != nil {
 		{
@@ -4296,6 +2337,10 @@ func (m *RespondDecisionTaskCompletedRequest) MarshalToSizedBuffer(dAtA []byte) 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.QueryResults) > 0 {
 		for k := range m.QueryResults {
 			v := m.QueryResults[k]
@@ -4419,6 +2464,10 @@ func (m *RespondDecisionTaskCompletedResponse) MarshalToSizedBuffer(dAtA []byte)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.ActivitiesToDispatchLocally) > 0 {
 		for k := range m.ActivitiesToDispatchLocally {
 			v := m.ActivitiesToDispatchLocally[k]
@@ -4480,6 +2529,10 @@ func (m *RespondDecisionTaskFailedRequest) MarshalToSizedBuffer(dAtA []byte) (in
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.BinaryChecksum) > 0 {
 		i -= len(m.BinaryChecksum)
 		copy(dAtA[i:], m.BinaryChecksum)
@@ -4541,6 +2594,10 @@ func (m *RespondDecisionTaskFailedResponse) MarshalToSizedBuffer(dAtA []byte) (i
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -4564,6 +2621,10 @@ func (m *PollForActivityTaskRequest) MarshalToSizedBuffer(dAtA []byte) (int, err
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.TaskListMetadata != nil {
 		{
 			size, err := m.TaskListMetadata.MarshalToSizedBuffer(dAtA[:i])
@@ -4625,6 +2686,10 @@ func (m *PollForActivityTaskResponse) MarshalToSizedBuffer(dAtA []byte) (int, er
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Header != nil {
 		{
 			size, err := m.Header.MarshalToSizedBuffer(dAtA[:i])
@@ -4671,12 +2736,14 @@ func (m *PollForActivityTaskResponse) MarshalToSizedBuffer(dAtA []byte) (int, er
 		dAtA[i] = 0x6a
 	}
 	if m.ScheduledTimeOfThisAttempt != nil {
-		n20, err20 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.ScheduledTimeOfThisAttempt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.ScheduledTimeOfThisAttempt):])
-		if err20 != nil {
-			return 0, err20
+		{
+			size, err := m.ScheduledTimeOfThisAttempt.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintServiceWorker(dAtA, i, uint64(size))
 		}
-		i -= n20
-		i = encodeVarintServiceWorker(dAtA, i, uint64(n20))
 		i--
 		dAtA[i] = 0x62
 	}
@@ -4686,52 +2753,62 @@ func (m *PollForActivityTaskResponse) MarshalToSizedBuffer(dAtA []byte) (int, er
 		dAtA[i] = 0x58
 	}
 	if m.HeartbeatTimeout != nil {
-		n21, err21 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.HeartbeatTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.HeartbeatTimeout):])
-		if err21 != nil {
-			return 0, err21
+		{
+			size, err := m.HeartbeatTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintServiceWorker(dAtA, i, uint64(size))
 		}
-		i -= n21
-		i = encodeVarintServiceWorker(dAtA, i, uint64(n21))
 		i--
 		dAtA[i] = 0x52
 	}
 	if m.StartToCloseTimeout != nil {
-		n22, err22 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.StartToCloseTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.StartToCloseTimeout):])
-		if err22 != nil {
-			return 0, err22
+		{
+			size, err := m.StartToCloseTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintServiceWorker(dAtA, i, uint64(size))
 		}
-		i -= n22
-		i = encodeVarintServiceWorker(dAtA, i, uint64(n22))
 		i--
 		dAtA[i] = 0x4a
 	}
 	if m.ScheduleToCloseTimeout != nil {
-		n23, err23 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.ScheduleToCloseTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ScheduleToCloseTimeout):])
-		if err23 != nil {
-			return 0, err23
+		{
+			size, err := m.ScheduleToCloseTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintServiceWorker(dAtA, i, uint64(size))
 		}
-		i -= n23
-		i = encodeVarintServiceWorker(dAtA, i, uint64(n23))
 		i--
 		dAtA[i] = 0x42
 	}
 	if m.StartedTime != nil {
-		n24, err24 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.StartedTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.StartedTime):])
-		if err24 != nil {
-			return 0, err24
+		{
+			size, err := m.StartedTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintServiceWorker(dAtA, i, uint64(size))
 		}
-		i -= n24
-		i = encodeVarintServiceWorker(dAtA, i, uint64(n24))
 		i--
 		dAtA[i] = 0x3a
 	}
 	if m.ScheduledTime != nil {
-		n25, err25 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.ScheduledTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.ScheduledTime):])
-		if err25 != nil {
-			return 0, err25
+		{
+			size, err := m.ScheduledTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintServiceWorker(dAtA, i, uint64(size))
 		}
-		i -= n25
-		i = encodeVarintServiceWorker(dAtA, i, uint64(n25))
 		i--
 		dAtA[i] = 0x32
 	}
@@ -4808,6 +2885,10 @@ func (m *RespondActivityTaskCompletedRequest) MarshalToSizedBuffer(dAtA []byte) 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Identity) > 0 {
 		i -= len(m.Identity)
 		copy(dAtA[i:], m.Identity)
@@ -4857,6 +2938,10 @@ func (m *RespondActivityTaskCompletedResponse) MarshalToSizedBuffer(dAtA []byte)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -4880,6 +2965,10 @@ func (m *RespondActivityTaskCompletedByIDRequest) MarshalToSizedBuffer(dAtA []by
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Identity) > 0 {
 		i -= len(m.Identity)
 		copy(dAtA[i:], m.Identity)
@@ -4948,6 +3037,10 @@ func (m *RespondActivityTaskCompletedByIDResponse) MarshalToSizedBuffer(dAtA []b
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -4971,6 +3064,10 @@ func (m *RespondActivityTaskFailedRequest) MarshalToSizedBuffer(dAtA []byte) (in
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Identity) > 0 {
 		i -= len(m.Identity)
 		copy(dAtA[i:], m.Identity)
@@ -5020,6 +3117,10 @@ func (m *RespondActivityTaskFailedResponse) MarshalToSizedBuffer(dAtA []byte) (i
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -5043,6 +3144,10 @@ func (m *RespondActivityTaskFailedByIDRequest) MarshalToSizedBuffer(dAtA []byte)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Identity) > 0 {
 		i -= len(m.Identity)
 		copy(dAtA[i:], m.Identity)
@@ -5111,6 +3216,10 @@ func (m *RespondActivityTaskFailedByIDResponse) MarshalToSizedBuffer(dAtA []byte
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -5134,6 +3243,10 @@ func (m *RespondActivityTaskCanceledRequest) MarshalToSizedBuffer(dAtA []byte) (
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Identity) > 0 {
 		i -= len(m.Identity)
 		copy(dAtA[i:], m.Identity)
@@ -5183,6 +3296,10 @@ func (m *RespondActivityTaskCanceledResponse) MarshalToSizedBuffer(dAtA []byte) 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -5206,6 +3323,10 @@ func (m *RespondActivityTaskCanceledByIDRequest) MarshalToSizedBuffer(dAtA []byt
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Identity) > 0 {
 		i -= len(m.Identity)
 		copy(dAtA[i:], m.Identity)
@@ -5274,6 +3395,10 @@ func (m *RespondActivityTaskCanceledByIDResponse) MarshalToSizedBuffer(dAtA []by
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -5297,6 +3422,10 @@ func (m *RecordActivityTaskHeartbeatRequest) MarshalToSizedBuffer(dAtA []byte) (
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Identity) > 0 {
 		i -= len(m.Identity)
 		copy(dAtA[i:], m.Identity)
@@ -5346,6 +3475,10 @@ func (m *RecordActivityTaskHeartbeatResponse) MarshalToSizedBuffer(dAtA []byte) 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.CancelRequested {
 		i--
 		if m.CancelRequested {
@@ -5379,6 +3512,10 @@ func (m *RecordActivityTaskHeartbeatByIDRequest) MarshalToSizedBuffer(dAtA []byt
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Identity) > 0 {
 		i -= len(m.Identity)
 		copy(dAtA[i:], m.Identity)
@@ -5447,6 +3584,10 @@ func (m *RecordActivityTaskHeartbeatByIDResponse) MarshalToSizedBuffer(dAtA []by
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.CancelRequested {
 		i--
 		if m.CancelRequested {
@@ -5480,6 +3621,10 @@ func (m *RespondQueryTaskCompletedRequest) MarshalToSizedBuffer(dAtA []byte) (in
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.WorkerVersionInfo != nil {
 		{
 			size, err := m.WorkerVersionInfo.MarshalToSizedBuffer(dAtA[:i])
@@ -5534,6 +3679,10 @@ func (m *RespondQueryTaskCompletedResponse) MarshalToSizedBuffer(dAtA []byte) (i
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -5557,6 +3706,10 @@ func (m *RequestCancelWorkflowExecutionRequest) MarshalToSizedBuffer(dAtA []byte
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.RequestId) > 0 {
 		i -= len(m.RequestId)
 		copy(dAtA[i:], m.RequestId)
@@ -5613,6 +3766,10 @@ func (m *RequestCancelWorkflowExecutionResponse) MarshalToSizedBuffer(dAtA []byt
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -5649,6 +3806,9 @@ func (m *PollForDecisionTaskRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -5670,8 +3830,9 @@ func (m *PollForDecisionTaskResponse) Size() (n int) {
 		l = m.WorkflowType.Size()
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
-	if m.PreviousStartedEventId != 0 {
-		n += 1 + sovServiceWorker(uint64(m.PreviousStartedEventId))
+	if m.PreviousStartedEventId != nil {
+		l = m.PreviousStartedEventId.Size()
+		n += 1 + l + sovServiceWorker(uint64(l))
 	}
 	if m.StartedEventId != 0 {
 		n += 1 + sovServiceWorker(uint64(m.StartedEventId))
@@ -5699,11 +3860,11 @@ func (m *PollForDecisionTaskResponse) Size() (n int) {
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
 	if m.ScheduledTime != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.ScheduledTime)
+		l = m.ScheduledTime.Size()
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
 	if m.StartedTime != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.StartedTime)
+		l = m.StartedTime.Size()
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
 	if len(m.Queries) > 0 {
@@ -5718,6 +3879,9 @@ func (m *PollForDecisionTaskResponse) Size() (n int) {
 			mapEntrySize := 1 + len(k) + sovServiceWorker(uint64(len(k))) + l
 			n += mapEntrySize + 1 + sovServiceWorker(uint64(mapEntrySize))
 		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -5773,6 +3937,9 @@ func (m *RespondDecisionTaskCompletedRequest) Size() (n int) {
 			n += mapEntrySize + 1 + sovServiceWorker(uint64(mapEntrySize))
 		}
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -5798,6 +3965,9 @@ func (m *RespondDecisionTaskCompletedResponse) Size() (n int) {
 			mapEntrySize := 1 + len(k) + sovServiceWorker(uint64(len(k))) + l
 			n += mapEntrySize + 1 + sovServiceWorker(uint64(mapEntrySize))
 		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -5827,6 +3997,9 @@ func (m *RespondDecisionTaskFailedRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -5836,6 +4009,9 @@ func (m *RespondDecisionTaskFailedResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -5860,6 +4036,9 @@ func (m *PollForActivityTaskRequest) Size() (n int) {
 	if m.TaskListMetadata != nil {
 		l = m.TaskListMetadata.Size()
 		n += 1 + l + sovServiceWorker(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -5891,30 +4070,30 @@ func (m *PollForActivityTaskResponse) Size() (n int) {
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
 	if m.ScheduledTime != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.ScheduledTime)
+		l = m.ScheduledTime.Size()
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
 	if m.StartedTime != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.StartedTime)
+		l = m.StartedTime.Size()
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
 	if m.ScheduleToCloseTimeout != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ScheduleToCloseTimeout)
+		l = m.ScheduleToCloseTimeout.Size()
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
 	if m.StartToCloseTimeout != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.StartToCloseTimeout)
+		l = m.StartToCloseTimeout.Size()
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
 	if m.HeartbeatTimeout != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.HeartbeatTimeout)
+		l = m.HeartbeatTimeout.Size()
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
 	if m.Attempt != 0 {
 		n += 1 + sovServiceWorker(uint64(m.Attempt))
 	}
 	if m.ScheduledTimeOfThisAttempt != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.ScheduledTimeOfThisAttempt)
+		l = m.ScheduledTimeOfThisAttempt.Size()
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
 	if m.HeartbeatDetails != nil {
@@ -5932,6 +4111,9 @@ func (m *PollForActivityTaskResponse) Size() (n int) {
 	if m.Header != nil {
 		l = m.Header.Size()
 		n += 2 + l + sovServiceWorker(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -5954,6 +4136,9 @@ func (m *RespondActivityTaskCompletedRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -5963,6 +4148,9 @@ func (m *RespondActivityTaskCompletedResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -5992,6 +4180,9 @@ func (m *RespondActivityTaskCompletedByIDRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6001,6 +4192,9 @@ func (m *RespondActivityTaskCompletedByIDResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6022,6 +4216,9 @@ func (m *RespondActivityTaskFailedRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6031,6 +4228,9 @@ func (m *RespondActivityTaskFailedResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6060,6 +4260,9 @@ func (m *RespondActivityTaskFailedByIDRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6069,6 +4272,9 @@ func (m *RespondActivityTaskFailedByIDResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6090,6 +4296,9 @@ func (m *RespondActivityTaskCanceledRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6099,6 +4308,9 @@ func (m *RespondActivityTaskCanceledResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6128,6 +4340,9 @@ func (m *RespondActivityTaskCanceledByIDRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6137,6 +4352,9 @@ func (m *RespondActivityTaskCanceledByIDResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6158,6 +4376,9 @@ func (m *RecordActivityTaskHeartbeatRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6169,6 +4390,9 @@ func (m *RecordActivityTaskHeartbeatResponse) Size() (n int) {
 	_ = l
 	if m.CancelRequested {
 		n += 2
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -6199,6 +4423,9 @@ func (m *RecordActivityTaskHeartbeatByIDRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6210,6 +4437,9 @@ func (m *RecordActivityTaskHeartbeatByIDResponse) Size() (n int) {
 	_ = l
 	if m.CancelRequested {
 		n += 2
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -6232,6 +4462,9 @@ func (m *RespondQueryTaskCompletedRequest) Size() (n int) {
 		l = m.WorkerVersionInfo.Size()
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6241,6 +4474,9 @@ func (m *RespondQueryTaskCompletedResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6266,6 +4502,9 @@ func (m *RequestCancelWorkflowExecutionRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceWorker(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6275,6 +4514,9 @@ func (m *RequestCancelWorkflowExecutionResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -6283,396 +4525,6 @@ func sovServiceWorker(x uint64) (n int) {
 }
 func sozServiceWorker(x uint64) (n int) {
 	return sovServiceWorker(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (this *PollForDecisionTaskRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&PollForDecisionTaskRequest{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`TaskList:` + strings.Replace(fmt.Sprintf("%v", this.TaskList), "TaskList", "TaskList", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`BinaryChecksum:` + fmt.Sprintf("%v", this.BinaryChecksum) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *PollForDecisionTaskResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	keysForQueries := make([]string, 0, len(this.Queries))
-	for k, _ := range this.Queries {
-		keysForQueries = append(keysForQueries, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForQueries)
-	mapStringForQueries := "map[string]*WorkflowQuery{"
-	for _, k := range keysForQueries {
-		mapStringForQueries += fmt.Sprintf("%v: %v,", k, this.Queries[k])
-	}
-	mapStringForQueries += "}"
-	s := strings.Join([]string{`&PollForDecisionTaskResponse{`,
-		`TaskToken:` + fmt.Sprintf("%v", this.TaskToken) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`WorkflowType:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowType), "WorkflowType", "WorkflowType", 1) + `,`,
-		`PreviousStartedEventId:` + fmt.Sprintf("%v", this.PreviousStartedEventId) + `,`,
-		`StartedEventId:` + fmt.Sprintf("%v", this.StartedEventId) + `,`,
-		`Attempt:` + fmt.Sprintf("%v", this.Attempt) + `,`,
-		`BacklogCountHint:` + fmt.Sprintf("%v", this.BacklogCountHint) + `,`,
-		`History:` + strings.Replace(fmt.Sprintf("%v", this.History), "History", "History", 1) + `,`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`Query:` + strings.Replace(fmt.Sprintf("%v", this.Query), "WorkflowQuery", "WorkflowQuery", 1) + `,`,
-		`WorkflowExecutionTaskList:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecutionTaskList), "TaskList", "TaskList", 1) + `,`,
-		`ScheduledTime:` + strings.Replace(fmt.Sprintf("%v", this.ScheduledTime), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`StartedTime:` + strings.Replace(fmt.Sprintf("%v", this.StartedTime), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`Queries:` + mapStringForQueries + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondDecisionTaskCompletedRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForDecisions := "[]*Decision{"
-	for _, f := range this.Decisions {
-		repeatedStringForDecisions += strings.Replace(fmt.Sprintf("%v", f), "Decision", "Decision", 1) + ","
-	}
-	repeatedStringForDecisions += "}"
-	keysForQueryResults := make([]string, 0, len(this.QueryResults))
-	for k, _ := range this.QueryResults {
-		keysForQueryResults = append(keysForQueryResults, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForQueryResults)
-	mapStringForQueryResults := "map[string]*WorkflowQueryResult{"
-	for _, k := range keysForQueryResults {
-		mapStringForQueryResults += fmt.Sprintf("%v: %v,", k, this.QueryResults[k])
-	}
-	mapStringForQueryResults += "}"
-	s := strings.Join([]string{`&RespondDecisionTaskCompletedRequest{`,
-		`TaskToken:` + fmt.Sprintf("%v", this.TaskToken) + `,`,
-		`Decisions:` + repeatedStringForDecisions + `,`,
-		`ExecutionContext:` + fmt.Sprintf("%v", this.ExecutionContext) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`StickyAttributes:` + strings.Replace(fmt.Sprintf("%v", this.StickyAttributes), "StickyExecutionAttributes", "StickyExecutionAttributes", 1) + `,`,
-		`ReturnNewDecisionTask:` + fmt.Sprintf("%v", this.ReturnNewDecisionTask) + `,`,
-		`ForceCreateNewDecisionTask:` + fmt.Sprintf("%v", this.ForceCreateNewDecisionTask) + `,`,
-		`BinaryChecksum:` + fmt.Sprintf("%v", this.BinaryChecksum) + `,`,
-		`QueryResults:` + mapStringForQueryResults + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondDecisionTaskCompletedResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	keysForActivitiesToDispatchLocally := make([]string, 0, len(this.ActivitiesToDispatchLocally))
-	for k, _ := range this.ActivitiesToDispatchLocally {
-		keysForActivitiesToDispatchLocally = append(keysForActivitiesToDispatchLocally, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForActivitiesToDispatchLocally)
-	mapStringForActivitiesToDispatchLocally := "map[string]*ActivityLocalDispatchInfo{"
-	for _, k := range keysForActivitiesToDispatchLocally {
-		mapStringForActivitiesToDispatchLocally += fmt.Sprintf("%v: %v,", k, this.ActivitiesToDispatchLocally[k])
-	}
-	mapStringForActivitiesToDispatchLocally += "}"
-	s := strings.Join([]string{`&RespondDecisionTaskCompletedResponse{`,
-		`DecisionTask:` + strings.Replace(this.DecisionTask.String(), "PollForDecisionTaskResponse", "PollForDecisionTaskResponse", 1) + `,`,
-		`ActivitiesToDispatchLocally:` + mapStringForActivitiesToDispatchLocally + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondDecisionTaskFailedRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RespondDecisionTaskFailedRequest{`,
-		`TaskToken:` + fmt.Sprintf("%v", this.TaskToken) + `,`,
-		`Cause:` + fmt.Sprintf("%v", this.Cause) + `,`,
-		`Details:` + strings.Replace(fmt.Sprintf("%v", this.Details), "Payload", "Payload", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`BinaryChecksum:` + fmt.Sprintf("%v", this.BinaryChecksum) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondDecisionTaskFailedResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RespondDecisionTaskFailedResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *PollForActivityTaskRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&PollForActivityTaskRequest{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`TaskList:` + strings.Replace(fmt.Sprintf("%v", this.TaskList), "TaskList", "TaskList", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`TaskListMetadata:` + strings.Replace(fmt.Sprintf("%v", this.TaskListMetadata), "TaskListMetadata", "TaskListMetadata", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *PollForActivityTaskResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&PollForActivityTaskResponse{`,
-		`TaskToken:` + fmt.Sprintf("%v", this.TaskToken) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`ActivityId:` + fmt.Sprintf("%v", this.ActivityId) + `,`,
-		`ActivityType:` + strings.Replace(fmt.Sprintf("%v", this.ActivityType), "ActivityType", "ActivityType", 1) + `,`,
-		`Input:` + strings.Replace(fmt.Sprintf("%v", this.Input), "Payload", "Payload", 1) + `,`,
-		`ScheduledTime:` + strings.Replace(fmt.Sprintf("%v", this.ScheduledTime), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`StartedTime:` + strings.Replace(fmt.Sprintf("%v", this.StartedTime), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`ScheduleToCloseTimeout:` + strings.Replace(fmt.Sprintf("%v", this.ScheduleToCloseTimeout), "Duration", "duration.Duration", 1) + `,`,
-		`StartToCloseTimeout:` + strings.Replace(fmt.Sprintf("%v", this.StartToCloseTimeout), "Duration", "duration.Duration", 1) + `,`,
-		`HeartbeatTimeout:` + strings.Replace(fmt.Sprintf("%v", this.HeartbeatTimeout), "Duration", "duration.Duration", 1) + `,`,
-		`Attempt:` + fmt.Sprintf("%v", this.Attempt) + `,`,
-		`ScheduledTimeOfThisAttempt:` + strings.Replace(fmt.Sprintf("%v", this.ScheduledTimeOfThisAttempt), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`HeartbeatDetails:` + strings.Replace(fmt.Sprintf("%v", this.HeartbeatDetails), "Payload", "Payload", 1) + `,`,
-		`WorkflowType:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowType), "WorkflowType", "WorkflowType", 1) + `,`,
-		`WorkflowDomain:` + fmt.Sprintf("%v", this.WorkflowDomain) + `,`,
-		`Header:` + strings.Replace(fmt.Sprintf("%v", this.Header), "Header", "Header", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondActivityTaskCompletedRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RespondActivityTaskCompletedRequest{`,
-		`TaskToken:` + fmt.Sprintf("%v", this.TaskToken) + `,`,
-		`Result:` + strings.Replace(fmt.Sprintf("%v", this.Result), "Payload", "Payload", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondActivityTaskCompletedResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RespondActivityTaskCompletedResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondActivityTaskCompletedByIDRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RespondActivityTaskCompletedByIDRequest{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`ActivityId:` + fmt.Sprintf("%v", this.ActivityId) + `,`,
-		`Result:` + strings.Replace(fmt.Sprintf("%v", this.Result), "Payload", "Payload", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondActivityTaskCompletedByIDResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RespondActivityTaskCompletedByIDResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondActivityTaskFailedRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RespondActivityTaskFailedRequest{`,
-		`TaskToken:` + fmt.Sprintf("%v", this.TaskToken) + `,`,
-		`Failure:` + strings.Replace(fmt.Sprintf("%v", this.Failure), "Failure", "Failure", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondActivityTaskFailedResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RespondActivityTaskFailedResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondActivityTaskFailedByIDRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RespondActivityTaskFailedByIDRequest{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`ActivityId:` + fmt.Sprintf("%v", this.ActivityId) + `,`,
-		`Failure:` + strings.Replace(fmt.Sprintf("%v", this.Failure), "Failure", "Failure", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondActivityTaskFailedByIDResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RespondActivityTaskFailedByIDResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondActivityTaskCanceledRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RespondActivityTaskCanceledRequest{`,
-		`TaskToken:` + fmt.Sprintf("%v", this.TaskToken) + `,`,
-		`Details:` + strings.Replace(fmt.Sprintf("%v", this.Details), "Payload", "Payload", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondActivityTaskCanceledResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RespondActivityTaskCanceledResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondActivityTaskCanceledByIDRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RespondActivityTaskCanceledByIDRequest{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`ActivityId:` + fmt.Sprintf("%v", this.ActivityId) + `,`,
-		`Details:` + strings.Replace(fmt.Sprintf("%v", this.Details), "Payload", "Payload", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondActivityTaskCanceledByIDResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RespondActivityTaskCanceledByIDResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RecordActivityTaskHeartbeatRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RecordActivityTaskHeartbeatRequest{`,
-		`TaskToken:` + fmt.Sprintf("%v", this.TaskToken) + `,`,
-		`Details:` + strings.Replace(fmt.Sprintf("%v", this.Details), "Payload", "Payload", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RecordActivityTaskHeartbeatResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RecordActivityTaskHeartbeatResponse{`,
-		`CancelRequested:` + fmt.Sprintf("%v", this.CancelRequested) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RecordActivityTaskHeartbeatByIDRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RecordActivityTaskHeartbeatByIDRequest{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`ActivityId:` + fmt.Sprintf("%v", this.ActivityId) + `,`,
-		`Details:` + strings.Replace(fmt.Sprintf("%v", this.Details), "Payload", "Payload", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RecordActivityTaskHeartbeatByIDResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RecordActivityTaskHeartbeatByIDResponse{`,
-		`CancelRequested:` + fmt.Sprintf("%v", this.CancelRequested) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondQueryTaskCompletedRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RespondQueryTaskCompletedRequest{`,
-		`TaskToken:` + fmt.Sprintf("%v", this.TaskToken) + `,`,
-		`Result:` + strings.Replace(fmt.Sprintf("%v", this.Result), "WorkflowQueryResult", "WorkflowQueryResult", 1) + `,`,
-		`WorkerVersionInfo:` + strings.Replace(fmt.Sprintf("%v", this.WorkerVersionInfo), "WorkerVersionInfo", "WorkerVersionInfo", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RespondQueryTaskCompletedResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RespondQueryTaskCompletedResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RequestCancelWorkflowExecutionRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RequestCancelWorkflowExecutionRequest{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`RequestId:` + fmt.Sprintf("%v", this.RequestId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RequestCancelWorkflowExecutionResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RequestCancelWorkflowExecutionResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func valueToStringServiceWorker(v interface{}) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("*%v", pv)
 }
 func (m *PollForDecisionTaskRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -6850,6 +4702,7 @@ func (m *PollForDecisionTaskRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -6995,10 +4848,10 @@ func (m *PollForDecisionTaskResponse) Unmarshal(dAtA []byte) error {
 			}
 			iNdEx = postIndex
 		case 4:
-			if wireType != 0 {
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PreviousStartedEventId", wireType)
 			}
-			m.PreviousStartedEventId = 0
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowServiceWorker
@@ -7008,11 +4861,28 @@ func (m *PollForDecisionTaskResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.PreviousStartedEventId |= int64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			if msglen < 0 {
+				return ErrInvalidLengthServiceWorker
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthServiceWorker
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.PreviousStartedEventId == nil {
+				m.PreviousStartedEventId = &types.Int64Value{}
+			}
+			if err := m.PreviousStartedEventId.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		case 5:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field StartedEventId", wireType)
@@ -7242,9 +5112,9 @@ func (m *PollForDecisionTaskResponse) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.ScheduledTime == nil {
-				m.ScheduledTime = new(time.Time)
+				m.ScheduledTime = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.ScheduledTime, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.ScheduledTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -7278,9 +5148,9 @@ func (m *PollForDecisionTaskResponse) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.StartedTime == nil {
-				m.StartedTime = new(time.Time)
+				m.StartedTime = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.StartedTime, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.StartedTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -7428,6 +5298,7 @@ func (m *PollForDecisionTaskResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -7852,6 +5723,7 @@ func (m *RespondDecisionTaskCompletedRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -8070,6 +5942,7 @@ func (m *RespondDecisionTaskCompletedResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -8276,6 +6149,7 @@ func (m *RespondDecisionTaskFailedRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -8329,6 +6203,7 @@ func (m *RespondDecisionTaskFailedResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -8518,6 +6393,7 @@ func (m *PollForActivityTaskRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -8760,9 +6636,9 @@ func (m *PollForActivityTaskResponse) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.ScheduledTime == nil {
-				m.ScheduledTime = new(time.Time)
+				m.ScheduledTime = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.ScheduledTime, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.ScheduledTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -8796,9 +6672,9 @@ func (m *PollForActivityTaskResponse) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.StartedTime == nil {
-				m.StartedTime = new(time.Time)
+				m.StartedTime = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.StartedTime, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.StartedTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -8832,9 +6708,9 @@ func (m *PollForActivityTaskResponse) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.ScheduleToCloseTimeout == nil {
-				m.ScheduleToCloseTimeout = new(time.Duration)
+				m.ScheduleToCloseTimeout = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.ScheduleToCloseTimeout, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.ScheduleToCloseTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -8868,9 +6744,9 @@ func (m *PollForActivityTaskResponse) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.StartToCloseTimeout == nil {
-				m.StartToCloseTimeout = new(time.Duration)
+				m.StartToCloseTimeout = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.StartToCloseTimeout, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.StartToCloseTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -8904,9 +6780,9 @@ func (m *PollForActivityTaskResponse) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.HeartbeatTimeout == nil {
-				m.HeartbeatTimeout = new(time.Duration)
+				m.HeartbeatTimeout = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.HeartbeatTimeout, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.HeartbeatTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -8959,9 +6835,9 @@ func (m *PollForActivityTaskResponse) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.ScheduledTimeOfThisAttempt == nil {
-				m.ScheduledTimeOfThisAttempt = new(time.Time)
+				m.ScheduledTimeOfThisAttempt = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.ScheduledTimeOfThisAttempt, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.ScheduledTimeOfThisAttempt.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -9120,6 +6996,7 @@ func (m *PollForActivityTaskResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -9275,6 +7152,7 @@ func (m *RespondActivityTaskCompletedRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -9328,6 +7206,7 @@ func (m *RespondActivityTaskCompletedResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -9549,6 +7428,7 @@ func (m *RespondActivityTaskCompletedByIDRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -9602,6 +7482,7 @@ func (m *RespondActivityTaskCompletedByIDResponse) Unmarshal(dAtA []byte) error 
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -9757,6 +7638,7 @@ func (m *RespondActivityTaskFailedRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -9810,6 +7692,7 @@ func (m *RespondActivityTaskFailedResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -10031,6 +7914,7 @@ func (m *RespondActivityTaskFailedByIDRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -10084,6 +7968,7 @@ func (m *RespondActivityTaskFailedByIDResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -10239,6 +8124,7 @@ func (m *RespondActivityTaskCanceledRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -10292,6 +8178,7 @@ func (m *RespondActivityTaskCanceledResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -10513,6 +8400,7 @@ func (m *RespondActivityTaskCanceledByIDRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -10566,6 +8454,7 @@ func (m *RespondActivityTaskCanceledByIDResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -10721,6 +8610,7 @@ func (m *RecordActivityTaskHeartbeatRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -10794,6 +8684,7 @@ func (m *RecordActivityTaskHeartbeatResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -11015,6 +8906,7 @@ func (m *RecordActivityTaskHeartbeatByIDRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -11088,6 +8980,7 @@ func (m *RecordActivityTaskHeartbeatByIDResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -11247,6 +9140,7 @@ func (m *RespondQueryTaskCompletedRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -11300,6 +9194,7 @@ func (m *RespondQueryTaskCompletedResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -11485,6 +9380,7 @@ func (m *RequestCancelWorkflowExecutionRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -11538,6 +9434,7 @@ func (m *RequestCancelWorkflowExecutionResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}

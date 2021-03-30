@@ -285,7 +285,7 @@ func (s *contextImpl) GetTransferProcessingQueueStates(cluster string) []*types.
 			AckLevel: common.Int64Ptr(ackLevel),
 			MaxLevel: common.Int64Ptr(math.MaxInt64),
 			DomainFilter: &types.DomainFilter{
-				ReverseMatch: common.BoolPtr(true),
+				ReverseMatch: true,
 			},
 		},
 	}
@@ -452,7 +452,7 @@ func (s *contextImpl) GetTimerProcessingQueueStates(cluster string) []*types.Pro
 			AckLevel: common.Int64Ptr(ackLevel.UnixNano()),
 			MaxLevel: common.Int64Ptr(math.MaxInt64),
 			DomainFilter: &types.DomainFilter{
-				ReverseMatch: common.BoolPtr(true),
+				ReverseMatch: true,
 			},
 		},
 	}
@@ -676,8 +676,8 @@ Create_Loop:
 	return nil, errMaxAttemptsExceeded
 }
 
-func (s *contextImpl) getDefaultEncoding(domainEntry *cache.DomainCacheEntry) common.EncodingType {
-	return common.EncodingType(s.config.EventEncodingType(domainEntry.GetInfo().Name))
+func (s *contextImpl) getDefaultEncoding(domainName string) common.EncodingType {
+	return common.EncodingType(s.config.EventEncodingType(domainName))
 }
 
 func (s *contextImpl) UpdateWorkflowExecution(
@@ -700,7 +700,7 @@ func (s *contextImpl) UpdateWorkflowExecution(
 	if err != nil {
 		return nil, err
 	}
-	request.Encoding = s.getDefaultEncoding(domainEntry)
+	request.Encoding = s.getDefaultEncoding(domainEntry.GetInfo().Name)
 
 	s.Lock()
 	defer s.Unlock()
@@ -808,7 +808,7 @@ func (s *contextImpl) ConflictResolveWorkflowExecution(
 	if err != nil {
 		return err
 	}
-	request.Encoding = s.getDefaultEncoding(domainEntry)
+	request.Encoding = s.getDefaultEncoding(domainEntry.GetInfo().Name)
 
 	s.Lock()
 	defer s.Unlock()
@@ -930,7 +930,7 @@ func (s *contextImpl) AppendHistoryV2Events(
 	execution types.WorkflowExecution,
 ) (int, error) {
 
-	domainEntry, err := s.GetDomainCache().GetDomainByID(domainID)
+	domainName, err := s.GetDomainCache().GetDomainName(domainID)
 	if err != nil {
 		return 0, err
 	}
@@ -942,18 +942,14 @@ func (s *contextImpl) AppendHistoryV2Events(
 		return 0, err
 	}
 
-	request.Encoding = s.getDefaultEncoding(domainEntry)
+	request.Encoding = s.getDefaultEncoding(domainName)
 	request.ShardID = common.IntPtr(s.shardID)
 	request.TransactionID = transactionID
 
 	size := 0
 	defer func() {
-		// N.B. - Dual emit here makes sense so that we can see aggregate timer stats across all
-		// domains along with the individual domains stats
-		s.GetMetricsClient().RecordTimer(metrics.SessionSizeStatsScope, metrics.HistorySize, time.Duration(size))
-		if entry, err := s.GetDomainCache().GetDomainByID(domainID); err == nil && entry != nil && entry.GetInfo() != nil {
-			s.GetMetricsClient().Scope(metrics.SessionSizeStatsScope, metrics.DomainTag(entry.GetInfo().Name)).RecordTimer(metrics.HistorySize, time.Duration(size))
-		}
+		s.GetMetricsClient().Scope(metrics.SessionSizeStatsScope, metrics.DomainTag(domainName)).
+			RecordTimer(metrics.HistorySize, time.Duration(size))
 		if size >= historySizeLogThreshold {
 			s.throttledLogger.Warn("history size threshold breached",
 				tag.WorkflowID(execution.GetWorkflowID()),

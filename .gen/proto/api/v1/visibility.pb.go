@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -30,22 +30,15 @@ import (
 	io "io"
 	math "math"
 	math_bits "math/bits"
-	reflect "reflect"
-	strconv "strconv"
-	strings "strings"
-	time "time"
 
-	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
-	github_com_gogo_protobuf_types "github.com/gogo/protobuf/types"
-	_ "github.com/golang/protobuf/ptypes/timestamp"
+	types "github.com/gogo/protobuf/types"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = time.Kitchen
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -56,13 +49,13 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 type IndexedValueType int32
 
 const (
-	INDEXED_VALUE_TYPE_INVALID  IndexedValueType = 0
-	INDEXED_VALUE_TYPE_STRING   IndexedValueType = 1
-	INDEXED_VALUE_TYPE_KEYWORD  IndexedValueType = 2
-	INDEXED_VALUE_TYPE_INT      IndexedValueType = 3
-	INDEXED_VALUE_TYPE_DOUBLE   IndexedValueType = 4
-	INDEXED_VALUE_TYPE_BOOL     IndexedValueType = 5
-	INDEXED_VALUE_TYPE_DATETIME IndexedValueType = 6
+	IndexedValueType_INDEXED_VALUE_TYPE_INVALID  IndexedValueType = 0
+	IndexedValueType_INDEXED_VALUE_TYPE_STRING   IndexedValueType = 1
+	IndexedValueType_INDEXED_VALUE_TYPE_KEYWORD  IndexedValueType = 2
+	IndexedValueType_INDEXED_VALUE_TYPE_INT      IndexedValueType = 3
+	IndexedValueType_INDEXED_VALUE_TYPE_DOUBLE   IndexedValueType = 4
+	IndexedValueType_INDEXED_VALUE_TYPE_BOOL     IndexedValueType = 5
+	IndexedValueType_INDEXED_VALUE_TYPE_DATETIME IndexedValueType = 6
 )
 
 var IndexedValueType_name = map[int32]string{
@@ -85,17 +78,25 @@ var IndexedValueType_value = map[string]int32{
 	"INDEXED_VALUE_TYPE_DATETIME": 6,
 }
 
+func (x IndexedValueType) String() string {
+	return proto.EnumName(IndexedValueType_name, int32(x))
+}
+
 func (IndexedValueType) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_c1b2132ef24217c8, []int{0}
 }
 
 type WorkflowExecutionFilter struct {
-	WorkflowId string `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
-	RunId      string `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	WorkflowId           string   `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	RunId                string   `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *WorkflowExecutionFilter) Reset()      { *m = WorkflowExecutionFilter{} }
-func (*WorkflowExecutionFilter) ProtoMessage() {}
+func (m *WorkflowExecutionFilter) Reset()         { *m = WorkflowExecutionFilter{} }
+func (m *WorkflowExecutionFilter) String() string { return proto.CompactTextString(m) }
+func (*WorkflowExecutionFilter) ProtoMessage()    {}
 func (*WorkflowExecutionFilter) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c1b2132ef24217c8, []int{0}
 }
@@ -141,11 +142,15 @@ func (m *WorkflowExecutionFilter) GetRunId() string {
 }
 
 type WorkflowTypeFilter struct {
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *WorkflowTypeFilter) Reset()      { *m = WorkflowTypeFilter{} }
-func (*WorkflowTypeFilter) ProtoMessage() {}
+func (m *WorkflowTypeFilter) Reset()         { *m = WorkflowTypeFilter{} }
+func (m *WorkflowTypeFilter) String() string { return proto.CompactTextString(m) }
+func (*WorkflowTypeFilter) ProtoMessage()    {}
 func (*WorkflowTypeFilter) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c1b2132ef24217c8, []int{1}
 }
@@ -184,12 +189,16 @@ func (m *WorkflowTypeFilter) GetName() string {
 }
 
 type StartTimeFilter struct {
-	EarliestTime *time.Time `protobuf:"bytes,1,opt,name=earliest_time,json=earliestTime,proto3,stdtime" json:"earliest_time,omitempty"`
-	LatestTime   *time.Time `protobuf:"bytes,2,opt,name=latest_time,json=latestTime,proto3,stdtime" json:"latest_time,omitempty"`
+	EarliestTime         *types.Timestamp `protobuf:"bytes,1,opt,name=earliest_time,json=earliestTime,proto3" json:"earliest_time,omitempty"`
+	LatestTime           *types.Timestamp `protobuf:"bytes,2,opt,name=latest_time,json=latestTime,proto3" json:"latest_time,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
+	XXX_unrecognized     []byte           `json:"-"`
+	XXX_sizecache        int32            `json:"-"`
 }
 
-func (m *StartTimeFilter) Reset()      { *m = StartTimeFilter{} }
-func (*StartTimeFilter) ProtoMessage() {}
+func (m *StartTimeFilter) Reset()         { *m = StartTimeFilter{} }
+func (m *StartTimeFilter) String() string { return proto.CompactTextString(m) }
+func (*StartTimeFilter) ProtoMessage()    {}
 func (*StartTimeFilter) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c1b2132ef24217c8, []int{2}
 }
@@ -220,14 +229,14 @@ func (m *StartTimeFilter) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_StartTimeFilter proto.InternalMessageInfo
 
-func (m *StartTimeFilter) GetEarliestTime() *time.Time {
+func (m *StartTimeFilter) GetEarliestTime() *types.Timestamp {
 	if m != nil {
 		return m.EarliestTime
 	}
 	return nil
 }
 
-func (m *StartTimeFilter) GetLatestTime() *time.Time {
+func (m *StartTimeFilter) GetLatestTime() *types.Timestamp {
 	if m != nil {
 		return m.LatestTime
 	}
@@ -235,11 +244,15 @@ func (m *StartTimeFilter) GetLatestTime() *time.Time {
 }
 
 type StatusFilter struct {
-	Status WorkflowExecutionCloseStatus `protobuf:"varint,1,opt,name=status,proto3,enum=uber.cadence.api.v1.WorkflowExecutionCloseStatus" json:"status,omitempty"`
+	Status               WorkflowExecutionCloseStatus `protobuf:"varint,1,opt,name=status,proto3,enum=uber.cadence.api.v1.WorkflowExecutionCloseStatus" json:"status,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                     `json:"-"`
+	XXX_unrecognized     []byte                       `json:"-"`
+	XXX_sizecache        int32                        `json:"-"`
 }
 
-func (m *StatusFilter) Reset()      { *m = StatusFilter{} }
-func (*StatusFilter) ProtoMessage() {}
+func (m *StatusFilter) Reset()         { *m = StatusFilter{} }
+func (m *StatusFilter) String() string { return proto.CompactTextString(m) }
+func (*StatusFilter) ProtoMessage()    {}
 func (*StatusFilter) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c1b2132ef24217c8, []int{3}
 }
@@ -274,7 +287,7 @@ func (m *StatusFilter) GetStatus() WorkflowExecutionCloseStatus {
 	if m != nil {
 		return m.Status
 	}
-	return WORKFLOW_EXECUTION_CLOSE_STATUS_INVALID
+	return WorkflowExecutionCloseStatus_WORKFLOW_EXECUTION_CLOSE_STATUS_INVALID
 }
 
 func init() {
@@ -286,213 +299,43 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("github.com/uber/cadence/.gen/proto/api/v1/visibility.proto", fileDescriptor_c1b2132ef24217c8)
+	proto.RegisterFile("uber/cadence/api/v1/visibility.proto", fileDescriptor_c1b2132ef24217c8)
 }
 
 var fileDescriptor_c1b2132ef24217c8 = []byte{
-	// 517 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x91, 0xc1, 0x8e, 0xd2, 0x50,
-	0x14, 0x86, 0x7b, 0x11, 0x88, 0x1e, 0x46, 0x6d, 0xae, 0x51, 0x94, 0xd1, 0x8b, 0x21, 0x2e, 0x26,
-	0x2e, 0xda, 0x30, 0x3e, 0x01, 0x48, 0x35, 0x8d, 0x08, 0x08, 0x1d, 0x46, 0xdc, 0xe0, 0x85, 0xde,
-	0x21, 0x37, 0x96, 0xde, 0xa6, 0xbd, 0x65, 0x66, 0x76, 0x3e, 0xc2, 0xec, 0x7d, 0x01, 0x1f, 0xc5,
-	0x25, 0xcb, 0xd9, 0x29, 0x65, 0x63, 0x5c, 0xcd, 0x23, 0x98, 0x96, 0xd6, 0x8d, 0x9d, 0x64, 0x76,
-	0xed, 0xf9, 0xff, 0xff, 0xeb, 0xe9, 0x7f, 0xe0, 0x45, 0x38, 0x63, 0xbe, 0x3e, 0xa7, 0x36, 0x73,
-	0xe7, 0x4c, 0xa7, 0x1e, 0xd7, 0x57, 0x4d, 0x7d, 0xc5, 0x03, 0x3e, 0xe3, 0x0e, 0x97, 0xe7, 0x9a,
-	0xe7, 0x0b, 0x29, 0xf0, 0x83, 0xd8, 0xa5, 0xa5, 0x2e, 0x8d, 0x7a, 0x5c, 0x5b, 0x35, 0x6b, 0xf5,
-	0x85, 0x10, 0x0b, 0x87, 0xe9, 0x89, 0x65, 0x16, 0x9e, 0xe8, 0x92, 0x2f, 0x59, 0x20, 0xe9, 0xd2,
-	0xdb, 0xa5, 0x6a, 0x4f, 0x6d, 0xe6, 0x31, 0x37, 0xce, 0x70, 0x16, 0xe8, 0x0b, 0xb1, 0x10, 0xc9,
-	0x3c, 0x55, 0x1b, 0x79, 0x5f, 0x3e, 0x15, 0xfe, 0x97, 0x13, 0x47, 0x9c, 0xee, 0x3c, 0x8d, 0x0f,
-	0x50, 0x3d, 0x4e, 0x27, 0xc6, 0x19, 0x9b, 0x87, 0x92, 0x0b, 0xf7, 0x0d, 0x77, 0x24, 0xf3, 0x71,
-	0x1d, 0x2a, 0x99, 0x79, 0xca, 0xed, 0xc7, 0xe8, 0x39, 0x3a, 0xb8, 0x33, 0x84, 0x6c, 0x64, 0xda,
-	0xf8, 0x21, 0x94, 0xfd, 0xd0, 0x8d, 0xb5, 0x42, 0xa2, 0x95, 0xfc, 0xd0, 0x35, 0xed, 0xc6, 0x01,
-	0xe0, 0x0c, 0x69, 0x9d, 0x7b, 0x2c, 0xa5, 0x61, 0x28, 0xba, 0x74, 0xc9, 0x52, 0x4c, 0xf2, 0xdc,
-	0xf8, 0x86, 0xe0, 0xfe, 0x48, 0x52, 0x5f, 0x5a, 0x7c, 0x99, 0xf9, 0x0c, 0xb8, 0xcb, 0xa8, 0xef,
-	0x70, 0x16, 0xc8, 0x69, 0xfc, 0xbb, 0x49, 0xa0, 0x72, 0x58, 0xd3, 0x76, 0x5d, 0x68, 0x59, 0x17,
-	0x9a, 0x95, 0x75, 0xd1, 0x2e, 0x5e, 0xfc, 0xac, 0xa3, 0xe1, 0x5e, 0x16, 0x8b, 0x05, 0xdc, 0x82,
-	0x8a, 0x43, 0xe5, 0x3f, 0x48, 0xe1, 0x86, 0x10, 0xd8, 0x85, 0xe2, 0x71, 0x63, 0x02, 0x7b, 0x23,
-	0x49, 0x65, 0x18, 0xa4, 0x9b, 0x99, 0x50, 0x0e, 0x92, 0xf7, 0x64, 0xa5, 0x7b, 0x87, 0x4d, 0x2d,
-	0xe7, 0x66, 0xda, 0x7f, 0x6d, 0xbe, 0x76, 0x44, 0xc0, 0x76, 0xa0, 0x61, 0x0a, 0x78, 0xf9, 0x07,
-	0x81, 0x6a, 0xba, 0x36, 0x3b, 0x63, 0xf6, 0x98, 0x3a, 0x21, 0x8b, 0x7b, 0xc2, 0x04, 0x6a, 0x66,
-	0xaf, 0x63, 0x7c, 0x34, 0x3a, 0xd3, 0x71, 0xab, 0x7b, 0x64, 0x4c, 0xad, 0xc9, 0xc0, 0x98, 0x9a,
-	0xbd, 0x71, 0xab, 0x6b, 0x76, 0x54, 0x05, 0x3f, 0x83, 0x27, 0x39, 0xfa, 0xc8, 0x1a, 0x9a, 0xbd,
-	0xb7, 0x2a, 0xba, 0x26, 0xfe, 0xce, 0x98, 0x1c, 0xf7, 0x87, 0x1d, 0xb5, 0x80, 0x6b, 0xf0, 0x28,
-	0x17, 0x6f, 0xa9, 0xb7, 0xae, 0x41, 0x77, 0xfa, 0x47, 0xed, 0xae, 0xa1, 0x16, 0xf1, 0x3e, 0x54,
-	0x73, 0xe4, 0x76, 0xbf, 0xdf, 0x55, 0x4b, 0xb8, 0x0e, 0xfb, 0x79, 0xd9, 0x96, 0x65, 0x58, 0xe6,
-	0x7b, 0x43, 0x2d, 0xb7, 0x3f, 0xaf, 0x37, 0x44, 0xb9, 0xdc, 0x10, 0xe5, 0x6a, 0x43, 0xd0, 0xd7,
-	0x88, 0xa0, 0xef, 0x11, 0x41, 0x3f, 0x22, 0x82, 0xd6, 0x11, 0x41, 0xbf, 0x22, 0x82, 0x7e, 0x47,
-	0x44, 0xb9, 0x8a, 0x08, 0xba, 0xd8, 0x12, 0x65, 0xbd, 0x25, 0xca, 0xe5, 0x96, 0x28, 0x50, 0x9d,
-	0x8b, 0x65, 0x5e, 0xc1, 0xed, 0xdb, 0x2d, 0x8f, 0x0f, 0xe2, 0xfb, 0x0d, 0xd0, 0xa7, 0x12, 0xf5,
-	0xf8, 0xaa, 0x39, 0x2b, 0x27, 0xf7, 0x7c, 0xf5, 0x37, 0x00, 0x00, 0xff, 0xff, 0xc6, 0x69, 0x21,
-	0xe5, 0x6b, 0x03, 0x00, 0x00,
+	// 474 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x92, 0xcd, 0x6e, 0xd3, 0x40,
+	0x14, 0x85, 0x71, 0x68, 0x23, 0xb8, 0x29, 0x60, 0x0d, 0x82, 0x80, 0x2b, 0x12, 0x64, 0xb1, 0xa8,
+	0x58, 0x8c, 0x95, 0xb2, 0xec, 0x02, 0x25, 0xd8, 0xa0, 0x11, 0x21, 0x09, 0x8e, 0x9b, 0x12, 0x36,
+	0xd6, 0xd8, 0x9e, 0x86, 0x11, 0xb6, 0xc7, 0xb2, 0xc7, 0x69, 0xfb, 0x14, 0xbc, 0x16, 0x4b, 0x1e,
+	0x01, 0x65, 0xc9, 0x53, 0x20, 0xff, 0x21, 0x21, 0x1c, 0xb1, 0xb3, 0xcf, 0x3d, 0xe7, 0xd3, 0xdc,
+	0x1f, 0x78, 0x91, 0x7b, 0x2c, 0x35, 0x7c, 0x1a, 0xb0, 0xd8, 0x67, 0x06, 0x4d, 0xb8, 0xb1, 0x1d,
+	0x19, 0x5b, 0x9e, 0x71, 0x8f, 0x87, 0x5c, 0xde, 0xe0, 0x24, 0x15, 0x52, 0xa0, 0x87, 0x85, 0x0b,
+	0xd7, 0x2e, 0x4c, 0x13, 0x8e, 0xb7, 0x23, 0x6d, 0xb8, 0x11, 0x62, 0x13, 0x32, 0xa3, 0xb4, 0x78,
+	0xf9, 0xa5, 0x21, 0x79, 0xc4, 0x32, 0x49, 0xa3, 0xa4, 0x4a, 0x69, 0x7a, 0x1b, 0xfb, 0x4a, 0xa4,
+	0x5f, 0x2f, 0x43, 0x71, 0x55, 0x79, 0xf4, 0x8f, 0xd0, 0xbf, 0xa8, 0x15, 0xeb, 0x9a, 0xf9, 0xb9,
+	0xe4, 0x22, 0x7e, 0xcb, 0x43, 0xc9, 0x52, 0x34, 0x84, 0x5e, 0x63, 0x76, 0x79, 0xf0, 0x44, 0x79,
+	0xae, 0x9c, 0xdc, 0xb5, 0xa1, 0x91, 0x48, 0x80, 0x1e, 0x41, 0x37, 0xcd, 0xe3, 0xa2, 0xd6, 0x29,
+	0x6b, 0x87, 0x69, 0x1e, 0x93, 0x40, 0x3f, 0x01, 0xd4, 0x20, 0x9d, 0x9b, 0x84, 0xd5, 0x34, 0x04,
+	0x07, 0x31, 0x8d, 0x58, 0x8d, 0x29, 0xbf, 0xf5, 0x6f, 0x0a, 0x3c, 0x58, 0x4a, 0x9a, 0x4a, 0x87,
+	0x47, 0x8d, 0xef, 0x35, 0xdc, 0x63, 0x34, 0x0d, 0x39, 0xcb, 0xa4, 0x5b, 0x34, 0x54, 0x06, 0x7a,
+	0xa7, 0x1a, 0xae, 0xba, 0xc5, 0x4d, 0xb7, 0xd8, 0x69, 0xba, 0xb5, 0x8f, 0x9a, 0x40, 0x21, 0xa1,
+	0x33, 0xe8, 0x85, 0x54, 0xfe, 0x89, 0x77, 0xfe, 0x1b, 0x87, 0xca, 0x5e, 0x08, 0xfa, 0x1a, 0x8e,
+	0x96, 0x92, 0xca, 0x3c, 0xab, 0x5f, 0x43, 0xa0, 0x9b, 0x95, 0xff, 0xe5, 0x33, 0xee, 0x9f, 0x8e,
+	0x70, 0xcb, 0x26, 0xf0, 0x3f, 0x13, 0x7c, 0x13, 0x8a, 0x8c, 0x55, 0x20, 0xbb, 0x06, 0xbc, 0xfc,
+	0xa5, 0x80, 0x4a, 0xe2, 0x80, 0x5d, 0xb3, 0x60, 0x45, 0xc3, 0x9c, 0x15, 0xb3, 0x41, 0x03, 0xd0,
+	0xc8, 0xcc, 0xb4, 0x3e, 0x59, 0xa6, 0xbb, 0x1a, 0x4f, 0xcf, 0x2d, 0xd7, 0x59, 0x2f, 0x2c, 0x97,
+	0xcc, 0x56, 0xe3, 0x29, 0x31, 0xd5, 0x5b, 0xe8, 0x19, 0x3c, 0x6d, 0xa9, 0x2f, 0x1d, 0x9b, 0xcc,
+	0xde, 0xa9, 0xca, 0x9e, 0xf8, 0x7b, 0x6b, 0x7d, 0x31, 0xb7, 0x4d, 0xb5, 0x83, 0x34, 0x78, 0xdc,
+	0x8a, 0x77, 0xd4, 0xdb, 0x7b, 0xd0, 0xe6, 0xfc, 0x7c, 0x32, 0xb5, 0xd4, 0x03, 0x74, 0x0c, 0xfd,
+	0x96, 0xf2, 0x64, 0x3e, 0x9f, 0xaa, 0x87, 0x68, 0x08, 0xc7, 0x6d, 0xd9, 0xb1, 0x63, 0x39, 0xe4,
+	0x83, 0xa5, 0x76, 0x27, 0xde, 0xf7, 0xdd, 0x40, 0xf9, 0xb1, 0x1b, 0x28, 0x3f, 0x77, 0x03, 0x05,
+	0xfa, 0xbe, 0x88, 0xda, 0x06, 0x37, 0xb9, 0x33, 0x4e, 0xf8, 0xa2, 0xd8, 0xc8, 0x42, 0xf9, 0x6c,
+	0x6c, 0xb8, 0xfc, 0x92, 0x7b, 0xd8, 0x17, 0x91, 0xf1, 0xd7, 0xe1, 0xe2, 0x0d, 0x8b, 0xab, 0x23,
+	0xaf, 0x6f, 0xf8, 0x8c, 0x26, 0x7c, 0x3b, 0xf2, 0xba, 0xa5, 0xf6, 0xea, 0x77, 0x00, 0x00, 0x00,
+	0xff, 0xff, 0xe8, 0x16, 0x6d, 0xcb, 0x43, 0x03, 0x00, 0x00,
 }
 
-func (x IndexedValueType) String() string {
-	s, ok := IndexedValueType_name[int32(x)]
-	if ok {
-		return s
-	}
-	return strconv.Itoa(int(x))
-}
-func (this *WorkflowExecutionFilter) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*WorkflowExecutionFilter)
-	if !ok {
-		that2, ok := that.(WorkflowExecutionFilter)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.WorkflowId != that1.WorkflowId {
-		return false
-	}
-	if this.RunId != that1.RunId {
-		return false
-	}
-	return true
-}
-func (this *WorkflowTypeFilter) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*WorkflowTypeFilter)
-	if !ok {
-		that2, ok := that.(WorkflowTypeFilter)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Name != that1.Name {
-		return false
-	}
-	return true
-}
-func (this *StartTimeFilter) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*StartTimeFilter)
-	if !ok {
-		that2, ok := that.(StartTimeFilter)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if that1.EarliestTime == nil {
-		if this.EarliestTime != nil {
-			return false
-		}
-	} else if !this.EarliestTime.Equal(*that1.EarliestTime) {
-		return false
-	}
-	if that1.LatestTime == nil {
-		if this.LatestTime != nil {
-			return false
-		}
-	} else if !this.LatestTime.Equal(*that1.LatestTime) {
-		return false
-	}
-	return true
-}
-func (this *StatusFilter) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*StatusFilter)
-	if !ok {
-		that2, ok := that.(StatusFilter)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Status != that1.Status {
-		return false
-	}
-	return true
-}
-func (this *WorkflowExecutionFilter) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.WorkflowExecutionFilter{")
-	s = append(s, "WorkflowId: "+fmt.Sprintf("%#v", this.WorkflowId)+",\n")
-	s = append(s, "RunId: "+fmt.Sprintf("%#v", this.RunId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *WorkflowTypeFilter) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&apiv1.WorkflowTypeFilter{")
-	s = append(s, "Name: "+fmt.Sprintf("%#v", this.Name)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *StartTimeFilter) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.StartTimeFilter{")
-	s = append(s, "EarliestTime: "+fmt.Sprintf("%#v", this.EarliestTime)+",\n")
-	s = append(s, "LatestTime: "+fmt.Sprintf("%#v", this.LatestTime)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *StatusFilter) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&apiv1.StatusFilter{")
-	s = append(s, "Status: "+fmt.Sprintf("%#v", this.Status)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func valueToGoStringVisibility(v interface{}, typ string) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
-}
 func (m *WorkflowExecutionFilter) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -513,6 +356,10 @@ func (m *WorkflowExecutionFilter) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.RunId) > 0 {
 		i -= len(m.RunId)
 		copy(dAtA[i:], m.RunId)
@@ -550,6 +397,10 @@ func (m *WorkflowTypeFilter) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Name) > 0 {
 		i -= len(m.Name)
 		copy(dAtA[i:], m.Name)
@@ -580,23 +431,31 @@ func (m *StartTimeFilter) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.LatestTime != nil {
-		n1, err1 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.LatestTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.LatestTime):])
-		if err1 != nil {
-			return 0, err1
+		{
+			size, err := m.LatestTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintVisibility(dAtA, i, uint64(size))
 		}
-		i -= n1
-		i = encodeVarintVisibility(dAtA, i, uint64(n1))
 		i--
 		dAtA[i] = 0x12
 	}
 	if m.EarliestTime != nil {
-		n2, err2 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.EarliestTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.EarliestTime):])
-		if err2 != nil {
-			return 0, err2
+		{
+			size, err := m.EarliestTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintVisibility(dAtA, i, uint64(size))
 		}
-		i -= n2
-		i = encodeVarintVisibility(dAtA, i, uint64(n2))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -623,6 +482,10 @@ func (m *StatusFilter) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Status != 0 {
 		i = encodeVarintVisibility(dAtA, i, uint64(m.Status))
 		i--
@@ -656,6 +519,9 @@ func (m *WorkflowExecutionFilter) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovVisibility(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -669,6 +535,9 @@ func (m *WorkflowTypeFilter) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovVisibility(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -679,12 +548,15 @@ func (m *StartTimeFilter) Size() (n int) {
 	var l int
 	_ = l
 	if m.EarliestTime != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.EarliestTime)
+		l = m.EarliestTime.Size()
 		n += 1 + l + sovVisibility(uint64(l))
 	}
 	if m.LatestTime != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.LatestTime)
+		l = m.LatestTime.Size()
 		n += 1 + l + sovVisibility(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -698,6 +570,9 @@ func (m *StatusFilter) Size() (n int) {
 	if m.Status != 0 {
 		n += 1 + sovVisibility(uint64(m.Status))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -706,56 +581,6 @@ func sovVisibility(x uint64) (n int) {
 }
 func sozVisibility(x uint64) (n int) {
 	return sovVisibility(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (this *WorkflowExecutionFilter) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&WorkflowExecutionFilter{`,
-		`WorkflowId:` + fmt.Sprintf("%v", this.WorkflowId) + `,`,
-		`RunId:` + fmt.Sprintf("%v", this.RunId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *WorkflowTypeFilter) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&WorkflowTypeFilter{`,
-		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *StartTimeFilter) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&StartTimeFilter{`,
-		`EarliestTime:` + strings.Replace(fmt.Sprintf("%v", this.EarliestTime), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`LatestTime:` + strings.Replace(fmt.Sprintf("%v", this.LatestTime), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *StatusFilter) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&StatusFilter{`,
-		`Status:` + fmt.Sprintf("%v", this.Status) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func valueToStringVisibility(v interface{}) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("*%v", pv)
 }
 func (m *WorkflowExecutionFilter) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -865,6 +690,7 @@ func (m *WorkflowExecutionFilter) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -950,6 +776,7 @@ func (m *WorkflowTypeFilter) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -1018,9 +845,9 @@ func (m *StartTimeFilter) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.EarliestTime == nil {
-				m.EarliestTime = new(time.Time)
+				m.EarliestTime = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.EarliestTime, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.EarliestTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -1054,9 +881,9 @@ func (m *StartTimeFilter) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.LatestTime == nil {
-				m.LatestTime = new(time.Time)
+				m.LatestTime = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.LatestTime, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.LatestTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -1075,6 +902,7 @@ func (m *StartTimeFilter) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -1147,6 +975,7 @@ func (m *StatusFilter) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}

@@ -26,10 +26,15 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/olivere/elastic"
+	esaws "github.com/olivere/elastic/aws/v4"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -99,6 +104,22 @@ func NewV6Client(
 	if connectConfig.DisableHealthCheck {
 		clientOptFuncs = append(clientOptFuncs, elastic.SetHealthcheck(false))
 	}
+	if connectConfig.AWSSigning.Enable {
+		if err := config.CheckAWSSigningConfig(connectConfig.AWSSigning); err != nil {
+			return nil, err
+		}
+		var signingClient *http.Client
+		var err error
+		if connectConfig.AWSSigning.EnvironmentCredential != nil {
+			signingClient, err = buildSigningHTTPClientFromEnvironmentCredentialV6(*connectConfig.AWSSigning.EnvironmentCredential)
+		} else {
+			signingClient, err = buildSigningHTTPClientFromStaticCredentialV6(*connectConfig.AWSSigning.StaticCredential)
+		}
+		if err != nil {
+			return nil, err
+		}
+		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(signingClient))
+	}
 	client, err := elastic.NewClient(clientOptFuncs...)
 	if err != nil {
 		return nil, err
@@ -109,6 +130,26 @@ func NewV6Client(
 		logger:     logger,
 		serializer: p.NewPayloadSerializer(),
 	}, nil
+}
+
+// Refer to https://github.com/olivere/elastic/blob/release-branch.v6/recipes/aws-connect-v4/main.go
+func buildSigningHTTPClientFromStaticCredentialV6(credentialConfig config.AWSStaticCredential) (*http.Client, error) {
+	awsCredentials := credentials.NewStaticCredentials(
+		credentialConfig.AccessKey,
+		credentialConfig.SecretKey,
+		credentialConfig.SessionToken,
+	)
+	return esaws.NewV4SigningClient(awsCredentials, credentialConfig.Region), nil
+}
+
+func buildSigningHTTPClientFromEnvironmentCredentialV6(credentialConfig config.AWSEnvironmentCredential) (*http.Client, error) {
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String(credentialConfig.Region)},
+	)
+	if err != nil {
+		return nil, err
+	}
+	return esaws.NewV4SigningClient(sess.Config.Credentials, credentialConfig.Region), nil
 }
 
 // root is for nested object like Attr property for search attributes.

@@ -119,7 +119,7 @@ func (s *markerNotifierSuite) TestNotifyPendingFailoverMarker() {
 		ActiveClusterName: s.mockClusterMetadata.GetCurrentClusterName(),
 		Clusters: []*persistence.ClusterReplicationConfig{
 			{
-				s.mockClusterMetadata.GetCurrentClusterName(),
+				ClusterName: s.mockClusterMetadata.GetCurrentClusterName(),
 			},
 		},
 	}
@@ -135,8 +135,8 @@ func (s *markerNotifierSuite) TestNotifyPendingFailoverMarker() {
 	)
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(domainEntry, nil).AnyTimes()
 	task := &types.FailoverMarkerAttributes{
-		DomainID:        common.StringPtr(domainID),
-		FailoverVersion: common.Int64Ptr(1),
+		DomainID:        domainID,
+		FailoverVersion: 1,
 		CreationTime:    common.Int64Ptr(1),
 	}
 	tasks := []*types.FailoverMarkerAttributes{task}

@@ -47,6 +47,7 @@ const (
 
 	// ConcreteExecutionsFixerWFTypeName defines workflow type name for concrete executions fixer
 	ConcreteExecutionsFixerWFTypeName   = "cadence-sys-executions-fixer-workflow"
+	concreteExecutionsFixerWFID         = "cadence-sys-executions-fixer"
 	concreteExecutionsFixerTaskListName = "cadence-sys-executions-fixer-tasklist-0"
 )
 
@@ -99,7 +100,6 @@ func ScannerManager(
 	ctx context.Context,
 	pr persistence.Retryer,
 	params shardscanner.ScanShardActivityParams,
-	_ shardscanner.ScannerConfig,
 ) invariant.Manager {
 
 	collections := ParseCollections(params.ScannerConfig)
@@ -117,7 +117,6 @@ func ScannerIterator(
 	ctx context.Context,
 	pr persistence.Retryer,
 	params shardscanner.ScanShardActivityParams,
-	_ shardscanner.ScannerConfig,
 ) pagination.Iterator {
 	it := ConcreteExecutionType.ToIterator()
 	return it(ctx, pr, params.PageSize)
@@ -125,12 +124,12 @@ func ScannerIterator(
 }
 
 // FixerIterator provides iterator for concrete execution fixer.
-func FixerIterator(ctx context.Context, client blobstore.Client, keys store.Keys, _ shardscanner.FixShardActivityParams, _ shardscanner.ScannerConfig) store.ScanOutputIterator {
+func FixerIterator(ctx context.Context, client blobstore.Client, keys store.Keys, _ shardscanner.FixShardActivityParams) store.ScanOutputIterator {
 	return store.NewBlobstoreIterator(ctx, client, keys, ConcreteExecutionType.ToBlobstoreEntity())
 }
 
 // FixerManager provides invariant manager for concrete execution fixer.
-func FixerManager(_ context.Context, pr persistence.Retryer, _ shardscanner.FixShardActivityParams, _ shardscanner.ScannerConfig) invariant.Manager {
+func FixerManager(_ context.Context, pr persistence.Retryer, _ shardscanner.FixShardActivityParams) invariant.Manager {
 	var ivs []invariant.Invariant
 	var collections []invariant.Collection
 
@@ -173,10 +172,16 @@ func ConcreteExecutionScannerConfig(dc *dynamicconfig.Collection) *shardscanner.
 		DynamicCollection: dc,
 		ScannerHooks:      ConcreteExecutionHooks,
 		FixerHooks:        ConcreteExecutionFixerHooks,
-		FixerTLName:       concreteExecutionsFixerTaskListName,
 		StartWorkflowOptions: cclient.StartWorkflowOptions{
 			ID:                           concreteExecutionsScannerWFID,
 			TaskList:                     concreteExecutionsScannerTaskListName,
+			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
+			WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
+			CronSchedule:                 "* * * * *",
+		},
+		StartFixerOptions: cclient.StartWorkflowOptions{
+			ID:                           concreteExecutionsFixerWFID,
+			TaskList:                     concreteExecutionsFixerTaskListName,
 			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
 			WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
 			CronSchedule:                 "* * * * *",

@@ -22,6 +22,8 @@ package common
 
 import (
 	"time"
+
+	"github.com/uber/cadence/.gen/go/shadower"
 )
 
 const (
@@ -116,6 +118,10 @@ const (
 	// BatcherLocalDomainName is domain name for batcher workflows running in local cluster
 	// Batcher cannot use SystemLocalDomain because auth
 	BatcherLocalDomainName = "cadence-batcher"
+	// ShadowerDomainID is domain id for workflow shadower local domain
+	ShadowerDomainID = "59c51119-1b41-4a28-986d-d6e377716f82"
+	// ShadowerLocalDomainName
+	ShadowerLocalDomainName = shadower.LocalDomainName
 )
 
 const (
@@ -125,10 +131,6 @@ const (
 	// CriticalLongPollTimeout is a threshold for the context timeout passed into long poll API,
 	// below which a warning will be logged
 	CriticalLongPollTimeout = time.Second * 20
-	// MaxWorkflowRetentionPeriodInDays is the maximum of workflow retention when registering domain
-	// !!! Do NOT simply decrease this number, because it is being used by history scavenger to avoid race condition against history archival.
-	// Check more details in history scanner(scavenger)
-	MaxWorkflowRetentionPeriodInDays = 30
 )
 
 const (

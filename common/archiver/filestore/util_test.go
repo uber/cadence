@@ -59,23 +59,23 @@ func (s *UtilSuite) TestEncodeDecodeHistoryBatches() {
 		{
 			Events: []*types.HistoryEvent{
 				{
-					EventID: common.Int64Ptr(common.FirstEventID),
-					Version: common.Int64Ptr(1),
+					EventID: common.FirstEventID,
+					Version: 1,
 				},
 			},
 		},
 		{
 			Events: []*types.HistoryEvent{
 				{
-					EventID:   common.Int64Ptr(common.FirstEventID + 1),
+					EventID:   common.FirstEventID + 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-					Version:   common.Int64Ptr(1),
+					Version:   1,
 				},
 				{
-					EventID: common.Int64Ptr(common.FirstEventID + 2),
-					Version: common.Int64Ptr(2),
+					EventID: common.FirstEventID + 2,
+					Version: 2,
 					DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
-						Identity: common.StringPtr("some random identity"),
+						Identity: "some random identity",
 					},
 				},
 			},
@@ -207,7 +207,7 @@ func (s *UtilSuite) TestHistoryMutated() {
 				{
 					Events: []*types.HistoryEvent{
 						{
-							Version: common.Int64Ptr(15),
+							Version: 15,
 						},
 					},
 				},
@@ -222,20 +222,20 @@ func (s *UtilSuite) TestHistoryMutated() {
 				{
 					Events: []*types.HistoryEvent{
 						{
-							EventID: common.Int64Ptr(33),
-							Version: common.Int64Ptr(10),
+							EventID: 33,
+							Version: 10,
 						},
 					},
 				},
 				{
 					Events: []*types.HistoryEvent{
 						{
-							EventID: common.Int64Ptr(49),
-							Version: common.Int64Ptr(10),
+							EventID: 49,
+							Version: 10,
 						},
 						{
-							EventID: common.Int64Ptr(50),
-							Version: common.Int64Ptr(10),
+							EventID: 50,
+							Version: 10,
 						},
 					},
 				},
@@ -252,7 +252,7 @@ func (s *UtilSuite) TestHistoryMutated() {
 				{
 					Events: []*types.HistoryEvent{
 						{
-							Version: common.Int64Ptr(9),
+							Version: 9,
 						},
 					},
 				},
@@ -268,16 +268,16 @@ func (s *UtilSuite) TestHistoryMutated() {
 				{
 					Events: []*types.HistoryEvent{
 						{
-							EventID: common.Int64Ptr(20),
-							Version: common.Int64Ptr(10),
+							EventID: 20,
+							Version: 10,
 						},
 					},
 				},
 				{
 					Events: []*types.HistoryEvent{
 						{
-							EventID: common.Int64Ptr(33),
-							Version: common.Int64Ptr(10),
+							EventID: 33,
+							Version: 10,
 						},
 					},
 				},

@@ -86,7 +86,7 @@ func (s *historyResenderSuite) SetupTest() {
 	s.mockHistoryClient = history.NewMockClient(s.controller)
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 
@@ -105,7 +105,7 @@ func (s *historyResenderSuite) SetupTest() {
 		1234,
 		nil,
 	)
-	s.mockDomainCache.EXPECT().GetDomainByID(s.domainID).Return(domainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainName(s.domainID).Return(s.domainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(s.domainName).Return(domainEntry, nil).AnyTimes()
 	s.serializer = persistence.NewPayloadSerializer()
 
@@ -135,14 +135,14 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 	pageSize := defaultPageSize
 	eventBatch := []*types.HistoryEvent{
 		{
-			EventID:   common.Int64Ptr(2),
-			Version:   common.Int64Ptr(123),
+			EventID:   2,
+			Version:   123,
 			Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 			EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 		},
 		{
-			EventID:   common.Int64Ptr(3),
-			Version:   common.Int64Ptr(123),
+			EventID:   3,
+			Version:   123,
 			Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 			EventType: types.EventTypeDecisionTaskStarted.Ptr(),
 		},
@@ -150,22 +150,22 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 	blob := s.serializeEvents(eventBatch)
 	versionHistoryItems := []*types.VersionHistoryItem{
 		{
-			EventID: common.Int64Ptr(1),
-			Version: common.Int64Ptr(1),
+			EventID: 1,
+			Version: 1,
 		},
 	}
 
 	s.mockAdminClient.EXPECT().GetWorkflowExecutionRawHistoryV2(
 		gomock.Any(),
 		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(workflowID),
-				RunID:      common.StringPtr(runID),
+				WorkflowID: workflowID,
+				RunID:      runID,
 			},
 			StartEventID:      common.Int64Ptr(startEventID),
 			StartEventVersion: common.Int64Ptr(startEventVersion),
-			MaximumPageSize:   common.Int32Ptr(pageSize),
+			MaximumPageSize:   pageSize,
 			NextPageToken:     nil,
 		}).Return(&types.GetWorkflowExecutionRawHistoryV2Response{
 		HistoryBatches: []*types.DataBlob{blob},
@@ -178,14 +178,14 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 	s.mockAdminClient.EXPECT().GetWorkflowExecutionRawHistoryV2(
 		gomock.Any(),
 		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(workflowID),
-				RunID:      common.StringPtr(runID),
+				WorkflowID: workflowID,
+				RunID:      runID,
 			},
 			StartEventID:      common.Int64Ptr(startEventID),
 			StartEventVersion: common.Int64Ptr(startEventVersion),
-			MaximumPageSize:   common.Int32Ptr(pageSize),
+			MaximumPageSize:   pageSize,
 			NextPageToken:     token,
 		}).Return(&types.GetWorkflowExecutionRawHistoryV2Response{
 		HistoryBatches: []*types.DataBlob{blob},
@@ -198,10 +198,10 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 	s.mockHistoryClient.EXPECT().ReplicateEventsV2(
 		gomock.Any(),
 		&types.ReplicateEventsV2Request{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			WorkflowExecution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(workflowID),
-				RunID:      common.StringPtr(runID),
+				WorkflowID: workflowID,
+				RunID:      runID,
 			},
 			VersionHistoryItems: versionHistoryItems,
 			Events:              blob,
@@ -229,16 +229,16 @@ func (s *historyResenderSuite) TestCreateReplicateRawEventsRequest() {
 	}
 	versionHistoryItems := []*types.VersionHistoryItem{
 		{
-			EventID: common.Int64Ptr(1),
-			Version: common.Int64Ptr(1),
+			EventID: 1,
+			Version: 1,
 		},
 	}
 
 	s.Equal(&types.ReplicateEventsV2Request{
-		DomainUUID: common.StringPtr(s.domainID),
+		DomainUUID: s.domainID,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		VersionHistoryItems: versionHistoryItems,
 		Events:              blob,
@@ -254,14 +254,14 @@ func (s *historyResenderSuite) TestSendReplicationRawRequest() {
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	item := &types.VersionHistoryItem{
-		EventID: common.Int64Ptr(1),
-		Version: common.Int64Ptr(1),
+		EventID: 1,
+		Version: 1,
 	}
 	request := &types.ReplicateEventsV2Request{
-		DomainUUID: common.StringPtr(s.domainID),
+		DomainUUID: s.domainID,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		Events: &types.DataBlob{
 			EncodingType: types.EncodingTypeThriftRW.Ptr(),
@@ -279,14 +279,14 @@ func (s *historyResenderSuite) TestSendReplicationRawRequest_Err() {
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	item := &types.VersionHistoryItem{
-		EventID: common.Int64Ptr(1),
-		Version: common.Int64Ptr(1),
+		EventID: 1,
+		Version: 1,
 	}
 	request := &types.ReplicateEventsV2Request{
-		DomainUUID: common.StringPtr(s.domainID),
+		DomainUUID: s.domainID,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		Events: &types.DataBlob{
 			EncodingType: types.EncodingTypeThriftRW.Ptr(),
@@ -295,9 +295,9 @@ func (s *historyResenderSuite) TestSendReplicationRawRequest_Err() {
 		VersionHistoryItems: []*types.VersionHistoryItem{item},
 	}
 	retryErr := &types.RetryTaskV2Error{
-		DomainID:   common.StringPtr(s.domainID),
-		WorkflowID: common.StringPtr(workflowID),
-		RunID:      common.StringPtr(runID),
+		DomainID:   s.domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
 	}
 
 	s.mockHistoryClient.EXPECT().ReplicateEventsV2(gomock.Any(), request).Return(retryErr).Times(1)
@@ -325,16 +325,16 @@ func (s *historyResenderSuite) TestGetHistory() {
 		NextPageToken: nextTokenOut,
 	}
 	s.mockAdminClient.EXPECT().GetWorkflowExecutionRawHistoryV2(gomock.Any(), &types.GetWorkflowExecutionRawHistoryV2Request{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		StartEventID:      common.Int64Ptr(startEventID),
 		StartEventVersion: common.Int64Ptr(version),
 		EndEventID:        common.Int64Ptr(endEventID),
 		EndEventVersion:   common.Int64Ptr(version),
-		MaximumPageSize:   common.Int32Ptr(pageSize),
+		MaximumPageSize:   pageSize,
 		NextPageToken:     nextTokenIn,
 	}).Return(response, nil).Times(1)
 

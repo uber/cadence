@@ -165,8 +165,12 @@ func New(params *BootstrapParams) Service {
 
 // UpdateLoggerWithServiceName tag logging with service name from the top level
 func (params *BootstrapParams) UpdateLoggerWithServiceName(name string) {
-	params.Logger = params.Logger.WithTags(tag.Service(name))
-	params.ThrottledLogger = params.ThrottledLogger.WithTags(tag.Service(name))
+	if params.Logger != nil {
+		params.Logger = params.Logger.WithTags(tag.Service(name))
+	}
+	if params.ThrottledLogger != nil {
+		params.ThrottledLogger = params.ThrottledLogger.WithTags(tag.Service(name))
+	}
 }
 
 // GetHostName returns the name of host running the service
@@ -308,7 +312,7 @@ func GetMetricsServiceIdx(serviceName string, logger log.Logger) metrics.Service
 	case common.WorkerServiceName:
 		return metrics.Worker
 	default:
-		logger.Fatal("Unknown service name for metrics!", tag.Service(serviceName))
+		logger.Fatal("Unknown service name for metrics!")
 	}
 
 	// this should never happen!

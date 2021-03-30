@@ -232,7 +232,7 @@ func (mr *MockMutableStateMockRecorder) AddChildWorkflowExecutionFailedEvent(arg
 }
 
 // AddChildWorkflowExecutionStartedEvent mocks base method
-func (m *MockMutableState) AddChildWorkflowExecutionStartedEvent(arg0 *string, arg1 *types.WorkflowExecution, arg2 *types.WorkflowType, arg3 int64, arg4 *types.Header) (*types.HistoryEvent, error) {
+func (m *MockMutableState) AddChildWorkflowExecutionStartedEvent(arg0 string, arg1 *types.WorkflowExecution, arg2 *types.WorkflowType, arg3 int64, arg4 *types.Header) (*types.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddChildWorkflowExecutionStartedEvent", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(*types.HistoryEvent)

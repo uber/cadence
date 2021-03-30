@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,11 +27,14 @@ package matchingserviceserver
 
 import (
 	context "context"
-	matching "github.com/uber/cadence/.gen/go/matching"
-	shared "github.com/uber/cadence/.gen/go/shared"
+
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
+	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
+
+	matching "github.com/uber/cadence/.gen/go/matching"
+	shared "github.com/uber/cadence/.gen/go/shared"
 )
 
 // Interface is the server-side interface for the MatchingService service.
@@ -201,173 +204,276 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
+type yarpcErrorNamer interface{ YARPCErrorName() string }
+
+type yarpcErrorCoder interface{ YARPCErrorCode() *yarpcerrors.Code }
+
 func (h handler) AddActivityTask(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args matching.MatchingService_AddActivityTask_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'MatchingService' procedure 'AddActivityTask': %w", err)
 	}
 
-	err := h.impl.AddActivityTask(ctx, args.AddRequest)
+	appErr := h.impl.AddActivityTask(ctx, args.AddRequest)
 
-	hadError := err != nil
-	result, err := matching.MatchingService_AddActivityTask_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := matching.MatchingService_AddActivityTask_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) AddDecisionTask(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args matching.MatchingService_AddDecisionTask_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'MatchingService' procedure 'AddDecisionTask': %w", err)
 	}
 
-	err := h.impl.AddDecisionTask(ctx, args.AddRequest)
+	appErr := h.impl.AddDecisionTask(ctx, args.AddRequest)
 
-	hadError := err != nil
-	result, err := matching.MatchingService_AddDecisionTask_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := matching.MatchingService_AddDecisionTask_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) CancelOutstandingPoll(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args matching.MatchingService_CancelOutstandingPoll_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'MatchingService' procedure 'CancelOutstandingPoll': %w", err)
 	}
 
-	err := h.impl.CancelOutstandingPoll(ctx, args.Request)
+	appErr := h.impl.CancelOutstandingPoll(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := matching.MatchingService_CancelOutstandingPoll_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := matching.MatchingService_CancelOutstandingPoll_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) DescribeTaskList(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args matching.MatchingService_DescribeTaskList_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'MatchingService' procedure 'DescribeTaskList': %w", err)
 	}
 
-	success, err := h.impl.DescribeTaskList(ctx, args.Request)
+	success, appErr := h.impl.DescribeTaskList(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := matching.MatchingService_DescribeTaskList_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := matching.MatchingService_DescribeTaskList_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) ListTaskListPartitions(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args matching.MatchingService_ListTaskListPartitions_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'MatchingService' procedure 'ListTaskListPartitions': %w", err)
 	}
 
-	success, err := h.impl.ListTaskListPartitions(ctx, args.Request)
+	success, appErr := h.impl.ListTaskListPartitions(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := matching.MatchingService_ListTaskListPartitions_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := matching.MatchingService_ListTaskListPartitions_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) PollForActivityTask(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args matching.MatchingService_PollForActivityTask_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'MatchingService' procedure 'PollForActivityTask': %w", err)
 	}
 
-	success, err := h.impl.PollForActivityTask(ctx, args.PollRequest)
+	success, appErr := h.impl.PollForActivityTask(ctx, args.PollRequest)
 
-	hadError := err != nil
-	result, err := matching.MatchingService_PollForActivityTask_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := matching.MatchingService_PollForActivityTask_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) PollForDecisionTask(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args matching.MatchingService_PollForDecisionTask_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'MatchingService' procedure 'PollForDecisionTask': %w", err)
 	}
 
-	success, err := h.impl.PollForDecisionTask(ctx, args.PollRequest)
+	success, appErr := h.impl.PollForDecisionTask(ctx, args.PollRequest)
 
-	hadError := err != nil
-	result, err := matching.MatchingService_PollForDecisionTask_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := matching.MatchingService_PollForDecisionTask_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) QueryWorkflow(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args matching.MatchingService_QueryWorkflow_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'MatchingService' procedure 'QueryWorkflow': %w", err)
 	}
 
-	success, err := h.impl.QueryWorkflow(ctx, args.QueryRequest)
+	success, appErr := h.impl.QueryWorkflow(ctx, args.QueryRequest)
 
-	hadError := err != nil
-	result, err := matching.MatchingService_QueryWorkflow_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := matching.MatchingService_QueryWorkflow_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) RespondQueryTaskCompleted(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args matching.MatchingService_RespondQueryTaskCompleted_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'MatchingService' procedure 'RespondQueryTaskCompleted': %w", err)
 	}
 
-	err := h.impl.RespondQueryTaskCompleted(ctx, args.Request)
+	appErr := h.impl.RespondQueryTaskCompleted(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := matching.MatchingService_RespondQueryTaskCompleted_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := matching.MatchingService_RespondQueryTaskCompleted_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }

@@ -32,7 +32,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
@@ -149,7 +148,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Op
 	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
-		Events: []*types.HistoryEvent{{EventID: common.Int64Ptr(1)}},
+		Events: []*types.HistoryEvent{{EventID: 1}},
 	}
 
 	workflow.EXPECT().GetContext().Return(context).AnyTimes()
@@ -260,7 +259,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Passive_O
 	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
-		Events: []*types.HistoryEvent{{EventID: common.Int64Ptr(1)}},
+		Events: []*types.HistoryEvent{{EventID: 1}},
 	}
 
 	workflow.EXPECT().GetContext().Return(context).AnyTimes()
@@ -448,8 +447,8 @@ func (s *transactionManagerSuite) TestCheckWorkflowExists_DoesNotExists() {
 	s.mockExecutionManager.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
 		Execution: types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	}).Return(nil, &types.EntityNotExistsError{}).Once()
 
@@ -467,8 +466,8 @@ func (s *transactionManagerSuite) TestCheckWorkflowExists_DoesExists() {
 	s.mockExecutionManager.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
 		Execution: types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	}).Return(&persistence.GetWorkflowExecutionResponse{}, nil).Once()
 

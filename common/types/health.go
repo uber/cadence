@@ -22,8 +22,8 @@ package types
 
 // HealthStatus is an internal type (TBD...)
 type HealthStatus struct {
-	Ok  bool    `json:"ok,required"`
-	Msg *string `json:"msg,omitempty"`
+	Ok  bool   `json:"ok,required"`
+	Msg string `json:"msg,omitempty"`
 }
 
 // GetOk is an internal getter (TBD...)
@@ -36,25 +36,8 @@ func (v *HealthStatus) GetOk() (o bool) {
 
 // GetMsg is an internal getter (TBD...)
 func (v *HealthStatus) GetMsg() (o string) {
-	if v != nil && v.Msg != nil {
-		return *v.Msg
-	}
-	return
-}
-
-// MetaHealthArgs is an internal type (TBD...)
-type MetaHealthArgs struct {
-}
-
-// MetaHealthResult is an internal type (TBD...)
-type MetaHealthResult struct {
-	Success *HealthStatus `json:"success,omitempty"`
-}
-
-// GetSuccess is an internal getter (TBD...)
-func (v *MetaHealthResult) GetSuccess() (o *HealthStatus) {
-	if v != nil && v.Success != nil {
-		return v.Success
+	if v != nil {
+		return v.Msg
 	}
 	return
 }

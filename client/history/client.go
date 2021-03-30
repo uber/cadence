@@ -69,7 +69,7 @@ func (c *clientImpl) StartWorkflowExecution(
 	request *types.HistoryStartWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (*types.StartWorkflowExecutionResponse, error) {
-	client, err := c.getClientForWorkflowID(*request.StartRequest.WorkflowID)
+	client, err := c.getClientForWorkflowID(request.StartRequest.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (c *clientImpl) GetMutableState(
 	request *types.GetMutableStateRequest,
 	opts ...yarpc.CallOption,
 ) (*types.GetMutableStateResponse, error) {
-	client, err := c.getClientForWorkflowID(*request.Execution.WorkflowID)
+	client, err := c.getClientForWorkflowID(request.Execution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (c *clientImpl) PollMutableState(
 	request *types.PollMutableStateRequest,
 	opts ...yarpc.CallOption,
 ) (*types.PollMutableStateResponse, error) {
-	client, err := c.getClientForWorkflowID(*request.Execution.WorkflowID)
+	client, err := c.getClientForWorkflowID(request.Execution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -184,13 +184,9 @@ func (c *clientImpl) RemoveTask(
 	request *types.RemoveTaskRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	var err error
-	var client Client
-	if request.ShardID != nil {
-		client, err = c.getClientForShardID(int(request.GetShardID()))
-		if err != nil {
-			return err
-		}
+	client, err := c.getClientForShardID(int(request.GetShardID()))
+	if err != nil {
+		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client Client) error {
@@ -210,14 +206,9 @@ func (c *clientImpl) CloseShard(
 	request *types.CloseShardRequest,
 	opts ...yarpc.CallOption,
 ) error {
-
-	var err error
-	var client Client
-	if request.ShardID != nil {
-		client, err = c.getClientForShardID(int(request.GetShardID()))
-		if err != nil {
-			return err
-		}
+	client, err := c.getClientForShardID(int(request.GetShardID()))
+	if err != nil {
+		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client Client) error {
@@ -240,14 +231,9 @@ func (c *clientImpl) ResetQueue(
 	request *types.ResetQueueRequest,
 	opts ...yarpc.CallOption,
 ) error {
-
-	var err error
-	var client Client
-	if request.ShardID != nil {
-		client, err = c.getClientForShardID(int(request.GetShardID()))
-		if err != nil {
-			return err
-		}
+	client, err := c.getClientForShardID(int(request.GetShardID()))
+	if err != nil {
+		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client Client) error {
@@ -270,14 +256,9 @@ func (c *clientImpl) DescribeQueue(
 	request *types.DescribeQueueRequest,
 	opts ...yarpc.CallOption,
 ) (*types.DescribeQueueResponse, error) {
-
-	var err error
-	var client Client
-	if request.ShardID != nil {
-		client, err = c.getClientForShardID(int(request.GetShardID()))
-		if err != nil {
-			return nil, err
-		}
+	client, err := c.getClientForShardID(int(request.GetShardID()))
+	if err != nil {
+		return nil, err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *types.DescribeQueueResponse
@@ -301,7 +282,7 @@ func (c *clientImpl) DescribeMutableState(
 	request *types.DescribeMutableStateRequest,
 	opts ...yarpc.CallOption,
 ) (*types.DescribeMutableStateResponse, error) {
-	client, err := c.getClientForWorkflowID(*request.Execution.WorkflowID)
+	client, err := c.getClientForWorkflowID(request.Execution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +307,7 @@ func (c *clientImpl) ResetStickyTaskList(
 	request *types.HistoryResetStickyTaskListRequest,
 	opts ...yarpc.CallOption,
 ) (*types.HistoryResetStickyTaskListResponse, error) {
-	client, err := c.getClientForWorkflowID(*request.Execution.WorkflowID)
+	client, err := c.getClientForWorkflowID(request.Execution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +332,7 @@ func (c *clientImpl) DescribeWorkflowExecution(
 	request *types.HistoryDescribeWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (*types.DescribeWorkflowExecutionResponse, error) {
-	client, err := c.getClientForWorkflowID(*request.Request.Execution.WorkflowID)
+	client, err := c.getClientForWorkflowID(request.Request.Execution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -376,7 +357,7 @@ func (c *clientImpl) RecordDecisionTaskStarted(
 	request *types.RecordDecisionTaskStartedRequest,
 	opts ...yarpc.CallOption,
 ) (*types.RecordDecisionTaskStartedResponse, error) {
-	client, err := c.getClientForWorkflowID(*request.WorkflowExecution.WorkflowID)
+	client, err := c.getClientForWorkflowID(request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -401,7 +382,7 @@ func (c *clientImpl) RecordActivityTaskStarted(
 	request *types.RecordActivityTaskStartedRequest,
 	opts ...yarpc.CallOption,
 ) (*types.RecordActivityTaskStartedResponse, error) {
-	client, err := c.getClientForWorkflowID(*request.WorkflowExecution.WorkflowID)
+	client, err := c.getClientForWorkflowID(request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -572,7 +553,7 @@ func (c *clientImpl) RequestCancelWorkflowExecution(
 	request *types.HistoryRequestCancelWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	client, err := c.getClientForWorkflowID(*request.CancelRequest.WorkflowExecution.WorkflowID)
+	client, err := c.getClientForWorkflowID(request.CancelRequest.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -590,7 +571,7 @@ func (c *clientImpl) SignalWorkflowExecution(
 	request *types.HistorySignalWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	client, err := c.getClientForWorkflowID(*request.SignalRequest.WorkflowExecution.WorkflowID)
+	client, err := c.getClientForWorkflowID(request.SignalRequest.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -610,7 +591,7 @@ func (c *clientImpl) SignalWithStartWorkflowExecution(
 	request *types.HistorySignalWithStartWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (*types.StartWorkflowExecutionResponse, error) {
-	client, err := c.getClientForWorkflowID(*request.SignalWithStartRequest.WorkflowID)
+	client, err := c.getClientForWorkflowID(request.SignalWithStartRequest.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -636,7 +617,7 @@ func (c *clientImpl) RemoveSignalMutableState(
 	request *types.RemoveSignalMutableStateRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	client, err := c.getClientForWorkflowID(*request.WorkflowExecution.WorkflowID)
+	client, err := c.getClientForWorkflowID(request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -655,7 +636,7 @@ func (c *clientImpl) TerminateWorkflowExecution(
 	request *types.HistoryTerminateWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	client, err := c.getClientForWorkflowID(*request.TerminateRequest.WorkflowExecution.WorkflowID)
+	client, err := c.getClientForWorkflowID(request.TerminateRequest.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -674,7 +655,7 @@ func (c *clientImpl) ResetWorkflowExecution(
 	request *types.HistoryResetWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (*types.ResetWorkflowExecutionResponse, error) {
-	client, err := c.getClientForWorkflowID(*request.ResetRequest.WorkflowExecution.WorkflowID)
+	client, err := c.getClientForWorkflowID(request.ResetRequest.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -698,7 +679,7 @@ func (c *clientImpl) ScheduleDecisionTask(
 	request *types.ScheduleDecisionTaskRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	client, err := c.getClientForWorkflowID(*request.WorkflowExecution.WorkflowID)
+	client, err := c.getClientForWorkflowID(request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -717,7 +698,7 @@ func (c *clientImpl) RecordChildExecutionCompleted(
 	request *types.RecordChildExecutionCompletedRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	client, err := c.getClientForWorkflowID(*request.WorkflowExecution.WorkflowID)
+	client, err := c.getClientForWorkflowID(request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -1048,7 +1029,7 @@ func (c *clientImpl) getClientForDomainID(domainID string) (Client, error) {
 }
 
 func (c *clientImpl) getClientForShardID(shardID int) (Client, error) {
-	client, err := c.clients.GetClientForKey(string(shardID))
+	client, err := c.clients.GetClientForKey(string(rune(shardID)))
 	if err != nil {
 		return nil, err
 	}

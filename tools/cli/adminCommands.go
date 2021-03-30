@@ -170,10 +170,10 @@ func describeMutableState(c *cli.Context) *types.AdminDescribeWorkflowExecutionR
 	defer cancel()
 
 	resp, err := adminClient.DescribeWorkflowExecution(ctx, &types.AdminDescribeWorkflowExecutionRequest{
-		Domain: common.StringPtr(domain),
+		Domain: domain,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-			RunID:      common.StringPtr(rid),
+			WorkflowID: wid,
+			RunID:      rid,
 		},
 	})
 	if err != nil {
@@ -427,9 +427,9 @@ func AdminRemoveTask(c *cli.Context) {
 	defer cancel()
 
 	req := &types.RemoveTaskRequest{
-		ShardID:             common.Int32Ptr(int32(shardID)),
+		ShardID:             int32(shardID),
 		Type:                common.Int32Ptr(int32(typeID)),
-		TaskID:              common.Int64Ptr(taskID),
+		TaskID:              taskID,
 		VisibilityTimestamp: common.Int64Ptr(visibilityTimestamp),
 	}
 
@@ -500,7 +500,7 @@ func AdminCloseShard(c *cli.Context) {
 	defer cancel()
 
 	req := &types.CloseShardRequest{}
-	req.ShardID = common.Int32Ptr(int32(sid))
+	req.ShardID = int32(sid)
 
 	err := adminClient.CloseShard(ctx, req)
 	if err != nil {
@@ -527,7 +527,7 @@ func AdminDescribeHistoryHost(c *cli.Context) {
 
 	req := &types.DescribeHistoryHostRequest{}
 	if len(wid) > 0 {
-		req.ExecutionForHost = &types.WorkflowExecution{WorkflowID: common.StringPtr(wid)}
+		req.ExecutionForHost = &types.WorkflowExecution{WorkflowID: wid}
 	}
 	if c.IsSet(FlagShardID) {
 		req.ShardIDForHost = common.Int32Ptr(int32(sid))
@@ -559,10 +559,10 @@ func AdminRefreshWorkflowTasks(c *cli.Context) {
 	defer cancel()
 
 	err := adminClient.RefreshWorkflowTasks(ctx, &types.RefreshWorkflowTasksRequest{
-		Domain: common.StringPtr(domain),
+		Domain: domain,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-			RunID:      common.StringPtr(rid),
+			WorkflowID: wid,
+			RunID:      rid,
 		},
 	})
 	if err != nil {
@@ -584,8 +584,8 @@ func AdminResetQueue(c *cli.Context) {
 	defer cancel()
 
 	req := &types.ResetQueueRequest{
-		ShardID:     common.Int32Ptr(int32(shardID)),
-		ClusterName: common.StringPtr(clusterName),
+		ShardID:     int32(shardID),
+		ClusterName: clusterName,
 		Type:        common.Int32Ptr(int32(typeID)),
 	}
 
@@ -608,8 +608,8 @@ func AdminDescribeQueue(c *cli.Context) {
 	defer cancel()
 
 	req := &types.DescribeQueueRequest{
-		ShardID:     common.Int32Ptr(int32(shardID)),
-		ClusterName: common.StringPtr(clusterName),
+		ShardID:     int32(shardID),
+		ClusterName: clusterName,
 		Type:        common.Int32Ptr(int32(typeID)),
 	}
 

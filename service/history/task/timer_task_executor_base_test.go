@@ -122,8 +122,8 @@ func (s *timerQueueTaskExecutorBaseSuite) TestDeleteWorkflow_NoErr() {
 		VisibilityTimestamp: time.Now(),
 	}
 	executionInfo := types.WorkflowExecution{
-		WorkflowID: &task.WorkflowID,
-		RunID:      &task.RunID,
+		WorkflowID: task.WorkflowID,
+		RunID:      task.RunID,
 	}
 	wfContext := execution.NewContext(task.DomainID, executionInfo, s.mockShard, s.mockExecutionManager, log.NewNoop())
 

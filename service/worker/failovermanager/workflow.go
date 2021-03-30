@@ -36,8 +36,12 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+type (
+	contextKey string
+)
+
 const (
-	failoverManagerContextKey = "failoverManagerContext"
+	failoverManagerContextKey contextKey = "failoverManagerContext"
 	// TaskListName tasklist
 	TaskListName = "cadence-sys-failoverManager-tasklist"
 	// WorkflowTypeName workflow type name
@@ -354,7 +358,7 @@ func getAllDomains(ctx context.Context, targetDomains []string) ([]*types.Descri
 	var token []byte
 	for more := true; more; more = len(token) > 0 {
 		listRequest := &types.ListDomainsRequest{
-			PageSize:      common.Int32Ptr(pagesize),
+			PageSize:      pagesize,
 			NextPageToken: token,
 		}
 		listResp, err := feClient.ListDomains(ctx, listRequest)
@@ -385,12 +389,9 @@ func FailoverActivity(ctx context.Context, params *FailoverActivityParams) (*Fai
 	var successDomains []string
 	var failedDomains []string
 	for _, domain := range domains {
-		replicationConfig := &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(params.TargetCluster),
-		}
 		updateRequest := &types.UpdateDomainRequest{
-			Name:                     common.StringPtr(domain),
-			ReplicationConfiguration: replicationConfig,
+			Name:              domain,
+			ActiveClusterName: common.StringPtr(params.TargetCluster),
 		}
 		_, err := feClient.UpdateDomain(ctx, updateRequest)
 		if err != nil {

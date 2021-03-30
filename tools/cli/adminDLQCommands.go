@@ -64,10 +64,10 @@ func AdminGetDLQMessages(c *cli.Context) {
 	paginationFunc := func(paginationToken []byte) ([]interface{}, []byte, error) {
 		resp, err := adminClient.ReadDLQMessages(ctx, &types.ReadDLQMessagesRequest{
 			Type:                  toQueueType(dlqType),
-			SourceCluster:         common.StringPtr(sourceCluster),
-			ShardID:               common.Int32Ptr(int32(shardID)),
+			SourceCluster:         sourceCluster,
+			ShardID:               int32(shardID),
 			InclusiveEndMessageID: common.Int64Ptr(lastMessageID),
-			MaximumPageSize:       common.Int32Ptr(defaultPageSize),
+			MaximumPageSize:       defaultPageSize,
 			NextPageToken:         paginationToken,
 		})
 		if err != nil {
@@ -98,7 +98,7 @@ func AdminGetDLQMessages(c *cli.Context) {
 			ErrorAndExit(fmt.Sprintf("fail to encode dlq message. Last read message id: %v", lastReadMessageID), err)
 		}
 
-		lastReadMessageID = int(*task.SourceTaskID)
+		lastReadMessageID = int(task.SourceTaskID)
 		remainingMessageCount--
 		_, err = outputFile.WriteString(fmt.Sprintf("%v\n", string(taskStr)))
 		if err != nil {
@@ -148,8 +148,8 @@ func AdminPurgeDLQMessages(c *cli.Context) {
 		ctx, cancel := newContext(c)
 		if err := adminClient.PurgeDLQMessages(ctx, &types.PurgeDLQMessagesRequest{
 			Type:                  toQueueType(dlqType),
-			SourceCluster:         common.StringPtr(sourceCluster),
-			ShardID:               common.Int32Ptr(int32(shardID)),
+			SourceCluster:         sourceCluster,
+			ShardID:               int32(shardID),
 			InclusiveEndMessageID: lastMessageID,
 		}); err != nil {
 			cancel()
@@ -177,10 +177,10 @@ func AdminMergeDLQMessages(c *cli.Context) {
 		ctx, cancel := newContext(c)
 		request := &types.MergeDLQMessagesRequest{
 			Type:                  toQueueType(dlqType),
-			SourceCluster:         common.StringPtr(sourceCluster),
-			ShardID:               common.Int32Ptr(int32(shardID)),
+			SourceCluster:         sourceCluster,
+			ShardID:               int32(shardID),
 			InclusiveEndMessageID: lastMessageID,
-			MaximumPageSize:       common.Int32Ptr(defaultPageSize),
+			MaximumPageSize:       defaultPageSize,
 		}
 
 		for {

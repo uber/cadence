@@ -97,6 +97,8 @@ type (
 		GetDomainName(id string) (string, error)
 		GetAllDomain() map[string]*DomainCacheEntry
 		GetCacheSize() (sizeOfCacheByName int64, sizeOfCacheByID int64)
+
+		GetActiveDomainByID(id string) (*DomainCacheEntry, error)
 	}
 
 	domainCache struct {
@@ -387,6 +389,25 @@ func (c *domainCache) GetDomainName(
 		return "", err
 	}
 	return entry.info.Name, nil
+}
+
+func (c *domainCache) GetActiveDomainByID(
+	id string,
+) (*DomainCacheEntry, error) {
+	if err := common.ValidateDomainUUID(id); err != nil {
+		return nil, err
+	}
+
+	domainEntry, err := c.GetDomainByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if err = domainEntry.GetDomainNotActiveErr(); err != nil {
+		// TODO: currently reapply events API will check if returned domainEntry is nil or not
+		// when there's an error.
+		return domainEntry, err
+	}
+	return domainEntry, nil
 }
 
 func (c *domainCache) refreshLoop() {

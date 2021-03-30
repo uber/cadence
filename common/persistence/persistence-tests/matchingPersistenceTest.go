@@ -31,7 +31,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -74,8 +73,8 @@ func (s *MatchingPersistenceSuite) TestCreateTask() {
 	defer cancel()
 
 	domainID := "11adbd1b-f164-4ea7-b2f3-2e857a5048f1"
-	workflowExecution := types.WorkflowExecution{WorkflowID: common.StringPtr("create-task-test"),
-		RunID: common.StringPtr("c949447a-691a-4132-8b2a-a5b38106793c")}
+	workflowExecution := types.WorkflowExecution{WorkflowID: "create-task-test",
+		RunID: "c949447a-691a-4132-8b2a-a5b38106793c"}
 	task0, err0 := s.CreateDecisionTask(ctx, domainID, workflowExecution, "a5b38106793c", 5)
 	s.NoError(err0)
 	s.NotNil(task0, "Expected non empty task identifier.")
@@ -105,8 +104,8 @@ func (s *MatchingPersistenceSuite) TestCreateTask() {
 		s.NoError(err)
 		s.Equal(1, len(resp.Tasks))
 		s.Equal(domainID, resp.Tasks[0].DomainID)
-		s.Equal(*workflowExecution.WorkflowID, resp.Tasks[0].WorkflowID)
-		s.Equal(*workflowExecution.RunID, resp.Tasks[0].RunID)
+		s.Equal(workflowExecution.WorkflowID, resp.Tasks[0].WorkflowID)
+		s.Equal(workflowExecution.RunID, resp.Tasks[0].RunID)
 		s.Equal(sid, resp.Tasks[0].ScheduleID)
 		s.True(resp.Tasks[0].CreatedTime.UnixNano() > 0)
 		if s.TaskMgr.GetName() != "cassandra" {
@@ -123,8 +122,8 @@ func (s *MatchingPersistenceSuite) TestGetDecisionTasks() {
 	defer cancel()
 
 	domainID := "aeac8287-527b-4b35-80a9-667cb47e7c6d"
-	workflowExecution := types.WorkflowExecution{WorkflowID: common.StringPtr("get-decision-task-test"),
-		RunID: common.StringPtr("db20f7e2-1a1e-40d9-9278-d8b886738e05")}
+	workflowExecution := types.WorkflowExecution{WorkflowID: "get-decision-task-test",
+		RunID: "db20f7e2-1a1e-40d9-9278-d8b886738e05"}
 	taskList := "d8b886738e05"
 	task0, err0 := s.CreateDecisionTask(ctx, domainID, workflowExecution, taskList, 5)
 	s.NoError(err0)
@@ -147,8 +146,8 @@ func (s *MatchingPersistenceSuite) TestGetTasksWithNoMaxReadLevel() {
 		return
 	}
 	domainID := "f1116985-d1f1-40e0-aba9-83344db915bc"
-	workflowExecution := types.WorkflowExecution{WorkflowID: common.StringPtr("complete-decision-task-test"),
-		RunID: common.StringPtr("2aa0a74e-16ee-4f27-983d-48b07ec1915d")}
+	workflowExecution := types.WorkflowExecution{WorkflowID: "complete-decision-task-test",
+		RunID: "2aa0a74e-16ee-4f27-983d-48b07ec1915d"}
 	taskList := "48b07ec1915d"
 	_, err0 := s.CreateActivityTasks(ctx, domainID, workflowExecution, map[int64]string{
 		10: taskList,
@@ -196,8 +195,8 @@ func (s *MatchingPersistenceSuite) TestCompleteDecisionTask() {
 	defer cancel()
 
 	domainID := "f1116985-d1f1-40e0-aba9-83344db915bc"
-	workflowExecution := types.WorkflowExecution{WorkflowID: common.StringPtr("complete-decision-task-test"),
-		RunID: common.StringPtr("2aa0a74e-16ee-4f27-983d-48b07ec1915d")}
+	workflowExecution := types.WorkflowExecution{WorkflowID: "complete-decision-task-test",
+		RunID: "2aa0a74e-16ee-4f27-983d-48b07ec1915d"}
 	taskList := "48b07ec1915d"
 	tasks0, err0 := s.CreateActivityTasks(ctx, domainID, workflowExecution, map[int64]string{
 		10: taskList,
@@ -222,8 +221,8 @@ func (s *MatchingPersistenceSuite) TestCompleteDecisionTask() {
 	s.Equal(5, len(tasksWithID1), "Expected 5 activity tasks.")
 	for _, t := range tasksWithID1 {
 		s.Equal(domainID, t.DomainID)
-		s.Equal(*workflowExecution.WorkflowID, t.WorkflowID)
-		s.Equal(*workflowExecution.RunID, t.RunID)
+		s.Equal(workflowExecution.WorkflowID, t.WorkflowID)
+		s.Equal(workflowExecution.RunID, t.RunID)
 		s.True(t.TaskID > 0)
 
 		err2 := s.CompleteTask(ctx, domainID, taskList, p.TaskListTypeActivity, t.TaskID, 100)
@@ -239,8 +238,8 @@ func (s *MatchingPersistenceSuite) TestCompleteTasksLessThan() {
 	domainID := uuid.New()
 	taskList := "range-complete-task-tl0"
 	wfExec := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("range-complete-task-test"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "range-complete-task-test",
+		RunID:      uuid.New(),
 	}
 	_, err := s.CreateActivityTasks(ctx, domainID, wfExec, map[int64]string{
 		10: taskList,

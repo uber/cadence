@@ -103,8 +103,8 @@ func (s *workflowResetterSuite) SetupTest() {
 	s.newContext = execution.NewContext(
 		s.domainID,
 		types.WorkflowExecution{
-			WorkflowID: common.StringPtr(s.workflowID),
-			RunID:      common.StringPtr(s.newRunID),
+			WorkflowID: s.workflowID,
+			RunID:      s.newRunID,
 		},
 		s.mockShard,
 		nil,
@@ -252,9 +252,9 @@ func (s *workflowResetterSuite) TestResetWorkflow_Error() {
 	s.True(isRetryError)
 	expectedErr := &types.RetryTaskV2Error{
 		Message:         resendOnResetWorkflowMessage,
-		DomainID:        common.StringPtr(s.domainID),
-		WorkflowID:      common.StringPtr(s.workflowID),
-		RunID:           common.StringPtr(s.newRunID),
+		DomainID:        s.domainID,
+		WorkflowID:      s.workflowID,
+		RunID:           s.newRunID,
 		EndEventID:      common.Int64Ptr(incomingFirstEventID),
 		EndEventVersion: common.Int64Ptr(incomingFirstEventVersion),
 	}

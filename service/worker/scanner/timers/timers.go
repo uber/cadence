@@ -50,6 +50,7 @@ const (
 	// FixerWFTypeName defines workflow type name for timers fixer
 	FixerWFTypeName   = "cadence-sys-timers-fixer-workflow"
 	fixerTaskListName = "cadence-sys-timers-fixer-tasklist-0"
+	fixerwfid         = "cadence-sys-timers-fixer"
 	periodStartKey    = "period_start"
 	periodEndKey      = "period_end"
 
@@ -109,7 +110,6 @@ func Manager(
 	_ context.Context,
 	pr persistence.Retryer,
 	_ shardscanner.ScanShardActivityParams,
-	_ shardscanner.ScannerConfig,
 ) invariant.Manager {
 	return invariant.NewInvariantManager(getInvariants(pr))
 }
@@ -119,7 +119,6 @@ func Iterator(
 	ctx context.Context,
 	pr persistence.Retryer,
 	params shardscanner.ScanShardActivityParams,
-	_ shardscanner.ScannerConfig,
 ) pagination.Iterator {
 	start, err := strconv.Atoi(params.ScannerConfig[periodStartKey])
 	if err != nil {
@@ -143,7 +142,6 @@ func FixerIterator(
 	client blobstore.Client,
 	keys store.Keys,
 	_ shardscanner.FixShardActivityParams,
-	_ shardscanner.ScannerConfig,
 ) store.ScanOutputIterator {
 	return store.NewBlobstoreIterator(ctx, client, keys, &entity.Timer{})
 }
@@ -153,7 +151,6 @@ func FixerManager(
 	_ context.Context,
 	pr persistence.Retryer,
 	_ shardscanner.FixShardActivityParams,
-	_ shardscanner.ScannerConfig,
 ) invariant.Manager {
 	return invariant.NewInvariantManager(getInvariants(pr))
 }
@@ -183,10 +180,17 @@ func ScannerConfig(dc *dynamicconfig.Collection) *shardscanner.ScannerConfig {
 		DynamicCollection: dc,
 		ScannerHooks:      ScannerHooks,
 		FixerHooks:        FixerHooks,
-		FixerTLName:       fixerTaskListName,
+
 		StartWorkflowOptions: client.StartWorkflowOptions{
 			ID:                           wfid,
 			TaskList:                     scannerTaskListName,
+			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
+			WorkflowIDReusePolicy:        client.WorkflowIDReusePolicyAllowDuplicate,
+			CronSchedule:                 "* * * * *",
+		},
+		StartFixerOptions: client.StartWorkflowOptions{
+			ID:                           fixerwfid,
+			TaskList:                     fixerTaskListName,
 			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
 			WorkflowIDReusePolicy:        client.WorkflowIDReusePolicyAllowDuplicate,
 			CronSchedule:                 "* * * * *",

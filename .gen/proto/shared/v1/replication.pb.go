@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -30,15 +30,10 @@ import (
 	io "io"
 	math "math"
 	math_bits "math/bits"
-	reflect "reflect"
-	strconv "strconv"
-	strings "strings"
-	time "time"
 
-	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
-	github_com_gogo_protobuf_types "github.com/gogo/protobuf/types"
-	_ "github.com/golang/protobuf/ptypes/timestamp"
+	types "github.com/gogo/protobuf/types"
+
 	v1 "github.com/uber/cadence/.gen/proto/api/v1"
 )
 
@@ -46,7 +41,6 @@ import (
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = time.Kitchen
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -57,14 +51,14 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 type ReplicationTaskType int32
 
 const (
-	REPLICATION_TASK_TYPE_INVALID           ReplicationTaskType = 0
-	REPLICATION_TASK_TYPE_DOMAIN            ReplicationTaskType = 1
-	REPLICATION_TASK_TYPE_HISTORY           ReplicationTaskType = 2
-	REPLICATION_TASK_TYPE_SYNC_SHARD_STATUS ReplicationTaskType = 3
-	REPLICATION_TASK_TYPE_SYNC_ACTIVITY     ReplicationTaskType = 4
-	REPLICATION_TASK_TYPE_HISTORY_METADATA  ReplicationTaskType = 5
-	REPLICATION_TASK_TYPE_HISTORY_V2        ReplicationTaskType = 6
-	REPLICATION_TASK_TYPE_FAILOVER_MARKER   ReplicationTaskType = 7
+	ReplicationTaskType_REPLICATION_TASK_TYPE_INVALID           ReplicationTaskType = 0
+	ReplicationTaskType_REPLICATION_TASK_TYPE_DOMAIN            ReplicationTaskType = 1
+	ReplicationTaskType_REPLICATION_TASK_TYPE_HISTORY           ReplicationTaskType = 2
+	ReplicationTaskType_REPLICATION_TASK_TYPE_SYNC_SHARD_STATUS ReplicationTaskType = 3
+	ReplicationTaskType_REPLICATION_TASK_TYPE_SYNC_ACTIVITY     ReplicationTaskType = 4
+	ReplicationTaskType_REPLICATION_TASK_TYPE_HISTORY_METADATA  ReplicationTaskType = 5
+	ReplicationTaskType_REPLICATION_TASK_TYPE_HISTORY_V2        ReplicationTaskType = 6
+	ReplicationTaskType_REPLICATION_TASK_TYPE_FAILOVER_MARKER   ReplicationTaskType = 7
 )
 
 var ReplicationTaskType_name = map[int32]string{
@@ -89,6 +83,10 @@ var ReplicationTaskType_value = map[string]int32{
 	"REPLICATION_TASK_TYPE_FAILOVER_MARKER":   7,
 }
 
+func (x ReplicationTaskType) String() string {
+	return proto.EnumName(ReplicationTaskType_name, int32(x))
+}
+
 func (ReplicationTaskType) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_00df2ec6c2eaefe5, []int{0}
 }
@@ -96,9 +94,9 @@ func (ReplicationTaskType) EnumDescriptor() ([]byte, []int) {
 type DomainOperation int32
 
 const (
-	DOMAIN_OPERATION_INVALID DomainOperation = 0
-	DOMAIN_OPERATION_CREATE  DomainOperation = 1
-	DOMAIN_OPERATION_UPDATE  DomainOperation = 2
+	DomainOperation_DOMAIN_OPERATION_INVALID DomainOperation = 0
+	DomainOperation_DOMAIN_OPERATION_CREATE  DomainOperation = 1
+	DomainOperation_DOMAIN_OPERATION_UPDATE  DomainOperation = 2
 )
 
 var DomainOperation_name = map[int32]string{
@@ -113,6 +111,10 @@ var DomainOperation_value = map[string]int32{
 	"DOMAIN_OPERATION_UPDATE":  2,
 }
 
+func (x DomainOperation) String() string {
+	return proto.EnumName(DomainOperation_name, int32(x))
+}
+
 func (DomainOperation) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_00df2ec6c2eaefe5, []int{1}
 }
@@ -120,9 +122,9 @@ func (DomainOperation) EnumDescriptor() ([]byte, []int) {
 type DLQType int32
 
 const (
-	DLQ_TYPE_INVALID     DLQType = 0
-	DLQ_TYPE_REPLICATION DLQType = 1
-	DLQ_TYPE_DOMAIN      DLQType = 2
+	DLQType_DLQ_TYPE_INVALID     DLQType = 0
+	DLQType_DLQ_TYPE_REPLICATION DLQType = 1
+	DLQType_DLQ_TYPE_DOMAIN      DLQType = 2
 )
 
 var DLQType_name = map[int32]string{
@@ -137,6 +139,10 @@ var DLQType_value = map[string]int32{
 	"DLQ_TYPE_DOMAIN":      2,
 }
 
+func (x DLQType) String() string {
+	return proto.EnumName(DLQType_name, int32(x))
+}
+
 func (DLQType) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_00df2ec6c2eaefe5, []int{2}
 }
@@ -147,12 +153,16 @@ type ReplicationMessages struct {
 	//because sender can decide to skip tasks (e.g. for completed workflows).
 	LastRetrievedMessageId int64 `protobuf:"varint,2,opt,name=last_retrieved_message_id,json=lastRetrievedMessageId,proto3" json:"last_retrieved_message_id,omitempty"`
 	// Hint for flow control.
-	HasMore         bool             `protobuf:"varint,3,opt,name=has_more,json=hasMore,proto3" json:"has_more,omitempty"`
-	SyncShardStatus *SyncShardStatus `protobuf:"bytes,4,opt,name=sync_shard_status,json=syncShardStatus,proto3" json:"sync_shard_status,omitempty"`
+	HasMore              bool             `protobuf:"varint,3,opt,name=has_more,json=hasMore,proto3" json:"has_more,omitempty"`
+	SyncShardStatus      *SyncShardStatus `protobuf:"bytes,4,opt,name=sync_shard_status,json=syncShardStatus,proto3" json:"sync_shard_status,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
+	XXX_unrecognized     []byte           `json:"-"`
+	XXX_sizecache        int32            `json:"-"`
 }
 
-func (m *ReplicationMessages) Reset()      { *m = ReplicationMessages{} }
-func (*ReplicationMessages) ProtoMessage() {}
+func (m *ReplicationMessages) Reset()         { *m = ReplicationMessages{} }
+func (m *ReplicationMessages) String() string { return proto.CompactTextString(m) }
+func (*ReplicationMessages) ProtoMessage()    {}
 func (*ReplicationMessages) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00df2ec6c2eaefe5, []int{0}
 }
@@ -214,18 +224,22 @@ func (m *ReplicationMessages) GetSyncShardStatus() *SyncShardStatus {
 type ReplicationTask struct {
 	TaskType     ReplicationTaskType `protobuf:"varint,1,opt,name=task_type,json=taskType,proto3,enum=uber.cadence.shared.v1.ReplicationTaskType" json:"task_type,omitempty"`
 	SourceTaskId int64               `protobuf:"varint,2,opt,name=source_task_id,json=sourceTaskId,proto3" json:"source_task_id,omitempty"`
-	CreationTime *time.Time          `protobuf:"bytes,3,opt,name=creation_time,json=creationTime,proto3,stdtime" json:"creation_time,omitempty"`
+	CreationTime *types.Timestamp    `protobuf:"bytes,3,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty"`
 	// Types that are valid to be assigned to Attributes:
 	//	*ReplicationTask_DomainTaskAttributes
 	//	*ReplicationTask_SyncShardStatusTaskAttributes
 	//	*ReplicationTask_SyncActivityTaskAttributes
 	//	*ReplicationTask_HistoryTaskV2Attributes
 	//	*ReplicationTask_FailoverMarkerAttributes
-	Attributes isReplicationTask_Attributes `protobuf_oneof:"attributes"`
+	Attributes           isReplicationTask_Attributes `protobuf_oneof:"attributes"`
+	XXX_NoUnkeyedLiteral struct{}                     `json:"-"`
+	XXX_unrecognized     []byte                       `json:"-"`
+	XXX_sizecache        int32                        `json:"-"`
 }
 
-func (m *ReplicationTask) Reset()      { *m = ReplicationTask{} }
-func (*ReplicationTask) ProtoMessage() {}
+func (m *ReplicationTask) Reset()         { *m = ReplicationTask{} }
+func (m *ReplicationTask) String() string { return proto.CompactTextString(m) }
+func (*ReplicationTask) ProtoMessage()    {}
 func (*ReplicationTask) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00df2ec6c2eaefe5, []int{1}
 }
@@ -258,7 +272,6 @@ var xxx_messageInfo_ReplicationTask proto.InternalMessageInfo
 
 type isReplicationTask_Attributes interface {
 	isReplicationTask_Attributes()
-	Equal(interface{}) bool
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
@@ -296,7 +309,7 @@ func (m *ReplicationTask) GetTaskType() ReplicationTaskType {
 	if m != nil {
 		return m.TaskType
 	}
-	return REPLICATION_TASK_TYPE_INVALID
+	return ReplicationTaskType_REPLICATION_TASK_TYPE_INVALID
 }
 
 func (m *ReplicationTask) GetSourceTaskId() int64 {
@@ -306,7 +319,7 @@ func (m *ReplicationTask) GetSourceTaskId() int64 {
 	return 0
 }
 
-func (m *ReplicationTask) GetCreationTime() *time.Time {
+func (m *ReplicationTask) GetCreationTime() *types.Timestamp {
 	if m != nil {
 		return m.CreationTime
 	}
@@ -360,18 +373,20 @@ func (*ReplicationTask) XXX_OneofWrappers() []interface{} {
 }
 
 type DomainTaskAttributes struct {
-	DomainOperation         DomainOperation                    `protobuf:"varint,1,opt,name=domain_operation,json=domainOperation,proto3,enum=uber.cadence.shared.v1.DomainOperation" json:"domain_operation,omitempty"`
-	Id                      string                             `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
-	Info                    *v1.DomainInfo                     `protobuf:"bytes,3,opt,name=info,proto3" json:"info,omitempty"`
-	Config                  *v1.DomainConfiguration            `protobuf:"bytes,4,opt,name=config,proto3" json:"config,omitempty"`
-	ReplicationConfig       *v1.DomainReplicationConfiguration `protobuf:"bytes,5,opt,name=replication_config,json=replicationConfig,proto3" json:"replication_config,omitempty"`
-	ConfigVersion           int64                              `protobuf:"varint,6,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
-	FailoverVersion         int64                              `protobuf:"varint,7,opt,name=failover_version,json=failoverVersion,proto3" json:"failover_version,omitempty"`
-	PreviousFailoverVersion int64                              `protobuf:"varint,8,opt,name=previous_failover_version,json=previousFailoverVersion,proto3" json:"previous_failover_version,omitempty"`
+	DomainOperation         DomainOperation `protobuf:"varint,1,opt,name=domain_operation,json=domainOperation,proto3,enum=uber.cadence.shared.v1.DomainOperation" json:"domain_operation,omitempty"`
+	Id                      string          `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Domain                  *v1.Domain      `protobuf:"bytes,3,opt,name=domain,proto3" json:"domain,omitempty"`
+	ConfigVersion           int64           `protobuf:"varint,4,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
+	FailoverVersion         int64           `protobuf:"varint,5,opt,name=failover_version,json=failoverVersion,proto3" json:"failover_version,omitempty"`
+	PreviousFailoverVersion int64           `protobuf:"varint,6,opt,name=previous_failover_version,json=previousFailoverVersion,proto3" json:"previous_failover_version,omitempty"`
+	XXX_NoUnkeyedLiteral    struct{}        `json:"-"`
+	XXX_unrecognized        []byte          `json:"-"`
+	XXX_sizecache           int32           `json:"-"`
 }
 
-func (m *DomainTaskAttributes) Reset()      { *m = DomainTaskAttributes{} }
-func (*DomainTaskAttributes) ProtoMessage() {}
+func (m *DomainTaskAttributes) Reset()         { *m = DomainTaskAttributes{} }
+func (m *DomainTaskAttributes) String() string { return proto.CompactTextString(m) }
+func (*DomainTaskAttributes) ProtoMessage()    {}
 func (*DomainTaskAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00df2ec6c2eaefe5, []int{2}
 }
@@ -406,7 +421,7 @@ func (m *DomainTaskAttributes) GetDomainOperation() DomainOperation {
 	if m != nil {
 		return m.DomainOperation
 	}
-	return DOMAIN_OPERATION_INVALID
+	return DomainOperation_DOMAIN_OPERATION_INVALID
 }
 
 func (m *DomainTaskAttributes) GetId() string {
@@ -416,23 +431,9 @@ func (m *DomainTaskAttributes) GetId() string {
 	return ""
 }
 
-func (m *DomainTaskAttributes) GetInfo() *v1.DomainInfo {
+func (m *DomainTaskAttributes) GetDomain() *v1.Domain {
 	if m != nil {
-		return m.Info
-	}
-	return nil
-}
-
-func (m *DomainTaskAttributes) GetConfig() *v1.DomainConfiguration {
-	if m != nil {
-		return m.Config
-	}
-	return nil
-}
-
-func (m *DomainTaskAttributes) GetReplicationConfig() *v1.DomainReplicationConfiguration {
-	if m != nil {
-		return m.ReplicationConfig
+		return m.Domain
 	}
 	return nil
 }
@@ -459,13 +460,17 @@ func (m *DomainTaskAttributes) GetPreviousFailoverVersion() int64 {
 }
 
 type SyncShardStatusTaskAttributes struct {
-	SourceCluster string     `protobuf:"bytes,1,opt,name=source_cluster,json=sourceCluster,proto3" json:"source_cluster,omitempty"`
-	ShardId       int32      `protobuf:"varint,2,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
-	Timestamp     *time.Time `protobuf:"bytes,3,opt,name=timestamp,proto3,stdtime" json:"timestamp,omitempty"`
+	SourceCluster        string           `protobuf:"bytes,1,opt,name=source_cluster,json=sourceCluster,proto3" json:"source_cluster,omitempty"`
+	ShardId              int32            `protobuf:"varint,2,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
+	Timestamp            *types.Timestamp `protobuf:"bytes,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
+	XXX_unrecognized     []byte           `json:"-"`
+	XXX_sizecache        int32            `json:"-"`
 }
 
-func (m *SyncShardStatusTaskAttributes) Reset()      { *m = SyncShardStatusTaskAttributes{} }
-func (*SyncShardStatusTaskAttributes) ProtoMessage() {}
+func (m *SyncShardStatusTaskAttributes) Reset()         { *m = SyncShardStatusTaskAttributes{} }
+func (m *SyncShardStatusTaskAttributes) String() string { return proto.CompactTextString(m) }
+func (*SyncShardStatusTaskAttributes) ProtoMessage()    {}
 func (*SyncShardStatusTaskAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00df2ec6c2eaefe5, []int{3}
 }
@@ -510,7 +515,7 @@ func (m *SyncShardStatusTaskAttributes) GetShardId() int32 {
 	return 0
 }
 
-func (m *SyncShardStatusTaskAttributes) GetTimestamp() *time.Time {
+func (m *SyncShardStatusTaskAttributes) GetTimestamp() *types.Timestamp {
 	if m != nil {
 		return m.Timestamp
 	}
@@ -518,23 +523,27 @@ func (m *SyncShardStatusTaskAttributes) GetTimestamp() *time.Time {
 }
 
 type SyncActivityTaskAttributes struct {
-	DomainId           string                `protobuf:"bytes,1,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
-	WorkflowExecution  *v1.WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	Version            int64                 `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
-	ScheduledId        int64                 `protobuf:"varint,4,opt,name=scheduled_id,json=scheduledId,proto3" json:"scheduled_id,omitempty"`
-	ScheduledTime      *time.Time            `protobuf:"bytes,5,opt,name=scheduled_time,json=scheduledTime,proto3,stdtime" json:"scheduled_time,omitempty"`
-	StartedId          int64                 `protobuf:"varint,6,opt,name=started_id,json=startedId,proto3" json:"started_id,omitempty"`
-	StartedTime        *time.Time            `protobuf:"bytes,7,opt,name=started_time,json=startedTime,proto3,stdtime" json:"started_time,omitempty"`
-	LastHeartbeatTime  *time.Time            `protobuf:"bytes,8,opt,name=last_heartbeat_time,json=lastHeartbeatTime,proto3,stdtime" json:"last_heartbeat_time,omitempty"`
-	Details            *v1.Payload           `protobuf:"bytes,9,opt,name=details,proto3" json:"details,omitempty"`
-	Attempt            int32                 `protobuf:"varint,10,opt,name=attempt,proto3" json:"attempt,omitempty"`
-	LastFailure        *v1.Failure           `protobuf:"bytes,11,opt,name=last_failure,json=lastFailure,proto3" json:"last_failure,omitempty"`
-	LastWorkerIdentity string                `protobuf:"bytes,12,opt,name=last_worker_identity,json=lastWorkerIdentity,proto3" json:"last_worker_identity,omitempty"`
-	VersionHistory     *VersionHistory       `protobuf:"bytes,13,opt,name=version_history,json=versionHistory,proto3" json:"version_history,omitempty"`
+	DomainId             string                `protobuf:"bytes,1,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
+	WorkflowExecution    *v1.WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	Version              int64                 `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
+	ScheduledId          int64                 `protobuf:"varint,4,opt,name=scheduled_id,json=scheduledId,proto3" json:"scheduled_id,omitempty"`
+	ScheduledTime        *types.Timestamp      `protobuf:"bytes,5,opt,name=scheduled_time,json=scheduledTime,proto3" json:"scheduled_time,omitempty"`
+	StartedId            int64                 `protobuf:"varint,6,opt,name=started_id,json=startedId,proto3" json:"started_id,omitempty"`
+	StartedTime          *types.Timestamp      `protobuf:"bytes,7,opt,name=started_time,json=startedTime,proto3" json:"started_time,omitempty"`
+	LastHeartbeatTime    *types.Timestamp      `protobuf:"bytes,8,opt,name=last_heartbeat_time,json=lastHeartbeatTime,proto3" json:"last_heartbeat_time,omitempty"`
+	Details              *v1.Payload           `protobuf:"bytes,9,opt,name=details,proto3" json:"details,omitempty"`
+	Attempt              int32                 `protobuf:"varint,10,opt,name=attempt,proto3" json:"attempt,omitempty"`
+	LastFailure          *v1.Failure           `protobuf:"bytes,11,opt,name=last_failure,json=lastFailure,proto3" json:"last_failure,omitempty"`
+	LastWorkerIdentity   string                `protobuf:"bytes,12,opt,name=last_worker_identity,json=lastWorkerIdentity,proto3" json:"last_worker_identity,omitempty"`
+	VersionHistory       *VersionHistory       `protobuf:"bytes,13,opt,name=version_history,json=versionHistory,proto3" json:"version_history,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
-func (m *SyncActivityTaskAttributes) Reset()      { *m = SyncActivityTaskAttributes{} }
-func (*SyncActivityTaskAttributes) ProtoMessage() {}
+func (m *SyncActivityTaskAttributes) Reset()         { *m = SyncActivityTaskAttributes{} }
+func (m *SyncActivityTaskAttributes) String() string { return proto.CompactTextString(m) }
+func (*SyncActivityTaskAttributes) ProtoMessage()    {}
 func (*SyncActivityTaskAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00df2ec6c2eaefe5, []int{4}
 }
@@ -593,7 +602,7 @@ func (m *SyncActivityTaskAttributes) GetScheduledId() int64 {
 	return 0
 }
 
-func (m *SyncActivityTaskAttributes) GetScheduledTime() *time.Time {
+func (m *SyncActivityTaskAttributes) GetScheduledTime() *types.Timestamp {
 	if m != nil {
 		return m.ScheduledTime
 	}
@@ -607,14 +616,14 @@ func (m *SyncActivityTaskAttributes) GetStartedId() int64 {
 	return 0
 }
 
-func (m *SyncActivityTaskAttributes) GetStartedTime() *time.Time {
+func (m *SyncActivityTaskAttributes) GetStartedTime() *types.Timestamp {
 	if m != nil {
 		return m.StartedTime
 	}
 	return nil
 }
 
-func (m *SyncActivityTaskAttributes) GetLastHeartbeatTime() *time.Time {
+func (m *SyncActivityTaskAttributes) GetLastHeartbeatTime() *types.Timestamp {
 	if m != nil {
 		return m.LastHeartbeatTime
 	}
@@ -663,11 +672,15 @@ type HistoryTaskV2Attributes struct {
 	VersionHistoryItems []*VersionHistoryItem `protobuf:"bytes,4,rep,name=version_history_items,json=versionHistoryItems,proto3" json:"version_history_items,omitempty"`
 	Events              *v1.DataBlob          `protobuf:"bytes,5,opt,name=events,proto3" json:"events,omitempty"`
 	// New run events does not need version history since there is no prior events.
-	NewRunEvents *v1.DataBlob `protobuf:"bytes,6,opt,name=new_run_events,json=newRunEvents,proto3" json:"new_run_events,omitempty"`
+	NewRunEvents         *v1.DataBlob `protobuf:"bytes,6,opt,name=new_run_events,json=newRunEvents,proto3" json:"new_run_events,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
 }
 
-func (m *HistoryTaskV2Attributes) Reset()      { *m = HistoryTaskV2Attributes{} }
-func (*HistoryTaskV2Attributes) ProtoMessage() {}
+func (m *HistoryTaskV2Attributes) Reset()         { *m = HistoryTaskV2Attributes{} }
+func (m *HistoryTaskV2Attributes) String() string { return proto.CompactTextString(m) }
+func (*HistoryTaskV2Attributes) ProtoMessage()    {}
 func (*HistoryTaskV2Attributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00df2ec6c2eaefe5, []int{5}
 }
@@ -741,13 +754,17 @@ func (m *HistoryTaskV2Attributes) GetNewRunEvents() *v1.DataBlob {
 }
 
 type FailoverMarkerAttributes struct {
-	DomainId        string     `protobuf:"bytes,1,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
-	FailoverVersion int64      `protobuf:"varint,2,opt,name=failover_version,json=failoverVersion,proto3" json:"failover_version,omitempty"`
-	CreationTime    *time.Time `protobuf:"bytes,3,opt,name=creation_time,json=creationTime,proto3,stdtime" json:"creation_time,omitempty"`
+	DomainId             string           `protobuf:"bytes,1,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
+	FailoverVersion      int64            `protobuf:"varint,2,opt,name=failover_version,json=failoverVersion,proto3" json:"failover_version,omitempty"`
+	CreationTime         *types.Timestamp `protobuf:"bytes,3,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
+	XXX_unrecognized     []byte           `json:"-"`
+	XXX_sizecache        int32            `json:"-"`
 }
 
-func (m *FailoverMarkerAttributes) Reset()      { *m = FailoverMarkerAttributes{} }
-func (*FailoverMarkerAttributes) ProtoMessage() {}
+func (m *FailoverMarkerAttributes) Reset()         { *m = FailoverMarkerAttributes{} }
+func (m *FailoverMarkerAttributes) String() string { return proto.CompactTextString(m) }
+func (*FailoverMarkerAttributes) ProtoMessage()    {}
 func (*FailoverMarkerAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00df2ec6c2eaefe5, []int{6}
 }
@@ -792,7 +809,7 @@ func (m *FailoverMarkerAttributes) GetFailoverVersion() int64 {
 	return 0
 }
 
-func (m *FailoverMarkerAttributes) GetCreationTime() *time.Time {
+func (m *FailoverMarkerAttributes) GetCreationTime() *types.Timestamp {
 	if m != nil {
 		return m.CreationTime
 	}
@@ -800,12 +817,16 @@ func (m *FailoverMarkerAttributes) GetCreationTime() *time.Time {
 }
 
 type FailoverMarkerToken struct {
-	ShardIds       []int32                   `protobuf:"varint,1,rep,packed,name=shard_ids,json=shardIds,proto3" json:"shard_ids,omitempty"`
-	FailoverMarker *FailoverMarkerAttributes `protobuf:"bytes,2,opt,name=failover_marker,json=failoverMarker,proto3" json:"failover_marker,omitempty"`
+	ShardIds             []int32                   `protobuf:"varint,1,rep,packed,name=shard_ids,json=shardIds,proto3" json:"shard_ids,omitempty"`
+	FailoverMarker       *FailoverMarkerAttributes `protobuf:"bytes,2,opt,name=failover_marker,json=failoverMarker,proto3" json:"failover_marker,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                  `json:"-"`
+	XXX_unrecognized     []byte                    `json:"-"`
+	XXX_sizecache        int32                     `json:"-"`
 }
 
-func (m *FailoverMarkerToken) Reset()      { *m = FailoverMarkerToken{} }
-func (*FailoverMarkerToken) ProtoMessage() {}
+func (m *FailoverMarkerToken) Reset()         { *m = FailoverMarkerToken{} }
+func (m *FailoverMarkerToken) String() string { return proto.CompactTextString(m) }
+func (*FailoverMarkerToken) ProtoMessage()    {}
 func (*FailoverMarkerToken) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00df2ec6c2eaefe5, []int{7}
 }
@@ -851,18 +872,22 @@ func (m *FailoverMarkerToken) GetFailoverMarker() *FailoverMarkerAttributes {
 }
 
 type ReplicationTaskInfo struct {
-	DomainId          string                `protobuf:"bytes,1,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
-	WorkflowExecution *v1.WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	TaskType          int32                 `protobuf:"varint,3,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"`
-	TaskId            int64                 `protobuf:"varint,4,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	Version           int64                 `protobuf:"varint,5,opt,name=version,proto3" json:"version,omitempty"`
-	FirstEventId      int64                 `protobuf:"varint,6,opt,name=first_event_id,json=firstEventId,proto3" json:"first_event_id,omitempty"`
-	NextEventId       int64                 `protobuf:"varint,7,opt,name=next_event_id,json=nextEventId,proto3" json:"next_event_id,omitempty"`
-	ScheduledId       int64                 `protobuf:"varint,8,opt,name=scheduled_id,json=scheduledId,proto3" json:"scheduled_id,omitempty"`
+	DomainId             string                `protobuf:"bytes,1,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
+	WorkflowExecution    *v1.WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	TaskType             int32                 `protobuf:"varint,3,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"`
+	TaskId               int64                 `protobuf:"varint,4,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	Version              int64                 `protobuf:"varint,5,opt,name=version,proto3" json:"version,omitempty"`
+	FirstEventId         int64                 `protobuf:"varint,6,opt,name=first_event_id,json=firstEventId,proto3" json:"first_event_id,omitempty"`
+	NextEventId          int64                 `protobuf:"varint,7,opt,name=next_event_id,json=nextEventId,proto3" json:"next_event_id,omitempty"`
+	ScheduledId          int64                 `protobuf:"varint,8,opt,name=scheduled_id,json=scheduledId,proto3" json:"scheduled_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
-func (m *ReplicationTaskInfo) Reset()      { *m = ReplicationTaskInfo{} }
-func (*ReplicationTaskInfo) ProtoMessage() {}
+func (m *ReplicationTaskInfo) Reset()         { *m = ReplicationTaskInfo{} }
+func (m *ReplicationTaskInfo) String() string { return proto.CompactTextString(m) }
+func (*ReplicationTaskInfo) ProtoMessage()    {}
 func (*ReplicationTaskInfo) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00df2ec6c2eaefe5, []int{8}
 }
@@ -955,11 +980,15 @@ type ReplicationToken struct {
 	LastRetrievedMessageId int64 `protobuf:"varint,2,opt,name=last_retrieved_message_id,json=lastRetrievedMessageId,proto3" json:"last_retrieved_message_id,omitempty"`
 	// lastProcessedMessageId is the last messageId that is processed on the passive side.
 	// This can be different than lastRetrievedMessageId if passive side supports prefetching messages.
-	LastProcessedMessageId int64 `protobuf:"varint,3,opt,name=last_processed_message_id,json=lastProcessedMessageId,proto3" json:"last_processed_message_id,omitempty"`
+	LastProcessedMessageId int64    `protobuf:"varint,3,opt,name=last_processed_message_id,json=lastProcessedMessageId,proto3" json:"last_processed_message_id,omitempty"`
+	XXX_NoUnkeyedLiteral   struct{} `json:"-"`
+	XXX_unrecognized       []byte   `json:"-"`
+	XXX_sizecache          int32    `json:"-"`
 }
 
-func (m *ReplicationToken) Reset()      { *m = ReplicationToken{} }
-func (*ReplicationToken) ProtoMessage() {}
+func (m *ReplicationToken) Reset()         { *m = ReplicationToken{} }
+func (m *ReplicationToken) String() string { return proto.CompactTextString(m) }
+func (*ReplicationToken) ProtoMessage()    {}
 func (*ReplicationToken) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00df2ec6c2eaefe5, []int{9}
 }
@@ -1012,11 +1041,15 @@ func (m *ReplicationToken) GetLastProcessedMessageId() int64 {
 }
 
 type SyncShardStatus struct {
-	Timestamp *time.Time `protobuf:"bytes,1,opt,name=timestamp,proto3,stdtime" json:"timestamp,omitempty"`
+	Timestamp            *types.Timestamp `protobuf:"bytes,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
+	XXX_unrecognized     []byte           `json:"-"`
+	XXX_sizecache        int32            `json:"-"`
 }
 
-func (m *SyncShardStatus) Reset()      { *m = SyncShardStatus{} }
-func (*SyncShardStatus) ProtoMessage() {}
+func (m *SyncShardStatus) Reset()         { *m = SyncShardStatus{} }
+func (m *SyncShardStatus) String() string { return proto.CompactTextString(m) }
+func (*SyncShardStatus) ProtoMessage()    {}
 func (*SyncShardStatus) Descriptor() ([]byte, []int) {
 	return fileDescriptor_00df2ec6c2eaefe5, []int{10}
 }
@@ -1047,7 +1080,7 @@ func (m *SyncShardStatus) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_SyncShardStatus proto.InternalMessageInfo
 
-func (m *SyncShardStatus) GetTimestamp() *time.Time {
+func (m *SyncShardStatus) GetTimestamp() *types.Timestamp {
 	if m != nil {
 		return m.Timestamp
 	}
@@ -1072,934 +1105,108 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("github.com/uber/cadence/.gen/proto/shared/v1/replication.proto", fileDescriptor_00df2ec6c2eaefe5)
+	proto.RegisterFile("uber/cadence/shared/v1/replication.proto", fileDescriptor_00df2ec6c2eaefe5)
 }
 
 var fileDescriptor_00df2ec6c2eaefe5 = []byte{
-	// 1602 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x57, 0xcf, 0x6f, 0x22, 0xc9,
-	0x15, 0xa6, 0xc1, 0x06, 0xfc, 0x8c, 0x81, 0x29, 0x3b, 0x63, 0xc6, 0x63, 0x33, 0x0c, 0xf1, 0xae,
-	0xbd, 0xde, 0x08, 0x76, 0x3c, 0xda, 0x48, 0xc9, 0x61, 0x13, 0x0c, 0x38, 0x6e, 0xad, 0x7f, 0x4d,
-	0xd1, 0xe3, 0x95, 0x73, 0x48, 0xab, 0x4d, 0x17, 0x76, 0xcb, 0xd0, 0x8d, 0xba, 0x0a, 0xbc, 0xdc,
-	0x92, 0xdc, 0x23, 0xed, 0x29, 0x97, 0x9c, 0xa2, 0x5c, 0x92, 0x7f, 0x24, 0xca, 0xd1, 0xc7, 0xbd,
-	0x25, 0x83, 0x2f, 0x39, 0xee, 0x9f, 0x10, 0x75, 0x55, 0x35, 0xd0, 0xfc, 0x12, 0xab, 0x8d, 0xb4,
-	0x37, 0xfa, 0xbd, 0xef, 0x7b, 0x5f, 0x55, 0xbd, 0x57, 0xaf, 0x1e, 0xb0, 0xdf, 0xb9, 0x21, 0x6e,
-	0xb1, 0x6e, 0x98, 0xc4, 0xae, 0x93, 0x22, 0xbd, 0x33, 0x5c, 0x62, 0x16, 0xbb, 0x6f, 0x8a, 0x2e,
-	0x69, 0x37, 0xad, 0xba, 0xc1, 0x2c, 0xc7, 0x2e, 0xb4, 0x5d, 0x87, 0x39, 0xe8, 0xb9, 0x87, 0x2c,
-	0x48, 0x64, 0x41, 0x20, 0x0b, 0xdd, 0x37, 0x5b, 0xaf, 0x6e, 0x1d, 0xe7, 0xb6, 0x49, 0x8a, 0x1c,
-	0x75, 0xd3, 0x69, 0x14, 0x99, 0xd5, 0x22, 0x94, 0x19, 0xad, 0xb6, 0x20, 0x6e, 0x6d, 0x9b, 0xa4,
-	0x4d, 0x6c, 0x8f, 0x66, 0x11, 0x5a, 0xbc, 0x75, 0x6e, 0x1d, 0x6e, 0x97, 0xde, 0x5c, 0x60, 0x01,
-	0x46, 0xdb, 0xf2, 0xd4, 0xeb, 0x4e, 0xab, 0xe5, 0x0b, 0x4f, 0x47, 0x98, 0x4e, 0xcb, 0xb0, 0x7c,
-	0xc4, 0xee, 0x8c, 0x4d, 0xdc, 0x59, 0x94, 0x39, 0x6e, 0x4f, 0xa0, 0xf2, 0x7f, 0x0e, 0xc3, 0x3a,
-	0x1e, 0x6e, 0xeb, 0x8c, 0x50, 0x6a, 0xdc, 0x12, 0x8a, 0x34, 0x78, 0x36, 0xb2, 0x5b, 0x9d, 0x19,
-	0xf4, 0x9e, 0x66, 0x94, 0x5c, 0x64, 0x7f, 0xf5, 0x70, 0xaf, 0x30, 0x7d, 0xd3, 0x85, 0x91, 0x38,
-	0x9a, 0x41, 0xef, 0x71, 0xda, 0x0d, 0x1a, 0x28, 0xfa, 0x05, 0xbc, 0x68, 0x1a, 0x94, 0xe9, 0x2e,
-	0x61, 0xae, 0x45, 0xba, 0xc4, 0xd4, 0x5b, 0x42, 0x50, 0xb7, 0xcc, 0x4c, 0x38, 0xa7, 0xec, 0x47,
-	0xf0, 0x73, 0x0f, 0x80, 0x7d, 0xbf, 0x5c, 0x8f, 0x6a, 0xa2, 0x17, 0x10, 0xbf, 0x33, 0xa8, 0xde,
-	0x72, 0x5c, 0x92, 0x89, 0xe4, 0x94, 0xfd, 0x38, 0x8e, 0xdd, 0x19, 0xf4, 0xcc, 0x71, 0x09, 0xaa,
-	0xc1, 0x33, 0xda, 0xb3, 0xeb, 0xba, 0xb7, 0x12, 0x53, 0xa7, 0xcc, 0x60, 0x1d, 0x9a, 0x59, 0xca,
-	0x29, 0xf3, 0xd6, 0x5a, 0xeb, 0xd9, 0xf5, 0x9a, 0x87, 0xaf, 0x71, 0x38, 0x4e, 0xd1, 0xa0, 0x21,
-	0xff, 0x97, 0x28, 0xa4, 0xc6, 0x36, 0x84, 0x4e, 0x60, 0xc5, 0x3b, 0x08, 0x9d, 0xf5, 0xda, 0x24,
-	0xa3, 0xe4, 0x94, 0xfd, 0xe4, 0xe1, 0xa7, 0x0b, 0x1e, 0x86, 0xd6, 0x6b, 0x13, 0x1c, 0x67, 0xf2,
-	0x17, 0xda, 0x85, 0x24, 0x75, 0x3a, 0x6e, 0x9d, 0xf0, 0x93, 0x1d, 0xee, 0x3e, 0x21, 0xac, 0x1e,
-	0x43, 0x35, 0x51, 0x15, 0xd6, 0xea, 0x2e, 0x91, 0x19, 0xb0, 0x5a, 0x62, 0xe3, 0xab, 0x87, 0x5b,
-	0x05, 0x51, 0x5d, 0x05, 0xbf, 0xba, 0x0a, 0x9a, 0x5f, 0x5d, 0x47, 0x4b, 0xdf, 0xfc, 0xfb, 0x95,
-	0x82, 0x13, 0x3e, 0xcd, 0x73, 0x20, 0x13, 0x9e, 0x8b, 0xca, 0x10, 0x62, 0x06, 0x63, 0xae, 0x75,
-	0xd3, 0x61, 0xc4, 0x3f, 0xa4, 0x9f, 0xcd, 0xda, 0x43, 0x85, 0xb3, 0xbc, 0xc5, 0x94, 0x06, 0x9c,
-	0x93, 0x10, 0xde, 0x30, 0xa7, 0xd8, 0xd1, 0x1f, 0x14, 0x78, 0x3d, 0x91, 0x86, 0x09, 0xc5, 0x65,
-	0xae, 0xf8, 0xf9, 0x82, 0x69, 0x99, 0x90, 0xde, 0xa1, 0xf3, 0x00, 0xe8, 0x01, 0x38, 0x40, 0x37,
-	0xea, 0xcc, 0xea, 0x5a, 0xac, 0x37, 0x21, 0x1f, 0xe5, 0xf2, 0x87, 0xf3, 0xe4, 0x4b, 0x92, 0x3b,
-	0xa1, 0xbd, 0x45, 0x67, 0x7a, 0x91, 0x0d, 0x5b, 0xf2, 0x5e, 0x09, 0xc9, 0xee, 0xe1, 0xa8, 0x6a,
-	0x8c, 0xab, 0x16, 0x67, 0xa9, 0x9e, 0x08, 0xa6, 0x17, 0xf2, 0xea, 0x30, 0x20, 0xb9, 0x79, 0x37,
-	0xdd, 0x85, 0xda, 0xb0, 0xd5, 0x30, 0xac, 0xa6, 0xd3, 0x25, 0xae, 0xde, 0x32, 0xdc, 0x7b, 0xe2,
-	0x8e, 0xea, 0xc5, 0xb9, 0xde, 0x67, 0xb3, 0xf4, 0x8e, 0x25, 0xf3, 0x8c, 0x13, 0x03, 0x82, 0x99,
-	0xc6, 0x0c, 0xdf, 0x51, 0x02, 0x60, 0xa8, 0x90, 0x7f, 0x8a, 0xc0, 0xc6, 0xb4, 0xea, 0x40, 0x18,
-	0xd2, 0xb2, 0xd6, 0x9c, 0x36, 0x71, 0x79, 0x0d, 0xca, 0x9b, 0xb2, 0x37, 0xbf, 0xca, 0x2e, 0x7c,
-	0x38, 0x4e, 0x99, 0x41, 0x03, 0x4a, 0x42, 0x58, 0x5e, 0x90, 0x15, 0x1c, 0xb6, 0x4c, 0xf4, 0x16,
-	0x96, 0x2c, 0xbb, 0xe1, 0xc8, 0xdb, 0xf0, 0x2a, 0x18, 0xd7, 0x68, 0x5b, 0xc3, 0xa0, 0xaa, 0xdd,
-	0x70, 0x30, 0x07, 0xa3, 0x5f, 0x43, 0xb4, 0xee, 0xd8, 0x0d, 0xeb, 0x56, 0x16, 0xfd, 0xfe, 0x1c,
-	0x5a, 0x99, 0x03, 0x3b, 0x72, 0x3d, 0x92, 0x87, 0x6e, 0x00, 0x8d, 0xb6, 0x44, 0x19, 0x4d, 0x14,
-	0xf4, 0xdb, 0x39, 0xd1, 0x46, 0x3a, 0x41, 0x30, 0xf0, 0x68, 0x87, 0x15, 0x1e, 0xf4, 0x11, 0x24,
-	0x45, 0x5c, 0xbd, 0x4b, 0x5c, 0xea, 0x1d, 0x5e, 0x94, 0xf7, 0x85, 0x35, 0x61, 0xbd, 0x12, 0x46,
-	0xf4, 0x09, 0xa4, 0x07, 0xe9, 0xf7, 0x81, 0x31, 0x0e, 0x4c, 0xf9, 0x76, 0x1f, 0xfa, 0x4b, 0x78,
-	0xd1, 0x76, 0x49, 0xd7, 0x72, 0x3a, 0x54, 0x9f, 0xe0, 0xc4, 0x39, 0x67, 0xd3, 0x07, 0x1c, 0x07,
-	0xb9, 0xf9, 0xbf, 0x2a, 0xb0, 0x33, 0xf7, 0x46, 0x7a, 0xeb, 0x95, 0x7d, 0xac, 0xde, 0xec, 0x50,
-	0x46, 0x5c, 0x9e, 0xec, 0x15, 0xbc, 0x26, 0xac, 0x65, 0x61, 0xf4, 0x9a, 0xb7, 0xe8, 0x0a, 0x32,
-	0x8f, 0xcb, 0x38, 0xc6, 0xbf, 0x55, 0x13, 0x7d, 0x01, 0x2b, 0x83, 0xb7, 0x71, 0xe1, 0xfe, 0x36,
-	0xa4, 0xe4, 0xfb, 0xcb, 0xb0, 0x35, 0xfb, 0xda, 0xa2, 0x97, 0xb0, 0x22, 0xeb, 0xd1, 0x32, 0xe5,
-	0xda, 0xe2, 0xc2, 0xa0, 0x9a, 0xe8, 0x3d, 0xa0, 0x07, 0xc7, 0xbd, 0x6f, 0x34, 0x9d, 0x07, 0x9d,
-	0x7c, 0x4d, 0xea, 0x1d, 0x5e, 0xae, 0x61, 0xbe, 0x88, 0x8f, 0xa7, 0x66, 0xf4, 0x2b, 0x09, 0xaf,
-	0xfa, 0x68, 0xfc, 0xec, 0x61, 0xdc, 0x84, 0x32, 0x10, 0xf3, 0x0f, 0x38, 0xc2, 0x0f, 0xd8, 0xff,
-	0x44, 0xaf, 0x21, 0x41, 0xeb, 0x77, 0xc4, 0xec, 0x34, 0x09, 0x3f, 0x8b, 0x25, 0xee, 0x5e, 0x1d,
-	0xd8, 0x54, 0x13, 0xfd, 0x06, 0x92, 0x43, 0x08, 0x6f, 0xfa, 0xcb, 0x0b, 0x1e, 0xca, 0xda, 0x80,
-	0xc7, 0xbb, 0xfe, 0x0e, 0x00, 0x65, 0x86, 0xcb, 0x84, 0x92, 0x28, 0xa3, 0x15, 0x69, 0x51, 0x4d,
-	0x54, 0x86, 0x84, 0xef, 0xe6, 0x2a, 0xb1, 0x05, 0x55, 0x56, 0x25, 0x8b, 0x6b, 0x5c, 0xc2, 0x3a,
-	0x7f, 0xcf, 0xef, 0x88, 0xe1, 0xb2, 0x1b, 0x62, 0x30, 0x11, 0x2b, 0xbe, 0x60, 0xac, 0x67, 0x1e,
-	0xf9, 0xc4, 0xe7, 0xf2, 0x88, 0x3f, 0x87, 0x98, 0x49, 0x98, 0x61, 0x35, 0x69, 0x66, 0x85, 0x47,
-	0xd9, 0x9e, 0x9a, 0x87, 0x4b, 0xa3, 0xd7, 0x74, 0x0c, 0x13, 0xfb, 0x60, 0xef, 0xcc, 0x0d, 0xc6,
-	0x48, 0xab, 0xcd, 0x32, 0x20, 0x0a, 0x4c, 0x7e, 0xa2, 0x5f, 0x41, 0x82, 0xaf, 0xd1, 0x2b, 0xfe,
-	0x8e, 0x4b, 0x32, 0xab, 0x73, 0xc2, 0x1e, 0x0b, 0x0c, 0x5e, 0xf5, 0x18, 0xf2, 0x03, 0x7d, 0x06,
-	0x1b, 0x3c, 0x80, 0x97, 0x68, 0xe2, 0xea, 0x96, 0x49, 0x6c, 0x66, 0xb1, 0x5e, 0x26, 0xc1, 0xab,
-	0x09, 0x79, 0xbe, 0xaf, 0xb8, 0x4b, 0x95, 0x1e, 0x74, 0x01, 0x29, 0x99, 0x71, 0x5d, 0x36, 0xf0,
-	0xcc, 0xda, 0xb4, 0xa2, 0x1a, 0xf6, 0x40, 0x79, 0xe3, 0xe4, 0x4b, 0x80, 0x93, 0xdd, 0xc0, 0x77,
-	0xfe, 0x8f, 0x11, 0xd8, 0x9c, 0xf1, 0x4a, 0xa0, 0x4d, 0x88, 0xf9, 0x33, 0x84, 0xc2, 0x93, 0x1c,
-	0x65, 0x62, 0x7a, 0x08, 0x94, 0x7e, 0x78, 0xa1, 0xd2, 0x8f, 0xfc, 0xd0, 0xd2, 0xff, 0x1d, 0xfc,
-	0x64, 0x6c, 0xe7, 0xba, 0xc5, 0x48, 0xcb, 0x9b, 0x34, 0xbc, 0xd1, 0xf1, 0x60, 0xb1, 0xfd, 0xab,
-	0x8c, 0xb4, 0xf0, 0x7a, 0x77, 0xc2, 0x46, 0xd1, 0xe7, 0x10, 0x25, 0x5d, 0x62, 0x33, 0x7f, 0x90,
-	0xd8, 0x99, 0xde, 0x77, 0x0d, 0x66, 0x1c, 0x35, 0x9d, 0x1b, 0x2c, 0xc1, 0xa8, 0x0c, 0x49, 0x9b,
-	0x3c, 0xe8, 0x6e, 0xc7, 0xd6, 0x25, 0x3d, 0xba, 0x08, 0x3d, 0x61, 0x93, 0x07, 0xdc, 0xb1, 0xab,
-	0x9c, 0x92, 0xff, 0x87, 0x02, 0x99, 0x59, 0x4f, 0xe7, 0xfc, 0x3e, 0x33, 0xad, 0x5d, 0x87, 0xa7,
-	0xb7, 0xeb, 0xff, 0xcf, 0xc8, 0x97, 0xff, 0x93, 0x02, 0xeb, 0xc1, 0xb5, 0x6a, 0xce, 0x3d, 0xb1,
-	0xbd, 0x65, 0xfa, 0x8d, 0x58, 0x8c, 0xf3, 0xcb, 0x38, 0x2e, 0x3b, 0x31, 0x45, 0xd7, 0x90, 0x1a,
-	0x1b, 0x2a, 0x64, 0x2f, 0xfc, 0xde, 0x93, 0x04, 0x4e, 0x06, 0xe7, 0x88, 0xfc, 0x3f, 0x83, 0x7f,
-	0x33, 0xf8, 0x7c, 0xeb, 0xbd, 0xca, 0x3f, 0x46, 0x7b, 0x7e, 0x39, 0x3a, 0xc5, 0x47, 0x78, 0xb3,
-	0x18, 0x0e, 0xe6, 0x23, 0xb7, 0x69, 0x29, 0x70, 0x9b, 0x46, 0x9a, 0xfa, 0x72, 0xb0, 0xa9, 0xef,
-	0x42, 0xb2, 0x61, 0xb9, 0x94, 0x89, 0xd2, 0x1a, 0x36, 0xdb, 0x04, 0xb7, 0xf2, 0xe2, 0x51, 0x4d,
-	0x94, 0x87, 0x35, 0x9b, 0x7c, 0x3d, 0x02, 0x12, 0xef, 0xf5, 0xaa, 0x67, 0xf4, 0x31, 0xe3, 0xcf,
-	0x43, 0x7c, 0xe2, 0x79, 0xc8, 0xff, 0x4d, 0x81, 0xf4, 0xe8, 0x41, 0xf2, 0xac, 0x8e, 0x3e, 0xaf,
-	0x4a, 0xf0, 0x79, 0xfd, 0x01, 0xff, 0xb8, 0x7c, 0x6a, 0xdb, 0x75, 0xea, 0x84, 0xd2, 0x20, 0x35,
-	0x32, 0xa4, 0x5e, 0xfa, 0xfe, 0x01, 0x35, 0xff, 0x0e, 0x52, 0x63, 0x73, 0x43, 0xf0, 0x9d, 0x57,
-	0xbe, 0xf7, 0x3b, 0x7f, 0xf0, 0x38, 0x59, 0x41, 0x3c, 0x61, 0xaf, 0x61, 0x07, 0x57, 0x2f, 0x4f,
-	0xd5, 0x72, 0x49, 0x53, 0x2f, 0xce, 0x75, 0xad, 0x54, 0xfb, 0x52, 0xd7, 0xae, 0x2f, 0xab, 0xba,
-	0x7a, 0x7e, 0x55, 0x3a, 0x55, 0x2b, 0xe9, 0x10, 0xca, 0xc1, 0xf6, 0x74, 0x48, 0xe5, 0xe2, 0xac,
-	0xa4, 0x9e, 0xa7, 0x95, 0xd9, 0x41, 0x4e, 0xd4, 0x9a, 0x76, 0x81, 0xaf, 0xd3, 0x61, 0xf4, 0x29,
-	0xec, 0x4d, 0x87, 0xd4, 0xae, 0xcf, 0xcb, 0x7a, 0xed, 0xa4, 0x84, 0x2b, 0x7a, 0x4d, 0x2b, 0x69,
-	0xef, 0x6b, 0xe9, 0x08, 0xda, 0x83, 0x9f, 0xce, 0x01, 0x97, 0xca, 0x9a, 0x7a, 0xa5, 0x6a, 0xd7,
-	0xe9, 0x25, 0x74, 0x00, 0x1f, 0xcf, 0x15, 0xd6, 0xcf, 0xaa, 0x5a, 0xa9, 0x52, 0xd2, 0x4a, 0xe9,
-	0x65, 0xb4, 0x0b, 0xb9, 0xf9, 0xd8, 0xab, 0xc3, 0x74, 0x14, 0x7d, 0x02, 0x1f, 0x4d, 0x47, 0x1d,
-	0x97, 0xd4, 0xd3, 0x8b, 0xab, 0x2a, 0xd6, 0xcf, 0x4a, 0xf8, 0xcb, 0x2a, 0x4e, 0xc7, 0x0e, 0x2c,
-	0x48, 0x8d, 0xcd, 0xde, 0x68, 0x1b, 0x32, 0xe2, 0x50, 0xf4, 0x8b, 0xcb, 0x2a, 0x16, 0x21, 0x86,
-	0x07, 0xf9, 0x12, 0x36, 0x27, 0xbc, 0x65, 0x5c, 0x2d, 0x69, 0xd5, 0xb4, 0x32, 0xd5, 0xf9, 0xfe,
-	0xb2, 0xe2, 0x39, 0xc3, 0x07, 0xe7, 0x10, 0xab, 0x9c, 0xbe, 0xe3, 0x09, 0xdb, 0x80, 0x74, 0xe5,
-	0xf4, 0xdd, 0x78, 0x8e, 0x32, 0xb0, 0x31, 0xb0, 0x8e, 0xac, 0x3f, 0xad, 0xa0, 0x75, 0x48, 0x0d,
-	0x3c, 0x32, 0x61, 0xe1, 0xa3, 0x2f, 0x1e, 0x3f, 0x64, 0x43, 0xdf, 0x7e, 0xc8, 0x86, 0xbe, 0xfb,
-	0x90, 0x55, 0x7e, 0xdf, 0xcf, 0x2a, 0x7f, 0xef, 0x67, 0x95, 0x7f, 0xf5, 0xb3, 0xca, 0x63, 0x3f,
-	0xab, 0xfc, 0xa7, 0x9f, 0x55, 0xfe, 0xdb, 0xcf, 0x86, 0xbe, 0xeb, 0x67, 0x95, 0x6f, 0x9e, 0xb2,
-	0xa1, 0xc7, 0xa7, 0x6c, 0xe8, 0xdb, 0xa7, 0x6c, 0xe8, 0xb7, 0x71, 0xd1, 0xb9, 0xba, 0x6f, 0x6e,
-	0xa2, 0xbc, 0xe4, 0xde, 0xfe, 0x2f, 0x00, 0x00, 0xff, 0xff, 0x9e, 0x7a, 0xee, 0x31, 0xea, 0x11,
+	// 1506 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x58, 0xcd, 0x72, 0x1a, 0x49,
+	0x12, 0x76, 0x83, 0xf8, 0x51, 0x0a, 0x01, 0x2a, 0x69, 0x2d, 0x2c, 0x59, 0x5e, 0xcc, 0xca, 0x96,
+	0x2c, 0x6f, 0x80, 0x2d, 0x87, 0x37, 0xf6, 0x27, 0x36, 0x1c, 0x6d, 0x81, 0x42, 0xbd, 0xd6, 0x9f,
+	0x8b, 0xb6, 0x1c, 0xda, 0xc3, 0x74, 0xb4, 0xe8, 0x92, 0xe8, 0x10, 0x74, 0x13, 0x5d, 0x05, 0x32,
+	0xc7, 0x99, 0xfb, 0x1c, 0x67, 0x2e, 0x73, 0x9c, 0xe7, 0x98, 0xeb, 0xc4, 0x1c, 0xfd, 0x08, 0x13,
+	0x7e, 0x92, 0x89, 0xae, 0xaa, 0x06, 0x1a, 0x1a, 0x2c, 0x87, 0x0f, 0x73, 0x53, 0x67, 0x7e, 0x5f,
+	0x66, 0x56, 0x66, 0x56, 0x66, 0x09, 0xd8, 0xee, 0x5e, 0x10, 0xaf, 0xd2, 0x30, 0x2d, 0xe2, 0x34,
+	0x48, 0x85, 0x36, 0x4d, 0x8f, 0x58, 0x95, 0xde, 0xf3, 0x8a, 0x47, 0x3a, 0x2d, 0xbb, 0x61, 0x32,
+	0xdb, 0x75, 0xca, 0x1d, 0xcf, 0x65, 0x2e, 0xba, 0xeb, 0x23, 0xcb, 0x12, 0x59, 0x16, 0xc8, 0x72,
+	0xef, 0xf9, 0xda, 0x5f, 0xaf, 0x5c, 0xf7, 0xaa, 0x45, 0x2a, 0x1c, 0x75, 0xd1, 0xbd, 0xac, 0x30,
+	0xbb, 0x4d, 0x28, 0x33, 0xdb, 0x1d, 0x41, 0x5c, 0x2b, 0x86, 0x5c, 0x98, 0x1d, 0xdb, 0xb7, 0xdf,
+	0x70, 0xdb, 0xed, 0xc0, 0x74, 0x34, 0xc2, 0x72, 0xdb, 0xa6, 0x1d, 0x20, 0x36, 0xa7, 0x84, 0xd9,
+	0xb4, 0x29, 0x73, 0xbd, 0xbe, 0x40, 0x95, 0x7e, 0x8c, 0xc1, 0x32, 0x1e, 0x06, 0x7e, 0x44, 0x28,
+	0x35, 0xaf, 0x08, 0x45, 0x3a, 0x2c, 0x8d, 0x9c, 0xc7, 0x60, 0x26, 0xbd, 0xa6, 0x05, 0xa5, 0x18,
+	0xdf, 0x5e, 0xd8, 0xdd, 0x2a, 0x47, 0x1f, 0xab, 0x3c, 0x62, 0x47, 0x37, 0xe9, 0x35, 0xce, 0x7b,
+	0x61, 0x01, 0x45, 0xff, 0x82, 0x7b, 0x2d, 0x93, 0x32, 0xc3, 0x23, 0xcc, 0xb3, 0x49, 0x8f, 0x58,
+	0x46, 0x5b, 0x38, 0x34, 0x6c, 0xab, 0x10, 0x2b, 0x2a, 0xdb, 0x71, 0x7c, 0xd7, 0x07, 0xe0, 0x40,
+	0x2f, 0xe3, 0xd1, 0x2c, 0x74, 0x0f, 0xd2, 0x4d, 0x93, 0x1a, 0x6d, 0xd7, 0x23, 0x85, 0x78, 0x51,
+	0xd9, 0x4e, 0xe3, 0x54, 0xd3, 0xa4, 0x47, 0xae, 0x47, 0x50, 0x1d, 0x96, 0x68, 0xdf, 0x69, 0x18,
+	0x7e, 0x24, 0x96, 0x41, 0x99, 0xc9, 0xba, 0xb4, 0x30, 0x57, 0x54, 0x66, 0xc5, 0x5a, 0xef, 0x3b,
+	0x8d, 0xba, 0x8f, 0xaf, 0x73, 0x38, 0xce, 0xd1, 0xb0, 0xa0, 0xf4, 0x43, 0x12, 0x72, 0x63, 0x07,
+	0x42, 0x07, 0x30, 0xef, 0x27, 0xc2, 0x60, 0xfd, 0x0e, 0x29, 0x28, 0x45, 0x65, 0x3b, 0xbb, 0xfb,
+	0xf4, 0x96, 0xc9, 0xd0, 0xfb, 0x1d, 0x82, 0xd3, 0x4c, 0xfe, 0x85, 0x36, 0x21, 0x4b, 0xdd, 0xae,
+	0xd7, 0x20, 0x3c, 0xb3, 0xc3, 0xd3, 0x67, 0x84, 0xd4, 0x67, 0x68, 0x16, 0x7a, 0x05, 0x8b, 0x0d,
+	0x8f, 0xc8, 0x0a, 0xd8, 0x6d, 0x71, 0xf0, 0x85, 0xdd, 0xb5, 0xb2, 0xe8, 0x9f, 0x72, 0xd0, 0x3f,
+	0x65, 0x3d, 0xe8, 0x1f, 0x9c, 0x09, 0x08, 0xbe, 0x08, 0x59, 0x70, 0x57, 0xf4, 0x84, 0x70, 0x63,
+	0x32, 0xe6, 0xd9, 0x17, 0x5d, 0x46, 0x82, 0xf4, 0xfc, 0x7d, 0x5a, 0xf4, 0x55, 0xce, 0xf2, 0xc3,
+	0x50, 0x07, 0x9c, 0x83, 0x3b, 0x78, 0xc5, 0x8a, 0x90, 0xa3, 0x6f, 0x15, 0x78, 0x38, 0x51, 0x80,
+	0x09, 0x8f, 0x09, 0xee, 0xf1, 0xe5, 0x2d, 0x0b, 0x32, 0xe1, 0x7a, 0x83, 0xce, 0x02, 0xa0, 0x1b,
+	0xe0, 0x00, 0xc3, 0x6c, 0x30, 0xbb, 0x67, 0xb3, 0xfe, 0x84, 0xfb, 0x24, 0x77, 0xbf, 0x3b, 0xcb,
+	0xbd, 0x2a, 0xb9, 0x13, 0xbe, 0xd7, 0xe8, 0x54, 0x2d, 0x72, 0x60, 0x4d, 0xde, 0x28, 0xe1, 0xb2,
+	0xb7, 0x3b, 0xea, 0x35, 0xc5, 0xbd, 0x56, 0xa6, 0x79, 0x3d, 0x10, 0x4c, 0xdf, 0xe4, 0xd9, 0x6e,
+	0xc8, 0xe5, 0x6a, 0x33, 0x5a, 0x85, 0x3a, 0xb0, 0x76, 0x69, 0xda, 0x2d, 0xb7, 0x47, 0x3c, 0xa3,
+	0x6d, 0x7a, 0xd7, 0xc4, 0x1b, 0xf5, 0x97, 0xe6, 0xfe, 0x9e, 0x4d, 0xf3, 0xb7, 0x2f, 0x99, 0x47,
+	0x9c, 0x18, 0x72, 0x58, 0xb8, 0x9c, 0xa2, 0x7b, 0x9d, 0x01, 0x18, 0x7a, 0x28, 0xfd, 0x12, 0x83,
+	0x95, 0xa8, 0xee, 0x40, 0x18, 0xf2, 0xb2, 0xd7, 0xdc, 0x0e, 0xf1, 0x78, 0x0f, 0xca, 0x3b, 0xb2,
+	0x35, 0xbb, 0xcb, 0x4e, 0x02, 0x38, 0xce, 0x59, 0x61, 0x01, 0xca, 0x42, 0x4c, 0x5e, 0x8d, 0x79,
+	0x1c, 0xb3, 0x2d, 0xf4, 0x02, 0x92, 0x02, 0x22, 0x6f, 0xc2, 0x7a, 0xd8, 0xb2, 0xd9, 0xb1, 0x87,
+	0x66, 0xb1, 0x84, 0xa2, 0x47, 0x90, 0x6d, 0xb8, 0xce, 0xa5, 0x7d, 0x65, 0xf4, 0x88, 0x47, 0xfd,
+	0xb0, 0xe6, 0xf8, 0x5d, 0x5b, 0x14, 0xd2, 0x33, 0x21, 0x44, 0x4f, 0x20, 0x3f, 0x48, 0x6c, 0x00,
+	0x4c, 0x70, 0x60, 0x2e, 0x90, 0x07, 0xd0, 0x7f, 0xc3, 0xbd, 0x8e, 0x47, 0x7a, 0xb6, 0xdb, 0xa5,
+	0xc6, 0x04, 0x27, 0xc9, 0x39, 0xab, 0x01, 0x60, 0x3f, 0xcc, 0x2d, 0xfd, 0xa4, 0xc0, 0xc6, 0xcc,
+	0x5e, 0xf7, 0xe3, 0x95, 0xb3, 0xa1, 0xd1, 0xea, 0x52, 0x46, 0x3c, 0x9e, 0xc6, 0x79, 0xbc, 0x28,
+	0xa4, 0x7b, 0x42, 0xe8, 0x0f, 0x44, 0x71, 0xdf, 0x64, 0x86, 0x12, 0x38, 0xc5, 0xbf, 0x35, 0x0b,
+	0xfd, 0x13, 0xe6, 0x07, 0x1b, 0xe5, 0x16, 0x33, 0x63, 0x08, 0x2e, 0x7d, 0x4c, 0xc0, 0xda, 0xf4,
+	0xab, 0x80, 0xd6, 0x61, 0x5e, 0xd6, 0xd8, 0xb6, 0x64, 0x54, 0x69, 0x21, 0xd0, 0x2c, 0xf4, 0x0e,
+	0xd0, 0x8d, 0xeb, 0x5d, 0x5f, 0xb6, 0xdc, 0x1b, 0x83, 0x7c, 0x20, 0x8d, 0x2e, 0x6f, 0x81, 0x18,
+	0x77, 0xff, 0x38, 0xb2, 0x50, 0xef, 0x25, 0xbc, 0x16, 0xa0, 0xf1, 0xd2, 0xcd, 0xb8, 0x08, 0x15,
+	0x20, 0x15, 0xa4, 0x36, 0xce, 0x53, 0x1b, 0x7c, 0xa2, 0x87, 0x90, 0xa1, 0x8d, 0x26, 0xb1, 0xba,
+	0x2d, 0xc2, 0xb3, 0x20, 0xca, 0xba, 0x30, 0x90, 0x69, 0x16, 0x52, 0x21, 0x3b, 0x84, 0xf0, 0x11,
+	0x9a, 0xf8, 0x6c, 0x3a, 0x16, 0x07, 0x0c, 0x3e, 0x43, 0x37, 0x00, 0x28, 0x33, 0x3d, 0x26, 0x7c,
+	0x88, 0xea, 0xce, 0x4b, 0x89, 0x66, 0xa1, 0xff, 0x42, 0x26, 0x50, 0x73, 0xfb, 0xa9, 0xcf, 0xda,
+	0x5f, 0x90, 0x78, 0x6e, 0xfd, 0x7f, 0xb0, 0xcc, 0x37, 0x62, 0x93, 0x98, 0x1e, 0xbb, 0x20, 0x26,
+	0x13, 0x56, 0xd2, 0x9f, 0xb5, 0xb2, 0xe4, 0xd3, 0x0e, 0x02, 0x16, 0xb7, 0xf5, 0x0f, 0x48, 0x59,
+	0x84, 0x99, 0x76, 0x8b, 0x16, 0xe6, 0x39, 0xff, 0x7e, 0x64, 0xd6, 0x4f, 0xcd, 0x7e, 0xcb, 0x35,
+	0x2d, 0x1c, 0x80, 0xfd, 0x0c, 0x9b, 0x8c, 0x91, 0x76, 0x87, 0x15, 0x40, 0x34, 0x92, 0xfc, 0x44,
+	0xaf, 0x20, 0xc3, 0xa3, 0xf3, 0x9b, 0xbc, 0xeb, 0x91, 0xc2, 0xc2, 0x0c, 0xb3, 0xfb, 0x02, 0x83,
+	0x17, 0x7c, 0x86, 0xfc, 0x40, 0xcf, 0x60, 0x85, 0x1b, 0xf0, 0xcb, 0x4a, 0x3c, 0xc3, 0xb6, 0x88,
+	0xc3, 0x6c, 0xd6, 0x2f, 0x64, 0x78, 0xef, 0x20, 0x5f, 0xf7, 0x9e, 0xab, 0x34, 0xa9, 0x41, 0x27,
+	0x90, 0x93, 0xf5, 0x35, 0xe4, 0x08, 0x2c, 0x2c, 0x46, 0xb5, 0xd0, 0x70, 0x8a, 0xc8, 0x9b, 0x25,
+	0x67, 0x29, 0xce, 0xf6, 0x42, 0xdf, 0xa5, 0xef, 0xe2, 0xb0, 0x3a, 0x65, 0xce, 0xa2, 0x55, 0x48,
+	0x05, 0xfb, 0x57, 0xe1, 0x85, 0x4d, 0x32, 0xb1, 0x79, 0x43, 0x8d, 0x1e, 0xbb, 0x55, 0xa3, 0xc7,
+	0xbf, 0xb6, 0xd1, 0xbf, 0x81, 0xbf, 0x8c, 0x9d, 0xdc, 0xb0, 0x19, 0x69, 0xfb, 0xbb, 0xda, 0x7f,
+	0x76, 0xed, 0xdc, 0xee, 0xfc, 0x1a, 0x23, 0x6d, 0xbc, 0xdc, 0x9b, 0x90, 0x51, 0xf4, 0x12, 0x92,
+	0xa4, 0x47, 0x1c, 0x16, 0xac, 0xe2, 0x8d, 0xe8, 0xe1, 0x69, 0x32, 0xf3, 0x75, 0xcb, 0xbd, 0xc0,
+	0x12, 0x8c, 0xf6, 0x20, 0xeb, 0x90, 0x1b, 0xc3, 0xeb, 0x3a, 0x86, 0xa4, 0x27, 0x6f, 0x43, 0xcf,
+	0x38, 0xe4, 0x06, 0x77, 0x9d, 0x1a, 0xa7, 0x94, 0x7e, 0x56, 0xa0, 0x30, 0x6d, 0xf9, 0xcc, 0x9e,
+	0x2a, 0x51, 0x63, 0x39, 0x16, 0x3d, 0x96, 0xbf, 0xf6, 0xb9, 0x54, 0xfa, 0x5e, 0x81, 0xe5, 0x70,
+	0x94, 0xba, 0x7b, 0x4d, 0x1c, 0x3f, 0xc0, 0x60, 0xd4, 0x8a, 0x47, 0x70, 0x02, 0xa7, 0xe5, 0xac,
+	0xa5, 0xe8, 0x1c, 0x72, 0x63, 0x0b, 0x59, 0xce, 0xbc, 0x2f, 0xde, 0xc2, 0x38, 0x1b, 0xde, 0xc1,
+	0xa5, 0x5f, 0xc3, 0x8f, 0x73, 0xfe, 0x2a, 0x74, 0x2e, 0xdd, 0x3f, 0x65, 0x0c, 0xaf, 0x8f, 0xbe,
+	0x7d, 0xe3, 0x7c, 0x4c, 0x0c, 0x9f, 0xb3, 0x23, 0xf7, 0x68, 0x2e, 0x74, 0x8f, 0x46, 0x86, 0x77,
+	0x22, 0x3c, 0xbc, 0x37, 0x21, 0x7b, 0x69, 0x7b, 0x94, 0x89, 0xa6, 0x1a, 0x8e, 0xd6, 0x0c, 0x97,
+	0xf2, 0xb6, 0xd1, 0x2c, 0x54, 0x82, 0x45, 0x87, 0x7c, 0x18, 0x01, 0xa5, 0xc4, 0x8c, 0xf7, 0x85,
+	0x01, 0x66, 0x7c, 0x0d, 0xa4, 0x27, 0xd6, 0x80, 0xdf, 0x7e, 0xf9, 0xd1, 0x44, 0xf2, 0xaa, 0x8e,
+	0x2e, 0x50, 0x25, 0xbc, 0x40, 0xbf, 0xe2, 0xff, 0x94, 0x80, 0xda, 0xf1, 0xdc, 0x06, 0xa1, 0x34,
+	0x4c, 0x8d, 0x0f, 0xa9, 0xa7, 0x81, 0x7e, 0x40, 0x2d, 0xbd, 0x81, 0xdc, 0xd8, 0xcb, 0x20, 0xbc,
+	0xc9, 0x95, 0x2f, 0xd8, 0xe4, 0x3b, 0x1f, 0x27, 0x7b, 0x87, 0x97, 0xea, 0x21, 0x6c, 0xe0, 0xda,
+	0xe9, 0xa1, 0xb6, 0xa7, 0xea, 0xda, 0xc9, 0xb1, 0xa1, 0xab, 0xf5, 0x37, 0x86, 0x7e, 0x7e, 0x5a,
+	0x33, 0xb4, 0xe3, 0x33, 0xf5, 0x50, 0xab, 0xe6, 0xef, 0xa0, 0x22, 0xdc, 0x8f, 0x86, 0x54, 0x4f,
+	0x8e, 0x54, 0xed, 0x38, 0xaf, 0x4c, 0x37, 0x72, 0xa0, 0xd5, 0xf5, 0x13, 0x7c, 0x9e, 0x8f, 0xa1,
+	0xa7, 0xb0, 0x15, 0x0d, 0xa9, 0x9f, 0x1f, 0xef, 0x19, 0xf5, 0x03, 0x15, 0x57, 0x8d, 0xba, 0xae,
+	0xea, 0xef, 0xea, 0xf9, 0x38, 0xda, 0x82, 0xbf, 0xcd, 0x00, 0xab, 0x7b, 0xba, 0x76, 0xa6, 0xe9,
+	0xe7, 0xf9, 0x39, 0xb4, 0x03, 0x8f, 0x67, 0x3a, 0x36, 0x8e, 0x6a, 0xba, 0x5a, 0x55, 0x75, 0x35,
+	0x9f, 0x40, 0x9b, 0x50, 0x9c, 0x8d, 0x3d, 0xdb, 0xcd, 0x27, 0xd1, 0x13, 0x78, 0x14, 0x8d, 0xda,
+	0x57, 0xb5, 0xc3, 0x93, 0xb3, 0x1a, 0x36, 0x8e, 0x54, 0xfc, 0xa6, 0x86, 0xf3, 0xa9, 0x1d, 0x1b,
+	0x72, 0x63, 0x2f, 0x56, 0x74, 0x1f, 0x0a, 0x22, 0x29, 0xc6, 0xc9, 0x69, 0x0d, 0x0b, 0x13, 0xc3,
+	0x44, 0xae, 0xc3, 0xea, 0x84, 0x76, 0x0f, 0xd7, 0x54, 0xbd, 0x96, 0x57, 0x22, 0x95, 0xef, 0x4e,
+	0xab, 0xbe, 0x32, 0xb6, 0x73, 0x0c, 0xa9, 0xea, 0xe1, 0x5b, 0x5e, 0xb0, 0x15, 0xc8, 0x57, 0x0f,
+	0xdf, 0x8e, 0xd7, 0xa8, 0x00, 0x2b, 0x03, 0xe9, 0x48, 0xfc, 0x79, 0x05, 0x2d, 0x43, 0x6e, 0xa0,
+	0x91, 0x05, 0x8b, 0xbd, 0xde, 0xfb, 0xed, 0xd3, 0x03, 0xe5, 0xe3, 0xa7, 0x07, 0xca, 0xef, 0x9f,
+	0x1e, 0x28, 0xff, 0x7f, 0x79, 0x65, 0xb3, 0x66, 0xf7, 0xa2, 0xdc, 0x70, 0xdb, 0x95, 0xd0, 0xaf,
+	0x04, 0xe5, 0x2b, 0xe2, 0x88, 0x5f, 0x25, 0x86, 0x3f, 0x18, 0xfc, 0x47, 0xfc, 0xd5, 0x7b, 0x7e,
+	0x91, 0xe4, 0x9a, 0x17, 0x7f, 0x04, 0x00, 0x00, 0xff, 0xff, 0xc8, 0x16, 0xd1, 0xe8, 0x01, 0x11,
 	0x00, 0x00,
 }
 
-func (x ReplicationTaskType) String() string {
-	s, ok := ReplicationTaskType_name[int32(x)]
-	if ok {
-		return s
-	}
-	return strconv.Itoa(int(x))
-}
-func (x DomainOperation) String() string {
-	s, ok := DomainOperation_name[int32(x)]
-	if ok {
-		return s
-	}
-	return strconv.Itoa(int(x))
-}
-func (x DLQType) String() string {
-	s, ok := DLQType_name[int32(x)]
-	if ok {
-		return s
-	}
-	return strconv.Itoa(int(x))
-}
-func (this *ReplicationMessages) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ReplicationMessages)
-	if !ok {
-		that2, ok := that.(ReplicationMessages)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.ReplicationTasks) != len(that1.ReplicationTasks) {
-		return false
-	}
-	for i := range this.ReplicationTasks {
-		if !this.ReplicationTasks[i].Equal(that1.ReplicationTasks[i]) {
-			return false
-		}
-	}
-	if this.LastRetrievedMessageId != that1.LastRetrievedMessageId {
-		return false
-	}
-	if this.HasMore != that1.HasMore {
-		return false
-	}
-	if !this.SyncShardStatus.Equal(that1.SyncShardStatus) {
-		return false
-	}
-	return true
-}
-func (this *ReplicationTask) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ReplicationTask)
-	if !ok {
-		that2, ok := that.(ReplicationTask)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.TaskType != that1.TaskType {
-		return false
-	}
-	if this.SourceTaskId != that1.SourceTaskId {
-		return false
-	}
-	if that1.CreationTime == nil {
-		if this.CreationTime != nil {
-			return false
-		}
-	} else if !this.CreationTime.Equal(*that1.CreationTime) {
-		return false
-	}
-	if that1.Attributes == nil {
-		if this.Attributes != nil {
-			return false
-		}
-	} else if this.Attributes == nil {
-		return false
-	} else if !this.Attributes.Equal(that1.Attributes) {
-		return false
-	}
-	return true
-}
-func (this *ReplicationTask_DomainTaskAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ReplicationTask_DomainTaskAttributes)
-	if !ok {
-		that2, ok := that.(ReplicationTask_DomainTaskAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.DomainTaskAttributes.Equal(that1.DomainTaskAttributes) {
-		return false
-	}
-	return true
-}
-func (this *ReplicationTask_SyncShardStatusTaskAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ReplicationTask_SyncShardStatusTaskAttributes)
-	if !ok {
-		that2, ok := that.(ReplicationTask_SyncShardStatusTaskAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.SyncShardStatusTaskAttributes.Equal(that1.SyncShardStatusTaskAttributes) {
-		return false
-	}
-	return true
-}
-func (this *ReplicationTask_SyncActivityTaskAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ReplicationTask_SyncActivityTaskAttributes)
-	if !ok {
-		that2, ok := that.(ReplicationTask_SyncActivityTaskAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.SyncActivityTaskAttributes.Equal(that1.SyncActivityTaskAttributes) {
-		return false
-	}
-	return true
-}
-func (this *ReplicationTask_HistoryTaskV2Attributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ReplicationTask_HistoryTaskV2Attributes)
-	if !ok {
-		that2, ok := that.(ReplicationTask_HistoryTaskV2Attributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.HistoryTaskV2Attributes.Equal(that1.HistoryTaskV2Attributes) {
-		return false
-	}
-	return true
-}
-func (this *ReplicationTask_FailoverMarkerAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ReplicationTask_FailoverMarkerAttributes)
-	if !ok {
-		that2, ok := that.(ReplicationTask_FailoverMarkerAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.FailoverMarkerAttributes.Equal(that1.FailoverMarkerAttributes) {
-		return false
-	}
-	return true
-}
-func (this *DomainTaskAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DomainTaskAttributes)
-	if !ok {
-		that2, ok := that.(DomainTaskAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.DomainOperation != that1.DomainOperation {
-		return false
-	}
-	if this.Id != that1.Id {
-		return false
-	}
-	if !this.Info.Equal(that1.Info) {
-		return false
-	}
-	if !this.Config.Equal(that1.Config) {
-		return false
-	}
-	if !this.ReplicationConfig.Equal(that1.ReplicationConfig) {
-		return false
-	}
-	if this.ConfigVersion != that1.ConfigVersion {
-		return false
-	}
-	if this.FailoverVersion != that1.FailoverVersion {
-		return false
-	}
-	if this.PreviousFailoverVersion != that1.PreviousFailoverVersion {
-		return false
-	}
-	return true
-}
-func (this *SyncShardStatusTaskAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*SyncShardStatusTaskAttributes)
-	if !ok {
-		that2, ok := that.(SyncShardStatusTaskAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.SourceCluster != that1.SourceCluster {
-		return false
-	}
-	if this.ShardId != that1.ShardId {
-		return false
-	}
-	if that1.Timestamp == nil {
-		if this.Timestamp != nil {
-			return false
-		}
-	} else if !this.Timestamp.Equal(*that1.Timestamp) {
-		return false
-	}
-	return true
-}
-func (this *SyncActivityTaskAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*SyncActivityTaskAttributes)
-	if !ok {
-		that2, ok := that.(SyncActivityTaskAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.DomainId != that1.DomainId {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if this.Version != that1.Version {
-		return false
-	}
-	if this.ScheduledId != that1.ScheduledId {
-		return false
-	}
-	if that1.ScheduledTime == nil {
-		if this.ScheduledTime != nil {
-			return false
-		}
-	} else if !this.ScheduledTime.Equal(*that1.ScheduledTime) {
-		return false
-	}
-	if this.StartedId != that1.StartedId {
-		return false
-	}
-	if that1.StartedTime == nil {
-		if this.StartedTime != nil {
-			return false
-		}
-	} else if !this.StartedTime.Equal(*that1.StartedTime) {
-		return false
-	}
-	if that1.LastHeartbeatTime == nil {
-		if this.LastHeartbeatTime != nil {
-			return false
-		}
-	} else if !this.LastHeartbeatTime.Equal(*that1.LastHeartbeatTime) {
-		return false
-	}
-	if !this.Details.Equal(that1.Details) {
-		return false
-	}
-	if this.Attempt != that1.Attempt {
-		return false
-	}
-	if !this.LastFailure.Equal(that1.LastFailure) {
-		return false
-	}
-	if this.LastWorkerIdentity != that1.LastWorkerIdentity {
-		return false
-	}
-	if !this.VersionHistory.Equal(that1.VersionHistory) {
-		return false
-	}
-	return true
-}
-func (this *HistoryTaskV2Attributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryTaskV2Attributes)
-	if !ok {
-		that2, ok := that.(HistoryTaskV2Attributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.TaskId != that1.TaskId {
-		return false
-	}
-	if this.DomainId != that1.DomainId {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if len(this.VersionHistoryItems) != len(that1.VersionHistoryItems) {
-		return false
-	}
-	for i := range this.VersionHistoryItems {
-		if !this.VersionHistoryItems[i].Equal(that1.VersionHistoryItems[i]) {
-			return false
-		}
-	}
-	if !this.Events.Equal(that1.Events) {
-		return false
-	}
-	if !this.NewRunEvents.Equal(that1.NewRunEvents) {
-		return false
-	}
-	return true
-}
-func (this *FailoverMarkerAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*FailoverMarkerAttributes)
-	if !ok {
-		that2, ok := that.(FailoverMarkerAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.DomainId != that1.DomainId {
-		return false
-	}
-	if this.FailoverVersion != that1.FailoverVersion {
-		return false
-	}
-	if that1.CreationTime == nil {
-		if this.CreationTime != nil {
-			return false
-		}
-	} else if !this.CreationTime.Equal(*that1.CreationTime) {
-		return false
-	}
-	return true
-}
-func (this *FailoverMarkerToken) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*FailoverMarkerToken)
-	if !ok {
-		that2, ok := that.(FailoverMarkerToken)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.ShardIds) != len(that1.ShardIds) {
-		return false
-	}
-	for i := range this.ShardIds {
-		if this.ShardIds[i] != that1.ShardIds[i] {
-			return false
-		}
-	}
-	if !this.FailoverMarker.Equal(that1.FailoverMarker) {
-		return false
-	}
-	return true
-}
-func (this *ReplicationTaskInfo) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ReplicationTaskInfo)
-	if !ok {
-		that2, ok := that.(ReplicationTaskInfo)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.DomainId != that1.DomainId {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if this.TaskType != that1.TaskType {
-		return false
-	}
-	if this.TaskId != that1.TaskId {
-		return false
-	}
-	if this.Version != that1.Version {
-		return false
-	}
-	if this.FirstEventId != that1.FirstEventId {
-		return false
-	}
-	if this.NextEventId != that1.NextEventId {
-		return false
-	}
-	if this.ScheduledId != that1.ScheduledId {
-		return false
-	}
-	return true
-}
-func (this *ReplicationToken) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ReplicationToken)
-	if !ok {
-		that2, ok := that.(ReplicationToken)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ShardId != that1.ShardId {
-		return false
-	}
-	if this.LastRetrievedMessageId != that1.LastRetrievedMessageId {
-		return false
-	}
-	if this.LastProcessedMessageId != that1.LastProcessedMessageId {
-		return false
-	}
-	return true
-}
-func (this *SyncShardStatus) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*SyncShardStatus)
-	if !ok {
-		that2, ok := that.(SyncShardStatus)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if that1.Timestamp == nil {
-		if this.Timestamp != nil {
-			return false
-		}
-	} else if !this.Timestamp.Equal(*that1.Timestamp) {
-		return false
-	}
-	return true
-}
-func (this *ReplicationMessages) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&sharedv1.ReplicationMessages{")
-	if this.ReplicationTasks != nil {
-		s = append(s, "ReplicationTasks: "+fmt.Sprintf("%#v", this.ReplicationTasks)+",\n")
-	}
-	s = append(s, "LastRetrievedMessageId: "+fmt.Sprintf("%#v", this.LastRetrievedMessageId)+",\n")
-	s = append(s, "HasMore: "+fmt.Sprintf("%#v", this.HasMore)+",\n")
-	if this.SyncShardStatus != nil {
-		s = append(s, "SyncShardStatus: "+fmt.Sprintf("%#v", this.SyncShardStatus)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ReplicationTask) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 12)
-	s = append(s, "&sharedv1.ReplicationTask{")
-	s = append(s, "TaskType: "+fmt.Sprintf("%#v", this.TaskType)+",\n")
-	s = append(s, "SourceTaskId: "+fmt.Sprintf("%#v", this.SourceTaskId)+",\n")
-	s = append(s, "CreationTime: "+fmt.Sprintf("%#v", this.CreationTime)+",\n")
-	if this.Attributes != nil {
-		s = append(s, "Attributes: "+fmt.Sprintf("%#v", this.Attributes)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ReplicationTask_DomainTaskAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&sharedv1.ReplicationTask_DomainTaskAttributes{` +
-		`DomainTaskAttributes:` + fmt.Sprintf("%#v", this.DomainTaskAttributes) + `}`}, ", ")
-	return s
-}
-func (this *ReplicationTask_SyncShardStatusTaskAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&sharedv1.ReplicationTask_SyncShardStatusTaskAttributes{` +
-		`SyncShardStatusTaskAttributes:` + fmt.Sprintf("%#v", this.SyncShardStatusTaskAttributes) + `}`}, ", ")
-	return s
-}
-func (this *ReplicationTask_SyncActivityTaskAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&sharedv1.ReplicationTask_SyncActivityTaskAttributes{` +
-		`SyncActivityTaskAttributes:` + fmt.Sprintf("%#v", this.SyncActivityTaskAttributes) + `}`}, ", ")
-	return s
-}
-func (this *ReplicationTask_HistoryTaskV2Attributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&sharedv1.ReplicationTask_HistoryTaskV2Attributes{` +
-		`HistoryTaskV2Attributes:` + fmt.Sprintf("%#v", this.HistoryTaskV2Attributes) + `}`}, ", ")
-	return s
-}
-func (this *ReplicationTask_FailoverMarkerAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&sharedv1.ReplicationTask_FailoverMarkerAttributes{` +
-		`FailoverMarkerAttributes:` + fmt.Sprintf("%#v", this.FailoverMarkerAttributes) + `}`}, ", ")
-	return s
-}
-func (this *DomainTaskAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 12)
-	s = append(s, "&sharedv1.DomainTaskAttributes{")
-	s = append(s, "DomainOperation: "+fmt.Sprintf("%#v", this.DomainOperation)+",\n")
-	s = append(s, "Id: "+fmt.Sprintf("%#v", this.Id)+",\n")
-	if this.Info != nil {
-		s = append(s, "Info: "+fmt.Sprintf("%#v", this.Info)+",\n")
-	}
-	if this.Config != nil {
-		s = append(s, "Config: "+fmt.Sprintf("%#v", this.Config)+",\n")
-	}
-	if this.ReplicationConfig != nil {
-		s = append(s, "ReplicationConfig: "+fmt.Sprintf("%#v", this.ReplicationConfig)+",\n")
-	}
-	s = append(s, "ConfigVersion: "+fmt.Sprintf("%#v", this.ConfigVersion)+",\n")
-	s = append(s, "FailoverVersion: "+fmt.Sprintf("%#v", this.FailoverVersion)+",\n")
-	s = append(s, "PreviousFailoverVersion: "+fmt.Sprintf("%#v", this.PreviousFailoverVersion)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *SyncShardStatusTaskAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&sharedv1.SyncShardStatusTaskAttributes{")
-	s = append(s, "SourceCluster: "+fmt.Sprintf("%#v", this.SourceCluster)+",\n")
-	s = append(s, "ShardId: "+fmt.Sprintf("%#v", this.ShardId)+",\n")
-	s = append(s, "Timestamp: "+fmt.Sprintf("%#v", this.Timestamp)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *SyncActivityTaskAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 17)
-	s = append(s, "&sharedv1.SyncActivityTaskAttributes{")
-	s = append(s, "DomainId: "+fmt.Sprintf("%#v", this.DomainId)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "Version: "+fmt.Sprintf("%#v", this.Version)+",\n")
-	s = append(s, "ScheduledId: "+fmt.Sprintf("%#v", this.ScheduledId)+",\n")
-	s = append(s, "ScheduledTime: "+fmt.Sprintf("%#v", this.ScheduledTime)+",\n")
-	s = append(s, "StartedId: "+fmt.Sprintf("%#v", this.StartedId)+",\n")
-	s = append(s, "StartedTime: "+fmt.Sprintf("%#v", this.StartedTime)+",\n")
-	s = append(s, "LastHeartbeatTime: "+fmt.Sprintf("%#v", this.LastHeartbeatTime)+",\n")
-	if this.Details != nil {
-		s = append(s, "Details: "+fmt.Sprintf("%#v", this.Details)+",\n")
-	}
-	s = append(s, "Attempt: "+fmt.Sprintf("%#v", this.Attempt)+",\n")
-	if this.LastFailure != nil {
-		s = append(s, "LastFailure: "+fmt.Sprintf("%#v", this.LastFailure)+",\n")
-	}
-	s = append(s, "LastWorkerIdentity: "+fmt.Sprintf("%#v", this.LastWorkerIdentity)+",\n")
-	if this.VersionHistory != nil {
-		s = append(s, "VersionHistory: "+fmt.Sprintf("%#v", this.VersionHistory)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *HistoryTaskV2Attributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&sharedv1.HistoryTaskV2Attributes{")
-	s = append(s, "TaskId: "+fmt.Sprintf("%#v", this.TaskId)+",\n")
-	s = append(s, "DomainId: "+fmt.Sprintf("%#v", this.DomainId)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	if this.VersionHistoryItems != nil {
-		s = append(s, "VersionHistoryItems: "+fmt.Sprintf("%#v", this.VersionHistoryItems)+",\n")
-	}
-	if this.Events != nil {
-		s = append(s, "Events: "+fmt.Sprintf("%#v", this.Events)+",\n")
-	}
-	if this.NewRunEvents != nil {
-		s = append(s, "NewRunEvents: "+fmt.Sprintf("%#v", this.NewRunEvents)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *FailoverMarkerAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&sharedv1.FailoverMarkerAttributes{")
-	s = append(s, "DomainId: "+fmt.Sprintf("%#v", this.DomainId)+",\n")
-	s = append(s, "FailoverVersion: "+fmt.Sprintf("%#v", this.FailoverVersion)+",\n")
-	s = append(s, "CreationTime: "+fmt.Sprintf("%#v", this.CreationTime)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *FailoverMarkerToken) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&sharedv1.FailoverMarkerToken{")
-	s = append(s, "ShardIds: "+fmt.Sprintf("%#v", this.ShardIds)+",\n")
-	if this.FailoverMarker != nil {
-		s = append(s, "FailoverMarker: "+fmt.Sprintf("%#v", this.FailoverMarker)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ReplicationTaskInfo) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 12)
-	s = append(s, "&sharedv1.ReplicationTaskInfo{")
-	s = append(s, "DomainId: "+fmt.Sprintf("%#v", this.DomainId)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "TaskType: "+fmt.Sprintf("%#v", this.TaskType)+",\n")
-	s = append(s, "TaskId: "+fmt.Sprintf("%#v", this.TaskId)+",\n")
-	s = append(s, "Version: "+fmt.Sprintf("%#v", this.Version)+",\n")
-	s = append(s, "FirstEventId: "+fmt.Sprintf("%#v", this.FirstEventId)+",\n")
-	s = append(s, "NextEventId: "+fmt.Sprintf("%#v", this.NextEventId)+",\n")
-	s = append(s, "ScheduledId: "+fmt.Sprintf("%#v", this.ScheduledId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ReplicationToken) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&sharedv1.ReplicationToken{")
-	s = append(s, "ShardId: "+fmt.Sprintf("%#v", this.ShardId)+",\n")
-	s = append(s, "LastRetrievedMessageId: "+fmt.Sprintf("%#v", this.LastRetrievedMessageId)+",\n")
-	s = append(s, "LastProcessedMessageId: "+fmt.Sprintf("%#v", this.LastProcessedMessageId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *SyncShardStatus) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&sharedv1.SyncShardStatus{")
-	s = append(s, "Timestamp: "+fmt.Sprintf("%#v", this.Timestamp)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func valueToGoStringReplication(v interface{}, typ string) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
-}
 func (m *ReplicationMessages) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -2020,6 +1227,10 @@ func (m *ReplicationMessages) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.SyncShardStatus != nil {
 		{
 			size, err := m.SyncShardStatus.MarshalToSizedBuffer(dAtA[:i])
@@ -2084,6 +1295,10 @@ func (m *ReplicationTask) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Attributes != nil {
 		{
 			size := m.Attributes.Size()
@@ -2094,12 +1309,14 @@ func (m *ReplicationTask) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		}
 	}
 	if m.CreationTime != nil {
-		n2, err2 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.CreationTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.CreationTime):])
-		if err2 != nil {
-			return 0, err2
+		{
+			size, err := m.CreationTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintReplication(dAtA, i, uint64(size))
 		}
-		i -= n2
-		i = encodeVarintReplication(dAtA, i, uint64(n2))
 		i--
 		dAtA[i] = 0x1a
 	}
@@ -2241,48 +1458,28 @@ func (m *DomainTaskAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.PreviousFailoverVersion != 0 {
 		i = encodeVarintReplication(dAtA, i, uint64(m.PreviousFailoverVersion))
 		i--
-		dAtA[i] = 0x40
+		dAtA[i] = 0x30
 	}
 	if m.FailoverVersion != 0 {
 		i = encodeVarintReplication(dAtA, i, uint64(m.FailoverVersion))
 		i--
-		dAtA[i] = 0x38
+		dAtA[i] = 0x28
 	}
 	if m.ConfigVersion != 0 {
 		i = encodeVarintReplication(dAtA, i, uint64(m.ConfigVersion))
 		i--
-		dAtA[i] = 0x30
+		dAtA[i] = 0x20
 	}
-	if m.ReplicationConfig != nil {
+	if m.Domain != nil {
 		{
-			size, err := m.ReplicationConfig.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintReplication(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x2a
-	}
-	if m.Config != nil {
-		{
-			size, err := m.Config.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintReplication(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x22
-	}
-	if m.Info != nil {
-		{
-			size, err := m.Info.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.Domain.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -2327,13 +1524,19 @@ func (m *SyncShardStatusTaskAttributes) MarshalToSizedBuffer(dAtA []byte) (int, 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Timestamp != nil {
-		n11, err11 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.Timestamp, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.Timestamp):])
-		if err11 != nil {
-			return 0, err11
+		{
+			size, err := m.Timestamp.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintReplication(dAtA, i, uint64(size))
 		}
-		i -= n11
-		i = encodeVarintReplication(dAtA, i, uint64(n11))
 		i--
 		dAtA[i] = 0x1a
 	}
@@ -2372,6 +1575,10 @@ func (m *SyncActivityTaskAttributes) MarshalToSizedBuffer(dAtA []byte) (int, err
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.VersionHistory != nil {
 		{
 			size, err := m.VersionHistory.MarshalToSizedBuffer(dAtA[:i])
@@ -2421,22 +1628,26 @@ func (m *SyncActivityTaskAttributes) MarshalToSizedBuffer(dAtA []byte) (int, err
 		dAtA[i] = 0x4a
 	}
 	if m.LastHeartbeatTime != nil {
-		n15, err15 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.LastHeartbeatTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.LastHeartbeatTime):])
-		if err15 != nil {
-			return 0, err15
+		{
+			size, err := m.LastHeartbeatTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintReplication(dAtA, i, uint64(size))
 		}
-		i -= n15
-		i = encodeVarintReplication(dAtA, i, uint64(n15))
 		i--
 		dAtA[i] = 0x42
 	}
 	if m.StartedTime != nil {
-		n16, err16 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.StartedTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.StartedTime):])
-		if err16 != nil {
-			return 0, err16
+		{
+			size, err := m.StartedTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintReplication(dAtA, i, uint64(size))
 		}
-		i -= n16
-		i = encodeVarintReplication(dAtA, i, uint64(n16))
 		i--
 		dAtA[i] = 0x3a
 	}
@@ -2446,12 +1657,14 @@ func (m *SyncActivityTaskAttributes) MarshalToSizedBuffer(dAtA []byte) (int, err
 		dAtA[i] = 0x30
 	}
 	if m.ScheduledTime != nil {
-		n17, err17 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.ScheduledTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.ScheduledTime):])
-		if err17 != nil {
-			return 0, err17
+		{
+			size, err := m.ScheduledTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintReplication(dAtA, i, uint64(size))
 		}
-		i -= n17
-		i = encodeVarintReplication(dAtA, i, uint64(n17))
 		i--
 		dAtA[i] = 0x2a
 	}
@@ -2507,6 +1720,10 @@ func (m *HistoryTaskV2Attributes) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.NewRunEvents != nil {
 		{
 			size, err := m.NewRunEvents.MarshalToSizedBuffer(dAtA[:i])
@@ -2592,13 +1809,19 @@ func (m *FailoverMarkerAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.CreationTime != nil {
-		n22, err22 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.CreationTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.CreationTime):])
-		if err22 != nil {
-			return 0, err22
+		{
+			size, err := m.CreationTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintReplication(dAtA, i, uint64(size))
 		}
-		i -= n22
-		i = encodeVarintReplication(dAtA, i, uint64(n22))
 		i--
 		dAtA[i] = 0x1a
 	}
@@ -2637,6 +1860,10 @@ func (m *FailoverMarkerToken) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.FailoverMarker != nil {
 		{
 			size, err := m.FailoverMarker.MarshalToSizedBuffer(dAtA[:i])
@@ -2650,21 +1877,21 @@ func (m *FailoverMarkerToken) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 	}
 	if len(m.ShardIds) > 0 {
-		dAtA25 := make([]byte, len(m.ShardIds)*10)
-		var j24 int
+		dAtA23 := make([]byte, len(m.ShardIds)*10)
+		var j22 int
 		for _, num1 := range m.ShardIds {
 			num := uint64(num1)
 			for num >= 1<<7 {
-				dAtA25[j24] = uint8(uint64(num)&0x7f | 0x80)
+				dAtA23[j22] = uint8(uint64(num)&0x7f | 0x80)
 				num >>= 7
-				j24++
+				j22++
 			}
-			dAtA25[j24] = uint8(num)
-			j24++
+			dAtA23[j22] = uint8(num)
+			j22++
 		}
-		i -= j24
-		copy(dAtA[i:], dAtA25[:j24])
-		i = encodeVarintReplication(dAtA, i, uint64(j24))
+		i -= j22
+		copy(dAtA[i:], dAtA23[:j22])
+		i = encodeVarintReplication(dAtA, i, uint64(j22))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -2691,6 +1918,10 @@ func (m *ReplicationTaskInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.ScheduledId != 0 {
 		i = encodeVarintReplication(dAtA, i, uint64(m.ScheduledId))
 		i--
@@ -2763,6 +1994,10 @@ func (m *ReplicationToken) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.LastProcessedMessageId != 0 {
 		i = encodeVarintReplication(dAtA, i, uint64(m.LastProcessedMessageId))
 		i--
@@ -2801,13 +2036,19 @@ func (m *SyncShardStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Timestamp != nil {
-		n27, err27 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.Timestamp, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.Timestamp):])
-		if err27 != nil {
-			return 0, err27
+		{
+			size, err := m.Timestamp.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintReplication(dAtA, i, uint64(size))
 		}
-		i -= n27
-		i = encodeVarintReplication(dAtA, i, uint64(n27))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -2847,6 +2088,9 @@ func (m *ReplicationMessages) Size() (n int) {
 		l = m.SyncShardStatus.Size()
 		n += 1 + l + sovReplication(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -2863,11 +2107,14 @@ func (m *ReplicationTask) Size() (n int) {
 		n += 1 + sovReplication(uint64(m.SourceTaskId))
 	}
 	if m.CreationTime != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.CreationTime)
+		l = m.CreationTime.Size()
 		n += 1 + l + sovReplication(uint64(l))
 	}
 	if m.Attributes != nil {
 		n += m.Attributes.Size()
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -2945,16 +2192,8 @@ func (m *DomainTaskAttributes) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovReplication(uint64(l))
 	}
-	if m.Info != nil {
-		l = m.Info.Size()
-		n += 1 + l + sovReplication(uint64(l))
-	}
-	if m.Config != nil {
-		l = m.Config.Size()
-		n += 1 + l + sovReplication(uint64(l))
-	}
-	if m.ReplicationConfig != nil {
-		l = m.ReplicationConfig.Size()
+	if m.Domain != nil {
+		l = m.Domain.Size()
 		n += 1 + l + sovReplication(uint64(l))
 	}
 	if m.ConfigVersion != 0 {
@@ -2965,6 +2204,9 @@ func (m *DomainTaskAttributes) Size() (n int) {
 	}
 	if m.PreviousFailoverVersion != 0 {
 		n += 1 + sovReplication(uint64(m.PreviousFailoverVersion))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -2983,8 +2225,11 @@ func (m *SyncShardStatusTaskAttributes) Size() (n int) {
 		n += 1 + sovReplication(uint64(m.ShardId))
 	}
 	if m.Timestamp != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.Timestamp)
+		l = m.Timestamp.Size()
 		n += 1 + l + sovReplication(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -3010,18 +2255,18 @@ func (m *SyncActivityTaskAttributes) Size() (n int) {
 		n += 1 + sovReplication(uint64(m.ScheduledId))
 	}
 	if m.ScheduledTime != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.ScheduledTime)
+		l = m.ScheduledTime.Size()
 		n += 1 + l + sovReplication(uint64(l))
 	}
 	if m.StartedId != 0 {
 		n += 1 + sovReplication(uint64(m.StartedId))
 	}
 	if m.StartedTime != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.StartedTime)
+		l = m.StartedTime.Size()
 		n += 1 + l + sovReplication(uint64(l))
 	}
 	if m.LastHeartbeatTime != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.LastHeartbeatTime)
+		l = m.LastHeartbeatTime.Size()
 		n += 1 + l + sovReplication(uint64(l))
 	}
 	if m.Details != nil {
@@ -3042,6 +2287,9 @@ func (m *SyncActivityTaskAttributes) Size() (n int) {
 	if m.VersionHistory != nil {
 		l = m.VersionHistory.Size()
 		n += 1 + l + sovReplication(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -3077,6 +2325,9 @@ func (m *HistoryTaskV2Attributes) Size() (n int) {
 		l = m.NewRunEvents.Size()
 		n += 1 + l + sovReplication(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -3094,8 +2345,11 @@ func (m *FailoverMarkerAttributes) Size() (n int) {
 		n += 1 + sovReplication(uint64(m.FailoverVersion))
 	}
 	if m.CreationTime != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.CreationTime)
+		l = m.CreationTime.Size()
 		n += 1 + l + sovReplication(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -3116,6 +2370,9 @@ func (m *FailoverMarkerToken) Size() (n int) {
 	if m.FailoverMarker != nil {
 		l = m.FailoverMarker.Size()
 		n += 1 + l + sovReplication(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -3152,6 +2409,9 @@ func (m *ReplicationTaskInfo) Size() (n int) {
 	if m.ScheduledId != 0 {
 		n += 1 + sovReplication(uint64(m.ScheduledId))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -3170,6 +2430,9 @@ func (m *ReplicationToken) Size() (n int) {
 	if m.LastProcessedMessageId != 0 {
 		n += 1 + sovReplication(uint64(m.LastProcessedMessageId))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -3180,8 +2443,11 @@ func (m *SyncShardStatus) Size() (n int) {
 	var l int
 	_ = l
 	if m.Timestamp != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.Timestamp)
+		l = m.Timestamp.Size()
 		n += 1 + l + sovReplication(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -3191,228 +2457,6 @@ func sovReplication(x uint64) (n int) {
 }
 func sozReplication(x uint64) (n int) {
 	return sovReplication(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (this *ReplicationMessages) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForReplicationTasks := "[]*ReplicationTask{"
-	for _, f := range this.ReplicationTasks {
-		repeatedStringForReplicationTasks += strings.Replace(f.String(), "ReplicationTask", "ReplicationTask", 1) + ","
-	}
-	repeatedStringForReplicationTasks += "}"
-	s := strings.Join([]string{`&ReplicationMessages{`,
-		`ReplicationTasks:` + repeatedStringForReplicationTasks + `,`,
-		`LastRetrievedMessageId:` + fmt.Sprintf("%v", this.LastRetrievedMessageId) + `,`,
-		`HasMore:` + fmt.Sprintf("%v", this.HasMore) + `,`,
-		`SyncShardStatus:` + strings.Replace(this.SyncShardStatus.String(), "SyncShardStatus", "SyncShardStatus", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ReplicationTask) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ReplicationTask{`,
-		`TaskType:` + fmt.Sprintf("%v", this.TaskType) + `,`,
-		`SourceTaskId:` + fmt.Sprintf("%v", this.SourceTaskId) + `,`,
-		`CreationTime:` + strings.Replace(fmt.Sprintf("%v", this.CreationTime), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`Attributes:` + fmt.Sprintf("%v", this.Attributes) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ReplicationTask_DomainTaskAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ReplicationTask_DomainTaskAttributes{`,
-		`DomainTaskAttributes:` + strings.Replace(fmt.Sprintf("%v", this.DomainTaskAttributes), "DomainTaskAttributes", "DomainTaskAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ReplicationTask_SyncShardStatusTaskAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ReplicationTask_SyncShardStatusTaskAttributes{`,
-		`SyncShardStatusTaskAttributes:` + strings.Replace(fmt.Sprintf("%v", this.SyncShardStatusTaskAttributes), "SyncShardStatusTaskAttributes", "SyncShardStatusTaskAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ReplicationTask_SyncActivityTaskAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ReplicationTask_SyncActivityTaskAttributes{`,
-		`SyncActivityTaskAttributes:` + strings.Replace(fmt.Sprintf("%v", this.SyncActivityTaskAttributes), "SyncActivityTaskAttributes", "SyncActivityTaskAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ReplicationTask_HistoryTaskV2Attributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ReplicationTask_HistoryTaskV2Attributes{`,
-		`HistoryTaskV2Attributes:` + strings.Replace(fmt.Sprintf("%v", this.HistoryTaskV2Attributes), "HistoryTaskV2Attributes", "HistoryTaskV2Attributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ReplicationTask_FailoverMarkerAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ReplicationTask_FailoverMarkerAttributes{`,
-		`FailoverMarkerAttributes:` + strings.Replace(fmt.Sprintf("%v", this.FailoverMarkerAttributes), "FailoverMarkerAttributes", "FailoverMarkerAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DomainTaskAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DomainTaskAttributes{`,
-		`DomainOperation:` + fmt.Sprintf("%v", this.DomainOperation) + `,`,
-		`Id:` + fmt.Sprintf("%v", this.Id) + `,`,
-		`Info:` + strings.Replace(fmt.Sprintf("%v", this.Info), "DomainInfo", "v1.DomainInfo", 1) + `,`,
-		`Config:` + strings.Replace(fmt.Sprintf("%v", this.Config), "DomainConfiguration", "v1.DomainConfiguration", 1) + `,`,
-		`ReplicationConfig:` + strings.Replace(fmt.Sprintf("%v", this.ReplicationConfig), "DomainReplicationConfiguration", "v1.DomainReplicationConfiguration", 1) + `,`,
-		`ConfigVersion:` + fmt.Sprintf("%v", this.ConfigVersion) + `,`,
-		`FailoverVersion:` + fmt.Sprintf("%v", this.FailoverVersion) + `,`,
-		`PreviousFailoverVersion:` + fmt.Sprintf("%v", this.PreviousFailoverVersion) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *SyncShardStatusTaskAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&SyncShardStatusTaskAttributes{`,
-		`SourceCluster:` + fmt.Sprintf("%v", this.SourceCluster) + `,`,
-		`ShardId:` + fmt.Sprintf("%v", this.ShardId) + `,`,
-		`Timestamp:` + strings.Replace(fmt.Sprintf("%v", this.Timestamp), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *SyncActivityTaskAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&SyncActivityTaskAttributes{`,
-		`DomainId:` + fmt.Sprintf("%v", this.DomainId) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "v1.WorkflowExecution", 1) + `,`,
-		`Version:` + fmt.Sprintf("%v", this.Version) + `,`,
-		`ScheduledId:` + fmt.Sprintf("%v", this.ScheduledId) + `,`,
-		`ScheduledTime:` + strings.Replace(fmt.Sprintf("%v", this.ScheduledTime), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`StartedId:` + fmt.Sprintf("%v", this.StartedId) + `,`,
-		`StartedTime:` + strings.Replace(fmt.Sprintf("%v", this.StartedTime), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`LastHeartbeatTime:` + strings.Replace(fmt.Sprintf("%v", this.LastHeartbeatTime), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`Details:` + strings.Replace(fmt.Sprintf("%v", this.Details), "Payload", "v1.Payload", 1) + `,`,
-		`Attempt:` + fmt.Sprintf("%v", this.Attempt) + `,`,
-		`LastFailure:` + strings.Replace(fmt.Sprintf("%v", this.LastFailure), "Failure", "v1.Failure", 1) + `,`,
-		`LastWorkerIdentity:` + fmt.Sprintf("%v", this.LastWorkerIdentity) + `,`,
-		`VersionHistory:` + strings.Replace(fmt.Sprintf("%v", this.VersionHistory), "VersionHistory", "VersionHistory", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryTaskV2Attributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForVersionHistoryItems := "[]*VersionHistoryItem{"
-	for _, f := range this.VersionHistoryItems {
-		repeatedStringForVersionHistoryItems += strings.Replace(fmt.Sprintf("%v", f), "VersionHistoryItem", "VersionHistoryItem", 1) + ","
-	}
-	repeatedStringForVersionHistoryItems += "}"
-	s := strings.Join([]string{`&HistoryTaskV2Attributes{`,
-		`TaskId:` + fmt.Sprintf("%v", this.TaskId) + `,`,
-		`DomainId:` + fmt.Sprintf("%v", this.DomainId) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "v1.WorkflowExecution", 1) + `,`,
-		`VersionHistoryItems:` + repeatedStringForVersionHistoryItems + `,`,
-		`Events:` + strings.Replace(fmt.Sprintf("%v", this.Events), "DataBlob", "v1.DataBlob", 1) + `,`,
-		`NewRunEvents:` + strings.Replace(fmt.Sprintf("%v", this.NewRunEvents), "DataBlob", "v1.DataBlob", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *FailoverMarkerAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&FailoverMarkerAttributes{`,
-		`DomainId:` + fmt.Sprintf("%v", this.DomainId) + `,`,
-		`FailoverVersion:` + fmt.Sprintf("%v", this.FailoverVersion) + `,`,
-		`CreationTime:` + strings.Replace(fmt.Sprintf("%v", this.CreationTime), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *FailoverMarkerToken) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&FailoverMarkerToken{`,
-		`ShardIds:` + fmt.Sprintf("%v", this.ShardIds) + `,`,
-		`FailoverMarker:` + strings.Replace(this.FailoverMarker.String(), "FailoverMarkerAttributes", "FailoverMarkerAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ReplicationTaskInfo) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ReplicationTaskInfo{`,
-		`DomainId:` + fmt.Sprintf("%v", this.DomainId) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "v1.WorkflowExecution", 1) + `,`,
-		`TaskType:` + fmt.Sprintf("%v", this.TaskType) + `,`,
-		`TaskId:` + fmt.Sprintf("%v", this.TaskId) + `,`,
-		`Version:` + fmt.Sprintf("%v", this.Version) + `,`,
-		`FirstEventId:` + fmt.Sprintf("%v", this.FirstEventId) + `,`,
-		`NextEventId:` + fmt.Sprintf("%v", this.NextEventId) + `,`,
-		`ScheduledId:` + fmt.Sprintf("%v", this.ScheduledId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ReplicationToken) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ReplicationToken{`,
-		`ShardId:` + fmt.Sprintf("%v", this.ShardId) + `,`,
-		`LastRetrievedMessageId:` + fmt.Sprintf("%v", this.LastRetrievedMessageId) + `,`,
-		`LastProcessedMessageId:` + fmt.Sprintf("%v", this.LastProcessedMessageId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *SyncShardStatus) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&SyncShardStatus{`,
-		`Timestamp:` + strings.Replace(fmt.Sprintf("%v", this.Timestamp), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func valueToStringReplication(v interface{}) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("*%v", pv)
 }
 func (m *ReplicationMessages) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -3567,6 +2611,7 @@ func (m *ReplicationMessages) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -3673,9 +2718,9 @@ func (m *ReplicationTask) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.CreationTime == nil {
-				m.CreationTime = new(time.Time)
+				m.CreationTime = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.CreationTime, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.CreationTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -3869,6 +2914,7 @@ func (m *ReplicationTask) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -3960,7 +3006,7 @@ func (m *DomainTaskAttributes) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Info", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Domain", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -3987,86 +3033,14 @@ func (m *DomainTaskAttributes) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.Info == nil {
-				m.Info = &v1.DomainInfo{}
+			if m.Domain == nil {
+				m.Domain = &v1.Domain{}
 			}
-			if err := m.Info.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.Domain.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
 		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Config", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowReplication
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthReplication
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthReplication
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Config == nil {
-				m.Config = &v1.DomainConfiguration{}
-			}
-			if err := m.Config.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ReplicationConfig", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowReplication
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthReplication
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthReplication
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.ReplicationConfig == nil {
-				m.ReplicationConfig = &v1.DomainReplicationConfiguration{}
-			}
-			if err := m.ReplicationConfig.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 6:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ConfigVersion", wireType)
 			}
@@ -4085,7 +3059,7 @@ func (m *DomainTaskAttributes) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 7:
+		case 5:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field FailoverVersion", wireType)
 			}
@@ -4104,7 +3078,7 @@ func (m *DomainTaskAttributes) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 8:
+		case 6:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PreviousFailoverVersion", wireType)
 			}
@@ -4138,6 +3112,7 @@ func (m *DomainTaskAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -4257,9 +3232,9 @@ func (m *SyncShardStatusTaskAttributes) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Timestamp == nil {
-				m.Timestamp = new(time.Time)
+				m.Timestamp = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.Timestamp, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.Timestamp.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -4278,6 +3253,7 @@ func (m *SyncShardStatusTaskAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -4452,9 +3428,9 @@ func (m *SyncActivityTaskAttributes) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.ScheduledTime == nil {
-				m.ScheduledTime = new(time.Time)
+				m.ScheduledTime = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.ScheduledTime, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.ScheduledTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -4507,9 +3483,9 @@ func (m *SyncActivityTaskAttributes) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.StartedTime == nil {
-				m.StartedTime = new(time.Time)
+				m.StartedTime = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.StartedTime, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.StartedTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -4543,9 +3519,9 @@ func (m *SyncActivityTaskAttributes) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.LastHeartbeatTime == nil {
-				m.LastHeartbeatTime = new(time.Time)
+				m.LastHeartbeatTime = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.LastHeartbeatTime, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.LastHeartbeatTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -4723,6 +3699,7 @@ func (m *SyncActivityTaskAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -4969,6 +3946,7 @@ func (m *HistoryTaskV2Attributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -5088,9 +4066,9 @@ func (m *FailoverMarkerAttributes) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.CreationTime == nil {
-				m.CreationTime = new(time.Time)
+				m.CreationTime = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.CreationTime, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.CreationTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -5109,6 +4087,7 @@ func (m *FailoverMarkerAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -5274,6 +4253,7 @@ func (m *FailoverMarkerToken) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -5509,6 +4489,7 @@ func (m *ReplicationTaskInfo) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -5619,6 +4600,7 @@ func (m *ReplicationToken) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -5687,9 +4669,9 @@ func (m *SyncShardStatus) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Timestamp == nil {
-				m.Timestamp = new(time.Time)
+				m.Timestamp = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.Timestamp, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.Timestamp.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -5708,6 +4690,7 @@ func (m *SyncShardStatus) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}

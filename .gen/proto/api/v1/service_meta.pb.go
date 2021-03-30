@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,18 +26,12 @@
 package apiv1
 
 import (
-	context "context"
 	fmt "fmt"
 	io "io"
 	math "math"
 	math_bits "math/bits"
-	reflect "reflect"
-	strings "strings"
 
 	proto "github.com/gogo/protobuf/proto"
-	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -52,10 +46,14 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type HealthRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *HealthRequest) Reset()      { *m = HealthRequest{} }
-func (*HealthRequest) ProtoMessage() {}
+func (m *HealthRequest) Reset()         { *m = HealthRequest{} }
+func (m *HealthRequest) String() string { return proto.CompactTextString(m) }
+func (*HealthRequest) ProtoMessage()    {}
 func (*HealthRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_f45a67f89288e7f3, []int{0}
 }
@@ -87,12 +85,16 @@ func (m *HealthRequest) XXX_DiscardUnknown() {
 var xxx_messageInfo_HealthRequest proto.InternalMessageInfo
 
 type HealthResponse struct {
-	Ok      bool   `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
-	Message string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Ok                   bool     `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
+	Message              string   `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *HealthResponse) Reset()      { *m = HealthResponse{} }
-func (*HealthResponse) ProtoMessage() {}
+func (m *HealthResponse) Reset()         { *m = HealthResponse{} }
+func (m *HealthResponse) String() string { return proto.CompactTextString(m) }
+func (*HealthResponse) ProtoMessage()    {}
 func (*HealthResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_f45a67f89288e7f3, []int{1}
 }
@@ -143,11 +145,11 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("github.com/uber/cadence/.gen/proto/api/v1/service_meta.proto", fileDescriptor_f45a67f89288e7f3)
+	proto.RegisterFile("uber/cadence/api/v1/service_meta.proto", fileDescriptor_f45a67f89288e7f3)
 }
 
 var fileDescriptor_f45a67f89288e7f3 = []byte{
-	// 262 bytes of a gzipped FileDescriptorProto
+	// 243 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x52, 0x2b, 0x4d, 0x4a, 0x2d,
 	0xd2, 0x4f, 0x4e, 0x4c, 0x49, 0xcd, 0x4b, 0x4e, 0xd5, 0x4f, 0x2c, 0xc8, 0xd4, 0x2f, 0x33, 0xd4,
 	0x2f, 0x4e, 0x2d, 0x2a, 0xcb, 0x4c, 0x4e, 0x8d, 0xcf, 0x4d, 0x2d, 0x49, 0xd4, 0x2b, 0x28, 0xca,
@@ -158,170 +160,12 @@ var fileDescriptor_f45a67f89288e7f3 = []byte{
 	0xb1, 0xe7, 0xa6, 0x16, 0x17, 0x27, 0xa6, 0xa7, 0x4a, 0x30, 0x29, 0x30, 0x6a, 0x70, 0x06, 0xc1,
 	0xb8, 0x46, 0x31, 0x5c, 0xec, 0xbe, 0xa9, 0x25, 0x89, 0x8e, 0x01, 0x9e, 0x42, 0x81, 0x5c, 0x6c,
 	0x10, 0x63, 0x84, 0x94, 0xf4, 0xb0, 0xd8, 0xab, 0x87, 0x62, 0xa9, 0x94, 0x32, 0x5e, 0x35, 0x10,
-	0x77, 0x38, 0x25, 0x5c, 0x78, 0x28, 0xc7, 0x70, 0xe3, 0xa1, 0x1c, 0xc3, 0x87, 0x87, 0x72, 0x8c,
-	0x0d, 0x8f, 0xe4, 0x18, 0x57, 0x3c, 0x92, 0x63, 0x3c, 0xf1, 0x48, 0x8e, 0xf1, 0xc2, 0x23, 0x39,
-	0xc6, 0x07, 0x8f, 0xe4, 0x18, 0x5f, 0x3c, 0x92, 0x63, 0xf8, 0xf0, 0x48, 0x8e, 0x71, 0xc2, 0x63,
-	0x39, 0x86, 0x0b, 0x8f, 0xe5, 0x18, 0x6e, 0x3c, 0x96, 0x63, 0xe0, 0x12, 0x4f, 0xce, 0xcf, 0xc5,
-	0x66, 0xba, 0x13, 0x87, 0x63, 0x41, 0x66, 0x00, 0x28, 0x60, 0x02, 0x18, 0xa3, 0x58, 0x13, 0x0b,
-	0x32, 0xcb, 0x0c, 0x93, 0xd8, 0xc0, 0x01, 0x65, 0x0c, 0x08, 0x00, 0x00, 0xff, 0xff, 0x60, 0x0d,
-	0xb7, 0x47, 0x52, 0x01, 0x00, 0x00,
-}
-
-func (this *HealthRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HealthRequest)
-	if !ok {
-		that2, ok := that.(HealthRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *HealthResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HealthResponse)
-	if !ok {
-		that2, ok := that.(HealthResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Ok != that1.Ok {
-		return false
-	}
-	if this.Message != that1.Message {
-		return false
-	}
-	return true
-}
-func (this *HealthRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.HealthRequest{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *HealthResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.HealthResponse{")
-	s = append(s, "Ok: "+fmt.Sprintf("%#v", this.Ok)+",\n")
-	s = append(s, "Message: "+fmt.Sprintf("%#v", this.Message)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func valueToGoStringServiceMeta(v interface{}, typ string) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
-}
-
-// Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConn
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion4
-
-// MetaAPIClient is the client API for MetaAPI service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type MetaAPIClient interface {
-	Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error)
-}
-
-type metaAPIClient struct {
-	cc *grpc.ClientConn
-}
-
-func NewMetaAPIClient(cc *grpc.ClientConn) MetaAPIClient {
-	return &metaAPIClient{cc}
-}
-
-func (c *metaAPIClient) Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error) {
-	out := new(HealthResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.MetaAPI/Health", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// MetaAPIServer is the server API for MetaAPI service.
-type MetaAPIServer interface {
-	Health(context.Context, *HealthRequest) (*HealthResponse, error)
-}
-
-// UnimplementedMetaAPIServer can be embedded to have forward compatible implementations.
-type UnimplementedMetaAPIServer struct {
-}
-
-func (*UnimplementedMetaAPIServer) Health(ctx context.Context, req *HealthRequest) (*HealthResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Health not implemented")
-}
-
-func RegisterMetaAPIServer(s *grpc.Server, srv MetaAPIServer) {
-	s.RegisterService(&_MetaAPI_serviceDesc, srv)
-}
-
-func _MetaAPI_Health_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HealthRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MetaAPIServer).Health(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.MetaAPI/Health",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetaAPIServer).Health(ctx, req.(*HealthRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _MetaAPI_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "uber.cadence.api.v1.MetaAPI",
-	HandlerType: (*MetaAPIServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Health",
-			Handler:    _MetaAPI_Health_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "github.com/uber/cadence/.gen/proto/api/v1/service_meta.proto",
+	0x77, 0x38, 0x25, 0x9d, 0x78, 0x24, 0xc7, 0x78, 0xe1, 0x91, 0x1c, 0xe3, 0x83, 0x47, 0x72, 0x8c,
+	0x5c, 0xe2, 0xc9, 0xf9, 0xb9, 0xd8, 0x74, 0x39, 0x71, 0x38, 0x16, 0x64, 0x06, 0x80, 0x3c, 0x1c,
+	0xc0, 0x18, 0xa5, 0x9f, 0x9e, 0x59, 0x92, 0x51, 0x9a, 0xa4, 0x97, 0x9c, 0x9f, 0xab, 0x8f, 0x12,
+	0x4a, 0x7a, 0xe9, 0xa9, 0x79, 0xfa, 0xe0, 0x60, 0x81, 0x06, 0x98, 0x75, 0x62, 0x41, 0x66, 0x99,
+	0x61, 0x12, 0x1b, 0x58, 0xcc, 0x18, 0x10, 0x00, 0x00, 0xff, 0xff, 0x8a, 0x60, 0x27, 0xd8, 0x54,
+	0x01, 0x00, 0x00,
 }
 
 func (m *HealthRequest) Marshal() (dAtA []byte, err error) {
@@ -344,6 +188,10 @@ func (m *HealthRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -367,6 +215,10 @@ func (m *HealthResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Message) > 0 {
 		i -= len(m.Message)
 		copy(dAtA[i:], m.Message)
@@ -404,6 +256,9 @@ func (m *HealthRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -420,6 +275,9 @@ func (m *HealthResponse) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceMeta(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -428,34 +286,6 @@ func sovServiceMeta(x uint64) (n int) {
 }
 func sozServiceMeta(x uint64) (n int) {
 	return sovServiceMeta(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (this *HealthRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HealthRequest{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HealthResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HealthResponse{`,
-		`Ok:` + fmt.Sprintf("%v", this.Ok) + `,`,
-		`Message:` + fmt.Sprintf("%v", this.Message) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func valueToStringServiceMeta(v interface{}) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("*%v", pv)
 }
 func (m *HealthRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -501,6 +331,7 @@ func (m *HealthRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -606,6 +437,7 @@ func (m *HealthResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}

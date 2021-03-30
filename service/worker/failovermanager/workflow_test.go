@@ -211,10 +211,10 @@ func (s *failoverWorkflowTestSuite) assertQueryState(env *testsuite.TestWorkflow
 
 var clusters = []*types.ClusterReplicationConfiguration{
 	{
-		ClusterName: common.StringPtr("c1"),
+		ClusterName: "c1",
 	},
 	{
-		ClusterName: common.StringPtr("c2"),
+		ClusterName: "c2",
 	},
 }
 
@@ -227,16 +227,16 @@ func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 	}{
 		{
 			domain: &types.DescribeDomainResponse{
-				IsGlobalDomain: common.BoolPtr(false),
+				IsGlobalDomain: false,
 			},
 			sourceCluster: "c1",
 			expected:      false,
 		},
 		{
 			domain: &types.DescribeDomainResponse{
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c1"),
+					ActiveClusterName: "c1",
 					Clusters:          clusters,
 				},
 			},
@@ -245,9 +245,9 @@ func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 		},
 		{
 			domain: &types.DescribeDomainResponse{
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c2"),
+					ActiveClusterName: "c2",
 					Clusters:          clusters,
 				},
 			},
@@ -256,9 +256,9 @@ func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 		},
 		{
 			domain: &types.DescribeDomainResponse{
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c2"),
+					ActiveClusterName: "c2",
 					Clusters:          clusters,
 				},
 				DomainInfo: &types.DomainInfo{
@@ -300,14 +300,14 @@ func (s *failoverWorkflowTestSuite) TestGetDomainsActivity() {
 		Domains: []*types.DescribeDomainResponse{
 			{
 				DomainInfo: &types.DomainInfo{
-					Name: common.StringPtr("d1"),
+					Name: "d1",
 					Data: map[string]string{common.DomainDataKeyForManagedFailover: "true"},
 				},
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c1"),
+					ActiveClusterName: "c1",
 					Clusters:          clusters,
 				},
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 			},
 		},
 	}
@@ -333,35 +333,35 @@ func (s *failoverWorkflowTestSuite) TestGetDomainsActivity_WithTargetDomains() {
 		Domains: []*types.DescribeDomainResponse{
 			{
 				DomainInfo: &types.DomainInfo{
-					Name: common.StringPtr("d1"),
+					Name: "d1",
 					Data: map[string]string{common.DomainDataKeyForManagedFailover: "true"},
 				},
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c1"),
+					ActiveClusterName: "c1",
 					Clusters:          clusters,
 				},
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 			},
 			{
 				DomainInfo: &types.DomainInfo{
-					Name: common.StringPtr("d2"),
+					Name: "d2",
 					Data: map[string]string{common.DomainDataKeyForManagedFailover: "true"},
 				},
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c1"),
+					ActiveClusterName: "c1",
 					Clusters:          clusters,
 				},
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 			},
 			{
 				DomainInfo: &types.DomainInfo{
-					Name: common.StringPtr("d3"),
+					Name: "d3",
 				},
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c1"),
+					ActiveClusterName: "c1",
 					Clusters:          clusters,
 				},
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 			},
 		},
 	}
@@ -406,16 +406,13 @@ func (s *failoverWorkflowTestSuite) TestFailoverActivity_Error() {
 
 	domains := []string{"d1", "d2"}
 	targetCluster := "c2"
-	replicationConfig := &types.DomainReplicationConfiguration{
+	updateRequest1 := &types.UpdateDomainRequest{
+		Name:              "d1",
 		ActiveClusterName: common.StringPtr(targetCluster),
 	}
-	updateRequest1 := &types.UpdateDomainRequest{
-		Name:                     common.StringPtr("d1"),
-		ReplicationConfiguration: replicationConfig,
-	}
 	updateRequest2 := &types.UpdateDomainRequest{
-		Name:                     common.StringPtr("d2"),
-		ReplicationConfiguration: replicationConfig,
+		Name:              "d2",
+		ActiveClusterName: common.StringPtr(targetCluster),
 	}
 	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), updateRequest1).Return(nil, nil)
 	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), updateRequest2).Return(nil, errors.New("mockErr"))

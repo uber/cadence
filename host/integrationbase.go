@@ -165,13 +165,13 @@ func (s *IntegrationBase) registerDomain(
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	return s.engine.RegisterDomain(ctx, &types.RegisterDomainRequest{
-		Name:                                   &domain,
-		Description:                            &domain,
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(retentionDays)),
+		Name:                                   domain,
+		Description:                            domain,
+		WorkflowExecutionRetentionPeriodInDays: int32(retentionDays),
 		HistoryArchivalStatus:                  &historyArchivalStatus,
-		HistoryArchivalURI:                     &historyArchivalURI,
+		HistoryArchivalURI:                     historyArchivalURI,
 		VisibilityArchivalStatus:               &visibilityArchivalStatus,
-		VisibilityArchivalURI:                  &visibilityArchivalURI,
+		VisibilityArchivalURI:                  visibilityArchivalURI,
 	})
 }
 
@@ -188,16 +188,16 @@ func (s *IntegrationBase) printWorkflowHistory(domain string, execution *types.W
 
 func (s *IntegrationBase) getHistory(domain string, execution *types.WorkflowExecution) []*types.HistoryEvent {
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-		Domain:          common.StringPtr(domain),
+		Domain:          domain,
 		Execution:       execution,
-		MaximumPageSize: common.Int32Ptr(5), // Use small page size to force pagination code path
+		MaximumPageSize: 5, // Use small page size to force pagination code path
 	})
 	s.Require().NoError(err)
 
 	events := historyResponse.History.Events
 	for historyResponse.NextPageToken != nil {
 		historyResponse, err = s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-			Domain:        common.StringPtr(domain),
+			Domain:        domain,
 			Execution:     execution,
 			NextPageToken: historyResponse.NextPageToken,
 		})

@@ -26,9 +26,11 @@ import (
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
+
+// An indirection for the prompt function so that it can be mocked in the unit tests
+var promptFn = prompt
 
 // AdminAddSearchAttribute to whitelist search attribute
 func AdminAddSearchAttribute(c *cli.Context) {
@@ -41,7 +43,7 @@ func AdminAddSearchAttribute(c *cli.Context) {
 	// ask user for confirmation
 	promptMsg := fmt.Sprintf("Are you trying to add key [%s] with Type [%s]? Y/N",
 		color.YellowString(key), color.YellowString(intValTypeToString(valType)))
-	prompt(promptMsg)
+	promptFn(promptMsg)
 
 	adminClient := cFactory.ServerAdminClient(c)
 	ctx, cancel := newContext(c)
@@ -50,7 +52,7 @@ func AdminAddSearchAttribute(c *cli.Context) {
 		SearchAttribute: map[string]types.IndexedValueType{
 			key: types.IndexedValueType(valType),
 		},
-		SecurityToken: common.StringPtr(c.String(FlagSecurityToken)),
+		SecurityToken: c.String(FlagSecurityToken),
 	}
 
 	err := adminClient.AddSearchAttribute(ctx, request)

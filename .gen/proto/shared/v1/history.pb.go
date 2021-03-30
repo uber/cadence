@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,15 +26,13 @@
 package sharedv1
 
 import (
-	bytes "bytes"
 	fmt "fmt"
 	io "io"
 	math "math"
 	math_bits "math/bits"
-	reflect "reflect"
-	strings "strings"
 
 	proto "github.com/gogo/protobuf/proto"
+
 	v1 "github.com/uber/cadence/.gen/proto/api/v1"
 )
 
@@ -50,12 +48,16 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type TransientDecisionInfo struct {
-	ScheduledEvent *v1.HistoryEvent `protobuf:"bytes,1,opt,name=scheduled_event,json=scheduledEvent,proto3" json:"scheduled_event,omitempty"`
-	StartedEvent   *v1.HistoryEvent `protobuf:"bytes,2,opt,name=started_event,json=startedEvent,proto3" json:"started_event,omitempty"`
+	ScheduledEvent       *v1.HistoryEvent `protobuf:"bytes,1,opt,name=scheduled_event,json=scheduledEvent,proto3" json:"scheduled_event,omitempty"`
+	StartedEvent         *v1.HistoryEvent `protobuf:"bytes,2,opt,name=started_event,json=startedEvent,proto3" json:"started_event,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
+	XXX_unrecognized     []byte           `json:"-"`
+	XXX_sizecache        int32            `json:"-"`
 }
 
-func (m *TransientDecisionInfo) Reset()      { *m = TransientDecisionInfo{} }
-func (*TransientDecisionInfo) ProtoMessage() {}
+func (m *TransientDecisionInfo) Reset()         { *m = TransientDecisionInfo{} }
+func (m *TransientDecisionInfo) String() string { return proto.CompactTextString(m) }
+func (*TransientDecisionInfo) ProtoMessage()    {}
 func (*TransientDecisionInfo) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0370c4177fcc3ee8, []int{0}
 }
@@ -102,12 +104,16 @@ func (m *TransientDecisionInfo) GetStartedEvent() *v1.HistoryEvent {
 
 // VersionHistoryItem contains signal eventId and the corresponding version.
 type VersionHistoryItem struct {
-	EventId int64 `protobuf:"varint,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
-	Version int64 `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	EventId              int64    `protobuf:"varint,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	Version              int64    `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *VersionHistoryItem) Reset()      { *m = VersionHistoryItem{} }
-func (*VersionHistoryItem) ProtoMessage() {}
+func (m *VersionHistoryItem) Reset()         { *m = VersionHistoryItem{} }
+func (m *VersionHistoryItem) String() string { return proto.CompactTextString(m) }
+func (*VersionHistoryItem) ProtoMessage()    {}
 func (*VersionHistoryItem) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0370c4177fcc3ee8, []int{1}
 }
@@ -154,12 +160,16 @@ func (m *VersionHistoryItem) GetVersion() int64 {
 
 // VersionHistory contains the version history of a branch.
 type VersionHistory struct {
-	BranchToken []byte                `protobuf:"bytes,1,opt,name=branch_token,json=branchToken,proto3" json:"branch_token,omitempty"`
-	Items       []*VersionHistoryItem `protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty"`
+	BranchToken          []byte                `protobuf:"bytes,1,opt,name=branch_token,json=branchToken,proto3" json:"branch_token,omitempty"`
+	Items                []*VersionHistoryItem `protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
-func (m *VersionHistory) Reset()      { *m = VersionHistory{} }
-func (*VersionHistory) ProtoMessage() {}
+func (m *VersionHistory) Reset()         { *m = VersionHistory{} }
+func (m *VersionHistory) String() string { return proto.CompactTextString(m) }
+func (*VersionHistory) ProtoMessage()    {}
 func (*VersionHistory) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0370c4177fcc3ee8, []int{2}
 }
@@ -208,10 +218,14 @@ func (m *VersionHistory) GetItems() []*VersionHistoryItem {
 type VersionHistories struct {
 	CurrentVersionHistoryIndex int32             `protobuf:"varint,1,opt,name=current_version_history_index,json=currentVersionHistoryIndex,proto3" json:"current_version_history_index,omitempty"`
 	Histories                  []*VersionHistory `protobuf:"bytes,2,rep,name=histories,proto3" json:"histories,omitempty"`
+	XXX_NoUnkeyedLiteral       struct{}          `json:"-"`
+	XXX_unrecognized           []byte            `json:"-"`
+	XXX_sizecache              int32             `json:"-"`
 }
 
-func (m *VersionHistories) Reset()      { *m = VersionHistories{} }
-func (*VersionHistories) ProtoMessage() {}
+func (m *VersionHistories) Reset()         { *m = VersionHistories{} }
+func (m *VersionHistories) String() string { return proto.CompactTextString(m) }
+func (*VersionHistories) ProtoMessage()    {}
 func (*VersionHistories) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0370c4177fcc3ee8, []int{3}
 }
@@ -264,216 +278,37 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("github.com/uber/cadence/.gen/proto/shared/v1/history.proto", fileDescriptor_0370c4177fcc3ee8)
+	proto.RegisterFile("uber/cadence/shared/v1/history.proto", fileDescriptor_0370c4177fcc3ee8)
 }
 
 var fileDescriptor_0370c4177fcc3ee8 = []byte{
-	// 398 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x92, 0xb1, 0x0e, 0xd2, 0x40,
-	0x1c, 0xc6, 0x7b, 0x10, 0x04, 0x0f, 0x44, 0x73, 0x89, 0x06, 0x49, 0xbc, 0x40, 0x63, 0x0c, 0x71,
-	0xb8, 0xa6, 0xb8, 0x1b, 0x35, 0x68, 0xac, 0x63, 0x43, 0x1c, 0x5c, 0x9a, 0xd2, 0xfe, 0x4d, 0x2f,
-	0xca, 0x95, 0xdc, 0x5d, 0x1b, 0xdd, 0x7c, 0x04, 0x77, 0x5f, 0xc0, 0xc4, 0x17, 0x71, 0x64, 0x64,
-	0x94, 0xb2, 0x38, 0xf2, 0x08, 0xa6, 0xd7, 0x82, 0xa9, 0x38, 0x30, 0x7e, 0xff, 0x7e, 0xdf, 0xef,
-	0xff, 0xf5, 0xee, 0xf0, 0xc3, 0x6c, 0x05, 0xd2, 0x89, 0xc2, 0x18, 0x44, 0x04, 0x8e, 0x4a, 0x42,
-	0x09, 0xb1, 0x93, 0xbb, 0x4e, 0xc2, 0x95, 0x4e, 0xe5, 0x67, 0xb6, 0x91, 0xa9, 0x4e, 0xc9, 0xbd,
-	0xd2, 0xc5, 0x6a, 0x17, 0xab, 0x5c, 0x2c, 0x77, 0xc7, 0xd3, 0x46, 0x3a, 0xdc, 0xf0, 0x8b, 0xa8,
-	0xfd, 0x03, 0xe1, 0xbb, 0x4b, 0x19, 0x0a, 0xc5, 0x41, 0xe8, 0x05, 0x44, 0x5c, 0xf1, 0x54, 0x78,
-	0xe2, 0x7d, 0x4a, 0xde, 0xe0, 0xdb, 0x2a, 0x4a, 0x20, 0xce, 0x3e, 0x42, 0x1c, 0x40, 0x0e, 0x42,
-	0x8f, 0xd0, 0x04, 0xcd, 0xfa, 0xf3, 0x29, 0x6b, 0xac, 0x0b, 0x37, 0x9c, 0xe5, 0x2e, 0x7b, 0x5d,
-	0x61, 0x5f, 0x96, 0x46, 0x7f, 0x78, 0x4e, 0x1a, 0x4d, 0x5e, 0xe1, 0x5b, 0x4a, 0x87, 0x52, 0x9f,
-	0x49, 0xad, 0x6b, 0x49, 0x83, 0x3a, 0x67, 0x94, 0xed, 0x61, 0xf2, 0x16, 0x64, 0x59, 0xb1, 0x36,
-	0x79, 0x1a, 0xd6, 0xe4, 0x3e, 0xee, 0x19, 0x6a, 0xc0, 0x63, 0x53, 0xb1, 0xed, 0x77, 0x8d, 0xf6,
-	0x62, 0x32, 0xc2, 0xdd, 0xbc, 0x0a, 0x98, 0x95, 0x6d, 0xff, 0x24, 0xed, 0x0c, 0x0f, 0x9b, 0x28,
-	0x32, 0xc5, 0x83, 0x95, 0x0c, 0x45, 0x94, 0x04, 0x3a, 0xfd, 0x00, 0xc2, 0xa0, 0x06, 0x7e, 0xbf,
-	0x9a, 0x2d, 0xcb, 0x11, 0x79, 0x86, 0x3b, 0x5c, 0xc3, 0x5a, 0x8d, 0x5a, 0x93, 0xf6, 0xac, 0x3f,
-	0x7f, 0xcc, 0xfe, 0x7f, 0xf0, 0xec, 0xb2, 0xa4, 0x5f, 0x05, 0xed, 0x6f, 0x08, 0xdf, 0x69, 0x7c,
-	0xe5, 0xa0, 0xc8, 0x73, 0xfc, 0x20, 0xca, 0xa4, 0x2c, 0x7f, 0xa1, 0xae, 0x17, 0xd4, 0xb7, 0x14,
-	0x70, 0x11, 0xc3, 0x27, 0x53, 0xa5, 0xe3, 0x8f, 0x6b, 0xd3, 0x3f, 0xf4, 0xd2, 0x41, 0x16, 0xf8,
-	0x66, 0x72, 0xe2, 0xd5, 0xed, 0x1e, 0x5d, 0xd7, 0xce, 0xff, 0x1b, 0x7c, 0xf1, 0x74, 0xbb, 0xa7,
-	0xd6, 0x6e, 0x4f, 0xad, 0xe3, 0x9e, 0xa2, 0x2f, 0x05, 0x45, 0xdf, 0x0b, 0x8a, 0x7e, 0x16, 0x14,
-	0x6d, 0x0b, 0x8a, 0x7e, 0x15, 0x14, 0xfd, 0x2e, 0xa8, 0x75, 0x2c, 0x28, 0xfa, 0x7a, 0xa0, 0xd6,
-	0xf6, 0x40, 0xad, 0xdd, 0x81, 0x5a, 0xef, 0x7a, 0x15, 0x3a, 0x77, 0x57, 0x37, 0xcc, 0xa3, 0x7a,
-	0xf2, 0x27, 0x00, 0x00, 0xff, 0xff, 0x2b, 0x1e, 0x2d, 0xef, 0xb7, 0x02, 0x00, 0x00,
+	// 380 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x92, 0xcd, 0x4e, 0xfa, 0x40,
+	0x14, 0xc5, 0x53, 0x08, 0x7f, 0xfe, 0x0e, 0x88, 0x66, 0x12, 0x0d, 0x92, 0x48, 0xa0, 0x31, 0x86,
+	0xb8, 0x98, 0xa6, 0x18, 0x57, 0x6e, 0xfc, 0x40, 0x63, 0x5d, 0x36, 0xc4, 0x85, 0x9b, 0xa6, 0x1f,
+	0x57, 0x3a, 0x51, 0xa6, 0x64, 0x66, 0xda, 0xe8, 0xb3, 0xf8, 0x08, 0xbe, 0x88, 0x4b, 0x1f, 0xc1,
+	0xf0, 0x24, 0xa6, 0xd3, 0x01, 0x52, 0x71, 0xc1, 0xae, 0x67, 0xe6, 0x9c, 0xdf, 0x3d, 0x6d, 0x2f,
+	0x3a, 0x4a, 0x03, 0xe0, 0x56, 0xe8, 0x47, 0xc0, 0x42, 0xb0, 0x44, 0xec, 0x73, 0x88, 0xac, 0xcc,
+	0xb6, 0x62, 0x2a, 0x64, 0xc2, 0xdf, 0xc8, 0x8c, 0x27, 0x32, 0xc1, 0xfb, 0xb9, 0x8b, 0x68, 0x17,
+	0x29, 0x5c, 0x24, 0xb3, 0x3b, 0xfd, 0x52, 0xda, 0x9f, 0xd1, 0xb5, 0xa8, 0xf9, 0x61, 0xa0, 0xbd,
+	0x31, 0xf7, 0x99, 0xa0, 0xc0, 0xe4, 0x08, 0x42, 0x2a, 0x68, 0xc2, 0x1c, 0xf6, 0x94, 0xe0, 0x7b,
+	0xb4, 0x23, 0xc2, 0x18, 0xa2, 0xf4, 0x05, 0x22, 0x0f, 0x32, 0x60, 0xb2, 0x6d, 0xf4, 0x8c, 0x41,
+	0x63, 0xd8, 0x27, 0xa5, 0x71, 0xfe, 0x8c, 0x92, 0xcc, 0x26, 0x77, 0x05, 0xf6, 0x26, 0x37, 0xba,
+	0xad, 0x65, 0x52, 0x69, 0x7c, 0x8b, 0xb6, 0x85, 0xf4, 0xb9, 0x5c, 0x92, 0x2a, 0x9b, 0x92, 0x9a,
+	0x3a, 0xa7, 0x94, 0xe9, 0x20, 0xfc, 0x00, 0x3c, 0xaf, 0xa8, 0x4d, 0x8e, 0x84, 0x29, 0x3e, 0x40,
+	0xff, 0x15, 0xd5, 0xa3, 0x91, 0xaa, 0x58, 0x75, 0xeb, 0x4a, 0x3b, 0x11, 0x6e, 0xa3, 0x7a, 0x56,
+	0x04, 0xd4, 0xc8, 0xaa, 0xbb, 0x90, 0x66, 0x8a, 0x5a, 0x65, 0x14, 0xee, 0xa3, 0x66, 0xc0, 0x7d,
+	0x16, 0xc6, 0x9e, 0x4c, 0x9e, 0x81, 0x29, 0x54, 0xd3, 0x6d, 0x14, 0x67, 0xe3, 0xfc, 0x08, 0x5f,
+	0xa0, 0x1a, 0x95, 0x30, 0x15, 0xed, 0x4a, 0xaf, 0x3a, 0x68, 0x0c, 0x4f, 0xc8, 0xdf, 0x1f, 0x9e,
+	0xac, 0x97, 0x74, 0x8b, 0xa0, 0xf9, 0x6e, 0xa0, 0xdd, 0xd2, 0x2d, 0x05, 0x81, 0x2f, 0xd1, 0x61,
+	0x98, 0x72, 0x9e, 0xbf, 0x82, 0xae, 0xe7, 0xe9, 0xbf, 0xe4, 0x51, 0x16, 0xc1, 0xab, 0xaa, 0x52,
+	0x73, 0x3b, 0xda, 0xf4, 0x8b, 0x9e, 0x3b, 0xf0, 0x08, 0x6d, 0xc5, 0x0b, 0x9e, 0x6e, 0x77, 0xbc,
+	0x59, 0x3b, 0x77, 0x15, 0xbc, 0xba, 0xfe, 0x9c, 0x77, 0x8d, 0xaf, 0x79, 0xd7, 0xf8, 0x9e, 0x77,
+	0x8d, 0xc7, 0xb3, 0x09, 0x95, 0x71, 0x1a, 0x90, 0x30, 0x99, 0x5a, 0xa5, 0x4d, 0x22, 0x13, 0x60,
+	0x96, 0xda, 0x9f, 0xd5, 0x4a, 0x9e, 0x17, 0x4f, 0x99, 0x1d, 0xfc, 0x53, 0x37, 0xa7, 0x3f, 0x01,
+	0x00, 0x00, 0xff, 0xff, 0x3b, 0xbe, 0xf4, 0xbd, 0xbc, 0x02, 0x00, 0x00,
 }
 
-func (this *TransientDecisionInfo) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*TransientDecisionInfo)
-	if !ok {
-		that2, ok := that.(TransientDecisionInfo)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ScheduledEvent.Equal(that1.ScheduledEvent) {
-		return false
-	}
-	if !this.StartedEvent.Equal(that1.StartedEvent) {
-		return false
-	}
-	return true
-}
-func (this *VersionHistoryItem) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*VersionHistoryItem)
-	if !ok {
-		that2, ok := that.(VersionHistoryItem)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.EventId != that1.EventId {
-		return false
-	}
-	if this.Version != that1.Version {
-		return false
-	}
-	return true
-}
-func (this *VersionHistory) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*VersionHistory)
-	if !ok {
-		that2, ok := that.(VersionHistory)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.BranchToken, that1.BranchToken) {
-		return false
-	}
-	if len(this.Items) != len(that1.Items) {
-		return false
-	}
-	for i := range this.Items {
-		if !this.Items[i].Equal(that1.Items[i]) {
-			return false
-		}
-	}
-	return true
-}
-func (this *VersionHistories) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*VersionHistories)
-	if !ok {
-		that2, ok := that.(VersionHistories)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.CurrentVersionHistoryIndex != that1.CurrentVersionHistoryIndex {
-		return false
-	}
-	if len(this.Histories) != len(that1.Histories) {
-		return false
-	}
-	for i := range this.Histories {
-		if !this.Histories[i].Equal(that1.Histories[i]) {
-			return false
-		}
-	}
-	return true
-}
-func (this *TransientDecisionInfo) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&sharedv1.TransientDecisionInfo{")
-	if this.ScheduledEvent != nil {
-		s = append(s, "ScheduledEvent: "+fmt.Sprintf("%#v", this.ScheduledEvent)+",\n")
-	}
-	if this.StartedEvent != nil {
-		s = append(s, "StartedEvent: "+fmt.Sprintf("%#v", this.StartedEvent)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *VersionHistoryItem) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&sharedv1.VersionHistoryItem{")
-	s = append(s, "EventId: "+fmt.Sprintf("%#v", this.EventId)+",\n")
-	s = append(s, "Version: "+fmt.Sprintf("%#v", this.Version)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *VersionHistory) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&sharedv1.VersionHistory{")
-	s = append(s, "BranchToken: "+fmt.Sprintf("%#v", this.BranchToken)+",\n")
-	if this.Items != nil {
-		s = append(s, "Items: "+fmt.Sprintf("%#v", this.Items)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *VersionHistories) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&sharedv1.VersionHistories{")
-	s = append(s, "CurrentVersionHistoryIndex: "+fmt.Sprintf("%#v", this.CurrentVersionHistoryIndex)+",\n")
-	if this.Histories != nil {
-		s = append(s, "Histories: "+fmt.Sprintf("%#v", this.Histories)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func valueToGoStringHistory(v interface{}, typ string) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
-}
 func (m *TransientDecisionInfo) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -494,6 +329,10 @@ func (m *TransientDecisionInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.StartedEvent != nil {
 		{
 			size, err := m.StartedEvent.MarshalToSizedBuffer(dAtA[:i])
@@ -541,6 +380,10 @@ func (m *VersionHistoryItem) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Version != 0 {
 		i = encodeVarintHistory(dAtA, i, uint64(m.Version))
 		i--
@@ -574,6 +417,10 @@ func (m *VersionHistory) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Items) > 0 {
 		for iNdEx := len(m.Items) - 1; iNdEx >= 0; iNdEx-- {
 			{
@@ -618,6 +465,10 @@ func (m *VersionHistories) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Histories) > 0 {
 		for iNdEx := len(m.Histories) - 1; iNdEx >= 0; iNdEx-- {
 			{
@@ -665,6 +516,9 @@ func (m *TransientDecisionInfo) Size() (n int) {
 		l = m.StartedEvent.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -679,6 +533,9 @@ func (m *VersionHistoryItem) Size() (n int) {
 	}
 	if m.Version != 0 {
 		n += 1 + sovHistory(uint64(m.Version))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -699,6 +556,9 @@ func (m *VersionHistory) Size() (n int) {
 			n += 1 + l + sovHistory(uint64(l))
 		}
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -717,6 +577,9 @@ func (m *VersionHistories) Size() (n int) {
 			n += 1 + l + sovHistory(uint64(l))
 		}
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -725,68 +588,6 @@ func sovHistory(x uint64) (n int) {
 }
 func sozHistory(x uint64) (n int) {
 	return sovHistory(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (this *TransientDecisionInfo) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&TransientDecisionInfo{`,
-		`ScheduledEvent:` + strings.Replace(fmt.Sprintf("%v", this.ScheduledEvent), "HistoryEvent", "v1.HistoryEvent", 1) + `,`,
-		`StartedEvent:` + strings.Replace(fmt.Sprintf("%v", this.StartedEvent), "HistoryEvent", "v1.HistoryEvent", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *VersionHistoryItem) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&VersionHistoryItem{`,
-		`EventId:` + fmt.Sprintf("%v", this.EventId) + `,`,
-		`Version:` + fmt.Sprintf("%v", this.Version) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *VersionHistory) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForItems := "[]*VersionHistoryItem{"
-	for _, f := range this.Items {
-		repeatedStringForItems += strings.Replace(f.String(), "VersionHistoryItem", "VersionHistoryItem", 1) + ","
-	}
-	repeatedStringForItems += "}"
-	s := strings.Join([]string{`&VersionHistory{`,
-		`BranchToken:` + fmt.Sprintf("%v", this.BranchToken) + `,`,
-		`Items:` + repeatedStringForItems + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *VersionHistories) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForHistories := "[]*VersionHistory{"
-	for _, f := range this.Histories {
-		repeatedStringForHistories += strings.Replace(f.String(), "VersionHistory", "VersionHistory", 1) + ","
-	}
-	repeatedStringForHistories += "}"
-	s := strings.Join([]string{`&VersionHistories{`,
-		`CurrentVersionHistoryIndex:` + fmt.Sprintf("%v", this.CurrentVersionHistoryIndex) + `,`,
-		`Histories:` + repeatedStringForHistories + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func valueToStringHistory(v interface{}) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("*%v", pv)
 }
 func (m *TransientDecisionInfo) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -904,6 +705,7 @@ func (m *TransientDecisionInfo) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -995,6 +797,7 @@ func (m *VersionHistoryItem) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -1116,6 +919,7 @@ func (m *VersionHistory) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -1222,6 +1026,7 @@ func (m *VersionHistories) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}

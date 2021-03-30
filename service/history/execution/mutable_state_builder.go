@@ -50,8 +50,6 @@ import (
 )
 
 const (
-	identityHistoryService = "history-service"
-
 	mutableStateInvalidHistoryActionMsg         = "invalid history builder state for action"
 	mutableStateInvalidHistoryActionMsgTemplate = mutableStateInvalidHistoryActionMsg + ": %v"
 
@@ -659,7 +657,7 @@ func (e *mutableStateBuilder) assignEventIDToBufferedEvents() {
 		}
 
 		eventID := e.executionInfo.NextEventID
-		event.EventID = common.Int64Ptr(eventID)
+		event.EventID = eventID
 		e.executionInfo.IncreaseNextEventID()
 
 		switch event.GetEventType() {
@@ -682,47 +680,47 @@ func (e *mutableStateBuilder) assignEventIDToBufferedEvents() {
 		case types.EventTypeActivityTaskCompleted:
 			attributes := event.ActivityTaskCompletedEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetScheduledEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		case types.EventTypeActivityTaskFailed:
 			attributes := event.ActivityTaskFailedEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetScheduledEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		case types.EventTypeActivityTaskTimedOut:
 			attributes := event.ActivityTaskTimedOutEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetScheduledEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		case types.EventTypeActivityTaskCanceled:
 			attributes := event.ActivityTaskCanceledEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetScheduledEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		case types.EventTypeChildWorkflowExecutionCompleted:
 			attributes := event.ChildWorkflowExecutionCompletedEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetInitiatedEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		case types.EventTypeChildWorkflowExecutionFailed:
 			attributes := event.ChildWorkflowExecutionFailedEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetInitiatedEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		case types.EventTypeChildWorkflowExecutionTimedOut:
 			attributes := event.ChildWorkflowExecutionTimedOutEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetInitiatedEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		case types.EventTypeChildWorkflowExecutionCanceled:
 			attributes := event.ChildWorkflowExecutionCanceledEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetInitiatedEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		case types.EventTypeChildWorkflowExecutionTerminated:
 			attributes := event.ChildWorkflowExecutionTerminatedEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetInitiatedEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		}
 	}
@@ -742,7 +740,7 @@ func (e *mutableStateBuilder) assignTaskIDToEvents() error {
 		for index, event := range e.hBuilder.transientHistory {
 			if event.GetTaskID() == common.EmptyEventTaskID {
 				taskID := taskIDs[index]
-				event.TaskID = common.Int64Ptr(taskID)
+				event.TaskID = taskID
 				e.executionInfo.LastEventTaskID = taskID
 			}
 		}
@@ -759,7 +757,7 @@ func (e *mutableStateBuilder) assignTaskIDToEvents() error {
 		for index, event := range e.hBuilder.history {
 			if event.GetTaskID() == common.EmptyEventTaskID {
 				taskID := taskIDs[index]
-				event.TaskID = common.Int64Ptr(taskID)
+				event.TaskID = taskID
 				e.executionInfo.LastEventTaskID = taskID
 			}
 		}
@@ -831,11 +829,11 @@ func (e *mutableStateBuilder) CreateNewHistoryEventWithTimestamp(
 
 	ts := common.Int64Ptr(timestamp)
 	historyEvent := &types.HistoryEvent{}
-	historyEvent.EventID = common.Int64Ptr(eventID)
+	historyEvent.EventID = eventID
 	historyEvent.Timestamp = ts
 	historyEvent.EventType = &eventType
-	historyEvent.Version = common.Int64Ptr(e.GetCurrentVersion())
-	historyEvent.TaskID = common.Int64Ptr(common.EmptyEventTaskID)
+	historyEvent.Version = e.GetCurrentVersion()
+	historyEvent.TaskID = common.EmptyEventTaskID
 
 	return historyEvent
 }
@@ -897,7 +895,7 @@ func (e *mutableStateBuilder) shouldBufferEvent(
 
 func (e *mutableStateBuilder) GetWorkflowType() *types.WorkflowType {
 	wType := &types.WorkflowType{}
-	wType.Name = common.StringPtr(e.executionInfo.WorkflowTypeName)
+	wType.Name = e.executionInfo.WorkflowTypeName
 
 	return wType
 }
@@ -1606,14 +1604,14 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		taskList = attributes.TaskList.GetName()
 	}
 	tl := &types.TaskList{}
-	tl.Name = common.StringPtr(taskList)
+	tl.Name = taskList
 
 	workflowType := previousExecutionInfo.WorkflowTypeName
 	if attributes.WorkflowType != nil {
 		workflowType = attributes.WorkflowType.GetName()
 	}
 	wType := &types.WorkflowType{}
-	wType.Name = common.StringPtr(workflowType)
+	wType.Name = workflowType
 
 	decisionTimeout := previousExecutionInfo.DecisionStartToCloseTimeout
 	if attributes.TaskStartToCloseTimeoutSeconds != nil {
@@ -1621,8 +1619,8 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 	}
 
 	createRequest := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(e.domainEntry.GetInfo().Name),
+		RequestID:                           uuid.New(),
+		Domain:                              e.domainEntry.GetInfo().Name,
 		WorkflowID:                          execution.WorkflowID,
 		TaskList:                            tl,
 		WorkflowType:                        wType,
@@ -1637,7 +1635,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 	}
 
 	req := &types.HistoryStartWorkflowExecutionRequest{
-		DomainUUID:                      common.StringPtr(e.domainEntry.GetInfo().ID),
+		DomainUUID:                      e.domainEntry.GetInfo().ID,
 		StartRequest:                    createRequest,
 		ParentExecutionInfo:             parentExecutionInfo,
 		LastCompletionResult:            attributes.LastCompletionResult,
@@ -1647,14 +1645,14 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		FirstDecisionTaskBackoffSeconds: attributes.BackoffStartIntervalInSeconds,
 	}
 	if attributes.GetInitiator() == types.ContinueAsNewInitiatorRetryPolicy {
-		req.Attempt = common.Int32Ptr(previousExecutionState.GetExecutionInfo().Attempt + 1)
+		req.Attempt = previousExecutionState.GetExecutionInfo().Attempt + 1
 		expirationTime := previousExecutionState.GetExecutionInfo().ExpirationTime
 		if !expirationTime.IsZero() {
 			req.ExpirationTimestamp = common.Int64Ptr(expirationTime.UnixNano())
 		}
 	} else {
 		// ContinueAsNew by decider or cron
-		req.Attempt = common.Int32Ptr(0)
+		req.Attempt = 0
 		if attributes.RetryPolicy != nil && attributes.RetryPolicy.GetExpirationIntervalInSeconds() > 0 {
 			// has retry policy and expiration time.
 			expirationSeconds := attributes.RetryPolicy.GetExpirationIntervalInSeconds() + req.GetFirstDecisionTaskBackoffSeconds()
@@ -1666,7 +1664,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 	// History event only has domainName so domainID has to be passed in explicitly to update the mutable state
 	var parentDomainID *string
 	if parentExecutionInfo != nil {
-		parentDomainID = parentExecutionInfo.DomainUUID
+		parentDomainID = &parentExecutionInfo.DomainUUID
 	}
 
 	event := e.hBuilder.AddWorkflowExecutionStartedEvent(req, previousExecutionInfo, firstRunID, execution.GetRunID())
@@ -1729,7 +1727,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(
 
 	var parentDomainID *string
 	if startRequest.ParentExecutionInfo != nil {
-		parentDomainID = startRequest.ParentExecutionInfo.DomainUUID
+		parentDomainID = &startRequest.ParentExecutionInfo.DomainUUID
 	}
 	if err := e.ReplicateWorkflowExecutionStartedEvent(
 		parentDomainID,
@@ -1954,11 +1952,11 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 		resettable = false
 	}
 	info := &types.ResetPointInfo{
-		BinaryChecksum:           common.StringPtr(binChecksum),
-		RunID:                    common.StringPtr(exeInfo.RunID),
-		FirstDecisionCompletedID: common.Int64Ptr(event.GetEventID()),
+		BinaryChecksum:           binChecksum,
+		RunID:                    exeInfo.RunID,
+		FirstDecisionCompletedID: event.GetEventID(),
 		CreatedTimeNano:          common.Int64Ptr(e.timeSource.Now().UnixNano()),
-		Resettable:               common.BoolPtr(resettable),
+		Resettable:               resettable,
 	}
 	currResetPoints = append(currResetPoints, info)
 	exeInfo.AutoResetPoints = &types.ResetPoints{
@@ -2131,9 +2129,8 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if e.config.EnableActivityLocalDispatchByDomain(e.domainEntry.GetInfo().Name) &&
-		common.BoolDefault(attributes.RequestLocalDispatch) {
-		return event, ai, &types.ActivityLocalDispatchInfo{ActivityID: common.StringPtr(ai.ActivityID)}, nil
+	if e.config.EnableActivityLocalDispatchByDomain(e.domainEntry.GetInfo().Name) && attributes.RequestLocalDispatch {
+		return event, ai, &types.ActivityLocalDispatchInfo{ActivityID: ai.ActivityID}, nil
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateActivityTransferTasks(
@@ -2153,7 +2150,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 
 	attributes := event.ActivityTaskScheduledEventAttributes
 	targetDomainID := e.executionInfo.DomainID
-	if attributes.Domain != nil {
+	if attributes.GetDomain() != "" {
 		targetDomainEntry, err := e.shard.GetDomainCache().GetDomain(attributes.GetDomain())
 		if err != nil {
 			return nil, err
@@ -2171,7 +2168,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 		ScheduledTime:            time.Unix(0, event.GetTimestamp()),
 		StartedID:                common.EmptyEventID,
 		StartedTime:              time.Time{},
-		ActivityID:               common.StringDefault(attributes.ActivityID),
+		ActivityID:               attributes.ActivityID,
 		DomainID:                 targetDomainID,
 		ScheduleToStartTimeout:   attributes.GetScheduleToStartTimeoutSeconds(),
 		ScheduleToCloseTimeout:   scheduleToCloseTimeout,
@@ -3293,21 +3290,21 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	var err error
 	newRunID := uuid.New()
 	newExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(e.executionInfo.WorkflowID),
-		RunID:      common.StringPtr(newRunID),
+		WorkflowID: e.executionInfo.WorkflowID,
+		RunID:      newRunID,
 	}
 
 	// Extract ParentExecutionInfo from current run so it can be passed down to the next
 	var parentInfo *types.ParentExecutionInfo
 	if e.HasParentExecution() {
 		parentInfo = &types.ParentExecutionInfo{
-			DomainUUID: common.StringPtr(e.executionInfo.ParentDomainID),
-			Domain:     common.StringPtr(parentDomainName),
+			DomainUUID: e.executionInfo.ParentDomainID,
+			Domain:     parentDomainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(e.executionInfo.ParentWorkflowID),
-				RunID:      common.StringPtr(e.executionInfo.ParentRunID),
+				WorkflowID: e.executionInfo.ParentWorkflowID,
+				RunID:      e.executionInfo.ParentRunID,
 			},
-			InitiatedID: common.Int64Ptr(e.executionInfo.InitiatedID),
+			InitiatedID: e.executionInfo.InitiatedID,
 		}
 	}
 
@@ -3449,7 +3446,7 @@ func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionInitiatedEvent
 }
 
 func (e *mutableStateBuilder) AddChildWorkflowExecutionStartedEvent(
-	domain *string,
+	domain string,
 	execution *types.WorkflowExecution,
 	workflowType *types.WorkflowType,
 	initiatedID int64,
@@ -3552,15 +3549,11 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
-	var domain *string
-	if len(ci.DomainName) > 0 {
-		domain = &ci.DomainName
-	}
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(ci.WorkflowTypeName),
+		Name: ci.WorkflowTypeName,
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionCompletedEvent(domain, childExecution, workflowType, ci.InitiatedID,
+	event := e.hBuilder.AddChildWorkflowExecutionCompletedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
 	if err := e.ReplicateChildWorkflowExecutionCompletedEvent(event); err != nil {
 		return nil, err
@@ -3599,15 +3592,11 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionFailedEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
-	var domain *string
-	if len(ci.DomainName) > 0 {
-		domain = &ci.DomainName
-	}
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(ci.WorkflowTypeName),
+		Name: ci.WorkflowTypeName,
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionFailedEvent(domain, childExecution, workflowType, ci.InitiatedID,
+	event := e.hBuilder.AddChildWorkflowExecutionFailedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
 	if err := e.ReplicateChildWorkflowExecutionFailedEvent(event); err != nil {
 		return nil, err
@@ -3646,15 +3635,11 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCanceledEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
-	var domain *string
-	if len(ci.DomainName) > 0 {
-		domain = &ci.DomainName
-	}
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(ci.WorkflowTypeName),
+		Name: ci.WorkflowTypeName,
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionCanceledEvent(domain, childExecution, workflowType, ci.InitiatedID,
+	event := e.hBuilder.AddChildWorkflowExecutionCanceledEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
 	if err := e.ReplicateChildWorkflowExecutionCanceledEvent(event); err != nil {
 		return nil, err
@@ -3693,15 +3678,11 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTerminatedEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
-	var domain *string
-	if len(ci.DomainName) > 0 {
-		domain = &ci.DomainName
-	}
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(ci.WorkflowTypeName),
+		Name: ci.WorkflowTypeName,
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionTerminatedEvent(domain, childExecution, workflowType, ci.InitiatedID,
+	event := e.hBuilder.AddChildWorkflowExecutionTerminatedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
 	if err := e.ReplicateChildWorkflowExecutionTerminatedEvent(event); err != nil {
 		return nil, err
@@ -3740,15 +3721,11 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
-	var domain *string
-	if len(ci.DomainName) > 0 {
-		domain = &ci.DomainName
-	}
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(ci.WorkflowTypeName),
+		Name: ci.WorkflowTypeName,
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionTimedOutEvent(domain, childExecution, workflowType, ci.InitiatedID,
+	event := e.hBuilder.AddChildWorkflowExecutionTimedOutEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
 	if err := e.ReplicateChildWorkflowExecutionTimedOutEvent(event); err != nil {
 		return nil, err
@@ -4676,7 +4653,8 @@ func (e *mutableStateBuilder) logDataInconsistency() {
 	workflowID := e.executionInfo.WorkflowID
 	runID := e.executionInfo.RunID
 
-	e.logger.Error("encounter cassandra data inconsistency",
+	e.metricsClient.Scope(metrics.WorkflowContextScope).IncCounter(metrics.DataInconsistentCounter)
+	e.logger.Error("encounter mutable state data inconsistency",
 		tag.WorkflowDomainID(domainID),
 		tag.WorkflowID(workflowID),
 		tag.WorkflowRunID(runID),

@@ -9,6 +9,8 @@
 .gobincache/
 .tmp/
 .vscode/
+.build/
+.bin/
 /vendor
 /_vendor-*
 /cadence
@@ -27,5 +29,6 @@ test_eventsV2_xdc.log
 /cadence
 /cadence-server
 /cadence-canary
+/cadence-bench
 /cadence-cassandra-tool
 /cadence-sql-tool

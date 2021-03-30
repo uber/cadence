@@ -32,6 +32,7 @@ func (k Key) String() string {
 }
 
 // Mapping from Key to keyName, where keyName are used dynamic config source.
+// !!!For developer: Make sure you also update the [documentation](https://cadenceworkflow.io/docs/operation-guide/setup/) if you add/remove any dynamic configuration.
 var keys = map[Key]string{
 	unknownKey: "unknownKey",
 
@@ -73,14 +74,15 @@ var keys = map[Key]string{
 	EnableGracefulFailover:              "system.enableGracefulFailover",
 	TransactionSizeLimit:                "system.transactionSizeLimit",
 	PersistenceErrorInjectionRate:       "system.persistenceErrorInjectionRate",
+	MaxRetentionDays:                    "system.maxRetentionDays",
 	MinRetentionDays:                    "system.minRetentionDays",
 	MaxDecisionStartToCloseSeconds:      "system.maxDecisionStartToCloseSeconds",
 	DisallowQuery:                       "system.disallowQuery",
 	EnableBatcher:                       "worker.enableBatcher",
 	EnableParentClosePolicyWorker:       "system.enableParentClosePolicyWorker",
 	EnableFailoverManager:               "system.enableFailoverManager",
+	EnableWorkflowShadower:              "system.enableWorkflowShadower",
 	EnableStickyQuery:                   "system.enableStickyQuery",
-	EnablePriorityTaskProcessor:         "system.enablePriorityTaskProcessor",
 	EnableDebugMode:                     "system.enableDebugMode",
 
 	// size limit
@@ -214,8 +216,6 @@ var keys = map[Key]string{
 	TimerProcessorSplitQueueInterval:                      "history.timerProcessorSplitQueueInterval",
 	TimerProcessorSplitQueueIntervalJitterCoefficient:     "history.timerProcessorSplitQueueIntervalJitterCoefficient",
 	TimerProcessorMaxRedispatchQueueSize:                  "history.timerProcessorMaxRedispatchQueueSize",
-	TimerProcessorEnablePriorityTaskProcessor:             "history.timerProcessorEnablePriorityTaskProcessor",
-	TimerProcessorEnableMultiCurosrProcessor:              "history.timerProcessorEnableMultiCursorProcessor",
 	TimerProcessorMaxTimeShift:                            "history.timerProcessorMaxTimeShift",
 	TimerProcessorHistoryArchivalSizeLimit:                "history.timerProcessorHistoryArchivalSizeLimit",
 	TimerProcessorArchivalTimeLimit:                       "history.timerProcessorArchivalTimeLimit",
@@ -233,8 +233,6 @@ var keys = map[Key]string{
 	TransferProcessorUpdateAckIntervalJitterCoefficient:   "history.transferProcessorUpdateAckIntervalJitterCoefficient",
 	TransferProcessorCompleteTransferInterval:             "history.transferProcessorCompleteTransferInterval",
 	TransferProcessorMaxRedispatchQueueSize:               "history.transferProcessorMaxRedispatchQueueSize",
-	TransferProcessorEnablePriorityTaskProcessor:          "history.transferProcessorEnablePriorityTaskProcessor",
-	TransferProcessorEnableMultiCurosrProcessor:           "history.transferProcessorEnableMultiCursorProcessor",
 	TransferProcessorEnableValidator:                      "history.transferProcessorEnableValidator",
 	TransferProcessorValidationInterval:                   "history.transferProcessorValidationInterval",
 	TransferProcessorVisibilityArchivalTimeLimit:          "history.transferProcessorVisibilityArchivalTimeLimit",
@@ -346,6 +344,7 @@ var keys = map[Key]string{
 	TimersFixerDomainAllow:                                   "worker.timersFixerDomainAllow",
 }
 
+// !!!For developer: Make sure you also update the [documentation](https://cadenceworkflow.io/docs/operation-guide/setup/) if you add/remove any dynamic configuration.
 const (
 	unknownKey Key = iota
 
@@ -411,14 +410,16 @@ const (
 	TransactionSizeLimit
 	// PersistenceErrorInjectionRate is the rate for injecting random error in persistence
 	PersistenceErrorInjectionRate
+	// MaxRetentionDays is the maximum retention allowed when registering a domain
+	// !!! Do NOT simply decrease this number, because it is being used by history scavenger to avoid race condition against history archival.
+	//	Check more details in history scanner(scavenger)
+	MaxRetentionDays
 	// MinRetentionDays is the minimal allowed retention days for domain
 	MinRetentionDays
 	// MaxDecisionStartToCloseSeconds is the minimal allowed decision start to close timeout in seconds
 	MaxDecisionStartToCloseSeconds
 	// DisallowQuery is the key to disallow query for a domain
 	DisallowQuery
-	// EnablePriorityTaskProcessor is the key for enabling priority task processor
-	EnablePriorityTaskProcessor
 	// EnableDebugMode is the key for enabling debugging components, logs and metrics
 	EnableDebugMode
 
@@ -682,10 +683,6 @@ const (
 	TimerProcessorSplitQueueIntervalJitterCoefficient
 	// TimerProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for timer processor
 	TimerProcessorMaxRedispatchQueueSize
-	// TimerProcessorEnablePriorityTaskProcessor indicates whether priority task processor should be used for timer processor
-	TimerProcessorEnablePriorityTaskProcessor
-	// TimerProcessorEnableMultiCurosrProcessor indicates whether multi-cursor queue processor should be used for timer processor
-	TimerProcessorEnableMultiCurosrProcessor
 	// TimerProcessorMaxTimeShift is the max shift timer processor can have
 	TimerProcessorMaxTimeShift
 	// TimerProcessorHistoryArchivalSizeLimit is the max history size for inline archival
@@ -720,10 +717,6 @@ const (
 	TransferProcessorCompleteTransferInterval
 	// TransferProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for transferQueueProcessor
 	TransferProcessorMaxRedispatchQueueSize
-	// TransferProcessorEnablePriorityTaskProcessor indicates whether priority task processor should be used for transferQueueProcessor
-	TransferProcessorEnablePriorityTaskProcessor
-	// TransferProcessorEnableMultiCurosrProcessor indicates whether multi-cursor queue processor should be used for transferQueueProcessor
-	TransferProcessorEnableMultiCurosrProcessor
 	// TransferProcessorEnableValidator indicates whether validator should be enabled for transferQueueProcessor
 	TransferProcessorEnableValidator
 	// TransferProcessorValidationInterval is the interval for performing transfer queue validation
@@ -901,6 +894,8 @@ const (
 	EnableStickyQuery
 	// EnableFailoverManager indicates if failover manager is enabled
 	EnableFailoverManager
+	// EnableWorkflowShadower indicates if workflow shadower is enabled
+	EnableWorkflowShadower
 
 	//ReplicationTaskFetcherParallelism determines how many go routines we spin up for fetching tasks
 	ReplicationTaskFetcherParallelism

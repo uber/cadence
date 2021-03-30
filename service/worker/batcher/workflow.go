@@ -40,8 +40,12 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+type (
+	contextKey string
+)
+
 const (
-	batcherContextKey = "batcherContext"
+	batcherContextKey contextKey = "batcherContext"
 	// BatcherTaskListName is the tasklist name
 	BatcherTaskListName = "cadence-sys-batcher-tasklist"
 	// BatchWFTypeName is the workflow type
@@ -249,8 +253,8 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 
 	if startOver {
 		resp, err := client.CountWorkflowExecutions(ctx, &types.CountWorkflowExecutionsRequest{
-			Domain: common.StringPtr(batchParams.DomainName),
-			Query:  common.StringPtr(batchParams.Query),
+			Domain: batchParams.DomainName,
+			Query:  batchParams.Query,
 		})
 		if err != nil {
 			return HeartBeatDetails{}, err
@@ -269,10 +273,10 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 		//  Need to improve scan concurrency because it will hold an ES resource until the workflow finishes.
 		//  And we can't use list API because terminate / reset will mutate the result.
 		resp, err := client.ScanWorkflowExecutions(ctx, &types.ListWorkflowExecutionsRequest{
-			Domain:        common.StringPtr(batchParams.DomainName),
-			PageSize:      common.Int32Ptr(int32(pageSize)),
+			Domain:        batchParams.DomainName,
+			PageSize:      int32(pageSize),
 			NextPageToken: hbd.PageToken,
-			Query:         common.StringPtr(batchParams.Query),
+			Query:         batchParams.Query,
 		})
 		if err != nil {
 			return HeartBeatDetails{}, err
@@ -354,13 +358,13 @@ func startTaskProcessor(
 					batchParams.TerminateParams.TerminateChildren,
 					func(workflowID, runID string) error {
 						return client.TerminateWorkflowExecution(ctx, &types.TerminateWorkflowExecutionRequest{
-							Domain: common.StringPtr(batchParams.DomainName),
+							Domain: batchParams.DomainName,
 							WorkflowExecution: &types.WorkflowExecution{
-								WorkflowID: common.StringPtr(workflowID),
-								RunID:      common.StringPtr(runID),
+								WorkflowID: workflowID,
+								RunID:      runID,
 							},
-							Reason:   common.StringPtr(batchParams.Reason),
-							Identity: common.StringPtr(BatchWFTypeName),
+							Reason:   batchParams.Reason,
+							Identity: BatchWFTypeName,
 						}, yarpcCallOptions...)
 					})
 			case BatchTypeCancel:
@@ -368,27 +372,27 @@ func startTaskProcessor(
 					batchParams.CancelParams.CancelChildren,
 					func(workflowID, runID string) error {
 						return client.RequestCancelWorkflowExecution(ctx, &types.RequestCancelWorkflowExecutionRequest{
-							Domain: common.StringPtr(batchParams.DomainName),
+							Domain: batchParams.DomainName,
 							WorkflowExecution: &types.WorkflowExecution{
-								WorkflowID: common.StringPtr(workflowID),
-								RunID:      common.StringPtr(runID),
+								WorkflowID: workflowID,
+								RunID:      runID,
 							},
-							Identity:  common.StringPtr(BatchWFTypeName),
-							RequestID: common.StringPtr(requestID),
+							Identity:  BatchWFTypeName,
+							RequestID: requestID,
 						}, yarpcCallOptions...)
 					})
 			case BatchTypeSignal:
 				err = processTask(ctx, limiter, task, batchParams, client, common.BoolPtr(false),
 					func(workflowID, runID string) error {
 						return client.SignalWorkflowExecution(ctx, &types.SignalWorkflowExecutionRequest{
-							Domain: common.StringPtr(batchParams.DomainName),
+							Domain: batchParams.DomainName,
 							WorkflowExecution: &types.WorkflowExecution{
-								WorkflowID: common.StringPtr(workflowID),
-								RunID:      common.StringPtr(runID),
+								WorkflowID: workflowID,
+								RunID:      runID,
 							},
-							Identity:   common.StringPtr(BatchWFTypeName),
-							RequestID:  common.StringPtr(requestID),
-							SignalName: common.StringPtr(batchParams.SignalParams.SignalName),
+							Identity:   BatchWFTypeName,
+							RequestID:  requestID,
+							SignalName: batchParams.SignalParams.SignalName,
 							Input:      []byte(batchParams.SignalParams.Input),
 						}, yarpcCallOptions...)
 					})
@@ -442,10 +446,10 @@ func processTask(
 			return err
 		}
 		resp, err := client.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
-			Domain: common.StringPtr(batchParams.DomainName),
+			Domain: batchParams.DomainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(wf.GetWorkflowID()),
-				RunID:      common.StringPtr(wf.GetRunID()),
+				WorkflowID: wf.WorkflowID,
+				RunID:      wf.RunID,
 			},
 		})
 		if err != nil {

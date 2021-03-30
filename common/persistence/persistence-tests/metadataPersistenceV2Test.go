@@ -237,9 +237,9 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	m.IsType(&types.EntityNotExistsError{}, err0)
 	testBinaries := types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
-			"abc": &types.BadBinaryInfo{
-				Reason:          common.StringPtr("test-reason"),
-				Operator:        common.StringPtr("test-operator"),
+			"abc": {
+				Reason:          "test-reason",
+				Operator:        "test-operator",
 				CreatedTimeNano: common.Int64Ptr(123),
 			},
 		},
@@ -341,6 +341,34 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	resp5, err5 := m.GetDomain(ctx, "", "")
 	m.Nil(resp5)
 	m.IsType(&types.BadRequestError{}, err5)
+
+	_, err6 := m.CreateDomain(ctx,
+		&p.DomainInfo{
+			ID:          uuid.New(),
+			Name:        name,
+			Status:      status,
+			Description: description,
+			OwnerEmail:  owner,
+			Data:        data,
+		},
+		&p.DomainConfig{
+			Retention:                retention,
+			EmitMetric:               emitMetric,
+			HistoryArchivalStatus:    historyArchivalStatus,
+			HistoryArchivalURI:       historyArchivalURI,
+			VisibilityArchivalStatus: visibilityArchivalStatus,
+			VisibilityArchivalURI:    visibilityArchivalURI,
+		},
+		&p.DomainReplicationConfig{
+			ActiveClusterName: clusterActive,
+			Clusters:          clusters,
+		},
+		isGlobalDomain,
+		configVersion,
+		failoverVersion,
+		0,
+	)
+	m.Error(err6)
 }
 
 // TestConcurrentCreateDomain test
@@ -348,9 +376,16 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	id := uuid.New()
+	concurrency := 16
+	numDomains := 5
+	domainIDs := make([]string, numDomains)
+	names := make([]string, numDomains)
+	registered := make([]bool, numDomains)
+	for idx := range domainIDs {
+		domainIDs[idx] = uuid.New()
+		names[idx] = "concurrent-create-domain-test-name-" + strconv.Itoa(idx)
+	}
 
-	name := "concurrent-create-domain-test-name"
 	status := p.DomainStatusRegistered
 	description := "concurrent-create-domain-test-description"
 	owner := "create-domain-test-owner"
@@ -377,24 +412,24 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 
 	testBinaries := types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
-			"abc": &types.BadBinaryInfo{
-				Reason:          common.StringPtr("test-reason"),
-				Operator:        common.StringPtr("test-operator"),
+			"abc": {
+				Reason:          "test-reason",
+				Operator:        "test-operator",
 				CreatedTimeNano: common.Int64Ptr(123),
 			},
 		},
 	}
-	concurrency := 16
-	successCount := int32(0)
+	successCount := 0
+	var mutex sync.Mutex
 	var wg sync.WaitGroup
 	for i := 1; i <= concurrency; i++ {
-		newValue := fmt.Sprintf("v-%v", i)
 		wg.Add(1)
-		go func(data map[string]string) {
+		go func(idx int) {
+			data := map[string]string{"k0": fmt.Sprintf("v-%v", idx)}
 			_, err1 := m.CreateDomain(ctx,
 				&p.DomainInfo{
-					ID:          id,
-					Name:        name,
+					ID:          domainIDs[idx%numDomains],
+					Name:        names[idx%numDomains],
 					Status:      status,
 					Description: description,
 					OwnerEmail:  owner,
@@ -418,45 +453,58 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 				failoverVersion,
 				0,
 			)
+			mutex.Lock()
+			defer mutex.Unlock()
 			if err1 == nil {
-				atomic.AddInt32(&successCount, 1)
+				successCount++
+				registered[idx%numDomains] = true
+			}
+			if _, ok := err1.(*types.DomainAlreadyExistsError); ok {
+				registered[idx%numDomains] = true
 			}
 			wg.Done()
-		}(map[string]string{"k0": newValue})
+		}(i)
 	}
 	wg.Wait()
-	m.Equal(int32(1), successCount)
+	m.GreaterOrEqual(successCount, 1)
 
-	resp, err3 := m.GetDomain(ctx, "", name)
-	m.NoError(err3)
-	m.NotNil(resp)
-	m.Equal(name, resp.Info.Name)
-	m.Equal(status, resp.Info.Status)
-	m.Equal(description, resp.Info.Description)
-	m.Equal(owner, resp.Info.OwnerEmail)
-	m.Equal(retention, resp.Config.Retention)
-	m.Equal(emitMetric, resp.Config.EmitMetric)
-	m.Equal(historyArchivalStatus, resp.Config.HistoryArchivalStatus)
-	m.Equal(historyArchivalURI, resp.Config.HistoryArchivalURI)
-	m.Equal(visibilityArchivalStatus, resp.Config.VisibilityArchivalStatus)
-	m.Equal(visibilityArchivalURI, resp.Config.VisibilityArchivalURI)
-	m.Equal(testBinaries, resp.Config.BadBinaries)
-	m.Equal(clusterActive, resp.ReplicationConfig.ActiveClusterName)
-	m.Equal(len(clusters), len(resp.ReplicationConfig.Clusters))
-	for index := range clusters {
-		m.Equal(clusters[index], resp.ReplicationConfig.Clusters[index])
+	for i := 0; i != numDomains; i++ {
+		if !registered[i] {
+			continue
+		}
+
+		resp, err3 := m.GetDomain(ctx, "", names[i])
+		m.NoError(err3)
+		m.NotNil(resp)
+		m.Equal(domainIDs[i], resp.Info.ID)
+		m.Equal(names[i], resp.Info.Name)
+		m.Equal(status, resp.Info.Status)
+		m.Equal(description, resp.Info.Description)
+		m.Equal(owner, resp.Info.OwnerEmail)
+		m.Equal(retention, resp.Config.Retention)
+		m.Equal(emitMetric, resp.Config.EmitMetric)
+		m.Equal(historyArchivalStatus, resp.Config.HistoryArchivalStatus)
+		m.Equal(historyArchivalURI, resp.Config.HistoryArchivalURI)
+		m.Equal(visibilityArchivalStatus, resp.Config.VisibilityArchivalStatus)
+		m.Equal(visibilityArchivalURI, resp.Config.VisibilityArchivalURI)
+		m.Equal(testBinaries, resp.Config.BadBinaries)
+		m.Equal(clusterActive, resp.ReplicationConfig.ActiveClusterName)
+		m.Equal(len(clusters), len(resp.ReplicationConfig.Clusters))
+		for index := range clusters {
+			m.Equal(clusters[index], resp.ReplicationConfig.Clusters[index])
+		}
+		m.Equal(isGlobalDomain, resp.IsGlobalDomain)
+		m.Equal(configVersion, resp.ConfigVersion)
+		m.Equal(failoverVersion, resp.FailoverVersion)
+		m.Equal(common.InitialPreviousFailoverVersion, resp.PreviousFailoverVersion)
+
+		//check domain data
+		ss := strings.Split(resp.Info.Data["k0"], "-")
+		m.Equal(2, len(ss))
+		vi, err := strconv.Atoi(ss[1])
+		m.NoError(err)
+		m.Equal(true, vi > 0 && vi <= concurrency)
 	}
-	m.Equal(isGlobalDomain, resp.IsGlobalDomain)
-	m.Equal(configVersion, resp.ConfigVersion)
-	m.Equal(failoverVersion, resp.FailoverVersion)
-	m.Equal(common.InitialPreviousFailoverVersion, resp.PreviousFailoverVersion)
-
-	//check domain data
-	ss := strings.Split(resp.Info.Data["k0"], "-")
-	m.Equal(2, len(ss))
-	vi, err := strconv.Atoi(ss[1])
-	m.NoError(err)
-	m.Equal(true, vi > 0 && vi <= concurrency)
 }
 
 // TestConcurrentUpdateDomain test
@@ -531,9 +579,9 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 
 	testBinaries := types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
-			"abc": &types.BadBinaryInfo{
-				Reason:          common.StringPtr("test-reason"),
-				Operator:        common.StringPtr("test-operator"),
+			"abc": {
+				Reason:          "test-reason",
+				Operator:        "test-operator",
 				CreatedTimeNano: common.Int64Ptr(123),
 			},
 		},
@@ -582,7 +630,15 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 		}(map[string]string{"k0": newValue})
 	}
 	wg.Wait()
-	m.Equal(int32(1), successCount)
+	m.Greater(successCount, int32(0))
+	allDomains, err := m.ListDomains(ctx, 100, nil)
+	m.NoError(err)
+	domainNameMap := make(map[string]bool)
+	for _, domain := range allDomains.Domains {
+		_, ok := domainNameMap[domain.Info.Name]
+		m.False(ok)
+		domainNameMap[domain.Info.Name] = true
+	}
 
 	resp3, err3 := m.GetDomain(ctx, "", name)
 	m.NoError(err3)
@@ -717,9 +773,9 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	}
 	testBinaries := types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
-			"abc": &types.BadBinaryInfo{
-				Reason:          common.StringPtr("test-reason"),
-				Operator:        common.StringPtr("test-operator"),
+			"abc": {
+				Reason:          "test-reason",
+				Operator:        "test-operator",
 				CreatedTimeNano: common.Int64Ptr(123),
 			},
 		},
@@ -1030,18 +1086,18 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 
 	testBinaries1 := types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
-			"abc": &types.BadBinaryInfo{
-				Reason:          common.StringPtr("test-reason1"),
-				Operator:        common.StringPtr("test-operator1"),
+			"abc": {
+				Reason:          "test-reason1",
+				Operator:        "test-operator1",
 				CreatedTimeNano: common.Int64Ptr(123),
 			},
 		},
 	}
 	testBinaries2 := types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
-			"efg": &types.BadBinaryInfo{
-				Reason:          common.StringPtr("test-reason2"),
-				Operator:        common.StringPtr("test-operator2"),
+			"efg": {
+				Reason:          "test-reason2",
+				Operator:        "test-operator2",
 				CreatedTimeNano: common.Int64Ptr(456),
 			},
 		},

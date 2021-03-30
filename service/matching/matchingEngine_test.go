@@ -80,7 +80,7 @@ func TestMatchingEngineSuite(t *testing.T) {
 }
 
 func (s *matchingEngineSuite) SetupSuite() {
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 	http.Handle("/test/tasks", http.HandlerFunc(s.TasksHandler))
 }
 
@@ -108,13 +108,14 @@ func (s *matchingEngineSuite) SetupTest() {
 	s.taskManager = newTestTaskManager(s.logger)
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry(matchingTestDomainName), nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(matchingTestDomainName, nil).AnyTimes()
 	s.handlerContext = newHandlerContext(
 		context.Background(),
 		matchingTestDomainName,
-		&types.TaskList{Name: common.StringPtr(matchingTestTaskList), Kind: &tlKindNormal},
+		&types.TaskList{Name: matchingTestTaskList, Kind: &tlKindNormal},
 		metrics.NewClient(tally.NoopScope, metrics.Matching),
 		metrics.MatchingTaskListMgrScope,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 	)
 
 	s.matchingEngine = s.newMatchingEngine(defaultTestConfig(), s.taskManager)
@@ -185,7 +186,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 	identity := "selfDrivingToaster"
 
 	stickyTaskList := &types.TaskList{}
-	stickyTaskList.Name = &stickyTl
+	stickyTaskList.Name = stickyTl
 	stickyTaskList.Kind = &stickyTlKind
 
 	s.matchingEngine.config.RangeSize = 2 // to test that range is not updated without tasks
@@ -194,9 +195,9 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 	runID := "run1"
 	workflowID := "workflow1"
 	workflowType := types.WorkflowType{
-		Name: common.StringPtr("workflow"),
+		Name: "workflow",
 	}
-	execution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	execution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 	scheduleID := int64(0)
 
 	// History service is using mock
@@ -207,20 +208,20 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 			response := &types.RecordDecisionTaskStartedResponse{}
 			response.WorkflowType = &workflowType
 			response.PreviousStartedEventID = common.Int64Ptr(scheduleID)
-			response.ScheduledEventID = common.Int64Ptr(scheduleID + 1)
-			response.Attempt = common.Int64Ptr(0)
-			response.StickyExecutionEnabled = common.BoolPtr(true)
+			response.ScheduledEventID = scheduleID + 1
+			response.Attempt = 0
+			response.StickyExecutionEnabled = true
 			response.WorkflowExecutionTaskList = &types.TaskList{
-				Name: &tl,
+				Name: tl,
 				Kind: &taskListKindNormal,
 			}
 			return response, nil
 		}).AnyTimes()
 
 	addRequest := types.AddDecisionTaskRequest{
-		DomainUUID:                    common.StringPtr(domainID),
+		DomainUUID:                    domainID,
 		Execution:                     &execution,
-		ScheduleID:                    &scheduleID,
+		ScheduleID:                    scheduleID,
 		TaskList:                      stickyTaskList,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 	}
@@ -229,13 +230,13 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 	s.NoError(err)
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	resp, err := s.matchingEngine.PollForDecisionTask(s.handlerContext, &types.MatchingPollForDecisionTaskRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: stickyTaskList,
-			Identity: &identity},
+			Identity: identity},
 	})
 
 	expectedResp := &types.MatchingPollForDecisionTaskResponse{
@@ -243,11 +244,11 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 		WorkflowExecution:      &execution,
 		WorkflowType:           &workflowType,
 		PreviousStartedEventID: common.Int64Ptr(scheduleID),
-		Attempt:                common.Int64Ptr(0),
-		BacklogCountHint:       common.Int64Ptr(1),
-		StickyExecutionEnabled: common.BoolPtr(true),
+		Attempt:                0,
+		BacklogCountHint:       1,
+		StickyExecutionEnabled: true,
 		WorkflowExecutionTaskList: &types.TaskList{
-			Name: &tl,
+			Name: tl,
 			Kind: &tlKind,
 		},
 	}
@@ -267,7 +268,7 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(callContext context.Co
 	identity := "selfDrivingToaster"
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 	var taskListType types.TaskListType
 	tlID := newTestTaskListID(domainID, tl, taskType)
 	s.handlerContext.Context = callContext
@@ -275,10 +276,10 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(callContext context.Co
 	for i := 0; i < pollCount; i++ {
 		if taskType == persistence.TaskListTypeActivity {
 			pollResp, err := s.matchingEngine.PollForActivityTask(s.handlerContext, &types.MatchingPollForActivityTaskRequest{
-				DomainUUID: common.StringPtr(domainID),
+				DomainUUID: domainID,
 				PollRequest: &types.PollForActivityTaskRequest{
 					TaskList: taskList,
-					Identity: &identity,
+					Identity: identity,
 				},
 			})
 			s.NoError(err)
@@ -287,10 +288,10 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(callContext context.Co
 			taskListType = types.TaskListTypeActivity
 		} else {
 			resp, err := s.matchingEngine.PollForDecisionTask(s.handlerContext, &types.MatchingPollForDecisionTaskRequest{
-				DomainUUID: common.StringPtr(domainID),
+				DomainUUID: domainID,
 				PollRequest: &types.PollForDecisionTaskRequest{
 					TaskList: taskList,
-					Identity: &identity},
+					Identity: identity},
 			})
 			s.NoError(err)
 			s.Equal(emptyPollForDecisionTaskResponse, resp)
@@ -305,11 +306,11 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(callContext context.Co
 		// check the poller information
 		s.handlerContext.Context = context.Background()
 		descResp, err := s.matchingEngine.DescribeTaskList(s.handlerContext, &types.MatchingDescribeTaskListRequest{
-			DomainUUID: common.StringPtr(domainID),
+			DomainUUID: domainID,
 			DescRequest: &types.DescribeTaskListRequest{
 				TaskList:              taskList,
 				TaskListType:          &taskListType,
-				IncludeTaskListStatus: common.BoolPtr(false),
+				IncludeTaskListStatus: false,
 			},
 		})
 		s.NoError(err)
@@ -345,40 +346,40 @@ func (s *matchingEngineSuite) AddTasksTest(taskType int, isForwarded bool) {
 	forwardedFrom := "/__cadence_sys/makeToast/1"
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	const taskCount = 111
 
 	runID := "run1"
 	workflowID := "workflow1"
-	execution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	execution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
 		var err error
 		if taskType == persistence.TaskListTypeActivity {
 			addRequest := types.AddActivityTaskRequest{
-				SourceDomainUUID:              common.StringPtr(domainID),
-				DomainUUID:                    common.StringPtr(domainID),
+				SourceDomainUUID:              domainID,
+				DomainUUID:                    domainID,
 				Execution:                     &execution,
-				ScheduleID:                    &scheduleID,
+				ScheduleID:                    scheduleID,
 				TaskList:                      taskList,
 				ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 			}
 			if isForwarded {
-				addRequest.ForwardedFrom = &forwardedFrom
+				addRequest.ForwardedFrom = forwardedFrom
 			}
 			_, err = s.matchingEngine.AddActivityTask(s.handlerContext, &addRequest)
 		} else {
 			addRequest := types.AddDecisionTaskRequest{
-				DomainUUID:                    common.StringPtr(domainID),
+				DomainUUID:                    domainID,
 				Execution:                     &execution,
-				ScheduleID:                    &scheduleID,
+				ScheduleID:                    scheduleID,
 				TaskList:                      taskList,
 				ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 			}
 			if isForwarded {
-				addRequest.ForwardedFrom = &forwardedFrom
+				addRequest.ForwardedFrom = forwardedFrom
 			}
 			_, err = s.matchingEngine.AddDecisionTask(s.handlerContext, &addRequest)
 		}
@@ -406,11 +407,11 @@ func (s *matchingEngineSuite) TestTaskWriterShutdown() {
 	tl := "makeToast"
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	runID := "run1"
 	workflowID := "workflow1"
-	execution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	execution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	tlID := newTestTaskListID(domainID, tl, persistence.TaskListTypeActivity)
 	tlKind := types.TaskListKindNormal
@@ -418,8 +419,8 @@ func (s *matchingEngineSuite) TestTaskWriterShutdown() {
 	s.Nil(err)
 
 	addRequest := types.AddActivityTaskRequest{
-		SourceDomainUUID:              common.StringPtr(domainID),
-		DomainUUID:                    common.StringPtr(domainID),
+		SourceDomainUUID:              domainID,
+		DomainUUID:                    domainID,
 		Execution:                     &execution,
 		TaskList:                      taskList,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
@@ -430,8 +431,7 @@ func (s *matchingEngineSuite) TestTaskWriterShutdown() {
 	tlmImpl.taskWriter.Stop()
 
 	// now attempt to add a task
-	scheduleID := int64(5)
-	addRequest.ScheduleID = &scheduleID
+	addRequest.ScheduleID = 5
 	_, err = s.matchingEngine.AddActivityTask(s.handlerContext, &addRequest)
 	s.Error(err)
 
@@ -447,7 +447,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 
 	runID := "run1"
 	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	const taskCount = 1000
 	const initialRangeID = 102
@@ -461,15 +461,15 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
 		addRequest := types.AddActivityTaskRequest{
-			SourceDomainUUID:              common.StringPtr(domainID),
-			DomainUUID:                    common.StringPtr(domainID),
+			SourceDomainUUID:              domainID,
+			DomainUUID:                    domainID,
 			Execution:                     &workflowExecution,
-			ScheduleID:                    &scheduleID,
+			ScheduleID:                    scheduleID,
 			TaskList:                      taskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 		}
@@ -481,7 +481,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 
 	activityTypeName := "activity1"
 	activityID := "activityId1"
-	activityType := &types.ActivityType{Name: &activityTypeName}
+	activityType := &types.ActivityType{Name: activityTypeName}
 	activityInput := []byte("Activity1 Input")
 
 	identity := "nobody"
@@ -491,9 +491,9 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 		func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest) (*types.RecordActivityTaskStartedResponse, error) {
 			s.logger.Debug("Mock Received RecordActivityTaskStartedRequest")
 			resp := &types.RecordActivityTaskStartedResponse{
-				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
+				ScheduledEvent: newActivityTaskScheduledEvent(taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    &activityID,
+						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
@@ -511,10 +511,10 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 		scheduleID := i * 3
 
 		result, err := s.matchingEngine.PollForActivityTask(s.handlerContext, &types.MatchingPollForActivityTaskRequest{
-			DomainUUID: common.StringPtr(domainID),
+			DomainUUID: domainID,
 			PollRequest: &types.PollForActivityTaskRequest{
 				TaskList: taskList,
-				Identity: &identity},
+				Identity: identity},
 		})
 
 		s.NoError(err)
@@ -523,7 +523,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 			s.logger.Debug(fmt.Sprintf("empty poll returned"))
 			continue
 		}
-		s.EqualValues(activityID, *result.ActivityID)
+		s.EqualValues(activityID, result.ActivityID)
 		s.EqualValues(activityType, result.ActivityType)
 		s.EqualValues(activityInput, result.Input)
 		s.EqualValues(workflowExecution, *result.WorkflowExecution)
@@ -560,7 +560,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 
 	runID := "run1"
 	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	const taskCount = 10
 	const initialRangeID = 102
@@ -591,10 +591,10 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 	s.NoError(mgr.Start())
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 	activityTypeName := "activity1"
 	activityID := "activityId1"
-	activityType := &types.ActivityType{Name: &activityTypeName}
+	activityType := &types.ActivityType{Name: activityTypeName}
 	activityInput := []byte("Activity1 Input")
 
 	identity := "nobody"
@@ -604,9 +604,9 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 		func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest) (*types.RecordActivityTaskStartedResponse, error) {
 			s.logger.Debug("Mock Received RecordActivityTaskStartedRequest")
 			return &types.RecordActivityTaskStartedResponse{
-				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
+				ScheduledEvent: newActivityTaskScheduledEvent(taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    &activityID,
+						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
@@ -620,10 +620,10 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 
 	pollFunc := func(maxDispatch float64) (*types.PollForActivityTaskResponse, error) {
 		return s.matchingEngine.PollForActivityTask(s.handlerContext, &types.MatchingPollForActivityTaskRequest{
-			DomainUUID: common.StringPtr(domainID),
+			DomainUUID: domainID,
 			PollRequest: &types.PollForActivityTaskRequest{
 				TaskList:         taskList,
-				Identity:         &identity,
+				Identity:         identity,
 				TaskListMetadata: &types.TaskListMetadata{MaxTasksPerSecond: &maxDispatch},
 			},
 		})
@@ -646,10 +646,10 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 		}()
 		time.Sleep(20 * time.Millisecond) // Necessary for sync match to happen
 		addRequest := types.AddActivityTaskRequest{
-			SourceDomainUUID:              common.StringPtr(domainID),
-			DomainUUID:                    common.StringPtr(domainID),
+			SourceDomainUUID:              domainID,
+			DomainUUID:                    domainID,
 			Execution:                     &workflowExecution,
-			ScheduleID:                    &scheduleID,
+			ScheduleID:                    scheduleID,
 			TaskList:                      taskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 		}
@@ -677,7 +677,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 			s.True(len(result.TaskToken) > 0)
 		}
 
-		s.EqualValues(activityID, *result.ActivityID)
+		s.EqualValues(activityID, result.ActivityID)
 		s.EqualValues(activityType, result.ActivityType)
 		s.EqualValues(activityInput, result.Input)
 		s.EqualValues(workflowExecution, *result.WorkflowExecution)
@@ -711,11 +711,11 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 	// check the poller information
 	tlType := types.TaskListTypeActivity
 	descResp, err := s.matchingEngine.DescribeTaskList(s.handlerContext, &types.MatchingDescribeTaskListRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		DescRequest: &types.DescribeTaskListRequest{
 			TaskList:              taskList,
 			TaskListType:          &tlType,
-			IncludeTaskListStatus: common.BoolPtr(true),
+			IncludeTaskListStatus: true,
 		},
 	})
 	s.NoError(err)
@@ -762,7 +762,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 	s.matchingEngine.metricsClient = metrics.NewClient(scope, metrics.Matching)
 	runID := "run1"
 	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	const initialRangeID = 0
 	const rangeSize = 3
@@ -785,7 +785,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 	s.NoError(mgr.Start())
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 	var wg sync.WaitGroup
 	wg.Add(2 * workerCount)
 
@@ -794,10 +794,10 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 			defer wg.Done()
 			for i := int64(0); i < taskCount; i++ {
 				addRequest := types.AddActivityTaskRequest{
-					SourceDomainUUID:              common.StringPtr(domainID),
-					DomainUUID:                    common.StringPtr(domainID),
+					SourceDomainUUID:              domainID,
+					DomainUUID:                    domainID,
 					Execution:                     &workflowExecution,
-					ScheduleID:                    &scheduleID,
+					ScheduleID:                    scheduleID,
 					TaskList:                      taskList,
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 				}
@@ -813,7 +813,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 
 	activityTypeName := "activity1"
 	activityID := "activityId1"
-	activityType := &types.ActivityType{Name: &activityTypeName}
+	activityType := &types.ActivityType{Name: activityTypeName}
 	activityInput := []byte("Activity1 Input")
 	activityHeader := &types.Header{
 		Fields: map[string][]byte{"tracing": []byte("tracing data")},
@@ -826,9 +826,9 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 		func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest) (*types.RecordActivityTaskStartedResponse, error) {
 			s.logger.Debug("Mock Received RecordActivityTaskStartedRequest")
 			return &types.RecordActivityTaskStartedResponse{
-				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
+				ScheduledEvent: newActivityTaskScheduledEvent(taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    &activityID,
+						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
@@ -847,10 +847,10 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 			for i := int64(0); i < taskCount; {
 				maxDispatch := dispatchLimitFn(wNum, i)
 				result, err := s.matchingEngine.PollForActivityTask(s.handlerContext, &types.MatchingPollForActivityTaskRequest{
-					DomainUUID: common.StringPtr(domainID),
+					DomainUUID: domainID,
 					PollRequest: &types.PollForActivityTaskRequest{
 						TaskList:         taskList,
-						Identity:         &identity,
+						Identity:         identity,
 						TaskListMetadata: &types.TaskListMetadata{MaxTasksPerSecond: &maxDispatch},
 					},
 				})
@@ -860,7 +860,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 					s.logger.Debug(fmt.Sprintf("empty poll returned"))
 					continue
 				}
-				s.EqualValues(activityID, *result.ActivityID)
+				s.EqualValues(activityID, result.ActivityID)
 				s.EqualValues(activityType, result.ActivityType)
 				s.EqualValues(activityInput, result.Input)
 				s.EqualValues(activityHeader, result.Header)
@@ -910,7 +910,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 	runID := "run1"
 	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	const workerCount = 20
 	const taskCount = 100
@@ -926,7 +926,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	var wg sync.WaitGroup
 	wg.Add(2 * workerCount)
@@ -935,9 +935,9 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 		go func() {
 			for i := int64(0); i < taskCount; i++ {
 				addRequest := types.AddDecisionTaskRequest{
-					DomainUUID:                    common.StringPtr(domainID),
+					DomainUUID:                    domainID,
 					Execution:                     &workflowExecution,
-					ScheduleID:                    &scheduleID,
+					ScheduleID:                    scheduleID,
 					TaskList:                      taskList,
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 				}
@@ -951,7 +951,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 		}()
 	}
 	workflowTypeName := "workflowType1"
-	workflowType := &types.WorkflowType{Name: &workflowTypeName}
+	workflowType := &types.WorkflowType{Name: workflowTypeName}
 
 	identity := "nobody"
 
@@ -961,8 +961,8 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 			s.logger.Debug("Mock Received RecordDecisionTaskStartedRequest")
 			return &types.RecordDecisionTaskStartedResponse{
 				PreviousStartedEventID: &startedEventID,
-				StartedEventID:         &startedEventID,
-				ScheduledEventID:       &scheduleID,
+				StartedEventID:         startedEventID,
+				ScheduledEventID:       scheduleID,
 				WorkflowType:           workflowType,
 			}, nil
 		}).AnyTimes()
@@ -970,10 +970,10 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 		go func() {
 			for i := int64(0); i < taskCount; {
 				result, err := s.matchingEngine.PollForDecisionTask(s.handlerContext, &types.MatchingPollForDecisionTaskRequest{
-					DomainUUID: common.StringPtr(domainID),
+					DomainUUID: domainID,
 					PollRequest: &types.PollForDecisionTaskRequest{
 						TaskList: taskList,
-						Identity: &identity},
+						Identity: identity},
 				})
 				if err != nil {
 					panic(err)
@@ -985,7 +985,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 				}
 				s.EqualValues(workflowExecution, *result.WorkflowExecution)
 				s.EqualValues(workflowType, result.WorkflowType)
-				s.EqualValues(startedEventID, *result.StartedEventID)
+				s.EqualValues(startedEventID, result.StartedEventID)
 				s.EqualValues(workflowExecution, *result.WorkflowExecution)
 				token := &common.TaskToken{
 					DomainID:   domainID,
@@ -1025,17 +1025,17 @@ func (s *matchingEngineSuite) TestPollWithExpiredContext() {
 	tl := "makeToast"
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	// Try with cancelled context
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	cancel()
 	s.handlerContext.Context = ctx
 	_, err := s.matchingEngine.PollForActivityTask(s.handlerContext, &types.MatchingPollForActivityTaskRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		PollRequest: &types.PollForActivityTaskRequest{
 			TaskList: taskList,
-			Identity: &identity},
+			Identity: identity},
 	})
 
 	s.Equal(ctx.Err(), err)
@@ -1045,10 +1045,10 @@ func (s *matchingEngineSuite) TestPollWithExpiredContext() {
 	defer cancel()
 	s.handlerContext.Context = ctx
 	resp, err := s.matchingEngine.PollForActivityTask(s.handlerContext, &types.MatchingPollForActivityTaskRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		PollRequest: &types.PollForActivityTaskRequest{
 			TaskList: taskList,
-			Identity: &identity},
+			Identity: identity},
 	})
 	s.Nil(err)
 	s.Equal(emptyPollForActivityTaskResponse, resp)
@@ -1057,7 +1057,7 @@ func (s *matchingEngineSuite) TestPollWithExpiredContext() {
 func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 	runID := "run1"
 	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	const engineCount = 2
 	const taskCount = 400
@@ -1073,7 +1073,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	var engines []*matchingEngineImpl
 
@@ -1089,10 +1089,10 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 			engine := engines[p]
 			for i := int64(0); i < taskCount; i++ {
 				addRequest := types.AddActivityTaskRequest{
-					SourceDomainUUID:              common.StringPtr(domainID),
-					DomainUUID:                    common.StringPtr(domainID),
+					SourceDomainUUID:              domainID,
+					DomainUUID:                    domainID,
 					Execution:                     &workflowExecution,
-					ScheduleID:                    &scheduleID,
+					ScheduleID:                    scheduleID,
 					TaskList:                      taskList,
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(600),
 				}
@@ -1113,7 +1113,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 
 	activityTypeName := "activity1"
 	activityID := "activityId1"
-	activityType := &types.ActivityType{Name: &activityTypeName}
+	activityType := &types.ActivityType{Name: activityTypeName}
 	activityInput := []byte("Activity1 Input")
 
 	identity := "nobody"
@@ -1123,17 +1123,17 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 	// History service is using mock
 	s.mockHistoryClient.EXPECT().RecordActivityTaskStarted(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest) (*types.RecordActivityTaskStartedResponse, error) {
-			if _, ok := startedTasks[*taskRequest.TaskID]; ok {
+			if _, ok := startedTasks[taskRequest.TaskID]; ok {
 				s.logger.Debug(fmt.Sprintf("From error function Mock Received DUPLICATED RecordActivityTaskStartedRequest for taskID=%v", taskRequest.TaskID))
 				return nil, &types.EntityNotExistsError{Message: "already started"}
 			}
 			s.logger.Debug(fmt.Sprintf("Mock Received RecordActivityTaskStartedRequest for taskID=%v", taskRequest.TaskID))
 
-			startedTasks[*taskRequest.TaskID] = true
+			startedTasks[taskRequest.TaskID] = true
 			return &types.RecordActivityTaskStartedResponse{
-				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
+				ScheduledEvent: newActivityTaskScheduledEvent(taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    &activityID,
+						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
@@ -1149,10 +1149,10 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 			engine := engines[p]
 			for i := int64(0); i < taskCount; /* incremented explicitly to skip empty polls */ {
 				result, err := engine.PollForActivityTask(s.handlerContext, &types.MatchingPollForActivityTaskRequest{
-					DomainUUID: common.StringPtr(domainID),
+					DomainUUID: domainID,
 					PollRequest: &types.PollForActivityTaskRequest{
 						TaskList: taskList,
-						Identity: &identity},
+						Identity: identity},
 				})
 				if err != nil {
 					panic(err)
@@ -1162,7 +1162,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 					s.logger.Debug(fmt.Sprintf("empty poll returned"))
 					continue
 				}
-				s.EqualValues(activityID, *result.ActivityID)
+				s.EqualValues(activityID, result.ActivityID)
 				s.EqualValues(activityType, result.ActivityType)
 				s.EqualValues(activityInput, result.Input)
 				s.EqualValues(workflowExecution, *result.WorkflowExecution)
@@ -1207,7 +1207,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 	runID := "run1"
 	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	const engineCount = 2
 	const taskCount = 400
@@ -1223,7 +1223,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	var engines []*matchingEngineImpl
 
@@ -1239,9 +1239,9 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 			engine := engines[p]
 			for i := int64(0); i < taskCount; i++ {
 				addRequest := types.AddDecisionTaskRequest{
-					DomainUUID:                    common.StringPtr(domainID),
+					DomainUUID:                    domainID,
 					Execution:                     &workflowExecution,
-					ScheduleID:                    &scheduleID,
+					ScheduleID:                    scheduleID,
 					TaskList:                      taskList,
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(600),
 				}
@@ -1257,8 +1257,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 			}
 		}
 	}
-	workflowTypeName := "workflowType1"
-	workflowType := &types.WorkflowType{Name: &workflowTypeName}
+	workflowType := &types.WorkflowType{Name: "workflowType1"}
 
 	identity := "nobody"
 	var startedEventID int64 = 1412
@@ -1268,17 +1267,17 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 	// History service is using mock
 	s.mockHistoryClient.EXPECT().RecordDecisionTaskStarted(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(ctx context.Context, taskRequest *types.RecordDecisionTaskStartedRequest) (*types.RecordDecisionTaskStartedResponse, error) {
-			if _, ok := startedTasks[*taskRequest.TaskID]; ok {
+			if _, ok := startedTasks[taskRequest.TaskID]; ok {
 				s.logger.Debug(fmt.Sprintf("From error function Mock Received DUPLICATED RecordDecisionTaskStartedRequest for taskID=%v", taskRequest.TaskID))
 				return nil, &types.EventAlreadyStartedError{Message: "already started"}
 			}
 			s.logger.Debug(fmt.Sprintf("Mock Received RecordDecisionTaskStartedRequest for taskID=%v", taskRequest.TaskID))
 			s.logger.Debug("Mock Received RecordDecisionTaskStartedRequest")
-			startedTasks[*taskRequest.TaskID] = true
+			startedTasks[taskRequest.TaskID] = true
 			return &types.RecordDecisionTaskStartedResponse{
 				PreviousStartedEventID: &startedEventID,
-				StartedEventID:         &startedEventID,
-				ScheduledEventID:       &scheduleID,
+				StartedEventID:         startedEventID,
+				ScheduledEventID:       scheduleID,
 				WorkflowType:           workflowType,
 			}, nil
 		}).AnyTimes()
@@ -1287,10 +1286,10 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 			engine := engines[p]
 			for i := int64(0); i < taskCount; /* incremented explicitly to skip empty polls */ {
 				result, err := engine.PollForDecisionTask(s.handlerContext, &types.MatchingPollForDecisionTaskRequest{
-					DomainUUID: common.StringPtr(domainID),
+					DomainUUID: domainID,
 					PollRequest: &types.PollForDecisionTaskRequest{
 						TaskList: taskList,
-						Identity: &identity},
+						Identity: identity},
 				})
 				if err != nil {
 					panic(err)
@@ -1302,7 +1301,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 				}
 				s.EqualValues(workflowExecution, *result.WorkflowExecution)
 				s.EqualValues(workflowType, result.WorkflowType)
-				s.EqualValues(startedEventID, *result.StartedEventID)
+				s.EqualValues(startedEventID, result.StartedEventID)
 				s.EqualValues(workflowExecution, *result.WorkflowExecution)
 				token := &common.TaskToken{
 					DomainID:   domainID,
@@ -1344,7 +1343,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 func (s *matchingEngineSuite) TestAddTaskAfterStartFailure() {
 	runID := "run1"
 	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	domainID := "domainId"
 	tl := "makeToast"
@@ -1352,14 +1351,14 @@ func (s *matchingEngineSuite) TestAddTaskAfterStartFailure() {
 	tlKind := types.TaskListKindNormal
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	scheduleID := int64(0)
 	addRequest := types.AddActivityTaskRequest{
-		SourceDomainUUID:              common.StringPtr(domainID),
-		DomainUUID:                    common.StringPtr(domainID),
+		SourceDomainUUID:              domainID,
+		DomainUUID:                    domainID,
 		Execution:                     &workflowExecution,
-		ScheduleID:                    &scheduleID,
+		ScheduleID:                    scheduleID,
 		TaskList:                      taskList,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 	}
@@ -1388,14 +1387,14 @@ func (s *matchingEngineSuite) TestAddTaskAfterStartFailure() {
 func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 	runID := "run1"
 	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	domainID := "domainId"
 	tl := "makeToast"
 	tlID := newTestTaskListID(domainID, tl, persistence.TaskListTypeActivity)
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	const taskCount = 1200
 	const rangeSize = 10
@@ -1405,10 +1404,10 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
 		addRequest := types.AddActivityTaskRequest{
-			SourceDomainUUID:              common.StringPtr(domainID),
-			DomainUUID:                    common.StringPtr(domainID),
+			SourceDomainUUID:              domainID,
+			DomainUUID:                    domainID,
 			Execution:                     &workflowExecution,
-			ScheduleID:                    &scheduleID,
+			ScheduleID:                    scheduleID,
 			TaskList:                      taskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 		}
@@ -1461,10 +1460,10 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 	for i := int64(0); i < rangeSize; i++ {
 		identity := "nobody"
 		result, err := s.matchingEngine.PollForActivityTask(s.handlerContext, &types.MatchingPollForActivityTaskRequest{
-			DomainUUID: common.StringPtr(domainID),
+			DomainUUID: domainID,
 			PollRequest: &types.PollForActivityTaskRequest{
 				TaskList: taskList,
-				Identity: &identity},
+				Identity: identity},
 		})
 
 		s.NoError(err)
@@ -1518,14 +1517,14 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch_ReadBatchDone() {
 func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 	runID := uuid.New()
 	workflowID := uuid.New()
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	domainID := uuid.New()
 	tl := "task-expiry-completion-tl0"
 	tlID := newTestTaskListID(domainID, tl, persistence.TaskListTypeActivity)
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	const taskCount = 20
 	const rangeSize = 10
@@ -1547,10 +1546,10 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 		for i := int64(0); i < taskCount; i++ {
 			scheduleID := i * 3
 			addRequest := types.AddActivityTaskRequest{
-				SourceDomainUUID:              common.StringPtr(domainID),
-				DomainUUID:                    common.StringPtr(domainID),
+				SourceDomainUUID:              domainID,
+				DomainUUID:                    domainID,
 				Execution:                     &workflowExecution,
-				ScheduleID:                    &scheduleID,
+				ScheduleID:                    scheduleID,
 				TaskList:                      taskList,
 				ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 			}
@@ -1576,8 +1575,8 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 		s.setupRecordActivityTaskStartedMock(tl)
 
 		pollReq := &types.MatchingPollForActivityTaskRequest{
-			DomainUUID:  common.StringPtr(domainID),
-			PollRequest: &types.PollForActivityTaskRequest{TaskList: taskList, Identity: common.StringPtr("test")},
+			DomainUUID:  domainID,
+			PollRequest: &types.PollForActivityTaskRequest{TaskList: taskList, Identity: "test"},
 		}
 
 		remaining := taskCount
@@ -1599,7 +1598,7 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 func (s *matchingEngineSuite) setupRecordActivityTaskStartedMock(tlName string) {
 	activityTypeName := "activity1"
 	activityID := "activityId1"
-	activityType := &types.ActivityType{Name: &activityTypeName}
+	activityType := &types.ActivityType{Name: activityTypeName}
 	activityInput := []byte("Activity1 Input")
 
 	// History service is using mock
@@ -1607,10 +1606,10 @@ func (s *matchingEngineSuite) setupRecordActivityTaskStartedMock(tlName string) 
 		func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest) (*types.RecordActivityTaskStartedResponse, error) {
 			s.logger.Debug("Mock Received RecordActivityTaskStartedRequest")
 			return &types.RecordActivityTaskStartedResponse{
-				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
+				ScheduledEvent: newActivityTaskScheduledEvent(taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    &activityID,
-						TaskList:                      &types.TaskList{Name: &tlName},
+						ActivityID:                    activityID,
+						TaskList:                      &types.TaskList{Name: tlName},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -1646,7 +1645,7 @@ func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID i
 	attributes.ScheduleToStartTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.ScheduleToStartTimeoutSeconds)
 	attributes.StartToCloseTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.StartToCloseTimeoutSeconds)
 	attributes.HeartbeatTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.HeartbeatTimeoutSeconds)
-	attributes.DecisionTaskCompletedEventID = common.Int64Ptr(decisionTaskCompletedEventID)
+	attributes.DecisionTaskCompletedEventID = decisionTaskCompletedEventID
 	historyEvent.ActivityTaskScheduledEventAttributes = attributes
 
 	return historyEvent
@@ -1655,7 +1654,7 @@ func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID i
 func newHistoryEvent(eventID int64, eventType types.EventType) *types.HistoryEvent {
 	ts := common.Int64Ptr(time.Now().UnixNano())
 	historyEvent := &types.HistoryEvent{}
-	historyEvent.EventID = common.Int64Ptr(eventID)
+	historyEvent.EventID = eventID
 	historyEvent.Timestamp = ts
 	historyEvent.EventType = &eventType
 
@@ -1870,10 +1869,10 @@ func (m *testTaskManager) CreateTasks(
 		scheduleID := task.Data.ScheduleID
 		info := &persistence.TaskInfo{
 			DomainID:   domainID,
-			RunID:      *task.Execution.RunID,
+			RunID:      task.Execution.RunID,
 			ScheduleID: scheduleID,
 			TaskID:     task.TaskID,
-			WorkflowID: *task.Execution.WorkflowID,
+			WorkflowID: task.Execution.WorkflowID,
 		}
 		if task.Data.ScheduleToStartTimeout != 0 {
 			info.Expiry = time.Now().Add(time.Duration(task.Data.ScheduleToStartTimeout) * time.Second)

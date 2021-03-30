@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,28 +26,19 @@
 package apiv1
 
 import (
-	bytes "bytes"
 	fmt "fmt"
 	io "io"
 	math "math"
 	math_bits "math/bits"
-	reflect "reflect"
-	strconv "strconv"
-	strings "strings"
-	time "time"
 
-	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
-	github_com_gogo_protobuf_types "github.com/gogo/protobuf/types"
-	_ "github.com/golang/protobuf/ptypes/duration"
-	_ "github.com/golang/protobuf/ptypes/timestamp"
+	types "github.com/gogo/protobuf/types"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = time.Kitchen
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -58,9 +49,9 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 type EventFilterType int32
 
 const (
-	EVENT_FILTER_TYPE_INVALID     EventFilterType = 0
-	EVENT_FILTER_TYPE_ALL_EVENT   EventFilterType = 1
-	EVENT_FILTER_TYPE_CLOSE_EVENT EventFilterType = 2
+	EventFilterType_EVENT_FILTER_TYPE_INVALID     EventFilterType = 0
+	EventFilterType_EVENT_FILTER_TYPE_ALL_EVENT   EventFilterType = 1
+	EventFilterType_EVENT_FILTER_TYPE_CLOSE_EVENT EventFilterType = 2
 )
 
 var EventFilterType_name = map[int32]string{
@@ -75,16 +66,24 @@ var EventFilterType_value = map[string]int32{
 	"EVENT_FILTER_TYPE_CLOSE_EVENT": 2,
 }
 
+func (x EventFilterType) String() string {
+	return proto.EnumName(EventFilterType_name, int32(x))
+}
+
 func (EventFilterType) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{0}
 }
 
 type History struct {
-	Events []*HistoryEvent `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+	Events               []*HistoryEvent `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
 }
 
-func (m *History) Reset()      { *m = History{} }
-func (*History) ProtoMessage() {}
+func (m *History) Reset()         { *m = History{} }
+func (m *History) String() string { return proto.CompactTextString(m) }
+func (*History) ProtoMessage()    {}
 func (*History) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{0}
 }
@@ -123,10 +122,10 @@ func (m *History) GetEvents() []*HistoryEvent {
 }
 
 type HistoryEvent struct {
-	EventId   int64      `protobuf:"varint,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
-	EventTime *time.Time `protobuf:"bytes,2,opt,name=event_time,json=eventTime,proto3,stdtime" json:"event_time,omitempty"`
-	Version   int64      `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
-	TaskId    int64      `protobuf:"varint,4,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	EventId   int64            `protobuf:"varint,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	EventTime *types.Timestamp `protobuf:"bytes,2,opt,name=event_time,json=eventTime,proto3" json:"event_time,omitempty"`
+	Version   int64            `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
+	TaskId    int64            `protobuf:"varint,4,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	// Types that are valid to be assigned to Attributes:
 	//	*HistoryEvent_WorkflowExecutionStartedEventAttributes
 	//	*HistoryEvent_WorkflowExecutionCompletedEventAttributes
@@ -170,11 +169,15 @@ type HistoryEvent struct {
 	//	*HistoryEvent_SignalExternalWorkflowExecutionFailedEventAttributes
 	//	*HistoryEvent_ExternalWorkflowExecutionSignaledEventAttributes
 	//	*HistoryEvent_UpsertWorkflowSearchAttributesEventAttributes
-	Attributes isHistoryEvent_Attributes `protobuf_oneof:"attributes"`
+	Attributes           isHistoryEvent_Attributes `protobuf_oneof:"attributes"`
+	XXX_NoUnkeyedLiteral struct{}                  `json:"-"`
+	XXX_unrecognized     []byte                    `json:"-"`
+	XXX_sizecache        int32                     `json:"-"`
 }
 
-func (m *HistoryEvent) Reset()      { *m = HistoryEvent{} }
-func (*HistoryEvent) ProtoMessage() {}
+func (m *HistoryEvent) Reset()         { *m = HistoryEvent{} }
+func (m *HistoryEvent) String() string { return proto.CompactTextString(m) }
+func (*HistoryEvent) ProtoMessage()    {}
 func (*HistoryEvent) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{1}
 }
@@ -207,7 +210,6 @@ var xxx_messageInfo_HistoryEvent proto.InternalMessageInfo
 
 type isHistoryEvent_Attributes interface {
 	isHistoryEvent_Attributes()
-	Equal(interface{}) bool
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
@@ -402,7 +404,7 @@ func (m *HistoryEvent) GetEventId() int64 {
 	return 0
 }
 
-func (m *HistoryEvent) GetEventTime() *time.Time {
+func (m *HistoryEvent) GetEventTime() *types.Timestamp {
 	if m != nil {
 		return m.EventTime
 	}
@@ -767,37 +769,39 @@ func (*HistoryEvent) XXX_OneofWrappers() []interface{} {
 
 type WorkflowExecutionStartedEventAttributes struct {
 	WorkflowType                 *WorkflowType          `protobuf:"bytes,1,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
-	ParentWorkflowDomain         string                 `protobuf:"bytes,2,opt,name=parent_workflow_domain,json=parentWorkflowDomain,proto3" json:"parent_workflow_domain,omitempty"`
-	ParentWorkflowExecution      *WorkflowExecution     `protobuf:"bytes,3,opt,name=parent_workflow_execution,json=parentWorkflowExecution,proto3" json:"parent_workflow_execution,omitempty"`
-	ParentInitiatedEventId       int64                  `protobuf:"varint,4,opt,name=parent_initiated_event_id,json=parentInitiatedEventId,proto3" json:"parent_initiated_event_id,omitempty"`
-	TaskList                     *TaskList              `protobuf:"bytes,5,opt,name=task_list,json=taskList,proto3" json:"task_list,omitempty"`
-	Input                        *Payload               `protobuf:"bytes,6,opt,name=input,proto3" json:"input,omitempty"`
-	ExecutionStartToCloseTimeout *time.Duration         `protobuf:"bytes,7,opt,name=execution_start_to_close_timeout,json=executionStartToCloseTimeout,proto3,stdduration" json:"execution_start_to_close_timeout,omitempty"`
-	TaskStartToCloseTimeout      *time.Duration         `protobuf:"bytes,8,opt,name=task_start_to_close_timeout,json=taskStartToCloseTimeout,proto3,stdduration" json:"task_start_to_close_timeout,omitempty"`
-	ContinuedExecutionRunId      string                 `protobuf:"bytes,9,opt,name=continued_execution_run_id,json=continuedExecutionRunId,proto3" json:"continued_execution_run_id,omitempty"`
-	Initiator                    ContinueAsNewInitiator `protobuf:"varint,10,opt,name=initiator,proto3,enum=uber.cadence.api.v1.ContinueAsNewInitiator" json:"initiator,omitempty"`
-	ContinuedFailure             *Failure               `protobuf:"bytes,11,opt,name=continued_failure,json=continuedFailure,proto3" json:"continued_failure,omitempty"`
-	LastCompletionResult         *Payload               `protobuf:"bytes,12,opt,name=last_completion_result,json=lastCompletionResult,proto3" json:"last_completion_result,omitempty"`
+	ParentExecutionInfo          *ParentExecutionInfo   `protobuf:"bytes,2,opt,name=parent_execution_info,json=parentExecutionInfo,proto3" json:"parent_execution_info,omitempty"`
+	TaskList                     *TaskList              `protobuf:"bytes,3,opt,name=task_list,json=taskList,proto3" json:"task_list,omitempty"`
+	Input                        *Payload               `protobuf:"bytes,4,opt,name=input,proto3" json:"input,omitempty"`
+	ExecutionStartToCloseTimeout *types.Duration        `protobuf:"bytes,5,opt,name=execution_start_to_close_timeout,json=executionStartToCloseTimeout,proto3" json:"execution_start_to_close_timeout,omitempty"`
+	TaskStartToCloseTimeout      *types.Duration        `protobuf:"bytes,6,opt,name=task_start_to_close_timeout,json=taskStartToCloseTimeout,proto3" json:"task_start_to_close_timeout,omitempty"`
+	ContinuedExecutionRunId      string                 `protobuf:"bytes,7,opt,name=continued_execution_run_id,json=continuedExecutionRunId,proto3" json:"continued_execution_run_id,omitempty"`
+	Initiator                    ContinueAsNewInitiator `protobuf:"varint,8,opt,name=initiator,proto3,enum=uber.cadence.api.v1.ContinueAsNewInitiator" json:"initiator,omitempty"`
+	ContinuedFailure             *Failure               `protobuf:"bytes,9,opt,name=continued_failure,json=continuedFailure,proto3" json:"continued_failure,omitempty"`
+	LastCompletionResult         *Payload               `protobuf:"bytes,10,opt,name=last_completion_result,json=lastCompletionResult,proto3" json:"last_completion_result,omitempty"`
 	// This is the previous runID of ContinueAsNew.
-	OriginalExecutionRunId string `protobuf:"bytes,13,opt,name=original_execution_run_id,json=originalExecutionRunId,proto3" json:"original_execution_run_id,omitempty"`
-	Identity               string `protobuf:"bytes,14,opt,name=identity,proto3" json:"identity,omitempty"`
+	OriginalExecutionRunId string `protobuf:"bytes,11,opt,name=original_execution_run_id,json=originalExecutionRunId,proto3" json:"original_execution_run_id,omitempty"`
+	Identity               string `protobuf:"bytes,12,opt,name=identity,proto3" json:"identity,omitempty"`
 	// This is the very first runID along the chain of ContinueAsNew and Reset.
-	FirstExecutionRunId      string            `protobuf:"bytes,15,opt,name=first_execution_run_id,json=firstExecutionRunId,proto3" json:"first_execution_run_id,omitempty"`
-	RetryPolicy              *RetryPolicy      `protobuf:"bytes,16,opt,name=retry_policy,json=retryPolicy,proto3" json:"retry_policy,omitempty"`
-	Attempt                  int32             `protobuf:"varint,17,opt,name=attempt,proto3" json:"attempt,omitempty"`
-	ExpirationTime           *time.Time        `protobuf:"bytes,19,opt,name=expiration_time,json=expirationTime,proto3,stdtime" json:"expiration_time,omitempty"`
-	CronSchedule             string            `protobuf:"bytes,20,opt,name=cron_schedule,json=cronSchedule,proto3" json:"cron_schedule,omitempty"`
-	FirstDecisionTaskBackoff *time.Duration    `protobuf:"bytes,21,opt,name=first_decision_task_backoff,json=firstDecisionTaskBackoff,proto3,stdduration" json:"first_decision_task_backoff,omitempty"`
-	Memo                     *Memo             `protobuf:"bytes,22,opt,name=memo,proto3" json:"memo,omitempty"`
-	SearchAttributes         *SearchAttributes `protobuf:"bytes,23,opt,name=search_attributes,json=searchAttributes,proto3" json:"search_attributes,omitempty"`
-	PrevAutoResetPoints      *ResetPoints      `protobuf:"bytes,24,opt,name=prev_auto_reset_points,json=prevAutoResetPoints,proto3" json:"prev_auto_reset_points,omitempty"`
-	Header                   *Header           `protobuf:"bytes,25,opt,name=header,proto3" json:"header,omitempty"`
+	FirstExecutionRunId      string            `protobuf:"bytes,13,opt,name=first_execution_run_id,json=firstExecutionRunId,proto3" json:"first_execution_run_id,omitempty"`
+	RetryPolicy              *RetryPolicy      `protobuf:"bytes,14,opt,name=retry_policy,json=retryPolicy,proto3" json:"retry_policy,omitempty"`
+	Attempt                  int32             `protobuf:"varint,15,opt,name=attempt,proto3" json:"attempt,omitempty"`
+	ExpirationTime           *types.Timestamp  `protobuf:"bytes,16,opt,name=expiration_time,json=expirationTime,proto3" json:"expiration_time,omitempty"`
+	CronSchedule             string            `protobuf:"bytes,17,opt,name=cron_schedule,json=cronSchedule,proto3" json:"cron_schedule,omitempty"`
+	FirstDecisionTaskBackoff *types.Duration   `protobuf:"bytes,18,opt,name=first_decision_task_backoff,json=firstDecisionTaskBackoff,proto3" json:"first_decision_task_backoff,omitempty"`
+	Memo                     *Memo             `protobuf:"bytes,19,opt,name=memo,proto3" json:"memo,omitempty"`
+	SearchAttributes         *SearchAttributes `protobuf:"bytes,20,opt,name=search_attributes,json=searchAttributes,proto3" json:"search_attributes,omitempty"`
+	PrevAutoResetPoints      *ResetPoints      `protobuf:"bytes,21,opt,name=prev_auto_reset_points,json=prevAutoResetPoints,proto3" json:"prev_auto_reset_points,omitempty"`
+	Header                   *Header           `protobuf:"bytes,22,opt,name=header,proto3" json:"header,omitempty"`
+	XXX_NoUnkeyedLiteral     struct{}          `json:"-"`
+	XXX_unrecognized         []byte            `json:"-"`
+	XXX_sizecache            int32             `json:"-"`
 }
 
 func (m *WorkflowExecutionStartedEventAttributes) Reset() {
 	*m = WorkflowExecutionStartedEventAttributes{}
 }
-func (*WorkflowExecutionStartedEventAttributes) ProtoMessage() {}
+func (m *WorkflowExecutionStartedEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*WorkflowExecutionStartedEventAttributes) ProtoMessage()    {}
 func (*WorkflowExecutionStartedEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{2}
 }
@@ -835,25 +839,11 @@ func (m *WorkflowExecutionStartedEventAttributes) GetWorkflowType() *WorkflowTyp
 	return nil
 }
 
-func (m *WorkflowExecutionStartedEventAttributes) GetParentWorkflowDomain() string {
+func (m *WorkflowExecutionStartedEventAttributes) GetParentExecutionInfo() *ParentExecutionInfo {
 	if m != nil {
-		return m.ParentWorkflowDomain
-	}
-	return ""
-}
-
-func (m *WorkflowExecutionStartedEventAttributes) GetParentWorkflowExecution() *WorkflowExecution {
-	if m != nil {
-		return m.ParentWorkflowExecution
+		return m.ParentExecutionInfo
 	}
 	return nil
-}
-
-func (m *WorkflowExecutionStartedEventAttributes) GetParentInitiatedEventId() int64 {
-	if m != nil {
-		return m.ParentInitiatedEventId
-	}
-	return 0
 }
 
 func (m *WorkflowExecutionStartedEventAttributes) GetTaskList() *TaskList {
@@ -870,14 +860,14 @@ func (m *WorkflowExecutionStartedEventAttributes) GetInput() *Payload {
 	return nil
 }
 
-func (m *WorkflowExecutionStartedEventAttributes) GetExecutionStartToCloseTimeout() *time.Duration {
+func (m *WorkflowExecutionStartedEventAttributes) GetExecutionStartToCloseTimeout() *types.Duration {
 	if m != nil {
 		return m.ExecutionStartToCloseTimeout
 	}
 	return nil
 }
 
-func (m *WorkflowExecutionStartedEventAttributes) GetTaskStartToCloseTimeout() *time.Duration {
+func (m *WorkflowExecutionStartedEventAttributes) GetTaskStartToCloseTimeout() *types.Duration {
 	if m != nil {
 		return m.TaskStartToCloseTimeout
 	}
@@ -895,7 +885,7 @@ func (m *WorkflowExecutionStartedEventAttributes) GetInitiator() ContinueAsNewIn
 	if m != nil {
 		return m.Initiator
 	}
-	return CONTINUE_AS_NEW_INITIATOR_INVALID
+	return ContinueAsNewInitiator_CONTINUE_AS_NEW_INITIATOR_INVALID
 }
 
 func (m *WorkflowExecutionStartedEventAttributes) GetContinuedFailure() *Failure {
@@ -947,7 +937,7 @@ func (m *WorkflowExecutionStartedEventAttributes) GetAttempt() int32 {
 	return 0
 }
 
-func (m *WorkflowExecutionStartedEventAttributes) GetExpirationTime() *time.Time {
+func (m *WorkflowExecutionStartedEventAttributes) GetExpirationTime() *types.Timestamp {
 	if m != nil {
 		return m.ExpirationTime
 	}
@@ -961,7 +951,7 @@ func (m *WorkflowExecutionStartedEventAttributes) GetCronSchedule() string {
 	return ""
 }
 
-func (m *WorkflowExecutionStartedEventAttributes) GetFirstDecisionTaskBackoff() *time.Duration {
+func (m *WorkflowExecutionStartedEventAttributes) GetFirstDecisionTaskBackoff() *types.Duration {
 	if m != nil {
 		return m.FirstDecisionTaskBackoff
 	}
@@ -999,10 +989,16 @@ func (m *WorkflowExecutionStartedEventAttributes) GetHeader() *Header {
 type WorkflowExecutionCompletedEventAttributes struct {
 	Result                       *Payload `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"`
 	DecisionTaskCompletedEventId int64    `protobuf:"varint,2,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{} `json:"-"`
+	XXX_unrecognized             []byte   `json:"-"`
+	XXX_sizecache                int32    `json:"-"`
 }
 
 func (m *WorkflowExecutionCompletedEventAttributes) Reset() {
 	*m = WorkflowExecutionCompletedEventAttributes{}
+}
+func (m *WorkflowExecutionCompletedEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*WorkflowExecutionCompletedEventAttributes) ProtoMessage() {}
 func (*WorkflowExecutionCompletedEventAttributes) Descriptor() ([]byte, []int) {
@@ -1052,12 +1048,16 @@ func (m *WorkflowExecutionCompletedEventAttributes) GetDecisionTaskCompletedEven
 type WorkflowExecutionFailedEventAttributes struct {
 	Failure                      *Failure `protobuf:"bytes,1,opt,name=failure,proto3" json:"failure,omitempty"`
 	DecisionTaskCompletedEventId int64    `protobuf:"varint,2,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{} `json:"-"`
+	XXX_unrecognized             []byte   `json:"-"`
+	XXX_sizecache                int32    `json:"-"`
 }
 
 func (m *WorkflowExecutionFailedEventAttributes) Reset() {
 	*m = WorkflowExecutionFailedEventAttributes{}
 }
-func (*WorkflowExecutionFailedEventAttributes) ProtoMessage() {}
+func (m *WorkflowExecutionFailedEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*WorkflowExecutionFailedEventAttributes) ProtoMessage()    {}
 func (*WorkflowExecutionFailedEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{4}
 }
@@ -1103,13 +1103,17 @@ func (m *WorkflowExecutionFailedEventAttributes) GetDecisionTaskCompletedEventId
 }
 
 type WorkflowExecutionTimedOutEventAttributes struct {
-	TimeoutType TimeoutType `protobuf:"varint,1,opt,name=timeout_type,json=timeoutType,proto3,enum=uber.cadence.api.v1.TimeoutType" json:"timeout_type,omitempty"`
+	TimeoutType          TimeoutType `protobuf:"varint,1,opt,name=timeout_type,json=timeoutType,proto3,enum=uber.cadence.api.v1.TimeoutType" json:"timeout_type,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
 }
 
 func (m *WorkflowExecutionTimedOutEventAttributes) Reset() {
 	*m = WorkflowExecutionTimedOutEventAttributes{}
 }
-func (*WorkflowExecutionTimedOutEventAttributes) ProtoMessage() {}
+func (m *WorkflowExecutionTimedOutEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*WorkflowExecutionTimedOutEventAttributes) ProtoMessage()    {}
 func (*WorkflowExecutionTimedOutEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{5}
 }
@@ -1144,17 +1148,21 @@ func (m *WorkflowExecutionTimedOutEventAttributes) GetTimeoutType() TimeoutType 
 	if m != nil {
 		return m.TimeoutType
 	}
-	return TIMEOUT_TYPE_INVALID
+	return TimeoutType_TIMEOUT_TYPE_INVALID
 }
 
 type DecisionTaskScheduledEventAttributes struct {
-	TaskList            *TaskList      `protobuf:"bytes,1,opt,name=task_list,json=taskList,proto3" json:"task_list,omitempty"`
-	StartToCloseTimeout *time.Duration `protobuf:"bytes,2,opt,name=start_to_close_timeout,json=startToCloseTimeout,proto3,stdduration" json:"start_to_close_timeout,omitempty"`
-	Attempt             int32          `protobuf:"varint,3,opt,name=attempt,proto3" json:"attempt,omitempty"`
+	TaskList             *TaskList       `protobuf:"bytes,1,opt,name=task_list,json=taskList,proto3" json:"task_list,omitempty"`
+	StartToCloseTimeout  *types.Duration `protobuf:"bytes,2,opt,name=start_to_close_timeout,json=startToCloseTimeout,proto3" json:"start_to_close_timeout,omitempty"`
+	Attempt              int32           `protobuf:"varint,3,opt,name=attempt,proto3" json:"attempt,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
 }
 
-func (m *DecisionTaskScheduledEventAttributes) Reset()      { *m = DecisionTaskScheduledEventAttributes{} }
-func (*DecisionTaskScheduledEventAttributes) ProtoMessage() {}
+func (m *DecisionTaskScheduledEventAttributes) Reset()         { *m = DecisionTaskScheduledEventAttributes{} }
+func (m *DecisionTaskScheduledEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*DecisionTaskScheduledEventAttributes) ProtoMessage()    {}
 func (*DecisionTaskScheduledEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{6}
 }
@@ -1192,7 +1200,7 @@ func (m *DecisionTaskScheduledEventAttributes) GetTaskList() *TaskList {
 	return nil
 }
 
-func (m *DecisionTaskScheduledEventAttributes) GetStartToCloseTimeout() *time.Duration {
+func (m *DecisionTaskScheduledEventAttributes) GetStartToCloseTimeout() *types.Duration {
 	if m != nil {
 		return m.StartToCloseTimeout
 	}
@@ -1207,13 +1215,17 @@ func (m *DecisionTaskScheduledEventAttributes) GetAttempt() int32 {
 }
 
 type DecisionTaskStartedEventAttributes struct {
-	ScheduledEventId int64  `protobuf:"varint,1,opt,name=scheduled_event_id,json=scheduledEventId,proto3" json:"scheduled_event_id,omitempty"`
-	Identity         string `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
-	RequestId        string `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	ScheduledEventId     int64    `protobuf:"varint,1,opt,name=scheduled_event_id,json=scheduledEventId,proto3" json:"scheduled_event_id,omitempty"`
+	Identity             string   `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
+	RequestId            string   `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *DecisionTaskStartedEventAttributes) Reset()      { *m = DecisionTaskStartedEventAttributes{} }
-func (*DecisionTaskStartedEventAttributes) ProtoMessage() {}
+func (m *DecisionTaskStartedEventAttributes) Reset()         { *m = DecisionTaskStartedEventAttributes{} }
+func (m *DecisionTaskStartedEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*DecisionTaskStartedEventAttributes) ProtoMessage()    {}
 func (*DecisionTaskStartedEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{7}
 }
@@ -1266,15 +1278,19 @@ func (m *DecisionTaskStartedEventAttributes) GetRequestId() string {
 }
 
 type DecisionTaskCompletedEventAttributes struct {
-	ScheduledEventId int64  `protobuf:"varint,1,opt,name=scheduled_event_id,json=scheduledEventId,proto3" json:"scheduled_event_id,omitempty"`
-	StartedEventId   int64  `protobuf:"varint,2,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
-	Identity         string `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
-	BinaryChecksum   string `protobuf:"bytes,4,opt,name=binary_checksum,json=binaryChecksum,proto3" json:"binary_checksum,omitempty"`
-	ExecutionContext []byte `protobuf:"bytes,5,opt,name=execution_context,json=executionContext,proto3" json:"execution_context,omitempty"`
+	ScheduledEventId     int64    `protobuf:"varint,1,opt,name=scheduled_event_id,json=scheduledEventId,proto3" json:"scheduled_event_id,omitempty"`
+	StartedEventId       int64    `protobuf:"varint,2,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
+	Identity             string   `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
+	BinaryChecksum       string   `protobuf:"bytes,4,opt,name=binary_checksum,json=binaryChecksum,proto3" json:"binary_checksum,omitempty"`
+	ExecutionContext     []byte   `protobuf:"bytes,5,opt,name=execution_context,json=executionContext,proto3" json:"execution_context,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *DecisionTaskCompletedEventAttributes) Reset()      { *m = DecisionTaskCompletedEventAttributes{} }
-func (*DecisionTaskCompletedEventAttributes) ProtoMessage() {}
+func (m *DecisionTaskCompletedEventAttributes) Reset()         { *m = DecisionTaskCompletedEventAttributes{} }
+func (m *DecisionTaskCompletedEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*DecisionTaskCompletedEventAttributes) ProtoMessage()    {}
 func (*DecisionTaskCompletedEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{8}
 }
@@ -1344,10 +1360,20 @@ type DecisionTaskTimedOutEventAttributes struct {
 	ScheduledEventId int64       `protobuf:"varint,1,opt,name=scheduled_event_id,json=scheduledEventId,proto3" json:"scheduled_event_id,omitempty"`
 	StartedEventId   int64       `protobuf:"varint,2,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
 	TimeoutType      TimeoutType `protobuf:"varint,3,opt,name=timeout_type,json=timeoutType,proto3,enum=uber.cadence.api.v1.TimeoutType" json:"timeout_type,omitempty"`
+	// For reset workflow.
+	BaseRunId            string                    `protobuf:"bytes,4,opt,name=base_run_id,json=baseRunId,proto3" json:"base_run_id,omitempty"`
+	NewRunId             string                    `protobuf:"bytes,5,opt,name=new_run_id,json=newRunId,proto3" json:"new_run_id,omitempty"`
+	ForkEventVersion     int64                     `protobuf:"varint,6,opt,name=fork_event_version,json=forkEventVersion,proto3" json:"fork_event_version,omitempty"`
+	Reason               string                    `protobuf:"bytes,7,opt,name=reason,proto3" json:"reason,omitempty"`
+	Cause                DecisionTaskTimedOutCause `protobuf:"varint,8,opt,name=cause,proto3,enum=uber.cadence.api.v1.DecisionTaskTimedOutCause" json:"cause,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                  `json:"-"`
+	XXX_unrecognized     []byte                    `json:"-"`
+	XXX_sizecache        int32                     `json:"-"`
 }
 
-func (m *DecisionTaskTimedOutEventAttributes) Reset()      { *m = DecisionTaskTimedOutEventAttributes{} }
-func (*DecisionTaskTimedOutEventAttributes) ProtoMessage() {}
+func (m *DecisionTaskTimedOutEventAttributes) Reset()         { *m = DecisionTaskTimedOutEventAttributes{} }
+func (m *DecisionTaskTimedOutEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*DecisionTaskTimedOutEventAttributes) ProtoMessage()    {}
 func (*DecisionTaskTimedOutEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{9}
 }
@@ -1396,7 +1422,42 @@ func (m *DecisionTaskTimedOutEventAttributes) GetTimeoutType() TimeoutType {
 	if m != nil {
 		return m.TimeoutType
 	}
-	return TIMEOUT_TYPE_INVALID
+	return TimeoutType_TIMEOUT_TYPE_INVALID
+}
+
+func (m *DecisionTaskTimedOutEventAttributes) GetBaseRunId() string {
+	if m != nil {
+		return m.BaseRunId
+	}
+	return ""
+}
+
+func (m *DecisionTaskTimedOutEventAttributes) GetNewRunId() string {
+	if m != nil {
+		return m.NewRunId
+	}
+	return ""
+}
+
+func (m *DecisionTaskTimedOutEventAttributes) GetForkEventVersion() int64 {
+	if m != nil {
+		return m.ForkEventVersion
+	}
+	return 0
+}
+
+func (m *DecisionTaskTimedOutEventAttributes) GetReason() string {
+	if m != nil {
+		return m.Reason
+	}
+	return ""
+}
+
+func (m *DecisionTaskTimedOutEventAttributes) GetCause() DecisionTaskTimedOutCause {
+	if m != nil {
+		return m.Cause
+	}
+	return DecisionTaskTimedOutCause_DECISION_TASK_TIMED_OUT_CAUSE_INVALID
 }
 
 type DecisionTaskFailedEventAttributes struct {
@@ -1406,14 +1467,18 @@ type DecisionTaskFailedEventAttributes struct {
 	Failure          *Failure                `protobuf:"bytes,4,opt,name=failure,proto3" json:"failure,omitempty"`
 	Identity         string                  `protobuf:"bytes,5,opt,name=identity,proto3" json:"identity,omitempty"`
 	// For reset workflow.
-	BaseRunId        string `protobuf:"bytes,6,opt,name=base_run_id,json=baseRunId,proto3" json:"base_run_id,omitempty"`
-	NewRunId         string `protobuf:"bytes,7,opt,name=new_run_id,json=newRunId,proto3" json:"new_run_id,omitempty"`
-	ForkEventVersion int64  `protobuf:"varint,8,opt,name=fork_event_version,json=forkEventVersion,proto3" json:"fork_event_version,omitempty"`
-	BinaryChecksum   string `protobuf:"bytes,9,opt,name=binary_checksum,json=binaryChecksum,proto3" json:"binary_checksum,omitempty"`
+	BaseRunId            string   `protobuf:"bytes,6,opt,name=base_run_id,json=baseRunId,proto3" json:"base_run_id,omitempty"`
+	NewRunId             string   `protobuf:"bytes,7,opt,name=new_run_id,json=newRunId,proto3" json:"new_run_id,omitempty"`
+	ForkEventVersion     int64    `protobuf:"varint,8,opt,name=fork_event_version,json=forkEventVersion,proto3" json:"fork_event_version,omitempty"`
+	BinaryChecksum       string   `protobuf:"bytes,9,opt,name=binary_checksum,json=binaryChecksum,proto3" json:"binary_checksum,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *DecisionTaskFailedEventAttributes) Reset()      { *m = DecisionTaskFailedEventAttributes{} }
-func (*DecisionTaskFailedEventAttributes) ProtoMessage() {}
+func (m *DecisionTaskFailedEventAttributes) Reset()         { *m = DecisionTaskFailedEventAttributes{} }
+func (m *DecisionTaskFailedEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*DecisionTaskFailedEventAttributes) ProtoMessage()    {}
 func (*DecisionTaskFailedEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{10}
 }
@@ -1462,7 +1527,7 @@ func (m *DecisionTaskFailedEventAttributes) GetCause() DecisionTaskFailedCause {
 	if m != nil {
 		return m.Cause
 	}
-	return DECISION_TASK_FAILED_CAUSE_INVALID
+	return DecisionTaskFailedCause_DECISION_TASK_FAILED_CAUSE_INVALID
 }
 
 func (m *DecisionTaskFailedEventAttributes) GetFailure() *Failure {
@@ -1508,22 +1573,26 @@ func (m *DecisionTaskFailedEventAttributes) GetBinaryChecksum() string {
 }
 
 type ActivityTaskScheduledEventAttributes struct {
-	ActivityId                   string         `protobuf:"bytes,1,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
-	ActivityType                 *ActivityType  `protobuf:"bytes,2,opt,name=activity_type,json=activityType,proto3" json:"activity_type,omitempty"`
-	Domain                       string         `protobuf:"bytes,3,opt,name=domain,proto3" json:"domain,omitempty"`
-	TaskList                     *TaskList      `protobuf:"bytes,4,opt,name=task_list,json=taskList,proto3" json:"task_list,omitempty"`
-	Input                        *Payload       `protobuf:"bytes,6,opt,name=input,proto3" json:"input,omitempty"`
-	ScheduleToCloseTimeout       *time.Duration `protobuf:"bytes,7,opt,name=schedule_to_close_timeout,json=scheduleToCloseTimeout,proto3,stdduration" json:"schedule_to_close_timeout,omitempty"`
-	ScheduleToStartTimeout       *time.Duration `protobuf:"bytes,8,opt,name=schedule_to_start_timeout,json=scheduleToStartTimeout,proto3,stdduration" json:"schedule_to_start_timeout,omitempty"`
-	StartToCloseTimeout          *time.Duration `protobuf:"bytes,9,opt,name=start_to_close_timeout,json=startToCloseTimeout,proto3,stdduration" json:"start_to_close_timeout,omitempty"`
-	HeartbeatTimeout             *time.Duration `protobuf:"bytes,10,opt,name=heartbeat_timeout,json=heartbeatTimeout,proto3,stdduration" json:"heartbeat_timeout,omitempty"`
-	DecisionTaskCompletedEventId int64          `protobuf:"varint,11,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
-	RetryPolicy                  *RetryPolicy   `protobuf:"bytes,12,opt,name=retry_policy,json=retryPolicy,proto3" json:"retry_policy,omitempty"`
-	Header                       *Header        `protobuf:"bytes,13,opt,name=header,proto3" json:"header,omitempty"`
+	ActivityId                   string          `protobuf:"bytes,1,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
+	ActivityType                 *ActivityType   `protobuf:"bytes,2,opt,name=activity_type,json=activityType,proto3" json:"activity_type,omitempty"`
+	Domain                       string          `protobuf:"bytes,3,opt,name=domain,proto3" json:"domain,omitempty"`
+	TaskList                     *TaskList       `protobuf:"bytes,4,opt,name=task_list,json=taskList,proto3" json:"task_list,omitempty"`
+	Input                        *Payload        `protobuf:"bytes,6,opt,name=input,proto3" json:"input,omitempty"`
+	ScheduleToCloseTimeout       *types.Duration `protobuf:"bytes,7,opt,name=schedule_to_close_timeout,json=scheduleToCloseTimeout,proto3" json:"schedule_to_close_timeout,omitempty"`
+	ScheduleToStartTimeout       *types.Duration `protobuf:"bytes,8,opt,name=schedule_to_start_timeout,json=scheduleToStartTimeout,proto3" json:"schedule_to_start_timeout,omitempty"`
+	StartToCloseTimeout          *types.Duration `protobuf:"bytes,9,opt,name=start_to_close_timeout,json=startToCloseTimeout,proto3" json:"start_to_close_timeout,omitempty"`
+	HeartbeatTimeout             *types.Duration `protobuf:"bytes,10,opt,name=heartbeat_timeout,json=heartbeatTimeout,proto3" json:"heartbeat_timeout,omitempty"`
+	DecisionTaskCompletedEventId int64           `protobuf:"varint,11,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
+	RetryPolicy                  *RetryPolicy    `protobuf:"bytes,12,opt,name=retry_policy,json=retryPolicy,proto3" json:"retry_policy,omitempty"`
+	Header                       *Header         `protobuf:"bytes,13,opt,name=header,proto3" json:"header,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{}        `json:"-"`
+	XXX_unrecognized             []byte          `json:"-"`
+	XXX_sizecache                int32           `json:"-"`
 }
 
-func (m *ActivityTaskScheduledEventAttributes) Reset()      { *m = ActivityTaskScheduledEventAttributes{} }
-func (*ActivityTaskScheduledEventAttributes) ProtoMessage() {}
+func (m *ActivityTaskScheduledEventAttributes) Reset()         { *m = ActivityTaskScheduledEventAttributes{} }
+func (m *ActivityTaskScheduledEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*ActivityTaskScheduledEventAttributes) ProtoMessage()    {}
 func (*ActivityTaskScheduledEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{11}
 }
@@ -1589,28 +1658,28 @@ func (m *ActivityTaskScheduledEventAttributes) GetInput() *Payload {
 	return nil
 }
 
-func (m *ActivityTaskScheduledEventAttributes) GetScheduleToCloseTimeout() *time.Duration {
+func (m *ActivityTaskScheduledEventAttributes) GetScheduleToCloseTimeout() *types.Duration {
 	if m != nil {
 		return m.ScheduleToCloseTimeout
 	}
 	return nil
 }
 
-func (m *ActivityTaskScheduledEventAttributes) GetScheduleToStartTimeout() *time.Duration {
+func (m *ActivityTaskScheduledEventAttributes) GetScheduleToStartTimeout() *types.Duration {
 	if m != nil {
 		return m.ScheduleToStartTimeout
 	}
 	return nil
 }
 
-func (m *ActivityTaskScheduledEventAttributes) GetStartToCloseTimeout() *time.Duration {
+func (m *ActivityTaskScheduledEventAttributes) GetStartToCloseTimeout() *types.Duration {
 	if m != nil {
 		return m.StartToCloseTimeout
 	}
 	return nil
 }
 
-func (m *ActivityTaskScheduledEventAttributes) GetHeartbeatTimeout() *time.Duration {
+func (m *ActivityTaskScheduledEventAttributes) GetHeartbeatTimeout() *types.Duration {
 	if m != nil {
 		return m.HeartbeatTimeout
 	}
@@ -1639,15 +1708,19 @@ func (m *ActivityTaskScheduledEventAttributes) GetHeader() *Header {
 }
 
 type ActivityTaskStartedEventAttributes struct {
-	ScheduledEventId int64    `protobuf:"varint,1,opt,name=scheduled_event_id,json=scheduledEventId,proto3" json:"scheduled_event_id,omitempty"`
-	Identity         string   `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
-	RequestId        string   `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	Attempt          int32    `protobuf:"varint,4,opt,name=attempt,proto3" json:"attempt,omitempty"`
-	LastFailure      *Failure `protobuf:"bytes,5,opt,name=last_failure,json=lastFailure,proto3" json:"last_failure,omitempty"`
+	ScheduledEventId     int64    `protobuf:"varint,1,opt,name=scheduled_event_id,json=scheduledEventId,proto3" json:"scheduled_event_id,omitempty"`
+	Identity             string   `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
+	RequestId            string   `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	Attempt              int32    `protobuf:"varint,4,opt,name=attempt,proto3" json:"attempt,omitempty"`
+	LastFailure          *Failure `protobuf:"bytes,5,opt,name=last_failure,json=lastFailure,proto3" json:"last_failure,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ActivityTaskStartedEventAttributes) Reset()      { *m = ActivityTaskStartedEventAttributes{} }
-func (*ActivityTaskStartedEventAttributes) ProtoMessage() {}
+func (m *ActivityTaskStartedEventAttributes) Reset()         { *m = ActivityTaskStartedEventAttributes{} }
+func (m *ActivityTaskStartedEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*ActivityTaskStartedEventAttributes) ProtoMessage()    {}
 func (*ActivityTaskStartedEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{12}
 }
@@ -1714,14 +1787,18 @@ func (m *ActivityTaskStartedEventAttributes) GetLastFailure() *Failure {
 }
 
 type ActivityTaskCompletedEventAttributes struct {
-	Result           *Payload `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"`
-	ScheduledEventId int64    `protobuf:"varint,2,opt,name=scheduled_event_id,json=scheduledEventId,proto3" json:"scheduled_event_id,omitempty"`
-	StartedEventId   int64    `protobuf:"varint,3,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
-	Identity         string   `protobuf:"bytes,4,opt,name=identity,proto3" json:"identity,omitempty"`
+	Result               *Payload `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"`
+	ScheduledEventId     int64    `protobuf:"varint,2,opt,name=scheduled_event_id,json=scheduledEventId,proto3" json:"scheduled_event_id,omitempty"`
+	StartedEventId       int64    `protobuf:"varint,3,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
+	Identity             string   `protobuf:"bytes,4,opt,name=identity,proto3" json:"identity,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ActivityTaskCompletedEventAttributes) Reset()      { *m = ActivityTaskCompletedEventAttributes{} }
-func (*ActivityTaskCompletedEventAttributes) ProtoMessage() {}
+func (m *ActivityTaskCompletedEventAttributes) Reset()         { *m = ActivityTaskCompletedEventAttributes{} }
+func (m *ActivityTaskCompletedEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*ActivityTaskCompletedEventAttributes) ProtoMessage()    {}
 func (*ActivityTaskCompletedEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{13}
 }
@@ -1781,14 +1858,18 @@ func (m *ActivityTaskCompletedEventAttributes) GetIdentity() string {
 }
 
 type ActivityTaskFailedEventAttributes struct {
-	Failure          *Failure `protobuf:"bytes,1,opt,name=failure,proto3" json:"failure,omitempty"`
-	ScheduledEventId int64    `protobuf:"varint,2,opt,name=scheduled_event_id,json=scheduledEventId,proto3" json:"scheduled_event_id,omitempty"`
-	StartedEventId   int64    `protobuf:"varint,3,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
-	Identity         string   `protobuf:"bytes,4,opt,name=identity,proto3" json:"identity,omitempty"`
+	Failure              *Failure `protobuf:"bytes,1,opt,name=failure,proto3" json:"failure,omitempty"`
+	ScheduledEventId     int64    `protobuf:"varint,2,opt,name=scheduled_event_id,json=scheduledEventId,proto3" json:"scheduled_event_id,omitempty"`
+	StartedEventId       int64    `protobuf:"varint,3,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
+	Identity             string   `protobuf:"bytes,4,opt,name=identity,proto3" json:"identity,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ActivityTaskFailedEventAttributes) Reset()      { *m = ActivityTaskFailedEventAttributes{} }
-func (*ActivityTaskFailedEventAttributes) ProtoMessage() {}
+func (m *ActivityTaskFailedEventAttributes) Reset()         { *m = ActivityTaskFailedEventAttributes{} }
+func (m *ActivityTaskFailedEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*ActivityTaskFailedEventAttributes) ProtoMessage()    {}
 func (*ActivityTaskFailedEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{14}
 }
@@ -1854,11 +1935,15 @@ type ActivityTaskTimedOutEventAttributes struct {
 	TimeoutType      TimeoutType `protobuf:"varint,4,opt,name=timeout_type,json=timeoutType,proto3,enum=uber.cadence.api.v1.TimeoutType" json:"timeout_type,omitempty"`
 	// For retry activity, it may have a failure before timeout. It's important to keep those information for debug.
 	// Client can also provide the info for making next decision
-	LastFailure *Failure `protobuf:"bytes,5,opt,name=last_failure,json=lastFailure,proto3" json:"last_failure,omitempty"`
+	LastFailure          *Failure `protobuf:"bytes,5,opt,name=last_failure,json=lastFailure,proto3" json:"last_failure,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ActivityTaskTimedOutEventAttributes) Reset()      { *m = ActivityTaskTimedOutEventAttributes{} }
-func (*ActivityTaskTimedOutEventAttributes) ProtoMessage() {}
+func (m *ActivityTaskTimedOutEventAttributes) Reset()         { *m = ActivityTaskTimedOutEventAttributes{} }
+func (m *ActivityTaskTimedOutEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*ActivityTaskTimedOutEventAttributes) ProtoMessage()    {}
 func (*ActivityTaskTimedOutEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{15}
 }
@@ -1914,7 +1999,7 @@ func (m *ActivityTaskTimedOutEventAttributes) GetTimeoutType() TimeoutType {
 	if m != nil {
 		return m.TimeoutType
 	}
-	return TIMEOUT_TYPE_INVALID
+	return TimeoutType_TIMEOUT_TYPE_INVALID
 }
 
 func (m *ActivityTaskTimedOutEventAttributes) GetLastFailure() *Failure {
@@ -1925,12 +2010,18 @@ func (m *ActivityTaskTimedOutEventAttributes) GetLastFailure() *Failure {
 }
 
 type ActivityTaskCancelRequestedEventAttributes struct {
-	ActivityId                   string `protobuf:"bytes,1,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
-	DecisionTaskCompletedEventId int64  `protobuf:"varint,2,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
+	ActivityId                   string   `protobuf:"bytes,1,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
+	DecisionTaskCompletedEventId int64    `protobuf:"varint,2,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{} `json:"-"`
+	XXX_unrecognized             []byte   `json:"-"`
+	XXX_sizecache                int32    `json:"-"`
 }
 
 func (m *ActivityTaskCancelRequestedEventAttributes) Reset() {
 	*m = ActivityTaskCancelRequestedEventAttributes{}
+}
+func (m *ActivityTaskCancelRequestedEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*ActivityTaskCancelRequestedEventAttributes) ProtoMessage() {}
 func (*ActivityTaskCancelRequestedEventAttributes) Descriptor() ([]byte, []int) {
@@ -1978,13 +2069,19 @@ func (m *ActivityTaskCancelRequestedEventAttributes) GetDecisionTaskCompletedEve
 }
 
 type RequestCancelActivityTaskFailedEventAttributes struct {
-	ActivityId                   string `protobuf:"bytes,1,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
-	Cause                        string `protobuf:"bytes,2,opt,name=cause,proto3" json:"cause,omitempty"`
-	DecisionTaskCompletedEventId int64  `protobuf:"varint,3,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
+	ActivityId                   string   `protobuf:"bytes,1,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
+	Cause                        string   `protobuf:"bytes,2,opt,name=cause,proto3" json:"cause,omitempty"`
+	DecisionTaskCompletedEventId int64    `protobuf:"varint,3,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{} `json:"-"`
+	XXX_unrecognized             []byte   `json:"-"`
+	XXX_sizecache                int32    `json:"-"`
 }
 
 func (m *RequestCancelActivityTaskFailedEventAttributes) Reset() {
 	*m = RequestCancelActivityTaskFailedEventAttributes{}
+}
+func (m *RequestCancelActivityTaskFailedEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*RequestCancelActivityTaskFailedEventAttributes) ProtoMessage() {}
 func (*RequestCancelActivityTaskFailedEventAttributes) Descriptor() ([]byte, []int) {
@@ -2044,10 +2141,14 @@ type ActivityTaskCanceledEventAttributes struct {
 	ScheduledEventId             int64    `protobuf:"varint,3,opt,name=scheduled_event_id,json=scheduledEventId,proto3" json:"scheduled_event_id,omitempty"`
 	StartedEventId               int64    `protobuf:"varint,4,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
 	Identity                     string   `protobuf:"bytes,5,opt,name=identity,proto3" json:"identity,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{} `json:"-"`
+	XXX_unrecognized             []byte   `json:"-"`
+	XXX_sizecache                int32    `json:"-"`
 }
 
-func (m *ActivityTaskCanceledEventAttributes) Reset()      { *m = ActivityTaskCanceledEventAttributes{} }
-func (*ActivityTaskCanceledEventAttributes) ProtoMessage() {}
+func (m *ActivityTaskCanceledEventAttributes) Reset()         { *m = ActivityTaskCanceledEventAttributes{} }
+func (m *ActivityTaskCanceledEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*ActivityTaskCanceledEventAttributes) ProtoMessage()    {}
 func (*ActivityTaskCanceledEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{18}
 }
@@ -2114,13 +2215,17 @@ func (m *ActivityTaskCanceledEventAttributes) GetIdentity() string {
 }
 
 type TimerStartedEventAttributes struct {
-	TimerId                      string         `protobuf:"bytes,1,opt,name=timer_id,json=timerId,proto3" json:"timer_id,omitempty"`
-	StartToFireTimeout           *time.Duration `protobuf:"bytes,2,opt,name=start_to_fire_timeout,json=startToFireTimeout,proto3,stdduration" json:"start_to_fire_timeout,omitempty"`
-	DecisionTaskCompletedEventId int64          `protobuf:"varint,3,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
+	TimerId                      string          `protobuf:"bytes,1,opt,name=timer_id,json=timerId,proto3" json:"timer_id,omitempty"`
+	StartToFireTimeout           *types.Duration `protobuf:"bytes,2,opt,name=start_to_fire_timeout,json=startToFireTimeout,proto3" json:"start_to_fire_timeout,omitempty"`
+	DecisionTaskCompletedEventId int64           `protobuf:"varint,3,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{}        `json:"-"`
+	XXX_unrecognized             []byte          `json:"-"`
+	XXX_sizecache                int32           `json:"-"`
 }
 
-func (m *TimerStartedEventAttributes) Reset()      { *m = TimerStartedEventAttributes{} }
-func (*TimerStartedEventAttributes) ProtoMessage() {}
+func (m *TimerStartedEventAttributes) Reset()         { *m = TimerStartedEventAttributes{} }
+func (m *TimerStartedEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*TimerStartedEventAttributes) ProtoMessage()    {}
 func (*TimerStartedEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{19}
 }
@@ -2158,7 +2263,7 @@ func (m *TimerStartedEventAttributes) GetTimerId() string {
 	return ""
 }
 
-func (m *TimerStartedEventAttributes) GetStartToFireTimeout() *time.Duration {
+func (m *TimerStartedEventAttributes) GetStartToFireTimeout() *types.Duration {
 	if m != nil {
 		return m.StartToFireTimeout
 	}
@@ -2173,12 +2278,16 @@ func (m *TimerStartedEventAttributes) GetDecisionTaskCompletedEventId() int64 {
 }
 
 type TimerFiredEventAttributes struct {
-	TimerId        string `protobuf:"bytes,1,opt,name=timer_id,json=timerId,proto3" json:"timer_id,omitempty"`
-	StartedEventId int64  `protobuf:"varint,2,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
+	TimerId              string   `protobuf:"bytes,1,opt,name=timer_id,json=timerId,proto3" json:"timer_id,omitempty"`
+	StartedEventId       int64    `protobuf:"varint,2,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *TimerFiredEventAttributes) Reset()      { *m = TimerFiredEventAttributes{} }
-func (*TimerFiredEventAttributes) ProtoMessage() {}
+func (m *TimerFiredEventAttributes) Reset()         { *m = TimerFiredEventAttributes{} }
+func (m *TimerFiredEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*TimerFiredEventAttributes) ProtoMessage()    {}
 func (*TimerFiredEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{20}
 }
@@ -2224,14 +2333,18 @@ func (m *TimerFiredEventAttributes) GetStartedEventId() int64 {
 }
 
 type TimerCanceledEventAttributes struct {
-	TimerId                      string `protobuf:"bytes,1,opt,name=timer_id,json=timerId,proto3" json:"timer_id,omitempty"`
-	StartedEventId               int64  `protobuf:"varint,2,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
-	DecisionTaskCompletedEventId int64  `protobuf:"varint,3,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
-	Identity                     string `protobuf:"bytes,4,opt,name=identity,proto3" json:"identity,omitempty"`
+	TimerId                      string   `protobuf:"bytes,1,opt,name=timer_id,json=timerId,proto3" json:"timer_id,omitempty"`
+	StartedEventId               int64    `protobuf:"varint,2,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
+	DecisionTaskCompletedEventId int64    `protobuf:"varint,3,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
+	Identity                     string   `protobuf:"bytes,4,opt,name=identity,proto3" json:"identity,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{} `json:"-"`
+	XXX_unrecognized             []byte   `json:"-"`
+	XXX_sizecache                int32    `json:"-"`
 }
 
-func (m *TimerCanceledEventAttributes) Reset()      { *m = TimerCanceledEventAttributes{} }
-func (*TimerCanceledEventAttributes) ProtoMessage() {}
+func (m *TimerCanceledEventAttributes) Reset()         { *m = TimerCanceledEventAttributes{} }
+func (m *TimerCanceledEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*TimerCanceledEventAttributes) ProtoMessage()    {}
 func (*TimerCanceledEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{21}
 }
@@ -2291,14 +2404,18 @@ func (m *TimerCanceledEventAttributes) GetIdentity() string {
 }
 
 type CancelTimerFailedEventAttributes struct {
-	TimerId                      string `protobuf:"bytes,1,opt,name=timer_id,json=timerId,proto3" json:"timer_id,omitempty"`
-	Cause                        string `protobuf:"bytes,2,opt,name=cause,proto3" json:"cause,omitempty"`
-	DecisionTaskCompletedEventId int64  `protobuf:"varint,3,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
-	Identity                     string `protobuf:"bytes,4,opt,name=identity,proto3" json:"identity,omitempty"`
+	TimerId                      string   `protobuf:"bytes,1,opt,name=timer_id,json=timerId,proto3" json:"timer_id,omitempty"`
+	Cause                        string   `protobuf:"bytes,2,opt,name=cause,proto3" json:"cause,omitempty"`
+	DecisionTaskCompletedEventId int64    `protobuf:"varint,3,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
+	Identity                     string   `protobuf:"bytes,4,opt,name=identity,proto3" json:"identity,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{} `json:"-"`
+	XXX_unrecognized             []byte   `json:"-"`
+	XXX_sizecache                int32    `json:"-"`
 }
 
-func (m *CancelTimerFailedEventAttributes) Reset()      { *m = CancelTimerFailedEventAttributes{} }
-func (*CancelTimerFailedEventAttributes) ProtoMessage() {}
+func (m *CancelTimerFailedEventAttributes) Reset()         { *m = CancelTimerFailedEventAttributes{} }
+func (m *CancelTimerFailedEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*CancelTimerFailedEventAttributes) ProtoMessage()    {}
 func (*CancelTimerFailedEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{22}
 }
@@ -2362,20 +2479,26 @@ type WorkflowExecutionContinuedAsNewEventAttributes struct {
 	WorkflowType                 *WorkflowType          `protobuf:"bytes,2,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
 	TaskList                     *TaskList              `protobuf:"bytes,3,opt,name=task_list,json=taskList,proto3" json:"task_list,omitempty"`
 	Input                        *Payload               `protobuf:"bytes,4,opt,name=input,proto3" json:"input,omitempty"`
-	ExecutionStartToCloseTimeout *time.Duration         `protobuf:"bytes,5,opt,name=execution_start_to_close_timeout,json=executionStartToCloseTimeout,proto3,stdduration" json:"execution_start_to_close_timeout,omitempty"`
-	TaskStartToCloseTimeout      *time.Duration         `protobuf:"bytes,6,opt,name=task_start_to_close_timeout,json=taskStartToCloseTimeout,proto3,stdduration" json:"task_start_to_close_timeout,omitempty"`
+	ExecutionStartToCloseTimeout *types.Duration        `protobuf:"bytes,5,opt,name=execution_start_to_close_timeout,json=executionStartToCloseTimeout,proto3" json:"execution_start_to_close_timeout,omitempty"`
+	TaskStartToCloseTimeout      *types.Duration        `protobuf:"bytes,6,opt,name=task_start_to_close_timeout,json=taskStartToCloseTimeout,proto3" json:"task_start_to_close_timeout,omitempty"`
 	DecisionTaskCompletedEventId int64                  `protobuf:"varint,7,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
-	BackoffStartInterval         *time.Duration         `protobuf:"bytes,8,opt,name=backoff_start_interval,json=backoffStartInterval,proto3,stdduration" json:"backoff_start_interval,omitempty"`
+	BackoffStartInterval         *types.Duration        `protobuf:"bytes,8,opt,name=backoff_start_interval,json=backoffStartInterval,proto3" json:"backoff_start_interval,omitempty"`
 	Initiator                    ContinueAsNewInitiator `protobuf:"varint,9,opt,name=initiator,proto3,enum=uber.cadence.api.v1.ContinueAsNewInitiator" json:"initiator,omitempty"`
 	Failure                      *Failure               `protobuf:"bytes,10,opt,name=failure,proto3" json:"failure,omitempty"`
 	LastCompletionResult         *Payload               `protobuf:"bytes,11,opt,name=last_completion_result,json=lastCompletionResult,proto3" json:"last_completion_result,omitempty"`
 	Header                       *Header                `protobuf:"bytes,12,opt,name=header,proto3" json:"header,omitempty"`
 	Memo                         *Memo                  `protobuf:"bytes,13,opt,name=memo,proto3" json:"memo,omitempty"`
 	SearchAttributes             *SearchAttributes      `protobuf:"bytes,14,opt,name=search_attributes,json=searchAttributes,proto3" json:"search_attributes,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{}               `json:"-"`
+	XXX_unrecognized             []byte                 `json:"-"`
+	XXX_sizecache                int32                  `json:"-"`
 }
 
 func (m *WorkflowExecutionContinuedAsNewEventAttributes) Reset() {
 	*m = WorkflowExecutionContinuedAsNewEventAttributes{}
+}
+func (m *WorkflowExecutionContinuedAsNewEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*WorkflowExecutionContinuedAsNewEventAttributes) ProtoMessage() {}
 func (*WorkflowExecutionContinuedAsNewEventAttributes) Descriptor() ([]byte, []int) {
@@ -2436,14 +2559,14 @@ func (m *WorkflowExecutionContinuedAsNewEventAttributes) GetInput() *Payload {
 	return nil
 }
 
-func (m *WorkflowExecutionContinuedAsNewEventAttributes) GetExecutionStartToCloseTimeout() *time.Duration {
+func (m *WorkflowExecutionContinuedAsNewEventAttributes) GetExecutionStartToCloseTimeout() *types.Duration {
 	if m != nil {
 		return m.ExecutionStartToCloseTimeout
 	}
 	return nil
 }
 
-func (m *WorkflowExecutionContinuedAsNewEventAttributes) GetTaskStartToCloseTimeout() *time.Duration {
+func (m *WorkflowExecutionContinuedAsNewEventAttributes) GetTaskStartToCloseTimeout() *types.Duration {
 	if m != nil {
 		return m.TaskStartToCloseTimeout
 	}
@@ -2457,7 +2580,7 @@ func (m *WorkflowExecutionContinuedAsNewEventAttributes) GetDecisionTaskComplete
 	return 0
 }
 
-func (m *WorkflowExecutionContinuedAsNewEventAttributes) GetBackoffStartInterval() *time.Duration {
+func (m *WorkflowExecutionContinuedAsNewEventAttributes) GetBackoffStartInterval() *types.Duration {
 	if m != nil {
 		return m.BackoffStartInterval
 	}
@@ -2468,7 +2591,7 @@ func (m *WorkflowExecutionContinuedAsNewEventAttributes) GetInitiator() Continue
 	if m != nil {
 		return m.Initiator
 	}
-	return CONTINUE_AS_NEW_INITIATOR_INVALID
+	return ContinueAsNewInitiator_CONTINUE_AS_NEW_INITIATOR_INVALID
 }
 
 func (m *WorkflowExecutionContinuedAsNewEventAttributes) GetFailure() *Failure {
@@ -2507,14 +2630,19 @@ func (m *WorkflowExecutionContinuedAsNewEventAttributes) GetSearchAttributes() *
 }
 
 type WorkflowExecutionCancelRequestedEventAttributes struct {
-	Cause                     string             `protobuf:"bytes,1,opt,name=cause,proto3" json:"cause,omitempty"`
-	ExternalInitiatedEventId  int64              `protobuf:"varint,2,opt,name=external_initiated_event_id,json=externalInitiatedEventId,proto3" json:"external_initiated_event_id,omitempty"`
-	ExternalWorkflowExecution *WorkflowExecution `protobuf:"bytes,3,opt,name=external_workflow_execution,json=externalWorkflowExecution,proto3" json:"external_workflow_execution,omitempty"`
-	Identity                  string             `protobuf:"bytes,4,opt,name=identity,proto3" json:"identity,omitempty"`
+	Cause                 string                 `protobuf:"bytes,1,opt,name=cause,proto3" json:"cause,omitempty"`
+	Identity              string                 `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
+	ExternalExecutionInfo *ExternalExecutionInfo `protobuf:"bytes,3,opt,name=external_execution_info,json=externalExecutionInfo,proto3" json:"external_execution_info,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{}               `json:"-"`
+	XXX_unrecognized      []byte                 `json:"-"`
+	XXX_sizecache         int32                  `json:"-"`
 }
 
 func (m *WorkflowExecutionCancelRequestedEventAttributes) Reset() {
 	*m = WorkflowExecutionCancelRequestedEventAttributes{}
+}
+func (m *WorkflowExecutionCancelRequestedEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*WorkflowExecutionCancelRequestedEventAttributes) ProtoMessage() {}
 func (*WorkflowExecutionCancelRequestedEventAttributes) Descriptor() ([]byte, []int) {
@@ -2554,20 +2682,6 @@ func (m *WorkflowExecutionCancelRequestedEventAttributes) GetCause() string {
 	return ""
 }
 
-func (m *WorkflowExecutionCancelRequestedEventAttributes) GetExternalInitiatedEventId() int64 {
-	if m != nil {
-		return m.ExternalInitiatedEventId
-	}
-	return 0
-}
-
-func (m *WorkflowExecutionCancelRequestedEventAttributes) GetExternalWorkflowExecution() *WorkflowExecution {
-	if m != nil {
-		return m.ExternalWorkflowExecution
-	}
-	return nil
-}
-
 func (m *WorkflowExecutionCancelRequestedEventAttributes) GetIdentity() string {
 	if m != nil {
 		return m.Identity
@@ -2575,15 +2689,26 @@ func (m *WorkflowExecutionCancelRequestedEventAttributes) GetIdentity() string {
 	return ""
 }
 
+func (m *WorkflowExecutionCancelRequestedEventAttributes) GetExternalExecutionInfo() *ExternalExecutionInfo {
+	if m != nil {
+		return m.ExternalExecutionInfo
+	}
+	return nil
+}
+
 type WorkflowExecutionCanceledEventAttributes struct {
 	DecisionTaskCompletedEventId int64    `protobuf:"varint,1,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
 	Details                      *Payload `protobuf:"bytes,2,opt,name=details,proto3" json:"details,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{} `json:"-"`
+	XXX_unrecognized             []byte   `json:"-"`
+	XXX_sizecache                int32    `json:"-"`
 }
 
 func (m *WorkflowExecutionCanceledEventAttributes) Reset() {
 	*m = WorkflowExecutionCanceledEventAttributes{}
 }
-func (*WorkflowExecutionCanceledEventAttributes) ProtoMessage() {}
+func (m *WorkflowExecutionCanceledEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*WorkflowExecutionCanceledEventAttributes) ProtoMessage()    {}
 func (*WorkflowExecutionCanceledEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{25}
 }
@@ -2633,10 +2758,14 @@ type MarkerRecordedEventAttributes struct {
 	Details                      *Payload `protobuf:"bytes,2,opt,name=details,proto3" json:"details,omitempty"`
 	DecisionTaskCompletedEventId int64    `protobuf:"varint,3,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
 	Header                       *Header  `protobuf:"bytes,4,opt,name=header,proto3" json:"header,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{} `json:"-"`
+	XXX_unrecognized             []byte   `json:"-"`
+	XXX_sizecache                int32    `json:"-"`
 }
 
-func (m *MarkerRecordedEventAttributes) Reset()      { *m = MarkerRecordedEventAttributes{} }
-func (*MarkerRecordedEventAttributes) ProtoMessage() {}
+func (m *MarkerRecordedEventAttributes) Reset()         { *m = MarkerRecordedEventAttributes{} }
+func (m *MarkerRecordedEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*MarkerRecordedEventAttributes) ProtoMessage()    {}
 func (*MarkerRecordedEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{26}
 }
@@ -2696,15 +2825,19 @@ func (m *MarkerRecordedEventAttributes) GetHeader() *Header {
 }
 
 type WorkflowExecutionSignaledEventAttributes struct {
-	SignalName string   `protobuf:"bytes,1,opt,name=signal_name,json=signalName,proto3" json:"signal_name,omitempty"`
-	Input      *Payload `protobuf:"bytes,2,opt,name=input,proto3" json:"input,omitempty"`
-	Identity   string   `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
+	SignalName           string   `protobuf:"bytes,1,opt,name=signal_name,json=signalName,proto3" json:"signal_name,omitempty"`
+	Input                *Payload `protobuf:"bytes,2,opt,name=input,proto3" json:"input,omitempty"`
+	Identity             string   `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *WorkflowExecutionSignaledEventAttributes) Reset() {
 	*m = WorkflowExecutionSignaledEventAttributes{}
 }
-func (*WorkflowExecutionSignaledEventAttributes) ProtoMessage() {}
+func (m *WorkflowExecutionSignaledEventAttributes) String() string { return proto.CompactTextString(m) }
+func (*WorkflowExecutionSignaledEventAttributes) ProtoMessage()    {}
 func (*WorkflowExecutionSignaledEventAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8237ca6511ad6c62, []int{27}
 }
@@ -2757,13 +2890,19 @@ func (m *WorkflowExecutionSignaledEventAttributes) GetIdentity() string {
 }
 
 type WorkflowExecutionTerminatedEventAttributes struct {
-	Reason   string   `protobuf:"bytes,1,opt,name=reason,proto3" json:"reason,omitempty"`
-	Details  *Payload `protobuf:"bytes,2,opt,name=details,proto3" json:"details,omitempty"`
-	Identity string   `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
+	Reason               string   `protobuf:"bytes,1,opt,name=reason,proto3" json:"reason,omitempty"`
+	Details              *Payload `protobuf:"bytes,2,opt,name=details,proto3" json:"details,omitempty"`
+	Identity             string   `protobuf:"bytes,3,opt,name=identity,proto3" json:"identity,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *WorkflowExecutionTerminatedEventAttributes) Reset() {
 	*m = WorkflowExecutionTerminatedEventAttributes{}
+}
+func (m *WorkflowExecutionTerminatedEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*WorkflowExecutionTerminatedEventAttributes) ProtoMessage() {}
 func (*WorkflowExecutionTerminatedEventAttributes) Descriptor() ([]byte, []int) {
@@ -2823,10 +2962,16 @@ type RequestCancelExternalWorkflowExecutionInitiatedEventAttributes struct {
 	WorkflowExecution            *WorkflowExecution `protobuf:"bytes,3,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
 	Control                      []byte             `protobuf:"bytes,4,opt,name=control,proto3" json:"control,omitempty"`
 	ChildWorkflowOnly            bool               `protobuf:"varint,5,opt,name=child_workflow_only,json=childWorkflowOnly,proto3" json:"child_workflow_only,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{}           `json:"-"`
+	XXX_unrecognized             []byte             `json:"-"`
+	XXX_sizecache                int32              `json:"-"`
 }
 
 func (m *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) Reset() {
 	*m = RequestCancelExternalWorkflowExecutionInitiatedEventAttributes{}
+}
+func (m *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) ProtoMessage() {}
 func (*RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) Descriptor() ([]byte, []int) {
@@ -2901,10 +3046,16 @@ type RequestCancelExternalWorkflowExecutionFailedEventAttributes struct {
 	WorkflowExecution            *WorkflowExecution                         `protobuf:"bytes,4,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
 	InitiatedEventId             int64                                      `protobuf:"varint,5,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
 	Control                      []byte                                     `protobuf:"bytes,6,opt,name=control,proto3" json:"control,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{}                                   `json:"-"`
+	XXX_unrecognized             []byte                                     `json:"-"`
+	XXX_sizecache                int32                                      `json:"-"`
 }
 
 func (m *RequestCancelExternalWorkflowExecutionFailedEventAttributes) Reset() {
 	*m = RequestCancelExternalWorkflowExecutionFailedEventAttributes{}
+}
+func (m *RequestCancelExternalWorkflowExecutionFailedEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*RequestCancelExternalWorkflowExecutionFailedEventAttributes) ProtoMessage() {}
 func (*RequestCancelExternalWorkflowExecutionFailedEventAttributes) Descriptor() ([]byte, []int) {
@@ -2941,7 +3092,7 @@ func (m *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GetCause()
 	if m != nil {
 		return m.Cause
 	}
-	return CANCEL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_INVALID
+	return CancelExternalWorkflowExecutionFailedCause_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_INVALID
 }
 
 func (m *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GetDecisionTaskCompletedEventId() int64 {
@@ -2980,13 +3131,19 @@ func (m *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GetControl
 }
 
 type ExternalWorkflowExecutionCancelRequestedEventAttributes struct {
-	InitiatedEventId  int64              `protobuf:"varint,1,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
-	Domain            string             `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `protobuf:"bytes,3,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	InitiatedEventId     int64              `protobuf:"varint,1,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
+	Domain               string             `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *WorkflowExecution `protobuf:"bytes,3,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
 }
 
 func (m *ExternalWorkflowExecutionCancelRequestedEventAttributes) Reset() {
 	*m = ExternalWorkflowExecutionCancelRequestedEventAttributes{}
+}
+func (m *ExternalWorkflowExecutionCancelRequestedEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*ExternalWorkflowExecutionCancelRequestedEventAttributes) ProtoMessage() {}
 func (*ExternalWorkflowExecutionCancelRequestedEventAttributes) Descriptor() ([]byte, []int) {
@@ -3048,10 +3205,16 @@ type SignalExternalWorkflowExecutionInitiatedEventAttributes struct {
 	Input                        *Payload           `protobuf:"bytes,5,opt,name=input,proto3" json:"input,omitempty"`
 	Control                      []byte             `protobuf:"bytes,6,opt,name=control,proto3" json:"control,omitempty"`
 	ChildWorkflowOnly            bool               `protobuf:"varint,7,opt,name=child_workflow_only,json=childWorkflowOnly,proto3" json:"child_workflow_only,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{}           `json:"-"`
+	XXX_unrecognized             []byte             `json:"-"`
+	XXX_sizecache                int32              `json:"-"`
 }
 
 func (m *SignalExternalWorkflowExecutionInitiatedEventAttributes) Reset() {
 	*m = SignalExternalWorkflowExecutionInitiatedEventAttributes{}
+}
+func (m *SignalExternalWorkflowExecutionInitiatedEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*SignalExternalWorkflowExecutionInitiatedEventAttributes) ProtoMessage() {}
 func (*SignalExternalWorkflowExecutionInitiatedEventAttributes) Descriptor() ([]byte, []int) {
@@ -3140,10 +3303,16 @@ type SignalExternalWorkflowExecutionFailedEventAttributes struct {
 	WorkflowExecution            *WorkflowExecution                         `protobuf:"bytes,4,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
 	InitiatedEventId             int64                                      `protobuf:"varint,5,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
 	Control                      []byte                                     `protobuf:"bytes,6,opt,name=control,proto3" json:"control,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{}                                   `json:"-"`
+	XXX_unrecognized             []byte                                     `json:"-"`
+	XXX_sizecache                int32                                      `json:"-"`
 }
 
 func (m *SignalExternalWorkflowExecutionFailedEventAttributes) Reset() {
 	*m = SignalExternalWorkflowExecutionFailedEventAttributes{}
+}
+func (m *SignalExternalWorkflowExecutionFailedEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*SignalExternalWorkflowExecutionFailedEventAttributes) ProtoMessage() {}
 func (*SignalExternalWorkflowExecutionFailedEventAttributes) Descriptor() ([]byte, []int) {
@@ -3180,7 +3349,7 @@ func (m *SignalExternalWorkflowExecutionFailedEventAttributes) GetCause() Signal
 	if m != nil {
 		return m.Cause
 	}
-	return SIGNAL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_INVALID
+	return SignalExternalWorkflowExecutionFailedCause_SIGNAL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_INVALID
 }
 
 func (m *SignalExternalWorkflowExecutionFailedEventAttributes) GetDecisionTaskCompletedEventId() int64 {
@@ -3219,14 +3388,20 @@ func (m *SignalExternalWorkflowExecutionFailedEventAttributes) GetControl() []by
 }
 
 type ExternalWorkflowExecutionSignaledEventAttributes struct {
-	InitiatedEventId  int64              `protobuf:"varint,1,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
-	Domain            string             `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `protobuf:"bytes,3,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	Control           []byte             `protobuf:"bytes,4,opt,name=control,proto3" json:"control,omitempty"`
+	InitiatedEventId     int64              `protobuf:"varint,1,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
+	Domain               string             `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *WorkflowExecution `protobuf:"bytes,3,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	Control              []byte             `protobuf:"bytes,4,opt,name=control,proto3" json:"control,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
 }
 
 func (m *ExternalWorkflowExecutionSignaledEventAttributes) Reset() {
 	*m = ExternalWorkflowExecutionSignaledEventAttributes{}
+}
+func (m *ExternalWorkflowExecutionSignaledEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*ExternalWorkflowExecutionSignaledEventAttributes) ProtoMessage() {}
 func (*ExternalWorkflowExecutionSignaledEventAttributes) Descriptor() ([]byte, []int) {
@@ -3290,10 +3465,16 @@ func (m *ExternalWorkflowExecutionSignaledEventAttributes) GetControl() []byte {
 type UpsertWorkflowSearchAttributesEventAttributes struct {
 	DecisionTaskCompletedEventId int64             `protobuf:"varint,1,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
 	SearchAttributes             *SearchAttributes `protobuf:"bytes,2,opt,name=search_attributes,json=searchAttributes,proto3" json:"search_attributes,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{}          `json:"-"`
+	XXX_unrecognized             []byte            `json:"-"`
+	XXX_sizecache                int32             `json:"-"`
 }
 
 func (m *UpsertWorkflowSearchAttributesEventAttributes) Reset() {
 	*m = UpsertWorkflowSearchAttributesEventAttributes{}
+}
+func (m *UpsertWorkflowSearchAttributesEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*UpsertWorkflowSearchAttributesEventAttributes) ProtoMessage() {}
 func (*UpsertWorkflowSearchAttributesEventAttributes) Descriptor() ([]byte, []int) {
@@ -3346,8 +3527,8 @@ type StartChildWorkflowExecutionInitiatedEventAttributes struct {
 	WorkflowType                 *WorkflowType         `protobuf:"bytes,3,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
 	TaskList                     *TaskList             `protobuf:"bytes,4,opt,name=task_list,json=taskList,proto3" json:"task_list,omitempty"`
 	Input                        *Payload              `protobuf:"bytes,5,opt,name=input,proto3" json:"input,omitempty"`
-	ExecutionStartToCloseTimeout *time.Duration        `protobuf:"bytes,6,opt,name=execution_start_to_close_timeout,json=executionStartToCloseTimeout,proto3,stdduration" json:"execution_start_to_close_timeout,omitempty"`
-	TaskStartToCloseTimeout      *time.Duration        `protobuf:"bytes,7,opt,name=task_start_to_close_timeout,json=taskStartToCloseTimeout,proto3,stdduration" json:"task_start_to_close_timeout,omitempty"`
+	ExecutionStartToCloseTimeout *types.Duration       `protobuf:"bytes,6,opt,name=execution_start_to_close_timeout,json=executionStartToCloseTimeout,proto3" json:"execution_start_to_close_timeout,omitempty"`
+	TaskStartToCloseTimeout      *types.Duration       `protobuf:"bytes,7,opt,name=task_start_to_close_timeout,json=taskStartToCloseTimeout,proto3" json:"task_start_to_close_timeout,omitempty"`
 	ParentClosePolicy            ParentClosePolicy     `protobuf:"varint,8,opt,name=parent_close_policy,json=parentClosePolicy,proto3,enum=uber.cadence.api.v1.ParentClosePolicy" json:"parent_close_policy,omitempty"`
 	Control                      []byte                `protobuf:"bytes,9,opt,name=control,proto3" json:"control,omitempty"`
 	DecisionTaskCompletedEventId int64                 `protobuf:"varint,10,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
@@ -3357,10 +3538,16 @@ type StartChildWorkflowExecutionInitiatedEventAttributes struct {
 	Header                       *Header               `protobuf:"bytes,15,opt,name=header,proto3" json:"header,omitempty"`
 	Memo                         *Memo                 `protobuf:"bytes,16,opt,name=memo,proto3" json:"memo,omitempty"`
 	SearchAttributes             *SearchAttributes     `protobuf:"bytes,17,opt,name=search_attributes,json=searchAttributes,proto3" json:"search_attributes,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{}              `json:"-"`
+	XXX_unrecognized             []byte                `json:"-"`
+	XXX_sizecache                int32                 `json:"-"`
 }
 
 func (m *StartChildWorkflowExecutionInitiatedEventAttributes) Reset() {
 	*m = StartChildWorkflowExecutionInitiatedEventAttributes{}
+}
+func (m *StartChildWorkflowExecutionInitiatedEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*StartChildWorkflowExecutionInitiatedEventAttributes) ProtoMessage() {}
 func (*StartChildWorkflowExecutionInitiatedEventAttributes) Descriptor() ([]byte, []int) {
@@ -3428,14 +3615,14 @@ func (m *StartChildWorkflowExecutionInitiatedEventAttributes) GetInput() *Payloa
 	return nil
 }
 
-func (m *StartChildWorkflowExecutionInitiatedEventAttributes) GetExecutionStartToCloseTimeout() *time.Duration {
+func (m *StartChildWorkflowExecutionInitiatedEventAttributes) GetExecutionStartToCloseTimeout() *types.Duration {
 	if m != nil {
 		return m.ExecutionStartToCloseTimeout
 	}
 	return nil
 }
 
-func (m *StartChildWorkflowExecutionInitiatedEventAttributes) GetTaskStartToCloseTimeout() *time.Duration {
+func (m *StartChildWorkflowExecutionInitiatedEventAttributes) GetTaskStartToCloseTimeout() *types.Duration {
 	if m != nil {
 		return m.TaskStartToCloseTimeout
 	}
@@ -3446,7 +3633,7 @@ func (m *StartChildWorkflowExecutionInitiatedEventAttributes) GetParentClosePoli
 	if m != nil {
 		return m.ParentClosePolicy
 	}
-	return PARENT_CLOSE_POLICY_INVALID
+	return ParentClosePolicy_PARENT_CLOSE_POLICY_INVALID
 }
 
 func (m *StartChildWorkflowExecutionInitiatedEventAttributes) GetControl() []byte {
@@ -3467,7 +3654,7 @@ func (m *StartChildWorkflowExecutionInitiatedEventAttributes) GetWorkflowIdReuse
 	if m != nil {
 		return m.WorkflowIdReusePolicy
 	}
-	return WORKFLOW_ID_REUSE_POLICY_INVALID
+	return WorkflowIdReusePolicy_WORKFLOW_ID_REUSE_POLICY_INVALID
 }
 
 func (m *StartChildWorkflowExecutionInitiatedEventAttributes) GetRetryPolicy() *RetryPolicy {
@@ -3513,10 +3700,16 @@ type StartChildWorkflowExecutionFailedEventAttributes struct {
 	Control                      []byte                            `protobuf:"bytes,5,opt,name=control,proto3" json:"control,omitempty"`
 	InitiatedEventId             int64                             `protobuf:"varint,6,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
 	DecisionTaskCompletedEventId int64                             `protobuf:"varint,7,opt,name=decision_task_completed_event_id,json=decisionTaskCompletedEventId,proto3" json:"decision_task_completed_event_id,omitempty"`
+	XXX_NoUnkeyedLiteral         struct{}                          `json:"-"`
+	XXX_unrecognized             []byte                            `json:"-"`
+	XXX_sizecache                int32                             `json:"-"`
 }
 
 func (m *StartChildWorkflowExecutionFailedEventAttributes) Reset() {
 	*m = StartChildWorkflowExecutionFailedEventAttributes{}
+}
+func (m *StartChildWorkflowExecutionFailedEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*StartChildWorkflowExecutionFailedEventAttributes) ProtoMessage() {}
 func (*StartChildWorkflowExecutionFailedEventAttributes) Descriptor() ([]byte, []int) {
@@ -3574,7 +3767,7 @@ func (m *StartChildWorkflowExecutionFailedEventAttributes) GetCause() ChildWorkf
 	if m != nil {
 		return m.Cause
 	}
-	return CHILD_WORKFLOW_EXECUTION_FAILED_CAUSE_INVALID
+	return ChildWorkflowExecutionFailedCause_CHILD_WORKFLOW_EXECUTION_FAILED_CAUSE_INVALID
 }
 
 func (m *StartChildWorkflowExecutionFailedEventAttributes) GetControl() []byte {
@@ -3599,15 +3792,21 @@ func (m *StartChildWorkflowExecutionFailedEventAttributes) GetDecisionTaskComple
 }
 
 type ChildWorkflowExecutionStartedEventAttributes struct {
-	Domain            string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	WorkflowType      *WorkflowType      `protobuf:"bytes,3,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
-	InitiatedEventId  int64              `protobuf:"varint,4,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
-	Header            *Header            `protobuf:"bytes,5,opt,name=header,proto3" json:"header,omitempty"`
+	Domain               string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	WorkflowType         *WorkflowType      `protobuf:"bytes,3,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
+	InitiatedEventId     int64              `protobuf:"varint,4,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
+	Header               *Header            `protobuf:"bytes,5,opt,name=header,proto3" json:"header,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
 }
 
 func (m *ChildWorkflowExecutionStartedEventAttributes) Reset() {
 	*m = ChildWorkflowExecutionStartedEventAttributes{}
+}
+func (m *ChildWorkflowExecutionStartedEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*ChildWorkflowExecutionStartedEventAttributes) ProtoMessage() {}
 func (*ChildWorkflowExecutionStartedEventAttributes) Descriptor() ([]byte, []int) {
@@ -3676,16 +3875,22 @@ func (m *ChildWorkflowExecutionStartedEventAttributes) GetHeader() *Header {
 }
 
 type ChildWorkflowExecutionCompletedEventAttributes struct {
-	Domain            string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	WorkflowType      *WorkflowType      `protobuf:"bytes,3,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
-	InitiatedEventId  int64              `protobuf:"varint,4,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
-	StartedEventId    int64              `protobuf:"varint,5,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
-	Result            *Payload           `protobuf:"bytes,6,opt,name=result,proto3" json:"result,omitempty"`
+	Domain               string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	WorkflowType         *WorkflowType      `protobuf:"bytes,3,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
+	InitiatedEventId     int64              `protobuf:"varint,4,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
+	StartedEventId       int64              `protobuf:"varint,5,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
+	Result               *Payload           `protobuf:"bytes,6,opt,name=result,proto3" json:"result,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
 }
 
 func (m *ChildWorkflowExecutionCompletedEventAttributes) Reset() {
 	*m = ChildWorkflowExecutionCompletedEventAttributes{}
+}
+func (m *ChildWorkflowExecutionCompletedEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*ChildWorkflowExecutionCompletedEventAttributes) ProtoMessage() {}
 func (*ChildWorkflowExecutionCompletedEventAttributes) Descriptor() ([]byte, []int) {
@@ -3761,16 +3966,22 @@ func (m *ChildWorkflowExecutionCompletedEventAttributes) GetResult() *Payload {
 }
 
 type ChildWorkflowExecutionFailedEventAttributes struct {
-	Domain            string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	WorkflowType      *WorkflowType      `protobuf:"bytes,3,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
-	InitiatedEventId  int64              `protobuf:"varint,4,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
-	StartedEventId    int64              `protobuf:"varint,5,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
-	Failure           *Failure           `protobuf:"bytes,6,opt,name=failure,proto3" json:"failure,omitempty"`
+	Domain               string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	WorkflowType         *WorkflowType      `protobuf:"bytes,3,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
+	InitiatedEventId     int64              `protobuf:"varint,4,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
+	StartedEventId       int64              `protobuf:"varint,5,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
+	Failure              *Failure           `protobuf:"bytes,6,opt,name=failure,proto3" json:"failure,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
 }
 
 func (m *ChildWorkflowExecutionFailedEventAttributes) Reset() {
 	*m = ChildWorkflowExecutionFailedEventAttributes{}
+}
+func (m *ChildWorkflowExecutionFailedEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*ChildWorkflowExecutionFailedEventAttributes) ProtoMessage() {}
 func (*ChildWorkflowExecutionFailedEventAttributes) Descriptor() ([]byte, []int) {
@@ -3846,16 +4057,22 @@ func (m *ChildWorkflowExecutionFailedEventAttributes) GetFailure() *Failure {
 }
 
 type ChildWorkflowExecutionCanceledEventAttributes struct {
-	Domain            string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	WorkflowType      *WorkflowType      `protobuf:"bytes,3,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
-	InitiatedEventId  int64              `protobuf:"varint,4,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
-	StartedEventId    int64              `protobuf:"varint,5,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
-	Details           *Payload           `protobuf:"bytes,6,opt,name=details,proto3" json:"details,omitempty"`
+	Domain               string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	WorkflowType         *WorkflowType      `protobuf:"bytes,3,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
+	InitiatedEventId     int64              `protobuf:"varint,4,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
+	StartedEventId       int64              `protobuf:"varint,5,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
+	Details              *Payload           `protobuf:"bytes,6,opt,name=details,proto3" json:"details,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
 }
 
 func (m *ChildWorkflowExecutionCanceledEventAttributes) Reset() {
 	*m = ChildWorkflowExecutionCanceledEventAttributes{}
+}
+func (m *ChildWorkflowExecutionCanceledEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*ChildWorkflowExecutionCanceledEventAttributes) ProtoMessage() {}
 func (*ChildWorkflowExecutionCanceledEventAttributes) Descriptor() ([]byte, []int) {
@@ -3931,16 +4148,22 @@ func (m *ChildWorkflowExecutionCanceledEventAttributes) GetDetails() *Payload {
 }
 
 type ChildWorkflowExecutionTimedOutEventAttributes struct {
-	Domain            string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	WorkflowType      *WorkflowType      `protobuf:"bytes,3,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
-	InitiatedEventId  int64              `protobuf:"varint,4,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
-	StartedEventId    int64              `protobuf:"varint,5,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
-	TimeoutType       TimeoutType        `protobuf:"varint,6,opt,name=timeout_type,json=timeoutType,proto3,enum=uber.cadence.api.v1.TimeoutType" json:"timeout_type,omitempty"`
+	Domain               string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	WorkflowType         *WorkflowType      `protobuf:"bytes,3,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
+	InitiatedEventId     int64              `protobuf:"varint,4,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
+	StartedEventId       int64              `protobuf:"varint,5,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
+	TimeoutType          TimeoutType        `protobuf:"varint,6,opt,name=timeout_type,json=timeoutType,proto3,enum=uber.cadence.api.v1.TimeoutType" json:"timeout_type,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
 }
 
 func (m *ChildWorkflowExecutionTimedOutEventAttributes) Reset() {
 	*m = ChildWorkflowExecutionTimedOutEventAttributes{}
+}
+func (m *ChildWorkflowExecutionTimedOutEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*ChildWorkflowExecutionTimedOutEventAttributes) ProtoMessage() {}
 func (*ChildWorkflowExecutionTimedOutEventAttributes) Descriptor() ([]byte, []int) {
@@ -4012,19 +4235,25 @@ func (m *ChildWorkflowExecutionTimedOutEventAttributes) GetTimeoutType() Timeout
 	if m != nil {
 		return m.TimeoutType
 	}
-	return TIMEOUT_TYPE_INVALID
+	return TimeoutType_TIMEOUT_TYPE_INVALID
 }
 
 type ChildWorkflowExecutionTerminatedEventAttributes struct {
-	Domain            string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	WorkflowType      *WorkflowType      `protobuf:"bytes,3,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
-	InitiatedEventId  int64              `protobuf:"varint,4,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
-	StartedEventId    int64              `protobuf:"varint,5,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
+	Domain               string             `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	WorkflowExecution    *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	WorkflowType         *WorkflowType      `protobuf:"bytes,3,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
+	InitiatedEventId     int64              `protobuf:"varint,4,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
+	StartedEventId       int64              `protobuf:"varint,5,opt,name=started_event_id,json=startedEventId,proto3" json:"started_event_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
 }
 
 func (m *ChildWorkflowExecutionTerminatedEventAttributes) Reset() {
 	*m = ChildWorkflowExecutionTerminatedEventAttributes{}
+}
+func (m *ChildWorkflowExecutionTerminatedEventAttributes) String() string {
+	return proto.CompactTextString(m)
 }
 func (*ChildWorkflowExecutionTerminatedEventAttributes) ProtoMessage() {}
 func (*ChildWorkflowExecutionTerminatedEventAttributes) Descriptor() ([]byte, []int) {
@@ -4140,4096 +4369,237 @@ func init() {
 	proto.RegisterType((*ChildWorkflowExecutionTerminatedEventAttributes)(nil), "uber.cadence.api.v1.ChildWorkflowExecutionTerminatedEventAttributes")
 }
 
-func init() {
-	proto.RegisterFile("github.com/uber/cadence/.gen/proto/api/v1/history.proto", fileDescriptor_8237ca6511ad6c62)
-}
+func init() { proto.RegisterFile("uber/cadence/api/v1/history.proto", fileDescriptor_8237ca6511ad6c62) }
 
 var fileDescriptor_8237ca6511ad6c62 = []byte{
-	// 3641 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x5b, 0x5f, 0x68, 0x1c, 0xc7,
-	0x19, 0xd7, 0xdc, 0x9d, 0x4e, 0xba, 0x4f, 0xb2, 0x2c, 0x8d, 0x1c, 0x59, 0xb2, 0xe4, 0x93, 0x7c,
-	0x76, 0x6c, 0xc5, 0x96, 0x4f, 0xfe, 0x17, 0xbb, 0x8e, 0x9b, 0xa4, 0x92, 0x2c, 0x91, 0x03, 0xd5,
-	0x31, 0x6b, 0xd9, 0xa5, 0x81, 0xf6, 0xb2, 0xba, 0x1d, 0xd9, 0x8b, 0xee, 0x6e, 0x2f, 0xbb, 0x7b,
-	0x3a, 0xab, 0x50, 0x28, 0xf4, 0xa1, 0x10, 0x1a, 0x92, 0x10, 0x0a, 0x09, 0x2d, 0xb4, 0x14, 0x5a,
-	0x92, 0x52, 0x48, 0x69, 0x09, 0x6d, 0xe9, 0x4b, 0x1b, 0x28, 0x0d, 0x14, 0x5a, 0x53, 0x4a, 0x09,
-	0xf4, 0x21, 0x8d, 0xd3, 0x87, 0xf4, 0x29, 0x79, 0x68, 0xfa, 0x5c, 0x76, 0x76, 0xf6, 0xfe, 0xec,
-	0xcd, 0xec, 0xce, 0xde, 0x9d, 0x9d, 0x96, 0xf8, 0xed, 0x76, 0xf7, 0x9b, 0x6f, 0x7e, 0x33, 0xf3,
-	0xfd, 0x9b, 0xef, 0xfb, 0x0e, 0x0e, 0x55, 0x37, 0x89, 0xb9, 0x58, 0x50, 0x35, 0x52, 0x2e, 0x90,
-	0x45, 0xb5, 0xa2, 0x2f, 0xee, 0x9c, 0x5e, 0xbc, 0xa5, 0x5b, 0xb6, 0x61, 0xee, 0x66, 0x2b, 0xa6,
-	0x61, 0x1b, 0x78, 0xdc, 0x21, 0xc9, 0x32, 0x92, 0xac, 0x5a, 0xd1, 0xb3, 0x3b, 0xa7, 0x0f, 0xa4,
-	0x6f, 0x1a, 0xc6, 0xcd, 0x22, 0x59, 0xa4, 0x24, 0x9b, 0xd5, 0xad, 0x45, 0xad, 0x6a, 0xaa, 0xb6,
-	0x6e, 0x94, 0xdd, 0x41, 0x07, 0x66, 0xfd, 0xdf, 0x6d, 0xbd, 0x44, 0x2c, 0x5b, 0x2d, 0x55, 0x18,
-	0xc1, 0x8c, 0x46, 0x2a, 0xa4, 0xec, 0xf0, 0xd4, 0x89, 0xb5, 0x78, 0xd3, 0xb8, 0x69, 0xd0, 0xf7,
-	0xec, 0xeb, 0x1c, 0x0f, 0x56, 0xc1, 0x28, 0x95, 0xea, 0x13, 0x64, 0x78, 0x14, 0xb6, 0x6a, 0x6d,
-	0x17, 0x75, 0xcb, 0x0e, 0xa2, 0xa9, 0x19, 0xe6, 0xf6, 0x56, 0xd1, 0xa8, 0xb9, 0x34, 0x99, 0xcb,
-	0x30, 0xf0, 0x94, 0xbb, 0x5c, 0x7c, 0x11, 0x92, 0x64, 0x87, 0x94, 0x6d, 0x6b, 0x12, 0xcd, 0xc5,
-	0xe7, 0x87, 0xce, 0x1c, 0xca, 0x72, 0x56, 0x9e, 0x65, 0xd4, 0xab, 0x0e, 0xa5, 0xc2, 0x06, 0x64,
-	0x3e, 0xba, 0x00, 0xc3, 0xcd, 0x1f, 0xf0, 0x14, 0x0c, 0xd2, 0x4f, 0x79, 0x5d, 0x9b, 0x44, 0x73,
-	0x68, 0x3e, 0xae, 0x0c, 0xd0, 0xe7, 0x9c, 0x86, 0x9f, 0x04, 0x70, 0x3f, 0x39, 0x5b, 0x32, 0x19,
-	0x9b, 0x43, 0xf3, 0x43, 0x67, 0x0e, 0x64, 0xdd, 0xfd, 0xca, 0x7a, 0xfb, 0x95, 0xdd, 0xf0, 0xf6,
-	0x6b, 0x39, 0xf1, 0xd2, 0x7b, 0xb3, 0x48, 0x49, 0xd1, 0x31, 0xce, 0x5b, 0x3c, 0x09, 0x03, 0x3b,
-	0xc4, 0xb4, 0x74, 0xa3, 0x3c, 0x19, 0x77, 0x59, 0xb3, 0x47, 0xbc, 0x1f, 0x06, 0x9c, 0x2d, 0x70,
-	0x26, 0x4d, 0xd0, 0x2f, 0x49, 0xe7, 0x31, 0xa7, 0xe1, 0xef, 0x21, 0x38, 0xe1, 0x2d, 0x3c, 0x4f,
-	0x6e, 0x93, 0x42, 0xd5, 0x39, 0xab, 0xbc, 0x65, 0xab, 0xa6, 0x4d, 0xb4, 0xbc, 0x8b, 0x47, 0xb5,
-	0x6d, 0x53, 0xdf, 0xac, 0xda, 0xc4, 0x9a, 0xec, 0xa7, 0xa8, 0x3e, 0xcf, 0xdd, 0x80, 0x2f, 0x31,
-	0x3e, 0xab, 0x1e, 0x9b, 0x6b, 0x2e, 0x17, 0xba, 0xf0, 0xa5, 0x3a, 0x8f, 0xa7, 0xfa, 0x94, 0x63,
-	0x35, 0x39, 0x52, 0xfc, 0x43, 0x04, 0x27, 0x39, 0xf0, 0x0a, 0x46, 0xa9, 0x52, 0x24, 0x5c, 0x80,
-	0x49, 0x0a, 0xf0, 0x09, 0x39, 0x80, 0x2b, 0x1e, 0x9f, 0x76, 0x88, 0x8f, 0xd4, 0x64, 0x89, 0xf1,
-	0x6b, 0x08, 0x8e, 0x73, 0x40, 0x6e, 0xa9, 0x7a, 0x91, 0x87, 0x70, 0x80, 0x22, 0xbc, 0x24, 0x87,
-	0x70, 0x8d, 0x32, 0x69, 0x87, 0x77, 0xb4, 0x26, 0x45, 0x89, 0x7f, 0xc0, 0xdf, 0x40, 0x47, 0xc2,
-	0xb4, 0xbc, 0x51, 0xb5, 0xdb, 0xe1, 0x0d, 0x52, 0x78, 0x8f, 0xcb, 0xc1, 0x73, 0xc4, 0x4e, 0x7b,
-	0xba, 0x6a, 0xb7, 0x03, 0x9c, 0xaf, 0x49, 0xd2, 0xe2, 0x57, 0x10, 0xcc, 0x6b, 0xa4, 0xa0, 0x5b,
-	0x14, 0x98, 0x23, 0xa5, 0x56, 0xe1, 0x16, 0xd1, 0xaa, 0xdc, 0xcd, 0x4b, 0x51, 0x74, 0x17, 0xb9,
-	0xe8, 0x2e, 0x33, 0x26, 0x1b, 0xaa, 0xb5, 0x7d, 0xcd, 0x63, 0xd1, 0x8e, 0xec, 0x88, 0x26, 0x41,
-	0x87, 0x5f, 0x40, 0x70, 0xd4, 0x87, 0x4a, 0xa4, 0x13, 0x40, 0x31, 0x5d, 0x08, 0xc7, 0x24, 0x52,
-	0x87, 0x8c, 0x16, 0x4a, 0xc5, 0xd9, 0xa5, 0x00, 0x25, 0x18, 0x92, 0xdc, 0xa5, 0x00, 0xf9, 0x6f,
-	0xd9, 0x25, 0xa1, 0xe8, 0xbf, 0xdc, 0x86, 0x2a, 0x40, 0xb2, 0x86, 0x29, 0xaa, 0xcf, 0x85, 0xa2,
-	0x12, 0x0b, 0xd5, 0x61, 0x2d, 0x9c, 0x0c, 0x3f, 0x8f, 0xe0, 0xe1, 0x56, 0x4c, 0x22, 0x4d, 0xdc,
-	0x43, 0x01, 0x9d, 0x0f, 0x05, 0x24, 0x52, 0xc2, 0x43, 0x5a, 0x18, 0x11, 0x3d, 0x36, 0xb5, 0x60,
-	0xeb, 0x3b, 0xba, 0xbd, 0x1b, 0x2a, 0xdc, 0x23, 0x01, 0xc7, 0xb6, 0xc4, 0x98, 0x84, 0x09, 0xb7,
-	0x2a, 0x41, 0x47, 0x85, 0xdb, 0x87, 0x4a, 0x24, 0xdc, 0x7b, 0x03, 0x84, 0xbb, 0x05, 0x93, 0x50,
-	0xb8, 0xd5, 0x50, 0x2a, 0xce, 0x2e, 0x05, 0x08, 0xf7, 0xa8, 0xe4, 0x2e, 0x05, 0x09, 0xb7, 0x2a,
-	0x41, 0x47, 0x05, 0xa9, 0x15, 0x95, 0x48, 0x90, 0xc6, 0x02, 0x04, 0xa9, 0x19, 0x92, 0x50, 0x90,
-	0xd4, 0x30, 0x22, 0xaa, 0x69, 0xad, 0x60, 0x02, 0x34, 0x0d, 0x07, 0x68, 0x5a, 0x33, 0x9e, 0x00,
-	0x4d, 0x53, 0xc3, 0xc9, 0x70, 0x0d, 0xd2, 0x0e, 0x08, 0x53, 0x2c, 0x3d, 0xe3, 0x14, 0xc8, 0x29,
-	0x2e, 0x10, 0x87, 0xab, 0x29, 0x14, 0x9b, 0x69, 0x5b, 0xfc, 0x19, 0x3f, 0x07, 0x33, 0xee, 0xc4,
-	0x5b, 0xba, 0xc9, 0x9b, 0x76, 0x1f, 0x9d, 0x36, 0x2b, 0x9e, 0x76, 0xcd, 0x19, 0xd7, 0x3e, 0xe9,
-	0x94, 0x2d, 0xfa, 0x88, 0x7f, 0x8c, 0x60, 0xd1, 0x27, 0xa2, 0x6a, 0xb9, 0x40, 0x8a, 0x79, 0x93,
-	0x3c, 0x57, 0x25, 0x16, 0x77, 0xf5, 0x0f, 0x51, 0x18, 0x4f, 0x86, 0x4b, 0x2a, 0xe5, 0xa4, 0x78,
-	0x8c, 0xda, 0x71, 0x1d, 0x57, 0xa5, 0xa9, 0xf1, 0x2f, 0x10, 0x9c, 0x63, 0x98, 0x3c, 0x88, 0x72,
-	0x42, 0x3c, 0x41, 0xd1, 0xae, 0x70, 0xd1, 0xb2, 0xd9, 0xdc, 0xa9, 0x65, 0x24, 0x3a, 0x6b, 0x46,
-	0x1a, 0x81, 0x5f, 0x42, 0x70, 0x8c, 0xb7, 0xbd, 0x3c, 0xa0, 0xfb, 0x25, 0xa5, 0x7b, 0x85, 0x71,
-	0x08, 0x91, 0x6e, 0x01, 0x19, 0xfe, 0x1a, 0xcc, 0xba, 0x42, 0x26, 0x46, 0x32, 0x49, 0x91, 0x9c,
-	0x16, 0xcb, 0x99, 0x18, 0x82, 0x2b, 0xc0, 0xa2, 0xb9, 0xbf, 0x85, 0xe0, 0x08, 0x3b, 0x3c, 0x26,
-	0xe8, 0x82, 0x43, 0x9b, 0xa2, 0x08, 0x1e, 0xe5, 0x22, 0x70, 0x99, 0xbb, 0xf2, 0x2e, 0x38, 0xa6,
-	0xb9, 0x42, 0x08, 0x0d, 0xfe, 0x3a, 0xcc, 0x95, 0x54, 0x73, 0x9b, 0x98, 0x79, 0x93, 0x14, 0x0c,
-	0x53, 0xe3, 0x81, 0x38, 0x40, 0x41, 0x9c, 0xe1, 0x82, 0xf8, 0x22, 0x1d, 0xac, 0xb0, 0xb1, 0xed,
-	0x08, 0x0e, 0x96, 0x82, 0x08, 0xf0, 0xf7, 0x11, 0x2c, 0xf0, 0xee, 0x27, 0xfa, 0xcd, 0xb2, 0xca,
-	0xdd, 0x90, 0xe9, 0x28, 0xe1, 0xeb, 0x35, 0xc6, 0x46, 0x26, 0x7c, 0x15, 0xd0, 0xe2, 0x1f, 0x21,
-	0xc8, 0xf2, 0x22, 0x6c, 0x62, 0x96, 0xf4, 0xb2, 0xca, 0xb5, 0x0b, 0x33, 0x01, 0x76, 0xa1, 0x3d,
-	0xc4, 0xae, 0x33, 0xe2, 0xd8, 0x85, 0x9a, 0x34, 0x35, 0x7e, 0x0b, 0xc1, 0x39, 0xde, 0x55, 0x2a,
-	0xd4, 0x8a, 0x1d, 0xa4, 0x68, 0x2f, 0x4b, 0xde, 0xa8, 0xc2, 0x4c, 0xd9, 0x62, 0x2d, 0xda, 0x10,
-	0x91, 0x04, 0x88, 0x95, 0x32, 0x1d, 0x45, 0x02, 0xc4, 0x0a, 0x3a, 0x5f, 0x93, 0xa4, 0xc5, 0xff,
-	0x44, 0xb0, 0xea, 0xb3, 0xb8, 0xe4, 0xb6, 0x4d, 0xcc, 0xb2, 0x5a, 0xcc, 0x73, 0x90, 0xeb, 0x65,
-	0xdd, 0xd6, 0xf9, 0x82, 0x31, 0x4b, 0xa1, 0x5f, 0x0b, 0x37, 0xc1, 0xab, 0x8c, 0x7f, 0xdb, 0x7a,
-	0x72, 0x1e, 0xf3, 0xf6, 0x05, 0x3d, 0x61, 0x76, 0xc5, 0x01, 0xff, 0x1d, 0xc1, 0x72, 0x84, 0x65,
-	0x8a, 0x2c, 0xd6, 0x1c, 0x5d, 0xe3, 0xd5, 0x2e, 0xd6, 0x28, 0x32, 0x66, 0x97, 0xcc, 0xce, 0x87,
-	0xe3, 0x3f, 0x21, 0x78, 0x3c, 0x68, 0x39, 0xe1, 0x7a, 0x72, 0x88, 0x2e, 0x6c, 0x9d, 0xbb, 0x30,
-	0x21, 0x98, 0x50, 0x7d, 0xb9, 0x40, 0x3a, 0x1b, 0x4a, 0xe3, 0x00, 0x6e, 0xea, 0xa4, 0x6c, 0xeb,
-	0xe5, 0x2a, 0xd1, 0xf2, 0xaa, 0x95, 0x2f, 0x93, 0x5a, 0xfb, 0x3a, 0x32, 0x01, 0x71, 0x00, 0x27,
-	0x83, 0xc2, 0xd8, 0x2d, 0x59, 0x57, 0x48, 0x8d, 0x13, 0x07, 0xd4, 0x22, 0x8d, 0xc0, 0x6f, 0x23,
-	0xb8, 0x48, 0xa3, 0xc9, 0x7c, 0xe1, 0x96, 0x5e, 0xd4, 0x22, 0xea, 0xcf, 0x61, 0x0a, 0xfd, 0x29,
-	0x2e, 0x74, 0x1a, 0x4a, 0xae, 0x38, 0x4c, 0xa3, 0x28, 0xcd, 0x59, 0x2b, 0xfa, 0x30, 0xfc, 0x6b,
-	0x04, 0xe7, 0x43, 0x16, 0x21, 0xd2, 0x8e, 0x23, 0x74, 0x05, 0xab, 0x51, 0x57, 0x20, 0x52, 0x89,
-	0x53, 0x56, 0xc4, 0x31, 0xf8, 0xa7, 0x08, 0x4e, 0x0b, 0x51, 0x0b, 0xe3, 0xfc, 0x87, 0x29, 0xec,
-	0x25, 0x7e, 0x18, 0xc2, 0x9d, 0x5d, 0x18, 0xf8, 0x2f, 0x14, 0x22, 0xd0, 0xe3, 0x9f, 0x23, 0x38,
-	0x2b, 0x84, 0x1b, 0x70, 0x89, 0x3c, 0x1a, 0x20, 0xe4, 0x7c, 0xc0, 0x01, 0xd7, 0xc9, 0x6c, 0x21,
-	0xd2, 0x08, 0xfc, 0x06, 0x82, 0x53, 0x91, 0x25, 0xe3, 0x18, 0x45, 0xfc, 0x85, 0x08, 0x88, 0x45,
-	0x42, 0x71, 0xa2, 0x10, 0x41, 0x1e, 0xde, 0x44, 0x70, 0x46, 0xbc, 0xc1, 0x42, 0x27, 0x3c, 0x4f,
-	0xd1, 0x2e, 0x47, 0xd9, 0x5f, 0xa1, 0x27, 0x3e, 0x59, 0x88, 0x32, 0x00, 0xff, 0x2c, 0x48, 0x24,
-	0x02, 0x2e, 0xcd, 0x8f, 0x44, 0x86, 0x2c, 0xbe, 0x3e, 0x0b, 0x20, 0x8b, 0x2e, 0xd2, 0x4e, 0x6c,
-	0x26, 0x86, 0x1c, 0x10, 0x49, 0x1e, 0x0f, 0x88, 0xcd, 0x04, 0x98, 0x03, 0xc2, 0xc9, 0xc5, 0x42,
-	0xb4, 0x21, 0xd4, 0x69, 0xba, 0xa1, 0x78, 0xa7, 0x11, 0xcf, 0x89, 0x00, 0xa7, 0xe9, 0x46, 0xdc,
-	0x9d, 0x84, 0x3a, 0x17, 0xac, 0xce, 0x86, 0xe2, 0xdf, 0x23, 0x78, 0x4c, 0x62, 0x41, 0x22, 0x1d,
-	0x5d, 0xa0, 0xab, 0xc9, 0x75, 0xb2, 0x1a, 0x91, 0xb2, 0x9e, 0xb3, 0x3a, 0x18, 0x87, 0x7f, 0x85,
-	0xe0, 0xd1, 0xa0, 0x05, 0x88, 0xef, 0x4f, 0x27, 0x03, 0x1c, 0x90, 0x10, 0x84, 0xf8, 0x1e, 0x75,
-	0x8a, 0x44, 0x1c, 0x43, 0x0d, 0x4e, 0xb5, 0x62, 0x11, 0xd3, 0x6e, 0x00, 0xb7, 0x88, 0x6a, 0x16,
-	0x6e, 0x35, 0xc1, 0x6c, 0xc7, 0x9d, 0x0d, 0xd0, 0xde, 0xeb, 0x94, 0x9d, 0x87, 0xe0, 0x1a, 0x65,
-	0xd6, 0x98, 0x91, 0xa3, 0xbd, 0xd5, 0x28, 0x03, 0x96, 0x87, 0x01, 0x1a, 0x40, 0x32, 0x1f, 0x0d,
-	0xc3, 0x31, 0x59, 0xef, 0xb5, 0x06, 0x7b, 0xea, 0x6b, 0xb4, 0x77, 0x2b, 0x84, 0x56, 0x04, 0x45,
-	0xf5, 0x45, 0x8f, 0xe9, 0xc6, 0x6e, 0x85, 0x28, 0xc3, 0xb5, 0xa6, 0x27, 0x7c, 0x0e, 0x26, 0x2a,
-	0xaa, 0xe9, 0xec, 0x48, 0x9d, 0x9d, 0x66, 0x94, 0x54, 0xbd, 0x4c, 0xab, 0x88, 0x29, 0x65, 0x9f,
-	0xfb, 0xd5, 0xe3, 0x70, 0x99, 0x7e, 0xc3, 0x9b, 0x30, 0xe5, 0x1f, 0x55, 0x97, 0x10, 0x5a, 0x40,
-	0x1c, 0x3a, 0x73, 0x54, 0x2e, 0x0a, 0x54, 0xf6, 0xb7, 0x4e, 0x50, 0xff, 0x80, 0x2f, 0xd6, 0xe7,
-	0xf0, 0x1b, 0x81, 0x7a, 0x29, 0x92, 0x41, 0x6f, 0xd5, 0xc9, 0x9c, 0x86, 0x1f, 0x83, 0x14, 0x4d,
-	0x04, 0x15, 0x75, 0xcb, 0x66, 0x75, 0xc7, 0x83, 0xfc, 0x4c, 0x8b, 0x6a, 0x6d, 0xaf, 0xeb, 0x96,
-	0xad, 0x0c, 0xda, 0xec, 0x17, 0x3e, 0x03, 0xfd, 0x7a, 0xb9, 0x52, 0xb5, 0x59, 0x39, 0x70, 0x86,
-	0x3b, 0xee, 0xaa, 0xba, 0x5b, 0x34, 0x54, 0x4d, 0x71, 0x49, 0xf1, 0x4d, 0x98, 0xf3, 0x45, 0x3a,
-	0x79, 0xdb, 0xc8, 0x17, 0x8a, 0x86, 0x45, 0xa8, 0xdb, 0x30, 0xaa, 0x36, 0xab, 0xdd, 0x4d, 0xb5,
-	0x15, 0x65, 0x2f, 0xb3, 0x22, 0xf7, 0x72, 0xe2, 0xd5, 0xf7, 0x66, 0x91, 0x32, 0x43, 0x5a, 0x0e,
-	0x7e, 0xc3, 0x58, 0x71, 0xb8, 0x6c, 0xb8, 0x4c, 0xf0, 0x57, 0x60, 0xba, 0x91, 0x73, 0x6f, 0x9f,
-	0x63, 0x50, 0x6e, 0x8e, 0xfd, 0xb6, 0x97, 0x4f, 0xf7, 0xb1, 0xbf, 0x04, 0x07, 0x1a, 0x41, 0x7e,
-	0x63, 0x45, 0x66, 0xb5, 0xec, 0xec, 0x79, 0x8a, 0x0a, 0xc4, 0xfe, 0x3a, 0x45, 0xe3, 0x0c, 0xab,
-	0xe5, 0x9c, 0x86, 0x73, 0x90, 0x62, 0x07, 0x65, 0x98, 0xb4, 0xb0, 0x35, 0x72, 0xe6, 0x04, 0xdf,
-	0xbb, 0x30, 0x06, 0x34, 0x8a, 0xcf, 0x79, 0x43, 0x94, 0xc6, 0x68, 0x9c, 0x83, 0xb1, 0x06, 0x0e,
-	0xc7, 0x62, 0x56, 0x4d, 0xc2, 0x2a, 0x53, 0xfc, 0xf3, 0x58, 0x73, 0x69, 0x94, 0xd1, 0xfa, 0x30,
-	0xf6, 0x06, 0x2b, 0x30, 0x51, 0x54, 0x9d, 0x6b, 0xa7, 0x1b, 0x51, 0xd1, 0xe5, 0x10, 0xab, 0x5a,
-	0xb4, 0x59, 0x4d, 0x29, 0xf8, 0x7c, 0xf7, 0x39, 0x63, 0x57, 0xea, 0x43, 0x15, 0x3a, 0xd2, 0x91,
-	0x4c, 0xc3, 0xd4, 0x6f, 0xea, 0xae, 0xad, 0xf7, 0xed, 0xd2, 0x1e, 0xba, 0x4b, 0x13, 0x1e, 0x81,
-	0x6f, 0x93, 0x0e, 0xc0, 0xa0, 0xae, 0x91, 0xb2, 0xad, 0xdb, 0xbb, 0xb4, 0x66, 0x93, 0x52, 0xea,
-	0xcf, 0xf8, 0x2c, 0x4c, 0x6c, 0xe9, 0xa6, 0x65, 0xb7, 0xf3, 0xdc, 0x4b, 0x29, 0xc7, 0xe9, 0x57,
-	0x1f, 0xc3, 0x15, 0x18, 0x36, 0x89, 0x6d, 0xee, 0xe6, 0x2b, 0x46, 0x51, 0x2f, 0xec, 0xb2, 0x12,
-	0xc7, 0x9c, 0xe0, 0x8e, 0x6c, 0x9b, 0xbb, 0x57, 0x29, 0x9d, 0x32, 0x64, 0x36, 0x1e, 0xf0, 0x24,
-	0x0c, 0xa8, 0xb6, 0x4d, 0x4a, 0x15, 0x9b, 0xd6, 0x23, 0xfa, 0x15, 0xef, 0x11, 0xe7, 0x60, 0x2f,
-	0xb9, 0x5d, 0xd1, 0x5d, 0xf1, 0x71, 0xbb, 0x0b, 0xc6, 0x25, 0xbb, 0x0b, 0x46, 0x1a, 0x03, 0x69,
-	0x8b, 0xc1, 0x61, 0xd8, 0x53, 0x30, 0x1d, 0xfd, 0x60, 0xa5, 0x25, 0x9a, 0x6a, 0x4f, 0x29, 0xc3,
-	0xce, 0x4b, 0xaf, 0xdc, 0x84, 0xbf, 0x0a, 0xd3, 0xee, 0x1e, 0xb4, 0x96, 0xe1, 0x36, 0xd5, 0xc2,
-	0xb6, 0xb1, 0xb5, 0xc5, 0xd2, 0xe2, 0xa1, 0x02, 0x3e, 0x49, 0x79, 0x34, 0xd7, 0xe1, 0x96, 0x5d,
-	0x06, 0xf8, 0x24, 0x24, 0x4a, 0xa4, 0x64, 0xb0, 0x8c, 0xf5, 0x14, 0x3f, 0xef, 0x48, 0x4a, 0x86,
-	0x42, 0xc9, 0xb0, 0x02, 0x63, 0x6d, 0x0e, 0x84, 0x25, 0x91, 0x1f, 0xe6, 0xbb, 0x6a, 0x9f, 0xc1,
-	0x57, 0x46, 0x2d, 0xdf, 0x1b, 0x7c, 0x1d, 0x26, 0x2a, 0x26, 0xd9, 0xc9, 0xab, 0x55, 0xdb, 0x70,
-	0x64, 0x91, 0xd8, 0xf9, 0x8a, 0xa1, 0x97, 0x6d, 0x2f, 0x27, 0x2c, 0x3a, 0x3b, 0x8b, 0xd8, 0x57,
-	0x29, 0x9d, 0x32, 0xee, 0x8c, 0x5f, 0xaa, 0xda, 0x46, 0xd3, 0x4b, 0x7c, 0x16, 0x92, 0xb7, 0x88,
-	0xaa, 0x11, 0x93, 0x25, 0x76, 0xa7, 0xf9, 0x9d, 0x26, 0x94, 0x44, 0x61, 0xa4, 0x99, 0x37, 0x10,
-	0x3c, 0x22, 0x7f, 0xf9, 0x38, 0x07, 0x49, 0xa6, 0x3b, 0x48, 0x42, 0x77, 0x18, 0x2d, 0x5e, 0x83,
-	0xb9, 0xe0, 0xea, 0xb3, 0xae, 0x51, 0x5f, 0x13, 0x57, 0x66, 0xc4, 0x85, 0xe3, 0x9c, 0x96, 0x79,
-	0x1d, 0xc1, 0x51, 0xc9, 0x18, 0xe6, 0x3c, 0x0c, 0x78, 0x56, 0x03, 0x49, 0x58, 0x0d, 0x8f, 0xb8,
-	0x67, 0x50, 0x0d, 0x98, 0x97, 0x0e, 0xe0, 0x57, 0x60, 0x98, 0x99, 0xef, 0x86, 0x1f, 0x1f, 0x11,
-	0x08, 0x01, 0xb3, 0xd3, 0xd4, 0x8d, 0x0f, 0xd9, 0x8d, 0x87, 0xcc, 0x5f, 0x10, 0x1c, 0x91, 0xe9,
-	0x61, 0x68, 0xf5, 0x8c, 0x28, 0x9a, 0x67, 0xdc, 0x80, 0x09, 0x81, 0xdf, 0x89, 0xc9, 0xa9, 0xe5,
-	0xb8, 0xc5, 0xf1, 0x39, 0x4d, 0xb6, 0x27, 0xde, 0x62, 0x7b, 0x32, 0x2f, 0x20, 0xc8, 0x84, 0x37,
-	0x41, 0xe0, 0x05, 0xc0, 0xfe, 0xc2, 0x78, 0xbd, 0x41, 0x6a, 0xd4, 0x6a, 0xd9, 0x08, 0x9f, 0x01,
-	0x8e, 0xf9, 0x0c, 0xf0, 0x41, 0x00, 0x2f, 0x4b, 0xa9, 0x6b, 0x14, 0x4d, 0x4a, 0x49, 0xb1, 0x37,
-	0x39, 0x2d, 0xf3, 0xb1, 0x6f, 0x93, 0x85, 0x7a, 0x12, 0x0d, 0xd1, 0x3c, 0x8c, 0xb6, 0x26, 0x47,
-	0xea, 0x42, 0x36, 0x62, 0x35, 0xad, 0xd8, 0x87, 0x3d, 0xee, 0xc3, 0x7e, 0x0c, 0xf6, 0x6e, 0xea,
-	0x65, 0xd5, 0xdc, 0xcd, 0x17, 0x6e, 0x91, 0xc2, 0xb6, 0x55, 0x2d, 0xd1, 0x18, 0x29, 0xa5, 0x8c,
-	0xb8, 0xaf, 0x57, 0xd8, 0x5b, 0x7c, 0x02, 0xc6, 0x5a, 0x53, 0x7a, 0xe4, 0xb6, 0x1b, 0x23, 0x0d,
-	0x2b, 0xa3, 0xa4, 0x39, 0xd3, 0x46, 0x6e, 0xdb, 0x99, 0xb7, 0x11, 0x1c, 0x96, 0xe8, 0xaf, 0xb8,
-	0x67, 0x2b, 0xf6, 0x2b, 0x47, 0xbc, 0x13, 0xe5, 0x78, 0x3d, 0x0e, 0x87, 0x42, 0x7b, 0x32, 0xee,
-	0xd9, 0x12, 0x96, 0xa1, 0xbf, 0xa0, 0x56, 0x2d, 0x0f, 0xfb, 0x82, 0x64, 0xcb, 0xc8, 0x8a, 0x33,
-	0x46, 0x71, 0x87, 0x36, 0xdb, 0xb3, 0x44, 0x14, 0x7b, 0xd6, 0x2c, 0x30, 0xfd, 0x3e, 0x81, 0x49,
-	0xc3, 0xd0, 0xa6, 0x6a, 0x11, 0x2f, 0xc4, 0x48, 0xba, 0xd2, 0xee, 0xbc, 0x72, 0x03, 0x8b, 0x19,
-	0x80, 0x32, 0xa9, 0x79, 0x9f, 0x07, 0xdc, 0xd1, 0x65, 0x52, 0x73, 0xbf, 0x2e, 0x00, 0xde, 0x32,
-	0xcc, 0x6d, 0xb6, 0x78, 0xaf, 0x75, 0x70, 0xd0, 0xdd, 0x2d, 0xe7, 0x0b, 0x5d, 0xfe, 0x0d, 0xd6,
-	0x43, 0xc8, 0x11, 0xce, 0x14, 0x4f, 0x38, 0x33, 0x6f, 0x25, 0xe1, 0x88, 0x4c, 0xbb, 0x0a, 0x9e,
-	0x85, 0xa1, 0x7a, 0xcd, 0x97, 0x1d, 0x53, 0x4a, 0x01, 0xef, 0x55, 0x4e, 0x73, 0xee, 0x47, 0x8d,
-	0xa2, 0xb0, 0x23, 0x3a, 0xb1, 0x80, 0xfb, 0x51, 0x7d, 0x4a, 0x7a, 0x3f, 0x52, 0x9b, 0x9e, 0xf0,
-	0x04, 0x24, 0xd9, 0x7d, 0xc8, 0xd5, 0x38, 0xf6, 0xd4, 0x6a, 0x48, 0x13, 0xf7, 0xfe, 0x8a, 0xf1,
-	0x0c, 0x4c, 0x79, 0x42, 0xd8, 0xf1, 0xdd, 0x62, 0xc2, 0xe3, 0xe0, 0x33, 0xc1, 0x3e, 0xde, 0xcc,
-	0xc8, 0x47, 0xbb, 0x53, 0x34, 0xf1, 0x76, 0x6f, 0x16, 0x8c, 0xb7, 0xd8, 0x69, 0xa4, 0xba, 0x70,
-	0x1a, 0xeb, 0x30, 0x76, 0x8b, 0xa8, 0xa6, 0xbd, 0x49, 0xd4, 0x06, 0x52, 0x90, 0x63, 0x38, 0x5a,
-	0x1f, 0xe9, 0x71, 0x93, 0x71, 0xfb, 0x43, 0xe1, 0x6e, 0xbf, 0x2d, 0x16, 0x1f, 0xee, 0x24, 0x16,
-	0x6f, 0xc4, 0x71, 0x7b, 0xe4, 0xe3, 0xb8, 0x0f, 0x11, 0x64, 0xc2, 0x5b, 0xaa, 0xee, 0x9b, 0xab,
-	0x6c, 0x76, 0xea, 0x89, 0xd6, 0x0b, 0xc5, 0x93, 0x30, 0x4c, 0xef, 0x63, 0x9e, 0x3d, 0xeb, 0x97,
-	0xb0, 0x67, 0x43, 0xce, 0x08, 0xf6, 0x90, 0xb9, 0x83, 0x5a, 0x4d, 0x44, 0x8f, 0xa3, 0x55, 0xfe,
-	0x16, 0xc5, 0x22, 0xb8, 0x81, 0x78, 0xa8, 0xef, 0x4e, 0xb4, 0x6e, 0x66, 0xe6, 0xcf, 0x08, 0x0e,
-	0x85, 0xf7, 0xb9, 0x74, 0x1a, 0xd4, 0x7e, 0x1a, 0x2b, 0xfa, 0x4d, 0x0c, 0x0e, 0x4b, 0x74, 0x8b,
-	0x39, 0x6b, 0xd2, 0x88, 0xad, 0xea, 0x45, 0x4b, 0xea, 0x90, 0x3c, 0xe2, 0x7b, 0xb6, 0x26, 0x7f,
-	0xbc, 0x91, 0xe8, 0x20, 0xde, 0xe8, 0x5e, 0xc4, 0xbf, 0x83, 0xe0, 0xb8, 0x7c, 0x93, 0x97, 0x8c,
-	0x2f, 0xec, 0xcd, 0xb5, 0xe6, 0x4d, 0x04, 0x11, 0xdb, 0xb9, 0xc2, 0xb1, 0xed, 0xf3, 0xc2, 0x23,
-	0xd7, 0xc2, 0xb0, 0x80, 0x47, 0x06, 0x71, 0x5c, 0x02, 0xf1, 0x6b, 0x3e, 0x39, 0x14, 0x15, 0x7e,
-	0x3a, 0x95, 0xc3, 0x35, 0x98, 0x2b, 0xaa, 0x76, 0x53, 0x5b, 0x83, 0xbf, 0xc8, 0xdf, 0xd8, 0x59,
-	0x97, 0x8e, 0x77, 0x94, 0x6e, 0x38, 0xc5, 0x91, 0xe7, 0x78, 0x04, 0x79, 0x4e, 0x84, 0xea, 0xa8,
-	0x2f, 0x00, 0xcc, 0xfc, 0x15, 0xc1, 0x74, 0x40, 0x23, 0x25, 0x9e, 0x82, 0x41, 0xb7, 0x81, 0xac,
-	0x7e, 0x6e, 0x03, 0xf4, 0x39, 0xa7, 0x61, 0x05, 0x1e, 0xaa, 0x3b, 0xf5, 0x2d, 0xdd, 0x8c, 0x7c,
-	0x11, 0xc4, 0xcc, 0xa7, 0xaf, 0xe9, 0x26, 0x89, 0xe2, 0x84, 0x65, 0x8e, 0xfc, 0x59, 0x98, 0x12,
-	0xf6, 0x69, 0x06, 0xad, 0x49, 0x3a, 0xa2, 0xcf, 0xfc, 0x01, 0xc1, 0x4c, 0x50, 0x8b, 0x5e, 0x4f,
-	0x66, 0xe9, 0xd5, 0x7e, 0x04, 0x9a, 0xe9, 0x5f, 0x22, 0x98, 0x0b, 0x6b, 0xf5, 0x0b, 0x5a, 0xcd,
-	0x3d, 0x55, 0xde, 0x40, 0xe4, 0x2f, 0x0e, 0x42, 0xc4, 0x8e, 0x12, 0xbc, 0x08, 0xfb, 0x68, 0xd3,
-	0x8a, 0x3f, 0xb9, 0xea, 0xae, 0x69, 0xac, 0x4c, 0x6a, 0xbe, 0xd4, 0x6a, 0x5b, 0x89, 0x25, 0xd6,
-	0x59, 0x89, 0xa5, 0xe5, 0xaa, 0x10, 0xef, 0xf0, 0xaa, 0x90, 0xe8, 0x6d, 0x35, 0xa2, 0xff, 0x3e,
-	0x54, 0x23, 0x92, 0x5d, 0x56, 0x23, 0x64, 0xe4, 0x68, 0x40, 0x42, 0x8e, 0xae, 0xc3, 0x04, 0xcb,
-	0x1f, 0x33, 0xa4, 0x7a, 0xd9, 0x26, 0xe6, 0x8e, 0x5a, 0x94, 0xbd, 0xdb, 0xec, 0x63, 0xc3, 0x29,
-	0xc8, 0x1c, 0x1b, 0xdc, 0x5a, 0xef, 0x48, 0x75, 0x55, 0xef, 0x68, 0x0a, 0xed, 0x20, 0x4a, 0x68,
-	0x27, 0x2e, 0x6e, 0x0c, 0x75, 0x5c, 0xdc, 0x68, 0xdc, 0x3f, 0x86, 0xa5, 0xef, 0x1f, 0xf5, 0xb4,
-	0xfa, 0x9e, 0x2e, 0xd2, 0xea, 0x23, 0x5d, 0xa5, 0xd5, 0x33, 0xcf, 0xc7, 0x60, 0x31, 0x6a, 0xa3,
-	0x5b, 0xdd, 0x7e, 0xa1, 0x66, 0xfb, 0xf5, 0x38, 0x4c, 0xd7, 0x0b, 0xe0, 0x9c, 0xd2, 0xa3, 0x6b,
-	0xae, 0x27, 0x3d, 0x92, 0xb6, 0xe2, 0xe3, 0x56, 0xd3, 0xf0, 0xae, 0xab, 0xa3, 0x53, 0xc2, 0x22,
-	0x78, 0xa0, 0x79, 0xfc, 0x09, 0xe2, 0x64, 0xa0, 0x45, 0xee, 0x4a, 0x46, 0xcf, 0x90, 0x84, 0x9e,
-	0x35, 0x05, 0x51, 0xb1, 0x08, 0x41, 0x54, 0xe6, 0x13, 0x04, 0x07, 0x03, 0x7b, 0xbd, 0x9d, 0x28,
-	0x92, 0x75, 0x92, 0x97, 0xd5, 0x92, 0x77, 0x5a, 0xe0, 0xbe, 0xba, 0xa2, 0x96, 0x48, 0xa7, 0x53,
-	0xf7, 0xcc, 0x55, 0x35, 0x94, 0x26, 0x21, 0x7f, 0x69, 0xff, 0x2e, 0xef, 0x90, 0x44, 0xbd, 0x0d,
-	0xb3, 0x30, 0xc4, 0xba, 0x4b, 0x9a, 0xb7, 0xc0, 0x7d, 0x45, 0xb7, 0xa0, 0xee, 0x29, 0x62, 0xf2,
-	0x9e, 0x22, 0x20, 0xa1, 0x9c, 0x79, 0x15, 0xc1, 0xf1, 0x08, 0xfd, 0x3c, 0x13, 0xce, 0x6d, 0x5b,
-	0xb5, 0x8c, 0x32, 0x83, 0xc6, 0x9e, 0x3a, 0x3e, 0x99, 0x20, 0x68, 0xbf, 0x8b, 0xc1, 0x13, 0xdd,
-	0xf5, 0x34, 0xf7, 0x4c, 0xe6, 0x1b, 0xe9, 0xc1, 0x58, 0x4b, 0x7a, 0xf0, 0x3a, 0xe0, 0xae, 0x75,
-	0x7f, 0xac, 0xad, 0x01, 0x16, 0x4f, 0xc2, 0x40, 0xc1, 0x28, 0xdb, 0xa6, 0x51, 0xa4, 0x82, 0x36,
-	0xac, 0x78, 0x8f, 0x38, 0x0b, 0xe3, 0xbe, 0x36, 0x30, 0xa3, 0x5c, 0x74, 0x83, 0xfe, 0x41, 0x65,
-	0xac, 0xa5, 0x3b, 0xeb, 0xe9, 0x72, 0x71, 0x37, 0xf3, 0x4a, 0x1c, 0x2e, 0x75, 0xd1, 0x33, 0x8d,
-	0xaf, 0x37, 0x9b, 0xce, 0x11, 0xc1, 0x3f, 0x12, 0xa4, 0x38, 0xb7, 0x64, 0xba, 0x7b, 0x74, 0x55,
-	0x15, 0xa6, 0x6d, 0xf9, 0xe7, 0x92, 0xe8, 0xf6, 0x5c, 0x16, 0x00, 0x73, 0x3c, 0x45, 0xbf, 0x7b,
-	0x7f, 0xd3, 0xfd, 0x1e, 0xa2, 0xe9, 0x14, 0x93, 0x2d, 0xa7, 0x98, 0xf9, 0x1b, 0x82, 0x0b, 0x1d,
-	0x36, 0x7c, 0x0b, 0x30, 0x20, 0x01, 0x86, 0xfb, 0x2b, 0xb8, 0x99, 0x17, 0xe3, 0x70, 0xa1, 0xc3,
-	0xa6, 0xbc, 0xff, 0x57, 0x5d, 0xf5, 0x59, 0xec, 0x84, 0xd8, 0x62, 0xf7, 0xcb, 0x5b, 0x6c, 0xa1,
-	0xe8, 0x88, 0x0c, 0xc0, 0x80, 0xc8, 0x00, 0x7c, 0x3b, 0x0e, 0xe7, 0x3a, 0x69, 0x2c, 0x94, 0xd3,
-	0x7c, 0x29, 0xce, 0x0f, 0x34, 0xbf, 0xa1, 0xf9, 0xff, 0x42, 0x70, 0x2a, 0x6a, 0x93, 0xe4, 0xff,
-	0xb4, 0xca, 0x8b, 0x7d, 0x55, 0xe6, 0x8f, 0x08, 0x4e, 0x46, 0x6a, 0xac, 0xec, 0x99, 0x09, 0xe0,
-	0x5e, 0x3c, 0x62, 0xdd, 0x5d, 0x3c, 0xde, 0x1c, 0x84, 0xb3, 0x1d, 0xfc, 0x43, 0xa4, 0xe9, 0x38,
-	0x50, 0xcb, 0x71, 0xcc, 0xc2, 0x50, 0xfd, 0x38, 0x98, 0xcc, 0xa7, 0x14, 0xf0, 0x5e, 0xf1, 0xf2,
-	0x12, 0xf1, 0x1e, 0xe4, 0x25, 0x3a, 0x2d, 0x61, 0xf6, 0xf7, 0x36, 0x2f, 0x91, 0xbc, 0x0f, 0x79,
-	0x89, 0x81, 0x2e, 0xf3, 0x12, 0x37, 0x60, 0x9c, 0x35, 0xa6, 0xba, 0x7c, 0x59, 0xb5, 0x6f, 0x90,
-	0x9a, 0xc3, 0xa3, 0x82, 0x9d, 0x70, 0xe8, 0x29, 0x17, 0x56, 0xf3, 0x1b, 0xab, 0xf8, 0x5f, 0x35,
-	0x2b, 0x4c, 0xaa, 0xd5, 0xb6, 0xcb, 0x88, 0x3f, 0x48, 0x88, 0x7f, 0x01, 0x26, 0x9b, 0x44, 0x2b,
-	0x6f, 0x92, 0x6a, 0x03, 0xfe, 0x10, 0x85, 0x7f, 0x3c, 0x50, 0x88, 0x72, 0x9a, 0xe2, 0x0c, 0x61,
-	0x4b, 0x78, 0xa8, 0xc6, 0x7b, 0xdd, 0x56, 0x05, 0xdd, 0xd3, 0x49, 0x15, 0xb4, 0xad, 0x59, 0x70,
-	0x84, 0xd3, 0x2c, 0xd8, 0xb8, 0x75, 0xed, 0x8d, 0x9e, 0xaa, 0x18, 0xed, 0x22, 0x55, 0x31, 0xd6,
-	0x9d, 0xc5, 0x78, 0x39, 0x0e, 0xa7, 0xa2, 0xfe, 0x23, 0xeb, 0xd3, 0x37, 0x17, 0xeb, 0x9e, 0xdf,
-	0x77, 0x8b, 0x62, 0xe7, 0x23, 0xff, 0x9d, 0xa8, 0xc5, 0xdd, 0x37, 0x09, 0x7b, 0x7f, 0xab, 0xb0,
-	0xf3, 0x9d, 0x5a, 0x52, 0xe0, 0xd4, 0x7a, 0x94, 0x24, 0xcc, 0xbc, 0x13, 0x83, 0x85, 0x28, 0x7f,
-	0x37, 0x13, 0x9e, 0x07, 0xdf, 0x9b, 0xc6, 0xba, 0xf5, 0xa6, 0xbd, 0x3a, 0x45, 0xfe, 0xee, 0x26,
-	0x04, 0xbb, 0xdb, 0xd0, 0xb0, 0x7e, 0xf9, 0xbc, 0xc6, 0x27, 0x31, 0x88, 0xf8, 0x47, 0xb8, 0xcf,
-	0xc6, 0x66, 0xf2, 0x6a, 0x3f, 0xfd, 0xdc, 0xda, 0x4f, 0xa3, 0x75, 0x21, 0x29, 0xdf, 0xba, 0x90,
-	0xf9, 0x77, 0x0c, 0x4e, 0xf4, 0xc2, 0xa2, 0x7c, 0x46, 0x37, 0xbd, 0x29, 0x09, 0x9f, 0x8c, 0x90,
-	0x84, 0xcf, 0xfc, 0x27, 0x06, 0x27, 0x23, 0xfd, 0x2f, 0xf1, 0xc1, 0xc6, 0xb7, 0x6d, 0xbc, 0x97,
-	0x22, 0x4c, 0x46, 0xc9, 0x1b, 0x7f, 0x33, 0x2e, 0xda, 0x78, 0x51, 0xbb, 0xc9, 0x83, 0x8d, 0x0f,
-	0xec, 0x76, 0x49, 0x76, 0xd2, 0x5d, 0xfb, 0xdb, 0x18, 0x2c, 0x46, 0xfc, 0xbf, 0xe8, 0x83, 0x73,
-	0x68, 0x39, 0x87, 0xe3, 0x36, 0xec, 0xa5, 0x3f, 0xd7, 0xf4, 0xa2, 0x4d, 0x4c, 0x3a, 0xd5, 0x41,
-	0x98, 0x5a, 0xbd, 0xb1, 0x7a, 0x65, 0x23, 0xbf, 0x96, 0x5b, 0xdf, 0x58, 0x55, 0xf2, 0x1b, 0x5f,
-	0xbe, 0xba, 0x9a, 0xcf, 0x5d, 0xb9, 0xb1, 0xb4, 0x9e, 0xbb, 0x3c, 0xda, 0x87, 0x67, 0x61, 0xba,
-	0xfd, 0xf3, 0xd2, 0xfa, 0x7a, 0x9e, 0xbe, 0x1d, 0x45, 0xf8, 0x10, 0x1c, 0x6c, 0x27, 0x58, 0x59,
-	0x7f, 0xfa, 0xda, 0x2a, 0x23, 0x89, 0x2d, 0x3f, 0x7b, 0xe7, 0xfd, 0x74, 0xdf, 0xbb, 0xef, 0xa7,
-	0xfb, 0x3e, 0x7e, 0x3f, 0x8d, 0xbe, 0x71, 0x37, 0x8d, 0x5e, 0xbf, 0x9b, 0x46, 0xef, 0xdc, 0x4d,
-	0xa3, 0x3b, 0x77, 0xd3, 0xe8, 0x1f, 0x77, 0xd3, 0xe8, 0xc3, 0xbb, 0xe9, 0xbe, 0x8f, 0xef, 0xa6,
-	0xd1, 0x4b, 0x1f, 0xa4, 0xfb, 0xee, 0x7c, 0x90, 0xee, 0x7b, 0xf7, 0x83, 0x74, 0x1f, 0xec, 0x2f,
-	0x18, 0x25, 0xde, 0xbe, 0x2d, 0x0f, 0x2e, 0x55, 0xf4, 0xab, 0xce, 0x55, 0xea, 0x2a, 0x7a, 0xa6,
-	0x5f, 0xad, 0xe8, 0x3b, 0xa7, 0x37, 0x93, 0xf4, 0x6a, 0x75, 0xf6, 0xbf, 0x01, 0x00, 0x00, 0xff,
-	0xff, 0x9b, 0x39, 0xdb, 0xee, 0x11, 0x56, 0x00, 0x00,
+	// 3592 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x5c, 0x5f, 0x6c, 0x1c, 0x57,
+	0xd5, 0xef, 0xdd, 0xb5, 0x77, 0xbd, 0x67, 0x1d, 0xc7, 0xbe, 0x49, 0x1c, 0x3b, 0x7f, 0x9d, 0x49,
+	0x9a, 0xb8, 0x8e, 0xb3, 0x4e, 0x9c, 0x34, 0xf9, 0xd2, 0x7c, 0x6d, 0x3f, 0xc7, 0xb1, 0xd5, 0x95,
+	0xfc, 0x25, 0xd6, 0xc4, 0x49, 0x01, 0x21, 0x2d, 0xe3, 0x9d, 0xeb, 0x78, 0xe4, 0xdd, 0x9d, 0xed,
+	0xcc, 0xac, 0x37, 0x46, 0xe2, 0x89, 0x07, 0x24, 0xd4, 0x0a, 0xaa, 0x0a, 0x89, 0x0a, 0x10, 0x08,
+	0x04, 0x6a, 0x11, 0x52, 0x11, 0x08, 0x01, 0xe2, 0x05, 0x90, 0x10, 0x95, 0x40, 0xa5, 0x4f, 0xbc,
+	0xf0, 0x52, 0x55, 0x3c, 0xd0, 0x37, 0x1e, 0x28, 0x6f, 0x48, 0x68, 0xee, 0xdc, 0xd9, 0xdd, 0x99,
+	0xb9, 0x77, 0xe6, 0xce, 0xda, 0x69, 0x41, 0xcd, 0x9b, 0xe7, 0xce, 0xb9, 0x67, 0x7e, 0xf7, 0xdc,
+	0x73, 0xce, 0x3d, 0xf7, 0x9c, 0xb3, 0x86, 0x53, 0xad, 0x75, 0x62, 0xcd, 0x55, 0x35, 0x9d, 0x34,
+	0xaa, 0x64, 0x4e, 0x6b, 0x1a, 0x73, 0xdb, 0x97, 0xe6, 0x36, 0x0d, 0xdb, 0x31, 0xad, 0x9d, 0x52,
+	0xd3, 0x32, 0x1d, 0x13, 0x1f, 0x70, 0x49, 0x4a, 0x8c, 0xa4, 0xa4, 0x35, 0x8d, 0xd2, 0xf6, 0xa5,
+	0x23, 0x27, 0x1e, 0x98, 0xe6, 0x83, 0x1a, 0x99, 0xa3, 0x24, 0xeb, 0xad, 0x8d, 0x39, 0xbd, 0x65,
+	0x69, 0x8e, 0x61, 0x36, 0xbc, 0x49, 0x47, 0x4e, 0x86, 0xdf, 0x3b, 0x46, 0x9d, 0xd8, 0x8e, 0x56,
+	0x6f, 0x32, 0x82, 0x29, 0xde, 0x87, 0xab, 0x66, 0xbd, 0xde, 0x61, 0xa1, 0xf0, 0x28, 0x1c, 0xcd,
+	0xde, 0xaa, 0x19, 0xb6, 0x13, 0x47, 0xd3, 0x36, 0xad, 0xad, 0x8d, 0x9a, 0xd9, 0xf6, 0x68, 0x94,
+	0x5b, 0x90, 0x7f, 0xc1, 0x5b, 0x10, 0xbe, 0x0e, 0x39, 0xb2, 0x4d, 0x1a, 0x8e, 0x3d, 0x81, 0xa6,
+	0xb2, 0xd3, 0xc5, 0xf9, 0x53, 0x25, 0xce, 0xda, 0x4a, 0x8c, 0x7a, 0xc9, 0xa5, 0x54, 0xd9, 0x04,
+	0xe5, 0x83, 0x6b, 0x30, 0xdc, 0xfb, 0x02, 0x4f, 0xc2, 0x10, 0x7d, 0x55, 0x31, 0xf4, 0x09, 0x34,
+	0x85, 0xa6, 0xb3, 0x6a, 0x9e, 0x3e, 0x97, 0x75, 0x7c, 0x1d, 0xc0, 0x7b, 0xe5, 0x2e, 0x7a, 0x22,
+	0x33, 0x85, 0xa6, 0x8b, 0xf3, 0x47, 0x4a, 0x9e, 0x44, 0x4a, 0xbe, 0x44, 0x4a, 0x6b, 0xbe, 0x44,
+	0xd4, 0x02, 0xa5, 0x76, 0x9f, 0xf1, 0x04, 0xe4, 0xb7, 0x89, 0x65, 0x1b, 0x66, 0x63, 0x22, 0xeb,
+	0x31, 0x65, 0x8f, 0xf8, 0x30, 0xe4, 0xdd, 0xc5, 0xbb, 0x9f, 0x1b, 0xa0, 0x6f, 0x72, 0xee, 0x63,
+	0x59, 0xc7, 0xdf, 0x44, 0x70, 0xde, 0x5f, 0x72, 0x85, 0x3c, 0x24, 0xd5, 0x96, 0xbb, 0x0f, 0x15,
+	0xdb, 0xd1, 0x2c, 0x87, 0xe8, 0x15, 0x0f, 0x89, 0xe6, 0x38, 0x96, 0xb1, 0xde, 0x72, 0x88, 0x3d,
+	0x31, 0x48, 0xf1, 0xfc, 0x2f, 0x77, 0xe9, 0x2f, 0x32, 0x3e, 0x4b, 0x3e, 0x9b, 0xbb, 0x1e, 0x17,
+	0xba, 0xe4, 0x85, 0x0e, 0x8f, 0x17, 0x9e, 0x50, 0xcf, 0xb5, 0xe5, 0x48, 0xf1, 0x77, 0x11, 0x5c,
+	0xe0, 0xc0, 0xab, 0x9a, 0xf5, 0x66, 0x8d, 0x70, 0x01, 0xe6, 0x28, 0xc0, 0xe7, 0xe4, 0x00, 0x2e,
+	0xfa, 0x7c, 0xa2, 0x10, 0x9f, 0x6a, 0xcb, 0x12, 0xe3, 0xd7, 0x11, 0xcc, 0x70, 0x40, 0x6e, 0x68,
+	0x46, 0x8d, 0x87, 0x30, 0x4f, 0x11, 0xde, 0x90, 0x43, 0xb8, 0x4c, 0x99, 0x44, 0xe1, 0x9d, 0x6d,
+	0x4b, 0x51, 0xe2, 0xef, 0xf0, 0x05, 0xe8, 0xea, 0x96, 0x5e, 0x31, 0x5b, 0x4e, 0x14, 0xde, 0x10,
+	0x85, 0xf7, 0xac, 0x1c, 0x3c, 0x57, 0xed, 0xf4, 0x3b, 0x2d, 0x27, 0x0a, 0x70, 0xba, 0x2d, 0x49,
+	0x8b, 0x5f, 0x43, 0x30, 0xad, 0x93, 0xaa, 0x61, 0x53, 0x60, 0xae, 0x96, 0xda, 0xd5, 0x4d, 0xa2,
+	0xb7, 0xb8, 0xc2, 0x2b, 0x50, 0x74, 0xd7, 0xb9, 0xe8, 0x6e, 0x31, 0x26, 0x6b, 0x9a, 0xbd, 0x75,
+	0xd7, 0x67, 0x11, 0x45, 0x76, 0x46, 0x97, 0xa0, 0xc3, 0xaf, 0x20, 0x38, 0x1b, 0x42, 0x25, 0xb2,
+	0x09, 0xa0, 0x98, 0xae, 0x25, 0x63, 0x12, 0x99, 0x83, 0xa2, 0x27, 0x52, 0x71, 0xa4, 0x14, 0x63,
+	0x04, 0x45, 0x49, 0x29, 0xc5, 0xe8, 0x7f, 0x40, 0x4a, 0x42, 0xd5, 0x7f, 0x35, 0x82, 0x2a, 0x46,
+	0xb3, 0x86, 0x29, 0xaa, 0xff, 0x49, 0x44, 0x25, 0x56, 0xaa, 0xd3, 0x7a, 0x32, 0x19, 0xfe, 0x32,
+	0x82, 0x27, 0x83, 0x98, 0x44, 0x96, 0xb8, 0x8f, 0x02, 0xba, 0x9a, 0x08, 0x48, 0x64, 0x84, 0xa7,
+	0xf4, 0x24, 0x22, 0xba, 0x6d, 0x5a, 0xd5, 0x31, 0xb6, 0x0d, 0x67, 0x27, 0x51, 0xb9, 0x47, 0x62,
+	0xb6, 0x6d, 0x81, 0x31, 0x49, 0x52, 0x6e, 0x4d, 0x82, 0x8e, 0x2a, 0x77, 0x08, 0x95, 0x48, 0xb9,
+	0xf7, 0xc7, 0x28, 0x77, 0x00, 0x93, 0x50, 0xb9, 0xb5, 0x44, 0x2a, 0x8e, 0x94, 0x62, 0x94, 0x7b,
+	0x54, 0x52, 0x4a, 0x71, 0xca, 0xad, 0x49, 0xd0, 0x51, 0x45, 0x0a, 0xa2, 0x12, 0x29, 0xd2, 0x58,
+	0x8c, 0x22, 0xf5, 0x42, 0x12, 0x2a, 0x92, 0x96, 0x44, 0x44, 0x2d, 0x2d, 0x08, 0x26, 0xc6, 0xd2,
+	0x70, 0x8c, 0xa5, 0xf5, 0xe2, 0x89, 0xb1, 0x34, 0x2d, 0x99, 0x0c, 0xb7, 0xe1, 0x84, 0x0b, 0xc2,
+	0x12, 0x6b, 0xcf, 0x01, 0x0a, 0xe4, 0x22, 0x17, 0x88, 0xcb, 0xd5, 0x12, 0xaa, 0xcd, 0x51, 0x47,
+	0xfc, 0x1a, 0xbf, 0x04, 0xc7, 0xbc, 0x0f, 0x6f, 0x18, 0x16, 0xef, 0xb3, 0x07, 0xe9, 0x67, 0x4b,
+	0xe2, 0xcf, 0x2e, 0xbb, 0xf3, 0xa2, 0x1f, 0x9d, 0x74, 0x44, 0x2f, 0xf1, 0x0f, 0x10, 0xcc, 0x85,
+	0x54, 0x54, 0x6b, 0x54, 0x49, 0xad, 0x62, 0x91, 0x97, 0x5a, 0xc4, 0xe6, 0xae, 0xfe, 0x10, 0x85,
+	0xf1, 0x7c, 0xb2, 0xa6, 0x52, 0x4e, 0xaa, 0xcf, 0x28, 0x8a, 0x6b, 0x46, 0x93, 0xa6, 0xc6, 0x3f,
+	0x45, 0x70, 0x85, 0x61, 0xf2, 0x21, 0xca, 0x29, 0xf1, 0x38, 0x45, 0xbb, 0xc8, 0x45, 0xcb, 0xbe,
+	0xe6, 0x7d, 0x5a, 0x46, 0xa3, 0x4b, 0x56, 0xaa, 0x19, 0xf8, 0xab, 0x08, 0xce, 0xf1, 0xc4, 0xcb,
+	0x03, 0x7a, 0x58, 0x52, 0xbb, 0x17, 0x19, 0x87, 0x04, 0xed, 0x16, 0x90, 0xe1, 0xcf, 0xc3, 0x49,
+	0x4f, 0xc9, 0xc4, 0x48, 0x26, 0x28, 0x92, 0x4b, 0x62, 0x3d, 0x13, 0x43, 0xf0, 0x14, 0x58, 0xf4,
+	0xed, 0x2f, 0x21, 0x38, 0xc3, 0x36, 0x8f, 0x29, 0xba, 0x60, 0xd3, 0x26, 0x29, 0x82, 0xa7, 0xb9,
+	0x08, 0x3c, 0xe6, 0x9e, 0xbe, 0x0b, 0xb6, 0x69, 0xaa, 0x9a, 0x40, 0x83, 0xbf, 0x00, 0x53, 0x75,
+	0xcd, 0xda, 0x22, 0x56, 0xc5, 0x22, 0x55, 0xd3, 0xd2, 0x79, 0x20, 0x8e, 0x50, 0x10, 0xf3, 0x5c,
+	0x10, 0xff, 0x4f, 0x27, 0xab, 0x6c, 0x6e, 0x14, 0xc1, 0xf1, 0x7a, 0x1c, 0x01, 0xfe, 0x36, 0x82,
+	0x59, 0xde, 0xfd, 0xc4, 0x78, 0xd0, 0xd0, 0xb8, 0x02, 0x39, 0x9a, 0x26, 0x7c, 0xbd, 0xcb, 0xd8,
+	0xc8, 0x84, 0xaf, 0x02, 0x5a, 0xfc, 0x7d, 0x04, 0x25, 0x5e, 0x84, 0x4d, 0xac, 0xba, 0xd1, 0xd0,
+	0xb8, 0x7e, 0xe1, 0x58, 0x8c, 0x5f, 0x88, 0x86, 0xd8, 0x1d, 0x46, 0x1c, 0xbf, 0xd0, 0x96, 0xa6,
+	0xc6, 0x3f, 0x43, 0x70, 0x85, 0x77, 0x95, 0x4a, 0xf4, 0x62, 0xc7, 0x29, 0xda, 0x5b, 0x92, 0x37,
+	0xaa, 0x24, 0x57, 0x36, 0xd7, 0x4e, 0x37, 0x45, 0xa4, 0x01, 0x62, 0xa3, 0x3c, 0x91, 0x46, 0x03,
+	0xc4, 0x06, 0x3a, 0xdd, 0x96, 0xa4, 0xc5, 0x7f, 0x45, 0xb0, 0x14, 0xf2, 0xb8, 0xe4, 0xa1, 0x43,
+	0xac, 0x86, 0x56, 0xab, 0x70, 0x90, 0x1b, 0x0d, 0xc3, 0x31, 0xf8, 0x8a, 0x71, 0x92, 0x42, 0xbf,
+	0x9b, 0xec, 0x82, 0x97, 0x18, 0xff, 0xc8, 0x7a, 0xca, 0x3e, 0xf3, 0xe8, 0x82, 0x9e, 0xb3, 0x76,
+	0xc5, 0x01, 0xff, 0x05, 0xc1, 0xcd, 0x14, 0xcb, 0x14, 0x79, 0xac, 0x29, 0xba, 0xc6, 0xd5, 0x5d,
+	0xac, 0x51, 0xe4, 0xcc, 0x6e, 0x58, 0xfd, 0x4f, 0xc7, 0xef, 0x20, 0x78, 0x36, 0x6e, 0x39, 0xc9,
+	0x76, 0x72, 0x8a, 0x2e, 0x6c, 0x85, 0xbb, 0x30, 0x21, 0x98, 0x44, 0x7b, 0xb9, 0x46, 0xfa, 0x9b,
+	0x4a, 0xe3, 0x00, 0x6e, 0xea, 0xa4, 0xe1, 0x18, 0x8d, 0x16, 0xd1, 0x2b, 0x9a, 0x5d, 0x69, 0x90,
+	0x76, 0x74, 0x1d, 0x4a, 0x4c, 0x1c, 0xc0, 0xc9, 0xa0, 0x30, 0x76, 0x0b, 0xf6, 0x6d, 0xd2, 0xe6,
+	0xc4, 0x01, 0xed, 0x54, 0x33, 0xf0, 0x6f, 0x11, 0x5c, 0xa7, 0xd1, 0x64, 0xa5, 0xba, 0x69, 0xd4,
+	0xf4, 0x94, 0xf6, 0x73, 0x9a, 0x42, 0x7f, 0x81, 0x0b, 0x9d, 0x86, 0x92, 0x8b, 0x2e, 0xd3, 0x34,
+	0x46, 0x73, 0xd9, 0x4e, 0x3f, 0x0d, 0xff, 0x12, 0xc1, 0xd5, 0x84, 0x45, 0x88, 0xac, 0xe3, 0x0c,
+	0x5d, 0xc1, 0x52, 0xda, 0x15, 0x88, 0x4c, 0xe2, 0xa2, 0x9d, 0x72, 0x0e, 0xfe, 0x11, 0x82, 0x4b,
+	0x42, 0xd4, 0xc2, 0x38, 0xff, 0x49, 0x0a, 0x7b, 0x81, 0x1f, 0x86, 0x70, 0xbf, 0x2e, 0x0c, 0xfc,
+	0x67, 0xab, 0x29, 0xe8, 0xf1, 0x4f, 0x10, 0x5c, 0x16, 0xc2, 0x8d, 0xb9, 0x44, 0x9e, 0x8d, 0x51,
+	0x72, 0x3e, 0xe0, 0x98, 0xeb, 0x64, 0xa9, 0x9a, 0x6a, 0x06, 0x7e, 0x13, 0xc1, 0xc5, 0xd4, 0x9a,
+	0x71, 0x8e, 0x22, 0xfe, 0xbf, 0x14, 0x88, 0x45, 0x4a, 0x71, 0xbe, 0x9a, 0x42, 0x1f, 0xde, 0x42,
+	0x30, 0x2f, 0x16, 0xb0, 0xf0, 0x10, 0x9e, 0xa6, 0x68, 0x6f, 0xa6, 0x91, 0xaf, 0xf0, 0x24, 0xbe,
+	0x50, 0x4d, 0x33, 0x01, 0xff, 0x38, 0x4e, 0x25, 0x62, 0x2e, 0xcd, 0x4f, 0xa5, 0x86, 0x2c, 0xbe,
+	0x3e, 0x0b, 0x20, 0x8b, 0x2e, 0xd2, 0x6e, 0x6c, 0x26, 0x86, 0x1c, 0x13, 0x49, 0xce, 0xc4, 0xc4,
+	0x66, 0x02, 0xcc, 0x31, 0xe1, 0xe4, 0x5c, 0x35, 0xdd, 0x14, 0x7a, 0x68, 0x7a, 0xa1, 0x78, 0xbf,
+	0x11, 0xcf, 0xf9, 0x98, 0x43, 0xd3, 0x8b, 0xb8, 0xfb, 0x09, 0x75, 0xae, 0xd9, 0xfd, 0x4d, 0xc5,
+	0xbf, 0x43, 0xf0, 0x8c, 0xc4, 0x82, 0x44, 0x36, 0x3a, 0x4b, 0x57, 0x53, 0xee, 0x67, 0x35, 0x22,
+	0x63, 0xbd, 0x62, 0xf7, 0x31, 0x0f, 0xff, 0x02, 0xc1, 0xd3, 0x71, 0x0b, 0x10, 0xdf, 0x9f, 0x2e,
+	0xc4, 0x1c, 0x40, 0x42, 0x10, 0xe2, 0x7b, 0xd4, 0x45, 0x92, 0x72, 0x0e, 0x75, 0x38, 0xad, 0xa6,
+	0x4d, 0x2c, 0xa7, 0x0b, 0xdc, 0x26, 0x9a, 0x55, 0xdd, 0xec, 0x81, 0x19, 0xc5, 0x5d, 0x8a, 0xb1,
+	0xde, 0x7b, 0x94, 0x9d, 0x8f, 0xe0, 0x2e, 0x65, 0xd6, 0xfd, 0x22, 0xc7, 0x7a, 0x5b, 0x69, 0x26,
+	0xdc, 0x1c, 0x06, 0xe8, 0x02, 0x51, 0xde, 0x2b, 0xc2, 0x39, 0xd9, 0xd3, 0x6b, 0x19, 0xf6, 0x75,
+	0xd6, 0xe8, 0xec, 0x34, 0x09, 0xad, 0x05, 0x8a, 0x2a, 0x8b, 0x3e, 0xd3, 0xb5, 0x9d, 0x26, 0x51,
+	0x87, 0xdb, 0x3d, 0x4f, 0xf8, 0xb3, 0x70, 0xa8, 0xa9, 0x59, 0xae, 0x44, 0x7a, 0x8d, 0x6e, 0xc3,
+	0x64, 0xe5, 0xc3, 0x69, 0x2e, 0xbf, 0x55, 0x3a, 0xa3, 0xc7, 0x26, 0x36, 0x4c, 0xf5, 0x40, 0x33,
+	0x3a, 0x88, 0x9f, 0x81, 0x02, 0xcd, 0xc8, 0xd4, 0x0c, 0xdb, 0xa1, 0x85, 0xc5, 0xe2, 0xfc, 0x71,
+	0x7e, 0xca, 0x43, 0xb3, 0xb7, 0x56, 0x0c, 0xdb, 0x51, 0x87, 0x1c, 0xf6, 0x17, 0x9e, 0x87, 0x41,
+	0xa3, 0xd1, 0x6c, 0x39, 0xb4, 0xec, 0x58, 0x9c, 0x3f, 0x26, 0x40, 0xb2, 0x53, 0x33, 0x35, 0x5d,
+	0xf5, 0x48, 0xb1, 0x06, 0x53, 0xa1, 0x90, 0xa3, 0xe2, 0x98, 0x95, 0x6a, 0xcd, 0xb4, 0x09, 0xf5,
+	0xdf, 0x66, 0xcb, 0x61, 0x75, 0xc8, 0xc9, 0x48, 0x5d, 0xf4, 0x16, 0xab, 0x24, 0xab, 0xc7, 0x48,
+	0x40, 0xf6, 0x6b, 0xe6, 0xa2, 0x3b, 0x7f, 0xcd, 0x9b, 0x8e, 0x5f, 0x84, 0xa3, 0xdd, 0xb4, 0x77,
+	0x94, 0x7b, 0x2e, 0x89, 0xfb, 0x61, 0xc7, 0x4f, 0x66, 0x87, 0x18, 0xdf, 0x80, 0x23, 0xdd, 0x08,
+	0xbb, 0xbb, 0x0a, 0xab, 0xd5, 0xa8, 0x18, 0x3a, 0x2d, 0xfd, 0x15, 0xd4, 0xc3, 0x1d, 0x8a, 0x8e,
+	0x9c, 0xd5, 0x56, 0xa3, 0xac, 0xe3, 0x32, 0x14, 0x98, 0xab, 0x34, 0x2d, 0x5a, 0x87, 0x1b, 0x99,
+	0x3f, 0xcf, 0x77, 0xed, 0x8c, 0x01, 0x0d, 0xa1, 0xcb, 0xfe, 0x14, 0xb5, 0x3b, 0x1b, 0x97, 0x61,
+	0xac, 0x8b, 0xc3, 0x75, 0x57, 0x2d, 0x8b, 0xb0, 0xe2, 0x19, 0x7f, 0x0f, 0x96, 0x3d, 0x1a, 0x75,
+	0xb4, 0x33, 0x8d, 0x8d, 0x60, 0x15, 0xc6, 0x6b, 0x9a, 0x7b, 0xe7, 0xf3, 0xc2, 0x19, 0xba, 0x1c,
+	0x62, 0xb7, 0x6a, 0x0e, 0x2b, 0x7c, 0xc5, 0xef, 0xe9, 0x41, 0x77, 0xee, 0x62, 0x67, 0xaa, 0x4a,
+	0x67, 0xe2, 0xeb, 0x30, 0x69, 0x5a, 0xc6, 0x03, 0xc3, 0x73, 0xb4, 0x21, 0x29, 0x15, 0xa9, 0x94,
+	0xc6, 0x7d, 0x82, 0x90, 0x90, 0x8e, 0xc0, 0x90, 0xa1, 0x93, 0x86, 0x63, 0x38, 0x3b, 0xb4, 0xa2,
+	0x54, 0x50, 0x3b, 0xcf, 0xf8, 0x32, 0x8c, 0x6f, 0x18, 0x96, 0xed, 0x44, 0x79, 0xee, 0xa3, 0x94,
+	0x07, 0xe8, 0xdb, 0x10, 0xc3, 0x45, 0x18, 0xb6, 0x88, 0x63, 0xed, 0x54, 0x9a, 0x66, 0xcd, 0xa8,
+	0xee, 0xb0, 0x2a, 0xcc, 0x94, 0xe0, 0x82, 0xea, 0x58, 0x3b, 0xab, 0x94, 0x4e, 0x2d, 0x5a, 0xdd,
+	0x07, 0x3c, 0x01, 0x79, 0xcd, 0x71, 0x48, 0xbd, 0xe9, 0xd0, 0x8a, 0xc9, 0xa0, 0xea, 0x3f, 0xe2,
+	0x45, 0xd8, 0x4f, 0x1e, 0x36, 0x0d, 0x4f, 0x71, 0xbc, 0xa2, 0xfe, 0x68, 0x62, 0x51, 0x7f, 0xa4,
+	0x3b, 0x85, 0x56, 0xf6, 0x4f, 0xc3, 0xbe, 0xaa, 0xe5, 0x5a, 0x03, 0xab, 0xe8, 0xd0, 0x8a, 0x43,
+	0x41, 0x1d, 0x76, 0x07, 0xfd, 0x2a, 0x0f, 0xfe, 0x14, 0x1c, 0xf5, 0x56, 0x1f, 0xac, 0x7e, 0xad,
+	0x6b, 0xd5, 0x2d, 0x73, 0x63, 0x83, 0x15, 0x05, 0x62, 0x94, 0x7a, 0x82, 0xce, 0xee, 0x2d, 0x7c,
+	0xdd, 0xf4, 0xa6, 0xe2, 0x0b, 0x30, 0x50, 0x27, 0x75, 0x93, 0xa5, 0xf3, 0x27, 0xf9, 0x89, 0x3e,
+	0x52, 0x37, 0x55, 0x4a, 0x86, 0x55, 0x18, 0x8b, 0x78, 0x6c, 0x96, 0x93, 0x7f, 0x92, 0x7f, 0x36,
+	0x86, 0x3c, 0xac, 0x3a, 0x6a, 0x87, 0x46, 0xf0, 0x3d, 0x18, 0x6f, 0x5a, 0x64, 0xbb, 0xa2, 0xb5,
+	0x1c, 0xd3, 0xd5, 0x3f, 0xe2, 0x54, 0x9a, 0xa6, 0xd1, 0x70, 0xfc, 0x2c, 0xbb, 0x68, 0xbf, 0x6c,
+	0xe2, 0xac, 0x52, 0x3a, 0xf5, 0x80, 0x3b, 0x7f, 0xa1, 0xe5, 0x98, 0x3d, 0x83, 0xf8, 0x32, 0xe4,
+	0x36, 0x89, 0xa6, 0x13, 0x8b, 0xa5, 0xbf, 0x8f, 0xf2, 0x9b, 0x3a, 0x28, 0x89, 0xca, 0x48, 0x95,
+	0x37, 0x11, 0x3c, 0x25, 0x1f, 0xed, 0x5f, 0x81, 0x1c, 0xb3, 0x17, 0x24, 0x61, 0x2f, 0x8c, 0x16,
+	0x2f, 0xc3, 0x54, 0x7c, 0xb9, 0xd7, 0xd0, 0xa9, 0x77, 0xcf, 0xaa, 0xc7, 0xc4, 0x95, 0xda, 0xb2,
+	0xae, 0xbc, 0x81, 0xe0, 0xac, 0x64, 0xd0, 0x70, 0x15, 0xf2, 0xbe, 0xa7, 0x40, 0x12, 0x9e, 0xc2,
+	0x27, 0xde, 0x33, 0xa8, 0x26, 0x4c, 0x4b, 0x47, 0xcc, 0x8b, 0x30, 0xcc, 0x9c, 0x75, 0xf7, 0xe0,
+	0x1c, 0x11, 0x28, 0x01, 0xf3, 0xcd, 0xf4, 0xdc, 0x2c, 0x3a, 0xdd, 0x07, 0xe5, 0x8f, 0x08, 0xce,
+	0xc8, 0x34, 0x0d, 0x04, 0x4f, 0x40, 0x94, 0xee, 0x04, 0xbc, 0x0d, 0xe3, 0x82, 0x53, 0x26, 0x93,
+	0x64, 0x90, 0x07, 0x6c, 0xce, 0x09, 0xd3, 0xe3, 0x69, 0xb2, 0x01, 0x4f, 0xa3, 0xbc, 0x82, 0x40,
+	0x49, 0xee, 0x37, 0xc0, 0xb3, 0x80, 0xc3, 0x35, 0xe8, 0x4e, 0x17, 0xd2, 0xa8, 0x1d, 0x10, 0x41,
+	0xc8, 0xdd, 0x66, 0x42, 0xee, 0xf6, 0x38, 0x80, 0x9f, 0x10, 0x34, 0x74, 0x8a, 0xa6, 0xa0, 0x16,
+	0xd8, 0x48, 0x59, 0x57, 0xfe, 0x1e, 0x12, 0xaf, 0xd0, 0x42, 0xd2, 0x21, 0x9a, 0x86, 0xd1, 0x60,
+	0x1e, 0xa2, 0xa3, 0x5e, 0x23, 0x76, 0xcf, 0x8a, 0x43, 0xd8, 0xb3, 0x21, 0xec, 0xe7, 0x60, 0xff,
+	0xba, 0xd1, 0xd0, 0xac, 0x9d, 0x4a, 0x75, 0x93, 0x54, 0xb7, 0xec, 0x56, 0x9d, 0x86, 0x28, 0x05,
+	0x75, 0xc4, 0x1b, 0x5e, 0x64, 0xa3, 0xf8, 0x3c, 0x8c, 0x05, 0xb3, 0x67, 0xe4, 0xa1, 0x17, 0x7e,
+	0x0c, 0xab, 0xa3, 0xa4, 0x37, 0xa9, 0x45, 0x1e, 0x3a, 0xca, 0xcb, 0x59, 0x38, 0x2d, 0xd1, 0xca,
+	0xf0, 0xc8, 0x56, 0x1c, 0x36, 0x8b, 0x6c, 0x1f, 0x66, 0x81, 0x4f, 0x40, 0x71, 0x5d, 0xb3, 0x89,
+	0x7f, 0x74, 0x7a, 0x62, 0x29, 0xb8, 0x43, 0xde, 0x81, 0x79, 0x0c, 0xa0, 0x41, 0xda, 0xfe, 0xeb,
+	0x41, 0x4f, 0xb0, 0x0d, 0xd2, 0xf6, 0xde, 0xce, 0x02, 0xde, 0x30, 0xad, 0x2d, 0x86, 0xd4, 0xef,
+	0x47, 0xcb, 0x79, 0x4b, 0x73, 0xdf, 0x50, 0xac, 0xf7, 0x59, 0x63, 0xda, 0xb8, 0xeb, 0x1c, 0x35,
+	0xdb, 0x6c, 0xb0, 0xd8, 0x88, 0x3d, 0xe1, 0x5b, 0x30, 0x58, 0xd5, 0x5a, 0x36, 0x61, 0x61, 0x50,
+	0x49, 0xba, 0x69, 0x64, 0xd1, 0x9d, 0xa5, 0x7a, 0x93, 0x95, 0x37, 0xb2, 0x70, 0x2a, 0xb1, 0x91,
+	0xe3, 0x91, 0x6d, 0xc6, 0x4d, 0x7f, 0x0d, 0xde, 0x2e, 0xcc, 0x4a, 0xf6, 0x99, 0xf4, 0xae, 0xa0,
+	0xd7, 0x27, 0x0f, 0xa4, 0xf1, 0xc9, 0xbd, 0xaa, 0x3f, 0x18, 0x52, 0xfd, 0xd0, 0xfe, 0xe6, 0xe2,
+	0xf7, 0x37, 0x2f, 0xb5, 0xbf, 0x43, 0x82, 0xfd, 0xe5, 0x98, 0x59, 0x81, 0x67, 0x66, 0xca, 0xb7,
+	0x72, 0x70, 0x46, 0xa6, 0xc7, 0x05, 0x9f, 0x84, 0x62, 0xa7, 0x50, 0xcc, 0xb6, 0xa9, 0xa0, 0x82,
+	0x3f, 0x54, 0xd6, 0xdd, 0x4b, 0x55, 0xb7, 0x92, 0xec, 0x1a, 0x41, 0x26, 0xe6, 0x52, 0xd5, 0xf9,
+	0x24, 0xbd, 0x54, 0x69, 0x3d, 0x4f, 0xae, 0x6a, 0xea, 0x66, 0x5d, 0x33, 0x1a, 0xcc, 0x77, 0xb0,
+	0xa7, 0xe0, 0x61, 0x30, 0xd0, 0xe7, 0x75, 0x28, 0x27, 0x7f, 0x1d, 0x5a, 0x83, 0x49, 0x5f, 0x09,
+	0xa3, 0x67, 0x48, 0x3e, 0xe9, 0x0c, 0x19, 0xf7, 0xe7, 0x86, 0x8e, 0x91, 0x10, 0x57, 0x76, 0x44,
+	0x31, 0xae, 0x43, 0x29, 0xb8, 0x7a, 0xb7, 0x20, 0xc6, 0x55, 0x7c, 0xd8, 0x15, 0xfa, 0x3a, 0xec,
+	0x96, 0x61, 0x6c, 0x93, 0x68, 0x96, 0xb3, 0x4e, 0xb4, 0x2e, 0x3a, 0x48, 0x62, 0x35, 0xda, 0x99,
+	0xd3, 0xe5, 0x93, 0x1c, 0xa2, 0x14, 0x93, 0x43, 0x94, 0xc8, 0x5d, 0x61, 0xb8, 0x9f, 0xbb, 0x42,
+	0x37, 0xe6, 0xdc, 0x27, 0x1f, 0x73, 0xfe, 0x0d, 0x81, 0x92, 0xdc, 0x6f, 0xf5, 0x91, 0x1d, 0xee,
+	0xbd, 0x61, 0xc8, 0x40, 0xf0, 0xc2, 0xf3, 0x3c, 0x0c, 0xd3, 0xfb, 0xa2, 0xef, 0xb7, 0x06, 0x25,
+	0xfc, 0x56, 0xd1, 0x9d, 0xc1, 0x1e, 0x94, 0x77, 0x51, 0xd0, 0x15, 0xec, 0x71, 0x64, 0xcd, 0x17,
+	0x51, 0x26, 0x85, 0xbb, 0xcf, 0x26, 0x46, 0x1b, 0x03, 0x41, 0x61, 0x2a, 0x7f, 0x42, 0x70, 0x2a,
+	0xb9, 0x09, 0xa6, 0xdf, 0x00, 0xfc, 0xe3, 0x58, 0xd1, 0xaf, 0x32, 0x70, 0x5a, 0xa2, 0x95, 0xcc,
+	0x5d, 0x93, 0x4e, 0x1c, 0xcd, 0xa8, 0xd9, 0x52, 0x9b, 0xe4, 0x13, 0x3f, 0xb2, 0x35, 0x85, 0x23,
+	0xa4, 0x81, 0x7e, 0x22, 0xa4, 0x5d, 0xab, 0xf8, 0xd7, 0x10, 0xcc, 0xc8, 0x77, 0x80, 0xc9, 0x9c,
+	0x79, 0x7b, 0x73, 0x05, 0x7b, 0x0b, 0x41, 0xca, 0x5e, 0xaf, 0x64, 0x6c, 0x07, 0xfd, 0x30, 0xc8,
+	0xf3, 0x30, 0x2c, 0xb0, 0x91, 0x41, 0x9c, 0x95, 0x40, 0xfc, 0x7a, 0x48, 0x0f, 0x45, 0x55, 0xa1,
+	0x7e, 0xf5, 0x70, 0x19, 0xa6, 0x6a, 0x9a, 0xd3, 0xd3, 0xf3, 0x10, 0xee, 0x00, 0xe8, 0x4a, 0xd6,
+	0xa3, 0xe3, 0x6d, 0xa5, 0x17, 0x36, 0x71, 0xf4, 0x39, 0x9b, 0x42, 0x9f, 0x07, 0x12, 0x6d, 0x34,
+	0x14, 0xe8, 0x29, 0xef, 0x20, 0x38, 0x1a, 0xd3, 0x65, 0x89, 0x27, 0x61, 0xc8, 0xeb, 0x2e, 0xeb,
+	0xec, 0x5b, 0x9e, 0x3e, 0x97, 0x75, 0xbc, 0x02, 0x87, 0x3a, 0x07, 0xf9, 0x86, 0x61, 0xa5, 0xb8,
+	0xb4, 0x62, 0x76, 0x8e, 0x2f, 0x1b, 0x16, 0x49, 0x73, 0xfc, 0xca, 0x6c, 0xf6, 0xe7, 0x60, 0x52,
+	0xd8, 0xbe, 0x19, 0xb7, 0x1a, 0xe9, 0x98, 0x5d, 0xf9, 0x3d, 0x82, 0x63, 0x71, 0x9d, 0x7b, 0x7b,
+	0xf2, 0x95, 0xbd, 0x92, 0x47, 0xac, 0x83, 0xfe, 0x39, 0x82, 0xa9, 0xa4, 0x0e, 0xc0, 0xb8, 0xd5,
+	0x3c, 0x52, 0xb3, 0x8d, 0x45, 0xfe, 0xaf, 0x3c, 0xa4, 0x6c, 0x34, 0xc1, 0x73, 0x70, 0x90, 0xf6,
+	0xb2, 0x84, 0xd3, 0xbe, 0xde, 0x9a, 0xc6, 0x1a, 0xa4, 0x1d, 0x4a, 0xfa, 0x46, 0x2a, 0x2f, 0x99,
+	0xfe, 0x2a, 0x2f, 0x8f, 0x6b, 0x23, 0xf2, 0xb5, 0x11, 0x19, 0xdd, 0xc9, 0x4b, 0xe8, 0xce, 0x1d,
+	0x18, 0x67, 0x39, 0x6d, 0x86, 0xd1, 0x68, 0x38, 0xc4, 0xda, 0xd6, 0x6a, 0xc9, 0xf7, 0x96, 0x83,
+	0x6c, 0x22, 0x85, 0x57, 0x66, 0xd3, 0x82, 0x75, 0x97, 0xc2, 0xae, 0xea, 0x2e, 0x3d, 0x21, 0x1c,
+	0xa4, 0x09, 0xe1, 0xc4, 0x45, 0x96, 0x62, 0xdf, 0x45, 0x96, 0xee, 0x3d, 0x63, 0x58, 0xfa, 0x9e,
+	0xd1, 0x49, 0xf5, 0xef, 0xdb, 0x45, 0xaa, 0x7f, 0x64, 0x57, 0xa9, 0x7e, 0xd7, 0x07, 0xcf, 0xa5,
+	0xed, 0x76, 0xeb, 0x78, 0x2b, 0xd4, 0xeb, 0xad, 0xe2, 0xee, 0x37, 0xeb, 0x70, 0xb8, 0x53, 0x21,
+	0x0f, 0x55, 0x4d, 0x3d, 0x3b, 0x9e, 0x89, 0xad, 0x81, 0x07, 0xeb, 0xa6, 0x87, 0x08, 0x6f, 0x58,
+	0xf9, 0x21, 0xe2, 0xa4, 0xb4, 0x45, 0x27, 0x8b, 0x8c, 0x79, 0x20, 0x09, 0xf3, 0xe8, 0x89, 0x74,
+	0x32, 0x29, 0x22, 0x1d, 0xe5, 0x43, 0x04, 0xc7, 0x63, 0xbb, 0xb5, 0xdd, 0x50, 0x8f, 0xf5, 0x82,
+	0x37, 0xb4, 0xba, 0x2f, 0x6a, 0xf0, 0x86, 0x6e, 0x6b, 0x75, 0xd2, 0xef, 0xa7, 0xf7, 0xec, 0x54,
+	0xe9, 0x6a, 0xfc, 0x80, 0xfc, 0xcd, 0xfa, 0x1b, 0xbc, 0x4d, 0x12, 0x75, 0x27, 0x9c, 0x84, 0x22,
+	0xeb, 0x0f, 0xe9, 0x15, 0x81, 0x37, 0x44, 0x45, 0xd0, 0x71, 0xea, 0x19, 0x79, 0xa7, 0x1e, 0x93,
+	0xa7, 0x56, 0xbe, 0x8e, 0x60, 0x26, 0x45, 0x47, 0x4e, 0x37, 0x9f, 0x8a, 0x02, 0xf9, 0xd4, 0x7e,
+	0x77, 0x26, 0x0e, 0xda, 0x6f, 0x32, 0xf0, 0xdc, 0xee, 0xba, 0x92, 0xf7, 0x4c, 0xe7, 0xbb, 0xb9,
+	0xba, 0x4c, 0x20, 0x57, 0x77, 0x0f, 0x70, 0xb4, 0xfb, 0x85, 0xd9, 0xf7, 0x59, 0xb9, 0x0e, 0x57,
+	0x75, 0x2c, 0xd2, 0xc2, 0x8a, 0x27, 0x20, 0x5f, 0x35, 0x1b, 0x8e, 0x65, 0xd6, 0xa8, 0xa2, 0x0d,
+	0xab, 0xfe, 0x23, 0x2e, 0xc1, 0x81, 0x50, 0x23, 0x97, 0xd9, 0xa8, 0x79, 0x91, 0xf9, 0x90, 0x3a,
+	0x16, 0xe8, 0xaf, 0xba, 0xd3, 0xa8, 0xed, 0x28, 0xaf, 0x65, 0xe1, 0xc6, 0x2e, 0xba, 0x9e, 0xf1,
+	0xbd, 0x5e, 0xbf, 0x37, 0x22, 0xf8, 0x4d, 0x81, 0x14, 0xe7, 0x40, 0xda, 0x79, 0x8f, 0xee, 0x93,
+	0xc2, 0x1c, 0x2a, 0x7f, 0x5f, 0x06, 0x76, 0xbb, 0x2f, 0xb3, 0x80, 0xc3, 0xbd, 0x66, 0xac, 0x42,
+	0x91, 0x55, 0x47, 0x8d, 0x80, 0x12, 0x7a, 0x29, 0x2c, 0x7f, 0x17, 0x73, 0x81, 0x5d, 0x54, 0xfe,
+	0x8c, 0xe0, 0x5a, 0x9f, 0x2d, 0xdb, 0x02, 0x0c, 0x48, 0x80, 0xe1, 0xa3, 0x55, 0x5c, 0xe5, 0x2b,
+	0x59, 0xb8, 0xd6, 0x67, 0x5b, 0xdd, 0x7f, 0xab, 0xad, 0x86, 0x3c, 0xf6, 0x80, 0xd8, 0x63, 0x0f,
+	0xca, 0x7b, 0x6c, 0xa1, 0xea, 0x88, 0x1c, 0x40, 0x5e, 0xe4, 0x00, 0x5e, 0xce, 0xc2, 0x95, 0x7e,
+	0x5a, 0x03, 0xe5, 0x2c, 0x5f, 0x8a, 0xf3, 0x63, 0xcb, 0xef, 0x5a, 0xfe, 0x07, 0x08, 0x2e, 0xa6,
+	0x6d, 0x73, 0xfc, 0x8f, 0x36, 0x79, 0xf1, 0x59, 0xa5, 0xfc, 0x01, 0xc1, 0x85, 0x54, 0xad, 0x91,
+	0x7b, 0xe6, 0x02, 0xb8, 0xb7, 0x86, 0xcc, 0xee, 0x6e, 0x0d, 0xdf, 0x1b, 0x82, 0xcb, 0x7d, 0xfc,
+	0xc6, 0xa3, 0x67, 0x3b, 0x50, 0x60, 0x3b, 0x4e, 0x42, 0xb1, 0xb3, 0x1d, 0x4c, 0xe7, 0x0b, 0x2a,
+	0xf8, 0x43, 0xbc, 0x14, 0x42, 0x76, 0x0f, 0x52, 0x08, 0xfd, 0xd6, 0x13, 0x07, 0xf7, 0x36, 0x85,
+	0x90, 0x7b, 0xa4, 0x29, 0x84, 0x7c, 0xdf, 0x29, 0x84, 0xfb, 0xc0, 0x3a, 0x54, 0x19, 0x47, 0x56,
+	0x86, 0xf3, 0x9a, 0x04, 0xce, 0xc6, 0xb4, 0xb9, 0x52, 0x2e, 0xac, 0x18, 0x37, 0xd6, 0x0c, 0x0f,
+	0xf5, 0x1a, 0x49, 0x21, 0xe8, 0xcf, 0x65, 0x54, 0x1e, 0x24, 0x54, 0xbe, 0x0a, 0x13, 0x3d, 0xea,
+	0x54, 0xb1, 0x48, 0xab, 0x0b, 0xbf, 0x48, 0xe1, 0xcf, 0xc4, 0x2a, 0x4e, 0x59, 0x57, 0xdd, 0x29,
+	0x6c, 0x09, 0x87, 0xda, 0xbc, 0xe1, 0x48, 0x79, 0x72, 0x5f, 0x3f, 0xe5, 0xc9, 0x48, 0xaf, 0xe1,
+	0x08, 0xa7, 0xd7, 0xb0, 0x7b, 0xd3, 0xda, 0x9f, 0x3e, 0xb7, 0x30, 0xba, 0x8b, 0xdc, 0xc2, 0xd8,
+	0xee, 0xbc, 0xc4, 0xab, 0x59, 0xb8, 0x98, 0xf6, 0x77, 0x54, 0x1f, 0xbf, 0x8b, 0x58, 0xf1, 0xcf,
+	0x7a, 0xaf, 0x5a, 0x75, 0x35, 0xf5, 0x8f, 0x80, 0x02, 0x47, 0x7c, 0x8f, 0xb2, 0x0f, 0x06, 0x95,
+	0x9d, 0x7f, 0x90, 0xe5, 0x04, 0x07, 0xd9, 0x1e, 0xe5, 0xf3, 0x94, 0xb7, 0x33, 0x30, 0x9b, 0xe6,
+	0x47, 0x62, 0xc2, 0xfd, 0xe0, 0x9f, 0xa0, 0x99, 0xdd, 0x9e, 0xa0, 0x7b, 0xb5, 0x8b, 0x7c, 0xe9,
+	0x0e, 0x08, 0xa4, 0xdb, 0xb5, 0xb0, 0x41, 0xf9, 0x5c, 0xc6, 0x87, 0x19, 0x48, 0xf9, 0xf3, 0xb5,
+	0x4f, 0x86, 0x30, 0x79, 0xa5, 0x99, 0x41, 0x6e, 0x69, 0xa6, 0xdb, 0x53, 0x90, 0x93, 0xef, 0x29,
+	0x50, 0xfe, 0x91, 0x81, 0xf3, 0x7b, 0xe1, 0x51, 0x3e, 0xa1, 0x42, 0xef, 0xc9, 0x9a, 0xe7, 0x52,
+	0x64, 0xcd, 0x95, 0x7f, 0x66, 0xe0, 0x42, 0xaa, 0x5f, 0x13, 0x3e, 0x16, 0x7c, 0x44, 0xf0, 0x7e,
+	0x5a, 0x30, 0x97, 0x26, 0x57, 0xfc, 0xc5, 0xac, 0x48, 0xf0, 0xa2, 0x3e, 0x90, 0xc7, 0x82, 0x8f,
+	0x6d, 0x43, 0xc9, 0xf5, 0xd3, 0xbf, 0xfe, 0xeb, 0x0c, 0xcc, 0xa5, 0xfc, 0x95, 0xe7, 0xe3, 0x7d,
+	0x08, 0xec, 0xc3, 0x8c, 0x03, 0xfb, 0xe9, 0x9f, 0xcb, 0x46, 0xcd, 0x21, 0x16, 0xfd, 0xd4, 0x71,
+	0x98, 0x5c, 0xba, 0xbf, 0x74, 0x7b, 0xad, 0xb2, 0x5c, 0x5e, 0x59, 0x5b, 0x52, 0x2b, 0x6b, 0x9f,
+	0x5e, 0x5d, 0xaa, 0x94, 0x6f, 0xdf, 0x5f, 0x58, 0x29, 0xdf, 0x1a, 0x7d, 0x02, 0x9f, 0x84, 0xa3,
+	0xd1, 0xd7, 0x0b, 0x2b, 0x2b, 0x15, 0x3a, 0x3a, 0x8a, 0xf0, 0x29, 0x38, 0x1e, 0x25, 0x58, 0x5c,
+	0xb9, 0x73, 0x77, 0x89, 0x91, 0x64, 0x6e, 0xae, 0xbf, 0xfd, 0xfe, 0x09, 0xf4, 0xee, 0xfb, 0x27,
+	0xd0, 0x7b, 0xef, 0x9f, 0x40, 0x70, 0xb8, 0x6a, 0xd6, 0x79, 0xf2, 0xb8, 0x39, 0xb4, 0xd0, 0x34,
+	0x56, 0xdd, 0xcb, 0xd1, 0x2a, 0xfa, 0xcc, 0xdc, 0x03, 0xc3, 0xd9, 0x6c, 0xad, 0x97, 0xaa, 0x66,
+	0x7d, 0x2e, 0xf0, 0x7f, 0x4b, 0x4b, 0x0f, 0x48, 0xc3, 0xfb, 0x4f, 0xa9, 0xec, 0x5f, 0x98, 0xde,
+	0xd0, 0x9a, 0xc6, 0xf6, 0xa5, 0xf5, 0x1c, 0x1d, 0xbb, 0xfc, 0xef, 0x00, 0x00, 0x00, 0xff, 0xff,
+	0xcb, 0xf6, 0xe0, 0x15, 0xa5, 0x55, 0x00, 0x00,
 }
 
-func (x EventFilterType) String() string {
-	s, ok := EventFilterType_name[int32(x)]
-	if ok {
-		return s
-	}
-	return strconv.Itoa(int(x))
-}
-func (this *History) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*History)
-	if !ok {
-		that2, ok := that.(History)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.Events) != len(that1.Events) {
-		return false
-	}
-	for i := range this.Events {
-		if !this.Events[i].Equal(that1.Events[i]) {
-			return false
-		}
-	}
-	return true
-}
-func (this *HistoryEvent) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent)
-	if !ok {
-		that2, ok := that.(HistoryEvent)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.EventId != that1.EventId {
-		return false
-	}
-	if that1.EventTime == nil {
-		if this.EventTime != nil {
-			return false
-		}
-	} else if !this.EventTime.Equal(*that1.EventTime) {
-		return false
-	}
-	if this.Version != that1.Version {
-		return false
-	}
-	if this.TaskId != that1.TaskId {
-		return false
-	}
-	if that1.Attributes == nil {
-		if this.Attributes != nil {
-			return false
-		}
-	} else if this.Attributes == nil {
-		return false
-	} else if !this.Attributes.Equal(that1.Attributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_WorkflowExecutionStartedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_WorkflowExecutionStartedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_WorkflowExecutionStartedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.WorkflowExecutionStartedEventAttributes.Equal(that1.WorkflowExecutionStartedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_WorkflowExecutionCompletedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_WorkflowExecutionCompletedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_WorkflowExecutionCompletedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.WorkflowExecutionCompletedEventAttributes.Equal(that1.WorkflowExecutionCompletedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_WorkflowExecutionFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_WorkflowExecutionFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_WorkflowExecutionFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.WorkflowExecutionFailedEventAttributes.Equal(that1.WorkflowExecutionFailedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_WorkflowExecutionTimedOutEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_WorkflowExecutionTimedOutEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_WorkflowExecutionTimedOutEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.WorkflowExecutionTimedOutEventAttributes.Equal(that1.WorkflowExecutionTimedOutEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_DecisionTaskScheduledEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_DecisionTaskScheduledEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_DecisionTaskScheduledEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.DecisionTaskScheduledEventAttributes.Equal(that1.DecisionTaskScheduledEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_DecisionTaskStartedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_DecisionTaskStartedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_DecisionTaskStartedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.DecisionTaskStartedEventAttributes.Equal(that1.DecisionTaskStartedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_DecisionTaskCompletedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_DecisionTaskCompletedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_DecisionTaskCompletedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.DecisionTaskCompletedEventAttributes.Equal(that1.DecisionTaskCompletedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_DecisionTaskTimedOutEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_DecisionTaskTimedOutEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_DecisionTaskTimedOutEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.DecisionTaskTimedOutEventAttributes.Equal(that1.DecisionTaskTimedOutEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_DecisionTaskFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_DecisionTaskFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_DecisionTaskFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.DecisionTaskFailedEventAttributes.Equal(that1.DecisionTaskFailedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_ActivityTaskScheduledEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_ActivityTaskScheduledEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_ActivityTaskScheduledEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ActivityTaskScheduledEventAttributes.Equal(that1.ActivityTaskScheduledEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_ActivityTaskStartedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_ActivityTaskStartedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_ActivityTaskStartedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ActivityTaskStartedEventAttributes.Equal(that1.ActivityTaskStartedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_ActivityTaskCompletedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_ActivityTaskCompletedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_ActivityTaskCompletedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ActivityTaskCompletedEventAttributes.Equal(that1.ActivityTaskCompletedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_ActivityTaskFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_ActivityTaskFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_ActivityTaskFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ActivityTaskFailedEventAttributes.Equal(that1.ActivityTaskFailedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_ActivityTaskTimedOutEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_ActivityTaskTimedOutEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_ActivityTaskTimedOutEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ActivityTaskTimedOutEventAttributes.Equal(that1.ActivityTaskTimedOutEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_TimerStartedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_TimerStartedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_TimerStartedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.TimerStartedEventAttributes.Equal(that1.TimerStartedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_TimerFiredEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_TimerFiredEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_TimerFiredEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.TimerFiredEventAttributes.Equal(that1.TimerFiredEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_ActivityTaskCancelRequestedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_ActivityTaskCancelRequestedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_ActivityTaskCancelRequestedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ActivityTaskCancelRequestedEventAttributes.Equal(that1.ActivityTaskCancelRequestedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_RequestCancelActivityTaskFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_RequestCancelActivityTaskFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_RequestCancelActivityTaskFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.RequestCancelActivityTaskFailedEventAttributes.Equal(that1.RequestCancelActivityTaskFailedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_ActivityTaskCanceledEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_ActivityTaskCanceledEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_ActivityTaskCanceledEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ActivityTaskCanceledEventAttributes.Equal(that1.ActivityTaskCanceledEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_TimerCanceledEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_TimerCanceledEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_TimerCanceledEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.TimerCanceledEventAttributes.Equal(that1.TimerCanceledEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_CancelTimerFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_CancelTimerFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_CancelTimerFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.CancelTimerFailedEventAttributes.Equal(that1.CancelTimerFailedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_MarkerRecordedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_MarkerRecordedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_MarkerRecordedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.MarkerRecordedEventAttributes.Equal(that1.MarkerRecordedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_WorkflowExecutionSignaledEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_WorkflowExecutionSignaledEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_WorkflowExecutionSignaledEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.WorkflowExecutionSignaledEventAttributes.Equal(that1.WorkflowExecutionSignaledEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_WorkflowExecutionTerminatedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_WorkflowExecutionTerminatedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_WorkflowExecutionTerminatedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.WorkflowExecutionTerminatedEventAttributes.Equal(that1.WorkflowExecutionTerminatedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_WorkflowExecutionCancelRequestedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_WorkflowExecutionCancelRequestedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_WorkflowExecutionCancelRequestedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.WorkflowExecutionCancelRequestedEventAttributes.Equal(that1.WorkflowExecutionCancelRequestedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_WorkflowExecutionCanceledEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_WorkflowExecutionCanceledEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_WorkflowExecutionCanceledEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.WorkflowExecutionCanceledEventAttributes.Equal(that1.WorkflowExecutionCanceledEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_RequestCancelExternalWorkflowExecutionInitiatedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_RequestCancelExternalWorkflowExecutionInitiatedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes.Equal(that1.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_RequestCancelExternalWorkflowExecutionFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_RequestCancelExternalWorkflowExecutionFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_RequestCancelExternalWorkflowExecutionFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.RequestCancelExternalWorkflowExecutionFailedEventAttributes.Equal(that1.RequestCancelExternalWorkflowExecutionFailedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_ExternalWorkflowExecutionCancelRequestedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_ExternalWorkflowExecutionCancelRequestedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_ExternalWorkflowExecutionCancelRequestedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ExternalWorkflowExecutionCancelRequestedEventAttributes.Equal(that1.ExternalWorkflowExecutionCancelRequestedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_WorkflowExecutionContinuedAsNewEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_WorkflowExecutionContinuedAsNewEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_WorkflowExecutionContinuedAsNewEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.WorkflowExecutionContinuedAsNewEventAttributes.Equal(that1.WorkflowExecutionContinuedAsNewEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_StartChildWorkflowExecutionInitiatedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_StartChildWorkflowExecutionInitiatedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_StartChildWorkflowExecutionInitiatedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.StartChildWorkflowExecutionInitiatedEventAttributes.Equal(that1.StartChildWorkflowExecutionInitiatedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_StartChildWorkflowExecutionFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_StartChildWorkflowExecutionFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_StartChildWorkflowExecutionFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.StartChildWorkflowExecutionFailedEventAttributes.Equal(that1.StartChildWorkflowExecutionFailedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_ChildWorkflowExecutionStartedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_ChildWorkflowExecutionStartedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_ChildWorkflowExecutionStartedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ChildWorkflowExecutionStartedEventAttributes.Equal(that1.ChildWorkflowExecutionStartedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_ChildWorkflowExecutionCompletedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_ChildWorkflowExecutionCompletedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_ChildWorkflowExecutionCompletedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ChildWorkflowExecutionCompletedEventAttributes.Equal(that1.ChildWorkflowExecutionCompletedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_ChildWorkflowExecutionFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_ChildWorkflowExecutionFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_ChildWorkflowExecutionFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ChildWorkflowExecutionFailedEventAttributes.Equal(that1.ChildWorkflowExecutionFailedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_ChildWorkflowExecutionCanceledEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_ChildWorkflowExecutionCanceledEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_ChildWorkflowExecutionCanceledEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ChildWorkflowExecutionCanceledEventAttributes.Equal(that1.ChildWorkflowExecutionCanceledEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_ChildWorkflowExecutionTimedOutEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_ChildWorkflowExecutionTimedOutEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_ChildWorkflowExecutionTimedOutEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ChildWorkflowExecutionTimedOutEventAttributes.Equal(that1.ChildWorkflowExecutionTimedOutEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_ChildWorkflowExecutionTerminatedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_ChildWorkflowExecutionTerminatedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_ChildWorkflowExecutionTerminatedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ChildWorkflowExecutionTerminatedEventAttributes.Equal(that1.ChildWorkflowExecutionTerminatedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_SignalExternalWorkflowExecutionInitiatedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_SignalExternalWorkflowExecutionInitiatedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_SignalExternalWorkflowExecutionInitiatedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.SignalExternalWorkflowExecutionInitiatedEventAttributes.Equal(that1.SignalExternalWorkflowExecutionInitiatedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_SignalExternalWorkflowExecutionFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_SignalExternalWorkflowExecutionFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_SignalExternalWorkflowExecutionFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.SignalExternalWorkflowExecutionFailedEventAttributes.Equal(that1.SignalExternalWorkflowExecutionFailedEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_ExternalWorkflowExecutionSignaledEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_ExternalWorkflowExecutionSignaledEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_ExternalWorkflowExecutionSignaledEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ExternalWorkflowExecutionSignaledEventAttributes.Equal(that1.ExternalWorkflowExecutionSignaledEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *HistoryEvent_UpsertWorkflowSearchAttributesEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*HistoryEvent_UpsertWorkflowSearchAttributesEventAttributes)
-	if !ok {
-		that2, ok := that.(HistoryEvent_UpsertWorkflowSearchAttributesEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.UpsertWorkflowSearchAttributesEventAttributes.Equal(that1.UpsertWorkflowSearchAttributesEventAttributes) {
-		return false
-	}
-	return true
-}
-func (this *WorkflowExecutionStartedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*WorkflowExecutionStartedEventAttributes)
-	if !ok {
-		that2, ok := that.(WorkflowExecutionStartedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.WorkflowType.Equal(that1.WorkflowType) {
-		return false
-	}
-	if this.ParentWorkflowDomain != that1.ParentWorkflowDomain {
-		return false
-	}
-	if !this.ParentWorkflowExecution.Equal(that1.ParentWorkflowExecution) {
-		return false
-	}
-	if this.ParentInitiatedEventId != that1.ParentInitiatedEventId {
-		return false
-	}
-	if !this.TaskList.Equal(that1.TaskList) {
-		return false
-	}
-	if !this.Input.Equal(that1.Input) {
-		return false
-	}
-	if this.ExecutionStartToCloseTimeout != nil && that1.ExecutionStartToCloseTimeout != nil {
-		if *this.ExecutionStartToCloseTimeout != *that1.ExecutionStartToCloseTimeout {
-			return false
-		}
-	} else if this.ExecutionStartToCloseTimeout != nil {
-		return false
-	} else if that1.ExecutionStartToCloseTimeout != nil {
-		return false
-	}
-	if this.TaskStartToCloseTimeout != nil && that1.TaskStartToCloseTimeout != nil {
-		if *this.TaskStartToCloseTimeout != *that1.TaskStartToCloseTimeout {
-			return false
-		}
-	} else if this.TaskStartToCloseTimeout != nil {
-		return false
-	} else if that1.TaskStartToCloseTimeout != nil {
-		return false
-	}
-	if this.ContinuedExecutionRunId != that1.ContinuedExecutionRunId {
-		return false
-	}
-	if this.Initiator != that1.Initiator {
-		return false
-	}
-	if !this.ContinuedFailure.Equal(that1.ContinuedFailure) {
-		return false
-	}
-	if !this.LastCompletionResult.Equal(that1.LastCompletionResult) {
-		return false
-	}
-	if this.OriginalExecutionRunId != that1.OriginalExecutionRunId {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	if this.FirstExecutionRunId != that1.FirstExecutionRunId {
-		return false
-	}
-	if !this.RetryPolicy.Equal(that1.RetryPolicy) {
-		return false
-	}
-	if this.Attempt != that1.Attempt {
-		return false
-	}
-	if that1.ExpirationTime == nil {
-		if this.ExpirationTime != nil {
-			return false
-		}
-	} else if !this.ExpirationTime.Equal(*that1.ExpirationTime) {
-		return false
-	}
-	if this.CronSchedule != that1.CronSchedule {
-		return false
-	}
-	if this.FirstDecisionTaskBackoff != nil && that1.FirstDecisionTaskBackoff != nil {
-		if *this.FirstDecisionTaskBackoff != *that1.FirstDecisionTaskBackoff {
-			return false
-		}
-	} else if this.FirstDecisionTaskBackoff != nil {
-		return false
-	} else if that1.FirstDecisionTaskBackoff != nil {
-		return false
-	}
-	if !this.Memo.Equal(that1.Memo) {
-		return false
-	}
-	if !this.SearchAttributes.Equal(that1.SearchAttributes) {
-		return false
-	}
-	if !this.PrevAutoResetPoints.Equal(that1.PrevAutoResetPoints) {
-		return false
-	}
-	if !this.Header.Equal(that1.Header) {
-		return false
-	}
-	return true
-}
-func (this *WorkflowExecutionCompletedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*WorkflowExecutionCompletedEventAttributes)
-	if !ok {
-		that2, ok := that.(WorkflowExecutionCompletedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Result.Equal(that1.Result) {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	return true
-}
-func (this *WorkflowExecutionFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*WorkflowExecutionFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(WorkflowExecutionFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Failure.Equal(that1.Failure) {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	return true
-}
-func (this *WorkflowExecutionTimedOutEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*WorkflowExecutionTimedOutEventAttributes)
-	if !ok {
-		that2, ok := that.(WorkflowExecutionTimedOutEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.TimeoutType != that1.TimeoutType {
-		return false
-	}
-	return true
-}
-func (this *DecisionTaskScheduledEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DecisionTaskScheduledEventAttributes)
-	if !ok {
-		that2, ok := that.(DecisionTaskScheduledEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.TaskList.Equal(that1.TaskList) {
-		return false
-	}
-	if this.StartToCloseTimeout != nil && that1.StartToCloseTimeout != nil {
-		if *this.StartToCloseTimeout != *that1.StartToCloseTimeout {
-			return false
-		}
-	} else if this.StartToCloseTimeout != nil {
-		return false
-	} else if that1.StartToCloseTimeout != nil {
-		return false
-	}
-	if this.Attempt != that1.Attempt {
-		return false
-	}
-	return true
-}
-func (this *DecisionTaskStartedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DecisionTaskStartedEventAttributes)
-	if !ok {
-		that2, ok := that.(DecisionTaskStartedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ScheduledEventId != that1.ScheduledEventId {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	if this.RequestId != that1.RequestId {
-		return false
-	}
-	return true
-}
-func (this *DecisionTaskCompletedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DecisionTaskCompletedEventAttributes)
-	if !ok {
-		that2, ok := that.(DecisionTaskCompletedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ScheduledEventId != that1.ScheduledEventId {
-		return false
-	}
-	if this.StartedEventId != that1.StartedEventId {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	if this.BinaryChecksum != that1.BinaryChecksum {
-		return false
-	}
-	if !bytes.Equal(this.ExecutionContext, that1.ExecutionContext) {
-		return false
-	}
-	return true
-}
-func (this *DecisionTaskTimedOutEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DecisionTaskTimedOutEventAttributes)
-	if !ok {
-		that2, ok := that.(DecisionTaskTimedOutEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ScheduledEventId != that1.ScheduledEventId {
-		return false
-	}
-	if this.StartedEventId != that1.StartedEventId {
-		return false
-	}
-	if this.TimeoutType != that1.TimeoutType {
-		return false
-	}
-	return true
-}
-func (this *DecisionTaskFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DecisionTaskFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(DecisionTaskFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ScheduledEventId != that1.ScheduledEventId {
-		return false
-	}
-	if this.StartedEventId != that1.StartedEventId {
-		return false
-	}
-	if this.Cause != that1.Cause {
-		return false
-	}
-	if !this.Failure.Equal(that1.Failure) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	if this.BaseRunId != that1.BaseRunId {
-		return false
-	}
-	if this.NewRunId != that1.NewRunId {
-		return false
-	}
-	if this.ForkEventVersion != that1.ForkEventVersion {
-		return false
-	}
-	if this.BinaryChecksum != that1.BinaryChecksum {
-		return false
-	}
-	return true
-}
-func (this *ActivityTaskScheduledEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ActivityTaskScheduledEventAttributes)
-	if !ok {
-		that2, ok := that.(ActivityTaskScheduledEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ActivityId != that1.ActivityId {
-		return false
-	}
-	if !this.ActivityType.Equal(that1.ActivityType) {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.TaskList.Equal(that1.TaskList) {
-		return false
-	}
-	if !this.Input.Equal(that1.Input) {
-		return false
-	}
-	if this.ScheduleToCloseTimeout != nil && that1.ScheduleToCloseTimeout != nil {
-		if *this.ScheduleToCloseTimeout != *that1.ScheduleToCloseTimeout {
-			return false
-		}
-	} else if this.ScheduleToCloseTimeout != nil {
-		return false
-	} else if that1.ScheduleToCloseTimeout != nil {
-		return false
-	}
-	if this.ScheduleToStartTimeout != nil && that1.ScheduleToStartTimeout != nil {
-		if *this.ScheduleToStartTimeout != *that1.ScheduleToStartTimeout {
-			return false
-		}
-	} else if this.ScheduleToStartTimeout != nil {
-		return false
-	} else if that1.ScheduleToStartTimeout != nil {
-		return false
-	}
-	if this.StartToCloseTimeout != nil && that1.StartToCloseTimeout != nil {
-		if *this.StartToCloseTimeout != *that1.StartToCloseTimeout {
-			return false
-		}
-	} else if this.StartToCloseTimeout != nil {
-		return false
-	} else if that1.StartToCloseTimeout != nil {
-		return false
-	}
-	if this.HeartbeatTimeout != nil && that1.HeartbeatTimeout != nil {
-		if *this.HeartbeatTimeout != *that1.HeartbeatTimeout {
-			return false
-		}
-	} else if this.HeartbeatTimeout != nil {
-		return false
-	} else if that1.HeartbeatTimeout != nil {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	if !this.RetryPolicy.Equal(that1.RetryPolicy) {
-		return false
-	}
-	if !this.Header.Equal(that1.Header) {
-		return false
-	}
-	return true
-}
-func (this *ActivityTaskStartedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ActivityTaskStartedEventAttributes)
-	if !ok {
-		that2, ok := that.(ActivityTaskStartedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ScheduledEventId != that1.ScheduledEventId {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	if this.RequestId != that1.RequestId {
-		return false
-	}
-	if this.Attempt != that1.Attempt {
-		return false
-	}
-	if !this.LastFailure.Equal(that1.LastFailure) {
-		return false
-	}
-	return true
-}
-func (this *ActivityTaskCompletedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ActivityTaskCompletedEventAttributes)
-	if !ok {
-		that2, ok := that.(ActivityTaskCompletedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Result.Equal(that1.Result) {
-		return false
-	}
-	if this.ScheduledEventId != that1.ScheduledEventId {
-		return false
-	}
-	if this.StartedEventId != that1.StartedEventId {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	return true
-}
-func (this *ActivityTaskFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ActivityTaskFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(ActivityTaskFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Failure.Equal(that1.Failure) {
-		return false
-	}
-	if this.ScheduledEventId != that1.ScheduledEventId {
-		return false
-	}
-	if this.StartedEventId != that1.StartedEventId {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	return true
-}
-func (this *ActivityTaskTimedOutEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ActivityTaskTimedOutEventAttributes)
-	if !ok {
-		that2, ok := that.(ActivityTaskTimedOutEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Details.Equal(that1.Details) {
-		return false
-	}
-	if this.ScheduledEventId != that1.ScheduledEventId {
-		return false
-	}
-	if this.StartedEventId != that1.StartedEventId {
-		return false
-	}
-	if this.TimeoutType != that1.TimeoutType {
-		return false
-	}
-	if !this.LastFailure.Equal(that1.LastFailure) {
-		return false
-	}
-	return true
-}
-func (this *ActivityTaskCancelRequestedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ActivityTaskCancelRequestedEventAttributes)
-	if !ok {
-		that2, ok := that.(ActivityTaskCancelRequestedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ActivityId != that1.ActivityId {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	return true
-}
-func (this *RequestCancelActivityTaskFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RequestCancelActivityTaskFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(RequestCancelActivityTaskFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ActivityId != that1.ActivityId {
-		return false
-	}
-	if this.Cause != that1.Cause {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	return true
-}
-func (this *ActivityTaskCanceledEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ActivityTaskCanceledEventAttributes)
-	if !ok {
-		that2, ok := that.(ActivityTaskCanceledEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Details.Equal(that1.Details) {
-		return false
-	}
-	if this.LatestCancelRequestedEventId != that1.LatestCancelRequestedEventId {
-		return false
-	}
-	if this.ScheduledEventId != that1.ScheduledEventId {
-		return false
-	}
-	if this.StartedEventId != that1.StartedEventId {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	return true
-}
-func (this *TimerStartedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*TimerStartedEventAttributes)
-	if !ok {
-		that2, ok := that.(TimerStartedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.TimerId != that1.TimerId {
-		return false
-	}
-	if this.StartToFireTimeout != nil && that1.StartToFireTimeout != nil {
-		if *this.StartToFireTimeout != *that1.StartToFireTimeout {
-			return false
-		}
-	} else if this.StartToFireTimeout != nil {
-		return false
-	} else if that1.StartToFireTimeout != nil {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	return true
-}
-func (this *TimerFiredEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*TimerFiredEventAttributes)
-	if !ok {
-		that2, ok := that.(TimerFiredEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.TimerId != that1.TimerId {
-		return false
-	}
-	if this.StartedEventId != that1.StartedEventId {
-		return false
-	}
-	return true
-}
-func (this *TimerCanceledEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*TimerCanceledEventAttributes)
-	if !ok {
-		that2, ok := that.(TimerCanceledEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.TimerId != that1.TimerId {
-		return false
-	}
-	if this.StartedEventId != that1.StartedEventId {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	return true
-}
-func (this *CancelTimerFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*CancelTimerFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(CancelTimerFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.TimerId != that1.TimerId {
-		return false
-	}
-	if this.Cause != that1.Cause {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	return true
-}
-func (this *WorkflowExecutionContinuedAsNewEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*WorkflowExecutionContinuedAsNewEventAttributes)
-	if !ok {
-		that2, ok := that.(WorkflowExecutionContinuedAsNewEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.NewExecutionRunId != that1.NewExecutionRunId {
-		return false
-	}
-	if !this.WorkflowType.Equal(that1.WorkflowType) {
-		return false
-	}
-	if !this.TaskList.Equal(that1.TaskList) {
-		return false
-	}
-	if !this.Input.Equal(that1.Input) {
-		return false
-	}
-	if this.ExecutionStartToCloseTimeout != nil && that1.ExecutionStartToCloseTimeout != nil {
-		if *this.ExecutionStartToCloseTimeout != *that1.ExecutionStartToCloseTimeout {
-			return false
-		}
-	} else if this.ExecutionStartToCloseTimeout != nil {
-		return false
-	} else if that1.ExecutionStartToCloseTimeout != nil {
-		return false
-	}
-	if this.TaskStartToCloseTimeout != nil && that1.TaskStartToCloseTimeout != nil {
-		if *this.TaskStartToCloseTimeout != *that1.TaskStartToCloseTimeout {
-			return false
-		}
-	} else if this.TaskStartToCloseTimeout != nil {
-		return false
-	} else if that1.TaskStartToCloseTimeout != nil {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	if this.BackoffStartInterval != nil && that1.BackoffStartInterval != nil {
-		if *this.BackoffStartInterval != *that1.BackoffStartInterval {
-			return false
-		}
-	} else if this.BackoffStartInterval != nil {
-		return false
-	} else if that1.BackoffStartInterval != nil {
-		return false
-	}
-	if this.Initiator != that1.Initiator {
-		return false
-	}
-	if !this.Failure.Equal(that1.Failure) {
-		return false
-	}
-	if !this.LastCompletionResult.Equal(that1.LastCompletionResult) {
-		return false
-	}
-	if !this.Header.Equal(that1.Header) {
-		return false
-	}
-	if !this.Memo.Equal(that1.Memo) {
-		return false
-	}
-	if !this.SearchAttributes.Equal(that1.SearchAttributes) {
-		return false
-	}
-	return true
-}
-func (this *WorkflowExecutionCancelRequestedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*WorkflowExecutionCancelRequestedEventAttributes)
-	if !ok {
-		that2, ok := that.(WorkflowExecutionCancelRequestedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Cause != that1.Cause {
-		return false
-	}
-	if this.ExternalInitiatedEventId != that1.ExternalInitiatedEventId {
-		return false
-	}
-	if !this.ExternalWorkflowExecution.Equal(that1.ExternalWorkflowExecution) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	return true
-}
-func (this *WorkflowExecutionCanceledEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*WorkflowExecutionCanceledEventAttributes)
-	if !ok {
-		that2, ok := that.(WorkflowExecutionCanceledEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	if !this.Details.Equal(that1.Details) {
-		return false
-	}
-	return true
-}
-func (this *MarkerRecordedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*MarkerRecordedEventAttributes)
-	if !ok {
-		that2, ok := that.(MarkerRecordedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.MarkerName != that1.MarkerName {
-		return false
-	}
-	if !this.Details.Equal(that1.Details) {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	if !this.Header.Equal(that1.Header) {
-		return false
-	}
-	return true
-}
-func (this *WorkflowExecutionSignaledEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*WorkflowExecutionSignaledEventAttributes)
-	if !ok {
-		that2, ok := that.(WorkflowExecutionSignaledEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.SignalName != that1.SignalName {
-		return false
-	}
-	if !this.Input.Equal(that1.Input) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	return true
-}
-func (this *WorkflowExecutionTerminatedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*WorkflowExecutionTerminatedEventAttributes)
-	if !ok {
-		that2, ok := that.(WorkflowExecutionTerminatedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Reason != that1.Reason {
-		return false
-	}
-	if !this.Details.Equal(that1.Details) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	return true
-}
-func (this *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RequestCancelExternalWorkflowExecutionInitiatedEventAttributes)
-	if !ok {
-		that2, ok := that.(RequestCancelExternalWorkflowExecutionInitiatedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if !bytes.Equal(this.Control, that1.Control) {
-		return false
-	}
-	if this.ChildWorkflowOnly != that1.ChildWorkflowOnly {
-		return false
-	}
-	return true
-}
-func (this *RequestCancelExternalWorkflowExecutionFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RequestCancelExternalWorkflowExecutionFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(RequestCancelExternalWorkflowExecutionFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Cause != that1.Cause {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if this.InitiatedEventId != that1.InitiatedEventId {
-		return false
-	}
-	if !bytes.Equal(this.Control, that1.Control) {
-		return false
-	}
-	return true
-}
-func (this *ExternalWorkflowExecutionCancelRequestedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ExternalWorkflowExecutionCancelRequestedEventAttributes)
-	if !ok {
-		that2, ok := that.(ExternalWorkflowExecutionCancelRequestedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.InitiatedEventId != that1.InitiatedEventId {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	return true
-}
-func (this *SignalExternalWorkflowExecutionInitiatedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*SignalExternalWorkflowExecutionInitiatedEventAttributes)
-	if !ok {
-		that2, ok := that.(SignalExternalWorkflowExecutionInitiatedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if this.SignalName != that1.SignalName {
-		return false
-	}
-	if !this.Input.Equal(that1.Input) {
-		return false
-	}
-	if !bytes.Equal(this.Control, that1.Control) {
-		return false
-	}
-	if this.ChildWorkflowOnly != that1.ChildWorkflowOnly {
-		return false
-	}
-	return true
-}
-func (this *SignalExternalWorkflowExecutionFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*SignalExternalWorkflowExecutionFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(SignalExternalWorkflowExecutionFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Cause != that1.Cause {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if this.InitiatedEventId != that1.InitiatedEventId {
-		return false
-	}
-	if !bytes.Equal(this.Control, that1.Control) {
-		return false
-	}
-	return true
-}
-func (this *ExternalWorkflowExecutionSignaledEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ExternalWorkflowExecutionSignaledEventAttributes)
-	if !ok {
-		that2, ok := that.(ExternalWorkflowExecutionSignaledEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.InitiatedEventId != that1.InitiatedEventId {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if !bytes.Equal(this.Control, that1.Control) {
-		return false
-	}
-	return true
-}
-func (this *UpsertWorkflowSearchAttributesEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*UpsertWorkflowSearchAttributesEventAttributes)
-	if !ok {
-		that2, ok := that.(UpsertWorkflowSearchAttributesEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	if !this.SearchAttributes.Equal(that1.SearchAttributes) {
-		return false
-	}
-	return true
-}
-func (this *StartChildWorkflowExecutionInitiatedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*StartChildWorkflowExecutionInitiatedEventAttributes)
-	if !ok {
-		that2, ok := that.(StartChildWorkflowExecutionInitiatedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if this.WorkflowId != that1.WorkflowId {
-		return false
-	}
-	if !this.WorkflowType.Equal(that1.WorkflowType) {
-		return false
-	}
-	if !this.TaskList.Equal(that1.TaskList) {
-		return false
-	}
-	if !this.Input.Equal(that1.Input) {
-		return false
-	}
-	if this.ExecutionStartToCloseTimeout != nil && that1.ExecutionStartToCloseTimeout != nil {
-		if *this.ExecutionStartToCloseTimeout != *that1.ExecutionStartToCloseTimeout {
-			return false
-		}
-	} else if this.ExecutionStartToCloseTimeout != nil {
-		return false
-	} else if that1.ExecutionStartToCloseTimeout != nil {
-		return false
-	}
-	if this.TaskStartToCloseTimeout != nil && that1.TaskStartToCloseTimeout != nil {
-		if *this.TaskStartToCloseTimeout != *that1.TaskStartToCloseTimeout {
-			return false
-		}
-	} else if this.TaskStartToCloseTimeout != nil {
-		return false
-	} else if that1.TaskStartToCloseTimeout != nil {
-		return false
-	}
-	if this.ParentClosePolicy != that1.ParentClosePolicy {
-		return false
-	}
-	if !bytes.Equal(this.Control, that1.Control) {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	if this.WorkflowIdReusePolicy != that1.WorkflowIdReusePolicy {
-		return false
-	}
-	if !this.RetryPolicy.Equal(that1.RetryPolicy) {
-		return false
-	}
-	if this.CronSchedule != that1.CronSchedule {
-		return false
-	}
-	if !this.Header.Equal(that1.Header) {
-		return false
-	}
-	if !this.Memo.Equal(that1.Memo) {
-		return false
-	}
-	if !this.SearchAttributes.Equal(that1.SearchAttributes) {
-		return false
-	}
-	return true
-}
-func (this *StartChildWorkflowExecutionFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*StartChildWorkflowExecutionFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(StartChildWorkflowExecutionFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if this.WorkflowId != that1.WorkflowId {
-		return false
-	}
-	if !this.WorkflowType.Equal(that1.WorkflowType) {
-		return false
-	}
-	if this.Cause != that1.Cause {
-		return false
-	}
-	if !bytes.Equal(this.Control, that1.Control) {
-		return false
-	}
-	if this.InitiatedEventId != that1.InitiatedEventId {
-		return false
-	}
-	if this.DecisionTaskCompletedEventId != that1.DecisionTaskCompletedEventId {
-		return false
-	}
-	return true
-}
-func (this *ChildWorkflowExecutionStartedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ChildWorkflowExecutionStartedEventAttributes)
-	if !ok {
-		that2, ok := that.(ChildWorkflowExecutionStartedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if !this.WorkflowType.Equal(that1.WorkflowType) {
-		return false
-	}
-	if this.InitiatedEventId != that1.InitiatedEventId {
-		return false
-	}
-	if !this.Header.Equal(that1.Header) {
-		return false
-	}
-	return true
-}
-func (this *ChildWorkflowExecutionCompletedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ChildWorkflowExecutionCompletedEventAttributes)
-	if !ok {
-		that2, ok := that.(ChildWorkflowExecutionCompletedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if !this.WorkflowType.Equal(that1.WorkflowType) {
-		return false
-	}
-	if this.InitiatedEventId != that1.InitiatedEventId {
-		return false
-	}
-	if this.StartedEventId != that1.StartedEventId {
-		return false
-	}
-	if !this.Result.Equal(that1.Result) {
-		return false
-	}
-	return true
-}
-func (this *ChildWorkflowExecutionFailedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ChildWorkflowExecutionFailedEventAttributes)
-	if !ok {
-		that2, ok := that.(ChildWorkflowExecutionFailedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if !this.WorkflowType.Equal(that1.WorkflowType) {
-		return false
-	}
-	if this.InitiatedEventId != that1.InitiatedEventId {
-		return false
-	}
-	if this.StartedEventId != that1.StartedEventId {
-		return false
-	}
-	if !this.Failure.Equal(that1.Failure) {
-		return false
-	}
-	return true
-}
-func (this *ChildWorkflowExecutionCanceledEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ChildWorkflowExecutionCanceledEventAttributes)
-	if !ok {
-		that2, ok := that.(ChildWorkflowExecutionCanceledEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if !this.WorkflowType.Equal(that1.WorkflowType) {
-		return false
-	}
-	if this.InitiatedEventId != that1.InitiatedEventId {
-		return false
-	}
-	if this.StartedEventId != that1.StartedEventId {
-		return false
-	}
-	if !this.Details.Equal(that1.Details) {
-		return false
-	}
-	return true
-}
-func (this *ChildWorkflowExecutionTimedOutEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ChildWorkflowExecutionTimedOutEventAttributes)
-	if !ok {
-		that2, ok := that.(ChildWorkflowExecutionTimedOutEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if !this.WorkflowType.Equal(that1.WorkflowType) {
-		return false
-	}
-	if this.InitiatedEventId != that1.InitiatedEventId {
-		return false
-	}
-	if this.StartedEventId != that1.StartedEventId {
-		return false
-	}
-	if this.TimeoutType != that1.TimeoutType {
-		return false
-	}
-	return true
-}
-func (this *ChildWorkflowExecutionTerminatedEventAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ChildWorkflowExecutionTerminatedEventAttributes)
-	if !ok {
-		that2, ok := that.(ChildWorkflowExecutionTerminatedEventAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if !this.WorkflowType.Equal(that1.WorkflowType) {
-		return false
-	}
-	if this.InitiatedEventId != that1.InitiatedEventId {
-		return false
-	}
-	if this.StartedEventId != that1.StartedEventId {
-		return false
-	}
-	return true
-}
-func (this *History) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&apiv1.History{")
-	if this.Events != nil {
-		s = append(s, "Events: "+fmt.Sprintf("%#v", this.Events)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *HistoryEvent) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 50)
-	s = append(s, "&apiv1.HistoryEvent{")
-	s = append(s, "EventId: "+fmt.Sprintf("%#v", this.EventId)+",\n")
-	s = append(s, "EventTime: "+fmt.Sprintf("%#v", this.EventTime)+",\n")
-	s = append(s, "Version: "+fmt.Sprintf("%#v", this.Version)+",\n")
-	s = append(s, "TaskId: "+fmt.Sprintf("%#v", this.TaskId)+",\n")
-	if this.Attributes != nil {
-		s = append(s, "Attributes: "+fmt.Sprintf("%#v", this.Attributes)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *HistoryEvent_WorkflowExecutionStartedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_WorkflowExecutionStartedEventAttributes{` +
-		`WorkflowExecutionStartedEventAttributes:` + fmt.Sprintf("%#v", this.WorkflowExecutionStartedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionCompletedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_WorkflowExecutionCompletedEventAttributes{` +
-		`WorkflowExecutionCompletedEventAttributes:` + fmt.Sprintf("%#v", this.WorkflowExecutionCompletedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_WorkflowExecutionFailedEventAttributes{` +
-		`WorkflowExecutionFailedEventAttributes:` + fmt.Sprintf("%#v", this.WorkflowExecutionFailedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionTimedOutEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_WorkflowExecutionTimedOutEventAttributes{` +
-		`WorkflowExecutionTimedOutEventAttributes:` + fmt.Sprintf("%#v", this.WorkflowExecutionTimedOutEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_DecisionTaskScheduledEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_DecisionTaskScheduledEventAttributes{` +
-		`DecisionTaskScheduledEventAttributes:` + fmt.Sprintf("%#v", this.DecisionTaskScheduledEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_DecisionTaskStartedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_DecisionTaskStartedEventAttributes{` +
-		`DecisionTaskStartedEventAttributes:` + fmt.Sprintf("%#v", this.DecisionTaskStartedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_DecisionTaskCompletedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_DecisionTaskCompletedEventAttributes{` +
-		`DecisionTaskCompletedEventAttributes:` + fmt.Sprintf("%#v", this.DecisionTaskCompletedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_DecisionTaskTimedOutEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_DecisionTaskTimedOutEventAttributes{` +
-		`DecisionTaskTimedOutEventAttributes:` + fmt.Sprintf("%#v", this.DecisionTaskTimedOutEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_DecisionTaskFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_DecisionTaskFailedEventAttributes{` +
-		`DecisionTaskFailedEventAttributes:` + fmt.Sprintf("%#v", this.DecisionTaskFailedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_ActivityTaskScheduledEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_ActivityTaskScheduledEventAttributes{` +
-		`ActivityTaskScheduledEventAttributes:` + fmt.Sprintf("%#v", this.ActivityTaskScheduledEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_ActivityTaskStartedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_ActivityTaskStartedEventAttributes{` +
-		`ActivityTaskStartedEventAttributes:` + fmt.Sprintf("%#v", this.ActivityTaskStartedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_ActivityTaskCompletedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_ActivityTaskCompletedEventAttributes{` +
-		`ActivityTaskCompletedEventAttributes:` + fmt.Sprintf("%#v", this.ActivityTaskCompletedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_ActivityTaskFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_ActivityTaskFailedEventAttributes{` +
-		`ActivityTaskFailedEventAttributes:` + fmt.Sprintf("%#v", this.ActivityTaskFailedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_ActivityTaskTimedOutEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_ActivityTaskTimedOutEventAttributes{` +
-		`ActivityTaskTimedOutEventAttributes:` + fmt.Sprintf("%#v", this.ActivityTaskTimedOutEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_TimerStartedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_TimerStartedEventAttributes{` +
-		`TimerStartedEventAttributes:` + fmt.Sprintf("%#v", this.TimerStartedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_TimerFiredEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_TimerFiredEventAttributes{` +
-		`TimerFiredEventAttributes:` + fmt.Sprintf("%#v", this.TimerFiredEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_ActivityTaskCancelRequestedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_ActivityTaskCancelRequestedEventAttributes{` +
-		`ActivityTaskCancelRequestedEventAttributes:` + fmt.Sprintf("%#v", this.ActivityTaskCancelRequestedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_RequestCancelActivityTaskFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_RequestCancelActivityTaskFailedEventAttributes{` +
-		`RequestCancelActivityTaskFailedEventAttributes:` + fmt.Sprintf("%#v", this.RequestCancelActivityTaskFailedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_ActivityTaskCanceledEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_ActivityTaskCanceledEventAttributes{` +
-		`ActivityTaskCanceledEventAttributes:` + fmt.Sprintf("%#v", this.ActivityTaskCanceledEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_TimerCanceledEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_TimerCanceledEventAttributes{` +
-		`TimerCanceledEventAttributes:` + fmt.Sprintf("%#v", this.TimerCanceledEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_CancelTimerFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_CancelTimerFailedEventAttributes{` +
-		`CancelTimerFailedEventAttributes:` + fmt.Sprintf("%#v", this.CancelTimerFailedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_MarkerRecordedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_MarkerRecordedEventAttributes{` +
-		`MarkerRecordedEventAttributes:` + fmt.Sprintf("%#v", this.MarkerRecordedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionSignaledEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_WorkflowExecutionSignaledEventAttributes{` +
-		`WorkflowExecutionSignaledEventAttributes:` + fmt.Sprintf("%#v", this.WorkflowExecutionSignaledEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionTerminatedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_WorkflowExecutionTerminatedEventAttributes{` +
-		`WorkflowExecutionTerminatedEventAttributes:` + fmt.Sprintf("%#v", this.WorkflowExecutionTerminatedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionCancelRequestedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_WorkflowExecutionCancelRequestedEventAttributes{` +
-		`WorkflowExecutionCancelRequestedEventAttributes:` + fmt.Sprintf("%#v", this.WorkflowExecutionCancelRequestedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionCanceledEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_WorkflowExecutionCanceledEventAttributes{` +
-		`WorkflowExecutionCanceledEventAttributes:` + fmt.Sprintf("%#v", this.WorkflowExecutionCanceledEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_RequestCancelExternalWorkflowExecutionInitiatedEventAttributes{` +
-		`RequestCancelExternalWorkflowExecutionInitiatedEventAttributes:` + fmt.Sprintf("%#v", this.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_RequestCancelExternalWorkflowExecutionFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_RequestCancelExternalWorkflowExecutionFailedEventAttributes{` +
-		`RequestCancelExternalWorkflowExecutionFailedEventAttributes:` + fmt.Sprintf("%#v", this.RequestCancelExternalWorkflowExecutionFailedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_ExternalWorkflowExecutionCancelRequestedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_ExternalWorkflowExecutionCancelRequestedEventAttributes{` +
-		`ExternalWorkflowExecutionCancelRequestedEventAttributes:` + fmt.Sprintf("%#v", this.ExternalWorkflowExecutionCancelRequestedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionContinuedAsNewEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_WorkflowExecutionContinuedAsNewEventAttributes{` +
-		`WorkflowExecutionContinuedAsNewEventAttributes:` + fmt.Sprintf("%#v", this.WorkflowExecutionContinuedAsNewEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_StartChildWorkflowExecutionInitiatedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_StartChildWorkflowExecutionInitiatedEventAttributes{` +
-		`StartChildWorkflowExecutionInitiatedEventAttributes:` + fmt.Sprintf("%#v", this.StartChildWorkflowExecutionInitiatedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_StartChildWorkflowExecutionFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_StartChildWorkflowExecutionFailedEventAttributes{` +
-		`StartChildWorkflowExecutionFailedEventAttributes:` + fmt.Sprintf("%#v", this.StartChildWorkflowExecutionFailedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_ChildWorkflowExecutionStartedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_ChildWorkflowExecutionStartedEventAttributes{` +
-		`ChildWorkflowExecutionStartedEventAttributes:` + fmt.Sprintf("%#v", this.ChildWorkflowExecutionStartedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_ChildWorkflowExecutionCompletedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_ChildWorkflowExecutionCompletedEventAttributes{` +
-		`ChildWorkflowExecutionCompletedEventAttributes:` + fmt.Sprintf("%#v", this.ChildWorkflowExecutionCompletedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_ChildWorkflowExecutionFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_ChildWorkflowExecutionFailedEventAttributes{` +
-		`ChildWorkflowExecutionFailedEventAttributes:` + fmt.Sprintf("%#v", this.ChildWorkflowExecutionFailedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_ChildWorkflowExecutionCanceledEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_ChildWorkflowExecutionCanceledEventAttributes{` +
-		`ChildWorkflowExecutionCanceledEventAttributes:` + fmt.Sprintf("%#v", this.ChildWorkflowExecutionCanceledEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_ChildWorkflowExecutionTimedOutEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_ChildWorkflowExecutionTimedOutEventAttributes{` +
-		`ChildWorkflowExecutionTimedOutEventAttributes:` + fmt.Sprintf("%#v", this.ChildWorkflowExecutionTimedOutEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_ChildWorkflowExecutionTerminatedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_ChildWorkflowExecutionTerminatedEventAttributes{` +
-		`ChildWorkflowExecutionTerminatedEventAttributes:` + fmt.Sprintf("%#v", this.ChildWorkflowExecutionTerminatedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_SignalExternalWorkflowExecutionInitiatedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_SignalExternalWorkflowExecutionInitiatedEventAttributes{` +
-		`SignalExternalWorkflowExecutionInitiatedEventAttributes:` + fmt.Sprintf("%#v", this.SignalExternalWorkflowExecutionInitiatedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_SignalExternalWorkflowExecutionFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_SignalExternalWorkflowExecutionFailedEventAttributes{` +
-		`SignalExternalWorkflowExecutionFailedEventAttributes:` + fmt.Sprintf("%#v", this.SignalExternalWorkflowExecutionFailedEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_ExternalWorkflowExecutionSignaledEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_ExternalWorkflowExecutionSignaledEventAttributes{` +
-		`ExternalWorkflowExecutionSignaledEventAttributes:` + fmt.Sprintf("%#v", this.ExternalWorkflowExecutionSignaledEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *HistoryEvent_UpsertWorkflowSearchAttributesEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.HistoryEvent_UpsertWorkflowSearchAttributesEventAttributes{` +
-		`UpsertWorkflowSearchAttributesEventAttributes:` + fmt.Sprintf("%#v", this.UpsertWorkflowSearchAttributesEventAttributes) + `}`}, ", ")
-	return s
-}
-func (this *WorkflowExecutionStartedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 28)
-	s = append(s, "&apiv1.WorkflowExecutionStartedEventAttributes{")
-	if this.WorkflowType != nil {
-		s = append(s, "WorkflowType: "+fmt.Sprintf("%#v", this.WorkflowType)+",\n")
-	}
-	s = append(s, "ParentWorkflowDomain: "+fmt.Sprintf("%#v", this.ParentWorkflowDomain)+",\n")
-	if this.ParentWorkflowExecution != nil {
-		s = append(s, "ParentWorkflowExecution: "+fmt.Sprintf("%#v", this.ParentWorkflowExecution)+",\n")
-	}
-	s = append(s, "ParentInitiatedEventId: "+fmt.Sprintf("%#v", this.ParentInitiatedEventId)+",\n")
-	if this.TaskList != nil {
-		s = append(s, "TaskList: "+fmt.Sprintf("%#v", this.TaskList)+",\n")
-	}
-	if this.Input != nil {
-		s = append(s, "Input: "+fmt.Sprintf("%#v", this.Input)+",\n")
-	}
-	s = append(s, "ExecutionStartToCloseTimeout: "+fmt.Sprintf("%#v", this.ExecutionStartToCloseTimeout)+",\n")
-	s = append(s, "TaskStartToCloseTimeout: "+fmt.Sprintf("%#v", this.TaskStartToCloseTimeout)+",\n")
-	s = append(s, "ContinuedExecutionRunId: "+fmt.Sprintf("%#v", this.ContinuedExecutionRunId)+",\n")
-	s = append(s, "Initiator: "+fmt.Sprintf("%#v", this.Initiator)+",\n")
-	if this.ContinuedFailure != nil {
-		s = append(s, "ContinuedFailure: "+fmt.Sprintf("%#v", this.ContinuedFailure)+",\n")
-	}
-	if this.LastCompletionResult != nil {
-		s = append(s, "LastCompletionResult: "+fmt.Sprintf("%#v", this.LastCompletionResult)+",\n")
-	}
-	s = append(s, "OriginalExecutionRunId: "+fmt.Sprintf("%#v", this.OriginalExecutionRunId)+",\n")
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "FirstExecutionRunId: "+fmt.Sprintf("%#v", this.FirstExecutionRunId)+",\n")
-	if this.RetryPolicy != nil {
-		s = append(s, "RetryPolicy: "+fmt.Sprintf("%#v", this.RetryPolicy)+",\n")
-	}
-	s = append(s, "Attempt: "+fmt.Sprintf("%#v", this.Attempt)+",\n")
-	s = append(s, "ExpirationTime: "+fmt.Sprintf("%#v", this.ExpirationTime)+",\n")
-	s = append(s, "CronSchedule: "+fmt.Sprintf("%#v", this.CronSchedule)+",\n")
-	s = append(s, "FirstDecisionTaskBackoff: "+fmt.Sprintf("%#v", this.FirstDecisionTaskBackoff)+",\n")
-	if this.Memo != nil {
-		s = append(s, "Memo: "+fmt.Sprintf("%#v", this.Memo)+",\n")
-	}
-	if this.SearchAttributes != nil {
-		s = append(s, "SearchAttributes: "+fmt.Sprintf("%#v", this.SearchAttributes)+",\n")
-	}
-	if this.PrevAutoResetPoints != nil {
-		s = append(s, "PrevAutoResetPoints: "+fmt.Sprintf("%#v", this.PrevAutoResetPoints)+",\n")
-	}
-	if this.Header != nil {
-		s = append(s, "Header: "+fmt.Sprintf("%#v", this.Header)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *WorkflowExecutionCompletedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.WorkflowExecutionCompletedEventAttributes{")
-	if this.Result != nil {
-		s = append(s, "Result: "+fmt.Sprintf("%#v", this.Result)+",\n")
-	}
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *WorkflowExecutionFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.WorkflowExecutionFailedEventAttributes{")
-	if this.Failure != nil {
-		s = append(s, "Failure: "+fmt.Sprintf("%#v", this.Failure)+",\n")
-	}
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *WorkflowExecutionTimedOutEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&apiv1.WorkflowExecutionTimedOutEventAttributes{")
-	s = append(s, "TimeoutType: "+fmt.Sprintf("%#v", this.TimeoutType)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DecisionTaskScheduledEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&apiv1.DecisionTaskScheduledEventAttributes{")
-	if this.TaskList != nil {
-		s = append(s, "TaskList: "+fmt.Sprintf("%#v", this.TaskList)+",\n")
-	}
-	s = append(s, "StartToCloseTimeout: "+fmt.Sprintf("%#v", this.StartToCloseTimeout)+",\n")
-	s = append(s, "Attempt: "+fmt.Sprintf("%#v", this.Attempt)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DecisionTaskStartedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&apiv1.DecisionTaskStartedEventAttributes{")
-	s = append(s, "ScheduledEventId: "+fmt.Sprintf("%#v", this.ScheduledEventId)+",\n")
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "RequestId: "+fmt.Sprintf("%#v", this.RequestId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DecisionTaskCompletedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&apiv1.DecisionTaskCompletedEventAttributes{")
-	s = append(s, "ScheduledEventId: "+fmt.Sprintf("%#v", this.ScheduledEventId)+",\n")
-	s = append(s, "StartedEventId: "+fmt.Sprintf("%#v", this.StartedEventId)+",\n")
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "BinaryChecksum: "+fmt.Sprintf("%#v", this.BinaryChecksum)+",\n")
-	s = append(s, "ExecutionContext: "+fmt.Sprintf("%#v", this.ExecutionContext)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DecisionTaskTimedOutEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&apiv1.DecisionTaskTimedOutEventAttributes{")
-	s = append(s, "ScheduledEventId: "+fmt.Sprintf("%#v", this.ScheduledEventId)+",\n")
-	s = append(s, "StartedEventId: "+fmt.Sprintf("%#v", this.StartedEventId)+",\n")
-	s = append(s, "TimeoutType: "+fmt.Sprintf("%#v", this.TimeoutType)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DecisionTaskFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 13)
-	s = append(s, "&apiv1.DecisionTaskFailedEventAttributes{")
-	s = append(s, "ScheduledEventId: "+fmt.Sprintf("%#v", this.ScheduledEventId)+",\n")
-	s = append(s, "StartedEventId: "+fmt.Sprintf("%#v", this.StartedEventId)+",\n")
-	s = append(s, "Cause: "+fmt.Sprintf("%#v", this.Cause)+",\n")
-	if this.Failure != nil {
-		s = append(s, "Failure: "+fmt.Sprintf("%#v", this.Failure)+",\n")
-	}
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "BaseRunId: "+fmt.Sprintf("%#v", this.BaseRunId)+",\n")
-	s = append(s, "NewRunId: "+fmt.Sprintf("%#v", this.NewRunId)+",\n")
-	s = append(s, "ForkEventVersion: "+fmt.Sprintf("%#v", this.ForkEventVersion)+",\n")
-	s = append(s, "BinaryChecksum: "+fmt.Sprintf("%#v", this.BinaryChecksum)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ActivityTaskScheduledEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 16)
-	s = append(s, "&apiv1.ActivityTaskScheduledEventAttributes{")
-	s = append(s, "ActivityId: "+fmt.Sprintf("%#v", this.ActivityId)+",\n")
-	if this.ActivityType != nil {
-		s = append(s, "ActivityType: "+fmt.Sprintf("%#v", this.ActivityType)+",\n")
-	}
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.TaskList != nil {
-		s = append(s, "TaskList: "+fmt.Sprintf("%#v", this.TaskList)+",\n")
-	}
-	if this.Input != nil {
-		s = append(s, "Input: "+fmt.Sprintf("%#v", this.Input)+",\n")
-	}
-	s = append(s, "ScheduleToCloseTimeout: "+fmt.Sprintf("%#v", this.ScheduleToCloseTimeout)+",\n")
-	s = append(s, "ScheduleToStartTimeout: "+fmt.Sprintf("%#v", this.ScheduleToStartTimeout)+",\n")
-	s = append(s, "StartToCloseTimeout: "+fmt.Sprintf("%#v", this.StartToCloseTimeout)+",\n")
-	s = append(s, "HeartbeatTimeout: "+fmt.Sprintf("%#v", this.HeartbeatTimeout)+",\n")
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	if this.RetryPolicy != nil {
-		s = append(s, "RetryPolicy: "+fmt.Sprintf("%#v", this.RetryPolicy)+",\n")
-	}
-	if this.Header != nil {
-		s = append(s, "Header: "+fmt.Sprintf("%#v", this.Header)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ActivityTaskStartedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&apiv1.ActivityTaskStartedEventAttributes{")
-	s = append(s, "ScheduledEventId: "+fmt.Sprintf("%#v", this.ScheduledEventId)+",\n")
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "RequestId: "+fmt.Sprintf("%#v", this.RequestId)+",\n")
-	s = append(s, "Attempt: "+fmt.Sprintf("%#v", this.Attempt)+",\n")
-	if this.LastFailure != nil {
-		s = append(s, "LastFailure: "+fmt.Sprintf("%#v", this.LastFailure)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ActivityTaskCompletedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&apiv1.ActivityTaskCompletedEventAttributes{")
-	if this.Result != nil {
-		s = append(s, "Result: "+fmt.Sprintf("%#v", this.Result)+",\n")
-	}
-	s = append(s, "ScheduledEventId: "+fmt.Sprintf("%#v", this.ScheduledEventId)+",\n")
-	s = append(s, "StartedEventId: "+fmt.Sprintf("%#v", this.StartedEventId)+",\n")
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ActivityTaskFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&apiv1.ActivityTaskFailedEventAttributes{")
-	if this.Failure != nil {
-		s = append(s, "Failure: "+fmt.Sprintf("%#v", this.Failure)+",\n")
-	}
-	s = append(s, "ScheduledEventId: "+fmt.Sprintf("%#v", this.ScheduledEventId)+",\n")
-	s = append(s, "StartedEventId: "+fmt.Sprintf("%#v", this.StartedEventId)+",\n")
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ActivityTaskTimedOutEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&apiv1.ActivityTaskTimedOutEventAttributes{")
-	if this.Details != nil {
-		s = append(s, "Details: "+fmt.Sprintf("%#v", this.Details)+",\n")
-	}
-	s = append(s, "ScheduledEventId: "+fmt.Sprintf("%#v", this.ScheduledEventId)+",\n")
-	s = append(s, "StartedEventId: "+fmt.Sprintf("%#v", this.StartedEventId)+",\n")
-	s = append(s, "TimeoutType: "+fmt.Sprintf("%#v", this.TimeoutType)+",\n")
-	if this.LastFailure != nil {
-		s = append(s, "LastFailure: "+fmt.Sprintf("%#v", this.LastFailure)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ActivityTaskCancelRequestedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.ActivityTaskCancelRequestedEventAttributes{")
-	s = append(s, "ActivityId: "+fmt.Sprintf("%#v", this.ActivityId)+",\n")
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RequestCancelActivityTaskFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&apiv1.RequestCancelActivityTaskFailedEventAttributes{")
-	s = append(s, "ActivityId: "+fmt.Sprintf("%#v", this.ActivityId)+",\n")
-	s = append(s, "Cause: "+fmt.Sprintf("%#v", this.Cause)+",\n")
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ActivityTaskCanceledEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&apiv1.ActivityTaskCanceledEventAttributes{")
-	if this.Details != nil {
-		s = append(s, "Details: "+fmt.Sprintf("%#v", this.Details)+",\n")
-	}
-	s = append(s, "LatestCancelRequestedEventId: "+fmt.Sprintf("%#v", this.LatestCancelRequestedEventId)+",\n")
-	s = append(s, "ScheduledEventId: "+fmt.Sprintf("%#v", this.ScheduledEventId)+",\n")
-	s = append(s, "StartedEventId: "+fmt.Sprintf("%#v", this.StartedEventId)+",\n")
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *TimerStartedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&apiv1.TimerStartedEventAttributes{")
-	s = append(s, "TimerId: "+fmt.Sprintf("%#v", this.TimerId)+",\n")
-	s = append(s, "StartToFireTimeout: "+fmt.Sprintf("%#v", this.StartToFireTimeout)+",\n")
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *TimerFiredEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.TimerFiredEventAttributes{")
-	s = append(s, "TimerId: "+fmt.Sprintf("%#v", this.TimerId)+",\n")
-	s = append(s, "StartedEventId: "+fmt.Sprintf("%#v", this.StartedEventId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *TimerCanceledEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&apiv1.TimerCanceledEventAttributes{")
-	s = append(s, "TimerId: "+fmt.Sprintf("%#v", this.TimerId)+",\n")
-	s = append(s, "StartedEventId: "+fmt.Sprintf("%#v", this.StartedEventId)+",\n")
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *CancelTimerFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&apiv1.CancelTimerFailedEventAttributes{")
-	s = append(s, "TimerId: "+fmt.Sprintf("%#v", this.TimerId)+",\n")
-	s = append(s, "Cause: "+fmt.Sprintf("%#v", this.Cause)+",\n")
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *WorkflowExecutionContinuedAsNewEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 18)
-	s = append(s, "&apiv1.WorkflowExecutionContinuedAsNewEventAttributes{")
-	s = append(s, "NewExecutionRunId: "+fmt.Sprintf("%#v", this.NewExecutionRunId)+",\n")
-	if this.WorkflowType != nil {
-		s = append(s, "WorkflowType: "+fmt.Sprintf("%#v", this.WorkflowType)+",\n")
-	}
-	if this.TaskList != nil {
-		s = append(s, "TaskList: "+fmt.Sprintf("%#v", this.TaskList)+",\n")
-	}
-	if this.Input != nil {
-		s = append(s, "Input: "+fmt.Sprintf("%#v", this.Input)+",\n")
-	}
-	s = append(s, "ExecutionStartToCloseTimeout: "+fmt.Sprintf("%#v", this.ExecutionStartToCloseTimeout)+",\n")
-	s = append(s, "TaskStartToCloseTimeout: "+fmt.Sprintf("%#v", this.TaskStartToCloseTimeout)+",\n")
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	s = append(s, "BackoffStartInterval: "+fmt.Sprintf("%#v", this.BackoffStartInterval)+",\n")
-	s = append(s, "Initiator: "+fmt.Sprintf("%#v", this.Initiator)+",\n")
-	if this.Failure != nil {
-		s = append(s, "Failure: "+fmt.Sprintf("%#v", this.Failure)+",\n")
-	}
-	if this.LastCompletionResult != nil {
-		s = append(s, "LastCompletionResult: "+fmt.Sprintf("%#v", this.LastCompletionResult)+",\n")
-	}
-	if this.Header != nil {
-		s = append(s, "Header: "+fmt.Sprintf("%#v", this.Header)+",\n")
-	}
-	if this.Memo != nil {
-		s = append(s, "Memo: "+fmt.Sprintf("%#v", this.Memo)+",\n")
-	}
-	if this.SearchAttributes != nil {
-		s = append(s, "SearchAttributes: "+fmt.Sprintf("%#v", this.SearchAttributes)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *WorkflowExecutionCancelRequestedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&apiv1.WorkflowExecutionCancelRequestedEventAttributes{")
-	s = append(s, "Cause: "+fmt.Sprintf("%#v", this.Cause)+",\n")
-	s = append(s, "ExternalInitiatedEventId: "+fmt.Sprintf("%#v", this.ExternalInitiatedEventId)+",\n")
-	if this.ExternalWorkflowExecution != nil {
-		s = append(s, "ExternalWorkflowExecution: "+fmt.Sprintf("%#v", this.ExternalWorkflowExecution)+",\n")
-	}
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *WorkflowExecutionCanceledEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.WorkflowExecutionCanceledEventAttributes{")
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	if this.Details != nil {
-		s = append(s, "Details: "+fmt.Sprintf("%#v", this.Details)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *MarkerRecordedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&apiv1.MarkerRecordedEventAttributes{")
-	s = append(s, "MarkerName: "+fmt.Sprintf("%#v", this.MarkerName)+",\n")
-	if this.Details != nil {
-		s = append(s, "Details: "+fmt.Sprintf("%#v", this.Details)+",\n")
-	}
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	if this.Header != nil {
-		s = append(s, "Header: "+fmt.Sprintf("%#v", this.Header)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *WorkflowExecutionSignaledEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&apiv1.WorkflowExecutionSignaledEventAttributes{")
-	s = append(s, "SignalName: "+fmt.Sprintf("%#v", this.SignalName)+",\n")
-	if this.Input != nil {
-		s = append(s, "Input: "+fmt.Sprintf("%#v", this.Input)+",\n")
-	}
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *WorkflowExecutionTerminatedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&apiv1.WorkflowExecutionTerminatedEventAttributes{")
-	s = append(s, "Reason: "+fmt.Sprintf("%#v", this.Reason)+",\n")
-	if this.Details != nil {
-		s = append(s, "Details: "+fmt.Sprintf("%#v", this.Details)+",\n")
-	}
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&apiv1.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes{")
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "Control: "+fmt.Sprintf("%#v", this.Control)+",\n")
-	s = append(s, "ChildWorkflowOnly: "+fmt.Sprintf("%#v", this.ChildWorkflowOnly)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&apiv1.RequestCancelExternalWorkflowExecutionFailedEventAttributes{")
-	s = append(s, "Cause: "+fmt.Sprintf("%#v", this.Cause)+",\n")
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "InitiatedEventId: "+fmt.Sprintf("%#v", this.InitiatedEventId)+",\n")
-	s = append(s, "Control: "+fmt.Sprintf("%#v", this.Control)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ExternalWorkflowExecutionCancelRequestedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&apiv1.ExternalWorkflowExecutionCancelRequestedEventAttributes{")
-	s = append(s, "InitiatedEventId: "+fmt.Sprintf("%#v", this.InitiatedEventId)+",\n")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *SignalExternalWorkflowExecutionInitiatedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 11)
-	s = append(s, "&apiv1.SignalExternalWorkflowExecutionInitiatedEventAttributes{")
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "SignalName: "+fmt.Sprintf("%#v", this.SignalName)+",\n")
-	if this.Input != nil {
-		s = append(s, "Input: "+fmt.Sprintf("%#v", this.Input)+",\n")
-	}
-	s = append(s, "Control: "+fmt.Sprintf("%#v", this.Control)+",\n")
-	s = append(s, "ChildWorkflowOnly: "+fmt.Sprintf("%#v", this.ChildWorkflowOnly)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *SignalExternalWorkflowExecutionFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&apiv1.SignalExternalWorkflowExecutionFailedEventAttributes{")
-	s = append(s, "Cause: "+fmt.Sprintf("%#v", this.Cause)+",\n")
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "InitiatedEventId: "+fmt.Sprintf("%#v", this.InitiatedEventId)+",\n")
-	s = append(s, "Control: "+fmt.Sprintf("%#v", this.Control)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ExternalWorkflowExecutionSignaledEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&apiv1.ExternalWorkflowExecutionSignaledEventAttributes{")
-	s = append(s, "InitiatedEventId: "+fmt.Sprintf("%#v", this.InitiatedEventId)+",\n")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "Control: "+fmt.Sprintf("%#v", this.Control)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *UpsertWorkflowSearchAttributesEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.UpsertWorkflowSearchAttributesEventAttributes{")
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	if this.SearchAttributes != nil {
-		s = append(s, "SearchAttributes: "+fmt.Sprintf("%#v", this.SearchAttributes)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *StartChildWorkflowExecutionInitiatedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 20)
-	s = append(s, "&apiv1.StartChildWorkflowExecutionInitiatedEventAttributes{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	s = append(s, "WorkflowId: "+fmt.Sprintf("%#v", this.WorkflowId)+",\n")
-	if this.WorkflowType != nil {
-		s = append(s, "WorkflowType: "+fmt.Sprintf("%#v", this.WorkflowType)+",\n")
-	}
-	if this.TaskList != nil {
-		s = append(s, "TaskList: "+fmt.Sprintf("%#v", this.TaskList)+",\n")
-	}
-	if this.Input != nil {
-		s = append(s, "Input: "+fmt.Sprintf("%#v", this.Input)+",\n")
-	}
-	s = append(s, "ExecutionStartToCloseTimeout: "+fmt.Sprintf("%#v", this.ExecutionStartToCloseTimeout)+",\n")
-	s = append(s, "TaskStartToCloseTimeout: "+fmt.Sprintf("%#v", this.TaskStartToCloseTimeout)+",\n")
-	s = append(s, "ParentClosePolicy: "+fmt.Sprintf("%#v", this.ParentClosePolicy)+",\n")
-	s = append(s, "Control: "+fmt.Sprintf("%#v", this.Control)+",\n")
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	s = append(s, "WorkflowIdReusePolicy: "+fmt.Sprintf("%#v", this.WorkflowIdReusePolicy)+",\n")
-	if this.RetryPolicy != nil {
-		s = append(s, "RetryPolicy: "+fmt.Sprintf("%#v", this.RetryPolicy)+",\n")
-	}
-	s = append(s, "CronSchedule: "+fmt.Sprintf("%#v", this.CronSchedule)+",\n")
-	if this.Header != nil {
-		s = append(s, "Header: "+fmt.Sprintf("%#v", this.Header)+",\n")
-	}
-	if this.Memo != nil {
-		s = append(s, "Memo: "+fmt.Sprintf("%#v", this.Memo)+",\n")
-	}
-	if this.SearchAttributes != nil {
-		s = append(s, "SearchAttributes: "+fmt.Sprintf("%#v", this.SearchAttributes)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *StartChildWorkflowExecutionFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 11)
-	s = append(s, "&apiv1.StartChildWorkflowExecutionFailedEventAttributes{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	s = append(s, "WorkflowId: "+fmt.Sprintf("%#v", this.WorkflowId)+",\n")
-	if this.WorkflowType != nil {
-		s = append(s, "WorkflowType: "+fmt.Sprintf("%#v", this.WorkflowType)+",\n")
-	}
-	s = append(s, "Cause: "+fmt.Sprintf("%#v", this.Cause)+",\n")
-	s = append(s, "Control: "+fmt.Sprintf("%#v", this.Control)+",\n")
-	s = append(s, "InitiatedEventId: "+fmt.Sprintf("%#v", this.InitiatedEventId)+",\n")
-	s = append(s, "DecisionTaskCompletedEventId: "+fmt.Sprintf("%#v", this.DecisionTaskCompletedEventId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ChildWorkflowExecutionStartedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&apiv1.ChildWorkflowExecutionStartedEventAttributes{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	if this.WorkflowType != nil {
-		s = append(s, "WorkflowType: "+fmt.Sprintf("%#v", this.WorkflowType)+",\n")
-	}
-	s = append(s, "InitiatedEventId: "+fmt.Sprintf("%#v", this.InitiatedEventId)+",\n")
-	if this.Header != nil {
-		s = append(s, "Header: "+fmt.Sprintf("%#v", this.Header)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ChildWorkflowExecutionCompletedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&apiv1.ChildWorkflowExecutionCompletedEventAttributes{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	if this.WorkflowType != nil {
-		s = append(s, "WorkflowType: "+fmt.Sprintf("%#v", this.WorkflowType)+",\n")
-	}
-	s = append(s, "InitiatedEventId: "+fmt.Sprintf("%#v", this.InitiatedEventId)+",\n")
-	s = append(s, "StartedEventId: "+fmt.Sprintf("%#v", this.StartedEventId)+",\n")
-	if this.Result != nil {
-		s = append(s, "Result: "+fmt.Sprintf("%#v", this.Result)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ChildWorkflowExecutionFailedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&apiv1.ChildWorkflowExecutionFailedEventAttributes{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	if this.WorkflowType != nil {
-		s = append(s, "WorkflowType: "+fmt.Sprintf("%#v", this.WorkflowType)+",\n")
-	}
-	s = append(s, "InitiatedEventId: "+fmt.Sprintf("%#v", this.InitiatedEventId)+",\n")
-	s = append(s, "StartedEventId: "+fmt.Sprintf("%#v", this.StartedEventId)+",\n")
-	if this.Failure != nil {
-		s = append(s, "Failure: "+fmt.Sprintf("%#v", this.Failure)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ChildWorkflowExecutionCanceledEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&apiv1.ChildWorkflowExecutionCanceledEventAttributes{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	if this.WorkflowType != nil {
-		s = append(s, "WorkflowType: "+fmt.Sprintf("%#v", this.WorkflowType)+",\n")
-	}
-	s = append(s, "InitiatedEventId: "+fmt.Sprintf("%#v", this.InitiatedEventId)+",\n")
-	s = append(s, "StartedEventId: "+fmt.Sprintf("%#v", this.StartedEventId)+",\n")
-	if this.Details != nil {
-		s = append(s, "Details: "+fmt.Sprintf("%#v", this.Details)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ChildWorkflowExecutionTimedOutEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&apiv1.ChildWorkflowExecutionTimedOutEventAttributes{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	if this.WorkflowType != nil {
-		s = append(s, "WorkflowType: "+fmt.Sprintf("%#v", this.WorkflowType)+",\n")
-	}
-	s = append(s, "InitiatedEventId: "+fmt.Sprintf("%#v", this.InitiatedEventId)+",\n")
-	s = append(s, "StartedEventId: "+fmt.Sprintf("%#v", this.StartedEventId)+",\n")
-	s = append(s, "TimeoutType: "+fmt.Sprintf("%#v", this.TimeoutType)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ChildWorkflowExecutionTerminatedEventAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&apiv1.ChildWorkflowExecutionTerminatedEventAttributes{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	if this.WorkflowType != nil {
-		s = append(s, "WorkflowType: "+fmt.Sprintf("%#v", this.WorkflowType)+",\n")
-	}
-	s = append(s, "InitiatedEventId: "+fmt.Sprintf("%#v", this.InitiatedEventId)+",\n")
-	s = append(s, "StartedEventId: "+fmt.Sprintf("%#v", this.StartedEventId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func valueToGoStringHistory(v interface{}, typ string) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
-}
 func (m *History) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -8250,6 +4620,10 @@ func (m *History) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Events) > 0 {
 		for iNdEx := len(m.Events) - 1; iNdEx >= 0; iNdEx-- {
 			{
@@ -8287,6 +4661,10 @@ func (m *HistoryEvent) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Attributes != nil {
 		{
 			size := m.Attributes.Size()
@@ -8307,12 +4685,14 @@ func (m *HistoryEvent) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		dAtA[i] = 0x18
 	}
 	if m.EventTime != nil {
-		n1, err1 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.EventTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.EventTime):])
-		if err1 != nil {
-			return 0, err1
+		{
+			size, err := m.EventTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
-		i -= n1
-		i = encodeVarintHistory(dAtA, i, uint64(n1))
 		i--
 		dAtA[i] = 0x12
 	}
@@ -9288,6 +5668,10 @@ func (m *WorkflowExecutionStartedEventAttributes) MarshalToSizedBuffer(dAtA []by
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Header != nil {
 		{
 			size, err := m.Header.MarshalToSizedBuffer(dAtA[:i])
@@ -9300,7 +5684,7 @@ func (m *WorkflowExecutionStartedEventAttributes) MarshalToSizedBuffer(dAtA []by
 		i--
 		dAtA[i] = 0x1
 		i--
-		dAtA[i] = 0xca
+		dAtA[i] = 0xb2
 	}
 	if m.PrevAutoResetPoints != nil {
 		{
@@ -9314,7 +5698,7 @@ func (m *WorkflowExecutionStartedEventAttributes) MarshalToSizedBuffer(dAtA []by
 		i--
 		dAtA[i] = 0x1
 		i--
-		dAtA[i] = 0xc2
+		dAtA[i] = 0xaa
 	}
 	if m.SearchAttributes != nil {
 		{
@@ -9328,7 +5712,7 @@ func (m *WorkflowExecutionStartedEventAttributes) MarshalToSizedBuffer(dAtA []by
 		i--
 		dAtA[i] = 0x1
 		i--
-		dAtA[i] = 0xba
+		dAtA[i] = 0xa2
 	}
 	if m.Memo != nil {
 		{
@@ -9342,19 +5726,21 @@ func (m *WorkflowExecutionStartedEventAttributes) MarshalToSizedBuffer(dAtA []by
 		i--
 		dAtA[i] = 0x1
 		i--
-		dAtA[i] = 0xb2
+		dAtA[i] = 0x9a
 	}
 	if m.FirstDecisionTaskBackoff != nil {
-		n48, err48 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.FirstDecisionTaskBackoff, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.FirstDecisionTaskBackoff):])
-		if err48 != nil {
-			return 0, err48
+		{
+			size, err := m.FirstDecisionTaskBackoff.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
-		i -= n48
-		i = encodeVarintHistory(dAtA, i, uint64(n48))
 		i--
 		dAtA[i] = 0x1
 		i--
-		dAtA[i] = 0xaa
+		dAtA[i] = 0x92
 	}
 	if len(m.CronSchedule) > 0 {
 		i -= len(m.CronSchedule)
@@ -9363,30 +5749,11 @@ func (m *WorkflowExecutionStartedEventAttributes) MarshalToSizedBuffer(dAtA []by
 		i--
 		dAtA[i] = 0x1
 		i--
-		dAtA[i] = 0xa2
+		dAtA[i] = 0x8a
 	}
 	if m.ExpirationTime != nil {
-		n49, err49 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.ExpirationTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.ExpirationTime):])
-		if err49 != nil {
-			return 0, err49
-		}
-		i -= n49
-		i = encodeVarintHistory(dAtA, i, uint64(n49))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0x9a
-	}
-	if m.Attempt != 0 {
-		i = encodeVarintHistory(dAtA, i, uint64(m.Attempt))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0x88
-	}
-	if m.RetryPolicy != nil {
 		{
-			size, err := m.RetryPolicy.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.ExpirationTime.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -9398,26 +5765,43 @@ func (m *WorkflowExecutionStartedEventAttributes) MarshalToSizedBuffer(dAtA []by
 		i--
 		dAtA[i] = 0x82
 	}
+	if m.Attempt != 0 {
+		i = encodeVarintHistory(dAtA, i, uint64(m.Attempt))
+		i--
+		dAtA[i] = 0x78
+	}
+	if m.RetryPolicy != nil {
+		{
+			size, err := m.RetryPolicy.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintHistory(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x72
+	}
 	if len(m.FirstExecutionRunId) > 0 {
 		i -= len(m.FirstExecutionRunId)
 		copy(dAtA[i:], m.FirstExecutionRunId)
 		i = encodeVarintHistory(dAtA, i, uint64(len(m.FirstExecutionRunId)))
 		i--
-		dAtA[i] = 0x7a
+		dAtA[i] = 0x6a
 	}
 	if len(m.Identity) > 0 {
 		i -= len(m.Identity)
 		copy(dAtA[i:], m.Identity)
 		i = encodeVarintHistory(dAtA, i, uint64(len(m.Identity)))
 		i--
-		dAtA[i] = 0x72
+		dAtA[i] = 0x62
 	}
 	if len(m.OriginalExecutionRunId) > 0 {
 		i -= len(m.OriginalExecutionRunId)
 		copy(dAtA[i:], m.OriginalExecutionRunId)
 		i = encodeVarintHistory(dAtA, i, uint64(len(m.OriginalExecutionRunId)))
 		i--
-		dAtA[i] = 0x6a
+		dAtA[i] = 0x5a
 	}
 	if m.LastCompletionResult != nil {
 		{
@@ -9429,7 +5813,7 @@ func (m *WorkflowExecutionStartedEventAttributes) MarshalToSizedBuffer(dAtA []by
 			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0x62
+		dAtA[i] = 0x52
 	}
 	if m.ContinuedFailure != nil {
 		{
@@ -9441,39 +5825,43 @@ func (m *WorkflowExecutionStartedEventAttributes) MarshalToSizedBuffer(dAtA []by
 			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0x5a
+		dAtA[i] = 0x4a
 	}
 	if m.Initiator != 0 {
 		i = encodeVarintHistory(dAtA, i, uint64(m.Initiator))
 		i--
-		dAtA[i] = 0x50
+		dAtA[i] = 0x40
 	}
 	if len(m.ContinuedExecutionRunId) > 0 {
 		i -= len(m.ContinuedExecutionRunId)
 		copy(dAtA[i:], m.ContinuedExecutionRunId)
 		i = encodeVarintHistory(dAtA, i, uint64(len(m.ContinuedExecutionRunId)))
 		i--
-		dAtA[i] = 0x4a
+		dAtA[i] = 0x3a
 	}
 	if m.TaskStartToCloseTimeout != nil {
-		n53, err53 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.TaskStartToCloseTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.TaskStartToCloseTimeout):])
-		if err53 != nil {
-			return 0, err53
+		{
+			size, err := m.TaskStartToCloseTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
-		i -= n53
-		i = encodeVarintHistory(dAtA, i, uint64(n53))
 		i--
-		dAtA[i] = 0x42
+		dAtA[i] = 0x32
 	}
 	if m.ExecutionStartToCloseTimeout != nil {
-		n54, err54 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.ExecutionStartToCloseTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ExecutionStartToCloseTimeout):])
-		if err54 != nil {
-			return 0, err54
+		{
+			size, err := m.ExecutionStartToCloseTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
-		i -= n54
-		i = encodeVarintHistory(dAtA, i, uint64(n54))
 		i--
-		dAtA[i] = 0x3a
+		dAtA[i] = 0x2a
 	}
 	if m.Input != nil {
 		{
@@ -9485,7 +5873,7 @@ func (m *WorkflowExecutionStartedEventAttributes) MarshalToSizedBuffer(dAtA []by
 			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0x32
+		dAtA[i] = 0x22
 	}
 	if m.TaskList != nil {
 		{
@@ -9497,29 +5885,17 @@ func (m *WorkflowExecutionStartedEventAttributes) MarshalToSizedBuffer(dAtA []by
 			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0x2a
+		dAtA[i] = 0x1a
 	}
-	if m.ParentInitiatedEventId != 0 {
-		i = encodeVarintHistory(dAtA, i, uint64(m.ParentInitiatedEventId))
-		i--
-		dAtA[i] = 0x20
-	}
-	if m.ParentWorkflowExecution != nil {
+	if m.ParentExecutionInfo != nil {
 		{
-			size, err := m.ParentWorkflowExecution.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.ParentExecutionInfo.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
 			i -= size
 			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.ParentWorkflowDomain) > 0 {
-		i -= len(m.ParentWorkflowDomain)
-		copy(dAtA[i:], m.ParentWorkflowDomain)
-		i = encodeVarintHistory(dAtA, i, uint64(len(m.ParentWorkflowDomain)))
 		i--
 		dAtA[i] = 0x12
 	}
@@ -9558,6 +5934,10 @@ func (m *WorkflowExecutionCompletedEventAttributes) MarshalToSizedBuffer(dAtA []
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.DecisionTaskCompletedEventId != 0 {
 		i = encodeVarintHistory(dAtA, i, uint64(m.DecisionTaskCompletedEventId))
 		i--
@@ -9598,6 +5978,10 @@ func (m *WorkflowExecutionFailedEventAttributes) MarshalToSizedBuffer(dAtA []byt
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.DecisionTaskCompletedEventId != 0 {
 		i = encodeVarintHistory(dAtA, i, uint64(m.DecisionTaskCompletedEventId))
 		i--
@@ -9638,6 +6022,10 @@ func (m *WorkflowExecutionTimedOutEventAttributes) MarshalToSizedBuffer(dAtA []b
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.TimeoutType != 0 {
 		i = encodeVarintHistory(dAtA, i, uint64(m.TimeoutType))
 		i--
@@ -9666,18 +6054,24 @@ func (m *DecisionTaskScheduledEventAttributes) MarshalToSizedBuffer(dAtA []byte)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Attempt != 0 {
 		i = encodeVarintHistory(dAtA, i, uint64(m.Attempt))
 		i--
 		dAtA[i] = 0x18
 	}
 	if m.StartToCloseTimeout != nil {
-		n61, err61 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.StartToCloseTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.StartToCloseTimeout):])
-		if err61 != nil {
-			return 0, err61
+		{
+			size, err := m.StartToCloseTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
-		i -= n61
-		i = encodeVarintHistory(dAtA, i, uint64(n61))
 		i--
 		dAtA[i] = 0x12
 	}
@@ -9716,6 +6110,10 @@ func (m *DecisionTaskStartedEventAttributes) MarshalToSizedBuffer(dAtA []byte) (
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.RequestId) > 0 {
 		i -= len(m.RequestId)
 		copy(dAtA[i:], m.RequestId)
@@ -9758,6 +6156,10 @@ func (m *DecisionTaskCompletedEventAttributes) MarshalToSizedBuffer(dAtA []byte)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.ExecutionContext) > 0 {
 		i -= len(m.ExecutionContext)
 		copy(dAtA[i:], m.ExecutionContext)
@@ -9812,6 +6214,41 @@ func (m *DecisionTaskTimedOutEventAttributes) MarshalToSizedBuffer(dAtA []byte) 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.Cause != 0 {
+		i = encodeVarintHistory(dAtA, i, uint64(m.Cause))
+		i--
+		dAtA[i] = 0x40
+	}
+	if len(m.Reason) > 0 {
+		i -= len(m.Reason)
+		copy(dAtA[i:], m.Reason)
+		i = encodeVarintHistory(dAtA, i, uint64(len(m.Reason)))
+		i--
+		dAtA[i] = 0x3a
+	}
+	if m.ForkEventVersion != 0 {
+		i = encodeVarintHistory(dAtA, i, uint64(m.ForkEventVersion))
+		i--
+		dAtA[i] = 0x30
+	}
+	if len(m.NewRunId) > 0 {
+		i -= len(m.NewRunId)
+		copy(dAtA[i:], m.NewRunId)
+		i = encodeVarintHistory(dAtA, i, uint64(len(m.NewRunId)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.BaseRunId) > 0 {
+		i -= len(m.BaseRunId)
+		copy(dAtA[i:], m.BaseRunId)
+		i = encodeVarintHistory(dAtA, i, uint64(len(m.BaseRunId)))
+		i--
+		dAtA[i] = 0x22
+	}
 	if m.TimeoutType != 0 {
 		i = encodeVarintHistory(dAtA, i, uint64(m.TimeoutType))
 		i--
@@ -9850,6 +6287,10 @@ func (m *DecisionTaskFailedEventAttributes) MarshalToSizedBuffer(dAtA []byte) (i
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.BinaryChecksum) > 0 {
 		i -= len(m.BinaryChecksum)
 		copy(dAtA[i:], m.BinaryChecksum)
@@ -9933,6 +6374,10 @@ func (m *ActivityTaskScheduledEventAttributes) MarshalToSizedBuffer(dAtA []byte)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Header != nil {
 		{
 			size, err := m.Header.MarshalToSizedBuffer(dAtA[:i])
@@ -9963,42 +6408,50 @@ func (m *ActivityTaskScheduledEventAttributes) MarshalToSizedBuffer(dAtA []byte)
 		dAtA[i] = 0x58
 	}
 	if m.HeartbeatTimeout != nil {
-		n66, err66 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.HeartbeatTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.HeartbeatTimeout):])
-		if err66 != nil {
-			return 0, err66
+		{
+			size, err := m.HeartbeatTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
-		i -= n66
-		i = encodeVarintHistory(dAtA, i, uint64(n66))
 		i--
 		dAtA[i] = 0x52
 	}
 	if m.StartToCloseTimeout != nil {
-		n67, err67 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.StartToCloseTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.StartToCloseTimeout):])
-		if err67 != nil {
-			return 0, err67
+		{
+			size, err := m.StartToCloseTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
-		i -= n67
-		i = encodeVarintHistory(dAtA, i, uint64(n67))
 		i--
 		dAtA[i] = 0x4a
 	}
 	if m.ScheduleToStartTimeout != nil {
-		n68, err68 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.ScheduleToStartTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ScheduleToStartTimeout):])
-		if err68 != nil {
-			return 0, err68
+		{
+			size, err := m.ScheduleToStartTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
-		i -= n68
-		i = encodeVarintHistory(dAtA, i, uint64(n68))
 		i--
 		dAtA[i] = 0x42
 	}
 	if m.ScheduleToCloseTimeout != nil {
-		n69, err69 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.ScheduleToCloseTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ScheduleToCloseTimeout):])
-		if err69 != nil {
-			return 0, err69
+		{
+			size, err := m.ScheduleToCloseTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
-		i -= n69
-		i = encodeVarintHistory(dAtA, i, uint64(n69))
 		i--
 		dAtA[i] = 0x3a
 	}
@@ -10075,6 +6528,10 @@ func (m *ActivityTaskStartedEventAttributes) MarshalToSizedBuffer(dAtA []byte) (
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.LastFailure != nil {
 		{
 			size, err := m.LastFailure.MarshalToSizedBuffer(dAtA[:i])
@@ -10134,6 +6591,10 @@ func (m *ActivityTaskCompletedEventAttributes) MarshalToSizedBuffer(dAtA []byte)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Identity) > 0 {
 		i -= len(m.Identity)
 		copy(dAtA[i:], m.Identity)
@@ -10186,6 +6647,10 @@ func (m *ActivityTaskFailedEventAttributes) MarshalToSizedBuffer(dAtA []byte) (i
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Identity) > 0 {
 		i -= len(m.Identity)
 		copy(dAtA[i:], m.Identity)
@@ -10238,6 +6703,10 @@ func (m *ActivityTaskTimedOutEventAttributes) MarshalToSizedBuffer(dAtA []byte) 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.LastFailure != nil {
 		{
 			size, err := m.LastFailure.MarshalToSizedBuffer(dAtA[:i])
@@ -10300,6 +6769,10 @@ func (m *ActivityTaskCancelRequestedEventAttributes) MarshalToSizedBuffer(dAtA [
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.DecisionTaskCompletedEventId != 0 {
 		i = encodeVarintHistory(dAtA, i, uint64(m.DecisionTaskCompletedEventId))
 		i--
@@ -10335,6 +6808,10 @@ func (m *RequestCancelActivityTaskFailedEventAttributes) MarshalToSizedBuffer(dA
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.DecisionTaskCompletedEventId != 0 {
 		i = encodeVarintHistory(dAtA, i, uint64(m.DecisionTaskCompletedEventId))
 		i--
@@ -10377,6 +6854,10 @@ func (m *ActivityTaskCanceledEventAttributes) MarshalToSizedBuffer(dAtA []byte) 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Identity) > 0 {
 		i -= len(m.Identity)
 		copy(dAtA[i:], m.Identity)
@@ -10434,18 +6915,24 @@ func (m *TimerStartedEventAttributes) MarshalToSizedBuffer(dAtA []byte) (int, er
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.DecisionTaskCompletedEventId != 0 {
 		i = encodeVarintHistory(dAtA, i, uint64(m.DecisionTaskCompletedEventId))
 		i--
 		dAtA[i] = 0x18
 	}
 	if m.StartToFireTimeout != nil {
-		n79, err79 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.StartToFireTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.StartToFireTimeout):])
-		if err79 != nil {
-			return 0, err79
+		{
+			size, err := m.StartToFireTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
-		i -= n79
-		i = encodeVarintHistory(dAtA, i, uint64(n79))
 		i--
 		dAtA[i] = 0x12
 	}
@@ -10479,6 +6966,10 @@ func (m *TimerFiredEventAttributes) MarshalToSizedBuffer(dAtA []byte) (int, erro
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.StartedEventId != 0 {
 		i = encodeVarintHistory(dAtA, i, uint64(m.StartedEventId))
 		i--
@@ -10514,6 +7005,10 @@ func (m *TimerCanceledEventAttributes) MarshalToSizedBuffer(dAtA []byte) (int, e
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Identity) > 0 {
 		i -= len(m.Identity)
 		copy(dAtA[i:], m.Identity)
@@ -10561,6 +7056,10 @@ func (m *CancelTimerFailedEventAttributes) MarshalToSizedBuffer(dAtA []byte) (in
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Identity) > 0 {
 		i -= len(m.Identity)
 		copy(dAtA[i:], m.Identity)
@@ -10610,6 +7109,10 @@ func (m *WorkflowExecutionContinuedAsNewEventAttributes) MarshalToSizedBuffer(dA
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.SearchAttributes != nil {
 		{
 			size, err := m.SearchAttributes.MarshalToSizedBuffer(dAtA[:i])
@@ -10676,12 +7179,14 @@ func (m *WorkflowExecutionContinuedAsNewEventAttributes) MarshalToSizedBuffer(dA
 		dAtA[i] = 0x48
 	}
 	if m.BackoffStartInterval != nil {
-		n85, err85 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.BackoffStartInterval, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.BackoffStartInterval):])
-		if err85 != nil {
-			return 0, err85
+		{
+			size, err := m.BackoffStartInterval.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
-		i -= n85
-		i = encodeVarintHistory(dAtA, i, uint64(n85))
 		i--
 		dAtA[i] = 0x42
 	}
@@ -10691,22 +7196,26 @@ func (m *WorkflowExecutionContinuedAsNewEventAttributes) MarshalToSizedBuffer(dA
 		dAtA[i] = 0x38
 	}
 	if m.TaskStartToCloseTimeout != nil {
-		n86, err86 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.TaskStartToCloseTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.TaskStartToCloseTimeout):])
-		if err86 != nil {
-			return 0, err86
+		{
+			size, err := m.TaskStartToCloseTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
-		i -= n86
-		i = encodeVarintHistory(dAtA, i, uint64(n86))
 		i--
 		dAtA[i] = 0x32
 	}
 	if m.ExecutionStartToCloseTimeout != nil {
-		n87, err87 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.ExecutionStartToCloseTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ExecutionStartToCloseTimeout):])
-		if err87 != nil {
-			return 0, err87
+		{
+			size, err := m.ExecutionStartToCloseTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
-		i -= n87
-		i = encodeVarintHistory(dAtA, i, uint64(n87))
 		i--
 		dAtA[i] = 0x2a
 	}
@@ -10776,16 +7285,13 @@ func (m *WorkflowExecutionCancelRequestedEventAttributes) MarshalToSizedBuffer(d
 	_ = i
 	var l int
 	_ = l
-	if len(m.Identity) > 0 {
-		i -= len(m.Identity)
-		copy(dAtA[i:], m.Identity)
-		i = encodeVarintHistory(dAtA, i, uint64(len(m.Identity)))
-		i--
-		dAtA[i] = 0x22
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	if m.ExternalWorkflowExecution != nil {
+	if m.ExternalExecutionInfo != nil {
 		{
-			size, err := m.ExternalWorkflowExecution.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.ExternalExecutionInfo.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -10795,10 +7301,12 @@ func (m *WorkflowExecutionCancelRequestedEventAttributes) MarshalToSizedBuffer(d
 		i--
 		dAtA[i] = 0x1a
 	}
-	if m.ExternalInitiatedEventId != 0 {
-		i = encodeVarintHistory(dAtA, i, uint64(m.ExternalInitiatedEventId))
+	if len(m.Identity) > 0 {
+		i -= len(m.Identity)
+		copy(dAtA[i:], m.Identity)
+		i = encodeVarintHistory(dAtA, i, uint64(len(m.Identity)))
 		i--
-		dAtA[i] = 0x10
+		dAtA[i] = 0x12
 	}
 	if len(m.Cause) > 0 {
 		i -= len(m.Cause)
@@ -10830,6 +7338,10 @@ func (m *WorkflowExecutionCanceledEventAttributes) MarshalToSizedBuffer(dAtA []b
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Details != nil {
 		{
 			size, err := m.Details.MarshalToSizedBuffer(dAtA[:i])
@@ -10870,6 +7382,10 @@ func (m *MarkerRecordedEventAttributes) MarshalToSizedBuffer(dAtA []byte) (int, 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Header != nil {
 		{
 			size, err := m.Header.MarshalToSizedBuffer(dAtA[:i])
@@ -10929,6 +7445,10 @@ func (m *WorkflowExecutionSignaledEventAttributes) MarshalToSizedBuffer(dAtA []b
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Identity) > 0 {
 		i -= len(m.Identity)
 		copy(dAtA[i:], m.Identity)
@@ -10978,6 +7498,10 @@ func (m *WorkflowExecutionTerminatedEventAttributes) MarshalToSizedBuffer(dAtA [
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Identity) > 0 {
 		i -= len(m.Identity)
 		copy(dAtA[i:], m.Identity)
@@ -11027,6 +7551,10 @@ func (m *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) Marshal
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.ChildWorkflowOnly {
 		i--
 		if m.ChildWorkflowOnly {
@@ -11091,6 +7619,10 @@ func (m *RequestCancelExternalWorkflowExecutionFailedEventAttributes) MarshalToS
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Control) > 0 {
 		i -= len(m.Control)
 		copy(dAtA[i:], m.Control)
@@ -11155,6 +7687,10 @@ func (m *ExternalWorkflowExecutionCancelRequestedEventAttributes) MarshalToSized
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.WorkflowExecution != nil {
 		{
 			size, err := m.WorkflowExecution.MarshalToSizedBuffer(dAtA[:i])
@@ -11202,6 +7738,10 @@ func (m *SignalExternalWorkflowExecutionInitiatedEventAttributes) MarshalToSized
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.ChildWorkflowOnly {
 		i--
 		if m.ChildWorkflowOnly {
@@ -11285,6 +7825,10 @@ func (m *SignalExternalWorkflowExecutionFailedEventAttributes) MarshalToSizedBuf
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Control) > 0 {
 		i -= len(m.Control)
 		copy(dAtA[i:], m.Control)
@@ -11349,6 +7893,10 @@ func (m *ExternalWorkflowExecutionSignaledEventAttributes) MarshalToSizedBuffer(
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Control) > 0 {
 		i -= len(m.Control)
 		copy(dAtA[i:], m.Control)
@@ -11403,6 +7951,10 @@ func (m *UpsertWorkflowSearchAttributesEventAttributes) MarshalToSizedBuffer(dAt
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.SearchAttributes != nil {
 		{
 			size, err := m.SearchAttributes.MarshalToSizedBuffer(dAtA[:i])
@@ -11443,6 +7995,10 @@ func (m *StartChildWorkflowExecutionInitiatedEventAttributes) MarshalToSizedBuff
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.SearchAttributes != nil {
 		{
 			size, err := m.SearchAttributes.MarshalToSizedBuffer(dAtA[:i])
@@ -11525,22 +8081,26 @@ func (m *StartChildWorkflowExecutionInitiatedEventAttributes) MarshalToSizedBuff
 		dAtA[i] = 0x40
 	}
 	if m.TaskStartToCloseTimeout != nil {
-		n109, err109 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.TaskStartToCloseTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.TaskStartToCloseTimeout):])
-		if err109 != nil {
-			return 0, err109
+		{
+			size, err := m.TaskStartToCloseTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
-		i -= n109
-		i = encodeVarintHistory(dAtA, i, uint64(n109))
 		i--
 		dAtA[i] = 0x3a
 	}
 	if m.ExecutionStartToCloseTimeout != nil {
-		n110, err110 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.ExecutionStartToCloseTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ExecutionStartToCloseTimeout):])
-		if err110 != nil {
-			return 0, err110
+		{
+			size, err := m.ExecutionStartToCloseTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintHistory(dAtA, i, uint64(size))
 		}
-		i -= n110
-		i = encodeVarintHistory(dAtA, i, uint64(n110))
 		i--
 		dAtA[i] = 0x32
 	}
@@ -11617,6 +8177,10 @@ func (m *StartChildWorkflowExecutionFailedEventAttributes) MarshalToSizedBuffer(
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.DecisionTaskCompletedEventId != 0 {
 		i = encodeVarintHistory(dAtA, i, uint64(m.DecisionTaskCompletedEventId))
 		i--
@@ -11688,6 +8252,10 @@ func (m *ChildWorkflowExecutionStartedEventAttributes) MarshalToSizedBuffer(dAtA
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Header != nil {
 		{
 			size, err := m.Header.MarshalToSizedBuffer(dAtA[:i])
@@ -11759,6 +8327,10 @@ func (m *ChildWorkflowExecutionCompletedEventAttributes) MarshalToSizedBuffer(dA
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Result != nil {
 		{
 			size, err := m.Result.MarshalToSizedBuffer(dAtA[:i])
@@ -11835,6 +8407,10 @@ func (m *ChildWorkflowExecutionFailedEventAttributes) MarshalToSizedBuffer(dAtA 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Failure != nil {
 		{
 			size, err := m.Failure.MarshalToSizedBuffer(dAtA[:i])
@@ -11911,6 +8487,10 @@ func (m *ChildWorkflowExecutionCanceledEventAttributes) MarshalToSizedBuffer(dAt
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Details != nil {
 		{
 			size, err := m.Details.MarshalToSizedBuffer(dAtA[:i])
@@ -11987,6 +8567,10 @@ func (m *ChildWorkflowExecutionTimedOutEventAttributes) MarshalToSizedBuffer(dAt
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.TimeoutType != 0 {
 		i = encodeVarintHistory(dAtA, i, uint64(m.TimeoutType))
 		i--
@@ -12056,6 +8640,10 @@ func (m *ChildWorkflowExecutionTerminatedEventAttributes) MarshalToSizedBuffer(d
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.StartedEventId != 0 {
 		i = encodeVarintHistory(dAtA, i, uint64(m.StartedEventId))
 		i--
@@ -12123,6 +8711,9 @@ func (m *History) Size() (n int) {
 			n += 1 + l + sovHistory(uint64(l))
 		}
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -12136,7 +8727,7 @@ func (m *HistoryEvent) Size() (n int) {
 		n += 1 + sovHistory(uint64(m.EventId))
 	}
 	if m.EventTime != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.EventTime)
+		l = m.EventTime.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.Version != 0 {
@@ -12147,6 +8738,9 @@ func (m *HistoryEvent) Size() (n int) {
 	}
 	if m.Attributes != nil {
 		n += m.Attributes.Size()
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -12665,16 +9259,9 @@ func (m *WorkflowExecutionStartedEventAttributes) Size() (n int) {
 		l = m.WorkflowType.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
-	l = len(m.ParentWorkflowDomain)
-	if l > 0 {
+	if m.ParentExecutionInfo != nil {
+		l = m.ParentExecutionInfo.Size()
 		n += 1 + l + sovHistory(uint64(l))
-	}
-	if m.ParentWorkflowExecution != nil {
-		l = m.ParentWorkflowExecution.Size()
-		n += 1 + l + sovHistory(uint64(l))
-	}
-	if m.ParentInitiatedEventId != 0 {
-		n += 1 + sovHistory(uint64(m.ParentInitiatedEventId))
 	}
 	if m.TaskList != nil {
 		l = m.TaskList.Size()
@@ -12685,11 +9272,11 @@ func (m *WorkflowExecutionStartedEventAttributes) Size() (n int) {
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.ExecutionStartToCloseTimeout != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ExecutionStartToCloseTimeout)
+		l = m.ExecutionStartToCloseTimeout.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.TaskStartToCloseTimeout != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.TaskStartToCloseTimeout)
+		l = m.TaskStartToCloseTimeout.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	l = len(m.ContinuedExecutionRunId)
@@ -12721,13 +9308,13 @@ func (m *WorkflowExecutionStartedEventAttributes) Size() (n int) {
 	}
 	if m.RetryPolicy != nil {
 		l = m.RetryPolicy.Size()
-		n += 2 + l + sovHistory(uint64(l))
+		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.Attempt != 0 {
-		n += 2 + sovHistory(uint64(m.Attempt))
+		n += 1 + sovHistory(uint64(m.Attempt))
 	}
 	if m.ExpirationTime != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.ExpirationTime)
+		l = m.ExpirationTime.Size()
 		n += 2 + l + sovHistory(uint64(l))
 	}
 	l = len(m.CronSchedule)
@@ -12735,7 +9322,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Size() (n int) {
 		n += 2 + l + sovHistory(uint64(l))
 	}
 	if m.FirstDecisionTaskBackoff != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.FirstDecisionTaskBackoff)
+		l = m.FirstDecisionTaskBackoff.Size()
 		n += 2 + l + sovHistory(uint64(l))
 	}
 	if m.Memo != nil {
@@ -12754,6 +9341,9 @@ func (m *WorkflowExecutionStartedEventAttributes) Size() (n int) {
 		l = m.Header.Size()
 		n += 2 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -12769,6 +9359,9 @@ func (m *WorkflowExecutionCompletedEventAttributes) Size() (n int) {
 	}
 	if m.DecisionTaskCompletedEventId != 0 {
 		n += 1 + sovHistory(uint64(m.DecisionTaskCompletedEventId))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -12786,6 +9379,9 @@ func (m *WorkflowExecutionFailedEventAttributes) Size() (n int) {
 	if m.DecisionTaskCompletedEventId != 0 {
 		n += 1 + sovHistory(uint64(m.DecisionTaskCompletedEventId))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -12797,6 +9393,9 @@ func (m *WorkflowExecutionTimedOutEventAttributes) Size() (n int) {
 	_ = l
 	if m.TimeoutType != 0 {
 		n += 1 + sovHistory(uint64(m.TimeoutType))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -12812,11 +9411,14 @@ func (m *DecisionTaskScheduledEventAttributes) Size() (n int) {
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.StartToCloseTimeout != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.StartToCloseTimeout)
+		l = m.StartToCloseTimeout.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.Attempt != 0 {
 		n += 1 + sovHistory(uint64(m.Attempt))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -12837,6 +9439,9 @@ func (m *DecisionTaskStartedEventAttributes) Size() (n int) {
 	l = len(m.RequestId)
 	if l > 0 {
 		n += 1 + l + sovHistory(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -12865,6 +9470,9 @@ func (m *DecisionTaskCompletedEventAttributes) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -12882,6 +9490,27 @@ func (m *DecisionTaskTimedOutEventAttributes) Size() (n int) {
 	}
 	if m.TimeoutType != 0 {
 		n += 1 + sovHistory(uint64(m.TimeoutType))
+	}
+	l = len(m.BaseRunId)
+	if l > 0 {
+		n += 1 + l + sovHistory(uint64(l))
+	}
+	l = len(m.NewRunId)
+	if l > 0 {
+		n += 1 + l + sovHistory(uint64(l))
+	}
+	if m.ForkEventVersion != 0 {
+		n += 1 + sovHistory(uint64(m.ForkEventVersion))
+	}
+	l = len(m.Reason)
+	if l > 0 {
+		n += 1 + l + sovHistory(uint64(l))
+	}
+	if m.Cause != 0 {
+		n += 1 + sovHistory(uint64(m.Cause))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -12924,6 +9553,9 @@ func (m *DecisionTaskFailedEventAttributes) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -12954,19 +9586,19 @@ func (m *ActivityTaskScheduledEventAttributes) Size() (n int) {
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.ScheduleToCloseTimeout != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ScheduleToCloseTimeout)
+		l = m.ScheduleToCloseTimeout.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.ScheduleToStartTimeout != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ScheduleToStartTimeout)
+		l = m.ScheduleToStartTimeout.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.StartToCloseTimeout != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.StartToCloseTimeout)
+		l = m.StartToCloseTimeout.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.HeartbeatTimeout != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.HeartbeatTimeout)
+		l = m.HeartbeatTimeout.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.DecisionTaskCompletedEventId != 0 {
@@ -12979,6 +9611,9 @@ func (m *ActivityTaskScheduledEventAttributes) Size() (n int) {
 	if m.Header != nil {
 		l = m.Header.Size()
 		n += 1 + l + sovHistory(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -13007,6 +9642,9 @@ func (m *ActivityTaskStartedEventAttributes) Size() (n int) {
 		l = m.LastFailure.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13030,6 +9668,9 @@ func (m *ActivityTaskCompletedEventAttributes) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13052,6 +9693,9 @@ func (m *ActivityTaskFailedEventAttributes) Size() (n int) {
 	l = len(m.Identity)
 	if l > 0 {
 		n += 1 + l + sovHistory(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -13079,6 +9723,9 @@ func (m *ActivityTaskTimedOutEventAttributes) Size() (n int) {
 		l = m.LastFailure.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13094,6 +9741,9 @@ func (m *ActivityTaskCancelRequestedEventAttributes) Size() (n int) {
 	}
 	if m.DecisionTaskCompletedEventId != 0 {
 		n += 1 + sovHistory(uint64(m.DecisionTaskCompletedEventId))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -13114,6 +9764,9 @@ func (m *RequestCancelActivityTaskFailedEventAttributes) Size() (n int) {
 	}
 	if m.DecisionTaskCompletedEventId != 0 {
 		n += 1 + sovHistory(uint64(m.DecisionTaskCompletedEventId))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -13141,6 +9794,9 @@ func (m *ActivityTaskCanceledEventAttributes) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13155,11 +9811,14 @@ func (m *TimerStartedEventAttributes) Size() (n int) {
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.StartToFireTimeout != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.StartToFireTimeout)
+		l = m.StartToFireTimeout.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.DecisionTaskCompletedEventId != 0 {
 		n += 1 + sovHistory(uint64(m.DecisionTaskCompletedEventId))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -13176,6 +9835,9 @@ func (m *TimerFiredEventAttributes) Size() (n int) {
 	}
 	if m.StartedEventId != 0 {
 		n += 1 + sovHistory(uint64(m.StartedEventId))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -13200,6 +9862,9 @@ func (m *TimerCanceledEventAttributes) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13223,6 +9888,9 @@ func (m *CancelTimerFailedEventAttributes) Size() (n int) {
 	l = len(m.Identity)
 	if l > 0 {
 		n += 1 + l + sovHistory(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -13250,18 +9918,18 @@ func (m *WorkflowExecutionContinuedAsNewEventAttributes) Size() (n int) {
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.ExecutionStartToCloseTimeout != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ExecutionStartToCloseTimeout)
+		l = m.ExecutionStartToCloseTimeout.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.TaskStartToCloseTimeout != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.TaskStartToCloseTimeout)
+		l = m.TaskStartToCloseTimeout.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.DecisionTaskCompletedEventId != 0 {
 		n += 1 + sovHistory(uint64(m.DecisionTaskCompletedEventId))
 	}
 	if m.BackoffStartInterval != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.BackoffStartInterval)
+		l = m.BackoffStartInterval.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.Initiator != 0 {
@@ -13287,6 +9955,9 @@ func (m *WorkflowExecutionContinuedAsNewEventAttributes) Size() (n int) {
 		l = m.SearchAttributes.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13300,16 +9971,16 @@ func (m *WorkflowExecutionCancelRequestedEventAttributes) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovHistory(uint64(l))
 	}
-	if m.ExternalInitiatedEventId != 0 {
-		n += 1 + sovHistory(uint64(m.ExternalInitiatedEventId))
-	}
-	if m.ExternalWorkflowExecution != nil {
-		l = m.ExternalWorkflowExecution.Size()
-		n += 1 + l + sovHistory(uint64(l))
-	}
 	l = len(m.Identity)
 	if l > 0 {
 		n += 1 + l + sovHistory(uint64(l))
+	}
+	if m.ExternalExecutionInfo != nil {
+		l = m.ExternalExecutionInfo.Size()
+		n += 1 + l + sovHistory(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -13326,6 +9997,9 @@ func (m *WorkflowExecutionCanceledEventAttributes) Size() (n int) {
 	if m.Details != nil {
 		l = m.Details.Size()
 		n += 1 + l + sovHistory(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -13351,6 +10025,9 @@ func (m *MarkerRecordedEventAttributes) Size() (n int) {
 		l = m.Header.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13372,6 +10049,9 @@ func (m *WorkflowExecutionSignaledEventAttributes) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13392,6 +10072,9 @@ func (m *WorkflowExecutionTerminatedEventAttributes) Size() (n int) {
 	l = len(m.Identity)
 	if l > 0 {
 		n += 1 + l + sovHistory(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -13419,6 +10102,9 @@ func (m *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) Size() 
 	}
 	if m.ChildWorkflowOnly {
 		n += 2
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -13450,6 +10136,9 @@ func (m *RequestCancelExternalWorkflowExecutionFailedEventAttributes) Size() (n 
 	if l > 0 {
 		n += 1 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13469,6 +10158,9 @@ func (m *ExternalWorkflowExecutionCancelRequestedEventAttributes) Size() (n int)
 	if m.WorkflowExecution != nil {
 		l = m.WorkflowExecution.Size()
 		n += 1 + l + sovHistory(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -13505,6 +10197,9 @@ func (m *SignalExternalWorkflowExecutionInitiatedEventAttributes) Size() (n int)
 	if m.ChildWorkflowOnly {
 		n += 2
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13535,6 +10230,9 @@ func (m *SignalExternalWorkflowExecutionFailedEventAttributes) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13559,6 +10257,9 @@ func (m *ExternalWorkflowExecutionSignaledEventAttributes) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13574,6 +10275,9 @@ func (m *UpsertWorkflowSearchAttributesEventAttributes) Size() (n int) {
 	if m.SearchAttributes != nil {
 		l = m.SearchAttributes.Size()
 		n += 1 + l + sovHistory(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -13605,11 +10309,11 @@ func (m *StartChildWorkflowExecutionInitiatedEventAttributes) Size() (n int) {
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.ExecutionStartToCloseTimeout != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ExecutionStartToCloseTimeout)
+		l = m.ExecutionStartToCloseTimeout.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.TaskStartToCloseTimeout != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.TaskStartToCloseTimeout)
+		l = m.TaskStartToCloseTimeout.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
 	if m.ParentClosePolicy != 0 {
@@ -13645,6 +10349,9 @@ func (m *StartChildWorkflowExecutionInitiatedEventAttributes) Size() (n int) {
 		l = m.SearchAttributes.Size()
 		n += 2 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13679,6 +10386,9 @@ func (m *StartChildWorkflowExecutionFailedEventAttributes) Size() (n int) {
 	if m.DecisionTaskCompletedEventId != 0 {
 		n += 1 + sovHistory(uint64(m.DecisionTaskCompletedEventId))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13706,6 +10416,9 @@ func (m *ChildWorkflowExecutionStartedEventAttributes) Size() (n int) {
 	if m.Header != nil {
 		l = m.Header.Size()
 		n += 1 + l + sovHistory(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -13738,6 +10451,9 @@ func (m *ChildWorkflowExecutionCompletedEventAttributes) Size() (n int) {
 		l = m.Result.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13768,6 +10484,9 @@ func (m *ChildWorkflowExecutionFailedEventAttributes) Size() (n int) {
 	if m.Failure != nil {
 		l = m.Failure.Size()
 		n += 1 + l + sovHistory(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -13800,6 +10519,9 @@ func (m *ChildWorkflowExecutionCanceledEventAttributes) Size() (n int) {
 		l = m.Details.Size()
 		n += 1 + l + sovHistory(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13830,6 +10552,9 @@ func (m *ChildWorkflowExecutionTimedOutEventAttributes) Size() (n int) {
 	if m.TimeoutType != 0 {
 		n += 1 + sovHistory(uint64(m.TimeoutType))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13857,6 +10582,9 @@ func (m *ChildWorkflowExecutionTerminatedEventAttributes) Size() (n int) {
 	if m.StartedEventId != 0 {
 		n += 1 + sovHistory(uint64(m.StartedEventId))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -13865,1066 +10593,6 @@ func sovHistory(x uint64) (n int) {
 }
 func sozHistory(x uint64) (n int) {
 	return sovHistory(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (this *History) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForEvents := "[]*HistoryEvent{"
-	for _, f := range this.Events {
-		repeatedStringForEvents += strings.Replace(f.String(), "HistoryEvent", "HistoryEvent", 1) + ","
-	}
-	repeatedStringForEvents += "}"
-	s := strings.Join([]string{`&History{`,
-		`Events:` + repeatedStringForEvents + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent{`,
-		`EventId:` + fmt.Sprintf("%v", this.EventId) + `,`,
-		`EventTime:` + strings.Replace(fmt.Sprintf("%v", this.EventTime), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`Version:` + fmt.Sprintf("%v", this.Version) + `,`,
-		`TaskId:` + fmt.Sprintf("%v", this.TaskId) + `,`,
-		`Attributes:` + fmt.Sprintf("%v", this.Attributes) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionStartedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_WorkflowExecutionStartedEventAttributes{`,
-		`WorkflowExecutionStartedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecutionStartedEventAttributes), "WorkflowExecutionStartedEventAttributes", "WorkflowExecutionStartedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionCompletedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_WorkflowExecutionCompletedEventAttributes{`,
-		`WorkflowExecutionCompletedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecutionCompletedEventAttributes), "WorkflowExecutionCompletedEventAttributes", "WorkflowExecutionCompletedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_WorkflowExecutionFailedEventAttributes{`,
-		`WorkflowExecutionFailedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecutionFailedEventAttributes), "WorkflowExecutionFailedEventAttributes", "WorkflowExecutionFailedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionTimedOutEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_WorkflowExecutionTimedOutEventAttributes{`,
-		`WorkflowExecutionTimedOutEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecutionTimedOutEventAttributes), "WorkflowExecutionTimedOutEventAttributes", "WorkflowExecutionTimedOutEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_DecisionTaskScheduledEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_DecisionTaskScheduledEventAttributes{`,
-		`DecisionTaskScheduledEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.DecisionTaskScheduledEventAttributes), "DecisionTaskScheduledEventAttributes", "DecisionTaskScheduledEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_DecisionTaskStartedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_DecisionTaskStartedEventAttributes{`,
-		`DecisionTaskStartedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.DecisionTaskStartedEventAttributes), "DecisionTaskStartedEventAttributes", "DecisionTaskStartedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_DecisionTaskCompletedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_DecisionTaskCompletedEventAttributes{`,
-		`DecisionTaskCompletedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.DecisionTaskCompletedEventAttributes), "DecisionTaskCompletedEventAttributes", "DecisionTaskCompletedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_DecisionTaskTimedOutEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_DecisionTaskTimedOutEventAttributes{`,
-		`DecisionTaskTimedOutEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.DecisionTaskTimedOutEventAttributes), "DecisionTaskTimedOutEventAttributes", "DecisionTaskTimedOutEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_DecisionTaskFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_DecisionTaskFailedEventAttributes{`,
-		`DecisionTaskFailedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.DecisionTaskFailedEventAttributes), "DecisionTaskFailedEventAttributes", "DecisionTaskFailedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_ActivityTaskScheduledEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_ActivityTaskScheduledEventAttributes{`,
-		`ActivityTaskScheduledEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.ActivityTaskScheduledEventAttributes), "ActivityTaskScheduledEventAttributes", "ActivityTaskScheduledEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_ActivityTaskStartedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_ActivityTaskStartedEventAttributes{`,
-		`ActivityTaskStartedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.ActivityTaskStartedEventAttributes), "ActivityTaskStartedEventAttributes", "ActivityTaskStartedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_ActivityTaskCompletedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_ActivityTaskCompletedEventAttributes{`,
-		`ActivityTaskCompletedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.ActivityTaskCompletedEventAttributes), "ActivityTaskCompletedEventAttributes", "ActivityTaskCompletedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_ActivityTaskFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_ActivityTaskFailedEventAttributes{`,
-		`ActivityTaskFailedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.ActivityTaskFailedEventAttributes), "ActivityTaskFailedEventAttributes", "ActivityTaskFailedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_ActivityTaskTimedOutEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_ActivityTaskTimedOutEventAttributes{`,
-		`ActivityTaskTimedOutEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.ActivityTaskTimedOutEventAttributes), "ActivityTaskTimedOutEventAttributes", "ActivityTaskTimedOutEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_TimerStartedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_TimerStartedEventAttributes{`,
-		`TimerStartedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.TimerStartedEventAttributes), "TimerStartedEventAttributes", "TimerStartedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_TimerFiredEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_TimerFiredEventAttributes{`,
-		`TimerFiredEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.TimerFiredEventAttributes), "TimerFiredEventAttributes", "TimerFiredEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_ActivityTaskCancelRequestedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_ActivityTaskCancelRequestedEventAttributes{`,
-		`ActivityTaskCancelRequestedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.ActivityTaskCancelRequestedEventAttributes), "ActivityTaskCancelRequestedEventAttributes", "ActivityTaskCancelRequestedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_RequestCancelActivityTaskFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_RequestCancelActivityTaskFailedEventAttributes{`,
-		`RequestCancelActivityTaskFailedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.RequestCancelActivityTaskFailedEventAttributes), "RequestCancelActivityTaskFailedEventAttributes", "RequestCancelActivityTaskFailedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_ActivityTaskCanceledEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_ActivityTaskCanceledEventAttributes{`,
-		`ActivityTaskCanceledEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.ActivityTaskCanceledEventAttributes), "ActivityTaskCanceledEventAttributes", "ActivityTaskCanceledEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_TimerCanceledEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_TimerCanceledEventAttributes{`,
-		`TimerCanceledEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.TimerCanceledEventAttributes), "TimerCanceledEventAttributes", "TimerCanceledEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_CancelTimerFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_CancelTimerFailedEventAttributes{`,
-		`CancelTimerFailedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.CancelTimerFailedEventAttributes), "CancelTimerFailedEventAttributes", "CancelTimerFailedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_MarkerRecordedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_MarkerRecordedEventAttributes{`,
-		`MarkerRecordedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.MarkerRecordedEventAttributes), "MarkerRecordedEventAttributes", "MarkerRecordedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionSignaledEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_WorkflowExecutionSignaledEventAttributes{`,
-		`WorkflowExecutionSignaledEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecutionSignaledEventAttributes), "WorkflowExecutionSignaledEventAttributes", "WorkflowExecutionSignaledEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionTerminatedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_WorkflowExecutionTerminatedEventAttributes{`,
-		`WorkflowExecutionTerminatedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecutionTerminatedEventAttributes), "WorkflowExecutionTerminatedEventAttributes", "WorkflowExecutionTerminatedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionCancelRequestedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_WorkflowExecutionCancelRequestedEventAttributes{`,
-		`WorkflowExecutionCancelRequestedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecutionCancelRequestedEventAttributes), "WorkflowExecutionCancelRequestedEventAttributes", "WorkflowExecutionCancelRequestedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionCanceledEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_WorkflowExecutionCanceledEventAttributes{`,
-		`WorkflowExecutionCanceledEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecutionCanceledEventAttributes), "WorkflowExecutionCanceledEventAttributes", "WorkflowExecutionCanceledEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_RequestCancelExternalWorkflowExecutionInitiatedEventAttributes{`,
-		`RequestCancelExternalWorkflowExecutionInitiatedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes), "RequestCancelExternalWorkflowExecutionInitiatedEventAttributes", "RequestCancelExternalWorkflowExecutionInitiatedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_RequestCancelExternalWorkflowExecutionFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_RequestCancelExternalWorkflowExecutionFailedEventAttributes{`,
-		`RequestCancelExternalWorkflowExecutionFailedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.RequestCancelExternalWorkflowExecutionFailedEventAttributes), "RequestCancelExternalWorkflowExecutionFailedEventAttributes", "RequestCancelExternalWorkflowExecutionFailedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_ExternalWorkflowExecutionCancelRequestedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_ExternalWorkflowExecutionCancelRequestedEventAttributes{`,
-		`ExternalWorkflowExecutionCancelRequestedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.ExternalWorkflowExecutionCancelRequestedEventAttributes), "ExternalWorkflowExecutionCancelRequestedEventAttributes", "ExternalWorkflowExecutionCancelRequestedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_WorkflowExecutionContinuedAsNewEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_WorkflowExecutionContinuedAsNewEventAttributes{`,
-		`WorkflowExecutionContinuedAsNewEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecutionContinuedAsNewEventAttributes), "WorkflowExecutionContinuedAsNewEventAttributes", "WorkflowExecutionContinuedAsNewEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_StartChildWorkflowExecutionInitiatedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_StartChildWorkflowExecutionInitiatedEventAttributes{`,
-		`StartChildWorkflowExecutionInitiatedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.StartChildWorkflowExecutionInitiatedEventAttributes), "StartChildWorkflowExecutionInitiatedEventAttributes", "StartChildWorkflowExecutionInitiatedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_StartChildWorkflowExecutionFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_StartChildWorkflowExecutionFailedEventAttributes{`,
-		`StartChildWorkflowExecutionFailedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.StartChildWorkflowExecutionFailedEventAttributes), "StartChildWorkflowExecutionFailedEventAttributes", "StartChildWorkflowExecutionFailedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_ChildWorkflowExecutionStartedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_ChildWorkflowExecutionStartedEventAttributes{`,
-		`ChildWorkflowExecutionStartedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.ChildWorkflowExecutionStartedEventAttributes), "ChildWorkflowExecutionStartedEventAttributes", "ChildWorkflowExecutionStartedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_ChildWorkflowExecutionCompletedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_ChildWorkflowExecutionCompletedEventAttributes{`,
-		`ChildWorkflowExecutionCompletedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.ChildWorkflowExecutionCompletedEventAttributes), "ChildWorkflowExecutionCompletedEventAttributes", "ChildWorkflowExecutionCompletedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_ChildWorkflowExecutionFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_ChildWorkflowExecutionFailedEventAttributes{`,
-		`ChildWorkflowExecutionFailedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.ChildWorkflowExecutionFailedEventAttributes), "ChildWorkflowExecutionFailedEventAttributes", "ChildWorkflowExecutionFailedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_ChildWorkflowExecutionCanceledEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_ChildWorkflowExecutionCanceledEventAttributes{`,
-		`ChildWorkflowExecutionCanceledEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.ChildWorkflowExecutionCanceledEventAttributes), "ChildWorkflowExecutionCanceledEventAttributes", "ChildWorkflowExecutionCanceledEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_ChildWorkflowExecutionTimedOutEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_ChildWorkflowExecutionTimedOutEventAttributes{`,
-		`ChildWorkflowExecutionTimedOutEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.ChildWorkflowExecutionTimedOutEventAttributes), "ChildWorkflowExecutionTimedOutEventAttributes", "ChildWorkflowExecutionTimedOutEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_ChildWorkflowExecutionTerminatedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_ChildWorkflowExecutionTerminatedEventAttributes{`,
-		`ChildWorkflowExecutionTerminatedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.ChildWorkflowExecutionTerminatedEventAttributes), "ChildWorkflowExecutionTerminatedEventAttributes", "ChildWorkflowExecutionTerminatedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_SignalExternalWorkflowExecutionInitiatedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_SignalExternalWorkflowExecutionInitiatedEventAttributes{`,
-		`SignalExternalWorkflowExecutionInitiatedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.SignalExternalWorkflowExecutionInitiatedEventAttributes), "SignalExternalWorkflowExecutionInitiatedEventAttributes", "SignalExternalWorkflowExecutionInitiatedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_SignalExternalWorkflowExecutionFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_SignalExternalWorkflowExecutionFailedEventAttributes{`,
-		`SignalExternalWorkflowExecutionFailedEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.SignalExternalWorkflowExecutionFailedEventAttributes), "SignalExternalWorkflowExecutionFailedEventAttributes", "SignalExternalWorkflowExecutionFailedEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_ExternalWorkflowExecutionSignaledEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_ExternalWorkflowExecutionSignaledEventAttributes{`,
-		`ExternalWorkflowExecutionSignaledEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.ExternalWorkflowExecutionSignaledEventAttributes), "ExternalWorkflowExecutionSignaledEventAttributes", "ExternalWorkflowExecutionSignaledEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HistoryEvent_UpsertWorkflowSearchAttributesEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HistoryEvent_UpsertWorkflowSearchAttributesEventAttributes{`,
-		`UpsertWorkflowSearchAttributesEventAttributes:` + strings.Replace(fmt.Sprintf("%v", this.UpsertWorkflowSearchAttributesEventAttributes), "UpsertWorkflowSearchAttributesEventAttributes", "UpsertWorkflowSearchAttributesEventAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *WorkflowExecutionStartedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&WorkflowExecutionStartedEventAttributes{`,
-		`WorkflowType:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowType), "WorkflowType", "WorkflowType", 1) + `,`,
-		`ParentWorkflowDomain:` + fmt.Sprintf("%v", this.ParentWorkflowDomain) + `,`,
-		`ParentWorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.ParentWorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`ParentInitiatedEventId:` + fmt.Sprintf("%v", this.ParentInitiatedEventId) + `,`,
-		`TaskList:` + strings.Replace(fmt.Sprintf("%v", this.TaskList), "TaskList", "TaskList", 1) + `,`,
-		`Input:` + strings.Replace(fmt.Sprintf("%v", this.Input), "Payload", "Payload", 1) + `,`,
-		`ExecutionStartToCloseTimeout:` + strings.Replace(fmt.Sprintf("%v", this.ExecutionStartToCloseTimeout), "Duration", "duration.Duration", 1) + `,`,
-		`TaskStartToCloseTimeout:` + strings.Replace(fmt.Sprintf("%v", this.TaskStartToCloseTimeout), "Duration", "duration.Duration", 1) + `,`,
-		`ContinuedExecutionRunId:` + fmt.Sprintf("%v", this.ContinuedExecutionRunId) + `,`,
-		`Initiator:` + fmt.Sprintf("%v", this.Initiator) + `,`,
-		`ContinuedFailure:` + strings.Replace(fmt.Sprintf("%v", this.ContinuedFailure), "Failure", "Failure", 1) + `,`,
-		`LastCompletionResult:` + strings.Replace(fmt.Sprintf("%v", this.LastCompletionResult), "Payload", "Payload", 1) + `,`,
-		`OriginalExecutionRunId:` + fmt.Sprintf("%v", this.OriginalExecutionRunId) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`FirstExecutionRunId:` + fmt.Sprintf("%v", this.FirstExecutionRunId) + `,`,
-		`RetryPolicy:` + strings.Replace(fmt.Sprintf("%v", this.RetryPolicy), "RetryPolicy", "RetryPolicy", 1) + `,`,
-		`Attempt:` + fmt.Sprintf("%v", this.Attempt) + `,`,
-		`ExpirationTime:` + strings.Replace(fmt.Sprintf("%v", this.ExpirationTime), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`CronSchedule:` + fmt.Sprintf("%v", this.CronSchedule) + `,`,
-		`FirstDecisionTaskBackoff:` + strings.Replace(fmt.Sprintf("%v", this.FirstDecisionTaskBackoff), "Duration", "duration.Duration", 1) + `,`,
-		`Memo:` + strings.Replace(fmt.Sprintf("%v", this.Memo), "Memo", "Memo", 1) + `,`,
-		`SearchAttributes:` + strings.Replace(fmt.Sprintf("%v", this.SearchAttributes), "SearchAttributes", "SearchAttributes", 1) + `,`,
-		`PrevAutoResetPoints:` + strings.Replace(fmt.Sprintf("%v", this.PrevAutoResetPoints), "ResetPoints", "ResetPoints", 1) + `,`,
-		`Header:` + strings.Replace(fmt.Sprintf("%v", this.Header), "Header", "Header", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *WorkflowExecutionCompletedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&WorkflowExecutionCompletedEventAttributes{`,
-		`Result:` + strings.Replace(fmt.Sprintf("%v", this.Result), "Payload", "Payload", 1) + `,`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *WorkflowExecutionFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&WorkflowExecutionFailedEventAttributes{`,
-		`Failure:` + strings.Replace(fmt.Sprintf("%v", this.Failure), "Failure", "Failure", 1) + `,`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *WorkflowExecutionTimedOutEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&WorkflowExecutionTimedOutEventAttributes{`,
-		`TimeoutType:` + fmt.Sprintf("%v", this.TimeoutType) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DecisionTaskScheduledEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DecisionTaskScheduledEventAttributes{`,
-		`TaskList:` + strings.Replace(fmt.Sprintf("%v", this.TaskList), "TaskList", "TaskList", 1) + `,`,
-		`StartToCloseTimeout:` + strings.Replace(fmt.Sprintf("%v", this.StartToCloseTimeout), "Duration", "duration.Duration", 1) + `,`,
-		`Attempt:` + fmt.Sprintf("%v", this.Attempt) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DecisionTaskStartedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DecisionTaskStartedEventAttributes{`,
-		`ScheduledEventId:` + fmt.Sprintf("%v", this.ScheduledEventId) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`RequestId:` + fmt.Sprintf("%v", this.RequestId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DecisionTaskCompletedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DecisionTaskCompletedEventAttributes{`,
-		`ScheduledEventId:` + fmt.Sprintf("%v", this.ScheduledEventId) + `,`,
-		`StartedEventId:` + fmt.Sprintf("%v", this.StartedEventId) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`BinaryChecksum:` + fmt.Sprintf("%v", this.BinaryChecksum) + `,`,
-		`ExecutionContext:` + fmt.Sprintf("%v", this.ExecutionContext) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DecisionTaskTimedOutEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DecisionTaskTimedOutEventAttributes{`,
-		`ScheduledEventId:` + fmt.Sprintf("%v", this.ScheduledEventId) + `,`,
-		`StartedEventId:` + fmt.Sprintf("%v", this.StartedEventId) + `,`,
-		`TimeoutType:` + fmt.Sprintf("%v", this.TimeoutType) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DecisionTaskFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DecisionTaskFailedEventAttributes{`,
-		`ScheduledEventId:` + fmt.Sprintf("%v", this.ScheduledEventId) + `,`,
-		`StartedEventId:` + fmt.Sprintf("%v", this.StartedEventId) + `,`,
-		`Cause:` + fmt.Sprintf("%v", this.Cause) + `,`,
-		`Failure:` + strings.Replace(fmt.Sprintf("%v", this.Failure), "Failure", "Failure", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`BaseRunId:` + fmt.Sprintf("%v", this.BaseRunId) + `,`,
-		`NewRunId:` + fmt.Sprintf("%v", this.NewRunId) + `,`,
-		`ForkEventVersion:` + fmt.Sprintf("%v", this.ForkEventVersion) + `,`,
-		`BinaryChecksum:` + fmt.Sprintf("%v", this.BinaryChecksum) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ActivityTaskScheduledEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ActivityTaskScheduledEventAttributes{`,
-		`ActivityId:` + fmt.Sprintf("%v", this.ActivityId) + `,`,
-		`ActivityType:` + strings.Replace(fmt.Sprintf("%v", this.ActivityType), "ActivityType", "ActivityType", 1) + `,`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`TaskList:` + strings.Replace(fmt.Sprintf("%v", this.TaskList), "TaskList", "TaskList", 1) + `,`,
-		`Input:` + strings.Replace(fmt.Sprintf("%v", this.Input), "Payload", "Payload", 1) + `,`,
-		`ScheduleToCloseTimeout:` + strings.Replace(fmt.Sprintf("%v", this.ScheduleToCloseTimeout), "Duration", "duration.Duration", 1) + `,`,
-		`ScheduleToStartTimeout:` + strings.Replace(fmt.Sprintf("%v", this.ScheduleToStartTimeout), "Duration", "duration.Duration", 1) + `,`,
-		`StartToCloseTimeout:` + strings.Replace(fmt.Sprintf("%v", this.StartToCloseTimeout), "Duration", "duration.Duration", 1) + `,`,
-		`HeartbeatTimeout:` + strings.Replace(fmt.Sprintf("%v", this.HeartbeatTimeout), "Duration", "duration.Duration", 1) + `,`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`RetryPolicy:` + strings.Replace(fmt.Sprintf("%v", this.RetryPolicy), "RetryPolicy", "RetryPolicy", 1) + `,`,
-		`Header:` + strings.Replace(fmt.Sprintf("%v", this.Header), "Header", "Header", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ActivityTaskStartedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ActivityTaskStartedEventAttributes{`,
-		`ScheduledEventId:` + fmt.Sprintf("%v", this.ScheduledEventId) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`RequestId:` + fmt.Sprintf("%v", this.RequestId) + `,`,
-		`Attempt:` + fmt.Sprintf("%v", this.Attempt) + `,`,
-		`LastFailure:` + strings.Replace(fmt.Sprintf("%v", this.LastFailure), "Failure", "Failure", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ActivityTaskCompletedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ActivityTaskCompletedEventAttributes{`,
-		`Result:` + strings.Replace(fmt.Sprintf("%v", this.Result), "Payload", "Payload", 1) + `,`,
-		`ScheduledEventId:` + fmt.Sprintf("%v", this.ScheduledEventId) + `,`,
-		`StartedEventId:` + fmt.Sprintf("%v", this.StartedEventId) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ActivityTaskFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ActivityTaskFailedEventAttributes{`,
-		`Failure:` + strings.Replace(fmt.Sprintf("%v", this.Failure), "Failure", "Failure", 1) + `,`,
-		`ScheduledEventId:` + fmt.Sprintf("%v", this.ScheduledEventId) + `,`,
-		`StartedEventId:` + fmt.Sprintf("%v", this.StartedEventId) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ActivityTaskTimedOutEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ActivityTaskTimedOutEventAttributes{`,
-		`Details:` + strings.Replace(fmt.Sprintf("%v", this.Details), "Payload", "Payload", 1) + `,`,
-		`ScheduledEventId:` + fmt.Sprintf("%v", this.ScheduledEventId) + `,`,
-		`StartedEventId:` + fmt.Sprintf("%v", this.StartedEventId) + `,`,
-		`TimeoutType:` + fmt.Sprintf("%v", this.TimeoutType) + `,`,
-		`LastFailure:` + strings.Replace(fmt.Sprintf("%v", this.LastFailure), "Failure", "Failure", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ActivityTaskCancelRequestedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ActivityTaskCancelRequestedEventAttributes{`,
-		`ActivityId:` + fmt.Sprintf("%v", this.ActivityId) + `,`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RequestCancelActivityTaskFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RequestCancelActivityTaskFailedEventAttributes{`,
-		`ActivityId:` + fmt.Sprintf("%v", this.ActivityId) + `,`,
-		`Cause:` + fmt.Sprintf("%v", this.Cause) + `,`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ActivityTaskCanceledEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ActivityTaskCanceledEventAttributes{`,
-		`Details:` + strings.Replace(fmt.Sprintf("%v", this.Details), "Payload", "Payload", 1) + `,`,
-		`LatestCancelRequestedEventId:` + fmt.Sprintf("%v", this.LatestCancelRequestedEventId) + `,`,
-		`ScheduledEventId:` + fmt.Sprintf("%v", this.ScheduledEventId) + `,`,
-		`StartedEventId:` + fmt.Sprintf("%v", this.StartedEventId) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *TimerStartedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&TimerStartedEventAttributes{`,
-		`TimerId:` + fmt.Sprintf("%v", this.TimerId) + `,`,
-		`StartToFireTimeout:` + strings.Replace(fmt.Sprintf("%v", this.StartToFireTimeout), "Duration", "duration.Duration", 1) + `,`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *TimerFiredEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&TimerFiredEventAttributes{`,
-		`TimerId:` + fmt.Sprintf("%v", this.TimerId) + `,`,
-		`StartedEventId:` + fmt.Sprintf("%v", this.StartedEventId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *TimerCanceledEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&TimerCanceledEventAttributes{`,
-		`TimerId:` + fmt.Sprintf("%v", this.TimerId) + `,`,
-		`StartedEventId:` + fmt.Sprintf("%v", this.StartedEventId) + `,`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *CancelTimerFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&CancelTimerFailedEventAttributes{`,
-		`TimerId:` + fmt.Sprintf("%v", this.TimerId) + `,`,
-		`Cause:` + fmt.Sprintf("%v", this.Cause) + `,`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *WorkflowExecutionContinuedAsNewEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&WorkflowExecutionContinuedAsNewEventAttributes{`,
-		`NewExecutionRunId:` + fmt.Sprintf("%v", this.NewExecutionRunId) + `,`,
-		`WorkflowType:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowType), "WorkflowType", "WorkflowType", 1) + `,`,
-		`TaskList:` + strings.Replace(fmt.Sprintf("%v", this.TaskList), "TaskList", "TaskList", 1) + `,`,
-		`Input:` + strings.Replace(fmt.Sprintf("%v", this.Input), "Payload", "Payload", 1) + `,`,
-		`ExecutionStartToCloseTimeout:` + strings.Replace(fmt.Sprintf("%v", this.ExecutionStartToCloseTimeout), "Duration", "duration.Duration", 1) + `,`,
-		`TaskStartToCloseTimeout:` + strings.Replace(fmt.Sprintf("%v", this.TaskStartToCloseTimeout), "Duration", "duration.Duration", 1) + `,`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`BackoffStartInterval:` + strings.Replace(fmt.Sprintf("%v", this.BackoffStartInterval), "Duration", "duration.Duration", 1) + `,`,
-		`Initiator:` + fmt.Sprintf("%v", this.Initiator) + `,`,
-		`Failure:` + strings.Replace(fmt.Sprintf("%v", this.Failure), "Failure", "Failure", 1) + `,`,
-		`LastCompletionResult:` + strings.Replace(fmt.Sprintf("%v", this.LastCompletionResult), "Payload", "Payload", 1) + `,`,
-		`Header:` + strings.Replace(fmt.Sprintf("%v", this.Header), "Header", "Header", 1) + `,`,
-		`Memo:` + strings.Replace(fmt.Sprintf("%v", this.Memo), "Memo", "Memo", 1) + `,`,
-		`SearchAttributes:` + strings.Replace(fmt.Sprintf("%v", this.SearchAttributes), "SearchAttributes", "SearchAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *WorkflowExecutionCancelRequestedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&WorkflowExecutionCancelRequestedEventAttributes{`,
-		`Cause:` + fmt.Sprintf("%v", this.Cause) + `,`,
-		`ExternalInitiatedEventId:` + fmt.Sprintf("%v", this.ExternalInitiatedEventId) + `,`,
-		`ExternalWorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.ExternalWorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *WorkflowExecutionCanceledEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&WorkflowExecutionCanceledEventAttributes{`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`Details:` + strings.Replace(fmt.Sprintf("%v", this.Details), "Payload", "Payload", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *MarkerRecordedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&MarkerRecordedEventAttributes{`,
-		`MarkerName:` + fmt.Sprintf("%v", this.MarkerName) + `,`,
-		`Details:` + strings.Replace(fmt.Sprintf("%v", this.Details), "Payload", "Payload", 1) + `,`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`Header:` + strings.Replace(fmt.Sprintf("%v", this.Header), "Header", "Header", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *WorkflowExecutionSignaledEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&WorkflowExecutionSignaledEventAttributes{`,
-		`SignalName:` + fmt.Sprintf("%v", this.SignalName) + `,`,
-		`Input:` + strings.Replace(fmt.Sprintf("%v", this.Input), "Payload", "Payload", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *WorkflowExecutionTerminatedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&WorkflowExecutionTerminatedEventAttributes{`,
-		`Reason:` + fmt.Sprintf("%v", this.Reason) + `,`,
-		`Details:` + strings.Replace(fmt.Sprintf("%v", this.Details), "Payload", "Payload", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RequestCancelExternalWorkflowExecutionInitiatedEventAttributes{`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`Control:` + fmt.Sprintf("%v", this.Control) + `,`,
-		`ChildWorkflowOnly:` + fmt.Sprintf("%v", this.ChildWorkflowOnly) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RequestCancelExternalWorkflowExecutionFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RequestCancelExternalWorkflowExecutionFailedEventAttributes{`,
-		`Cause:` + fmt.Sprintf("%v", this.Cause) + `,`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`InitiatedEventId:` + fmt.Sprintf("%v", this.InitiatedEventId) + `,`,
-		`Control:` + fmt.Sprintf("%v", this.Control) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ExternalWorkflowExecutionCancelRequestedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ExternalWorkflowExecutionCancelRequestedEventAttributes{`,
-		`InitiatedEventId:` + fmt.Sprintf("%v", this.InitiatedEventId) + `,`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *SignalExternalWorkflowExecutionInitiatedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&SignalExternalWorkflowExecutionInitiatedEventAttributes{`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`SignalName:` + fmt.Sprintf("%v", this.SignalName) + `,`,
-		`Input:` + strings.Replace(fmt.Sprintf("%v", this.Input), "Payload", "Payload", 1) + `,`,
-		`Control:` + fmt.Sprintf("%v", this.Control) + `,`,
-		`ChildWorkflowOnly:` + fmt.Sprintf("%v", this.ChildWorkflowOnly) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *SignalExternalWorkflowExecutionFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&SignalExternalWorkflowExecutionFailedEventAttributes{`,
-		`Cause:` + fmt.Sprintf("%v", this.Cause) + `,`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`InitiatedEventId:` + fmt.Sprintf("%v", this.InitiatedEventId) + `,`,
-		`Control:` + fmt.Sprintf("%v", this.Control) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ExternalWorkflowExecutionSignaledEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ExternalWorkflowExecutionSignaledEventAttributes{`,
-		`InitiatedEventId:` + fmt.Sprintf("%v", this.InitiatedEventId) + `,`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`Control:` + fmt.Sprintf("%v", this.Control) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *UpsertWorkflowSearchAttributesEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&UpsertWorkflowSearchAttributesEventAttributes{`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`SearchAttributes:` + strings.Replace(fmt.Sprintf("%v", this.SearchAttributes), "SearchAttributes", "SearchAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *StartChildWorkflowExecutionInitiatedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&StartChildWorkflowExecutionInitiatedEventAttributes{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowId:` + fmt.Sprintf("%v", this.WorkflowId) + `,`,
-		`WorkflowType:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowType), "WorkflowType", "WorkflowType", 1) + `,`,
-		`TaskList:` + strings.Replace(fmt.Sprintf("%v", this.TaskList), "TaskList", "TaskList", 1) + `,`,
-		`Input:` + strings.Replace(fmt.Sprintf("%v", this.Input), "Payload", "Payload", 1) + `,`,
-		`ExecutionStartToCloseTimeout:` + strings.Replace(fmt.Sprintf("%v", this.ExecutionStartToCloseTimeout), "Duration", "duration.Duration", 1) + `,`,
-		`TaskStartToCloseTimeout:` + strings.Replace(fmt.Sprintf("%v", this.TaskStartToCloseTimeout), "Duration", "duration.Duration", 1) + `,`,
-		`ParentClosePolicy:` + fmt.Sprintf("%v", this.ParentClosePolicy) + `,`,
-		`Control:` + fmt.Sprintf("%v", this.Control) + `,`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`WorkflowIdReusePolicy:` + fmt.Sprintf("%v", this.WorkflowIdReusePolicy) + `,`,
-		`RetryPolicy:` + strings.Replace(fmt.Sprintf("%v", this.RetryPolicy), "RetryPolicy", "RetryPolicy", 1) + `,`,
-		`CronSchedule:` + fmt.Sprintf("%v", this.CronSchedule) + `,`,
-		`Header:` + strings.Replace(fmt.Sprintf("%v", this.Header), "Header", "Header", 1) + `,`,
-		`Memo:` + strings.Replace(fmt.Sprintf("%v", this.Memo), "Memo", "Memo", 1) + `,`,
-		`SearchAttributes:` + strings.Replace(fmt.Sprintf("%v", this.SearchAttributes), "SearchAttributes", "SearchAttributes", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *StartChildWorkflowExecutionFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&StartChildWorkflowExecutionFailedEventAttributes{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowId:` + fmt.Sprintf("%v", this.WorkflowId) + `,`,
-		`WorkflowType:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowType), "WorkflowType", "WorkflowType", 1) + `,`,
-		`Cause:` + fmt.Sprintf("%v", this.Cause) + `,`,
-		`Control:` + fmt.Sprintf("%v", this.Control) + `,`,
-		`InitiatedEventId:` + fmt.Sprintf("%v", this.InitiatedEventId) + `,`,
-		`DecisionTaskCompletedEventId:` + fmt.Sprintf("%v", this.DecisionTaskCompletedEventId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ChildWorkflowExecutionStartedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ChildWorkflowExecutionStartedEventAttributes{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`WorkflowType:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowType), "WorkflowType", "WorkflowType", 1) + `,`,
-		`InitiatedEventId:` + fmt.Sprintf("%v", this.InitiatedEventId) + `,`,
-		`Header:` + strings.Replace(fmt.Sprintf("%v", this.Header), "Header", "Header", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ChildWorkflowExecutionCompletedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ChildWorkflowExecutionCompletedEventAttributes{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`WorkflowType:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowType), "WorkflowType", "WorkflowType", 1) + `,`,
-		`InitiatedEventId:` + fmt.Sprintf("%v", this.InitiatedEventId) + `,`,
-		`StartedEventId:` + fmt.Sprintf("%v", this.StartedEventId) + `,`,
-		`Result:` + strings.Replace(fmt.Sprintf("%v", this.Result), "Payload", "Payload", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ChildWorkflowExecutionFailedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ChildWorkflowExecutionFailedEventAttributes{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`WorkflowType:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowType), "WorkflowType", "WorkflowType", 1) + `,`,
-		`InitiatedEventId:` + fmt.Sprintf("%v", this.InitiatedEventId) + `,`,
-		`StartedEventId:` + fmt.Sprintf("%v", this.StartedEventId) + `,`,
-		`Failure:` + strings.Replace(fmt.Sprintf("%v", this.Failure), "Failure", "Failure", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ChildWorkflowExecutionCanceledEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ChildWorkflowExecutionCanceledEventAttributes{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`WorkflowType:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowType), "WorkflowType", "WorkflowType", 1) + `,`,
-		`InitiatedEventId:` + fmt.Sprintf("%v", this.InitiatedEventId) + `,`,
-		`StartedEventId:` + fmt.Sprintf("%v", this.StartedEventId) + `,`,
-		`Details:` + strings.Replace(fmt.Sprintf("%v", this.Details), "Payload", "Payload", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ChildWorkflowExecutionTimedOutEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ChildWorkflowExecutionTimedOutEventAttributes{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`WorkflowType:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowType), "WorkflowType", "WorkflowType", 1) + `,`,
-		`InitiatedEventId:` + fmt.Sprintf("%v", this.InitiatedEventId) + `,`,
-		`StartedEventId:` + fmt.Sprintf("%v", this.StartedEventId) + `,`,
-		`TimeoutType:` + fmt.Sprintf("%v", this.TimeoutType) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ChildWorkflowExecutionTerminatedEventAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ChildWorkflowExecutionTerminatedEventAttributes{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`WorkflowType:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowType), "WorkflowType", "WorkflowType", 1) + `,`,
-		`InitiatedEventId:` + fmt.Sprintf("%v", this.InitiatedEventId) + `,`,
-		`StartedEventId:` + fmt.Sprintf("%v", this.StartedEventId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func valueToStringHistory(v interface{}) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("*%v", pv)
 }
 func (m *History) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -15004,6 +10672,7 @@ func (m *History) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -15091,9 +10760,9 @@ func (m *HistoryEvent) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.EventTime == nil {
-				m.EventTime = new(time.Time)
+				m.EventTime = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.EventTime, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.EventTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -16620,6 +12289,7 @@ func (m *HistoryEvent) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -16696,39 +12366,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ParentWorkflowDomain", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowHistory
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthHistory
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ParentWorkflowDomain = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ParentWorkflowExecution", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ParentExecutionInfo", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -16755,33 +12393,14 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.ParentWorkflowExecution == nil {
-				m.ParentWorkflowExecution = &WorkflowExecution{}
+			if m.ParentExecutionInfo == nil {
+				m.ParentExecutionInfo = &ParentExecutionInfo{}
 			}
-			if err := m.ParentWorkflowExecution.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.ParentExecutionInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ParentInitiatedEventId", wireType)
-			}
-			m.ParentInitiatedEventId = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowHistory
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.ParentInitiatedEventId |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 5:
+		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field TaskList", wireType)
 			}
@@ -16817,7 +12436,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 6:
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Input", wireType)
 			}
@@ -16853,7 +12472,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 7:
+		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ExecutionStartToCloseTimeout", wireType)
 			}
@@ -16883,13 +12502,13 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.ExecutionStartToCloseTimeout == nil {
-				m.ExecutionStartToCloseTimeout = new(time.Duration)
+				m.ExecutionStartToCloseTimeout = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.ExecutionStartToCloseTimeout, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.ExecutionStartToCloseTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
-		case 8:
+		case 6:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field TaskStartToCloseTimeout", wireType)
 			}
@@ -16919,13 +12538,13 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.TaskStartToCloseTimeout == nil {
-				m.TaskStartToCloseTimeout = new(time.Duration)
+				m.TaskStartToCloseTimeout = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.TaskStartToCloseTimeout, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.TaskStartToCloseTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
-		case 9:
+		case 7:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ContinuedExecutionRunId", wireType)
 			}
@@ -16957,7 +12576,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 			}
 			m.ContinuedExecutionRunId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 10:
+		case 8:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Initiator", wireType)
 			}
@@ -16976,7 +12595,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 11:
+		case 9:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ContinuedFailure", wireType)
 			}
@@ -17012,7 +12631,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 12:
+		case 10:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field LastCompletionResult", wireType)
 			}
@@ -17048,7 +12667,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 13:
+		case 11:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field OriginalExecutionRunId", wireType)
 			}
@@ -17080,7 +12699,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 			}
 			m.OriginalExecutionRunId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 14:
+		case 12:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
@@ -17112,7 +12731,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 			}
 			m.Identity = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 15:
+		case 13:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field FirstExecutionRunId", wireType)
 			}
@@ -17144,7 +12763,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 			}
 			m.FirstExecutionRunId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 16:
+		case 14:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field RetryPolicy", wireType)
 			}
@@ -17180,7 +12799,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 17:
+		case 15:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Attempt", wireType)
 			}
@@ -17199,7 +12818,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 19:
+		case 16:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ExpirationTime", wireType)
 			}
@@ -17229,13 +12848,13 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.ExpirationTime == nil {
-				m.ExpirationTime = new(time.Time)
+				m.ExpirationTime = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.ExpirationTime, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.ExpirationTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
-		case 20:
+		case 17:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field CronSchedule", wireType)
 			}
@@ -17267,7 +12886,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 			}
 			m.CronSchedule = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 21:
+		case 18:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field FirstDecisionTaskBackoff", wireType)
 			}
@@ -17297,13 +12916,13 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.FirstDecisionTaskBackoff == nil {
-				m.FirstDecisionTaskBackoff = new(time.Duration)
+				m.FirstDecisionTaskBackoff = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.FirstDecisionTaskBackoff, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.FirstDecisionTaskBackoff.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
-		case 22:
+		case 19:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Memo", wireType)
 			}
@@ -17339,7 +12958,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 23:
+		case 20:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field SearchAttributes", wireType)
 			}
@@ -17375,7 +12994,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 24:
+		case 21:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PrevAutoResetPoints", wireType)
 			}
@@ -17411,7 +13030,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 25:
+		case 22:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Header", wireType)
 			}
@@ -17462,6 +13081,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -17570,6 +13190,7 @@ func (m *WorkflowExecutionCompletedEventAttributes) Unmarshal(dAtA []byte) error
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -17678,6 +13299,7 @@ func (m *WorkflowExecutionFailedEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -17750,6 +13372,7 @@ func (m *WorkflowExecutionTimedOutEventAttributes) Unmarshal(dAtA []byte) error 
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -17854,9 +13477,9 @@ func (m *DecisionTaskScheduledEventAttributes) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.StartToCloseTimeout == nil {
-				m.StartToCloseTimeout = new(time.Duration)
+				m.StartToCloseTimeout = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.StartToCloseTimeout, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.StartToCloseTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -17894,6 +13517,7 @@ func (m *DecisionTaskScheduledEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -18030,6 +13654,7 @@ func (m *DecisionTaskStartedEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -18219,6 +13844,7 @@ func (m *DecisionTaskCompletedEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -18314,6 +13940,140 @@ func (m *DecisionTaskTimedOutEventAttributes) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field BaseRunId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowHistory
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthHistory
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthHistory
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.BaseRunId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NewRunId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowHistory
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthHistory
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthHistory
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.NewRunId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ForkEventVersion", wireType)
+			}
+			m.ForkEventVersion = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowHistory
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ForkEventVersion |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Reason", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowHistory
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthHistory
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthHistory
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Reason = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 8:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Cause", wireType)
+			}
+			m.Cause = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowHistory
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Cause |= DecisionTaskTimedOutCause(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipHistory(dAtA[iNdEx:])
@@ -18329,6 +14089,7 @@ func (m *DecisionTaskTimedOutEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -18622,6 +14383,7 @@ func (m *DecisionTaskFailedEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -18862,9 +14624,9 @@ func (m *ActivityTaskScheduledEventAttributes) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.ScheduleToCloseTimeout == nil {
-				m.ScheduleToCloseTimeout = new(time.Duration)
+				m.ScheduleToCloseTimeout = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.ScheduleToCloseTimeout, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.ScheduleToCloseTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -18898,9 +14660,9 @@ func (m *ActivityTaskScheduledEventAttributes) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.ScheduleToStartTimeout == nil {
-				m.ScheduleToStartTimeout = new(time.Duration)
+				m.ScheduleToStartTimeout = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.ScheduleToStartTimeout, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.ScheduleToStartTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -18934,9 +14696,9 @@ func (m *ActivityTaskScheduledEventAttributes) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.StartToCloseTimeout == nil {
-				m.StartToCloseTimeout = new(time.Duration)
+				m.StartToCloseTimeout = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.StartToCloseTimeout, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.StartToCloseTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -18970,9 +14732,9 @@ func (m *ActivityTaskScheduledEventAttributes) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.HeartbeatTimeout == nil {
-				m.HeartbeatTimeout = new(time.Duration)
+				m.HeartbeatTimeout = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.HeartbeatTimeout, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.HeartbeatTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -19082,6 +14844,7 @@ func (m *ActivityTaskScheduledEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -19273,6 +15036,7 @@ func (m *ActivityTaskStartedEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -19432,6 +15196,7 @@ func (m *ActivityTaskCompletedEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -19591,6 +15356,7 @@ func (m *ActivityTaskFailedEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -19773,6 +15539,7 @@ func (m *ActivityTaskTimedOutEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -19877,6 +15644,7 @@ func (m *ActivityTaskCancelRequestedEventAttributes) Unmarshal(dAtA []byte) erro
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -20013,6 +15781,7 @@ func (m *RequestCancelActivityTaskFailedEventAttributes) Unmarshal(dAtA []byte) 
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -20191,6 +15960,7 @@ func (m *ActivityTaskCanceledEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -20291,9 +16061,9 @@ func (m *TimerStartedEventAttributes) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.StartToFireTimeout == nil {
-				m.StartToFireTimeout = new(time.Duration)
+				m.StartToFireTimeout = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.StartToFireTimeout, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.StartToFireTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -20331,6 +16101,7 @@ func (m *TimerStartedEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -20435,6 +16206,7 @@ func (m *TimerFiredEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -20590,6 +16362,7 @@ func (m *TimerCanceledEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -20758,6 +16531,7 @@ func (m *CancelTimerFailedEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -20966,9 +16740,9 @@ func (m *WorkflowExecutionContinuedAsNewEventAttributes) Unmarshal(dAtA []byte) 
 				return io.ErrUnexpectedEOF
 			}
 			if m.ExecutionStartToCloseTimeout == nil {
-				m.ExecutionStartToCloseTimeout = new(time.Duration)
+				m.ExecutionStartToCloseTimeout = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.ExecutionStartToCloseTimeout, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.ExecutionStartToCloseTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -21002,9 +16776,9 @@ func (m *WorkflowExecutionContinuedAsNewEventAttributes) Unmarshal(dAtA []byte) 
 				return io.ErrUnexpectedEOF
 			}
 			if m.TaskStartToCloseTimeout == nil {
-				m.TaskStartToCloseTimeout = new(time.Duration)
+				m.TaskStartToCloseTimeout = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.TaskStartToCloseTimeout, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.TaskStartToCloseTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -21057,9 +16831,9 @@ func (m *WorkflowExecutionContinuedAsNewEventAttributes) Unmarshal(dAtA []byte) 
 				return io.ErrUnexpectedEOF
 			}
 			if m.BackoffStartInterval == nil {
-				m.BackoffStartInterval = new(time.Duration)
+				m.BackoffStartInterval = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.BackoffStartInterval, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.BackoffStartInterval.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -21277,6 +17051,7 @@ func (m *WorkflowExecutionContinuedAsNewEventAttributes) Unmarshal(dAtA []byte) 
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -21348,61 +17123,6 @@ func (m *WorkflowExecutionCancelRequestedEventAttributes) Unmarshal(dAtA []byte)
 			m.Cause = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ExternalInitiatedEventId", wireType)
-			}
-			m.ExternalInitiatedEventId = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowHistory
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.ExternalInitiatedEventId |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ExternalWorkflowExecution", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowHistory
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthHistory
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.ExternalWorkflowExecution == nil {
-				m.ExternalWorkflowExecution = &WorkflowExecution{}
-			}
-			if err := m.ExternalWorkflowExecution.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
@@ -21434,6 +17154,42 @@ func (m *WorkflowExecutionCancelRequestedEventAttributes) Unmarshal(dAtA []byte)
 			}
 			m.Identity = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ExternalExecutionInfo", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowHistory
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthHistory
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthHistory
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ExternalExecutionInfo == nil {
+				m.ExternalExecutionInfo = &ExternalExecutionInfo{}
+			}
+			if err := m.ExternalExecutionInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipHistory(dAtA[iNdEx:])
@@ -21449,6 +17205,7 @@ func (m *WorkflowExecutionCancelRequestedEventAttributes) Unmarshal(dAtA []byte)
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -21557,6 +17314,7 @@ func (m *WorkflowExecutionCanceledEventAttributes) Unmarshal(dAtA []byte) error 
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -21733,6 +17491,7 @@ func (m *MarkerRecordedEventAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -21886,6 +17645,7 @@ func (m *WorkflowExecutionSignaledEventAttributes) Unmarshal(dAtA []byte) error 
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -22039,6 +17799,7 @@ func (m *WorkflowExecutionTerminatedEventAttributes) Unmarshal(dAtA []byte) erro
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -22233,6 +17994,7 @@ func (m *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) Unmarsh
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -22445,6 +18207,7 @@ func (m *RequestCancelExternalWorkflowExecutionFailedEventAttributes) Unmarshal(
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -22585,6 +18348,7 @@ func (m *ExternalWorkflowExecutionCancelRequestedEventAttributes) Unmarshal(dAtA
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -22847,6 +18611,7 @@ func (m *SignalExternalWorkflowExecutionInitiatedEventAttributes) Unmarshal(dAtA
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -23059,6 +18824,7 @@ func (m *SignalExternalWorkflowExecutionFailedEventAttributes) Unmarshal(dAtA []
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -23233,6 +18999,7 @@ func (m *ExternalWorkflowExecutionSignaledEventAttributes) Unmarshal(dAtA []byte
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -23341,6 +19108,7 @@ func (m *UpsertWorkflowSearchAttributesEventAttributes) Unmarshal(dAtA []byte) e
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -23581,9 +19349,9 @@ func (m *StartChildWorkflowExecutionInitiatedEventAttributes) Unmarshal(dAtA []b
 				return io.ErrUnexpectedEOF
 			}
 			if m.ExecutionStartToCloseTimeout == nil {
-				m.ExecutionStartToCloseTimeout = new(time.Duration)
+				m.ExecutionStartToCloseTimeout = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.ExecutionStartToCloseTimeout, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.ExecutionStartToCloseTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -23617,9 +19385,9 @@ func (m *StartChildWorkflowExecutionInitiatedEventAttributes) Unmarshal(dAtA []b
 				return io.ErrUnexpectedEOF
 			}
 			if m.TaskStartToCloseTimeout == nil {
-				m.TaskStartToCloseTimeout = new(time.Duration)
+				m.TaskStartToCloseTimeout = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.TaskStartToCloseTimeout, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.TaskStartToCloseTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -23905,6 +19673,7 @@ func (m *StartChildWorkflowExecutionInitiatedEventAttributes) Unmarshal(dAtA []b
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -24149,6 +19918,7 @@ func (m *StartChildWorkflowExecutionFailedEventAttributes) Unmarshal(dAtA []byte
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -24361,6 +20131,7 @@ func (m *ChildWorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) er
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -24592,6 +20363,7 @@ func (m *ChildWorkflowExecutionCompletedEventAttributes) Unmarshal(dAtA []byte) 
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -24823,6 +20595,7 @@ func (m *ChildWorkflowExecutionFailedEventAttributes) Unmarshal(dAtA []byte) err
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -25054,6 +20827,7 @@ func (m *ChildWorkflowExecutionCanceledEventAttributes) Unmarshal(dAtA []byte) e
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -25268,6 +21042,7 @@ func (m *ChildWorkflowExecutionTimedOutEventAttributes) Unmarshal(dAtA []byte) e
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -25463,6 +21238,7 @@ func (m *ChildWorkflowExecutionTerminatedEventAttributes) Unmarshal(dAtA []byte)
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}

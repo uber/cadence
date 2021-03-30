@@ -157,22 +157,22 @@ func (s *cliAppSuite) TestDomainRegister_Failed() {
 
 var describeDomainResponseServer = &types.DescribeDomainResponse{
 	DomainInfo: &types.DomainInfo{
-		Name:        common.StringPtr("test-domain"),
-		Description: common.StringPtr("a test domain"),
-		OwnerEmail:  common.StringPtr("test@uber.com"),
+		Name:        "test-domain",
+		Description: "a test domain",
+		OwnerEmail:  "test@uber.com",
 	},
 	Configuration: &types.DomainConfiguration{
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(3),
-		EmitMetric:                             common.BoolPtr(true),
+		WorkflowExecutionRetentionPeriodInDays: 3,
+		EmitMetric:                             true,
 	},
 	ReplicationConfiguration: &types.DomainReplicationConfiguration{
-		ActiveClusterName: common.StringPtr("active"),
+		ActiveClusterName: "active",
 		Clusters: []*types.ClusterReplicationConfiguration{
 			{
-				ClusterName: common.StringPtr("active"),
+				ClusterName: "active",
 			},
 			{
-				ClusterName: common.StringPtr("standby"),
+				ClusterName: "standby",
 			},
 		},
 	},
@@ -207,6 +207,24 @@ func (s *cliAppSuite) TestDomainUpdate_Failed() {
 	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, nil)
 	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, &shared.BadRequestError{"faked error"})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "update"})
+	s.Equal(1, errorCode)
+}
+
+func (s *cliAppSuite) TestDomainDeprecate() {
+	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(nil)
+	err := s.app.Run([]string{"", "--do", domainName, "domain", "deprecate"})
+	s.Nil(err)
+}
+
+func (s *cliAppSuite) TestDomainDeprecate_DomainNotExist() {
+	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(&types.EntityNotExistsError{})
+	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
+	s.Equal(1, errorCode)
+}
+
+func (s *cliAppSuite) TestDomainDeprecate_Failed() {
+	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"faked error"})
+	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
 	s.Equal(1, errorCode)
 }
 
@@ -256,6 +274,10 @@ var (
 func (s *cliAppSuite) TestShowHistory() {
 	resp := getWorkflowExecutionHistoryResponse
 	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	describeResp := &types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
+	}
+	s.serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(describeResp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "show", "-w", "wid"})
 	s.Nil(err)
 }
@@ -263,6 +285,10 @@ func (s *cliAppSuite) TestShowHistory() {
 func (s *cliAppSuite) TestShowHistoryWithID() {
 	resp := getWorkflowExecutionHistoryResponse
 	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	describeResp := &types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
+	}
+	s.serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(describeResp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "showid", "wid"})
 	s.Nil(err)
 }
@@ -270,6 +296,10 @@ func (s *cliAppSuite) TestShowHistoryWithID() {
 func (s *cliAppSuite) TestShowHistory_PrintRawTime() {
 	resp := getWorkflowExecutionHistoryResponse
 	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	describeResp := &types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
+	}
+	s.serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(describeResp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "show", "-w", "wid", "-prt"})
 	s.Nil(err)
 }
@@ -277,6 +307,10 @@ func (s *cliAppSuite) TestShowHistory_PrintRawTime() {
 func (s *cliAppSuite) TestShowHistory_PrintDateTime() {
 	resp := getWorkflowExecutionHistoryResponse
 	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	describeResp := &types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
+	}
+	s.serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(describeResp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "show", "-w", "wid", "-pdt"})
 	s.Nil(err)
 }
@@ -510,9 +544,9 @@ var describeTaskListResponse = &shared.DescribeTaskListResponse{
 
 func (s *cliAppSuite) TestAdminDescribeWorkflow() {
 	resp := &types.AdminDescribeWorkflowExecutionResponse{
-		ShardID:                common.StringPtr("test-shard-id"),
-		HistoryAddr:            common.StringPtr("ip:port"),
-		MutableStateInDatabase: common.StringPtr("{\"ExecutionInfo\":{\"BranchToken\":\"WQsACgAAACQ2MzI5YzEzMi1mMGI0LTQwZmUtYWYxMS1hODVmMDA3MzAzODQLABQAAAAkOWM5OWI1MjItMGEyZi00NTdmLWEyNDgtMWU0OTA0ZDg4YzVhDwAeDAAAAAAA\"}}"),
+		ShardID:                "test-shard-id",
+		HistoryAddr:            "ip:port",
+		MutableStateInDatabase: "{\"ExecutionInfo\":{\"BranchToken\":\"WQsACgAAACQ2MzI5YzEzMi1mMGI0LTQwZmUtYWYxMS1hODVmMDA3MzAzODQLABQAAAAkOWM5OWI1MjItMGEyZi00NTdmLWEyNDgtMWU0OTA0ZDg4YzVhDwAeDAAAAAAA\"}}",
 	}
 
 	s.serverAdminClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil)
@@ -527,12 +561,26 @@ func (s *cliAppSuite) TestAdminDescribeWorkflow_Failed() {
 }
 
 func (s *cliAppSuite) TestAdminAddSearchAttribute() {
+	var promptMsg string
+	promptFn = func(msg string) {
+		promptMsg = msg
+	}
+	request := &types.AddSearchAttributeRequest{
+		SearchAttribute: map[string]types.IndexedValueType{
+			"testKey": types.IndexedValueType(1),
+		},
+	}
+	s.serverAdminClient.EXPECT().AddSearchAttribute(gomock.Any(), request).Return(nil)
+
 	err := s.app.Run([]string{"", "--do", domainName, "admin", "cl", "asa", "--search_attr_key", "testKey", "--search_attr_type", "1"})
+	s.Equal("Are you trying to add key [testKey] with Type [Keyword]? Y/N", promptMsg)
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestAdminFailover() {
-	err := s.app.Run([]string{"", "admin", "cl", "fo", "--ac", "standby"})
+	resp := &shared.StartWorkflowExecutionResponse{RunId: common.StringPtr(uuid.New())}
+	s.clientFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), gomock.Any()).Return(resp, nil)
+	err := s.app.Run([]string{"", "admin", "cl", "fo", "start", "--tc", "standby", "--sc", "active"})
 	s.Nil(err)
 }
 

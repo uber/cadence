@@ -701,7 +701,7 @@ func (s *HistoryV2PersistenceSuite) genRandomEvents(eventIDs []int64, version in
 
 	timestamp := time.Now().UnixNano()
 	for _, eid := range eventIDs {
-		e := &types.HistoryEvent{EventID: common.Int64Ptr(eid), Version: common.Int64Ptr(version), Timestamp: int64Ptr(timestamp)}
+		e := &types.HistoryEvent{EventID: eid, Version: version, Timestamp: int64Ptr(timestamp)}
 		events = append(events, e)
 	}
 

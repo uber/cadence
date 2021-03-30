@@ -222,8 +222,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 ) (*p.InternalGetWorkflowExecutionResponse, error) {
 
 	domainID := serialization.MustParseUUID(request.DomainID)
-	runID := serialization.MustParseUUID(*request.Execution.RunID)
-	wfID := *request.Execution.WorkflowID
+	runID := serialization.MustParseUUID(request.Execution.RunID)
+	wfID := request.Execution.WorkflowID
 	executions, err := m.db.SelectFromExecutions(ctx, &sqlplugin.ExecutionsFilter{
 		ShardID: m.shardID, DomainID: domainID, WorkflowID: wfID, RunID: runID})
 
@@ -813,7 +813,6 @@ func (m *sqlExecutionManager) ListConcreteExecutions(
 		filter = &sqlplugin.ExecutionsFilter{
 			ShardID:    m.shardID,
 			WorkflowID: "",
-			RunID:      serialization.MustParseUUID(minUUID),
 		}
 	}
 	filter.Size = request.PageSize
@@ -835,7 +834,6 @@ func (m *sqlExecutionManager) ListConcreteExecutions(
 	nextFilter := &sqlplugin.ExecutionsFilter{
 		ShardID:    m.shardID,
 		WorkflowID: lastExecution.WorkflowID,
-		RunID:      lastExecution.RunID,
 	}
 	token, err := gobSerialize(nextFilter)
 	if err != nil {
@@ -1447,17 +1445,9 @@ func (m *sqlExecutionManager) populateInternalListConcreteExecutions(
 			return nil, err
 		}
 
-		var versionHistories *p.DataBlob
-		if len(execution.VersionHistories) != 0 {
-			versionHistories = p.NewDataBlob(
-				versionHistories.Data,
-				versionHistories.Encoding,
-			)
-		}
-
 		concreteExecution := &p.InternalListConcreteExecutionsEntity{
 			ExecutionInfo:    mutableState.ExecutionInfo,
-			VersionHistories: versionHistories,
+			VersionHistories: mutableState.VersionHistories,
 		}
 		concreteExecutions = append(concreteExecutions, concreteExecution)
 	}

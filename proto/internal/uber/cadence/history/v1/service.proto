@@ -22,11 +22,11 @@ syntax = "proto3";
 
 package uber.cadence.history.v1;
 
-option go_package = "historyv1";
+option go_package = "github.com/uber/cadence/.gen/proto/history/v1;historyv1";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
-import "dependencies/gogoproto.proto";
+import "google/protobuf/wrappers.proto";
 import "uber/cadence/api/v1/common.proto";
 import "uber/cadence/api/v1/history.proto";
 import "uber/cadence/api/v1/query.proto";
@@ -221,13 +221,13 @@ service HistoryAPI {
 message StartWorkflowExecutionRequest {
   api.v1.StartWorkflowExecutionRequest request = 1;
   string domain_id = 2;
-  shared.v1.ParentExecutionInfo parent_execution_info = 3;
+  api.v1.ParentExecutionInfo parent_execution_info = 3;
   int32 attempt = 4;
-  google.protobuf.Timestamp expiration_time = 5 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp expiration_time = 5;
   api.v1.ContinueAsNewInitiator continue_as_new_initiator = 6;
   api.v1.Failure continued_failure = 7;
   api.v1.Payload last_completion_result = 8;
-  google.protobuf.Duration first_decision_task_backoff = 9 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration first_decision_task_backoff = 9;
 }
 
 message StartWorkflowExecutionResponse {
@@ -312,14 +312,14 @@ message GetMutableStateResponse {
   api.v1.WorkflowExecution workflow_execution = 1;
   api.v1.WorkflowType workflow_type = 2;
   int64 next_event_id = 3;
-  int64 previous_started_event_id = 4;
+  google.protobuf.Int64Value previous_started_event_id = 4;
   int64 last_first_event_id = 5;
   api.v1.TaskList task_list = 6;
   api.v1.TaskList sticky_task_list = 7;
   string client_library_version = 8;
   string client_feature_version = 9;
   string client_impl = 10;
-  google.protobuf.Duration sticky_task_list_schedule_to_start_timeout = 11 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration sticky_task_list_schedule_to_start_timeout = 11;
   int32 event_store_version = 12;
   bytes current_branch_token = 13;
   shared.v1.WorkflowState workflow_state = 14;
@@ -339,14 +339,14 @@ message PollMutableStateResponse {
   api.v1.WorkflowExecution workflow_execution = 1;
   api.v1.WorkflowType workflow_type = 2;
   int64 next_event_id = 3;
-  int64 previous_started_event_id = 4;
+  google.protobuf.Int64Value previous_started_event_id = 4;
   int64 last_first_event_id = 5;
   api.v1.TaskList task_list = 6;
   api.v1.TaskList sticky_task_list = 7;
   string client_library_version = 8;
   string client_feature_version = 9;
   string client_impl = 10;
-  google.protobuf.Duration sticky_task_list_schedule_to_start_timeout = 11 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration sticky_task_list_schedule_to_start_timeout = 11;
   bytes current_branch_token = 12;
   shared.v1.VersionHistories version_histories = 13;
   shared.v1.WorkflowState workflow_state = 14;
@@ -365,7 +365,7 @@ message RecordDecisionTaskStartedRequest {
 
 message RecordDecisionTaskStartedResponse {
   api.v1.WorkflowType workflow_type = 1;
-  int64 previous_started_event_id = 2;
+  google.protobuf.Int64Value previous_started_event_id = 2;
   int64 scheduled_event_id = 3;
   int64 started_event_id = 4;
   int64 next_event_id = 5;
@@ -375,8 +375,8 @@ message RecordDecisionTaskStartedResponse {
   api.v1.TaskList workflow_execution_task_list = 9;
   int32 event_store_version = 10;
   bytes branch_token = 11;
-  google.protobuf.Timestamp scheduled_time = 12 [(gogoproto.stdtime) = true];
-  google.protobuf.Timestamp started_time = 13 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp scheduled_time = 12;
+  google.protobuf.Timestamp started_time = 13;
   map<string, api.v1.WorkflowQuery> queries = 14;
 }
 
@@ -392,9 +392,9 @@ message RecordActivityTaskStartedRequest {
 
 message RecordActivityTaskStartedResponse {
   api.v1.HistoryEvent scheduled_event = 1;
-  google.protobuf.Timestamp started_time = 2 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp started_time = 2;
   int32 attempt = 3;
-  google.protobuf.Timestamp scheduled_time_of_this_attempt = 4 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp scheduled_time_of_this_attempt = 4;
   api.v1.Payload heartbeat_details = 5;
   api.v1.WorkflowType workflow_type = 6;
   string workflow_domain = 7;
@@ -463,9 +463,8 @@ message RemoveSignalMutableStateResponse {
 message RequestCancelWorkflowExecutionRequest {
   string domain_id = 1;
   api.v1.RequestCancelWorkflowExecutionRequest cancel_request = 2;
-  int64 external_initiated_event_id = 3;
-  api.v1.WorkflowExecution external_workflow_execution = 4;
-  bool child_workflow_only = 5;
+  api.v1.ExternalExecutionInfo external_execution_info = 3;
+  bool child_workflow_only = 4;
 }
 
 message RequestCancelWorkflowExecutionResponse {
@@ -511,7 +510,7 @@ message ReplicateEventsV2Response {
 message SyncShardStatusRequest {
   string source_cluster = 1;
   int32 shard_id = 2;
-  google.protobuf.Timestamp time = 3 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp time = 3;
 }
 
 message SyncShardStatusResponse {
@@ -522,10 +521,10 @@ message SyncActivityRequest {
   api.v1.WorkflowExecution workflow_execution = 2;
   int64 version = 3;
   int64 scheduled_id = 4;
-  google.protobuf.Timestamp scheduled_time = 5 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp scheduled_time = 5;
   int64 started_id = 6;
-  google.protobuf.Timestamp started_time = 7 [(gogoproto.stdtime) = true];
-  google.protobuf.Timestamp last_heartbeat_time = 8 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp started_time = 7;
+  google.protobuf.Timestamp last_heartbeat_time = 8;
   api.v1.Payload details = 9;
   int32 attempt = 10;
   api.v1.Failure last_failure = 11;
@@ -547,9 +546,6 @@ message DescribeMutableStateResponse {
 }
 
 message DescribeHistoryHostRequest {
-  string host_address = 1;
-  int32 shard_id = 2;
-  api.v1.WorkflowExecution workflow_execution = 3;
 }
 
 message DescribeHistoryHostResponse {
@@ -571,7 +567,7 @@ message RemoveTaskRequest {
   int32 shard_id = 1;
   shared.v1.TaskType task_type = 2;
   int64 task_id = 3;
-  google.protobuf.Timestamp visibility_time = 4 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp visibility_time = 4;
 }
 
 message RemoveTaskResponse {
@@ -636,7 +632,7 @@ message ReadDLQMessagesRequest {
   shared.v1.DLQType type = 1;
   int32 shard_id = 2;
   string source_cluster = 3;
-  int64 inclusive_end_message_id = 4;
+  google.protobuf.Int64Value inclusive_end_message_id = 4;
   int32 page_size = 5;
   bytes next_page_token = 6;
 }
@@ -644,14 +640,15 @@ message ReadDLQMessagesRequest {
 message ReadDLQMessagesResponse {
   shared.v1.DLQType type = 1;
   repeated shared.v1.ReplicationTask replication_tasks = 2;
-  bytes next_page_token = 3;
+  repeated shared.v1.ReplicationTaskInfo replication_tasks_info = 3;
+  bytes next_page_token = 4;
 }
 
 message PurgeDLQMessagesRequest {
   shared.v1.DLQType type = 1;
   int32 shard_id = 2;
   string source_cluster = 3;
-  int64 inclusive_end_message_id = 4;
+  google.protobuf.Int64Value inclusive_end_message_id = 4;
 }
 
 message PurgeDLQMessagesResponse {
@@ -661,7 +658,7 @@ message MergeDLQMessagesRequest {
   shared.v1.DLQType type = 1;
   int32 shard_id = 2;
   string source_cluster = 3;
-  int64 inclusive_end_message_id = 4;
+  google.protobuf.Int64Value inclusive_end_message_id = 4;
   int32 page_size = 5;
   bytes next_page_token = 6;
 }

@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,13 +26,10 @@
 package apiv1
 
 import (
-	bytes "bytes"
 	fmt "fmt"
 	io "io"
 	math "math"
 	math_bits "math/bits"
-	reflect "reflect"
-	strings "strings"
 
 	proto "github.com/gogo/protobuf/proto"
 )
@@ -49,12 +46,16 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type WorkflowExecutionAlreadyStartedError struct {
-	StartRequestId string `protobuf:"bytes,1,opt,name=start_request_id,json=startRequestId,proto3" json:"start_request_id,omitempty"`
-	RunId          string `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	StartRequestId       string   `protobuf:"bytes,1,opt,name=start_request_id,json=startRequestId,proto3" json:"start_request_id,omitempty"`
+	RunId                string   `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *WorkflowExecutionAlreadyStartedError) Reset()      { *m = WorkflowExecutionAlreadyStartedError{} }
-func (*WorkflowExecutionAlreadyStartedError) ProtoMessage() {}
+func (m *WorkflowExecutionAlreadyStartedError) Reset()         { *m = WorkflowExecutionAlreadyStartedError{} }
+func (m *WorkflowExecutionAlreadyStartedError) String() string { return proto.CompactTextString(m) }
+func (*WorkflowExecutionAlreadyStartedError) ProtoMessage()    {}
 func (*WorkflowExecutionAlreadyStartedError) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c8f91786c9aff272, []int{0}
 }
@@ -100,12 +101,16 @@ func (m *WorkflowExecutionAlreadyStartedError) GetRunId() string {
 }
 
 type EntityNotExistsError struct {
-	CurrentCluster string `protobuf:"bytes,1,opt,name=current_cluster,json=currentCluster,proto3" json:"current_cluster,omitempty"`
-	ActiveCluster  string `protobuf:"bytes,2,opt,name=active_cluster,json=activeCluster,proto3" json:"active_cluster,omitempty"`
+	CurrentCluster       string   `protobuf:"bytes,1,opt,name=current_cluster,json=currentCluster,proto3" json:"current_cluster,omitempty"`
+	ActiveCluster        string   `protobuf:"bytes,2,opt,name=active_cluster,json=activeCluster,proto3" json:"active_cluster,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *EntityNotExistsError) Reset()      { *m = EntityNotExistsError{} }
-func (*EntityNotExistsError) ProtoMessage() {}
+func (m *EntityNotExistsError) Reset()         { *m = EntityNotExistsError{} }
+func (m *EntityNotExistsError) String() string { return proto.CompactTextString(m) }
+func (*EntityNotExistsError) ProtoMessage()    {}
 func (*EntityNotExistsError) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c8f91786c9aff272, []int{1}
 }
@@ -151,13 +156,17 @@ func (m *EntityNotExistsError) GetActiveCluster() string {
 }
 
 type DomainNotActiveError struct {
-	Domain         string `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	CurrentCluster string `protobuf:"bytes,2,opt,name=current_cluster,json=currentCluster,proto3" json:"current_cluster,omitempty"`
-	ActiveCluster  string `protobuf:"bytes,3,opt,name=active_cluster,json=activeCluster,proto3" json:"active_cluster,omitempty"`
+	Domain               string   `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	CurrentCluster       string   `protobuf:"bytes,2,opt,name=current_cluster,json=currentCluster,proto3" json:"current_cluster,omitempty"`
+	ActiveCluster        string   `protobuf:"bytes,3,opt,name=active_cluster,json=activeCluster,proto3" json:"active_cluster,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *DomainNotActiveError) Reset()      { *m = DomainNotActiveError{} }
-func (*DomainNotActiveError) ProtoMessage() {}
+func (m *DomainNotActiveError) Reset()         { *m = DomainNotActiveError{} }
+func (m *DomainNotActiveError) String() string { return proto.CompactTextString(m) }
+func (*DomainNotActiveError) ProtoMessage()    {}
 func (*DomainNotActiveError) Descriptor() ([]byte, []int) {
 	return fileDescriptor_c8f91786c9aff272, []int{2}
 }
@@ -209,99 +218,20 @@ func (m *DomainNotActiveError) GetActiveCluster() string {
 	return ""
 }
 
-type RetryTaskV2Error struct {
-	DomainId          string             `protobuf:"bytes,1,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
-	WorkflowExecution *WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	StartEventId      int64              `protobuf:"varint,3,opt,name=start_event_id,json=startEventId,proto3" json:"start_event_id,omitempty"`
-	StartEventVersion int64              `protobuf:"varint,4,opt,name=start_event_version,json=startEventVersion,proto3" json:"start_event_version,omitempty"`
-	EndEventId        int64              `protobuf:"varint,5,opt,name=end_event_id,json=endEventId,proto3" json:"end_event_id,omitempty"`
-	EndEventVersion   int64              `protobuf:"varint,6,opt,name=end_event_version,json=endEventVersion,proto3" json:"end_event_version,omitempty"`
-}
-
-func (m *RetryTaskV2Error) Reset()      { *m = RetryTaskV2Error{} }
-func (*RetryTaskV2Error) ProtoMessage() {}
-func (*RetryTaskV2Error) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8f91786c9aff272, []int{3}
-}
-func (m *RetryTaskV2Error) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *RetryTaskV2Error) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_RetryTaskV2Error.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *RetryTaskV2Error) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RetryTaskV2Error.Merge(m, src)
-}
-func (m *RetryTaskV2Error) XXX_Size() int {
-	return m.Size()
-}
-func (m *RetryTaskV2Error) XXX_DiscardUnknown() {
-	xxx_messageInfo_RetryTaskV2Error.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_RetryTaskV2Error proto.InternalMessageInfo
-
-func (m *RetryTaskV2Error) GetDomainId() string {
-	if m != nil {
-		return m.DomainId
-	}
-	return ""
-}
-
-func (m *RetryTaskV2Error) GetWorkflowExecution() *WorkflowExecution {
-	if m != nil {
-		return m.WorkflowExecution
-	}
-	return nil
-}
-
-func (m *RetryTaskV2Error) GetStartEventId() int64 {
-	if m != nil {
-		return m.StartEventId
-	}
-	return 0
-}
-
-func (m *RetryTaskV2Error) GetStartEventVersion() int64 {
-	if m != nil {
-		return m.StartEventVersion
-	}
-	return 0
-}
-
-func (m *RetryTaskV2Error) GetEndEventId() int64 {
-	if m != nil {
-		return m.EndEventId
-	}
-	return 0
-}
-
-func (m *RetryTaskV2Error) GetEndEventVersion() int64 {
-	if m != nil {
-		return m.EndEventVersion
-	}
-	return 0
-}
-
 type ClientVersionNotSupportedError struct {
-	FeatureVersion    string `protobuf:"bytes,1,opt,name=feature_version,json=featureVersion,proto3" json:"feature_version,omitempty"`
-	ClientImpl        string `protobuf:"bytes,2,opt,name=client_impl,json=clientImpl,proto3" json:"client_impl,omitempty"`
-	SupportedVersions string `protobuf:"bytes,3,opt,name=supported_versions,json=supportedVersions,proto3" json:"supported_versions,omitempty"`
+	FeatureVersion       string   `protobuf:"bytes,1,opt,name=feature_version,json=featureVersion,proto3" json:"feature_version,omitempty"`
+	ClientImpl           string   `protobuf:"bytes,2,opt,name=client_impl,json=clientImpl,proto3" json:"client_impl,omitempty"`
+	SupportedVersions    string   `protobuf:"bytes,3,opt,name=supported_versions,json=supportedVersions,proto3" json:"supported_versions,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ClientVersionNotSupportedError) Reset()      { *m = ClientVersionNotSupportedError{} }
-func (*ClientVersionNotSupportedError) ProtoMessage() {}
+func (m *ClientVersionNotSupportedError) Reset()         { *m = ClientVersionNotSupportedError{} }
+func (m *ClientVersionNotSupportedError) String() string { return proto.CompactTextString(m) }
+func (*ClientVersionNotSupportedError) ProtoMessage()    {}
 func (*ClientVersionNotSupportedError) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8f91786c9aff272, []int{4}
+	return fileDescriptor_c8f91786c9aff272, []int{3}
 }
 func (m *ClientVersionNotSupportedError) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -351,56 +281,17 @@ func (m *ClientVersionNotSupportedError) GetSupportedVersions() string {
 	return ""
 }
 
-type CurrentBranchChangedError struct {
-	CurrentBranchToken []byte `protobuf:"bytes,1,opt,name=current_branch_token,json=currentBranchToken,proto3" json:"current_branch_token,omitempty"`
-}
-
-func (m *CurrentBranchChangedError) Reset()      { *m = CurrentBranchChangedError{} }
-func (*CurrentBranchChangedError) ProtoMessage() {}
-func (*CurrentBranchChangedError) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8f91786c9aff272, []int{5}
-}
-func (m *CurrentBranchChangedError) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *CurrentBranchChangedError) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_CurrentBranchChangedError.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *CurrentBranchChangedError) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CurrentBranchChangedError.Merge(m, src)
-}
-func (m *CurrentBranchChangedError) XXX_Size() int {
-	return m.Size()
-}
-func (m *CurrentBranchChangedError) XXX_DiscardUnknown() {
-	xxx_messageInfo_CurrentBranchChangedError.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_CurrentBranchChangedError proto.InternalMessageInfo
-
-func (m *CurrentBranchChangedError) GetCurrentBranchToken() []byte {
-	if m != nil {
-		return m.CurrentBranchToken
-	}
-	return nil
-}
-
 type CancellationAlreadyRequestedError struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *CancellationAlreadyRequestedError) Reset()      { *m = CancellationAlreadyRequestedError{} }
-func (*CancellationAlreadyRequestedError) ProtoMessage() {}
+func (m *CancellationAlreadyRequestedError) Reset()         { *m = CancellationAlreadyRequestedError{} }
+func (m *CancellationAlreadyRequestedError) String() string { return proto.CompactTextString(m) }
+func (*CancellationAlreadyRequestedError) ProtoMessage()    {}
 func (*CancellationAlreadyRequestedError) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8f91786c9aff272, []int{6}
+	return fileDescriptor_c8f91786c9aff272, []int{4}
 }
 func (m *CancellationAlreadyRequestedError) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -430,12 +321,16 @@ func (m *CancellationAlreadyRequestedError) XXX_DiscardUnknown() {
 var xxx_messageInfo_CancellationAlreadyRequestedError proto.InternalMessageInfo
 
 type DomainAlreadyExistsError struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *DomainAlreadyExistsError) Reset()      { *m = DomainAlreadyExistsError{} }
-func (*DomainAlreadyExistsError) ProtoMessage() {}
+func (m *DomainAlreadyExistsError) Reset()         { *m = DomainAlreadyExistsError{} }
+func (m *DomainAlreadyExistsError) String() string { return proto.CompactTextString(m) }
+func (*DomainAlreadyExistsError) ProtoMessage()    {}
 func (*DomainAlreadyExistsError) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8f91786c9aff272, []int{7}
+	return fileDescriptor_c8f91786c9aff272, []int{5}
 }
 func (m *DomainAlreadyExistsError) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -464,48 +359,17 @@ func (m *DomainAlreadyExistsError) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_DomainAlreadyExistsError proto.InternalMessageInfo
 
-type EventAlreadyStartedError struct {
-}
-
-func (m *EventAlreadyStartedError) Reset()      { *m = EventAlreadyStartedError{} }
-func (*EventAlreadyStartedError) ProtoMessage() {}
-func (*EventAlreadyStartedError) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8f91786c9aff272, []int{8}
-}
-func (m *EventAlreadyStartedError) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *EventAlreadyStartedError) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_EventAlreadyStartedError.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *EventAlreadyStartedError) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EventAlreadyStartedError.Merge(m, src)
-}
-func (m *EventAlreadyStartedError) XXX_Size() int {
-	return m.Size()
-}
-func (m *EventAlreadyStartedError) XXX_DiscardUnknown() {
-	xxx_messageInfo_EventAlreadyStartedError.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_EventAlreadyStartedError proto.InternalMessageInfo
-
 type LimitExceededError struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *LimitExceededError) Reset()      { *m = LimitExceededError{} }
-func (*LimitExceededError) ProtoMessage() {}
+func (m *LimitExceededError) Reset()         { *m = LimitExceededError{} }
+func (m *LimitExceededError) String() string { return proto.CompactTextString(m) }
+func (*LimitExceededError) ProtoMessage()    {}
 func (*LimitExceededError) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8f91786c9aff272, []int{9}
+	return fileDescriptor_c8f91786c9aff272, []int{6}
 }
 func (m *LimitExceededError) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -535,12 +399,16 @@ func (m *LimitExceededError) XXX_DiscardUnknown() {
 var xxx_messageInfo_LimitExceededError proto.InternalMessageInfo
 
 type QueryFailedError struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *QueryFailedError) Reset()      { *m = QueryFailedError{} }
-func (*QueryFailedError) ProtoMessage() {}
+func (m *QueryFailedError) Reset()         { *m = QueryFailedError{} }
+func (m *QueryFailedError) String() string { return proto.CompactTextString(m) }
+func (*QueryFailedError) ProtoMessage()    {}
 func (*QueryFailedError) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8f91786c9aff272, []int{10}
+	return fileDescriptor_c8f91786c9aff272, []int{7}
 }
 func (m *QueryFailedError) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -569,48 +437,17 @@ func (m *QueryFailedError) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_QueryFailedError proto.InternalMessageInfo
 
-type RemoteSyncMatchedError struct {
-}
-
-func (m *RemoteSyncMatchedError) Reset()      { *m = RemoteSyncMatchedError{} }
-func (*RemoteSyncMatchedError) ProtoMessage() {}
-func (*RemoteSyncMatchedError) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8f91786c9aff272, []int{11}
-}
-func (m *RemoteSyncMatchedError) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *RemoteSyncMatchedError) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_RemoteSyncMatchedError.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *RemoteSyncMatchedError) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RemoteSyncMatchedError.Merge(m, src)
-}
-func (m *RemoteSyncMatchedError) XXX_Size() int {
-	return m.Size()
-}
-func (m *RemoteSyncMatchedError) XXX_DiscardUnknown() {
-	xxx_messageInfo_RemoteSyncMatchedError.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_RemoteSyncMatchedError proto.InternalMessageInfo
-
 type ServiceBusyError struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ServiceBusyError) Reset()      { *m = ServiceBusyError{} }
-func (*ServiceBusyError) ProtoMessage() {}
+func (m *ServiceBusyError) Reset()         { *m = ServiceBusyError{} }
+func (m *ServiceBusyError) String() string { return proto.CompactTextString(m) }
+func (*ServiceBusyError) ProtoMessage()    {}
 func (*ServiceBusyError) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8f91786c9aff272, []int{12}
+	return fileDescriptor_c8f91786c9aff272, []int{8}
 }
 func (m *ServiceBusyError) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -639,607 +476,53 @@ func (m *ServiceBusyError) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ServiceBusyError proto.InternalMessageInfo
 
-type ShardOwnershipLostError struct {
-}
-
-func (m *ShardOwnershipLostError) Reset()      { *m = ShardOwnershipLostError{} }
-func (*ShardOwnershipLostError) ProtoMessage() {}
-func (*ShardOwnershipLostError) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8f91786c9aff272, []int{13}
-}
-func (m *ShardOwnershipLostError) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ShardOwnershipLostError) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ShardOwnershipLostError.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *ShardOwnershipLostError) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ShardOwnershipLostError.Merge(m, src)
-}
-func (m *ShardOwnershipLostError) XXX_Size() int {
-	return m.Size()
-}
-func (m *ShardOwnershipLostError) XXX_DiscardUnknown() {
-	xxx_messageInfo_ShardOwnershipLostError.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ShardOwnershipLostError proto.InternalMessageInfo
-
 func init() {
 	proto.RegisterType((*WorkflowExecutionAlreadyStartedError)(nil), "uber.cadence.api.v1.WorkflowExecutionAlreadyStartedError")
 	proto.RegisterType((*EntityNotExistsError)(nil), "uber.cadence.api.v1.EntityNotExistsError")
 	proto.RegisterType((*DomainNotActiveError)(nil), "uber.cadence.api.v1.DomainNotActiveError")
-	proto.RegisterType((*RetryTaskV2Error)(nil), "uber.cadence.api.v1.RetryTaskV2Error")
 	proto.RegisterType((*ClientVersionNotSupportedError)(nil), "uber.cadence.api.v1.ClientVersionNotSupportedError")
-	proto.RegisterType((*CurrentBranchChangedError)(nil), "uber.cadence.api.v1.CurrentBranchChangedError")
 	proto.RegisterType((*CancellationAlreadyRequestedError)(nil), "uber.cadence.api.v1.CancellationAlreadyRequestedError")
 	proto.RegisterType((*DomainAlreadyExistsError)(nil), "uber.cadence.api.v1.DomainAlreadyExistsError")
-	proto.RegisterType((*EventAlreadyStartedError)(nil), "uber.cadence.api.v1.EventAlreadyStartedError")
 	proto.RegisterType((*LimitExceededError)(nil), "uber.cadence.api.v1.LimitExceededError")
 	proto.RegisterType((*QueryFailedError)(nil), "uber.cadence.api.v1.QueryFailedError")
-	proto.RegisterType((*RemoteSyncMatchedError)(nil), "uber.cadence.api.v1.RemoteSyncMatchedError")
 	proto.RegisterType((*ServiceBusyError)(nil), "uber.cadence.api.v1.ServiceBusyError")
-	proto.RegisterType((*ShardOwnershipLostError)(nil), "uber.cadence.api.v1.ShardOwnershipLostError")
 }
 
-func init() {
-	proto.RegisterFile("github.com/uber/cadence/.gen/proto/api/v1/error.proto", fileDescriptor_c8f91786c9aff272)
-}
+func init() { proto.RegisterFile("uber/cadence/api/v1/error.proto", fileDescriptor_c8f91786c9aff272) }
 
 var fileDescriptor_c8f91786c9aff272 = []byte{
-	// 680 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x94, 0xdf, 0x52, 0xd3, 0x40,
-	0x14, 0xc6, 0x1b, 0x90, 0x0e, 0x1c, 0x10, 0x68, 0xa8, 0xfc, 0x73, 0x26, 0x60, 0x44, 0x61, 0x9c,
-	0xb1, 0x15, 0x7c, 0x02, 0x5a, 0xeb, 0x4c, 0x67, 0x00, 0xb1, 0x45, 0x9c, 0xf1, 0xa6, 0x2e, 0x9b,
-	0x03, 0xdd, 0x21, 0xc9, 0xc6, 0xcd, 0xa6, 0xa5, 0x37, 0x8e, 0x8f, 0xe0, 0xad, 0x6f, 0xe0, 0xf8,
-	0x24, 0x5e, 0x72, 0xc9, 0xa5, 0x94, 0x1b, 0x2f, 0x79, 0x04, 0x27, 0xbb, 0x1b, 0xda, 0xd1, 0x5e,
-	0x78, 0x99, 0xdf, 0xf7, 0xed, 0x77, 0x4e, 0x72, 0xce, 0x06, 0xd6, 0x92, 0x13, 0x14, 0x65, 0x4a,
-	0x3c, 0x0c, 0x29, 0x96, 0x49, 0xc4, 0xca, 0x9d, 0xed, 0x32, 0x0a, 0xc1, 0x45, 0x29, 0x12, 0x5c,
-	0x72, 0x7b, 0x21, 0x35, 0x94, 0x8c, 0xa1, 0x44, 0x22, 0x56, 0xea, 0x6c, 0xaf, 0xae, 0x8f, 0x3a,
-	0x45, 0x79, 0x10, 0xf0, 0x50, 0x1f, 0x73, 0xcf, 0x60, 0xe3, 0x3d, 0x17, 0xe7, 0xa7, 0x3e, 0xef,
-	0xd6, 0x2e, 0x90, 0x26, 0x92, 0xf1, 0x70, 0xd7, 0x17, 0x48, 0xbc, 0x5e, 0x53, 0x12, 0x21, 0xd1,
-	0xab, 0xa5, 0x45, 0xec, 0x2d, 0x98, 0x8f, 0xd3, 0xe7, 0x96, 0xc0, 0x4f, 0x09, 0xc6, 0xb2, 0xc5,
-	0xbc, 0x65, 0x6b, 0xdd, 0xda, 0x9a, 0x6a, 0xcc, 0x2a, 0xde, 0xd0, 0xb8, 0xee, 0xd9, 0x0f, 0x20,
-	0x2f, 0x92, 0x30, 0xd5, 0xc7, 0x94, 0x3e, 0x21, 0x92, 0xb0, 0xee, 0xb9, 0xa7, 0x50, 0xac, 0x85,
-	0x92, 0xc9, 0xde, 0x01, 0x97, 0xb5, 0x0b, 0x16, 0xcb, 0x58, 0x07, 0x6f, 0xc2, 0x1c, 0x4d, 0x84,
-	0xc0, 0x50, 0xb6, 0xa8, 0x9f, 0xc4, 0x12, 0x45, 0x96, 0x6b, 0x70, 0x55, 0x53, 0xfb, 0x09, 0xcc,
-	0x12, 0x2a, 0x59, 0x07, 0xef, 0x7c, 0x3a, 0xff, 0xbe, 0xa6, 0xc6, 0xe6, 0x7e, 0x86, 0xe2, 0x2b,
-	0x1e, 0x10, 0x16, 0x1e, 0x70, 0xb9, 0xab, 0x14, 0x5d, 0x67, 0x11, 0xf2, 0x9e, 0xe2, 0x26, 0xde,
-	0x3c, 0x8d, 0xaa, 0x3f, 0xf6, 0x9f, 0xf5, 0xc7, 0x47, 0xd5, 0xff, 0x31, 0x06, 0xf3, 0x0d, 0x94,
-	0xa2, 0x77, 0x44, 0xe2, 0xf3, 0xe3, 0x1d, 0x5d, 0xfc, 0x21, 0x4c, 0xe9, 0x72, 0x83, 0xcf, 0x36,
-	0xa9, 0x41, 0xdd, 0xb3, 0xdf, 0x81, 0xdd, 0x35, 0x23, 0x68, 0x61, 0x36, 0x03, 0xd5, 0xc4, 0xf4,
-	0xce, 0xd3, 0xd2, 0x88, 0xb1, 0x96, 0xfe, 0x99, 0x58, 0xa3, 0xd0, 0xfd, 0x1b, 0xd9, 0x1b, 0xa0,
-	0x27, 0xd3, 0xc2, 0x4e, 0xfa, 0x72, 0xcc, 0x53, 0xfd, 0x8e, 0x37, 0x66, 0x14, 0xad, 0xa5, 0xb0,
-	0xee, 0xd9, 0x25, 0x58, 0x18, 0x76, 0x75, 0x50, 0xc4, 0x69, 0xf5, 0x7b, 0xca, 0x5a, 0x18, 0x58,
-	0x8f, 0xb5, 0x60, 0xaf, 0xc3, 0x0c, 0x86, 0xde, 0x20, 0x73, 0x42, 0x19, 0x01, 0x43, 0x2f, 0x4b,
-	0x7c, 0x06, 0x85, 0x81, 0x23, 0xcb, 0xcb, 0x2b, 0xdb, 0x5c, 0x66, 0x33, 0x69, 0xee, 0x37, 0x0b,
-	0x9c, 0xaa, 0xcf, 0x06, 0xe4, 0x80, 0xcb, 0x66, 0x12, 0x45, 0x7c, 0xb0, 0x78, 0x9b, 0x30, 0x77,
-	0x8a, 0x44, 0x26, 0x02, 0xef, 0xc2, 0xcc, 0x7e, 0x18, 0x9c, 0x75, 0xb6, 0x06, 0xd3, 0x54, 0x45,
-	0xb5, 0x58, 0x10, 0xf9, 0x66, 0x88, 0xa0, 0x51, 0x3d, 0x88, 0x7c, 0xfb, 0x39, 0xd8, 0x71, 0x96,
-	0x9d, 0x65, 0xc5, 0x66, 0x88, 0x85, 0x3b, 0xc5, 0xc4, 0xc5, 0xee, 0x3e, 0xac, 0x54, 0xf5, 0x06,
-	0x54, 0x04, 0x09, 0x69, 0xbb, 0xda, 0x26, 0xe1, 0x59, 0xd6, 0xd5, 0x0b, 0x28, 0x66, 0x5b, 0x73,
-	0xa2, 0xd4, 0x96, 0xe4, 0xe7, 0xa8, 0x5b, 0x9b, 0x69, 0xd8, 0x74, 0xf8, 0xe0, 0x51, 0xaa, 0xb8,
-	0x8f, 0xe1, 0x51, 0x95, 0x84, 0x14, 0x7d, 0x9f, 0x0c, 0xdd, 0x31, 0x73, 0x6d, 0x4c, 0xac, 0xbb,
-	0x0a, 0xcb, 0x7a, 0x79, 0x8d, 0x3c, 0x74, 0x51, 0x52, 0x4d, 0x7d, 0xbb, 0x11, 0xb7, 0xd3, 0x2d,
-	0x82, 0xbd, 0xc7, 0x02, 0x26, 0x6b, 0x17, 0x14, 0xd1, 0xcb, 0xa8, 0x0d, 0xf3, 0x6f, 0x13, 0x14,
-	0xbd, 0xd7, 0x84, 0xf9, 0x19, 0x5b, 0x86, 0xc5, 0x06, 0x06, 0x5c, 0x62, 0xb3, 0x17, 0xd2, 0x7d,
-	0x22, 0x69, 0x7b, 0xc8, 0xdd, 0x44, 0xd1, 0x61, 0x14, 0x2b, 0x49, 0xdc, 0xd3, 0x6c, 0x05, 0x96,
-	0x9a, 0x6d, 0x22, 0xbc, 0x37, 0xdd, 0x10, 0x45, 0xdc, 0x66, 0xd1, 0x1e, 0x8f, 0xa5, 0x92, 0x2a,
-	0x1f, 0x2f, 0xaf, 0x9d, 0xdc, 0xd5, 0xb5, 0x93, 0xbb, 0xbd, 0x76, 0xac, 0x2f, 0x7d, 0xc7, 0xfa,
-	0xde, 0x77, 0xac, 0x9f, 0x7d, 0xc7, 0xba, 0xec, 0x3b, 0xd6, 0xaf, 0xbe, 0x63, 0xfd, 0xee, 0x3b,
-	0xb9, 0xdb, 0xbe, 0x63, 0x7d, 0xbd, 0x71, 0x72, 0x97, 0x37, 0x4e, 0xee, 0xea, 0xc6, 0xc9, 0xc1,
-	0x12, 0xe5, 0xc1, 0xa8, 0x95, 0xae, 0x4c, 0xee, 0x46, 0xec, 0x30, 0xfd, 0x23, 0x1d, 0x5a, 0x1f,
-	0x26, 0x48, 0xc4, 0x3a, 0xdb, 0x27, 0x79, 0xf5, 0x87, 0x7a, 0xf9, 0x27, 0x00, 0x00, 0xff, 0xff,
-	0xde, 0x42, 0x85, 0xc3, 0xfb, 0x04, 0x00, 0x00,
+	// 451 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x92, 0xc1, 0x6e, 0xd3, 0x40,
+	0x10, 0x86, 0xe5, 0x22, 0x22, 0x18, 0x44, 0x5b, 0x4c, 0x80, 0x8a, 0x43, 0x0a, 0x06, 0xd4, 0x5e,
+	0xb0, 0x15, 0x71, 0xe4, 0x94, 0x84, 0x20, 0x45, 0x42, 0x55, 0x69, 0x24, 0x90, 0xb8, 0x58, 0x9b,
+	0xf5, 0x24, 0x8c, 0xb0, 0x77, 0xcd, 0xec, 0xae, 0x49, 0x2e, 0xbc, 0x07, 0x6f, 0xc4, 0x91, 0x47,
+	0x40, 0x79, 0x12, 0x64, 0x7b, 0x5d, 0x82, 0x94, 0x03, 0xc7, 0xfd, 0xe6, 0xdf, 0x7f, 0x66, 0x77,
+	0x7e, 0x38, 0x75, 0x0b, 0xe4, 0x44, 0x8a, 0x0c, 0x95, 0xc4, 0x44, 0x94, 0x94, 0x54, 0xc3, 0x04,
+	0x99, 0x35, 0xc7, 0x25, 0x6b, 0xab, 0xc3, 0xfb, 0xb5, 0x20, 0xf6, 0x82, 0x58, 0x94, 0x14, 0x57,
+	0xc3, 0x68, 0x05, 0xcf, 0x3f, 0x6a, 0xfe, 0xb2, 0xcc, 0xf5, 0xb7, 0xe9, 0x1a, 0xa5, 0xb3, 0xa4,
+	0xd5, 0x28, 0x67, 0x14, 0xd9, 0x66, 0x6e, 0x05, 0x5b, 0xcc, 0xa6, 0xb5, 0x45, 0x78, 0x0e, 0xc7,
+	0xa6, 0x3e, 0xa7, 0x8c, 0x5f, 0x1d, 0x1a, 0x9b, 0x52, 0x76, 0x12, 0x3c, 0x09, 0xce, 0x6f, 0x5f,
+	0x1d, 0x36, 0xfc, 0xaa, 0xc5, 0xb3, 0x2c, 0x7c, 0x00, 0x3d, 0x76, 0xaa, 0xae, 0x1f, 0x34, 0xf5,
+	0x9b, 0xec, 0xd4, 0x2c, 0x8b, 0x96, 0xd0, 0x9f, 0x2a, 0x4b, 0x76, 0x73, 0xa1, 0xed, 0x74, 0x4d,
+	0xc6, 0x9a, 0xd6, 0xf8, 0x0c, 0x8e, 0xa4, 0x63, 0x46, 0x65, 0x53, 0x99, 0x3b, 0x63, 0x91, 0x3b,
+	0x5f, 0x8f, 0x27, 0x2d, 0x0d, 0x5f, 0xc0, 0xa1, 0x90, 0x96, 0x2a, 0xbc, 0xd6, 0xb5, 0xfe, 0x77,
+	0x5b, 0xea, 0x65, 0xd1, 0x77, 0xe8, 0xbf, 0xd1, 0x85, 0x20, 0x75, 0xa1, 0xed, 0xa8, 0xa9, 0xb4,
+	0x7d, 0x1e, 0x42, 0x2f, 0x6b, 0xb8, 0xb7, 0xf7, 0xa7, 0x7d, 0xfd, 0x0f, 0xfe, 0xb3, 0xff, 0x8d,
+	0x7d, 0xfd, 0x7f, 0x04, 0x30, 0x98, 0xe4, 0x84, 0xca, 0x7e, 0x40, 0x36, 0xa4, 0xeb, 0x39, 0xe6,
+	0xae, 0x2c, 0xf5, 0xdf, 0xbf, 0x3c, 0x83, 0xa3, 0x25, 0x0a, 0xeb, 0x18, 0xd3, 0xaa, 0xd5, 0x74,
+	0x4f, 0xf6, 0xd8, 0xdf, 0x0c, 0x4f, 0xe1, 0x8e, 0x6c, 0xac, 0x52, 0x2a, 0xca, 0xdc, 0xcf, 0x05,
+	0x2d, 0x9a, 0x15, 0x65, 0x1e, 0xbe, 0x84, 0xd0, 0x74, 0xde, 0x9d, 0x97, 0xf1, 0x73, 0xdd, 0xbb,
+	0xae, 0x78, 0x3b, 0x13, 0x3d, 0x83, 0xa7, 0x13, 0xa1, 0x24, 0xe6, 0xb9, 0xd8, 0xd9, 0xb3, 0x5f,
+	0x9d, 0x9f, 0x2e, 0x7a, 0x0c, 0x27, 0xed, 0x07, 0xfa, 0xf2, 0xce, 0xb2, 0xa2, 0x3e, 0x84, 0xef,
+	0xa8, 0x20, 0x3b, 0x5d, 0x4b, 0xc4, 0xac, 0xbb, 0x11, 0xc2, 0xf1, 0x7b, 0x87, 0xbc, 0x79, 0x2b,
+	0x28, 0xdf, 0x61, 0x73, 0xe4, 0x8a, 0x24, 0x8e, 0x9d, 0xd9, 0x34, 0x6c, 0xbc, 0xf8, 0xb9, 0x1d,
+	0x04, 0xbf, 0xb6, 0x83, 0xe0, 0xf7, 0x76, 0x10, 0xc0, 0x23, 0xa9, 0x8b, 0x78, 0x4f, 0x24, 0xc7,
+	0xb7, 0x46, 0x25, 0x5d, 0xd6, 0x89, 0xbd, 0x0c, 0x3e, 0x25, 0x2b, 0xb2, 0x9f, 0xdd, 0x22, 0x96,
+	0xba, 0x48, 0xfe, 0xc9, 0x77, 0xbc, 0x42, 0x95, 0x34, 0xb9, 0xf6, 0x51, 0x7f, 0x2d, 0x4a, 0xaa,
+	0x86, 0x8b, 0x5e, 0xc3, 0x5e, 0xfd, 0x09, 0x00, 0x00, 0xff, 0xff, 0x04, 0x40, 0x4c, 0xad, 0x0e,
+	0x03, 0x00, 0x00,
 }
 
-func (this *WorkflowExecutionAlreadyStartedError) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*WorkflowExecutionAlreadyStartedError)
-	if !ok {
-		that2, ok := that.(WorkflowExecutionAlreadyStartedError)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.StartRequestId != that1.StartRequestId {
-		return false
-	}
-	if this.RunId != that1.RunId {
-		return false
-	}
-	return true
-}
-func (this *EntityNotExistsError) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*EntityNotExistsError)
-	if !ok {
-		that2, ok := that.(EntityNotExistsError)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.CurrentCluster != that1.CurrentCluster {
-		return false
-	}
-	if this.ActiveCluster != that1.ActiveCluster {
-		return false
-	}
-	return true
-}
-func (this *DomainNotActiveError) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DomainNotActiveError)
-	if !ok {
-		that2, ok := that.(DomainNotActiveError)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if this.CurrentCluster != that1.CurrentCluster {
-		return false
-	}
-	if this.ActiveCluster != that1.ActiveCluster {
-		return false
-	}
-	return true
-}
-func (this *RetryTaskV2Error) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RetryTaskV2Error)
-	if !ok {
-		that2, ok := that.(RetryTaskV2Error)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.DomainId != that1.DomainId {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if this.StartEventId != that1.StartEventId {
-		return false
-	}
-	if this.StartEventVersion != that1.StartEventVersion {
-		return false
-	}
-	if this.EndEventId != that1.EndEventId {
-		return false
-	}
-	if this.EndEventVersion != that1.EndEventVersion {
-		return false
-	}
-	return true
-}
-func (this *ClientVersionNotSupportedError) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ClientVersionNotSupportedError)
-	if !ok {
-		that2, ok := that.(ClientVersionNotSupportedError)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.FeatureVersion != that1.FeatureVersion {
-		return false
-	}
-	if this.ClientImpl != that1.ClientImpl {
-		return false
-	}
-	if this.SupportedVersions != that1.SupportedVersions {
-		return false
-	}
-	return true
-}
-func (this *CurrentBranchChangedError) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*CurrentBranchChangedError)
-	if !ok {
-		that2, ok := that.(CurrentBranchChangedError)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.CurrentBranchToken, that1.CurrentBranchToken) {
-		return false
-	}
-	return true
-}
-func (this *CancellationAlreadyRequestedError) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*CancellationAlreadyRequestedError)
-	if !ok {
-		that2, ok := that.(CancellationAlreadyRequestedError)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *DomainAlreadyExistsError) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DomainAlreadyExistsError)
-	if !ok {
-		that2, ok := that.(DomainAlreadyExistsError)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *EventAlreadyStartedError) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*EventAlreadyStartedError)
-	if !ok {
-		that2, ok := that.(EventAlreadyStartedError)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *LimitExceededError) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*LimitExceededError)
-	if !ok {
-		that2, ok := that.(LimitExceededError)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *QueryFailedError) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*QueryFailedError)
-	if !ok {
-		that2, ok := that.(QueryFailedError)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *RemoteSyncMatchedError) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RemoteSyncMatchedError)
-	if !ok {
-		that2, ok := that.(RemoteSyncMatchedError)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *ServiceBusyError) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ServiceBusyError)
-	if !ok {
-		that2, ok := that.(ServiceBusyError)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *ShardOwnershipLostError) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ShardOwnershipLostError)
-	if !ok {
-		that2, ok := that.(ShardOwnershipLostError)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *WorkflowExecutionAlreadyStartedError) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.WorkflowExecutionAlreadyStartedError{")
-	s = append(s, "StartRequestId: "+fmt.Sprintf("%#v", this.StartRequestId)+",\n")
-	s = append(s, "RunId: "+fmt.Sprintf("%#v", this.RunId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *EntityNotExistsError) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.EntityNotExistsError{")
-	s = append(s, "CurrentCluster: "+fmt.Sprintf("%#v", this.CurrentCluster)+",\n")
-	s = append(s, "ActiveCluster: "+fmt.Sprintf("%#v", this.ActiveCluster)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DomainNotActiveError) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&apiv1.DomainNotActiveError{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	s = append(s, "CurrentCluster: "+fmt.Sprintf("%#v", this.CurrentCluster)+",\n")
-	s = append(s, "ActiveCluster: "+fmt.Sprintf("%#v", this.ActiveCluster)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RetryTaskV2Error) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&apiv1.RetryTaskV2Error{")
-	s = append(s, "DomainId: "+fmt.Sprintf("%#v", this.DomainId)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "StartEventId: "+fmt.Sprintf("%#v", this.StartEventId)+",\n")
-	s = append(s, "StartEventVersion: "+fmt.Sprintf("%#v", this.StartEventVersion)+",\n")
-	s = append(s, "EndEventId: "+fmt.Sprintf("%#v", this.EndEventId)+",\n")
-	s = append(s, "EndEventVersion: "+fmt.Sprintf("%#v", this.EndEventVersion)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ClientVersionNotSupportedError) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&apiv1.ClientVersionNotSupportedError{")
-	s = append(s, "FeatureVersion: "+fmt.Sprintf("%#v", this.FeatureVersion)+",\n")
-	s = append(s, "ClientImpl: "+fmt.Sprintf("%#v", this.ClientImpl)+",\n")
-	s = append(s, "SupportedVersions: "+fmt.Sprintf("%#v", this.SupportedVersions)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *CurrentBranchChangedError) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&apiv1.CurrentBranchChangedError{")
-	s = append(s, "CurrentBranchToken: "+fmt.Sprintf("%#v", this.CurrentBranchToken)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *CancellationAlreadyRequestedError) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.CancellationAlreadyRequestedError{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DomainAlreadyExistsError) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.DomainAlreadyExistsError{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *EventAlreadyStartedError) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.EventAlreadyStartedError{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *LimitExceededError) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.LimitExceededError{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *QueryFailedError) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.QueryFailedError{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RemoteSyncMatchedError) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.RemoteSyncMatchedError{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ServiceBusyError) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.ServiceBusyError{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ShardOwnershipLostError) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.ShardOwnershipLostError{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func valueToGoStringError(v interface{}, typ string) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
-}
 func (m *WorkflowExecutionAlreadyStartedError) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -1260,6 +543,10 @@ func (m *WorkflowExecutionAlreadyStartedError) MarshalToSizedBuffer(dAtA []byte)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.RunId) > 0 {
 		i -= len(m.RunId)
 		copy(dAtA[i:], m.RunId)
@@ -1297,6 +584,10 @@ func (m *EntityNotExistsError) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.ActiveCluster) > 0 {
 		i -= len(m.ActiveCluster)
 		copy(dAtA[i:], m.ActiveCluster)
@@ -1334,6 +625,10 @@ func (m *DomainNotActiveError) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.ActiveCluster) > 0 {
 		i -= len(m.ActiveCluster)
 		copy(dAtA[i:], m.ActiveCluster)
@@ -1352,68 +647,6 @@ func (m *DomainNotActiveError) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.Domain)
 		copy(dAtA[i:], m.Domain)
 		i = encodeVarintError(dAtA, i, uint64(len(m.Domain)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *RetryTaskV2Error) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *RetryTaskV2Error) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *RetryTaskV2Error) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.EndEventVersion != 0 {
-		i = encodeVarintError(dAtA, i, uint64(m.EndEventVersion))
-		i--
-		dAtA[i] = 0x30
-	}
-	if m.EndEventId != 0 {
-		i = encodeVarintError(dAtA, i, uint64(m.EndEventId))
-		i--
-		dAtA[i] = 0x28
-	}
-	if m.StartEventVersion != 0 {
-		i = encodeVarintError(dAtA, i, uint64(m.StartEventVersion))
-		i--
-		dAtA[i] = 0x20
-	}
-	if m.StartEventId != 0 {
-		i = encodeVarintError(dAtA, i, uint64(m.StartEventId))
-		i--
-		dAtA[i] = 0x18
-	}
-	if m.WorkflowExecution != nil {
-		{
-			size, err := m.WorkflowExecution.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintError(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.DomainId) > 0 {
-		i -= len(m.DomainId)
-		copy(dAtA[i:], m.DomainId)
-		i = encodeVarintError(dAtA, i, uint64(len(m.DomainId)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -1440,6 +673,10 @@ func (m *ClientVersionNotSupportedError) MarshalToSizedBuffer(dAtA []byte) (int,
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.SupportedVersions) > 0 {
 		i -= len(m.SupportedVersions)
 		copy(dAtA[i:], m.SupportedVersions)
@@ -1458,36 +695,6 @@ func (m *ClientVersionNotSupportedError) MarshalToSizedBuffer(dAtA []byte) (int,
 		i -= len(m.FeatureVersion)
 		copy(dAtA[i:], m.FeatureVersion)
 		i = encodeVarintError(dAtA, i, uint64(len(m.FeatureVersion)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *CurrentBranchChangedError) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *CurrentBranchChangedError) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *CurrentBranchChangedError) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.CurrentBranchToken) > 0 {
-		i -= len(m.CurrentBranchToken)
-		copy(dAtA[i:], m.CurrentBranchToken)
-		i = encodeVarintError(dAtA, i, uint64(len(m.CurrentBranchToken)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -1514,6 +721,10 @@ func (m *CancellationAlreadyRequestedError) MarshalToSizedBuffer(dAtA []byte) (i
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -1537,29 +748,10 @@ func (m *DomainAlreadyExistsError) MarshalToSizedBuffer(dAtA []byte) (int, error
 	_ = i
 	var l int
 	_ = l
-	return len(dAtA) - i, nil
-}
-
-func (m *EventAlreadyStartedError) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return dAtA[:n], nil
-}
-
-func (m *EventAlreadyStartedError) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *EventAlreadyStartedError) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
 	return len(dAtA) - i, nil
 }
 
@@ -1583,6 +775,10 @@ func (m *LimitExceededError) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -1606,29 +802,10 @@ func (m *QueryFailedError) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	return len(dAtA) - i, nil
-}
-
-func (m *RemoteSyncMatchedError) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return dAtA[:n], nil
-}
-
-func (m *RemoteSyncMatchedError) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *RemoteSyncMatchedError) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
 	return len(dAtA) - i, nil
 }
 
@@ -1652,29 +829,10 @@ func (m *ServiceBusyError) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	return len(dAtA) - i, nil
-}
-
-func (m *ShardOwnershipLostError) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return dAtA[:n], nil
-}
-
-func (m *ShardOwnershipLostError) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ShardOwnershipLostError) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
 	return len(dAtA) - i, nil
 }
 
@@ -1703,6 +861,9 @@ func (m *WorkflowExecutionAlreadyStartedError) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovError(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -1719,6 +880,9 @@ func (m *EntityNotExistsError) Size() (n int) {
 	l = len(m.ActiveCluster)
 	if l > 0 {
 		n += 1 + l + sovError(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -1741,34 +905,8 @@ func (m *DomainNotActiveError) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovError(uint64(l))
 	}
-	return n
-}
-
-func (m *RetryTaskV2Error) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.DomainId)
-	if l > 0 {
-		n += 1 + l + sovError(uint64(l))
-	}
-	if m.WorkflowExecution != nil {
-		l = m.WorkflowExecution.Size()
-		n += 1 + l + sovError(uint64(l))
-	}
-	if m.StartEventId != 0 {
-		n += 1 + sovError(uint64(m.StartEventId))
-	}
-	if m.StartEventVersion != 0 {
-		n += 1 + sovError(uint64(m.StartEventVersion))
-	}
-	if m.EndEventId != 0 {
-		n += 1 + sovError(uint64(m.EndEventId))
-	}
-	if m.EndEventVersion != 0 {
-		n += 1 + sovError(uint64(m.EndEventVersion))
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -1791,18 +929,8 @@ func (m *ClientVersionNotSupportedError) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovError(uint64(l))
 	}
-	return n
-}
-
-func (m *CurrentBranchChangedError) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.CurrentBranchToken)
-	if l > 0 {
-		n += 1 + l + sovError(uint64(l))
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -1813,6 +941,9 @@ func (m *CancellationAlreadyRequestedError) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -1822,15 +953,9 @@ func (m *DomainAlreadyExistsError) Size() (n int) {
 	}
 	var l int
 	_ = l
-	return n
-}
-
-func (m *EventAlreadyStartedError) Size() (n int) {
-	if m == nil {
-		return 0
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
-	var l int
-	_ = l
 	return n
 }
 
@@ -1840,6 +965,9 @@ func (m *LimitExceededError) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -1849,15 +977,9 @@ func (m *QueryFailedError) Size() (n int) {
 	}
 	var l int
 	_ = l
-	return n
-}
-
-func (m *RemoteSyncMatchedError) Size() (n int) {
-	if m == nil {
-		return 0
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
-	var l int
-	_ = l
 	return n
 }
 
@@ -1867,15 +989,9 @@ func (m *ServiceBusyError) Size() (n int) {
 	}
 	var l int
 	_ = l
-	return n
-}
-
-func (m *ShardOwnershipLostError) Size() (n int) {
-	if m == nil {
-		return 0
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
-	var l int
-	_ = l
 	return n
 }
 
@@ -1884,157 +1000,6 @@ func sovError(x uint64) (n int) {
 }
 func sozError(x uint64) (n int) {
 	return sovError(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (this *WorkflowExecutionAlreadyStartedError) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&WorkflowExecutionAlreadyStartedError{`,
-		`StartRequestId:` + fmt.Sprintf("%v", this.StartRequestId) + `,`,
-		`RunId:` + fmt.Sprintf("%v", this.RunId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *EntityNotExistsError) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&EntityNotExistsError{`,
-		`CurrentCluster:` + fmt.Sprintf("%v", this.CurrentCluster) + `,`,
-		`ActiveCluster:` + fmt.Sprintf("%v", this.ActiveCluster) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DomainNotActiveError) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DomainNotActiveError{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`CurrentCluster:` + fmt.Sprintf("%v", this.CurrentCluster) + `,`,
-		`ActiveCluster:` + fmt.Sprintf("%v", this.ActiveCluster) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RetryTaskV2Error) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RetryTaskV2Error{`,
-		`DomainId:` + fmt.Sprintf("%v", this.DomainId) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "WorkflowExecution", 1) + `,`,
-		`StartEventId:` + fmt.Sprintf("%v", this.StartEventId) + `,`,
-		`StartEventVersion:` + fmt.Sprintf("%v", this.StartEventVersion) + `,`,
-		`EndEventId:` + fmt.Sprintf("%v", this.EndEventId) + `,`,
-		`EndEventVersion:` + fmt.Sprintf("%v", this.EndEventVersion) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ClientVersionNotSupportedError) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ClientVersionNotSupportedError{`,
-		`FeatureVersion:` + fmt.Sprintf("%v", this.FeatureVersion) + `,`,
-		`ClientImpl:` + fmt.Sprintf("%v", this.ClientImpl) + `,`,
-		`SupportedVersions:` + fmt.Sprintf("%v", this.SupportedVersions) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *CurrentBranchChangedError) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&CurrentBranchChangedError{`,
-		`CurrentBranchToken:` + fmt.Sprintf("%v", this.CurrentBranchToken) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *CancellationAlreadyRequestedError) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&CancellationAlreadyRequestedError{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DomainAlreadyExistsError) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DomainAlreadyExistsError{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *EventAlreadyStartedError) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&EventAlreadyStartedError{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *LimitExceededError) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&LimitExceededError{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *QueryFailedError) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&QueryFailedError{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RemoteSyncMatchedError) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RemoteSyncMatchedError{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ServiceBusyError) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ServiceBusyError{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ShardOwnershipLostError) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ShardOwnershipLostError{`,
-		`}`,
-	}, "")
-	return s
-}
-func valueToStringError(v interface{}) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("*%v", pv)
 }
 func (m *WorkflowExecutionAlreadyStartedError) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -2144,6 +1109,7 @@ func (m *WorkflowExecutionAlreadyStartedError) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -2261,6 +1227,7 @@ func (m *EntityNotExistsError) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -2410,203 +1377,7 @@ func (m *DomainNotActiveError) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *RetryTaskV2Error) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowError
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: RetryTaskV2Error: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: RetryTaskV2Error: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DomainId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowError
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthError
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthError
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.DomainId = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field WorkflowExecution", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowError
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthError
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthError
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.WorkflowExecution == nil {
-				m.WorkflowExecution = &WorkflowExecution{}
-			}
-			if err := m.WorkflowExecution.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field StartEventId", wireType)
-			}
-			m.StartEventId = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowError
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.StartEventId |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field StartEventVersion", wireType)
-			}
-			m.StartEventVersion = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowError
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.StartEventVersion |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 5:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field EndEventId", wireType)
-			}
-			m.EndEventId = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowError
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.EndEventId |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 6:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field EndEventVersion", wireType)
-			}
-			m.EndEventVersion = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowError
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.EndEventVersion |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipError(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthError
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthError
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -2756,93 +1527,7 @@ func (m *ClientVersionNotSupportedError) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *CurrentBranchChangedError) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowError
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: CurrentBranchChangedError: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: CurrentBranchChangedError: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CurrentBranchToken", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowError
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthError
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthError
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.CurrentBranchToken = append(m.CurrentBranchToken[:0], dAtA[iNdEx:postIndex]...)
-			if m.CurrentBranchToken == nil {
-				m.CurrentBranchToken = []byte{}
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipError(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthError
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthError
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -2896,6 +1581,7 @@ func (m *CancellationAlreadyRequestedError) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -2949,59 +1635,7 @@ func (m *DomainAlreadyExistsError) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *EventAlreadyStartedError) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowError
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: EventAlreadyStartedError: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: EventAlreadyStartedError: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipError(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthError
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthError
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -3055,6 +1689,7 @@ func (m *LimitExceededError) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -3108,59 +1743,7 @@ func (m *QueryFailedError) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *RemoteSyncMatchedError) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowError
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: RemoteSyncMatchedError: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: RemoteSyncMatchedError: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipError(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthError
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthError
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -3214,59 +1797,7 @@ func (m *ServiceBusyError) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ShardOwnershipLostError) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowError
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ShardOwnershipLostError: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ShardOwnershipLostError: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipError(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthError
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthError
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}

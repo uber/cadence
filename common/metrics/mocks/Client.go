@@ -23,6 +23,7 @@ package mocks
 import (
 	mock "github.com/stretchr/testify/mock"
 	tally "github.com/uber-go/tally"
+
 	metrics "github.com/uber/cadence/common/metrics"
 
 	time "time"

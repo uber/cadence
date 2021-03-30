@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,20 +26,12 @@
 package apiv1
 
 import (
-	bytes "bytes"
-	context "context"
 	fmt "fmt"
 	io "io"
 	math "math"
 	math_bits "math/bits"
-	reflect "reflect"
-	strings "strings"
 
 	proto "github.com/gogo/protobuf/proto"
-	github_com_gogo_protobuf_sortkeys "github.com/gogo/protobuf/sortkeys"
-	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -54,14 +46,18 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type ListWorkflowExecutionsRequest struct {
-	Domain        string `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	PageSize      int32  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	NextPageToken []byte `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	Query         string `protobuf:"bytes,4,opt,name=query,proto3" json:"query,omitempty"`
+	Domain               string   `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	PageSize             int32    `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	NextPageToken        []byte   `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Query                string   `protobuf:"bytes,4,opt,name=query,proto3" json:"query,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ListWorkflowExecutionsRequest) Reset()      { *m = ListWorkflowExecutionsRequest{} }
-func (*ListWorkflowExecutionsRequest) ProtoMessage() {}
+func (m *ListWorkflowExecutionsRequest) Reset()         { *m = ListWorkflowExecutionsRequest{} }
+func (m *ListWorkflowExecutionsRequest) String() string { return proto.CompactTextString(m) }
+func (*ListWorkflowExecutionsRequest) ProtoMessage()    {}
 func (*ListWorkflowExecutionsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_a7341dc69cef4364, []int{0}
 }
@@ -121,12 +117,16 @@ func (m *ListWorkflowExecutionsRequest) GetQuery() string {
 }
 
 type ListWorkflowExecutionsResponse struct {
-	Executions    []*WorkflowExecutionInfo `protobuf:"bytes,1,rep,name=executions,proto3" json:"executions,omitempty"`
-	NextPageToken []byte                   `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Executions           []*WorkflowExecutionInfo `protobuf:"bytes,1,rep,name=executions,proto3" json:"executions,omitempty"`
+	NextPageToken        []byte                   `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                 `json:"-"`
+	XXX_unrecognized     []byte                   `json:"-"`
+	XXX_sizecache        int32                    `json:"-"`
 }
 
-func (m *ListWorkflowExecutionsResponse) Reset()      { *m = ListWorkflowExecutionsResponse{} }
-func (*ListWorkflowExecutionsResponse) ProtoMessage() {}
+func (m *ListWorkflowExecutionsResponse) Reset()         { *m = ListWorkflowExecutionsResponse{} }
+func (m *ListWorkflowExecutionsResponse) String() string { return proto.CompactTextString(m) }
+func (*ListWorkflowExecutionsResponse) ProtoMessage()    {}
 func (*ListWorkflowExecutionsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_a7341dc69cef4364, []int{1}
 }
@@ -179,11 +179,15 @@ type ListOpenWorkflowExecutionsRequest struct {
 	// Types that are valid to be assigned to Filters:
 	//	*ListOpenWorkflowExecutionsRequest_ExecutionFilter
 	//	*ListOpenWorkflowExecutionsRequest_TypeFilter
-	Filters isListOpenWorkflowExecutionsRequest_Filters `protobuf_oneof:"filters"`
+	Filters              isListOpenWorkflowExecutionsRequest_Filters `protobuf_oneof:"filters"`
+	XXX_NoUnkeyedLiteral struct{}                                    `json:"-"`
+	XXX_unrecognized     []byte                                      `json:"-"`
+	XXX_sizecache        int32                                       `json:"-"`
 }
 
-func (m *ListOpenWorkflowExecutionsRequest) Reset()      { *m = ListOpenWorkflowExecutionsRequest{} }
-func (*ListOpenWorkflowExecutionsRequest) ProtoMessage() {}
+func (m *ListOpenWorkflowExecutionsRequest) Reset()         { *m = ListOpenWorkflowExecutionsRequest{} }
+func (m *ListOpenWorkflowExecutionsRequest) String() string { return proto.CompactTextString(m) }
+func (*ListOpenWorkflowExecutionsRequest) ProtoMessage()    {}
 func (*ListOpenWorkflowExecutionsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_a7341dc69cef4364, []int{2}
 }
@@ -216,7 +220,6 @@ var xxx_messageInfo_ListOpenWorkflowExecutionsRequest proto.InternalMessageInfo
 
 type isListOpenWorkflowExecutionsRequest_Filters interface {
 	isListOpenWorkflowExecutionsRequest_Filters()
-	Equal(interface{}) bool
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
@@ -290,12 +293,16 @@ func (*ListOpenWorkflowExecutionsRequest) XXX_OneofWrappers() []interface{} {
 }
 
 type ListOpenWorkflowExecutionsResponse struct {
-	Executions    []*WorkflowExecutionInfo `protobuf:"bytes,1,rep,name=executions,proto3" json:"executions,omitempty"`
-	NextPageToken []byte                   `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Executions           []*WorkflowExecutionInfo `protobuf:"bytes,1,rep,name=executions,proto3" json:"executions,omitempty"`
+	NextPageToken        []byte                   `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                 `json:"-"`
+	XXX_unrecognized     []byte                   `json:"-"`
+	XXX_sizecache        int32                    `json:"-"`
 }
 
-func (m *ListOpenWorkflowExecutionsResponse) Reset()      { *m = ListOpenWorkflowExecutionsResponse{} }
-func (*ListOpenWorkflowExecutionsResponse) ProtoMessage() {}
+func (m *ListOpenWorkflowExecutionsResponse) Reset()         { *m = ListOpenWorkflowExecutionsResponse{} }
+func (m *ListOpenWorkflowExecutionsResponse) String() string { return proto.CompactTextString(m) }
+func (*ListOpenWorkflowExecutionsResponse) ProtoMessage()    {}
 func (*ListOpenWorkflowExecutionsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_a7341dc69cef4364, []int{3}
 }
@@ -349,11 +356,15 @@ type ListClosedWorkflowExecutionsRequest struct {
 	//	*ListClosedWorkflowExecutionsRequest_ExecutionFilter
 	//	*ListClosedWorkflowExecutionsRequest_TypeFilter
 	//	*ListClosedWorkflowExecutionsRequest_StatusFilter
-	Filters isListClosedWorkflowExecutionsRequest_Filters `protobuf_oneof:"filters"`
+	Filters              isListClosedWorkflowExecutionsRequest_Filters `protobuf_oneof:"filters"`
+	XXX_NoUnkeyedLiteral struct{}                                      `json:"-"`
+	XXX_unrecognized     []byte                                        `json:"-"`
+	XXX_sizecache        int32                                         `json:"-"`
 }
 
-func (m *ListClosedWorkflowExecutionsRequest) Reset()      { *m = ListClosedWorkflowExecutionsRequest{} }
-func (*ListClosedWorkflowExecutionsRequest) ProtoMessage() {}
+func (m *ListClosedWorkflowExecutionsRequest) Reset()         { *m = ListClosedWorkflowExecutionsRequest{} }
+func (m *ListClosedWorkflowExecutionsRequest) String() string { return proto.CompactTextString(m) }
+func (*ListClosedWorkflowExecutionsRequest) ProtoMessage()    {}
 func (*ListClosedWorkflowExecutionsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_a7341dc69cef4364, []int{4}
 }
@@ -386,7 +397,6 @@ var xxx_messageInfo_ListClosedWorkflowExecutionsRequest proto.InternalMessageInf
 
 type isListClosedWorkflowExecutionsRequest_Filters interface {
 	isListClosedWorkflowExecutionsRequest_Filters()
-	Equal(interface{}) bool
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
@@ -474,12 +484,16 @@ func (*ListClosedWorkflowExecutionsRequest) XXX_OneofWrappers() []interface{} {
 }
 
 type ListClosedWorkflowExecutionsResponse struct {
-	Executions    []*WorkflowExecutionInfo `protobuf:"bytes,1,rep,name=executions,proto3" json:"executions,omitempty"`
-	NextPageToken []byte                   `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Executions           []*WorkflowExecutionInfo `protobuf:"bytes,1,rep,name=executions,proto3" json:"executions,omitempty"`
+	NextPageToken        []byte                   `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                 `json:"-"`
+	XXX_unrecognized     []byte                   `json:"-"`
+	XXX_sizecache        int32                    `json:"-"`
 }
 
-func (m *ListClosedWorkflowExecutionsResponse) Reset()      { *m = ListClosedWorkflowExecutionsResponse{} }
-func (*ListClosedWorkflowExecutionsResponse) ProtoMessage() {}
+func (m *ListClosedWorkflowExecutionsResponse) Reset()         { *m = ListClosedWorkflowExecutionsResponse{} }
+func (m *ListClosedWorkflowExecutionsResponse) String() string { return proto.CompactTextString(m) }
+func (*ListClosedWorkflowExecutionsResponse) ProtoMessage()    {}
 func (*ListClosedWorkflowExecutionsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_a7341dc69cef4364, []int{5}
 }
@@ -525,14 +539,18 @@ func (m *ListClosedWorkflowExecutionsResponse) GetNextPageToken() []byte {
 }
 
 type ListArchivedWorkflowExecutionsRequest struct {
-	Domain        string `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	PageSize      int32  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	NextPageToken []byte `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	Query         string `protobuf:"bytes,4,opt,name=query,proto3" json:"query,omitempty"`
+	Domain               string   `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	PageSize             int32    `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	NextPageToken        []byte   `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Query                string   `protobuf:"bytes,4,opt,name=query,proto3" json:"query,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ListArchivedWorkflowExecutionsRequest) Reset()      { *m = ListArchivedWorkflowExecutionsRequest{} }
-func (*ListArchivedWorkflowExecutionsRequest) ProtoMessage() {}
+func (m *ListArchivedWorkflowExecutionsRequest) Reset()         { *m = ListArchivedWorkflowExecutionsRequest{} }
+func (m *ListArchivedWorkflowExecutionsRequest) String() string { return proto.CompactTextString(m) }
+func (*ListArchivedWorkflowExecutionsRequest) ProtoMessage()    {}
 func (*ListArchivedWorkflowExecutionsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_a7341dc69cef4364, []int{6}
 }
@@ -592,14 +610,18 @@ func (m *ListArchivedWorkflowExecutionsRequest) GetQuery() string {
 }
 
 type ListArchivedWorkflowExecutionsResponse struct {
-	Executions    []*WorkflowExecutionInfo `protobuf:"bytes,1,rep,name=executions,proto3" json:"executions,omitempty"`
-	NextPageToken []byte                   `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Executions           []*WorkflowExecutionInfo `protobuf:"bytes,1,rep,name=executions,proto3" json:"executions,omitempty"`
+	NextPageToken        []byte                   `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                 `json:"-"`
+	XXX_unrecognized     []byte                   `json:"-"`
+	XXX_sizecache        int32                    `json:"-"`
 }
 
 func (m *ListArchivedWorkflowExecutionsResponse) Reset() {
 	*m = ListArchivedWorkflowExecutionsResponse{}
 }
-func (*ListArchivedWorkflowExecutionsResponse) ProtoMessage() {}
+func (m *ListArchivedWorkflowExecutionsResponse) String() string { return proto.CompactTextString(m) }
+func (*ListArchivedWorkflowExecutionsResponse) ProtoMessage()    {}
 func (*ListArchivedWorkflowExecutionsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_a7341dc69cef4364, []int{7}
 }
@@ -645,14 +667,18 @@ func (m *ListArchivedWorkflowExecutionsResponse) GetNextPageToken() []byte {
 }
 
 type ScanWorkflowExecutionsRequest struct {
-	Domain        string `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	PageSize      int32  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	NextPageToken []byte `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	Query         string `protobuf:"bytes,4,opt,name=query,proto3" json:"query,omitempty"`
+	Domain               string   `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	PageSize             int32    `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	NextPageToken        []byte   `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Query                string   `protobuf:"bytes,4,opt,name=query,proto3" json:"query,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ScanWorkflowExecutionsRequest) Reset()      { *m = ScanWorkflowExecutionsRequest{} }
-func (*ScanWorkflowExecutionsRequest) ProtoMessage() {}
+func (m *ScanWorkflowExecutionsRequest) Reset()         { *m = ScanWorkflowExecutionsRequest{} }
+func (m *ScanWorkflowExecutionsRequest) String() string { return proto.CompactTextString(m) }
+func (*ScanWorkflowExecutionsRequest) ProtoMessage()    {}
 func (*ScanWorkflowExecutionsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_a7341dc69cef4364, []int{8}
 }
@@ -712,12 +738,16 @@ func (m *ScanWorkflowExecutionsRequest) GetQuery() string {
 }
 
 type ScanWorkflowExecutionsResponse struct {
-	Executions    []*WorkflowExecutionInfo `protobuf:"bytes,1,rep,name=executions,proto3" json:"executions,omitempty"`
-	NextPageToken []byte                   `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Executions           []*WorkflowExecutionInfo `protobuf:"bytes,1,rep,name=executions,proto3" json:"executions,omitempty"`
+	NextPageToken        []byte                   `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                 `json:"-"`
+	XXX_unrecognized     []byte                   `json:"-"`
+	XXX_sizecache        int32                    `json:"-"`
 }
 
-func (m *ScanWorkflowExecutionsResponse) Reset()      { *m = ScanWorkflowExecutionsResponse{} }
-func (*ScanWorkflowExecutionsResponse) ProtoMessage() {}
+func (m *ScanWorkflowExecutionsResponse) Reset()         { *m = ScanWorkflowExecutionsResponse{} }
+func (m *ScanWorkflowExecutionsResponse) String() string { return proto.CompactTextString(m) }
+func (*ScanWorkflowExecutionsResponse) ProtoMessage()    {}
 func (*ScanWorkflowExecutionsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_a7341dc69cef4364, []int{9}
 }
@@ -763,12 +793,16 @@ func (m *ScanWorkflowExecutionsResponse) GetNextPageToken() []byte {
 }
 
 type CountWorkflowExecutionsRequest struct {
-	Domain string `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
-	Query  string `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
+	Domain               string   `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	Query                string   `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *CountWorkflowExecutionsRequest) Reset()      { *m = CountWorkflowExecutionsRequest{} }
-func (*CountWorkflowExecutionsRequest) ProtoMessage() {}
+func (m *CountWorkflowExecutionsRequest) Reset()         { *m = CountWorkflowExecutionsRequest{} }
+func (m *CountWorkflowExecutionsRequest) String() string { return proto.CompactTextString(m) }
+func (*CountWorkflowExecutionsRequest) ProtoMessage()    {}
 func (*CountWorkflowExecutionsRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_a7341dc69cef4364, []int{10}
 }
@@ -814,11 +848,15 @@ func (m *CountWorkflowExecutionsRequest) GetQuery() string {
 }
 
 type CountWorkflowExecutionsResponse struct {
-	Count int64 `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
+	Count                int64    `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *CountWorkflowExecutionsResponse) Reset()      { *m = CountWorkflowExecutionsResponse{} }
-func (*CountWorkflowExecutionsResponse) ProtoMessage() {}
+func (m *CountWorkflowExecutionsResponse) Reset()         { *m = CountWorkflowExecutionsResponse{} }
+func (m *CountWorkflowExecutionsResponse) String() string { return proto.CompactTextString(m) }
+func (*CountWorkflowExecutionsResponse) ProtoMessage()    {}
 func (*CountWorkflowExecutionsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_a7341dc69cef4364, []int{11}
 }
@@ -857,10 +895,14 @@ func (m *CountWorkflowExecutionsResponse) GetCount() int64 {
 }
 
 type GetSearchAttributesRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *GetSearchAttributesRequest) Reset()      { *m = GetSearchAttributesRequest{} }
-func (*GetSearchAttributesRequest) ProtoMessage() {}
+func (m *GetSearchAttributesRequest) Reset()         { *m = GetSearchAttributesRequest{} }
+func (m *GetSearchAttributesRequest) String() string { return proto.CompactTextString(m) }
+func (*GetSearchAttributesRequest) ProtoMessage()    {}
 func (*GetSearchAttributesRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_a7341dc69cef4364, []int{12}
 }
@@ -892,11 +934,15 @@ func (m *GetSearchAttributesRequest) XXX_DiscardUnknown() {
 var xxx_messageInfo_GetSearchAttributesRequest proto.InternalMessageInfo
 
 type GetSearchAttributesResponse struct {
-	Keys map[string]IndexedValueType `protobuf:"bytes,1,rep,name=keys,proto3" json:"keys,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3,enum=uber.cadence.api.v1.IndexedValueType"`
+	Keys                 map[string]IndexedValueType `protobuf:"bytes,1,rep,name=keys,proto3" json:"keys,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3,enum=uber.cadence.api.v1.IndexedValueType"`
+	XXX_NoUnkeyedLiteral struct{}                    `json:"-"`
+	XXX_unrecognized     []byte                      `json:"-"`
+	XXX_sizecache        int32                       `json:"-"`
 }
 
-func (m *GetSearchAttributesResponse) Reset()      { *m = GetSearchAttributesResponse{} }
-func (*GetSearchAttributesResponse) ProtoMessage() {}
+func (m *GetSearchAttributesResponse) Reset()         { *m = GetSearchAttributesResponse{} }
+func (m *GetSearchAttributesResponse) String() string { return proto.CompactTextString(m) }
+func (*GetSearchAttributesResponse) ProtoMessage()    {}
 func (*GetSearchAttributesResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_a7341dc69cef4364, []int{13}
 }
@@ -953,1180 +999,63 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("github.com/uber/cadence/.gen/proto/api/v1/service_visibility.proto", fileDescriptor_a7341dc69cef4364)
+	proto.RegisterFile("uber/cadence/api/v1/service_visibility.proto", fileDescriptor_a7341dc69cef4364)
 }
 
 var fileDescriptor_a7341dc69cef4364 = []byte{
-	// 851 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x57, 0x4f, 0x8f, 0xdb, 0x54,
-	0x10, 0xcf, 0xdb, 0x34, 0xbb, 0xdd, 0xd9, 0x2e, 0x5b, 0x5e, 0xab, 0x36, 0x72, 0x8b, 0x49, 0xcd,
-	0xb6, 0x44, 0xa8, 0x4a, 0xd8, 0x14, 0xd1, 0xb2, 0x3d, 0x65, 0xab, 0x42, 0xb7, 0xa0, 0x12, 0x39,
-	0xab, 0x22, 0x38, 0x10, 0x1c, 0x67, 0xb6, 0x7d, 0x4a, 0x62, 0xbb, 0x7e, 0xcf, 0x69, 0xdc, 0x13,
-	0x48, 0xbd, 0x22, 0x21, 0xe0, 0x00, 0x15, 0x1f, 0x80, 0x8f, 0xc2, 0x05, 0x29, 0xc7, 0x8a, 0x13,
-	0x9b, 0xbd, 0x70, 0xec, 0x47, 0x40, 0xfe, 0x13, 0x2b, 0x85, 0x67, 0x67, 0xb3, 0x07, 0xc2, 0xa1,
-	0xb7, 0xcc, 0x64, 0xe6, 0xf7, 0x7e, 0x33, 0x1e, 0xff, 0xde, 0x18, 0xae, 0x7a, 0x6d, 0x74, 0xab,
-	0xa6, 0xd1, 0x41, 0xcb, 0xc4, 0xaa, 0xe1, 0xb0, 0xea, 0x60, 0xab, 0xca, 0xd1, 0x1d, 0x30, 0x13,
-	0x5b, 0x03, 0xc6, 0x59, 0x9b, 0xf5, 0x98, 0xf0, 0x2b, 0x8e, 0x6b, 0x0b, 0x9b, 0x9e, 0x09, 0xa2,
-	0x2b, 0x71, 0x74, 0xc5, 0x70, 0x58, 0x65, 0xb0, 0xa5, 0x6c, 0xca, 0x20, 0xfe, 0x99, 0xaa, 0x68,
-	0xb2, 0xa8, 0xc7, 0xb6, 0xdb, 0xdd, 0xef, 0xd9, 0x8f, 0xa3, 0x18, 0xed, 0x7b, 0x02, 0x6f, 0x7c,
-	0xc2, 0xb8, 0xf8, 0x2c, 0x76, 0xdf, 0x1e, 0xa2, 0xe9, 0x09, 0x66, 0x5b, 0x5c, 0xc7, 0x47, 0x1e,
-	0x72, 0x41, 0xcf, 0xc1, 0x72, 0xc7, 0xee, 0x1b, 0xcc, 0x2a, 0x92, 0x12, 0x29, 0xaf, 0xea, 0xb1,
-	0x45, 0x2f, 0xc0, 0xaa, 0x63, 0x3c, 0xc0, 0x16, 0x67, 0x4f, 0xb0, 0xb8, 0x54, 0x22, 0xe5, 0x82,
-	0x7e, 0x32, 0x70, 0x34, 0xd9, 0x13, 0xa4, 0x57, 0x60, 0xc3, 0xc2, 0xa1, 0x68, 0x85, 0x11, 0xc2,
-	0xee, 0xa2, 0x55, 0xcc, 0x97, 0x48, 0xf9, 0x94, 0xbe, 0x1e, 0xb8, 0x1b, 0xc6, 0x03, 0xdc, 0x0b,
-	0x9c, 0xf4, 0x2c, 0x14, 0x1e, 0x79, 0xe8, 0xfa, 0xc5, 0x13, 0x21, 0x76, 0x64, 0x68, 0x3f, 0x12,
-	0x50, 0xd3, 0x48, 0x71, 0xc7, 0xb6, 0x38, 0xd2, 0xbb, 0x00, 0x98, 0x78, 0x8b, 0xa4, 0x94, 0x2f,
-	0xaf, 0xd5, 0xde, 0xa9, 0x48, 0x7a, 0x55, 0xf9, 0x17, 0xc8, 0xae, 0xb5, 0x6f, 0xeb, 0x53, 0xd9,
-	0x32, 0xb2, 0x4b, 0x12, 0xb2, 0xda, 0xd3, 0x3c, 0x5c, 0x0a, 0x68, 0x7d, 0xea, 0xa0, 0xb5, 0xa0,
-	0x7e, 0x35, 0xe0, 0x75, 0x2e, 0x0c, 0x57, 0xb4, 0x04, 0xeb, 0x63, 0x6b, 0x9f, 0xf5, 0x04, 0xba,
-	0x61, 0xef, 0xd6, 0x6a, 0x9b, 0xd2, 0xea, 0x9b, 0x41, 0xf4, 0x1e, 0xeb, 0xe3, 0x87, 0x61, 0xac,
-	0xbe, 0xc1, 0x5f, 0x76, 0xd0, 0xcf, 0xe1, 0x74, 0xd2, 0x8a, 0x09, 0x60, 0x21, 0x04, 0xbc, 0x7a,
-	0xb4, 0x76, 0x46, 0x38, 0x77, 0x72, 0xfa, 0x06, 0xbe, 0xec, 0xa2, 0x77, 0x61, 0x4d, 0xf8, 0x4e,
-	0x42, 0x73, 0x39, 0x44, 0x7d, 0x3b, 0x13, 0x75, 0xcf, 0x77, 0x30, 0x01, 0x04, 0x91, 0x58, 0x3b,
-	0xab, 0xb0, 0x12, 0xc1, 0x70, 0xed, 0x27, 0x02, 0x5a, 0xd6, 0x63, 0x58, 0xe0, 0x84, 0x8c, 0xf2,
-	0xf0, 0x56, 0x40, 0xed, 0x56, 0xcf, 0xe6, 0xd8, 0x79, 0x35, 0x23, 0xff, 0xe9, 0x8c, 0xd0, 0x3b,
-	0xb0, 0xce, 0x85, 0x21, 0x3c, 0x3e, 0x41, 0x5b, 0x09, 0xd1, 0x2e, 0xa5, 0x15, 0x2d, 0x3c, 0x9e,
-	0xe0, 0x9c, 0xe2, 0x53, 0xf6, 0xf4, 0xb4, 0x3d, 0x23, 0xb0, 0x99, 0xfd, 0x48, 0x17, 0x38, 0x6f,
-	0xcf, 0x08, 0x5c, 0x0e, 0xc8, 0xd5, 0x5d, 0xf3, 0x21, 0x1b, 0x2c, 0x6c, 0xe2, 0xe4, 0x2a, 0xfe,
-	0x0b, 0x81, 0x2b, 0xb3, 0xc8, 0x2d, 0xb0, 0x77, 0xc1, 0xcd, 0xd7, 0x34, 0x0d, 0xeb, 0x7f, 0x77,
-	0xf3, 0xa5, 0x91, 0x5a, 0x60, 0xaf, 0xee, 0x81, 0x7a, 0xcb, 0xf6, 0xac, 0x63, 0x6c, 0x09, 0x49,
-	0x99, 0x4b, 0xd3, 0x65, 0x5e, 0x87, 0x37, 0x53, 0xf1, 0xe2, 0x32, 0xcf, 0x42, 0xc1, 0x0c, 0x42,
-	0x42, 0xbc, 0xbc, 0x1e, 0x19, 0xda, 0x45, 0x50, 0x3e, 0x42, 0xd1, 0x44, 0xc3, 0x35, 0x1f, 0xd6,
-	0x85, 0x70, 0x59, 0xdb, 0x13, 0x38, 0x21, 0xa1, 0xfd, 0x4e, 0xe0, 0x82, 0xf4, 0xef, 0x18, 0xf3,
-	0x1e, 0x9c, 0xe8, 0xa2, 0x3f, 0x69, 0xda, 0xb6, 0xb4, 0x69, 0x19, 0xf9, 0x95, 0x8f, 0xd1, 0xe7,
-	0xb7, 0x2d, 0xe1, 0xfa, 0x7a, 0x88, 0xa3, 0x7c, 0x09, 0xab, 0x89, 0x8b, 0x9e, 0x86, 0x7c, 0x17,
-	0xfd, 0xb8, 0xfc, 0xe0, 0x27, 0xbd, 0x09, 0x85, 0x81, 0xd1, 0xf3, 0xa2, 0x19, 0x79, 0xad, 0x76,
-	0x59, 0x7a, 0xde, 0xae, 0xd5, 0xc1, 0x21, 0x76, 0xee, 0x07, 0x81, 0x81, 0xb2, 0xe9, 0x51, 0xce,
-	0xf6, 0xd2, 0x0d, 0x52, 0xfb, 0x63, 0x05, 0xd6, 0xef, 0x27, 0x5b, 0x5d, 0xbd, 0xb1, 0x4b, 0xbf,
-	0x21, 0x70, 0x4e, 0xbe, 0x19, 0xd1, 0x9a, 0x14, 0x3e, 0x73, 0xb7, 0x53, 0xae, 0xcd, 0x95, 0x13,
-	0x77, 0xf1, 0x5b, 0x02, 0x4a, 0xfa, 0xfd, 0x4b, 0xdf, 0x4f, 0xc5, 0xcc, 0xdc, 0x9b, 0x94, 0xeb,
-	0x73, 0xe7, 0xc5, 0x7c, 0x7e, 0x20, 0x70, 0x31, 0x4b, 0xa1, 0xe9, 0x8d, 0x54, 0xe4, 0x19, 0xf7,
-	0xb4, 0xf2, 0xc1, 0x31, 0x32, 0x63, 0x56, 0x3f, 0xc7, 0x3b, 0x6c, 0xba, 0xfa, 0xd1, 0xed, 0x54,
-	0xf4, 0x99, 0x7a, 0xae, 0xdc, 0x3c, 0x56, 0x6e, 0xcc, 0x2d, 0x98, 0x22, 0xb9, 0xca, 0xa4, 0x4c,
-	0x51, 0xa6, 0x4e, 0xa6, 0x4c, 0xd1, 0x0c, 0x19, 0x7b, 0x4a, 0xe0, 0x7c, 0x8a, 0x06, 0x50, 0x39,
-	0x60, 0xb6, 0x02, 0x29, 0xef, 0xcd, 0x97, 0x14, 0xd3, 0x18, 0xc2, 0x19, 0xc9, 0x1b, 0x4f, 0xab,
-	0x47, 0xd7, 0x86, 0xe8, 0xf4, 0x77, 0xe7, 0x15, 0x93, 0x9d, 0xaf, 0x46, 0x07, 0x6a, 0xee, 0xf9,
-	0x81, 0x9a, 0x7b, 0x71, 0xa0, 0x92, 0xaf, 0xc7, 0x2a, 0xf9, 0x75, 0xac, 0x92, 0xdf, 0xc6, 0x2a,
-	0x19, 0x8d, 0x55, 0xf2, 0xe7, 0x58, 0x25, 0x7f, 0x8d, 0xd5, 0xdc, 0x8b, 0xb1, 0x4a, 0xbe, 0x3b,
-	0x54, 0x73, 0xa3, 0x43, 0x35, 0xf7, 0xfc, 0x50, 0xcd, 0xc1, 0x79, 0xd3, 0xee, 0xcb, 0x8e, 0xda,
-	0x39, 0x59, 0x77, 0x58, 0x23, 0xf8, 0xa4, 0x6b, 0x90, 0x2f, 0x0a, 0x86, 0xc3, 0x06, 0x5b, 0xed,
-	0xe5, 0xf0, 0x13, 0xef, 0xda, 0xdf, 0x01, 0x00, 0x00, 0xff, 0xff, 0xa2, 0x5e, 0x80, 0x79, 0x71,
-	0x0e, 0x00, 0x00,
-}
-
-func (this *ListWorkflowExecutionsRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ListWorkflowExecutionsRequest)
-	if !ok {
-		that2, ok := that.(ListWorkflowExecutionsRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if this.PageSize != that1.PageSize {
-		return false
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	if this.Query != that1.Query {
-		return false
-	}
-	return true
-}
-func (this *ListWorkflowExecutionsResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ListWorkflowExecutionsResponse)
-	if !ok {
-		that2, ok := that.(ListWorkflowExecutionsResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.Executions) != len(that1.Executions) {
-		return false
-	}
-	for i := range this.Executions {
-		if !this.Executions[i].Equal(that1.Executions[i]) {
-			return false
-		}
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	return true
-}
-func (this *ListOpenWorkflowExecutionsRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ListOpenWorkflowExecutionsRequest)
-	if !ok {
-		that2, ok := that.(ListOpenWorkflowExecutionsRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if this.PageSize != that1.PageSize {
-		return false
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	if !this.StartTimeFilter.Equal(that1.StartTimeFilter) {
-		return false
-	}
-	if that1.Filters == nil {
-		if this.Filters != nil {
-			return false
-		}
-	} else if this.Filters == nil {
-		return false
-	} else if !this.Filters.Equal(that1.Filters) {
-		return false
-	}
-	return true
-}
-func (this *ListOpenWorkflowExecutionsRequest_ExecutionFilter) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ListOpenWorkflowExecutionsRequest_ExecutionFilter)
-	if !ok {
-		that2, ok := that.(ListOpenWorkflowExecutionsRequest_ExecutionFilter)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ExecutionFilter.Equal(that1.ExecutionFilter) {
-		return false
-	}
-	return true
-}
-func (this *ListOpenWorkflowExecutionsRequest_TypeFilter) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ListOpenWorkflowExecutionsRequest_TypeFilter)
-	if !ok {
-		that2, ok := that.(ListOpenWorkflowExecutionsRequest_TypeFilter)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.TypeFilter.Equal(that1.TypeFilter) {
-		return false
-	}
-	return true
-}
-func (this *ListOpenWorkflowExecutionsResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ListOpenWorkflowExecutionsResponse)
-	if !ok {
-		that2, ok := that.(ListOpenWorkflowExecutionsResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.Executions) != len(that1.Executions) {
-		return false
-	}
-	for i := range this.Executions {
-		if !this.Executions[i].Equal(that1.Executions[i]) {
-			return false
-		}
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	return true
-}
-func (this *ListClosedWorkflowExecutionsRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ListClosedWorkflowExecutionsRequest)
-	if !ok {
-		that2, ok := that.(ListClosedWorkflowExecutionsRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if this.PageSize != that1.PageSize {
-		return false
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	if !this.StartTimeFilter.Equal(that1.StartTimeFilter) {
-		return false
-	}
-	if that1.Filters == nil {
-		if this.Filters != nil {
-			return false
-		}
-	} else if this.Filters == nil {
-		return false
-	} else if !this.Filters.Equal(that1.Filters) {
-		return false
-	}
-	return true
-}
-func (this *ListClosedWorkflowExecutionsRequest_ExecutionFilter) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ListClosedWorkflowExecutionsRequest_ExecutionFilter)
-	if !ok {
-		that2, ok := that.(ListClosedWorkflowExecutionsRequest_ExecutionFilter)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.ExecutionFilter.Equal(that1.ExecutionFilter) {
-		return false
-	}
-	return true
-}
-func (this *ListClosedWorkflowExecutionsRequest_TypeFilter) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ListClosedWorkflowExecutionsRequest_TypeFilter)
-	if !ok {
-		that2, ok := that.(ListClosedWorkflowExecutionsRequest_TypeFilter)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.TypeFilter.Equal(that1.TypeFilter) {
-		return false
-	}
-	return true
-}
-func (this *ListClosedWorkflowExecutionsRequest_StatusFilter) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ListClosedWorkflowExecutionsRequest_StatusFilter)
-	if !ok {
-		that2, ok := that.(ListClosedWorkflowExecutionsRequest_StatusFilter)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.StatusFilter.Equal(that1.StatusFilter) {
-		return false
-	}
-	return true
-}
-func (this *ListClosedWorkflowExecutionsResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ListClosedWorkflowExecutionsResponse)
-	if !ok {
-		that2, ok := that.(ListClosedWorkflowExecutionsResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.Executions) != len(that1.Executions) {
-		return false
-	}
-	for i := range this.Executions {
-		if !this.Executions[i].Equal(that1.Executions[i]) {
-			return false
-		}
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	return true
-}
-func (this *ListArchivedWorkflowExecutionsRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ListArchivedWorkflowExecutionsRequest)
-	if !ok {
-		that2, ok := that.(ListArchivedWorkflowExecutionsRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if this.PageSize != that1.PageSize {
-		return false
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	if this.Query != that1.Query {
-		return false
-	}
-	return true
-}
-func (this *ListArchivedWorkflowExecutionsResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ListArchivedWorkflowExecutionsResponse)
-	if !ok {
-		that2, ok := that.(ListArchivedWorkflowExecutionsResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.Executions) != len(that1.Executions) {
-		return false
-	}
-	for i := range this.Executions {
-		if !this.Executions[i].Equal(that1.Executions[i]) {
-			return false
-		}
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	return true
-}
-func (this *ScanWorkflowExecutionsRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ScanWorkflowExecutionsRequest)
-	if !ok {
-		that2, ok := that.(ScanWorkflowExecutionsRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if this.PageSize != that1.PageSize {
-		return false
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	if this.Query != that1.Query {
-		return false
-	}
-	return true
-}
-func (this *ScanWorkflowExecutionsResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ScanWorkflowExecutionsResponse)
-	if !ok {
-		that2, ok := that.(ScanWorkflowExecutionsResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.Executions) != len(that1.Executions) {
-		return false
-	}
-	for i := range this.Executions {
-		if !this.Executions[i].Equal(that1.Executions[i]) {
-			return false
-		}
-	}
-	if !bytes.Equal(this.NextPageToken, that1.NextPageToken) {
-		return false
-	}
-	return true
-}
-func (this *CountWorkflowExecutionsRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*CountWorkflowExecutionsRequest)
-	if !ok {
-		that2, ok := that.(CountWorkflowExecutionsRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Domain != that1.Domain {
-		return false
-	}
-	if this.Query != that1.Query {
-		return false
-	}
-	return true
-}
-func (this *CountWorkflowExecutionsResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*CountWorkflowExecutionsResponse)
-	if !ok {
-		that2, ok := that.(CountWorkflowExecutionsResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Count != that1.Count {
-		return false
-	}
-	return true
-}
-func (this *GetSearchAttributesRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*GetSearchAttributesRequest)
-	if !ok {
-		that2, ok := that.(GetSearchAttributesRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *GetSearchAttributesResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*GetSearchAttributesResponse)
-	if !ok {
-		that2, ok := that.(GetSearchAttributesResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.Keys) != len(that1.Keys) {
-		return false
-	}
-	for i := range this.Keys {
-		if this.Keys[i] != that1.Keys[i] {
-			return false
-		}
-	}
-	return true
-}
-func (this *ListWorkflowExecutionsRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&apiv1.ListWorkflowExecutionsRequest{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	s = append(s, "PageSize: "+fmt.Sprintf("%#v", this.PageSize)+",\n")
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	s = append(s, "Query: "+fmt.Sprintf("%#v", this.Query)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ListWorkflowExecutionsResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.ListWorkflowExecutionsResponse{")
-	if this.Executions != nil {
-		s = append(s, "Executions: "+fmt.Sprintf("%#v", this.Executions)+",\n")
-	}
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ListOpenWorkflowExecutionsRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&apiv1.ListOpenWorkflowExecutionsRequest{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	s = append(s, "PageSize: "+fmt.Sprintf("%#v", this.PageSize)+",\n")
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	if this.StartTimeFilter != nil {
-		s = append(s, "StartTimeFilter: "+fmt.Sprintf("%#v", this.StartTimeFilter)+",\n")
-	}
-	if this.Filters != nil {
-		s = append(s, "Filters: "+fmt.Sprintf("%#v", this.Filters)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ListOpenWorkflowExecutionsRequest_ExecutionFilter) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.ListOpenWorkflowExecutionsRequest_ExecutionFilter{` +
-		`ExecutionFilter:` + fmt.Sprintf("%#v", this.ExecutionFilter) + `}`}, ", ")
-	return s
-}
-func (this *ListOpenWorkflowExecutionsRequest_TypeFilter) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.ListOpenWorkflowExecutionsRequest_TypeFilter{` +
-		`TypeFilter:` + fmt.Sprintf("%#v", this.TypeFilter) + `}`}, ", ")
-	return s
-}
-func (this *ListOpenWorkflowExecutionsResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.ListOpenWorkflowExecutionsResponse{")
-	if this.Executions != nil {
-		s = append(s, "Executions: "+fmt.Sprintf("%#v", this.Executions)+",\n")
-	}
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ListClosedWorkflowExecutionsRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 11)
-	s = append(s, "&apiv1.ListClosedWorkflowExecutionsRequest{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	s = append(s, "PageSize: "+fmt.Sprintf("%#v", this.PageSize)+",\n")
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	if this.StartTimeFilter != nil {
-		s = append(s, "StartTimeFilter: "+fmt.Sprintf("%#v", this.StartTimeFilter)+",\n")
-	}
-	if this.Filters != nil {
-		s = append(s, "Filters: "+fmt.Sprintf("%#v", this.Filters)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ListClosedWorkflowExecutionsRequest_ExecutionFilter) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.ListClosedWorkflowExecutionsRequest_ExecutionFilter{` +
-		`ExecutionFilter:` + fmt.Sprintf("%#v", this.ExecutionFilter) + `}`}, ", ")
-	return s
-}
-func (this *ListClosedWorkflowExecutionsRequest_TypeFilter) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.ListClosedWorkflowExecutionsRequest_TypeFilter{` +
-		`TypeFilter:` + fmt.Sprintf("%#v", this.TypeFilter) + `}`}, ", ")
-	return s
-}
-func (this *ListClosedWorkflowExecutionsRequest_StatusFilter) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&apiv1.ListClosedWorkflowExecutionsRequest_StatusFilter{` +
-		`StatusFilter:` + fmt.Sprintf("%#v", this.StatusFilter) + `}`}, ", ")
-	return s
-}
-func (this *ListClosedWorkflowExecutionsResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.ListClosedWorkflowExecutionsResponse{")
-	if this.Executions != nil {
-		s = append(s, "Executions: "+fmt.Sprintf("%#v", this.Executions)+",\n")
-	}
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ListArchivedWorkflowExecutionsRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&apiv1.ListArchivedWorkflowExecutionsRequest{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	s = append(s, "PageSize: "+fmt.Sprintf("%#v", this.PageSize)+",\n")
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	s = append(s, "Query: "+fmt.Sprintf("%#v", this.Query)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ListArchivedWorkflowExecutionsResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.ListArchivedWorkflowExecutionsResponse{")
-	if this.Executions != nil {
-		s = append(s, "Executions: "+fmt.Sprintf("%#v", this.Executions)+",\n")
-	}
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ScanWorkflowExecutionsRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&apiv1.ScanWorkflowExecutionsRequest{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	s = append(s, "PageSize: "+fmt.Sprintf("%#v", this.PageSize)+",\n")
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	s = append(s, "Query: "+fmt.Sprintf("%#v", this.Query)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ScanWorkflowExecutionsResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.ScanWorkflowExecutionsResponse{")
-	if this.Executions != nil {
-		s = append(s, "Executions: "+fmt.Sprintf("%#v", this.Executions)+",\n")
-	}
-	s = append(s, "NextPageToken: "+fmt.Sprintf("%#v", this.NextPageToken)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *CountWorkflowExecutionsRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.CountWorkflowExecutionsRequest{")
-	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
-	s = append(s, "Query: "+fmt.Sprintf("%#v", this.Query)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *CountWorkflowExecutionsResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&apiv1.CountWorkflowExecutionsResponse{")
-	s = append(s, "Count: "+fmt.Sprintf("%#v", this.Count)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *GetSearchAttributesRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&apiv1.GetSearchAttributesRequest{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *GetSearchAttributesResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&apiv1.GetSearchAttributesResponse{")
-	keysForKeys := make([]string, 0, len(this.Keys))
-	for k, _ := range this.Keys {
-		keysForKeys = append(keysForKeys, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForKeys)
-	mapStringForKeys := "map[string]IndexedValueType{"
-	for _, k := range keysForKeys {
-		mapStringForKeys += fmt.Sprintf("%#v: %#v,", k, this.Keys[k])
-	}
-	mapStringForKeys += "}"
-	if this.Keys != nil {
-		s = append(s, "Keys: "+mapStringForKeys+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func valueToGoStringServiceVisibility(v interface{}, typ string) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
-}
-
-// Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConn
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion4
-
-// VisibilityAPIClient is the client API for VisibilityAPI service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type VisibilityAPIClient interface {
-	// ListWorkflowExecutions is a visibility API to list workflow executions in a specific domain.
-	ListWorkflowExecutions(ctx context.Context, in *ListWorkflowExecutionsRequest, opts ...grpc.CallOption) (*ListWorkflowExecutionsResponse, error)
-	// ListOpenWorkflowExecutions is a visibility API to list the open executions in a specific domain.
-	ListOpenWorkflowExecutions(ctx context.Context, in *ListOpenWorkflowExecutionsRequest, opts ...grpc.CallOption) (*ListOpenWorkflowExecutionsResponse, error)
-	// ListClosedWorkflowExecutions is a visibility API to list the closed executions in a specific domain.
-	ListClosedWorkflowExecutions(ctx context.Context, in *ListClosedWorkflowExecutionsRequest, opts ...grpc.CallOption) (*ListClosedWorkflowExecutionsResponse, error)
-	// ListArchivedWorkflowExecutions is a visibility API to list archived workflow executions in a specific domain.
-	ListArchivedWorkflowExecutions(ctx context.Context, in *ListArchivedWorkflowExecutionsRequest, opts ...grpc.CallOption) (*ListArchivedWorkflowExecutionsResponse, error)
-	// ScanWorkflowExecutions is a visibility API to list large amount of workflow executions in a specific domain without order.
-	ScanWorkflowExecutions(ctx context.Context, in *ScanWorkflowExecutionsRequest, opts ...grpc.CallOption) (*ScanWorkflowExecutionsResponse, error)
-	// CountWorkflowExecutions is a visibility API to count of workflow executions in a specific domain.
-	CountWorkflowExecutions(ctx context.Context, in *CountWorkflowExecutionsRequest, opts ...grpc.CallOption) (*CountWorkflowExecutionsResponse, error)
-	// GetSearchAttributes is a visibility API to get all legal keys that could be used in list APIs.
-	GetSearchAttributes(ctx context.Context, in *GetSearchAttributesRequest, opts ...grpc.CallOption) (*GetSearchAttributesResponse, error)
-}
-
-type visibilityAPIClient struct {
-	cc *grpc.ClientConn
-}
-
-func NewVisibilityAPIClient(cc *grpc.ClientConn) VisibilityAPIClient {
-	return &visibilityAPIClient{cc}
-}
-
-func (c *visibilityAPIClient) ListWorkflowExecutions(ctx context.Context, in *ListWorkflowExecutionsRequest, opts ...grpc.CallOption) (*ListWorkflowExecutionsResponse, error) {
-	out := new(ListWorkflowExecutionsResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.VisibilityAPI/ListWorkflowExecutions", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *visibilityAPIClient) ListOpenWorkflowExecutions(ctx context.Context, in *ListOpenWorkflowExecutionsRequest, opts ...grpc.CallOption) (*ListOpenWorkflowExecutionsResponse, error) {
-	out := new(ListOpenWorkflowExecutionsResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.VisibilityAPI/ListOpenWorkflowExecutions", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *visibilityAPIClient) ListClosedWorkflowExecutions(ctx context.Context, in *ListClosedWorkflowExecutionsRequest, opts ...grpc.CallOption) (*ListClosedWorkflowExecutionsResponse, error) {
-	out := new(ListClosedWorkflowExecutionsResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.VisibilityAPI/ListClosedWorkflowExecutions", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *visibilityAPIClient) ListArchivedWorkflowExecutions(ctx context.Context, in *ListArchivedWorkflowExecutionsRequest, opts ...grpc.CallOption) (*ListArchivedWorkflowExecutionsResponse, error) {
-	out := new(ListArchivedWorkflowExecutionsResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.VisibilityAPI/ListArchivedWorkflowExecutions", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *visibilityAPIClient) ScanWorkflowExecutions(ctx context.Context, in *ScanWorkflowExecutionsRequest, opts ...grpc.CallOption) (*ScanWorkflowExecutionsResponse, error) {
-	out := new(ScanWorkflowExecutionsResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.VisibilityAPI/ScanWorkflowExecutions", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *visibilityAPIClient) CountWorkflowExecutions(ctx context.Context, in *CountWorkflowExecutionsRequest, opts ...grpc.CallOption) (*CountWorkflowExecutionsResponse, error) {
-	out := new(CountWorkflowExecutionsResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.VisibilityAPI/CountWorkflowExecutions", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *visibilityAPIClient) GetSearchAttributes(ctx context.Context, in *GetSearchAttributesRequest, opts ...grpc.CallOption) (*GetSearchAttributesResponse, error) {
-	out := new(GetSearchAttributesResponse)
-	err := c.cc.Invoke(ctx, "/uber.cadence.api.v1.VisibilityAPI/GetSearchAttributes", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// VisibilityAPIServer is the server API for VisibilityAPI service.
-type VisibilityAPIServer interface {
-	// ListWorkflowExecutions is a visibility API to list workflow executions in a specific domain.
-	ListWorkflowExecutions(context.Context, *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error)
-	// ListOpenWorkflowExecutions is a visibility API to list the open executions in a specific domain.
-	ListOpenWorkflowExecutions(context.Context, *ListOpenWorkflowExecutionsRequest) (*ListOpenWorkflowExecutionsResponse, error)
-	// ListClosedWorkflowExecutions is a visibility API to list the closed executions in a specific domain.
-	ListClosedWorkflowExecutions(context.Context, *ListClosedWorkflowExecutionsRequest) (*ListClosedWorkflowExecutionsResponse, error)
-	// ListArchivedWorkflowExecutions is a visibility API to list archived workflow executions in a specific domain.
-	ListArchivedWorkflowExecutions(context.Context, *ListArchivedWorkflowExecutionsRequest) (*ListArchivedWorkflowExecutionsResponse, error)
-	// ScanWorkflowExecutions is a visibility API to list large amount of workflow executions in a specific domain without order.
-	ScanWorkflowExecutions(context.Context, *ScanWorkflowExecutionsRequest) (*ScanWorkflowExecutionsResponse, error)
-	// CountWorkflowExecutions is a visibility API to count of workflow executions in a specific domain.
-	CountWorkflowExecutions(context.Context, *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
-	// GetSearchAttributes is a visibility API to get all legal keys that could be used in list APIs.
-	GetSearchAttributes(context.Context, *GetSearchAttributesRequest) (*GetSearchAttributesResponse, error)
-}
-
-// UnimplementedVisibilityAPIServer can be embedded to have forward compatible implementations.
-type UnimplementedVisibilityAPIServer struct {
-}
-
-func (*UnimplementedVisibilityAPIServer) ListWorkflowExecutions(ctx context.Context, req *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListWorkflowExecutions not implemented")
-}
-func (*UnimplementedVisibilityAPIServer) ListOpenWorkflowExecutions(ctx context.Context, req *ListOpenWorkflowExecutionsRequest) (*ListOpenWorkflowExecutionsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListOpenWorkflowExecutions not implemented")
-}
-func (*UnimplementedVisibilityAPIServer) ListClosedWorkflowExecutions(ctx context.Context, req *ListClosedWorkflowExecutionsRequest) (*ListClosedWorkflowExecutionsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListClosedWorkflowExecutions not implemented")
-}
-func (*UnimplementedVisibilityAPIServer) ListArchivedWorkflowExecutions(ctx context.Context, req *ListArchivedWorkflowExecutionsRequest) (*ListArchivedWorkflowExecutionsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListArchivedWorkflowExecutions not implemented")
-}
-func (*UnimplementedVisibilityAPIServer) ScanWorkflowExecutions(ctx context.Context, req *ScanWorkflowExecutionsRequest) (*ScanWorkflowExecutionsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ScanWorkflowExecutions not implemented")
-}
-func (*UnimplementedVisibilityAPIServer) CountWorkflowExecutions(ctx context.Context, req *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CountWorkflowExecutions not implemented")
-}
-func (*UnimplementedVisibilityAPIServer) GetSearchAttributes(ctx context.Context, req *GetSearchAttributesRequest) (*GetSearchAttributesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSearchAttributes not implemented")
-}
-
-func RegisterVisibilityAPIServer(s *grpc.Server, srv VisibilityAPIServer) {
-	s.RegisterService(&_VisibilityAPI_serviceDesc, srv)
-}
-
-func _VisibilityAPI_ListWorkflowExecutions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListWorkflowExecutionsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VisibilityAPIServer).ListWorkflowExecutions(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.VisibilityAPI/ListWorkflowExecutions",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VisibilityAPIServer).ListWorkflowExecutions(ctx, req.(*ListWorkflowExecutionsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _VisibilityAPI_ListOpenWorkflowExecutions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListOpenWorkflowExecutionsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VisibilityAPIServer).ListOpenWorkflowExecutions(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.VisibilityAPI/ListOpenWorkflowExecutions",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VisibilityAPIServer).ListOpenWorkflowExecutions(ctx, req.(*ListOpenWorkflowExecutionsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _VisibilityAPI_ListClosedWorkflowExecutions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListClosedWorkflowExecutionsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VisibilityAPIServer).ListClosedWorkflowExecutions(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.VisibilityAPI/ListClosedWorkflowExecutions",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VisibilityAPIServer).ListClosedWorkflowExecutions(ctx, req.(*ListClosedWorkflowExecutionsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _VisibilityAPI_ListArchivedWorkflowExecutions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListArchivedWorkflowExecutionsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VisibilityAPIServer).ListArchivedWorkflowExecutions(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.VisibilityAPI/ListArchivedWorkflowExecutions",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VisibilityAPIServer).ListArchivedWorkflowExecutions(ctx, req.(*ListArchivedWorkflowExecutionsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _VisibilityAPI_ScanWorkflowExecutions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ScanWorkflowExecutionsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VisibilityAPIServer).ScanWorkflowExecutions(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.VisibilityAPI/ScanWorkflowExecutions",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VisibilityAPIServer).ScanWorkflowExecutions(ctx, req.(*ScanWorkflowExecutionsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _VisibilityAPI_CountWorkflowExecutions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CountWorkflowExecutionsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VisibilityAPIServer).CountWorkflowExecutions(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.VisibilityAPI/CountWorkflowExecutions",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VisibilityAPIServer).CountWorkflowExecutions(ctx, req.(*CountWorkflowExecutionsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _VisibilityAPI_GetSearchAttributes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetSearchAttributesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VisibilityAPIServer).GetSearchAttributes(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/uber.cadence.api.v1.VisibilityAPI/GetSearchAttributes",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VisibilityAPIServer).GetSearchAttributes(ctx, req.(*GetSearchAttributesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _VisibilityAPI_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "uber.cadence.api.v1.VisibilityAPI",
-	HandlerType: (*VisibilityAPIServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "ListWorkflowExecutions",
-			Handler:    _VisibilityAPI_ListWorkflowExecutions_Handler,
-		},
-		{
-			MethodName: "ListOpenWorkflowExecutions",
-			Handler:    _VisibilityAPI_ListOpenWorkflowExecutions_Handler,
-		},
-		{
-			MethodName: "ListClosedWorkflowExecutions",
-			Handler:    _VisibilityAPI_ListClosedWorkflowExecutions_Handler,
-		},
-		{
-			MethodName: "ListArchivedWorkflowExecutions",
-			Handler:    _VisibilityAPI_ListArchivedWorkflowExecutions_Handler,
-		},
-		{
-			MethodName: "ScanWorkflowExecutions",
-			Handler:    _VisibilityAPI_ScanWorkflowExecutions_Handler,
-		},
-		{
-			MethodName: "CountWorkflowExecutions",
-			Handler:    _VisibilityAPI_CountWorkflowExecutions_Handler,
-		},
-		{
-			MethodName: "GetSearchAttributes",
-			Handler:    _VisibilityAPI_GetSearchAttributes_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "github.com/uber/cadence/.gen/proto/api/v1/service_visibility.proto",
+	// 827 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x97, 0xcf, 0x6f, 0x1b, 0x45,
+	0x14, 0xc7, 0x19, 0xbb, 0x4e, 0xea, 0x97, 0x86, 0x94, 0x69, 0xd5, 0x5a, 0xdb, 0x62, 0xdc, 0x25,
+	0x2d, 0x16, 0xaa, 0x76, 0x89, 0x8b, 0x68, 0x49, 0x4e, 0x4e, 0x55, 0x68, 0x0a, 0x2a, 0xd6, 0x3a,
+	0x2a, 0x82, 0x03, 0xd6, 0x7a, 0xfd, 0xe2, 0x8c, 0x6c, 0xef, 0x6e, 0x77, 0x66, 0x5d, 0x6f, 0x6f,
+	0x48, 0xb9, 0x72, 0x01, 0x0e, 0x10, 0xf1, 0x07, 0x71, 0x41, 0xca, 0x99, 0x13, 0xca, 0x5f, 0x82,
+	0xf6, 0x87, 0x57, 0x0e, 0xcc, 0xae, 0xe3, 0x1c, 0x30, 0x87, 0xde, 0x3c, 0xcf, 0xef, 0x7d, 0xf6,
+	0x3b, 0x6f, 0xdf, 0xbe, 0x79, 0x03, 0xf7, 0xfd, 0x2e, 0x7a, 0xba, 0x65, 0xf6, 0xd0, 0xb6, 0x50,
+	0x37, 0x5d, 0xa6, 0x8f, 0xb7, 0x74, 0x8e, 0xde, 0x98, 0x59, 0xd8, 0x19, 0x33, 0xce, 0xba, 0x6c,
+	0xc8, 0x44, 0xa0, 0xb9, 0x9e, 0x23, 0x1c, 0x7a, 0x2d, 0xf4, 0xd6, 0x12, 0x6f, 0xcd, 0x74, 0x99,
+	0x36, 0xde, 0x52, 0x36, 0x65, 0x88, 0x7f, 0x86, 0x2a, 0xaa, 0xcc, 0xeb, 0x95, 0xe3, 0x0d, 0x0e,
+	0x86, 0xce, 0xab, 0xd8, 0x47, 0xfd, 0x91, 0xc0, 0xbb, 0x5f, 0x32, 0x2e, 0xbe, 0x4e, 0xcc, 0x4f,
+	0x26, 0x68, 0xf9, 0x82, 0x39, 0x36, 0x37, 0xf0, 0xa5, 0x8f, 0x5c, 0xd0, 0x1b, 0xb0, 0xd2, 0x73,
+	0x46, 0x26, 0xb3, 0x2b, 0xa4, 0x46, 0xea, 0x65, 0x23, 0x59, 0xd1, 0x5b, 0x50, 0x76, 0xcd, 0x3e,
+	0x76, 0x38, 0x7b, 0x8d, 0x95, 0x42, 0x8d, 0xd4, 0x4b, 0xc6, 0xe5, 0xd0, 0xd0, 0x66, 0xaf, 0x91,
+	0xde, 0x83, 0x0d, 0x1b, 0x27, 0xa2, 0x13, 0x79, 0x08, 0x67, 0x80, 0x76, 0xa5, 0x58, 0x23, 0xf5,
+	0x2b, 0xc6, 0x7a, 0x68, 0x6e, 0x99, 0x7d, 0xdc, 0x0f, 0x8d, 0xf4, 0x3a, 0x94, 0x5e, 0xfa, 0xe8,
+	0x05, 0x95, 0x4b, 0x11, 0x3b, 0x5e, 0xa8, 0x3f, 0x13, 0xa8, 0x66, 0x89, 0xe2, 0xae, 0x63, 0x73,
+	0xa4, 0xcf, 0x00, 0x30, 0xb5, 0x56, 0x48, 0xad, 0x58, 0x5f, 0x6b, 0x7c, 0xa8, 0x49, 0x72, 0xa5,
+	0xfd, 0x0b, 0xb2, 0x67, 0x1f, 0x38, 0xc6, 0x4c, 0xb4, 0x4c, 0x6c, 0x41, 0x22, 0x56, 0x3d, 0x2a,
+	0xc2, 0x9d, 0x50, 0xd6, 0x57, 0x2e, 0xda, 0x4b, 0xca, 0x57, 0x0b, 0xde, 0xe1, 0xc2, 0xf4, 0x44,
+	0x47, 0xb0, 0x11, 0x76, 0x0e, 0xd8, 0x50, 0xa0, 0x17, 0xe5, 0x6e, 0xad, 0xb1, 0x29, 0xdd, 0x7d,
+	0x3b, 0xf4, 0xde, 0x67, 0x23, 0xfc, 0x2c, 0xf2, 0x35, 0x36, 0xf8, 0x59, 0x03, 0xfd, 0x06, 0xae,
+	0xa6, 0xa9, 0x98, 0x02, 0x4b, 0x11, 0xf0, 0xfe, 0xf9, 0xd2, 0x19, 0x73, 0x9e, 0xbe, 0x65, 0x6c,
+	0xe0, 0x59, 0x13, 0x7d, 0x06, 0x6b, 0x22, 0x70, 0x53, 0x99, 0x2b, 0x11, 0xf5, 0x83, 0x5c, 0xea,
+	0x7e, 0xe0, 0x62, 0x0a, 0x04, 0x91, 0xae, 0x76, 0xcb, 0xb0, 0x1a, 0x63, 0xb8, 0xfa, 0x0b, 0x01,
+	0x35, 0xef, 0x35, 0x2c, 0xb1, 0x42, 0x4e, 0x8a, 0xf0, 0x7e, 0x28, 0xed, 0xf1, 0xd0, 0xe1, 0xd8,
+	0x7b, 0x53, 0x23, 0xff, 0x69, 0x8d, 0xd0, 0xa7, 0xb0, 0xce, 0x85, 0x29, 0x7c, 0x3e, 0xa5, 0xad,
+	0x46, 0xb4, 0x3b, 0x59, 0x9b, 0x16, 0x3e, 0x4f, 0x39, 0x57, 0xf8, 0xcc, 0x7a, 0xb6, 0xda, 0x8e,
+	0x09, 0x6c, 0xe6, 0xbf, 0xd2, 0x25, 0xd6, 0xdb, 0x31, 0x81, 0xbb, 0xa1, 0xb8, 0xa6, 0x67, 0x1d,
+	0xb2, 0xf1, 0xd2, 0x2a, 0x4e, 0xde, 0xc5, 0x7f, 0x23, 0x70, 0x6f, 0x9e, 0xb8, 0x25, 0xe6, 0x2e,
+	0x3c, 0xf9, 0xda, 0x96, 0x69, 0xff, 0xef, 0x4e, 0xbe, 0x2c, 0x51, 0x4b, 0xcc, 0xd5, 0x73, 0xa8,
+	0x3e, 0x76, 0x7c, 0xfb, 0x02, 0x53, 0x42, 0xba, 0xcd, 0xc2, 0xec, 0x36, 0x1f, 0xc2, 0x7b, 0x99,
+	0xbc, 0x64, 0x9b, 0xd7, 0xa1, 0x64, 0x85, 0x2e, 0x11, 0xaf, 0x68, 0xc4, 0x0b, 0xf5, 0x36, 0x28,
+	0x9f, 0xa3, 0x68, 0xa3, 0xe9, 0x59, 0x87, 0x4d, 0x21, 0x3c, 0xd6, 0xf5, 0x05, 0x4e, 0x45, 0xa8,
+	0x7f, 0x10, 0xb8, 0x25, 0xfd, 0x3b, 0x61, 0x3e, 0x87, 0x4b, 0x03, 0x0c, 0xa6, 0x49, 0xdb, 0x96,
+	0x26, 0x2d, 0x27, 0x5e, 0xfb, 0x02, 0x03, 0xfe, 0xc4, 0x16, 0x5e, 0x60, 0x44, 0x1c, 0xe5, 0x3b,
+	0x28, 0xa7, 0x26, 0x7a, 0x15, 0x8a, 0x03, 0x0c, 0x92, 0xed, 0x87, 0x3f, 0xe9, 0x0e, 0x94, 0xc6,
+	0xe6, 0xd0, 0x8f, 0x6b, 0xe4, 0xed, 0xc6, 0x5d, 0xe9, 0xf3, 0xf6, 0xec, 0x1e, 0x4e, 0xb0, 0xf7,
+	0x22, 0x74, 0x0c, 0x3b, 0x9b, 0x11, 0xc7, 0x6c, 0x17, 0x1e, 0x91, 0xc6, 0x9f, 0xab, 0xb0, 0xfe,
+	0x22, 0x9d, 0xea, 0x9a, 0xad, 0x3d, 0xfa, 0x3d, 0x81, 0x1b, 0xf2, 0xc9, 0x88, 0x36, 0xa4, 0xf8,
+	0xdc, 0xd9, 0x4e, 0x79, 0xb0, 0x50, 0x4c, 0x92, 0xc5, 0x1f, 0x08, 0x28, 0xd9, 0xe7, 0x2f, 0xfd,
+	0x24, 0x93, 0x99, 0x3b, 0x37, 0x29, 0x0f, 0x17, 0x8e, 0x4b, 0xf4, 0xfc, 0x44, 0xe0, 0x76, 0x5e,
+	0x87, 0xa6, 0x8f, 0x32, 0xc9, 0x73, 0xce, 0x69, 0xe5, 0xd3, 0x0b, 0x44, 0x26, 0xaa, 0x7e, 0x4d,
+	0x66, 0xd8, 0xec, 0xee, 0x47, 0xb7, 0x33, 0xe9, 0x73, 0xfb, 0xb9, 0xb2, 0x73, 0xa1, 0xd8, 0x44,
+	0x5b, 0x58, 0x45, 0xf2, 0x2e, 0x93, 0x51, 0x45, 0xb9, 0x7d, 0x32, 0xa3, 0x8a, 0xe6, 0xb4, 0xb1,
+	0x23, 0x02, 0x37, 0x33, 0x7a, 0x00, 0x95, 0x03, 0xf3, 0x3b, 0x90, 0xf2, 0xf1, 0x62, 0x41, 0x89,
+	0x8c, 0x09, 0x5c, 0x93, 0x7c, 0xf1, 0x54, 0x3f, 0x7f, 0x6f, 0x88, 0x9f, 0xfe, 0xd1, 0xa2, 0xcd,
+	0x64, 0xb7, 0xfb, 0xfb, 0x69, 0x95, 0x9c, 0x9c, 0x56, 0xc9, 0x5f, 0xa7, 0x55, 0x02, 0x37, 0x2d,
+	0x67, 0x24, 0x43, 0xec, 0x5e, 0x6e, 0xba, 0xac, 0x15, 0x5e, 0xd5, 0x5a, 0xe4, 0x5b, 0xbd, 0xcf,
+	0xc4, 0xa1, 0xdf, 0xd5, 0x2c, 0x67, 0xa4, 0x9f, 0xb9, 0xdb, 0x69, 0x7d, 0xb4, 0xf5, 0xe8, 0x42,
+	0x97, 0x5c, 0xf3, 0x76, 0x4c, 0x97, 0x8d, 0xb7, 0xba, 0x2b, 0x91, 0xed, 0xc1, 0xdf, 0x01, 0x00,
+	0x00, 0xff, 0xff, 0x3f, 0xeb, 0x89, 0xd3, 0x73, 0x0e, 0x00, 0x00,
 }
 
 func (m *ListWorkflowExecutionsRequest) Marshal() (dAtA []byte, err error) {
@@ -2149,6 +1078,10 @@ func (m *ListWorkflowExecutionsRequest) MarshalToSizedBuffer(dAtA []byte) (int, 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Query) > 0 {
 		i -= len(m.Query)
 		copy(dAtA[i:], m.Query)
@@ -2198,6 +1131,10 @@ func (m *ListWorkflowExecutionsResponse) MarshalToSizedBuffer(dAtA []byte) (int,
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.NextPageToken) > 0 {
 		i -= len(m.NextPageToken)
 		copy(dAtA[i:], m.NextPageToken)
@@ -2242,6 +1179,10 @@ func (m *ListOpenWorkflowExecutionsRequest) MarshalToSizedBuffer(dAtA []byte) (i
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Filters != nil {
 		{
 			size := m.Filters.Size()
@@ -2347,6 +1288,10 @@ func (m *ListOpenWorkflowExecutionsResponse) MarshalToSizedBuffer(dAtA []byte) (
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.NextPageToken) > 0 {
 		i -= len(m.NextPageToken)
 		copy(dAtA[i:], m.NextPageToken)
@@ -2391,6 +1336,10 @@ func (m *ListClosedWorkflowExecutionsRequest) MarshalToSizedBuffer(dAtA []byte) 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Filters != nil {
 		{
 			size := m.Filters.Size()
@@ -2517,6 +1466,10 @@ func (m *ListClosedWorkflowExecutionsResponse) MarshalToSizedBuffer(dAtA []byte)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.NextPageToken) > 0 {
 		i -= len(m.NextPageToken)
 		copy(dAtA[i:], m.NextPageToken)
@@ -2561,6 +1514,10 @@ func (m *ListArchivedWorkflowExecutionsRequest) MarshalToSizedBuffer(dAtA []byte
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Query) > 0 {
 		i -= len(m.Query)
 		copy(dAtA[i:], m.Query)
@@ -2610,6 +1567,10 @@ func (m *ListArchivedWorkflowExecutionsResponse) MarshalToSizedBuffer(dAtA []byt
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.NextPageToken) > 0 {
 		i -= len(m.NextPageToken)
 		copy(dAtA[i:], m.NextPageToken)
@@ -2654,6 +1615,10 @@ func (m *ScanWorkflowExecutionsRequest) MarshalToSizedBuffer(dAtA []byte) (int, 
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Query) > 0 {
 		i -= len(m.Query)
 		copy(dAtA[i:], m.Query)
@@ -2703,6 +1668,10 @@ func (m *ScanWorkflowExecutionsResponse) MarshalToSizedBuffer(dAtA []byte) (int,
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.NextPageToken) > 0 {
 		i -= len(m.NextPageToken)
 		copy(dAtA[i:], m.NextPageToken)
@@ -2747,6 +1716,10 @@ func (m *CountWorkflowExecutionsRequest) MarshalToSizedBuffer(dAtA []byte) (int,
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Query) > 0 {
 		i -= len(m.Query)
 		copy(dAtA[i:], m.Query)
@@ -2784,6 +1757,10 @@ func (m *CountWorkflowExecutionsResponse) MarshalToSizedBuffer(dAtA []byte) (int
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Count != 0 {
 		i = encodeVarintServiceVisibility(dAtA, i, uint64(m.Count))
 		i--
@@ -2812,6 +1789,10 @@ func (m *GetSearchAttributesRequest) MarshalToSizedBuffer(dAtA []byte) (int, err
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -2835,6 +1816,10 @@ func (m *GetSearchAttributesResponse) MarshalToSizedBuffer(dAtA []byte) (int, er
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Keys) > 0 {
 		for k := range m.Keys {
 			v := m.Keys[k]
@@ -2887,6 +1872,9 @@ func (m *ListWorkflowExecutionsRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceVisibility(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -2905,6 +1893,9 @@ func (m *ListWorkflowExecutionsResponse) Size() (n int) {
 	l = len(m.NextPageToken)
 	if l > 0 {
 		n += 1 + l + sovServiceVisibility(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -2932,6 +1923,9 @@ func (m *ListOpenWorkflowExecutionsRequest) Size() (n int) {
 	}
 	if m.Filters != nil {
 		n += m.Filters.Size()
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -2976,6 +1970,9 @@ func (m *ListOpenWorkflowExecutionsResponse) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceVisibility(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -3002,6 +1999,9 @@ func (m *ListClosedWorkflowExecutionsRequest) Size() (n int) {
 	}
 	if m.Filters != nil {
 		n += m.Filters.Size()
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -3058,6 +2058,9 @@ func (m *ListClosedWorkflowExecutionsResponse) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceVisibility(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -3082,6 +2085,9 @@ func (m *ListArchivedWorkflowExecutionsRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceVisibility(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -3100,6 +2106,9 @@ func (m *ListArchivedWorkflowExecutionsResponse) Size() (n int) {
 	l = len(m.NextPageToken)
 	if l > 0 {
 		n += 1 + l + sovServiceVisibility(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -3125,6 +2134,9 @@ func (m *ScanWorkflowExecutionsRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceVisibility(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -3144,6 +2156,9 @@ func (m *ScanWorkflowExecutionsResponse) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceVisibility(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -3161,6 +2176,9 @@ func (m *CountWorkflowExecutionsRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovServiceVisibility(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -3173,6 +2191,9 @@ func (m *CountWorkflowExecutionsResponse) Size() (n int) {
 	if m.Count != 0 {
 		n += 1 + sovServiceVisibility(uint64(m.Count))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -3182,6 +2203,9 @@ func (m *GetSearchAttributesRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -3199,6 +2223,9 @@ func (m *GetSearchAttributesResponse) Size() (n int) {
 			n += mapEntrySize + 1 + sovServiceVisibility(uint64(mapEntrySize))
 		}
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -3207,261 +2234,6 @@ func sovServiceVisibility(x uint64) (n int) {
 }
 func sozServiceVisibility(x uint64) (n int) {
 	return sovServiceVisibility(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (this *ListWorkflowExecutionsRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ListWorkflowExecutionsRequest{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`PageSize:` + fmt.Sprintf("%v", this.PageSize) + `,`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`Query:` + fmt.Sprintf("%v", this.Query) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ListWorkflowExecutionsResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForExecutions := "[]*WorkflowExecutionInfo{"
-	for _, f := range this.Executions {
-		repeatedStringForExecutions += strings.Replace(fmt.Sprintf("%v", f), "WorkflowExecutionInfo", "WorkflowExecutionInfo", 1) + ","
-	}
-	repeatedStringForExecutions += "}"
-	s := strings.Join([]string{`&ListWorkflowExecutionsResponse{`,
-		`Executions:` + repeatedStringForExecutions + `,`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ListOpenWorkflowExecutionsRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ListOpenWorkflowExecutionsRequest{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`PageSize:` + fmt.Sprintf("%v", this.PageSize) + `,`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`StartTimeFilter:` + strings.Replace(fmt.Sprintf("%v", this.StartTimeFilter), "StartTimeFilter", "StartTimeFilter", 1) + `,`,
-		`Filters:` + fmt.Sprintf("%v", this.Filters) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ListOpenWorkflowExecutionsRequest_ExecutionFilter) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ListOpenWorkflowExecutionsRequest_ExecutionFilter{`,
-		`ExecutionFilter:` + strings.Replace(fmt.Sprintf("%v", this.ExecutionFilter), "WorkflowExecutionFilter", "WorkflowExecutionFilter", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ListOpenWorkflowExecutionsRequest_TypeFilter) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ListOpenWorkflowExecutionsRequest_TypeFilter{`,
-		`TypeFilter:` + strings.Replace(fmt.Sprintf("%v", this.TypeFilter), "WorkflowTypeFilter", "WorkflowTypeFilter", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ListOpenWorkflowExecutionsResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForExecutions := "[]*WorkflowExecutionInfo{"
-	for _, f := range this.Executions {
-		repeatedStringForExecutions += strings.Replace(fmt.Sprintf("%v", f), "WorkflowExecutionInfo", "WorkflowExecutionInfo", 1) + ","
-	}
-	repeatedStringForExecutions += "}"
-	s := strings.Join([]string{`&ListOpenWorkflowExecutionsResponse{`,
-		`Executions:` + repeatedStringForExecutions + `,`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ListClosedWorkflowExecutionsRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ListClosedWorkflowExecutionsRequest{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`PageSize:` + fmt.Sprintf("%v", this.PageSize) + `,`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`StartTimeFilter:` + strings.Replace(fmt.Sprintf("%v", this.StartTimeFilter), "StartTimeFilter", "StartTimeFilter", 1) + `,`,
-		`Filters:` + fmt.Sprintf("%v", this.Filters) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ListClosedWorkflowExecutionsRequest_ExecutionFilter) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ListClosedWorkflowExecutionsRequest_ExecutionFilter{`,
-		`ExecutionFilter:` + strings.Replace(fmt.Sprintf("%v", this.ExecutionFilter), "WorkflowExecutionFilter", "WorkflowExecutionFilter", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ListClosedWorkflowExecutionsRequest_TypeFilter) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ListClosedWorkflowExecutionsRequest_TypeFilter{`,
-		`TypeFilter:` + strings.Replace(fmt.Sprintf("%v", this.TypeFilter), "WorkflowTypeFilter", "WorkflowTypeFilter", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ListClosedWorkflowExecutionsRequest_StatusFilter) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ListClosedWorkflowExecutionsRequest_StatusFilter{`,
-		`StatusFilter:` + strings.Replace(fmt.Sprintf("%v", this.StatusFilter), "StatusFilter", "StatusFilter", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ListClosedWorkflowExecutionsResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForExecutions := "[]*WorkflowExecutionInfo{"
-	for _, f := range this.Executions {
-		repeatedStringForExecutions += strings.Replace(fmt.Sprintf("%v", f), "WorkflowExecutionInfo", "WorkflowExecutionInfo", 1) + ","
-	}
-	repeatedStringForExecutions += "}"
-	s := strings.Join([]string{`&ListClosedWorkflowExecutionsResponse{`,
-		`Executions:` + repeatedStringForExecutions + `,`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ListArchivedWorkflowExecutionsRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ListArchivedWorkflowExecutionsRequest{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`PageSize:` + fmt.Sprintf("%v", this.PageSize) + `,`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`Query:` + fmt.Sprintf("%v", this.Query) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ListArchivedWorkflowExecutionsResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForExecutions := "[]*WorkflowExecutionInfo{"
-	for _, f := range this.Executions {
-		repeatedStringForExecutions += strings.Replace(fmt.Sprintf("%v", f), "WorkflowExecutionInfo", "WorkflowExecutionInfo", 1) + ","
-	}
-	repeatedStringForExecutions += "}"
-	s := strings.Join([]string{`&ListArchivedWorkflowExecutionsResponse{`,
-		`Executions:` + repeatedStringForExecutions + `,`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ScanWorkflowExecutionsRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ScanWorkflowExecutionsRequest{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`PageSize:` + fmt.Sprintf("%v", this.PageSize) + `,`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`Query:` + fmt.Sprintf("%v", this.Query) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ScanWorkflowExecutionsResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForExecutions := "[]*WorkflowExecutionInfo{"
-	for _, f := range this.Executions {
-		repeatedStringForExecutions += strings.Replace(fmt.Sprintf("%v", f), "WorkflowExecutionInfo", "WorkflowExecutionInfo", 1) + ","
-	}
-	repeatedStringForExecutions += "}"
-	s := strings.Join([]string{`&ScanWorkflowExecutionsResponse{`,
-		`Executions:` + repeatedStringForExecutions + `,`,
-		`NextPageToken:` + fmt.Sprintf("%v", this.NextPageToken) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *CountWorkflowExecutionsRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&CountWorkflowExecutionsRequest{`,
-		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
-		`Query:` + fmt.Sprintf("%v", this.Query) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *CountWorkflowExecutionsResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&CountWorkflowExecutionsResponse{`,
-		`Count:` + fmt.Sprintf("%v", this.Count) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *GetSearchAttributesRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&GetSearchAttributesRequest{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *GetSearchAttributesResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	keysForKeys := make([]string, 0, len(this.Keys))
-	for k, _ := range this.Keys {
-		keysForKeys = append(keysForKeys, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForKeys)
-	mapStringForKeys := "map[string]IndexedValueType{"
-	for _, k := range keysForKeys {
-		mapStringForKeys += fmt.Sprintf("%v: %v,", k, this.Keys[k])
-	}
-	mapStringForKeys += "}"
-	s := strings.Join([]string{`&GetSearchAttributesResponse{`,
-		`Keys:` + mapStringForKeys + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func valueToStringServiceVisibility(v interface{}) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("*%v", pv)
 }
 func (m *ListWorkflowExecutionsRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -3624,6 +2396,7 @@ func (m *ListWorkflowExecutionsRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -3745,6 +2518,7 @@ func (m *ListWorkflowExecutionsResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -3989,6 +2763,7 @@ func (m *ListOpenWorkflowExecutionsRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -4110,6 +2885,7 @@ func (m *ListOpenWorkflowExecutionsResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -4389,6 +3165,7 @@ func (m *ListClosedWorkflowExecutionsRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -4510,6 +3287,7 @@ func (m *ListClosedWorkflowExecutionsResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -4680,6 +3458,7 @@ func (m *ListArchivedWorkflowExecutionsRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -4801,6 +3580,7 @@ func (m *ListArchivedWorkflowExecutionsResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -4971,6 +3751,7 @@ func (m *ScanWorkflowExecutionsRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -5092,6 +3873,7 @@ func (m *ScanWorkflowExecutionsResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -5209,6 +3991,7 @@ func (m *CountWorkflowExecutionsRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -5281,6 +4064,7 @@ func (m *CountWorkflowExecutionsResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -5334,6 +4118,7 @@ func (m *GetSearchAttributesRequest) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -5500,6 +4285,7 @@ func (m *GetSearchAttributesResponse) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}

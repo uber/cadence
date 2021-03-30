@@ -28,15 +28,18 @@ import (
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
 
+type (
+	contextKey string
+)
+
 const (
-	processorContextKey = "processorContext"
+	processorContextKey contextKey = "processorContext"
 	// processorTaskListName is the tasklist name
 	processorTaskListName = "cadence-sys-processor-parent-close-policy"
 	// processorWFTypeName is the workflow type
@@ -110,27 +113,27 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 			continue
 		case types.ParentClosePolicyTerminate:
 			err = client.TerminateWorkflowExecution(nil, &types.HistoryTerminateWorkflowExecutionRequest{
-				DomainUUID: common.StringPtr(request.DomainUUID),
+				DomainUUID: request.DomainUUID,
 				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
-					Domain: common.StringPtr(request.DomainName),
+					Domain: request.DomainName,
 					WorkflowExecution: &types.WorkflowExecution{
-						WorkflowID: common.StringPtr(execution.WorkflowID),
-						RunID:      common.StringPtr(execution.RunID),
+						WorkflowID: execution.WorkflowID,
+						RunID:      execution.RunID,
 					},
-					Reason:   common.StringPtr("by parent close policy"),
-					Identity: common.StringPtr(processorWFTypeName),
+					Reason:   "by parent close policy",
+					Identity: processorWFTypeName,
 				},
 			})
 		case types.ParentClosePolicyRequestCancel:
 			err = client.RequestCancelWorkflowExecution(nil, &types.HistoryRequestCancelWorkflowExecutionRequest{
-				DomainUUID: common.StringPtr(request.DomainUUID),
+				DomainUUID: request.DomainUUID,
 				CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
-					Domain: common.StringPtr(request.DomainName),
+					Domain: request.DomainName,
 					WorkflowExecution: &types.WorkflowExecution{
-						WorkflowID: common.StringPtr(execution.WorkflowID),
-						RunID:      common.StringPtr(execution.RunID),
+						WorkflowID: execution.WorkflowID,
+						RunID:      execution.RunID,
 					},
-					Identity: common.StringPtr(processorWFTypeName),
+					Identity: processorWFTypeName,
 				},
 			})
 		}

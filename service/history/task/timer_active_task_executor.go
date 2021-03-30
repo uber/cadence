@@ -455,7 +455,7 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 		if err != nil {
 			return err
 		}
-		if scheduledEvent.ActivityTaskScheduledEventAttributes.Domain != nil {
+		if scheduledEvent.ActivityTaskScheduledEventAttributes.GetDomain() != "" {
 			domainEntry, err := t.shard.GetDomainCache().GetDomain(scheduledEvent.ActivityTaskScheduledEventAttributes.GetDomain())
 			if err != nil {
 				return &types.InternalServiceError{Message: "unable to re-schedule activity across domain."}
@@ -465,21 +465,21 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 	}
 
 	execution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(task.WorkflowID),
-		RunID:      common.StringPtr(task.RunID)}
+		WorkflowID: task.WorkflowID,
+		RunID:      task.RunID}
 	taskList := &types.TaskList{
-		Name: common.StringPtr(activityInfo.TaskList),
+		Name: activityInfo.TaskList,
 	}
 	scheduleToStartTimeout := activityInfo.ScheduleToStartTimeout
 
 	release(nil) // release earlier as we don't need the lock anymore
 
 	return t.shard.GetService().GetMatchingClient().AddActivityTask(ctx, &types.AddActivityTaskRequest{
-		DomainUUID:                    common.StringPtr(targetDomainID),
-		SourceDomainUUID:              common.StringPtr(domainID),
+		DomainUUID:                    targetDomainID,
+		SourceDomainUUID:              domainID,
 		Execution:                     &execution,
 		TaskList:                      taskList,
-		ScheduleID:                    common.Int64Ptr(scheduledID),
+		ScheduleID:                    scheduledID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
 	})
 }
@@ -559,7 +559,7 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 		RetryPolicy:                         startAttributes.RetryPolicy,
 		Initiator:                           continueAsNewInitiator.Ptr(),
 		FailureReason:                       common.StringPtr(timeoutReason),
-		CronSchedule:                        common.StringPtr(mutableState.GetExecutionInfo().CronSchedule),
+		CronSchedule:                        mutableState.GetExecutionInfo().CronSchedule,
 		Header:                              startAttributes.Header,
 		Memo:                                startAttributes.Memo,
 		SearchAttributes:                    startAttributes.SearchAttributes,
@@ -582,8 +582,8 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 		execution.NewContext(
 			newExecutionInfo.DomainID,
 			types.WorkflowExecution{
-				WorkflowID: common.StringPtr(newExecutionInfo.WorkflowID),
-				RunID:      common.StringPtr(newExecutionInfo.RunID),
+				WorkflowID: newExecutionInfo.WorkflowID,
+				RunID:      newExecutionInfo.RunID,
 			},
 			t.shard,
 			t.shard.GetExecutionManager(),

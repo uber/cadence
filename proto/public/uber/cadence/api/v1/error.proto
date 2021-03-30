@@ -22,12 +22,10 @@ syntax = "proto3";
 
 package uber.cadence.api.v1;
 
-option go_package = "apiv1";
+option go_package = "github.com/uber/cadence/.gen/proto/api/v1;apiv1";
 option java_multiple_files = true;
 option java_outer_classname = "ApiProto";
 option java_package = "com.uber.cadence.api.v1";
-
-import "uber/cadence/api/v1/common.proto";
 
 message WorkflowExecutionAlreadyStartedError {
   string start_request_id = 1;
@@ -45,23 +43,10 @@ message DomainNotActiveError {
   string active_cluster = 3;
 }
 
-message RetryTaskV2Error {
-  string domain_id = 1;
-  WorkflowExecution workflow_execution = 2;
-  int64 start_event_id = 3;
-  int64 start_event_version = 4;
-  int64 end_event_id = 5;
-  int64 end_event_version = 6;
-}
-
 message ClientVersionNotSupportedError {
   string feature_version = 1;
   string client_impl = 2;
   string supported_versions = 3;
-}
-
-message CurrentBranchChangedError {
-  bytes current_branch_token = 1;
 }
 
 message CancellationAlreadyRequestedError {
@@ -70,20 +55,11 @@ message CancellationAlreadyRequestedError {
 message DomainAlreadyExistsError {
 }
 
-message EventAlreadyStartedError {
-}
-
 message LimitExceededError {
 }
 
 message QueryFailedError {
 }
 
-message RemoteSyncMatchedError {
-}
-
 message ServiceBusyError {
-}
-
-message ShardOwnershipLostError {
 }

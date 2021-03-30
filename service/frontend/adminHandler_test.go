@@ -147,16 +147,16 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 	ctx := context.Background()
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
 		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(""),
-				RunID:      common.StringPtr(uuid.New()),
+				WorkflowID: "",
+				RunID:      uuid.New(),
 			},
 			StartEventID:      common.Int64Ptr(1),
 			StartEventVersion: common.Int64Ptr(100),
 			EndEventID:        common.Int64Ptr(10),
 			EndEventVersion:   common.Int64Ptr(100),
-			MaximumPageSize:   common.Int32Ptr(1),
+			MaximumPageSize:   1,
 			NextPageToken:     nil,
 		})
 	s.Error(err)
@@ -166,16 +166,16 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 	ctx := context.Background()
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
 		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr("workflowID"),
-				RunID:      common.StringPtr("runID"),
+				WorkflowID: "workflowID",
+				RunID:      "runID",
 			},
 			StartEventID:      common.Int64Ptr(1),
 			StartEventVersion: common.Int64Ptr(100),
 			EndEventID:        common.Int64Ptr(10),
 			EndEventVersion:   common.Int64Ptr(100),
-			MaximumPageSize:   common.Int32Ptr(1),
+			MaximumPageSize:   1,
 			NextPageToken:     nil,
 		})
 	s.Error(err)
@@ -185,16 +185,16 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 	ctx := context.Background()
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
 		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr("workflowID"),
-				RunID:      common.StringPtr(uuid.New()),
+				WorkflowID: "workflowID",
+				RunID:      uuid.New(),
 			},
 			StartEventID:      common.Int64Ptr(1),
 			StartEventVersion: common.Int64Ptr(100),
 			EndEventID:        common.Int64Ptr(10),
 			EndEventVersion:   common.Int64Ptr(100),
-			MaximumPageSize:   common.Int32Ptr(-1),
+			MaximumPageSize:   -1,
 			NextPageToken:     nil,
 		})
 	s.Error(err)
@@ -205,16 +205,16 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnDomain
 	s.mockDomainCache.EXPECT().GetDomainID(s.domainName).Return("", fmt.Errorf("test")).Times(1)
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
 		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr("workflowID"),
-				RunID:      common.StringPtr(uuid.New()),
+				WorkflowID: "workflowID",
+				RunID:      uuid.New(),
 			},
 			StartEventID:      common.Int64Ptr(1),
 			StartEventVersion: common.Int64Ptr(100),
 			EndEventID:        common.Int64Ptr(10),
 			EndEventVersion:   common.Int64Ptr(100),
-			MaximumPageSize:   common.Int32Ptr(1),
+			MaximumPageSize:   1,
 			NextPageToken:     nil,
 		})
 	s.Error(err)
@@ -230,7 +230,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 	rawVersionHistories := persistence.NewVersionHistories(versionHistory)
 	versionHistories := rawVersionHistories.ToInternalType()
 	mState := &types.GetMutableStateResponse{
-		NextEventID:        common.Int64Ptr(11),
+		NextEventID:        11,
 		CurrentBranchToken: branchToken,
 		VersionHistories:   versionHistories,
 	}
@@ -243,16 +243,16 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 	}, nil)
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
 		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr("workflowID"),
-				RunID:      common.StringPtr(uuid.New()),
+				WorkflowID: "workflowID",
+				RunID:      uuid.New(),
 			},
 			StartEventID:      common.Int64Ptr(1),
 			StartEventVersion: common.Int64Ptr(100),
 			EndEventID:        common.Int64Ptr(10),
 			EndEventVersion:   common.Int64Ptr(100),
-			MaximumPageSize:   common.Int32Ptr(10),
+			MaximumPageSize:   10,
 			NextPageToken:     nil,
 		})
 	s.NoError(err)
@@ -268,7 +268,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_SameStartIDAnd
 	rawVersionHistories := persistence.NewVersionHistories(versionHistory)
 	versionHistories := rawVersionHistories.ToInternalType()
 	mState := &types.GetMutableStateResponse{
-		NextEventID:        common.Int64Ptr(11),
+		NextEventID:        11,
 		CurrentBranchToken: branchToken,
 		VersionHistories:   versionHistories,
 	}
@@ -276,14 +276,14 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_SameStartIDAnd
 
 	resp, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
 		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr("workflowID"),
-				RunID:      common.StringPtr(uuid.New()),
+				WorkflowID: "workflowID",
+				RunID:      uuid.New(),
 			},
 			StartEventID:      common.Int64Ptr(10),
 			StartEventVersion: common.Int64Ptr(100),
-			MaximumPageSize:   common.Int32Ptr(1),
+			MaximumPageSize:   1,
 			NextPageToken:     nil,
 		})
 	s.Nil(resp.NextPageToken)
@@ -300,16 +300,16 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{firstItem, endItem})
 	versionHistories := persistence.NewVersionHistories(versionHistory)
 	request := &types.GetWorkflowExecutionRawHistoryV2Request{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr("workflowID"),
-			RunID:      common.StringPtr(uuid.New()),
+			WorkflowID: "workflowID",
+			RunID:      uuid.New(),
 		},
 		StartEventID:      common.Int64Ptr(inputStartEventID),
 		StartEventVersion: common.Int64Ptr(inputStartVersion),
 		EndEventID:        common.Int64Ptr(inputEndEventID),
 		EndEventVersion:   common.Int64Ptr(inputEndVersion),
-		MaximumPageSize:   common.Int32Ptr(10),
+		MaximumPageSize:   10,
 		NextPageToken:     nil,
 	}
 
@@ -333,16 +333,16 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{firstItem, targetItem})
 	versionHistories := persistence.NewVersionHistories(versionHistory)
 	request := &types.GetWorkflowExecutionRawHistoryV2Request{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr("workflowID"),
-			RunID:      common.StringPtr(uuid.New()),
+			WorkflowID: "workflowID",
+			RunID:      uuid.New(),
 		},
 		StartEventID:      nil,
 		StartEventVersion: nil,
 		EndEventID:        common.Int64Ptr(inputEndEventID),
 		EndEventVersion:   common.Int64Ptr(inputEndVersion),
-		MaximumPageSize:   common.Int32Ptr(10),
+		MaximumPageSize:   10,
 		NextPageToken:     nil,
 	}
 
@@ -366,16 +366,16 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{firstItem, targetItem})
 	versionHistories := persistence.NewVersionHistories(versionHistory)
 	request := &types.GetWorkflowExecutionRawHistoryV2Request{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr("workflowID"),
-			RunID:      common.StringPtr(uuid.New()),
+			WorkflowID: "workflowID",
+			RunID:      uuid.New(),
 		},
 		StartEventID:      common.Int64Ptr(inputStartEventID),
 		StartEventVersion: common.Int64Ptr(inputStartVersion),
 		EndEventID:        nil,
 		EndEventVersion:   nil,
-		MaximumPageSize:   common.Int32Ptr(10),
+		MaximumPageSize:   10,
 		NextPageToken:     nil,
 	}
 
@@ -404,16 +404,16 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 	_, _, err := versionHistories.AddVersionHistory(versionHistory2)
 	s.NoError(err)
 	request := &types.GetWorkflowExecutionRawHistoryV2Request{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr("workflowID"),
-			RunID:      common.StringPtr(uuid.New()),
+			WorkflowID: "workflowID",
+			RunID:      uuid.New(),
 		},
 		StartEventID:      common.Int64Ptr(9),
 		StartEventVersion: common.Int64Ptr(20),
 		EndEventID:        common.Int64Ptr(inputEndEventID),
 		EndEventVersion:   common.Int64Ptr(inputEndVersion),
-		MaximumPageSize:   common.Int32Ptr(10),
+		MaximumPageSize:   10,
 		NextPageToken:     nil,
 	}
 
@@ -563,14 +563,14 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Permission() {
 		{
 			Name: "unknown token",
 			Request: &types.AddSearchAttributeRequest{
-				SecurityToken: common.StringPtr("unknown"),
+				SecurityToken: "unknown",
 			},
 			Expected: errNoPermission,
 		},
 		{
 			Name: "correct token",
 			Request: &types.AddSearchAttributeRequest{
-				SecurityToken: common.StringPtr(common.DefaultAdminOperationToken),
+				SecurityToken: common.DefaultAdminOperationToken,
 			},
 			Expected: &types.BadRequestError{Message: "SearchAttributes are not provided"},
 		},

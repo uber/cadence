@@ -197,6 +197,10 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID,
 		return nil, err
 	}
 	e.taskLists[*taskList] = mgr
+	e.metricsClient.Scope(metrics.MatchingTaskListMgrScope).UpdateGauge(
+		metrics.TaskListManagersGauge,
+		float64(len(e.taskLists)),
+	)
 	e.taskListsLock.Unlock()
 	err = mgr.Start()
 	if err != nil {
@@ -218,6 +222,10 @@ func (e *matchingEngineImpl) removeTaskListManager(id *taskListID) {
 	e.taskListsLock.Lock()
 	defer e.taskListsLock.Unlock()
 	delete(e.taskLists, *id)
+	e.metricsClient.Scope(metrics.MatchingTaskListMgrScope).UpdateGauge(
+		metrics.TaskListManagersGauge,
+		float64(len(e.taskLists)),
+	)
 }
 
 // AddDecisionTask either delivers task directly to waiting poller or save it into task list persistence.
@@ -383,7 +391,7 @@ pollLoop:
 				PreviousStartedEventID:    mutableStateResp.PreviousStartedEventID,
 				NextEventID:               mutableStateResp.NextEventID,
 				WorkflowType:              mutableStateResp.WorkflowType,
-				StickyExecutionEnabled:    common.BoolPtr(isStickyEnabled),
+				StickyExecutionEnabled:    isStickyEnabled,
 				WorkflowExecutionTaskList: mutableStateResp.TaskList,
 				BranchToken:               mutableStateResp.CurrentBranchToken,
 			}
@@ -657,8 +665,8 @@ func (e *matchingEngineImpl) listTaskListPartitions(
 		host, _ := e.getHostInfo(partition)
 		partitionHostInfo = append(partitionHostInfo,
 			&types.TaskListPartitionMetadata{
-				Key:           common.StringPtr(partition),
-				OwnerHostName: common.StringPtr(host),
+				Key:           partition,
+				OwnerHostName: host,
 			})
 	}
 	return partitionHostInfo, nil
@@ -735,8 +743,8 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 		// for a query task
 		queryRequest := task.query.request
 		taskToken := &common.QueryTaskToken{
-			DomainID: *queryRequest.DomainUUID,
-			TaskList: *queryRequest.TaskList.Name,
+			DomainID: queryRequest.DomainUUID,
+			TaskList: queryRequest.TaskList.Name,
 			TaskID:   task.query.taskID,
 		}
 		token, _ = e.tokenSerializer.SerializeQueryTaskToken(taskToken)
@@ -758,7 +766,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 	if task.query != nil {
 		response.Query = task.query.request.QueryRequest.Query
 	}
-	response.BacklogCountHint = common.Int64Ptr(task.backlogCountHint)
+	response.BacklogCountHint = task.backlogCountHint
 	return response
 }
 
@@ -774,7 +782,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 		panic("GetActivityTaskScheduledEventAttributes is not set")
 	}
 	attributes := scheduledEvent.ActivityTaskScheduledEventAttributes
-	if attributes.ActivityID == nil {
+	if attributes.ActivityID == "" {
 		panic("ActivityTaskScheduledEventAttributes.ActivityID is not set")
 	}
 	if task.responseC == nil {
@@ -806,7 +814,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 	}
 
 	response.TaskToken, _ = e.tokenSerializer.Serialize(token)
-	response.Attempt = common.Int32Ptr(int32(token.ScheduleAttempt))
+	response.Attempt = int32(token.ScheduleAttempt)
 	response.HeartbeatDetails = historyResponse.HeartbeatDetails
 	response.WorkflowType = historyResponse.WorkflowType
 	response.WorkflowDomain = historyResponse.WorkflowDomain
@@ -819,11 +827,11 @@ func (e *matchingEngineImpl) recordDecisionTaskStarted(
 	task *internalTask,
 ) (*types.RecordDecisionTaskStartedResponse, error) {
 	request := &types.RecordDecisionTaskStartedRequest{
-		DomainUUID:        &task.event.DomainID,
+		DomainUUID:        task.event.DomainID,
 		WorkflowExecution: task.workflowExecution(),
-		ScheduleID:        &task.event.ScheduleID,
-		TaskID:            &task.event.TaskID,
-		RequestID:         common.StringPtr(uuid.New()),
+		ScheduleID:        task.event.ScheduleID,
+		TaskID:            task.event.TaskID,
+		RequestID:         uuid.New(),
 		PollRequest:       pollReq,
 	}
 	var resp *types.RecordDecisionTaskStartedResponse
@@ -848,11 +856,11 @@ func (e *matchingEngineImpl) recordActivityTaskStarted(
 	task *internalTask,
 ) (*types.RecordActivityTaskStartedResponse, error) {
 	request := &types.RecordActivityTaskStartedRequest{
-		DomainUUID:        &task.event.DomainID,
+		DomainUUID:        task.event.DomainID,
 		WorkflowExecution: task.workflowExecution(),
-		ScheduleID:        &task.event.ScheduleID,
-		TaskID:            &task.event.TaskID,
-		RequestID:         common.StringPtr(uuid.New()),
+		ScheduleID:        task.event.ScheduleID,
+		TaskID:            task.event.TaskID,
+		RequestID:         uuid.New(),
 		PollRequest:       pollReq,
 	}
 	var resp *types.RecordActivityTaskStartedResponse

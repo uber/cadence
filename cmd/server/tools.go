@@ -28,10 +28,21 @@ import (
 	// yarpc plugin for thriftrw code gen
 	_ "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc"
 
+	// protobuf stuff
+	_ "github.com/gogo/protobuf/protoc-gen-gofast"
+	_ "go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go"
+
 	// goimports
 	_ "golang.org/x/tools/cmd/goimports"
 	// mockgen for generating mocks
 	_ "github.com/golang/mock/mockgen"
 	// enumer for generating utility methods for const enums
 	_ "github.com/dmarkham/enumer"
+	// replaces golint - configurable and much faster
+	_ "github.com/mgechev/revive"
+	// coverage reporting
+	_ "github.com/mattn/goveralls"
+
+	// health check for docker containers
+	_ "github.com/uber/tcheck"
 )

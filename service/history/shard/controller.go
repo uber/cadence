@@ -278,7 +278,7 @@ func (c *controller) getOrCreateHistoryShardItem(shardID int) (*historyShardsIte
 	if c.isShuttingDown() || atomic.LoadInt32(&c.status) == common.DaemonStatusStopped {
 		return nil, fmt.Errorf("controller for host '%v' shutting down", c.GetHostInfo().Identity())
 	}
-	info, err := c.GetHistoryServiceResolver().Lookup(string(shardID))
+	info, err := c.GetHistoryServiceResolver().Lookup(string(rune(shardID)))
 	if err != nil {
 		return nil, err
 	}
@@ -378,7 +378,7 @@ func (c *controller) acquireShards() {
 				if c.isShuttingDown() {
 					return
 				}
-				info, err := c.GetHistoryServiceResolver().Lookup(string(shardID))
+				info, err := c.GetHistoryServiceResolver().Lookup(string(rune(shardID)))
 				if err != nil {
 					c.logger.Error("Error looking up host for shardID", tag.Error(err), tag.OperationFailed, tag.ShardID(shardID))
 				} else {
@@ -520,8 +520,8 @@ func CreateShardOwnershipLostError(
 ) *types.ShardOwnershipLostError {
 
 	shardLostErr := &types.ShardOwnershipLostError{}
-	shardLostErr.Message = common.StringPtr(fmt.Sprintf("Shard is not owned by host: %v", currentHost))
-	shardLostErr.Owner = common.StringPtr(ownerHost)
+	shardLostErr.Message = fmt.Sprintf("Shard is not owned by host: %v", currentHost)
+	shardLostErr.Owner = ownerHost
 
 	return shardLostErr
 }

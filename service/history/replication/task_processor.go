@@ -274,9 +274,9 @@ func (p *taskProcessorImpl) sendFetchMessageRequest() <-chan *types.ReplicationM
 	// TODO: when we support prefetching, LastRetrievedMessageID can be different than LastProcessedMessageID
 	p.requestChan <- &request{
 		token: &types.ReplicationToken{
-			ShardID:                common.Int32Ptr(int32(p.shard.GetShardID())),
-			LastRetrievedMessageID: common.Int64Ptr(p.lastRetrievedMessageID),
-			LastProcessedMessageID: common.Int64Ptr(p.lastProcessedMessageID),
+			ShardID:                int32(p.shard.GetShardID()),
+			LastRetrievedMessageID: p.lastRetrievedMessageID,
+			LastProcessedMessageID: p.lastProcessedMessageID,
 		},
 		respChan: respChan,
 	}
@@ -362,8 +362,8 @@ func (p *taskProcessorImpl) handleSyncShardStatus(
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
 	return p.historyEngine.SyncShardStatus(ctx, &types.SyncShardStatusRequest{
-		SourceCluster: common.StringPtr(p.sourceCluster),
-		ShardID:       common.Int64Ptr(int64(p.shard.GetShardID())),
+		SourceCluster: p.sourceCluster,
+		ShardID:       int64(p.shard.GetShardID()),
 		Timestamp:     status.Timestamp,
 	})
 }

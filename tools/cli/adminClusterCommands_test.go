@@ -80,21 +80,21 @@ func TestAdminFailover(t *testing.T) {
 		Domains: []*types.DescribeDomainResponse{
 			{
 				DomainInfo: &types.DomainInfo{
-					Name:        common.StringPtr("test-domain"),
-					Description: common.StringPtr("a test domain"),
-					OwnerEmail:  common.StringPtr("test@uber.com"),
+					Name:        "test-domain",
+					Description: "a test domain",
+					OwnerEmail:  "test@uber.com",
 					Data: map[string]string{
 						common.DomainDataKeyForManagedFailover: "true",
 					},
 				},
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("active"),
+					ActiveClusterName: "active",
 					Clusters: []*types.ClusterReplicationConfiguration{
 						{
-							ClusterName: common.StringPtr("active"),
+							ClusterName: "active",
 						},
 						{
-							ClusterName: common.StringPtr("standby"),
+							ClusterName: "standby",
 						},
 					},
 				},

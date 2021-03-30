@@ -355,24 +355,24 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 
 	convertedExecution := &types.WorkflowExecutionInfo{
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(execution.WorkflowID),
-			RunID:      common.StringPtr(execution.RunID),
+			WorkflowID: execution.WorkflowID,
+			RunID:      execution.RunID,
 		},
 		Type: &types.WorkflowType{
-			Name: common.StringPtr(execution.TypeName),
+			Name: execution.TypeName,
 		},
 		StartTime:        common.Int64Ptr(execution.StartTime.UnixNano()),
 		ExecutionTime:    common.Int64Ptr(execution.ExecutionTime.UnixNano()),
 		Memo:             memo,
 		SearchAttributes: searchAttributes,
-		TaskList:         common.StringPtr(execution.TaskList),
+		TaskList:         execution.TaskList,
 	}
 
 	// for close records
 	if execution.Status != nil {
 		convertedExecution.CloseTime = common.Int64Ptr(execution.CloseTime.UnixNano())
 		convertedExecution.CloseStatus = execution.Status
-		convertedExecution.HistoryLength = common.Int64Ptr(execution.HistoryLength)
+		convertedExecution.HistoryLength = execution.HistoryLength
 	}
 
 	return convertedExecution

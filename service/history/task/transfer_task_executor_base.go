@@ -93,14 +93,14 @@ func (t *transferTaskExecutorBase) pushActivity(
 	}
 
 	return t.matchingClient.AddActivityTask(ctx, &types.AddActivityTaskRequest{
-		DomainUUID:       common.StringPtr(task.TargetDomainID),
-		SourceDomainUUID: common.StringPtr(task.DomainID),
+		DomainUUID:       task.TargetDomainID,
+		SourceDomainUUID: task.DomainID,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(task.WorkflowID),
-			RunID:      common.StringPtr(task.RunID),
+			WorkflowID: task.WorkflowID,
+			RunID:      task.RunID,
 		},
-		TaskList:                      &types.TaskList{Name: &task.TaskList},
-		ScheduleID:                    &task.ScheduleID,
+		TaskList:                      &types.TaskList{Name: task.TaskList},
+		ScheduleID:                    task.ScheduleID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(activityScheduleToStartTimeout),
 	})
 }
@@ -120,13 +120,13 @@ func (t *transferTaskExecutorBase) pushDecision(
 	}
 
 	return t.matchingClient.AddDecisionTask(ctx, &types.AddDecisionTaskRequest{
-		DomainUUID: common.StringPtr(task.DomainID),
+		DomainUUID: task.DomainID,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(task.WorkflowID),
-			RunID:      common.StringPtr(task.RunID),
+			WorkflowID: task.WorkflowID,
+			RunID:      task.RunID,
 		},
 		TaskList:                      tasklist,
-		ScheduleID:                    common.Int64Ptr(task.ScheduleID),
+		ScheduleID:                    task.ScheduleID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(decisionScheduleToStartTimeout),
 	})
 }
@@ -165,8 +165,8 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		DomainUUID: domainID,
 		Domain:     domain,
 		Execution: types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		WorkflowTypeName:   workflowTypeName,
 		StartTimestamp:     startTimeUnixNano,
@@ -196,22 +196,20 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 	searchAttributes map[string][]byte,
 ) error {
 
-	domain := defaultDomainName
-	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
+	domain, err := t.shard.GetDomainCache().GetDomainName(domainID)
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			return err
 		}
-	} else {
-		domain = domainEntry.GetInfo().Name
+		domain = defaultDomainName
 	}
 
 	request := &persistence.UpsertWorkflowExecutionRequest{
 		DomainUUID: domainID,
 		Domain:     domain,
 		Execution: types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		WorkflowTypeName:   workflowTypeName,
 		StartTimestamp:     startTimeUnixNano,
@@ -274,8 +272,8 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 			DomainUUID: domainID,
 			Domain:     domain,
 			Execution: types.WorkflowExecution{
-				WorkflowID: common.StringPtr(workflowID),
-				RunID:      common.StringPtr(runID),
+				WorkflowID: workflowID,
+				RunID:      runID,
 			},
 			WorkflowTypeName:   workflowTypeName,
 			StartTimestamp:     startTimeUnixNano,

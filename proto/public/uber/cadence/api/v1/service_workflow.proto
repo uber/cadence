@@ -22,13 +22,12 @@ syntax = "proto3";
 
 package uber.cadence.api.v1;
 
-option go_package = "apiv1";
+option go_package = "github.com/uber/cadence/.gen/proto/api/v1;apiv1";
 option java_multiple_files = true;
 option java_outer_classname = "ApiProto";
 option java_package = "com.uber.cadence.api.v1";
 
 import "google/protobuf/duration.proto";
-import "dependencies/gogoproto.proto";
 import "uber/cadence/api/v1/common.proto";
 import "uber/cadence/api/v1/history.proto";
 import "uber/cadence/api/v1/query.proto";
@@ -97,8 +96,8 @@ message StartWorkflowExecutionRequest {
   WorkflowType workflow_type = 3;
   TaskList task_list = 4;
   Payload input = 5;
-  google.protobuf.Duration execution_start_to_close_timeout = 6 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration task_start_to_close_timeout = 7 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration execution_start_to_close_timeout = 6;
+  google.protobuf.Duration task_start_to_close_timeout = 7;
   string identity = 8;
   string request_id = 9;
   WorkflowIdReusePolicy workflow_id_reuse_policy = 10;
@@ -143,6 +142,7 @@ message ResetWorkflowExecutionRequest {
   string reason = 3;
   int64 decision_finish_event_id = 4;
   string request_id = 5;
+  bool skip_signal_reapply = 6;
 }
 
 message ResetWorkflowExecutionResponse {

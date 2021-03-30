@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,17 +26,21 @@
 package historyservicefx
 
 import (
-	historyserviceclient "github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	fx "go.uber.org/fx"
 	yarpc "go.uber.org/yarpc"
+	transport "go.uber.org/yarpc/api/transport"
+	restriction "go.uber.org/yarpc/api/x/restriction"
 	thrift "go.uber.org/yarpc/encoding/thrift"
+
+	historyserviceclient "github.com/uber/cadence/.gen/go/history/historyserviceclient"
 )
 
 // Params defines the dependencies for the HistoryService client.
 type Params struct {
 	fx.In
 
-	Provider yarpc.ClientConfig
+	Provider    yarpc.ClientConfig
+	Restriction restriction.Checker `optional:"true"`
 }
 
 // Result defines the output of the HistoryService client module. It provides a
@@ -60,7 +64,13 @@ type Result struct {
 // 	)
 func Client(name string, opts ...thrift.ClientOption) interface{} {
 	return func(p Params) Result {
-		client := historyserviceclient.New(p.Provider.ClientConfig(name), opts...)
+		cc := p.Provider.ClientConfig(name)
+		if namer, ok := cc.GetUnaryOutbound().(transport.Namer); ok && p.Restriction != nil {
+			if err := p.Restriction.Check(thrift.Encoding, namer.TransportName()); err != nil {
+				panic(err.Error())
+			}
+		}
+		client := historyserviceclient.New(cc, opts...)
 		return Result{Client: client}
 	}
 }

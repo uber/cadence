@@ -56,7 +56,7 @@ type (
 		// PublicClient is config for connecting to cadence frontend
 		PublicClient PublicClient `yaml:"publicClient"`
 		// DynamicConfigClient is the config for setting up the file based dynamic config client
-		// Filepath should be relative to the root directory
+		// Filepath would be relative to the root directory when the path wasn't absolute.
 		DynamicConfigClient dynamicconfig.FileBasedClientConfig `yaml:"dynamicConfigClient"`
 		// DomainDefaults is the default config for every domain
 		DomainDefaults DomainDefaults `yaml:"domainDefaults"`
@@ -429,10 +429,7 @@ func (c *Config) ValidateAndFillDefaults() error {
 	if err := c.validate(); err != nil {
 		return err
 	}
-	if err := c.fillDefaults(); err != nil {
-		return err
-	}
-	return nil
+	return c.fillDefaults()
 }
 
 func (c *Config) validate() error {

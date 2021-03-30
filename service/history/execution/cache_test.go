@@ -30,7 +30,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
@@ -89,8 +88,8 @@ func (s *historyCacheSuite) TestHistoryCacheBasic() {
 
 	domainID := "test_domain_id"
 	execution1 := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	mockMS1 := NewMockMutableState(s.controller)
 	context, release, err := s.cache.GetOrCreateWorkflowExecutionForBackground(domainID, execution1)
@@ -103,8 +102,8 @@ func (s *historyCacheSuite) TestHistoryCacheBasic() {
 	release(nil)
 
 	execution2 := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	context, release, err = s.cache.GetOrCreateWorkflowExecutionForBackground(domainID, execution2)
 	s.Nil(err)
@@ -117,16 +116,16 @@ func (s *historyCacheSuite) TestHistoryCachePinning() {
 	domainID := "test_domain_id"
 	s.cache = NewCache(s.mockShard)
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wf-cache-test-pinning"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "wf-cache-test-pinning",
+		RunID:      uuid.New(),
 	}
 
 	context, release, err := s.cache.GetOrCreateWorkflowExecutionForBackground(domainID, we)
 	s.Nil(err)
 
 	we2 := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wf-cache-test-pinning"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "wf-cache-test-pinning",
+		RunID:      uuid.New(),
 	}
 
 	// Cache is full because context is pinned, should get an error now
@@ -152,8 +151,8 @@ func (s *historyCacheSuite) TestHistoryCacheClear() {
 	domainID := "test_domain_id"
 	s.cache = NewCache(s.mockShard)
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wf-cache-test-clear"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "wf-cache-test-clear",
+		RunID:      uuid.New(),
 	}
 
 	context, release, err := s.cache.GetOrCreateWorkflowExecutionForBackground(domainID, we)
@@ -183,8 +182,8 @@ func (s *historyCacheSuite) TestHistoryCacheConcurrentAccess() {
 	domainID := "test_domain_id"
 	s.cache = NewCache(s.mockShard)
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wf-cache-test-pinning"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "wf-cache-test-pinning",
+		RunID:      uuid.New(),
 	}
 
 	coroutineCount := 50

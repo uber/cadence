@@ -41,7 +41,7 @@ const (
  WHERE shard_id = $1 AND domain_id = $2 AND workflow_id = $3 AND run_id = $4`
 
 	listExecutionQuery = `SELECT ` + executionsColumns + ` FROM executions
- WHERE shard_id = $1 AND workflow_id > $2 AND run_id > $3 ORDER BY workflow_id, run_id LIMIT $4`
+ WHERE shard_id = $1 AND workflow_id > $2 ORDER BY workflow_id LIMIT $3`
 
 	deleteExecutionQuery = `DELETE FROM executions 
  WHERE shard_id = $1 AND domain_id = $2 AND workflow_id = $3 AND run_id = $4`
@@ -171,11 +171,12 @@ func (pdb *db) UpdateExecutions(ctx context.Context, row *sqlplugin.ExecutionsRo
 }
 
 // SelectFromExecutions reads a single row from executions table
+// The list execution query result is order by workflow ID only. It may returns duplicate record with pagination.
 func (pdb *db) SelectFromExecutions(ctx context.Context, filter *sqlplugin.ExecutionsFilter) ([]sqlplugin.ExecutionsRow, error) {
 	var rows []sqlplugin.ExecutionsRow
 	var err error
 	if len(filter.DomainID) == 0 && filter.Size > 0 {
-		err = pdb.conn.SelectContext(ctx, &rows, listExecutionQuery, filter.ShardID, filter.WorkflowID, filter.RunID, filter.Size)
+		err = pdb.conn.SelectContext(ctx, &rows, listExecutionQuery, filter.ShardID, filter.WorkflowID, filter.Size)
 		if err != nil {
 			return nil, err
 		}

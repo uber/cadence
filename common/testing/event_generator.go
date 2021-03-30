@@ -415,7 +415,7 @@ func (c HistoryEventEdge) GetCondition() func(...interface{}) bool {
 }
 
 // SetAction sets an action to perform when the end vertex hits
-func (c HistoryEventEdge) SetAction(action func()) {
+func (c *HistoryEventEdge) SetAction(action func()) {
 
 	c.action = action
 }

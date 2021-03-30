@@ -23,7 +23,6 @@ package domain
 import (
 	"context"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
@@ -89,30 +88,30 @@ func (domainReplicator *domainReplicatorImpl) HandleTransmissionTask(
 	taskType := types.ReplicationTaskTypeDomain
 	task := &types.DomainTaskAttributes{
 		DomainOperation: &domainOperation,
-		ID:              common.StringPtr(info.ID),
+		ID:              info.ID,
 		Info: &types.DomainInfo{
-			Name:        common.StringPtr(info.Name),
+			Name:        info.Name,
 			Status:      status,
-			Description: common.StringPtr(info.Description),
-			OwnerEmail:  common.StringPtr(info.OwnerEmail),
+			Description: info.Description,
+			OwnerEmail:  info.OwnerEmail,
 			Data:        info.Data,
 		},
 		Config: &types.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(config.Retention),
-			EmitMetric:                             common.BoolPtr(config.EmitMetric),
+			WorkflowExecutionRetentionPeriodInDays: config.Retention,
+			EmitMetric:                             config.EmitMetric,
 			HistoryArchivalStatus:                  config.HistoryArchivalStatus.Ptr(),
-			HistoryArchivalURI:                     common.StringPtr(config.HistoryArchivalURI),
+			HistoryArchivalURI:                     config.HistoryArchivalURI,
 			VisibilityArchivalStatus:               config.VisibilityArchivalStatus.Ptr(),
-			VisibilityArchivalURI:                  common.StringPtr(config.VisibilityArchivalURI),
+			VisibilityArchivalURI:                  config.VisibilityArchivalURI,
 			BadBinaries:                            &config.BadBinaries,
 		},
 		ReplicationConfig: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(replicationConfig.ActiveClusterName),
+			ActiveClusterName: replicationConfig.ActiveClusterName,
 			Clusters:          domainReplicator.convertClusterReplicationConfigToThrift(replicationConfig.Clusters),
 		},
-		ConfigVersion:           common.Int64Ptr(configVersion),
-		FailoverVersion:         common.Int64Ptr(failoverVersion),
-		PreviousFailoverVersion: common.Int64Ptr(previousFailoverVersion),
+		ConfigVersion:           configVersion,
+		FailoverVersion:         failoverVersion,
+		PreviousFailoverVersion: previousFailoverVersion,
 	}
 
 	return domainReplicator.replicationMessageSink.Publish(
@@ -128,8 +127,7 @@ func (domainReplicator *domainReplicatorImpl) convertClusterReplicationConfigToT
 ) []*types.ClusterReplicationConfiguration {
 	output := []*types.ClusterReplicationConfiguration{}
 	for _, cluster := range input {
-		clusterName := common.StringPtr(cluster.ClusterName)
-		output = append(output, &types.ClusterReplicationConfiguration{ClusterName: clusterName})
+		output = append(output, &types.ClusterReplicationConfiguration{ClusterName: cluster.ClusterName})
 	}
 	return output
 }

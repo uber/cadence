@@ -31,7 +31,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
@@ -61,7 +60,7 @@ func (s *eventReapplicationSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 
-	logger := loggerimpl.NewDevelopmentForTest(s.Suite)
+	logger := loggerimpl.NewLoggerForTest(s.Suite)
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.reapplication = NewEventsReapplier(
 		metricsClient,
@@ -79,11 +78,11 @@ func (s *eventReapplicationSuite) TestReapplyEvents_AppliedEvent() {
 		DomainID: uuid.New(),
 	}
 	event := &types.HistoryEvent{
-		EventID:   common.Int64Ptr(1),
+		EventID:   1,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-			Identity:   common.StringPtr("test"),
-			SignalName: common.StringPtr("signal"),
+			Identity:   "test",
+			SignalName: "signal",
 			Input:      []byte{},
 		},
 	}
@@ -113,11 +112,11 @@ func (s *eventReapplicationSuite) TestReapplyEvents_AppliedEvent() {
 func (s *eventReapplicationSuite) TestReapplyEvents_Noop() {
 	runID := uuid.New()
 	event := &types.HistoryEvent{
-		EventID:   common.Int64Ptr(1),
+		EventID:   1,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-			Identity:   common.StringPtr("test"),
-			SignalName: common.StringPtr("signal"),
+			Identity:   "test",
+			SignalName: "signal",
 			Input:      []byte{},
 		},
 	}
@@ -140,20 +139,20 @@ func (s *eventReapplicationSuite) TestReapplyEvents_PartialAppliedEvent() {
 		DomainID: uuid.New(),
 	}
 	event1 := &types.HistoryEvent{
-		EventID:   common.Int64Ptr(1),
+		EventID:   1,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-			Identity:   common.StringPtr("test"),
-			SignalName: common.StringPtr("signal"),
+			Identity:   "test",
+			SignalName: "signal",
 			Input:      []byte{},
 		},
 	}
 	event2 := &types.HistoryEvent{
-		EventID:   common.Int64Ptr(2),
+		EventID:   2,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-			Identity:   common.StringPtr("test"),
-			SignalName: common.StringPtr("signal"),
+			Identity:   "test",
+			SignalName: "signal",
 			Input:      []byte{},
 		},
 	}
@@ -189,11 +188,11 @@ func (s *eventReapplicationSuite) TestReapplyEvents_Error() {
 		DomainID: uuid.New(),
 	}
 	event := &types.HistoryEvent{
-		EventID:   common.Int64Ptr(1),
+		EventID:   1,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-			Identity:   common.StringPtr("test"),
-			SignalName: common.StringPtr("signal"),
+			Identity:   "test",
+			SignalName: "signal",
 			Input:      []byte{},
 		},
 	}

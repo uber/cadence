@@ -40,8 +40,8 @@ import (
 )
 
 const (
-	// CurrentExecutionsScannerWFID is the current execution scanner workflow ID
-	CurrentExecutionsScannerWFID = "cadence-sys-current-executions-scanner"
+	// currentExecutionsScannerWFID is the current execution scanner workflow ID
+	currentExecutionsScannerWFID = "cadence-sys-current-executions-scanner"
 	// CurrentExecutionsScannerWFTypeName is the current execution scanner workflow type
 	CurrentExecutionsScannerWFTypeName = "cadence-sys-current-executions-scanner-workflow"
 	// CurrentExecutionsScannerTaskListName is the current execution scanner workflow tasklist
@@ -49,6 +49,7 @@ const (
 
 	// CurrentExecutionsFixerWFTypeName is the current execution fixer workflow ID
 	CurrentExecutionsFixerWFTypeName = "cadence-sys-current-executions-fixer-workflow"
+	currentExecutionsFixerWFID       = "cadence-sys-current-executions-fixer"
 	// CurrentExecutionsFixerTaskListName is the current execution fixer workflow tasklist
 	CurrentExecutionsFixerTaskListName = "cadence-sys-current-executions-fixer-tasklist-0"
 )
@@ -82,7 +83,6 @@ func CurrentExecutionManager(
 	ctx context.Context,
 	pr persistence.Retryer,
 	params shardscanner.ScanShardActivityParams,
-	_ shardscanner.ScannerConfig,
 ) invariant.Manager {
 	var ivs []invariant.Invariant
 	collections := ParseCollections(params.ScannerConfig)
@@ -144,10 +144,16 @@ func CurrentExecutionScannerConfig(dc *dynamicconfig.Collection) *shardscanner.S
 		},
 		ScannerHooks: CurrentExecutionsHooks,
 		FixerHooks:   CurrentExecutionFixerHooks,
-		FixerTLName:  CurrentExecutionsFixerTaskListName,
 		StartWorkflowOptions: cclient.StartWorkflowOptions{
-			ID:                           CurrentExecutionsScannerWFID,
+			ID:                           currentExecutionsScannerWFID,
 			TaskList:                     CurrentExecutionsScannerTaskListName,
+			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
+			WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
+			CronSchedule:                 "* * * * *",
+		},
+		StartFixerOptions: cclient.StartWorkflowOptions{
+			ID:                           currentExecutionsFixerWFID,
+			TaskList:                     CurrentExecutionsFixerTaskListName,
 			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
 			WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
 			CronSchedule:                 "* * * * *",
@@ -160,7 +166,6 @@ func CurrentExecutionIterator(
 	ctx context.Context,
 	pr persistence.Retryer,
 	params shardscanner.ScanShardActivityParams,
-	_ shardscanner.ScannerConfig,
 ) pagination.Iterator {
 	return CurrentExecutionType.ToIterator()(ctx, pr, params.PageSize)
 }
@@ -171,7 +176,6 @@ func CurrentExecutionFixerIterator(
 	client blobstore.Client,
 	keys store.Keys,
 	_ shardscanner.FixShardActivityParams,
-	_ shardscanner.ScannerConfig,
 ) store.ScanOutputIterator {
 	return store.NewBlobstoreIterator(ctx, client, keys, CurrentExecutionType.ToBlobstoreEntity())
 }

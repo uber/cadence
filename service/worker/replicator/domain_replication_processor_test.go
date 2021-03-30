@@ -32,7 +32,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/metrics"
@@ -92,7 +91,7 @@ func (s *domainReplicationSuite) TestHandleDomainReplicationTask() {
 	task := &types.ReplicationTask{
 		TaskType: types.ReplicationTaskTypeDomain.Ptr(),
 		DomainTaskAttributes: &types.DomainTaskAttributes{
-			ID: common.StringPtr(domainID),
+			ID: domainID,
 		},
 	}
 
@@ -116,7 +115,7 @@ func (s *domainReplicationSuite) TestPutDomainReplicationTaskToDLQ() {
 	s.Error(err)
 
 	task.DomainTaskAttributes = &types.DomainTaskAttributes{
-		ID: common.StringPtr(domainID),
+		ID: domainID,
 	}
 
 	s.domainReplicationQueue.EXPECT().PublishToDLQ(gomock.Any(), task).Return(nil).Times(1)
@@ -138,17 +137,17 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks() {
 				{
 					TaskType: types.ReplicationTaskTypeDomain.Ptr(),
 					DomainTaskAttributes: &types.DomainTaskAttributes{
-						ID: common.StringPtr(domainID1),
+						ID: domainID1,
 					},
 				},
 				{
 					TaskType: types.ReplicationTaskTypeDomain.Ptr(),
 					DomainTaskAttributes: &types.DomainTaskAttributes{
-						ID: common.StringPtr(domainID2),
+						ID: domainID2,
 					},
 				},
 			},
-			LastRetrievedMessageID: common.Int64Ptr(lastMessageID),
+			LastRetrievedMessageID: lastMessageID,
 		},
 	}
 	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(resp, nil)
@@ -178,17 +177,17 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks_FailedOnExecuti
 				{
 					TaskType: types.ReplicationTaskTypeDomain.Ptr(),
 					DomainTaskAttributes: &types.DomainTaskAttributes{
-						ID: common.StringPtr(domainID1),
+						ID: domainID1,
 					},
 				},
 				{
 					TaskType: types.ReplicationTaskTypeDomain.Ptr(),
 					DomainTaskAttributes: &types.DomainTaskAttributes{
-						ID: common.StringPtr(domainID2),
+						ID: domainID2,
 					},
 				},
 			},
-			LastRetrievedMessageID: common.Int64Ptr(lastMessageID),
+			LastRetrievedMessageID: lastMessageID,
 		},
 	}
 	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(resp, nil)
@@ -210,17 +209,17 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks_FailedOnDLQ() {
 				{
 					TaskType: types.ReplicationTaskTypeDomain.Ptr(),
 					DomainTaskAttributes: &types.DomainTaskAttributes{
-						ID: common.StringPtr(domainID1),
+						ID: domainID1,
 					},
 				},
 				{
 					TaskType: types.ReplicationTaskTypeDomain.Ptr(),
 					DomainTaskAttributes: &types.DomainTaskAttributes{
-						ID: common.StringPtr(domainID2),
+						ID: domainID2,
 					},
 				},
 			},
-			LastRetrievedMessageID: common.Int64Ptr(lastMessageID),
+			LastRetrievedMessageID: lastMessageID,
 		},
 	}
 	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(resp, nil)

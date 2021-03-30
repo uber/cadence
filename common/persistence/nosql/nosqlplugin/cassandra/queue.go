@@ -188,7 +188,11 @@ func (db *cdb) InsertQueueMetadata(
 ) error {
 	clusterAckLevels := map[string]int64{}
 	query := db.session.Query(templateInsertQueueMetadataQuery, queueType, clusterAckLevels, version).WithContext(ctx)
-	_, err := query.ScanCAS()
+
+	// NOTE: Must pass nils to be compatible with ScyllaDB's LWT behavior
+	// "Scylla always returns the old version of the row, regardless of whether the condition is true or not."
+	// See also https://docs.scylladb.com/kb/lwt-differences/
+	_, err := query.ScanCAS(nil, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -209,7 +213,11 @@ func (db *cdb) UpdateQueueMetadataCas(
 		row.QueueType,
 		row.Version-1,
 	).WithContext(ctx)
-	applied, err := query.ScanCAS()
+
+	// NOTE: Must pass nils to be compatible with ScyllaDB's LWT behavior
+	// "Scylla always returns the old version of the row, regardless of whether the condition is true or not."
+	// See also https://docs.scylladb.com/kb/lwt-differences/
+	applied, err := query.ScanCAS(nil, nil, nil, nil)
 	if err != nil {
 		return err
 	}

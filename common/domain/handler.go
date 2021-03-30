@@ -86,6 +86,7 @@ type (
 	// Config is the domain config for domain handler
 	Config struct {
 		MinRetentionDays  dynamicconfig.IntPropertyFn
+		MaxRetentionDays  dynamicconfig.IntPropertyFn
 		MaxBadBinaryCount dynamicconfig.IntPropertyFnWithDomainFilter
 		FailoverCoolDown  dynamicconfig.DurationPropertyFnWithDomainFilter
 	}
@@ -124,16 +125,11 @@ func (d *handlerImpl) RegisterDomain(
 ) error {
 
 	if !d.clusterMetadata.IsGlobalDomainEnabled() {
-		if registerRequest.GetIsGlobalDomain() {
+		if registerRequest.IsGlobalDomain {
 			return &types.BadRequestError{Message: "Cannot register global domain when not enabled"}
 		}
-
-		registerRequest.IsGlobalDomain = common.BoolPtr(false)
 	} else {
 		// cluster global domain enabled
-		if registerRequest.IsGlobalDomain == nil {
-			return &types.BadRequestError{Message: "Must specify whether domain is a global domain"}
-		}
 		if !d.clusterMetadata.IsMasterCluster() && registerRequest.GetIsGlobalDomain() {
 			return errNotMasterCluster
 		}
@@ -154,7 +150,7 @@ func (d *handlerImpl) RegisterDomain(
 
 	activeClusterName := d.clusterMetadata.GetCurrentClusterName()
 	// input validation on cluster names
-	if registerRequest.ActiveClusterName != nil {
+	if registerRequest.ActiveClusterName != "" {
 		activeClusterName = registerRequest.GetActiveClusterName()
 	}
 	clusters := []*persistence.ClusterReplicationConfig{}
@@ -312,8 +308,8 @@ func (d *handlerImpl) ListDomains(
 	domains := []*types.DescribeDomainResponse{}
 	for _, domain := range resp.Domains {
 		desc := &types.DescribeDomainResponse{
-			IsGlobalDomain:  common.BoolPtr(domain.IsGlobalDomain),
-			FailoverVersion: common.Int64Ptr(domain.FailoverVersion),
+			IsGlobalDomain:  domain.IsGlobalDomain,
+			FailoverVersion: domain.FailoverVersion,
 		}
 		desc.DomainInfo, desc.Configuration, desc.ReplicationConfiguration = d.createResponse(domain.Info, domain.Config, domain.ReplicationConfig)
 		domains = append(domains, desc)
@@ -344,8 +340,8 @@ func (d *handlerImpl) DescribeDomain(
 	}
 
 	response := &types.DescribeDomainResponse{
-		IsGlobalDomain:  common.BoolPtr(resp.IsGlobalDomain),
-		FailoverVersion: common.Int64Ptr(resp.FailoverVersion),
+		IsGlobalDomain:  resp.IsGlobalDomain,
+		FailoverVersion: resp.FailoverVersion,
 	}
 	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = d.createResponse(resp.Info, resp.Config, resp.ReplicationConfig)
 	return response, nil
@@ -395,7 +391,7 @@ func (d *handlerImpl) UpdateDomain(
 	// Update history archival state
 	historyArchivalState, historyArchivalConfigChanged, err := d.getHistoryArchivalState(
 		config,
-		updateRequest.Configuration,
+		updateRequest,
 	)
 	if err != nil {
 		return nil, err
@@ -408,7 +404,7 @@ func (d *handlerImpl) UpdateDomain(
 	// Update visibility archival state
 	visibilityArchivalState, visibilityArchivalConfigChanged, err := d.getVisibilityArchivalState(
 		config,
-		updateRequest.Configuration,
+		updateRequest,
 	)
 	if err != nil {
 		return nil, err
@@ -420,14 +416,14 @@ func (d *handlerImpl) UpdateDomain(
 
 	// Update domain info
 	info, domainInfoChanged := d.updateDomainInfo(
-		updateRequest.UpdatedInfo,
+		updateRequest,
 		info,
 	)
 	// Update domain config
 	config, domainConfigChanged, err := d.updateDomainConfiguration(
 		updateRequest.GetName(),
 		config,
-		updateRequest.Configuration,
+		updateRequest,
 	)
 	if err != nil {
 		return nil, err
@@ -445,7 +441,7 @@ func (d *handlerImpl) UpdateDomain(
 	// Update replication config
 	replicationConfig, replicationConfigChanged, activeClusterChanged, err := d.updateReplicationConfig(
 		replicationConfig,
-		updateRequest.ReplicationConfiguration,
+		updateRequest,
 	)
 	if err != nil {
 		return nil, err
@@ -560,8 +556,8 @@ func (d *handlerImpl) UpdateDomain(
 	}
 
 	response := &types.UpdateDomainResponse{
-		IsGlobalDomain:  common.BoolPtr(isGlobalDomain),
-		FailoverVersion: common.Int64Ptr(failoverVersion),
+		IsGlobalDomain:  isGlobalDomain,
+		FailoverVersion: failoverVersion,
 	}
 	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = d.createResponse(info, config, replicationConfig)
 
@@ -578,12 +574,6 @@ func (d *handlerImpl) DeprecateDomain(
 	deprecateRequest *types.DeprecateDomainRequest,
 ) error {
 
-	clusterMetadata := d.clusterMetadata
-	// TODO remove the IsGlobalDomainEnabled check once cross DC is public
-	if clusterMetadata.IsGlobalDomainEnabled() && !clusterMetadata.IsMasterCluster() {
-		return errNotMasterCluster
-	}
-
 	// must get the metadata (notificationVersion) first
 	// this version can be regarded as the lock on the v2 domain table
 	// and since we do not know which table will return the domain afterwards
@@ -598,8 +588,13 @@ func (d *handlerImpl) DeprecateDomain(
 		return err
 	}
 
+	isGlobalDomain := getResponse.IsGlobalDomain
+	if isGlobalDomain && !d.clusterMetadata.IsMasterCluster() {
+		return errNotMasterCluster
+	}
 	getResponse.ConfigVersion = getResponse.ConfigVersion + 1
 	getResponse.Info.Status = persistence.DomainStatusDeprecated
+
 	updateReq := &persistence.UpdateDomainRequest{
 		Info:                        getResponse.Info,
 		Config:                      getResponse.Config,
@@ -607,12 +602,36 @@ func (d *handlerImpl) DeprecateDomain(
 		ConfigVersion:               getResponse.ConfigVersion,
 		FailoverVersion:             getResponse.FailoverVersion,
 		FailoverNotificationVersion: getResponse.FailoverNotificationVersion,
+		FailoverEndTime:             getResponse.FailoverEndTime,
+		PreviousFailoverVersion:     getResponse.PreviousFailoverVersion,
+		LastUpdatedTime:             d.timeSource.Now().UnixNano(),
 		NotificationVersion:         notificationVersion,
 	}
 	err = d.metadataMgr.UpdateDomain(ctx, updateReq)
 	if err != nil {
 		return err
 	}
+
+	if isGlobalDomain {
+		if err := d.domainReplicator.HandleTransmissionTask(
+			ctx,
+			types.DomainOperationUpdate,
+			getResponse.Info,
+			getResponse.Config,
+			getResponse.ReplicationConfig,
+			getResponse.ConfigVersion,
+			getResponse.FailoverVersion,
+			getResponse.PreviousFailoverVersion,
+			isGlobalDomain,
+		); err != nil {
+			return err
+		}
+	}
+
+	d.logger.Info("DeprecateDomain domain succeeded",
+		tag.WorkflowDomainName(getResponse.Info.Name),
+		tag.WorkflowDomainID(getResponse.Info.ID),
+	)
 	return nil
 }
 
@@ -623,33 +642,33 @@ func (d *handlerImpl) createResponse(
 ) (*types.DomainInfo, *types.DomainConfiguration, *types.DomainReplicationConfiguration) {
 
 	infoResult := &types.DomainInfo{
-		Name:        common.StringPtr(info.Name),
+		Name:        info.Name,
 		Status:      getDomainStatus(info),
-		Description: common.StringPtr(info.Description),
-		OwnerEmail:  common.StringPtr(info.OwnerEmail),
+		Description: info.Description,
+		OwnerEmail:  info.OwnerEmail,
 		Data:        info.Data,
-		UUID:        common.StringPtr(info.ID),
+		UUID:        info.ID,
 	}
 
 	configResult := &types.DomainConfiguration{
-		EmitMetric:                             common.BoolPtr(config.EmitMetric),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(config.Retention),
+		EmitMetric:                             config.EmitMetric,
+		WorkflowExecutionRetentionPeriodInDays: config.Retention,
 		HistoryArchivalStatus:                  config.HistoryArchivalStatus.Ptr(),
-		HistoryArchivalURI:                     common.StringPtr(config.HistoryArchivalURI),
+		HistoryArchivalURI:                     config.HistoryArchivalURI,
 		VisibilityArchivalStatus:               config.VisibilityArchivalStatus.Ptr(),
-		VisibilityArchivalURI:                  common.StringPtr(config.VisibilityArchivalURI),
+		VisibilityArchivalURI:                  config.VisibilityArchivalURI,
 		BadBinaries:                            &config.BadBinaries,
 	}
 
 	clusters := []*types.ClusterReplicationConfiguration{}
 	for _, cluster := range replicationConfig.Clusters {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(cluster.ClusterName),
+			ClusterName: cluster.ClusterName,
 		})
 	}
 
 	replicationConfigResult := &types.DomainReplicationConfiguration{
-		ActiveClusterName: common.StringPtr(replicationConfig.ActiveClusterName),
+		ActiveClusterName: replicationConfig.ActiveClusterName,
 		Clusters:          clusters,
 	}
 
@@ -756,7 +775,7 @@ func (d *handlerImpl) validateVisibilityArchivalURI(URIString string) error {
 
 func (d *handlerImpl) getHistoryArchivalState(
 	config *persistence.DomainConfig,
-	requestedConfig *types.DomainConfiguration,
+	updateRequest *types.UpdateDomainRequest,
 ) (*ArchivalState, bool, error) {
 
 	currentHistoryArchivalState := &ArchivalState{
@@ -765,10 +784,10 @@ func (d *handlerImpl) getHistoryArchivalState(
 	}
 	clusterHistoryArchivalConfig := d.archivalMetadata.GetHistoryConfig()
 
-	if requestedConfig != nil && clusterHistoryArchivalConfig.ClusterConfiguredForArchival() {
+	if clusterHistoryArchivalConfig.ClusterConfiguredForArchival() {
 		archivalEvent, err := d.toArchivalUpdateEvent(
-			requestedConfig.HistoryArchivalStatus,
-			requestedConfig.GetHistoryArchivalURI(),
+			updateRequest.HistoryArchivalStatus,
+			updateRequest.GetHistoryArchivalURI(),
 			clusterHistoryArchivalConfig.GetDomainDefaultURI(),
 		)
 		if err != nil {
@@ -781,17 +800,17 @@ func (d *handlerImpl) getHistoryArchivalState(
 
 func (d *handlerImpl) getVisibilityArchivalState(
 	config *persistence.DomainConfig,
-	requestedConfig *types.DomainConfiguration,
+	updateRequest *types.UpdateDomainRequest,
 ) (*ArchivalState, bool, error) {
 	currentVisibilityArchivalState := &ArchivalState{
 		Status: config.VisibilityArchivalStatus,
 		URI:    config.VisibilityArchivalURI,
 	}
 	clusterVisibilityArchivalConfig := d.archivalMetadata.GetVisibilityConfig()
-	if requestedConfig != nil && clusterVisibilityArchivalConfig.ClusterConfiguredForArchival() {
+	if clusterVisibilityArchivalConfig.ClusterConfiguredForArchival() {
 		archivalEvent, err := d.toArchivalUpdateEvent(
-			requestedConfig.VisibilityArchivalStatus,
-			requestedConfig.GetVisibilityArchivalURI(),
+			updateRequest.VisibilityArchivalStatus,
+			updateRequest.GetVisibilityArchivalURI(),
 			clusterVisibilityArchivalConfig.GetDomainDefaultURI(),
 		)
 		if err != nil {
@@ -803,25 +822,23 @@ func (d *handlerImpl) getVisibilityArchivalState(
 }
 
 func (d *handlerImpl) updateDomainInfo(
-	updatedDomainInfo *types.UpdateDomainInfo,
+	updateRequest *types.UpdateDomainRequest,
 	currentDomainInfo *persistence.DomainInfo,
 ) (*persistence.DomainInfo, bool) {
 
 	isDomainUpdated := false
-	if updatedDomainInfo != nil {
-		if updatedDomainInfo.Description != nil {
-			isDomainUpdated = true
-			currentDomainInfo.Description = updatedDomainInfo.GetDescription()
-		}
-		if updatedDomainInfo.OwnerEmail != nil {
-			isDomainUpdated = true
-			currentDomainInfo.OwnerEmail = updatedDomainInfo.GetOwnerEmail()
-		}
-		if updatedDomainInfo.Data != nil {
-			isDomainUpdated = true
-			// only do merging
-			currentDomainInfo.Data = d.mergeDomainData(currentDomainInfo.Data, updatedDomainInfo.Data)
-		}
+	if updateRequest.Description != nil {
+		isDomainUpdated = true
+		currentDomainInfo.Description = *updateRequest.Description
+	}
+	if updateRequest.OwnerEmail != nil {
+		isDomainUpdated = true
+		currentDomainInfo.OwnerEmail = *updateRequest.OwnerEmail
+	}
+	if updateRequest.Data != nil {
+		isDomainUpdated = true
+		// only do merging
+		currentDomainInfo.Data = d.mergeDomainData(currentDomainInfo.Data, updateRequest.Data)
 	}
 	return currentDomainInfo, isDomainUpdated
 }
@@ -829,27 +846,25 @@ func (d *handlerImpl) updateDomainInfo(
 func (d *handlerImpl) updateDomainConfiguration(
 	domainName string,
 	config *persistence.DomainConfig,
-	domainConfig *types.DomainConfiguration,
+	updateRequest *types.UpdateDomainRequest,
 ) (*persistence.DomainConfig, bool, error) {
 
 	isConfigChanged := false
-	if domainConfig != nil {
-		if domainConfig.EmitMetric != nil {
-			isConfigChanged = true
-			config.EmitMetric = domainConfig.GetEmitMetric()
-		}
-		if domainConfig.WorkflowExecutionRetentionPeriodInDays != nil {
-			isConfigChanged = true
-			config.Retention = domainConfig.GetWorkflowExecutionRetentionPeriodInDays()
-		}
-		if domainConfig.BadBinaries != nil {
-			maxLength := d.config.MaxBadBinaryCount(domainName)
-			// only do merging
-			config.BadBinaries = d.mergeBadBinaries(config.BadBinaries.Binaries, domainConfig.BadBinaries.Binaries, time.Now().UnixNano())
-			if len(config.BadBinaries.Binaries) > maxLength {
-				return config, isConfigChanged, &types.BadRequestError{
-					Message: fmt.Sprintf("Total resetBinaries cannot exceed the max limit: %v", maxLength),
-				}
+	if updateRequest.EmitMetric != nil {
+		isConfigChanged = true
+		config.EmitMetric = *updateRequest.EmitMetric
+	}
+	if updateRequest.WorkflowExecutionRetentionPeriodInDays != nil {
+		isConfigChanged = true
+		config.Retention = *updateRequest.WorkflowExecutionRetentionPeriodInDays
+	}
+	if updateRequest.BadBinaries != nil {
+		maxLength := d.config.MaxBadBinaryCount(domainName)
+		// only do merging
+		config.BadBinaries = d.mergeBadBinaries(config.BadBinaries.Binaries, updateRequest.BadBinaries.Binaries, time.Now().UnixNano())
+		if len(config.BadBinaries.Binaries) > maxLength {
+			return config, isConfigChanged, &types.BadRequestError{
+				Message: fmt.Sprintf("Total resetBinaries cannot exceed the max limit: %v", maxLength),
 			}
 		}
 	}
@@ -876,34 +891,32 @@ func (d *handlerImpl) updateDeleteBadBinary(
 
 func (d *handlerImpl) updateReplicationConfig(
 	config *persistence.DomainReplicationConfig,
-	replicationConfig *types.DomainReplicationConfiguration,
+	updateRequest *types.UpdateDomainRequest,
 ) (*persistence.DomainReplicationConfig, bool, bool, error) {
 
 	clusterUpdated := false
 	activeClusterUpdated := false
-	if replicationConfig != nil {
-		if len(replicationConfig.GetClusters()) != 0 {
-			clusterUpdated = true
-			clustersNew := []*persistence.ClusterReplicationConfig{}
-			for _, clusterConfig := range replicationConfig.Clusters {
-				clustersNew = append(clustersNew, &persistence.ClusterReplicationConfig{
-					ClusterName: clusterConfig.GetClusterName(),
-				})
-			}
-
-			if err := d.domainAttrValidator.validateDomainReplicationConfigClustersDoesNotRemove(
-				config.Clusters,
-				clustersNew,
-			); err != nil {
-				return config, clusterUpdated, activeClusterUpdated, err
-			}
-			config.Clusters = clustersNew
+	if len(updateRequest.Clusters) != 0 {
+		clusterUpdated = true
+		clustersNew := []*persistence.ClusterReplicationConfig{}
+		for _, clusterConfig := range updateRequest.Clusters {
+			clustersNew = append(clustersNew, &persistence.ClusterReplicationConfig{
+				ClusterName: clusterConfig.GetClusterName(),
+			})
 		}
 
-		if replicationConfig.ActiveClusterName != nil {
-			activeClusterUpdated = true
-			config.ActiveClusterName = replicationConfig.GetActiveClusterName()
+		if err := d.domainAttrValidator.validateDomainReplicationConfigClustersDoesNotRemove(
+			config.Clusters,
+			clustersNew,
+		); err != nil {
+			return config, clusterUpdated, activeClusterUpdated, err
 		}
+		config.Clusters = clustersNew
+	}
+
+	if updateRequest.ActiveClusterName != nil {
+		activeClusterUpdated = true
+		config.ActiveClusterName = *updateRequest.ActiveClusterName
 	}
 	return config, clusterUpdated, activeClusterUpdated, nil
 }

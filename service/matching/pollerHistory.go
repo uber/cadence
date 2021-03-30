@@ -30,7 +30,7 @@ import (
 
 const (
 	pollerHistoryInitSize    = 0
-	pollerHistoryInitMaxSize = 1000
+	pollerHistoryInitMaxSize = 5000
 	pollerHistoryTTL         = 5 * time.Minute
 )
 
@@ -46,9 +46,15 @@ type pollerHistory struct {
 	// poller ID -> pollerInfo
 	// pollers map[pollerID]pollerInfo
 	history cache.Cache
+
+	// OnHistoryUpdatedFunc is a function called when the poller history was updated
+	onHistoryUpdatedFunc HistoryUpdatedFunc
 }
 
-func newPollerHistory() *pollerHistory {
+// HistoryUpdatedFunc is a type for notifying applications when the poller history was updated
+type HistoryUpdatedFunc func()
+
+func newPollerHistory(historyUpdatedFunc HistoryUpdatedFunc) *pollerHistory {
 	opts := &cache.Options{
 		InitialCapacity: pollerHistoryInitSize,
 		TTL:             pollerHistoryTTL,
@@ -57,7 +63,8 @@ func newPollerHistory() *pollerHistory {
 	}
 
 	return &pollerHistory{
-		history: cache.New(opts),
+		history:              cache.New(opts),
+		onHistoryUpdatedFunc: historyUpdatedFunc,
 	}
 }
 
@@ -67,6 +74,9 @@ func (pollers *pollerHistory) updatePollerInfo(id pollerIdentity, ratePerSecond 
 		rps = *ratePerSecond
 	}
 	pollers.history.Put(id, &pollerInfo{ratePerSecond: rps})
+	if pollers.onHistoryUpdatedFunc != nil {
+		pollers.onHistoryUpdatedFunc()
+	}
 }
 
 func (pollers *pollerHistory) getAllPollerInfo() []*types.PollerInfo {
@@ -81,9 +91,9 @@ func (pollers *pollerHistory) getAllPollerInfo() []*types.PollerInfo {
 		// TODO add IP, T1396795
 		lastAccessTime := entry.CreateTime()
 		result = append(result, &types.PollerInfo{
-			Identity:       common.StringPtr(string(key)),
+			Identity:       string(key),
 			LastAccessTime: common.Int64Ptr(lastAccessTime.UnixNano()),
-			RatePerSecond:  common.Float64Ptr(value.ratePerSecond),
+			RatePerSecond:  value.ratePerSecond,
 		})
 	}
 

@@ -123,7 +123,6 @@ var (
 	errWorkflowIDNotSet        = &types.BadRequestError{Message: "WorkflowId is not set on request."}
 	errRunIDNotValid           = &types.BadRequestError{Message: "RunID is not valid UUID."}
 	errSourceClusterNotSet     = &types.BadRequestError{Message: "Source Cluster not set on request."}
-	errShardIDNotSet           = &types.BadRequestError{Message: "Shard ID not set on request."}
 	errTimestampNotSet         = &types.BadRequestError{Message: "Timestamp not set on request."}
 	errInvalidTaskType         = &types.BadRequestError{Message: "Invalid task type"}
 	errHistoryHostThrottle     = &types.ServiceBusyError{Message: "History host rps exceeded"}
@@ -163,27 +162,25 @@ func (h *handlerImpl) Start() {
 
 	h.replicationTaskFetchers.Start()
 
-	if h.config.EnablePriorityTaskProcessor() {
-		var err error
-		taskPriorityAssigner := task.NewPriorityAssigner(
-			h.GetClusterMetadata().GetCurrentClusterName(),
-			h.GetDomainCache(),
-			h.GetLogger(),
-			h.GetMetricsClient(),
-			h.config,
-		)
+	var err error
+	taskPriorityAssigner := task.NewPriorityAssigner(
+		h.GetClusterMetadata().GetCurrentClusterName(),
+		h.GetDomainCache(),
+		h.GetLogger(),
+		h.GetMetricsClient(),
+		h.config,
+	)
 
-		h.queueTaskProcessor, err = task.NewProcessor(
-			taskPriorityAssigner,
-			h.config,
-			h.GetLogger(),
-			h.GetMetricsClient(),
-		)
-		if err != nil {
-			h.GetLogger().Fatal("Creating priority task processor failed", tag.Error(err))
-		}
-		h.queueTaskProcessor.Start()
+	h.queueTaskProcessor, err = task.NewProcessor(
+		taskPriorityAssigner,
+		h.config,
+		h.GetLogger(),
+		h.GetMetricsClient(),
+	)
+	if err != nil {
+		h.GetLogger().Fatal("Creating priority task processor failed", tag.Error(err))
 	}
+	h.queueTaskProcessor.Start()
 
 	h.controller = shard.NewShardController(
 		h.Resource,
@@ -216,9 +213,7 @@ func (h *handlerImpl) Start() {
 func (h *handlerImpl) Stop() {
 	h.PrepareToStop()
 	h.replicationTaskFetchers.Stop()
-	if h.queueTaskProcessor != nil {
-		h.queueTaskProcessor.Stop()
-	}
+	h.queueTaskProcessor.Stop()
 	h.controller.Stop()
 	h.historyEventNotifier.Stop()
 	h.failoverCoordinator.Stop()
@@ -256,7 +251,7 @@ func (h *handlerImpl) CreateEngine(
 func (h *handlerImpl) Health(ctx context.Context) (*types.HealthStatus, error) {
 	h.startWG.Wait()
 	h.GetLogger().Debug("History health check endpoint reached.")
-	hs := &types.HealthStatus{Ok: true, Msg: common.StringPtr("OK")}
+	hs := &types.HealthStatus{Ok: true, Msg: "OK"}
 	return hs, nil
 }
 
@@ -269,9 +264,7 @@ func (h *handlerImpl) RecordActivityTaskHeartbeat(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryRecordActivityTaskHeartbeatScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryRecordActivityTaskHeartbeatScope)
 	defer sw.Stop()
 
 	domainID := wrappedRequest.GetDomainUUID()
@@ -318,9 +311,7 @@ func (h *handlerImpl) RecordActivityTaskStarted(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryRecordActivityTaskStartedScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryRecordActivityTaskStartedScope)
 	defer sw.Stop()
 
 	domainID := recordRequest.GetDomainUUID()
@@ -332,7 +323,7 @@ func (h *handlerImpl) RecordActivityTaskStarted(
 		"RecordActivityTaskStarted",
 		tag.WorkflowDomainID(domainID),
 		tag.WorkflowID(workflowExecution.GetWorkflowID()),
-		tag.WorkflowRunID(common.StringDefault(recordRequest.WorkflowExecution.RunID)),
+		tag.WorkflowRunID(recordRequest.WorkflowExecution.RunID),
 		tag.WorkflowScheduleID(recordRequest.GetScheduleID()),
 	)
 
@@ -366,9 +357,7 @@ func (h *handlerImpl) RecordDecisionTaskStarted(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryRecordDecisionTaskStartedScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryRecordDecisionTaskStartedScope)
 	defer sw.Stop()
 
 	domainID := recordRequest.GetDomainUUID()
@@ -380,7 +369,7 @@ func (h *handlerImpl) RecordDecisionTaskStarted(
 		"RecordDecisionTaskStarted",
 		tag.WorkflowDomainID(domainID),
 		tag.WorkflowID(workflowExecution.GetWorkflowID()),
-		tag.WorkflowRunID(common.StringDefault(recordRequest.WorkflowExecution.RunID)),
+		tag.WorkflowRunID(recordRequest.WorkflowExecution.RunID),
 		tag.WorkflowScheduleID(recordRequest.GetScheduleID()),
 	)
 
@@ -424,9 +413,7 @@ func (h *handlerImpl) RespondActivityTaskCompleted(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryRespondActivityTaskCompletedScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryRespondActivityTaskCompletedScope)
 	defer sw.Stop()
 
 	domainID := wrappedRequest.GetDomainUUID()
@@ -473,9 +460,7 @@ func (h *handlerImpl) RespondActivityTaskFailed(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryRespondActivityTaskFailedScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryRespondActivityTaskFailedScope)
 	defer sw.Stop()
 
 	domainID := wrappedRequest.GetDomainUUID()
@@ -522,9 +507,7 @@ func (h *handlerImpl) RespondActivityTaskCanceled(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryRespondActivityTaskCanceledScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryRespondActivityTaskCanceledScope)
 	defer sw.Stop()
 
 	domainID := wrappedRequest.GetDomainUUID()
@@ -571,9 +554,7 @@ func (h *handlerImpl) RespondDecisionTaskCompleted(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryRespondDecisionTaskCompletedScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryRespondDecisionTaskCompletedScope)
 	defer sw.Stop()
 
 	domainID := wrappedRequest.GetDomainUUID()
@@ -587,7 +568,7 @@ func (h *handlerImpl) RespondDecisionTaskCompleted(
 
 	completeRequest := wrappedRequest.CompleteRequest
 	if len(completeRequest.Decisions) == 0 {
-		h.GetMetricsClient().IncCounter(scope, metrics.EmptyCompletionDecisionsCounter)
+		scope.IncCounter(metrics.EmptyCompletionDecisionsCounter)
 	}
 	token, err0 := h.tokenSerializer.Deserialize(completeRequest.TaskToken)
 	if err0 != nil {
@@ -629,9 +610,7 @@ func (h *handlerImpl) RespondDecisionTaskFailed(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryRespondDecisionTaskFailedScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryRespondDecisionTaskFailedScope)
 	defer sw.Stop()
 
 	domainID := wrappedRequest.GetDomainUUID()
@@ -667,7 +646,7 @@ func (h *handlerImpl) RespondDecisionTaskFailed(
 			domainTag = metrics.DomainUnknownTag()
 		}
 
-		h.GetMetricsClient().Scope(scope, domainTag).IncCounter(metrics.CadenceErrNonDeterministicCounter)
+		scope.Tagged(domainTag).IncCounter(metrics.CadenceErrNonDeterministicCounter)
 	}
 	err0 = validateTaskToken(token)
 	if err0 != nil {
@@ -697,9 +676,7 @@ func (h *handlerImpl) StartWorkflowExecution(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryStartWorkflowExecutionScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryStartWorkflowExecutionScope)
 	defer sw.Stop()
 
 	domainID := wrappedRequest.GetDomainUUID()
@@ -747,14 +724,14 @@ func (h *handlerImpl) DescribeHistoryHost(
 	}
 
 	resp = &types.DescribeHistoryHostResponse{
-		NumberOfShards: common.Int32Ptr(int32(h.controller.NumShards())),
+		NumberOfShards: int32(h.controller.NumShards()),
 		ShardIDs:       h.controller.ShardIDs(),
 		DomainCache: &types.DomainCacheInfo{
-			NumOfItemsInCacheByID:   &numOfItemsInCacheByID,
-			NumOfItemsInCacheByName: &numOfItemsInCacheByName,
+			NumOfItemsInCacheByID:   numOfItemsInCacheByID,
+			NumOfItemsInCacheByName: numOfItemsInCacheByName,
 		},
-		ShardControllerStatus: &status,
-		Address:               common.StringPtr(h.GetHostInfo().GetAddress()),
+		ShardControllerStatus: status,
+		Address:               h.GetHostInfo().GetAddress(),
 	}
 	return resp, nil
 }
@@ -806,9 +783,7 @@ func (h *handlerImpl) ResetQueue(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryResetQueueScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryResetQueueScope)
 	defer sw.Stop()
 
 	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
@@ -840,9 +815,7 @@ func (h *handlerImpl) DescribeQueue(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryDescribeQueueScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryDescribeQueueScope)
 	defer sw.Stop()
 
 	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
@@ -874,9 +847,7 @@ func (h *handlerImpl) DescribeMutableState(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryDescribeMutabelStateScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryDescribeMutabelStateScope)
 	defer sw.Stop()
 
 	domainID := request.GetDomainUUID()
@@ -907,9 +878,7 @@ func (h *handlerImpl) GetMutableState(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryGetMutableStateScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryGetMutableStateScope)
 	defer sw.Stop()
 
 	domainID := getRequest.GetDomainUUID()
@@ -944,9 +913,7 @@ func (h *handlerImpl) PollMutableState(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryPollMutableStateScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryPollMutableStateScope)
 	defer sw.Stop()
 
 	domainID := getRequest.GetDomainUUID()
@@ -981,9 +948,7 @@ func (h *handlerImpl) DescribeWorkflowExecution(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryDescribeWorkflowExecutionScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryDescribeWorkflowExecutionScope)
 	defer sw.Stop()
 
 	domainID := request.GetDomainUUID()
@@ -1018,9 +983,7 @@ func (h *handlerImpl) RequestCancelWorkflowExecution(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryRequestCancelWorkflowExecutionScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryRequestCancelWorkflowExecutionScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1067,9 +1030,7 @@ func (h *handlerImpl) SignalWorkflowExecution(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistorySignalWorkflowExecutionScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistorySignalWorkflowExecutionScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1113,9 +1074,7 @@ func (h *handlerImpl) SignalWithStartWorkflowExecution(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistorySignalWithStartWorkflowExecutionScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistorySignalWithStartWorkflowExecutionScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1156,9 +1115,7 @@ func (h *handlerImpl) RemoveSignalMutableState(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryRemoveSignalMutableStateScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryRemoveSignalMutableStateScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1199,9 +1156,7 @@ func (h *handlerImpl) TerminateWorkflowExecution(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryTerminateWorkflowExecutionScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryTerminateWorkflowExecutionScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1242,9 +1197,7 @@ func (h *handlerImpl) ResetWorkflowExecution(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryResetWorkflowExecutionScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryResetWorkflowExecutionScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1283,9 +1236,7 @@ func (h *handlerImpl) QueryWorkflow(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryQueryWorkflowScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryQueryWorkflowScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1327,9 +1278,7 @@ func (h *handlerImpl) ScheduleDecisionTask(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryScheduleDecisionTaskScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryScheduleDecisionTaskScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1374,9 +1323,7 @@ func (h *handlerImpl) RecordChildExecutionCompleted(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryRecordChildExecutionCompletedScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryRecordChildExecutionCompletedScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1426,9 +1373,7 @@ func (h *handlerImpl) ResetStickyTaskList(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryResetStickyTaskListScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryResetStickyTaskListScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1471,9 +1416,7 @@ func (h *handlerImpl) ReplicateEventsV2(
 		return errShuttingDown
 	}
 
-	scope := metrics.HistoryReplicateEventsV2Scope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryReplicateEventsV2Scope)
 	defer sw.Stop()
 
 	domainID := replicateRequest.GetDomainUUID()
@@ -1509,9 +1452,7 @@ func (h *handlerImpl) SyncShardStatus(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistorySyncShardStatusScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistorySyncShardStatusScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1522,12 +1463,8 @@ func (h *handlerImpl) SyncShardStatus(
 		return h.error(errHistoryHostThrottle, scope, "", "")
 	}
 
-	if syncShardStatusRequest.SourceCluster == nil {
+	if syncShardStatusRequest.SourceCluster == "" {
 		return h.error(errSourceClusterNotSet, scope, "", "")
-	}
-
-	if syncShardStatusRequest.ShardID == nil {
-		return h.error(errShardIDNotSet, scope, "", "")
 	}
 
 	if syncShardStatusRequest.Timestamp == nil {
@@ -1557,9 +1494,7 @@ func (h *handlerImpl) SyncActivity(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistorySyncActivityScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistorySyncActivityScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1567,7 +1502,7 @@ func (h *handlerImpl) SyncActivity(
 	}
 
 	domainID := syncActivityRequest.GetDomainID()
-	if syncActivityRequest.DomainID == nil || uuid.Parse(syncActivityRequest.GetDomainID()) == nil {
+	if syncActivityRequest.DomainID == "" || uuid.Parse(syncActivityRequest.GetDomainID()) == nil {
 		return h.error(errDomainNotSet, scope, domainID, "")
 	}
 
@@ -1575,11 +1510,11 @@ func (h *handlerImpl) SyncActivity(
 		return h.error(errHistoryHostThrottle, scope, domainID, "")
 	}
 
-	if syncActivityRequest.WorkflowID == nil {
+	if syncActivityRequest.WorkflowID == "" {
 		return h.error(errWorkflowIDNotSet, scope, domainID, "")
 	}
 
-	if syncActivityRequest.RunID == nil || uuid.Parse(syncActivityRequest.GetRunID()) == nil {
+	if syncActivityRequest.RunID == "" || uuid.Parse(syncActivityRequest.GetRunID()) == nil {
 		return h.error(errRunIDNotValid, scope, domainID, "")
 	}
 
@@ -1607,9 +1542,7 @@ func (h *handlerImpl) GetReplicationMessages(
 
 	h.GetLogger().Debug("Received GetReplicationMessages call.")
 
-	scope := metrics.HistoryGetReplicationMessagesScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	_, sw := h.startRequestProfile(ctx, metrics.HistoryGetReplicationMessagesScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1666,9 +1599,7 @@ func (h *handlerImpl) GetDLQReplicationMessages(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryGetDLQReplicationMessagesScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	_, sw := h.startRequestProfile(ctx, metrics.HistoryGetDLQReplicationMessagesScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1744,9 +1675,7 @@ func (h *handlerImpl) ReapplyEvents(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryReapplyEventsScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryReapplyEventsScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1790,9 +1719,7 @@ func (h *handlerImpl) ReadDLQMessages(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryReadDLQMessagesScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryReadDLQMessagesScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1816,9 +1743,7 @@ func (h *handlerImpl) PurgeDLQMessages(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	scope := metrics.HistoryPurgeDLQMessagesScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryPurgeDLQMessagesScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1846,9 +1771,7 @@ func (h *handlerImpl) MergeDLQMessages(
 		return nil, errShuttingDown
 	}
 
-	scope := metrics.HistoryMergeDLQMessagesScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryMergeDLQMessagesScope)
 	defer sw.Stop()
 
 	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
@@ -1864,16 +1787,14 @@ func (h *handlerImpl) RefreshWorkflowTasks(
 	ctx context.Context,
 	request *types.HistoryRefreshWorkflowTasksRequest) (retError error) {
 
-	scope := metrics.HistoryRefreshWorkflowTasksScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryRefreshWorkflowTasksScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
 		return errShuttingDown
 	}
 
-	domainID := request.GetDomainUIID()
+	domainID := request.DomainUIID
 	execution := request.GetRequest().GetExecution()
 	workflowID := execution.GetWorkflowID()
 	engine, err := h.controller.GetEngine(workflowID)
@@ -1904,9 +1825,7 @@ func (h *handlerImpl) NotifyFailoverMarkers(
 	request *types.NotifyFailoverMarkersRequest,
 ) (retError error) {
 
-	scope := metrics.HistoryNotifyFailoverMarkersScope
-	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
-	sw := h.GetMetricsClient().StartTimer(scope, metrics.CadenceLatency)
+	_, sw := h.startRequestProfile(ctx, metrics.HistoryNotifyFailoverMarkersScope)
 	defer sw.Stop()
 
 	for _, token := range request.GetFailoverMarkerTokens() {
@@ -1944,58 +1863,58 @@ func (h *handlerImpl) convertError(err error) error {
 }
 
 func (h *handlerImpl) updateErrorMetric(
-	scope int,
+	scope metrics.Scope,
 	domainID string,
 	workflowID string,
 	err error,
 ) {
 
 	if err == context.DeadlineExceeded || err == context.Canceled {
-		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrContextTimeoutCounter)
+		scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
 		return
 	}
 
 	switch err := err.(type) {
 	case *types.ShardOwnershipLostError:
-		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrShardOwnershipLostCounter)
+		scope.IncCounter(metrics.CadenceErrShardOwnershipLostCounter)
 	case *types.EventAlreadyStartedError:
-		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrEventAlreadyStartedCounter)
+		scope.IncCounter(metrics.CadenceErrEventAlreadyStartedCounter)
 	case *types.BadRequestError:
-		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrBadRequestCounter)
+		scope.IncCounter(metrics.CadenceErrBadRequestCounter)
 	case *types.DomainNotActiveError:
-		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrBadRequestCounter)
+		scope.IncCounter(metrics.CadenceErrBadRequestCounter)
 	case *types.WorkflowExecutionAlreadyStartedError:
-		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrExecutionAlreadyStartedCounter)
+		scope.IncCounter(metrics.CadenceErrExecutionAlreadyStartedCounter)
 	case *types.EntityNotExistsError:
-		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrEntityNotExistsCounter)
+		scope.IncCounter(metrics.CadenceErrEntityNotExistsCounter)
 	case *types.CancellationAlreadyRequestedError:
-		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrCancellationAlreadyRequestedCounter)
+		scope.IncCounter(metrics.CadenceErrCancellationAlreadyRequestedCounter)
 	case *types.LimitExceededError:
-		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
+		scope.IncCounter(metrics.CadenceErrLimitExceededCounter)
 	case *types.RetryTaskV2Error:
-		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrRetryTaskCounter)
+		scope.IncCounter(metrics.CadenceErrRetryTaskCounter)
 	case *types.ServiceBusyError:
-		h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrServiceBusyCounter)
+		scope.IncCounter(metrics.CadenceErrServiceBusyCounter)
 	case *yarpcerrors.Status:
 		if err.Code() == yarpcerrors.CodeDeadlineExceeded {
-			h.GetMetricsClient().IncCounter(scope, metrics.CadenceErrContextTimeoutCounter)
+			scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
 		}
-		h.GetMetricsClient().IncCounter(scope, metrics.CadenceFailures)
+		scope.IncCounter(metrics.CadenceFailures)
 	case *types.InternalServiceError:
-		h.GetMetricsClient().IncCounter(scope, metrics.CadenceFailures)
+		scope.IncCounter(metrics.CadenceFailures)
 		h.GetLogger().Error("Internal service error",
 			tag.Error(err),
 			tag.WorkflowID(workflowID),
 			tag.WorkflowDomainID(domainID))
 	default:
-		h.GetMetricsClient().IncCounter(scope, metrics.CadenceFailures)
+		scope.IncCounter(metrics.CadenceFailures)
 		h.getLoggerWithTags(domainID, workflowID).Error("Uncategorized error", tag.Error(err))
 	}
 }
 
 func (h *handlerImpl) error(
 	err error,
-	scope int,
+	scope metrics.Scope,
 	domainID string,
 	workflowID string,
 ) error {
@@ -2033,6 +1952,13 @@ func (h *handlerImpl) emitInfoOrDebugLog(
 	} else {
 		h.GetLogger().Debug(msg, tags...)
 	}
+}
+
+func (h *handlerImpl) startRequestProfile(ctx context.Context, scope int) (metrics.Scope, metrics.Stopwatch) {
+	metricsScope := h.GetMetricsClient().Scope(scope, metrics.GetContextTags(ctx)...)
+	metricsScope.IncCounter(metrics.CadenceRequests)
+	sw := metricsScope.StartTimer(metrics.CadenceLatency)
+	return metricsScope, sw
 }
 
 func validateTaskToken(token *common.TaskToken) error {

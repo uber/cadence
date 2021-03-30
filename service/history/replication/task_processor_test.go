@@ -135,7 +135,7 @@ func (s *taskProcessorSuite) TearDownTest() {
 
 func (s *taskProcessorSuite) TestProcessResponse_NoTask() {
 	response := &types.ReplicationMessages{
-		LastRetrievedMessageID: common.Int64Ptr(100),
+		LastRetrievedMessageID: 100,
 	}
 
 	s.taskProcessor.processResponse(response)
@@ -155,8 +155,8 @@ func (s *taskProcessorSuite) TestSendFetchMessageRequest() {
 func (s *taskProcessorSuite) TestHandleSyncShardStatus() {
 	now := time.Now()
 	s.mockEngine.EXPECT().SyncShardStatus(gomock.Any(), &types.SyncShardStatusRequest{
-		SourceCluster: common.StringPtr("standby"),
-		ShardID:       common.Int64Ptr(0),
+		SourceCluster: "standby",
+		ShardID:       0,
 		Timestamp:     common.Int64Ptr(now.UnixNano()),
 	}).Return(nil).Times(1)
 
@@ -173,9 +173,9 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_SyncActivityReplication
 	task := &types.ReplicationTask{
 		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
 		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
-			DomainID:   common.StringPtr(domainID),
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			DomainID:   domainID,
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	}
 	request := &persistence.PutReplicationTaskToDLQRequest{
@@ -198,8 +198,8 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTas
 	runID := uuid.New()
 	events := []*types.HistoryEvent{
 		{
-			EventID: common.Int64Ptr(1),
-			Version: common.Int64Ptr(1),
+			EventID: 1,
+			Version: 1,
 		},
 	}
 	serializer := s.mockShard.GetPayloadSerializer()
@@ -208,9 +208,9 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTas
 	task := &types.ReplicationTask{
 		TaskType: types.ReplicationTaskTypeHistoryV2.Ptr(),
 		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
-			DomainID:   common.StringPtr(domainID),
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			DomainID:   domainID,
+			WorkflowID: workflowID,
+			RunID:      runID,
 			Events: &types.DataBlob{
 				EncodingType: types.EncodingTypeThriftRW.Ptr(),
 				Data:         data.Data,
@@ -240,8 +240,8 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeHistoryV2
 	runID := uuid.New()
 	events := []*types.HistoryEvent{
 		{
-			EventID: common.Int64Ptr(1),
-			Version: common.Int64Ptr(1),
+			EventID: 1,
+			Version: 1,
 		},
 	}
 	serializer := s.mockShard.GetPayloadSerializer()
@@ -250,9 +250,9 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeHistoryV2
 	task := &types.ReplicationTask{
 		TaskType: types.ReplicationTaskTypeHistoryV2.Ptr(),
 		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
-			DomainID:   common.StringPtr(domainID),
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			DomainID:   domainID,
+			WorkflowID: workflowID,
+			RunID:      runID,
 			Events: &types.DataBlob{
 				EncodingType: types.EncodingTypeThriftRW.Ptr(),
 				Data:         data.Data,
@@ -278,10 +278,10 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeSyncActiv
 	task := &types.ReplicationTask{
 		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
 		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
-			DomainID:    common.StringPtr(domainID),
-			WorkflowID:  common.StringPtr(workflowID),
-			RunID:       common.StringPtr(runID),
-			ScheduledID: common.Int64Ptr(1),
+			DomainID:    domainID,
+			WorkflowID:  workflowID,
+			RunID:       runID,
+			ScheduledID: 1,
 		},
 	}
 	request, err := s.taskProcessor.generateDLQRequest(task)

@@ -22,13 +22,13 @@ syntax = "proto3";
 
 package uber.cadence.api.v1;
 
-option go_package = "apiv1";
+option go_package = "github.com/uber/cadence/.gen/proto/api/v1;apiv1";
 option java_multiple_files = true;
 option java_outer_classname = "ApiProto";
 option java_package = "com.uber.cadence.api.v1";
 
 import "google/protobuf/duration.proto";
-import "dependencies/gogoproto.proto";
+import "google/protobuf/field_mask.proto";
 import "uber/cadence/api/v1/domain.proto";
 
 service DomainAPI {
@@ -54,14 +54,14 @@ service DomainAPI {
 }
 
 message RegisterDomainRequest {
-  string name = 1;
-  string description = 2;
-  string owner_email = 3;
-  google.protobuf.Duration workflow_execution_retention_period = 4 [(gogoproto.stdduration) = true];
-  repeated ClusterReplicationConfiguration clusters = 5;
-  string active_cluster_name = 6;
-  map<string, string> data = 7;
-  string security_token = 8;
+  string security_token = 1;
+  string name = 2;
+  string description = 3;
+  string owner_email = 4;
+  google.protobuf.Duration workflow_execution_retention_period = 5;
+  repeated ClusterReplicationConfiguration clusters = 6;
+  string active_cluster_name = 7;
+  map<string, string> data = 8;
   bool is_global_domain = 9;
   ArchivalStatus history_archival_status = 10;
   string history_archival_uri = 11;
@@ -72,6 +72,39 @@ message RegisterDomainRequest {
 message RegisterDomainResponse {
 }
 
+message UpdateDomainRequest {
+  string security_token = 1;
+  string name = 2;
+
+  // Below are the fields that can be updated if specified by update_mask.
+  google.protobuf.FieldMask update_mask = 10;
+  string description = 11;
+  string owner_email = 12;
+  map<string, string> data = 13;
+  google.protobuf.Duration workflow_execution_retention_period = 14;
+  BadBinaries bad_binaries = 15;
+  ArchivalStatus history_archival_status = 16;
+  string history_archival_uri = 17;
+  ArchivalStatus visibility_archival_status = 18;
+  string visibility_archival_uri = 19;
+  string active_cluster_name = 20;
+  repeated ClusterReplicationConfiguration clusters = 21;
+  string delete_bad_binary = 22;
+  google.protobuf.Duration failover_timeout = 23;
+}
+
+message UpdateDomainResponse {
+  Domain domain = 1;
+}
+
+message DeprecateDomainRequest {
+  string security_token = 1;
+  string name = 2;
+}
+
+message DeprecateDomainResponse {
+}
+
 message DescribeDomainRequest {
   oneof describe_by {
     string id = 1;
@@ -80,11 +113,7 @@ message DescribeDomainRequest {
 }
 
 message DescribeDomainResponse {
-  DomainInfo info = 1;
-  DomainConfiguration configuration = 2;
-  DomainReplicationConfiguration replication_configuration = 3;
-  int64 failover_version = 4;
-  bool is_global_domain = 5;
+  Domain domain = 1;
 }
 
 message ListDomainsRequest {
@@ -93,38 +122,6 @@ message ListDomainsRequest {
 }
 
 message ListDomainsResponse {
-  repeated DescribeDomainResponse domains = 1;
+  repeated Domain domains = 1;
   bytes next_page_token = 2;
-}
-
-message UpdateDomainInfo {
-  string description = 1;
-  string owner_email = 2;
-  map<string, string> data = 3;
-}
-
-message UpdateDomainRequest {
-  string name = 1;
-  UpdateDomainInfo info = 2;
-  DomainConfiguration configuration = 3;
-  DomainReplicationConfiguration replication_configuration = 4;
-  string security_token = 5;
-  string delete_bad_binary = 6;
-  google.protobuf.Duration failover_timeout = 7 [(gogoproto.stdduration) = true];
-}
-
-message UpdateDomainResponse {
-  DomainInfo info = 1;
-  DomainConfiguration configuration = 2;
-  DomainReplicationConfiguration replication_configuration = 3;
-  int64 failover_version = 4;
-  bool is_global_domain = 5;
-}
-
-message DeprecateDomainRequest {
-  string name = 1;
-  string security_token = 2;
-}
-
-message DeprecateDomainResponse {
 }

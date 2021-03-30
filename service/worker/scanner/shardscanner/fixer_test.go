@@ -107,17 +107,7 @@ func (s *FixerSuite) TestFix_Failure_NonFirstError() {
 	fixedWriter := store.NewMockExecutionWriter(s.controller)
 	fixedWriter.EXPECT().Add(gomock.Any()).Return(nil).Times(4)
 	domainCache := cache.NewMockDomainCache(s.controller)
-	domainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
-		&persistence.DomainInfo{
-			Name: "test_domain",
-		},
-		nil,
-		false,
-		nil,
-		0,
-		nil,
-		nil),
-		nil).Times(4)
+	domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil).Times(4)
 	fixer := &ShardFixer{
 		shardID:          0,
 		itr:              mockItr,
@@ -160,17 +150,7 @@ func (s *FixerSuite) TestFix_Failure_SkippedWriterError() {
 	skippedWriter := store.NewMockExecutionWriter(s.controller)
 	skippedWriter.EXPECT().Add(gomock.Any()).Return(errors.New("skipped writer error")).Times(1)
 	domainCache := cache.NewMockDomainCache(s.controller)
-	domainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
-		&persistence.DomainInfo{
-			Name: "test_domain",
-		},
-		nil,
-		false,
-		nil,
-		0,
-		nil,
-		nil),
-		nil)
+	domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil).Times(1)
 	fixer := &ShardFixer{
 		shardID:          0,
 		itr:              mockItr,
@@ -212,17 +192,7 @@ func (s *FixerSuite) TestFix_Failure_FailedWriterError() {
 	failedWriter := store.NewMockExecutionWriter(s.controller)
 	failedWriter.EXPECT().Add(gomock.Any()).Return(errors.New("failed writer error")).Times(1)
 	domainCache := cache.NewMockDomainCache(s.controller)
-	domainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
-		&persistence.DomainInfo{
-			Name: "test_domain",
-		},
-		nil,
-		false,
-		nil,
-		0,
-		nil,
-		nil),
-		nil)
+	domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil).Times(1)
 	fixer := &ShardFixer{
 		shardID:          0,
 		itr:              mockItr,
@@ -264,17 +234,7 @@ func (s *FixerSuite) TestFix_Failure_FixedWriterError() {
 	fixedWriter := store.NewMockExecutionWriter(s.controller)
 	fixedWriter.EXPECT().Add(gomock.Any()).Return(errors.New("fixed writer error")).Times(1)
 	domainCache := cache.NewMockDomainCache(s.controller)
-	domainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
-		&persistence.DomainInfo{
-			Name: "test_domain",
-		},
-		nil,
-		false,
-		nil,
-		0,
-		nil,
-		nil),
-		nil)
+	domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil).Times(1)
 	fixer := &ShardFixer{
 		shardID:          0,
 		itr:              mockItr,
@@ -692,72 +652,12 @@ func (s *FixerSuite) TestFix_Success() {
 	mockFailedWriter.EXPECT().FlushedKeys().Return(&store.Keys{UUID: "failed_keys_uuid"})
 	mockFixedWriter.EXPECT().FlushedKeys().Return(&store.Keys{UUID: "fixed_keys_uuid"})
 	domainCache := cache.NewMockDomainCache(s.controller)
-	domainCache.EXPECT().GetDomainByID("skipped").Return(cache.NewDomainCacheEntryForTest(
-		&persistence.DomainInfo{
-			Name: "skipped",
-		},
-		nil,
-		false,
-		nil,
-		0,
-		nil,
-		nil),
-		nil).Times(4)
-	domainCache.EXPECT().GetDomainByID("history_missing").Return(cache.NewDomainCacheEntryForTest(
-		&persistence.DomainInfo{
-			Name: "history_missing",
-		},
-		nil,
-		false,
-		nil,
-		0,
-		nil,
-		nil),
-		nil).Times(2)
-	domainCache.EXPECT().GetDomainByID("first_history_event").Return(cache.NewDomainCacheEntryForTest(
-		&persistence.DomainInfo{
-			Name: "first_history_event",
-		},
-		nil,
-		false,
-		nil,
-		0,
-		nil,
-		nil),
-		nil).Times(1)
-	domainCache.EXPECT().GetDomainByID("orphan_execution").Return(cache.NewDomainCacheEntryForTest(
-		&persistence.DomainInfo{
-			Name: "orphan_execution",
-		},
-		nil,
-		false,
-		nil,
-		0,
-		nil,
-		nil),
-		nil).Times(1)
-	domainCache.EXPECT().GetDomainByID("failed").Return(cache.NewDomainCacheEntryForTest(
-		&persistence.DomainInfo{
-			Name: "failed",
-		},
-		nil,
-		false,
-		nil,
-		0,
-		nil,
-		nil),
-		nil).Times(2)
-	domainCache.EXPECT().GetDomainByID("disallow_domain").Return(cache.NewDomainCacheEntryForTest(
-		&persistence.DomainInfo{
-			Name: "disallow_domain",
-		},
-		nil,
-		false,
-		nil,
-		0,
-		nil,
-		nil),
-		nil).Times(2)
+	domainCache.EXPECT().GetDomainName("skipped").Return("skipped", nil).Times(4)
+	domainCache.EXPECT().GetDomainName("history_missing").Return("history_missing", nil).Times(2)
+	domainCache.EXPECT().GetDomainName("first_history_event").Return("first_history_event", nil).Times(1)
+	domainCache.EXPECT().GetDomainName("orphan_execution").Return("orphan_execution", nil).Times(1)
+	domainCache.EXPECT().GetDomainName("failed").Return("failed", nil).Times(2)
+	domainCache.EXPECT().GetDomainName("disallow_domain").Return("disallow_domain", nil).Times(2)
 
 	allowDomain := func(domain string) bool {
 		return domain != "disallow_domain"

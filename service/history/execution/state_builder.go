@@ -27,7 +27,6 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/errors"
@@ -133,7 +132,11 @@ func (b *stateBuilderImpl) ApplyEvents(
 		case types.EventTypeWorkflowExecutionStarted:
 			attributes := event.WorkflowExecutionStartedEventAttributes
 			var parentDomainID *string
-			if attributes.ParentWorkflowDomain != nil {
+			// If ParentWorkflowDomainID is present use it, otherwise fallback to ParentWorkflowDomain
+			// as ParentWorkflowDomainID will not be present on older histories.
+			if attributes.ParentWorkflowDomainID != nil {
+				parentDomainID = attributes.ParentWorkflowDomainID
+			} else if attributes.GetParentWorkflowDomain() != "" {
 				parentDomainEntry, err := b.domainCache.GetDomain(
 					attributes.GetParentWorkflowDomain(),
 				)
@@ -606,7 +609,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 				newRunID := event.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunID()
 				newExecution := types.WorkflowExecution{
 					WorkflowID: workflowExecution.WorkflowID,
-					RunID:      common.StringPtr(newRunID),
+					RunID:      newRunID,
 				}
 				_, err := newRunStateBuilder.ApplyEvents(
 					domainID,

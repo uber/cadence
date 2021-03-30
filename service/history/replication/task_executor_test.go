@@ -32,7 +32,6 @@ import (
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/metrics"
@@ -177,15 +176,15 @@ func (s *taskExecutorSuite) TestProcessTaskOnce_SyncActivityReplicationTask() {
 	task := &types.ReplicationTask{
 		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
 		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
-			DomainID:   common.StringPtr(domainID),
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			DomainID:   domainID,
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	}
 	request := &types.SyncActivityRequest{
-		DomainID:   common.StringPtr(domainID),
-		WorkflowID: common.StringPtr(workflowID),
-		RunID:      common.StringPtr(runID),
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
 	}
 
 	s.mockEngine.EXPECT().SyncActivity(gomock.Any(), request).Return(nil).Times(2)
@@ -200,16 +199,16 @@ func (s *taskExecutorSuite) TestProcess_HistoryV2ReplicationTask() {
 	task := &types.ReplicationTask{
 		TaskType: types.ReplicationTaskTypeHistoryV2.Ptr(),
 		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
-			DomainID:   common.StringPtr(domainID),
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			DomainID:   domainID,
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	}
 	request := &types.ReplicateEventsV2Request{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	}
 

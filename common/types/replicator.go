@@ -131,13 +131,13 @@ const (
 // DomainTaskAttributes is an internal type (TBD...)
 type DomainTaskAttributes struct {
 	DomainOperation         *DomainOperation                `json:"domainOperation,omitempty"`
-	ID                      *string                         `json:"id,omitempty"`
+	ID                      string                          `json:"id,omitempty"`
 	Info                    *DomainInfo                     `json:"info,omitempty"`
 	Config                  *DomainConfiguration            `json:"config,omitempty"`
 	ReplicationConfig       *DomainReplicationConfiguration `json:"replicationConfig,omitempty"`
-	ConfigVersion           *int64                          `json:"configVersion,omitempty"`
-	FailoverVersion         *int64                          `json:"failoverVersion,omitempty"`
-	PreviousFailoverVersion *int64                          `json:"previousFailoverVersion,omitempty"`
+	ConfigVersion           int64                           `json:"configVersion,omitempty"`
+	FailoverVersion         int64                           `json:"failoverVersion,omitempty"`
+	PreviousFailoverVersion int64                           `json:"previousFailoverVersion,omitempty"`
 }
 
 // GetDomainOperation is an internal getter (TBD...)
@@ -150,8 +150,8 @@ func (v *DomainTaskAttributes) GetDomainOperation() (o DomainOperation) {
 
 // GetID is an internal getter (TBD...)
 func (v *DomainTaskAttributes) GetID() (o string) {
-	if v != nil && v.ID != nil {
-		return *v.ID
+	if v != nil {
+		return v.ID
 	}
 	return
 }
@@ -182,47 +182,47 @@ func (v *DomainTaskAttributes) GetReplicationConfig() (o *DomainReplicationConfi
 
 // GetConfigVersion is an internal getter (TBD...)
 func (v *DomainTaskAttributes) GetConfigVersion() (o int64) {
-	if v != nil && v.ConfigVersion != nil {
-		return *v.ConfigVersion
+	if v != nil {
+		return v.ConfigVersion
 	}
 	return
 }
 
 // GetFailoverVersion is an internal getter (TBD...)
 func (v *DomainTaskAttributes) GetFailoverVersion() (o int64) {
-	if v != nil && v.FailoverVersion != nil {
-		return *v.FailoverVersion
+	if v != nil {
+		return v.FailoverVersion
 	}
 	return
 }
 
 // GetPreviousFailoverVersion is an internal getter (TBD...)
 func (v *DomainTaskAttributes) GetPreviousFailoverVersion() (o int64) {
-	if v != nil && v.PreviousFailoverVersion != nil {
-		return *v.PreviousFailoverVersion
+	if v != nil {
+		return v.PreviousFailoverVersion
 	}
 	return
 }
 
 // FailoverMarkerAttributes is an internal type (TBD...)
 type FailoverMarkerAttributes struct {
-	DomainID        *string `json:"domainID,omitempty"`
-	FailoverVersion *int64  `json:"failoverVersion,omitempty"`
-	CreationTime    *int64  `json:"creationTime,omitempty"`
+	DomainID        string `json:"domainID,omitempty"`
+	FailoverVersion int64  `json:"failoverVersion,omitempty"`
+	CreationTime    *int64 `json:"creationTime,omitempty"`
 }
 
 // GetDomainID is an internal getter (TBD...)
 func (v *FailoverMarkerAttributes) GetDomainID() (o string) {
-	if v != nil && v.DomainID != nil {
-		return *v.DomainID
+	if v != nil {
+		return v.DomainID
 	}
 	return
 }
 
 // GetFailoverVersion is an internal getter (TBD...)
 func (v *FailoverMarkerAttributes) GetFailoverVersion() (o int64) {
-	if v != nil && v.FailoverVersion != nil {
-		return *v.FailoverVersion
+	if v != nil {
+		return v.FailoverVersion
 	}
 	return
 }
@@ -276,9 +276,9 @@ func (v *GetDLQReplicationMessagesResponse) GetReplicationTasks() (o []*Replicat
 
 // GetDomainReplicationMessagesRequest is an internal type (TBD...)
 type GetDomainReplicationMessagesRequest struct {
-	LastRetrievedMessageID *int64  `json:"lastRetrievedMessageId,omitempty"`
-	LastProcessedMessageID *int64  `json:"lastProcessedMessageId,omitempty"`
-	ClusterName            *string `json:"clusterName,omitempty"`
+	LastRetrievedMessageID *int64 `json:"lastRetrievedMessageId,omitempty"`
+	LastProcessedMessageID *int64 `json:"lastProcessedMessageId,omitempty"`
+	ClusterName            string `json:"clusterName,omitempty"`
 }
 
 // GetLastRetrievedMessageID is an internal getter (TBD...)
@@ -299,8 +299,8 @@ func (v *GetDomainReplicationMessagesRequest) GetLastProcessedMessageID() (o int
 
 // GetClusterName is an internal getter (TBD...)
 func (v *GetDomainReplicationMessagesRequest) GetClusterName() (o string) {
-	if v != nil && v.ClusterName != nil {
-		return *v.ClusterName
+	if v != nil {
+		return v.ClusterName
 	}
 	return
 }
@@ -321,7 +321,7 @@ func (v *GetDomainReplicationMessagesResponse) GetMessages() (o *ReplicationMess
 // GetReplicationMessagesRequest is an internal type (TBD...)
 type GetReplicationMessagesRequest struct {
 	Tokens      []*ReplicationToken `json:"tokens,omitempty"`
-	ClusterName *string             `json:"clusterName,omitempty"`
+	ClusterName string              `json:"clusterName,omitempty"`
 }
 
 // GetTokens is an internal getter (TBD...)
@@ -334,8 +334,8 @@ func (v *GetReplicationMessagesRequest) GetTokens() (o []*ReplicationToken) {
 
 // GetClusterName is an internal getter (TBD...)
 func (v *GetReplicationMessagesRequest) GetClusterName() (o string) {
-	if v != nil && v.ClusterName != nil {
-		return *v.ClusterName
+	if v != nil {
+		return v.ClusterName
 	}
 	return
 }
@@ -355,10 +355,10 @@ func (v *GetReplicationMessagesResponse) GetMessagesByShard() (o map[int32]*Repl
 
 // HistoryTaskV2Attributes is an internal type (TBD...)
 type HistoryTaskV2Attributes struct {
-	TaskID              *int64                `json:"taskId,omitempty"`
-	DomainID            *string               `json:"domainId,omitempty"`
-	WorkflowID          *string               `json:"workflowId,omitempty"`
-	RunID               *string               `json:"runId,omitempty"`
+	TaskID              int64                 `json:"taskId,omitempty"`
+	DomainID            string                `json:"domainId,omitempty"`
+	WorkflowID          string                `json:"workflowId,omitempty"`
+	RunID               string                `json:"runId,omitempty"`
 	VersionHistoryItems []*VersionHistoryItem `json:"versionHistoryItems,omitempty"`
 	Events              *DataBlob             `json:"events,omitempty"`
 	NewRunEvents        *DataBlob             `json:"newRunEvents,omitempty"`
@@ -366,32 +366,32 @@ type HistoryTaskV2Attributes struct {
 
 // GetTaskID is an internal getter (TBD...)
 func (v *HistoryTaskV2Attributes) GetTaskID() (o int64) {
-	if v != nil && v.TaskID != nil {
-		return *v.TaskID
+	if v != nil {
+		return v.TaskID
 	}
 	return
 }
 
 // GetDomainID is an internal getter (TBD...)
 func (v *HistoryTaskV2Attributes) GetDomainID() (o string) {
-	if v != nil && v.DomainID != nil {
-		return *v.DomainID
+	if v != nil {
+		return v.DomainID
 	}
 	return
 }
 
 // GetWorkflowID is an internal getter (TBD...)
 func (v *HistoryTaskV2Attributes) GetWorkflowID() (o string) {
-	if v != nil && v.WorkflowID != nil {
-		return *v.WorkflowID
+	if v != nil {
+		return v.WorkflowID
 	}
 	return
 }
 
 // GetRunID is an internal getter (TBD...)
 func (v *HistoryTaskV2Attributes) GetRunID() (o string) {
-	if v != nil && v.RunID != nil {
-		return *v.RunID
+	if v != nil {
+		return v.RunID
 	}
 	return
 }
@@ -423,10 +423,10 @@ func (v *HistoryTaskV2Attributes) GetNewRunEvents() (o *DataBlob) {
 // MergeDLQMessagesRequest is an internal type (TBD...)
 type MergeDLQMessagesRequest struct {
 	Type                  *DLQType `json:"type,omitempty"`
-	ShardID               *int32   `json:"shardID,omitempty"`
-	SourceCluster         *string  `json:"sourceCluster,omitempty"`
+	ShardID               int32    `json:"shardID,omitempty"`
+	SourceCluster         string   `json:"sourceCluster,omitempty"`
 	InclusiveEndMessageID *int64   `json:"inclusiveEndMessageID,omitempty"`
-	MaximumPageSize       *int32   `json:"maximumPageSize,omitempty"`
+	MaximumPageSize       int32    `json:"maximumPageSize,omitempty"`
 	NextPageToken         []byte   `json:"nextPageToken,omitempty"`
 }
 
@@ -440,16 +440,16 @@ func (v *MergeDLQMessagesRequest) GetType() (o DLQType) {
 
 // GetShardID is an internal getter (TBD...)
 func (v *MergeDLQMessagesRequest) GetShardID() (o int32) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }
 
 // GetSourceCluster is an internal getter (TBD...)
 func (v *MergeDLQMessagesRequest) GetSourceCluster() (o string) {
-	if v != nil && v.SourceCluster != nil {
-		return *v.SourceCluster
+	if v != nil {
+		return v.SourceCluster
 	}
 	return
 }
@@ -464,8 +464,8 @@ func (v *MergeDLQMessagesRequest) GetInclusiveEndMessageID() (o int64) {
 
 // GetMaximumPageSize is an internal getter (TBD...)
 func (v *MergeDLQMessagesRequest) GetMaximumPageSize() (o int32) {
-	if v != nil && v.MaximumPageSize != nil {
-		return *v.MaximumPageSize
+	if v != nil {
+		return v.MaximumPageSize
 	}
 	return
 }
@@ -494,8 +494,8 @@ func (v *MergeDLQMessagesResponse) GetNextPageToken() (o []byte) {
 // PurgeDLQMessagesRequest is an internal type (TBD...)
 type PurgeDLQMessagesRequest struct {
 	Type                  *DLQType `json:"type,omitempty"`
-	ShardID               *int32   `json:"shardID,omitempty"`
-	SourceCluster         *string  `json:"sourceCluster,omitempty"`
+	ShardID               int32    `json:"shardID,omitempty"`
+	SourceCluster         string   `json:"sourceCluster,omitempty"`
 	InclusiveEndMessageID *int64   `json:"inclusiveEndMessageID,omitempty"`
 }
 
@@ -509,16 +509,16 @@ func (v *PurgeDLQMessagesRequest) GetType() (o DLQType) {
 
 // GetShardID is an internal getter (TBD...)
 func (v *PurgeDLQMessagesRequest) GetShardID() (o int32) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }
 
 // GetSourceCluster is an internal getter (TBD...)
 func (v *PurgeDLQMessagesRequest) GetSourceCluster() (o string) {
-	if v != nil && v.SourceCluster != nil {
-		return *v.SourceCluster
+	if v != nil {
+		return v.SourceCluster
 	}
 	return
 }
@@ -534,10 +534,10 @@ func (v *PurgeDLQMessagesRequest) GetInclusiveEndMessageID() (o int64) {
 // ReadDLQMessagesRequest is an internal type (TBD...)
 type ReadDLQMessagesRequest struct {
 	Type                  *DLQType `json:"type,omitempty"`
-	ShardID               *int32   `json:"shardID,omitempty"`
-	SourceCluster         *string  `json:"sourceCluster,omitempty"`
+	ShardID               int32    `json:"shardID,omitempty"`
+	SourceCluster         string   `json:"sourceCluster,omitempty"`
 	InclusiveEndMessageID *int64   `json:"inclusiveEndMessageID,omitempty"`
-	MaximumPageSize       *int32   `json:"maximumPageSize,omitempty"`
+	MaximumPageSize       int32    `json:"maximumPageSize,omitempty"`
 	NextPageToken         []byte   `json:"nextPageToken,omitempty"`
 }
 
@@ -551,16 +551,16 @@ func (v *ReadDLQMessagesRequest) GetType() (o DLQType) {
 
 // GetShardID is an internal getter (TBD...)
 func (v *ReadDLQMessagesRequest) GetShardID() (o int32) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }
 
 // GetSourceCluster is an internal getter (TBD...)
 func (v *ReadDLQMessagesRequest) GetSourceCluster() (o string) {
-	if v != nil && v.SourceCluster != nil {
-		return *v.SourceCluster
+	if v != nil {
+		return v.SourceCluster
 	}
 	return
 }
@@ -575,8 +575,8 @@ func (v *ReadDLQMessagesRequest) GetInclusiveEndMessageID() (o int64) {
 
 // GetMaximumPageSize is an internal getter (TBD...)
 func (v *ReadDLQMessagesRequest) GetMaximumPageSize() (o int32) {
-	if v != nil && v.MaximumPageSize != nil {
-		return *v.MaximumPageSize
+	if v != nil {
+		return v.MaximumPageSize
 	}
 	return
 }
@@ -632,8 +632,8 @@ func (v *ReadDLQMessagesResponse) GetNextPageToken() (o []byte) {
 // ReplicationMessages is an internal type (TBD...)
 type ReplicationMessages struct {
 	ReplicationTasks       []*ReplicationTask `json:"replicationTasks,omitempty"`
-	LastRetrievedMessageID *int64             `json:"lastRetrievedMessageId,omitempty"`
-	HasMore                *bool              `json:"hasMore,omitempty"`
+	LastRetrievedMessageID int64              `json:"lastRetrievedMessageId,omitempty"`
+	HasMore                bool               `json:"hasMore,omitempty"`
 	SyncShardStatus        *SyncShardStatus   `json:"syncShardStatus,omitempty"`
 }
 
@@ -647,16 +647,16 @@ func (v *ReplicationMessages) GetReplicationTasks() (o []*ReplicationTask) {
 
 // GetLastRetrievedMessageID is an internal getter (TBD...)
 func (v *ReplicationMessages) GetLastRetrievedMessageID() (o int64) {
-	if v != nil && v.LastRetrievedMessageID != nil {
-		return *v.LastRetrievedMessageID
+	if v != nil {
+		return v.LastRetrievedMessageID
 	}
 	return
 }
 
 // GetHasMore is an internal getter (TBD...)
 func (v *ReplicationMessages) GetHasMore() (o bool) {
-	if v != nil && v.HasMore != nil {
-		return *v.HasMore
+	if v != nil {
+		return v.HasMore
 	}
 	return
 }
@@ -672,7 +672,7 @@ func (v *ReplicationMessages) GetSyncShardStatus() (o *SyncShardStatus) {
 // ReplicationTask is an internal type (TBD...)
 type ReplicationTask struct {
 	TaskType                      *ReplicationTaskType           `json:"taskType,omitempty"`
-	SourceTaskID                  *int64                         `json:"sourceTaskId,omitempty"`
+	SourceTaskID                  int64                          `json:"sourceTaskId,omitempty"`
 	DomainTaskAttributes          *DomainTaskAttributes          `json:"domainTaskAttributes,omitempty"`
 	SyncShardStatusTaskAttributes *SyncShardStatusTaskAttributes `json:"syncShardStatusTaskAttributes,omitempty"`
 	SyncActivityTaskAttributes    *SyncActivityTaskAttributes    `json:"syncActivityTaskAttributes,omitempty"`
@@ -691,8 +691,8 @@ func (v *ReplicationTask) GetTaskType() (o ReplicationTaskType) {
 
 // GetSourceTaskID is an internal getter (TBD...)
 func (v *ReplicationTask) GetSourceTaskID() (o int64) {
-	if v != nil && v.SourceTaskID != nil {
-		return *v.SourceTaskID
+	if v != nil {
+		return v.SourceTaskID
 	}
 	return
 }
@@ -747,85 +747,85 @@ func (v *ReplicationTask) GetCreationTime() (o int64) {
 
 // ReplicationTaskInfo is an internal type (TBD...)
 type ReplicationTaskInfo struct {
-	DomainID     *string `json:"domainID,omitempty"`
-	WorkflowID   *string `json:"workflowID,omitempty"`
-	RunID        *string `json:"runID,omitempty"`
-	TaskType     *int16  `json:"taskType,omitempty"`
-	TaskID       *int64  `json:"taskID,omitempty"`
-	Version      *int64  `json:"version,omitempty"`
-	FirstEventID *int64  `json:"firstEventID,omitempty"`
-	NextEventID  *int64  `json:"nextEventID,omitempty"`
-	ScheduledID  *int64  `json:"scheduledID,omitempty"`
+	DomainID     string `json:"domainID,omitempty"`
+	WorkflowID   string `json:"workflowID,omitempty"`
+	RunID        string `json:"runID,omitempty"`
+	TaskType     int16  `json:"taskType,omitempty"`
+	TaskID       int64  `json:"taskID,omitempty"`
+	Version      int64  `json:"version,omitempty"`
+	FirstEventID int64  `json:"firstEventID,omitempty"`
+	NextEventID  int64  `json:"nextEventID,omitempty"`
+	ScheduledID  int64  `json:"scheduledID,omitempty"`
 }
 
 // GetDomainID is an internal getter (TBD...)
 func (v *ReplicationTaskInfo) GetDomainID() (o string) {
-	if v != nil && v.DomainID != nil {
-		return *v.DomainID
+	if v != nil {
+		return v.DomainID
 	}
 	return
 }
 
 // GetWorkflowID is an internal getter (TBD...)
 func (v *ReplicationTaskInfo) GetWorkflowID() (o string) {
-	if v != nil && v.WorkflowID != nil {
-		return *v.WorkflowID
+	if v != nil {
+		return v.WorkflowID
 	}
 	return
 }
 
 // GetRunID is an internal getter (TBD...)
 func (v *ReplicationTaskInfo) GetRunID() (o string) {
-	if v != nil && v.RunID != nil {
-		return *v.RunID
+	if v != nil {
+		return v.RunID
 	}
 	return
 }
 
 // GetTaskType is an internal getter (TBD...)
 func (v *ReplicationTaskInfo) GetTaskType() (o int16) {
-	if v != nil && v.TaskType != nil {
-		return *v.TaskType
+	if v != nil {
+		return v.TaskType
 	}
 	return
 }
 
 // GetTaskID is an internal getter (TBD...)
 func (v *ReplicationTaskInfo) GetTaskID() (o int64) {
-	if v != nil && v.TaskID != nil {
-		return *v.TaskID
+	if v != nil {
+		return v.TaskID
 	}
 	return
 }
 
 // GetVersion is an internal getter (TBD...)
 func (v *ReplicationTaskInfo) GetVersion() (o int64) {
-	if v != nil && v.Version != nil {
-		return *v.Version
+	if v != nil {
+		return v.Version
 	}
 	return
 }
 
 // GetFirstEventID is an internal getter (TBD...)
 func (v *ReplicationTaskInfo) GetFirstEventID() (o int64) {
-	if v != nil && v.FirstEventID != nil {
-		return *v.FirstEventID
+	if v != nil {
+		return v.FirstEventID
 	}
 	return
 }
 
 // GetNextEventID is an internal getter (TBD...)
 func (v *ReplicationTaskInfo) GetNextEventID() (o int64) {
-	if v != nil && v.NextEventID != nil {
-		return *v.NextEventID
+	if v != nil {
+		return v.NextEventID
 	}
 	return
 }
 
 // GetScheduledID is an internal getter (TBD...)
 func (v *ReplicationTaskInfo) GetScheduledID() (o int64) {
-	if v != nil && v.ScheduledID != nil {
-		return *v.ScheduledID
+	if v != nil {
+		return v.ScheduledID
 	}
 	return
 }
@@ -918,90 +918,90 @@ const (
 
 // ReplicationToken is an internal type (TBD...)
 type ReplicationToken struct {
-	ShardID                *int32 `json:"shardID,omitempty"`
-	LastRetrievedMessageID *int64 `json:"lastRetrievedMessageId,omitempty"`
-	LastProcessedMessageID *int64 `json:"lastProcessedMessageId,omitempty"`
+	ShardID                int32 `json:"shardID,omitempty"`
+	LastRetrievedMessageID int64 `json:"lastRetrievedMessageId,omitempty"`
+	LastProcessedMessageID int64 `json:"lastProcessedMessageId,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
 func (v *ReplicationToken) GetShardID() (o int32) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }
 
 // GetLastRetrievedMessageID is an internal getter (TBD...)
 func (v *ReplicationToken) GetLastRetrievedMessageID() (o int64) {
-	if v != nil && v.LastRetrievedMessageID != nil {
-		return *v.LastRetrievedMessageID
+	if v != nil {
+		return v.LastRetrievedMessageID
 	}
 	return
 }
 
 // GetLastProcessedMessageID is an internal getter (TBD...)
 func (v *ReplicationToken) GetLastProcessedMessageID() (o int64) {
-	if v != nil && v.LastProcessedMessageID != nil {
-		return *v.LastProcessedMessageID
+	if v != nil {
+		return v.LastProcessedMessageID
 	}
 	return
 }
 
 // SyncActivityTaskAttributes is an internal type (TBD...)
 type SyncActivityTaskAttributes struct {
-	DomainID           *string         `json:"domainId,omitempty"`
-	WorkflowID         *string         `json:"workflowId,omitempty"`
-	RunID              *string         `json:"runId,omitempty"`
-	Version            *int64          `json:"version,omitempty"`
-	ScheduledID        *int64          `json:"scheduledId,omitempty"`
+	DomainID           string          `json:"domainId,omitempty"`
+	WorkflowID         string          `json:"workflowId,omitempty"`
+	RunID              string          `json:"runId,omitempty"`
+	Version            int64           `json:"version,omitempty"`
+	ScheduledID        int64           `json:"scheduledId,omitempty"`
 	ScheduledTime      *int64          `json:"scheduledTime,omitempty"`
-	StartedID          *int64          `json:"startedId,omitempty"`
+	StartedID          int64           `json:"startedId,omitempty"`
 	StartedTime        *int64          `json:"startedTime,omitempty"`
 	LastHeartbeatTime  *int64          `json:"lastHeartbeatTime,omitempty"`
 	Details            []byte          `json:"details,omitempty"`
-	Attempt            *int32          `json:"attempt,omitempty"`
+	Attempt            int32           `json:"attempt,omitempty"`
 	LastFailureReason  *string         `json:"lastFailureReason,omitempty"`
-	LastWorkerIdentity *string         `json:"lastWorkerIdentity,omitempty"`
+	LastWorkerIdentity string          `json:"lastWorkerIdentity,omitempty"`
 	LastFailureDetails []byte          `json:"lastFailureDetails,omitempty"`
 	VersionHistory     *VersionHistory `json:"versionHistory,omitempty"`
 }
 
 // GetDomainID is an internal getter (TBD...)
 func (v *SyncActivityTaskAttributes) GetDomainID() (o string) {
-	if v != nil && v.DomainID != nil {
-		return *v.DomainID
+	if v != nil {
+		return v.DomainID
 	}
 	return
 }
 
 // GetWorkflowID is an internal getter (TBD...)
 func (v *SyncActivityTaskAttributes) GetWorkflowID() (o string) {
-	if v != nil && v.WorkflowID != nil {
-		return *v.WorkflowID
+	if v != nil {
+		return v.WorkflowID
 	}
 	return
 }
 
 // GetRunID is an internal getter (TBD...)
 func (v *SyncActivityTaskAttributes) GetRunID() (o string) {
-	if v != nil && v.RunID != nil {
-		return *v.RunID
+	if v != nil {
+		return v.RunID
 	}
 	return
 }
 
 // GetVersion is an internal getter (TBD...)
 func (v *SyncActivityTaskAttributes) GetVersion() (o int64) {
-	if v != nil && v.Version != nil {
-		return *v.Version
+	if v != nil {
+		return v.Version
 	}
 	return
 }
 
 // GetScheduledID is an internal getter (TBD...)
 func (v *SyncActivityTaskAttributes) GetScheduledID() (o int64) {
-	if v != nil && v.ScheduledID != nil {
-		return *v.ScheduledID
+	if v != nil {
+		return v.ScheduledID
 	}
 	return
 }
@@ -1016,8 +1016,8 @@ func (v *SyncActivityTaskAttributes) GetScheduledTime() (o int64) {
 
 // GetStartedID is an internal getter (TBD...)
 func (v *SyncActivityTaskAttributes) GetStartedID() (o int64) {
-	if v != nil && v.StartedID != nil {
-		return *v.StartedID
+	if v != nil {
+		return v.StartedID
 	}
 	return
 }
@@ -1048,8 +1048,8 @@ func (v *SyncActivityTaskAttributes) GetDetails() (o []byte) {
 
 // GetAttempt is an internal getter (TBD...)
 func (v *SyncActivityTaskAttributes) GetAttempt() (o int32) {
-	if v != nil && v.Attempt != nil {
-		return *v.Attempt
+	if v != nil {
+		return v.Attempt
 	}
 	return
 }
@@ -1064,8 +1064,8 @@ func (v *SyncActivityTaskAttributes) GetLastFailureReason() (o string) {
 
 // GetLastWorkerIdentity is an internal getter (TBD...)
 func (v *SyncActivityTaskAttributes) GetLastWorkerIdentity() (o string) {
-	if v != nil && v.LastWorkerIdentity != nil {
-		return *v.LastWorkerIdentity
+	if v != nil {
+		return v.LastWorkerIdentity
 	}
 	return
 }
@@ -1101,23 +1101,23 @@ func (v *SyncShardStatus) GetTimestamp() (o int64) {
 
 // SyncShardStatusTaskAttributes is an internal type (TBD...)
 type SyncShardStatusTaskAttributes struct {
-	SourceCluster *string `json:"sourceCluster,omitempty"`
-	ShardID       *int64  `json:"shardId,omitempty"`
-	Timestamp     *int64  `json:"timestamp,omitempty"`
+	SourceCluster string `json:"sourceCluster,omitempty"`
+	ShardID       int64  `json:"shardId,omitempty"`
+	Timestamp     *int64 `json:"timestamp,omitempty"`
 }
 
 // GetSourceCluster is an internal getter (TBD...)
 func (v *SyncShardStatusTaskAttributes) GetSourceCluster() (o string) {
-	if v != nil && v.SourceCluster != nil {
-		return *v.SourceCluster
+	if v != nil {
+		return v.SourceCluster
 	}
 	return
 }
 
 // GetShardID is an internal getter (TBD...)
 func (v *SyncShardStatusTaskAttributes) GetShardID() (o int64) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }

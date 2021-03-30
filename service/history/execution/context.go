@@ -204,11 +204,11 @@ func (c *contextImpl) GetExecution() *types.WorkflowExecution {
 }
 
 func (c *contextImpl) GetDomainName() string {
-	domainEntry, err := c.shard.GetDomainCache().GetDomainByID(c.domainID)
+	domainName, err := c.shard.GetDomainCache().GetDomainName(c.domainID)
 	if err != nil {
 		return ""
 	}
-	return domainEntry.GetInfo().Name
+	return domainName
 }
 
 func (c *contextImpl) GetHistorySize() int64 {
@@ -904,8 +904,8 @@ func (c *contextImpl) PersistFirstWorkflowEvents(
 	workflowID := workflowEvents.WorkflowID
 	runID := workflowEvents.RunID
 	execution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(workflowEvents.WorkflowID),
-		RunID:      common.StringPtr(workflowEvents.RunID),
+		WorkflowID: workflowEvents.WorkflowID,
+		RunID:      workflowEvents.RunID,
 	}
 	branchToken := workflowEvents.BranchToken
 	events := workflowEvents.Events
@@ -936,8 +936,8 @@ func (c *contextImpl) PersistNonFirstWorkflowEvents(
 
 	domainID := workflowEvents.DomainID
 	execution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(workflowEvents.WorkflowID),
-		RunID:      common.StringPtr(workflowEvents.RunID),
+		WorkflowID: workflowEvents.WorkflowID,
+		RunID:      workflowEvents.RunID,
 	}
 	branchToken := workflowEvents.BranchToken
 	events := workflowEvents.Events
@@ -1167,8 +1167,8 @@ func (c *contextImpl) ReapplyEvents(
 	// Reapply events only reapply to the current run.
 	// The run id is only used for reapply event de-duplication
 	execution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(workflowID),
-		RunID:      common.StringPtr(runID),
+		WorkflowID: workflowID,
+		RunID:      runID,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), defaultRemoteCallTimeout)
 	defer cancel()
@@ -1205,7 +1205,7 @@ func (c *contextImpl) ReapplyEvents(
 	return sourceCluster.ReapplyEvents(
 		ctx,
 		&types.ReapplyEventsRequest{
-			DomainName:        common.StringPtr(domainEntry.GetInfo().Name),
+			DomainName:        domainEntry.GetInfo().Name,
 			WorkflowExecution: execution,
 			Events:            reapplyEventsDataBlob.ToInternal(),
 		},

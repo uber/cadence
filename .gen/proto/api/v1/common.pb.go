@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,29 +26,20 @@
 package apiv1
 
 import (
-	bytes "bytes"
 	encoding_binary "encoding/binary"
 	fmt "fmt"
 	io "io"
 	math "math"
 	math_bits "math/bits"
-	reflect "reflect"
-	strconv "strconv"
-	strings "strings"
-	time "time"
 
-	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
-	github_com_gogo_protobuf_sortkeys "github.com/gogo/protobuf/sortkeys"
-	github_com_gogo_protobuf_types "github.com/gogo/protobuf/types"
-	_ "github.com/golang/protobuf/ptypes/duration"
+	types "github.com/gogo/protobuf/types"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = time.Kitchen
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -59,10 +50,10 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 type EncodingType int32
 
 const (
-	ENCODING_TYPE_INVALID  EncodingType = 0
-	ENCODING_TYPE_THRIFTRW EncodingType = 1
-	ENCODING_TYPE_JSON     EncodingType = 2
-	ENCODING_TYPE_PROTO3   EncodingType = 3
+	EncodingType_ENCODING_TYPE_INVALID  EncodingType = 0
+	EncodingType_ENCODING_TYPE_THRIFTRW EncodingType = 1
+	EncodingType_ENCODING_TYPE_JSON     EncodingType = 2
+	EncodingType_ENCODING_TYPE_PROTO3   EncodingType = 3
 )
 
 var EncodingType_name = map[int32]string{
@@ -79,17 +70,25 @@ var EncodingType_value = map[string]int32{
 	"ENCODING_TYPE_PROTO3":   3,
 }
 
+func (x EncodingType) String() string {
+	return proto.EnumName(EncodingType_name, int32(x))
+}
+
 func (EncodingType) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_0ff151d4a308b356, []int{0}
 }
 
 type WorkflowExecution struct {
-	WorkflowId string `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
-	RunId      string `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	WorkflowId           string   `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	RunId                string   `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *WorkflowExecution) Reset()      { *m = WorkflowExecution{} }
-func (*WorkflowExecution) ProtoMessage() {}
+func (m *WorkflowExecution) Reset()         { *m = WorkflowExecution{} }
+func (m *WorkflowExecution) String() string { return proto.CompactTextString(m) }
+func (*WorkflowExecution) ProtoMessage()    {}
 func (*WorkflowExecution) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0ff151d4a308b356, []int{0}
 }
@@ -135,11 +134,15 @@ func (m *WorkflowExecution) GetRunId() string {
 }
 
 type WorkflowType struct {
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *WorkflowType) Reset()      { *m = WorkflowType{} }
-func (*WorkflowType) ProtoMessage() {}
+func (m *WorkflowType) Reset()         { *m = WorkflowType{} }
+func (m *WorkflowType) String() string { return proto.CompactTextString(m) }
+func (*WorkflowType) ProtoMessage()    {}
 func (*WorkflowType) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0ff151d4a308b356, []int{1}
 }
@@ -178,11 +181,15 @@ func (m *WorkflowType) GetName() string {
 }
 
 type ActivityType struct {
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ActivityType) Reset()      { *m = ActivityType{} }
-func (*ActivityType) ProtoMessage() {}
+func (m *ActivityType) Reset()         { *m = ActivityType{} }
+func (m *ActivityType) String() string { return proto.CompactTextString(m) }
+func (*ActivityType) ProtoMessage()    {}
 func (*ActivityType) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0ff151d4a308b356, []int{2}
 }
@@ -221,11 +228,15 @@ func (m *ActivityType) GetName() string {
 }
 
 type Payload struct {
-	Data []byte `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data                 []byte   `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Payload) Reset()      { *m = Payload{} }
-func (*Payload) ProtoMessage() {}
+func (m *Payload) Reset()         { *m = Payload{} }
+func (m *Payload) String() string { return proto.CompactTextString(m) }
+func (*Payload) ProtoMessage()    {}
 func (*Payload) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0ff151d4a308b356, []int{3}
 }
@@ -264,12 +275,16 @@ func (m *Payload) GetData() []byte {
 }
 
 type Failure struct {
-	Reason  string `protobuf:"bytes,1,opt,name=reason,proto3" json:"reason,omitempty"`
-	Details []byte `protobuf:"bytes,2,opt,name=details,proto3" json:"details,omitempty"`
+	Reason               string   `protobuf:"bytes,1,opt,name=reason,proto3" json:"reason,omitempty"`
+	Details              []byte   `protobuf:"bytes,2,opt,name=details,proto3" json:"details,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Failure) Reset()      { *m = Failure{} }
-func (*Failure) ProtoMessage() {}
+func (m *Failure) Reset()         { *m = Failure{} }
+func (m *Failure) String() string { return proto.CompactTextString(m) }
+func (*Failure) ProtoMessage()    {}
 func (*Failure) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0ff151d4a308b356, []int{4}
 }
@@ -315,11 +330,15 @@ func (m *Failure) GetDetails() []byte {
 }
 
 type Memo struct {
-	Fields map[string]*Payload `protobuf:"bytes,1,rep,name=fields,proto3" json:"fields,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Fields               map[string]*Payload `protobuf:"bytes,1,rep,name=fields,proto3" json:"fields,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
+	XXX_unrecognized     []byte              `json:"-"`
+	XXX_sizecache        int32               `json:"-"`
 }
 
-func (m *Memo) Reset()      { *m = Memo{} }
-func (*Memo) ProtoMessage() {}
+func (m *Memo) Reset()         { *m = Memo{} }
+func (m *Memo) String() string { return proto.CompactTextString(m) }
+func (*Memo) ProtoMessage()    {}
 func (*Memo) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0ff151d4a308b356, []int{5}
 }
@@ -358,11 +377,15 @@ func (m *Memo) GetFields() map[string]*Payload {
 }
 
 type Header struct {
-	Fields map[string]*Payload `protobuf:"bytes,1,rep,name=fields,proto3" json:"fields,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Fields               map[string]*Payload `protobuf:"bytes,1,rep,name=fields,proto3" json:"fields,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
+	XXX_unrecognized     []byte              `json:"-"`
+	XXX_sizecache        int32               `json:"-"`
 }
 
-func (m *Header) Reset()      { *m = Header{} }
-func (*Header) ProtoMessage() {}
+func (m *Header) Reset()         { *m = Header{} }
+func (m *Header) String() string { return proto.CompactTextString(m) }
+func (*Header) ProtoMessage()    {}
 func (*Header) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0ff151d4a308b356, []int{6}
 }
@@ -401,11 +424,15 @@ func (m *Header) GetFields() map[string]*Payload {
 }
 
 type SearchAttributes struct {
-	IndexedFields map[string]*Payload `protobuf:"bytes,1,rep,name=indexed_fields,json=indexedFields,proto3" json:"indexed_fields,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	IndexedFields        map[string]*Payload `protobuf:"bytes,1,rep,name=indexed_fields,json=indexedFields,proto3" json:"indexed_fields,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
+	XXX_unrecognized     []byte              `json:"-"`
+	XXX_sizecache        int32               `json:"-"`
 }
 
-func (m *SearchAttributes) Reset()      { *m = SearchAttributes{} }
-func (*SearchAttributes) ProtoMessage() {}
+func (m *SearchAttributes) Reset()         { *m = SearchAttributes{} }
+func (m *SearchAttributes) String() string { return proto.CompactTextString(m) }
+func (*SearchAttributes) ProtoMessage()    {}
 func (*SearchAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0ff151d4a308b356, []int{7}
 }
@@ -444,12 +471,16 @@ func (m *SearchAttributes) GetIndexedFields() map[string]*Payload {
 }
 
 type DataBlob struct {
-	EncodingType EncodingType `protobuf:"varint,1,opt,name=encoding_type,json=encodingType,proto3,enum=uber.cadence.api.v1.EncodingType" json:"encoding_type,omitempty"`
-	Data         []byte       `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	EncodingType         EncodingType `protobuf:"varint,1,opt,name=encoding_type,json=encodingType,proto3,enum=uber.cadence.api.v1.EncodingType" json:"encoding_type,omitempty"`
+	Data                 []byte       `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
 }
 
-func (m *DataBlob) Reset()      { *m = DataBlob{} }
-func (*DataBlob) ProtoMessage() {}
+func (m *DataBlob) Reset()         { *m = DataBlob{} }
+func (m *DataBlob) String() string { return proto.CompactTextString(m) }
+func (*DataBlob) ProtoMessage()    {}
 func (*DataBlob) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0ff151d4a308b356, []int{8}
 }
@@ -484,7 +515,7 @@ func (m *DataBlob) GetEncodingType() EncodingType {
 	if m != nil {
 		return m.EncodingType
 	}
-	return ENCODING_TYPE_INVALID
+	return EncodingType_ENCODING_TYPE_INVALID
 }
 
 func (m *DataBlob) GetData() []byte {
@@ -495,12 +526,16 @@ func (m *DataBlob) GetData() []byte {
 }
 
 type WorkerVersionInfo struct {
-	Impl           string `protobuf:"bytes,1,opt,name=impl,proto3" json:"impl,omitempty"`
-	FeatureVersion string `protobuf:"bytes,2,opt,name=feature_version,json=featureVersion,proto3" json:"feature_version,omitempty"`
+	Impl                 string   `protobuf:"bytes,1,opt,name=impl,proto3" json:"impl,omitempty"`
+	FeatureVersion       string   `protobuf:"bytes,2,opt,name=feature_version,json=featureVersion,proto3" json:"feature_version,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *WorkerVersionInfo) Reset()      { *m = WorkerVersionInfo{} }
-func (*WorkerVersionInfo) ProtoMessage() {}
+func (m *WorkerVersionInfo) Reset()         { *m = WorkerVersionInfo{} }
+func (m *WorkerVersionInfo) String() string { return proto.CompactTextString(m) }
+func (*WorkerVersionInfo) ProtoMessage()    {}
 func (*WorkerVersionInfo) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0ff151d4a308b356, []int{9}
 }
@@ -549,11 +584,15 @@ type SupportedClientVersions struct {
 	// Indicates the highest Go SDK version server will accept requests from.
 	GoSdk string `protobuf:"bytes,1,opt,name=go_sdk,json=goSdk,proto3" json:"go_sdk,omitempty"`
 	// Indicates the highest Java SDK version server will accept requests from.
-	JavaSdk string `protobuf:"bytes,2,opt,name=java_sdk,json=javaSdk,proto3" json:"java_sdk,omitempty"`
+	JavaSdk              string   `protobuf:"bytes,2,opt,name=java_sdk,json=javaSdk,proto3" json:"java_sdk,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *SupportedClientVersions) Reset()      { *m = SupportedClientVersions{} }
-func (*SupportedClientVersions) ProtoMessage() {}
+func (m *SupportedClientVersions) Reset()         { *m = SupportedClientVersions{} }
+func (m *SupportedClientVersions) String() string { return proto.CompactTextString(m) }
+func (*SupportedClientVersions) ProtoMessage()    {}
 func (*SupportedClientVersions) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0ff151d4a308b356, []int{10}
 }
@@ -600,25 +639,29 @@ func (m *SupportedClientVersions) GetJavaSdk() string {
 
 type RetryPolicy struct {
 	// Interval of the first retry. If backoffCoefficient is 1.0 then it is used for all retries.
-	InitialInterval *time.Duration `protobuf:"bytes,1,opt,name=initial_interval,json=initialInterval,proto3,stdduration" json:"initial_interval,omitempty"`
+	InitialInterval *types.Duration `protobuf:"bytes,1,opt,name=initial_interval,json=initialInterval,proto3" json:"initial_interval,omitempty"`
 	// Coefficient used to calculate the next retry interval.
 	// The next retry interval is previous interval multiplied by the coefficient.
 	// Must be 1 or larger.
 	BackoffCoefficient float64 `protobuf:"fixed64,2,opt,name=backoff_coefficient,json=backoffCoefficient,proto3" json:"backoff_coefficient,omitempty"`
 	// Maximum interval between retries. Exponential backoff leads to interval increase.
 	// This value is the cap of the increase. Default is 100x of initial interval.
-	MaximumInterval *time.Duration `protobuf:"bytes,3,opt,name=maximum_interval,json=maximumInterval,proto3,stdduration" json:"maximum_interval,omitempty"`
+	MaximumInterval *types.Duration `protobuf:"bytes,3,opt,name=maximum_interval,json=maximumInterval,proto3" json:"maximum_interval,omitempty"`
 	// Maximum number of attempts. When exceeded the retries stop even if not expired yet.
 	// Must be 1 or bigger. Default is unlimited.
 	MaximumAttempts int32 `protobuf:"varint,4,opt,name=maximum_attempts,json=maximumAttempts,proto3" json:"maximum_attempts,omitempty"`
 	// Non-Retryable errors. Will stop retrying if error type matches this list.
 	NonRetryableErrorReasons []string `protobuf:"bytes,5,rep,name=non_retryable_error_reasons,json=nonRetryableErrorReasons,proto3" json:"non_retryable_error_reasons,omitempty"`
 	// Expiration time for the whole retry process.
-	ExpirationInterval *time.Duration `protobuf:"bytes,6,opt,name=expiration_interval,json=expirationInterval,proto3,stdduration" json:"expiration_interval,omitempty"`
+	ExpirationInterval   *types.Duration `protobuf:"bytes,6,opt,name=expiration_interval,json=expirationInterval,proto3" json:"expiration_interval,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
 }
 
-func (m *RetryPolicy) Reset()      { *m = RetryPolicy{} }
-func (*RetryPolicy) ProtoMessage() {}
+func (m *RetryPolicy) Reset()         { *m = RetryPolicy{} }
+func (m *RetryPolicy) String() string { return proto.CompactTextString(m) }
+func (*RetryPolicy) ProtoMessage()    {}
 func (*RetryPolicy) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0ff151d4a308b356, []int{11}
 }
@@ -649,7 +692,7 @@ func (m *RetryPolicy) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_RetryPolicy proto.InternalMessageInfo
 
-func (m *RetryPolicy) GetInitialInterval() *time.Duration {
+func (m *RetryPolicy) GetInitialInterval() *types.Duration {
 	if m != nil {
 		return m.InitialInterval
 	}
@@ -663,7 +706,7 @@ func (m *RetryPolicy) GetBackoffCoefficient() float64 {
 	return 0
 }
 
-func (m *RetryPolicy) GetMaximumInterval() *time.Duration {
+func (m *RetryPolicy) GetMaximumInterval() *types.Duration {
 	if m != nil {
 		return m.MaximumInterval
 	}
@@ -684,7 +727,7 @@ func (m *RetryPolicy) GetNonRetryableErrorReasons() []string {
 	return nil
 }
 
-func (m *RetryPolicy) GetExpirationInterval() *time.Duration {
+func (m *RetryPolicy) GetExpirationInterval() *types.Duration {
 	if m != nil {
 		return m.ExpirationInterval
 	}
@@ -710,607 +753,64 @@ func init() {
 	proto.RegisterType((*RetryPolicy)(nil), "uber.cadence.api.v1.RetryPolicy")
 }
 
-func init() {
-	proto.RegisterFile("github.com/uber/cadence/.gen/proto/api/v1/common.proto", fileDescriptor_0ff151d4a308b356)
-}
+func init() { proto.RegisterFile("uber/cadence/api/v1/common.proto", fileDescriptor_0ff151d4a308b356) }
 
 var fileDescriptor_0ff151d4a308b356 = []byte{
-	// 881 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x54, 0x4f, 0x6f, 0x1b, 0x45,
-	0x14, 0xf7, 0xc4, 0xb1, 0x93, 0x8e, 0xd3, 0xd4, 0x4c, 0x68, 0xea, 0x98, 0xb2, 0x35, 0x96, 0x50,
-	0x03, 0x87, 0xb5, 0xe2, 0x5e, 0x2a, 0x50, 0x85, 0x9c, 0xc4, 0xa1, 0x6e, 0x21, 0xb1, 0xd6, 0x56,
-	0x23, 0x38, 0xb0, 0x8c, 0x77, 0xdf, 0x9a, 0xc1, 0xbb, 0x33, 0xab, 0xd9, 0x59, 0x27, 0xbe, 0xf1,
-	0x11, 0x10, 0x27, 0x4e, 0x1c, 0x38, 0xf1, 0x51, 0x38, 0x46, 0xe2, 0xd2, 0x1b, 0xc4, 0xb9, 0x70,
-	0xec, 0x47, 0x40, 0xbb, 0x3b, 0x8e, 0x9d, 0x62, 0xa4, 0x1e, 0x50, 0x6f, 0x33, 0xef, 0xf7, 0x67,
-	0x7e, 0x33, 0x7a, 0x6f, 0x70, 0x2d, 0x1e, 0x80, 0x6c, 0x38, 0xd4, 0x05, 0xee, 0x40, 0x83, 0x86,
-	0xac, 0x31, 0xde, 0x6b, 0x38, 0x22, 0x08, 0x04, 0x37, 0x43, 0x29, 0x94, 0x20, 0x5b, 0x09, 0xc3,
-	0xd4, 0x0c, 0x93, 0x86, 0xcc, 0x1c, 0xef, 0x55, 0x8d, 0xa1, 0x10, 0x43, 0x1f, 0x1a, 0x29, 0x65,
-	0x10, 0x7b, 0x0d, 0x37, 0x96, 0x54, 0xb1, 0x99, 0xa8, 0x7a, 0xdf, 0x85, 0x10, 0x78, 0x22, 0x61,
-	0x10, 0x35, 0x86, 0x62, 0x28, 0xd2, 0x7a, 0x86, 0xd6, 0x9f, 0xe3, 0x77, 0x4e, 0x85, 0x1c, 0x79,
-	0xbe, 0x38, 0x6b, 0x9f, 0x83, 0x13, 0x27, 0x42, 0xf2, 0x00, 0x97, 0xce, 0x74, 0xd1, 0x66, 0x6e,
-	0x05, 0xd5, 0xd0, 0xee, 0x2d, 0x0b, 0xcf, 0x4a, 0x1d, 0x97, 0xdc, 0xc5, 0x45, 0x19, 0xf3, 0x04,
-	0x5b, 0x49, 0xb1, 0x82, 0x8c, 0x79, 0xc7, 0xad, 0xd7, 0xf1, 0xc6, 0xcc, 0xac, 0x3f, 0x09, 0x81,
-	0x10, 0xbc, 0xca, 0x69, 0x00, 0xda, 0x20, 0x5d, 0x27, 0x9c, 0x96, 0xa3, 0xd8, 0x98, 0xa9, 0xc9,
-	0x7f, 0x72, 0xde, 0xc7, 0x6b, 0x5d, 0x3a, 0xf1, 0x05, 0x75, 0x13, 0xd8, 0xa5, 0x8a, 0xa6, 0xf0,
-	0x86, 0x95, 0xae, 0xeb, 0x9f, 0xe2, 0xb5, 0x23, 0xca, 0xfc, 0x58, 0x02, 0xd9, 0xc6, 0x45, 0x09,
-	0x34, 0x12, 0x5c, 0xeb, 0xf5, 0x8e, 0x54, 0xf0, 0x9a, 0x0b, 0x8a, 0x32, 0x3f, 0x4a, 0x13, 0x6e,
-	0x58, 0xb3, 0x6d, 0xfd, 0x17, 0x84, 0x57, 0xbf, 0x84, 0x40, 0x90, 0x27, 0xb8, 0xe8, 0x31, 0xf0,
-	0xdd, 0xa8, 0x82, 0x6a, 0xf9, 0xdd, 0x52, 0xf3, 0x43, 0x73, 0xc9, 0xeb, 0x9a, 0x09, 0xd5, 0x3c,
-	0x4a, 0x79, 0x6d, 0xae, 0xe4, 0xc4, 0xd2, 0xa2, 0xea, 0x29, 0x2e, 0x2d, 0x94, 0x49, 0x19, 0xe7,
-	0x47, 0x30, 0xd1, 0x29, 0x92, 0x25, 0x69, 0xe2, 0xc2, 0x98, 0xfa, 0x31, 0xa4, 0x01, 0x4a, 0xcd,
-	0xfb, 0x4b, 0xed, 0xf5, 0x35, 0xad, 0x8c, 0xfa, 0xc9, 0xca, 0x63, 0x54, 0xff, 0x15, 0xe1, 0xe2,
-	0x53, 0xa0, 0x2e, 0x48, 0xf2, 0xd9, 0x6b, 0x11, 0x1f, 0x2e, 0xf5, 0xc8, 0xc8, 0x6f, 0x37, 0xe4,
-	0x1f, 0x08, 0x97, 0x7b, 0x40, 0xa5, 0xf3, 0x5d, 0x4b, 0x29, 0xc9, 0x06, 0xb1, 0x82, 0x88, 0xd8,
-	0x78, 0x93, 0x71, 0x17, 0xce, 0xc1, 0xb5, 0x6f, 0xc4, 0x7e, 0xbc, 0xd4, 0xf5, 0x75, 0xb9, 0xd9,
-	0xc9, 0xb4, 0x8b, 0xf7, 0xb8, 0xcd, 0x16, 0x6b, 0xd5, 0x6f, 0x30, 0xf9, 0x37, 0xe9, 0x7f, 0xbc,
-	0x95, 0x87, 0xd7, 0x0f, 0xa9, 0xa2, 0xfb, 0xbe, 0x18, 0x90, 0x23, 0x7c, 0x1b, 0xb8, 0x23, 0x5c,
-	0xc6, 0x87, 0xb6, 0x9a, 0x84, 0x59, 0x83, 0x6e, 0x36, 0x3f, 0x58, 0xea, 0xd5, 0xd6, 0xcc, 0xa4,
-	0xa3, 0xad, 0x0d, 0x58, 0xd8, 0x5d, 0x37, 0xf0, 0xca, 0x42, 0x03, 0x77, 0xb3, 0xa1, 0x03, 0xf9,
-	0x02, 0x64, 0xc4, 0x04, 0xef, 0x70, 0x4f, 0x24, 0x44, 0x16, 0x84, 0xfe, 0x6c, 0x10, 0x92, 0x35,
-	0x79, 0x88, 0xef, 0x78, 0x40, 0x55, 0x2c, 0xc1, 0x1e, 0x67, 0x54, 0x3d, 0x70, 0x9b, 0xba, 0xac,
-	0x0d, 0xea, 0xcf, 0xf1, 0xbd, 0x5e, 0x1c, 0x86, 0x42, 0x2a, 0x70, 0x0f, 0x7c, 0x06, 0x5c, 0x69,
-	0x24, 0x4a, 0x66, 0x75, 0x28, 0xec, 0xc8, 0x1d, 0x69, 0xe7, 0xc2, 0x50, 0xf4, 0xdc, 0x11, 0xd9,
-	0xc1, 0xeb, 0xdf, 0xd3, 0x31, 0x4d, 0x81, 0xcc, 0x73, 0x2d, 0xd9, 0xf7, 0xdc, 0x51, 0xfd, 0xa7,
-	0x3c, 0x2e, 0x59, 0xa0, 0xe4, 0xa4, 0x2b, 0x7c, 0xe6, 0x4c, 0xc8, 0x33, 0x5c, 0x66, 0x9c, 0x29,
-	0x46, 0x7d, 0x9b, 0x71, 0x05, 0x72, 0x4c, 0xb3, 0x94, 0xa5, 0xe6, 0x8e, 0x99, 0x7d, 0x3e, 0xe6,
-	0xec, 0xf3, 0x31, 0x0f, 0xf5, 0xe7, 0xb3, 0xbf, 0xfa, 0xf3, 0x9f, 0x0f, 0x90, 0x75, 0x47, 0x0b,
-	0x3b, 0x5a, 0x47, 0x1a, 0x78, 0x6b, 0x40, 0x9d, 0x91, 0xf0, 0x3c, 0xdb, 0x11, 0xe0, 0x79, 0xcc,
-	0x49, 0xc2, 0xa6, 0x09, 0x90, 0x45, 0x34, 0x74, 0x30, 0x47, 0x92, 0xc3, 0x03, 0x7a, 0xce, 0x82,
-	0x38, 0x98, 0x1f, 0x9e, 0x7f, 0xc3, 0xc3, 0xb5, 0xf0, 0xfa, 0xf0, 0x8f, 0xe6, 0x5e, 0x54, 0x29,
-	0x08, 0x42, 0x15, 0x55, 0x56, 0x6b, 0x68, 0xb7, 0x70, 0x4d, 0x6d, 0xe9, 0x32, 0x79, 0x82, 0xdf,
-	0xe3, 0x82, 0xdb, 0x32, 0x79, 0x06, 0x3a, 0xf0, 0xc1, 0x06, 0x29, 0x85, 0xb4, 0xb3, 0xef, 0x25,
-	0xaa, 0x14, 0x6a, 0xf9, 0xdd, 0x5b, 0x56, 0x85, 0x0b, 0x6e, 0xcd, 0x18, 0xed, 0x84, 0x60, 0x65,
-	0x38, 0xe9, 0xe2, 0x2d, 0x38, 0x0f, 0x59, 0x16, 0x67, 0x1e, 0xbc, 0xf8, 0x66, 0xc1, 0xc9, 0x5c,
-	0x3b, 0xcb, 0xfe, 0xf1, 0x19, 0xde, 0x58, 0xec, 0x32, 0xb2, 0x83, 0xef, 0xb6, 0x8f, 0x0f, 0x4e,
-	0x0e, 0x3b, 0xc7, 0x9f, 0xdb, 0xfd, 0xaf, 0xba, 0x6d, 0xbb, 0x73, 0xfc, 0xa2, 0xf5, 0x45, 0xe7,
-	0xb0, 0x9c, 0x23, 0x55, 0xbc, 0x7d, 0x13, 0xea, 0x3f, 0xb5, 0x3a, 0x47, 0x7d, 0xeb, 0xb4, 0x8c,
-	0xc8, 0x36, 0x26, 0x37, 0xb1, 0x67, 0xbd, 0x93, 0xe3, 0xf2, 0x0a, 0xa9, 0xe0, 0x77, 0x6f, 0xd6,
-	0xbb, 0xd6, 0x49, 0xff, 0xe4, 0x51, 0x39, 0xbf, 0xff, 0xed, 0xc5, 0xa5, 0x91, 0x7b, 0x79, 0x69,
-	0xe4, 0x5e, 0x5d, 0x1a, 0xe8, 0x87, 0xa9, 0x81, 0x7e, 0x9b, 0x1a, 0xe8, 0xf7, 0xa9, 0x81, 0x2e,
-	0xa6, 0x06, 0xfa, 0x6b, 0x6a, 0xa0, 0xbf, 0xa7, 0x46, 0xee, 0xd5, 0xd4, 0x40, 0x3f, 0x5e, 0x19,
-	0xb9, 0x8b, 0x2b, 0x23, 0xf7, 0xf2, 0xca, 0xc8, 0xe1, 0x7b, 0x8e, 0x08, 0x96, 0x8d, 0xca, 0xfe,
-	0x7a, 0x2b, 0x64, 0xdd, 0xe4, 0xde, 0x5d, 0xf4, 0x75, 0x81, 0x86, 0x6c, 0xbc, 0x37, 0x28, 0xa6,
-	0xef, 0xf0, 0xe8, 0x9f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x15, 0xff, 0xd9, 0x87, 0x01, 0x07, 0x00,
-	0x00,
+	// 829 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x55, 0x4f, 0x6f, 0xe3, 0x44,
+	0x14, 0xc7, 0xcd, 0x26, 0xed, 0xbe, 0x64, 0xbb, 0x61, 0xca, 0x76, 0xd3, 0x02, 0x25, 0x44, 0x42,
+	0x5b, 0x38, 0xd8, 0x6a, 0xf6, 0xb2, 0x62, 0xb5, 0x42, 0x69, 0x93, 0xb2, 0xde, 0x85, 0x36, 0x72,
+	0xa2, 0xad, 0xe0, 0x80, 0x35, 0xb6, 0x9f, 0xb3, 0x43, 0xec, 0x19, 0x6b, 0x3c, 0x4e, 0x9b, 0x1b,
+	0x9f, 0x84, 0x03, 0x9f, 0x86, 0x23, 0x12, 0x5f, 0x00, 0xf5, 0x93, 0x20, 0xdb, 0x93, 0x26, 0x59,
+	0x82, 0xf6, 0x82, 0xb8, 0xcd, 0xbc, 0xdf, 0x9f, 0xf9, 0x3d, 0xeb, 0xcd, 0x18, 0xda, 0x99, 0x87,
+	0xd2, 0xf2, 0x69, 0x80, 0xdc, 0x47, 0x8b, 0x26, 0xcc, 0x9a, 0x9d, 0x58, 0xbe, 0x88, 0x63, 0xc1,
+	0xcd, 0x44, 0x0a, 0x25, 0xc8, 0x5e, 0xce, 0x30, 0x35, 0xc3, 0xa4, 0x09, 0x33, 0x67, 0x27, 0x87,
+	0x47, 0x13, 0x21, 0x26, 0x11, 0x5a, 0x05, 0xc5, 0xcb, 0x42, 0x2b, 0xc8, 0x24, 0x55, 0x6c, 0x21,
+	0xea, 0xbc, 0x86, 0x0f, 0xaf, 0x84, 0x9c, 0x86, 0x91, 0xb8, 0x1e, 0xdc, 0xa0, 0x9f, 0xe5, 0x10,
+	0xf9, 0x0c, 0xea, 0xd7, 0xba, 0xe8, 0xb2, 0xa0, 0x65, 0xb4, 0x8d, 0xe3, 0xfb, 0x0e, 0x2c, 0x4a,
+	0x76, 0x40, 0x1e, 0x41, 0x4d, 0x66, 0x3c, 0xc7, 0xb6, 0x0a, 0xac, 0x2a, 0x33, 0x6e, 0x07, 0x9d,
+	0x0e, 0x34, 0x16, 0x66, 0xe3, 0x79, 0x82, 0x84, 0xc0, 0x3d, 0x4e, 0x63, 0xd4, 0x06, 0xc5, 0x3a,
+	0xe7, 0xf4, 0x7c, 0xc5, 0x66, 0x4c, 0xcd, 0xff, 0x95, 0xf3, 0x29, 0x6c, 0x0f, 0xe9, 0x3c, 0x12,
+	0x34, 0xc8, 0xe1, 0x80, 0x2a, 0x5a, 0xc0, 0x0d, 0xa7, 0x58, 0x77, 0x9e, 0xc3, 0xf6, 0x39, 0x65,
+	0x51, 0x26, 0x91, 0xec, 0x43, 0x4d, 0x22, 0x4d, 0x05, 0xd7, 0x7a, 0xbd, 0x23, 0x2d, 0xd8, 0x0e,
+	0x50, 0x51, 0x16, 0xa5, 0x45, 0xc2, 0x86, 0xb3, 0xd8, 0x76, 0x7e, 0x35, 0xe0, 0xde, 0xf7, 0x18,
+	0x0b, 0xf2, 0x02, 0x6a, 0x21, 0xc3, 0x28, 0x48, 0x5b, 0x46, 0xbb, 0x72, 0x5c, 0xef, 0x7e, 0x61,
+	0x6e, 0xf8, 0x7e, 0x66, 0x4e, 0x35, 0xcf, 0x0b, 0xde, 0x80, 0x2b, 0x39, 0x77, 0xb4, 0xe8, 0xf0,
+	0x0a, 0xea, 0x2b, 0x65, 0xd2, 0x84, 0xca, 0x14, 0xe7, 0x3a, 0x45, 0xbe, 0x24, 0x5d, 0xa8, 0xce,
+	0x68, 0x94, 0x61, 0x11, 0xa0, 0xde, 0xfd, 0x64, 0xa3, 0xbd, 0x6e, 0xd3, 0x29, 0xa9, 0x5f, 0x6f,
+	0x3d, 0x33, 0x3a, 0xbf, 0x19, 0x50, 0x7b, 0x89, 0x34, 0x40, 0x49, 0xbe, 0x79, 0x27, 0xe2, 0x93,
+	0x8d, 0x1e, 0x25, 0xf9, 0xff, 0x0d, 0xf9, 0xa7, 0x01, 0xcd, 0x11, 0x52, 0xe9, 0xbf, 0xed, 0x29,
+	0x25, 0x99, 0x97, 0x29, 0x4c, 0x89, 0x0b, 0xbb, 0x8c, 0x07, 0x78, 0x83, 0x81, 0xbb, 0x16, 0xfb,
+	0xd9, 0x46, 0xd7, 0x77, 0xe5, 0xa6, 0x5d, 0x6a, 0x57, 0xfb, 0x78, 0xc0, 0x56, 0x6b, 0x87, 0x3f,
+	0x01, 0xf9, 0x27, 0xe9, 0x3f, 0xec, 0x2a, 0x84, 0x9d, 0x3e, 0x55, 0xf4, 0x34, 0x12, 0x1e, 0x39,
+	0x87, 0x07, 0xc8, 0x7d, 0x11, 0x30, 0x3e, 0x71, 0xd5, 0x3c, 0x29, 0x07, 0x74, 0xb7, 0xfb, 0xf9,
+	0x46, 0xaf, 0x81, 0x66, 0xe6, 0x13, 0xed, 0x34, 0x70, 0x65, 0x77, 0x37, 0xc0, 0x5b, 0x2b, 0x03,
+	0x3c, 0x2c, 0x2f, 0x1d, 0xca, 0x37, 0x28, 0x53, 0x26, 0xb8, 0xcd, 0x43, 0x91, 0x13, 0x59, 0x9c,
+	0x44, 0x8b, 0x8b, 0x90, 0xaf, 0xc9, 0x13, 0x78, 0x18, 0x22, 0x55, 0x99, 0x44, 0x77, 0x56, 0x52,
+	0xf5, 0x85, 0xdb, 0xd5, 0x65, 0x6d, 0xd0, 0x79, 0x0d, 0x8f, 0x47, 0x59, 0x92, 0x08, 0xa9, 0x30,
+	0x38, 0x8b, 0x18, 0x72, 0xa5, 0x91, 0x34, 0xbf, 0xab, 0x13, 0xe1, 0xa6, 0xc1, 0x54, 0x3b, 0x57,
+	0x27, 0x62, 0x14, 0x4c, 0xc9, 0x01, 0xec, 0xfc, 0x4c, 0x67, 0xb4, 0x00, 0x4a, 0xcf, 0xed, 0x7c,
+	0x3f, 0x0a, 0xa6, 0x9d, 0x5f, 0x2a, 0x50, 0x77, 0x50, 0xc9, 0xf9, 0x50, 0x44, 0xcc, 0x9f, 0x93,
+	0x3e, 0x34, 0x19, 0x67, 0x8a, 0xd1, 0xc8, 0x65, 0x5c, 0xa1, 0x9c, 0xd1, 0x32, 0x65, 0xbd, 0x7b,
+	0x60, 0x96, 0xcf, 0x8b, 0xb9, 0x78, 0x5e, 0xcc, 0xbe, 0x7e, 0x5e, 0x9c, 0x87, 0x5a, 0x62, 0x6b,
+	0x05, 0xb1, 0x60, 0xcf, 0xa3, 0xfe, 0x54, 0x84, 0xa1, 0xeb, 0x0b, 0x0c, 0x43, 0xe6, 0xe7, 0x31,
+	0x8b, 0xb3, 0x0d, 0x87, 0x68, 0xe8, 0x6c, 0x89, 0xe4, 0xc7, 0xc6, 0xf4, 0x86, 0xc5, 0x59, 0xbc,
+	0x3c, 0xb6, 0xf2, 0xde, 0x63, 0xb5, 0xe4, 0xee, 0xd8, 0x2f, 0x97, 0x2e, 0x54, 0x29, 0x8c, 0x13,
+	0x95, 0xb6, 0xee, 0xb5, 0x8d, 0xe3, 0xea, 0x1d, 0xb5, 0xa7, 0xcb, 0xe4, 0x05, 0x7c, 0xcc, 0x05,
+	0x77, 0x65, 0xde, 0x3a, 0xf5, 0x22, 0x74, 0x51, 0x4a, 0x21, 0xdd, 0xf2, 0x49, 0x49, 0x5b, 0xd5,
+	0x76, 0xe5, 0xf8, 0xbe, 0xd3, 0xe2, 0x82, 0x3b, 0x0b, 0xc6, 0x20, 0x27, 0x38, 0x25, 0x4e, 0x5e,
+	0xc1, 0x1e, 0xde, 0x24, 0xac, 0x0c, 0xb2, 0x8c, 0x5c, 0x7b, 0x5f, 0x64, 0xb2, 0x54, 0x2d, 0x52,
+	0x7f, 0x75, 0x0d, 0x8d, 0xd5, 0x99, 0x22, 0x07, 0xf0, 0x68, 0x70, 0x71, 0x76, 0xd9, 0xb7, 0x2f,
+	0xbe, 0x75, 0xc7, 0x3f, 0x0c, 0x07, 0xae, 0x7d, 0xf1, 0xa6, 0xf7, 0x9d, 0xdd, 0x6f, 0x7e, 0x40,
+	0x0e, 0x61, 0x7f, 0x1d, 0x1a, 0xbf, 0x74, 0xec, 0xf3, 0xb1, 0x73, 0xd5, 0x34, 0xc8, 0x3e, 0x90,
+	0x75, 0xec, 0xd5, 0xe8, 0xf2, 0xa2, 0xb9, 0x45, 0x5a, 0xf0, 0xd1, 0x7a, 0x7d, 0xe8, 0x5c, 0x8e,
+	0x2f, 0x9f, 0x36, 0x2b, 0xa7, 0xde, 0xef, 0xb7, 0x47, 0xc6, 0x1f, 0xb7, 0x47, 0xc6, 0x5f, 0xb7,
+	0x47, 0x06, 0x3c, 0xf6, 0x45, 0xbc, 0x69, 0xe0, 0x4f, 0x77, 0x7a, 0x09, 0x1b, 0xe6, 0x9d, 0x0c,
+	0x8d, 0x1f, 0xad, 0x09, 0x53, 0x6f, 0x33, 0xcf, 0xf4, 0x45, 0x6c, 0xad, 0xfd, 0xa4, 0xcc, 0x09,
+	0xf2, 0xf2, 0xc7, 0xa3, 0xff, 0x57, 0xcf, 0x69, 0xc2, 0x66, 0x27, 0x5e, 0xad, 0xa8, 0x3d, 0xfd,
+	0x3b, 0x00, 0x00, 0xff, 0xff, 0xf9, 0x8a, 0xf4, 0x9b, 0xd3, 0x06, 0x00, 0x00,
 }
 
-func (x EncodingType) String() string {
-	s, ok := EncodingType_name[int32(x)]
-	if ok {
-		return s
-	}
-	return strconv.Itoa(int(x))
-}
-func (this *WorkflowExecution) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*WorkflowExecution)
-	if !ok {
-		that2, ok := that.(WorkflowExecution)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.WorkflowId != that1.WorkflowId {
-		return false
-	}
-	if this.RunId != that1.RunId {
-		return false
-	}
-	return true
-}
-func (this *WorkflowType) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*WorkflowType)
-	if !ok {
-		that2, ok := that.(WorkflowType)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Name != that1.Name {
-		return false
-	}
-	return true
-}
-func (this *ActivityType) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ActivityType)
-	if !ok {
-		that2, ok := that.(ActivityType)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Name != that1.Name {
-		return false
-	}
-	return true
-}
-func (this *Payload) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Payload)
-	if !ok {
-		that2, ok := that.(Payload)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.Data, that1.Data) {
-		return false
-	}
-	return true
-}
-func (this *Failure) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Failure)
-	if !ok {
-		that2, ok := that.(Failure)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Reason != that1.Reason {
-		return false
-	}
-	if !bytes.Equal(this.Details, that1.Details) {
-		return false
-	}
-	return true
-}
-func (this *Memo) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Memo)
-	if !ok {
-		that2, ok := that.(Memo)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.Fields) != len(that1.Fields) {
-		return false
-	}
-	for i := range this.Fields {
-		if !this.Fields[i].Equal(that1.Fields[i]) {
-			return false
-		}
-	}
-	return true
-}
-func (this *Header) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Header)
-	if !ok {
-		that2, ok := that.(Header)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.Fields) != len(that1.Fields) {
-		return false
-	}
-	for i := range this.Fields {
-		if !this.Fields[i].Equal(that1.Fields[i]) {
-			return false
-		}
-	}
-	return true
-}
-func (this *SearchAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*SearchAttributes)
-	if !ok {
-		that2, ok := that.(SearchAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.IndexedFields) != len(that1.IndexedFields) {
-		return false
-	}
-	for i := range this.IndexedFields {
-		if !this.IndexedFields[i].Equal(that1.IndexedFields[i]) {
-			return false
-		}
-	}
-	return true
-}
-func (this *DataBlob) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DataBlob)
-	if !ok {
-		that2, ok := that.(DataBlob)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.EncodingType != that1.EncodingType {
-		return false
-	}
-	if !bytes.Equal(this.Data, that1.Data) {
-		return false
-	}
-	return true
-}
-func (this *WorkerVersionInfo) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*WorkerVersionInfo)
-	if !ok {
-		that2, ok := that.(WorkerVersionInfo)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Impl != that1.Impl {
-		return false
-	}
-	if this.FeatureVersion != that1.FeatureVersion {
-		return false
-	}
-	return true
-}
-func (this *SupportedClientVersions) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*SupportedClientVersions)
-	if !ok {
-		that2, ok := that.(SupportedClientVersions)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.GoSdk != that1.GoSdk {
-		return false
-	}
-	if this.JavaSdk != that1.JavaSdk {
-		return false
-	}
-	return true
-}
-func (this *RetryPolicy) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*RetryPolicy)
-	if !ok {
-		that2, ok := that.(RetryPolicy)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.InitialInterval != nil && that1.InitialInterval != nil {
-		if *this.InitialInterval != *that1.InitialInterval {
-			return false
-		}
-	} else if this.InitialInterval != nil {
-		return false
-	} else if that1.InitialInterval != nil {
-		return false
-	}
-	if this.BackoffCoefficient != that1.BackoffCoefficient {
-		return false
-	}
-	if this.MaximumInterval != nil && that1.MaximumInterval != nil {
-		if *this.MaximumInterval != *that1.MaximumInterval {
-			return false
-		}
-	} else if this.MaximumInterval != nil {
-		return false
-	} else if that1.MaximumInterval != nil {
-		return false
-	}
-	if this.MaximumAttempts != that1.MaximumAttempts {
-		return false
-	}
-	if len(this.NonRetryableErrorReasons) != len(that1.NonRetryableErrorReasons) {
-		return false
-	}
-	for i := range this.NonRetryableErrorReasons {
-		if this.NonRetryableErrorReasons[i] != that1.NonRetryableErrorReasons[i] {
-			return false
-		}
-	}
-	if this.ExpirationInterval != nil && that1.ExpirationInterval != nil {
-		if *this.ExpirationInterval != *that1.ExpirationInterval {
-			return false
-		}
-	} else if this.ExpirationInterval != nil {
-		return false
-	} else if that1.ExpirationInterval != nil {
-		return false
-	}
-	return true
-}
-func (this *WorkflowExecution) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.WorkflowExecution{")
-	s = append(s, "WorkflowId: "+fmt.Sprintf("%#v", this.WorkflowId)+",\n")
-	s = append(s, "RunId: "+fmt.Sprintf("%#v", this.RunId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *WorkflowType) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&apiv1.WorkflowType{")
-	s = append(s, "Name: "+fmt.Sprintf("%#v", this.Name)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *ActivityType) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&apiv1.ActivityType{")
-	s = append(s, "Name: "+fmt.Sprintf("%#v", this.Name)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *Payload) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&apiv1.Payload{")
-	s = append(s, "Data: "+fmt.Sprintf("%#v", this.Data)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *Failure) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.Failure{")
-	s = append(s, "Reason: "+fmt.Sprintf("%#v", this.Reason)+",\n")
-	s = append(s, "Details: "+fmt.Sprintf("%#v", this.Details)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *Memo) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&apiv1.Memo{")
-	keysForFields := make([]string, 0, len(this.Fields))
-	for k, _ := range this.Fields {
-		keysForFields = append(keysForFields, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForFields)
-	mapStringForFields := "map[string]*Payload{"
-	for _, k := range keysForFields {
-		mapStringForFields += fmt.Sprintf("%#v: %#v,", k, this.Fields[k])
-	}
-	mapStringForFields += "}"
-	if this.Fields != nil {
-		s = append(s, "Fields: "+mapStringForFields+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *Header) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&apiv1.Header{")
-	keysForFields := make([]string, 0, len(this.Fields))
-	for k, _ := range this.Fields {
-		keysForFields = append(keysForFields, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForFields)
-	mapStringForFields := "map[string]*Payload{"
-	for _, k := range keysForFields {
-		mapStringForFields += fmt.Sprintf("%#v: %#v,", k, this.Fields[k])
-	}
-	mapStringForFields += "}"
-	if this.Fields != nil {
-		s = append(s, "Fields: "+mapStringForFields+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *SearchAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&apiv1.SearchAttributes{")
-	keysForIndexedFields := make([]string, 0, len(this.IndexedFields))
-	for k, _ := range this.IndexedFields {
-		keysForIndexedFields = append(keysForIndexedFields, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForIndexedFields)
-	mapStringForIndexedFields := "map[string]*Payload{"
-	for _, k := range keysForIndexedFields {
-		mapStringForIndexedFields += fmt.Sprintf("%#v: %#v,", k, this.IndexedFields[k])
-	}
-	mapStringForIndexedFields += "}"
-	if this.IndexedFields != nil {
-		s = append(s, "IndexedFields: "+mapStringForIndexedFields+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DataBlob) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.DataBlob{")
-	s = append(s, "EncodingType: "+fmt.Sprintf("%#v", this.EncodingType)+",\n")
-	s = append(s, "Data: "+fmt.Sprintf("%#v", this.Data)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *WorkerVersionInfo) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.WorkerVersionInfo{")
-	s = append(s, "Impl: "+fmt.Sprintf("%#v", this.Impl)+",\n")
-	s = append(s, "FeatureVersion: "+fmt.Sprintf("%#v", this.FeatureVersion)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *SupportedClientVersions) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.SupportedClientVersions{")
-	s = append(s, "GoSdk: "+fmt.Sprintf("%#v", this.GoSdk)+",\n")
-	s = append(s, "JavaSdk: "+fmt.Sprintf("%#v", this.JavaSdk)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *RetryPolicy) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&apiv1.RetryPolicy{")
-	s = append(s, "InitialInterval: "+fmt.Sprintf("%#v", this.InitialInterval)+",\n")
-	s = append(s, "BackoffCoefficient: "+fmt.Sprintf("%#v", this.BackoffCoefficient)+",\n")
-	s = append(s, "MaximumInterval: "+fmt.Sprintf("%#v", this.MaximumInterval)+",\n")
-	s = append(s, "MaximumAttempts: "+fmt.Sprintf("%#v", this.MaximumAttempts)+",\n")
-	s = append(s, "NonRetryableErrorReasons: "+fmt.Sprintf("%#v", this.NonRetryableErrorReasons)+",\n")
-	s = append(s, "ExpirationInterval: "+fmt.Sprintf("%#v", this.ExpirationInterval)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func valueToGoStringCommon(v interface{}, typ string) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
-}
 func (m *WorkflowExecution) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -1331,6 +831,10 @@ func (m *WorkflowExecution) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.RunId) > 0 {
 		i -= len(m.RunId)
 		copy(dAtA[i:], m.RunId)
@@ -1368,6 +872,10 @@ func (m *WorkflowType) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Name) > 0 {
 		i -= len(m.Name)
 		copy(dAtA[i:], m.Name)
@@ -1398,6 +906,10 @@ func (m *ActivityType) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Name) > 0 {
 		i -= len(m.Name)
 		copy(dAtA[i:], m.Name)
@@ -1428,6 +940,10 @@ func (m *Payload) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Data) > 0 {
 		i -= len(m.Data)
 		copy(dAtA[i:], m.Data)
@@ -1458,6 +974,10 @@ func (m *Failure) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Details) > 0 {
 		i -= len(m.Details)
 		copy(dAtA[i:], m.Details)
@@ -1495,6 +1015,10 @@ func (m *Memo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Fields) > 0 {
 		for k := range m.Fields {
 			v := m.Fields[k]
@@ -1544,6 +1068,10 @@ func (m *Header) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Fields) > 0 {
 		for k := range m.Fields {
 			v := m.Fields[k]
@@ -1593,6 +1121,10 @@ func (m *SearchAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.IndexedFields) > 0 {
 		for k := range m.IndexedFields {
 			v := m.IndexedFields[k]
@@ -1642,6 +1174,10 @@ func (m *DataBlob) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Data) > 0 {
 		i -= len(m.Data)
 		copy(dAtA[i:], m.Data)
@@ -1677,6 +1213,10 @@ func (m *WorkerVersionInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.FeatureVersion) > 0 {
 		i -= len(m.FeatureVersion)
 		copy(dAtA[i:], m.FeatureVersion)
@@ -1714,6 +1254,10 @@ func (m *SupportedClientVersions) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.JavaSdk) > 0 {
 		i -= len(m.JavaSdk)
 		copy(dAtA[i:], m.JavaSdk)
@@ -1751,13 +1295,19 @@ func (m *RetryPolicy) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.ExpirationInterval != nil {
-		n4, err4 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.ExpirationInterval, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ExpirationInterval):])
-		if err4 != nil {
-			return 0, err4
+		{
+			size, err := m.ExpirationInterval.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintCommon(dAtA, i, uint64(size))
 		}
-		i -= n4
-		i = encodeVarintCommon(dAtA, i, uint64(n4))
 		i--
 		dAtA[i] = 0x32
 	}
@@ -1776,12 +1326,14 @@ func (m *RetryPolicy) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		dAtA[i] = 0x20
 	}
 	if m.MaximumInterval != nil {
-		n5, err5 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.MaximumInterval, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.MaximumInterval):])
-		if err5 != nil {
-			return 0, err5
+		{
+			size, err := m.MaximumInterval.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintCommon(dAtA, i, uint64(size))
 		}
-		i -= n5
-		i = encodeVarintCommon(dAtA, i, uint64(n5))
 		i--
 		dAtA[i] = 0x1a
 	}
@@ -1792,12 +1344,14 @@ func (m *RetryPolicy) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		dAtA[i] = 0x11
 	}
 	if m.InitialInterval != nil {
-		n6, err6 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.InitialInterval, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.InitialInterval):])
-		if err6 != nil {
-			return 0, err6
+		{
+			size, err := m.InitialInterval.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintCommon(dAtA, i, uint64(size))
 		}
-		i -= n6
-		i = encodeVarintCommon(dAtA, i, uint64(n6))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -1829,6 +1383,9 @@ func (m *WorkflowExecution) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovCommon(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -1841,6 +1398,9 @@ func (m *WorkflowType) Size() (n int) {
 	l = len(m.Name)
 	if l > 0 {
 		n += 1 + l + sovCommon(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -1855,6 +1415,9 @@ func (m *ActivityType) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovCommon(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -1867,6 +1430,9 @@ func (m *Payload) Size() (n int) {
 	l = len(m.Data)
 	if l > 0 {
 		n += 1 + l + sovCommon(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -1884,6 +1450,9 @@ func (m *Failure) Size() (n int) {
 	l = len(m.Details)
 	if l > 0 {
 		n += 1 + l + sovCommon(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -1907,6 +1476,9 @@ func (m *Memo) Size() (n int) {
 			n += mapEntrySize + 1 + sovCommon(uint64(mapEntrySize))
 		}
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -1928,6 +1500,9 @@ func (m *Header) Size() (n int) {
 			mapEntrySize := 1 + len(k) + sovCommon(uint64(len(k))) + l
 			n += mapEntrySize + 1 + sovCommon(uint64(mapEntrySize))
 		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -1951,6 +1526,9 @@ func (m *SearchAttributes) Size() (n int) {
 			n += mapEntrySize + 1 + sovCommon(uint64(mapEntrySize))
 		}
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -1966,6 +1544,9 @@ func (m *DataBlob) Size() (n int) {
 	l = len(m.Data)
 	if l > 0 {
 		n += 1 + l + sovCommon(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -1984,6 +1565,9 @@ func (m *WorkerVersionInfo) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovCommon(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -2001,6 +1585,9 @@ func (m *SupportedClientVersions) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovCommon(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -2011,14 +1598,14 @@ func (m *RetryPolicy) Size() (n int) {
 	var l int
 	_ = l
 	if m.InitialInterval != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.InitialInterval)
+		l = m.InitialInterval.Size()
 		n += 1 + l + sovCommon(uint64(l))
 	}
 	if m.BackoffCoefficient != 0 {
 		n += 9
 	}
 	if m.MaximumInterval != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.MaximumInterval)
+		l = m.MaximumInterval.Size()
 		n += 1 + l + sovCommon(uint64(l))
 	}
 	if m.MaximumAttempts != 0 {
@@ -2031,8 +1618,11 @@ func (m *RetryPolicy) Size() (n int) {
 		}
 	}
 	if m.ExpirationInterval != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ExpirationInterval)
+		l = m.ExpirationInterval.Size()
 		n += 1 + l + sovCommon(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -2042,174 +1632,6 @@ func sovCommon(x uint64) (n int) {
 }
 func sozCommon(x uint64) (n int) {
 	return sovCommon(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (this *WorkflowExecution) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&WorkflowExecution{`,
-		`WorkflowId:` + fmt.Sprintf("%v", this.WorkflowId) + `,`,
-		`RunId:` + fmt.Sprintf("%v", this.RunId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *WorkflowType) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&WorkflowType{`,
-		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ActivityType) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ActivityType{`,
-		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Payload) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Payload{`,
-		`Data:` + fmt.Sprintf("%v", this.Data) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Failure) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Failure{`,
-		`Reason:` + fmt.Sprintf("%v", this.Reason) + `,`,
-		`Details:` + fmt.Sprintf("%v", this.Details) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Memo) String() string {
-	if this == nil {
-		return "nil"
-	}
-	keysForFields := make([]string, 0, len(this.Fields))
-	for k, _ := range this.Fields {
-		keysForFields = append(keysForFields, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForFields)
-	mapStringForFields := "map[string]*Payload{"
-	for _, k := range keysForFields {
-		mapStringForFields += fmt.Sprintf("%v: %v,", k, this.Fields[k])
-	}
-	mapStringForFields += "}"
-	s := strings.Join([]string{`&Memo{`,
-		`Fields:` + mapStringForFields + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Header) String() string {
-	if this == nil {
-		return "nil"
-	}
-	keysForFields := make([]string, 0, len(this.Fields))
-	for k, _ := range this.Fields {
-		keysForFields = append(keysForFields, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForFields)
-	mapStringForFields := "map[string]*Payload{"
-	for _, k := range keysForFields {
-		mapStringForFields += fmt.Sprintf("%v: %v,", k, this.Fields[k])
-	}
-	mapStringForFields += "}"
-	s := strings.Join([]string{`&Header{`,
-		`Fields:` + mapStringForFields + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *SearchAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	keysForIndexedFields := make([]string, 0, len(this.IndexedFields))
-	for k, _ := range this.IndexedFields {
-		keysForIndexedFields = append(keysForIndexedFields, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForIndexedFields)
-	mapStringForIndexedFields := "map[string]*Payload{"
-	for _, k := range keysForIndexedFields {
-		mapStringForIndexedFields += fmt.Sprintf("%v: %v,", k, this.IndexedFields[k])
-	}
-	mapStringForIndexedFields += "}"
-	s := strings.Join([]string{`&SearchAttributes{`,
-		`IndexedFields:` + mapStringForIndexedFields + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DataBlob) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DataBlob{`,
-		`EncodingType:` + fmt.Sprintf("%v", this.EncodingType) + `,`,
-		`Data:` + fmt.Sprintf("%v", this.Data) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *WorkerVersionInfo) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&WorkerVersionInfo{`,
-		`Impl:` + fmt.Sprintf("%v", this.Impl) + `,`,
-		`FeatureVersion:` + fmt.Sprintf("%v", this.FeatureVersion) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *SupportedClientVersions) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&SupportedClientVersions{`,
-		`GoSdk:` + fmt.Sprintf("%v", this.GoSdk) + `,`,
-		`JavaSdk:` + fmt.Sprintf("%v", this.JavaSdk) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *RetryPolicy) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&RetryPolicy{`,
-		`InitialInterval:` + strings.Replace(fmt.Sprintf("%v", this.InitialInterval), "Duration", "duration.Duration", 1) + `,`,
-		`BackoffCoefficient:` + fmt.Sprintf("%v", this.BackoffCoefficient) + `,`,
-		`MaximumInterval:` + strings.Replace(fmt.Sprintf("%v", this.MaximumInterval), "Duration", "duration.Duration", 1) + `,`,
-		`MaximumAttempts:` + fmt.Sprintf("%v", this.MaximumAttempts) + `,`,
-		`NonRetryableErrorReasons:` + fmt.Sprintf("%v", this.NonRetryableErrorReasons) + `,`,
-		`ExpirationInterval:` + strings.Replace(fmt.Sprintf("%v", this.ExpirationInterval), "Duration", "duration.Duration", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func valueToStringCommon(v interface{}) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("*%v", pv)
 }
 func (m *WorkflowExecution) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -2319,6 +1741,7 @@ func (m *WorkflowExecution) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -2404,6 +1827,7 @@ func (m *WorkflowType) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -2489,6 +1913,7 @@ func (m *ActivityType) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -2576,6 +2001,7 @@ func (m *Payload) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -2695,6 +2121,7 @@ func (m *Failure) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -2877,6 +2304,7 @@ func (m *Memo) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -3059,6 +2487,7 @@ func (m *Header) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -3241,6 +2670,7 @@ func (m *SearchAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -3347,6 +2777,7 @@ func (m *DataBlob) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -3464,6 +2895,7 @@ func (m *WorkerVersionInfo) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -3581,6 +3013,7 @@ func (m *SupportedClientVersions) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -3649,9 +3082,9 @@ func (m *RetryPolicy) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.InitialInterval == nil {
-				m.InitialInterval = new(time.Duration)
+				m.InitialInterval = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.InitialInterval, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.InitialInterval.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -3696,9 +3129,9 @@ func (m *RetryPolicy) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.MaximumInterval == nil {
-				m.MaximumInterval = new(time.Duration)
+				m.MaximumInterval = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.MaximumInterval, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.MaximumInterval.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -3783,9 +3216,9 @@ func (m *RetryPolicy) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.ExpirationInterval == nil {
-				m.ExpirationInterval = new(time.Duration)
+				m.ExpirationInterval = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.ExpirationInterval, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.ExpirationInterval.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -3804,6 +3237,7 @@ func (m *RetryPolicy) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}

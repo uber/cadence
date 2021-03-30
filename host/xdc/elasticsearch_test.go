@@ -81,10 +81,10 @@ var (
 	clusterNameES              = []string{"active-es", "standby-es"}
 	clusterReplicationConfigES = []*types.ClusterReplicationConfiguration{
 		{
-			ClusterName: common.StringPtr(clusterNameES[0]),
+			ClusterName: clusterNameES[0],
 		},
 		{
-			ClusterName: common.StringPtr(clusterNameES[1]),
+			ClusterName: clusterNameES[1],
 		},
 	}
 )
@@ -143,11 +143,11 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	domainName := "test-xdc-search-attr-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
+		Name:                                   domainName,
 		Clusters:                               clusterReplicationConfigES,
-		ActiveClusterName:                      common.StringPtr(clusterNameES[0]),
-		IsGlobalDomain:                         common.BoolPtr(true),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterNameES[0],
+		IsGlobalDomain:                         true,
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -172,8 +172,8 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	wt := "xdc-search-attr-test-type"
 	tl := "xdc-search-attr-test-tasklist"
 	identity := "worker1"
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	workflowType := &types.WorkflowType{Name: wt}
+	taskList := &types.TaskList{Name: tl}
 	attrValBytes, _ := json.Marshal(s.testSearchAttributeVal)
 	searchAttr := &types.SearchAttributes{
 		IndexedFields: map[string][]byte{
@@ -181,15 +181,15 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 		},
 	}
 	startReq := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(domainName),
-		WorkflowID:                          common.StringPtr(id),
+		RequestID:                           uuid.New(),
+		Domain:                              domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 		SearchAttributes:                    searchAttr,
 	}
 	startTime := time.Now().UnixNano()
@@ -203,9 +203,9 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	startFilter.EarliestTime = common.Int64Ptr(startTime)
 	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
 	listRequest := &types.ListWorkflowExecutionsRequest{
-		Domain:   common.StringPtr(domainName),
-		PageSize: common.Int32Ptr(5),
-		Query:    common.StringPtr(query),
+		Domain:   domainName,
+		PageSize: 5,
+		Query:    query,
 	}
 
 	testListResult := func(client host.FrontendClient) {
@@ -267,9 +267,9 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	time.Sleep(waitForESToSettle)
 
 	listRequest = &types.ListWorkflowExecutionsRequest{
-		Domain:   common.StringPtr(domainName),
-		PageSize: common.Int32Ptr(int32(2)),
-		Query:    common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt)),
+		Domain:   domainName,
+		PageSize: int32(2),
+		Query:    fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt),
 	}
 
 	testListResult = func(client host.FrontendClient) {
@@ -308,22 +308,22 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	terminateReason := "force terminate to make sure standby process tasks"
 	terminateDetails := []byte("terminate details.")
 	err = client1.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
-		Domain: common.StringPtr(domainName),
+		Domain: domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
-		Reason:   common.StringPtr(terminateReason),
+		Reason:   terminateReason,
 		Details:  terminateDetails,
-		Identity: common.StringPtr(identity),
+		Identity: identity,
 	})
 	s.Nil(err)
 
 	// check terminate done
 	executionTerminated := false
 	getHistoryReq := &types.GetWorkflowExecutionHistoryRequest{
-		Domain: common.StringPtr(domainName),
+		Domain: domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 	}
 GetHistoryLoop:
@@ -340,9 +340,9 @@ GetHistoryLoop:
 		}
 
 		terminateEventAttributes := lastEvent.WorkflowExecutionTerminatedEventAttributes
-		s.Equal(terminateReason, *terminateEventAttributes.Reason)
+		s.Equal(terminateReason, terminateEventAttributes.Reason)
 		s.Equal(terminateDetails, terminateEventAttributes.Details)
-		s.Equal(identity, *terminateEventAttributes.Identity)
+		s.Equal(identity, terminateEventAttributes.Identity)
 		executionTerminated = true
 		break GetHistoryLoop
 	}
@@ -359,9 +359,9 @@ GetHistoryLoop2:
 			lastEvent := history.Events[len(history.Events)-1]
 			if *lastEvent.EventType == types.EventTypeWorkflowExecutionTerminated {
 				terminateEventAttributes := lastEvent.WorkflowExecutionTerminatedEventAttributes
-				s.Equal(terminateReason, *terminateEventAttributes.Reason)
+				s.Equal(terminateReason, terminateEventAttributes.Reason)
 				s.Equal(terminateDetails, terminateEventAttributes.Details)
-				s.Equal(identity, *terminateEventAttributes.Identity)
+				s.Equal(identity, terminateEventAttributes.Identity)
 				eventsReplicated = true
 				break GetHistoryLoop2
 			}

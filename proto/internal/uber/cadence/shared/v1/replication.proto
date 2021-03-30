@@ -22,10 +22,9 @@ syntax = "proto3";
 
 package uber.cadence.shared.v1;
 
-option go_package = "sharedv1";
+option go_package = "github.com/uber/cadence/.gen/proto/shared/v1;sharedv1";
 
 import "google/protobuf/timestamp.proto";
-import "dependencies/gogoproto.proto";
 import "uber/cadence/api/v1/common.proto";
 import "uber/cadence/api/v1/domain.proto";
 import "uber/cadence/shared/v1/history.proto";
@@ -46,7 +45,7 @@ message ReplicationMessages {
 message ReplicationTask {
   ReplicationTaskType task_type = 1;
   int64 source_task_id = 2;
-  google.protobuf.Timestamp creation_time = 3 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp creation_time = 3;
   oneof attributes {
     DomainTaskAttributes domain_task_attributes = 4;
     SyncShardStatusTaskAttributes sync_shard_status_task_attributes = 5;
@@ -59,18 +58,16 @@ message ReplicationTask {
 message DomainTaskAttributes {
   DomainOperation domain_operation = 1;
   string id = 2;
-  api.v1.DomainInfo info = 3;
-  api.v1.DomainConfiguration config = 4;
-  api.v1.DomainReplicationConfiguration replication_config = 5;
-  int64 config_version = 6;
-  int64 failover_version = 7;
-  int64 previous_failover_version = 8;
+  api.v1.Domain domain = 3;
+  int64 config_version = 4;
+  int64 failover_version = 5;
+  int64 previous_failover_version = 6;
 }
 
 message SyncShardStatusTaskAttributes {
   string source_cluster = 1;
   int32 shard_id = 2;
-  google.protobuf.Timestamp timestamp = 3 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp timestamp = 3;
 }
 
 message SyncActivityTaskAttributes {
@@ -78,10 +75,10 @@ message SyncActivityTaskAttributes {
   api.v1.WorkflowExecution workflow_execution = 2;
   int64 version = 3;
   int64 scheduled_id = 4;
-  google.protobuf.Timestamp scheduled_time = 5 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp scheduled_time = 5;
   int64 started_id = 6;
-  google.protobuf.Timestamp started_time = 7 [(gogoproto.stdtime) = true];
-  google.protobuf.Timestamp last_heartbeat_time = 8 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp started_time = 7;
+  google.protobuf.Timestamp last_heartbeat_time = 8;
   api.v1.Payload details = 9;
   int32 attempt = 10;
   api.v1.Failure last_failure = 11;
@@ -102,7 +99,7 @@ message HistoryTaskV2Attributes {
 message FailoverMarkerAttributes {
   string domain_id = 1;
   int64 failover_version = 2;
-  google.protobuf.Timestamp creation_time = 3 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp creation_time = 3;
 }
 
 message FailoverMarkerToken {
@@ -148,7 +145,7 @@ message ReplicationToken {
 }
 
 message SyncShardStatus {
-  google.protobuf.Timestamp timestamp = 1 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp timestamp = 1;
 }
 
 enum DLQType {

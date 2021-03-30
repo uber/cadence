@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,12 +27,15 @@ package adminserviceserver
 
 import (
 	context "context"
-	admin "github.com/uber/cadence/.gen/go/admin"
-	replicator "github.com/uber/cadence/.gen/go/replicator"
-	shared "github.com/uber/cadence/.gen/go/shared"
+
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
+	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
+
+	admin "github.com/uber/cadence/.gen/go/admin"
+	replicator "github.com/uber/cadence/.gen/go/replicator"
+	shared "github.com/uber/cadence/.gen/go/shared"
 )
 
 // Interface is the server-side interface for the AdminService service.
@@ -345,344 +348,546 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
+type yarpcErrorNamer interface{ YARPCErrorName() string }
+
+type yarpcErrorCoder interface{ YARPCErrorCode() *yarpcerrors.Code }
+
 func (h handler) AddSearchAttribute(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_AddSearchAttribute_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'AddSearchAttribute': %w", err)
 	}
 
-	err := h.impl.AddSearchAttribute(ctx, args.Request)
+	appErr := h.impl.AddSearchAttribute(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := admin.AdminService_AddSearchAttribute_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_AddSearchAttribute_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) CloseShard(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_CloseShard_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'CloseShard': %w", err)
 	}
 
-	err := h.impl.CloseShard(ctx, args.Request)
+	appErr := h.impl.CloseShard(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := admin.AdminService_CloseShard_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_CloseShard_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) DescribeCluster(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_DescribeCluster_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'DescribeCluster': %w", err)
 	}
 
-	success, err := h.impl.DescribeCluster(ctx)
+	success, appErr := h.impl.DescribeCluster(ctx)
 
-	hadError := err != nil
-	result, err := admin.AdminService_DescribeCluster_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_DescribeCluster_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) DescribeHistoryHost(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_DescribeHistoryHost_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'DescribeHistoryHost': %w", err)
 	}
 
-	success, err := h.impl.DescribeHistoryHost(ctx, args.Request)
+	success, appErr := h.impl.DescribeHistoryHost(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := admin.AdminService_DescribeHistoryHost_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_DescribeHistoryHost_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) DescribeQueue(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_DescribeQueue_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'DescribeQueue': %w", err)
 	}
 
-	success, err := h.impl.DescribeQueue(ctx, args.Request)
+	success, appErr := h.impl.DescribeQueue(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := admin.AdminService_DescribeQueue_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_DescribeQueue_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_DescribeWorkflowExecution_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'DescribeWorkflowExecution': %w", err)
 	}
 
-	success, err := h.impl.DescribeWorkflowExecution(ctx, args.Request)
+	success, appErr := h.impl.DescribeWorkflowExecution(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := admin.AdminService_DescribeWorkflowExecution_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_DescribeWorkflowExecution_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) GetDLQReplicationMessages(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_GetDLQReplicationMessages_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'GetDLQReplicationMessages': %w", err)
 	}
 
-	success, err := h.impl.GetDLQReplicationMessages(ctx, args.Request)
+	success, appErr := h.impl.GetDLQReplicationMessages(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := admin.AdminService_GetDLQReplicationMessages_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_GetDLQReplicationMessages_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) GetDomainReplicationMessages(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_GetDomainReplicationMessages_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'GetDomainReplicationMessages': %w", err)
 	}
 
-	success, err := h.impl.GetDomainReplicationMessages(ctx, args.Request)
+	success, appErr := h.impl.GetDomainReplicationMessages(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := admin.AdminService_GetDomainReplicationMessages_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_GetDomainReplicationMessages_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) GetReplicationMessages(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_GetReplicationMessages_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'GetReplicationMessages': %w", err)
 	}
 
-	success, err := h.impl.GetReplicationMessages(ctx, args.Request)
+	success, appErr := h.impl.GetReplicationMessages(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := admin.AdminService_GetReplicationMessages_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_GetReplicationMessages_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) GetWorkflowExecutionRawHistoryV2(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_GetWorkflowExecutionRawHistoryV2_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'GetWorkflowExecutionRawHistoryV2': %w", err)
 	}
 
-	success, err := h.impl.GetWorkflowExecutionRawHistoryV2(ctx, args.GetRequest)
+	success, appErr := h.impl.GetWorkflowExecutionRawHistoryV2(ctx, args.GetRequest)
 
-	hadError := err != nil
-	result, err := admin.AdminService_GetWorkflowExecutionRawHistoryV2_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_GetWorkflowExecutionRawHistoryV2_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) MergeDLQMessages(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_MergeDLQMessages_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'MergeDLQMessages': %w", err)
 	}
 
-	success, err := h.impl.MergeDLQMessages(ctx, args.Request)
+	success, appErr := h.impl.MergeDLQMessages(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := admin.AdminService_MergeDLQMessages_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_MergeDLQMessages_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) PurgeDLQMessages(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_PurgeDLQMessages_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'PurgeDLQMessages': %w", err)
 	}
 
-	err := h.impl.PurgeDLQMessages(ctx, args.Request)
+	appErr := h.impl.PurgeDLQMessages(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := admin.AdminService_PurgeDLQMessages_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_PurgeDLQMessages_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) ReadDLQMessages(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_ReadDLQMessages_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'ReadDLQMessages': %w", err)
 	}
 
-	success, err := h.impl.ReadDLQMessages(ctx, args.Request)
+	success, appErr := h.impl.ReadDLQMessages(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := admin.AdminService_ReadDLQMessages_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_ReadDLQMessages_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) ReapplyEvents(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_ReapplyEvents_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'ReapplyEvents': %w", err)
 	}
 
-	err := h.impl.ReapplyEvents(ctx, args.ReapplyEventsRequest)
+	appErr := h.impl.ReapplyEvents(ctx, args.ReapplyEventsRequest)
 
-	hadError := err != nil
-	result, err := admin.AdminService_ReapplyEvents_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_ReapplyEvents_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) RefreshWorkflowTasks(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_RefreshWorkflowTasks_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'RefreshWorkflowTasks': %w", err)
 	}
 
-	err := h.impl.RefreshWorkflowTasks(ctx, args.Request)
+	appErr := h.impl.RefreshWorkflowTasks(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := admin.AdminService_RefreshWorkflowTasks_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_RefreshWorkflowTasks_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) RemoveTask(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_RemoveTask_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'RemoveTask': %w", err)
 	}
 
-	err := h.impl.RemoveTask(ctx, args.Request)
+	appErr := h.impl.RemoveTask(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := admin.AdminService_RemoveTask_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_RemoveTask_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) ResendReplicationTasks(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_ResendReplicationTasks_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'ResendReplicationTasks': %w", err)
 	}
 
-	err := h.impl.ResendReplicationTasks(ctx, args.Request)
+	appErr := h.impl.ResendReplicationTasks(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := admin.AdminService_ResendReplicationTasks_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_ResendReplicationTasks_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) ResetQueue(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_ResetQueue_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'ResetQueue': %w", err)
 	}
 
-	err := h.impl.ResetQueue(ctx, args.Request)
+	appErr := h.impl.ResetQueue(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := admin.AdminService_ResetQueue_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := admin.AdminService_ResetQueue_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }

@@ -102,8 +102,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 	defer failOnPanic(s.T())
 	domainID := uuid.New()
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("test-eventsv2-workflow"),
-		RunID:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+		WorkflowID: "test-eventsv2-workflow",
+		RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 	}
 
 	csum := s.newRandomChecksum()
@@ -208,8 +208,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreationWithVersionHistor
 	defer failOnPanic(s.T())
 	domainID := uuid.New()
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("test-eventsv2-workflow-version-history"),
-		RunID:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+		WorkflowID: "test-eventsv2-workflow-version-history",
+		RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 	}
 	versionHistory := p.NewVersionHistory(
 		[]byte{1},
@@ -306,8 +306,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 
 	domainID := uuid.New()
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("continue-as-new-workflow-test"),
-		RunID:      common.StringPtr("551c88d2-d9e6-404f-8131-9eec14f36643"),
+		WorkflowID: "continue-as-new-workflow-test",
+		RunID:      "551c88d2-d9e6-404f-8131-9eec14f36643",
 	}
 	decisionScheduleID := int64(2)
 	_, err0 := s.CreateWorkflowExecution(ctx, domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, decisionScheduleID, nil)
@@ -328,8 +328,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 	verisonHistories := p.NewVersionHistories(versionHistory)
 
 	newWorkflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("continue-as-new-workflow-test"),
-		RunID:      common.StringPtr("64c7e15a-3fd7-4182-9c6f-6f25a4fa2614"),
+		WorkflowID: "continue-as-new-workflow-test",
+		RunID:      "64c7e15a-3fd7-4182-9c6f-6f25a4fa2614",
 	}
 
 	newdecisionTask := &p.DecisionTask{
@@ -400,9 +400,9 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 	s.Equal(int64(2), newExecutionInfo.DecisionScheduleID)
 	s.Equal([]byte("branchToken1"), newExecutionInfo.BranchToken)
 
-	newRunID, err5 := s.GetCurrentWorkflowRunID(ctx, domainID, *workflowExecution.WorkflowID)
+	newRunID, err5 := s.GetCurrentWorkflowRunID(ctx, domainID, workflowExecution.WorkflowID)
 	s.NoError(err5)
-	s.Equal(*newWorkflowExecution.RunID, newRunID)
+	s.Equal(newWorkflowExecution.RunID, newRunID)
 }
 
 func (s *ExecutionManagerSuiteForEventsV2) createWorkflowExecution(
@@ -487,8 +487,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 	domainID := uuid.New()
 	runID := uuid.New()
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("test-reset-workflow-with-replication-state-test"),
-		RunID:      common.StringPtr(runID),
+		WorkflowID: "test-reset-workflow-with-replication-state-test",
+		RunID:      runID,
 	}
 
 	currentTime := time.Now()
@@ -532,8 +532,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 	tsk := taskR[0]
 	s.Equal(p.ReplicationTaskTypeHistory, tsk.TaskType)
 	s.Equal(domainID, tsk.DomainID)
-	s.Equal(*workflowExecution.WorkflowID, tsk.WorkflowID)
-	s.Equal(*workflowExecution.RunID, tsk.RunID)
+	s.Equal(workflowExecution.WorkflowID, tsk.WorkflowID)
+	s.Equal(workflowExecution.RunID, tsk.RunID)
 	s.Equal(int64(1), tsk.FirstEventID)
 	s.Equal(int64(3), tsk.NextEventID)
 	s.Equal(int64(9), tsk.Version)
@@ -583,7 +583,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 	newRunID := uuid.New()
 	newExecution := types.WorkflowExecution{
 		WorkflowID: workflowExecution.WorkflowID,
-		RunID:      common.StringPtr(newRunID),
+		RunID:      newRunID,
 	}
 	insertInfo := copyWorkflowExecutionInfo(info0)
 	insertStats := copyExecutionStats(state0.ExecutionStats)
@@ -631,7 +631,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 		ScheduleID:     111,
 		StartedID:      112,
 		ActivityID:     uuid.New(),
-		ScheduledEvent: &types.HistoryEvent{EventID: int64Ptr(1)},
+		ScheduledEvent: &types.HistoryEvent{EventID: 1},
 	}}
 
 	insertRequestCancelInfos := []*p.RequestCancelInfo{{
@@ -645,7 +645,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 		InitiatedID:     131,
 		StartedID:       132,
 		CreateRequestID: uuid.New(),
-		InitiatedEvent:  &types.HistoryEvent{EventID: int64Ptr(1)},
+		InitiatedEvent:  &types.HistoryEvent{EventID: 1},
 	}}
 
 	insertSignalInfos := []*p.SignalInfo{{
@@ -720,7 +720,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 	tsk = taskR[0]
 	s.Equal(p.ReplicationTaskTypeHistory, tsk.TaskType)
 	s.Equal(domainID, tsk.DomainID)
-	s.Equal(*workflowExecution.WorkflowID, tsk.WorkflowID)
+	s.Equal(workflowExecution.WorkflowID, tsk.WorkflowID)
 	s.Equal(insertInfo.RunID, tsk.RunID)
 	s.Equal(int64(10), tsk.FirstEventID)
 	s.Equal(int64(30), tsk.NextEventID)
@@ -798,8 +798,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 	domainID := uuid.New()
 	runID := uuid.New()
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("test-reset-workflow-with-replication-state-test"),
-		RunID:      common.StringPtr(runID),
+		WorkflowID: "test-reset-workflow-with-replication-state-test",
+		RunID:      runID,
 	}
 
 	currentTime := time.Now()
@@ -855,8 +855,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 	tsk := taskR[0]
 	s.Equal(p.ReplicationTaskTypeHistory, tsk.TaskType)
 	s.Equal(domainID, tsk.DomainID)
-	s.Equal(*workflowExecution.WorkflowID, tsk.WorkflowID)
-	s.Equal(*workflowExecution.RunID, tsk.RunID)
+	s.Equal(workflowExecution.WorkflowID, tsk.WorkflowID)
+	s.Equal(workflowExecution.RunID, tsk.RunID)
 	s.Equal(int64(1), tsk.FirstEventID)
 	s.Equal(int64(3), tsk.NextEventID)
 	s.Equal(int64(9), tsk.Version)
@@ -899,7 +899,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 	newRunID := uuid.New()
 	newExecution := types.WorkflowExecution{
 		WorkflowID: workflowExecution.WorkflowID,
-		RunID:      common.StringPtr(newRunID),
+		RunID:      newRunID,
 	}
 	insertInfo := copyWorkflowExecutionInfo(info0)
 	insterStats := copyExecutionStats(state0.ExecutionStats)
@@ -949,7 +949,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 		ScheduleID:     111,
 		StartedID:      112,
 		ActivityID:     uuid.New(),
-		ScheduledEvent: &types.HistoryEvent{EventID: int64Ptr(1)},
+		ScheduledEvent: &types.HistoryEvent{EventID: 1},
 	}}
 
 	insertRequestCancelInfos := []*p.RequestCancelInfo{{
@@ -963,7 +963,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 		InitiatedID:     131,
 		StartedID:       132,
 		CreateRequestID: uuid.New(),
-		InitiatedEvent:  &types.HistoryEvent{EventID: int64Ptr(1)},
+		InitiatedEvent:  &types.HistoryEvent{EventID: 1},
 	}}
 
 	insertSignalInfos := []*p.SignalInfo{{
@@ -1031,7 +1031,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 	tsk = taskR[0]
 	s.Equal(p.ReplicationTaskTypeHistory, tsk.TaskType)
 	s.Equal(domainID, tsk.DomainID)
-	s.Equal(*workflowExecution.WorkflowID, tsk.WorkflowID)
+	s.Equal(workflowExecution.WorkflowID, tsk.WorkflowID)
 	s.Equal(insertInfo.RunID, tsk.RunID)
 	s.Equal(int64(10), tsk.FirstEventID)
 	s.Equal(int64(30), tsk.NextEventID)
@@ -1109,8 +1109,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrNoReplicate() 
 	domainID := uuid.New()
 	runID := uuid.New()
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("test-reset-workflow-with-replication-state-test"),
-		RunID:      common.StringPtr(runID),
+		WorkflowID: "test-reset-workflow-with-replication-state-test",
+		RunID:      runID,
 	}
 
 	currentTime := time.Now()
@@ -1160,7 +1160,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrNoReplicate() 
 	newRunID := uuid.New()
 	newExecution := types.WorkflowExecution{
 		WorkflowID: workflowExecution.WorkflowID,
-		RunID:      common.StringPtr(newRunID),
+		RunID:      newRunID,
 	}
 	insertInfo := copyWorkflowExecutionInfo(info0)
 	insertStats := copyExecutionStats(state0.ExecutionStats)
@@ -1200,7 +1200,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrNoReplicate() 
 		ScheduleID:     111,
 		StartedID:      112,
 		ActivityID:     uuid.New(),
-		ScheduledEvent: &types.HistoryEvent{EventID: int64Ptr(1)},
+		ScheduledEvent: &types.HistoryEvent{EventID: 1},
 	}}
 
 	insertRequestCancelInfos := []*p.RequestCancelInfo{{

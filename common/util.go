@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/dgryski/go-farm"
+	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -313,7 +314,7 @@ func CreateMatchingPollForDecisionTaskResponse(historyResponse *types.RecordDeci
 	matchingResp := &types.MatchingPollForDecisionTaskResponse{
 		WorkflowExecution:         workflowExecution,
 		TaskToken:                 token,
-		Attempt:                   Int64Ptr(historyResponse.GetAttempt()),
+		Attempt:                   historyResponse.GetAttempt(),
 		WorkflowType:              historyResponse.WorkflowType,
 		StartedEventID:            historyResponse.StartedEventID,
 		StickyExecutionEnabled:    historyResponse.StickyExecutionEnabled,
@@ -432,7 +433,7 @@ func CreateHistoryStartWorkflowRequest(
 	now time.Time,
 ) *types.HistoryStartWorkflowExecutionRequest {
 	histRequest := &types.HistoryStartWorkflowExecutionRequest{
-		DomainUUID:   StringPtr(domainID),
+		DomainUUID:   domainID,
 		StartRequest: startRequest,
 	}
 	firstDecisionTaskBackoffSeconds := backoff.GetBackoffForNextScheduleInSeconds(startRequest.GetCronSchedule(), now, now)
@@ -523,6 +524,19 @@ func ValidateLongPollContextTimeoutIsSet(
 		return deadline, err
 	}
 	return deadline, nil
+}
+
+// ValidateDomainUUID checks if the given domainID string is a valid UUID
+func ValidateDomainUUID(
+	domainUUID string,
+) error {
+
+	if domainUUID == "" {
+		return &types.BadRequestError{Message: "Missing domain UUID."}
+	} else if uuid.Parse(domainUUID) == nil {
+		return &types.BadRequestError{Message: "Invalid domain UUID."}
+	}
+	return nil
 }
 
 // GetSizeOfMapStringToByteArray get size of map[string][]byte

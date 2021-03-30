@@ -251,9 +251,16 @@ func loadMutableStateForTimerTask(
 		}
 		// after refresh, still mutable state's next event ID <= task ID
 		if timerTask.EventID >= msBuilder.GetNextEventID() {
-			logger.Info("Timer Task Processor: task event ID >= MS NextEventID, skip.",
+			metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.DataInconsistentCounter)
+			logger.Error("Timer Task Processor: task event ID >= MS NextEventID, skip.",
+				tag.WorkflowDomainID(timerTask.DomainID),
+				tag.WorkflowID(timerTask.WorkflowID),
+				tag.WorkflowRunID(timerTask.RunID),
+				tag.TaskType(timerTask.TaskType),
+				tag.TaskID(timerTask.TaskID),
 				tag.WorkflowEventID(timerTask.EventID),
-				tag.WorkflowNextEventID(msBuilder.GetNextEventID()))
+				tag.WorkflowNextEventID(msBuilder.GetNextEventID()),
+			)
 			return nil, nil
 		}
 	}
@@ -297,9 +304,16 @@ func loadMutableStateForTransferTask(
 		}
 		// after refresh, still mutable state's next event ID <= task ID
 		if transferTask.ScheduleID >= msBuilder.GetNextEventID() {
-			logger.Info("Transfer Task Processor: task event ID >= MS NextEventID, skip.",
+			metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.DataInconsistentCounter)
+			logger.Error("Transfer Task Processor: task event ID >= MS NextEventID, skip.",
+				tag.WorkflowDomainID(transferTask.DomainID),
+				tag.WorkflowID(transferTask.WorkflowID),
+				tag.WorkflowRunID(transferTask.RunID),
+				tag.TaskType(transferTask.TaskType),
+				tag.TaskID(transferTask.TaskID),
 				tag.WorkflowScheduleID(transferTask.ScheduleID),
-				tag.WorkflowNextEventID(msBuilder.GetNextEventID()))
+				tag.WorkflowNextEventID(msBuilder.GetNextEventID()),
+			)
 			return nil, nil
 		}
 	}
@@ -363,8 +377,8 @@ func getWorkflowExecution(
 ) types.WorkflowExecution {
 
 	return types.WorkflowExecution{
-		WorkflowID: common.StringPtr(taskInfo.GetWorkflowID()),
-		RunID:      common.StringPtr(taskInfo.GetRunID()),
+		WorkflowID: taskInfo.GetWorkflowID(),
+		RunID:      taskInfo.GetRunID(),
 	}
 }
 

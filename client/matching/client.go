@@ -74,7 +74,7 @@ func (c *clientImpl) AddActivityTask(
 		persistence.TaskListTypeActivity,
 		request.GetForwardedFrom(),
 	)
-	request.TaskList.Name = &partition
+	request.TaskList.Name = partition
 	client, err := c.getClientForTasklist(partition)
 	if err != nil {
 		return err
@@ -96,7 +96,7 @@ func (c *clientImpl) AddDecisionTask(
 		persistence.TaskListTypeDecision,
 		request.GetForwardedFrom(),
 	)
-	request.TaskList.Name = &partition
+	request.TaskList.Name = partition
 	client, err := c.getClientForTasklist(request.TaskList.GetName())
 	if err != nil {
 		return err
@@ -118,7 +118,7 @@ func (c *clientImpl) PollForActivityTask(
 		persistence.TaskListTypeActivity,
 		request.GetForwardedFrom(),
 	)
-	request.PollRequest.TaskList.Name = &partition
+	request.PollRequest.TaskList.Name = partition
 	client, err := c.getClientForTasklist(request.PollRequest.TaskList.GetName())
 	if err != nil {
 		return nil, err
@@ -140,7 +140,7 @@ func (c *clientImpl) PollForDecisionTask(
 		persistence.TaskListTypeDecision,
 		request.GetForwardedFrom(),
 	)
-	request.PollRequest.TaskList.Name = &partition
+	request.PollRequest.TaskList.Name = partition
 	client, err := c.getClientForTasklist(request.PollRequest.TaskList.GetName())
 	if err != nil {
 		return nil, err
@@ -162,7 +162,7 @@ func (c *clientImpl) QueryWorkflow(
 		persistence.TaskListTypeDecision,
 		request.GetForwardedFrom(),
 	)
-	request.TaskList.Name = &partition
+	request.TaskList.Name = partition
 	client, err := c.getClientForTasklist(request.TaskList.GetName())
 	if err != nil {
 		return nil, err

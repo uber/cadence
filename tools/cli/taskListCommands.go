@@ -23,7 +23,6 @@ package cli
 import (
 	"os"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 
 	"github.com/olekukonko/tablewriter"
@@ -74,8 +73,8 @@ func ListTaskListPartitions(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 	request := &types.ListTaskListPartitionsRequest{
-		Domain:   common.StringPtr(domain),
-		TaskList: &types.TaskList{Name: common.StringPtr(taskList)},
+		Domain:   domain,
+		TaskList: &types.TaskList{Name: taskList},
 	}
 
 	response, err := frontendClient.ListTaskListPartitions(ctx, request)

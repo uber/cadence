@@ -48,23 +48,23 @@ func (s *utilSuite) TestEncodeDecodeHistoryBatches() {
 		{
 			Events: []*types.HistoryEvent{
 				{
-					EventID: common.Int64Ptr(common.FirstEventID),
-					Version: common.Int64Ptr(1),
+					EventID: common.FirstEventID,
+					Version: 1,
 				},
 			},
 		},
 		{
 			Events: []*types.HistoryEvent{
 				{
-					EventID:   common.Int64Ptr(common.FirstEventID + 1),
+					EventID:   common.FirstEventID + 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-					Version:   common.Int64Ptr(1),
+					Version:   1,
 				},
 				{
-					EventID: common.Int64Ptr(common.FirstEventID + 2),
-					Version: common.Int64Ptr(2),
+					EventID: common.FirstEventID + 2,
+					Version: 2,
 					DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
-						Identity: common.StringPtr("some random identity"),
+						Identity: "some random identity",
 					},
 				},
 			},

@@ -49,6 +49,7 @@ import (
 	"github.com/uber/cadence/service/worker/scanner/executions"
 	"github.com/uber/cadence/service/worker/scanner/shardscanner"
 	"github.com/uber/cadence/service/worker/scanner/timers"
+	"github.com/uber/cadence/service/worker/shadower"
 )
 
 type (
@@ -78,6 +79,7 @@ type (
 		EnableBatcher                     dynamicconfig.BoolPropertyFn
 		EnableParentClosePolicyWorker     dynamicconfig.BoolPropertyFn
 		EnableFailoverManager             dynamicconfig.BoolPropertyFn
+		EnableWorkflowShadower            dynamicconfig.BoolPropertyFn
 		DomainReplicationMaxRetryDuration dynamicconfig.DurationPropertyFn
 	}
 )
@@ -139,6 +141,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 				executions.CurrentExecutionScannerConfig(dc),
 				timers.ScannerConfig(dc),
 			},
+			MaxWorkflowRetentionInDays: dc.GetIntProperty(dynamicconfig.MaxRetentionDays, domain.DefaultMaxWorkflowRetentionInDays),
 		},
 		BatcherCfg: &batcher.Config{
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
@@ -151,6 +154,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 		EnableBatcher:                     dc.GetBoolProperty(dynamicconfig.EnableBatcher, false),
 		EnableParentClosePolicyWorker:     dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
 		EnableFailoverManager:             dc.GetBoolProperty(dynamicconfig.EnableFailoverManager, true),
+		EnableWorkflowShadower:            dc.GetBoolProperty(dynamicconfig.EnableWorkflowShadower, false),
 		ThrottledLogRPS:                   dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS, 20),
 		PersistenceGlobalMaxQPS:           dc.GetIntProperty(dynamicconfig.WorkerPersistenceGlobalMaxQPS, 0),
 		PersistenceMaxQPS:                 dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
@@ -205,6 +209,10 @@ func (s *Service) Start() {
 	}
 	if s.config.EnableFailoverManager() {
 		s.startFailoverManager()
+	}
+	if s.config.EnableWorkflowShadower() {
+		s.ensureDomainExists(common.ShadowerLocalDomainName)
+		s.startWorkflowShadower()
 	}
 
 	logger.Info("worker started", tag.ComponentWorker)
@@ -333,6 +341,17 @@ func (s *Service) startFailoverManager() {
 	}
 }
 
+func (s *Service) startWorkflowShadower() {
+	params := &shadower.BootstrapParams{
+		ServiceClient: s.params.PublicClient,
+		DomainCache:   s.GetDomainCache(),
+	}
+	if err := shadower.New(params).Start(); err != nil {
+		s.Stop()
+		s.GetLogger().Fatal("error starting workflow shadower", tag.Error(err))
+	}
+}
+
 func (s *Service) ensureDomainExists(domain string) {
 	_, err := s.GetMetadataManager().GetDomain(context.Background(), &persistence.GetDomainRequest{Name: domain})
 	switch err.(type) {
@@ -381,6 +400,8 @@ func getDomainID(domain string) string {
 		domainID = common.SystemDomainID
 	case common.BatcherLocalDomainName:
 		domainID = common.BatcherDomainID
+	case common.ShadowerLocalDomainName:
+		domainID = common.ShadowerDomainID
 	}
 	return domainID
 }

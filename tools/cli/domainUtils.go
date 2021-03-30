@@ -174,6 +174,13 @@ var (
 		},
 	}
 
+	deprecateDomainFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:  FlagSecurityTokenWithAlias,
+			Usage: "Optional token for security check",
+		},
+	}
+
 	describeDomainFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  FlagDomainID,
@@ -203,6 +210,11 @@ var (
 
 	adminUpdateDomainFlags = append(
 		updateDomainFlags,
+		adminDomainCommonFlags...,
+	)
+
+	adminDeprecateDomainFlags = append(
+		deprecateDomainFlags,
 		adminDomainCommonFlags...,
 	)
 
@@ -268,7 +280,7 @@ func initializeDomainHandler(
 ) domain.Handler {
 
 	domainConfig := domain.Config{
-		MinRetentionDays:  dynamicconfig.GetIntPropertyFn(domain.MinRetentionDays),
+		MinRetentionDays:  dynamicconfig.GetIntPropertyFn(domain.DefaultMinWorkflowRetentionInDays),
 		MaxBadBinaryCount: dynamicconfig.GetIntPropertyFilteredByDomain(domain.MaxBadBinaries),
 		FailoverCoolDown:  dynamicconfig.GetDurationPropertyFnFilteredByDomain(domain.FailoverCoolDown),
 	}

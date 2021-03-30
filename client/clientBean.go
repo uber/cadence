@@ -274,7 +274,7 @@ func (p *dnsDispatcherProvider) Get(serviceName string, address string) (*yarpc.
 	peerListUpdater.Start()
 	outbound := tchanTransport.NewOutbound(peerList)
 
-	p.logger.Info("Creating RPC dispatcher outbound", tag.Service(serviceName), tag.Address(address))
+	p.logger.Info("Creating RPC dispatcher outbound", tag.Address(address))
 
 	// Attach the outbound to the dispatcher (this will add middleware/logging/etc)
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{

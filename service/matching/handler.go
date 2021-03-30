@@ -110,7 +110,7 @@ func (h *handlerImpl) Stop() {
 func (h *handlerImpl) Health(ctx context.Context) (*types.HealthStatus, error) {
 	h.startWG.Wait()
 	h.GetLogger().Debug("Matching service health check endpoint reached.")
-	hs := &types.HealthStatus{Ok: true, Msg: common.StringPtr("matching good")}
+	hs := &types.HealthStatus{Ok: true, Msg: "matching good"}
 	return hs, nil
 }
 
@@ -392,9 +392,9 @@ func (h *handlerImpl) ListTaskListPartitions(
 }
 
 func (h *handlerImpl) domainName(id string) string {
-	entry, err := h.GetDomainCache().GetDomainByID(id)
+	domainName, err := h.GetDomainCache().GetDomainName(id)
 	if err != nil {
 		return ""
 	}
-	return entry.GetInfo().Name
+	return domainName
 }

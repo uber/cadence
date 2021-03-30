@@ -28,7 +28,6 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	test "github.com/uber/cadence/common/testing"
 	"github.com/uber/cadence/common/types"
@@ -101,7 +100,7 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 	versionHistory := s.eventBatchesToVersionHistory(nil, historyBatch)
 
 	s.NotNil(historyBatch)
-	historyBatch[0].Events[1].Version = common.Int64Ptr(2)
+	historyBatch[0].Events[1].Version = 2
 
 	s.applyEventsThroughFetcher(
 		workflowID,

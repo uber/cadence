@@ -27,6 +27,8 @@ import (
 	"github.com/uber/cadence/.gen/go/health"
 	m "github.com/uber/cadence/.gen/go/matching"
 	s "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 
 	"github.com/golang/mock/gomock"
@@ -40,62 +42,70 @@ func TestThriftHandler(t *testing.T) {
 	h := NewMockHandler(ctrl)
 	th := NewThriftHandler(h)
 	ctx := context.Background()
+	taggedCtx := metrics.TagContext(ctx, metrics.ThriftTransportTag())
 	internalErr := &types.InternalServiceError{Message: "test"}
 	expectedErr := &s.InternalServiceError{Message: "test"}
 
 	t.Run("Health", func(t *testing.T) {
-		h.EXPECT().Health(ctx).Return(&types.HealthStatus{}, internalErr).Times(1)
+		h.EXPECT().Health(taggedCtx).Return(&types.HealthStatus{}, internalErr).Times(1)
 		resp, err := th.Health(ctx)
-		assert.Equal(t, health.HealthStatus{}, *resp)
+		assert.Equal(t, health.HealthStatus{Msg: common.StringPtr("")}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("AddActivityTask", func(t *testing.T) {
-		h.EXPECT().AddActivityTask(ctx, &types.AddActivityTaskRequest{}).Return(internalErr).Times(1)
+		h.EXPECT().AddActivityTask(taggedCtx, &types.AddActivityTaskRequest{}).Return(internalErr).Times(1)
 		err := th.AddActivityTask(ctx, &m.AddActivityTaskRequest{})
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("AddDecisionTask", func(t *testing.T) {
-		h.EXPECT().AddDecisionTask(ctx, &types.AddDecisionTaskRequest{}).Return(internalErr).Times(1)
+		h.EXPECT().AddDecisionTask(taggedCtx, &types.AddDecisionTaskRequest{}).Return(internalErr).Times(1)
 		err := th.AddDecisionTask(ctx, &m.AddDecisionTaskRequest{})
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("CancelOutstandingPoll", func(t *testing.T) {
-		h.EXPECT().CancelOutstandingPoll(ctx, &types.CancelOutstandingPollRequest{}).Return(internalErr).Times(1)
+		h.EXPECT().CancelOutstandingPoll(taggedCtx, &types.CancelOutstandingPollRequest{}).Return(internalErr).Times(1)
 		err := th.CancelOutstandingPoll(ctx, &m.CancelOutstandingPollRequest{})
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("DescribeTaskList", func(t *testing.T) {
-		h.EXPECT().DescribeTaskList(ctx, &types.MatchingDescribeTaskListRequest{}).Return(&types.DescribeTaskListResponse{}, internalErr).Times(1)
+		h.EXPECT().DescribeTaskList(taggedCtx, &types.MatchingDescribeTaskListRequest{}).Return(&types.DescribeTaskListResponse{}, internalErr).Times(1)
 		resp, err := th.DescribeTaskList(ctx, &m.DescribeTaskListRequest{})
 		assert.Equal(t, s.DescribeTaskListResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("ListTaskListPartitions", func(t *testing.T) {
-		h.EXPECT().ListTaskListPartitions(ctx, &types.MatchingListTaskListPartitionsRequest{}).Return(&types.ListTaskListPartitionsResponse{}, internalErr).Times(1)
+		h.EXPECT().ListTaskListPartitions(taggedCtx, &types.MatchingListTaskListPartitionsRequest{}).Return(&types.ListTaskListPartitionsResponse{}, internalErr).Times(1)
 		resp, err := th.ListTaskListPartitions(ctx, &m.ListTaskListPartitionsRequest{})
 		assert.Equal(t, s.ListTaskListPartitionsResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("PollForActivityTask", func(t *testing.T) {
-		h.EXPECT().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{}).Return(&types.PollForActivityTaskResponse{}, internalErr).Times(1)
+		h.EXPECT().PollForActivityTask(taggedCtx, &types.MatchingPollForActivityTaskRequest{}).Return(&types.PollForActivityTaskResponse{}, internalErr).Times(1)
 		resp, err := th.PollForActivityTask(ctx, &m.PollForActivityTaskRequest{})
-		assert.Equal(t, s.PollForActivityTaskResponse{}, *resp)
+		assert.Equal(t, s.PollForActivityTaskResponse{WorkflowDomain: common.StringPtr(""), ActivityId: common.StringPtr(""), Attempt: common.Int32Ptr(0)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("PollForDecisionTask", func(t *testing.T) {
-		h.EXPECT().PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{}).Return(&types.MatchingPollForDecisionTaskResponse{}, internalErr).Times(1)
+		h.EXPECT().PollForDecisionTask(taggedCtx, &types.MatchingPollForDecisionTaskRequest{}).Return(&types.MatchingPollForDecisionTaskResponse{}, internalErr).Times(1)
 		resp, err := th.PollForDecisionTask(ctx, &m.PollForDecisionTaskRequest{})
-		assert.Equal(t, m.PollForDecisionTaskResponse{}, *resp)
+		assert.Equal(t, m.PollForDecisionTaskResponse{
+			StartedEventId:         common.Int64Ptr(0),
+			NextEventId:            common.Int64Ptr(0),
+			Attempt:                common.Int64Ptr(0),
+			StickyExecutionEnabled: common.BoolPtr(false),
+			BacklogCountHint:       common.Int64Ptr(0),
+			EventStoreVersion:      common.Int32Ptr(0),
+		}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("QueryWorkflow", func(t *testing.T) {
-		h.EXPECT().QueryWorkflow(ctx, &types.MatchingQueryWorkflowRequest{}).Return(&types.QueryWorkflowResponse{}, internalErr).Times(1)
+		h.EXPECT().QueryWorkflow(taggedCtx, &types.MatchingQueryWorkflowRequest{}).Return(&types.QueryWorkflowResponse{}, internalErr).Times(1)
 		resp, err := th.QueryWorkflow(ctx, &m.QueryWorkflowRequest{})
 		assert.Equal(t, s.QueryWorkflowResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("RespondQueryTaskCompleted", func(t *testing.T) {
-		h.EXPECT().RespondQueryTaskCompleted(ctx, &types.MatchingRespondQueryTaskCompletedRequest{}).Return(internalErr).Times(1)
+		h.EXPECT().RespondQueryTaskCompleted(taggedCtx, &types.MatchingRespondQueryTaskCompletedRequest{}).Return(internalErr).Times(1)
 		err := th.RespondQueryTaskCompleted(ctx, &m.RespondQueryTaskCompletedRequest{})
 		assert.Equal(t, expectedErr, err)
 	})

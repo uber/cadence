@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,17 +26,13 @@
 package indexerv1
 
 import (
-	bytes "bytes"
 	fmt "fmt"
 	io "io"
 	math "math"
 	math_bits "math/bits"
-	reflect "reflect"
-	strconv "strconv"
-	strings "strings"
 
 	proto "github.com/gogo/protobuf/proto"
-	github_com_gogo_protobuf_sortkeys "github.com/gogo/protobuf/sortkeys"
+
 	v1 "github.com/uber/cadence/.gen/proto/api/v1"
 )
 
@@ -54,9 +50,9 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 type MessageType int32
 
 const (
-	MESSAGE_TYPE_INVALID MessageType = 0
-	MESSAGE_TYPE_INDEX   MessageType = 1
-	MESSAGE_TYPE_DELETE  MessageType = 2
+	MessageType_MESSAGE_TYPE_INVALID MessageType = 0
+	MessageType_MESSAGE_TYPE_INDEX   MessageType = 1
+	MessageType_MESSAGE_TYPE_DELETE  MessageType = 2
 )
 
 var MessageType_name = map[int32]string{
@@ -71,20 +67,28 @@ var MessageType_value = map[string]int32{
 	"MESSAGE_TYPE_DELETE":  2,
 }
 
+func (x MessageType) String() string {
+	return proto.EnumName(MessageType_name, int32(x))
+}
+
 func (MessageType) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_60256a432328b016, []int{0}
 }
 
 type Message struct {
-	MessageType       MessageType           `protobuf:"varint,1,opt,name=message_type,json=messageType,proto3,enum=uber.cadence.indexer.v1.MessageType" json:"message_type,omitempty"`
-	DomainId          string                `protobuf:"bytes,2,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
-	WorkflowExecution *v1.WorkflowExecution `protobuf:"bytes,3,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
-	Version           int64                 `protobuf:"varint,4,opt,name=version,proto3" json:"version,omitempty"`
-	Fields            map[string]*Field     `protobuf:"bytes,5,rep,name=fields,proto3" json:"fields,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	MessageType          MessageType           `protobuf:"varint,1,opt,name=message_type,json=messageType,proto3,enum=uber.cadence.indexer.v1.MessageType" json:"message_type,omitempty"`
+	DomainId             string                `protobuf:"bytes,2,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
+	WorkflowExecution    *v1.WorkflowExecution `protobuf:"bytes,3,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	Version              int64                 `protobuf:"varint,4,opt,name=version,proto3" json:"version,omitempty"`
+	Fields               map[string]*Field     `protobuf:"bytes,5,rep,name=fields,proto3" json:"fields,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
-func (m *Message) Reset()      { *m = Message{} }
-func (*Message) ProtoMessage() {}
+func (m *Message) Reset()         { *m = Message{} }
+func (m *Message) String() string { return proto.CompactTextString(m) }
+func (*Message) ProtoMessage()    {}
 func (*Message) Descriptor() ([]byte, []int) {
 	return fileDescriptor_60256a432328b016, []int{0}
 }
@@ -119,7 +123,7 @@ func (m *Message) GetMessageType() MessageType {
 	if m != nil {
 		return m.MessageType
 	}
-	return MESSAGE_TYPE_INVALID
+	return MessageType_MESSAGE_TYPE_INVALID
 }
 
 func (m *Message) GetDomainId() string {
@@ -156,11 +160,15 @@ type Field struct {
 	//	*Field_IntData
 	//	*Field_BoolData
 	//	*Field_BinaryData
-	Data isField_Data `protobuf_oneof:"data"`
+	Data                 isField_Data `protobuf_oneof:"data"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
 }
 
-func (m *Field) Reset()      { *m = Field{} }
-func (*Field) ProtoMessage() {}
+func (m *Field) Reset()         { *m = Field{} }
+func (m *Field) String() string { return proto.CompactTextString(m) }
+func (*Field) ProtoMessage()    {}
 func (*Field) Descriptor() ([]byte, []int) {
 	return fileDescriptor_60256a432328b016, []int{1}
 }
@@ -193,7 +201,6 @@ var xxx_messageInfo_Field proto.InternalMessageInfo
 
 type isField_Data interface {
 	isField_Data()
-	Equal(interface{}) bool
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
@@ -269,299 +276,44 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("github.com/uber/cadence/.gen/proto/indexer/v1/messages.proto", fileDescriptor_60256a432328b016)
+	proto.RegisterFile("uber/cadence/indexer/v1/messages.proto", fileDescriptor_60256a432328b016)
 }
 
 var fileDescriptor_60256a432328b016 = []byte{
-	// 510 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x92, 0xcd, 0x6e, 0xd3, 0x40,
-	0x14, 0x85, 0x3d, 0x71, 0xf3, 0x77, 0x5d, 0xa1, 0x30, 0x20, 0x6a, 0xb5, 0x62, 0xe4, 0x56, 0xa8,
-	0x8a, 0x10, 0x72, 0x94, 0xc0, 0x02, 0xb1, 0x41, 0xad, 0x62, 0x9a, 0x48, 0x2d, 0x42, 0x6e, 0x80,
-	0x96, 0x8d, 0x35, 0x89, 0xa7, 0xd5, 0xa8, 0x89, 0x27, 0xb2, 0x9d, 0xa4, 0xde, 0xc1, 0x1b, 0xc0,
-	0x5b, 0xf0, 0x28, 0x2c, 0xb3, 0xec, 0x92, 0x38, 0x1b, 0x96, 0x7d, 0x04, 0x34, 0x1e, 0x57, 0x34,
-	0x95, 0x2a, 0x76, 0x9e, 0x73, 0xbe, 0x7b, 0xae, 0xe6, 0x78, 0x60, 0x77, 0xd2, 0x67, 0x61, 0x63,
-	0x40, 0x7d, 0x16, 0x0c, 0x58, 0x83, 0x07, 0x3e, 0xbb, 0x64, 0x61, 0x63, 0xda, 0x6c, 0x8c, 0x58,
-	0x14, 0xd1, 0x73, 0x16, 0xd9, 0xe3, 0x50, 0xc4, 0x02, 0x6f, 0x48, 0xce, 0xce, 0x39, 0x3b, 0xe7,
-	0xec, 0x69, 0x73, 0xd3, 0x5a, 0x09, 0xa0, 0x63, 0x2e, 0x87, 0x07, 0x62, 0x34, 0x12, 0x81, 0x1a,
-	0xdd, 0xf9, 0xa6, 0x43, 0xf9, 0x48, 0xa5, 0xe1, 0x03, 0x58, 0xcf, 0x83, 0xbd, 0x38, 0x19, 0x33,
-	0x13, 0x59, 0xa8, 0xfe, 0xa0, 0xf5, 0xcc, 0xbe, 0x27, 0xdd, 0xce, 0xe7, 0x7a, 0xc9, 0x98, 0xb9,
-	0xc6, 0xe8, 0xdf, 0x01, 0x6f, 0x41, 0xd5, 0x17, 0x23, 0xca, 0x03, 0x8f, 0xfb, 0x66, 0xc1, 0x42,
-	0xf5, 0xaa, 0x5b, 0x51, 0x42, 0xd7, 0xc7, 0x1f, 0x01, 0xcf, 0x44, 0x78, 0x71, 0x36, 0x14, 0x33,
-	0x8f, 0x5d, 0xb2, 0xc1, 0x24, 0xe6, 0x22, 0x30, 0x75, 0x0b, 0xd5, 0x8d, 0xd6, 0xee, 0xea, 0x2e,
-	0x3a, 0xe6, 0x72, 0xcf, 0xe7, 0x1c, 0x77, 0x6e, 0x68, 0xf7, 0xe1, 0xec, 0xae, 0x84, 0x4d, 0x28,
-	0x4f, 0x59, 0x18, 0xc9, 0xac, 0x35, 0x0b, 0xd5, 0x75, 0xf7, 0xe6, 0x88, 0xdb, 0x50, 0x3a, 0xe3,
-	0x6c, 0xe8, 0x47, 0x66, 0xd1, 0xd2, 0xeb, 0x46, 0xeb, 0xc5, 0xff, 0x2e, 0x64, 0xbf, 0xcb, 0x70,
-	0x27, 0x88, 0xc3, 0xc4, 0xcd, 0x67, 0x37, 0x4f, 0xc1, 0xb8, 0x25, 0xe3, 0x1a, 0xe8, 0x17, 0x2c,
-	0xc9, 0x2a, 0xaa, 0xba, 0xf2, 0x13, 0xbf, 0x82, 0xe2, 0x94, 0x0e, 0x27, 0x2c, 0xbb, 0xb0, 0xd1,
-	0x22, 0xf7, 0x6e, 0xc9, 0x62, 0x5c, 0x05, 0xbf, 0x29, 0xbc, 0x46, 0x3b, 0x3f, 0x10, 0x14, 0x33,
-	0x11, 0x6f, 0x83, 0x11, 0xc5, 0x21, 0x0f, 0xce, 0x3d, 0x9f, 0xc6, 0x54, 0xa5, 0x77, 0x34, 0x17,
-	0x94, 0xd8, 0xa6, 0x31, 0xc5, 0x5b, 0x50, 0xe1, 0x41, 0xac, 0x7c, 0xb9, 0x49, 0xef, 0x68, 0x6e,
-	0x99, 0x07, 0x71, 0x66, 0x3e, 0x85, 0x6a, 0x5f, 0x88, 0xa1, 0x72, 0x65, 0xa5, 0x95, 0x8e, 0xe6,
-	0x56, 0xa4, 0x94, 0xd9, 0xdb, 0x60, 0xf4, 0x79, 0x40, 0xc3, 0x44, 0x01, 0xb2, 0xa7, 0x75, 0x19,
-	0xaf, 0x44, 0x89, 0xec, 0x97, 0x60, 0x4d, 0x7a, 0xcf, 0x4f, 0xc0, 0xb8, 0xf5, 0x7b, 0xb1, 0x09,
-	0x8f, 0x8f, 0x9c, 0xe3, 0xe3, 0xbd, 0x03, 0xc7, 0xeb, 0x9d, 0x7e, 0x70, 0xbc, 0xee, 0xfb, 0x4f,
-	0x7b, 0x87, 0xdd, 0x76, 0x4d, 0xc3, 0x4f, 0x00, 0xdf, 0x71, 0xda, 0xce, 0x49, 0x0d, 0xe1, 0x0d,
-	0x78, 0xb4, 0xa2, 0xb7, 0x9d, 0x43, 0xa7, 0xe7, 0xd4, 0x0a, 0xfb, 0x6f, 0xe7, 0x0b, 0xa2, 0x5d,
-	0x2d, 0x88, 0x76, 0xbd, 0x20, 0xe8, 0x6b, 0x4a, 0xd0, 0xcf, 0x94, 0xa0, 0x5f, 0x29, 0x41, 0xf3,
-	0x94, 0xa0, 0xdf, 0x29, 0x41, 0x7f, 0x52, 0xa2, 0x5d, 0xa7, 0x04, 0x7d, 0x5f, 0x12, 0x6d, 0xbe,
-	0x24, 0xda, 0xd5, 0x92, 0x68, 0x5f, 0xaa, 0x79, 0x81, 0xd3, 0x66, 0xbf, 0x94, 0xbd, 0xdc, 0x97,
-	0x7f, 0x03, 0x00, 0x00, 0xff, 0xff, 0xf1, 0xcc, 0xd5, 0x76, 0x1e, 0x03, 0x00, 0x00,
+	// 488 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x92, 0xdf, 0x6a, 0x13, 0x41,
+	0x14, 0xc6, 0x33, 0xd9, 0xe6, 0xdf, 0xd9, 0x22, 0x71, 0x14, 0xbb, 0xb4, 0x18, 0xb6, 0x45, 0x4a,
+	0x10, 0xd9, 0x25, 0x51, 0x50, 0xf4, 0xaa, 0x25, 0x6b, 0x13, 0x68, 0x45, 0xa6, 0x51, 0x5b, 0x6f,
+	0x96, 0x49, 0x76, 0x1a, 0x87, 0x66, 0x67, 0xc2, 0xee, 0x24, 0xe9, 0x5e, 0xfa, 0x08, 0xbe, 0x95,
+	0x97, 0x3e, 0x82, 0xe4, 0x49, 0x64, 0x76, 0xb6, 0x98, 0x14, 0x4a, 0xef, 0x66, 0xbe, 0xef, 0x77,
+	0xbe, 0xc3, 0x9c, 0x39, 0x70, 0x38, 0x1f, 0xb1, 0xc4, 0x1f, 0xd3, 0x88, 0x89, 0x31, 0xf3, 0xb9,
+	0x88, 0xd8, 0x0d, 0x4b, 0xfc, 0x45, 0xc7, 0x8f, 0x59, 0x9a, 0xd2, 0x09, 0x4b, 0xbd, 0x59, 0x22,
+	0x95, 0xc4, 0x3b, 0x9a, 0xf3, 0x0a, 0xce, 0x2b, 0x38, 0x6f, 0xd1, 0xd9, 0x75, 0x37, 0x02, 0xe8,
+	0x8c, 0xeb, 0xe2, 0xb1, 0x8c, 0x63, 0x29, 0x4c, 0xe9, 0xc1, 0x4f, 0x0b, 0x6a, 0x67, 0x26, 0x0d,
+	0x9f, 0xc0, 0x76, 0x11, 0x1c, 0xaa, 0x6c, 0xc6, 0x1c, 0xe4, 0xa2, 0xf6, 0xa3, 0xee, 0x0b, 0xef,
+	0x9e, 0x74, 0xaf, 0xa8, 0x1b, 0x66, 0x33, 0x46, 0xec, 0xf8, 0xff, 0x05, 0xef, 0x41, 0x23, 0x92,
+	0x31, 0xe5, 0x22, 0xe4, 0x91, 0x53, 0x76, 0x51, 0xbb, 0x41, 0xea, 0x46, 0x18, 0x44, 0xf8, 0x0b,
+	0xe0, 0xa5, 0x4c, 0xae, 0xaf, 0xa6, 0x72, 0x19, 0xb2, 0x1b, 0x36, 0x9e, 0x2b, 0x2e, 0x85, 0x63,
+	0xb9, 0xa8, 0x6d, 0x77, 0x0f, 0x37, 0x7b, 0xd1, 0x19, 0xd7, 0x7d, 0xbe, 0x15, 0x78, 0x70, 0x4b,
+	0x93, 0xc7, 0xcb, 0xbb, 0x12, 0x76, 0xa0, 0xb6, 0x60, 0x49, 0xaa, 0xb3, 0xb6, 0x5c, 0xd4, 0xb6,
+	0xc8, 0xed, 0x15, 0xf7, 0xa0, 0x7a, 0xc5, 0xd9, 0x34, 0x4a, 0x9d, 0x8a, 0x6b, 0xb5, 0xed, 0xee,
+	0xab, 0x87, 0x1e, 0xe4, 0x7d, 0xcc, 0xf1, 0x40, 0xa8, 0x24, 0x23, 0x45, 0xed, 0xee, 0x25, 0xd8,
+	0x6b, 0x32, 0x6e, 0x82, 0x75, 0xcd, 0xb2, 0x7c, 0x44, 0x0d, 0xa2, 0x8f, 0xf8, 0x0d, 0x54, 0x16,
+	0x74, 0x3a, 0x67, 0xf9, 0x83, 0xed, 0x6e, 0xeb, 0xde, 0x2e, 0x79, 0x0c, 0x31, 0xf0, 0xfb, 0xf2,
+	0x3b, 0x74, 0xf0, 0x0b, 0x41, 0x25, 0x17, 0xf1, 0x3e, 0xd8, 0xa9, 0x4a, 0xb8, 0x98, 0x84, 0x11,
+	0x55, 0xd4, 0xa4, 0xf7, 0x4b, 0x04, 0x8c, 0xd8, 0xa3, 0x8a, 0xe2, 0x3d, 0xa8, 0x73, 0xa1, 0x8c,
+	0xaf, 0x3b, 0x59, 0xfd, 0x12, 0xa9, 0x71, 0xa1, 0x72, 0xf3, 0x39, 0x34, 0x46, 0x52, 0x4e, 0x8d,
+	0xab, 0x47, 0x5a, 0xef, 0x97, 0x48, 0x5d, 0x4b, 0xb9, 0xbd, 0x0f, 0xf6, 0x88, 0x0b, 0x9a, 0x64,
+	0x06, 0xd0, 0x73, 0xda, 0xd6, 0xf1, 0x46, 0xd4, 0xc8, 0x71, 0x15, 0xb6, 0xb4, 0xf7, 0xf2, 0x02,
+	0xec, 0xb5, 0xef, 0xc5, 0x0e, 0x3c, 0x3d, 0x0b, 0xce, 0xcf, 0x8f, 0x4e, 0x82, 0x70, 0x78, 0xf9,
+	0x39, 0x08, 0x07, 0x9f, 0xbe, 0x1e, 0x9d, 0x0e, 0x7a, 0xcd, 0x12, 0x7e, 0x06, 0xf8, 0x8e, 0xd3,
+	0x0b, 0x2e, 0x9a, 0x08, 0xef, 0xc0, 0x93, 0x0d, 0xbd, 0x17, 0x9c, 0x06, 0xc3, 0xa0, 0x59, 0x3e,
+	0x0e, 0x7e, 0xaf, 0x5a, 0xe8, 0xcf, 0xaa, 0x85, 0xfe, 0xae, 0x5a, 0xe8, 0xfb, 0xdb, 0x09, 0x57,
+	0x3f, 0xe6, 0x23, 0x6f, 0x2c, 0x63, 0x7f, 0x63, 0x59, 0xbd, 0x09, 0x13, 0x7e, 0xbe, 0xa3, 0x6b,
+	0x8b, 0xff, 0xa1, 0x38, 0x2e, 0x3a, 0xa3, 0x6a, 0xee, 0xbd, 0xfe, 0x17, 0x00, 0x00, 0xff, 0xff,
+	0x94, 0x56, 0xcb, 0x00, 0x24, 0x03, 0x00, 0x00,
 }
 
-func (x MessageType) String() string {
-	s, ok := MessageType_name[int32(x)]
-	if ok {
-		return s
-	}
-	return strconv.Itoa(int(x))
-}
-func (this *Message) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Message)
-	if !ok {
-		that2, ok := that.(Message)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.MessageType != that1.MessageType {
-		return false
-	}
-	if this.DomainId != that1.DomainId {
-		return false
-	}
-	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
-		return false
-	}
-	if this.Version != that1.Version {
-		return false
-	}
-	if len(this.Fields) != len(that1.Fields) {
-		return false
-	}
-	for i := range this.Fields {
-		if !this.Fields[i].Equal(that1.Fields[i]) {
-			return false
-		}
-	}
-	return true
-}
-func (this *Field) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Field)
-	if !ok {
-		that2, ok := that.(Field)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if that1.Data == nil {
-		if this.Data != nil {
-			return false
-		}
-	} else if this.Data == nil {
-		return false
-	} else if !this.Data.Equal(that1.Data) {
-		return false
-	}
-	return true
-}
-func (this *Field_StringData) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Field_StringData)
-	if !ok {
-		that2, ok := that.(Field_StringData)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.StringData != that1.StringData {
-		return false
-	}
-	return true
-}
-func (this *Field_IntData) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Field_IntData)
-	if !ok {
-		that2, ok := that.(Field_IntData)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.IntData != that1.IntData {
-		return false
-	}
-	return true
-}
-func (this *Field_BoolData) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Field_BoolData)
-	if !ok {
-		that2, ok := that.(Field_BoolData)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.BoolData != that1.BoolData {
-		return false
-	}
-	return true
-}
-func (this *Field_BinaryData) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Field_BinaryData)
-	if !ok {
-		that2, ok := that.(Field_BinaryData)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !bytes.Equal(this.BinaryData, that1.BinaryData) {
-		return false
-	}
-	return true
-}
-func (this *Message) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&indexerv1.Message{")
-	s = append(s, "MessageType: "+fmt.Sprintf("%#v", this.MessageType)+",\n")
-	s = append(s, "DomainId: "+fmt.Sprintf("%#v", this.DomainId)+",\n")
-	if this.WorkflowExecution != nil {
-		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
-	}
-	s = append(s, "Version: "+fmt.Sprintf("%#v", this.Version)+",\n")
-	keysForFields := make([]string, 0, len(this.Fields))
-	for k, _ := range this.Fields {
-		keysForFields = append(keysForFields, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForFields)
-	mapStringForFields := "map[string]*Field{"
-	for _, k := range keysForFields {
-		mapStringForFields += fmt.Sprintf("%#v: %#v,", k, this.Fields[k])
-	}
-	mapStringForFields += "}"
-	if this.Fields != nil {
-		s = append(s, "Fields: "+mapStringForFields+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *Field) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&indexerv1.Field{")
-	if this.Data != nil {
-		s = append(s, "Data: "+fmt.Sprintf("%#v", this.Data)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *Field_StringData) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&indexerv1.Field_StringData{` +
-		`StringData:` + fmt.Sprintf("%#v", this.StringData) + `}`}, ", ")
-	return s
-}
-func (this *Field_IntData) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&indexerv1.Field_IntData{` +
-		`IntData:` + fmt.Sprintf("%#v", this.IntData) + `}`}, ", ")
-	return s
-}
-func (this *Field_BoolData) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&indexerv1.Field_BoolData{` +
-		`BoolData:` + fmt.Sprintf("%#v", this.BoolData) + `}`}, ", ")
-	return s
-}
-func (this *Field_BinaryData) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&indexerv1.Field_BinaryData{` +
-		`BinaryData:` + fmt.Sprintf("%#v", this.BinaryData) + `}`}, ", ")
-	return s
-}
-func valueToGoStringMessages(v interface{}, typ string) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
-}
 func (m *Message) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -582,6 +334,10 @@ func (m *Message) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Fields) > 0 {
 		for k := range m.Fields {
 			v := m.Fields[k]
@@ -660,6 +416,10 @@ func (m *Field) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Data != nil {
 		{
 			size := m.Data.Size()
@@ -775,6 +535,9 @@ func (m *Message) Size() (n int) {
 			n += mapEntrySize + 1 + sovMessages(uint64(mapEntrySize))
 		}
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -786,6 +549,9 @@ func (m *Field) Size() (n int) {
 	_ = l
 	if m.Data != nil {
 		n += m.Data.Size()
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -836,88 +602,6 @@ func sovMessages(x uint64) (n int) {
 }
 func sozMessages(x uint64) (n int) {
 	return sovMessages(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (this *Message) String() string {
-	if this == nil {
-		return "nil"
-	}
-	keysForFields := make([]string, 0, len(this.Fields))
-	for k, _ := range this.Fields {
-		keysForFields = append(keysForFields, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForFields)
-	mapStringForFields := "map[string]*Field{"
-	for _, k := range keysForFields {
-		mapStringForFields += fmt.Sprintf("%v: %v,", k, this.Fields[k])
-	}
-	mapStringForFields += "}"
-	s := strings.Join([]string{`&Message{`,
-		`MessageType:` + fmt.Sprintf("%v", this.MessageType) + `,`,
-		`DomainId:` + fmt.Sprintf("%v", this.DomainId) + `,`,
-		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "v1.WorkflowExecution", 1) + `,`,
-		`Version:` + fmt.Sprintf("%v", this.Version) + `,`,
-		`Fields:` + mapStringForFields + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Field) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Field{`,
-		`Data:` + fmt.Sprintf("%v", this.Data) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Field_StringData) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Field_StringData{`,
-		`StringData:` + fmt.Sprintf("%v", this.StringData) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Field_IntData) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Field_IntData{`,
-		`IntData:` + fmt.Sprintf("%v", this.IntData) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Field_BoolData) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Field_BoolData{`,
-		`BoolData:` + fmt.Sprintf("%v", this.BoolData) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Field_BinaryData) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Field_BinaryData{`,
-		`BinaryData:` + fmt.Sprintf("%v", this.BinaryData) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func valueToStringMessages(v interface{}) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("*%v", pv)
 }
 func (m *Message) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -1198,6 +882,7 @@ func (m *Message) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -1357,6 +1042,7 @@ func (m *Field) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}

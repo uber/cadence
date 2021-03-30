@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -31,24 +31,15 @@ import (
 	io "io"
 	math "math"
 	math_bits "math/bits"
-	reflect "reflect"
-	strconv "strconv"
-	strings "strings"
-	time "time"
 
-	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
-	github_com_gogo_protobuf_types "github.com/gogo/protobuf/types"
 	types "github.com/gogo/protobuf/types"
-	_ "github.com/golang/protobuf/ptypes/duration"
-	_ "github.com/golang/protobuf/ptypes/timestamp"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = time.Kitchen
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -59,9 +50,9 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 type TaskListKind int32
 
 const (
-	TASK_LIST_KIND_INVALID TaskListKind = 0
-	TASK_LIST_KIND_NORMAL  TaskListKind = 1
-	TASK_LIST_KIND_STICKY  TaskListKind = 2
+	TaskListKind_TASK_LIST_KIND_INVALID TaskListKind = 0
+	TaskListKind_TASK_LIST_KIND_NORMAL  TaskListKind = 1
+	TaskListKind_TASK_LIST_KIND_STICKY  TaskListKind = 2
 )
 
 var TaskListKind_name = map[int32]string{
@@ -76,6 +67,10 @@ var TaskListKind_value = map[string]int32{
 	"TASK_LIST_KIND_STICKY":  2,
 }
 
+func (x TaskListKind) String() string {
+	return proto.EnumName(TaskListKind_name, int32(x))
+}
+
 func (TaskListKind) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_216fa006947e00a0, []int{0}
 }
@@ -83,9 +78,9 @@ func (TaskListKind) EnumDescriptor() ([]byte, []int) {
 type TaskListType int32
 
 const (
-	TASK_LIST_TYPE_INVALID  TaskListType = 0
-	TASK_LIST_TYPE_DECISION TaskListType = 1
-	TASK_LIST_TYPE_ACTIVITY TaskListType = 2
+	TaskListType_TASK_LIST_TYPE_INVALID  TaskListType = 0
+	TaskListType_TASK_LIST_TYPE_DECISION TaskListType = 1
+	TaskListType_TASK_LIST_TYPE_ACTIVITY TaskListType = 2
 )
 
 var TaskListType_name = map[int32]string{
@@ -100,17 +95,25 @@ var TaskListType_value = map[string]int32{
 	"TASK_LIST_TYPE_ACTIVITY": 2,
 }
 
+func (x TaskListType) String() string {
+	return proto.EnumName(TaskListType_name, int32(x))
+}
+
 func (TaskListType) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_216fa006947e00a0, []int{1}
 }
 
 type TaskList struct {
-	Name string       `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Kind TaskListKind `protobuf:"varint,2,opt,name=kind,proto3,enum=uber.cadence.api.v1.TaskListKind" json:"kind,omitempty"`
+	Name                 string       `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Kind                 TaskListKind `protobuf:"varint,2,opt,name=kind,proto3,enum=uber.cadence.api.v1.TaskListKind" json:"kind,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
 }
 
-func (m *TaskList) Reset()      { *m = TaskList{} }
-func (*TaskList) ProtoMessage() {}
+func (m *TaskList) Reset()         { *m = TaskList{} }
+func (m *TaskList) String() string { return proto.CompactTextString(m) }
+func (*TaskList) ProtoMessage()    {}
 func (*TaskList) Descriptor() ([]byte, []int) {
 	return fileDescriptor_216fa006947e00a0, []int{0}
 }
@@ -152,15 +155,19 @@ func (m *TaskList) GetKind() TaskListKind {
 	if m != nil {
 		return m.Kind
 	}
-	return TASK_LIST_KIND_INVALID
+	return TaskListKind_TASK_LIST_KIND_INVALID
 }
 
 type TaskListMetadata struct {
-	MaxTasksPerSecond *types.DoubleValue `protobuf:"bytes,1,opt,name=max_tasks_per_second,json=maxTasksPerSecond,proto3" json:"max_tasks_per_second,omitempty"`
+	MaxTasksPerSecond    *types.DoubleValue `protobuf:"bytes,1,opt,name=max_tasks_per_second,json=maxTasksPerSecond,proto3" json:"max_tasks_per_second,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
 }
 
-func (m *TaskListMetadata) Reset()      { *m = TaskListMetadata{} }
-func (*TaskListMetadata) ProtoMessage() {}
+func (m *TaskListMetadata) Reset()         { *m = TaskListMetadata{} }
+func (m *TaskListMetadata) String() string { return proto.CompactTextString(m) }
+func (*TaskListMetadata) ProtoMessage()    {}
 func (*TaskListMetadata) Descriptor() ([]byte, []int) {
 	return fileDescriptor_216fa006947e00a0, []int{1}
 }
@@ -199,12 +206,16 @@ func (m *TaskListMetadata) GetMaxTasksPerSecond() *types.DoubleValue {
 }
 
 type TaskListPartitionMetadata struct {
-	Key           string `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	OwnerHostName string `protobuf:"bytes,2,opt,name=owner_host_name,json=ownerHostName,proto3" json:"owner_host_name,omitempty"`
+	Key                  string   `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	OwnerHostName        string   `protobuf:"bytes,2,opt,name=owner_host_name,json=ownerHostName,proto3" json:"owner_host_name,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *TaskListPartitionMetadata) Reset()      { *m = TaskListPartitionMetadata{} }
-func (*TaskListPartitionMetadata) ProtoMessage() {}
+func (m *TaskListPartitionMetadata) Reset()         { *m = TaskListPartitionMetadata{} }
+func (m *TaskListPartitionMetadata) String() string { return proto.CompactTextString(m) }
+func (*TaskListPartitionMetadata) ProtoMessage()    {}
 func (*TaskListPartitionMetadata) Descriptor() ([]byte, []int) {
 	return fileDescriptor_216fa006947e00a0, []int{2}
 }
@@ -250,15 +261,19 @@ func (m *TaskListPartitionMetadata) GetOwnerHostName() string {
 }
 
 type TaskListStatus struct {
-	BacklogCountHint int64        `protobuf:"varint,1,opt,name=backlog_count_hint,json=backlogCountHint,proto3" json:"backlog_count_hint,omitempty"`
-	ReadLevel        int64        `protobuf:"varint,2,opt,name=read_level,json=readLevel,proto3" json:"read_level,omitempty"`
-	AckLevel         int64        `protobuf:"varint,3,opt,name=ack_level,json=ackLevel,proto3" json:"ack_level,omitempty"`
-	RatePerSecond    float64      `protobuf:"fixed64,4,opt,name=rate_per_second,json=ratePerSecond,proto3" json:"rate_per_second,omitempty"`
-	TaskIdBlock      *TaskIDBlock `protobuf:"bytes,5,opt,name=task_id_block,json=taskIdBlock,proto3" json:"task_id_block,omitempty"`
+	BacklogCountHint     int64        `protobuf:"varint,1,opt,name=backlog_count_hint,json=backlogCountHint,proto3" json:"backlog_count_hint,omitempty"`
+	ReadLevel            int64        `protobuf:"varint,2,opt,name=read_level,json=readLevel,proto3" json:"read_level,omitempty"`
+	AckLevel             int64        `protobuf:"varint,3,opt,name=ack_level,json=ackLevel,proto3" json:"ack_level,omitempty"`
+	RatePerSecond        float64      `protobuf:"fixed64,4,opt,name=rate_per_second,json=ratePerSecond,proto3" json:"rate_per_second,omitempty"`
+	TaskIdBlock          *TaskIDBlock `protobuf:"bytes,5,opt,name=task_id_block,json=taskIdBlock,proto3" json:"task_id_block,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
 }
 
-func (m *TaskListStatus) Reset()      { *m = TaskListStatus{} }
-func (*TaskListStatus) ProtoMessage() {}
+func (m *TaskListStatus) Reset()         { *m = TaskListStatus{} }
+func (m *TaskListStatus) String() string { return proto.CompactTextString(m) }
+func (*TaskListStatus) ProtoMessage()    {}
 func (*TaskListStatus) Descriptor() ([]byte, []int) {
 	return fileDescriptor_216fa006947e00a0, []int{3}
 }
@@ -325,12 +340,16 @@ func (m *TaskListStatus) GetTaskIdBlock() *TaskIDBlock {
 }
 
 type TaskIDBlock struct {
-	StartId int64 `protobuf:"varint,1,opt,name=start_id,json=startId,proto3" json:"start_id,omitempty"`
-	EndId   int64 `protobuf:"varint,2,opt,name=end_id,json=endId,proto3" json:"end_id,omitempty"`
+	StartId              int64    `protobuf:"varint,1,opt,name=start_id,json=startId,proto3" json:"start_id,omitempty"`
+	EndId                int64    `protobuf:"varint,2,opt,name=end_id,json=endId,proto3" json:"end_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *TaskIDBlock) Reset()      { *m = TaskIDBlock{} }
-func (*TaskIDBlock) ProtoMessage() {}
+func (m *TaskIDBlock) Reset()         { *m = TaskIDBlock{} }
+func (m *TaskIDBlock) String() string { return proto.CompactTextString(m) }
+func (*TaskIDBlock) ProtoMessage()    {}
 func (*TaskIDBlock) Descriptor() ([]byte, []int) {
 	return fileDescriptor_216fa006947e00a0, []int{4}
 }
@@ -376,13 +395,17 @@ func (m *TaskIDBlock) GetEndId() int64 {
 }
 
 type PollerInfo struct {
-	LastAccessTime *time.Time `protobuf:"bytes,1,opt,name=last_access_time,json=lastAccessTime,proto3,stdtime" json:"last_access_time,omitempty"`
-	Identity       string     `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
-	RatePerSecond  float64    `protobuf:"fixed64,3,opt,name=rate_per_second,json=ratePerSecond,proto3" json:"rate_per_second,omitempty"`
+	LastAccessTime       *types.Timestamp `protobuf:"bytes,1,opt,name=last_access_time,json=lastAccessTime,proto3" json:"last_access_time,omitempty"`
+	Identity             string           `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
+	RatePerSecond        float64          `protobuf:"fixed64,3,opt,name=rate_per_second,json=ratePerSecond,proto3" json:"rate_per_second,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
+	XXX_unrecognized     []byte           `json:"-"`
+	XXX_sizecache        int32            `json:"-"`
 }
 
-func (m *PollerInfo) Reset()      { *m = PollerInfo{} }
-func (*PollerInfo) ProtoMessage() {}
+func (m *PollerInfo) Reset()         { *m = PollerInfo{} }
+func (m *PollerInfo) String() string { return proto.CompactTextString(m) }
+func (*PollerInfo) ProtoMessage()    {}
 func (*PollerInfo) Descriptor() ([]byte, []int) {
 	return fileDescriptor_216fa006947e00a0, []int{5}
 }
@@ -413,7 +436,7 @@ func (m *PollerInfo) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_PollerInfo proto.InternalMessageInfo
 
-func (m *PollerInfo) GetLastAccessTime() *time.Time {
+func (m *PollerInfo) GetLastAccessTime() *types.Timestamp {
 	if m != nil {
 		return m.LastAccessTime
 	}
@@ -435,12 +458,16 @@ func (m *PollerInfo) GetRatePerSecond() float64 {
 }
 
 type StickyExecutionAttributes struct {
-	WorkerTaskList         *TaskList      `protobuf:"bytes,1,opt,name=worker_task_list,json=workerTaskList,proto3" json:"worker_task_list,omitempty"`
-	ScheduleToStartTimeout *time.Duration `protobuf:"bytes,2,opt,name=schedule_to_start_timeout,json=scheduleToStartTimeout,proto3,stdduration" json:"schedule_to_start_timeout,omitempty"`
+	WorkerTaskList         *TaskList       `protobuf:"bytes,1,opt,name=worker_task_list,json=workerTaskList,proto3" json:"worker_task_list,omitempty"`
+	ScheduleToStartTimeout *types.Duration `protobuf:"bytes,2,opt,name=schedule_to_start_timeout,json=scheduleToStartTimeout,proto3" json:"schedule_to_start_timeout,omitempty"`
+	XXX_NoUnkeyedLiteral   struct{}        `json:"-"`
+	XXX_unrecognized       []byte          `json:"-"`
+	XXX_sizecache          int32           `json:"-"`
 }
 
-func (m *StickyExecutionAttributes) Reset()      { *m = StickyExecutionAttributes{} }
-func (*StickyExecutionAttributes) ProtoMessage() {}
+func (m *StickyExecutionAttributes) Reset()         { *m = StickyExecutionAttributes{} }
+func (m *StickyExecutionAttributes) String() string { return proto.CompactTextString(m) }
+func (*StickyExecutionAttributes) ProtoMessage()    {}
 func (*StickyExecutionAttributes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_216fa006947e00a0, []int{6}
 }
@@ -478,7 +505,7 @@ func (m *StickyExecutionAttributes) GetWorkerTaskList() *TaskList {
 	return nil
 }
 
-func (m *StickyExecutionAttributes) GetScheduleToStartTimeout() *time.Duration {
+func (m *StickyExecutionAttributes) GetScheduleToStartTimeout() *types.Duration {
 	if m != nil {
 		return m.ScheduleToStartTimeout
 	}
@@ -498,380 +525,61 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("github.com/uber/cadence/.gen/proto/api/v1/tasklist.proto", fileDescriptor_216fa006947e00a0)
+	proto.RegisterFile("uber/cadence/api/v1/tasklist.proto", fileDescriptor_216fa006947e00a0)
 }
 
 var fileDescriptor_216fa006947e00a0 = []byte{
-	// 816 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x53, 0xcd, 0x6e, 0xdb, 0x46,
-	0x10, 0xd6, 0x5a, 0x72, 0x2a, 0xaf, 0x6b, 0x87, 0xdd, 0x36, 0x89, 0xa5, 0x24, 0x8c, 0xab, 0x43,
-	0x60, 0x04, 0x85, 0x04, 0xbb, 0xe8, 0xb9, 0x90, 0x2c, 0xa3, 0x61, 0x2d, 0x2b, 0x02, 0xc5, 0x18,
-	0x70, 0x2e, 0x9b, 0x15, 0x77, 0x22, 0x2f, 0x48, 0x71, 0x09, 0xee, 0xd2, 0x3f, 0xb7, 0x3e, 0x42,
-	0x8e, 0x3d, 0xf4, 0x01, 0xfa, 0x18, 0x3d, 0xf6, 0xe8, 0x63, 0x6e, 0xad, 0xe5, 0x4b, 0x8e, 0x79,
-	0x84, 0x62, 0x57, 0x94, 0xeb, 0xda, 0x6a, 0x6e, 0xdc, 0xf9, 0x66, 0xe6, 0xe3, 0xf7, 0xcd, 0x0c,
-	0x6e, 0xe4, 0x23, 0xc8, 0x5a, 0x21, 0xe3, 0x90, 0x84, 0xd0, 0x62, 0xa9, 0x68, 0x9d, 0x6c, 0xb7,
-	0x34, 0x53, 0x51, 0x2c, 0x94, 0x6e, 0xa6, 0x99, 0xd4, 0x92, 0x7c, 0x6d, 0x72, 0x9a, 0x45, 0x4e,
-	0x93, 0xa5, 0xa2, 0x79, 0xb2, 0x5d, 0x77, 0xc7, 0x52, 0x8e, 0x63, 0x68, 0xd9, 0x94, 0x51, 0xfe,
-	0xae, 0xc5, 0xf3, 0x8c, 0x69, 0x21, 0x93, 0x59, 0x51, 0xfd, 0xd9, 0x6d, 0x5c, 0x8b, 0x09, 0x28,
-	0xcd, 0x26, 0x69, 0x91, 0x70, 0xa7, 0xc1, 0x69, 0xc6, 0xd2, 0x14, 0x32, 0x55, 0xe0, 0x4f, 0x38,
-	0xa4, 0x90, 0x18, 0x4e, 0x01, 0xaa, 0x35, 0x96, 0x63, 0x69, 0xe3, 0x33, 0xb4, 0xf1, 0x1a, 0x57,
-	0x03, 0xa6, 0xa2, 0x9e, 0x50, 0x9a, 0x10, 0x5c, 0x49, 0xd8, 0x04, 0x36, 0xd0, 0x26, 0xda, 0x5a,
-	0xf1, 0xed, 0x37, 0xf9, 0x01, 0x57, 0x22, 0x91, 0xf0, 0x8d, 0xa5, 0x4d, 0xb4, 0xb5, 0xbe, 0xf3,
-	0x6d, 0x73, 0x81, 0x84, 0xe6, 0xbc, 0xc1, 0xbe, 0x48, 0xb8, 0x6f, 0xd3, 0x1b, 0x0c, 0x3b, 0xf3,
-	0xe8, 0x01, 0x68, 0xc6, 0x99, 0x66, 0xe4, 0x00, 0x7f, 0x33, 0x61, 0x67, 0xd4, 0x98, 0xa2, 0x68,
-	0x0a, 0x19, 0x55, 0x10, 0xca, 0x84, 0x5b, 0xba, 0xd5, 0x9d, 0x27, 0xcd, 0x99, 0x8e, 0xe6, 0x5c,
-	0x47, 0xb3, 0x2b, 0xf3, 0x51, 0x0c, 0x87, 0x2c, 0xce, 0xc1, 0xff, 0x6a, 0xc2, 0xce, 0x4c, 0x43,
-	0x35, 0x80, 0x6c, 0x68, 0xcb, 0x1a, 0xaf, 0x71, 0x6d, 0x4e, 0x31, 0x60, 0x99, 0x16, 0xc6, 0xb3,
-	0x6b, 0x2e, 0x07, 0x97, 0x23, 0x38, 0x2f, 0x94, 0x98, 0x4f, 0xf2, 0x1c, 0xdf, 0x97, 0xa7, 0x09,
-	0x64, 0xf4, 0x58, 0x2a, 0x4d, 0xad, 0xce, 0x25, 0x8b, 0xae, 0xd9, 0xf0, 0x4b, 0xa9, 0x74, 0x9f,
-	0x4d, 0xa0, 0xf1, 0x11, 0xe1, 0xf5, 0x79, 0xdf, 0xa1, 0x66, 0x3a, 0x57, 0xe4, 0x3b, 0x4c, 0x46,
-	0x2c, 0x8c, 0x62, 0x39, 0xa6, 0xa1, 0xcc, 0x13, 0x4d, 0x8f, 0x45, 0xa2, 0x6d, 0xef, 0xb2, 0xef,
-	0x14, 0xc8, 0xae, 0x01, 0x5e, 0x8a, 0x44, 0x93, 0xa7, 0x18, 0x67, 0xc0, 0x38, 0x8d, 0xe1, 0x04,
-	0x62, 0xcb, 0x51, 0xf6, 0x57, 0x4c, 0xa4, 0x67, 0x02, 0xe4, 0x31, 0x5e, 0x61, 0x61, 0x54, 0xa0,
-	0x65, 0x8b, 0x56, 0x59, 0x18, 0xcd, 0xc0, 0xe7, 0xf8, 0x7e, 0xc6, 0x34, 0xdc, 0x74, 0xa7, 0xb2,
-	0x89, 0xb6, 0x90, 0xbf, 0x66, 0xc2, 0xd7, 0xda, 0x49, 0x17, 0xaf, 0x19, 0x1b, 0xa9, 0xe0, 0x74,
-	0x14, 0xcb, 0x30, 0xda, 0x58, 0xb6, 0x1e, 0x6e, 0xfe, 0xef, 0x78, 0xbc, 0x6e, 0xc7, 0xe4, 0xf9,
-	0xab, 0xa6, 0xcc, 0xe3, 0xf6, 0xd1, 0xf8, 0x11, 0xaf, 0xde, 0xc0, 0x48, 0x0d, 0x57, 0x95, 0x66,
-	0x99, 0xa6, 0x82, 0x17, 0xe2, 0xbe, 0xb0, 0x6f, 0x8f, 0x93, 0x07, 0xf8, 0x1e, 0x24, 0xdc, 0x00,
-	0x33, 0x3d, 0xcb, 0x90, 0x70, 0x8f, 0x37, 0x7e, 0x43, 0x18, 0x0f, 0x64, 0x1c, 0x43, 0xe6, 0x25,
-	0xef, 0x24, 0xf9, 0x19, 0x3b, 0x31, 0x53, 0x9a, 0xb2, 0x30, 0x04, 0xa5, 0xa8, 0x59, 0xd4, 0x62,
-	0xb8, 0xf5, 0x3b, 0xc3, 0x0d, 0xe6, 0x5b, 0xdc, 0xa9, 0xbc, 0xff, 0xeb, 0x19, 0xf2, 0xd7, 0x4d,
-	0x65, 0xdb, 0x16, 0x1a, 0x88, 0xd4, 0x71, 0x55, 0x70, 0x48, 0xb4, 0xd0, 0xe7, 0xc5, 0x9c, 0xae,
-	0xdf, 0x8b, 0x5c, 0x2a, 0x2f, 0x70, 0xa9, 0xf1, 0x07, 0xc2, 0xb5, 0xa1, 0x16, 0x61, 0x74, 0xbe,
-	0x77, 0x06, 0x61, 0x6e, 0x16, 0xa4, 0xad, 0x75, 0x26, 0x46, 0xb9, 0x06, 0x45, 0x7e, 0xc2, 0xce,
-	0xa9, 0xcc, 0x22, 0xc8, 0xec, 0x46, 0x52, 0x73, 0xa7, 0xc5, 0xdf, 0x3e, 0xfd, 0xec, 0x96, 0xfb,
-	0xeb, 0xb3, 0xb2, 0xeb, 0xb3, 0x79, 0x83, 0x6b, 0x2a, 0x3c, 0x06, 0x9e, 0xc7, 0x40, 0xb5, 0xa4,
-	0x33, 0x0f, 0x8d, 0x78, 0x99, 0x6b, 0xfb, 0xef, 0xab, 0x3b, 0xb5, 0xbb, 0xcb, 0x5d, 0x5c, 0x79,
-	0xa7, 0xf2, 0xab, 0x91, 0xff, 0x70, 0xde, 0x21, 0x90, 0x43, 0x53, 0x1f, 0xcc, 0xca, 0x5f, 0xbc,
-	0xc5, 0x5f, 0xde, 0xbc, 0x2e, 0x52, 0xc7, 0x0f, 0x83, 0xf6, 0x70, 0x9f, 0xf6, 0xbc, 0x61, 0x40,
-	0xf7, 0xbd, 0x7e, 0x97, 0x7a, 0xfd, 0xc3, 0x76, 0xcf, 0xeb, 0x3a, 0x25, 0x52, 0xc3, 0x0f, 0x6e,
-	0x61, 0xfd, 0x57, 0xfe, 0x41, 0xbb, 0xe7, 0xa0, 0x05, 0xd0, 0x30, 0xf0, 0x76, 0xf7, 0x8f, 0x9c,
-	0xa5, 0x17, 0xfc, 0x5f, 0x86, 0xe0, 0x3c, 0x85, 0xff, 0x32, 0x04, 0x47, 0x83, 0xbd, 0x1b, 0x0c,
-	0x8f, 0xf1, 0xa3, 0x5b, 0x58, 0x77, 0x6f, 0xd7, 0x1b, 0x7a, 0xaf, 0xfa, 0x0e, 0x5a, 0x00, 0xb6,
-	0x77, 0x03, 0xef, 0xd0, 0x0b, 0x8e, 0x9c, 0xa5, 0xce, 0xdb, 0x8b, 0x4b, 0xb7, 0xf4, 0xe1, 0xd2,
-	0x2d, 0x7d, 0xba, 0x74, 0xd1, 0x2f, 0x53, 0x17, 0xfd, 0x3e, 0x75, 0xd1, 0x9f, 0x53, 0x17, 0x5d,
-	0x4c, 0x5d, 0xf4, 0xf7, 0xd4, 0x45, 0x1f, 0xa7, 0x6e, 0xe9, 0xd3, 0xd4, 0x45, 0xef, 0xaf, 0xdc,
-	0xd2, 0xc5, 0x95, 0x5b, 0xfa, 0x70, 0xe5, 0x96, 0xf0, 0xa3, 0x50, 0x4e, 0x16, 0xcd, 0xa2, 0x53,
-	0x6d, 0xa7, 0x62, 0x60, 0xac, 0x1c, 0xa0, 0x37, 0xcb, 0x2c, 0x15, 0x27, 0xdb, 0xa3, 0x7b, 0xd6,
-	0xda, 0xef, 0xff, 0x09, 0x00, 0x00, 0xff, 0xff, 0x81, 0x79, 0x33, 0xbc, 0x89, 0x05, 0x00, 0x00,
+	// 764 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x54, 0xcb, 0x6e, 0xdc, 0x36,
+	0x14, 0xad, 0x3c, 0x4e, 0x3a, 0xa6, 0x6b, 0x47, 0x65, 0x9b, 0xc4, 0x33, 0x69, 0x5c, 0x57, 0x8b,
+	0xc0, 0x08, 0x0a, 0x09, 0x76, 0xd1, 0x55, 0x17, 0xc5, 0xd8, 0x63, 0x34, 0x82, 0xc7, 0x93, 0x81,
+	0xa4, 0x18, 0x70, 0x37, 0x2c, 0x25, 0xde, 0x8c, 0x09, 0x3d, 0x28, 0x90, 0x94, 0x1f, 0x3f, 0xd2,
+	0x8f, 0xe9, 0x17, 0x74, 0xd9, 0x4f, 0x28, 0xbc, 0xea, 0x67, 0x14, 0xa4, 0x34, 0xae, 0x1f, 0xd3,
+	0xec, 0xc8, 0x7b, 0xee, 0xb9, 0x8f, 0xc3, 0x7b, 0x89, 0xbc, 0x26, 0x05, 0x19, 0x64, 0x94, 0x41,
+	0x95, 0x41, 0x40, 0x6b, 0x1e, 0x5c, 0xec, 0x05, 0x9a, 0xaa, 0xbc, 0xe0, 0x4a, 0xfb, 0xb5, 0x14,
+	0x5a, 0xe0, 0xaf, 0x8c, 0x8f, 0xdf, 0xf9, 0xf8, 0xb4, 0xe6, 0xfe, 0xc5, 0xde, 0x70, 0x7b, 0x2e,
+	0xc4, 0xbc, 0x80, 0xc0, 0xba, 0xa4, 0xcd, 0xc7, 0x80, 0x35, 0x92, 0x6a, 0x2e, 0xaa, 0x96, 0x34,
+	0xfc, 0xf6, 0x21, 0xae, 0x79, 0x09, 0x4a, 0xd3, 0xb2, 0xee, 0x1c, 0x1e, 0x05, 0xb8, 0x94, 0xb4,
+	0xae, 0x41, 0xaa, 0x16, 0xf7, 0x3e, 0xa0, 0x7e, 0x42, 0x55, 0x3e, 0xe1, 0x4a, 0x63, 0x8c, 0x56,
+	0x2b, 0x5a, 0xc2, 0x96, 0xb3, 0xe3, 0xec, 0xae, 0x45, 0xf6, 0x8c, 0x7f, 0x44, 0xab, 0x39, 0xaf,
+	0xd8, 0xd6, 0xca, 0x8e, 0xb3, 0xbb, 0xb9, 0xff, 0x9d, 0xbf, 0xa4, 0x48, 0x7f, 0x11, 0xe0, 0x98,
+	0x57, 0x2c, 0xb2, 0xee, 0x1e, 0x45, 0xee, 0xc2, 0x7a, 0x02, 0x9a, 0x32, 0xaa, 0x29, 0x3e, 0x41,
+	0x5f, 0x97, 0xf4, 0x8a, 0x98, 0xb6, 0x15, 0xa9, 0x41, 0x12, 0x05, 0x99, 0xa8, 0x98, 0x4d, 0xb7,
+	0xbe, 0xff, 0x8d, 0xdf, 0x56, 0xea, 0x2f, 0x2a, 0xf5, 0xc7, 0xa2, 0x49, 0x0b, 0x38, 0xa5, 0x45,
+	0x03, 0xd1, 0x97, 0x25, 0xbd, 0x32, 0x01, 0xd5, 0x0c, 0x64, 0x6c, 0x69, 0xde, 0x07, 0x34, 0x58,
+	0xa4, 0x98, 0x51, 0xa9, 0xb9, 0x51, 0xe5, 0x36, 0x97, 0x8b, 0x7a, 0x39, 0x5c, 0x77, 0x9d, 0x98,
+	0x23, 0x7e, 0x83, 0x9e, 0x89, 0xcb, 0x0a, 0x24, 0x39, 0x17, 0x4a, 0x13, 0xdb, 0xe7, 0x8a, 0x45,
+	0x37, 0xac, 0xf9, 0x9d, 0x50, 0x7a, 0x4a, 0x4b, 0xf0, 0xfe, 0x71, 0xd0, 0xe6, 0x22, 0x6e, 0xac,
+	0xa9, 0x6e, 0x14, 0xfe, 0x1e, 0xe1, 0x94, 0x66, 0x79, 0x21, 0xe6, 0x24, 0x13, 0x4d, 0xa5, 0xc9,
+	0x39, 0xaf, 0xb4, 0x8d, 0xdd, 0x8b, 0xdc, 0x0e, 0x39, 0x34, 0xc0, 0x3b, 0x5e, 0x69, 0xfc, 0x1a,
+	0x21, 0x09, 0x94, 0x91, 0x02, 0x2e, 0xa0, 0xb0, 0x39, 0x7a, 0xd1, 0x9a, 0xb1, 0x4c, 0x8c, 0x01,
+	0xbf, 0x42, 0x6b, 0x34, 0xcb, 0x3b, 0xb4, 0x67, 0xd1, 0x3e, 0xcd, 0xf2, 0x16, 0x7c, 0x83, 0x9e,
+	0x49, 0xaa, 0xe1, 0xae, 0x3a, 0xab, 0x3b, 0xce, 0xae, 0x13, 0x6d, 0x18, 0xf3, 0x6d, 0xef, 0x78,
+	0x8c, 0x36, 0x8c, 0x8c, 0x84, 0x33, 0x92, 0x16, 0x22, 0xcb, 0xb7, 0x9e, 0x58, 0x0d, 0x77, 0xfe,
+	0xf7, 0x79, 0xc2, 0xf1, 0x81, 0xf1, 0x8b, 0xd6, 0x0d, 0x2d, 0x64, 0xf6, 0xe2, 0xfd, 0x8c, 0xd6,
+	0xef, 0x60, 0x78, 0x80, 0xfa, 0x4a, 0x53, 0xa9, 0x09, 0x67, 0x5d, 0x73, 0x9f, 0xdb, 0x7b, 0xc8,
+	0xf0, 0x73, 0xf4, 0x14, 0x2a, 0x66, 0x80, 0xb6, 0x9f, 0x27, 0x50, 0xb1, 0x90, 0x79, 0xbf, 0x3b,
+	0x08, 0xcd, 0x44, 0x51, 0x80, 0x0c, 0xab, 0x8f, 0x02, 0x8f, 0x91, 0x5b, 0x50, 0xa5, 0x09, 0xcd,
+	0x32, 0x50, 0x8a, 0x98, 0x51, 0xec, 0x1e, 0x77, 0xf8, 0xe8, 0x71, 0x93, 0xc5, 0x9c, 0x46, 0x9b,
+	0x86, 0x33, 0xb2, 0x14, 0x63, 0xc4, 0x43, 0xd4, 0xe7, 0x0c, 0x2a, 0xcd, 0xf5, 0x75, 0xf7, 0x42,
+	0xb7, 0xf7, 0x65, 0xfa, 0xf4, 0x96, 0xe8, 0xe3, 0xfd, 0xe1, 0xa0, 0x41, 0xac, 0x79, 0x96, 0x5f,
+	0x1f, 0x5d, 0x41, 0xd6, 0x98, 0xd1, 0x18, 0x69, 0x2d, 0x79, 0xda, 0x68, 0x50, 0xf8, 0x17, 0xe4,
+	0x5e, 0x0a, 0x99, 0x83, 0xb4, 0xb3, 0x48, 0xcc, 0x0e, 0x76, 0x75, 0xbe, 0xfe, 0xe4, 0x7c, 0x47,
+	0x9b, 0x2d, 0xed, 0x76, 0x61, 0x12, 0x34, 0x50, 0xd9, 0x39, 0xb0, 0xa6, 0x00, 0xa2, 0x05, 0x69,
+	0xd5, 0x33, 0x6d, 0x8b, 0x46, 0xdb, 0xda, 0xd7, 0xf7, 0x07, 0x8f, 0xc7, 0xba, 0xdb, 0xe0, 0xe8,
+	0xc5, 0x82, 0x9b, 0x88, 0xd8, 0x30, 0x93, 0x96, 0xf8, 0xf6, 0x37, 0xf4, 0xc5, 0xdd, 0x8d, 0xc2,
+	0x43, 0xf4, 0x22, 0x19, 0xc5, 0xc7, 0x64, 0x12, 0xc6, 0x09, 0x39, 0x0e, 0xa7, 0x63, 0x12, 0x4e,
+	0x4f, 0x47, 0x93, 0x70, 0xec, 0x7e, 0x86, 0x07, 0xe8, 0xf9, 0x03, 0x6c, 0xfa, 0x3e, 0x3a, 0x19,
+	0x4d, 0x5c, 0x67, 0x09, 0x14, 0x27, 0xe1, 0xe1, 0xf1, 0x99, 0xbb, 0xf2, 0x96, 0xfd, 0x97, 0x21,
+	0xb9, 0xae, 0xe1, 0x7e, 0x86, 0xe4, 0x6c, 0x76, 0x74, 0x27, 0xc3, 0x2b, 0xf4, 0xf2, 0x01, 0x36,
+	0x3e, 0x3a, 0x0c, 0xe3, 0xf0, 0xfd, 0xd4, 0x75, 0x96, 0x80, 0xa3, 0xc3, 0x24, 0x3c, 0x0d, 0x93,
+	0x33, 0x77, 0xe5, 0x20, 0xfd, 0xf3, 0x66, 0xdb, 0xf9, 0xeb, 0x66, 0xdb, 0xf9, 0xfb, 0x66, 0xdb,
+	0x41, 0x2f, 0x33, 0x51, 0x2e, 0x53, 0xf7, 0xa0, 0x3f, 0xaa, 0xf9, 0xcc, 0x88, 0x33, 0x73, 0x7e,
+	0x0d, 0xe6, 0x5c, 0x9f, 0x37, 0xa9, 0x9f, 0x89, 0x32, 0xb8, 0xf7, 0x65, 0xfa, 0x73, 0xa8, 0xda,
+	0x3f, 0xac, 0xfb, 0x3d, 0x7f, 0xa2, 0x35, 0xbf, 0xd8, 0x4b, 0x9f, 0x5a, 0xdb, 0x0f, 0xff, 0x06,
+	0x00, 0x00, 0xff, 0xff, 0xed, 0xf7, 0x38, 0xe6, 0x61, 0x05, 0x00, 0x00,
 }
 
-func (x TaskListKind) String() string {
-	s, ok := TaskListKind_name[int32(x)]
-	if ok {
-		return s
-	}
-	return strconv.Itoa(int(x))
-}
-func (x TaskListType) String() string {
-	s, ok := TaskListType_name[int32(x)]
-	if ok {
-		return s
-	}
-	return strconv.Itoa(int(x))
-}
-func (this *TaskList) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*TaskList)
-	if !ok {
-		that2, ok := that.(TaskList)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Name != that1.Name {
-		return false
-	}
-	if this.Kind != that1.Kind {
-		return false
-	}
-	return true
-}
-func (this *TaskListMetadata) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*TaskListMetadata)
-	if !ok {
-		that2, ok := that.(TaskListMetadata)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.MaxTasksPerSecond.Equal(that1.MaxTasksPerSecond) {
-		return false
-	}
-	return true
-}
-func (this *TaskListPartitionMetadata) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*TaskListPartitionMetadata)
-	if !ok {
-		that2, ok := that.(TaskListPartitionMetadata)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Key != that1.Key {
-		return false
-	}
-	if this.OwnerHostName != that1.OwnerHostName {
-		return false
-	}
-	return true
-}
-func (this *TaskListStatus) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*TaskListStatus)
-	if !ok {
-		that2, ok := that.(TaskListStatus)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.BacklogCountHint != that1.BacklogCountHint {
-		return false
-	}
-	if this.ReadLevel != that1.ReadLevel {
-		return false
-	}
-	if this.AckLevel != that1.AckLevel {
-		return false
-	}
-	if this.RatePerSecond != that1.RatePerSecond {
-		return false
-	}
-	if !this.TaskIdBlock.Equal(that1.TaskIdBlock) {
-		return false
-	}
-	return true
-}
-func (this *TaskIDBlock) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*TaskIDBlock)
-	if !ok {
-		that2, ok := that.(TaskIDBlock)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.StartId != that1.StartId {
-		return false
-	}
-	if this.EndId != that1.EndId {
-		return false
-	}
-	return true
-}
-func (this *PollerInfo) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*PollerInfo)
-	if !ok {
-		that2, ok := that.(PollerInfo)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if that1.LastAccessTime == nil {
-		if this.LastAccessTime != nil {
-			return false
-		}
-	} else if !this.LastAccessTime.Equal(*that1.LastAccessTime) {
-		return false
-	}
-	if this.Identity != that1.Identity {
-		return false
-	}
-	if this.RatePerSecond != that1.RatePerSecond {
-		return false
-	}
-	return true
-}
-func (this *StickyExecutionAttributes) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*StickyExecutionAttributes)
-	if !ok {
-		that2, ok := that.(StickyExecutionAttributes)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.WorkerTaskList.Equal(that1.WorkerTaskList) {
-		return false
-	}
-	if this.ScheduleToStartTimeout != nil && that1.ScheduleToStartTimeout != nil {
-		if *this.ScheduleToStartTimeout != *that1.ScheduleToStartTimeout {
-			return false
-		}
-	} else if this.ScheduleToStartTimeout != nil {
-		return false
-	} else if that1.ScheduleToStartTimeout != nil {
-		return false
-	}
-	return true
-}
-func (this *TaskList) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.TaskList{")
-	s = append(s, "Name: "+fmt.Sprintf("%#v", this.Name)+",\n")
-	s = append(s, "Kind: "+fmt.Sprintf("%#v", this.Kind)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *TaskListMetadata) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&apiv1.TaskListMetadata{")
-	if this.MaxTasksPerSecond != nil {
-		s = append(s, "MaxTasksPerSecond: "+fmt.Sprintf("%#v", this.MaxTasksPerSecond)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *TaskListPartitionMetadata) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.TaskListPartitionMetadata{")
-	s = append(s, "Key: "+fmt.Sprintf("%#v", this.Key)+",\n")
-	s = append(s, "OwnerHostName: "+fmt.Sprintf("%#v", this.OwnerHostName)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *TaskListStatus) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&apiv1.TaskListStatus{")
-	s = append(s, "BacklogCountHint: "+fmt.Sprintf("%#v", this.BacklogCountHint)+",\n")
-	s = append(s, "ReadLevel: "+fmt.Sprintf("%#v", this.ReadLevel)+",\n")
-	s = append(s, "AckLevel: "+fmt.Sprintf("%#v", this.AckLevel)+",\n")
-	s = append(s, "RatePerSecond: "+fmt.Sprintf("%#v", this.RatePerSecond)+",\n")
-	if this.TaskIdBlock != nil {
-		s = append(s, "TaskIdBlock: "+fmt.Sprintf("%#v", this.TaskIdBlock)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *TaskIDBlock) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.TaskIDBlock{")
-	s = append(s, "StartId: "+fmt.Sprintf("%#v", this.StartId)+",\n")
-	s = append(s, "EndId: "+fmt.Sprintf("%#v", this.EndId)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *PollerInfo) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&apiv1.PollerInfo{")
-	s = append(s, "LastAccessTime: "+fmt.Sprintf("%#v", this.LastAccessTime)+",\n")
-	s = append(s, "Identity: "+fmt.Sprintf("%#v", this.Identity)+",\n")
-	s = append(s, "RatePerSecond: "+fmt.Sprintf("%#v", this.RatePerSecond)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *StickyExecutionAttributes) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.StickyExecutionAttributes{")
-	if this.WorkerTaskList != nil {
-		s = append(s, "WorkerTaskList: "+fmt.Sprintf("%#v", this.WorkerTaskList)+",\n")
-	}
-	s = append(s, "ScheduleToStartTimeout: "+fmt.Sprintf("%#v", this.ScheduleToStartTimeout)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func valueToGoStringTasklist(v interface{}, typ string) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
-}
 func (m *TaskList) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -892,6 +600,10 @@ func (m *TaskList) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.Kind != 0 {
 		i = encodeVarintTasklist(dAtA, i, uint64(m.Kind))
 		i--
@@ -927,6 +639,10 @@ func (m *TaskListMetadata) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.MaxTasksPerSecond != nil {
 		{
 			size, err := m.MaxTasksPerSecond.MarshalToSizedBuffer(dAtA[:i])
@@ -962,6 +678,10 @@ func (m *TaskListPartitionMetadata) MarshalToSizedBuffer(dAtA []byte) (int, erro
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.OwnerHostName) > 0 {
 		i -= len(m.OwnerHostName)
 		copy(dAtA[i:], m.OwnerHostName)
@@ -999,6 +719,10 @@ func (m *TaskListStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.TaskIdBlock != nil {
 		{
 			size, err := m.TaskIdBlock.MarshalToSizedBuffer(dAtA[:i])
@@ -1055,6 +779,10 @@ func (m *TaskIDBlock) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.EndId != 0 {
 		i = encodeVarintTasklist(dAtA, i, uint64(m.EndId))
 		i--
@@ -1088,6 +816,10 @@ func (m *PollerInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.RatePerSecond != 0 {
 		i -= 8
 		encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(m.RatePerSecond))))
@@ -1102,12 +834,14 @@ func (m *PollerInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 	}
 	if m.LastAccessTime != nil {
-		n3, err3 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.LastAccessTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.LastAccessTime):])
-		if err3 != nil {
-			return 0, err3
+		{
+			size, err := m.LastAccessTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintTasklist(dAtA, i, uint64(size))
 		}
-		i -= n3
-		i = encodeVarintTasklist(dAtA, i, uint64(n3))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -1134,13 +868,19 @@ func (m *StickyExecutionAttributes) MarshalToSizedBuffer(dAtA []byte) (int, erro
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if m.ScheduleToStartTimeout != nil {
-		n4, err4 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.ScheduleToStartTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ScheduleToStartTimeout):])
-		if err4 != nil {
-			return 0, err4
+		{
+			size, err := m.ScheduleToStartTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintTasklist(dAtA, i, uint64(size))
 		}
-		i -= n4
-		i = encodeVarintTasklist(dAtA, i, uint64(n4))
 		i--
 		dAtA[i] = 0x12
 	}
@@ -1183,6 +923,9 @@ func (m *TaskList) Size() (n int) {
 	if m.Kind != 0 {
 		n += 1 + sovTasklist(uint64(m.Kind))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -1195,6 +938,9 @@ func (m *TaskListMetadata) Size() (n int) {
 	if m.MaxTasksPerSecond != nil {
 		l = m.MaxTasksPerSecond.Size()
 		n += 1 + l + sovTasklist(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -1212,6 +958,9 @@ func (m *TaskListPartitionMetadata) Size() (n int) {
 	l = len(m.OwnerHostName)
 	if l > 0 {
 		n += 1 + l + sovTasklist(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -1238,6 +987,9 @@ func (m *TaskListStatus) Size() (n int) {
 		l = m.TaskIdBlock.Size()
 		n += 1 + l + sovTasklist(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -1253,6 +1005,9 @@ func (m *TaskIDBlock) Size() (n int) {
 	if m.EndId != 0 {
 		n += 1 + sovTasklist(uint64(m.EndId))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
 	return n
 }
 
@@ -1263,7 +1018,7 @@ func (m *PollerInfo) Size() (n int) {
 	var l int
 	_ = l
 	if m.LastAccessTime != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.LastAccessTime)
+		l = m.LastAccessTime.Size()
 		n += 1 + l + sovTasklist(uint64(l))
 	}
 	l = len(m.Identity)
@@ -1272,6 +1027,9 @@ func (m *PollerInfo) Size() (n int) {
 	}
 	if m.RatePerSecond != 0 {
 		n += 9
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -1287,8 +1045,11 @@ func (m *StickyExecutionAttributes) Size() (n int) {
 		n += 1 + l + sovTasklist(uint64(l))
 	}
 	if m.ScheduleToStartTimeout != nil {
-		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ScheduleToStartTimeout)
+		l = m.ScheduleToStartTimeout.Size()
 		n += 1 + l + sovTasklist(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -1298,94 +1059,6 @@ func sovTasklist(x uint64) (n int) {
 }
 func sozTasklist(x uint64) (n int) {
 	return sovTasklist(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (this *TaskList) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&TaskList{`,
-		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
-		`Kind:` + fmt.Sprintf("%v", this.Kind) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *TaskListMetadata) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&TaskListMetadata{`,
-		`MaxTasksPerSecond:` + strings.Replace(fmt.Sprintf("%v", this.MaxTasksPerSecond), "DoubleValue", "types.DoubleValue", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *TaskListPartitionMetadata) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&TaskListPartitionMetadata{`,
-		`Key:` + fmt.Sprintf("%v", this.Key) + `,`,
-		`OwnerHostName:` + fmt.Sprintf("%v", this.OwnerHostName) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *TaskListStatus) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&TaskListStatus{`,
-		`BacklogCountHint:` + fmt.Sprintf("%v", this.BacklogCountHint) + `,`,
-		`ReadLevel:` + fmt.Sprintf("%v", this.ReadLevel) + `,`,
-		`AckLevel:` + fmt.Sprintf("%v", this.AckLevel) + `,`,
-		`RatePerSecond:` + fmt.Sprintf("%v", this.RatePerSecond) + `,`,
-		`TaskIdBlock:` + strings.Replace(this.TaskIdBlock.String(), "TaskIDBlock", "TaskIDBlock", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *TaskIDBlock) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&TaskIDBlock{`,
-		`StartId:` + fmt.Sprintf("%v", this.StartId) + `,`,
-		`EndId:` + fmt.Sprintf("%v", this.EndId) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *PollerInfo) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&PollerInfo{`,
-		`LastAccessTime:` + strings.Replace(fmt.Sprintf("%v", this.LastAccessTime), "Timestamp", "timestamp.Timestamp", 1) + `,`,
-		`Identity:` + fmt.Sprintf("%v", this.Identity) + `,`,
-		`RatePerSecond:` + fmt.Sprintf("%v", this.RatePerSecond) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *StickyExecutionAttributes) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&StickyExecutionAttributes{`,
-		`WorkerTaskList:` + strings.Replace(this.WorkerTaskList.String(), "TaskList", "TaskList", 1) + `,`,
-		`ScheduleToStartTimeout:` + strings.Replace(fmt.Sprintf("%v", this.ScheduleToStartTimeout), "Duration", "duration.Duration", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func valueToStringTasklist(v interface{}) string {
-	rv := reflect.ValueOf(v)
-	if rv.IsNil() {
-		return "nil"
-	}
-	pv := reflect.Indirect(rv).Interface()
-	return fmt.Sprintf("*%v", pv)
 }
 func (m *TaskList) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -1482,6 +1155,7 @@ func (m *TaskList) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -1571,6 +1245,7 @@ func (m *TaskListMetadata) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -1688,6 +1363,7 @@ func (m *TaskListPartitionMetadata) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -1845,6 +1521,7 @@ func (m *TaskListStatus) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -1936,6 +1613,7 @@ func (m *TaskIDBlock) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -2004,9 +1682,9 @@ func (m *PollerInfo) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.LastAccessTime == nil {
-				m.LastAccessTime = new(time.Time)
+				m.LastAccessTime = &types.Timestamp{}
 			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.LastAccessTime, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.LastAccessTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -2068,6 +1746,7 @@ func (m *PollerInfo) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -2172,9 +1851,9 @@ func (m *StickyExecutionAttributes) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.ScheduleToStartTimeout == nil {
-				m.ScheduleToStartTimeout = new(time.Duration)
+				m.ScheduleToStartTimeout = &types.Duration{}
 			}
-			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.ScheduleToStartTimeout, dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.ScheduleToStartTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -2193,6 +1872,7 @@ func (m *StickyExecutionAttributes) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}

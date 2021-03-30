@@ -379,11 +379,16 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduledEventAsHea
 	scheduleID := m.msb.GetNextEventID() // we will generate the schedule event later for repeatedly failing decisions
 	// Avoid creating new history events when decisions are continuously failing
 	scheduleTime := m.msb.timeSource.Now().UnixNano()
-	if m.msb.executionInfo.DecisionAttempt == 0 {
-		newDecisionEvent = m.msb.hBuilder.AddDecisionTaskScheduledEvent(taskList, startToCloseTimeoutSeconds,
+	useNonTransientDecision := m.shouldUpdateLastWriteVersion()
+
+	if m.msb.executionInfo.DecisionAttempt == 0 || useNonTransientDecision {
+		newDecisionEvent = m.msb.hBuilder.AddDecisionTaskScheduledEvent(
+			taskList,
+			startToCloseTimeoutSeconds,
 			m.msb.executionInfo.DecisionAttempt)
 		scheduleID = newDecisionEvent.GetEventID()
 		scheduleTime = newDecisionEvent.GetTimestamp()
+		m.msb.executionInfo.DecisionAttempt = 0
 	}
 
 	decision, err := m.ReplicateDecisionTaskScheduledEvent(
@@ -476,8 +481,10 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskStartedEvent(
 	startedID := scheduleID + 1
 	tasklist := request.TaskList.GetName()
 	startTime := m.msb.timeSource.Now().UnixNano()
+	useNonTransientDecision := m.shouldUpdateLastWriteVersion()
+
 	// First check to see if new events came since transient decision was scheduled
-	if decision.Attempt > 0 && decision.ScheduleID != m.msb.GetNextEventID() {
+	if decision.Attempt > 0 && (decision.ScheduleID != m.msb.GetNextEventID() || useNonTransientDecision) {
 		// Also create a new DecisionTaskScheduledEvent since new events came in when it was scheduled
 		scheduleEvent := m.msb.hBuilder.AddDecisionTaskScheduledEvent(tasklist, decision.DecisionTimeout, 0)
 		scheduleID = scheduleEvent.GetEventID()
@@ -554,16 +561,16 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskFailedEvent(
 ) (*types.HistoryEvent, error) {
 	opTag := tag.WorkflowActionDecisionTaskFailed
 	attr := types.DecisionTaskFailedEventAttributes{
-		ScheduledEventID: common.Int64Ptr(scheduleEventID),
-		StartedEventID:   common.Int64Ptr(startedEventID),
+		ScheduledEventID: scheduleEventID,
+		StartedEventID:   startedEventID,
 		Cause:            cause.Ptr(),
 		Details:          details,
-		Identity:         common.StringPtr(identity),
+		Identity:         identity,
 		Reason:           common.StringPtr(reason),
-		BinaryChecksum:   common.StringPtr(binChecksum),
-		BaseRunID:        common.StringPtr(baseRunID),
-		NewRunID:         common.StringPtr(newRunID),
-		ForkEventVersion: common.Int64Ptr(forkEventVersion),
+		BinaryChecksum:   binChecksum,
+		BaseRunID:        baseRunID,
+		NewRunID:         newRunID,
+		ForkEventVersion: forkEventVersion,
 	}
 
 	dt, ok := m.GetDecisionInfo(scheduleEventID)
@@ -646,6 +653,7 @@ func (m *mutableStateDecisionTaskManagerImpl) FailDecision(
 		TaskList:                   "",
 		OriginalScheduledTimestamp: 0,
 	}
+
 	if incrementAttempt {
 		failDecisionInfo.Attempt = m.msb.executionInfo.DecisionAttempt + 1
 		failDecisionInfo.ScheduledTimestamp = m.msb.timeSource.Now().UnixNano()
@@ -805,4 +813,15 @@ func (m *mutableStateDecisionTaskManagerImpl) afterAddDecisionTaskCompletedEvent
 ) error {
 	m.msb.executionInfo.LastProcessedEvent = event.GetDecisionTaskCompletedEventAttributes().GetStartedEventID()
 	return m.msb.addBinaryCheckSumIfNotExists(event, maxResetPoints)
+}
+
+func (m *mutableStateDecisionTaskManagerImpl) shouldUpdateLastWriteVersion() bool {
+
+	currentVersion := m.msb.GetCurrentVersion()
+	lastWriteVersion, err := m.msb.GetLastWriteVersion()
+	if err != nil {
+		// The error is version history has no item. This is expected for the first batch of a workflow.
+		return false
+	}
+	return currentVersion != lastWriteVersion
 }

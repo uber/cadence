@@ -335,8 +335,8 @@ func (r *workflowResetterImpl) replayResetWorkflow(
 	resetContext := execution.NewContext(
 		domainID,
 		types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(resetRunID),
+			WorkflowID: workflowID,
+			RunID:      resetRunID,
 		},
 		r.shard,
 		r.shard.GetExecutionManager(),
@@ -398,7 +398,7 @@ func (r *workflowResetterImpl) failInflightActivity(
 				&types.RespondActivityTaskFailedRequest{
 					Reason:   common.StringPtr(terminateReason),
 					Details:  ai.Details,
-					Identity: common.StringPtr(ai.StartedIdentity),
+					Identity: ai.StartedIdentity,
 				},
 			); err != nil {
 				return err
@@ -479,8 +479,8 @@ func (r *workflowResetterImpl) reapplyResetAndContinueAsNewWorkflowEvents(
 			ctx,
 			domainID,
 			types.WorkflowExecution{
-				WorkflowID: common.StringPtr(workflowID),
-				RunID:      common.StringPtr(runID),
+				WorkflowID: workflowID,
+				RunID:      runID,
 			},
 		)
 		if err != nil {
