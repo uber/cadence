@@ -101,8 +101,3 @@ func (k *KafkaConfig) GetBrokersForKafkaCluster(kafkaCluster string) []string {
 func (k *KafkaConfig) GetTopicsForApplication(app string) TopicList {
 	return k.Applications[app]
 }
-
-// GetKafkaVersionForApplication gets kafka version from application
-func (k *KafkaConfig) GetKafkaVersionForApplication() string {
-	return k.Version
-}

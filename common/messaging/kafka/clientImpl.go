@@ -86,7 +86,7 @@ func NewKafkaClient(
 // NewConsumer is used to create a Kafka consumer
 func (c *clientImpl) NewConsumer(app, consumerName string) (messaging.Consumer, error) {
 	topics := c.config.GetTopicsForApplication(app)
-	kafkaVersion := c.config.GetKafkaVersionForApplication()
+	kafkaVersion := c.config.Version
 	if kafkaVersion == "" {
 		kafkaVersion = "0.10.2.0"
 	}
