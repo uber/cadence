@@ -34,7 +34,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func (s *integrationSuite) TestQueryWorkflow_Sticky() {
+func (s *IntegrationSuite) TestQueryWorkflow_Sticky() {
 	id := "interation-query-workflow-test-sticky"
 	wt := "interation-query-workflow-test-sticky-type"
 	tl := "interation-query-workflow-test-sticky-tasklist"
@@ -197,7 +197,7 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 	s.Equal("unknown-query-type", queryFailError.Message)
 }
 
-func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
+func (s *IntegrationSuite) TestQueryWorkflow_StickyTimeout() {
 	id := "interation-query-workflow-test-sticky-timeout"
 	wt := "interation-query-workflow-test-sticky-timeout-type"
 	tl := "interation-query-workflow-test-sticky-timeout-tasklist"
@@ -346,7 +346,7 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 	s.Equal("query-result", queryResultString)
 }
 
-func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
+func (s *IntegrationSuite) TestQueryWorkflow_NonSticky() {
 	id := "integration-query-workflow-test-non-sticky"
 	wt := "integration-query-workflow-test-non-sticky-type"
 	tl := "integration-query-workflow-test-non-sticky-tasklist"
@@ -553,7 +553,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	s.Equal("query-result", queryResultString)
 }
 
-func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
+func (s *IntegrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 	id := "integration-query-workflow-test-consistent-piggyback-query"
 	wt := "integration-query-workflow-test-consistent-piggyback-query-type"
 	tl := "integration-query-workflow-test-consistent-piggyback-query-tasklist"
@@ -738,7 +738,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 	s.Equal("consistent query result", queryResultString)
 }
 
-func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
+func (s *IntegrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 	id := "integration-query-workflow-test-consistent-timeout"
 	wt := "integration-query-workflow-test-consistent-timeout-type"
 	tl := "integration-query-workflow-test-consistent-timeout-tasklist"
@@ -899,7 +899,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 	s.Nil(queryResult.Resp)
 }
 
-func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonSticky() {
+func (s *IntegrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonSticky() {
 	id := "integration-query-workflow-test-consistent-blocked-by-started-non-sticky"
 	wt := "integration-query-workflow-test-consistent-blocked-by-started-non-sticky-type"
 	tl := "integration-query-workflow-test-consistent-blocked-by-started-non-sticky-tasklist"
@@ -1083,7 +1083,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 	s.Equal("query-result", queryResultString)
 }
 
-func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky() {
+func (s *IntegrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky() {
 	id := "integration-query-workflow-test-consistent-new-decision-task-sticky"
 	wt := "integration-query-workflow-test-consistent-new-decision-task-sticky-type"
 	tl := "integration-query-workflow-test-consistent-new-decision-task-sticky-tasklist"
@@ -1302,7 +1302,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 	s.Equal("consistent query result", queryResultString)
 }
 
-func (s *integrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
+func (s *IntegrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
 	id := "integration-test-query-workflow-before-first-decision"
 	wt := "integration-test-query-workflow-before-first-decision-type"
 	tl := "integration-test-query-workflow-before-first-decision-tasklist"

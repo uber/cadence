@@ -24,8 +24,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -37,7 +35,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
-	"gopkg.in/yaml.v2"
 
 	adminClient "github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
@@ -46,14 +43,14 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	test "github.com/uber/cadence/common/testing"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/host"
 )
 
 type (
-	nDCIntegrationTestSuite struct {
+	NDCIntegrationTestSuite struct {
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
 		*require.Assertions
@@ -70,6 +67,16 @@ type (
 		mockAdminClient             map[string]adminClient.Client
 		standByReplicationTasksChan chan *types.ReplicationTask
 		standByTaskID               int64
+
+		clusterConfigs        []*host.TestClusterConfig
+		defaultTestCluster    pt.PersistenceTestCluster
+		visibilityTestCluster pt.PersistenceTestCluster
+	}
+
+	NDCIntegrationTestSuiteParams struct {
+		ClusterConfigs        []*host.TestClusterConfig
+		DefaultTestCluster    pt.PersistenceTestCluster
+		VisibilityTestCluster pt.PersistenceTestCluster
 	}
 )
 
@@ -83,32 +90,38 @@ var (
 )
 
 func TestNDCIntegrationTestSuite(t *testing.T) {
-
 	flag.Parse()
-	suite.Run(t, new(nDCIntegrationTestSuite))
+
+	clusterConfigs, err := host.GetTestClusterConfigs("../testdata/ndc_integration_test_clusters.yaml")
+	if err != nil {
+		panic(err)
+	}
+	clusterConfigs[0].WorkerConfig = &host.WorkerConfig{}
+	clusterConfigs[1].WorkerConfig = &host.WorkerConfig{}
+	testCluster := host.NewPersistenceTestCluster(clusterConfigs[0])
+	params := NDCIntegrationTestSuiteParams{
+		ClusterConfigs:        clusterConfigs,
+		DefaultTestCluster:    testCluster,
+		VisibilityTestCluster: testCluster,
+	}
+	s := NewNDCIntegrationTestSuite(params)
+	suite.Run(t, s)
 }
 
-func (s *nDCIntegrationTestSuite) SetupSuite() {
+func NewNDCIntegrationTestSuite(params NDCIntegrationTestSuiteParams) *NDCIntegrationTestSuite {
+	return &NDCIntegrationTestSuite{
+		clusterConfigs:        params.ClusterConfigs,
+		defaultTestCluster:    params.DefaultTestCluster,
+		visibilityTestCluster: params.VisibilityTestCluster,
+	}
+}
+
+func (s *NDCIntegrationTestSuite) SetupSuite() {
 	zapLogger, err := zap.NewDevelopment()
 	// cannot use s.Nil since it is not initialized
 	s.Require().NoError(err)
 	s.serializer = persistence.NewPayloadSerializer()
 	s.logger = loggerimpl.NewLogger(zapLogger)
-
-	fileName := "../testdata/ndc_integration_test_clusters.yaml"
-	if host.TestFlags.TestClusterConfigFile != "" {
-		fileName = host.TestFlags.TestClusterConfigFile
-	}
-	environment.SetupEnv()
-
-	confContent, err := ioutil.ReadFile(fileName)
-	s.Require().NoError(err)
-	confContent = []byte(os.ExpandEnv(string(confContent)))
-
-	var clusterConfigs []*host.TestClusterConfig
-	s.Require().NoError(yaml.Unmarshal(confContent, &clusterConfigs))
-	clusterConfigs[0].WorkerConfig = &host.WorkerConfig{}
-	clusterConfigs[1].WorkerConfig = &host.WorkerConfig{}
 
 	s.standByReplicationTasksChan = make(chan *types.ReplicationTask, 100)
 
@@ -124,20 +137,26 @@ func (s *nDCIntegrationTestSuite) SetupSuite() {
 		}, nil).AnyTimes()
 	s.mockAdminClient["standby"] = mockStandbyClient
 	s.mockAdminClient["other"] = mockOtherClient
-	clusterConfigs[0].MockAdminClient = s.mockAdminClient
+	s.clusterConfigs[0].MockAdminClient = s.mockAdminClient
 
-	cluster, err := host.NewCluster(clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterName[0])))
+	clusterMetadata := host.NewClusterMetadata(s.clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterName[0])))
+	params := pt.TestBaseParams{
+		DefaultTestCluster:    s.defaultTestCluster,
+		VisibilityTestCluster: s.visibilityTestCluster,
+		ClusterMetadata:       clusterMetadata,
+	}
+	cluster, err := host.NewCluster(s.clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterName[0])), params)
 	s.Require().NoError(err)
 	s.active = cluster
 
 	s.registerDomain()
 
-	s.version = clusterConfigs[1].ClusterMetadata.ClusterInformation[clusterConfigs[1].ClusterMetadata.CurrentClusterName].InitialFailoverVersion
-	s.versionIncrement = clusterConfigs[0].ClusterMetadata.FailoverVersionIncrement
+	s.version = s.clusterConfigs[1].ClusterMetadata.ClusterInformation[s.clusterConfigs[1].ClusterMetadata.CurrentClusterName].InitialFailoverVersion
+	s.versionIncrement = s.clusterConfigs[0].ClusterMetadata.FailoverVersionIncrement
 	s.generator = test.InitializeHistoryEventGenerator(s.domainName, s.version)
 }
 
-func (s *nDCIntegrationTestSuite) GetReplicationMessagesMock(
+func (s *NDCIntegrationTestSuite) GetReplicationMessagesMock(
 	ctx context.Context,
 	request *types.GetReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
@@ -170,20 +189,20 @@ func (s *nDCIntegrationTestSuite) GetReplicationMessagesMock(
 	}
 }
 
-func (s *nDCIntegrationTestSuite) SetupTest() {
+func (s *NDCIntegrationTestSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 	s.generator = test.InitializeHistoryEventGenerator(s.domainName, s.version)
 }
 
-func (s *nDCIntegrationTestSuite) TearDownSuite() {
+func (s *NDCIntegrationTestSuite) TearDownSuite() {
 	if s.generator != nil {
 		s.generator.Reset()
 	}
 	s.active.TearDownCluster()
 }
 
-func (s *nDCIntegrationTestSuite) TestSingleBranch() {
+func (s *NDCIntegrationTestSuite) TestSingleBranch() {
 
 	s.setupRemoteFrontendClients()
 	workflowID := "ndc-single-branch-test" + uuid.New()
@@ -225,7 +244,7 @@ func (s *nDCIntegrationTestSuite) TestSingleBranch() {
 	}
 }
 
-func (s *nDCIntegrationTestSuite) verifyEventHistory(
+func (s *NDCIntegrationTestSuite) verifyEventHistory(
 	workflowID string,
 	runID string,
 	historyBatch []*types.History,
@@ -272,7 +291,7 @@ func (s *nDCIntegrationTestSuite) verifyEventHistory(
 	return nil
 }
 
-func (s *nDCIntegrationTestSuite) TestMultipleBranches() {
+func (s *NDCIntegrationTestSuite) TestMultipleBranches() {
 
 	s.setupRemoteFrontendClients()
 	workflowID := "ndc-multiple-branches-test" + uuid.New()
@@ -358,7 +377,7 @@ func (s *nDCIntegrationTestSuite) TestMultipleBranches() {
 	}
 }
 
-func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
+func (s *NDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 
 	s.setupRemoteFrontendClients()
 	workflowID := "ndc-handcrafted-multiple-branches-test" + uuid.New()
@@ -663,7 +682,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 	)
 }
 
-func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieContinueAsNew() {
+func (s *NDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieContinueAsNew() {
 
 	s.setupRemoteFrontendClients()
 	workflowID := "ndc-handcrafted-multiple-branches-with-continue-as-new-test" + uuid.New()
@@ -932,7 +951,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 	)
 }
 
-func (s *nDCIntegrationTestSuite) TestEventsReapply_ZombieWorkflow() {
+func (s *NDCIntegrationTestSuite) TestEventsReapply_ZombieWorkflow() {
 
 	workflowID := "ndc-single-branch-test" + uuid.New()
 
@@ -995,7 +1014,7 @@ func (s *nDCIntegrationTestSuite) TestEventsReapply_ZombieWorkflow() {
 	)
 }
 
-func (s *nDCIntegrationTestSuite) TestEventsReapply_UpdateNonCurrentBranch() {
+func (s *NDCIntegrationTestSuite) TestEventsReapply_UpdateNonCurrentBranch() {
 
 	workflowID := "ndc-single-branch-test" + uuid.New()
 	runID := uuid.New()
@@ -1105,7 +1124,7 @@ func (s *nDCIntegrationTestSuite) TestEventsReapply_UpdateNonCurrentBranch() {
 	)
 }
 
-func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
+func (s *NDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 
 	workflowID := "ndc-re-send-test" + uuid.New()
 	runID := uuid.New()
@@ -1569,7 +1588,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 	s.Equal(batchCount, 10)
 }
 
-func (s *nDCIntegrationTestSuite) registerDomain() {
+func (s *NDCIntegrationTestSuite) registerDomain() {
 	s.domainName = "test-simple-workflow-ndc-" + common.GenerateRandomString(5)
 	client1 := s.active.GetFrontendClient() // active
 	err := client1.RegisterDomain(s.createContext(), &types.RegisterDomainRequest{
@@ -1595,7 +1614,7 @@ func (s *nDCIntegrationTestSuite) registerDomain() {
 	s.logger.Info(fmt.Sprintf("Domain name: %v - ID: %v", s.domainName, s.domainID))
 }
 
-func (s *nDCIntegrationTestSuite) generateNewRunHistory(
+func (s *NDCIntegrationTestSuite) generateNewRunHistory(
 	event *types.HistoryEvent,
 	domain string,
 	workflowID string,
@@ -1650,7 +1669,7 @@ func (s *nDCIntegrationTestSuite) generateNewRunHistory(
 	return eventBlob
 }
 
-func (s *nDCIntegrationTestSuite) toInternalDataBlob(
+func (s *NDCIntegrationTestSuite) toInternalDataBlob(
 	blob *persistence.DataBlob,
 ) *types.DataBlob {
 
@@ -1677,7 +1696,7 @@ func (s *nDCIntegrationTestSuite) toInternalDataBlob(
 	}
 }
 
-func (s *nDCIntegrationTestSuite) generateEventBlobs(
+func (s *NDCIntegrationTestSuite) generateEventBlobs(
 	workflowID string,
 	runID string,
 	workflowType string,
@@ -1697,7 +1716,7 @@ func (s *nDCIntegrationTestSuite) generateEventBlobs(
 	return eventBlob, newRunEventBlob
 }
 
-func (s *nDCIntegrationTestSuite) applyEvents(
+func (s *NDCIntegrationTestSuite) applyEvents(
 	workflowID string,
 	runID string,
 	workflowType string,
@@ -1726,7 +1745,7 @@ func (s *nDCIntegrationTestSuite) applyEvents(
 	}
 }
 
-func (s *nDCIntegrationTestSuite) applyEventsThroughFetcher(
+func (s *NDCIntegrationTestSuite) applyEventsThroughFetcher(
 	workflowID string,
 	runID string,
 	workflowType string,
@@ -1758,7 +1777,7 @@ func (s *nDCIntegrationTestSuite) applyEventsThroughFetcher(
 	}
 }
 
-func (s *nDCIntegrationTestSuite) eventBatchesToVersionHistory(
+func (s *NDCIntegrationTestSuite) eventBatchesToVersionHistory(
 	versionHistory *persistence.VersionHistory,
 	eventBatches []*types.History,
 ) *persistence.VersionHistory {
@@ -1782,7 +1801,7 @@ func (s *nDCIntegrationTestSuite) eventBatchesToVersionHistory(
 	return versionHistory
 }
 
-func (s *nDCIntegrationTestSuite) toInternalVersionHistoryItems(
+func (s *NDCIntegrationTestSuite) toInternalVersionHistoryItems(
 	versionHistory *persistence.VersionHistory,
 ) []*types.VersionHistoryItem {
 	if versionHistory == nil {
@@ -1792,12 +1811,12 @@ func (s *nDCIntegrationTestSuite) toInternalVersionHistoryItems(
 	return versionHistory.ToInternalType().Items
 }
 
-func (s *nDCIntegrationTestSuite) createContext() context.Context {
+func (s *NDCIntegrationTestSuite) createContext() context.Context {
 	ctx, _ := context.WithTimeout(context.Background(), 90*time.Second)
 	return ctx
 }
 
-func (s *nDCIntegrationTestSuite) setupRemoteFrontendClients() {
+func (s *NDCIntegrationTestSuite) setupRemoteFrontendClients() {
 	s.mockAdminClient["standby"].(*adminClient.MockClient).EXPECT().ReapplyEvents(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	s.mockAdminClient["other"].(*adminClient.MockClient).EXPECT().ReapplyEvents(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 }
