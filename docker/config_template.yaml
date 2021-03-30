@@ -112,7 +112,7 @@ services:
     frontend:
         rpc:
             port: {{ default .Env.FRONTEND_PORT "7933" }}
-            bindOnIP: {{ default .Env.FRONTEND_SERVICE "127.0.0.1" }}
+            bindOnIP: {{ default .Env.BIND_ON_IP "127.0.0.1" }}
         {{- if .Env.STATSD_ENDPOINT }}
         metrics:
             statsd:
@@ -133,7 +133,7 @@ services:
     matching:
         rpc:
             port: {{ default .Env.MATCHING_PORT "7935" }}
-            bindOnIP: {{ default .Env.MATCHING_SERVICE "127.0.0.1" }}
+            bindOnIP: {{ default .Env.BIND_ON_IP "127.0.0.1" }}
         {{- if .Env.STATSD_ENDPOINT }}
         metrics:
             statsd:
@@ -154,7 +154,7 @@ services:
     history:
         rpc:
             port: {{ default .Env.HISTORY_PORT "7934" }}
-            bindOnIP: {{ default .Env.HISTORY_SERVICE "127.0.0.1" }}
+            bindOnIP: {{ default .Env.BIND_ON_IP "127.0.0.1" }}
         {{- if .Env.STATSD_ENDPOINT }}
         metrics:
             statsd:
@@ -175,7 +175,7 @@ services:
     worker:
         rpc:
             port: {{ default .Env.WORKER_PORT "7939" }}
-            bindOnIP: {{ default .Env.WORKER_SERVICE "127.0.0.1" }}
+            bindOnIP: {{ default .Env.BIND_ON_IP "127.0.0.1" }}
         {{- if .Env.STATSD_ENDPOINT }}
         metrics:
             statsd:
