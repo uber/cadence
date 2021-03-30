@@ -1064,9 +1064,17 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 		return err
 	}
 
+	isRetryable := func(err error) bool {
+		if _, ok := err.(*persistence.TimeoutError); ok {
+			// timeout error is not retryable for update workflow execution
+			return false
+		}
+		return persistence.IsTransientError(err)
+	}
+
 	err := backoff.Retry(
 		op, persistenceOperationRetryPolicy,
-		persistence.IsTransientError,
+		isRetryable,
 	)
 	switch err.(type) {
 	case nil:

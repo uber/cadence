@@ -1223,8 +1223,7 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionWithRetry(
 		return t.historyClient.RequestCancelWorkflowExecution(requestCancelCtx, request)
 	}
 
-	err := backoff.Retry(op, taskRetryPolicy, persistence.IsTransientError)
-
+	err := backoff.Retry(op, taskRetryPolicy, common.IsServiceTransientError)
 	if _, ok := err.(*types.CancellationAlreadyRequestedError); ok {
 		// err is CancellationAlreadyRequestedError
 		// this could happen if target workflow cancellation is already requested
@@ -1269,7 +1268,7 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionWithRetry(
 		return t.historyClient.SignalWorkflowExecution(signalCtx, request)
 	}
 
-	return backoff.Retry(op, taskRetryPolicy, persistence.IsTransientError)
+	return backoff.Retry(op, taskRetryPolicy, common.IsServiceTransientError)
 }
 
 func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
@@ -1321,7 +1320,7 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 		return err
 	}
 
-	err = backoff.Retry(op, taskRetryPolicy, persistence.IsTransientError)
+	err = backoff.Retry(op, taskRetryPolicy, common.IsServiceTransientError)
 	if err != nil {
 		return "", err
 	}
