@@ -156,7 +156,7 @@ $(BIN)/$(BUF_VERSION_BIN): | $(BIN)
 	@chmod +x $@
 
 # https://www.grpc.io/docs/languages/go/quickstart/
-# protoc-gen-gofast (yarpc) are versioned via tools.go + go.mod (built above) and will be rebuilt as needed.
+# protoc-gen-gogofast (yarpc) are versioned via tools.go + go.mod (built above) and will be rebuilt as needed.
 # changing PROTOC_VERSION will automatically download and use the specified version
 PROTOC_VERSION = 3.14.0
 PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(subst Darwin,osx,$(OS))-$(ARCH).zip
@@ -212,7 +212,7 @@ PROTO_OUT := .gen/proto
 PROTO_FILES = $(shell find ./$(PROTO_ROOT) -name "*.proto" | grep -v "persistenceblobs")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 
-# protoc splits proto files into directories, otherwise protoc-gen-gofast is complaining about inconsistent package
+# protoc splits proto files into directories, otherwise protoc-gen-gogofast is complaining about inconsistent package
 # import paths due to multiple packages being compiled at once.
 #
 # After compilation files are moved to final location, as plugins adds additional path based on proto package.
@@ -247,7 +247,7 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 # "build" fake binaries, and touch the book-keeping files, so Make thinks codegen has been run.
 # order matters, as e.g. a $(BIN) newer than a $(BUILD) implies Make should run the $(BIN).
 .fake-protoc: | $(BIN) $(BUILD)
-	touch $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gofast $(BIN)/protoc-gen-yarpc-go
+	touch $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gogofast $(BIN)/protoc-gen-yarpc-go
 	touch $(BUILD)/protoc
 
 .fake-thrift: | $(BIN) $(BUILD)
@@ -320,7 +320,7 @@ lint: ## (re)run the linter
 fmt: $(BUILD)/fmt ## run goimports
 
 # not identical to the intermediate target, but does provide the same codegen (or more).
-copyright: ## update copyright headers
+copyright: $(BIN)/copyright ## update copyright headers
 	$(BIN)/copyright
 	@touch $(BUILD)/copyright
 

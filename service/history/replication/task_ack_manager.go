@@ -33,6 +33,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -155,6 +156,16 @@ func (t *taskAckManagerImpl) GetTasks(
 	readLevel := lastReadTaskID
 TaskInfoLoop:
 	for _, taskInfo := range taskInfoList {
+		// filter task info by domain clusters.
+		domainEntity, err := t.shard.GetDomainCache().GetDomainByID(taskInfo.GetDomainID())
+		if err != nil {
+			return nil, err
+		}
+		if skipTask(pollingCluster, domainEntity) {
+			continue
+		}
+
+		// construct replication task from DB
 		_ = t.rateLimiter.Wait(ctx)
 		var replicationTask *types.ReplicationTask
 		op := func() error {
@@ -162,7 +173,6 @@ TaskInfoLoop:
 			replicationTask, err = t.toReplicationTask(ctx, taskInfo)
 			return err
 		}
-
 		err = backoff.Retry(op, t.retryPolicy, common.IsPersistenceTransientError)
 		switch err.(type) {
 		case nil:
@@ -612,6 +622,15 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 			return replicationTask, nil
 		},
 	)
+}
+
+func skipTask(pollingCluster string, domainEntity *cache.DomainCacheEntry) bool {
+	for _, cluster := range domainEntity.GetReplicationConfig().Clusters {
+		if cluster.ClusterName == pollingCluster {
+			return false
+		}
+	}
+	return true
 }
 
 func getVersionHistoryItems(
