@@ -25,7 +25,6 @@ package persistence
 import (
 	"context"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 )
 
@@ -77,7 +76,7 @@ func (pr *persistenceRetryer) ListConcreteExecutions(
 		return err
 	}
 	var err error
-	err = backoff.Retry(op, pr.policy, common.IsPersistenceTransientError)
+	err = backoff.Retry(op, pr.policy, IsTransientError)
 	if err == nil {
 		return resp, nil
 	}
@@ -95,7 +94,7 @@ func (pr *persistenceRetryer) GetWorkflowExecution(
 		resp, err = pr.execManager.GetWorkflowExecution(ctx, req)
 		return err
 	}
-	err := backoff.Retry(op, pr.policy, common.IsPersistenceTransientError)
+	err := backoff.Retry(op, pr.policy, IsTransientError)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +112,7 @@ func (pr *persistenceRetryer) GetCurrentExecution(
 		resp, err = pr.execManager.GetCurrentExecution(ctx, req)
 		return err
 	}
-	err := backoff.Retry(op, pr.policy, common.IsPersistenceTransientError)
+	err := backoff.Retry(op, pr.policy, IsTransientError)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +131,7 @@ func (pr *persistenceRetryer) ListCurrentExecutions(
 		return err
 	}
 	var err error
-	err = backoff.Retry(op, pr.policy, common.IsPersistenceTransientError)
+	err = backoff.Retry(op, pr.policy, IsTransientError)
 	if err == nil {
 		return resp, nil
 	}
@@ -150,7 +149,7 @@ func (pr *persistenceRetryer) IsWorkflowExecutionExists(
 		resp, err = pr.execManager.IsWorkflowExecutionExists(ctx, req)
 		return err
 	}
-	err := backoff.Retry(op, pr.policy, common.IsPersistenceTransientError)
+	err := backoff.Retry(op, pr.policy, IsTransientError)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +167,7 @@ func (pr *persistenceRetryer) ReadHistoryBranch(
 		resp, err = pr.historyManager.ReadHistoryBranch(ctx, req)
 		return err
 	}
-	err := backoff.Retry(op, pr.policy, common.IsPersistenceTransientError)
+	err := backoff.Retry(op, pr.policy, IsTransientError)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +182,7 @@ func (pr *persistenceRetryer) DeleteWorkflowExecution(
 	op := func() error {
 		return pr.execManager.DeleteWorkflowExecution(ctx, req)
 	}
-	return backoff.Retry(op, pr.policy, common.IsPersistenceTransientError)
+	return backoff.Retry(op, pr.policy, IsTransientError)
 }
 
 // DeleteCurrentWorkflowExecution retries DeleteCurrentWorkflowExecution
@@ -194,7 +193,7 @@ func (pr *persistenceRetryer) DeleteCurrentWorkflowExecution(
 	op := func() error {
 		return pr.execManager.DeleteCurrentWorkflowExecution(ctx, req)
 	}
-	return backoff.Retry(op, pr.policy, common.IsPersistenceTransientError)
+	return backoff.Retry(op, pr.policy, IsTransientError)
 }
 
 // GetShardID return shard id
@@ -213,7 +212,7 @@ func (pr *persistenceRetryer) GetTimerIndexTasks(
 		resp, err = pr.execManager.GetTimerIndexTasks(ctx, req)
 		return err
 	}
-	err := backoff.Retry(op, pr.policy, common.IsPersistenceTransientError)
+	err := backoff.Retry(op, pr.policy, IsTransientError)
 
 	if err != nil {
 		return nil, err
@@ -231,5 +230,5 @@ func (pr *persistenceRetryer) CompleteTimerTask(
 		return pr.execManager.CompleteTimerTask(ctx, request)
 	}
 
-	return backoff.Retry(op, pr.policy, common.IsPersistenceTransientError)
+	return backoff.Retry(op, pr.policy, IsTransientError)
 }

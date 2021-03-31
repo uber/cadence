@@ -162,8 +162,7 @@ TaskInfoLoop:
 			replicationTask, err = t.toReplicationTask(ctx, taskInfo)
 			return err
 		}
-
-		err = backoff.Retry(op, t.retryPolicy, common.IsPersistenceTransientError)
+		err = backoff.Retry(op, t.retryPolicy, persistence.IsTransientError)
 		switch err.(type) {
 		case nil:
 			// No action
