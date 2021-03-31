@@ -28,6 +28,7 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common/types/testdata"
 )

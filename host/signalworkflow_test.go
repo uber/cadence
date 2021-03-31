@@ -38,7 +38,7 @@ import (
 	"github.com/uber/cadence/service/history/execution"
 )
 
-func (s *integrationSuite) TestSignalWorkflow() {
+func (s *IntegrationSuite) TestSignalWorkflow() {
 	id := "integration-signal-workflow-test"
 	wt := "integration-signal-workflow-test-type"
 	tl := "integration-signal-workflow-test-tasklist"
@@ -228,7 +228,7 @@ func (s *integrationSuite) TestSignalWorkflow() {
 	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
-func (s *integrationSuite) TestSignalWorkflow_DuplicateRequest() {
+func (s *IntegrationSuite) TestSignalWorkflow_DuplicateRequest() {
 	id := "integration-signal-workflow-test-duplicate"
 	wt := "integration-signal-workflow-test-duplicate-type"
 	tl := "integration-signal-workflow-test-duplicate-tasklist"
@@ -372,7 +372,7 @@ func (s *integrationSuite) TestSignalWorkflow_DuplicateRequest() {
 	s.Equal(0, numOfSignaledEvent)
 }
 
-func (s *integrationSuite) TestSignalExternalWorkflowDecision() {
+func (s *IntegrationSuite) TestSignalExternalWorkflowDecision() {
 	id := "integration-signal-external-workflow-test"
 	wt := "integration-signal-external-workflow-test-type"
 	tl := "integration-signal-external-workflow-test-tasklist"
@@ -590,7 +590,7 @@ CheckHistoryLoopForSignalSent:
 	s.Equal(execution.IdentityHistoryService, signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
 }
 
-func (s *integrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
+func (s *IntegrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
 	id := "integration-signal-workflow-test-cron"
 	wt := "integration-signal-workflow-test-cron-type"
 	tl := "integration-signal-workflow-test-cron-tasklist"
@@ -669,7 +669,7 @@ func (s *integrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
 	s.True(decisionTaskDelay > time.Second*2)
 }
 
-func (s *integrationSuite) TestSignalExternalWorkflowDecision_WithoutRunID() {
+func (s *IntegrationSuite) TestSignalExternalWorkflowDecision_WithoutRunID() {
 	id := "integration-signal-external-workflow-test-without-run-id"
 	wt := "integration-signal-external-workflow-test-without-run-id-type"
 	tl := "integration-signal-external-workflow-test-without-run-id-tasklist"
@@ -886,7 +886,7 @@ CheckHistoryLoopForSignalSent:
 	s.Equal(execution.IdentityHistoryService, signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
 }
 
-func (s *integrationSuite) TestSignalExternalWorkflowDecision_UnKnownTarget() {
+func (s *IntegrationSuite) TestSignalExternalWorkflowDecision_UnKnownTarget() {
 	id := "integration-signal-unknown-workflow-decision-test"
 	wt := "integration-signal-unknown-workflow-decision-test-type"
 	tl := "integration-signal-unknown-workflow-decision-test-tasklist"
@@ -1013,7 +1013,7 @@ CheckHistoryLoopForCancelSent:
 	s.True(signalSentFailed)
 }
 
-func (s *integrationSuite) TestSignalExternalWorkflowDecision_SignalSelf() {
+func (s *IntegrationSuite) TestSignalExternalWorkflowDecision_SignalSelf() {
 	id := "integration-signal-self-workflow-decision-test"
 	wt := "integration-signal-self-workflow-decision-test-type"
 	tl := "integration-signal-self-workflow-decision-test-tasklist"
@@ -1141,7 +1141,7 @@ CheckHistoryLoopForCancelSent:
 
 }
 
-func (s *integrationSuite) TestSignalWithStartWorkflow() {
+func (s *IntegrationSuite) TestSignalWithStartWorkflow() {
 	id := "integration-signal-with-start-workflow-test"
 	wt := "integration-signal-with-start-workflow-test-type"
 	tl := "integration-signal-with-start-workflow-test-tasklist"
@@ -1408,7 +1408,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	s.Equal(1, len(listClosedResp.Executions))
 }
 
-func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
+func (s *IntegrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 	id := "integration-signal-with-start-workflow-id-reuse-test"
 	wt := "integration-signal-with-start-workflow-id-reuse-test-type"
 	tl := "integration-signal-with-start-workflow-id-reuse-test-tasklist"

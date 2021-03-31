@@ -57,7 +57,9 @@ func TestActivityTaskFailedEventAttributes(t *testing.T) {
 	}
 }
 func TestActivityTaskScheduledEventAttributes(t *testing.T) {
-	for _, item := range []*types.ActivityTaskScheduledEventAttributes{nil, {}, &testdata.ActivityTaskScheduledEventAttributes} {
+	// since proto definition for Domain field doesn't have pointer, To(From(item)) won't be equal to item when item's Domain is a nil pointer
+	// this is fine as the code using this field will check both if the field is a nil pointer and if it's a pointer to an empty string.
+	for _, item := range []*types.ActivityTaskScheduledEventAttributes{nil, {Domain: common.StringPtr("")}, &testdata.ActivityTaskScheduledEventAttributes} {
 		assert.Equal(t, item, ToActivityTaskScheduledEventAttributes(FromActivityTaskScheduledEventAttributes(item)))
 	}
 }

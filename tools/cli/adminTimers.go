@@ -266,7 +266,7 @@ func (cl *cassandraLoader) Load() []*persistence.TimerTaskInfo {
 		}
 
 		isRetryable := func(err error) bool {
-			return common.IsPersistenceTransientError(err) || common.IsContextTimeoutError(err)
+			return persistence.IsTransientError(err) || common.IsContextTimeoutError(err)
 		}
 
 		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), isRetryable)

@@ -10,7 +10,6 @@ require (
 	github.com/apache/thrift v0.13.0
 	github.com/aws/aws-sdk-go v1.34.13
 	github.com/benbjohnson/clock v0.0.0-20161215174838-7dc76406b6d3 // indirect
-	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
 	github.com/cactus/go-statsd-client/statsd v0.0.0-20191106001114-12b4e2b38748
 	github.com/cch123/elasticsql v0.0.0-20190321073543-a1a440758eb9
 	github.com/davecgh/go-spew v1.1.1

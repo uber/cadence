@@ -209,6 +209,12 @@ func setHandlers(aggregator *ShardFixResultAggregator) map[string]interface{} {
 			}
 			return aggregator.GetAggregation(), nil
 		},
+		DomainReportQuery: func(req DomainReportQueryRequest) (*DomainFixReportQueryResult, error) {
+			if aggregator == nil {
+				return nil, errQueryNotReady
+			}
+			return aggregator.GetDomainStatus(req)
+		},
 	}
 }
 
