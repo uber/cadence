@@ -90,7 +90,7 @@ func TestHistoryGetMutableStateRequest(t *testing.T) {
 	}
 }
 func TestHistoryGetMutableStateResponse(t *testing.T) {
-	for _, item := range []*types.GetMutableStateResponse{nil, {}, &testdata.HistoryGetMutableStateResponse} {
+	for _, item := range []*types.GetMutableStateResponse{nil, &testdata.HistoryGetMutableStateResponse} {
 		assert.Equal(t, item, ToHistoryGetMutableStateResponse(FromHistoryGetMutableStateResponse(item)))
 	}
 }
@@ -125,7 +125,7 @@ func TestHistoryPollMutableStateRequest(t *testing.T) {
 	}
 }
 func TestHistoryPollMutableStateResponse(t *testing.T) {
-	for _, item := range []*types.PollMutableStateResponse{nil, {}, &testdata.HistoryPollMutableStateResponse} {
+	for _, item := range []*types.PollMutableStateResponse{nil, &testdata.HistoryPollMutableStateResponse} {
 		assert.Equal(t, item, ToHistoryPollMutableStateResponse(FromHistoryPollMutableStateResponse(item)))
 	}
 }

@@ -260,7 +260,7 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 			workflowStartTimestamp,
 			workflowExecutionTimestamp.UnixNano(),
 			workflowCloseTimestamp,
-			workflowCloseStatus,
+			*workflowCloseStatus,
 			workflowHistoryLength,
 			transferTask.GetTaskID(),
 			visibilityMemo,

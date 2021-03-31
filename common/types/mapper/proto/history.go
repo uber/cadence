@@ -25,6 +25,7 @@ import (
 	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
 	sharedv1 "github.com/uber/cadence/.gen/proto/shared/v1"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -278,7 +279,7 @@ func FromHistoryGetMutableStateResponse(t *types.GetMutableStateResponse) *histo
 	}
 	var workflowCloseState *types.WorkflowExecutionCloseStatus
 	if t.WorkflowCloseState != nil {
-		workflowCloseState = types.WorkflowExecutionCloseStatus(*t.WorkflowCloseState).Ptr()
+		workflowCloseState = persistence.ToInternalWorkflowExecutionCloseStatus(int(*t.WorkflowCloseState))
 	}
 	return &historyv1.GetMutableStateResponse{
 		WorkflowExecution:                    FromWorkflowExecution(t.Execution),
@@ -305,10 +306,6 @@ func ToHistoryGetMutableStateResponse(t *historyv1.GetMutableStateResponse) *typ
 	if t == nil {
 		return nil
 	}
-	var workflowCloseState *int32
-	if s := ToWorkflowExecutionCloseStatus(t.WorkflowCloseState); s != nil {
-		workflowCloseState = common.Int32Ptr(int32(*s))
-	}
 	return &types.GetMutableStateResponse{
 		Execution:                            ToWorkflowExecution(t.WorkflowExecution),
 		WorkflowType:                         ToWorkflowType(t.WorkflowType),
@@ -324,7 +321,7 @@ func ToHistoryGetMutableStateResponse(t *historyv1.GetMutableStateResponse) *typ
 		EventStoreVersion:                    t.EventStoreVersion,
 		CurrentBranchToken:                   t.CurrentBranchToken,
 		WorkflowState:                        ToWorkflowState(t.WorkflowState),
-		WorkflowCloseState:                   workflowCloseState,
+		WorkflowCloseState:                   common.Int32Ptr(int32(persistence.FromInternalWorkflowExecutionCloseStatus(ToWorkflowExecutionCloseStatus(t.WorkflowCloseState)))),
 		VersionHistories:                     ToVersionHistories(t.VersionHistories),
 		IsStickyTaskListEnabled:              t.IsStickyTaskListEnabled,
 		IsWorkflowRunning:                    t.WorkflowState == sharedv1.WorkflowState_WORKFLOW_STATE_RUNNING,
@@ -461,9 +458,10 @@ func FromHistoryPollMutableStateResponse(t *types.PollMutableStateResponse) *his
 	if t == nil {
 		return nil
 	}
+
 	var workflowCloseState *types.WorkflowExecutionCloseStatus
 	if t.WorkflowCloseState != nil {
-		workflowCloseState = types.WorkflowExecutionCloseStatus(*t.WorkflowCloseState).Ptr()
+		workflowCloseState = persistence.ToInternalWorkflowExecutionCloseStatus(int(*t.WorkflowCloseState))
 	}
 	return &historyv1.PollMutableStateResponse{
 		WorkflowExecution:                    FromWorkflowExecution(t.Execution),
@@ -488,10 +486,7 @@ func ToHistoryPollMutableStateResponse(t *historyv1.PollMutableStateResponse) *t
 	if t == nil {
 		return nil
 	}
-	var workflowCloseState *int32
-	if s := ToWorkflowExecutionCloseStatus(t.WorkflowCloseState); s != nil {
-		workflowCloseState = common.Int32Ptr(int32(*s))
-	}
+
 	return &types.PollMutableStateResponse{
 		Execution:                            ToWorkflowExecution(t.WorkflowExecution),
 		WorkflowType:                         ToWorkflowType(t.WorkflowType),
@@ -507,7 +502,7 @@ func ToHistoryPollMutableStateResponse(t *historyv1.PollMutableStateResponse) *t
 		CurrentBranchToken:                   t.CurrentBranchToken,
 		VersionHistories:                     ToVersionHistories(t.VersionHistories),
 		WorkflowState:                        ToWorkflowState(t.WorkflowState),
-		WorkflowCloseState:                   workflowCloseState,
+		WorkflowCloseState:                   common.Int32Ptr(int32(persistence.FromInternalWorkflowExecutionCloseStatus(ToWorkflowExecutionCloseStatus(t.WorkflowCloseState)))),
 	}
 }
 
