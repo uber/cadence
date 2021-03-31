@@ -1463,7 +1463,7 @@ func acquireShard(
 	retryPolicy.SetExpirationInterval(5 * time.Second)
 
 	retryPredicate := func(err error) bool {
-		if common.IsPersistenceTransientError(err) {
+		if persistence.IsTransientError(err) {
 			return true
 		}
 		_, ok := err.(*persistence.ShardAlreadyExistError)

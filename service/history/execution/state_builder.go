@@ -136,7 +136,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 			// as ParentWorkflowDomainID will not be present on older histories.
 			if attributes.ParentWorkflowDomainID != nil {
 				parentDomainID = attributes.ParentWorkflowDomainID
-			} else if attributes.ParentWorkflowDomain != nil {
+			} else if attributes.GetParentWorkflowDomain() != "" {
 				parentDomainEntry, err := b.domainCache.GetDomain(
 					attributes.GetParentWorkflowDomain(),
 				)

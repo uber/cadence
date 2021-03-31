@@ -45,6 +45,7 @@ import (
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/util"
@@ -119,7 +120,7 @@ func (h *historyArchiver) Archive(
 ) (err error) {
 	featureCatalog := archiver.GetFeatureCatalog(opts...)
 	defer func() {
-		if err != nil && !common.IsPersistenceTransientError(err) && featureCatalog.NonRetriableError != nil {
+		if err != nil && !persistence.IsTransientError(err) && featureCatalog.NonRetriableError != nil {
 			err = featureCatalog.NonRetriableError()
 		}
 	}()
@@ -146,7 +147,7 @@ func (h *historyArchiver) Archive(
 		historyBlob, err := getNextHistoryBlob(ctx, historyIterator)
 		if err != nil {
 			logger := logger.WithTags(tag.ArchivalArchiveFailReason(archiver.ErrReasonReadHistory), tag.Error(err))
-			if !common.IsPersistenceTransientError(err) {
+			if !persistence.IsTransientError(err) {
 				logger.Error(archiver.ArchiveNonRetriableErrorMsg)
 			} else {
 				logger.Error(archiver.ArchiveTransientErrorMsg)
@@ -290,10 +291,10 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 		if contextExpired(ctx) {
 			return nil, archiver.ErrContextTimeout
 		}
-		if !common.IsPersistenceTransientError(err) {
+		if !persistence.IsTransientError(err) {
 			return nil, err
 		}
-		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), common.IsPersistenceTransientError)
+		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), persistence.IsTransientError)
 	}
 	return historyBlob, nil
 }

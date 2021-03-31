@@ -30,6 +30,7 @@ import (
 
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/pagination"
+	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
 )
@@ -83,6 +84,7 @@ func (s *ShardScanner) Scan(ctx context.Context) ScanReport {
 		Stats: ScanStats{
 			CorruptionByType: make(map[invariant.Name]int64),
 		},
+		DomainStats: map[string]*ScanStats{},
 	}
 	for s.itr.HasNext() {
 		s.progressReportFn()
@@ -95,6 +97,20 @@ func (s *ShardScanner) Scan(ctx context.Context) ScanReport {
 			return result
 		}
 		checkResult := s.invariantManager.RunChecks(ctx, entity)
+		domainID, err := s.getDomainIDFromEntity(entity)
+		if err != nil {
+			result.Result.ControlFlowFailure = &ControlFlowFailure{
+				Info:        "failed to get domainID from entity",
+				InfoDetails: err.Error(),
+			}
+			return result
+		}
+		if _, ok := result.DomainStats[*domainID]; !ok {
+			result.DomainStats[*domainID] = &ScanStats{
+				CorruptionByType: make(map[invariant.Name]int64),
+			}
+		}
+		result.DomainStats[*domainID].EntitiesCount++
 		result.Stats.EntitiesCount++
 		switch checkResult.CheckResultType {
 		case invariant.CheckResultTypeHealthy:
@@ -112,6 +128,8 @@ func (s *ShardScanner) Scan(ctx context.Context) ScanReport {
 			}
 			result.Stats.CorruptedCount++
 			result.Stats.CorruptionByType[*checkResult.DeterminingInvariantType]++
+			result.DomainStats[*domainID].CorruptedCount++
+			result.DomainStats[*domainID].CorruptionByType[*checkResult.DeterminingInvariantType]++
 		case invariant.CheckResultTypeFailed:
 			if err := s.failedWriter.Add(store.ScanOutputEntity{
 				Execution: entity,
@@ -124,6 +142,7 @@ func (s *ShardScanner) Scan(ctx context.Context) ScanReport {
 				return result
 			}
 			result.Stats.CheckFailedCount++
+			result.DomainStats[*domainID].CheckFailedCount++
 		default:
 			panic(fmt.Sprintf("unknown CheckResultType: %v", checkResult.CheckResultType))
 		}
@@ -149,4 +168,23 @@ func (s *ShardScanner) Scan(ctx context.Context) ScanReport {
 		Failed:  s.failedWriter.FlushedKeys(),
 	}
 	return result
+}
+
+func (s *ShardScanner) getDomainIDFromEntity(e interface{}) (*string, error) {
+	concreteExecution, ok := e.(*entity.ConcreteExecution)
+	if ok {
+		return &concreteExecution.DomainID, nil
+	}
+
+	currentExecution, ok := e.(*entity.CurrentExecution)
+	if ok {
+		return &currentExecution.DomainID, nil
+	}
+
+	timer, ok := e.(*entity.Timer)
+	if ok {
+		return &timer.DomainID, nil
+	}
+
+	return nil, fmt.Errorf("unknown entity type in scanner: %T", e)
 }
