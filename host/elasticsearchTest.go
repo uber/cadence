@@ -29,7 +29,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"testing"
 	"time"
 
 	"github.com/pborman/uuid"

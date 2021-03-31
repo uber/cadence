@@ -45,4 +45,3 @@ func TestIntegrationSuite(t *testing.T) {
 	s.IntegrationBase = NewIntegrationBase(params)
 	suite.Run(t, s)
 }
-
