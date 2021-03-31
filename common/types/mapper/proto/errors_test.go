@@ -25,8 +25,6 @@ import (
 	"reflect"
 	"testing"
 
-	"go.uber.org/yarpc/yarpcerrors"
-
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/yarpcerrors"
 
