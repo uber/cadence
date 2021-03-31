@@ -24,7 +24,6 @@ import (
 	"context"
 	"fmt"
 	"sync/atomic"
-	"testing"
 	"time"
 
 	"go.uber.org/yarpc"

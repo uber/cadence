@@ -29,7 +29,6 @@ import (
 	"math"
 	"sort"
 	"strconv"
-	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -1208,11 +1207,11 @@ func (s *IntegrationSuite) TestCronWorkflow() {
 		// TODO: Remove this line once we unify the time source
 		executionTimeDiff := executionInfo.GetStartTime() - lastExecution.GetCloseTime()
 		// The backoff between any two executions should be multiplier of the target backoff duration which is 3 in this test
-		backoffSeconds := int(time.Duration(expectedBackoff-executionTimeDiff).Round(time.Second).Seconds())
+		backoffSeconds := int(time.Duration(expectedBackoff - executionTimeDiff).Round(time.Second).Seconds())
 		targetBackoffSeconds := int(targetBackoffDuration.Seconds())
 		s.Equal(
 			0,
-			backoffSeconds % targetBackoffSeconds,
+			backoffSeconds%targetBackoffSeconds,
 			"Still Flaky?: backoffSeconds: %v ((%v-%v) - (%v-%v)), targetBackoffSeconds: %v",
 			backoffSeconds,
 			executionInfo.GetExecutionTime(),
