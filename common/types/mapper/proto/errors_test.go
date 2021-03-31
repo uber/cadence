@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common/types/testdata"
 )
@@ -61,4 +62,7 @@ func TestErrors(t *testing.T) {
 			assert.Equal(t, err, ToError(FromError(err)))
 		})
 	}
+
+	timeout := yarpcerrors.DeadlineExceededErrorf("timeout")
+	assert.Equal(t, timeout, ToError(timeout))
 }
