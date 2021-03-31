@@ -25,6 +25,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"sync/atomic"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -34,7 +35,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func (s *integrationSuite) TestQueryWorkflow_Sticky() {
+func (s *IntegrationSuite) TestQueryWorkflow_Sticky() {
 	id := "interation-query-workflow-test-sticky"
 	wt := "interation-query-workflow-test-sticky-type"
 	tl := "interation-query-workflow-test-sticky-tasklist"
@@ -197,7 +198,7 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 	s.Equal("unknown-query-type", queryFailError.Message)
 }
 
-func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
+func (s *IntegrationSuite) TestQueryWorkflow_StickyTimeout() {
 	id := "interation-query-workflow-test-sticky-timeout"
 	wt := "interation-query-workflow-test-sticky-timeout-type"
 	tl := "interation-query-workflow-test-sticky-timeout-tasklist"
@@ -346,7 +347,7 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 	s.Equal("query-result", queryResultString)
 }
 
-func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
+func (s *IntegrationSuite) TestQueryWorkflow_NonSticky() {
 	id := "integration-query-workflow-test-non-sticky"
 	wt := "integration-query-workflow-test-non-sticky-type"
 	tl := "integration-query-workflow-test-non-sticky-tasklist"
@@ -553,7 +554,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	s.Equal("query-result", queryResultString)
 }
 
-func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
+func (s *IntegrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 	id := "integration-query-workflow-test-consistent-piggyback-query"
 	wt := "integration-query-workflow-test-consistent-piggyback-query-type"
 	tl := "integration-query-workflow-test-consistent-piggyback-query-tasklist"
@@ -588,7 +589,8 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 	// decider logic
 	activityScheduled := false
 	activityData := int32(1)
-	handledSignal := false
+	var handledSignal atomic.Value
+	handledSignal.Store(false)
 	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 
@@ -613,7 +615,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 		} else if previousStartedEventID > 0 {
 			for _, event := range history.Events[previousStartedEventID:] {
 				if *event.EventType == types.EventTypeWorkflowExecutionSignaled {
-					handledSignal = true
+					handledSignal.Store(true)
 					return nil, []*types.Decision{}, nil
 				}
 			}
@@ -668,7 +670,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 	queryWorkflowFn := func(queryType string, rejectCondition *types.QueryRejectCondition) {
 		// before the query is answer the signal is not handled because the decision task is not dispatched
 		// to the worker yet
-		s.False(handledSignal)
+		s.False(handledSignal.Load().(bool))
 		queryResp, err := s.engine.QueryWorkflow(createContext(), &types.QueryWorkflowRequest{
 			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
@@ -683,7 +685,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 		})
 		// after the query is answered the signal is handled because query is consistent and since
 		// signal came before query signal must be handled by the time query returns
-		s.True(handledSignal)
+		s.True(handledSignal.Load().(bool))
 		queryResultCh <- QueryResult{Resp: queryResp, Err: err}
 	}
 
@@ -738,7 +740,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 	s.Equal("consistent query result", queryResultString)
 }
 
-func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
+func (s *IntegrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 	id := "integration-query-workflow-test-consistent-timeout"
 	wt := "integration-query-workflow-test-consistent-timeout-type"
 	tl := "integration-query-workflow-test-consistent-timeout-tasklist"
@@ -899,7 +901,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 	s.Nil(queryResult.Resp)
 }
 
-func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonSticky() {
+func (s *IntegrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonSticky() {
 	id := "integration-query-workflow-test-consistent-blocked-by-started-non-sticky"
 	wt := "integration-query-workflow-test-consistent-blocked-by-started-non-sticky-type"
 	tl := "integration-query-workflow-test-consistent-blocked-by-started-non-sticky-tasklist"
@@ -934,7 +936,8 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 	// decider logic
 	activityScheduled := false
 	activityData := int32(1)
-	handledSignal := false
+	var handledSignal atomic.Value
+	handledSignal.Store(false)
 	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 
@@ -961,7 +964,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 				if *event.EventType == types.EventTypeWorkflowExecutionSignaled {
 					// wait for some time to force decision task to stay in started state while query is issued
 					<-time.After(5 * time.Second)
-					handledSignal = true
+					handledSignal.Store(true)
 					return nil, []*types.Decision{}, nil
 				}
 			}
@@ -1014,7 +1017,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 	}
 	queryResultCh := make(chan QueryResult)
 	queryWorkflowFn := func(queryType string, rejectCondition *types.QueryRejectCondition) {
-		s.False(handledSignal)
+		s.False(handledSignal.Load().(bool))
 		queryResp, err := s.engine.QueryWorkflow(createContext(), &types.QueryWorkflowRequest{
 			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
@@ -1027,7 +1030,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 			QueryRejectCondition:  rejectCondition,
 			QueryConsistencyLevel: types.QueryConsistencyLevelStrong.Ptr(),
 		})
-		s.True(handledSignal)
+		s.True(handledSignal.Load().(bool))
 		queryResultCh <- QueryResult{Resp: queryResp, Err: err}
 	}
 
@@ -1083,7 +1086,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 	s.Equal("query-result", queryResultString)
 }
 
-func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky() {
+func (s *IntegrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky() {
 	id := "integration-query-workflow-test-consistent-new-decision-task-sticky"
 	wt := "integration-query-workflow-test-consistent-new-decision-task-sticky-type"
 	tl := "integration-query-workflow-test-consistent-new-decision-task-sticky-tasklist"
@@ -1123,7 +1126,8 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 	// decider logic
 	activityScheduled := false
 	activityData := int32(1)
-	handledSignal := false
+	var handledSignal atomic.Value
+	handledSignal.Store(false)
 	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 		if !activityScheduled {
@@ -1149,7 +1153,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 				if *event.EventType == types.EventTypeWorkflowExecutionSignaled {
 					// wait for some time to force decision task to stay in started state while query is issued
 					<-time.After(5 * time.Second)
-					handledSignal = true
+					handledSignal.Store(true)
 					return nil, []*types.Decision{}, nil
 				}
 			}
@@ -1204,7 +1208,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 	}
 	queryResultCh := make(chan QueryResult)
 	queryWorkflowFn := func(queryType string, rejectCondition *types.QueryRejectCondition) {
-		s.False(handledSignal)
+		s.False(handledSignal.Load().(bool))
 		queryResp, err := s.engine.QueryWorkflow(createContext(), &types.QueryWorkflowRequest{
 			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
@@ -1217,7 +1221,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 			QueryRejectCondition:  rejectCondition,
 			QueryConsistencyLevel: types.QueryConsistencyLevelStrong.Ptr(),
 		})
-		s.True(handledSignal)
+		s.True(handledSignal.Load().(bool))
 		queryResultCh <- QueryResult{Resp: queryResp, Err: err}
 	}
 
@@ -1302,7 +1306,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 	s.Equal("consistent query result", queryResultString)
 }
 
-func (s *integrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
+func (s *IntegrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
 	id := "integration-test-query-workflow-before-first-decision"
 	wt := "integration-test-query-workflow-before-first-decision-type"
 	tl := "integration-test-query-workflow-before-first-decision-tasklist"

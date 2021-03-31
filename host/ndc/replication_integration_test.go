@@ -37,7 +37,7 @@ const (
 	defaultTestPersistenceTimeout = 5 * time.Second
 )
 
-func (s *nDCIntegrationTestSuite) TestReplicationMessageApplication() {
+func (s *NDCIntegrationTestSuite) TestReplicationMessageApplication() {
 
 	workflowID := "replication-message-test" + uuid.New()
 	runID := uuid.New()
@@ -80,7 +80,7 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageApplication() {
 	s.Fail("Verification of replicated messages failed")
 }
 
-func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
+func (s *NDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 
 	workflowID := "replication-message-dlq-test" + uuid.New()
 	runID := uuid.New()
