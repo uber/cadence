@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/client"
@@ -1928,7 +1929,7 @@ func (s *TestBase) Publish(
 		},
 		retryPolicy,
 		func(e error) bool {
-			return common.IsPersistenceTransientError(e) || isMessageIDConflictError(e)
+			return persistence.IsTransientError(e) || isMessageIDConflictError(e)
 		})
 }
 
@@ -1980,7 +1981,7 @@ func (s *TestBase) PublishToDomainDLQ(
 		},
 		retryPolicy,
 		func(e error) bool {
-			return common.IsPersistenceTransientError(e) || isMessageIDConflictError(e)
+			return persistence.IsTransientError(e) || isMessageIDConflictError(e)
 		})
 }
 
