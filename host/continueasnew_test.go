@@ -33,7 +33,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func (s *integrationSuite) TestContinueAsNewWorkflow() {
+func (s *IntegrationSuite) TestContinueAsNewWorkflow() {
 	id := "integration-continue-as-new-workflow-test"
 	wt := "integration-continue-as-new-workflow-test-type"
 	tl := "integration-continue-as-new-workflow-test-tasklist"
@@ -139,7 +139,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 	s.Equal(searchAttr, lastRunStartedEvent.WorkflowExecutionStartedEventAttributes.SearchAttributes)
 }
 
-func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
+func (s *IntegrationSuite) TestContinueAsNewWorkflow_Timeout() {
 	id := "integration-continue-as-new-workflow-timeout-test"
 	wt := "integration-continue-as-new-workflow-timeout-test-type"
 	tl := "integration-continue-as-new-workflow-timeout-test-tasklist"
@@ -244,7 +244,7 @@ GetHistoryLoop:
 	s.True(workflowComplete)
 }
 
-func (s *integrationSuite) TestWorkflowContinueAsNew_TaskID() {
+func (s *IntegrationSuite) TestWorkflowContinueAsNew_TaskID() {
 	id := "integration-wf-continue-as-new-task-id-test"
 	wt := "integration-wf-continue-as-new-task-id-type"
 	tl := "integration-wf-continue-as-new-task-id-tasklist"
@@ -334,7 +334,7 @@ func (s *integrationSuite) TestWorkflowContinueAsNew_TaskID() {
 	}
 }
 
-func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
+func (s *IntegrationSuite) TestChildWorkflowWithContinueAsNew() {
 	parentID := "integration-child-workflow-with-continue-as-new-test-parent"
 	childID := "integration-child-workflow-with-continue-as-new-test-child"
 	wtParent := "integration-child-workflow-with-continue-as-new-test-parent-type"

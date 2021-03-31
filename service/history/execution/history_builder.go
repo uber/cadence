@@ -673,6 +673,11 @@ func (b *HistoryBuilder) newActivityTaskScheduledEvent(DecisionTaskCompletedEven
 	attributes.HeartbeatTimeoutSeconds = common.Int32Ptr(common.Int32Default(scheduleAttributes.HeartbeatTimeoutSeconds))
 	attributes.DecisionTaskCompletedEventID = DecisionTaskCompletedEventID
 	attributes.RetryPolicy = scheduleAttributes.RetryPolicy
+	if scheduleAttributes.Domain != "" {
+		// for backward compatibility
+		// old releases will encounter issues if Domain field is a pointer to an empty string.
+		attributes.Domain = common.StringPtr(scheduleAttributes.Domain)
+	}
 	historyEvent.ActivityTaskScheduledEventAttributes = attributes
 
 	return historyEvent

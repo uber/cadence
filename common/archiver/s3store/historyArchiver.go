@@ -128,7 +128,7 @@ func (h *historyArchiver) Archive(
 	defer func() {
 		sw.Stop()
 		if err != nil {
-			if common.IsPersistenceTransientError(err) || isRetryableError(err) {
+			if persistence.IsTransientError(err) || isRetryableError(err) {
 				scope.IncCounter(metrics.HistoryArchiverArchiveTransientErrorCount)
 			} else {
 				scope.IncCounter(metrics.HistoryArchiverArchiveNonRetryableErrorCount)
@@ -160,7 +160,7 @@ func (h *historyArchiver) Archive(
 		historyBlob, err := getNextHistoryBlob(ctx, historyIterator)
 		if err != nil {
 			logger := logger.WithTags(tag.ArchivalArchiveFailReason(archiver.ErrReasonReadHistory), tag.Error(err))
-			if common.IsPersistenceTransientError(err) {
+			if persistence.IsTransientError(err) {
 				logger.Error(archiver.ArchiveTransientErrorMsg)
 			} else {
 				logger.Error(archiver.ArchiveNonRetriableErrorMsg)
@@ -355,10 +355,10 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 		if contextExpired(ctx) {
 			return nil, archiver.ErrContextTimeout
 		}
-		if !common.IsPersistenceTransientError(err) {
+		if !persistence.IsTransientError(err) {
 			return nil, err
 		}
-		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), common.IsPersistenceTransientError)
+		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), persistence.IsTransientError)
 	}
 	return historyBlob, nil
 }

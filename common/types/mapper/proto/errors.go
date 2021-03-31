@@ -219,9 +219,13 @@ func ToError(err error) error {
 				Message: status.Message(),
 			}
 		}
+	case yarpcerrors.CodeUnknown:
+		return errors.New(status.Message())
 	}
 
-	return errors.New(status.Message())
+	// If error does not match anything, return raw yarpc status error
+	// There are some code that casts error to yarpc status to check for deadline exceeded status
+	return status
 }
 
 func getErrorDetails(err error) interface{} {

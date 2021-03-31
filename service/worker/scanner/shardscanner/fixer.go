@@ -94,7 +94,8 @@ func NewFixer(
 func (f *ShardFixer) Fix() FixReport {
 
 	result := FixReport{
-		ShardID: f.shardID,
+		ShardID:     f.shardID,
+		DomainStats: map[string]*FixStats{},
 	}
 
 	for f.itr.HasNext() {
@@ -108,13 +109,17 @@ func (f *ShardFixer) Fix() FixReport {
 			return result
 		}
 
-		domainName, err := f.domainCache.GetDomainName(soe.Execution.(entity.Entity).GetDomainID())
+		domainID := soe.Execution.(entity.Entity).GetDomainID()
+		domainName, err := f.domainCache.GetDomainName(domainID)
 		if err != nil {
 			result.Result.ControlFlowFailure = &ControlFlowFailure{
 				Info:        "failed to get domain name",
 				InfoDetails: err.Error(),
 			}
 			return result
+		}
+		if _, ok := result.DomainStats[domainID]; !ok {
+			result.DomainStats[domainID] = &FixStats{}
 		}
 
 		var fixResult invariant.ManagerFixResult
@@ -127,6 +132,7 @@ func (f *ShardFixer) Fix() FixReport {
 			}
 		}
 		result.Stats.EntitiesCount++
+		result.DomainStats[domainID].EntitiesCount++
 		foe := store.FixOutputEntity{
 			Execution: soe.Execution,
 			Input:     *soe,
@@ -142,6 +148,7 @@ func (f *ShardFixer) Fix() FixReport {
 				return result
 			}
 			result.Stats.FixedCount++
+			result.DomainStats[domainID].FixedCount++
 		case invariant.FixResultTypeSkipped:
 			if err := f.skippedWriter.Add(foe); err != nil {
 				result.Result.ControlFlowFailure = &ControlFlowFailure{
@@ -151,6 +158,7 @@ func (f *ShardFixer) Fix() FixReport {
 				return result
 			}
 			result.Stats.SkippedCount++
+			result.DomainStats[domainID].SkippedCount++
 		case invariant.FixResultTypeFailed:
 			if err := f.failedWriter.Add(foe); err != nil {
 				result.Result.ControlFlowFailure = &ControlFlowFailure{
@@ -160,6 +168,7 @@ func (f *ShardFixer) Fix() FixReport {
 				return result
 			}
 			result.Stats.FailedCount++
+			result.DomainStats[domainID].FailedCount++
 		default:
 			panic(fmt.Sprintf("unknown FixResultType: %v", fixResult.FixResultType))
 		}

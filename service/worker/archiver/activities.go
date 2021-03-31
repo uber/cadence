@@ -116,7 +116,7 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	}
 	logger := tagLoggerWithHistoryRequest(tagLoggerWithActivityInfo(container.Logger, activity.GetInfo(ctx)), &request)
 	logger.Error("failed to delete history events", tag.Error(err))
-	if !common.IsPersistenceTransientError(err) {
+	if !persistence.IsTransientError(err) {
 		return errDeleteNonRetriable
 	}
 	return err
