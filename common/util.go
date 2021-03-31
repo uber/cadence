@@ -203,16 +203,6 @@ func CreateReplicationServiceBusyRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// IsPersistenceTransientError checks if the error is a transient persistence error
-func IsPersistenceTransientError(err error) bool {
-	switch err.(type) {
-	case *types.InternalServiceError, *types.ServiceBusyError:
-		return true
-	}
-
-	return false
-}
-
 // IsServiceTransientError checks if the error is a transient error.
 func IsServiceTransientError(err error) bool {
 	switch err.(type) {

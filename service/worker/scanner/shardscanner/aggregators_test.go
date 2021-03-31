@@ -44,9 +44,10 @@ func TestAggregatorSuite(t *testing.T) {
 func (s *aggregatorsSuite) TestShardScanResultAggregator() {
 	agg := NewShardScanResultAggregator([]int{1, 2, 3}, 1, 3)
 	expected := &ShardScanResultAggregator{
-		minShard: 1,
-		maxShard: 3,
-		reports:  map[int]ScanReport{},
+		minShard:    1,
+		maxShard:    3,
+		reports:     map[int]ScanReport{},
+		domainStats: map[string]*ScanStats{},
 		status: map[int]ShardStatus{
 			1: ShardStatusRunning,
 			2: ShardStatusRunning,
@@ -88,6 +89,24 @@ func (s *aggregatorsSuite) TestShardScanResultAggregator() {
 				},
 			},
 		},
+		DomainStats: map[string]*ScanStats{
+			"ABC": &ScanStats{
+				EntitiesCount:    5,
+				CorruptedCount:   2,
+				CheckFailedCount: 1,
+				CorruptionByType: map[invariant.Name]int64{
+					invariant.HistoryExists:        1,
+					invariant.OpenCurrentExecution: 1,
+				},
+			},
+			"DEF": &ScanStats{
+				EntitiesCount:  5,
+				CorruptedCount: 1,
+				CorruptionByType: map[invariant.Name]int64{
+					invariant.HistoryExists: 1,
+				},
+			},
+		},
 	}
 	agg.AddReport(firstReport)
 	expected.status[1] = ShardStatusSuccess
@@ -106,6 +125,22 @@ func (s *aggregatorsSuite) TestShardScanResultAggregator() {
 	expected.aggregation.CorruptionByType = map[invariant.Name]int64{
 		invariant.HistoryExists:        2,
 		invariant.OpenCurrentExecution: 1,
+	}
+	expected.domainStats["ABC"] = &ScanStats{
+		EntitiesCount:    5,
+		CorruptedCount:   2,
+		CheckFailedCount: 1,
+		CorruptionByType: map[invariant.Name]int64{
+			invariant.HistoryExists:        1,
+			invariant.OpenCurrentExecution: 1,
+		},
+	}
+	expected.domainStats["DEF"] = &ScanStats{
+		EntitiesCount:  5,
+		CorruptedCount: 1,
+		CorruptionByType: map[invariant.Name]int64{
+			invariant.HistoryExists: 1,
+		},
 	}
 
 	expected.corruptionKeys = map[int]store.Keys{
@@ -131,6 +166,24 @@ func (s *aggregatorsSuite) TestShardScanResultAggregator() {
 		Result: ScanResult{
 			ControlFlowFailure: &ControlFlowFailure{},
 		},
+		DomainStats: map[string]*ScanStats{
+			"ABC": &ScanStats{
+				EntitiesCount:    5,
+				CorruptedCount:   2,
+				CheckFailedCount: 1,
+				CorruptionByType: map[invariant.Name]int64{
+					invariant.HistoryExists:        1,
+					invariant.OpenCurrentExecution: 1,
+				},
+			},
+			"DEF": &ScanStats{
+				EntitiesCount:  5,
+				CorruptedCount: 1,
+				CorruptionByType: map[invariant.Name]int64{
+					invariant.HistoryExists: 1,
+				},
+			},
+		},
 	}
 	agg.AddReport(secondReport)
 	expected.status[2] = ShardStatusControlFlowFailure
@@ -143,6 +196,14 @@ func (s *aggregatorsSuite) TestShardScanResultAggregator() {
 			EntitiesCount: 10,
 		},
 	}
+	expected.domainStats["ABC"].EntitiesCount *= 2
+	expected.domainStats["ABC"].CorruptedCount *= 2
+	expected.domainStats["ABC"].CheckFailedCount *= 2
+	expected.domainStats["ABC"].CorruptionByType[invariant.HistoryExists] *= 2
+	expected.domainStats["ABC"].CorruptionByType[invariant.OpenCurrentExecution] *= 2
+	expected.domainStats["DEF"].EntitiesCount *= 2
+	expected.domainStats["DEF"].CorruptedCount *= 2
+	expected.domainStats["DEF"].CorruptionByType[invariant.HistoryExists] *= 2
 	s.Equal(expected, agg)
 	shardStatus, err := agg.GetStatusResult(PaginatedShardQueryRequest{
 		StartingShardID: c.IntPtr(1),
@@ -175,14 +236,64 @@ func (s *aggregatorsSuite) TestShardScanResultAggregator() {
 			IsDone:      true,
 		},
 	}, corruptedKeys)
+
+	domainReport, err := agg.GetDomainStatus(DomainReportQueryRequest{
+		DomainID: c.StringPtr("ABC"),
+	})
+	s.NoError(err)
+	s.Equal(&DomainScanReportQueryResult{
+		Reports: []DomainScanStats{
+			{
+				DomainID: "ABC",
+				Stats: ScanStats{
+					EntitiesCount:    10,
+					CorruptedCount:   4,
+					CheckFailedCount: 2,
+					CorruptionByType: map[invariant.Name]int64{
+						invariant.HistoryExists:        2,
+						invariant.OpenCurrentExecution: 2,
+					},
+				},
+			},
+		},
+	}, domainReport)
+	allDomainsReport, err := agg.GetDomainStatus(DomainReportQueryRequest{})
+	s.NoError(err)
+	s.Equal(&DomainScanReportQueryResult{
+		Reports: []DomainScanStats{
+			{
+				DomainID: "ABC",
+				Stats: ScanStats{
+					EntitiesCount:    10,
+					CorruptedCount:   4,
+					CheckFailedCount: 2,
+					CorruptionByType: map[invariant.Name]int64{
+						invariant.HistoryExists:        2,
+						invariant.OpenCurrentExecution: 2,
+					},
+				},
+			},
+			{
+				DomainID: "DEF",
+				Stats: ScanStats{
+					EntitiesCount:  10,
+					CorruptedCount: 2,
+					CorruptionByType: map[invariant.Name]int64{
+						invariant.HistoryExists: 2,
+					},
+				},
+			},
+		},
+	}, allDomainsReport)
 }
 
 func (s *aggregatorsSuite) TestShardFixResultAggregator() {
 	agg := NewShardFixResultAggregator([]CorruptedKeysEntry{{ShardID: 1}, {ShardID: 2}, {ShardID: 3}}, 1, 3)
 	expected := &ShardFixResultAggregator{
-		minShard: 1,
-		maxShard: 3,
-		reports:  map[int]FixReport{},
+		minShard:    1,
+		maxShard:    3,
+		reports:     map[int]FixReport{},
+		domainStats: map[string]*FixStats{},
 		status: map[int]ShardStatus{
 			1: ShardStatusRunning,
 			2: ShardStatusRunning,

@@ -973,7 +973,7 @@ func (c *contextImpl) appendHistoryV2EventsWithRetry(
 	err := backoff.Retry(
 		op,
 		persistenceOperationRetryPolicy,
-		common.IsPersistenceTransientError,
+		persistence.IsTransientError,
 	)
 	return int64(resp), err
 }
@@ -990,10 +990,20 @@ func (c *contextImpl) createWorkflowExecutionWithRetry(
 		return err
 	}
 
+	isRetryable := func(err error) bool {
+		if _, ok := err.(*persistence.TimeoutError); ok {
+			// TODO: is timeout error retryable for create workflow?
+			// if we treat it as retryable, user may receive workflowAlreadyRunning error
+			// on the first start workflow execution request.
+			return false
+		}
+		return persistence.IsTransientError(err)
+	}
+
 	err := backoff.Retry(
 		op,
 		persistenceOperationRetryPolicy,
-		common.IsPersistenceTransientError,
+		isRetryable,
 	)
 	switch err.(type) {
 	case nil:
@@ -1031,7 +1041,7 @@ func (c *contextImpl) getWorkflowExecutionWithRetry(
 	err := backoff.Retry(
 		op,
 		persistenceOperationRetryPolicy,
-		common.IsPersistenceTransientError,
+		persistence.IsTransientError,
 	)
 	switch err.(type) {
 	case nil:
@@ -1064,9 +1074,17 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 		return err
 	}
 
+	isRetryable := func(err error) bool {
+		if _, ok := err.(*persistence.TimeoutError); ok {
+			// timeout error is not retryable for update workflow execution
+			return false
+		}
+		return persistence.IsTransientError(err)
+	}
+
 	err := backoff.Retry(
 		op, persistenceOperationRetryPolicy,
-		common.IsPersistenceTransientError,
+		isRetryable,
 	)
 	switch err.(type) {
 	case nil:

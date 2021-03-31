@@ -33,7 +33,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func (s *integrationSuite) TestExternalRequestCancelWorkflowExecution() {
+func (s *IntegrationSuite) TestExternalRequestCancelWorkflowExecution() {
 	id := "integration-request-cancel-workflow-test"
 	wt := "integration-request-cancel-workflow-test-type"
 	tl := "integration-request-cancel-workflow-test-tasklist"
@@ -170,7 +170,7 @@ GetHistoryLoop:
 	s.True(executionCancelled)
 }
 
-func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution() {
+func (s *IntegrationSuite) TestRequestCancelWorkflowDecisionExecution() {
 	id := "integration-cancel-workflow-decision-test"
 	wt := "integration-cancel-workflow-decision-test-type"
 	tl := "integration-cancel-workflow-decision-test-tasklist"
@@ -404,7 +404,7 @@ GetHistoryLoop:
 	s.True(executionCancelled)
 }
 
-func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution_UnKnownTarget() {
+func (s *IntegrationSuite) TestRequestCancelWorkflowDecisionExecution_UnKnownTarget() {
 	id := "integration-cancel-unknown-workflow-decision-test"
 	wt := "integration-cancel-unknown-workflow-decision-test-type"
 	tl := "integration-cancel-unknown-workflow-decision-test-tasklist"

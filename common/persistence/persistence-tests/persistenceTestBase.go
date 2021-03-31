@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/client"
@@ -89,6 +90,13 @@ type (
 		PayloadSerializer         p.PayloadSerializer
 	}
 
+	// TestBaseParams defines the input of TestBase
+	TestBaseParams struct {
+		DefaultTestCluster    PersistenceTestCluster
+		VisibilityTestCluster PersistenceTestCluster
+		ClusterMetadata       cluster.Metadata
+	}
+
 	// PersistenceTestCluster exposes management operations on a database
 	PersistenceTestCluster interface {
 		SetupTestDatabase()
@@ -106,13 +114,37 @@ const (
 	defaultScheduleToStartTimeout = 111
 )
 
+// NewTestBaseFromParams returns a customized test base from given input
+func NewTestBaseFromParams(params TestBaseParams) TestBase {
+	logger, err := loggerimpl.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+	return TestBase{
+		DefaultTestCluster:    params.DefaultTestCluster,
+		VisibilityTestCluster: params.VisibilityTestCluster,
+		ClusterMetadata:       params.ClusterMetadata,
+		PayloadSerializer:     p.NewPayloadSerializer(),
+		Logger:                logger,
+	}
+}
+
 // NewTestBaseWithCassandra returns a persistence test base backed by cassandra datastore
 func NewTestBaseWithCassandra(options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
 	testCluster := cassandra.NewTestCluster(options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.SchemaDir)
-	return newTestBase(options, testCluster)
+	metadata := options.ClusterMetadata
+	if metadata == nil {
+		metadata = cluster.GetTestClusterMetadata(false, false)
+	}
+	params := TestBaseParams{
+		DefaultTestCluster:    testCluster,
+		VisibilityTestCluster: testCluster,
+		ClusterMetadata:       metadata,
+	}
+	return NewTestBaseFromParams(params)
 }
 
 // NewTestBaseWithSQL returns a new persistence test base backed by SQL
@@ -121,7 +153,16 @@ func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
 	testCluster := sql.NewTestCluster(options.SQLDBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.SchemaDir)
-	return newTestBase(options, testCluster)
+	metadata := options.ClusterMetadata
+	if metadata == nil {
+		metadata = cluster.GetTestClusterMetadata(false, false)
+	}
+	params := TestBaseParams{
+		DefaultTestCluster:    testCluster,
+		VisibilityTestCluster: testCluster,
+		ClusterMetadata:       metadata,
+	}
+	return NewTestBaseFromParams(params)
 }
 
 // NewTestBase returns a persistence test base backed by either cassandra or sql
@@ -134,26 +175,6 @@ func NewTestBase(options *TestBaseOptions) TestBase {
 	default:
 		panic("invalid storeType " + options.StoreType)
 	}
-}
-
-func newTestBase(options *TestBaseOptions, testCluster PersistenceTestCluster) TestBase {
-	metadata := options.ClusterMetadata
-	if metadata == nil {
-		metadata = cluster.GetTestClusterMetadata(false, false)
-	}
-	options.ClusterMetadata = metadata
-	base := TestBase{
-		DefaultTestCluster:    testCluster,
-		VisibilityTestCluster: testCluster,
-		ClusterMetadata:       metadata,
-		PayloadSerializer:     p.NewPayloadSerializer(),
-	}
-	logger, err := loggerimpl.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
-	base.Logger = logger
-	return base
 }
 
 // Config returns the persistence configuration for this test
@@ -1908,7 +1929,7 @@ func (s *TestBase) Publish(
 		},
 		retryPolicy,
 		func(e error) bool {
-			return common.IsPersistenceTransientError(e) || isMessageIDConflictError(e)
+			return persistence.IsTransientError(e) || isMessageIDConflictError(e)
 		})
 }
 
@@ -1960,7 +1981,7 @@ func (s *TestBase) PublishToDomainDLQ(
 		},
 		retryPolicy,
 		func(e error) bool {
-			return common.IsPersistenceTransientError(e) || isMessageIDConflictError(e)
+			return persistence.IsTransientError(e) || isMessageIDConflictError(e)
 		})
 }
 

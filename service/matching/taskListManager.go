@@ -449,7 +449,7 @@ func (c *taskListManagerImpl) renewLeaseWithRetry() (taskListState, error) {
 		return
 	}
 	c.metricScope().IncCounter(metrics.LeaseRequestPerTaskListCounter)
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	err := backoff.Retry(op, persistenceOperationRetryPolicy, persistence.IsTransientError)
 	if err != nil {
 		c.metricScope().IncCounter(metrics.LeaseFailurePerTaskListCounter)
 		c.engine.unloadTaskList(c.taskListID)
@@ -492,7 +492,7 @@ func (c *taskListManagerImpl) executeWithRetry(
 		if _, ok := err.(*persistence.ConditionFailedError); ok {
 			return false
 		}
-		return common.IsPersistenceTransientError(err)
+		return persistence.IsTransientError(err)
 	})
 
 	if _, ok := err.(*persistence.ConditionFailedError); ok {
