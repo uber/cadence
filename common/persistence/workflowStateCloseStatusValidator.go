@@ -138,21 +138,48 @@ func validateWorkflowCloseStatus(
 // ToInternalWorkflowExecutionCloseStatus convert persistence representation of close status to internal representation
 func ToInternalWorkflowExecutionCloseStatus(
 	closeStatus int,
-) types.WorkflowExecutionCloseStatus {
+) *types.WorkflowExecutionCloseStatus {
 
 	switch closeStatus {
+	case WorkflowCloseStatusNone:
+		return nil
 	case WorkflowCloseStatusCompleted:
-		return types.WorkflowExecutionCloseStatusCompleted
+		return types.WorkflowExecutionCloseStatusCompleted.Ptr()
 	case WorkflowCloseStatusFailed:
-		return types.WorkflowExecutionCloseStatusFailed
+		return types.WorkflowExecutionCloseStatusFailed.Ptr()
 	case WorkflowCloseStatusCanceled:
-		return types.WorkflowExecutionCloseStatusCanceled
+		return types.WorkflowExecutionCloseStatusCanceled.Ptr()
 	case WorkflowCloseStatusTerminated:
-		return types.WorkflowExecutionCloseStatusTerminated
+		return types.WorkflowExecutionCloseStatusTerminated.Ptr()
 	case WorkflowCloseStatusContinuedAsNew:
-		return types.WorkflowExecutionCloseStatusContinuedAsNew
+		return types.WorkflowExecutionCloseStatusContinuedAsNew.Ptr()
 	case WorkflowCloseStatusTimedOut:
-		return types.WorkflowExecutionCloseStatusTimedOut
+		return types.WorkflowExecutionCloseStatusTimedOut.Ptr()
+	default:
+		panic("Invalid value for enum WorkflowExecutionCloseStatus")
+	}
+}
+
+// FromInternalWorkflowExecutionCloseStatus convert internal representation of close status to persistence representation
+func FromInternalWorkflowExecutionCloseStatus(
+	closeStatus *types.WorkflowExecutionCloseStatus,
+) int {
+	if closeStatus == nil {
+		return WorkflowCloseStatusNone
+	}
+	switch *closeStatus {
+	case types.WorkflowExecutionCloseStatusCompleted:
+		return WorkflowCloseStatusCompleted
+	case types.WorkflowExecutionCloseStatusFailed:
+		return WorkflowCloseStatusFailed
+	case types.WorkflowExecutionCloseStatusCanceled:
+		return WorkflowCloseStatusCanceled
+	case types.WorkflowExecutionCloseStatusTerminated:
+		return WorkflowCloseStatusTerminated
+	case types.WorkflowExecutionCloseStatusContinuedAsNew:
+		return WorkflowCloseStatusContinuedAsNew
+	case types.WorkflowExecutionCloseStatusTimedOut:
+		return WorkflowCloseStatusTimedOut
 	default:
 		panic("Invalid value for enum WorkflowExecutionCloseStatus")
 	}
