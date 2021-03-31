@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"strconv"
-	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
