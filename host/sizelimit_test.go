@@ -37,7 +37,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-type sizeLimitIntegrationSuite struct {
+type SizeLimitIntegrationSuite struct {
 	// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 	// not merely log an error
 	*require.Assertions
@@ -45,25 +45,39 @@ type sizeLimitIntegrationSuite struct {
 }
 
 // This cluster use customized threshold for history config
-func (s *sizeLimitIntegrationSuite) SetupSuite() {
-	s.setupSuite("testdata/integration_sizelimit_cluster.yaml")
+func (s *SizeLimitIntegrationSuite) SetupSuite() {
+	s.setupSuite()
 }
 
-func (s *sizeLimitIntegrationSuite) TearDownSuite() {
+func (s *SizeLimitIntegrationSuite) TearDownSuite() {
 	s.tearDownSuite()
 }
 
-func (s *sizeLimitIntegrationSuite) SetupTest() {
+func (s *SizeLimitIntegrationSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 }
 
 func TestSizeLimitIntegrationSuite(t *testing.T) {
 	flag.Parse()
-	suite.Run(t, new(sizeLimitIntegrationSuite))
+
+	clusterConfig, err := GetTestClusterConfig("testdata/integration_sizelimit_cluster.yaml")
+	if err != nil {
+		panic(err)
+	}
+	testCluster := NewPersistenceTestCluster(clusterConfig)
+
+	s := new(SizeLimitIntegrationSuite)
+	params := IntegrationBaseParams{
+		DefaultTestCluster:    testCluster,
+		VisibilityTestCluster: testCluster,
+		TestClusterConfig:     clusterConfig,
+	}
+	s.IntegrationBase = NewIntegrationBase(params)
+	suite.Run(t, s)
 }
 
-func (s *sizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
+func (s *SizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 	id := "integration-terminate-workflow-by-size-limit-test"
 	wt := "integration-terminate-workflow-by-size-limit-test-type"
 	tl := "integration-terminate-workflow-by-size-limit-test-tasklist"

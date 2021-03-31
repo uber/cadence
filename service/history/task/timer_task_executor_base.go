@@ -227,7 +227,7 @@ func (t *timerTaskExecutorBase) deleteWorkflowExecution(
 			RunID:      task.RunID,
 		})
 	}
-	return backoff.Retry(op, taskRetryPolicy, common.IsPersistenceTransientError)
+	return backoff.Retry(op, taskRetryPolicy, persistence.IsTransientError)
 }
 
 func (t *timerTaskExecutorBase) deleteCurrentWorkflowExecution(
@@ -242,7 +242,7 @@ func (t *timerTaskExecutorBase) deleteCurrentWorkflowExecution(
 			RunID:      task.RunID,
 		})
 	}
-	return backoff.Retry(op, taskRetryPolicy, common.IsPersistenceTransientError)
+	return backoff.Retry(op, taskRetryPolicy, persistence.IsTransientError)
 }
 
 func (t *timerTaskExecutorBase) deleteWorkflowHistory(
@@ -262,7 +262,7 @@ func (t *timerTaskExecutorBase) deleteWorkflowHistory(
 		})
 
 	}
-	return backoff.Retry(op, taskRetryPolicy, common.IsPersistenceTransientError)
+	return backoff.Retry(op, taskRetryPolicy, persistence.IsTransientError)
 }
 
 func (t *timerTaskExecutorBase) deleteWorkflowVisibility(
@@ -280,5 +280,5 @@ func (t *timerTaskExecutorBase) deleteWorkflowVisibility(
 		// TODO: expose GetVisibilityManager method on shardContext interface
 		return t.shard.GetService().GetVisibilityManager().DeleteWorkflowExecution(ctx, request) // delete from db
 	}
-	return backoff.Retry(op, taskRetryPolicy, common.IsPersistenceTransientError)
+	return backoff.Retry(op, taskRetryPolicy, persistence.IsTransientError)
 }

@@ -1039,7 +1039,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 			return &types.HistoryQueryWorkflowResponse{
 				Response: &types.QueryWorkflowResponse{
 					QueryRejected: &types.QueryRejected{
-						CloseStatus: persistence.ToInternalWorkflowExecutionCloseStatus(int(closeStatus)).Ptr(),
+						CloseStatus: persistence.ToInternalWorkflowExecutionCloseStatus(int(closeStatus)),
 					},
 				},
 			}, nil
@@ -1486,8 +1486,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	}
 	if executionInfo.State == persistence.WorkflowStateCompleted {
 		// for closed workflow
-		closeStatus := persistence.ToInternalWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
-		result.WorkflowExecutionInfo.CloseStatus = &closeStatus
+		result.WorkflowExecutionInfo.CloseStatus = persistence.ToInternalWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 		completionEvent, err := mutableState.GetCompletionEvent(ctx)
 		if err != nil {
 			return nil, err

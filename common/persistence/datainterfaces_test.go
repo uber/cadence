@@ -21,9 +21,13 @@
 package persistence
 
 import (
+	"errors"
 	"testing"
 
-	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/uber/cadence/common/types"
 )
 
 func TestClusterReplicationConfigGetCopy(t *testing.T) {
@@ -32,4 +36,25 @@ func TestClusterReplicationConfigGetCopy(t *testing.T) {
 	}
 	assert.Equal(t, config, config.GetCopy()) // deep equal
 	assert.Equal(t, true, config != config.GetCopy())
+}
+
+func TestIsTransientError(t *testing.T) {
+	transientErrors := []error{
+		&types.ServiceBusyError{},
+		&types.InternalServiceError{},
+		&TimeoutError{},
+	}
+	for _, err := range transientErrors {
+		require.True(t, IsTransientError(err))
+	}
+
+	nonRetryableErrors := []error{
+		&types.EntityNotExistsError{},
+		&types.DomainAlreadyExistsError{},
+		&WorkflowExecutionAlreadyStartedError{},
+		errors.New("some unknown error"),
+	}
+	for _, err := range nonRetryableErrors {
+		require.False(t, IsTransientError(err))
+	}
 }

@@ -144,7 +144,7 @@ func (h *historyArchiver) Archive(ctx context.Context, URI archiver.URI, request
 
 		if err != nil {
 			logger := logger.WithTags(tag.ArchivalArchiveFailReason(archiver.ErrReasonReadHistory), tag.Error(err))
-			if !common.IsPersistenceTransientError(err) {
+			if !persistence.IsTransientError(err) {
 				logger.Error(archiver.ArchiveNonRetriableErrorMsg)
 				return errUploadNonRetriable
 			}
@@ -305,10 +305,10 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 		if contextExpired(ctx) {
 			return nil, archiver.ErrContextTimeout
 		}
-		if !common.IsPersistenceTransientError(err) {
+		if !persistence.IsTransientError(err) {
 			return nil, err
 		}
-		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), common.IsPersistenceTransientError)
+		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), persistence.IsTransientError)
 	}
 	return historyBlob, nil
 }
