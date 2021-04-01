@@ -5039,6 +5039,7 @@ func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *
 		Memo:                                FromMemo(t.Memo),
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
 		Header:                              FromHeader(t.Header),
+		DelayStartSeconds:                   t.DelayStartSeconds,
 	}
 }
 
