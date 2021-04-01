@@ -322,7 +322,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		workflowStartTimestamp,
 		workflowExecutionTimestamp.UnixNano(),
 		workflowCloseTimestamp,
-		workflowCloseStatus,
+		*workflowCloseStatus,
 		workflowHistoryLength,
 		task.GetTaskID(),
 		visibilityMemo,
@@ -1296,10 +1296,14 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 		CronSchedule:          attributes.CronSchedule,
 		Memo:                  attributes.Memo,
 		SearchAttributes:      attributes.SearchAttributes,
+		DelayStartSeconds:     attributes.DelayStartSeconds,
 	}
 
 	now := t.shard.GetTimeSource().Now()
-	historyStartReq := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, now)
+	historyStartReq, historyReqError := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, now)
+	if historyReqError != nil {
+		return "", historyReqError
+	}
 
 	historyStartReq.ParentExecutionInfo = &types.ParentExecutionInfo{
 		DomainUUID: task.DomainID,
