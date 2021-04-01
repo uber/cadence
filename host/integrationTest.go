@@ -433,28 +433,67 @@ StartNewExecutionLoop:
 }
 
 func (s *IntegrationSuite) TestSequentialWorkflow() {
-	id := "integration-sequential-workflow-test"
-	wt := "integration-sequential-workflow-test-type"
-	tl := "integration-sequential-workflow-test-tasklist"
+	RunSequentialWorkflow(
+		s,
+		"integration-sequential-workflow-test",
+		"integration-sequential-workflow-test-type",
+		"integration-sequential-workflow-test-tasklist",
+		0,
+	)
+}
+
+func (s *IntegrationSuite) TestDelayStartWorkflow() {
+	startWorkflowTS := time.Now()
+	RunSequentialWorkflow(
+		s,
+		"integration-delay-start-workflow-test",
+		"integration-delay-start-workflow-test-type",
+		"integration-delay-start-workflow-test-tasklist",
+		10,
+	)
+
+	targetBackoffDuration := time.Second * 10
+	backoffDurationTolerance := time.Millisecond * 3000
+	backoffDuration := time.Since(startWorkflowTS)
+	s.True(
+		backoffDuration > targetBackoffDuration,
+		"Backoff duration(%f s) should have been at least 5 seconds",
+		time.Duration(backoffDuration).Round(time.Millisecond).Seconds(),
+	)
+	s.True(
+		backoffDuration < targetBackoffDuration+backoffDurationTolerance,
+		"Integration test too long: %f seconds",
+		time.Duration(backoffDuration).Round(time.Millisecond).Seconds(),
+	)
+}
+
+func RunSequentialWorkflow(
+	s *IntegrationSuite,
+	workflowId string,
+	workflowTypeStr string,
+	taskListStr string,
+	delayStartSeconds int32,
+) {
 	identity := "worker1"
 	activityName := "activity_type1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = wt
+	workflowType.Name = workflowTypeStr
 
 	taskList := &types.TaskList{}
-	taskList.Name = tl
+	taskList.Name = taskListStr
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
-		WorkflowID:                          id,
+		WorkflowID:                          workflowId,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
+		DelayStartSeconds:                   common.Int32Ptr(delayStartSeconds),
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -477,7 +516,7 @@ func (s *IntegrationSuite) TestSequentialWorkflow() {
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    strconv.Itoa(int(activityCounter)),
 					ActivityType:                  &types.ActivityType{Name: activityName},
-					TaskList:                      &types.TaskList{Name: tl},
+					TaskList:                      &types.TaskList{Name: taskListStr},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
@@ -499,7 +538,7 @@ func (s *IntegrationSuite) TestSequentialWorkflow() {
 	expectedActivity := int32(1)
 	atHandler := func(execution *types.WorkflowExecution, activityType *types.ActivityType,
 		ActivityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
-		s.Equal(id, execution.WorkflowID)
+		s.Equal(workflowId, execution.WorkflowID)
 		s.Equal(activityName, activityType.Name)
 		id, _ := strconv.Atoi(ActivityID)
 		s.Equal(int(expectedActivity), id)
