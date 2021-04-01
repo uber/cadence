@@ -1788,7 +1788,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errInvalidTaskStartToCloseTimeoutSeconds, scope)
 	}
 
-	if startRequest.GetDelayStartSeconds() <= 0 {
+	if startRequest.GetDelayStartSeconds() < 0 {
 		return nil, wh.error(errInvalidDelayStartSeconds, scope)
 	}
 
@@ -1836,7 +1836,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
 	historyRequest, err := common.CreateHistoryStartWorkflowRequest(
 		domainID, startRequest, time.Now())
-	if historyRequest == nil {
+	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 

@@ -1296,11 +1296,12 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 		CronSchedule:          attributes.CronSchedule,
 		Memo:                  attributes.Memo,
 		SearchAttributes:      attributes.SearchAttributes,
+		DelayStartSeconds:     attributes.DelayStartSeconds,
 	}
 
 	now := t.shard.GetTimeSource().Now()
 	historyStartReq, historyReqError := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, now)
-	if historyStartReq == nil {
+	if historyReqError != nil {
 		return "", historyReqError
 	}
 

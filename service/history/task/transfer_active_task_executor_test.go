@@ -2269,7 +2269,7 @@ func (s *transferActiveTaskExecutorSuite) createChildWorkflowExecutionRequest(
 
 	historyStartReq, err := common.CreateHistoryStartWorkflowRequest(
 		task.TargetDomainID, frontendStartReq, now)
-	if historyStartReq == nil {
+	if err != nil {
 		return nil, err
 	}
 

@@ -778,7 +778,7 @@ UpdateWorkflowLoop:
 
 		if signalWithStartRequest != nil {
 			startRequest, err = getStartRequest(domainID, signalWithStartRequest.SignalWithStartRequest)
-			if startRequest == nil {
+			if err != nil {
 				return nil, err
 			}
 		}
@@ -2287,7 +2287,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 
 	// Start workflow and signal
 	startRequest, err := getStartRequest(domainID, sRequest)
-	if startRequest == nil {
+	if err != nil {
 		return nil, err
 	}
 
@@ -2764,7 +2764,7 @@ func getScheduleID(
 func getStartRequest(
 	domainID string,
 	request *types.SignalWithStartWorkflowExecutionRequest,
-) (historyReq *types.HistoryStartWorkflowExecutionRequest, retError error) {
+) (*types.HistoryStartWorkflowExecutionRequest, error) {
 
 	req := &types.StartWorkflowExecutionRequest{
 		Domain:                              request.Domain,
@@ -2782,10 +2782,11 @@ func getStartRequest(
 		Memo:                                request.Memo,
 		SearchAttributes:                    request.SearchAttributes,
 		Header:                              request.Header,
+		DelayStartSeconds:                   request.DelayStartSeconds,
 	}
 
 	startRequest, err := common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
-	if startRequest == nil {
+	if err != nil {
 		return nil, err
 	}
 

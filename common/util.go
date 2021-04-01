@@ -103,7 +103,7 @@ var (
 	ErrContextTimeoutTooShort = &types.BadRequestError{Message: "Context timeout is too short."}
 	// ErrContextTimeoutNotSet is error for not setting a context timeout when calling a long poll API
 	ErrContextTimeoutNotSet = &types.BadRequestError{Message: "Context timeout is not set."}
-	ErrDelayStartSeconds    = &types.BadRequestError{Message: "A valid DelayStartSeconds is not set on request."}
+	ErrDelayStartSeconds    = &types.BadRequestError{Message: "Conflicting inputs: both DelayStartSeconds and Cron schedule is set"}
 )
 
 // AwaitWaitGroup calls Wait on the given wait
@@ -422,7 +422,7 @@ func CreateHistoryStartWorkflowRequest(
 	domainID string,
 	startRequest *types.StartWorkflowExecutionRequest,
 	now time.Time,
-) (resp *types.HistoryStartWorkflowExecutionRequest, retError error) {
+) (*types.HistoryStartWorkflowExecutionRequest, error) {
 	histRequest := &types.HistoryStartWorkflowExecutionRequest{
 		DomainUUID:   domainID,
 		StartRequest: startRequest,

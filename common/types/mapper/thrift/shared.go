@@ -5063,6 +5063,7 @@ func ToStartWorkflowExecutionRequest(t *shared.StartWorkflowExecutionRequest) *t
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		Header:                              ToHeader(t.Header),
+		DelayStartSeconds:                   t.DelayStartSeconds,
 	}
 }
 
