@@ -299,7 +299,8 @@ func initializeDomainHandler(
 func initializeLogger(
 	serviceConfig *config.Config,
 ) log.Logger {
-	return loggerimpl.NewLogger(serviceConfig.Log.NewZapLogger())
+	zapLogger, _ := serviceConfig.Log.NewZapLogger()
+	return loggerimpl.NewLogger(zapLogger)
 }
 
 func initializeMetadataMgr(

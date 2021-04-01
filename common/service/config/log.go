@@ -32,7 +32,7 @@ const fileMode = os.FileMode(0644)
 
 // NewZapLogger builds and returns a new zap
 // logger for this logging configuration
-func (cfg *Logger) NewZapLogger() *zap.Logger {
+func (cfg *Logger) NewZapLogger() (*zap.Logger, error) {
 	encodeConfig := zapcore.EncoderConfig{
 		TimeKey:        "ts",
 		LevelKey:       "level",
@@ -64,8 +64,7 @@ func (cfg *Logger) NewZapLogger() *zap.Logger {
 		OutputPaths:      []string{outputPath},
 		ErrorOutputPaths: []string{outputPath},
 	}
-	logger, _ := config.Build()
-	return logger
+	return config.Build()
 }
 
 func parseZapLevel(level string) zapcore.Level {
