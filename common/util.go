@@ -103,6 +103,7 @@ var (
 	ErrContextTimeoutTooShort = &types.BadRequestError{Message: "Context timeout is too short."}
 	// ErrContextTimeoutNotSet is error for not setting a context timeout when calling a long poll API
 	ErrContextTimeoutNotSet = &types.BadRequestError{Message: "Context timeout is not set."}
+	ErrDelayStartSeconds    = &types.BadRequestError{Message: "A valid DelayStartSeconds is not set on request."}
 )
 
 // AwaitWaitGroup calls Wait on the given wait
@@ -421,12 +422,22 @@ func CreateHistoryStartWorkflowRequest(
 	domainID string,
 	startRequest *types.StartWorkflowExecutionRequest,
 	now time.Time,
-) *types.HistoryStartWorkflowExecutionRequest {
+) (resp *types.HistoryStartWorkflowExecutionRequest, retError error) {
 	histRequest := &types.HistoryStartWorkflowExecutionRequest{
 		DomainUUID:   domainID,
 		StartRequest: startRequest,
 	}
-	firstDecisionTaskBackoffSeconds := backoff.GetBackoffForNextScheduleInSeconds(startRequest.GetCronSchedule(), now, now)
+
+	firstDecisionTaskBackoffSeconds := backoff.GetBackoffForNextScheduleInSeconds(
+		startRequest.GetCronSchedule(), now, now)
+	delayStartSeconds := startRequest.GetDelayStartSeconds()
+	if delayStartSeconds > 0 && firstDecisionTaskBackoffSeconds > 0 {
+		return nil, ErrDelayStartSeconds
+	}
+	if delayStartSeconds > 0 {
+		firstDecisionTaskBackoffSeconds = delayStartSeconds
+	}
+
 	histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(firstDecisionTaskBackoffSeconds)
 
 	if startRequest.RetryPolicy != nil && startRequest.RetryPolicy.GetExpirationIntervalInSeconds() > 0 {
@@ -436,7 +447,7 @@ func CreateHistoryStartWorkflowRequest(
 		histRequest.ExpirationTimestamp = Int64Ptr(deadline.Round(time.Millisecond).UnixNano())
 	}
 
-	return histRequest
+	return histRequest, nil
 }
 
 // CheckEventBlobSizeLimit checks if a blob data exceeds limits. It logs a warning if it exceeds warnLimit,

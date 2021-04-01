@@ -124,6 +124,7 @@ var (
 	errInvalidRetention                           = &types.BadRequestError{Message: "RetentionDays is invalid."}
 	errInvalidExecutionStartToCloseTimeoutSeconds = &types.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidTaskStartToCloseTimeoutSeconds      = &types.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
+	errInvalidDelayStartSeconds                   = &types.BadRequestError{Message: "A valid DelayStartSeconds is not set on request."}
 	errQueryDisallowedForDomain                   = &types.BadRequestError{Message: "Domain is not allowed to query, please contact cadence team to re-enable queries."}
 	errClusterNameNotSet                          = &types.BadRequestError{Message: "Cluster name is not set."}
 	errEmptyReplicationInfo                       = &types.BadRequestError{Message: "Replication task info is not set."}
@@ -1787,6 +1788,10 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errInvalidTaskStartToCloseTimeoutSeconds, scope)
 	}
 
+	if startRequest.GetDelayStartSeconds() <= 0 {
+		return nil, wh.error(errInvalidDelayStartSeconds, scope)
+	}
+
 	if startRequest.GetRequestID() == "" {
 		return nil, wh.error(errRequestIDNotSet, scope)
 	}
@@ -1829,8 +1834,13 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	}
 
 	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
-	resp, err = wh.GetHistoryClient().
-		StartWorkflowExecution(ctx, common.CreateHistoryStartWorkflowRequest(domainID, startRequest, time.Now()))
+	historyRequest, err := common.CreateHistoryStartWorkflowRequest(
+		domainID, startRequest, time.Now())
+	if historyRequest == nil {
+		return nil, wh.error(err, scope)
+	}
+
+	resp, err = wh.GetHistoryClient().StartWorkflowExecution(ctx, historyRequest)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
