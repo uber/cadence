@@ -78,7 +78,7 @@ func (d *RPCFactory) createDispatcher() *yarpc.Dispatcher {
 	if err != nil {
 		d.logger.Fatal("Failed to create transport channel", tag.Error(err))
 	}
-	d.logger.Info("Created RPC dispatcher and listening", tag.Service(d.serviceName), tag.Address(hostAddress))
+	d.logger.Info("Created RPC dispatcher and listening", tag.Address(hostAddress))
 	return yarpc.NewDispatcher(yarpc.Config{
 		Name:     d.serviceName,
 		Inbounds: yarpc.Inbounds{d.ch.NewInbound()},
@@ -93,7 +93,7 @@ func (d *RPCFactory) CreateDispatcherForOutbound(
 ) *yarpc.Dispatcher {
 
 	// Setup dispatcher(outbound) for onebox
-	d.logger.Info("Created RPC dispatcher outbound", tag.Service(d.serviceName), tag.Address(hostName))
+	d.logger.Info("Created RPC dispatcher outbound", tag.Address(hostName))
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: callerName,
 		Outbounds: yarpc.Outbounds{

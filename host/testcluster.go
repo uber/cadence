@@ -30,13 +30,11 @@ import (
 
 	"github.com/uber/cadence/client"
 	adminClient "github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/filestore"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
@@ -46,8 +44,9 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	pes "github.com/uber/cadence/common/persistence/elasticsearch"
+	"github.com/uber/cadence/common/persistence/cassandra"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres"
 	"github.com/uber/cadence/common/service/config"
@@ -107,72 +106,20 @@ const (
 )
 
 // NewCluster creates and sets up the test cluster
-func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, error) {
-
-	clusterMetadata := cluster.GetTestClusterMetadata(
-		options.ClusterMetadata.EnableGlobalDomain,
-		options.IsMasterCluster,
-	)
-	if !options.IsMasterCluster && options.ClusterMetadata.MasterClusterName != "" { // xdc cluster metadata setup
-		clusterMetadata = cluster.NewMetadata(
-			logger,
-			dynamicconfig.GetBoolPropertyFn(options.ClusterMetadata.EnableGlobalDomain),
-			options.ClusterMetadata.FailoverVersionIncrement,
-			options.ClusterMetadata.MasterClusterName,
-			options.ClusterMetadata.CurrentClusterName,
-			options.ClusterMetadata.ClusterInformation,
-		)
-	}
-
-	options.Persistence.StoreType = TestFlags.PersistenceType
-	if TestFlags.PersistenceType == config.StoreTypeSQL {
-		var ops *persistencetests.TestBaseOptions
-		if TestFlags.SQLPluginName == mysql.PluginName {
-			ops = mysql.GetTestClusterOption()
-		} else if TestFlags.SQLPluginName == postgres.PluginName {
-			ops = postgres.GetTestClusterOption()
-		} else {
-			panic("not supported plugin " + TestFlags.SQLPluginName)
-		}
-		options.Persistence.SQLDBPluginName = TestFlags.SQLPluginName
-		options.Persistence.DBUsername = ops.DBUsername
-		options.Persistence.DBPassword = ops.DBPassword
-		options.Persistence.DBHost = ops.DBHost
-		options.Persistence.DBPort = ops.DBPort
-		options.Persistence.SchemaDir = ops.SchemaDir
-	}
-	options.Persistence.ClusterMetadata = clusterMetadata
-	testBase := persistencetests.NewTestBase(&options.Persistence)
+func NewCluster(options *TestClusterConfig, logger log.Logger, params persistencetests.TestBaseParams) (*TestCluster, error) {
+	testBase := persistencetests.NewTestBaseFromParams(params)
 	testBase.Setup()
 	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
 	archiverBase := newArchiverBase(options.EnableArchival, logger)
 	messagingClient := getMessagingClient(options.MessagingClientConfig, logger)
 	var esClient elasticsearch.GenericClient
-	var esVisibilityMgr persistence.VisibilityManager
-	advancedVisibilityWritingMode := dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff)
 	if options.WorkerConfig.EnableIndexer {
-		advancedVisibilityWritingMode = dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOn)
 		var err error
-		visConfig := &config.VisibilityConfig{
-			VisibilityListMaxQPS:   dynamicconfig.GetIntPropertyFilteredByDomain(2000),
-			ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(defaultTestValueOfESIndexMaxResultWindow),
-			ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
-		}
 		esClient, err = elasticsearch.NewGenericClient(options.ESConfig, logger)
 		if err != nil {
 			return nil, err
 		}
-
-		indexName := options.ESConfig.Indices[common.VisibilityAppName]
-		visProducer, err := messagingClient.NewProducer(common.VisibilityAppName)
-		if err != nil {
-			return nil, err
-		}
-		esVisibilityStore := pes.NewElasticSearchVisibilityStore(esClient, indexName, visProducer, visConfig, logger)
-		esVisibilityMgr = persistence.NewVisibilityManagerImpl(esVisibilityStore, logger)
 	}
-	visibilityMgr := persistence.NewVisibilityManagerWrapper(testBase.VisibilityMgr, esVisibilityMgr,
-		dynamicconfig.GetBoolPropertyFnFilteredByDomain(options.WorkerConfig.EnableIndexer), advancedVisibilityWritingMode)
 
 	pConfig := testBase.Config()
 	pConfig.NumHistoryShards = options.HistoryConfig.NumHistoryShards
@@ -185,17 +132,14 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		logger,
 	)
 	cadenceParams := &CadenceParams{
-		ClusterMetadata:               clusterMetadata,
+		ClusterMetadata:               params.ClusterMetadata,
 		PersistenceConfig:             pConfig,
 		DispatcherProvider:            client.NewDNSYarpcDispatcherProvider(logger, 0),
 		MessagingClient:               messagingClient,
 		MetadataMgr:                   testBase.MetadataManager,
-		ShardMgr:                      testBase.ShardMgr,
 		HistoryV2Mgr:                  testBase.HistoryV2Mgr,
 		ExecutionMgrFactory:           testBase.ExecutionMgrFactory,
 		DomainReplicationQueue:        domainReplicationQueue,
-		TaskMgr:                       testBase.TaskMgr,
-		VisibilityMgr:                 visibilityMgr,
 		Logger:                        logger,
 		ClusterNo:                     options.ClusterNo,
 		ESConfig:                      options.ESConfig,
@@ -213,6 +157,45 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 	}
 
 	return &TestCluster{testBase: testBase, archiverBase: archiverBase, host: cluster}, nil
+}
+
+// NewClusterMetadata returns cluster metdata from config
+func NewClusterMetadata(options *TestClusterConfig, logger log.Logger) cluster.Metadata {
+	clusterMetadata := cluster.GetTestClusterMetadata(
+		options.ClusterMetadata.EnableGlobalDomain,
+		options.IsMasterCluster,
+	)
+	if !options.IsMasterCluster && options.ClusterMetadata.MasterClusterName != "" { // xdc cluster metadata setup
+		clusterMetadata = cluster.NewMetadata(
+			logger,
+			dynamicconfig.GetBoolPropertyFn(options.ClusterMetadata.EnableGlobalDomain),
+			options.ClusterMetadata.FailoverVersionIncrement,
+			options.ClusterMetadata.MasterClusterName,
+			options.ClusterMetadata.CurrentClusterName,
+			options.ClusterMetadata.ClusterInformation,
+		)
+	}
+	return clusterMetadata
+}
+
+func NewPersistenceTestCluster(clusterConfig *TestClusterConfig) persistencetests.PersistenceTestCluster {
+	var testCluster persistencetests.PersistenceTestCluster
+	if TestFlags.PersistenceType == config.StoreTypeCassandra {
+		testCluster = cassandra.NewTestCluster(clusterConfig.Persistence.DBName, clusterConfig.Persistence.DBUsername, clusterConfig.Persistence.DBPassword, clusterConfig.Persistence.DBHost, clusterConfig.Persistence.DBPort, clusterConfig.Persistence.SchemaDir)
+	} else if TestFlags.PersistenceType == config.StoreTypeSQL {
+		var ops *persistencetests.TestBaseOptions
+		if TestFlags.SQLPluginName == mysql.PluginName {
+			ops = mysql.GetTestClusterOption()
+		} else if TestFlags.SQLPluginName == postgres.PluginName {
+			ops = postgres.GetTestClusterOption()
+		} else {
+			panic("not supported plugin " + TestFlags.SQLPluginName)
+		}
+		testCluster = sql.NewTestCluster(TestFlags.SQLPluginName, clusterConfig.Persistence.DBName, ops.DBUsername, ops.DBPassword, ops.DBHost, ops.DBPort, ops.SchemaDir)
+	} else {
+		panic("not supported storage type" + TestFlags.PersistenceType)
+	}
+	return testCluster
 }
 
 func setupShards(testBase persistencetests.TestBase, numHistoryShards int, logger log.Logger) {

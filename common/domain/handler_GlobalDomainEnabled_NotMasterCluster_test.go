@@ -408,6 +408,25 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	)
 }
 
+func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestDeprecateGetDomain_LocalDomain() {
+	domainName := s.getRandomDomainName()
+	domain := s.setupLocalDomain(domainName)
+
+	err := s.handler.DeprecateDomain(context.Background(), &types.DeprecateDomainRequest{
+		Name: domainName,
+	})
+	s.Nil(err)
+
+	expectedResp := domain
+	expectedResp.DomainInfo.Status = types.DomainStatusDeprecated.Ptr()
+
+	getResp, err := s.handler.DescribeDomain(context.Background(), &types.DescribeDomainRequest{
+		Name: common.StringPtr(domainName),
+	})
+	s.Nil(err)
+	assertDomainEqual(s.Suite, getResp, expectedResp)
+}
+
 func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetDomain_GlobalDomain_AllDefault() {
 	domainName := s.getRandomDomainName()
 	isGlobalDomain := true
@@ -714,6 +733,78 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	)
 }
 
+func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestDeprecateGetDomain_GlobalDomain() {
+	domainName := s.getRandomDomainName()
+	s.setupGlobalDomainWithMetadataManager(domainName)
+
+	err := s.handler.DeprecateDomain(context.Background(), &types.DeprecateDomainRequest{
+		Name: domainName,
+	})
+	s.IsType(&types.BadRequestError{}, err)
+}
+
 func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) getRandomDomainName() string {
 	return "domain" + uuid.New()
+}
+
+func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) setupLocalDomain(domainName string) *types.DescribeDomainResponse {
+	return setupLocalDomain(s.Suite, s.handler, s.ClusterMetadata, domainName)
+}
+
+func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) setupGlobalDomainWithMetadataManager(domainName string) *types.DescribeDomainResponse {
+	return setupGlobalDomainWithMetadataManager(s.Suite, s.handler, s.ClusterMetadata, s.MetadataManager, domainName)
+}
+
+func setupGlobalDomainWithMetadataManager(s suite.Suite, handler *handlerImpl, clusterMetadata cluster.Metadata, metadataManager persistence.MetadataManager, domainName string) *types.DescribeDomainResponse {
+	description := "some random description"
+	email := "some random email"
+	retention := int32(7)
+	emitMetric := true
+	activeClusterName := ""
+	clusters := []*persistence.ClusterReplicationConfig{}
+	for clusterName := range clusterMetadata.GetAllClusterInfo() {
+		if clusterName != clusterMetadata.GetCurrentClusterName() {
+			activeClusterName = clusterName
+		}
+		clusters = append(clusters, &persistence.ClusterReplicationConfig{
+			ClusterName: clusterName,
+		})
+	}
+	s.True(len(activeClusterName) > 0)
+	s.True(len(clusters) > 1)
+	data := map[string]string{"some random key": "some random value"}
+	isGlobalDomain := true
+
+	_, err := metadataManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
+		Info: &persistence.DomainInfo{
+			ID:          uuid.New(),
+			Name:        domainName,
+			Status:      persistence.DomainStatusRegistered,
+			Description: description,
+			OwnerEmail:  email,
+			Data:        data,
+		},
+		Config: &persistence.DomainConfig{
+			Retention:                retention,
+			EmitMetric:               emitMetric,
+			HistoryArchivalStatus:    types.ArchivalStatusDisabled,
+			HistoryArchivalURI:       "",
+			VisibilityArchivalStatus: types.ArchivalStatusDisabled,
+			VisibilityArchivalURI:    "",
+		},
+		ReplicationConfig: &persistence.DomainReplicationConfig{
+			ActiveClusterName: activeClusterName,
+			Clusters:          clusters,
+		},
+		IsGlobalDomain:  isGlobalDomain,
+		ConfigVersion:   0,
+		FailoverVersion: clusterMetadata.GetNextFailoverVersion(activeClusterName, 0),
+	})
+	s.Nil(err)
+
+	getResp, err := handler.DescribeDomain(context.Background(), &types.DescribeDomainRequest{
+		Name: common.StringPtr(domainName),
+	})
+	s.Nil(err)
+	return getResp
 }

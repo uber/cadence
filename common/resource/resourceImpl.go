@@ -143,7 +143,7 @@ func New(
 	visibilityManagerInitializer VisibilityManagerInitializer,
 ) (impl *Impl, retError error) {
 
-	logger := params.Logger.WithTags(tag.Service(serviceName))
+	logger := params.Logger
 	throttledLogger := loggerimpl.NewThrottledLogger(logger, throttledLoggerMaxRPS)
 
 	numShards := params.PersistenceConfig.NumHistoryShards

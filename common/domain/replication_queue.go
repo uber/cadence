@@ -229,16 +229,11 @@ func (q *replicationQueueImpl) UpdateDLQAckLevel(
 	ctx context.Context,
 	lastProcessedMessageID int64,
 ) error {
-
-	if err := q.queue.UpdateDLQAckLevel(
+	return q.queue.UpdateDLQAckLevel(
 		ctx,
 		lastProcessedMessageID,
 		localDomainReplicationCluster,
-	); err != nil {
-		return err
-	}
-
-	return nil
+	)
 }
 
 func (q *replicationQueueImpl) GetDLQAckLevel(
@@ -261,16 +256,11 @@ func (q *replicationQueueImpl) RangeDeleteMessagesFromDLQ(
 	firstMessageID int64,
 	lastMessageID int64,
 ) error {
-
-	if err := q.queue.RangeDeleteMessagesFromDLQ(
+	return q.queue.RangeDeleteMessagesFromDLQ(
 		ctx,
 		firstMessageID,
 		lastMessageID,
-	); err != nil {
-		return err
-	}
-
-	return nil
+	)
 }
 
 func (q *replicationQueueImpl) DeleteMessageFromDLQ(
@@ -346,13 +336,14 @@ func (q *replicationQueueImpl) emitDLQSize() {
 				).IncCounter(
 					metrics.DomainReplicationQueueSizeErrorCount,
 				)
+			} else {
+				q.metricsClient.Scope(
+					metrics.DomainReplicationQueueScope,
+				).UpdateGauge(
+					metrics.DomainReplicationQueueSizeGauge,
+					float64(size),
+				)
 			}
-			q.metricsClient.Scope(
-				metrics.DomainReplicationQueueScope,
-			).UpdateGauge(
-				metrics.DomainReplicationQueueSizeGauge,
-				float64(size),
-			)
 		}
 	}
 }

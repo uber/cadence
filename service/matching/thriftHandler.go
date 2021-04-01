@@ -30,6 +30,7 @@ import (
 	m "github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceserver"
 	s "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -50,60 +51,64 @@ func (t ThriftHandler) register(dispatcher *yarpc.Dispatcher) {
 
 // Health forwards request to the underlying handler
 func (t ThriftHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
-	response, err := t.h.Health(ctx)
+	response, err := t.h.Health(withThriftTag(ctx))
 	return thrift.FromHealthStatus(response), thrift.FromError(err)
 }
 
 // AddActivityTask forwards request to the underlying handler
 func (t ThriftHandler) AddActivityTask(ctx context.Context, request *m.AddActivityTaskRequest) error {
-	err := t.h.AddActivityTask(ctx, thrift.ToAddActivityTaskRequest(request))
+	err := t.h.AddActivityTask(withThriftTag(ctx), thrift.ToAddActivityTaskRequest(request))
 	return thrift.FromError(err)
 }
 
 // AddDecisionTask forwards request to the underlying handler
 func (t ThriftHandler) AddDecisionTask(ctx context.Context, request *m.AddDecisionTaskRequest) error {
-	err := t.h.AddDecisionTask(ctx, thrift.ToAddDecisionTaskRequest(request))
+	err := t.h.AddDecisionTask(withThriftTag(ctx), thrift.ToAddDecisionTaskRequest(request))
 	return thrift.FromError(err)
 }
 
 // CancelOutstandingPoll forwards request to the underlying handler
 func (t ThriftHandler) CancelOutstandingPoll(ctx context.Context, request *m.CancelOutstandingPollRequest) error {
-	err := t.h.CancelOutstandingPoll(ctx, thrift.ToCancelOutstandingPollRequest(request))
+	err := t.h.CancelOutstandingPoll(withThriftTag(ctx), thrift.ToCancelOutstandingPollRequest(request))
 	return thrift.FromError(err)
 }
 
 // DescribeTaskList forwards request to the underlying handler
 func (t ThriftHandler) DescribeTaskList(ctx context.Context, request *m.DescribeTaskListRequest) (*s.DescribeTaskListResponse, error) {
-	response, err := t.h.DescribeTaskList(ctx, thrift.ToMatchingDescribeTaskListRequest(request))
+	response, err := t.h.DescribeTaskList(withThriftTag(ctx), thrift.ToMatchingDescribeTaskListRequest(request))
 	return thrift.FromDescribeTaskListResponse(response), thrift.FromError(err)
 }
 
 // ListTaskListPartitions forwards request to the underlying handler
 func (t ThriftHandler) ListTaskListPartitions(ctx context.Context, request *m.ListTaskListPartitionsRequest) (*s.ListTaskListPartitionsResponse, error) {
-	response, err := t.h.ListTaskListPartitions(ctx, thrift.ToMatchingListTaskListPartitionsRequest(request))
+	response, err := t.h.ListTaskListPartitions(withThriftTag(ctx), thrift.ToMatchingListTaskListPartitionsRequest(request))
 	return thrift.FromListTaskListPartitionsResponse(response), thrift.FromError(err)
 }
 
 // PollForActivityTask forwards request to the underlying handler
 func (t ThriftHandler) PollForActivityTask(ctx context.Context, request *m.PollForActivityTaskRequest) (*s.PollForActivityTaskResponse, error) {
-	response, err := t.h.PollForActivityTask(ctx, thrift.ToMatchingPollForActivityTaskRequest(request))
+	response, err := t.h.PollForActivityTask(withThriftTag(ctx), thrift.ToMatchingPollForActivityTaskRequest(request))
 	return thrift.FromPollForActivityTaskResponse(response), thrift.FromError(err)
 }
 
 // PollForDecisionTask forwards request to the underlying handler
 func (t ThriftHandler) PollForDecisionTask(ctx context.Context, request *m.PollForDecisionTaskRequest) (*m.PollForDecisionTaskResponse, error) {
-	response, err := t.h.PollForDecisionTask(ctx, thrift.ToMatchingPollForDecisionTaskRequest(request))
+	response, err := t.h.PollForDecisionTask(withThriftTag(ctx), thrift.ToMatchingPollForDecisionTaskRequest(request))
 	return thrift.FromMatchingPollForDecisionTaskResponse(response), thrift.FromError(err)
 }
 
 // QueryWorkflow forwards request to the underlying handler
 func (t ThriftHandler) QueryWorkflow(ctx context.Context, request *m.QueryWorkflowRequest) (*s.QueryWorkflowResponse, error) {
-	response, err := t.h.QueryWorkflow(ctx, thrift.ToMatchingQueryWorkflowRequest(request))
+	response, err := t.h.QueryWorkflow(withThriftTag(ctx), thrift.ToMatchingQueryWorkflowRequest(request))
 	return thrift.FromQueryWorkflowResponse(response), thrift.FromError(err)
 }
 
 // RespondQueryTaskCompleted forwards request to the underlying handler
 func (t ThriftHandler) RespondQueryTaskCompleted(ctx context.Context, request *m.RespondQueryTaskCompletedRequest) error {
-	err := t.h.RespondQueryTaskCompleted(ctx, thrift.ToMatchingRespondQueryTaskCompletedRequest(request))
+	err := t.h.RespondQueryTaskCompleted(withThriftTag(ctx), thrift.ToMatchingRespondQueryTaskCompletedRequest(request))
 	return thrift.FromError(err)
+}
+
+func withThriftTag(ctx context.Context) context.Context {
+	return metrics.TagContext(ctx, metrics.ThriftTransportTag())
 }

@@ -196,7 +196,7 @@ func FixerCorruptedKeysActivity(
 	if params.ScannerWorkflowRunID == "" {
 		listResp, err := client.ListClosedWorkflowExecutions(activityCtx, &shared.ListClosedWorkflowExecutionsRequest{
 			Domain:          c.StringPtr(c.SystemLocalDomainName),
-			MaximumPageSize: c.Int32Ptr(1),
+			MaximumPageSize: c.Int32Ptr(10),
 			NextPageToken:   nil,
 			StartTimeFilter: &shared.StartTimeFilter{
 				EarliestTime: c.Int64Ptr(0),
@@ -205,16 +205,24 @@ func FixerCorruptedKeysActivity(
 			ExecutionFilter: &shared.WorkflowExecutionFilter{
 				WorkflowId: c.StringPtr(params.ScannerWorkflowWorkflowID),
 			},
-			StatusFilter: shared.WorkflowExecutionCloseStatusCompleted.Ptr(),
 		})
 		if err != nil {
 			return nil, err
 		}
-		if len(listResp.Executions) != 1 {
+		if len(listResp.Executions) > 10 {
 			return nil, errors.New("got unexpected number of executions back from list")
 		}
-
-		params.ScannerWorkflowRunID = *listResp.Executions[0].Execution.RunId
+		// ListClosedWorkflowExecutions API doesn't support querying by workflow ID and status filter at the same time,
+		// and we want to avoid using a scan result with Terminated state.
+		for _, executionInfo := range listResp.Executions {
+			if *executionInfo.CloseStatus == shared.WorkflowExecutionCloseStatusContinuedAsNew {
+				params.ScannerWorkflowRunID = *executionInfo.Execution.RunId
+				break
+			}
+		}
+		if len(params.ScannerWorkflowRunID) == 0 {
+			return nil, errors.New("failed to find a recent scanner workflow execution with ContinuedAsNew status")
+		}
 	}
 
 	descResp, err := client.DescribeWorkflowExecution(activityCtx, &shared.DescribeWorkflowExecutionRequest{

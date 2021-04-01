@@ -158,7 +158,7 @@ func (task *addLicenseHeaderTask) handleFile(path string, fileInfo os.FileInfo, 
 	}
 
 	if fileInfo.IsDir() {
-		if strings.HasPrefix(fileInfo.Name(), "_vendor-") || fileInfo.Name() == ".build" {
+		if strings.HasPrefix(fileInfo.Name(), "_vendor-") || fileInfo.Name() == ".build" || fileInfo.Name() == ".bin" {
 			return filepath.SkipDir
 		}
 		return nil

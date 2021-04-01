@@ -90,10 +90,8 @@ func (m *nosqlDomainManager) CreateDomain(
 	err = m.db.InsertDomain(ctx, row)
 
 	if err != nil {
-		if m.db.IsConditionFailedError(err) {
-			return nil, &types.DomainAlreadyExistsError{
-				Message: fmt.Sprintf("CreateDomain operation failed because of conditional failure, %v", err),
-			}
+		if _, ok := err.(*types.DomainAlreadyExistsError); ok {
+			return nil, err
 		}
 		return nil, convertCommonErrors(m.db, "CreateDomain", err)
 	}

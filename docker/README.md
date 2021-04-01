@@ -31,6 +31,7 @@ We also provide several other compose files for different features/modes:
 * docker-compose-mysql.yml uses MySQL as persistence storage
 * docker-compose-postgres.yml uses PosstgreSQL as persistence storage
 * docker-compose-prometheus.yaml runs with Prometheus
+* docker-compose-multiclusters.yaml runs with 2 cadence clusters
 
 Also feel free to make your own to combine the above features.
 

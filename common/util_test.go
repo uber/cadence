@@ -97,11 +97,31 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) 
 		CronSchedule: "@every 300s",
 	}
 	now := time.Now()
-	startRequest := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	startRequest, _ := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	require.NotNil(t, startRequest)
 
 	expirationTime := startRequest.GetExpirationTimestamp()
 	require.NotNil(t, expirationTime)
 	require.True(t, time.Unix(0, expirationTime).Sub(now) > 60*time.Second)
+}
+
+func TestCreateHistoryStartWorkflowRequest_DelayStart(t *testing.T) {
+	domainID := uuid.New()
+	request := &types.StartWorkflowExecutionRequest{
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    60,
+			ExpirationIntervalInSeconds: 60,
+		},
+		DelayStartSeconds: Int32Ptr(100),
+	}
+	now := time.Now()
+	startRequest, _ := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	require.NotNil(t, startRequest)
+
+	expirationTime := startRequest.GetExpirationTimestamp()
+	require.NotNil(t, expirationTime)
+	require.True(t, time.Unix(0, expirationTime).Sub(now) > (100+60)*time.Second)
+	require.True(t, time.Unix(0, expirationTime).Sub(now) < (100+65)*time.Second)
 }
 
 func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.T) {
@@ -113,7 +133,8 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.
 		},
 	}
 	now := time.Now()
-	startRequest := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	startRequest, _ := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	require.NotNil(t, startRequest)
 
 	expirationTime := startRequest.GetExpirationTimestamp()
 	require.NotNil(t, expirationTime)
@@ -127,5 +148,40 @@ func TestConvertIndexedValueTypeToThriftType(t *testing.T) {
 	for i := 0; i < len(expected); i++ {
 		require.Equal(t, expected[i], ConvertIndexedValueTypeToThriftType(i, nil))
 		require.Equal(t, expected[i], ConvertIndexedValueTypeToThriftType(float64(i), nil))
+	}
+}
+
+func TestValidateDomainUUID(t *testing.T) {
+	testCases := []struct {
+		msg        string
+		domainUUID string
+		valid      bool
+	}{
+		{
+			msg:        "empty",
+			domainUUID: "",
+			valid:      false,
+		},
+		{
+			msg:        "invalid",
+			domainUUID: "some random uuid",
+			valid:      false,
+		},
+		{
+			msg:        "valid",
+			domainUUID: uuid.New(),
+			valid:      true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.msg, func(t *testing.T) {
+			err := ValidateDomainUUID(tc.domainUUID)
+			if tc.valid {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+		})
 	}
 }

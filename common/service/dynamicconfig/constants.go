@@ -32,6 +32,7 @@ func (k Key) String() string {
 }
 
 // Mapping from Key to keyName, where keyName are used dynamic config source.
+// !!!For developer: Make sure you also update the [documentation](https://cadenceworkflow.io/docs/operation-guide/setup/) if you add/remove any dynamic configuration.
 var keys = map[Key]string{
 	unknownKey: "unknownKey",
 
@@ -80,6 +81,7 @@ var keys = map[Key]string{
 	EnableBatcher:                       "worker.enableBatcher",
 	EnableParentClosePolicyWorker:       "system.enableParentClosePolicyWorker",
 	EnableFailoverManager:               "system.enableFailoverManager",
+	EnableWorkflowShadower:              "system.enableWorkflowShadower",
 	EnableStickyQuery:                   "system.enableStickyQuery",
 	EnableDebugMode:                     "system.enableDebugMode",
 
@@ -342,6 +344,7 @@ var keys = map[Key]string{
 	TimersFixerDomainAllow:                                   "worker.timersFixerDomainAllow",
 }
 
+// !!!For developer: Make sure you also update the [documentation](https://cadenceworkflow.io/docs/operation-guide/setup/) if you add/remove any dynamic configuration.
 const (
 	unknownKey Key = iota
 
@@ -891,6 +894,8 @@ const (
 	EnableStickyQuery
 	// EnableFailoverManager indicates if failover manager is enabled
 	EnableFailoverManager
+	// EnableWorkflowShadower indicates if workflow shadower is enabled
+	EnableWorkflowShadower
 
 	//ReplicationTaskFetcherParallelism determines how many go routines we spin up for fetching tasks
 	ReplicationTaskFetcherParallelism

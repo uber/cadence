@@ -221,7 +221,7 @@ service HistoryAPI {
 message StartWorkflowExecutionRequest {
   api.v1.StartWorkflowExecutionRequest request = 1;
   string domain_id = 2;
-  shared.v1.ParentExecutionInfo parent_execution_info = 3;
+  api.v1.ParentExecutionInfo parent_execution_info = 3;
   int32 attempt = 4;
   google.protobuf.Timestamp expiration_time = 5;
   api.v1.ContinueAsNewInitiator continue_as_new_initiator = 6;
@@ -463,9 +463,8 @@ message RemoveSignalMutableStateResponse {
 message RequestCancelWorkflowExecutionRequest {
   string domain_id = 1;
   api.v1.RequestCancelWorkflowExecutionRequest cancel_request = 2;
-  int64 external_initiated_event_id = 3;
-  api.v1.WorkflowExecution external_workflow_execution = 4;
-  bool child_workflow_only = 5;
+  api.v1.ExternalExecutionInfo external_execution_info = 3;
+  bool child_workflow_only = 4;
 }
 
 message RequestCancelWorkflowExecutionResponse {
@@ -641,7 +640,8 @@ message ReadDLQMessagesRequest {
 message ReadDLQMessagesResponse {
   shared.v1.DLQType type = 1;
   repeated shared.v1.ReplicationTask replication_tasks = 2;
-  bytes next_page_token = 3;
+  repeated shared.v1.ReplicationTaskInfo replication_tasks_info = 3;
+  bytes next_page_token = 4;
 }
 
 message PurgeDLQMessagesRequest {

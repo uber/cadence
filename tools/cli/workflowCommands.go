@@ -299,6 +299,10 @@ func constructStartWorkflowRequest(c *cli.Context) *s.StartWorkflowExecutionRequ
 		}
 	}
 
+	if c.IsSet(DelayStartSeconds) {
+		startRequest.DelayStartSeconds = common.Int32Ptr(int32(c.Int(DelayStartSeconds)))
+	}
+
 	headerFields := processHeader(c)
 	if len(headerFields) != 0 {
 		startRequest.Header = &s.Header{Fields: headerFields}
@@ -554,6 +558,7 @@ func constructSignalWithStartWorkflowRequest(c *cli.Context) *s.SignalWithStartW
 		Header:                              startRequest.Header,
 		SignalName:                          common.StringPtr(getRequiredOption(c, FlagName)),
 		SignalInput:                         []byte(processJSONInputSignal(c)),
+		DelayStartSeconds:                   startRequest.DelayStartSeconds,
 	}
 }
 
@@ -973,7 +978,7 @@ type workflowExecutionInfo struct {
 	StartTime        *string // change from *int64
 	CloseTime        *string // change from *int64
 	CloseStatus      *types.WorkflowExecutionCloseStatus
-	HistoryLength    *int64
+	HistoryLength    int64
 	ParentDomainID   *string
 	ParentExecution  *types.WorkflowExecution
 	Memo             *types.Memo

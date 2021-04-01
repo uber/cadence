@@ -90,31 +90,29 @@ message HistoryEvent {
 
 message WorkflowExecutionStartedEventAttributes {
   WorkflowType workflow_type = 1;
-  string parent_workflow_domain = 2;
-  WorkflowExecution parent_workflow_execution = 3;
-  int64 parent_initiated_event_id = 4;
-  TaskList task_list = 5;
-  Payload input = 6;
-  google.protobuf.Duration execution_start_to_close_timeout = 7;
-  google.protobuf.Duration task_start_to_close_timeout = 8;
-  string continued_execution_run_id = 9;
-  ContinueAsNewInitiator initiator = 10;
-  Failure continued_failure = 11;
-  Payload last_completion_result = 12;
+  ParentExecutionInfo parent_execution_info = 2;
+  TaskList task_list = 3;
+  Payload input = 4;
+  google.protobuf.Duration execution_start_to_close_timeout = 5;
+  google.protobuf.Duration task_start_to_close_timeout = 6;
+  string continued_execution_run_id = 7;
+  ContinueAsNewInitiator initiator = 8;
+  Failure continued_failure = 9;
+  Payload last_completion_result = 10;
   // This is the previous runID of ContinueAsNew.
-  string original_execution_run_id = 13;
-  string identity = 14;
+  string original_execution_run_id = 11;
+  string identity = 12;
   // This is the very first runID along the chain of ContinueAsNew and Reset.
-  string first_execution_run_id = 15;
-  RetryPolicy retry_policy = 16;
-  int32 attempt = 17;
-  google.protobuf.Timestamp expiration_time = 19;
-  string cron_schedule = 20;
-  google.protobuf.Duration first_decision_task_backoff = 21;
-  Memo memo = 22;
-  SearchAttributes search_attributes = 23;
-  ResetPoints prev_auto_reset_points = 24;
-  Header header = 25;
+  string first_execution_run_id = 13;
+  RetryPolicy retry_policy = 14;
+  int32 attempt = 15;
+  google.protobuf.Timestamp expiration_time = 16;
+  string cron_schedule = 17;
+  google.protobuf.Duration first_decision_task_backoff = 18;
+  Memo memo = 19;
+  SearchAttributes search_attributes = 20;
+  ResetPoints prev_auto_reset_points = 21;
+  Header header = 22;
 }
 
 message WorkflowExecutionCompletedEventAttributes {
@@ -155,6 +153,12 @@ message DecisionTaskTimedOutEventAttributes {
   int64 scheduled_event_id = 1;
   int64 started_event_id = 2;
   TimeoutType timeout_type = 3;
+  // For reset workflow.
+  string base_run_id = 4;
+  string new_run_id = 5;
+  int64 fork_event_version = 6;
+  string reason = 7;
+  DecisionTaskTimedOutCause cause = 8;
 }
 
 message DecisionTaskFailedEventAttributes {
@@ -280,9 +284,8 @@ message WorkflowExecutionContinuedAsNewEventAttributes {
 
 message WorkflowExecutionCancelRequestedEventAttributes {
   string cause = 1;
-  int64 external_initiated_event_id = 2;
-  WorkflowExecution external_workflow_execution = 3;
-  string identity = 4;
+  string identity = 2;
+  ExternalExecutionInfo external_execution_info = 3;
 }
 
 message WorkflowExecutionCanceledEventAttributes {

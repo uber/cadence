@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/dgryski/go-farm"
+	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -102,6 +103,7 @@ var (
 	ErrContextTimeoutTooShort = &types.BadRequestError{Message: "Context timeout is too short."}
 	// ErrContextTimeoutNotSet is error for not setting a context timeout when calling a long poll API
 	ErrContextTimeoutNotSet = &types.BadRequestError{Message: "Context timeout is not set."}
+	ErrDelayStartSeconds    = &types.BadRequestError{Message: "Conflicting inputs: both DelayStartSeconds and Cron schedule is set"}
 )
 
 // AwaitWaitGroup calls Wait on the given wait
@@ -200,16 +202,6 @@ func CreateReplicationServiceBusyRetryPolicy() backoff.RetryPolicy {
 	policy.SetExpirationInterval(replicationServiceBusyExpirationInterval)
 
 	return policy
-}
-
-// IsPersistenceTransientError checks if the error is a transient persistence error
-func IsPersistenceTransientError(err error) bool {
-	switch err.(type) {
-	case *types.InternalServiceError, *types.ServiceBusyError:
-		return true
-	}
-
-	return false
 }
 
 // IsServiceTransientError checks if the error is a transient error.
@@ -430,12 +422,22 @@ func CreateHistoryStartWorkflowRequest(
 	domainID string,
 	startRequest *types.StartWorkflowExecutionRequest,
 	now time.Time,
-) *types.HistoryStartWorkflowExecutionRequest {
+) (*types.HistoryStartWorkflowExecutionRequest, error) {
 	histRequest := &types.HistoryStartWorkflowExecutionRequest{
 		DomainUUID:   domainID,
 		StartRequest: startRequest,
 	}
-	firstDecisionTaskBackoffSeconds := backoff.GetBackoffForNextScheduleInSeconds(startRequest.GetCronSchedule(), now, now)
+
+	firstDecisionTaskBackoffSeconds := backoff.GetBackoffForNextScheduleInSeconds(
+		startRequest.GetCronSchedule(), now, now)
+	delayStartSeconds := startRequest.GetDelayStartSeconds()
+	if delayStartSeconds > 0 && firstDecisionTaskBackoffSeconds > 0 {
+		return nil, ErrDelayStartSeconds
+	}
+	if delayStartSeconds > 0 {
+		firstDecisionTaskBackoffSeconds = delayStartSeconds
+	}
+
 	histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(firstDecisionTaskBackoffSeconds)
 
 	if startRequest.RetryPolicy != nil && startRequest.RetryPolicy.GetExpirationIntervalInSeconds() > 0 {
@@ -445,7 +447,7 @@ func CreateHistoryStartWorkflowRequest(
 		histRequest.ExpirationTimestamp = Int64Ptr(deadline.Round(time.Millisecond).UnixNano())
 	}
 
-	return histRequest
+	return histRequest, nil
 }
 
 // CheckEventBlobSizeLimit checks if a blob data exceeds limits. It logs a warning if it exceeds warnLimit,
@@ -523,6 +525,19 @@ func ValidateLongPollContextTimeoutIsSet(
 		return deadline, err
 	}
 	return deadline, nil
+}
+
+// ValidateDomainUUID checks if the given domainID string is a valid UUID
+func ValidateDomainUUID(
+	domainUUID string,
+) error {
+
+	if domainUUID == "" {
+		return &types.BadRequestError{Message: "Missing domain UUID."}
+	} else if uuid.Parse(domainUUID) == nil {
+		return &types.BadRequestError{Message: "Invalid domain UUID."}
+	}
+	return nil
 }
 
 // GetSizeOfMapStringToByteArray get size of map[string][]byte

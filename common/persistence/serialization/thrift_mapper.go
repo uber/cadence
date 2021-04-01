@@ -690,6 +690,8 @@ func replicationTaskInfoFromThrift(info *sqlblobs.ReplicationTaskInfo) *Replicat
 	}
 }
 
+var zeroTimeNanos = time.Time{}.UnixNano()
+
 func unixNanoPtr(t *time.Time) *int64 {
 	if t == nil {
 		return nil
@@ -700,6 +702,11 @@ func unixNanoPtr(t *time.Time) *int64 {
 func timePtr(t *int64) *time.Time {
 	if t == nil {
 		return nil
+	}
+	// Calling UnixNano() on zero time is undefined an results in a number that is converted back to 1754-08-30T22:43:41Z
+	// Handle such case explicitly
+	if *t == zeroTimeNanos {
+		return common.TimePtr(time.Time{})
 	}
 	return common.TimePtr(time.Unix(0, *t))
 }

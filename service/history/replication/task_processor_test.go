@@ -135,7 +135,7 @@ func (s *taskProcessorSuite) TearDownTest() {
 
 func (s *taskProcessorSuite) TestProcessResponse_NoTask() {
 	response := &types.ReplicationMessages{
-		LastRetrievedMessageID: common.Int64Ptr(100),
+		LastRetrievedMessageID: 100,
 	}
 
 	s.taskProcessor.processResponse(response)
@@ -155,7 +155,7 @@ func (s *taskProcessorSuite) TestSendFetchMessageRequest() {
 func (s *taskProcessorSuite) TestHandleSyncShardStatus() {
 	now := time.Now()
 	s.mockEngine.EXPECT().SyncShardStatus(gomock.Any(), &types.SyncShardStatusRequest{
-		SourceCluster: common.StringPtr("standby"),
+		SourceCluster: "standby",
 		ShardID:       0,
 		Timestamp:     common.Int64Ptr(now.UnixNano()),
 	}).Return(nil).Times(1)

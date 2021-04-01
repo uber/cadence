@@ -32,8 +32,6 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-go/tally"
-
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/testsuite"
@@ -152,7 +150,7 @@ func (s *activitiesSuite) TestScanShardActivity() {
 		var reports []ScanReport
 		s.NoError(report.Get(&reports))
 
-		for _, v := range s.mockResource.MetricsScope.(tally.TestScope).Snapshot().Timers() {
+		for _, v := range s.mockResource.MetricsScope.Snapshot().Timers() {
 			tags := v.Tags()
 			s.Equal("cadence-sys-shardscanner-scanshard-activity", tags["activityType"])
 			s.Equal(tc.workflowName, tags["workflowType"])
@@ -402,6 +400,9 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
 	response := &shared.ListClosedWorkflowExecutionsResponse{
 		Executions: []*shared.WorkflowExecutionInfo{
 			{
+				CloseStatus: shared.WorkflowExecutionCloseStatusCompleted.Ptr(),
+			},
+			{
 				Execution: &shared.WorkflowExecution{
 					WorkflowId: common.StringPtr("test-list-workflow-id"),
 					RunId:      common.StringPtr(uuid.New()),
@@ -411,7 +412,7 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
 				},
 				StartTime:     common.Int64Ptr(time.Now().UnixNano()),
 				CloseTime:     common.Int64Ptr(time.Now().Add(time.Hour).UnixNano()),
-				CloseStatus:   shared.WorkflowExecutionCloseStatusCompleted.Ptr(),
+				CloseStatus:   shared.WorkflowExecutionCloseStatusContinuedAsNew.Ptr(),
 				HistoryLength: common.Int64Ptr(12),
 			},
 		},
@@ -422,19 +423,7 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
 	s.mockResource.SDKClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(&shared.QueryWorkflowResponse{
 		QueryResult: queryResultData,
 	}, nil)
-	env := s.NewTestActivityEnvironment()
-	cfg := &ScannerConfig{
-		DynamicParams: DynamicParams{
-			AllowDomain: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
-		},
-		FixerHooks: func() *FixerHooks {
-			return &FixerHooks{}
-		},
-	}
-	fc := NewShardFixerContext(s.mockResource, cfg)
-	env.SetWorkerOptions(worker.Options{
-		BackgroundActivityContext: NewFixerContext(context.Background(), testWorkflowName, fc),
-	})
+	env := s.getFixerActivityEnvironment()
 	fixerResultValue, err := env.ExecuteActivity(FixerCorruptedKeysActivity, FixerCorruptedKeysActivityParams{})
 	s.NoError(err)
 	fixerResult := &FixerCorruptedKeysActivityResult{}
@@ -463,4 +452,49 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
 			UUID: "third",
 		},
 	})
+}
+
+func (s *activitiesSuite) TestFixerCorruptedKeysActivity_Fails_WhenNoSuitableExecutionsAreFound() {
+	response := &shared.ListClosedWorkflowExecutionsResponse{
+		Executions: []*shared.WorkflowExecutionInfo{
+			{
+				CloseStatus: shared.WorkflowExecutionCloseStatusCompleted.Ptr(),
+			},
+			{
+				CloseStatus: shared.WorkflowExecutionCloseStatusCanceled.Ptr(),
+			},
+			{
+				CloseStatus: shared.WorkflowExecutionCloseStatusTimedOut.Ptr(),
+			},
+			{
+				CloseStatus: shared.WorkflowExecutionCloseStatusTerminated.Ptr(),
+			},
+			{
+				CloseStatus: shared.WorkflowExecutionCloseStatusFailed.Ptr(),
+			},
+		},
+	}
+	s.mockResource.SDKClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return(response, nil)
+
+	env := s.getFixerActivityEnvironment()
+	fixerResultValue, err := env.ExecuteActivity(FixerCorruptedKeysActivity, FixerCorruptedKeysActivityParams{})
+	s.Nil(fixerResultValue)
+	s.EqualError(err, "failed to find a recent scanner workflow execution with ContinuedAsNew status")
+}
+
+func (s *activitiesSuite) getFixerActivityEnvironment() *testsuite.TestActivityEnvironment {
+	env := s.NewTestActivityEnvironment()
+	cfg := &ScannerConfig{
+		DynamicParams: DynamicParams{
+			AllowDomain: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+		},
+		FixerHooks: func() *FixerHooks {
+			return &FixerHooks{}
+		},
+	}
+	fc := NewShardFixerContext(s.mockResource, cfg)
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: NewFixerContext(context.Background(), testWorkflowName, fc),
+	})
+	return env
 }

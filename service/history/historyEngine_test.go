@@ -52,6 +52,7 @@ import (
 	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
+	"github.com/uber/cadence/service/history/decision"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/ndc"
@@ -60,6 +61,7 @@ import (
 	"github.com/uber/cadence/service/history/reset"
 	"github.com/uber/cadence/service/history/shard"
 	test "github.com/uber/cadence/service/history/testing"
+	"github.com/uber/cadence/service/history/workflow"
 )
 
 type (
@@ -140,6 +142,10 @@ func (s *engineSuite) SetupTest() {
 	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestSingleDCClusterInfo).AnyTimes()
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(common.EmptyVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestLocalDomainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetActiveDomainByID("").Return(nil, &types.BadRequestError{
+		Message: "Missing domain UUID.",
+	}).AnyTimes()
+	s.mockDomainCache.EXPECT().GetActiveDomainByID(constants.TestDomainID).Return(constants.TestLocalDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(constants.TestDomainName).Return(constants.TestLocalDomainEntry, nil).AnyTimes()
 
@@ -171,7 +177,7 @@ func (s *engineSuite) SetupTest() {
 		workflowResetter:     s.mockWorkflowResetter,
 	}
 	s.mockShard.SetEngine(h)
-	h.decisionHandler = NewDecisionHandler(s.mockShard, h.executionCache, h.tokenSerializer)
+	h.decisionHandler = decision.NewHandler(s.mockShard, h.executionCache, h.tokenSerializer)
 
 	h.historyEventNotifier.Start()
 
@@ -303,7 +309,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 	response, err := s.mockHistoryEngine.GetMutableState(ctx, &types.GetMutableStateRequest{
 		DomainUUID:          constants.TestDomainID,
 		Execution:           &workflowExecution,
-		ExpectedNextEventID: common.Int64Ptr(3),
+		ExpectedNextEventID: 3,
 	})
 	s.Nil(err)
 	s.Equal(int64(4), response.NextEventID)
@@ -314,7 +320,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 	pollResponse, err := s.mockHistoryEngine.PollMutableState(ctx, &types.PollMutableStateRequest{
 		DomainUUID:          constants.TestDomainID,
 		Execution:           &workflowExecution,
-		ExpectedNextEventID: common.Int64Ptr(4),
+		ExpectedNextEventID: 4,
 	})
 	s.True(time.Now().After(start.Add(time.Second * 1)))
 	s.Nil(err)
@@ -369,7 +375,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll_CurrentBranchChanged() {
 	response0, err := s.mockHistoryEngine.GetMutableState(ctx, &types.GetMutableStateRequest{
 		DomainUUID:          constants.TestDomainID,
 		Execution:           &workflowExecution,
-		ExpectedNextEventID: common.Int64Ptr(3),
+		ExpectedNextEventID: 3,
 	})
 	s.Nil(err)
 	s.Equal(int64(4), response0.GetNextEventID())
@@ -380,7 +386,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll_CurrentBranchChanged() {
 	response1, err := s.mockHistoryEngine.GetMutableState(ctx, &types.GetMutableStateRequest{
 		DomainUUID:          constants.TestDomainID,
 		Execution:           &workflowExecution,
-		ExpectedNextEventID: common.Int64Ptr(10),
+		ExpectedNextEventID: 10,
 	})
 	s.True(time.Now().After(start.Add(time.Second * 1)))
 	s.Nil(err)
@@ -415,7 +421,7 @@ func (s *engineSuite) TestGetMutableStateLongPollTimeout() {
 	response, err := s.mockHistoryEngine.GetMutableState(ctx, &types.GetMutableStateRequest{
 		DomainUUID:          constants.TestDomainID,
 		Execution:           &workflowExecution,
-		ExpectedNextEventID: common.Int64Ptr(4),
+		ExpectedNextEventID: 4,
 	})
 	s.Nil(err)
 	s.Equal(int64(4), response.GetNextEventID())
@@ -431,13 +437,13 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnNotEnabled() {
 	}
 	resp, err := s.mockHistoryEngine.QueryWorkflow(context.Background(), request)
 	s.Nil(resp)
-	s.Equal(ErrConsistentQueryNotEnabled, err)
+	s.Equal(workflow.ErrConsistentQueryNotEnabled, err)
 
 	s.mockHistoryEngine.config.EnableConsistentQueryByDomain = dynamicconfig.GetBoolPropertyFnFilteredByDomain(true)
 	s.mockHistoryEngine.config.EnableConsistentQuery = dynamicconfig.GetBoolPropertyFn(false)
 	resp, err = s.mockHistoryEngine.QueryWorkflow(context.Background(), request)
 	s.Nil(resp)
-	s.Equal(ErrConsistentQueryNotEnabled, err)
+	s.Equal(workflow.ErrConsistentQueryNotEnabled, err)
 }
 
 func (s *engineSuite) TestQueryWorkflow_RejectBasedOnCompleted() {
@@ -561,7 +567,7 @@ func (s *engineSuite) TestQueryWorkflow_FirstDecisionNotCompleted() {
 		},
 	}
 	resp, err := s.mockHistoryEngine.QueryWorkflow(context.Background(), request)
-	s.Equal(ErrQueryWorkflowBeforeFirstDecision, err)
+	s.Equal(workflow.ErrQueryWorkflowBeforeFirstDecision, err)
 	s.Nil(resp)
 }
 
@@ -712,7 +718,7 @@ func (s *engineSuite) TestQueryWorkflow_ConsistentQueryBufferFull() {
 	}
 	resp, err := s.mockHistoryEngine.QueryWorkflow(context.Background(), request)
 	s.Nil(resp)
-	s.Equal(ErrConsistentQueryBufferExceeded, err)
+	s.Equal(workflow.ErrConsistentQueryBufferExceeded, err)
 }
 
 func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
@@ -1205,7 +1211,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 		},
 	}}
 
-	for i := 0; i < conditionalRetryCount; i++ {
+	for i := 0; i < workflow.ConditionalRetryCount; i++ {
 		ms := execution.CreatePersistenceMutableState(msBuilder)
 		gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
@@ -1225,7 +1231,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 		},
 	})
 	s.NotNil(err)
-	s.Equal(ErrMaxAttemptsExceeded, err)
+	s.Equal(workflow.ErrMaxAttemptsExceeded, err)
 }
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
@@ -1657,6 +1663,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadBinary() {
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(domainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetActiveDomainByID(domainID).Return(domainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(constants.TestDomainName, nil).AnyTimes()
 
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &types.HistoryRespondDecisionTaskCompletedRequest{
@@ -2747,7 +2754,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedMaxAttemptsExceeded() {
 		activityType, tl, activityInput, 100, 10, 1, 5)
 	test.AddActivityTaskStartedEvent(msBuilder, activityScheduledEvent.EventID, identity)
 
-	for i := 0; i < conditionalRetryCount; i++ {
+	for i := 0; i < workflow.ConditionalRetryCount; i++ {
 		ms := execution.CreatePersistenceMutableState(msBuilder)
 		gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
@@ -2764,7 +2771,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedMaxAttemptsExceeded() {
 			Identity:  identity,
 		},
 	})
-	s.Equal(ErrMaxAttemptsExceeded, err)
+	s.Equal(workflow.ErrMaxAttemptsExceeded, err)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCompletedSuccess() {
@@ -3321,7 +3328,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedMaxAttemptsExceeded() {
 		activityType, tl, activityInput, 100, 10, 1, 5)
 	test.AddActivityTaskStartedEvent(msBuilder, activityScheduledEvent.EventID, identity)
 
-	for i := 0; i < conditionalRetryCount; i++ {
+	for i := 0; i < workflow.ConditionalRetryCount; i++ {
 		ms := execution.CreatePersistenceMutableState(msBuilder)
 		gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
@@ -3337,7 +3344,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedMaxAttemptsExceeded() {
 			Identity:  identity,
 		},
 	})
-	s.Equal(ErrMaxAttemptsExceeded, err)
+	s.Equal(workflow.ErrMaxAttemptsExceeded, err)
 }
 
 func (s *engineSuite) TestRespondActivityTaskFailedSuccess() {
@@ -4434,7 +4441,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	}
 	result2 := &types.WorkflowQueryResult{
 		ResultType:   types.QueryResultTypeFailed.Ptr(),
-		ErrorMessage: common.StringPtr("error reason"),
+		ErrorMessage: "error reason",
 	}
 	queryResults := map[string]*types.WorkflowQueryResult{
 		id1: result1,
@@ -4903,7 +4910,7 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_TimerFired() 
 func (s *engineSuite) TestSignalWorkflowExecution() {
 	signalRequest := &types.HistorySignalWorkflowExecutionRequest{}
 	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
-	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
+	s.Error(err)
 
 	we := types.WorkflowExecution{
 		WorkflowID: "wId",
@@ -4948,7 +4955,7 @@ func (s *engineSuite) TestSignalWorkflowExecution() {
 func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest() {
 	signalRequest := &types.HistorySignalWorkflowExecutionRequest{}
 	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
-	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
+	s.Error(err)
 
 	we := types.WorkflowExecution{
 		WorkflowID: "wId2",
@@ -4996,7 +5003,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest() {
 func (s *engineSuite) TestSignalWorkflowExecution_Failed() {
 	signalRequest := &types.HistorySignalWorkflowExecutionRequest{}
 	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
-	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
+	s.Error(err)
 
 	we := &types.WorkflowExecution{
 		WorkflowID: "wId",
@@ -5038,7 +5045,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_Failed() {
 func (s *engineSuite) TestRemoveSignalMutableState() {
 	removeRequest := &types.RemoveSignalMutableStateRequest{}
 	err := s.mockHistoryEngine.RemoveSignalMutableState(context.Background(), removeRequest)
-	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
+	s.Error(err)
 
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: "wId",

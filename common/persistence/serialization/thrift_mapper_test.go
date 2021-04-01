@@ -303,7 +303,7 @@ func TestActivityInfo(t *testing.T) {
 		RetryInitialInterval:     common.DurationPtr(time.Minute * time.Duration(rand.Intn(10))),
 		RetryMaximumInterval:     common.DurationPtr(time.Minute * time.Duration(rand.Intn(10))),
 		RetryMaximumAttempts:     common.Int32Ptr(int32(rand.Intn(1000))),
-		RetryExpirationTimestamp: common.TimePtr(time.Now()),
+		RetryExpirationTimestamp: common.TimePtr(time.Time{}),
 		RetryBackoffCoefficient:  common.Float64Ptr(rand.Float64() * 1000),
 		RetryNonRetryableErrors:  []string{"RetryNonRetryableErrors"},
 		RetryLastFailureReason:   common.StringPtr("RetryLastFailureReason"),

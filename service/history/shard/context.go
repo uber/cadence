@@ -948,10 +948,8 @@ func (s *contextImpl) AppendHistoryV2Events(
 
 	size := 0
 	defer func() {
-		// N.B. - Dual emit here makes sense so that we can see aggregate timer stats across all
-		// domains along with the individual domains stats
-		s.GetMetricsClient().RecordTimer(metrics.SessionSizeStatsScope, metrics.HistorySize, time.Duration(size))
-		s.GetMetricsClient().Scope(metrics.SessionSizeStatsScope, metrics.DomainTag(domainName)).RecordTimer(metrics.HistorySize, time.Duration(size))
+		s.GetMetricsClient().Scope(metrics.SessionSizeStatsScope, metrics.DomainTag(domainName)).
+			RecordTimer(metrics.HistorySize, time.Duration(size))
 		if size >= historySizeLogThreshold {
 			s.throttledLogger.Warn("history size threshold breached",
 				tag.WorkflowID(execution.GetWorkflowID()),
@@ -1465,7 +1463,7 @@ func acquireShard(
 	retryPolicy.SetExpirationInterval(5 * time.Second)
 
 	retryPredicate := func(err error) bool {
-		if common.IsPersistenceTransientError(err) {
+		if persistence.IsTransientError(err) {
 			return true
 		}
 		_, ok := err.(*persistence.ShardAlreadyExistError)

@@ -322,7 +322,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		workflowStartTimestamp,
 		workflowExecutionTimestamp.UnixNano(),
 		workflowCloseTimestamp,
-		workflowCloseStatus,
+		*workflowCloseStatus,
 		workflowHistoryLength,
 		task.GetTaskID(),
 		visibilityMemo,
@@ -901,7 +901,7 @@ func (t *transferActiveTaskExecutor) processResetWorkflow(
 	// reset workflow needs to go through the history so it may take a long time.
 	// as a result it's not subject to the taskDefaultTimeout. Otherwise the task
 	// may got stuck if the workflow history is large.
-	if err := t.resetWorkflow(
+	return t.resetWorkflow(
 		task,
 		domainEntry.GetInfo().Name,
 		reason,
@@ -911,10 +911,7 @@ func (t *transferActiveTaskExecutor) processResetWorkflow(
 		currentContext,
 		currentMutableState,
 		logger,
-	); err != nil {
-		return err
-	}
-	return nil
+	)
 }
 
 func (t *transferActiveTaskExecutor) recordChildExecutionStarted(
@@ -1226,8 +1223,7 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionWithRetry(
 		return t.historyClient.RequestCancelWorkflowExecution(requestCancelCtx, request)
 	}
 
-	err := backoff.Retry(op, taskRetryPolicy, common.IsPersistenceTransientError)
-
+	err := backoff.Retry(op, taskRetryPolicy, common.IsServiceTransientError)
 	if _, ok := err.(*types.CancellationAlreadyRequestedError); ok {
 		// err is CancellationAlreadyRequestedError
 		// this could happen if target workflow cancellation is already requested
@@ -1272,7 +1268,7 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionWithRetry(
 		return t.historyClient.SignalWorkflowExecution(signalCtx, request)
 	}
 
-	return backoff.Retry(op, taskRetryPolicy, common.IsPersistenceTransientError)
+	return backoff.Retry(op, taskRetryPolicy, common.IsServiceTransientError)
 }
 
 func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
@@ -1300,19 +1296,23 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 		CronSchedule:          attributes.CronSchedule,
 		Memo:                  attributes.Memo,
 		SearchAttributes:      attributes.SearchAttributes,
+		DelayStartSeconds:     attributes.DelayStartSeconds,
 	}
 
 	now := t.shard.GetTimeSource().Now()
-	historyStartReq := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, now)
+	historyStartReq, historyReqError := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, now)
+	if historyReqError != nil {
+		return "", historyReqError
+	}
 
 	historyStartReq.ParentExecutionInfo = &types.ParentExecutionInfo{
-		DomainUUID: common.StringPtr(task.DomainID),
-		Domain:     common.StringPtr(domain),
+		DomainUUID: task.DomainID,
+		Domain:     domain,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
 		},
-		InitiatedID: common.Int64Ptr(task.ScheduleID),
+		InitiatedID: task.ScheduleID,
 	}
 
 	startWorkflowCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
@@ -1324,7 +1324,7 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 		return err
 	}
 
-	err = backoff.Retry(op, taskRetryPolicy, common.IsPersistenceTransientError)
+	err = backoff.Retry(op, taskRetryPolicy, common.IsServiceTransientError)
 	if err != nil {
 		return "", err
 	}

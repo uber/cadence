@@ -157,7 +157,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 		},
 		ExecutionFilter: &types.WorkflowExecutionFilter{
-			WorkflowID: common.StringPtr("wid"),
+			WorkflowID: "wid",
 		},
 	}
 	_, err := wh.ListOpenWorkflowExecutions(context.Background(), listRequest)
@@ -167,7 +167,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 	// test list open by workflow type
 	listRequest.ExecutionFilter = nil
 	listRequest.TypeFilter = &types.WorkflowTypeFilter{
-		Name: common.StringPtr("workflow-type"),
+		Name: "workflow-type",
 	}
 	_, err = wh.ListOpenWorkflowExecutions(context.Background(), listRequest)
 	s.Error(err)
@@ -181,7 +181,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 		},
 		ExecutionFilter: &types.WorkflowExecutionFilter{
-			WorkflowID: common.StringPtr("wid"),
+			WorkflowID: "wid",
 		},
 	}
 	_, err = wh.ListClosedWorkflowExecutions(context.Background(), listRequest2)
@@ -191,7 +191,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 	// test list close by workflow type
 	listRequest2.ExecutionFilter = nil
 	listRequest2.TypeFilter = &types.WorkflowTypeFilter{
-		Name: common.StringPtr("workflow-type"),
+		Name: "workflow-type",
 	}
 	_, err = wh.ListClosedWorkflowExecutions(context.Background(), listRequest2)
 	s.Error(err)
@@ -258,6 +258,37 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_RequestIdNotSet
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
 	s.Equal(errRequestIDNotSet, err)
+}
+
+func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_BadDelayStartSeconds() {
+	config := s.newConfig()
+	config.RPS = dc.GetIntPropertyFn(10)
+	wh := s.getWorkflowHandler(config)
+
+	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
+		Domain:     "test-domain",
+		WorkflowID: "workflow-id",
+		WorkflowType: &types.WorkflowType{
+			Name: "workflow-type",
+		},
+		TaskList: &types.TaskList{
+			Name: "task-list",
+		},
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
+		},
+		RequestID:         uuid.New(),
+		DelayStartSeconds: common.Int32Ptr(-1),
+	}
+	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
+	s.Error(err)
+	s.Equal(errInvalidDelayStartSeconds, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_StartRequestNotSet() {
@@ -1358,6 +1389,23 @@ func (s *workflowHandlerSuite) TestVerifyHistoryIsComplete() {
 			s.NoError(err, "testcase %v failed", i)
 		}
 	}
+}
+
+func (s *workflowHandlerSuite) TestContextMetricsTags() {
+	wh := s.getWorkflowHandler(s.newConfig())
+
+	tag := metrics.ThriftTransportTag()
+	ctx := metrics.TagContext(context.Background(), tag)
+	wh.CountWorkflowExecutions(ctx, nil)
+
+	snapshot := s.mockResource.MetricsScope.Snapshot()
+	for _, counter := range snapshot.Counters() {
+		if counter.Name() == "test.cadence_requests" {
+			s.Equal(tag.Value(), counter.Tags()[tag.Key()])
+			return
+		}
+	}
+	s.Fail("counter not found")
 }
 
 func (s *workflowHandlerSuite) newConfig() *Config {

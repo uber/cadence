@@ -542,43 +542,43 @@ func (b *HistoryBuilder) addTransientEvent(event *types.HistoryEvent) *types.His
 
 func (b *HistoryBuilder) newWorkflowExecutionStartedEvent(
 	startRequest *types.HistoryStartWorkflowExecutionRequest, previousExecution *persistence.WorkflowExecutionInfo, firstRunID, originalRunID string) *types.HistoryEvent {
-	var prevRunID *string
+	var prevRunID string
 	var resetPoints *types.ResetPoints
 	if previousExecution != nil {
-		prevRunID = common.StringPtr(previousExecution.RunID)
+		prevRunID = previousExecution.RunID
 		resetPoints = previousExecution.AutoResetPoints
 	}
 	request := startRequest.StartRequest
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(types.EventTypeWorkflowExecutionStarted)
-	attributes := &types.WorkflowExecutionStartedEventAttributes{}
-	attributes.WorkflowType = request.WorkflowType
-	attributes.TaskList = request.TaskList
-	attributes.Header = request.Header
-	attributes.Input = request.Input
-	attributes.ExecutionStartToCloseTimeoutSeconds = common.Int32Ptr(*request.ExecutionStartToCloseTimeoutSeconds)
-	attributes.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(*request.TaskStartToCloseTimeoutSeconds)
-	attributes.ContinuedExecutionRunID = prevRunID
-	attributes.PrevAutoResetPoints = resetPoints
-	attributes.Identity = request.Identity
-	attributes.RetryPolicy = request.RetryPolicy
-	attributes.Attempt = startRequest.GetAttempt()
-	attributes.ExpirationTimestamp = startRequest.ExpirationTimestamp
-	attributes.CronSchedule = request.CronSchedule
-	attributes.LastCompletionResult = startRequest.LastCompletionResult
-	attributes.ContinuedFailureReason = startRequest.ContinuedFailureReason
-	attributes.ContinuedFailureDetails = startRequest.ContinuedFailureDetails
-	attributes.Initiator = startRequest.ContinueAsNewInitiator
-	attributes.FirstDecisionTaskBackoffSeconds = startRequest.FirstDecisionTaskBackoffSeconds
-	attributes.FirstExecutionRunID = firstRunID
-	attributes.OriginalExecutionRunID = originalRunID
-	attributes.Memo = request.Memo
-	attributes.SearchAttributes = request.SearchAttributes
-
-	parentInfo := startRequest.ParentExecutionInfo
-	if parentInfo != nil {
-		attributes.ParentWorkflowDomain = parentInfo.Domain
+	attributes := &types.WorkflowExecutionStartedEventAttributes{
+		WorkflowType:                        request.WorkflowType,
+		TaskList:                            request.TaskList,
+		Header:                              request.Header,
+		Input:                               request.Input,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(*request.ExecutionStartToCloseTimeoutSeconds),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(*request.TaskStartToCloseTimeoutSeconds),
+		ContinuedExecutionRunID:             prevRunID,
+		PrevAutoResetPoints:                 resetPoints,
+		Identity:                            request.Identity,
+		RetryPolicy:                         request.RetryPolicy,
+		Attempt:                             startRequest.GetAttempt(),
+		ExpirationTimestamp:                 startRequest.ExpirationTimestamp,
+		CronSchedule:                        request.CronSchedule,
+		LastCompletionResult:                startRequest.LastCompletionResult,
+		ContinuedFailureReason:              startRequest.ContinuedFailureReason,
+		ContinuedFailureDetails:             startRequest.ContinuedFailureDetails,
+		Initiator:                           startRequest.ContinueAsNewInitiator,
+		FirstDecisionTaskBackoffSeconds:     startRequest.FirstDecisionTaskBackoffSeconds,
+		FirstExecutionRunID:                 firstRunID,
+		OriginalExecutionRunID:              originalRunID,
+		Memo:                                request.Memo,
+		SearchAttributes:                    request.SearchAttributes,
+	}
+	if parentInfo := startRequest.ParentExecutionInfo; parentInfo != nil {
+		attributes.ParentWorkflowDomainID = &parentInfo.DomainUUID
+		attributes.ParentWorkflowDomain = &parentInfo.Domain
 		attributes.ParentWorkflowExecution = parentInfo.Execution
-		attributes.ParentInitiatedEventID = parentInfo.InitiatedID
+		attributes.ParentInitiatedEventID = &parentInfo.InitiatedID
 	}
 	historyEvent.WorkflowExecutionStartedEventAttributes = attributes
 
@@ -673,6 +673,11 @@ func (b *HistoryBuilder) newActivityTaskScheduledEvent(DecisionTaskCompletedEven
 	attributes.HeartbeatTimeoutSeconds = common.Int32Ptr(common.Int32Default(scheduleAttributes.HeartbeatTimeoutSeconds))
 	attributes.DecisionTaskCompletedEventID = DecisionTaskCompletedEventID
 	attributes.RetryPolicy = scheduleAttributes.RetryPolicy
+	if scheduleAttributes.Domain != "" {
+		// for backward compatibility
+		// old releases will encounter issues if Domain field is a pointer to an empty string.
+		attributes.Domain = common.StringPtr(scheduleAttributes.Domain)
+	}
 	historyEvent.ActivityTaskScheduledEventAttributes = attributes
 
 	return historyEvent

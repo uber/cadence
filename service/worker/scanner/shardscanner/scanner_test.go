@@ -79,6 +79,7 @@ func (s *ScannerSuite) TestScan_Failure_FirstIteratorError() {
 				InfoDetails: "iterator error",
 			},
 		},
+		DomainStats: make(map[string]*ScanStats),
 	}, result)
 }
 
@@ -93,7 +94,7 @@ func (s *ScannerSuite) TestScan_Failure_NonFirstError() {
 			iteratorCallNumber++
 		}()
 		if iteratorCallNumber < 4 {
-			return &entity.ConcreteExecution{}, nil
+			return &entity.ConcreteExecution{Execution: entity.Execution{DomainID: "ABC"}}, nil
 		}
 		return nil, fmt.Errorf("iterator got error on: %v", iteratorCallNumber)
 	}).Times(5)
@@ -120,13 +121,19 @@ func (s *ScannerSuite) TestScan_Failure_NonFirstError() {
 				InfoDetails: "iterator got error on: 4",
 			},
 		},
+		DomainStats: map[string]*ScanStats{
+			"ABC": &ScanStats{
+				EntitiesCount:    4,
+				CorruptionByType: make(map[invariant.Name]int64),
+			},
+		},
 	}, result)
 }
 
 func (s *ScannerSuite) TestScan_Failure_CorruptedWriterError() {
 	mockItr := pagination.NewMockIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
-	mockItr.EXPECT().Next().Return(&entity.ConcreteExecution{}, nil).Times(1)
+	mockItr.EXPECT().Next().Return(&entity.ConcreteExecution{Execution: entity.Execution{DomainID: "ABC"}}, nil).Times(1)
 	mockInvariantManager := invariant.NewMockManager(s.controller)
 	mockInvariantManager.EXPECT().RunChecks(gomock.Any(), gomock.Any()).Return(invariant.ManagerCheckResult{
 		CheckResultType: invariant.CheckResultTypeCorrupted,
@@ -153,13 +160,19 @@ func (s *ScannerSuite) TestScan_Failure_CorruptedWriterError() {
 				InfoDetails: "corrupted writer add failed",
 			},
 		},
+		DomainStats: map[string]*ScanStats{
+			"ABC": &ScanStats{
+				EntitiesCount:    1,
+				CorruptionByType: make(map[invariant.Name]int64),
+			},
+		},
 	}, result)
 }
 
 func (s *ScannerSuite) TestScan_Failure_FailedWriterError() {
 	mockItr := pagination.NewMockIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
-	mockItr.EXPECT().Next().Return(&entity.ConcreteExecution{}, nil).Times(1)
+	mockItr.EXPECT().Next().Return(&entity.ConcreteExecution{Execution: entity.Execution{DomainID: "ABC"}}, nil).Times(1)
 	mockInvariantManager := invariant.NewMockManager(s.controller)
 	mockInvariantManager.EXPECT().RunChecks(gomock.Any(), gomock.Any()).Return(invariant.ManagerCheckResult{
 		CheckResultType: invariant.CheckResultTypeFailed,
@@ -184,6 +197,12 @@ func (s *ScannerSuite) TestScan_Failure_FailedWriterError() {
 			ControlFlowFailure: &ControlFlowFailure{
 				Info:        "blobstore add failed for failed execution check",
 				InfoDetails: "failed writer add failed",
+			},
+		},
+		DomainStats: map[string]*ScanStats{
+			"ABC": &ScanStats{
+				EntitiesCount:    1,
+				CorruptionByType: make(map[invariant.Name]int64),
 			},
 		},
 	}, result)
@@ -213,6 +232,7 @@ func (s *ScannerSuite) TestScan_Failure_FailedWriterFlushError() {
 				InfoDetails: "failed writer flush failed",
 			},
 		},
+		DomainStats: make(map[string]*ScanStats),
 	}, result)
 }
 
@@ -243,6 +263,7 @@ func (s *ScannerSuite) TestScan_Failure_CorruptedWriterFlushError() {
 				InfoDetails: "corrupted writer flush failed",
 			},
 		},
+		DomainStats: make(map[string]*ScanStats),
 	}, result)
 }
 
@@ -435,5 +456,54 @@ func (s *ScannerSuite) TestScan_Success() {
 				Failed:  &store.Keys{UUID: "failed_keys_uuid"},
 			},
 		},
+		DomainStats: map[string]*ScanStats{
+			"failed": &ScanStats{
+				EntitiesCount:    2,
+				CheckFailedCount: 2,
+				CorruptionByType: make(map[invariant.Name]int64),
+			},
+			"healthy": &ScanStats{
+				EntitiesCount:    4,
+				CorruptionByType: make(map[invariant.Name]int64),
+			},
+			"history_missing": &ScanStats{
+				EntitiesCount:  3,
+				CorruptedCount: 3,
+				CorruptionByType: map[invariant.Name]int64{
+					invariant.HistoryExists: 3,
+				},
+			},
+			"orphan_execution": &ScanStats{
+				EntitiesCount:  1,
+				CorruptedCount: 1,
+				CorruptionByType: map[invariant.Name]int64{
+					invariant.OpenCurrentExecution: 1,
+				},
+			},
+		},
 	}, result)
+}
+
+func (s *ScannerSuite) TestGetDomainIDFromEntity() {
+	scanner := &ShardScanner{}
+
+	concreteExecution := entity.ConcreteExecution{Execution: entity.Execution{DomainID: "A"}}
+	concreteExecutionDomain, err := scanner.getDomainIDFromEntity(&concreteExecution)
+	s.NoError(err)
+	s.Equal("A", *concreteExecutionDomain)
+
+	currentExecution := entity.CurrentExecution{Execution: entity.Execution{DomainID: "B"}}
+	currentExecutionDomain, err := scanner.getDomainIDFromEntity(&currentExecution)
+	s.NoError(err)
+	s.Equal("B", *currentExecutionDomain)
+
+	timer := entity.CurrentExecution{Execution: entity.Execution{DomainID: "C"}}
+	timerDomain, err := scanner.getDomainIDFromEntity(&timer)
+	s.NoError(err)
+	s.Equal("C", *timerDomain)
+
+	baseExecution := entity.Execution{DomainID: "D"}
+	result, err := scanner.getDomainIDFromEntity(&baseExecution)
+	s.Nil(result)
+	s.Error(err)
 }

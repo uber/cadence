@@ -26,7 +26,10 @@ COPY go.* ./
 RUN go mod download
 
 COPY . .
+RUN rm -fr .bin .build
 
+# bypass codegen, use committed files.  must be run separately, before building things.
+RUN make .fake-codegen
 RUN CGO_ENABLED=0 make copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server
 
 

@@ -33,7 +33,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
 )
 
@@ -140,11 +139,6 @@ Loop:
 			Identity: p.Identity,
 		})
 
-		if err1 == history.ErrDuplicate {
-			p.Logger.Info("Duplicate Decision task: Polling again.")
-			continue Loop
-		}
-
 		if err1 != nil {
 			return false, nil, err1
 		}
@@ -211,7 +205,7 @@ Loop:
 			if err != nil {
 				completeType := types.QueryTaskCompletedTypeFailed
 				completeRequest.CompletedType = &completeType
-				completeRequest.ErrorMessage = common.StringPtr(err.Error())
+				completeRequest.ErrorMessage = err.Error()
 			} else {
 				completeType := types.QueryTaskCompletedTypeCompleted
 				completeRequest.CompletedType = &completeType
@@ -343,18 +337,12 @@ func (p *TaskPoller) HandlePartialDecision(response *types.PollForDecisionTaskRe
 
 // PollAndProcessActivityTask for activity tasks
 func (p *TaskPoller) PollAndProcessActivityTask(dropTask bool) error {
-retry:
 	for attempt := 0; attempt < 5; attempt++ {
 		response, err1 := p.Engine.PollForActivityTask(createContext(), &types.PollForActivityTaskRequest{
 			Domain:   p.Domain,
 			TaskList: p.TaskList,
 			Identity: p.Identity,
 		})
-
-		if err1 == history.ErrDuplicate {
-			p.Logger.Info("Duplicate Activity task: Polling again.")
-			continue retry
-		}
 
 		if err1 != nil {
 			return err1
@@ -403,18 +391,12 @@ retry:
 
 // PollAndProcessActivityTaskWithID is similar to PollAndProcessActivityTask but using RespondActivityTask...ByID
 func (p *TaskPoller) PollAndProcessActivityTaskWithID(dropTask bool) error {
-retry:
 	for attempt := 0; attempt < 5; attempt++ {
 		response, err1 := p.Engine.PollForActivityTask(createContext(), &types.PollForActivityTaskRequest{
 			Domain:   p.Domain,
 			TaskList: p.TaskList,
 			Identity: p.Identity,
 		})
-
-		if err1 == history.ErrDuplicate {
-			p.Logger.Info("Duplicate Activity task: Polling again.")
-			continue retry
-		}
 
 		if err1 != nil {
 			return err1

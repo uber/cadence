@@ -342,12 +342,12 @@ type MatchingPollForDecisionTaskResponse struct {
 	StartedEventID            int64                     `json:"startedEventId,omitempty"`
 	Attempt                   int64                     `json:"attempt,omitempty"`
 	NextEventID               int64                     `json:"nextEventId,omitempty"`
-	BacklogCountHint          *int64                    `json:"backlogCountHint,omitempty"`
+	BacklogCountHint          int64                     `json:"backlogCountHint,omitempty"`
 	StickyExecutionEnabled    bool                      `json:"stickyExecutionEnabled,omitempty"`
 	Query                     *WorkflowQuery            `json:"query,omitempty"`
 	DecisionInfo              *TransientDecisionInfo    `json:"decisionInfo,omitempty"`
 	WorkflowExecutionTaskList *TaskList                 `json:"WorkflowExecutionTaskList,omitempty"`
-	EventStoreVersion         *int32                    `json:"eventStoreVersion,omitempty"`
+	EventStoreVersion         int32                     `json:"eventStoreVersion,omitempty"`
 	BranchToken               []byte                    `json:"branchToken,omitempty"`
 	ScheduledTimestamp        *int64                    `json:"scheduledTimestamp,omitempty"`
 	StartedTimestamp          *int64                    `json:"startedTimestamp,omitempty"`
@@ -412,8 +412,8 @@ func (v *MatchingPollForDecisionTaskResponse) GetNextEventID() (o int64) {
 
 // GetBacklogCountHint is an internal getter (TBD...)
 func (v *MatchingPollForDecisionTaskResponse) GetBacklogCountHint() (o int64) {
-	if v != nil && v.BacklogCountHint != nil {
-		return *v.BacklogCountHint
+	if v != nil {
+		return v.BacklogCountHint
 	}
 	return
 }
@@ -452,8 +452,8 @@ func (v *MatchingPollForDecisionTaskResponse) GetWorkflowExecutionTaskList() (o 
 
 // GetEventStoreVersion is an internal getter (TBD...)
 func (v *MatchingPollForDecisionTaskResponse) GetEventStoreVersion() (o int32) {
-	if v != nil && v.EventStoreVersion != nil {
-		return *v.EventStoreVersion
+	if v != nil {
+		return v.EventStoreVersion
 	}
 	return
 }

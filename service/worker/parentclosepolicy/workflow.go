@@ -34,8 +34,12 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+type (
+	contextKey string
+)
+
 const (
-	processorContextKey = "processorContext"
+	processorContextKey contextKey = "processorContext"
 	// processorTaskListName is the tasklist name
 	processorTaskListName = "cadence-sys-processor-parent-close-policy"
 	// processorWFTypeName is the workflow type

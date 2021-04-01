@@ -520,8 +520,8 @@ func CreateShardOwnershipLostError(
 ) *types.ShardOwnershipLostError {
 
 	shardLostErr := &types.ShardOwnershipLostError{}
-	shardLostErr.Message = common.StringPtr(fmt.Sprintf("Shard is not owned by host: %v", currentHost))
-	shardLostErr.Owner = common.StringPtr(ownerHost)
+	shardLostErr.Message = fmt.Sprintf("Shard is not owned by host: %v", currentHost)
+	shardLostErr.Owner = ownerHost
 
 	return shardLostErr
 }

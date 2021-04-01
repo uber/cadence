@@ -916,7 +916,7 @@ func (s *taskAckManagerSuite) TestGetTasks() {
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
-	clusterName := "cluster"
+	clusterName := cluster.TestCurrentClusterName
 	taskInfo := &persistence.ReplicationTaskInfo{
 		TaskType:     persistence.ReplicationTaskTypeFailoverMarker,
 		DomainID:     domainID,
@@ -930,6 +930,19 @@ func (s *taskAckManagerSuite) TestGetTasks() {
 		NextPageToken: []byte{1},
 	}, nil)
 	s.mockShard.Resource.ShardMgr.On("UpdateShard", mock.Anything, mock.Anything).Return(nil)
+	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
+		&persistence.DomainConfig{Retention: 1},
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+		1,
+		nil,
+	), nil).AnyTimes()
 
 	_, err := s.ackManager.GetTasks(context.Background(), clusterName, 10)
 	s.NoError(err)
@@ -941,7 +954,7 @@ func (s *taskAckManagerSuite) TestGetTasks_ReturnDataErrors() {
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
-	clusterName := "cluster"
+	clusterName := cluster.TestCurrentClusterName
 	taskID := int64(10)
 	taskInfo := &persistence.ReplicationTaskInfo{
 		TaskType:     persistence.ReplicationTaskTypeHistory,
@@ -1023,4 +1036,40 @@ func (s *taskAckManagerSuite) TestGetTasks_ReturnDataErrors() {
 	msg, err = s.ackManager.GetTasks(context.Background(), clusterName, taskID)
 	s.NoError(err)
 	s.Equal(taskID+1, msg.GetLastRetrievedMessageID())
+}
+
+func (s *taskAckManagerSuite) TestSkipTask_ReturnTrue() {
+	domainID := uuid.New()
+	domainEntity := cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
+		&persistence.DomainConfig{Retention: 1},
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+		1,
+		nil,
+	)
+	s.True(skipTask("test", domainEntity))
+}
+
+func (s *taskAckManagerSuite) TestSkipTask_ReturnFalse() {
+	domainID := uuid.New()
+	domainEntity := cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
+		&persistence.DomainConfig{Retention: 1},
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+		1,
+		nil,
+	)
+	s.False(skipTask(cluster.TestAlternativeClusterName, domainEntity))
 }

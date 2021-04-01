@@ -1,0 +1,72 @@
+version: '3'
+services:
+  cassandra:
+    image: cassandra:3.11
+    ports:
+      - "9042:9042"
+  statsd:
+    image: graphiteapp/graphite-statsd
+    ports:
+      - "8080:80"
+      - "2003:2003"
+      - "8125:8125"
+      - "8126:8126"
+  cadence:
+    image: ubercadence/server:master-auto-setup
+    ports:
+     - "7933:7933"
+     - "7934:7934"
+     - "7935:7935"
+     - "7939:7939"
+    environment:
+      - "CASSANDRA_SEEDS=cassandra"
+      - "STATSD_ENDPOINT=statsd:8125"
+      - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml"
+      - "ENABLE_GLOBAL_DOMAIN=true"
+      - "KEYSPACE=cadence_primary"
+      - "VISIBILITY_KEYSPACE=cadence_visibility_primary"
+      - "STATSD_FRONTEND_PREFIX=cadence-frontend-primary"
+      - "STATSD_MATCHING_PREFIX=cadence-matching-primary"
+      - "STATSD_HISTORY_PREFIX=cadence-history-primary"
+      - "STATSD_WORKER_PREFIX=cadence-worker-primary"
+    depends_on:
+      - cassandra
+      - statsd
+  cadence-secondary:
+    image: ubercadence/server:master-auto-setup
+    ports:
+     - "7943:7933"
+     - "7944:7934"
+     - "7945:7935"
+     - "7949:7939"
+    environment:
+      - "CASSANDRA_SEEDS=cassandra"
+      - "STATSD_ENDPOINT=statsd:8125"
+      - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml"
+      - "IS_NOT_PRIMARY=true"
+      - "ENABLE_GLOBAL_DOMAIN=true"
+      - "KEYSPACE=cadence_secondary"
+      - "VISIBILITY_KEYSPACE=cadence_visibility_secondary"
+      - "STATSD_FRONTEND_PREFIX=cadence-frontend-secondary"
+      - "STATSD_MATCHING_PREFIX=cadence-matching-secondary"
+      - "STATSD_HISTORY_PREFIX=cadence-history-secondary"
+      - "STATSD_WORKER_PREFIX=cadence-worker-secondary"
+    depends_on:
+      - cassandra
+      - statsd
+  cadence-web:
+    image: ubercadence/web:latest
+    environment:
+      - "CADENCE_TCHANNEL_PEERS=cadence:7933"
+    ports:
+      - "8088:8088"
+    depends_on:
+      - cadence
+  cadence-web-secondary:
+    image: ubercadence/web:latest
+    environment:
+      - "CADENCE_TCHANNEL_PEERS=cadence-secondary:7933"
+    ports:
+      - "8089:8088"
+    depends_on:
+      - cadence-secondary

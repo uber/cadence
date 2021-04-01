@@ -124,6 +124,7 @@ var (
 	errInvalidRetention                           = &types.BadRequestError{Message: "RetentionDays is invalid."}
 	errInvalidExecutionStartToCloseTimeoutSeconds = &types.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidTaskStartToCloseTimeoutSeconds      = &types.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
+	errInvalidDelayStartSeconds                   = &types.BadRequestError{Message: "A valid DelayStartSeconds is not set on request."}
 	errQueryDisallowedForDomain                   = &types.BadRequestError{Message: "Domain is not allowed to query, please contact cadence team to re-enable queries."}
 	errClusterNameNotSet                          = &types.BadRequestError{Message: "Cluster name is not set."}
 	errEmptyReplicationInfo                       = &types.BadRequestError{Message: "Replication task info is not set."}
@@ -239,7 +240,7 @@ func (wh *WorkflowHandler) Health(ctx context.Context) (*types.HealthStatus, err
 
 	return &types.HealthStatus{
 		Ok:  status == HealthStatusOK,
-		Msg: &msg,
+		Msg: msg,
 	}, nil
 }
 
@@ -250,7 +251,7 @@ func (wh *WorkflowHandler) Health(ctx context.Context) (*types.HealthStatus, err
 func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *types.RegisterDomainRequest) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfile(metrics.FrontendRegisterDomainScope)
+	scope, sw := wh.startRequestProfile(ctx, metrics.FrontendRegisterDomainScope)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -291,7 +292,7 @@ func (wh *WorkflowHandler) ListDomains(
 ) (response *types.ListDomainsResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfile(metrics.FrontendListDomainsScope)
+	scope, sw := wh.startRequestProfile(ctx, metrics.FrontendListDomainsScope)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -320,7 +321,7 @@ func (wh *WorkflowHandler) DescribeDomain(
 ) (response *types.DescribeDomainResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfile(metrics.FrontendDescribeDomainScope)
+	scope, sw := wh.startRequestProfile(ctx, metrics.FrontendDescribeDomainScope)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -353,7 +354,7 @@ func (wh *WorkflowHandler) UpdateDomain(
 ) (resp *types.UpdateDomainResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfile(metrics.FrontendUpdateDomainScope)
+	scope, sw := wh.startRequestProfile(ctx, metrics.FrontendUpdateDomainScope)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -401,7 +402,7 @@ func (wh *WorkflowHandler) UpdateDomain(
 func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest *types.DeprecateDomainRequest) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfile(metrics.FrontendDeprecateDomainScope)
+	scope, sw := wh.startRequestProfile(ctx, metrics.FrontendDeprecateDomainScope)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -440,7 +441,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 
 	callTime := time.Now()
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendPollForActivityTaskScope, pollRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendPollForActivityTaskScope, pollRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -524,7 +525,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	tagsForErrorLog := []tag.Tag{tag.WorkflowDomainName(pollRequest.GetDomain())}
 	callTime := time.Now()
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendPollForDecisionTaskScope, pollRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendPollForDecisionTaskScope, pollRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -663,7 +664,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 ) (resp *types.RecordActivityTaskHeartbeatResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope := wh.getDefaultScope(metrics.FrontendRecordActivityTaskHeartbeatScope)
+	scope := wh.getDefaultScope(ctx, metrics.FrontendRecordActivityTaskHeartbeatScope)
 
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
 		return nil, wh.error(err, scope)
@@ -694,6 +695,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 	}
 
 	scope, sw := wh.startRequestProfileWithDomain(
+		ctx,
 		metrics.FrontendRecordActivityTaskHeartbeatScope,
 		domainWrapper{
 			domain: domainName,
@@ -754,7 +756,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 ) (resp *types.RecordActivityTaskHeartbeatResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendRecordActivityTaskHeartbeatByIDScope, heartbeatRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendRecordActivityTaskHeartbeatByIDScope, heartbeatRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -866,7 +868,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope := wh.getDefaultScope(metrics.FrontendRespondActivityTaskCompletedScope)
+	scope := wh.getDefaultScope(ctx, metrics.FrontendRespondActivityTaskCompletedScope)
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
 		return wh.error(err, scope)
 	}
@@ -898,6 +900,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 	}
 
 	scope, sw := wh.startRequestProfileWithDomain(
+		ctx,
 		metrics.FrontendRespondActivityTaskCompletedScope,
 		domainWrapper{
 			domain: domainName,
@@ -957,7 +960,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendRespondActivityTaskCompletedByIDScope, completeRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendRespondActivityTaskCompletedByIDScope, completeRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -1071,7 +1074,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope := wh.getDefaultScope(metrics.FrontendRespondActivityTaskFailedScope)
+	scope := wh.getDefaultScope(ctx, metrics.FrontendRespondActivityTaskFailedScope)
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
 		return wh.error(err, scope)
 	}
@@ -1100,6 +1103,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 	}
 
 	scope, sw := wh.startRequestProfileWithDomain(
+		ctx,
 		metrics.FrontendRespondActivityTaskFailedScope,
 		domainWrapper{
 			domain: domainName,
@@ -1151,7 +1155,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendRespondActivityTaskFailedByIDScope, failedRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendRespondActivityTaskFailedByIDScope, failedRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -1253,7 +1257,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope := wh.getDefaultScope(metrics.FrontendRespondActivityTaskCanceledScope)
+	scope := wh.getDefaultScope(ctx, metrics.FrontendRespondActivityTaskCanceledScope)
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
 		return wh.error(err, scope)
 	}
@@ -1282,6 +1286,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 	}
 
 	scope, sw := wh.startRequestProfileWithDomain(
+		ctx,
 		metrics.FrontendRespondActivityTaskCanceledScope,
 		domainWrapper{
 			domain: domainName,
@@ -1345,7 +1350,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendRespondActivityTaskCanceledScope, cancelRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendRespondActivityTaskCanceledScope, cancelRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -1458,7 +1463,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 ) (resp *types.RespondDecisionTaskCompletedResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope := wh.getDefaultScope(metrics.FrontendRespondDecisionTaskCompletedScope)
+	scope := wh.getDefaultScope(ctx, metrics.FrontendRespondDecisionTaskCompletedScope)
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -1487,6 +1492,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	}
 
 	scope, sw := wh.startRequestProfileWithDomain(
+		ctx,
 		metrics.FrontendRespondDecisionTaskCompletedScope,
 		domainWrapper{
 			domain: domainName,
@@ -1544,7 +1550,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope := wh.getDefaultScope(metrics.FrontendRespondDecisionTaskFailedScope)
+	scope := wh.getDefaultScope(ctx, metrics.FrontendRespondDecisionTaskFailedScope)
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
 		return wh.error(err, scope)
 	}
@@ -1573,6 +1579,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 	}
 
 	scope, sw := wh.startRequestProfileWithDomain(
+		ctx,
 		metrics.FrontendRespondDecisionTaskFailedScope,
 		domainWrapper{
 			domain: domainName,
@@ -1623,7 +1630,7 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope := wh.getDefaultScope(metrics.FrontendRespondQueryTaskCompletedScope)
+	scope := wh.getDefaultScope(ctx, metrics.FrontendRespondQueryTaskCompletedScope)
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
 		return wh.error(err, scope)
 	}
@@ -1652,6 +1659,7 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	}
 
 	scope, sw := wh.startRequestProfileWithDomain(
+		ctx,
 		metrics.FrontendRespondQueryTaskCompletedScope,
 		domainWrapper{
 			domain: domainName,
@@ -1681,15 +1689,15 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 			TaskToken:     completeRequest.TaskToken,
 			CompletedType: types.QueryTaskCompletedTypeFailed.Ptr(),
 			QueryResult:   nil,
-			ErrorMessage:  common.StringPtr(err.Error()),
+			ErrorMessage:  err.Error(),
 		}
 	}
 
 	call := yarpc.CallFromContext(ctx)
 
 	completeRequest.WorkerVersionInfo = &types.WorkerVersionInfo{
-		Impl:           common.StringPtr(call.Header(common.ClientImplHeaderName)),
-		FeatureVersion: common.StringPtr(call.Header(common.FeatureVersionHeaderName)),
+		Impl:           call.Header(common.ClientImplHeaderName),
+		FeatureVersion: call.Header(common.FeatureVersionHeaderName),
 	}
 	matchingRequest := &types.MatchingRespondQueryTaskCompletedRequest{
 		DomainUUID:       queryTaskToken.DomainID,
@@ -1712,7 +1720,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 ) (resp *types.StartWorkflowExecutionResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendStartWorkflowExecutionScope, startRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendStartWorkflowExecutionScope, startRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -1780,6 +1788,10 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errInvalidTaskStartToCloseTimeoutSeconds, scope)
 	}
 
+	if startRequest.GetDelayStartSeconds() < 0 {
+		return nil, wh.error(errInvalidDelayStartSeconds, scope)
+	}
+
 	if startRequest.GetRequestID() == "" {
 		return nil, wh.error(errRequestIDNotSet, scope)
 	}
@@ -1822,8 +1834,13 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	}
 
 	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
-	resp, err = wh.GetHistoryClient().
-		StartWorkflowExecution(ctx, common.CreateHistoryStartWorkflowRequest(domainID, startRequest, time.Now()))
+	historyRequest, err := common.CreateHistoryStartWorkflowRequest(
+		domainID, startRequest, time.Now())
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	resp, err = wh.GetHistoryClient().StartWorkflowExecution(ctx, historyRequest)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -1837,7 +1854,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 ) (resp *types.GetWorkflowExecutionHistoryResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendGetWorkflowExecutionHistoryScope, getRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendGetWorkflowExecutionHistoryScope, getRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -1907,7 +1924,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		response, err := wh.GetHistoryClient().PollMutableState(ctx, &types.PollMutableStateRequest{
 			DomainUUID:          domainUUID,
 			Execution:           execution,
-			ExpectedNextEventID: common.Int64Ptr(expectedNextEventID),
+			ExpectedNextEventID: expectedNextEventID,
 			CurrentBranchToken:  currentBranchToken,
 		})
 
@@ -2095,7 +2112,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendSignalWorkflowExecutionScope, signalRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendSignalWorkflowExecutionScope, signalRequest)
 	defer sw.Stop()
 
 	wfExecution := signalRequest.GetWorkflowExecution()
@@ -2180,7 +2197,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 ) (resp *types.StartWorkflowExecutionResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendSignalWithStartWorkflowExecutionScope, signalWithStartRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendSignalWithStartWorkflowExecutionScope, signalWithStartRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -2325,7 +2342,7 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendTerminateWorkflowExecutionScope, terminateRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendTerminateWorkflowExecutionScope, terminateRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -2378,7 +2395,7 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(
 ) (resp *types.ResetWorkflowExecutionResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendResetWorkflowExecutionScope, resetRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendResetWorkflowExecutionScope, resetRequest)
 	defer sw.Stop()
 
 	wfExecution := resetRequest.GetWorkflowExecution()
@@ -2430,7 +2447,7 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendRequestCancelWorkflowExecutionScope, cancelRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendRequestCancelWorkflowExecutionScope, cancelRequest)
 	defer sw.Stop()
 
 	wfExecution := cancelRequest.GetWorkflowExecution()
@@ -2482,7 +2499,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 ) (resp *types.ListOpenWorkflowExecutionsResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendListOpenWorkflowExecutionsScope, listRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendListOpenWorkflowExecutionsScope, listRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -2599,7 +2616,7 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 ) (resp *types.ListArchivedWorkflowExecutionsResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendListArchivedWorkflowExecutionsScope, listRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendListArchivedWorkflowExecutionsScope, listRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -2691,7 +2708,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 ) (resp *types.ListClosedWorkflowExecutionsResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendListClosedWorkflowExecutionsScope, listRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendListClosedWorkflowExecutionsScope, listRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -2831,7 +2848,7 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 ) (resp *types.ListWorkflowExecutionsResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendListWorkflowExecutionsScope, listRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendListWorkflowExecutionsScope, listRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -2899,7 +2916,7 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 ) (resp *types.ListWorkflowExecutionsResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendScanWorkflowExecutionsScope, listRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendScanWorkflowExecutionsScope, listRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -2967,7 +2984,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 ) (resp *types.CountWorkflowExecutionsResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendCountWorkflowExecutionsScope, countRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendCountWorkflowExecutionsScope, countRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -3012,7 +3029,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 	}
 
 	resp = &types.CountWorkflowExecutionsResponse{
-		Count: common.Int64Ptr(persistenceResp.Count),
+		Count: persistenceResp.Count,
 	}
 	return resp, nil
 }
@@ -3021,7 +3038,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 func (wh *WorkflowHandler) GetSearchAttributes(ctx context.Context) (resp *types.GetSearchAttributesResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfile(metrics.FrontendGetSearchAttributesScope)
+	scope, sw := wh.startRequestProfile(ctx, metrics.FrontendGetSearchAttributesScope)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -3046,7 +3063,7 @@ func (wh *WorkflowHandler) ResetStickyTaskList(
 ) (resp *types.ResetStickyTaskListResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendResetStickyTaskListScope, resetRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendResetStickyTaskListScope, resetRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -3091,7 +3108,7 @@ func (wh *WorkflowHandler) QueryWorkflow(
 ) (resp *types.QueryWorkflowResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendQueryWorkflowScope, queryRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendQueryWorkflowScope, queryRequest)
 	defer sw.Stop()
 
 	wfExecution := queryRequest.GetExecution()
@@ -3170,7 +3187,7 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(
 ) (resp *types.DescribeWorkflowExecutionResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendDescribeWorkflowExecutionScope, request)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendDescribeWorkflowExecutionScope, request)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -3224,7 +3241,7 @@ func (wh *WorkflowHandler) DescribeTaskList(
 ) (resp *types.DescribeTaskListResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendDescribeTaskListScope, request)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendDescribeTaskListScope, request)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -3277,7 +3294,7 @@ func (wh *WorkflowHandler) ListTaskListPartitions(
 ) (resp *types.ListTaskListPartitionsResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendListTaskListPartitionsScope, request)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendListTaskListPartitionsScope, request)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -3460,8 +3477,8 @@ func (wh *WorkflowHandler) validateTransientDecisionEvents(
 }
 
 // startRequestProfile initiates recording of request metrics
-func (wh *WorkflowHandler) startRequestProfile(scope int) (metrics.Scope, metrics.Stopwatch) {
-	metricsScope := wh.GetMetricsClient().Scope(scope).Tagged(metrics.DomainUnknownTag())
+func (wh *WorkflowHandler) startRequestProfile(ctx context.Context, scope int) (metrics.Scope, metrics.Stopwatch) {
+	metricsScope := wh.GetMetricsClient().Scope(scope).Tagged(metrics.DomainUnknownTag()).Tagged(metrics.GetContextTags(ctx)...)
 	// timer should be emitted with the all tag
 	sw := metricsScope.StartTimer(metrics.CadenceLatency)
 	metricsScope.IncCounter(metrics.CadenceRequests)
@@ -3469,16 +3486,16 @@ func (wh *WorkflowHandler) startRequestProfile(scope int) (metrics.Scope, metric
 }
 
 // startRequestProfileWithDomain initiates recording of request metrics and returns a domain tagged scope
-func (wh *WorkflowHandler) startRequestProfileWithDomain(scope int, d domainGetter) (metrics.Scope, metrics.Stopwatch) {
-	metricsScope := getMetricsScopeWithDomain(scope, d, wh.GetMetricsClient())
+func (wh *WorkflowHandler) startRequestProfileWithDomain(ctx context.Context, scope int, d domainGetter) (metrics.Scope, metrics.Stopwatch) {
+	metricsScope := getMetricsScopeWithDomain(scope, d, wh.GetMetricsClient()).Tagged(metrics.GetContextTags(ctx)...)
 	sw := metricsScope.StartTimer(metrics.CadenceLatency)
 	metricsScope.IncCounter(metrics.CadenceRequests)
 	return metricsScope, sw
 }
 
 // getDefaultScope returns a default scope to use for request metrics
-func (wh *WorkflowHandler) getDefaultScope(scope int) metrics.Scope {
-	return wh.GetMetricsClient().Scope(scope).Tagged(metrics.DomainUnknownTag())
+func (wh *WorkflowHandler) getDefaultScope(ctx context.Context, scope int) metrics.Scope {
+	return wh.GetMetricsClient().Scope(scope).Tagged(metrics.DomainUnknownTag()).Tagged(metrics.GetContextTags(ctx)...)
 }
 
 func frontendInternalServiceError(fmtStr string, args ...interface{}) error {
@@ -3818,7 +3835,7 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 			}
 		}
 		if failoverVersion == nil {
-			failoverVersion = resp.FailoverVersion
+			failoverVersion = &resp.FailoverVersion
 		}
 		if *failoverVersion != resp.GetFailoverVersion() {
 			return &types.BadRequestError{
@@ -3936,15 +3953,15 @@ func (wh *WorkflowHandler) GetClusterInfo(
 ) (resp *types.ClusterInfo, err error) {
 	defer log.CapturePanic(wh.GetLogger(), &err)
 
-	scope := wh.getDefaultScope(metrics.FrontendClientGetClusterInfoScope)
+	scope := wh.getDefaultScope(ctx, metrics.FrontendClientGetClusterInfoScope)
 	if ok := wh.allow(nil); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
 	return &types.ClusterInfo{
 		SupportedClientVersions: &types.SupportedClientVersions{
-			GoSdk:   common.StringPtr(client.SupportedGoSDKVersion),
-			JavaSdk: common.StringPtr(client.SupportedJavaSDKVersion),
+			GoSdk:   client.SupportedGoSDKVersion,
+			JavaSdk: client.SupportedJavaSDKVersion,
 		},
 	}, nil
 }

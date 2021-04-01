@@ -33,6 +33,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -155,6 +156,16 @@ func (t *taskAckManagerImpl) GetTasks(
 	readLevel := lastReadTaskID
 TaskInfoLoop:
 	for _, taskInfo := range taskInfoList {
+		// filter task info by domain clusters.
+		domainEntity, err := t.shard.GetDomainCache().GetDomainByID(taskInfo.GetDomainID())
+		if err != nil {
+			return nil, err
+		}
+		if skipTask(pollingCluster, domainEntity) {
+			continue
+		}
+
+		// construct replication task from DB
 		_ = t.rateLimiter.Wait(ctx)
 		var replicationTask *types.ReplicationTask
 		op := func() error {
@@ -162,8 +173,7 @@ TaskInfoLoop:
 			replicationTask, err = t.toReplicationTask(ctx, taskInfo)
 			return err
 		}
-
-		err = backoff.Retry(op, t.retryPolicy, common.IsPersistenceTransientError)
+		err = backoff.Retry(op, t.retryPolicy, persistence.IsTransientError)
 		switch err.(type) {
 		case nil:
 			// No action
@@ -209,7 +219,7 @@ TaskInfoLoop:
 	return &types.ReplicationMessages{
 		ReplicationTasks:       replicationTasks,
 		HasMore:                hasMore,
-		LastRetrievedMessageID: common.Int64Ptr(readLevel),
+		LastRetrievedMessageID: readLevel,
 	}, nil
 }
 
@@ -471,7 +481,7 @@ func (t *taskAckManagerImpl) generateFailoverMarkerTask(
 		SourceTaskID: taskInfo.GetTaskID(),
 		FailoverMarkerAttributes: &types.FailoverMarkerAttributes{
 			DomainID:        taskInfo.GetDomainID(),
-			FailoverVersion: common.Int64Ptr(taskInfo.GetVersion()),
+			FailoverVersion: taskInfo.GetVersion(),
 		},
 		CreationTime: common.Int64Ptr(taskInfo.CreationTime),
 	}
@@ -519,7 +529,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 					DomainID:           taskInfo.GetDomainID(),
 					WorkflowID:         taskInfo.GetWorkflowID(),
 					RunID:              taskInfo.GetRunID(),
-					Version:            common.Int64Ptr(activityInfo.Version),
+					Version:            activityInfo.Version,
 					ScheduledID:        activityInfo.ScheduleID,
 					ScheduledTime:      scheduledTime,
 					StartedID:          activityInfo.StartedID,
@@ -612,6 +622,15 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 			return replicationTask, nil
 		},
 	)
+}
+
+func skipTask(pollingCluster string, domainEntity *cache.DomainCacheEntry) bool {
+	for _, cluster := range domainEntity.GetReplicationConfig().Clusters {
+		if cluster.ClusterName == pollingCluster {
+			return false
+		}
+	}
+	return true
 }
 
 func getVersionHistoryItems(

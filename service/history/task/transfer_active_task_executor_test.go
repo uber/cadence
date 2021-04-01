@@ -653,10 +653,10 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent() 
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
 			ParentExecutionInfo: &types.ParentExecutionInfo{
-				DomainUUID:  common.StringPtr(parentDomainID),
-				Domain:      common.StringPtr(parentDomainName),
+				DomainUUID:  parentDomainID,
+				Domain:      parentDomainName,
 				Execution:   &parentExecution,
-				InitiatedID: common.Int64Ptr(parentInitiatedID),
+				InitiatedID: parentInitiatedID,
 			},
 		},
 	)
@@ -1584,14 +1584,15 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventID(), event.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), s.createChildWorkflowExecutionRequest(
+	historyReq, _ := s.createChildWorkflowExecutionRequest(
 		s.domainName,
 		s.childDomainName,
 		transferTask,
 		mutableState,
 		ci,
 		time.Now(),
-	)).Return(&types.StartWorkflowExecutionResponse{RunID: childRunID}, nil).Times(1)
+	)
+	s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), historyReq).Return(&types.StartWorkflowExecutionResponse{RunID: childRunID}, nil).Times(1)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.version).Return(cluster.TestCurrentClusterName).AnyTimes()
@@ -1677,16 +1678,17 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_WithRet
 
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventID(), event.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+	historyReq, _ := s.createChildWorkflowExecutionRequest(
+		s.domainName,
+		s.childDomainName,
+		transferTask,
+		mutableState,
+		ci,
+		s.mockShard.GetTimeSource().Now(),
+	)
 	s.mockHistoryClient.EXPECT().StartWorkflowExecution(
 		gomock.Any(),
-		gomock.Eq(s.createChildWorkflowExecutionRequest(
-			s.domainName,
-			s.childDomainName,
-			transferTask,
-			mutableState,
-			ci,
-			s.mockShard.GetTimeSource().Now(),
-		))).Return(&types.StartWorkflowExecutionResponse{RunID: childRunID}, nil).Times(1)
+		gomock.Eq(historyReq)).Return(&types.StartWorkflowExecutionResponse{RunID: childRunID}, nil).Times(1)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.version).Return(cluster.TestCurrentClusterName).AnyTimes()
@@ -1774,14 +1776,15 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Failure
 
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventID(), event.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), s.createChildWorkflowExecutionRequest(
+	historyReq, _ := s.createChildWorkflowExecutionRequest(
 		s.domainName,
 		s.childDomainName,
 		transferTask,
 		mutableState,
 		ci,
 		time.Now(),
-	)).Return(nil, &types.WorkflowExecutionAlreadyStartedError{}).Times(1)
+	)
+	s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), historyReq).Return(nil, &types.WorkflowExecutionAlreadyStartedError{}).Times(1)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.version).Return(cluster.TestCurrentClusterName).AnyTimes()
@@ -2234,7 +2237,7 @@ func (s *transferActiveTaskExecutorSuite) createChildWorkflowExecutionRequest(
 	mutableState execution.MutableState,
 	ci *persistence.ChildExecutionInfo,
 	now time.Time,
-) *types.HistoryStartWorkflowExecutionRequest {
+) (historyReq *types.HistoryStartWorkflowExecutionRequest, retError error) {
 
 	event, err := mutableState.GetChildExecutionInitiatedEvent(context.Background(), task.ScheduleID)
 	s.NoError(err)
@@ -2258,16 +2261,20 @@ func (s *transferActiveTaskExecutorSuite) createChildWorkflowExecutionRequest(
 	}
 
 	parentInfo := &types.ParentExecutionInfo{
-		DomainUUID:  common.StringPtr(task.DomainID),
-		Domain:      common.StringPtr(domainName),
+		DomainUUID:  task.DomainID,
+		Domain:      domainName,
 		Execution:   &workflowExecution,
-		InitiatedID: common.Int64Ptr(task.ScheduleID),
+		InitiatedID: task.ScheduleID,
 	}
 
-	historyStartReq := common.CreateHistoryStartWorkflowRequest(
+	historyStartReq, err := common.CreateHistoryStartWorkflowRequest(
 		task.TargetDomainID, frontendStartReq, now)
+	if err != nil {
+		return nil, err
+	}
+
 	historyStartReq.ParentExecutionInfo = parentInfo
-	return historyStartReq
+	return historyStartReq, nil
 }
 
 func (s *transferActiveTaskExecutorSuite) createUpsertWorkflowSearchAttributesRequest(

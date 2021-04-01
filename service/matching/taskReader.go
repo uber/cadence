@@ -188,6 +188,11 @@ func (tr *taskReader) getTaskBatchWithRange(readLevel int64, maxReadLevel int64)
 		return tr.tlMgr.db.GetTasks(readLevel, maxReadLevel, tr.tlMgr.config.GetTasksBatchSize())
 	})
 	if err != nil {
+		tr.logger().Error("Persistent store operation failure",
+			tag.StoreOperationGetTasks,
+			tag.Error(err),
+			tag.WorkflowTaskListName(tr.tlMgr.taskListID.name),
+			tag.WorkflowTaskListType(tr.tlMgr.taskListID.taskType))
 		return nil, err
 	}
 	return response.(*persistence.GetTasksResponse).Tasks, err
@@ -274,7 +279,14 @@ func (tr *taskReader) addSingleTaskToBuffer(
 }
 
 func (tr *taskReader) persistAckLevel() error {
-	return tr.tlMgr.db.UpdateState(tr.tlMgr.taskAckManager.GetAckLevel())
+	ackLevel := tr.tlMgr.taskAckManager.GetAckLevel()
+	maxReadLevel := tr.tlMgr.taskWriter.GetMaxReadLevel()
+	scope := tr.scope().Tagged(getTaskListTypeTag(tr.tlMgr.taskListID.taskType))
+	// note: this metrics is only an estimation for the lag. taskID in DB may not be continuous,
+	// especially when task list ownership changes.
+	scope.UpdateGauge(metrics.TaskLagPerTaskListGauge, float64(maxReadLevel-ackLevel))
+
+	return tr.tlMgr.db.UpdateState(ackLevel)
 }
 
 func (tr *taskReader) isTaskAddedRecently(lastAddTime time.Time) bool {

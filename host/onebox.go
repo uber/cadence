@@ -93,10 +93,7 @@ type (
 		dispatcherProvider            client.DispatcherProvider
 		messagingClient               messaging.Client
 		metadataMgr                   persistence.MetadataManager
-		shardMgr                      persistence.ShardManager
 		historyV2Mgr                  persistence.HistoryManager
-		taskMgr                       persistence.TaskManager
-		visibilityMgr                 persistence.VisibilityManager
 		executionMgrFactory           persistence.ExecutionManagerFactory
 		domainReplicationQueue        domain.ReplicationQueue
 		shutdownCh                    chan struct{}
@@ -130,11 +127,8 @@ type (
 		DispatcherProvider            client.DispatcherProvider
 		MessagingClient               messaging.Client
 		MetadataMgr                   persistence.MetadataManager
-		ShardMgr                      persistence.ShardManager
 		HistoryV2Mgr                  persistence.HistoryManager
 		ExecutionMgrFactory           persistence.ExecutionManagerFactory
-		TaskMgr                       persistence.TaskManager
-		VisibilityMgr                 persistence.VisibilityManager
 		DomainReplicationQueue        domain.ReplicationQueue
 		Logger                        log.Logger
 		ClusterNo                     int
@@ -164,10 +158,7 @@ func NewCadence(params *CadenceParams) Cadence {
 		dispatcherProvider:            params.DispatcherProvider,
 		messagingClient:               params.MessagingClient,
 		metadataMgr:                   params.MetadataMgr,
-		visibilityMgr:                 params.VisibilityMgr,
-		shardMgr:                      params.ShardMgr,
 		historyV2Mgr:                  params.HistoryV2Mgr,
-		taskMgr:                       params.TaskMgr,
 		executionMgrFactory:           params.ExecutionMgrFactory,
 		domainReplicationQueue:        params.DomainReplicationQueue,
 		shutdownCh:                    make(chan struct{}),
@@ -398,6 +389,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.Name = common.FrontendServiceName
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
+	params.UpdateLoggerWithServiceName(common.FrontendServiceName)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.FrontendServiceName, c.FrontendAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.FrontendServiceName, make(map[string]string))
@@ -461,6 +453,7 @@ func (c *cadenceImpl) startHistory(
 		params.Name = common.HistoryServiceName
 		params.Logger = c.logger
 		params.ThrottledLogger = c.logger
+		params.UpdateLoggerWithServiceName(common.HistoryServiceName)
 		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
 		params.RPCFactory = newRPCFactoryImpl(common.HistoryServiceName, hostport, c.logger)
 		params.MetricScope = tally.NewTestScope(common.HistoryServiceName, make(map[string]string))
@@ -530,6 +523,7 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 	params.Name = common.MatchingServiceName
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
+	params.UpdateLoggerWithServiceName(common.MatchingServiceName)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.MatchingPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.MatchingServiceName, c.MatchingServiceAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.MatchingServiceName, make(map[string]string))
@@ -572,6 +566,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	params.Name = common.WorkerServiceName
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
+	params.UpdateLoggerWithServiceName(common.WorkerServiceName)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.WorkerPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.WorkerServiceName, c.WorkerServiceAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.WorkerServiceName, make(map[string]string))

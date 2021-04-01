@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	mprom "github.com/uber/cadence/common/metrics/tally/prometheus"
 	statsdreporter "github.com/uber/cadence/common/metrics/tally/statsd"
 )
 
@@ -127,6 +128,9 @@ func (c *Metrics) newStatsdScope(logger log.Logger) tally.Scope {
 // newPrometheusScope returns a new prometheus scope with
 // a default reporting interval of a second
 func (c *Metrics) newPrometheusScope(logger log.Logger) tally.Scope {
+	if len(c.Prometheus.DefaultHistogramBuckets) == 0 {
+		c.Prometheus.DefaultHistogramBuckets = mprom.DefaultHistogramBuckets()
+	}
 	reporter, err := c.Prometheus.NewReporter(
 		prometheus.ConfigurationOptions{
 			Registry: prom.NewRegistry(),
