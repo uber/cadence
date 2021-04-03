@@ -266,6 +266,7 @@ const (
 	FlagDateFormat                        = "date_format"
 	FlagShardMultiplier                   = "shard_multiplier"
 	FlagBucketSize                        = "bucket_size"
+	DelayStartSeconds                     = "delay_start_seconds"
 )
 
 var flagsForExecution = []cli.Flag{
@@ -429,6 +430,10 @@ func getFlagsForStart() []cli.Flag {
 		cli.IntFlag{
 			Name:  FlagRetryMaxInterval,
 			Usage: "Optional retry maximum interval in seconds. If set will give an upper bound for retry interval. Must be equal or greater than retry interval.",
+		},
+		cli.IntFlag{
+			Name:  DelayStartSeconds,
+			Usage: "Optional workflow start delay in seconds. If set workflow start will be delayed this many seconds",
 		},
 	}
 }

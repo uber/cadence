@@ -97,11 +97,31 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) 
 		CronSchedule: "@every 300s",
 	}
 	now := time.Now()
-	startRequest := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	startRequest, _ := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	require.NotNil(t, startRequest)
 
 	expirationTime := startRequest.GetExpirationTimestamp()
 	require.NotNil(t, expirationTime)
 	require.True(t, time.Unix(0, expirationTime).Sub(now) > 60*time.Second)
+}
+
+func TestCreateHistoryStartWorkflowRequest_DelayStart(t *testing.T) {
+	domainID := uuid.New()
+	request := &types.StartWorkflowExecutionRequest{
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    60,
+			ExpirationIntervalInSeconds: 60,
+		},
+		DelayStartSeconds: Int32Ptr(100),
+	}
+	now := time.Now()
+	startRequest, _ := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	require.NotNil(t, startRequest)
+
+	expirationTime := startRequest.GetExpirationTimestamp()
+	require.NotNil(t, expirationTime)
+	require.True(t, time.Unix(0, expirationTime).Sub(now) > (100+60)*time.Second)
+	require.True(t, time.Unix(0, expirationTime).Sub(now) < (100+65)*time.Second)
 }
 
 func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.T) {
@@ -113,7 +133,8 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.
 		},
 	}
 	now := time.Now()
-	startRequest := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	startRequest, _ := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	require.NotNil(t, startRequest)
 
 	expirationTime := startRequest.GetExpirationTimestamp()
 	require.NotNil(t, expirationTime)
