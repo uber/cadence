@@ -158,12 +158,12 @@ func constructPathIfNeed(dir string, file string) string {
 }
 
 // BuildCLI is the main entry point for the cadence server
-func BuildCLI() *cli.App {
+func BuildCLI(version string) *cli.App {
 
 	app := cli.NewApp()
 	app.Name = "cadence"
 	app.Usage = "Cadence server"
-	app.Version = "0.0.1"
+	app.Version = version
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{

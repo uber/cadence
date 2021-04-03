@@ -28,8 +28,10 @@ import (
 	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres" // needed to load postgres plugin
 )
 
+var Version = "unknown"
+
 // main entry point for the cadence server
 func main() {
-	app := cadence.BuildCLI()
+	app := cadence.BuildCLI(Version)
 	app.Run(os.Args)
 }
