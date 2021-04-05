@@ -154,7 +154,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 		EnableBatcher:                     dc.GetBoolProperty(dynamicconfig.EnableBatcher, false),
 		EnableParentClosePolicyWorker:     dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
 		EnableFailoverManager:             dc.GetBoolProperty(dynamicconfig.EnableFailoverManager, true),
-		EnableWorkflowShadower:            dc.GetBoolProperty(dynamicconfig.EnableWorkflowShadower, false),
+		EnableWorkflowShadower:            dc.GetBoolProperty(dynamicconfig.EnableWorkflowShadower, true),
 		ThrottledLogRPS:                   dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS, 20),
 		PersistenceGlobalMaxQPS:           dc.GetIntProperty(dynamicconfig.WorkerPersistenceGlobalMaxQPS, 0),
 		PersistenceMaxQPS:                 dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
@@ -345,6 +345,7 @@ func (s *Service) startWorkflowShadower() {
 	params := &shadower.BootstrapParams{
 		ServiceClient: s.params.PublicClient,
 		DomainCache:   s.GetDomainCache(),
+		TallyScope:    s.params.MetricScope,
 	}
 	if err := shadower.New(params).Start(); err != nil {
 		s.Stop()
