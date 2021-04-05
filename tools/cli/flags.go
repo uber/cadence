@@ -255,18 +255,18 @@ const (
 	FlagFailoverDomains                   = "domains"
 	FlagRetryInterval                     = "retry_interval"
 	FlagRetryAttempts                     = "retry_attempts"
-	FlagRetryExpiration                   = "retry_expiration"
-	FlagRetryBackoff                      = "retry_backoff"
-	FlagRetryMaxInterval                  = "retry_max_interval"
-	FlagHeaderKey                         = "header_key"
-	FlagHeaderValue                       = "header_value"
-	FlagHeaderFile                        = "header_file"
-	FlagStartDate                         = "start_date"
-	FlagEndDate                           = "end_date"
-	FlagDateFormat                        = "date_format"
-	FlagShardMultiplier                   = "shard_multiplier"
-	FlagBucketSize                        = "bucket_size"
-	DelayStartSeconds                     = "delay_start_seconds"
+	FlagRetryExpiration  = "retry_expiration"
+	FlagRetryBackoff     = "retry_backoff"
+	FlagRetryMaxInterval = "retry_max_interval"
+	FlagHeaderKey        = "header_key"
+	FlagHeaderValue      = "header_value"
+	FlagHeaderFile       = "header_file"
+	FlagStartDate        = "start_date"
+	FlagEndDate          = "end_date"
+	FlagDateFormat       = "date_format"
+	FlagShardMultiplier  = "shard_multiplier"
+	FlagBucketSize       = "bucket_size"
+	DelayStartSeconds    = "delay_start_seconds"
 )
 
 var flagsForExecution = []cli.Flag{
@@ -280,8 +280,19 @@ var flagsForExecution = []cli.Flag{
 	},
 }
 
+var flagsOfExecutionForShow = []cli.Flag{
+	cli.StringFlag{
+		Name:  FlagWorkflowIDWithAlias,
+		Usage: "WorkflowID",
+	},
+	cli.StringFlag{
+		Name:  FlagRunIDWithAlias,
+		Usage: "RunID, required for archived history",
+	},
+}
+
 func getFlagsForShow() []cli.Flag {
-	return append(flagsForExecution, getFlagsForShowID()...)
+	return append(flagsOfExecutionForShow, getFlagsForShowID()...)
 }
 
 func getFlagsForShowID() []cli.Flag {

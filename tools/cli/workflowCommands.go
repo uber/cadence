@@ -164,6 +164,10 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 		},
 	})
 	if err != nil {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
+			fmt.Println("NOTE: The above history is retrieved from history archival")
+			return
+		}
 		ErrorAndExit("Describe workflow execution failed, cannot get information of pending activities", err)
 	}
 
