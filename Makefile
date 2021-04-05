@@ -251,7 +251,7 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 	touch $(BUILD)/protoc
 
 .fake-thrift: | $(BIN) $(BUILD)
-	git submodule update --init --recursive
+	$(if $(THRIFT_GEN),touch $(THRIFT_GEN),)
 	touch $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc
 	touch $(THRIFT_GEN)
 
