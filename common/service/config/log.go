@@ -31,7 +31,7 @@ import (
 const fileMode = os.FileMode(0644)
 
 // NewZapLogger builds and returns a new zap
-// logger for this logging configuration
+// logger for logging configuration
 func (cfg *Logger) NewZapLogger() (*zap.Logger, error) {
 	encodeConfig := zapcore.EncoderConfig{
 		TimeKey:        "ts",
