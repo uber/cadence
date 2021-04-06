@@ -84,7 +84,6 @@ func shadowWorkflow(
 		return shadower.WorkflowResult{}, profile.endWorkflow(nil)
 	}
 
-	replayStartTime := workflow.Now(ctx)
 	workflowTimeout := time.Duration(workflow.GetInfo(ctx).ExecutionStartToCloseTimeoutSeconds) * time.Second
 	retryPolicy := &cadence.RetryPolicy{
 		InitialInterval:    time.Second,
@@ -151,7 +150,7 @@ func shadowWorkflow(
 			*shadowResult.Skipped += replayResult.GetSkipped()
 			*shadowResult.Failed += replayResult.GetFailed()
 
-			if exitConditionMet(ctx, params.GetExitCondition(), replayStartTime, shadowResult) {
+			if exitConditionMet(ctx, params.GetExitCondition(), profile.startTime, shadowResult) {
 				return combineShadowResults(shadowResult, params.GetLastRunResult()), profile.endWorkflow(nil)
 			}
 		}
@@ -162,7 +161,7 @@ func shadowWorkflow(
 		}
 
 		if shouldContinueAsNew(shadowResult) {
-			continueAsNewErr := getContinueAsNewError(ctx, params, replayStartTime, params.GetLastRunResult(), shadowResult, scanParams.NextPageToken)
+			continueAsNewErr := getContinueAsNewError(ctx, params, profile.startTime, params.GetLastRunResult(), shadowResult, scanParams.NextPageToken)
 			return shadower.WorkflowResult{}, profile.endWorkflow(continueAsNewErr)
 		}
 	}
@@ -171,7 +170,7 @@ func shadowWorkflow(
 		if err := workflow.Sleep(ctx, defaultWaitDurationPerIteration); err != nil {
 			return shadower.WorkflowResult{}, profile.endWorkflow(err)
 		}
-		continueAsNewErr := getContinueAsNewError(ctx, params, replayStartTime, params.GetLastRunResult(), shadowResult, nil)
+		continueAsNewErr := getContinueAsNewError(ctx, params, profile.startTime, params.GetLastRunResult(), shadowResult, nil)
 		return shadower.WorkflowResult{}, profile.endWorkflow(continueAsNewErr)
 	}
 

@@ -23,10 +23,9 @@ package shadower
 import (
 	"context"
 
+	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/worker"
-
-	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/.gen/go/shadower"
 	"github.com/uber/cadence/common"
