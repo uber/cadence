@@ -252,7 +252,7 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 
 .fake-thrift: | $(BIN) $(BUILD)
 	touch $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc
-	touch $(THRIFT_GEN)
+	$(if $(THRIFT_GEN),touch $(THRIFT_GEN),) # maybe ignoring empty idl folder
 
 # ====================================
 # other intermediates
