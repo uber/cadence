@@ -163,10 +163,7 @@ func BuildCLI(version string, revision string) *cli.App {
 	app := cli.NewApp()
 	app.Name = "cadence"
 	app.Usage = "Cadence server"
-	app.Version = version
-	app.Metadata = map[string]interface{}{
-		"Revision": revision,
-	}
+	app.Version = version + "-" + revision
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
