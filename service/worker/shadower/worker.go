@@ -27,6 +27,7 @@ import (
 	"go.uber.org/cadence/worker"
 
 	"github.com/uber-go/tally"
+
 	"github.com/uber/cadence/.gen/go/shadower"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"

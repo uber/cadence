@@ -253,15 +253,16 @@ func (s *workflowSuite) TestShadowWorkflow_ExitCondition_ShadowCount_WithLastRes
 		nil,
 	).Once()
 
+	lastFailed := shadowCount / 2
 	s.env.ExecuteWorkflow(shadowWorkflow, shadower.WorkflowParams{
 		Domain:        common.StringPtr(testActiveDomainName),
 		TaskList:      common.StringPtr(testTaskListName),
 		WorkflowQuery: common.StringPtr(testWorkflowQuery),
 		ExitCondition: &shadower.ExitCondition{
-			ShadowCount: common.Int32Ptr(int32(shadowCount)),
+			ShadowCount: common.Int32Ptr(int32(shadowCount - lastFailed)),
 		},
 		LastRunResult: &shadower.WorkflowResult{
-			Failed: common.Int32Ptr(int32(shadowCount) / 2),
+			Failed: common.Int32Ptr(int32(lastFailed)),
 		},
 	})
 
