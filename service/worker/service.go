@@ -345,6 +345,7 @@ func (s *Service) startWorkflowShadower() {
 	params := &shadower.BootstrapParams{
 		ServiceClient: s.params.PublicClient,
 		DomainCache:   s.GetDomainCache(),
+		TallyScope:    s.params.MetricScope,
 	}
 	if err := shadower.New(params).Start(); err != nil {
 		s.Stop()
