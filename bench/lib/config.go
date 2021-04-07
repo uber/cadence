@@ -23,7 +23,7 @@ package lib
 import (
 	"errors"
 
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/config"
 )
 
 const (

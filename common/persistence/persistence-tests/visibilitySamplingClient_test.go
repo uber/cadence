@@ -35,7 +35,7 @@ import (
 	mmocks "github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
-	c "github.com/uber/cadence/common/service/config"
+	c "github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/types"
 )
 

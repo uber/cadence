@@ -42,7 +42,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/types"
 )
 

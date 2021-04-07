@@ -43,7 +43,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/types"
 )
 

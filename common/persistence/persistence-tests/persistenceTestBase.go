@@ -46,7 +46,7 @@ import (
 	"github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/types"
 )
 

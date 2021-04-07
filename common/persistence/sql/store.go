@@ -24,7 +24,7 @@ import (
 	"fmt"
 
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/config"
 )
 
 var supportedPlugins = map[string]sqlplugin.Plugin{}
