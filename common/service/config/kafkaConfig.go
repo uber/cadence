@@ -35,6 +35,7 @@ type (
 		Topics   map[string]TopicConfig   `yaml:"topics"`
 		// Applications describes the applications that will use the Kafka topics
 		Applications map[string]TopicList `yaml:"applications"`
+		Version      string               `yaml:"version"`
 	}
 
 	// ClusterConfig describes the configuration for a single Kafka cluster
