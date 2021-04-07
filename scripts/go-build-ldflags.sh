@@ -14,7 +14,7 @@ export BUILD_TS_UNIX=$(date '+%s') # second since epoch
 export BASE_PACKAGE=github.com/uber/cadence/common/metrics
 if [ -z ${SERVER_VERSION} ]; then
   # If not set SERVER_VERSION, then use the most recent tag.
-  export GIT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo unknown)
+  export GIT_VERSION=$(git describe --tags --abbrev=0 --dirty 2>/dev/null || echo unknown)
 else
   # If passing a version explicitly, then use it
   export GIT_VERSION=${SERVER_VERSION}
