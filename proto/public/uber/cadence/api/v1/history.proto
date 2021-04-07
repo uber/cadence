@@ -383,6 +383,7 @@ message StartChildWorkflowExecutionInitiatedEventAttributes {
   Header header = 15;
   Memo memo = 16;
   SearchAttributes search_attributes = 17;
+  google.protobuf.Duration delay_start = 18;
 }
 
 message StartChildWorkflowExecutionFailedEventAttributes {

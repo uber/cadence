@@ -3220,6 +3220,7 @@ func FromSignalWithStartWorkflowExecutionRequest(t *types.SignalWithStartWorkflo
 			Memo:                         FromMemo(t.Memo),
 			SearchAttributes:             FromSearchAttributes(t.SearchAttributes),
 			Header:                       FromHeader(t.Header),
+			DelayStart:                   secondsToDuration(t.DelayStartSeconds),
 		},
 		SignalName:  t.SignalName,
 		SignalInput: FromPayload(t.SignalInput),
@@ -3250,6 +3251,7 @@ func ToSignalWithStartWorkflowExecutionRequest(t *apiv1.SignalWithStartWorkflowE
 		Memo:                                ToMemo(t.StartRequest.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.StartRequest.SearchAttributes),
 		Header:                              ToHeader(t.StartRequest.Header),
+		DelayStartSeconds:                   durationToSeconds(t.StartRequest.DelayStart),
 	}
 }
 
@@ -3398,6 +3400,7 @@ func FromStartChildWorkflowExecutionInitiatedEventAttributes(t *types.StartChild
 		Header:                       FromHeader(t.Header),
 		Memo:                         FromMemo(t.Memo),
 		SearchAttributes:             FromSearchAttributes(t.SearchAttributes),
+		DelayStart:                   secondsToDuration(t.DelayStartSeconds),
 	}
 }
 
@@ -3422,6 +3425,7 @@ func ToStartChildWorkflowExecutionInitiatedEventAttributes(t *apiv1.StartChildWo
 		Header:                              ToHeader(t.Header),
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
+		DelayStartSeconds:                   durationToSeconds(t.DelayStart),
 	}
 }
 
@@ -3485,6 +3489,7 @@ func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *
 		Memo:                         FromMemo(t.Memo),
 		SearchAttributes:             FromSearchAttributes(t.SearchAttributes),
 		Header:                       FromHeader(t.Header),
+		DelayStart:                   secondsToDuration(t.DelayStartSeconds),
 	}
 }
 
@@ -3508,6 +3513,7 @@ func ToStartWorkflowExecutionRequest(t *apiv1.StartWorkflowExecutionRequest) *ty
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		Header:                              ToHeader(t.Header),
+		DelayStartSeconds:                   durationToSeconds(t.DelayStart),
 	}
 }
 

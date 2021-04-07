@@ -120,8 +120,25 @@ func TestCreateHistoryStartWorkflowRequest_DelayStart(t *testing.T) {
 
 	expirationTime := startRequest.GetExpirationTimestamp()
 	require.NotNil(t, expirationTime)
-	require.True(t, time.Unix(0, expirationTime).Sub(now) > (100+60)*time.Second)
-	require.True(t, time.Unix(0, expirationTime).Sub(now) < (100+65)*time.Second)
+
+	// Since we assign the expiration time after we create the workflow request,
+	// There's a chance that the test thread might sleep or get deprioritized and
+	// expirationTime - now may not be equal to DelayStartSeconds. Adding 2 seconds
+	// buffer to avoid this test being flaky
+	require.True(
+		t,
+		time.Unix(0, expirationTime).Sub(now) >= (100+58)*time.Second,
+		"Integration test took too short: %f seconds vs %f seconds",
+		time.Duration(time.Unix(0, expirationTime).Sub(now)).Round(time.Millisecond).Seconds(),
+		time.Duration((100+58)*time.Second).Round(time.Millisecond).Seconds(),
+	)
+	require.True(
+		t,
+		time.Unix(0, expirationTime).Sub(now) < (100+68)*time.Second,
+		"Integration test took too long: %f seconds vs %f seconds",
+		time.Duration(time.Unix(0, expirationTime).Sub(now)).Round(time.Millisecond).Seconds(),
+		time.Duration((100+68)*time.Second).Round(time.Millisecond).Seconds(),
+	)
 }
 
 func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.T) {
