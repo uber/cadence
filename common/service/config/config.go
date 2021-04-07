@@ -232,6 +232,8 @@ type (
 		Level string `yaml:"level"`
 		// OutputFile is the path to the log output file
 		OutputFile string `yaml:"outputFile"`
+		// levelKey is the desired log level
+		LevelKey string `yaml:"levelKey"`
 	}
 
 	// ClusterMetadata contains the all cluster which participated in cross DC

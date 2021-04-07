@@ -106,6 +106,7 @@ func (s *server) startService() common.Daemon {
 
 	params := service.BootstrapParams{}
 	params.Name = "cadence-" + s.name
+	if (len(s.cfg.Log.LevelKey) == 0) {s.cfg.Log.LevelKey = "Level"} 
 	params.Logger = loggerimpl.NewLogger(s.cfg.Log.NewZapLogger())
 	params.PersistenceConfig = s.cfg.Persistence
 

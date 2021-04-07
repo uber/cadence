@@ -38,7 +38,7 @@ const fileMode = os.FileMode(0644)
 func (cfg *Logger) NewZapLogger() *zap.Logger {
 	encodeConfig := zapcore.EncoderConfig{
 		TimeKey:        "ts",
-		LevelKey:       "level",
+		LevelKey:       cfg.LevelKey,
 		NameKey:        "logger",
 		CallerKey:      "", // we use our own caller, check common/log/logger.go
 		MessageKey:     "msg",
