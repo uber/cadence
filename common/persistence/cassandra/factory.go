@@ -23,11 +23,11 @@ package cassandra
 import (
 	"sync"
 
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
-	"github.com/uber/cadence/common/config"
 )
 
 type (

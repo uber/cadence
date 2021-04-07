@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
@@ -41,7 +42,6 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/client"
-	"github.com/uber/cadence/common/config"
 )
 
 const (

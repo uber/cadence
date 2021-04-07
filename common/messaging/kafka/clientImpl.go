@@ -32,10 +32,10 @@ import (
 	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/common/auth"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/config"
 )
 
 type (

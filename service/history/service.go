@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	sconfig "github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -32,7 +33,6 @@ import (
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	espersistence "github.com/uber/cadence/common/persistence/elasticsearch"
 	"github.com/uber/cadence/common/service"
-	sconfig "github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/resource"
 )

@@ -33,10 +33,10 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/types"
 )
 

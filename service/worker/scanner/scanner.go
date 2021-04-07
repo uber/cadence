@@ -36,10 +36,10 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/service/worker/scanner/shardscanner"
 )
 

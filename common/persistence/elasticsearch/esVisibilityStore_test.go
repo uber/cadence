@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/.gen/go/indexer"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
 	es "github.com/uber/cadence/common/elasticsearch"
@@ -44,7 +45,6 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )

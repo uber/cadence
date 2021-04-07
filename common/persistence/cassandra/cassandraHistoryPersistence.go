@@ -26,12 +26,12 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/types"
 )
 

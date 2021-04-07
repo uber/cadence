@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -46,7 +47,6 @@ import (
 	"github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/types"
 )
 

@@ -24,9 +24,9 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/task"
 )
 
