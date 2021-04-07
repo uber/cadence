@@ -102,12 +102,14 @@ func (s *server) Stop() {
 
 // startService starts a service with the given name and config
 func (s *server) startService() common.Daemon {
-
-	var err error
-
 	params := service.BootstrapParams{}
 	params.Name = "cadence-" + s.name
-	params.Logger = loggerimpl.NewLogger(s.cfg.Log.NewZapLogger())
+
+	zapLogger, err := s.cfg.Log.NewZapLogger()
+	if err != nil {
+		log.Fatal("failed to create the zap logger, err: ", err.Error())
+	}
+	params.Logger = loggerimpl.NewLogger(zapLogger)
 	params.UpdateLoggerWithServiceName(params.Name)
 	params.PersistenceConfig = s.cfg.Persistence
 

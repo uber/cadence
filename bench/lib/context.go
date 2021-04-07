@@ -54,7 +54,10 @@ type RuntimeContext struct {
 
 // NewRuntimeContext builds a runtime context from the config
 func NewRuntimeContext(cfg *Config) (*RuntimeContext, error) {
-	logger := cfg.Log.NewZapLogger()
+	logger, err := cfg.Log.NewZapLogger()
+	if err != nil {
+		return nil, err
+	}
 
 	metricsScope := cfg.Metrics.NewScope(loggerimpl.NewLogger(logger), cfg.Bench.Name)
 
