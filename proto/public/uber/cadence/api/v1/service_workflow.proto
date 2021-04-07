@@ -106,6 +106,7 @@ message StartWorkflowExecutionRequest {
   Memo memo = 13;
   SearchAttributes search_attributes = 14;
   Header header = 15;
+  google.protobuf.Duration delay_start = 16;
 }
 
 message StartWorkflowExecutionResponse {

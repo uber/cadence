@@ -97,11 +97,48 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) 
 		CronSchedule: "@every 300s",
 	}
 	now := time.Now()
-	startRequest := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	startRequest, _ := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	require.NotNil(t, startRequest)
 
 	expirationTime := startRequest.GetExpirationTimestamp()
 	require.NotNil(t, expirationTime)
 	require.True(t, time.Unix(0, expirationTime).Sub(now) > 60*time.Second)
+}
+
+func TestCreateHistoryStartWorkflowRequest_DelayStart(t *testing.T) {
+	domainID := uuid.New()
+	request := &types.StartWorkflowExecutionRequest{
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    60,
+			ExpirationIntervalInSeconds: 60,
+		},
+		DelayStartSeconds: Int32Ptr(100),
+	}
+	now := time.Now()
+	startRequest, _ := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	require.NotNil(t, startRequest)
+
+	expirationTime := startRequest.GetExpirationTimestamp()
+	require.NotNil(t, expirationTime)
+
+	// Since we assign the expiration time after we create the workflow request,
+	// There's a chance that the test thread might sleep or get deprioritized and
+	// expirationTime - now may not be equal to DelayStartSeconds. Adding 2 seconds
+	// buffer to avoid this test being flaky
+	require.True(
+		t,
+		time.Unix(0, expirationTime).Sub(now) >= (100+58)*time.Second,
+		"Integration test took too short: %f seconds vs %f seconds",
+		time.Duration(time.Unix(0, expirationTime).Sub(now)).Round(time.Millisecond).Seconds(),
+		time.Duration((100+58)*time.Second).Round(time.Millisecond).Seconds(),
+	)
+	require.True(
+		t,
+		time.Unix(0, expirationTime).Sub(now) < (100+68)*time.Second,
+		"Integration test took too long: %f seconds vs %f seconds",
+		time.Duration(time.Unix(0, expirationTime).Sub(now)).Round(time.Millisecond).Seconds(),
+		time.Duration((100+68)*time.Second).Round(time.Millisecond).Seconds(),
+	)
 }
 
 func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.T) {
@@ -113,7 +150,8 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.
 		},
 	}
 	now := time.Now()
-	startRequest := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	startRequest, _ := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	require.NotNil(t, startRequest)
 
 	expirationTime := startRequest.GetExpirationTimestamp()
 	require.NotNil(t, expirationTime)

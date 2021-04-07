@@ -9,10 +9,17 @@ fi
 
 export GIT_REVISION=$(git rev-parse --short HEAD)
 export GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-export GIT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo unknown)
 export BUILD_DATE=$(date '+%F-%T') # outputs something in this format 2017-08-21-18:58:45
 export BUILD_TS_UNIX=$(date '+%s') # second since epoch
 export BASE_PACKAGE=github.com/uber/cadence/common/metrics
+if [ -z ${SERVER_VERSION} ]; then
+  # If not set SERVER_VERSION, then use the most recent tag.
+  export GIT_VERSION=$(git describe --tags --abbrev=0 --dirty 2>/dev/null || echo unknown)
+else
+  # If passing a version explicitly, then use it
+  export GIT_VERSION=${SERVER_VERSION}
+fi
+
 
 if [ "$MODE" = "LDFLAG" ]; then
   LD_FLAGS="-X ${BASE_PACKAGE}.Revision=${GIT_REVISION} \

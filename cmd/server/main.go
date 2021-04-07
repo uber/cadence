@@ -24,12 +24,13 @@ import (
 	"os"
 
 	"github.com/uber/cadence/cmd/server/cadence"
+	"github.com/uber/cadence/common/metrics"
 	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"    // needed to load mysql plugin
 	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres" // needed to load postgres plugin
 )
 
 // main entry point for the cadence server
 func main() {
-	app := cadence.BuildCLI()
+	app := cadence.BuildCLI(metrics.Version, metrics.Revision)
 	app.Run(os.Args)
 }
