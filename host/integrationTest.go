@@ -1232,11 +1232,6 @@ func (s *IntegrationSuite) TestCronWorkflow() {
 	})
 	lastExecution := closedExecutions[0]
 
-	// TODO https://github.com/uber/cadence/issues/3540
-	// the rest assertion can cause transient failure
-	if s.testClusterConfig.Persistence.SQLDBPluginName == "postgres" {
-		return
-	}
 	for i := 1; i != 4; i++ {
 		executionInfo := closedExecutions[i]
 		expectedBackoff := executionInfo.GetExecutionTime() - lastExecution.GetExecutionTime()
@@ -1246,18 +1241,21 @@ func (s *IntegrationSuite) TestCronWorkflow() {
 		// TODO: Remove this line once we unify the time source
 		executionTimeDiff := executionInfo.GetStartTime() - lastExecution.GetCloseTime()
 		// The backoff between any two executions should be multiplier of the target backoff duration which is 3 in this test
+		// However, it's difficult to guarantee accuracy within a second, we allows 1s as buffering...
 		backoffSeconds := int(time.Duration(expectedBackoff - executionTimeDiff).Round(time.Second).Seconds())
 		targetBackoffSeconds := int(targetBackoffDuration.Seconds())
-		s.Equal(
-			0,
-			backoffSeconds%targetBackoffSeconds,
-			"Still Flaky?: backoffSeconds: %v ((%v-%v) - (%v-%v)), targetBackoffSeconds: %v",
+		targetDiff := math.Abs(float64(backoffSeconds%targetBackoffSeconds - 3))
+
+		s.True(
+			targetDiff <= 1,
+			"Still Flaky?:((%v-%v) - (%v-%v)), backoffSeconds: %v, targetBackoffSeconds: %v, targetDiff:%v",
 			backoffSeconds,
 			executionInfo.GetExecutionTime(),
 			lastExecution.GetExecutionTime(),
 			executionInfo.GetStartTime(),
 			lastExecution.GetCloseTime(),
 			targetBackoffSeconds,
+			targetDiff,
 		)
 		lastExecution = executionInfo
 	}
