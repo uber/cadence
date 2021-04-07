@@ -299,7 +299,11 @@ func initializeDomainHandler(
 func initializeLogger(
 	serviceConfig *config.Config,
 ) log.Logger {
-	return loggerimpl.NewLogger(serviceConfig.Log.NewZapLogger())
+	zapLogger, err := serviceConfig.Log.NewZapLogger()
+	if err != nil {
+		ErrorAndExit("failed to create zap logger, err: ", err)
+	}
+	return loggerimpl.NewLogger(zapLogger)
 }
 
 func initializeMetadataMgr(
