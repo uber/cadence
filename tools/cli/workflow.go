@@ -47,7 +47,7 @@ func newWorkflowCommands() []cli.Command {
 		{
 			Name:        "showid",
 			Usage:       "show workflow history with given workflow_id and run_id (a shortcut of `show -w <wid> -r <rid>`). run_id is only required for archived history",
-			Description: "cadence workflow showid <workflow_id> <run_id>. workflow_id is required, run_id is only required for archived history",
+			Description: "cadence workflow showid <workflow_id> <run_id>. workflow_id is required; run_id is only required for archived history",
 			Flags:       getFlagsForShowID(),
 			Action: func(c *cli.Context) {
 				ShowHistoryWithWID(c)
