@@ -11,3 +11,7 @@ scrape_configs:
           - 'cadence:8001'
           - 'cadence:8002'
           - 'cadence:8003'
+          - 'cadence:9000'
+          - 'cadence:9001'
+          - 'cadence:9002'
+          - 'cadence:9003'
