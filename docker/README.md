@@ -4,33 +4,38 @@ Quickstart for localhost development
 Install docker: https://docs.docker.com/engine/installation/
 
 Following steps will bring up the docker container running cadence server
-along with all its dependencies (cassandra, statsd, graphite). Exposes cadence
+along with all its dependencies (cassandra, prometheus, grafana). Exposes cadence
 frontend on port 7933 and grafana metrics frontend on port 8080.
 
 ```
 cd $GOPATH/src/github.com/uber/cadence/docker
 docker-compose up
 ```
+> Note: Above command will run with `master-auto-setup` image, which is a changing image all the time.
+> You can use a released image if you want a stable version. See the below section of "Using a released image".
 
-View metrics at localhost:8080/dashboard    
-View Cadence-Web at localhost:8088  
-Use Cadence-CLI with `docker run --network=host --rm ubercadence/cli:master`
+To update your `master-auto-setup` image to the latest version
+```
+docker pull ubercadence/server:master-auto-setup
 
-For example to register new domain 'test-domain' with 1 retention day
-`docker run --network=host --rm ubercadence/cli:master --do test-domain domain register -rd 1`
+```
+
+* View Cadence-Web at localhost:8088  
+* View metrics at localhost:3000 , with default username/password: admin/admin    
+  * Configure Prometheus as datasource: use `http://host.docker.internal:9090` as URL of prometheus.
 
 Using different docker-compose files
 -----------------------
 By default `docker-compose up` will run with `docker-compose.yaml` in this folder.
 This compose file is running with Cassandra, with basic visibility, 
-using Statsd for emitting metric to Graphite, with Grafana access. 
+using Statsd for emitting metric to Prometheus, with Grafana access. 
 
 We also provide several other compose files for different features/modes:
 * docker-compose-es.yml enables advanced visibility with ElasticSearch 6.x
 * docker-compose-es-v7.yml enables advanced visibility with ElasticSearch 7.x
 * docker-compose-mysql.yml uses MySQL as persistence storage
 * docker-compose-postgres.yml uses PosstgreSQL as persistence storage
-* docker-compose-prometheus.yaml runs with Prometheus
+* docker-compose-statsd.yaml runs with Statsd+Graphite
 * docker-compose-multiclusters.yaml runs with 2 cadence clusters
 
 Also feel free to make your own to combine the above features.
