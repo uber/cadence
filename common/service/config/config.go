@@ -232,7 +232,7 @@ type (
 		Level string `yaml:"level"`
 		// OutputFile is the path to the log output file
 		OutputFile string `yaml:"outputFile"`
-		// levelKey is the desired log level
+		// levelKey is the desired log level, defaults to "level"
 		LevelKey string `yaml:"levelKey"`
 	}
 
