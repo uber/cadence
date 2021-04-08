@@ -280,8 +280,19 @@ var flagsForExecution = []cli.Flag{
 	},
 }
 
+var flagsOfExecutionForShow = []cli.Flag{
+	cli.StringFlag{
+		Name:  FlagWorkflowIDWithAlias,
+		Usage: "WorkflowID",
+	},
+	cli.StringFlag{
+		Name:  FlagRunIDWithAlias,
+		Usage: "RunID, required for archived history",
+	},
+}
+
 func getFlagsForShow() []cli.Flag {
-	return append(flagsForExecution, getFlagsForShowID()...)
+	return append(flagsOfExecutionForShow, getFlagsForShowID()...)
 }
 
 func getFlagsForShowID() []cli.Flag {
