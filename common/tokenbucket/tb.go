@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/dynamicconfig"
 )
 
 type (

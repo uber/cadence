@@ -69,7 +69,7 @@ type VisibilityArchiver interface {
 
 Modify the `./provider/provider.go` file so that the `ArchiverProvider` knows how to create an instance of your archiver. 
 Also, add configs for you archiver to static yaml config files and modify the `HistoryArchiverProvider` 
-and `VisibilityArchiverProvider` struct in the `../common/service/config.go` accordingly.
+and `VisibilityArchiverProvider` struct in the `../common/config.go` accordingly.
 
 
 ## FAQ

@@ -27,10 +27,10 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/uber/cadence/common/config"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
-	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/environment"
 
 	"github.com/iancoleman/strcase"

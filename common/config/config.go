@@ -30,8 +30,8 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/auth"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (

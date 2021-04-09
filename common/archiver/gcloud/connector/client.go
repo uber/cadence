@@ -33,7 +33,7 @@ import (
 	"google.golang.org/api/iterator"
 
 	"github.com/uber/cadence/common/archiver"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/config"
 )
 
 const (
