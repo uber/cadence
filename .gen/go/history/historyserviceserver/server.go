@@ -1,17 +1,17 @@
 // The MIT License (MIT)
-// 
-// Copyright (c) 2019 Uber Technologies, Inc.
-// 
+
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,12 +27,15 @@ package historyserviceserver
 
 import (
 	context "context"
-	history "github.com/uber/cadence/.gen/go/history"
-	replicator "github.com/uber/cadence/.gen/go/replicator"
-	shared "github.com/uber/cadence/.gen/go/shared"
+
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
+	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
+
+	history "github.com/uber/cadence/.gen/go/history"
+	replicator "github.com/uber/cadence/.gen/go/replicator"
+	shared "github.com/uber/cadence/.gen/go/shared"
 )
 
 // Interface is the server-side interface for the HistoryService service.
@@ -52,10 +55,20 @@ type Interface interface {
 		Request *history.DescribeMutableStateRequest,
 	) (*history.DescribeMutableStateResponse, error)
 
+	DescribeQueue(
+		ctx context.Context,
+		Request *shared.DescribeQueueRequest,
+	) (*shared.DescribeQueueResponse, error)
+
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		DescribeRequest *history.DescribeWorkflowExecutionRequest,
 	) (*shared.DescribeWorkflowExecutionResponse, error)
+
+	GetDLQReplicationMessages(
+		ctx context.Context,
+		Request *replicator.GetDLQReplicationMessagesRequest,
+	) (*replicator.GetDLQReplicationMessagesResponse, error)
 
 	GetMutableState(
 		ctx context.Context,
@@ -67,15 +80,35 @@ type Interface interface {
 		Request *replicator.GetReplicationMessagesRequest,
 	) (*replicator.GetReplicationMessagesResponse, error)
 
+	MergeDLQMessages(
+		ctx context.Context,
+		Request *replicator.MergeDLQMessagesRequest,
+	) (*replicator.MergeDLQMessagesResponse, error)
+
+	NotifyFailoverMarkers(
+		ctx context.Context,
+		Request *history.NotifyFailoverMarkersRequest,
+	) error
+
 	PollMutableState(
 		ctx context.Context,
 		PollRequest *history.PollMutableStateRequest,
 	) (*history.PollMutableStateResponse, error)
 
+	PurgeDLQMessages(
+		ctx context.Context,
+		Request *replicator.PurgeDLQMessagesRequest,
+	) error
+
 	QueryWorkflow(
 		ctx context.Context,
 		QueryRequest *history.QueryWorkflowRequest,
 	) (*history.QueryWorkflowResponse, error)
+
+	ReadDLQMessages(
+		ctx context.Context,
+		Request *replicator.ReadDLQMessagesRequest,
+	) (*replicator.ReadDLQMessagesResponse, error)
 
 	ReapplyEvents(
 		ctx context.Context,
@@ -102,6 +135,11 @@ type Interface interface {
 		AddRequest *history.RecordDecisionTaskStartedRequest,
 	) (*history.RecordDecisionTaskStartedResponse, error)
 
+	RefreshWorkflowTasks(
+		ctx context.Context,
+		Request *history.RefreshWorkflowTasksRequest,
+	) error
+
 	RemoveSignalMutableState(
 		ctx context.Context,
 		RemoveRequest *history.RemoveSignalMutableStateRequest,
@@ -112,24 +150,19 @@ type Interface interface {
 		Request *shared.RemoveTaskRequest,
 	) error
 
-	ReplicateEvents(
-		ctx context.Context,
-		ReplicateRequest *history.ReplicateEventsRequest,
-	) error
-
 	ReplicateEventsV2(
 		ctx context.Context,
 		ReplicateV2Request *history.ReplicateEventsV2Request,
 	) error
 
-	ReplicateRawEvents(
-		ctx context.Context,
-		ReplicateRequest *history.ReplicateRawEventsRequest,
-	) error
-
 	RequestCancelWorkflowExecution(
 		ctx context.Context,
 		CancelRequest *history.RequestCancelWorkflowExecutionRequest,
+	) error
+
+	ResetQueue(
+		ctx context.Context,
+		Request *shared.ResetQueueRequest,
 	) error
 
 	ResetStickyTaskList(
@@ -248,6 +281,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "DescribeQueue",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.DescribeQueue),
+				},
+				Signature:    "DescribeQueue(Request *shared.DescribeQueueRequest) (*shared.DescribeQueueResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "DescribeWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -255,6 +299,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.DescribeWorkflowExecution),
 				},
 				Signature:    "DescribeWorkflowExecution(DescribeRequest *history.DescribeWorkflowExecutionRequest) (*shared.DescribeWorkflowExecutionResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "GetDLQReplicationMessages",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.GetDLQReplicationMessages),
+				},
+				Signature:    "GetDLQReplicationMessages(Request *replicator.GetDLQReplicationMessagesRequest) (*replicator.GetDLQReplicationMessagesResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -281,6 +336,28 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "MergeDLQMessages",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.MergeDLQMessages),
+				},
+				Signature:    "MergeDLQMessages(Request *replicator.MergeDLQMessagesRequest) (*replicator.MergeDLQMessagesResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "NotifyFailoverMarkers",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.NotifyFailoverMarkers),
+				},
+				Signature:    "NotifyFailoverMarkers(Request *history.NotifyFailoverMarkersRequest)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "PollMutableState",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -292,6 +369,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "PurgeDLQMessages",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.PurgeDLQMessages),
+				},
+				Signature:    "PurgeDLQMessages(Request *replicator.PurgeDLQMessagesRequest)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "QueryWorkflow",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -299,6 +387,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.QueryWorkflow),
 				},
 				Signature:    "QueryWorkflow(QueryRequest *history.QueryWorkflowRequest) (*history.QueryWorkflowResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "ReadDLQMessages",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ReadDLQMessages),
+				},
+				Signature:    "ReadDLQMessages(Request *replicator.ReadDLQMessagesRequest) (*replicator.ReadDLQMessagesResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -358,6 +457,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "RefreshWorkflowTasks",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.RefreshWorkflowTasks),
+				},
+				Signature:    "RefreshWorkflowTasks(Request *history.RefreshWorkflowTasksRequest)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "RemoveSignalMutableState",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -380,17 +490,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "ReplicateEvents",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ReplicateEvents),
-				},
-				Signature:    "ReplicateEvents(ReplicateRequest *history.ReplicateEventsRequest)",
-				ThriftModule: history.ThriftModule,
-			},
-
-			thrift.Method{
 				Name: "ReplicateEventsV2",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -402,17 +501,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "ReplicateRawEvents",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ReplicateRawEvents),
-				},
-				Signature:    "ReplicateRawEvents(ReplicateRequest *history.ReplicateRawEventsRequest)",
-				ThriftModule: history.ThriftModule,
-			},
-
-			thrift.Method{
 				Name: "RequestCancelWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -420,6 +508,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.RequestCancelWorkflowExecution),
 				},
 				Signature:    "RequestCancelWorkflowExecution(CancelRequest *history.RequestCancelWorkflowExecutionRequest)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "ResetQueue",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ResetQueue),
+				},
+				Signature:    "ResetQueue(Request *shared.ResetQueueRequest)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -579,636 +678,1183 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 33)
+	procedures := make([]transport.Procedure, 0, 39)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
 
 type handler struct{ impl Interface }
 
+type yarpcErrorNamer interface{ YARPCErrorName() string }
+
+type yarpcErrorCoder interface{ YARPCErrorCode() *yarpcerrors.Code }
+
 func (h handler) CloseShard(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_CloseShard_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'CloseShard': %w", err)
 	}
 
-	err := h.impl.CloseShard(ctx, args.Request)
+	appErr := h.impl.CloseShard(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := history.HistoryService_CloseShard_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_CloseShard_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) DescribeHistoryHost(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_DescribeHistoryHost_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'DescribeHistoryHost': %w", err)
 	}
 
-	success, err := h.impl.DescribeHistoryHost(ctx, args.Request)
+	success, appErr := h.impl.DescribeHistoryHost(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := history.HistoryService_DescribeHistoryHost_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_DescribeHistoryHost_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) DescribeMutableState(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_DescribeMutableState_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'DescribeMutableState': %w", err)
 	}
 
-	success, err := h.impl.DescribeMutableState(ctx, args.Request)
+	success, appErr := h.impl.DescribeMutableState(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := history.HistoryService_DescribeMutableState_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_DescribeMutableState_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
+	return response, err
+}
+
+func (h handler) DescribeQueue(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_DescribeQueue_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'DescribeQueue': %w", err)
+	}
+
+	success, appErr := h.impl.DescribeQueue(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_DescribeQueue_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
 	return response, err
 }
 
 func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_DescribeWorkflowExecution_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'DescribeWorkflowExecution': %w", err)
 	}
 
-	success, err := h.impl.DescribeWorkflowExecution(ctx, args.DescribeRequest)
+	success, appErr := h.impl.DescribeWorkflowExecution(ctx, args.DescribeRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_DescribeWorkflowExecution_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_DescribeWorkflowExecution_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
+	return response, err
+}
+
+func (h handler) GetDLQReplicationMessages(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_GetDLQReplicationMessages_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'GetDLQReplicationMessages': %w", err)
+	}
+
+	success, appErr := h.impl.GetDLQReplicationMessages(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_GetDLQReplicationMessages_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
 	return response, err
 }
 
 func (h handler) GetMutableState(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_GetMutableState_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'GetMutableState': %w", err)
 	}
 
-	success, err := h.impl.GetMutableState(ctx, args.GetRequest)
+	success, appErr := h.impl.GetMutableState(ctx, args.GetRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_GetMutableState_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_GetMutableState_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) GetReplicationMessages(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_GetReplicationMessages_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'GetReplicationMessages': %w", err)
 	}
 
-	success, err := h.impl.GetReplicationMessages(ctx, args.Request)
+	success, appErr := h.impl.GetReplicationMessages(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := history.HistoryService_GetReplicationMessages_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_GetReplicationMessages_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
+	return response, err
+}
+
+func (h handler) MergeDLQMessages(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_MergeDLQMessages_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'MergeDLQMessages': %w", err)
+	}
+
+	success, appErr := h.impl.MergeDLQMessages(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_MergeDLQMessages_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) NotifyFailoverMarkers(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_NotifyFailoverMarkers_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'NotifyFailoverMarkers': %w", err)
+	}
+
+	appErr := h.impl.NotifyFailoverMarkers(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_NotifyFailoverMarkers_Helper.WrapResponse(appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
 	return response, err
 }
 
 func (h handler) PollMutableState(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_PollMutableState_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'PollMutableState': %w", err)
 	}
 
-	success, err := h.impl.PollMutableState(ctx, args.PollRequest)
+	success, appErr := h.impl.PollMutableState(ctx, args.PollRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_PollMutableState_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_PollMutableState_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
+	return response, err
+}
+
+func (h handler) PurgeDLQMessages(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_PurgeDLQMessages_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'PurgeDLQMessages': %w", err)
+	}
+
+	appErr := h.impl.PurgeDLQMessages(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_PurgeDLQMessages_Helper.WrapResponse(appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
 	return response, err
 }
 
 func (h handler) QueryWorkflow(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_QueryWorkflow_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'QueryWorkflow': %w", err)
 	}
 
-	success, err := h.impl.QueryWorkflow(ctx, args.QueryRequest)
+	success, appErr := h.impl.QueryWorkflow(ctx, args.QueryRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_QueryWorkflow_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_QueryWorkflow_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
+	return response, err
+}
+
+func (h handler) ReadDLQMessages(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_ReadDLQMessages_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'ReadDLQMessages': %w", err)
+	}
+
+	success, appErr := h.impl.ReadDLQMessages(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_ReadDLQMessages_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
 	return response, err
 }
 
 func (h handler) ReapplyEvents(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_ReapplyEvents_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'ReapplyEvents': %w", err)
 	}
 
-	err := h.impl.ReapplyEvents(ctx, args.ReapplyEventsRequest)
+	appErr := h.impl.ReapplyEvents(ctx, args.ReapplyEventsRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_ReapplyEvents_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_ReapplyEvents_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) RecordActivityTaskHeartbeat(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_RecordActivityTaskHeartbeat_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'RecordActivityTaskHeartbeat': %w", err)
 	}
 
-	success, err := h.impl.RecordActivityTaskHeartbeat(ctx, args.HeartbeatRequest)
+	success, appErr := h.impl.RecordActivityTaskHeartbeat(ctx, args.HeartbeatRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_RecordActivityTaskHeartbeat_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_RecordActivityTaskHeartbeat_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) RecordActivityTaskStarted(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_RecordActivityTaskStarted_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'RecordActivityTaskStarted': %w", err)
 	}
 
-	success, err := h.impl.RecordActivityTaskStarted(ctx, args.AddRequest)
+	success, appErr := h.impl.RecordActivityTaskStarted(ctx, args.AddRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_RecordActivityTaskStarted_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_RecordActivityTaskStarted_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) RecordChildExecutionCompleted(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_RecordChildExecutionCompleted_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'RecordChildExecutionCompleted': %w", err)
 	}
 
-	err := h.impl.RecordChildExecutionCompleted(ctx, args.CompletionRequest)
+	appErr := h.impl.RecordChildExecutionCompleted(ctx, args.CompletionRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_RecordChildExecutionCompleted_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_RecordChildExecutionCompleted_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) RecordDecisionTaskStarted(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_RecordDecisionTaskStarted_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'RecordDecisionTaskStarted': %w", err)
 	}
 
-	success, err := h.impl.RecordDecisionTaskStarted(ctx, args.AddRequest)
+	success, appErr := h.impl.RecordDecisionTaskStarted(ctx, args.AddRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_RecordDecisionTaskStarted_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_RecordDecisionTaskStarted_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
+	return response, err
+}
+
+func (h handler) RefreshWorkflowTasks(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_RefreshWorkflowTasks_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'RefreshWorkflowTasks': %w", err)
+	}
+
+	appErr := h.impl.RefreshWorkflowTasks(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RefreshWorkflowTasks_Helper.WrapResponse(appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
 	return response, err
 }
 
 func (h handler) RemoveSignalMutableState(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_RemoveSignalMutableState_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'RemoveSignalMutableState': %w", err)
 	}
 
-	err := h.impl.RemoveSignalMutableState(ctx, args.RemoveRequest)
+	appErr := h.impl.RemoveSignalMutableState(ctx, args.RemoveRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_RemoveSignalMutableState_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_RemoveSignalMutableState_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) RemoveTask(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_RemoveTask_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'RemoveTask': %w", err)
 	}
 
-	err := h.impl.RemoveTask(ctx, args.Request)
+	appErr := h.impl.RemoveTask(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := history.HistoryService_RemoveTask_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_RemoveTask_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
-	return response, err
-}
 
-func (h handler) ReplicateEvents(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args history.HistoryService_ReplicateEvents_Args
-	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
-	}
-
-	err := h.impl.ReplicateEvents(ctx, args.ReplicateRequest)
-
-	hadError := err != nil
-	result, err := history.HistoryService_ReplicateEvents_Helper.WrapResponse(err)
-
-	var response thrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
-	}
 	return response, err
 }
 
 func (h handler) ReplicateEventsV2(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_ReplicateEventsV2_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'ReplicateEventsV2': %w", err)
 	}
 
-	err := h.impl.ReplicateEventsV2(ctx, args.ReplicateV2Request)
+	appErr := h.impl.ReplicateEventsV2(ctx, args.ReplicateV2Request)
 
-	hadError := err != nil
-	result, err := history.HistoryService_ReplicateEventsV2_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_ReplicateEventsV2_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
-	return response, err
-}
 
-func (h handler) ReplicateRawEvents(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args history.HistoryService_ReplicateRawEvents_Args
-	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
-	}
-
-	err := h.impl.ReplicateRawEvents(ctx, args.ReplicateRequest)
-
-	hadError := err != nil
-	result, err := history.HistoryService_ReplicateRawEvents_Helper.WrapResponse(err)
-
-	var response thrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
-	}
 	return response, err
 }
 
 func (h handler) RequestCancelWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_RequestCancelWorkflowExecution_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'RequestCancelWorkflowExecution': %w", err)
 	}
 
-	err := h.impl.RequestCancelWorkflowExecution(ctx, args.CancelRequest)
+	appErr := h.impl.RequestCancelWorkflowExecution(ctx, args.CancelRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_RequestCancelWorkflowExecution_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_RequestCancelWorkflowExecution_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
+	return response, err
+}
+
+func (h handler) ResetQueue(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_ResetQueue_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'ResetQueue': %w", err)
+	}
+
+	appErr := h.impl.ResetQueue(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_ResetQueue_Helper.WrapResponse(appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
 	return response, err
 }
 
 func (h handler) ResetStickyTaskList(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_ResetStickyTaskList_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'ResetStickyTaskList': %w", err)
 	}
 
-	success, err := h.impl.ResetStickyTaskList(ctx, args.ResetRequest)
+	success, appErr := h.impl.ResetStickyTaskList(ctx, args.ResetRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_ResetStickyTaskList_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_ResetStickyTaskList_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) ResetWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_ResetWorkflowExecution_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'ResetWorkflowExecution': %w", err)
 	}
 
-	success, err := h.impl.ResetWorkflowExecution(ctx, args.ResetRequest)
+	success, appErr := h.impl.ResetWorkflowExecution(ctx, args.ResetRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_ResetWorkflowExecution_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_ResetWorkflowExecution_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) RespondActivityTaskCanceled(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_RespondActivityTaskCanceled_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'RespondActivityTaskCanceled': %w", err)
 	}
 
-	err := h.impl.RespondActivityTaskCanceled(ctx, args.CanceledRequest)
+	appErr := h.impl.RespondActivityTaskCanceled(ctx, args.CanceledRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_RespondActivityTaskCanceled_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_RespondActivityTaskCanceled_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) RespondActivityTaskCompleted(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_RespondActivityTaskCompleted_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'RespondActivityTaskCompleted': %w", err)
 	}
 
-	err := h.impl.RespondActivityTaskCompleted(ctx, args.CompleteRequest)
+	appErr := h.impl.RespondActivityTaskCompleted(ctx, args.CompleteRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_RespondActivityTaskCompleted_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_RespondActivityTaskCompleted_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) RespondActivityTaskFailed(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_RespondActivityTaskFailed_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'RespondActivityTaskFailed': %w", err)
 	}
 
-	err := h.impl.RespondActivityTaskFailed(ctx, args.FailRequest)
+	appErr := h.impl.RespondActivityTaskFailed(ctx, args.FailRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_RespondActivityTaskFailed_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_RespondActivityTaskFailed_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) RespondDecisionTaskCompleted(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_RespondDecisionTaskCompleted_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'RespondDecisionTaskCompleted': %w", err)
 	}
 
-	success, err := h.impl.RespondDecisionTaskCompleted(ctx, args.CompleteRequest)
+	success, appErr := h.impl.RespondDecisionTaskCompleted(ctx, args.CompleteRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_RespondDecisionTaskCompleted_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_RespondDecisionTaskCompleted_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) RespondDecisionTaskFailed(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_RespondDecisionTaskFailed_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'RespondDecisionTaskFailed': %w", err)
 	}
 
-	err := h.impl.RespondDecisionTaskFailed(ctx, args.FailedRequest)
+	appErr := h.impl.RespondDecisionTaskFailed(ctx, args.FailedRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_RespondDecisionTaskFailed_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_RespondDecisionTaskFailed_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) ScheduleDecisionTask(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_ScheduleDecisionTask_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'ScheduleDecisionTask': %w", err)
 	}
 
-	err := h.impl.ScheduleDecisionTask(ctx, args.ScheduleRequest)
+	appErr := h.impl.ScheduleDecisionTask(ctx, args.ScheduleRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_ScheduleDecisionTask_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_ScheduleDecisionTask_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) SignalWithStartWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_SignalWithStartWorkflowExecution_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'SignalWithStartWorkflowExecution': %w", err)
 	}
 
-	success, err := h.impl.SignalWithStartWorkflowExecution(ctx, args.SignalWithStartRequest)
+	success, appErr := h.impl.SignalWithStartWorkflowExecution(ctx, args.SignalWithStartRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_SignalWithStartWorkflowExecution_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_SignalWithStartWorkflowExecution_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) SignalWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_SignalWorkflowExecution_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'SignalWorkflowExecution': %w", err)
 	}
 
-	err := h.impl.SignalWorkflowExecution(ctx, args.SignalRequest)
+	appErr := h.impl.SignalWorkflowExecution(ctx, args.SignalRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_SignalWorkflowExecution_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_SignalWorkflowExecution_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) StartWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_StartWorkflowExecution_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'StartWorkflowExecution': %w", err)
 	}
 
-	success, err := h.impl.StartWorkflowExecution(ctx, args.StartRequest)
+	success, appErr := h.impl.StartWorkflowExecution(ctx, args.StartRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_StartWorkflowExecution_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_StartWorkflowExecution_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) SyncActivity(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_SyncActivity_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'SyncActivity': %w", err)
 	}
 
-	err := h.impl.SyncActivity(ctx, args.SyncActivityRequest)
+	appErr := h.impl.SyncActivity(ctx, args.SyncActivityRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_SyncActivity_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_SyncActivity_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) SyncShardStatus(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_SyncShardStatus_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'SyncShardStatus': %w", err)
 	}
 
-	err := h.impl.SyncShardStatus(ctx, args.SyncShardStatusRequest)
+	appErr := h.impl.SyncShardStatus(ctx, args.SyncShardStatusRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_SyncShardStatus_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_SyncShardStatus_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 
 func (h handler) TerminateWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_TerminateWorkflowExecution_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'TerminateWorkflowExecution': %w", err)
 	}
 
-	err := h.impl.TerminateWorkflowExecution(ctx, args.TerminateRequest)
+	appErr := h.impl.TerminateWorkflowExecution(ctx, args.TerminateRequest)
 
-	hadError := err != nil
-	result, err := history.HistoryService_TerminateWorkflowExecution_Helper.WrapResponse(err)
+	hadError := appErr != nil
+	result, err := history.HistoryService_TerminateWorkflowExecution_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }

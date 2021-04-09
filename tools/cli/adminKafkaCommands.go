@@ -23,47 +23,46 @@ package cli
 import (
 	"bufio"
 	"bytes"
-	"crypto/tls"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	"github.com/uber/cadence/common/auth"
-
 	"io"
-	"io/ioutil"
 	"os"
 	"regexp"
-	"runtime"
-	"strconv"
-	"strings"
 	"sync/atomic"
 	"time"
 
-	"github.com/Shopify/sarama"
-	cluster "github.com/bsm/sarama-cluster"
-	"github.com/gocql/gocql"
 	"github.com/urfave/cli"
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
-	yaml "gopkg.in/yaml.v2"
 
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
-	"github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/cadence/service/history"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
-type filterFn func(*replicator.ReplicationTask) bool
-type filterFnForVisibility func(*indexer.Message) bool
+type (
+	filterFn              func(*types.ReplicationTask) bool
+	filterFnForVisibility func(*indexer.Message) bool
 
-type kafkaMessageType int
+	kafkaMessageType int
+
+	historyV2Task struct {
+		Task         *types.ReplicationTask
+		Events       []*types.HistoryEvent
+		NewRunEvents []*types.HistoryEvent
+	}
+)
 
 const (
 	kafkaMessageTypeReplicationTask kafkaMessageType = iota
@@ -71,11 +70,12 @@ const (
 )
 
 const (
-	bufferSize                 = 4096
-	preambleVersion0      byte = 0x59
-	malformedMessage           = "Input was malformed"
-	chanBufferSize             = 10000
-	maxRereplicateEventID      = 999999
+	bufferSize                       = 8192
+	preambleVersion0            byte = 0x59
+	malformedMessage                 = "Input was malformed"
+	chanBufferSize                   = 10000
+	maxRereplicateEventID            = 999999
+	defaultResendContextTimeout      = 30 * time.Second
 )
 
 var (
@@ -84,7 +84,7 @@ var (
 
 type writerChannel struct {
 	Type                   kafkaMessageType
-	ReplicationTaskChannel chan *replicator.ReplicationTask
+	ReplicationTaskChannel chan *types.ReplicationTask
 	VisibilityMsgChannel   chan *indexer.Message
 }
 
@@ -94,7 +94,7 @@ func newWriterChannel(messageType kafkaMessageType) *writerChannel {
 	}
 	switch messageType {
 	case kafkaMessageTypeReplicationTask:
-		ch.ReplicationTaskChannel = make(chan *replicator.ReplicationTask, chanBufferSize)
+		ch.ReplicationTaskChannel = make(chan *types.ReplicationTask, chanBufferSize)
 	case kafkaMessageTypeVisibilityMsg:
 		ch.VisibilityMsgChannel = make(chan *indexer.Message, chanBufferSize)
 	}
@@ -121,13 +121,14 @@ func AdminKafkaParse(c *cli.Context) {
 	readerCh := make(chan []byte, chanBufferSize)
 	writerCh := newWriterChannel(kafkaMessageType(c.Int(FlagMessageType)))
 	doneCh := make(chan struct{})
+	serializer := persistence.NewPayloadSerializer()
 
 	var skippedCount int32
 	skipErrMode := c.Bool(FlagSkipErrorMode)
 
 	go startReader(inputFile, readerCh)
 	go startParser(readerCh, writerCh, skipErrMode, &skippedCount)
-	go startWriter(outputFile, writerCh, doneCh, &skippedCount, c)
+	go startWriter(outputFile, writerCh, doneCh, &skippedCount, serializer, c)
 
 	<-doneCh
 
@@ -137,16 +138,16 @@ func AdminKafkaParse(c *cli.Context) {
 }
 
 func buildFilterFn(workflowID, runID string) filterFn {
-	return func(task *replicator.ReplicationTask) bool {
+	return func(task *types.ReplicationTask) bool {
 		if len(workflowID) != 0 || len(runID) != 0 {
-			if task.GetHistoryTaskAttributes() == nil {
+			if task.GetHistoryTaskV2Attributes() == nil {
 				return false
 			}
 		}
-		if len(workflowID) != 0 && *task.HistoryTaskAttributes.WorkflowId != workflowID {
+		if len(workflowID) != 0 && task.GetHistoryTaskV2Attributes().WorkflowID != workflowID {
 			return false
 		}
-		if len(runID) != 0 && *task.HistoryTaskAttributes.RunId != runID {
+		if len(runID) != 0 && task.GetHistoryTaskV2Attributes().RunID != runID {
 			return false
 		}
 		return true
@@ -165,27 +166,6 @@ func buildFilterFnForVisibility(workflowID, runID string) filterFnForVisibility 
 	}
 }
 
-func getInputFile(inputFile string) *os.File {
-	if len(inputFile) == 0 {
-		info, err := os.Stdin.Stat()
-		if err != nil {
-			ErrorAndExit("Failed to stat stdin file handle", err)
-		}
-		if info.Mode()&os.ModeCharDevice != 0 || info.Size() <= 0 {
-			fmt.Println("Misuse of pipe mode")
-			os.Exit(1)
-		}
-		return os.Stdin
-	}
-	// This code is executed from the CLI. All user input is from a CLI user.
-	// #nosec
-	f, err := os.Open(inputFile)
-	if err != nil {
-		ErrorAndExit(fmt.Sprintf("Failed to open input file for reading: %v", inputFile), err)
-	}
-	return f
-}
-
 func getOutputFile(outputFile string) *os.File {
 	if len(outputFile) == 0 {
 		return os.Stdout
@@ -194,6 +174,7 @@ func getOutputFile(outputFile string) *os.File {
 	if err != nil {
 		ErrorAndExit("failed to create output file", err)
 	}
+
 	return f
 }
 
@@ -242,6 +223,7 @@ func startWriter(
 	writerCh *writerChannel,
 	doneCh chan struct{},
 	skippedCount *int32,
+	serializer persistence.PayloadSerializer,
 	c *cli.Context,
 ) {
 
@@ -252,7 +234,7 @@ func startWriter(
 
 	switch writerCh.Type {
 	case kafkaMessageTypeReplicationTask:
-		writeReplicationTask(outputFile, writerCh, skippedCount, skipErrMode, headerMode, c)
+		writeReplicationTask(outputFile, writerCh, skippedCount, skipErrMode, headerMode, serializer, c)
 	case kafkaMessageTypeVisibilityMsg:
 		writeVisibilityMessage(outputFile, writerCh, skippedCount, skipErrMode, headerMode, c)
 	}
@@ -264,6 +246,7 @@ func writeReplicationTask(
 	skippedCount *int32,
 	skipErrMode bool,
 	headerMode bool,
+	serializer persistence.PayloadSerializer,
 	c *cli.Context,
 ) {
 	filter := buildFilterFn(c.String(FlagWorkflowID), c.String(FlagRunID))
@@ -275,7 +258,7 @@ Loop:
 				break Loop
 			}
 			if filter(task) {
-				jsonStr, err := json.Marshal(task)
+				jsonStr, err := decodeReplicationTask(task, serializer)
 				if err != nil {
 					if !skipErrMode {
 						ErrorAndExit(malformedMessage, fmt.Errorf("failed to encode into json, err: %v", err))
@@ -290,15 +273,16 @@ Loop:
 					outStr = string(jsonStr)
 				} else {
 					outStr = fmt.Sprintf(
-						"%v, %v, %v, %v, %v",
-						*task.HistoryTaskAttributes.DomainId,
-						*task.HistoryTaskAttributes.WorkflowId,
-						*task.HistoryTaskAttributes.RunId,
-						*task.HistoryTaskAttributes.FirstEventId,
-						*task.HistoryTaskAttributes.NextEventId,
+						"%v, %v, %v",
+						task.GetHistoryTaskV2Attributes().DomainID,
+						task.GetHistoryTaskV2Attributes().WorkflowID,
+						task.GetHistoryTaskV2Attributes().RunID,
 					)
 				}
-				outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
+				_, err = outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
+				if err != nil {
+					ErrorAndExit("Failed to write to file", fmt.Errorf("err: %v", err))
+				}
 			}
 		}
 	}
@@ -344,7 +328,10 @@ Loop:
 						msg.GetVersion(),
 					)
 				}
-				outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
+				_, err = outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
+				if err != nil {
+					ErrorAndExit("Failed to write to file", fmt.Errorf("err: %v", err))
+				}
 			}
 		}
 	}
@@ -405,8 +392,8 @@ func getMessages(data []byte, skipErrors bool) ([][]byte, int32) {
 	return rawMessages, skipped
 }
 
-func deserializeMessages(messages [][]byte, skipErrors bool) ([]*replicator.ReplicationTask, int32) {
-	var replicationTasks []*replicator.ReplicationTask
+func deserializeMessages(messages [][]byte, skipErrors bool) ([]*types.ReplicationTask, int32) {
+	var replicationTasks []*types.ReplicationTask
 	var skipped int32
 	for _, m := range messages {
 		var task replicator.ReplicationTask
@@ -419,7 +406,7 @@ func deserializeMessages(messages [][]byte, skipErrors bool) ([]*replicator.Repl
 				continue
 			}
 		}
-		replicationTasks = append(replicationTasks, &task)
+		replicationTasks = append(replicationTasks, thrift.ToReplicationTask(&task))
 	}
 	return replicationTasks, skipped
 }
@@ -463,108 +450,57 @@ func decodeVisibility(message []byte, val *indexer.Message) error {
 
 // ClustersConfig describes the kafka clusters
 type ClustersConfig struct {
-	Clusters map[string]messaging.ClusterConfig
+	Clusters map[string]config.ClusterConfig
 	TLS      auth.TLS
 }
 
-func doRereplicate(shardID int, domainID, wid, rid string, minID, maxID int64, targets []string, producer messaging.Producer, session *gocql.Session) {
-	if minID <= 0 {
-		minID = 1
-	}
-	if maxID == 0 {
-		maxID = maxRereplicateEventID
-	}
+func doRereplicate(
+	ctx context.Context,
+	shardID int,
+	domainID string,
+	wid string,
+	rid string,
+	endEventID int64,
+	endEventVersion int64,
+	sourceCluster string,
+	cqlClient gocql.Client,
+	session gocql.Session,
+	adminClient admin.Client,
+) {
 
-	histV2 := cassandra.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
-	historyV2Mgr := persistence.NewHistoryV2ManagerImpl(histV2, loggerimpl.NewNopLogger(), dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit))
-
-	exeM, _ := cassandra.NewWorkflowExecutionPersistence(shardID, session, loggerimpl.NewNopLogger())
+	exeM, _ := cassandra.NewWorkflowExecutionPersistence(shardID, cqlClient, session, loggerimpl.NewNopLogger())
 	exeMgr := persistence.NewExecutionManagerImpl(exeM, loggerimpl.NewNopLogger())
 
-	for {
-		fmt.Printf("Start rereplicate for wid: %v, rid:%v \n", wid, rid)
-		resp, err := exeMgr.GetWorkflowExecution(&persistence.GetWorkflowExecutionRequest{
-			DomainID: domainID,
-			Execution: shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(wid),
-				RunId:      common.StringPtr(rid),
-			},
-		})
-		if err != nil {
-			ErrorAndExit("GetWorkflowExecution error", err)
-		}
-
-		currVersion := resp.State.ReplicationState.CurrentVersion
-		repInfo := map[string]*persistence.ReplicationInfo{
-			"": {
-				Version:     currVersion,
-				LastEventID: 0,
-			},
-		}
-
-		exeInfo := resp.State.ExecutionInfo
-		taskTemplate := &persistence.ReplicationTaskInfo{
-			DomainID:            domainID,
-			WorkflowID:          wid,
-			RunID:               rid,
-			Version:             currVersion,
-			LastReplicationInfo: repInfo,
-			BranchToken:         exeInfo.BranchToken,
-		}
-
-		_, historyBatches, err := history.GetAllHistory(historyV2Mgr, nil, true,
-			minID, maxID, exeInfo.BranchToken, common.IntPtr(shardID))
-
-		if err != nil {
-			ErrorAndExit("GetAllHistory error", err)
-		}
-
-		continueAsNew := false
-		var newRunID string
-		for _, batch := range historyBatches {
-
-			events := batch.Events
-			firstEvent := events[0]
-			lastEvent := events[len(events)-1]
-			if lastEvent.GetEventType() == shared.EventTypeWorkflowExecutionContinuedAsNew {
-				continueAsNew = true
-				newRunID = lastEvent.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
-				resp, err := exeMgr.GetWorkflowExecution(&persistence.GetWorkflowExecutionRequest{
-					DomainID: domainID,
-					Execution: shared.WorkflowExecution{
-						WorkflowId: common.StringPtr(wid),
-						RunId:      common.StringPtr(newRunID),
-					},
-				})
-				if err != nil {
-					ErrorAndExit("GetWorkflowExecution error", err)
-				}
-				taskTemplate.NewRunBranchToken = resp.State.ExecutionInfo.BranchToken
-			}
-			taskTemplate.Version = firstEvent.GetVersion()
-			taskTemplate.FirstEventID = firstEvent.GetEventId()
-			taskTemplate.NextEventID = lastEvent.GetEventId() + 1
-			task, _, err := history.GenerateReplicationTask(targets, taskTemplate, historyV2Mgr, nil, batch, common.IntPtr(shardID))
-			if err != nil {
-				ErrorAndExit("GenerateReplicationTask error", err)
-			}
-			err = producer.Publish(task)
-			if err != nil {
-				ErrorAndExit("Publish task error", err)
-			}
-			fmt.Printf("publish task successfully firstEventID %v, lastEventID %v \n", firstEvent.GetEventId(), lastEvent.GetEventId())
-		}
-
-		fmt.Printf("Done rereplicate for wid: %v, rid:%v \n", wid, rid)
-		runtime.GC()
-		if continueAsNew {
-			rid = newRunID
-			minID = 1
-			maxID = maxRereplicateEventID
-		} else {
-			break
-		}
+	fmt.Printf("Start rereplicate for wid: %v, rid:%v \n", wid, rid)
+	resp, err := exeMgr.GetWorkflowExecution(ctx, &persistence.GetWorkflowExecutionRequest{
+		DomainID: domainID,
+		Execution: types.WorkflowExecution{
+			WorkflowID: wid,
+			RunID:      rid,
+		},
+	})
+	if err != nil {
+		ErrorAndExit("GetWorkflowExecution error", err)
 	}
+
+	versionHistories := resp.State.VersionHistories
+	if versionHistories == nil {
+		ErrorAndExit("The workflow is not a NDC workflow", nil)
+	}
+	if err := adminClient.ResendReplicationTasks(
+		ctx,
+		&types.ResendReplicationTasksRequest{
+			DomainID:      domainID,
+			WorkflowID:    wid,
+			RunID:         rid,
+			RemoteCluster: sourceCluster,
+			EndEventID:    common.Int64Ptr(endEventID + 1),
+			EndVersion:    common.Int64Ptr(endEventVersion),
+		},
+	); err != nil {
+		ErrorAndExit("Failed to resend ndc workflow", err)
+	}
+	fmt.Printf("Done rereplicate for wid: %v, rid:%v \n", wid, rid)
 }
 
 // AdminRereplicate parses will re-publish replication tasks to topic
@@ -574,315 +510,76 @@ func AdminRereplicate(c *cli.Context) {
 		ErrorAndExit("numberOfShards is must be > 0", nil)
 		return
 	}
-	target := getRequiredOption(c, FlagTargetCluster)
-	targets := []string{target}
-
-	producer := newKafkaProducer(c)
-	session := connectToCassandra(c)
-
-	if c.IsSet(FlagInputFile) {
-		inFile := c.String(FlagInputFile)
-		// This code is executed from the CLI. All user input is from a CLI user.
-		// parse domainID,workflowID,runID,minEventID,maxEventID
-		// #nosec
-		file, err := os.Open(inFile)
-		if err != nil {
-			ErrorAndExit("Open failed", err)
-		}
-		defer file.Close()
-
-		scanner := bufio.NewScanner(file)
-		idx := 0
-		for scanner.Scan() {
-			idx++
-			line := strings.TrimSpace(scanner.Text())
-			if len(line) == 0 {
-				fmt.Printf("line %v is empty, skipped\n", idx)
-				continue
-			}
-			cols := strings.Split(line, ",")
-			if len(cols) < 3 {
-				ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 3 cols separated by comma, only %v ", idx, len(cols)))
-			}
-			fmt.Printf("Start processing line %v ...\n", idx)
-			domainID := strings.TrimSpace(cols[0])
-			wid := strings.TrimSpace(cols[1])
-			rid := strings.TrimSpace(cols[2])
-			var minID, maxID int64
-			if len(cols) >= 4 {
-				i, err := strconv.Atoi(strings.TrimSpace(cols[3]))
-				if err != nil {
-					ErrorAndExit(fmt.Sprintf("Atoi failed at lne %v", idx), err)
-				}
-				minID = int64(i)
-			}
-			if len(cols) >= 5 {
-				i, err := strconv.Atoi(strings.TrimSpace(cols[4]))
-				if err != nil {
-					ErrorAndExit(fmt.Sprintf("Atoi failed at lne %v", idx), err)
-				}
-				maxID = int64(i)
-			}
-
-			shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
-			doRereplicate(shardID, domainID, wid, rid, minID, maxID, targets, producer, session)
-			fmt.Printf("Done processing line %v ...\n", idx)
-		}
-		if err := scanner.Err(); err != nil {
-			ErrorAndExit("scanner failed", err)
-		}
-	} else {
-		domainID := getRequiredOption(c, FlagDomainID)
-		wid := getRequiredOption(c, FlagWorkflowID)
-		rid := getRequiredOption(c, FlagRunID)
-		minID := c.Int64(FlagMinEventID)
-		maxID := c.Int64(FlagMaxEventID)
-
-		shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
-		doRereplicate(shardID, domainID, wid, rid, minID, maxID, targets, producer, session)
+	sourceCluster := getRequiredOption(c, FlagSourceCluster)
+	if !c.IsSet(FlagMaxEventID) {
+		ErrorAndExit("End event ID is not defined", nil)
 	}
+	if !c.IsSet(FlagEndEventVersion) {
+		ErrorAndExit("End event version is not defined", nil)
+	}
+
+	client, session := connectToCassandra(c)
+	adminClient := cFactory.ServerAdminClient(c)
+	endEventID := c.Int64(FlagMaxEventID)
+	endVersion := c.Int64(FlagEndEventVersion)
+	domainID := getRequiredOption(c, FlagDomainID)
+	wid := getRequiredOption(c, FlagWorkflowID)
+	rid := getRequiredOption(c, FlagRunID)
+	shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
+	contextTimeout := defaultResendContextTimeout
+	if c.GlobalIsSet(FlagContextTimeout) {
+		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+	defer cancel()
+
+	doRereplicate(
+		ctx,
+		shardID,
+		domainID,
+		wid,
+		rid,
+		endEventID,
+		endVersion,
+		sourceCluster,
+		client,
+		session,
+		adminClient,
+	)
 }
 
-func newKafkaProducer(c *cli.Context) messaging.Producer {
-	hostFile := getRequiredOption(c, FlagHostFile)
-	destCluster := getRequiredOption(c, FlagCluster)
-	destTopic := getRequiredOption(c, FlagTopic)
+func decodeReplicationTask(
+	task *types.ReplicationTask,
+	serializer persistence.PayloadSerializer,
+) ([]byte, error) {
 
-	// initialize kafka producer
-	destBrokers, tlsConfig, err := loadBrokerConfig(hostFile, destCluster)
-	if err != nil {
-		ErrorAndExit("", err)
-	}
-
-	config := sarama.NewConfig()
-	config.Producer.RequiredAcks = sarama.WaitForAll
-	config.Producer.Return.Successes = true
-	if tlsConfig != nil {
-		config.Net.TLS.Config = tlsConfig
-		config.Net.TLS.Enable = true
-	}
-	sproducer, err := sarama.NewSyncProducer(destBrokers, config)
-	if err != nil {
-		ErrorAndExit("", err)
-	}
-	logger := loggerimpl.NewNopLogger()
-
-	producer := messaging.NewKafkaProducer(destTopic, sproducer, logger)
-	return producer
-}
-
-// AdminPurgeTopic is used to purge kafka topic
-func AdminPurgeTopic(c *cli.Context) {
-	hostFile := getRequiredOption(c, FlagHostFile)
-	topic := getRequiredOption(c, FlagTopic)
-	cluster := getRequiredOption(c, FlagCluster)
-	group := getRequiredOption(c, FlagGroup)
-	brokers, tlsConfig, err := loadBrokerConfig(hostFile, cluster)
-
-	consumer := createConsumerAndWaitForReady(brokers, tlsConfig, group, topic)
-
-	highWaterMarks, ok := consumer.HighWaterMarks()[topic]
-	if !ok {
-		ErrorAndExit("", fmt.Errorf("cannot find high watermark"))
-	}
-	fmt.Printf("Topic high watermark %v.\n", highWaterMarks)
-	for partition, hi := range highWaterMarks {
-		consumer.MarkPartitionOffset(topic, partition, hi-1, "")
-		fmt.Printf("set partition offset %v:%v \n", partition, hi)
-	}
-	err = consumer.CommitOffsets()
-	if err != nil {
-		ErrorAndExit("fail to commit offset", err)
-	}
-
-	consumer = createConsumerAndWaitForReady(brokers, tlsConfig, group, topic)
-	msg, ok := <-consumer.Messages()
-	fmt.Printf("current offset sample: %v: %v \n", msg.Partition, msg.Offset)
-}
-
-// AdminMergeDLQ publish replication tasks from DLQ or JSON file
-func AdminMergeDLQ(c *cli.Context) {
-	hostFile := getRequiredOption(c, FlagHostFile)
-	producer := newKafkaProducer(c)
-
-	var err error
-	var inFile string
-	var tasks []*replicator.ReplicationTask
-	if c.IsSet(FlagInputFile) && (c.IsSet(FlagInputCluster) || c.IsSet(FlagInputTopic) || c.IsSet(FlagStartOffset)) {
-		ErrorAndExit("", fmt.Errorf("ONLY Either from JSON file or from DLQ topic"))
-	}
-
-	if c.IsSet(FlagInputFile) {
-		inFile = c.String(FlagInputFile)
-		// parse json input as replicaiton tasks
-		tasks, err = parseReplicationTask(inFile)
+	switch task.GetTaskType() {
+	case types.ReplicationTaskTypeHistoryV2:
+		historyV2 := task.GetHistoryTaskV2Attributes()
+		events, err := serializer.DeserializeBatchEvents(
+			persistence.NewDataBlobFromInternal(historyV2.Events),
+		)
 		if err != nil {
-			ErrorAndExit("", err)
-		}
-		// publish to topic
-		for idx, t := range tasks {
-			err := producer.Publish(t)
-			if err != nil {
-				fmt.Printf("cannot publish task %v to topic \n", idx)
-				ErrorAndExit("", err)
-			} else {
-				fmt.Printf("replication task sent: %v firstID %v, nextID %v \n", idx, t.HistoryTaskAttributes.GetFirstEventId(), t.HistoryTaskAttributes.GetNextEventId())
-			}
-		}
-	} else {
-		fromTopic := getRequiredOption(c, FlagInputTopic)
-		fromCluster := getRequiredOption(c, FlagInputCluster)
-		startOffset := c.Int64(FlagStartOffset)
-		group := getRequiredOption(c, FlagGroup)
-
-		fromBrokers, tlsConfig, err := loadBrokerConfig(hostFile, fromCluster)
-		if err != nil {
-			ErrorAndExit("", err)
-		}
-
-		consumer := createConsumerAndWaitForReady(fromBrokers, tlsConfig, group, fromTopic)
-
-		highWaterMarks, ok := consumer.HighWaterMarks()[fromTopic]
-		if !ok {
-			ErrorAndExit("", fmt.Errorf("cannot find high watermark"))
-		}
-		fmt.Printf("Topic high watermark %v.\n", highWaterMarks)
-		for partition := range highWaterMarks {
-			consumer.MarkPartitionOffset(fromTopic, partition, startOffset, "")
-			fmt.Printf("reset offset %v:%v \n", partition, startOffset)
-		}
-		err = consumer.CommitOffsets()
-		if err != nil {
-			ErrorAndExit("fail to commit offset", err)
-		}
-		// create consumer again to make sure MarkPartitionOffset works
-		consumer = createConsumerAndWaitForReady(fromBrokers, tlsConfig, group, fromTopic)
-
-		for {
-			select {
-			case msg, ok := <-consumer.Messages():
-				if !ok {
-					return
-				}
-				if msg.Offset < startOffset {
-					fmt.Printf("Wrong Message [%v],[%v] \n", msg.Partition, msg.Offset)
-					ErrorAndExit("", fmt.Errorf("offset is not correct"))
-					continue
-				} else {
-					var task replicator.ReplicationTask
-					err := decode(msg.Value, &task)
-					if err != nil {
-						ErrorAndExit("failed to deserialize message due to error", err)
-					}
-
-					err = producer.Publish(&task)
-
-					if err != nil {
-						fmt.Printf("[Error] Message [%v],[%v] failed: %v\n", msg.Partition, msg.Offset, err)
-					} else {
-						fmt.Printf("Message [%v],[%v] succeeded\n", msg.Partition, msg.Offset)
-					}
-				}
-				consumer.MarkOffset(msg, "")
-			case <-time.After(time.Second * 5):
-				fmt.Println("heartbeat: waiting for more messages, Ctrl+C to stop any time...")
-			}
-		}
-	}
-}
-
-func createConsumerAndWaitForReady(brokers []string, tlsConfig *tls.Config, group, fromTopic string) *cluster.Consumer {
-	config := cluster.NewConfig()
-	config.Consumer.Return.Errors = true
-	config.Consumer.Offsets.Initial = sarama.OffsetOldest
-	if tlsConfig != nil {
-		config.Net.TLS.Enable = true
-		config.Net.TLS.Config = tlsConfig
-	}
-
-	config.Group.Return.Notifications = true
-
-	client, err := cluster.NewClient(brokers, config)
-	if err != nil {
-		ErrorAndExit("", err)
-	}
-
-	consumer, err := cluster.NewConsumerFromClient(client, group, []string{fromTopic})
-	if err != nil {
-		ErrorAndExit("", err)
-	}
-
-	for ntf := range consumer.Notifications() {
-		time.Sleep(time.Second)
-		if partitions := ntf.Current[fromTopic]; len(partitions) > 0 && ntf.Type == cluster.RebalanceOK {
-			break
-		}
-		fmt.Println("Waiting for consumer ready...")
-	}
-	return consumer
-}
-
-func parseReplicationTask(in string) (tasks []*replicator.ReplicationTask, err error) {
-	// This code is executed from the CLI. All user input is from a CLI user.
-	// #nosec
-	file, err := os.Open(in)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	idx := 0
-	for scanner.Scan() {
-		idx++
-		line := strings.TrimSpace(scanner.Text())
-		if len(line) == 0 {
-			fmt.Printf("line %v is empty, skipped\n", idx)
-			continue
-		}
-
-		t := &replicator.ReplicationTask{}
-		err := json.Unmarshal([]byte(line), t)
-		if err != nil {
-			fmt.Printf("line %v cannot be deserialized to replicaiton task: %v.\n", idx, line)
 			return nil, err
 		}
-		tasks = append(tasks, t)
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	return tasks, nil
-}
-
-func loadBrokerConfig(hostFile string, cluster string) ([]string, *tls.Config, error) {
-	// This code is executed from the CLI and is only used to load config files
-	// #nosec
-	contents, err := ioutil.ReadFile(hostFile)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to load kafka cluster info from %v., error: %v", hostFile, err)
-	}
-	clustersConfig := ClustersConfig{}
-	if err := yaml.Unmarshal(contents, &clustersConfig); err != nil {
-		return nil, nil, err
-	}
-	if len(clustersConfig.Clusters) != 0 {
-		config, ok := clustersConfig.Clusters[cluster]
-		if ok {
-			brs := config.Brokers
-			for i, b := range brs {
-				if !strings.Contains(b, ":") {
-					b += ":9092"
-					brs[i] = b
-				}
-			}
-			tlsConfig, err := messaging.CreateTLSConfig(clustersConfig.TLS)
+		var newRunEvents []*types.HistoryEvent
+		if historyV2.NewRunEvents != nil {
+			newRunEvents, err = serializer.DeserializeBatchEvents(
+				persistence.NewDataBlobFromInternal(historyV2.NewRunEvents),
+			)
 			if err != nil {
-				return nil, nil, fmt.Errorf(fmt.Sprintf("Error creating Kafka TLS config %v", err))
+				return nil, err
 			}
-			return brs, tlsConfig, nil
 		}
+		historyV2.Events = nil
+		historyV2.NewRunEvents = nil
+		historyV2Attributes := &historyV2Task{
+			Task:         task,
+			Events:       events,
+			NewRunEvents: newRunEvents,
+		}
+		return json.Marshal(historyV2Attributes)
+	default:
+		return json.Marshal(task)
 	}
-	return nil, nil, fmt.Errorf("failed to load broker for cluster %v", cluster)
 }

@@ -1,0 +1,9 @@
+{
+  "totalBatches": 15,
+  "concurrency": 5,
+  "batchType": "childWorkflow",
+  "batchSize": 100,
+  "batchPeriodInSeconds": 60,
+  "batchMaxLatencyInSeconds": 10,
+  "batchTimeoutInSeconds": 30
+}

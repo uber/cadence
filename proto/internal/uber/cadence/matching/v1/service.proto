@@ -1,0 +1,214 @@
+// Copyright (c) 2020 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package uber.cadence.matching.v1;
+
+option go_package = "github.com/uber/cadence/.gen/proto/matching/v1;matchingv1";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "uber/cadence/api/v1/common.proto";
+import "uber/cadence/api/v1/query.proto";
+import "uber/cadence/api/v1/tasklist.proto";
+import "uber/cadence/api/v1/service_worker.proto";
+import "uber/cadence/api/v1/service_workflow.proto";
+import "uber/cadence/shared/v1/history.proto";
+import "uber/cadence/shared/v1/tasklist.proto";
+
+// MatchingAPI is exposed to provide support for polling from long running applications.
+// Such applications are expected to have a worker which regularly polls for DecisionTask and ActivityTask.  For each
+// DecisionTask, application is expected to process the history of events for that session and respond back with next
+// decisions.  For each ActivityTask, application is expected to execute the actual logic for that task and respond back
+// with completion or failure.
+service MatchingAPI {
+
+  // PollForDecisionTask is called by frontend to process DecisionTask from a specific taskList.  A
+  // DecisionTask is dispatched to callers for active workflow executions, with pending decisions.
+  rpc PollForDecisionTask(PollForDecisionTaskRequest) returns (PollForDecisionTaskResponse);
+
+  // PollForActivityTask is called by frontend to process ActivityTask from a specific taskList.  ActivityTask
+  // is dispatched to callers whenever a ScheduleTask decision is made for a workflow execution.
+  rpc PollForActivityTask(PollForActivityTaskRequest) returns (PollForActivityTaskResponse);
+
+  // AddDecisionTask is called by the history service when a decision task is scheduled, so that it can be dispatched
+  // by the MatchingEngine.
+  rpc AddDecisionTask(AddDecisionTaskRequest) returns (AddDecisionTaskResponse);
+
+  // AddActivityTask is called by the history service when a decision task is scheduled, so that it can be dispatched
+  // by the MatchingEngine.
+  rpc AddActivityTask(AddActivityTaskRequest) returns (AddActivityTaskResponse);
+
+  // QueryWorkflow is called by frontend to query a workflow.
+  rpc QueryWorkflow(QueryWorkflowRequest) returns (QueryWorkflowResponse);
+
+  // RespondQueryTaskCompleted is called by frontend to respond query completed.
+  rpc RespondQueryTaskCompleted(RespondQueryTaskCompletedRequest) returns (RespondQueryTaskCompletedResponse);
+
+  // CancelOutstandingPoll is called by frontend to unblock long polls on matching for zombie pollers.
+  // Our rpc stack does not support context propagation, so when a client connection goes away frontend sees
+  // cancellation of context for that handler, but any corresponding calls (long-poll) to matching service does not
+  // see the cancellation propagated so it can unblock corresponding long-polls on its end.  This results is tasks
+  // being dispatched to zombie pollers in this situation.  This API is added so everytime frontend makes a long-poll
+  // api call to matching it passes in a pollerID and then calls this API when it detects client connection is closed
+  // to unblock long polls for this poller and prevent tasks being sent to these zombie pollers.
+  rpc CancelOutstandingPoll(CancelOutstandingPollRequest) returns (CancelOutstandingPollResponse);
+
+  // DescribeTaskList returns information about the target tasklist, right now this API returns the
+  // pollers which polled this tasklist in last few minutes.
+  rpc DescribeTaskList(DescribeTaskListRequest) returns (DescribeTaskListResponse);
+
+  // ListTaskListPartitions returns a map of partitionKey and hostAddress for a taskList
+  rpc ListTaskListPartitions(ListTaskListPartitionsRequest) returns (ListTaskListPartitionsResponse);
+}
+
+message PollForDecisionTaskRequest {
+  api.v1.PollForDecisionTaskRequest request = 1;
+  string domain_id = 2;
+  string poller_id = 3;
+  string forwarded_from = 4;
+}
+
+message PollForDecisionTaskResponse {
+  bytes task_token = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  api.v1.WorkflowType workflow_type = 3;
+  google.protobuf.Int64Value previous_started_event_id = 4;
+  int64 started_event_id = 5;
+  int32 attempt = 6;
+  int64 next_event_id = 7;
+  int64 backlog_count_hint = 8;
+  bool sticky_execution_enabled = 9;
+  api.v1.WorkflowQuery query = 10;
+  shared.v1.TransientDecisionInfo decision_info = 11;
+  api.v1.TaskList workflow_execution_task_list = 12;
+  int32 event_store_version = 13;
+  bytes branch_token = 14;
+  google.protobuf.Timestamp scheduled_time = 15;
+  google.protobuf.Timestamp started_time = 16;
+  map<string, api.v1.WorkflowQuery> queries = 17;
+}
+
+message PollForActivityTaskRequest {
+  api.v1.PollForActivityTaskRequest request = 1;
+  string domain_id = 2;
+  string poller_id = 3;
+  string forwarded_from = 4;
+}
+
+message PollForActivityTaskResponse {
+  bytes task_token = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  string activity_id = 3;
+  api.v1.ActivityType activity_type = 4;
+  api.v1.Payload input = 5;
+  google.protobuf.Timestamp scheduled_time = 6;
+  google.protobuf.Timestamp started_time = 7;
+  google.protobuf.Duration schedule_to_close_timeout = 8;
+  google.protobuf.Duration start_to_close_timeout = 9;
+  google.protobuf.Duration heartbeat_timeout = 10;
+  int32 attempt = 11;
+  google.protobuf.Timestamp scheduled_time_of_this_attempt = 12;
+  api.v1.Payload heartbeat_details = 13;
+  api.v1.WorkflowType workflow_type = 14;
+  string workflow_domain = 15;
+  api.v1.Header header = 16;
+}
+
+message AddDecisionTaskRequest {
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  api.v1.TaskList task_list = 3;
+  int64 schedule_id = 4;
+  google.protobuf.Duration schedule_to_start_timeout = 5;
+  shared.v1.TaskSource source = 6;
+  string forwarded_from = 7;
+}
+
+message AddDecisionTaskResponse {
+}
+
+message AddActivityTaskRequest {
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  string source_domain_id = 3;
+  api.v1.TaskList task_list = 4;
+  int64 schedule_id = 5;
+  google.protobuf.Duration schedule_to_start_timeout = 6;
+  shared.v1.TaskSource source = 7;
+  string forwarded_from = 8;
+}
+
+message AddActivityTaskResponse {
+}
+
+message QueryWorkflowRequest {
+  api.v1.QueryWorkflowRequest request = 1;
+  string domain_id = 2;
+  api.v1.TaskList task_list = 3;
+  string forwarded_from = 4;
+}
+
+message QueryWorkflowResponse {
+  api.v1.Payload query_result = 1;
+  api.v1.QueryRejected query_rejected = 2;
+}
+
+message RespondQueryTaskCompletedRequest {
+  api.v1.RespondQueryTaskCompletedRequest request = 1;
+  string domain_id = 2;
+  api.v1.TaskList task_list = 3;
+  string task_id = 4;
+}
+
+message RespondQueryTaskCompletedResponse {
+}
+
+message CancelOutstandingPollRequest {
+  string domain_id = 1;
+  string poller_id = 2;
+  api.v1.TaskListType task_list_type = 3;
+  api.v1.TaskList task_list = 4;
+}
+
+message CancelOutstandingPollResponse {
+}
+
+message DescribeTaskListRequest {
+  api.v1.DescribeTaskListRequest request = 1;
+  string domain_id = 2;
+}
+
+message DescribeTaskListResponse {
+  repeated api.v1.PollerInfo pollers = 1;
+  api.v1.TaskListStatus task_list_status = 2;
+}
+
+message ListTaskListPartitionsRequest {
+  string domain = 1;
+  api.v1.TaskList task_list = 2;
+}
+
+message ListTaskListPartitionsResponse {
+  repeated api.v1.TaskListPartitionMetadata activity_task_list_partitions = 1;
+  repeated api.v1.TaskListPartitionMetadata decision_task_list_partitions = 2;
+}

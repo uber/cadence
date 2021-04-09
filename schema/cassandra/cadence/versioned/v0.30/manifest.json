@@ -1,0 +1,8 @@
+{
+  "CurrVersion": "0.30",
+  "MinCompatibleVersion": "0.29",
+  "Description": "Add last updated time in domains table",
+  "SchemaUpdateCqlFiles": [
+    "domain_last_updated_time.cql"
+  ]
+}

@@ -1,4 +1,5 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +22,7 @@
 package cli
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -30,6 +32,7 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"regexp"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -508,8 +511,24 @@ func mapKeysToArray(m map[string]string) []string {
 	return out
 }
 
-// ErrorAndExit print easy to understand error msg first then error detail in a new line
-func ErrorAndExit(msg string, err error) {
+func mapToString(m map[string]string, sep string) string {
+	kv := make([]string, 0, len(m))
+	for key, value := range m {
+		kv = append(kv, key+": "+value)
+	}
+
+	return strings.Join(kv, sep)
+}
+
+func intSliceToSet(s []int) map[int]struct{} {
+	var ret = make(map[int]struct{}, len(s))
+	for _, v := range s {
+		ret[v] = struct{}{}
+	}
+	return ret
+}
+
+func printError(msg string, err error) {
 	if err != nil {
 		fmt.Printf("%s %s\n%s %+v\n", colorRed("Error:"), msg, colorMagenta("Error Details:"), err)
 		if os.Getenv(showErrorStackEnv) != `` {
@@ -521,6 +540,11 @@ func ErrorAndExit(msg string, err error) {
 	} else {
 		fmt.Printf("%s %s\n", colorRed("Error:"), msg)
 	}
+}
+
+// ErrorAndExit print easy to understand error msg first then error detail in a new line
+func ErrorAndExit(msg string, err error) {
+	printError(msg, err)
 	osExit(1)
 }
 
@@ -597,11 +621,117 @@ func parseTime(timeStr string, defaultValue int64) int64 {
 
 	// treat as raw time
 	resultValue, err := strconv.ParseInt(timeStr, 10, 64)
-	if err != nil {
-		ErrorAndExit(fmt.Sprintf("Cannot parse time '%s', use UTC format '2006-01-02T15:04:05Z' or raw UnixNano directly.", timeStr), err)
+	if err == nil {
+		return resultValue
 	}
 
-	return resultValue
+	// treat as time range format
+	parsedTime, err = parseTimeRange(timeStr)
+	if err != nil {
+		ErrorAndExit(fmt.Sprintf("Cannot parse time '%s', use UTC format '2006-01-02T15:04:05Z', "+
+			"time range or raw UnixNano directly. See help for more details.", timeStr), err)
+	}
+	return parsedTime.UnixNano()
+}
+
+// parseTimeRange parses a given time duration string (in format X<time-duration>) and
+// returns parsed timestamp given that duration in the past from current time.
+// All valid values must contain a number followed by a time-duration, from the following list (long form/short form):
+// - second/s
+// - minute/m
+// - hour/h
+// - day/d
+// - week/w
+// - month/M
+// - year/y
+// For example, possible input values, and their result:
+// - "3d" or "3day" --> three days --> time.Now().Add(-3 * 24 * time.Hour)
+// - "2m" or "2minute" --> two minutes --> time.Now().Add(-2 * time.Minute)
+// - "1w" or "1week" --> one week --> time.Now().Add(-7 * 24 * time.Hour)
+// - "30s" or "30second" --> thirty seconds --> time.Now().Add(-30 * time.Second)
+// Note: Duration strings are case-sensitive, and should be used as mentioned above only.
+// Limitation: Value of numerical multiplier, X should be in b/w 0 - 1e6 (1 million), boundary values excluded i.e.
+// 0 < X < 1e6. Also, the maximum time in the past can be 1 January 1970 00:00:00 UTC (epoch time),
+// so giving "1000y" will result in epoch time.
+func parseTimeRange(timeRange string) (time.Time, error) {
+	match, err := regexp.MatchString(defaultDateTimeRangeShortRE, timeRange)
+	if !match { // fallback on to check if it's of longer notation
+		match, err = regexp.MatchString(defaultDateTimeRangeLongRE, timeRange)
+	}
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	re, _ := regexp.Compile(defaultDateTimeRangeNum)
+	idx := re.FindStringSubmatchIndex(timeRange)
+	if idx == nil {
+		return time.Time{}, fmt.Errorf("cannot parse timeRange %s", timeRange)
+	}
+
+	num, err := strconv.Atoi(timeRange[idx[0]:idx[1]])
+	if err != nil {
+		return time.Time{}, fmt.Errorf("cannot parse timeRange %s", timeRange)
+	}
+	if num >= 1e6 {
+		return time.Time{}, fmt.Errorf("invalid time-duation multiplier %d, allowed range is 0 < multiplier < 1000000", num)
+	}
+
+	dur, err := parseTimeDuration(timeRange[idx[1]:])
+	if err != nil {
+		return time.Time{}, fmt.Errorf("cannot parse timeRange %s", timeRange)
+	}
+
+	res := time.Now().Add(time.Duration(-num) * dur) // using server's local timezone
+	epochTime := time.Unix(0, 0)
+	if res.Before(epochTime) {
+		res = epochTime
+	}
+	return res, nil
+}
+
+func parseSingleTs(ts string) (time.Time, error) {
+	var tsOut time.Time
+	var err error
+	formats := []string{"2006-01-02T15:04:05", "2006-01-02T15:04", "2006-01-02", "2006-01-02T15:04:05+0700", time.RFC3339}
+	for _, format := range formats {
+		if tsOut, err = time.Parse(format, ts); err == nil {
+			return tsOut, err
+		}
+	}
+	return tsOut, err
+}
+
+// parseTimeDuration parses the given time duration in either short or long convention
+// and returns the time.Duration
+// Valid values (long notation/short notation):
+// - second/s
+// - minute/m
+// - hour/h
+// - day/d
+// - week/w
+// - month/M
+// - year/y
+// NOTE: the input "duration" is case-sensitive
+func parseTimeDuration(duration string) (dur time.Duration, err error) {
+	switch duration {
+	case "s", "second":
+		dur = time.Second
+	case "m", "minute":
+		dur = time.Minute
+	case "h", "hour":
+		dur = time.Hour
+	case "d", "day":
+		dur = day
+	case "w", "week":
+		dur = week
+	case "M", "month":
+		dur = month
+	case "y", "year":
+		dur = year
+	default:
+		err = fmt.Errorf("unknown time duration %s", duration)
+	}
+	return
 }
 
 func strToTaskListType(str string) s.TaskListType {
@@ -642,6 +772,15 @@ func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc)
 	return context.WithTimeout(context.Background(), contextTimeout)
 }
 
+func newIndefiniteContext(c *cli.Context) (context.Context, context.CancelFunc) {
+	if c.GlobalIsSet(FlagContextTimeout) {
+		contextTimeout := time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
+		return context.WithTimeout(context.Background(), contextTimeout)
+	}
+
+	return context.WithCancel(context.Background())
+}
+
 // process and validate input provided through cmd or file
 func processJSONInput(c *cli.Context) string {
 	return processJSONInputHelper(c, jsonTypeInput)
@@ -659,6 +798,12 @@ func processJSONInputHelper(c *cli.Context, jType jsonType) string {
 	case jsonTypeMemo:
 		flagNameOfRawInput = FlagMemo
 		flagNameOfInputFileName = FlagMemoFile
+	case jsonTypeHeader:
+		flagNameOfRawInput = FlagHeaderValue
+		flagNameOfInputFileName = FlagHeaderFile
+	case jsonTypeSignal:
+		flagNameOfRawInput = FlagSignalInput
+		flagNameOfInputFileName = FlagSignalInputFile
 	default:
 		return ""
 	}
@@ -682,6 +827,35 @@ func processJSONInputHelper(c *cli.Context, jType jsonType) string {
 		}
 	}
 	return input
+}
+
+func processMultipleKeys(rawKey, separator string) []string {
+	var keys []string
+	if strings.TrimSpace(rawKey) != "" {
+		keys = strings.Split(rawKey, separator)
+	}
+	return keys
+}
+
+func processMultipleJSONValues(rawValue string) []string {
+	var values []string
+	var sc fastjson.Scanner
+	sc.Init(rawValue)
+	for sc.Next() {
+		values = append(values, sc.Value().String())
+	}
+	if err := sc.Error(); err != nil {
+		ErrorAndExit("Parse json error.", err)
+	}
+	return values
+}
+
+func mapFromKeysValues(keys, values []string) map[string][]byte {
+	fields := map[string][]byte{}
+	for i, key := range keys {
+		fields[key] = []byte(values[i])
+	}
+	return fields
 }
 
 // validate whether str is a valid json or multi valid json concatenated with spaces/newlines
@@ -788,4 +962,35 @@ func showNextPage() bool {
 	var input string
 	fmt.Scanln(&input)
 	return strings.Trim(input, " ") == ""
+}
+
+// prompt will show input msg, then waiting user input y/yes to continue
+func prompt(msg string) {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println(msg)
+	text, _ := reader.ReadString('\n')
+	textLower := strings.ToLower(strings.TrimRight(text, "\n"))
+	if textLower != "y" && textLower != "yes" {
+		os.Exit(0)
+	}
+}
+func getInputFile(inputFile string) *os.File {
+	if len(inputFile) == 0 {
+		info, err := os.Stdin.Stat()
+		if err != nil {
+			ErrorAndExit("Failed to stat stdin file handle", err)
+		}
+		if info.Mode()&os.ModeCharDevice != 0 || info.Size() <= 0 {
+			fmt.Fprintln(os.Stderr, "Provide a filename or pass data to STDIN")
+			os.Exit(1)
+		}
+		return os.Stdin
+	}
+	// This code is executed from the CLI. All user input is from a CLI user.
+	// #nosec
+	f, err := os.Open(inputFile)
+	if err != nil {
+		ErrorAndExit(fmt.Sprintf("Failed to open input file for reading: %v", inputFile), err)
+	}
+	return f
 }

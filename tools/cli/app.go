@@ -27,7 +27,7 @@ import (
 const (
 	// Version is the controlled version string. It should be updated every time
 	// before we release a new version.
-	Version = "0.8.2"
+	Version = "0.18.3"
 )
 
 // SetFactory is used to set the ClientFactory global
@@ -131,6 +131,24 @@ func NewCliApp() *cli.App {
 					Aliases:     []string{"cl"},
 					Usage:       "Run admin operation on cluster",
 					Subcommands: newAdminClusterCommands(),
+				},
+				{
+					Name:        "dlq",
+					Aliases:     []string{"dlq"},
+					Usage:       "Run admin operation on DLQ",
+					Subcommands: newAdminDLQCommands(),
+				},
+				{
+					Name:        "db",
+					Aliases:     []string{"db"},
+					Usage:       "Run admin operations on database",
+					Subcommands: newDBCommands(),
+				},
+				{
+					Name:        "queue",
+					Aliases:     []string{"q"},
+					Usage:       "Run admin operations on queue",
+					Subcommands: newAdminQueueCommands(),
 				},
 			},
 		},

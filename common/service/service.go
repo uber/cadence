@@ -34,6 +34,8 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/authorization"
+	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	es "github.com/uber/cadence/common/elasticsearch"
@@ -46,13 +48,6 @@ import (
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
-
-var cadenceServices = []string{
-	common.FrontendServiceName,
-	common.HistoryServiceName,
-	common.MatchingServiceName,
-	common.WorkerServiceName,
-}
 
 type (
 	// BootstrapParams holds the set of parameters
@@ -72,14 +67,16 @@ type (
 		ReplicatorConfig    config.Replicator
 		MetricsClient       metrics.Client
 		MessagingClient     messaging.Client
-		ESClient            es.Client
-		ESConfig            *es.Config
+		BlobstoreClient     blobstore.Client
+		ESClient            es.GenericClient
+		ESConfig            *config.ElasticSearchConfig
 		DynamicConfig       dynamicconfig.Client
 		DispatcherProvider  client.DispatcherProvider
 		DCRedirectionPolicy config.DCRedirectionPolicy
 		PublicClient        workflowserviceclient.Interface
 		ArchivalMetadata    archiver.ArchivalMetadata
 		ArchiverProvider    provider.ArchiverProvider
+		Authorizer          authorization.Authorizer
 	}
 
 	// MembershipMonitorFactory provides a bootstrapped membership monitor
@@ -111,6 +108,7 @@ type (
 		metricsClient          metrics.Client
 		clusterMetadata        cluster.Metadata
 		messagingClient        messaging.Client
+		blobstoreClient        blobstore.Client
 		dynamicCollection      *dynamicconfig.Collection
 		dispatcherProvider     client.DispatcherProvider
 		archivalMetadata       archiver.ArchivalMetadata
@@ -138,11 +136,16 @@ func New(params *BootstrapParams) Service {
 		clusterMetadata:       params.ClusterMetadata,
 		metricsClient:         params.MetricsClient,
 		messagingClient:       params.MessagingClient,
+		blobstoreClient:       params.BlobstoreClient,
 		dispatcherProvider:    params.DispatcherProvider,
-		dynamicCollection:     dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
-		archivalMetadata:      params.ArchivalMetadata,
-		archiverProvider:      params.ArchiverProvider,
-		serializer:            persistence.NewPayloadSerializer(),
+		dynamicCollection: dynamicconfig.NewCollection(
+			params.DynamicConfig,
+			params.Logger,
+			dynamicconfig.ClusterNameFilter(params.ClusterMetadata.GetCurrentClusterName()),
+		),
+		archivalMetadata: params.ArchivalMetadata,
+		archiverProvider: params.ArchiverProvider,
+		serializer:       persistence.NewPayloadSerializer(),
 	}
 
 	sVice.runtimeMetricsReporter = metrics.NewRuntimeMetricsReporter(params.MetricScope, time.Minute, sVice.GetLogger(), params.InstanceID)
@@ -162,8 +165,12 @@ func New(params *BootstrapParams) Service {
 
 // UpdateLoggerWithServiceName tag logging with service name from the top level
 func (params *BootstrapParams) UpdateLoggerWithServiceName(name string) {
-	params.Logger = params.Logger.WithTags(tag.Service(name))
-	params.ThrottledLogger = params.ThrottledLogger.WithTags(tag.Service(name))
+	if params.Logger != nil {
+		params.Logger = params.Logger.WithTags(tag.Service(name))
+	}
+	if params.ThrottledLogger != nil {
+		params.ThrottledLogger = params.ThrottledLogger.WithTags(tag.Service(name))
+	}
 }
 
 // GetHostName returns the name of host running the service
@@ -229,7 +236,7 @@ func (h *serviceImpl) Stop() {
 	}
 
 	if h.dispatcher != nil {
-		h.dispatcher.Stop()
+		h.dispatcher.Stop() //nolint:errcheck
 	}
 
 	h.runtimeMetricsReporter.Stop()
@@ -277,6 +284,10 @@ func (h *serviceImpl) GetMessagingClient() messaging.Client {
 	return h.messagingClient
 }
 
+func (h *serviceImpl) GetBlobstoreClient() blobstore.Client {
+	return h.blobstoreClient
+}
+
 func (h *serviceImpl) GetArchivalMetadata() archiver.ArchivalMetadata {
 	return h.archivalMetadata
 }
@@ -301,7 +312,7 @@ func GetMetricsServiceIdx(serviceName string, logger log.Logger) metrics.Service
 	case common.WorkerServiceName:
 		return metrics.Worker
 	default:
-		logger.Fatal("Unknown service name '%v' for metrics!", tag.Service(serviceName))
+		logger.Fatal("Unknown service name for metrics!")
 	}
 
 	// this should never happen!

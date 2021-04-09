@@ -35,3 +35,34 @@ func (n *nopStopwatchRecorder) RecordStopwatch(stopwatchStart time.Time) {}
 func NopStopwatch() tally.Stopwatch {
 	return tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})
 }
+
+type noopClientImpl struct{}
+
+func (n noopClientImpl) IncCounter(scope int, counter int) {
+	return
+}
+
+func (n noopClientImpl) AddCounter(scope int, counter int, delta int64) {
+	return
+}
+
+func (n noopClientImpl) StartTimer(scope int, timer int) tally.Stopwatch {
+	return NopStopwatch()
+}
+
+func (n noopClientImpl) RecordTimer(scope int, timer int, d time.Duration) {
+	return
+}
+
+func (n noopClientImpl) UpdateGauge(scope int, gauge int, value float64) {
+	return
+}
+
+func (n noopClientImpl) Scope(scope int, tags ...Tag) Scope {
+	return NoopScope(Common)
+}
+
+// NewNoopMetricsClient initialize new no-op metrics client
+func NewNoopMetricsClient() Client {
+	return &noopClientImpl{}
+}

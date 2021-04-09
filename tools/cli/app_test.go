@@ -34,13 +34,11 @@ import (
 	clientFrontendTest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
 	"go.uber.org/cadence/.gen/go/shared"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
-	serverAdminTest "github.com/uber/cadence/.gen/go/admin/adminservicetest"
-	serverFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
-	serverFrontendTest "github.com/uber/cadence/.gen/go/cadence/workflowservicetest"
-	serverShared "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/admin"
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/types"
 )
 
 type cliAppSuite struct {
@@ -48,26 +46,32 @@ type cliAppSuite struct {
 	app                  *cli.App
 	mockCtrl             *gomock.Controller
 	clientFrontendClient *clientFrontendTest.MockClient
-	serverFrontendClient *serverFrontendTest.MockClient
-	serverAdminClient    *serverAdminTest.MockClient
+	serverFrontendClient *frontend.MockClient
+	serverAdminClient    *admin.MockClient
+	cqlClient            *gocql.MockClient
 }
 
 type clientFactoryMock struct {
 	clientFrontendClient clientFrontend.Interface
-	serverFrontendClient serverFrontend.Interface
-	serverAdminClient    serverAdmin.Interface
+	serverFrontendClient frontend.Client
+	serverAdminClient    admin.Client
+	cqlClient            gocql.Client
 }
 
 func (m *clientFactoryMock) ClientFrontendClient(c *cli.Context) clientFrontend.Interface {
 	return m.clientFrontendClient
 }
 
-func (m *clientFactoryMock) ServerFrontendClient(c *cli.Context) serverFrontend.Interface {
+func (m *clientFactoryMock) ServerFrontendClient(c *cli.Context) frontend.Client {
 	return m.serverFrontendClient
 }
 
-func (m *clientFactoryMock) ServerAdminClient(c *cli.Context) serverAdmin.Interface {
+func (m *clientFactoryMock) ServerAdminClient(c *cli.Context) admin.Client {
 	return m.serverAdminClient
+}
+
+func (m *clientFactoryMock) CQLClient() gocql.Client {
+	return m.cqlClient
 }
 
 // this is the mock for yarpcCallOptions, make sure length are the same
@@ -94,12 +98,14 @@ func (s *cliAppSuite) SetupTest() {
 	s.mockCtrl = gomock.NewController(s.T())
 
 	s.clientFrontendClient = clientFrontendTest.NewMockClient(s.mockCtrl)
-	s.serverFrontendClient = serverFrontendTest.NewMockClient(s.mockCtrl)
-	s.serverAdminClient = serverAdminTest.NewMockClient(s.mockCtrl)
+	s.serverFrontendClient = frontend.NewMockClient(s.mockCtrl)
+	s.serverAdminClient = admin.NewMockClient(s.mockCtrl)
+	s.cqlClient = gocql.NewMockClient(s.mockCtrl)
 	SetFactory(&clientFactoryMock{
 		clientFrontendClient: s.clientFrontendClient,
 		serverFrontendClient: s.serverFrontendClient,
 		serverAdminClient:    s.serverAdminClient,
+		cqlClient:            s.cqlClient,
 	})
 }
 
@@ -114,7 +120,7 @@ func (s *cliAppSuite) RunErrorExitCode(arguments []string) int {
 	osExit = func(code int) {
 		errorCode = code
 	}
-	s.app.Run(arguments)
+	s.NoError(s.app.Run(arguments))
 	return errorCode
 }
 
@@ -149,24 +155,24 @@ func (s *cliAppSuite) TestDomainRegister_Failed() {
 	s.Equal(1, errorCode)
 }
 
-var describeDomainResponseServer = &serverShared.DescribeDomainResponse{
-	DomainInfo: &serverShared.DomainInfo{
-		Name:        common.StringPtr("test-domain"),
-		Description: common.StringPtr("a test domain"),
-		OwnerEmail:  common.StringPtr("test@uber.com"),
+var describeDomainResponseServer = &types.DescribeDomainResponse{
+	DomainInfo: &types.DomainInfo{
+		Name:        "test-domain",
+		Description: "a test domain",
+		OwnerEmail:  "test@uber.com",
 	},
-	Configuration: &serverShared.DomainConfiguration{
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(3),
-		EmitMetric:                             common.BoolPtr(true),
+	Configuration: &types.DomainConfiguration{
+		WorkflowExecutionRetentionPeriodInDays: 3,
+		EmitMetric:                             true,
 	},
-	ReplicationConfiguration: &serverShared.DomainReplicationConfiguration{
-		ActiveClusterName: common.StringPtr("active"),
-		Clusters: []*serverShared.ClusterReplicationConfiguration{
+	ReplicationConfiguration: &types.DomainReplicationConfiguration{
+		ActiveClusterName: "active",
+		Clusters: []*types.ClusterReplicationConfiguration{
 			{
-				ClusterName: common.StringPtr("active"),
+				ClusterName: "active",
 			},
 			{
-				ClusterName: common.StringPtr("standby"),
+				ClusterName: "standby",
 			},
 		},
 	},
@@ -178,7 +184,7 @@ func (s *cliAppSuite) TestDomainUpdate() {
 	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, nil).Times(2)
 	err := s.app.Run([]string{"", "--do", domainName, "domain", "update"})
 	s.Nil(err)
-	err = s.app.Run([]string{"", "--do", domainName, "domain", "update", "--desc", "another desc", "--oe", "another@uber.com", "--rd", "1", "--em", "f"})
+	err = s.app.Run([]string{"", "--do", domainName, "domain", "update", "--desc", "another desc", "--oe", "another@uber.com", "--rd", "1"})
 	s.Nil(err)
 }
 
@@ -201,6 +207,24 @@ func (s *cliAppSuite) TestDomainUpdate_Failed() {
 	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, nil)
 	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, &shared.BadRequestError{"faked error"})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "update"})
+	s.Equal(1, errorCode)
+}
+
+func (s *cliAppSuite) TestDomainDeprecate() {
+	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(nil)
+	err := s.app.Run([]string{"", "--do", domainName, "domain", "deprecate"})
+	s.Nil(err)
+}
+
+func (s *cliAppSuite) TestDomainDeprecate_DomainNotExist() {
+	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(&types.EntityNotExistsError{})
+	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
+	s.Equal(1, errorCode)
+}
+
+func (s *cliAppSuite) TestDomainDeprecate_Failed() {
+	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"faked error"})
+	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
 	s.Equal(1, errorCode)
 }
 
@@ -250,6 +274,10 @@ var (
 func (s *cliAppSuite) TestShowHistory() {
 	resp := getWorkflowExecutionHistoryResponse
 	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	describeResp := &types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
+	}
+	s.serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(describeResp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "show", "-w", "wid"})
 	s.Nil(err)
 }
@@ -257,6 +285,10 @@ func (s *cliAppSuite) TestShowHistory() {
 func (s *cliAppSuite) TestShowHistoryWithID() {
 	resp := getWorkflowExecutionHistoryResponse
 	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	describeResp := &types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
+	}
+	s.serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(describeResp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "showid", "wid"})
 	s.Nil(err)
 }
@@ -264,6 +296,10 @@ func (s *cliAppSuite) TestShowHistoryWithID() {
 func (s *cliAppSuite) TestShowHistory_PrintRawTime() {
 	resp := getWorkflowExecutionHistoryResponse
 	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	describeResp := &types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
+	}
+	s.serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(describeResp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "show", "-w", "wid", "-prt"})
 	s.Nil(err)
 }
@@ -271,6 +307,10 @@ func (s *cliAppSuite) TestShowHistory_PrintRawTime() {
 func (s *cliAppSuite) TestShowHistory_PrintDateTime() {
 	resp := getWorkflowExecutionHistoryResponse
 	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	describeResp := &types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
+	}
+	s.serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(describeResp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "show", "-w", "wid", "-pdt"})
 	s.Nil(err)
 }
@@ -478,7 +518,7 @@ func (s *cliAppSuite) TestListWorkflow_Open_WithWorkflowType() {
 func (s *cliAppSuite) TestListArchivedWorkflow() {
 	resp := &shared.ListArchivedWorkflowExecutionsResponse{}
 	s.clientFrontendClient.EXPECT().ListArchivedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
-	err := s.app.Run([]string{"", "--do", domainName, "workflow", "listarchived", "-q", "some query string", "-m"})
+	err := s.app.Run([]string{"", "--do", domainName, "workflow", "listarchived", "-q", "some query string", "--ps", "200", "--all"})
 	s.Nil(err)
 }
 
@@ -503,10 +543,10 @@ var describeTaskListResponse = &shared.DescribeTaskListResponse{
 }
 
 func (s *cliAppSuite) TestAdminDescribeWorkflow() {
-	resp := &admin.DescribeWorkflowExecutionResponse{
-		ShardId:                common.StringPtr("test-shard-id"),
-		HistoryAddr:            common.StringPtr("ip:port"),
-		MutableStateInDatabase: common.StringPtr("{\"ExecutionInfo\":{\"BranchToken\":\"WQsACgAAACQ2MzI5YzEzMi1mMGI0LTQwZmUtYWYxMS1hODVmMDA3MzAzODQLABQAAAAkOWM5OWI1MjItMGEyZi00NTdmLWEyNDgtMWU0OTA0ZDg4YzVhDwAeDAAAAAAA\"}}"),
+	resp := &types.AdminDescribeWorkflowExecutionResponse{
+		ShardID:                "test-shard-id",
+		HistoryAddr:            "ip:port",
+		MutableStateInDatabase: "{\"ExecutionInfo\":{\"BranchToken\":\"WQsACgAAACQ2MzI5YzEzMi1mMGI0LTQwZmUtYWYxMS1hODVmMDA3MzAzODQLABQAAAAkOWM5OWI1MjItMGEyZi00NTdmLWEyNDgtMWU0OTA0ZDg4YzVhDwAeDAAAAAAA\"}}",
 	}
 
 	s.serverAdminClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil)
@@ -515,13 +555,32 @@ func (s *cliAppSuite) TestAdminDescribeWorkflow() {
 }
 
 func (s *cliAppSuite) TestAdminDescribeWorkflow_Failed() {
-	s.serverAdminClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, &serverShared.BadRequestError{"faked error"})
+	s.serverAdminClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, &types.BadRequestError{"faked error"})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "admin", "wf", "describe", "-w", "test-wf-id"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestAdminAddSearchAttribute() {
+	var promptMsg string
+	promptFn = func(msg string) {
+		promptMsg = msg
+	}
+	request := &types.AddSearchAttributeRequest{
+		SearchAttribute: map[string]types.IndexedValueType{
+			"testKey": types.IndexedValueType(1),
+		},
+	}
+	s.serverAdminClient.EXPECT().AddSearchAttribute(gomock.Any(), request).Return(nil)
+
 	err := s.app.Run([]string{"", "--do", domainName, "admin", "cl", "asa", "--search_attr_key", "testKey", "--search_attr_type", "1"})
+	s.Equal("Are you trying to add key [testKey] with Type [Keyword]? Y/N", promptMsg)
+	s.Nil(err)
+}
+
+func (s *cliAppSuite) TestAdminFailover() {
+	resp := &shared.StartWorkflowExecutionResponse{RunId: common.StringPtr(uuid.New())}
+	s.clientFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), gomock.Any()).Return(resp, nil)
+	err := s.app.Run([]string{"", "admin", "cl", "fo", "start", "--tc", "standby", "--sc", "active"})
 	s.Nil(err)
 }
 
@@ -557,10 +616,102 @@ func (s *cliAppSuite) TestObserveWorkflowWithID() {
 	s.Nil(err)
 }
 
+// TestParseTime tests the parsing of date argument in UTC and UnixNano formats
 func (s *cliAppSuite) TestParseTime() {
 	s.Equal(int64(100), parseTime("", 100))
 	s.Equal(int64(1528383845000000000), parseTime("2018-06-07T15:04:05+00:00", 0))
 	s.Equal(int64(1528383845000000000), parseTime("1528383845000000000", 0))
+}
+
+// TestParseTimeDateRange tests the parsing of date argument in time range format, N<duration>
+// where N is the integral multiplier, and duration can be second/minute/hour/day/week/month/year
+func (s *cliAppSuite) TestParseTimeDateRange() {
+	tests := []struct {
+		timeStr  string // input
+		defVal   int64  // input
+		expected int64  // expected unix nano (approx)
+	}{
+		{
+			timeStr:  "1s",
+			defVal:   int64(0),
+			expected: time.Now().Add(-time.Second).UnixNano(),
+		},
+		{
+			timeStr:  "100second",
+			defVal:   int64(0),
+			expected: time.Now().Add(-100 * time.Second).UnixNano(),
+		},
+		{
+			timeStr:  "2m",
+			defVal:   int64(0),
+			expected: time.Now().Add(-2 * time.Minute).UnixNano(),
+		},
+		{
+			timeStr:  "200minute",
+			defVal:   int64(0),
+			expected: time.Now().Add(-200 * time.Minute).UnixNano(),
+		},
+		{
+			timeStr:  "3h",
+			defVal:   int64(0),
+			expected: time.Now().Add(-3 * time.Hour).UnixNano(),
+		},
+		{
+			timeStr:  "1000hour",
+			defVal:   int64(0),
+			expected: time.Now().Add(-1000 * time.Hour).UnixNano(),
+		},
+		{
+			timeStr:  "5d",
+			defVal:   int64(0),
+			expected: time.Now().Add(-5 * day).UnixNano(),
+		},
+		{
+			timeStr:  "25day",
+			defVal:   int64(0),
+			expected: time.Now().Add(-25 * day).UnixNano(),
+		},
+		{
+			timeStr:  "5w",
+			defVal:   int64(0),
+			expected: time.Now().Add(-5 * week).UnixNano(),
+		},
+		{
+			timeStr:  "52week",
+			defVal:   int64(0),
+			expected: time.Now().Add(-52 * week).UnixNano(),
+		},
+		{
+			timeStr:  "3M",
+			defVal:   int64(0),
+			expected: time.Now().Add(-3 * month).UnixNano(),
+		},
+		{
+			timeStr:  "6month",
+			defVal:   int64(0),
+			expected: time.Now().Add(-6 * month).UnixNano(),
+		},
+		{
+			timeStr:  "1y",
+			defVal:   int64(0),
+			expected: time.Now().Add(-year).UnixNano(),
+		},
+		{
+			timeStr:  "7year",
+			defVal:   int64(0),
+			expected: time.Now().Add(-7 * year).UnixNano(),
+		},
+		{
+			timeStr:  "100y", // epoch time will be returned as that's the minimum unix timestamp possible
+			defVal:   int64(0),
+			expected: time.Unix(0, 0).UnixNano(),
+		},
+	}
+	delta := int64(50 * time.Millisecond)
+	for _, te := range tests {
+		s.True(te.expected <= parseTime(te.timeStr, te.defVal))
+		s.True(te.expected+delta >= parseTime(te.timeStr, te.defVal))
+	}
 }
 
 func (s *cliAppSuite) TestBreakLongWords() {

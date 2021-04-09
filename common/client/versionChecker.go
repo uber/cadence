@@ -27,8 +27,8 @@ import (
 	"github.com/hashicorp/go-version"
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -40,21 +40,36 @@ const (
 	CLI = "cli"
 
 	// SupportedGoSDKVersion indicates the highest go sdk version server will accept requests from
-	SupportedGoSDKVersion = "1.4.0"
+	SupportedGoSDKVersion = "1.6.0"
 	// SupportedJavaSDKVersion indicates the highest java sdk version server will accept requests from
-	SupportedJavaSDKVersion = "1.4.0"
+	SupportedJavaSDKVersion = "1.6.0"
 	// SupportedCLIVersion indicates the highest cli version server will accept requests from
-	SupportedCLIVersion = "1.4.0"
+	SupportedCLIVersion = "1.6.0"
 
+	// StickyQueryUnknownImplConstraints indicates the minimum client version of an unknown client type which supports StickyQuery
+	StickyQueryUnknownImplConstraints = "1.0.0"
 	// GoWorkerStickyQueryVersion indicates the minimum client version of go worker which supports StickyQuery
 	GoWorkerStickyQueryVersion = "1.0.0"
 	// JavaWorkerStickyQueryVersion indicates the minimum client version of the java worker which supports StickyQuery
 	JavaWorkerStickyQueryVersion = "1.0.0"
 	// GoWorkerConsistentQueryVersion indicates the minimum client version of the go worker which supports ConsistentQuery
 	GoWorkerConsistentQueryVersion = "1.5.0"
+	// JavaWorkerRawHistoryQueryVersion indicates the minimum client version of the java worker which supports RawHistoryQuery
+	JavaWorkerRawHistoryQueryVersion = "1.3.0"
+	// GoWorkerRawHistoryQueryVersion indicates the minimum client version of the go worker which supports RawHistoryQuery
+	GoWorkerRawHistoryQueryVersion = "1.6.0"
+	// CLIRawHistoryQueryVersion indicates the minimum CLI version of the go worker which supports RawHistoryQuery
+	// Note: cli uses go client feature version
+	CLIRawHistoryQueryVersion = "1.6.0"
 
 	stickyQuery     = "sticky-query"
 	consistentQuery = "consistent-query"
+	rawHistoryQuery = "send-raw-workflow-history"
+)
+
+var (
+	// ErrUnknownFeature indicates that requested feature is not known by version checker
+	ErrUnknownFeature = &types.BadRequestError{Message: "Unknown feature"}
 )
 
 type (
@@ -64,11 +79,13 @@ type (
 
 		SupportsStickyQuery(clientImpl string, clientFeatureVersion string) error
 		SupportsConsistentQuery(clientImpl string, clientFeatureVersion string) error
+		SupportsRawHistoryQuery(clientImpl string, clientFeatureVersion string) error
 	}
 
 	versionChecker struct {
-		supportedFeatures map[string]map[string]version.Constraints
-		supportedClients  map[string]version.Constraints
+		supportedFeatures                 map[string]map[string]version.Constraints
+		supportedClients                  map[string]version.Constraints
+		stickyQueryUnknownImplConstraints version.Constraints
 	}
 )
 
@@ -78,9 +95,14 @@ func NewVersionChecker() VersionChecker {
 		GoSDK: {
 			stickyQuery:     mustNewConstraint(fmt.Sprintf(">=%v", GoWorkerStickyQueryVersion)),
 			consistentQuery: mustNewConstraint(fmt.Sprintf(">=%v", GoWorkerConsistentQueryVersion)),
+			rawHistoryQuery: mustNewConstraint(fmt.Sprintf(">=%v", GoWorkerRawHistoryQueryVersion)),
 		},
 		JavaSDK: {
-			stickyQuery: mustNewConstraint(fmt.Sprintf(">=%v", JavaWorkerStickyQueryVersion)),
+			stickyQuery:     mustNewConstraint(fmt.Sprintf(">=%v", JavaWorkerStickyQueryVersion)),
+			rawHistoryQuery: mustNewConstraint(fmt.Sprintf(">=%v", JavaWorkerRawHistoryQueryVersion)),
+		},
+		CLI: {
+			rawHistoryQuery: mustNewConstraint(fmt.Sprintf(">=%v", CLIRawHistoryQueryVersion)),
 		},
 	}
 	supportedClients := map[string]version.Constraints{
@@ -89,8 +111,9 @@ func NewVersionChecker() VersionChecker {
 		CLI:     mustNewConstraint(fmt.Sprintf("<=%v", SupportedCLIVersion)),
 	}
 	return &versionChecker{
-		supportedFeatures: supportedFeatures,
-		supportedClients:  supportedClients,
+		supportedFeatures:                 supportedFeatures,
+		supportedClients:                  supportedClients,
+		stickyQueryUnknownImplConstraints: mustNewConstraint(fmt.Sprintf(">=%v", StickyQueryUnknownImplConstraints)),
 	}
 }
 
@@ -114,10 +137,10 @@ func (vc *versionChecker) ClientSupported(ctx context.Context, enableClientVersi
 	}
 	version, err := version.NewVersion(clientFeatureVersion)
 	if err != nil {
-		return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
+		return &types.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
 	}
 	if !supportedVersions.Check(version) {
-		return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
+		return &types.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
 	}
 	return nil
 }
@@ -134,24 +157,51 @@ func (vc *versionChecker) SupportsConsistentQuery(clientImpl string, clientFeatu
 	return vc.featureSupported(clientImpl, clientFeatureVersion, consistentQuery)
 }
 
+// SupportsSendRawWorkflowHistory returns error if raw history query is not supported otherwise nil.
+// In case client version lookup fails assume the client does not support feature.
+func (vc *versionChecker) SupportsRawHistoryQuery(clientImpl string, clientFeatureVersion string) error {
+	return vc.featureSupported(clientImpl, clientFeatureVersion, rawHistoryQuery)
+}
+
 func (vc *versionChecker) featureSupported(clientImpl string, clientFeatureVersion string, feature string) error {
-	if clientImpl == "" || clientFeatureVersion == "" {
-		return &shared.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion}
+	// Some older clients may not provide clientImpl.
+	// If this is the case special handling needs to be done to maintain backwards compatibility.
+	// This can be removed after it is sure there are no existing clients which do not provide clientImpl in RPC headers.
+	if clientImpl == "" {
+		switch feature {
+		case consistentQuery:
+		case rawHistoryQuery:
+			return &types.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion}
+		case stickyQuery:
+			version, err := version.NewVersion(clientFeatureVersion)
+			if err != nil {
+				return &types.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion}
+			}
+			if !vc.stickyQueryUnknownImplConstraints.Check(version) {
+				return &types.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, SupportedVersions: vc.stickyQueryUnknownImplConstraints.String()}
+			}
+			return nil
+		default:
+			return ErrUnknownFeature
+		}
+	}
+	if clientFeatureVersion == "" {
+		return &types.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion}
 	}
 	implMap, ok := vc.supportedFeatures[clientImpl]
 	if !ok {
-		return &shared.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion}
+		return &types.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion}
 	}
 	supportedVersions, ok := implMap[feature]
 	if !ok {
-		return &shared.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion}
+		return &types.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion}
 	}
 	version, err := version.NewVersion(clientFeatureVersion)
 	if err != nil {
-		return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
+		return &types.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
 	}
 	if !supportedVersions.Check(version) {
-		return &shared.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion, SupportedVersions: supportedVersions.String()}
+		return &types.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion, SupportedVersions: supportedVersions.String()}
 	}
 	return nil
 }

@@ -5,12 +5,15 @@ This package contains the tooling for cadence cassandra operations.
 ``` 
 make install-schema
 ```
+> NOTE: See [CONTRIBUTING](../../CONTRIBUTING.md) for prerequisite of make command.
 
 ## For production
 
 ### Create the binaries
-- Run `make bins`
+- Run `make cadence-cassandra-tool`
 - You should see an executable `cadence-cassandra-tool`
+
+> NOTE: See [CONTRIBUTING](../../CONTRIBUTING.md) for prerequisite of make command.
 
 ### Do one time database creation and schema setup for a new cluster
 This uses Cassandra's SimpleStratagey for replication. For production, we recommend using a replication factor of 3 with NetworkTopologyStrategy.

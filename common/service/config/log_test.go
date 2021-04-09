@@ -36,7 +36,7 @@ type LogSuite struct {
 }
 
 func TestLogSuite(t *testing.T) {
-	suite.Run(t, new(LoaderSuite))
+	suite.Run(t, new(LogSuite))
 }
 
 func (s *LogSuite) SetupTest() {
@@ -59,12 +59,11 @@ func (s *LogSuite) TestNewLogger() {
 	defer os.RemoveAll(dir)
 
 	config := &Logger{
-		Stdout:     true,
 		Level:      "info",
 		OutputFile: dir + "/test.log",
 	}
 
-	log := config.NewZapLogger()
+	log, _ := config.NewZapLogger()
 	s.NotNil(log)
 	_, err = os.Stat(dir + "/test.log")
 	s.Nil(err)

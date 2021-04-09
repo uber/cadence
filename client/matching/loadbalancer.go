@@ -25,8 +25,9 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -42,7 +43,7 @@ type (
 		// performed
 		PickWritePartition(
 			domainID string,
-			taskList shared.TaskList,
+			taskList types.TaskList,
 			taskListType int,
 			forwardedFrom string,
 		) string
@@ -52,7 +53,7 @@ type (
 		// forwardedFrom is non-empty, no load balancing should be done.
 		PickReadPartition(
 			domainID string,
-			taskList shared.TaskList,
+			taskList types.TaskList,
 			taskListType int,
 			forwardedFrom string,
 		) string
@@ -63,10 +64,6 @@ type (
 		nWritePartitions dynamicconfig.IntPropertyFnWithTaskListInfoFilters
 		domainIDToName   func(string) (string, error)
 	}
-)
-
-const (
-	taskListPartitionPrefix = "/__cadence_sys/"
 )
 
 // NewLoadBalancer returns an instance of matching load balancer that
@@ -84,7 +81,7 @@ func NewLoadBalancer(
 
 func (lb *defaultLoadBalancer) PickWritePartition(
 	domainID string,
-	taskList shared.TaskList,
+	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
 ) string {
@@ -93,7 +90,7 @@ func (lb *defaultLoadBalancer) PickWritePartition(
 
 func (lb *defaultLoadBalancer) PickReadPartition(
 	domainID string,
-	taskList shared.TaskList,
+	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
 ) string {
@@ -102,17 +99,17 @@ func (lb *defaultLoadBalancer) PickReadPartition(
 
 func (lb *defaultLoadBalancer) pickPartition(
 	domainID string,
-	taskList shared.TaskList,
+	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
 	nPartitions dynamicconfig.IntPropertyFnWithTaskListInfoFilters,
 ) string {
 
-	if forwardedFrom != "" || taskList.GetKind() == shared.TaskListKindSticky {
+	if forwardedFrom != "" || taskList.GetKind() == types.TaskListKindSticky {
 		return taskList.GetName()
 	}
 
-	if strings.HasPrefix(taskList.GetName(), taskListPartitionPrefix) {
+	if strings.HasPrefix(taskList.GetName(), common.ReservedTaskListPrefix) {
 		// this should never happen when forwardedFrom is empty
 		return taskList.GetName()
 	}
@@ -132,5 +129,5 @@ func (lb *defaultLoadBalancer) pickPartition(
 		return taskList.GetName()
 	}
 
-	return fmt.Sprintf("%v%v/%v", taskListPartitionPrefix, taskList.GetName(), p)
+	return fmt.Sprintf("%v%v/%v", common.ReservedTaskListPrefix, taskList.GetName(), p)
 }

@@ -1,4 +1,5 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,15 +25,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gocql/gocql"
-
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/checksum"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/types"
 )
 
 func applyWorkflowMutationBatch(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	shardID int,
 	workflowMutation *p.InternalWorkflowMutation,
 ) error {
@@ -40,7 +41,6 @@ func applyWorkflowMutationBatch(
 	cqlNowTimestampMillis := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 
 	executionInfo := workflowMutation.ExecutionInfo
-	replicationState := workflowMutation.ReplicationState
 	versionHistories := workflowMutation.VersionHistories
 	domainID := executionInfo.DomainID
 	workflowID := executionInfo.WorkflowID
@@ -51,10 +51,11 @@ func applyWorkflowMutationBatch(
 		batch,
 		shardID,
 		executionInfo,
-		replicationState,
 		versionHistories,
 		cqlNowTimestampMillis,
 		condition,
+		workflowMutation.Checksum,
+		workflowMutation.LastWriteVersion,
 	); err != nil {
 		return err
 	}
@@ -84,7 +85,7 @@ func applyWorkflowMutationBatch(
 	if err := updateChildExecutionInfos(
 		batch,
 		workflowMutation.UpsertChildExecutionInfos,
-		workflowMutation.DeleteChildExecutionInfo,
+		workflowMutation.DeleteChildExecutionInfos,
 		shardID,
 		domainID,
 		workflowID,
@@ -96,7 +97,7 @@ func applyWorkflowMutationBatch(
 	updateRequestCancelInfos(
 		batch,
 		workflowMutation.UpsertRequestCancelInfos,
-		workflowMutation.DeleteRequestCancelInfo,
+		workflowMutation.DeleteRequestCancelInfos,
 		shardID,
 		domainID,
 		workflowID,
@@ -106,7 +107,7 @@ func applyWorkflowMutationBatch(
 	updateSignalInfos(
 		batch,
 		workflowMutation.UpsertSignalInfos,
-		workflowMutation.DeleteSignalInfo,
+		workflowMutation.DeleteSignalInfos,
 		shardID,
 		domainID,
 		workflowID,
@@ -116,7 +117,7 @@ func applyWorkflowMutationBatch(
 	updateSignalsRequested(
 		batch,
 		workflowMutation.UpsertSignalRequestedIDs,
-		workflowMutation.DeleteSignalRequestedID,
+		workflowMutation.DeleteSignalRequestedIDs,
 		shardID,
 		domainID,
 		workflowID,
@@ -147,7 +148,7 @@ func applyWorkflowMutationBatch(
 }
 
 func applyWorkflowSnapshotBatchAsReset(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	shardID int,
 	workflowSnapshot *p.InternalWorkflowSnapshot,
 ) error {
@@ -155,7 +156,6 @@ func applyWorkflowSnapshotBatchAsReset(
 	cqlNowTimestampMillis := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 
 	executionInfo := workflowSnapshot.ExecutionInfo
-	replicationState := workflowSnapshot.ReplicationState
 	versionHistories := workflowSnapshot.VersionHistories
 	domainID := executionInfo.DomainID
 	workflowID := executionInfo.WorkflowID
@@ -166,10 +166,11 @@ func applyWorkflowSnapshotBatchAsReset(
 		batch,
 		shardID,
 		executionInfo,
-		replicationState,
 		versionHistories,
 		cqlNowTimestampMillis,
 		condition,
+		workflowSnapshot.Checksum,
+		workflowSnapshot.LastWriteVersion,
 	); err != nil {
 		return err
 	}
@@ -254,7 +255,7 @@ func applyWorkflowSnapshotBatchAsReset(
 }
 
 func applyWorkflowSnapshotBatchAsNew(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	shardID int,
 	workflowSnapshot *p.InternalWorkflowSnapshot,
 ) error {
@@ -262,7 +263,6 @@ func applyWorkflowSnapshotBatchAsNew(
 	cqlNowTimestampMillis := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 
 	executionInfo := workflowSnapshot.ExecutionInfo
-	replicationState := workflowSnapshot.ReplicationState
 	versionHistories := workflowSnapshot.VersionHistories
 	domainID := executionInfo.DomainID
 	workflowID := executionInfo.WorkflowID
@@ -272,9 +272,10 @@ func applyWorkflowSnapshotBatchAsNew(
 		batch,
 		shardID,
 		executionInfo,
-		replicationState,
 		versionHistories,
+		workflowSnapshot.Checksum,
 		cqlNowTimestampMillis,
+		workflowSnapshot.LastWriteVersion,
 	); err != nil {
 		return err
 	}
@@ -336,7 +337,7 @@ func applyWorkflowSnapshotBatchAsNew(
 	updateSignalsRequested(
 		batch,
 		workflowSnapshot.SignalRequestedIDs,
-		"",
+		nil,
 		shardID,
 		domainID,
 		workflowID,
@@ -357,12 +358,13 @@ func applyWorkflowSnapshotBatchAsNew(
 }
 
 func createExecution(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	shardID int,
 	executionInfo *p.InternalWorkflowExecutionInfo,
-	replicationState *p.ReplicationState,
 	versionHistories *p.DataBlob,
+	checksum checksum.Checksum,
 	cqlNowTimestampMillis int64,
+	lastWriteVersion int64,
 ) error {
 
 	// validate workflow state & close status
@@ -390,243 +392,99 @@ func createExecution(
 	// TODO we should set the start time and last update time on business logic layer
 	executionInfo.StartTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
 	executionInfo.LastUpdatedTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
-
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
-	if replicationState == nil && versionHistories == nil {
-		// Cross DC feature is currently disabled so we will be creating workflow executions without replication state
-		batch.Query(templateCreateWorkflowExecutionQuery,
-			shardID,
-			domainID,
-			workflowID,
-			runID,
-			rowTypeExecution,
-			domainID,
-			workflowID,
-			runID,
-			parentDomainID,
-			parentWorkflowID,
-			parentRunID,
-			initiatedID,
-			executionInfo.CompletionEventBatchID,
-			completionData,
-			completionEncoding,
-			executionInfo.TaskList,
-			executionInfo.WorkflowTypeName,
-			executionInfo.WorkflowTimeout,
-			executionInfo.DecisionStartToCloseTimeout,
-			executionInfo.ExecutionContext,
-			executionInfo.State,
-			executionInfo.CloseStatus,
-			executionInfo.LastFirstEventID,
-			executionInfo.LastEventTaskID,
-			executionInfo.NextEventID,
-			executionInfo.LastProcessedEvent,
-			executionInfo.StartTimestamp,
-			executionInfo.LastUpdatedTimestamp,
-			executionInfo.CreateRequestID,
-			executionInfo.SignalCount,
-			executionInfo.HistorySize,
-			executionInfo.DecisionVersion,
-			executionInfo.DecisionScheduleID,
-			executionInfo.DecisionStartedID,
-			executionInfo.DecisionRequestID,
-			executionInfo.DecisionTimeout,
-			executionInfo.DecisionAttempt,
-			executionInfo.DecisionStartedTimestamp,
-			executionInfo.DecisionScheduledTimestamp,
-			executionInfo.DecisionOriginalScheduledTimestamp,
-			executionInfo.CancelRequested,
-			executionInfo.CancelRequestID,
-			executionInfo.StickyTaskList,
-			executionInfo.StickyScheduleToStartTimeout,
-			executionInfo.ClientLibraryVersion,
-			executionInfo.ClientFeatureVersion,
-			executionInfo.ClientImpl,
-			executionInfo.AutoResetPoints.Data,
-			executionInfo.AutoResetPoints.GetEncoding(),
-			executionInfo.Attempt,
-			executionInfo.HasRetryPolicy,
-			executionInfo.InitialInterval,
-			executionInfo.BackoffCoefficient,
-			executionInfo.MaximumInterval,
-			executionInfo.ExpirationTime,
-			executionInfo.MaximumAttempts,
-			executionInfo.NonRetriableErrors,
-			p.EventStoreVersion,
-			executionInfo.BranchToken,
-			executionInfo.CronSchedule,
-			executionInfo.ExpirationSeconds,
-			executionInfo.SearchAttributes,
-			executionInfo.Memo,
-			executionInfo.NextEventID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
-	} else if versionHistories != nil {
-		// TODO also need to set the start / current / last write version
-		versionHistoriesData, versionHistoriesEncoding := p.FromDataBlob(versionHistories)
-		batch.Query(templateCreateWorkflowExecutionWithVersionHistoriesQuery,
-			shardID,
-			domainID,
-			workflowID,
-			runID,
-			rowTypeExecution,
-			domainID,
-			workflowID,
-			runID,
-			parentDomainID,
-			parentWorkflowID,
-			parentRunID,
-			initiatedID,
-			executionInfo.CompletionEventBatchID,
-			completionData,
-			completionEncoding,
-			executionInfo.TaskList,
-			executionInfo.WorkflowTypeName,
-			executionInfo.WorkflowTimeout,
-			executionInfo.DecisionStartToCloseTimeout,
-			executionInfo.ExecutionContext,
-			executionInfo.State,
-			executionInfo.CloseStatus,
-			executionInfo.LastFirstEventID,
-			executionInfo.LastEventTaskID,
-			executionInfo.NextEventID,
-			executionInfo.LastProcessedEvent,
-			executionInfo.StartTimestamp,
-			executionInfo.LastUpdatedTimestamp,
-			executionInfo.CreateRequestID,
-			executionInfo.SignalCount,
-			executionInfo.HistorySize,
-			executionInfo.DecisionVersion,
-			executionInfo.DecisionScheduleID,
-			executionInfo.DecisionStartedID,
-			executionInfo.DecisionRequestID,
-			executionInfo.DecisionTimeout,
-			executionInfo.DecisionAttempt,
-			executionInfo.DecisionStartedTimestamp,
-			executionInfo.DecisionScheduledTimestamp,
-			executionInfo.DecisionOriginalScheduledTimestamp,
-			executionInfo.CancelRequested,
-			executionInfo.CancelRequestID,
-			executionInfo.StickyTaskList,
-			executionInfo.StickyScheduleToStartTimeout,
-			executionInfo.ClientLibraryVersion,
-			executionInfo.ClientFeatureVersion,
-			executionInfo.ClientImpl,
-			executionInfo.AutoResetPoints.Data,
-			executionInfo.AutoResetPoints.GetEncoding(),
-			executionInfo.Attempt,
-			executionInfo.HasRetryPolicy,
-			executionInfo.InitialInterval,
-			executionInfo.BackoffCoefficient,
-			executionInfo.MaximumInterval,
-			executionInfo.ExpirationTime,
-			executionInfo.MaximumAttempts,
-			executionInfo.NonRetriableErrors,
-			p.EventStoreVersion,
-			executionInfo.BranchToken,
-			executionInfo.CronSchedule,
-			executionInfo.ExpirationSeconds,
-			executionInfo.SearchAttributes,
-			executionInfo.Memo,
-			executionInfo.NextEventID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			versionHistoriesData,
-			versionHistoriesEncoding)
-	} else if replicationState != nil {
-		lastReplicationInfo := make(map[string]map[string]interface{})
-		for k, v := range replicationState.LastReplicationInfo {
-			lastReplicationInfo[k] = createReplicationInfoMap(v)
-		}
 
-		batch.Query(templateCreateWorkflowExecutionWithReplicationQuery,
-			shardID,
-			domainID,
-			workflowID,
-			runID,
-			rowTypeExecution,
-			domainID,
-			workflowID,
-			runID,
-			parentDomainID,
-			parentWorkflowID,
-			parentRunID,
-			initiatedID,
-			executionInfo.CompletionEventBatchID,
-			completionData,
-			completionEncoding,
-			executionInfo.TaskList,
-			executionInfo.WorkflowTypeName,
-			executionInfo.WorkflowTimeout,
-			executionInfo.DecisionStartToCloseTimeout,
-			executionInfo.ExecutionContext,
-			executionInfo.State,
-			executionInfo.CloseStatus,
-			executionInfo.LastFirstEventID,
-			executionInfo.LastEventTaskID,
-			executionInfo.NextEventID,
-			executionInfo.LastProcessedEvent,
-			executionInfo.StartTimestamp,
-			executionInfo.LastUpdatedTimestamp,
-			executionInfo.CreateRequestID,
-			executionInfo.SignalCount,
-			executionInfo.HistorySize,
-			executionInfo.DecisionVersion,
-			executionInfo.DecisionScheduleID,
-			executionInfo.DecisionStartedID,
-			executionInfo.DecisionRequestID,
-			executionInfo.DecisionTimeout,
-			executionInfo.DecisionAttempt,
-			executionInfo.DecisionStartedTimestamp,
-			executionInfo.DecisionScheduledTimestamp,
-			executionInfo.DecisionOriginalScheduledTimestamp,
-			executionInfo.CancelRequested,
-			executionInfo.CancelRequestID,
-			executionInfo.StickyTaskList,
-			executionInfo.StickyScheduleToStartTimeout,
-			executionInfo.ClientLibraryVersion, // client_library_version
-			executionInfo.ClientFeatureVersion, // client_feature_version
-			executionInfo.ClientImpl,           // client_impl
-			executionInfo.AutoResetPoints.Data,
-			executionInfo.AutoResetPoints.GetEncoding(),
-			executionInfo.Attempt,
-			executionInfo.HasRetryPolicy,
-			executionInfo.InitialInterval,
-			executionInfo.BackoffCoefficient,
-			executionInfo.MaximumInterval,
-			executionInfo.ExpirationTime,
-			executionInfo.MaximumAttempts,
-			executionInfo.NonRetriableErrors,
-			p.EventStoreVersion,
-			executionInfo.BranchToken,
-			executionInfo.CronSchedule,
-			executionInfo.ExpirationSeconds,
-			executionInfo.SearchAttributes,
-			executionInfo.Memo,
-			replicationState.CurrentVersion,
-			replicationState.StartVersion,
-			replicationState.LastWriteVersion,
-			replicationState.LastWriteEventID,
-			lastReplicationInfo,
-			executionInfo.NextEventID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
-	} else {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("Create workflow execution with both version histories and replication state."),
-		}
+	if versionHistories == nil {
+		return &types.InternalServiceError{Message: "encounter empty version histories in createExecution"}
 	}
+	versionHistoriesData, versionHistoriesEncoding := p.FromDataBlob(versionHistories)
+	batch.Query(templateCreateWorkflowExecutionWithVersionHistoriesQuery,
+		shardID,
+		domainID,
+		workflowID,
+		runID,
+		rowTypeExecution,
+		domainID,
+		workflowID,
+		runID,
+		parentDomainID,
+		parentWorkflowID,
+		parentRunID,
+		initiatedID,
+		executionInfo.CompletionEventBatchID,
+		completionData,
+		completionEncoding,
+		executionInfo.TaskList,
+		executionInfo.WorkflowTypeName,
+		int32(executionInfo.WorkflowTimeout.Seconds()),
+		int32(executionInfo.DecisionStartToCloseTimeout.Seconds()),
+		executionInfo.ExecutionContext,
+		executionInfo.State,
+		executionInfo.CloseStatus,
+		executionInfo.LastFirstEventID,
+		executionInfo.LastEventTaskID,
+		executionInfo.NextEventID,
+		executionInfo.LastProcessedEvent,
+		executionInfo.StartTimestamp,
+		executionInfo.LastUpdatedTimestamp,
+		executionInfo.CreateRequestID,
+		executionInfo.SignalCount,
+		executionInfo.HistorySize,
+		executionInfo.DecisionVersion,
+		executionInfo.DecisionScheduleID,
+		executionInfo.DecisionStartedID,
+		executionInfo.DecisionRequestID,
+		int32(executionInfo.DecisionTimeout.Seconds()),
+		executionInfo.DecisionAttempt,
+		executionInfo.DecisionStartedTimestamp.UnixNano(),
+		executionInfo.DecisionScheduledTimestamp.UnixNano(),
+		executionInfo.DecisionOriginalScheduledTimestamp.UnixNano(),
+		executionInfo.CancelRequested,
+		executionInfo.CancelRequestID,
+		executionInfo.StickyTaskList,
+		int32(executionInfo.StickyScheduleToStartTimeout.Seconds()),
+		executionInfo.ClientLibraryVersion,
+		executionInfo.ClientFeatureVersion,
+		executionInfo.ClientImpl,
+		executionInfo.AutoResetPoints.Data,
+		executionInfo.AutoResetPoints.GetEncoding(),
+		executionInfo.Attempt,
+		executionInfo.HasRetryPolicy,
+		int32(executionInfo.InitialInterval.Seconds()),
+		executionInfo.BackoffCoefficient,
+		int32(executionInfo.MaximumInterval.Seconds()),
+		executionInfo.ExpirationTime,
+		executionInfo.MaximumAttempts,
+		executionInfo.NonRetriableErrors,
+		p.EventStoreVersion,
+		executionInfo.BranchToken,
+		executionInfo.CronSchedule,
+		int32(executionInfo.ExpirationSeconds.Seconds()),
+		executionInfo.SearchAttributes,
+		executionInfo.Memo,
+		executionInfo.NextEventID,
+		defaultVisibilityTimestamp,
+		rowTypeExecutionTaskID,
+		versionHistoriesData,
+		versionHistoriesEncoding,
+		checksum.Version,
+		checksum.Flavor,
+		checksum.Value,
+		lastWriteVersion,
+		executionInfo.State,
+	)
 	return nil
 }
 
 func updateExecution(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	shardID int,
 	executionInfo *p.InternalWorkflowExecutionInfo,
-	replicationState *p.ReplicationState,
 	versionHistories *p.DataBlob,
 	cqlNowTimestampMillis int64,
 	condition int64,
+	checksum checksum.Checksum,
+	lastWriteVersion int64,
 ) error {
 
 	// validate workflow state & close status
@@ -655,239 +513,89 @@ func updateExecution(
 	executionInfo.LastUpdatedTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
 
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
-	if replicationState == nil && versionHistories == nil {
-		// Updates will be called with null ReplicationState while the feature is disabled
-		batch.Query(templateUpdateWorkflowExecutionQuery,
-			domainID,
-			workflowID,
-			runID,
-			parentDomainID,
-			parentWorkflowID,
-			parentRunID,
-			initiatedID,
-			executionInfo.CompletionEventBatchID,
-			completionData,
-			completionEncoding,
-			executionInfo.TaskList,
-			executionInfo.WorkflowTypeName,
-			executionInfo.WorkflowTimeout,
-			executionInfo.DecisionStartToCloseTimeout,
-			executionInfo.ExecutionContext,
-			executionInfo.State,
-			executionInfo.CloseStatus,
-			executionInfo.LastFirstEventID,
-			executionInfo.LastEventTaskID,
-			executionInfo.NextEventID,
-			executionInfo.LastProcessedEvent,
-			executionInfo.StartTimestamp,
-			executionInfo.LastUpdatedTimestamp,
-			executionInfo.CreateRequestID,
-			executionInfo.SignalCount,
-			executionInfo.HistorySize,
-			executionInfo.DecisionVersion,
-			executionInfo.DecisionScheduleID,
-			executionInfo.DecisionStartedID,
-			executionInfo.DecisionRequestID,
-			executionInfo.DecisionTimeout,
-			executionInfo.DecisionAttempt,
-			executionInfo.DecisionStartedTimestamp,
-			executionInfo.DecisionScheduledTimestamp,
-			executionInfo.DecisionOriginalScheduledTimestamp,
-			executionInfo.CancelRequested,
-			executionInfo.CancelRequestID,
-			executionInfo.StickyTaskList,
-			executionInfo.StickyScheduleToStartTimeout,
-			executionInfo.ClientLibraryVersion,
-			executionInfo.ClientFeatureVersion,
-			executionInfo.ClientImpl,
-			executionInfo.AutoResetPoints.Data,
-			executionInfo.AutoResetPoints.GetEncoding(),
-			executionInfo.Attempt,
-			executionInfo.HasRetryPolicy,
-			executionInfo.InitialInterval,
-			executionInfo.BackoffCoefficient,
-			executionInfo.MaximumInterval,
-			executionInfo.ExpirationTime,
-			executionInfo.MaximumAttempts,
-			executionInfo.NonRetriableErrors,
-			p.EventStoreVersion,
-			executionInfo.BranchToken,
-			executionInfo.CronSchedule,
-			executionInfo.ExpirationSeconds,
-			executionInfo.SearchAttributes,
-			executionInfo.Memo,
-			executionInfo.NextEventID,
-			shardID,
-			rowTypeExecution,
-			domainID,
-			workflowID,
-			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
-	} else if versionHistories != nil {
-		// TODO also need to set the start / current / last write version
-		versionHistoriesData, versionHistoriesEncoding := p.FromDataBlob(versionHistories)
-		batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQuery,
-			domainID,
-			workflowID,
-			runID,
-			parentDomainID,
-			parentWorkflowID,
-			parentRunID,
-			initiatedID,
-			executionInfo.CompletionEventBatchID,
-			completionData,
-			completionEncoding,
-			executionInfo.TaskList,
-			executionInfo.WorkflowTypeName,
-			executionInfo.WorkflowTimeout,
-			executionInfo.DecisionStartToCloseTimeout,
-			executionInfo.ExecutionContext,
-			executionInfo.State,
-			executionInfo.CloseStatus,
-			executionInfo.LastFirstEventID,
-			executionInfo.LastEventTaskID,
-			executionInfo.NextEventID,
-			executionInfo.LastProcessedEvent,
-			executionInfo.StartTimestamp,
-			executionInfo.LastUpdatedTimestamp,
-			executionInfo.CreateRequestID,
-			executionInfo.SignalCount,
-			executionInfo.HistorySize,
-			executionInfo.DecisionVersion,
-			executionInfo.DecisionScheduleID,
-			executionInfo.DecisionStartedID,
-			executionInfo.DecisionRequestID,
-			executionInfo.DecisionTimeout,
-			executionInfo.DecisionAttempt,
-			executionInfo.DecisionStartedTimestamp,
-			executionInfo.DecisionScheduledTimestamp,
-			executionInfo.DecisionOriginalScheduledTimestamp,
-			executionInfo.CancelRequested,
-			executionInfo.CancelRequestID,
-			executionInfo.StickyTaskList,
-			executionInfo.StickyScheduleToStartTimeout,
-			executionInfo.ClientLibraryVersion,
-			executionInfo.ClientFeatureVersion,
-			executionInfo.ClientImpl,
-			executionInfo.AutoResetPoints.Data,
-			executionInfo.AutoResetPoints.GetEncoding(),
-			executionInfo.Attempt,
-			executionInfo.HasRetryPolicy,
-			executionInfo.InitialInterval,
-			executionInfo.BackoffCoefficient,
-			executionInfo.MaximumInterval,
-			executionInfo.ExpirationTime,
-			executionInfo.MaximumAttempts,
-			executionInfo.NonRetriableErrors,
-			p.EventStoreVersion,
-			executionInfo.BranchToken,
-			executionInfo.CronSchedule,
-			executionInfo.ExpirationSeconds,
-			executionInfo.SearchAttributes,
-			executionInfo.Memo,
-			executionInfo.NextEventID,
-			versionHistoriesData,
-			versionHistoriesEncoding,
-			shardID,
-			rowTypeExecution,
-			domainID,
-			workflowID,
-			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
-	} else if replicationState != nil {
-		lastReplicationInfo := make(map[string]map[string]interface{})
-		for k, v := range replicationState.LastReplicationInfo {
-			lastReplicationInfo[k] = createReplicationInfoMap(v)
-		}
-
-		batch.Query(templateUpdateWorkflowExecutionWithReplicationQuery,
-			domainID,
-			workflowID,
-			runID,
-			parentDomainID,
-			parentWorkflowID,
-			parentRunID,
-			initiatedID,
-			executionInfo.CompletionEventBatchID,
-			completionData,
-			completionEncoding,
-			executionInfo.TaskList,
-			executionInfo.WorkflowTypeName,
-			executionInfo.WorkflowTimeout,
-			executionInfo.DecisionStartToCloseTimeout,
-			executionInfo.ExecutionContext,
-			executionInfo.State,
-			executionInfo.CloseStatus,
-			executionInfo.LastFirstEventID,
-			executionInfo.LastEventTaskID,
-			executionInfo.NextEventID,
-			executionInfo.LastProcessedEvent,
-			executionInfo.StartTimestamp,
-			executionInfo.LastUpdatedTimestamp,
-			executionInfo.CreateRequestID,
-			executionInfo.SignalCount,
-			executionInfo.HistorySize,
-			executionInfo.DecisionVersion,
-			executionInfo.DecisionScheduleID,
-			executionInfo.DecisionStartedID,
-			executionInfo.DecisionRequestID,
-			executionInfo.DecisionTimeout,
-			executionInfo.DecisionAttempt,
-			executionInfo.DecisionStartedTimestamp,
-			executionInfo.DecisionScheduledTimestamp,
-			executionInfo.DecisionOriginalScheduledTimestamp,
-			executionInfo.CancelRequested,
-			executionInfo.CancelRequestID,
-			executionInfo.StickyTaskList,
-			executionInfo.StickyScheduleToStartTimeout,
-			executionInfo.ClientLibraryVersion,
-			executionInfo.ClientFeatureVersion,
-			executionInfo.ClientImpl,
-			executionInfo.AutoResetPoints.Data,
-			executionInfo.AutoResetPoints.GetEncoding(),
-			executionInfo.Attempt,
-			executionInfo.HasRetryPolicy,
-			executionInfo.InitialInterval,
-			executionInfo.BackoffCoefficient,
-			executionInfo.MaximumInterval,
-			executionInfo.ExpirationTime,
-			executionInfo.MaximumAttempts,
-			executionInfo.NonRetriableErrors,
-			p.EventStoreVersion,
-			executionInfo.BranchToken,
-			executionInfo.CronSchedule,
-			executionInfo.ExpirationSeconds,
-			executionInfo.SearchAttributes,
-			executionInfo.Memo,
-			replicationState.CurrentVersion,
-			replicationState.StartVersion,
-			replicationState.LastWriteVersion,
-			replicationState.LastWriteEventID,
-			lastReplicationInfo,
-			executionInfo.NextEventID,
-			shardID,
-			rowTypeExecution,
-			domainID,
-			workflowID,
-			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
-	} else {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("Update workflow execution with both version histories and replication state."),
-		}
-	}
+	// TODO also need to set the start / current / last write version
+	versionHistoriesData, versionHistoriesEncoding := p.FromDataBlob(versionHistories)
+	batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQuery,
+		domainID,
+		workflowID,
+		runID,
+		parentDomainID,
+		parentWorkflowID,
+		parentRunID,
+		initiatedID,
+		executionInfo.CompletionEventBatchID,
+		completionData,
+		completionEncoding,
+		executionInfo.TaskList,
+		executionInfo.WorkflowTypeName,
+		int32(executionInfo.WorkflowTimeout.Seconds()),
+		int32(executionInfo.DecisionStartToCloseTimeout.Seconds()),
+		executionInfo.ExecutionContext,
+		executionInfo.State,
+		executionInfo.CloseStatus,
+		executionInfo.LastFirstEventID,
+		executionInfo.LastEventTaskID,
+		executionInfo.NextEventID,
+		executionInfo.LastProcessedEvent,
+		executionInfo.StartTimestamp,
+		executionInfo.LastUpdatedTimestamp,
+		executionInfo.CreateRequestID,
+		executionInfo.SignalCount,
+		executionInfo.HistorySize,
+		executionInfo.DecisionVersion,
+		executionInfo.DecisionScheduleID,
+		executionInfo.DecisionStartedID,
+		executionInfo.DecisionRequestID,
+		int32(executionInfo.DecisionTimeout.Seconds()),
+		executionInfo.DecisionAttempt,
+		executionInfo.DecisionStartedTimestamp.UnixNano(),
+		executionInfo.DecisionScheduledTimestamp.UnixNano(),
+		executionInfo.DecisionOriginalScheduledTimestamp.UnixNano(),
+		executionInfo.CancelRequested,
+		executionInfo.CancelRequestID,
+		executionInfo.StickyTaskList,
+		int32(executionInfo.StickyScheduleToStartTimeout.Seconds()),
+		executionInfo.ClientLibraryVersion,
+		executionInfo.ClientFeatureVersion,
+		executionInfo.ClientImpl,
+		executionInfo.AutoResetPoints.Data,
+		executionInfo.AutoResetPoints.GetEncoding(),
+		executionInfo.Attempt,
+		executionInfo.HasRetryPolicy,
+		int32(executionInfo.InitialInterval.Seconds()),
+		executionInfo.BackoffCoefficient,
+		int32(executionInfo.MaximumInterval.Seconds()),
+		executionInfo.ExpirationTime,
+		executionInfo.MaximumAttempts,
+		executionInfo.NonRetriableErrors,
+		p.EventStoreVersion,
+		executionInfo.BranchToken,
+		executionInfo.CronSchedule,
+		int32(executionInfo.ExpirationSeconds.Seconds()),
+		executionInfo.SearchAttributes,
+		executionInfo.Memo,
+		executionInfo.NextEventID,
+		versionHistoriesData,
+		versionHistoriesEncoding,
+		checksum.Version,
+		checksum.Flavor,
+		checksum.Value,
+		lastWriteVersion,
+		executionInfo.State,
+		shardID,
+		rowTypeExecution,
+		domainID,
+		workflowID,
+		runID,
+		defaultVisibilityTimestamp,
+		rowTypeExecutionTaskID,
+		condition)
 
 	return nil
 }
 
 func applyTasks(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	shardID int,
 	domainID string,
 	workflowID string,
@@ -930,7 +638,7 @@ func applyTasks(
 }
 
 func createTransferTasks(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	transferTasks []p.Task,
 	shardID int,
 	domainID string,
@@ -991,7 +699,7 @@ func createTransferTasks(
 			// No explicit property needs to be set
 
 		default:
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Unknow transfer type: %v", task.GetType()),
 			}
 		}
@@ -1024,7 +732,7 @@ func createTransferTasks(
 }
 
 func createReplicationTasks(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	replicationTasks []p.Task,
 	shardID int,
 	domainID string,
@@ -1036,11 +744,9 @@ func createReplicationTasks(
 		// Replication task specific information
 		firstEventID := common.EmptyEventID
 		nextEventID := common.EmptyEventID
-		version := common.EmptyVersion
-		var lastReplicationInfo map[string]map[string]interface{}
+		version := common.EmptyVersion //nolint:ineffassign
 		activityScheduleID := common.EmptyEventID
 		var branchToken, newRunBranchToken []byte
-		resetWorkflow := false
 
 		switch task.GetType() {
 		case p.ReplicationTaskTypeHistory:
@@ -1050,20 +756,16 @@ func createReplicationTasks(
 			firstEventID = histTask.FirstEventID
 			nextEventID = histTask.NextEventID
 			version = task.GetVersion()
-			lastReplicationInfo = make(map[string]map[string]interface{})
-			for k, v := range histTask.LastReplicationInfo {
-				lastReplicationInfo[k] = createReplicationInfoMap(v)
-			}
-			resetWorkflow = histTask.ResetWorkflow
 
 		case p.ReplicationTaskTypeSyncActivity:
 			version = task.GetVersion()
 			activityScheduleID = task.(*p.SyncActivityTask).ScheduledID
-			// cassandra does not like null
-			lastReplicationInfo = make(map[string]map[string]interface{})
+
+		case p.ReplicationTaskTypeFailoverMarker:
+			version = task.GetVersion()
 
 		default:
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Unknow replication type: %v", task.GetType()),
 			}
 		}
@@ -1082,13 +784,12 @@ func createReplicationTasks(
 			firstEventID,
 			nextEventID,
 			version,
-			lastReplicationInfo,
 			activityScheduleID,
 			p.EventStoreVersion,
 			branchToken,
-			resetWorkflow,
 			p.EventStoreVersion,
 			newRunBranchToken,
+			task.GetVisibilityTimestamp().UnixNano(),
 			defaultVisibilityTimestamp,
 			task.GetTaskID())
 	}
@@ -1097,7 +798,7 @@ func createReplicationTasks(
 }
 
 func createTimerTasks(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	timerTasks []p.Task,
 	shardID int,
 	domainID string,
@@ -1140,7 +841,7 @@ func createTimerTasks(
 			// noop
 
 		default:
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Unknow timer type: %v", task.GetType()),
 			}
 		}
@@ -1172,7 +873,7 @@ func createTimerTasks(
 }
 
 func createOrUpdateCurrentExecution(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	createMode p.CreateWorkflowMode,
 	shardID int,
 	domainID string,
@@ -1195,8 +896,6 @@ func createOrUpdateCurrentExecution(
 			createRequestID,
 			state,
 			closeStatus,
-			startVersion,
-			lastWriteVersion,
 			lastWriteVersion,
 			state,
 			shardID,
@@ -1215,8 +914,6 @@ func createOrUpdateCurrentExecution(
 			createRequestID,
 			state,
 			closeStatus,
-			startVersion,
-			lastWriteVersion,
 			lastWriteVersion,
 			state,
 			shardID,
@@ -1244,13 +941,11 @@ func createOrUpdateCurrentExecution(
 			createRequestID,
 			state,
 			closeStatus,
-			startVersion,
-			lastWriteVersion,
 			lastWriteVersion,
 			state,
 		)
 	default:
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("unknown mode: %v", createMode),
 		}
 	}
@@ -1259,7 +954,7 @@ func createOrUpdateCurrentExecution(
 }
 
 func updateActivityInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	activityInfos []*p.InternalActivityInfo,
 	deleteInfos []int64,
 	shardID int,
@@ -1288,10 +983,10 @@ func updateActivityInfos(
 			a.ActivityID,
 			a.RequestID,
 			a.Details,
-			a.ScheduleToStartTimeout,
-			a.ScheduleToCloseTimeout,
-			a.StartToCloseTimeout,
-			a.HeartbeatTimeout,
+			int32(a.ScheduleToStartTimeout.Seconds()),
+			int32(a.ScheduleToCloseTimeout.Seconds()),
+			int32(a.StartToCloseTimeout.Seconds()),
+			int32(a.HeartbeatTimeout.Seconds()),
 			a.CancelRequested,
 			a.CancelRequestID,
 			a.LastHeartBeatUpdatedTime,
@@ -1300,9 +995,9 @@ func updateActivityInfos(
 			a.TaskList,
 			a.StartedIdentity,
 			a.HasRetryPolicy,
-			a.InitialInterval,
+			int32(a.InitialInterval.Seconds()),
 			a.BackoffCoefficient,
-			a.MaximumInterval,
+			int32(a.MaximumInterval.Seconds()),
 			a.ExpirationTime,
 			a.MaximumAttempts,
 			a.NonRetriableErrors,
@@ -1334,7 +1029,7 @@ func updateActivityInfos(
 }
 
 func deleteBufferedEvents(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	shardID int,
 	domainID string,
 	workflowID string,
@@ -1353,7 +1048,7 @@ func deleteBufferedEvents(
 }
 
 func resetActivityInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	activityInfos []*p.InternalActivityInfo,
 	shardID int,
 	domainID string,
@@ -1379,7 +1074,7 @@ func resetActivityInfos(
 }
 
 func updateTimerInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	timerInfos []*p.TimerInfo,
 	deleteInfos []string,
 	shardID int,
@@ -1388,14 +1083,14 @@ func updateTimerInfos(
 	runID string,
 ) {
 
-	for _, a := range timerInfos {
+	for _, timerInfo := range timerInfos {
 		batch.Query(templateUpdateTimerInfoQuery,
-			a.TimerID,
-			a.Version,
-			a.TimerID,
-			a.StartedID,
-			a.ExpiryTime,
-			a.TaskStatus,
+			timerInfo.TimerID,
+			timerInfo.Version,
+			timerInfo.TimerID,
+			timerInfo.StartedID,
+			timerInfo.ExpiryTime,
+			timerInfo.TaskStatus,
 			shardID,
 			rowTypeExecution,
 			domainID,
@@ -1405,9 +1100,9 @@ func updateTimerInfos(
 			rowTypeExecutionTaskID)
 	}
 
-	for _, t := range deleteInfos {
+	for _, deleteInfo := range deleteInfos {
 		batch.Query(templateDeleteTimerInfoQuery,
-			t,
+			deleteInfo,
 			shardID,
 			rowTypeExecution,
 			domainID,
@@ -1419,7 +1114,7 @@ func updateTimerInfos(
 }
 
 func resetTimerInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	timerInfos []*p.TimerInfo,
 	shardID int,
 	domainID string,
@@ -1439,9 +1134,9 @@ func resetTimerInfos(
 }
 
 func updateChildExecutionInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	childExecutionInfos []*p.InternalChildExecutionInfo,
-	deleteInfo *int64,
+	deleteInfos []int64,
 	shardID int,
 	domainID string,
 	workflowID string,
@@ -1484,10 +1179,10 @@ func updateChildExecutionInfos(
 			rowTypeExecutionTaskID)
 	}
 
-	// deleteInfo is the initiatedID for ChildInfo being deleted
-	if deleteInfo != nil {
+	// deleteInfos are the initiatedIDs for ChildInfo being deleted
+	for _, deleteInfo := range deleteInfos {
 		batch.Query(templateDeleteChildExecutionInfoQuery,
-			*deleteInfo,
+			deleteInfo,
 			shardID,
 			rowTypeExecution,
 			domainID,
@@ -1500,7 +1195,7 @@ func updateChildExecutionInfos(
 }
 
 func resetChildExecutionInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	childExecutionInfos []*p.InternalChildExecutionInfo,
 	shardID int,
 	domainID string,
@@ -1525,9 +1220,9 @@ func resetChildExecutionInfos(
 }
 
 func updateRequestCancelInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	requestCancelInfos []*p.RequestCancelInfo,
-	deleteInfo *int64,
+	deleteInfos []int64,
 	shardID int,
 	domainID string,
 	workflowID string,
@@ -1550,10 +1245,10 @@ func updateRequestCancelInfos(
 			rowTypeExecutionTaskID)
 	}
 
-	// deleteInfo is the initiatedID for RequestCancelInfo being deleted
-	if deleteInfo != nil {
+	// deleteInfos are the initiatedIDs for RequestCancelInfo being deleted
+	for _, deleteInfo := range deleteInfos {
 		batch.Query(templateDeleteRequestCancelInfoQuery,
-			*deleteInfo,
+			deleteInfo,
 			shardID,
 			rowTypeExecution,
 			domainID,
@@ -1565,7 +1260,7 @@ func updateRequestCancelInfos(
 }
 
 func resetRequestCancelInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	requestCancelInfos []*p.RequestCancelInfo,
 	shardID int,
 	domainID string,
@@ -1585,9 +1280,9 @@ func resetRequestCancelInfos(
 }
 
 func updateSignalInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	signalInfos []*p.SignalInfo,
-	deleteInfo *int64,
+	deleteInfos []int64,
 	shardID int,
 	domainID string,
 	workflowID string,
@@ -1613,10 +1308,10 @@ func updateSignalInfos(
 			rowTypeExecutionTaskID)
 	}
 
-	// deleteInfo is the initiatedID for SignalInfo being deleted
-	if deleteInfo != nil {
+	// deleteInfos are the initiatedIDs for SignalInfo being deleted
+	for _, deleteInfo := range deleteInfos {
 		batch.Query(templateDeleteSignalInfoQuery,
-			*deleteInfo,
+			deleteInfo,
 			shardID,
 			rowTypeExecution,
 			domainID,
@@ -1628,7 +1323,7 @@ func updateSignalInfos(
 }
 
 func resetSignalInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	signalInfos []*p.SignalInfo,
 	shardID int,
 	domainID string,
@@ -1648,9 +1343,9 @@ func resetSignalInfos(
 }
 
 func updateSignalsRequested(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	signalReqIDs []string,
-	deleteSignalReqID string,
+	deleteSignalReqIDs []string,
 	shardID int,
 	domainID string,
 	workflowID string,
@@ -1669,10 +1364,9 @@ func updateSignalsRequested(
 			rowTypeExecutionTaskID)
 	}
 
-	if deleteSignalReqID != "" {
-		req := []string{deleteSignalReqID} // for cassandra set binding
+	if len(deleteSignalReqIDs) > 0 {
 		batch.Query(templateDeleteWorkflowExecutionSignalRequestedQuery,
-			req,
+			deleteSignalReqIDs,
 			shardID,
 			rowTypeExecution,
 			domainID,
@@ -1684,7 +1378,7 @@ func updateSignalsRequested(
 }
 
 func resetSignalRequested(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	signalRequested []string,
 	shardID int,
 	domainID string,
@@ -1704,7 +1398,7 @@ func resetSignalRequested(
 }
 
 func updateBufferedEvents(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	newBufferedEvents *p.DataBlob,
 	clearBufferedEvents bool,
 	shardID int,
@@ -1742,18 +1436,24 @@ func updateBufferedEvents(
 
 func createShardInfo(
 	currentCluster string,
-	result map[string]interface{},
-) *p.ShardInfo {
+	rangeID int64,
+	shard map[string]interface{},
+) *p.InternalShardInfo {
 
-	info := &p.ShardInfo{}
-	for k, v := range result {
+	var pendingFailoverMarkersRawData []byte
+	var pendingFailoverMarkersEncoding string
+	var transferProcessingQueueStatesRawData []byte
+	var transferProcessingQueueStatesEncoding string
+	var timerProcessingQueueStatesRawData []byte
+	var timerProcessingQueueStatesEncoding string
+	info := &p.InternalShardInfo{}
+	info.RangeID = rangeID
+	for k, v := range shard {
 		switch k {
 		case "shard_id":
 			info.ShardID = v.(int)
 		case "owner":
 			info.Owner = v.(string)
-		case "range_id":
-			info.RangeID = v.(int64)
 		case "stolen_since_renew":
 			info.StolenSinceRenew = v.(int)
 		case "updated_at":
@@ -1768,10 +1468,24 @@ func createShardInfo(
 			info.ClusterTransferAckLevel = v.(map[string]int64)
 		case "cluster_timer_ack_level":
 			info.ClusterTimerAckLevel = v.(map[string]time.Time)
+		case "transfer_processing_queue_states":
+			transferProcessingQueueStatesRawData = v.([]byte)
+		case "transfer_processing_queue_states_encoding":
+			transferProcessingQueueStatesEncoding = v.(string)
+		case "timer_processing_queue_states":
+			timerProcessingQueueStatesRawData = v.([]byte)
+		case "timer_processing_queue_states_encoding":
+			timerProcessingQueueStatesEncoding = v.(string)
 		case "domain_notification_version":
 			info.DomainNotificationVersion = v.(int64)
 		case "cluster_replication_level":
 			info.ClusterReplicationLevel = v.(map[string]int64)
+		case "replication_dlq_ack_level":
+			info.ReplicationDLQAckLevel = v.(map[string]int64)
+		case "pending_failover_markers":
+			pendingFailoverMarkersRawData = v.([]byte)
+		case "pending_failover_markers_encoding":
+			pendingFailoverMarkersEncoding = v.(string)
 		}
 	}
 
@@ -1788,6 +1502,21 @@ func createShardInfo(
 	if info.ClusterReplicationLevel == nil {
 		info.ClusterReplicationLevel = make(map[string]int64)
 	}
+	if info.ReplicationDLQAckLevel == nil {
+		info.ReplicationDLQAckLevel = make(map[string]int64)
+	}
+	info.PendingFailoverMarkers = p.NewDataBlob(
+		pendingFailoverMarkersRawData,
+		common.EncodingType(pendingFailoverMarkersEncoding),
+	)
+	info.TransferProcessingQueueStates = p.NewDataBlob(
+		transferProcessingQueueStatesRawData,
+		common.EncodingType(transferProcessingQueueStatesEncoding),
+	)
+	info.TimerProcessingQueueStates = p.NewDataBlob(
+		timerProcessingQueueStatesRawData,
+		common.EncodingType(timerProcessingQueueStatesEncoding),
+	)
 
 	return info
 }
@@ -1839,9 +1568,9 @@ func createWorkflowExecutionInfo(
 		case "workflow_type_name":
 			info.WorkflowTypeName = v.(string)
 		case "workflow_timeout":
-			info.WorkflowTimeout = int32(v.(int))
+			info.WorkflowTimeout = common.SecondsToDuration(int64(v.(int)))
 		case "decision_task_timeout":
-			info.DecisionStartToCloseTimeout = int32(v.(int))
+			info.DecisionStartToCloseTimeout = common.SecondsToDuration(int64(v.(int)))
 		case "execution_context":
 			info.ExecutionContext = v.([]byte)
 		case "state":
@@ -1875,15 +1604,15 @@ func createWorkflowExecutionInfo(
 		case "decision_request_id":
 			info.DecisionRequestID = v.(string)
 		case "decision_timeout":
-			info.DecisionTimeout = int32(v.(int))
+			info.DecisionTimeout = common.SecondsToDuration(int64(v.(int)))
 		case "decision_attempt":
 			info.DecisionAttempt = v.(int64)
 		case "decision_timestamp":
-			info.DecisionStartedTimestamp = v.(int64)
+			info.DecisionStartedTimestamp = time.Unix(0, v.(int64))
 		case "decision_scheduled_timestamp":
-			info.DecisionScheduledTimestamp = v.(int64)
+			info.DecisionScheduledTimestamp = time.Unix(0, v.(int64))
 		case "decision_original_scheduled_timestamp":
-			info.DecisionOriginalScheduledTimestamp = v.(int64)
+			info.DecisionOriginalScheduledTimestamp = time.Unix(0, v.(int64))
 		case "cancel_requested":
 			info.CancelRequested = v.(bool)
 		case "cancel_request_id":
@@ -1891,7 +1620,7 @@ func createWorkflowExecutionInfo(
 		case "sticky_task_list":
 			info.StickyTaskList = v.(string)
 		case "sticky_schedule_to_start_timeout":
-			info.StickyScheduleToStartTimeout = int32(v.(int))
+			info.StickyScheduleToStartTimeout = common.SecondsToDuration(int64(v.(int)))
 		case "client_library_version":
 			info.ClientLibraryVersion = v.(string)
 		case "client_feature_version":
@@ -1903,11 +1632,11 @@ func createWorkflowExecutionInfo(
 		case "has_retry_policy":
 			info.HasRetryPolicy = v.(bool)
 		case "init_interval":
-			info.InitialInterval = int32(v.(int))
+			info.InitialInterval = common.SecondsToDuration(int64(v.(int)))
 		case "backoff_coefficient":
 			info.BackoffCoefficient = v.(float64)
 		case "max_interval":
-			info.MaximumInterval = int32(v.(int))
+			info.MaximumInterval = common.SecondsToDuration(int64(v.(int)))
 		case "max_attempts":
 			info.MaximumAttempts = int32(v.(int))
 		case "expiration_time":
@@ -1919,7 +1648,7 @@ func createWorkflowExecutionInfo(
 		case "cron_schedule":
 			info.CronSchedule = v.(string)
 		case "expiration_seconds":
-			info.ExpirationSeconds = int32(v.(int))
+			info.ExpirationSeconds = common.SecondsToDuration(int64(v.(int)))
 		case "search_attributes":
 			info.SearchAttributes = v.(map[string][]byte)
 		case "memo":
@@ -1928,37 +1657,6 @@ func createWorkflowExecutionInfo(
 	}
 	info.CompletionEvent = p.NewDataBlob(completionEventData, completionEventEncoding)
 	info.AutoResetPoints = p.NewDataBlob(autoResetPoints, autoResetPointsEncoding)
-	return info
-}
-
-func createReplicationState(
-	result map[string]interface{},
-) *p.ReplicationState {
-
-	if len(result) == 0 {
-		return nil
-	}
-
-	info := &p.ReplicationState{}
-	for k, v := range result {
-		switch k {
-		case "current_version":
-			info.CurrentVersion = v.(int64)
-		case "start_version":
-			info.StartVersion = v.(int64)
-		case "last_write_version":
-			info.LastWriteVersion = v.(int64)
-		case "last_write_event_id":
-			info.LastWriteEventID = v.(int64)
-		case "last_replication_info":
-			info.LastReplicationInfo = make(map[string]*p.ReplicationInfo)
-			replicationInfoMap := v.(map[string]map[string]interface{})
-			for key, value := range replicationInfoMap {
-				info.LastReplicationInfo[key] = createReplicationInfo(value)
-			}
-		}
-	}
-
 	return info
 }
 
@@ -2008,9 +1706,9 @@ func createTransferTaskInfo(
 
 func createReplicationTaskInfo(
 	result map[string]interface{},
-) *p.ReplicationTaskInfo {
+) *p.InternalReplicationTaskInfo {
 
-	info := &p.ReplicationTaskInfo{}
+	info := &p.InternalReplicationTaskInfo{}
 	for k, v := range result {
 		switch k {
 		case "domain_id":
@@ -2029,20 +1727,14 @@ func createReplicationTaskInfo(
 			info.NextEventID = v.(int64)
 		case "version":
 			info.Version = v.(int64)
-		case "last_replication_info":
-			info.LastReplicationInfo = make(map[string]*p.ReplicationInfo)
-			replicationInfoMap := v.(map[string]map[string]interface{})
-			for key, value := range replicationInfoMap {
-				info.LastReplicationInfo[key] = createReplicationInfo(value)
-			}
 		case "scheduled_id":
 			info.ScheduledID = v.(int64)
 		case "branch_token":
 			info.BranchToken = v.([]byte)
-		case "reset_workflow":
-			info.ResetWorkflow = v.(bool)
 		case "new_run_branch_token":
 			info.NewRunBranchToken = v.([]byte)
+		case "created_time":
+			info.CreationTime = time.Unix(0, v.(int64))
 		}
 	}
 
@@ -2082,13 +1774,13 @@ func createActivityInfo(
 		case "details":
 			info.Details = v.([]byte)
 		case "schedule_to_start_timeout":
-			info.ScheduleToStartTimeout = int32(v.(int))
+			info.ScheduleToStartTimeout = common.SecondsToDuration(int64(v.(int)))
 		case "schedule_to_close_timeout":
-			info.ScheduleToCloseTimeout = int32(v.(int))
+			info.ScheduleToCloseTimeout = common.SecondsToDuration(int64(v.(int)))
 		case "start_to_close_timeout":
-			info.StartToCloseTimeout = int32(v.(int))
+			info.StartToCloseTimeout = common.SecondsToDuration(int64(v.(int)))
 		case "heart_beat_timeout":
-			info.HeartbeatTimeout = int32(v.(int))
+			info.HeartbeatTimeout = common.SecondsToDuration(int64(v.(int)))
 		case "cancel_requested":
 			info.CancelRequested = v.(bool)
 		case "cancel_request_id":
@@ -2106,11 +1798,11 @@ func createActivityInfo(
 		case "has_retry_policy":
 			info.HasRetryPolicy = v.(bool)
 		case "init_interval":
-			info.InitialInterval = (int32)(v.(int))
+			info.InitialInterval = common.SecondsToDuration(int64(v.(int)))
 		case "backoff_coefficient":
 			info.BackoffCoefficient = v.(float64)
 		case "max_interval":
-			info.MaximumInterval = (int32)(v.(int))
+			info.MaximumInterval = common.SecondsToDuration(int64(v.(int)))
 		case "max_attempts":
 			info.MaximumAttempts = (int32)(v.(int))
 		case "expiration_time":
@@ -2194,7 +1886,7 @@ func createChildExecutionInfo(
 		case "workflow_type_name":
 			info.WorkflowTypeName = v.(string)
 		case "parent_close_policy":
-			info.ParentClosePolicy = workflow.ParentClosePolicy(v.(int))
+			info.ParentClosePolicy = types.ParentClosePolicy(v.(int))
 		}
 	}
 	info.InitiatedEvent = p.NewDataBlob(initiatedData, encoding)
@@ -2274,10 +1966,10 @@ func resetActivityInfoMap(
 		aInfo["activity_id"] = a.ActivityID
 		aInfo["request_id"] = a.RequestID
 		aInfo["details"] = a.Details
-		aInfo["schedule_to_start_timeout"] = a.ScheduleToStartTimeout
-		aInfo["schedule_to_close_timeout"] = a.ScheduleToCloseTimeout
-		aInfo["start_to_close_timeout"] = a.StartToCloseTimeout
-		aInfo["heart_beat_timeout"] = a.HeartbeatTimeout
+		aInfo["schedule_to_start_timeout"] = int32(a.ScheduleToStartTimeout.Seconds())
+		aInfo["schedule_to_close_timeout"] = int32(a.ScheduleToCloseTimeout.Seconds())
+		aInfo["start_to_close_timeout"] = int32(a.StartToCloseTimeout.Seconds())
+		aInfo["heart_beat_timeout"] = int32(a.HeartbeatTimeout.Seconds())
 		aInfo["cancel_requested"] = a.CancelRequested
 		aInfo["cancel_request_id"] = a.CancelRequestID
 		aInfo["last_hb_updated_time"] = a.LastHeartBeatUpdatedTime
@@ -2286,9 +1978,9 @@ func resetActivityInfoMap(
 		aInfo["task_list"] = a.TaskList
 		aInfo["started_identity"] = a.StartedIdentity
 		aInfo["has_retry_policy"] = a.HasRetryPolicy
-		aInfo["init_interval"] = a.InitialInterval
+		aInfo["init_interval"] = int32(a.InitialInterval.Seconds())
 		aInfo["backoff_coefficient"] = a.BackoffCoefficient
-		aInfo["max_interval"] = a.MaximumInterval
+		aInfo["max_interval"] = int32(a.MaximumInterval.Seconds())
 		aInfo["expiration_time"] = a.ExpirationTime
 		aInfo["max_attempts"] = a.MaximumAttempts
 		aInfo["non_retriable_errors"] = a.NonRetriableErrors
@@ -2418,9 +2110,9 @@ func createHistoryEventBatchBlob(
 
 func createTaskInfo(
 	result map[string]interface{},
-) *p.TaskInfo {
+) *p.InternalTaskInfo {
 
-	info := &p.TaskInfo{}
+	info := &p.InternalTaskInfo{}
 	for k, v := range result {
 		switch k {
 		case "domain_id":
@@ -2489,32 +2181,46 @@ func createReplicationInfo(
 	return info
 }
 
-func createReplicationInfoMap(
-	info *p.ReplicationInfo,
-) map[string]interface{} {
-
-	rInfoMap := make(map[string]interface{})
-	rInfoMap["version"] = info.Version
-	rInfoMap["last_event_id"] = info.LastEventID
-
-	return rInfoMap
+func createChecksum(result map[string]interface{}) checksum.Checksum {
+	csum := checksum.Checksum{}
+	if len(result) == 0 {
+		return csum
+	}
+	for k, v := range result {
+		switch k {
+		case "flavor":
+			csum.Flavor = checksum.Flavor(v.(int))
+		case "version":
+			csum.Version = v.(int)
+		case "value":
+			csum.Value = v.([]byte)
+		}
+	}
+	return csum
 }
 
-func isTimeoutError(err error) bool {
-	if err == gocql.ErrTimeoutNoResponse {
-		return true
+func convertCommonErrors(
+	errChecker gocql.ErrorChecker,
+	operation string,
+	err error,
+) error {
+	if errChecker.IsNotFoundError(err) {
+		return &types.EntityNotExistsError{
+			Message: fmt.Sprintf("%v failed. Error: %v ", operation, err),
+		}
 	}
-	if err == gocql.ErrConnectionClosed {
-		return true
-	}
-	_, ok := err.(*gocql.RequestErrWriteTimeout)
-	return ok
-}
 
-func isThrottlingError(err error) bool {
-	if req, ok := err.(gocql.RequestError); ok {
-		// gocql does not expose the constant errOverloaded = 0x1001
-		return req.Code() == 0x1001
+	if errChecker.IsTimeoutError(err) {
+		return &p.TimeoutError{Msg: fmt.Sprintf("%v timed out. Error: %v", operation, err)}
 	}
-	return false
+
+	if errChecker.IsThrottlingError(err) {
+		return &types.ServiceBusyError{
+			Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
+		}
+	}
+
+	return &types.InternalServiceError{
+		Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
+	}
 }

@@ -21,9 +21,11 @@
 package matching
 
 import (
+	"sync/atomic"
+	"time"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/resource"
@@ -34,9 +36,11 @@ import (
 // Service represents the cadence-matching service
 type Service struct {
 	resource.Resource
-	config *Config
 
-	stopC chan struct{}
+	status  int32
+	handler *handlerImpl
+	stopC   chan struct{}
+	config  *Config
 }
 
 // NewService builds a new cadence-matching service
@@ -44,10 +48,18 @@ func NewService(
 	params *service.BootstrapParams,
 ) (resource.Resource, error) {
 
-	serviceConfig := NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger))
+	serviceConfig := NewConfig(
+		dynamicconfig.NewCollection(
+			params.DynamicConfig,
+			params.Logger,
+			dynamicconfig.ClusterNameFilter(params.ClusterMetadata.GetCurrentClusterName()),
+		),
+	)
 	serviceResource, err := resource.New(
 		params,
 		common.MatchingServiceName,
+		serviceConfig.PersistenceMaxQPS,
+		serviceConfig.PersistenceGlobalMaxQPS,
 		serviceConfig.ThrottledLogRPS,
 		func(
 			persistenceBean persistenceClient.Bean,
@@ -62,6 +74,7 @@ func NewService(
 
 	return &Service{
 		Resource: serviceResource,
+		status:   common.DaemonStatusInitialized,
 		config:   serviceConfig,
 		stopC:    make(chan struct{}),
 	}, nil
@@ -69,24 +82,43 @@ func NewService(
 
 // Start starts the service
 func (s *Service) Start() {
+	if !atomic.CompareAndSwapInt32(&s.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
 
 	logger := s.GetLogger()
-	logger.Info("matching starting", tag.Service(common.MatchingServiceName))
+	logger.Info("matching starting")
 
-	handler := NewHandler(s, s.config)
-	handler.RegisterHandler()
+	s.handler = NewHandler(s, s.config)
+
+	thriftHandler := NewThriftHandler(s.handler)
+	thriftHandler.register(s.GetDispatcher())
 
 	// must start base service first
 	s.Resource.Start()
-	handler.Start()
+	s.handler.Start()
 
-	logger.Info("matching started", tag.Service(common.MatchingServiceName))
+	logger.Info("matching started")
+
 	<-s.stopC
-	s.Resource.Stop()
 }
 
 // Stop stops the service
 func (s *Service) Stop() {
+	if !atomic.CompareAndSwapInt32(&s.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
+	}
+
+	// remove self from membership ring and wait for traffic to drain
+	s.GetLogger().Info("ShutdownHandler: Evicting self from membership ring")
+	s.GetMembershipMonitor().EvictSelf()
+	s.GetLogger().Info("ShutdownHandler: Waiting for others to discover I am unhealthy")
+	time.Sleep(s.config.ShutdownDrainDuration())
+
 	close(s.stopC)
-	s.GetLogger().Info("matching stopped", tag.Service(common.MatchingServiceName))
+
+	s.handler.Stop()
+	s.Resource.Stop()
+
+	s.GetLogger().Info("matching stopped")
 }

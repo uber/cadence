@@ -25,12 +25,11 @@ import (
 	"errors"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
-
 	"golang.org/x/time/rate"
 
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/types"
 )
 
 // TaskMatcher matches a task producer with a task consumer
@@ -79,9 +78,27 @@ func newTaskMatcher(config *taskListConfig, fwdr *Forwarder, scopeFunc func() me
 // If the task is successfully matched with a consumer, this
 // method will return true and no error. If the task is matched
 // but consumer returned error, then this method will return
-// true and error message. Both regular tasks and query tasks
-// should use this method to match with a consumer. Likewise, sync matches
-// and non-sync matches both should use this method.
+// true and error message. This method should not be used for query
+// task. This method should ONLY be used for sync match.
+//
+// When a local poller is not available and forwarding to a parent
+// task list partition is possible, this method will attempt forwarding
+// to the parent partition.
+//
+// Cases when this method will block:
+//
+// Ratelimit:
+// When a ratelimit token is not available, this method might block
+// waiting for a token until the provided context timeout. Rate limits are
+// not enforced for forwarded tasks from child partition.
+//
+// Forwarded tasks that originated from db backlog:
+// When this method is called with a task that is forwarded from a
+// remote partition and if (1) this task list is root (2) task
+// was from db backlog - this method will block until context timeout
+// trying to match with a poller. The caller is expected to set the
+// correct context timeout.
+//
 // returns error when:
 //  - ratelimit is exceeded (does not apply to query task)
 //  - context deadline is exceeded
@@ -92,7 +109,7 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *internalTask) (bool, err
 	if !task.isForwarded() {
 		rsv, err = tm.ratelimit(ctx)
 		if err != nil {
-			tm.scope().IncCounter(metrics.SyncThrottleCounter)
+			tm.scope().IncCounter(metrics.SyncThrottlePerTaskListCounter)
 			return false, err
 		}
 	}
@@ -108,7 +125,7 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *internalTask) (bool, err
 		return false, nil
 	default:
 		// no poller waiting for tasks, try forwarding this task to the
-		// root partition if available
+		// root partition if possible
 		select {
 		case token := <-tm.fwdrAddReqTokenC():
 			if err := tm.fwdr.ForwardTask(ctx, task); err == nil {
@@ -118,6 +135,13 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *internalTask) (bool, err
 			}
 			token.release()
 		default:
+			if !tm.isForwardingAllowed() && // we are the root partition and forwarding is not possible
+				task.source == types.TaskSourceDbBacklog && // task was from backlog (stored in db)
+				task.isForwarded() { // task came from a child partition
+				// a forwarded backlog task from a child partition, block trying
+				// to match with a poller until ctx timeout
+				return tm.offerOrTimeout(ctx, task)
+			}
 		}
 
 		if rsv != nil {
@@ -129,10 +153,27 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *internalTask) (bool, err
 	}
 }
 
+func (tm *TaskMatcher) offerOrTimeout(ctx context.Context, task *internalTask) (bool, error) {
+	select {
+	case tm.taskC <- task: // poller picked up the task
+		if task.responseC != nil {
+			select {
+			case err := <-task.responseC:
+				return true, err
+			case <-ctx.Done():
+				return false, nil
+			}
+		}
+		return false, nil
+	case <-ctx.Done():
+		return false, nil
+	}
+}
+
 // OfferQuery will either match task to local poller or will forward query task.
 // Local match is always attempted before forwarding is attempted. If local match occurs
 // response and error are both nil, if forwarding occurs then response or error is returned.
-func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask) (*shared.QueryWorkflowResponse, error) {
+func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask) (*types.QueryWorkflowResponse, error) {
 	select {
 	case tm.queryTaskC <- task:
 		<-task.responseC
@@ -200,15 +241,21 @@ forLoop:
 				// hoping for a local poller match
 				select {
 				case tm.taskC <- task:
+					cancel()
 					return nil
 				case <-childCtx.Done():
 				case <-ctx.Done():
+					cancel()
 					return ctx.Err()
 				}
 				cancel()
 				continue forLoop
 			}
 			cancel()
+			// at this point, we forwarded the task to a parent partition which
+			// in turn dispatched the task to a poller. Make sure we delete the
+			// task from the database
+			task.finish(nil)
 			return nil
 		case <-ctx.Done():
 			return ctx.Err()
@@ -270,16 +317,16 @@ func (tm *TaskMatcher) pollOrForward(
 	select {
 	case task := <-taskC:
 		if task.responseC != nil {
-			tm.scope().IncCounter(metrics.PollSuccessWithSyncCounter)
+			tm.scope().IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		}
-		tm.scope().IncCounter(metrics.PollSuccessCounter)
+		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
 		return task, nil
 	case task := <-queryTaskC:
-		tm.scope().IncCounter(metrics.PollSuccessWithSyncCounter)
-		tm.scope().IncCounter(metrics.PollSuccessCounter)
+		tm.scope().IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
+		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
 		return task, nil
 	case <-ctx.Done():
-		tm.scope().IncCounter(metrics.PollTimeoutCounter)
+		tm.scope().IncCounter(metrics.PollTimeoutPerTaskListCounter)
 		return nil, ErrNoTasks
 	case token := <-tm.fwdrPollReqTokenC():
 		if task, err := tm.fwdr.ForwardPoll(ctx); err == nil {
@@ -299,16 +346,16 @@ func (tm *TaskMatcher) poll(
 	select {
 	case task := <-taskC:
 		if task.responseC != nil {
-			tm.scope().IncCounter(metrics.PollSuccessWithSyncCounter)
+			tm.scope().IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		}
-		tm.scope().IncCounter(metrics.PollSuccessCounter)
+		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
 		return task, nil
 	case task := <-queryTaskC:
-		tm.scope().IncCounter(metrics.PollSuccessWithSyncCounter)
-		tm.scope().IncCounter(metrics.PollSuccessCounter)
+		tm.scope().IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
+		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
 		return task, nil
 	case <-ctx.Done():
-		tm.scope().IncCounter(metrics.PollTimeoutCounter)
+		tm.scope().IncCounter(metrics.PollTimeoutPerTaskListCounter)
 		return nil, ErrNoTasks
 	}
 }
@@ -321,13 +368,13 @@ func (tm *TaskMatcher) pollNonBlocking(
 	select {
 	case task := <-taskC:
 		if task.responseC != nil {
-			tm.scope().IncCounter(metrics.PollSuccessWithSyncCounter)
+			tm.scope().IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		}
-		tm.scope().IncCounter(metrics.PollSuccessCounter)
+		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
 		return task, nil
 	case task := <-queryTaskC:
-		tm.scope().IncCounter(metrics.PollSuccessWithSyncCounter)
-		tm.scope().IncCounter(metrics.PollSuccessCounter)
+		tm.scope().IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
+		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
 		return task, nil
 	default:
 		return nil, ErrNoTasks
@@ -374,4 +421,8 @@ func (tm *TaskMatcher) ratelimit(ctx context.Context) (*rate.Reservation, error)
 
 	time.Sleep(rsv.Delay())
 	return rsv, nil
+}
+
+func (tm *TaskMatcher) isForwardingAllowed() bool {
+	return tm.fwdr != nil
 }

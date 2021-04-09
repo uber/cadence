@@ -28,10 +28,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -68,78 +68,102 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 
 	serializer := NewPayloadSerializer()
 
-	event0 := &workflow.HistoryEvent{
-		EventId:   common.Int64Ptr(999),
+	event0 := &types.HistoryEvent{
+		EventID:   999,
 		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-		EventType: common.EventTypePtr(workflow.EventTypeActivityTaskCompleted),
-		ActivityTaskCompletedEventAttributes: &workflow.ActivityTaskCompletedEventAttributes{
+		EventType: types.EventTypeActivityTaskCompleted.Ptr(),
+		ActivityTaskCompletedEventAttributes: &types.ActivityTaskCompletedEventAttributes{
 			Result:           []byte("result-1-event-1"),
-			ScheduledEventId: common.Int64Ptr(4),
-			StartedEventId:   common.Int64Ptr(5),
-			Identity:         common.StringPtr("event-1"),
+			ScheduledEventID: 4,
+			StartedEventID:   5,
+			Identity:         "event-1",
 		},
 	}
 
-	history0 := &workflow.History{Events: []*workflow.HistoryEvent{event0, event0}}
+	history0 := &types.History{Events: []*types.HistoryEvent{event0, event0}}
 
 	memoFields := map[string][]byte{
 		"TestField": []byte(`Test binary`),
 	}
-	memo0 := &workflow.Memo{Fields: memoFields}
+	memo0 := &types.Memo{Fields: memoFields}
 
-	resetPoints0 := &workflow.ResetPoints{
-		Points: []*workflow.ResetPointInfo{
+	resetPoints0 := &types.ResetPoints{
+		Points: []*types.ResetPointInfo{
 			{
-				BinaryChecksum:           common.StringPtr("bad-binary-cs"),
-				RunId:                    common.StringPtr("test-run-id"),
-				FirstDecisionCompletedId: common.Int64Ptr(123),
+				BinaryChecksum:           "bad-binary-cs",
+				RunID:                    "test-run-id",
+				FirstDecisionCompletedID: 123,
 				CreatedTimeNano:          common.Int64Ptr(456),
 				ExpiringTimeNano:         common.Int64Ptr(789),
-				Resettable:               common.BoolPtr(true),
+				Resettable:               true,
 			},
 		},
 	}
 
-	badBinaries0 := &workflow.BadBinaries{
-		Binaries: map[string]*workflow.BadBinaryInfo{
+	badBinaries0 := &types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
 			"bad-binary-cs": {
 				CreatedTimeNano: common.Int64Ptr(456),
-				Operator:        common.StringPtr("test-operattor"),
-				Reason:          common.StringPtr("test-reason"),
+				Operator:        "test-operattor",
+				Reason:          "test-reason",
 			},
 		},
 	}
 
-	histories := &workflow.VersionHistories{
-		Histories: []*workflow.VersionHistory{
+	histories := &types.VersionHistories{
+		Histories: []*types.VersionHistory{
 			{
 				BranchToken: []byte{1},
-				Items: []*workflow.VersionHistoryItem{
+				Items: []*types.VersionHistoryItem{
 					{
-						EventID: common.Int64Ptr(1),
-						Version: common.Int64Ptr(0),
+						EventID: 1,
+						Version: 0,
 					},
 					{
-						EventID: common.Int64Ptr(2),
-						Version: common.Int64Ptr(1),
+						EventID: 2,
+						Version: 1,
 					},
 				},
 			},
 			{
 				BranchToken: []byte{2},
-				Items: []*workflow.VersionHistoryItem{
+				Items: []*types.VersionHistoryItem{
 					{
-						EventID: common.Int64Ptr(2),
-						Version: common.Int64Ptr(0),
+						EventID: 2,
+						Version: 0,
 					},
 					{
-						EventID: common.Int64Ptr(3),
-						Version: common.Int64Ptr(1),
+						EventID: 3,
+						Version: 1,
 					},
 				},
 			},
 		},
 	}
+
+	domainFilter := &types.DomainFilter{
+		DomainIDs:    []string{"domain1", "domain2"},
+		ReverseMatch: true,
+	}
+	processingQueueStateMap := map[string][]*types.ProcessingQueueState{
+		"cluster1": {
+			&types.ProcessingQueueState{
+				Level:        common.Int32Ptr(0),
+				AckLevel:     common.Int64Ptr(1),
+				MaxLevel:     common.Int64Ptr(2),
+				DomainFilter: domainFilter,
+			},
+		},
+		"cluster2": {
+			&types.ProcessingQueueState{
+				Level:        common.Int32Ptr(3),
+				AckLevel:     common.Int64Ptr(4),
+				MaxLevel:     common.Int64Ptr(5),
+				DomainFilter: domainFilter,
+			},
+		},
+	}
+	processingQueueStates := &types.ProcessingQueueStates{StatesByCluster: processingQueueStateMap}
 
 	for i := 0; i < concurrency; i++ {
 
@@ -243,15 +267,15 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 
 			event1, err := serializer.DeserializeEvent(dJSON)
 			s.Nil(err)
-			s.True(event0.Equals(event1))
+			s.Equal(event0, event1)
 
 			event2, err := serializer.DeserializeEvent(dThrift)
 			s.Nil(err)
-			s.True(event0.Equals(event2))
+			s.Equal(event0, event2)
 
 			event3, err := serializer.DeserializeEvent(dEmpty)
 			s.Nil(err)
-			s.True(event0.Equals(event3))
+			s.Equal(event0, event3)
 
 			// deserialize batch events
 
@@ -260,36 +284,36 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			s.Nil(dNilEvents)
 
 			events, err := serializer.DeserializeBatchEvents(dsJSON)
-			history1 := &workflow.History{Events: events}
+			history1 := &types.History{Events: events}
 			s.Nil(err)
-			s.True(history0.Equals(history1))
+			s.Equal(history0, history1)
 
 			events, err = serializer.DeserializeBatchEvents(dsThrift)
-			history2 := &workflow.History{Events: events}
+			history2 := &types.History{Events: events}
 			s.Nil(err)
-			s.True(history0.Equals(history2))
+			s.Equal(history0, history2)
 
 			events, err = serializer.DeserializeBatchEvents(dsEmpty)
-			history3 := &workflow.History{Events: events}
+			history3 := &types.History{Events: events}
 			s.Nil(err)
-			s.True(history0.Equals(history3))
+			s.Equal(history0, history3)
 
 			// deserialize visibility memo
 
 			dNilMemo, err := serializer.DeserializeVisibilityMemo(nilMemo)
 			s.Nil(err)
-			s.Equal(&workflow.Memo{}, dNilMemo)
+			s.Equal(&types.Memo{}, dNilMemo)
 
 			memo1, err := serializer.DeserializeVisibilityMemo(mJSON)
 			s.Nil(err)
-			s.True(memo0.Equals(memo1))
+			s.Equal(memo0, memo1)
 
 			memo2, err := serializer.DeserializeVisibilityMemo(mThrift)
 			s.Nil(err)
-			s.True(memo0.Equals(memo2))
+			s.Equal(memo0, memo2)
 			memo3, err := serializer.DeserializeVisibilityMemo(mEmpty)
 			s.Nil(err)
-			s.True(memo0.Equals(memo3))
+			s.Equal(memo0, memo3)
 
 			// serialize reset points
 
@@ -318,23 +342,23 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 
 			dNilResetPoints1, err := serializer.DeserializeResetPoints(nil)
 			s.Nil(err)
-			s.Equal(&workflow.ResetPoints{}, dNilResetPoints1)
+			s.Equal(&types.ResetPoints{}, dNilResetPoints1)
 
 			dNilResetPoints2, err := serializer.DeserializeResetPoints(nilResetPoints)
 			s.Nil(err)
-			s.Equal(&workflow.ResetPoints{}, dNilResetPoints2)
+			s.Equal(&types.ResetPoints{}, dNilResetPoints2)
 
 			resetPoints1, err := serializer.DeserializeResetPoints(resetPointsJSON)
 			s.Nil(err)
-			s.True(resetPoints1.Equals(resetPoints0))
+			s.Equal(resetPoints1, resetPoints0)
 
 			resetPoints2, err := serializer.DeserializeResetPoints(resetPointsThrift)
 			s.Nil(err)
-			s.True(resetPoints2.Equals(resetPoints0))
+			s.Equal(resetPoints2, resetPoints0)
 
 			resetPoints3, err := serializer.DeserializeResetPoints(resetPointsEmpty)
 			s.Nil(err)
-			s.True(resetPoints3.Equals(resetPoints0))
+			s.Equal(resetPoints3, resetPoints0)
 
 			// serialize bad binaries
 
@@ -363,45 +387,91 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 
 			dNilBadBinaries1, err := serializer.DeserializeBadBinaries(nil)
 			s.Nil(err)
-			s.Equal(&workflow.BadBinaries{}, dNilBadBinaries1)
+			s.Equal(&types.BadBinaries{}, dNilBadBinaries1)
 
 			dNilBadBinaries2, err := serializer.DeserializeBadBinaries(nilBadBinaries)
 			s.Nil(err)
-			s.Equal(&workflow.BadBinaries{}, dNilBadBinaries2)
+			s.Equal(&types.BadBinaries{}, dNilBadBinaries2)
 
 			badBinaries1, err := serializer.DeserializeBadBinaries(badBinariesJSON)
 			s.Nil(err)
-			s.True(badBinaries1.Equals(badBinaries0))
+			s.Equal(badBinaries1, badBinaries0)
 
 			badBinaries2, err := serializer.DeserializeBadBinaries(badBinariesThrift)
 			s.Nil(err)
-			s.True(badBinaries2.Equals(badBinaries0))
+			s.Equal(badBinaries2, badBinaries0)
 
 			badBinaries3, err := serializer.DeserializeBadBinaries(badBinariesEmpty)
 			s.Nil(err)
-			s.True(badBinaries3.Equals(badBinaries0))
+			s.Equal(badBinaries3, badBinaries0)
 
 			// serialize version histories
 
 			dNilHistories, err := serializer.DeserializeVersionHistories(nil)
 			s.Nil(err)
-			s.Equal(&workflow.VersionHistories{}, dNilHistories)
+			s.Equal(&types.VersionHistories{}, dNilHistories)
 
 			dNilHistories2, err := serializer.DeserializeVersionHistories(nilHistories)
 			s.Nil(err)
-			s.Equal(&workflow.VersionHistories{}, dNilHistories2)
+			s.Equal(&types.VersionHistories{}, dNilHistories2)
 
 			dHistoriesJSON, err := serializer.DeserializeVersionHistories(historiesJSON)
 			s.Nil(err)
-			s.True(dHistoriesJSON.Equals(histories))
+			s.Equal(dHistoriesJSON, histories)
 
 			dHistoriesThrift, err := serializer.DeserializeVersionHistories(historiesThrift)
 			s.Nil(err)
-			s.True(dHistoriesThrift.Equals(histories))
+			s.Equal(dHistoriesThrift, histories)
 
 			dHistoriesEmpty, err := serializer.DeserializeVersionHistories(historiesEmpty)
 			s.Nil(err)
-			s.True(dHistoriesEmpty.Equals(histories))
+			s.Equal(dHistoriesEmpty, histories)
+
+			// serialize processing queue states
+
+			nilProcessingQueueStates, err := serializer.SerializeProcessingQueueStates(nil, common.EncodingTypeThriftRW)
+			s.Nil(err)
+			s.Nil(nilProcessingQueueStates)
+
+			_, err = serializer.SerializeProcessingQueueStates(processingQueueStates, common.EncodingTypeGob)
+			s.NotNil(err)
+			_, ok = err.(*UnknownEncodingTypeError)
+			s.True(ok)
+
+			processingQueueStatesJSON, err := serializer.SerializeProcessingQueueStates(processingQueueStates, common.EncodingTypeJSON)
+			s.Nil(err)
+			s.NotNil(processingQueueStatesJSON)
+
+			processingQueueStatesThrift, err := serializer.SerializeProcessingQueueStates(processingQueueStates, common.EncodingTypeThriftRW)
+			s.Nil(err)
+			s.NotNil(processingQueueStatesThrift)
+
+			processingQueueStatesEmpty, err := serializer.SerializeProcessingQueueStates(processingQueueStates, common.EncodingType(""))
+			s.Nil(err)
+			s.NotNil(processingQueueStatesEmpty)
+
+			// deserialize processing queue states
+
+			dNilProcessingQueueStates1, err := serializer.DeserializeProcessingQueueStates(nil)
+			s.Nil(err)
+			s.Nil(dNilProcessingQueueStates1)
+
+			dNilProcessingQueueStates2, err := serializer.DeserializeProcessingQueueStates(nilProcessingQueueStates)
+			s.Nil(err)
+			s.Nil(dNilProcessingQueueStates2)
+
+			dProcessingQueueStatesJSON, err := serializer.DeserializeProcessingQueueStates(processingQueueStatesJSON)
+			s.Nil(err)
+			s.Equal(dProcessingQueueStatesJSON, processingQueueStates)
+
+			dProcessingQueueStatesThrift, err := serializer.DeserializeProcessingQueueStates(processingQueueStatesThrift)
+			s.Nil(err)
+			s.Equal(dProcessingQueueStatesThrift, processingQueueStates)
+
+			dProcessingQueueStatesEmpty, err := serializer.DeserializeProcessingQueueStates(processingQueueStatesEmpty)
+			s.Nil(err)
+			s.Equal(dProcessingQueueStatesEmpty, processingQueueStates)
+
 		}()
 	}
 

@@ -21,13 +21,14 @@
 package sql
 
 import (
+	"fmt"
 	"sync"
 
-	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence/serialization"
+
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/sql/storage"
-	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/service/config"
 )
 
@@ -38,6 +39,7 @@ type (
 		dbConn      dbConn
 		clusterName string
 		logger      log.Logger
+		parser      serialization.Parser
 	}
 
 	// dbConn represents a logical mysql connection - its a
@@ -45,7 +47,7 @@ type (
 	// additional reference counting
 	dbConn struct {
 		sync.Mutex
-		sqldb.Interface
+		sqlplugin.DB
 		refCnt int
 		cfg    *config.SQL
 	}
@@ -53,12 +55,18 @@ type (
 
 // NewFactory returns an instance of a factory object which can be used to create
 // datastores backed by any kind of SQL store
-func NewFactory(cfg config.SQL, clusterName string, logger log.Logger) *Factory {
+func NewFactory(
+	cfg config.SQL,
+	clusterName string,
+	logger log.Logger,
+	parser serialization.Parser,
+) *Factory {
 	return &Factory{
 		cfg:         cfg,
 		clusterName: clusterName,
 		logger:      logger,
 		dbConn:      newRefCountedDBConn(&cfg),
+		parser:      parser,
 	}
 }
 
@@ -68,7 +76,7 @@ func (f *Factory) NewTaskStore() (p.TaskStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newTaskPersistence(conn, f.cfg.NumShards, f.logger)
+	return newTaskPersistence(conn, f.cfg.NumShards, f.logger, f.parser)
 }
 
 // NewShardStore returns a new shard store
@@ -77,7 +85,7 @@ func (f *Factory) NewShardStore() (p.ShardStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newShardPersistence(conn, f.clusterName, f.logger)
+	return newShardPersistence(conn, f.clusterName, f.logger, f.parser)
 }
 
 // NewHistoryV2Store returns a new history store
@@ -86,7 +94,7 @@ func (f *Factory) NewHistoryV2Store() (p.HistoryStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newHistoryV2Persistence(conn, f.logger)
+	return newHistoryV2Persistence(conn, f.logger, f.parser)
 }
 
 // NewMetadataStore returns a new metadata store
@@ -95,7 +103,7 @@ func (f *Factory) NewMetadataStore() (p.MetadataStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newMetadataPersistenceV2(conn, f.clusterName, f.logger)
+	return newMetadataPersistenceV2(conn, f.clusterName, f.logger, f.parser)
 }
 
 // NewExecutionStore returns an ExecutionStore for a given shardID
@@ -104,16 +112,17 @@ func (f *Factory) NewExecutionStore(shardID int) (p.ExecutionStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewSQLExecutionStore(conn, f.logger, shardID)
+	return NewSQLExecutionStore(conn, f.logger, shardID, f.parser)
 }
 
 // NewVisibilityStore returns a visibility store
-func (f *Factory) NewVisibilityStore() (p.VisibilityStore, error) {
+// TODO sortByCloseTime will be removed and implemented for https://github.com/uber/cadence/issues/3621
+func (f *Factory) NewVisibilityStore(sortByCloseTime bool) (p.VisibilityStore, error) {
 	return NewSQLVisibilityStore(f.cfg, f.logger)
 }
 
 // NewQueue returns a new queue backed by sql
-func (f *Factory) NewQueue(queueType common.QueueType) (p.Queue, error) {
+func (f *Factory) NewQueue(queueType p.QueueType) (p.Queue, error) {
 	conn, err := f.dbConn.get()
 	if err != nil {
 		return nil, err
@@ -138,15 +147,15 @@ func newRefCountedDBConn(cfg *config.SQL) dbConn {
 // get returns a mysql db connection and increments a reference count
 // this method will create a new connection, if an existing connection
 // does not exist
-func (c *dbConn) get() (sqldb.Interface, error) {
+func (c *dbConn) get() (sqlplugin.DB, error) {
 	c.Lock()
 	defer c.Unlock()
 	if c.refCnt == 0 {
-		conn, err := storage.NewSQLDB(c.cfg)
+		conn, err := NewSQLDB(c.cfg)
 		if err != nil {
 			return nil, err
 		}
-		c.Interface = conn
+		c.DB = conn
 	}
 	c.refCnt++
 	return c, nil
@@ -156,8 +165,12 @@ func (c *dbConn) get() (sqldb.Interface, error) {
 func (c *dbConn) forceClose() {
 	c.Lock()
 	defer c.Unlock()
-	if c.Interface != nil {
-		c.Interface.Close()
+	if c.DB != nil {
+		err := c.DB.Close()
+		if err != nil {
+			fmt.Println("failed to close database connection, may leak some connection", err)
+		}
+
 	}
 	c.refCnt = 0
 }
@@ -168,8 +181,8 @@ func (c *dbConn) Close() error {
 	defer c.Unlock()
 	c.refCnt--
 	if c.refCnt == 0 {
-		err := c.Interface.Close()
-		c.Interface = nil
+		err := c.DB.Close()
+		c.DB = nil
 		return err
 	}
 	return nil

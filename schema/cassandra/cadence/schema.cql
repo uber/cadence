@@ -1,22 +1,34 @@
 CREATE TYPE shard (
-  shard_id                    int,
-  owner                       text, -- Host identifier processing the shard
+  shard_id                          int,
+  owner                             text, -- Host identifier processing the shard
   -- Range identifier used for generating ack ids for tasks within shard.
   -- Also used for optimistic concurrency and all writes to a shard are conditional on this value.
-  range_id                    bigint,
+  range_id                          bigint, -- TO BE DEPRECATED, IN FAVOR OF range_id column in executions table
   -- This field keeps track of number of times owner for a shard changes before updating range_id or ack_levels
-  stolen_since_renew          int,
-  updated_at                  timestamp,
-  replication_ack_level       bigint,
-  transfer_ack_level          bigint, -- TO BE DEPRECATED, IN FAVOR OF cluster_transfer_ack_level
-  timer_ack_level             timestamp, -- TO BE DEPRECATED, IN FAVOR OF cluster_timer_ack_level
+  stolen_since_renew                int,
+  updated_at                        timestamp,
+  replication_ack_level             bigint,
+  transfer_ack_level                bigint, -- TO BE DEPRECATED, IN FAVOR OF cluster_transfer_ack_level
+  timer_ack_level                   timestamp, -- TO BE DEPRECATED, IN FAVOR OF cluster_timer_ack_level
   -- Mapping of cluster to corresponding transfer ack level
-  cluster_transfer_ack_level  map<text, bigint>,
+  cluster_transfer_ack_level        map<text, bigint>, -- TO BE DEPRECATED, IN FAVOR OF transfer_processing_queue_states
   -- Mapping of cluster to corresponding timer ack level
-  cluster_timer_ack_level     map<text, timestamp>,
-  domain_notification_version bigint, -- the global domain change version this shard is aware of
+  cluster_timer_ack_level           map<text, timestamp>, -- TO BE DEPRECATED, IN FAVOR OF timer_processing_queue_states
+  domain_notification_version       bigint, -- the global domain change version this shard is aware of
+  -- Mapping of cluster to corresponding list of transfer queue processing states
+  transfer_processing_queue_states  blob,
+  transfer_processing_queue_states_encoding  text,
+  -- Mapping of cluster to corresponding list of transfer queue processing states
+  timer_processing_queue_states     blob,
+  timer_processing_queue_states_encoding     text,
   -- Mapping of (remote) cluster to corresponding replication level (last replicated task_id)
-  cluster_replication_level   map<text, bigint>,
+  cluster_replication_level         map<text, bigint>,
+  -- Mapping of (remote) cluster to corresponding replication DLQ ack level (last replicated task_id)
+  replication_dlq_ack_level         map<text, bigint>,
+  -- Data blob of pending failover markers
+  pending_failover_markers          blob,
+  pending_failover_markers_encoding text
+
 );
 
 --- Workflow execution and mutable state ---
@@ -130,6 +142,7 @@ CREATE TYPE replication_task (
   new_run_event_store_version        int, -- indicates which version of event store to query for new run(continueAsNew)
   new_run_branch_token               blob, -- if eventV2, then query with this token for new run(continueAsNew)
   reset_workflow             boolean, -- whether the task is for resetWorkflowExecution
+  created_time               bigint, -- task creation timestamp
 );
 
 CREATE TYPE timer_task (
@@ -302,6 +315,12 @@ CREATE TYPE branch_range (
   end_node_id bigint, -- exclusive node_id to represent the stopping point for this range
 );
 
+CREATE TYPE checksum (
+  version int,  -- version of the payload used to generate checksum
+  flavor  int,  -- type of checksum e.g crc32OverThrift
+  value   blob, -- checksum bytes
+);
+
 CREATE TABLE executions (
   shard_id                       int,
   type                           int, -- enum RowType { Shard, Execution, TransferTask, TimerTask, ReplicationTask}
@@ -331,6 +350,7 @@ CREATE TABLE executions (
   workflow_state                 int,
   version_histories              blob, -- the metadata of history branching
   version_histories_encoding     text,
+  checksum                       frozen<checksum>,
   PRIMARY KEY  (shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id)
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
@@ -395,6 +415,9 @@ CREATE TABLE domains_by_name_v2 (
   config_version                bigint, -- indicating the version of domain config, excluding the failover / change of active cluster name
   failover_version              bigint, -- indicating the version of active domain only, used for domain failover
   failover_notification_version bigint, -- indicating the last change related to domain failover
+  previous_failover_version     bigint, -- indicating the previouse failover version for graceful failover
+  failover_end_time             bigint, -- indicating domain failover state
+  last_updated_time             bigint, -- indicating the domain last update timestamp
   notification_version          bigint,
   PRIMARY KEY (domains_partition, name)
 )  WITH COMPACTION = {
@@ -443,7 +466,7 @@ INSERT INTO domains (
 
 CREATE TABLE queue (
   queue_type      int,
-  message_id      int,
+  message_id      bigint,
   message_payload blob,
   PRIMARY KEY  (queue_type, message_id)
 ) WITH COMPACTION = {

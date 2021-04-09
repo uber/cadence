@@ -23,14 +23,10 @@ package cassandra
 import (
 	"sync"
 
-	"github.com/uber/cadence/common/cassandra"
-
-	"github.com/uber/cadence/common"
-
-	"github.com/gocql/gocql"
-
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/service/config"
 )
 
@@ -43,8 +39,10 @@ type (
 		logger           log.Logger
 		execStoreFactory *executionStoreFactory
 	}
+
 	executionStoreFactory struct {
-		session *gocql.Session
+		client  gocql.Client
+		session gocql.Session
 		logger  log.Logger
 	}
 )
@@ -52,6 +50,9 @@ type (
 // NewFactory returns an instance of a factory object which can be used to create
 // datastores that are backed by cassandra
 func NewFactory(cfg config.Cassandra, clusterName string, logger log.Logger) *Factory {
+	if cfg.CQLClient == nil {
+		cfg.CQLClient = gocql.NewClient()
+	}
 	return &Factory{
 		cfg:         cfg,
 		clusterName: clusterName,
@@ -89,12 +90,12 @@ func (f *Factory) NewExecutionStore(shardID int) (p.ExecutionStore, error) {
 }
 
 // NewVisibilityStore returns a visibility store
-func (f *Factory) NewVisibilityStore() (p.VisibilityStore, error) {
-	return newVisibilityPersistence(f.cfg, f.logger)
+func (f *Factory) NewVisibilityStore(sortByCloseTime bool) (p.VisibilityStore, error) {
+	return newVisibilityPersistence(sortByCloseTime, f.cfg, f.logger)
 }
 
 // NewQueue returns a new queue backed by cassandra
-func (f *Factory) NewQueue(queueType common.QueueType) (p.Queue, error) {
+func (f *Factory) NewQueue(queueType p.QueueType) (p.Queue, error) {
 	return newQueue(f.cfg, f.logger, queueType)
 }
 
@@ -129,17 +130,20 @@ func (f *Factory) executionStoreFactory() (*executionStoreFactory, error) {
 }
 
 // newExecutionStoreFactory is used to create an instance of ExecutionStoreFactory implementation
-func newExecutionStoreFactory(cfg config.Cassandra, logger log.Logger) (*executionStoreFactory, error) {
-	cluster := cassandra.NewCassandraCluster(cfg)
-	cluster.ProtoVersion = cassandraProtoVersion
-	cluster.Consistency = gocql.LocalQuorum
-	cluster.SerialConsistency = gocql.LocalSerial
-	cluster.Timeout = defaultSessionTimeout
-	session, err := cluster.CreateSession()
+func newExecutionStoreFactory(
+	cfg config.Cassandra,
+	logger log.Logger,
+) (*executionStoreFactory, error) {
+	session, err := cassandra.CreateSession(cfg)
 	if err != nil {
 		return nil, err
 	}
-	return &executionStoreFactory{session: session, logger: logger}, nil
+
+	return &executionStoreFactory{
+		client:  cfg.CQLClient,
+		session: session,
+		logger:  logger,
+	}, nil
 }
 
 func (f *executionStoreFactory) close() {
@@ -148,7 +152,7 @@ func (f *executionStoreFactory) close() {
 
 // new implements ExecutionStoreFactory interface
 func (f *executionStoreFactory) new(shardID int) (p.ExecutionStore, error) {
-	pmgr, err := NewWorkflowExecutionPersistence(shardID, f.session, f.logger)
+	pmgr, err := NewWorkflowExecutionPersistence(shardID, f.client, f.session, f.logger)
 	if err != nil {
 		return nil, err
 	}

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../LICENSE -package $GOPACKAGE -source $GOFILE -destination clientBean_mock.go -self_package github.com/uber/cadence/client
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination clientBean_mock.go -self_package github.com/uber/cadence/client
 
 package client
 
@@ -125,6 +125,7 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 		adminClient, err := factory.NewAdminClientWithTimeoutAndDispatcher(
 			info.RPCName,
 			admin.DefaultTimeout,
+			admin.DefaultLargeTimeout,
 			dispatcher,
 		)
 		if err != nil {
@@ -273,7 +274,7 @@ func (p *dnsDispatcherProvider) Get(serviceName string, address string) (*yarpc.
 	peerListUpdater.Start()
 	outbound := tchanTransport.NewOutbound(peerList)
 
-	p.logger.Info("Creating RPC dispatcher outbound", tag.Service(serviceName), tag.Address(address))
+	p.logger.Info("Creating RPC dispatcher outbound", tag.Address(address))
 
 	// Attach the outbound to the dispatcher (this will add middleware/logging/etc)
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{

@@ -26,11 +26,11 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -44,6 +44,7 @@ const (
 	// 3. SignalWorkflowExecution
 	// 4. RequestCancelWorkflowExecution
 	// 5. TerminateWorkflowExecution
+	// 6. QueryWorkflow
 	// please also reference selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs
 	DCRedirectionPolicySelectedAPIsForwarding = "selected-apis-forwarding"
 )
@@ -76,6 +77,8 @@ var selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs = map[string]struct{}
 	"SignalWorkflowExecution":          {},
 	"RequestCancelWorkflowExecution":   {},
 	"TerminateWorkflowExecution":       {},
+	"QueryWorkflow":                    {},
+	"ResetWorkflowExecution":           {},
 }
 
 // RedirectionPolicyGenerator generate corresponding redirection policy
@@ -152,7 +155,7 @@ func (policy *SelectedAPIsForwardingRedirectionPolicy) withRedirect(ctx context.
 }
 
 func (policy *SelectedAPIsForwardingRedirectionPolicy) isDomainNotActiveError(err error) (string, bool) {
-	domainNotActiveErr, ok := err.(*shared.DomainNotActiveError)
+	domainNotActiveErr, ok := err.(*types.DomainNotActiveError)
 	if !ok {
 		return "", false
 	}

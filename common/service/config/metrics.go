@@ -31,6 +31,8 @@ import (
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
+	mprom "github.com/uber/cadence/common/metrics/tally/prometheus"
 	statsdreporter "github.com/uber/cadence/common/metrics/tally/statsd"
 )
 
@@ -69,17 +71,19 @@ var (
 // only one of them will be used for
 // reporting. Currently, m3 is preferred
 // over statsd
-func (c *Metrics) NewScope(logger log.Logger) tally.Scope {
+func (c *Metrics) NewScope(logger log.Logger, service string) tally.Scope {
+	rootScope := tally.NoopScope
 	if c.M3 != nil {
-		return c.newM3Scope(logger)
+		rootScope = c.newM3Scope(logger)
 	}
 	if c.Statsd != nil {
-		return c.newStatsdScope(logger)
+		rootScope = c.newStatsdScope(logger)
 	}
 	if c.Prometheus != nil {
-		return c.newPrometheusScope(logger)
+		rootScope = c.newPrometheusScope(logger)
 	}
-	return tally.NoopScope
+	rootScope = rootScope.Tagged(map[string]string{metrics.CadenceServiceTagName: service})
+	return rootScope
 }
 
 // newM3Scope returns a new m3 scope with
@@ -92,6 +96,7 @@ func (c *Metrics) newM3Scope(logger log.Logger) tally.Scope {
 	scopeOpts := tally.ScopeOptions{
 		Tags:           c.Tags,
 		CachedReporter: reporter,
+		Prefix:         c.Prefix,
 	}
 	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
 	return scope
@@ -114,6 +119,7 @@ func (c *Metrics) newStatsdScope(logger log.Logger) tally.Scope {
 	scopeOpts := tally.ScopeOptions{
 		Tags:     c.Tags,
 		Reporter: reporter,
+		Prefix:   c.Prefix,
 	}
 	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
 	return scope
@@ -122,6 +128,9 @@ func (c *Metrics) newStatsdScope(logger log.Logger) tally.Scope {
 // newPrometheusScope returns a new prometheus scope with
 // a default reporting interval of a second
 func (c *Metrics) newPrometheusScope(logger log.Logger) tally.Scope {
+	if len(c.Prometheus.DefaultHistogramBuckets) == 0 {
+		c.Prometheus.DefaultHistogramBuckets = mprom.DefaultHistogramBuckets()
+	}
 	reporter, err := c.Prometheus.NewReporter(
 		prometheus.ConfigurationOptions{
 			Registry: prom.NewRegistry(),
@@ -138,6 +147,7 @@ func (c *Metrics) newPrometheusScope(logger log.Logger) tally.Scope {
 		CachedReporter:  reporter,
 		Separator:       prometheus.DefaultSeparator,
 		SanitizeOptions: &sanitizeOptions,
+		Prefix:          c.Prefix,
 	}
 	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
 	return scope

@@ -21,6 +21,7 @@
 package tasklist
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -36,6 +37,7 @@ import (
 type (
 	// Scavenger is the type that holds the state for task list scavenger daemon
 	Scavenger struct {
+		ctx      context.Context
 		db       p.TaskManager
 		executor executor.Executor
 		metrics  metrics.Client
@@ -99,11 +101,12 @@ var (
 // two conditions
 //  - either all task lists are processed successfully (or)
 //  - Stop() method is called to stop the scavenger
-func NewScavenger(db p.TaskManager, metricsClient metrics.Client, logger log.Logger) *Scavenger {
+func NewScavenger(ctx context.Context, db p.TaskManager, metricsClient metrics.Client, logger log.Logger) *Scavenger {
 	stopC := make(chan struct{})
 	taskExecutor := executor.NewFixedSizePoolExecutor(
 		taskListBatchSize, executorMaxDeferredTasks, metricsClient, metrics.TaskListScavengerScope)
 	return &Scavenger{
+		ctx:      ctx,
 		db:       db,
 		metrics:  metricsClient,
 		logger:   logger,

@@ -1,0 +1,155 @@
+// Copyright (c) 2020 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package uber.cadence.shared.v1;
+
+option go_package = "github.com/uber/cadence/.gen/proto/shared/v1;sharedv1";
+
+import "google/protobuf/timestamp.proto";
+import "uber/cadence/api/v1/common.proto";
+import "uber/cadence/api/v1/domain.proto";
+import "uber/cadence/shared/v1/history.proto";
+
+message ReplicationMessages {
+  repeated ReplicationTask replication_tasks = 1;
+
+  // This can be different than the last taskId in the above list,
+  //because sender can decide to skip tasks (e.g. for completed workflows).
+  int64 last_retrieved_message_id = 2;
+
+  // Hint for flow control.
+  bool has_more  = 3;
+
+  SyncShardStatus sync_shard_status = 4;
+}
+
+message ReplicationTask {
+  ReplicationTaskType task_type = 1;
+  int64 source_task_id = 2;
+  google.protobuf.Timestamp creation_time = 3;
+  oneof attributes {
+    DomainTaskAttributes domain_task_attributes = 4;
+    SyncShardStatusTaskAttributes sync_shard_status_task_attributes = 5;
+    SyncActivityTaskAttributes sync_activity_task_attributes = 6;
+    HistoryTaskV2Attributes history_task_v2_attributes = 7;
+    FailoverMarkerAttributes failover_marker_attributes = 8;
+  }
+}
+
+message DomainTaskAttributes {
+  DomainOperation domain_operation = 1;
+  string id = 2;
+  api.v1.Domain domain = 3;
+  int64 config_version = 4;
+  int64 failover_version = 5;
+  int64 previous_failover_version = 6;
+}
+
+message SyncShardStatusTaskAttributes {
+  string source_cluster = 1;
+  int32 shard_id = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+message SyncActivityTaskAttributes {
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  int64 version = 3;
+  int64 scheduled_id = 4;
+  google.protobuf.Timestamp scheduled_time = 5;
+  int64 started_id = 6;
+  google.protobuf.Timestamp started_time = 7;
+  google.protobuf.Timestamp last_heartbeat_time = 8;
+  api.v1.Payload details = 9;
+  int32 attempt = 10;
+  api.v1.Failure last_failure = 11;
+  string last_worker_identity = 12;
+  shared.v1.VersionHistory version_history = 13;
+}
+
+message HistoryTaskV2Attributes {
+  int64 task_id = 1;
+  string domain_id = 2;
+  api.v1.WorkflowExecution workflow_execution = 3;
+  repeated shared.v1.VersionHistoryItem version_history_items = 4;
+  api.v1.DataBlob events = 5;
+  // New run events does not need version history since there is no prior events.
+  api.v1.DataBlob new_run_events = 6;
+}
+
+message FailoverMarkerAttributes {
+  string domain_id = 1;
+  int64 failover_version = 2;
+  google.protobuf.Timestamp creation_time = 3;
+}
+
+message FailoverMarkerToken {
+  repeated int32 shard_ids = 1;
+  FailoverMarkerAttributes failover_marker = 2;
+}
+
+message ReplicationTaskInfo {
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  int32 task_type = 3;
+  int64 task_id = 4;
+  int64 version = 5;
+  int64 first_event_id = 6;
+  int64 next_event_id = 7;
+  int64 scheduled_id = 8;
+}
+
+enum ReplicationTaskType {
+  REPLICATION_TASK_TYPE_INVALID = 0;
+  REPLICATION_TASK_TYPE_DOMAIN = 1;
+  REPLICATION_TASK_TYPE_HISTORY = 2;
+  REPLICATION_TASK_TYPE_SYNC_SHARD_STATUS = 3;
+  REPLICATION_TASK_TYPE_SYNC_ACTIVITY = 4;
+  REPLICATION_TASK_TYPE_HISTORY_METADATA = 5;
+  REPLICATION_TASK_TYPE_HISTORY_V2 = 6;
+  REPLICATION_TASK_TYPE_FAILOVER_MARKER = 7;
+}
+
+enum DomainOperation {
+  DOMAIN_OPERATION_INVALID = 0;
+  DOMAIN_OPERATION_CREATE = 1;
+  DOMAIN_OPERATION_UPDATE = 2;
+}
+
+message ReplicationToken {
+  int32 shard_id = 1;
+  // lastRetrievedMessageId is where the next fetch should begin with.
+  int64 last_retrieved_message_id = 2;
+  // lastProcessedMessageId is the last messageId that is processed on the passive side.
+  // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.
+  int64 last_processed_message_id = 3;
+}
+
+message SyncShardStatus {
+  google.protobuf.Timestamp timestamp = 1;
+}
+
+enum DLQType {
+  DLQ_TYPE_INVALID = 0;
+  DLQ_TYPE_REPLICATION = 1;
+  DLQ_TYPE_DOMAIN = 2;
+}

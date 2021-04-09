@@ -1,0 +1,675 @@
+// Copyright (c) 2020 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package uber.cadence.history.v1;
+
+option go_package = "github.com/uber/cadence/.gen/proto/history/v1;historyv1";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "uber/cadence/api/v1/common.proto";
+import "uber/cadence/api/v1/history.proto";
+import "uber/cadence/api/v1/query.proto";
+import "uber/cadence/api/v1/tasklist.proto";
+import "uber/cadence/api/v1/workflow.proto";
+import "uber/cadence/api/v1/service_workflow.proto";
+import "uber/cadence/api/v1/service_worker.proto";
+import "uber/cadence/shared/v1/cluster.proto";
+import "uber/cadence/shared/v1/history.proto";
+import "uber/cadence/shared/v1/queue.proto";
+import "uber/cadence/shared/v1/replication.proto";
+import "uber/cadence/shared/v1/workflow.proto";
+
+
+// HistoryAPI provides API to start a new long running workflow instance, as well as query and update the history
+// of workflow instances already created.
+service HistoryAPI {
+  // StartWorkflowExecution starts a new long running workflow instance.  It will create the instance with
+  // 'WorkflowExecutionStarted' event in history and also schedule the first DecisionTask for the worker to make the
+  // first decision for this instance.  It will return 'WorkflowExecutionAlreadyStartedError', if an instance already
+  // exists with same workflowId.
+  rpc StartWorkflowExecution(StartWorkflowExecutionRequest) returns (StartWorkflowExecutionResponse);
+
+  // SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in
+  // WorkflowExecutionSignaled event recorded in the history and a decision task being created for the execution.
+  rpc SignalWorkflowExecution(SignalWorkflowExecutionRequest) returns (SignalWorkflowExecutionResponse);
+
+  // SignalWithStartWorkflowExecution is used to ensure sending a signal event to a workflow execution.
+  // If workflow is running, this results in WorkflowExecutionSignaled event recorded in the history
+  // and a decision task being created for the execution.
+  // If workflow is not running or not found, it will first try start workflow with given WorkflowIDReusePolicy,
+  // and record WorkflowExecutionStarted and WorkflowExecutionSignaled event in case of success.
+  // It will return `WorkflowExecutionAlreadyStartedError` if start workflow failed with given policy.
+  rpc SignalWithStartWorkflowExecution(SignalWithStartWorkflowExecutionRequest) returns (SignalWithStartWorkflowExecutionResponse);
+
+  // ResetWorkflowExecution reset an existing workflow execution by a firstEventID of a existing event batch
+  // in the history and immediately terminating the current execution instance.
+  // After reset, the history will grow from nextFirstEventID.
+  rpc ResetWorkflowExecution(ResetWorkflowExecutionRequest) returns (ResetWorkflowExecutionResponse);
+
+  // TerminateWorkflowExecution terminates an existing workflow execution by recording WorkflowExecutionTerminated event
+  // in the history and immediately terminating the execution instance.
+  rpc TerminateWorkflowExecution(TerminateWorkflowExecutionRequest) returns (TerminateWorkflowExecutionResponse);
+
+  // DescribeWorkflowExecution returns information about the specified workflow execution.
+  rpc DescribeWorkflowExecution(DescribeWorkflowExecutionRequest) returns (DescribeWorkflowExecutionResponse);
+
+  // QueryWorkflow returns query result for a specified workflow execution.
+  rpc QueryWorkflow(QueryWorkflowRequest) returns (QueryWorkflowResponse);
+
+  // Reset the sticky tasklist related information in mutable state of a given workflow.
+  // Things cleared are:
+  // 1. StickyTaskList
+  // 2. StickyScheduleToStartTimeout
+  // 3. ClientLibraryVersion
+  // 4. ClientFeatureVersion
+  // 5. ClientImpl
+  rpc ResetStickyTaskList(ResetStickyTaskListRequest) returns (ResetStickyTaskListResponse);
+
+  // Returns the information from mutable state of workflow execution.
+  // It fails with 'EntityNotExistError' if specified workflow execution in unknown to the service.
+  // It returns CurrentBranchChangedError if the workflow version branch has changed.
+  rpc GetMutableState(GetMutableStateRequest) returns (GetMutableStateResponse);
+
+  // Returns the information from mutable state of workflow execution.
+  // It fails with 'EntityNotExistError' if specified workflow execution in unknown to the service.
+  // It returns CurrentBranchChangedError if the workflow version branch has changed.
+  rpc PollMutableState(PollMutableStateRequest) returns (PollMutableStateResponse);
+
+  // RecordDecisionTaskStarted is called by the MatchingService before it hands a decision task to the application worker in response to
+  // a PollForDecisionTask call. It records in the history the event that the decision task has started. It will return 'EventAlreadyStartedError',
+  // if the workflow's execution history already includes a record of the event starting.
+  rpc RecordDecisionTaskStarted(RecordDecisionTaskStartedRequest) returns (RecordDecisionTaskStartedResponse);
+
+  // RespondDecisionTaskCompleted is called by application worker to complete a DecisionTask handed as a result of
+  // 'PollForDecisionTask' API call.  Completing a DecisionTask will result in new events for the workflow execution and
+  // potentially new ActivityTask being created for corresponding decisions.  It will also create a DecisionTaskCompleted
+  // event in the history for that session.  Use the 'taskToken' provided as response of PollForDecisionTask API call
+  // for completing the DecisionTask.
+  rpc RespondDecisionTaskCompleted(RespondDecisionTaskCompletedRequest) returns (RespondDecisionTaskCompletedResponse);
+
+  // RespondDecisionTaskFailed is called by application worker to indicate failure.  This results in
+  // DecisionTaskFailedEvent written to the history and a new DecisionTask created.  This API can be used by client to
+  // either clear sticky tasklist or report ny panics during DecisionTask processing.
+  rpc RespondDecisionTaskFailed(RespondDecisionTaskFailedRequest) returns (RespondDecisionTaskFailedResponse);
+
+  // RecordActivityTaskStarted is called by the MatchingService before it hands a decision task to the application worker in response to
+  // a PollForActivityTask call. It records in the history the event that the decision task has started. It will return 'EventAlreadyStartedError',
+  // if the workflow's execution history already includes a record of the event starting.
+  rpc RecordActivityTaskStarted(RecordActivityTaskStartedRequest) returns (RecordActivityTaskStartedResponse);
+
+  // RespondActivityTaskCompleted is called by application worker when it is done processing an ActivityTask.  It will
+  // result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask
+  // created for the workflow so new decisions could be made.  Use the 'taskToken' provided as response of
+  // PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
+  // anymore due to activity timeout.
+  rpc RespondActivityTaskCompleted(RespondActivityTaskCompletedRequest) returns (RespondActivityTaskCompletedResponse);
+
+  // RespondActivityTaskFailed is called by application worker when it is done processing an ActivityTask.  It will
+  // result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask
+  // created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of
+  // PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
+  // anymore due to activity timeout.
+  rpc RespondActivityTaskFailed(RespondActivityTaskFailedRequest) returns (RespondActivityTaskFailedResponse);
+
+  // RespondActivityTaskCanceled is called by application worker when it is successfully canceled an ActivityTask.  It will
+  // result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask
+  // created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of
+  // PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
+  // anymore due to activity timeout.
+  rpc RespondActivityTaskCanceled(RespondActivityTaskCanceledRequest) returns (RespondActivityTaskCanceledResponse);
+
+  // RecordActivityTaskHeartbeat is called by application worker while it is processing an ActivityTask.  If worker fails
+  // to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as timed out and
+  // 'ActivityTaskTimedOut' event will be written to the workflow history.  Calling 'RecordActivityTaskHeartbeat' will
+  // fail with 'EntityNotExistsError' in such situations.  Use the 'taskToken' provided as response of
+  // PollForActivityTask API call for heart beating.
+  rpc RecordActivityTaskHeartbeat(RecordActivityTaskHeartbeatRequest) returns (RecordActivityTaskHeartbeatResponse);
+
+  // RequestCancelWorkflowExecution is called by application worker when it wants to request cancellation of a workflow instance.
+  // It will result in a new 'WorkflowExecutionCancelRequested' event being written to the workflow history and a new DecisionTask
+  // created for the workflow instance so new decisions could be made. It fails with 'EntityNotExistsError' if the workflow is not valid
+  // anymore due to completion or doesn't exist.
+  rpc RequestCancelWorkflowExecution(RequestCancelWorkflowExecutionRequest) returns (RequestCancelWorkflowExecutionResponse);
+
+  // RemoveSignalMutableState is used to remove a signal request ID that was previously recorded.  This is currently
+  // used to clean execution info when signal decision finished.
+  rpc RemoveSignalMutableState(RemoveSignalMutableStateRequest) returns (RemoveSignalMutableStateResponse);
+
+  // ScheduleDecisionTask is used for creating a decision task for already started workflow execution.  This is mainly
+  // used by transfer queue processor during the processing of StartChildWorkflowExecution task, where it first starts
+  // child execution without creating the decision task and then calls this API after updating the mutable state of
+  // parent execution.
+  rpc ScheduleDecisionTask(ScheduleDecisionTaskRequest) returns (ScheduleDecisionTaskResponse);
+
+  // RecordChildExecutionCompleted is used for reporting the completion of child workflow execution to parent.
+  // This is mainly called by transfer queue processor during the processing of DeleteExecution task.
+  rpc RecordChildExecutionCompleted(RecordChildExecutionCompletedRequest) returns (RecordChildExecutionCompletedResponse);
+
+  rpc ReplicateEventsV2(ReplicateEventsV2Request) returns (ReplicateEventsV2Response);
+
+  // SyncShardStatus sync the status between shards.
+  rpc SyncShardStatus(SyncShardStatusRequest) returns (SyncShardStatusResponse);
+
+  // SyncActivity sync the activity status.
+  rpc SyncActivity(SyncActivityRequest) returns (SyncActivityResponse);
+
+  // DescribeMutableState returns information about the internal states of workflow mutable state.
+  rpc DescribeMutableState(DescribeMutableStateRequest) returns (DescribeMutableStateResponse);
+
+  // DescribeHistoryHost returns information about the internal states of a history host.
+  rpc DescribeHistoryHost(DescribeHistoryHostRequest) returns (DescribeHistoryHostResponse);
+
+  // CloseShard close the shard.
+  rpc CloseShard(CloseShardRequest) returns (CloseShardResponse);
+
+  // RemoveTask remove task based on type, task_id, shard_id.
+  rpc RemoveTask(RemoveTaskRequest) returns (RemoveTaskResponse);
+
+  // ResetQueue reset processing queue state based on cluster name and type.
+  rpc ResetQueue(ResetQueueRequest) returns (ResetQueueResponse);
+
+  // DescribeQueue return queue states based on cluster name and type.
+  rpc DescribeQueue(DescribeQueueRequest) returns (DescribeQueueResponse);
+
+  // GetReplicationMessages return replication messages based on the read level.
+  rpc GetReplicationMessages(GetReplicationMessagesRequest) returns (GetReplicationMessagesResponse);
+
+  // GetDLQReplicationMessages return replication messages based on DLQ info.
+  rpc GetDLQReplicationMessages(GetDLQReplicationMessagesRequest) returns (GetDLQReplicationMessagesResponse);
+
+  // ReapplyEvents applies stale events to the current workflow and current run.
+  rpc ReapplyEvents(ReapplyEventsRequest) returns (ReapplyEventsResponse);
+
+  // RefreshWorkflowTasks refreshes all tasks of a workflow.
+  rpc RefreshWorkflowTasks(RefreshWorkflowTasksRequest) returns (RefreshWorkflowTasksResponse);
+
+  // ReadDLQMessages returns messages from DLQ.
+  rpc ReadDLQMessages(ReadDLQMessagesRequest) returns (ReadDLQMessagesResponse);
+
+  // PurgeDLQMessages purges messages from DLQ.
+  rpc PurgeDLQMessages(PurgeDLQMessagesRequest) returns (PurgeDLQMessagesResponse);
+
+  // MergeDLQMessages merges messages from DLQ.
+  rpc MergeDLQMessages(MergeDLQMessagesRequest) returns (MergeDLQMessagesResponse);
+
+  // NotifyFailoverMarkers sends failover marker to the failover coordinator.
+  rpc NotifyFailoverMarkers(NotifyFailoverMarkersRequest) returns (NotifyFailoverMarkersResponse);
+}
+
+
+message StartWorkflowExecutionRequest {
+  api.v1.StartWorkflowExecutionRequest request = 1;
+  string domain_id = 2;
+  api.v1.ParentExecutionInfo parent_execution_info = 3;
+  int32 attempt = 4;
+  google.protobuf.Timestamp expiration_time = 5;
+  api.v1.ContinueAsNewInitiator continue_as_new_initiator = 6;
+  api.v1.Failure continued_failure = 7;
+  api.v1.Payload last_completion_result = 8;
+  google.protobuf.Duration first_decision_task_backoff = 9;
+}
+
+message StartWorkflowExecutionResponse {
+  string run_id = 1;
+}
+
+message SignalWorkflowExecutionRequest {
+  api.v1.SignalWorkflowExecutionRequest request = 1;
+  string domain_id = 2;
+  api.v1.WorkflowExecution external_workflow_execution = 3;
+  bool child_workflow_only = 4;
+}
+
+message SignalWorkflowExecutionResponse {
+}
+
+message SignalWithStartWorkflowExecutionRequest {
+  api.v1.SignalWithStartWorkflowExecutionRequest request = 1;
+  string domain_id = 2;
+}
+
+message SignalWithStartWorkflowExecutionResponse {
+  string run_id = 1;
+}
+
+message ResetWorkflowExecutionRequest {
+  api.v1.ResetWorkflowExecutionRequest request = 1;
+  string domain_id = 2;
+}
+
+message ResetWorkflowExecutionResponse {
+  string run_id = 1;
+}
+
+message TerminateWorkflowExecutionRequest {
+  api.v1.TerminateWorkflowExecutionRequest request = 1;
+  string domain_id = 2;
+}
+
+message TerminateWorkflowExecutionResponse {
+}
+
+message DescribeWorkflowExecutionRequest {
+  api.v1.DescribeWorkflowExecutionRequest request = 1;
+  string domain_id = 2;
+}
+
+message DescribeWorkflowExecutionResponse {
+  api.v1.WorkflowExecutionConfiguration execution_configuration = 1;
+  api.v1.WorkflowExecutionInfo workflow_execution_info = 2;
+  repeated api.v1.PendingActivityInfo pending_activities = 3;
+  repeated api.v1.PendingChildExecutionInfo pending_children = 4;
+  api.v1.PendingDecisionInfo pending_decision = 5;
+}
+
+message QueryWorkflowRequest {
+  api.v1.QueryWorkflowRequest request = 1;
+  string domain_id = 2;
+}
+
+message QueryWorkflowResponse {
+  api.v1.Payload query_result = 1;
+  api.v1.QueryRejected query_rejected = 2;
+}
+
+message ResetStickyTaskListRequest {
+  api.v1.ResetStickyTaskListRequest request = 1;
+  string domain_id = 2;
+}
+
+message ResetStickyTaskListResponse {
+}
+
+message GetMutableStateRequest {
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  int64 expected_next_event_id = 3;
+  bytes current_branch_token = 4;
+}
+
+message GetMutableStateResponse {
+  api.v1.WorkflowExecution workflow_execution = 1;
+  api.v1.WorkflowType workflow_type = 2;
+  int64 next_event_id = 3;
+  google.protobuf.Int64Value previous_started_event_id = 4;
+  int64 last_first_event_id = 5;
+  api.v1.TaskList task_list = 6;
+  api.v1.TaskList sticky_task_list = 7;
+  string client_library_version = 8;
+  string client_feature_version = 9;
+  string client_impl = 10;
+  google.protobuf.Duration sticky_task_list_schedule_to_start_timeout = 11;
+  int32 event_store_version = 12;
+  bytes current_branch_token = 13;
+  shared.v1.WorkflowState workflow_state = 14;
+  api.v1.WorkflowExecutionCloseStatus workflow_close_state = 15;
+  shared.v1.VersionHistories version_histories = 16;
+  bool is_sticky_task_list_enabled = 17;
+}
+
+message PollMutableStateRequest {
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  int64 expected_next_event_id = 3;
+  bytes current_branch_token = 4;
+}
+
+message PollMutableStateResponse {
+  api.v1.WorkflowExecution workflow_execution = 1;
+  api.v1.WorkflowType workflow_type = 2;
+  int64 next_event_id = 3;
+  google.protobuf.Int64Value previous_started_event_id = 4;
+  int64 last_first_event_id = 5;
+  api.v1.TaskList task_list = 6;
+  api.v1.TaskList sticky_task_list = 7;
+  string client_library_version = 8;
+  string client_feature_version = 9;
+  string client_impl = 10;
+  google.protobuf.Duration sticky_task_list_schedule_to_start_timeout = 11;
+  bytes current_branch_token = 12;
+  shared.v1.VersionHistories version_histories = 13;
+  shared.v1.WorkflowState workflow_state = 14;
+  api.v1.WorkflowExecutionCloseStatus workflow_close_state = 15;
+}
+
+message RecordDecisionTaskStartedRequest {
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  int64 schedule_id = 3;
+  int64 task_id = 4;
+  // Unique id of each poll request. Used to ensure at most once delivery of tasks.
+  string request_id = 5;
+  api.v1.PollForDecisionTaskRequest poll_request = 6;
+}
+
+message RecordDecisionTaskStartedResponse {
+  api.v1.WorkflowType workflow_type = 1;
+  google.protobuf.Int64Value previous_started_event_id = 2;
+  int64 scheduled_event_id = 3;
+  int64 started_event_id = 4;
+  int64 next_event_id = 5;
+  int32 attempt = 6;
+  bool sticky_execution_enabled = 7;
+  shared.v1.TransientDecisionInfo decision_info = 8;
+  api.v1.TaskList workflow_execution_task_list = 9;
+  int32 event_store_version = 10;
+  bytes branch_token = 11;
+  google.protobuf.Timestamp scheduled_time = 12;
+  google.protobuf.Timestamp started_time = 13;
+  map<string, api.v1.WorkflowQuery> queries = 14;
+}
+
+message RecordActivityTaskStartedRequest {
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  int64 schedule_id = 3;
+  int64 task_id = 4;
+  // Unique id of each poll request. Used to ensure at most once delivery of tasks.
+  string request_id = 5;
+  api.v1.PollForActivityTaskRequest poll_request = 6;
+}
+
+message RecordActivityTaskStartedResponse {
+  api.v1.HistoryEvent scheduled_event = 1;
+  google.protobuf.Timestamp started_time = 2;
+  int32 attempt = 3;
+  google.protobuf.Timestamp scheduled_time_of_this_attempt = 4;
+  api.v1.Payload heartbeat_details = 5;
+  api.v1.WorkflowType workflow_type = 6;
+  string workflow_domain = 7;
+}
+
+message RespondDecisionTaskCompletedRequest {
+  api.v1.RespondDecisionTaskCompletedRequest request = 1;
+  string domain_id = 2;
+}
+
+message RespondDecisionTaskCompletedResponse {
+  RecordDecisionTaskStartedResponse started_response = 1;
+  map<string, api.v1.ActivityLocalDispatchInfo> activities_to_dispatch_locally = 2;
+}
+
+message RespondDecisionTaskFailedRequest {
+  api.v1.RespondDecisionTaskFailedRequest request = 1;
+  string domain_id = 2;
+}
+
+message RespondDecisionTaskFailedResponse {
+}
+
+message RecordActivityTaskHeartbeatRequest {
+  api.v1.RecordActivityTaskHeartbeatRequest request = 1;
+  string domain_id = 2;
+}
+
+message RecordActivityTaskHeartbeatResponse {
+  bool cancel_requested = 1;
+}
+
+message RespondActivityTaskCompletedRequest {
+  api.v1.RespondActivityTaskCompletedRequest request = 1;
+  string domain_id = 2;
+}
+
+message RespondActivityTaskCompletedResponse {
+}
+
+message RespondActivityTaskFailedRequest {
+  api.v1.RespondActivityTaskFailedRequest request = 1;
+  string domain_id = 2;
+}
+
+message RespondActivityTaskFailedResponse {
+}
+
+message RespondActivityTaskCanceledRequest {
+  api.v1.RespondActivityTaskCanceledRequest request = 1;
+  string domain_id = 2;
+}
+
+message RespondActivityTaskCanceledResponse {
+}
+
+message RemoveSignalMutableStateRequest {
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  string request_id = 3;
+}
+
+message RemoveSignalMutableStateResponse {
+}
+
+message RequestCancelWorkflowExecutionRequest {
+  string domain_id = 1;
+  api.v1.RequestCancelWorkflowExecutionRequest cancel_request = 2;
+  api.v1.ExternalExecutionInfo external_execution_info = 3;
+  bool child_workflow_only = 4;
+}
+
+message RequestCancelWorkflowExecutionResponse {
+}
+
+message ScheduleDecisionTaskRequest {
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  bool is_first_decision = 3;
+}
+
+message ScheduleDecisionTaskResponse {
+}
+
+// RecordChildExecutionCompletedRequest is used for reporting the completion of child execution to parent workflow
+// execution which started it.  When a child execution is completed it creates this request and calls the
+// RecordChildExecutionCompleted API with the workflowExecution of parent.  It also sets the completedExecution of the
+// child as it could potentially be different than the ChildExecutionStartedEvent of parent in the situation when
+// child creates multiple runs through ContinueAsNew before finally completing.
+message RecordChildExecutionCompletedRequest {
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  int64 initiated_id = 3;
+  api.v1.WorkflowExecution completed_execution = 4;
+  api.v1.HistoryEvent completion_event = 5;
+}
+
+message RecordChildExecutionCompletedResponse {
+}
+
+message ReplicateEventsV2Request {
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  repeated shared.v1.VersionHistoryItem version_history_items = 3;
+  api.v1.DataBlob events = 4;
+  // New run events does not need version history since there is no prior events.
+  api.v1.DataBlob new_run_events = 5;
+}
+
+message ReplicateEventsV2Response {
+}
+
+message SyncShardStatusRequest {
+  string source_cluster = 1;
+  int32 shard_id = 2;
+  google.protobuf.Timestamp time = 3;
+}
+
+message SyncShardStatusResponse {
+}
+
+message SyncActivityRequest {
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  int64 version = 3;
+  int64 scheduled_id = 4;
+  google.protobuf.Timestamp scheduled_time = 5;
+  int64 started_id = 6;
+  google.protobuf.Timestamp started_time = 7;
+  google.protobuf.Timestamp last_heartbeat_time = 8;
+  api.v1.Payload details = 9;
+  int32 attempt = 10;
+  api.v1.Failure last_failure = 11;
+  string last_worker_identity = 12;
+  shared.v1.VersionHistory version_history = 13;
+}
+
+message SyncActivityResponse {
+}
+
+message DescribeMutableStateRequest {
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+}
+
+message DescribeMutableStateResponse {
+  string mutable_state_in_cache = 1;
+  string mutable_state_in_database = 2;
+}
+
+message DescribeHistoryHostRequest {
+}
+
+message DescribeHistoryHostResponse {
+  int32 number_of_shards = 1;
+  repeated int32 shard_ids = 2;
+  shared.v1.DomainCacheInfo domain_cache = 3;
+  string shard_controller_status = 4;
+  string address = 5;
+}
+
+message CloseShardRequest {
+  int32 shard_id = 1;
+}
+
+message CloseShardResponse {
+}
+
+message RemoveTaskRequest {
+  int32 shard_id = 1;
+  shared.v1.TaskType task_type = 2;
+  int64 task_id = 3;
+  google.protobuf.Timestamp visibility_time = 4;
+}
+
+message RemoveTaskResponse {
+}
+
+message ResetQueueRequest {
+  int32 shard_id = 1;
+  string cluster_name = 2;
+  shared.v1.TaskType task_type = 3;
+}
+
+message ResetQueueResponse {
+}
+
+message DescribeQueueRequest {
+  int32 shard_id = 1;
+  string cluster_name = 2;
+  shared.v1.TaskType task_type = 3;
+}
+
+message DescribeQueueResponse {
+  repeated string processing_queue_states = 1;
+}
+
+message GetReplicationMessagesRequest {
+  repeated shared.v1.ReplicationToken tokens = 1;
+  string cluster_name = 2;
+}
+
+message GetReplicationMessagesResponse {
+  map<int32, shared.v1.ReplicationMessages> shard_messages = 1;
+}
+
+message GetDLQReplicationMessagesRequest {
+  repeated shared.v1.ReplicationTaskInfo task_infos = 1;
+}
+
+message GetDLQReplicationMessagesResponse {
+  repeated shared.v1.ReplicationTask replication_tasks = 1;
+}
+
+message ReapplyEventsRequest {
+  string domain = 1;
+  string domain_id = 2;
+  api.v1.WorkflowExecution workflow_execution = 3;
+  api.v1.DataBlob events = 4;
+}
+
+message ReapplyEventsResponse {
+}
+
+message RefreshWorkflowTasksRequest {
+  string domain = 1;
+  string domain_id = 2;
+  api.v1.WorkflowExecution workflow_execution = 3;
+}
+
+message RefreshWorkflowTasksResponse {
+}
+
+message ReadDLQMessagesRequest {
+  shared.v1.DLQType type = 1;
+  int32 shard_id = 2;
+  string source_cluster = 3;
+  google.protobuf.Int64Value inclusive_end_message_id = 4;
+  int32 page_size = 5;
+  bytes next_page_token = 6;
+}
+
+message ReadDLQMessagesResponse {
+  shared.v1.DLQType type = 1;
+  repeated shared.v1.ReplicationTask replication_tasks = 2;
+  repeated shared.v1.ReplicationTaskInfo replication_tasks_info = 3;
+  bytes next_page_token = 4;
+}
+
+message PurgeDLQMessagesRequest {
+  shared.v1.DLQType type = 1;
+  int32 shard_id = 2;
+  string source_cluster = 3;
+  google.protobuf.Int64Value inclusive_end_message_id = 4;
+}
+
+message PurgeDLQMessagesResponse {
+}
+
+message MergeDLQMessagesRequest {
+  shared.v1.DLQType type = 1;
+  int32 shard_id = 2;
+  string source_cluster = 3;
+  google.protobuf.Int64Value inclusive_end_message_id = 4;
+  int32 page_size = 5;
+  bytes next_page_token = 6;
+}
+
+message MergeDLQMessagesResponse {
+  bytes next_page_token = 1;
+}
+
+message NotifyFailoverMarkersRequest {
+  repeated shared.v1.FailoverMarkerToken failover_marker_tokens = 1;
+}
+
+message NotifyFailoverMarkersResponse {
+}

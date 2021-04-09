@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source queryParser.go -destination queryParser_mock.go -mock_names Interface=MockQueryParser
+//go:generate mockgen -package $GOPACKAGE -source queryParser.go -destination queryParser_mock.go -mock_names Interface=MockQueryParser
 
 package filestore
 
@@ -31,8 +31,8 @@ import (
 
 	"github.com/xwb1989/sqlparser"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -49,7 +49,7 @@ type (
 		workflowID        *string
 		runID             *string
 		workflowTypeName  *string
-		closeStatus       *shared.WorkflowExecutionCloseStatus
+		closeStatus       *types.WorkflowExecutionCloseStatus
 		emptyResult       bool
 	}
 )
@@ -103,7 +103,7 @@ func (p *queryParser) convertWhereExpr(expr sqlparser.Expr, parsedQuery *parsedQ
 	case *sqlparser.ParenExpr:
 		return p.convertParenExpr(expr.(*sqlparser.ParenExpr), parsedQuery)
 	default:
-		return errors.New("only comparsion and \"and\" expression is supported")
+		return errors.New("only comparison and \"and\" expression is supported")
 	}
 }
 
@@ -138,7 +138,7 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 			return err
 		}
 		if op != "=" {
-			return fmt.Errorf("only operation = is support for %s", WorkflowID)
+			return fmt.Errorf("only operator = is supported for %s with file system", WorkflowID)
 		}
 		if parsedQuery.workflowID != nil && *parsedQuery.workflowID != val {
 			parsedQuery.emptyResult = true
@@ -151,7 +151,7 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 			return err
 		}
 		if op != "=" {
-			return fmt.Errorf("only operation = is support for %s", RunID)
+			return fmt.Errorf("only operator = is supported for %s with file system", RunID)
 		}
 		if parsedQuery.runID != nil && *parsedQuery.runID != val {
 			parsedQuery.emptyResult = true
@@ -164,7 +164,7 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 			return err
 		}
 		if op != "=" {
-			return fmt.Errorf("only operation = is support for %s", WorkflowType)
+			return fmt.Errorf("only operator = is supported for %s with file system", WorkflowType)
 		}
 		if parsedQuery.workflowTypeName != nil && *parsedQuery.workflowTypeName != val {
 			parsedQuery.emptyResult = true
@@ -174,10 +174,11 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 	case CloseStatus:
 		val, err := extractStringValue(valStr)
 		if err != nil {
-			return err
+			// if failed to extract string value, it means user input close status as a number
+			val = valStr
 		}
 		if op != "=" {
-			return fmt.Errorf("only operation = is support for %s", CloseStatus)
+			return fmt.Errorf("only operator = is supported for %s with file system", CloseStatus)
 		}
 		status, err := convertStatusStr(val)
 		if err != nil {
@@ -240,19 +241,21 @@ func convertToTimestamp(timeStr string) (int64, error) {
 	return parsedTime.UnixNano(), nil
 }
 
-func convertStatusStr(statusStr string) (shared.WorkflowExecutionCloseStatus, error) {
-	statusStr = strings.ToLower(statusStr)
+func convertStatusStr(statusStr string) (types.WorkflowExecutionCloseStatus, error) {
+	statusStr = strings.ToLower(strings.TrimSpace(statusStr))
 	switch statusStr {
-	case "completed":
-		return shared.WorkflowExecutionCloseStatusCompleted, nil
-	case "failed":
-		return shared.WorkflowExecutionCloseStatusFailed, nil
-	case "canceled":
-		return shared.WorkflowExecutionCloseStatusCanceled, nil
-	case "continuedasnew":
-		return shared.WorkflowExecutionCloseStatusContinuedAsNew, nil
-	case "timedout":
-		return shared.WorkflowExecutionCloseStatusTimedOut, nil
+	case "completed", strconv.Itoa(int(types.WorkflowExecutionCloseStatusCompleted)):
+		return types.WorkflowExecutionCloseStatusCompleted, nil
+	case "failed", strconv.Itoa(int(types.WorkflowExecutionCloseStatusFailed)):
+		return types.WorkflowExecutionCloseStatusFailed, nil
+	case "canceled", strconv.Itoa(int(types.WorkflowExecutionCloseStatusCanceled)):
+		return types.WorkflowExecutionCloseStatusCanceled, nil
+	case "terminated", strconv.Itoa(int(types.WorkflowExecutionCloseStatusTerminated)):
+		return types.WorkflowExecutionCloseStatusTerminated, nil
+	case "continuedasnew", "continued_as_new", strconv.Itoa(int(types.WorkflowExecutionCloseStatusContinuedAsNew)):
+		return types.WorkflowExecutionCloseStatusContinuedAsNew, nil
+	case "timedout", "timed_out", strconv.Itoa(int(types.WorkflowExecutionCloseStatusTimedOut)):
+		return types.WorkflowExecutionCloseStatusTimedOut, nil
 	default:
 		return 0, fmt.Errorf("unknown workflow close status: %s", statusStr)
 	}

@@ -1,0 +1,112 @@
+// Copyright (c) 2020 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package uber.cadence.api.v1;
+
+option go_package = "github.com/uber/cadence/.gen/proto/api/v1;apiv1";
+option java_multiple_files = true;
+option java_outer_classname = "ApiProto";
+option java_package = "com.uber.cadence.api.v1";
+
+import "google/protobuf/duration.proto";
+
+message WorkflowExecution {
+  string workflow_id = 1;
+  string run_id = 2;
+}
+
+message WorkflowType {
+  string name = 1;
+}
+
+message ActivityType {
+  string name = 1;
+}
+
+message Payload {
+  bytes data = 1;
+}
+
+message Failure {
+  string reason = 1;
+  bytes details = 2;
+}
+
+message Memo {
+  map<string, Payload> fields = 1;
+}
+
+message Header {
+  map<string, Payload> fields = 1;
+}
+
+message SearchAttributes {
+  map<string, Payload> indexed_fields = 1;
+}
+
+enum EncodingType {
+  ENCODING_TYPE_INVALID = 0;
+  ENCODING_TYPE_THRIFTRW = 1;
+  ENCODING_TYPE_JSON = 2;
+  ENCODING_TYPE_PROTO3 = 3;
+}
+
+message DataBlob {
+  EncodingType encoding_type = 1;
+  bytes data = 2;
+}
+
+message WorkerVersionInfo {
+  string impl = 1;
+  string feature_version = 2;
+}
+
+message SupportedClientVersions {
+  // Indicates the highest Go SDK version server will accept requests from.
+  string go_sdk = 1;
+  // Indicates the highest Java SDK version server will accept requests from.
+  string java_sdk = 2;
+}
+
+message RetryPolicy {
+  // Interval of the first retry. If backoffCoefficient is 1.0 then it is used for all retries.
+  google.protobuf.Duration initial_interval = 1;
+
+  // Coefficient used to calculate the next retry interval.
+  // The next retry interval is previous interval multiplied by the coefficient.
+  // Must be 1 or larger.
+  double backoff_coefficient = 2;
+
+  // Maximum interval between retries. Exponential backoff leads to interval increase.
+  // This value is the cap of the increase. Default is 100x of initial interval.
+  google.protobuf.Duration maximum_interval = 3;
+
+  // Maximum number of attempts. When exceeded the retries stop even if not expired yet.
+  // Must be 1 or bigger. Default is unlimited.
+  int32 maximum_attempts = 4;
+
+  // Non-Retryable errors. Will stop retrying if error type matches this list.
+  repeated string non_retryable_error_reasons = 5;
+
+  // Expiration time for the whole retry process.
+  google.protobuf.Duration expiration_interval = 6;
+}

@@ -29,7 +29,7 @@ import (
 )
 
 func BenchmarkGetIntProperty(b *testing.B) {
-	client := newInMemoryClient()
+	client := NewInMemoryClient()
 	cln := NewCollection(client, log.NewNoop())
 	key := MatchingMaxTaskBatchSize
 	for i := 0; i < b.N; i++ {

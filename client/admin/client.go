@@ -27,10 +27,8 @@ import (
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 var _ Client = (*clientImpl)(nil)
@@ -38,27 +36,32 @@ var _ Client = (*clientImpl)(nil)
 const (
 	// DefaultTimeout is the default timeout used to make calls
 	DefaultTimeout = 10 * time.Second
+	// DefaultLargeTimeout is the default timeout used to make calls
+	DefaultLargeTimeout = time.Minute
 )
 
 type clientImpl struct {
-	timeout time.Duration
-	clients common.ClientCache
+	timeout      time.Duration
+	largeTimeout time.Duration
+	clients      common.ClientCache
 }
 
 // NewClient creates a new admin service TChannel client
 func NewClient(
 	timeout time.Duration,
+	largeTimeout time.Duration,
 	clients common.ClientCache,
 ) Client {
 	return &clientImpl{
-		timeout: timeout,
-		clients: clients,
+		timeout:      timeout,
+		largeTimeout: largeTimeout,
+		clients:      clients,
 	}
 }
 
 func (c *clientImpl) AddSearchAttribute(
 	ctx context.Context,
-	request *admin.AddSearchAttributeRequest,
+	request *types.AddSearchAttributeRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -74,9 +77,9 @@ func (c *clientImpl) AddSearchAttribute(
 
 func (c *clientImpl) DescribeHistoryHost(
 	ctx context.Context,
-	request *shared.DescribeHistoryHostRequest,
+	request *types.DescribeHistoryHostRequest,
 	opts ...yarpc.CallOption,
-) (*shared.DescribeHistoryHostResponse, error) {
+) (*types.DescribeHistoryHostResponse, error) {
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
@@ -90,7 +93,7 @@ func (c *clientImpl) DescribeHistoryHost(
 
 func (c *clientImpl) RemoveTask(
 	ctx context.Context,
-	request *shared.RemoveTaskRequest,
+	request *types.RemoveTaskRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -106,7 +109,7 @@ func (c *clientImpl) RemoveTask(
 
 func (c *clientImpl) CloseShard(
 	ctx context.Context,
-	request *shared.CloseShardRequest,
+	request *types.CloseShardRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -120,11 +123,43 @@ func (c *clientImpl) CloseShard(
 	return client.CloseShard(ctx, request, opts...)
 }
 
+func (c *clientImpl) ResetQueue(
+	ctx context.Context,
+	request *types.ResetQueueRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.ResetQueue(ctx, request, opts...)
+}
+
+func (c *clientImpl) DescribeQueue(
+	ctx context.Context,
+	request *types.DescribeQueueRequest,
+	opts ...yarpc.CallOption,
+) (*types.DescribeQueueResponse, error) {
+
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.DescribeQueue(ctx, request, opts...)
+}
+
 func (c *clientImpl) DescribeWorkflowExecution(
 	ctx context.Context,
-	request *admin.DescribeWorkflowExecutionRequest,
+	request *types.AdminDescribeWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) (*admin.DescribeWorkflowExecutionResponse, error) {
+) (*types.AdminDescribeWorkflowExecutionResponse, error) {
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
@@ -136,27 +171,11 @@ func (c *clientImpl) DescribeWorkflowExecution(
 	return client.DescribeWorkflowExecution(ctx, request, opts...)
 }
 
-func (c *clientImpl) GetWorkflowExecutionRawHistory(
-	ctx context.Context,
-	request *admin.GetWorkflowExecutionRawHistoryRequest,
-	opts ...yarpc.CallOption,
-) (*admin.GetWorkflowExecutionRawHistoryResponse, error) {
-
-	opts = common.AggregateYarpcOptions(ctx, opts...)
-	client, err := c.getRandomClient()
-	if err != nil {
-		return nil, err
-	}
-	ctx, cancel := c.createContext(ctx)
-	defer cancel()
-	return client.GetWorkflowExecutionRawHistory(ctx, request, opts...)
-}
-
 func (c *clientImpl) GetWorkflowExecutionRawHistoryV2(
 	ctx context.Context,
-	request *admin.GetWorkflowExecutionRawHistoryV2Request,
+	request *types.GetWorkflowExecutionRawHistoryV2Request,
 	opts ...yarpc.CallOption,
-) (*admin.GetWorkflowExecutionRawHistoryV2Response, error) {
+) (*types.GetWorkflowExecutionRawHistoryV2Response, error) {
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
@@ -168,6 +187,162 @@ func (c *clientImpl) GetWorkflowExecutionRawHistoryV2(
 	return client.GetWorkflowExecutionRawHistoryV2(ctx, request, opts...)
 }
 
+func (c *clientImpl) DescribeCluster(
+	ctx context.Context,
+	opts ...yarpc.CallOption,
+) (*types.DescribeClusterResponse, error) {
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.DescribeCluster(ctx, opts...)
+}
+
+func (c *clientImpl) GetReplicationMessages(
+	ctx context.Context,
+	request *types.GetReplicationMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetReplicationMessagesResponse, error) {
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContextWithLargeTimeout(ctx)
+	defer cancel()
+	return client.GetReplicationMessages(ctx, request, opts...)
+}
+
+func (c *clientImpl) GetDomainReplicationMessages(
+	ctx context.Context,
+	request *types.GetDomainReplicationMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetDomainReplicationMessagesResponse, error) {
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.GetDomainReplicationMessages(ctx, request, opts...)
+}
+
+func (c *clientImpl) GetDLQReplicationMessages(
+	ctx context.Context,
+	request *types.GetDLQReplicationMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetDLQReplicationMessagesResponse, error) {
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.GetDLQReplicationMessages(ctx, request, opts...)
+}
+
+func (c *clientImpl) ReapplyEvents(
+	ctx context.Context,
+	request *types.ReapplyEventsRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.ReapplyEvents(ctx, request, opts...)
+}
+
+func (c *clientImpl) ReadDLQMessages(
+	ctx context.Context,
+	request *types.ReadDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*types.ReadDLQMessagesResponse, error) {
+
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.ReadDLQMessages(ctx, request, opts...)
+}
+
+func (c *clientImpl) PurgeDLQMessages(
+	ctx context.Context,
+	request *types.PurgeDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.PurgeDLQMessages(ctx, request, opts...)
+}
+
+func (c *clientImpl) MergeDLQMessages(
+	ctx context.Context,
+	request *types.MergeDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*types.MergeDLQMessagesResponse, error) {
+
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.MergeDLQMessages(ctx, request, opts...)
+
+}
+
+func (c *clientImpl) RefreshWorkflowTasks(
+	ctx context.Context,
+	request *types.RefreshWorkflowTasksRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.RefreshWorkflowTasks(ctx, request, opts...)
+}
+
+func (c *clientImpl) ResendReplicationTasks(
+	ctx context.Context,
+	request *types.ResendReplicationTasksRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.ResendReplicationTasks(ctx, request, opts...)
+}
+
 func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {
 	if parent == nil {
 		return context.WithTimeout(context.Background(), c.timeout)
@@ -175,7 +350,14 @@ func (c *clientImpl) createContext(parent context.Context) (context.Context, con
 	return context.WithTimeout(parent, c.timeout)
 }
 
-func (c *clientImpl) getRandomClient() (adminserviceclient.Interface, error) {
+func (c *clientImpl) createContextWithLargeTimeout(parent context.Context) (context.Context, context.CancelFunc) {
+	if parent == nil {
+		return context.WithTimeout(context.Background(), c.largeTimeout)
+	}
+	return context.WithTimeout(parent, c.largeTimeout)
+}
+
+func (c *clientImpl) getRandomClient() (Client, error) {
 	// generate a random shard key to do load balancing
 	key := uuid.New()
 	client, err := c.clients.GetClientForKey(key)
@@ -183,5 +365,5 @@ func (c *clientImpl) getRandomClient() (adminserviceclient.Interface, error) {
 		return nil, err
 	}
 
-	return client.(adminserviceclient.Interface), nil
+	return client.(Client), nil
 }

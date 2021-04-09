@@ -15,11 +15,12 @@ frontend.validSearchAttributes:
       CloseTime: 2
       CloseStatus: 2
       HistoryLength: 2
+      TaskList: 1
       CustomStringField: 0
       CustomKeywordField: 1
       CustomIntField: 2
-      CustomBoolField: 3
-      CustomDoubleField: 4
+      CustomDoubleField: 3
+      CustomBoolField: 4
       CustomDatetimeField: 5
       project: 1
       service: 1
@@ -32,5 +33,6 @@ frontend.validSearchAttributes:
       RolloutID: 1
       CadenceChangeVersion: 1
       BinaryChecksums: 1
+      Passed: 4
 system.minRetentionDays:
     - value: 0

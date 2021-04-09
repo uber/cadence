@@ -21,45 +21,38 @@
 package cli
 
 import (
-	"bufio"
 	"fmt"
-	"os"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
+
+// An indirection for the prompt function so that it can be mocked in the unit tests
+var promptFn = prompt
 
 // AdminAddSearchAttribute to whitelist search attribute
 func AdminAddSearchAttribute(c *cli.Context) {
 	key := getRequiredOption(c, FlagSearchAttributesKey)
 	valType := getRequiredIntOption(c, FlagSearchAttributesType)
-	if valType < 0 || valType >= 5 {
+	if !isValueTypeValid(valType) {
 		ErrorAndExit("Unknown Search Attributes value type.", nil)
 	}
 
 	// ask user for confirmation
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Printf("Are you trying to add key [%s] with Type [%s]? Y/N\n",
+	promptMsg := fmt.Sprintf("Are you trying to add key [%s] with Type [%s]? Y/N",
 		color.YellowString(key), color.YellowString(intValTypeToString(valType)))
-	text, _ := reader.ReadString('\n')
-	textLower := strings.ToLower(strings.TrimRight(text, "\n"))
-	if textLower != "y" && textLower != "yes" {
-		return
-	}
+	promptFn(promptMsg)
 
 	adminClient := cFactory.ServerAdminClient(c)
 	ctx, cancel := newContext(c)
 	defer cancel()
-	request := &admin.AddSearchAttributeRequest{
-		SearchAttribute: map[string]shared.IndexedValueType{
-			key: shared.IndexedValueType(valType),
+	request := &types.AddSearchAttributeRequest{
+		SearchAttribute: map[string]types.IndexedValueType{
+			key: types.IndexedValueType(valType),
 		},
-		SecurityToken: common.StringPtr(c.String(FlagSecurityToken)),
+		SecurityToken: c.String(FlagSecurityToken),
 	}
 
 	err := adminClient.AddSearchAttribute(ctx, request)
@@ -67,6 +60,20 @@ func AdminAddSearchAttribute(c *cli.Context) {
 		ErrorAndExit("Add search attribute failed.", err)
 	}
 	fmt.Println("Success")
+}
+
+// AdminDescribeCluster is used to dump information about the cluster
+func AdminDescribeCluster(c *cli.Context) {
+	adminClient := cFactory.ServerAdminClient(c)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+	response, err := adminClient.DescribeCluster(ctx)
+	if err != nil {
+		ErrorAndExit("Operation DescribeCluster failed.", err)
+	}
+
+	prettyPrintJSONObject(response)
 }
 
 func intValTypeToString(valType int) string {
@@ -86,4 +93,8 @@ func intValTypeToString(valType int) string {
 	default:
 		return ""
 	}
+}
+
+func isValueTypeValid(valType int) bool {
+	return valType >= 0 && valType <= 5
 }

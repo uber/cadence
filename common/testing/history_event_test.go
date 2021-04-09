@@ -27,7 +27,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -64,21 +64,21 @@ func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
 
 		fmt.Println("########################")
 		for _, e := range events {
-			event := e.GetData().(*shared.HistoryEvent)
-			if maxEventID != event.GetEventId()-1 {
+			event := e.GetData().(*types.HistoryEvent)
+			if maxEventID != event.GetEventID()-1 {
 				s.Fail("event id sequence is incorrect")
 			}
-			maxEventID = event.GetEventId()
+			maxEventID = event.GetEventID()
 			if maxVersion > event.GetVersion() {
 				s.Fail("event version is incorrect")
 			}
 			maxVersion = event.GetVersion()
-			if maxTaskID > event.GetTaskId() {
+			if maxTaskID > event.GetTaskID() {
 				s.Fail("event task id is incorrect")
 			}
-			maxTaskID = event.GetTaskId()
+			maxTaskID = event.GetTaskID()
 			fmt.Println(e.GetName())
-			fmt.Println(event.GetEventId())
+			fmt.Println(event.GetEventID())
 		}
 	}
 	s.NotEmpty(s.generator.ListGeneratedVertices())
@@ -88,45 +88,45 @@ func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
 		events := branchGenerator1.GetNextVertices()
 		fmt.Println("########################")
 		for _, e := range events {
-			event := e.GetData().(*shared.HistoryEvent)
-			if maxEventID != event.GetEventId()-1 {
+			event := e.GetData().(*types.HistoryEvent)
+			if maxEventID != event.GetEventID()-1 {
 				s.Fail("event id sequence is incorrect")
 			}
-			maxEventID = event.GetEventId()
+			maxEventID = event.GetEventID()
 			if maxVersion > event.GetVersion() {
 				s.Fail("event version is incorrect")
 			}
 			maxVersion = event.GetVersion()
-			if maxTaskID > event.GetTaskId() {
+			if maxTaskID > event.GetTaskID() {
 				s.Fail("event task id is incorrect")
 			}
-			maxTaskID = event.GetTaskId()
+			maxTaskID = event.GetTaskID()
 			fmt.Println(e.GetName())
-			fmt.Println(event.GetEventId())
+			fmt.Println(event.GetEventID())
 		}
 	}
 	fmt.Println("==========================")
 	history := s.generator.ListGeneratedVertices()
-	maxEventID = history[len(history)-1].GetData().(*shared.HistoryEvent).GetEventId()
+	maxEventID = history[len(history)-1].GetData().(*types.HistoryEvent).GetEventID()
 	for i := 0; i < 10 && s.generator.HasNextVertex(); i++ {
 		events := s.generator.GetNextVertices()
 		fmt.Println("########################")
 		for _, e := range events {
-			event := e.GetData().(*shared.HistoryEvent)
-			if maxEventID != event.GetEventId()-1 {
+			event := e.GetData().(*types.HistoryEvent)
+			if maxEventID != event.GetEventID()-1 {
 				s.Fail("event id sequence is incorrect")
 			}
-			maxEventID = event.GetEventId()
+			maxEventID = event.GetEventID()
 			if maxVersion > event.GetVersion() {
 				s.Fail("event version is incorrect")
 			}
 			maxVersion = event.GetVersion()
-			if maxTaskID > event.GetTaskId() {
+			if maxTaskID > event.GetTaskID() {
 				s.Fail("event task id is incorrect")
 			}
-			maxTaskID = event.GetTaskId()
+			maxTaskID = event.GetTaskID()
 			fmt.Println(e.GetName())
-			fmt.Println(event.GetEventId())
+			fmt.Println(event.GetEventID())
 		}
 	}
 }

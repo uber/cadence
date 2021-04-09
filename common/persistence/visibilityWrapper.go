@@ -21,11 +21,12 @@
 package persistence
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -40,9 +41,12 @@ type (
 var _ VisibilityManager = (*visibilityManagerWrapper)(nil)
 
 // NewVisibilityManagerWrapper create a visibility manager that operate on DB or ElasticSearch based on dynamic config.
-func NewVisibilityManagerWrapper(visibilityManager, esVisibilityManager VisibilityManager,
+func NewVisibilityManagerWrapper(
+	visibilityManager VisibilityManager,
+	esVisibilityManager VisibilityManager,
 	enableReadVisibilityFromES dynamicconfig.BoolPropertyFnWithDomainFilter,
-	advancedVisWritingMode dynamicconfig.StringPropertyFn) VisibilityManager {
+	advancedVisWritingMode dynamicconfig.StringPropertyFn,
+) VisibilityManager {
 	return &visibilityManagerWrapper{
 		visibilityManager:          visibilityManager,
 		esVisibilityManager:        esVisibilityManager,
@@ -64,112 +68,157 @@ func (v *visibilityManagerWrapper) GetName() string {
 	return "visibilityManagerWrapper"
 }
 
-func (v *visibilityManagerWrapper) RecordWorkflowExecutionStarted(request *RecordWorkflowExecutionStartedRequest) error {
+func (v *visibilityManagerWrapper) RecordWorkflowExecutionStarted(
+	ctx context.Context,
+	request *RecordWorkflowExecutionStartedRequest,
+) error {
 	switch v.advancedVisWritingMode() {
 	case common.AdvancedVisibilityWritingModeOff:
-		return v.visibilityManager.RecordWorkflowExecutionStarted(request)
+		return v.visibilityManager.RecordWorkflowExecutionStarted(ctx, request)
 	case common.AdvancedVisibilityWritingModeOn:
-		return v.esVisibilityManager.RecordWorkflowExecutionStarted(request)
+		return v.esVisibilityManager.RecordWorkflowExecutionStarted(ctx, request)
 	case common.AdvancedVisibilityWritingModeDual:
-		if err := v.esVisibilityManager.RecordWorkflowExecutionStarted(request); err != nil {
+		if err := v.esVisibilityManager.RecordWorkflowExecutionStarted(ctx, request); err != nil {
 			return err
 		}
-		return v.visibilityManager.RecordWorkflowExecutionStarted(request)
+		return v.visibilityManager.RecordWorkflowExecutionStarted(ctx, request)
 	default:
-		return &shared.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Unknown advanced visibility writing mode: %s", v.advancedVisWritingMode()),
 		}
 	}
 }
 
-func (v *visibilityManagerWrapper) RecordWorkflowExecutionClosed(request *RecordWorkflowExecutionClosedRequest) error {
+func (v *visibilityManagerWrapper) RecordWorkflowExecutionClosed(
+	ctx context.Context,
+	request *RecordWorkflowExecutionClosedRequest,
+) error {
 	switch v.advancedVisWritingMode() {
 	case common.AdvancedVisibilityWritingModeOff:
-		return v.visibilityManager.RecordWorkflowExecutionClosed(request)
+		return v.visibilityManager.RecordWorkflowExecutionClosed(ctx, request)
 	case common.AdvancedVisibilityWritingModeOn:
-		return v.esVisibilityManager.RecordWorkflowExecutionClosed(request)
+		return v.esVisibilityManager.RecordWorkflowExecutionClosed(ctx, request)
 	case common.AdvancedVisibilityWritingModeDual:
-		if err := v.esVisibilityManager.RecordWorkflowExecutionClosed(request); err != nil {
+		if err := v.esVisibilityManager.RecordWorkflowExecutionClosed(ctx, request); err != nil {
 			return err
 		}
-		return v.visibilityManager.RecordWorkflowExecutionClosed(request)
+		return v.visibilityManager.RecordWorkflowExecutionClosed(ctx, request)
 	default:
-		return &shared.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Unknown advanced visibility writing mode: %s", v.advancedVisWritingMode()),
 		}
 	}
 }
 
-func (v *visibilityManagerWrapper) UpsertWorkflowExecution(request *UpsertWorkflowExecutionRequest) error {
+func (v *visibilityManagerWrapper) UpsertWorkflowExecution(
+	ctx context.Context,
+	request *UpsertWorkflowExecutionRequest,
+) error {
 	if v.esVisibilityManager == nil { // return operation not support
-		return v.visibilityManager.UpsertWorkflowExecution(request)
+		return v.visibilityManager.UpsertWorkflowExecution(ctx, request)
 	}
 
-	return v.esVisibilityManager.UpsertWorkflowExecution(request)
+	return v.esVisibilityManager.UpsertWorkflowExecution(ctx, request)
 }
 
-func (v *visibilityManagerWrapper) ListOpenWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error) {
+func (v *visibilityManagerWrapper) ListOpenWorkflowExecutions(
+	ctx context.Context,
+	request *ListWorkflowExecutionsRequest,
+) (*ListWorkflowExecutionsResponse, error) {
 	manager := v.chooseVisibilityManagerForDomain(request.Domain)
-	return manager.ListOpenWorkflowExecutions(request)
+	return manager.ListOpenWorkflowExecutions(ctx, request)
 }
 
-func (v *visibilityManagerWrapper) ListClosedWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error) {
+func (v *visibilityManagerWrapper) ListClosedWorkflowExecutions(
+	ctx context.Context,
+	request *ListWorkflowExecutionsRequest,
+) (*ListWorkflowExecutionsResponse, error) {
 	manager := v.chooseVisibilityManagerForDomain(request.Domain)
-	return manager.ListClosedWorkflowExecutions(request)
+	return manager.ListClosedWorkflowExecutions(ctx, request)
 }
 
-func (v *visibilityManagerWrapper) ListOpenWorkflowExecutionsByType(request *ListWorkflowExecutionsByTypeRequest) (*ListWorkflowExecutionsResponse, error) {
+func (v *visibilityManagerWrapper) ListOpenWorkflowExecutionsByType(
+	ctx context.Context,
+	request *ListWorkflowExecutionsByTypeRequest,
+) (*ListWorkflowExecutionsResponse, error) {
 	manager := v.chooseVisibilityManagerForDomain(request.Domain)
-	return manager.ListOpenWorkflowExecutionsByType(request)
+	return manager.ListOpenWorkflowExecutionsByType(ctx, request)
 }
 
-func (v *visibilityManagerWrapper) ListClosedWorkflowExecutionsByType(request *ListWorkflowExecutionsByTypeRequest) (*ListWorkflowExecutionsResponse, error) {
+func (v *visibilityManagerWrapper) ListClosedWorkflowExecutionsByType(
+	ctx context.Context,
+	request *ListWorkflowExecutionsByTypeRequest,
+) (*ListWorkflowExecutionsResponse, error) {
 	manager := v.chooseVisibilityManagerForDomain(request.Domain)
-	return manager.ListClosedWorkflowExecutionsByType(request)
+	return manager.ListClosedWorkflowExecutionsByType(ctx, request)
 }
 
-func (v *visibilityManagerWrapper) ListOpenWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*ListWorkflowExecutionsResponse, error) {
+func (v *visibilityManagerWrapper) ListOpenWorkflowExecutionsByWorkflowID(
+	ctx context.Context,
+	request *ListWorkflowExecutionsByWorkflowIDRequest,
+) (*ListWorkflowExecutionsResponse, error) {
 	manager := v.chooseVisibilityManagerForDomain(request.Domain)
-	return manager.ListOpenWorkflowExecutionsByWorkflowID(request)
+	return manager.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 }
 
-func (v *visibilityManagerWrapper) ListClosedWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*ListWorkflowExecutionsResponse, error) {
+func (v *visibilityManagerWrapper) ListClosedWorkflowExecutionsByWorkflowID(
+	ctx context.Context,
+	request *ListWorkflowExecutionsByWorkflowIDRequest,
+) (*ListWorkflowExecutionsResponse, error) {
 	manager := v.chooseVisibilityManagerForDomain(request.Domain)
-	return manager.ListClosedWorkflowExecutionsByWorkflowID(request)
+	return manager.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 }
 
-func (v *visibilityManagerWrapper) ListClosedWorkflowExecutionsByStatus(request *ListClosedWorkflowExecutionsByStatusRequest) (*ListWorkflowExecutionsResponse, error) {
+func (v *visibilityManagerWrapper) ListClosedWorkflowExecutionsByStatus(
+	ctx context.Context,
+	request *ListClosedWorkflowExecutionsByStatusRequest,
+) (*ListWorkflowExecutionsResponse, error) {
 	manager := v.chooseVisibilityManagerForDomain(request.Domain)
-	return manager.ListClosedWorkflowExecutionsByStatus(request)
+	return manager.ListClosedWorkflowExecutionsByStatus(ctx, request)
 }
 
-func (v *visibilityManagerWrapper) GetClosedWorkflowExecution(request *GetClosedWorkflowExecutionRequest) (*GetClosedWorkflowExecutionResponse, error) {
+func (v *visibilityManagerWrapper) GetClosedWorkflowExecution(
+	ctx context.Context,
+	request *GetClosedWorkflowExecutionRequest,
+) (*GetClosedWorkflowExecutionResponse, error) {
 	manager := v.chooseVisibilityManagerForDomain(request.Domain)
-	return manager.GetClosedWorkflowExecution(request)
+	return manager.GetClosedWorkflowExecution(ctx, request)
 }
 
-func (v *visibilityManagerWrapper) DeleteWorkflowExecution(request *VisibilityDeleteWorkflowExecutionRequest) error {
+func (v *visibilityManagerWrapper) DeleteWorkflowExecution(
+	ctx context.Context,
+	request *VisibilityDeleteWorkflowExecutionRequest,
+) error {
 	if v.esVisibilityManager != nil {
-		if err := v.esVisibilityManager.DeleteWorkflowExecution(request); err != nil {
+		if err := v.esVisibilityManager.DeleteWorkflowExecution(ctx, request); err != nil {
 			return err
 		}
 	}
-	return v.visibilityManager.DeleteWorkflowExecution(request)
+	return v.visibilityManager.DeleteWorkflowExecution(ctx, request)
 }
 
-func (v *visibilityManagerWrapper) ListWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
+func (v *visibilityManagerWrapper) ListWorkflowExecutions(
+	ctx context.Context,
+	request *ListWorkflowExecutionsByQueryRequest,
+) (*ListWorkflowExecutionsResponse, error) {
 	manager := v.chooseVisibilityManagerForDomain(request.Domain)
-	return manager.ListWorkflowExecutions(request)
+	return manager.ListWorkflowExecutions(ctx, request)
 }
 
-func (v *visibilityManagerWrapper) ScanWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
+func (v *visibilityManagerWrapper) ScanWorkflowExecutions(
+	ctx context.Context,
+	request *ListWorkflowExecutionsByQueryRequest,
+) (*ListWorkflowExecutionsResponse, error) {
 	manager := v.chooseVisibilityManagerForDomain(request.Domain)
-	return manager.ScanWorkflowExecutions(request)
+	return manager.ScanWorkflowExecutions(ctx, request)
 }
 
-func (v *visibilityManagerWrapper) CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error) {
+func (v *visibilityManagerWrapper) CountWorkflowExecutions(
+	ctx context.Context,
+	request *CountWorkflowExecutionsRequest,
+) (*CountWorkflowExecutionsResponse, error) {
 	manager := v.chooseVisibilityManagerForDomain(request.Domain)
-	return manager.CountWorkflowExecutions(request)
+	return manager.CountWorkflowExecutions(ctx, request)
 }
 
 func (v *visibilityManagerWrapper) chooseVisibilityManagerForDomain(domain string) VisibilityManager {

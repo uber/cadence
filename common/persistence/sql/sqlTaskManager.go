@@ -1,4 +1,5 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +22,7 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"math"
@@ -28,12 +30,12 @@ import (
 
 	"github.com/dgryski/go-farm"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
+	"github.com/uber/cadence/common/persistence/serialization"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+	"github.com/uber/cadence/common/types"
 )
 
 type sqlTaskManager struct {
@@ -43,42 +45,53 @@ type sqlTaskManager struct {
 
 var (
 	minUUID = "00000000-0000-0000-0000-000000000000"
+
+	stickyTasksListsTTL = time.Hour * 24
 )
 
 // newTaskPersistence creates a new instance of TaskManager
-func newTaskPersistence(db sqldb.Interface, nShards int, log log.Logger) (persistence.TaskManager, error) {
+func newTaskPersistence(
+	db sqlplugin.DB,
+	nShards int,
+	log log.Logger,
+	parser serialization.Parser,
+) (persistence.TaskStore, error) {
 	return &sqlTaskManager{
 		sqlStore: sqlStore{
 			db:     db,
 			logger: log,
+			parser: parser,
 		},
 		nShards: nShards,
 	}, nil
 }
 
-func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest) (*persistence.LeaseTaskListResponse, error) {
+func (m *sqlTaskManager) LeaseTaskList(
+	ctx context.Context,
+	request *persistence.LeaseTaskListRequest,
+) (*persistence.LeaseTaskListResponse, error) {
 	var rangeID int64
 	var ackLevel int64
 	shardID := m.shardID(request.DomainID, request.TaskList)
-	domainID := sqldb.MustParseUUID(request.DomainID)
-	rows, err := m.db.SelectFromTaskLists(&sqldb.TaskListsFilter{
+	domainID := serialization.MustParseUUID(request.DomainID)
+	rows, err := m.db.SelectFromTaskLists(ctx, &sqlplugin.TaskListsFilter{
 		ShardID:  shardID,
 		DomainID: &domainID,
 		Name:     &request.TaskList,
 		TaskType: common.Int64Ptr(int64(request.TaskType))})
 	if err != nil {
 		if err == sql.ErrNoRows {
-			tlInfo := &sqlblobs.TaskListInfo{
-				AckLevel:         &ackLevel,
-				Kind:             common.Int16Ptr(int16(request.TaskListKind)),
-				ExpiryTimeNanos:  common.Int64Ptr(0),
-				LastUpdatedNanos: common.Int64Ptr(time.Now().UnixNano()),
+			tlInfo := &serialization.TaskListInfo{
+				AckLevel:        &ackLevel,
+				Kind:            common.Int16Ptr(int16(request.TaskListKind)),
+				ExpiryTimestamp: common.TimePtr(time.Unix(0, 0)),
+				LastUpdated:     common.TimePtr(time.Now()),
 			}
-			blob, err := taskListInfoToBlob(tlInfo)
+			blob, err := m.parser.TaskListInfoToBlob(tlInfo)
 			if err != nil {
 				return nil, err
 			}
-			row := sqldb.TaskListsRow{
+			row := sqlplugin.TaskListsRow{
 				ShardID:      shardID,
 				DomainID:     domainID,
 				Name:         request.TaskList,
@@ -86,14 +99,26 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 				Data:         blob.Data,
 				DataEncoding: string(blob.Encoding),
 			}
-			rows = []sqldb.TaskListsRow{row}
-			if _, err := m.db.InsertIntoTaskLists(&row); err != nil {
-				return nil, &workflow.InternalServiceError{
-					Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to make task list %v of type %v. Error: %v", request.TaskList, request.TaskType, err),
+			rows = []sqlplugin.TaskListsRow{row}
+			if m.db.SupportsTTL() && request.TaskListKind == persistence.TaskListKindSticky {
+				rowWithTTL := sqlplugin.TaskListsRowWithTTL{
+					TaskListsRow: row,
+					TTL:          stickyTasksListsTTL,
+				}
+				if _, err := m.db.InsertIntoTaskListsWithTTL(ctx, &rowWithTTL); err != nil {
+					return nil, &types.InternalServiceError{
+						Message: fmt.Sprintf("LeaseTaskListWithTTL operation failed. Failed to make task list %v of type %v. Error: %v", request.TaskList, request.TaskType, err),
+					}
+				}
+			} else {
+				if _, err := m.db.InsertIntoTaskLists(ctx, &row); err != nil {
+					return nil, &types.InternalServiceError{
+						Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to make task list %v of type %v. Error: %v", request.TaskList, request.TaskType, err),
+					}
 				}
 			}
 		} else {
-			return nil, &workflow.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to check if task list existed. Error: %v", err),
 			}
 		}
@@ -107,29 +132,29 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 		}
 	}
 
-	tlInfo, err := taskListInfoFromBlob(row.Data, row.DataEncoding)
+	tlInfo, err := m.parser.TaskListInfoFromBlob(row.Data, row.DataEncoding)
 	if err != nil {
 		return nil, err
 	}
 
 	var resp *persistence.LeaseTaskListResponse
-	err = m.txExecute("LeaseTaskList", func(tx sqldb.Tx) error {
+	err = m.txExecute(ctx, "LeaseTaskList", func(tx sqlplugin.Tx) error {
 		rangeID = row.RangeID
 		ackLevel = tlInfo.GetAckLevel()
 		// We need to separately check the condition and do the
 		// update because we want to throw different error codes.
 		// Since we need to do things separately (in a transaction), we need to take a lock.
-		err1 := lockTaskList(tx, shardID, domainID, request.TaskList, request.TaskType, rangeID)
+		err1 := lockTaskList(ctx, tx, shardID, domainID, request.TaskList, request.TaskType, rangeID)
 		if err1 != nil {
 			return err1
 		}
 		now := time.Now()
-		tlInfo.LastUpdatedNanos = common.Int64Ptr(now.UnixNano())
-		blob, err1 := taskListInfoToBlob(tlInfo)
+		tlInfo.LastUpdated = common.TimePtr(now)
+		blob, err1 := m.parser.TaskListInfoToBlob(tlInfo)
 		if err1 != nil {
 			return err1
 		}
-		result, err1 := tx.UpdateTaskLists(&sqldb.TaskListsRow{
+		row := &sqlplugin.TaskListsRow{
 			ShardID:      shardID,
 			DomainID:     row.DomainID,
 			RangeID:      row.RangeID + 1,
@@ -137,7 +162,16 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 			TaskType:     row.TaskType,
 			Data:         blob.Data,
 			DataEncoding: string(blob.Encoding),
-		})
+		}
+		var result sql.Result
+		if tlInfo.GetKind() == persistence.TaskListKindSticky && m.db.SupportsTTL() {
+			result, err1 = tx.UpdateTaskListsWithTTL(ctx, &sqlplugin.TaskListsRowWithTTL{
+				TaskListsRow: *row,
+				TTL:          stickyTasksListsTTL,
+			})
+		} else {
+			result, err1 = tx.UpdateTaskLists(ctx, row)
+		}
 		if err1 != nil {
 			return err1
 		}
@@ -162,47 +196,35 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 	return resp, err
 }
 
-func (m *sqlTaskManager) UpdateTaskList(request *persistence.UpdateTaskListRequest) (*persistence.UpdateTaskListResponse, error) {
+func (m *sqlTaskManager) UpdateTaskList(
+	ctx context.Context,
+	request *persistence.UpdateTaskListRequest,
+) (*persistence.UpdateTaskListResponse, error) {
 	shardID := m.shardID(request.TaskListInfo.DomainID, request.TaskListInfo.Name)
-	domainID := sqldb.MustParseUUID(request.TaskListInfo.DomainID)
-	tlInfo := &sqlblobs.TaskListInfo{
-		AckLevel:         common.Int64Ptr(request.TaskListInfo.AckLevel),
-		Kind:             common.Int16Ptr(int16(request.TaskListInfo.Kind)),
-		ExpiryTimeNanos:  common.Int64Ptr(0),
-		LastUpdatedNanos: common.TimeNowNanosPtr(),
+	domainID := serialization.MustParseUUID(request.TaskListInfo.DomainID)
+	tlInfo := &serialization.TaskListInfo{
+		AckLevel:        common.Int64Ptr(request.TaskListInfo.AckLevel),
+		Kind:            common.Int16Ptr(int16(request.TaskListInfo.Kind)),
+		ExpiryTimestamp: common.TimePtr(time.Unix(0, 0)),
+		LastUpdated:     common.TimePtr(time.Now()),
 	}
 	if request.TaskListInfo.Kind == persistence.TaskListKindSticky {
-		tlInfo.ExpiryTimeNanos = common.Int64Ptr(stickyTaskListTTL().UnixNano())
-		blob, err := taskListInfoToBlob(tlInfo)
-		if err != nil {
-			return nil, err
-		}
-		if _, err := m.db.ReplaceIntoTaskLists(&sqldb.TaskListsRow{
-			ShardID:      shardID,
-			DomainID:     domainID,
-			RangeID:      request.TaskListInfo.RangeID,
-			Name:         request.TaskListInfo.Name,
-			TaskType:     int64(request.TaskListInfo.TaskType),
-			Data:         blob.Data,
-			DataEncoding: string(blob.Encoding),
-		}); err != nil {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("UpdateTaskList operation failed. Failed to make sticky task list. Error: %v", err),
-			}
-		}
+		tlInfo.ExpiryTimestamp = common.TimePtr(stickyTaskListExpiry())
 	}
+
 	var resp *persistence.UpdateTaskListResponse
-	blob, err := taskListInfoToBlob(tlInfo)
+	blob, err := m.parser.TaskListInfoToBlob(tlInfo)
 	if err != nil {
 		return nil, err
 	}
-	err = m.txExecute("UpdateTaskList", func(tx sqldb.Tx) error {
+	err = m.txExecute(ctx, "UpdateTaskList", func(tx sqlplugin.Tx) error {
 		err1 := lockTaskList(
-			tx, shardID, domainID, request.TaskListInfo.Name, request.TaskListInfo.TaskType, request.TaskListInfo.RangeID)
+			ctx, tx, shardID, domainID, request.TaskListInfo.Name, request.TaskListInfo.TaskType, request.TaskListInfo.RangeID)
 		if err1 != nil {
 			return err1
 		}
-		result, err1 := tx.UpdateTaskLists(&sqldb.TaskListsRow{
+		var result sql.Result
+		row := &sqlplugin.TaskListsRow{
 			ShardID:      shardID,
 			DomainID:     domainID,
 			RangeID:      request.TaskListInfo.RangeID,
@@ -210,7 +232,15 @@ func (m *sqlTaskManager) UpdateTaskList(request *persistence.UpdateTaskListReque
 			TaskType:     int64(request.TaskListInfo.TaskType),
 			Data:         blob.Data,
 			DataEncoding: string(blob.Encoding),
-		})
+		}
+		if m.db.SupportsTTL() && request.TaskListInfo.Kind == persistence.TaskListKindSticky {
+			result, err1 = tx.UpdateTaskListsWithTTL(ctx, &sqlplugin.TaskListsRowWithTTL{
+				TaskListsRow: *row,
+				TTL:          stickyTasksListsTTL,
+			})
+		} else {
+			result, err1 = tx.UpdateTaskLists(ctx, row)
+		}
 		if err1 != nil {
 			return err1
 		}
@@ -234,18 +264,25 @@ type taskListPageToken struct {
 	TaskType int64
 }
 
-func (m *sqlTaskManager) ListTaskList(request *persistence.ListTaskListRequest) (*persistence.ListTaskListResponse, error) {
+// ListTaskList lists tasklist from DB
+// DomainID translates into byte array in SQL. The minUUID is not the minimum byte array.
+// This API could return incomplete result set.
+// https://github.com/uber/cadence/issues/3911
+func (m *sqlTaskManager) ListTaskList(
+	ctx context.Context,
+	request *persistence.ListTaskListRequest,
+) (*persistence.ListTaskListResponse, error) {
 	pageToken := taskListPageToken{TaskType: math.MinInt16, DomainID: minUUID}
 	if request.PageToken != nil {
 		if err := gobDeserialize(request.PageToken, &pageToken); err != nil {
-			return nil, &workflow.InternalServiceError{Message: fmt.Sprintf("error deserializing page token: %v", err)}
+			return nil, &types.InternalServiceError{Message: fmt.Sprintf("error deserializing page token: %v", err)}
 		}
 	}
 	var err error
-	var rows []sqldb.TaskListsRow
-	domainID := sqldb.MustParseUUID(pageToken.DomainID)
+	var rows []sqlplugin.TaskListsRow
+	domainID := serialization.MustParseUUID(pageToken.DomainID)
 	for pageToken.ShardID < m.nShards {
-		rows, err = m.db.SelectFromTaskLists(&sqldb.TaskListsFilter{
+		rows, err = m.db.SelectFromTaskLists(ctx, &sqlplugin.TaskListsFilter{
 			ShardID:             pageToken.ShardID,
 			DomainIDGreaterThan: &domainID,
 			NameGreaterThan:     &pageToken.Name,
@@ -253,7 +290,7 @@ func (m *sqlTaskManager) ListTaskList(request *persistence.ListTaskListRequest) 
 			PageSize:            &request.PageSize,
 		})
 		if err != nil {
-			return nil, &workflow.InternalServiceError{Message: err.Error()}
+			return nil, &types.InternalServiceError{Message: err.Error()}
 		}
 		if len(rows) > 0 {
 			break
@@ -276,7 +313,7 @@ func (m *sqlTaskManager) ListTaskList(request *persistence.ListTaskListRequest) 
 	}
 
 	if err != nil {
-		return nil, &workflow.InternalServiceError{Message: fmt.Sprintf("error serializing nextPageToken:%v", err)}
+		return nil, &types.InternalServiceError{Message: fmt.Sprintf("error serializing nextPageToken:%v", err)}
 	}
 
 	resp := &persistence.ListTaskListResponse{
@@ -285,7 +322,7 @@ func (m *sqlTaskManager) ListTaskList(request *persistence.ListTaskListRequest) 
 	}
 
 	for i := range rows {
-		info, err := taskListInfoFromBlob(rows[i].Data, rows[i].DataEncoding)
+		info, err := m.parser.TaskListInfoFromBlob(rows[i].Data, rows[i].DataEncoding)
 		if err != nil {
 			return nil, err
 		}
@@ -295,16 +332,19 @@ func (m *sqlTaskManager) ListTaskList(request *persistence.ListTaskListRequest) 
 		resp.Items[i].RangeID = rows[i].RangeID
 		resp.Items[i].Kind = int(info.GetKind())
 		resp.Items[i].AckLevel = info.GetAckLevel()
-		resp.Items[i].Expiry = time.Unix(0, info.GetExpiryTimeNanos())
-		resp.Items[i].LastUpdated = time.Unix(0, info.GetLastUpdatedNanos())
+		resp.Items[i].Expiry = info.GetExpiryTimestamp()
+		resp.Items[i].LastUpdated = info.GetLastUpdated()
 	}
 
 	return resp, nil
 }
 
-func (m *sqlTaskManager) DeleteTaskList(request *persistence.DeleteTaskListRequest) error {
-	domainID := sqldb.MustParseUUID(request.DomainID)
-	result, err := m.db.DeleteFromTaskLists(&sqldb.TaskListsFilter{
+func (m *sqlTaskManager) DeleteTaskList(
+	ctx context.Context,
+	request *persistence.DeleteTaskListRequest,
+) error {
+	domainID := serialization.MustParseUUID(request.DomainID)
+	result, err := m.db.DeleteFromTaskLists(ctx, &sqlplugin.TaskListsFilter{
 		ShardID:  m.shardID(request.DomainID, request.TaskListName),
 		DomainID: &domainID,
 		Name:     &request.TaskListName,
@@ -312,53 +352,93 @@ func (m *sqlTaskManager) DeleteTaskList(request *persistence.DeleteTaskListReque
 		RangeID:  &request.RangeID,
 	})
 	if err != nil {
-		return &workflow.InternalServiceError{Message: err.Error()}
+		return &types.InternalServiceError{Message: err.Error()}
 	}
 	nRows, err := result.RowsAffected()
 	if err != nil {
-		return &workflow.InternalServiceError{Message: fmt.Sprintf("rowsAffected returned error:%v", err)}
+		return &types.InternalServiceError{Message: fmt.Sprintf("rowsAffected returned error:%v", err)}
 	}
 	if nRows != 1 {
-		return &workflow.InternalServiceError{Message: fmt.Sprintf("delete failed: %v rows affected instead of 1", nRows)}
+		return &types.InternalServiceError{Message: fmt.Sprintf("delete failed: %v rows affected instead of 1", nRows)}
 	}
 	return nil
 }
 
-func (m *sqlTaskManager) CreateTasks(request *persistence.CreateTasksRequest) (*persistence.CreateTasksResponse, error) {
-	tasksRows := make([]sqldb.TasksRow, len(request.Tasks))
+func (m *sqlTaskManager) CreateTasks(
+	ctx context.Context,
+	request *persistence.InternalCreateTasksRequest,
+) (*persistence.CreateTasksResponse, error) {
+	var tasksRows []sqlplugin.TasksRow
+	var tasksRowsWithTTL []sqlplugin.TasksRowWithTTL
+	if m.db.SupportsTTL() {
+		tasksRowsWithTTL = make([]sqlplugin.TasksRowWithTTL, len(request.Tasks))
+	} else {
+		tasksRows = make([]sqlplugin.TasksRow, len(request.Tasks))
+	}
+
 	for i, v := range request.Tasks {
 		var expiryTime time.Time
-		if v.Data.ScheduleToStartTimeout > 0 {
-			expiryTime = time.Now().Add(time.Second * time.Duration(v.Data.ScheduleToStartTimeout))
+		var ttl time.Duration
+		if v.Data.ScheduleToStartTimeout.Seconds() > 0 {
+			ttl = v.Data.ScheduleToStartTimeout
+			if m.db.SupportsTTL() {
+				maxAllowedTTL, err := m.db.MaxAllowedTTL()
+				if err != nil {
+					return nil, err
+				}
+				if ttl > *maxAllowedTTL {
+					ttl = *maxAllowedTTL
+				}
+			}
+			expiryTime = time.Now().Add(ttl)
 		}
-		blob, err := taskInfoToBlob(&sqlblobs.TaskInfo{
+		blob, err := m.parser.TaskInfoToBlob(&serialization.TaskInfo{
 			WorkflowID:       &v.Data.WorkflowID,
-			RunID:            sqldb.MustParseUUID(v.Data.RunID),
+			RunID:            serialization.MustParseUUID(v.Data.RunID),
 			ScheduleID:       &v.Data.ScheduleID,
-			ExpiryTimeNanos:  common.Int64Ptr(expiryTime.UnixNano()),
-			CreatedTimeNanos: common.Int64Ptr(time.Now().UnixNano()),
+			ExpiryTimestamp:  &expiryTime,
+			CreatedTimestamp: common.TimePtr(time.Now()),
 		})
 		if err != nil {
 			return nil, err
 		}
-		tasksRows[i] = sqldb.TasksRow{
-			DomainID:     sqldb.MustParseUUID(v.Data.DomainID),
+		currTasksRow := sqlplugin.TasksRow{
+			DomainID:     serialization.MustParseUUID(v.Data.DomainID),
 			TaskListName: request.TaskListInfo.Name,
 			TaskType:     int64(request.TaskListInfo.TaskType),
 			TaskID:       v.TaskID,
 			Data:         blob.Data,
 			DataEncoding: string(blob.Encoding),
 		}
+		if m.db.SupportsTTL() {
+			currTasksRowWithTTL := sqlplugin.TasksRowWithTTL{
+				TasksRow: currTasksRow,
+			}
+			if ttl > 0 {
+				currTasksRowWithTTL.TTL = &ttl
+			}
+			tasksRowsWithTTL[i] = currTasksRowWithTTL
+		} else {
+			tasksRows[i] = currTasksRow
+		}
+
 	}
 	var resp *persistence.CreateTasksResponse
-	err := m.txExecute("CreateTasks", func(tx sqldb.Tx) error {
-		if _, err1 := tx.InsertIntoTasks(tasksRows); err1 != nil {
-			return err1
+	err := m.txExecute(ctx, "CreateTasks", func(tx sqlplugin.Tx) error {
+		if m.db.SupportsTTL() {
+			if _, err := tx.InsertIntoTasksWithTTL(ctx, tasksRowsWithTTL); err != nil {
+				return err
+			}
+		} else {
+			if _, err := tx.InsertIntoTasks(ctx, tasksRows); err != nil {
+				return err
+			}
 		}
+
 		// Lock task list before committing.
-		err1 := lockTaskList(tx,
+		err1 := lockTaskList(ctx, tx,
 			m.shardID(request.TaskListInfo.DomainID, request.TaskListInfo.Name),
-			sqldb.MustParseUUID(request.TaskListInfo.DomainID),
+			serialization.MustParseUUID(request.TaskListInfo.DomainID),
 			request.TaskListInfo.Name,
 			request.TaskListInfo.TaskType, request.TaskListInfo.RangeID)
 		if err1 != nil {
@@ -370,9 +450,12 @@ func (m *sqlTaskManager) CreateTasks(request *persistence.CreateTasksRequest) (*
 	return resp, err
 }
 
-func (m *sqlTaskManager) GetTasks(request *persistence.GetTasksRequest) (*persistence.GetTasksResponse, error) {
-	rows, err := m.db.SelectFromTasks(&sqldb.TasksFilter{
-		DomainID:     sqldb.MustParseUUID(request.DomainID),
+func (m *sqlTaskManager) GetTasks(
+	ctx context.Context,
+	request *persistence.GetTasksRequest,
+) (*persistence.InternalGetTasksResponse, error) {
+	rows, err := m.db.SelectFromTasks(ctx, &sqlplugin.TasksFilter{
+		DomainID:     serialization.MustParseUUID(request.DomainID),
 		TaskListName: request.TaskList,
 		TaskType:     int64(request.TaskType),
 		MinTaskID:    &request.ReadLevel,
@@ -380,59 +463,65 @@ func (m *sqlTaskManager) GetTasks(request *persistence.GetTasksRequest) (*persis
 		PageSize:     &request.BatchSize,
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("GetTasks operation failed. Failed to get rows. Error: %v", err),
 		}
 	}
 
-	var tasks = make([]*persistence.TaskInfo, len(rows))
+	var tasks = make([]*persistence.InternalTaskInfo, len(rows))
 	for i, v := range rows {
-		info, err := taskInfoFromBlob(v.Data, v.DataEncoding)
+		info, err := m.parser.TaskInfoFromBlob(v.Data, v.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
-		tasks[i] = &persistence.TaskInfo{
+		tasks[i] = &persistence.InternalTaskInfo{
 			DomainID:    request.DomainID,
 			WorkflowID:  info.GetWorkflowID(),
-			RunID:       sqldb.UUID(info.RunID).String(),
+			RunID:       info.RunID.String(),
 			TaskID:      v.TaskID,
 			ScheduleID:  info.GetScheduleID(),
-			Expiry:      time.Unix(0, info.GetExpiryTimeNanos()),
-			CreatedTime: time.Unix(0, info.GetCreatedTimeNanos()),
+			Expiry:      info.GetExpiryTimestamp(),
+			CreatedTime: info.GetCreatedTimestamp(),
 		}
 	}
 
-	return &persistence.GetTasksResponse{Tasks: tasks}, nil
+	return &persistence.InternalGetTasksResponse{Tasks: tasks}, nil
 }
 
-func (m *sqlTaskManager) CompleteTask(request *persistence.CompleteTaskRequest) error {
+func (m *sqlTaskManager) CompleteTask(
+	ctx context.Context,
+	request *persistence.CompleteTaskRequest,
+) error {
 	taskID := request.TaskID
 	taskList := request.TaskList
-	_, err := m.db.DeleteFromTasks(&sqldb.TasksFilter{
-		DomainID:     sqldb.MustParseUUID(taskList.DomainID),
+	_, err := m.db.DeleteFromTasks(ctx, &sqlplugin.TasksFilter{
+		DomainID:     serialization.MustParseUUID(taskList.DomainID),
 		TaskListName: taskList.Name,
 		TaskType:     int64(taskList.TaskType),
 		TaskID:       &taskID})
 	if err != nil && err != sql.ErrNoRows {
-		return &workflow.InternalServiceError{Message: err.Error()}
+		return &types.InternalServiceError{Message: err.Error()}
 	}
 	return nil
 }
 
-func (m *sqlTaskManager) CompleteTasksLessThan(request *persistence.CompleteTasksLessThanRequest) (int, error) {
-	result, err := m.db.DeleteFromTasks(&sqldb.TasksFilter{
-		DomainID:             sqldb.MustParseUUID(request.DomainID),
+func (m *sqlTaskManager) CompleteTasksLessThan(
+	ctx context.Context,
+	request *persistence.CompleteTasksLessThanRequest,
+) (int, error) {
+	result, err := m.db.DeleteFromTasks(ctx, &sqlplugin.TasksFilter{
+		DomainID:             serialization.MustParseUUID(request.DomainID),
 		TaskListName:         request.TaskListName,
 		TaskType:             int64(request.TaskType),
 		TaskIDLessThanEquals: &request.TaskID,
 		Limit:                &request.Limit,
 	})
 	if err != nil {
-		return 0, &workflow.InternalServiceError{Message: err.Error()}
+		return 0, &types.InternalServiceError{Message: err.Error()}
 	}
 	nRows, err := result.RowsAffected()
 	if err != nil {
-		return 0, &workflow.InternalServiceError{
+		return 0, &types.InternalServiceError{
 			Message: fmt.Sprintf("rowsAffected returned error: %v", err),
 		}
 	}
@@ -444,22 +533,29 @@ func (m *sqlTaskManager) shardID(domainID string, name string) int {
 	return int(id)
 }
 
-func lockTaskList(tx sqldb.Tx, shardID int, domainID sqldb.UUID, name string, taskListType int, oldRangeID int64) error {
-	rangeID, err := tx.LockTaskLists(&sqldb.TaskListsFilter{
+func lockTaskList(ctx context.Context, tx sqlplugin.Tx, shardID int, domainID serialization.UUID, name string, taskListType int, oldRangeID int64) error {
+	rangeID, err := tx.LockTaskLists(ctx, &sqlplugin.TaskListsFilter{
 		ShardID: shardID, DomainID: &domainID, Name: &name, TaskType: common.Int64Ptr(int64(taskListType))})
-	if err != nil {
-		return &workflow.InternalServiceError{
+
+	switch err {
+	case nil:
+		if rangeID != oldRangeID {
+			return &persistence.ConditionFailedError{
+				Msg: fmt.Sprintf("Task list range ID was %v when it was should have been %v", rangeID, oldRangeID),
+			}
+		}
+		return nil
+	case sql.ErrNoRows:
+		return &persistence.ConditionFailedError{
+			Msg: "Task list does not exist.",
+		}
+	default:
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to lock task list. Error: %v", err),
 		}
 	}
-	if rangeID != oldRangeID {
-		return &persistence.ConditionFailedError{
-			Msg: fmt.Sprintf("Task list range ID was %v when it was should have been %v", rangeID, oldRangeID),
-		}
-	}
-	return nil
 }
 
-func stickyTaskListTTL() time.Time {
-	return time.Now().Add(24 * time.Hour)
+func stickyTaskListExpiry() time.Time {
+	return time.Now().Add(stickyTasksListsTTL)
 }

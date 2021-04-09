@@ -40,6 +40,14 @@ func TestScopeDefsMapped(t *testing.T) {
 			assert.True(t, IsMetric(tag), "metric tags should conform to regex")
 		}
 	}
+	for i := AdminDescribeHistoryHostScope; i < NumAdminScopes; i++ {
+		key, ok := ScopeDefs[Frontend][i]
+		require.True(t, ok)
+		require.NotEmpty(t, key)
+		for tag := range key.tags {
+			assert.True(t, IsMetric(tag), "metric tags should conform to regex")
+		}
+	}
 	for i := FrontendStartWorkflowExecutionScope; i < NumFrontendScopes; i++ {
 		key, ok := ScopeDefs[Frontend][i]
 		require.True(t, ok)
@@ -85,7 +93,7 @@ func TestMetricDefsMapped(t *testing.T) {
 		require.True(t, ok)
 		require.NotEmpty(t, key)
 	}
-	for i := PollSuccessCounter; i < NumMatchingMetrics; i++ {
+	for i := PollSuccessPerTaskListCounter; i < NumMatchingMetrics; i++ {
 		key, ok := MetricDefs[Matching][i]
 		require.True(t, ok)
 		require.NotEmpty(t, key)

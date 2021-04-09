@@ -82,8 +82,10 @@ const (
 	CLIOptKeyspace = "keyspace"
 	// CLIOptDatabase is the cli option for database
 	CLIOptDatabase = "database"
-	// CLIOptDriverName is the cli option for driver name
-	CLIOptDriverName = "driver"
+	// CLIOptPluginName is the cli option for plugin name
+	CLIOptPluginName = "plugin"
+	// CLIOptConnectAttributes is the cli option for connect attributes (key/values via a url query string)
+	CLIOptConnectAttributes = "connect-attributes"
 	// CLIOptVersion is the cli option for version
 	CLIOptVersion = "version"
 	// CLIOptSchemaFile is the cli option for schema file
@@ -117,8 +119,10 @@ const (
 	CLIFlagKeyspace = CLIOptKeyspace + ", k"
 	// CLIFlagDatabase is the cli flag for database
 	CLIFlagDatabase = CLIOptDatabase + ", db"
-	// CLIFlagDriverName is the cli flag for driver name
-	CLIFlagDriverName = CLIOptDriverName + ", dr"
+	// CLIFlagPluginName is the cli flag for plugin name
+	CLIFlagPluginName = CLIOptPluginName + ", pl"
+	// CLIFlagConnectAttributes allows arbitrary connect attributes
+	CLIFlagConnectAttributes = CLIOptConnectAttributes + ", ca"
 	// CLIFlagVersion is the cli flag for version
 	CLIFlagVersion = CLIOptVersion + ", v"
 	// CLIFlagSchemaFile is the cli flag for schema file
@@ -130,7 +134,7 @@ const (
 	// CLIFlagTargetVersion is the cli flag for target version
 	CLIFlagTargetVersion = CLIOptTargetVersion + ", v"
 	// CLIFlagDryrun is the cli flag for dryrun
-	CLIFlagDryrun = CLIOptDryrun + ", y"
+	CLIFlagDryrun = CLIOptDryrun
 	// CLIFlagSchemaDir is the cli flag for schema directory
 	CLIFlagSchemaDir = CLIOptSchemaDir + ", d"
 	// CLIFlagReplicationFactor is the cli flag for replication factor
@@ -150,10 +154,7 @@ const (
 	CLIFlagTLSEnableHostVerification = "tls-enable-host-verification"
 )
 
-// DryrunDBName is the db name used for dryrun
-const DryrunDBName = "_cadence_dryrun_"
-
-var rmspaceRegex = regexp.MustCompile("\\s+")
+var rmspaceRegex = regexp.MustCompile(`\s+`)
 
 // NewConfigError creates and returns an instance of ConfigError
 func NewConfigError(msg string) error {

@@ -32,9 +32,11 @@ type (
 
 	// metricDefinition contains the definition for a metric
 	metricDefinition struct {
-		metricType MetricType    // metric type
-		metricName MetricName    // metric name
-		buckets    tally.Buckets // buckets if we are emitting histograms
+		//nolint
+		metricType       MetricType    // metric type
+		metricName       MetricName    // metric name
+		metricRollupName MetricName    // optional. if non-empty, this name must be used for rolled-up version of this metric
+		buckets          tally.Buckets // buckets if we are emitting histograms
 	}
 
 	// scopeDefinition holds the tag definitions for a scope
@@ -64,25 +66,28 @@ const (
 	NumServices
 )
 
+// This package should hold all the metrics and tags for cadence
+// Note that to better support Prometheus, metric name and tag name
+// should match the regex [a-zA-Z_][a-zA-Z0-9_]*, tag value can be any Unicode characters.
+// See more https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
+
 // Common tags for all services
 const (
-	HostnameTagName    = "hostname"
-	OperationTagName   = "operation"
-	CadenceRoleTagName = "cadence_role"
-	StatsTypeTagName   = "stats_type"
-	CacheTypeTagName   = "cache_type"
+	OperationTagName      = "operation"
+	CadenceRoleTagName    = "cadence_role"
+	CadenceServiceTagName = "cadence_service"
+	StatsTypeTagName      = "stats_type"
+	CacheTypeTagName      = "cache_type"
 )
 
-// This package should hold all the metrics and tags for cadence
+// Common tag values
 const (
-	UnknownDirectoryTagValue = "Unknown"
-
-	HistoryRoleTagValue       = "history"
-	MatchingRoleTagValue      = "matching"
-	FrontendRoleTagValue      = "frontend"
-	AdminRoleTagValue         = "admin"
-	DCRedirectionRoleTagValue = "dc_redirection"
-	BlobstoreRoleTagValue     = "blobstore"
+	HistoryClientRoleTagValue  = "history_client"
+	MatchingClientRoleTagValue = "matching_client"
+	FrontendClientRoleTagValue = "frontend_client"
+	AdminClientRoleTagValue    = "admin_client"
+	DCRedirectionRoleTagValue  = "dc_redirection"
+	BlobstoreRoleTagValue      = "blobstore"
 
 	SizeStatsTypeTagValue  = "size"
 	CountStatsTypeTagValue = "count"
@@ -147,10 +152,14 @@ const (
 	PersistenceDeleteWorkflowExecutionScope
 	// PersistenceDeleteCurrentWorkflowExecutionScope tracks DeleteCurrentWorkflowExecution calls made by service to persistence layer
 	PersistenceDeleteCurrentWorkflowExecutionScope
-	// PersistenceDeleteTaskScope tracks RemoveTask calls made by service to persistence layer
-	PersistenceDeleteTaskScope
 	// PersistenceGetCurrentExecutionScope tracks GetCurrentExecution calls made by service to persistence layer
 	PersistenceGetCurrentExecutionScope
+	// PersistenceIsWorkflowExecutionExistsScope tracks IsWorkflowExecutionExists calls made by service to persistence layer
+	PersistenceIsWorkflowExecutionExistsScope
+	// PersistenceListCurrentExecutionsScope tracks ListCurrentExecutions calls made by service to persistence layer
+	PersistenceListCurrentExecutionsScope
+	// PersistenceListConcreteExecutionsScope tracks ListConcreteExecutions calls made by service to persistence layer
+	PersistenceListConcreteExecutionsScope
 	// PersistenceGetTransferTasksScope tracks GetTransferTasks calls made by service to persistence layer
 	PersistenceGetTransferTasksScope
 	// PersistenceCompleteTransferTaskScope tracks CompleteTransferTasks calls made by service to persistence layer
@@ -161,10 +170,20 @@ const (
 	PersistenceGetReplicationTasksScope
 	// PersistenceCompleteReplicationTaskScope tracks CompleteReplicationTasks calls made by service to persistence layer
 	PersistenceCompleteReplicationTaskScope
+	// PersistenceRangeCompleteReplicationTaskScope tracks RangeCompleteReplicationTasks calls made by service to persistence layer
+	PersistenceRangeCompleteReplicationTaskScope
 	// PersistencePutReplicationTaskToDLQScope tracks PersistencePutReplicationTaskToDLQScope calls made by service to persistence layer
 	PersistencePutReplicationTaskToDLQScope
 	// PersistenceGetReplicationTasksFromDLQScope tracks PersistenceGetReplicationTasksFromDLQScope calls made by service to persistence layer
 	PersistenceGetReplicationTasksFromDLQScope
+	// PersistenceGetReplicationDLQSizeScope tracks PersistenceGetReplicationDLQSizeScope calls made by service to persistence layer
+	PersistenceGetReplicationDLQSizeScope
+	// PersistenceDeleteReplicationTaskFromDLQScope tracks PersistenceDeleteReplicationTaskFromDLQScope calls made by service to persistence layer
+	PersistenceDeleteReplicationTaskFromDLQScope
+	// PersistenceRangeDeleteReplicationTaskFromDLQScope tracks PersistenceRangeDeleteReplicationTaskFromDLQScope calls made by service to persistence layer
+	PersistenceRangeDeleteReplicationTaskFromDLQScope
+	// PersistenceCreateFailoverMarkerTasksScope tracks CreateFailoverMarkerTasks calls made by service to persistence layer
+	PersistenceCreateFailoverMarkerTasksScope
 	// PersistenceGetTimerIndexTasksScope tracks GetTimerIndexTasks calls made by service to persistence layer
 	PersistenceGetTimerIndexTasksScope
 	// PersistenceCompleteTimerTaskScope tracks CompleteTimerTasks calls made by service to persistence layer
@@ -237,18 +256,42 @@ const (
 	PersistenceScanWorkflowExecutionsScope
 	// PersistenceCountWorkflowExecutionsScope tracks CountWorkflowExecutions calls made by service to persistence layer
 	PersistenceCountWorkflowExecutionsScope
-	// PersistenceEnqueueMessageScope tracks Encueue calls made by service to persistence layer
+	// PersistenceEnqueueMessageScope tracks Enqueue calls made by service to persistence layer
 	PersistenceEnqueueMessageScope
+	// PersistenceEnqueueMessageToDLQScope tracks Enqueue DLQ calls made by service to persistence layer
+	PersistenceEnqueueMessageToDLQScope
 	// PersistenceReadQueueMessagesScope tracks ReadMessages calls made by service to persistence layer
 	PersistenceReadQueueMessagesScope
+	// PersistenceReadQueueMessagesFromDLQScope tracks ReadMessagesFromDLQ calls made by service to persistence layer
+	PersistenceReadQueueMessagesFromDLQScope
 	// PersistenceDeleteQueueMessagesScope tracks DeleteMessages calls made by service to persistence layer
 	PersistenceDeleteQueueMessagesScope
+	// PersistenceDeleteQueueMessageFromDLQScope tracks DeleteMessageFromDLQ calls made by service to persistence layer
+	PersistenceDeleteQueueMessageFromDLQScope
+	// PersistenceRangeDeleteMessagesFromDLQScope tracks RangeDeleteMessagesFromDLQ calls made by service to persistence layer
+	PersistenceRangeDeleteMessagesFromDLQScope
 	// PersistenceUpdateAckLevelScope tracks UpdateAckLevel calls made by service to persistence layer
 	PersistenceUpdateAckLevelScope
 	// PersistenceGetAckLevelScope tracks GetAckLevel calls made by service to persistence layer
 	PersistenceGetAckLevelScope
+	// PersistenceUpdateDLQAckLevelScope tracks UpdateDLQAckLevel calls made by service to persistence layer
+	PersistenceUpdateDLQAckLevelScope
+	// PersistenceGetDLQAckLevelScope tracks GetDLQAckLevel calls made by service to persistence layer
+	PersistenceGetDLQAckLevelScope
+	// PersistenceGetDLQSizeScope tracks GetDLQSize calls made by service to persistence layer
+	PersistenceGetDLQSizeScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
+	// HistoryClientDescribeHistoryHostScope tracks RPC calls to history service
+	HistoryClientDescribeHistoryHostScope
+	// HistoryClientRemoveTaskScope tracks RPC calls to history service
+	HistoryClientRemoveTaskScope
+	// HistoryClientCloseShardScope tracks RPC calls to history service
+	HistoryClientCloseShardScope
+	// HistoryClientResetQueueScope tracks RPC calls to history service
+	HistoryClientResetQueueScope
+	// HistoryClientDescribeQueueScope tracks RPC calls to history service
+	HistoryClientDescribeQueueScope
 	// HistoryClientRecordActivityTaskHeartbeatScope tracks RPC calls to history service
 	HistoryClientRecordActivityTaskHeartbeatScope
 	// HistoryClientRespondDecisionTaskCompletedScope tracks RPC calls to history service
@@ -261,6 +304,8 @@ const (
 	HistoryClientRespondActivityTaskFailedScope
 	// HistoryClientRespondActivityTaskCanceledScope tracks RPC calls to history service
 	HistoryClientRespondActivityTaskCanceledScope
+	// HistoryClientDescribeMutableStateScope tracks RPC calls to history service
+	HistoryClientDescribeMutableStateScope
 	// HistoryClientGetMutableStateScope tracks RPC calls to history service
 	HistoryClientGetMutableStateScope
 	// HistoryClientPollMutableStateScope tracks RPC calls to history service
@@ -289,10 +334,6 @@ const (
 	HistoryClientScheduleDecisionTaskScope
 	// HistoryClientRecordChildExecutionCompletedScope tracks RPC calls to history service
 	HistoryClientRecordChildExecutionCompletedScope
-	// HistoryClientReplicateEventsScope tracks RPC calls to history service
-	HistoryClientReplicateEventsScope
-	// HistoryClientReplicateRawEventsScope tracks RPC calls to history service
-	HistoryClientReplicateRawEventsScope
 	// HistoryClientSyncShardStatusScope tracks RPC calls to history service
 	HistoryClientReplicateEventsV2Scope
 	// HistoryClientReplicateRawEventsV2Scope tracks RPC calls to history service
@@ -301,10 +342,22 @@ const (
 	HistoryClientSyncActivityScope
 	// HistoryClientGetReplicationTasksScope tracks RPC calls to history service
 	HistoryClientGetReplicationTasksScope
+	// HistoryClientGetDLQReplicationTasksScope tracks RPC calls to history service
+	HistoryClientGetDLQReplicationTasksScope
 	// HistoryClientQueryWorkflowScope tracks RPC calls to history service
 	HistoryClientQueryWorkflowScope
 	// HistoryClientReapplyEventsScope tracks RPC calls to history service
 	HistoryClientReapplyEventsScope
+	// HistoryClientReadDLQMessagesScope tracks RPC calls to history service
+	HistoryClientReadDLQMessagesScope
+	// HistoryClientPurgeDLQMessagesScope tracks RPC calls to history service
+	HistoryClientPurgeDLQMessagesScope
+	// HistoryClientMergeDLQMessagesScope tracks RPC calls to history service
+	HistoryClientMergeDLQMessagesScope
+	// HistoryClientRefreshWorkflowTasksScope tracks RPC calls to history service
+	HistoryClientRefreshWorkflowTasksScope
+	// HistoryClientNotifyFailoverMarkersScope tracks RPC calls to history service
+	HistoryClientNotifyFailoverMarkersScope
 	// MatchingClientPollForDecisionTaskScope tracks RPC calls to matching service
 	MatchingClientPollForDecisionTaskScope
 	// MatchingClientPollForActivityTaskScope tracks RPC calls to matching service
@@ -321,6 +374,8 @@ const (
 	MatchingClientCancelOutstandingPollScope
 	// MatchingClientDescribeTaskListScope tracks RPC calls to matching service
 	MatchingClientDescribeTaskListScope
+	// MatchingClientListTaskListPartitionsScope tracks RPC calls to matching service
+	MatchingClientListTaskListPartitionsScope
 	// FrontendClientDeprecateDomainScope tracks RPC calls to frontend service
 	FrontendClientDeprecateDomainScope
 	// FrontendClientDescribeDomainScope tracks RPC calls to frontend service
@@ -331,6 +386,10 @@ const (
 	FrontendClientDescribeWorkflowExecutionScope
 	// FrontendClientGetWorkflowExecutionHistoryScope tracks RPC calls to frontend service
 	FrontendClientGetWorkflowExecutionHistoryScope
+	// FrontendClientGetWorkflowExecutionRawHistoryScope tracks RPC calls to frontend service
+	FrontendClientGetWorkflowExecutionRawHistoryScope
+	// FrontendClientPollForWorkflowExecutionRawHistoryScope tracks RPC calls to frontend service
+	FrontendClientPollForWorkflowExecutionRawHistoryScope
 	// FrontendClientListArchivedWorkflowExecutionsScope tracks RPC calls to frontend service
 	FrontendClientListArchivedWorkflowExecutionsScope
 	// FrontendClientListClosedWorkflowExecutionsScope tracks RPC calls to frontend service
@@ -397,20 +456,42 @@ const (
 	FrontendClientGetReplicationTasksScope
 	// FrontendClientGetDomainReplicationTasksScope tracks RPC calls to frontend service
 	FrontendClientGetDomainReplicationTasksScope
+	// FrontendClientGetDLQReplicationTasksScope tracks RPC calls to frontend service
+	FrontendClientGetDLQReplicationTasksScope
 	// FrontendClientReapplyEventsScope tracks RPC calls to frontend service
 	FrontendClientReapplyEventsScope
+	// FrontendClientGetClusterInfoScope tracks RPC calls to frontend
+	FrontendClientGetClusterInfoScope
+	// FrontendClientListTaskListPartitionsScope tracks RPC calls to frontend service
+	FrontendClientListTaskListPartitionsScope
 	// AdminClientAddSearchAttributeScope tracks RPC calls to admin service
 	AdminClientAddSearchAttributeScope
 	// AdminClientCloseShardScope tracks RPC calls to admin service
 	AdminClientCloseShardScope
+	// AdminClientRemoveTaskScope tracks RPC calls to admin service
+	AdminClientRemoveTaskScope
+	// AdminClientResetQueueScope tracks RPC calls to admin service
+	AdminClientResetQueueScope
+	// AdminClientDescribeQueueScope tracks RPC calls to admin service
+	AdminClientDescribeQueueScope
 	// AdminClientDescribeHistoryHostScope tracks RPC calls to admin service
 	AdminClientDescribeHistoryHostScope
 	// AdminClientDescribeWorkflowExecutionScope tracks RPC calls to admin service
 	AdminClientDescribeWorkflowExecutionScope
-	// AdminClientGetWorkflowExecutionRawHistoryScope tracks RPC calls to admin service
-	AdminClientGetWorkflowExecutionRawHistoryScope
 	// AdminClientGetWorkflowExecutionRawHistoryV2Scope tracks RPC calls to admin service
 	AdminClientGetWorkflowExecutionRawHistoryV2Scope
+	// AdminClientDescribeClusterScope tracks RPC calls to admin service
+	AdminClientDescribeClusterScope
+	// AdminClientReadDLQMessagesScope tracks RPC calls to admin service
+	AdminClientReadDLQMessagesScope
+	// AdminClientPurgeDLQMessagesScope tracks RPC calls to admin service
+	AdminClientPurgeDLQMessagesScope
+	// AdminClientMergeDLQMessagesScope tracks RPC calls to admin service
+	AdminClientMergeDLQMessagesScope
+	// AdminClientRefreshWorkflowTasksScope tracks RPC calls to admin service
+	AdminClientRefreshWorkflowTasksScope
+	// AdminClientResendReplicationTasksScope tracks RPC calls to admin service
+	AdminClientResendReplicationTasksScope
 	// DCRedirectionDeprecateDomainScope tracks RPC calls for dc redirection
 	DCRedirectionDeprecateDomainScope
 	// DCRedirectionDescribeDomainScope tracks RPC calls for dc redirection
@@ -421,6 +502,10 @@ const (
 	DCRedirectionDescribeWorkflowExecutionScope
 	// DCRedirectionGetWorkflowExecutionHistoryScope tracks RPC calls for dc redirection
 	DCRedirectionGetWorkflowExecutionHistoryScope
+	// DCRedirectionGetWorkflowExecutionRawHistoryScope tracks RPC calls for dc redirection
+	DCRedirectionGetWorkflowExecutionRawHistoryScope
+	// DCRedirectionPollForWorklfowExecutionRawHistoryScope tracks RPC calls for dc redirection
+	DCRedirectionPollForWorklfowExecutionRawHistoryScope
 	// DCRedirectionListArchivedWorkflowExecutionsScope tracks RPC calls for dc redirection
 	DCRedirectionListArchivedWorkflowExecutionsScope
 	// DCRedirectionListClosedWorkflowExecutionsScope tracks RPC calls for dc redirection
@@ -483,11 +568,15 @@ const (
 	DCRedirectionTerminateWorkflowExecutionScope
 	// DCRedirectionUpdateDomainScope tracks RPC calls for dc redirection
 	DCRedirectionUpdateDomainScope
+	// DCRedirectionListTaskListPartitionsScope tracks RPC calls for dc redirection
+	DCRedirectionListTaskListPartitionsScope
 
 	// MessagingPublishScope tracks Publish calls made by service to messaging layer
 	MessagingClientPublishScope
 	// MessagingPublishBatchScope tracks Publish calls made by service to messaging layer
 	MessagingClientPublishBatchScope
+	// MessagingClientConsumerScope tracks the consumer activities
+	MessagingClientConsumerScope
 
 	// DomainCacheScope tracks domain cache callbacks
 	DomainCacheScope
@@ -553,6 +642,10 @@ const (
 
 	// SequentialTaskProcessingScope is used by sequential task processing logic
 	SequentialTaskProcessingScope
+	// ParallelTaskProcessingScope is used by parallel task processing logic
+	ParallelTaskProcessingScope
+	// TaskSchedulerScope is used by task scheduler logic
+	TaskSchedulerScope
 
 	// HistoryArchiverScope is used by history archivers
 	HistoryArchiverScope
@@ -575,6 +668,11 @@ const (
 	// BlobstoreClientDirectoryExistsScope tracks DirectoryExists calls to blobstore
 	BlobstoreClientDirectoryExistsScope
 
+	// DomainFailoverScope is used in domain failover processor
+	DomainFailoverScope
+	// DomainReplicationQueueScope is used in domainreplication queue
+	DomainReplicationQueueScope
+
 	NumCommonScopes
 )
 
@@ -582,16 +680,40 @@ const (
 const (
 	// AdminDescribeHistoryHostScope is the metric scope for admin.AdminDescribeHistoryHostScope
 	AdminDescribeHistoryHostScope = iota + NumCommonScopes
+	// AdminAddSearchAttributeScope is the metric scope for admin.AdminAddSearchAttributeScope
+	AdminAddSearchAttributeScope
 	// AdminDescribeWorkflowExecutionScope is the metric scope for admin.AdminDescribeWorkflowExecutionScope
 	AdminDescribeWorkflowExecutionScope
 	// AdminGetWorkflowExecutionRawHistoryScope is the metric scope for admin.GetWorkflowExecutionRawHistoryScope
 	AdminGetWorkflowExecutionRawHistoryScope
 	// AdminGetWorkflowExecutionRawHistoryV2Scope is the metric scope for admin.GetWorkflowExecutionRawHistoryScope
 	AdminGetWorkflowExecutionRawHistoryV2Scope
+	// AdminGetReplicationMessagesScope is the metric scope for admin.GetReplicationMessages
+	AdminGetReplicationMessagesScope
+	// AdminGetDomainReplicationMessagesScope is the metric scope for admin.GetDomainReplicationMessages
+	AdminGetDomainReplicationMessagesScope
+	// AdminGetDLQReplicationMessagesScope is the metric scope for admin.GetDLQReplicationMessages
+	AdminGetDLQReplicationMessagesScope
+	// AdminReapplyEventsScope is the metric scope for admin.ReapplyEvents
+	AdminReapplyEventsScope
+	// AdminRefreshWorkflowTasksScope is the metric scope for admin.RefreshWorkflowTasks
+	AdminRefreshWorkflowTasksScope
+	// AdminResendReplicationTasksScope is the metric scope for admin.ResendReplicationTasks
+	AdminResendReplicationTasksScope
 	// AdminRemoveTaskScope is the metric scope for admin.AdminRemoveTaskScope
 	AdminRemoveTaskScope
-	//AdminCloseShardTaskScope is the metric scope for admin.AdminRemoveTaskScope
-	AdminCloseShardTaskScope
+	// AdminCloseShardScope is the metric scope for admin.AdminCloseShardScope
+	AdminCloseShardScope
+	// AdminResetQueueScope is the metric scope for admin.AdminResetQueueScope
+	AdminResetQueueScope
+	// AdminDescribeQueueScope is the metrics scope for admin.AdminDescribeQueueScope
+	AdminDescribeQueueScope
+	// AdminReadDLQMessagesScope is the metric scope for admin.AdminReadDLQMessagesScope
+	AdminReadDLQMessagesScope
+	// AdminPurgeDLQMessagesScope is the metric scope for admin.AdminPurgeDLQMessagesScope
+	AdminPurgeDLQMessagesScope
+	// AdminMergeDLQMessagesScope is the metric scope for admin.AdminMergeDLQMessagesScope
+	AdminMergeDLQMessagesScope
 
 	NumAdminScopes
 )
@@ -628,6 +750,10 @@ const (
 	FrontendRespondActivityTaskCanceledByIDScope
 	// FrontendGetWorkflowExecutionHistoryScope is the metric scope for frontend.GetWorkflowExecutionHistory
 	FrontendGetWorkflowExecutionHistoryScope
+	// FrontendGetWorkflowExecutionRawHistoryScope is the metric scope for frontend.GetWorkflowExecutionRawHistory
+	FrontendGetWorkflowExecutionRawHistoryScope
+	// FrontendPollForWorklfowExecutionRawHistoryScope is the metric scope for frontend.GetWorkflowExecutionRawHistory
+	FrontendPollForWorklfowExecutionRawHistoryScope
 	// FrontendSignalWorkflowExecutionScope is the metric scope for frontend.SignalWorkflowExecution
 	FrontendSignalWorkflowExecutionScope
 	// FrontendSignalWithStartWorkflowExecutionScope is the metric scope for frontend.SignalWithStartWorkflowExecution
@@ -663,6 +789,8 @@ const (
 	// FrontendDescribeTaskListScope is the metric scope for frontend.DescribeTaskList
 	FrontendDescribeTaskListScope
 	// FrontendResetStickyTaskListScope is the metric scope for frontend.ResetStickyTaskList
+	FrontendListTaskListPartitionsScope
+	// FrontendResetStickyTaskListScope is the metric scope for frontend.ResetStickyTaskList
 	FrontendResetStickyTaskListScope
 	// FrontendListDomainsScope is the metric scope for frontend.ListDomain
 	FrontendListDomainsScope
@@ -670,14 +798,6 @@ const (
 	FrontendResetWorkflowExecutionScope
 	// FrontendGetSearchAttributesScope is the metric scope for frontend.GetSearchAttributes
 	FrontendGetSearchAttributesScope
-	// FrontendGetReplicationMessagesScope is the metric scope for frontend.GetReplicationMessages
-	FrontendGetReplicationMessagesScope
-	// FrontendGetDomainReplicationMessagesScope is the metric scope for frontend.GetDomainReplicationMessages
-	FrontendGetDomainReplicationMessagesScope
-	// FrontendReapplyEventsScope is the metric scope for frontend.ReapplyEvents
-	FrontendReapplyEventsScope
-	// FrontendDomainReplicationQueueScope is the metrics scope for domain replication queue
-	FrontendDomainReplicationQueueScope
 
 	NumFrontendScopes
 )
@@ -698,9 +818,17 @@ const (
 	HistoryRespondActivityTaskFailedScope
 	// HistoryRespondActivityTaskCanceledScope tracks RespondActivityTaskCanceled API calls received by service
 	HistoryRespondActivityTaskCanceledScope
-	// HistoryGetMutableStateScope tracks GetMutableStateScope API calls received by service
+	// HistoryResetQueueScope tracks ResetQueue API calls received by service
+	HistoryResetQueueScope
+	// HistoryDescribeQueueScope tracks DescribeQueue API calls received by service
+	HistoryDescribeQueueScope
+	// HistoryDescribeMutabelStateScope tracks DescribeMutableState API calls received by service
+	HistoryDescribeMutabelStateScope
+	// HistoryGetMutableStateScope tracks GetMutableState API calls received by service
 	HistoryGetMutableStateScope
-	// HistoryResetStickyTaskListScope tracks ResetStickyTaskListScope API calls received by service
+	// HistoryPollMutableStateScope tracks PollMutableState API calls received by service
+	HistoryPollMutableStateScope
+	// HistoryResetStickyTaskListScope tracks ResetStickyTaskList API calls received by service
 	HistoryResetStickyTaskListScope
 	// HistoryDescribeWorkflowExecutionScope tracks DescribeWorkflowExecution API calls received by service
 	HistoryDescribeWorkflowExecutionScope
@@ -736,10 +864,24 @@ const (
 	HistoryDescribeMutableStateScope
 	// GetReplicationMessages tracks GetReplicationMessages API calls received by service
 	HistoryGetReplicationMessagesScope
+	// HistoryGetDLQReplicationMessagesScope tracks GetReplicationMessages API calls received by service
+	HistoryGetDLQReplicationMessagesScope
+	// HistoryReadDLQMessagesScope tracks ReadDLQMessages API calls received by service
+	HistoryReadDLQMessagesScope
+	// HistoryPurgeDLQMessagesScope tracks PurgeDLQMessages API calls received by service
+	HistoryPurgeDLQMessagesScope
+	// HistoryMergeDLQMessagesScope tracks MergeDLQMessages API calls received by service
+	HistoryMergeDLQMessagesScope
 	// HistoryShardControllerScope is the scope used by shard controller
 	HistoryShardControllerScope
 	// HistoryReapplyEventsScope is the scope used by event reapplication
 	HistoryReapplyEventsScope
+	// HistoryRefreshWorkflowTasksScope is the scope used by refresh workflow tasks API
+	HistoryRefreshWorkflowTasksScope
+	// HistoryNotifyFailoverMarkersScope is the scope used by refresh workflow tasks API
+	HistoryNotifyFailoverMarkersScope
+	// TaskPriorityAssignerScope is the scope used by all metric emitted by task priority assigner
+	TaskPriorityAssignerScope
 	// TransferQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
 	TransferQueueProcessorScope
 	// TransferActiveQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
@@ -816,7 +958,7 @@ const (
 	TimerStandbyTaskDeleteHistoryEventScope
 	// TimerStandbyTaskWorkflowBackoffTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
 	TimerStandbyTaskWorkflowBackoffTimerScope
-	// HistoryEventNotificationScope is the scope used by shard history event nitification
+	// HistoryEventNotificationScope is the scope used by shard history event notification
 	HistoryEventNotificationScope
 	// ReplicatorQueueProcessorScope is the scope used by all metric emitted by replicator queue processor
 	ReplicatorQueueProcessorScope
@@ -842,8 +984,6 @@ const (
 	EventsCacheGetEventScope
 	// EventsCachePutEventScope is the scope used by events cache
 	EventsCachePutEventScope
-	// EventsCacheDeleteEventScope is the scope used by events cache
-	EventsCacheDeleteEventScope
 	// EventsCacheGetFromStoreScope is the scope used by events cache
 	EventsCacheGetFromStoreScope
 	// ExecutionSizeStatsScope is the scope used for emiting workflow execution size related stats
@@ -866,6 +1006,16 @@ const (
 	ArchiverClientScope
 	// ReplicationTaskFetcherScope is scope used by all metrics emitted by ReplicationTaskFetcher
 	ReplicationTaskFetcherScope
+	// ReplicationTaskCleanupScope is scope used by all metrics emitted by ReplicationTaskProcessor cleanup
+	ReplicationTaskCleanupScope
+	// ReplicationDLQStatsScope is scope used by all metrics emitted related to replication DLQ
+	ReplicationDLQStatsScope
+	// FailoverMarkerScope is scope used by all metrics emitted related to failover marker
+	FailoverMarkerScope
+	// HistoryReplicationV2TaskScope is the scope used by history task replication processing
+	HistoryReplicationV2TaskScope
+	// SyncActivityTaskScope is the scope used by sync activity information processing
+	SyncActivityTaskScope
 
 	NumHistoryScopes
 )
@@ -890,6 +1040,8 @@ const (
 	MatchingCancelOutstandingPollScope
 	// MatchingDescribeTaskListScope tracks DescribeTaskList API calls received by service
 	MatchingDescribeTaskListScope
+	// MatchingListTaskListPartitionsScope tracks ListTaskListPartitions API calls received by service
+	MatchingListTaskListPartitionsScope
 
 	NumMatchingScopes
 )
@@ -900,16 +1052,6 @@ const (
 	ReplicatorScope = iota + NumCommonScopes
 	// DomainReplicationTaskScope is the scope used by domain task replication processing
 	DomainReplicationTaskScope
-	// HistoryReplicationTaskScope is the scope used by history task replication processing
-	HistoryReplicationTaskScope
-	// HistoryMetadataReplicationTaskScope is the scope used by history metadata task replication processing
-	HistoryMetadataReplicationTaskScope
-	// HistoryReplicationV2TaskScope is the scope used by history task replication processing
-	HistoryReplicationV2TaskScope
-	// SyncShardTaskScope is the scope used by sync shrad information processing
-	SyncShardTaskScope
-	// SyncActivityTaskScope is the scope used by sync activity information processing
-	SyncActivityTaskScope
 	// ESProcessorScope is scope used by all metric emitted by esProcessor
 	ESProcessorScope
 	// IndexProcessorScope is scope used by all metric emitted by index processor
@@ -928,12 +1070,18 @@ const (
 	ArchiverArchivalWorkflowScope
 	// TaskListScavengerScope is scope used by all metrics emitted by worker.tasklist.Scavenger module
 	TaskListScavengerScope
+	// ExecutionsScannerScope is scope used by all metrics emitted by worker.executions.Scanner module
+	ExecutionsScannerScope
+	// ExecutionsFixerScope is the scope used by all metrics emitted by worker.executions.Fixer module
+	ExecutionsFixerScope
 	// BatcherScope is scope used by all metrics emitted by worker.Batcher module
 	BatcherScope
 	// HistoryScavengerScope is scope used by all metrics emitted by worker.history.Scavenger module
 	HistoryScavengerScope
 	// ParentClosePolicyProcessorScope is scope used by all metrics emitted by worker.ParentClosePolicyProcessor
 	ParentClosePolicyProcessorScope
+	// ShardScannerScope is scope used by all metrics emitted by worker.shardscanner module
+	ShardScannerScope
 
 	NumWorkerScopes
 )
@@ -952,15 +1100,22 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceResetWorkflowExecutionScope:                   {operation: "ResetWorkflowExecution"},
 		PersistenceDeleteWorkflowExecutionScope:                  {operation: "DeleteWorkflowExecution"},
 		PersistenceDeleteCurrentWorkflowExecutionScope:           {operation: "DeleteCurrentWorkflowExecution"},
-		PersistenceDeleteTaskScope:                               {operation: "PersistenceDelete"},
 		PersistenceGetCurrentExecutionScope:                      {operation: "GetCurrentExecution"},
+		PersistenceIsWorkflowExecutionExistsScope:                {operation: "IsWorkflowExecutionExists"},
+		PersistenceListCurrentExecutionsScope:                    {operation: "ListCurrentExecutions"},
+		PersistenceListConcreteExecutionsScope:                   {operation: "ListConcreteExecutions"},
 		PersistenceGetTransferTasksScope:                         {operation: "GetTransferTasks"},
 		PersistenceCompleteTransferTaskScope:                     {operation: "CompleteTransferTask"},
 		PersistenceRangeCompleteTransferTaskScope:                {operation: "RangeCompleteTransferTask"},
 		PersistenceGetReplicationTasksScope:                      {operation: "GetReplicationTasks"},
 		PersistenceCompleteReplicationTaskScope:                  {operation: "CompleteReplicationTask"},
-		PersistencePutReplicationTaskToDLQScope:                  {operation: "PersistencePutReplicationTaskToDLQ"},
-		PersistenceGetReplicationTasksFromDLQScope:               {operation: "PersistenceGetReplicationTasksFromDLQ"},
+		PersistenceRangeCompleteReplicationTaskScope:             {operation: "RangeCompleteReplicationTask"},
+		PersistencePutReplicationTaskToDLQScope:                  {operation: "PutReplicationTaskToDLQ"},
+		PersistenceGetReplicationTasksFromDLQScope:               {operation: "GetReplicationTasksFromDLQ"},
+		PersistenceGetReplicationDLQSizeScope:                    {operation: "GetReplicationDLQSize"},
+		PersistenceDeleteReplicationTaskFromDLQScope:             {operation: "DeleteReplicationTaskFromDLQ"},
+		PersistenceRangeDeleteReplicationTaskFromDLQScope:        {operation: "RangeDeleteReplicationTaskFromDLQ"},
+		PersistenceCreateFailoverMarkerTasksScope:                {operation: "CreateFailoverMarkerTasks"},
 		PersistenceGetTimerIndexTasksScope:                       {operation: "GetTimerIndexTasks"},
 		PersistenceCompleteTimerTaskScope:                        {operation: "CompleteTimerTask"},
 		PersistenceRangeCompleteTimerTaskScope:                   {operation: "RangeCompleteTimerTask"},
@@ -1005,134 +1160,169 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetHistoryTreeScope:                           {operation: "GetHistoryTree"},
 		PersistenceGetAllHistoryTreeBranchesScope:                {operation: "GetAllHistoryTreeBranches"},
 		PersistenceEnqueueMessageScope:                           {operation: "EnqueueMessage"},
+		PersistenceEnqueueMessageToDLQScope:                      {operation: "EnqueueMessageToDLQ"},
 		PersistenceReadQueueMessagesScope:                        {operation: "ReadQueueMessages"},
+		PersistenceReadQueueMessagesFromDLQScope:                 {operation: "ReadQueueMessagesFromDLQ"},
 		PersistenceDeleteQueueMessagesScope:                      {operation: "DeleteQueueMessages"},
+		PersistenceDeleteQueueMessageFromDLQScope:                {operation: "DeleteQueueMessageFromDLQ"},
+		PersistenceRangeDeleteMessagesFromDLQScope:               {operation: "RangeDeleteMessagesFromDLQ"},
 		PersistenceUpdateAckLevelScope:                           {operation: "UpdateAckLevel"},
 		PersistenceGetAckLevelScope:                              {operation: "GetAckLevel"},
+		PersistenceUpdateDLQAckLevelScope:                        {operation: "UpdateDLQAckLevel"},
+		PersistenceGetDLQAckLevelScope:                           {operation: "GetDLQAckLevel"},
+		PersistenceGetDLQSizeScope:                               {operation: "GetDLQSize"},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 
-		HistoryClientStartWorkflowExecutionScope:            {operation: "HistoryClientStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientRecordActivityTaskHeartbeatScope:       {operation: "HistoryClientRecordActivityTaskHeartbeat", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientRespondDecisionTaskCompletedScope:      {operation: "HistoryClientRespondDecisionTaskCompleted", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientRespondDecisionTaskFailedScope:         {operation: "HistoryClientRespondDecisionTaskFailed", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientRespondActivityTaskCompletedScope:      {operation: "HistoryClientRespondActivityTaskCompleted", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientRespondActivityTaskFailedScope:         {operation: "HistoryClientRespondActivityTaskFailed", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientRespondActivityTaskCanceledScope:       {operation: "HistoryClientRespondActivityTaskCanceled", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientGetMutableStateScope:                   {operation: "HistoryClientGetMutableState", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientPollMutableStateScope:                  {operation: "HistoryClientPollMutableState", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientResetStickyTaskListScope:               {operation: "HistoryClientResetStickyTaskListScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientDescribeWorkflowExecutionScope:         {operation: "HistoryClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientRecordDecisionTaskStartedScope:         {operation: "HistoryClientRecordDecisionTaskStarted", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientRecordActivityTaskStartedScope:         {operation: "HistoryClientRecordActivityTaskStarted", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientRequestCancelWorkflowExecutionScope:    {operation: "HistoryClientRequestCancelWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientSignalWorkflowExecutionScope:           {operation: "HistoryClientSignalWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientSignalWithStartWorkflowExecutionScope:  {operation: "HistoryClientSignalWithStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientRemoveSignalMutableStateScope:          {operation: "HistoryClientRemoveSignalMutableStateScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientTerminateWorkflowExecutionScope:        {operation: "HistoryClientTerminateWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientResetWorkflowExecutionScope:            {operation: "HistoryClientResetWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientScheduleDecisionTaskScope:              {operation: "HistoryClientScheduleDecisionTask", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientRecordChildExecutionCompletedScope:     {operation: "HistoryClientRecordChildExecutionCompleted", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientReplicateEventsScope:                   {operation: "HistoryClientReplicateEvents", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientReplicateRawEventsScope:                {operation: "HistoryClientReplicateRawEvents", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientReplicateEventsV2Scope:                 {operation: "HistoryClientReplicateEventsV2", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientSyncShardStatusScope:                   {operation: "HistoryClientSyncShardStatusScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientSyncActivityScope:                      {operation: "HistoryClientSyncActivityScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientGetReplicationTasksScope:               {operation: "HistoryClientGetReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientQueryWorkflowScope:                     {operation: "HistoryClientQueryWorkflowScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		HistoryClientReapplyEventsScope:                     {operation: "HistoryClientReapplyEventsScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
-		MatchingClientPollForDecisionTaskScope:              {operation: "MatchingClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
-		MatchingClientPollForActivityTaskScope:              {operation: "MatchingClientPollForActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
-		MatchingClientAddActivityTaskScope:                  {operation: "MatchingClientAddActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
-		MatchingClientAddDecisionTaskScope:                  {operation: "MatchingClientAddDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
-		MatchingClientQueryWorkflowScope:                    {operation: "MatchingClientQueryWorkflow", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
-		MatchingClientRespondQueryTaskCompletedScope:        {operation: "MatchingClientRespondQueryTaskCompleted", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
-		MatchingClientCancelOutstandingPollScope:            {operation: "MatchingClientCancelOutstandingPoll", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
-		MatchingClientDescribeTaskListScope:                 {operation: "MatchingClientDescribeTaskList", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
-		FrontendClientDeprecateDomainScope:                  {operation: "FrontendClientDeprecateDomain", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientDescribeDomainScope:                   {operation: "FrontendClientDescribeDomain", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientDescribeTaskListScope:                 {operation: "FrontendClientDescribeTaskList", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientDescribeWorkflowExecutionScope:        {operation: "FrontendClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientGetWorkflowExecutionHistoryScope:      {operation: "FrontendClientGetWorkflowExecutionHistory", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientListArchivedWorkflowExecutionsScope:   {operation: "FrontendClientListArchivedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientListClosedWorkflowExecutionsScope:     {operation: "FrontendClientListClosedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientListDomainsScope:                      {operation: "FrontendClientListDomains", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientListOpenWorkflowExecutionsScope:       {operation: "FrontendClientListOpenWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientPollForActivityTaskScope:              {operation: "FrontendClientPollForActivityTask", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientPollForDecisionTaskScope:              {operation: "FrontendClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientQueryWorkflowScope:                    {operation: "FrontendClientQueryWorkflow", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientRecordActivityTaskHeartbeatScope:      {operation: "FrontendClientRecordActivityTaskHeartbeat", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientRecordActivityTaskHeartbeatByIDScope:  {operation: "FrontendClientRecordActivityTaskHeartbeatByID", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientRegisterDomainScope:                   {operation: "FrontendClientRegisterDomain", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientRequestCancelWorkflowExecutionScope:   {operation: "FrontendClientRequestCancelWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientResetStickyTaskListScope:              {operation: "FrontendClientResetStickyTaskList", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientResetWorkflowExecutionScope:           {operation: "FrontendClientResetWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientRespondActivityTaskCanceledScope:      {operation: "FrontendClientRespondActivityTaskCanceled", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientRespondActivityTaskCanceledByIDScope:  {operation: "FrontendClientRespondActivityTaskCanceledByID", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientRespondActivityTaskCompletedScope:     {operation: "FrontendClientRespondActivityTaskCompleted", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientRespondActivityTaskCompletedByIDScope: {operation: "FrontendClientRespondActivityTaskCompletedByID", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientRespondActivityTaskFailedScope:        {operation: "FrontendClientRespondActivityTaskFailed", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientRespondActivityTaskFailedByIDScope:    {operation: "FrontendClientRespondActivityTaskFailedByID", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientRespondDecisionTaskCompletedScope:     {operation: "FrontendClientRespondDecisionTaskCompleted", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientRespondDecisionTaskFailedScope:        {operation: "FrontendClientRespondDecisionTaskFailed", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientRespondQueryTaskCompletedScope:        {operation: "FrontendClientRespondQueryTaskCompleted", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientSignalWithStartWorkflowExecutionScope: {operation: "FrontendClientSignalWithStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientSignalWorkflowExecutionScope:          {operation: "FrontendClientSignalWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientStartWorkflowExecutionScope:           {operation: "FrontendClientStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientTerminateWorkflowExecutionScope:       {operation: "FrontendClientTerminateWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientUpdateDomainScope:                     {operation: "FrontendClientUpdateDomain", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientListWorkflowExecutionsScope:           {operation: "FrontendClientListWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientScanWorkflowExecutionsScope:           {operation: "FrontendClientScanWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientCountWorkflowExecutionsScope:          {operation: "FrontendClientCountWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientGetSearchAttributesScope:              {operation: "FrontendClientGetSearchAttributes", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientGetReplicationTasksScope:              {operation: "FrontendClientGetReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientGetDomainReplicationTasksScope:        {operation: "FrontendClientGetDomainReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		FrontendClientReapplyEventsScope:                    {operation: "FrontendClientReapplyEventsScope", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		AdminClientAddSearchAttributeScope:                  {operation: "AdminClientAddSearchAttribute", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
-		AdminClientDescribeHistoryHostScope:                 {operation: "AdminClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
-		AdminClientDescribeWorkflowExecutionScope:           {operation: "AdminClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
-		AdminClientGetWorkflowExecutionRawHistoryScope:      {operation: "AdminClientGetWorkflowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
-		AdminClientGetWorkflowExecutionRawHistoryV2Scope:    {operation: "AdminClientGetWorkflowExecutionRawHistoryV2", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
-		AdminClientCloseShardScope:                          {operation: "AdminClientCloseShard", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
-		DCRedirectionDeprecateDomainScope:                   {operation: "DCRedirectionDeprecateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionDescribeDomainScope:                    {operation: "DCRedirectionDescribeDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionDescribeTaskListScope:                  {operation: "DCRedirectionDescribeTaskList", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionDescribeWorkflowExecutionScope:         {operation: "DCRedirectionDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionGetWorkflowExecutionHistoryScope:       {operation: "DCRedirectionGetWorkflowExecutionHistory", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionListArchivedWorkflowExecutionsScope:    {operation: "DCRedirectionListArchivedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionListClosedWorkflowExecutionsScope:      {operation: "DCRedirectionListClosedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionListDomainsScope:                       {operation: "DCRedirectionListDomains", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionListOpenWorkflowExecutionsScope:        {operation: "DCRedirectionListOpenWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionListWorkflowExecutionsScope:            {operation: "DCRedirectionListWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionScanWorkflowExecutionsScope:            {operation: "DCRedirectionScanWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionCountWorkflowExecutionsScope:           {operation: "DCRedirectionCountWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionGetSearchAttributesScope:               {operation: "DCRedirectionGetSearchAttributes", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionPollForActivityTaskScope:               {operation: "DCRedirectionPollForActivityTask", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionPollForDecisionTaskScope:               {operation: "DCRedirectionPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionQueryWorkflowScope:                     {operation: "DCRedirectionQueryWorkflow", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRecordActivityTaskHeartbeatScope:       {operation: "DCRedirectionRecordActivityTaskHeartbeat", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRecordActivityTaskHeartbeatByIDScope:   {operation: "DCRedirectionRecordActivityTaskHeartbeatByID", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRegisterDomainScope:                    {operation: "DCRedirectionRegisterDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRequestCancelWorkflowExecutionScope:    {operation: "DCRedirectionRequestCancelWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionResetStickyTaskListScope:               {operation: "DCRedirectionResetStickyTaskList", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionResetWorkflowExecutionScope:            {operation: "DCRedirectionResetWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondActivityTaskCanceledScope:       {operation: "DCRedirectionRespondActivityTaskCanceled", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondActivityTaskCanceledByIDScope:   {operation: "DCRedirectionRespondActivityTaskCanceledByID", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondActivityTaskCompletedScope:      {operation: "DCRedirectionRespondActivityTaskCompleted", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondActivityTaskCompletedByIDScope:  {operation: "DCRedirectionRespondActivityTaskCompletedByID", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondActivityTaskFailedScope:         {operation: "DCRedirectionRespondActivityTaskFailed", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondActivityTaskFailedByIDScope:     {operation: "DCRedirectionRespondActivityTaskFailedByID", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondDecisionTaskCompletedScope:      {operation: "DCRedirectionRespondDecisionTaskCompleted", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondDecisionTaskFailedScope:         {operation: "DCRedirectionRespondDecisionTaskFailed", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondQueryTaskCompletedScope:         {operation: "DCRedirectionRespondQueryTaskCompleted", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionSignalWithStartWorkflowExecutionScope:  {operation: "DCRedirectionSignalWithStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionSignalWorkflowExecutionScope:           {operation: "DCRedirectionSignalWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionStartWorkflowExecutionScope:            {operation: "DCRedirectionStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionTerminateWorkflowExecutionScope:        {operation: "DCRedirectionTerminateWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionUpdateDomainScope:                      {operation: "DCRedirectionUpdateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		HistoryClientStartWorkflowExecutionScope:              {operation: "HistoryClientStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientDescribeHistoryHostScope:                 {operation: "HistoryClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRemoveTaskScope:                          {operation: "HistoryClientRemoveTask", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientCloseShardScope:                          {operation: "HistoryClientCloseShard", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientResetQueueScope:                          {operation: "HistoryClientResetQueue", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientDescribeQueueScope:                       {operation: "HistoryClientDescribeQueue", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRecordActivityTaskHeartbeatScope:         {operation: "HistoryClientRecordActivityTaskHeartbeat", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRespondDecisionTaskCompletedScope:        {operation: "HistoryClientRespondDecisionTaskCompleted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRespondDecisionTaskFailedScope:           {operation: "HistoryClientRespondDecisionTaskFailed", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRespondActivityTaskCompletedScope:        {operation: "HistoryClientRespondActivityTaskCompleted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRespondActivityTaskFailedScope:           {operation: "HistoryClientRespondActivityTaskFailed", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRespondActivityTaskCanceledScope:         {operation: "HistoryClientRespondActivityTaskCanceled", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientDescribeMutableStateScope:                {operation: "HistoryClientDescribeMutableState", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientGetMutableStateScope:                     {operation: "HistoryClientGetMutableState", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientPollMutableStateScope:                    {operation: "HistoryClientPollMutableState", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientResetStickyTaskListScope:                 {operation: "HistoryClientResetStickyTaskListScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientDescribeWorkflowExecutionScope:           {operation: "HistoryClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRecordDecisionTaskStartedScope:           {operation: "HistoryClientRecordDecisionTaskStarted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRecordActivityTaskStartedScope:           {operation: "HistoryClientRecordActivityTaskStarted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRequestCancelWorkflowExecutionScope:      {operation: "HistoryClientRequestCancelWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientSignalWorkflowExecutionScope:             {operation: "HistoryClientSignalWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientSignalWithStartWorkflowExecutionScope:    {operation: "HistoryClientSignalWithStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRemoveSignalMutableStateScope:            {operation: "HistoryClientRemoveSignalMutableStateScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientTerminateWorkflowExecutionScope:          {operation: "HistoryClientTerminateWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientResetWorkflowExecutionScope:              {operation: "HistoryClientResetWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientScheduleDecisionTaskScope:                {operation: "HistoryClientScheduleDecisionTask", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRecordChildExecutionCompletedScope:       {operation: "HistoryClientRecordChildExecutionCompleted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientReplicateEventsV2Scope:                   {operation: "HistoryClientReplicateEventsV2", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientSyncShardStatusScope:                     {operation: "HistoryClientSyncShardStatusScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientSyncActivityScope:                        {operation: "HistoryClientSyncActivityScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientGetReplicationTasksScope:                 {operation: "HistoryClientGetReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientGetDLQReplicationTasksScope:              {operation: "HistoryClientGetDLQReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientQueryWorkflowScope:                       {operation: "HistoryClientQueryWorkflowScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientReapplyEventsScope:                       {operation: "HistoryClientReapplyEventsScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientReadDLQMessagesScope:                     {operation: "HistoryClientReadDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientPurgeDLQMessagesScope:                    {operation: "HistoryClientPurgeDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientMergeDLQMessagesScope:                    {operation: "HistoryClientMergeDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRefreshWorkflowTasksScope:                {operation: "HistoryClientRefreshWorkflowTasksScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientNotifyFailoverMarkersScope:               {operation: "HistoryClientNotifyFailoverMarkersScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		MatchingClientPollForDecisionTaskScope:                {operation: "MatchingClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientPollForActivityTaskScope:                {operation: "MatchingClientPollForActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientAddActivityTaskScope:                    {operation: "MatchingClientAddActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientAddDecisionTaskScope:                    {operation: "MatchingClientAddDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientQueryWorkflowScope:                      {operation: "MatchingClientQueryWorkflow", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientRespondQueryTaskCompletedScope:          {operation: "MatchingClientRespondQueryTaskCompleted", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientCancelOutstandingPollScope:              {operation: "MatchingClientCancelOutstandingPoll", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientDescribeTaskListScope:                   {operation: "MatchingClientDescribeTaskList", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientListTaskListPartitionsScope:             {operation: "MatchingClientListTaskListPartitions", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		FrontendClientDeprecateDomainScope:                    {operation: "FrontendClientDeprecateDomain", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientDescribeDomainScope:                     {operation: "FrontendClientDescribeDomain", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientDescribeTaskListScope:                   {operation: "FrontendClientDescribeTaskList", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientDescribeWorkflowExecutionScope:          {operation: "FrontendClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientGetWorkflowExecutionHistoryScope:        {operation: "FrontendClientGetWorkflowExecutionHistory", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientGetWorkflowExecutionRawHistoryScope:     {operation: "FrontendClientGetWorkflowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientPollForWorkflowExecutionRawHistoryScope: {operation: "FrontendClientPollForWorkflowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientListArchivedWorkflowExecutionsScope:     {operation: "FrontendClientListArchivedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientListClosedWorkflowExecutionsScope:       {operation: "FrontendClientListClosedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientListDomainsScope:                        {operation: "FrontendClientListDomains", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientListOpenWorkflowExecutionsScope:         {operation: "FrontendClientListOpenWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientPollForActivityTaskScope:                {operation: "FrontendClientPollForActivityTask", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientPollForDecisionTaskScope:                {operation: "FrontendClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientQueryWorkflowScope:                      {operation: "FrontendClientQueryWorkflow", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientRecordActivityTaskHeartbeatScope:        {operation: "FrontendClientRecordActivityTaskHeartbeat", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientRecordActivityTaskHeartbeatByIDScope:    {operation: "FrontendClientRecordActivityTaskHeartbeatByID", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientRegisterDomainScope:                     {operation: "FrontendClientRegisterDomain", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientRequestCancelWorkflowExecutionScope:     {operation: "FrontendClientRequestCancelWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientResetStickyTaskListScope:                {operation: "FrontendClientResetStickyTaskList", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientResetWorkflowExecutionScope:             {operation: "FrontendClientResetWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientRespondActivityTaskCanceledScope:        {operation: "FrontendClientRespondActivityTaskCanceled", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientRespondActivityTaskCanceledByIDScope:    {operation: "FrontendClientRespondActivityTaskCanceledByID", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientRespondActivityTaskCompletedScope:       {operation: "FrontendClientRespondActivityTaskCompleted", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientRespondActivityTaskCompletedByIDScope:   {operation: "FrontendClientRespondActivityTaskCompletedByID", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientRespondActivityTaskFailedScope:          {operation: "FrontendClientRespondActivityTaskFailed", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientRespondActivityTaskFailedByIDScope:      {operation: "FrontendClientRespondActivityTaskFailedByID", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientRespondDecisionTaskCompletedScope:       {operation: "FrontendClientRespondDecisionTaskCompleted", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientRespondDecisionTaskFailedScope:          {operation: "FrontendClientRespondDecisionTaskFailed", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientRespondQueryTaskCompletedScope:          {operation: "FrontendClientRespondQueryTaskCompleted", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientSignalWithStartWorkflowExecutionScope:   {operation: "FrontendClientSignalWithStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientSignalWorkflowExecutionScope:            {operation: "FrontendClientSignalWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientStartWorkflowExecutionScope:             {operation: "FrontendClientStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientTerminateWorkflowExecutionScope:         {operation: "FrontendClientTerminateWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientUpdateDomainScope:                       {operation: "FrontendClientUpdateDomain", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientListWorkflowExecutionsScope:             {operation: "FrontendClientListWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientScanWorkflowExecutionsScope:             {operation: "FrontendClientScanWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientCountWorkflowExecutionsScope:            {operation: "FrontendClientCountWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientGetSearchAttributesScope:                {operation: "FrontendClientGetSearchAttributes", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientGetReplicationTasksScope:                {operation: "FrontendClientGetReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientGetDomainReplicationTasksScope:          {operation: "FrontendClientGetDomainReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientGetDLQReplicationTasksScope:             {operation: "FrontendClientGetDLQReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientReapplyEventsScope:                      {operation: "FrontendClientReapplyEventsScope", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientGetClusterInfoScope:                     {operation: "FrontendClientGetClusterInfoScope", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientListTaskListPartitionsScope:             {operation: "FrontendClientListTaskListPartitions", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		AdminClientAddSearchAttributeScope:                    {operation: "AdminClientAddSearchAttribute", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDescribeHistoryHostScope:                   {operation: "AdminClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDescribeWorkflowExecutionScope:             {operation: "AdminClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetWorkflowExecutionRawHistoryV2Scope:      {operation: "AdminClientGetWorkflowExecutionRawHistoryV2", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDescribeClusterScope:                       {operation: "AdminClientDescribeCluster", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientRefreshWorkflowTasksScope:                  {operation: "AdminClientRefreshWorkflowTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientResendReplicationTasksScope:                {operation: "AdminClientResendReplicationTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientCloseShardScope:                            {operation: "AdminClientCloseShard", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientRemoveTaskScope:                            {operation: "AdminClientRemoveTask", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientResetQueueScope:                            {operation: "AdminClientResetQueue", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDescribeQueueScope:                         {operation: "AdminClientDescribeQueue", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientReadDLQMessagesScope:                       {operation: "AdminClientReadDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientPurgeDLQMessagesScope:                      {operation: "AdminClientPurgeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientMergeDLQMessagesScope:                      {operation: "AdminClientMergeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		DCRedirectionDeprecateDomainScope:                     {operation: "DCRedirectionDeprecateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionDescribeDomainScope:                      {operation: "DCRedirectionDescribeDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionDescribeTaskListScope:                    {operation: "DCRedirectionDescribeTaskList", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionDescribeWorkflowExecutionScope:           {operation: "DCRedirectionDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionGetWorkflowExecutionHistoryScope:         {operation: "DCRedirectionGetWorkflowExecutionHistory", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionGetWorkflowExecutionRawHistoryScope:      {operation: "DCRedirectionGetWorkflowExecutionRawHistoryScope", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionPollForWorklfowExecutionRawHistoryScope:  {operation: "DCRedirectionPollForWorklfowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionListArchivedWorkflowExecutionsScope:      {operation: "DCRedirectionListArchivedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionListClosedWorkflowExecutionsScope:        {operation: "DCRedirectionListClosedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionListDomainsScope:                         {operation: "DCRedirectionListDomains", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionListOpenWorkflowExecutionsScope:          {operation: "DCRedirectionListOpenWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionListWorkflowExecutionsScope:              {operation: "DCRedirectionListWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionScanWorkflowExecutionsScope:              {operation: "DCRedirectionScanWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionCountWorkflowExecutionsScope:             {operation: "DCRedirectionCountWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionGetSearchAttributesScope:                 {operation: "DCRedirectionGetSearchAttributes", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionPollForActivityTaskScope:                 {operation: "DCRedirectionPollForActivityTask", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionPollForDecisionTaskScope:                 {operation: "DCRedirectionPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionQueryWorkflowScope:                       {operation: "DCRedirectionQueryWorkflow", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRecordActivityTaskHeartbeatScope:         {operation: "DCRedirectionRecordActivityTaskHeartbeat", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRecordActivityTaskHeartbeatByIDScope:     {operation: "DCRedirectionRecordActivityTaskHeartbeatByID", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRegisterDomainScope:                      {operation: "DCRedirectionRegisterDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRequestCancelWorkflowExecutionScope:      {operation: "DCRedirectionRequestCancelWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionResetStickyTaskListScope:                 {operation: "DCRedirectionResetStickyTaskList", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionResetWorkflowExecutionScope:              {operation: "DCRedirectionResetWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondActivityTaskCanceledScope:         {operation: "DCRedirectionRespondActivityTaskCanceled", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondActivityTaskCanceledByIDScope:     {operation: "DCRedirectionRespondActivityTaskCanceledByID", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondActivityTaskCompletedScope:        {operation: "DCRedirectionRespondActivityTaskCompleted", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondActivityTaskCompletedByIDScope:    {operation: "DCRedirectionRespondActivityTaskCompletedByID", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondActivityTaskFailedScope:           {operation: "DCRedirectionRespondActivityTaskFailed", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondActivityTaskFailedByIDScope:       {operation: "DCRedirectionRespondActivityTaskFailedByID", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondDecisionTaskCompletedScope:        {operation: "DCRedirectionRespondDecisionTaskCompleted", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondDecisionTaskFailedScope:           {operation: "DCRedirectionRespondDecisionTaskFailed", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondQueryTaskCompletedScope:           {operation: "DCRedirectionRespondQueryTaskCompleted", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionSignalWithStartWorkflowExecutionScope:    {operation: "DCRedirectionSignalWithStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionSignalWorkflowExecutionScope:             {operation: "DCRedirectionSignalWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionStartWorkflowExecutionScope:              {operation: "DCRedirectionStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionTerminateWorkflowExecutionScope:          {operation: "DCRedirectionTerminateWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionUpdateDomainScope:                        {operation: "DCRedirectionUpdateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionListTaskListPartitionsScope:              {operation: "DCRedirectionListTaskListPartitions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 
 		MessagingClientPublishScope:      {operation: "MessagingClientPublish"},
 		MessagingClientPublishBatchScope: {operation: "MessagingClientPublishBatch"},
+		MessagingClientConsumerScope:     {operation: "MessagingClientConsumerScope"},
 
 		DomainCacheScope:                                      {operation: "DomainCache"},
 		HistoryRereplicationByTransferTaskScope:               {operation: "HistoryRereplicationByTransferTask"},
@@ -1157,6 +1347,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ElasticsearchCountWorkflowExecutionsScope:                  {operation: "CountWorkflowExecutions"},
 		ElasticsearchDeleteWorkflowExecutionsScope:                 {operation: "DeleteWorkflowExecution"},
 		SequentialTaskProcessingScope:                              {operation: "SequentialTaskProcessing"},
+		ParallelTaskProcessingScope:                                {operation: "ParallelTaskProcessing"},
+		TaskSchedulerScope:                                         {operation: "TaskScheduler"},
 
 		HistoryArchiverScope:    {operation: "HistoryArchiver"},
 		VisibilityArchiverScope: {operation: "VisibilityArchiver"},
@@ -1167,57 +1359,71 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		BlobstoreClientExistsScope:          {operation: "BlobstoreClientExists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 		BlobstoreClientDeleteScope:          {operation: "BlobstoreClientDelete", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 		BlobstoreClientDirectoryExistsScope: {operation: "BlobstoreClientDirectoryExists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+
+		DomainFailoverScope:         {operation: "DomainFailover"},
+		DomainReplicationQueueScope: {operation: "DomainReplicationQueue"},
 	},
 	// Frontend Scope Names
 	Frontend: {
 		// Admin API scope co-locates with with frontend
 		AdminRemoveTaskScope:                       {operation: "AdminRemoveTask"},
-		AdminCloseShardTaskScope:                   {operation: "AdminCloseShardTask"},
+		AdminCloseShardScope:                       {operation: "AdminCloseShard"},
+		AdminResetQueueScope:                       {operation: "AdminResetQueueScope"},
+		AdminDescribeQueueScope:                    {operation: "AdminDescribeQueueScope"},
+		AdminReadDLQMessagesScope:                  {operation: "AdminReadDLQMessages"},
+		AdminPurgeDLQMessagesScope:                 {operation: "AdminPurgeDLQMessages"},
+		AdminMergeDLQMessagesScope:                 {operation: "AdminMergeDLQMessages"},
 		AdminDescribeHistoryHostScope:              {operation: "DescribeHistoryHost"},
+		AdminAddSearchAttributeScope:               {operation: "AddSearchAttribute"},
 		AdminDescribeWorkflowExecutionScope:        {operation: "DescribeWorkflowExecution"},
 		AdminGetWorkflowExecutionRawHistoryScope:   {operation: "GetWorkflowExecutionRawHistory"},
 		AdminGetWorkflowExecutionRawHistoryV2Scope: {operation: "GetWorkflowExecutionRawHistoryV2"},
+		AdminGetReplicationMessagesScope:           {operation: "GetReplicationMessages"},
+		AdminGetDomainReplicationMessagesScope:     {operation: "GetDomainReplicationMessages"},
+		AdminGetDLQReplicationMessagesScope:        {operation: "AdminGetDLQReplicationMessages"},
+		AdminReapplyEventsScope:                    {operation: "ReapplyEvents"},
+		AdminRefreshWorkflowTasksScope:             {operation: "RefreshWorkflowTasks"},
+		AdminResendReplicationTasksScope:           {operation: "ResendReplicationTasks"},
 
-		FrontendStartWorkflowExecutionScope:           {operation: "StartWorkflowExecution"},
-		FrontendPollForDecisionTaskScope:              {operation: "PollForDecisionTask"},
-		FrontendPollForActivityTaskScope:              {operation: "PollForActivityTask"},
-		FrontendRecordActivityTaskHeartbeatScope:      {operation: "RecordActivityTaskHeartbeat"},
-		FrontendRecordActivityTaskHeartbeatByIDScope:  {operation: "RecordActivityTaskHeartbeatByID"},
-		FrontendRespondDecisionTaskCompletedScope:     {operation: "RespondDecisionTaskCompleted"},
-		FrontendRespondDecisionTaskFailedScope:        {operation: "RespondDecisionTaskFailed"},
-		FrontendRespondQueryTaskCompletedScope:        {operation: "RespondQueryTaskCompleted"},
-		FrontendRespondActivityTaskCompletedScope:     {operation: "RespondActivityTaskCompleted"},
-		FrontendRespondActivityTaskFailedScope:        {operation: "RespondActivityTaskFailed"},
-		FrontendRespondActivityTaskCanceledScope:      {operation: "RespondActivityTaskCanceled"},
-		FrontendRespondActivityTaskCompletedByIDScope: {operation: "RespondActivityTaskCompletedByID"},
-		FrontendRespondActivityTaskFailedByIDScope:    {operation: "RespondActivityTaskFailedByID"},
-		FrontendRespondActivityTaskCanceledByIDScope:  {operation: "RespondActivityTaskCanceledByID"},
-		FrontendGetWorkflowExecutionHistoryScope:      {operation: "GetWorkflowExecutionHistory"},
-		FrontendSignalWorkflowExecutionScope:          {operation: "SignalWorkflowExecution"},
-		FrontendSignalWithStartWorkflowExecutionScope: {operation: "SignalWithStartWorkflowExecution"},
-		FrontendTerminateWorkflowExecutionScope:       {operation: "TerminateWorkflowExecution"},
-		FrontendResetWorkflowExecutionScope:           {operation: "ResetWorkflowExecution"},
-		FrontendRequestCancelWorkflowExecutionScope:   {operation: "RequestCancelWorkflowExecution"},
-		FrontendListArchivedWorkflowExecutionsScope:   {operation: "ListArchivedWorkflowExecutions"},
-		FrontendListOpenWorkflowExecutionsScope:       {operation: "ListOpenWorkflowExecutions"},
-		FrontendListClosedWorkflowExecutionsScope:     {operation: "ListClosedWorkflowExecutions"},
-		FrontendListWorkflowExecutionsScope:           {operation: "ListWorkflowExecutions"},
-		FrontendScanWorkflowExecutionsScope:           {operation: "ScanWorkflowExecutions"},
-		FrontendCountWorkflowExecutionsScope:          {operation: "CountWorkflowExecutions"},
-		FrontendRegisterDomainScope:                   {operation: "RegisterDomain"},
-		FrontendDescribeDomainScope:                   {operation: "DescribeDomain"},
-		FrontendListDomainsScope:                      {operation: "ListDomain"},
-		FrontendUpdateDomainScope:                     {operation: "UpdateDomain"},
-		FrontendDeprecateDomainScope:                  {operation: "DeprecateDomain"},
-		FrontendQueryWorkflowScope:                    {operation: "QueryWorkflow"},
-		FrontendDescribeWorkflowExecutionScope:        {operation: "DescribeWorkflowExecution"},
-		FrontendDescribeTaskListScope:                 {operation: "DescribeTaskList"},
-		FrontendResetStickyTaskListScope:              {operation: "ResetStickyTaskList"},
-		FrontendGetSearchAttributesScope:              {operation: "GetSearchAttributes"},
-		FrontendGetReplicationMessagesScope:           {operation: "GetReplicationMessages"},
-		FrontendGetDomainReplicationMessagesScope:     {operation: "GetDomainReplicationMessages"},
-		FrontendReapplyEventsScope:                    {operation: "ReapplyEvents"},
-		FrontendDomainReplicationQueueScope:           {operation: "DomainReplicationQueue"},
+		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},
+		FrontendPollForDecisionTaskScope:                {operation: "PollForDecisionTask"},
+		FrontendPollForActivityTaskScope:                {operation: "PollForActivityTask"},
+		FrontendRecordActivityTaskHeartbeatScope:        {operation: "RecordActivityTaskHeartbeat"},
+		FrontendRecordActivityTaskHeartbeatByIDScope:    {operation: "RecordActivityTaskHeartbeatByID"},
+		FrontendRespondDecisionTaskCompletedScope:       {operation: "RespondDecisionTaskCompleted"},
+		FrontendRespondDecisionTaskFailedScope:          {operation: "RespondDecisionTaskFailed"},
+		FrontendRespondQueryTaskCompletedScope:          {operation: "RespondQueryTaskCompleted"},
+		FrontendRespondActivityTaskCompletedScope:       {operation: "RespondActivityTaskCompleted"},
+		FrontendRespondActivityTaskFailedScope:          {operation: "RespondActivityTaskFailed"},
+		FrontendRespondActivityTaskCanceledScope:        {operation: "RespondActivityTaskCanceled"},
+		FrontendRespondActivityTaskCompletedByIDScope:   {operation: "RespondActivityTaskCompletedByID"},
+		FrontendRespondActivityTaskFailedByIDScope:      {operation: "RespondActivityTaskFailedByID"},
+		FrontendRespondActivityTaskCanceledByIDScope:    {operation: "RespondActivityTaskCanceledByID"},
+		FrontendGetWorkflowExecutionHistoryScope:        {operation: "GetWorkflowExecutionHistory"},
+		FrontendGetWorkflowExecutionRawHistoryScope:     {operation: "GetWorkflowExecutionRawHistory"},
+		FrontendPollForWorklfowExecutionRawHistoryScope: {operation: "PollForWorklfowExecutionRawHistory"},
+		FrontendSignalWorkflowExecutionScope:            {operation: "SignalWorkflowExecution"},
+		FrontendSignalWithStartWorkflowExecutionScope:   {operation: "SignalWithStartWorkflowExecution"},
+		FrontendTerminateWorkflowExecutionScope:         {operation: "TerminateWorkflowExecution"},
+		FrontendResetWorkflowExecutionScope:             {operation: "ResetWorkflowExecution"},
+		FrontendRequestCancelWorkflowExecutionScope:     {operation: "RequestCancelWorkflowExecution"},
+		FrontendListArchivedWorkflowExecutionsScope:     {operation: "ListArchivedWorkflowExecutions"},
+		FrontendListOpenWorkflowExecutionsScope:         {operation: "ListOpenWorkflowExecutions"},
+		FrontendListClosedWorkflowExecutionsScope:       {operation: "ListClosedWorkflowExecutions"},
+		FrontendListWorkflowExecutionsScope:             {operation: "ListWorkflowExecutions"},
+		FrontendScanWorkflowExecutionsScope:             {operation: "ScanWorkflowExecutions"},
+		FrontendCountWorkflowExecutionsScope:            {operation: "CountWorkflowExecutions"},
+		FrontendRegisterDomainScope:                     {operation: "RegisterDomain"},
+		FrontendDescribeDomainScope:                     {operation: "DescribeDomain"},
+		FrontendListDomainsScope:                        {operation: "ListDomain"},
+		FrontendUpdateDomainScope:                       {operation: "UpdateDomain"},
+		FrontendDeprecateDomainScope:                    {operation: "DeprecateDomain"},
+		FrontendQueryWorkflowScope:                      {operation: "QueryWorkflow"},
+		FrontendDescribeWorkflowExecutionScope:          {operation: "DescribeWorkflowExecution"},
+		FrontendListTaskListPartitionsScope:             {operation: "FrontendListTaskListPartitions"},
+		FrontendDescribeTaskListScope:                   {operation: "DescribeTaskList"},
+		FrontendResetStickyTaskListScope:                {operation: "ResetStickyTaskList"},
+		FrontendGetSearchAttributesScope:                {operation: "GetSearchAttributes"},
 	},
 	// History Scope Names
 	History: {
@@ -1228,7 +1434,11 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryRespondActivityTaskCompletedScope:               {operation: "RespondActivityTaskCompleted"},
 		HistoryRespondActivityTaskFailedScope:                  {operation: "RespondActivityTaskFailed"},
 		HistoryRespondActivityTaskCanceledScope:                {operation: "RespondActivityTaskCanceled"},
+		HistoryResetQueueScope:                                 {operation: "ResetQueue"},
+		HistoryDescribeQueueScope:                              {operation: "DescribeQueue"},
+		HistoryDescribeMutabelStateScope:                       {operation: "DescribeMutableState"},
 		HistoryGetMutableStateScope:                            {operation: "GetMutableState"},
+		HistoryPollMutableStateScope:                           {operation: "PollMutableState"},
 		HistoryResetStickyTaskListScope:                        {operation: "ResetStickyTaskListScope"},
 		HistoryDescribeWorkflowExecutionScope:                  {operation: "DescribeWorkflowExecution"},
 		HistoryRecordDecisionTaskStartedScope:                  {operation: "RecordDecisionTaskStarted"},
@@ -1250,8 +1460,15 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistorySyncActivityScope:                               {operation: "SyncActivity"},
 		HistoryDescribeMutableStateScope:                       {operation: "DescribeMutableState"},
 		HistoryGetReplicationMessagesScope:                     {operation: "GetReplicationMessages"},
+		HistoryGetDLQReplicationMessagesScope:                  {operation: "GetDLQReplicationMessages"},
+		HistoryReadDLQMessagesScope:                            {operation: "ReadDLQMessages"},
+		HistoryPurgeDLQMessagesScope:                           {operation: "PurgeDLQMessages"},
+		HistoryMergeDLQMessagesScope:                           {operation: "MergeDLQMessages"},
 		HistoryShardControllerScope:                            {operation: "ShardController"},
 		HistoryReapplyEventsScope:                              {operation: "EventReapplication"},
+		HistoryRefreshWorkflowTasksScope:                       {operation: "RefreshWorkflowTasks"},
+		HistoryNotifyFailoverMarkersScope:                      {operation: "NotifyFailoverMarkers"},
+		TaskPriorityAssignerScope:                              {operation: "TaskPriorityAssigner"},
 		TransferQueueProcessorScope:                            {operation: "TransferQueueProcessor"},
 		TransferActiveQueueProcessorScope:                      {operation: "TransferActiveQueueProcessor"},
 		TransferStandbyQueueProcessorScope:                     {operation: "TransferStandbyQueueProcessor"},
@@ -1303,7 +1520,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryCacheGetCurrentExecutionScope:                   {operation: "HistoryCacheGetCurrentExecution", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
 		EventsCacheGetEventScope:                               {operation: "EventsCacheGetEvent", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
 		EventsCachePutEventScope:                               {operation: "EventsCachePutEvent", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
-		EventsCacheDeleteEventScope:                            {operation: "EventsCacheDeleteEvent", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
 		EventsCacheGetFromStoreScope:                           {operation: "EventsCacheGetFromStore", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
 		ExecutionSizeStatsScope:                                {operation: "ExecutionStats", tags: map[string]string{StatsTypeTagName: SizeStatsTypeTagValue}},
 		ExecutionCountStatsScope:                               {operation: "ExecutionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
@@ -1312,6 +1528,11 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		WorkflowCompletionStatsScope:                           {operation: "CompletionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
 		ArchiverClientScope:                                    {operation: "ArchiverClient"},
 		ReplicationTaskFetcherScope:                            {operation: "ReplicationTaskFetcher"},
+		ReplicationTaskCleanupScope:                            {operation: "ReplicationTaskCleanup"},
+		ReplicationDLQStatsScope:                               {operation: "ReplicationDLQStats"},
+		FailoverMarkerScope:                                    {operation: "FailoverMarker"},
+		HistoryReplicationV2TaskScope:                          {operation: "HistoryReplicationV2Task"},
+		SyncActivityTaskScope:                                  {operation: "SyncActivityTask"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -1324,16 +1545,12 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MatchingRespondQueryTaskCompletedScope: {operation: "RespondQueryTaskCompleted"},
 		MatchingCancelOutstandingPollScope:     {operation: "CancelOutstandingPoll"},
 		MatchingDescribeTaskListScope:          {operation: "DescribeTaskList"},
+		MatchingListTaskListPartitionsScope:    {operation: "ListTaskListPartitions"},
 	},
 	// Worker Scope Names
 	Worker: {
 		ReplicatorScope:                        {operation: "Replicator"},
 		DomainReplicationTaskScope:             {operation: "DomainReplicationTask"},
-		HistoryReplicationTaskScope:            {operation: "HistoryReplicationTask"},
-		HistoryMetadataReplicationTaskScope:    {operation: "HistoryMetadataReplicationTask"},
-		HistoryReplicationV2TaskScope:          {operation: "HistoryReplicationV2Task"},
-		SyncShardTaskScope:                     {operation: "SyncShardTask"},
-		SyncActivityTaskScope:                  {operation: "SyncActivityTask"},
 		ESProcessorScope:                       {operation: "ESProcessor"},
 		IndexProcessorScope:                    {operation: "IndexProcessor"},
 		ArchiverDeleteHistoryActivityScope:     {operation: "ArchiverDeleteHistoryActivity"},
@@ -1343,6 +1560,9 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ArchiverPumpScope:                      {operation: "ArchiverPump"},
 		ArchiverArchivalWorkflowScope:          {operation: "ArchiverArchivalWorkflow"},
 		TaskListScavengerScope:                 {operation: "tasklistscavenger"},
+		ExecutionsScannerScope:                 {operation: "ExecutionsScanner"},
+		ShardScannerScope:                      {operation: "ShardScanner"},
+		ExecutionsFixerScope:                   {operation: "ExecutionsFixer"},
 		HistoryScavengerScope:                  {operation: "historyscavenger"},
 		BatcherScope:                           {operation: "batcher"},
 		ParentClosePolicyProcessorScope:        {operation: "ParentClosePolicyProcessor"},
@@ -1368,6 +1588,12 @@ const (
 	CadenceErrRetryTaskCounter
 	CadenceErrBadBinaryCounter
 	CadenceErrClientVersionNotSupportedCounter
+	CadenceErrIncompleteHistoryCounter
+	CadenceErrNonDeterministicCounter
+	CadenceErrUnauthorizedCounter
+	CadenceErrAuthorizeFailedCounter
+	CadenceErrRemoteSyncMatchFailedCounter
+	CadenceErrIDLengthExceededWarnLimit
 	PersistenceRequests
 	PersistenceFailures
 	PersistenceLatency
@@ -1391,6 +1617,8 @@ const (
 	CadenceDcRedirectionClientFailures
 	CadenceDcRedirectionClientLatency
 
+	CadenceAuthorizationLatency
+
 	DomainCachePrepareCallbacksLatency
 	DomainCacheCallbacksLatency
 
@@ -1399,6 +1627,7 @@ const (
 	EventBlobSize
 
 	ArchivalConfigFailures
+	ActiveClusterGauge
 
 	ElasticsearchRequests
 	ElasticsearchFailures
@@ -1413,6 +1642,19 @@ const (
 	SequentialTaskQueueSize
 	SequentialTaskQueueProcessingLatency
 	SequentialTaskTaskProcessingLatency
+
+	ParallelTaskSubmitRequest
+	ParallelTaskSubmitLatency
+	ParallelTaskTaskProcessingLatency
+
+	PriorityTaskSubmitRequest
+	PriorityTaskSubmitLatency
+
+	KafkaConsumerMessageIn
+	KafkaConsumerMessageAck
+	KafkaConsumerMessageNack
+	KafkaConsumerMessageNackDlqErr
+	KafkaConsumerSessionStart
 
 	HistoryArchiverArchiveNonRetryableErrorCount
 	HistoryArchiverArchiveTransientErrorCount
@@ -1438,19 +1680,44 @@ const (
 	MatchingClientForwardedCounter
 	MatchingClientInvalidTaskListName
 
+	// common metrics that are emitted per task list
+	CadenceRequestsPerTaskList
+	CadenceFailuresPerTaskList
+	CadenceLatencyPerTaskList
+	CadenceErrBadRequestPerTaskListCounter
+	CadenceErrDomainNotActivePerTaskListCounter
+	CadenceErrServiceBusyPerTaskListCounter
+	CadenceErrEntityNotExistsPerTaskListCounter
+	CadenceErrExecutionAlreadyStartedPerTaskListCounter
+	CadenceErrDomainAlreadyExistsPerTaskListCounter
+	CadenceErrCancellationAlreadyRequestedPerTaskListCounter
+	CadenceErrQueryFailedPerTaskListCounter
+	CadenceErrLimitExceededPerTaskListCounter
+	CadenceErrContextTimeoutPerTaskListCounter
+	CadenceErrRetryTaskPerTaskListCounter
+	CadenceErrBadBinaryPerTaskListCounter
+	CadenceErrClientVersionNotSupportedPerTaskListCounter
+	CadenceErrIncompleteHistoryPerTaskListCounter
+	CadenceErrNonDeterministicPerTaskListCounter
+	CadenceErrUnauthorizedPerTaskListCounter
+	CadenceErrAuthorizeFailedPerTaskListCounter
+	CadenceErrRemoteSyncMatchFailedPerTaskListCounter
+
+	CadenceShardSuccessGauge
+	CadenceShardFailureGauge
+
+	DomainReplicationQueueSizeGauge
+	DomainReplicationQueueSizeErrorCount
+
+	ParentClosePolicyProcessorSuccess
+	ParentClosePolicyProcessorFailures
+
 	NumCommonMetrics // Needs to be last on this list for iota numbering
-)
-
-// Frontend Metrics enum
-const (
-	DomainReplicationTaskAckLevel = iota + NumCommonMetrics
-
-	NumFrontendMetrics
 )
 
 // History Metrics enum
 const (
-	TaskRequests = iota + NumFrontendMetrics
+	TaskRequests = iota + NumCommonMetrics
 	TaskLatency
 	TaskFailures
 	TaskDiscarded
@@ -1462,6 +1729,43 @@ const (
 	TaskProcessingLatency
 	TaskQueueLatency
 
+	TaskRequestsPerDomain
+	TaskLatencyPerDomain
+	TaskFailuresPerDomain
+	TaskWorkflowBusyPerDomain
+	TaskDiscardedPerDomain
+	TaskUnsupportedPerDomain
+	TaskAttemptTimerPerDomain
+	TaskStandbyRetryCounterPerDomain
+	TaskPendingActiveCounterPerDomain
+	TaskNotActiveCounterPerDomain
+	TaskLimitExceededCounterPerDomain
+	TaskProcessingLatencyPerDomain
+	TaskQueueLatencyPerDomain
+	TransferTaskMissingEventCounterPerDomain
+
+	TaskRedispatchQueuePendingTasksTimer
+
+	TransferTaskThrottledCounter
+	TimerTaskThrottledCounter
+
+	TransferTaskMissingEventCounter
+
+	ProcessingQueueNumTimer
+	ProcessingQueueMaxLevelTimer
+	ProcessingQueuePendingTaskSplitCounter
+	ProcessingQueueStuckTaskSplitCounter
+	ProcessingQueueSelectedDomainSplitCounter
+	ProcessingQueueRandomSplitCounter
+	ProcessingQueueThrottledCounter
+
+	QueueValidatorLostTaskCounter
+	QueueValidatorDropTaskCounter
+	QueueValidatorInvalidLoadCounter
+	QueueValidatorValidationCounter
+
+	ActivityE2ELatency
+	ActivityLostCounter
 	AckLevelUpdateCounter
 	AckLevelUpdateFailedCounter
 	DecisionTypeScheduleActivityCounter
@@ -1480,7 +1784,9 @@ const (
 	EmptyCompletionDecisionsCounter
 	MultipleCompletionDecisionsCounter
 	FailedDecisionsCounter
+	DecisionAttemptTimer
 	StaleMutableStateCounter
+	DataInconsistentCounter
 	AutoResetPointsLimitExceededCounter
 	AutoResetPointCorruptionCounter
 	ConcurrencyUpdateFailureCounter
@@ -1497,6 +1803,7 @@ const (
 	ShardClosedCounter
 	ShardItemCreatedCounter
 	ShardItemRemovedCounter
+	ShardItemAcquisitionLatency
 	ShardInfoReplicationPendingTasksTimer
 	ShardInfoTransferActivePendingTasksTimer
 	ShardInfoTransferStandbyPendingTasksTimer
@@ -1511,6 +1818,8 @@ const (
 	ShardInfoTimerFailoverInProgressTimer
 	ShardInfoTransferFailoverLatencyTimer
 	ShardInfoTimerFailoverLatencyTimer
+	SyncShardFromRemoteCounter
+	SyncShardFromRemoteFailure
 	MembershipChangedCounter
 	NumShardsGauge
 	GetEngineForShardErrorCounter
@@ -1581,46 +1890,78 @@ const (
 	ReplicationTasksLag
 	ReplicationTasksFetched
 	ReplicationTasksReturned
+	ReplicationTasksReturnedDiff
+	ReplicationTasksAppliedLatency
+	ReplicationDLQFailed
+	ReplicationDLQMaxLevelGauge
+	ReplicationDLQAckLevelGauge
+	ReplicationDLQProbeFailed
+	ReplicationDLQSize
 	GetReplicationMessagesForShardLatency
+	GetDLQReplicationMessagesLatency
 	EventReapplySkippedCount
 	DirectQueryDispatchLatency
+	DirectQueryDispatchStickyLatency
+	DirectQueryDispatchNonStickyLatency
+	DirectQueryDispatchStickySuccessCount
+	DirectQueryDispatchNonStickySuccessCount
+	DirectQueryDispatchClearStickinessLatency
+	DirectQueryDispatchClearStickinessSuccessCount
+	DirectQueryDispatchTimeoutBeforeNonStickyCount
 	DecisionTaskQueryLatency
-	CompleteQueryFailedCount
-	UnblockQueryFailedCount
-	FailQueryFailedCount
 	ConsistentQueryTimeoutCount
+	QueryBeforeFirstDecisionCount
+	QueryBufferExceededCount
+	QueryRegistryInvalidStateCount
+	WorkerNotSupportsConsistentQueryCount
+	DecisionStartToCloseTimeoutOverrideCount
+	ReplicationTaskCleanupCount
+	ReplicationTaskCleanupFailure
+	ReplicationTaskLatency
+	MutableStateChecksumMismatch
+	MutableStateChecksumInvalidated
+	GracefulFailoverLatency
+	GracefulFailoverFailure
+	FailoverMarkerCount
+	FailoverMarkerReplicationLatency
+	FailoverMarkerInsertFailure
+	FailoverMarkerNotificationFailure
+	FailoverMarkerUpdateShardFailure
 
 	NumHistoryMetrics
 )
 
 // Matching metrics enum
 const (
-	PollSuccessCounter = iota + NumCommonMetrics
-	PollTimeoutCounter
-	PollSuccessWithSyncCounter
-	LeaseRequestCounter
-	LeaseFailureCounter
-	ConditionFailedErrorCounter
-	RespondQueryTaskFailedCounter
-	SyncThrottleCounter
-	BufferThrottleCounter
-	SyncMatchLatency
-	AsyncMatchLatency
-	ExpiredTasksCounter
-	ForwardedCounter
-	ForwardTaskCalls
-	ForwardTaskErrors
-	ForwardTaskLatency
-	ForwardQueryCalls
-	ForwardQueryErrors
-	ForwardQueryLatency
-	ForwardPollCalls
-	ForwardPollErrors
-	ForwardPollLatency
-	LocalToLocalMatchCounter
-	LocalToRemoteMatchCounter
-	RemoteToLocalMatchCounter
-	RemoteToRemoteMatchCounter
+	PollSuccessPerTaskListCounter = iota + NumCommonMetrics
+	PollTimeoutPerTaskListCounter
+	PollSuccessWithSyncPerTaskListCounter
+	LeaseRequestPerTaskListCounter
+	LeaseFailurePerTaskListCounter
+	ConditionFailedErrorPerTaskListCounter
+	RespondQueryTaskFailedPerTaskListCounter
+	SyncThrottlePerTaskListCounter
+	BufferThrottlePerTaskListCounter
+	SyncMatchLatencyPerTaskList
+	AsyncMatchLatencyPerTaskList
+	ExpiredTasksPerTaskListCounter
+	ForwardedPerTaskListCounter
+	ForwardTaskCallsPerTaskList
+	ForwardTaskErrorsPerTaskList
+	ForwardTaskLatencyPerTaskList
+	ForwardQueryCallsPerTaskList
+	ForwardQueryErrorsPerTaskList
+	ForwardQueryLatencyPerTaskList
+	ForwardPollCallsPerTaskList
+	ForwardPollErrorsPerTaskList
+	ForwardPollLatencyPerTaskList
+	LocalToLocalMatchPerTaskListCounter
+	LocalToRemoteMatchPerTaskListCounter
+	RemoteToLocalMatchPerTaskListCounter
+	RemoteToRemoteMatchPerTaskListCounter
+	PollerPerTaskListCounter
+	TaskListManagersGauge
+	TaskLagPerTaskListGauge
 
 	NumMatchingMetrics
 )
@@ -1631,6 +1972,7 @@ const (
 	ReplicatorFailures
 	ReplicatorMessagesDropped
 	ReplicatorLatency
+	ReplicatorDLQFailures
 	ESProcessorRequests
 	ESProcessorRetries
 	ESProcessorFailures
@@ -1669,6 +2011,7 @@ const (
 	TaskListProcessedCount
 	TaskListDeletedCount
 	TaskListOutstandingCount
+	ExecutionsOutstandingCount
 	StartedCount
 	StoppedCount
 	ExecutorTasksDeferredCount
@@ -1678,8 +2021,19 @@ const (
 	HistoryScavengerSuccessCount
 	HistoryScavengerErrorCount
 	HistoryScavengerSkipCount
-	ParentClosePolicyProcessorSuccess
-	ParentClosePolicyProcessorFailures
+	DomainReplicationEnqueueDLQCount
+	ScannerExecutionsGauge
+	ScannerCorruptedGauge
+	ScannerCheckFailedGauge
+	ScannerCorruptionByTypeGauge
+	ScannerCorruptedOpenExecutionGauge
+	ScannerShardSizeMaxGauge
+	ScannerShardSizeMedianGauge
+	ScannerShardSizeMinGauge
+	ScannerShardSizeNinetyGauge
+	ScannerShardSizeSeventyFiveGauge
+	ScannerShardSizeTwentyFiveGauge
+	ScannerShardSizeTenGauge
 
 	NumWorkerMetrics
 )
@@ -1704,6 +2058,12 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceErrRetryTaskCounter:                          {metricName: "cadence_errors_retry_task", metricType: Counter},
 		CadenceErrBadBinaryCounter:                          {metricName: "cadence_errors_bad_binary", metricType: Counter},
 		CadenceErrClientVersionNotSupportedCounter:          {metricName: "cadence_errors_client_version_not_supported", metricType: Counter},
+		CadenceErrIncompleteHistoryCounter:                  {metricName: "cadence_errors_incomplete_history", metricType: Counter},
+		CadenceErrNonDeterministicCounter:                   {metricName: "cadence_errors_nondeterministic", metricType: Counter},
+		CadenceErrUnauthorizedCounter:                       {metricName: "cadence_errors_unauthorized", metricType: Counter},
+		CadenceErrAuthorizeFailedCounter:                    {metricName: "cadence_errors_authorize_failed", metricType: Counter},
+		CadenceErrRemoteSyncMatchFailedCounter:              {metricName: "cadence_errors_remote_syncmatch_failed", metricType: Counter},
+		CadenceErrIDLengthExceededWarnLimit:                 {metricName: "cadence_errors_id_length_exceeded_warn_limit", metricType: Counter},
 		PersistenceRequests:                                 {metricName: "persistence_requests", metricType: Counter},
 		PersistenceFailures:                                 {metricName: "persistence_errors", metricType: Counter},
 		PersistenceLatency:                                  {metricName: "persistence_latency", metricType: Timer},
@@ -1724,12 +2084,14 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceDcRedirectionClientRequests:                  {metricName: "cadence_client_requests_redirection", metricType: Counter},
 		CadenceDcRedirectionClientFailures:                  {metricName: "cadence_client_errors_redirection", metricType: Counter},
 		CadenceDcRedirectionClientLatency:                   {metricName: "cadence_client_latency_redirection", metricType: Timer},
+		CadenceAuthorizationLatency:                         {metricName: "cadence_authorization_latency", metricType: Timer},
 		DomainCachePrepareCallbacksLatency:                  {metricName: "domain_cache_prepare_callbacks_latency", metricType: Timer},
 		DomainCacheCallbacksLatency:                         {metricName: "domain_cache_callbacks_latency", metricType: Timer},
 		HistorySize:                                         {metricName: "history_size", metricType: Timer},
 		HistoryCount:                                        {metricName: "history_count", metricType: Timer},
 		EventBlobSize:                                       {metricName: "event_blob_size", metricType: Timer},
 		ArchivalConfigFailures:                              {metricName: "archivalconfig_failures", metricType: Counter},
+		ActiveClusterGauge:                                  {metricName: "active_cluster", metricType: Gauge},
 		ElasticsearchRequests:                               {metricName: "elasticsearch_requests", metricType: Counter},
 		ElasticsearchFailures:                               {metricName: "elasticsearch_errors", metricType: Counter},
 		ElasticsearchLatency:                                {metricName: "elasticsearch_latency", metricType: Timer},
@@ -1742,6 +2104,16 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		SequentialTaskQueueSize:                             {metricName: "sequentialtask_queue_size", metricType: Timer},
 		SequentialTaskQueueProcessingLatency:                {metricName: "sequentialtask_queue_processing_latency", metricType: Timer},
 		SequentialTaskTaskProcessingLatency:                 {metricName: "sequentialtask_task_processing_latency", metricType: Timer},
+		ParallelTaskSubmitRequest:                           {metricName: "paralleltask_submit_request", metricType: Counter},
+		ParallelTaskSubmitLatency:                           {metricName: "paralleltask_submit_latency", metricType: Timer},
+		ParallelTaskTaskProcessingLatency:                   {metricName: "paralleltask_task_processing_latency", metricType: Timer},
+		PriorityTaskSubmitRequest:                           {metricName: "prioritytask_submit_request", metricType: Counter},
+		PriorityTaskSubmitLatency:                           {metricName: "prioritytask_submit_latency", metricType: Timer},
+		KafkaConsumerMessageIn:                              {metricName: "kafka_consumer_message_in", metricType: Counter},
+		KafkaConsumerMessageAck:                             {metricName: "kafka_consumer_message_ack", metricType: Counter},
+		KafkaConsumerMessageNack:                            {metricName: "kafka_consumer_message_nack", metricType: Counter},
+		KafkaConsumerMessageNackDlqErr:                      {metricName: "kafka_consumer_message_nack_dlq_err", metricType: Counter},
+		KafkaConsumerSessionStart:                           {metricName: "kafka_consumer_session_start", metricType: Counter},
 
 		HistoryArchiverArchiveNonRetryableErrorCount:              {metricName: "history_archiver_archive_non_retryable_error", metricType: Counter},
 		HistoryArchiverArchiveTransientErrorCount:                 {metricName: "history_archiver_archive_transient_error", metricType: Counter},
@@ -1761,22 +2133,126 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		VisibilityArchiveSuccessCount:                             {metricName: "visibility_archiver_archive_success", metricType: Counter},
 		MatchingClientForwardedCounter:                            {metricName: "forwarded", metricType: Counter},
 		MatchingClientInvalidTaskListName:                         {metricName: "invalid_task_list_name", metricType: Counter},
-	},
-	Frontend: {
-		DomainReplicationTaskAckLevel: {metricName: "domain_replication_task_ack_level", metricType: Gauge},
+
+		// per task list common metrics
+
+		CadenceRequestsPerTaskList: {
+			metricName: "cadence_requests_per_tl", metricRollupName: "cadence_requests", metricType: Counter,
+		},
+		CadenceFailuresPerTaskList: {
+			metricName: "cadence_errors_per_tl", metricRollupName: "cadence_errors", metricType: Counter,
+		},
+		CadenceLatencyPerTaskList: {
+			metricName: "cadence_latency_per_tl", metricRollupName: "cadence_latency", metricType: Timer,
+		},
+		CadenceErrBadRequestPerTaskListCounter: {
+			metricName: "cadence_errors_bad_request_per_tl", metricRollupName: "cadence_errors_bad_request", metricType: Counter,
+		},
+		CadenceErrDomainNotActivePerTaskListCounter: {
+			metricName: "cadence_errors_domain_not_active_per_tl", metricRollupName: "cadence_errors_domain_not_active", metricType: Counter,
+		},
+		CadenceErrServiceBusyPerTaskListCounter: {
+			metricName: "cadence_errors_service_busy_per_tl", metricRollupName: "cadence_errors_service_busy", metricType: Counter,
+		},
+		CadenceErrEntityNotExistsPerTaskListCounter: {
+			metricName: "cadence_errors_entity_not_exists_per_tl", metricRollupName: "cadence_errors_entity_not_exists", metricType: Counter,
+		},
+		CadenceErrExecutionAlreadyStartedPerTaskListCounter: {
+			metricName: "cadence_errors_execution_already_started_per_tl", metricRollupName: "cadence_errors_execution_already_started", metricType: Counter,
+		},
+		CadenceErrDomainAlreadyExistsPerTaskListCounter: {
+			metricName: "cadence_errors_domain_already_exists_per_tl", metricRollupName: "cadence_errors_domain_already_exists", metricType: Counter,
+		},
+		CadenceErrCancellationAlreadyRequestedPerTaskListCounter: {
+			metricName: "cadence_errors_cancellation_already_requested_per_tl", metricRollupName: "cadence_errors_cancellation_already_requested", metricType: Counter,
+		},
+		CadenceErrQueryFailedPerTaskListCounter: {
+			metricName: "cadence_errors_query_failed_per_tl", metricRollupName: "cadence_errors_query_failed", metricType: Counter,
+		},
+		CadenceErrLimitExceededPerTaskListCounter: {
+			metricName: "cadence_errors_limit_exceeded_per_tl", metricRollupName: "cadence_errors_limit_exceeded", metricType: Counter,
+		},
+		CadenceErrContextTimeoutPerTaskListCounter: {
+			metricName: "cadence_errors_context_timeout_per_tl", metricRollupName: "cadence_errors_context_timeout", metricType: Counter,
+		},
+		CadenceErrRetryTaskPerTaskListCounter: {
+			metricName: "cadence_errors_retry_task_per_tl", metricRollupName: "cadence_errors_retry_task", metricType: Counter,
+		},
+		CadenceErrBadBinaryPerTaskListCounter: {
+			metricName: "cadence_errors_bad_binary_per_tl", metricRollupName: "cadence_errors_bad_binary", metricType: Counter,
+		},
+		CadenceErrClientVersionNotSupportedPerTaskListCounter: {
+			metricName: "cadence_errors_client_version_not_supported_per_tl", metricRollupName: "cadence_errors_client_version_not_supported", metricType: Counter,
+		},
+		CadenceErrIncompleteHistoryPerTaskListCounter: {
+			metricName: "cadence_errors_incomplete_history_per_tl", metricRollupName: "cadence_errors_incomplete_history", metricType: Counter,
+		},
+		CadenceErrNonDeterministicPerTaskListCounter: {
+			metricName: "cadence_errors_nondeterministic_per_tl", metricRollupName: "cadence_errors_nondeterministic", metricType: Counter,
+		},
+		CadenceErrUnauthorizedPerTaskListCounter: {
+			metricName: "cadence_errors_unauthorized_per_tl", metricRollupName: "cadence_errors_unauthorized", metricType: Counter,
+		},
+		CadenceErrAuthorizeFailedPerTaskListCounter: {
+			metricName: "cadence_errors_authorize_failed_per_tl", metricRollupName: "cadence_errors_authorize_failed", metricType: Counter,
+		},
+		CadenceErrRemoteSyncMatchFailedPerTaskListCounter: {
+			metricName: "cadence_errors_remote_syncmatch_failed_per_tl", metricRollupName: "cadence_errors_remote_syncmatch_failed", metricType: Counter,
+		},
+		CadenceShardSuccessGauge:             {metricName: "cadence_shard_success", metricType: Gauge},
+		CadenceShardFailureGauge:             {metricName: "cadence_shard_failure", metricType: Gauge},
+		DomainReplicationQueueSizeGauge:      {metricName: "domain_replication_queue_size", metricType: Gauge},
+		DomainReplicationQueueSizeErrorCount: {metricName: "domain_replication_queue_failed", metricType: Counter},
+		ParentClosePolicyProcessorSuccess:    {metricName: "parent_close_policy_processor_requests", metricType: Counter},
+		ParentClosePolicyProcessorFailures:   {metricName: "parent_close_policy_processor_errors", metricType: Counter},
 	},
 	History: {
-		TaskRequests:                                      {metricName: "task_requests", metricType: Counter},
-		TaskLatency:                                       {metricName: "task_latency", metricType: Timer},
-		TaskAttemptTimer:                                  {metricName: "task_attempt", metricType: Timer},
-		TaskFailures:                                      {metricName: "task_errors", metricType: Counter},
-		TaskDiscarded:                                     {metricName: "task_errors_discarded", metricType: Counter},
-		TaskStandbyRetryCounter:                           {metricName: "task_errors_standby_retry_counter", metricType: Counter},
-		TaskNotActiveCounter:                              {metricName: "task_errors_not_active_counter", metricType: Counter},
-		TaskLimitExceededCounter:                          {metricName: "task_errors_limit_exceeded_counter", metricType: Counter},
-		TaskProcessingLatency:                             {metricName: "task_latency_processing", metricType: Timer},
-		TaskQueueLatency:                                  {metricName: "task_latency_queue", metricType: Timer},
+		TaskRequests:             {metricName: "task_requests", metricType: Counter},
+		TaskLatency:              {metricName: "task_latency", metricType: Timer},
+		TaskAttemptTimer:         {metricName: "task_attempt", metricType: Timer},
+		TaskFailures:             {metricName: "task_errors", metricType: Counter},
+		TaskDiscarded:            {metricName: "task_errors_discarded", metricType: Counter},
+		TaskStandbyRetryCounter:  {metricName: "task_errors_standby_retry_counter", metricType: Counter},
+		TaskNotActiveCounter:     {metricName: "task_errors_not_active_counter", metricType: Counter},
+		TaskLimitExceededCounter: {metricName: "task_errors_limit_exceeded_counter", metricType: Counter},
+		TaskProcessingLatency:    {metricName: "task_latency_processing", metricType: Timer},
+		TaskQueueLatency:         {metricName: "task_latency_queue", metricType: Timer},
+
+		// per domain task metrics
+
+		TaskRequestsPerDomain:                    {metricName: "task_requests_per_domain", metricRollupName: "task_requests", metricType: Counter},
+		TaskLatencyPerDomain:                     {metricName: "task_latency_per_domain", metricRollupName: "task_latency", metricType: Timer},
+		TaskAttemptTimerPerDomain:                {metricName: "task_attempt_per_domain", metricRollupName: "task_attempt", metricType: Timer},
+		TaskFailuresPerDomain:                    {metricName: "task_errors_per_domain", metricRollupName: "task_errors", metricType: Counter},
+		TaskWorkflowBusyPerDomain:                {metricName: "task_errors_workflow_busy_per_domain", metricRollupName: "task_errors_workflow_busy", metricType: Counter},
+		TaskDiscardedPerDomain:                   {metricName: "task_errors_discarded_per_domain", metricRollupName: "task_errors_discarded", metricType: Counter},
+		TaskUnsupportedPerDomain:                 {metricName: "task_errors_unsupported_per_domain", metricRollupName: "task_errors_discarded", metricType: Counter},
+		TaskStandbyRetryCounterPerDomain:         {metricName: "task_errors_standby_retry_counter_per_domain", metricRollupName: "task_errors_standby_retry_counter", metricType: Counter},
+		TaskPendingActiveCounterPerDomain:        {metricName: "task_errors_pending_active_counter_per_domain", metricRollupName: "task_errors_pending_active_counter", metricType: Counter},
+		TaskNotActiveCounterPerDomain:            {metricName: "task_errors_not_active_counter_per_domain", metricRollupName: "task_errors_not_active_counter", metricType: Counter},
+		TaskLimitExceededCounterPerDomain:        {metricName: "task_errors_limit_exceeded_counter_per_domain", metricRollupName: "task_errors_limit_exceeded_counter", metricType: Counter},
+		TaskProcessingLatencyPerDomain:           {metricName: "task_latency_processing_per_domain", metricRollupName: "task_latency_processing", metricType: Timer},
+		TaskQueueLatencyPerDomain:                {metricName: "task_latency_queue_per_domain", metricRollupName: "task_latency_queue", metricType: Timer},
+		TransferTaskMissingEventCounterPerDomain: {metricName: "transfer_task_missing_event_counter_per_domain", metricRollupName: "transfer_task_missing_event_counter", metricType: Counter},
+
 		TaskBatchCompleteCounter:                          {metricName: "task_batch_complete_counter", metricType: Counter},
+		TaskRedispatchQueuePendingTasksTimer:              {metricName: "task_redispatch_queue_pending_tasks", metricType: Timer},
+		TransferTaskThrottledCounter:                      {metricName: "transfer_task_throttled_counter", metricType: Counter},
+		TimerTaskThrottledCounter:                         {metricName: "timer_task_throttled_counter", metricType: Counter},
+		TransferTaskMissingEventCounter:                   {metricName: "transfer_task_missing_event_counter", metricType: Counter},
+		ProcessingQueueNumTimer:                           {metricName: "processing_queue_num", metricType: Timer},
+		ProcessingQueueMaxLevelTimer:                      {metricName: "processing_queue_max_level", metricType: Timer},
+		ProcessingQueuePendingTaskSplitCounter:            {metricName: "processing_queue_pending_task_split_counter", metricType: Counter},
+		ProcessingQueueStuckTaskSplitCounter:              {metricName: "processing_queue_stuck_task_split_counter", metricType: Counter},
+		ProcessingQueueSelectedDomainSplitCounter:         {metricName: "processing_queue_selected_domain_split_counter", metricType: Counter},
+		ProcessingQueueRandomSplitCounter:                 {metricName: "processing_queue_random_split_counter", metricType: Counter},
+		ProcessingQueueThrottledCounter:                   {metricName: "processing_queue_throttled_counter", metricType: Counter},
+		QueueValidatorLostTaskCounter:                     {metricName: "queue_validator_lost_task_counter", metricType: Counter},
+		QueueValidatorDropTaskCounter:                     {metricName: "queue_validator_drop_task_counter", metricType: Counter},
+		QueueValidatorInvalidLoadCounter:                  {metricName: "queue_validator_invalid_load_counter", metricType: Counter},
+		QueueValidatorValidationCounter:                   {metricName: "queue_validator_validation_counter", metricType: Counter},
+		ActivityE2ELatency:                                {metricName: "activity_end_to_end_latency", metricType: Timer},
+		ActivityLostCounter:                               {metricName: "activity_lost", metricType: Counter},
 		AckLevelUpdateCounter:                             {metricName: "ack_level_update", metricType: Counter},
 		AckLevelUpdateFailedCounter:                       {metricName: "ack_level_update_failed", metricType: Counter},
 		DecisionTypeScheduleActivityCounter:               {metricName: "schedule_activity_decision", metricType: Counter},
@@ -1795,7 +2271,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		EmptyCompletionDecisionsCounter:                   {metricName: "empty_completion_decisions", metricType: Counter},
 		MultipleCompletionDecisionsCounter:                {metricName: "multiple_completion_decisions", metricType: Counter},
 		FailedDecisionsCounter:                            {metricName: "failed_decisions", metricType: Counter},
+		DecisionAttemptTimer:                              {metricName: "decision_attempt", metricType: Timer},
 		StaleMutableStateCounter:                          {metricName: "stale_mutable_state", metricType: Counter},
+		DataInconsistentCounter:                           {metricName: "data_inconsistent", metricType: Counter},
 		AutoResetPointsLimitExceededCounter:               {metricName: "auto_reset_points_exceed_limit", metricType: Counter},
 		AutoResetPointCorruptionCounter:                   {metricName: "auto_reset_point_corruption", metricType: Counter},
 		ConcurrencyUpdateFailureCounter:                   {metricName: "concurrency_update_failure", metricType: Counter},
@@ -1812,6 +2290,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ShardClosedCounter:                                {metricName: "shard_closed_count", metricType: Counter},
 		ShardItemCreatedCounter:                           {metricName: "sharditem_created_count", metricType: Counter},
 		ShardItemRemovedCounter:                           {metricName: "sharditem_removed_count", metricType: Counter},
+		ShardItemAcquisitionLatency:                       {metricName: "sharditem_acquisition_latency", metricType: Timer},
 		ShardInfoReplicationPendingTasksTimer:             {metricName: "shardinfo_replication_pending_task", metricType: Timer},
 		ShardInfoTransferActivePendingTasksTimer:          {metricName: "shardinfo_transfer_active_pending_task", metricType: Timer},
 		ShardInfoTransferStandbyPendingTasksTimer:         {metricName: "shardinfo_transfer_standby_pending_task", metricType: Timer},
@@ -1826,6 +2305,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ShardInfoTimerFailoverInProgressTimer:             {metricName: "shardinfo_timer_failover_in_progress", metricType: Timer},
 		ShardInfoTransferFailoverLatencyTimer:             {metricName: "shardinfo_transfer_failover_latency", metricType: Timer},
 		ShardInfoTimerFailoverLatencyTimer:                {metricName: "shardinfo_timer_failover_latency", metricType: Timer},
+		SyncShardFromRemoteCounter:                        {metricName: "syncshard_remote_count", metricType: Counter},
+		SyncShardFromRemoteFailure:                        {metricName: "syncshard_remote_failed", metricType: Counter},
 		MembershipChangedCounter:                          {metricName: "membership_changed_count", metricType: Counter},
 		NumShardsGauge:                                    {metricName: "numshards_gauge", metricType: Gauge},
 		GetEngineForShardErrorCounter:                     {metricName: "get_engine_for_shard_errors", metricType: Counter},
@@ -1857,7 +2338,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ActivityInfoSize:                                  {metricName: "activity_info_size", metricType: Timer},
 		TimerInfoSize:                                     {metricName: "timer_info_size", metricType: Timer},
 		ChildInfoSize:                                     {metricName: "child_info_size", metricType: Timer},
-		SignalInfoSize:                                    {metricName: "signal_info", metricType: Timer},
+		SignalInfoSize:                                    {metricName: "signal_info_size", metricType: Timer},
 		BufferedEventsSize:                                {metricName: "buffered_events_size", metricType: Timer},
 		ActivityInfoCount:                                 {metricName: "activity_info_count", metricType: Timer},
 		TimerInfoCount:                                    {metricName: "timer_info_count", metricType: Timer},
@@ -1896,48 +2377,81 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTasksLag:                               {metricName: "replication_tasks_lag", metricType: Timer},
 		ReplicationTasksFetched:                           {metricName: "replication_tasks_fetched", metricType: Timer},
 		ReplicationTasksReturned:                          {metricName: "replication_tasks_returned", metricType: Timer},
+		ReplicationTasksReturnedDiff:                      {metricName: "replication_tasks_returned_diff", metricType: Timer},
+		ReplicationTasksAppliedLatency:                    {metricName: "replication_tasks_applied_latency", metricType: Timer},
+		ReplicationDLQFailed:                              {metricName: "replication_dlq_enqueue_failed", metricType: Counter},
+		ReplicationDLQMaxLevelGauge:                       {metricName: "replication_dlq_max_level", metricType: Gauge},
+		ReplicationDLQAckLevelGauge:                       {metricName: "replication_dlq_ack_level", metricType: Gauge},
+		ReplicationDLQProbeFailed:                         {metricName: "replication_dlq_probe_failed", metricType: Counter},
+		ReplicationDLQSize:                                {metricName: "replication_dlq_size", metricType: Gauge},
 		GetReplicationMessagesForShardLatency:             {metricName: "get_replication_messages_for_shard", metricType: Timer},
+		GetDLQReplicationMessagesLatency:                  {metricName: "get_dlq_replication_messages", metricType: Timer},
 		EventReapplySkippedCount:                          {metricName: "event_reapply_skipped_count", metricType: Counter},
 		DirectQueryDispatchLatency:                        {metricName: "direct_query_dispatch_latency", metricType: Timer},
+		DirectQueryDispatchStickyLatency:                  {metricName: "direct_query_dispatch_sticky_latency", metricType: Timer},
+		DirectQueryDispatchNonStickyLatency:               {metricName: "direct_query_dispatch_non_sticky_latency", metricType: Timer},
+		DirectQueryDispatchStickySuccessCount:             {metricName: "direct_query_dispatch_sticky_success", metricType: Counter},
+		DirectQueryDispatchNonStickySuccessCount:          {metricName: "direct_query_dispatch_non_sticky_success", metricType: Counter},
+		DirectQueryDispatchClearStickinessLatency:         {metricName: "direct_query_dispatch_clear_stickiness_latency", metricType: Timer},
+		DirectQueryDispatchClearStickinessSuccessCount:    {metricName: "direct_query_dispatch_clear_stickiness_success", metricType: Counter},
+		DirectQueryDispatchTimeoutBeforeNonStickyCount:    {metricName: "direct_query_dispatch_timeout_before_non_sticky", metricType: Counter},
 		DecisionTaskQueryLatency:                          {metricName: "decision_task_query_latency", metricType: Timer},
-		CompleteQueryFailedCount:                          {metricName: "complete_query_failed", metricType: Counter},
-		UnblockQueryFailedCount:                           {metricName: "unblock_query_failed", metricType: Counter},
-		FailQueryFailedCount:                              {metricName: "fail_query_failed", metricType: Counter},
 		ConsistentQueryTimeoutCount:                       {metricName: "consistent_query_timeout", metricType: Counter},
+		QueryBeforeFirstDecisionCount:                     {metricName: "query_before_first_decision", metricType: Counter},
+		QueryBufferExceededCount:                          {metricName: "query_buffer_exceeded", metricType: Counter},
+		QueryRegistryInvalidStateCount:                    {metricName: "query_registry_invalid_state", metricType: Counter},
+		WorkerNotSupportsConsistentQueryCount:             {metricName: "worker_not_supports_consistent_query", metricType: Counter},
+		DecisionStartToCloseTimeoutOverrideCount:          {metricName: "decision_start_to_close_timeout_overrides", metricType: Counter},
+		ReplicationTaskCleanupCount:                       {metricName: "replication_task_cleanup_count", metricType: Counter},
+		ReplicationTaskCleanupFailure:                     {metricName: "replication_task_cleanup_failed", metricType: Counter},
+		ReplicationTaskLatency:                            {metricName: "replication_task_latency", metricType: Timer},
+		MutableStateChecksumMismatch:                      {metricName: "mutable_state_checksum_mismatch", metricType: Counter},
+		MutableStateChecksumInvalidated:                   {metricName: "mutable_state_checksum_invalidated", metricType: Counter},
+		GracefulFailoverLatency:                           {metricName: "graceful_failover_latency", metricType: Timer},
+		GracefulFailoverFailure:                           {metricName: "graceful_failover_failures", metricType: Counter},
+		FailoverMarkerCount:                               {metricName: "failover_marker_count", metricType: Counter},
+		FailoverMarkerReplicationLatency:                  {metricName: "failover_marker_replication_latency", metricType: Timer},
+		FailoverMarkerInsertFailure:                       {metricName: "failover_marker_insert_failures", metricType: Counter},
+		FailoverMarkerNotificationFailure:                 {metricName: "failover_marker_notification_failures", metricType: Counter},
+		FailoverMarkerUpdateShardFailure:                  {metricName: "failover_marker_update_shard_failures", metricType: Counter},
 	},
 	Matching: {
-		PollSuccessCounter:            {metricName: "poll_success"},
-		PollTimeoutCounter:            {metricName: "poll_timeouts"},
-		PollSuccessWithSyncCounter:    {metricName: "poll_success_sync"},
-		LeaseRequestCounter:           {metricName: "lease_requests"},
-		LeaseFailureCounter:           {metricName: "lease_failures"},
-		ConditionFailedErrorCounter:   {metricName: "condition_failed_errors"},
-		RespondQueryTaskFailedCounter: {metricName: "respond_query_failed"},
-		SyncThrottleCounter:           {metricName: "sync_throttle_count"},
-		BufferThrottleCounter:         {metricName: "buffer_throttle_count"},
-		ExpiredTasksCounter:           {metricName: "tasks_expired"},
-		ForwardedCounter:              {metricName: "forwarded"},
-		ForwardTaskCalls:              {metricName: "forward_task_calls"},
-		ForwardTaskErrors:             {metricName: "forward_task_errors"},
-		ForwardQueryCalls:             {metricName: "forward_query_calls"},
-		ForwardQueryErrors:            {metricName: "forward_query_errors"},
-		ForwardPollCalls:              {metricName: "forward_poll_calls"},
-		ForwardPollErrors:             {metricName: "forward_poll_errors"},
-		SyncMatchLatency:              {metricName: "syncmatch_latency", metricType: Timer},
-		AsyncMatchLatency:             {metricName: "asyncmatch_latency", metricType: Timer},
-		ForwardTaskLatency:            {metricName: "forward_task_latency"},
-		ForwardQueryLatency:           {metricName: "forward_query_latency"},
-		ForwardPollLatency:            {metricName: "forward_poll_latency"},
-		LocalToLocalMatchCounter:      {metricName: "local_to_local_matches"},
-		LocalToRemoteMatchCounter:     {metricName: "local_to_remote_matches"},
-		RemoteToLocalMatchCounter:     {metricName: "remote_to_local_matches"},
-		RemoteToRemoteMatchCounter:    {metricName: "remote_to_remote_matches"},
+		PollSuccessPerTaskListCounter:            {metricName: "poll_success_per_tl", metricRollupName: "poll_success"},
+		PollTimeoutPerTaskListCounter:            {metricName: "poll_timeouts_per_tl", metricRollupName: "poll_timeouts"},
+		PollSuccessWithSyncPerTaskListCounter:    {metricName: "poll_success_sync_per_tl", metricRollupName: "poll_success_sync"},
+		LeaseRequestPerTaskListCounter:           {metricName: "lease_requests_per_tl", metricRollupName: "lease_requests"},
+		LeaseFailurePerTaskListCounter:           {metricName: "lease_failures_per_tl", metricRollupName: "lease_failures"},
+		ConditionFailedErrorPerTaskListCounter:   {metricName: "condition_failed_errors_per_tl", metricRollupName: "condition_failed_errors"},
+		RespondQueryTaskFailedPerTaskListCounter: {metricName: "respond_query_failed_per_tl", metricRollupName: "respond_query_failed"},
+		SyncThrottlePerTaskListCounter:           {metricName: "sync_throttle_count_per_tl", metricRollupName: "sync_throttle_count"},
+		BufferThrottlePerTaskListCounter:         {metricName: "buffer_throttle_count_per_tl", metricRollupName: "buffer_throttle_count"},
+		ExpiredTasksPerTaskListCounter:           {metricName: "tasks_expired_per_tl", metricRollupName: "tasks_expired"},
+		ForwardedPerTaskListCounter:              {metricName: "forwarded_per_tl", metricRollupName: "forwarded"},
+		ForwardTaskCallsPerTaskList:              {metricName: "forward_task_calls_per_tl", metricRollupName: "forward_task_calls"},
+		ForwardTaskErrorsPerTaskList:             {metricName: "forward_task_errors_per_tl", metricRollupName: "forward_task_errors"},
+		ForwardQueryCallsPerTaskList:             {metricName: "forward_query_calls_per_tl", metricRollupName: "forward_query_calls"},
+		ForwardQueryErrorsPerTaskList:            {metricName: "forward_query_errors_per_tl", metricRollupName: "forward_query_errors"},
+		ForwardPollCallsPerTaskList:              {metricName: "forward_poll_calls_per_tl", metricRollupName: "forward_poll_calls"},
+		ForwardPollErrorsPerTaskList:             {metricName: "forward_poll_errors_per_tl", metricRollupName: "forward_poll_errors"},
+		SyncMatchLatencyPerTaskList:              {metricName: "syncmatch_latency_per_tl", metricRollupName: "syncmatch_latency", metricType: Timer},
+		AsyncMatchLatencyPerTaskList:             {metricName: "asyncmatch_latency_per_tl", metricRollupName: "asyncmatch_latency", metricType: Timer},
+		ForwardTaskLatencyPerTaskList:            {metricName: "forward_task_latency_per_tl", metricRollupName: "forward_task_latency"},
+		ForwardQueryLatencyPerTaskList:           {metricName: "forward_query_latency_per_tl", metricRollupName: "forward_query_latency"},
+		ForwardPollLatencyPerTaskList:            {metricName: "forward_poll_latency_per_tl", metricRollupName: "forward_poll_latency"},
+		LocalToLocalMatchPerTaskListCounter:      {metricName: "local_to_local_matches_per_tl", metricRollupName: "local_to_local_matches"},
+		LocalToRemoteMatchPerTaskListCounter:     {metricName: "local_to_remote_matches_per_tl", metricRollupName: "local_to_remote_matches"},
+		RemoteToLocalMatchPerTaskListCounter:     {metricName: "remote_to_local_matches_per_tl", metricRollupName: "remote_to_local_matches"},
+		RemoteToRemoteMatchPerTaskListCounter:    {metricName: "remote_to_remote_matches_per_tl", metricRollupName: "remote_to_remote_matches"},
+		PollerPerTaskListCounter:                 {metricName: "poller_count_per_tl", metricRollupName: "poller_count"},
+		TaskListManagersGauge:                    {metricName: "tasklist_managers", metricType: Gauge},
+		TaskLagPerTaskListGauge:                  {metricName: "task_lag_per_tl", metricType: Gauge},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},
 		ReplicatorFailures:                            {metricName: "replicator_errors"},
 		ReplicatorMessagesDropped:                     {metricName: "replicator_messages_dropped"},
 		ReplicatorLatency:                             {metricName: "replicator_latency"},
+		ReplicatorDLQFailures:                         {metricName: "replicator_dlq_enqueue_fails", metricType: Counter},
 		ESProcessorRequests:                           {metricName: "es_processor_requests"},
 		ESProcessorRetries:                            {metricName: "es_processor_retries"},
 		ESProcessorFailures:                           {metricName: "es_processor_errors"},
@@ -1976,6 +2490,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskListProcessedCount:                        {metricName: "tasklist_processed", metricType: Gauge},
 		TaskListDeletedCount:                          {metricName: "tasklist_deleted", metricType: Gauge},
 		TaskListOutstandingCount:                      {metricName: "tasklist_outstanding", metricType: Gauge},
+		ExecutionsOutstandingCount:                    {metricName: "executions_outstanding", metricType: Gauge},
 		StartedCount:                                  {metricName: "started", metricType: Counter},
 		StoppedCount:                                  {metricName: "stopped", metricType: Counter},
 		ExecutorTasksDeferredCount:                    {metricName: "executor_deferred", metricType: Counter},
@@ -1985,8 +2500,19 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryScavengerSuccessCount:                  {metricName: "scavenger_success", metricType: Counter},
 		HistoryScavengerErrorCount:                    {metricName: "scavenger_errors", metricType: Counter},
 		HistoryScavengerSkipCount:                     {metricName: "scavenger_skips", metricType: Counter},
-		ParentClosePolicyProcessorSuccess:             {metricName: "parent_close_policy_processor_requests", metricType: Counter},
-		ParentClosePolicyProcessorFailures:            {metricName: "parent_close_policy_processor_errors", metricType: Counter},
+		DomainReplicationEnqueueDLQCount:              {metricName: "domain_replication_dlq_enqueue_requests", metricType: Counter},
+		ScannerExecutionsGauge:                        {metricName: "scanner_executions", metricType: Gauge},
+		ScannerCorruptedGauge:                         {metricName: "scanner_corrupted", metricType: Gauge},
+		ScannerCheckFailedGauge:                       {metricName: "scanner_check_failed", metricType: Gauge},
+		ScannerCorruptionByTypeGauge:                  {metricName: "scanner_corruption_by_type", metricType: Gauge},
+		ScannerCorruptedOpenExecutionGauge:            {metricName: "scanner_corrupted_open_execution", metricType: Gauge},
+		ScannerShardSizeMaxGauge:                      {metricName: "scanner_shard_size_max", metricType: Gauge},
+		ScannerShardSizeMedianGauge:                   {metricName: "scanner_shard_size_median", metricType: Gauge},
+		ScannerShardSizeMinGauge:                      {metricName: "scanner_shard_size_min", metricType: Gauge},
+		ScannerShardSizeNinetyGauge:                   {metricName: "scanner_shard_size_ninety", metricType: Gauge},
+		ScannerShardSizeSeventyFiveGauge:              {metricName: "scanner_shard_size_seventy_five", metricType: Gauge},
+		ScannerShardSizeTwentyFiveGauge:               {metricName: "scanner_shard_size_twenty_five", metricType: Gauge},
+		ScannerShardSizeTenGauge:                      {metricName: "scanner_shard_size_ten", metricType: Gauge},
 	},
 }
 
@@ -2001,3 +2527,13 @@ const (
 	// InternalError indicates that this is an SLA-reportable error
 	InternalError
 )
+
+// Empty returns true if the metricName is an empty string
+func (mn MetricName) Empty() bool {
+	return mn == ""
+}
+
+// String returns string representation of this metric name
+func (mn MetricName) String() string {
+	return string(mn)
+}

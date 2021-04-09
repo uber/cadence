@@ -1,0 +1,323 @@
+// Copyright (c) 2020 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package uber.cadence.api.v1;
+
+option go_package = "github.com/uber/cadence/.gen/proto/api/v1;apiv1";
+option java_multiple_files = true;
+option java_outer_classname = "ApiProto";
+option java_package = "com.uber.cadence.api.v1";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "uber/cadence/api/v1/common.proto";
+import "uber/cadence/api/v1/decision.proto";
+import "uber/cadence/api/v1/history.proto";
+import "uber/cadence/api/v1/query.proto";
+import "uber/cadence/api/v1/tasklist.proto";
+import "uber/cadence/api/v1/workflow.proto";
+
+// WorkerAPI is exposed to provide support for long running applications.  Such applications are
+// expected to have a worker which regularly polls for DecisionTask and ActivityTask from the WorkflowService.  For each
+// DecisionTask, application is expected to process the history of events for that session and respond back with next
+// decisions.  For each ActivityTask, application is expected to execute the actual logic for that task and respond back
+// with completion or failure.  Worker is expected to regularly heartbeat while activity task is running.
+service WorkerAPI {
+  // PollForDecisionTask is called by application worker to process DecisionTask from a specific taskList.
+  // A DecisionTask is dispatched to callers for active workflow executions, with pending decisions.
+  // Application is then expected to call 'RespondDecisionTaskCompleted' API when it is done processing the DecisionTask.
+  // It will also create a 'DecisionTaskStarted' event in the history for that session before handing off DecisionTask to
+  // application worker.
+  rpc PollForDecisionTask(PollForDecisionTaskRequest) returns (PollForDecisionTaskResponse);
+
+  // RespondDecisionTaskCompleted is called by application worker to complete a DecisionTask handed as a result of
+  // 'PollForDecisionTask' API call.  Completing a DecisionTask will result in new events for the workflow execution and
+  // potentially new ActivityTask being created for corresponding decisions.  It will also create a DecisionTaskCompleted
+  // event in the history for that session.  Use the 'taskToken' provided as response of PollForDecisionTask API call
+  // for completing the DecisionTask.
+  // The response could contain a new decision task if there is one or if the request asking for one.
+  rpc RespondDecisionTaskCompleted(RespondDecisionTaskCompletedRequest) returns (RespondDecisionTaskCompletedResponse);
+
+  // RespondDecisionTaskFailed is called by application worker to indicate failure.  This results in
+  // DecisionTaskFailedEvent written to the history and a new DecisionTask created.  This API can be used by client to
+  // either clear sticky tasklist or report any panics during DecisionTask processing.  Cadence will only append first
+  // DecisionTaskFailed event to the history of workflow execution for consecutive failures.
+  rpc RespondDecisionTaskFailed(RespondDecisionTaskFailedRequest) returns (RespondDecisionTaskFailedResponse);
+
+
+  // PollForActivityTask is called by application worker to process ActivityTask from a specific taskList.  ActivityTask
+  // is dispatched to callers whenever a ScheduleTask decision is made for a workflow execution.
+  // Application is expected to call 'RespondActivityTaskCompleted' or 'RespondActivityTaskFailed' once it is done
+  // processing the task.
+  // Application also needs to call 'RecordActivityTaskHeartbeat' API within 'heartbeatTimeoutSeconds' interval to
+  // prevent the task from getting timed out.  An event 'ActivityTaskStarted' event is also written to workflow execution
+  // history before the ActivityTask is dispatched to application worker.
+  rpc PollForActivityTask(PollForActivityTaskRequest) returns (PollForActivityTaskResponse);
+
+  // RespondActivityTaskCompleted is called by application worker when it is done processing an ActivityTask.  It will
+  // result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask
+  // created for the workflow so new decisions could be made.  Use the 'taskToken' provided as response of
+  // PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
+  // anymore due to activity timeout.
+  rpc RespondActivityTaskCompleted(RespondActivityTaskCompletedRequest) returns (RespondActivityTaskCompletedResponse);
+
+  // RespondActivityTaskCompletedByID is called by application worker when it is done processing an ActivityTask.
+  // It will result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask
+  // created for the workflow so new decisions could be made.  Similar to RespondActivityTaskCompleted but use Domain,
+  // WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'
+  // if the these IDs are not valid anymore due to activity timeout.
+  rpc RespondActivityTaskCompletedByID(RespondActivityTaskCompletedByIDRequest) returns (RespondActivityTaskCompletedByIDResponse);
+
+  // RespondActivityTaskFailed is called by application worker when it is done processing an ActivityTask.  It will
+  // result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask
+  // created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of
+  // PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
+  // anymore due to activity timeout.
+  rpc RespondActivityTaskFailed(RespondActivityTaskFailedRequest) returns (RespondActivityTaskFailedResponse);
+
+  // RespondActivityTaskFailedByID is called by application worker when it is done processing an ActivityTask.
+  // It will result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask
+  // created for the workflow instance so new decisions could be made.  Similar to RespondActivityTaskFailed but use
+  // Domain, WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'
+  // if the these IDs are not valid anymore due to activity timeout.
+  rpc RespondActivityTaskFailedByID(RespondActivityTaskFailedByIDRequest) returns (RespondActivityTaskFailedByIDResponse);
+
+  // RespondActivityTaskCanceled is called by application worker when it is successfully canceled an ActivityTask.
+  // It will result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask
+  // created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of
+  // PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
+  // anymore due to activity timeout.
+  rpc RespondActivityTaskCanceled(RespondActivityTaskCanceledRequest) returns (RespondActivityTaskCanceledResponse);
+
+  // RespondActivityTaskCanceledByID is called by application worker when it is successfully canceled an ActivityTask.
+  // It will result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask
+  // created for the workflow instance so new decisions could be made.  Similar to RespondActivityTaskCanceled but use
+  // Domain, WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'
+  // if the these IDs are not valid anymore due to activity timeout.
+  rpc RespondActivityTaskCanceledByID(RespondActivityTaskCanceledByIDRequest) returns (RespondActivityTaskCanceledByIDResponse);
+
+  // RecordActivityTaskHeartbeat is called by application worker while it is processing an ActivityTask.  If worker fails
+  // to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as timedout and
+  // 'ActivityTaskTimedOut' event will be written to the workflow history.  Calling 'RecordActivityTaskHeartbeat' will
+  // fail with 'EntityNotExistsError' in such situations.  Use the 'taskToken' provided as response of
+  // PollForActivityTask API call for heartbeating.
+  rpc RecordActivityTaskHeartbeat(RecordActivityTaskHeartbeatRequest) returns (RecordActivityTaskHeartbeatResponse);
+
+  // RecordActivityTaskHeartbeatByID is called by application worker while it is processing an ActivityTask.  If worker
+  // fails to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as
+  // timed out and 'ActivityTaskTimedOut' event will be written to the workflow history.
+  // Calling 'RecordActivityTaskHeartbeatByID' will fail with 'EntityNotExistsError' in such situations.  Instead of
+  // using 'taskToken' like in RecordActivityTaskHeartbeat, use Domain, WorkflowID and ActivityID.
+  rpc RecordActivityTaskHeartbeatByID(RecordActivityTaskHeartbeatByIDRequest) returns (RecordActivityTaskHeartbeatByIDResponse);
+
+
+  // RespondQueryTaskCompleted is called by application worker to complete a QueryTask (which is a DecisionTask for query)
+  // as a result of 'PollForDecisionTask' API call. Completing a QueryTask will unblock the client call to 'QueryWorkflow'
+  // API and return the query result to client as a response to 'QueryWorkflow' API call.
+  rpc RespondQueryTaskCompleted(RespondQueryTaskCompletedRequest) returns (RespondQueryTaskCompletedResponse);
+
+  // RequestCancelWorkflowExecution is called by application worker when it wants to request cancellation of a workflow
+  // instance. It will result in a new 'WorkflowExecutionCancelRequested' event being written to the workflow history
+  // and a new DecisionTask created for the workflow instance so new decisions could be made. It fails with
+  // 'EntityNotExistsError' if the workflow is not valid anymore due to completion or doesn't exist.
+  rpc RequestCancelWorkflowExecution(RequestCancelWorkflowExecutionRequest) returns (RequestCancelWorkflowExecutionResponse);
+}
+
+message PollForDecisionTaskRequest {
+  string domain = 1;
+  TaskList task_list = 2;
+  string identity = 3;
+  string binary_checksum = 4;
+}
+
+message PollForDecisionTaskResponse {
+  bytes task_token = 1;
+  WorkflowExecution workflow_execution = 2;
+  WorkflowType workflow_type = 3;
+  google.protobuf.Int64Value previous_started_event_id = 4;
+  int64 started_event_id = 5;
+  int64 attempt = 6;
+  int64 backlog_count_hint = 7;
+  History history = 8;
+  bytes next_page_token = 9;
+  WorkflowQuery query = 10;
+  TaskList workflow_execution_task_list = 11;
+  google.protobuf.Timestamp scheduled_time = 12;
+  google.protobuf.Timestamp started_time = 13;
+  map<string, WorkflowQuery> queries = 14;
+}
+
+message RespondDecisionTaskCompletedRequest {
+  bytes task_token = 1;
+  repeated Decision decisions = 2;
+  bytes execution_context = 3;
+  string identity = 4;
+  StickyExecutionAttributes sticky_attributes = 5;
+  bool return_new_decision_task = 6;
+  bool force_create_new_decision_task = 7;
+  string binary_checksum = 8;
+  map<string, WorkflowQueryResult> query_results = 9;
+}
+
+message RespondDecisionTaskCompletedResponse {
+  PollForDecisionTaskResponse decision_task = 1;
+  map<string, ActivityLocalDispatchInfo> activities_to_dispatch_locally = 2;
+}
+
+message RespondDecisionTaskFailedRequest {
+  bytes task_token = 1;
+  DecisionTaskFailedCause cause = 2;
+  Payload details = 3;
+  string identity = 4;
+  string binary_checksum = 5;
+}
+
+message RespondDecisionTaskFailedResponse {
+}
+
+message PollForActivityTaskRequest {
+  string domain = 1;
+  TaskList task_list = 2;
+  string identity = 3;
+  TaskListMetadata task_list_metadata = 4;
+}
+
+message PollForActivityTaskResponse {
+  bytes task_token = 1;
+  WorkflowExecution workflow_execution = 2;
+  string activity_id = 3;
+  ActivityType activity_type = 4;
+  Payload input = 5;
+  google.protobuf.Timestamp scheduled_time = 6;
+  google.protobuf.Timestamp started_time = 7;
+  google.protobuf.Duration schedule_to_close_timeout = 8;
+  google.protobuf.Duration start_to_close_timeout = 9;
+  google.protobuf.Duration heartbeat_timeout = 10;
+  int32 attempt = 11;
+  google.protobuf.Timestamp scheduled_time_of_this_attempt = 12;
+  Payload heartbeat_details = 13;
+  WorkflowType workflow_type = 14;
+  string workflow_domain = 15;
+  Header header = 16;
+}
+
+message RespondActivityTaskCompletedRequest {
+  bytes task_token = 1;
+  Payload result = 2;
+  string identity = 3;
+}
+
+message RespondActivityTaskCompletedResponse {
+}
+
+message RespondActivityTaskCompletedByIDRequest {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+  string activity_id = 3;
+  Payload result = 4;
+  string identity = 5;
+}
+
+message RespondActivityTaskCompletedByIDResponse {
+}
+
+message RespondActivityTaskFailedRequest {
+  bytes task_token = 1;
+  Failure failure = 2;
+  string identity = 3;
+}
+
+message RespondActivityTaskFailedResponse {
+}
+
+message RespondActivityTaskFailedByIDRequest {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+  string activity_id = 3;
+  Failure failure = 4;
+  string identity = 5;
+}
+
+message RespondActivityTaskFailedByIDResponse {
+}
+
+message RespondActivityTaskCanceledRequest {
+  bytes task_token = 1;
+  Payload details = 2;
+  string identity = 3;
+}
+
+message RespondActivityTaskCanceledResponse {
+}
+
+message RespondActivityTaskCanceledByIDRequest {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+  string activity_id = 3;
+  Payload details = 4;
+  string identity = 5;
+}
+
+message RespondActivityTaskCanceledByIDResponse {
+}
+
+message RecordActivityTaskHeartbeatRequest {
+  bytes task_token = 1;
+  Payload details = 2;
+  string identity = 3;
+}
+
+message RecordActivityTaskHeartbeatResponse {
+  bool cancel_requested = 1;
+}
+
+message RecordActivityTaskHeartbeatByIDRequest {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+  string activity_id = 3;
+  Payload details = 4;
+  string identity = 5;
+}
+
+message RecordActivityTaskHeartbeatByIDResponse {
+  bool cancel_requested = 1;
+}
+
+message RespondQueryTaskCompletedRequest {
+  bytes task_token = 1;
+  WorkflowQueryResult result = 2;
+  WorkerVersionInfo worker_version_info = 3;
+}
+
+message RespondQueryTaskCompletedResponse {
+}
+
+message RequestCancelWorkflowExecutionRequest {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+  string identity = 3;
+  string request_id = 4;
+}
+
+message RequestCancelWorkflowExecutionResponse {
+}

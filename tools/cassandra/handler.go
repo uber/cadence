@@ -24,10 +24,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/uber/cadence/common/auth"
-
 	"github.com/urfave/cli"
 
+	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/schema/cassandra"
 	"github.com/uber/cadence/tools/common/schema"
@@ -74,13 +73,14 @@ func checkCompatibleVersion(
 ) error {
 
 	client, err := newCQLClient(&CQLClientConfig{
-		Hosts:    cfg.Hosts,
-		Port:     cfg.Port,
-		User:     cfg.User,
-		Password: cfg.Password,
-		Keyspace: cfg.Keyspace,
-		Timeout:  defaultTimeout,
-		TLS:      cfg.TLS,
+		Hosts:     cfg.Hosts,
+		Port:      cfg.Port,
+		User:      cfg.User,
+		Password:  cfg.Password,
+		Keyspace:  cfg.Keyspace,
+		Timeout:   defaultTimeout,
+		TLS:       cfg.TLS,
+		CQLClient: cfg.CQLClient,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create CQL Client: %v", err.Error())
@@ -115,13 +115,6 @@ func updateSchema(cli *cli.Context) error {
 	config, err := newCQLClientConfig(cli)
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
-	}
-	if config.Keyspace == schema.DryrunDBName {
-		cfg := *config
-		if err := doCreateKeyspace(cfg, cfg.Keyspace); err != nil {
-			return handleErr(fmt.Errorf("error creating dryrun Keyspace: %v", err))
-		}
-		defer doDropKeyspace(cfg, cfg.Keyspace)
 	}
 	client, err := newCQLClient(config)
 	if err != nil {
@@ -161,16 +154,6 @@ func doCreateKeyspace(cfg CQLClientConfig, name string) error {
 	return client.createKeyspace(name)
 }
 
-func doDropKeyspace(cfg CQLClientConfig, name string) {
-	cfg.Keyspace = systemKeyspace
-	client, err := newCQLClient(&cfg)
-	if err != nil {
-		return
-	}
-	client.dropKeyspace(name)
-	client.Close()
-}
-
 func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 	config := new(CQLClientConfig)
 	config.Hosts = cli.GlobalString(schema.CLIOptEndpoint)
@@ -191,28 +174,27 @@ func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 		}
 	}
 
-	isDryRun := cli.Bool(schema.CLIOptDryrun)
-	if err := validateCQLClientConfig(config, isDryRun); err != nil {
+	if err := validateCQLClientConfig(config); err != nil {
 		return nil, err
 	}
 	return config, nil
 }
 
-func validateCQLClientConfig(config *CQLClientConfig, isDryRun bool) error {
+func validateCQLClientConfig(config *CQLClientConfig) error {
 	if len(config.Hosts) == 0 {
 		return schema.NewConfigError("missing cassandra endpoint argument " + flag(schema.CLIOptEndpoint))
 	}
 	if config.Keyspace == "" {
-		if !isDryRun {
-			return schema.NewConfigError("missing " + flag(schema.CLIOptKeyspace) + " argument ")
-		}
-		config.Keyspace = schema.DryrunDBName
+		return schema.NewConfigError("missing " + flag(schema.CLIOptKeyspace) + " argument ")
 	}
 	if config.Port == 0 {
 		config.Port = defaultCassandraPort
 	}
 	if config.numReplicas == 0 {
 		config.numReplicas = defaultNumReplicas
+	}
+	if config.CQLClient == nil {
+		config.CQLClient = defaultGoCQLClient
 	}
 
 	return nil
@@ -225,4 +207,8 @@ func flag(opt string) string {
 func handleErr(err error) error {
 	log.Println(err)
 	return err
+}
+
+func logErr(err error) {
+	log.Println(err)
 }

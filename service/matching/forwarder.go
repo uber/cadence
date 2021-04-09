@@ -25,12 +25,10 @@ import (
 	"errors"
 	"sync/atomic"
 
-	gen "github.com/uber/cadence/.gen/go/matching"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -39,7 +37,7 @@ type (
 	Forwarder struct {
 		cfg          *forwarderConfig
 		taskListID   *taskListID
-		taskListKind shared.TaskListKind
+		taskListKind types.TaskListKind
 		client       matching.Client
 
 		// token channels that vend tokens necessary to make
@@ -59,14 +57,6 @@ type (
 		// todo: implement a rate limiter that automatically
 		// adjusts rate based on ServiceBusy errors from API calls
 		limiter *quotas.DynamicRateLimiter
-
-		// cached metric scopes for API calls
-		scope struct {
-			forwardTask  metrics.Scope
-			forwardQuery metrics.Scope
-			forwardPoll  metrics.Scope
-		}
-		scopeFunc func() metrics.Scope
 	}
 	// ForwarderReqToken is the token that must be acquired before
 	// making forwarder API calls. This type contains the state
@@ -99,9 +89,8 @@ var noopForwarderTokenC <-chan *ForwarderReqToken = make(chan *ForwarderReqToken
 func newForwarder(
 	cfg *forwarderConfig,
 	taskListID *taskListID,
-	kind shared.TaskListKind,
+	kind types.TaskListKind,
 	client matching.Client,
-	scopeFunc func() metrics.Scope,
 ) *Forwarder {
 	rpsFunc := func() float64 { return float64(cfg.ForwarderMaxRatePerSecond()) }
 	fwdr := &Forwarder{
@@ -112,7 +101,6 @@ func newForwarder(
 		outstandingTasksLimit: int32(cfg.ForwarderMaxOutstandingTasks()),
 		outstandingPollsLimit: int32(cfg.ForwarderMaxOutstandingPolls()),
 		limiter:               quotas.NewDynamicRateLimiter(rpsFunc),
-		scopeFunc:             scopeFunc,
 	}
 	fwdr.addReqToken.Store(newForwarderReqToken(cfg.ForwarderMaxOutstandingTasks()))
 	fwdr.pollReqToken.Store(newForwarderReqToken(cfg.ForwarderMaxOutstandingPolls()))
@@ -121,7 +109,7 @@ func newForwarder(
 
 // ForwardTask forwards an activity or decision task to the parent task list partition if it exist
 func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) error {
-	if fwdr.taskListKind == shared.TaskListKindSticky {
+	if fwdr.taskListKind == types.TaskListKindSticky {
 		return errTaskListKind
 	}
 
@@ -138,29 +126,31 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) erro
 
 	switch fwdr.taskListID.taskType {
 	case persistence.TaskListTypeDecision:
-		err = fwdr.client.AddDecisionTask(ctx, &gen.AddDecisionTaskRequest{
-			DomainUUID: &task.event.DomainID,
+		err = fwdr.client.AddDecisionTask(ctx, &types.AddDecisionTaskRequest{
+			DomainUUID: task.event.DomainID,
 			Execution:  task.workflowExecution(),
-			TaskList: &shared.TaskList{
-				Name: &name,
+			TaskList: &types.TaskList{
+				Name: name,
 				Kind: &fwdr.taskListKind,
 			},
-			ScheduleId:                    &task.event.ScheduleID,
+			ScheduleID:                    task.event.ScheduleID,
 			ScheduleToStartTimeoutSeconds: &task.event.ScheduleToStartTimeout,
-			ForwardedFrom:                 &fwdr.taskListID.name,
+			Source:                        &task.source,
+			ForwardedFrom:                 fwdr.taskListID.name,
 		})
 	case persistence.TaskListTypeActivity:
-		err = fwdr.client.AddActivityTask(ctx, &gen.AddActivityTaskRequest{
-			DomainUUID:       &fwdr.taskListID.domainID,
-			SourceDomainUUID: &task.event.DomainID,
+		err = fwdr.client.AddActivityTask(ctx, &types.AddActivityTaskRequest{
+			DomainUUID:       fwdr.taskListID.domainID,
+			SourceDomainUUID: task.event.DomainID,
 			Execution:        task.workflowExecution(),
-			TaskList: &shared.TaskList{
-				Name: &name,
+			TaskList: &types.TaskList{
+				Name: name,
 				Kind: &fwdr.taskListKind,
 			},
-			ScheduleId:                    &task.event.ScheduleID,
+			ScheduleID:                    task.event.ScheduleID,
 			ScheduleToStartTimeoutSeconds: &task.event.ScheduleToStartTimeout,
-			ForwardedFrom:                 &fwdr.taskListID.name,
+			Source:                        &task.source,
+			ForwardedFrom:                 fwdr.taskListID.name,
 		})
 	default:
 		return errInvalidTaskListType
@@ -173,9 +163,9 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) erro
 func (fwdr *Forwarder) ForwardQueryTask(
 	ctx context.Context,
 	task *internalTask,
-) (*shared.QueryWorkflowResponse, error) {
+) (*types.QueryWorkflowResponse, error) {
 
-	if fwdr.taskListKind == shared.TaskListKindSticky {
+	if fwdr.taskListKind == types.TaskListKindSticky {
 		return nil, errTaskListKind
 	}
 
@@ -184,14 +174,14 @@ func (fwdr *Forwarder) ForwardQueryTask(
 		return nil, errNoParent
 	}
 
-	resp, err := fwdr.client.QueryWorkflow(ctx, &gen.QueryWorkflowRequest{
+	resp, err := fwdr.client.QueryWorkflow(ctx, &types.MatchingQueryWorkflowRequest{
 		DomainUUID: task.query.request.DomainUUID,
-		TaskList: &shared.TaskList{
-			Name: &name,
+		TaskList: &types.TaskList{
+			Name: name,
 			Kind: &fwdr.taskListKind,
 		},
 		QueryRequest:  task.query.request.QueryRequest,
-		ForwardedFrom: &fwdr.taskListID.name,
+		ForwardedFrom: fwdr.taskListID.name,
 	})
 
 	return resp, fwdr.handleErr(err)
@@ -199,7 +189,7 @@ func (fwdr *Forwarder) ForwardQueryTask(
 
 // ForwardPoll forwards a poll request to parent task list partition if it exist
 func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
-	if fwdr.taskListKind == shared.TaskListKindSticky {
+	if fwdr.taskListKind == types.TaskListKindSticky {
 		return nil, errTaskListKind
 	}
 
@@ -213,39 +203,37 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 
 	switch fwdr.taskListID.taskType {
 	case persistence.TaskListTypeDecision:
-		resp, err := fwdr.client.PollForDecisionTask(ctx, &gen.PollForDecisionTaskRequest{
-			DomainUUID: &fwdr.taskListID.domainID,
-			PollerID:   &pollerID,
-			PollRequest: &shared.PollForDecisionTaskRequest{
-				TaskList: &shared.TaskList{
-					Name: &name,
+		resp, err := fwdr.client.PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{
+			DomainUUID: fwdr.taskListID.domainID,
+			PollerID:   pollerID,
+			PollRequest: &types.PollForDecisionTaskRequest{
+				TaskList: &types.TaskList{
+					Name: name,
 					Kind: &fwdr.taskListKind,
 				},
-				Identity: &identity,
+				Identity: identity,
 			},
-			ForwardedFrom: &fwdr.taskListID.name,
+			ForwardedFrom: fwdr.taskListID.name,
 		})
 		if err != nil {
-			fwdr.handleErr(err)
-			return nil, err
+			return nil, fwdr.handleErr(err)
 		}
 		return newInternalStartedTask(&startedTaskInfo{decisionTaskInfo: resp}), nil
 	case persistence.TaskListTypeActivity:
-		resp, err := fwdr.client.PollForActivityTask(ctx, &gen.PollForActivityTaskRequest{
-			DomainUUID: &fwdr.taskListID.domainID,
-			PollerID:   &pollerID,
-			PollRequest: &shared.PollForActivityTaskRequest{
-				TaskList: &shared.TaskList{
-					Name: &name,
+		resp, err := fwdr.client.PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
+			DomainUUID: fwdr.taskListID.domainID,
+			PollerID:   pollerID,
+			PollRequest: &types.PollForActivityTaskRequest{
+				TaskList: &types.TaskList{
+					Name: name,
 					Kind: &fwdr.taskListKind,
 				},
-				Identity: &identity,
+				Identity: identity,
 			},
-			ForwardedFrom: &fwdr.taskListID.name,
+			ForwardedFrom: fwdr.taskListID.name,
 		})
 		if err != nil {
-			fwdr.handleErr(err)
-			return nil, err
+			return nil, fwdr.handleErr(err)
 		}
 		return newInternalStartedTask(&startedTaskInfo{activityTaskInfo: resp}), nil
 	}
@@ -279,7 +267,7 @@ func (fwdr *Forwarder) refreshTokenC(value *atomic.Value, curr *int32, maxLimit 
 }
 
 func (fwdr *Forwarder) handleErr(err error) error {
-	if _, ok := err.(*shared.ServiceBusyError); ok {
+	if _, ok := err.(*types.ServiceBusyError); ok {
 		return errForwarderSlowDown
 	}
 	return err

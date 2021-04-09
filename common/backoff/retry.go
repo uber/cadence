@@ -89,23 +89,35 @@ func NewConcurrentRetrier(retryPolicy RetryPolicy) *ConcurrentRetrier {
 }
 
 // Retry function can be used to wrap any call with retry logic using the passed in policy
+// The returned error will be preferred to a previous one if one exists. That's because the
+// very last error is very likely a timeout error, and it's not useful for logging/troubleshooting
 func Retry(operation Operation, policy RetryPolicy, isRetryable IsRetryable) error {
+	var prevErr error
 	var err error
 	var next time.Duration
 
 	r := NewRetrier(policy, SystemClock)
 	for {
+		// record the previous error before an operation
+		prevErr = err
+
 		// operation completed successfully.  No need to retry.
 		if err = operation(); err == nil {
 			return nil
 		}
 
 		if next = r.NextBackOff(); next == done {
+			if prevErr != nil {
+				return prevErr
+			}
 			return err
 		}
 
 		// Check if the error is retryable
 		if isRetryable != nil && !isRetryable(err) {
+			if prevErr != nil {
+				return prevErr
+			}
 			return err
 		}
 

@@ -23,15 +23,12 @@ package domain
 import (
 	"testing"
 
-	"github.com/uber/cadence/.gen/go/shared"
-
-	"github.com/uber/cadence/common/cluster"
-
-	"github.com/uber/cadence/common/persistence"
-
 	"github.com/stretchr/testify/suite"
 
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -96,7 +93,7 @@ func (s *attrValidatorSuite) TestClusterName() {
 	)
 
 	err := s.validator.validateClusterName("some random foo bar")
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 
 	err = s.validator.validateClusterName(cluster.TestCurrentClusterName)
 	s.NoError(err)
@@ -121,7 +118,7 @@ func (s *attrValidatorSuite) TestValidateDomainReplicationConfigForLocalDomain()
 			},
 		},
 	)
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 
 	err = s.validator.validateDomainReplicationConfigForLocalDomain(
 		&persistence.DomainReplicationConfig{
@@ -132,7 +129,7 @@ func (s *attrValidatorSuite) TestValidateDomainReplicationConfigForLocalDomain()
 			},
 		},
 	)
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 
 	err = s.validator.validateDomainReplicationConfigForLocalDomain(
 		&persistence.DomainReplicationConfig{
@@ -143,7 +140,7 @@ func (s *attrValidatorSuite) TestValidateDomainReplicationConfigForLocalDomain()
 			},
 		},
 	)
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 
 	err = s.validator.validateDomainReplicationConfigForLocalDomain(
 		&persistence.DomainReplicationConfig{
@@ -207,8 +204,8 @@ func (s *attrValidatorSuite) TestValidateDomainReplicationConfigForGlobalDomain(
 	s.NoError(err)
 }
 
-func (s *attrValidatorSuite) TestValidateDomainReplicationConfigClustersDoesNotChange() {
-	err := s.validator.validateDomainReplicationConfigClustersDoesNotChange(
+func (s *attrValidatorSuite) TestValidateDomainReplicationConfigClustersDoesNotRemove() {
+	err := s.validator.validateDomainReplicationConfigClustersDoesNotRemove(
 		[]*persistence.ClusterReplicationConfig{
 			{ClusterName: cluster.TestCurrentClusterName},
 			{ClusterName: cluster.TestAlternativeClusterName},
@@ -220,7 +217,7 @@ func (s *attrValidatorSuite) TestValidateDomainReplicationConfigClustersDoesNotC
 	)
 	s.NoError(err)
 
-	err = s.validator.validateDomainReplicationConfigClustersDoesNotChange(
+	err = s.validator.validateDomainReplicationConfigClustersDoesNotRemove(
 		[]*persistence.ClusterReplicationConfig{
 			{ClusterName: cluster.TestCurrentClusterName},
 		},
@@ -229,9 +226,9 @@ func (s *attrValidatorSuite) TestValidateDomainReplicationConfigClustersDoesNotC
 			{ClusterName: cluster.TestAlternativeClusterName},
 		},
 	)
-	s.IsType(&shared.BadRequestError{}, err)
+	s.NoError(err)
 
-	err = s.validator.validateDomainReplicationConfigClustersDoesNotChange(
+	err = s.validator.validateDomainReplicationConfigClustersDoesNotRemove(
 		[]*persistence.ClusterReplicationConfig{
 			{ClusterName: cluster.TestCurrentClusterName},
 			{ClusterName: cluster.TestAlternativeClusterName},
@@ -240,9 +237,9 @@ func (s *attrValidatorSuite) TestValidateDomainReplicationConfigClustersDoesNotC
 			{ClusterName: cluster.TestAlternativeClusterName},
 		},
 	)
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 
-	err = s.validator.validateDomainReplicationConfigClustersDoesNotChange(
+	err = s.validator.validateDomainReplicationConfigClustersDoesNotRemove(
 		[]*persistence.ClusterReplicationConfig{
 			{ClusterName: cluster.TestCurrentClusterName},
 		},
@@ -250,5 +247,5 @@ func (s *attrValidatorSuite) TestValidateDomainReplicationConfigClustersDoesNotC
 			{ClusterName: cluster.TestAlternativeClusterName},
 		},
 	)
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 }

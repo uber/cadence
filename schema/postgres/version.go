@@ -18,16 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package mysql
-
-import "github.com/uber/cadence/schema/mysql"
+package postgres
 
 // NOTE: whenever there is a new data base schema update, plz update the following versions
 
 // Version is the Postgres database release version
 // Cadence supports both MySQL and Postgres officially, so upgrade should be perform for both MySQL and Postgres
-const Version = mysql.Version
+const Version = "0.3"
 
 // VisibilityVersion is the Postgres visibility database release version
 // Cadence supports both MySQL and Postgres officially, so upgrade should be perform for both MySQL and Postgres
-const VisibilityVersion = mysql.VisibilityVersion
+const VisibilityVersion = "0.3"

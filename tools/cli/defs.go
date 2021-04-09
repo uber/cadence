@@ -37,6 +37,17 @@ const (
 	defaultMaxFieldLength = 500 // default max length for each attribute field
 	maxWordLength         = 120 // if text length is larger than maxWordLength, it will be inserted spaces
 
+	// regex expression for parsing time durations, shorter, longer notations and numeric value respectively
+	defaultDateTimeRangeShortRE = "^[1-9][0-9]*[smhdwMy]$"                                // eg. 1s, 20m, 300h etc.
+	defaultDateTimeRangeLongRE  = "^[1-9][0-9]*(second|minute|hour|day|week|month|year)$" // eg. 1second, 20minute, 300hour etc.
+	defaultDateTimeRangeNum     = "^[1-9][0-9]*"                                          // eg. 1, 20, 300 etc.
+
+	// time ranges
+	day   = 24 * time.Hour
+	week  = 7 * day
+	month = 30 * day
+	year  = 365 * day
+
 	defaultTimeFormat                            = "15:04:05"   // used for converting UnixNano to string like 16:16:36 (only time)
 	defaultDateTimeFormat                        = time.RFC3339 // used for converting UnixNano to string like 2018-02-15T16:16:36-08:00
 	defaultDomainRetentionDays                   = 3
@@ -54,6 +65,8 @@ const (
 	showErrorStackEnv    = `CADENCE_CLI_SHOW_STACKS`
 
 	searchAttrInputSeparator = "|"
+
+	defaultGracefulFailoverTimeoutInSeconds = 60
 )
 
 var envKeysForUserName = []string{
@@ -62,11 +75,22 @@ var envKeysForUserName = []string{
 	"HOME",
 }
 
+const resetTypeFirstDecisionCompleted = "FirstDecisionCompleted"
+const resetTypeLastDecisionCompleted = "LastDecisionCompleted"
+const resetTypeLastContinuedAsNew = "LastContinuedAsNew"
+const resetTypeBadBinary = "BadBinary"
+const resetTypeDecisionCompletedTime = "DecisionCompletedTime"
+const resetTypeFirstDecisionScheduled = "FirstDecisionScheduled"
+const resetTypeLastDecisionScheduled = "LastDecisionScheduled"
+
 var resetTypesMap = map[string]string{
-	"FirstDecisionCompleted": "",
-	"LastDecisionCompleted":  "",
-	"LastContinuedAsNew":     "",
-	"BadBinary":              FlagResetBadBinaryChecksum,
+	resetTypeFirstDecisionCompleted: "",
+	resetTypeLastDecisionCompleted:  "",
+	resetTypeLastContinuedAsNew:     "",
+	resetTypeBadBinary:              FlagResetBadBinaryChecksum,
+	resetTypeDecisionCompletedTime:  FlagEarliestTime,
+	resetTypeFirstDecisionScheduled: "",
+	resetTypeLastDecisionScheduled:  "",
 }
 
 type jsonType int
@@ -74,6 +98,8 @@ type jsonType int
 const (
 	jsonTypeInput jsonType = iota
 	jsonTypeMemo
+	jsonTypeHeader
+	jsonTypeSignal
 )
 
 var (
@@ -87,23 +113,25 @@ var (
 	optionErr               = "there is something wrong with your command options"
 	osExit                  = os.Exit
 	workflowClosedStatusMap = map[string]s.WorkflowExecutionCloseStatus{
-		"completed":      s.WorkflowExecutionCloseStatusCompleted,
-		"failed":         s.WorkflowExecutionCloseStatusFailed,
-		"canceled":       s.WorkflowExecutionCloseStatusCanceled,
-		"terminated":     s.WorkflowExecutionCloseStatusTerminated,
+		"completed":        s.WorkflowExecutionCloseStatusCompleted,
+		"failed":           s.WorkflowExecutionCloseStatusFailed,
+		"canceled":         s.WorkflowExecutionCloseStatusCanceled,
+		"terminated":       s.WorkflowExecutionCloseStatusTerminated,
+		"continued_as_new": s.WorkflowExecutionCloseStatusContinuedAsNew,
+		"timed_out":        s.WorkflowExecutionCloseStatusTimedOut,
+		// below are some alias
+		"c":              s.WorkflowExecutionCloseStatusCompleted,
+		"complete":       s.WorkflowExecutionCloseStatusCompleted,
+		"f":              s.WorkflowExecutionCloseStatusFailed,
+		"fail":           s.WorkflowExecutionCloseStatusFailed,
+		"cancel":         s.WorkflowExecutionCloseStatusCanceled,
+		"terminate":      s.WorkflowExecutionCloseStatusTerminated,
+		"term":           s.WorkflowExecutionCloseStatusTerminated,
+		"continue":       s.WorkflowExecutionCloseStatusContinuedAsNew,
+		"cont":           s.WorkflowExecutionCloseStatusContinuedAsNew,
 		"continuedasnew": s.WorkflowExecutionCloseStatusContinuedAsNew,
 		"continueasnew":  s.WorkflowExecutionCloseStatusContinuedAsNew,
 		"timedout":       s.WorkflowExecutionCloseStatusTimedOut,
-		// below are some alias
-		"c":         s.WorkflowExecutionCloseStatusCompleted,
-		"complete":  s.WorkflowExecutionCloseStatusCompleted,
-		"f":         s.WorkflowExecutionCloseStatusFailed,
-		"fail":      s.WorkflowExecutionCloseStatusFailed,
-		"cancel":    s.WorkflowExecutionCloseStatusCanceled,
-		"terminate": s.WorkflowExecutionCloseStatusTerminated,
-		"term":      s.WorkflowExecutionCloseStatusTerminated,
-		"continue":  s.WorkflowExecutionCloseStatusContinuedAsNew,
-		"cont":      s.WorkflowExecutionCloseStatusContinuedAsNew,
-		"timeout":   s.WorkflowExecutionCloseStatusTimedOut,
+		"timeout":        s.WorkflowExecutionCloseStatusTimedOut,
 	}
 )

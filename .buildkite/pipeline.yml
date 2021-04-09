@@ -1,11 +1,19 @@
 steps:
+  - label: "fossa analyze"
+    agents:
+      queue: "init"
+      docker: "*"
+    command: "./scripts/buildkite/fossa.sh"
   - label: ":golang: unit test"
     agents:
       queue: "workers"
       docker: "*"
     command: "make cover_profile"
     artifact_paths:
-      - "build/coverage/*.out"
+      - ".build/coverage/*.out"
+    retry:
+      automatic:
+        limit: 1
     plugins:
       - docker-compose#v3.0.0:
           run: unit-test
@@ -17,7 +25,7 @@ steps:
       docker: "*"
     command: "make cover_integration_profile"
     artifact_paths:
-      - "build/coverage/*.out"
+      - ".build/coverage/*.out"
     retry:
       automatic:
         limit: 1
@@ -26,20 +34,20 @@ steps:
           run: integration-test-cassandra
           config: docker/buildkite/docker-compose.yml
 
-  - label: ":golang: integration xdc test with cassandra"
+  - label: ":golang: integration test with cassandra with ElasticSearch V7"
     agents:
       queue: "workers"
       docker: "*"
-    command: "make cover_xdc_profile"
+    command: "make cover_integration_profile"
     artifact_paths:
-      - "build/coverage/*.out"
+      - ".build/coverage/*.out"
     retry:
       automatic:
         limit: 1
     plugins:
       - docker-compose#v3.0.0:
-          run: integration-test-xdc-cassandra
-          config: docker/buildkite/docker-compose.yml
+          run: integration-test-cassandra
+          config: docker/buildkite/docker-compose-es7.yml
 
   - label: ":golang: integration ndc test with cassandra"
     agents:
@@ -47,13 +55,13 @@ steps:
       docker: "*"
     command: "make cover_ndc_profile"
     artifact_paths:
-      - "build/coverage/*.out"
+      - ".build/coverage/*.out"
     retry:
       automatic:
         limit: 1
     plugins:
       - docker-compose#v3.0.0:
-          run: integration-test-xdc-cassandra
+          run: integration-test-ndc-cassandra
           config: docker/buildkite/docker-compose.yml
 
   - label: ":golang: integration test with mysql"
@@ -62,7 +70,7 @@ steps:
       docker: "*"
     command: "make cover_integration_profile"
     artifact_paths:
-      - "build/coverage/*.out"
+      - ".build/coverage/*.out"
     retry:
       automatic:
         limit: 1
@@ -71,34 +79,49 @@ steps:
           run: integration-test-mysql
           config: docker/buildkite/docker-compose.yml
 
-  - label: ":golang: integration xdc test with mysql"
-    agents:
-      queue: "workers"
-      docker: "*"
-    command: "make cover_xdc_profile"
-    artifact_paths:
-      - "build/coverage/*.out"
-    retry:
-      automatic:
-        limit: 1
-    plugins:
-      - docker-compose#v3.0.0:
-          run: integration-test-xdc-mysql
-          config: docker/buildkite/docker-compose.yml
-
   - label: ":golang: integration ndc test with mysql"
     agents:
       queue: "workers"
       docker: "*"
     command: "make cover_ndc_profile"
     artifact_paths:
-      - "build/coverage/*.out"
+      - ".build/coverage/*.out"
     retry:
       automatic:
         limit: 1
     plugins:
       - docker-compose#v3.0.0:
-          run: integration-test-xdc-mysql
+          run: integration-test-ndc-mysql
+          config: docker/buildkite/docker-compose.yml
+
+  - label: ":golang: integration test with postgres"
+    agents:
+      queue: "workers"
+      docker: "*"
+    command: "make cover_integration_profile"
+    artifact_paths:
+      - ".build/coverage/*.out"
+    retry:
+      automatic:
+        limit: 1
+    plugins:
+      - docker-compose#v3.0.0:
+          run: integration-test-postgres
+          config: docker/buildkite/docker-compose.yml
+
+  - label: ":golang: integration ndc test with postgres"
+    agents:
+      queue: "workers"
+      docker: "*"
+    command: "make cover_ndc_profile"
+    artifact_paths:
+      - ".build/coverage/*.out"
+    retry:
+      automatic:
+        limit: 1
+    plugins:
+      - docker-compose#v3.0.0:
+          run: integration-test-ndc-postgres
           config: docker/buildkite/docker-compose.yml
 
   - wait

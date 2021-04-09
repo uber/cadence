@@ -202,6 +202,42 @@ func (s *RetryPolicySuite) TestUnbounded() {
 	}
 }
 
+func (s *RetryPolicySuite) TestMultiPhasesRetryPolicy() {
+	firstPolicy := NewExponentialRetryPolicy(50 * time.Millisecond)
+	firstPolicy.SetMaximumAttempts(3)
+	secondPolicy := NewExponentialRetryPolicy(2 * time.Second)
+	secondPolicy.SetMaximumInterval(128 * time.Second)
+	secondPolicy.SetExpirationInterval(5 * time.Minute)
+	policy := NewMultiPhasesRetryPolicy(firstPolicy, secondPolicy)
+
+	r, clock := createRetrier(policy)
+	expectedResult := []time.Duration{
+		50 * time.Millisecond,
+		100 * time.Millisecond,
+		200 * time.Millisecond,
+		2 * time.Second,
+		4 * time.Second,
+		8 * time.Second,
+		16 * time.Second,
+		32 * time.Second,
+		64 * time.Second,
+		128 * time.Second,
+		46 * time.Second,
+		done,
+	}
+	for _, expected := range expectedResult {
+		next := r.NextBackOff()
+		if expected == done {
+			s.Equal(done, next, "backoff not done yet!!!")
+		} else {
+			min, max := getNextBackoffRange(expected)
+			s.True(next >= min, "NextBackoff too low: actual: %v, expected: %v", next, expected)
+			s.True(next < max, "NextBackoff too high: actual: %v, expected: %v", next, expected)
+			clock.moveClock(expected)
+		}
+	}
+}
+
 func (c *TestClock) Now() time.Time {
 	return c.currentTime
 }

@@ -1,4 +1,5 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,16 +22,18 @@
 package persistence
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/codec"
+	"github.com/uber/cadence/common/types"
 )
 
 // Domain status
@@ -50,6 +53,16 @@ const (
 
 // CreateWorkflowMode workflow creation mode
 type CreateWorkflowMode int
+
+// QueueType is an enum that represents various queue types in persistence
+type QueueType int
+
+// Queue types used in queue table
+// Use positive numbers for queue type
+// Negative numbers are reserved for DLQ
+const (
+	DomainReplicationQueueType QueueType = iota + 1
+)
 
 // Create Workflow Execution Mode
 const (
@@ -100,6 +113,7 @@ const (
 	WorkflowStateCompleted
 	WorkflowStateZombie
 	WorkflowStateVoid
+	WorkflowStateCorrupted
 )
 
 // Workflow execution close status
@@ -142,6 +156,7 @@ const (
 const (
 	ReplicationTaskTypeHistory = iota
 	ReplicationTaskTypeSyncActivity
+	ReplicationTaskTypeFailoverMarker
 )
 
 // Types of timers
@@ -230,20 +245,24 @@ type (
 
 	// ShardInfo describes a shard
 	ShardInfo struct {
-		ShardID                   int
-		Owner                     string
-		RangeID                   int64
-		StolenSinceRenew          int
-		UpdatedAt                 time.Time
-		ReplicationAckLevel       int64
-		TransferAckLevel          int64
-		TimerAckLevel             time.Time
-		ClusterTransferAckLevel   map[string]int64
-		ClusterTimerAckLevel      map[string]time.Time
-		TransferFailoverLevels    map[string]TransferFailoverLevel // uuid -> TransferFailoverLevel
-		TimerFailoverLevels       map[string]TimerFailoverLevel    // uuid -> TimerFailoverLevel
-		ClusterReplicationLevel   map[string]int64                 // cluster -> last replicated taskID
-		DomainNotificationVersion int64
+		ShardID                       int                               `json:"shard_id"`
+		Owner                         string                            `json:"owner"`
+		RangeID                       int64                             `json:"range_id"`
+		StolenSinceRenew              int                               `json:"stolen_since_renew"`
+		UpdatedAt                     time.Time                         `json:"updated_at"`
+		ReplicationAckLevel           int64                             `json:"replication_ack_level"`
+		ReplicationDLQAckLevel        map[string]int64                  `json:"replication_dlq_ack_level"`
+		TransferAckLevel              int64                             `json:"transfer_ack_level"`
+		TimerAckLevel                 time.Time                         `json:"timer_ack_level"`
+		ClusterTransferAckLevel       map[string]int64                  `json:"cluster_transfer_ack_level"`
+		ClusterTimerAckLevel          map[string]time.Time              `json:"cluster_timer_ack_level"`
+		TransferProcessingQueueStates *types.ProcessingQueueStates      `json:"transfer_processing_queue_states"`
+		TimerProcessingQueueStates    *types.ProcessingQueueStates      `json:"timer_processing_queue_states"`
+		TransferFailoverLevels        map[string]TransferFailoverLevel  // uuid -> TransferFailoverLevel
+		TimerFailoverLevels           map[string]TimerFailoverLevel     // uuid -> TimerFailoverLevel
+		ClusterReplicationLevel       map[string]int64                  `json:"cluster_replication_level"`
+		DomainNotificationVersion     int64                             `json:"domain_notification_version"`
+		PendingFailoverMarkers        []*types.FailoverMarkerAttributes `json:"pending_failover_markers"`
 	}
 
 	// TransferFailoverLevel contains corresponding start / end level
@@ -274,7 +293,7 @@ type (
 		ParentRunID                        string
 		InitiatedID                        int64
 		CompletionEventBatchID             int64
-		CompletionEvent                    *workflow.HistoryEvent
+		CompletionEvent                    *types.HistoryEvent
 		TaskList                           string
 		WorkflowTypeName                   string
 		WorkflowTimeout                    int32
@@ -306,7 +325,7 @@ type (
 		ClientLibraryVersion               string
 		ClientFeatureVersion               string
 		ClientImpl                         string
-		AutoResetPoints                    *workflow.ResetPoints
+		AutoResetPoints                    *types.ResetPoints
 		Memo                               map[string][]byte
 		SearchAttributes                   map[string][]byte
 		// for retry
@@ -321,7 +340,7 @@ type (
 		BranchToken        []byte
 		// Cron
 		CronSchedule      string
-		ExpirationSeconds int32
+		ExpirationSeconds int32 // TODO: is this field useful?
 	}
 
 	// ExecutionStats is the statistics about workflow execution
@@ -331,12 +350,22 @@ type (
 
 	// ReplicationState represents mutable state information for global domains.
 	// This information is used by replication protocol when applying events from remote clusters
+	// TODO: remove this struct after all 2DC workflows complete
 	ReplicationState struct {
 		CurrentVersion      int64
 		StartVersion        int64
 		LastWriteVersion    int64
 		LastWriteEventID    int64
 		LastReplicationInfo map[string]*ReplicationInfo
+	}
+
+	// CurrentWorkflowExecution describes a current execution record
+	CurrentWorkflowExecution struct {
+		DomainID     string
+		WorkflowID   string
+		RunID        string
+		State        int
+		CurrentRunID string
 	}
 
 	// TransferTaskInfo describes a transfer task
@@ -370,10 +399,7 @@ type (
 		ScheduledID       int64
 		BranchToken       []byte
 		NewRunBranchToken []byte
-		ResetWorkflow     bool
-
-		// TODO deprecate when NDC is fully released && migrated
-		LastReplicationInfo map[string]*ReplicationInfo
+		CreationTime      int64
 	}
 
 	// TimerTaskInfo describes a timer task.
@@ -579,10 +605,6 @@ type (
 		Version             int64
 		BranchToken         []byte
 		NewRunBranchToken   []byte
-
-		// TODO when 2DC is deprecated remove these 2 attributes
-		ResetWorkflow       bool
-		LastReplicationInfo map[string]*ReplicationInfo
 	}
 
 	// SyncActivityTask is the replication task created for shipping activity info to other clusters
@@ -591,6 +613,14 @@ type (
 		TaskID              int64
 		Version             int64
 		ScheduledID         int64
+	}
+
+	// FailoverMarkerTask is the marker for graceful failover
+	FailoverMarkerTask struct {
+		TaskID              int64
+		VisibilityTimestamp time.Time
+		Version             int64
+		DomainID            string
 	}
 
 	// ReplicationInfo represents the information stored for last replication event details per cluster
@@ -627,9 +657,10 @@ type (
 		SignalRequestedIDs  map[string]struct{}
 		ExecutionInfo       *WorkflowExecutionInfo
 		ExecutionStats      *ExecutionStats
-		ReplicationState    *ReplicationState
-		BufferedEvents      []*workflow.HistoryEvent
+		BufferedEvents      []*types.HistoryEvent
 		VersionHistories    *VersionHistories
+		ReplicationState    *ReplicationState // TODO: remove this after all 2DC workflows complete
+		Checksum            checksum.Checksum
 	}
 
 	// ActivityInfo details.
@@ -637,10 +668,10 @@ type (
 		Version                  int64
 		ScheduleID               int64
 		ScheduledEventBatchID    int64
-		ScheduledEvent           *workflow.HistoryEvent
+		ScheduledEvent           *types.HistoryEvent
 		ScheduledTime            time.Time
 		StartedID                int64
-		StartedEvent             *workflow.HistoryEvent
+		StartedEvent             *types.HistoryEvent
 		StartedTime              time.Time
 		DomainID                 string
 		ActivityID               string
@@ -669,7 +700,7 @@ type (
 		LastWorkerIdentity string
 		LastFailureDetails []byte
 		// Not written to database - This is used only for deduping heartbeat timer creation
-		LastHeartbeatTimeoutVisibility int64
+		LastHeartbeatTimeoutVisibilityInSeconds int64
 	}
 
 	// TimerInfo details - metadata about user timer info.
@@ -686,15 +717,15 @@ type (
 		Version               int64
 		InitiatedID           int64
 		InitiatedEventBatchID int64
-		InitiatedEvent        *workflow.HistoryEvent
+		InitiatedEvent        *types.HistoryEvent
 		StartedID             int64
 		StartedWorkflowID     string
 		StartedRunID          string
-		StartedEvent          *workflow.HistoryEvent
+		StartedEvent          *types.HistoryEvent
 		CreateRequestID       string
 		DomainName            string
 		WorkflowTypeName      string
-		ParentClosePolicy     workflow.ParentClosePolicy
+		ParentClosePolicy     types.ParentClosePolicy
 	}
 
 	// RequestCancelInfo has details for pending external workflow cancellations
@@ -756,7 +787,7 @@ type (
 	// GetWorkflowExecutionRequest is used to retrieve the info of a workflow execution
 	GetWorkflowExecutionRequest struct {
 		DomainID  string
-		Execution workflow.WorkflowExecution
+		Execution types.WorkflowExecution
 	}
 
 	// GetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest
@@ -771,6 +802,43 @@ type (
 		WorkflowID string
 	}
 
+	// ListCurrentExecutionsRequest is request to ListCurrentExecutions
+	ListCurrentExecutionsRequest struct {
+		PageSize  int
+		PageToken []byte
+	}
+
+	// ListCurrentExecutionsResponse is the response to ListCurrentExecutionsRequest
+	ListCurrentExecutionsResponse struct {
+		Executions []*CurrentWorkflowExecution
+		PageToken  []byte
+	}
+
+	// IsWorkflowExecutionExistsRequest is used to check if the concrete execution exists
+	IsWorkflowExecutionExistsRequest struct {
+		DomainID   string
+		WorkflowID string
+		RunID      string
+	}
+
+	// ListConcreteExecutionsRequest is request to ListConcreteExecutions
+	ListConcreteExecutionsRequest struct {
+		PageSize  int
+		PageToken []byte
+	}
+
+	// ListConcreteExecutionsResponse is response to ListConcreteExecutions
+	ListConcreteExecutionsResponse struct {
+		Executions []*ListConcreteExecutionsEntity
+		PageToken  []byte
+	}
+
+	// ListConcreteExecutionsEntity is a single entity in ListConcreteExecutionsResponse
+	ListConcreteExecutionsEntity struct {
+		ExecutionInfo    *WorkflowExecutionInfo
+		VersionHistories *VersionHistories
+	}
+
 	// GetCurrentExecutionResponse is the response to GetCurrentExecution
 	GetCurrentExecutionResponse struct {
 		StartRequestID   string
@@ -778,6 +846,11 @@ type (
 		State            int
 		CloseStatus      int
 		LastWriteVersion int64
+	}
+
+	// IsWorkflowExecutionExistsResponse is the response to IsWorkflowExecutionExists
+	IsWorkflowExecutionExistsResponse struct {
+		Exists bool
 	}
 
 	// UpdateWorkflowExecutionRequest is used to update a workflow execution
@@ -808,19 +881,7 @@ type (
 		// current workflow
 		CurrentWorkflowMutation *WorkflowMutation
 
-		// TODO deprecate this once nDC migration is completed
-		//  basically should use CurrentWorkflowMutation instead
-		CurrentWorkflowCAS *CurrentWorkflowCAS
-
 		Encoding common.EncodingType // optional binary encoding type
-	}
-
-	// CurrentWorkflowCAS represent a compare and swap on current record
-	// TODO deprecate this once nDC migration is completed
-	CurrentWorkflowCAS struct {
-		PrevRunID            string
-		PrevLastWriteVersion int64
-		PrevState            int
 	}
 
 	// ResetWorkflowExecutionRequest is used to reset workflow execution state for current run and create new run
@@ -850,14 +911,13 @@ type (
 		WorkflowID  string
 		RunID       string
 		BranchToken []byte
-		Events      []*workflow.HistoryEvent
+		Events      []*types.HistoryEvent
 	}
 
 	// WorkflowMutation is used as generic workflow execution state mutation
 	WorkflowMutation struct {
 		ExecutionInfo    *WorkflowExecutionInfo
 		ExecutionStats   *ExecutionStats
-		ReplicationState *ReplicationState
 		VersionHistories *VersionHistories
 
 		UpsertActivityInfos       []*ActivityInfo
@@ -865,14 +925,14 @@ type (
 		UpsertTimerInfos          []*TimerInfo
 		DeleteTimerInfos          []string
 		UpsertChildExecutionInfos []*ChildExecutionInfo
-		DeleteChildExecutionInfo  *int64
+		DeleteChildExecutionInfos []int64
 		UpsertRequestCancelInfos  []*RequestCancelInfo
-		DeleteRequestCancelInfo   *int64
+		DeleteRequestCancelInfos  []int64
 		UpsertSignalInfos         []*SignalInfo
-		DeleteSignalInfo          *int64
+		DeleteSignalInfos         []int64
 		UpsertSignalRequestedIDs  []string
-		DeleteSignalRequestedID   string
-		NewBufferedEvents         []*workflow.HistoryEvent
+		DeleteSignalRequestedIDs  []string
+		NewBufferedEvents         []*types.HistoryEvent
 		ClearBufferedEvents       bool
 
 		TransferTasks    []Task
@@ -880,13 +940,13 @@ type (
 		TimerTasks       []Task
 
 		Condition int64
+		Checksum  checksum.Checksum
 	}
 
 	// WorkflowSnapshot is used as generic workflow execution state snapshot
 	WorkflowSnapshot struct {
 		ExecutionInfo    *WorkflowExecutionInfo
 		ExecutionStats   *ExecutionStats
-		ReplicationState *ReplicationState
 		VersionHistories *VersionHistories
 
 		ActivityInfos       []*ActivityInfo
@@ -901,6 +961,7 @@ type (
 		TimerTasks       []Task
 
 		Condition int64
+		Checksum  checksum.Checksum
 	}
 
 	// DeleteWorkflowExecutionRequest is used to delete a workflow execution
@@ -908,14 +969,6 @@ type (
 		DomainID   string
 		WorkflowID string
 		RunID      string
-	}
-
-	// DeleteTaskRequest is used to detele a task that corrupted and need to be removed
-	// 	e.g. corrupted history event batch, eventID is not continouous
-	DeleteTaskRequest struct {
-		TaskID  int64
-		Type    int
-		ShardID int
 	}
 
 	// DeleteCurrentWorkflowExecutionRequest is used to delete the current workflow execution
@@ -969,6 +1022,11 @@ type (
 		TaskID int64
 	}
 
+	// RangeCompleteReplicationTaskRequest is used to complete a range of task in the replication task queue
+	RangeCompleteReplicationTaskRequest struct {
+		InclusiveEndTaskID int64
+	}
+
 	// PutReplicationTaskToDLQRequest is used to put a replication task to dlq
 	PutReplicationTaskToDLQRequest struct {
 		SourceClusterName string
@@ -981,8 +1039,31 @@ type (
 		GetReplicationTasksRequest
 	}
 
+	// GetReplicationDLQSizeRequest is used to get one replication task from dlq
+	GetReplicationDLQSizeRequest struct {
+		SourceClusterName string
+	}
+
+	// DeleteReplicationTaskFromDLQRequest is used to delete replication task from DLQ
+	DeleteReplicationTaskFromDLQRequest struct {
+		SourceClusterName string
+		TaskID            int64
+	}
+
+	//RangeDeleteReplicationTaskFromDLQRequest is used to delete replication tasks from DLQ
+	RangeDeleteReplicationTaskFromDLQRequest struct {
+		SourceClusterName    string
+		ExclusiveBeginTaskID int64
+		InclusiveEndTaskID   int64
+	}
+
 	// GetReplicationTasksFromDLQResponse is the response for GetReplicationTasksFromDLQ
 	GetReplicationTasksFromDLQResponse = GetReplicationTasksResponse
+
+	// GetReplicationDLQSizeResponse is the response for GetReplicationDLQSize
+	GetReplicationDLQSizeResponse struct {
+		Size int64
+	}
 
 	// RangeCompleteTimerTaskRequest is used to complete a range of tasks in the timer task queue
 	RangeCompleteTimerTaskRequest struct {
@@ -1047,7 +1128,7 @@ type (
 
 	// CreateTaskInfo describes a task to be created in CreateTasksRequest
 	CreateTaskInfo struct {
-		Execution workflow.WorkflowExecution
+		Execution types.WorkflowExecution
 		Data      *TaskInfo
 		TaskID    int64
 	}
@@ -1116,11 +1197,11 @@ type (
 		// NOTE: this retention is in days, not in seconds
 		Retention                int32
 		EmitMetric               bool
-		HistoryArchivalStatus    workflow.ArchivalStatus
+		HistoryArchivalStatus    types.ArchivalStatus
 		HistoryArchivalURI       string
-		VisibilityArchivalStatus workflow.ArchivalStatus
+		VisibilityArchivalStatus types.ArchivalStatus
 		VisibilityArchivalURI    string
-		BadBinaries              workflow.BadBinaries
+		BadBinaries              types.BadBinaries
 	}
 
 	// DomainReplicationConfig describes the cross DC domain replication configuration
@@ -1132,6 +1213,7 @@ type (
 	// ClusterReplicationConfig describes the cross DC cluster replication configuration
 	ClusterReplicationConfig struct {
 		ClusterName string
+		// Note: if adding new properties of non-primitive types, remember to update GetCopy()
 	}
 
 	// CreateDomainRequest is used to create the domain
@@ -1142,6 +1224,7 @@ type (
 		IsGlobalDomain    bool
 		ConfigVersion     int64
 		FailoverVersion   int64
+		LastUpdatedTime   int64
 	}
 
 	// CreateDomainResponse is the response for CreateDomain
@@ -1164,6 +1247,9 @@ type (
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
+		PreviousFailoverVersion     int64
+		FailoverEndTime             *int64
+		LastUpdatedTime             int64
 		NotificationVersion         int64
 	}
 
@@ -1175,6 +1261,9 @@ type (
 		ConfigVersion               int64
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
+		PreviousFailoverVersion     int64
+		FailoverEndTime             *int64
+		LastUpdatedTime             int64
 		NotificationVersion         int64
 	}
 
@@ -1268,7 +1357,7 @@ type (
 		// The branch to be appended
 		BranchToken []byte
 		// The batch of events to be appended. The first eventID will become the nodeID of this batch
-		Events []*workflow.HistoryEvent
+		Events []*types.HistoryEvent
 		// requested TransactionID for this write operation. For the same eventID, the node with larger TransactionID always wins
 		TransactionID int64
 		// optional binary encoding type
@@ -1303,7 +1392,7 @@ type (
 	// ReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
 	ReadHistoryBranchResponse struct {
 		// History events
-		HistoryEvents []*workflow.HistoryEvent
+		HistoryEvents []*types.HistoryEvent
 		// Token to read next page if there are more events beyond page size.
 		// Use this to set NextPageToken on ReadHistoryBranchRequest to read the next page.
 		// Empty means we have reached the last page, not need to continue
@@ -1317,7 +1406,7 @@ type (
 	// ReadHistoryBranchByBatchResponse is the response to ReadHistoryBranchRequest
 	ReadHistoryBranchByBatchResponse struct {
 		// History events by batch
-		History []*workflow.History
+		History []*types.History
 		// Token to read next page if there are more events beyond page size.
 		// Use this to set NextPageToken on ReadHistoryBranchRequest to read the next page.
 		// Empty means we have reached the last page, not need to continue
@@ -1418,6 +1507,12 @@ type (
 		Branches []HistoryBranchDetail
 	}
 
+	// CreateFailoverMarkersRequest is request to create failover markers
+	CreateFailoverMarkersRequest struct {
+		RangeID int64
+		Markers []*FailoverMarkerTask
+	}
+
 	// Closeable is an interface for any entity that supports a close operation to release resources
 	Closeable interface {
 		Close()
@@ -1427,9 +1522,9 @@ type (
 	ShardManager interface {
 		Closeable
 		GetName() string
-		CreateShard(request *CreateShardRequest) error
-		GetShard(request *GetShardRequest) (*GetShardResponse, error)
-		UpdateShard(request *UpdateShardRequest) error
+		CreateShard(ctx context.Context, request *CreateShardRequest) error
+		GetShard(ctx context.Context, request *GetShardRequest) (*GetShardResponse, error)
+		UpdateShard(ctx context.Context, request *UpdateShardRequest) error
 	}
 
 	// ExecutionManager is used to manage workflow executions
@@ -1438,33 +1533,40 @@ type (
 		GetName() string
 		GetShardID() int
 
-		CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
-		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*GetWorkflowExecutionResponse, error)
-		UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) (*UpdateWorkflowExecutionResponse, error)
-		ConflictResolveWorkflowExecution(request *ConflictResolveWorkflowExecutionRequest) error
-		ResetWorkflowExecution(request *ResetWorkflowExecutionRequest) error
-		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
-		DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error
-		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
+		CreateWorkflowExecution(ctx context.Context, request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
+		GetWorkflowExecution(ctx context.Context, request *GetWorkflowExecutionRequest) (*GetWorkflowExecutionResponse, error)
+		UpdateWorkflowExecution(ctx context.Context, request *UpdateWorkflowExecutionRequest) (*UpdateWorkflowExecutionResponse, error)
+		ConflictResolveWorkflowExecution(ctx context.Context, request *ConflictResolveWorkflowExecutionRequest) error
+		ResetWorkflowExecution(ctx context.Context, request *ResetWorkflowExecutionRequest) error
+		DeleteWorkflowExecution(ctx context.Context, request *DeleteWorkflowExecutionRequest) error
+		DeleteCurrentWorkflowExecution(ctx context.Context, request *DeleteCurrentWorkflowExecutionRequest) error
+		GetCurrentExecution(ctx context.Context, request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
+		IsWorkflowExecutionExists(ctx context.Context, request *IsWorkflowExecutionExistsRequest) (*IsWorkflowExecutionExistsResponse, error)
 
 		// Transfer task related methods
-		GetTransferTasks(request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)
-		CompleteTransferTask(request *CompleteTransferTaskRequest) error
-		RangeCompleteTransferTask(request *RangeCompleteTransferTaskRequest) error
+		GetTransferTasks(ctx context.Context, request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)
+		CompleteTransferTask(ctx context.Context, request *CompleteTransferTaskRequest) error
+		RangeCompleteTransferTask(ctx context.Context, request *RangeCompleteTransferTaskRequest) error
 
 		// Replication task related methods
-		GetReplicationTasks(request *GetReplicationTasksRequest) (*GetReplicationTasksResponse, error)
-		CompleteReplicationTask(request *CompleteReplicationTaskRequest) error
-		PutReplicationTaskToDLQ(request *PutReplicationTaskToDLQRequest) error
-		GetReplicationTasksFromDLQ(request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
+		GetReplicationTasks(ctx context.Context, request *GetReplicationTasksRequest) (*GetReplicationTasksResponse, error)
+		CompleteReplicationTask(ctx context.Context, request *CompleteReplicationTaskRequest) error
+		RangeCompleteReplicationTask(ctx context.Context, request *RangeCompleteReplicationTaskRequest) error
+		PutReplicationTaskToDLQ(ctx context.Context, request *PutReplicationTaskToDLQRequest) error
+		GetReplicationTasksFromDLQ(ctx context.Context, request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
+		GetReplicationDLQSize(ctx context.Context, request *GetReplicationDLQSizeRequest) (*GetReplicationDLQSizeResponse, error)
+		DeleteReplicationTaskFromDLQ(ctx context.Context, request *DeleteReplicationTaskFromDLQRequest) error
+		RangeDeleteReplicationTaskFromDLQ(ctx context.Context, request *RangeDeleteReplicationTaskFromDLQRequest) error
+		CreateFailoverMarkerTasks(ctx context.Context, request *CreateFailoverMarkersRequest) error
 
 		// Timer related methods.
-		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
-		CompleteTimerTask(request *CompleteTimerTaskRequest) error
-		RangeCompleteTimerTask(request *RangeCompleteTimerTaskRequest) error
+		GetTimerIndexTasks(ctx context.Context, request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
+		CompleteTimerTask(ctx context.Context, request *CompleteTimerTaskRequest) error
+		RangeCompleteTimerTask(ctx context.Context, request *RangeCompleteTimerTaskRequest) error
 
-		// Remove Task due to corrupted data
-		DeleteTask(request *DeleteTaskRequest) error
+		// Scan operations
+		ListConcreteExecutions(ctx context.Context, request *ListConcreteExecutionsRequest) (*ListConcreteExecutionsResponse, error)
+		ListCurrentExecutions(ctx context.Context, request *ListCurrentExecutionsRequest) (*ListCurrentExecutionsResponse, error)
 	}
 
 	// ExecutionManagerFactory creates an instance of ExecutionManager for a given shard
@@ -1477,23 +1579,14 @@ type (
 	TaskManager interface {
 		Closeable
 		GetName() string
-		LeaseTaskList(request *LeaseTaskListRequest) (*LeaseTaskListResponse, error)
-		UpdateTaskList(request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
-		ListTaskList(request *ListTaskListRequest) (*ListTaskListResponse, error)
-		DeleteTaskList(request *DeleteTaskListRequest) error
-		CreateTasks(request *CreateTasksRequest) (*CreateTasksResponse, error)
-		GetTasks(request *GetTasksRequest) (*GetTasksResponse, error)
-		CompleteTask(request *CompleteTaskRequest) error
-		// CompleteTasksLessThan completes tasks less than or equal to the given task id
-		// This API takes a limit parameter which specifies the count of maxRows that
-		// can be deleted. This parameter may be ignored by the underlying storage, but
-		// its mandatory to specify it. On success this method returns the number of rows
-		// actually deleted. If the underlying storage doesn't support "limit", all rows
-		// less than or equal to taskID will be deleted.
-		// On success, this method returns:
-		//  - number of rows actually deleted, if limit is honored
-		//  - UnknownNumRowsDeleted, when all rows below value are deleted
-		CompleteTasksLessThan(request *CompleteTasksLessThanRequest) (int, error)
+		LeaseTaskList(ctx context.Context, request *LeaseTaskListRequest) (*LeaseTaskListResponse, error)
+		UpdateTaskList(ctx context.Context, request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
+		ListTaskList(ctx context.Context, request *ListTaskListRequest) (*ListTaskListResponse, error)
+		DeleteTaskList(ctx context.Context, request *DeleteTaskListRequest) error
+		CreateTasks(ctx context.Context, request *CreateTasksRequest) (*CreateTasksResponse, error)
+		GetTasks(ctx context.Context, request *GetTasksRequest) (*GetTasksResponse, error)
+		CompleteTask(ctx context.Context, request *CompleteTaskRequest) error
+		CompleteTasksLessThan(ctx context.Context, request *CompleteTasksLessThanRequest) (int, error)
 	}
 
 	// HistoryManager is used to manager workflow history events
@@ -1506,45 +1599,60 @@ type (
 		// For Cadence, treeID is new runID, except for fork(reset), treeID will be the runID that it forks from.
 
 		// AppendHistoryNodes add(or override) a batch of nodes to a history branch
-		AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error)
+		AppendHistoryNodes(ctx context.Context, request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error)
 		// ReadHistoryBranch returns history node data for a branch
-		ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error)
+		ReadHistoryBranch(ctx context.Context, request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error)
 		// ReadHistoryBranchByBatch returns history node data for a branch ByBatch
-		ReadHistoryBranchByBatch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchByBatchResponse, error)
+		ReadHistoryBranchByBatch(ctx context.Context, request *ReadHistoryBranchRequest) (*ReadHistoryBranchByBatchResponse, error)
 		// ReadRawHistoryBranch returns history node raw data for a branch ByBatch
 		// NOTE: this API should only be used by 3+DC
-		ReadRawHistoryBranch(request *ReadHistoryBranchRequest) (*ReadRawHistoryBranchResponse, error)
+		ReadRawHistoryBranch(ctx context.Context, request *ReadHistoryBranchRequest) (*ReadRawHistoryBranchResponse, error)
 		// ForkHistoryBranch forks a new branch from a old branch
-		ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error)
+		ForkHistoryBranch(ctx context.Context, request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error)
 		// DeleteHistoryBranch removes a branch
 		// If this is the last branch to delete, it will also remove the root node
-		DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error
+		DeleteHistoryBranch(ctx context.Context, request *DeleteHistoryBranchRequest) error
 		// GetHistoryTree returns all branch information of a tree
-		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
+		GetHistoryTree(ctx context.Context, request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
 		// GetAllHistoryTreeBranches returns all branches of all trees
-		GetAllHistoryTreeBranches(request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error)
+		GetAllHistoryTreeBranches(ctx context.Context, request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error)
 	}
 
 	// MetadataManager is used to manage metadata CRUD for domain entities
 	MetadataManager interface {
 		Closeable
 		GetName() string
-		CreateDomain(request *CreateDomainRequest) (*CreateDomainResponse, error)
-		GetDomain(request *GetDomainRequest) (*GetDomainResponse, error)
-		UpdateDomain(request *UpdateDomainRequest) error
-		DeleteDomain(request *DeleteDomainRequest) error
-		DeleteDomainByName(request *DeleteDomainByNameRequest) error
-		ListDomains(request *ListDomainsRequest) (*ListDomainsResponse, error)
-		GetMetadata() (*GetMetadataResponse, error)
+		CreateDomain(ctx context.Context, request *CreateDomainRequest) (*CreateDomainResponse, error)
+		GetDomain(ctx context.Context, request *GetDomainRequest) (*GetDomainResponse, error)
+		UpdateDomain(ctx context.Context, request *UpdateDomainRequest) error
+		DeleteDomain(ctx context.Context, request *DeleteDomainRequest) error
+		DeleteDomainByName(ctx context.Context, request *DeleteDomainByNameRequest) error
+		ListDomains(ctx context.Context, request *ListDomainsRequest) (*ListDomainsResponse, error)
+		GetMetadata(ctx context.Context) (*GetMetadataResponse, error)
 	}
 
-	// DomainReplicationQueue is used to publish and list domain replication tasks
-	DomainReplicationQueue interface {
+	// QueueManager is used to manage queue store
+	QueueManager interface {
 		Closeable
-		Publish(message interface{}) error
-		GetReplicationMessages(lastMessageID int, maxCount int) ([]*replicator.ReplicationTask, int, error)
-		UpdateAckLevel(lastProcessedMessageID int, clusterName string) error
-		GetAckLevels() (map[string]int, error)
+		EnqueueMessage(ctx context.Context, messagePayload []byte) error
+		ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) ([]*QueueMessage, error)
+		DeleteMessagesBefore(ctx context.Context, messageID int64) error
+		UpdateAckLevel(ctx context.Context, messageID int64, clusterName string) error
+		GetAckLevels(ctx context.Context) (map[string]int64, error)
+		EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) error
+		ReadMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*QueueMessage, []byte, error)
+		DeleteMessageFromDLQ(ctx context.Context, messageID int64) error
+		RangeDeleteMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64) error
+		UpdateDLQAckLevel(ctx context.Context, messageID int64, clusterName string) error
+		GetDLQAckLevels(ctx context.Context) (map[string]int64, error)
+		GetDLQSize(ctx context.Context) (int64, error)
+	}
+
+	// QueueMessage is the message that stores in the queue
+	QueueMessage struct {
+		ID        int64     `json:"message_id"`
+		QueueType QueueType `json:"queue_type"`
+		Payload   []byte    `json:"message_payload"`
 	}
 )
 
@@ -2216,6 +2324,41 @@ func (a *SyncActivityTask) SetVisibilityTimestamp(timestamp time.Time) {
 	a.VisibilityTimestamp = timestamp
 }
 
+// GetType returns the type of the history replication task
+func (a *FailoverMarkerTask) GetType() int {
+	return ReplicationTaskTypeFailoverMarker
+}
+
+// GetVersion returns the version of the history replication task
+func (a *FailoverMarkerTask) GetVersion() int64 {
+	return a.Version
+}
+
+// SetVersion returns the version of the history replication task
+func (a *FailoverMarkerTask) SetVersion(version int64) {
+	a.Version = version
+}
+
+// GetTaskID returns the sequence ID of the history replication task
+func (a *FailoverMarkerTask) GetTaskID() int64 {
+	return a.TaskID
+}
+
+// SetTaskID sets the sequence ID of the history replication task
+func (a *FailoverMarkerTask) SetTaskID(id int64) {
+	a.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (a *FailoverMarkerTask) GetVisibilityTimestamp() time.Time {
+	return a.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (a *FailoverMarkerTask) SetVisibilityTimestamp(timestamp time.Time) {
+	a.VisibilityTimestamp = timestamp
+}
+
 // GetTaskID returns the task ID for transfer task
 func (t *TransferTaskInfo) GetTaskID() int64 {
 	return t.TaskID
@@ -2369,12 +2512,18 @@ func (config *ClusterReplicationConfig) deserialize(input map[string]interface{}
 	config.ClusterName = input["cluster_name"].(string)
 }
 
-// DBTimestampToUnixNano converts CQL timestamp to UnixNano
+// GetCopy return a copy of ClusterReplicationConfig
+func (config *ClusterReplicationConfig) GetCopy() *ClusterReplicationConfig {
+	res := *config
+	return &res
+}
+
+// DBTimestampToUnixNano converts Milliseconds timestamp to UnixNano
 func DBTimestampToUnixNano(milliseconds int64) int64 {
 	return milliseconds * 1000 * 1000 // Milliseconds are 10⁻³, nanoseconds are 10⁻⁹, (-3) - (-9) = 6, so multiply by 10⁶
 }
 
-// UnixNanoToDBTimestamp converts UnixNano to CQL timestamp
+// UnixNanoToDBTimestamp converts UnixNano to Milliseconds timestamp
 func UnixNanoToDBTimestamp(timestamp int64) int64 {
 	return timestamp / (1000 * 1000) // Milliseconds are 10⁻³, nanoseconds are 10⁻⁹, (-9) - (-3) = -6, so divide by 10⁶
 }
@@ -2466,4 +2615,14 @@ func NewGetReplicationTasksFromDLQRequest(
 			NextPageToken: nextPageToken,
 		},
 	}
+}
+
+// IsTransientError checks if the error is a transient persistence error
+func IsTransientError(err error) bool {
+	switch err.(type) {
+	case *types.InternalServiceError, *types.ServiceBusyError, *TimeoutError:
+		return true
+	}
+
+	return false
 }

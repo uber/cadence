@@ -21,9 +21,8 @@
 package matching
 
 import (
-	m "github.com/uber/cadence/.gen/go/matching"
-	s "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -35,13 +34,13 @@ type (
 	// queryTaskInfo contains the info for a query task
 	queryTaskInfo struct {
 		taskID  string
-		request *m.QueryWorkflowRequest
+		request *types.MatchingQueryWorkflowRequest
 	}
 	// startedTaskInfo contains info for any task received from
 	// another matching host. This type of task is already marked as started
 	startedTaskInfo struct {
-		decisionTaskInfo *m.PollForDecisionTaskResponse
-		activityTaskInfo *s.PollForActivityTaskResponse
+		decisionTaskInfo *types.MatchingPollForDecisionTaskResponse
+		activityTaskInfo *types.PollForActivityTaskResponse
 	}
 	// internalTask represents an activity, decision, query or started (received from another host).
 	// this struct is more like a union and only one of [ query, event, forwarded ] is
@@ -51,6 +50,7 @@ type (
 		query            *queryTaskInfo   // non-nil for a query task that's locally sync matched
 		started          *startedTaskInfo // non-nil for a task received from a parent partition which is already started
 		domainName       string
+		source           types.TaskSource
 		forwardedFrom    string     // name of the child partition this task is forwarded from (empty if not forwarded)
 		responseC        chan error // non-nil only where there is a caller waiting for response (sync-match)
 		backlogCountHint int64
@@ -60,6 +60,7 @@ type (
 func newInternalTask(
 	info *persistence.TaskInfo,
 	completionFunc func(*persistence.TaskInfo, error),
+	source types.TaskSource,
 	forwardedFrom string,
 	forSyncMatch bool,
 ) *internalTask {
@@ -68,6 +69,7 @@ func newInternalTask(
 			TaskInfo:       info,
 			completionFunc: completionFunc,
 		},
+		source:        source,
 		forwardedFrom: forwardedFrom,
 	}
 	if forSyncMatch {
@@ -78,14 +80,15 @@ func newInternalTask(
 
 func newInternalQueryTask(
 	taskID string,
-	request *m.QueryWorkflowRequest,
+	request *types.MatchingQueryWorkflowRequest,
 ) *internalTask {
 	return &internalTask{
 		query: &queryTaskInfo{
 			taskID:  taskID,
 			request: request,
 		},
-		responseC: make(chan error, 1),
+		forwardedFrom: request.GetForwardedFrom(),
+		responseC:     make(chan error, 1),
 	}
 }
 
@@ -109,10 +112,10 @@ func (task *internalTask) isForwarded() bool {
 	return task.forwardedFrom != ""
 }
 
-func (task *internalTask) workflowExecution() *s.WorkflowExecution {
+func (task *internalTask) workflowExecution() *types.WorkflowExecution {
 	switch {
 	case task.event != nil:
-		return &s.WorkflowExecution{WorkflowId: &task.event.WorkflowID, RunId: &task.event.RunID}
+		return &types.WorkflowExecution{WorkflowID: task.event.WorkflowID, RunID: task.event.RunID}
 	case task.query != nil:
 		return task.query.request.GetQueryRequest().GetExecution()
 	case task.started != nil && task.started.decisionTaskInfo != nil:
@@ -120,12 +123,12 @@ func (task *internalTask) workflowExecution() *s.WorkflowExecution {
 	case task.started != nil && task.started.activityTaskInfo != nil:
 		return task.started.activityTaskInfo.WorkflowExecution
 	}
-	return &s.WorkflowExecution{}
+	return &types.WorkflowExecution{}
 }
 
 // pollForDecisionResponse returns the poll response for a decision task that is
 // already marked as started. This method should only be called when isStarted() is true
-func (task *internalTask) pollForDecisionResponse() *m.PollForDecisionTaskResponse {
+func (task *internalTask) pollForDecisionResponse() *types.MatchingPollForDecisionTaskResponse {
 	if task.isStarted() {
 		return task.started.decisionTaskInfo
 	}
@@ -134,7 +137,7 @@ func (task *internalTask) pollForDecisionResponse() *m.PollForDecisionTaskRespon
 
 // pollForActivityResponse returns the poll response for an activity task that is
 // already marked as started. This method should only be called when isStarted() is true
-func (task *internalTask) pollForActivityResponse() *s.PollForActivityTaskResponse {
+func (task *internalTask) pollForActivityResponse() *types.PollForActivityTaskResponse {
 	if task.isStarted() {
 		return task.started.activityTaskInfo
 	}

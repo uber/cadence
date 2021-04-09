@@ -10,7 +10,9 @@ CREATE TABLE domains(
 );
 
 CREATE TABLE domain_metadata (
-  notification_version BIGINT NOT NULL
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  notification_version BIGINT NOT NULL,
+  PRIMARY KEY (`id`)
 );
 
 INSERT INTO domain_metadata (notification_version) VALUES (1);

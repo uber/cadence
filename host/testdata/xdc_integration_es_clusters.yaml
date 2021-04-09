@@ -120,25 +120,10 @@
           brokers:
             - "${KAFKA_SEEDS}:9092"
       topics:
-        active-es:
-          cluster: test
-        active-es-dlq:
-          cluster: test
-        standby-es:
-          cluster: test
-        standby-es-dlq:
-          cluster: test
         test-visibility-topic-1:
           cluster: test
         test-visibility-topic-1-dlq:
           cluster: test
-      cadence-cluster-topics:
-        active-es:
-          topic: active-es
-          dlq-topic: active-es-dlq
-        standby-es:
-          topic: standby-es
-          dlq-topic: standby-es-dlq
       applications:
         visibility:
           topic: test-visibility-topic-1

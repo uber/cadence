@@ -3,8 +3,8 @@ version: "3.5"
 services:
   cassandra:
     image: cassandra:3.11
-    ports:
-      - "9042:9042"
+    expose:
+      - "9042"
     networks:
       services-network:
         aliases:
@@ -17,17 +17,29 @@ services:
       MYSQL_ROOT_PASSWORD: uber
     volumes:
       - ./mysql-init:/docker-entrypoint-initdb.d
-    ports:
-      - "3306:3306"
+    expose:
+      - "3306"
     networks:
       services-network:
         aliases:
           - mysql
 
+  postgres:
+    image: postgres:12
+    environment:
+      POSTGRES_PASSWORD: cadence
+      POSTGRES_USER: cadence
+    expose:
+      - "5432"
+    networks:
+      services-network:
+        aliases:
+          - postgres
+
   zookeeper:
     image: wurstmeister/zookeeper:3.4.6
-    ports:
-      - "2181:2181"
+    expose:
+      - "2181"
     networks:
       services-network:
         aliases:
@@ -37,8 +49,8 @@ services:
     image: wurstmeister/kafka:2.12-2.1.1
     depends_on:
       - zookeeper
-    ports:
-      - "9092:9092"
+    expose:
+      - "9092"
     networks:
       services-network:
         aliases:
@@ -50,8 +62,8 @@ services:
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.5.1
-    ports:
-      - "9200:9200"
+    expose:
+      - "9200"
     networks:
       services-network:
         aliases:
@@ -63,23 +75,17 @@ services:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
-    command:
-      - /bin/sh
-      - -e
-      - -c
-      - |
-        make cover_profile
-    ports:
-      - "7933:7933"
-      - "7934:7934"
-      - "7935:7935"
-      - "7939:7939"
+    command: make cover_profile
     environment:
       - "CASSANDRA_SEEDS=cassandra"
       - "MYSQL_SEEDS=mysql"
+      - "POSTGRES_SEEDS=postgres"
+      - "POSTGRES_USER=cadence"
+      - "POSTGRES_PASSWORD=cadence"
     depends_on:
       - cassandra
       - mysql
+      - postgres
     volumes:
       - ../../:/cadence
     networks:
@@ -91,17 +97,7 @@ services:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
-    command:
-      - /bin/sh
-      - -e
-      - -c
-      - |
-        make cover_integration_profile
-    ports:
-      - "7933:7933"
-      - "7934:7934"
-      - "7935:7935"
-      - "7939:7939"
+    command: make cover_integration_profile
     environment:
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
@@ -122,17 +118,7 @@ services:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
-    command:
-      - /bin/sh
-      - -e
-      - -c
-      - |
-        make cover_integration_profile
-    ports:
-      - "7933:7933"
-      - "7934:7934"
-      - "7935:7935"
-      - "7939:7939"
+    command: make cover_integration_profile
     environment:
       - "MYSQL_SEEDS=mysql"
       - "ES_SEEDS=elasticsearch"
@@ -141,6 +127,29 @@ services:
       - "TEST_TAG=esintegration"
     depends_on:
       - mysql
+      - elasticsearch
+      - kafka
+    volumes:
+      - ../../:/cadence
+    networks:
+      services-network:
+        aliases:
+          - integration-test
+
+  integration-test-postgres:
+    build:
+      context: ../../
+      dockerfile: ./docker/buildkite/Dockerfile
+    command: make cover_integration_profile
+    environment:
+      - "POSTGRES_SEEDS=postgres"
+      - "PERSISTENCE_PLUGIN=postgres"
+      - "ES_SEEDS=elasticsearch"
+      - "KAFKA_SEEDS=kafka"
+      - "PERSISTENCE_TYPE=sql"
+      - "TEST_TAG=esintegration"
+    depends_on:
+      - postgres
       - elasticsearch
       - kafka
     volumes:
@@ -154,17 +163,7 @@ services:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
-    command:
-      - /bin/sh
-      - -e
-      - -c
-      - |
-        make cover_integration_profile EVENTSV2=true
-    ports:
-      - "7933:7933"
-      - "7934:7934"
-      - "7935:7935"
-      - "7939:7939"
+    command: make cover_integration_profile EVENTSV2=true
     environment:
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
@@ -181,21 +180,11 @@ services:
         aliases:
           - integration-test
 
-  integration-test-xdc-cassandra:
+  integration-test-ndc-cassandra:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
-    command:
-      - /bin/sh
-      - -e
-      - -c
-      - |
-        make cover_xdc_profile
-    ports:
-      - "7933:7933"
-      - "7934:7934"
-      - "7935:7935"
-      - "7939:7939"
+    command: make cover_ndc_profile
     environment:
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
@@ -210,23 +199,13 @@ services:
     networks:
       services-network:
         aliases:
-          - integration-test-xdc
+          - integration-test-ndc
 
-  integration-test-xdc-mysql:
+  integration-test-ndc-mysql:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
-    command:
-      - /bin/sh
-      - -e
-      - -c
-      - |
-        make cover_xdc_profile
-    ports:
-      - "7933:7933"
-      - "7934:7934"
-      - "7935:7935"
-      - "7939:7939"
+    command: make cover_ndc_profile
     environment:
       - "MYSQL_SEEDS=mysql"
       - "ES_SEEDS=elasticsearch"
@@ -242,7 +221,7 @@ services:
     networks:
       services-network:
         aliases:
-          - integration-test-xdc
+          - integration-test-ndc
 
 networks:
   services-network:

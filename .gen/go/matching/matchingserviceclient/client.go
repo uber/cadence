@@ -1,17 +1,17 @@
 // The MIT License (MIT)
-// 
-// Copyright (c) 2019 Uber Technologies, Inc.
-// 
+
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,13 +27,15 @@ package matchingserviceclient
 
 import (
 	context "context"
-	matching "github.com/uber/cadence/.gen/go/matching"
-	shared "github.com/uber/cadence/.gen/go/shared"
+	reflect "reflect"
+
 	wire "go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
-	reflect "reflect"
+
+	matching "github.com/uber/cadence/.gen/go/matching"
+	shared "github.com/uber/cadence/.gen/go/shared"
 )
 
 // Interface is a client for the MatchingService service.
@@ -61,6 +63,12 @@ type Interface interface {
 		Request *matching.DescribeTaskListRequest,
 		opts ...yarpc.CallOption,
 	) (*shared.DescribeTaskListResponse, error)
+
+	ListTaskListPartitions(
+		ctx context.Context,
+		Request *matching.ListTaskListPartitionsRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.ListTaskListPartitionsResponse, error)
 
 	PollForActivityTask(
 		ctx context.Context,
@@ -200,6 +208,29 @@ func (c client) DescribeTaskList(
 	}
 
 	success, err = matching.MatchingService_DescribeTaskList_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ListTaskListPartitions(
+	ctx context.Context,
+	_Request *matching.ListTaskListPartitionsRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.ListTaskListPartitionsResponse, err error) {
+
+	args := matching.MatchingService_ListTaskListPartitions_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result matching.MatchingService_ListTaskListPartitions_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = matching.MatchingService_ListTaskListPartitions_Helper.UnwrapResponse(&result)
 	return
 }
 

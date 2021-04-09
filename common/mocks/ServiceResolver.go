@@ -20,8 +20,11 @@
 
 package mocks
 
-import mock "github.com/stretchr/testify/mock"
-import membership "github.com/uber/cadence/common/membership"
+import (
+	mock "github.com/stretchr/testify/mock"
+
+	membership "github.com/uber/cadence/common/membership"
+)
 
 // ServiceResolver is an mock implementation
 type ServiceResolver struct {
@@ -74,6 +77,34 @@ func (_m *ServiceResolver) RemoveListener(name string) error {
 		r0 = rf(name)
 	} else {
 		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MemberCount is am mock implementation
+func (_m *ServiceResolver) MemberCount() int {
+	ret := _m.Called()
+
+	var r0 int
+	if rf, ok := ret.Get(0).(func() int); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	return r0
+}
+
+// Members is am mock implementation
+func (_m *ServiceResolver) Members() []*membership.HostInfo {
+	ret := _m.Called()
+
+	var r0 []*membership.HostInfo
+	if rf, ok := ret.Get(0).(func() []*membership.HostInfo); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).([]*membership.HostInfo)
 	}
 
 	return r0

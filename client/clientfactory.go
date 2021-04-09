@@ -62,7 +62,7 @@ type (
 		NewMatchingClientWithTimeout(domainIDToName DomainIDToNameFunc, timeout time.Duration, longPollTimeout time.Duration) (matching.Client, error)
 		NewFrontendClientWithTimeout(timeout time.Duration, longPollTimeout time.Duration) (frontend.Client, error)
 
-		NewAdminClientWithTimeoutAndDispatcher(rpcName string, timeout time.Duration, dispatcher *yarpc.Dispatcher) (admin.Client, error)
+		NewAdminClientWithTimeoutAndDispatcher(rpcName string, timeout time.Duration, largeTimeout time.Duration, dispatcher *yarpc.Dispatcher) (admin.Client, error)
 		NewFrontendClientWithTimeoutAndDispatcher(rpcName string, timeout time.Duration, longPollTimeout time.Duration, dispatcher *yarpc.Dispatcher) (frontend.Client, error)
 	}
 
@@ -126,10 +126,18 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 
 	clientProvider := func(clientKey string) (interface{}, error) {
 		dispatcher := cf.rpcFactory.CreateDispatcherForOutbound(historyCaller, common.HistoryServiceName, clientKey)
-		return historyserviceclient.New(dispatcher.ClientConfig(common.HistoryServiceName)), nil
+		return history.NewThriftClient(historyserviceclient.New(dispatcher.ClientConfig(common.HistoryServiceName))), nil
 	}
 
-	client := history.NewClient(cf.numberOfHistoryShards, timeout, common.NewClientCache(keyResolver, clientProvider), cf.logger)
+	client := history.NewClient(
+		cf.numberOfHistoryShards,
+		timeout,
+		common.NewClientCache(keyResolver, clientProvider),
+		cf.logger,
+	)
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.HistoryErrorInjectionRate, 0)(); errorRate != 0 {
+		client = history.NewErrorInjectionClient(client, errorRate, cf.logger)
+	}
 	if cf.metricsClient != nil {
 		client = history.NewMetricClient(client, cf.metricsClient)
 	}
@@ -156,7 +164,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 
 	clientProvider := func(clientKey string) (interface{}, error) {
 		dispatcher := cf.rpcFactory.CreateDispatcherForOutbound(matchingCaller, common.MatchingServiceName, clientKey)
-		return matchingserviceclient.New(dispatcher.ClientConfig(common.MatchingServiceName)), nil
+		return matching.NewThriftClient(matchingserviceclient.New(dispatcher.ClientConfig(common.MatchingServiceName))), nil
 	}
 
 	client := matching.NewClient(
@@ -165,7 +173,9 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		common.NewClientCache(keyResolver, clientProvider),
 		matching.NewLoadBalancer(domainIDToName, cf.dynConfig),
 	)
-
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.MatchingErrorInjectionRate, 0)(); errorRate != 0 {
+		client = matching.NewErrorInjectionClient(client, errorRate, cf.logger)
+	}
 	if cf.metricsClient != nil {
 		client = matching.NewMetricClient(client, cf.metricsClient)
 	}
@@ -193,10 +203,13 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeout(
 
 	clientProvider := func(clientKey string) (interface{}, error) {
 		dispatcher := cf.rpcFactory.CreateDispatcherForOutbound(frontendCaller, common.FrontendServiceName, clientKey)
-		return workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName)), nil
+		return frontend.NewThriftClient(workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))), nil
 	}
 
 	client := frontend.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider))
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate, 0)(); errorRate != 0 {
+		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
+	}
 	if cf.metricsClient != nil {
 		client = frontend.NewMetricClient(client, cf.metricsClient)
 	}
@@ -206,6 +219,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeout(
 func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndDispatcher(
 	rpcName string,
 	timeout time.Duration,
+	largeTimeout time.Duration,
 	dispatcher *yarpc.Dispatcher,
 ) (admin.Client, error) {
 	keyResolver := func(key string) (string, error) {
@@ -213,10 +227,13 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndDispatcher(
 	}
 
 	clientProvider := func(clientKey string) (interface{}, error) {
-		return adminserviceclient.New(dispatcher.ClientConfig(rpcName)), nil
+		return admin.NewThriftClient(adminserviceclient.New(dispatcher.ClientConfig(rpcName))), nil
 	}
 
-	client := admin.NewClient(timeout, common.NewClientCache(keyResolver, clientProvider))
+	client := admin.NewClient(timeout, largeTimeout, common.NewClientCache(keyResolver, clientProvider))
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate, 0)(); errorRate != 0 {
+		client = admin.NewErrorInjectionClient(client, errorRate, cf.logger)
+	}
 	if cf.metricsClient != nil {
 		client = admin.NewMetricClient(client, cf.metricsClient)
 	}
@@ -234,10 +251,13 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndDispatcher(
 	}
 
 	clientProvider := func(clientKey string) (interface{}, error) {
-		return workflowserviceclient.New(dispatcher.ClientConfig(rpcName)), nil
+		return frontend.NewThriftClient(workflowserviceclient.New(dispatcher.ClientConfig(rpcName))), nil
 	}
 
 	client := frontend.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider))
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate, 0)(); errorRate != 0 {
+		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
+	}
 	if cf.metricsClient != nil {
 		client = frontend.NewMetricClient(client, cf.metricsClient)
 	}

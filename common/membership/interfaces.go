@@ -18,20 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interfaces_mock.go -self_package github.com/uber/cadence/common/membership
+
 package membership
 
 import (
 	"errors"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 // ErrUnknownService is thrown for a service that is not tracked by this instance
 var ErrUnknownService = errors.New("Service not tracked by Monitor")
 
 // ErrInsufficientHosts is thrown when there are not enough hosts to serve the request
-var ErrInsufficientHosts = &shared.InternalServiceError{Message: "Not enough hosts to serve the request"}
+var ErrInsufficientHosts = &types.InternalServiceError{Message: "Not enough hosts to serve the request"}
 
 // ErrListenerAlreadyExist is thrown on a duplicate AddListener call from the same listener
 var ErrListenerAlreadyExist = errors.New("Listener already exist for the service")
@@ -51,6 +53,10 @@ type (
 		common.Daemon
 
 		WhoAmI() (*HostInfo, error)
+		// EvictSelf evicts this member from the membership ring. After this method is
+		// called, other members will discover that this node is no longer part of the
+		// ring. This primitive is useful to carry out graceful host shutdown during deployments.
+		EvictSelf() error
 		Lookup(service string, key string) (*HostInfo, error)
 		GetResolver(service string) (ServiceResolver, error)
 		// AddListener adds a listener for this service.
@@ -62,6 +68,11 @@ type (
 		AddListener(service string, name string, notifyChannel chan<- *ChangedEvent) error
 		// RemoveListener removes a listener for this service.
 		RemoveListener(service string, name string) error
+		// GetReachableMembers returns addresses of all members of the ring
+		GetReachableMembers() ([]string, error)
+		// GetMemberCount returns the number of reachable members
+		// currently in this node's membership list for the given role
+		GetMemberCount(role string) (int, error)
 	}
 
 	// ServiceResolver provides membership information for a specific cadence service.
@@ -75,5 +86,9 @@ type (
 		AddListener(name string, notifyChannel chan<- *ChangedEvent) error
 		// RemoveListener removes a listener for this service.
 		RemoveListener(name string) error
+		// MemberCount returns host count in hashring for any particular role
+		MemberCount() int
+		// Members returns all host addresses in hashring for any particular role
+		Members() []*HostInfo
 	}
 )

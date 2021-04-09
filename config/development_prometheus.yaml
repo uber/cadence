@@ -7,17 +7,15 @@ persistence:
       cassandra:
         hosts: "127.0.0.1"
         keyspace: "cadence"
-        consistency: "One"
     cass-visibility:
       cassandra:
         hosts: "127.0.0.1"
         keyspace: "cadence_visibility"
-        consistency: "One"
 
 ringpop:
   name: cadence
   bootstrapMode: hosts
-  bootstrapHosts: ["127.0.0.1:7933", "127.0.0.1:7934", "127.0.0.1:7935"]
+  bootstrapHosts: [ "127.0.0.1:7933", "127.0.0.1:7934", "127.0.0.1:7935" ]
   maxJoinDuration: 30s
 
 services:
@@ -90,8 +88,12 @@ archival:
         fileMode: "0666"
         dirMode: "0766"
   visibility:
-    status: "disabled"
-    enableRead: false
+    status: "enabled"
+    enableRead: true
+    provider:
+      filestore:
+        fileMode: "0666"
+        dirMode: "0766"
 
 domainDefaults:
   archival:
@@ -99,19 +101,12 @@ domainDefaults:
       status: "enabled"
       URI: "file:///tmp/cadence_archival/development"
     visibility:
-      status: "disabled"
-
-kafka:
-  clusters:
-    test:
-      brokers:
-        - 127.0.0.1:9092
-  topics:
-    cadence-visibility-dev:
-      cluster: test
-    cadence-visibility-dev-dlq:
-      cluster: test
+      status: "enabled"
+      URI: "file:///tmp/cadence_vis_archival/development"
 
 publicClient:
   hostPort: "localhost:7933"
 
+blobstore:
+  filestore:
+    outputDirectory: "/tmp/blobstore"

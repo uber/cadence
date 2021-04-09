@@ -7,17 +7,15 @@ persistence:
       cassandra:
         hosts: "127.0.0.1"
         keyspace: "cadence_standby"
-        consistency: "One"
     cass-visibility:
       cassandra:
         hosts: "127.0.0.1"
         keyspace: "cadence_visibility_standby"
-        consistency: "One"
 
 ringpop:
   name: cadence_standby
   bootstrapMode: hosts
-  bootstrapHosts: ["127.0.0.1:8933", "127.0.0.1:8934", "127.0.0.1:8935", "127.0.0.1:8940"]
+  bootstrapHosts: [ "127.0.0.1:8933", "127.0.0.1:8934", "127.0.0.1:8935", "127.0.0.1:8940" ]
   maxJoinDuration: 30s
 
 services:
@@ -93,40 +91,6 @@ dcRedirectionPolicy:
   policy: "selected-apis-forwarding"
   toDC: ""
 
-kafka:
-  tls:
-    enabled: false
-    certFile: ""
-    keyFile: ""
-    caFile: ""
-  clusters:
-    test:
-      brokers:
-        - 127.0.0.1:9092
-  topics:
-    active:
-      cluster: test
-    active-dlq:
-      cluster: test
-    standby:
-      cluster: test
-    standby-dlq:
-      cluster: test
-    other:
-      cluster: test
-    other-dlq:
-      cluster: test
-  cadence-cluster-topics:
-    active:
-      topic: active
-      dlq-topic: active-dlq
-    standby:
-      topic: standby
-      dlq-topic: standby-dlq
-    other:
-      topic: other
-      dlq-topic: other-dlq
-
 archival:
   history:
     status: "enabled"
@@ -136,8 +100,12 @@ archival:
         fileMode: "0666"
         dirMode: "0766"
   visibility:
-    status: "disabled"
-    enableRead: false
+    status: "enabled"
+    enableRead: true
+    provider:
+      filestore:
+        fileMode: "0666"
+        dirMode: "0766"
 
 domainDefaults:
   archival:
@@ -145,7 +113,12 @@ domainDefaults:
       status: "enabled"
       URI: "file:///tmp/cadence_archival/development"
     visibility:
-      status: "disabled"
+      status: "enabled"
+      URI: "file:///tmp/cadence_vis_archival/development"
 
 publicClient:
   hostPort: "localhost:8933"
+
+blobstore:
+  filestore:
+    outputDirectory: "/tmp/blobstore"

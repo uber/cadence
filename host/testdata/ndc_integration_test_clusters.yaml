@@ -37,7 +37,6 @@
     enablearchiver: false
     enablereplicator: true
     enableindexer: false
-  enablendc: true
   clusterno: 0
   historyconfig:
     numhistoryshards: 1
@@ -72,7 +71,7 @@
         other:
           topic: other
           dlq-topic: other-dlq
-      applications: {}
+      applications: { }
 - persistence:
     dbname: integration_standby
   clustermetadata:
@@ -112,7 +111,6 @@
     enablearchiver: false
     enablereplicator: true
     enableindexer: false
-  enablendc: true
   clusterno: 1
   historyconfig:
     numhistoryshards: 1
@@ -147,7 +145,7 @@
         other:
           topic: other
           dlq-topic: other-dlq
-      applications: {}
+      applications: { }
 - persistence:
     dbname: integration_other
   clustermetadata:
@@ -187,7 +185,6 @@
     enablearchiver: false
     enablereplicator: true
     enableindexer: false
-  enablendc: true
   clusterno: 2
   historyconfig:
     numhistoryshards: 1
@@ -199,27 +196,3 @@
         test:
           brokers:
             - "${KAFKA_SEEDS}:9092"
-      topics:
-        active:
-          cluster: test
-        active-dlq:
-          cluster: test
-        standby:
-          cluster: test
-        standby-dlq:
-          cluster: test
-        other:
-          cluster: test
-        other-dlq:
-          cluster: test
-      cadence-cluster-topics:
-        active:
-          topic: active
-          dlq-topic: active-dlq
-        standby:
-          topic: standby
-          dlq-topic: standby-dlq
-        other:
-          topic: other
-          dlq-topic: other-dlq
-      applications: {}

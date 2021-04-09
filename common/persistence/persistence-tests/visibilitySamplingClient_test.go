@@ -21,14 +21,14 @@
 package persistencetests
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	gen "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/metrics/mocks"
@@ -36,6 +36,7 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	c "github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type VisibilitySamplingSuite struct {
@@ -49,9 +50,9 @@ type VisibilitySamplingSuite struct {
 var (
 	testDomainUUID        = "fb15e4b5-356f-466d-8c6d-a29223e5c536"
 	testDomain            = "test-domain-name"
-	testWorkflowExecution = gen.WorkflowExecution{
-		WorkflowId: common.StringPtr("visibility-workflow-test"),
-		RunId:      common.StringPtr("843f6fc7-102a-4c63-a2d4-7c653b01bf52"),
+	testWorkflowExecution = types.WorkflowExecution{
+		WorkflowID: "visibility-workflow-test",
+		RunID:      "843f6fc7-102a-4c63-a2d4-7c653b01bf52",
 	}
 	testWorkflowTypeName = "visibility-workflow"
 
@@ -81,6 +82,9 @@ func (s *VisibilitySamplingSuite) TearDownTest() {
 }
 
 func (s *VisibilitySamplingSuite) TestRecordWorkflowExecutionStarted() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	request := &p.RecordWorkflowExecutionStartedRequest{
 		DomainUUID:       testDomainUUID,
 		Domain:           testDomain,
@@ -88,77 +92,89 @@ func (s *VisibilitySamplingSuite) TestRecordWorkflowExecutionStarted() {
 		WorkflowTypeName: testWorkflowTypeName,
 		StartTimestamp:   time.Now().UnixNano(),
 	}
-	s.persistence.On("RecordWorkflowExecutionStarted", request).Return(nil).Once()
-	s.NoError(s.client.RecordWorkflowExecutionStarted(request))
+	s.persistence.On("RecordWorkflowExecutionStarted", mock.Anything, request).Return(nil).Once()
+	s.NoError(s.client.RecordWorkflowExecutionStarted(ctx, request))
 
 	// no remaining tokens
 	s.metricClient.On("IncCounter", metrics.PersistenceRecordWorkflowExecutionStartedScope, metrics.PersistenceSampledCounter).Once()
-	s.NoError(s.client.RecordWorkflowExecutionStarted(request))
+	s.NoError(s.client.RecordWorkflowExecutionStarted(ctx, request))
 }
 
 func (s *VisibilitySamplingSuite) TestRecordWorkflowExecutionClosed() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	request := &p.RecordWorkflowExecutionClosedRequest{
 		DomainUUID:       testDomainUUID,
 		Domain:           testDomain,
 		Execution:        testWorkflowExecution,
 		WorkflowTypeName: testWorkflowTypeName,
-		Status:           gen.WorkflowExecutionCloseStatusCompleted,
+		Status:           types.WorkflowExecutionCloseStatusCompleted,
 	}
 	request2 := &p.RecordWorkflowExecutionClosedRequest{
 		DomainUUID:       testDomainUUID,
 		Domain:           testDomain,
 		Execution:        testWorkflowExecution,
 		WorkflowTypeName: testWorkflowTypeName,
-		Status:           gen.WorkflowExecutionCloseStatusFailed,
+		Status:           types.WorkflowExecutionCloseStatusFailed,
 	}
 
-	s.persistence.On("RecordWorkflowExecutionClosed", request).Return(nil).Once()
-	s.NoError(s.client.RecordWorkflowExecutionClosed(request))
-	s.persistence.On("RecordWorkflowExecutionClosed", request2).Return(nil).Once()
-	s.NoError(s.client.RecordWorkflowExecutionClosed(request2))
+	s.persistence.On("RecordWorkflowExecutionClosed", mock.Anything, request).Return(nil).Once()
+	s.NoError(s.client.RecordWorkflowExecutionClosed(ctx, request))
+	s.persistence.On("RecordWorkflowExecutionClosed", mock.Anything, request2).Return(nil).Once()
+	s.NoError(s.client.RecordWorkflowExecutionClosed(ctx, request2))
 
 	// no remaining tokens
 	s.metricClient.On("IncCounter", metrics.PersistenceRecordWorkflowExecutionClosedScope, metrics.PersistenceSampledCounter).Once()
-	s.NoError(s.client.RecordWorkflowExecutionClosed(request))
+	s.NoError(s.client.RecordWorkflowExecutionClosed(ctx, request))
 	s.metricClient.On("IncCounter", metrics.PersistenceRecordWorkflowExecutionClosedScope, metrics.PersistenceSampledCounter).Once()
-	s.NoError(s.client.RecordWorkflowExecutionClosed(request2))
+	s.NoError(s.client.RecordWorkflowExecutionClosed(ctx, request2))
 }
 
 func (s *VisibilitySamplingSuite) TestListOpenWorkflowExecutions() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	request := &p.ListWorkflowExecutionsRequest{
 		DomainUUID: testDomainUUID,
 		Domain:     testDomain,
 	}
-	s.persistence.On("ListOpenWorkflowExecutions", request).Return(nil, nil).Once()
-	_, err := s.client.ListOpenWorkflowExecutions(request)
+	s.persistence.On("ListOpenWorkflowExecutions", mock.Anything, request).Return(nil, nil).Once()
+	_, err := s.client.ListOpenWorkflowExecutions(ctx, request)
 	s.NoError(err)
 
 	// no remaining tokens
-	_, err = s.client.ListOpenWorkflowExecutions(request)
+	_, err = s.client.ListOpenWorkflowExecutions(ctx, request)
 	s.Error(err)
-	errDetail, ok := err.(*gen.ServiceBusyError)
+	errDetail, ok := err.(*types.ServiceBusyError)
 	s.True(ok)
 	s.Equal(listErrMsg, errDetail.Message)
 }
 
 func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutions() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	request := &p.ListWorkflowExecutionsRequest{
 		DomainUUID: testDomainUUID,
 		Domain:     testDomain,
 	}
-	s.persistence.On("ListClosedWorkflowExecutions", request).Return(nil, nil).Once()
-	_, err := s.client.ListClosedWorkflowExecutions(request)
+	s.persistence.On("ListClosedWorkflowExecutions", mock.Anything, request).Return(nil, nil).Once()
+	_, err := s.client.ListClosedWorkflowExecutions(ctx, request)
 	s.NoError(err)
 
 	// no remaining tokens
-	_, err = s.client.ListClosedWorkflowExecutions(request)
+	_, err = s.client.ListClosedWorkflowExecutions(ctx, request)
 	s.Error(err)
-	errDetail, ok := err.(*gen.ServiceBusyError)
+	errDetail, ok := err.(*types.ServiceBusyError)
 	s.True(ok)
 	s.Equal(listErrMsg, errDetail.Message)
 }
 
 func (s *VisibilitySamplingSuite) TestListOpenWorkflowExecutionsByType() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	req := p.ListWorkflowExecutionsRequest{
 		DomainUUID: testDomainUUID,
 		Domain:     testDomain,
@@ -167,19 +183,22 @@ func (s *VisibilitySamplingSuite) TestListOpenWorkflowExecutionsByType() {
 		ListWorkflowExecutionsRequest: req,
 		WorkflowTypeName:              testWorkflowTypeName,
 	}
-	s.persistence.On("ListOpenWorkflowExecutionsByType", request).Return(nil, nil).Once()
-	_, err := s.client.ListOpenWorkflowExecutionsByType(request)
+	s.persistence.On("ListOpenWorkflowExecutionsByType", mock.Anything, request).Return(nil, nil).Once()
+	_, err := s.client.ListOpenWorkflowExecutionsByType(ctx, request)
 	s.NoError(err)
 
 	// no remaining tokens
-	_, err = s.client.ListOpenWorkflowExecutionsByType(request)
+	_, err = s.client.ListOpenWorkflowExecutionsByType(ctx, request)
 	s.Error(err)
-	errDetail, ok := err.(*gen.ServiceBusyError)
+	errDetail, ok := err.(*types.ServiceBusyError)
 	s.True(ok)
 	s.Equal(listErrMsg, errDetail.Message)
 }
 
 func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByType() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	req := p.ListWorkflowExecutionsRequest{
 		DomainUUID: testDomainUUID,
 		Domain:     testDomain,
@@ -188,77 +207,86 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByType() {
 		ListWorkflowExecutionsRequest: req,
 		WorkflowTypeName:              testWorkflowTypeName,
 	}
-	s.persistence.On("ListClosedWorkflowExecutionsByType", request).Return(nil, nil).Once()
-	_, err := s.client.ListClosedWorkflowExecutionsByType(request)
+	s.persistence.On("ListClosedWorkflowExecutionsByType", mock.Anything, request).Return(nil, nil).Once()
+	_, err := s.client.ListClosedWorkflowExecutionsByType(ctx, request)
 	s.NoError(err)
 
 	// no remaining tokens
-	_, err = s.client.ListClosedWorkflowExecutionsByType(request)
+	_, err = s.client.ListClosedWorkflowExecutionsByType(ctx, request)
 	s.Error(err)
-	errDetail, ok := err.(*gen.ServiceBusyError)
+	errDetail, ok := err.(*types.ServiceBusyError)
 	s.True(ok)
 	s.Equal(listErrMsg, errDetail.Message)
 }
 
 func (s *VisibilitySamplingSuite) TestListOpenWorkflowExecutionsByWorkflowID() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	req := p.ListWorkflowExecutionsRequest{
 		DomainUUID: testDomainUUID,
 		Domain:     testDomain,
 	}
 	request := &p.ListWorkflowExecutionsByWorkflowIDRequest{
 		ListWorkflowExecutionsRequest: req,
-		WorkflowID:                    testWorkflowExecution.GetWorkflowId(),
+		WorkflowID:                    testWorkflowExecution.GetWorkflowID(),
 	}
-	s.persistence.On("ListOpenWorkflowExecutionsByWorkflowID", request).Return(nil, nil).Once()
-	_, err := s.client.ListOpenWorkflowExecutionsByWorkflowID(request)
+	s.persistence.On("ListOpenWorkflowExecutionsByWorkflowID", mock.Anything, request).Return(nil, nil).Once()
+	_, err := s.client.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 	s.NoError(err)
 
 	// no remaining tokens
-	_, err = s.client.ListOpenWorkflowExecutionsByWorkflowID(request)
+	_, err = s.client.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 	s.Error(err)
-	errDetail, ok := err.(*gen.ServiceBusyError)
+	errDetail, ok := err.(*types.ServiceBusyError)
 	s.True(ok)
 	s.Equal(listErrMsg, errDetail.Message)
 }
 
 func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByWorkflowID() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	req := p.ListWorkflowExecutionsRequest{
 		DomainUUID: testDomainUUID,
 		Domain:     testDomain,
 	}
 	request := &p.ListWorkflowExecutionsByWorkflowIDRequest{
 		ListWorkflowExecutionsRequest: req,
-		WorkflowID:                    testWorkflowExecution.GetWorkflowId(),
+		WorkflowID:                    testWorkflowExecution.GetWorkflowID(),
 	}
-	s.persistence.On("ListClosedWorkflowExecutionsByWorkflowID", request).Return(nil, nil).Once()
-	_, err := s.client.ListClosedWorkflowExecutionsByWorkflowID(request)
+	s.persistence.On("ListClosedWorkflowExecutionsByWorkflowID", mock.Anything, request).Return(nil, nil).Once()
+	_, err := s.client.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 	s.NoError(err)
 
 	// no remaining tokens
-	_, err = s.client.ListClosedWorkflowExecutionsByWorkflowID(request)
+	_, err = s.client.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 	s.Error(err)
-	errDetail, ok := err.(*gen.ServiceBusyError)
+	errDetail, ok := err.(*types.ServiceBusyError)
 	s.True(ok)
 	s.Equal(listErrMsg, errDetail.Message)
 }
 
 func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByStatus() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	req := p.ListWorkflowExecutionsRequest{
 		DomainUUID: testDomainUUID,
 		Domain:     testDomain,
 	}
 	request := &p.ListClosedWorkflowExecutionsByStatusRequest{
 		ListWorkflowExecutionsRequest: req,
-		Status:                        gen.WorkflowExecutionCloseStatusFailed,
+		Status:                        types.WorkflowExecutionCloseStatusFailed,
 	}
-	s.persistence.On("ListClosedWorkflowExecutionsByStatus", request).Return(nil, nil).Once()
-	_, err := s.client.ListClosedWorkflowExecutionsByStatus(request)
+	s.persistence.On("ListClosedWorkflowExecutionsByStatus", mock.Anything, request).Return(nil, nil).Once()
+	_, err := s.client.ListClosedWorkflowExecutionsByStatus(ctx, request)
 	s.NoError(err)
 
 	// no remaining tokens
-	_, err = s.client.ListClosedWorkflowExecutionsByStatus(request)
+	_, err = s.client.ListClosedWorkflowExecutionsByStatus(ctx, request)
 	s.Error(err)
-	errDetail, ok := err.(*gen.ServiceBusyError)
+	errDetail, ok := err.(*types.ServiceBusyError)
 	s.True(ok)
 	s.Equal(listErrMsg, errDetail.Message)
 }

@@ -38,7 +38,7 @@ type (
 
 	// Client is used to send request to processor workflow
 	Client interface {
-		SendParentClosePolicyRequest(Request) error
+		SendParentClosePolicyRequest(context.Context, Request) error
 	}
 
 	clientImpl struct {
@@ -71,7 +71,10 @@ func NewClient(
 	}
 }
 
-func (c *clientImpl) SendParentClosePolicyRequest(request Request) error {
+func (c *clientImpl) SendParentClosePolicyRequest(
+	ctx context.Context,
+	request Request,
+) error {
 	randomID := rand.Intn(c.numWorkflows)
 	workflowID := fmt.Sprintf("%v-%v", workflowIDPrefix, randomID)
 	workflowOptions := cclient.StartWorkflowOptions{
@@ -81,7 +84,7 @@ func (c *clientImpl) SendParentClosePolicyRequest(request Request) error {
 		DecisionTaskStartToCloseTimeout: time.Minute,
 		WorkflowIDReusePolicy:           cclient.WorkflowIDReusePolicyAllowDuplicate,
 	}
-	signalCtx, cancel := context.WithTimeout(context.Background(), signalTimeout)
+	signalCtx, cancel := context.WithTimeout(ctx, signalTimeout)
 	defer cancel()
 	_, err := c.cadenceClient.SignalWithStartWorkflow(signalCtx, workflowID, processorChannelName, request, workflowOptions, processorWFTypeName, nil)
 	return err

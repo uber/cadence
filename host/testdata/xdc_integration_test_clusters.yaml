@@ -59,7 +59,7 @@
         standby:
           topic: standby
           dlq-topic: standby-dlq
-      applications: {}
+      applications: { }
 - persistence:
     dbname: integration_standby
   clustermetadata:
@@ -105,20 +105,4 @@
         test:
           brokers:
             - "${KAFKA_SEEDS}:9092"
-      topics:
-        active:
-          cluster: test
-        active-dlq:
-          cluster: test
-        standby:
-          cluster: test
-        standby-dlq:
-          cluster: test
-      cadence-cluster-topics:
-        active:
-          topic: active
-          dlq-topic: active-dlq
-        standby:
-          topic: standby
-          dlq-topic: standby-dlq
-      applications: {}
+      applications: { }

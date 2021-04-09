@@ -1,17 +1,17 @@
 // The MIT License (MIT)
-// 
-// Copyright (c) 2019 Uber Technologies, Inc.
-// 
+
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,13 +27,16 @@ package adminserviceclient
 
 import (
 	context "context"
-	admin "github.com/uber/cadence/.gen/go/admin"
-	shared "github.com/uber/cadence/.gen/go/shared"
+	reflect "reflect"
+
 	wire "go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
-	reflect "reflect"
+
+	admin "github.com/uber/cadence/.gen/go/admin"
+	replicator "github.com/uber/cadence/.gen/go/replicator"
+	shared "github.com/uber/cadence/.gen/go/shared"
 )
 
 // Interface is a client for the AdminService service.
@@ -50,11 +53,22 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	DescribeCluster(
+		ctx context.Context,
+		opts ...yarpc.CallOption,
+	) (*admin.DescribeClusterResponse, error)
+
 	DescribeHistoryHost(
 		ctx context.Context,
 		Request *shared.DescribeHistoryHostRequest,
 		opts ...yarpc.CallOption,
 	) (*shared.DescribeHistoryHostResponse, error)
+
+	DescribeQueue(
+		ctx context.Context,
+		Request *shared.DescribeQueueRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.DescribeQueueResponse, error)
 
 	DescribeWorkflowExecution(
 		ctx context.Context,
@@ -62,11 +76,23 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*admin.DescribeWorkflowExecutionResponse, error)
 
-	GetWorkflowExecutionRawHistory(
+	GetDLQReplicationMessages(
 		ctx context.Context,
-		GetRequest *admin.GetWorkflowExecutionRawHistoryRequest,
+		Request *replicator.GetDLQReplicationMessagesRequest,
 		opts ...yarpc.CallOption,
-	) (*admin.GetWorkflowExecutionRawHistoryResponse, error)
+	) (*replicator.GetDLQReplicationMessagesResponse, error)
+
+	GetDomainReplicationMessages(
+		ctx context.Context,
+		Request *replicator.GetDomainReplicationMessagesRequest,
+		opts ...yarpc.CallOption,
+	) (*replicator.GetDomainReplicationMessagesResponse, error)
+
+	GetReplicationMessages(
+		ctx context.Context,
+		Request *replicator.GetReplicationMessagesRequest,
+		opts ...yarpc.CallOption,
+	) (*replicator.GetReplicationMessagesResponse, error)
 
 	GetWorkflowExecutionRawHistoryV2(
 		ctx context.Context,
@@ -74,9 +100,51 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*admin.GetWorkflowExecutionRawHistoryV2Response, error)
 
+	MergeDLQMessages(
+		ctx context.Context,
+		Request *replicator.MergeDLQMessagesRequest,
+		opts ...yarpc.CallOption,
+	) (*replicator.MergeDLQMessagesResponse, error)
+
+	PurgeDLQMessages(
+		ctx context.Context,
+		Request *replicator.PurgeDLQMessagesRequest,
+		opts ...yarpc.CallOption,
+	) error
+
+	ReadDLQMessages(
+		ctx context.Context,
+		Request *replicator.ReadDLQMessagesRequest,
+		opts ...yarpc.CallOption,
+	) (*replicator.ReadDLQMessagesResponse, error)
+
+	ReapplyEvents(
+		ctx context.Context,
+		ReapplyEventsRequest *shared.ReapplyEventsRequest,
+		opts ...yarpc.CallOption,
+	) error
+
+	RefreshWorkflowTasks(
+		ctx context.Context,
+		Request *shared.RefreshWorkflowTasksRequest,
+		opts ...yarpc.CallOption,
+	) error
+
 	RemoveTask(
 		ctx context.Context,
 		Request *shared.RemoveTaskRequest,
+		opts ...yarpc.CallOption,
+	) error
+
+	ResendReplicationTasks(
+		ctx context.Context,
+		Request *admin.ResendReplicationTasksRequest,
+		opts ...yarpc.CallOption,
+	) error
+
+	ResetQueue(
+		ctx context.Context,
+		Request *shared.ResetQueueRequest,
 		opts ...yarpc.CallOption,
 	) error
 }
@@ -151,6 +219,28 @@ func (c client) CloseShard(
 	return
 }
 
+func (c client) DescribeCluster(
+	ctx context.Context,
+	opts ...yarpc.CallOption,
+) (success *admin.DescribeClusterResponse, err error) {
+
+	args := admin.AdminService_DescribeCluster_Helper.Args()
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_DescribeCluster_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_DescribeCluster_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) DescribeHistoryHost(
 	ctx context.Context,
 	_Request *shared.DescribeHistoryHostRequest,
@@ -171,6 +261,29 @@ func (c client) DescribeHistoryHost(
 	}
 
 	success, err = admin.AdminService_DescribeHistoryHost_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) DescribeQueue(
+	ctx context.Context,
+	_Request *shared.DescribeQueueRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.DescribeQueueResponse, err error) {
+
+	args := admin.AdminService_DescribeQueue_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_DescribeQueue_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_DescribeQueue_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -197,13 +310,13 @@ func (c client) DescribeWorkflowExecution(
 	return
 }
 
-func (c client) GetWorkflowExecutionRawHistory(
+func (c client) GetDLQReplicationMessages(
 	ctx context.Context,
-	_GetRequest *admin.GetWorkflowExecutionRawHistoryRequest,
+	_Request *replicator.GetDLQReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (success *admin.GetWorkflowExecutionRawHistoryResponse, err error) {
+) (success *replicator.GetDLQReplicationMessagesResponse, err error) {
 
-	args := admin.AdminService_GetWorkflowExecutionRawHistory_Helper.Args(_GetRequest)
+	args := admin.AdminService_GetDLQReplicationMessages_Helper.Args(_Request)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -211,12 +324,58 @@ func (c client) GetWorkflowExecutionRawHistory(
 		return
 	}
 
-	var result admin.AdminService_GetWorkflowExecutionRawHistory_Result
+	var result admin.AdminService_GetDLQReplicationMessages_Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	success, err = admin.AdminService_GetWorkflowExecutionRawHistory_Helper.UnwrapResponse(&result)
+	success, err = admin.AdminService_GetDLQReplicationMessages_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetDomainReplicationMessages(
+	ctx context.Context,
+	_Request *replicator.GetDomainReplicationMessagesRequest,
+	opts ...yarpc.CallOption,
+) (success *replicator.GetDomainReplicationMessagesResponse, err error) {
+
+	args := admin.AdminService_GetDomainReplicationMessages_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_GetDomainReplicationMessages_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_GetDomainReplicationMessages_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetReplicationMessages(
+	ctx context.Context,
+	_Request *replicator.GetReplicationMessagesRequest,
+	opts ...yarpc.CallOption,
+) (success *replicator.GetReplicationMessagesResponse, err error) {
+
+	args := admin.AdminService_GetReplicationMessages_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_GetReplicationMessages_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_GetReplicationMessages_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -243,6 +402,121 @@ func (c client) GetWorkflowExecutionRawHistoryV2(
 	return
 }
 
+func (c client) MergeDLQMessages(
+	ctx context.Context,
+	_Request *replicator.MergeDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (success *replicator.MergeDLQMessagesResponse, err error) {
+
+	args := admin.AdminService_MergeDLQMessages_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_MergeDLQMessages_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_MergeDLQMessages_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) PurgeDLQMessages(
+	ctx context.Context,
+	_Request *replicator.PurgeDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := admin.AdminService_PurgeDLQMessages_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_PurgeDLQMessages_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = admin.AdminService_PurgeDLQMessages_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ReadDLQMessages(
+	ctx context.Context,
+	_Request *replicator.ReadDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (success *replicator.ReadDLQMessagesResponse, err error) {
+
+	args := admin.AdminService_ReadDLQMessages_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_ReadDLQMessages_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_ReadDLQMessages_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ReapplyEvents(
+	ctx context.Context,
+	_ReapplyEventsRequest *shared.ReapplyEventsRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := admin.AdminService_ReapplyEvents_Helper.Args(_ReapplyEventsRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_ReapplyEvents_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = admin.AdminService_ReapplyEvents_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RefreshWorkflowTasks(
+	ctx context.Context,
+	_Request *shared.RefreshWorkflowTasksRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := admin.AdminService_RefreshWorkflowTasks_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_RefreshWorkflowTasks_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = admin.AdminService_RefreshWorkflowTasks_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) RemoveTask(
 	ctx context.Context,
 	_Request *shared.RemoveTaskRequest,
@@ -263,5 +537,51 @@ func (c client) RemoveTask(
 	}
 
 	err = admin.AdminService_RemoveTask_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ResendReplicationTasks(
+	ctx context.Context,
+	_Request *admin.ResendReplicationTasksRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := admin.AdminService_ResendReplicationTasks_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_ResendReplicationTasks_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = admin.AdminService_ResendReplicationTasks_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ResetQueue(
+	ctx context.Context,
+	_Request *shared.ResetQueueRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := admin.AdminService_ResetQueue_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_ResetQueue_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = admin.AdminService_ResetQueue_Helper.UnwrapResponse(&result)
 	return
 }

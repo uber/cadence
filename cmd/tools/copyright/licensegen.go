@@ -22,9 +22,9 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -41,8 +41,11 @@ type (
 
 	// command line config params
 	config struct {
-		rootDir    string
-		verifyOnly bool
+		rootDir            string
+		verifyOnly         bool
+		temporalAddMode    bool
+		temporalModifyMode bool
+		filePaths          string
 	}
 )
 
@@ -50,12 +53,18 @@ type (
 const licenseFileName = "LICENSE"
 
 // unique prefix that identifies a license header
-const licenseHeaderPrefixOld = "// Copyright (c)"
+const licenseHeaderPrefixOld = "Copyright (c)"
 const licenseHeaderPrefix = "// The MIT License (MIT)"
+const cadenceCopyright = "// Copyright (c) 2017-2020 Uber Technologies Inc."
+const cadenceModificationHeader = "// Modifications Copyright (c) 2020 Uber Technologies Inc."
+const temporalCopyright = "// Copyright (c) 2020 Temporal Technologies, Inc."
+const temporalPartialCopyright = "// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc."
+
+const firstLinesToCheck = 10
 
 var (
 	// directories to be excluded
-	dirBlacklist = []string{"vendor/"}
+	dirDenylist = []string{"vendor/"}
 	// default perms for the newly created files
 	defaultFilePerms = os.FileMode(0644)
 )
@@ -70,13 +79,36 @@ func main() {
 	flag.StringVar(&cfg.rootDir, "rootDir", ".", "project root directory")
 	flag.BoolVar(&cfg.verifyOnly, "verifyOnly", false,
 		"don't automatically add headers, just verify all files")
+	flag.BoolVar(&cfg.temporalAddMode, "temporalAddMode", false, "add copyright for new file copied from temporal")
+	flag.BoolVar(&cfg.temporalModifyMode, "temporalModifyMode", false, "add copyright for existing file which has parts copied from temporal")
+	flag.StringVar(&cfg.filePaths, "filePaths", "", "comma separated list of files to run temporal license on")
 	flag.Parse()
+
+	if err := verifyCfg(cfg); err != nil {
+		fmt.Println(err)
+		os.Exit(-1)
+	}
 
 	task := newAddLicenseHeaderTask(&cfg)
 	if err := task.run(); err != nil {
 		fmt.Println(err)
 		os.Exit(-1)
 	}
+}
+
+func verifyCfg(cfg config) error {
+	if cfg.verifyOnly {
+		if cfg.temporalModifyMode || cfg.temporalAddMode {
+			return errors.New("invalid config, can only specify one of temporalAddMode, temporalModifyMode or verifyOnly")
+		}
+	}
+	if cfg.temporalAddMode && cfg.temporalModifyMode {
+		return errors.New("invalid config, can only specify temporalAddMode or temporalModifyMode")
+	}
+	if (cfg.temporalModifyMode || cfg.temporalAddMode) && len(cfg.filePaths) == 0 {
+		return errors.New("invalid config, when running in temporalAddMode or temporalModifyMode must provide filePaths")
+	}
+	return nil
 }
 
 func newAddLicenseHeaderTask(cfg *config) *addLicenseHeaderTask {
@@ -90,12 +122,28 @@ func (task *addLicenseHeaderTask) run() error {
 	if err != nil {
 		return fmt.Errorf("error reading license file, errr=%v", err.Error())
 	}
-
 	task.license, err = commentOutLines(string(data))
 	if err != nil {
 		return fmt.Errorf("copyright header failed to comment out lines, err=%v", err.Error())
 	}
-
+	if task.config.temporalAddMode {
+		task.license = fmt.Sprintf("%v\n\n%v\n\n%v", cadenceModificationHeader, temporalCopyright, task.license)
+	} else if task.config.temporalModifyMode {
+		task.license = fmt.Sprintf("%v\n\n%v\n\n%v", cadenceCopyright, temporalPartialCopyright, task.license)
+	}
+	if task.config.temporalModifyMode || task.config.temporalAddMode {
+		filePaths, fileInfos, err := getFilePaths(task.config.filePaths)
+		if err != nil {
+			return err
+		}
+		for i := 0; i < len(filePaths); i++ {
+			if err := task.handleFile(filePaths[i], fileInfos[i], nil); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	task.license = fmt.Sprintf("%v\n\n%v\n\n%v", licenseHeaderPrefix, cadenceCopyright, task.license)
 	err = filepath.Walk(task.config.rootDir, task.handleFile)
 	if err != nil {
 		return fmt.Errorf("copyright header check failed, err=%v", err.Error())
@@ -109,11 +157,10 @@ func (task *addLicenseHeaderTask) handleFile(path string, fileInfo os.FileInfo, 
 		return err
 	}
 
-	if fileInfo.IsDir() && strings.HasPrefix(fileInfo.Name(), "_vendor-") {
-		return filepath.SkipDir
-	}
-
 	if fileInfo.IsDir() {
+		if strings.HasPrefix(fileInfo.Name(), "_vendor-") || fileInfo.Name() == ".build" || fileInfo.Name() == ".bin" {
+			return filepath.SkipDir
+		}
 		return nil
 	}
 
@@ -121,7 +168,7 @@ func (task *addLicenseHeaderTask) handleFile(path string, fileInfo os.FileInfo, 
 		return nil
 	}
 
-	if !strings.HasSuffix(fileInfo.Name(), ".go") {
+	if !strings.HasSuffix(fileInfo.Name(), ".go") && !strings.HasSuffix(fileInfo.Name(), ".proto") {
 		return nil
 	}
 
@@ -132,19 +179,20 @@ func (task *addLicenseHeaderTask) handleFile(path string, fileInfo os.FileInfo, 
 		return err
 	}
 
-	scanner := bufio.NewScanner(f)
-	readLineSucc := scanner.Scan()
-	if !readLineSucc {
-		return fmt.Errorf("fail to read first line of file %v", path)
-	}
-	firstLine := strings.TrimSpace(scanner.Text())
-	if err := scanner.Err(); err != nil {
+	ok, err := hasCopyright(f)
+	if err != nil {
 		return err
 	}
-	f.Close()
 
-	if strings.Contains(firstLine, licenseHeaderPrefixOld) || strings.Contains(firstLine, licenseHeaderPrefix) {
-		return nil // file already has the copyright header
+	if err := f.Close(); err != nil {
+		return err
+	}
+
+	if ok {
+		if task.config.temporalModifyMode || task.config.temporalAddMode {
+			return fmt.Errorf("when running in temporalModifyMode or temporalAddMode please first remove existing license header: %v", path)
+		}
+		return nil
 	}
 
 	// at this point, src file is missing the header
@@ -164,12 +212,33 @@ func (task *addLicenseHeaderTask) handleFile(path string, fileInfo os.FileInfo, 
 	return ioutil.WriteFile(path, []byte(task.license+string(data)), defaultFilePerms)
 }
 
+func hasCopyright(f *os.File) (bool, error) {
+	scanner := bufio.NewScanner(f)
+	lineSuccess := scanner.Scan()
+	if !lineSuccess {
+		return false, fmt.Errorf("fail to read first line of file %v", f.Name())
+	}
+	i := 0
+	for i < firstLinesToCheck && lineSuccess {
+		i++
+		line := strings.TrimSpace(scanner.Text())
+		if err := scanner.Err(); err != nil {
+			return false, err
+		}
+		if lineHasCopyright(line) {
+			return true, nil
+		}
+		lineSuccess = scanner.Scan()
+	}
+	return false, nil
+}
+
 func isFileAutogenerated(path string) bool {
 	return strings.HasPrefix(path, ".gen")
 }
 
 func mustProcessPath(path string) bool {
-	for _, d := range dirBlacklist {
+	for _, d := range dirDenylist {
 		if strings.HasPrefix(path, d) {
 			return false
 		}
@@ -177,16 +246,17 @@ func mustProcessPath(path string) bool {
 	return true
 }
 
-// returns true if the error type is an EOF
-func isEOF(err error) bool {
-	return err == io.EOF || err == io.ErrUnexpectedEOF
-}
-
 func commentOutLines(str string) (string, error) {
 	var lines []string
 	scanner := bufio.NewScanner(strings.NewReader(str))
 	for scanner.Scan() {
-		lines = append(lines, "// "+scanner.Text()+"\n")
+		text := scanner.Text()
+		if text == "" {
+			// do not add trailing whitespace, gofmt / goimports removes it
+			lines = append(lines, "//\n")
+		} else {
+			lines = append(lines, "// "+scanner.Text()+"\n")
+		}
 	}
 	lines = append(lines, "\n")
 
@@ -194,4 +264,22 @@ func commentOutLines(str string) (string, error) {
 		return "", err
 	}
 	return strings.Join(lines, ""), nil
+}
+
+func lineHasCopyright(line string) bool {
+	return strings.Contains(line, licenseHeaderPrefixOld) ||
+		strings.Contains(line, licenseHeaderPrefix)
+}
+
+func getFilePaths(filePaths string) ([]string, []os.FileInfo, error) {
+	paths := strings.Split(filePaths, ",")
+	var fileInfos []os.FileInfo
+	for _, p := range paths {
+		fileInfo, err := os.Stat(p)
+		if err != nil {
+			return nil, nil, err
+		}
+		fileInfos = append(fileInfos, fileInfo)
+	}
+	return paths, fileInfos, nil
 }

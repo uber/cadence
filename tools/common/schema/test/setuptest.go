@@ -65,7 +65,7 @@ func (tb *SetupSchemaTestBase) SetupSuiteBase(db DB) {
 
 // TearDownSuiteBase tears down the test suite
 func (tb *SetupSchemaTestBase) TearDownSuiteBase() {
-	tb.db.DropDatabase(tb.DBName)
+	tb.NoError(tb.db.DropDatabase(tb.DBName))
 	tb.db.Close()
 }
 
@@ -73,26 +73,27 @@ func (tb *SetupSchemaTestBase) TearDownSuiteBase() {
 func (tb *SetupSchemaTestBase) RunSetupTest(
 	app *cli.App, db DB, dbNameFlag string, sqlFileContent string, expectedTables []string) {
 	// test command fails without required arguments
-	app.Run([]string{"./tool", dbNameFlag, tb.DBName, "-q", "setup-schema"})
+	tb.NoError(app.Run([]string{"./tool", dbNameFlag, tb.DBName, "-q", "setup-schema"}))
 	tables, err := db.ListTables()
-	tb.Nil(err)
-	tb.Equal(0, len(tables))
+	tb.NoError(err)
+	tb.Empty(tables)
 
 	tmpDir, err := ioutil.TempDir("", "setupSchemaTestDir")
-	tb.Nil(err)
+	tb.NoError(err)
 	defer os.Remove(tmpDir)
 
 	sqlFile, err := ioutil.TempFile(tmpDir, "setupSchema.cliOptionsTest")
-	tb.Nil(err)
+	tb.NoError(err)
 	defer os.Remove(sqlFile.Name())
 
-	sqlFile.WriteString(sqlFileContent)
+	_, err = sqlFile.WriteString(sqlFileContent)
+	tb.NoError(err)
 
 	// make sure command doesn't succeed without version or disable-version
-	app.Run([]string{"./tool", dbNameFlag, tb.DBName, "-q", "setup-schema", "-f", sqlFile.Name()})
+	tb.NoError(app.Run([]string{"./tool", dbNameFlag, tb.DBName, "-q", "setup-schema", "-f", sqlFile.Name()}))
 	tables, err = db.ListTables()
-	tb.Nil(err)
-	tb.Equal(0, len(tables))
+	tb.NoError(err)
+	tb.Empty(tables)
 
 	for i := 0; i < 4; i++ {
 
@@ -101,26 +102,24 @@ func (tb *SetupSchemaTestBase) RunSetupTest(
 
 		// test overwrite with versioning works
 		if versioningEnabled {
-			app.Run([]string{"./tool", dbNameFlag, tb.DBName, "-q", "setup-schema", "-f", sqlFile.Name(), "-version", ver, "-o"})
+			tb.NoError(app.Run([]string{"./tool", dbNameFlag, tb.DBName, "-q", "setup-schema", "-f", sqlFile.Name(), "-version", ver, "-o"}))
 		} else {
-			app.Run([]string{"./tool", dbNameFlag, tb.DBName, "-q", "setup-schema", "-f", sqlFile.Name(), "-d", "-o"})
+			tb.NoError(app.Run([]string{"./tool", dbNameFlag, tb.DBName, "-q", "setup-schema", "-f", sqlFile.Name(), "-d", "-o"}))
 		}
 
 		expectedTables := getExpectedTables(versioningEnabled, expectedTables)
-		tables, err = db.ListTables()
-		tb.Nil(err)
-		tb.Equal(len(expectedTables), len(tables))
-
-		for _, t := range tables {
-			_, ok := expectedTables[t]
-			tb.True(ok)
-			delete(expectedTables, t)
+		var expected []string
+		for t := range expectedTables {
+			expected = append(expected, t)
 		}
-		tb.Equal(0, len(expectedTables))
+
+		tables, err = db.ListTables()
+		tb.NoError(err)
+		tb.ElementsMatch(expected, tables)
 
 		gotVer, err := db.ReadSchemaVersion()
 		if versioningEnabled {
-			tb.Nil(err)
+			tb.NoError(err)
 			tb.Equal(ver, gotVer)
 		} else {
 			tb.NotNil(err)
@@ -131,7 +130,6 @@ func (tb *SetupSchemaTestBase) RunSetupTest(
 func getExpectedTables(versioningEnabled bool, wantTables []string) map[string]struct{} {
 	expectedTables := make(map[string]struct{})
 	for _, tab := range wantTables {
-		expectedTables[tab] = struct{}{}
 		expectedTables[tab] = struct{}{}
 	}
 	if versioningEnabled {

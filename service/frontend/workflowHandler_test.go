@@ -22,45 +22,40 @@ package frontend
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/.gen/go/history/historyservicetest"
 	"github.com/uber/cadence/.gen/go/shared"
-	gen "github.com/uber/cadence/.gen/go/shared"
-	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/domain"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	cs "github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/common/resource"
 	dc "github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
 	numHistoryShards = 10
 
 	testWorkflowID            = "test-workflow-id"
-	testRunID                 = "test-run-id"
+	testRunID                 = "2c8b555f-1f55-4955-9d1c-b980194555c9"
 	testHistoryArchivalURI    = "testScheme://history/URI"
 	testVisibilityArchivalURI = "testScheme://visibility/URI"
 )
@@ -70,25 +65,25 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller      *gomock.Controller
-		mockDomainCache *cache.MockDomainCache
-		mockClientBean  *client.MockBean
+		controller          *gomock.Controller
+		mockResource        *resource.Test
+		mockDomainCache     *cache.MockDomainCache
+		mockHistoryClient   *history.MockClient
+		mockClusterMetadata *cluster.MockMetadata
+
+		mockProducer           *mocks.KafkaProducer
+		mockMessagingClient    messaging.Client
+		mockMetadataMgr        *mocks.MetadataManager
+		mockHistoryV2Mgr       *mocks.HistoryV2Manager
+		mockVisibilityMgr      *mocks.VisibilityManager
+		mockArchivalMetadata   *archiver.MockArchivalMetadata
+		mockArchiverProvider   *provider.MockArchiverProvider
+		mockHistoryArchiver    *archiver.HistoryArchiverMock
+		mockVisibilityArchiver *archiver.VisibilityArchiverMock
+		mockVersionChecker     *client.VersionCheckerMock
 
 		testDomain   string
 		testDomainID string
-		logger       log.Logger
-		config       *Config
-
-		mockClusterMetadata  *mocks.ClusterMetadata
-		mockProducer         *mocks.KafkaProducer
-		mockMetricClient     metrics.Client
-		mockMessagingClient  messaging.Client
-		mockMetadataMgr      *mocks.MetadataManager
-		mockHistoryV2Mgr     *mocks.HistoryV2Manager
-		mockVisibilityMgr    *mocks.VisibilityManager
-		mockService          cs.Service
-		mockArchivalMetadata *archiver.MockArchivalMetadata
-		mockArchiverProvider *provider.MockArchiverProvider
 	}
 )
 
@@ -101,68 +96,47 @@ func (s *workflowHandlerSuite) SetupSuite() {
 }
 
 func (s *workflowHandlerSuite) TearDownSuite() {
-
 }
 
 func (s *workflowHandlerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
-	s.controller = gomock.NewController(s.T())
-	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
-	s.mockClientBean = client.NewMockBean(s.controller)
-
 	s.testDomain = "test-domain"
 	s.testDomainID = "e4f90ec0-1313-45be-9877-8aa41f72a45a"
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
-	s.mockClusterMetadata = &mocks.ClusterMetadata{}
+
+	s.controller = gomock.NewController(s.T())
+	s.mockResource = resource.NewTest(s.controller, metrics.Frontend)
+	s.mockDomainCache = s.mockResource.DomainCache
+	s.mockHistoryClient = s.mockResource.HistoryClient
+	s.mockClusterMetadata = s.mockResource.ClusterMetadata
+	s.mockMetadataMgr = s.mockResource.MetadataMgr
+	s.mockHistoryV2Mgr = s.mockResource.HistoryMgr
+	s.mockVisibilityMgr = s.mockResource.VisibilityMgr
+	s.mockArchivalMetadata = s.mockResource.ArchivalMetadata
+	s.mockArchiverProvider = s.mockResource.ArchiverProvider
+
 	s.mockProducer = &mocks.KafkaProducer{}
-	s.mockMetricClient = metrics.NewClient(tally.NoopScope, metrics.Frontend)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
-	s.mockMetadataMgr = &mocks.MetadataManager{}
-	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
-	s.mockVisibilityMgr = &mocks.VisibilityManager{}
-	s.mockArchivalMetadata = &archiver.MockArchivalMetadata{}
-	s.mockArchiverProvider = &provider.MockArchiverProvider{}
-	s.mockService = cs.NewTestService(
-		s.mockClusterMetadata,
-		s.mockMessagingClient,
-		s.mockMetricClient,
-		s.mockClientBean,
-		s.mockArchivalMetadata,
-		s.mockArchiverProvider,
-		nil,
-	)
+	s.mockHistoryArchiver = &archiver.HistoryArchiverMock{}
+	s.mockVisibilityArchiver = &archiver.VisibilityArchiverMock{}
+	s.mockVersionChecker = client.NewMockVersionChecker(s.controller)
+
+	mockMonitor := s.mockResource.MembershipMonitor
+	mockMonitor.EXPECT().GetMemberCount(common.FrontendServiceName).Return(5, nil).AnyTimes()
+	s.mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
 }
 
 func (s *workflowHandlerSuite) TearDownTest() {
-	s.mockProducer.AssertExpectations(s.T())
-	s.mockMetadataMgr.AssertExpectations(s.T())
-	s.mockHistoryV2Mgr.AssertExpectations(s.T())
-	s.mockVisibilityMgr.AssertExpectations(s.T())
-	s.mockArchivalMetadata.AssertExpectations(s.T())
-	s.mockArchiverProvider.AssertExpectations(s.T())
 	s.controller.Finish()
+	s.mockResource.Finish(s.T())
+	s.mockProducer.AssertExpectations(s.T())
+	s.mockHistoryArchiver.AssertExpectations(s.T())
+	s.mockVisibilityArchiver.AssertExpectations(s.T())
 }
 
 func (s *workflowHandlerSuite) getWorkflowHandler(config *Config) *WorkflowHandler {
-	domainCache := cache.NewDomainCache(
-		s.mockMetadataMgr,
-		s.mockService.GetClusterMetadata(),
-		s.mockService.GetMetricsClient(),
-		s.mockService.GetLogger(),
-	)
-	return NewWorkflowHandler(s.mockService, config, s.mockMetadataMgr,
-		s.mockHistoryV2Mgr, s.mockVisibilityMgr, s.mockProducer, nil, domainCache)
-}
-
-func (s *workflowHandlerSuite) getWorkflowHandlerHelper() *WorkflowHandler {
-	s.config = s.newConfig()
-	wh := s.getWorkflowHandler(s.config)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.domainCache = s.mockDomainCache
-	wh.visibilityMgr = s.mockVisibilityMgr
-	wh.startWG.Done()
-	return wh
+	return NewWorkflowHandler(s.mockResource, config, s.mockProducer, s.mockVersionChecker)
 }
 
 func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
@@ -172,566 +146,513 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 	config.DisableListVisibilityByFilter = dc.GetBoolPropertyFnFilteredByDomain(true)
 
 	wh := s.getWorkflowHandler(config)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.domainCache = s.mockDomainCache
-	wh.startWG.Done()
 
 	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(domainID, nil).AnyTimes()
 
 	// test list open by wid
-	listRequest := &shared.ListOpenWorkflowExecutionsRequest{
-		Domain: common.StringPtr(domain),
-		StartTimeFilter: &shared.StartTimeFilter{
+	listRequest := &types.ListOpenWorkflowExecutionsRequest{
+		Domain: domain,
+		StartTimeFilter: &types.StartTimeFilter{
 			EarliestTime: common.Int64Ptr(0),
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 		},
-		ExecutionFilter: &shared.WorkflowExecutionFilter{
-			WorkflowId: common.StringPtr("wid"),
+		ExecutionFilter: &types.WorkflowExecutionFilter{
+			WorkflowID: "wid",
 		},
 	}
 	_, err := wh.ListOpenWorkflowExecutions(context.Background(), listRequest)
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errNoPermission, err)
+	s.Error(err)
+	s.Equal(errNoPermission, err)
 
 	// test list open by workflow type
 	listRequest.ExecutionFilter = nil
-	listRequest.TypeFilter = &shared.WorkflowTypeFilter{
-		Name: common.StringPtr("workflow-type"),
+	listRequest.TypeFilter = &types.WorkflowTypeFilter{
+		Name: "workflow-type",
 	}
 	_, err = wh.ListOpenWorkflowExecutions(context.Background(), listRequest)
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errNoPermission, err)
+	s.Error(err)
+	s.Equal(errNoPermission, err)
 
 	// test list close by wid
-	listRequest2 := &shared.ListClosedWorkflowExecutionsRequest{
-		Domain: common.StringPtr(domain),
-		StartTimeFilter: &shared.StartTimeFilter{
+	listRequest2 := &types.ListClosedWorkflowExecutionsRequest{
+		Domain: domain,
+		StartTimeFilter: &types.StartTimeFilter{
 			EarliestTime: common.Int64Ptr(0),
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 		},
-		ExecutionFilter: &shared.WorkflowExecutionFilter{
-			WorkflowId: common.StringPtr("wid"),
+		ExecutionFilter: &types.WorkflowExecutionFilter{
+			WorkflowID: "wid",
 		},
 	}
 	_, err = wh.ListClosedWorkflowExecutions(context.Background(), listRequest2)
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errNoPermission, err)
+	s.Error(err)
+	s.Equal(errNoPermission, err)
 
 	// test list close by workflow type
 	listRequest2.ExecutionFilter = nil
-	listRequest2.TypeFilter = &shared.WorkflowTypeFilter{
-		Name: common.StringPtr("workflow-type"),
+	listRequest2.TypeFilter = &types.WorkflowTypeFilter{
+		Name: "workflow-type",
 	}
 	_, err = wh.ListClosedWorkflowExecutions(context.Background(), listRequest2)
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errNoPermission, err)
+	s.Error(err)
+	s.Equal(errNoPermission, err)
 
 	// test list close by workflow status
 	listRequest2.TypeFilter = nil
-	failedStatus := shared.WorkflowExecutionCloseStatusFailed
+	failedStatus := types.WorkflowExecutionCloseStatusFailed
 	listRequest2.StatusFilter = &failedStatus
 	_, err = wh.ListClosedWorkflowExecutions(context.Background(), listRequest2)
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errNoPermission, err)
+	s.Error(err)
+	s.Equal(errNoPermission, err)
 }
 
 func (s *workflowHandlerSuite) TestPollForTask_Failed_ContextTimeoutTooShort() {
 	config := s.newConfig()
 	wh := s.getWorkflowHandler(config)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
 
 	bgCtx := context.Background()
-	_, err := wh.PollForDecisionTask(bgCtx, &shared.PollForDecisionTaskRequest{})
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), common.ErrContextTimeoutNotSet, err)
+	_, err := wh.PollForDecisionTask(bgCtx, &types.PollForDecisionTaskRequest{})
+	s.Error(err)
+	s.Equal(common.ErrContextTimeoutNotSet, err)
 
-	_, err = wh.PollForActivityTask(bgCtx, &shared.PollForActivityTaskRequest{})
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), common.ErrContextTimeoutNotSet, err)
+	_, err = wh.PollForActivityTask(bgCtx, &types.PollForActivityTaskRequest{})
+	s.Error(err)
+	s.Equal(common.ErrContextTimeoutNotSet, err)
 
 	shortCtx, cancel := context.WithTimeout(bgCtx, common.MinLongPollTimeout-time.Millisecond)
 	defer cancel()
 
-	_, err = wh.PollForDecisionTask(shortCtx, &shared.PollForDecisionTaskRequest{})
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), common.ErrContextTimeoutTooShort, err)
+	_, err = wh.PollForDecisionTask(shortCtx, &types.PollForDecisionTaskRequest{})
+	s.Error(err)
+	s.Equal(common.ErrContextTimeoutTooShort, err)
 
-	_, err = wh.PollForActivityTask(shortCtx, &shared.PollForActivityTaskRequest{})
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), common.ErrContextTimeoutTooShort, err)
+	_, err = wh.PollForActivityTask(shortCtx, &types.PollForActivityTaskRequest{})
+	s.Error(err)
+	s.Equal(common.ErrContextTimeoutTooShort, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_RequestIdNotSet() {
 	config := s.newConfig()
 	config.RPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
 
-	startWorkflowExecutionRequest := &shared.StartWorkflowExecutionRequest{
-		Domain:     common.StringPtr("test-domain"),
-		WorkflowId: common.StringPtr("workflow-id"),
-		WorkflowType: &shared.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
+		Domain:     "test-domain",
+		WorkflowID: "workflow-id",
+		WorkflowType: &types.WorkflowType{
+			Name: "workflow-type",
 		},
-		TaskList: &shared.TaskList{
-			Name: common.StringPtr("task-list"),
+		TaskList: &types.TaskList{
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		RetryPolicy: &shared.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(2),
-			MaximumAttempts:             common.Int32Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(1),
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
 		},
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errRequestIDNotSet, err)
+	s.Error(err)
+	s.Equal(errRequestIDNotSet, err)
+}
+
+func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_BadDelayStartSeconds() {
+	config := s.newConfig()
+	config.RPS = dc.GetIntPropertyFn(10)
+	wh := s.getWorkflowHandler(config)
+
+	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
+		Domain:     "test-domain",
+		WorkflowID: "workflow-id",
+		WorkflowType: &types.WorkflowType{
+			Name: "workflow-type",
+		},
+		TaskList: &types.TaskList{
+			Name: "task-list",
+		},
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
+		},
+		RequestID:         uuid.New(),
+		DelayStartSeconds: common.Int32Ptr(-1),
+	}
+	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
+	s.Error(err)
+	s.Equal(errInvalidDelayStartSeconds, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_StartRequestNotSet() {
 	config := s.newConfig()
 	config.RPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
 
 	_, err := wh.StartWorkflowExecution(context.Background(), nil)
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errRequestNotSet, err)
+	s.Error(err)
+	s.Equal(errRequestNotSet, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_DomainNotSet() {
 	config := s.newConfig()
 	config.RPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
 
-	startWorkflowExecutionRequest := &shared.StartWorkflowExecutionRequest{
-		WorkflowId: common.StringPtr("workflow-id"),
-		WorkflowType: &shared.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
+		WorkflowID: "workflow-id",
+		WorkflowType: &types.WorkflowType{
+			Name: "workflow-type",
 		},
-		TaskList: &shared.TaskList{
-			Name: common.StringPtr("task-list"),
+		TaskList: &types.TaskList{
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		RetryPolicy: &shared.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(2),
-			MaximumAttempts:             common.Int32Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(1),
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
 		},
-		RequestId: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errDomainNotSet, err)
+	s.Error(err)
+	s.Equal(errDomainNotSet, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowIdNotSet() {
 	config := s.newConfig()
 	config.RPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
 
-	startWorkflowExecutionRequest := &shared.StartWorkflowExecutionRequest{
-		Domain: common.StringPtr("test-domain"),
-		WorkflowType: &shared.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
+		Domain: "test-domain",
+		WorkflowType: &types.WorkflowType{
+			Name: "workflow-type",
 		},
-		TaskList: &shared.TaskList{
-			Name: common.StringPtr("task-list"),
+		TaskList: &types.TaskList{
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		RetryPolicy: &shared.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(2),
-			MaximumAttempts:             common.Int32Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(1),
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
 		},
-		RequestId: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errWorkflowIDNotSet, err)
+	s.Error(err)
+	s.Equal(errWorkflowIDNotSet, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowTypeNotSet() {
 	config := s.newConfig()
 	config.RPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
 
-	startWorkflowExecutionRequest := &shared.StartWorkflowExecutionRequest{
-		Domain:     common.StringPtr("test-domain"),
-		WorkflowId: common.StringPtr("workflow-id"),
-		WorkflowType: &shared.WorkflowType{
-			Name: common.StringPtr(""),
+	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
+		Domain:     "test-domain",
+		WorkflowID: "workflow-id",
+		WorkflowType: &types.WorkflowType{
+			Name: "",
 		},
-		TaskList: &shared.TaskList{
-			Name: common.StringPtr("task-list"),
+		TaskList: &types.TaskList{
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		RetryPolicy: &shared.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(2),
-			MaximumAttempts:             common.Int32Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(1),
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
 		},
-		RequestId: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errWorkflowTypeNotSet, err)
+	s.Error(err)
+	s.Equal(errWorkflowTypeNotSet, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_TaskListNotSet() {
 	config := s.newConfig()
 	config.RPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
 
-	startWorkflowExecutionRequest := &shared.StartWorkflowExecutionRequest{
-		Domain:     common.StringPtr("test-domain"),
-		WorkflowId: common.StringPtr("workflow-id"),
-		WorkflowType: &shared.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
+		Domain:     "test-domain",
+		WorkflowID: "workflow-id",
+		WorkflowType: &types.WorkflowType{
+			Name: "workflow-type",
 		},
-		TaskList: &shared.TaskList{
-			Name: common.StringPtr(""),
+		TaskList: &types.TaskList{
+			Name: "",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		RetryPolicy: &shared.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(2),
-			MaximumAttempts:             common.Int32Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(1),
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
 		},
-		RequestId: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errTaskListNotSet, err)
+	s.Error(err)
+	s.Equal(errTaskListNotSet, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidExecutionStartToCloseTimeout() {
 	config := s.newConfig()
 	config.RPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
 
-	startWorkflowExecutionRequest := &shared.StartWorkflowExecutionRequest{
-		Domain:     common.StringPtr("test-domain"),
-		WorkflowId: common.StringPtr("workflow-id"),
-		WorkflowType: &shared.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
+		Domain:     "test-domain",
+		WorkflowID: "workflow-id",
+		WorkflowType: &types.WorkflowType{
+			Name: "workflow-type",
 		},
-		TaskList: &shared.TaskList{
-			Name: common.StringPtr("task-list"),
+		TaskList: &types.TaskList{
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(0),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		RetryPolicy: &shared.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(2),
-			MaximumAttempts:             common.Int32Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(1),
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
 		},
-		RequestId: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errInvalidExecutionStartToCloseTimeoutSeconds, err)
+	s.Error(err)
+	s.Equal(errInvalidExecutionStartToCloseTimeoutSeconds, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStartToCloseTimeout() {
 	config := s.newConfig()
 	config.RPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
 
-	startWorkflowExecutionRequest := &shared.StartWorkflowExecutionRequest{
-		Domain:     common.StringPtr("test-domain"),
-		WorkflowId: common.StringPtr("workflow-id"),
-		WorkflowType: &shared.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
+		Domain:     "test-domain",
+		WorkflowID: "workflow-id",
+		WorkflowType: &types.WorkflowType{
+			Name: "workflow-type",
 		},
-		TaskList: &shared.TaskList{
-			Name: common.StringPtr("task-list"),
+		TaskList: &types.TaskList{
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(0),
-		RetryPolicy: &shared.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(2),
-			MaximumAttempts:             common.Int32Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(1),
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
 		},
-		RequestId: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errInvalidTaskStartToCloseTimeoutSeconds, err)
-}
-
-func (s *workflowHandlerSuite) getWorkflowHandlerWithParams(mService cs.Service, config *Config,
-	mMetadataManager persistence.MetadataManager, mockDomainCache *cache.MockDomainCache) *WorkflowHandler {
-	return NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, nil, mockDomainCache)
+	s.Error(err)
+	s.Equal(errInvalidTaskStartToCloseTimeoutSeconds, err)
 }
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Failure_InvalidArchivalURI() {
-	config := s.newConfig()
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(false)
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName)
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "random URI"))
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "random URI"))
-	s.mockClusterMetadata.On("GetNextFailoverVersion", mock.Anything, mock.Anything).Return(int64(0))
-	mMetadataManager := &mocks.MetadataManager{}
-	mMetadataManager.On("GetDomain", mock.Anything).Return(nil, &shared.EntityNotExistsError{})
-	mMetadataManager.On("CreateDomain", mock.Anything).Return(&persistence.CreateDomainResponse{
-		ID: "test-id",
-	}, nil)
-	mHistoryArchiver := &archiver.HistoryArchiverMock{}
-	mHistoryArchiver.On("ValidateURI", mock.Anything).Return(nil)
-	mVisibilityArchiver := &archiver.VisibilityArchiverMock{}
-	mVisibilityArchiver.On("ValidateURI", mock.Anything).Return(errors.New("invalid URI"))
-	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(mHistoryArchiver, nil)
-	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(mVisibilityArchiver, nil)
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{})
+	s.mockHistoryArchiver.On("ValidateURI", mock.Anything).Return(nil)
+	s.mockVisibilityArchiver.On("ValidateURI", mock.Anything).Return(errors.New("invalid URI"))
+	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(s.mockHistoryArchiver, nil)
+	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(s.mockVisibilityArchiver, nil)
 
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+	wh := s.getWorkflowHandler(s.newConfig())
 
 	req := registerDomainRequest(
-		shared.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr(testHistoryArchivalURI),
-		shared.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr(testVisibilityArchivalURI),
+		types.ArchivalStatusEnabled.Ptr(),
+		testHistoryArchivalURI,
+		types.ArchivalStatusEnabled.Ptr(),
+		testVisibilityArchivalURI,
 	)
 	err := wh.RegisterDomain(context.Background(), req)
-	assert.Error(s.T(), err)
+	s.Error(err)
 }
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Success_EnabledWithNoArchivalURI() {
-	config := s.newConfig()
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(false)
+	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", testHistoryArchivalURI))
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", testVisibilityArchivalURI))
-	s.mockClusterMetadata.On("GetNextFailoverVersion", mock.Anything, mock.Anything).Return(int64(0))
-	mMetadataManager := &mocks.MetadataManager{}
-	mMetadataManager.On("GetDomain", mock.Anything).Return(nil, &shared.EntityNotExistsError{})
-	mMetadataManager.On("CreateDomain", mock.Anything).Return(&persistence.CreateDomainResponse{
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{})
+	s.mockMetadataMgr.On("CreateDomain", mock.Anything, mock.Anything).Return(&persistence.CreateDomainResponse{
 		ID: "test-id",
 	}, nil)
-	mHistoryArchiver := &archiver.HistoryArchiverMock{}
-	mHistoryArchiver.On("ValidateURI", mock.Anything).Return(nil)
-	mVisibilityArchiver := &archiver.VisibilityArchiverMock{}
-	mVisibilityArchiver.On("ValidateURI", mock.Anything).Return(nil)
-	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(mHistoryArchiver, nil)
-	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(mVisibilityArchiver, nil)
+	s.mockHistoryArchiver.On("ValidateURI", mock.Anything).Return(nil)
+	s.mockVisibilityArchiver.On("ValidateURI", mock.Anything).Return(nil)
+	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(s.mockHistoryArchiver, nil)
+	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(s.mockVisibilityArchiver, nil)
 
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+	wh := s.getWorkflowHandler(s.newConfig())
 
-	req := registerDomainRequest(shared.ArchivalStatusEnabled.Ptr(), nil, shared.ArchivalStatusEnabled.Ptr(), nil)
+	req := registerDomainRequest(types.ArchivalStatusEnabled.Ptr(), "", types.ArchivalStatusEnabled.Ptr(), "")
 	err := wh.RegisterDomain(context.Background(), req)
-	assert.NoError(s.T(), err)
+	s.NoError(err)
 }
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Success_EnabledWithArchivalURI() {
-	config := s.newConfig()
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(false)
+	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "invalidURI"))
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "invalidURI"))
-	s.mockClusterMetadata.On("GetNextFailoverVersion", mock.Anything, mock.Anything).Return(int64(0))
-	mMetadataManager := &mocks.MetadataManager{}
-	mMetadataManager.On("GetDomain", mock.Anything).Return(nil, &shared.EntityNotExistsError{})
-	mMetadataManager.On("CreateDomain", mock.Anything).Return(&persistence.CreateDomainResponse{
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{})
+	s.mockMetadataMgr.On("CreateDomain", mock.Anything, mock.Anything).Return(&persistence.CreateDomainResponse{
 		ID: "test-id",
 	}, nil)
-	mHistoryArchiver := &archiver.HistoryArchiverMock{}
-	mHistoryArchiver.On("ValidateURI", mock.Anything).Return(nil)
-	mVisibilityArchiver := &archiver.VisibilityArchiverMock{}
-	mVisibilityArchiver.On("ValidateURI", mock.Anything).Return(nil)
-	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(mHistoryArchiver, nil)
-	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(mVisibilityArchiver, nil)
+	s.mockHistoryArchiver.On("ValidateURI", mock.Anything).Return(nil)
+	s.mockVisibilityArchiver.On("ValidateURI", mock.Anything).Return(nil)
+	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(s.mockHistoryArchiver, nil)
+	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(s.mockVisibilityArchiver, nil)
 
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+	wh := s.getWorkflowHandler(s.newConfig())
 
 	req := registerDomainRequest(
-		shared.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr(testHistoryArchivalURI),
-		shared.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr(testVisibilityArchivalURI),
+		types.ArchivalStatusEnabled.Ptr(),
+		testHistoryArchivalURI,
+		types.ArchivalStatusEnabled.Ptr(),
+		testVisibilityArchivalURI,
 	)
 	err := wh.RegisterDomain(context.Background(), req)
-	assert.NoError(s.T(), err)
+	s.NoError(err)
 }
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Success_ClusterNotConfiguredForArchival() {
-	config := s.newConfig()
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(false)
+	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewDisabledArchvialConfig())
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
-	s.mockClusterMetadata.On("GetNextFailoverVersion", mock.Anything, mock.Anything).Return(int64(0))
-	mMetadataManager := &mocks.MetadataManager{}
-	mMetadataManager.On("GetDomain", mock.Anything).Return(nil, &shared.EntityNotExistsError{})
-	mMetadataManager.On("CreateDomain", mock.Anything).Return(&persistence.CreateDomainResponse{
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{})
+	s.mockMetadataMgr.On("CreateDomain", mock.Anything, mock.Anything).Return(&persistence.CreateDomainResponse{
 		ID: "test-id",
 	}, nil)
 
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+	wh := s.getWorkflowHandler(s.newConfig())
 
 	req := registerDomainRequest(
-		shared.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr(testVisibilityArchivalURI),
-		shared.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr("invalidURI"),
+		types.ArchivalStatusEnabled.Ptr(),
+		testVisibilityArchivalURI,
+		types.ArchivalStatusEnabled.Ptr(),
+		"invalidURI",
 	)
 	err := wh.RegisterDomain(context.Background(), req)
-	assert.NoError(s.T(), err)
+	s.NoError(err)
 }
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Success_NotEnabled() {
-	config := s.newConfig()
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(false)
+	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "some random URI"))
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "some random URI"))
-	s.mockClusterMetadata.On("GetNextFailoverVersion", mock.Anything, mock.Anything).Return(int64(0))
-	mMetadataManager := &mocks.MetadataManager{}
-	mMetadataManager.On("GetDomain", mock.Anything).Return(nil, &shared.EntityNotExistsError{})
-	mMetadataManager.On("CreateDomain", mock.Anything).Return(&persistence.CreateDomainResponse{
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{})
+	s.mockMetadataMgr.On("CreateDomain", mock.Anything, mock.Anything).Return(&persistence.CreateDomainResponse{
 		ID: "test-id",
 	}, nil)
 
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+	wh := s.getWorkflowHandler(s.newConfig())
 
-	req := registerDomainRequest(nil, nil, nil, nil)
+	req := registerDomainRequest(nil, "", nil, "")
 	err := wh.RegisterDomain(context.Background(), req)
-	assert.NoError(s.T(), err)
+	s.NoError(err)
 }
 
 func (s *workflowHandlerSuite) TestDescribeDomain_Success_ArchivalDisabled() {
-	config := s.newConfig()
-	mMetadataManager := &mocks.MetadataManager{}
 	getDomainResp := persistenceGetDomainResponse(
-		&domain.ArchivalState{Status: shared.ArchivalStatusDisabled, URI: ""},
-		&domain.ArchivalState{Status: shared.ArchivalStatusDisabled, URI: ""},
+		&domain.ArchivalState{Status: types.ArchivalStatusDisabled, URI: ""},
+		&domain.ArchivalState{Status: types.ArchivalStatusDisabled, URI: ""},
 	)
-	mMetadataManager.On("GetDomain", mock.Anything).Return(getDomainResp, nil)
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.Anything).Return(getDomainResp, nil)
 
-	req := &shared.DescribeDomainRequest{
+	wh := s.getWorkflowHandler(s.newConfig())
+
+	req := &types.DescribeDomainRequest{
 		Name: common.StringPtr("test-domain"),
 	}
 	result, err := wh.DescribeDomain(context.Background(), req)
 
-	assert.NoError(s.T(), err)
-	assert.NotNil(s.T(), result)
-	assert.NotNil(s.T(), result.Configuration)
-	assert.Equal(s.T(), shared.ArchivalStatusDisabled, result.Configuration.GetHistoryArchivalStatus())
-	assert.Equal(s.T(), "", result.Configuration.GetHistoryArchivalURI())
-	assert.Equal(s.T(), shared.ArchivalStatusDisabled, result.Configuration.GetVisibilityArchivalStatus())
-	assert.Equal(s.T(), "", result.Configuration.GetVisibilityArchivalURI())
+	s.NoError(err)
+	s.NotNil(result)
+	s.NotNil(result.Configuration)
+	s.Equal(types.ArchivalStatusDisabled, result.Configuration.GetHistoryArchivalStatus())
+	s.Equal("", result.Configuration.GetHistoryArchivalURI())
+	s.Equal(types.ArchivalStatusDisabled, result.Configuration.GetVisibilityArchivalStatus())
+	s.Equal("", result.Configuration.GetVisibilityArchivalURI())
 }
 
 func (s *workflowHandlerSuite) TestDescribeDomain_Success_ArchivalEnabled() {
-	config := s.newConfig()
-	mMetadataManager := &mocks.MetadataManager{}
 	getDomainResp := persistenceGetDomainResponse(
-		&domain.ArchivalState{Status: shared.ArchivalStatusEnabled, URI: testHistoryArchivalURI},
-		&domain.ArchivalState{Status: shared.ArchivalStatusEnabled, URI: testVisibilityArchivalURI},
+		&domain.ArchivalState{Status: types.ArchivalStatusEnabled, URI: testHistoryArchivalURI},
+		&domain.ArchivalState{Status: types.ArchivalStatusEnabled, URI: testVisibilityArchivalURI},
 	)
-	mMetadataManager.On("GetDomain", mock.Anything).Return(getDomainResp, nil)
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.Anything).Return(getDomainResp, nil)
 
-	req := &shared.DescribeDomainRequest{
+	wh := s.getWorkflowHandler(s.newConfig())
+
+	req := &types.DescribeDomainRequest{
 		Name: common.StringPtr("test-domain"),
 	}
 	result, err := wh.DescribeDomain(context.Background(), req)
 
-	assert.NoError(s.T(), err)
-	assert.NotNil(s.T(), result)
-	assert.NotNil(s.T(), result.Configuration)
-	assert.Equal(s.T(), shared.ArchivalStatusEnabled, result.Configuration.GetHistoryArchivalStatus())
-	assert.Equal(s.T(), testHistoryArchivalURI, result.Configuration.GetHistoryArchivalURI())
-	assert.Equal(s.T(), shared.ArchivalStatusEnabled, result.Configuration.GetVisibilityArchivalStatus())
-	assert.Equal(s.T(), testVisibilityArchivalURI, result.Configuration.GetVisibilityArchivalURI())
+	s.NoError(err)
+	s.NotNil(result)
+	s.NotNil(result.Configuration)
+	s.Equal(types.ArchivalStatusEnabled, result.Configuration.GetHistoryArchivalStatus())
+	s.Equal(testHistoryArchivalURI, result.Configuration.GetHistoryArchivalURI())
+	s.Equal(types.ArchivalStatusEnabled, result.Configuration.GetVisibilityArchivalStatus())
+	s.Equal(testVisibilityArchivalURI, result.Configuration.GetVisibilityArchivalURI())
 }
 
 func (s *workflowHandlerSuite) TestUpdateDomain_Failure_UpdateExistingArchivalURI() {
-	config := s.newConfig()
-	mMetadataManager := &mocks.MetadataManager{}
-	mMetadataManager.On("GetMetadata").Return(&persistence.GetMetadataResponse{
+	s.mockMetadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{
 		NotificationVersion: int64(0),
 	}, nil)
 	getDomainResp := persistenceGetDomainResponse(
-		&domain.ArchivalState{Status: shared.ArchivalStatusEnabled, URI: testHistoryArchivalURI},
-		&domain.ArchivalState{Status: shared.ArchivalStatusEnabled, URI: testVisibilityArchivalURI},
+		&domain.ArchivalState{Status: types.ArchivalStatusEnabled, URI: testHistoryArchivalURI},
+		&domain.ArchivalState{Status: types.ArchivalStatusEnabled, URI: testVisibilityArchivalURI},
 	)
-	mMetadataManager.On("GetDomain", mock.Anything).Return(getDomainResp, nil)
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.Anything).Return(getDomainResp, nil)
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "some random URI"))
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "some random URI"))
-	mHistoryArchiver := &archiver.HistoryArchiverMock{}
-	mHistoryArchiver.On("ValidateURI", mock.Anything).Return(nil)
-	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(mHistoryArchiver, nil)
+	s.mockHistoryArchiver.On("ValidateURI", mock.Anything).Return(nil)
+	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(s.mockHistoryArchiver, nil)
 
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+	wh := s.getWorkflowHandler(s.newConfig())
 
 	updateReq := updateRequest(
 		nil,
@@ -740,403 +661,335 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Failure_UpdateExistingArchivalUR
 		nil,
 	)
 	_, err := wh.UpdateDomain(context.Background(), updateReq)
-	assert.Error(s.T(), err)
+	s.Error(err)
 }
 
 func (s *workflowHandlerSuite) TestUpdateDomain_Failure_InvalidArchivalURI() {
-	config := s.newConfig()
-	mMetadataManager := &mocks.MetadataManager{}
-	mMetadataManager.On("GetMetadata").Return(&persistence.GetMetadataResponse{
+	s.mockMetadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{
 		NotificationVersion: int64(0),
 	}, nil)
 	getDomainResp := persistenceGetDomainResponse(
-		&domain.ArchivalState{Status: shared.ArchivalStatusDisabled, URI: ""},
-		&domain.ArchivalState{Status: shared.ArchivalStatusDisabled, URI: ""},
+		&domain.ArchivalState{Status: types.ArchivalStatusDisabled, URI: ""},
+		&domain.ArchivalState{Status: types.ArchivalStatusDisabled, URI: ""},
 	)
-	mMetadataManager.On("GetDomain", mock.Anything).Return(getDomainResp, nil)
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.Anything).Return(getDomainResp, nil)
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "some random URI"))
-	mHistoryArchiver := &archiver.HistoryArchiverMock{}
-	mHistoryArchiver.On("ValidateURI", mock.Anything).Return(errors.New("invalid URI"))
-	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(mHistoryArchiver, nil)
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+	s.mockHistoryArchiver.On("ValidateURI", mock.Anything).Return(errors.New("invalid URI"))
+	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(s.mockHistoryArchiver, nil)
+
+	wh := s.getWorkflowHandler(s.newConfig())
 
 	updateReq := updateRequest(
 		common.StringPtr("testScheme://invalid/updated/history/URI"),
-		common.ArchivalStatusPtr(shared.ArchivalStatusEnabled),
+		types.ArchivalStatusEnabled.Ptr(),
 		nil,
 		nil,
 	)
 	_, err := wh.UpdateDomain(context.Background(), updateReq)
-	assert.Error(s.T(), err)
+	s.Error(err)
 }
 
 func (s *workflowHandlerSuite) TestUpdateDomain_Success_ArchivalEnabledToArchivalDisabledWithoutSettingURI() {
-	config := s.newConfig()
-	mMetadataManager := &mocks.MetadataManager{}
-	mMetadataManager.On("GetMetadata").Return(&persistence.GetMetadataResponse{
+	s.mockMetadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{
 		NotificationVersion: int64(0),
 	}, nil)
 	getDomainResp := persistenceGetDomainResponse(
-		&domain.ArchivalState{Status: shared.ArchivalStatusEnabled, URI: testHistoryArchivalURI},
-		&domain.ArchivalState{Status: shared.ArchivalStatusEnabled, URI: testVisibilityArchivalURI},
+		&domain.ArchivalState{Status: types.ArchivalStatusEnabled, URI: testHistoryArchivalURI},
+		&domain.ArchivalState{Status: types.ArchivalStatusEnabled, URI: testVisibilityArchivalURI},
 	)
-	mMetadataManager.On("GetDomain", mock.Anything).Return(getDomainResp, nil)
-	mMetadataManager.On("UpdateDomain", mock.Anything).Return(nil)
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.Anything).Return(getDomainResp, nil)
+	s.mockMetadataMgr.On("UpdateDomain", mock.Anything, mock.Anything).Return(nil)
+	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "some random URI"))
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "some random URI"))
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	mHistoryArchiver := &archiver.HistoryArchiverMock{}
-	mHistoryArchiver.On("ValidateURI", mock.Anything).Return(nil)
-	mVisibilityArchiver := &archiver.VisibilityArchiverMock{}
-	mVisibilityArchiver.On("ValidateURI", mock.Anything).Return(nil)
-	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(mHistoryArchiver, nil)
-	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(mVisibilityArchiver, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+	s.mockHistoryArchiver.On("ValidateURI", mock.Anything).Return(nil)
+	s.mockVisibilityArchiver.On("ValidateURI", mock.Anything).Return(nil)
+	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(s.mockHistoryArchiver, nil)
+	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(s.mockVisibilityArchiver, nil)
+
+	wh := s.getWorkflowHandler(s.newConfig())
 
 	updateReq := updateRequest(
 		nil,
-		common.ArchivalStatusPtr(shared.ArchivalStatusDisabled),
+		types.ArchivalStatusDisabled.Ptr(),
 		nil,
-		common.ArchivalStatusPtr(shared.ArchivalStatusDisabled),
+		types.ArchivalStatusDisabled.Ptr(),
 	)
 	result, err := wh.UpdateDomain(context.Background(), updateReq)
-	assert.NoError(s.T(), err)
-	assert.NotNil(s.T(), result)
-	assert.NotNil(s.T(), result.Configuration)
-	assert.Equal(s.T(), shared.ArchivalStatusDisabled, result.Configuration.GetHistoryArchivalStatus())
-	assert.Equal(s.T(), testHistoryArchivalURI, result.Configuration.GetHistoryArchivalURI())
-	assert.Equal(s.T(), shared.ArchivalStatusDisabled, result.Configuration.GetVisibilityArchivalStatus())
-	assert.Equal(s.T(), testVisibilityArchivalURI, result.Configuration.GetVisibilityArchivalURI())
+	s.NoError(err)
+	s.NotNil(result)
+	s.NotNil(result.Configuration)
+	s.Equal(types.ArchivalStatusDisabled, result.Configuration.GetHistoryArchivalStatus())
+	s.Equal(testHistoryArchivalURI, result.Configuration.GetHistoryArchivalURI())
+	s.Equal(types.ArchivalStatusDisabled, result.Configuration.GetVisibilityArchivalStatus())
+	s.Equal(testVisibilityArchivalURI, result.Configuration.GetVisibilityArchivalURI())
 }
 
 func (s *workflowHandlerSuite) TestUpdateDomain_Success_ClusterNotConfiguredForArchival() {
-	config := s.newConfig()
-	mMetadataManager := &mocks.MetadataManager{}
-	mMetadataManager.On("GetMetadata").Return(&persistence.GetMetadataResponse{
+	s.mockMetadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{
 		NotificationVersion: int64(0),
 	}, nil)
 	getDomainResp := persistenceGetDomainResponse(
-		&domain.ArchivalState{Status: shared.ArchivalStatusEnabled, URI: "some random history URI"},
-		&domain.ArchivalState{Status: shared.ArchivalStatusEnabled, URI: "some random visibility URI"},
+		&domain.ArchivalState{Status: types.ArchivalStatusEnabled, URI: "some random history URI"},
+		&domain.ArchivalState{Status: types.ArchivalStatusEnabled, URI: "some random visibility URI"},
 	)
-	mMetadataManager.On("GetDomain", mock.Anything).Return(getDomainResp, nil)
-	mMetadataManager.On("UpdateDomain", mock.Anything).Return(nil)
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.Anything).Return(getDomainResp, nil)
+	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewDisabledArchvialConfig())
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
 
-	updateReq := updateRequest(nil, common.ArchivalStatusPtr(shared.ArchivalStatusDisabled), nil, nil)
+	wh := s.getWorkflowHandler(s.newConfig())
+
+	updateReq := updateRequest(nil, types.ArchivalStatusDisabled.Ptr(), nil, nil)
 	result, err := wh.UpdateDomain(context.Background(), updateReq)
-	assert.NoError(s.T(), err)
-	assert.NotNil(s.T(), result)
-	assert.NotNil(s.T(), result.Configuration)
-	assert.Equal(s.T(), shared.ArchivalStatusEnabled, result.Configuration.GetHistoryArchivalStatus())
-	assert.Equal(s.T(), "some random history URI", result.Configuration.GetHistoryArchivalURI())
-	assert.Equal(s.T(), shared.ArchivalStatusEnabled, result.Configuration.GetVisibilityArchivalStatus())
-	assert.Equal(s.T(), "some random visibility URI", result.Configuration.GetVisibilityArchivalURI())
+	s.NoError(err)
+	s.NotNil(result)
+	s.NotNil(result.Configuration)
+	s.Equal(types.ArchivalStatusEnabled, result.Configuration.GetHistoryArchivalStatus())
+	s.Equal("some random history URI", result.Configuration.GetHistoryArchivalURI())
+	s.Equal(types.ArchivalStatusEnabled, result.Configuration.GetVisibilityArchivalStatus())
+	s.Equal("some random visibility URI", result.Configuration.GetVisibilityArchivalURI())
 }
 
 func (s *workflowHandlerSuite) TestUpdateDomain_Success_ArchivalEnabledToArchivalDisabledWithSettingBucket() {
-	config := s.newConfig()
-	mMetadataManager := &mocks.MetadataManager{}
-	mMetadataManager.On("GetMetadata").Return(&persistence.GetMetadataResponse{
+	s.mockMetadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{
 		NotificationVersion: int64(0),
 	}, nil)
 	getDomainResp := persistenceGetDomainResponse(
-		&domain.ArchivalState{Status: shared.ArchivalStatusEnabled, URI: testHistoryArchivalURI},
-		&domain.ArchivalState{Status: shared.ArchivalStatusEnabled, URI: testVisibilityArchivalURI},
+		&domain.ArchivalState{Status: types.ArchivalStatusEnabled, URI: testHistoryArchivalURI},
+		&domain.ArchivalState{Status: types.ArchivalStatusEnabled, URI: testVisibilityArchivalURI},
 	)
-	mMetadataManager.On("GetDomain", mock.Anything).Return(getDomainResp, nil)
-	mMetadataManager.On("UpdateDomain", mock.Anything).Return(nil)
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.Anything).Return(getDomainResp, nil)
+	s.mockMetadataMgr.On("UpdateDomain", mock.Anything, mock.Anything).Return(nil)
+	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "some random URI"))
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "some random URI"))
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	mHistoryArchiver := &archiver.HistoryArchiverMock{}
-	mHistoryArchiver.On("ValidateURI", mock.Anything).Return(nil)
-	mVisibilityArchiver := &archiver.VisibilityArchiverMock{}
-	mVisibilityArchiver.On("ValidateURI", mock.Anything).Return(nil)
-	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(mHistoryArchiver, nil)
-	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(mVisibilityArchiver, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+	s.mockHistoryArchiver.On("ValidateURI", mock.Anything).Return(nil)
+	s.mockVisibilityArchiver.On("ValidateURI", mock.Anything).Return(nil)
+	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(s.mockHistoryArchiver, nil)
+	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(s.mockVisibilityArchiver, nil)
+
+	wh := s.getWorkflowHandler(s.newConfig())
 
 	updateReq := updateRequest(
 		common.StringPtr(testHistoryArchivalURI),
-		common.ArchivalStatusPtr(shared.ArchivalStatusDisabled),
+		types.ArchivalStatusDisabled.Ptr(),
 		common.StringPtr(testVisibilityArchivalURI),
-		common.ArchivalStatusPtr(shared.ArchivalStatusDisabled),
+		types.ArchivalStatusDisabled.Ptr(),
 	)
 	result, err := wh.UpdateDomain(context.Background(), updateReq)
-	assert.NoError(s.T(), err)
-	assert.NotNil(s.T(), result)
-	assert.NotNil(s.T(), result.Configuration)
-	assert.Equal(s.T(), shared.ArchivalStatusDisabled, result.Configuration.GetHistoryArchivalStatus())
-	assert.Equal(s.T(), testHistoryArchivalURI, result.Configuration.GetHistoryArchivalURI())
-	assert.Equal(s.T(), shared.ArchivalStatusDisabled, result.Configuration.GetVisibilityArchivalStatus())
-	assert.Equal(s.T(), testVisibilityArchivalURI, result.Configuration.GetVisibilityArchivalURI())
+	s.NoError(err)
+	s.NotNil(result)
+	s.NotNil(result.Configuration)
+	s.Equal(types.ArchivalStatusDisabled, result.Configuration.GetHistoryArchivalStatus())
+	s.Equal(testHistoryArchivalURI, result.Configuration.GetHistoryArchivalURI())
+	s.Equal(types.ArchivalStatusDisabled, result.Configuration.GetVisibilityArchivalStatus())
+	s.Equal(testVisibilityArchivalURI, result.Configuration.GetVisibilityArchivalURI())
 }
 
 func (s *workflowHandlerSuite) TestUpdateDomain_Success_ArchivalEnabledToEnabled() {
-	config := s.newConfig()
-	mMetadataManager := &mocks.MetadataManager{}
-	mMetadataManager.On("GetMetadata").Return(&persistence.GetMetadataResponse{
+	s.mockMetadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{
 		NotificationVersion: int64(0),
 	}, nil)
 	getDomainResp := persistenceGetDomainResponse(
-		&domain.ArchivalState{Status: shared.ArchivalStatusEnabled, URI: testHistoryArchivalURI},
-		&domain.ArchivalState{Status: shared.ArchivalStatusEnabled, URI: testVisibilityArchivalURI},
+		&domain.ArchivalState{Status: types.ArchivalStatusEnabled, URI: testHistoryArchivalURI},
+		&domain.ArchivalState{Status: types.ArchivalStatusEnabled, URI: testVisibilityArchivalURI},
 	)
-	mMetadataManager.On("GetDomain", mock.Anything).Return(getDomainResp, nil)
-	mMetadataManager.On("UpdateDomain", mock.Anything).Return(nil)
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.Anything).Return(getDomainResp, nil)
+	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "some random URI"))
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "some random URI"))
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	mHistoryArchiver := &archiver.HistoryArchiverMock{}
-	mHistoryArchiver.On("ValidateURI", mock.Anything).Return(nil)
-	mVisibilityArchiver := &archiver.VisibilityArchiverMock{}
-	mVisibilityArchiver.On("ValidateURI", mock.Anything).Return(nil)
-	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(mHistoryArchiver, nil)
-	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(mVisibilityArchiver, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+	s.mockHistoryArchiver.On("ValidateURI", mock.Anything).Return(nil)
+	s.mockVisibilityArchiver.On("ValidateURI", mock.Anything).Return(nil)
+	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(s.mockHistoryArchiver, nil)
+	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(s.mockVisibilityArchiver, nil)
+
+	wh := s.getWorkflowHandler(s.newConfig())
 
 	updateReq := updateRequest(
 		common.StringPtr(testHistoryArchivalURI),
-		common.ArchivalStatusPtr(shared.ArchivalStatusEnabled),
+		types.ArchivalStatusEnabled.Ptr(),
 		common.StringPtr(testVisibilityArchivalURI),
-		common.ArchivalStatusPtr(shared.ArchivalStatusEnabled),
+		types.ArchivalStatusEnabled.Ptr(),
 	)
 	result, err := wh.UpdateDomain(context.Background(), updateReq)
-	assert.NoError(s.T(), err)
-	assert.NotNil(s.T(), result)
-	assert.NotNil(s.T(), result.Configuration)
-	assert.Equal(s.T(), shared.ArchivalStatusEnabled, result.Configuration.GetHistoryArchivalStatus())
-	assert.Equal(s.T(), testHistoryArchivalURI, result.Configuration.GetHistoryArchivalURI())
-	assert.Equal(s.T(), shared.ArchivalStatusEnabled, result.Configuration.GetVisibilityArchivalStatus())
-	assert.Equal(s.T(), testVisibilityArchivalURI, result.Configuration.GetVisibilityArchivalURI())
+	s.NoError(err)
+	s.NotNil(result)
+	s.NotNil(result.Configuration)
+	s.Equal(types.ArchivalStatusEnabled, result.Configuration.GetHistoryArchivalStatus())
+	s.Equal(testHistoryArchivalURI, result.Configuration.GetHistoryArchivalURI())
+	s.Equal(types.ArchivalStatusEnabled, result.Configuration.GetVisibilityArchivalStatus())
+	s.Equal(testVisibilityArchivalURI, result.Configuration.GetVisibilityArchivalURI())
 }
 
 func (s *workflowHandlerSuite) TestUpdateDomain_Success_ArchivalNeverEnabledToEnabled() {
-	config := s.newConfig()
-	mMetadataManager := &mocks.MetadataManager{}
-	mMetadataManager.On("GetMetadata").Return(&persistence.GetMetadataResponse{
+	s.mockMetadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{
 		NotificationVersion: int64(0),
 	}, nil)
 	getDomainResp := persistenceGetDomainResponse(
-		&domain.ArchivalState{Status: shared.ArchivalStatusDisabled, URI: ""},
-		&domain.ArchivalState{Status: shared.ArchivalStatusDisabled, URI: ""},
+		&domain.ArchivalState{Status: types.ArchivalStatusDisabled, URI: ""},
+		&domain.ArchivalState{Status: types.ArchivalStatusDisabled, URI: ""},
 	)
-	mMetadataManager.On("GetDomain", mock.Anything).Return(getDomainResp, nil)
-	mMetadataManager.On("UpdateDomain", mock.Anything).Return(nil)
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.Anything).Return(getDomainResp, nil)
+	s.mockMetadataMgr.On("UpdateDomain", mock.Anything, mock.Anything).Return(nil)
+	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "some random URI"))
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "some random URI"))
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	mHistoryArchiver := &archiver.HistoryArchiverMock{}
-	mHistoryArchiver.On("ValidateURI", mock.Anything).Return(nil)
-	mVisibilityArchiver := &archiver.VisibilityArchiverMock{}
-	mVisibilityArchiver.On("ValidateURI", mock.Anything).Return(nil)
-	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(mHistoryArchiver, nil)
-	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(mVisibilityArchiver, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+	s.mockHistoryArchiver.On("ValidateURI", mock.Anything).Return(nil)
+	s.mockVisibilityArchiver.On("ValidateURI", mock.Anything).Return(nil)
+	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(s.mockHistoryArchiver, nil)
+	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(s.mockVisibilityArchiver, nil)
+
+	wh := s.getWorkflowHandler(s.newConfig())
 
 	updateReq := updateRequest(
 		common.StringPtr(testHistoryArchivalURI),
-		common.ArchivalStatusPtr(shared.ArchivalStatusEnabled),
+		types.ArchivalStatusEnabled.Ptr(),
 		common.StringPtr(testVisibilityArchivalURI),
-		common.ArchivalStatusPtr(shared.ArchivalStatusEnabled),
+		types.ArchivalStatusEnabled.Ptr(),
 	)
 	result, err := wh.UpdateDomain(context.Background(), updateReq)
-	assert.NoError(s.T(), err)
-	assert.NotNil(s.T(), result)
-	assert.NotNil(s.T(), result.Configuration)
-	assert.Equal(s.T(), shared.ArchivalStatusEnabled, result.Configuration.GetHistoryArchivalStatus())
-	assert.Equal(s.T(), testHistoryArchivalURI, result.Configuration.GetHistoryArchivalURI())
-	assert.Equal(s.T(), shared.ArchivalStatusEnabled, result.Configuration.GetVisibilityArchivalStatus())
-	assert.Equal(s.T(), testVisibilityArchivalURI, result.Configuration.GetVisibilityArchivalURI())
+	s.NoError(err)
+	s.NotNil(result)
+	s.NotNil(result.Configuration)
+	s.Equal(types.ArchivalStatusEnabled, result.Configuration.GetHistoryArchivalStatus())
+	s.Equal(testHistoryArchivalURI, result.Configuration.GetHistoryArchivalURI())
+	s.Equal(types.ArchivalStatusEnabled, result.Configuration.GetVisibilityArchivalStatus())
+	s.Equal(testVisibilityArchivalURI, result.Configuration.GetVisibilityArchivalURI())
 }
 
 func (s *workflowHandlerSuite) TestHistoryArchived() {
-	wh := &WorkflowHandler{}
-	getHistoryRequest := &shared.GetWorkflowExecutionHistoryRequest{}
+	wh := s.getWorkflowHandler(s.newConfig())
+
+	getHistoryRequest := &types.GetWorkflowExecutionHistoryRequest{}
 	s.False(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
 
-	getHistoryRequest = &shared.GetWorkflowExecutionHistoryRequest{
-		Execution: &shared.WorkflowExecution{},
+	getHistoryRequest = &types.GetWorkflowExecutionHistoryRequest{
+		Execution: &types.WorkflowExecution{},
 	}
 	s.False(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
 
-	mockHistoryClient := historyservicetest.NewMockClient(s.controller)
-	mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
-	wh = &WorkflowHandler{
-		history: mockHistoryClient,
-	}
-	getHistoryRequest = &shared.GetWorkflowExecutionHistoryRequest{
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(testWorkflowID),
-			RunId:      common.StringPtr(testRunID),
+	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+	getHistoryRequest = &types.GetWorkflowExecutionHistoryRequest{
+		Execution: &types.WorkflowExecution{
+			WorkflowID: testWorkflowID,
+			RunID:      testRunID,
 		},
 	}
 	s.False(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
 
-	mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(nil, &shared.EntityNotExistsError{Message: "got archival indication error"}).Times(1)
-	wh = &WorkflowHandler{
-		history: mockHistoryClient,
-	}
-	getHistoryRequest = &shared.GetWorkflowExecutionHistoryRequest{
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(testWorkflowID),
-			RunId:      common.StringPtr(testRunID),
+	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(nil, &types.EntityNotExistsError{Message: "got archival indication error"}).Times(1)
+	getHistoryRequest = &types.GetWorkflowExecutionHistoryRequest{
+		Execution: &types.WorkflowExecution{
+			WorkflowID: testWorkflowID,
+			RunID:      testRunID,
 		},
 	}
 	s.True(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
 
-	mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(nil, errors.New("got non-archival indication error")).Times(1)
-	wh = &WorkflowHandler{
-		history: mockHistoryClient,
-	}
-	getHistoryRequest = &shared.GetWorkflowExecutionHistoryRequest{
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(testWorkflowID),
-			RunId:      common.StringPtr(testRunID),
+	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(nil, errors.New("got non-archival indication error")).Times(1)
+	getHistoryRequest = &types.GetWorkflowExecutionHistoryRequest{
+		Execution: &types.WorkflowExecution{
+			WorkflowID: testWorkflowID,
+			RunID:      testRunID,
 		},
 	}
 	s.False(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
 }
 
 func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_DomainCacheEntryError() {
-	config := s.newConfig()
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(nil, errors.New("error getting domain")).Times(1)
-	wh := s.getWorkflowHandlerWithParams(s.mockService, config, nil, s.mockDomainCache)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+
+	wh := s.getWorkflowHandler(s.newConfig())
+
 	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID, metrics.NoopScope(metrics.Frontend))
 	s.Nil(resp)
 	s.Error(err)
 }
 
 func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_ArchivalURIEmpty() {
-	config := s.newConfig()
 	domainEntry := cache.NewLocalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: "test-domain"},
 		&persistence.DomainConfig{
-			HistoryArchivalStatus:    shared.ArchivalStatusDisabled,
+			HistoryArchivalStatus:    types.ArchivalStatusDisabled,
 			HistoryArchivalURI:       "",
-			VisibilityArchivalStatus: shared.ArchivalStatusDisabled,
+			VisibilityArchivalStatus: types.ArchivalStatusDisabled,
 			VisibilityArchivalURI:    "",
 		},
 		"",
 		nil)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(domainEntry, nil).AnyTimes()
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, nil, s.mockDomainCache)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+
+	wh := s.getWorkflowHandler(s.newConfig())
+
 	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID, metrics.NoopScope(metrics.Frontend))
 	s.Nil(resp)
 	s.Error(err)
 }
 
 func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_InvalidURI() {
-	config := s.newConfig()
 	domainEntry := cache.NewLocalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: "test-domain"},
 		&persistence.DomainConfig{
-			HistoryArchivalStatus:    shared.ArchivalStatusEnabled,
+			HistoryArchivalStatus:    types.ArchivalStatusEnabled,
 			HistoryArchivalURI:       "uri without scheme",
-			VisibilityArchivalStatus: shared.ArchivalStatusDisabled,
+			VisibilityArchivalStatus: types.ArchivalStatusDisabled,
 			VisibilityArchivalURI:    "",
 		},
 		"",
 		nil)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(domainEntry, nil).AnyTimes()
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, nil, s.mockDomainCache)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+
+	wh := s.getWorkflowHandler(s.newConfig())
+
 	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID, metrics.NoopScope(metrics.Frontend))
 	s.Nil(resp)
 	s.Error(err)
 }
 
 func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetFirstPage() {
-	config := s.newConfig()
 	domainEntry := cache.NewLocalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: "test-domain"},
 		&persistence.DomainConfig{
-			HistoryArchivalStatus:    shared.ArchivalStatusEnabled,
+			HistoryArchivalStatus:    types.ArchivalStatusEnabled,
 			HistoryArchivalURI:       testHistoryArchivalURI,
-			VisibilityArchivalStatus: shared.ArchivalStatusDisabled,
+			VisibilityArchivalStatus: types.ArchivalStatusDisabled,
 			VisibilityArchivalURI:    "",
 		},
 		"",
 		nil)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(domainEntry, nil).AnyTimes()
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	mHistoryArchiver := &archiver.HistoryArchiverMock{}
+
 	nextPageToken := []byte{'1', '2', '3'}
-	historyBatch1 := &gen.History{
-		Events: []*gen.HistoryEvent{
-			&gen.HistoryEvent{EventId: common.Int64Ptr(1)},
-			&gen.HistoryEvent{EventId: common.Int64Ptr(2)},
+	historyBatch1 := &types.History{
+		Events: []*types.HistoryEvent{
+			{EventID: 1},
+			{EventID: 2},
 		},
 	}
-	historyBatch2 := &gen.History{
-		Events: []*gen.HistoryEvent{
-			&gen.HistoryEvent{EventId: common.Int64Ptr(3)},
-			&gen.HistoryEvent{EventId: common.Int64Ptr(4)},
-			&gen.HistoryEvent{EventId: common.Int64Ptr(5)},
+	historyBatch2 := &types.History{
+		Events: []*types.HistoryEvent{
+			{EventID: 3},
+			{EventID: 4},
+			{EventID: 5},
 		},
 	}
-	history := &gen.History{}
+	history := &types.History{}
 	history.Events = append(history.Events, historyBatch1.Events...)
 	history.Events = append(history.Events, historyBatch2.Events...)
-	mHistoryArchiver.On("Get", mock.Anything, mock.Anything, mock.Anything).Return(&archiver.GetHistoryResponse{
+	s.mockHistoryArchiver.On("Get", mock.Anything, mock.Anything, mock.Anything).Return(&archiver.GetHistoryResponse{
 		NextPageToken:  nextPageToken,
-		HistoryBatches: []*gen.History{historyBatch1, historyBatch2},
+		HistoryBatches: []*types.History{historyBatch1, historyBatch2},
 	}, nil)
-	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(mHistoryArchiver, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, nil, s.mockDomainCache)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(s.mockHistoryArchiver, nil)
+
+	wh := s.getWorkflowHandler(s.newConfig())
+
 	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID, metrics.NoopScope(metrics.Frontend))
 	s.NoError(err)
 	s.NotNil(resp)
@@ -1147,16 +1000,15 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetFirstPage() {
 }
 
 func (s *workflowHandlerSuite) TestGetHistory() {
-	config := s.newConfig()
 	domainID := uuid.New()
 	firstEventID := int64(100)
 	nextEventID := int64(101)
 	branchToken := []byte{1}
-	we := gen.WorkflowExecution{
-		WorkflowId: common.StringPtr("wid"),
-		RunId:      common.StringPtr("rid"),
+	we := types.WorkflowExecution{
+		WorkflowID: "wid",
+		RunID:      "rid",
 	}
-	shardID := common.WorkflowIDToHistoryShard(*we.WorkflowId, numHistoryShards)
+	shardID := common.WorkflowIDToHistoryShard(we.WorkflowID, numHistoryShards)
 	req := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
@@ -1165,137 +1017,115 @@ func (s *workflowHandlerSuite) TestGetHistory() {
 		NextPageToken: []byte{},
 		ShardID:       common.IntPtr(shardID),
 	}
-	s.mockHistoryV2Mgr.On("ReadHistoryBranch", req).Return(&persistence.ReadHistoryBranchResponse{
-		HistoryEvents: []*workflow.HistoryEvent{
+	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, req).Return(&persistence.ReadHistoryBranchResponse{
+		HistoryEvents: []*types.HistoryEvent{
 			{
-				EventId: common.Int64Ptr(int64(1)),
+				EventID: int64(100),
 			},
 		},
 		NextPageToken:    []byte{},
 		Size:             1,
 		LastFirstEventID: nextEventID,
 	}, nil).Once()
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	mMetadataManager := &mocks.MetadataManager{}
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	scope := wh.metricsClient.Scope(0)
-	history, token, err := wh.getHistory(scope, domainID, we, firstEventID, nextEventID, 0, []byte{}, nil, branchToken)
+
+	wh := s.getWorkflowHandler(s.newConfig())
+
+	scope := metrics.NoopScope(metrics.Frontend)
+	history, token, err := wh.getHistory(context.Background(), scope, domainID, we, firstEventID, nextEventID, 0, []byte{}, nil, branchToken)
+	s.NoError(err)
 	s.NotNil(history)
 	s.Equal([]byte{}, token)
-	s.NoError(err)
 }
 
 func (s *workflowHandlerSuite) TestListArchivedVisibility_Failure_InvalidRequest() {
-	config := s.newConfig()
-	mMetadataManager := &mocks.MetadataManager{}
-	wh := s.getWorkflowHandlerWithParams(s.mockService, config, mMetadataManager, nil)
-	wh.startWG.Done()
-	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), &workflow.ListArchivedWorkflowExecutionsRequest{})
+	wh := s.getWorkflowHandler(s.newConfig())
+
+	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), &types.ListArchivedWorkflowExecutionsRequest{})
 	s.Nil(resp)
 	s.Error(err)
 }
 
 func (s *workflowHandlerSuite) TestListArchivedVisibility_Failure_ClusterNotConfiguredForArchival() {
-	config := s.newConfig()
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, &mocks.MetadataManager{}, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+
+	wh := s.getWorkflowHandler(s.newConfig())
+
 	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), listArchivedWorkflowExecutionsTestRequest())
 	s.Nil(resp)
 	s.Error(err)
 }
 
 func (s *workflowHandlerSuite) TestListArchivedVisibility_Failure_DomainCacheEntryError() {
-	config := s.newConfig()
-	mMetadataManager := &mocks.MetadataManager{}
-	mMetadataManager.On("GetDomain", mock.Anything).Return(nil, errors.New("error getting domain")).Once()
+	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(nil, errors.New("error getting domain"))
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "random URI"))
-	wh := s.getWorkflowHandlerWithParams(s.mockService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+
+	wh := s.getWorkflowHandler(s.newConfig())
+
 	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), listArchivedWorkflowExecutionsTestRequest())
 	s.Nil(resp)
 	s.Error(err)
 }
 
 func (s *workflowHandlerSuite) TestListArchivedVisibility_Failure_DomainNotConfiguredForArchival() {
-	config := s.newConfig()
-	mMetadataManager := &mocks.MetadataManager{}
-	getDomainResp := persistenceGetDomainResponse(
-		&domain.ArchivalState{Status: shared.ArchivalStatusEnabled, URI: "uri without scheme"},
-		&domain.ArchivalState{Status: shared.ArchivalStatusDisabled, URI: "uri without scheme"},
-	)
-	mMetadataManager.On("GetDomain", mock.Anything).Return(getDomainResp, nil)
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewLocalDomainCacheEntryForTest(
+		nil,
+		&persistence.DomainConfig{
+			VisibilityArchivalStatus: types.ArchivalStatusDisabled,
+		},
+		"",
+		nil,
+	), nil)
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "random URI"))
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+
+	wh := s.getWorkflowHandler(s.newConfig())
+
 	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), listArchivedWorkflowExecutionsTestRequest())
 	s.Nil(resp)
-	fmt.Println(err)
 	s.Error(err)
 }
 
 func (s *workflowHandlerSuite) TestListArchivedVisibility_Failure_InvalidURI() {
-	config := s.newConfig()
-	mMetadataManager := &mocks.MetadataManager{}
-	getDomainResp := persistenceGetDomainResponse(
-		&domain.ArchivalState{Status: shared.ArchivalStatusEnabled, URI: "uri without scheme"},
-		&domain.ArchivalState{Status: shared.ArchivalStatusEnabled, URI: "uri without scheme"},
-	)
-	mMetadataManager.On("GetDomain", mock.Anything).Return(getDomainResp, nil)
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewLocalDomainCacheEntryForTest(
+		&persistence.DomainInfo{Name: "test-domain"},
+		&persistence.DomainConfig{
+			VisibilityArchivalStatus: types.ArchivalStatusDisabled,
+			VisibilityArchivalURI:    "uri without scheme",
+		},
+		"",
+		nil,
+	), nil)
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "random URI"))
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, nil)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+
+	wh := s.getWorkflowHandler(s.newConfig())
+
 	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), listArchivedWorkflowExecutionsTestRequest())
 	s.Nil(resp)
 	s.Error(err)
 }
 
 func (s *workflowHandlerSuite) TestListArchivedVisibility_Success() {
-	config := s.newConfig()
-	domainEntry := cache.NewLocalDomainCacheEntryForTest(
+	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewLocalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: "test-domain"},
 		&persistence.DomainConfig{
-			HistoryArchivalStatus:    shared.ArchivalStatusEnabled,
-			HistoryArchivalURI:       testHistoryArchivalURI,
-			VisibilityArchivalStatus: shared.ArchivalStatusEnabled,
+			VisibilityArchivalStatus: types.ArchivalStatusEnabled,
 			VisibilityArchivalURI:    testVisibilityArchivalURI,
 		},
 		"",
-		nil)
-	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(domainEntry, nil).AnyTimes()
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+		nil,
+	), nil).AnyTimes()
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "random URI"))
-	mVisibilityArchiver := &archiver.VisibilityArchiverMock{}
-	mVisibilityArchiver.On("Query", mock.Anything, mock.Anything, mock.Anything).Return(&archiver.QueryVisibilityResponse{}, nil)
-	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(mVisibilityArchiver, nil)
-	mService := cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.mockArchivalMetadata, s.mockArchiverProvider, nil)
-	wh := s.getWorkflowHandlerWithParams(mService, config, nil, s.mockDomainCache)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+	s.mockVisibilityArchiver.On("Query", mock.Anything, mock.Anything, mock.Anything).Return(&archiver.QueryVisibilityResponse{}, nil)
+	s.mockArchiverProvider.On("GetVisibilityArchiver", mock.Anything, mock.Anything).Return(s.mockVisibilityArchiver, nil)
+
+	wh := s.getWorkflowHandler(s.newConfig())
+
 	resp, err := wh.ListArchivedWorkflowExecutions(context.Background(), listArchivedWorkflowExecutionsTestRequest())
 	s.NotNil(resp)
-	fmt.Println(err)
 	s.NoError(err)
 }
 
 func (s *workflowHandlerSuite) TestGetSearchAttributes() {
-	wh := s.getWorkflowHandlerHelper()
+	wh := s.getWorkflowHandler(s.newConfig())
 
 	ctx := context.Background()
 	resp, err := wh.GetSearchAttributes(ctx)
@@ -1303,87 +1133,165 @@ func (s *workflowHandlerSuite) TestGetSearchAttributes() {
 	s.NotNil(resp)
 }
 
+func (s *workflowHandlerSuite) TestGetWorkflowExecutionHistory__Success__RawHistoryEnabledTransientDecisionEmitted() {
+	var nextEventID int64 = 5
+	s.getWorkflowExecutionHistory(5, &types.TransientDecisionInfo{
+		StartedEvent:   &types.HistoryEvent{EventID: nextEventID + 1},
+		ScheduledEvent: &types.HistoryEvent{EventID: nextEventID},
+	}, []*types.HistoryEvent{{}, {}, {}})
+}
+
+func (s *workflowHandlerSuite) TestGetWorkflowExecutionHistory__Success__RawHistoryEnabledNoTransientDecisionEmitted() {
+	var nextEventID int64 = 5
+	s.getWorkflowExecutionHistory(5, &types.TransientDecisionInfo{
+		StartedEvent:   &types.HistoryEvent{EventID: nextEventID + 1},
+		ScheduledEvent: &types.HistoryEvent{EventID: nextEventID},
+	}, []*types.HistoryEvent{{}, {}, {}})
+}
+
+func (s *workflowHandlerSuite) getWorkflowExecutionHistory(nextEventID int64, transientDecision *types.TransientDecisionInfo, historyEvents []*types.HistoryEvent) {
+	wh := s.getWorkflowHandler(
+		NewConfig(
+			dc.NewCollection(
+				dc.NewNopClient(),
+				s.mockResource.GetLogger()),
+			numHistoryShards,
+			false,
+			true,
+		),
+	)
+	ctx := context.Background()
+	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
+	s.mockVersionChecker.EXPECT().SupportsRawHistoryQuery(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	blob, _ := wh.GetPayloadSerializer().SerializeBatchEvents(historyEvents, common.EncodingTypeThriftRW)
+	s.mockHistoryV2Mgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadRawHistoryBranchResponse{
+		HistoryEventBlobs: []*persistence.DataBlob{blob},
+		NextPageToken:     []byte{},
+	}, nil).Once()
+	token, _ := json.Marshal(&getHistoryContinuationToken{
+		FirstEventID:      1,
+		NextEventID:       nextEventID,
+		RunID:             testRunID,
+		TransientDecision: transientDecision,
+	})
+	resp, err := wh.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
+		Domain: s.testDomain,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: testWorkflowID,
+			RunID:      testRunID,
+		},
+		SkipArchival:  true,
+		NextPageToken: token,
+	})
+	s.NoError(err)
+	s.NotNil(resp)
+	s.NotNil(resp.RawHistory)
+	s.Equal(2, len(resp.RawHistory))
+
+	events := deserializeBlobDataToHistoryEvents(wh, resp.RawHistory)
+	s.NotNil(events)
+	if transientDecision != nil {
+		s.Equal(len(historyEvents)+2, len(events))
+	} else {
+		s.Equal(len(historyEvents), len(events))
+	}
+}
+
+func deserializeBlobDataToHistoryEvents(wh *WorkflowHandler, dataBlobs []*types.DataBlob) []*types.HistoryEvent {
+	var historyEvents []*types.HistoryEvent
+	for _, batch := range dataBlobs {
+		events, err := wh.GetPayloadSerializer().DeserializeBatchEvents(&persistence.DataBlob{Data: batch.Data, Encoding: common.EncodingTypeThriftRW})
+		if err != nil {
+			return nil
+		}
+		historyEvents = append(historyEvents, events...)
+	}
+	return historyEvents
+}
+
 func (s *workflowHandlerSuite) TestListWorkflowExecutions() {
-	wh := s.getWorkflowHandlerHelper()
+	config := s.newConfig()
+	wh := s.getWorkflowHandler(config)
 
 	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
-	s.mockVisibilityMgr.On("ListWorkflowExecutions", mock.Anything).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Once()
+	s.mockVisibilityMgr.On("ListWorkflowExecutions", mock.Anything, mock.Anything).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Once()
 
-	listRequest := &shared.ListWorkflowExecutionsRequest{
-		Domain:   common.StringPtr(s.testDomain),
-		PageSize: common.Int32Ptr(int32(s.config.ESIndexMaxResultWindow())),
+	listRequest := &types.ListWorkflowExecutionsRequest{
+		Domain:   s.testDomain,
+		PageSize: int32(config.ESIndexMaxResultWindow()),
 	}
 	ctx := context.Background()
 
 	query := "WorkflowID = 'wid'"
-	listRequest.Query = common.StringPtr(query)
+	listRequest.Query = query
 	_, err := wh.ListWorkflowExecutions(ctx, listRequest)
 	s.NoError(err)
 	s.Equal(query, listRequest.GetQuery())
 
 	query = "InvalidKey = 'a'"
-	listRequest.Query = common.StringPtr(query)
+	listRequest.Query = query
 	_, err = wh.ListWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 
-	listRequest.PageSize = common.Int32Ptr(int32(s.config.ESIndexMaxResultWindow() + 1))
+	listRequest.PageSize = int32(config.ESIndexMaxResultWindow() + 1)
 	_, err = wh.ListWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 }
 
 func (s *workflowHandlerSuite) TestScantWorkflowExecutions() {
-	wh := s.getWorkflowHandlerHelper()
+	config := s.newConfig()
+	wh := s.getWorkflowHandler(config)
 
 	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
-	s.mockVisibilityMgr.On("ScanWorkflowExecutions", mock.Anything).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Once()
+	s.mockVisibilityMgr.On("ScanWorkflowExecutions", mock.Anything, mock.Anything).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Once()
 
-	listRequest := &shared.ListWorkflowExecutionsRequest{
-		Domain:   common.StringPtr(s.testDomain),
-		PageSize: common.Int32Ptr(int32(s.config.ESIndexMaxResultWindow())),
+	listRequest := &types.ListWorkflowExecutionsRequest{
+		Domain:   s.testDomain,
+		PageSize: int32(config.ESIndexMaxResultWindow()),
 	}
 	ctx := context.Background()
 
 	query := "WorkflowID = 'wid'"
-	listRequest.Query = common.StringPtr(query)
+	listRequest.Query = query
 	_, err := wh.ScanWorkflowExecutions(ctx, listRequest)
 	s.NoError(err)
 	s.Equal(query, listRequest.GetQuery())
 
 	query = "InvalidKey = 'a'"
-	listRequest.Query = common.StringPtr(query)
+	listRequest.Query = query
 	_, err = wh.ScanWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 
-	listRequest.PageSize = common.Int32Ptr(int32(s.config.ESIndexMaxResultWindow() + 1))
+	listRequest.PageSize = int32(config.ESIndexMaxResultWindow() + 1)
 	_, err = wh.ListWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 }
 
 func (s *workflowHandlerSuite) TestCountWorkflowExecutions() {
-	wh := s.getWorkflowHandlerHelper()
+	wh := s.getWorkflowHandler(s.newConfig())
 
 	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
-	s.mockVisibilityMgr.On("CountWorkflowExecutions", mock.Anything).Return(&persistence.CountWorkflowExecutionsResponse{}, nil).Once()
+	s.mockVisibilityMgr.On("CountWorkflowExecutions", mock.Anything, mock.Anything).Return(&persistence.CountWorkflowExecutionsResponse{}, nil).Once()
 
-	countRequest := &shared.CountWorkflowExecutionsRequest{
-		Domain: common.StringPtr(s.testDomain),
+	countRequest := &types.CountWorkflowExecutionsRequest{
+		Domain: s.testDomain,
 	}
 	ctx := context.Background()
 
 	query := "WorkflowID = 'wid'"
-	countRequest.Query = common.StringPtr(query)
+	countRequest.Query = query
 	_, err := wh.CountWorkflowExecutions(ctx, countRequest)
 	s.NoError(err)
 	s.Equal(query, countRequest.GetQuery())
 
 	query = "InvalidKey = 'a'"
-	countRequest.Query = common.StringPtr(query)
+	countRequest.Query = query
 	_, err = wh.CountWorkflowExecutions(ctx, countRequest)
 	s.NotNil(err)
 }
 
 func (s *workflowHandlerSuite) TestConvertIndexedKeyToThrift() {
-	wh := s.getWorkflowHandlerHelper()
+	wh := s.getWorkflowHandler(s.newConfig())
 	m := map[string]interface{}{
 		"key1":  float64(0),
 		"key2":  float64(1),
@@ -1397,32 +1305,32 @@ func (s *workflowHandlerSuite) TestConvertIndexedKeyToThrift() {
 		"key4i": 3,
 		"key5i": 4,
 		"key6i": 5,
-		"key1t": gen.IndexedValueTypeString,
-		"key2t": gen.IndexedValueTypeKeyword,
-		"key3t": gen.IndexedValueTypeInt,
-		"key4t": gen.IndexedValueTypeDouble,
-		"key5t": gen.IndexedValueTypeBool,
-		"key6t": gen.IndexedValueTypeDatetime,
+		"key1t": shared.IndexedValueTypeString,
+		"key2t": shared.IndexedValueTypeKeyword,
+		"key3t": shared.IndexedValueTypeInt,
+		"key4t": shared.IndexedValueTypeDouble,
+		"key5t": shared.IndexedValueTypeBool,
+		"key6t": shared.IndexedValueTypeDatetime,
 	}
 	result := wh.convertIndexedKeyToThrift(m)
-	s.Equal(gen.IndexedValueTypeString, result["key1"])
-	s.Equal(gen.IndexedValueTypeKeyword, result["key2"])
-	s.Equal(gen.IndexedValueTypeInt, result["key3"])
-	s.Equal(gen.IndexedValueTypeDouble, result["key4"])
-	s.Equal(gen.IndexedValueTypeBool, result["key5"])
-	s.Equal(gen.IndexedValueTypeDatetime, result["key6"])
-	s.Equal(gen.IndexedValueTypeString, result["key1i"])
-	s.Equal(gen.IndexedValueTypeKeyword, result["key2i"])
-	s.Equal(gen.IndexedValueTypeInt, result["key3i"])
-	s.Equal(gen.IndexedValueTypeDouble, result["key4i"])
-	s.Equal(gen.IndexedValueTypeBool, result["key5i"])
-	s.Equal(gen.IndexedValueTypeDatetime, result["key6i"])
-	s.Equal(gen.IndexedValueTypeString, result["key1t"])
-	s.Equal(gen.IndexedValueTypeKeyword, result["key2t"])
-	s.Equal(gen.IndexedValueTypeInt, result["key3t"])
-	s.Equal(gen.IndexedValueTypeDouble, result["key4t"])
-	s.Equal(gen.IndexedValueTypeBool, result["key5t"])
-	s.Equal(gen.IndexedValueTypeDatetime, result["key6t"])
+	s.Equal(types.IndexedValueTypeString, result["key1"])
+	s.Equal(types.IndexedValueTypeKeyword, result["key2"])
+	s.Equal(types.IndexedValueTypeInt, result["key3"])
+	s.Equal(types.IndexedValueTypeDouble, result["key4"])
+	s.Equal(types.IndexedValueTypeBool, result["key5"])
+	s.Equal(types.IndexedValueTypeDatetime, result["key6"])
+	s.Equal(types.IndexedValueTypeString, result["key1i"])
+	s.Equal(types.IndexedValueTypeKeyword, result["key2i"])
+	s.Equal(types.IndexedValueTypeInt, result["key3i"])
+	s.Equal(types.IndexedValueTypeDouble, result["key4i"])
+	s.Equal(types.IndexedValueTypeBool, result["key5i"])
+	s.Equal(types.IndexedValueTypeDatetime, result["key6i"])
+	s.Equal(types.IndexedValueTypeString, result["key1t"])
+	s.Equal(types.IndexedValueTypeKeyword, result["key2t"])
+	s.Equal(types.IndexedValueTypeInt, result["key3t"])
+	s.Equal(types.IndexedValueTypeDouble, result["key4t"])
+	s.Equal(types.IndexedValueTypeBool, result["key5t"])
+	s.Equal(types.IndexedValueTypeDatetime, result["key6t"])
 	s.Panics(func() {
 		wh.convertIndexedKeyToThrift(map[string]interface{}{
 			"invalidType": "unknown",
@@ -1430,24 +1338,100 @@ func (s *workflowHandlerSuite) TestConvertIndexedKeyToThrift() {
 	})
 }
 
+func (s *workflowHandlerSuite) TestVerifyHistoryIsComplete() {
+	events := make([]*types.HistoryEvent, 50)
+	for i := 0; i < len(events); i++ {
+		events[i] = &types.HistoryEvent{EventID: int64(i + 1)}
+	}
+	var eventsWithHoles []*types.HistoryEvent
+	eventsWithHoles = append(eventsWithHoles, events[9:12]...)
+	eventsWithHoles = append(eventsWithHoles, events[20:31]...)
+
+	testCases := []struct {
+		events       []*types.HistoryEvent
+		firstEventID int64
+		lastEventID  int64
+		isFirstPage  bool
+		isLastPage   bool
+		pageSize     int
+		isResultErr  bool
+	}{
+		{events[:1], 1, 1, true, true, 1000, false},
+		{events[:5], 1, 5, true, true, 1000, false},
+		{events[9:31], 10, 31, true, true, 1000, false},
+		{events[9:29], 10, 50, true, false, 20, false},
+		{events[9:30], 10, 50, true, false, 20, false},
+
+		{events[9:29], 1, 50, false, false, 20, false},
+		{events[9:29], 1, 29, false, true, 20, false},
+
+		{eventsWithHoles, 1, 50, false, false, 22, true},
+		{eventsWithHoles, 10, 50, true, false, 22, true},
+		{eventsWithHoles, 1, 31, false, true, 22, true},
+		{eventsWithHoles, 10, 31, true, true, 1000, true},
+
+		{events[9:31], 9, 31, true, true, 1000, true},
+		{events[9:31], 9, 50, true, false, 22, true},
+		{events[9:31], 11, 31, true, true, 1000, true},
+		{events[9:31], 11, 50, true, false, 22, true},
+
+		{events[9:31], 10, 30, true, true, 1000, true},
+		{events[9:31], 1, 30, false, true, 22, true},
+		{events[9:31], 10, 32, true, true, 1000, true},
+		{events[9:31], 1, 32, false, true, 22, true},
+	}
+
+	for i, tc := range testCases {
+		err := verifyHistoryIsComplete(tc.events, tc.firstEventID, tc.lastEventID, tc.isFirstPage, tc.isLastPage, tc.pageSize)
+		if tc.isResultErr {
+			s.Error(err, "testcase %v failed", i)
+		} else {
+			s.NoError(err, "testcase %v failed", i)
+		}
+	}
+}
+
+func (s *workflowHandlerSuite) TestContextMetricsTags() {
+	wh := s.getWorkflowHandler(s.newConfig())
+
+	tag := metrics.ThriftTransportTag()
+	ctx := metrics.TagContext(context.Background(), tag)
+	wh.CountWorkflowExecutions(ctx, nil)
+
+	snapshot := s.mockResource.MetricsScope.Snapshot()
+	for _, counter := range snapshot.Counters() {
+		if counter.Name() == "test.cadence_requests" {
+			s.Equal(tag.Value(), counter.Tags()[tag.Key()])
+			return
+		}
+	}
+	s.Fail("counter not found")
+}
+
 func (s *workflowHandlerSuite) newConfig() *Config {
-	return NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger), numHistoryShards, false)
+	return NewConfig(
+		dc.NewCollection(
+			dc.NewNopClient(),
+			s.mockResource.GetLogger(),
+		),
+		numHistoryShards,
+		false,
+		false,
+	)
 }
 
 func updateRequest(
 	historyArchivalURI *string,
-	historyArchivalStatus *shared.ArchivalStatus,
+	historyArchivalStatus *types.ArchivalStatus,
 	visibilityArchivalURI *string,
-	visibilityArchivalStatus *shared.ArchivalStatus,
-) *shared.UpdateDomainRequest {
-	return &shared.UpdateDomainRequest{
-		Name: common.StringPtr("test-name"),
-		Configuration: &shared.DomainConfiguration{
-			HistoryArchivalStatus:    historyArchivalStatus,
-			HistoryArchivalURI:       historyArchivalURI,
-			VisibilityArchivalStatus: visibilityArchivalStatus,
-			VisibilityArchivalURI:    visibilityArchivalURI,
-		},
+	visibilityArchivalStatus *types.ArchivalStatus,
+) *types.UpdateDomainRequest {
+	return &types.UpdateDomainRequest{
+		Name:                     "test-name",
+		HistoryArchivalStatus:    historyArchivalStatus,
+		HistoryArchivalURI:       historyArchivalURI,
+		VisibilityArchivalStatus: visibilityArchivalStatus,
+		VisibilityArchivalURI:    visibilityArchivalURI,
 	}
 }
 
@@ -1486,47 +1470,47 @@ func persistenceGetDomainResponse(historyArchivalState, visibilityArchivalState 
 }
 
 func registerDomainRequest(
-	historyArchivalStatus *shared.ArchivalStatus,
-	historyArchivalURI *string,
-	visibilityArchivalStatus *shared.ArchivalStatus,
-	visibilityArchivalURI *string,
-) *shared.RegisterDomainRequest {
-	return &shared.RegisterDomainRequest{
-		Name:                                   common.StringPtr("test-domain"),
-		Description:                            common.StringPtr("test-description"),
-		OwnerEmail:                             common.StringPtr("test-owner-email"),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(10),
+	historyArchivalStatus *types.ArchivalStatus,
+	historyArchivalURI string,
+	visibilityArchivalStatus *types.ArchivalStatus,
+	visibilityArchivalURI string,
+) *types.RegisterDomainRequest {
+	return &types.RegisterDomainRequest{
+		Name:                                   "test-domain",
+		Description:                            "test-description",
+		OwnerEmail:                             "test-owner-email",
+		WorkflowExecutionRetentionPeriodInDays: 10,
 		EmitMetric:                             common.BoolPtr(true),
-		Clusters: []*shared.ClusterReplicationConfiguration{
+		Clusters: []*types.ClusterReplicationConfiguration{
 			{
-				ClusterName: common.StringPtr(cluster.TestCurrentClusterName),
+				ClusterName: cluster.TestCurrentClusterName,
 			},
 		},
-		ActiveClusterName:        common.StringPtr(cluster.TestCurrentClusterName),
+		ActiveClusterName:        cluster.TestCurrentClusterName,
 		Data:                     make(map[string]string),
-		SecurityToken:            common.StringPtr("token"),
+		SecurityToken:            "token",
 		HistoryArchivalStatus:    historyArchivalStatus,
 		HistoryArchivalURI:       historyArchivalURI,
 		VisibilityArchivalStatus: visibilityArchivalStatus,
 		VisibilityArchivalURI:    visibilityArchivalURI,
-		IsGlobalDomain:           common.BoolPtr(false),
+		IsGlobalDomain:           false,
 	}
 }
 
-func getHistoryRequest(nextPageToken []byte) *shared.GetWorkflowExecutionHistoryRequest {
-	return &shared.GetWorkflowExecutionHistoryRequest{
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(testWorkflowID),
-			RunId:      common.StringPtr(testRunID),
+func getHistoryRequest(nextPageToken []byte) *types.GetWorkflowExecutionHistoryRequest {
+	return &types.GetWorkflowExecutionHistoryRequest{
+		Execution: &types.WorkflowExecution{
+			WorkflowID: testWorkflowID,
+			RunID:      testRunID,
 		},
 		NextPageToken: nextPageToken,
 	}
 }
 
-func listArchivedWorkflowExecutionsTestRequest() *shared.ListArchivedWorkflowExecutionsRequest {
-	return &shared.ListArchivedWorkflowExecutionsRequest{
-		Domain:   common.StringPtr("some random domain name"),
-		PageSize: common.Int32Ptr(10),
-		Query:    common.StringPtr("some random query string"),
+func listArchivedWorkflowExecutionsTestRequest() *types.ListArchivedWorkflowExecutionsRequest {
+	return &types.ListArchivedWorkflowExecutionsRequest{
+		Domain:   "some random domain name",
+		PageSize: 10,
+		Query:    "some random query string",
 	}
 }

@@ -87,6 +87,34 @@ func (s *RetrySuite) TestRetryFailed() {
 	s.Error(err)
 }
 
+func (s *RetrySuite) TestRetryFailed_ReturnPreviousError() {
+	i := 0
+
+	the5thError := fmt.Errorf("this is the error of the 5th attempt(4th retry attempt)")
+	op := func() error {
+		i++
+		if i == 5 {
+			return the5thError
+		}
+		if i == 7 {
+			return nil
+		}
+
+		return &someError{}
+	}
+
+	policy := NewExponentialRetryPolicy(1 * time.Millisecond)
+	policy.SetMaximumInterval(5 * time.Millisecond)
+	// Note that this is retry attempts(maybe it should be renamed to SetMaximumRetryAttempts),
+	// so the total attempts is 5+1=6
+	policy.SetMaximumAttempts(5)
+
+	err := Retry(op, policy, nil)
+	s.Error(err)
+	s.Equal(6, i)
+	s.Equal(the5thError, err)
+}
+
 func (s *RetrySuite) TestIsRetryableSuccess() {
 	i := 0
 	op := func() error {

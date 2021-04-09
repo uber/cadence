@@ -22,12 +22,10 @@ package archiver
 
 import (
 	"bytes"
-	"context"
-	"encoding/gob"
+	"encoding/json"
 	"time"
 
 	"github.com/dgryski/go-farm"
-	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 
 	"github.com/uber/cadence/common/log"
@@ -41,7 +39,9 @@ func MaxArchivalIterationTimeout() time.Duration {
 
 func hash(i interface{}) uint64 {
 	var b bytes.Buffer
-	gob.NewEncoder(&b).Encode(i)
+	// please make sure encoder is deterministic (especially when encoding map objects)
+	// use json not gob here as json will sort map keys, while gob is non-deterministic
+	json.NewEncoder(&b).Encode(i) //nolint:errcheck
 	return farm.Fingerprint64(b.Bytes())
 }
 
@@ -100,22 +100,4 @@ func convertSearchAttributesToString(searchAttr map[string][]byte) map[string]st
 		searchAttrStr[k] = string(v)
 	}
 	return searchAttrStr
-}
-
-func contextExpired(ctx context.Context) bool {
-	select {
-	case <-ctx.Done():
-		return true
-	default:
-		return false
-	}
-}
-
-func errorDetails(err error) string {
-	var details string
-	if _, ok := err.(*cadence.CustomError); !ok {
-		return details
-	}
-	err.(*cadence.CustomError).Details(&details)
-	return details
 }

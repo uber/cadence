@@ -45,9 +45,8 @@ var (
 	errDeleteNonRetriable            = errors.New("delete non-retriable error")
 	errArchiveVisibilityNonRetriable = errors.New("archive visibility non-retriable error")
 
-	uploadHistoryActivityNonRetryableErrors     = []string{"cadenceInternal:Panic", errUploadNonRetriable.Error()}
-	deleteHistoryActivityNonRetryableErrors     = []string{"cadenceInternal:Panic", errDeleteNonRetriable.Error()}
-	archiveVisibitliyActivityNonRetryableErrors = []string{"cadenceInternal:Panic", errArchiveVisibilityNonRetriable.Error()}
+	uploadHistoryActivityNonRetryableErrors = []string{"cadenceInternal:Panic", errUploadNonRetriable.Error()}
+	deleteHistoryActivityNonRetryableErrors = []string{"cadenceInternal:Panic", errDeleteNonRetriable.Error()}
 )
 
 func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err error) {
@@ -108,7 +107,7 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			err = cadence.NewCustomError(err.Error())
 		}
 	}()
-	err = container.HistoryV2Manager.DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
+	err = container.HistoryV2Manager.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
 		BranchToken: request.BranchToken,
 		ShardID:     common.IntPtr(request.ShardID),
 	})
@@ -117,7 +116,7 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	}
 	logger := tagLoggerWithHistoryRequest(tagLoggerWithActivityInfo(container.Logger, activity.GetInfo(ctx)), &request)
 	logger.Error("failed to delete history events", tag.Error(err))
-	if !common.IsPersistenceTransientError(err) {
+	if !persistence.IsTransientError(err) {
 		return errDeleteNonRetriable
 	}
 	return err

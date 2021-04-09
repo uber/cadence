@@ -21,76 +21,48 @@
 package cassandra
 
 import (
+	"context"
 	"fmt"
-	"time"
 
-	"github.com/gocql/gocql"
-
-	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/cassandra"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
-	firstMessageID = 0
-)
-
-const (
-	templateEnqueueMessageQuery      = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(?, ?, ?) IF NOT EXISTS`
-	templateGetLastMessageIDQuery    = `SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1`
-	templateGetMessagesQuery         = `SELECT message_id, message_payload FROM queue WHERE queue_type = ? and message_id > ? LIMIT ?`
-	templateDeleteMessagesQuery      = `DELETE FROM queue WHERE queue_type = ? and message_id < ?`
-	templateGetQueueMetadataQuery    = `SELECT cluster_ack_level, version FROM queue_metadata WHERE queue_type = ?`
-	templateInsertQueueMetadataQuery = `INSERT INTO queue_metadata (queue_type, cluster_ack_level, version) VALUES(?, ?, ?) IF NOT EXISTS`
-	templateUpdateQueueMetadataQuery = `UPDATE queue_metadata SET cluster_ack_level = ?, version = ? WHERE queue_type = ? IF version = ?`
+	emptyMessageID = -1
 )
 
 type (
-	cassandraQueue struct {
-		queueType common.QueueType
+	nosqlQueue struct {
+		queueType persistence.QueueType
 		logger    log.Logger
-		cassandraStore
-	}
-
-	// Note that this struct is defined in the cassandra package not the persistence interface
-	// because we only have ack levels in metadata (version is a cassandra only concept because
-	// of the CAS operation). Consider moving this to persistence interface if we end up having
-	// more shared fields.
-	queueMetadata struct {
-		clusterAckLevels map[string]int
-		// version is used for CAS operation.
-		version int
+		db        nosqlplugin.DB
 	}
 )
+
+func (q *nosqlQueue) Close() {
+	q.db.Close()
+}
 
 func newQueue(
 	cfg config.Cassandra,
 	logger log.Logger,
-	queueType common.QueueType,
+	queueType persistence.QueueType,
 ) (persistence.Queue, error) {
-	cluster := cassandra.NewCassandraCluster(cfg)
-	cluster.ProtoVersion = cassandraProtoVersion
-	cluster.Consistency = gocql.LocalQuorum
-	cluster.SerialConsistency = gocql.LocalSerial
-	cluster.Timeout = defaultSessionTimeout
-
-	session, err := cluster.CreateSession()
+	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
+	db, err := cassandra.NewCassandraDB(cfg, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	retryPolicy := backoff.NewExponentialRetryPolicy(100 * time.Millisecond)
-	retryPolicy.SetBackoffCoefficient(1.5)
-	retryPolicy.SetMaximumAttempts(5)
-
-	queue := &cassandraQueue{
-		cassandraStore: cassandraStore{session: session, logger: logger},
-		logger:         logger,
-		queueType:      queueType,
+	queue := &nosqlQueue{
+		db:        db,
+		logger:    logger,
+		queueType: queueType,
 	}
 	if err := queue.createQueueMetadataEntryIfNotExist(); err != nil {
 		return nil, fmt.Errorf("failed to check and create queue metadata entry: %v", err)
@@ -99,224 +71,310 @@ func newQueue(
 	return queue, nil
 }
 
-func (q *cassandraQueue) createQueueMetadataEntryIfNotExist() error {
-	queueMetadata, err := q.getQueueMetadata()
+func (q *nosqlQueue) createQueueMetadataEntryIfNotExist() error {
+	queueMetadata, err := q.getQueueMetadata(context.Background(), q.queueType)
 	if err != nil {
 		return err
 	}
 
 	if queueMetadata == nil {
-		return q.insertInitialQueueMetadataRecord()
+		if err := q.insertInitialQueueMetadataRecord(context.Background(), q.queueType); err != nil {
+			return err
+		}
 	}
 
-	return nil
-}
-
-func (q *cassandraQueue) EnqueueMessage(
-	messagePayload []byte,
-) error {
-	nextMessageID, err := q.getNextMessageID()
+	dlqMetadata, err := q.getQueueMetadata(context.Background(), q.getDLQTypeFromQueueType())
 	if err != nil {
 		return err
 	}
 
-	return q.tryEnqueue(nextMessageID, messagePayload)
-}
-
-func (q *cassandraQueue) tryEnqueue(
-	messageID int,
-	messagePayload []byte,
-) error {
-	query := q.session.Query(templateEnqueueMessageQuery, q.queueType, messageID, messagePayload)
-	previous := make(map[string]interface{})
-	applied, err := query.MapScanCAS(previous)
-	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("Failed to enqueue message. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("Failed to enqueue message. Error: %v", err),
-		}
-	}
-
-	if !applied {
-		return &persistence.ConditionFailedError{Msg: fmt.Sprintf("message ID %v exists in queue", previous["message_id"])}
+	if dlqMetadata == nil {
+		return q.insertInitialQueueMetadataRecord(context.Background(), q.getDLQTypeFromQueueType())
 	}
 
 	return nil
 }
 
-func (q *cassandraQueue) getNextMessageID() (int, error) {
-	query := q.session.Query(templateGetLastMessageIDQuery, q.queueType)
-
-	result := make(map[string]interface{})
-	err := query.MapScan(result)
+func (q *nosqlQueue) EnqueueMessage(
+	ctx context.Context,
+	messagePayload []byte,
+) error {
+	lastMessageID, err := q.getLastMessageID(ctx, q.queueType)
 	if err != nil {
-		if err == gocql.ErrNotFound {
-			return firstMessageID, nil
-		} else if isThrottlingError(err) {
-			return 0, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("Failed to get last message ID for queue %v. Error: %v", q.queueType, err),
-			}
-		}
-
-		return 0, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("Failed to get last message ID for queue %v. Error: %v", q.queueType, err),
-		}
+		return err
 	}
 
-	return result["message_id"].(int) + 1, nil
+	_, err = q.tryEnqueue(ctx, q.queueType, lastMessageID+1, messagePayload)
+	return err
 }
 
-func (q *cassandraQueue) ReadMessages(
-	lastMessageID int,
+func (q *nosqlQueue) EnqueueMessageToDLQ(
+	ctx context.Context,
+	messagePayload []byte,
+) error {
+	// Use negative queue type as the dlq type
+	lastMessageID, err := q.getLastMessageID(ctx, q.getDLQTypeFromQueueType())
+	if err != nil {
+		return err
+	}
+
+	_, err = q.tryEnqueue(ctx, q.getDLQTypeFromQueueType(), lastMessageID+1, messagePayload)
+	return err
+}
+
+func (q *nosqlQueue) tryEnqueue(
+	ctx context.Context,
+	queueType persistence.QueueType,
+	messageID int64,
+	messagePayload []byte,
+) (int64, error) {
+	err := q.db.InsertIntoQueue(ctx, &nosqlplugin.QueueMessageRow{
+		QueueType: queueType,
+		ID:        messageID,
+		Payload:   messagePayload,
+	})
+	if err != nil {
+		if q.db.IsConditionFailedError(err) {
+			return emptyMessageID, &persistence.ConditionFailedError{Msg: fmt.Sprintf("message ID %v exists in queue", messageID)}
+		}
+
+		return emptyMessageID, convertCommonErrors(q.db, fmt.Sprintf("EnqueueMessage, Type: %v", queueType), err)
+	}
+
+	return messageID, nil
+}
+
+func (q *nosqlQueue) getLastMessageID(
+	ctx context.Context,
+	queueType persistence.QueueType,
+) (int64, error) {
+
+	msgID, err := q.db.SelectLastEnqueuedMessageID(ctx, queueType)
+	if err != nil {
+		if q.db.IsNotFoundError(err) {
+			return emptyMessageID, nil
+		}
+
+		return emptyMessageID, convertCommonErrors(q.db, fmt.Sprintf("GetLastMessageID, Type: %v", queueType), err)
+	}
+
+	return msgID, nil
+}
+
+func (q *nosqlQueue) ReadMessages(
+	ctx context.Context,
+	lastMessageID int64,
 	maxCount int,
-) ([]*persistence.QueueMessage, error) {
-	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
-	query := q.session.Query(templateGetMessagesQuery,
-		q.queueType,
-		lastMessageID,
-		maxCount,
-	)
-
-	iter := query.Iter()
-	if iter == nil {
-		return nil, &workflow.InternalServiceError{
-			Message: "ReadMessages operation failed. Not able to create query iterator.",
-		}
+) ([]*persistence.InternalQueueMessage, error) {
+	messages, err := q.db.SelectMessagesFrom(ctx, q.queueType, lastMessageID, maxCount)
+	if err != nil {
+		return nil, convertCommonErrors(q.db, "ReadMessages", err)
 	}
-
-	var result []*persistence.QueueMessage
-	message := make(map[string]interface{})
-	for iter.MapScan(message) {
-		payload := getMessagePayload(message)
-		id := getMessageID(message)
-		result = append(result, &persistence.QueueMessage{ID: id, Payload: payload})
-		message = make(map[string]interface{})
-	}
-
-	if err := iter.Close(); err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ReadMessages operation failed. Error: %v", err),
-		}
+	var result []*persistence.InternalQueueMessage
+	for _, msg := range messages {
+		result = append(result, &persistence.InternalQueueMessage{
+			ID:        msg.ID,
+			QueueType: q.queueType,
+			Payload:   msg.Payload,
+		})
 	}
 
 	return result, nil
 }
 
-func getMessagePayload(message map[string]interface{}) []byte {
-	return message["message_payload"].([]byte)
+func (q *nosqlQueue) ReadMessagesFromDLQ(
+	ctx context.Context,
+	firstMessageID int64,
+	lastMessageID int64,
+	pageSize int,
+	pageToken []byte,
+) ([]*persistence.InternalQueueMessage, []byte, error) {
+	response, err := q.db.SelectMessagesBetween(ctx, nosqlplugin.SelectMessagesBetweenRequest{
+		QueueType:               q.getDLQTypeFromQueueType(),
+		ExclusiveBeginMessageID: firstMessageID,
+		InclusiveEndMessageID:   lastMessageID,
+		PageSize:                pageSize,
+		NextPageToken:           pageToken,
+	})
+	if err != nil {
+		return nil, nil, convertCommonErrors(q.db, "ReadMessagesFromDLQ", err)
+	}
+	var result []*persistence.InternalQueueMessage
+	for _, msg := range response.Rows {
+		result = append(result, &persistence.InternalQueueMessage{
+			ID:        msg.ID,
+			QueueType: msg.QueueType,
+			Payload:   msg.Payload,
+		})
+	}
+
+	return result, response.NextPageToken, nil
 }
 
-func getMessageID(message map[string]interface{}) int {
-	return message["message_id"].(int)
-}
-
-func (q *cassandraQueue) DeleteMessagesBefore(messageID int) error {
-	query := q.session.Query(templateDeleteMessagesQuery, q.queueType, messageID)
-	if err := query.Exec(); err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("DeleteMessagesBefore operation failed. Error %v", err),
-		}
+func (q *nosqlQueue) DeleteMessagesBefore(
+	ctx context.Context,
+	messageID int64,
+) error {
+	if err := q.db.DeleteMessagesBefore(ctx, q.queueType, messageID); err != nil {
+		return convertCommonErrors(q.db, "DeleteMessagesBefore", err)
 	}
 
 	return nil
 }
 
-func (q *cassandraQueue) insertInitialQueueMetadataRecord() error {
-	version := 0
-	clusterAckLevels := map[string]int{}
-	query := q.session.Query(templateInsertQueueMetadataQuery, q.queueType, clusterAckLevels, version)
-	_, err := query.ScanCAS()
-	if err != nil {
-		return fmt.Errorf("failed to insert initial queue metadata record: %v", err)
-	}
-	// it's ok if the query is not applied, which means that the record exists already.
-	return nil
-}
-
-func (q *cassandraQueue) UpdateAckLevel(messageID int, clusterName string) error {
-	queueMetadata, err := q.getQueueMetadata()
-	if err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateAckLevel operation failed. Error %v", err),
-		}
-	}
-
-	// Ignore possibly delayed message
-	if queueMetadata.clusterAckLevels[clusterName] > messageID {
-		return nil
-	}
-
-	queueMetadata.clusterAckLevels[clusterName] = messageID
-	queueMetadata.version++
-
-	err = q.updateQueueMetadata(queueMetadata)
-	if err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateAckLevel operation failed. Error %v", err),
-		}
+func (q *nosqlQueue) DeleteMessageFromDLQ(
+	ctx context.Context,
+	messageID int64,
+) error {
+	// Use negative queue type as the dlq type
+	if err := q.db.DeleteMessage(ctx, q.getDLQTypeFromQueueType(), messageID); err != nil {
+		return convertCommonErrors(q.db, "DeleteMessageFromDLQ", err)
 	}
 
 	return nil
 }
 
-func (q *cassandraQueue) GetAckLevels() (map[string]int, error) {
-	queueMetadata, err := q.getQueueMetadata()
+func (q *nosqlQueue) RangeDeleteMessagesFromDLQ(
+	ctx context.Context,
+	firstMessageID int64,
+	lastMessageID int64,
+) error {
+	// Use negative queue type as the dlq type
+	if err := q.db.DeleteMessagesInRange(ctx, q.getDLQTypeFromQueueType(), firstMessageID, lastMessageID); err != nil {
+		return convertCommonErrors(q.db, "RangeDeleteMessagesFromDLQ", err)
+	}
+
+	return nil
+}
+
+func (q *nosqlQueue) insertInitialQueueMetadataRecord(
+	ctx context.Context,
+	queueType persistence.QueueType,
+) error {
+	version := int64(0)
+	if err := q.db.InsertQueueMetadata(ctx, queueType, version); err != nil {
+		return convertCommonErrors(q.db, fmt.Sprintf("InsertInitialQueueMetadataRecord, Type: %v", queueType), err)
+	}
+
+	return nil
+}
+
+func (q *nosqlQueue) UpdateAckLevel(
+	ctx context.Context,
+	messageID int64,
+	clusterName string,
+) error {
+
+	return q.updateAckLevel(ctx, messageID, clusterName, q.queueType)
+}
+
+func (q *nosqlQueue) GetAckLevels(
+	ctx context.Context,
+) (map[string]int64, error) {
+	queueMetadata, err := q.getQueueMetadata(ctx, q.queueType)
 	if err != nil {
 		return nil, err
 	}
 
-	return queueMetadata.clusterAckLevels, nil
+	return queueMetadata.ClusterAckLevels, nil
 }
 
-func (q *cassandraQueue) getQueueMetadata() (*queueMetadata, error) {
-	query := q.session.Query(templateGetQueueMetadataQuery, q.queueType)
-	var ackLevels map[string]int
-	var version int
-	err := query.Scan(&ackLevels, &version)
+func (q *nosqlQueue) UpdateDLQAckLevel(
+	ctx context.Context,
+	messageID int64,
+	clusterName string,
+) error {
+
+	return q.updateAckLevel(ctx, messageID, clusterName, q.getDLQTypeFromQueueType())
+}
+
+func (q *nosqlQueue) GetDLQAckLevels(
+	ctx context.Context,
+) (map[string]int64, error) {
+
+	// Use negative queue type as the dlq type
+	queueMetadata, err := q.getQueueMetadata(ctx, q.getDLQTypeFromQueueType())
 	if err != nil {
-		if err == gocql.ErrNotFound {
+		return nil, err
+	}
+
+	return queueMetadata.ClusterAckLevels, nil
+}
+
+func (q *nosqlQueue) GetDLQSize(
+	ctx context.Context,
+) (int64, error) {
+
+	size, err := q.db.GetQueueSize(ctx, q.getDLQTypeFromQueueType())
+	if err != nil {
+		return 0, convertCommonErrors(q.db, "GetDLQSize", err)
+	}
+	return size, err
+}
+
+func (q *nosqlQueue) getQueueMetadata(
+	ctx context.Context,
+	queueType persistence.QueueType,
+) (*nosqlplugin.QueueMetadataRow, error) {
+	row, err := q.db.SelectQueueMetadata(ctx, queueType)
+	if err != nil {
+		if q.db.IsNotFoundError(err) {
 			return nil, nil
 		}
 
-		return nil, fmt.Errorf("failed to get queue metadata: %v", err)
+		return nil, convertCommonErrors(q.db, "GetQueueMetadata", err)
 	}
 
-	// if record exist but ackLevels is empty, we initialize the map
-	if ackLevels == nil {
-		ackLevels = make(map[string]int)
-	}
-
-	return &queueMetadata{clusterAckLevels: ackLevels, version: version}, nil
+	return row, nil
 }
 
-func (q *cassandraQueue) updateQueueMetadata(metadata *queueMetadata) error {
-	query := q.session.Query(templateUpdateQueueMetadataQuery,
-		metadata.clusterAckLevels,
-		metadata.version,
-		q.queueType,
-		metadata.version-1,
-	)
-	applied, err := query.ScanCAS()
+func (q *nosqlQueue) updateQueueMetadata(
+	ctx context.Context,
+	metadata *nosqlplugin.QueueMetadataRow,
+) error {
+	err := q.db.UpdateQueueMetadataCas(ctx, *metadata)
 	if err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateAckLevel operation failed. Error %v", err),
+		if q.db.IsConditionFailedError(err) {
+			return &types.InternalServiceError{
+				Message: fmt.Sprintf("UpdateQueueMetadata operation encounter concurrent write."),
+			}
 		}
-	}
-	if !applied {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateAckLevel operation encounter concurrent write."),
-		}
+
+		return convertCommonErrors(q.db, "UpdateQueueMetadata", err)
 	}
 
 	return nil
 }
 
-func (q *cassandraQueue) Close() {
-	if q.session != nil {
-		q.session.Close()
+// DLQ type of is the negative of number of the non-DLQ
+func (q *nosqlQueue) getDLQTypeFromQueueType() persistence.QueueType {
+	return -q.queueType
+}
+
+func (q *nosqlQueue) updateAckLevel(
+	ctx context.Context,
+	messageID int64,
+	clusterName string,
+	queueType persistence.QueueType,
+) error {
+
+	queueMetadata, err := q.getQueueMetadata(ctx, queueType)
+	if err != nil {
+		return err
 	}
+
+	// Ignore possibly delayed message
+	if queueMetadata.ClusterAckLevels[clusterName] > messageID {
+		return nil
+	}
+
+	queueMetadata.ClusterAckLevels[clusterName] = messageID
+	queueMetadata.Version++
+
+	// Use negative queue type as the dlq type
+	err = q.updateQueueMetadata(ctx, queueMetadata)
+	if err != nil {
+		return err
+	}
+	return nil
 }

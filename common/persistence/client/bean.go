@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source $GOFILE -destination bean_mock.go
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination bean_mock.go
 
 package client
 
@@ -42,8 +42,8 @@ type (
 		GetVisibilityManager() persistence.VisibilityManager
 		SetVisibilityManager(persistence.VisibilityManager)
 
-		GetDomainReplicationQueue() persistence.DomainReplicationQueue
-		SetDomainReplicationQueue(persistence.DomainReplicationQueue)
+		GetDomainReplicationQueueManager() persistence.QueueManager
+		SetDomainReplicationQueueManager(persistence.QueueManager)
 
 		GetShardManager() persistence.ShardManager
 		SetShardManager(persistence.ShardManager)
@@ -57,13 +57,13 @@ type (
 
 	// BeanImpl stores persistence managers
 	BeanImpl struct {
-		metadataManager         persistence.MetadataManager
-		taskManager             persistence.TaskManager
-		visibilityManager       persistence.VisibilityManager
-		domainReplicationQueue  persistence.DomainReplicationQueue
-		shardManager            persistence.ShardManager
-		historyManager          persistence.HistoryManager
-		executionManagerFactory persistence.ExecutionManagerFactory
+		metadataManager               persistence.MetadataManager
+		taskManager                   persistence.TaskManager
+		visibilityManager             persistence.VisibilityManager
+		domainReplicationQueueManager persistence.QueueManager
+		shardManager                  persistence.ShardManager
+		historyManager                persistence.HistoryManager
+		executionManagerFactory       persistence.ExecutionManagerFactory
 
 		sync.RWMutex
 		shardIDToExecutionManager map[int]persistence.ExecutionManager
@@ -90,7 +90,7 @@ func NewBeanFromFactory(
 		return nil, err
 	}
 
-	domainReplicationQueue, err := factory.NewDomainReplicationQueue()
+	domainReplicationQueue, err := factory.NewDomainReplicationQueueManager()
 	if err != nil {
 		return nil, err
 	}
@@ -121,19 +121,19 @@ func NewBean(
 	metadataManager persistence.MetadataManager,
 	taskManager persistence.TaskManager,
 	visibilityManager persistence.VisibilityManager,
-	domainReplicationQueue persistence.DomainReplicationQueue,
+	domainReplicationQueueManager persistence.QueueManager,
 	shardManager persistence.ShardManager,
 	historyManager persistence.HistoryManager,
 	executionManagerFactory persistence.ExecutionManagerFactory,
 ) *BeanImpl {
 	return &BeanImpl{
-		metadataManager:         metadataManager,
-		taskManager:             taskManager,
-		visibilityManager:       visibilityManager,
-		domainReplicationQueue:  domainReplicationQueue,
-		shardManager:            shardManager,
-		historyManager:          historyManager,
-		executionManagerFactory: executionManagerFactory,
+		metadataManager:               metadataManager,
+		taskManager:                   taskManager,
+		visibilityManager:             visibilityManager,
+		domainReplicationQueueManager: domainReplicationQueueManager,
+		shardManager:                  shardManager,
+		historyManager:                historyManager,
+		executionManagerFactory:       executionManagerFactory,
 
 		shardIDToExecutionManager: make(map[int]persistence.ExecutionManager),
 	}
@@ -199,24 +199,24 @@ func (s *BeanImpl) SetVisibilityManager(
 	s.visibilityManager = visibilityManager
 }
 
-// GetDomainReplicationQueue get DomainReplicationQueue
-func (s *BeanImpl) GetDomainReplicationQueue() persistence.DomainReplicationQueue {
+// GetDomainReplicationQueueManager gets domain replication QueueManager
+func (s *BeanImpl) GetDomainReplicationQueueManager() persistence.QueueManager {
 
 	s.RLock()
 	defer s.RUnlock()
 
-	return s.domainReplicationQueue
+	return s.domainReplicationQueueManager
 }
 
-// SetDomainReplicationQueue set DomainReplicationQueue
-func (s *BeanImpl) SetDomainReplicationQueue(
-	domainReplicationQueue persistence.DomainReplicationQueue,
+// SetDomainReplicationQueueManager sets domain replication QueueManager
+func (s *BeanImpl) SetDomainReplicationQueueManager(
+	domainReplicationQueueManager persistence.QueueManager,
 ) {
 
 	s.Lock()
 	defer s.Unlock()
 
-	s.domainReplicationQueue = domainReplicationQueue
+	s.domainReplicationQueueManager = domainReplicationQueueManager
 }
 
 // GetShardManager get ShardManager
@@ -310,7 +310,7 @@ func (s *BeanImpl) Close() {
 	s.metadataManager.Close()
 	s.taskManager.Close()
 	s.visibilityManager.Close()
-	s.domainReplicationQueue.Close()
+	s.domainReplicationQueueManager.Close()
 	s.shardManager.Close()
 	s.historyManager.Close()
 	s.executionManagerFactory.Close()

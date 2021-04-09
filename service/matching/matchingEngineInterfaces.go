@@ -20,24 +20,20 @@
 
 package matching
 
-import (
-	"context"
-
-	m "github.com/uber/cadence/.gen/go/matching"
-	workflow "github.com/uber/cadence/.gen/go/shared"
-)
+import "github.com/uber/cadence/common/types"
 
 type (
 	// Engine exposes interfaces for clients to poll for activity and decision tasks.
 	Engine interface {
 		Stop()
-		AddDecisionTask(ctx context.Context, addRequest *m.AddDecisionTaskRequest) (syncMatch bool, err error)
-		AddActivityTask(ctx context.Context, addRequest *m.AddActivityTaskRequest) (syncMatch bool, err error)
-		PollForDecisionTask(ctx context.Context, request *m.PollForDecisionTaskRequest) (*m.PollForDecisionTaskResponse, error)
-		PollForActivityTask(ctx context.Context, request *m.PollForActivityTaskRequest) (*workflow.PollForActivityTaskResponse, error)
-		QueryWorkflow(ctx context.Context, request *m.QueryWorkflowRequest) (*workflow.QueryWorkflowResponse, error)
-		RespondQueryTaskCompleted(ctx context.Context, request *m.RespondQueryTaskCompletedRequest) error
-		CancelOutstandingPoll(ctx context.Context, request *m.CancelOutstandingPollRequest) error
-		DescribeTaskList(ctx context.Context, request *m.DescribeTaskListRequest) (*workflow.DescribeTaskListResponse, error)
+		AddDecisionTask(hCtx *handlerContext, request *types.AddDecisionTaskRequest) (syncMatch bool, err error)
+		AddActivityTask(hCtx *handlerContext, request *types.AddActivityTaskRequest) (syncMatch bool, err error)
+		PollForDecisionTask(hCtx *handlerContext, request *types.MatchingPollForDecisionTaskRequest) (*types.MatchingPollForDecisionTaskResponse, error)
+		PollForActivityTask(hCtx *handlerContext, request *types.MatchingPollForActivityTaskRequest) (*types.PollForActivityTaskResponse, error)
+		QueryWorkflow(hCtx *handlerContext, request *types.MatchingQueryWorkflowRequest) (*types.QueryWorkflowResponse, error)
+		RespondQueryTaskCompleted(hCtx *handlerContext, request *types.MatchingRespondQueryTaskCompletedRequest) error
+		CancelOutstandingPoll(hCtx *handlerContext, request *types.CancelOutstandingPollRequest) error
+		DescribeTaskList(hCtx *handlerContext, request *types.MatchingDescribeTaskListRequest) (*types.DescribeTaskListResponse, error)
+		ListTaskListPartitions(hCtx *handlerContext, request *types.MatchingListTaskListPartitionsRequest) (*types.ListTaskListPartitionsResponse, error)
 	}
 )

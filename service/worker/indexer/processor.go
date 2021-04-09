@@ -27,10 +27,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/olivere/elastic"
-
 	"github.com/uber/cadence/.gen/go/indexer"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/definition"
@@ -39,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
 )
 
 type indexProcessor struct {
@@ -46,8 +44,8 @@ type indexProcessor struct {
 	consumerName    string
 	kafkaClient     messaging.Client
 	consumer        messaging.Consumer
-	esClient        es.Client
-	esProcessor     ESProcessor
+	esClient        es.GenericClient
+	esProcessor     *esProcessorImpl
 	esProcessorName string
 	esIndexName     string
 	config          *Config
@@ -63,15 +61,16 @@ type indexProcessor struct {
 const (
 	esDocIDDelimiter = "~"
 	esDocType        = "_doc"
+	esDocIDSizeLimit = 512
 
 	versionTypeExternal = "external"
 )
 
 var (
-	errUnknownMessageType = &shared.BadRequestError{Message: "unknown message type"}
+	errUnknownMessageType = &types.BadRequestError{Message: "unknown message type"}
 )
 
-func newIndexProcessor(appName, consumerName string, kafkaClient messaging.Client, esClient es.Client,
+func newIndexProcessor(appName, consumerName string, kafkaClient messaging.Client, esClient es.GenericClient,
 	esProcessorName, esIndexName string, config *Config, logger log.Logger, metricsClient metrics.Client) *indexProcessor {
 	return &indexProcessor{
 		appName:         appName,
@@ -93,21 +92,21 @@ func (p *indexProcessor) Start() error {
 		return nil
 	}
 
-	p.logger.Info("", tag.LifeCycleStarting)
-	consumer, err := p.kafkaClient.NewConsumer(p.appName, p.consumerName, p.config.IndexerConcurrency())
+	p.logger.Info("Index processor state changed", tag.LifeCycleStarting)
+	consumer, err := p.kafkaClient.NewConsumer(p.appName, p.consumerName)
 	if err != nil {
-		p.logger.Info("", tag.LifeCycleStartFailed, tag.Error(err))
+		p.logger.Info("Index processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
 		return err
 	}
 
 	if err := consumer.Start(); err != nil {
-		p.logger.Info("", tag.LifeCycleStartFailed, tag.Error(err))
+		p.logger.Info("Index processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
 		return err
 	}
 
-	esProcessor, err := NewESProcessorAndStart(p.config, p.esClient, p.esProcessorName, p.logger, p.metricsClient)
+	esProcessor, err := newESProcessorAndStart(p.config, p.esClient, p.esProcessorName, p.logger, p.metricsClient, p.msgEncoder)
 	if err != nil {
-		p.logger.Info("", tag.LifeCycleStartFailed, tag.Error(err))
+		p.logger.Info("Index processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
 		return err
 	}
 
@@ -116,7 +115,7 @@ func (p *indexProcessor) Start() error {
 	p.shutdownWG.Add(1)
 	go p.processorPump()
 
-	p.logger.Info("", tag.LifeCycleStarted)
+	p.logger.Info("Index processor state changed", tag.LifeCycleStarted)
 	return nil
 }
 
@@ -125,15 +124,15 @@ func (p *indexProcessor) Stop() {
 		return
 	}
 
-	p.logger.Info("", tag.LifeCycleStopping)
-	defer p.logger.Info("", tag.LifeCycleStopped)
+	p.logger.Info("Index processor state changed", tag.LifeCycleStopping)
+	defer p.logger.Info("Index processor state changed", tag.LifeCycleStopped)
 
 	if atomic.LoadInt32(&p.isStarted) == 1 {
 		close(p.shutdownCh)
 	}
 
 	if success := common.AwaitWaitGroup(&p.shutdownWG, time.Minute); !success {
-		p.logger.Info("", tag.LifeCycleStopTimedout)
+		p.logger.Info("Index processor state changed", tag.LifeCycleStopTimedout)
 	}
 }
 
@@ -143,15 +142,13 @@ func (p *indexProcessor) processorPump() {
 	var workerWG sync.WaitGroup
 	for workerID := 0; workerID < p.config.IndexerConcurrency(); workerID++ {
 		workerWG.Add(1)
-		go p.messageProcessLoop(&workerWG, workerID)
+		go p.messageProcessLoop(&workerWG)
 	}
 
-	select {
-	case <-p.shutdownCh:
-		// Processor is shutting down, close the underlying consumer and esProcessor
-		p.consumer.Stop()
-		p.esProcessor.Stop()
-	}
+	<-p.shutdownCh
+	// Processor is shutting down, close the underlying consumer and esProcessor
+	p.consumer.Stop()
+	p.esProcessor.Stop()
 
 	p.logger.Info("Index processor pump shutting down.")
 	if success := common.AwaitWaitGroup(&workerWG, 10*time.Second); !success {
@@ -159,22 +156,15 @@ func (p *indexProcessor) processorPump() {
 	}
 }
 
-func (p *indexProcessor) messageProcessLoop(workerWG *sync.WaitGroup, workerID int) {
+func (p *indexProcessor) messageProcessLoop(workerWG *sync.WaitGroup) {
 	defer workerWG.Done()
 
-	for {
-		select {
-		case msg, ok := <-p.consumer.Messages():
-			if !ok {
-				p.logger.Info("Worker for index processor shutting down.")
-				return // channel closed
-			}
-			sw := p.metricsClient.StartTimer(metrics.IndexProcessorScope, metrics.IndexProcessorProcessMsgLatency)
-			err := p.process(msg)
-			sw.Stop()
-			if err != nil {
-				msg.Nack()
-			}
+	for msg := range p.consumer.Messages() {
+		sw := p.metricsClient.StartTimer(metrics.IndexProcessorScope, metrics.IndexProcessorProcessMsgLatency)
+		err := p.process(msg)
+		sw.Stop()
+		if err != nil {
+			msg.Nack() //nolint:errcheck
 		}
 	}
 }
@@ -201,29 +191,34 @@ func (p *indexProcessor) deserialize(payload []byte) (*indexer.Message, error) {
 }
 
 func (p *indexProcessor) addMessageToES(indexMsg *indexer.Message, kafkaMsg messaging.Message, logger log.Logger) error {
-	docID := indexMsg.GetWorkflowID() + esDocIDDelimiter + indexMsg.GetRunID()
+	docID := generateDocID(indexMsg.GetWorkflowID(), indexMsg.GetRunID())
+	// check and skip invalid docID
+	if len(docID) >= esDocIDSizeLimit {
+		logger.Error("Index message is too long",
+			tag.WorkflowDomainID(indexMsg.GetDomainID()),
+			tag.WorkflowID(indexMsg.GetWorkflowID()),
+			tag.WorkflowRunID(indexMsg.GetRunID()))
+		kafkaMsg.Nack()
+		return nil
+	}
 
 	var keyToKafkaMsg string
-	var req elastic.BulkableRequest
+	req := &es.GenericBulkableAddRequest{
+		Index:       p.esIndexName,
+		Type:        esDocType,
+		ID:          docID,
+		VersionType: versionTypeExternal,
+		Version:     indexMsg.GetVersion(),
+	}
 	switch indexMsg.GetMessageType() {
 	case indexer.MessageTypeIndex:
 		keyToKafkaMsg = fmt.Sprintf("%v-%v", kafkaMsg.Partition(), kafkaMsg.Offset())
 		doc := p.generateESDoc(indexMsg, keyToKafkaMsg)
-		req = elastic.NewBulkIndexRequest().
-			Index(p.esIndexName).
-			Type(esDocType).
-			Id(docID).
-			VersionType(versionTypeExternal).
-			Version(indexMsg.GetVersion()).
-			Doc(doc)
+		req.Doc = doc
+		req.IsDelete = false
 	case indexer.MessageTypeDelete:
 		keyToKafkaMsg = docID
-		req = elastic.NewBulkDeleteRequest().
-			Index(p.esIndexName).
-			Type(esDocType).
-			Id(docID).
-			VersionType(versionTypeExternal).
-			Version(indexMsg.GetVersion())
+		req.IsDelete = true
 	default:
 		logger.Error("Unknown message type")
 		p.metricsClient.IncCounter(metrics.IndexProcessorScope, metrics.IndexProcessorCorruptedData)
@@ -297,4 +292,8 @@ func fulfillDoc(doc map[string]interface{}, msg *indexer.Message, keyToKafkaMsg 
 	doc[definition.WorkflowID] = msg.GetWorkflowID()
 	doc[definition.RunID] = msg.GetRunID()
 	doc[definition.KafkaKey] = keyToKafkaMsg
+}
+
+func generateDocID(wid, rid string) string {
+	return wid + esDocIDDelimiter + rid
 }

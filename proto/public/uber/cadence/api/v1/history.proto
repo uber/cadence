@@ -1,0 +1,455 @@
+// Copyright (c) 2020 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package uber.cadence.api.v1;
+
+option go_package = "github.com/uber/cadence/.gen/proto/api/v1;apiv1";
+option java_multiple_files = true;
+option java_outer_classname = "ApiProto";
+option java_package = "com.uber.cadence.api.v1";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "uber/cadence/api/v1/common.proto";
+import "uber/cadence/api/v1/tasklist.proto";
+import "uber/cadence/api/v1/workflow.proto";
+
+message History {
+  repeated HistoryEvent events = 1;
+}
+
+message HistoryEvent {
+  int64 event_id = 1;
+  google.protobuf.Timestamp event_time = 2;
+  int64 version = 3;
+  int64 task_id = 4;
+  oneof attributes {
+    WorkflowExecutionStartedEventAttributes workflow_execution_started_event_attributes = 5;
+    WorkflowExecutionCompletedEventAttributes workflow_execution_completed_event_attributes = 6;
+    WorkflowExecutionFailedEventAttributes workflow_execution_failed_event_attributes = 7;
+    WorkflowExecutionTimedOutEventAttributes workflow_execution_timed_out_event_attributes = 8;
+    DecisionTaskScheduledEventAttributes decision_task_scheduled_event_attributes = 9;
+    DecisionTaskStartedEventAttributes decision_task_started_event_attributes = 10;
+    DecisionTaskCompletedEventAttributes decision_task_completed_event_attributes = 11;
+    DecisionTaskTimedOutEventAttributes decision_task_timed_out_event_attributes = 12;
+    DecisionTaskFailedEventAttributes decision_task_failed_event_attributes = 13;
+    ActivityTaskScheduledEventAttributes activity_task_scheduled_event_attributes = 14;
+    ActivityTaskStartedEventAttributes activity_task_started_event_attributes = 15;
+    ActivityTaskCompletedEventAttributes activity_task_completed_event_attributes = 16;
+    ActivityTaskFailedEventAttributes activity_task_failed_event_attributes = 17;
+    ActivityTaskTimedOutEventAttributes activity_task_timed_out_event_attributes = 18;
+    TimerStartedEventAttributes timer_started_event_attributes = 19;
+    TimerFiredEventAttributes timer_fired_event_attributes = 20;
+    ActivityTaskCancelRequestedEventAttributes activity_task_cancel_requested_event_attributes = 21;
+    RequestCancelActivityTaskFailedEventAttributes request_cancel_activity_task_failed_event_attributes = 22;
+    ActivityTaskCanceledEventAttributes activity_task_canceled_event_attributes = 23;
+    TimerCanceledEventAttributes timer_canceled_event_attributes = 24;
+    CancelTimerFailedEventAttributes cancel_timer_failed_event_attributes = 25;
+    MarkerRecordedEventAttributes marker_recorded_event_attributes = 26;
+    WorkflowExecutionSignaledEventAttributes workflow_execution_signaled_event_attributes = 27;
+    WorkflowExecutionTerminatedEventAttributes workflow_execution_terminated_event_attributes = 28;
+    WorkflowExecutionCancelRequestedEventAttributes workflow_execution_cancel_requested_event_attributes = 29;
+    WorkflowExecutionCanceledEventAttributes workflow_execution_canceled_event_attributes = 30;
+    RequestCancelExternalWorkflowExecutionInitiatedEventAttributes request_cancel_external_workflow_execution_initiated_event_attributes = 31;
+    RequestCancelExternalWorkflowExecutionFailedEventAttributes request_cancel_external_workflow_execution_failed_event_attributes = 32;
+    ExternalWorkflowExecutionCancelRequestedEventAttributes external_workflow_execution_cancel_requested_event_attributes = 33;
+    WorkflowExecutionContinuedAsNewEventAttributes workflow_execution_continued_as_new_event_attributes = 34;
+    StartChildWorkflowExecutionInitiatedEventAttributes start_child_workflow_execution_initiated_event_attributes = 35;
+    StartChildWorkflowExecutionFailedEventAttributes start_child_workflow_execution_failed_event_attributes = 36;
+    ChildWorkflowExecutionStartedEventAttributes child_workflow_execution_started_event_attributes = 37;
+    ChildWorkflowExecutionCompletedEventAttributes child_workflow_execution_completed_event_attributes = 38;
+    ChildWorkflowExecutionFailedEventAttributes child_workflow_execution_failed_event_attributes = 39;
+    ChildWorkflowExecutionCanceledEventAttributes child_workflow_execution_canceled_event_attributes = 40;
+    ChildWorkflowExecutionTimedOutEventAttributes child_workflow_execution_timed_out_event_attributes = 41;
+    ChildWorkflowExecutionTerminatedEventAttributes child_workflow_execution_terminated_event_attributes = 42;
+    SignalExternalWorkflowExecutionInitiatedEventAttributes signal_external_workflow_execution_initiated_event_attributes = 43;
+    SignalExternalWorkflowExecutionFailedEventAttributes signal_external_workflow_execution_failed_event_attributes = 44;
+    ExternalWorkflowExecutionSignaledEventAttributes external_workflow_execution_signaled_event_attributes = 45;
+    UpsertWorkflowSearchAttributesEventAttributes upsert_workflow_search_attributes_event_attributes = 46;
+  }
+}
+
+message WorkflowExecutionStartedEventAttributes {
+  WorkflowType workflow_type = 1;
+  ParentExecutionInfo parent_execution_info = 2;
+  TaskList task_list = 3;
+  Payload input = 4;
+  google.protobuf.Duration execution_start_to_close_timeout = 5;
+  google.protobuf.Duration task_start_to_close_timeout = 6;
+  string continued_execution_run_id = 7;
+  ContinueAsNewInitiator initiator = 8;
+  Failure continued_failure = 9;
+  Payload last_completion_result = 10;
+  // This is the previous runID of ContinueAsNew.
+  string original_execution_run_id = 11;
+  string identity = 12;
+  // This is the very first runID along the chain of ContinueAsNew and Reset.
+  string first_execution_run_id = 13;
+  RetryPolicy retry_policy = 14;
+  int32 attempt = 15;
+  google.protobuf.Timestamp expiration_time = 16;
+  string cron_schedule = 17;
+  google.protobuf.Duration first_decision_task_backoff = 18;
+  Memo memo = 19;
+  SearchAttributes search_attributes = 20;
+  ResetPoints prev_auto_reset_points = 21;
+  Header header = 22;
+}
+
+message WorkflowExecutionCompletedEventAttributes {
+  Payload result = 1;
+  int64 decision_task_completed_event_id = 2;
+}
+
+message WorkflowExecutionFailedEventAttributes {
+  Failure failure = 1;
+  int64 decision_task_completed_event_id = 2;
+}
+
+message WorkflowExecutionTimedOutEventAttributes {
+  TimeoutType timeout_type = 1;
+}
+
+message DecisionTaskScheduledEventAttributes {
+  TaskList task_list = 1;
+  google.protobuf.Duration start_to_close_timeout = 2;
+  int32 attempt = 3;
+}
+
+message DecisionTaskStartedEventAttributes {
+  int64 scheduled_event_id = 1;
+  string identity = 2;
+  string request_id = 3;
+}
+
+message DecisionTaskCompletedEventAttributes {
+  int64 scheduled_event_id = 1;
+  int64 started_event_id = 2;
+  string identity = 3;
+  string binary_checksum = 4;
+  bytes execution_context = 5;
+}
+
+message DecisionTaskTimedOutEventAttributes {
+  int64 scheduled_event_id = 1;
+  int64 started_event_id = 2;
+  TimeoutType timeout_type = 3;
+  // For reset workflow.
+  string base_run_id = 4;
+  string new_run_id = 5;
+  int64 fork_event_version = 6;
+  string reason = 7;
+  DecisionTaskTimedOutCause cause = 8;
+}
+
+message DecisionTaskFailedEventAttributes {
+  int64 scheduled_event_id = 1;
+  int64 started_event_id = 2;
+  DecisionTaskFailedCause cause = 3;
+  Failure failure = 4;
+  string identity = 5;
+  // For reset workflow.
+  string base_run_id = 6;
+  string new_run_id = 7;
+  int64 fork_event_version = 8;
+  string binary_checksum = 9;
+}
+
+message ActivityTaskScheduledEventAttributes {
+  string activity_id = 1;
+  ActivityType activity_type = 2;
+  string domain = 3;
+  TaskList task_list = 4;
+  Payload input = 6;
+  google.protobuf.Duration schedule_to_close_timeout = 7;
+  google.protobuf.Duration schedule_to_start_timeout = 8;
+  google.protobuf.Duration start_to_close_timeout = 9;
+  google.protobuf.Duration heartbeat_timeout = 10;
+  int64 decision_task_completed_event_id = 11;
+  RetryPolicy retry_policy = 12;
+  Header header = 13;
+}
+
+message ActivityTaskStartedEventAttributes {
+  int64 scheduled_event_id = 1;
+  string identity = 2;
+  string request_id = 3;
+  int32 attempt = 4;
+  Failure last_failure = 5;
+}
+
+message ActivityTaskCompletedEventAttributes {
+  Payload result = 1;
+  int64 scheduled_event_id = 2;
+  int64 started_event_id = 3;
+  string identity = 4;
+}
+
+message ActivityTaskFailedEventAttributes {
+  Failure failure = 1;
+  int64 scheduled_event_id = 2;
+  int64 started_event_id = 3;
+  string identity = 4;
+}
+
+message ActivityTaskTimedOutEventAttributes {
+  Payload details = 1;
+  int64 scheduled_event_id = 2;
+  int64 started_event_id = 3;
+  TimeoutType timeout_type = 4;
+  // For retry activity, it may have a failure before timeout. It's important to keep those information for debug.
+  // Client can also provide the info for making next decision
+  Failure last_failure = 5;
+}
+
+message ActivityTaskCancelRequestedEventAttributes {
+  string activity_id = 1;
+  int64 decision_task_completed_event_id = 2;
+}
+
+message RequestCancelActivityTaskFailedEventAttributes {
+  string activity_id = 1;
+  string cause = 2;
+  int64 decision_task_completed_event_id = 3;
+}
+
+message ActivityTaskCanceledEventAttributes {
+  Payload details = 1;
+  int64 latest_cancel_requested_event_id = 2;
+  int64 scheduled_event_id = 3;
+  int64 started_event_id = 4;
+  string identity = 5;
+}
+
+message TimerStartedEventAttributes {
+  string timer_id = 1;
+  google.protobuf.Duration start_to_fire_timeout = 2;
+  int64 decision_task_completed_event_id = 3;
+}
+
+message TimerFiredEventAttributes {
+  string timer_id = 1;
+  int64 started_event_id = 2;
+}
+
+message TimerCanceledEventAttributes {
+  string timer_id = 1;
+  int64 started_event_id = 2;
+  int64 decision_task_completed_event_id = 3;
+  string identity = 4;
+}
+
+message CancelTimerFailedEventAttributes {
+  string timer_id = 1;
+  string cause = 2;
+  int64 decision_task_completed_event_id = 3;
+  string identity = 4;
+}
+
+message WorkflowExecutionContinuedAsNewEventAttributes {
+  string new_execution_run_id = 1;
+  WorkflowType workflow_type = 2;
+  TaskList task_list = 3;
+  Payload input = 4;
+  google.protobuf.Duration execution_start_to_close_timeout = 5;
+  google.protobuf.Duration task_start_to_close_timeout = 6;
+  int64 decision_task_completed_event_id = 7;
+  google.protobuf.Duration backoff_start_interval = 8;
+  ContinueAsNewInitiator initiator = 9;
+  Failure failure = 10;
+  Payload last_completion_result = 11;
+  Header header = 12;
+  Memo memo = 13;
+  SearchAttributes search_attributes = 14;
+}
+
+message WorkflowExecutionCancelRequestedEventAttributes {
+  string cause = 1;
+  string identity = 2;
+  ExternalExecutionInfo external_execution_info = 3;
+}
+
+message WorkflowExecutionCanceledEventAttributes {
+  int64 decision_task_completed_event_id = 1;
+  Payload details = 2;
+}
+
+message MarkerRecordedEventAttributes {
+  string marker_name = 1;
+  Payload details = 2;
+  int64 decision_task_completed_event_id = 3;
+  Header header = 4;
+}
+
+message WorkflowExecutionSignaledEventAttributes {
+  string signal_name = 1;
+  Payload input = 2;
+  string identity = 3;
+}
+
+message WorkflowExecutionTerminatedEventAttributes {
+  string reason = 1;
+  Payload details = 2;
+  string identity = 3;
+}
+
+message RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
+  int64 decision_task_completed_event_id = 1;
+  string domain = 2;
+  WorkflowExecution workflow_execution = 3;
+  bytes control = 4;
+  bool child_workflow_only = 5;
+}
+
+message RequestCancelExternalWorkflowExecutionFailedEventAttributes {
+  CancelExternalWorkflowExecutionFailedCause cause = 1;
+  int64 decision_task_completed_event_id = 2;
+  string domain = 3;
+  WorkflowExecution workflow_execution = 4;
+  int64 initiated_event_id = 5;
+  bytes control = 6;
+}
+
+message ExternalWorkflowExecutionCancelRequestedEventAttributes {
+  int64 initiated_event_id = 1;
+  string domain = 2;
+  WorkflowExecution workflow_execution = 3;
+}
+
+message SignalExternalWorkflowExecutionInitiatedEventAttributes {
+  int64 decision_task_completed_event_id = 1;
+  string domain = 2;
+  WorkflowExecution workflow_execution = 3;
+  string signal_name = 4;
+  Payload input = 5;
+  bytes control = 6;
+  bool child_workflow_only = 7;
+}
+
+message SignalExternalWorkflowExecutionFailedEventAttributes {
+  SignalExternalWorkflowExecutionFailedCause cause = 1;
+  int64 decision_task_completed_event_id = 2;
+  string domain = 3;
+  WorkflowExecution workflow_execution = 4;
+  int64 initiated_event_id = 5;
+  bytes control = 6;
+}
+
+message ExternalWorkflowExecutionSignaledEventAttributes {
+  int64 initiated_event_id = 1;
+  string domain = 2;
+  WorkflowExecution workflow_execution = 3;
+  bytes control = 4;
+}
+
+message UpsertWorkflowSearchAttributesEventAttributes {
+  int64 decision_task_completed_event_id = 1;
+  SearchAttributes search_attributes = 2;
+}
+
+message StartChildWorkflowExecutionInitiatedEventAttributes {
+  string domain = 1;
+  string workflow_id = 2;
+  WorkflowType workflow_type = 3;
+  TaskList task_list = 4;
+  Payload input = 5;
+  google.protobuf.Duration execution_start_to_close_timeout = 6;
+  google.protobuf.Duration task_start_to_close_timeout = 7;
+  ParentClosePolicy parent_close_policy = 8;
+  bytes control = 9;
+  int64 decision_task_completed_event_id = 10;
+  WorkflowIdReusePolicy workflow_id_reuse_policy = 11;
+  RetryPolicy retry_policy = 13;
+  string cron_schedule = 14;
+  Header header = 15;
+  Memo memo = 16;
+  SearchAttributes search_attributes = 17;
+  google.protobuf.Duration delay_start = 18;
+}
+
+message StartChildWorkflowExecutionFailedEventAttributes {
+  string domain = 1;
+  string workflow_id = 2;
+  WorkflowType workflow_type = 3;
+  ChildWorkflowExecutionFailedCause cause = 4;
+  bytes control = 5;
+  int64 initiated_event_id = 6;
+  int64 decision_task_completed_event_id = 7;
+}
+
+message ChildWorkflowExecutionStartedEventAttributes {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+  WorkflowType workflow_type = 3;
+  int64 initiated_event_id = 4;
+  Header header = 5;
+}
+
+message ChildWorkflowExecutionCompletedEventAttributes {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+  WorkflowType workflow_type = 3;
+  int64 initiated_event_id = 4;
+  int64 started_event_id = 5;
+  Payload result = 6;
+}
+
+message ChildWorkflowExecutionFailedEventAttributes {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+  WorkflowType workflow_type = 3;
+  int64 initiated_event_id = 4;
+  int64 started_event_id = 5;
+  Failure failure = 6;
+}
+
+message ChildWorkflowExecutionCanceledEventAttributes {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+  WorkflowType workflow_type = 3;
+  int64 initiated_event_id = 4;
+  int64 started_event_id = 5;
+  Payload details = 6;
+}
+
+message ChildWorkflowExecutionTimedOutEventAttributes {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+  WorkflowType workflow_type = 3;
+  int64 initiated_event_id = 4;
+  int64 started_event_id = 5;
+  TimeoutType timeout_type = 6;
+}
+
+message ChildWorkflowExecutionTerminatedEventAttributes {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+  WorkflowType workflow_type = 3;
+  int64 initiated_event_id = 4;
+  int64 started_event_id = 5;
+}
+
+enum EventFilterType {
+  EVENT_FILTER_TYPE_INVALID = 0;
+  EVENT_FILTER_TYPE_ALL_EVENT = 1;
+  EVENT_FILTER_TYPE_CLOSE_EVENT = 2;
+}

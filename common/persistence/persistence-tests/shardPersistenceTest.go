@@ -21,6 +21,7 @@
 package persistencetests
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -28,8 +29,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	gen "github.com/uber/cadence/.gen/go/shared"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -62,10 +63,13 @@ func (s *ShardPersistenceSuite) TearDownSuite() {
 
 // TestCreateShard test
 func (s *ShardPersistenceSuite) TestCreateShard() {
-	err0 := s.CreateShard(19, "test_create_shard1", 123)
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	err0 := s.CreateShard(ctx, 19, "test_create_shard1", 123)
 	s.Nil(err0, "No error expected.")
 
-	err1 := s.CreateShard(19, "test_create_shard2", 124)
+	err1 := s.CreateShard(ctx, 19, "test_create_shard2", 124)
 	s.NotNil(err1, "expected non nil error.")
 	s.IsType(&p.ShardAlreadyExistError{}, err1)
 	log.Infof("CreateShard failed with error: %v", err1)
@@ -73,13 +77,16 @@ func (s *ShardPersistenceSuite) TestCreateShard() {
 
 // TestGetShard test
 func (s *ShardPersistenceSuite) TestGetShard() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	shardID := 20
 	owner := "test_get_shard"
 	rangeID := int64(131)
-	err0 := s.CreateShard(shardID, owner, rangeID)
+	err0 := s.CreateShard(ctx, shardID, owner, rangeID)
 	s.Nil(err0, "No error expected.")
 
-	shardInfo, err1 := s.GetShard(shardID)
+	shardInfo, err1 := s.GetShard(ctx, shardID)
 	s.Nil(err1)
 	s.NotNil(shardInfo)
 	s.Equal(shardID, shardInfo.ShardID)
@@ -87,21 +94,24 @@ func (s *ShardPersistenceSuite) TestGetShard() {
 	s.Equal(rangeID, shardInfo.RangeID)
 	s.Equal(0, shardInfo.StolenSinceRenew)
 
-	_, err2 := s.GetShard(4766)
+	_, err2 := s.GetShard(ctx, 4766)
 	s.NotNil(err2)
-	s.IsType(&gen.EntityNotExistsError{}, err2)
+	s.IsType(&types.EntityNotExistsError{}, err2)
 	log.Infof("GetShard failed with error: %v", err2)
 }
 
 // TestUpdateShard test
 func (s *ShardPersistenceSuite) TestUpdateShard() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	shardID := 30
 	owner := "test_update_shard"
 	rangeID := int64(141)
-	err0 := s.CreateShard(shardID, owner, rangeID)
+	err0 := s.CreateShard(ctx, shardID, owner, rangeID)
 	s.Nil(err0, "No error expected.")
 
-	shardInfo, err1 := s.GetShard(shardID)
+	shardInfo, err1 := s.GetShard(ctx, shardID)
 	s.Nil(err1)
 	s.NotNil(shardInfo)
 	s.Equal(shardID, shardInfo.ShardID)
@@ -122,10 +132,10 @@ func (s *ShardPersistenceSuite) TestUpdateShard() {
 	updatedInfo.StolenSinceRenew = updatedStolenSinceRenew
 	updatedTimerAckLevel := time.Now()
 	updatedInfo.TimerAckLevel = updatedTimerAckLevel
-	err2 := s.UpdateShard(updatedInfo, shardInfo.RangeID)
+	err2 := s.UpdateShard(ctx, updatedInfo, shardInfo.RangeID)
 	s.Nil(err2)
 
-	info1, err3 := s.GetShard(shardID)
+	info1, err3 := s.GetShard(ctx, shardID)
 	s.Nil(err3)
 	s.NotNil(info1)
 	s.Equal(updatedOwner, info1.Owner)
@@ -139,12 +149,12 @@ func (s *ShardPersistenceSuite) TestUpdateShard() {
 	failedUpdateInfo.Owner = "failed_owner"
 	failedUpdateInfo.TransferAckLevel = int64(4000)
 	failedUpdateInfo.ReplicationAckLevel = int64(5000)
-	err4 := s.UpdateShard(failedUpdateInfo, shardInfo.RangeID)
+	err4 := s.UpdateShard(ctx, failedUpdateInfo, shardInfo.RangeID)
 	s.NotNil(err4)
 	s.IsType(&p.ShardOwnershipLostError{}, err4)
 	log.Infof("Update shard failed with error: %v", err4)
 
-	info2, err5 := s.GetShard(shardID)
+	info2, err5 := s.GetShard(ctx, shardID)
 	s.Nil(err5)
 	s.NotNil(info2)
 	s.Equal(updatedOwner, info2.Owner)

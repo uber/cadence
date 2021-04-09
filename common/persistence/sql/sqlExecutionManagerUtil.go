@@ -1,4 +1,5 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,43 +23,39 @@ package sql
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
 
-	"github.com/go-sql-driver/mysql"
+	"github.com/uber/cadence/common/persistence/serialization"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+	"github.com/uber/cadence/common/types"
 )
 
 func applyWorkflowMutationTx(
-	tx sqldb.Tx,
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	shardID int,
 	workflowMutation *p.InternalWorkflowMutation,
+	parser serialization.Parser,
 ) error {
 
 	executionInfo := workflowMutation.ExecutionInfo
-	replicationState := workflowMutation.ReplicationState
 	versionHistories := workflowMutation.VersionHistories
 	startVersion := workflowMutation.StartVersion
 	lastWriteVersion := workflowMutation.LastWriteVersion
-	domainID := sqldb.MustParseUUID(executionInfo.DomainID)
+	domainID := serialization.MustParseUUID(executionInfo.DomainID)
 	workflowID := executionInfo.WorkflowID
-	runID := sqldb.MustParseUUID(executionInfo.RunID)
-
-	// TODO remove once 2DC is deprecated
-	//  since current version is only used by 2DC
-	currentVersion := lastWriteVersion
-	if replicationState != nil {
-		currentVersion = replicationState.CurrentVersion
-	}
+	runID := serialization.MustParseUUID(executionInfo.RunID)
 
 	// TODO Remove me if UPDATE holds the lock to the end of a transaction
-	if err := lockAndCheckNextEventID(tx,
+	if err := lockAndCheckNextEventID(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -68,127 +65,161 @@ func applyWorkflowMutationTx(
 		case *p.ConditionFailedError:
 			return err
 		default:
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("applyWorkflowMutationTx failed. Failed to lock executions row. Error: %v", err),
 			}
 		}
 	}
 
-	if err := updateExecution(tx,
+	if err := updateExecution(
+		ctx,
+		tx,
 		executionInfo,
-		replicationState,
 		versionHistories,
 		startVersion,
 		lastWriteVersion,
-		currentVersion,
-		shardID); err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Failed to update executions row. Erorr: %v", err),
+		shardID,
+		parser); err != nil {
+		return &types.InternalServiceError{
+			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Failed to update executions row. Error: %v", err),
 		}
 	}
 
-	if err := applyTasks(tx,
+	if err := applyTasks(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
 		runID,
 		workflowMutation.TransferTasks,
 		workflowMutation.ReplicationTasks,
-		workflowMutation.TimerTasks); err != nil {
+		workflowMutation.TimerTasks,
+		parser,
+	); err != nil {
 		return err
 	}
 
-	if err := updateActivityInfos(tx,
+	if err := updateActivityInfos(
+		ctx,
+		tx,
 		workflowMutation.UpsertActivityInfos,
 		workflowMutation.DeleteActivityInfos,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser,
+	); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
 	}
 
-	if err := updateTimerInfos(tx,
+	if err := updateTimerInfos(
+		ctx,
+		tx,
 		workflowMutation.UpsertTimerInfos,
 		workflowMutation.DeleteTimerInfos,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser,
+	); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
 	}
 
-	if err := updateChildExecutionInfos(tx,
+	if err := updateChildExecutionInfos(
+		ctx,
+		tx,
 		workflowMutation.UpsertChildExecutionInfos,
-		workflowMutation.DeleteChildExecutionInfo,
+		workflowMutation.DeleteChildExecutionInfos,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser,
+	); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
 	}
 
-	if err := updateRequestCancelInfos(tx,
+	if err := updateRequestCancelInfos(
+		ctx,
+		tx,
 		workflowMutation.UpsertRequestCancelInfos,
-		workflowMutation.DeleteRequestCancelInfo,
+		workflowMutation.DeleteRequestCancelInfos,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser,
+	); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
 	}
 
-	if err := updateSignalInfos(tx,
+	if err := updateSignalInfos(
+		ctx,
+		tx,
 		workflowMutation.UpsertSignalInfos,
-		workflowMutation.DeleteSignalInfo,
+		workflowMutation.DeleteSignalInfos,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser,
+	); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
 	}
 
-	if err := updateSignalsRequested(tx,
+	if err := updateSignalsRequested(
+		ctx,
+		tx,
 		workflowMutation.UpsertSignalRequestedIDs,
-		workflowMutation.DeleteSignalRequestedID,
+		workflowMutation.DeleteSignalRequestedIDs,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+	); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
 	}
 
 	if workflowMutation.ClearBufferedEvents {
-		if err := deleteBufferedEvents(tx,
+		if err := deleteBufferedEvents(
+			ctx,
+			tx,
 			shardID,
 			domainID,
 			workflowID,
-			runID); err != nil {
-			return &workflow.InternalServiceError{
+			runID,
+		); err != nil {
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 			}
 		}
 	}
 
-	if err := updateBufferedEvents(tx,
+	if err := updateBufferedEvents(
+		ctx,
+		tx,
 		workflowMutation.NewBufferedEvents,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+	); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
 	}
@@ -196,29 +227,25 @@ func applyWorkflowMutationTx(
 }
 
 func applyWorkflowSnapshotTxAsReset(
-	tx sqldb.Tx,
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	shardID int,
 	workflowSnapshot *p.InternalWorkflowSnapshot,
+	parser serialization.Parser,
 ) error {
 
 	executionInfo := workflowSnapshot.ExecutionInfo
-	replicationState := workflowSnapshot.ReplicationState
 	versionHistories := workflowSnapshot.VersionHistories
 	startVersion := workflowSnapshot.StartVersion
 	lastWriteVersion := workflowSnapshot.LastWriteVersion
-	domainID := sqldb.MustParseUUID(executionInfo.DomainID)
+	domainID := serialization.MustParseUUID(executionInfo.DomainID)
 	workflowID := executionInfo.WorkflowID
-	runID := sqldb.MustParseUUID(executionInfo.RunID)
-
-	// TODO remove once 2DC is deprecated
-	//  since current version is only used by 2DC
-	currentVersion := lastWriteVersion
-	if replicationState != nil {
-		currentVersion = replicationState.CurrentVersion
-	}
+	runID := serialization.MustParseUUID(executionInfo.RunID)
 
 	// TODO Is there a way to modify the various map tables without fear of other people adding rows after we delete, without locking the executions row?
-	if err := lockAndCheckNextEventID(tx,
+	if err := lockAndCheckNextEventID(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
@@ -228,292 +255,344 @@ func applyWorkflowSnapshotTxAsReset(
 		case *p.ConditionFailedError:
 			return err
 		default:
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to lock executions row. Error: %v", err),
 			}
 		}
 	}
 
-	if err := updateExecution(tx,
+	if err := updateExecution(
+		ctx,
+		tx,
 		executionInfo,
-		replicationState,
 		versionHistories,
 		startVersion,
 		lastWriteVersion,
-		currentVersion,
-		shardID); err != nil {
-		return &workflow.InternalServiceError{
+		shardID,
+		parser); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to update executions row. Erorr: %v", err),
 		}
 	}
 
-	if err := applyTasks(tx,
+	if err := applyTasks(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
 		runID,
 		workflowSnapshot.TransferTasks,
 		workflowSnapshot.ReplicationTasks,
-		workflowSnapshot.TimerTasks); err != nil {
+		workflowSnapshot.TimerTasks,
+		parser,
+	); err != nil {
 		return err
 	}
 
-	if err := deleteActivityInfoMap(tx,
+	if err := deleteActivityInfoMap(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to clear activity info map. Error: %v", err),
 		}
 	}
 
-	if err := updateActivityInfos(tx,
+	if err := updateActivityInfos(
+		ctx,
+		tx,
 		workflowSnapshot.ActivityInfos,
 		nil,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into activity info map after clearing. Error: %v", err),
 		}
 	}
 
-	if err := deleteTimerInfoMap(tx,
+	if err := deleteTimerInfoMap(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to clear timer info map. Error: %v", err),
 		}
 	}
 
-	if err := updateTimerInfos(tx,
+	if err := updateTimerInfos(
+		ctx,
+		tx,
 		workflowSnapshot.TimerInfos,
 		nil,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into timer info map after clearing. Error: %v", err),
 		}
 	}
 
-	if err := deleteChildExecutionInfoMap(tx,
+	if err := deleteChildExecutionInfoMap(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to clear child execution info map. Error: %v", err),
 		}
 	}
 
-	if err := updateChildExecutionInfos(tx,
+	if err := updateChildExecutionInfos(
+		ctx,
+		tx,
 		workflowSnapshot.ChildExecutionInfos,
 		nil,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into activity info map after clearing. Error: %v", err),
 		}
 	}
 
-	if err := deleteRequestCancelInfoMap(tx,
+	if err := deleteRequestCancelInfoMap(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to clear request cancel info map. Error: %v", err),
 		}
 	}
 
-	if err := updateRequestCancelInfos(tx,
+	if err := updateRequestCancelInfos(
+		ctx,
+		tx,
 		workflowSnapshot.RequestCancelInfos,
 		nil,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into request cancel info map after clearing. Error: %v", err),
 		}
 	}
 
-	if err := deleteSignalInfoMap(tx,
+	if err := deleteSignalInfoMap(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to clear signal info map. Error: %v", err),
 		}
 	}
 
-	if err := updateSignalInfos(tx,
+	if err := updateSignalInfos(
+		ctx,
+		tx,
 		workflowSnapshot.SignalInfos,
 		nil,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into signal info map after clearing. Error: %v", err),
 		}
 	}
 
-	if err := deleteSignalsRequestedSet(tx,
+	if err := deleteSignalsRequestedSet(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to clear signals requested set. Error: %v", err),
 		}
 	}
 
-	if err := updateSignalsRequested(tx,
+	if err := updateSignalsRequested(
+		ctx,
+		tx,
 		workflowSnapshot.SignalRequestedIDs,
-		"",
+		nil,
 		shardID,
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into signals requested set after clearing. Error: %v", err),
 		}
 	}
 
-	if err := deleteBufferedEvents(tx,
+	if err := deleteBufferedEvents(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to clear buffered events. Error: %v", err),
 		}
 	}
 	return nil
 }
 
-func applyWorkflowSnapshotTxAsNew(
-	tx sqldb.Tx,
+func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	shardID int,
 	workflowSnapshot *p.InternalWorkflowSnapshot,
+	parser serialization.Parser,
 ) error {
 
 	executionInfo := workflowSnapshot.ExecutionInfo
-	replicationState := workflowSnapshot.ReplicationState
 	versionHistories := workflowSnapshot.VersionHistories
 	startVersion := workflowSnapshot.StartVersion
 	lastWriteVersion := workflowSnapshot.LastWriteVersion
-	domainID := sqldb.MustParseUUID(executionInfo.DomainID)
+	domainID := serialization.MustParseUUID(executionInfo.DomainID)
 	workflowID := executionInfo.WorkflowID
-	runID := sqldb.MustParseUUID(executionInfo.RunID)
+	runID := serialization.MustParseUUID(executionInfo.RunID)
 
-	// TODO remove once 2DC is deprecated
-	//  since current version is only used by 2DC
-	currentVersion := lastWriteVersion
-	if replicationState != nil {
-		currentVersion = replicationState.CurrentVersion
-	}
-
-	if err := createExecution(tx,
+	if err := m.createExecution(
+		ctx,
+		tx,
 		executionInfo,
-		replicationState,
 		versionHistories,
 		startVersion,
 		lastWriteVersion,
-		currentVersion,
-		shardID); err != nil {
+		shardID,
+		parser); err != nil {
 		return err
 	}
 
-	if err := applyTasks(tx,
+	if err := applyTasks(
+		ctx,
+		tx,
 		shardID,
 		domainID,
 		workflowID,
 		runID,
 		workflowSnapshot.TransferTasks,
 		workflowSnapshot.ReplicationTasks,
-		workflowSnapshot.TimerTasks); err != nil {
+		workflowSnapshot.TimerTasks,
+		parser,
+	); err != nil {
 		return err
 	}
 
-	if err := updateActivityInfos(tx,
+	if err := updateActivityInfos(
+		ctx,
+		tx,
 		workflowSnapshot.ActivityInfos,
 		nil,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into activity info map after clearing. Error: %v", err),
 		}
 	}
 
-	if err := updateTimerInfos(tx,
+	if err := updateTimerInfos(
+		ctx,
+		tx,
 		workflowSnapshot.TimerInfos,
 		nil,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into timer info map after clearing. Error: %v", err),
 		}
 	}
 
-	if err := updateChildExecutionInfos(tx,
+	if err := updateChildExecutionInfos(
+		ctx,
+		tx,
 		workflowSnapshot.ChildExecutionInfos,
 		nil,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into activity info map after clearing. Error: %v", err),
 		}
 	}
 
-	if err := updateRequestCancelInfos(tx,
+	if err := updateRequestCancelInfos(
+		ctx,
+		tx,
 		workflowSnapshot.RequestCancelInfos,
 		nil,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into request cancel info map after clearing. Error: %v", err),
 		}
 	}
 
-	if err := updateSignalInfos(tx,
+	if err := updateSignalInfos(
+		ctx,
+		tx,
 		workflowSnapshot.SignalInfos,
 		nil,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into signal info map after clearing. Error: %v", err),
 		}
 	}
 
-	if err := updateSignalsRequested(tx,
+	if err := updateSignalsRequested(
+		ctx,
+		tx,
 		workflowSnapshot.SignalRequestedIDs,
-		"",
+		nil,
 		shardID,
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into signals requested set after clearing. Error: %v", err),
 		}
 	}
@@ -522,45 +601,57 @@ func applyWorkflowSnapshotTxAsNew(
 }
 
 func applyTasks(
-	tx sqldb.Tx,
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqldb.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqldb.UUID,
+	runID serialization.UUID,
 	transferTasks []p.Task,
 	replicationTasks []p.Task,
 	timerTasks []p.Task,
+	parser serialization.Parser,
 ) error {
 
-	if err := createTransferTasks(tx,
+	if err := createTransferTasks(
+		ctx,
+		tx,
 		transferTasks,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyTasks failed. Failed to create transfer tasks. Error: %v", err),
 		}
 	}
 
-	if err := createReplicationTasks(tx,
+	if err := createReplicationTasks(
+		ctx,
+		tx,
 		replicationTasks,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser,
+	); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyTasks failed. Failed to create replication tasks. Error: %v", err),
 		}
 	}
 
-	if err := createTimerTasks(tx,
+	if err := createTimerTasks(
+		ctx,
+		tx,
 		timerTasks,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return &workflow.InternalServiceError{
+		runID,
+		parser); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("applyTasks failed. Failed to create timer tasks. Error: %v", err),
 		}
 	}
@@ -571,24 +662,28 @@ func applyTasks(
 // lockCurrentExecutionIfExists returns current execution or nil if none is found for the workflowID
 // locking it in the DB
 func lockCurrentExecutionIfExists(
-	tx sqldb.Tx,
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqldb.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-) (*sqldb.CurrentExecutionsRow, error) {
+) (*sqlplugin.CurrentExecutionsRow, error) {
 
-	rows, err := tx.LockCurrentExecutionsJoinExecutions(&sqldb.CurrentExecutionsFilter{
-		ShardID: int64(shardID), DomainID: domainID, WorkflowID: workflowID})
+	rows, err := tx.LockCurrentExecutionsJoinExecutions(ctx, &sqlplugin.CurrentExecutionsFilter{
+		ShardID:    int64(shardID),
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+	})
 	if err != nil {
 		if err != sql.ErrNoRows {
-			return nil, &workflow.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("lockCurrentExecutionIfExists failed. Failed to get current_executions row for (shard,domain,workflow) = (%v, %v, %v). Error: %v", shardID, domainID, workflowID, err),
 			}
 		}
 	}
 	size := len(rows)
 	if size > 1 {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("lockCurrentExecutionIfExists failed. Multiple current_executions rows for (shard,domain,workflow) = (%v, %v, %v).", shardID, domainID, workflowID),
 		}
 	}
@@ -599,12 +694,13 @@ func lockCurrentExecutionIfExists(
 }
 
 func createOrUpdateCurrentExecution(
-	tx sqldb.Tx,
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	createMode p.CreateWorkflowMode,
 	shardID int,
-	domainID sqldb.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqldb.UUID,
+	runID serialization.UUID,
 	state int,
 	closeStatus int,
 	createRequestID string,
@@ -612,7 +708,7 @@ func createOrUpdateCurrentExecution(
 	lastWriteVersion int64,
 ) error {
 
-	row := sqldb.CurrentExecutionsRow{
+	row := sqlplugin.CurrentExecutionsRow{
 		ShardID:          int64(shardID),
 		DomainID:         domainID,
 		WorkflowID:       workflowID,
@@ -626,7 +722,9 @@ func createOrUpdateCurrentExecution(
 
 	switch createMode {
 	case p.CreateWorkflowModeContinueAsNew:
-		if err := updateCurrentExecution(tx,
+		if err := updateCurrentExecution(
+			ctx,
+			tx,
 			shardID,
 			domainID,
 			workflowID,
@@ -636,12 +734,14 @@ func createOrUpdateCurrentExecution(
 			closeStatus,
 			row.StartVersion,
 			row.LastWriteVersion); err != nil {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("createOrUpdateCurrentExecution failed. Failed to continue as new. Error: %v", err),
 			}
 		}
 	case p.CreateWorkflowModeWorkflowIDReuse:
-		if err := updateCurrentExecution(tx,
+		if err := updateCurrentExecution(
+			ctx,
+			tx,
 			shardID,
 			domainID,
 			workflowID,
@@ -651,13 +751,13 @@ func createOrUpdateCurrentExecution(
 			closeStatus,
 			row.StartVersion,
 			row.LastWriteVersion); err != nil {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("createOrUpdateCurrentExecution failed. Failed to reuse workflow ID. Error: %v", err),
 			}
 		}
 	case p.CreateWorkflowModeBrandNew:
-		if _, err := tx.InsertIntoCurrentExecutions(&row); err != nil {
-			return &workflow.InternalServiceError{
+		if _, err := tx.InsertIntoCurrentExecutions(ctx, &row); err != nil {
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("createOrUpdateCurrentExecution failed. Failed to insert into current_executions table. Error: %v", err),
 			}
 		}
@@ -671,15 +771,24 @@ func createOrUpdateCurrentExecution(
 }
 
 func lockAndCheckNextEventID(
-	tx sqldb.Tx,
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqldb.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqldb.UUID,
+	runID serialization.UUID,
 	condition int64,
 ) error {
 
-	nextEventID, err := lockNextEventID(tx, shardID, domainID, workflowID, runID)
+	nextEventID, err := lockNextEventID(
+		ctx,
+		tx,
+		shardID,
+		domainID,
+		workflowID,
+		runID,
+	)
+
 	if err != nil {
 		return err
 	}
@@ -692,14 +801,15 @@ func lockAndCheckNextEventID(
 }
 
 func lockNextEventID(
-	tx sqldb.Tx,
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqldb.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqldb.UUID,
+	runID serialization.UUID,
 ) (*int64, error) {
 
-	nextEventID, err := tx.WriteLockExecutions(&sqldb.ExecutionsFilter{
+	nextEventID, err := tx.WriteLockExecutions(ctx, &sqlplugin.ExecutionsFilter{
 		ShardID:    shardID,
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -707,7 +817,7 @@ func lockNextEventID(
 	})
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, &workflow.EntityNotExistsError{
+			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf(
 					"lockNextEventID failed. Unable to lock executions row with (shard, domain, workflow, run) = (%v,%v,%v,%v) which does not exist.",
 					shardID,
@@ -717,7 +827,7 @@ func lockNextEventID(
 				),
 			}
 		}
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("lockNextEventID failed. Error: %v", err),
 		}
 	}
@@ -726,21 +836,23 @@ func lockNextEventID(
 }
 
 func createTransferTasks(
-	tx sqldb.Tx,
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	transferTasks []p.Task,
 	shardID int,
-	domainID sqldb.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqldb.UUID,
+	runID serialization.UUID,
+	parser serialization.Parser,
 ) error {
 
 	if len(transferTasks) == 0 {
 		return nil
 	}
 
-	transferTasksRows := make([]sqldb.TransferTasksRow, len(transferTasks))
+	transferTasksRows := make([]sqlplugin.TransferTasksRow, len(transferTasks))
 	for i, task := range transferTasks {
-		info := &sqlblobs.TransferTaskInfo{
+		info := &serialization.TransferTaskInfo{
 			DomainID:         domainID,
 			WorkflowID:       &workflowID,
 			RunID:            runID,
@@ -754,35 +866,35 @@ func createTransferTasks(
 
 		switch task.GetType() {
 		case p.TransferTaskTypeActivityTask:
-			info.TargetDomainID = sqldb.MustParseUUID(task.(*p.ActivityTask).DomainID)
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.ActivityTask).DomainID)
 			info.TaskList = &task.(*p.ActivityTask).TaskList
 			info.ScheduleID = &task.(*p.ActivityTask).ScheduleID
 
 		case p.TransferTaskTypeDecisionTask:
-			info.TargetDomainID = sqldb.MustParseUUID(task.(*p.DecisionTask).DomainID)
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.DecisionTask).DomainID)
 			info.TaskList = &task.(*p.DecisionTask).TaskList
 			info.ScheduleID = &task.(*p.DecisionTask).ScheduleID
 
 		case p.TransferTaskTypeCancelExecution:
-			info.TargetDomainID = sqldb.MustParseUUID(task.(*p.CancelExecutionTask).TargetDomainID)
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.CancelExecutionTask).TargetDomainID)
 			info.TargetWorkflowID = &task.(*p.CancelExecutionTask).TargetWorkflowID
 			if task.(*p.CancelExecutionTask).TargetRunID != "" {
-				info.TargetRunID = sqldb.MustParseUUID(task.(*p.CancelExecutionTask).TargetRunID)
+				info.TargetRunID = serialization.MustParseUUID(task.(*p.CancelExecutionTask).TargetRunID)
 			}
 			info.TargetChildWorkflowOnly = &task.(*p.CancelExecutionTask).TargetChildWorkflowOnly
 			info.ScheduleID = &task.(*p.CancelExecutionTask).InitiatedID
 
 		case p.TransferTaskTypeSignalExecution:
-			info.TargetDomainID = sqldb.MustParseUUID(task.(*p.SignalExecutionTask).TargetDomainID)
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.SignalExecutionTask).TargetDomainID)
 			info.TargetWorkflowID = &task.(*p.SignalExecutionTask).TargetWorkflowID
 			if task.(*p.SignalExecutionTask).TargetRunID != "" {
-				info.TargetRunID = sqldb.MustParseUUID(task.(*p.SignalExecutionTask).TargetRunID)
+				info.TargetRunID = serialization.MustParseUUID(task.(*p.SignalExecutionTask).TargetRunID)
 			}
 			info.TargetChildWorkflowOnly = &task.(*p.SignalExecutionTask).TargetChildWorkflowOnly
 			info.ScheduleID = &task.(*p.SignalExecutionTask).InitiatedID
 
 		case p.TransferTaskTypeStartChildExecution:
-			info.TargetDomainID = sqldb.MustParseUUID(task.(*p.StartChildExecutionTask).TargetDomainID)
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.StartChildExecutionTask).TargetDomainID)
 			info.TargetWorkflowID = &task.(*p.StartChildExecutionTask).TargetWorkflowID
 			info.ScheduleID = &task.(*p.StartChildExecutionTask).InitiatedID
 
@@ -793,16 +905,16 @@ func createTransferTasks(
 			// No explicit property needs to be set
 
 		default:
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("createTransferTasks failed. Unknow transfer type: %v", task.GetType()),
 			}
 		}
 
 		info.TaskType = common.Int16Ptr(int16(task.GetType()))
 		info.Version = common.Int64Ptr(task.GetVersion())
-		info.VisibilityTimestampNanos = common.Int64Ptr(task.GetVisibilityTimestamp().UnixNano())
+		info.VisibilityTimestamp = common.TimePtr(task.GetVisibilityTimestamp())
 
-		blob, err := transferTaskInfoToBlob(info)
+		blob, err := parser.TransferTaskInfoToBlob(info)
 		if err != nil {
 			return err
 		}
@@ -810,22 +922,22 @@ func createTransferTasks(
 		transferTasksRows[i].DataEncoding = string(blob.Encoding)
 	}
 
-	result, err := tx.InsertIntoTransferTasks(transferTasksRows)
+	result, err := tx.InsertIntoTransferTasks(ctx, transferTasksRows)
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("createTransferTasks failed. Error: %v", err),
 		}
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("createTransferTasks failed. Could not verify number of rows inserted. Error: %v", err),
 		}
 	}
 
 	if int(rowsAffected) != len(transferTasks) {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("createTransferTasks failed. Inserted %v instead of %v rows into transfer_tasks. Error: %v", rowsAffected, len(transferTasks), err),
 		}
 	}
@@ -834,18 +946,20 @@ func createTransferTasks(
 }
 
 func createReplicationTasks(
-	tx sqldb.Tx,
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	replicationTasks []p.Task,
 	shardID int,
-	domainID sqldb.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqldb.UUID,
+	runID serialization.UUID,
+	parser serialization.Parser,
 ) error {
 
 	if len(replicationTasks) == 0 {
 		return nil
 	}
-	replicationTasksRows := make([]sqldb.ReplicationTasksRow, len(replicationTasks))
+	replicationTasksRows := make([]sqlplugin.ReplicationTasksRow, len(replicationTasks))
 
 	for i, task := range replicationTasks {
 
@@ -853,16 +967,13 @@ func createReplicationTasks(
 		nextEventID := common.EmptyEventID
 		version := common.EmptyVersion
 		activityScheduleID := common.EmptyEventID
-		var lastReplicationInfo map[string]*sqlblobs.ReplicationInfo
-
 		var branchToken, newRunBranchToken []byte
-		var resetWorkflow bool
 
 		switch task.GetType() {
 		case p.ReplicationTaskTypeHistory:
 			historyReplicationTask, ok := task.(*p.HistoryReplicationTask)
 			if !ok {
-				return &workflow.InternalServiceError{
+				return &types.InternalServiceError{
 					Message: fmt.Sprintf("createReplicationTasks failed. Failed to cast %v to HistoryReplicationTask", task),
 				}
 			}
@@ -871,24 +982,21 @@ func createReplicationTasks(
 			version = task.GetVersion()
 			branchToken = historyReplicationTask.BranchToken
 			newRunBranchToken = historyReplicationTask.NewRunBranchToken
-			resetWorkflow = historyReplicationTask.ResetWorkflow
-			lastReplicationInfo = make(map[string]*sqlblobs.ReplicationInfo, len(historyReplicationTask.LastReplicationInfo))
-			for k, v := range historyReplicationTask.LastReplicationInfo {
-				lastReplicationInfo[k] = &sqlblobs.ReplicationInfo{Version: &v.Version, LastEventID: &v.LastEventID}
-			}
 
 		case p.ReplicationTaskTypeSyncActivity:
 			version = task.GetVersion()
 			activityScheduleID = task.(*p.SyncActivityTask).ScheduledID
-			lastReplicationInfo = map[string]*sqlblobs.ReplicationInfo{}
+
+		case p.ReplicationTaskTypeFailoverMarker:
+			version = task.GetVersion()
 
 		default:
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Unknown replication task: %v", task.GetType()),
 			}
 		}
 
-		blob, err := replicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
+		blob, err := parser.ReplicationTaskInfoToBlob(&serialization.ReplicationTaskInfo{
 			DomainID:                domainID,
 			WorkflowID:              &workflowID,
 			RunID:                   runID,
@@ -896,13 +1004,12 @@ func createReplicationTasks(
 			FirstEventID:            &firstEventID,
 			NextEventID:             &nextEventID,
 			Version:                 &version,
-			LastReplicationInfo:     lastReplicationInfo,
 			ScheduledID:             &activityScheduleID,
 			EventStoreVersion:       common.Int32Ptr(p.EventStoreVersion),
 			NewRunEventStoreVersion: common.Int32Ptr(p.EventStoreVersion),
 			BranchToken:             branchToken,
 			NewRunBranchToken:       newRunBranchToken,
-			ResetWorkflow:           &resetWorkflow,
+			CreationTimestamp:       common.TimePtr(task.GetVisibilityTimestamp()),
 		})
 		if err != nil {
 			return err
@@ -913,22 +1020,22 @@ func createReplicationTasks(
 		replicationTasksRows[i].DataEncoding = string(blob.Encoding)
 	}
 
-	result, err := tx.InsertIntoReplicationTasks(replicationTasksRows)
+	result, err := tx.InsertIntoReplicationTasks(ctx, replicationTasksRows)
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("createReplicationTasks failed. Error: %v", err),
 		}
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("createReplicationTasks failed. Could not verify number of rows inserted. Error: %v", err),
 		}
 	}
 
 	if int(rowsAffected) != len(replicationTasks) {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("createReplicationTasks failed. Inserted %v instead of %v rows into transfer_tasks. Error: %v", rowsAffected, len(replicationTasks), err),
 		}
 	}
@@ -937,88 +1044,92 @@ func createReplicationTasks(
 }
 
 func createTimerTasks(
-	tx sqldb.Tx,
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	timerTasks []p.Task,
 	shardID int,
-	domainID sqldb.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqldb.UUID,
+	runID serialization.UUID,
+	parser serialization.Parser,
 ) error {
 
-	if len(timerTasks) > 0 {
-		timerTasksRows := make([]sqldb.TimerTasksRow, len(timerTasks))
+	if len(timerTasks) == 0 {
+		return nil
+	}
 
-		for i, task := range timerTasks {
-			info := &sqlblobs.TimerTaskInfo{}
-			switch t := task.(type) {
-			case *p.DecisionTimeoutTask:
-				info.EventID = &t.EventID
-				info.TimeoutType = common.Int16Ptr(int16(t.TimeoutType))
-				info.ScheduleAttempt = &t.ScheduleAttempt
+	timerTasksRows := make([]sqlplugin.TimerTasksRow, len(timerTasks))
 
-			case *p.ActivityTimeoutTask:
-				info.EventID = &t.EventID
-				info.TimeoutType = common.Int16Ptr(int16(t.TimeoutType))
-				info.ScheduleAttempt = &t.Attempt
+	for i, task := range timerTasks {
+		info := &serialization.TimerTaskInfo{}
+		switch t := task.(type) {
+		case *p.DecisionTimeoutTask:
+			info.EventID = &t.EventID
+			info.TimeoutType = common.Int16Ptr(int16(t.TimeoutType))
+			info.ScheduleAttempt = &t.ScheduleAttempt
 
-			case *p.UserTimerTask:
-				info.EventID = &t.EventID
+		case *p.ActivityTimeoutTask:
+			info.EventID = &t.EventID
+			info.TimeoutType = common.Int16Ptr(int16(t.TimeoutType))
+			info.ScheduleAttempt = &t.Attempt
 
-			case *p.ActivityRetryTimerTask:
-				info.EventID = &t.EventID
-				info.ScheduleAttempt = common.Int64Ptr(int64(t.Attempt))
+		case *p.UserTimerTask:
+			info.EventID = &t.EventID
 
-			case *p.WorkflowBackoffTimerTask:
-				info.EventID = &t.EventID
-				info.TimeoutType = common.Int16Ptr(int16(t.TimeoutType))
+		case *p.ActivityRetryTimerTask:
+			info.EventID = &t.EventID
+			info.ScheduleAttempt = common.Int64Ptr(int64(t.Attempt))
 
-			case *p.WorkflowTimeoutTask:
-				// noop
+		case *p.WorkflowBackoffTimerTask:
+			info.EventID = &t.EventID
+			info.TimeoutType = common.Int16Ptr(int16(t.TimeoutType))
 
-			case *p.DeleteHistoryEventTask:
-				// noop
+		case *p.WorkflowTimeoutTask:
+			// noop
 
-			default:
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("createTimerTasks failed. Unknown timer task: %v", task.GetType()),
-				}
+		case *p.DeleteHistoryEventTask:
+			// noop
+
+		default:
+			return &types.InternalServiceError{
+				Message: fmt.Sprintf("createTimerTasks failed. Unknown timer task: %v", task.GetType()),
 			}
-
-			info.DomainID = domainID
-			info.WorkflowID = &workflowID
-			info.RunID = runID
-			info.Version = common.Int64Ptr(task.GetVersion())
-			info.TaskType = common.Int16Ptr(int16(task.GetType()))
-
-			blob, err := timerTaskInfoToBlob(info)
-			if err != nil {
-				return err
-			}
-
-			timerTasksRows[i].ShardID = shardID
-			timerTasksRows[i].VisibilityTimestamp = task.GetVisibilityTimestamp()
-			timerTasksRows[i].TaskID = task.GetTaskID()
-			timerTasksRows[i].Data = blob.Data
-			timerTasksRows[i].DataEncoding = string(blob.Encoding)
 		}
 
-		result, err := tx.InsertIntoTimerTasks(timerTasksRows)
+		info.DomainID = domainID
+		info.WorkflowID = &workflowID
+		info.RunID = runID
+		info.Version = common.Int64Ptr(task.GetVersion())
+		info.TaskType = common.Int16Ptr(int16(task.GetType()))
+
+		blob, err := parser.TimerTaskInfoToBlob(info)
 		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("createTimerTasks failed. Error: %v", err),
-			}
-		}
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("createTimerTasks failed. Could not verify number of rows inserted. Error: %v", err),
-			}
+			return err
 		}
 
-		if int(rowsAffected) != len(timerTasks) {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("createTimerTasks failed. Inserted %v instead of %v rows into timer_tasks. Error: %v", rowsAffected, len(timerTasks), err),
-			}
+		timerTasksRows[i].ShardID = shardID
+		timerTasksRows[i].VisibilityTimestamp = task.GetVisibilityTimestamp()
+		timerTasksRows[i].TaskID = task.GetTaskID()
+		timerTasksRows[i].Data = blob.Data
+		timerTasksRows[i].DataEncoding = string(blob.Encoding)
+	}
+
+	result, err := tx.InsertIntoTimerTasks(ctx, timerTasksRows)
+	if err != nil {
+		return &types.InternalServiceError{
+			Message: fmt.Sprintf("createTimerTasks failed. Error: %v", err),
+		}
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return &types.InternalServiceError{
+			Message: fmt.Sprintf("createTimerTasks failed. Could not verify number of rows inserted. Error: %v", err),
+		}
+	}
+
+	if int(rowsAffected) != len(timerTasks) {
+		return &types.InternalServiceError{
+			Message: fmt.Sprintf("createTimerTasks failed. Inserted %v instead of %v rows into timer_tasks. Error: %v", rowsAffected, len(timerTasks), err),
 		}
 	}
 
@@ -1026,26 +1137,38 @@ func createTimerTasks(
 }
 
 func assertNotCurrentExecution(
-	tx sqldb.Tx,
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqldb.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqldb.UUID,
+	runID serialization.UUID,
 ) error {
-
-	assertFn := func(currentRow *sqldb.CurrentExecutionsRow) error {
-		return assertRunIDMismatch(runID, currentRow.RunID)
+	currentRow, err := tx.LockCurrentExecutions(ctx, &sqlplugin.CurrentExecutionsFilter{
+		ShardID:    int64(shardID),
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+	})
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// allow bypassing no current record
+			return nil
+		}
+		return &types.InternalServiceError{
+			Message: fmt.Sprintf("assertCurrentExecution failed. Unable to load current record. Error: %v", err),
+		}
 	}
-	return assertCurrentExecution(tx, shardID, domainID, workflowID, assertFn)
+	return assertRunIDMismatch(runID, currentRow.RunID)
 }
 
 func assertRunIDAndUpdateCurrentExecution(
-	tx sqldb.Tx,
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqldb.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	newRunID sqldb.UUID,
-	previousRunID sqldb.UUID,
+	newRunID serialization.UUID,
+	previousRunID serialization.UUID,
 	createRequestID string,
 	state int,
 	closeStatus int,
@@ -1053,7 +1176,7 @@ func assertRunIDAndUpdateCurrentExecution(
 	lastWriteVersion int64,
 ) error {
 
-	assertFn := func(currentRow *sqldb.CurrentExecutionsRow) error {
+	assertFn := func(currentRow *sqlplugin.CurrentExecutionsRow) error {
 		if !bytes.Equal(currentRow.RunID, previousRunID) {
 			return &p.ConditionFailedError{Msg: fmt.Sprintf(
 				"assertRunIDAndUpdateCurrentExecution failed. Current run ID was %v, expected %v",
@@ -1063,20 +1186,21 @@ func assertRunIDAndUpdateCurrentExecution(
 		}
 		return nil
 	}
-	if err := assertCurrentExecution(tx, shardID, domainID, workflowID, assertFn); err != nil {
+	if err := assertCurrentExecution(ctx, tx, shardID, domainID, workflowID, assertFn); err != nil {
 		return err
 	}
 
-	return updateCurrentExecution(tx, shardID, domainID, workflowID, newRunID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
+	return updateCurrentExecution(ctx, tx, shardID, domainID, workflowID, newRunID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
 }
 
 func assertAndUpdateCurrentExecution(
-	tx sqldb.Tx,
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqldb.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	newRunID sqldb.UUID,
-	previousRunID sqldb.UUID,
+	newRunID serialization.UUID,
+	previousRunID serialization.UUID,
 	previousLastWriteVersion int64,
 	previousState int,
 	createRequestID string,
@@ -1086,7 +1210,7 @@ func assertAndUpdateCurrentExecution(
 	lastWriteVersion int64,
 ) error {
 
-	assertFn := func(currentRow *sqldb.CurrentExecutionsRow) error {
+	assertFn := func(currentRow *sqlplugin.CurrentExecutionsRow) error {
 		if !bytes.Equal(currentRow.RunID, previousRunID) {
 			return &p.ConditionFailedError{Msg: fmt.Sprintf(
 				"assertAndUpdateCurrentExecution failed. Current run ID was %v, expected %v",
@@ -1110,35 +1234,36 @@ func assertAndUpdateCurrentExecution(
 		}
 		return nil
 	}
-	if err := assertCurrentExecution(tx, shardID, domainID, workflowID, assertFn); err != nil {
+	if err := assertCurrentExecution(ctx, tx, shardID, domainID, workflowID, assertFn); err != nil {
 		return err
 	}
 
-	return updateCurrentExecution(tx, shardID, domainID, workflowID, newRunID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
+	return updateCurrentExecution(ctx, tx, shardID, domainID, workflowID, newRunID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
 }
 
 func assertCurrentExecution(
-	tx sqldb.Tx,
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqldb.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	assertFn func(currentRow *sqldb.CurrentExecutionsRow) error,
+	assertFn func(currentRow *sqlplugin.CurrentExecutionsRow) error,
 ) error {
 
-	currentRow, err := tx.LockCurrentExecutions(&sqldb.CurrentExecutionsFilter{
+	currentRow, err := tx.LockCurrentExecutions(ctx, &sqlplugin.CurrentExecutionsFilter{
 		ShardID:    int64(shardID),
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	})
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("assertCurrentExecution failed. Unable to load current record. Error: %v", err),
 		}
 	}
 	return assertFn(currentRow)
 }
 
-func assertRunIDMismatch(runID sqldb.UUID, currentRunID sqldb.UUID) error {
+func assertRunIDMismatch(runID serialization.UUID, currentRunID serialization.UUID) error {
 	// zombie workflow creation with existence of current record, this is a noop
 	if bytes.Equal(currentRunID, runID) {
 		return &p.ConditionFailedError{Msg: fmt.Sprintf(
@@ -1151,11 +1276,12 @@ func assertRunIDMismatch(runID sqldb.UUID, currentRunID sqldb.UUID) error {
 }
 
 func updateCurrentExecution(
-	tx sqldb.Tx,
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqldb.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqldb.UUID,
+	runID serialization.UUID,
 	createRequestID string,
 	state int,
 	closeStatus int,
@@ -1163,7 +1289,7 @@ func updateCurrentExecution(
 	lastWriteVersion int64,
 ) error {
 
-	result, err := tx.UpdateCurrentExecutions(&sqldb.CurrentExecutionsRow{
+	result, err := tx.UpdateCurrentExecutions(ctx, &sqlplugin.CurrentExecutionsRow{
 		ShardID:          int64(shardID),
 		DomainID:         domainID,
 		WorkflowID:       workflowID,
@@ -1175,18 +1301,18 @@ func updateCurrentExecution(
 		LastWriteVersion: lastWriteVersion,
 	})
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("updateCurrentExecution failed. Error: %v", err),
 		}
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("updateCurrentExecution failed. Failed to check number of rows updated in current_executions table. Error: %v", err),
 		}
 	}
 	if rowsAffected != 1 {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("updateCurrentExecution failed. %v rows of current_executions updated instead of 1.", rowsAffected),
 		}
 	}
@@ -1195,61 +1321,60 @@ func updateCurrentExecution(
 
 func buildExecutionRow(
 	executionInfo *p.InternalWorkflowExecutionInfo,
-	replicationState *p.ReplicationState,
 	versionHistories *p.DataBlob,
 	startVersion int64,
 	lastWriteVersion int64,
-	currentVersion int64,
 	shardID int,
-) (row *sqldb.ExecutionsRow, err error) {
+	parser serialization.Parser,
+) (row *sqlplugin.ExecutionsRow, err error) {
 
-	info := &sqlblobs.WorkflowExecutionInfo{
-		TaskList:                                &executionInfo.TaskList,
-		WorkflowTypeName:                        &executionInfo.WorkflowTypeName,
-		WorkflowTimeoutSeconds:                  &executionInfo.WorkflowTimeout,
-		DecisionTaskTimeoutSeconds:              &executionInfo.DecisionStartToCloseTimeout,
-		ExecutionContext:                        executionInfo.ExecutionContext,
-		State:                                   common.Int32Ptr(int32(executionInfo.State)),
-		CloseStatus:                             common.Int32Ptr(int32(executionInfo.CloseStatus)),
-		LastFirstEventID:                        &executionInfo.LastFirstEventID,
-		LastEventTaskID:                         &executionInfo.LastEventTaskID,
-		LastProcessedEvent:                      &executionInfo.LastProcessedEvent,
-		StartTimeNanos:                          common.Int64Ptr(executionInfo.StartTimestamp.UnixNano()),
-		LastUpdatedTimeNanos:                    common.Int64Ptr(executionInfo.LastUpdatedTimestamp.UnixNano()),
-		CreateRequestID:                         &executionInfo.CreateRequestID,
-		DecisionVersion:                         &executionInfo.DecisionVersion,
-		DecisionScheduleID:                      &executionInfo.DecisionScheduleID,
-		DecisionStartedID:                       &executionInfo.DecisionStartedID,
-		DecisionRequestID:                       &executionInfo.DecisionRequestID,
-		DecisionTimeout:                         &executionInfo.DecisionTimeout,
-		DecisionAttempt:                         &executionInfo.DecisionAttempt,
-		DecisionStartedTimestampNanos:           &executionInfo.DecisionStartedTimestamp,
-		DecisionScheduledTimestampNanos:         &executionInfo.DecisionScheduledTimestamp,
-		DecisionOriginalScheduledTimestampNanos: &executionInfo.DecisionOriginalScheduledTimestamp,
-		StickyTaskList:                          &executionInfo.StickyTaskList,
-		StickyScheduleToStartTimeout:            common.Int64Ptr(int64(executionInfo.StickyScheduleToStartTimeout)),
-		ClientLibraryVersion:                    &executionInfo.ClientLibraryVersion,
-		ClientFeatureVersion:                    &executionInfo.ClientFeatureVersion,
-		ClientImpl:                              &executionInfo.ClientImpl,
-		SignalCount:                             common.Int64Ptr(int64(executionInfo.SignalCount)),
-		HistorySize:                             &executionInfo.HistorySize,
-		CronSchedule:                            &executionInfo.CronSchedule,
-		CompletionEventBatchID:                  &executionInfo.CompletionEventBatchID,
-		HasRetryPolicy:                          &executionInfo.HasRetryPolicy,
-		RetryAttempt:                            common.Int64Ptr(int64(executionInfo.Attempt)),
-		RetryInitialIntervalSeconds:             &executionInfo.InitialInterval,
-		RetryBackoffCoefficient:                 &executionInfo.BackoffCoefficient,
-		RetryMaximumIntervalSeconds:             &executionInfo.MaximumInterval,
-		RetryMaximumAttempts:                    &executionInfo.MaximumAttempts,
-		RetryExpirationSeconds:                  &executionInfo.ExpirationSeconds,
-		RetryExpirationTimeNanos:                common.Int64Ptr(executionInfo.ExpirationTime.UnixNano()),
-		RetryNonRetryableErrors:                 executionInfo.NonRetriableErrors,
-		EventStoreVersion:                       common.Int32Ptr(p.EventStoreVersion),
-		EventBranchToken:                        executionInfo.BranchToken,
-		AutoResetPoints:                         executionInfo.AutoResetPoints.Data,
-		AutoResetPointsEncoding:                 common.StringPtr(string(executionInfo.AutoResetPoints.GetEncoding())),
-		SearchAttributes:                        executionInfo.SearchAttributes,
-		Memo:                                    executionInfo.Memo,
+	info := &serialization.WorkflowExecutionInfo{
+		TaskList:                           &executionInfo.TaskList,
+		WorkflowTypeName:                   &executionInfo.WorkflowTypeName,
+		WorkflowTimeout:                    &executionInfo.WorkflowTimeout,
+		DecisionTaskTimeout:                &executionInfo.DecisionStartToCloseTimeout,
+		ExecutionContext:                   executionInfo.ExecutionContext,
+		State:                              common.Int32Ptr(int32(executionInfo.State)),
+		CloseStatus:                        common.Int32Ptr(int32(executionInfo.CloseStatus)),
+		LastFirstEventID:                   &executionInfo.LastFirstEventID,
+		LastEventTaskID:                    &executionInfo.LastEventTaskID,
+		LastProcessedEvent:                 &executionInfo.LastProcessedEvent,
+		StartTimestamp:                     &executionInfo.StartTimestamp,
+		LastUpdatedTimestamp:               &executionInfo.LastUpdatedTimestamp,
+		CreateRequestID:                    &executionInfo.CreateRequestID,
+		DecisionVersion:                    &executionInfo.DecisionVersion,
+		DecisionScheduleID:                 &executionInfo.DecisionScheduleID,
+		DecisionStartedID:                  &executionInfo.DecisionStartedID,
+		DecisionRequestID:                  &executionInfo.DecisionRequestID,
+		DecisionTimeout:                    &executionInfo.DecisionTimeout,
+		DecisionAttempt:                    &executionInfo.DecisionAttempt,
+		DecisionStartedTimestamp:           &executionInfo.DecisionStartedTimestamp,
+		DecisionScheduledTimestamp:         &executionInfo.DecisionScheduledTimestamp,
+		DecisionOriginalScheduledTimestamp: &executionInfo.DecisionOriginalScheduledTimestamp,
+		StickyTaskList:                     &executionInfo.StickyTaskList,
+		StickyScheduleToStartTimeout:       &executionInfo.StickyScheduleToStartTimeout,
+		ClientLibraryVersion:               &executionInfo.ClientLibraryVersion,
+		ClientFeatureVersion:               &executionInfo.ClientFeatureVersion,
+		ClientImpl:                         &executionInfo.ClientImpl,
+		SignalCount:                        common.Int64Ptr(int64(executionInfo.SignalCount)),
+		HistorySize:                        &executionInfo.HistorySize,
+		CronSchedule:                       &executionInfo.CronSchedule,
+		CompletionEventBatchID:             &executionInfo.CompletionEventBatchID,
+		HasRetryPolicy:                     &executionInfo.HasRetryPolicy,
+		RetryAttempt:                       common.Int64Ptr(int64(executionInfo.Attempt)),
+		RetryInitialInterval:               &executionInfo.InitialInterval,
+		RetryBackoffCoefficient:            &executionInfo.BackoffCoefficient,
+		RetryMaximumInterval:               &executionInfo.MaximumInterval,
+		RetryMaximumAttempts:               &executionInfo.MaximumAttempts,
+		RetryExpiration:                    &executionInfo.ExpirationSeconds,
+		RetryExpirationTimestamp:           &executionInfo.ExpirationTime,
+		RetryNonRetryableErrors:            executionInfo.NonRetriableErrors,
+		EventStoreVersion:                  common.Int32Ptr(p.EventStoreVersion),
+		EventBranchToken:                   executionInfo.BranchToken,
+		AutoResetPoints:                    executionInfo.AutoResetPoints.Data,
+		AutoResetPointsEncoding:            common.StringPtr(string(executionInfo.AutoResetPoints.GetEncoding())),
+		SearchAttributes:                   executionInfo.SearchAttributes,
+		Memo:                               executionInfo.Memo,
 	}
 
 	completionEvent := executionInfo.CompletionEvent
@@ -1259,28 +1384,17 @@ func buildExecutionRow(
 	}
 
 	info.StartVersion = &startVersion
-	info.CurrentVersion = &currentVersion
-	if replicationState == nil && versionHistories == nil {
+	if versionHistories == nil {
 		// this is allowed
-	} else if replicationState != nil {
-		info.LastWriteEventID = &replicationState.LastWriteEventID
-		info.LastReplicationInfo = make(map[string]*sqlblobs.ReplicationInfo, len(replicationState.LastReplicationInfo))
-		for k, v := range replicationState.LastReplicationInfo {
-			info.LastReplicationInfo[k] = &sqlblobs.ReplicationInfo{Version: &v.Version, LastEventID: &v.LastEventID}
-		}
-	} else if versionHistories != nil {
+	} else {
 		info.VersionHistories = versionHistories.Data
 		info.VersionHistoriesEncoding = common.StringPtr(string(versionHistories.GetEncoding()))
-	} else {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("build workflow execution with both version histories and replication state."),
-		}
 	}
 
 	if executionInfo.ParentDomainID != "" {
-		info.ParentDomainID = sqldb.MustParseUUID(executionInfo.ParentDomainID)
+		info.ParentDomainID = serialization.MustParseUUID(executionInfo.ParentDomainID)
 		info.ParentWorkflowID = &executionInfo.ParentWorkflowID
-		info.ParentRunID = sqldb.MustParseUUID(executionInfo.ParentRunID)
+		info.ParentRunID = serialization.MustParseUUID(executionInfo.ParentRunID)
 		info.InitiatedID = &executionInfo.InitiatedID
 		info.CompletionEvent = nil
 	}
@@ -1290,16 +1404,16 @@ func buildExecutionRow(
 		info.CancelRequestID = &executionInfo.CancelRequestID
 	}
 
-	blob, err := workflowExecutionInfoToBlob(info)
+	blob, err := parser.WorkflowExecutionInfoToBlob(info)
 	if err != nil {
 		return nil, err
 	}
 
-	return &sqldb.ExecutionsRow{
+	return &sqlplugin.ExecutionsRow{
 		ShardID:          shardID,
-		DomainID:         sqldb.MustParseUUID(executionInfo.DomainID),
+		DomainID:         serialization.MustParseUUID(executionInfo.DomainID),
 		WorkflowID:       executionInfo.WorkflowID,
-		RunID:            sqldb.MustParseUUID(executionInfo.RunID),
+		RunID:            serialization.MustParseUUID(executionInfo.RunID),
 		NextEventID:      int64(executionInfo.NextEventID),
 		LastWriteVersion: lastWriteVersion,
 		Data:             blob.Data,
@@ -1307,15 +1421,15 @@ func buildExecutionRow(
 	}, nil
 }
 
-func createExecution(
-	tx sqldb.Tx,
+func (m *sqlExecutionManager) createExecution(
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	executionInfo *p.InternalWorkflowExecutionInfo,
-	replicationState *p.ReplicationState,
 	versionHistories *p.DataBlob,
 	startVersion int64,
 	lastWriteVersion int64,
-	currentVersion int64,
 	shardID int,
+	parser serialization.Parser,
 ) error {
 
 	// validate workflow state & close status
@@ -1331,50 +1445,39 @@ func createExecution(
 
 	row, err := buildExecutionRow(
 		executionInfo,
-		replicationState,
 		versionHistories,
 		startVersion,
 		lastWriteVersion,
-		currentVersion,
 		shardID,
+		parser,
 	)
 	if err != nil {
 		return err
 	}
-	result, err := tx.InsertIntoExecutions(row)
+	result, err := tx.InsertIntoExecutions(ctx, row)
 	if err != nil {
-		switch mysqlErr := err.(type) {
-		case *mysql.MySQLError:
-			switch mysqlErr.Number {
-			case uint16(1062):
-				// mysql error `Duplicate entry`
-				return &p.WorkflowExecutionAlreadyStartedError{
-					Msg:              fmt.Sprintf("Workflow execution already running. WorkflowId: %v", executionInfo.WorkflowID),
-					StartRequestID:   executionInfo.CreateRequestID,
-					RunID:            executionInfo.RunID,
-					State:            executionInfo.State,
-					CloseStatus:      executionInfo.CloseStatus,
-					LastWriteVersion: row.LastWriteVersion,
-				}
-			default:
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("createExecution failed. Erorr: %v, Code: %v", err, mysqlErr.Number),
-				}
+		if m.db.IsDupEntryError(err) {
+			return &p.WorkflowExecutionAlreadyStartedError{
+				Msg:              fmt.Sprintf("Workflow execution already running. WorkflowId: %v", executionInfo.WorkflowID),
+				StartRequestID:   executionInfo.CreateRequestID,
+				RunID:            executionInfo.RunID,
+				State:            executionInfo.State,
+				CloseStatus:      executionInfo.CloseStatus,
+				LastWriteVersion: row.LastWriteVersion,
 			}
-		default:
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("createExecution failed. Erorr: %v", err),
-			}
+		}
+		return &types.InternalServiceError{
+			Message: fmt.Sprintf("createExecution failed. Erorr: %v", err),
 		}
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("createExecution failed. Failed to verify number of rows affected. Erorr: %v", err),
 		}
 	}
 	if rowsAffected != 1 {
-		return &workflow.EntityNotExistsError{
+		return &types.EntityNotExistsError{
 			Message: fmt.Sprintf("createExecution failed. Affected %v rows updated instead of 1.", rowsAffected),
 		}
 	}
@@ -1383,14 +1486,14 @@ func createExecution(
 }
 
 func updateExecution(
-	tx sqldb.Tx,
+	ctx context.Context,
+	tx sqlplugin.Tx,
 	executionInfo *p.InternalWorkflowExecutionInfo,
-	replicationState *p.ReplicationState,
 	versionHistories *p.DataBlob,
 	startVersion int64,
 	lastWriteVersion int64,
-	currentVersion int64,
 	shardID int,
+	parser serialization.Parser,
 ) error {
 
 	// validate workflow state & close status
@@ -1405,30 +1508,29 @@ func updateExecution(
 
 	row, err := buildExecutionRow(
 		executionInfo,
-		replicationState,
 		versionHistories,
 		startVersion,
 		lastWriteVersion,
-		currentVersion,
 		shardID,
+		parser,
 	)
 	if err != nil {
 		return err
 	}
-	result, err := tx.UpdateExecutions(row)
+	result, err := tx.UpdateExecutions(ctx, row)
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("updateExecution failed. Erorr: %v", err),
 		}
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("updateExecution failed. Failed to verify number of rows affected. Erorr: %v", err),
 		}
 	}
 	if rowsAffected != 1 {
-		return &workflow.EntityNotExistsError{
+		return &types.EntityNotExistsError{
 			Message: fmt.Sprintf("updateExecution failed. Affected %v rows updated instead of 1.", rowsAffected),
 		}
 	}

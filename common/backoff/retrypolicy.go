@@ -65,6 +65,15 @@ type (
 		maximumAttempts    int
 	}
 
+	// MultiPhasesRetryPolicy implements a policy that first use one policy to get next delay,
+	// and once expired use the next policy for the following retry.
+	// It can achieve fast retries in first phase then slowly retires in second phase.
+	// The supported retry policy is ExponentialRetryPolicy.
+	// To have the correct next delay, set the maximumAttempts in the non-final policy.
+	MultiPhasesRetryPolicy struct {
+		policies []*ExponentialRetryPolicy
+	}
+
 	systemClock struct{}
 
 	retrierImpl struct {
@@ -91,8 +100,28 @@ func NewExponentialRetryPolicy(initialInterval time.Duration) *ExponentialRetryP
 	return p
 }
 
+// NewMultiPhasesRetryPolicy creates MultiPhasesRetryPolicy
+func NewMultiPhasesRetryPolicy(policies ...*ExponentialRetryPolicy) *MultiPhasesRetryPolicy {
+
+	for i := 0; i < len(policies)-1; i++ {
+		if policies[i].maximumAttempts == noMaximumAttempts {
+			panic("Non final retry policy in MultiPhasesRetryPolicy need to set maximum attempts")
+		}
+	}
+	return &MultiPhasesRetryPolicy{
+		policies: policies,
+	}
+}
+
 // NewRetrier is used for creating a new instance of Retrier
 func NewRetrier(policy RetryPolicy, clock Clock) Retrier {
+	if policy == nil {
+		panic("Retry policy cannot be nil.")
+	}
+	if clock == nil {
+		panic("Retry clock cannot be nil.")
+	}
+
 	return &retrierImpl{
 		policy:         policy,
 		clock:          clock,
@@ -171,6 +200,19 @@ func (p *ExponentialRetryPolicy) ComputeNextDelay(elapsedTime time.Duration, num
 	nextInterval = nextInterval*0.8 + float64(rand.Intn(jitterPortion))
 
 	return time.Duration(nextInterval)
+}
+
+// ComputeNextDelay returns the next delay interval.
+func (tp MultiPhasesRetryPolicy) ComputeNextDelay(elapsedTime time.Duration, numAttempts int) time.Duration {
+	previousStageRetryCount := 0
+	for _, policy := range tp.policies {
+		nextInterval := policy.ComputeNextDelay(elapsedTime, numAttempts-previousStageRetryCount)
+		if nextInterval != done {
+			return nextInterval
+		}
+		previousStageRetryCount += policy.maximumAttempts
+	}
+	return done
 }
 
 // Now returns the current time using the system clock

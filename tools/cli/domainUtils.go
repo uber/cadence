@@ -27,10 +27,11 @@ import (
 	"github.com/uber-go/tally"
 	"github.com/urfave/cli"
 
-	sericeFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
@@ -60,10 +61,6 @@ var (
 		cli.StringFlag{
 			Name:  FlagRetentionDaysWithAlias,
 			Usage: "Workflow execution retention in days",
-		},
-		cli.StringFlag{
-			Name:  FlagEmitMetricWithAlias,
-			Usage: "Flag to emit metric",
 		},
 		cli.StringFlag{
 			Name:  FlagActiveClusterNameWithAlias,
@@ -120,10 +117,6 @@ var (
 			Usage: "Workflow execution retention in days",
 		},
 		cli.StringFlag{
-			Name:  FlagEmitMetricWithAlias,
-			Usage: "Flag to emit metric",
-		},
-		cli.StringFlag{
 			Name:  FlagActiveClusterNameWithAlias,
 			Usage: "Active cluster name",
 		},
@@ -170,6 +163,22 @@ var (
 			Name:  FlagReason,
 			Usage: "Reason for the operation",
 		},
+		cli.StringFlag{
+			Name:  FlagFailoverTypeWithAlias,
+			Usage: "Domain failover type. Default value: force. Options: [force,grace]",
+		},
+		cli.IntFlag{
+			Name:  FlagFailoverTimeoutWithAlias,
+			Value: defaultGracefulFailoverTimeoutInSeconds,
+			Usage: "[Optional] Domain failover timeout in seconds.",
+		},
+	}
+
+	deprecateDomainFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:  FlagSecurityTokenWithAlias,
+			Usage: "Optional token for security check",
+		},
 	}
 
 	describeDomainFlags = []cli.Flag{
@@ -204,6 +213,11 @@ var (
 		adminDomainCommonFlags...,
 	)
 
+	adminDeprecateDomainFlags = append(
+		deprecateDomainFlags,
+		adminDomainCommonFlags...,
+	)
+
 	adminDescribeDomainFlags = append(
 		updateDomainFlags,
 		adminDomainCommonFlags...,
@@ -212,7 +226,7 @@ var (
 
 func initializeFrontendClient(
 	context *cli.Context,
-) sericeFrontend.Interface {
+) frontend.Client {
 	return cFactory.ServerFrontendClient(context)
 }
 
@@ -264,22 +278,32 @@ func initializeDomainHandler(
 	archivalMetadata archiver.ArchivalMetadata,
 	archiverProvider provider.ArchiverProvider,
 ) domain.Handler {
+
+	domainConfig := domain.Config{
+		MinRetentionDays:  dynamicconfig.GetIntPropertyFn(domain.DefaultMinWorkflowRetentionInDays),
+		MaxBadBinaryCount: dynamicconfig.GetIntPropertyFilteredByDomain(domain.MaxBadBinaries),
+		FailoverCoolDown:  dynamicconfig.GetDurationPropertyFnFilteredByDomain(domain.FailoverCoolDown),
+	}
 	return domain.NewHandler(
-		domain.MinRetentionDays,
-		dynamicconfig.GetIntPropertyFilteredByDomain(domain.MaxBadBinaries),
+		domainConfig,
 		logger,
 		metadataMgr,
 		clusterMetadata,
 		initializeDomainReplicator(logger),
 		archivalMetadata,
 		archiverProvider,
+		clock.NewRealTimeSource(),
 	)
 }
 
 func initializeLogger(
 	serviceConfig *config.Config,
 ) log.Logger {
-	return loggerimpl.NewLogger(serviceConfig.Log.NewZapLogger())
+	zapLogger, err := serviceConfig.Log.NewZapLogger()
+	if err != nil {
+		ErrorAndExit("failed to create zap logger, err: ", err)
+	}
+	return loggerimpl.NewLogger(zapLogger)
 }
 
 func initializeMetadataMgr(
@@ -290,7 +314,6 @@ func initializeMetadataMgr(
 ) persistence.MetadataManager {
 
 	pConfig := serviceConfig.Persistence
-	pConfig.SetMaxQPS(pConfig.DefaultStore, dependencyMaxQPS)
 	pConfig.VisibilityConfig = &config.VisibilityConfig{
 		VisibilityListMaxQPS:            dynamicconfig.GetIntPropertyFilteredByDomain(dependencyMaxQPS),
 		EnableSampling:                  dynamicconfig.GetBoolPropertyFn(false), // not used by domain operation
@@ -298,6 +321,7 @@ func initializeMetadataMgr(
 	}
 	pFactory := client.NewFactory(
 		&pConfig,
+		dynamicconfig.GetIntPropertyFn(dependencyMaxQPS),
 		clusterMetadata.GetCurrentClusterName(),
 		metricsClient,
 		logger,
@@ -322,7 +346,6 @@ func initializeClusterMetadata(
 		clusterMetadata.MasterClusterName,
 		clusterMetadata.CurrentClusterName,
 		clusterMetadata.ClusterInformation,
-		clusterMetadata.ReplicationConsumer,
 	)
 }
 
@@ -383,7 +406,7 @@ func initializeDomainReplicator(
 ) domain.Replicator {
 
 	replicationMessageSink := &mocks.KafkaProducer{}
-	replicationMessageSink.On("Publish", mock.Anything).Return(nil)
+	replicationMessageSink.On("Publish", mock.Anything, mock.Anything).Return(nil)
 	return domain.NewDomainReplicator(replicationMessageSink, logger)
 }
 

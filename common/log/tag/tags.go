@@ -64,7 +64,9 @@ func workflowListFilterType(listFilterType string) Tag {
 // general
 
 // WorkflowError returns tag for WorkflowError
-func WorkflowError(error error) Tag { return newErrorTag("wf-error", error) }
+func WorkflowError(error error) Tag {
+	return newErrorTag("wf-error", error)
+}
 
 // WorkflowTimeoutType returns tag for WorkflowTimeoutType
 func WorkflowTimeoutType(timeoutType int64) Tag {
@@ -144,6 +146,11 @@ func WorkflowDecisionTimeoutSeconds(s int32) Tag {
 // QueryID returns tag for QueryID
 func QueryID(queryID string) Tag {
 	return newStringTag("query-id", queryID)
+}
+
+// BlobSizeViolationOperation returns tag for BlobSizeViolationOperation
+func BlobSizeViolationOperation(operation string) Tag {
+	return newStringTag("blob-size-violation-operation", operation)
 }
 
 // domain related
@@ -244,6 +251,11 @@ func WorkflowTaskListType(taskListType int) Tag {
 	return newInt("wf-task-list-type", taskListType)
 }
 
+// WorkflowTaskListKind returns tag for WorkflowTaskListKind
+func WorkflowTaskListKind(taskListKind int32) Tag {
+	return newInt32("wf-task-list-kind", taskListKind)
+}
+
 // WorkflowTaskListName returns tag for WorkflowTaskListName
 func WorkflowTaskListName(taskListName string) Tag {
 	return newStringTag("wf-task-list-name", taskListName)
@@ -279,32 +291,37 @@ func WorkflowEventCount(eventCount int) Tag {
 ///////////////////  System tags defined here:  ///////////////////
 // Tags with pre-define values
 
-// Component returns tag for Component
+// component returns tag for component
 func component(component string) Tag {
 	return newPredefinedStringTag("component", component)
 }
 
-// Lifecycle returns tag for Lifecycle
+// lifecycle returns tag for lifecycle
 func lifecycle(lifecycle string) Tag {
 	return newPredefinedStringTag("lifecycle", lifecycle)
 }
 
-// StoreOperation returns tag for StoreOperation
+// storeOperation returns tag for storeOperation
 func storeOperation(storeOperation string) Tag {
 	return newPredefinedStringTag("store-operation", storeOperation)
 }
 
-// OperationResult returns tag for OperationResult
+// clientOperation returns tag for clientOperation
+func clientOperation(clientOperation string) Tag {
+	return newPredefinedStringTag("client-operation", clientOperation)
+}
+
+// operationResult returns tag for operationResult
 func operationResult(operationResult string) Tag {
 	return newPredefinedStringTag("operation-result", operationResult)
 }
 
-// ErrorType returns tag for ErrorType
+// errorType returns tag for errorType
 func errorType(errorType string) Tag {
-	return newPredefinedStringTag("error", errorType)
+	return newPredefinedStringTag("error-type", errorType)
 }
 
-// Shardupdate returns tag for Shardupdate
+// shardupdate returns tag for shardupdate
 func shardupdate(shardupdate string) Tag {
 	return newPredefinedStringTag("shard-update", shardupdate)
 }
@@ -329,6 +346,11 @@ func ListenerName(name string) Tag {
 // Address return tag for Address
 func Address(ad string) Tag {
 	return newStringTag("address", ad)
+}
+
+// Env return tag for runtime environment
+func Env(env string) Tag {
+	return newStringTag("env", env)
 }
 
 // Key returns tag for Key
@@ -374,6 +396,16 @@ func MetricScope(metricScope int) Tag {
 // StoreType returns tag for StoreType
 func StoreType(storeType string) Tag {
 	return newPredefinedStringTag("store-type", storeType)
+}
+
+// StoreError returns tag for StoreError
+func StoreError(storeErr error) Tag {
+	return newErrorTag("store-error", storeErr)
+}
+
+// ClientError returns tag for ClientError
+func ClientError(clientErr error) Tag {
+	return newErrorTag("client-error", clientErr)
 }
 
 // DetailInfo returns tag for DetailInfo
@@ -455,6 +487,21 @@ func ShardTimerAcks(shardTimerAcks interface{}) Tag {
 
 // task queue processor
 
+// QueueLevel returns tag for QueueLevel
+func QueueLevel(level int) Tag {
+	return newInt("queue-level", level)
+}
+
+// PreviousQueueLevel returns tag for PreviousQueueLevel
+func PreviousQueueLevel(level int) Tag {
+	return newInt("previous-queue-level", level)
+}
+
+// QueueSplitPolicyType returns tag for QueueSplitPolicyType
+func QueueSplitPolicyType(policyType int) Tag {
+	return newInt("split-policy-type", policyType)
+}
+
 // TaskID returns tag for TaskID
 func TaskID(taskID int64) Tag {
 	return newInt64("queue-task-id", taskID)
@@ -463,6 +510,11 @@ func TaskID(taskID int64) Tag {
 // TaskType returns tag for TaskType for queue processor
 func TaskType(taskType int) Tag {
 	return newInt("queue-task-type", taskType)
+}
+
+// TaskVisibilityTimestamp returns tag for task visibilityTimestamp
+func TaskVisibilityTimestamp(timestamp int64) Tag {
+	return newInt64("queue-task-visibility-timestamp", timestamp)
 }
 
 // NumberProcessed returns tag for NumberProcessed
@@ -529,6 +581,12 @@ func ESKey(ESKey string) Tag {
 	return newStringTag("es-mapping-key", ESKey)
 }
 
+// ESValue returns tag for ESValue
+func ESValue(ESValue []byte) Tag {
+	// convert value to string type so that the value logged is human readable
+	return newStringTag("es-mapping-value", string(ESValue))
+}
+
 // ESConfig returns tag for ESConfig
 func ESConfig(c interface{}) Tag {
 	return newObjectTag("es-config", c)
@@ -546,10 +604,6 @@ func ESDocID(id string) Tag {
 
 // LoggingCallAtKey is reserved tag
 const LoggingCallAtKey = "logging-call-at"
-
-func loggingCallAt(position string) Tag {
-	return newStringTag(LoggingCallAtKey, position)
-}
 
 // SysStackTrace returns tag for SysStackTrace
 func SysStackTrace(stackTrace string) Tag {
@@ -623,11 +677,6 @@ func IncomingVersion(incomingVersion int64) Tag {
 // ReplicationInfo returns tag for ReplicationInfo
 func ReplicationInfo(replicationInfo interface{}) Tag {
 	return newObjectTag("xdc-replication-info", replicationInfo)
-}
-
-// ReplicationState returns tag for ReplicationState
-func ReplicationState(replicationState interface{}) Tag {
-	return newObjectTag("xdc-replication-state", replicationState)
 }
 
 // FirstEventVersion returns tag for FirstEventVersion

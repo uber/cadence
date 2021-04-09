@@ -27,21 +27,17 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/auth"
-
-	"github.com/uber/cadence/common/service/config"
-
-	"github.com/gocql/gocql"
-
-	"github.com/uber/cadence/common/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/tools/common/schema"
 )
 
 type (
 	cqlClient struct {
-		nReplicas     int
-		session       *gocql.Session
-		clusterConfig *gocql.ClusterConfig
+		nReplicas int
+		session   gocql.Session
+		cfg       *CQLClientConfig
 	}
+
 	// CQLClientConfig contains the configuration for cql client
 	CQLClientConfig struct {
 		Hosts       string
@@ -52,6 +48,7 @@ type (
 		Timeout     int
 		numReplicas int
 		TLS         *auth.TLS
+		CQLClient   gocql.Client
 	}
 )
 
@@ -59,9 +56,8 @@ var errNoHosts = errors.New("Cassandra Hosts list is empty or malformed")
 var errGetSchemaVersion = errors.New("Failed to get current schema version from cassandra")
 
 const (
-	defaultTimeout       = 30    // Timeout in seconds
-	cqlProtoVersion      = 4     // default CQL protocol version
-	defaultConsistency   = "ALL" // schema updates must always be ALL
+	defaultTimeout       = 30 // Timeout in seconds
+	cqlProtoVersion      = 4  // default CQL protocol version
 	defaultCassandraPort = 9042
 	systemKeyspace       = "system"
 )
@@ -94,51 +90,32 @@ const (
 
 var _ schema.DB = (*cqlClient)(nil)
 
-// NewCassandraCluster return gocql clusterConfig
-func NewCassandraCluster(cfg *config.Cassandra, timeoutSeconds int) (*gocql.ClusterConfig, error) {
-	clusterCfg := cassandra.NewCassandraCluster(*cfg)
-
-	if len(clusterCfg.Hosts) == 0 {
-		return nil, errNoHosts
-	}
-
-	timeout := time.Duration(timeoutSeconds) * time.Second
-	clusterCfg.Timeout = timeout
-	clusterCfg.ProtoVersion = cqlProtoVersion
-	clusterCfg.Consistency = gocql.ParseConsistency(defaultConsistency)
-	return clusterCfg, nil
-}
-
 // newCQLClient returns a new instance of CQLClient
 func newCQLClient(cfg *CQLClientConfig) (*cqlClient, error) {
 	var err error
 
-	cassandraConfig := cfg.toCassandraConfig()
-	clusterCfg, err := NewCassandraCluster(cassandraConfig, cfg.Timeout)
-	if err != nil {
-		return nil, err
-	}
 	cqlClient := new(cqlClient)
+	cqlClient.cfg = cfg
 	cqlClient.nReplicas = cfg.numReplicas
-	cqlClient.clusterConfig = clusterCfg
-	cqlClient.session, err = clusterCfg.CreateSession()
+	client := cfg.CQLClient
+	if client == nil {
+		client = defaultGoCQLClient
+	}
+	cqlClient.session, err = client.CreateSession(gocql.ClusterConfig{
+		Hosts:        cfg.Hosts,
+		Port:         cfg.Port,
+		User:         cfg.User,
+		Password:     cfg.Password,
+		Keyspace:     cfg.Keyspace,
+		TLS:          cfg.TLS,
+		Timeout:      time.Duration(cfg.Timeout) * time.Second,
+		ProtoVersion: cqlProtoVersion,
+		Consistency:  gocql.All,
+	})
 	if err != nil {
 		return nil, err
 	}
 	return cqlClient, nil
-}
-
-func (cfg *CQLClientConfig) toCassandraConfig() *config.Cassandra {
-	cassandraConfig := config.Cassandra{
-		Hosts:    cfg.Hosts,
-		Port:     cfg.Port,
-		User:     cfg.User,
-		Password: cfg.Password,
-		Keyspace: cfg.Keyspace,
-		TLS:      cfg.TLS,
-	}
-
-	return &cassandraConfig
 }
 
 func (client *cqlClient) CreateDatabase(name string) error {
@@ -173,7 +150,7 @@ func (client *cqlClient) CreateSchemaVersionTables() error {
 
 // ReadSchemaVersion returns the current schema version for the Keyspace
 func (client *cqlClient) ReadSchemaVersion() (string, error) {
-	query := client.session.Query(readSchemaVersionCQL, client.clusterConfig.Keyspace)
+	query := client.session.Query(readSchemaVersionCQL, client.cfg.Keyspace)
 	iter := query.Iter()
 	var version string
 	if !iter.Scan(&version) {
@@ -188,7 +165,7 @@ func (client *cqlClient) ReadSchemaVersion() (string, error) {
 
 // UpdateShemaVersion updates the schema version for the Keyspace
 func (client *cqlClient) UpdateSchemaVersion(newVersion string, minCompatibleVersion string) error {
-	query := client.session.Query(writeSchemaVersionCQL, client.clusterConfig.Keyspace, time.Now(), newVersion, minCompatibleVersion)
+	query := client.session.Query(writeSchemaVersionCQL, client.cfg.Keyspace, time.Now(), newVersion, minCompatibleVersion)
 	return query.Exec()
 }
 
@@ -214,7 +191,7 @@ func (client *cqlClient) Close() {
 
 // ListTables lists the table names in a Keyspace
 func (client *cqlClient) ListTables() ([]string, error) {
-	query := client.session.Query(listTablesCQL, client.clusterConfig.Keyspace)
+	query := client.session.Query(listTablesCQL, client.cfg.Keyspace)
 	iter := query.Iter()
 	var names []string
 	var name string
@@ -229,7 +206,7 @@ func (client *cqlClient) ListTables() ([]string, error) {
 
 // listTypes lists the User defined types in a Keyspace
 func (client *cqlClient) listTypes() ([]string, error) {
-	qry := client.session.Query(listTypesCQL, client.clusterConfig.Keyspace)
+	qry := client.session.Query(listTypesCQL, client.cfg.Keyspace)
 	iter := qry.Iter()
 	var names []string
 	var name string
@@ -266,17 +243,26 @@ func (client *cqlClient) dropAllTablesTypes() error {
 			log.Printf("Error dropping table %v, err=%v\n", table, err1)
 		}
 	}
+
 	types, err := client.listTypes()
 	if err != nil {
 		return err
 	}
 	log.Printf("Dropping following types: %v\n", types)
-	for _, t := range types {
-		err1 := client.dropType(t)
-		if err1 != nil {
-			log.Printf("Error dropping type %v, err=%v\n", t, err1)
-			return err1
+	numOfTypes := len(types)
+	for i := 0; i < numOfTypes && len(types) > 0; i++ {
+		var erroredTypes []string
+		for _, t := range types {
+			err = client.dropType(t)
+			if err != nil {
+				log.Printf("Error dropping type %v, err=%v\n", t, err)
+				erroredTypes = append(erroredTypes, t)
+			}
 		}
+		types = erroredTypes
+	}
+	if len(types) > 0 {
+		return err
 	}
 	return nil
 }

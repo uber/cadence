@@ -47,6 +47,10 @@ func (s *simpleMonitor) Start() {
 func (s *simpleMonitor) Stop() {
 }
 
+func (s *simpleMonitor) EvictSelf() error {
+	return nil
+}
+
 func (s *simpleMonitor) WhoAmI() (*membership.HostInfo, error) {
 	return s.hostInfo, nil
 }
@@ -69,4 +73,12 @@ func (s *simpleMonitor) AddListener(service string, name string, notifyChannel c
 
 func (s *simpleMonitor) RemoveListener(service string, name string) error {
 	return nil
+}
+
+func (s *simpleMonitor) GetReachableMembers() ([]string, error) {
+	return nil, nil
+}
+
+func (s *simpleMonitor) GetMemberCount(service string) (int, error) {
+	return 0, nil
 }

@@ -24,13 +24,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 
-	"github.com/uber/cadence/common/auth"
-
-	"github.com/gocql/gocql"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/uber/cadence/common/auth"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/tools/cassandra"
 	"github.com/uber/cadence/tools/common/schema"
 )
@@ -38,10 +36,14 @@ import (
 const cassandraPersistenceName = "cassandra"
 
 // CreateCassandraKeyspace creates the keyspace using this session for given replica count
-func CreateCassandraKeyspace(s *gocql.Session, keyspace string, replicas int, overwrite bool) (err error) {
+func CreateCassandraKeyspace(s gocql.Session, keyspace string, replicas int, overwrite bool) (err error) {
 	// if overwrite flag is set, drop the keyspace and create a new one
 	if overwrite {
-		DropCassandraKeyspace(s, keyspace)
+		err = DropCassandraKeyspace(s, keyspace)
+		if err != nil {
+			log.Error(`drop keyspace error`, err)
+			return
+		}
 	}
 	err = s.Query(fmt.Sprintf(`CREATE KEYSPACE IF NOT EXISTS %s WITH replication = {
 		'class' : 'SimpleStrategy', 'replication_factor' : %d}`, keyspace, replicas)).Exec()
@@ -55,7 +57,7 @@ func CreateCassandraKeyspace(s *gocql.Session, keyspace string, replicas int, ov
 }
 
 // DropCassandraKeyspace drops the given keyspace, if it exists
-func DropCassandraKeyspace(s *gocql.Session, keyspace string) (err error) {
+func DropCassandraKeyspace(s gocql.Session, keyspace string) (err error) {
 	err = s.Query(fmt.Sprintf("DROP KEYSPACE IF EXISTS %s", keyspace)).Exec()
 	if err != nil {
 		log.Error(`drop keyspace error`, err)
@@ -69,7 +71,7 @@ func DropCassandraKeyspace(s *gocql.Session, keyspace string) (err error) {
 func loadCassandraSchema(
 	dir string,
 	fileNames []string,
-	hosts []string,
+	hosts string,
 	port int,
 	keyspace string,
 	override bool,
@@ -90,15 +92,17 @@ func loadCassandraSchema(
 		if err != nil {
 			return fmt.Errorf("error reading contents of file %v:%v", file, err.Error())
 		}
-		tmpFile.WriteString(string(content))
-		tmpFile.WriteString("\n")
+		_, err = tmpFile.WriteString(string(content) + "\n")
+		if err != nil {
+			return fmt.Errorf("error writing string to file, err: %v", err.Error())
+		}
 	}
 
 	tmpFile.Close()
 
 	config := &cassandra.SetupSchemaConfig{
 		CQLClientConfig: cassandra.CQLClientConfig{
-			Hosts:    strings.Join(hosts, ","),
+			Hosts:    hosts,
 			Port:     port,
 			Keyspace: keyspace,
 			TLS:      tls,

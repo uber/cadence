@@ -20,13 +20,15 @@
 
 package messaging
 
+import (
+	"context"
+)
+
 type (
 	// Client is the interface used to abstract out interaction with messaging system for replication
 	Client interface {
-		NewConsumer(appName, consumerName string, concurrency int) (Consumer, error)
-		NewConsumerWithClusterName(currentCluster, sourceCluster, consumerName string, concurrency int) (Consumer, error)
+		NewConsumer(appName, consumerName string) (Consumer, error)
 		NewProducer(appName string) (Producer, error)
-		NewProducerWithClusterName(sourceCluster string) (Producer, error)
 	}
 
 	// Consumer is the unified interface for both internal and external kafka clients
@@ -55,12 +57,30 @@ type (
 
 	// Producer is the interface used to send replication tasks to other clusters through replicator
 	Producer interface {
-		Publish(message interface{}) error
+		Publish(ctx context.Context, message interface{}) error
 	}
 
 	// CloseableProducer is a Producer that can be closed
 	CloseableProducer interface {
 		Producer
 		Close() error
+	}
+
+	// AckManager convert out of order acks into ackLevel movement.
+	AckManager interface {
+		// Read an item into backlog for processing for ack
+		ReadItem(id int64) error
+		// Get current max ID from read items
+		GetReadLevel() int64
+		// Set current max ID from read items
+		SetReadLevel(readLevel int64)
+		// Mark an item as done processing, and remove from backlog
+		AckItem(id int64) (ackLevel int64)
+		// Get current max level that can safely ack
+		GetAckLevel() int64
+		// Set current max level that can safely ack
+		SetAckLevel(ackLevel int64)
+		// GetBacklogCount return the of items that are waiting for ack
+		GetBacklogCount() int64
 	}
 )

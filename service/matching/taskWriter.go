@@ -1,4 +1,5 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,10 +25,10 @@ import (
 	"errors"
 	"sync/atomic"
 
-	s "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -37,7 +38,7 @@ type (
 	}
 
 	writeTaskRequest struct {
-		execution  *s.WorkflowExecution
+		execution  *types.WorkflowExecution
 		taskInfo   *persistence.TaskInfo
 		responseCh chan<- *writeTaskResponse
 	}
@@ -92,7 +93,7 @@ func (w *taskWriter) isStopped() bool {
 	return atomic.LoadInt64(&w.stopped) == 1
 }
 
-func (w *taskWriter) appendTask(execution *s.WorkflowExecution,
+func (w *taskWriter) appendTask(execution *types.WorkflowExecution,
 	taskInfo *persistence.TaskInfo) (*persistence.CreateTasksResponse, error) {
 
 	if w.isStopped() {
@@ -172,9 +173,15 @@ writerLoop:
 				}
 
 				r, err := w.tlMgr.db.CreateTasks(tasks)
-				if err != nil {
+				switch err.(type) {
+				case nil:
+					// Do nothing
+				case *persistence.ConditionFailedError:
+					// Stop and reload task list manager
+					w.tlMgr.Stop()
+				default:
 					w.logger.Error("Persistent store operation failure",
-						tag.StoreOperationCreateTask,
+						tag.StoreOperationCreateTasks,
 						tag.Error(err),
 						tag.WorkflowTaskListName(w.taskListID.name),
 						tag.WorkflowTaskListType(w.taskListID.taskType),

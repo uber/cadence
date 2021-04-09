@@ -23,9 +23,9 @@ package tasklist
 import (
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 var retryForeverPolicy = newRetryForeverPolicy()
@@ -34,7 +34,7 @@ func (s *Scavenger) completeTasks(key *taskListKey, taskID int64, limit int) (in
 	var n int
 	var err error
 	err = s.retryForever(func() error {
-		n, err = s.db.CompleteTasksLessThan(&p.CompleteTasksLessThanRequest{
+		n, err = s.db.CompleteTasksLessThan(s.ctx, &p.CompleteTasksLessThanRequest{
 			DomainID:     key.DomainID,
 			TaskListName: key.Name,
 			TaskType:     key.TaskType,
@@ -50,7 +50,7 @@ func (s *Scavenger) getTasks(key *taskListKey, batchSize int) (*p.GetTasksRespon
 	var err error
 	var resp *p.GetTasksResponse
 	err = s.retryForever(func() error {
-		resp, err = s.db.GetTasks(&p.GetTasksRequest{
+		resp, err = s.db.GetTasks(s.ctx, &p.GetTasksRequest{
 			DomainID:  key.DomainID,
 			TaskList:  key.Name,
 			TaskType:  key.TaskType,
@@ -66,7 +66,7 @@ func (s *Scavenger) listTaskList(pageSize int, pageToken []byte) (*p.ListTaskLis
 	var err error
 	var resp *p.ListTaskListResponse
 	err = s.retryForever(func() error {
-		resp, err = s.db.ListTaskList(&p.ListTaskListRequest{
+		resp, err = s.db.ListTaskList(s.ctx, &p.ListTaskListRequest{
 			PageSize:  pageSize,
 			PageToken: pageToken,
 		})
@@ -78,14 +78,14 @@ func (s *Scavenger) listTaskList(pageSize int, pageToken []byte) (*p.ListTaskLis
 func (s *Scavenger) deleteTaskList(key *taskListKey, rangeID int64) error {
 	// retry only on service busy errors
 	return backoff.Retry(func() error {
-		return s.db.DeleteTaskList(&p.DeleteTaskListRequest{
+		return s.db.DeleteTaskList(s.ctx, &p.DeleteTaskListRequest{
 			DomainID:     key.DomainID,
 			TaskListName: key.Name,
 			TaskListType: key.TaskType,
 			RangeID:      rangeID,
 		})
 	}, retryForeverPolicy, func(err error) bool {
-		_, ok := err.(*shared.ServiceBusyError)
+		_, ok := err.(*types.ServiceBusyError)
 		return ok
 	})
 }

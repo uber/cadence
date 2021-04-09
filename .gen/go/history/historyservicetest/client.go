@@ -1,17 +1,17 @@
 // The MIT License (MIT)
-// 
-// Copyright (c) 2019 Uber Technologies, Inc.
-// 
+
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,12 +27,14 @@ package historyservicetest
 
 import (
 	context "context"
+
 	gomock "github.com/golang/mock/gomock"
+	yarpc "go.uber.org/yarpc"
+
 	history "github.com/uber/cadence/.gen/go/history"
 	historyserviceclient "github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	replicator "github.com/uber/cadence/.gen/go/replicator"
 	shared "github.com/uber/cadence/.gen/go/shared"
-	yarpc "go.uber.org/yarpc"
 )
 
 // MockClient implements a gomock-compatible mock client for service
@@ -163,6 +165,39 @@ func (mr *_MockClientRecorder) DescribeMutableState(
 	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeMutableState", args...)
 }
 
+// DescribeQueue responds to a DescribeQueue call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().DescribeQueue(gomock.Any(), ...).Return(...)
+// 	... := client.DescribeQueue(...)
+func (m *MockClient) DescribeQueue(
+	ctx context.Context,
+	_Request *shared.DescribeQueueRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.DescribeQueueResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "DescribeQueue", args...)
+	success, _ = ret[i].(*shared.DescribeQueueResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) DescribeQueue(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeQueue", args...)
+}
+
 // DescribeWorkflowExecution responds to a DescribeWorkflowExecution call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -194,6 +229,39 @@ func (mr *_MockClientRecorder) DescribeWorkflowExecution(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _DescribeRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeWorkflowExecution", args...)
+}
+
+// GetDLQReplicationMessages responds to a GetDLQReplicationMessages call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().GetDLQReplicationMessages(gomock.Any(), ...).Return(...)
+// 	... := client.GetDLQReplicationMessages(...)
+func (m *MockClient) GetDLQReplicationMessages(
+	ctx context.Context,
+	_Request *replicator.GetDLQReplicationMessagesRequest,
+	opts ...yarpc.CallOption,
+) (success *replicator.GetDLQReplicationMessagesResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "GetDLQReplicationMessages", args...)
+	success, _ = ret[i].(*replicator.GetDLQReplicationMessagesResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) GetDLQReplicationMessages(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "GetDLQReplicationMessages", args...)
 }
 
 // GetMutableState responds to a GetMutableState call based on the mock expectations. This
@@ -262,6 +330,70 @@ func (mr *_MockClientRecorder) GetReplicationMessages(
 	return mr.mock.ctrl.RecordCall(mr.mock, "GetReplicationMessages", args...)
 }
 
+// MergeDLQMessages responds to a MergeDLQMessages call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().MergeDLQMessages(gomock.Any(), ...).Return(...)
+// 	... := client.MergeDLQMessages(...)
+func (m *MockClient) MergeDLQMessages(
+	ctx context.Context,
+	_Request *replicator.MergeDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (success *replicator.MergeDLQMessagesResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "MergeDLQMessages", args...)
+	success, _ = ret[i].(*replicator.MergeDLQMessagesResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) MergeDLQMessages(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "MergeDLQMessages", args...)
+}
+
+// NotifyFailoverMarkers responds to a NotifyFailoverMarkers call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().NotifyFailoverMarkers(gomock.Any(), ...).Return(...)
+// 	... := client.NotifyFailoverMarkers(...)
+func (m *MockClient) NotifyFailoverMarkers(
+	ctx context.Context,
+	_Request *history.NotifyFailoverMarkersRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "NotifyFailoverMarkers", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) NotifyFailoverMarkers(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "NotifyFailoverMarkers", args...)
+}
+
 // PollMutableState responds to a PollMutableState call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -295,6 +427,37 @@ func (mr *_MockClientRecorder) PollMutableState(
 	return mr.mock.ctrl.RecordCall(mr.mock, "PollMutableState", args...)
 }
 
+// PurgeDLQMessages responds to a PurgeDLQMessages call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().PurgeDLQMessages(gomock.Any(), ...).Return(...)
+// 	... := client.PurgeDLQMessages(...)
+func (m *MockClient) PurgeDLQMessages(
+	ctx context.Context,
+	_Request *replicator.PurgeDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "PurgeDLQMessages", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) PurgeDLQMessages(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "PurgeDLQMessages", args...)
+}
+
 // QueryWorkflow responds to a QueryWorkflow call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -326,6 +489,39 @@ func (mr *_MockClientRecorder) QueryWorkflow(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _QueryRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "QueryWorkflow", args...)
+}
+
+// ReadDLQMessages responds to a ReadDLQMessages call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().ReadDLQMessages(gomock.Any(), ...).Return(...)
+// 	... := client.ReadDLQMessages(...)
+func (m *MockClient) ReadDLQMessages(
+	ctx context.Context,
+	_Request *replicator.ReadDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (success *replicator.ReadDLQMessagesResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "ReadDLQMessages", args...)
+	success, _ = ret[i].(*replicator.ReadDLQMessagesResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) ReadDLQMessages(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "ReadDLQMessages", args...)
 }
 
 // ReapplyEvents responds to a ReapplyEvents call based on the mock expectations. This
@@ -489,6 +685,37 @@ func (mr *_MockClientRecorder) RecordDecisionTaskStarted(
 	return mr.mock.ctrl.RecordCall(mr.mock, "RecordDecisionTaskStarted", args...)
 }
 
+// RefreshWorkflowTasks responds to a RefreshWorkflowTasks call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().RefreshWorkflowTasks(gomock.Any(), ...).Return(...)
+// 	... := client.RefreshWorkflowTasks(...)
+func (m *MockClient) RefreshWorkflowTasks(
+	ctx context.Context,
+	_Request *history.RefreshWorkflowTasksRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "RefreshWorkflowTasks", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) RefreshWorkflowTasks(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "RefreshWorkflowTasks", args...)
+}
+
 // RemoveSignalMutableState responds to a RemoveSignalMutableState call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -551,37 +778,6 @@ func (mr *_MockClientRecorder) RemoveTask(
 	return mr.mock.ctrl.RecordCall(mr.mock, "RemoveTask", args...)
 }
 
-// ReplicateEvents responds to a ReplicateEvents call based on the mock expectations. This
-// call will fail if the mock does not expect this call. Use EXPECT to expect
-// a call to this function.
-//
-// 	client.EXPECT().ReplicateEvents(gomock.Any(), ...).Return(...)
-// 	... := client.ReplicateEvents(...)
-func (m *MockClient) ReplicateEvents(
-	ctx context.Context,
-	_ReplicateRequest *history.ReplicateEventsRequest,
-	opts ...yarpc.CallOption,
-) (err error) {
-
-	args := []interface{}{ctx, _ReplicateRequest}
-	for _, o := range opts {
-		args = append(args, o)
-	}
-	i := 0
-	ret := m.ctrl.Call(m, "ReplicateEvents", args...)
-	err, _ = ret[i].(error)
-	return
-}
-
-func (mr *_MockClientRecorder) ReplicateEvents(
-	ctx interface{},
-	_ReplicateRequest interface{},
-	opts ...interface{},
-) *gomock.Call {
-	args := append([]interface{}{ctx, _ReplicateRequest}, opts...)
-	return mr.mock.ctrl.RecordCall(mr.mock, "ReplicateEvents", args...)
-}
-
 // ReplicateEventsV2 responds to a ReplicateEventsV2 call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -613,37 +809,6 @@ func (mr *_MockClientRecorder) ReplicateEventsV2(
 	return mr.mock.ctrl.RecordCall(mr.mock, "ReplicateEventsV2", args...)
 }
 
-// ReplicateRawEvents responds to a ReplicateRawEvents call based on the mock expectations. This
-// call will fail if the mock does not expect this call. Use EXPECT to expect
-// a call to this function.
-//
-// 	client.EXPECT().ReplicateRawEvents(gomock.Any(), ...).Return(...)
-// 	... := client.ReplicateRawEvents(...)
-func (m *MockClient) ReplicateRawEvents(
-	ctx context.Context,
-	_ReplicateRequest *history.ReplicateRawEventsRequest,
-	opts ...yarpc.CallOption,
-) (err error) {
-
-	args := []interface{}{ctx, _ReplicateRequest}
-	for _, o := range opts {
-		args = append(args, o)
-	}
-	i := 0
-	ret := m.ctrl.Call(m, "ReplicateRawEvents", args...)
-	err, _ = ret[i].(error)
-	return
-}
-
-func (mr *_MockClientRecorder) ReplicateRawEvents(
-	ctx interface{},
-	_ReplicateRequest interface{},
-	opts ...interface{},
-) *gomock.Call {
-	args := append([]interface{}{ctx, _ReplicateRequest}, opts...)
-	return mr.mock.ctrl.RecordCall(mr.mock, "ReplicateRawEvents", args...)
-}
-
 // RequestCancelWorkflowExecution responds to a RequestCancelWorkflowExecution call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -673,6 +838,37 @@ func (mr *_MockClientRecorder) RequestCancelWorkflowExecution(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _CancelRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "RequestCancelWorkflowExecution", args...)
+}
+
+// ResetQueue responds to a ResetQueue call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().ResetQueue(gomock.Any(), ...).Return(...)
+// 	... := client.ResetQueue(...)
+func (m *MockClient) ResetQueue(
+	ctx context.Context,
+	_Request *shared.ResetQueueRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "ResetQueue", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) ResetQueue(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "ResetQueue", args...)
 }
 
 // ResetStickyTaskList responds to a ResetStickyTaskList call based on the mock expectations. This

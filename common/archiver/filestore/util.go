@@ -25,112 +25,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/dgryski/go-farm"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/archiver"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/util"
 )
 
 var (
-	errDirectoryExpected  = errors.New("a path to a directory was expected")
-	errFileExpected       = errors.New("a path to a file was expected")
 	errEmptyDirectoryPath = errors.New("directory path is empty")
 )
-
-// File I/O util
-
-func fileExists(filepath string) (bool, error) {
-	if info, err := os.Stat(filepath); err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	} else if info.IsDir() {
-		return false, errFileExpected
-	}
-	return true, nil
-}
-
-func directoryExists(path string) (bool, error) {
-	if info, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	} else if !info.IsDir() {
-		return false, errDirectoryExpected
-	}
-	return true, nil
-}
-
-func mkdirAll(path string, dirMode os.FileMode) error {
-	return os.MkdirAll(path, dirMode)
-}
-
-func writeFile(filepath string, data []byte, fileMode os.FileMode) error {
-	if err := os.Remove(filepath); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	f, err := os.Create(filepath)
-	defer f.Close()
-	if err != nil {
-		return err
-	}
-	if err = f.Chmod(fileMode); err != nil {
-		return err
-	}
-	if _, err = f.Write(data); err != nil {
-		return err
-	}
-	return nil
-}
-
-// readFile reads the contents of a file specified by filepath
-// WARNING: callers of this method should be extremely careful not to use it in a context where filepath is supplied by
-// the user.
-func readFile(filepath string) ([]byte, error) {
-	// #nosec
-	return ioutil.ReadFile(filepath)
-}
-
-func listFiles(dirPath string) ([]string, error) {
-	if info, err := os.Stat(dirPath); err != nil {
-		return nil, err
-	} else if !info.IsDir() {
-		return nil, errDirectoryExpected
-	}
-
-	f, err := os.Open(dirPath)
-	if err != nil {
-		return nil, err
-	}
-	fileNames, err := f.Readdirnames(-1)
-	f.Close()
-	if err != nil {
-		return nil, err
-	}
-	return fileNames, nil
-}
-
-func listFilesByPrefix(dirPath string, prefix string) ([]string, error) {
-	fileNames, err := listFiles(dirPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var filteredFileNames []string
-	for _, name := range fileNames {
-		if strings.HasPrefix(name, prefix) {
-			filteredFileNames = append(filteredFileNames, name)
-		}
-	}
-	return filteredFileNames, nil
-}
 
 // encoding & decoding util
 
@@ -138,8 +46,8 @@ func encode(v interface{}) ([]byte, error) {
 	return json.Marshal(v)
 }
 
-func decodeHistoryBatches(data []byte) ([]*shared.History, error) {
-	historyBatches := []*shared.History{}
+func decodeHistoryBatches(data []byte) ([]*types.History, error) {
+	historyBatches := []*types.History{}
 	err := json.Unmarshal(data, &historyBatches)
 	if err != nil {
 		return nil, err
@@ -208,7 +116,7 @@ func validateDirPath(dirPath string) error {
 		return err
 	}
 	if !info.IsDir() {
-		return errDirectoryExpected
+		return util.ErrDirectoryExpected
 	}
 	return nil
 }
@@ -225,7 +133,7 @@ func extractCloseFailoverVersion(filename string) (int64, error) {
 	return strconv.ParseInt(filenameParts[1], 10, 64)
 }
 
-func historyMutated(request *archiver.ArchiveHistoryRequest, historyBatches []*shared.History, isLast bool) bool {
+func historyMutated(request *archiver.ArchiveHistoryRequest, historyBatches []*types.History, isLast bool) bool {
 	lastBatch := historyBatches[len(historyBatches)-1].Events
 	lastEvent := lastBatch[len(lastBatch)-1]
 	lastFailoverVersion := lastEvent.GetVersion()
@@ -236,7 +144,7 @@ func historyMutated(request *archiver.ArchiveHistoryRequest, historyBatches []*s
 	if !isLast {
 		return false
 	}
-	lastEventID := lastEvent.GetEventId()
+	lastEventID := lastEvent.GetEventID()
 	return lastFailoverVersion != request.CloseFailoverVersion || lastEventID+1 != request.NextEventID
 }
 

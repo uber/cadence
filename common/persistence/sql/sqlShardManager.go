@@ -21,16 +21,18 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/.gen/go/sqlblobs"
+	"github.com/uber/cadence/common/persistence/serialization"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+	"github.com/uber/cadence/common/types"
 )
 
 type sqlShardManager struct {
@@ -38,19 +40,28 @@ type sqlShardManager struct {
 	currentClusterName string
 }
 
-// newShardPersistence creates an instance of ShardManager
-func newShardPersistence(db sqldb.Interface, currentClusterName string, log log.Logger) (persistence.ShardManager, error) {
+// newShardPersistence creates an instance of ShardStore
+func newShardPersistence(
+	db sqlplugin.DB,
+	currentClusterName string,
+	log log.Logger,
+	parser serialization.Parser,
+) (persistence.ShardStore, error) {
 	return &sqlShardManager{
 		sqlStore: sqlStore{
 			db:     db,
 			logger: log,
+			parser: parser,
 		},
 		currentClusterName: currentClusterName,
 	}, nil
 }
 
-func (m *sqlShardManager) CreateShard(request *persistence.CreateShardRequest) error {
-	if _, err := m.GetShard(&persistence.GetShardRequest{
+func (m *sqlShardManager) CreateShard(
+	ctx context.Context,
+	request *persistence.InternalCreateShardRequest,
+) error {
+	if _, err := m.GetShard(ctx, &persistence.InternalGetShardRequest{
 		ShardID: request.ShardInfo.ShardID,
 	}); err == nil {
 		return &persistence.ShardAlreadyExistError{
@@ -58,15 +69,15 @@ func (m *sqlShardManager) CreateShard(request *persistence.CreateShardRequest) e
 		}
 	}
 
-	row, err := shardInfoToShardsRow(*request.ShardInfo)
+	row, err := shardInfoToShardsRow(*request.ShardInfo, m.parser)
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("CreateShard operation failed. Error: %v", err),
 		}
 	}
 
-	if _, err := m.db.InsertIntoShards(row); err != nil {
-		return &workflow.InternalServiceError{
+	if _, err := m.db.InsertIntoShards(ctx, row); err != nil {
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("CreateShard operation failed. Failed to insert into shards table. Error: %v", err),
 		}
 	}
@@ -74,20 +85,23 @@ func (m *sqlShardManager) CreateShard(request *persistence.CreateShardRequest) e
 	return nil
 }
 
-func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persistence.GetShardResponse, error) {
-	row, err := m.db.SelectFromShards(&sqldb.ShardsFilter{ShardID: int64(request.ShardID)})
+func (m *sqlShardManager) GetShard(
+	ctx context.Context,
+	request *persistence.InternalGetShardRequest,
+) (*persistence.InternalGetShardResponse, error) {
+	row, err := m.db.SelectFromShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(request.ShardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, &workflow.EntityNotExistsError{
+			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("GetShard operation failed. Shard with ID %v not found. Error: %v", request.ShardID, err),
 			}
 		}
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("GetShard operation failed. Failed to get record. ShardId: %v. Error: %v", request.ShardID, err),
 		}
 	}
 
-	shardInfo, err := shardInfoFromBlob(row.Data, row.DataEncoding)
+	shardInfo, err := m.parser.ShardInfoFromBlob(row.Data, row.DataEncoding)
 	if err != nil {
 		return nil, err
 	}
@@ -100,49 +114,74 @@ func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persi
 
 	timerAckLevel := make(map[string]time.Time, len(shardInfo.ClusterTimerAckLevel))
 	for k, v := range shardInfo.ClusterTimerAckLevel {
-		timerAckLevel[k] = time.Unix(0, v)
+		timerAckLevel[k] = v
 	}
 
 	if len(timerAckLevel) == 0 {
 		timerAckLevel = map[string]time.Time{
-			m.currentClusterName: time.Unix(0, shardInfo.GetTimerAckLevelNanos()),
+			m.currentClusterName: shardInfo.GetTimerAckLevel(),
 		}
 	}
 
 	if shardInfo.ClusterReplicationLevel == nil {
 		shardInfo.ClusterReplicationLevel = make(map[string]int64)
 	}
+	if shardInfo.ReplicationDlqAckLevel == nil {
+		shardInfo.ReplicationDlqAckLevel = make(map[string]int64)
+	}
 
-	resp := &persistence.GetShardResponse{ShardInfo: &persistence.ShardInfo{
-		ShardID:                   int(row.ShardID),
-		RangeID:                   row.RangeID,
-		Owner:                     shardInfo.GetOwner(),
-		StolenSinceRenew:          int(shardInfo.GetStolenSinceRenew()),
-		UpdatedAt:                 time.Unix(0, shardInfo.GetUpdatedAtNanos()),
-		ReplicationAckLevel:       shardInfo.GetReplicationAckLevel(),
-		TransferAckLevel:          shardInfo.GetTransferAckLevel(),
-		TimerAckLevel:             time.Unix(0, shardInfo.GetTimerAckLevelNanos()),
-		ClusterTransferAckLevel:   shardInfo.ClusterTransferAckLevel,
-		ClusterTimerAckLevel:      timerAckLevel,
-		DomainNotificationVersion: shardInfo.GetDomainNotificationVersion(),
-		ClusterReplicationLevel:   shardInfo.ClusterReplicationLevel,
+	var transferPQS *persistence.DataBlob
+	if shardInfo.GetTransferProcessingQueueStates() != nil {
+		transferPQS = &persistence.DataBlob{
+			Encoding: common.EncodingType(shardInfo.GetTransferProcessingQueueStatesEncoding()),
+			Data:     shardInfo.GetTransferProcessingQueueStates(),
+		}
+	}
+
+	var timerPQS *persistence.DataBlob
+	if shardInfo.GetTimerProcessingQueueStates() != nil {
+		timerPQS = &persistence.DataBlob{
+			Encoding: common.EncodingType(shardInfo.GetTimerProcessingQueueStatesEncoding()),
+			Data:     shardInfo.GetTimerProcessingQueueStates(),
+		}
+	}
+
+	resp := &persistence.InternalGetShardResponse{ShardInfo: &persistence.InternalShardInfo{
+		ShardID:                       int(row.ShardID),
+		RangeID:                       row.RangeID,
+		Owner:                         shardInfo.GetOwner(),
+		StolenSinceRenew:              int(shardInfo.GetStolenSinceRenew()),
+		UpdatedAt:                     shardInfo.GetUpdatedAt(),
+		ReplicationAckLevel:           shardInfo.GetReplicationAckLevel(),
+		TransferAckLevel:              shardInfo.GetTransferAckLevel(),
+		TimerAckLevel:                 shardInfo.GetTimerAckLevel(),
+		ClusterTransferAckLevel:       shardInfo.ClusterTransferAckLevel,
+		ClusterTimerAckLevel:          timerAckLevel,
+		TransferProcessingQueueStates: transferPQS,
+		TimerProcessingQueueStates:    timerPQS,
+		DomainNotificationVersion:     shardInfo.GetDomainNotificationVersion(),
+		ClusterReplicationLevel:       shardInfo.ClusterReplicationLevel,
+		ReplicationDLQAckLevel:        shardInfo.ReplicationDlqAckLevel,
 	}}
 
 	return resp, nil
 }
 
-func (m *sqlShardManager) UpdateShard(request *persistence.UpdateShardRequest) error {
-	row, err := shardInfoToShardsRow(*request.ShardInfo)
+func (m *sqlShardManager) UpdateShard(
+	ctx context.Context,
+	request *persistence.InternalUpdateShardRequest,
+) error {
+	row, err := shardInfoToShardsRow(*request.ShardInfo, m.parser)
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("UpdateShard operation failed. Error: %v", err),
 		}
 	}
-	return m.txExecute("UpdateShard", func(tx sqldb.Tx) error {
-		if err := lockShard(tx, request.ShardInfo.ShardID, request.PreviousRangeID); err != nil {
+	return m.txExecute(ctx, "UpdateShard", func(tx sqlplugin.Tx) error {
+		if err := lockShard(ctx, tx, request.ShardInfo.ShardID, request.PreviousRangeID); err != nil {
 			return err
 		}
-		result, err := tx.UpdateShards(row)
+		result, err := tx.UpdateShards(ctx, row)
 		if err != nil {
 			return err
 		}
@@ -158,15 +197,15 @@ func (m *sqlShardManager) UpdateShard(request *persistence.UpdateShardRequest) e
 }
 
 // initiated by the owning shard
-func lockShard(tx sqldb.Tx, shardID int, oldRangeID int64) error {
-	rangeID, err := tx.WriteLockShards(&sqldb.ShardsFilter{ShardID: int64(shardID)})
+func lockShard(ctx context.Context, tx sqlplugin.Tx, shardID int, oldRangeID int64) error {
+	rangeID, err := tx.WriteLockShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(shardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Failed to lock shard with ID %v that does not exist.", shardID),
 			}
 		}
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to lock shard with ID: %v. Error: %v", shardID, err),
 		}
 	}
@@ -182,15 +221,15 @@ func lockShard(tx sqldb.Tx, shardID int, oldRangeID int64) error {
 }
 
 // initiated by the owning shard
-func readLockShard(tx sqldb.Tx, shardID int, oldRangeID int64) error {
-	rangeID, err := tx.ReadLockShards(&sqldb.ShardsFilter{ShardID: int64(shardID)})
+func readLockShard(ctx context.Context, tx sqlplugin.Tx, shardID int, oldRangeID int64) error {
+	rangeID, err := tx.ReadLockShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(shardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Failed to lock shard with ID %v that does not exist.", shardID),
 			}
 		}
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to lock shard with ID: %v. Error: %v", shardID, err),
 		}
 	}
@@ -204,30 +243,53 @@ func readLockShard(tx sqldb.Tx, shardID int, oldRangeID int64) error {
 	return nil
 }
 
-func shardInfoToShardsRow(s persistence.ShardInfo) (*sqldb.ShardsRow, error) {
-	timerAckLevels := make(map[string]int64, len(s.ClusterTimerAckLevel))
-	for k, v := range s.ClusterTimerAckLevel {
-		timerAckLevels[k] = v.UnixNano()
+func shardInfoToShardsRow(s persistence.InternalShardInfo, parser serialization.Parser) (*sqlplugin.ShardsRow, error) {
+	var markerData []byte
+	var markerEncoding string
+	if s.PendingFailoverMarkers != nil {
+		markerData = s.PendingFailoverMarkers.Data
+		markerEncoding = string(s.PendingFailoverMarkers.Encoding)
 	}
 
-	shardInfo := &sqlblobs.ShardInfo{
-		StolenSinceRenew:          common.Int32Ptr(int32(s.StolenSinceRenew)),
-		UpdatedAtNanos:            common.Int64Ptr(s.UpdatedAt.UnixNano()),
-		ReplicationAckLevel:       common.Int64Ptr(s.ReplicationAckLevel),
-		TransferAckLevel:          common.Int64Ptr(s.TransferAckLevel),
-		TimerAckLevelNanos:        common.Int64Ptr(s.TimerAckLevel.UnixNano()),
-		ClusterTransferAckLevel:   s.ClusterTransferAckLevel,
-		ClusterTimerAckLevel:      timerAckLevels,
-		DomainNotificationVersion: common.Int64Ptr(s.DomainNotificationVersion),
-		Owner:                     &s.Owner,
-		ClusterReplicationLevel:   s.ClusterReplicationLevel,
+	var transferPQSData []byte
+	var transferPQSEncoding string
+	if s.TransferProcessingQueueStates != nil {
+		transferPQSData = s.TransferProcessingQueueStates.Data
+		transferPQSEncoding = string(s.TransferProcessingQueueStates.Encoding)
 	}
 
-	blob, err := shardInfoToBlob(shardInfo)
+	var timerPQSData []byte
+	var timerPQSEncoding string
+	if s.TimerProcessingQueueStates != nil {
+		timerPQSData = s.TimerProcessingQueueStates.Data
+		timerPQSEncoding = string(s.TimerProcessingQueueStates.Encoding)
+	}
+
+	shardInfo := &serialization.ShardInfo{
+		StolenSinceRenew:                      common.Int32Ptr(int32(s.StolenSinceRenew)),
+		UpdatedAt:                             &s.UpdatedAt,
+		ReplicationAckLevel:                   common.Int64Ptr(s.ReplicationAckLevel),
+		TransferAckLevel:                      common.Int64Ptr(s.TransferAckLevel),
+		TimerAckLevel:                         &s.TimerAckLevel,
+		ClusterTransferAckLevel:               s.ClusterTransferAckLevel,
+		ClusterTimerAckLevel:                  s.ClusterTimerAckLevel,
+		TransferProcessingQueueStates:         transferPQSData,
+		TransferProcessingQueueStatesEncoding: common.StringPtr(transferPQSEncoding),
+		TimerProcessingQueueStates:            timerPQSData,
+		TimerProcessingQueueStatesEncoding:    common.StringPtr(timerPQSEncoding),
+		DomainNotificationVersion:             common.Int64Ptr(s.DomainNotificationVersion),
+		Owner:                                 &s.Owner,
+		ClusterReplicationLevel:               s.ClusterReplicationLevel,
+		ReplicationDlqAckLevel:                s.ReplicationDLQAckLevel,
+		PendingFailoverMarkers:                markerData,
+		PendingFailoverMarkersEncoding:        common.StringPtr(markerEncoding),
+	}
+
+	blob, err := parser.ShardInfoToBlob(shardInfo)
 	if err != nil {
 		return nil, err
 	}
-	return &sqldb.ShardsRow{
+	return &sqlplugin.ShardsRow{
 		ShardID:      int64(s.ShardID),
 		RangeID:      s.RangeID,
 		Data:         blob.Data,

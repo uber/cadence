@@ -24,22 +24,14 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/uber/cadence/common/auth"
-
 	"github.com/uber-go/tally/m3"
 	"github.com/uber-go/tally/prometheus"
 	"github.com/uber/ringpop-go/discovery"
 
-	"github.com/uber/cadence/common/elasticsearch"
-	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/auth"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-)
-
-const (
-	// ReplicationConsumerTypeKafka means consuming replication tasks from kafka.
-	ReplicationConsumerTypeKafka = "kafka"
-	// ReplicationConsumerTypeRPC means pulling source DC for replication tasks.
-	ReplicationConsumerTypeRPC = "rpc"
 )
 
 type (
@@ -58,16 +50,18 @@ type (
 		// Services is a map of service name to service config items
 		Services map[string]Service `yaml:"services"`
 		// Kafka is the config for connecting to kafka
-		Kafka messaging.KafkaConfig `yaml:"kafka"`
+		Kafka KafkaConfig `yaml:"kafka"`
 		// Archival is the config for archival
 		Archival Archival `yaml:"archival"`
 		// PublicClient is config for connecting to cadence frontend
 		PublicClient PublicClient `yaml:"publicClient"`
 		// DynamicConfigClient is the config for setting up the file based dynamic config client
-		// Filepath should be relative to the root directory
+		// Filepath would be relative to the root directory when the path wasn't absolute.
 		DynamicConfigClient dynamicconfig.FileBasedClientConfig `yaml:"dynamicConfigClient"`
 		// DomainDefaults is the default config for every domain
 		DomainDefaults DomainDefaults `yaml:"domainDefaults"`
+		// Blobstore is the config for setting up blobstore
+		Blobstore Blobstore `yaml:"blobstore"`
 	}
 
 	// Service contains the service specific config items
@@ -100,6 +94,16 @@ type (
 		DisableLogging bool `yaml:"disableLogging"`
 		// LogLevel is the desired log level
 		LogLevel string `yaml:"logLevel"`
+	}
+
+	// Blobstore contains the config for blobstore
+	Blobstore struct {
+		Filestore *FileBlobstore `yaml:"filestore"`
+	}
+
+	// FileBlobstore contains the config for a file backed blobstore
+	FileBlobstore struct {
+		OutputDirectory string `yaml:"outputDirectory"`
 	}
 
 	// Ringpop contains the ringpop config items
@@ -135,9 +139,11 @@ type (
 		// DataStores contains the configuration for all datastores
 		DataStores map[string]DataStore `yaml:"datastores"`
 		// VisibilityConfig is config for visibility sampling
-		VisibilityConfig *VisibilityConfig
+		VisibilityConfig *VisibilityConfig `yaml:"-" json:"-"`
 		// TransactionSizeLimit is the largest allowed transaction size
-		TransactionSizeLimit dynamicconfig.IntPropertyFn
+		TransactionSizeLimit dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
+		// ErrorInjectionRate is the the rate for injecting random error
+		ErrorInjectionRate dynamicconfig.FloatPropertyFn `yaml:"-" json:"-"`
 	}
 
 	// DataStore is the configuration for a single datastore
@@ -147,27 +153,27 @@ type (
 		// SQL contains the config for a SQL based datastore
 		SQL *SQL `yaml:"sql"`
 		// ElasticSearch contains the config for a ElasticSearch datastore
-		ElasticSearch *elasticsearch.Config `yaml:"elasticsearch"`
+		ElasticSearch *ElasticSearchConfig `yaml:"elasticsearch"`
 	}
 
-	// VisibilityConfig is config for visibility sampling
+	// VisibilityConfig is config for visibility
 	VisibilityConfig struct {
 		// EnableSampling for visibility
-		EnableSampling dynamicconfig.BoolPropertyFn
+		EnableSampling dynamicconfig.BoolPropertyFn `yaml:"-" json:"-"`
 		// EnableReadFromClosedExecutionV2 read closed from v2 table
-		EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn
+		EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn `yaml:"-" json:"-"`
 		// VisibilityOpenMaxQPS max QPS for record open workflows
-		VisibilityOpenMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter
+		VisibilityOpenMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
 		// VisibilityClosedMaxQPS max QPS for record closed workflows
-		VisibilityClosedMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter
+		VisibilityClosedMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
 		// VisibilityListMaxQPS max QPS for list workflow
-		VisibilityListMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter
+		VisibilityListMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
 		// ESIndexMaxResultWindow ElasticSearch index setting max_result_window
-		ESIndexMaxResultWindow dynamicconfig.IntPropertyFn
+		ESIndexMaxResultWindow dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
 		// MaxQPS is overall max QPS
-		MaxQPS dynamicconfig.IntPropertyFn
+		MaxQPS dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
 		// ValidSearchAttributes is legal indexed keys that can be used in list APIs
-		ValidSearchAttributes dynamicconfig.MapPropertyFn
+		ValidSearchAttributes dynamicconfig.MapPropertyFn `yaml:"-" json:"-"`
 	}
 
 	// Cassandra contains configuration to connect to Cassandra cluster
@@ -180,16 +186,18 @@ type (
 		User string `yaml:"user"`
 		// Password is the cassandra password used for authentication by gocql client
 		Password string `yaml:"password"`
-		// keyspace is the cassandra keyspace
+		// Keyspace is the cassandra keyspace
 		Keyspace string `yaml:"keyspace" validate:"nonzero"`
+		// Region is the region filter arg for cassandra
+		Region string `yaml:"region"`
 		// Datacenter is the data center filter arg for cassandra
 		Datacenter string `yaml:"datacenter"`
-		// MaxQPS is the max request rate to this datastore
-		MaxQPS int `yaml:"maxQPS"`
 		// MaxConns is the max number of connections to this datastore for a single keyspace
 		MaxConns int `yaml:"maxConns"`
 		// TLS configuration
 		TLS *auth.TLS `yaml:"tls"`
+		// CQLClient specifies a custom CQL client implementation, can not be specified through yaml
+		CQLClient gocql.Client `yaml:"-" json:"-"`
 	}
 
 	// SQL is the configuration for connecting to a SQL backed datastore
@@ -198,8 +206,8 @@ type (
 		User string `yaml:"user"`
 		// Password is the password corresponding to the user name
 		Password string `yaml:"password"`
-		// DriverName is the name of SQL driver
-		DriverName string `yaml:"driverName" validate:"nonzero"`
+		// PluginName is the name of SQL plugin
+		PluginName string `yaml:"pluginName" validate:"nonzero"`
 		// DatabaseName is the name of SQL database to connect to
 		DatabaseName string `yaml:"databaseName" validate:"nonzero"`
 		// ConnectAddr is the remote addr of the database
@@ -208,8 +216,6 @@ type (
 		ConnectProtocol string `yaml:"connectProtocol" validate:"nonzero"`
 		// ConnectAttributes is a set of key-value attributes to be sent as part of connect data_source_name url
 		ConnectAttributes map[string]string `yaml:"connectAttributes"`
-		// MaxQPS the max request rate on this datastore
-		MaxQPS int `yaml:"maxQPS"`
 		// MaxConns the max number of connections to this datastore
 		MaxConns int `yaml:"maxConns"`
 		// MaxIdleConns is the max number of idle connections to this datastore
@@ -219,6 +225,21 @@ type (
 		// NumShards is the number of storage shards to use for tables
 		// in a sharded sql database. The default value for this param is 1
 		NumShards int `yaml:"nShards"`
+		// TLS is the configuration for TLS connections
+		TLS *auth.TLS `yaml:"tls"`
+		// EncodingType is the configuration for the type of encoding used for sql blobs
+		EncodingType string `yaml:"encodingType"`
+		// DecodingTypes is the configuration for all the sql blob decoding types which need to be supported
+		// DecodingTypes should not be removed unless there are no blobs in database with the encoding type
+		DecodingTypes []string `yaml:"decodingTypes"`
+	}
+
+	// CustomDatastoreConfig is the configuration for connecting to a custom datastore that is not supported by cadence core
+	CustomDatastoreConfig struct {
+		// Name of the custom datastore
+		Name string `yaml:"name"`
+		// Options is a set of key-value attributes that can be used by AbstractDatastoreFactory implementation
+		Options map[string]string `yaml:"options"`
 	}
 
 	// Replicator describes the configuration of replicator
@@ -239,8 +260,6 @@ type (
 	// ClusterMetadata contains the all cluster which participated in cross DC
 	ClusterMetadata struct {
 		EnableGlobalDomain bool `yaml:"enableGlobalDomain"`
-		// ReplicationConsumerConfig determines how we consume replication tasks.
-		ReplicationConsumer *ReplicationConsumerConfig `yaml:"replicationConsumer"`
 		// FailoverVersionIncrement is the increment of each cluster version when failover happens
 		FailoverVersionIncrement int64 `yaml:"failoverVersionIncrement"`
 		// MasterClusterName is the master cluster name, only the master cluster can register / update domain
@@ -260,12 +279,6 @@ type (
 		RPCName string `yaml:"rpcName"`
 		// Address indicate the remote service address(Host:Port). Host can be DNS name.
 		RPCAddress string `yaml:"rpcAddress"`
-	}
-
-	// ReplicationConsumerConfig contains config for replication consumer
-	ReplicationConsumerConfig struct {
-		// Type determines how we consume replication tasks. It can be either kafka(default) or rpc.
-		Type string `yaml:"type"`
 	}
 
 	// ReplicationTaskProcessorConfig is the config for replication task processor.
@@ -292,6 +305,8 @@ type (
 		// Tags is the set of key-value pairs to be reported
 		// as part of every metric
 		Tags map[string]string `yaml:"tags"`
+		// Prefix sets the prefix to all outgoing metrics
+		Prefix string `yaml:"prefix"`
 	}
 
 	// Statsd contains the config items for statsd metrics reporter
@@ -330,6 +345,8 @@ type (
 	// HistoryArchiverProvider contains the config for all history archivers
 	HistoryArchiverProvider struct {
 		Filestore *FilestoreArchiver `yaml:"filestore"`
+		Gstorage  *GstorageArchiver  `yaml:"gstorage"`
+		S3store   *S3Archiver        `yaml:"s3store"`
 	}
 
 	// VisibilityArchival contains the config for visibility archival
@@ -345,12 +362,26 @@ type (
 	// VisibilityArchiverProvider contains the config for all visibility archivers
 	VisibilityArchiverProvider struct {
 		Filestore *FilestoreArchiver `yaml:"filestore"`
+		S3store   *S3Archiver        `yaml:"s3store"`
+		Gstorage  *GstorageArchiver  `yaml:"gstorage"`
 	}
 
 	// FilestoreArchiver contain the config for filestore archiver
 	FilestoreArchiver struct {
 		FileMode string `yaml:"fileMode"`
 		DirMode  string `yaml:"dirMode"`
+	}
+
+	// GstorageArchiver contain the config for google storage archiver
+	GstorageArchiver struct {
+		CredentialsPath string `yaml:"credentialsPath"`
+	}
+
+	// S3Archiver contains the config for S3 archiver
+	S3Archiver struct {
+		Region           string  `yaml:"region"`
+		Endpoint         *string `yaml:"endpoint"`
+		S3ForcePathStyle bool    `yaml:"s3ForcePathStyle"`
 	}
 
 	// PublicClient is config for connecting to cadence frontend
@@ -395,12 +426,46 @@ type (
 	BootstrapMode int
 )
 
-// Validate validates this config
-func (c *Config) Validate() error {
+// ValidateAndFillDefaults validates this config and fills default values if needed
+func (c *Config) ValidateAndFillDefaults() error {
+	if err := c.validate(); err != nil {
+		return err
+	}
+	return c.fillDefaults()
+}
+
+func (c *Config) validate() error {
 	if err := c.Persistence.Validate(); err != nil {
 		return err
 	}
 	return c.Archival.Validate(&c.DomainDefaults.Archival)
+}
+
+func (c *Config) fillDefaults() error {
+	// filling default encodingType/decodingTypes for SQL persistence
+	for k, store := range c.Persistence.DataStores {
+		if store.SQL != nil {
+			if store.SQL.EncodingType == "" {
+				store.SQL.EncodingType = string(common.EncodingTypeThriftRW)
+			}
+			if len(store.SQL.DecodingTypes) == 0 {
+				store.SQL.DecodingTypes = []string{
+					string(common.EncodingTypeThriftRW),
+				}
+			}
+			c.Persistence.DataStores[k] = store
+		}
+	}
+	// filling RPCName with a default value if empty
+	if c.ClusterMetadata != nil {
+		for k, cluster := range c.ClusterMetadata.ClusterInformation {
+			if cluster.RPCName == "" {
+				cluster.RPCName = "cadence-frontend"
+				c.ClusterMetadata.ClusterInformation[k] = cluster
+			}
+		}
+	}
+	return nil
 }
 
 // String converts the config object into a string

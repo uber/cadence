@@ -21,9 +21,12 @@
 package persistence
 
 import (
-	"github.com/uber/cadence/.gen/go/shared"
+	"context"
+	"time"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -51,80 +54,111 @@ func (m *metadataManagerImpl) GetName() string {
 	return m.persistence.GetName()
 }
 
-func (m *metadataManagerImpl) CreateDomain(request *CreateDomainRequest) (*CreateDomainResponse, error) {
-	dc, err := m.serializeDomainConfig(request.Config)
+func (m *metadataManagerImpl) CreateDomain(
+	ctx context.Context,
+	request *CreateDomainRequest,
+) (*CreateDomainResponse, error) {
+	dc, err := m.toInternalDomainConfig(request.Config)
 	if err != nil {
 		return nil, err
 	}
-	return m.persistence.CreateDomain(&InternalCreateDomainRequest{
+	return m.persistence.CreateDomain(ctx, &InternalCreateDomainRequest{
 		Info:              request.Info,
 		Config:            &dc,
 		ReplicationConfig: request.ReplicationConfig,
 		IsGlobalDomain:    request.IsGlobalDomain,
 		ConfigVersion:     request.ConfigVersion,
 		FailoverVersion:   request.FailoverVersion,
+		LastUpdatedTime:   time.Unix(0, request.LastUpdatedTime),
 	})
 }
 
-func (m *metadataManagerImpl) GetDomain(request *GetDomainRequest) (*GetDomainResponse, error) {
-	resp, err := m.persistence.GetDomain(request)
+func (m *metadataManagerImpl) GetDomain(
+	ctx context.Context,
+	request *GetDomainRequest,
+) (*GetDomainResponse, error) {
+	internalResp, err := m.persistence.GetDomain(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 
-	dc, err := m.deserializeDomainConfig(resp.Config)
+	dc, err := m.fromInternalDomainConfig(internalResp.Config)
 	if err != nil {
 		return nil, err
 	}
 
-	return &GetDomainResponse{
-		Info:                        resp.Info,
+	resp := &GetDomainResponse{
+		Info:                        internalResp.Info,
 		Config:                      &dc,
-		ReplicationConfig:           resp.ReplicationConfig,
-		IsGlobalDomain:              resp.IsGlobalDomain,
-		ConfigVersion:               resp.ConfigVersion,
-		FailoverVersion:             resp.FailoverVersion,
-		FailoverNotificationVersion: resp.FailoverNotificationVersion,
-		NotificationVersion:         resp.NotificationVersion,
-	}, nil
+		ReplicationConfig:           internalResp.ReplicationConfig,
+		IsGlobalDomain:              internalResp.IsGlobalDomain,
+		ConfigVersion:               internalResp.ConfigVersion,
+		FailoverVersion:             internalResp.FailoverVersion,
+		FailoverNotificationVersion: internalResp.FailoverNotificationVersion,
+		PreviousFailoverVersion:     internalResp.PreviousFailoverVersion,
+		LastUpdatedTime:             internalResp.LastUpdatedTime.UnixNano(),
+		NotificationVersion:         internalResp.NotificationVersion,
+	}
+	if internalResp.FailoverEndTime != nil {
+		resp.FailoverEndTime = common.Int64Ptr(internalResp.FailoverEndTime.UnixNano())
+	}
+	return resp, nil
 }
 
-func (m *metadataManagerImpl) UpdateDomain(request *UpdateDomainRequest) error {
-	dc, err := m.serializeDomainConfig(request.Config)
+func (m *metadataManagerImpl) UpdateDomain(
+	ctx context.Context,
+	request *UpdateDomainRequest,
+) error {
+	dc, err := m.toInternalDomainConfig(request.Config)
 	if err != nil {
 		return err
 	}
-	return m.persistence.UpdateDomain(&InternalUpdateDomainRequest{
+	internalReq := &InternalUpdateDomainRequest{
 		Info:                        request.Info,
 		Config:                      &dc,
 		ReplicationConfig:           request.ReplicationConfig,
 		ConfigVersion:               request.ConfigVersion,
 		FailoverVersion:             request.FailoverVersion,
 		FailoverNotificationVersion: request.FailoverNotificationVersion,
+		PreviousFailoverVersion:     request.PreviousFailoverVersion,
+		LastUpdatedTime:             time.Unix(0, request.LastUpdatedTime),
 		NotificationVersion:         request.NotificationVersion,
-	})
+	}
+	if request.FailoverEndTime != nil {
+		internalReq.FailoverEndTime = common.TimePtr(time.Unix(0, *request.FailoverEndTime))
+	}
+	return m.persistence.UpdateDomain(ctx, internalReq)
 }
 
-func (m *metadataManagerImpl) DeleteDomain(request *DeleteDomainRequest) error {
-	return m.persistence.DeleteDomain(request)
+func (m *metadataManagerImpl) DeleteDomain(
+	ctx context.Context,
+	request *DeleteDomainRequest,
+) error {
+	return m.persistence.DeleteDomain(ctx, request)
 }
 
-func (m *metadataManagerImpl) DeleteDomainByName(request *DeleteDomainByNameRequest) error {
-	return m.persistence.DeleteDomainByName(request)
+func (m *metadataManagerImpl) DeleteDomainByName(
+	ctx context.Context,
+	request *DeleteDomainByNameRequest,
+) error {
+	return m.persistence.DeleteDomainByName(ctx, request)
 }
 
-func (m *metadataManagerImpl) ListDomains(request *ListDomainsRequest) (*ListDomainsResponse, error) {
-	resp, err := m.persistence.ListDomains(request)
+func (m *metadataManagerImpl) ListDomains(
+	ctx context.Context,
+	request *ListDomainsRequest,
+) (*ListDomainsResponse, error) {
+	resp, err := m.persistence.ListDomains(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 	domains := make([]*GetDomainResponse, 0, len(resp.Domains))
 	for _, d := range resp.Domains {
-		dc, err := m.deserializeDomainConfig(d.Config)
+		dc, err := m.fromInternalDomainConfig(d.Config)
 		if err != nil {
 			return nil, err
 		}
-		domains = append(domains, &GetDomainResponse{
+		currResp := &GetDomainResponse{
 			Info:                        d.Info,
 			Config:                      &dc,
 			ReplicationConfig:           d.ReplicationConfig,
@@ -132,8 +166,13 @@ func (m *metadataManagerImpl) ListDomains(request *ListDomainsRequest) (*ListDom
 			ConfigVersion:               d.ConfigVersion,
 			FailoverVersion:             d.FailoverVersion,
 			FailoverNotificationVersion: d.FailoverNotificationVersion,
+			PreviousFailoverVersion:     d.PreviousFailoverVersion,
 			NotificationVersion:         d.NotificationVersion,
-		})
+		}
+		if d.FailoverEndTime != nil {
+			currResp.FailoverEndTime = common.Int64Ptr(d.FailoverEndTime.UnixNano())
+		}
+		domains = append(domains, currResp)
 	}
 	return &ListDomainsResponse{
 		Domains:       domains,
@@ -141,19 +180,19 @@ func (m *metadataManagerImpl) ListDomains(request *ListDomainsRequest) (*ListDom
 	}, nil
 }
 
-func (m *metadataManagerImpl) serializeDomainConfig(c *DomainConfig) (InternalDomainConfig, error) {
+func (m *metadataManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalDomainConfig, error) {
 	if c == nil {
 		return InternalDomainConfig{}, nil
 	}
 	if c.BadBinaries.Binaries == nil {
-		c.BadBinaries.Binaries = map[string]*shared.BadBinaryInfo{}
+		c.BadBinaries.Binaries = map[string]*types.BadBinaryInfo{}
 	}
 	badBinaries, err := m.serializer.SerializeBadBinaries(&c.BadBinaries, common.EncodingTypeThriftRW)
 	if err != nil {
 		return InternalDomainConfig{}, err
 	}
 	return InternalDomainConfig{
-		Retention:                c.Retention,
+		Retention:                common.DaysToDuration(c.Retention),
 		EmitMetric:               c.EmitMetric,
 		HistoryArchivalStatus:    c.HistoryArchivalStatus,
 		HistoryArchivalURI:       c.HistoryArchivalURI,
@@ -163,7 +202,7 @@ func (m *metadataManagerImpl) serializeDomainConfig(c *DomainConfig) (InternalDo
 	}, nil
 }
 
-func (m *metadataManagerImpl) deserializeDomainConfig(ic *InternalDomainConfig) (DomainConfig, error) {
+func (m *metadataManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig) (DomainConfig, error) {
 	if ic == nil {
 		return DomainConfig{}, nil
 	}
@@ -172,10 +211,10 @@ func (m *metadataManagerImpl) deserializeDomainConfig(ic *InternalDomainConfig) 
 		return DomainConfig{}, err
 	}
 	if badBinaries.Binaries == nil {
-		badBinaries.Binaries = map[string]*shared.BadBinaryInfo{}
+		badBinaries.Binaries = map[string]*types.BadBinaryInfo{}
 	}
 	return DomainConfig{
-		Retention:                ic.Retention,
+		Retention:                common.DurationToDays(ic.Retention),
 		EmitMetric:               ic.EmitMetric,
 		HistoryArchivalStatus:    ic.HistoryArchivalStatus,
 		HistoryArchivalURI:       ic.HistoryArchivalURI,
@@ -185,8 +224,10 @@ func (m *metadataManagerImpl) deserializeDomainConfig(ic *InternalDomainConfig) 
 	}, nil
 }
 
-func (m *metadataManagerImpl) GetMetadata() (*GetMetadataResponse, error) {
-	return m.persistence.GetMetadata()
+func (m *metadataManagerImpl) GetMetadata(
+	ctx context.Context,
+) (*GetMetadataResponse, error) {
+	return m.persistence.GetMetadata(ctx)
 }
 
 func (m *metadataManagerImpl) Close() {

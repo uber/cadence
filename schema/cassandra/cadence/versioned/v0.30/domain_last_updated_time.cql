@@ -1,0 +1,1 @@
+ALTER TABLE domains_by_name_v2 ADD last_updated_time bigint;

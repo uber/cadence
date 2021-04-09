@@ -23,9 +23,9 @@ package domain
 import (
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -52,10 +52,10 @@ func (d *AttrValidatorImpl) validateDomainConfig(config *persistence.DomainConfi
 	if config.Retention < int32(d.minRetentionDays) {
 		return errInvalidRetentionPeriod
 	}
-	if config.HistoryArchivalStatus == shared.ArchivalStatusEnabled && len(config.HistoryArchivalURI) == 0 {
+	if config.HistoryArchivalStatus == types.ArchivalStatusEnabled && len(config.HistoryArchivalURI) == 0 {
 		return errInvalidArchivalConfig
 	}
-	if config.VisibilityArchivalStatus == shared.ArchivalStatusEnabled && len(config.VisibilityArchivalURI) == 0 {
+	if config.VisibilityArchivalStatus == types.ArchivalStatusEnabled && len(config.VisibilityArchivalURI) == 0 {
 		return errInvalidArchivalConfig
 	}
 	return nil
@@ -78,11 +78,11 @@ func (d *AttrValidatorImpl) validateDomainReplicationConfigForLocalDomain(
 	}
 
 	if activeCluster != d.clusterMetadata.GetCurrentClusterName() {
-		return &shared.BadRequestError{Message: "Invalid local domain active cluster"}
+		return &types.BadRequestError{Message: "Invalid local domain active cluster"}
 	}
 
 	if len(clusters) != 1 || clusters[0].ClusterName != activeCluster {
-		return &shared.BadRequestError{Message: "Invalid local domain clusters"}
+		return &types.BadRequestError{Message: "Invalid local domain clusters"}
 	}
 
 	return nil
@@ -118,7 +118,7 @@ func (d *AttrValidatorImpl) validateDomainReplicationConfigForGlobalDomain(
 	return nil
 }
 
-func (d *AttrValidatorImpl) validateDomainReplicationConfigClustersDoesNotChange(
+func (d *AttrValidatorImpl) validateDomainReplicationConfigClustersDoesNotRemove(
 	clustersOld []*persistence.ClusterReplicationConfig,
 	clustersNew []*persistence.ClusterReplicationConfig,
 ) error {
@@ -132,13 +132,13 @@ func (d *AttrValidatorImpl) validateDomainReplicationConfigClustersDoesNotChange
 		clusterNamesNew[clusterConfig.ClusterName] = true
 	}
 
-	if len(clusterNamesNew) != len(clusterNamesOld) {
-		return errCannotModifyClustersFromDomain
+	if len(clusterNamesNew) < len(clusterNamesOld) {
+		return errCannotRemoveClustersFromDomain
 	}
 
 	for clusterName := range clusterNamesOld {
 		if _, ok := clusterNamesNew[clusterName]; !ok {
-			return errCannotModifyClustersFromDomain
+			return errCannotRemoveClustersFromDomain
 		}
 	}
 	return nil
@@ -149,7 +149,7 @@ func (d *AttrValidatorImpl) validateClusterName(
 ) error {
 
 	if info, ok := d.clusterMetadata.GetAllClusterInfo()[clusterName]; !ok || !info.Enabled {
-		return &shared.BadRequestError{Message: fmt.Sprintf(
+		return &types.BadRequestError{Message: fmt.Sprintf(
 			"Invalid cluster name: %v",
 			clusterName,
 		)}

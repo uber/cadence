@@ -29,8 +29,8 @@ import (
 	"go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -113,7 +113,7 @@ func (s *VersionCheckerSuite) TestClientSupported() {
 		err := versionChecker.ClientSupported(tc.callContext, tc.enableClientVersionCheck)
 		if tc.expectErr {
 			s.Error(err)
-			s.IsType(&shared.ClientVersionNotSupportedError{}, err)
+			s.IsType(&types.ClientVersionNotSupportedError{}, err)
 		} else {
 			s.NoError(err)
 		}
@@ -129,6 +129,16 @@ func (s *VersionCheckerSuite) TestSupportsStickyQuery() {
 		{
 			clientImpl: "",
 			expectErr:  true,
+		},
+		{
+			clientImpl:           "",
+			clientFeatureVersion: "0.9.0",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           "",
+			clientFeatureVersion: "1.0.0",
+			expectErr:            false,
 		},
 		{
 			clientImpl: GoSDK,
@@ -181,7 +191,7 @@ func (s *VersionCheckerSuite) TestSupportsStickyQuery() {
 		if tc.expectErr {
 			err := vc.SupportsStickyQuery(tc.clientImpl, tc.clientFeatureVersion)
 			s.Error(err)
-			s.IsType(&shared.ClientVersionNotSupportedError{}, err)
+			s.IsType(&types.ClientVersionNotSupportedError{}, err)
 		} else {
 			s.NoError(vc.SupportsStickyQuery(tc.clientImpl, tc.clientFeatureVersion))
 		}
@@ -197,6 +207,11 @@ func (s *VersionCheckerSuite) TestSupportsConsistentQuery() {
 		{
 			clientImpl: "",
 			expectErr:  true,
+		},
+		{
+			clientImpl:           "",
+			clientFeatureVersion: GoWorkerConsistentQueryVersion,
+			expectErr:            true,
 		},
 		{
 			clientImpl: GoSDK,
@@ -239,9 +254,87 @@ func (s *VersionCheckerSuite) TestSupportsConsistentQuery() {
 		if tc.expectErr {
 			err := vc.SupportsConsistentQuery(tc.clientImpl, tc.clientFeatureVersion)
 			s.Error(err)
-			s.IsType(&shared.ClientVersionNotSupportedError{}, err)
+			s.IsType(&types.ClientVersionNotSupportedError{}, err)
 		} else {
 			s.NoError(vc.SupportsConsistentQuery(tc.clientImpl, tc.clientFeatureVersion))
+		}
+	}
+}
+
+func (s *VersionCheckerSuite) TestSupportsRawHistoryQuery() {
+	testCases := []struct {
+		clientImpl           string
+		clientFeatureVersion string
+		expectErr            bool
+	}{
+		{
+			clientImpl: "",
+			expectErr:  true,
+		},
+		{
+			clientImpl:           "",
+			clientFeatureVersion: GoWorkerRawHistoryQueryVersion,
+			expectErr:            true,
+		},
+		{
+			clientImpl: GoSDK,
+			expectErr:  true,
+		},
+		{
+			clientImpl:           "unknown",
+			clientFeatureVersion: "0.0.0",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           JavaSDK,
+			clientFeatureVersion: "1.5.0",
+			expectErr:            false,
+		},
+		{
+			clientImpl:           JavaSDK,
+			clientFeatureVersion: "1.2.0",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           GoSDK,
+			clientFeatureVersion: "malformed-feature-version",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           GoSDK,
+			clientFeatureVersion: GoWorkerRawHistoryQueryVersion,
+			expectErr:            false,
+		},
+		{
+			clientImpl:           GoSDK,
+			clientFeatureVersion: "1.4.0",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           GoSDK,
+			clientFeatureVersion: "2.0.0",
+			expectErr:            false,
+		},
+		{
+			clientImpl:           CLI,
+			clientFeatureVersion: "1.5.0",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           CLI,
+			clientFeatureVersion: "1.6.0",
+			expectErr:            false,
+		},
+	}
+
+	for _, tc := range testCases {
+		vc := NewVersionChecker()
+		if tc.expectErr {
+			err := vc.SupportsRawHistoryQuery(tc.clientImpl, tc.clientFeatureVersion)
+			s.Error(err)
+			s.IsType(&types.ClientVersionNotSupportedError{}, err)
+		} else {
+			s.NoError(vc.SupportsRawHistoryQuery(tc.clientImpl, tc.clientFeatureVersion))
 		}
 	}
 }

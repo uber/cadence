@@ -21,8 +21,11 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
+	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"    // needed to load mysql plugin
+	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres" // needed to load postgres plugin
 	"github.com/uber/cadence/tools/cli"
 )
 
@@ -30,5 +33,8 @@ import (
 // See cadence/tools/cli/README.md for usage
 func main() {
 	app := cli.NewCliApp()
-	app.Run(os.Args)
+	if err := app.Run(os.Args); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
 }

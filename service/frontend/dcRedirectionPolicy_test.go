@@ -29,13 +29,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -134,7 +134,14 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) SetupTest() {
 	logger, err := loggerimpl.NewDevelopment()
 	s.Nil(err)
 
-	s.mockConfig = NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewNopClient(), logger), 0, false)
+	s.mockConfig = NewConfig(dynamicconfig.NewCollection(
+		dynamicconfig.NewNopClient(),
+		logger,
+	),
+		0,
+		false,
+		false,
+	)
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.policy = NewSelectedAPIsForwardingPolicy(
@@ -280,7 +287,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 		switch targetCluster {
 		case s.currentClusterName:
 			currentClustercallCount++
-			return &shared.DomainNotActiveError{
+			return &types.DomainNotActiveError{
 				CurrentCluster: s.currentClusterName,
 				ActiveCluster:  s.alternativeClusterName,
 			}
@@ -316,7 +323,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 			return nil
 		case s.alternativeClusterName:
 			alternativeClustercallCount++
-			return &shared.DomainNotActiveError{
+			return &types.DomainNotActiveError{
 				CurrentCluster: s.alternativeClusterName,
 				ActiveCluster:  s.currentClusterName,
 			}

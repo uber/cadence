@@ -31,9 +31,11 @@ import (
 type (
 	// Config represents configuration for cadence-matching service
 	Config struct {
-		PersistenceMaxQPS dynamicconfig.IntPropertyFn
-		EnableSyncMatch   dynamicconfig.BoolPropertyFnWithTaskListInfoFilters
-		RPS               dynamicconfig.IntPropertyFn
+		PersistenceMaxQPS       dynamicconfig.IntPropertyFn
+		PersistenceGlobalMaxQPS dynamicconfig.IntPropertyFn
+		EnableSyncMatch         dynamicconfig.BoolPropertyFnWithTaskListInfoFilters
+		RPS                     dynamicconfig.IntPropertyFn
+		ShutdownDrainDuration   dynamicconfig.DurationPropertyFn
 
 		// taskListManager configuration
 		RangeSize                    int64
@@ -58,6 +60,10 @@ type (
 		MaxTaskBatchSize                dynamicconfig.IntPropertyFnWithTaskListInfoFilters
 
 		ThrottledLogRPS dynamicconfig.IntPropertyFn
+
+		// debugging configuration
+		EnableDebugMode             bool // note that this value is initialized once on service start
+		EnableTaskInfoLogByDomainID dynamicconfig.BoolPropertyFnWithDomainIDFilter
 	}
 
 	forwarderConfig struct {
@@ -91,6 +97,7 @@ type (
 func NewConfig(dc *dynamicconfig.Collection) *Config {
 	return &Config{
 		PersistenceMaxQPS:               dc.GetIntProperty(dynamicconfig.MatchingPersistenceMaxQPS, 3000),
+		PersistenceGlobalMaxQPS:         dc.GetIntProperty(dynamicconfig.MatchingPersistenceGlobalMaxQPS, 0),
 		EnableSyncMatch:                 dc.GetBoolPropertyFilteredByTaskListInfo(dynamicconfig.MatchingEnableSyncMatch, true),
 		RPS:                             dc.GetIntProperty(dynamicconfig.MatchingRPS, 1200),
 		RangeSize:                       100000,
@@ -110,68 +117,70 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		ForwarderMaxOutstandingTasks:    dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingForwarderMaxOutstandingTasks, 1),
 		ForwarderMaxRatePerSecond:       dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingForwarderMaxRatePerSecond, 10),
 		ForwarderMaxChildrenPerNode:     dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingForwarderMaxChildrenPerNode, 20),
+		ShutdownDrainDuration:           dc.GetDurationProperty(dynamicconfig.MatchingShutdownDrainDuration, 0),
+		EnableDebugMode:                 dc.GetBoolProperty(dynamicconfig.EnableDebugMode, false)(),
+		EnableTaskInfoLogByDomainID:     dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.MatchingEnableTaskInfoLogByDomainID, false),
 	}
 }
 
 func newTaskListConfig(id *taskListID, config *Config, domainCache cache.DomainCache) (*taskListConfig, error) {
-	domainEntry, err := domainCache.GetDomainByID(id.domainID)
+	domainName, err := domainCache.GetDomainName(id.domainID)
 	if err != nil {
 		return nil, err
 	}
 
-	domain := domainEntry.GetInfo().Name
 	taskListName := id.name
 	taskType := id.taskType
 	return &taskListConfig{
 		RangeSize: config.RangeSize,
 		GetTasksBatchSize: func() int {
-			return config.GetTasksBatchSize(domain, taskListName, taskType)
+			return config.GetTasksBatchSize(domainName, taskListName, taskType)
 		},
 		UpdateAckInterval: func() time.Duration {
-			return config.UpdateAckInterval(domain, taskListName, taskType)
+			return config.UpdateAckInterval(domainName, taskListName, taskType)
 		},
 		IdleTasklistCheckInterval: func() time.Duration {
-			return config.IdleTasklistCheckInterval(domain, taskListName, taskType)
+			return config.IdleTasklistCheckInterval(domainName, taskListName, taskType)
 		},
 		MaxTasklistIdleTime: func() time.Duration {
-			return config.MaxTasklistIdleTime(domain, taskListName, taskType)
+			return config.MaxTasklistIdleTime(domainName, taskListName, taskType)
 		},
 		MinTaskThrottlingBurstSize: func() int {
-			return config.MinTaskThrottlingBurstSize(domain, taskListName, taskType)
+			return config.MinTaskThrottlingBurstSize(domainName, taskListName, taskType)
 		},
 		EnableSyncMatch: func() bool {
-			return config.EnableSyncMatch(domain, taskListName, taskType)
+			return config.EnableSyncMatch(domainName, taskListName, taskType)
 		},
 		LongPollExpirationInterval: func() time.Duration {
-			return config.LongPollExpirationInterval(domain, taskListName, taskType)
+			return config.LongPollExpirationInterval(domainName, taskListName, taskType)
 		},
 		MaxTaskDeleteBatchSize: func() int {
-			return config.MaxTaskDeleteBatchSize(domain, taskListName, taskType)
+			return config.MaxTaskDeleteBatchSize(domainName, taskListName, taskType)
 		},
 		OutstandingTaskAppendsThreshold: func() int {
-			return config.OutstandingTaskAppendsThreshold(domain, taskListName, taskType)
+			return config.OutstandingTaskAppendsThreshold(domainName, taskListName, taskType)
 		},
 		MaxTaskBatchSize: func() int {
-			return config.MaxTaskBatchSize(domain, taskListName, taskType)
+			return config.MaxTaskBatchSize(domainName, taskListName, taskType)
 		},
 		NumWritePartitions: func() int {
-			return common.MaxInt(1, config.NumTasklistWritePartitions(domain, taskListName, taskType))
+			return common.MaxInt(1, config.NumTasklistWritePartitions(domainName, taskListName, taskType))
 		},
 		NumReadPartitions: func() int {
-			return common.MaxInt(1, config.NumTasklistReadPartitions(domain, taskListName, taskType))
+			return common.MaxInt(1, config.NumTasklistReadPartitions(domainName, taskListName, taskType))
 		},
 		forwarderConfig: forwarderConfig{
 			ForwarderMaxOutstandingPolls: func() int {
-				return config.ForwarderMaxOutstandingPolls(domain, taskListName, taskType)
+				return config.ForwarderMaxOutstandingPolls(domainName, taskListName, taskType)
 			},
 			ForwarderMaxOutstandingTasks: func() int {
-				return config.ForwarderMaxOutstandingTasks(domain, taskListName, taskType)
+				return config.ForwarderMaxOutstandingTasks(domainName, taskListName, taskType)
 			},
 			ForwarderMaxRatePerSecond: func() int {
-				return config.ForwarderMaxRatePerSecond(domain, taskListName, taskType)
+				return config.ForwarderMaxRatePerSecond(domainName, taskListName, taskType)
 			},
 			ForwarderMaxChildrenPerNode: func() int {
-				return common.MaxInt(1, config.ForwarderMaxChildrenPerNode(domain, taskListName, taskType))
+				return common.MaxInt(1, config.ForwarderMaxChildrenPerNode(domainName, taskListName, taskType))
 			},
 		},
 	}, nil

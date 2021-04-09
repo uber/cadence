@@ -21,8 +21,6 @@
 package dynamicconfig
 
 import (
-	"errors"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -31,93 +29,6 @@ import (
 
 	"github.com/uber/cadence/common/log"
 )
-
-type inMemoryClient struct {
-	globalValues atomic.Value
-}
-
-func newInMemoryClient() *inMemoryClient {
-	var globalValues atomic.Value
-	globalValues.Store(make(map[Key]interface{}))
-	return &inMemoryClient{globalValues: globalValues}
-}
-
-func (mc *inMemoryClient) SetValue(key Key, value interface{}) {
-	v := mc.globalValues.Load().(map[Key]interface{})
-	v[key] = value
-	mc.globalValues.Store(v)
-}
-
-func (mc *inMemoryClient) GetValue(key Key, defaultValue interface{}) (interface{}, error) {
-	v := mc.globalValues.Load().(map[Key]interface{})
-	if val, ok := v[key]; ok {
-		return val, nil
-	}
-	return defaultValue, errors.New("unable to find key")
-}
-
-func (mc *inMemoryClient) GetValueWithFilters(
-	name Key, filters map[Filter]interface{}, defaultValue interface{},
-) (interface{}, error) {
-	return mc.GetValue(name, defaultValue)
-}
-
-func (mc *inMemoryClient) GetIntValue(name Key, filters map[Filter]interface{}, defaultValue int) (int, error) {
-	v := mc.globalValues.Load().(map[Key]interface{})
-	if val, ok := v[name]; ok {
-		return val.(int), nil
-	}
-	return defaultValue, errors.New("unable to find key")
-}
-
-func (mc *inMemoryClient) GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
-	v := mc.globalValues.Load().(map[Key]interface{})
-	if val, ok := v[name]; ok {
-		return val.(float64), nil
-	}
-	return defaultValue, errors.New("unable to find key")
-}
-
-func (mc *inMemoryClient) GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
-	v := mc.globalValues.Load().(map[Key]interface{})
-	if val, ok := v[name]; ok {
-		return val.(bool), nil
-	}
-	return defaultValue, errors.New("unable to find key")
-}
-
-func (mc *inMemoryClient) GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error) {
-	v := mc.globalValues.Load().(map[Key]interface{})
-	if val, ok := v[name]; ok {
-		return val.(string), nil
-	}
-	return defaultValue, errors.New("unable to find key")
-}
-
-func (mc *inMemoryClient) GetMapValue(
-	name Key, filters map[Filter]interface{}, defaultValue map[string]interface{},
-) (map[string]interface{}, error) {
-	v := mc.globalValues.Load().(map[Key]interface{})
-	if val, ok := v[name]; ok {
-		return val.(map[string]interface{}), nil
-	}
-	return defaultValue, errors.New("unable to find key")
-}
-
-func (mc *inMemoryClient) GetDurationValue(
-	name Key, filters map[Filter]interface{}, defaultValue time.Duration,
-) (time.Duration, error) {
-	v := mc.globalValues.Load().(map[Key]interface{})
-	if val, ok := v[name]; ok {
-		return val.(time.Duration), nil
-	}
-	return defaultValue, errors.New("unable to find key")
-}
-
-func (mc *inMemoryClient) UpdateValue(key Key, value interface{}) error {
-	mc.SetValue(key, value)
-	return nil
-}
 
 type configSuite struct {
 	suite.Suite
@@ -131,7 +42,7 @@ func TestConfigSuite(t *testing.T) {
 }
 
 func (s *configSuite) SetupSuite() {
-	s.client = newInMemoryClient()
+	s.client = NewInMemoryClient().(*inMemoryClient)
 	logger := log.NewNoop()
 	s.cln = NewCollection(s.client, logger)
 }
@@ -164,7 +75,7 @@ func (s *configSuite) TestGetIntPropertyFilteredByDomain() {
 func (s *configSuite) TestGetStringPropertyFnWithDomainFilter() {
 	key := DefaultEventEncoding
 	domain := "testDomain"
-	value := s.cln.GetStringPropertyFnWithDomainFilter(key, "abc")
+	value := s.cln.GetStringPropertyFilteredByDomain(key, "abc")
 	s.Equal("abc", value(domain))
 	s.client.SetValue(key, "efg")
 	s.Equal("efg", value(domain))
@@ -195,6 +106,15 @@ func (s *configSuite) TestGetBoolProperty() {
 	s.Equal(true, value())
 	s.client.SetValue(key, false)
 	s.Equal(false, value())
+}
+
+func (s *configSuite) TestGetBoolPropertyFilteredByDomainID() {
+	key := testGetBoolPropertyFilteredByDomainIDKey
+	domainID := "testDomainID"
+	value := s.cln.GetBoolPropertyFilteredByDomainID(key, true)
+	s.Equal(true, value(domainID))
+	s.client.SetValue(key, false)
+	s.Equal(false, value(domainID))
 }
 
 func (s *configSuite) TestGetBoolPropertyFilteredByTaskListInfo() {
@@ -275,11 +195,36 @@ func TestDynamicConfigFilterTypeIsMapped(t *testing.T) {
 	}
 }
 
-func TestMapToString(t *testing.T) {
-	require.Equal(t, "", mapToString(nil))
-	m := map[string]interface{}{
-		"k1": 1,
-		"k2": 2,
+func BenchmarkLogValue(b *testing.B) {
+	keys := []Key{
+		HistorySizeLimitError,
+		MatchingThrottledLogRPS,
+		MatchingIdleTasklistCheckInterval,
 	}
-	require.Equal(t, "map[k1:1 k2:2]", mapToString(m))
+	values := []interface{}{
+		1024 * 1024,
+		0.1,
+		30 * time.Second,
+	}
+	filters := map[Filter]interface{}{
+		ClusterName: "development",
+		DomainName:  "domainName",
+	}
+	cmpFuncs := []func(interface{}, interface{}) bool{
+		intCompareEquals,
+		float64CompareEquals,
+		durationCompareEquals,
+	}
+
+	collection := NewCollection(NewInMemoryClient(), log.NewNoop())
+	// pre-warm the collection logValue map
+	for i := range keys {
+		collection.logValue(keys[i], filters, values[i], values[i], cmpFuncs[i])
+	}
+
+	for i := 0; i < b.N; i++ {
+		for i := range keys {
+			collection.logValue(keys[i], filters, values[i], values[i], cmpFuncs[i])
+		}
+	}
 }

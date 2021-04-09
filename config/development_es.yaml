@@ -8,12 +8,10 @@ persistence:
       cassandra:
         hosts: "127.0.0.1"
         keyspace: "cadence"
-        consistency: "One"
     cass-visibility:
       cassandra:
         hosts: "127.0.0.1"
         keyspace: "cadence_visibility"
-        consistency: "One"
     es-visibility:
       elasticsearch:
         url:
@@ -98,8 +96,12 @@ archival:
         fileMode: "0666"
         dirMode: "0766"
   visibility:
-    status: "disabled"
-    enableRead: false
+    status: "enabled"
+    enableRead: true
+    provider:
+      filestore:
+        fileMode: "0666"
+        dirMode: "0766"
 
 domainDefaults:
   archival:
@@ -107,7 +109,8 @@ domainDefaults:
       status: "enabled"
       URI: "file:///tmp/cadence_archival/development"
     visibility:
-      status: "disabled"
+      status: "enabled"
+      URI: "file:///tmp/cadence_vis_archival/development"
 
 kafka:
   tls:
@@ -133,3 +136,6 @@ dynamicConfigClient:
   filepath: "config/dynamicconfig/development_es.yaml"
   pollInterval: "10s"
 
+blobstore:
+  filestore:
+    outputDirectory: "/tmp/blobstore"

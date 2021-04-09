@@ -36,7 +36,7 @@ func RunTool(args []string) error {
 
 // SetupSchema setups the cassandra schema
 func SetupSchema(config *SetupSchemaConfig) error {
-	if err := validateCQLClientConfig(&config.CQLClientConfig, false); err != nil {
+	if err := validateCQLClientConfig(&config.CQLClientConfig); err != nil {
 		return err
 	}
 	db, err := newCQLClient(&config.CQLClientConfig)
@@ -73,7 +73,7 @@ func buildCLIOptions() *cli.App {
 			Name:   schema.CLIFlagPort,
 			Value:  defaultCassandraPort,
 			Usage:  "Port of cassandra host to connect to",
-			EnvVar: "CASSANDRA_PORT",
+			EnvVar: "CASSANDRA_DB_PORT",
 		},
 		cli.StringFlag{
 			Name:   schema.CLIFlagUser,
