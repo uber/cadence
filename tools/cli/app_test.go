@@ -211,20 +211,57 @@ func (s *cliAppSuite) TestDomainUpdate_Failed() {
 }
 
 func (s *cliAppSuite) TestDomainDeprecate() {
+	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.ListClosedWorkflowExecutionsResponse{}, nil)
+	s.clientFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.ListOpenWorkflowExecutionsResponse{}, nil)
 	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(nil)
 	err := s.app.Run([]string{"", "--do", domainName, "domain", "deprecate"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestDomainDeprecate_DomainNotExist() {
+	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.ListClosedWorkflowExecutionsResponse{}, nil)
+	s.clientFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.ListOpenWorkflowExecutionsResponse{}, nil)
 	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(&types.EntityNotExistsError{})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestDomainDeprecate_Failed() {
+	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.ListClosedWorkflowExecutionsResponse{}, nil)
+	s.clientFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.ListOpenWorkflowExecutionsResponse{}, nil)
 	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"faked error"})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
+	s.Equal(1, errorCode)
+}
+
+func (s *cliAppSuite) TestDomainDeprecate_ClosedWorkflowsExist() {
+	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(listClosedWorkflowExecutionsResponse, nil)
+	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
+	s.Equal(1, errorCode)
+}
+
+func (s *cliAppSuite) TestDomainDeprecate_OpenWorkflowsExist() {
+	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.ListClosedWorkflowExecutionsResponse{}, nil)
+	s.clientFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(listOpenWorkflowExecutionsResponse, nil)
+	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
+	s.Equal(1, errorCode)
+}
+
+func (s *cliAppSuite) TestDomainDeprecate_Force() {
+	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(nil)
+	err := s.app.Run([]string{"", "--do", domainName, "domain", "deprecate", "--force"})
+	s.Nil(err)
+}
+
+func (s *cliAppSuite) TestDomainDeprecate_DomainNotExist_Force() {
+	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(&types.EntityNotExistsError{})
+	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate", "--force"})
+	s.Equal(1, errorCode)
+}
+
+func (s *cliAppSuite) TestDomainDeprecate_Failed_Force() {
+	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"faked error"})
+	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate", "--force"})
 	s.Equal(1, errorCode)
 }
 

@@ -179,6 +179,10 @@ var (
 			Name:  FlagSecurityTokenWithAlias,
 			Usage: "Optional token for security check",
 		},
+		cli.BoolFlag{
+			Name: FlagForce,
+			Usage: "Deprecate domain regardless of domain history.",
+		},
 	}
 
 	describeDomainFlags = []cli.Flag{
