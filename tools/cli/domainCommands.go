@@ -288,6 +288,16 @@ func (d *domainCLIImpl) DeprecateDomain(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
+	// check if there is any workflow in this domain, if exists, do not deprecate
+	wfs, _ := listClosedWorkflow(getWorkflowClient(c), 1, 0, time.Now().UnixNano(), "", "", workflowStatusNotSet, nil, c)
+	if len(wfs) > 0 {
+		ErrorAndExit("Operation DeprecateDomain failed.", errors.New("Workflow history not cleared in this domain."))
+	}
+	wfs, _ = listOpenWorkflow(getWorkflowClient(c), 1, 0, time.Now().UnixNano(), "", "", nil, c)
+	if len(wfs) > 0 {
+		ErrorAndExit("Operation DeprecateDomain failed.", errors.New("Workflow still running in this domain."))
+	}
+
 	err := d.deprecateDomain(ctx, &types.DeprecateDomainRequest{
 		Name:          domainName,
 		SecurityToken: securityToken,
