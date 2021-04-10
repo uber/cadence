@@ -26,7 +26,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/uber/cadence/common/auth"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/tools/common/schema"
 )
@@ -47,7 +47,7 @@ type (
 		Keyspace    string
 		Timeout     int
 		numReplicas int
-		TLS         *auth.TLS
+		TLS         *config.TLS
 		CQLClient   gocql.Client
 	}
 )

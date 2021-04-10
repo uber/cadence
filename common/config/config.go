@@ -29,7 +29,6 @@ import (
 	"github.com/uber/ringpop-go/discovery"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
@@ -197,7 +196,7 @@ type (
 		// MaxConns is the max number of connections to this datastore for a single keyspace
 		MaxConns int `yaml:"maxConns"`
 		// TLS configuration
-		TLS *auth.TLS `yaml:"tls"`
+		TLS *TLS `yaml:"tls"`
 		// CQLClient specifies a custom CQL client implementation, can not be specified through yaml
 		CQLClient gocql.Client `yaml:"-" json:"-"`
 	}
@@ -228,7 +227,7 @@ type (
 		// in a sharded sql database. The default value for this param is 1
 		NumShards int `yaml:"nShards"`
 		// TLS is the configuration for TLS connections
-		TLS *auth.TLS `yaml:"tls"`
+		TLS *TLS `yaml:"tls"`
 		// EncodingType is the configuration for the type of encoding used for sql blobs
 		EncodingType string `yaml:"encodingType"`
 		// DecodingTypes is the configuration for all the sql blob decoding types which need to be supported

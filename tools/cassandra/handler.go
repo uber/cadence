@@ -26,7 +26,6 @@ import (
 
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/schema/cassandra"
 	"github.com/uber/cadence/tools/common/schema"
@@ -165,7 +164,7 @@ func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 	config.numReplicas = cli.Int(schema.CLIOptReplicationFactor)
 
 	if cli.GlobalBool(schema.CLIFlagEnableTLS) {
-		config.TLS = &auth.TLS{
+		config.TLS = &config.TLS{
 			Enabled:                true,
 			CertFile:               cli.GlobalString(schema.CLIFlagTLSCertFile),
 			KeyFile:                cli.GlobalString(schema.CLIFlagTLSKeyFile),

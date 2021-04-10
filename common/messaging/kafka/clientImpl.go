@@ -31,7 +31,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/common/auth"
+	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/messaging"
@@ -165,10 +165,10 @@ func (c *clientImpl) initAuth(saramaConfig *sarama.Config) error {
 
 	if c.config.SASL.Enabled {
 		if c.config.SASL.Algorithm == "sha512" {
-			saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &auth.XDGSCRAMClient{HashGeneratorFcn: auth.SHA512} }
+			saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &authorization.XDGSCRAMClient{HashGeneratorFcn: authorization.SHA512} }
 			saramaConfig.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA512
 		} else if c.config.SASL.Algorithm == "sha256" {
-			saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &auth.XDGSCRAMClient{HashGeneratorFcn: auth.SHA256} }
+			saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &authorization.XDGSCRAMClient{HashGeneratorFcn: authorization.SHA256} }
 			saramaConfig.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA256
 		} else if c.config.SASL.Algorithm == "plain" {
 			saramaConfig.Net.SASL.Mechanism = sarama.SASLTypePlaintext
@@ -180,7 +180,7 @@ func (c *clientImpl) initAuth(saramaConfig *sarama.Config) error {
 }
 
 // convertTLSConfig converts tls config
-func convertTLSConfig(authConfig auth.TLS) (*tls.Config, error) {
+func convertTLSConfig(authConfig config.TLS) (*tls.Config, error) {
 	if !authConfig.Enabled {
 		return nil, nil
 	}

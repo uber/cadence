@@ -22,15 +22,13 @@ package config
 
 import (
 	"fmt"
-
-	"github.com/uber/cadence/common/auth"
 )
 
 type (
 	// KafkaConfig describes the configuration needed to connect to all kafka clusters
 	KafkaConfig struct {
-		TLS      auth.TLS                 `yaml:"tls"`
-		SASL     auth.SASL                `yaml:"sasl"`
+		TLS      TLS                      `yaml:"tls"`
+		SASL     SASL                     `yaml:"sasl"`
 		Clusters map[string]ClusterConfig `yaml:"clusters"`
 		Topics   map[string]TopicConfig   `yaml:"topics"`
 		// Applications describes the applications that will use the Kafka topics

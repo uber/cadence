@@ -27,7 +27,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/uber/cadence/common/auth"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/tools/cassandra"
 	"github.com/uber/cadence/tools/common/schema"
@@ -75,7 +75,7 @@ func loadCassandraSchema(
 	port int,
 	keyspace string,
 	override bool,
-	tls *auth.TLS,
+	tls *config.TLS,
 ) (err error) {
 
 	tmpFile, err := ioutil.TempFile("", "_cadence_")

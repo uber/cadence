@@ -41,7 +41,6 @@ import (
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
@@ -451,7 +450,7 @@ func decodeVisibility(message []byte, val *indexer.Message) error {
 // ClustersConfig describes the kafka clusters
 type ClustersConfig struct {
 	Clusters map[string]config.ClusterConfig
-	TLS      auth.TLS
+	TLS      config.TLS
 }
 
 func doRereplicate(

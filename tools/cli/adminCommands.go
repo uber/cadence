@@ -33,7 +33,6 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -298,7 +297,7 @@ func connectToCassandra(c *cli.Context) (gocql.Client, gocql.Session) {
 		Timeout:           10 * time.Second,
 	}
 	if c.Bool(FlagEnableTLS) {
-		clusterConfig.TLS = &auth.TLS{
+		clusterConfig.TLS = &config.TLS{
 			Enabled:                true,
 			CertFile:               c.String(FlagTLSCertPath),
 			KeyFile:                c.String(FlagTLSKeyPath),
@@ -337,7 +336,7 @@ func connectToSQL(c *cli.Context) sqlplugin.DB {
 	}
 
 	if c.Bool(FlagEnableTLS) {
-		sqlConfig.TLS = &auth.TLS{
+		sqlConfig.TLS = &config.TLS{
 			Enabled:                true,
 			CertFile:               c.String(FlagTLSCertPath),
 			KeyFile:                c.String(FlagTLSKeyPath),
