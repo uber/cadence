@@ -1244,7 +1244,7 @@ func (s *IntegrationSuite) TestCronWorkflow() {
 		// However, it's difficult to guarantee accuracy within a second, we allows 1s as buffering...
 		backoffSeconds := int(time.Duration(expectedBackoff - executionTimeDiff).Round(time.Second).Seconds())
 		targetBackoffSeconds := int(targetBackoffDuration.Seconds())
-		targetDiff := math.Abs(float64(backoffSeconds%targetBackoffSeconds - 3))
+		targetDiff := int(math.Abs(float64(backoffSeconds%targetBackoffSeconds-3))) % 3
 
 		s.True(
 			targetDiff <= 1,
