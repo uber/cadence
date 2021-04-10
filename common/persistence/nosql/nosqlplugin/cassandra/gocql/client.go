@@ -41,7 +41,7 @@ func NewClient() Client {
 
 // RegisterClient registers a client into this package, can only be called once
 func RegisterClient(c Client) {
-	if registered != nil {
+	if registered == nil {
 		registered = c
 	} else {
 		panic("binary build error: gocql client is already register!")

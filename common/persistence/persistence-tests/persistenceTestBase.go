@@ -45,6 +45,7 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/client"
+	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/native" // needed to load the default gocql client
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
