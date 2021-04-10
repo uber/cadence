@@ -30,7 +30,6 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
 
 type (
@@ -197,8 +196,6 @@ type (
 		MaxConns int `yaml:"maxConns"`
 		// TLS configuration
 		TLS *TLS `yaml:"tls"`
-		// CQLClient specifies a custom CQL client implementation, can not be specified through yaml
-		CQLClient gocql.Client `yaml:"-" json:"-"`
 	}
 
 	// SQL is the configuration for connecting to a SQL backed datastore

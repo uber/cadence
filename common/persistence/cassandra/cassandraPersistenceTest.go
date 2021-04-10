@@ -68,7 +68,6 @@ func NewTestCluster(keyspace, username, password, host string, port int, schemaD
 		Port:      port,
 		MaxConns:  2,
 		Keyspace:  keyspace,
-		CQLClient: gocql.NewClient(),
 	}
 	return &result
 }
@@ -129,7 +128,7 @@ func (s *TestCluster) CreateSession() {
 	}
 
 	var err error
-	s.session, err = s.cfg.CQLClient.CreateSession(*s.cluster)
+	s.session, err = gocql.NewClient().CreateSession(*s.cluster)
 	if err != nil {
 		log.Fatal(`CreateSession`, err)
 	}

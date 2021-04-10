@@ -79,7 +79,6 @@ func checkCompatibleVersion(
 		Keyspace:  cfg.Keyspace,
 		Timeout:   defaultTimeout,
 		TLS:       cfg.TLS,
-		CQLClient: cfg.CQLClient,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create CQL Client: %v", err.Error())
@@ -191,9 +190,6 @@ func validateCQLClientConfig(config *CQLClientConfig) error {
 	}
 	if config.numReplicas == 0 {
 		config.numReplicas = defaultNumReplicas
-	}
-	if config.CQLClient == nil {
-		config.CQLClient = defaultGoCQLClient
 	}
 
 	return nil

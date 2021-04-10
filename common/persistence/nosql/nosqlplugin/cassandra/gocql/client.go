@@ -21,58 +21,31 @@
 package gocql
 
 import (
-	"context"
 	"crypto/tls"
 	"strings"
 
 	"github.com/gocql/gocql"
 )
 
-var _ Client = client{}
-
-type (
-	client struct{}
-)
-
 var (
-	defaultClient = client{}
+	registered Client = nil //= client{}
 )
 
-// NewClient creates a default gocql client based on the open source gocql library.
+// NewClient gets a gocql client based registered object
 func NewClient() Client {
-	return defaultClient
+	if registered == nil {
+		panic("binary build error: gocql client is not registered yet!")
+	}
+	return registered
 }
 
-func (c client) CreateSession(
-	config ClusterConfig,
-) (Session, error) {
-	return newSession(config)
-}
-
-func (c client) IsTimeoutError(err error) bool {
-	if err == context.DeadlineExceeded {
-		return true
+// RegisterClient registers a client into this package, can only be called once
+func RegisterClient(c Client) {
+	if registered != nil {
+		registered = c
+	} else {
+		panic("binary build error: gocql client is already register!")
 	}
-	if err == gocql.ErrTimeoutNoResponse {
-		return true
-	}
-	if err == gocql.ErrConnectionClosed {
-		return true
-	}
-	_, ok := err.(*gocql.RequestErrWriteTimeout)
-	return ok
-}
-
-func (c client) IsNotFoundError(err error) bool {
-	return err == gocql.ErrNotFound
-}
-
-func (c client) IsThrottlingError(err error) bool {
-	if req, ok := err.(gocql.RequestError); ok {
-		// gocql does not expose the constant errOverloaded = 0x1001
-		return req.Code() == 0x1001
-	}
-	return false
 }
 
 func newCassandraCluster(cfg ClusterConfig) *gocql.ClusterConfig {
