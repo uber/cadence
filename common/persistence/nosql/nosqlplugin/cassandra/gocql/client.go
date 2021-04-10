@@ -28,7 +28,7 @@ import (
 )
 
 var (
-	registered Client = nil //= client{}
+	registered Client = nil
 )
 
 // NewClient gets a gocql client based registered object
