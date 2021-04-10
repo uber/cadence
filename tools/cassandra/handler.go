@@ -154,17 +154,17 @@ func doCreateKeyspace(cfg CQLClientConfig, name string) error {
 }
 
 func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
-	config := new(CQLClientConfig)
-	config.Hosts = cli.GlobalString(schema.CLIOptEndpoint)
-	config.Port = cli.GlobalInt(schema.CLIOptPort)
-	config.User = cli.GlobalString(schema.CLIOptUser)
-	config.Password = cli.GlobalString(schema.CLIOptPassword)
-	config.Timeout = cli.GlobalInt(schema.CLIOptTimeout)
-	config.Keyspace = cli.GlobalString(schema.CLIOptKeyspace)
-	config.numReplicas = cli.Int(schema.CLIOptReplicationFactor)
+	cqlConfig := new(CQLClientConfig)
+	cqlConfig.Hosts = cli.GlobalString(schema.CLIOptEndpoint)
+	cqlConfig.Port = cli.GlobalInt(schema.CLIOptPort)
+	cqlConfig.User = cli.GlobalString(schema.CLIOptUser)
+	cqlConfig.Password = cli.GlobalString(schema.CLIOptPassword)
+	cqlConfig.Timeout = cli.GlobalInt(schema.CLIOptTimeout)
+	cqlConfig.Keyspace = cli.GlobalString(schema.CLIOptKeyspace)
+	cqlConfig.numReplicas = cli.Int(schema.CLIOptReplicationFactor)
 
 	if cli.GlobalBool(schema.CLIFlagEnableTLS) {
-		config.TLS = &config.TLS{
+		cqlConfig.TLS = &config.TLS{
 			Enabled:                true,
 			CertFile:               cli.GlobalString(schema.CLIFlagTLSCertFile),
 			KeyFile:                cli.GlobalString(schema.CLIFlagTLSKeyFile),
@@ -173,10 +173,10 @@ func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 		}
 	}
 
-	if err := validateCQLClientConfig(config); err != nil {
+	if err := validateCQLClientConfig(cqlConfig); err != nil {
 		return nil, err
 	}
-	return config, nil
+	return cqlConfig, nil
 }
 
 func validateCQLClientConfig(config *CQLClientConfig) error {
