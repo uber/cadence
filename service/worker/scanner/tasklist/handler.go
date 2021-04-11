@@ -21,7 +21,6 @@
 package tasklist
 
 import (
-	"fmt"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -69,7 +68,7 @@ func (s *Scavenger) deleteHandler(info *p.TaskListInfo) handlerStatus {
 			return handlerStatusDefer
 		}
 		if err != nil {
-			s.logger.Error(fmt.Sprintf("Scavenger error completing tasks: %v", err))
+			s.logger.Error("Scavenger error completing tasks", tag.Error(err))
 			return handlerStatusErr
 		}
 		nProcessed += nTasks
@@ -83,7 +82,7 @@ func (s *Scavenger) deleteHandler(info *p.TaskListInfo) handlerStatus {
 		resp, err1 := s.getTasks(info, taskBatchSize)
 		if err1 != nil {
 			err = err1
-			s.logger.Error(fmt.Sprintf("Scavenger error getting tasks: %v", err))
+			s.logger.Error("Scavenger error getting tasks", tag.Error(err))
 			return handlerStatusErr
 		}
 
@@ -92,7 +91,7 @@ func (s *Scavenger) deleteHandler(info *p.TaskListInfo) handlerStatus {
 		for _, task := range resp.Tasks {
 			nProcessed++
 			if !s.isTaskExpired(task) {
-				s.logger.Info(fmt.Sprintf("Scavenger stopping at an unexpired task. (Expires %v)", task.Expiry), tag.WorkflowTaskListName(info.Name), tag.TaskType(info.TaskType), tag.WorkflowDomainID(task.DomainID), tag.WorkflowID(task.WorkflowID), tag.WorkflowRunID(task.RunID), tag.TaskID(task.TaskID))
+				s.logger.Info("Scavenger stopping at an unexpired task", tag.Timestamp(task.Expiry), tag.WorkflowTaskListName(info.Name), tag.TaskType(info.TaskType), tag.WorkflowDomainID(task.DomainID), tag.WorkflowID(task.WorkflowID), tag.WorkflowRunID(task.RunID), tag.TaskID(task.TaskID))
 				unexpiredTaskFound = true
 				break
 			}

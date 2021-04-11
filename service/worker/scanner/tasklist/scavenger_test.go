@@ -33,11 +33,11 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -72,7 +72,16 @@ func (s *ScavengerTestSuite) SetupTest() {
 	logger := loggerimpl.NewLogger(zapLogger)
 
 	scvgrCtx, scvgrCancelFn := context.WithTimeout(context.Background(), scavengerTestTimeout)
-	s.scvgr = NewScavenger(scvgrCtx, s.taskMgr, metrics.NewClient(tally.NoopScope, metrics.Worker), logger, dynamicconfig.GetIntPropertyFn(common.DefaultScannerGetOrphanTasksPageSize), dynamicconfig.GetIntPropertyFn(int(common.DefaultScannerBatchSizeForCompleteTasksLessThanAckLevel)), dynamicconfig.GetIntPropertyFn(common.DefaultScannerMaxTasksProcessedPerTasklistJob))
+	s.scvgr = NewScavenger(
+		scvgrCtx,
+		s.taskMgr,
+		metrics.NewClient(tally.NoopScope, metrics.Worker),
+		logger,
+		dynamicconfig.GetIntPropertyFn(common.DefaultScannerGetOrphanTasksPageSize),
+		dynamicconfig.GetIntPropertyFn(int(common.DefaultScannerBatchSizeForCompleteTasksLessThanAckLevel)),
+		dynamicconfig.GetIntPropertyFn(common.DefaultScannerMaxTasksProcessedPerTasklistJob),
+		dynamicconfig.GetBoolPropertyFn(false),
+	)
 	s.scvgrCancelFn = scvgrCancelFn
 	executorPollInterval = time.Millisecond * 50
 }

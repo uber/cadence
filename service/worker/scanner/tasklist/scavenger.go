@@ -27,29 +27,30 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/worker/scanner/executor"
 )
 
 type (
 	// Scavenger is the type that holds the state for task list scavenger daemon
 	Scavenger struct {
-		ctx                      context.Context
-		db                       p.TaskManager
-		executor                 executor.Executor
-		metrics                  metrics.Client
-		logger                   log.Logger
-		stats                    stats
-		status                   int32
-		stopC                    chan struct{}
-		stopWG                   sync.WaitGroup
-		getOrphanTasksPageSizeFn dynamicconfig.IntPropertyFn
-		taskBatchSizeFn          dynamicconfig.IntPropertyFn
-		maxTasksPerJobFn         dynamicconfig.IntPropertyFn
+		ctx                                         context.Context
+		db                                          p.TaskManager
+		executor                                    executor.Executor
+		metrics                                     metrics.Client
+		logger                                      log.Logger
+		stats                                       stats
+		status                                      int32
+		stopC                                       chan struct{}
+		stopWG                                      sync.WaitGroup
+		getOrphanTasksPageSizeFn                    dynamicconfig.IntPropertyFn
+		taskBatchSizeFn                             dynamicconfig.IntPropertyFn
+		maxTasksPerJobFn                            dynamicconfig.IntPropertyFn
+		enableCleaningOrphanTaskInTasklistScavenger dynamicconfig.BoolPropertyFn
 	}
 
 	stats struct {
@@ -97,7 +98,16 @@ var (
 // two conditions
 //  - either all task lists are processed successfully (or)
 //  - Stop() method is called to stop the scavenger
-func NewScavenger(ctx context.Context, db p.TaskManager, metricsClient metrics.Client, logger log.Logger, getOrphanTasksPageSizeFn dynamicconfig.IntPropertyFn, taskBatchSizeFn dynamicconfig.IntPropertyFn, maxTasksPerJobFn dynamicconfig.IntPropertyFn) *Scavenger {
+func NewScavenger(
+	ctx context.Context,
+	db p.TaskManager,
+	metricsClient metrics.Client,
+	logger log.Logger,
+	getOrphanTasksPageSizeFn dynamicconfig.IntPropertyFn,
+	taskBatchSizeFn dynamicconfig.IntPropertyFn,
+	maxTasksPerJobFn dynamicconfig.IntPropertyFn,
+	enableCleaningOrphanTaskInTasklistScavenger dynamicconfig.BoolPropertyFn,
+) *Scavenger {
 	stopC := make(chan struct{})
 	taskExecutor := executor.NewFixedSizePoolExecutor(
 		taskListBatchSize, executorMaxDeferredTasks, metricsClient, metrics.TaskListScavengerScope)
@@ -111,6 +121,7 @@ func NewScavenger(ctx context.Context, db p.TaskManager, metricsClient metrics.C
 		getOrphanTasksPageSizeFn: getOrphanTasksPageSizeFn,
 		taskBatchSizeFn:          taskBatchSizeFn,
 		maxTasksPerJobFn:         maxTasksPerJobFn,
+		enableCleaningOrphanTaskInTasklistScavenger: enableCleaningOrphanTaskInTasklistScavenger,
 	}
 }
 
@@ -153,8 +164,10 @@ func (s *Scavenger) run() {
 		s.stopWG.Done()
 	}()
 
-	// Start a task to delete orphaned tasks from the tasks table
-	s.executor.Submit(&orphanExecutorTask{scvg: s})
+	// Start a task to delete orphaned tasks from the tasks table, if enabled
+	if s.enableCleaningOrphanTaskInTasklistScavenger() {
+		s.executor.Submit(&orphanExecutorTask{scvg: s})
+	}
 
 	var pageToken []byte
 	for {

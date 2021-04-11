@@ -314,7 +314,8 @@ var keys = map[Key]string{
 	WorkerThrottledLogRPS:                                    "worker.throttledLogRPS",
 	ScannerPersistenceMaxQPS:                                 "worker.scannerPersistenceMaxQPS",
 	ScannerGetOrphanTasksPageSize:                            "worker.scannerGetOrphanTasksPageSize",
-	ScannerBatchSizeForCompleteTasksLessThanAckLevel:         "worker.scannerBatchSizeForCompleteTasksLessThanAckLevel",
+	ScannerBatchSizeForTasklistHandler:                       "worker.scannerBatchSizeForTasklistHandler",
+	EnableCleaningOrphanTaskInTasklistScavenger:              "worker.enableCleaningOrphanTaskInTasklistScavenger",
 	ScannerMaxTasksProcessedPerTasklistJob:                   "worker.scannerMaxTasksProcessedPerTasklistJob",
 	TaskListScannerEnabled:                                   "worker.taskListScannerEnabled",
 	HistoryScannerEnabled:                                    "worker.historyScannerEnabled",
@@ -833,8 +834,13 @@ const (
 	ScannerPersistenceMaxQPS
 	// ScannerGetOrphanTasksPageSize is the maximum number of orphans to delete in one batch
 	ScannerGetOrphanTasksPageSize
-	// ScannerBatchSizeForCompleteTasksLessThanAckLevel is the number of tasks to query per call in the scavenger. The scavenger then uses the return of CompleteTasksLessThanAckLevel, to decide if a tasklist can be deleted. So it's better to keep it a relatively high number to let it be more efficient.
-	ScannerBatchSizeForCompleteTasksLessThanAckLevel
+	// ScannerBatchSizeForTasklistHandler is for:
+	//  1. max number of tasks to query per call(complete tasks and get tasks for tasklist) in the scavenger handler.
+	//  2. The scavenger then uses the return of CompleteTasksLessThanAckLevel, to decide if a tasklist can be deleted.
+	// It's better to keep it a relatively high number to let it be more efficient.
+	ScannerBatchSizeForTasklistHandler
+	// EnableCleaningOrphanTaskInTasklistScavenger indicates if enabling the scanner to clean up orphan tasks
+	EnableCleaningOrphanTaskInTasklistScavenger
 	// ScannerMaxTasksProcessedPerTasklistJob is the number of tasks to process for a tasklist in each workflow run
 	ScannerMaxTasksProcessedPerTasklistJob
 	// TaskListScannerEnabled indicates if task list scanner should be started as part of worker.Scanner
