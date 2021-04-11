@@ -547,6 +547,11 @@ func (s *MatchingPersistenceSuite) TestGetOrphanTasks() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
+	oresp, err := s.TaskMgr.GetOrphanTasks(ctx, &p.GetOrphanTasksRequest{Limit: 10})
+	s.NoError(err)
+	// existing orphans that caused by other tests
+	existingOrphans := len(oresp.Tasks)
+
 	domainID := uuid.New()
 	name := fmt.Sprintf("test-list-with-orphans")
 	resp, err := s.TaskMgr.LeaseTaskList(ctx, &p.LeaseTaskListRequest{
@@ -579,21 +584,26 @@ func (s *MatchingPersistenceSuite) TestGetOrphanTasks() {
 		},
 	})
 
-	oresp, err := s.TaskMgr.GetOrphanTasks(ctx, &p.GetOrphanTasksRequest{Limit: 10})
+	oresp, err = s.TaskMgr.GetOrphanTasks(ctx, &p.GetOrphanTasksRequest{Limit: 10})
 	s.NoError(err)
 
-	s.Equal(len(oresp.Tasks), 0)
+	s.Equal(existingOrphans, len(oresp.Tasks))
 
 	s.deleteAllTaskList()
 
 	oresp, err = s.TaskMgr.GetOrphanTasks(ctx, &p.GetOrphanTasksRequest{Limit: 10})
 	s.NoError(err)
 
-	s.Equal(len(oresp.Tasks), 1)
+	s.Equal(existingOrphans+1, len(oresp.Tasks))
+	found := false
 	for _, it := range oresp.Tasks {
-		s.Equal(domainID, it.DomainID)
+		if it.DomainID != domainID {
+			continue
+		}
 		s.Equal(p.TaskListTypeActivity, it.TaskType)
-		s.Equal(0, it.TaskID)
+		s.Equal(int64(0), it.TaskID)
 		s.Equal(name, it.TaskListName)
+		found = true
 	}
+	s.True(found)
 }
