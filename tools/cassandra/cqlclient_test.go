@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/log/tag"
+	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/native" // needed to load the default gocql client
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/tools/common/schema/test"
 )
