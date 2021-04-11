@@ -47,72 +47,50 @@ const scannerTaskListPrefix = "cadence-sys-tl-scanner"
 // with the assumption that the executor will schedule this task later
 //
 // Each loop of the handler proceeds as follows
-//    - Attempt to delete tasks up to the persisted ACK level.
+//    - Retrieve the next batch of tasks sorted by task_id for this task-list from persistence
 //    - If there are 0 tasks for this task-list, try deleting the task-list if its idle
-//    - If the number of tasks completed is less than the batchSize, there are no more tasks in the task-list
+//    - If any of the tasks in the batch isn't expired, we are done. Since tasks are retrieved
+//      in sorted order, if one of the tasks isn't expired, chances are, none of the tasks above
+//      it are expired as well - so, we give up and wait for the next run
+//    - Delete the entire batch of tasks
+//    - If the number of tasks retrieved is less than batchSize, there are no more tasks in the task-list
 //      Try deleting the task-list if its idle
-func (s *Scavenger) deleteHandler(info *p.TaskListInfo) handlerStatus {
+func (s *Scavenger) deleteHandler(taskListInfo *p.TaskListInfo) handlerStatus {
 	var err error
 	var nProcessed, nDeleted int
 
+	defer func() { s.deleteHandlerLog(taskListInfo, nProcessed, nDeleted, err) }()
 	taskBatchSize := s.taskBatchSizeFn()
-	max := s.maxTasksPerJobFn()
+	maxTasksPerJob := s.maxTasksPerJobFn()
 
-	defer func() { s.deleteHandlerLog(info, nProcessed, nDeleted, err) }()
-
-	for nProcessed < max {
-		// First we complete tasks up to the persisted acklevel regardless of the task expiration
-		nTasks, err := s.completeTasks(info, info.AckLevel, taskBatchSize)
-		if err == p.ErrPersistenceLimitExceeded {
-			s.logger.Info("scavenger.deleteHandler query was ratelimited; will retry")
-			return handlerStatusDefer
-		}
-		if err != nil {
-			s.logger.Error("Scavenger error completing tasks", tag.Error(err))
-			return handlerStatusErr
-		}
-		nProcessed += nTasks
-		nDeleted += nTasks
-		if nTasks < taskBatchSize {
-			break
-		}
-	}
-	for nProcessed < max {
-		// if we finished completing tasks below the ack level, but still have budget, then focus on expired tasks
-		resp, err1 := s.getTasks(info, taskBatchSize)
+	for nProcessed < maxTasksPerJob {
+		resp, err1 := s.getTasks(taskListInfo, taskBatchSize)
 		if err1 != nil {
 			err = err1
-			s.logger.Error("Scavenger error getting tasks", tag.Error(err))
 			return handlerStatusErr
 		}
 
-		nTasks := 0
-		unexpiredTaskFound := false
-		for _, task := range resp.Tasks {
-			nProcessed++
-			if !s.isTaskExpired(task) {
-				s.logger.Info("Scavenger stopping at an unexpired task", tag.Timestamp(task.Expiry), tag.WorkflowTaskListName(info.Name), tag.TaskType(info.TaskType), tag.WorkflowDomainID(task.DomainID), tag.WorkflowID(task.WorkflowID), tag.WorkflowRunID(task.RunID), tag.TaskID(task.TaskID))
-				unexpiredTaskFound = true
-				break
-			}
-			nTasks++
-		}
-
-		if nTasks > 0 {
-			taskID := resp.Tasks[nTasks-1].TaskID
-			if _, err = s.completeTasks(info, taskID, nTasks); err != nil {
-				return handlerStatusErr
-			}
-			nDeleted += nTasks
-		}
-
-		if unexpiredTaskFound {
+		nTasks := len(resp.Tasks)
+		if nTasks == 0 {
+			s.tryDeleteTaskList(taskListInfo)
 			return handlerStatusDone
 		}
 
+		for _, task := range resp.Tasks {
+			nProcessed++
+			if !s.isTaskExpired(task) {
+				return handlerStatusDone
+			}
+		}
+
+		taskID := resp.Tasks[nTasks-1].TaskID
+		if _, err = s.completeTasks(taskListInfo, taskID, nTasks); err != nil {
+			return handlerStatusErr
+		}
+
+		nDeleted += nTasks
 		if nTasks < taskBatchSize {
-			// with no unexpired tasks left, it's safe to try and delete the task list itself
-			s.tryDeleteTaskList(info)
+			s.tryDeleteTaskList(taskListInfo)
 			return handlerStatusDone
 		}
 	}

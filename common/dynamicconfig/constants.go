@@ -835,8 +835,8 @@ const (
 	// ScannerGetOrphanTasksPageSize is the maximum number of orphans to delete in one batch
 	ScannerGetOrphanTasksPageSize
 	// ScannerBatchSizeForTasklistHandler is for:
-	//  1. max number of tasks to query per call(complete tasks and get tasks for tasklist) in the scavenger handler.
-	//  2. The scavenger then uses the return of CompleteTasksLessThanAckLevel, to decide if a tasklist can be deleted.
+	//  1. max number of tasks to query per call(get tasks for tasklist) in the scavenger handler.
+	//  2. The scavenger then uses the return to decide if a tasklist can be deleted.
 	// It's better to keep it a relatively high number to let it be more efficient.
 	ScannerBatchSizeForTasklistHandler
 	// EnableCleaningOrphanTaskInTasklistScavenger indicates if enabling the scanner to clean up orphan tasks
