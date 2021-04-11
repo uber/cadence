@@ -74,7 +74,7 @@ func (s *Scavenger) getTasks(info *p.TaskListInfo, batchSize int) (*p.GetTasksRe
 	var err error
 	var resp *p.GetTasksResponse
 	err = s.retryForever(func() error {
-		resp, err = s.db.GetTasks(&p.GetTasksRequest{
+		resp, err = s.db.GetTasks(s.ctx, &p.GetTasksRequest{
 			DomainID:  info.DomainID,
 			TaskList:  info.Name,
 			TaskType:  info.TaskType,
