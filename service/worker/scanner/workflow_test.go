@@ -67,7 +67,8 @@ func (s *scannerWorkflowTestSuite) TestScavengerActivity() {
 	ctx := scannerContext{
 		resource: mockResource,
 		cfg: Config{
-			GetOrphanTasksPageSizeFn: dynamicconfig.GetIntPropertyFn(common.DefaultScannerGetOrphanTasksPageSize),
+			GetOrphanTasksPageSizeFn:                    dynamicconfig.GetIntPropertyFn(common.DefaultScannerGetOrphanTasksPageSize),
+			EnableCleaningOrphanTaskInTasklistScavenger: dynamicconfig.GetBoolPropertyFn(true),
 		},
 	}
 	env.SetTestTimeout(time.Second * 5)
