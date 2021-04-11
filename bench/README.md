@@ -8,7 +8,7 @@ Setup
 ### Cadence server
 Bench tests requires Cadence server with ElasticSearch. You can run it through:
 - Docker: Instructions for running Cadence server through docker can be found in `docker/README.md`. Either `docker-compose-es-v7.yml` or `docker-compose-es.yml` can be used to start the server.
-- Build from source: Please check `docs/setup/CONTRIBUTING.md` for how to build and run Cadence server from source. Please also make sure Kafka and ElasticSearch are running before starting the server with `./cadence-server --zone es start`. If ElasticSearch v7 is used, change the value for `--zone` flag to `es_v7`.
+- Build from source: Please check [CONTRIBUTING](/CONTRIBUTING.md) for how to build and run Cadence server from source. Please also make sure Kafka and ElasticSearch are running before starting the server with `./cadence-server --zone es start`. If ElasticSearch v7 is used, change the value for `--zone` flag to `es_v7`.
 
 ### Search Attributes
 One of the bench tests (called `Cron`), which is responsible for running other tests as a cron job and tracking the results, requires an search attribute named `Passed`. 
