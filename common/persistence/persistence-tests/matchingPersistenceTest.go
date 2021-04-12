@@ -513,7 +513,7 @@ func (s *MatchingPersistenceSuite) TestListWithMultipleTaskList() {
 		listedNames := make(map[string]struct{})
 		var nextPageToken []byte
 		for {
-			resp, err := s.TaskMgr.ListTaskList(ctx, &p.ListTaskListRequest{PageSize: 10, PageToken: nextPageToken})
+			resp, err := s.TaskMgr.ListTaskList(ctx, &p.ListTaskListRequest{PageSize: 1, PageToken: nextPageToken})
 			s.NoError(err)
 			for _, it := range resp.Items {
 				s.Equal(domainID, it.DomainID)
@@ -530,6 +530,26 @@ func (s *MatchingPersistenceSuite) TestListWithMultipleTaskList() {
 		}
 		s.Equal(tlNames, listedNames, "list API returned wrong set of task list names")
 	}
+
+	println("debug list..", len(tlNames), tlNames)
+
+	// final test again pagination
+	total := 0
+	var nextPageToken []byte
+	for {
+		resp, err := s.TaskMgr.ListTaskList(ctx, &p.ListTaskListRequest{
+			PageSize:  6,
+			PageToken: nextPageToken,
+		})
+		s.NoError(err)
+		total += len(resp.Items)
+		if resp.NextPageToken == nil {
+			break
+		}
+		nextPageToken = resp.NextPageToken
+	}
+	s.Equal(10, total)
+
 	s.deleteAllTaskList()
 	resp, err := s.TaskMgr.ListTaskList(ctx, &p.ListTaskListRequest{PageSize: 10})
 	s.NoError(err)
