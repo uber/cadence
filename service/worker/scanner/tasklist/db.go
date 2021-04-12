@@ -30,14 +30,14 @@ import (
 
 var retryForeverPolicy = newRetryForeverPolicy()
 
-func (s *Scavenger) completeTasks(key *taskListKey, taskID int64, limit int) (int, error) {
+func (s *Scavenger) completeTasks(info *p.TaskListInfo, taskID int64, limit int) (int, error) {
 	var n int
 	var err error
 	err = s.retryForever(func() error {
 		n, err = s.db.CompleteTasksLessThan(s.ctx, &p.CompleteTasksLessThanRequest{
-			DomainID:     key.DomainID,
-			TaskListName: key.Name,
-			TaskType:     key.TaskType,
+			DomainID:     info.DomainID,
+			TaskListName: info.Name,
+			TaskType:     info.TaskType,
 			TaskID:       taskID,
 			Limit:        limit,
 		})
@@ -46,14 +46,38 @@ func (s *Scavenger) completeTasks(key *taskListKey, taskID int64, limit int) (in
 	return n, err
 }
 
-func (s *Scavenger) getTasks(key *taskListKey, batchSize int) (*p.GetTasksResponse, error) {
+func (s *Scavenger) getOrphanTasks(limit int) (*p.GetOrphanTasksResponse, error) {
+	var tasks *p.GetOrphanTasksResponse
+	var err error
+	err = s.retryForever(func() error {
+		tasks, err = s.db.GetOrphanTasks(s.ctx, &p.GetOrphanTasksRequest{
+			Limit: limit,
+		})
+		return err
+	})
+	return tasks, err
+}
+
+func (s *Scavenger) completeTask(info *p.TaskListInfo, taskid int64) error {
+	var err error
+	err = s.retryForever(func() error {
+		err = s.db.CompleteTask(s.ctx, &p.CompleteTaskRequest{
+			TaskList: info,
+			TaskID:   taskid,
+		})
+		return err
+	})
+	return err
+}
+
+func (s *Scavenger) getTasks(info *p.TaskListInfo, batchSize int) (*p.GetTasksResponse, error) {
 	var err error
 	var resp *p.GetTasksResponse
 	err = s.retryForever(func() error {
 		resp, err = s.db.GetTasks(s.ctx, &p.GetTasksRequest{
-			DomainID:  key.DomainID,
-			TaskList:  key.Name,
-			TaskType:  key.TaskType,
+			DomainID:  info.DomainID,
+			TaskList:  info.Name,
+			TaskType:  info.TaskType,
 			ReadLevel: -1, // get the first N tasks sorted by taskID
 			BatchSize: batchSize,
 		})
@@ -75,14 +99,14 @@ func (s *Scavenger) listTaskList(pageSize int, pageToken []byte) (*p.ListTaskLis
 	return resp, err
 }
 
-func (s *Scavenger) deleteTaskList(key *taskListKey, rangeID int64) error {
+func (s *Scavenger) deleteTaskList(info *p.TaskListInfo) error {
 	// retry only on service busy errors
 	return backoff.Retry(func() error {
 		return s.db.DeleteTaskList(s.ctx, &p.DeleteTaskListRequest{
-			DomainID:     key.DomainID,
-			TaskListName: key.Name,
-			TaskListType: key.TaskType,
-			RangeID:      rangeID,
+			DomainID:     info.DomainID,
+			TaskListName: info.Name,
+			TaskListType: info.TaskType,
+			RangeID:      info.RangeID,
 		})
 	}, retryForeverPolicy, func(err error) bool {
 		_, ok := err.(*types.ServiceBusyError)

@@ -1912,6 +1912,10 @@ func (m *testTaskManager) GetTasks(
 	}, nil
 }
 
+func (m *testTaskManager) GetOrphanTasks(_ context.Context, request *persistence.GetOrphanTasksRequest) (*persistence.GetOrphanTasksResponse, error) {
+	return &persistence.GetOrphanTasksResponse{}, nil
+}
+
 // getTaskCount returns number of tasks in a task list
 func (m *testTaskManager) getTaskCount(taskList *taskListID) int {
 	tlm := m.getTaskListManager(taskList)

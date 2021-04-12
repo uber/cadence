@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -37,26 +38,19 @@ import (
 type (
 	// Scavenger is the type that holds the state for task list scavenger daemon
 	Scavenger struct {
-		ctx      context.Context
-		db       p.TaskManager
-		executor executor.Executor
-		metrics  metrics.Client
-		logger   log.Logger
-		stats    stats
-		status   int32
-		stopC    chan struct{}
-		stopWG   sync.WaitGroup
-	}
-
-	taskListKey struct {
-		DomainID string
-		Name     string
-		TaskType int
-	}
-
-	taskListState struct {
-		rangeID     int64
-		lastUpdated time.Time
+		ctx                                         context.Context
+		db                                          p.TaskManager
+		executor                                    executor.Executor
+		metrics                                     metrics.Client
+		logger                                      log.Logger
+		stats                                       stats
+		status                                      int32
+		stopC                                       chan struct{}
+		stopWG                                      sync.WaitGroup
+		getOrphanTasksPageSizeFn                    dynamicconfig.IntPropertyFn
+		taskBatchSizeFn                             dynamicconfig.IntPropertyFn
+		maxTasksPerJobFn                            dynamicconfig.IntPropertyFn
+		enableCleaningOrphanTaskInTasklistScavenger dynamicconfig.BoolPropertyFn
 	}
 
 	stats struct {
@@ -73,16 +67,19 @@ type (
 	// executorTask is a runnable task that adheres to the executor.Task interface
 	// for the scavenger, each of this task processes a single task list
 	executorTask struct {
-		taskListKey
-		taskListState
+		taskListInfo p.TaskListInfo
+		scvg         *Scavenger
+	}
+
+	// orphanExecutorTask is a runnable task that processes a limited block of
+	// orphans
+	orphanExecutorTask struct {
 		scvg *Scavenger
 	}
 )
 
 var (
 	taskListBatchSize        = 32             // maximum number of task list we process concurrently
-	taskBatchSize            = 16             // number of tasks we read from persistence in one call
-	maxTasksPerJob           = 256            // maximum number of tasks we process for a executorTask list as part of a single job
 	taskListGracePeriod      = 48 * time.Hour // amount of time a executorTask list has to be idle before it becomes a candidate for deletion
 	epochStartTime           = time.Unix(0, 0)
 	executorPollInterval     = time.Minute
@@ -101,17 +98,30 @@ var (
 // two conditions
 //  - either all task lists are processed successfully (or)
 //  - Stop() method is called to stop the scavenger
-func NewScavenger(ctx context.Context, db p.TaskManager, metricsClient metrics.Client, logger log.Logger) *Scavenger {
+func NewScavenger(
+	ctx context.Context,
+	db p.TaskManager,
+	metricsClient metrics.Client,
+	logger log.Logger,
+	getOrphanTasksPageSizeFn dynamicconfig.IntPropertyFn,
+	taskBatchSizeFn dynamicconfig.IntPropertyFn,
+	maxTasksPerJobFn dynamicconfig.IntPropertyFn,
+	enableCleaningOrphanTaskInTasklistScavenger dynamicconfig.BoolPropertyFn,
+) *Scavenger {
 	stopC := make(chan struct{})
 	taskExecutor := executor.NewFixedSizePoolExecutor(
 		taskListBatchSize, executorMaxDeferredTasks, metricsClient, metrics.TaskListScavengerScope)
 	return &Scavenger{
-		ctx:      ctx,
-		db:       db,
-		metrics:  metricsClient,
-		logger:   logger,
-		stopC:    stopC,
-		executor: taskExecutor,
+		ctx:                      ctx,
+		db:                       db,
+		metrics:                  metricsClient,
+		logger:                   logger,
+		stopC:                    stopC,
+		executor:                 taskExecutor,
+		getOrphanTasksPageSizeFn: getOrphanTasksPageSizeFn,
+		taskBatchSizeFn:          taskBatchSizeFn,
+		maxTasksPerJobFn:         maxTasksPerJobFn,
+		enableCleaningOrphanTaskInTasklistScavenger: enableCleaningOrphanTaskInTasklistScavenger,
 	}
 }
 
@@ -154,6 +164,11 @@ func (s *Scavenger) run() {
 		s.stopWG.Done()
 	}()
 
+	// Start a task to delete orphaned tasks from the tasks table, if enabled
+	if s.enableCleaningOrphanTaskInTasklistScavenger() {
+		s.executor.Submit(&orphanExecutorTask{scvg: s})
+	}
+
 	var pageToken []byte
 	for {
 		resp, err := s.listTaskList(taskListBatchSize, pageToken)
@@ -179,8 +194,8 @@ func (s *Scavenger) run() {
 }
 
 // process is a callback function that gets invoked from within the executor.Run() method
-func (s *Scavenger) process(key *taskListKey, state *taskListState) executor.TaskStatus {
-	return s.deleteHandler(key, state)
+func (s *Scavenger) process(taskListInfo *p.TaskListInfo) executor.TaskStatus {
+	return s.deleteHandler(taskListInfo)
 }
 
 func (s *Scavenger) awaitExecutor() {
@@ -206,20 +221,16 @@ func (s *Scavenger) emitStats() {
 // newTask returns a new instance of an executable task which will process a single task list
 func (s *Scavenger) newTask(info *p.TaskListInfo) executor.Task {
 	return &executorTask{
-		taskListKey: taskListKey{
-			DomainID: info.DomainID,
-			Name:     info.Name,
-			TaskType: info.TaskType,
-		},
-		taskListState: taskListState{
-			rangeID:     info.RangeID,
-			lastUpdated: info.LastUpdated,
-		},
-		scvg: s,
+		taskListInfo: *info,
+		scvg:         s,
 	}
 }
 
 // Run runs the task
 func (t *executorTask) Run() executor.TaskStatus {
-	return t.scvg.process(&t.taskListKey, &t.taskListState)
+	return t.scvg.process(&t.taskListInfo)
+}
+
+func (t *orphanExecutorTask) Run() executor.TaskStatus {
+	return t.scvg.completeOrphanTasksHandler()
 }

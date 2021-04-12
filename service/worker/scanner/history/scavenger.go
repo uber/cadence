@@ -153,7 +153,7 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 			if err != nil {
 				batchCount--
 				errorsOnSplitting++
-				s.logger.Error("unable to parse the history cleanup info", tag.DetailInfo(br.Info))
+				s.logger.Error("scavenger: unable to parse the history cleanup info", tag.WorkflowTreeID(br.TreeID), tag.WorkflowBranchID(br.BranchID), tag.DetailInfo(br.Info))
 				s.metrics.IncCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerErrorCount)
 				continue
 			}

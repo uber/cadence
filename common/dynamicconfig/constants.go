@@ -313,6 +313,10 @@ var keys = map[Key]string{
 	WorkerTimeLimitPerArchivalIteration:                      "worker.TimeLimitPerArchivalIteration",
 	WorkerThrottledLogRPS:                                    "worker.throttledLogRPS",
 	ScannerPersistenceMaxQPS:                                 "worker.scannerPersistenceMaxQPS",
+	ScannerGetOrphanTasksPageSize:                            "worker.scannerGetOrphanTasksPageSize",
+	ScannerBatchSizeForTasklistHandler:                       "worker.scannerBatchSizeForTasklistHandler",
+	EnableCleaningOrphanTaskInTasklistScavenger:              "worker.enableCleaningOrphanTaskInTasklistScavenger",
+	ScannerMaxTasksProcessedPerTasklistJob:                   "worker.scannerMaxTasksProcessedPerTasklistJob",
 	TaskListScannerEnabled:                                   "worker.taskListScannerEnabled",
 	HistoryScannerEnabled:                                    "worker.historyScannerEnabled",
 	ConcreteExecutionsScannerEnabled:                         "worker.executionsScannerEnabled",
@@ -828,6 +832,17 @@ const (
 	WorkerThrottledLogRPS
 	// ScannerPersistenceMaxQPS is the maximum rate of persistence calls from worker.Scanner
 	ScannerPersistenceMaxQPS
+	// ScannerGetOrphanTasksPageSize is the maximum number of orphans to delete in one batch
+	ScannerGetOrphanTasksPageSize
+	// ScannerBatchSizeForTasklistHandler is for:
+	//  1. max number of tasks to query per call(get tasks for tasklist) in the scavenger handler.
+	//  2. The scavenger then uses the return to decide if a tasklist can be deleted.
+	// It's better to keep it a relatively high number to let it be more efficient.
+	ScannerBatchSizeForTasklistHandler
+	// EnableCleaningOrphanTaskInTasklistScavenger indicates if enabling the scanner to clean up orphan tasks
+	EnableCleaningOrphanTaskInTasklistScavenger
+	// ScannerMaxTasksProcessedPerTasklistJob is the number of tasks to process for a tasklist in each workflow run
+	ScannerMaxTasksProcessedPerTasklistJob
 	// TaskListScannerEnabled indicates if task list scanner should be started as part of worker.Scanner
 	TaskListScannerEnabled
 	// HistoryScannerEnabled indicates if history scanner should be started as part of worker.Scanner

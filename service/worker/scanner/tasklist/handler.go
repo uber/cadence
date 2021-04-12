@@ -55,14 +55,16 @@ const scannerTaskListPrefix = "cadence-sys-tl-scanner"
 //    - Delete the entire batch of tasks
 //    - If the number of tasks retrieved is less than batchSize, there are no more tasks in the task-list
 //      Try deleting the task-list if its idle
-func (s *Scavenger) deleteHandler(key *taskListKey, state *taskListState) handlerStatus {
+func (s *Scavenger) deleteHandler(taskListInfo *p.TaskListInfo) handlerStatus {
 	var err error
 	var nProcessed, nDeleted int
 
-	defer func() { s.deleteHandlerLog(key, state, nProcessed, nDeleted, err) }()
+	defer func() { s.deleteHandlerLog(taskListInfo, nProcessed, nDeleted, err) }()
+	taskBatchSize := s.taskBatchSizeFn()
+	maxTasksPerJob := s.maxTasksPerJobFn()
 
 	for nProcessed < maxTasksPerJob {
-		resp, err1 := s.getTasks(key, taskBatchSize)
+		resp, err1 := s.getTasks(taskListInfo, taskBatchSize)
 		if err1 != nil {
 			err = err1
 			return handlerStatusErr
@@ -70,7 +72,7 @@ func (s *Scavenger) deleteHandler(key *taskListKey, state *taskListState) handle
 
 		nTasks := len(resp.Tasks)
 		if nTasks == 0 {
-			s.tryDeleteTaskList(key, state)
+			s.tryDeleteTaskList(taskListInfo)
 			return handlerStatusDone
 		}
 
@@ -82,13 +84,13 @@ func (s *Scavenger) deleteHandler(key *taskListKey, state *taskListState) handle
 		}
 
 		taskID := resp.Tasks[nTasks-1].TaskID
-		if _, err = s.completeTasks(key, taskID, nTasks); err != nil {
+		if _, err = s.completeTasks(taskListInfo, taskID, nTasks); err != nil {
 			return handlerStatusErr
 		}
 
 		nDeleted += nTasks
 		if nTasks < taskBatchSize {
-			s.tryDeleteTaskList(key, state)
+			s.tryDeleteTaskList(taskListInfo)
 			return handlerStatusDone
 		}
 	}
@@ -96,11 +98,11 @@ func (s *Scavenger) deleteHandler(key *taskListKey, state *taskListState) handle
 	return handlerStatusDefer
 }
 
-func (s *Scavenger) tryDeleteTaskList(key *taskListKey, state *taskListState) {
-	if strings.HasPrefix(key.Name, scannerTaskListPrefix) {
+func (s *Scavenger) tryDeleteTaskList(info *p.TaskListInfo) {
+	if strings.HasPrefix(info.Name, scannerTaskListPrefix) {
 		return // avoid deleting our own task list
 	}
-	delta := time.Now().Sub(state.lastUpdated)
+	delta := time.Now().Sub(info.LastUpdated)
 	if delta < taskListGracePeriod {
 		return
 	}
@@ -112,28 +114,65 @@ func (s *Scavenger) tryDeleteTaskList(key *taskListKey, state *taskListState) {
 	//     of idle timeout). If any new host has to take ownership of this at this time, it can only
 	//     do so by updating the rangeID
 	//   - deleteTaskList is a conditional delete where condition is the rangeID
-	if err := s.deleteTaskList(key, state.rangeID); err != nil {
+	if err := s.deleteTaskList(info); err != nil {
 		s.logger.Error("deleteTaskList error", tag.Error(err))
 		return
 	}
 	atomic.AddInt64(&s.stats.tasklist.nDeleted, 1)
-	s.logger.Info("tasklist deleted", tag.WorkflowDomainID(key.DomainID), tag.WorkflowTaskListName(key.Name), tag.TaskType(key.TaskType))
+	s.logger.Info("tasklist deleted", tag.WorkflowDomainID(info.DomainID), tag.WorkflowTaskListName(info.Name), tag.TaskType(info.TaskType))
 }
 
-func (s *Scavenger) deleteHandlerLog(key *taskListKey, state *taskListState, nProcessed int, nDeleted int, err error) {
+func (s *Scavenger) deleteHandlerLog(info *p.TaskListInfo, nProcessed int, nDeleted int, err error) {
 	atomic.AddInt64(&s.stats.task.nDeleted, int64(nDeleted))
 	atomic.AddInt64(&s.stats.task.nProcessed, int64(nProcessed))
 	if err != nil {
 		s.logger.Error("scavenger.deleteHandler processed.",
-			tag.Error(err), tag.WorkflowDomainID(key.DomainID), tag.WorkflowTaskListName(key.Name), tag.TaskType(key.TaskType), tag.NumberProcessed(nProcessed), tag.NumberDeleted(nDeleted))
+			tag.Error(err), tag.WorkflowDomainID(info.DomainID), tag.WorkflowTaskListName(info.Name), tag.TaskType(info.TaskType), tag.NumberProcessed(nProcessed), tag.NumberDeleted(nDeleted))
 		return
 	}
 	if nProcessed > 0 {
 		s.logger.Info("scavenger.deleteHandler processed.",
-			tag.WorkflowDomainID(key.DomainID), tag.WorkflowTaskListName(key.Name), tag.TaskType(key.TaskType), tag.NumberProcessed(nProcessed), tag.NumberDeleted(nDeleted))
+			tag.WorkflowDomainID(info.DomainID), tag.WorkflowTaskListName(info.Name), tag.TaskType(info.TaskType), tag.NumberProcessed(nProcessed), tag.NumberDeleted(nDeleted))
 	}
 }
 
 func (s *Scavenger) isTaskExpired(t *p.TaskInfo) bool {
 	return t.Expiry.After(epochStartTime) && time.Now().After(t.Expiry)
+}
+
+func (s *Scavenger) completeOrphanTasksHandler() handlerStatus {
+	var nDeleted int
+	batchSize := s.getOrphanTasksPageSizeFn()
+	resp, err := s.getOrphanTasks(batchSize)
+	if err == p.ErrPersistenceLimitExceeded {
+		s.logger.Info("scavenger.completeOrphanTasksHandler query was ratelimited; will retry")
+		return handlerStatusDefer
+	}
+	if err != nil {
+		s.logger.Error("scavenger.completeOrphanTasksHandler error getting orphan tasks")
+		return handlerStatusErr
+	}
+	for _, taskKey := range resp.Tasks {
+		err = s.completeTask(&p.TaskListInfo{
+			DomainID: taskKey.DomainID,
+			Name:     taskKey.TaskListName,
+			TaskType: taskKey.TaskType,
+		}, taskKey.TaskID)
+		if err == p.ErrPersistenceLimitExceeded {
+			s.logger.Info("scavenger.completeOrphanTasksHandler query was ratelimited; will retry")
+			return handlerStatusDefer
+		}
+		if err != nil {
+			s.logger.Error("scavenger.completeOrphanTasksHandler error getting orphan tasks")
+			return handlerStatusErr
+		}
+		nDeleted++
+		atomic.AddInt64(&s.stats.task.nDeleted, 1)
+		atomic.AddInt64(&s.stats.task.nProcessed, 1)
+	}
+	s.logger.Info("scavenger.completeOrphanTasksHandler deleted.", tag.NumberDeleted(nDeleted))
+	if len(resp.Tasks) < batchSize {
+		return handlerStatusDone
+	}
+	return handlerStatusDefer
 }

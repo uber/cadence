@@ -105,6 +105,10 @@ func (t *taskManager) CompleteTasksLessThan(ctx context.Context, request *Comple
 	return t.persistence.CompleteTasksLessThan(ctx, request)
 }
 
+func (t *taskManager) GetOrphanTasks(ctx context.Context, request *GetOrphanTasksRequest) (*GetOrphanTasksResponse, error) {
+	return t.persistence.GetOrphanTasks(ctx, request)
+}
+
 func (t *taskManager) toInternalCreateTaskInfo(createTaskInfo *CreateTaskInfo) *InternalCreateTasksInfo {
 	if createTaskInfo == nil {
 		return nil

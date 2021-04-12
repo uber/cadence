@@ -55,7 +55,11 @@ type (
 	Config struct {
 		// ScannerPersistenceMaxQPS the max rate of calls to persistence
 		// Right now is being used by historyScanner to determine the rate of persistence API calls
-		ScannerPersistenceMaxQPS dynamicconfig.IntPropertyFn
+		ScannerPersistenceMaxQPS                    dynamicconfig.IntPropertyFn
+		GetOrphanTasksPageSizeFn                    dynamicconfig.IntPropertyFn
+		TaskBatchSizeFn                             dynamicconfig.IntPropertyFn
+		EnableCleaningOrphanTaskInTasklistScavenger dynamicconfig.BoolPropertyFn
+		MaxTasksPerJobFn                            dynamicconfig.IntPropertyFn
 		// Persistence contains the persistence configuration
 		Persistence *config.Persistence
 		// ClusterMetadata contains the metadata for this cluster
@@ -131,8 +135,7 @@ func (s *Scanner) Start() error {
 		workerTaskListNames = append(workerTaskListNames, wtl...)
 	}
 
-	switch s.context.cfg.Persistence.DefaultStoreType() {
-	case config.StoreTypeSQL:
+	if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeSQL {
 		if s.context.cfg.TaskListScannerEnabled() {
 			ctx = s.startScanner(
 				ctx,
@@ -140,14 +143,13 @@ func (s *Scanner) Start() error {
 				tlScannerWFTypeName)
 			workerTaskListNames = append(workerTaskListNames, tlScannerTaskListName)
 		}
-	case config.StoreTypeCassandra:
-		if s.context.cfg.HistoryScannerEnabled() {
-			ctx = s.startScanner(
-				ctx,
-				historyScannerWFStartOptions,
-				historyScannerWFTypeName)
-			workerTaskListNames = append(workerTaskListNames, historyScannerTaskListName)
-		}
+	}
+	if s.context.cfg.HistoryScannerEnabled() {
+		ctx = s.startScanner(
+			ctx,
+			historyScannerWFStartOptions,
+			historyScannerWFTypeName)
+		workerTaskListNames = append(workerTaskListNames, historyScannerTaskListName)
 	}
 
 	workerOpts := worker.Options{

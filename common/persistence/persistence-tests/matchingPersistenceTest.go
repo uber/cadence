@@ -513,7 +513,7 @@ func (s *MatchingPersistenceSuite) TestListWithMultipleTaskList() {
 		listedNames := make(map[string]struct{})
 		var nextPageToken []byte
 		for {
-			resp, err := s.TaskMgr.ListTaskList(ctx, &p.ListTaskListRequest{PageSize: 10, PageToken: nextPageToken})
+			resp, err := s.TaskMgr.ListTaskList(ctx, &p.ListTaskListRequest{PageSize: 1, PageToken: nextPageToken})
 			s.NoError(err)
 			for _, it := range resp.Items {
 				s.Equal(domainID, it.DomainID)
@@ -530,9 +530,98 @@ func (s *MatchingPersistenceSuite) TestListWithMultipleTaskList() {
 		}
 		s.Equal(tlNames, listedNames, "list API returned wrong set of task list names")
 	}
+	
+	// final test again pagination
+	total := 0
+	var nextPageToken []byte
+	for {
+		resp, err := s.TaskMgr.ListTaskList(ctx, &p.ListTaskListRequest{
+			PageSize:  6,
+			PageToken: nextPageToken,
+		})
+		s.NoError(err)
+		total += len(resp.Items)
+		if resp.NextPageToken == nil {
+			break
+		}
+		nextPageToken = resp.NextPageToken
+	}
+	s.Equal(10, total)
+
 	s.deleteAllTaskList()
 	resp, err := s.TaskMgr.ListTaskList(ctx, &p.ListTaskListRequest{PageSize: 10})
 	s.NoError(err)
 	s.Nil(resp.NextPageToken)
 	s.Equal(0, len(resp.Items))
+}
+
+func (s *MatchingPersistenceSuite) TestGetOrphanTasks() {
+	if s.TaskMgr.GetName() == "cassandra" {
+		// GetOrphanTasks API is currently not supported in cassandra"
+		return
+	}
+	s.deleteAllTaskList()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	oresp, err := s.TaskMgr.GetOrphanTasks(ctx, &p.GetOrphanTasksRequest{Limit: 10})
+	s.NoError(err)
+	// existing orphans that caused by other tests
+	existingOrphans := len(oresp.Tasks)
+
+	domainID := uuid.New()
+	name := fmt.Sprintf("test-list-with-orphans")
+	resp, err := s.TaskMgr.LeaseTaskList(ctx, &p.LeaseTaskListRequest{
+		DomainID:     domainID,
+		TaskList:     name,
+		TaskType:     p.TaskListTypeActivity,
+		TaskListKind: p.TaskListKindNormal,
+	})
+	s.NoError(err)
+
+	wid := uuid.New()
+	rid := uuid.New()
+	s.TaskMgr.CreateTasks(ctx, &p.CreateTasksRequest{
+		TaskListInfo: resp.TaskListInfo,
+		Tasks: []*p.CreateTaskInfo{
+			{
+				Execution: types.WorkflowExecution{WorkflowID: wid, RunID: rid},
+				Data: &p.TaskInfo{
+					DomainID:               domainID,
+					WorkflowID:             wid,
+					RunID:                  rid,
+					TaskID:                 0,
+					ScheduleID:             0,
+					ScheduleToStartTimeout: 0,
+					Expiry:                 time.Now(),
+					CreatedTime:            time.Now(),
+				},
+				TaskID: 0,
+			},
+		},
+	})
+
+	oresp, err = s.TaskMgr.GetOrphanTasks(ctx, &p.GetOrphanTasksRequest{Limit: 10})
+	s.NoError(err)
+
+	s.Equal(existingOrphans, len(oresp.Tasks))
+
+	s.deleteAllTaskList()
+
+	oresp, err = s.TaskMgr.GetOrphanTasks(ctx, &p.GetOrphanTasksRequest{Limit: 10})
+	s.NoError(err)
+
+	s.Equal(existingOrphans+1, len(oresp.Tasks))
+	found := false
+	for _, it := range oresp.Tasks {
+		if it.DomainID != domainID {
+			continue
+		}
+		s.Equal(p.TaskListTypeActivity, it.TaskType)
+		s.Equal(int64(0), it.TaskID)
+		s.Equal(name, it.TaskListName)
+		found = true
+	}
+	s.True(found)
 }
