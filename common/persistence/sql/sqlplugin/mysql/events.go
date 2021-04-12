@@ -47,7 +47,7 @@ const (
 
 	deleteHistoryTreeQuery = `DELETE FROM history_tree WHERE shard_id = ? AND tree_id = ? AND branch_id = ? `
 
-	getAllHistoryTreeQuery = `SELECT tree_id, branch_id, data, data_encoding FROM history_tree WHERE (shard_id = ? AND tree_id = ? AND branch_id > ?) OR (shard_id = ? AND tree_id > ?) OR (shard_id > ?) ORDER BY shard_id, tree_id, branch_id LIMIT ?`
+	getAllHistoryTreeQuery = `SELECT shard_id, tree_id, branch_id, data, data_encoding FROM history_tree WHERE (shard_id = ? AND tree_id = ? AND branch_id > ?) OR (shard_id = ? AND tree_id > ?) OR (shard_id > ?) ORDER BY shard_id, tree_id, branch_id LIMIT ?`
 )
 
 // For history_node table:
@@ -97,6 +97,6 @@ func (mdb *db) DeleteFromHistoryTree(ctx context.Context, filter *sqlplugin.Hist
 
 func (mdb *db) GetAllHistoryTreeBranches(ctx context.Context, filter *sqlplugin.HistoryTreeFilter) ([]sqlplugin.HistoryTreeRow, error) {
 	var rows []sqlplugin.HistoryTreeRow
-	err := mdb.conn.SelectContext(ctx, &rows, getAllHistoryTreeQuery, filter.ShardID, filter.TreeID, filter.BranchID, filter.ShardID, filter.TreeID, filter.ShardID, filter.PageSize)
+	err := mdb.conn.SelectContext(ctx, &rows, getAllHistoryTreeQuery, filter.ShardID, filter.TreeID, *filter.BranchID, filter.ShardID, filter.TreeID, filter.ShardID, filter.PageSize)
 	return rows, err
 }
