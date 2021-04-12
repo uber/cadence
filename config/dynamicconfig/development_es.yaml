@@ -13,8 +13,8 @@ frontend.validSearchAttributes:
       StartTime: 2
       ExecutionTime: 2
       CloseTime: 2
-      CloseStatus: 1
-      HistoryLength: 1
+      CloseStatus: 2
+      HistoryLength: 2
       TaskList: 1
       CustomStringField: 0
       CustomKeywordField: 1
