@@ -29,9 +29,9 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common/auth"
+	"github.com/uber/cadence/common/config"
 	mysql_db "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
 	postgres_db "github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres"
-	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/schema/mysql"
 	"github.com/uber/cadence/schema/postgres"
 	"github.com/uber/cadence/tools/common/schema"

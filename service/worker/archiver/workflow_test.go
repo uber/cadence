@@ -30,11 +30,11 @@ import (
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/metrics/mocks"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 var (

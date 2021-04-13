@@ -31,7 +31,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	config "github.com/uber/cadence/common/service/config"
+	config "github.com/uber/cadence/common/config"
 )
 
 // MockMetadata is a mock of Metadata interface

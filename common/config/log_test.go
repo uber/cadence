@@ -63,7 +63,7 @@ func (s *LogSuite) TestNewLogger() {
 		OutputFile: dir + "/test.log",
 	}
 
-	log := config.NewZapLogger()
+	log, _ := config.NewZapLogger()
 	s.NotNil(log)
 	_, err = os.Stat(dir + "/test.log")
 	s.Nil(err)

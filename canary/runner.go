@@ -40,7 +40,10 @@ type canaryRunner struct {
 // NewCanaryRunner creates and returns a runnable which spins
 // up a set of canaries based on supplied config
 func NewCanaryRunner(cfg *Config) (Runnable, error) {
-	logger := cfg.Log.NewZapLogger()
+	logger, err := cfg.Log.NewZapLogger()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create logger: %v", err)
+	}
 
 	metricsScope := cfg.Metrics.NewScope(loggerimpl.NewLogger(logger), "cadence-canary")
 

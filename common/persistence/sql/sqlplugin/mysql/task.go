@@ -46,9 +46,23 @@ name = :name AND
 task_type = :task_type
 `
 
+	// This query uses pagination that is best understood by analogy to simple numbers.
+	// Given a list of numbers
+	// 	111
+	//	113
+	//	122
+	//	211
+	// where the hundreds digit corresponds to domain_id, the tens digit
+	// corresponds to name, and the ones digit corresponds to task_type,
+	// Imagine recurring queries with a limit of 1.
+	// For the second query to skip the first result and return 112, it must allow equal values in hundreds & tens, but it's OK because the ones digit is higher.
+	// For the third query, the ones digit is now lower but that's irrelevant because the tens digit is greater.
+	// For the fourth query, both the tens digit and ones digit are now lower but that's again irrelevant because now the hundreds digit is higher.
+	// This technique is useful since the size of the table can easily change between calls, making SKIP an unreliable method, while other db-specific things like rowids are not portable
 	listTaskListQry = `SELECT domain_id, range_id, name, task_type, data, data_encoding ` +
 		`FROM task_lists ` +
-		`WHERE shard_id = ? AND domain_id > ? AND name > ? AND task_type > ? ORDER BY domain_id,name,task_type LIMIT ?`
+		`WHERE shard_id = ? AND ((domain_id = ? AND name = ? AND task_type > ?) OR (domain_id=? AND name > ?) OR (domain_id > ?)) ` +
+		`ORDER BY domain_id,name,task_type LIMIT ?`
 
 	getTaskListQry = `SELECT domain_id, range_id, name, task_type, data, data_encoding ` +
 		`FROM task_lists ` +
@@ -78,6 +92,12 @@ task_type = :task_type
 	rangeDeleteTaskQry = `DELETE FROM tasks ` +
 		`WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id <= ? ` +
 		`ORDER BY domain_id,task_list_name,task_type,task_id LIMIT ?`
+
+	getOrphanTaskQry = `SELECT task_id, domain_id, task_list_name, task_type FROM tasks AS t ` +
+		`WHERE NOT EXISTS ( ` +
+		`	SELECT domain_id, name, task_type FROM task_lists AS tl ` +
+		`	WHERE t.domain_id=tl.domain_id and t.task_list_name=tl.name and t.task_type=tl.task_type ` +
+		`) LIMIT ?;`
 )
 
 // InsertIntoTasks inserts one or more rows into tasks table
@@ -113,6 +133,19 @@ func (mdb *db) DeleteFromTasks(ctx context.Context, filter *sqlplugin.TasksFilte
 			filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskIDLessThanEquals, *filter.Limit)
 	}
 	return mdb.conn.ExecContext(ctx, deleteTaskQry, filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskID)
+}
+
+func (mdb *db) GetOrphanTasks(ctx context.Context, filter *sqlplugin.OrphanTasksFilter) ([]sqlplugin.TaskKeyRow, error) {
+	if filter.Limit == nil || *filter.Limit == 0 {
+		return nil, fmt.Errorf("missing limit parameter")
+	}
+	var rows []sqlplugin.TaskKeyRow
+
+	err := mdb.conn.SelectContext(ctx, &rows, getOrphanTaskQry, *filter.Limit)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
 }
 
 // InsertIntoTaskLists inserts one or more rows into task_lists table
@@ -151,7 +184,7 @@ func (mdb *db) rangeSelectFromTaskLists(ctx context.Context, filter *sqlplugin.T
 	var err error
 	var rows []sqlplugin.TaskListsRow
 	err = mdb.conn.SelectContext(ctx, &rows, listTaskListQry,
-		filter.ShardID, *filter.DomainIDGreaterThan, *filter.NameGreaterThan, *filter.TaskTypeGreaterThan, *filter.PageSize)
+		filter.ShardID, *filter.DomainIDGreaterThan, *filter.NameGreaterThan, *filter.TaskTypeGreaterThan, *filter.DomainIDGreaterThan, *filter.NameGreaterThan, *filter.DomainIDGreaterThan, *filter.PageSize)
 	if err != nil {
 		return nil, err
 	}

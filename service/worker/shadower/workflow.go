@@ -57,8 +57,10 @@ func shadowWorkflow(
 	ctx workflow.Context,
 	params shadower.WorkflowParams,
 ) (shadower.WorkflowResult, error) {
+	profile := beginWorkflow(ctx, &params)
+
 	if err := validateAndFillWorkflowParams(&params); err != nil {
-		return shadower.WorkflowResult{}, err
+		return shadower.WorkflowResult{}, profile.endWorkflow(err)
 	}
 
 	lao := workflow.LocalActivityOptions{
@@ -73,16 +75,15 @@ func shadowWorkflow(
 
 	var domainActive bool
 	if err := workflow.ExecuteLocalActivity(ctx, verifyActiveDomainActivity, params.GetDomain()).Get(ctx, &domainActive); err != nil {
-		return shadower.WorkflowResult{}, err
+		return shadower.WorkflowResult{}, profile.endWorkflow(err)
 	}
 
 	// TODO: we probably should make this configurable by user so that they can control is shadowing workflow
 	// should be run in active or passive side
 	if !domainActive {
-		return shadower.WorkflowResult{}, nil
+		return shadower.WorkflowResult{}, profile.endWorkflow(nil)
 	}
 
-	replayStartTime := workflow.Now(ctx)
 	workflowTimeout := time.Duration(workflow.GetInfo(ctx).ExecutionStartToCloseTimeoutSeconds) * time.Second
 	retryPolicy := &cadence.RetryPolicy{
 		InitialInterval:    time.Second,
@@ -112,18 +113,10 @@ func shadowWorkflow(
 		RetryPolicy:      retryPolicy,
 	})
 
-	var shadowResult shadower.WorkflowResult
-	if params.GetLastRunResult() != nil {
-		shadowResult = *params.GetLastRunResult()
-	}
-	if shadowResult.Succeeded == nil {
-		shadowResult.Succeeded = common.Int32Ptr(0)
-	}
-	if shadowResult.Skipped == nil {
-		shadowResult.Skipped = common.Int32Ptr(0)
-	}
-	if shadowResult.Failed == nil {
-		shadowResult.Failed = common.Int32Ptr(0)
+	shadowResult := shadower.WorkflowResult{
+		Succeeded: common.Int32Ptr(0),
+		Skipped:   common.Int32Ptr(0),
+		Failed:    common.Int32Ptr(0),
 	}
 	scanParams := shadower.ScanWorkflowActivityParams{
 		Domain:        params.Domain,
@@ -135,7 +128,7 @@ func shadowWorkflow(
 	for {
 		var scanResult shadower.ScanWorkflowActivityResult
 		if err := workflow.ExecuteActivity(scanWorkflowCtx, shadower.ScanWorkflowActivityName, scanParams).Get(scanWorkflowCtx, &scanResult); err != nil {
-			return shadowResult, err
+			return shadower.WorkflowResult{}, profile.endWorkflow(err)
 		}
 
 		replayFutures := make([]workflow.Future, 0, params.GetConcurrency())
@@ -151,14 +144,14 @@ func shadowWorkflow(
 		for _, future := range replayFutures {
 			var replayResult shadower.ReplayWorkflowActivityResult
 			if err := future.Get(replayWorkflowCtx, &replayResult); err != nil {
-				return shadowResult, err
+				return shadower.WorkflowResult{}, profile.endWorkflow(err)
 			}
 			*shadowResult.Succeeded += replayResult.GetSucceeded()
 			*shadowResult.Skipped += replayResult.GetSkipped()
 			*shadowResult.Failed += replayResult.GetFailed()
 
-			if exitConditionMet(ctx, params.GetExitCondition(), replayStartTime, shadowResult) {
-				return shadowResult, nil
+			if exitConditionMet(ctx, params.GetExitCondition(), profile.startTime, shadowResult) {
+				return combineShadowResults(shadowResult, params.GetLastRunResult()), profile.endWorkflow(nil)
 			}
 		}
 
@@ -168,18 +161,20 @@ func shadowWorkflow(
 		}
 
 		if shouldContinueAsNew(shadowResult) {
-			return shadowResult, getContinueAsNewError(ctx, params, replayStartTime, shadowResult, scanParams.NextPageToken)
+			continueAsNewErr := getContinueAsNewError(ctx, params, profile.startTime, params.GetLastRunResult(), shadowResult, scanParams.NextPageToken)
+			return shadower.WorkflowResult{}, profile.endWorkflow(continueAsNewErr)
 		}
 	}
 
 	if params.GetShadowMode() == shadower.ModeContinuous {
 		if err := workflow.Sleep(ctx, defaultWaitDurationPerIteration); err != nil {
-			return shadowResult, err
+			return shadower.WorkflowResult{}, profile.endWorkflow(err)
 		}
-		return shadowResult, getContinueAsNewError(ctx, params, replayStartTime, shadowResult, nil)
+		continueAsNewErr := getContinueAsNewError(ctx, params, profile.startTime, params.GetLastRunResult(), shadowResult, nil)
+		return shadower.WorkflowResult{}, profile.endWorkflow(continueAsNewErr)
 	}
 
-	return shadowResult, nil
+	return combineShadowResults(shadowResult, params.GetLastRunResult()), profile.endWorkflow(nil)
 }
 
 func validateAndFillWorkflowParams(
@@ -259,6 +254,7 @@ func getContinueAsNewError(
 	ctx workflow.Context,
 	params shadower.WorkflowParams,
 	startTime time.Time,
+	lastRunResult *shadower.WorkflowResult,
 	currentResult shadower.WorkflowResult,
 	nextPageToken []byte,
 ) error {
@@ -273,6 +269,7 @@ func getContinueAsNewError(
 		}
 	}
 
+	combineShadowResults(currentResult, lastRunResult)
 	params.LastRunResult = &currentResult
 
 	return workflow.NewContinueAsNewError(
@@ -280,6 +277,20 @@ func getContinueAsNewError(
 		shadower.WorkflowName,
 		params,
 	)
+}
+
+func combineShadowResults(
+	currentResult shadower.WorkflowResult,
+	lastRunResult *shadower.WorkflowResult,
+) shadower.WorkflowResult {
+	if lastRunResult == nil {
+		return currentResult
+	}
+
+	*currentResult.Succeeded += lastRunResult.GetSucceeded()
+	*currentResult.Skipped += lastRunResult.GetSkipped()
+	*currentResult.Failed += lastRunResult.GetFailed()
+	return currentResult
 }
 
 func verifyActiveDomainActivity(

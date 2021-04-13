@@ -30,7 +30,7 @@ import (
 	"os"
 
 	"github.com/uber/cadence/common/blobstore"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/util"
 )
 

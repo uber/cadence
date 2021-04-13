@@ -27,11 +27,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
-	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -181,6 +181,13 @@ func newTaskPersistence(
 		},
 		shardID: -1,
 	}, nil
+}
+
+func (d *cassandraTaskPersistence) GetOrphanTasks(ctx context.Context, request *p.GetOrphanTasksRequest) (*p.GetOrphanTasksResponse, error) {
+	// TODO: It's unclear if this's necessary or useful for Cassandra
+	return nil, &types.InternalServiceError{
+		Message: "Unimplemented call to GetOrphanTasks for Cassandra",
+	}
 }
 
 // From TaskManager interface

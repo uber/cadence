@@ -27,7 +27,7 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common/auth"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/schema/cassandra"
 	"github.com/uber/cadence/tools/common/schema"
 )

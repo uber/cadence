@@ -30,12 +30,17 @@ import (
 
 const fileMode = os.FileMode(0644)
 
-// NewZapLogger builds and returns a new zap
-// logger for this logging configuration
-func (cfg *Logger) NewZapLogger() *zap.Logger {
+// NewZapLogger builds and returns a new
+// Zap logger for this logging configuration
+func (cfg *Logger) NewZapLogger() (*zap.Logger, error) {
+	levelKey := cfg.LevelKey
+	if levelKey == "" {
+		levelKey = "level"
+	}
+
 	encodeConfig := zapcore.EncoderConfig{
 		TimeKey:        "ts",
-		LevelKey:       "level",
+		LevelKey:       levelKey,
 		NameKey:        "logger",
 		CallerKey:      "", // we use our own caller, check common/log/logger.go
 		MessageKey:     "msg",
@@ -64,8 +69,7 @@ func (cfg *Logger) NewZapLogger() *zap.Logger {
 		OutputPaths:      []string{outputPath},
 		ErrorOutputPaths: []string{outputPath},
 	}
-	logger, _ := config.Build()
-	return logger
+	return config.Build()
 }
 
 func parseZapLevel(level string) zapcore.Level {

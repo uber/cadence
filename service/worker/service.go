@@ -31,13 +31,13 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/batcher"
@@ -131,11 +131,15 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			TimeLimitPerArchivalIteration: dc.GetDurationProperty(dynamicconfig.WorkerTimeLimitPerArchivalIteration, archiver.MaxArchivalIterationTimeout()),
 		},
 		ScannerCfg: &scanner.Config{
-			ScannerPersistenceMaxQPS: dc.GetIntProperty(dynamicconfig.ScannerPersistenceMaxQPS, 5),
-			Persistence:              &params.PersistenceConfig,
-			ClusterMetadata:          params.ClusterMetadata,
-			TaskListScannerEnabled:   dc.GetBoolProperty(dynamicconfig.TaskListScannerEnabled, true),
-			HistoryScannerEnabled:    dc.GetBoolProperty(dynamicconfig.HistoryScannerEnabled, false),
+			ScannerPersistenceMaxQPS:                    dc.GetIntProperty(dynamicconfig.ScannerPersistenceMaxQPS, 5),
+			GetOrphanTasksPageSizeFn:                    dc.GetIntProperty(dynamicconfig.ScannerGetOrphanTasksPageSize, common.DefaultScannerGetOrphanTasksPageSize),
+			TaskBatchSizeFn:                             dc.GetIntProperty(dynamicconfig.ScannerBatchSizeForTasklistHandler, common.DefaultScannerGetOrphanTasksPageSize),
+			EnableCleaningOrphanTaskInTasklistScavenger: dc.GetBoolProperty(dynamicconfig.EnableCleaningOrphanTaskInTasklistScavenger, false),
+			MaxTasksPerJobFn:                            dc.GetIntProperty(dynamicconfig.ScannerMaxTasksProcessedPerTasklistJob, common.DefaultScannerMaxTasksProcessedPerTasklistJob),
+			Persistence:                                 &params.PersistenceConfig,
+			ClusterMetadata:                             params.ClusterMetadata,
+			TaskListScannerEnabled:                      dc.GetBoolProperty(dynamicconfig.TaskListScannerEnabled, true),
+			HistoryScannerEnabled:                       dc.GetBoolProperty(dynamicconfig.HistoryScannerEnabled, false),
 			ShardScanners: []*shardscanner.ScannerConfig{
 				executions.ConcreteExecutionScannerConfig(dc),
 				executions.CurrentExecutionScannerConfig(dc),
@@ -345,6 +349,7 @@ func (s *Service) startWorkflowShadower() {
 	params := &shadower.BootstrapParams{
 		ServiceClient: s.params.PublicClient,
 		DomainCache:   s.GetDomainCache(),
+		TallyScope:    s.params.MetricScope,
 	}
 	if err := shadower.New(params).Start(); err != nil {
 		s.Stop()

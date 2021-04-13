@@ -164,12 +164,17 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 		},
 	})
 	if err != nil {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
+			fmt.Println("History Source: History Archival")
+			return
+		}
 		ErrorAndExit("Describe workflow execution failed, cannot get information of pending activities", err)
 	}
+	fmt.Println("History Source: Default Storage")
 
 	descOutput := convertDescribeWorkflowExecutionResponse(resp, frontendClient, c)
 	if len(descOutput.PendingActivities) > 0 {
-		fmt.Println("============Pending activities============")
+		fmt.Println("============Workflow Pending activities============")
 		prettyPrintJSONObject(descOutput.PendingActivities)
 		fmt.Println("NOTE: ActivityStartedEvent with retry policy will be written into history when the activity is finished.")
 	}

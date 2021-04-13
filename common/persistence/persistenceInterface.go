@@ -70,6 +70,10 @@ type (
 		//  - number of rows actually deleted, if limit is honored
 		//  - UnknownNumRowsDeleted, when all rows below value are deleted
 		CompleteTasksLessThan(ctx context.Context, request *CompleteTasksLessThanRequest) (int, error)
+		// GetOrphanTasks returns tasks that exist as records in the database but are part of task lists which
+		// _do not_ exist in the database. They are therefore unreachable and no longer represent valid items
+		// that can be legitimately acted upon.
+		GetOrphanTasks(ctx context.Context, request *GetOrphanTasksRequest) (*GetOrphanTasksResponse, error)
 	}
 
 	// MetadataStore is a lower level of MetadataManager

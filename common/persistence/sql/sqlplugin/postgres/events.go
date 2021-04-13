@@ -46,6 +46,8 @@ const (
 	getHistoryTreeQuery = `SELECT branch_id, data, data_encoding FROM history_tree WHERE shard_id = $1 AND tree_id = $2 `
 
 	deleteHistoryTreeQuery = `DELETE FROM history_tree WHERE shard_id = $1 AND tree_id = $2 AND branch_id = $3 `
+
+	getAllHistoryTreeQuery = `SELECT shard_id, tree_id, branch_id, data, data_encoding FROM history_tree WHERE (shard_id = $1 AND tree_id = $2 AND branch_id > $3) OR (shard_id = $1 AND tree_id > $2) OR (shard_id > $1) ORDER BY shard_id, tree_id, branch_id LIMIT $4`
 )
 
 // For history_node table:
@@ -91,4 +93,10 @@ func (pdb *db) SelectFromHistoryTree(ctx context.Context, filter *sqlplugin.Hist
 // DeleteFromHistoryTree deletes one or more rows from history_tree table
 func (pdb *db) DeleteFromHistoryTree(ctx context.Context, filter *sqlplugin.HistoryTreeFilter) (sql.Result, error) {
 	return pdb.conn.ExecContext(ctx, deleteHistoryTreeQuery, filter.ShardID, filter.TreeID, *filter.BranchID)
+}
+
+func (pdb *db) GetAllHistoryTreeBranches(ctx context.Context, filter *sqlplugin.HistoryTreeFilter) ([]sqlplugin.HistoryTreeRow, error) {
+	var rows []sqlplugin.HistoryTreeRow
+	err := pdb.conn.SelectContext(ctx, &rows, getAllHistoryTreeQuery, filter.ShardID, filter.TreeID, filter.BranchID, filter.PageSize)
+	return rows, err
 }

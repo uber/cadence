@@ -33,14 +33,14 @@ import (
 	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
@@ -102,12 +102,14 @@ func (s *server) Stop() {
 
 // startService starts a service with the given name and config
 func (s *server) startService() common.Daemon {
-
-	var err error
-
 	params := service.BootstrapParams{}
 	params.Name = "cadence-" + s.name
-	params.Logger = loggerimpl.NewLogger(s.cfg.Log.NewZapLogger())
+
+	zapLogger, err := s.cfg.Log.NewZapLogger()
+	if err != nil {
+		log.Fatal("failed to create the zap logger, err: ", err.Error())
+	}
+	params.Logger = loggerimpl.NewLogger(zapLogger)
 	params.UpdateLoggerWithServiceName(params.Name)
 	params.PersistenceConfig = s.cfg.Persistence
 
