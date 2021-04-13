@@ -530,7 +530,7 @@ func (s *MatchingPersistenceSuite) TestListWithMultipleTaskList() {
 		}
 		s.Equal(tlNames, listedNames, "list API returned wrong set of task list names")
 	}
-	
+
 	// final test again pagination
 	total := 0
 	var nextPageToken []byte

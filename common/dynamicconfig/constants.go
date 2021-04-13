@@ -84,6 +84,7 @@ var keys = map[Key]string{
 	EnableWorkflowShadower:              "system.enableWorkflowShadower",
 	EnableStickyQuery:                   "system.enableStickyQuery",
 	EnableDebugMode:                     "system.enableDebugMode",
+	RequiredDomainDataKeys:              "system.requiredDomainDataKeys",
 
 	// size limit
 	BlobSizeLimitError:      "limit.blobSize.error",
@@ -426,6 +427,8 @@ const (
 	DisallowQuery
 	// EnableDebugMode is the key for enabling debugging components, logs and metrics
 	EnableDebugMode
+	// RequiredDomainDataKeys is the key for the list of data keys required in domain registeration
+	RequiredDomainDataKeys
 
 	// BlobSizeLimitError is the per event blob size limit
 	BlobSizeLimitError
