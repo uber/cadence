@@ -860,7 +860,7 @@ func (vm *versionMiddleware) Handle(ctx context.Context, req *transport.Request,
 }
 
 func (c *rpcFactoryImpl) CreateDispatcherForOutbound(
-	callerName, serviceName, hostName string) *yarpc.Dispatcher {
+	callerName, serviceName, hostName string) (*yarpc.Dispatcher, error) {
 	// Setup dispatcher(outbound) for onebox
 	d := yarpc.NewDispatcher(yarpc.Config{
 		Name: callerName,
@@ -869,16 +869,18 @@ func (c *rpcFactoryImpl) CreateDispatcherForOutbound(
 		},
 	})
 	if err := d.Start(); err != nil {
-		c.logger.Fatal("Failed to create outbound transport channel", tag.Error(err))
+		c.logger.Error("Failed to create outbound transport channel", tag.Error(err))
+		return nil, err
 	}
-	return d
+	return d, nil
 }
 
 func (c *rpcFactoryImpl) CreateGRPCDispatcherForOutbound(
-	callerName, serviceName, hostName string) *yarpc.Dispatcher {
+	callerName, serviceName, hostName string) (*yarpc.Dispatcher, error) {
 	grpcAddress, err := getGRPCAddress(hostName)
 	if err != nil {
-		c.logger.Fatal("Failed to obtain GRPC address", tag.Error(err))
+		c.logger.Error("Failed to obtain GRPC address", tag.Error(err))
+		return nil, err
 	}
 
 	// Setup dispatcher(outbound) for onebox
@@ -889,9 +891,10 @@ func (c *rpcFactoryImpl) CreateGRPCDispatcherForOutbound(
 		},
 	})
 	if err := d.Start(); err != nil {
-		c.logger.Fatal("Failed to create outbound GRPC", tag.Error(err))
+		c.logger.Error("Failed to create outbound GRPC", tag.Error(err))
+		return nil, err
 	}
-	return d
+	return d, nil
 }
 
 const gprcPortOffset = 10
