@@ -827,6 +827,10 @@ const (
 	// KeyName: history.decisionHeartbeatTimeout
 	// Default value: time.Minute*30
 	DecisionHeartbeatTimeout
+	// DecisionRetryCriticalAttempts is decision attempt threshold for logging and emiting metrics
+	// KeyName: history.decisionRetryCriticalAttempts
+	// Default value: 10
+	DecisionRetryCriticalAttempts
 	// EnableDropStuckTaskByDomainID is whether stuck timer/transfer task should be dropped for a domain
 	// KeyName: history.DropStuckTaskByDomain
 	// Default value: FALSE
@@ -871,10 +875,6 @@ const (
 	// KeyName: history.enableActivityLocalDispatchByDomain
 	// Default value: FALSE
 	EnableActivityLocalDispatchByDomain
-	// DecisionRetryCriticalAttempts is decision attempt threshold for logging and emiting metrics
-	// KeyName: history.decisionRetryCriticalAttempts
-	// Default value: 10
-	DecisionRetryCriticalAttempts
 	// HistoryErrorInjectionRate is rate for injecting random error in history client
 	// KeyName: history.errorInjectionRate
 	// Default value: 0
