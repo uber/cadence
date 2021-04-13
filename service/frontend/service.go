@@ -136,10 +136,11 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		DisallowQuery:                               dc.GetBoolPropertyFilteredByDomain(dynamicconfig.DisallowQuery, false),
 		SendRawWorkflowHistory:                      dc.GetBoolPropertyFilteredByDomain(dynamicconfig.SendRawWorkflowHistory, sendRawWorkflowHistory),
 		domainConfig: domain.Config{
-			MaxBadBinaryCount: dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries, domain.MaxBadBinaries),
-			MinRetentionDays:  dc.GetIntProperty(dynamicconfig.MinRetentionDays, domain.DefaultMinWorkflowRetentionInDays),
-			MaxRetentionDays:  dc.GetIntProperty(dynamicconfig.MaxRetentionDays, domain.DefaultMaxWorkflowRetentionInDays),
-			FailoverCoolDown:  dc.GetDurationPropertyFilteredByDomain(dynamicconfig.FrontendFailoverCoolDown, domain.FailoverCoolDown),
+			MaxBadBinaryCount:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries, domain.MaxBadBinaries),
+			MinRetentionDays:       dc.GetIntProperty(dynamicconfig.MinRetentionDays, domain.DefaultMinWorkflowRetentionInDays),
+			MaxRetentionDays:       dc.GetIntProperty(dynamicconfig.MaxRetentionDays, domain.DefaultMaxWorkflowRetentionInDays),
+			FailoverCoolDown:       dc.GetDurationPropertyFilteredByDomain(dynamicconfig.FrontendFailoverCoolDown, domain.FailoverCoolDown),
+			RequiredDomainDataKeys: dc.GetMapProperty(dynamicconfig.RequiredDomainDataKeys, nil),
 		},
 	}
 }
