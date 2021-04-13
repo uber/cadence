@@ -703,6 +703,10 @@ const (
 	// KeyName: history.transferProcessorEnableValidator
 	// Default value: FALSE
 	TransferProcessorEnableValidator
+	// TransferProcessorValidationInterval is interval for performing transfer queue validation
+	// KeyName: history.transferProcessorValidationInterval
+	// Default value: 30*time.Second
+	TransferProcessorValidationInterval
 	// TransferProcessorVisibilityArchivalTimeLimit is the upper time limit for archiving visibility records
 	// KeyName: history.transferProcessorVisibilityArchivalTimeLimit
 	// Default value: 200*time.Millisecond
@@ -867,10 +871,6 @@ const (
 	// KeyName: history.enableActivityLocalDispatchByDomain
 	// Default value: FALSE
 	EnableActivityLocalDispatchByDomain
-	// TransferProcessorValidationInterval is interval for performing transfer queue validation
-	// KeyName: history.transferProcessorValidationInterval
-	// Default value: 30*time.Second
-	TransferProcessorValidationInterval
 	// DecisionRetryCriticalAttempts is decision attempt threshold for logging and emiting metrics
 	// KeyName: history.decisionRetryCriticalAttempts
 	// Default value: 10
