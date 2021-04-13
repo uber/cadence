@@ -87,6 +87,7 @@ type (
 	Config struct {
 		MinRetentionDays  dynamicconfig.IntPropertyFn
 		MaxRetentionDays  dynamicconfig.IntPropertyFn
+		RequiredDomainDataKeys dynamicconfig.MapPropertyFn
 		MaxBadBinaryCount dynamicconfig.IntPropertyFnWithDomainFilter
 		FailoverCoolDown  dynamicconfig.DurationPropertyFnWithDomainFilter
 	}
