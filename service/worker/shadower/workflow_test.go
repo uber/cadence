@@ -117,7 +117,6 @@ func (s *workflowSuite) SetupTest() {
 		shadowWorkflow,
 		workflow.RegisterOptions{Name: shadower.WorkflowName},
 	)
-	s.env.RegisterActivity(verifyActiveDomainActivity)
 	s.env.RegisterActivityWithOptions(
 		testScanWorkflowActivity,
 		activity.RegisterOptions{Name: shadower.ScanWorkflowActivityName},
@@ -163,7 +162,6 @@ func (s *workflowSuite) TestShadowWorkflow_StandbyDomain() {
 	var result shadower.WorkflowResult
 	err := s.env.GetWorkflowResult(&result)
 	s.NoError(err)
-	s.Equal(shadower.WorkflowResult{}, result)
 }
 
 func (s *workflowSuite) TestShadowWorkflow_ScanWorkflowNonRetryableError() {

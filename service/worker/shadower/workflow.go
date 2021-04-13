@@ -21,7 +21,6 @@
 package shadower
 
 import (
-	"context"
 	"errors"
 	"time"
 
@@ -50,7 +49,6 @@ func register(worker worker.Worker) {
 		shadowWorkflow,
 		workflow.RegisterOptions{Name: shadower.WorkflowName},
 	)
-	worker.RegisterActivity(verifyActiveDomainActivity)
 }
 
 func shadowWorkflow(
@@ -61,27 +59,6 @@ func shadowWorkflow(
 
 	if err := validateAndFillWorkflowParams(&params); err != nil {
 		return shadower.WorkflowResult{}, profile.endWorkflow(err)
-	}
-
-	lao := workflow.LocalActivityOptions{
-		ScheduleToCloseTimeout: time.Second * 5,
-		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:    time.Second,
-			BackoffCoefficient: 1.0,
-			MaximumAttempts:    5,
-		},
-	}
-	ctx = workflow.WithLocalActivityOptions(ctx, lao)
-
-	var domainActive bool
-	if err := workflow.ExecuteLocalActivity(ctx, verifyActiveDomainActivity, params.GetDomain()).Get(ctx, &domainActive); err != nil {
-		return shadower.WorkflowResult{}, profile.endWorkflow(err)
-	}
-
-	// TODO: we probably should make this configurable by user so that they can control is shadowing workflow
-	// should be run in active or passive side
-	if !domainActive {
-		return shadower.WorkflowResult{}, profile.endWorkflow(nil)
 	}
 
 	workflowTimeout := time.Duration(workflow.GetInfo(ctx).ExecutionStartToCloseTimeoutSeconds) * time.Second
@@ -185,7 +162,7 @@ func validateAndFillWorkflowParams(
 	}
 
 	if len(params.GetTaskList()) == 0 {
-		return errors.New("TaskList is not set on shaoder workflow params")
+		return errors.New("TaskList is not set on shadower workflow params")
 	}
 
 	if params.GetSamplingRate() == 0 {
@@ -291,19 +268,4 @@ func combineShadowResults(
 	*currentResult.Skipped += lastRunResult.GetSkipped()
 	*currentResult.Failed += lastRunResult.GetFailed()
 	return currentResult
-}
-
-func verifyActiveDomainActivity(
-	ctx context.Context,
-	domain string,
-) (bool, error) {
-	worker := ctx.Value(workerContextKey).(*Worker)
-	domainCache := worker.domainCache
-	domainEntry, err := domainCache.GetDomain(domain)
-	if err != nil {
-		return false, err
-	}
-
-	domainActive := domainEntry.IsDomainActive() || domainEntry.IsDomainPendingActive()
-	return domainActive, nil
 }
