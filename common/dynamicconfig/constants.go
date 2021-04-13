@@ -699,6 +699,10 @@ const (
 	// KeyName: history.transferProcessorMaxRedispatchQueueSize
 	// Default value: 10000
 	TransferProcessorMaxRedispatchQueueSize
+	// TransferProcessorEnableValidator is whether validator should be enabled for transferQueueProcessor
+	// KeyName: history.transferProcessorEnableValidator
+	// Default value: FALSE
+	TransferProcessorEnableValidator
 	// TransferProcessorVisibilityArchivalTimeLimit is the upper time limit for archiving visibility records
 	// KeyName: history.transferProcessorVisibilityArchivalTimeLimit
 	// Default value: 200*time.Millisecond
@@ -863,10 +867,6 @@ const (
 	// KeyName: history.enableActivityLocalDispatchByDomain
 	// Default value: FALSE
 	EnableActivityLocalDispatchByDomain
-	// TransferProcessorEnableValidator is whether validator should be enabled for transferQueueProcessor
-	// KeyName: history.transferProcessorEnableValidator
-	// Default value: FALSE
-	TransferProcessorEnableValidator
 	// TransferProcessorValidationInterval is interval for performing transfer queue validation
 	// KeyName: history.transferProcessorValidationInterval
 	// Default value: 30*time.Second
