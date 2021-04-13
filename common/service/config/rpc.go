@@ -112,7 +112,7 @@ func (d *RPCFactory) CreateDispatcherForOutbound(
 	callerName string,
 	serviceName string,
 	hostName string,
-) *yarpc.Dispatcher {
+) (*yarpc.Dispatcher, error) {
 	return d.createOutboundDispatcher(callerName, serviceName, hostName, d.ch.NewSingleOutbound(hostName))
 }
 
@@ -121,10 +121,11 @@ func (d *RPCFactory) CreateGRPCDispatcherForOutbound(
 	callerName string,
 	serviceName string,
 	hostName string,
-) *yarpc.Dispatcher {
+) (*yarpc.Dispatcher, error) {
 	grpcAddress, err := d.grpcPorts.GetGRPCAddress(serviceName, hostName)
 	if err != nil {
-		d.logger.Fatal("Failed to create GRPC outbound dispatcher", tag.Error(err))
+		d.logger.Error("Failed to create GRPC outbound dispatcher", tag.Error(err))
+		return nil, err
 	}
 	return d.createOutboundDispatcher(callerName, serviceName, grpcAddress, d.grpc.NewSingleOutbound(grpcAddress))
 }
@@ -134,7 +135,7 @@ func (d *RPCFactory) createOutboundDispatcher(
 	serviceName string,
 	hostName string,
 	outbound transport.UnaryOutbound,
-) *yarpc.Dispatcher {
+) (*yarpc.Dispatcher, error) {
 
 	// Setup dispatcher(outbound) for onebox
 	d.logger.Info("Created RPC dispatcher outbound", tag.Address(hostName))
@@ -145,9 +146,10 @@ func (d *RPCFactory) createOutboundDispatcher(
 		},
 	})
 	if err := dispatcher.Start(); err != nil {
-		d.logger.Fatal("Failed to create outbound transport channel", tag.Error(err))
+		d.logger.Error("Failed to create outbound transport channel", tag.Error(err))
+		return nil, err
 	}
-	return dispatcher
+	return dispatcher, nil
 }
 
 func (d *RPCFactory) getListenIP() net.IP {

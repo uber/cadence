@@ -54,8 +54,8 @@ type (
 	// RPCFactory Creates a dispatcher that knows how to transport requests.
 	RPCFactory interface {
 		GetDispatcher() *yarpc.Dispatcher
-		CreateDispatcherForOutbound(callerName, serviceName, hostName string) *yarpc.Dispatcher
-		CreateGRPCDispatcherForOutbound(callerName, serviceName, hostName string) *yarpc.Dispatcher
+		CreateDispatcherForOutbound(callerName, serviceName, hostName string) (*yarpc.Dispatcher, error)
+		CreateGRPCDispatcherForOutbound(callerName, serviceName, hostName string) (*yarpc.Dispatcher, error)
 	}
 )
 
