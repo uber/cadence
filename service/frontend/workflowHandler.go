@@ -274,6 +274,10 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 		return err
 	}
 
+	if err := checkRequiredDomainDataKVs(wh.config.domainConfig.RequiredDomainDataKeys(), registerRequest.GetData()); err != nil {
+		return err
+	}
+
 	if registerRequest.GetName() == "" {
 		return errDomainNotSet
 	}
@@ -4011,4 +4015,15 @@ func getWfIDRunIDTags(wf *types.WorkflowExecution) []tag.Tag {
 		tag.WorkflowID(wf.GetWorkflowID()),
 		tag.WorkflowRunID(wf.GetRunID()),
 	}
+}
+
+func checkRequiredDomainDataKVs(requiredDomainDataKeys map[string]interface{}, domainData map[string]string) error {
+	//check requiredDomainDataKeys
+	for k := range requiredDomainDataKeys {
+		_, ok := domainData[k]
+		if !ok {
+			return fmt.Errorf("domain data error, missing required key %v . All required keys: %v", k, requiredDomainDataKeys)
+		}
+	}
+	return nil
 }
