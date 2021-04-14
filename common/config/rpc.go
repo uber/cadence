@@ -69,12 +69,12 @@ func (d *RPCFactory) GetDispatcher() *yarpc.Dispatcher {
 		return d.dispatcher
 	}
 
-	d.dispatcher = d.createDispatcher()
+	d.dispatcher = d.createInboundDispatcher()
 	return d.dispatcher
 }
 
-// createDispatcher creates a dispatcher for inbound
-func (d *RPCFactory) createDispatcher() *yarpc.Dispatcher {
+// createInboundDispatcher creates a dispatcher for inbound
+func (d *RPCFactory) createInboundDispatcher() *yarpc.Dispatcher {
 	// Setup dispatcher for onebox
 	var err error
 	inbounds := yarpc.Inbounds{}
