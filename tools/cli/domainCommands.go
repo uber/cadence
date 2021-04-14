@@ -22,6 +22,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -447,25 +448,40 @@ func (d *domainCLIImpl) ListDomains(c *cli.Context) {
 	printAll := c.Bool(FlagAll)
 	printDeprecated := c.Bool(FlagDeprecated)
 	printFull := c.Bool(FlagPrintFullyDetail)
+	printJSON := c.Bool(FlagPrintJSON)
 
 	if printAll && printDeprecated {
 		ErrorAndExit(fmt.Sprintf("Cannot specify %s and %s flags at the same time.", FlagAll, FlagDeprecated), nil)
 	}
 
 	domains := d.getAllDomains(c)
+	var filteredDomains []*types.DescribeDomainResponse
+	if printAll {
+		filteredDomains = domains
+	} else {
+		filteredDomains = make([]*types.DescribeDomainResponse, 0, len(domains))
+		for _, domain := range domains {
+			if printDeprecated && *domain.DomainInfo.Status == types.DomainStatusDeprecated {
+				filteredDomains = append(filteredDomains, domain)
+			} else if !printDeprecated && *domain.DomainInfo.Status == types.DomainStatusRegistered {
+				filteredDomains = append(filteredDomains, domain)
+			}
+		}
+	}
+
+	if printJSON {
+		output, err := json.Marshal(filteredDomains)
+		if err != nil {
+			ErrorAndExit("Failed to encode domain results into JSON.", err)
+		}
+		fmt.Println(string(output))
+		return
+	}
 
 	table := createTableForListDomains(printAll, printFull)
 
 	currentPageSize := 0
-	for i, domain := range domains {
-		if printDeprecated {
-			if *domain.DomainInfo.Status != types.DomainStatusDeprecated {
-				continue
-			}
-		} else if !printAll && *domain.DomainInfo.Status != types.DomainStatusRegistered {
-			continue
-		}
-
+	for i, domain := range filteredDomains {
 		appendDomainToTable(table, domain, printAll, printFull)
 		currentPageSize++
 
