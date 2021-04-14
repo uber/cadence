@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/common/persistence/persistence-tests/external"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -57,7 +58,7 @@ func (s *domainReplicationTaskExecutorSuite) TearDownSuite() {
 }
 
 func (s *domainReplicationTaskExecutorSuite) SetupTest() {
-	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{})
+	s.TestBase = external.NewTestBaseWithExternalCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
 	zapLogger, err := zap.NewDevelopment()
 	s.Require().NoError(err)
