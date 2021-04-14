@@ -29,15 +29,19 @@ Other clients are developed by community:
 * [Ruby Client](https://github.com/coinbase/cadence-ruby)
 
 ### Use CLI Tools
-Use [Cadence command-line tool](tools/cli/README.md) to perform various tasks on Cadence server cluster
 
-For [manual setup or upgrading](docs/persistence.md) server schema --
+* Use [Cadence command-line tool](https://cadenceworkflow.io/docs/cli/) to perform various tasks on Cadence server cluster
+  * Use brew to install CLI: `brew install cadence-workflow`
+  * Use docker image for CLI: `docker run --rm ubercadence/cli:master `. Be sure to update your image when you want to try new features: `docker pull ubercadence/cli:master `
+  * Check out the repo and run `make cadence` to build all tools. See [CONTRIBUTING](CONTRIBUTING.md) for prerequisite of make command.
+  
+  
+* For [manual setup or upgrading](docs/persistence.md) server schema --
+  * Use brew to install CLI: `brew install cadence-workflow` which also includes `cadence-sql-tool` and `cadence-cassandra-tool`
+  * If server runs with Cassandra, Use [Cadence Cassandra tool](tools/cassandra/README.md) to perform various tasks on database schema of Cassandra persistence
+  * If server runs with SQL database, Use [Cadence SQL tool](tools/sql/README.md) to perform various tasks on database schema of SQL based persistence
 
-* If server runs with Cassandra, Use [Cadence Cassandra tool](tools/cassandra/README.md) to perform various tasks on database schema of Cassandra persistence
-* If server runs with SQL database, Use [Cadence SQL tool](tools/sql/README.md) to perform various tasks on database schema of SQL based persistence
-
-TIPS: Run `make tools` to build all tools mentioned above. 
-> NOTE: See [CONTRIBUTING](CONTRIBUTING.md) for prerequisite of make command. 
+> Tips: Use `make tools` to build all tools
 
 ### Use Cadence Web
 

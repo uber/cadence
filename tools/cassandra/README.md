@@ -9,11 +9,11 @@ make install-schema
 
 ## For production
 
-### Create the binaries
-- Run `make cadence-cassandra-tool`
-- You should see an executable `cadence-cassandra-tool`
+### Get the Cassandra Schema tool
+* Use brew to install CLI: `brew install cadence-workflow` which includes `cadence-cassandra-tool`
+* Or build yourself, with `make cadence-cassandra-tool`. See [CONTRIBUTING](/CONTRIBUTING.md) for prerequisite of make command.
 
-> NOTE: See [CONTRIBUTING](/CONTRIBUTING.md) for prerequisite of make command.
+> Note: The binaries can also be found in the `ubercadence/server` docker images
 
 ### Do one time database creation and schema setup for a new cluster
 This uses Cassandra's SimpleStratagey for replication. For production, we recommend using a replication factor of 3 with NetworkTopologyStrategy.
