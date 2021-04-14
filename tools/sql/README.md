@@ -11,6 +11,7 @@ SQL_USER=$USERNAME SQL_PASSWORD=$PASSWD make install-schema-mysql
 
 ## For production
 
+### Get the SQL Schema tool
 * Use brew to install CLI: `brew install cadence-workflow` which includes `cadence-sql-tool`
 * Or build yourself, with `make cadence-sql-tool`. See [CONTRIBUTING](/CONTRIBUTING.md) for prerequisite of make command.
 
