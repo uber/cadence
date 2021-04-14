@@ -3526,6 +3526,9 @@ func (wh *WorkflowHandler) error(err error, scope metrics.Scope, tagsForErrorLog
 	case *types.EntityNotExistsError:
 		scope.IncCounter(metrics.CadenceErrEntityNotExistsCounter)
 		return err
+	case *types.WorkflowExecutionAlreadyCompletedError:
+		scope.IncCounter(metrics.CadenceErrWorkflowExecutionAlreadyCompletedCounter)
+		return err
 	case *types.WorkflowExecutionAlreadyStartedError:
 		scope.IncCounter(metrics.CadenceErrExecutionAlreadyStartedCounter)
 		return err

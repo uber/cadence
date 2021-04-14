@@ -75,6 +75,12 @@ func (err EntityNotExistsError) Error() string {
 	return fmt.Sprintf("EntityNotExistsError{%s}", sb.String())
 }
 
+func (err WorkflowExecutionAlreadyCompletedError) Error() string {
+	sb := &strings.Builder{}
+	printField(sb, "Message", err.Message)
+	return fmt.Sprintf("WorkflowExecutionAlreadyCompletedError{%s}", sb.String())
+}
+
 func (err InternalDataInconsistencyError) Error() string {
 	return fmt.Sprintf("InternalDataInconsistencyError{Message: %v}", err.Message)
 }

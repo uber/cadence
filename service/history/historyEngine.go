@@ -682,7 +682,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 			}
 			defer func() { runningWFCtx.GetReleaseFn()(retError) }()
 
-			return e.terminateAndStartWorkflow(
+			resp, err = e.terminateAndStartWorkflow(
 				ctx,
 				runningWFCtx,
 				workflowExecution,
@@ -691,6 +691,11 @@ func (e *historyEngineImpl) startWorkflowHelper(
 				startRequest,
 				nil,
 			)
+			// By the time we try to terminate the workflow, it was already terminated
+			// So continue as if we didn't need to terminate it in the first place
+			if _, ok := err.(*types.WorkflowExecutionAlreadyCompletedError); !ok {
+				return resp, err
+			}
 		}
 		if err = e.applyWorkflowIDReusePolicyHelper(
 			t.StartRequestID,
@@ -2229,7 +2234,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 			if sRequest.GetWorkflowIDReusePolicy() == types.WorkflowIDReusePolicyTerminateIfRunning {
 				workflowExecution.RunID = uuid.New()
 				runningWFCtx := workflow.NewContext(wfContext, release, mutableState)
-				return e.terminateAndStartWorkflow(
+				resp, errTerm := e.terminateAndStartWorkflow(
 					ctx,
 					runningWFCtx,
 					workflowExecution,
@@ -2238,6 +2243,11 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 					nil,
 					signalWithStartRequest,
 				)
+				// By the time we try to terminate the workflow, it was already terminated
+				// So continue as if we didn't need to terminate it in the first place
+				if _, ok := errTerm.(*types.WorkflowExecutionAlreadyCompletedError); !ok {
+					return resp, errTerm
+				}
 			}
 
 			executionInfo := mutableState.GetExecutionInfo()

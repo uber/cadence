@@ -2962,6 +2962,19 @@ func (v *EntityNotExistsError) GetActiveCluster() (o string) {
 	return
 }
 
+// WorkflowExecutionAlreadyCompletedError is an internal type (TBD...)
+type WorkflowExecutionAlreadyCompletedError struct {
+	Message string `json:"message,required"`
+}
+
+// GetMessage is an internal getter (TBD...)
+func (v *WorkflowExecutionAlreadyCompletedError) GetMessage() (o string) {
+	if v != nil {
+		return v.Message
+	}
+	return
+}
+
 // EventType is an internal type (TBD...)
 type EventType int32
 

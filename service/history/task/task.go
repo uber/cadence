@@ -238,6 +238,8 @@ func (t *taskImpl) HandleErr(
 
 	if _, ok := err.(*types.EntityNotExistsError); ok {
 		return nil
+	} else if _, ok := err.(*types.WorkflowExecutionAlreadyCompletedError); ok {
+		return nil
 	}
 
 	if transferTask, ok := t.Info.(*persistence.TransferTaskInfo); ok &&
