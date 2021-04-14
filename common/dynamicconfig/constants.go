@@ -1220,6 +1220,7 @@ var keys = map[Key]string{
 	EnableStickyQuery:                   "system.enableStickyQuery",
 	EnableDebugMode:                     "system.enableDebugMode",
 	RequiredDomainDataKeys:              "system.requiredDomainDataKeys",
+	EnableGRPCOutbound:                  "system.enableGRPCOutbound",
 
 	// size limit
 	BlobSizeLimitError:      "limit.blobSize.error",
