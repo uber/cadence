@@ -513,7 +513,14 @@ func (adh *adminHandlerImpl) DescribeCluster(
 	scope, sw := adh.startRequestProfile(metrics.AdminGetWorkflowExecutionRawHistoryV2Scope)
 	defer sw.Stop()
 
-	membershipInfo := &types.MembershipInfo{}
+	persistenceName := adh.Resource.GetVisibilityManager().GetName()
+	advancedVisibilityEnabled := adh.params.ESConfig != nil
+	persistenceInfo := types.PersistenceInfo{
+		Name:                      &persistenceName,
+		AdvancedVisibilityEnabled: &advancedVisibilityEnabled,
+	}
+
+	membershipInfo := types.MembershipInfo{}
 	if monitor := adh.GetMembershipMonitor(); monitor != nil {
 		currentHost, err := monitor.WhoAmI()
 		if err != nil {
@@ -559,7 +566,8 @@ func (adh *adminHandlerImpl) DescribeCluster(
 			GoSdk:   client.SupportedGoSDKVersion,
 			JavaSdk: client.SupportedJavaSDKVersion,
 		},
-		MembershipInfo: membershipInfo,
+		MembershipInfo:  &membershipInfo,
+		PersistenceInfo: &persistenceInfo,
 	}, nil
 }
 

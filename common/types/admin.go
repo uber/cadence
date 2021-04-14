@@ -46,6 +46,7 @@ func (v *AddSearchAttributeRequest) GetSecurityToken() (o string) {
 type DescribeClusterResponse struct {
 	SupportedClientVersions *SupportedClientVersions `json:"supportedClientVersions,omitempty"`
 	MembershipInfo          *MembershipInfo          `json:"membershipInfo,omitempty"`
+	PersistenceInfo         *PersistenceInfo         `json:"persistenceInfo,omitempty"`
 }
 
 // GetSupportedClientVersions is an internal getter (TBD...)
@@ -275,6 +276,12 @@ func (v *MembershipInfo) GetRings() (o []*RingInfo) {
 		return v.Rings
 	}
 	return
+}
+
+// PersistenceInfo is an internal type which exposes persistence configuration
+type PersistenceInfo struct {
+	Name                      *string `json:"name,omitempty"`
+	AdvancedVisibilityEnabled *bool   `json:"advancedVisibilityEnabled,omitempty"`
 }
 
 // ResendReplicationTasksRequest is an internal type (TBD...)

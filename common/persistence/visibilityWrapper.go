@@ -65,7 +65,10 @@ func (v *visibilityManagerWrapper) Close() {
 }
 
 func (v *visibilityManagerWrapper) GetName() string {
-	return "visibilityManagerWrapper"
+	if v.esVisibilityManager != nil {
+		return v.esVisibilityManager.GetName()
+	}
+	return v.visibilityManager.GetName()
 }
 
 func (v *visibilityManagerWrapper) RecordWorkflowExecutionStarted(
