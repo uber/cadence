@@ -396,6 +396,10 @@ func newAdminDomainCommands() []cli.Command {
 					Name:  FlagPrintFullyDetailWithAlias,
 					Usage: "Print full domain detail",
 				},
+				cli.BoolFlag{
+					Name:  FlagPrintJSONWithAlias,
+					Usage: "Print in raw json format",
+				},
 			},
 			Action: func(c *cli.Context) {
 				newDomainCLI(c, false).ListDomains(c)

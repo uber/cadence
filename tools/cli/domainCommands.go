@@ -22,6 +22,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -284,10 +285,24 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 func (d *domainCLIImpl) DeprecateDomain(c *cli.Context) {
 	domainName := getRequiredGlobalOption(c, FlagDomain)
 	securityToken := c.String(FlagSecurityToken)
+	force := c.Bool(FlagForce)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
 
+	if !force {
+	// check if there is any workflow in this domain, if exists, do not deprecate
+		wfs, _ := listClosedWorkflow(getWorkflowClient(c), 1, 0, time.Now().UnixNano(), "", "", workflowStatusNotSet, nil, c)
+		if len(wfs) > 0 {
+			ErrorAndExit("Operation DeprecateDomain failed.", errors.New("Workflow history not cleared in this domain."))
+			return
+		}
+		wfs, _ = listOpenWorkflow(getWorkflowClient(c), 1, 0, time.Now().UnixNano(), "", "", nil, c)
+		if len(wfs) > 0 {
+			ErrorAndExit("Operation DeprecateDomain failed.", errors.New("Workflow still running in this domain."))
+			return
+		}
+	}
 	err := d.deprecateDomain(ctx, &types.DeprecateDomainRequest{
 		Name:          domainName,
 		SecurityToken: securityToken,
@@ -447,25 +462,40 @@ func (d *domainCLIImpl) ListDomains(c *cli.Context) {
 	printAll := c.Bool(FlagAll)
 	printDeprecated := c.Bool(FlagDeprecated)
 	printFull := c.Bool(FlagPrintFullyDetail)
+	printJSON := c.Bool(FlagPrintJSON)
 
 	if printAll && printDeprecated {
 		ErrorAndExit(fmt.Sprintf("Cannot specify %s and %s flags at the same time.", FlagAll, FlagDeprecated), nil)
 	}
 
 	domains := d.getAllDomains(c)
+	var filteredDomains []*types.DescribeDomainResponse
+	if printAll {
+		filteredDomains = domains
+	} else {
+		filteredDomains = make([]*types.DescribeDomainResponse, 0, len(domains))
+		for _, domain := range domains {
+			if printDeprecated && *domain.DomainInfo.Status == types.DomainStatusDeprecated {
+				filteredDomains = append(filteredDomains, domain)
+			} else if !printDeprecated && *domain.DomainInfo.Status == types.DomainStatusRegistered {
+				filteredDomains = append(filteredDomains, domain)
+			}
+		}
+	}
+
+	if printJSON {
+		output, err := json.Marshal(filteredDomains)
+		if err != nil {
+			ErrorAndExit("Failed to encode domain results into JSON.", err)
+		}
+		fmt.Println(string(output))
+		return
+	}
 
 	table := createTableForListDomains(printAll, printFull)
 
 	currentPageSize := 0
-	for i, domain := range domains {
-		if printDeprecated {
-			if *domain.DomainInfo.Status != types.DomainStatusDeprecated {
-				continue
-			}
-		} else if !printAll && *domain.DomainInfo.Status != types.DomainStatusRegistered {
-			continue
-		}
-
+	for i, domain := range filteredDomains {
 		appendDomainToTable(table, domain, printAll, printFull)
 		currentPageSize++
 
