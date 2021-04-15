@@ -22,6 +22,7 @@ services:
   frontend:
     rpc:
       port: 8933
+      grpcPort: 8833
       bindOnLocalHost: true
     metrics:
       statsd:
@@ -33,6 +34,7 @@ services:
   matching:
     rpc:
       port: 8935
+      grpcPort: 8835
       bindOnLocalHost: true
     metrics:
       statsd:
@@ -44,6 +46,7 @@ services:
   history:
     rpc:
       port: 8934
+      grpcPort: 8834
       bindOnLocalHost: true
     metrics:
       statsd:

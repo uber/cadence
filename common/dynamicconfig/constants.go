@@ -138,6 +138,10 @@ const (
 	// KeyName: system.requiredDomainDataKeys
 	// Default value: nil
 	RequiredDomainDataKeys
+	// EnableGRPCOutbound is the key for enabling outbound GRPC traffic
+	// KeyName: system.enableGRPCOutbound
+	// Default value: false
+	EnableGRPCOutbound
 
 	// BlobSizeLimitError is the per event blob size limit
 	// KeyName: limit.blobSize.error
@@ -1216,6 +1220,7 @@ var keys = map[Key]string{
 	EnableStickyQuery:                   "system.enableStickyQuery",
 	EnableDebugMode:                     "system.enableDebugMode",
 	RequiredDomainDataKeys:              "system.requiredDomainDataKeys",
+	EnableGRPCOutbound:                  "system.enableGRPCOutbound",
 
 	// size limit
 	BlobSizeLimitError:      "limit.blobSize.error",
