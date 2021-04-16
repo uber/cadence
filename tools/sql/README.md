@@ -7,17 +7,13 @@ the sql interface. So, this same tool can be used against, say, OracleDB and MyS
 ``` 
 SQL_USER=$USERNAME SQL_PASSWORD=$PASSWD make install-schema-mysql
 ```
-> NOTE: See [CONTRIBUTING](../../CONTRIBUTING.md) for prerequisite of make command.
+> NOTE: See [CONTRIBUTING](/CONTRIBUTING.md) for prerequisite of make command.
 
 ## For production
 
-### Create the binaries
-- Run `make cadence-sql-tool`
-- You should see an executable `cadence-sql-tool`
-- Cadence officially support MySQL and Postgres for SQL. 
-- For other SQL database, you can add it easily as we do for MySQL/Postgres following our code in sql-extensions  
-
-> NOTE: See [CONTRIBUTING](../../CONTRIBUTING.md) for prerequisite of make command.
+### Get the SQL Schema tool
+* Use brew to install CLI: `brew install cadence-workflow` which includes `cadence-sql-tool`
+* Or build yourself, with `make cadence-sql-tool`. See [CONTRIBUTING](/CONTRIBUTING.md) for prerequisite of make command.
 
 > Note: The binaries can also be found in the `ubercadence/server` docker images
 

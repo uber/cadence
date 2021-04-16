@@ -57,7 +57,7 @@ Connected to Test Cluster at 127.0.0.1:9042.
 Use HELP for help.
 cqlsh>
 ```
->If you are running Cadence on top of [Mysql](MYSQL_SETUP.md) or [Postgres](POSTGRES_SETUP.md), you can follow the instructions to run the SQL DB and then run:
+>If you are running Cadence on top of [Mysql](docs/setup/MYSQL_SETUP.md) or [Postgres](docs/setup/POSTGRES_SETUP.md), you can follow the instructions to run the SQL DB and then run:
 
 Now you can setup the database schema
 ```bash
