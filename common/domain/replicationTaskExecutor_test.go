@@ -22,6 +22,7 @@ package domain
 
 import (
 	"context"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/tests"
 	"testing"
 
 	"github.com/pborman/uuid"
@@ -33,7 +34,6 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
-	"github.com/uber/cadence/common/persistence/persistence-tests/public"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -58,7 +58,7 @@ func (s *domainReplicationTaskExecutorSuite) TearDownSuite() {
 }
 
 func (s *domainReplicationTaskExecutorSuite) SetupTest() {
-	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
+	s.TestBase = tests.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
 	zapLogger, err := zap.NewDevelopment()
 	s.Require().NoError(err)
