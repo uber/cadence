@@ -72,13 +72,13 @@ func checkCompatibleVersion(
 ) error {
 
 	client, err := newCQLClient(&CQLClientConfig{
-		Hosts:     cfg.Hosts,
-		Port:      cfg.Port,
-		User:      cfg.User,
-		Password:  cfg.Password,
-		Keyspace:  cfg.Keyspace,
-		Timeout:   defaultTimeout,
-		TLS:       cfg.TLS,
+		Hosts:    cfg.Hosts,
+		Port:     cfg.Port,
+		User:     cfg.User,
+		Password: cfg.Password,
+		Keyspace: cfg.Keyspace,
+		Timeout:  defaultTimeout,
+		TLS:      cfg.TLS,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create CQL Client: %v", err.Error())

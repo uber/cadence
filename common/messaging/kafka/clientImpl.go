@@ -165,10 +165,14 @@ func (c *clientImpl) initAuth(saramaConfig *sarama.Config) error {
 
 	if c.config.SASL.Enabled {
 		if c.config.SASL.Algorithm == "sha512" {
-			saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &authorization.XDGSCRAMClient{HashGeneratorFcn: authorization.SHA512} }
+			saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
+				return &authorization.XDGSCRAMClient{HashGeneratorFcn: authorization.SHA512}
+			}
 			saramaConfig.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA512
 		} else if c.config.SASL.Algorithm == "sha256" {
-			saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &authorization.XDGSCRAMClient{HashGeneratorFcn: authorization.SHA256} }
+			saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
+				return &authorization.XDGSCRAMClient{HashGeneratorFcn: authorization.SHA256}
+			}
 			saramaConfig.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA256
 		} else if c.config.SASL.Algorithm == "plain" {
 			saramaConfig.Net.SASL.Mechanism = sarama.SASLTypePlaintext

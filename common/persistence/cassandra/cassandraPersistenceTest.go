@@ -62,12 +62,12 @@ func NewTestCluster(keyspace, username, password, host string, port int, schemaD
 	}
 	result.schemaDir = schemaDir
 	result.cfg = config.Cassandra{
-		User:      username,
-		Password:  password,
-		Hosts:     host,
-		Port:      port,
-		MaxConns:  2,
-		Keyspace:  keyspace,
+		User:     username,
+		Password: password,
+		Hosts:    host,
+		Port:     port,
+		MaxConns: 2,
+		Keyspace: keyspace,
 	}
 	return &result
 }
