@@ -33,7 +33,7 @@ services:
       - cassandra
       - statsd
   cadence-secondary:
-    image: ubercadence/server:master-auto-setup
+    image: ubercadence/server:0.20.0-auto-setup
     ports:
      - "7943:7933"
      - "7944:7934"
@@ -55,7 +55,7 @@ services:
       - cassandra
       - statsd
   cadence-web:
-    image: ubercadence/web:latest
+    image: ubercadence/web:v3.24.0
     environment:
       - "CADENCE_TCHANNEL_PEERS=cadence:7933"
     ports:
