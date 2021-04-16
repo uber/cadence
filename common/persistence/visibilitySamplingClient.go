@@ -180,7 +180,7 @@ func (p *visibilitySamplingClient) ListOpenWorkflowExecutions(
 	domain := request.Domain
 
 	rateLimiter := p.rateLimitersForList.getRateLimiter(domain, numOfPriorityForList, p.config.VisibilityListMaxQPS(domain))
-	if ok, _ := rateLimiter.GetToken(0, 1); !ok {
+	if !p.tryConsumeListToken(request.Domain, rateLimiter) {
 		return nil, p.returnServiceBusyErrorForList(request.Domain)
 	}
 
@@ -194,7 +194,7 @@ func (p *visibilitySamplingClient) ListClosedWorkflowExecutions(
 	domain := request.Domain
 
 	rateLimiter := p.rateLimitersForList.getRateLimiter(domain, numOfPriorityForList, p.config.VisibilityListMaxQPS(domain))
-	if ok, _ := rateLimiter.GetToken(0, 1); !ok {
+	if !p.tryConsumeListToken(request.Domain, rateLimiter) {
 		return nil, p.returnServiceBusyErrorForList(request.Domain)
 	}
 
@@ -208,7 +208,7 @@ func (p *visibilitySamplingClient) ListOpenWorkflowExecutionsByType(
 	domain := request.Domain
 
 	rateLimiter := p.rateLimitersForList.getRateLimiter(domain, numOfPriorityForList, p.config.VisibilityListMaxQPS(domain))
-	if ok, _ := rateLimiter.GetToken(0, 1); !ok {
+	if !p.tryConsumeListToken(request.Domain, rateLimiter) {
 		return nil, p.returnServiceBusyErrorForList(request.Domain)
 	}
 
@@ -222,7 +222,7 @@ func (p *visibilitySamplingClient) ListClosedWorkflowExecutionsByType(
 	domain := request.Domain
 
 	rateLimiter := p.rateLimitersForList.getRateLimiter(domain, numOfPriorityForList, p.config.VisibilityListMaxQPS(domain))
-	if ok, _ := rateLimiter.GetToken(0, 1); !ok {
+	if !p.tryConsumeListToken(request.Domain, rateLimiter) {
 		return nil, p.returnServiceBusyErrorForList(request.Domain)
 	}
 
@@ -236,7 +236,7 @@ func (p *visibilitySamplingClient) ListOpenWorkflowExecutionsByWorkflowID(
 	domain := request.Domain
 
 	rateLimiter := p.rateLimitersForList.getRateLimiter(domain, numOfPriorityForList, p.config.VisibilityListMaxQPS(domain))
-	if ok, _ := rateLimiter.GetToken(0, 1); !ok {
+	if !p.tryConsumeListToken(request.Domain, rateLimiter) {
 		return nil, p.returnServiceBusyErrorForList(request.Domain)
 	}
 
@@ -250,7 +250,7 @@ func (p *visibilitySamplingClient) ListClosedWorkflowExecutionsByWorkflowID(
 	domain := request.Domain
 
 	rateLimiter := p.rateLimitersForList.getRateLimiter(domain, numOfPriorityForList, p.config.VisibilityListMaxQPS(domain))
-	if ok, _ := rateLimiter.GetToken(0, 1); !ok {
+	if !p.tryConsumeListToken(request.Domain, rateLimiter) {
 		return nil, p.returnServiceBusyErrorForList(request.Domain)
 	}
 
@@ -264,7 +264,7 @@ func (p *visibilitySamplingClient) ListClosedWorkflowExecutionsByStatus(
 	domain := request.Domain
 
 	rateLimiter := p.rateLimitersForList.getRateLimiter(domain, numOfPriorityForList, p.config.VisibilityListMaxQPS(domain))
-	if ok, _ := rateLimiter.GetToken(0, 1); !ok {
+	if !p.tryConsumeListToken(request.Domain, rateLimiter) {
 		return nil, p.returnServiceBusyErrorForList(request.Domain)
 	}
 
@@ -320,6 +320,14 @@ func getRequestPriority(request *RecordWorkflowExecutionClosedRequest) int {
 		priority = 1 // low priority for completed workflows
 	}
 	return priority
+}
+
+func (p *visibilitySamplingClient) tryConsumeListToken(domainName string, rateLimiter tokenbucket.PriorityTokenBucket) bool {
+	ok, _ := rateLimiter.GetToken(0, 1)
+	if ok {
+		p.logger.Debug("List API request consumed QPS token", tag.WorkflowDomainName(domainName), tag.Name(callerFuncName(2)))
+	}
+	return ok
 }
 
 func (p *visibilitySamplingClient) returnServiceBusyErrorForList(domainName string) error {
