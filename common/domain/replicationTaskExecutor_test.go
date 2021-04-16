@@ -58,7 +58,7 @@ func (s *domainReplicationTaskExecutorSuite) TearDownSuite() {
 }
 
 func (s *domainReplicationTaskExecutorSuite) SetupTest() {
-	s.TestBase = external.NewTestBaseWithExternalCassandra(&persistencetests.TestBaseOptions{})
+	s.TestBase = external.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
 	zapLogger, err := zap.NewDevelopment()
 	s.Require().NoError(err)

@@ -73,7 +73,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) SetupSuite() {
 		log.SetOutput(os.Stdout)
 	}
 
-	s.TestBase = external.NewTestBaseWithExternalCassandra(&persistencetests.TestBaseOptions{
+	s.TestBase = external.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(true, true),
 	})
 	s.TestBase.Setup()

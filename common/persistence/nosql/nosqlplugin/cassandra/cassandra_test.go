@@ -18,68 +18,69 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistencetests
+package cassandra
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/persistence-tests/external"
 )
 
 func TestCassandraHistoryV2Persistence(t *testing.T) {
-	s := new(HistoryV2PersistenceSuite)
-	s.TestBase = external.NewTestBaseWithExternalCassandra(&TestBaseOptions{})
+	s := new(persistencetests.HistoryV2PersistenceSuite)
+	s.TestBase = external.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
 func TestCassandraMatchingPersistence(t *testing.T) {
-	s := new(MatchingPersistenceSuite)
-	s.TestBase = external.NewTestBaseWithExternalCassandra(&TestBaseOptions{})
+	s := new(persistencetests.MatchingPersistenceSuite)
+	s.TestBase = external.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
 func TestCassandraMetadataPersistenceV2(t *testing.T) {
-	s := new(MetadataPersistenceSuiteV2)
-	s.TestBase = external.NewTestBaseWithExternalCassandra(&TestBaseOptions{})
+	s := new(persistencetests.MetadataPersistenceSuiteV2)
+	s.TestBase = external.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
 func TestCassandraShardPersistence(t *testing.T) {
-	s := new(ShardPersistenceSuite)
-	s.TestBase = external.NewTestBaseWithExternalCassandra(&TestBaseOptions{})
+	s := new(persistencetests.ShardPersistenceSuite)
+	s.TestBase = external.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
 func TestCassandraVisibilityPersistence(t *testing.T) {
-	s := new(VisibilityPersistenceSuite)
-	s.TestBase = external.NewTestBaseWithExternalCassandra(&TestBaseOptions{})
+	s := new(persistencetests.VisibilityPersistenceSuite)
+	s.TestBase = external.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
 func TestCassandraExecutionManager(t *testing.T) {
-	s := new(ExecutionManagerSuite)
-	s.TestBase = external.NewTestBaseWithExternalCassandra(&TestBaseOptions{})
+	s := new(persistencetests.ExecutionManagerSuite)
+	s.TestBase = external.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
 func TestCassandraExecutionManagerWithEventsV2(t *testing.T) {
-	s := new(ExecutionManagerSuiteForEventsV2)
-	s.TestBase = external.NewTestBaseWithExternalCassandra(&TestBaseOptions{})
+	s := new(persistencetests.ExecutionManagerSuiteForEventsV2)
+	s.TestBase = external.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
 func TestQueuePersistence(t *testing.T) {
-	s := new(QueuePersistenceSuite)
-	s.TestBase = external.NewTestBaseWithExternalCassandra(&TestBaseOptions{})
+	s := new(persistencetests.QueuePersistenceSuite)
+	s.TestBase = external.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
