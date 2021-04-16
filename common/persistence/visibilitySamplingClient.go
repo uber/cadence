@@ -22,6 +22,9 @@ package persistence
 
 import (
 	"context"
+	"fmt"
+	"path/filepath"
+	"runtime"
 	"sync"
 
 	"github.com/uber/cadence/common/clock"
@@ -40,8 +43,8 @@ const (
 	numOfPriorityForList   = 1
 )
 
-// ErrPersistenceLimitExceededForList is the error indicating QPS limit reached for list visibility.
-var ErrPersistenceLimitExceededForList = &types.ServiceBusyError{Message: "Persistence Max QPS Reached for List Operations."}
+// errPersistenceLimitExceededForList is the error indicating QPS limit reached for list visibility.
+var errPersistenceLimitExceededForList = &types.ServiceBusyError{Message: "Persistence Max QPS Reached for List Operations."}
 
 type visibilitySamplingClient struct {
 	rateLimitersForOpen   *domainToBucketMap
@@ -56,6 +59,9 @@ type visibilitySamplingClient struct {
 var _ VisibilityManager = (*visibilitySamplingClient)(nil)
 
 // NewVisibilitySamplingClient creates a client to manage visibility with sampling
+// For write requests, it will do sampling which will lose some records
+// For read requests, it will do sampling which will return service busy errors.
+// Note that this is different from NewVisibilityPersistenceRateLimitedClient which is overlapping with the read processing.
 func NewVisibilitySamplingClient(persistence VisibilityManager, config *config.VisibilityConfig, metricClient metrics.Client, logger log.Logger) VisibilityManager {
 	return &visibilitySamplingClient{
 		persistence:           persistence,
@@ -177,7 +183,7 @@ func (p *visibilitySamplingClient) ListOpenWorkflowExecutions(
 
 	rateLimiter := p.rateLimitersForList.getRateLimiter(domain, numOfPriorityForList, p.config.VisibilityListMaxQPS(domain))
 	if ok, _ := rateLimiter.GetToken(0, 1); !ok {
-		return nil, ErrPersistenceLimitExceededForList
+		return nil, p.returnServiceBusyErrorForList(request.Domain)
 	}
 
 	return p.persistence.ListOpenWorkflowExecutions(ctx, request)
@@ -191,7 +197,7 @@ func (p *visibilitySamplingClient) ListClosedWorkflowExecutions(
 
 	rateLimiter := p.rateLimitersForList.getRateLimiter(domain, numOfPriorityForList, p.config.VisibilityListMaxQPS(domain))
 	if ok, _ := rateLimiter.GetToken(0, 1); !ok {
-		return nil, ErrPersistenceLimitExceededForList
+		return nil, p.returnServiceBusyErrorForList(request.Domain)
 	}
 
 	return p.persistence.ListClosedWorkflowExecutions(ctx, request)
@@ -205,7 +211,7 @@ func (p *visibilitySamplingClient) ListOpenWorkflowExecutionsByType(
 
 	rateLimiter := p.rateLimitersForList.getRateLimiter(domain, numOfPriorityForList, p.config.VisibilityListMaxQPS(domain))
 	if ok, _ := rateLimiter.GetToken(0, 1); !ok {
-		return nil, ErrPersistenceLimitExceededForList
+		return nil, p.returnServiceBusyErrorForList(request.Domain)
 	}
 
 	return p.persistence.ListOpenWorkflowExecutionsByType(ctx, request)
@@ -219,7 +225,7 @@ func (p *visibilitySamplingClient) ListClosedWorkflowExecutionsByType(
 
 	rateLimiter := p.rateLimitersForList.getRateLimiter(domain, numOfPriorityForList, p.config.VisibilityListMaxQPS(domain))
 	if ok, _ := rateLimiter.GetToken(0, 1); !ok {
-		return nil, ErrPersistenceLimitExceededForList
+		return nil, p.returnServiceBusyErrorForList(request.Domain)
 	}
 
 	return p.persistence.ListClosedWorkflowExecutionsByType(ctx, request)
@@ -233,7 +239,7 @@ func (p *visibilitySamplingClient) ListOpenWorkflowExecutionsByWorkflowID(
 
 	rateLimiter := p.rateLimitersForList.getRateLimiter(domain, numOfPriorityForList, p.config.VisibilityListMaxQPS(domain))
 	if ok, _ := rateLimiter.GetToken(0, 1); !ok {
-		return nil, ErrPersistenceLimitExceededForList
+		return nil, p.returnServiceBusyErrorForList(request.Domain)
 	}
 
 	return p.persistence.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
@@ -247,7 +253,7 @@ func (p *visibilitySamplingClient) ListClosedWorkflowExecutionsByWorkflowID(
 
 	rateLimiter := p.rateLimitersForList.getRateLimiter(domain, numOfPriorityForList, p.config.VisibilityListMaxQPS(domain))
 	if ok, _ := rateLimiter.GetToken(0, 1); !ok {
-		return nil, ErrPersistenceLimitExceededForList
+		return nil, p.returnServiceBusyErrorForList(request.Domain)
 	}
 
 	return p.persistence.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
@@ -261,7 +267,7 @@ func (p *visibilitySamplingClient) ListClosedWorkflowExecutionsByStatus(
 
 	rateLimiter := p.rateLimitersForList.getRateLimiter(domain, numOfPriorityForList, p.config.VisibilityListMaxQPS(domain))
 	if ok, _ := rateLimiter.GetToken(0, 1); !ok {
-		return nil, ErrPersistenceLimitExceededForList
+		return nil, p.returnServiceBusyErrorForList(request.Domain)
 	}
 
 	return p.persistence.ListClosedWorkflowExecutionsByStatus(ctx, request)
@@ -316,4 +322,17 @@ func getRequestPriority(request *RecordWorkflowExecutionClosedRequest) int {
 		priority = 1 // low priority for completed workflows
 	}
 	return priority
+}
+
+func (p *visibilitySamplingClient) returnServiceBusyErrorForList(domainName string) error {
+	p.logger.Debug("List API request is being sampled", tag.WorkflowDomainName(domainName), tag.Name(caller(1)))
+	return errPersistenceLimitExceededForList
+}
+
+func caller(skip int) string {
+	_, path, lineno, ok := runtime.Caller(skip)
+	if !ok {
+		return ""
+	}
+	return fmt.Sprintf("%v:%v", filepath.Base(path), lineno)
 }
