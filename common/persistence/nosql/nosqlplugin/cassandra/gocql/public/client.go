@@ -1,5 +1,4 @@
 // Copyright (c) 2017-2021 Uber Technologies, Inc.
-// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,15 +18,56 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package external
+
+package public
 
 import (
-	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/native" // needed to load the default gocql client
-	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
+	"context"
+
+	gogocql "github.com/gocql/gocql"
+
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
 
-// NewTestBaseWithPublicCassandra returns a persistence test base backed by cassandra datastore
-// It is only being used by testing against external/public Cassandra, which require to load the default gocql client
-func NewTestBaseWithPublicCassandra(options *persistencetests.TestBaseOptions) persistencetests.TestBase {
-	return persistencetests.NewTestBaseWithCassandra(options)
+var _ gocql.Client = client{}
+
+type (
+	client struct {
+	}
+)
+
+func init() {
+	gocql.RegisterClient(client{})
+}
+
+func (c client) CreateSession(
+	config gocql.ClusterConfig,
+) (gocql.Session, error) {
+	return gocql.NewSession(config)
+}
+
+func (c client) IsTimeoutError(err error) bool {
+	if err == context.DeadlineExceeded {
+		return true
+	}
+	if err == gogocql.ErrTimeoutNoResponse {
+		return true
+	}
+	if err == gogocql.ErrConnectionClosed {
+		return true
+	}
+	_, ok := err.(*gogocql.RequestErrWriteTimeout)
+	return ok
+}
+
+func (c client) IsNotFoundError(err error) bool {
+	return err == gogocql.ErrNotFound
+}
+
+func (c client) IsThrottlingError(err error) bool {
+	if req, ok := err.(gogocql.RequestError); ok {
+		// gocql does not expose the constant errOverloaded = 0x1001
+		return req.Code() == 0x1001
+	}
+	return false
 }

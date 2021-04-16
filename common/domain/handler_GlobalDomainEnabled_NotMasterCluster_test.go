@@ -42,7 +42,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
-	"github.com/uber/cadence/common/persistence/persistence-tests/external"
+	"github.com/uber/cadence/common/persistence/persistence-tests/public"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -73,7 +73,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) SetupSuite() {
 		log.SetOutput(os.Stdout)
 	}
 
-	s.TestBase = external.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
+	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(true, false),
 	})
 	s.TestBase.Setup()

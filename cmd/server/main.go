@@ -25,7 +25,7 @@ import (
 
 	"github.com/uber/cadence/cmd/server/cadence"
 	"github.com/uber/cadence/common/metrics"
-	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/native" // needed to load the default gocql client
+	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public" // needed to load the default gocql client
 	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"                      // needed to load mysql plugin
 	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres"                   // needed to load postgres plugin
 )
