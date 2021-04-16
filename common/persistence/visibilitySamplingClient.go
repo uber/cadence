@@ -22,8 +22,6 @@ package persistence
 
 import (
 	"context"
-	"fmt"
-	"path/filepath"
 	"runtime"
 	"sync"
 
@@ -325,14 +323,15 @@ func getRequestPriority(request *RecordWorkflowExecutionClosedRequest) int {
 }
 
 func (p *visibilitySamplingClient) returnServiceBusyErrorForList(domainName string) error {
-	p.logger.Debug("List API request is being sampled", tag.WorkflowDomainName(domainName), tag.Name(caller(1)))
+	p.logger.Debug("List API request is being sampled", tag.WorkflowDomainName(domainName), tag.Name(callerFuncName(2)))
 	return errPersistenceLimitExceededForList
 }
 
-func caller(skip int) string {
-	_, path, lineno, ok := runtime.Caller(skip)
-	if !ok {
-		return ""
+func callerFuncName(skip int) string {
+	pc, _, _, ok := runtime.Caller(skip)
+	details := runtime.FuncForPC(pc)
+	if ok && details != nil {
+		return details.Name()
 	}
-	return fmt.Sprintf("%v:%v", filepath.Base(path), lineno)
+	return ""
 }
