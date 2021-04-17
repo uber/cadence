@@ -578,6 +578,11 @@ const (
 	// MessagingClientConsumerScope tracks the consumer activities
 	MessagingClientConsumerScope
 
+	// DocstoreLoadTestInsertScope tracks the inserts from bench test
+	DocstoreLoadTestInsertScope
+	// DocstoreLoadTestDeleteScope tracks the deletes from bench test
+	DocstoreLoadTestDeleteScope
+
 	// DomainCacheScope tracks domain cache callbacks
 	DomainCacheScope
 	// HistoryRereplicationByTransferTaskScope tracks history replication calls made by transfer task
@@ -1324,6 +1329,9 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MessagingClientPublishBatchScope: {operation: "MessagingClientPublishBatch"},
 		MessagingClientConsumerScope:     {operation: "MessagingClientConsumerScope"},
 
+		DocstoreLoadTestInsertScope: {operation: "DocstoreLoadTestInsert"},
+		DocstoreLoadTestDeleteScope: {operation: "DocstoreLoadTestDelete"},
+
 		DomainCacheScope:                                      {operation: "DomainCache"},
 		HistoryRereplicationByTransferTaskScope:               {operation: "HistoryRereplicationByTransferTask"},
 		HistoryRereplicationByTimerTaskScope:                  {operation: "HistoryRereplicationByTimerTask"},
@@ -1608,6 +1616,10 @@ const (
 	PersistenceErrDomainAlreadyExistsCounter
 	PersistenceErrBadRequestCounter
 	PersistenceSampledCounter
+	BenchTestRateLimitErrorCounter
+	BenchTestCommitErrorCounter
+	BenchTestRollbackErrorCounter
+	BenchTestRowsInsertedCounter
 
 	CadenceClientRequests
 	CadenceClientFailures
@@ -2078,6 +2090,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PersistenceErrDomainAlreadyExistsCounter:            {metricName: "persistence_errors_domain_already_exists", metricType: Counter},
 		PersistenceErrBadRequestCounter:                     {metricName: "persistence_errors_bad_request", metricType: Counter},
 		PersistenceSampledCounter:                           {metricName: "persistence_sampled", metricType: Counter},
+		BenchTestRateLimitErrorCounter:                      {metricName: "bench_test_rate_limit_errors", metricType: Counter},
+		BenchTestCommitErrorCounter:                         {metricName: "bench_test_commit_errors", metricType: Counter},
+		BenchTestRollbackErrorCounter:                       {metricName: "bench_test_rollback_errors", metricType: Counter},
+		BenchTestRowsInsertedCounter:                        {metricName: "bench_test_rows_inserted", metricType: Counter},
 		CadenceClientRequests:                               {metricName: "cadence_client_requests", metricType: Counter},
 		CadenceClientFailures:                               {metricName: "cadence_client_errors", metricType: Counter},
 		CadenceClientLatency:                                {metricName: "cadence_client_latency", metricType: Timer},
