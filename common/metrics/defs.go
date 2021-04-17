@@ -1616,6 +1616,8 @@ const (
 	PersistenceErrDomainAlreadyExistsCounter
 	PersistenceErrBadRequestCounter
 	PersistenceSampledCounter
+	BenchTestInsertWorkerStarted
+	BenchTestInsertWorkerStopped
 	BenchTestRateLimitErrorCounter
 	BenchTestCommitErrorCounter
 	BenchTestRollbackErrorCounter
@@ -2090,6 +2092,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PersistenceErrDomainAlreadyExistsCounter:            {metricName: "persistence_errors_domain_already_exists", metricType: Counter},
 		PersistenceErrBadRequestCounter:                     {metricName: "persistence_errors_bad_request", metricType: Counter},
 		PersistenceSampledCounter:                           {metricName: "persistence_sampled", metricType: Counter},
+		BenchTestInsertWorkerStarted:                        {metricName: "bench_test_insert_worker_started", metricType: Counter},
+		BenchTestInsertWorkerStopped:                        {metricName: "bench_test_insert_worker_stopped", metricType: Counter},
 		BenchTestRateLimitErrorCounter:                      {metricName: "bench_test_rate_limit_errors", metricType: Counter},
 		BenchTestCommitErrorCounter:                         {metricName: "bench_test_commit_errors", metricType: Counter},
 		BenchTestRollbackErrorCounter:                       {metricName: "bench_test_rollback_errors", metricType: Counter},
