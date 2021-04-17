@@ -6,16 +6,21 @@ services:
       - "3306:3306"
     environment:
       - "MYSQL_ROOT_PASSWORD=root"
-  statsd:
-    image: graphiteapp/graphite-statsd
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus_config.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
     ports:
-      - "8080:80"
-      - "2003:2003"
-      - "8125:8125"
-      - "8126:8126"
+      - '9090:9090'
   cadence:
     image: ubercadence/server:master-auto-setup
     ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8002:8002"
+      - "8003:8003"
       - "7933:7933"
       - "7934:7934"
       - "7935:7935"
@@ -25,11 +30,14 @@ services:
       - "MYSQL_USER=root"
       - "MYSQL_PWD=root"
       - "MYSQL_SEEDS=mysql"
-      - "STATSD_ENDPOINT=statsd:8125"
+      - "PROMETHEUS_ENDPOINT_0=0.0.0.0:8000"
+      - "PROMETHEUS_ENDPOINT_1=0.0.0.0:8001"
+      - "PROMETHEUS_ENDPOINT_2=0.0.0.0:8002"
+      - "PROMETHEUS_ENDPOINT_3=0.0.0.0:8003"
       - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml"
     depends_on:
       - mysql
-      - statsd
+      - prometheus
   cadence-web:
     image: ubercadence/web:latest
     environment:
@@ -38,3 +46,10 @@ services:
       - "8088:8088"
     depends_on:
       - cadence
+  grafana:
+    image: grafana/grafana
+    user: "1000"
+    depends_on:
+      - prometheus
+    ports:
+      - '3000:3000'

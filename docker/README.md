@@ -1,37 +1,49 @@
-Quickstart for localhost development
+Quickstart for development with local Cadence server 
 ====================================
 
-Install docker: https://docs.docker.com/engine/installation/
+**Prerequisite**: [Docker + Docker compose](https://docs.docker.com/engine/installation/) 
 
 Following steps will bring up the docker container running cadence server
-along with all its dependencies (cassandra, statsd, graphite). Exposes cadence
-frontend on port 7933 and grafana metrics frontend on port 8080.
+along with all its dependencies (cassandra, prometheus, grafana). Exposes cadence
+frontend on port 7933, web on port 8088, and grafana on port 3000.
 
 ```
 cd $GOPATH/src/github.com/uber/cadence/docker
 docker-compose up
 ```
+> Note: Above command will run with `master-auto-setup` image, which is a changing image all the time.
+> You can use a released image if you want a stable version. See the below section of "Using a released image".
 
-View metrics at localhost:8080/dashboard    
-View Cadence-Web at localhost:8088  
-Use Cadence-CLI with `docker run --network=host --rm ubercadence/cli:master`
+To update your `master-auto-setup` image to the latest version
+```
+docker pull ubercadence/server:master-auto-setup
 
-For example to register new domain 'test-domain' with 1 retention day
-`docker run --network=host --rm ubercadence/cli:master --do test-domain domain register -rd 1`
+```
+
+* View Cadence-Web at http://localhost:8088  
+* View metrics at http://localhost:3000 , with default username/password: admin/admin    
+  * Configure Prometheus as datasource: use `http://host.docker.internal:9090` as URL of prometheus.
 
 Using different docker-compose files
 -----------------------
 By default `docker-compose up` will run with `docker-compose.yaml` in this folder.
 This compose file is running with Cassandra, with basic visibility, 
-using Statsd for emitting metric to Graphite, with Grafana access. 
+using Prometheus for emitting metric, with Grafana access. 
+
 
 We also provide several other compose files for different features/modes:
+
 * docker-compose-es.yml enables advanced visibility with ElasticSearch 6.x
 * docker-compose-es-v7.yml enables advanced visibility with ElasticSearch 7.x
 * docker-compose-mysql.yml uses MySQL as persistence storage
 * docker-compose-postgres.yml uses PosstgreSQL as persistence storage
-* docker-compose-prometheus.yaml runs with Prometheus
+* docker-compose-statsd.yaml runs with Statsd+Graphite
 * docker-compose-multiclusters.yaml runs with 2 cadence clusters
+
+For example:
+```
+docker-compose -f docker-compose-mysql.yml up
+```
 
 Also feel free to make your own to combine the above features.
 
@@ -47,7 +59,7 @@ contain a **docker.tar.gz** file (docker-compose startup scripts).
 Go [here](https://github.com/uber/cadence/releases/latest) to download a latest **docker.tar.gz** 
 
 Execute the following
-commands to start a pre-built image along with all dependencies (cassandra/statsd).
+commands to start a pre-built image along with all dependencies.
 
 ```
 tar -xzvf docker.tar.gz
