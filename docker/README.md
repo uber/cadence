@@ -26,7 +26,7 @@ docker pull ubercadence/server:master-auto-setup
 
 Using different docker-compose files
 -----------------------
-By default `docker-compose up` will run with `docker-compose.yaml` in this folder.
+By default `docker-compose up` will run with `docker-compose.yml` in this folder.
 This compose file is running with Cassandra, with basic visibility, 
 using Prometheus for emitting metric, with Grafana access. 
 
@@ -36,7 +36,7 @@ We also provide several other compose files for different features/modes:
 * docker-compose-es.yml enables advanced visibility with ElasticSearch 6.x
 * docker-compose-es-v7.yml enables advanced visibility with ElasticSearch 7.x
 * docker-compose-mysql.yml uses MySQL as persistence storage
-* docker-compose-postgres.yml uses PosstgreSQL as persistence storage
+* docker-compose-postgres.yml uses PostgreSQL as persistence storage
 * docker-compose-statsd.yaml runs with Statsd+Graphite
 * docker-compose-multiclusters.yaml runs with 2 cadence clusters
 
