@@ -46,6 +46,7 @@ const (
 
 const (
 	shadowWorkflowLatency       = "shadow-workflow-latency"
+	shadowWorkflowStarted       = "shadow-workflow-started"
 	shadowWorkflowCompleted     = "shadow-workflow-completed"
 	shadowWorkflowContinueAsNew = "shadow-workflow-continueasnew"
 	shadowWorkflowFailed        = "shadow-workflow-failed"
@@ -64,7 +65,7 @@ func beginWorkflow(
 		zap.String(tagShadowTaskList, params.GetTaskList()),
 	)
 	if params.LastRunResult == nil {
-		taggedScope.Counter("shadow-workflow-started").Inc(1)
+		taggedScope.Counter(shadowWorkflowStarted).Inc(1)
 		taggedLogger.Info("Shadow workflow started")
 	}
 	return &workflowProfile{
