@@ -513,11 +513,19 @@ func (adh *adminHandlerImpl) DescribeCluster(
 	scope, sw := adh.startRequestProfile(metrics.AdminGetWorkflowExecutionRawHistoryV2Scope)
 	defer sw.Stop()
 
-	persistenceName := adh.Resource.GetVisibilityManager().GetName()
-	advancedVisibilityEnabled := adh.params.ESConfig != nil
-	persistenceInfo := types.PersistenceInfo{
-		Name:                      &persistenceName,
-		AdvancedVisibilityEnabled: &advancedVisibilityEnabled,
+	// expose visibility store backend and if advanced options are available
+	ave := types.PersistenceFeature{
+		Key:     "advancedVisibilityEnabled",
+		Enabled: adh.params.ESConfig != nil,
+	}
+	visibilityStoreInfo := types.PersistenceInfo{
+		Backend:  adh.Resource.GetVisibilityManager().GetName(),
+		Features: []*types.PersistenceFeature{&ave},
+	}
+
+	// expose history store backend
+	historyStoreInfo := types.PersistenceInfo{
+		Backend: adh.GetHistoryManager().GetName(),
 	}
 
 	membershipInfo := types.MembershipInfo{}
@@ -566,8 +574,11 @@ func (adh *adminHandlerImpl) DescribeCluster(
 			GoSdk:   client.SupportedGoSDKVersion,
 			JavaSdk: client.SupportedJavaSDKVersion,
 		},
-		MembershipInfo:  &membershipInfo,
-		PersistenceInfo: &persistenceInfo,
+		MembershipInfo: &membershipInfo,
+		PersistenceInfo: map[string]*types.PersistenceInfo{
+			"visibilityStore": &visibilityStoreInfo,
+			"historyStore":    &historyStoreInfo,
+		},
 	}, nil
 }
 
