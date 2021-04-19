@@ -42,7 +42,7 @@ const (
 	// SupportedGoSDKVersion indicates the highest go sdk version server will accept requests from
 	SupportedGoSDKVersion = "1.7.0"
 	// SupportedJavaSDKVersion indicates the highest java sdk version server will accept requests from
-	SupportedJavaSDKVersion = "1.7.0"
+	SupportedJavaSDKVersion = "1.4.0"
 	// SupportedCLIVersion indicates the highest cli version server will accept requests from
 	SupportedCLIVersion = "1.7.0"
 
