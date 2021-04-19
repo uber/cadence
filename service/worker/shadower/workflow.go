@@ -34,11 +34,11 @@ import (
 )
 
 const (
-	defaultScanWorkflowPageSize     = 2000
+	defaultScanWorkflowPageSize     = 1000
 	defaultSamplingRate             = 1.0
 	defaultReplayConcurrency        = 1
 	defaultMaxReplayConcurrency     = 50
-	defaultMaxShadowCountPerRun     = 100000
+	defaultMaxShadowCountPerRun     = 20000
 	defaultWaitDurationPerIteration = 5 * time.Minute
 )
 
@@ -98,9 +98,10 @@ func shadowWorkflow(
 	replayWorkflowCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
 		TaskList:               params.GetTaskList(),
 		ScheduleToStartTimeout: time.Minute,
-		StartToCloseTimeout:    time.Hour,
+		StartToCloseTimeout:    time.Duration(config.ScanWorkflowPageSize/params.GetConcurrency()+1) * time.Minute,
 		// do not use a short heartbeat timeout here,
-		// as replay may take some time if workflow history is large or retrying due to some transient error
+		// as replay may take some time if workflow history is large or retrying due to some transient errors
+		// this is mainly for java, go replay activity can enable auto heartbeating
 		HeartbeatTimeout: 2 * time.Minute,
 		RetryPolicy:      retryPolicy,
 	})
