@@ -198,6 +198,19 @@ func (e *ServiceBusyError) YARPCErrorCode() *yarpcerrors.Code {
 // Name is the error name for ServiceBusyError.
 func (e *ServiceBusyError) YARPCErrorName() string { return "ServiceBusyError" }
 
+// YARPCErrorCode returns nil for WorkflowExecutionAlreadyCompletedError.
+//
+// This is derived from the rpc.code annotation on the Thrift exception.
+func (e *WorkflowExecutionAlreadyCompletedError) YARPCErrorCode() *yarpcerrors.Code {
+
+	return nil
+}
+
+// Name is the error name for WorkflowExecutionAlreadyCompletedError.
+func (e *WorkflowExecutionAlreadyCompletedError) YARPCErrorName() string {
+	return "WorkflowExecutionAlreadyCompletedError"
+}
+
 // YARPCErrorCode returns nil for WorkflowExecutionAlreadyStartedError.
 //
 // This is derived from the rpc.code annotation on the Thrift exception.

@@ -331,7 +331,46 @@ func (v *AddSearchAttributeRequest) IsSetSecurityToken() bool {
 type DescribeClusterResponse struct {
 	SupportedClientVersions *shared.SupportedClientVersions `json:"supportedClientVersions,omitempty"`
 	MembershipInfo          *MembershipInfo                 `json:"membershipInfo,omitempty"`
+	PersistenceInfo         map[string]*PersistenceInfo     `json:"persistenceInfo,omitempty"`
 }
+
+type _Map_String_PersistenceInfo_MapItemList map[string]*PersistenceInfo
+
+func (m _Map_String_PersistenceInfo_MapItemList) ForEach(f func(wire.MapItem) error) error {
+	for k, v := range m {
+		if v == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", k)
+		}
+		kw, err := wire.NewValueString(k), error(nil)
+		if err != nil {
+			return err
+		}
+
+		vw, err := v.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(wire.MapItem{Key: kw, Value: vw})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m _Map_String_PersistenceInfo_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_String_PersistenceInfo_MapItemList) KeyType() wire.Type {
+	return wire.TBinary
+}
+
+func (_Map_String_PersistenceInfo_MapItemList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_Map_String_PersistenceInfo_MapItemList) Close() {}
 
 // ToWire translates a DescribeClusterResponse struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
@@ -350,7 +389,7 @@ type DescribeClusterResponse struct {
 //   }
 func (v *DescribeClusterResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [2]wire.Field
+		fields [3]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -372,6 +411,14 @@ func (v *DescribeClusterResponse) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 20, Value: w}
 		i++
 	}
+	if v.PersistenceInfo != nil {
+		w, err = wire.NewValueMap(_Map_String_PersistenceInfo_MapItemList(v.PersistenceInfo)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
@@ -386,6 +433,40 @@ func _MembershipInfo_Read(w wire.Value) (*MembershipInfo, error) {
 	var v MembershipInfo
 	err := v.FromWire(w)
 	return &v, err
+}
+
+func _PersistenceInfo_Read(w wire.Value) (*PersistenceInfo, error) {
+	var v PersistenceInfo
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _Map_String_PersistenceInfo_Read(m wire.MapItemList) (map[string]*PersistenceInfo, error) {
+	if m.KeyType() != wire.TBinary {
+		return nil, nil
+	}
+
+	if m.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make(map[string]*PersistenceInfo, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
+		k, err := x.Key.GetString(), error(nil)
+		if err != nil {
+			return err
+		}
+
+		v, err := _PersistenceInfo_Read(x.Value)
+		if err != nil {
+			return err
+		}
+
+		o[k] = v
+		return nil
+	})
+	m.Close()
+	return o, err
 }
 
 // FromWire deserializes a DescribeClusterResponse struct from its Thrift-level
@@ -426,6 +507,14 @@ func (v *DescribeClusterResponse) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 30:
+			if field.Value.Type() == wire.TMap {
+				v.PersistenceInfo, err = _Map_String_PersistenceInfo_Read(field.Value.GetMap())
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -439,7 +528,7 @@ func (v *DescribeClusterResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [2]string
+	var fields [3]string
 	i := 0
 	if v.SupportedClientVersions != nil {
 		fields[i] = fmt.Sprintf("SupportedClientVersions: %v", v.SupportedClientVersions)
@@ -449,8 +538,29 @@ func (v *DescribeClusterResponse) String() string {
 		fields[i] = fmt.Sprintf("MembershipInfo: %v", v.MembershipInfo)
 		i++
 	}
+	if v.PersistenceInfo != nil {
+		fields[i] = fmt.Sprintf("PersistenceInfo: %v", v.PersistenceInfo)
+		i++
+	}
 
 	return fmt.Sprintf("DescribeClusterResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _Map_String_PersistenceInfo_Equals(lhs, rhs map[string]*PersistenceInfo) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for lk, lv := range lhs {
+		rv, ok := rhs[lk]
+		if !ok {
+			return false
+		}
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+	return true
 }
 
 // Equals returns true if all the fields of this DescribeClusterResponse match the
@@ -469,8 +579,22 @@ func (v *DescribeClusterResponse) Equals(rhs *DescribeClusterResponse) bool {
 	if !((v.MembershipInfo == nil && rhs.MembershipInfo == nil) || (v.MembershipInfo != nil && rhs.MembershipInfo != nil && v.MembershipInfo.Equals(rhs.MembershipInfo))) {
 		return false
 	}
+	if !((v.PersistenceInfo == nil && rhs.PersistenceInfo == nil) || (v.PersistenceInfo != nil && rhs.PersistenceInfo != nil && _Map_String_PersistenceInfo_Equals(v.PersistenceInfo, rhs.PersistenceInfo))) {
+		return false
+	}
 
 	return true
+}
+
+type _Map_String_PersistenceInfo_Zapper map[string]*PersistenceInfo
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of _Map_String_PersistenceInfo_Zapper.
+func (m _Map_String_PersistenceInfo_Zapper) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	for k, v := range m {
+		err = multierr.Append(err, enc.AddObject((string)(k), v))
+	}
+	return err
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
@@ -484,6 +608,9 @@ func (v *DescribeClusterResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (e
 	}
 	if v.MembershipInfo != nil {
 		err = multierr.Append(err, enc.AddObject("membershipInfo", v.MembershipInfo))
+	}
+	if v.PersistenceInfo != nil {
+		err = multierr.Append(err, enc.AddObject("persistenceInfo", (_Map_String_PersistenceInfo_Zapper)(v.PersistenceInfo)))
 	}
 	return err
 }
@@ -516,6 +643,21 @@ func (v *DescribeClusterResponse) GetMembershipInfo() (o *MembershipInfo) {
 // IsSetMembershipInfo returns true if MembershipInfo is not nil.
 func (v *DescribeClusterResponse) IsSetMembershipInfo() bool {
 	return v != nil && v.MembershipInfo != nil
+}
+
+// GetPersistenceInfo returns the value of PersistenceInfo if it is set or its
+// zero value if it is unset.
+func (v *DescribeClusterResponse) GetPersistenceInfo() (o map[string]*PersistenceInfo) {
+	if v != nil && v.PersistenceInfo != nil {
+		return v.PersistenceInfo
+	}
+
+	return
+}
+
+// IsSetPersistenceInfo returns true if PersistenceInfo is not nil.
+func (v *DescribeClusterResponse) IsSetPersistenceInfo() bool {
+	return v != nil && v.PersistenceInfo != nil
 }
 
 type DescribeWorkflowExecutionRequest struct {
@@ -2256,6 +2398,760 @@ func (v *MembershipInfo) IsSetRings() bool {
 	return v != nil && v.Rings != nil
 }
 
+type PersistenceFeature struct {
+	Key     *string `json:"key,omitempty"`
+	Enabled *bool   `json:"enabled,omitempty"`
+}
+
+// ToWire translates a PersistenceFeature struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *PersistenceFeature) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Key != nil {
+		w, err = wire.NewValueString(*(v.Key)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.Enabled != nil {
+		w, err = wire.NewValueBool(*(v.Enabled)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a PersistenceFeature struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a PersistenceFeature struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v PersistenceFeature
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *PersistenceFeature) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Key = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.Enabled = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a PersistenceFeature
+// struct.
+func (v *PersistenceFeature) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Key != nil {
+		fields[i] = fmt.Sprintf("Key: %v", *(v.Key))
+		i++
+	}
+	if v.Enabled != nil {
+		fields[i] = fmt.Sprintf("Enabled: %v", *(v.Enabled))
+		i++
+	}
+
+	return fmt.Sprintf("PersistenceFeature{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _Bool_EqualsPtr(lhs, rhs *bool) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return (x == y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+// Equals returns true if all the fields of this PersistenceFeature match the
+// provided PersistenceFeature.
+//
+// This function performs a deep comparison.
+func (v *PersistenceFeature) Equals(rhs *PersistenceFeature) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Key, rhs.Key) {
+		return false
+	}
+	if !_Bool_EqualsPtr(v.Enabled, rhs.Enabled) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of PersistenceFeature.
+func (v *PersistenceFeature) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Key != nil {
+		enc.AddString("key", *v.Key)
+	}
+	if v.Enabled != nil {
+		enc.AddBool("enabled", *v.Enabled)
+	}
+	return err
+}
+
+// GetKey returns the value of Key if it is set or its
+// zero value if it is unset.
+func (v *PersistenceFeature) GetKey() (o string) {
+	if v != nil && v.Key != nil {
+		return *v.Key
+	}
+
+	return
+}
+
+// IsSetKey returns true if Key is not nil.
+func (v *PersistenceFeature) IsSetKey() bool {
+	return v != nil && v.Key != nil
+}
+
+// GetEnabled returns the value of Enabled if it is set or its
+// zero value if it is unset.
+func (v *PersistenceFeature) GetEnabled() (o bool) {
+	if v != nil && v.Enabled != nil {
+		return *v.Enabled
+	}
+
+	return
+}
+
+// IsSetEnabled returns true if Enabled is not nil.
+func (v *PersistenceFeature) IsSetEnabled() bool {
+	return v != nil && v.Enabled != nil
+}
+
+type PersistenceInfo struct {
+	Backend  *string               `json:"backend,omitempty"`
+	Settings []*PersistenceSetting `json:"settings,omitempty"`
+	Features []*PersistenceFeature `json:"features,omitempty"`
+}
+
+type _List_PersistenceSetting_ValueList []*PersistenceSetting
+
+func (v _List_PersistenceSetting_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_PersistenceSetting_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_PersistenceSetting_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_PersistenceSetting_ValueList) Close() {}
+
+type _List_PersistenceFeature_ValueList []*PersistenceFeature
+
+func (v _List_PersistenceFeature_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_PersistenceFeature_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_PersistenceFeature_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_PersistenceFeature_ValueList) Close() {}
+
+// ToWire translates a PersistenceInfo struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *PersistenceInfo) ToWire() (wire.Value, error) {
+	var (
+		fields [3]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Backend != nil {
+		w, err = wire.NewValueString(*(v.Backend)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.Settings != nil {
+		w, err = wire.NewValueList(_List_PersistenceSetting_ValueList(v.Settings)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.Features != nil {
+		w, err = wire.NewValueList(_List_PersistenceFeature_ValueList(v.Features)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _PersistenceSetting_Read(w wire.Value) (*PersistenceSetting, error) {
+	var v PersistenceSetting
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_PersistenceSetting_Read(l wire.ValueList) ([]*PersistenceSetting, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*PersistenceSetting, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _PersistenceSetting_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
+}
+
+func _PersistenceFeature_Read(w wire.Value) (*PersistenceFeature, error) {
+	var v PersistenceFeature
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_PersistenceFeature_Read(l wire.ValueList) ([]*PersistenceFeature, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*PersistenceFeature, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _PersistenceFeature_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
+}
+
+// FromWire deserializes a PersistenceInfo struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a PersistenceInfo struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v PersistenceInfo
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *PersistenceInfo) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Backend = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TList {
+				v.Settings, err = _List_PersistenceSetting_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TList {
+				v.Features, err = _List_PersistenceFeature_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a PersistenceInfo
+// struct.
+func (v *PersistenceInfo) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [3]string
+	i := 0
+	if v.Backend != nil {
+		fields[i] = fmt.Sprintf("Backend: %v", *(v.Backend))
+		i++
+	}
+	if v.Settings != nil {
+		fields[i] = fmt.Sprintf("Settings: %v", v.Settings)
+		i++
+	}
+	if v.Features != nil {
+		fields[i] = fmt.Sprintf("Features: %v", v.Features)
+		i++
+	}
+
+	return fmt.Sprintf("PersistenceInfo{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _List_PersistenceSetting_Equals(lhs, rhs []*PersistenceSetting) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func _List_PersistenceFeature_Equals(lhs, rhs []*PersistenceFeature) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Equals returns true if all the fields of this PersistenceInfo match the
+// provided PersistenceInfo.
+//
+// This function performs a deep comparison.
+func (v *PersistenceInfo) Equals(rhs *PersistenceInfo) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Backend, rhs.Backend) {
+		return false
+	}
+	if !((v.Settings == nil && rhs.Settings == nil) || (v.Settings != nil && rhs.Settings != nil && _List_PersistenceSetting_Equals(v.Settings, rhs.Settings))) {
+		return false
+	}
+	if !((v.Features == nil && rhs.Features == nil) || (v.Features != nil && rhs.Features != nil && _List_PersistenceFeature_Equals(v.Features, rhs.Features))) {
+		return false
+	}
+
+	return true
+}
+
+type _List_PersistenceSetting_Zapper []*PersistenceSetting
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_PersistenceSetting_Zapper.
+func (l _List_PersistenceSetting_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
+	}
+	return err
+}
+
+type _List_PersistenceFeature_Zapper []*PersistenceFeature
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_PersistenceFeature_Zapper.
+func (l _List_PersistenceFeature_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
+	}
+	return err
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of PersistenceInfo.
+func (v *PersistenceInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Backend != nil {
+		enc.AddString("backend", *v.Backend)
+	}
+	if v.Settings != nil {
+		err = multierr.Append(err, enc.AddArray("settings", (_List_PersistenceSetting_Zapper)(v.Settings)))
+	}
+	if v.Features != nil {
+		err = multierr.Append(err, enc.AddArray("features", (_List_PersistenceFeature_Zapper)(v.Features)))
+	}
+	return err
+}
+
+// GetBackend returns the value of Backend if it is set or its
+// zero value if it is unset.
+func (v *PersistenceInfo) GetBackend() (o string) {
+	if v != nil && v.Backend != nil {
+		return *v.Backend
+	}
+
+	return
+}
+
+// IsSetBackend returns true if Backend is not nil.
+func (v *PersistenceInfo) IsSetBackend() bool {
+	return v != nil && v.Backend != nil
+}
+
+// GetSettings returns the value of Settings if it is set or its
+// zero value if it is unset.
+func (v *PersistenceInfo) GetSettings() (o []*PersistenceSetting) {
+	if v != nil && v.Settings != nil {
+		return v.Settings
+	}
+
+	return
+}
+
+// IsSetSettings returns true if Settings is not nil.
+func (v *PersistenceInfo) IsSetSettings() bool {
+	return v != nil && v.Settings != nil
+}
+
+// GetFeatures returns the value of Features if it is set or its
+// zero value if it is unset.
+func (v *PersistenceInfo) GetFeatures() (o []*PersistenceFeature) {
+	if v != nil && v.Features != nil {
+		return v.Features
+	}
+
+	return
+}
+
+// IsSetFeatures returns true if Features is not nil.
+func (v *PersistenceInfo) IsSetFeatures() bool {
+	return v != nil && v.Features != nil
+}
+
+type PersistenceSetting struct {
+	Key   *string `json:"key,omitempty"`
+	Value *string `json:"value,omitempty"`
+}
+
+// ToWire translates a PersistenceSetting struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *PersistenceSetting) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Key != nil {
+		w, err = wire.NewValueString(*(v.Key)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.Value != nil {
+		w, err = wire.NewValueString(*(v.Value)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a PersistenceSetting struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a PersistenceSetting struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v PersistenceSetting
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *PersistenceSetting) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Key = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Value = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a PersistenceSetting
+// struct.
+func (v *PersistenceSetting) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Key != nil {
+		fields[i] = fmt.Sprintf("Key: %v", *(v.Key))
+		i++
+	}
+	if v.Value != nil {
+		fields[i] = fmt.Sprintf("Value: %v", *(v.Value))
+		i++
+	}
+
+	return fmt.Sprintf("PersistenceSetting{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this PersistenceSetting match the
+// provided PersistenceSetting.
+//
+// This function performs a deep comparison.
+func (v *PersistenceSetting) Equals(rhs *PersistenceSetting) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Key, rhs.Key) {
+		return false
+	}
+	if !_String_EqualsPtr(v.Value, rhs.Value) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of PersistenceSetting.
+func (v *PersistenceSetting) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Key != nil {
+		enc.AddString("key", *v.Key)
+	}
+	if v.Value != nil {
+		enc.AddString("value", *v.Value)
+	}
+	return err
+}
+
+// GetKey returns the value of Key if it is set or its
+// zero value if it is unset.
+func (v *PersistenceSetting) GetKey() (o string) {
+	if v != nil && v.Key != nil {
+		return *v.Key
+	}
+
+	return
+}
+
+// IsSetKey returns true if Key is not nil.
+func (v *PersistenceSetting) IsSetKey() bool {
+	return v != nil && v.Key != nil
+}
+
+// GetValue returns the value of Value if it is set or its
+// zero value if it is unset.
+func (v *PersistenceSetting) GetValue() (o string) {
+	if v != nil && v.Value != nil {
+		return *v.Value
+	}
+
+	return
+}
+
+// IsSetValue returns true if Value is not nil.
+func (v *PersistenceSetting) IsSetValue() bool {
+	return v != nil && v.Value != nil
+}
+
 type ResendReplicationTasksRequest struct {
 	DomainID      *string `json:"domainID,omitempty"`
 	WorkflowID    *string `json:"workflowID,omitempty"`
@@ -3004,7 +3900,7 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "admin",
 	Package:  "github.com/uber/cadence/.gen/go/admin",
 	FilePath: "admin.thrift",
-	SHA1:     "6b8899c15b18d2022df452b70fe3bf49948daafa",
+	SHA1:     "4330d923209caea6cd6995913b3d77f339c59c79",
 	Includes: []*thriftreflect.ThriftModule{
 		replicator.ThriftModule,
 		shared.ThriftModule,
@@ -3012,7 +3908,7 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\ninclude \"replicator.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privilege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void ResetQueue(1: shared.ResetQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  shared.DescribeQueueResponse DescribeQueue(1: shared.DescribeQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDomainReplicationMessagesResponse GetDomainReplicationMessages(1: replicator.GetDomainReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDLQReplicationMessagesResponse GetDLQReplicationMessages(1: replicator.GetDLQReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReapplyEvents applies stale events to the current workflow and current run\n  **/\n  void ReapplyEvents(1: shared.ReapplyEventsRequest reapplyEventsRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.DomainNotActiveError domainNotActiveError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * DescribeCluster returns information about cadence cluster\n  **/\n  DescribeClusterResponse DescribeCluster()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReadDLQMessages returns messages from DLQ\n  **/\n  replicator.ReadDLQMessagesResponse ReadDLQMessages(1: replicator.ReadDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * PurgeDLQMessages purges messages from DLQ\n  **/\n  void PurgeDLQMessages(1: replicator.PurgeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * MergeDLQMessages merges messages from DLQ\n  **/\n  replicator.MergeDLQMessagesResponse MergeDLQMessages(1: replicator.MergeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * RefreshWorkflowTasks refreshes all tasks of a workflow\n  **/\n  void RefreshWorkflowTasks(1: shared.RefreshWorkflowTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.DomainNotActiveError domainNotActiveError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * ResendReplicationTasks requests replication tasks from remote cluster and apply tasks to current cluster\n  **/\n  void ResendReplicationTasks(1: ResendReplicationTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n      3: shared.EntityNotExistsError entityNotExistError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") startEventVersion\n  50: optional i64 (js.type = \"Long\") endEventId\n  60: optional i64 (js.type = \"Long\") endEventVersion\n  70: optional i32 maximumPageSize\n  80: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n  20: optional string securityToken\n}\n\nstruct HostInfo {\n  10: optional string Identity\n}\n\nstruct RingInfo {\n  10: optional string role\n  20: optional i32 memberCount\n  30: optional list<HostInfo> members\n}\n\nstruct MembershipInfo {\n  10: optional HostInfo currentHost\n  20: optional list<string> reachableMembers\n  30: optional list<RingInfo> rings\n}\n\nstruct DescribeClusterResponse {\n  10: optional shared.SupportedClientVersions supportedClientVersions\n  20: optional MembershipInfo membershipInfo\n}\n\nstruct ResendReplicationTasksRequest {\n  10: optional string domainID\n  20: optional string workflowID\n  30: optional string runID\n  40: optional string remoteCluster\n  50: optional i64 (js.type = \"Long\") startEventID\n  60: optional i64 (js.type = \"Long\") startVersion\n  70: optional i64 (js.type = \"Long\") endEventID\n  80: optional i64 (js.type = \"Long\") endVersion\n}"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\ninclude \"replicator.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privilege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void ResetQueue(1: shared.ResetQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  shared.DescribeQueueResponse DescribeQueue(1: shared.DescribeQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDomainReplicationMessagesResponse GetDomainReplicationMessages(1: replicator.GetDomainReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDLQReplicationMessagesResponse GetDLQReplicationMessages(1: replicator.GetDLQReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReapplyEvents applies stale events to the current workflow and current run\n  **/\n  void ReapplyEvents(1: shared.ReapplyEventsRequest reapplyEventsRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.DomainNotActiveError domainNotActiveError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * DescribeCluster returns information about cadence cluster\n  **/\n  DescribeClusterResponse DescribeCluster()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReadDLQMessages returns messages from DLQ\n  **/\n  replicator.ReadDLQMessagesResponse ReadDLQMessages(1: replicator.ReadDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * PurgeDLQMessages purges messages from DLQ\n  **/\n  void PurgeDLQMessages(1: replicator.PurgeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * MergeDLQMessages merges messages from DLQ\n  **/\n  replicator.MergeDLQMessagesResponse MergeDLQMessages(1: replicator.MergeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * RefreshWorkflowTasks refreshes all tasks of a workflow\n  **/\n  void RefreshWorkflowTasks(1: shared.RefreshWorkflowTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.DomainNotActiveError domainNotActiveError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * ResendReplicationTasks requests replication tasks from remote cluster and apply tasks to current cluster\n  **/\n  void ResendReplicationTasks(1: ResendReplicationTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n      3: shared.EntityNotExistsError entityNotExistError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") startEventVersion\n  50: optional i64 (js.type = \"Long\") endEventId\n  60: optional i64 (js.type = \"Long\") endEventVersion\n  70: optional i32 maximumPageSize\n  80: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n  20: optional string securityToken\n}\n\nstruct HostInfo {\n  10: optional string Identity\n}\n\nstruct RingInfo {\n  10: optional string role\n  20: optional i32 memberCount\n  30: optional list<HostInfo> members\n}\n\nstruct MembershipInfo {\n  10: optional HostInfo currentHost\n  20: optional list<string> reachableMembers\n  30: optional list<RingInfo> rings\n}\n\nstruct PersistenceSetting {\n  10: optional string key\n  20: optional string value\n}\n\nstruct PersistenceFeature {\n  10: optional string key\n  20: optional bool enabled\n}\n\nstruct PersistenceInfo {\n  10: optional string backend\n  20: optional list<PersistenceSetting> settings\n  30: optional list<PersistenceFeature> features\n}\n\nstruct DescribeClusterResponse {\n  10: optional shared.SupportedClientVersions supportedClientVersions\n  20: optional MembershipInfo membershipInfo\n  30: optional map<string,PersistenceInfo> persistenceInfo\n}\n\nstruct ResendReplicationTasksRequest {\n  10: optional string domainID\n  20: optional string workflowID\n  30: optional string runID\n  40: optional string remoteCluster\n  50: optional i64 (js.type = \"Long\") startEventID\n  60: optional i64 (js.type = \"Long\") startVersion\n  70: optional i64 (js.type = \"Long\") endEventID\n  80: optional i64 (js.type = \"Long\") endVersion\n}"
 
 // AdminService_AddSearchAttribute_Args represents the arguments for the AdminService.AddSearchAttribute function.
 //
