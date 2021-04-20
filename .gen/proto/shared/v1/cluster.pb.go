@@ -273,11 +273,187 @@ func (m *DomainCacheInfo) GetNumOfItemsInCacheByName() int64 {
 	return 0
 }
 
+type PersistenceSetting struct {
+	Key                  string   `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Value                string   `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *PersistenceSetting) Reset()         { *m = PersistenceSetting{} }
+func (m *PersistenceSetting) String() string { return proto.CompactTextString(m) }
+func (*PersistenceSetting) ProtoMessage()    {}
+func (*PersistenceSetting) Descriptor() ([]byte, []int) {
+	return fileDescriptor_31e4c5c03631024e, []int{4}
+}
+func (m *PersistenceSetting) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PersistenceSetting) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PersistenceSetting.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PersistenceSetting) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PersistenceSetting.Merge(m, src)
+}
+func (m *PersistenceSetting) XXX_Size() int {
+	return m.Size()
+}
+func (m *PersistenceSetting) XXX_DiscardUnknown() {
+	xxx_messageInfo_PersistenceSetting.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PersistenceSetting proto.InternalMessageInfo
+
+func (m *PersistenceSetting) GetKey() string {
+	if m != nil {
+		return m.Key
+	}
+	return ""
+}
+
+func (m *PersistenceSetting) GetValue() string {
+	if m != nil {
+		return m.Value
+	}
+	return ""
+}
+
+type PersistenceFeature struct {
+	Key                  string   `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Enabled              bool     `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *PersistenceFeature) Reset()         { *m = PersistenceFeature{} }
+func (m *PersistenceFeature) String() string { return proto.CompactTextString(m) }
+func (*PersistenceFeature) ProtoMessage()    {}
+func (*PersistenceFeature) Descriptor() ([]byte, []int) {
+	return fileDescriptor_31e4c5c03631024e, []int{5}
+}
+func (m *PersistenceFeature) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PersistenceFeature) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PersistenceFeature.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PersistenceFeature) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PersistenceFeature.Merge(m, src)
+}
+func (m *PersistenceFeature) XXX_Size() int {
+	return m.Size()
+}
+func (m *PersistenceFeature) XXX_DiscardUnknown() {
+	xxx_messageInfo_PersistenceFeature.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PersistenceFeature proto.InternalMessageInfo
+
+func (m *PersistenceFeature) GetKey() string {
+	if m != nil {
+		return m.Key
+	}
+	return ""
+}
+
+func (m *PersistenceFeature) GetEnabled() bool {
+	if m != nil {
+		return m.Enabled
+	}
+	return false
+}
+
+type PersistenceInfo struct {
+	Backend              string                `protobuf:"bytes,1,opt,name=backend,proto3" json:"backend,omitempty"`
+	Settings             []*PersistenceSetting `protobuf:"bytes,2,rep,name=settings,proto3" json:"settings,omitempty"`
+	Features             []*PersistenceFeature `protobuf:"bytes,3,rep,name=features,proto3" json:"features,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
+}
+
+func (m *PersistenceInfo) Reset()         { *m = PersistenceInfo{} }
+func (m *PersistenceInfo) String() string { return proto.CompactTextString(m) }
+func (*PersistenceInfo) ProtoMessage()    {}
+func (*PersistenceInfo) Descriptor() ([]byte, []int) {
+	return fileDescriptor_31e4c5c03631024e, []int{6}
+}
+func (m *PersistenceInfo) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PersistenceInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PersistenceInfo.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PersistenceInfo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PersistenceInfo.Merge(m, src)
+}
+func (m *PersistenceInfo) XXX_Size() int {
+	return m.Size()
+}
+func (m *PersistenceInfo) XXX_DiscardUnknown() {
+	xxx_messageInfo_PersistenceInfo.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PersistenceInfo proto.InternalMessageInfo
+
+func (m *PersistenceInfo) GetBackend() string {
+	if m != nil {
+		return m.Backend
+	}
+	return ""
+}
+
+func (m *PersistenceInfo) GetSettings() []*PersistenceSetting {
+	if m != nil {
+		return m.Settings
+	}
+	return nil
+}
+
+func (m *PersistenceInfo) GetFeatures() []*PersistenceFeature {
+	if m != nil {
+		return m.Features
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterType((*HostInfo)(nil), "uber.cadence.shared.v1.HostInfo")
 	proto.RegisterType((*RingInfo)(nil), "uber.cadence.shared.v1.RingInfo")
 	proto.RegisterType((*MembershipInfo)(nil), "uber.cadence.shared.v1.MembershipInfo")
 	proto.RegisterType((*DomainCacheInfo)(nil), "uber.cadence.shared.v1.DomainCacheInfo")
+	proto.RegisterType((*PersistenceSetting)(nil), "uber.cadence.shared.v1.PersistenceSetting")
+	proto.RegisterType((*PersistenceFeature)(nil), "uber.cadence.shared.v1.PersistenceFeature")
+	proto.RegisterType((*PersistenceInfo)(nil), "uber.cadence.shared.v1.PersistenceInfo")
 }
 
 func init() {
@@ -285,32 +461,39 @@ func init() {
 }
 
 var fileDescriptor_31e4c5c03631024e = []byte{
-	// 386 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x92, 0xcf, 0xaa, 0xd4, 0x30,
-	0x14, 0x87, 0xc9, 0xad, 0x57, 0xe7, 0x66, 0x2e, 0xfe, 0x09, 0xa8, 0x83, 0xe2, 0x50, 0x8b, 0x48,
-	0x41, 0x48, 0x19, 0x45, 0x17, 0x57, 0x70, 0x71, 0xeb, 0xc2, 0x2e, 0x54, 0xc8, 0xd2, 0x4d, 0x48,
-	0xd3, 0x33, 0x6d, 0x60, 0x92, 0x5c, 0xd2, 0x74, 0x60, 0x16, 0x3e, 0x82, 0x2f, 0xe4, 0x13, 0xb8,
-	0xf4, 0x11, 0x64, 0x9e, 0x44, 0x9a, 0xb6, 0x23, 0xc2, 0x88, 0x77, 0x77, 0x72, 0xce, 0xf7, 0x6b,
-	0xbf, 0x84, 0x83, 0x9f, 0x75, 0x25, 0xb8, 0x4c, 0x8a, 0x0a, 0x8c, 0x84, 0xac, 0x6d, 0x84, 0x83,
-	0x2a, 0xdb, 0xae, 0x32, 0xb9, 0xe9, 0x5a, 0x0f, 0x8e, 0x5e, 0x39, 0xeb, 0x2d, 0x79, 0xd0, 0x53,
-	0x74, 0xa4, 0xe8, 0x40, 0xd1, 0xed, 0x2a, 0x79, 0x8e, 0x67, 0x1f, 0x6c, 0xeb, 0x0b, 0xb3, 0xb6,
-	0xe4, 0x11, 0x9e, 0xa9, 0x0a, 0x8c, 0x57, 0x7e, 0xb7, 0x40, 0x31, 0x4a, 0xcf, 0xd8, 0xe1, 0x9c,
-	0x7c, 0xc5, 0x33, 0xa6, 0x4c, 0x1d, 0x38, 0x82, 0x6f, 0x38, 0xbb, 0x81, 0x91, 0x09, 0x35, 0x79,
-	0x8a, 0xcf, 0x35, 0xe8, 0x12, 0x1c, 0x97, 0xb6, 0x33, 0x7e, 0x71, 0x12, 0xa3, 0xf4, 0x94, 0xcd,
-	0x87, 0x5e, 0xde, 0xb7, 0xc8, 0x05, 0xbe, 0x35, 0x1c, 0xdb, 0x45, 0x14, 0x47, 0xe9, 0xfc, 0x65,
-	0x4c, 0x8f, 0x4b, 0xd1, 0xc9, 0x88, 0x4d, 0x81, 0xe4, 0x3b, 0xc2, 0xb7, 0x3f, 0x0e, 0x75, 0xa3,
-	0xae, 0x82, 0x45, 0x8e, 0xcf, 0x65, 0xe7, 0x1c, 0x18, 0xcf, 0x1b, 0xdb, 0xfa, 0x60, 0x73, 0x9d,
-	0x6f, 0xce, 0xc7, 0x54, 0xdf, 0x20, 0x2f, 0xf0, 0x3d, 0x07, 0x42, 0x36, 0xa2, 0xdc, 0x00, 0x9f,
-	0xec, 0x4e, 0xe2, 0x28, 0x3d, 0x63, 0x77, 0x0f, 0x83, 0xf1, 0xc7, 0xe4, 0x0d, 0x3e, 0x75, 0xca,
-	0xd4, 0xff, 0xd5, 0x9f, 0x1e, 0x8a, 0x0d, 0x78, 0xf2, 0x0d, 0xe1, 0x3b, 0xef, 0xad, 0x16, 0xca,
-	0xe4, 0x42, 0x36, 0x10, 0xec, 0x2f, 0xf0, 0x63, 0xd3, 0x69, 0x6e, 0xd7, 0x5c, 0x79, 0xd0, 0x2d,
-	0x57, 0x86, 0xcb, 0x7e, 0xc8, 0xcb, 0x1d, 0x57, 0x55, 0xb8, 0x4c, 0xc4, 0xee, 0x9b, 0x4e, 0x7f,
-	0x5e, 0x17, 0x3d, 0x50, 0x0c, 0xd9, 0xcb, 0x5d, 0x51, 0x91, 0x77, 0xf8, 0xc9, 0x3f, 0xb3, 0x46,
-	0x68, 0x08, 0x8f, 0x1f, 0xb1, 0x87, 0x47, 0xd2, 0x9f, 0x84, 0x86, 0xcb, 0xfc, 0xc7, 0x7e, 0x89,
-	0x7e, 0xee, 0x97, 0xe8, 0xd7, 0x7e, 0x89, 0xbe, 0xbc, 0xae, 0x95, 0x6f, 0xba, 0x92, 0x4a, 0xab,
-	0xb3, 0xbf, 0x56, 0x89, 0xd6, 0x60, 0xb2, 0xb0, 0x3d, 0x7f, 0xb6, 0xea, 0xed, 0x50, 0x6d, 0x57,
-	0xe5, 0xcd, 0x30, 0x79, 0xf5, 0x3b, 0x00, 0x00, 0xff, 0xff, 0xd8, 0xd5, 0x2a, 0xe3, 0x7f, 0x02,
-	0x00, 0x00,
+	// 499 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x53, 0xdd, 0x8a, 0x13, 0x4d,
+	0x10, 0x65, 0x76, 0xbe, 0x7c, 0x49, 0x2a, 0x8b, 0xbb, 0x36, 0xfe, 0x04, 0xc5, 0x10, 0x07, 0x91,
+	0xa0, 0x30, 0x43, 0x56, 0xf4, 0x62, 0x15, 0x91, 0x8d, 0x2c, 0xe6, 0xc2, 0x1f, 0xda, 0x3b, 0x6f,
+	0x86, 0x9e, 0x9e, 0xca, 0x4c, 0xb3, 0x99, 0xee, 0xa5, 0xa7, 0x27, 0x90, 0x0b, 0x1f, 0xc1, 0x17,
+	0xd2, 0x17, 0xf0, 0xd2, 0x47, 0x90, 0x3c, 0x89, 0x4c, 0xf7, 0x4c, 0x74, 0x31, 0x8b, 0x7b, 0x57,
+	0xd5, 0x75, 0xce, 0xe9, 0x53, 0x55, 0x14, 0x3c, 0xa8, 0x12, 0xd4, 0x11, 0x67, 0x29, 0x4a, 0x8e,
+	0x51, 0x99, 0x33, 0x8d, 0x69, 0xb4, 0x9a, 0x46, 0x7c, 0x59, 0x95, 0x06, 0x75, 0x78, 0xae, 0x95,
+	0x51, 0xe4, 0x56, 0x8d, 0x0a, 0x1b, 0x54, 0xe8, 0x50, 0xe1, 0x6a, 0x1a, 0x3c, 0x84, 0xde, 0x1b,
+	0x55, 0x9a, 0xb9, 0x5c, 0x28, 0x72, 0x07, 0x7a, 0x22, 0x45, 0x69, 0x84, 0x59, 0x0f, 0xbd, 0xb1,
+	0x37, 0xe9, 0xd3, 0x6d, 0x1e, 0x7c, 0x86, 0x1e, 0x15, 0x32, 0xb3, 0x38, 0x02, 0xff, 0x69, 0xb5,
+	0xc4, 0x06, 0x63, 0x63, 0x72, 0x1f, 0xf6, 0x0b, 0x2c, 0x12, 0xd4, 0x31, 0x57, 0x95, 0x34, 0xc3,
+	0xbd, 0xb1, 0x37, 0xe9, 0xd0, 0x81, 0x7b, 0x9b, 0xd5, 0x4f, 0xe4, 0x18, 0xba, 0x2e, 0x2d, 0x87,
+	0xfe, 0xd8, 0x9f, 0x0c, 0x8e, 0xc6, 0xe1, 0x6e, 0x53, 0x61, 0xeb, 0x88, 0xb6, 0x84, 0xe0, 0xab,
+	0x07, 0xd7, 0xde, 0xba, 0x38, 0x17, 0xe7, 0xd6, 0xc5, 0x0c, 0xf6, 0x79, 0xa5, 0x35, 0x4a, 0x13,
+	0xe7, 0xaa, 0x34, 0xd6, 0xcd, 0x55, 0x34, 0x07, 0x0d, 0xab, 0x7e, 0x20, 0x8f, 0xe1, 0xba, 0x46,
+	0xc6, 0x73, 0x96, 0x2c, 0x31, 0x6e, 0xdd, 0xed, 0x8d, 0xfd, 0x49, 0x9f, 0x1e, 0x6e, 0x0b, 0xcd,
+	0xc7, 0xe4, 0x19, 0x74, 0xb4, 0x90, 0xd9, 0x3f, 0xed, 0xb7, 0x83, 0xa2, 0x0e, 0x1e, 0x7c, 0xf1,
+	0xe0, 0xe0, 0xb5, 0x2a, 0x98, 0x90, 0x33, 0xc6, 0x73, 0xb4, 0xee, 0x8f, 0xe1, 0xae, 0xac, 0x8a,
+	0x58, 0x2d, 0x62, 0x61, 0xb0, 0x28, 0x63, 0x21, 0x63, 0x5e, 0x17, 0xe3, 0x64, 0x1d, 0x8b, 0xd4,
+	0x36, 0xe3, 0xd3, 0x9b, 0xb2, 0x2a, 0xde, 0x2f, 0xe6, 0x35, 0x60, 0xee, 0xb8, 0x27, 0xeb, 0x79,
+	0x4a, 0x5e, 0xc2, 0xbd, 0x4b, 0xb9, 0x92, 0x15, 0x68, 0x87, 0xef, 0xd3, 0xdb, 0x3b, 0xd8, 0xef,
+	0x58, 0x81, 0xc1, 0x0b, 0x20, 0x1f, 0x50, 0x97, 0xa2, 0x34, 0xb5, 0xf1, 0x8f, 0x68, 0x8c, 0x90,
+	0x19, 0x39, 0x04, 0xff, 0x0c, 0xdb, 0xc5, 0xd7, 0x21, 0xb9, 0x01, 0x9d, 0x15, 0x5b, 0x56, 0x4e,
+	0xaf, 0x4f, 0x5d, 0x12, 0xbc, 0xba, 0xc0, 0x3e, 0x45, 0x66, 0x2a, 0x8d, 0x3b, 0xd8, 0x43, 0xe8,
+	0xa2, 0xac, 0xc7, 0x97, 0x5a, 0x7e, 0x8f, 0xb6, 0x69, 0xf0, 0xcd, 0x83, 0x83, 0x3f, 0x24, 0xec,
+	0x3c, 0x86, 0xd0, 0x4d, 0x18, 0x3f, 0x43, 0x99, 0x36, 0x1a, 0x6d, 0x4a, 0x4e, 0xa1, 0x57, 0x3a,
+	0x8b, 0x6e, 0x33, 0x83, 0xa3, 0x47, 0x97, 0x0d, 0xfe, 0xef, 0xae, 0xe8, 0x96, 0x5b, 0xeb, 0x2c,
+	0x9c, 0xd9, 0x76, 0x81, 0x57, 0xd1, 0x69, 0xfa, 0xa3, 0x5b, 0xee, 0xc9, 0xec, 0xfb, 0x66, 0xe4,
+	0xfd, 0xd8, 0x8c, 0xbc, 0x9f, 0x9b, 0x91, 0xf7, 0xe9, 0x69, 0x26, 0x4c, 0x5e, 0x25, 0x21, 0x57,
+	0x45, 0x74, 0xe1, 0x10, 0xc3, 0x0c, 0x65, 0x64, 0x6f, 0xef, 0xf7, 0x4d, 0x3e, 0x77, 0xd1, 0x6a,
+	0x9a, 0xfc, 0x6f, 0x2b, 0x4f, 0x7e, 0x05, 0x00, 0x00, 0xff, 0xff, 0x93, 0x7f, 0x12, 0xb0, 0xbd,
+	0x03, 0x00, 0x00,
 }
 
 func (m *HostInfo) Marshal() (dAtA []byte, err error) {
@@ -499,6 +682,153 @@ func (m *DomainCacheInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *PersistenceSetting) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PersistenceSetting) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PersistenceSetting) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.Value) > 0 {
+		i -= len(m.Value)
+		copy(dAtA[i:], m.Value)
+		i = encodeVarintCluster(dAtA, i, uint64(len(m.Value)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Key) > 0 {
+		i -= len(m.Key)
+		copy(dAtA[i:], m.Key)
+		i = encodeVarintCluster(dAtA, i, uint64(len(m.Key)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *PersistenceFeature) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PersistenceFeature) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PersistenceFeature) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.Enabled {
+		i--
+		if m.Enabled {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.Key) > 0 {
+		i -= len(m.Key)
+		copy(dAtA[i:], m.Key)
+		i = encodeVarintCluster(dAtA, i, uint64(len(m.Key)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *PersistenceInfo) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PersistenceInfo) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PersistenceInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.Features) > 0 {
+		for iNdEx := len(m.Features) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Features[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintCluster(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x1a
+		}
+	}
+	if len(m.Settings) > 0 {
+		for iNdEx := len(m.Settings) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Settings[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintCluster(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.Backend) > 0 {
+		i -= len(m.Backend)
+		copy(dAtA[i:], m.Backend)
+		i = encodeVarintCluster(dAtA, i, uint64(len(m.Backend)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintCluster(dAtA []byte, offset int, v uint64) int {
 	offset -= sovCluster(v)
 	base := offset
@@ -590,6 +920,73 @@ func (m *DomainCacheInfo) Size() (n int) {
 	}
 	if m.NumOfItemsInCacheByName != 0 {
 		n += 1 + sovCluster(uint64(m.NumOfItemsInCacheByName))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *PersistenceSetting) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Key)
+	if l > 0 {
+		n += 1 + l + sovCluster(uint64(l))
+	}
+	l = len(m.Value)
+	if l > 0 {
+		n += 1 + l + sovCluster(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *PersistenceFeature) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Key)
+	if l > 0 {
+		n += 1 + l + sovCluster(uint64(l))
+	}
+	if m.Enabled {
+		n += 2
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *PersistenceInfo) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Backend)
+	if l > 0 {
+		n += 1 + l + sovCluster(uint64(l))
+	}
+	if len(m.Settings) > 0 {
+		for _, e := range m.Settings {
+			l = e.Size()
+			n += 1 + l + sovCluster(uint64(l))
+		}
+	}
+	if len(m.Features) > 0 {
+		for _, e := range m.Features {
+			l = e.Size()
+			n += 1 + l + sovCluster(uint64(l))
+		}
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -1051,6 +1448,384 @@ func (m *DomainCacheInfo) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCluster(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *PersistenceSetting) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCluster
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PersistenceSetting: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PersistenceSetting: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Key", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Key = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Value", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Value = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCluster(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *PersistenceFeature) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCluster
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PersistenceFeature: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PersistenceFeature: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Key", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Key = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Enabled", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Enabled = bool(v != 0)
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCluster(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *PersistenceInfo) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCluster
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PersistenceInfo: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PersistenceInfo: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Backend", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Backend = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Settings", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Settings = append(m.Settings, &PersistenceSetting{})
+			if err := m.Settings[len(m.Settings)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Features", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Features = append(m.Features, &PersistenceFeature{})
+			if err := m.Features[len(m.Features)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCluster(dAtA[iNdEx:])
