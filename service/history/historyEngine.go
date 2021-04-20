@@ -30,6 +30,7 @@ import (
 
 	"github.com/pborman/uuid"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/client/admin"
@@ -750,7 +751,12 @@ func (e *historyEngineImpl) terminateAndStartWorkflow(
 UpdateWorkflowLoop:
 	for attempt := 0; attempt < workflow.ConditionalRetryCount; attempt++ {
 		if !runningMutableState.IsWorkflowExecutionRunning() {
-			return nil, workflow.ErrAlreadyCompleted
+			return nil, execution.VersionBasedError(
+				workflow.ErrAlreadyCompleted,
+				"1.7.0",
+				yarpc.CallFromContext(ctx).Header(common.FeatureVersionHeaderName),
+				workflow.ErrNotExists,
+			)
 		}
 
 		if err := execution.TerminateWorkflow(
@@ -1240,7 +1246,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 			})
 			clearStickinessStopWatch.Stop()
 			cancel()
-			if err != nil && err != workflow.ErrAlreadyCompleted {
+			if err != nil && err != workflow.ErrAlreadyCompleted && err != workflow.ErrNotExists {
 				return nil, err
 			}
 			scope.IncCounter(metrics.DirectQueryDispatchClearStickinessSuccessCount)
@@ -1413,7 +1419,7 @@ func (e *historyEngineImpl) ResetStickyTaskList(
 	err := workflow.UpdateWithAction(ctx, e.executionCache, domainID, *resetRequest.Execution, false, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return workflow.ErrAlreadyCompleted
+				return workflow.ErrNotExists
 			}
 			mutableState.ClearStickyness()
 			return nil
@@ -1602,7 +1608,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 	err = workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, false, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return workflow.ErrAlreadyCompleted
+				return workflow.ErrNotExists
 			}
 
 			scheduleID := request.GetScheduleID()
@@ -1737,7 +1743,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 	err = workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, true, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return workflow.ErrAlreadyCompleted
+				return workflow.ErrNotExists
 			}
 
 			scheduleID := token.ScheduleID
@@ -1821,9 +1827,9 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 		domainID,
 		workflowExecution,
 		e.timeSource.Now(),
-		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
+		func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, workflow.ErrAlreadyCompleted
+				return nil, workflow.ErrNotExists
 			}
 
 			scheduleID := token.ScheduleID
@@ -1915,7 +1921,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 	err = workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, true, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return workflow.ErrAlreadyCompleted
+				return workflow.ErrNotExists
 			}
 
 			scheduleID := token.ScheduleID
@@ -2004,7 +2010,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				e.logger.Debug("Heartbeat failed")
-				return workflow.ErrAlreadyCompleted
+				return workflow.ErrNotExists
 			}
 
 			scheduleID := token.ScheduleID
@@ -2074,9 +2080,14 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 	}
 
 	return workflow.UpdateCurrentWithActionFunc(ctx, e.executionCache, e.executionManager, domainID, workflowExecution, e.timeSource.Now(),
-		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
+		func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, workflow.ErrAlreadyCompleted
+				return nil, execution.VersionBasedError(
+					workflow.ErrAlreadyCompleted,
+					"1.7.0",
+					yarpc.CallFromContext(ctx).Header(common.FeatureVersionHeaderName),
+					workflow.ErrNotExists,
+				)
 			}
 
 			executionInfo := mutableState.GetExecutionInfo()
@@ -2137,7 +2148,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 		domainID,
 		workflowExecution,
 		e.timeSource.Now(),
-		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
+		func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			executionInfo := mutableState.GetExecutionInfo()
 			createDecisionTask := true
 			// Do not create decision task when the workflow is cron and the cron has not been started yet
@@ -2149,7 +2160,12 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 			}
 
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, workflow.ErrAlreadyCompleted
+				return nil, execution.VersionBasedError(
+					workflow.ErrAlreadyCompleted,
+					"1.7.0",
+					yarpc.CallFromContext(ctx).Header(common.FeatureVersionHeaderName),
+					workflow.ErrNotExists,
+				)
 			}
 
 			maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
@@ -2334,7 +2350,7 @@ func (e *historyEngineImpl) RemoveSignalMutableState(
 	return workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, false, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return workflow.ErrAlreadyCompleted
+				return workflow.ErrNotExists
 			}
 
 			mutableState.DeleteSignalRequested(request.GetRequestID())
@@ -2367,9 +2383,14 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 		domainID,
 		workflowExecution,
 		e.timeSource.Now(),
-		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
+		func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, workflow.ErrAlreadyCompleted
+				return nil, execution.VersionBasedError(
+					workflow.ErrAlreadyCompleted,
+					"1.7.0",
+					yarpc.CallFromContext(ctx).Header(common.FeatureVersionHeaderName),
+					workflow.ErrNotExists,
+				)
 			}
 
 			eventBatchFirstEventID := mutableState.GetNextEventID()
@@ -2403,7 +2424,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 	return workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, true, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return workflow.ErrAlreadyCompleted
+				return workflow.ErrNotExists
 			}
 
 			initiatedID := completionRequest.InitiatedID
@@ -2955,7 +2976,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 		domainID,
 		currentExecution,
 		e.timeSource.Now(),
-		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
+		func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			// Filter out reapply event from the same cluster
 			toReapplyEvents := make([]*types.HistoryEvent, 0, len(reapplyEvents))
 			lastWriteVersion, err := mutableState.GetLastWriteVersion()

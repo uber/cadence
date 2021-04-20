@@ -20,7 +20,10 @@
 
 package execution
 
-import "github.com/uber/cadence/common/types"
+import (
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
+)
 
 // TerminateWorkflow is a helper function to terminate workflow
 func TerminateWorkflow(
@@ -48,4 +51,18 @@ func TerminateWorkflow(
 		terminateIdentity,
 	)
 	return err
+}
+
+func VersionBasedError(
+	desiredError error,
+	desiredVersion string,
+	currentVersion string,
+	legacyError error,
+) error {
+	versionSupported, _ := common.VersionGreaterThanOrEqualTo(currentVersion, desiredVersion)
+	if versionSupported {
+		return desiredError
+	} else {
+		return legacyError
+	}
 }

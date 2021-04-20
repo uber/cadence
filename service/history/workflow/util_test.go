@@ -50,7 +50,7 @@ func TestUpdateHelper(t *testing.T) {
 				mockMutableState.EXPECT().GetNextEventID().Return(common.FirstEventID).Times(1)
 				mockMutableState.EXPECT().GetNextEventID().Return(common.FirstEventID + 1).Times(1)
 			},
-			actionFn: func(context execution.Context, mutableState execution.MutableState) (*UpdateAction, error) {
+			actionFn: func(ctx context.Context, context execution.Context, mutableState execution.MutableState) (*UpdateAction, error) {
 				if mutableState.GetNextEventID() == common.FirstEventID {
 					return nil, ErrStaleState
 				}
@@ -64,7 +64,7 @@ func TestUpdateHelper(t *testing.T) {
 				mockMutableState.EXPECT().AddDecisionTaskScheduledEvent(gomock.Any()).Return(&execution.DecisionInfo{}, nil).Times(1)
 				mockContext.EXPECT().UpdateWorkflowExecutionAsActive(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
-			actionFn: func(context execution.Context, mutableState execution.MutableState) (*UpdateAction, error) {
+			actionFn: func(ctx context.Context, context execution.Context, mutableState execution.MutableState) (*UpdateAction, error) {
 				return UpdateWithNewDecision, nil
 			},
 		},
@@ -74,7 +74,7 @@ func TestUpdateHelper(t *testing.T) {
 				mockContext.EXPECT().UpdateWorkflowExecutionAsActive(gomock.Any(), gomock.Any()).Return(execution.ErrConflict).Times(ConditionalRetryCount - 1)
 				mockContext.EXPECT().UpdateWorkflowExecutionAsActive(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
-			actionFn: func(context execution.Context, mutableState execution.MutableState) (*UpdateAction, error) {
+			actionFn: func(ctx context.Context, context execution.Context, mutableState execution.MutableState) (*UpdateAction, error) {
 				return UpdateWithoutDecision, nil
 			},
 		},

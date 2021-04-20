@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
@@ -921,7 +922,7 @@ func (t *transferActiveTaskExecutor) recordChildExecutionStarted(
 	return t.updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
+				return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
 
 			domain := initiatedAttributes.Domain
@@ -956,7 +957,7 @@ func (t *transferActiveTaskExecutor) recordStartChildExecutionFailed(
 	return t.updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
+				return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
 
 			initiatedEventID := task.ScheduleID
@@ -1012,7 +1013,12 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionCompleted(
 	err := t.updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
+				return execution.VersionBasedError(
+					&types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."},
+					"1.7.0",
+					yarpc.CallFromContext(ctx).Header(common.FeatureVersionHeaderName),
+					&types.EntityNotExistsError{Message: "Workflow execution already completed."},
+				)
 			}
 
 			initiatedEventID := task.ScheduleID
@@ -1054,7 +1060,12 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionCompleted(
 	err := t.updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
+				return execution.VersionBasedError(
+					&types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."},
+					"1.7.0",
+					yarpc.CallFromContext(ctx).Header(common.FeatureVersionHeaderName),
+					&types.EntityNotExistsError{Message: "Workflow execution already completed."},
+				)
 			}
 
 			initiatedEventID := task.ScheduleID
@@ -1073,11 +1084,13 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionCompleted(
 			return err
 		})
 
-	if _, ok := err.(*types.WorkflowExecutionAlreadyCompletedError); ok {
-		// this could happen if this is a duplicate processing of the task,
-		// or the execution has already completed.
+	switch err.(type) {
+	// this could happen if this is a duplicate processing of the task,
+	// or the execution has already completed.
+	case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError:
 		return nil
 	}
+
 	return err
 }
 
@@ -1093,7 +1106,12 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionFailed(
 	err := t.updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
+				return execution.VersionBasedError(
+					&types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."},
+					"1.7.0",
+					yarpc.CallFromContext(ctx).Header(common.FeatureVersionHeaderName),
+					&types.EntityNotExistsError{Message: "Workflow execution already completed."},
+				)
 			}
 
 			initiatedEventID := task.ScheduleID
@@ -1113,13 +1131,11 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionFailed(
 			return err
 		})
 
-	if err != nil {
-		switch err.(type) {
-		// this could happen if this is a duplicate processing of the task,
-		// or the execution has already completed.
-		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError:
-			return nil
-		}
+	switch err.(type) {
+	// this could happen if this is a duplicate processing of the task,
+	// or the execution has already completed.
+	case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError:
+		return nil
 	}
 	return err
 }
@@ -1137,7 +1153,12 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionFailed(
 	err := t.updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
+				return execution.VersionBasedError(
+					&types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."},
+					"1.7.0",
+					yarpc.CallFromContext(ctx).Header(common.FeatureVersionHeaderName),
+					&types.EntityNotExistsError{Message: "Workflow execution already completed."},
+				)
 			}
 
 			initiatedEventID := task.ScheduleID
@@ -1158,11 +1179,13 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionFailed(
 			return err
 		})
 
-	if _, ok := err.(*types.WorkflowExecutionAlreadyCompletedError); ok {
-		// this could happen if this is a duplicate processing of the task,
-		// or the execution has already completed.
+	switch err.(type) {
+	// this could happen if this is a duplicate processing of the task,
+	// or the execution has already completed.
+	case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError:
 		return nil
 	}
+
 	return err
 }
 

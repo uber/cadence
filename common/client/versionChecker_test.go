@@ -292,6 +292,11 @@ func (s *VersionCheckerSuite) TestSupportsRawHistoryQuery() {
 		},
 		{
 			clientImpl:           JavaSDK,
+			clientFeatureVersion: "1.7.0",
+			expectErr:            false,
+		},
+		{
+			clientImpl:           JavaSDK,
 			clientFeatureVersion: "1.2.0",
 			expectErr:            true,
 		},
@@ -322,7 +327,7 @@ func (s *VersionCheckerSuite) TestSupportsRawHistoryQuery() {
 		},
 		{
 			clientImpl:           CLI,
-			clientFeatureVersion: "1.6.0",
+			clientFeatureVersion: "1.7.0",
 			expectErr:            false,
 		},
 	}

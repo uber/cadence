@@ -53,14 +53,14 @@ const (
 	// JavaWorkerStickyQueryVersion indicates the minimum client version of the java worker which supports StickyQuery
 	JavaWorkerStickyQueryVersion = "1.0.0"
 	// GoWorkerConsistentQueryVersion indicates the minimum client version of the go worker which supports ConsistentQuery
-	GoWorkerConsistentQueryVersion = "1.5.0"
+	GoWorkerConsistentQueryVersion = "1.7.0"
 	// JavaWorkerRawHistoryQueryVersion indicates the minimum client version of the java worker which supports RawHistoryQuery
-	JavaWorkerRawHistoryQueryVersion = "1.3.0"
+	JavaWorkerRawHistoryQueryVersion = "1.4.0"
 	// GoWorkerRawHistoryQueryVersion indicates the minimum client version of the go worker which supports RawHistoryQuery
-	GoWorkerRawHistoryQueryVersion = "1.6.0"
+	GoWorkerRawHistoryQueryVersion = "1.7.0"
 	// CLIRawHistoryQueryVersion indicates the minimum CLI version of the go worker which supports RawHistoryQuery
 	// Note: cli uses go client feature version
-	CLIRawHistoryQueryVersion = "1.6.0"
+	CLIRawHistoryQueryVersion = "1.7.0"
 
 	stickyQuery     = "sticky-query"
 	consistentQuery = "consistent-query"

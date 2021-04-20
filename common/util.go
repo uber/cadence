@@ -35,6 +35,8 @@ import (
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
 
+	"github.com/hashicorp/go-version"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
@@ -877,4 +879,29 @@ func MicrosecondsToDuration(d int64) time.Duration {
 // NanosecondsToDuration converts number of nanoseconds to time.Duration
 func NanosecondsToDuration(d int64) time.Duration {
 	return time.Duration(d) * time.Nanosecond
+}
+
+func VersionGreaterThanOrEqualTo(vStr1 string, vStr2 string) (bool, error) {
+	v1, err1 := version.NewVersion(vStr1)
+	v2, err2 := version.NewVersion(vStr2)
+
+	if err1 != nil {
+		return false, err1
+	}
+	if err2 != nil {
+		return false, err2
+	}
+
+	if v1 == nil {
+		return false, fmt.Errorf("malformed version on the left %s", vStr1)
+	}
+	if v2 == nil {
+		return false, fmt.Errorf("malformed version on the right %s", vStr2)
+	}
+
+	if v1.GreaterThanOrEqual(v2) {
+		return true, nil
+	}
+
+	return false, nil
 }
