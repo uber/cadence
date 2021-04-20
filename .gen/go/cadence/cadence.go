@@ -43,14 +43,14 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "cadence",
 	Package:  "github.com/uber/cadence/.gen/go/cadence",
 	FilePath: "cadence.thrift",
-	SHA1:     "4f624203d4b1260bcccc8789d989e4e98107f2c9",
+	SHA1:     "9bc839885f29c2460af53bf639994d20e53521a0",
 	Includes: []*thriftreflect.ThriftModule{
 		shared.ThriftModule,
 	},
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\ninclude \"shared.thrift\"\n\nnamespace java com.uber.cadence\n\n/**\n* WorkflowService API is exposed to provide support for long running applications.  Application is expected to call\n* StartWorkflowExecution to create an instance for each instance of long running workflow.  Such applications are expected\n* to have a worker which regularly polls for DecisionTask and ActivityTask from the WorkflowService.  For each\n* DecisionTask, application is expected to process the history of events for that session and respond back with next\n* decisions.  For each ActivityTask, application is expected to execute the actual logic for that task and respond back\n* with completion or failure.  Worker is expected to regularly heartbeat while activity task is running.\n**/\nservice WorkflowService {\n  /**\n  * RegisterDomain creates a new domain which can be used as a container for all resources.  Domain is a top level\n  * entity within Cadence, used as a container for all resources like workflow executions, tasklists, etc.  Domain\n  * acts as a sandbox and provides isolation for all resources within the domain.  All resources belongs to exactly one\n  * domain.\n  **/\n  void RegisterDomain(1: shared.RegisterDomainRequest registerRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.DomainAlreadyExistsError domainExistsError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * DescribeDomain returns the information and configuration for a registered domain.\n  **/\n  shared.DescribeDomainResponse DescribeDomain(1: shared.DescribeDomainRequest describeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n    * ListDomains returns the information and configuration for all domains.\n    **/\n    shared.ListDomainsResponse ListDomains(1: shared.ListDomainsRequest listRequest)\n      throws (\n        1: shared.BadRequestError badRequestError,\n        3: shared.EntityNotExistsError entityNotExistError,\n        4: shared.ServiceBusyError serviceBusyError,\n        5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      )\n\n  /**\n  * UpdateDomain is used to update the information and configuration for a registered domain.\n  **/\n  shared.UpdateDomainResponse UpdateDomain(1: shared.UpdateDomainRequest updateRequest)\n      throws (\n        1: shared.BadRequestError badRequestError,\n        3: shared.EntityNotExistsError entityNotExistError,\n        4: shared.ServiceBusyError serviceBusyError,\n        5: shared.DomainNotActiveError domainNotActiveError,\n        6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      )\n\n  /**\n  * DeprecateDomain us used to update status of a registered domain to DEPRECATED.  Once the domain is deprecated\n  * it cannot be used to start new workflow executions.  Existing workflow executions will continue to run on\n  * deprecated domains.\n  **/\n  void DeprecateDomain(1: shared.DeprecateDomainRequest deprecateRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * StartWorkflowExecution starts a new long running workflow instance.  It will create the instance with\n  * 'WorkflowExecutionStarted' event in history and also schedule the first DecisionTask for the worker to make the\n  * first decision for this instance.  It will return 'WorkflowExecutionAlreadyStartedError', if an instance already\n  * exists with same workflowId.\n  **/\n  shared.StartWorkflowExecutionResponse StartWorkflowExecution(1: shared.StartWorkflowExecutionRequest startRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.WorkflowExecutionAlreadyStartedError sessionAlreadyExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.EntityNotExistsError entityNotExistError,\n      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * Returns the history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  shared.GetWorkflowExecutionHistoryResponse GetWorkflowExecutionHistory(1: shared.GetWorkflowExecutionHistoryRequest getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * PollForDecisionTask is called by application worker to process DecisionTask from a specific taskList.  A\n  * DecisionTask is dispatched to callers for active workflow executions, with pending decisions.\n  * Application is then expected to call 'RespondDecisionTaskCompleted' API when it is done processing the DecisionTask.\n  * It will also create a 'DecisionTaskStarted' event in the history for that session before handing off DecisionTask to\n  * application worker.\n  **/\n  shared.PollForDecisionTaskResponse PollForDecisionTask(1: shared.PollForDecisionTaskRequest pollRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.EntityNotExistsError entityNotExistError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondDecisionTaskCompleted is called by application worker to complete a DecisionTask handed as a result of\n  * 'PollForDecisionTask' API call.  Completing a DecisionTask will result in new events for the workflow execution and\n  * potentially new ActivityTask being created for corresponding decisions.  It will also create a DecisionTaskCompleted\n  * event in the history for that session.  Use the 'taskToken' provided as response of PollForDecisionTask API call\n  * for completing the DecisionTask.\n  * The response could contain a new decision task if there is one or if the request asking for one.\n  **/\n  shared.RespondDecisionTaskCompletedResponse RespondDecisionTaskCompleted(1: shared.RespondDecisionTaskCompletedRequest completeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondDecisionTaskFailed is called by application worker to indicate failure.  This results in\n  * DecisionTaskFailedEvent written to the history and a new DecisionTask created.  This API can be used by client to\n  * either clear sticky tasklist or report any panics during DecisionTask processing.  Cadence will only append first\n  * DecisionTaskFailed event to the history of workflow execution for consecutive failures.\n  **/\n  void RespondDecisionTaskFailed(1: shared.RespondDecisionTaskFailedRequest failedRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * PollForActivityTask is called by application worker to process ActivityTask from a specific taskList.  ActivityTask\n  * is dispatched to callers whenever a ScheduleTask decision is made for a workflow execution.\n  * Application is expected to call 'RespondActivityTaskCompleted' or 'RespondActivityTaskFailed' once it is done\n  * processing the task.\n  * Application also needs to call 'RecordActivityTaskHeartbeat' API within 'heartbeatTimeoutSeconds' interval to\n  * prevent the task from getting timed out.  An event 'ActivityTaskStarted' event is also written to workflow execution\n  * history before the ActivityTask is dispatched to application worker.\n  **/\n  shared.PollForActivityTaskResponse PollForActivityTask(1: shared.PollForActivityTaskRequest pollRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.EntityNotExistsError entityNotExistError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RecordActivityTaskHeartbeat is called by application worker while it is processing an ActivityTask.  If worker fails\n  * to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as timedout and\n  * 'ActivityTaskTimedOut' event will be written to the workflow history.  Calling 'RecordActivityTaskHeartbeat' will\n  * fail with 'EntityNotExistsError' in such situations.  Use the 'taskToken' provided as response of\n  * PollForActivityTask API call for heartbeating.\n  **/\n  shared.RecordActivityTaskHeartbeatResponse RecordActivityTaskHeartbeat(1: shared.RecordActivityTaskHeartbeatRequest heartbeatRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RecordActivityTaskHeartbeatByID is called by application worker while it is processing an ActivityTask.  If worker fails\n  * to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as timedout and\n  * 'ActivityTaskTimedOut' event will be written to the workflow history.  Calling 'RecordActivityTaskHeartbeatByID' will\n  * fail with 'EntityNotExistsError' in such situations.  Instead of using 'taskToken' like in RecordActivityTaskHeartbeat,\n  * use Domain, WorkflowID and ActivityID\n  **/\n  shared.RecordActivityTaskHeartbeatResponse RecordActivityTaskHeartbeatByID(1: shared.RecordActivityTaskHeartbeatByIDRequest heartbeatRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskCompleted is called by application worker when it is done processing an ActivityTask.  It will\n  * result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask\n  * created for the workflow so new decisions could be made.  Use the 'taskToken' provided as response of\n  * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid\n  * anymore due to activity timeout.\n  **/\n  void  RespondActivityTaskCompleted(1: shared.RespondActivityTaskCompletedRequest completeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskCompletedByID is called by application worker when it is done processing an ActivityTask.\n  * It will result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask\n  * created for the workflow so new decisions could be made.  Similar to RespondActivityTaskCompleted but use Domain,\n  * WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'\n  * if the these IDs are not valid anymore due to activity timeout.\n  **/\n  void  RespondActivityTaskCompletedByID(1: shared.RespondActivityTaskCompletedByIDRequest completeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskFailed is called by application worker when it is done processing an ActivityTask.  It will\n  * result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of\n  * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid\n  * anymore due to activity timeout.\n  **/\n  void  RespondActivityTaskFailed(1: shared.RespondActivityTaskFailedRequest failRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskFailedByID is called by application worker when it is done processing an ActivityTask.\n  * It will result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made.  Similar to RespondActivityTaskFailed but use\n  * Domain, WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'\n  * if the these IDs are not valid anymore due to activity timeout.\n  **/\n  void  RespondActivityTaskFailedByID(1: shared.RespondActivityTaskFailedByIDRequest failRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskCanceled is called by application worker when it is successfully canceled an ActivityTask.  It will\n  * result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of\n  * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid\n  * anymore due to activity timeout.\n  **/\n  void RespondActivityTaskCanceled(1: shared.RespondActivityTaskCanceledRequest canceledRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskCanceledByID is called by application worker when it is successfully canceled an ActivityTask.\n  * It will result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made.  Similar to RespondActivityTaskCanceled but use\n  * Domain, WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'\n  * if the these IDs are not valid anymore due to activity timeout.\n  **/\n  void RespondActivityTaskCanceledByID(1: shared.RespondActivityTaskCanceledByIDRequest canceledRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RequestCancelWorkflowExecution is called by application worker when it wants to request cancellation of a workflow instance.\n  * It will result in a new 'WorkflowExecutionCancelRequested' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made. It fails with 'EntityNotExistsError' if the workflow is not valid\n  * anymore due to completion or doesn't exist.\n  **/\n  void RequestCancelWorkflowExecution(1: shared.RequestCancelWorkflowExecutionRequest cancelRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.CancellationAlreadyRequestedError cancellationAlreadyRequestedError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.LimitExceededError limitExceededError,\n      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in\n  * WorkflowExecutionSignaled event recorded in the history and a decision task being created for the execution.\n  **/\n  void SignalWorkflowExecution(1: shared.SignalWorkflowExecutionRequest signalRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * SignalWithStartWorkflowExecution is used to ensure sending signal to a workflow.\n  * If the workflow is running, this results in WorkflowExecutionSignaled event being recorded in the history\n  * and a decision task being created for the execution.\n  * If the workflow is not running or not found, this results in WorkflowExecutionStarted and WorkflowExecutionSignaled\n  * events being recorded in history, and a decision task being created for the execution\n  **/\n  shared.StartWorkflowExecutionResponse SignalWithStartWorkflowExecution(1: shared.SignalWithStartWorkflowExecutionRequest signalWithStartRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.WorkflowExecutionAlreadyStartedError workflowAlreadyStartedError,\n      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n    * ResetWorkflowExecution reset an existing workflow execution to DecisionTaskCompleted event(exclusive).\n    * And it will immediately terminating the current execution instance.\n    **/\n  shared.ResetWorkflowExecutionResponse ResetWorkflowExecution(1: shared.ResetWorkflowExecutionRequest resetRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * TerminateWorkflowExecution terminates an existing workflow execution by recording WorkflowExecutionTerminated event\n  * in the history and immediately terminating the execution instance.\n  **/\n  void TerminateWorkflowExecution(1: shared.TerminateWorkflowExecutionRequest terminateRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ListOpenWorkflowExecutions is a visibility API to list the open executions in a specific domain.\n  **/\n  shared.ListOpenWorkflowExecutionsResponse ListOpenWorkflowExecutions(1: shared.ListOpenWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ListClosedWorkflowExecutions is a visibility API to list the closed executions in a specific domain.\n  **/\n  shared.ListClosedWorkflowExecutionsResponse ListClosedWorkflowExecutions(1: shared.ListClosedWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ListWorkflowExecutions is a visibility API to list workflow executions in a specific domain.\n  **/\n  shared.ListWorkflowExecutionsResponse ListWorkflowExecutions(1: shared.ListWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ListArchivedWorkflowExecutions is a visibility API to list archived workflow executions in a specific domain.\n  **/\n  shared.ListArchivedWorkflowExecutionsResponse ListArchivedWorkflowExecutions(1: shared.ListArchivedWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ScanWorkflowExecutions is a visibility API to list large amount of workflow executions in a specific domain without order.\n  **/\n  shared.ListWorkflowExecutionsResponse ScanWorkflowExecutions(1: shared.ListWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * CountWorkflowExecutions is a visibility API to count of workflow executions in a specific domain.\n  **/\n  shared.CountWorkflowExecutionsResponse CountWorkflowExecutions(1: shared.CountWorkflowExecutionsRequest countRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * GetSearchAttributes is a visibility API to get all legal keys that could be used in list APIs\n  **/\n  shared.GetSearchAttributesResponse GetSearchAttributes()\n    throws (\n      2: shared.ServiceBusyError serviceBusyError,\n      3: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondQueryTaskCompleted is called by application worker to complete a QueryTask (which is a DecisionTask for query)\n  * as a result of 'PollForDecisionTask' API call. Completing a QueryTask will unblock the client call to 'QueryWorkflow'\n  * API and return the query result to client as a response to 'QueryWorkflow' API call.\n  **/\n  void RespondQueryTaskCompleted(1: shared.RespondQueryTaskCompletedRequest completeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * Reset the sticky tasklist related information in mutable state of a given workflow.\n  * Things cleared are:\n  * 1. StickyTaskList\n  * 2. StickyScheduleToStartTimeout\n  * 3. ClientLibraryVersion\n  * 4. ClientFeatureVersion\n  * 5. ClientImpl\n  **/\n  shared.ResetStickyTaskListResponse ResetStickyTaskList(1: shared.ResetStickyTaskListRequest resetRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * QueryWorkflow returns query result for a specified workflow execution\n  **/\n  shared.QueryWorkflowResponse QueryWorkflow(1: shared.QueryWorkflowRequest queryRequest)\n\tthrows (\n\t  1: shared.BadRequestError badRequestError,\n\t  3: shared.EntityNotExistsError entityNotExistError,\n\t  4: shared.QueryFailedError queryFailedError,\n\t  5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n\t)\n\n  /**\n  * DescribeWorkflowExecution returns information about the specified workflow execution.\n  **/\n  shared.DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: shared.DescribeWorkflowExecutionRequest describeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * DescribeTaskList returns information about the target tasklist, right now this API returns the\n  * pollers which polled this tasklist in last few minutes.\n  **/\n  shared.DescribeTaskListResponse DescribeTaskList(1: shared.DescribeTaskListRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * GetClusterInfo returns information about cadence cluster\n  **/\n  shared.ClusterInfo GetClusterInfo()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n   /**\n   * ReapplyEvents applies stale events to the current workflow and current run\n   **/\n  shared.ListTaskListPartitionsResponse ListTaskListPartitions(1: shared.ListTaskListPartitionsRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n    )\n}\n"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\ninclude \"shared.thrift\"\n\nnamespace java com.uber.cadence\n\n/**\n* WorkflowService API is exposed to provide support for long running applications.  Application is expected to call\n* StartWorkflowExecution to create an instance for each instance of long running workflow.  Such applications are expected\n* to have a worker which regularly polls for DecisionTask and ActivityTask from the WorkflowService.  For each\n* DecisionTask, application is expected to process the history of events for that session and respond back with next\n* decisions.  For each ActivityTask, application is expected to execute the actual logic for that task and respond back\n* with completion or failure.  Worker is expected to regularly heartbeat while activity task is running.\n**/\nservice WorkflowService {\n  /**\n  * RegisterDomain creates a new domain which can be used as a container for all resources.  Domain is a top level\n  * entity within Cadence, used as a container for all resources like workflow executions, tasklists, etc.  Domain\n  * acts as a sandbox and provides isolation for all resources within the domain.  All resources belongs to exactly one\n  * domain.\n  **/\n  void RegisterDomain(1: shared.RegisterDomainRequest registerRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.DomainAlreadyExistsError domainExistsError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * DescribeDomain returns the information and configuration for a registered domain.\n  **/\n  shared.DescribeDomainResponse DescribeDomain(1: shared.DescribeDomainRequest describeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n    * ListDomains returns the information and configuration for all domains.\n    **/\n    shared.ListDomainsResponse ListDomains(1: shared.ListDomainsRequest listRequest)\n      throws (\n        1: shared.BadRequestError badRequestError,\n        3: shared.EntityNotExistsError entityNotExistError,\n        4: shared.ServiceBusyError serviceBusyError,\n        5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      )\n\n  /**\n  * UpdateDomain is used to update the information and configuration for a registered domain.\n  **/\n  shared.UpdateDomainResponse UpdateDomain(1: shared.UpdateDomainRequest updateRequest)\n      throws (\n        1: shared.BadRequestError badRequestError,\n        3: shared.EntityNotExistsError entityNotExistError,\n        4: shared.ServiceBusyError serviceBusyError,\n        5: shared.DomainNotActiveError domainNotActiveError,\n        6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      )\n\n  /**\n  * DeprecateDomain us used to update status of a registered domain to DEPRECATED.  Once the domain is deprecated\n  * it cannot be used to start new workflow executions.  Existing workflow executions will continue to run on\n  * deprecated domains.\n  **/\n  void DeprecateDomain(1: shared.DeprecateDomainRequest deprecateRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * StartWorkflowExecution starts a new long running workflow instance.  It will create the instance with\n  * 'WorkflowExecutionStarted' event in history and also schedule the first DecisionTask for the worker to make the\n  * first decision for this instance.  It will return 'WorkflowExecutionAlreadyStartedError', if an instance already\n  * exists with same workflowId.\n  **/\n  shared.StartWorkflowExecutionResponse StartWorkflowExecution(1: shared.StartWorkflowExecutionRequest startRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.WorkflowExecutionAlreadyStartedError sessionAlreadyExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.EntityNotExistsError entityNotExistError,\n      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * Returns the history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  shared.GetWorkflowExecutionHistoryResponse GetWorkflowExecutionHistory(1: shared.GetWorkflowExecutionHistoryRequest getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * PollForDecisionTask is called by application worker to process DecisionTask from a specific taskList.  A\n  * DecisionTask is dispatched to callers for active workflow executions, with pending decisions.\n  * Application is then expected to call 'RespondDecisionTaskCompleted' API when it is done processing the DecisionTask.\n  * It will also create a 'DecisionTaskStarted' event in the history for that session before handing off DecisionTask to\n  * application worker.\n  **/\n  shared.PollForDecisionTaskResponse PollForDecisionTask(1: shared.PollForDecisionTaskRequest pollRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.EntityNotExistsError entityNotExistError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondDecisionTaskCompleted is called by application worker to complete a DecisionTask handed as a result of\n  * 'PollForDecisionTask' API call.  Completing a DecisionTask will result in new events for the workflow execution and\n  * potentially new ActivityTask being created for corresponding decisions.  It will also create a DecisionTaskCompleted\n  * event in the history for that session.  Use the 'taskToken' provided as response of PollForDecisionTask API call\n  * for completing the DecisionTask.\n  * The response could contain a new decision task if there is one or if the request asking for one.\n  **/\n  shared.RespondDecisionTaskCompletedResponse RespondDecisionTaskCompleted(1: shared.RespondDecisionTaskCompletedRequest completeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      8: shared.WorkflowExecutionAlreadyCompletedError workflowExecutionAlreadyCompletedError,\n    )\n\n  /**\n  * RespondDecisionTaskFailed is called by application worker to indicate failure.  This results in\n  * DecisionTaskFailedEvent written to the history and a new DecisionTask created.  This API can be used by client to\n  * either clear sticky tasklist or report any panics during DecisionTask processing.  Cadence will only append first\n  * DecisionTaskFailed event to the history of workflow execution for consecutive failures.\n  **/\n  void RespondDecisionTaskFailed(1: shared.RespondDecisionTaskFailedRequest failedRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      8: shared.WorkflowExecutionAlreadyCompletedError workflowExecutionAlreadyCompletedError,\n    )\n\n  /**\n  * PollForActivityTask is called by application worker to process ActivityTask from a specific taskList.  ActivityTask\n  * is dispatched to callers whenever a ScheduleTask decision is made for a workflow execution.\n  * Application is expected to call 'RespondActivityTaskCompleted' or 'RespondActivityTaskFailed' once it is done\n  * processing the task.\n  * Application also needs to call 'RecordActivityTaskHeartbeat' API within 'heartbeatTimeoutSeconds' interval to\n  * prevent the task from getting timed out.  An event 'ActivityTaskStarted' event is also written to workflow execution\n  * history before the ActivityTask is dispatched to application worker.\n  **/\n  shared.PollForActivityTaskResponse PollForActivityTask(1: shared.PollForActivityTaskRequest pollRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.EntityNotExistsError entityNotExistError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RecordActivityTaskHeartbeat is called by application worker while it is processing an ActivityTask.  If worker fails\n  * to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as timedout and\n  * 'ActivityTaskTimedOut' event will be written to the workflow history.  Calling 'RecordActivityTaskHeartbeat' will\n  * fail with 'EntityNotExistsError' in such situations.  Use the 'taskToken' provided as response of\n  * PollForActivityTask API call for heartbeating.\n  **/\n  shared.RecordActivityTaskHeartbeatResponse RecordActivityTaskHeartbeat(1: shared.RecordActivityTaskHeartbeatRequest heartbeatRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      8: shared.WorkflowExecutionAlreadyCompletedError workflowExecutionAlreadyCompletedError,\n    )\n\n  /**\n  * RecordActivityTaskHeartbeatByID is called by application worker while it is processing an ActivityTask.  If worker fails\n  * to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as timedout and\n  * 'ActivityTaskTimedOut' event will be written to the workflow history.  Calling 'RecordActivityTaskHeartbeatByID' will\n  * fail with 'EntityNotExistsError' in such situations.  Instead of using 'taskToken' like in RecordActivityTaskHeartbeat,\n  * use Domain, WorkflowID and ActivityID\n  **/\n  shared.RecordActivityTaskHeartbeatResponse RecordActivityTaskHeartbeatByID(1: shared.RecordActivityTaskHeartbeatByIDRequest heartbeatRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      8: shared.WorkflowExecutionAlreadyCompletedError workflowExecutionAlreadyCompletedError,\n    )\n\n  /**\n  * RespondActivityTaskCompleted is called by application worker when it is done processing an ActivityTask.  It will\n  * result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask\n  * created for the workflow so new decisions could be made.  Use the 'taskToken' provided as response of\n  * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid\n  * anymore due to activity timeout.\n  **/\n  void  RespondActivityTaskCompleted(1: shared.RespondActivityTaskCompletedRequest completeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      8: shared.WorkflowExecutionAlreadyCompletedError workflowExecutionAlreadyCompletedError,\n    )\n\n  /**\n  * RespondActivityTaskCompletedByID is called by application worker when it is done processing an ActivityTask.\n  * It will result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask\n  * created for the workflow so new decisions could be made.  Similar to RespondActivityTaskCompleted but use Domain,\n  * WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'\n  * if the these IDs are not valid anymore due to activity timeout.\n  **/\n  void  RespondActivityTaskCompletedByID(1: shared.RespondActivityTaskCompletedByIDRequest completeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      8: shared.WorkflowExecutionAlreadyCompletedError workflowExecutionAlreadyCompletedError,\n    )\n\n  /**\n  * RespondActivityTaskFailed is called by application worker when it is done processing an ActivityTask.  It will\n  * result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of\n  * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid\n  * anymore due to activity timeout.\n  **/\n  void  RespondActivityTaskFailed(1: shared.RespondActivityTaskFailedRequest failRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      8: shared.WorkflowExecutionAlreadyCompletedError workflowExecutionAlreadyCompletedError,\n    )\n\n  /**\n  * RespondActivityTaskFailedByID is called by application worker when it is done processing an ActivityTask.\n  * It will result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made.  Similar to RespondActivityTaskFailed but use\n  * Domain, WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'\n  * if the these IDs are not valid anymore due to activity timeout.\n  **/\n  void  RespondActivityTaskFailedByID(1: shared.RespondActivityTaskFailedByIDRequest failRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      8: shared.WorkflowExecutionAlreadyCompletedError workflowExecutionAlreadyCompletedError,\n    )\n\n  /**\n  * RespondActivityTaskCanceled is called by application worker when it is successfully canceled an ActivityTask.  It will\n  * result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of\n  * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid\n  * anymore due to activity timeout.\n  **/\n  void RespondActivityTaskCanceled(1: shared.RespondActivityTaskCanceledRequest canceledRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      8: shared.WorkflowExecutionAlreadyCompletedError workflowExecutionAlreadyCompletedError,\n    )\n\n  /**\n  * RespondActivityTaskCanceledByID is called by application worker when it is successfully canceled an ActivityTask.\n  * It will result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made.  Similar to RespondActivityTaskCanceled but use\n  * Domain, WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'\n  * if the these IDs are not valid anymore due to activity timeout.\n  **/\n  void RespondActivityTaskCanceledByID(1: shared.RespondActivityTaskCanceledByIDRequest canceledRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      8: shared.WorkflowExecutionAlreadyCompletedError workflowExecutionAlreadyCompletedError,\n    )\n\n  /**\n  * RequestCancelWorkflowExecution is called by application worker when it wants to request cancellation of a workflow instance.\n  * It will result in a new 'WorkflowExecutionCancelRequested' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made. It fails with 'EntityNotExistsError' if the workflow is not valid\n  * anymore due to completion or doesn't exist.\n  **/\n  void RequestCancelWorkflowExecution(1: shared.RequestCancelWorkflowExecutionRequest cancelRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.CancellationAlreadyRequestedError cancellationAlreadyRequestedError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.LimitExceededError limitExceededError,\n      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      9: shared.WorkflowExecutionAlreadyCompletedError workflowExecutionAlreadyCompletedError,\n    )\n\n  /**\n  * SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in\n  * WorkflowExecutionSignaled event recorded in the history and a decision task being created for the execution.\n  **/\n  void SignalWorkflowExecution(1: shared.SignalWorkflowExecutionRequest signalRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      8: shared.WorkflowExecutionAlreadyCompletedError workflowExecutionAlreadyCompletedError,\n    )\n\n  /**\n  * SignalWithStartWorkflowExecution is used to ensure sending signal to a workflow.\n  * If the workflow is running, this results in WorkflowExecutionSignaled event being recorded in the history\n  * and a decision task being created for the execution.\n  * If the workflow is not running or not found, this results in WorkflowExecutionStarted and WorkflowExecutionSignaled\n  * events being recorded in history, and a decision task being created for the execution\n  **/\n  shared.StartWorkflowExecutionResponse SignalWithStartWorkflowExecution(1: shared.SignalWithStartWorkflowExecutionRequest signalWithStartRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.WorkflowExecutionAlreadyStartedError workflowAlreadyStartedError,\n      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n    * ResetWorkflowExecution reset an existing workflow execution to DecisionTaskCompleted event(exclusive).\n    * And it will immediately terminating the current execution instance.\n    **/\n  shared.ResetWorkflowExecutionResponse ResetWorkflowExecution(1: shared.ResetWorkflowExecutionRequest resetRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * TerminateWorkflowExecution terminates an existing workflow execution by recording WorkflowExecutionTerminated event\n  * in the history and immediately terminating the execution instance.\n  **/\n  void TerminateWorkflowExecution(1: shared.TerminateWorkflowExecutionRequest terminateRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      8: shared.WorkflowExecutionAlreadyCompletedError workflowExecutionAlreadyCompletedError,\n    )\n\n  /**\n  * ListOpenWorkflowExecutions is a visibility API to list the open executions in a specific domain.\n  **/\n  shared.ListOpenWorkflowExecutionsResponse ListOpenWorkflowExecutions(1: shared.ListOpenWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ListClosedWorkflowExecutions is a visibility API to list the closed executions in a specific domain.\n  **/\n  shared.ListClosedWorkflowExecutionsResponse ListClosedWorkflowExecutions(1: shared.ListClosedWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ListWorkflowExecutions is a visibility API to list workflow executions in a specific domain.\n  **/\n  shared.ListWorkflowExecutionsResponse ListWorkflowExecutions(1: shared.ListWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ListArchivedWorkflowExecutions is a visibility API to list archived workflow executions in a specific domain.\n  **/\n  shared.ListArchivedWorkflowExecutionsResponse ListArchivedWorkflowExecutions(1: shared.ListArchivedWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ScanWorkflowExecutions is a visibility API to list large amount of workflow executions in a specific domain without order.\n  **/\n  shared.ListWorkflowExecutionsResponse ScanWorkflowExecutions(1: shared.ListWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * CountWorkflowExecutions is a visibility API to count of workflow executions in a specific domain.\n  **/\n  shared.CountWorkflowExecutionsResponse CountWorkflowExecutions(1: shared.CountWorkflowExecutionsRequest countRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * GetSearchAttributes is a visibility API to get all legal keys that could be used in list APIs\n  **/\n  shared.GetSearchAttributesResponse GetSearchAttributes()\n    throws (\n      2: shared.ServiceBusyError serviceBusyError,\n      3: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondQueryTaskCompleted is called by application worker to complete a QueryTask (which is a DecisionTask for query)\n  * as a result of 'PollForDecisionTask' API call. Completing a QueryTask will unblock the client call to 'QueryWorkflow'\n  * API and return the query result to client as a response to 'QueryWorkflow' API call.\n  **/\n  void RespondQueryTaskCompleted(1: shared.RespondQueryTaskCompletedRequest completeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * Reset the sticky tasklist related information in mutable state of a given workflow.\n  * Things cleared are:\n  * 1. StickyTaskList\n  * 2. StickyScheduleToStartTimeout\n  * 3. ClientLibraryVersion\n  * 4. ClientFeatureVersion\n  * 5. ClientImpl\n  **/\n  shared.ResetStickyTaskListResponse ResetStickyTaskList(1: shared.ResetStickyTaskListRequest resetRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      8: shared.WorkflowExecutionAlreadyCompletedError workflowExecutionAlreadyCompletedError,\n    )\n\n  /**\n  * QueryWorkflow returns query result for a specified workflow execution\n  **/\n  shared.QueryWorkflowResponse QueryWorkflow(1: shared.QueryWorkflowRequest queryRequest)\n\tthrows (\n\t  1: shared.BadRequestError badRequestError,\n\t  3: shared.EntityNotExistsError entityNotExistError,\n\t  4: shared.QueryFailedError queryFailedError,\n\t  5: shared.LimitExceededError limitExceededError,\n\t  6: shared.ServiceBusyError serviceBusyError,\n\t  7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n\t)\n\n  /**\n  * DescribeWorkflowExecution returns information about the specified workflow execution.\n  **/\n  shared.DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: shared.DescribeWorkflowExecutionRequest describeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * DescribeTaskList returns information about the target tasklist, right now this API returns the\n  * pollers which polled this tasklist in last few minutes.\n  **/\n  shared.DescribeTaskListResponse DescribeTaskList(1: shared.DescribeTaskListRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * GetClusterInfo returns information about cadence cluster\n  **/\n  shared.ClusterInfo GetClusterInfo()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n   /**\n   * ReapplyEvents applies stale events to the current workflow and current run\n   **/\n  shared.ListTaskListPartitionsResponse ListTaskListPartitions(1: shared.ListTaskListPartitionsRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n    )\n}\n"
 
 // WorkflowService_CountWorkflowExecutions_Args represents the arguments for the WorkflowService.CountWorkflowExecutions function.
 //
@@ -11419,6 +11419,8 @@ func init() {
 			return true
 		case *shared.ClientVersionNotSupportedError:
 			return true
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			return true
 		default:
 			return false
 		}
@@ -11460,6 +11462,11 @@ func init() {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RecordActivityTaskHeartbeat_Result.ClientVersionNotSupportedError")
 			}
 			return &WorkflowService_RecordActivityTaskHeartbeat_Result{ClientVersionNotSupportedError: e}, nil
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RecordActivityTaskHeartbeat_Result.WorkflowExecutionAlreadyCompletedError")
+			}
+			return &WorkflowService_RecordActivityTaskHeartbeat_Result{WorkflowExecutionAlreadyCompletedError: e}, nil
 		}
 
 		return nil, err
@@ -11489,6 +11496,10 @@ func init() {
 			err = result.ClientVersionNotSupportedError
 			return
 		}
+		if result.WorkflowExecutionAlreadyCompletedError != nil {
+			err = result.WorkflowExecutionAlreadyCompletedError
+			return
+		}
 
 		if result.Success != nil {
 			success = result.Success
@@ -11508,13 +11519,14 @@ func init() {
 // Success is set only if the function did not throw an exception.
 type WorkflowService_RecordActivityTaskHeartbeat_Result struct {
 	// Value returned by RecordActivityTaskHeartbeat after a successful execution.
-	Success                        *shared.RecordActivityTaskHeartbeatResponse `json:"success,omitempty"`
-	BadRequestError                *shared.BadRequestError                     `json:"badRequestError,omitempty"`
-	EntityNotExistError            *shared.EntityNotExistsError                `json:"entityNotExistError,omitempty"`
-	DomainNotActiveError           *shared.DomainNotActiveError                `json:"domainNotActiveError,omitempty"`
-	LimitExceededError             *shared.LimitExceededError                  `json:"limitExceededError,omitempty"`
-	ServiceBusyError               *shared.ServiceBusyError                    `json:"serviceBusyError,omitempty"`
-	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError      `json:"clientVersionNotSupportedError,omitempty"`
+	Success                                *shared.RecordActivityTaskHeartbeatResponse    `json:"success,omitempty"`
+	BadRequestError                        *shared.BadRequestError                        `json:"badRequestError,omitempty"`
+	EntityNotExistError                    *shared.EntityNotExistsError                   `json:"entityNotExistError,omitempty"`
+	DomainNotActiveError                   *shared.DomainNotActiveError                   `json:"domainNotActiveError,omitempty"`
+	LimitExceededError                     *shared.LimitExceededError                     `json:"limitExceededError,omitempty"`
+	ServiceBusyError                       *shared.ServiceBusyError                       `json:"serviceBusyError,omitempty"`
+	ClientVersionNotSupportedError         *shared.ClientVersionNotSupportedError         `json:"clientVersionNotSupportedError,omitempty"`
+	WorkflowExecutionAlreadyCompletedError *shared.WorkflowExecutionAlreadyCompletedError `json:"workflowExecutionAlreadyCompletedError,omitempty"`
 }
 
 // ToWire translates a WorkflowService_RecordActivityTaskHeartbeat_Result struct into a Thrift-level intermediate
@@ -11534,7 +11546,7 @@ type WorkflowService_RecordActivityTaskHeartbeat_Result struct {
 //   }
 func (v *WorkflowService_RecordActivityTaskHeartbeat_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [7]wire.Field
+		fields [8]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -11596,6 +11608,14 @@ func (v *WorkflowService_RecordActivityTaskHeartbeat_Result) ToWire() (wire.Valu
 		fields[i] = wire.Field{ID: 7, Value: w}
 		i++
 	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		w, err = v.WorkflowExecutionAlreadyCompletedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
+		i++
+	}
 
 	if i != 1 {
 		return wire.Value{}, fmt.Errorf("WorkflowService_RecordActivityTaskHeartbeat_Result should have exactly one field: got %v fields", i)
@@ -11606,6 +11626,12 @@ func (v *WorkflowService_RecordActivityTaskHeartbeat_Result) ToWire() (wire.Valu
 
 func _RecordActivityTaskHeartbeatResponse_Read(w wire.Value) (*shared.RecordActivityTaskHeartbeatResponse, error) {
 	var v shared.RecordActivityTaskHeartbeatResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _WorkflowExecutionAlreadyCompletedError_Read(w wire.Value) (*shared.WorkflowExecutionAlreadyCompletedError, error) {
+	var v shared.WorkflowExecutionAlreadyCompletedError
 	err := v.FromWire(w)
 	return &v, err
 }
@@ -11688,6 +11714,14 @@ func (v *WorkflowService_RecordActivityTaskHeartbeat_Result) FromWire(w wire.Val
 				}
 
 			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionAlreadyCompletedError, err = _WorkflowExecutionAlreadyCompletedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -11713,6 +11747,9 @@ func (v *WorkflowService_RecordActivityTaskHeartbeat_Result) FromWire(w wire.Val
 	if v.ClientVersionNotSupportedError != nil {
 		count++
 	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		count++
+	}
 	if count != 1 {
 		return fmt.Errorf("WorkflowService_RecordActivityTaskHeartbeat_Result should have exactly one field: got %v fields", count)
 	}
@@ -11727,7 +11764,7 @@ func (v *WorkflowService_RecordActivityTaskHeartbeat_Result) String() string {
 		return "<nil>"
 	}
 
-	var fields [7]string
+	var fields [8]string
 	i := 0
 	if v.Success != nil {
 		fields[i] = fmt.Sprintf("Success: %v", v.Success)
@@ -11755,6 +11792,10 @@ func (v *WorkflowService_RecordActivityTaskHeartbeat_Result) String() string {
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionAlreadyCompletedError: %v", v.WorkflowExecutionAlreadyCompletedError)
 		i++
 	}
 
@@ -11792,6 +11833,9 @@ func (v *WorkflowService_RecordActivityTaskHeartbeat_Result) Equals(rhs *Workflo
 	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
 		return false
 	}
+	if !((v.WorkflowExecutionAlreadyCompletedError == nil && rhs.WorkflowExecutionAlreadyCompletedError == nil) || (v.WorkflowExecutionAlreadyCompletedError != nil && rhs.WorkflowExecutionAlreadyCompletedError != nil && v.WorkflowExecutionAlreadyCompletedError.Equals(rhs.WorkflowExecutionAlreadyCompletedError))) {
+		return false
+	}
 
 	return true
 }
@@ -11822,6 +11866,9 @@ func (v *WorkflowService_RecordActivityTaskHeartbeat_Result) MarshalLogObject(en
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		err = multierr.Append(err, enc.AddObject("workflowExecutionAlreadyCompletedError", v.WorkflowExecutionAlreadyCompletedError))
 	}
 	return err
 }
@@ -11929,6 +11976,21 @@ func (v *WorkflowService_RecordActivityTaskHeartbeat_Result) GetClientVersionNot
 // IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
 func (v *WorkflowService_RecordActivityTaskHeartbeat_Result) IsSetClientVersionNotSupportedError() bool {
 	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// GetWorkflowExecutionAlreadyCompletedError returns the value of WorkflowExecutionAlreadyCompletedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_RecordActivityTaskHeartbeat_Result) GetWorkflowExecutionAlreadyCompletedError() (o *shared.WorkflowExecutionAlreadyCompletedError) {
+	if v != nil && v.WorkflowExecutionAlreadyCompletedError != nil {
+		return v.WorkflowExecutionAlreadyCompletedError
+	}
+
+	return
+}
+
+// IsSetWorkflowExecutionAlreadyCompletedError returns true if WorkflowExecutionAlreadyCompletedError is not nil.
+func (v *WorkflowService_RecordActivityTaskHeartbeat_Result) IsSetWorkflowExecutionAlreadyCompletedError() bool {
+	return v != nil && v.WorkflowExecutionAlreadyCompletedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
@@ -12174,6 +12236,8 @@ func init() {
 			return true
 		case *shared.ClientVersionNotSupportedError:
 			return true
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			return true
 		default:
 			return false
 		}
@@ -12215,6 +12279,11 @@ func init() {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RecordActivityTaskHeartbeatByID_Result.ClientVersionNotSupportedError")
 			}
 			return &WorkflowService_RecordActivityTaskHeartbeatByID_Result{ClientVersionNotSupportedError: e}, nil
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RecordActivityTaskHeartbeatByID_Result.WorkflowExecutionAlreadyCompletedError")
+			}
+			return &WorkflowService_RecordActivityTaskHeartbeatByID_Result{WorkflowExecutionAlreadyCompletedError: e}, nil
 		}
 
 		return nil, err
@@ -12244,6 +12313,10 @@ func init() {
 			err = result.ClientVersionNotSupportedError
 			return
 		}
+		if result.WorkflowExecutionAlreadyCompletedError != nil {
+			err = result.WorkflowExecutionAlreadyCompletedError
+			return
+		}
 
 		if result.Success != nil {
 			success = result.Success
@@ -12263,13 +12336,14 @@ func init() {
 // Success is set only if the function did not throw an exception.
 type WorkflowService_RecordActivityTaskHeartbeatByID_Result struct {
 	// Value returned by RecordActivityTaskHeartbeatByID after a successful execution.
-	Success                        *shared.RecordActivityTaskHeartbeatResponse `json:"success,omitempty"`
-	BadRequestError                *shared.BadRequestError                     `json:"badRequestError,omitempty"`
-	EntityNotExistError            *shared.EntityNotExistsError                `json:"entityNotExistError,omitempty"`
-	DomainNotActiveError           *shared.DomainNotActiveError                `json:"domainNotActiveError,omitempty"`
-	LimitExceededError             *shared.LimitExceededError                  `json:"limitExceededError,omitempty"`
-	ServiceBusyError               *shared.ServiceBusyError                    `json:"serviceBusyError,omitempty"`
-	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError      `json:"clientVersionNotSupportedError,omitempty"`
+	Success                                *shared.RecordActivityTaskHeartbeatResponse    `json:"success,omitempty"`
+	BadRequestError                        *shared.BadRequestError                        `json:"badRequestError,omitempty"`
+	EntityNotExistError                    *shared.EntityNotExistsError                   `json:"entityNotExistError,omitempty"`
+	DomainNotActiveError                   *shared.DomainNotActiveError                   `json:"domainNotActiveError,omitempty"`
+	LimitExceededError                     *shared.LimitExceededError                     `json:"limitExceededError,omitempty"`
+	ServiceBusyError                       *shared.ServiceBusyError                       `json:"serviceBusyError,omitempty"`
+	ClientVersionNotSupportedError         *shared.ClientVersionNotSupportedError         `json:"clientVersionNotSupportedError,omitempty"`
+	WorkflowExecutionAlreadyCompletedError *shared.WorkflowExecutionAlreadyCompletedError `json:"workflowExecutionAlreadyCompletedError,omitempty"`
 }
 
 // ToWire translates a WorkflowService_RecordActivityTaskHeartbeatByID_Result struct into a Thrift-level intermediate
@@ -12289,7 +12363,7 @@ type WorkflowService_RecordActivityTaskHeartbeatByID_Result struct {
 //   }
 func (v *WorkflowService_RecordActivityTaskHeartbeatByID_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [7]wire.Field
+		fields [8]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -12349,6 +12423,14 @@ func (v *WorkflowService_RecordActivityTaskHeartbeatByID_Result) ToWire() (wire.
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 7, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		w, err = v.WorkflowExecutionAlreadyCompletedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
 		i++
 	}
 
@@ -12437,6 +12519,14 @@ func (v *WorkflowService_RecordActivityTaskHeartbeatByID_Result) FromWire(w wire
 				}
 
 			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionAlreadyCompletedError, err = _WorkflowExecutionAlreadyCompletedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -12462,6 +12552,9 @@ func (v *WorkflowService_RecordActivityTaskHeartbeatByID_Result) FromWire(w wire
 	if v.ClientVersionNotSupportedError != nil {
 		count++
 	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		count++
+	}
 	if count != 1 {
 		return fmt.Errorf("WorkflowService_RecordActivityTaskHeartbeatByID_Result should have exactly one field: got %v fields", count)
 	}
@@ -12476,7 +12569,7 @@ func (v *WorkflowService_RecordActivityTaskHeartbeatByID_Result) String() string
 		return "<nil>"
 	}
 
-	var fields [7]string
+	var fields [8]string
 	i := 0
 	if v.Success != nil {
 		fields[i] = fmt.Sprintf("Success: %v", v.Success)
@@ -12504,6 +12597,10 @@ func (v *WorkflowService_RecordActivityTaskHeartbeatByID_Result) String() string
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionAlreadyCompletedError: %v", v.WorkflowExecutionAlreadyCompletedError)
 		i++
 	}
 
@@ -12541,6 +12638,9 @@ func (v *WorkflowService_RecordActivityTaskHeartbeatByID_Result) Equals(rhs *Wor
 	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
 		return false
 	}
+	if !((v.WorkflowExecutionAlreadyCompletedError == nil && rhs.WorkflowExecutionAlreadyCompletedError == nil) || (v.WorkflowExecutionAlreadyCompletedError != nil && rhs.WorkflowExecutionAlreadyCompletedError != nil && v.WorkflowExecutionAlreadyCompletedError.Equals(rhs.WorkflowExecutionAlreadyCompletedError))) {
+		return false
+	}
 
 	return true
 }
@@ -12571,6 +12671,9 @@ func (v *WorkflowService_RecordActivityTaskHeartbeatByID_Result) MarshalLogObjec
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		err = multierr.Append(err, enc.AddObject("workflowExecutionAlreadyCompletedError", v.WorkflowExecutionAlreadyCompletedError))
 	}
 	return err
 }
@@ -12678,6 +12781,21 @@ func (v *WorkflowService_RecordActivityTaskHeartbeatByID_Result) GetClientVersio
 // IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
 func (v *WorkflowService_RecordActivityTaskHeartbeatByID_Result) IsSetClientVersionNotSupportedError() bool {
 	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// GetWorkflowExecutionAlreadyCompletedError returns the value of WorkflowExecutionAlreadyCompletedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_RecordActivityTaskHeartbeatByID_Result) GetWorkflowExecutionAlreadyCompletedError() (o *shared.WorkflowExecutionAlreadyCompletedError) {
+	if v != nil && v.WorkflowExecutionAlreadyCompletedError != nil {
+		return v.WorkflowExecutionAlreadyCompletedError
+	}
+
+	return
+}
+
+// IsSetWorkflowExecutionAlreadyCompletedError returns true if WorkflowExecutionAlreadyCompletedError is not nil.
+func (v *WorkflowService_RecordActivityTaskHeartbeatByID_Result) IsSetWorkflowExecutionAlreadyCompletedError() bool {
+	return v != nil && v.WorkflowExecutionAlreadyCompletedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
@@ -13515,6 +13633,8 @@ func init() {
 			return true
 		case *shared.ClientVersionNotSupportedError:
 			return true
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			return true
 		default:
 			return false
 		}
@@ -13561,6 +13681,11 @@ func init() {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RequestCancelWorkflowExecution_Result.ClientVersionNotSupportedError")
 			}
 			return &WorkflowService_RequestCancelWorkflowExecution_Result{ClientVersionNotSupportedError: e}, nil
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RequestCancelWorkflowExecution_Result.WorkflowExecutionAlreadyCompletedError")
+			}
+			return &WorkflowService_RequestCancelWorkflowExecution_Result{WorkflowExecutionAlreadyCompletedError: e}, nil
 		}
 
 		return nil, err
@@ -13594,6 +13719,10 @@ func init() {
 			err = result.ClientVersionNotSupportedError
 			return
 		}
+		if result.WorkflowExecutionAlreadyCompletedError != nil {
+			err = result.WorkflowExecutionAlreadyCompletedError
+			return
+		}
 		return
 	}
 
@@ -13603,13 +13732,14 @@ func init() {
 //
 // The result of a RequestCancelWorkflowExecution execution is sent and received over the wire as this struct.
 type WorkflowService_RequestCancelWorkflowExecution_Result struct {
-	BadRequestError                   *shared.BadRequestError                   `json:"badRequestError,omitempty"`
-	EntityNotExistError               *shared.EntityNotExistsError              `json:"entityNotExistError,omitempty"`
-	CancellationAlreadyRequestedError *shared.CancellationAlreadyRequestedError `json:"cancellationAlreadyRequestedError,omitempty"`
-	ServiceBusyError                  *shared.ServiceBusyError                  `json:"serviceBusyError,omitempty"`
-	DomainNotActiveError              *shared.DomainNotActiveError              `json:"domainNotActiveError,omitempty"`
-	LimitExceededError                *shared.LimitExceededError                `json:"limitExceededError,omitempty"`
-	ClientVersionNotSupportedError    *shared.ClientVersionNotSupportedError    `json:"clientVersionNotSupportedError,omitempty"`
+	BadRequestError                        *shared.BadRequestError                        `json:"badRequestError,omitempty"`
+	EntityNotExistError                    *shared.EntityNotExistsError                   `json:"entityNotExistError,omitempty"`
+	CancellationAlreadyRequestedError      *shared.CancellationAlreadyRequestedError      `json:"cancellationAlreadyRequestedError,omitempty"`
+	ServiceBusyError                       *shared.ServiceBusyError                       `json:"serviceBusyError,omitempty"`
+	DomainNotActiveError                   *shared.DomainNotActiveError                   `json:"domainNotActiveError,omitempty"`
+	LimitExceededError                     *shared.LimitExceededError                     `json:"limitExceededError,omitempty"`
+	ClientVersionNotSupportedError         *shared.ClientVersionNotSupportedError         `json:"clientVersionNotSupportedError,omitempty"`
+	WorkflowExecutionAlreadyCompletedError *shared.WorkflowExecutionAlreadyCompletedError `json:"workflowExecutionAlreadyCompletedError,omitempty"`
 }
 
 // ToWire translates a WorkflowService_RequestCancelWorkflowExecution_Result struct into a Thrift-level intermediate
@@ -13629,7 +13759,7 @@ type WorkflowService_RequestCancelWorkflowExecution_Result struct {
 //   }
 func (v *WorkflowService_RequestCancelWorkflowExecution_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [7]wire.Field
+		fields [8]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -13689,6 +13819,14 @@ func (v *WorkflowService_RequestCancelWorkflowExecution_Result) ToWire() (wire.V
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 8, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		w, err = v.WorkflowExecutionAlreadyCompletedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 9, Value: w}
 		i++
 	}
 
@@ -13783,6 +13921,14 @@ func (v *WorkflowService_RequestCancelWorkflowExecution_Result) FromWire(w wire.
 				}
 
 			}
+		case 9:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionAlreadyCompletedError, err = _WorkflowExecutionAlreadyCompletedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -13808,6 +13954,9 @@ func (v *WorkflowService_RequestCancelWorkflowExecution_Result) FromWire(w wire.
 	if v.ClientVersionNotSupportedError != nil {
 		count++
 	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		count++
+	}
 	if count > 1 {
 		return fmt.Errorf("WorkflowService_RequestCancelWorkflowExecution_Result should have at most one field: got %v fields", count)
 	}
@@ -13822,7 +13971,7 @@ func (v *WorkflowService_RequestCancelWorkflowExecution_Result) String() string 
 		return "<nil>"
 	}
 
-	var fields [7]string
+	var fields [8]string
 	i := 0
 	if v.BadRequestError != nil {
 		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
@@ -13850,6 +13999,10 @@ func (v *WorkflowService_RequestCancelWorkflowExecution_Result) String() string 
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionAlreadyCompletedError: %v", v.WorkflowExecutionAlreadyCompletedError)
 		i++
 	}
 
@@ -13887,6 +14040,9 @@ func (v *WorkflowService_RequestCancelWorkflowExecution_Result) Equals(rhs *Work
 	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
 		return false
 	}
+	if !((v.WorkflowExecutionAlreadyCompletedError == nil && rhs.WorkflowExecutionAlreadyCompletedError == nil) || (v.WorkflowExecutionAlreadyCompletedError != nil && rhs.WorkflowExecutionAlreadyCompletedError != nil && v.WorkflowExecutionAlreadyCompletedError.Equals(rhs.WorkflowExecutionAlreadyCompletedError))) {
+		return false
+	}
 
 	return true
 }
@@ -13917,6 +14073,9 @@ func (v *WorkflowService_RequestCancelWorkflowExecution_Result) MarshalLogObject
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		err = multierr.Append(err, enc.AddObject("workflowExecutionAlreadyCompletedError", v.WorkflowExecutionAlreadyCompletedError))
 	}
 	return err
 }
@@ -14024,6 +14183,21 @@ func (v *WorkflowService_RequestCancelWorkflowExecution_Result) GetClientVersion
 // IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
 func (v *WorkflowService_RequestCancelWorkflowExecution_Result) IsSetClientVersionNotSupportedError() bool {
 	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// GetWorkflowExecutionAlreadyCompletedError returns the value of WorkflowExecutionAlreadyCompletedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_RequestCancelWorkflowExecution_Result) GetWorkflowExecutionAlreadyCompletedError() (o *shared.WorkflowExecutionAlreadyCompletedError) {
+	if v != nil && v.WorkflowExecutionAlreadyCompletedError != nil {
+		return v.WorkflowExecutionAlreadyCompletedError
+	}
+
+	return
+}
+
+// IsSetWorkflowExecutionAlreadyCompletedError returns true if WorkflowExecutionAlreadyCompletedError is not nil.
+func (v *WorkflowService_RequestCancelWorkflowExecution_Result) IsSetWorkflowExecutionAlreadyCompletedError() bool {
+	return v != nil && v.WorkflowExecutionAlreadyCompletedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
@@ -14269,6 +14443,8 @@ func init() {
 			return true
 		case *shared.ClientVersionNotSupportedError:
 			return true
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			return true
 		default:
 			return false
 		}
@@ -14310,6 +14486,11 @@ func init() {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ResetStickyTaskList_Result.ClientVersionNotSupportedError")
 			}
 			return &WorkflowService_ResetStickyTaskList_Result{ClientVersionNotSupportedError: e}, nil
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ResetStickyTaskList_Result.WorkflowExecutionAlreadyCompletedError")
+			}
+			return &WorkflowService_ResetStickyTaskList_Result{WorkflowExecutionAlreadyCompletedError: e}, nil
 		}
 
 		return nil, err
@@ -14339,6 +14520,10 @@ func init() {
 			err = result.ClientVersionNotSupportedError
 			return
 		}
+		if result.WorkflowExecutionAlreadyCompletedError != nil {
+			err = result.WorkflowExecutionAlreadyCompletedError
+			return
+		}
 
 		if result.Success != nil {
 			success = result.Success
@@ -14358,13 +14543,14 @@ func init() {
 // Success is set only if the function did not throw an exception.
 type WorkflowService_ResetStickyTaskList_Result struct {
 	// Value returned by ResetStickyTaskList after a successful execution.
-	Success                        *shared.ResetStickyTaskListResponse    `json:"success,omitempty"`
-	BadRequestError                *shared.BadRequestError                `json:"badRequestError,omitempty"`
-	EntityNotExistError            *shared.EntityNotExistsError           `json:"entityNotExistError,omitempty"`
-	LimitExceededError             *shared.LimitExceededError             `json:"limitExceededError,omitempty"`
-	ServiceBusyError               *shared.ServiceBusyError               `json:"serviceBusyError,omitempty"`
-	DomainNotActiveError           *shared.DomainNotActiveError           `json:"domainNotActiveError,omitempty"`
-	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
+	Success                                *shared.ResetStickyTaskListResponse            `json:"success,omitempty"`
+	BadRequestError                        *shared.BadRequestError                        `json:"badRequestError,omitempty"`
+	EntityNotExistError                    *shared.EntityNotExistsError                   `json:"entityNotExistError,omitempty"`
+	LimitExceededError                     *shared.LimitExceededError                     `json:"limitExceededError,omitempty"`
+	ServiceBusyError                       *shared.ServiceBusyError                       `json:"serviceBusyError,omitempty"`
+	DomainNotActiveError                   *shared.DomainNotActiveError                   `json:"domainNotActiveError,omitempty"`
+	ClientVersionNotSupportedError         *shared.ClientVersionNotSupportedError         `json:"clientVersionNotSupportedError,omitempty"`
+	WorkflowExecutionAlreadyCompletedError *shared.WorkflowExecutionAlreadyCompletedError `json:"workflowExecutionAlreadyCompletedError,omitempty"`
 }
 
 // ToWire translates a WorkflowService_ResetStickyTaskList_Result struct into a Thrift-level intermediate
@@ -14384,7 +14570,7 @@ type WorkflowService_ResetStickyTaskList_Result struct {
 //   }
 func (v *WorkflowService_ResetStickyTaskList_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [7]wire.Field
+		fields [8]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -14444,6 +14630,14 @@ func (v *WorkflowService_ResetStickyTaskList_Result) ToWire() (wire.Value, error
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 7, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		w, err = v.WorkflowExecutionAlreadyCompletedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
 		i++
 	}
 
@@ -14538,6 +14732,14 @@ func (v *WorkflowService_ResetStickyTaskList_Result) FromWire(w wire.Value) erro
 				}
 
 			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionAlreadyCompletedError, err = _WorkflowExecutionAlreadyCompletedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -14563,6 +14765,9 @@ func (v *WorkflowService_ResetStickyTaskList_Result) FromWire(w wire.Value) erro
 	if v.ClientVersionNotSupportedError != nil {
 		count++
 	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		count++
+	}
 	if count != 1 {
 		return fmt.Errorf("WorkflowService_ResetStickyTaskList_Result should have exactly one field: got %v fields", count)
 	}
@@ -14577,7 +14782,7 @@ func (v *WorkflowService_ResetStickyTaskList_Result) String() string {
 		return "<nil>"
 	}
 
-	var fields [7]string
+	var fields [8]string
 	i := 0
 	if v.Success != nil {
 		fields[i] = fmt.Sprintf("Success: %v", v.Success)
@@ -14605,6 +14810,10 @@ func (v *WorkflowService_ResetStickyTaskList_Result) String() string {
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionAlreadyCompletedError: %v", v.WorkflowExecutionAlreadyCompletedError)
 		i++
 	}
 
@@ -14642,6 +14851,9 @@ func (v *WorkflowService_ResetStickyTaskList_Result) Equals(rhs *WorkflowService
 	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
 		return false
 	}
+	if !((v.WorkflowExecutionAlreadyCompletedError == nil && rhs.WorkflowExecutionAlreadyCompletedError == nil) || (v.WorkflowExecutionAlreadyCompletedError != nil && rhs.WorkflowExecutionAlreadyCompletedError != nil && v.WorkflowExecutionAlreadyCompletedError.Equals(rhs.WorkflowExecutionAlreadyCompletedError))) {
+		return false
+	}
 
 	return true
 }
@@ -14672,6 +14884,9 @@ func (v *WorkflowService_ResetStickyTaskList_Result) MarshalLogObject(enc zapcor
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		err = multierr.Append(err, enc.AddObject("workflowExecutionAlreadyCompletedError", v.WorkflowExecutionAlreadyCompletedError))
 	}
 	return err
 }
@@ -14779,6 +14994,21 @@ func (v *WorkflowService_ResetStickyTaskList_Result) GetClientVersionNotSupporte
 // IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
 func (v *WorkflowService_ResetStickyTaskList_Result) IsSetClientVersionNotSupportedError() bool {
 	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// GetWorkflowExecutionAlreadyCompletedError returns the value of WorkflowExecutionAlreadyCompletedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_ResetStickyTaskList_Result) GetWorkflowExecutionAlreadyCompletedError() (o *shared.WorkflowExecutionAlreadyCompletedError) {
+	if v != nil && v.WorkflowExecutionAlreadyCompletedError != nil {
+		return v.WorkflowExecutionAlreadyCompletedError
+	}
+
+	return
+}
+
+// IsSetWorkflowExecutionAlreadyCompletedError returns true if WorkflowExecutionAlreadyCompletedError is not nil.
+func (v *WorkflowService_ResetStickyTaskList_Result) IsSetWorkflowExecutionAlreadyCompletedError() bool {
+	return v != nil && v.WorkflowExecutionAlreadyCompletedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
@@ -15780,6 +16010,8 @@ func init() {
 			return true
 		case *shared.ClientVersionNotSupportedError:
 			return true
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			return true
 		default:
 			return false
 		}
@@ -15821,6 +16053,11 @@ func init() {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RespondActivityTaskCanceled_Result.ClientVersionNotSupportedError")
 			}
 			return &WorkflowService_RespondActivityTaskCanceled_Result{ClientVersionNotSupportedError: e}, nil
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RespondActivityTaskCanceled_Result.WorkflowExecutionAlreadyCompletedError")
+			}
+			return &WorkflowService_RespondActivityTaskCanceled_Result{WorkflowExecutionAlreadyCompletedError: e}, nil
 		}
 
 		return nil, err
@@ -15850,6 +16087,10 @@ func init() {
 			err = result.ClientVersionNotSupportedError
 			return
 		}
+		if result.WorkflowExecutionAlreadyCompletedError != nil {
+			err = result.WorkflowExecutionAlreadyCompletedError
+			return
+		}
 		return
 	}
 
@@ -15859,12 +16100,13 @@ func init() {
 //
 // The result of a RespondActivityTaskCanceled execution is sent and received over the wire as this struct.
 type WorkflowService_RespondActivityTaskCanceled_Result struct {
-	BadRequestError                *shared.BadRequestError                `json:"badRequestError,omitempty"`
-	EntityNotExistError            *shared.EntityNotExistsError           `json:"entityNotExistError,omitempty"`
-	DomainNotActiveError           *shared.DomainNotActiveError           `json:"domainNotActiveError,omitempty"`
-	LimitExceededError             *shared.LimitExceededError             `json:"limitExceededError,omitempty"`
-	ServiceBusyError               *shared.ServiceBusyError               `json:"serviceBusyError,omitempty"`
-	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
+	BadRequestError                        *shared.BadRequestError                        `json:"badRequestError,omitempty"`
+	EntityNotExistError                    *shared.EntityNotExistsError                   `json:"entityNotExistError,omitempty"`
+	DomainNotActiveError                   *shared.DomainNotActiveError                   `json:"domainNotActiveError,omitempty"`
+	LimitExceededError                     *shared.LimitExceededError                     `json:"limitExceededError,omitempty"`
+	ServiceBusyError                       *shared.ServiceBusyError                       `json:"serviceBusyError,omitempty"`
+	ClientVersionNotSupportedError         *shared.ClientVersionNotSupportedError         `json:"clientVersionNotSupportedError,omitempty"`
+	WorkflowExecutionAlreadyCompletedError *shared.WorkflowExecutionAlreadyCompletedError `json:"workflowExecutionAlreadyCompletedError,omitempty"`
 }
 
 // ToWire translates a WorkflowService_RespondActivityTaskCanceled_Result struct into a Thrift-level intermediate
@@ -15884,7 +16126,7 @@ type WorkflowService_RespondActivityTaskCanceled_Result struct {
 //   }
 func (v *WorkflowService_RespondActivityTaskCanceled_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -15936,6 +16178,14 @@ func (v *WorkflowService_RespondActivityTaskCanceled_Result) ToWire() (wire.Valu
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 7, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		w, err = v.WorkflowExecutionAlreadyCompletedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
 		i++
 	}
 
@@ -16016,6 +16266,14 @@ func (v *WorkflowService_RespondActivityTaskCanceled_Result) FromWire(w wire.Val
 				}
 
 			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionAlreadyCompletedError, err = _WorkflowExecutionAlreadyCompletedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -16038,6 +16296,9 @@ func (v *WorkflowService_RespondActivityTaskCanceled_Result) FromWire(w wire.Val
 	if v.ClientVersionNotSupportedError != nil {
 		count++
 	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		count++
+	}
 	if count > 1 {
 		return fmt.Errorf("WorkflowService_RespondActivityTaskCanceled_Result should have at most one field: got %v fields", count)
 	}
@@ -16052,7 +16313,7 @@ func (v *WorkflowService_RespondActivityTaskCanceled_Result) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
 	if v.BadRequestError != nil {
 		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
@@ -16076,6 +16337,10 @@ func (v *WorkflowService_RespondActivityTaskCanceled_Result) String() string {
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionAlreadyCompletedError: %v", v.WorkflowExecutionAlreadyCompletedError)
 		i++
 	}
 
@@ -16110,6 +16375,9 @@ func (v *WorkflowService_RespondActivityTaskCanceled_Result) Equals(rhs *Workflo
 	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
 		return false
 	}
+	if !((v.WorkflowExecutionAlreadyCompletedError == nil && rhs.WorkflowExecutionAlreadyCompletedError == nil) || (v.WorkflowExecutionAlreadyCompletedError != nil && rhs.WorkflowExecutionAlreadyCompletedError != nil && v.WorkflowExecutionAlreadyCompletedError.Equals(rhs.WorkflowExecutionAlreadyCompletedError))) {
+		return false
+	}
 
 	return true
 }
@@ -16137,6 +16405,9 @@ func (v *WorkflowService_RespondActivityTaskCanceled_Result) MarshalLogObject(en
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		err = multierr.Append(err, enc.AddObject("workflowExecutionAlreadyCompletedError", v.WorkflowExecutionAlreadyCompletedError))
 	}
 	return err
 }
@@ -16229,6 +16500,21 @@ func (v *WorkflowService_RespondActivityTaskCanceled_Result) GetClientVersionNot
 // IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
 func (v *WorkflowService_RespondActivityTaskCanceled_Result) IsSetClientVersionNotSupportedError() bool {
 	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// GetWorkflowExecutionAlreadyCompletedError returns the value of WorkflowExecutionAlreadyCompletedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_RespondActivityTaskCanceled_Result) GetWorkflowExecutionAlreadyCompletedError() (o *shared.WorkflowExecutionAlreadyCompletedError) {
+	if v != nil && v.WorkflowExecutionAlreadyCompletedError != nil {
+		return v.WorkflowExecutionAlreadyCompletedError
+	}
+
+	return
+}
+
+// IsSetWorkflowExecutionAlreadyCompletedError returns true if WorkflowExecutionAlreadyCompletedError is not nil.
+func (v *WorkflowService_RespondActivityTaskCanceled_Result) IsSetWorkflowExecutionAlreadyCompletedError() bool {
+	return v != nil && v.WorkflowExecutionAlreadyCompletedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
@@ -16475,6 +16761,8 @@ func init() {
 			return true
 		case *shared.ClientVersionNotSupportedError:
 			return true
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			return true
 		default:
 			return false
 		}
@@ -16516,6 +16804,11 @@ func init() {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RespondActivityTaskCanceledByID_Result.ClientVersionNotSupportedError")
 			}
 			return &WorkflowService_RespondActivityTaskCanceledByID_Result{ClientVersionNotSupportedError: e}, nil
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RespondActivityTaskCanceledByID_Result.WorkflowExecutionAlreadyCompletedError")
+			}
+			return &WorkflowService_RespondActivityTaskCanceledByID_Result{WorkflowExecutionAlreadyCompletedError: e}, nil
 		}
 
 		return nil, err
@@ -16545,6 +16838,10 @@ func init() {
 			err = result.ClientVersionNotSupportedError
 			return
 		}
+		if result.WorkflowExecutionAlreadyCompletedError != nil {
+			err = result.WorkflowExecutionAlreadyCompletedError
+			return
+		}
 		return
 	}
 
@@ -16554,12 +16851,13 @@ func init() {
 //
 // The result of a RespondActivityTaskCanceledByID execution is sent and received over the wire as this struct.
 type WorkflowService_RespondActivityTaskCanceledByID_Result struct {
-	BadRequestError                *shared.BadRequestError                `json:"badRequestError,omitempty"`
-	EntityNotExistError            *shared.EntityNotExistsError           `json:"entityNotExistError,omitempty"`
-	DomainNotActiveError           *shared.DomainNotActiveError           `json:"domainNotActiveError,omitempty"`
-	LimitExceededError             *shared.LimitExceededError             `json:"limitExceededError,omitempty"`
-	ServiceBusyError               *shared.ServiceBusyError               `json:"serviceBusyError,omitempty"`
-	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
+	BadRequestError                        *shared.BadRequestError                        `json:"badRequestError,omitempty"`
+	EntityNotExistError                    *shared.EntityNotExistsError                   `json:"entityNotExistError,omitempty"`
+	DomainNotActiveError                   *shared.DomainNotActiveError                   `json:"domainNotActiveError,omitempty"`
+	LimitExceededError                     *shared.LimitExceededError                     `json:"limitExceededError,omitempty"`
+	ServiceBusyError                       *shared.ServiceBusyError                       `json:"serviceBusyError,omitempty"`
+	ClientVersionNotSupportedError         *shared.ClientVersionNotSupportedError         `json:"clientVersionNotSupportedError,omitempty"`
+	WorkflowExecutionAlreadyCompletedError *shared.WorkflowExecutionAlreadyCompletedError `json:"workflowExecutionAlreadyCompletedError,omitempty"`
 }
 
 // ToWire translates a WorkflowService_RespondActivityTaskCanceledByID_Result struct into a Thrift-level intermediate
@@ -16579,7 +16877,7 @@ type WorkflowService_RespondActivityTaskCanceledByID_Result struct {
 //   }
 func (v *WorkflowService_RespondActivityTaskCanceledByID_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -16631,6 +16929,14 @@ func (v *WorkflowService_RespondActivityTaskCanceledByID_Result) ToWire() (wire.
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 7, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		w, err = v.WorkflowExecutionAlreadyCompletedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
 		i++
 	}
 
@@ -16711,6 +17017,14 @@ func (v *WorkflowService_RespondActivityTaskCanceledByID_Result) FromWire(w wire
 				}
 
 			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionAlreadyCompletedError, err = _WorkflowExecutionAlreadyCompletedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -16733,6 +17047,9 @@ func (v *WorkflowService_RespondActivityTaskCanceledByID_Result) FromWire(w wire
 	if v.ClientVersionNotSupportedError != nil {
 		count++
 	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		count++
+	}
 	if count > 1 {
 		return fmt.Errorf("WorkflowService_RespondActivityTaskCanceledByID_Result should have at most one field: got %v fields", count)
 	}
@@ -16747,7 +17064,7 @@ func (v *WorkflowService_RespondActivityTaskCanceledByID_Result) String() string
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
 	if v.BadRequestError != nil {
 		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
@@ -16771,6 +17088,10 @@ func (v *WorkflowService_RespondActivityTaskCanceledByID_Result) String() string
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionAlreadyCompletedError: %v", v.WorkflowExecutionAlreadyCompletedError)
 		i++
 	}
 
@@ -16805,6 +17126,9 @@ func (v *WorkflowService_RespondActivityTaskCanceledByID_Result) Equals(rhs *Wor
 	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
 		return false
 	}
+	if !((v.WorkflowExecutionAlreadyCompletedError == nil && rhs.WorkflowExecutionAlreadyCompletedError == nil) || (v.WorkflowExecutionAlreadyCompletedError != nil && rhs.WorkflowExecutionAlreadyCompletedError != nil && v.WorkflowExecutionAlreadyCompletedError.Equals(rhs.WorkflowExecutionAlreadyCompletedError))) {
+		return false
+	}
 
 	return true
 }
@@ -16832,6 +17156,9 @@ func (v *WorkflowService_RespondActivityTaskCanceledByID_Result) MarshalLogObjec
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		err = multierr.Append(err, enc.AddObject("workflowExecutionAlreadyCompletedError", v.WorkflowExecutionAlreadyCompletedError))
 	}
 	return err
 }
@@ -16924,6 +17251,21 @@ func (v *WorkflowService_RespondActivityTaskCanceledByID_Result) GetClientVersio
 // IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
 func (v *WorkflowService_RespondActivityTaskCanceledByID_Result) IsSetClientVersionNotSupportedError() bool {
 	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// GetWorkflowExecutionAlreadyCompletedError returns the value of WorkflowExecutionAlreadyCompletedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_RespondActivityTaskCanceledByID_Result) GetWorkflowExecutionAlreadyCompletedError() (o *shared.WorkflowExecutionAlreadyCompletedError) {
+	if v != nil && v.WorkflowExecutionAlreadyCompletedError != nil {
+		return v.WorkflowExecutionAlreadyCompletedError
+	}
+
+	return
+}
+
+// IsSetWorkflowExecutionAlreadyCompletedError returns true if WorkflowExecutionAlreadyCompletedError is not nil.
+func (v *WorkflowService_RespondActivityTaskCanceledByID_Result) IsSetWorkflowExecutionAlreadyCompletedError() bool {
+	return v != nil && v.WorkflowExecutionAlreadyCompletedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
@@ -17170,6 +17512,8 @@ func init() {
 			return true
 		case *shared.ClientVersionNotSupportedError:
 			return true
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			return true
 		default:
 			return false
 		}
@@ -17211,6 +17555,11 @@ func init() {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RespondActivityTaskCompleted_Result.ClientVersionNotSupportedError")
 			}
 			return &WorkflowService_RespondActivityTaskCompleted_Result{ClientVersionNotSupportedError: e}, nil
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RespondActivityTaskCompleted_Result.WorkflowExecutionAlreadyCompletedError")
+			}
+			return &WorkflowService_RespondActivityTaskCompleted_Result{WorkflowExecutionAlreadyCompletedError: e}, nil
 		}
 
 		return nil, err
@@ -17240,6 +17589,10 @@ func init() {
 			err = result.ClientVersionNotSupportedError
 			return
 		}
+		if result.WorkflowExecutionAlreadyCompletedError != nil {
+			err = result.WorkflowExecutionAlreadyCompletedError
+			return
+		}
 		return
 	}
 
@@ -17249,12 +17602,13 @@ func init() {
 //
 // The result of a RespondActivityTaskCompleted execution is sent and received over the wire as this struct.
 type WorkflowService_RespondActivityTaskCompleted_Result struct {
-	BadRequestError                *shared.BadRequestError                `json:"badRequestError,omitempty"`
-	EntityNotExistError            *shared.EntityNotExistsError           `json:"entityNotExistError,omitempty"`
-	DomainNotActiveError           *shared.DomainNotActiveError           `json:"domainNotActiveError,omitempty"`
-	LimitExceededError             *shared.LimitExceededError             `json:"limitExceededError,omitempty"`
-	ServiceBusyError               *shared.ServiceBusyError               `json:"serviceBusyError,omitempty"`
-	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
+	BadRequestError                        *shared.BadRequestError                        `json:"badRequestError,omitempty"`
+	EntityNotExistError                    *shared.EntityNotExistsError                   `json:"entityNotExistError,omitempty"`
+	DomainNotActiveError                   *shared.DomainNotActiveError                   `json:"domainNotActiveError,omitempty"`
+	LimitExceededError                     *shared.LimitExceededError                     `json:"limitExceededError,omitempty"`
+	ServiceBusyError                       *shared.ServiceBusyError                       `json:"serviceBusyError,omitempty"`
+	ClientVersionNotSupportedError         *shared.ClientVersionNotSupportedError         `json:"clientVersionNotSupportedError,omitempty"`
+	WorkflowExecutionAlreadyCompletedError *shared.WorkflowExecutionAlreadyCompletedError `json:"workflowExecutionAlreadyCompletedError,omitempty"`
 }
 
 // ToWire translates a WorkflowService_RespondActivityTaskCompleted_Result struct into a Thrift-level intermediate
@@ -17274,7 +17628,7 @@ type WorkflowService_RespondActivityTaskCompleted_Result struct {
 //   }
 func (v *WorkflowService_RespondActivityTaskCompleted_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -17326,6 +17680,14 @@ func (v *WorkflowService_RespondActivityTaskCompleted_Result) ToWire() (wire.Val
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 7, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		w, err = v.WorkflowExecutionAlreadyCompletedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
 		i++
 	}
 
@@ -17406,6 +17768,14 @@ func (v *WorkflowService_RespondActivityTaskCompleted_Result) FromWire(w wire.Va
 				}
 
 			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionAlreadyCompletedError, err = _WorkflowExecutionAlreadyCompletedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -17428,6 +17798,9 @@ func (v *WorkflowService_RespondActivityTaskCompleted_Result) FromWire(w wire.Va
 	if v.ClientVersionNotSupportedError != nil {
 		count++
 	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		count++
+	}
 	if count > 1 {
 		return fmt.Errorf("WorkflowService_RespondActivityTaskCompleted_Result should have at most one field: got %v fields", count)
 	}
@@ -17442,7 +17815,7 @@ func (v *WorkflowService_RespondActivityTaskCompleted_Result) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
 	if v.BadRequestError != nil {
 		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
@@ -17466,6 +17839,10 @@ func (v *WorkflowService_RespondActivityTaskCompleted_Result) String() string {
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionAlreadyCompletedError: %v", v.WorkflowExecutionAlreadyCompletedError)
 		i++
 	}
 
@@ -17500,6 +17877,9 @@ func (v *WorkflowService_RespondActivityTaskCompleted_Result) Equals(rhs *Workfl
 	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
 		return false
 	}
+	if !((v.WorkflowExecutionAlreadyCompletedError == nil && rhs.WorkflowExecutionAlreadyCompletedError == nil) || (v.WorkflowExecutionAlreadyCompletedError != nil && rhs.WorkflowExecutionAlreadyCompletedError != nil && v.WorkflowExecutionAlreadyCompletedError.Equals(rhs.WorkflowExecutionAlreadyCompletedError))) {
+		return false
+	}
 
 	return true
 }
@@ -17527,6 +17907,9 @@ func (v *WorkflowService_RespondActivityTaskCompleted_Result) MarshalLogObject(e
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		err = multierr.Append(err, enc.AddObject("workflowExecutionAlreadyCompletedError", v.WorkflowExecutionAlreadyCompletedError))
 	}
 	return err
 }
@@ -17619,6 +18002,21 @@ func (v *WorkflowService_RespondActivityTaskCompleted_Result) GetClientVersionNo
 // IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
 func (v *WorkflowService_RespondActivityTaskCompleted_Result) IsSetClientVersionNotSupportedError() bool {
 	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// GetWorkflowExecutionAlreadyCompletedError returns the value of WorkflowExecutionAlreadyCompletedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_RespondActivityTaskCompleted_Result) GetWorkflowExecutionAlreadyCompletedError() (o *shared.WorkflowExecutionAlreadyCompletedError) {
+	if v != nil && v.WorkflowExecutionAlreadyCompletedError != nil {
+		return v.WorkflowExecutionAlreadyCompletedError
+	}
+
+	return
+}
+
+// IsSetWorkflowExecutionAlreadyCompletedError returns true if WorkflowExecutionAlreadyCompletedError is not nil.
+func (v *WorkflowService_RespondActivityTaskCompleted_Result) IsSetWorkflowExecutionAlreadyCompletedError() bool {
+	return v != nil && v.WorkflowExecutionAlreadyCompletedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
@@ -17865,6 +18263,8 @@ func init() {
 			return true
 		case *shared.ClientVersionNotSupportedError:
 			return true
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			return true
 		default:
 			return false
 		}
@@ -17906,6 +18306,11 @@ func init() {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RespondActivityTaskCompletedByID_Result.ClientVersionNotSupportedError")
 			}
 			return &WorkflowService_RespondActivityTaskCompletedByID_Result{ClientVersionNotSupportedError: e}, nil
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RespondActivityTaskCompletedByID_Result.WorkflowExecutionAlreadyCompletedError")
+			}
+			return &WorkflowService_RespondActivityTaskCompletedByID_Result{WorkflowExecutionAlreadyCompletedError: e}, nil
 		}
 
 		return nil, err
@@ -17935,6 +18340,10 @@ func init() {
 			err = result.ClientVersionNotSupportedError
 			return
 		}
+		if result.WorkflowExecutionAlreadyCompletedError != nil {
+			err = result.WorkflowExecutionAlreadyCompletedError
+			return
+		}
 		return
 	}
 
@@ -17944,12 +18353,13 @@ func init() {
 //
 // The result of a RespondActivityTaskCompletedByID execution is sent and received over the wire as this struct.
 type WorkflowService_RespondActivityTaskCompletedByID_Result struct {
-	BadRequestError                *shared.BadRequestError                `json:"badRequestError,omitempty"`
-	EntityNotExistError            *shared.EntityNotExistsError           `json:"entityNotExistError,omitempty"`
-	DomainNotActiveError           *shared.DomainNotActiveError           `json:"domainNotActiveError,omitempty"`
-	LimitExceededError             *shared.LimitExceededError             `json:"limitExceededError,omitempty"`
-	ServiceBusyError               *shared.ServiceBusyError               `json:"serviceBusyError,omitempty"`
-	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
+	BadRequestError                        *shared.BadRequestError                        `json:"badRequestError,omitempty"`
+	EntityNotExistError                    *shared.EntityNotExistsError                   `json:"entityNotExistError,omitempty"`
+	DomainNotActiveError                   *shared.DomainNotActiveError                   `json:"domainNotActiveError,omitempty"`
+	LimitExceededError                     *shared.LimitExceededError                     `json:"limitExceededError,omitempty"`
+	ServiceBusyError                       *shared.ServiceBusyError                       `json:"serviceBusyError,omitempty"`
+	ClientVersionNotSupportedError         *shared.ClientVersionNotSupportedError         `json:"clientVersionNotSupportedError,omitempty"`
+	WorkflowExecutionAlreadyCompletedError *shared.WorkflowExecutionAlreadyCompletedError `json:"workflowExecutionAlreadyCompletedError,omitempty"`
 }
 
 // ToWire translates a WorkflowService_RespondActivityTaskCompletedByID_Result struct into a Thrift-level intermediate
@@ -17969,7 +18379,7 @@ type WorkflowService_RespondActivityTaskCompletedByID_Result struct {
 //   }
 func (v *WorkflowService_RespondActivityTaskCompletedByID_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -18021,6 +18431,14 @@ func (v *WorkflowService_RespondActivityTaskCompletedByID_Result) ToWire() (wire
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 7, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		w, err = v.WorkflowExecutionAlreadyCompletedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
 		i++
 	}
 
@@ -18101,6 +18519,14 @@ func (v *WorkflowService_RespondActivityTaskCompletedByID_Result) FromWire(w wir
 				}
 
 			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionAlreadyCompletedError, err = _WorkflowExecutionAlreadyCompletedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -18123,6 +18549,9 @@ func (v *WorkflowService_RespondActivityTaskCompletedByID_Result) FromWire(w wir
 	if v.ClientVersionNotSupportedError != nil {
 		count++
 	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		count++
+	}
 	if count > 1 {
 		return fmt.Errorf("WorkflowService_RespondActivityTaskCompletedByID_Result should have at most one field: got %v fields", count)
 	}
@@ -18137,7 +18566,7 @@ func (v *WorkflowService_RespondActivityTaskCompletedByID_Result) String() strin
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
 	if v.BadRequestError != nil {
 		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
@@ -18161,6 +18590,10 @@ func (v *WorkflowService_RespondActivityTaskCompletedByID_Result) String() strin
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionAlreadyCompletedError: %v", v.WorkflowExecutionAlreadyCompletedError)
 		i++
 	}
 
@@ -18195,6 +18628,9 @@ func (v *WorkflowService_RespondActivityTaskCompletedByID_Result) Equals(rhs *Wo
 	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
 		return false
 	}
+	if !((v.WorkflowExecutionAlreadyCompletedError == nil && rhs.WorkflowExecutionAlreadyCompletedError == nil) || (v.WorkflowExecutionAlreadyCompletedError != nil && rhs.WorkflowExecutionAlreadyCompletedError != nil && v.WorkflowExecutionAlreadyCompletedError.Equals(rhs.WorkflowExecutionAlreadyCompletedError))) {
+		return false
+	}
 
 	return true
 }
@@ -18222,6 +18658,9 @@ func (v *WorkflowService_RespondActivityTaskCompletedByID_Result) MarshalLogObje
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		err = multierr.Append(err, enc.AddObject("workflowExecutionAlreadyCompletedError", v.WorkflowExecutionAlreadyCompletedError))
 	}
 	return err
 }
@@ -18314,6 +18753,21 @@ func (v *WorkflowService_RespondActivityTaskCompletedByID_Result) GetClientVersi
 // IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
 func (v *WorkflowService_RespondActivityTaskCompletedByID_Result) IsSetClientVersionNotSupportedError() bool {
 	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// GetWorkflowExecutionAlreadyCompletedError returns the value of WorkflowExecutionAlreadyCompletedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_RespondActivityTaskCompletedByID_Result) GetWorkflowExecutionAlreadyCompletedError() (o *shared.WorkflowExecutionAlreadyCompletedError) {
+	if v != nil && v.WorkflowExecutionAlreadyCompletedError != nil {
+		return v.WorkflowExecutionAlreadyCompletedError
+	}
+
+	return
+}
+
+// IsSetWorkflowExecutionAlreadyCompletedError returns true if WorkflowExecutionAlreadyCompletedError is not nil.
+func (v *WorkflowService_RespondActivityTaskCompletedByID_Result) IsSetWorkflowExecutionAlreadyCompletedError() bool {
+	return v != nil && v.WorkflowExecutionAlreadyCompletedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
@@ -18560,6 +19014,8 @@ func init() {
 			return true
 		case *shared.ClientVersionNotSupportedError:
 			return true
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			return true
 		default:
 			return false
 		}
@@ -18601,6 +19057,11 @@ func init() {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RespondActivityTaskFailed_Result.ClientVersionNotSupportedError")
 			}
 			return &WorkflowService_RespondActivityTaskFailed_Result{ClientVersionNotSupportedError: e}, nil
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RespondActivityTaskFailed_Result.WorkflowExecutionAlreadyCompletedError")
+			}
+			return &WorkflowService_RespondActivityTaskFailed_Result{WorkflowExecutionAlreadyCompletedError: e}, nil
 		}
 
 		return nil, err
@@ -18630,6 +19091,10 @@ func init() {
 			err = result.ClientVersionNotSupportedError
 			return
 		}
+		if result.WorkflowExecutionAlreadyCompletedError != nil {
+			err = result.WorkflowExecutionAlreadyCompletedError
+			return
+		}
 		return
 	}
 
@@ -18639,12 +19104,13 @@ func init() {
 //
 // The result of a RespondActivityTaskFailed execution is sent and received over the wire as this struct.
 type WorkflowService_RespondActivityTaskFailed_Result struct {
-	BadRequestError                *shared.BadRequestError                `json:"badRequestError,omitempty"`
-	EntityNotExistError            *shared.EntityNotExistsError           `json:"entityNotExistError,omitempty"`
-	DomainNotActiveError           *shared.DomainNotActiveError           `json:"domainNotActiveError,omitempty"`
-	LimitExceededError             *shared.LimitExceededError             `json:"limitExceededError,omitempty"`
-	ServiceBusyError               *shared.ServiceBusyError               `json:"serviceBusyError,omitempty"`
-	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
+	BadRequestError                        *shared.BadRequestError                        `json:"badRequestError,omitempty"`
+	EntityNotExistError                    *shared.EntityNotExistsError                   `json:"entityNotExistError,omitempty"`
+	DomainNotActiveError                   *shared.DomainNotActiveError                   `json:"domainNotActiveError,omitempty"`
+	LimitExceededError                     *shared.LimitExceededError                     `json:"limitExceededError,omitempty"`
+	ServiceBusyError                       *shared.ServiceBusyError                       `json:"serviceBusyError,omitempty"`
+	ClientVersionNotSupportedError         *shared.ClientVersionNotSupportedError         `json:"clientVersionNotSupportedError,omitempty"`
+	WorkflowExecutionAlreadyCompletedError *shared.WorkflowExecutionAlreadyCompletedError `json:"workflowExecutionAlreadyCompletedError,omitempty"`
 }
 
 // ToWire translates a WorkflowService_RespondActivityTaskFailed_Result struct into a Thrift-level intermediate
@@ -18664,7 +19130,7 @@ type WorkflowService_RespondActivityTaskFailed_Result struct {
 //   }
 func (v *WorkflowService_RespondActivityTaskFailed_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -18716,6 +19182,14 @@ func (v *WorkflowService_RespondActivityTaskFailed_Result) ToWire() (wire.Value,
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 7, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		w, err = v.WorkflowExecutionAlreadyCompletedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
 		i++
 	}
 
@@ -18796,6 +19270,14 @@ func (v *WorkflowService_RespondActivityTaskFailed_Result) FromWire(w wire.Value
 				}
 
 			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionAlreadyCompletedError, err = _WorkflowExecutionAlreadyCompletedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -18818,6 +19300,9 @@ func (v *WorkflowService_RespondActivityTaskFailed_Result) FromWire(w wire.Value
 	if v.ClientVersionNotSupportedError != nil {
 		count++
 	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		count++
+	}
 	if count > 1 {
 		return fmt.Errorf("WorkflowService_RespondActivityTaskFailed_Result should have at most one field: got %v fields", count)
 	}
@@ -18832,7 +19317,7 @@ func (v *WorkflowService_RespondActivityTaskFailed_Result) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
 	if v.BadRequestError != nil {
 		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
@@ -18856,6 +19341,10 @@ func (v *WorkflowService_RespondActivityTaskFailed_Result) String() string {
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionAlreadyCompletedError: %v", v.WorkflowExecutionAlreadyCompletedError)
 		i++
 	}
 
@@ -18890,6 +19379,9 @@ func (v *WorkflowService_RespondActivityTaskFailed_Result) Equals(rhs *WorkflowS
 	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
 		return false
 	}
+	if !((v.WorkflowExecutionAlreadyCompletedError == nil && rhs.WorkflowExecutionAlreadyCompletedError == nil) || (v.WorkflowExecutionAlreadyCompletedError != nil && rhs.WorkflowExecutionAlreadyCompletedError != nil && v.WorkflowExecutionAlreadyCompletedError.Equals(rhs.WorkflowExecutionAlreadyCompletedError))) {
+		return false
+	}
 
 	return true
 }
@@ -18917,6 +19409,9 @@ func (v *WorkflowService_RespondActivityTaskFailed_Result) MarshalLogObject(enc 
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		err = multierr.Append(err, enc.AddObject("workflowExecutionAlreadyCompletedError", v.WorkflowExecutionAlreadyCompletedError))
 	}
 	return err
 }
@@ -19009,6 +19504,21 @@ func (v *WorkflowService_RespondActivityTaskFailed_Result) GetClientVersionNotSu
 // IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
 func (v *WorkflowService_RespondActivityTaskFailed_Result) IsSetClientVersionNotSupportedError() bool {
 	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// GetWorkflowExecutionAlreadyCompletedError returns the value of WorkflowExecutionAlreadyCompletedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_RespondActivityTaskFailed_Result) GetWorkflowExecutionAlreadyCompletedError() (o *shared.WorkflowExecutionAlreadyCompletedError) {
+	if v != nil && v.WorkflowExecutionAlreadyCompletedError != nil {
+		return v.WorkflowExecutionAlreadyCompletedError
+	}
+
+	return
+}
+
+// IsSetWorkflowExecutionAlreadyCompletedError returns true if WorkflowExecutionAlreadyCompletedError is not nil.
+func (v *WorkflowService_RespondActivityTaskFailed_Result) IsSetWorkflowExecutionAlreadyCompletedError() bool {
+	return v != nil && v.WorkflowExecutionAlreadyCompletedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
@@ -19255,6 +19765,8 @@ func init() {
 			return true
 		case *shared.ClientVersionNotSupportedError:
 			return true
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			return true
 		default:
 			return false
 		}
@@ -19296,6 +19808,11 @@ func init() {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RespondActivityTaskFailedByID_Result.ClientVersionNotSupportedError")
 			}
 			return &WorkflowService_RespondActivityTaskFailedByID_Result{ClientVersionNotSupportedError: e}, nil
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RespondActivityTaskFailedByID_Result.WorkflowExecutionAlreadyCompletedError")
+			}
+			return &WorkflowService_RespondActivityTaskFailedByID_Result{WorkflowExecutionAlreadyCompletedError: e}, nil
 		}
 
 		return nil, err
@@ -19325,6 +19842,10 @@ func init() {
 			err = result.ClientVersionNotSupportedError
 			return
 		}
+		if result.WorkflowExecutionAlreadyCompletedError != nil {
+			err = result.WorkflowExecutionAlreadyCompletedError
+			return
+		}
 		return
 	}
 
@@ -19334,12 +19855,13 @@ func init() {
 //
 // The result of a RespondActivityTaskFailedByID execution is sent and received over the wire as this struct.
 type WorkflowService_RespondActivityTaskFailedByID_Result struct {
-	BadRequestError                *shared.BadRequestError                `json:"badRequestError,omitempty"`
-	EntityNotExistError            *shared.EntityNotExistsError           `json:"entityNotExistError,omitempty"`
-	DomainNotActiveError           *shared.DomainNotActiveError           `json:"domainNotActiveError,omitempty"`
-	LimitExceededError             *shared.LimitExceededError             `json:"limitExceededError,omitempty"`
-	ServiceBusyError               *shared.ServiceBusyError               `json:"serviceBusyError,omitempty"`
-	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
+	BadRequestError                        *shared.BadRequestError                        `json:"badRequestError,omitempty"`
+	EntityNotExistError                    *shared.EntityNotExistsError                   `json:"entityNotExistError,omitempty"`
+	DomainNotActiveError                   *shared.DomainNotActiveError                   `json:"domainNotActiveError,omitempty"`
+	LimitExceededError                     *shared.LimitExceededError                     `json:"limitExceededError,omitempty"`
+	ServiceBusyError                       *shared.ServiceBusyError                       `json:"serviceBusyError,omitempty"`
+	ClientVersionNotSupportedError         *shared.ClientVersionNotSupportedError         `json:"clientVersionNotSupportedError,omitempty"`
+	WorkflowExecutionAlreadyCompletedError *shared.WorkflowExecutionAlreadyCompletedError `json:"workflowExecutionAlreadyCompletedError,omitempty"`
 }
 
 // ToWire translates a WorkflowService_RespondActivityTaskFailedByID_Result struct into a Thrift-level intermediate
@@ -19359,7 +19881,7 @@ type WorkflowService_RespondActivityTaskFailedByID_Result struct {
 //   }
 func (v *WorkflowService_RespondActivityTaskFailedByID_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -19411,6 +19933,14 @@ func (v *WorkflowService_RespondActivityTaskFailedByID_Result) ToWire() (wire.Va
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 7, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		w, err = v.WorkflowExecutionAlreadyCompletedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
 		i++
 	}
 
@@ -19491,6 +20021,14 @@ func (v *WorkflowService_RespondActivityTaskFailedByID_Result) FromWire(w wire.V
 				}
 
 			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionAlreadyCompletedError, err = _WorkflowExecutionAlreadyCompletedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -19513,6 +20051,9 @@ func (v *WorkflowService_RespondActivityTaskFailedByID_Result) FromWire(w wire.V
 	if v.ClientVersionNotSupportedError != nil {
 		count++
 	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		count++
+	}
 	if count > 1 {
 		return fmt.Errorf("WorkflowService_RespondActivityTaskFailedByID_Result should have at most one field: got %v fields", count)
 	}
@@ -19527,7 +20068,7 @@ func (v *WorkflowService_RespondActivityTaskFailedByID_Result) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
 	if v.BadRequestError != nil {
 		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
@@ -19551,6 +20092,10 @@ func (v *WorkflowService_RespondActivityTaskFailedByID_Result) String() string {
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionAlreadyCompletedError: %v", v.WorkflowExecutionAlreadyCompletedError)
 		i++
 	}
 
@@ -19585,6 +20130,9 @@ func (v *WorkflowService_RespondActivityTaskFailedByID_Result) Equals(rhs *Workf
 	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
 		return false
 	}
+	if !((v.WorkflowExecutionAlreadyCompletedError == nil && rhs.WorkflowExecutionAlreadyCompletedError == nil) || (v.WorkflowExecutionAlreadyCompletedError != nil && rhs.WorkflowExecutionAlreadyCompletedError != nil && v.WorkflowExecutionAlreadyCompletedError.Equals(rhs.WorkflowExecutionAlreadyCompletedError))) {
+		return false
+	}
 
 	return true
 }
@@ -19612,6 +20160,9 @@ func (v *WorkflowService_RespondActivityTaskFailedByID_Result) MarshalLogObject(
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		err = multierr.Append(err, enc.AddObject("workflowExecutionAlreadyCompletedError", v.WorkflowExecutionAlreadyCompletedError))
 	}
 	return err
 }
@@ -19704,6 +20255,21 @@ func (v *WorkflowService_RespondActivityTaskFailedByID_Result) GetClientVersionN
 // IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
 func (v *WorkflowService_RespondActivityTaskFailedByID_Result) IsSetClientVersionNotSupportedError() bool {
 	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// GetWorkflowExecutionAlreadyCompletedError returns the value of WorkflowExecutionAlreadyCompletedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_RespondActivityTaskFailedByID_Result) GetWorkflowExecutionAlreadyCompletedError() (o *shared.WorkflowExecutionAlreadyCompletedError) {
+	if v != nil && v.WorkflowExecutionAlreadyCompletedError != nil {
+		return v.WorkflowExecutionAlreadyCompletedError
+	}
+
+	return
+}
+
+// IsSetWorkflowExecutionAlreadyCompletedError returns true if WorkflowExecutionAlreadyCompletedError is not nil.
+func (v *WorkflowService_RespondActivityTaskFailedByID_Result) IsSetWorkflowExecutionAlreadyCompletedError() bool {
+	return v != nil && v.WorkflowExecutionAlreadyCompletedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
@@ -19949,6 +20515,8 @@ func init() {
 			return true
 		case *shared.ClientVersionNotSupportedError:
 			return true
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			return true
 		default:
 			return false
 		}
@@ -19990,6 +20558,11 @@ func init() {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RespondDecisionTaskCompleted_Result.ClientVersionNotSupportedError")
 			}
 			return &WorkflowService_RespondDecisionTaskCompleted_Result{ClientVersionNotSupportedError: e}, nil
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RespondDecisionTaskCompleted_Result.WorkflowExecutionAlreadyCompletedError")
+			}
+			return &WorkflowService_RespondDecisionTaskCompleted_Result{WorkflowExecutionAlreadyCompletedError: e}, nil
 		}
 
 		return nil, err
@@ -20019,6 +20592,10 @@ func init() {
 			err = result.ClientVersionNotSupportedError
 			return
 		}
+		if result.WorkflowExecutionAlreadyCompletedError != nil {
+			err = result.WorkflowExecutionAlreadyCompletedError
+			return
+		}
 
 		if result.Success != nil {
 			success = result.Success
@@ -20038,13 +20615,14 @@ func init() {
 // Success is set only if the function did not throw an exception.
 type WorkflowService_RespondDecisionTaskCompleted_Result struct {
 	// Value returned by RespondDecisionTaskCompleted after a successful execution.
-	Success                        *shared.RespondDecisionTaskCompletedResponse `json:"success,omitempty"`
-	BadRequestError                *shared.BadRequestError                      `json:"badRequestError,omitempty"`
-	EntityNotExistError            *shared.EntityNotExistsError                 `json:"entityNotExistError,omitempty"`
-	DomainNotActiveError           *shared.DomainNotActiveError                 `json:"domainNotActiveError,omitempty"`
-	LimitExceededError             *shared.LimitExceededError                   `json:"limitExceededError,omitempty"`
-	ServiceBusyError               *shared.ServiceBusyError                     `json:"serviceBusyError,omitempty"`
-	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError       `json:"clientVersionNotSupportedError,omitempty"`
+	Success                                *shared.RespondDecisionTaskCompletedResponse   `json:"success,omitempty"`
+	BadRequestError                        *shared.BadRequestError                        `json:"badRequestError,omitempty"`
+	EntityNotExistError                    *shared.EntityNotExistsError                   `json:"entityNotExistError,omitempty"`
+	DomainNotActiveError                   *shared.DomainNotActiveError                   `json:"domainNotActiveError,omitempty"`
+	LimitExceededError                     *shared.LimitExceededError                     `json:"limitExceededError,omitempty"`
+	ServiceBusyError                       *shared.ServiceBusyError                       `json:"serviceBusyError,omitempty"`
+	ClientVersionNotSupportedError         *shared.ClientVersionNotSupportedError         `json:"clientVersionNotSupportedError,omitempty"`
+	WorkflowExecutionAlreadyCompletedError *shared.WorkflowExecutionAlreadyCompletedError `json:"workflowExecutionAlreadyCompletedError,omitempty"`
 }
 
 // ToWire translates a WorkflowService_RespondDecisionTaskCompleted_Result struct into a Thrift-level intermediate
@@ -20064,7 +20642,7 @@ type WorkflowService_RespondDecisionTaskCompleted_Result struct {
 //   }
 func (v *WorkflowService_RespondDecisionTaskCompleted_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [7]wire.Field
+		fields [8]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -20124,6 +20702,14 @@ func (v *WorkflowService_RespondDecisionTaskCompleted_Result) ToWire() (wire.Val
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 7, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		w, err = v.WorkflowExecutionAlreadyCompletedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
 		i++
 	}
 
@@ -20218,6 +20804,14 @@ func (v *WorkflowService_RespondDecisionTaskCompleted_Result) FromWire(w wire.Va
 				}
 
 			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionAlreadyCompletedError, err = _WorkflowExecutionAlreadyCompletedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -20243,6 +20837,9 @@ func (v *WorkflowService_RespondDecisionTaskCompleted_Result) FromWire(w wire.Va
 	if v.ClientVersionNotSupportedError != nil {
 		count++
 	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		count++
+	}
 	if count != 1 {
 		return fmt.Errorf("WorkflowService_RespondDecisionTaskCompleted_Result should have exactly one field: got %v fields", count)
 	}
@@ -20257,7 +20854,7 @@ func (v *WorkflowService_RespondDecisionTaskCompleted_Result) String() string {
 		return "<nil>"
 	}
 
-	var fields [7]string
+	var fields [8]string
 	i := 0
 	if v.Success != nil {
 		fields[i] = fmt.Sprintf("Success: %v", v.Success)
@@ -20285,6 +20882,10 @@ func (v *WorkflowService_RespondDecisionTaskCompleted_Result) String() string {
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionAlreadyCompletedError: %v", v.WorkflowExecutionAlreadyCompletedError)
 		i++
 	}
 
@@ -20322,6 +20923,9 @@ func (v *WorkflowService_RespondDecisionTaskCompleted_Result) Equals(rhs *Workfl
 	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
 		return false
 	}
+	if !((v.WorkflowExecutionAlreadyCompletedError == nil && rhs.WorkflowExecutionAlreadyCompletedError == nil) || (v.WorkflowExecutionAlreadyCompletedError != nil && rhs.WorkflowExecutionAlreadyCompletedError != nil && v.WorkflowExecutionAlreadyCompletedError.Equals(rhs.WorkflowExecutionAlreadyCompletedError))) {
+		return false
+	}
 
 	return true
 }
@@ -20352,6 +20956,9 @@ func (v *WorkflowService_RespondDecisionTaskCompleted_Result) MarshalLogObject(e
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		err = multierr.Append(err, enc.AddObject("workflowExecutionAlreadyCompletedError", v.WorkflowExecutionAlreadyCompletedError))
 	}
 	return err
 }
@@ -20459,6 +21066,21 @@ func (v *WorkflowService_RespondDecisionTaskCompleted_Result) GetClientVersionNo
 // IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
 func (v *WorkflowService_RespondDecisionTaskCompleted_Result) IsSetClientVersionNotSupportedError() bool {
 	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// GetWorkflowExecutionAlreadyCompletedError returns the value of WorkflowExecutionAlreadyCompletedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_RespondDecisionTaskCompleted_Result) GetWorkflowExecutionAlreadyCompletedError() (o *shared.WorkflowExecutionAlreadyCompletedError) {
+	if v != nil && v.WorkflowExecutionAlreadyCompletedError != nil {
+		return v.WorkflowExecutionAlreadyCompletedError
+	}
+
+	return
+}
+
+// IsSetWorkflowExecutionAlreadyCompletedError returns true if WorkflowExecutionAlreadyCompletedError is not nil.
+func (v *WorkflowService_RespondDecisionTaskCompleted_Result) IsSetWorkflowExecutionAlreadyCompletedError() bool {
+	return v != nil && v.WorkflowExecutionAlreadyCompletedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
@@ -20705,6 +21327,8 @@ func init() {
 			return true
 		case *shared.ClientVersionNotSupportedError:
 			return true
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			return true
 		default:
 			return false
 		}
@@ -20746,6 +21370,11 @@ func init() {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RespondDecisionTaskFailed_Result.ClientVersionNotSupportedError")
 			}
 			return &WorkflowService_RespondDecisionTaskFailed_Result{ClientVersionNotSupportedError: e}, nil
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_RespondDecisionTaskFailed_Result.WorkflowExecutionAlreadyCompletedError")
+			}
+			return &WorkflowService_RespondDecisionTaskFailed_Result{WorkflowExecutionAlreadyCompletedError: e}, nil
 		}
 
 		return nil, err
@@ -20775,6 +21404,10 @@ func init() {
 			err = result.ClientVersionNotSupportedError
 			return
 		}
+		if result.WorkflowExecutionAlreadyCompletedError != nil {
+			err = result.WorkflowExecutionAlreadyCompletedError
+			return
+		}
 		return
 	}
 
@@ -20784,12 +21417,13 @@ func init() {
 //
 // The result of a RespondDecisionTaskFailed execution is sent and received over the wire as this struct.
 type WorkflowService_RespondDecisionTaskFailed_Result struct {
-	BadRequestError                *shared.BadRequestError                `json:"badRequestError,omitempty"`
-	EntityNotExistError            *shared.EntityNotExistsError           `json:"entityNotExistError,omitempty"`
-	DomainNotActiveError           *shared.DomainNotActiveError           `json:"domainNotActiveError,omitempty"`
-	LimitExceededError             *shared.LimitExceededError             `json:"limitExceededError,omitempty"`
-	ServiceBusyError               *shared.ServiceBusyError               `json:"serviceBusyError,omitempty"`
-	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
+	BadRequestError                        *shared.BadRequestError                        `json:"badRequestError,omitempty"`
+	EntityNotExistError                    *shared.EntityNotExistsError                   `json:"entityNotExistError,omitempty"`
+	DomainNotActiveError                   *shared.DomainNotActiveError                   `json:"domainNotActiveError,omitempty"`
+	LimitExceededError                     *shared.LimitExceededError                     `json:"limitExceededError,omitempty"`
+	ServiceBusyError                       *shared.ServiceBusyError                       `json:"serviceBusyError,omitempty"`
+	ClientVersionNotSupportedError         *shared.ClientVersionNotSupportedError         `json:"clientVersionNotSupportedError,omitempty"`
+	WorkflowExecutionAlreadyCompletedError *shared.WorkflowExecutionAlreadyCompletedError `json:"workflowExecutionAlreadyCompletedError,omitempty"`
 }
 
 // ToWire translates a WorkflowService_RespondDecisionTaskFailed_Result struct into a Thrift-level intermediate
@@ -20809,7 +21443,7 @@ type WorkflowService_RespondDecisionTaskFailed_Result struct {
 //   }
 func (v *WorkflowService_RespondDecisionTaskFailed_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -20861,6 +21495,14 @@ func (v *WorkflowService_RespondDecisionTaskFailed_Result) ToWire() (wire.Value,
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 7, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		w, err = v.WorkflowExecutionAlreadyCompletedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
 		i++
 	}
 
@@ -20941,6 +21583,14 @@ func (v *WorkflowService_RespondDecisionTaskFailed_Result) FromWire(w wire.Value
 				}
 
 			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionAlreadyCompletedError, err = _WorkflowExecutionAlreadyCompletedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -20963,6 +21613,9 @@ func (v *WorkflowService_RespondDecisionTaskFailed_Result) FromWire(w wire.Value
 	if v.ClientVersionNotSupportedError != nil {
 		count++
 	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		count++
+	}
 	if count > 1 {
 		return fmt.Errorf("WorkflowService_RespondDecisionTaskFailed_Result should have at most one field: got %v fields", count)
 	}
@@ -20977,7 +21630,7 @@ func (v *WorkflowService_RespondDecisionTaskFailed_Result) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
 	if v.BadRequestError != nil {
 		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
@@ -21001,6 +21654,10 @@ func (v *WorkflowService_RespondDecisionTaskFailed_Result) String() string {
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionAlreadyCompletedError: %v", v.WorkflowExecutionAlreadyCompletedError)
 		i++
 	}
 
@@ -21035,6 +21692,9 @@ func (v *WorkflowService_RespondDecisionTaskFailed_Result) Equals(rhs *WorkflowS
 	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
 		return false
 	}
+	if !((v.WorkflowExecutionAlreadyCompletedError == nil && rhs.WorkflowExecutionAlreadyCompletedError == nil) || (v.WorkflowExecutionAlreadyCompletedError != nil && rhs.WorkflowExecutionAlreadyCompletedError != nil && v.WorkflowExecutionAlreadyCompletedError.Equals(rhs.WorkflowExecutionAlreadyCompletedError))) {
+		return false
+	}
 
 	return true
 }
@@ -21062,6 +21722,9 @@ func (v *WorkflowService_RespondDecisionTaskFailed_Result) MarshalLogObject(enc 
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		err = multierr.Append(err, enc.AddObject("workflowExecutionAlreadyCompletedError", v.WorkflowExecutionAlreadyCompletedError))
 	}
 	return err
 }
@@ -21154,6 +21817,21 @@ func (v *WorkflowService_RespondDecisionTaskFailed_Result) GetClientVersionNotSu
 // IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
 func (v *WorkflowService_RespondDecisionTaskFailed_Result) IsSetClientVersionNotSupportedError() bool {
 	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// GetWorkflowExecutionAlreadyCompletedError returns the value of WorkflowExecutionAlreadyCompletedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_RespondDecisionTaskFailed_Result) GetWorkflowExecutionAlreadyCompletedError() (o *shared.WorkflowExecutionAlreadyCompletedError) {
+	if v != nil && v.WorkflowExecutionAlreadyCompletedError != nil {
+		return v.WorkflowExecutionAlreadyCompletedError
+	}
+
+	return
+}
+
+// IsSetWorkflowExecutionAlreadyCompletedError returns true if WorkflowExecutionAlreadyCompletedError is not nil.
+func (v *WorkflowService_RespondDecisionTaskFailed_Result) IsSetWorkflowExecutionAlreadyCompletedError() bool {
+	return v != nil && v.WorkflowExecutionAlreadyCompletedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
@@ -23543,6 +24221,8 @@ func init() {
 			return true
 		case *shared.ClientVersionNotSupportedError:
 			return true
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			return true
 		default:
 			return false
 		}
@@ -23584,6 +24264,11 @@ func init() {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_SignalWorkflowExecution_Result.ClientVersionNotSupportedError")
 			}
 			return &WorkflowService_SignalWorkflowExecution_Result{ClientVersionNotSupportedError: e}, nil
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_SignalWorkflowExecution_Result.WorkflowExecutionAlreadyCompletedError")
+			}
+			return &WorkflowService_SignalWorkflowExecution_Result{WorkflowExecutionAlreadyCompletedError: e}, nil
 		}
 
 		return nil, err
@@ -23613,6 +24298,10 @@ func init() {
 			err = result.ClientVersionNotSupportedError
 			return
 		}
+		if result.WorkflowExecutionAlreadyCompletedError != nil {
+			err = result.WorkflowExecutionAlreadyCompletedError
+			return
+		}
 		return
 	}
 
@@ -23622,12 +24311,13 @@ func init() {
 //
 // The result of a SignalWorkflowExecution execution is sent and received over the wire as this struct.
 type WorkflowService_SignalWorkflowExecution_Result struct {
-	BadRequestError                *shared.BadRequestError                `json:"badRequestError,omitempty"`
-	EntityNotExistError            *shared.EntityNotExistsError           `json:"entityNotExistError,omitempty"`
-	ServiceBusyError               *shared.ServiceBusyError               `json:"serviceBusyError,omitempty"`
-	DomainNotActiveError           *shared.DomainNotActiveError           `json:"domainNotActiveError,omitempty"`
-	LimitExceededError             *shared.LimitExceededError             `json:"limitExceededError,omitempty"`
-	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
+	BadRequestError                        *shared.BadRequestError                        `json:"badRequestError,omitempty"`
+	EntityNotExistError                    *shared.EntityNotExistsError                   `json:"entityNotExistError,omitempty"`
+	ServiceBusyError                       *shared.ServiceBusyError                       `json:"serviceBusyError,omitempty"`
+	DomainNotActiveError                   *shared.DomainNotActiveError                   `json:"domainNotActiveError,omitempty"`
+	LimitExceededError                     *shared.LimitExceededError                     `json:"limitExceededError,omitempty"`
+	ClientVersionNotSupportedError         *shared.ClientVersionNotSupportedError         `json:"clientVersionNotSupportedError,omitempty"`
+	WorkflowExecutionAlreadyCompletedError *shared.WorkflowExecutionAlreadyCompletedError `json:"workflowExecutionAlreadyCompletedError,omitempty"`
 }
 
 // ToWire translates a WorkflowService_SignalWorkflowExecution_Result struct into a Thrift-level intermediate
@@ -23647,7 +24337,7 @@ type WorkflowService_SignalWorkflowExecution_Result struct {
 //   }
 func (v *WorkflowService_SignalWorkflowExecution_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -23699,6 +24389,14 @@ func (v *WorkflowService_SignalWorkflowExecution_Result) ToWire() (wire.Value, e
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 7, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		w, err = v.WorkflowExecutionAlreadyCompletedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
 		i++
 	}
 
@@ -23779,6 +24477,14 @@ func (v *WorkflowService_SignalWorkflowExecution_Result) FromWire(w wire.Value) 
 				}
 
 			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionAlreadyCompletedError, err = _WorkflowExecutionAlreadyCompletedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -23801,6 +24507,9 @@ func (v *WorkflowService_SignalWorkflowExecution_Result) FromWire(w wire.Value) 
 	if v.ClientVersionNotSupportedError != nil {
 		count++
 	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		count++
+	}
 	if count > 1 {
 		return fmt.Errorf("WorkflowService_SignalWorkflowExecution_Result should have at most one field: got %v fields", count)
 	}
@@ -23815,7 +24524,7 @@ func (v *WorkflowService_SignalWorkflowExecution_Result) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
 	if v.BadRequestError != nil {
 		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
@@ -23839,6 +24548,10 @@ func (v *WorkflowService_SignalWorkflowExecution_Result) String() string {
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionAlreadyCompletedError: %v", v.WorkflowExecutionAlreadyCompletedError)
 		i++
 	}
 
@@ -23873,6 +24586,9 @@ func (v *WorkflowService_SignalWorkflowExecution_Result) Equals(rhs *WorkflowSer
 	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
 		return false
 	}
+	if !((v.WorkflowExecutionAlreadyCompletedError == nil && rhs.WorkflowExecutionAlreadyCompletedError == nil) || (v.WorkflowExecutionAlreadyCompletedError != nil && rhs.WorkflowExecutionAlreadyCompletedError != nil && v.WorkflowExecutionAlreadyCompletedError.Equals(rhs.WorkflowExecutionAlreadyCompletedError))) {
+		return false
+	}
 
 	return true
 }
@@ -23900,6 +24616,9 @@ func (v *WorkflowService_SignalWorkflowExecution_Result) MarshalLogObject(enc za
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		err = multierr.Append(err, enc.AddObject("workflowExecutionAlreadyCompletedError", v.WorkflowExecutionAlreadyCompletedError))
 	}
 	return err
 }
@@ -23992,6 +24711,21 @@ func (v *WorkflowService_SignalWorkflowExecution_Result) GetClientVersionNotSupp
 // IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
 func (v *WorkflowService_SignalWorkflowExecution_Result) IsSetClientVersionNotSupportedError() bool {
 	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// GetWorkflowExecutionAlreadyCompletedError returns the value of WorkflowExecutionAlreadyCompletedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_SignalWorkflowExecution_Result) GetWorkflowExecutionAlreadyCompletedError() (o *shared.WorkflowExecutionAlreadyCompletedError) {
+	if v != nil && v.WorkflowExecutionAlreadyCompletedError != nil {
+		return v.WorkflowExecutionAlreadyCompletedError
+	}
+
+	return
+}
+
+// IsSetWorkflowExecutionAlreadyCompletedError returns true if WorkflowExecutionAlreadyCompletedError is not nil.
+func (v *WorkflowService_SignalWorkflowExecution_Result) IsSetWorkflowExecutionAlreadyCompletedError() bool {
+	return v != nil && v.WorkflowExecutionAlreadyCompletedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
@@ -25043,6 +25777,8 @@ func init() {
 			return true
 		case *shared.ClientVersionNotSupportedError:
 			return true
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			return true
 		default:
 			return false
 		}
@@ -25084,6 +25820,11 @@ func init() {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_TerminateWorkflowExecution_Result.ClientVersionNotSupportedError")
 			}
 			return &WorkflowService_TerminateWorkflowExecution_Result{ClientVersionNotSupportedError: e}, nil
+		case *shared.WorkflowExecutionAlreadyCompletedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_TerminateWorkflowExecution_Result.WorkflowExecutionAlreadyCompletedError")
+			}
+			return &WorkflowService_TerminateWorkflowExecution_Result{WorkflowExecutionAlreadyCompletedError: e}, nil
 		}
 
 		return nil, err
@@ -25113,6 +25854,10 @@ func init() {
 			err = result.ClientVersionNotSupportedError
 			return
 		}
+		if result.WorkflowExecutionAlreadyCompletedError != nil {
+			err = result.WorkflowExecutionAlreadyCompletedError
+			return
+		}
 		return
 	}
 
@@ -25122,12 +25867,13 @@ func init() {
 //
 // The result of a TerminateWorkflowExecution execution is sent and received over the wire as this struct.
 type WorkflowService_TerminateWorkflowExecution_Result struct {
-	BadRequestError                *shared.BadRequestError                `json:"badRequestError,omitempty"`
-	EntityNotExistError            *shared.EntityNotExistsError           `json:"entityNotExistError,omitempty"`
-	ServiceBusyError               *shared.ServiceBusyError               `json:"serviceBusyError,omitempty"`
-	DomainNotActiveError           *shared.DomainNotActiveError           `json:"domainNotActiveError,omitempty"`
-	LimitExceededError             *shared.LimitExceededError             `json:"limitExceededError,omitempty"`
-	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
+	BadRequestError                        *shared.BadRequestError                        `json:"badRequestError,omitempty"`
+	EntityNotExistError                    *shared.EntityNotExistsError                   `json:"entityNotExistError,omitempty"`
+	ServiceBusyError                       *shared.ServiceBusyError                       `json:"serviceBusyError,omitempty"`
+	DomainNotActiveError                   *shared.DomainNotActiveError                   `json:"domainNotActiveError,omitempty"`
+	LimitExceededError                     *shared.LimitExceededError                     `json:"limitExceededError,omitempty"`
+	ClientVersionNotSupportedError         *shared.ClientVersionNotSupportedError         `json:"clientVersionNotSupportedError,omitempty"`
+	WorkflowExecutionAlreadyCompletedError *shared.WorkflowExecutionAlreadyCompletedError `json:"workflowExecutionAlreadyCompletedError,omitempty"`
 }
 
 // ToWire translates a WorkflowService_TerminateWorkflowExecution_Result struct into a Thrift-level intermediate
@@ -25147,7 +25893,7 @@ type WorkflowService_TerminateWorkflowExecution_Result struct {
 //   }
 func (v *WorkflowService_TerminateWorkflowExecution_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -25199,6 +25945,14 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) ToWire() (wire.Value
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 7, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		w, err = v.WorkflowExecutionAlreadyCompletedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
 		i++
 	}
 
@@ -25279,6 +26033,14 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) FromWire(w wire.Valu
 				}
 
 			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionAlreadyCompletedError, err = _WorkflowExecutionAlreadyCompletedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -25301,6 +26063,9 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) FromWire(w wire.Valu
 	if v.ClientVersionNotSupportedError != nil {
 		count++
 	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		count++
+	}
 	if count > 1 {
 		return fmt.Errorf("WorkflowService_TerminateWorkflowExecution_Result should have at most one field: got %v fields", count)
 	}
@@ -25315,7 +26080,7 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
 	if v.BadRequestError != nil {
 		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
@@ -25339,6 +26104,10 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) String() string {
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionAlreadyCompletedError: %v", v.WorkflowExecutionAlreadyCompletedError)
 		i++
 	}
 
@@ -25373,6 +26142,9 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) Equals(rhs *Workflow
 	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
 		return false
 	}
+	if !((v.WorkflowExecutionAlreadyCompletedError == nil && rhs.WorkflowExecutionAlreadyCompletedError == nil) || (v.WorkflowExecutionAlreadyCompletedError != nil && rhs.WorkflowExecutionAlreadyCompletedError != nil && v.WorkflowExecutionAlreadyCompletedError.Equals(rhs.WorkflowExecutionAlreadyCompletedError))) {
+		return false
+	}
 
 	return true
 }
@@ -25400,6 +26172,9 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) MarshalLogObject(enc
 	}
 	if v.ClientVersionNotSupportedError != nil {
 		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	if v.WorkflowExecutionAlreadyCompletedError != nil {
+		err = multierr.Append(err, enc.AddObject("workflowExecutionAlreadyCompletedError", v.WorkflowExecutionAlreadyCompletedError))
 	}
 	return err
 }
@@ -25492,6 +26267,21 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) GetClientVersionNotS
 // IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
 func (v *WorkflowService_TerminateWorkflowExecution_Result) IsSetClientVersionNotSupportedError() bool {
 	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// GetWorkflowExecutionAlreadyCompletedError returns the value of WorkflowExecutionAlreadyCompletedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_TerminateWorkflowExecution_Result) GetWorkflowExecutionAlreadyCompletedError() (o *shared.WorkflowExecutionAlreadyCompletedError) {
+	if v != nil && v.WorkflowExecutionAlreadyCompletedError != nil {
+		return v.WorkflowExecutionAlreadyCompletedError
+	}
+
+	return
+}
+
+// IsSetWorkflowExecutionAlreadyCompletedError returns true if WorkflowExecutionAlreadyCompletedError is not nil.
+func (v *WorkflowService_TerminateWorkflowExecution_Result) IsSetWorkflowExecutionAlreadyCompletedError() bool {
+	return v != nil && v.WorkflowExecutionAlreadyCompletedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
