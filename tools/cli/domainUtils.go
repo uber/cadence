@@ -453,4 +453,3 @@ func getConfigDir(c *cli.Context) string {
 	}
 	return dirPath
 }
-

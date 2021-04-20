@@ -82,10 +82,12 @@ func (s *redispatcherSuite) TestRedispatch_ProcessorShutDown() {
 	numTasks := 5
 
 	successfullyRedispatched := 3
+	stopDoneCh := make(chan struct{})
 	s.mockProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).Times(successfullyRedispatched)
 	s.mockProcessor.EXPECT().TrySubmit(gomock.Any()).DoAndReturn(func(_ interface{}) (bool, error) {
 		go func() {
 			s.redispatcher.Stop()
+			close(stopDoneCh)
 		}()
 
 		<-s.redispatcher.shutdownCh
@@ -100,6 +102,7 @@ func (s *redispatcherSuite) TestRedispatch_ProcessorShutDown() {
 
 	s.Equal(numTasks, s.redispatcher.Size())
 	<-s.redispatcher.shutdownCh
+	<-stopDoneCh
 
 	s.Equal(numTasks-successfullyRedispatched-1, s.redispatcher.Size())
 }
