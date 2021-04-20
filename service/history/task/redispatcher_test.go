@@ -90,7 +90,7 @@ func (s *redispatcherSuite) TestRedispatch_ProcessorShutDown() {
 			close(stopDoneCh)
 		}()
 
-		<-stopDoneCh
+		<-s.redispatcher.shutdownCh
 		return false, errors.New("processor shutdown")
 	}).Times(1)
 
@@ -101,6 +101,7 @@ func (s *redispatcherSuite) TestRedispatch_ProcessorShutDown() {
 	}
 
 	s.Equal(numTasks, s.redispatcher.Size())
+	<-s.redispatcher.shutdownCh
 	<-stopDoneCh
 
 	s.Equal(numTasks-successfullyRedispatched-1, s.redispatcher.Size())
