@@ -56,7 +56,7 @@ message PersistenceFeature {
 }
 
 message PersistenceInfo {
-  string backend=1;
+  string backend = 1;
   repeated PersistenceSetting settings = 2;
   repeated PersistenceFeature features = 3;
 }
