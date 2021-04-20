@@ -56,6 +56,7 @@ func FromDescribeClusterResponse(t *types.DescribeClusterResponse) *admin.Descri
 	return &admin.DescribeClusterResponse{
 		SupportedClientVersions: FromSupportedClientVersions(t.SupportedClientVersions),
 		MembershipInfo:          FromMembershipInfo(t.MembershipInfo),
+		PersistenceInfo:         FromPersistenceInfoMap(t.PersistenceInfo),
 	}
 }
 
@@ -67,6 +68,7 @@ func ToDescribeClusterResponse(t *admin.DescribeClusterResponse) *types.Describe
 	return &types.DescribeClusterResponse{
 		SupportedClientVersions: ToSupportedClientVersions(t.SupportedClientVersions),
 		MembershipInfo:          ToMembershipInfo(t.MembershipInfo),
+		PersistenceInfo:         ToPersistenceInfoMap(t.PersistenceInfo),
 	}
 }
 
@@ -217,6 +219,146 @@ func ToMembershipInfo(t *admin.MembershipInfo) *types.MembershipInfo {
 		CurrentHost:      ToHostInfo(t.CurrentHost),
 		ReachableMembers: t.ReachableMembers,
 		Rings:            ToRingInfoArray(t.Rings),
+	}
+}
+
+// FromPersistenceInfoMap converts internal map[string]*types.PersistenceInfo type to thrift
+func FromPersistenceInfoMap(t map[string]*types.PersistenceInfo) map[string]*admin.PersistenceInfo {
+	if t == nil {
+		return nil
+	}
+	v := make(map[string]*admin.PersistenceInfo, len(t))
+	for key := range t {
+		v[key] = FromPersistenceInfo(t[key])
+	}
+	return v
+}
+
+// FromPersistenceInfo converts internal PersistenceInfo type to thrift
+func FromPersistenceInfo(t *types.PersistenceInfo) *admin.PersistenceInfo {
+	if t == nil {
+		return nil
+	}
+	return &admin.PersistenceInfo{
+		Backend:  &t.Backend,
+		Settings: FromPersistenceSettings(t.Settings),
+		Features: FromPersistenceFeatures(t.Features),
+	}
+}
+
+// FromPersistenceSettings converts internal []*types.PersistenceSetting type to thrift
+func FromPersistenceSettings(t []*types.PersistenceSetting) []*admin.PersistenceSetting {
+	if t == nil {
+		return nil
+	}
+	v := make([]*admin.PersistenceSetting, len(t))
+	for i := range t {
+		v[i] = FromPersistenceSetting(t[i])
+	}
+	return v
+}
+
+// FromPersistenceSetting converts internal PersistenceSetting type to thrift
+func FromPersistenceSetting(t *types.PersistenceSetting) *admin.PersistenceSetting {
+	if t == nil {
+		return nil
+	}
+	return &admin.PersistenceSetting{
+		Key:   &t.Key,
+		Value: &t.Value,
+	}
+}
+
+// FromPersistenceFeatures converts internal []*types.PersistenceFeature type to thrift
+func FromPersistenceFeatures(t []*types.PersistenceFeature) []*admin.PersistenceFeature {
+	if t == nil {
+		return nil
+	}
+	v := make([]*admin.PersistenceFeature, len(t))
+	for i := range t {
+		v[i] = FromPersistenceFeature(t[i])
+	}
+	return v
+}
+
+// FromPersistenceFeature converts internal PersistenceFeature type to thrift
+func FromPersistenceFeature(t *types.PersistenceFeature) *admin.PersistenceFeature {
+	if t == nil {
+		return nil
+	}
+	return &admin.PersistenceFeature{
+		Key:     &t.Key,
+		Enabled: &t.Enabled,
+	}
+}
+
+// ToPersistenceInfoMap converts thrift to internal map[string]*types.PersistenceInfo type
+func ToPersistenceInfoMap(t map[string]*admin.PersistenceInfo) map[string]*types.PersistenceInfo {
+	if t == nil {
+		return nil
+	}
+	v := make(map[string]*types.PersistenceInfo, len(t))
+	for key := range t {
+		v[key] = ToPersistenceInfo(t[key])
+	}
+	return v
+}
+
+// ToPersistenceInfo converts thrift to internal PersistenceInfo type
+func ToPersistenceInfo(t *admin.PersistenceInfo) *types.PersistenceInfo {
+	if t == nil {
+		return nil
+	}
+	return &types.PersistenceInfo{
+		Backend:  t.GetBackend(),
+		Settings: ToPersistenceSettings(t.Settings),
+		Features: ToPersistenceFeatures(t.Features),
+	}
+}
+
+// ToPersistenceSettings converts thrift to internal []*types.PersistenceSetting type
+func ToPersistenceSettings(t []*admin.PersistenceSetting) []*types.PersistenceSetting {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.PersistenceSetting, len(t))
+	for i := range t {
+		v[i] = ToPersistenceSetting(t[i])
+	}
+	return v
+}
+
+// ToPersistenceSetting converts from thrift to internal PersistenceSetting type
+func ToPersistenceSetting(t *admin.PersistenceSetting) *types.PersistenceSetting {
+	if t == nil {
+		return nil
+	}
+	return &types.PersistenceSetting{
+		Key:   t.GetKey(),
+		Value: t.GetValue(),
+	}
+}
+
+// ToPersistenceFeatures converts from thrift to internal []*types.PersistenceFeature type
+func ToPersistenceFeatures(t []*admin.PersistenceFeature) []*types.PersistenceFeature {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.PersistenceFeature, len(t))
+	for i := range t {
+		v[i] = ToPersistenceFeature(t[i])
+	}
+	return v
+}
+
+// ToPersistenceFeature converts from thrift to internal PersistenceFeature type
+func ToPersistenceFeature(t *admin.PersistenceFeature) *types.PersistenceFeature {
+	if t == nil {
+		return nil
+	}
+	return &types.PersistenceFeature{
+		Key:     t.GetKey(),
+		Enabled: t.GetEnabled(),
 	}
 }
 
