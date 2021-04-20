@@ -56,6 +56,138 @@ func FromMembershipInfo(t *types.MembershipInfo) *sharedv1.MembershipInfo {
 	}
 }
 
+func FromPersistenceSettings(t []*types.PersistenceSetting) []*sharedv1.PersistenceSetting {
+	if t == nil {
+		return nil
+	}
+	v := make([]*sharedv1.PersistenceSetting, len(t))
+	for i := range t {
+		v[i] = FromPersistenceSetting(t[i])
+	}
+	return v
+}
+
+func FromPersistenceSetting(t *types.PersistenceSetting) *sharedv1.PersistenceSetting {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.PersistenceSetting{
+		Key:   t.Key,
+		Value: t.Value,
+	}
+}
+
+func FromPersistenceFeatures(t []*types.PersistenceFeature) []*sharedv1.PersistenceFeature {
+	if t == nil {
+		return nil
+	}
+	v := make([]*sharedv1.PersistenceFeature, len(t))
+	for i := range t {
+		v[i] = FromPersistenceFeature(t[i])
+	}
+	return v
+}
+
+func FromPersistenceFeature(t *types.PersistenceFeature) *sharedv1.PersistenceFeature {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.PersistenceFeature{
+		Key:     t.Key,
+		Enabled: t.Enabled,
+	}
+}
+
+func FromPersistenceInfoMap(t map[string]*types.PersistenceInfo) map[string]*sharedv1.PersistenceInfo {
+	if t == nil {
+		return nil
+	}
+	v := make(map[string]*sharedv1.PersistenceInfo, len(t))
+	for key := range t {
+		v[key] = FromPersistenceInfo(t[key])
+	}
+
+	return v
+}
+
+func FromPersistenceInfo(t *types.PersistenceInfo) *sharedv1.PersistenceInfo {
+	if t == nil {
+		return nil
+	}
+
+	return &sharedv1.PersistenceInfo{
+		Backend:  t.Backend,
+		Settings: FromPersistenceSettings(t.Settings),
+		Features: FromPersistenceFeatures(t.Features),
+	}
+}
+
+func ToPersistenceSettings(t []*sharedv1.PersistenceSetting) []*types.PersistenceSetting {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.PersistenceSetting, len(t))
+	for i := range t {
+		v[i] = ToPersistenceSetting(t[i])
+	}
+	return v
+}
+
+func ToPersistenceSetting(t *sharedv1.PersistenceSetting) *types.PersistenceSetting {
+	if t == nil {
+		return nil
+	}
+	return &types.PersistenceSetting{
+		Key:   t.Key,
+		Value: t.Value,
+	}
+}
+
+func ToPersistenceFeatures(t []*sharedv1.PersistenceFeature) []*types.PersistenceFeature {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.PersistenceFeature, len(t))
+	for i := range t {
+		v[i] = ToPersistenceFeature(t[i])
+	}
+	return v
+}
+
+func ToPersistenceFeature(t *sharedv1.PersistenceFeature) *types.PersistenceFeature {
+	if t == nil {
+		return nil
+	}
+	return &types.PersistenceFeature{
+		Key:     t.Key,
+		Enabled: t.Enabled,
+	}
+}
+
+func ToPersistenceInfoMap(t map[string]*sharedv1.PersistenceInfo) map[string]*types.PersistenceInfo {
+	if t == nil {
+		return nil
+	}
+	v := make(map[string]*types.PersistenceInfo, len(t))
+	for key := range t {
+		v[key] = ToPersistenceInfo(t[key])
+	}
+
+	return v
+}
+
+func ToPersistenceInfo(t *sharedv1.PersistenceInfo) *types.PersistenceInfo {
+	if t == nil {
+		return nil
+	}
+
+	return &types.PersistenceInfo{
+		Backend:  t.Backend,
+		Settings: ToPersistenceSettings(t.Settings),
+		Features: ToPersistenceFeatures(t.Features),
+	}
+}
+
 func ToMembershipInfo(t *sharedv1.MembershipInfo) *types.MembershipInfo {
 	if t == nil {
 		return nil
