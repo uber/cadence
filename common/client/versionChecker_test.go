@@ -375,12 +375,7 @@ func (s *VersionCheckerSuite) TestSupportsWorkflowAlreadyCompletedError() {
 		},
 		{
 			clientImpl:           JavaSDK,
-			clientFeatureVersion: "1.4.0",
-			expectErr:            false,
-		},
-		{
-			clientImpl:           JavaSDK,
-			clientFeatureVersion: "1.2.0",
+			clientFeatureVersion: "1.3.0",
 			expectErr:            true,
 		},
 		{

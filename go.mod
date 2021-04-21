@@ -58,7 +58,7 @@ require (
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.opencensus.io v0.22.5 // indirect
 	go.uber.org/atomic v1.5.1
-	go.uber.org/cadence v0.16.1-0.20210409233821-65903f75c15d
+	go.uber.org/cadence v0.16.1-0.20210420001847-b31c3bbfb06a
 	go.uber.org/fx v1.10.0
 	go.uber.org/multierr v1.4.0
 	go.uber.org/thriftrw v1.25.0

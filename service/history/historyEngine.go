@@ -691,9 +691,12 @@ func (e *historyEngineImpl) startWorkflowHelper(
 				startRequest,
 				nil,
 			)
+			switch err.(type) {
 			// By the time we try to terminate the workflow, it was already terminated
 			// So continue as if we didn't need to terminate it in the first place
-			if _, ok := err.(*types.WorkflowExecutionAlreadyCompletedError); !ok {
+			case *types.WorkflowExecutionAlreadyCompletedError:
+				e.shard.GetLogger().Warn("Workflow completed while trying to terminate, will continue starting workflow", tag.Error(err))
+			default:
 				return resp, err
 			}
 		}

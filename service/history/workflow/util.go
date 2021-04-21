@@ -186,12 +186,11 @@ func UpdateWithAction(
 		domainID,
 		execution,
 		now,
-		getUpdateActionFunc(ctx, createDecisionTask, action),
+		getUpdateActionFunc(createDecisionTask, action),
 	)
 }
 
 func getUpdateActionFunc(
-	ctx context.Context,
 	createDecisionTask bool,
 	action func(wfContext execution.Context, mutableState execution.MutableState) error,
 ) UpdateActionFunc {

@@ -2184,8 +2184,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		SignalRequest: signalRequest,
 	})
 	if err != nil {
-		err = wh.NormalizeVersionedErrors(ctx, err)
-		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
+		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...))
 	}
 
 	return nil
@@ -2386,8 +2385,7 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 		TerminateRequest: terminateRequest,
 	})
 	if err != nil {
-		err = wh.NormalizeVersionedErrors(ctx, err)
-		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
+		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...))
 	}
 
 	return nil
@@ -2492,8 +2490,7 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 		CancelRequest: cancelRequest,
 	})
 	if err != nil {
-		err = wh.NormalizeVersionedErrors(ctx, err)
-		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
+		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...))
 	}
 
 	return nil
@@ -4037,7 +4034,7 @@ func checkRequiredDomainDataKVs(requiredDomainDataKeys map[string]interface{}, d
 // Some error types are introduced later that some clients might not support
 // To make them backward compatible, we continue returning the legacy error types
 // for older clients
-func (wh *WorkflowHandler) NormalizeVersionedErrors(ctx context.Context, err error) error {
+func (wh *WorkflowHandler) normalizeVersionedErrors(ctx context.Context, err error) error {
 	switch err.(type) {
 	case *types.WorkflowExecutionAlreadyCompletedError:
 		call := yarpc.CallFromContext(ctx)
