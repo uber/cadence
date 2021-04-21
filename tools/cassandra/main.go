@@ -39,7 +39,7 @@ func SetupSchema(config *SetupSchemaConfig) error {
 	if err := validateCQLClientConfig(&config.CQLClientConfig); err != nil {
 		return err
 	}
-	db, err := newCQLClient(&config.CQLClientConfig)
+	db, err := NewCQLClient(&config.CQLClientConfig)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func buildCLIOptions() *cli.App {
 		},
 		cli.IntFlag{
 			Name:   schema.CLIFlagPort,
-			Value:  defaultCassandraPort,
+			Value:  DefaultCassandraPort,
 			Usage:  "Port of cassandra host to connect to",
 			EnvVar: "CASSANDRA_DB_PORT",
 		},
@@ -89,7 +89,7 @@ func buildCLIOptions() *cli.App {
 		},
 		cli.IntFlag{
 			Name:   schema.CLIFlagTimeout,
-			Value:  defaultTimeout,
+			Value:  DefaultTimeout,
 			Usage:  "request Timeout in seconds used for cql client",
 			EnvVar: "CASSANDRA_TIMEOUT",
 		},

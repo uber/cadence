@@ -21,6 +21,7 @@
 package cassandra
 
 import (
+	"github.com/uber/cadence/tools/cassandra/tests"
 	"os"
 	"testing"
 
@@ -34,7 +35,7 @@ import (
 type (
 	SetupSchemaTestSuite struct {
 		test.SetupSchemaTestBase
-		client *cqlClient
+		client *CqlClient
 	}
 )
 
@@ -44,7 +45,7 @@ func TestSetupSchemaTestSuite(t *testing.T) {
 
 func (s *SetupSchemaTestSuite) SetupSuite() {
 	os.Setenv("CASSANDRA_HOST", environment.GetCassandraAddress())
-	client, err := newTestCQLClient(systemKeyspace)
+	client, err := tests.newTestCQLClient(SystemKeyspace)
 	if err != nil {
 		log.Fatal("Error creating CQLClient")
 	}
@@ -63,7 +64,7 @@ func (s *SetupSchemaTestSuite) TestCreateKeyspace() {
 }
 
 func (s *SetupSchemaTestSuite) TestSetupSchema() {
-	client, err := newTestCQLClient(s.DBName)
+	client, err := tests.newTestCQLClient(s.DBName)
 	s.Nil(err)
-	s.RunSetupTest(buildCLIOptions(), client, "-k", createTestCQLFileContent(), []string{"tasks", "events"})
+	s.RunSetupTest(buildCLIOptions(), client, "-k", tests.createTestCQLFileContent(), []string{"tasks", "events"})
 }

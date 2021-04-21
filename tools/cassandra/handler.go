@@ -71,13 +71,13 @@ func checkCompatibleVersion(
 	expectedVersion string,
 ) error {
 
-	client, err := newCQLClient(&CQLClientConfig{
+	client, err := NewCQLClient(&CQLClientConfig{
 		Hosts:    cfg.Hosts,
 		Port:     cfg.Port,
 		User:     cfg.User,
 		Password: cfg.Password,
 		Keyspace: cfg.Keyspace,
-		Timeout:  defaultTimeout,
+		Timeout:  DefaultTimeout,
 		TLS:      cfg.TLS,
 	})
 	if err != nil {
@@ -96,7 +96,7 @@ func setupSchema(cli *cli.Context) error {
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
-	client, err := newCQLClient(config)
+	client, err := NewCQLClient(config)
 	if err != nil {
 		return handleErr(err)
 	}
@@ -114,7 +114,7 @@ func updateSchema(cli *cli.Context) error {
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
-	client, err := newCQLClient(config)
+	client, err := NewCQLClient(config)
 	if err != nil {
 		return handleErr(err)
 	}
@@ -143,8 +143,8 @@ func createKeyspace(cli *cli.Context) error {
 }
 
 func doCreateKeyspace(cfg CQLClientConfig, name string) error {
-	cfg.Keyspace = systemKeyspace
-	client, err := newCQLClient(&cfg)
+	cfg.Keyspace = SystemKeyspace
+	client, err := NewCQLClient(&cfg)
 	if err != nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 	cqlConfig.Password = cli.GlobalString(schema.CLIOptPassword)
 	cqlConfig.Timeout = cli.GlobalInt(schema.CLIOptTimeout)
 	cqlConfig.Keyspace = cli.GlobalString(schema.CLIOptKeyspace)
-	cqlConfig.numReplicas = cli.Int(schema.CLIOptReplicationFactor)
+	cqlConfig.NumReplicas = cli.Int(schema.CLIOptReplicationFactor)
 
 	if cli.GlobalBool(schema.CLIFlagEnableTLS) {
 		cqlConfig.TLS = &config.TLS{
@@ -186,10 +186,10 @@ func validateCQLClientConfig(config *CQLClientConfig) error {
 		return schema.NewConfigError("missing " + flag(schema.CLIOptKeyspace) + " argument ")
 	}
 	if config.Port == 0 {
-		config.Port = defaultCassandraPort
+		config.Port = DefaultCassandraPort
 	}
-	if config.numReplicas == 0 {
-		config.numReplicas = defaultNumReplicas
+	if config.NumReplicas == 0 {
+		config.NumReplicas = defaultNumReplicas
 	}
 
 	return nil

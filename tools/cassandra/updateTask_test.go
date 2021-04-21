@@ -21,6 +21,7 @@
 package cassandra
 
 import (
+	"github.com/uber/cadence/tools/cassandra/tests"
 	"log"
 	"os"
 	"testing"
@@ -40,7 +41,7 @@ func TestUpdateSchemaTestSuite(t *testing.T) {
 }
 
 func (s *UpdateSchemaTestSuite) SetupSuite() {
-	client, err := newTestCQLClient(systemKeyspace)
+	client, err := tests.newTestCQLClient(SystemKeyspace)
 	if err != nil {
 		log.Fatal("Error creating CQLClient")
 	}
@@ -52,14 +53,14 @@ func (s *UpdateSchemaTestSuite) TearDownSuite() {
 }
 
 func (s *UpdateSchemaTestSuite) TestUpdateSchema() {
-	client, err := newTestCQLClient(s.DBName)
+	client, err := tests.newTestCQLClient(s.DBName)
 	s.Nil(err)
 	defer client.Close()
-	s.RunUpdateSchemaTest(buildCLIOptions(), client, "-k", createTestCQLFileContent(), []string{"events", "tasks"})
+	s.RunUpdateSchemaTest(buildCLIOptions(), client, "-k", tests.createTestCQLFileContent(), []string{"events", "tasks"})
 }
 
 func (s *UpdateSchemaTestSuite) TestDryrun() {
-	client, err := newTestCQLClient(s.DBName)
+	client, err := tests.newTestCQLClient(s.DBName)
 	s.Nil(err)
 	defer client.Close()
 	dir := "../../schema/cassandra/cadence/versioned"
@@ -67,7 +68,7 @@ func (s *UpdateSchemaTestSuite) TestDryrun() {
 }
 
 func (s *UpdateSchemaTestSuite) TestVisibilityDryrun() {
-	client, err := newTestCQLClient(s.DBName)
+	client, err := tests.newTestCQLClient(s.DBName)
 	s.Nil(err)
 	defer client.Close()
 	dir := "../../schema/cassandra/visibility/versioned"
@@ -75,7 +76,7 @@ func (s *UpdateSchemaTestSuite) TestVisibilityDryrun() {
 }
 
 func (s *UpdateSchemaTestSuite) TestShortcut() {
-	client, err := newTestCQLClient(s.DBName)
+	client, err := tests.newTestCQLClient(s.DBName)
 	s.Nil(err)
 	defer client.Close()
 	dir := "../../schema/cassandra/cadence/versioned"

@@ -18,9 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package tests
 
 import (
+	"github.com/uber/cadence/tools/cassandra"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -38,7 +39,7 @@ type (
 	}
 )
 
-var _ test.DB = (*cqlClient)(nil)
+var _ test.DB = (*cassandra.CqlClient)(nil)
 
 func TestCQLClientTestSuite(t *testing.T) {
 	suite.Run(t, new(CQLClientTestSuite))
@@ -49,7 +50,7 @@ func (s *CQLClientTestSuite) SetupTest() {
 }
 
 func (s *CQLClientTestSuite) SetupSuite() {
-	client, err := newTestCQLClient(systemKeyspace)
+	client, err := newTestCQLClient(cassandra.SystemKeyspace)
 	if err != nil {
 		s.Log.Fatal("error creating CQLClient, ", tag.Error(err))
 	}
@@ -73,13 +74,13 @@ func (s *CQLClientTestSuite) TestCQLClient() {
 	client.Close()
 }
 
-func newTestCQLClient(keyspace string) (*cqlClient, error) {
-	return newCQLClient(&CQLClientConfig{
+func newTestCQLClient(keyspace string) (*cassandra.CqlClient, error) {
+	return cassandra.NewCQLClient(&cassandra.CQLClientConfig{
 		Hosts:       environment.GetCassandraAddress(),
-		Port:        defaultCassandraPort,
+		Port:        cassandra.DefaultCassandraPort,
 		Keyspace:    keyspace,
-		Timeout:     defaultTimeout,
-		numReplicas: 1,
+		Timeout:     cassandra.DefaultTimeout,
+		NumReplicas: 1,
 	})
 }
 

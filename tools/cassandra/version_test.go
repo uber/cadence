@@ -75,7 +75,7 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 
 	defaultCfg := config.Cassandra{
 		Hosts:    environment.GetCassandraAddress(),
-		Port:     defaultCassandraPort,
+		Port:     DefaultCassandraPort,
 		User:     "",
 		Password: "",
 		Keyspace: keyspace,
@@ -115,12 +115,12 @@ func (s *VersionTestSuite) TestCheckCompatibleVersion() {
 func (s *VersionTestSuite) createKeyspace(keyspace string) func() {
 	cfg := &CQLClientConfig{
 		Hosts:       environment.GetCassandraAddress(),
-		Port:        defaultCassandraPort,
+		Port:        DefaultCassandraPort,
 		Keyspace:    "system",
-		Timeout:     defaultTimeout,
-		numReplicas: 1,
+		Timeout:     DefaultTimeout,
+		NumReplicas: 1,
 	}
-	client, err := newCQLClient(cfg)
+	client, err := NewCQLClient(cfg)
 	s.NoError(err)
 
 	err = client.createKeyspace(keyspace)
@@ -163,7 +163,7 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 
 	cfg := config.Cassandra{
 		Hosts:    environment.GetCassandraAddress(),
-		Port:     defaultCassandraPort,
+		Port:     DefaultCassandraPort,
 		User:     "",
 		Password: "",
 		Keyspace: keyspace,
