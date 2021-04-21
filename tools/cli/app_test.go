@@ -70,10 +70,6 @@ func (m *clientFactoryMock) ServerAdminClient(c *cli.Context) admin.Client {
 	return m.serverAdminClient
 }
 
-func (m *clientFactoryMock) CQLClient() gocql.Client {
-	return m.cqlClient
-}
-
 // this is the mock for yarpcCallOptions, make sure length are the same
 var callOptions = []interface{}{gomock.Any(), gomock.Any(), gomock.Any()}
 
