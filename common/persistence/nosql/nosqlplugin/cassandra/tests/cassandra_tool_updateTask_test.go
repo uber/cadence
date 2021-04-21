@@ -18,10 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package tests
 
 import (
-	"github.com/uber/cadence/tools/cassandra/tests"
 	"log"
 	"os"
 	"testing"
@@ -29,6 +28,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/schema/cassandra"
+	cassandra2 "github.com/uber/cadence/tools/cassandra"
 	"github.com/uber/cadence/tools/common/schema/test"
 )
 
@@ -41,7 +41,7 @@ func TestUpdateSchemaTestSuite(t *testing.T) {
 }
 
 func (s *UpdateSchemaTestSuite) SetupSuite() {
-	client, err := tests.newTestCQLClient(SystemKeyspace)
+	client, err := NewTestCQLClient(cassandra2.SystemKeyspace)
 	if err != nil {
 		log.Fatal("Error creating CQLClient")
 	}
@@ -53,37 +53,37 @@ func (s *UpdateSchemaTestSuite) TearDownSuite() {
 }
 
 func (s *UpdateSchemaTestSuite) TestUpdateSchema() {
-	client, err := tests.newTestCQLClient(s.DBName)
+	client, err := NewTestCQLClient(s.DBName)
 	s.Nil(err)
 	defer client.Close()
-	s.RunUpdateSchemaTest(buildCLIOptions(), client, "-k", tests.createTestCQLFileContent(), []string{"events", "tasks"})
+	s.RunUpdateSchemaTest(cassandra2.BuildCLIOptions(), client, "-k", CreateTestCQLFileContent(), []string{"events", "tasks"})
 }
 
 func (s *UpdateSchemaTestSuite) TestDryrun() {
-	client, err := tests.newTestCQLClient(s.DBName)
+	client, err := NewTestCQLClient(s.DBName)
 	s.Nil(err)
 	defer client.Close()
-	dir := "../../schema/cassandra/cadence/versioned"
-	s.RunDryrunTest(buildCLIOptions(), client, "-k", dir, cassandra.Version)
+	dir := rootRelativePath + "schema/cassandra/cadence/versioned"
+	s.RunDryrunTest(cassandra2.BuildCLIOptions(), client, "-k", dir, cassandra.Version)
 }
 
 func (s *UpdateSchemaTestSuite) TestVisibilityDryrun() {
-	client, err := tests.newTestCQLClient(s.DBName)
+	client, err := NewTestCQLClient(s.DBName)
 	s.Nil(err)
 	defer client.Close()
-	dir := "../../schema/cassandra/visibility/versioned"
-	s.RunDryrunTest(buildCLIOptions(), client, "-k", dir, cassandra.VisibilityVersion)
+	dir := rootRelativePath + "schema/cassandra/visibility/versioned"
+	s.RunDryrunTest(cassandra2.BuildCLIOptions(), client, "-k", dir, cassandra.VisibilityVersion)
 }
 
 func (s *UpdateSchemaTestSuite) TestShortcut() {
-	client, err := tests.newTestCQLClient(s.DBName)
+	client, err := NewTestCQLClient(s.DBName)
 	s.Nil(err)
 	defer client.Close()
-	dir := "../../schema/cassandra/cadence/versioned"
+	dir := rootRelativePath + "schema/cassandra/cadence/versioned"
 
 	cqlshArgs := []string{"--cqlversion=3.4.4", "-e", "DESC KEYSPACE %s;"}
 	if cassandraHost := os.Getenv("CASSANDRA_HOST"); cassandraHost != "" {
 		cqlshArgs = append(cqlshArgs, cassandraHost)
 	}
-	s.RunShortcutTest(buildCLIOptions(), client, "-k", dir, "cqlsh", cqlshArgs...)
+	s.RunShortcutTest(cassandra2.BuildCLIOptions(), client, "-k", dir, "cqlsh", cqlshArgs...)
 }

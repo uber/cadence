@@ -30,7 +30,7 @@ import (
 
 // RunTool runs the cadence-cassandra-tool command line tool
 func RunTool(args []string) error {
-	app := buildCLIOptions()
+	app := BuildCLIOptions()
 	return app.Run(args)
 }
 
@@ -55,7 +55,7 @@ func cliHandler(c *cli.Context, handler func(c *cli.Context) error) {
 	}
 }
 
-func buildCLIOptions() *cli.App {
+func BuildCLIOptions() *cli.App {
 
 	app := cli.NewApp()
 	app.Name = "cadence-cassandra-tool"

@@ -50,14 +50,14 @@ func VerifyCompatibleVersion(
 
 	ds, ok := cfg.DataStores[cfg.DefaultStore]
 	if ok && ds.Cassandra != nil {
-		err := checkCompatibleVersion(*ds.Cassandra, cassandra.Version)
+		err := CheckCompatibleVersion(*ds.Cassandra, cassandra.Version)
 		if err != nil {
 			return err
 		}
 	}
 	ds, ok = cfg.DataStores[cfg.VisibilityStore]
 	if ok && ds.Cassandra != nil {
-		err := checkCompatibleVersion(*ds.Cassandra, cassandra.VisibilityVersion)
+		err := CheckCompatibleVersion(*ds.Cassandra, cassandra.VisibilityVersion)
 		if err != nil {
 			return err
 		}
@@ -65,8 +65,8 @@ func VerifyCompatibleVersion(
 	return nil
 }
 
-// checkCompatibleVersion check the version compatibility
-func checkCompatibleVersion(
+// CheckCompatibleVersion check the version compatibility
+func CheckCompatibleVersion(
 	cfg config.Cassandra,
 	expectedVersion string,
 ) error {
@@ -149,7 +149,7 @@ func doCreateKeyspace(cfg CQLClientConfig, name string) error {
 		return err
 	}
 	defer client.Close()
-	return client.createKeyspace(name)
+	return client.CreateKeyspace(name)
 }
 
 func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {

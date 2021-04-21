@@ -115,20 +115,20 @@ func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
 }
 
 func (client *CqlClient) CreateDatabase(name string) error {
-	return client.createKeyspace(name)
+	return client.CreateKeyspace(name)
 }
 
 func (client *CqlClient) DropDatabase(name string) error {
-	return client.dropKeyspace(name)
+	return client.DropKeyspace(name)
 }
 
 // createKeyspace creates a cassandra Keyspace if it doesn't exist
-func (client *CqlClient) createKeyspace(name string) error {
+func (client *CqlClient) CreateKeyspace(name string) error {
 	return client.Exec(fmt.Sprintf(createKeyspaceCQL, name, client.nReplicas))
 }
 
-// dropKeyspace drops a Keyspace
-func (client *CqlClient) dropKeyspace(name string) error {
+// DropKeyspace drops a Keyspace
+func (client *CqlClient) DropKeyspace(name string) error {
 	return client.Exec(fmt.Sprintf("DROP KEYSPACE %v", name))
 }
 
