@@ -37,7 +37,7 @@ type (
 		CreateDecision bool
 	}
 
-	UpdateActionFunc func(context.Context, execution.Context, execution.MutableState) (*UpdateAction, error)
+	UpdateActionFunc func(execution.Context, execution.MutableState) (*UpdateAction, error)
 )
 
 var (
@@ -196,7 +196,7 @@ func getUpdateActionFunc(
 	action func(wfContext execution.Context, mutableState execution.MutableState) error,
 ) UpdateActionFunc {
 
-	return func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (*UpdateAction, error) {
+	return func(wfContext execution.Context, mutableState execution.MutableState) (*UpdateAction, error) {
 		err := action(wfContext, mutableState)
 		if err != nil {
 			return nil, err
@@ -221,7 +221,7 @@ UpdateHistoryLoop:
 		mutableState := workflowContext.GetMutableState()
 
 		// conduct caller action
-		postActions, err := action(ctx, wfContext, mutableState)
+		postActions, err := action(wfContext, mutableState)
 		if err != nil {
 			if err == ErrStaleState {
 				// Handler detected that cached workflow mutable could potentially be stale

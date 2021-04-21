@@ -120,7 +120,7 @@ func (handler *handlerImpl) HandleDecisionTaskScheduled(
 		domainID,
 		workflowExecution,
 		handler.timeSource.Now(),
-		func(ctx context.Context, context execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
+		func(context execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return nil, workflow.ErrNotExists
 			}
@@ -172,7 +172,7 @@ func (handler *handlerImpl) HandleDecisionTaskStarted(
 		domainID,
 		workflowExecution,
 		handler.timeSource.Now(),
-		func(ctx context.Context, context execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
+		func(context execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return nil, workflow.ErrNotExists
 			}

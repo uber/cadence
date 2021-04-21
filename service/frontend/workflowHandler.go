@@ -2184,6 +2184,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		SignalRequest: signalRequest,
 	})
 	if err != nil {
+		err = wh.NormalizeVersionedErrors(ctx, err)
 		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2385,6 +2386,7 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 		TerminateRequest: terminateRequest,
 	})
 	if err != nil {
+		err = wh.NormalizeVersionedErrors(ctx, err)
 		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2490,6 +2492,7 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 		CancelRequest: cancelRequest,
 	})
 	if err != nil {
+		err = wh.NormalizeVersionedErrors(ctx, err)
 		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -4029,4 +4032,24 @@ func checkRequiredDomainDataKVs(requiredDomainDataKeys map[string]interface{}, d
 		}
 	}
 	return nil
+}
+
+// Some error types are introduced later that some clients might not support
+// To make them backward compatible, we continue returning the legacy error types
+// for older clients
+func (wh *WorkflowHandler) NormalizeVersionedErrors(ctx context.Context, err error) error {
+	switch err.(type) {
+	case *types.WorkflowExecutionAlreadyCompletedError:
+		call := yarpc.CallFromContext(ctx)
+		clientFeatureVersion := call.Header(common.FeatureVersionHeaderName)
+		clientImpl := call.Header(common.ClientImplHeaderName)
+		vErr := wh.versionChecker.SupportsWorkflowAlreadyCompletedError(clientImpl, clientFeatureVersion)
+		if vErr == nil {
+			return err
+		} else {
+			return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
+		}
+	default:
+		return err
+	}
 }

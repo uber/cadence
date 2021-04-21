@@ -30,7 +30,6 @@ import (
 
 	"github.com/pborman/uuid"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/client/admin"
@@ -751,12 +750,7 @@ func (e *historyEngineImpl) terminateAndStartWorkflow(
 UpdateWorkflowLoop:
 	for attempt := 0; attempt < workflow.ConditionalRetryCount; attempt++ {
 		if !runningMutableState.IsWorkflowExecutionRunning() {
-			return nil, execution.VersionBasedError(
-				workflow.ErrAlreadyCompleted,
-				"1.7.0",
-				yarpc.CallFromContext(ctx).Header(common.FeatureVersionHeaderName),
-				workflow.ErrNotExists,
-			)
+			return nil, workflow.ErrAlreadyCompleted
 		}
 
 		if err := execution.TerminateWorkflow(
@@ -1827,7 +1821,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 		domainID,
 		workflowExecution,
 		e.timeSource.Now(),
-		func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
+		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return nil, workflow.ErrNotExists
 			}
@@ -2080,14 +2074,9 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 	}
 
 	return workflow.UpdateCurrentWithActionFunc(ctx, e.executionCache, e.executionManager, domainID, workflowExecution, e.timeSource.Now(),
-		func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
+		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, execution.VersionBasedError(
-					workflow.ErrAlreadyCompleted,
-					"1.7.0",
-					yarpc.CallFromContext(ctx).Header(common.FeatureVersionHeaderName),
-					workflow.ErrNotExists,
-				)
+				return nil, workflow.ErrAlreadyCompleted
 			}
 
 			executionInfo := mutableState.GetExecutionInfo()
@@ -2148,7 +2137,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 		domainID,
 		workflowExecution,
 		e.timeSource.Now(),
-		func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
+		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			executionInfo := mutableState.GetExecutionInfo()
 			createDecisionTask := true
 			// Do not create decision task when the workflow is cron and the cron has not been started yet
@@ -2160,12 +2149,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 			}
 
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, execution.VersionBasedError(
-					workflow.ErrAlreadyCompleted,
-					"1.7.0",
-					yarpc.CallFromContext(ctx).Header(common.FeatureVersionHeaderName),
-					workflow.ErrNotExists,
-				)
+				return nil, workflow.ErrAlreadyCompleted
 			}
 
 			maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
@@ -2383,14 +2367,9 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 		domainID,
 		workflowExecution,
 		e.timeSource.Now(),
-		func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
+		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, execution.VersionBasedError(
-					workflow.ErrAlreadyCompleted,
-					"1.7.0",
-					yarpc.CallFromContext(ctx).Header(common.FeatureVersionHeaderName),
-					workflow.ErrNotExists,
-				)
+				return nil, workflow.ErrAlreadyCompleted
 			}
 
 			eventBatchFirstEventID := mutableState.GetNextEventID()
@@ -2976,7 +2955,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 		domainID,
 		currentExecution,
 		e.timeSource.Now(),
-		func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
+		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			// Filter out reapply event from the same cluster
 			toReapplyEvents := make([]*types.HistoryEvent, 0, len(reapplyEvents))
 			lastWriteVersion, err := mutableState.GetLastWriteVersion()
