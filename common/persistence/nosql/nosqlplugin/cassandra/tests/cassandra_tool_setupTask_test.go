@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package tests
 
 import (
 	"os"
@@ -28,13 +28,14 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/environment"
+	"github.com/uber/cadence/tools/cassandra"
 	"github.com/uber/cadence/tools/common/schema/test"
 )
 
 type (
 	SetupSchemaTestSuite struct {
 		test.SetupSchemaTestBase
-		client *cqlClient
+		client *cassandra.CqlClient
 	}
 )
 
@@ -44,7 +45,7 @@ func TestSetupSchemaTestSuite(t *testing.T) {
 
 func (s *SetupSchemaTestSuite) SetupSuite() {
 	os.Setenv("CASSANDRA_HOST", environment.GetCassandraAddress())
-	client, err := newTestCQLClient(systemKeyspace)
+	client, err := NewTestCQLClient(cassandra.SystemKeyspace)
 	if err != nil {
 		log.Fatal("Error creating CQLClient")
 	}
@@ -57,13 +58,13 @@ func (s *SetupSchemaTestSuite) TearDownSuite() {
 }
 
 func (s *SetupSchemaTestSuite) TestCreateKeyspace() {
-	s.Nil(RunTool([]string{"./tool", "create", "-k", "foobar123", "--rf", "1"}))
-	err := s.client.dropKeyspace("foobar123")
+	s.Nil(cassandra.RunTool([]string{"./tool", "create", "-k", "foobar123", "--rf", "1"}))
+	err := s.client.DropKeyspace("foobar123")
 	s.Nil(err)
 }
 
 func (s *SetupSchemaTestSuite) TestSetupSchema() {
-	client, err := newTestCQLClient(s.DBName)
+	client, err := NewTestCQLClient(s.DBName)
 	s.Nil(err)
-	s.RunSetupTest(buildCLIOptions(), client, "-k", createTestCQLFileContent(), []string{"tasks", "events"})
+	s.RunSetupTest(cassandra.BuildCLIOptions(), client, "-k", CreateTestCQLFileContent(), []string{"tasks", "events"})
 }

@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/types"
 )
@@ -71,7 +72,7 @@ func (s *domainHandlerGlobalDomainDisabledSuite) SetupSuite() {
 		log.SetOutput(os.Stdout)
 	}
 
-	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{
+	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(false, false),
 	})
 	s.TestBase.Setup()

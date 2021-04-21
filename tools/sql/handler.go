@@ -28,7 +28,6 @@ import (
 
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/config"
 	mysql_db "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
 	postgres_db "github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres"
@@ -183,7 +182,7 @@ func parseConnectConfig(cli *cli.Context) (*config.SQL, error) {
 	}
 
 	if cli.GlobalBool(schema.CLIFlagEnableTLS) {
-		cfg.TLS = &auth.TLS{
+		cfg.TLS = &config.TLS{
 			Enabled:                true,
 			CertFile:               cli.GlobalString(schema.CLIFlagTLSCertFile),
 			KeyFile:                cli.GlobalString(schema.CLIFlagTLSKeyFile),

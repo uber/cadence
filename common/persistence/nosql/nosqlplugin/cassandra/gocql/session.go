@@ -48,7 +48,7 @@ type (
 	}
 )
 
-func newSession(
+func NewSession(
 	config ClusterConfig,
 ) (*session, error) {
 	gocqlSession, err := initSession(config)

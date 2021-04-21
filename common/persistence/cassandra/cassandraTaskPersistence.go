@@ -175,7 +175,7 @@ func newTaskPersistence(
 
 	return &cassandraTaskPersistence{
 		cassandraStore: cassandraStore{
-			client:  cfg.CQLClient,
+			client:  gocql.NewClient(),
 			session: session,
 			logger:  logger,
 		},

@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/tools/sql"
@@ -69,7 +68,7 @@ func (s *HandlerTestSuite) TestValidateConnectConfig() {
 	cfg.DatabaseName = "foobar"
 	s.Nil(sql.ValidateConnectConfig(cfg))
 
-	cfg.TLS = &auth.TLS{}
+	cfg.TLS = &config.TLS{}
 	cfg.TLS.Enabled = true
 	s.NotNil(sql.ValidateConnectConfig(cfg))
 

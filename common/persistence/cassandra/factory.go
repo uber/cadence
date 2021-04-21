@@ -50,9 +50,6 @@ type (
 // NewFactory returns an instance of a factory object which can be used to create
 // datastores that are backed by cassandra
 func NewFactory(cfg config.Cassandra, clusterName string, logger log.Logger) *Factory {
-	if cfg.CQLClient == nil {
-		cfg.CQLClient = gocql.NewClient()
-	}
 	return &Factory{
 		cfg:         cfg,
 		clusterName: clusterName,
@@ -140,7 +137,7 @@ func newExecutionStoreFactory(
 	}
 
 	return &executionStoreFactory{
-		client:  cfg.CQLClient,
+		client:  gocql.NewClient(),
 		session: session,
 		logger:  logger,
 	}, nil

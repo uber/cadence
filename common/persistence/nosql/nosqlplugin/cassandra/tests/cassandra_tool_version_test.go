@@ -18,15 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package tests
 
 import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
-	"path"
-	"runtime"
 	"testing"
 	"time"
 
@@ -38,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/environment"
+	"github.com/uber/cadence/tools/cassandra"
 )
 
 type (
@@ -58,24 +57,21 @@ func (s *VersionTestSuite) SetupTest() {
 func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 	keyspace := "cadence_test"
 	visKeyspace := "cadence_visibility_test"
-	_, filename, _, ok := runtime.Caller(0)
-	s.True(ok)
-	root := path.Dir(path.Dir(path.Dir(filename)))
-	cqlFile := path.Join(root, "schema/cassandra/cadence/schema.cql")
-	visCqlFile := path.Join(root, "schema/cassandra/visibility/schema.cql")
+	cqlFile := rootRelativePath + "schema/cassandra/cadence/schema.cql"
+	visCqlFile := rootRelativePath + "schema/cassandra/visibility/schema.cql"
 
 	defer s.createKeyspace(keyspace)()
 	defer s.createKeyspace(visKeyspace)()
-	s.Nil(RunTool([]string{
+	s.Nil(cassandra.RunTool([]string{
 		"./tool", "-k", keyspace, "-q", "setup-schema", "-f", cqlFile, "-version", "10.0", "-o",
 	}))
-	s.Nil(RunTool([]string{
+	s.Nil(cassandra.RunTool([]string{
 		"./tool", "-k", visKeyspace, "-q", "setup-schema", "-f", visCqlFile, "-version", "10.0", "-o",
 	}))
 
 	defaultCfg := config.Cassandra{
 		Hosts:    environment.GetCassandraAddress(),
-		Port:     defaultCassandraPort,
+		Port:     cassandra.DefaultCassandraPort,
 		User:     "",
 		Password: "",
 		Keyspace: keyspace,
@@ -92,7 +88,7 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 		TransactionSizeLimit: dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
 		ErrorInjectionRate:   dynamicconfig.GetFloatPropertyFn(0),
 	}
-	s.NoError(VerifyCompatibleVersion(cfg))
+	s.NoError(cassandra.VerifyCompatibleVersion(cfg))
 }
 
 func (s *VersionTestSuite) TestCheckCompatibleVersion() {
@@ -113,22 +109,22 @@ func (s *VersionTestSuite) TestCheckCompatibleVersion() {
 }
 
 func (s *VersionTestSuite) createKeyspace(keyspace string) func() {
-	cfg := &CQLClientConfig{
+	cfg := &cassandra.CQLClientConfig{
 		Hosts:       environment.GetCassandraAddress(),
-		Port:        defaultCassandraPort,
+		Port:        cassandra.DefaultCassandraPort,
 		Keyspace:    "system",
-		Timeout:     defaultTimeout,
-		numReplicas: 1,
+		Timeout:     cassandra.DefaultTimeout,
+		NumReplicas: 1,
 	}
-	client, err := newCQLClient(cfg)
+	client, err := cassandra.NewCQLClient(cfg)
 	s.NoError(err)
 
-	err = client.createKeyspace(keyspace)
+	err = client.CreateKeyspace(keyspace)
 	if err != nil {
 		log.Fatalf("error creating Keyspace, err=%v", err)
 	}
 	return func() {
-		s.NoError(client.dropKeyspace(keyspace))
+		s.NoError(client.DropKeyspace(keyspace))
 		client.Close()
 	}
 }
@@ -154,7 +150,7 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 	}
 
 	cqlFile := subdir + "/v" + actual + "/tmp.cql"
-	s.NoError(RunTool([]string{
+	s.NoError(cassandra.RunTool([]string{
 		"./tool", "-k", keyspace, "-q", "setup-schema", "-f", cqlFile, "-version", actual, "-o",
 	}))
 	if expectedFail {
@@ -163,12 +159,12 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 
 	cfg := config.Cassandra{
 		Hosts:    environment.GetCassandraAddress(),
-		Port:     defaultCassandraPort,
+		Port:     cassandra.DefaultCassandraPort,
 		User:     "",
 		Password: "",
 		Keyspace: keyspace,
 	}
-	err = checkCompatibleVersion(cfg, expected)
+	err = cassandra.CheckCompatibleVersion(cfg, expected)
 	if len(errStr) > 0 {
 		s.Error(err)
 		s.Contains(err.Error(), errStr)

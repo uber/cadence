@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,15 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package config
 
-import (
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+type (
+	// SASL describe SASL configuration (for Kafka)
+	SASL struct {
+		Enabled   bool   `yaml:"enabled"` // false as default
+		User      string `yaml:"user"`
+		Password  string `yaml:"password"`
+		Algorithm string `yaml:"algorithm"` // plain, sha512 or sha256
+	}
 )
-
-var defaultGoCQLClient = gocql.NewClient()
-
-// SetGoCQLClient is used to overwrite the defaultGoCQLClient global
-func SetGoCQLClient(client gocql.Client) {
-	defaultGoCQLClient = client
-}

@@ -201,7 +201,7 @@ func newVisibilityPersistence(
 	return &cassandraVisibilityPersistence{
 		sortByCloseTime: listClosedOrderingByCloseTime,
 		cassandraStore: cassandraStore{
-			client:  cfg.CQLClient,
+			client:  gocql.NewClient(),
 			session: session,
 			logger:  logger,
 		},

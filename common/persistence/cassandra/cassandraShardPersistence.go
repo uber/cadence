@@ -119,7 +119,7 @@ func newShardPersistence(
 
 	return &cassandraShardPersistence{
 		cassandraStore: cassandraStore{
-			client:  cfg.CQLClient,
+			client:  gocql.NewClient(),
 			session: session,
 			logger:  logger,
 		},
