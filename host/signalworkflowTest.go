@@ -225,7 +225,7 @@ func (s *IntegrationSuite) TestSignalWorkflow() {
 		Identity:   identity,
 	})
 	s.NotNil(err)
-	s.IsType(&types.EntityNotExistsError{}, err)
+	s.IsType(&types.WorkflowExecutionAlreadyCompletedError{}, err)
 }
 
 func (s *IntegrationSuite) TestSignalWorkflow_DuplicateRequest() {

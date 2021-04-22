@@ -46,6 +46,8 @@ func FromError(err error) error {
 			CurrentCluster: e.CurrentCluster,
 			ActiveCluster:  e.ActiveCluster,
 		}))
+	case *types.WorkflowExecutionAlreadyCompletedError:
+		return protobuf.NewError(yarpcerrors.CodeNotFound, e.Message, protobuf.WithErrorDetails(&apiv1.WorkflowExecutionAlreadyCompletedError{}))
 	case *types.BadRequestError:
 		return protobuf.NewError(yarpcerrors.CodeInvalidArgument, e.Message)
 	case *types.QueryFailedError:
@@ -123,6 +125,10 @@ func ToError(err error) error {
 				Message:        status.Message(),
 				CurrentCluster: details.CurrentCluster,
 				ActiveCluster:  details.ActiveCluster,
+			}
+		case *apiv1.WorkflowExecutionAlreadyCompletedError:
+			return &types.WorkflowExecutionAlreadyCompletedError{
+				Message: status.Message(),
 			}
 		}
 	case yarpcerrors.CodeInvalidArgument:

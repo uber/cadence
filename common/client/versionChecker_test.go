@@ -292,6 +292,11 @@ func (s *VersionCheckerSuite) TestSupportsRawHistoryQuery() {
 		},
 		{
 			clientImpl:           JavaSDK,
+			clientFeatureVersion: "1.7.0",
+			expectErr:            false,
+		},
+		{
+			clientImpl:           JavaSDK,
 			clientFeatureVersion: "1.2.0",
 			expectErr:            true,
 		},
@@ -322,7 +327,7 @@ func (s *VersionCheckerSuite) TestSupportsRawHistoryQuery() {
 		},
 		{
 			clientImpl:           CLI,
-			clientFeatureVersion: "1.6.0",
+			clientFeatureVersion: "1.7.0",
 			expectErr:            false,
 		},
 	}
@@ -335,6 +340,84 @@ func (s *VersionCheckerSuite) TestSupportsRawHistoryQuery() {
 			s.IsType(&types.ClientVersionNotSupportedError{}, err)
 		} else {
 			s.NoError(vc.SupportsRawHistoryQuery(tc.clientImpl, tc.clientFeatureVersion))
+		}
+	}
+}
+
+func (s *VersionCheckerSuite) TestSupportsWorkflowAlreadyCompletedError() {
+	testCases := []struct {
+		clientImpl           string
+		clientFeatureVersion string
+		expectErr            bool
+	}{
+		{
+			clientImpl: "",
+			expectErr:  true,
+		},
+		{
+			clientImpl:           "",
+			clientFeatureVersion: GoWorkerWorkflowAlreadyCompletedVersion,
+			expectErr:            true,
+		},
+		{
+			clientImpl: GoSDK,
+			expectErr:  true,
+		},
+		{
+			clientImpl:           "unknown",
+			clientFeatureVersion: "0.0.0",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           JavaSDK,
+			clientFeatureVersion: "1.4.0",
+			expectErr:            false,
+		},
+		{
+			clientImpl:           JavaSDK,
+			clientFeatureVersion: "1.3.0",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           GoSDK,
+			clientFeatureVersion: "malformed-feature-version",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           GoSDK,
+			clientFeatureVersion: GoWorkerWorkflowAlreadyCompletedVersion,
+			expectErr:            false,
+		},
+		{
+			clientImpl:           GoSDK,
+			clientFeatureVersion: "1.4.0",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           GoSDK,
+			clientFeatureVersion: "2.0.0",
+			expectErr:            false,
+		},
+		{
+			clientImpl:           CLI,
+			clientFeatureVersion: "1.5.0",
+			expectErr:            true,
+		},
+		{
+			clientImpl:           CLI,
+			clientFeatureVersion: "1.7.0",
+			expectErr:            false,
+		},
+	}
+
+	for _, tc := range testCases {
+		vc := NewVersionChecker()
+		if tc.expectErr {
+			err := vc.SupportsWorkflowAlreadyCompletedError(tc.clientImpl, tc.clientFeatureVersion)
+			s.Error(err)
+			s.IsType(&types.ClientVersionNotSupportedError{}, err)
+		} else {
+			s.NoError(vc.SupportsWorkflowAlreadyCompletedError(tc.clientImpl, tc.clientFeatureVersion))
 		}
 	}
 }

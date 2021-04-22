@@ -112,3 +112,17 @@ func (mr *MockVersionCheckerMockRecorder) SupportsRawHistoryQuery(clientImpl, cl
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SupportsRawHistoryQuery", reflect.TypeOf((*VersionCheckerMock)(nil).SupportsRawHistoryQuery), clientImpl, clientFeatureVersion)
 }
+
+// SupportsWorkflowAlreadyCompletedError mocks base method
+func (m *VersionCheckerMock) SupportsWorkflowAlreadyCompletedError(clientImpl, clientFeatureVersion string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SupportsWorkflowAlreadyCompletedError", clientImpl, clientFeatureVersion)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SupportsWorkflowAlreadyCompletedError indicates an expected call of SupportsWorkflowAlreadyCompletedError
+func (mr *MockVersionCheckerMockRecorder) SupportsWorkflowAlreadyCompletedError(clientImpl, clientFeatureVersion interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SupportsWorkflowAlreadyCompletedError", reflect.TypeOf((*VersionCheckerMock)(nil).SupportsRawHistoryQuery), clientImpl, clientFeatureVersion)
+}

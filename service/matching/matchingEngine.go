@@ -401,7 +401,7 @@ pollLoop:
 		resp, err := e.recordDecisionTaskStarted(hCtx.Context, request, task)
 		if err != nil {
 			switch err.(type) {
-			case *types.EntityNotExistsError, *types.EventAlreadyStartedError:
+			case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError:
 				e.emitInfoOrDebugLog(
 					task.event.DomainID,
 					"Duplicated decision task",
@@ -480,7 +480,7 @@ pollLoop:
 		resp, err := e.recordActivityTaskStarted(hCtx.Context, request, task)
 		if err != nil {
 			switch err.(type) {
-			case *types.EntityNotExistsError, *types.EventAlreadyStartedError:
+			case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError:
 				e.emitInfoOrDebugLog(
 					task.event.DomainID,
 					"Duplicated activity task",
@@ -842,7 +842,7 @@ func (e *matchingEngineImpl) recordDecisionTaskStarted(
 	}
 	err := backoff.Retry(op, historyServiceOperationRetryPolicy, func(err error) bool {
 		switch err.(type) {
-		case *types.EntityNotExistsError, *types.EventAlreadyStartedError:
+		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError:
 			return false
 		}
 		return true
@@ -871,7 +871,7 @@ func (e *matchingEngineImpl) recordActivityTaskStarted(
 	}
 	err := backoff.Retry(op, historyServiceOperationRetryPolicy, func(err error) bool {
 		switch err.(type) {
-		case *types.EntityNotExistsError, *types.EventAlreadyStartedError:
+		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError:
 			return false
 		}
 		return true

@@ -826,7 +826,7 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionFail() {
 		},
 	})
 	s.NotNil(err)
-	s.IsType(&types.EntityNotExistsError{}, err)
+	s.IsType(&types.WorkflowExecutionAlreadyCompletedError{}, err)
 }
 
 func (s *engine2Suite) createExecutionStartedState(we types.WorkflowExecution, tl, identity string,

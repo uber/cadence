@@ -2184,7 +2184,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		SignalRequest: signalRequest,
 	})
 	if err != nil {
-		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
+		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...))
 	}
 
 	return nil
@@ -2385,7 +2385,7 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 		TerminateRequest: terminateRequest,
 	})
 	if err != nil {
-		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
+		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...))
 	}
 
 	return nil
@@ -2490,7 +2490,7 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 		CancelRequest: cancelRequest,
 	})
 	if err != nil {
-		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
+		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...))
 	}
 
 	return nil
@@ -3526,6 +3526,9 @@ func (wh *WorkflowHandler) error(err error, scope metrics.Scope, tagsForErrorLog
 	case *types.EntityNotExistsError:
 		scope.IncCounter(metrics.CadenceErrEntityNotExistsCounter)
 		return err
+	case *types.WorkflowExecutionAlreadyCompletedError:
+		scope.IncCounter(metrics.CadenceErrWorkflowExecutionAlreadyCompletedCounter)
+		return err
 	case *types.WorkflowExecutionAlreadyStartedError:
 		scope.IncCounter(metrics.CadenceErrExecutionAlreadyStartedCounter)
 		return err
@@ -4026,4 +4029,24 @@ func checkRequiredDomainDataKVs(requiredDomainDataKeys map[string]interface{}, d
 		}
 	}
 	return nil
+}
+
+// Some error types are introduced later that some clients might not support
+// To make them backward compatible, we continue returning the legacy error types
+// for older clients
+func (wh *WorkflowHandler) normalizeVersionedErrors(ctx context.Context, err error) error {
+	switch err.(type) {
+	case *types.WorkflowExecutionAlreadyCompletedError:
+		call := yarpc.CallFromContext(ctx)
+		clientFeatureVersion := call.Header(common.FeatureVersionHeaderName)
+		clientImpl := call.Header(common.ClientImplHeaderName)
+		vErr := wh.versionChecker.SupportsWorkflowAlreadyCompletedError(clientImpl, clientFeatureVersion)
+		if vErr == nil {
+			return err
+		} else {
+			return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
+		}
+	default:
+		return err
+	}
 }
