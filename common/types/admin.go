@@ -280,20 +280,20 @@ func (v *MembershipInfo) GetRings() (o []*RingInfo) {
 
 // PersistenceSetting is used to expose persistence engine settings
 type PersistenceSetting struct {
-	Key   string `json:"key,omitempty"`
-	Value string `json:"value,omitempty"`
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 // PersistenceFeature is used to expose store specific feature.
 // Feature can be cadence or store specific.
 type PersistenceFeature struct {
-	Key     string `json:"key,omitempty"`
-	Enabled bool   `json:"enabled,omitempty"`
+	Key     string `json:"key"`
+	Enabled bool   `json:"enabled"`
 }
 
 // PersistenceInfo is used to expose store configuration
 type PersistenceInfo struct {
-	Backend  string                `json:"backend,omitempty"`
+	Backend  string                `json:"backend"`
 	Settings []*PersistenceSetting `json:"settings,omitempty"`
 	Features []*PersistenceFeature `json:"features,omitempty"`
 }
