@@ -118,6 +118,7 @@ This will run all the tests excluding end-to-end integration test in host/ packa
 ```bash
 make test
 ```
+:warning: Note:
 > Note that you will see some test failures because of errors connecting to MySQL/Postgres if only Cassandra is up. This is okay if you don't write any code related to persistence layer. 
  
 To run all end-to-end integration tests in **host/** package: 
