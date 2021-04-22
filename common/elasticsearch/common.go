@@ -23,10 +23,11 @@ package elasticsearch
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"github.com/uber/cadence/common/config"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/uber/cadence/common/config"
 )
 
 const unknownStatusCode = -1
@@ -37,8 +38,9 @@ const oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
 // Build Http Client with TLS
 func buildTLSHTTPClient(config config.TLS) (*http.Client, error) {
 	// Setup base TLS config
+	// EnableHostVerification is a secure flag vs insecureSkipVerify is insecure so inverse the valu
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify : config.EnableHostVerification,
+		InsecureSkipVerify: !config.EnableHostVerification,
 	}
 
 	// Setup server name
