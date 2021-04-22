@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	cc "github.com/uber/cadence/common/client"
 )
 
 const (
@@ -121,6 +122,8 @@ type versionMiddleware struct {
 }
 
 func (vm *versionMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
-	request.Headers = request.Headers.With(common.ClientImplHeaderName, "cli")
+	request.Headers = request.Headers.
+		With(common.ClientImplHeaderName, cc.CLI).
+		With(common.FeatureVersionHeaderName, cc.SupportedCLIVersion)
 	return out.Call(ctx, request)
 }
