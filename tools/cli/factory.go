@@ -29,12 +29,13 @@ import (
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/zap"
 
+	clientFrontend "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+
 	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	serverFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
-	clientFrontend "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 )
 
 const (
