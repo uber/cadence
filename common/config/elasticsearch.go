@@ -48,6 +48,9 @@ type (
 		// optional to use AWS signing client
 		// See more info https://github.com/olivere/elastic/wiki/Using-with-AWS-Elasticsearch-Service
 		AWSSigning AWSSigning `yaml:"awsSigning"`
+		// optional to use Signed Certificates over https
+		// See more info https://github.com/olivere/elastic/wiki/Using-with-AWS-Elasticsearch-Service
+		TLS TLS `yaml:"tls"`
 	}
 
 	// AWSSigning contains config to enable signing,

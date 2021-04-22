@@ -21,6 +21,11 @@
 package elasticsearch
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"github.com/uber/cadence/common/config"
+	"io/ioutil"
+	"net/http"
 	"time"
 )
 
@@ -28,3 +33,42 @@ const unknownStatusCode = -1
 
 // TODO https://github.com/uber/cadence/issues/3686
 const oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
+
+// Build Http Client with TLS
+func buildTLSHTTPClient(config config.TLS) (*http.Client, error) {
+	// Setup base TLS config
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify : config.EnableHostVerification,
+	}
+
+	// Setup server name
+	if config.ServerName != "" {
+		tlsConfig.ServerName = config.ServerName
+	}
+
+	// Load client cert
+	if config.CertFile != "" && config.KeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(config.CertFile, config.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	// Load CA cert
+	if config.CaFile != "" {
+		caCert, err := ioutil.ReadFile(config.CaFile)
+		if err != nil {
+			return nil, err
+		}
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+		tlsConfig.RootCAs = caCertPool
+	}
+
+	// Setup HTTPS client
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	tlsClient := &http.Client{Transport: transport}
+
+	return tlsClient, nil
+}
