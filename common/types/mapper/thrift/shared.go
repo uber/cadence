@@ -1972,6 +1972,26 @@ func ToEntityNotExistsError(t *shared.EntityNotExistsError) *types.EntityNotExis
 	}
 }
 
+// FromWorkflowExecutionAlreadyCompletedError converts internal WorkflowExecutionAlreadyCompletedError type to thrift
+func FromWorkflowExecutionAlreadyCompletedError(t *types.WorkflowExecutionAlreadyCompletedError) *shared.WorkflowExecutionAlreadyCompletedError {
+	if t == nil {
+		return nil
+	}
+	return &shared.WorkflowExecutionAlreadyCompletedError{
+		Message: t.Message,
+	}
+}
+
+// ToWorkflowExecutionAlreadyCompletedError converts thrift WorkflowExecutionAlreadyCompletedError type to internal
+func ToWorkflowExecutionAlreadyCompletedError(t *shared.WorkflowExecutionAlreadyCompletedError) *types.WorkflowExecutionAlreadyCompletedError {
+	if t == nil {
+		return nil
+	}
+	return &types.WorkflowExecutionAlreadyCompletedError{
+		Message: t.Message,
+	}
+}
+
 // FromEventType converts internal EventType type to thrift
 func FromEventType(t *types.EventType) *shared.EventType {
 	if t == nil {

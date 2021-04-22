@@ -42,6 +42,7 @@ func TestErrors(t *testing.T) {
 		&testdata.DomainAlreadyExistsError,
 		&testdata.DomainNotActiveError,
 		&testdata.EntityNotExistsError,
+		&testdata.WorkflowExecutionAlreadyCompletedError,
 		&testdata.EventAlreadyStartedError,
 		&testdata.InternalDataInconsistencyError,
 		&testdata.InternalServiceError,

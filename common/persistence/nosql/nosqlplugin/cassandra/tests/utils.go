@@ -38,7 +38,6 @@ func NewTestCQLClient(keyspace string) (*cassandra.CqlClient, error) {
 	})
 }
 
-
 func CreateTestCQLFileContent() string {
 	return `
 -- test cql file content

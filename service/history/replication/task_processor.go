@@ -603,6 +603,8 @@ func (p *taskProcessorImpl) updateFailureMetric(scope int, err error) {
 		p.metricsClient.IncCounter(scope, metrics.CadenceErrExecutionAlreadyStartedCounter)
 	case *types.EntityNotExistsError:
 		p.metricsClient.IncCounter(scope, metrics.CadenceErrEntityNotExistsCounter)
+	case *types.WorkflowExecutionAlreadyCompletedError:
+		p.metricsClient.IncCounter(scope, metrics.CadenceErrWorkflowExecutionAlreadyCompletedCounter)
 	case *types.LimitExceededError:
 		p.metricsClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
 	case *yarpcerrors.Status:

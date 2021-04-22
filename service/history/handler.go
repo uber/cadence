@@ -1887,6 +1887,8 @@ func (h *handlerImpl) updateErrorMetric(
 		scope.IncCounter(metrics.CadenceErrExecutionAlreadyStartedCounter)
 	case *types.EntityNotExistsError:
 		scope.IncCounter(metrics.CadenceErrEntityNotExistsCounter)
+	case *types.WorkflowExecutionAlreadyCompletedError:
+		scope.IncCounter(metrics.CadenceErrWorkflowExecutionAlreadyCompletedCounter)
 	case *types.CancellationAlreadyRequestedError:
 		scope.IncCounter(metrics.CadenceErrCancellationAlreadyRequestedCounter)
 	case *types.LimitExceededError:

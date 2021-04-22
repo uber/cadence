@@ -62,6 +62,9 @@ var (
 		CurrentCluster: ClusterName1,
 		ActiveCluster:  ClusterName2,
 	}
+	WorkflowExecutionAlreadyCompletedError = types.WorkflowExecutionAlreadyCompletedError{
+		Message: ErrorMessage,
+	}
 	EventAlreadyStartedError = types.EventAlreadyStartedError{
 		Message: ErrorMessage,
 	}
