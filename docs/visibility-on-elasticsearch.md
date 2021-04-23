@@ -79,7 +79,7 @@ Optional TLS Support can be enabled by setting the TLS config as follows:
 ```yaml
 elasticsearch:
   url:
-    scheme: "http"
+    scheme: "https"
     host: "127.0.0.1:9200"
   indices:
     visibility: cadence-visibility-dev
