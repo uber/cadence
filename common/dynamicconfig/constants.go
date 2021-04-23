@@ -1041,6 +1041,8 @@ const (
 	// Default value: false
 	EnableCleaningOrphanTaskInTasklistScavenger
 	// ScannerMaxTasksProcessedPerTasklistJob is the number of tasks to process for a tasklist in each workflow run
+	// KeyName: worker.scannerMaxTasksProcessedPerTasklistJob
+	// Default value: 256
 	ScannerMaxTasksProcessedPerTasklistJob
 	// TaskListScannerEnabled is indicates if task list scanner should be started as part of worker.Scanner
 	// KeyName: worker.taskListScannerEnabled
