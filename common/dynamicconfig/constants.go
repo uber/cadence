@@ -895,42 +895,80 @@ const (
 	// key for history replication
 
 	//ReplicationTaskFetcherParallelism determines how many go routines we spin up for fetching tasks
+	// KeyName: history.ReplicationTaskFetcherParallelism
+	// Default value: 1
 	ReplicationTaskFetcherParallelism
 	// ReplicationTaskFetcherAggregationInterval determines how frequently the fetch requests are sent
+	// KeyName: history.ReplicationTaskFetcherAggregationInterval
+	// Default value: 2 * time.Second
 	ReplicationTaskFetcherAggregationInterval
 	// ReplicationTaskFetcherTimerJitterCoefficient is the jitter for fetcher timer
+	// KeyName: history.ReplicationTaskFetcherTimerJitterCoefficient
+	// Default value: 0.15
 	ReplicationTaskFetcherTimerJitterCoefficient
 	// ReplicationTaskFetcherErrorRetryWait is the wait time when fetcher encounters error
+	// KeyName: history.ReplicationTaskFetcherErrorRetryWait
+	// Default value: time.Second
 	ReplicationTaskFetcherErrorRetryWait
 	// ReplicationTaskFetcherServiceBusyWait is the wait time when fetcher encounters service busy error
+	// KeyName: history.ReplicationTaskFetcherServiceBusyWait
+	// Default value: 60 * time.Second
 	ReplicationTaskFetcherServiceBusyWait
 	// ReplicationTaskProcessorErrorRetryWait is the initial retry wait when we see errors in applying replication tasks
+	// KeyName: history.ReplicationTaskProcessorErrorRetryWait
+	// Default value: 50*time.Millisecond
 	ReplicationTaskProcessorErrorRetryWait
 	// ReplicationTaskProcessorErrorRetryMaxAttempts is the max retry attempts for applying replication tasks
+	// KeyName: history.ReplicationTaskProcessorErrorRetryMaxAttempts
+	// Default value: 10
 	ReplicationTaskProcessorErrorRetryMaxAttempts
 	// ReplicationTaskProcessorErrorSecondRetryWait is the initial retry wait for the second phase retry
+	// KeyName: history.ReplicationTaskProcessorErrorSecondRetryWait
+	// Default value: 5 * time.Second
 	ReplicationTaskProcessorErrorSecondRetryWait
 	// ReplicationTaskProcessorErrorSecondRetryMaxWait is the max wait time for the second phase retry
+	// KeyName: history.ReplicationTaskProcessorErrorSecondRetryMaxWait
+	// Default value: 30 * 5 * time.Second
 	ReplicationTaskProcessorErrorSecondRetryMaxWait
 	// ReplicationTaskProcessorErrorSecondRetryExpiration is the expiration duration for the second phase retry
+	// KeyName: history.ReplicationTaskProcessorErrorSecondRetryExpiration
+	// Default value: 5 * time.Minute
 	ReplicationTaskProcessorErrorSecondRetryExpiration
 	// ReplicationTaskProcessorNoTaskInitialWait is the wait time when not ask is returned
+	// KeyName: history.ReplicationTaskProcessorNoTaskInitialWait
+	// Default value: 2 * time.Second
 	ReplicationTaskProcessorNoTaskInitialWait
 	// ReplicationTaskProcessorCleanupInterval determines how frequently the cleanup replication queue
+	// KeyName: history.ReplicationTaskProcessorCleanupInterval
+	// Default value: 1 * time.Minute
 	ReplicationTaskProcessorCleanupInterval
 	// ReplicationTaskProcessorCleanupJitterCoefficient is the jitter for cleanup timer
+	// KeyName: history.ReplicationTaskProcessorCleanupJitterCoefficient
+	// Default value: 0.15
 	ReplicationTaskProcessorCleanupJitterCoefficient
 	// ReplicationTaskProcessorReadHistoryBatchSize is the batch size to read history events
+	// KeyName: history.ReplicationTaskProcessorReadHistoryBatchSize
+	// Default value: 5
 	ReplicationTaskProcessorReadHistoryBatchSize
 	// ReplicationTaskProcessorStartWait is the wait time before each task processing batch
+	// KeyName: history.ReplicationTaskProcessorStartWait
+	// Default value: 5 * time.Second
 	ReplicationTaskProcessorStartWait
 	// ReplicationTaskProcessorStartWaitJitterCoefficient is the jitter for batch start wait timer
+	// KeyName: history.ReplicationTaskProcessorStartWaitJitterCoefficient
+	// Default value: 0.9
 	ReplicationTaskProcessorStartWaitJitterCoefficient
 	// ReplicationTaskProcessorHostQPS is the qps of task processing rate limiter on host level
+	// KeyName: history.ReplicationTaskProcessorHostQPS
+	// Default value: 1500
 	ReplicationTaskProcessorHostQPS
 	// ReplicationTaskProcessorShardQPS is the qps of task processing rate limiter on shard level
+	// KeyName: history.ReplicationTaskProcessorShardQPS
+	// Default value: 5
 	ReplicationTaskProcessorShardQPS
 	//ReplicationTaskGenerationQPS is the wait time between each replication task generation qps
+	// KeyName: history.ReplicationTaskGenerationQPS
+	// Default value: 100
 	ReplicationTaskGenerationQPS
 
 	// key for worker
