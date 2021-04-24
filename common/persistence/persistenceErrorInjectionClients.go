@@ -342,13 +342,14 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) UpdateWorkflowExecuti
 func (p *workflowExecutionErrorInjectionPersistenceClient) ConflictResolveWorkflowExecution(
 	ctx context.Context,
 	request *ConflictResolveWorkflowExecutionRequest,
-) error {
+) (*ConflictResolveWorkflowExecutionResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
+	var response *ConflictResolveWorkflowExecutionResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		persistenceErr = p.persistence.ConflictResolveWorkflowExecution(ctx, request)
+		response, persistenceErr = p.persistence.ConflictResolveWorkflowExecution(ctx, request)
 	}
 
 	if fakeErr != nil {
@@ -358,9 +359,9 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) ConflictResolveWorkfl
 			tag.Bool(forwardCall),
 			tag.StoreError(persistenceErr),
 		)
-		return fakeErr
+		return nil, fakeErr
 	}
-	return persistenceErr
+	return response, persistenceErr
 }
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) ResetWorkflowExecution(

@@ -1367,7 +1367,7 @@ func (s *TestBase) ConflictResolveWorkflowExecution(
 	versionHistories *p.VersionHistories,
 ) error {
 
-	return s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, &p.ConflictResolveWorkflowExecutionRequest{
+	_, err := s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, &p.ConflictResolveWorkflowExecutionRequest{
 		RangeID: s.ShardInfo.RangeID,
 		ResetWorkflowSnapshot: p.WorkflowSnapshot{
 			ExecutionInfo:       info,
@@ -1384,6 +1384,7 @@ func (s *TestBase) ConflictResolveWorkflowExecution(
 		},
 		Encoding: pickRandomEncoding(),
 	})
+	return err
 }
 
 // ResetWorkflowExecution is  utility method to reset WF

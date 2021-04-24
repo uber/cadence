@@ -85,3 +85,83 @@ func (s *statsComputerSuite) TestStatsWithStartedEvent() {
 	stats := s.sc.computeMutableStateUpdateStats(ms)
 	s.Equal(stats.ExecutionInfoSize, expectedSize)
 }
+
+func (s *statsComputerSuite) TestComputeWorkflowMutationStats() {
+	a1 := &InternalActivityInfo{}
+	t1 := &TimerInfo{}
+	c1 := &InternalChildExecutionInfo{}
+	s1 := &SignalInfo{}
+	r1 := &RequestCancelInfo{}
+	ms := &InternalWorkflowMutation{
+		ExecutionInfo:             &InternalWorkflowExecutionInfo{},
+		UpsertActivityInfos:       []*InternalActivityInfo{a1, a1},
+		UpsertTimerInfos:          []*TimerInfo{t1, t1, t1},
+		UpsertChildExecutionInfos: []*InternalChildExecutionInfo{c1, c1, c1, c1},
+		UpsertSignalInfos:         []*SignalInfo{s1},
+		UpsertRequestCancelInfos:  []*RequestCancelInfo{r1},
+		NewBufferedEvents:         &DataBlob{Data: []byte("asdfsaf")},
+		DeleteActivityInfos:       []int64{1, 2, 3, 4},
+		DeleteTimerInfos:          []string{"asdfa"},
+		DeleteChildExecutionInfos: []int64{0},
+		DeleteSignalInfos:         nil,
+		DeleteRequestCancelInfos:  []int64{},
+		TransferTasks:             []Task{},
+		TimerTasks:                []Task{},
+		ReplicationTasks:          []Task{},
+	}
+	stats := s.sc.computeWorkflowMutationStats(ms)
+	s.Equal(computeExecutionInfoSize(ms.ExecutionInfo), stats.ExecutionInfoSize)
+	s.Equal(computeActivityInfoSize(a1)*len(ms.UpsertActivityInfos), stats.ActivityInfoSize)
+	s.Equal(len(ms.UpsertActivityInfos), stats.ActivityInfoCount)
+	s.Equal(computeTimerInfoSize(t1)*len(ms.UpsertTimerInfos), stats.TimerInfoSize)
+	s.Equal(len(ms.UpsertTimerInfos), stats.TimerInfoCount)
+	s.Equal(computeChildInfoSize(c1)*len(ms.UpsertChildExecutionInfos), stats.ChildInfoSize)
+	s.Equal(len(ms.UpsertChildExecutionInfos), stats.ChildInfoCount)
+	s.Equal(computeSignalInfoSize(s1)*len(ms.UpsertSignalInfos), stats.SignalInfoSize)
+	s.Equal(len(ms.UpsertSignalInfos), stats.SignalInfoCount)
+	s.Equal(len(ms.UpsertRequestCancelInfos), stats.RequestCancelInfoCount)
+	s.Equal(len(ms.NewBufferedEvents.Data), stats.BufferedEventsSize)
+	s.Equal(len(ms.DeleteActivityInfos), stats.DeleteActivityInfoCount)
+	s.Equal(len(ms.DeleteTimerInfos), stats.DeleteTimerInfoCount)
+	s.Equal(len(ms.DeleteChildExecutionInfos), stats.DeleteChildInfoCount)
+	s.Equal(len(ms.DeleteSignalInfos), stats.DeleteSignalInfoCount)
+	s.Equal(len(ms.DeleteRequestCancelInfos), stats.DeleteRequestCancelInfoCount)
+	s.Equal(len(ms.TransferTasks), stats.TransferTasksCount)
+	s.Equal(len(ms.TimerTasks), stats.TimerTasksCount)
+	s.Equal(len(ms.ReplicationTasks), stats.ReplicationTasksCount)
+	s.Equal(stats.ExecutionInfoSize+stats.ActivityInfoSize+stats.TimerInfoSize+stats.ChildInfoSize+stats.SignalInfoSize+stats.BufferedEventsSize, stats.MutableStateSize)
+}
+
+func (s *statsComputerSuite) TestComputeWorkflowSnapshotStats() {
+	a1 := &InternalActivityInfo{}
+	t1 := &TimerInfo{}
+	c1 := &InternalChildExecutionInfo{}
+	s1 := &SignalInfo{}
+	r1 := &RequestCancelInfo{}
+	ms := &InternalWorkflowSnapshot{
+		ExecutionInfo:       &InternalWorkflowExecutionInfo{},
+		ActivityInfos:       []*InternalActivityInfo{a1, a1},
+		TimerInfos:          []*TimerInfo{t1, t1, t1},
+		ChildExecutionInfos: []*InternalChildExecutionInfo{c1, c1, c1, c1},
+		SignalInfos:         []*SignalInfo{s1},
+		RequestCancelInfos:  []*RequestCancelInfo{r1},
+		TransferTasks:       []Task{},
+		TimerTasks:          []Task{},
+		ReplicationTasks:    []Task{},
+	}
+	stats := s.sc.computeWorkflowSnapshotStats(ms)
+	s.Equal(computeExecutionInfoSize(ms.ExecutionInfo), stats.ExecutionInfoSize)
+	s.Equal(computeActivityInfoSize(a1)*len(ms.ActivityInfos), stats.ActivityInfoSize)
+	s.Equal(len(ms.ActivityInfos), stats.ActivityInfoCount)
+	s.Equal(computeTimerInfoSize(t1)*len(ms.TimerInfos), stats.TimerInfoSize)
+	s.Equal(len(ms.TimerInfos), stats.TimerInfoCount)
+	s.Equal(computeChildInfoSize(c1)*len(ms.ChildExecutionInfos), stats.ChildInfoSize)
+	s.Equal(len(ms.ChildExecutionInfos), stats.ChildInfoCount)
+	s.Equal(computeSignalInfoSize(s1)*len(ms.SignalInfos), stats.SignalInfoSize)
+	s.Equal(len(ms.SignalInfos), stats.SignalInfoCount)
+	s.Equal(len(ms.RequestCancelInfos), stats.RequestCancelInfoCount)
+	s.Equal(len(ms.TransferTasks), stats.TransferTasksCount)
+	s.Equal(len(ms.TimerTasks), stats.TimerTasksCount)
+	s.Equal(len(ms.ReplicationTasks), stats.ReplicationTasksCount)
+	s.Equal(stats.ExecutionInfoSize+stats.ActivityInfoSize+stats.TimerInfoSize+stats.ChildInfoSize+stats.SignalInfoSize+stats.BufferedEventsSize, stats.MutableStateSize)
+}
