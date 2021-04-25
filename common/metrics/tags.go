@@ -43,6 +43,7 @@ const (
 	invariantType  = "invariantType"
 	kafkaPartition = "kafkaPartition"
 	transport      = "transport"
+	signalName     = "signalName"
 
 	domainAllValue = "all"
 	unknownValue   = "_unknown_"
@@ -152,4 +153,9 @@ func ThriftTransportTag() Tag {
 // GPRCTransportTag returns a new GRPC transport type tag.
 func GPRCTransportTag() Tag {
 	return simpleMetric{key: transport, value: transportGRPC}
+}
+
+// SignalNameTag returns a new SignalName tag
+func SignalNameTag(value string) Tag {
+	return metricWithUnknown(signalName, value)
 }
