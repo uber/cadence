@@ -190,6 +190,7 @@ THRIFT_GEN := $(subst idls/thrift/,.build/,$(THRIFT_FILES))
 
 # thrift is done when all sub-thrifts are done
 $(BUILD)/thrift: $(THRIFT_GEN) | $(BUILD)
+	$(if $(THRIFT_GEN),,$(error "idls directory is empty, please use 'git submodule update idls/' to checkout submodule and retry"))  # thrift_gen or thrift_files, either should work fine
 	@touch $@
 
 # how to generate each thrift book-keeping file.
