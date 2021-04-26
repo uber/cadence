@@ -266,7 +266,7 @@ func (handler *handlerImpl) HandleDecisionTaskFailed(
 	return workflow.UpdateWithAction(ctx, handler.executionCache, domainID, workflowExecution, true, handler.timeSource.Now(),
 		func(context execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return workflow.ErrNotExists
+				return workflow.ErrAlreadyCompleted
 			}
 
 			scheduleID := token.ScheduleID
@@ -321,7 +321,7 @@ Update_History_Loop:
 			return nil, err
 		}
 		if !msBuilder.IsWorkflowExecutionRunning() {
-			return nil, workflow.ErrNotExists
+			return nil, workflow.ErrAlreadyCompleted
 		}
 		executionStats, err := wfContext.LoadExecutionStats(ctx)
 		if err != nil {

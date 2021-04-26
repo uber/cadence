@@ -737,7 +737,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 			FailedRequest: failRequest,
 		})
 		if err != nil {
-			return nil, wh.error(err, scope)
+			return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 		resp = &types.RecordActivityTaskHeartbeatResponse{CancelRequested: true}
 	} else {
@@ -746,7 +746,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 			HeartbeatRequest: heartbeatRequest,
 		})
 		if err != nil {
-			return nil, wh.error(err, scope)
+			return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	}
 
@@ -843,7 +843,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 			FailedRequest: failRequest,
 		})
 		if err != nil {
-			return nil, wh.error(err, scope)
+			return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 		resp = &types.RecordActivityTaskHeartbeatResponse{CancelRequested: true}
 	} else {
@@ -858,7 +858,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 			HeartbeatRequest: req,
 		})
 		if err != nil {
-			return nil, wh.error(err, scope)
+			return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	}
 
@@ -942,7 +942,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 			FailedRequest: failRequest,
 		})
 		if err != nil {
-			return wh.error(err, scope)
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	} else {
 		err = wh.GetHistoryClient().RespondActivityTaskCompleted(ctx, &types.HistoryRespondActivityTaskCompletedRequest{
@@ -950,7 +950,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 			CompleteRequest: completeRequest,
 		})
 		if err != nil {
-			return wh.error(err, scope)
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	}
 
@@ -1050,7 +1050,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 			FailedRequest: failRequest,
 		})
 		if err != nil {
-			return wh.error(err, scope)
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	} else {
 		req := &types.RespondActivityTaskCompletedRequest{
@@ -1064,7 +1064,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 			CompleteRequest: req,
 		})
 		if err != nil {
-			return wh.error(err, scope)
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	}
 
@@ -1147,7 +1147,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 		FailedRequest: failedRequest,
 	})
 	if err != nil {
-		return wh.error(err, scope)
+		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 	}
 	return nil
 }
@@ -1249,7 +1249,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 		FailedRequest: req,
 	})
 	if err != nil {
-		return wh.error(err, scope)
+		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 	}
 	return nil
 }
@@ -1332,7 +1332,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 			FailedRequest: failRequest,
 		})
 		if err != nil {
-			return wh.error(err, scope)
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	} else {
 		err = wh.GetHistoryClient().RespondActivityTaskCanceled(ctx, &types.HistoryRespondActivityTaskCanceledRequest{
@@ -1340,7 +1340,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 			CancelRequest: cancelRequest,
 		})
 		if err != nil {
-			return wh.error(err, scope)
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	}
 
@@ -1439,7 +1439,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 			FailedRequest: failRequest,
 		})
 		if err != nil {
-			return wh.error(err, scope)
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	} else {
 		req := &types.RespondActivityTaskCanceledRequest{
@@ -1453,7 +1453,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 			CancelRequest: req,
 		})
 		if err != nil {
-			return wh.error(err, scope)
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	}
 
@@ -1517,7 +1517,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	}
 
 	if !wh.validIDLength(completeRequest.GetIdentity(), scope, domainName) {
-		return nil, wh.error(errIdentityTooLong, scope)
+		return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 	}
 
 	completedResp := &types.RespondDecisionTaskCompletedResponse{}
@@ -1622,7 +1622,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 		FailedRequest: failedRequest,
 	})
 	if err != nil {
-		return wh.error(err, scope)
+		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 	}
 	return nil
 }
@@ -3105,7 +3105,7 @@ func (wh *WorkflowHandler) ResetStickyTaskList(
 		Execution:  resetRequest.Execution,
 	})
 	if err != nil {
-		return nil, wh.error(err, scope)
+		return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 	}
 	return &types.ResetStickyTaskListResponse{}, nil
 }
