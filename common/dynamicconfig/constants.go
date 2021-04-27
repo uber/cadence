@@ -274,6 +274,7 @@ const (
 	// Value type: Int
 	// Default value: 1
 	// Allowed filters: DomainName
+	// Default value: 10
 	FrontendVisibilityListMaxQPS
 	// FrontendESVisibilityListMaxQPS is max qps frontend can list open/close workflows from ElasticSearch
 	// KeyName: frontend.esVisibilityListMaxQPS
