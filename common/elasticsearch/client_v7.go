@@ -113,6 +113,15 @@ func NewV7Client(
 		}
 		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(signingClient))
 	}
+	if connectConfig.TLS.Enabled {
+		var tlsClient *http.Client
+		var err error
+		tlsClient, err = buildTLSHTTPClient(connectConfig.TLS)
+		if err != nil {
+			return nil, err
+		}
+		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(tlsClient))
+	}
 	client, err := elastic.NewClient(clientOptFuncs...)
 	if err != nil {
 		return nil, err
