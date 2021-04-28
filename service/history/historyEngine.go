@@ -1416,7 +1416,7 @@ func (e *historyEngineImpl) ResetStickyTaskList(
 	err := workflow.UpdateWithAction(ctx, e.executionCache, domainID, *resetRequest.Execution, false, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return workflow.ErrNotExists
+				return workflow.ErrAlreadyCompleted
 			}
 			mutableState.ClearStickyness()
 			return nil
@@ -1740,7 +1740,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 	err = workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, true, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return workflow.ErrNotExists
+				return workflow.ErrAlreadyCompleted
 			}
 
 			scheduleID := token.ScheduleID
@@ -1826,7 +1826,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 		e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, workflow.ErrNotExists
+				return nil, workflow.ErrAlreadyCompleted
 			}
 
 			scheduleID := token.ScheduleID
@@ -1918,7 +1918,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 	err = workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, true, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return workflow.ErrNotExists
+				return workflow.ErrAlreadyCompleted
 			}
 
 			scheduleID := token.ScheduleID
@@ -2007,7 +2007,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				e.logger.Debug("Heartbeat failed")
-				return workflow.ErrNotExists
+				return workflow.ErrAlreadyCompleted
 			}
 
 			scheduleID := token.ScheduleID
