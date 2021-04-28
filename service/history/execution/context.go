@@ -414,7 +414,7 @@ func (c *contextImpl) CreateWorkflowExecution(
 		HistorySize: historySize,
 	}
 
-	_, err := c.createWorkflowExecutionWithRetry(ctx, createRequest)
+	resp, err := c.createWorkflowExecutionWithRetry(ctx, createRequest)
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {
 			c.notifyTasksFromWorkflowSnapshot(newWorkflow)
@@ -423,6 +423,14 @@ func (c *contextImpl) CreateWorkflowExecution(
 	}
 
 	c.notifyTasksFromWorkflowSnapshot(newWorkflow)
+
+	// finally emit session stats
+	domainName := c.GetDomainName()
+	emitSessionUpdateStats(
+		c.metricsClient,
+		domainName,
+		resp.MutableStateUpdateSessionStats,
+	)
 
 	return nil
 }
@@ -535,14 +543,15 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		return err
 	}
 
-	if err := c.shard.ConflictResolveWorkflowExecution(ctx, &persistence.ConflictResolveWorkflowExecutionRequest{
+	resp, err := c.shard.ConflictResolveWorkflowExecution(ctx, &persistence.ConflictResolveWorkflowExecutionRequest{
 		// RangeID , this is set by shard context
 		Mode:                    conflictResolveMode,
 		ResetWorkflowSnapshot:   *resetWorkflow,
 		NewWorkflowSnapshot:     newWorkflow,
 		CurrentWorkflowMutation: currentWorkflow,
 		// Encoding, this is set by shard context
-	}); err != nil {
+	})
+	if err != nil {
 		if c.isPersistenceTimeoutError(err) {
 			c.notifyTasksFromWorkflowSnapshot(resetWorkflow)
 			c.notifyTasksFromWorkflowSnapshot(newWorkflow)
@@ -572,6 +581,28 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 	c.notifyTasksFromWorkflowSnapshot(resetWorkflow)
 	c.notifyTasksFromWorkflowSnapshot(newWorkflow)
 	c.notifyTasksFromWorkflowMutation(currentWorkflow)
+
+	// finally emit session stats
+	domainName := c.GetDomainName()
+	emitWorkflowHistoryStats(
+		c.metricsClient,
+		domainName,
+		int(c.stats.HistorySize),
+		int(resetMutableState.GetNextEventID()-1),
+	)
+	emitSessionUpdateStats(
+		c.metricsClient,
+		domainName,
+		resp.MutableStateUpdateSessionStats,
+	)
+	// emit workflow completion stats if any
+	if resetWorkflow.ExecutionInfo.State == persistence.WorkflowStateCompleted {
+		if event, err := resetMutableState.GetCompletionEvent(ctx); err == nil {
+			workflowType := resetWorkflow.ExecutionInfo.WorkflowTypeName
+			taskList := resetWorkflow.ExecutionInfo.TaskList
+			emitWorkflowCompletionStats(c.metricsClient, domainName, workflowType, taskList, event)
+		}
+	}
 
 	return nil
 }

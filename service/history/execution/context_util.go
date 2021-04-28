@@ -104,6 +104,9 @@ func emitSessionUpdateStats(
 	countScope.RecordTimer(metrics.DeleteChildInfoCount, time.Duration(stats.DeleteChildInfoCount))
 	countScope.RecordTimer(metrics.DeleteSignalInfoCount, time.Duration(stats.DeleteSignalInfoCount))
 	countScope.RecordTimer(metrics.DeleteRequestCancelInfoCount, time.Duration(stats.DeleteRequestCancelInfoCount))
+	countScope.RecordTimer(metrics.TransferTasksCount, time.Duration(stats.TransferTasksCount))
+	countScope.RecordTimer(metrics.TimerTasksCount, time.Duration(stats.TimerTasksCount))
+	countScope.RecordTimer(metrics.ReplicationTasksCount, time.Duration(stats.ReplicationTasksCount))
 }
 
 func emitWorkflowCompletionStats(

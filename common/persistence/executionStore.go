@@ -335,8 +335,11 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(
 		NewWorkflowSnapshot:    serializedNewWorkflowSnapshot,
 	}
 	msuss := m.statsComputer.computeMutableStateUpdateStats(newRequest)
-	err1 := m.persistence.UpdateWorkflowExecution(ctx, newRequest)
-	return &UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: msuss}, err1
+	err = m.persistence.UpdateWorkflowExecution(ctx, newRequest)
+	if err != nil {
+		return nil, err
+	}
+	return &UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: msuss}, nil
 }
 
 func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(
@@ -513,24 +516,24 @@ func (m *executionManagerImpl) SerializeExecutionInfo(
 func (m *executionManagerImpl) ConflictResolveWorkflowExecution(
 	ctx context.Context,
 	request *ConflictResolveWorkflowExecutionRequest,
-) error {
+) (*ConflictResolveWorkflowExecutionResponse, error) {
 
 	serializedResetWorkflowSnapshot, err := m.SerializeWorkflowSnapshot(&request.ResetWorkflowSnapshot, request.Encoding)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var serializedCurrentWorkflowMutation *InternalWorkflowMutation
 	if request.CurrentWorkflowMutation != nil {
 		serializedCurrentWorkflowMutation, err = m.SerializeWorkflowMutation(request.CurrentWorkflowMutation, request.Encoding)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 	var serializedNewWorkflowMutation *InternalWorkflowSnapshot
 	if request.NewWorkflowSnapshot != nil {
 		serializedNewWorkflowMutation, err = m.SerializeWorkflowSnapshot(request.NewWorkflowSnapshot, request.Encoding)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -545,7 +548,12 @@ func (m *executionManagerImpl) ConflictResolveWorkflowExecution(
 
 		CurrentWorkflowMutation: serializedCurrentWorkflowMutation,
 	}
-	return m.persistence.ConflictResolveWorkflowExecution(ctx, newRequest)
+	msuss := m.statsComputer.computeMutableStateConflictResolveStats(newRequest)
+	err = m.persistence.ConflictResolveWorkflowExecution(ctx, newRequest)
+	if err != nil {
+		return nil, err
+	}
+	return &ConflictResolveWorkflowExecutionResponse{MutableStateUpdateSessionStats: msuss}, nil
 }
 
 func (m *executionManagerImpl) ResetWorkflowExecution(
@@ -604,7 +612,12 @@ func (m *executionManagerImpl) CreateWorkflowExecution(
 		NewWorkflowSnapshot: *serializedNewWorkflowSnapshot,
 	}
 
-	return m.persistence.CreateWorkflowExecution(ctx, newRequest)
+	msuss := m.statsComputer.computeMutableStateCreateStats(newRequest)
+	_, err = m.persistence.CreateWorkflowExecution(ctx, newRequest)
+	if err != nil {
+		return nil, err
+	}
+	return &CreateWorkflowExecutionResponse{MutableStateUpdateSessionStats: msuss}, nil
 }
 
 func (m *executionManagerImpl) SerializeWorkflowMutation(

@@ -790,6 +790,7 @@ type (
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
 	CreateWorkflowExecutionResponse struct {
+		MutableStateUpdateSessionStats *MutableStateUpdateSessionStats
 	}
 
 	// GetWorkflowExecutionRequest is used to retrieve the info of a workflow execution
@@ -1359,10 +1360,19 @@ type (
 		DeleteChildInfoCount         int
 		DeleteSignalInfoCount        int
 		DeleteRequestCancelInfoCount int
+
+		TransferTasksCount    int
+		TimerTasksCount       int
+		ReplicationTasksCount int
 	}
 
 	// UpdateWorkflowExecutionResponse is response for UpdateWorkflowExecutionRequest
 	UpdateWorkflowExecutionResponse struct {
+		MutableStateUpdateSessionStats *MutableStateUpdateSessionStats
+	}
+
+	// ConflictResolveWorkflowExecutionResponse is response for ConflictResolveWorkflowExecutionRequest
+	ConflictResolveWorkflowExecutionResponse struct {
 		MutableStateUpdateSessionStats *MutableStateUpdateSessionStats
 	}
 
@@ -1554,7 +1564,7 @@ type (
 		CreateWorkflowExecution(ctx context.Context, request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
 		GetWorkflowExecution(ctx context.Context, request *GetWorkflowExecutionRequest) (*GetWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(ctx context.Context, request *UpdateWorkflowExecutionRequest) (*UpdateWorkflowExecutionResponse, error)
-		ConflictResolveWorkflowExecution(ctx context.Context, request *ConflictResolveWorkflowExecutionRequest) error
+		ConflictResolveWorkflowExecution(ctx context.Context, request *ConflictResolveWorkflowExecutionRequest) (*ConflictResolveWorkflowExecutionResponse, error)
 		ResetWorkflowExecution(ctx context.Context, request *ResetWorkflowExecutionRequest) error
 		DeleteWorkflowExecution(ctx context.Context, request *DeleteWorkflowExecutionRequest) error
 		DeleteCurrentWorkflowExecution(ctx context.Context, request *DeleteCurrentWorkflowExecutionRequest) error

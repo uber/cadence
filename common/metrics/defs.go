@@ -1863,6 +1863,9 @@ const (
 	SignalInfoCount
 	RequestCancelInfoCount
 	BufferedEventsCount
+	TransferTasksCount
+	TimerTasksCount
+	ReplicationTasksCount
 	DeleteActivityInfoCount
 	DeleteTimerInfoCount
 	DeleteChildInfoCount
@@ -2419,6 +2422,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		FailoverMarkerInsertFailure:                       {metricName: "failover_marker_insert_failures", metricType: Counter},
 		FailoverMarkerNotificationFailure:                 {metricName: "failover_marker_notification_failures", metricType: Counter},
 		FailoverMarkerUpdateShardFailure:                  {metricName: "failover_marker_update_shard_failures", metricType: Counter},
+		TransferTasksCount:                                {metricName: "transfer_tasks_count", metricType: Timer},
+		TimerTasksCount:                                   {metricName: "timer_tasks_count", metricType: Timer},
+		ReplicationTasksCount:                             {metricName: "replication_tasks_count", metricType: Timer},
 	},
 	Matching: {
 		PollSuccessPerTaskListCounter:            {metricName: "poll_success_per_tl", metricRollupName: "poll_success"},
