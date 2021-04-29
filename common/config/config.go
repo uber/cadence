@@ -94,6 +94,8 @@ type (
 		DisableLogging bool `yaml:"disableLogging"`
 		// LogLevel is the desired log level
 		LogLevel string `yaml:"logLevel"`
+		// GRPCMaxMsgSize allows overriding default (4MB) message size for gRPC
+		GRPCMaxMsgSize int `yaml:"grpcMaxMsgSize"`
 	}
 
 	// Blobstore contains the config for blobstore
