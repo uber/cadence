@@ -401,6 +401,7 @@ func (m *sqlTaskManager) CreateTasks(
 			return nil, err
 		}
 		currTasksRow := sqlplugin.TasksRow{
+			ShardID:      m.shardID(v.Data.DomainID, request.TaskListInfo.Name),
 			DomainID:     serialization.MustParseUUID(v.Data.DomainID),
 			TaskListName: request.TaskListInfo.Name,
 			TaskType:     int64(request.TaskListInfo.TaskType),
@@ -453,6 +454,7 @@ func (m *sqlTaskManager) GetTasks(
 	request *persistence.GetTasksRequest,
 ) (*persistence.InternalGetTasksResponse, error) {
 	rows, err := m.db.SelectFromTasks(ctx, &sqlplugin.TasksFilter{
+		ShardID:      m.shardID(request.DomainID, request.TaskList),
 		DomainID:     serialization.MustParseUUID(request.DomainID),
 		TaskListName: request.TaskList,
 		TaskType:     int64(request.TaskType),
@@ -493,6 +495,7 @@ func (m *sqlTaskManager) CompleteTask(
 	taskID := request.TaskID
 	taskList := request.TaskList
 	_, err := m.db.DeleteFromTasks(ctx, &sqlplugin.TasksFilter{
+		ShardID:      m.shardID(taskList.DomainID, taskList.Name),
 		DomainID:     serialization.MustParseUUID(taskList.DomainID),
 		TaskListName: taskList.Name,
 		TaskType:     int64(taskList.TaskType),
@@ -508,6 +511,7 @@ func (m *sqlTaskManager) CompleteTasksLessThan(
 	request *persistence.CompleteTasksLessThanRequest,
 ) (int, error) {
 	result, err := m.db.DeleteFromTasks(ctx, &sqlplugin.TasksFilter{
+		ShardID:              m.shardID(request.DomainID, request.TaskListName),
 		DomainID:             serialization.MustParseUUID(request.DomainID),
 		TaskListName:         request.TaskListName,
 		TaskType:             int64(request.TaskType),

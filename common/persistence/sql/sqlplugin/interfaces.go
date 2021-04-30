@@ -170,6 +170,7 @@ type (
 
 	// TasksRow represents a row in tasks table
 	TasksRow struct {
+		ShardID      int
 		DomainID     serialization.UUID
 		TaskType     int64
 		TaskID       int64
@@ -198,6 +199,7 @@ type (
 	// TasksFilter contains the column names within tasks table that
 	// can be used to filter results through a WHERE clause
 	TasksFilter struct {
+		ShardID              int
 		DomainID             serialization.UUID
 		TaskListName         string
 		TaskType             int64
