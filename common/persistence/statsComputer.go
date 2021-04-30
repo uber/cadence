@@ -92,52 +92,78 @@ func (sc *statsComputer) computeMutableStateStats(req *InternalGetWorkflowExecut
 }
 
 func (sc *statsComputer) computeMutableStateUpdateStats(req *InternalUpdateWorkflowExecutionRequest) *MutableStateUpdateSessionStats {
-	executionInfoSize := computeExecutionInfoSize(req.UpdateWorkflowMutation.ExecutionInfo)
+	if req.NewWorkflowSnapshot != nil {
+		return mergeMutableStateUpdateSessionStats(sc.computeWorkflowMutationStats(&req.UpdateWorkflowMutation), sc.computeWorkflowSnapshotStats(req.NewWorkflowSnapshot))
+	}
+	return sc.computeWorkflowMutationStats(&req.UpdateWorkflowMutation)
+}
+
+func (sc *statsComputer) computeMutableStateCreateStats(req *InternalCreateWorkflowExecutionRequest) *MutableStateUpdateSessionStats {
+	return sc.computeWorkflowSnapshotStats(&req.NewWorkflowSnapshot)
+}
+
+func (sc *statsComputer) computeMutableStateConflictResolveStats(req *InternalConflictResolveWorkflowExecutionRequest) *MutableStateUpdateSessionStats {
+	mss := sc.computeWorkflowSnapshotStats(&req.ResetWorkflowSnapshot)
+	if req.NewWorkflowSnapshot != nil {
+		mss = mergeMutableStateUpdateSessionStats(mss, sc.computeWorkflowSnapshotStats(req.NewWorkflowSnapshot))
+	}
+	if req.CurrentWorkflowMutation != nil {
+		mss = mergeMutableStateUpdateSessionStats(mss, sc.computeWorkflowMutationStats(req.CurrentWorkflowMutation))
+	}
+	return mss
+}
+
+func (sc *statsComputer) computeWorkflowMutationStats(req *InternalWorkflowMutation) *MutableStateUpdateSessionStats {
+	executionInfoSize := computeExecutionInfoSize(req.ExecutionInfo)
 
 	activityInfoCount := 0
 	activityInfoSize := 0
-	for _, ai := range req.UpdateWorkflowMutation.UpsertActivityInfos {
+	for _, ai := range req.UpsertActivityInfos {
 		activityInfoCount++
 		activityInfoSize += computeActivityInfoSize(ai)
 	}
 
 	timerInfoCount := 0
 	timerInfoSize := 0
-	for _, ti := range req.UpdateWorkflowMutation.UpsertTimerInfos {
+	for _, ti := range req.UpsertTimerInfos {
 		timerInfoCount++
 		timerInfoSize += computeTimerInfoSize(ti)
 	}
 
 	childExecutionInfoCount := 0
 	childExecutionInfoSize := 0
-	for _, ci := range req.UpdateWorkflowMutation.UpsertChildExecutionInfos {
+	for _, ci := range req.UpsertChildExecutionInfos {
 		childExecutionInfoCount++
 		childExecutionInfoSize += computeChildInfoSize(ci)
 	}
 
 	signalInfoCount := 0
 	signalInfoSize := 0
-	for _, si := range req.UpdateWorkflowMutation.UpsertSignalInfos {
+	for _, si := range req.UpsertSignalInfos {
 		signalInfoCount++
 		signalInfoSize += computeSignalInfoSize(si)
 	}
 
 	bufferedEventsSize := 0
-	if req.UpdateWorkflowMutation.NewBufferedEvents != nil {
-		bufferedEventsSize = len(req.UpdateWorkflowMutation.NewBufferedEvents.Data)
+	if req.NewBufferedEvents != nil {
+		bufferedEventsSize = len(req.NewBufferedEvents.Data)
 	}
 
-	requestCancelInfoCount := len(req.UpdateWorkflowMutation.UpsertRequestCancelInfos)
+	requestCancelInfoCount := len(req.UpsertRequestCancelInfos)
 
-	deleteActivityInfoCount := len(req.UpdateWorkflowMutation.DeleteActivityInfos)
+	deleteActivityInfoCount := len(req.DeleteActivityInfos)
 
-	deleteTimerInfoCount := len(req.UpdateWorkflowMutation.DeleteTimerInfos)
+	deleteTimerInfoCount := len(req.DeleteTimerInfos)
 
-	deleteChildInfoCount := len(req.UpdateWorkflowMutation.DeleteChildExecutionInfos)
+	deleteChildInfoCount := len(req.DeleteChildExecutionInfos)
 
-	deleteSignalInfoCount := len(req.UpdateWorkflowMutation.DeleteSignalInfos)
+	deleteSignalInfoCount := len(req.DeleteSignalInfos)
 
-	deleteRequestCancelInfoCount := len(req.UpdateWorkflowMutation.DeleteRequestCancelInfos)
+	deleteRequestCancelInfoCount := len(req.DeleteRequestCancelInfos)
+
+	transferTasksCount := len(req.TransferTasks)
+	timerTasksCount := len(req.TimerTasks)
+	replicationTasksCount := len(req.ReplicationTasks)
 
 	totalSize := executionInfoSize
 	totalSize += activityInfoSize
@@ -164,7 +190,102 @@ func (sc *statsComputer) computeMutableStateUpdateStats(req *InternalUpdateWorkf
 		DeleteChildInfoCount:         deleteChildInfoCount,
 		DeleteSignalInfoCount:        deleteSignalInfoCount,
 		DeleteRequestCancelInfoCount: deleteRequestCancelInfoCount,
+		TransferTasksCount:           transferTasksCount,
+		TimerTasksCount:              timerTasksCount,
+		ReplicationTasksCount:        replicationTasksCount,
 	}
+}
+
+func (sc *statsComputer) computeWorkflowSnapshotStats(req *InternalWorkflowSnapshot) *MutableStateUpdateSessionStats {
+	executionInfoSize := computeExecutionInfoSize(req.ExecutionInfo)
+
+	activityInfoCount := 0
+	activityInfoSize := 0
+	for _, ai := range req.ActivityInfos {
+		activityInfoCount++
+		activityInfoSize += computeActivityInfoSize(ai)
+	}
+
+	timerInfoCount := 0
+	timerInfoSize := 0
+	for _, ti := range req.TimerInfos {
+		timerInfoCount++
+		timerInfoSize += computeTimerInfoSize(ti)
+	}
+
+	childExecutionInfoCount := 0
+	childExecutionInfoSize := 0
+	for _, ci := range req.ChildExecutionInfos {
+		childExecutionInfoCount++
+		childExecutionInfoSize += computeChildInfoSize(ci)
+	}
+
+	signalInfoCount := 0
+	signalInfoSize := 0
+	for _, si := range req.SignalInfos {
+		signalInfoCount++
+		signalInfoSize += computeSignalInfoSize(si)
+	}
+
+	requestCancelInfoCount := len(req.RequestCancelInfos)
+
+	transferTasksCount := len(req.TransferTasks)
+	timerTasksCount := len(req.TimerTasks)
+	replicationTasksCount := len(req.ReplicationTasks)
+
+	totalSize := executionInfoSize
+	totalSize += activityInfoSize
+	totalSize += timerInfoSize
+	totalSize += childExecutionInfoSize
+	totalSize += signalInfoSize
+
+	return &MutableStateUpdateSessionStats{
+		MutableStateSize:       totalSize,
+		ExecutionInfoSize:      executionInfoSize,
+		ActivityInfoSize:       activityInfoSize,
+		TimerInfoSize:          timerInfoSize,
+		ChildInfoSize:          childExecutionInfoSize,
+		SignalInfoSize:         signalInfoSize,
+		ActivityInfoCount:      activityInfoCount,
+		TimerInfoCount:         timerInfoCount,
+		ChildInfoCount:         childExecutionInfoCount,
+		SignalInfoCount:        signalInfoCount,
+		RequestCancelInfoCount: requestCancelInfoCount,
+		TransferTasksCount:     transferTasksCount,
+		TimerTasksCount:        timerTasksCount,
+		ReplicationTasksCount:  replicationTasksCount,
+	}
+}
+
+func mergeMutableStateUpdateSessionStats(stats ...*MutableStateUpdateSessionStats) *MutableStateUpdateSessionStats {
+	result := &MutableStateUpdateSessionStats{}
+	for _, s := range stats {
+		result.MutableStateSize += s.MutableStateSize
+
+		result.ExecutionInfoSize += s.ExecutionInfoSize
+		result.ActivityInfoSize += s.ActivityInfoSize
+		result.TimerInfoSize += s.TimerInfoSize
+		result.ChildInfoSize += s.ChildInfoSize
+		result.SignalInfoSize += s.SignalInfoSize
+		result.BufferedEventsSize += s.BufferedEventsSize
+
+		result.ActivityInfoCount += s.ActivityInfoCount
+		result.TimerInfoCount += s.TimerInfoCount
+		result.ChildInfoCount += s.ChildInfoCount
+		result.SignalInfoCount += s.SignalInfoCount
+		result.RequestCancelInfoCount += s.RequestCancelInfoCount
+
+		result.DeleteActivityInfoCount += s.DeleteActivityInfoCount
+		result.DeleteTimerInfoCount += s.DeleteTimerInfoCount
+		result.DeleteChildInfoCount += s.DeleteChildInfoCount
+		result.DeleteSignalInfoCount += s.DeleteSignalInfoCount
+		result.DeleteRequestCancelInfoCount += s.DeleteRequestCancelInfoCount
+
+		result.TransferTasksCount += s.TransferTasksCount
+		result.TimerInfoCount += s.TimerInfoCount
+		result.ReplicationTasksCount += s.ReplicationTasksCount
+	}
+	return result
 }
 
 func computeExecutionInfoSize(executionInfo *InternalWorkflowExecutionInfo) int {
