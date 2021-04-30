@@ -67,6 +67,15 @@ const (
 	HealthStatusShuttingDown
 )
 
+var (
+	domainLengthTag   = metrics.IDNameTag("domain")
+	identityLengthTag = metrics.IDNameTag("identity")
+	workflowIDLengthTag = metrics.IDNameTag("workflow-id")
+	signalNameLengthTag = metrics.IDNameTag("signal-name")
+	workflowTypeLengthTag = metrics.IDNameTag("workflow-type")
+	taskListLengthTag = metrics.IDNameTag("task-list")
+)
+
 var _ Handler = (*WorkflowHandler)(nil)
 
 type (
@@ -473,14 +482,14 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if !wh.validIDLength(pollRequest.GetDomain(), scope, pollRequest.GetDomain()) {
+	if !wh.validIDLength(pollRequest.GetDomain(), scope, pollRequest.GetDomain(), domainLengthTag) {
 		return nil, wh.error(errDomainTooLong, scope)
 	}
 
 	if err := wh.validateTaskList(pollRequest.TaskList, scope, pollRequest.GetDomain()); err != nil {
 		return nil, err
 	}
-	if !wh.validIDLength(pollRequest.GetIdentity(), scope, pollRequest.GetDomain()) {
+	if !wh.validIDLength(pollRequest.GetIdentity(), scope, pollRequest.GetDomain(), identityLengthTag) {
 		return nil, wh.error(errIdentityTooLong, scope)
 	}
 
@@ -556,11 +565,11 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	if pollRequest.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope, tagsForErrorLog...)
 	}
-	if !wh.validIDLength(pollRequest.GetDomain(), scope, pollRequest.GetDomain()) {
+	if !wh.validIDLength(pollRequest.GetDomain(), scope, pollRequest.GetDomain(), domainLengthTag) {
 		return nil, wh.error(errDomainTooLong, scope, tagsForErrorLog...)
 	}
 
-	if !wh.validIDLength(pollRequest.GetIdentity(), scope, pollRequest.GetDomain()) {
+	if !wh.validIDLength(pollRequest.GetIdentity(), scope, pollRequest.GetDomain(), identityLengthTag) {
 		return nil, wh.error(errIdentityTooLong, scope, tagsForErrorLog...)
 	}
 
@@ -899,7 +908,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 	if err != nil {
 		return wh.error(err, scope)
 	}
-	if !wh.validIDLength(completeRequest.GetIdentity(), scope, domainName) {
+	if !wh.validIDLength(completeRequest.GetIdentity(), scope, domainName, identityLengthTag) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
@@ -1000,7 +1009,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 		return wh.error(errActivityIDNotSet, scope)
 	}
 
-	if !wh.validIDLength(completeRequest.GetIdentity(), scope, completeRequest.GetDomain()) {
+	if !wh.validIDLength(completeRequest.GetIdentity(), scope, completeRequest.GetDomain(), identityLengthTag) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
@@ -1119,7 +1128,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 		return errShuttingDown
 	}
 
-	if !wh.validIDLength(failedRequest.GetIdentity(), scope, domainName) {
+	if !wh.validIDLength(failedRequest.GetIdentity(), scope, domainName, identityLengthTag) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
@@ -1194,7 +1203,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 	if activityID == "" {
 		return wh.error(errActivityIDNotSet, scope)
 	}
-	if !wh.validIDLength(failedRequest.GetIdentity(), scope, failedRequest.GetDomain()) {
+	if !wh.validIDLength(failedRequest.GetIdentity(), scope, failedRequest.GetDomain(), identityLengthTag) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
@@ -1302,7 +1311,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 		return errShuttingDown
 	}
 
-	if !wh.validIDLength(cancelRequest.GetIdentity(), scope, domainName) {
+	if !wh.validIDLength(cancelRequest.GetIdentity(), scope, domainName, identityLengthTag) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
@@ -1389,7 +1398,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 	if activityID == "" {
 		return wh.error(errActivityIDNotSet, scope)
 	}
-	if !wh.validIDLength(cancelRequest.GetIdentity(), scope, cancelRequest.GetDomain()) {
+	if !wh.validIDLength(cancelRequest.GetIdentity(), scope, cancelRequest.GetDomain(), identityLengthTag) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
@@ -1516,7 +1525,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		return nil, wh.error(err, scope)
 	}
 
-	if !wh.validIDLength(completeRequest.GetIdentity(), scope, domainName) {
+	if !wh.validIDLength(completeRequest.GetIdentity(), scope, domainName, identityLengthTag) {
 		return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 	}
 
@@ -1595,7 +1604,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 		return errShuttingDown
 	}
 
-	if !wh.validIDLength(failedRequest.GetIdentity(), scope, domainName) {
+	if !wh.validIDLength(failedRequest.GetIdentity(), scope, domainName, identityLengthTag) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
@@ -1748,7 +1757,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if !wh.validIDLength(domainName, scope, domainName) {
+	if !wh.validIDLength(domainName, scope, domainName, domainLengthTag) {
 		return nil, wh.error(errDomainTooLong, scope)
 	}
 
@@ -1756,7 +1765,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errWorkflowIDNotSet, scope)
 	}
 
-	if !wh.validIDLength(startRequest.GetWorkflowID(), scope, domainName) {
+	if !wh.validIDLength(startRequest.GetWorkflowID(), scope, domainName, workflowIDLengthTag) {
 		return nil, wh.error(errWorkflowIDTooLong, scope)
 	}
 
@@ -1776,7 +1785,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errWorkflowTypeNotSet, scope)
 	}
 
-	if !wh.validIDLength(startRequest.WorkflowType.GetName(), scope, domainName) {
+	if !wh.validIDLength(startRequest.WorkflowType.GetName(), scope, domainName, workflowTypeLengthTag) {
 		return nil, wh.error(errWorkflowTypeTooLong, scope)
 	}
 
@@ -1800,7 +1809,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errRequestIDNotSet, scope)
 	}
 
-	if !wh.validIDLength(startRequest.GetRequestID(), scope, domainName) {
+	if !wh.validIDLength(startRequest.GetRequestID(), scope, domainName, identityLengthTag) {
 		return nil, wh.error(errRequestIDTooLong, scope)
 	}
 
@@ -2142,7 +2151,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		return wh.error(errDomainNotSet, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if !wh.validIDLength(signalRequest.GetDomain(), scope, signalRequest.GetDomain()) {
+	if !wh.validIDLength(signalRequest.GetDomain(), scope, signalRequest.GetDomain(), domainLengthTag) {
 		return wh.error(errDomainTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2155,11 +2164,11 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if !wh.validIDLength(signalRequest.GetSignalName(), scope, signalRequest.GetDomain()) {
+	if !wh.validIDLength(signalRequest.GetSignalName(), scope, signalRequest.GetDomain(), signalNameLengthTag) {
 		return wh.error(errSignalNameTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if !wh.validIDLength(signalRequest.GetRequestID(), scope, signalRequest.GetDomain()) {
+	if !wh.validIDLength(signalRequest.GetRequestID(), scope, signalRequest.GetDomain(), identityLengthTag) {
 		return wh.error(errRequestIDTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2234,7 +2243,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(errDomainNotSet, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if !wh.validIDLength(domainName, scope, domainName) {
+	if !wh.validIDLength(domainName, scope, domainName, domainLengthTag) {
 		return nil, wh.error(errDomainTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2243,7 +2252,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if !wh.validIDLength(signalWithStartRequest.GetWorkflowID(), scope, domainName) {
+	if !wh.validIDLength(signalWithStartRequest.GetWorkflowID(), scope, domainName, workflowIDLengthTag) {
 		return nil, wh.error(errWorkflowIDTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2252,7 +2261,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if !wh.validIDLength(signalWithStartRequest.GetSignalName(), scope, domainName) {
+	if !wh.validIDLength(signalWithStartRequest.GetSignalName(), scope, domainName, signalNameLengthTag) {
 		return nil, wh.error(errSignalNameTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2261,7 +2270,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if !wh.validIDLength(signalWithStartRequest.WorkflowType.GetName(), scope, domainName) {
+	if !wh.validIDLength(signalWithStartRequest.WorkflowType.GetName(), scope, domainName, workflowTypeLengthTag) {
 		return nil, wh.error(errWorkflowTypeTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2269,7 +2278,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, err
 	}
 
-	if !wh.validIDLength(signalWithStartRequest.GetRequestID(), scope, domainName) {
+	if !wh.validIDLength(signalWithStartRequest.GetRequestID(), scope, domainName, identityLengthTag) {
 		return nil, wh.error(errRequestIDTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -3579,7 +3588,7 @@ func (wh *WorkflowHandler) validateTaskList(t *types.TaskList, scope metrics.Sco
 	if t == nil || t.GetName() == "" {
 		return wh.error(errTaskListNotSet, scope)
 	}
-	if !wh.validIDLength(t.GetName(), scope, domain) {
+	if !wh.validIDLength(t.GetName(), scope, domain, taskListLengthTag) {
 		return wh.error(errTaskListTooLong, scope)
 	}
 	if wh.isRawListList(t) && len(t.GetName()) > wh.config.MaxRawTaskListNameLimit(domain) {
@@ -3930,10 +3939,10 @@ func (wh *WorkflowHandler) getArchivedHistory(
 	}, nil
 }
 
-func (wh *WorkflowHandler) validIDLength(id string, scope metrics.Scope, domain string) bool {
+func (wh *WorkflowHandler) validIDLength(id string, scope metrics.Scope, domain string, idNameTag metrics.Tag) bool {
 	valid := len(id) <= wh.config.MaxIDLengthLimit(domain)
 	if len(id) > wh.config.MaxIDLengthWarnLimit() {
-		scope.IncCounter(metrics.CadenceErrIDLengthExceededWarnLimit)
+		scope.Tagged(idNameTag).IncCounter(metrics.CadenceErrIDLengthExceededWarnLimit)
 	}
 	return valid
 }

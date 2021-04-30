@@ -44,6 +44,7 @@ const (
 	kafkaPartition = "kafkaPartition"
 	transport      = "transport"
 	signalName     = "signalName"
+	idName         = "id_name"
 
 	domainAllValue = "all"
 	unknownValue   = "_unknown_"
@@ -108,6 +109,11 @@ func TaskListTag(value string) Tag {
 		value = unknownValue
 	}
 	return simpleMetric{key: taskList, value: sanitizer.Value(value)}
+}
+
+// IDNameTag returns a new id name tag.
+func IDNameTag(value string) Tag {
+	return metricWithUnknown(idName, value)
 }
 
 // TaskListUnknownTag returns a new tasklist:unknown tag-value
