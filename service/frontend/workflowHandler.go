@@ -143,6 +143,7 @@ var (
 	errRawTaskListTooLong  = &types.BadRequestError{Message: "Raw TaskList length exceeds limit."}
 	errRequestIDTooLong    = &types.BadRequestError{Message: "RequestID length exceeds limit."}
 	errIdentityTooLong     = &types.BadRequestError{Message: "Identity length exceeds limit."}
+	errCronSearchAttr      = &types.BadRequestError{Message: "'is_cron' search attribute cannot be set from outside"}
 
 	frontendServiceRetryPolicy = common.CreateFrontendServiceRetryPolicy()
 )
@@ -1717,6 +1718,29 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	return nil
 }
 
+func AddCronSearchAttribute(
+	startRequest *types.StartWorkflowExecutionRequest,
+) error {
+	if startRequest.SearchAttributes != nil {
+		if _, ok := startRequest.SearchAttributes.IndexedFields["is_cron"]; ok {
+			return errCronSearchAttr
+		}
+	}
+
+	if startRequest.SearchAttributes == nil {
+		startRequest.SearchAttributes = &types.SearchAttributes{
+			IndexedFields: make(map[string][]byte),
+		}
+	}
+
+	if len(startRequest.CronSchedule) > 0 {
+		startRequest.SearchAttributes.IndexedFields["is_cron"] = []byte(`true`)
+	} else {
+		startRequest.SearchAttributes.IndexedFields["is_cron"] = []byte(`false`)
+	}
+	return nil
+}
+
 // StartWorkflowExecution - Creates a new workflow execution
 func (wh *WorkflowHandler) StartWorkflowExecution(
 	ctx context.Context,
@@ -1802,6 +1826,11 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 
 	if !wh.validIDLength(startRequest.GetRequestID(), scope, domainName) {
 		return nil, wh.error(errRequestIDTooLong, scope)
+	}
+
+	err := AddCronSearchAttribute(startRequest)
+	if err != nil {
+		return nil, wh.error(err, scope)
 	}
 
 	if err := wh.searchAttributesValidator.ValidateSearchAttributes(startRequest.SearchAttributes, domainName); err != nil {

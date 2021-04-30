@@ -1452,6 +1452,36 @@ func (s *workflowHandlerSuite) TestSignalMetricHasSignalName() {
 	s.True(expectedMetrics["test.cadence_errors_bad_request"])
 }
 
+func (s *workflowHandlerSuite) validateCron(cronVal string, expectedCronValue bool) {
+	startRequest := &types.StartWorkflowExecutionRequest{
+		CronSchedule: cronVal,
+	}
+	err := AddCronSearchAttribute(startRequest)
+	s.Nil(err)
+
+	var is_cron bool
+	err = json.Unmarshal(startRequest.SearchAttributes.IndexedFields["is_cron"], &is_cron)
+	s.Nil(err)
+	s.True(expectedCronValue)
+}
+
+func (s *workflowHandlerSuite) TestAddCronSearchAttribute() {
+	s.validateCron("5 4 * * *", true)
+	s.validateCron("", false)
+}
+
+func (s *workflowHandlerSuite) TestCronValueAlreadySet() {
+	startRequest := &types.StartWorkflowExecutionRequest{
+		SearchAttributes: &types.SearchAttributes{
+			IndexedFields: map[string][]byte{
+				"is_cron": []byte(`true`),
+			},
+		},
+	}
+	err := AddCronSearchAttribute(startRequest)
+	s.Equal(errCronSearchAttr, err)
+}
+
 func (s *workflowHandlerSuite) newConfig(dynamicClient dc.Client) *Config {
 	return NewConfig(
 		dc.NewCollection(
