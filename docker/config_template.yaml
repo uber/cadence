@@ -267,7 +267,7 @@ kafka:
             dlq-topic: {{ default .Env.VISIBILITY_NAME "cadence-visibility-dev" }}-dlq
 
 publicClient:
-    hostPort: {{ default .Env.FRONTEND_SERVICE "127.0.0.1" }}:{{ default .Env.FRONTEND_PORT "7933" }}
+    hostPort: {{ default .Env.FRONTEND_SERVICE "cadence" }}:{{ default .Env.FRONTEND_PORT "7933" }}
 
 dynamicConfigClient:
     filepath: {{ default .Env.DYNAMIC_CONFIG_FILE_PATH "/etc/cadence/config/dynamicconfig/development.yaml" }}
