@@ -166,7 +166,7 @@ PROTOC_UNZIP_DIR = $(BIN)/protoc-$(PROTOC_VERSION)-zip
 # otherwise this must be a .PHONY rule, or the buf bin / symlink could become out of date.
 PROTOC_VERSION_BIN = protoc-$(PROTOC_VERSION)
 $(BIN)/$(PROTOC_VERSION_BIN): | $(BIN)
-	@echo "downloading protoc $(PROTOC_VERSION)"
+	@echo "downloading protoc $(PROTOC_VERSION): $(PROTOC_URL)"
 	@# recover from partial success
 	@rm -rf $(BIN)/protoc.zip $(PROTOC_UNZIP_DIR)
 	@# download, unzip, copy to a normal location
@@ -177,6 +177,15 @@ $(BIN)/$(PROTOC_VERSION_BIN): | $(BIN)
 # ====================================
 # Codegen targets
 # ====================================
+
+# IDL submodule must be populated, or files will not exist -> prerequisites will be wrong -> build will fail.
+# Because it must exist before the makefile is parsed, this cannot be done automatically as part of a build.
+# Instead: call this func in targets that require the submodule to exist, so that target will not be built.
+#
+# THRIFT_FILES is just an easy identifier for "the submodule has files", others would work fine as well.
+define ensure_idl_submodule
+$(if $(THRIFT_FILES),,$(error idls/ submodule must exist, or build will fail.  Run `git submodule update --init` and try again))
+endef
 
 # codegen is done when thrift and protoc are done
 $(BUILD)/codegen: $(BUILD)/thrift $(BUILD)/protoc | $(BUILD)
@@ -190,6 +199,7 @@ THRIFT_GEN := $(subst idls/thrift/,.build/,$(THRIFT_FILES))
 
 # thrift is done when all sub-thrifts are done
 $(BUILD)/thrift: $(THRIFT_GEN) | $(BUILD)
+	$(call ensure_idl_submodule)
 	@touch $@
 
 # how to generate each thrift book-keeping file.
@@ -217,6 +227,7 @@ PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 #
 # After compilation files are moved to final location, as plugins adds additional path based on proto package.
 $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gogofast $(BIN)/protoc-gen-yarpc-go | $(BUILD)
+	$(call ensure_idl_submodule)
 	@mkdir -p $(PROTO_OUT)
 	@echo "protoc..."
 	@$(foreach PROTO_DIR,$(PROTO_DIRS),$(BIN)/$(PROTOC_VERSION_BIN) \
@@ -243,6 +254,9 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 # this will ensure that committed code will be used rather than re-generating.
 # must be manually run before (nearly) any other targets.
 .fake-codegen: .fake-protoc .fake-thrift
+	$(warning build-tool binaries have been faked, you will need to delete the $(BIN) folder if you wish to build real ones)
+	@# touch a marker-file for a `make clean` warning.  this does not impact behavior.
+	touch $(BIN)/fake-codegen
 
 # "build" fake binaries, and touch the book-keeping files, so Make thinks codegen has been run.
 # order matters, as e.g. a $(BIN) newer than a $(BUILD) implies Make should run the $(BIN).
@@ -252,7 +266,10 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 
 .fake-thrift: | $(BIN) $(BUILD)
 	touch $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc
-	$(if $(THRIFT_GEN),touch $(THRIFT_GEN),) # maybe ignoring empty idl folder
+	@# if the submodule exists, touch thrift_gen markers to fake their generation.
+	@# if it does not, do nothing - there are none.
+	$(if $(THRIFT_GEN),touch $(THRIFT_GEN),)
+	touch $(BUILD)/thrift
 
 # ====================================
 # other intermediates
@@ -385,7 +402,9 @@ release: ## Re-generate generated code and run tests
 clean: ## Clean binaries and build folder
 	rm -f $(BINS)
 	rm -Rf $(BUILD)
-	@echo '# rm -rf $(BIN) # not removing tools dir, it is rarely necessary'
+	$(if \
+		$(filter $(BIN)/fake-codegen, $(wildcard $(BIN)/*)), \
+		$(warning fake build tools may exist, delete the $(BIN) folder to get real ones if desired),)
 
 # v----- not yet cleaned up -----v
 
