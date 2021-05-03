@@ -688,7 +688,10 @@ func (handler *taskHandlerImpl) handleDecisionRecordMarker(
 
 	if err := handler.validateDecisionAttr(
 		func() error {
-			return handler.attrValidator.validateRecordMarkerAttributes(attr)
+			return handler.attrValidator.validateRecordMarkerAttributes(
+				attr,
+				metrics.HistoryRespondDecisionTaskCompletedScope,
+				handler.domainEntry.GetInfo().Name)
 		},
 		types.DecisionTaskFailedCauseBadRecordMarkerAttributes,
 	); err != nil || handler.stopProcessing {

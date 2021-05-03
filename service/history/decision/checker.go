@@ -45,7 +45,6 @@ type (
 		domainCache               cache.DomainCache
 		metricsClient             metrics.Client
 		searchAttributesValidator *validator.SearchAttributesValidator
-
 	}
 
 	workflowSizeChecker struct {
@@ -73,9 +72,9 @@ func newAttrValidator(
 	logger log.Logger,
 ) *attrValidator {
 	return &attrValidator{
-		config:           config,
-		domainCache:      domainCache,
-		metricsClient:    metricsClient,
+		config:        config,
+		domainCache:   domainCache,
+		metricsClient: metricsClient,
 		searchAttributesValidator: validator.NewSearchAttributesValidator(
 			logger,
 			config.ValidSearchAttributes,

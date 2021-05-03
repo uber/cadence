@@ -61,14 +61,14 @@ type Config struct {
 	ShutdownDrainDuration           dynamicconfig.DurationPropertyFn
 
 	// id length limits
-	MaxIDLengthWarnLimit            dynamicconfig.IntPropertyFn
-	DomainNameMaxLength             dynamicconfig.IntPropertyFnWithDomainFilter
-	IdentityMaxLength        dynamicconfig.IntPropertyFnWithDomainFilter
-	WorkflowIDMaxLength             dynamicconfig.IntPropertyFnWithDomainFilter
-	SignalNameMaxLength             dynamicconfig.IntPropertyFnWithDomainFilter
-	WorkflowTypeMaxLength           dynamicconfig.IntPropertyFnWithDomainFilter
-	RequestIDMaxLength              dynamicconfig.IntPropertyFnWithDomainFilter
-	TaskListNameMaxLength           dynamicconfig.IntPropertyFnWithDomainFilter
+	MaxIDLengthWarnLimit  dynamicconfig.IntPropertyFn
+	DomainNameMaxLength   dynamicconfig.IntPropertyFnWithDomainFilter
+	IdentityMaxLength     dynamicconfig.IntPropertyFnWithDomainFilter
+	WorkflowIDMaxLength   dynamicconfig.IntPropertyFnWithDomainFilter
+	SignalNameMaxLength   dynamicconfig.IntPropertyFnWithDomainFilter
+	WorkflowTypeMaxLength dynamicconfig.IntPropertyFnWithDomainFilter
+	RequestIDMaxLength    dynamicconfig.IntPropertyFnWithDomainFilter
+	TaskListNameMaxLength dynamicconfig.IntPropertyFnWithDomainFilter
 
 	// Persistence settings
 	HistoryMgrNumConns dynamicconfig.IntPropertyFn

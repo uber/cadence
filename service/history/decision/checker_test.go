@@ -21,9 +21,10 @@
 package decision
 
 import (
-	"github.com/uber/cadence/common/metrics"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/metrics"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -78,18 +79,18 @@ func (s *attrValidatorSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 	config := &config.Config{
-		MaxIDLengthWarnLimit:                 dynamicconfig.GetIntPropertyFn(128),
-		DomainNameMaxLength:                  dynamicconfig.GetIntPropertyFilteredByDomain(1000),
-		IdentityMaxLength:                    dynamicconfig.GetIntPropertyFilteredByDomain(1000),
-		WorkflowIDMaxLength:                  dynamicconfig.GetIntPropertyFilteredByDomain(1000),
-		SignalNameMaxLength:                  dynamicconfig.GetIntPropertyFilteredByDomain(1000),
-		WorkflowTypeMaxLength:                dynamicconfig.GetIntPropertyFilteredByDomain(1000),
-		RequestIDMaxLength:                   dynamicconfig.GetIntPropertyFilteredByDomain(1000),
-		TaskListNameMaxLength:                dynamicconfig.GetIntPropertyFilteredByDomain(1000),
-		ActivityIDMaxLength: dynamicconfig.GetIntPropertyFilteredByDomain(1000),
-		ActivityTypeMaxLength: dynamicconfig.GetIntPropertyFilteredByDomain(1000),
-		MarkerNameMaxLength: dynamicconfig.GetIntPropertyFilteredByDomain(1000),
-		TimerIDMaxLength: dynamicconfig.GetIntPropertyFilteredByDomain(1000),
+		MaxIDLengthWarnLimit:              dynamicconfig.GetIntPropertyFn(128),
+		DomainNameMaxLength:               dynamicconfig.GetIntPropertyFilteredByDomain(1000),
+		IdentityMaxLength:                 dynamicconfig.GetIntPropertyFilteredByDomain(1000),
+		WorkflowIDMaxLength:               dynamicconfig.GetIntPropertyFilteredByDomain(1000),
+		SignalNameMaxLength:               dynamicconfig.GetIntPropertyFilteredByDomain(1000),
+		WorkflowTypeMaxLength:             dynamicconfig.GetIntPropertyFilteredByDomain(1000),
+		RequestIDMaxLength:                dynamicconfig.GetIntPropertyFilteredByDomain(1000),
+		TaskListNameMaxLength:             dynamicconfig.GetIntPropertyFilteredByDomain(1000),
+		ActivityIDMaxLength:               dynamicconfig.GetIntPropertyFilteredByDomain(1000),
+		ActivityTypeMaxLength:             dynamicconfig.GetIntPropertyFilteredByDomain(1000),
+		MarkerNameMaxLength:               dynamicconfig.GetIntPropertyFilteredByDomain(1000),
+		TimerIDMaxLength:                  dynamicconfig.GetIntPropertyFilteredByDomain(1000),
 		ValidSearchAttributes:             dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 		SearchAttributesNumberOfKeysLimit: dynamicconfig.GetIntPropertyFilteredByDomain(100),
 		SearchAttributesSizeOfValueLimit:  dynamicconfig.GetIntPropertyFilteredByDomain(2 * 1024),
