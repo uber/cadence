@@ -63,7 +63,7 @@ type Config struct {
 	// id length limits
 	MaxIDLengthWarnLimit            dynamicconfig.IntPropertyFn
 	DomainNameMaxLength             dynamicconfig.IntPropertyFnWithDomainFilter
-	RequestIdentityMaxLength        dynamicconfig.IntPropertyFnWithDomainFilter
+	IdentityMaxLength        dynamicconfig.IntPropertyFnWithDomainFilter
 	WorkflowIDMaxLength             dynamicconfig.IntPropertyFnWithDomainFilter
 	SignalNameMaxLength             dynamicconfig.IntPropertyFnWithDomainFilter
 	WorkflowTypeMaxLength           dynamicconfig.IntPropertyFnWithDomainFilter
@@ -121,7 +121,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		GlobalDomainRPS:                             dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainRPS, 0),
 		MaxIDLengthWarnLimit:                        dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit, 128),
 		DomainNameMaxLength:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.DomainNameMaxLength, 1000),
-		RequestIdentityMaxLength:                    dc.GetIntPropertyFilteredByDomain(dynamicconfig.RequestIdentityMaxLength, 1000),
+		IdentityMaxLength:                           dc.GetIntPropertyFilteredByDomain(dynamicconfig.IdentityMaxLength, 1000),
 		WorkflowIDMaxLength:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowIDMaxLength, 1000),
 		SignalNameMaxLength:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.SignalNameMaxLength, 1000),
 		WorkflowTypeMaxLength:                       dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowTypeMaxLength, 1000),

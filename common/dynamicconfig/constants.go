@@ -230,12 +230,12 @@ const (
 	// Default value: 1000
 	// Allowed filters: DomainName
 	DomainNameMaxLength
-	// RequestIdentityMaxLength is the length limit for request identity
-	// KeyName: limit.requestIdentityLength
+	// IdentityMaxLength is the length limit for identity
+	// KeyName: limit.identityLength
 	// Value type: Int
 	// Default value: 1000
 	// Allowed filters: DomainName
-	RequestIdentityMaxLength
+	IdentityMaxLength
 	// WorkflowIDMaxLength is the length limit for workflowID
 	// KeyName: limit.workflowIDLength
 	// Value type: Int
@@ -1875,7 +1875,7 @@ var keys = map[Key]string{
 	// id length limits
 	MaxIDLengthWarnLimit:    "limit.maxIDWarnLength",
 	DomainNameMaxLength: "limit.domainNameLength",
-	RequestIdentityMaxLength: "limit.requestIdentityLength",
+	IdentityMaxLength: "limit.identityLength",
 	WorkflowIDMaxLength: "limit.workflowIDLength",
 	SignalNameMaxLength: "limit.signalNameLength",
 	WorkflowTypeMaxLength: "limit.workflowTypeLength",

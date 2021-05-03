@@ -1598,7 +1598,7 @@ const (
 	CadenceErrAuthorizeFailedCounter
 	CadenceErrRemoteSyncMatchFailedCounter
 	CadenceErrDomainNameExceededWarnLimit
-	CadenceErrRequestIdentityExceededWarnLimit
+	CadenceErrIdentityExceededWarnLimit
 	CadenceErrWorkflowIDExceededWarnLimit
 	CadenceErrSignalNameExceededWarnLimit
 	CadenceErrWorkflowTypeExceededWarnLimit
@@ -2082,7 +2082,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceErrAuthorizeFailedCounter:                    {metricName: "cadence_errors_authorize_failed", metricType: Counter},
 		CadenceErrRemoteSyncMatchFailedCounter:              {metricName: "cadence_errors_remote_syncmatch_failed", metricType: Counter},
 		CadenceErrDomainNameExceededWarnLimit:                 {metricName: "cadence_errors_domain_name_exceeded_warn_limit", metricType: Counter},
-		CadenceErrRequestIdentityExceededWarnLimit:                 {metricName: "cadence_errors_request_identity_exceeded_warn_limit", metricType: Counter},
+		CadenceErrIdentityExceededWarnLimit:                 {metricName: "cadence_errors_identity_exceeded_warn_limit", metricType: Counter},
 		CadenceErrWorkflowIDExceededWarnLimit:                 {metricName: "cadence_errors_workflow_id_exceeded_warn_limit", metricType: Counter},
 		CadenceErrSignalNameExceededWarnLimit:                 {metricName: "cadence_errors_signal_name_exceeded_warn_limit", metricType: Counter},
 		CadenceErrWorkflowTypeExceededWarnLimit:                 {metricName: "cadence_errors_workflow_type_exceeded_warn_limit", metricType: Counter},
