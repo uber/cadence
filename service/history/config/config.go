@@ -33,9 +33,19 @@ import (
 // Config represents configuration for cadence-history service
 type Config struct {
 	NumberOfShards int
-
 	RPS                             dynamicconfig.IntPropertyFn
-	MaxIDLengthLimit                dynamicconfig.IntPropertyFn
+	MaxIDLengthWarnLimit dynamicconfig.IntPropertyFn
+	DomainNameMaxLength dynamicconfig.IntPropertyFnWithDomainFilter
+	IdentityMaxLength dynamicconfig.IntPropertyFnWithDomainFilter
+	WorkflowIDMaxLength dynamicconfig.IntPropertyFnWithDomainFilter
+	SignalNameMaxLength dynamicconfig.IntPropertyFnWithDomainFilter
+	WorkflowTypeMaxLength dynamicconfig.IntPropertyFnWithDomainFilter
+	RequestIDMaxLength dynamicconfig.IntPropertyFnWithDomainFilter
+	TaskListNameMaxLength dynamicconfig.IntPropertyFnWithDomainFilter
+	ActivityIDMaxLength dynamicconfig.IntPropertyFnWithDomainFilter
+	ActivityTypeMaxLength dynamicconfig.IntPropertyFnWithDomainFilter
+	MarkerNameMaxLength dynamicconfig.IntPropertyFnWithDomainFilter
+	TimerIDMaxLength dynamicconfig.IntPropertyFnWithDomainFilter
 	PersistenceMaxQPS               dynamicconfig.IntPropertyFn
 	PersistenceGlobalMaxQPS         dynamicconfig.IntPropertyFn
 	EnableVisibilitySampling        dynamicconfig.BoolPropertyFn
@@ -297,7 +307,18 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 	cfg := &Config{
 		NumberOfShards:                       numberOfShards,
 		RPS:                                  dc.GetIntProperty(dynamicconfig.HistoryRPS, 3000),
-		MaxIDLengthLimit:                     dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
+		MaxIDLengthWarnLimit:                 dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit, 128),
+		DomainNameMaxLength: dc.GetIntPropertyFilteredByDomain(dynamicconfig.DomainNameMaxLength, 1000),
+		IdentityMaxLength: dc.GetIntPropertyFilteredByDomain(dynamicconfig.IdentityMaxLength, 1000),
+		WorkflowIDMaxLength: dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowIDMaxLength, 1000),
+		SignalNameMaxLength: dc.GetIntPropertyFilteredByDomain(dynamicconfig.SignalNameMaxLength, 1000),
+		WorkflowTypeMaxLength: dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowTypeMaxLength, 1000),
+		RequestIDMaxLength: dc.GetIntPropertyFilteredByDomain(dynamicconfig.RequestIDMaxLength, 1000),
+		TaskListNameMaxLength: dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskListNameMaxLength, 1000),
+		ActivityIDMaxLength: dc.GetIntPropertyFilteredByDomain(dynamicconfig.ActivityIDMaxLength, 1000),
+		ActivityTypeMaxLength: dc.GetIntPropertyFilteredByDomain(dynamicconfig.ActivityTypeMaxLength, 1000),
+		MarkerNameMaxLength: dc.GetIntPropertyFilteredByDomain(dynamicconfig.MarkerNameMaxLength, 1000),
+		TimerIDMaxLength: dc.GetIntPropertyFilteredByDomain(dynamicconfig.TimerIDMaxLength, 1000),
 		PersistenceMaxQPS:                    dc.GetIntProperty(dynamicconfig.HistoryPersistenceMaxQPS, 9000),
 		PersistenceGlobalMaxQPS:              dc.GetIntProperty(dynamicconfig.HistoryPersistenceGlobalMaxQPS, 0),
 		ShutdownDrainDuration:                dc.GetDurationProperty(dynamicconfig.HistoryShutdownDrainDuration, 0),

@@ -236,6 +236,7 @@ func (handler *taskHandlerImpl) handleDecisionScheduleActivity(
 				targetDomainID,
 				attr,
 				executionInfo.WorkflowTimeout,
+				metrics.HistoryRespondDecisionTaskCompletedScope,
 			)
 		},
 		types.DecisionTaskFailedCauseBadScheduleActivityAttributes,
@@ -301,7 +302,10 @@ func (handler *taskHandlerImpl) handleDecisionRequestCancelActivity(
 
 	if err := handler.validateDecisionAttr(
 		func() error {
-			return handler.attrValidator.validateActivityCancelAttributes(attr)
+			return handler.attrValidator.validateActivityCancelAttributes(
+				attr,
+				metrics.HistoryRespondDecisionTaskCompletedScope,
+				handler.domainEntry.GetInfo().Name)
 		},
 		types.DecisionTaskFailedCauseBadRequestCancelActivityAttributes,
 	); err != nil || handler.stopProcessing {
@@ -356,7 +360,10 @@ func (handler *taskHandlerImpl) handleDecisionStartTimer(
 
 	if err := handler.validateDecisionAttr(
 		func() error {
-			return handler.attrValidator.validateTimerScheduleAttributes(attr)
+			return handler.attrValidator.validateTimerScheduleAttributes(
+				attr,
+				metrics.HistoryRespondDecisionTaskCompletedScope,
+				handler.domainEntry.GetInfo().Name)
 		},
 		types.DecisionTaskFailedCauseBadStartTimerAttributes,
 	); err != nil || handler.stopProcessing {
@@ -552,7 +559,10 @@ func (handler *taskHandlerImpl) handleDecisionCancelTimer(
 
 	if err := handler.validateDecisionAttr(
 		func() error {
-			return handler.attrValidator.validateTimerCancelAttributes(attr)
+			return handler.attrValidator.validateTimerCancelAttributes(
+				attr,
+				metrics.HistoryRespondDecisionTaskCompletedScope,
+				handler.domainEntry.GetInfo().Name)
 		},
 		types.DecisionTaskFailedCauseBadCancelTimerAttributes,
 	); err != nil || handler.stopProcessing {
@@ -651,6 +661,7 @@ func (handler *taskHandlerImpl) handleDecisionRequestCancelExternalWorkflow(
 				domainID,
 				targetDomainID,
 				attr,
+				metrics.HistoryRespondDecisionTaskCompletedScope,
 			)
 		},
 		types.DecisionTaskFailedCauseBadRequestCancelExternalWorkflowExecutionAttributes,
@@ -719,6 +730,8 @@ func (handler *taskHandlerImpl) handleDecisionContinueAsNewWorkflow(
 			return handler.attrValidator.validateContinueAsNewWorkflowExecutionAttributes(
 				attr,
 				executionInfo,
+				metrics.HistoryRespondDecisionTaskCompletedScope,
+				handler.domainEntry.GetInfo().Name,
 			)
 		},
 		types.DecisionTaskFailedCauseBadContinueAsNewAttributes,
@@ -805,6 +818,7 @@ func (handler *taskHandlerImpl) handleDecisionStartChildWorkflow(
 				targetDomainID,
 				attr,
 				executionInfo,
+				metrics.HistoryRespondDecisionTaskCompletedScope,
 			)
 		},
 		types.DecisionTaskFailedCauseBadStartChildExecutionAttributes,
@@ -873,6 +887,7 @@ func (handler *taskHandlerImpl) handleDecisionSignalExternalWorkflow(
 				domainID,
 				targetDomainID,
 				attr,
+				metrics.HistoryRespondDecisionTaskCompletedScope,
 			)
 		},
 		types.DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes,
