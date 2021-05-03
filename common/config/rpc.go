@@ -89,7 +89,12 @@ func (d *RPCFactory) createInboundDispatcher() *yarpc.Dispatcher {
 	inbounds = append(inbounds, d.ch.NewInbound())
 	d.logger.Info("Listening for TChannel requests", tag.Address(hostAddress))
 
-	d.grpc = grpc.NewTransport()
+	var options []grpc.TransportOption
+	if d.config.GRPCMaxMsgSize > 0 {
+		options = append(options, grpc.ServerMaxRecvMsgSize(d.config.GRPCMaxMsgSize))
+		options = append(options, grpc.ClientMaxRecvMsgSize(d.config.GRPCMaxMsgSize))
+	}
+	d.grpc = grpc.NewTransport(options...)
 	if d.config.GRPCPort > 0 {
 		grpcAddress := fmt.Sprintf("%v:%v", d.getListenIP(), d.config.GRPCPort)
 		listener, err := net.Listen("tcp", grpcAddress)
