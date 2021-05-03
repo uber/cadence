@@ -56,12 +56,19 @@ type Config struct {
 	RPS                             dynamicconfig.IntPropertyFn
 	MaxDomainRPSPerInstance         dynamicconfig.IntPropertyFnWithDomainFilter
 	GlobalDomainRPS                 dynamicconfig.IntPropertyFnWithDomainFilter
-	MaxIDLengthLimit                dynamicconfig.IntPropertyFnWithDomainFilter
-	MaxIDLengthWarnLimit            dynamicconfig.IntPropertyFn
-	MaxRawTaskListNameLimit         dynamicconfig.IntPropertyFnWithDomainFilter
 	EnableClientVersionCheck        dynamicconfig.BoolPropertyFn
 	DisallowQuery                   dynamicconfig.BoolPropertyFnWithDomainFilter
 	ShutdownDrainDuration           dynamicconfig.DurationPropertyFn
+
+	// id length limits
+	MaxIDLengthWarnLimit            dynamicconfig.IntPropertyFn
+	DomainNameMaxLength             dynamicconfig.IntPropertyFnWithDomainFilter
+	RequestIdentityMaxLength        dynamicconfig.IntPropertyFnWithDomainFilter
+	WorkflowIDMaxLength             dynamicconfig.IntPropertyFnWithDomainFilter
+	SignalNameMaxLength             dynamicconfig.IntPropertyFnWithDomainFilter
+	WorkflowTypeMaxLength           dynamicconfig.IntPropertyFnWithDomainFilter
+	RequestIDMaxLength              dynamicconfig.IntPropertyFnWithDomainFilter
+	TaskListNameMaxLength           dynamicconfig.IntPropertyFnWithDomainFilter
 
 	// Persistence settings
 	HistoryMgrNumConns dynamicconfig.IntPropertyFn
@@ -112,9 +119,14 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		RPS:                                         dc.GetIntProperty(dynamicconfig.FrontendRPS, 1200),
 		MaxDomainRPSPerInstance:                     dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxDomainRPSPerInstance, 1200),
 		GlobalDomainRPS:                             dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainRPS, 0),
-		MaxIDLengthLimit:                            dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxIDLengthLimit, 1000),
 		MaxIDLengthWarnLimit:                        dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit, 128),
-		MaxRawTaskListNameLimit:                     dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxRawTaskListNameLimit, 1000),
+		DomainNameMaxLength:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.DomainNameMaxLength, 1000),
+		RequestIdentityMaxLength:                    dc.GetIntPropertyFilteredByDomain(dynamicconfig.RequestIdentityMaxLength, 1000),
+		WorkflowIDMaxLength:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowIDMaxLength, 1000),
+		SignalNameMaxLength:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.SignalNameMaxLength, 1000),
+		WorkflowTypeMaxLength:                       dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowTypeMaxLength, 1000),
+		RequestIDMaxLength:                          dc.GetIntPropertyFilteredByDomain(dynamicconfig.RequestIDMaxLength, 1000),
+		TaskListNameMaxLength:                       dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskListNameMaxLength, 1000),
 		HistoryMgrNumConns:                          dc.GetIntProperty(dynamicconfig.FrontendHistoryMgrNumConns, 10),
 		EnableAdminProtection:                       dc.GetBoolProperty(dynamicconfig.EnableAdminProtection, false),
 		AdminOperationToken:                         dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),

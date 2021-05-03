@@ -224,24 +224,78 @@ const (
 	// Default value: 50*1024
 	// Allowed filters: DomainName
 	HistoryCountLimitWarn
-	// MaxIDLengthLimit is the length limit for various IDs, including: Domain, TaskList, WorkflowID, ActivityID, TimerID,WorkflowType, ActivityType, SignalName, MarkerName, ErrorReason/FailureReason/CancelCause, Identity, RequestID
-	// KeyName: limit.maxIDLength
+	// DomainNameMaxLength is the length limit for domain name
+	// KeyName: limit.domainNameLength
 	// Value type: Int
 	// Default value: 1000
-	// Allowed filters: N/A
-	MaxIDLengthLimit
+	// Allowed filters: DomainName
+	DomainNameMaxLength
+	// RequestIdentityMaxLength is the length limit for request identity
+	// KeyName: limit.requestIdentityLength
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: DomainName
+	RequestIdentityMaxLength
+	// WorkflowIDMaxLength is the length limit for workflowID
+	// KeyName: limit.workflowIDLength
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: DomainName
+	WorkflowIDMaxLength
+	// SignalNameMaxLength is the length limit for signal name
+	// KeyName: limit.signalNameLength
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: DomainName
+	SignalNameMaxLength
+	// WorkflowTypeMaxLength is the length limit for workflow type
+	// KeyName: limit.workflowTypeLength
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: DomainName
+	WorkflowTypeMaxLength
+	// RequestIDMaxLength is the length limit for requestID
+	// KeyName: limit.requestIDLength
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: DomainName
+	RequestIDMaxLength
+	// TaskListNameMaxLength is the length limit for task list name
+	// KeyName: limit.taskListNameLength
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: DomainName
+	TaskListNameMaxLength
+	// ActivityIDMaxLength is the length limit for activityID
+	// KeyName: limit.activityIDLength
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: DomainName
+	ActivityIDMaxLength
+	// ActivityTypeMaxLength is the length limit for activity type
+	// KeyName: limit.activityTypeLength
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: DomainName
+	ActivityTypeMaxLength
+	// MarkerNameMaxLength is the length limit for marker name
+	// KeyName: limit.markerNameLength
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: DomainName
+	MarkerNameMaxLength
+	// TimerIDMaxLength is the length limit for timerID
+	// KeyName: limit.timerIDLength
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: DomainName
+	TimerIDMaxLength
 	// MaxIDLengthWarnLimit is the warn length limit for various IDs, including: Domain, TaskList, WorkflowID, ActivityID, TimerID, WorkflowType, ActivityType, SignalName, MarkerName, ErrorReason/FailureReason/CancelCause, Identity, RequestID
 	// KeyName: limit.maxIDWarnLength
 	// Value type: Int
 	// Default value: 150
 	// Allowed filters: N/A
 	MaxIDLengthWarnLimit
-	// MaxRawTaskListNameLimit is max length of user provided task list name (non-sticky and non-scalable)
-	// KeyName: limit.maxRawTaskListNameLength
-	// Value type: Int
-	// Default value: 1000
-	// Allowed filters: DomainName
-	MaxRawTaskListNameLimit
 	// AdminErrorInjectionRate is the rate for injecting random error in admin client
 	// KeyName: admin.errorInjectionRate
 	// Value type: Float64
@@ -1817,9 +1871,20 @@ var keys = map[Key]string{
 	HistorySizeLimitWarn:    "limit.historySize.warn",
 	HistoryCountLimitError:  "limit.historyCount.error",
 	HistoryCountLimitWarn:   "limit.historyCount.warn",
-	MaxIDLengthLimit:        "limit.maxIDLength",
+
+	// id length limits
 	MaxIDLengthWarnLimit:    "limit.maxIDWarnLength",
-	MaxRawTaskListNameLimit: "limit.maxRawTaskListNameLength",
+	DomainNameMaxLength: "limit.domainNameLength",
+	RequestIdentityMaxLength: "limit.requestIdentityLength",
+	WorkflowIDMaxLength: "limit.workflowIDLength",
+	SignalNameMaxLength: "limit.signalNameLength",
+	WorkflowTypeMaxLength: "limit.workflowTypeLength",
+	RequestIDMaxLength: "limit.requestIDLength",
+	TaskListNameMaxLength: "limit.taskListNameLength",
+	ActivityIDMaxLength: "limit.activityIDLength",
+	ActivityTypeMaxLength: "limit.activityTypeLength",
+	MarkerNameMaxLength: "limit.markerNameLength",
+	TimerIDMaxLength: "limit.timerIDLength",
 
 	// admin settings
 	AdminErrorInjectionRate: "admin.errorInjectionRate",
