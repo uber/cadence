@@ -56,6 +56,7 @@ type (
 		GetDispatcher() *yarpc.Dispatcher
 		CreateDispatcherForOutbound(callerName, serviceName, hostName string) (*yarpc.Dispatcher, error)
 		CreateGRPCDispatcherForOutbound(callerName, serviceName, hostName string) (*yarpc.Dispatcher, error)
+		ReplaceGRPCPort(serviceName, hostAddress string) (string, error)
 	}
 )
 
