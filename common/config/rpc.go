@@ -127,12 +127,12 @@ func (d *RPCFactory) CreateGRPCDispatcherForOutbound(
 	serviceName string,
 	hostName string,
 ) (*yarpc.Dispatcher, error) {
-	grpcAddress, err := d.grpcPorts.GetGRPCAddress(serviceName, hostName)
-	if err != nil {
-		d.logger.Error("Failed to create GRPC outbound dispatcher", tag.Error(err))
-		return nil, err
-	}
-	return d.createOutboundDispatcher(callerName, serviceName, grpcAddress, d.grpc.NewSingleOutbound(grpcAddress))
+	return d.createOutboundDispatcher(callerName, serviceName, hostName, d.grpc.NewSingleOutbound(hostName))
+}
+
+// ReplaceGRPCPort replaces port in the address to grpc for a given service
+func (d *RPCFactory) ReplaceGRPCPort(serviceName, hostAddress string) (string, error) {
+	return d.grpcPorts.GetGRPCAddress(serviceName, hostAddress)
 }
 
 func (d *RPCFactory) createOutboundDispatcher(

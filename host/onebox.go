@@ -827,7 +827,7 @@ func (c *rpcFactoryImpl) createDispatcher() *yarpc.Dispatcher {
 	}
 	inbounds = append(inbounds, c.ch.NewInbound())
 
-	grpcHostPort, err := getGRPCAddress(c.hostPort)
+	grpcHostPort, err := c.ReplaceGRPCPort("", c.hostPort)
 	if err != nil {
 		c.logger.Fatal("Failed to obtain GRPC address", tag.Error(err))
 	}
@@ -880,17 +880,12 @@ func (c *rpcFactoryImpl) CreateDispatcherForOutbound(
 
 func (c *rpcFactoryImpl) CreateGRPCDispatcherForOutbound(
 	callerName, serviceName, hostName string) (*yarpc.Dispatcher, error) {
-	grpcAddress, err := getGRPCAddress(hostName)
-	if err != nil {
-		c.logger.Error("Failed to obtain GRPC address", tag.Error(err))
-		return nil, err
-	}
 
 	// Setup dispatcher(outbound) for onebox
 	d := yarpc.NewDispatcher(yarpc.Config{
 		Name: callerName,
 		Outbounds: yarpc.Outbounds{
-			serviceName: {Unary: c.grpc.NewSingleOutbound(grpcAddress)},
+			serviceName: {Unary: c.grpc.NewSingleOutbound(hostName)},
 		},
 	})
 	if err := d.Start(); err != nil {
@@ -900,10 +895,9 @@ func (c *rpcFactoryImpl) CreateGRPCDispatcherForOutbound(
 	return d, nil
 }
 
-const gprcPortOffset = 10
+const grpcPortOffset = 10
 
-func getGRPCAddress(hostPort string) (string, error) {
-	fmt.Println()
+func (c *rpcFactoryImpl) ReplaceGRPCPort(_, hostPort string) (string, error) {
 	host, port, err := net.SplitHostPort(hostPort)
 	if err != nil {
 		return "", err
@@ -914,6 +908,6 @@ func getGRPCAddress(hostPort string) (string, error) {
 		return "", err
 	}
 
-	grpcAddress := net.JoinHostPort(host, strconv.Itoa(portInt+gprcPortOffset))
+	grpcAddress := net.JoinHostPort(host, strconv.Itoa(portInt+grpcPortOffset))
 	return grpcAddress, nil
 }
