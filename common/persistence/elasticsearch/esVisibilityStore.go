@@ -103,6 +103,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 		request.TaskID,
 		request.Memo.Data,
 		request.Memo.GetEncoding(),
+		request.IsCron,
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
@@ -127,6 +128,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 		request.Memo.Data,
 		request.TaskList,
 		request.Memo.GetEncoding(),
+		request.IsCron,
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
@@ -148,6 +150,7 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 		request.TaskID,
 		request.Memo.Data,
 		request.Memo.GetEncoding(),
+		request.IsCron,
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
@@ -700,9 +703,20 @@ func (v *esVisibilityStore) checkProducer() {
 	}
 }
 
-func getVisibilityMessage(domainID string, wid, rid string, workflowTypeName string, taskList string,
-	startTimeUnixNano, executionTimeUnixNano int64, taskID int64, memo []byte, encoding common.EncodingType,
-	searchAttributes map[string][]byte) *indexer.Message {
+func getVisibilityMessage(
+	domainID string,
+	wid,
+	rid string,
+	workflowTypeName string,
+	taskList string,
+	startTimeUnixNano,
+	executionTimeUnixNano int64,
+	taskID int64,
+	memo []byte,
+	encoding common.EncodingType,
+	isCron bool,
+	searchAttributes map[string][]byte,
+) *indexer.Message {
 
 	msgType := indexer.MessageTypeIndex
 	fields := map[string]*indexer.Field{
@@ -710,6 +724,7 @@ func getVisibilityMessage(domainID string, wid, rid string, workflowTypeName str
 		es.StartTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
 		es.ExecutionTime: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
 		es.TaskList:      {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
+		es.IsCron:        {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
 	}
 	if len(memo) != 0 {
 		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}
@@ -730,10 +745,23 @@ func getVisibilityMessage(domainID string, wid, rid string, workflowTypeName str
 	return msg
 }
 
-func getVisibilityMessageForCloseExecution(domainID string, wid, rid string, workflowTypeName string,
-	startTimeUnixNano int64, executionTimeUnixNano int64, endTimeUnixNano int64, closeStatus workflow.WorkflowExecutionCloseStatus,
-	historyLength int64, taskID int64, memo []byte, taskList string, encoding common.EncodingType,
-	searchAttributes map[string][]byte) *indexer.Message {
+func getVisibilityMessageForCloseExecution(
+	domainID string,
+	wid,
+	rid string,
+	workflowTypeName string,
+	startTimeUnixNano int64,
+	executionTimeUnixNano int64,
+	endTimeUnixNano int64,
+	closeStatus workflow.WorkflowExecutionCloseStatus,
+	historyLength int64,
+	taskID int64,
+	memo []byte,
+	taskList string,
+	encoding common.EncodingType,
+	isCron bool,
+	searchAttributes map[string][]byte,
+) *indexer.Message {
 
 	msgType := indexer.MessageTypeIndex
 	fields := map[string]*indexer.Field{
@@ -744,6 +772,7 @@ func getVisibilityMessageForCloseExecution(domainID string, wid, rid string, wor
 		es.CloseStatus:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(closeStatus))},
 		es.HistoryLength: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(historyLength)},
 		es.TaskList:      {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
+		es.IsCron:        {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
 	}
 	if len(memo) != 0 {
 		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}

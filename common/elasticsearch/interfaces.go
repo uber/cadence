@@ -219,6 +219,7 @@ type (
 		Memo          []byte
 		Encoding      string
 		TaskList      string
+		IsCron        bool
 		Attr          map[string]interface{}
 	}
 )

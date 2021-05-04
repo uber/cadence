@@ -134,7 +134,38 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow() {
 	s.Nil(err)
 
 	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
-	s.testHelperForReadOnce(we.GetRunID(), query, false)
+	s.testHelperForReadOnce(we.GetRunID(), query, false, false)
+}
+
+func (s *ElasticSearchIntegrationSuite) startWorkflow(
+	prefix string,
+	is_cron bool,
+) *types.StartWorkflowExecutionResponse {
+	id := "es-integration-list-workflow-" + prefix + "-test"
+	wt := "es-integration-list-workflow-" + prefix + "test-type"
+	tl := "es-integration-list-workflow-" + prefix + "test-tasklist"
+	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
+	if is_cron {
+		request.CronSchedule = "*/5 * * * *" // every 5 minutes
+	}
+
+	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err)
+
+	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
+	s.testHelperForReadOnce(we.GetRunID(), query, false, false)
+	return we
+}
+
+func (s *ElasticSearchIntegrationSuite) TestListCronWorkflows() {
+	we1 := s.startWorkflow("cron", true)
+	we2 := s.startWorkflow("regular", false)
+
+	query := fmt.Sprintf(`IsCron = "true"`)
+	s.testHelperForReadOnce(we1.GetRunID(), query, false, true)
+
+	query = fmt.Sprintf(`IsCron = "false"`)
+	s.testHelperForReadOnce(we2.GetRunID(), query, false, true)
 }
 
 func (s *ElasticSearchIntegrationSuite) TestListWorkflow_ExecutionTime() {
@@ -154,10 +185,10 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow_ExecutionTime() {
 	s.Nil(err)
 
 	query := fmt.Sprintf(`(WorkflowID = "%s" or WorkflowID = "%s") and ExecutionTime < %v`, id, cronID, time.Now().UnixNano()+int64(time.Minute))
-	s.testHelperForReadOnce(weCron.GetRunID(), query, false)
+	s.testHelperForReadOnce(weCron.GetRunID(), query, false, false)
 
 	query = fmt.Sprintf(`WorkflowID = "%s"`, id)
-	s.testHelperForReadOnce(we.GetRunID(), query, false)
+	s.testHelperForReadOnce(we.GetRunID(), query, false, false)
 }
 
 func (s *ElasticSearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
@@ -177,7 +208,7 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
 	we, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
 	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
-	s.testHelperForReadOnce(we.GetRunID(), query, false)
+	s.testHelperForReadOnce(we.GetRunID(), query, false, false)
 
 	// test upsert
 	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
@@ -618,13 +649,14 @@ func (s *ElasticSearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 	s.Nil(nextPageToken)
 }
 
-func (s *ElasticSearchIntegrationSuite) testHelperForReadOnce(runID, query string, isScan bool) {
+func (s *ElasticSearchIntegrationSuite) testHelperForReadOnce(runID, query string, isScan bool, isAnyMatchOk bool) {
 	var openExecution *types.WorkflowExecutionInfo
 	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   s.domainName,
 		PageSize: defaultTestValueOfESIndexMaxResultWindow,
 		Query:    query,
 	}
+Retry:
 	for i := 0; i < numOfRetry; i++ {
 		var resp *types.ListWorkflowExecutionsResponse
 		var err error
@@ -636,9 +668,23 @@ func (s *ElasticSearchIntegrationSuite) testHelperForReadOnce(runID, query strin
 		}
 
 		s.Nil(err)
+		logStr := fmt.Sprintf("Results for query '%s' (desired runId: %s): \n", query, runID)
+		s.Logger.Info(logStr)
+		for _, e := range resp.GetExecutions() {
+			logStr = fmt.Sprintf("Execution: %+v, %+v \n", e.Execution, e)
+			s.Logger.Info(logStr)
+		}
 		if len(resp.GetExecutions()) == 1 {
 			openExecution = resp.GetExecutions()[0]
 			break
+		}
+		if isAnyMatchOk {
+			for _, e := range resp.GetExecutions() {
+				if e.Execution.RunID == runID {
+					openExecution = e
+					break Retry
+				}
+			}
 		}
 		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
@@ -680,7 +726,7 @@ func (s *ElasticSearchIntegrationSuite) TestScanWorkflow() {
 	we, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
 	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
-	s.testHelperForReadOnce(we.GetRunID(), query, true)
+	s.testHelperForReadOnce(we.GetRunID(), query, true, false)
 }
 
 func (s *ElasticSearchIntegrationSuite) TestScanWorkflow_SearchAttribute() {
@@ -700,7 +746,7 @@ func (s *ElasticSearchIntegrationSuite) TestScanWorkflow_SearchAttribute() {
 	we, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
 	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
-	s.testHelperForReadOnce(we.GetRunID(), query, true)
+	s.testHelperForReadOnce(we.GetRunID(), query, true, false)
 }
 
 func (s *ElasticSearchIntegrationSuite) TestScanWorkflow_PageToken() {

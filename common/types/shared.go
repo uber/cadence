@@ -9520,6 +9520,7 @@ type WorkflowExecutionInfo struct {
 	SearchAttributes  *SearchAttributes             `json:"searchAttributes,omitempty"`
 	AutoResetPoints   *ResetPoints                  `json:"autoResetPoints,omitempty"`
 	TaskList          string                        `json:"taskList,omitempty"`
+	IsCron            bool                          `json:"isCron,omitempty"`
 }
 
 // GetExecution is an internal getter (TBD...)
@@ -9622,6 +9623,14 @@ func (v *WorkflowExecutionInfo) GetAutoResetPoints() (o *ResetPoints) {
 func (v *WorkflowExecutionInfo) GetTaskList() (o string) {
 	if v != nil {
 		return v.TaskList
+	}
+	return
+}
+
+// GetIsCron is an internal getter (TBD...)
+func (v *WorkflowExecutionInfo) GetIsCron() (o bool) {
+	if v != nil {
+		return v.IsCron
 	}
 	return
 }
