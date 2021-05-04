@@ -713,6 +713,29 @@ func (a *AccessControlledWorkflowHandler) ListTaskListPartitions(
 	return a.frontendHandler.ListTaskListPartitions(ctx, request)
 }
 
+// GetTaskListsForDomain API call
+func (a *AccessControlledWorkflowHandler) GetTaskListsForDomain(
+	ctx context.Context,
+	request *types.GetTaskListsForDomainRequest,
+) (*types.GetTaskListsForDomainResponse, error) {
+
+	scope := a.getMetricsScopeWithDomain(metrics.FrontendGetTaskListsForDomainScope, request)
+
+	attr := &authorization.Attributes{
+		APIName:    "GetTaskListsForDomain",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
+	if err != nil {
+		return nil, err
+	}
+	if !isAuthorized {
+		return nil, errUnauthorized
+	}
+
+	return a.frontendHandler.GetTaskListsForDomain(ctx, request)
+}
+
 // UpdateDomain API call
 func (a *AccessControlledWorkflowHandler) UpdateDomain(
 	ctx context.Context,

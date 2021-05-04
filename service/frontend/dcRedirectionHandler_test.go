@@ -837,3 +837,26 @@ func (s *dcRedirectionHandlerSuite) TestListTaskListPartitions() {
 	err = callFn(s.alternativeClusterName)
 	s.Nil(err)
 }
+
+func (s *dcRedirectionHandlerSuite) TestGetTaskListsForDomain() {
+	apiName := "ListTaskListPartitions"
+
+	s.mockDCRedirectionPolicy.On("WithDomainNameRedirect",
+		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
+
+	req := &types.GetTaskListsForDomainRequest{
+		Domain: s.domainName,
+	}
+	resp, err := s.handler.GetTaskListsForDomain(context.Background(), req)
+	s.Nil(err)
+	// the resp is initialized to nil, since inner function is not called
+	s.Nil(resp)
+
+	callFn := s.mockDCRedirectionPolicy.Calls[0].Arguments[2].(func(string) error)
+	s.mockFrontendHandler.EXPECT().GetTaskListsForDomain(gomock.Any(), req).Return(&types.GetTask{}, nil).Times(1)
+	err = callFn(s.currentClusterName)
+	s.Nil(err)
+	s.mockRemoteFrontendClient.EXPECT().GetTaskListsForDomain(gomock.Any(), req).Return(&types.ListTaskListPartitionsResponse{}, nil).Times(1)
+	err = callFn(s.alternativeClusterName)
+	s.Nil(err)
+}

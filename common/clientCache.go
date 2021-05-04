@@ -30,6 +30,8 @@ type (
 		GetClientForKey(key string) (interface{}, error)
 		GetClientForClientKey(clientKey string) (interface{}, error)
 		GetHostNameForKey(key string) (string, error)
+
+		GetAllTaskLists() []string
 	}
 
 	keyResolver    func(string) (string, error)
@@ -97,4 +99,12 @@ func (c *clientCacheImpl) GetClientForClientKey(clientKey string) (interface{}, 
 	}
 	c.clients[clientKey] = client
 	return client, nil
+}
+
+func (c *clientCacheImpl) GetAllTaskLists() []string {
+	taskLists := make([]string, 0, len(c.clients))
+	for tl, _ := range c.clients {
+		taskLists = append(taskLists, tl)
+	}
+	return taskLists
 }

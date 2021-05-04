@@ -291,6 +291,39 @@ func (mr *_MockClientRecorder) GetSearchAttributes(
 	return mr.mock.ctrl.RecordCall(mr.mock, "GetSearchAttributes", args...)
 }
 
+// GetTaskListsForDomain responds to a GetTaskListsForDomain call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().GetTaskListsForDomain(gomock.Any(), ...).Return(...)
+// 	... := client.GetTaskListsForDomain(...)
+func (m *MockClient) GetTaskListsForDomain(
+	ctx context.Context,
+	_Request *shared.GetTaskListsForDomainRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetTaskListsForDomainResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "GetTaskListsForDomain", args...)
+	success, _ = ret[i].(*shared.GetTaskListsForDomainResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) GetTaskListsForDomain(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "GetTaskListsForDomain", args...)
+}
+
 // GetWorkflowExecutionHistory responds to a GetWorkflowExecutionHistory call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.

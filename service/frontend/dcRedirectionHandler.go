@@ -1143,6 +1143,36 @@ func (handler *DCRedirectionHandlerImpl) ListTaskListPartitions(
 	return resp, err
 }
 
+// GetTaskListsForDomain API call
+func (handler *DCRedirectionHandlerImpl) GetTaskListsForDomain(
+	ctx context.Context,
+	request *types.GetTaskListsForDomainRequest,
+) (resp *types.GetTaskListsForDomainResponse, retError error) {
+
+	var apiName = "GetTaskListsForDomain"
+	var err error
+	var cluster string
+
+	scope, startTime := handler.beforeCall(metrics.DCRedirectionGetTaskListsForDomainScope)
+	defer func() {
+		handler.afterCall(scope, startTime, cluster, &retError)
+	}()
+
+	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
+		cluster = targetDC
+		switch {
+		case targetDC == handler.currentClusterName:
+			resp, err = handler.frontendHandler.GetTaskListsForDomain(ctx, request)
+		default:
+			remoteClient := handler.GetRemoteFrontendClient(targetDC)
+			resp, err = remoteClient.GetTaskListsForDomain(ctx, request)
+		}
+		return err
+	})
+
+	return resp, err
+}
+
 // GetClusterInfo API call
 func (handler *DCRedirectionHandlerImpl) GetClusterInfo(
 	ctx context.Context,

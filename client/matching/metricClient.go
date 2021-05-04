@@ -242,6 +242,24 @@ func (c *metricClient) ListTaskListPartitions(
 	return resp, err
 }
 
+func (c *metricClient) GetTaskListsForDomain(
+	ctx context.Context,
+	request *types.MatchingGetTaskListsForDomainRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetTaskListsForDomainResponse, error) {
+	c.metricsClient.IncCounter(metrics.MatchingClientGetTaskListsForDomainScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.MatchingClientGetTaskListsForDomainScope, metrics.CadenceClientLatency)
+	resp, err := c.client.GetTaskListsForDomain(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.MatchingClientGetTaskListsForDomainScope, metrics.CadenceClientFailures)
+	}
+
+	return resp, err
+}
+
 func (c *metricClient) emitForwardedFromStats(
 	scope int,
 	forwardedFrom string,

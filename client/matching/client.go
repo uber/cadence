@@ -75,7 +75,7 @@ func (c *clientImpl) AddActivityTask(
 		request.GetForwardedFrom(),
 	)
 	request.TaskList.Name = partition
-	client, err := c.getClientForTasklist(partition)
+	client, err := c.getClientForTaskList(partition)
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func (c *clientImpl) AddDecisionTask(
 		request.GetForwardedFrom(),
 	)
 	request.TaskList.Name = partition
-	client, err := c.getClientForTasklist(request.TaskList.GetName())
+	client, err := c.getClientForTaskList(request.TaskList.GetName())
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (c *clientImpl) PollForActivityTask(
 		request.GetForwardedFrom(),
 	)
 	request.PollRequest.TaskList.Name = partition
-	client, err := c.getClientForTasklist(request.PollRequest.TaskList.GetName())
+	client, err := c.getClientForTaskList(request.PollRequest.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (c *clientImpl) PollForDecisionTask(
 		request.GetForwardedFrom(),
 	)
 	request.PollRequest.TaskList.Name = partition
-	client, err := c.getClientForTasklist(request.PollRequest.TaskList.GetName())
+	client, err := c.getClientForTaskList(request.PollRequest.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (c *clientImpl) QueryWorkflow(
 		request.GetForwardedFrom(),
 	)
 	request.TaskList.Name = partition
-	client, err := c.getClientForTasklist(request.TaskList.GetName())
+	client, err := c.getClientForTaskList(request.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func (c *clientImpl) RespondQueryTaskCompleted(
 	opts ...yarpc.CallOption,
 ) error {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	client, err := c.getClientForTasklist(request.TaskList.GetName())
+	client, err := c.getClientForTaskList(request.TaskList.GetName())
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func (c *clientImpl) CancelOutstandingPoll(
 	opts ...yarpc.CallOption,
 ) error {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	client, err := c.getClientForTasklist(request.TaskList.GetName())
+	client, err := c.getClientForTaskList(request.TaskList.GetName())
 	if err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func (c *clientImpl) DescribeTaskList(
 	opts ...yarpc.CallOption,
 ) (*types.DescribeTaskListResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	client, err := c.getClientForTasklist(request.DescRequest.TaskList.GetName())
+	client, err := c.getClientForTaskList(request.DescRequest.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -223,13 +223,40 @@ func (c *clientImpl) ListTaskListPartitions(
 	opts ...yarpc.CallOption,
 ) (*types.ListTaskListPartitionsResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	client, err := c.getClientForTasklist(request.TaskList.GetName())
+	client, err := c.getClientForTaskList(request.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return client.ListTaskListPartitions(ctx, request, opts...)
+}
+
+func (c *clientImpl) GetTaskListsForDomain(
+	ctx context.Context,
+	request *types.MatchingGetTaskListsForDomainRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetTaskListsForDomainResponse, error) {
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	clients := c.clients.GetAllTaskLists()
+
+	var response *types.GetTaskListsForDomainResponse
+	for _, tl := range clients {
+		client, err := c.getClientForTaskList(tl)
+		if err != nil {
+			return nil, err
+		}
+
+		resp, err := c.getTaskListForDomain(client, ctx, request, opts...)
+		if err != nil {
+			return nil, err
+		}
+		for _, tl := range resp.TaskListNames {
+			response.TaskListNames = append(response.TaskListNames, tl)
+		}
+	}
+
+	return response, nil
 }
 
 func (c *clientImpl) createContext(
@@ -250,10 +277,26 @@ func (c *clientImpl) createLongPollContext(
 	return context.WithTimeout(parent, c.longPollTimeout)
 }
 
-func (c *clientImpl) getClientForTasklist(key string) (Client, error) {
+func (c *clientImpl) getClientForTaskList(key string) (Client, error) {
 	client, err := c.clients.GetClientForKey(key)
 	if err != nil {
 		return nil, err
 	}
 	return client.(Client), nil
+}
+
+func (c *clientImpl) getTaskListForDomain(
+	cl Client,
+	ctx context.Context,
+	request *types.MatchingGetTaskListsForDomainRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetTaskListsForDomainResponse, error) {
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+
+	resp, err := cl.GetTaskListsForDomain(ctx, request, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }

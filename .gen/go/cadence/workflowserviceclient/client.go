@@ -80,6 +80,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.GetSearchAttributesResponse, error)
 
+	GetTaskListsForDomain(
+		ctx context.Context,
+		Request *shared.GetTaskListsForDomainRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.GetTaskListsForDomainResponse, error)
+
 	GetWorkflowExecutionHistory(
 		ctx context.Context,
 		GetRequest *shared.GetWorkflowExecutionHistoryRequest,
@@ -447,6 +453,29 @@ func (c client) GetSearchAttributes(
 	}
 
 	success, err = cadence.WorkflowService_GetSearchAttributes_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetTaskListsForDomain(
+	ctx context.Context,
+	_Request *shared.GetTaskListsForDomainRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetTaskListsForDomainResponse, err error) {
+
+	args := cadence.WorkflowService_GetTaskListsForDomain_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_GetTaskListsForDomain_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_GetTaskListsForDomain_Helper.UnwrapResponse(&result)
 	return
 }
 

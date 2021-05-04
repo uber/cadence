@@ -78,6 +78,7 @@ type (
 		config               *Config
 		lockableQueryTaskMap lockableQueryTaskMap
 		domainCache          cache.DomainCache
+		taskListCache        cache.Cache
 		versionChecker       client.VersionChecker
 		keyResolver          membership.ServiceResolver
 	}
@@ -123,6 +124,7 @@ func NewEngine(taskManager persistence.TaskManager,
 		config:               config,
 		lockableQueryTaskMap: lockableQueryTaskMap{queryTaskMap: make(map[string]chan *queryResult)},
 		domainCache:          domainCache,
+		taskListCache:        cache.NewSimple(nil),
 		versionChecker:       client.NewVersionChecker(),
 		keyResolver:          resolver,
 	}
@@ -167,6 +169,8 @@ func (e *matchingEngineImpl) String() string {
 // if successful creates one.
 func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID,
 	taskListKind *types.TaskListKind) (taskListManager, error) {
+	// Cache the task list in taskListCache
+	e.cacheTaskListByDomain(taskList)
 	// The first check is an optimization so almost all requests will have a task list manager
 	// and return avoiding the write lock
 	e.taskListsLock.RLock()
@@ -196,6 +200,7 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID,
 		logger.Info("Task list manager state changed", tag.LifeCycleStartFailed, tag.Error(err))
 		return nil, err
 	}
+
 	e.taskLists[*taskList] = mgr
 	e.metricsClient.Scope(metrics.MatchingTaskListMgrScope).UpdateGauge(
 		metrics.TaskListManagersGauge,
@@ -209,6 +214,24 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID,
 	}
 	logger.Info("Task list manager state changed", tag.LifeCycleStarted)
 	return mgr, nil
+}
+
+func (e *matchingEngineImpl) cacheTaskListByDomain(taskList *taskListID) error {
+	domainName, err := e.domainCache.GetDomainName(taskList.domainID)
+	if err != nil {
+		return err
+	}
+	cachedTL := e.taskListCache.Get(domainName)
+	var taskLists map[string]bool
+	if cachedTL != nil {
+		taskLists = cachedTL.(map[string]bool)
+	} else {
+		taskLists = map[string]bool{}
+	}
+
+	taskLists[taskList.name] = true
+	e.taskListCache.PutIfNotExist(domainName, taskLists)
+	return nil
 }
 
 // For use in tests
@@ -670,6 +693,21 @@ func (e *matchingEngineImpl) listTaskListPartitions(
 			})
 	}
 	return partitionHostInfo, nil
+}
+
+func (e *matchingEngineImpl) GetTaskListsForDomain(
+	hCtx *handlerContext,
+	request *types.MatchingGetTaskListsForDomainRequest,
+) *types.GetTaskListsForDomainResponse {
+	taskLists := e.taskListCache.Get(request.GetDomain()).(map[string]bool)
+	var taskListNames []string
+	for taskList, _ := range taskLists {
+		taskListNames = append(taskListNames, taskList)
+	}
+
+	return &types.GetTaskListsForDomainResponse{
+		TaskListNames: taskListNames,
+	}
 }
 
 func (e *matchingEngineImpl) getHostInfo(partitionKey string) (string, error) {

@@ -59,6 +59,11 @@ type Interface interface {
 		Request *matching.DescribeTaskListRequest,
 	) (*shared.DescribeTaskListResponse, error)
 
+	GetTaskListsForDomain(
+		ctx context.Context,
+		Request *matching.GetTaskListsForDomainRequest,
+	) (*shared.GetTaskListsForDomainResponse, error)
+
 	ListTaskListPartitions(
 		ctx context.Context,
 		Request *matching.ListTaskListPartitionsRequest,
@@ -141,6 +146,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "GetTaskListsForDomain",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.GetTaskListsForDomain),
+				},
+				Signature:    "GetTaskListsForDomain(Request *matching.GetTaskListsForDomainRequest) (*shared.GetTaskListsForDomainResponse)",
+				ThriftModule: matching.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "ListTaskListPartitions",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -197,7 +213,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 9)
+	procedures := make([]transport.Procedure, 0, 10)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -325,6 +341,25 @@ func (h handler) DescribeTaskList(ctx context.Context, body wire.Value) (thrift.
 		}
 	}
 
+	return response, err
+}
+
+func (h handler) GetTaskListsForDomain(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args matching.MatchingService_GetTaskListsForDomain_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.GetTaskListsForDomain(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := matching.MatchingService_GetTaskListsForDomain_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
 	return response, err
 }
 

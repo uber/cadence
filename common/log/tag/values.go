@@ -320,6 +320,7 @@ var (
 	FrontendClientOperationUpdateDomain                     = clientOperation("frontend-update-domain")
 	FrontendClientOperationGetClusterInfo                   = clientOperation("frontend-get-cluster-info")
 	FrontendClientOperationListTaskListPartitions           = clientOperation("frontend-list-task-list-partitions")
+	FrontendClientOperationGetTaskListsForDomain            = clientOperation("frontend-get-task-list-for-domain")
 
 	HistoryClientOperationStartWorkflowExecution           = clientOperation("history-start-wf-execution")
 	HistoryClientOperationDescribeHistoryHost              = clientOperation("history-describe-history-host")
@@ -370,4 +371,5 @@ var (
 	MatchingClientOperationCancelOutstandingPoll  = clientOperation("matching-cancel-outstanding-poll")
 	MatchingClientOperationDescribeTaskList       = clientOperation("matching-describe-task-list")
 	MatchingClientOperationListTaskListPartitions = clientOperation("matching-list-task-list-partitions")
+	MatchingClientOperationGetTaskListsForDomain  = clientOperation("get-task-list-for-domain")
 )

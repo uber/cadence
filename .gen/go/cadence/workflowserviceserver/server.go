@@ -72,6 +72,11 @@ type Interface interface {
 		ctx context.Context,
 	) (*shared.GetSearchAttributesResponse, error)
 
+	GetTaskListsForDomain(
+		ctx context.Context,
+		Request *shared.GetTaskListsForDomainRequest,
+	) (*shared.GetTaskListsForDomainResponse, error)
+
 	GetWorkflowExecutionHistory(
 		ctx context.Context,
 		GetRequest *shared.GetWorkflowExecutionHistoryRequest,
@@ -313,6 +318,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.GetSearchAttributes),
 				},
 				Signature:    "GetSearchAttributes() (*shared.GetSearchAttributesResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "GetTaskListsForDomain",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.GetTaskListsForDomain),
+				},
+				Signature:    "GetTaskListsForDomain(Request *shared.GetTaskListsForDomainRequest) (*shared.GetTaskListsForDomainResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -659,7 +675,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 38)
+	procedures := make([]transport.Procedure, 0, 39)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -877,6 +893,25 @@ func (h handler) GetSearchAttributes(ctx context.Context, body wire.Value) (thri
 		}
 	}
 
+	return response, err
+}
+
+func (h handler) GetTaskListsForDomain(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_GetTaskListsForDomain_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.GetTaskListsForDomain(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_GetTaskListsForDomain_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
 	return response, err
 }
 
