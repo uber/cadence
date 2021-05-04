@@ -118,18 +118,32 @@ func (cf *rpcClientFactory) NewFrontendClient() (frontend.Client, error) {
 	return cf.NewFrontendClientWithTimeout(frontend.DefaultTimeout, frontend.DefaultLongPollTimeout)
 }
 
-func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error) {
-	resolver, err := cf.monitor.GetResolver(common.HistoryServiceName)
+func (cf *rpcClientFactory) createKeyResolver(serviceName string) (func(key string) (string, error), error) {
+	resolver, err := cf.monitor.GetResolver(serviceName)
 	if err != nil {
 		return nil, err
 	}
 
-	keyResolver := func(key string) (string, error) {
+	return func(key string) (string, error) {
 		host, err := resolver.Lookup(key)
 		if err != nil {
 			return "", err
 		}
-		return host.GetAddress(), nil
+		hostAddress := host.GetAddress()
+		if cf.enableGRPCOutbound {
+			hostAddress, err = cf.rpcFactory.ReplaceGRPCPort(serviceName, hostAddress)
+			if err != nil {
+				return "", err
+			}
+		}
+		return hostAddress, nil
+	}, nil
+}
+
+func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error) {
+	keyResolver, err := cf.createKeyResolver(common.HistoryServiceName)
+	if err != nil {
+		return nil, err
 	}
 
 	clientProvider := func(clientKey string) (interface{}, error) {
@@ -159,17 +173,9 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 	timeout time.Duration,
 	longPollTimeout time.Duration,
 ) (matching.Client, error) {
-	resolver, err := cf.monitor.GetResolver(common.MatchingServiceName)
+	keyResolver, err := cf.createKeyResolver(common.MatchingServiceName)
 	if err != nil {
 		return nil, err
-	}
-
-	keyResolver := func(key string) (string, error) {
-		host, err := resolver.Lookup(key)
-		if err != nil {
-			return "", err
-		}
-		return host.GetAddress(), nil
 	}
 
 	clientProvider := func(clientKey string) (interface{}, error) {
@@ -199,18 +205,9 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeout(
 	timeout time.Duration,
 	longPollTimeout time.Duration,
 ) (frontend.Client, error) {
-
-	resolver, err := cf.monitor.GetResolver(common.FrontendServiceName)
+	keyResolver, err := cf.createKeyResolver(common.FrontendServiceName)
 	if err != nil {
 		return nil, err
-	}
-
-	keyResolver := func(key string) (string, error) {
-		host, err := resolver.Lookup(key)
-		if err != nil {
-			return "", err
-		}
-		return host.GetAddress(), nil
 	}
 
 	clientProvider := func(clientKey string) (interface{}, error) {
