@@ -613,6 +613,8 @@ func (s *cliAppSuite) TestAdminAddSearchAttribute() {
 func (s *cliAppSuite) TestAdminFailover() {
 	resp := &shared.StartWorkflowExecutionResponse{RunId: common.StringPtr(uuid.New())}
 	s.clientFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), gomock.Any()).Return(resp, nil)
+	query := &shared.QueryWorkflowResponse{QueryResult: []byte{}}
+	s.clientFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any(), gomock.Any()).Return(query, nil)
 	err := s.app.Run([]string{"", "admin", "cl", "fo", "start", "--tc", "standby", "--sc", "active"})
 	s.Nil(err)
 }
