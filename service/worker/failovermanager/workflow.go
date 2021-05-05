@@ -48,6 +48,7 @@ const (
 	WorkflowTypeName = "cadence-sys-failoverManager-workflow"
 	// WorkflowID will be reused to ensure only one workflow running
 	WorkflowID             = "cadence-failover-manager"
+	DrillWorkflowID        = WorkflowID + "-drill"
 	failoverActivityName   = "cadence-sys-failover-activity"
 	getDomainsActivityName = "cadence-sys-getDomains-activity"
 
@@ -68,6 +69,8 @@ const (
 
 	// workflow states for query
 
+	// WorkflowInitialized state
+	WorkflowInitialized = "initialized"
 	// WorkflowRunning state
 	WorkflowRunning = "running"
 	// WorkflowPaused state
@@ -93,12 +96,16 @@ type (
 		BatchFailoverWaitTimeInSeconds int
 		// Domains candidates to be failover
 		Domains []string
+		// DrillWaitTime defines the wait time of a failover drill
+		DrillWaitTime time.Duration
 	}
 
 	// FailoverResult is workflow result
 	FailoverResult struct {
-		SuccessDomains []string
-		FailedDomains  []string
+		SuccessDomains      []string
+		FailedDomains       []string
+		SuccessResetDomains []string
+		FailedResetDomains  []string
 	}
 
 	// GetDomainsActivityParams params for activity
@@ -122,23 +129,19 @@ type (
 
 	// QueryResult for failover progress
 	QueryResult struct {
-		TotalDomains   int
-		Success        int
-		Failed         int
-		State          string
-		TargetCluster  string
-		SourceCluster  string
-		SuccessDomains []string // SuccessDomains are guaranteed succeed processed
-		FailedDomains  []string // FailedDomains contains false positive
-		Operator       string
+		TotalDomains        int
+		Success             int
+		Failed              int
+		State               string
+		TargetCluster       string
+		SourceCluster       string
+		SuccessDomains      []string // SuccessDomains are guaranteed succeed processed
+		FailedDomains       []string // FailedDomains contains false positive
+		SuccessResetDomains []string // SuccessResetDomains are domains successfully reset in drill mode
+		FailedResetDomains  []string // FailedResetDomains contains false positive in drill mode
+		Operator            string
 	}
 )
-
-func init() {
-	workflow.RegisterWithOptions(FailoverWorkflow, workflow.RegisterOptions{Name: WorkflowTypeName})
-	activity.RegisterWithOptions(FailoverActivity, activity.RegisterOptions{Name: failoverActivityName})
-	activity.RegisterWithOptions(GetDomainsActivity, activity.RegisterOptions{Name: getDomainsActivityName})
-}
 
 // FailoverWorkflow is the workflow that managed failover all domains with IsManagedByCadence=true
 func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverResult, error) {
@@ -150,20 +153,24 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 	// define query properties
 	var failedDomains []string
 	var successDomains []string
+	var successResetDomains []string
+	var failedResetDomains []string
 	var totalNumOfDomains int
-	wfState := WorkflowRunning
+	wfState := WorkflowInitialized
 	operator := getOperator(ctx)
 	err = workflow.SetQueryHandler(ctx, QueryType, func(input []byte) (*QueryResult, error) {
 		return &QueryResult{
-			TotalDomains:   totalNumOfDomains,
-			Success:        len(successDomains),
-			Failed:         len(failedDomains),
-			State:          wfState,
-			TargetCluster:  params.TargetCluster,
-			SourceCluster:  params.SourceCluster,
-			SuccessDomains: successDomains,
-			FailedDomains:  failedDomains,
-			Operator:       operator,
+			TotalDomains:        totalNumOfDomains,
+			Success:             len(successDomains),
+			Failed:              len(failedDomains),
+			State:               wfState,
+			TargetCluster:       params.TargetCluster,
+			SourceCluster:       params.SourceCluster,
+			SuccessDomains:      successDomains,
+			FailedDomains:       failedDomains,
+			SuccessResetDomains: successResetDomains,
+			FailedResetDomains:  failedResetDomains,
+			Operator:            operator,
 		}, nil
 	})
 	if err != nil {
@@ -184,30 +191,66 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 	}
 	totalNumOfDomains = len(domains)
 
-	// failover in batch
-	ao = workflow.WithActivityOptions(ctx, getFailoverActivityOptions())
-	batchSize := params.BatchFailoverSize
-	times := len(domains)/batchSize + 1
-
 	pauseCh := workflow.GetSignalChannel(ctx, PauseSignal)
 	resumeCh := workflow.GetSignalChannel(ctx, ResumeSignal)
 	var shouldPause bool
-
-	for i := 0; i < times; i++ {
-		// check if need to pause
+	checkPauseSignal := func() {
 		shouldPause = pauseCh.ReceiveAsync(nil)
 		if shouldPause {
 			wfState = WorkflowPaused
 			resumeCh.Receive(ctx, nil)
 		}
 		wfState = WorkflowRunning
+	}
+
+	// failover in batch
+	successDomains, failedDomains = failoverDomainsByBatch(ctx, domains, params, checkPauseSignal, false)
+
+	if params.DrillWaitTime == 0 {
+		// This is a normal failover
+		wfState = WorkflowCompleted
+		return &FailoverResult{
+			SuccessDomains: successDomains,
+			FailedDomains:  failedDomains,
+		}, nil
+	}
+
+	workflow.Sleep(ctx, params.DrillWaitTime)
+	// Reset domains to original cluster
+	successResetDomains, failedResetDomains = failoverDomainsByBatch(ctx, domains, params, checkPauseSignal, true)
+	wfState = WorkflowCompleted
+
+	return &FailoverResult{
+		SuccessDomains:      successDomains,
+		FailedDomains:       failedDomains,
+		SuccessResetDomains: successResetDomains,
+		FailedResetDomains:  failedResetDomains,
+	}, nil
+}
+
+func failoverDomainsByBatch(
+	ctx workflow.Context,
+	domains []string,
+	params *FailoverParams,
+	pauseSignalHandler func(),
+	reverseFailover bool) (successDomains []string, failedDomains []string) {
+	totalNumOfDomains := len(domains)
+	batchSize := params.BatchFailoverSize
+	times := totalNumOfDomains/batchSize + 1
+	ao := workflow.WithActivityOptions(ctx, getFailoverActivityOptions())
+	targetCluster := params.TargetCluster
+	if reverseFailover {
+		targetCluster = params.SourceCluster
+	}
+	for i := 0; i < times; i++ {
+		pauseSignalHandler()
 
 		failoverActivityParams := &FailoverActivityParams{
 			Domains:       domains[i*batchSize : common.MinInt((i+1)*batchSize, totalNumOfDomains)],
-			TargetCluster: params.TargetCluster,
+			TargetCluster: targetCluster,
 		}
 		var actResult FailoverActivityResult
-		err = workflow.ExecuteActivity(ao, FailoverActivity, failoverActivityParams).Get(ctx, &actResult)
+		err := workflow.ExecuteActivity(ao, FailoverActivity, failoverActivityParams).Get(ctx, &actResult)
 		if err != nil {
 			// Domains in failed activity can be either failovered or not, but we treated them as failed.
 			// This makes the query result for FailedDomains contains false positive results.
@@ -216,15 +259,9 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 			successDomains = append(successDomains, actResult.SuccessDomains...)
 			failedDomains = append(failedDomains, actResult.FailedDomains...)
 		}
-
 		workflow.Sleep(ctx, time.Duration(params.BatchFailoverWaitTimeInSeconds)*time.Second)
 	}
-
-	wfState = WorkflowCompleted
-	return &FailoverResult{
-		SuccessDomains: successDomains,
-		FailedDomains:  failedDomains,
-	}, nil
+	return
 }
 
 func getOperator(ctx workflow.Context) string {
