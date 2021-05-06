@@ -63,14 +63,8 @@ var (
 	}
 )
 
-// NewScope builds a new tally scope
-// for this metrics configuration
-//
-// If the underlying configuration is
-// valid for multiple reporter types,
-// only one of them will be used for
-// reporting. Currently, m3 is preferred
-// over statsd
+// NewScope builds a new tally scope for this metrics configuration
+// Only one reporter type is allowed
 func (c *Metrics) NewScope(logger log.Logger, service string) tally.Scope {
 	rootScope := tally.NoopScope
 	if c.M3 != nil {
