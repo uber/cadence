@@ -77,9 +77,15 @@ func (c *Metrics) NewScope(logger log.Logger, service string) tally.Scope {
 		rootScope = c.newM3Scope(logger)
 	}
 	if c.Statsd != nil {
+		if rootScope != tally.NoopScope {
+			logger.Fatal("error creating metric reporter: cannot have more than one types of metric configuration")
+		}
 		rootScope = c.newStatsdScope(logger)
 	}
 	if c.Prometheus != nil {
+		if rootScope != tally.NoopScope {
+			logger.Fatal("error creating metric reporter: cannot have more than one types of metric configuration")
+		}
 		rootScope = c.newPrometheusScope(logger)
 	}
 	rootScope = rootScope.Tagged(map[string]string{metrics.CadenceServiceTagName: service})
