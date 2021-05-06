@@ -63,24 +63,19 @@ func (q *sqlQueue) EnqueueMessage(
 	ctx context.Context,
 	messagePayload []byte,
 ) error {
-
-	err := q.txExecute(ctx, "EnqueueMessage", func(tx sqlplugin.Tx) error {
+	return q.txExecute(ctx, "EnqueueMessage", func(tx sqlplugin.Tx) error {
 		lastMessageID, err := tx.GetLastEnqueuedMessageIDForUpdate(ctx, q.queueType)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				lastMessageID = -1
 			} else {
-				return fmt.Errorf("failed to get last enqueued message id: %v", err)
+				return err
 			}
 		}
 
 		_, err = tx.InsertIntoQueue(ctx, newQueueRow(q.queueType, lastMessageID+1, messagePayload))
 		return err
 	})
-	if err != nil {
-		return &types.InternalServiceError{Message: err.Error()}
-	}
-	return nil
 }
 
 func (q *sqlQueue) ReadMessages(
@@ -91,7 +86,7 @@ func (q *sqlQueue) ReadMessages(
 
 	rows, err := q.db.GetMessagesFromQueue(ctx, q.queueType, lastMessageID, maxCount)
 	if err != nil {
-		return nil, err
+		return nil, convertCommonErrors(q.db, "ReadMessages", "", err)
 	}
 
 	var messages []*persistence.InternalQueueMessage
@@ -117,9 +112,7 @@ func (q *sqlQueue) DeleteMessagesBefore(
 
 	_, err := q.db.DeleteMessagesBefore(ctx, q.queueType, messageID)
 	if err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("DeleteMessagesBefore operation failed. Error %v", err),
-		}
+		return convertCommonErrors(q.db, "DeleteMessagesBefore", "", err)
 	}
 	return nil
 }
@@ -129,23 +122,14 @@ func (q *sqlQueue) UpdateAckLevel(
 	messageID int64,
 	clusterName string,
 ) error {
-
-	err := q.txExecute(ctx, "UpdateAckLevel", func(tx sqlplugin.Tx) error {
+	return q.txExecute(ctx, "UpdateAckLevel", func(tx sqlplugin.Tx) error {
 		clusterAckLevels, err := tx.GetAckLevels(ctx, q.queueType, true)
 		if err != nil {
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("UpdateAckLevel operation failed. Error %v", err),
-			}
+			return err
 		}
 
 		if clusterAckLevels == nil {
-			err := tx.InsertAckLevel(ctx, q.queueType, messageID, clusterName)
-			if err != nil {
-				return &types.InternalServiceError{
-					Message: fmt.Sprintf("UpdateAckLevel operation failed. Error %v", err),
-				}
-			}
-			return nil
+			return tx.InsertAckLevel(ctx, q.queueType, messageID, clusterName)
 		}
 
 		// Ignore possibly delayed message
@@ -154,49 +138,37 @@ func (q *sqlQueue) UpdateAckLevel(
 		}
 
 		clusterAckLevels[clusterName] = messageID
-		err = tx.UpdateAckLevels(ctx, q.queueType, clusterAckLevels)
-		if err != nil {
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("UpdateAckLevel operation failed. Error %v", err),
-			}
-		}
-		return nil
+		return tx.UpdateAckLevels(ctx, q.queueType, clusterAckLevels)
 	})
-
-	if err != nil {
-		return &types.InternalServiceError{Message: err.Error()}
-	}
-	return nil
 }
 
 func (q *sqlQueue) GetAckLevels(
 	ctx context.Context,
 ) (map[string]int64, error) {
-	return q.db.GetAckLevels(ctx, q.queueType, false)
+	result, err := q.db.GetAckLevels(ctx, q.queueType, false)
+	if err != nil {
+		return nil, convertCommonErrors(q.db, "GetAckLevels", "", err)
+	}
+	return result, nil
 }
 
 func (q *sqlQueue) EnqueueMessageToDLQ(
 	ctx context.Context,
 	messagePayload []byte,
 ) error {
-
-	err := q.txExecute(ctx, "EnqueueMessageToDLQ", func(tx sqlplugin.Tx) error {
+	return q.txExecute(ctx, "EnqueueMessageToDLQ", func(tx sqlplugin.Tx) error {
 		var err error
 		lastMessageID, err := tx.GetLastEnqueuedMessageIDForUpdate(ctx, q.getDLQTypeFromQueueType())
 		if err != nil {
 			if err == sql.ErrNoRows {
 				lastMessageID = -1
 			} else {
-				return fmt.Errorf("failed to get last enqueued message id from DLQ: %v", err)
+				return err
 			}
 		}
 		_, err = tx.InsertIntoQueue(ctx, newQueueRow(q.getDLQTypeFromQueueType(), lastMessageID+1, messagePayload))
 		return err
 	})
-	if err != nil {
-		return &types.InternalServiceError{Message: err.Error()}
-	}
-	return nil
 }
 
 func (q *sqlQueue) ReadMessagesFromDLQ(
@@ -218,9 +190,7 @@ func (q *sqlQueue) ReadMessagesFromDLQ(
 
 	rows, err := q.db.GetMessagesBetween(ctx, q.getDLQTypeFromQueueType(), firstMessageID, lastMessageID, pageSize)
 	if err != nil {
-		return nil, nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ReadMessagesFromDLQ operation failed. Error %v", err),
-		}
+		return nil, nil, convertCommonErrors(q.db, "ReadMessagesFromDLQ", "", err)
 	}
 
 	var messages []*persistence.InternalQueueMessage
@@ -240,12 +210,9 @@ func (q *sqlQueue) DeleteMessageFromDLQ(
 	ctx context.Context,
 	messageID int64,
 ) error {
-
 	_, err := q.db.DeleteMessage(ctx, q.getDLQTypeFromQueueType(), messageID)
 	if err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("DeleteMessageFromDLQ operation failed. Error %v", err),
-		}
+		return convertCommonErrors(q.db, "DeleteMessageFromDLQ", "", err)
 	}
 	return nil
 }
@@ -255,12 +222,9 @@ func (q *sqlQueue) RangeDeleteMessagesFromDLQ(
 	firstMessageID int64,
 	lastMessageID int64,
 ) error {
-
 	_, err := q.db.RangeDeleteMessages(ctx, q.getDLQTypeFromQueueType(), firstMessageID, lastMessageID)
 	if err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("RangeDeleteMessagesFromDLQ operation failed. Error %v", err),
-		}
+		return convertCommonErrors(q.db, "RangeDeleteMessagesFromDLQ", "", err)
 	}
 	return nil
 }
@@ -270,23 +234,14 @@ func (q *sqlQueue) UpdateDLQAckLevel(
 	messageID int64,
 	clusterName string,
 ) error {
-
-	err := q.txExecute(ctx, "UpdateDLQAckLevel", func(tx sqlplugin.Tx) error {
+	return q.txExecute(ctx, "UpdateDLQAckLevel", func(tx sqlplugin.Tx) error {
 		clusterAckLevels, err := tx.GetAckLevels(ctx, q.getDLQTypeFromQueueType(), true)
 		if err != nil {
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("UpdateDLQAckLevel operation failed. Error %v", err),
-			}
+			return err
 		}
 
 		if clusterAckLevels == nil {
-			err := tx.InsertAckLevel(ctx, q.getDLQTypeFromQueueType(), messageID, clusterName)
-			if err != nil {
-				return &types.InternalServiceError{
-					Message: fmt.Sprintf("UpdateDLQAckLevel operation failed. Error %v", err),
-				}
-			}
-			return nil
+			return tx.InsertAckLevel(ctx, q.getDLQTypeFromQueueType(), messageID, clusterName)
 		}
 
 		// Ignore possibly delayed message
@@ -295,33 +250,28 @@ func (q *sqlQueue) UpdateDLQAckLevel(
 		}
 
 		clusterAckLevels[clusterName] = messageID
-		err = tx.UpdateAckLevels(ctx, q.getDLQTypeFromQueueType(), clusterAckLevels)
-		if err != nil {
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("UpdateDLQAckLevel operation failed. Error %v", err),
-			}
-		}
-		return nil
+		return tx.UpdateAckLevels(ctx, q.getDLQTypeFromQueueType(), clusterAckLevels)
 	})
-
-	if err != nil {
-		return &types.InternalServiceError{Message: err.Error()}
-	}
-	return nil
 }
 
 func (q *sqlQueue) GetDLQAckLevels(
 	ctx context.Context,
 ) (map[string]int64, error) {
-
-	return q.db.GetAckLevels(ctx, q.getDLQTypeFromQueueType(), false)
+	result, err := q.db.GetAckLevels(ctx, q.getDLQTypeFromQueueType(), false)
+	if err != nil {
+		return nil, convertCommonErrors(q.db, "GetDLQAckLevels", "", err)
+	}
+	return result, nil
 }
 
 func (q *sqlQueue) GetDLQSize(
 	ctx context.Context,
 ) (int64, error) {
-
-	return q.db.GetQueueSize(ctx, q.getDLQTypeFromQueueType())
+	result, err := q.db.GetQueueSize(ctx, q.getDLQTypeFromQueueType())
+	if err != nil {
+		return 0, convertCommonErrors(q.db, "GetDLQSize", "", err)
+	}
+	return result, nil
 }
 
 func (q *sqlQueue) getDLQTypeFromQueueType() persistence.QueueType {

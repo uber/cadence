@@ -77,9 +77,7 @@ func (m *sqlShardManager) CreateShard(
 	}
 
 	if _, err := m.db.InsertIntoShards(ctx, row); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("CreateShard operation failed. Failed to insert into shards table. Error: %v", err),
-		}
+		return convertCommonErrors(m.db, "CreateShard", "Failed to insert into shards table.", err)
 	}
 
 	return nil
@@ -91,14 +89,7 @@ func (m *sqlShardManager) GetShard(
 ) (*persistence.InternalGetShardResponse, error) {
 	row, err := m.db.SelectFromShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(request.ShardID)})
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, &types.EntityNotExistsError{
-				Message: fmt.Sprintf("GetShard operation failed. Shard with ID %v not found. Error: %v", request.ShardID, err),
-			}
-		}
-		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("GetShard operation failed. Failed to get record. ShardId: %v. Error: %v", request.ShardID, err),
-		}
+		return nil, convertCommonErrors(m.db, "GetShard", fmt.Sprintf("Failed to get shard, ShardId: %v.", request.ShardID), err)
 	}
 
 	shardInfo, err := m.parser.ShardInfoFromBlob(row.Data, row.DataEncoding)
@@ -205,9 +196,7 @@ func lockShard(ctx context.Context, tx sqlplugin.Tx, shardID int, oldRangeID int
 				Message: fmt.Sprintf("Failed to lock shard with ID %v that does not exist.", shardID),
 			}
 		}
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("Failed to lock shard with ID: %v. Error: %v", shardID, err),
-		}
+		return convertCommonErrors(tx, "lockShard", fmt.Sprintf("Failed to lock shard with ID: %v.", shardID), err)
 	}
 
 	if int64(rangeID) != oldRangeID {
@@ -229,9 +218,7 @@ func readLockShard(ctx context.Context, tx sqlplugin.Tx, shardID int, oldRangeID
 				Message: fmt.Sprintf("Failed to lock shard with ID %v that does not exist.", shardID),
 			}
 		}
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("Failed to lock shard with ID: %v. Error: %v", shardID, err),
-		}
+		return convertCommonErrors(tx, "readLockShard", fmt.Sprintf("Failed to lock shard with ID: %v.", shardID), err)
 	}
 
 	if int64(rangeID) != oldRangeID {
