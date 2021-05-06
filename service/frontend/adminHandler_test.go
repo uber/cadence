@@ -495,7 +495,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 					"testkey": 1,
 				},
 			},
-			Expected: &types.BadRequestError{Message: "Key [testkey] is already whitelist"},
+			Expected: &types.BadRequestError{Message: "Key [testkey] is already whitelisted as a different type"},
 		},
 	}
 	for _, testCase := range testCases2 {
@@ -506,16 +506,17 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 		Name: "dynamic config update failed",
 		Request: &types.AddSearchAttributeRequest{
 			SearchAttribute: map[string]types.IndexedValueType{
-				"testkey2": 1,
+				"testkey2": -1,
 			},
 		},
-		Expected: &types.InternalServiceError{Message: "Failed to update dynamic config, err: error"},
+		Expected: &types.BadRequestError{Message: "Unknown value type, IndexedValueType(-1)"},
 	}
 	dynamicConfig.EXPECT().UpdateValue(dynamicconfig.ValidSearchAttributes, map[string]interface{}{
 		"testkey":  types.IndexedValueTypeKeyword,
-		"testkey2": 1,
+		"testkey2": -1,
 	}).Return(errors.New("error"))
-	s.Equal(dcUpdateTest.Expected, handler.AddSearchAttribute(ctx, dcUpdateTest.Request))
+	err := handler.AddSearchAttribute(ctx, dcUpdateTest.Request)
+	s.Equal(dcUpdateTest.Expected, err)
 
 	// ES operations tests
 	dynamicConfig.EXPECT().UpdateValue(gomock.Any(), gomock.Any()).Return(nil).Times(2)
