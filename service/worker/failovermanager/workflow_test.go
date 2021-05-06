@@ -70,6 +70,7 @@ func (s *failoverWorkflowTestSuite) SetupTest() {
 	s.activityEnv.RegisterActivityWithOptions(FailoverActivity, activity.RegisterOptions{Name: failoverActivityName})
 	s.activityEnv.RegisterActivityWithOptions(GetDomainsActivity, activity.RegisterOptions{Name: getDomainsActivityName})
 }
+
 func (s *failoverWorkflowTestSuite) TestValidateParams() {
 	s.Error(validateParams(nil))
 	params := &FailoverParams{}
@@ -227,8 +228,18 @@ func (s *failoverWorkflowTestSuite) TestWorkflow_WithDrillWaitTime_Success() {
 	params := &FailoverParams{
 		TargetCluster: "t",
 		SourceCluster: "s",
-		DrillWaitTime: 1,
+		DrillWaitTime: 1 * time.Second,
 	}
+	var timerCount int
+	s.workflowEnv.SetOnTimerScheduledListener(func(timerID string, duration time.Duration) {
+		timerCount++
+		if duration != time.Second && duration != 30*time.Second {
+			s.Fail("Receive unknown timer.")
+		}
+	})
+	s.workflowEnv.SetOnTimerFiredListener(func(timerID string) {
+		timerCount--
+	})
 	s.workflowEnv.ExecuteWorkflow(WorkflowTypeName, params)
 	var result FailoverResult
 	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
@@ -237,6 +248,7 @@ func (s *failoverWorkflowTestSuite) TestWorkflow_WithDrillWaitTime_Success() {
 
 	queryResult, err := s.workflowEnv.QueryWorkflow(QueryType)
 	s.NoError(err)
+	s.Equal(0, timerCount)
 	var res QueryResult
 	s.NoError(queryResult.Get(&res))
 	s.Equal(len(domains), res.TotalDomains)

@@ -70,20 +70,20 @@ func AdminFailoverStart(c *cli.Context) {
 
 // AdminFailoverPause pause failover workflow
 func AdminFailoverPause(c *cli.Context) {
-	err := executePauseOrResume(c, true)
+	err := executePauseOrResume(c, getFailoverWorkflowID(c), true)
 	if err != nil {
 		ErrorAndExit("Failed to pause failover workflow", err)
 	}
-	fmt.Println("Failover paused on " + getWorkflowID(c))
+	fmt.Println("Failover paused on " + getFailoverWorkflowID(c))
 }
 
 // AdminFailoverResume resume a paused failover workflow
 func AdminFailoverResume(c *cli.Context) {
-	err := executePauseOrResume(c, false)
+	err := executePauseOrResume(c, getFailoverWorkflowID(c), false)
 	if err != nil {
 		ErrorAndExit("Failed to resume failover workflow", err)
 	}
-	fmt.Println("Failover resumed on " + getWorkflowID(c))
+	fmt.Println("Failover resumed on " + getFailoverWorkflowID(c))
 }
 
 // AdminFailoverQuery query a failover workflow
@@ -91,7 +91,7 @@ func AdminFailoverQuery(c *cli.Context) {
 	client := getCadenceClient(c)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
-	workflowID := getWorkflowID(c)
+	workflowID := getFailoverWorkflowID(c)
 	runID := getRunID(c)
 	result := query(tcCtx, client, workflowID, runID)
 
@@ -115,7 +115,7 @@ func AdminFailoverAbort(c *cli.Context) {
 	if len(reason) == 0 {
 		reason = defaultAbortReason
 	}
-	workflowID := getWorkflowID(c)
+	workflowID := getFailoverWorkflowID(c)
 	runID := getRunID(c)
 
 	err := client.TerminateWorkflow(tcCtx, workflowID, runID, reason, nil)
@@ -161,7 +161,7 @@ func AdminFailoverRollback(c *cli.Context) {
 
 // AdminFailoverList list failover runs
 func AdminFailoverList(c *cli.Context) {
-	c.Set(FlagWorkflowID, getWorkflowID(c))
+	c.Set(FlagWorkflowID, getFailoverWorkflowID(c))
 	c.GlobalSet(FlagDomain, common.SystemLocalDomainName)
 	ListWorkflow(c)
 }
@@ -224,19 +224,23 @@ func failoverStart(c *cli.Context, params *startParams) {
 			common.MemoKeyForOperator: getOperator(),
 		},
 	}
-	if len(params.cron) > 0 {
+	if params.drillWaitTime > 0 {
 		options.ID = failovermanager.DrillWorkflowID
 		options.CronSchedule = params.cron
 	} else {
-		client := getCadenceClient(c)
-		tcCtx, cancel := newContext(c)
-		defer cancel()
-
-		// block managed failover if an on-going failover drill
-		result := query(tcCtx, client, failovermanager.DrillWorkflowID, "")
-		if result.State == failovermanager.WorkflowRunning {
-			ErrorAndExit("Failed to start failover workflow due to ongoing failover drill", nil)
+		// block if there is an on-going failover drill
+		if err := executePauseOrResume(c, failovermanager.DrillWorkflowID, true); err != nil {
+			switch err.(type) {
+			case *shared.EntityNotExistsError:
+				break
+			case *shared.WorkflowExecutionAlreadyCompletedError:
+				break
+			default:
+				ErrorAndExit("Failed to send pase signal to drill workflow", err)
+			}
 		}
+		fmt.Println("The failover drill workflow is paused. Please run 'cadence admin cluster failover resume --fd'" +
+			" to resume the drill workflow.")
 	}
 
 	foParams := failovermanager.FailoverParams{
@@ -256,7 +260,7 @@ func failoverStart(c *cli.Context, params *startParams) {
 	fmt.Println("rid: " + wf.RunID)
 }
 
-func getWorkflowID(c *cli.Context) string {
+func getFailoverWorkflowID(c *cli.Context) string {
 	if c.Bool(FlagFailoverDrill) {
 		return failovermanager.DrillWorkflowID
 	}
@@ -277,12 +281,11 @@ func isWorkflowTerminated(descResp *shared.DescribeWorkflowExecutionResponse) bo
 		descResp.WorkflowExecutionInfo.CloseStatus.Equals(shared.WorkflowExecutionCloseStatusTerminated)
 }
 
-func executePauseOrResume(c *cli.Context, isPause bool) error {
+func executePauseOrResume(c *cli.Context, workflowID string, isPause bool) error {
 	client := getCadenceClient(c)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
-	workflowID := getWorkflowID(c)
 	runID := getRunID(c)
 	var signalName string
 	if isPause {
@@ -313,11 +316,4 @@ func validateStartParams(params *startParams) {
 	if params.failoverTimeout <= 0 {
 		params.failoverTimeout = defaultFailoverTimeoutInSeconds
 	}
-}
-
-func validateWorkflowID(workflowID string) string {
-	if workflowID != failovermanager.DrillWorkflowID && workflowID != failovermanager.WorkflowID {
-		ErrorAndExit("The workflow ID is not supported", nil)
-	}
-	return workflowID
 }

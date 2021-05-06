@@ -1032,11 +1032,13 @@ func newAdminFailoverCommands() []cli.Command {
 				cli.IntFlag{
 					Name: FlagFailoverDrillWaitTimeWithAlias,
 					Usage: "Optional failover drill wait time. " +
-						"After the wait time, the domains will be reset to original regions.",
+						"After the wait time, the domains will be reset to original regions." +
+						"This field is required if the cron schedule is specified.",
 				},
 				cli.StringFlag{
-					Name:  FlagCronSchedule,
-					Usage: "Optional cron schedule on failover drill",
+					Name: FlagCronSchedule,
+					Usage: "Optional cron schedule on failover drill. Please specify failover drill wait time " +
+						"if this field is specific",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -1054,7 +1056,7 @@ func newAdminFailoverCommands() []cli.Command {
 				},
 				cli.BoolFlag{
 					Name: FlagFailoverDrillWithAlias,
-					Usage: "Optional to query failover workflow or failover drill workflow." +
+					Usage: "Optional to pause failover workflow or failover drill workflow." +
 						" The default is normal failover workflow",
 				},
 			},
@@ -1074,7 +1076,7 @@ func newAdminFailoverCommands() []cli.Command {
 				},
 				cli.BoolFlag{
 					Name: FlagFailoverDrillWithAlias,
-					Usage: "Optional to query failover workflow or failover drill workflow." +
+					Usage: "Optional to resume failover workflow or failover drill workflow." +
 						" The default is normal failover workflow",
 				},
 			},
@@ -1116,7 +1118,7 @@ func newAdminFailoverCommands() []cli.Command {
 				},
 				cli.BoolFlag{
 					Name: FlagFailoverDrillWithAlias,
-					Usage: "Optional to query failover workflow or failover drill workflow." +
+					Usage: "Optional to abort failover workflow or failover drill workflow." +
 						" The default is normal failover workflow",
 				},
 			},
