@@ -63,6 +63,11 @@ func (g grpcClient) ListTaskListPartitions(ctx context.Context, request *types.M
 	return proto.ToMatchingListTaskListPartitionsResponse(response), proto.ToError(err)
 }
 
+func (g grpcClient) GetTaskListsForDomain(ctx context.Context, request *types.MatchingGetTaskListsForDomainRequest, opts ...yarpc.CallOption) (*types.GetTaskListsForDomainResponse, error) {
+	response, err := g.c.GetTaskListsForDomain(ctx, proto.FromMatchingGetTaskListsForDomainRequest(request), opts...)
+	return proto.ToMatchingGetTaskListsForDomainResponse(response), proto.ToError(err)
+}
+
 func (g grpcClient) PollForActivityTask(ctx context.Context, request *types.MatchingPollForActivityTaskRequest, opts ...yarpc.CallOption) (*types.PollForActivityTaskResponse, error) {
 	response, err := g.c.PollForActivityTask(ctx, proto.FromMatchingPollForActivityTaskRequest(request), opts...)
 	return proto.ToMatchingPollForActivityTaskResponse(response), proto.ToError(err)

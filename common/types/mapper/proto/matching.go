@@ -200,6 +200,42 @@ func ToMatchingListTaskListPartitionsResponse(t *matchingv1.ListTaskListPartitio
 	}
 }
 
+func FromMatchingGetTaskListsForDomainRequest(t *types.MatchingGetTaskListsForDomainRequest) *matchingv1.GetTaskListsForDomainRequest {
+	if t == nil {
+		return nil
+	}
+	return &matchingv1.GetTaskListsForDomainRequest{
+		Domain: t.Domain,
+	}
+}
+
+func ToMatchingGetTaskListsForDomainRequest(t *matchingv1.GetTaskListsForDomainRequest) *types.MatchingGetTaskListsForDomainRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.MatchingGetTaskListsForDomainRequest{
+		Domain: t.Domain,
+	}
+}
+
+func FromMatchingGetTaskListsForDomainResponse(t *types.GetTaskListsForDomainResponse) *matchingv1.GetTaskListsForDomainResponse {
+	if t == nil {
+		return nil
+	}
+	return &matchingv1.GetTaskListsForDomainResponse{
+		TaskListNames: t.GetTaskListNames(),
+	}
+}
+
+func ToMatchingGetTaskListsForDomainResponse(t *matchingv1.GetTaskListsForDomainResponse) *types.GetTaskListsForDomainResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.GetTaskListsForDomainResponse{
+		TaskListNames: t.GetTaskListNames(),
+	}
+}
+
 func FromMatchingPollForActivityTaskRequest(t *types.MatchingPollForActivityTaskRequest) *matchingv1.PollForActivityTaskRequest {
 	if t == nil {
 		return nil

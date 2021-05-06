@@ -899,19 +899,30 @@ func (h handler) GetSearchAttributes(ctx context.Context, body wire.Value) (thri
 func (h handler) GetTaskListsForDomain(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args cadence.WorkflowService_GetTaskListsForDomain_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'WorkflowService' procedure 'GetTaskListsForDomain': %w", err)
 	}
 
-	success, err := h.impl.GetTaskListsForDomain(ctx, args.Request)
+	success, appErr := h.impl.GetTaskListsForDomain(ctx, args.Request)
 
-	hadError := err != nil
-	result, err := cadence.WorkflowService_GetTaskListsForDomain_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := cadence.WorkflowService_GetTaskListsForDomain_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
 

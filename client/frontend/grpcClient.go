@@ -111,6 +111,11 @@ func (g grpcClient) ListTaskListPartitions(ctx context.Context, request *types.L
 	return proto.ToListTaskListPartitionsResponse(response), proto.ToError(err)
 }
 
+func (g grpcClient) GetTaskListsForDomain(ctx context.Context, request *types.GetTaskListsForDomainRequest, opts ...yarpc.CallOption) (*types.GetTaskListsForDomainResponse, error) {
+	response, err := g.workflow.GetTaskListsForDomain(ctx, proto.FromGetTaskListsForDomainRequest(request), opts...)
+	return proto.ToGetTaskListsForDomainResponse(response), proto.ToError(err)
+}
+
 func (g grpcClient) ListWorkflowExecutions(ctx context.Context, request *types.ListWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*types.ListWorkflowExecutionsResponse, error) {
 	response, err := g.visibility.ListWorkflowExecutions(ctx, proto.FromListWorkflowExecutionsRequest(request), opts...)
 	return proto.ToListWorkflowExecutionsResponse(response), proto.ToError(err)

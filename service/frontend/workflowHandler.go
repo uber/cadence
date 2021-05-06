@@ -3337,7 +3337,7 @@ func (wh *WorkflowHandler) GetTaskListsForDomain(
 ) (resp *types.GetTaskListsForDomainResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendGetTaskListsForDomainScope, request)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendGetTaskListsForDomainScope, request)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {

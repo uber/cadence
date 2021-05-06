@@ -1713,6 +1713,42 @@ func ToListTaskListPartitionsResponse(t *apiv1.ListTaskListPartitionsResponse) *
 	}
 }
 
+func FromGetTaskListsForDomainRequest(t *types.GetTaskListsForDomainRequest) *apiv1.GetTaskListsForDomainRequest {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.GetTaskListsForDomainRequest{
+		Domain: t.Domain,
+	}
+}
+
+func ToGetTaskListsForDomainRequest(t *apiv1.GetTaskListsForDomainRequest) *types.GetTaskListsForDomainRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetTaskListsForDomainRequest{
+		Domain: t.Domain,
+	}
+}
+
+func FromGetTaskListsForDomainResponse(t *types.GetTaskListsForDomainResponse) *apiv1.GetTaskListsForDomainResponse {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.GetTaskListsForDomainResponse{
+		TaskListNames: t.GetTaskListNames(),
+	}
+}
+
+func ToGetTaskListsForDomainResponse(t *apiv1.GetTaskListsForDomainResponse) *types.GetTaskListsForDomainResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.GetTaskListsForDomainResponse{
+		TaskListNames: t.GetTaskListNames(),
+	}
+}
+
 func FromListWorkflowExecutionsRequest(t *types.ListWorkflowExecutionsRequest) *apiv1.ListWorkflowExecutionsRequest {
 	if t == nil {
 		return nil
