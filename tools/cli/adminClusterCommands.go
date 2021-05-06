@@ -59,7 +59,7 @@ func AdminAddSearchAttribute(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("Add search attribute failed.", err)
 	}
-	fmt.Println("Success")
+	fmt.Println("Success. Note that for a multil-node Cadence cluster, DynamicConfig MUST be updated separately to whitelist the new attributes.")
 }
 
 // AdminDescribeCluster is used to dump information about the cluster
