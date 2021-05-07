@@ -63,23 +63,23 @@ var (
 	}
 )
 
-// NewScope builds a new tally scope
-// for this metrics configuration
-//
-// If the underlying configuration is
-// valid for multiple reporter types,
-// only one of them will be used for
-// reporting. Currently, m3 is preferred
-// over statsd
+// NewScope builds a new tally scope for this metrics configuration
+// Only one reporter type is allowed
 func (c *Metrics) NewScope(logger log.Logger, service string) tally.Scope {
 	rootScope := tally.NoopScope
 	if c.M3 != nil {
 		rootScope = c.newM3Scope(logger)
 	}
 	if c.Statsd != nil {
+		if rootScope != tally.NoopScope {
+			logger.Fatal("error creating metric reporter: cannot have more than one types of metric configuration")
+		}
 		rootScope = c.newStatsdScope(logger)
 	}
 	if c.Prometheus != nil {
+		if rootScope != tally.NoopScope {
+			logger.Fatal("error creating metric reporter: cannot have more than one types of metric configuration")
+		}
 		rootScope = c.newPrometheusScope(logger)
 	}
 	rootScope = rootScope.Tagged(map[string]string{metrics.CadenceServiceTagName: service})
