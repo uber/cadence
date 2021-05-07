@@ -87,6 +87,12 @@ func (s *IntegrationSuite) TestStartWorkflowExecution() {
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
+		Header: &types.Header{
+			Fields: map[string][]byte{
+				"test-key":    []byte("test-value"),
+				"empty-value": {},
+			},
+		},
 	}
 
 	we0, err0 := s.engine.StartWorkflowExecution(createContext(), request)
