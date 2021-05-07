@@ -5149,6 +5149,13 @@ func ToPayload(p *apiv1.Payload) []byte {
 	if p == nil {
 		return nil
 	}
+	if p.Data == nil {
+		// FromPayload will not generate this case
+		// however, Data field will be dropped by the encoding if it's empty
+		// and receiver side will see nil for the Data field
+		// since we already know p is not nil, Data field must be an empty byte array
+		return []byte{}
+	}
 	return p.Data
 }
 

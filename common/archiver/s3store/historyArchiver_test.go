@@ -391,6 +391,52 @@ func (s *historyArchiverSuite) TestArchive_Fail_NonRetriableErrorOption() {
 	s.Equal(nonRetryableErr, err)
 }
 
+func (s *historyArchiverSuite) TestArchive_Skip() {
+	mockCtrl := gomock.NewController(s.T())
+	defer mockCtrl.Finish()
+	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
+	historyBlob := &archiver.HistoryBlob{
+		Header: &archiver.HistoryBlobHeader{
+			IsLast: common.BoolPtr(false),
+		},
+		Body: []*types.History{
+			{
+				Events: []*types.HistoryEvent{
+					{
+						EventID:   common.FirstEventID,
+						Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+						Version:   testCloseFailoverVersion,
+					},
+				},
+			},
+		},
+	}
+	gomock.InOrder(
+		historyIterator.EXPECT().HasNext().Return(true),
+		historyIterator.EXPECT().Next().Return(historyBlob, nil),
+		historyIterator.EXPECT().HasNext().Return(true),
+		historyIterator.EXPECT().Next().Return(nil, &types.EntityNotExistsError{Message: "workflow not found"}),
+	)
+
+	historyArchiver := s.newTestHistoryArchiver(historyIterator)
+	request := &archiver.ArchiveHistoryRequest{
+		DomainID:             testDomainID,
+		DomainName:           testDomainName,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		BranchToken:          testBranchToken,
+		NextEventID:          testNextEventID,
+		CloseFailoverVersion: testCloseFailoverVersion,
+	}
+	URI, err := archiver.NewURI(testBucketURI + "/TestArchive_Skip")
+	s.NoError(err)
+	err = historyArchiver.Archive(context.Background(), URI, request)
+	s.NoError(err)
+
+	expectedkey := constructHistoryKey("", testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, 0)
+	s.assertKeyExists(expectedkey)
+}
+
 func (s *historyArchiverSuite) TestArchive_Success() {
 	mockCtrl := gomock.NewController(s.T())
 	defer mockCtrl.Finish()

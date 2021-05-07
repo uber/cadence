@@ -187,23 +187,29 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 	}
 
 	searchAttr := request.GetSearchAttribute()
-	currentValidAttr, _ := adh.params.DynamicConfig.GetMapValue(
+	currentValidAttr, err := adh.params.DynamicConfig.GetMapValue(
 		dynamicconfig.ValidSearchAttributes, nil, definition.GetDefaultIndexedKeys())
-	for k, v := range searchAttr {
-		if definition.IsSystemIndexedKey(k) {
-			return adh.error(&types.BadRequestError{Message: fmt.Sprintf("Key [%s] is reserved by system", k)}, scope)
-		}
-		if _, exist := currentValidAttr[k]; exist {
-			return adh.error(&types.BadRequestError{Message: fmt.Sprintf("Key [%s] is already whitelist", k)}, scope)
-		}
-
-		currentValidAttr[k] = int(v)
+	if err != nil {
+		return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to get dynamic config, err: %v", err)}, scope)
 	}
 
-	// update dynamic config
-	err := adh.params.DynamicConfig.UpdateValue(dynamicconfig.ValidSearchAttributes, currentValidAttr)
+	for keyName, valueType := range searchAttr {
+		if definition.IsSystemIndexedKey(keyName) {
+			return adh.error(&types.BadRequestError{Message: fmt.Sprintf("Key [%s] is reserved by system", keyName)}, scope)
+		}
+		if currValType, exist := currentValidAttr[keyName]; exist {
+			if currValType != int(valueType) {
+				return adh.error(&types.BadRequestError{Message: fmt.Sprintf("Key [%s] is already whitelisted as a different type", keyName)}, scope)
+			}
+			adh.GetLogger().Warn("Adding a search attribute that is already existing in dynamicconfig, it's probably a noop if ElasticSearch is already added. Here will re-do it on ElasticSearch.")
+		}
+		currentValidAttr[keyName] = int(valueType)
+	}
+
+	// update dynamic config. Until the DB based dynamic config is implemented, we shouldn't fail the updating.
+	err = adh.params.DynamicConfig.UpdateValue(dynamicconfig.ValidSearchAttributes, currentValidAttr)
 	if err != nil {
-		return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to update dynamic config, err: %v", err)}, scope)
+		adh.GetLogger().Warn("Failed to update dynamicconfig. This is only useful in local dev environment. Please ignore this warn if this is in a real Cluster, because you dynamicconfig MUST be updated separately")
 	}
 
 	// update elasticsearch mapping, new added field will not be able to remove or update
