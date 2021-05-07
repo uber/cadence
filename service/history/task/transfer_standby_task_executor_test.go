@@ -1179,6 +1179,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessRecordWorkflowStartedTask(
 		WorkflowTimeout:  int64(executionInfo.WorkflowTimeout),
 		TaskID:           taskID,
 		TaskList:         taskListName,
+		IsCron:           false,
 	}).Return(nil).Once()
 
 	s.mockShard.SetCurrentTime(s.clusterName, now)

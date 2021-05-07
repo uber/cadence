@@ -2155,6 +2155,7 @@ func (s *transferActiveTaskExecutorSuite) createRecordWorkflowExecutionStartedRe
 	}
 	executionInfo := mutableState.GetExecutionInfo()
 	executionTimestamp := time.Unix(0, startEvent.GetTimestamp()).Add(time.Duration(backoffSeconds) * time.Second)
+	isCron := len(executionInfo.CronSchedule) > 0
 
 	return &persistence.RecordWorkflowExecutionStartedRequest{
 		Domain:             domainName,
@@ -2166,6 +2167,7 @@ func (s *transferActiveTaskExecutorSuite) createRecordWorkflowExecutionStartedRe
 		WorkflowTimeout:    int64(executionInfo.WorkflowTimeout),
 		TaskID:             task.TaskID,
 		TaskList:           task.TaskList,
+		IsCron:             isCron,
 	}
 }
 
