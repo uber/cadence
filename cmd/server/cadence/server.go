@@ -142,6 +142,7 @@ func (s *server) startService() common.Daemon {
 
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 
+	//TODO: remove this after 0.23 and mention a breaking change in config.
 	primaryClusterName := clusterMetadata.PrimaryClusterName
 	if len(primaryClusterName) == 0 {
 		primaryClusterName = clusterMetadata.MasterClusterName
