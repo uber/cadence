@@ -47,6 +47,7 @@ type (
 		TaskID             int64 // not persisted, used as condition update version for ES
 		Memo               *types.Memo
 		TaskList           string
+		IsCron             bool
 		SearchAttributes   map[string][]byte
 	}
 
@@ -66,6 +67,7 @@ type (
 		TaskID             int64 // not persisted, used as condition update version for ES
 		Memo               *types.Memo
 		TaskList           string
+		IsCron             bool
 		SearchAttributes   map[string][]byte
 	}
 
@@ -81,6 +83,7 @@ type (
 		TaskID             int64 // not persisted, used as condition update version for ES
 		Memo               *types.Memo
 		TaskList           string
+		IsCron             bool
 		SearchAttributes   map[string][]byte
 	}
 

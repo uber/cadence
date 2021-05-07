@@ -638,6 +638,7 @@ type (
 		HistoryLength    int64
 		Memo             *DataBlob
 		TaskList         string
+		IsCron           bool
 		SearchAttributes map[string]interface{}
 	}
 
@@ -691,6 +692,7 @@ type (
 		TaskID             int64
 		Memo               *DataBlob
 		TaskList           string
+		IsCron             bool
 		SearchAttributes   map[string][]byte
 	}
 
@@ -710,6 +712,7 @@ type (
 		Status             types.WorkflowExecutionCloseStatus
 		HistoryLength      int64
 		RetentionSeconds   time.Duration
+		IsCron             bool
 	}
 
 	// InternalUpsertWorkflowExecutionRequest is request to UpsertWorkflowExecution
@@ -724,6 +727,7 @@ type (
 		TaskID             int64
 		Memo               *DataBlob
 		TaskList           string
+		IsCron             bool
 		SearchAttributes   map[string][]byte
 	}
 

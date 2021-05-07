@@ -1121,8 +1121,8 @@ func createTableForListWorkflow(c *cli.Context, listAll bool, queryOpen bool) *t
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetBorder(false)
 	table.SetColumnSeparator("|")
-	header := []string{"Workflow Type", "Workflow ID", "Run ID", "Task List", "Start Time", "Execution Time"}
-	headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue}
+	header := []string{"Workflow Type", "Workflow ID", "Run ID", "Task List", "Is Cron", "Start Time", "Execution Time"}
+	headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue}
 	if !queryOpen {
 		header = append(header, "End Time")
 		headerColor = append(headerColor, tableHeaderBlue)
@@ -1220,7 +1220,15 @@ func appendWorkflowExecutionsToTable(
 			executionTime = convertTime(e.GetExecutionTime(), !printDateTime)
 			closeTime = convertTime(e.GetCloseTime(), !printDateTime)
 		}
-		row := []string{trimWorkflowType(e.Type.GetName()), e.Execution.GetWorkflowId(), e.Execution.GetRunId(), e.GetTaskList(), startTime, executionTime}
+		row := []string{
+			trimWorkflowType(e.Type.GetName()),
+			e.Execution.GetWorkflowId(),
+			e.Execution.GetRunId(),
+			e.GetTaskList(),
+			fmt.Sprintf("%t", e.GetIsCron()),
+			startTime,
+			executionTime,
+		}
 		if !queryOpen {
 			row = append(row, closeTime)
 		}

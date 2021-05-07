@@ -142,6 +142,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 	workflowTimeout int32,
 	taskID int64,
 	taskList string,
+	isCron bool,
 	visibilityMemo *types.Memo,
 	searchAttributes map[string][]byte,
 ) error {
@@ -175,6 +176,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		TaskID:             taskID,
 		Memo:               visibilityMemo,
 		TaskList:           taskList,
+		IsCron:             isCron,
 		SearchAttributes:   searchAttributes,
 	}
 
@@ -193,6 +195,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 	taskID int64,
 	taskList string,
 	visibilityMemo *types.Memo,
+	isCron bool,
 	searchAttributes map[string][]byte,
 ) error {
 
@@ -218,6 +221,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 		TaskID:             taskID,
 		Memo:               visibilityMemo,
 		TaskList:           taskList,
+		IsCron:             isCron,
 		SearchAttributes:   searchAttributes,
 	}
 
@@ -238,6 +242,7 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 	taskID int64,
 	visibilityMemo *types.Memo,
 	taskList string,
+	isCron bool,
 	searchAttributes map[string][]byte,
 ) error {
 
@@ -286,6 +291,7 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 			Memo:               visibilityMemo,
 			TaskList:           taskList,
 			SearchAttributes:   searchAttributes,
+			IsCron:             isCron,
 		}); err != nil {
 			return err
 		}
