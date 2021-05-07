@@ -148,6 +148,7 @@ func (h *historyArchiver) Archive(ctx context.Context, URI archiver.URI, request
 				// this may happen even in the middle of iterating history as two archival signals
 				// can be processed concurrently.
 				logger.Info(archiver.ArchiveSkippedInfoMsg)
+				scope.IncCounter(metrics.HistoryArchiverDuplicateArchivalsCount)
 				return nil
 			}
 
