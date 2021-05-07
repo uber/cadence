@@ -36,6 +36,7 @@ const (
 	Memo          = "Memo"
 	Encoding      = "Encoding"
 	TaskList      = "TaskList"
+	IsCron        = "IsCron"
 
 	KafkaKey = "KafkaKey"
 )

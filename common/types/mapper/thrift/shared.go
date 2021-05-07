@@ -6039,6 +6039,7 @@ func FromWorkflowExecutionInfo(t *types.WorkflowExecutionInfo) *shared.WorkflowE
 		SearchAttributes: FromSearchAttributes(t.SearchAttributes),
 		AutoResetPoints:  FromResetPoints(t.AutoResetPoints),
 		TaskList:         &t.TaskList,
+		IsCron:           &t.IsCron,
 	}
 }
 
@@ -6061,6 +6062,7 @@ func ToWorkflowExecutionInfo(t *shared.WorkflowExecutionInfo) *types.WorkflowExe
 		SearchAttributes: ToSearchAttributes(t.SearchAttributes),
 		AutoResetPoints:  ToResetPoints(t.AutoResetPoints),
 		TaskList:         t.GetTaskList(),
+		IsCron:           t.GetIsCron(),
 	}
 }
 

@@ -37,6 +37,7 @@ const (
 	KafkaKey        = "KafkaKey"
 	BinaryChecksums = "BinaryChecksums"
 	TaskList        = "TaskList"
+	IsCron          = "IsCron"
 
 	CustomStringField    = "CustomStringField"
 	CustomKeywordField   = "CustomKeywordField"
@@ -92,6 +93,7 @@ var systemIndexedKeys = map[string]interface{}{
 	CloseStatus:   shared.IndexedValueTypeInt,
 	HistoryLength: shared.IndexedValueTypeInt,
 	TaskList:      shared.IndexedValueTypeKeyword,
+	IsCron:        shared.IndexedValueTypeBool,
 }
 
 // IsSystemIndexedKey return true is key is system added

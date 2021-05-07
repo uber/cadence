@@ -57,12 +57,12 @@ require (
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.opencensus.io v0.22.5 // indirect
-	go.uber.org/atomic v1.5.1
-	go.uber.org/cadence v0.17.0
+	go.uber.org/atomic v1.7.0
+	go.uber.org/cadence v0.17.1-0.20210506170202-97f887f049c4
 	go.uber.org/fx v1.10.0
-	go.uber.org/multierr v1.4.0
+	go.uber.org/multierr v1.6.0
 	go.uber.org/thriftrw v1.25.0
-	go.uber.org/yarpc v1.52.0
+	go.uber.org/yarpc v1.53.2
 	go.uber.org/zap v1.13.0
 	golang.org/x/net v0.0.0-20201031054903-ff519b6c9102
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d

@@ -46,6 +46,9 @@
         "TaskList": {
           "type": "keyword"
         },
+        "IsCron": {
+          "type": "boolean"
+        },
         "Attr": {
           "properties": {
             "CadenceChangeVersion":  { "type": "keyword" },
