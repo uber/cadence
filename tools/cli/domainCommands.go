@@ -353,6 +353,39 @@ func (d *domainCLIImpl) failoverDomains(c *cli.Context) ([]string, []string) {
 	return succeedDomains, failedDomains
 }
 
+// RebalanceDomains is used for managed failover to rebalance with domain data PreferredCluster
+func (d *domainCLIImpl) RebalanceDomains(c *cli.Context) {
+	// ask user for confirmation
+	prompt("You are trying to rebalance all managed domains, continue? Y/N")
+	d.rebalanceDomains(c)
+}
+
+func (d *domainCLIImpl) rebalanceDomains(c *cli.Context) ([]string, []string) {
+	domains := d.getAllDomains(c)
+	shouldFailover := func(domain *types.DescribeDomainResponse) bool {
+		return len(getPreferredClusterName(domain.GetDomainInfo())) != 0 && isDomainFailoverManagedByCadence(domain)
+	}
+	var succeedDomains []string
+	var failedDomains []string
+	for _, domain := range domains {
+		if shouldFailover(domain) {
+			domainInfo := domain.GetDomainInfo()
+			domainName := domainInfo.GetName()
+			err := d.failover(c, domainName, getPreferredClusterName(domainInfo))
+			if err != nil {
+				printError(fmt.Sprintf("Failed failover domain: %s\n", domainName), err)
+				failedDomains = append(failedDomains, domainName)
+			} else {
+				fmt.Printf("Success failover domain: %s\n", domainName)
+				succeedDomains = append(succeedDomains, domainName)
+			}
+		}
+	}
+	fmt.Printf("Succeed %d: %v\n", len(succeedDomains), succeedDomains)
+	fmt.Printf("Failed  %d: %v\n", len(failedDomains), failedDomains)
+	return succeedDomains, failedDomains
+}
+
 func (d *domainCLIImpl) getAllDomains(c *cli.Context) []*types.DescribeDomainResponse {
 	var res []*types.DescribeDomainResponse
 	pagesize := int32(200)
@@ -650,4 +683,8 @@ func clustersToString(clusters []*types.ClusterReplicationConfiguration) string 
 		}
 	}
 	return res
+}
+
+func getPreferredClusterName(domainInfo *types.DomainInfo) string {
+	return domainInfo.GetData()[preferredClusterKey]
 }
