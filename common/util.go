@@ -226,6 +226,12 @@ func IsServiceTransientError(err error) bool {
 	return false
 }
 
+// IsEntityNotExistsError checks if the error is an entity not exists error.
+func IsEntityNotExistsError(err error) bool {
+	_, ok := err.(*types.EntityNotExistsError)
+	return ok
+}
+
 // IsServiceBusyError checks if the error is a service busy error.
 func IsServiceBusyError(err error) bool {
 	switch err.(type) {
