@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 You can find a list of previous releases on the [github releases](https://github.com/uber/cadence/releases) page.
 
 ## [Unreleased]
+
+
+## [0.21.0] - 2021-05-07
 ### Added
 - Added GRPC support. Cadence server will accept requests on both TChannel and GRPC. With dynamic config flag `system.enableGRPCOutbound` it will also switch to GRPC communication internally between server components.
 
@@ -14,7 +17,7 @@ You can find a list of previous releases on the [github releases](https://github
 - Fixed a bug where an error message is always displayed in Cadence UI `persistence max qps reached for list operations` on the workflow list screen (#3958)
 
 ### Changed
-- Bump CLI version to v0.18.3 (#3959)
+- Bump CLI version to v0.18.4 (#4150)
 
 ## [0.18.0] - 2021-01-22
 
