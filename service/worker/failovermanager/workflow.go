@@ -449,7 +449,7 @@ func FailoverActivity(ctx context.Context, params *FailoverActivityParams) (*Fai
 
 func cleanupChannel(channel workflow.Channel) {
 	for {
-		if _, hasMore := channel.ReceiveAsyncWithMoreFlag(nil); !hasMore {
+		if hasValue := channel.ReceiveAsync(nil); !hasValue {
 			return
 		}
 	}
