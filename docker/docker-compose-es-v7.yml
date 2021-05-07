@@ -33,7 +33,7 @@ services:
     environment:
       - discovery.type=single-node
   cadence:
-    image: ubercadence/server:master-auto-setup
+    image: ubercadence/server:0.21.0-auto-setup
     ports:
       - "8000:8000"
       - "8001:8001"
@@ -60,7 +60,7 @@ services:
       - kafka
       - elasticsearch
   cadence-web:
-    image: ubercadence/web:latest
+    image: ubercadence/web:v3.25.0
     environment:
       - "CADENCE_TCHANNEL_PEERS=cadence:7933"
     ports:
