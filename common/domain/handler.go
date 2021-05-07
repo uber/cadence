@@ -131,8 +131,8 @@ func (d *handlerImpl) RegisterDomain(
 		}
 	} else {
 		// cluster global domain enabled
-		if !d.clusterMetadata.IsMasterCluster() && registerRequest.GetIsGlobalDomain() {
-			return errNotMasterCluster
+		if !d.clusterMetadata.IsPrimaryCluster() && registerRequest.GetIsGlobalDomain() {
+			return errNotPrimaryCluster
 		}
 	}
 
@@ -486,8 +486,8 @@ func (d *handlerImpl) UpdateDomain(
 			return nil, errCannotDoDomainFailoverAndUpdate
 		}
 
-		if !activeClusterChanged && !d.clusterMetadata.IsMasterCluster() {
-			return nil, errNotMasterCluster
+		if !activeClusterChanged && !d.clusterMetadata.IsPrimaryCluster() {
+			return nil, errNotPrimaryCluster
 		}
 	} else {
 		if err := d.domainAttrValidator.validateDomainReplicationConfigForLocalDomain(
@@ -590,8 +590,8 @@ func (d *handlerImpl) DeprecateDomain(
 	}
 
 	isGlobalDomain := getResponse.IsGlobalDomain
-	if isGlobalDomain && !d.clusterMetadata.IsMasterCluster() {
-		return errNotMasterCluster
+	if isGlobalDomain && !d.clusterMetadata.IsPrimaryCluster() {
+		return errNotPrimaryCluster
 	}
 	getResponse.ConfigVersion = getResponse.ConfigVersion + 1
 	getResponse.Info.Status = persistence.DomainStatusDeprecated

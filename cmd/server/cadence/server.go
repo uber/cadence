@@ -142,11 +142,15 @@ func (s *server) startService() common.Daemon {
 
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 
+	primaryClusterName := clusterMetadata.PrimaryClusterName
+	if len(primaryClusterName) == 0 {
+		primaryClusterName = clusterMetadata.MasterClusterName
+	}
 	params.ClusterMetadata = cluster.NewMetadata(
 		params.Logger,
 		dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, clusterMetadata.EnableGlobalDomain),
 		clusterMetadata.FailoverVersionIncrement,
-		clusterMetadata.MasterClusterName,
+		primaryClusterName,
 		clusterMetadata.CurrentClusterName,
 		clusterMetadata.ClusterInformation,
 	)

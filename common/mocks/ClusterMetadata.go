@@ -75,8 +75,8 @@ func (_m *ClusterMetadata) GetCurrentClusterName() string {
 	return r0
 }
 
-// GetMasterClusterName provides a mock function with given fields:
-func (_m *ClusterMetadata) GetMasterClusterName() string {
+// GetPrimaryClusterName provides a mock function with given fields:
+func (_m *ClusterMetadata) GetPrimaryClusterName() string {
 	ret := _m.Called()
 
 	var r0 string
@@ -145,8 +145,8 @@ func (_m *ClusterMetadata) IsGlobalDomainEnabled() bool {
 	return r0
 }
 
-// IsMasterCluster provides a mock function with given fields:
-func (_m *ClusterMetadata) IsMasterCluster() bool {
+// IsPrimaryCluster provides a mock function with given fields:
+func (_m *ClusterMetadata) IsPrimaryCluster() bool {
 	ret := _m.Called()
 
 	var r0 bool

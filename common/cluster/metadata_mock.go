@@ -71,18 +71,18 @@ func (mr *MockMetadataMockRecorder) IsGlobalDomainEnabled() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsGlobalDomainEnabled", reflect.TypeOf((*MockMetadata)(nil).IsGlobalDomainEnabled))
 }
 
-// IsMasterCluster mocks base method
-func (m *MockMetadata) IsMasterCluster() bool {
+// IsPrimaryCluster mocks base method
+func (m *MockMetadata) IsPrimaryCluster() bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsMasterCluster")
+	ret := m.ctrl.Call(m, "IsPrimaryCluster")
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// IsMasterCluster indicates an expected call of IsMasterCluster
-func (mr *MockMetadataMockRecorder) IsMasterCluster() *gomock.Call {
+// IsPrimaryCluster indicates an expected call of IsPrimartCluster
+func (mr *MockMetadataMockRecorder) IsPrimaryCluster() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMasterCluster", reflect.TypeOf((*MockMetadata)(nil).IsMasterCluster))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsPrimaryCluster", reflect.TypeOf((*MockMetadata)(nil).IsPrimaryCluster))
 }
 
 // GetNextFailoverVersion mocks base method
@@ -113,18 +113,18 @@ func (mr *MockMetadataMockRecorder) IsVersionFromSameCluster(version1, version2 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsVersionFromSameCluster", reflect.TypeOf((*MockMetadata)(nil).IsVersionFromSameCluster), version1, version2)
 }
 
-// GetMasterClusterName mocks base method
-func (m *MockMetadata) GetMasterClusterName() string {
+// GetPrimaryClusterName mocks base method
+func (m *MockMetadata) GetPrimaryClusterName() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMasterClusterName")
+	ret := m.ctrl.Call(m, "GetPrimaryClusterName")
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
-// GetMasterClusterName indicates an expected call of GetMasterClusterName
-func (mr *MockMetadataMockRecorder) GetMasterClusterName() *gomock.Call {
+// GetPrimaryClusterName indicates an expected call of GetPrimaryClusterName
+func (mr *MockMetadataMockRecorder) GetPrimaryClusterName() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMasterClusterName", reflect.TypeOf((*MockMetadata)(nil).GetMasterClusterName))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrimaryClusterName", reflect.TypeOf((*MockMetadata)(nil).GetPrimaryClusterName))
 }
 
 // GetCurrentClusterName mocks base method

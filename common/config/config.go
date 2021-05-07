@@ -262,8 +262,10 @@ type (
 		EnableGlobalDomain bool `yaml:"enableGlobalDomain"`
 		// FailoverVersionIncrement is the increment of each cluster version when failover happens
 		FailoverVersionIncrement int64 `yaml:"failoverVersionIncrement"`
-		// MasterClusterName is the master cluster name, only the master cluster can register / update domain
+		// PrimaryClusterName is the primary cluster name, only the primary cluster can register / update domain
 		// all clusters can do domain failover
+		PrimaryClusterName string `yaml:"primaryClusterName"`
+		// MasterClusterName is deprecated. Please use PrimaryClusterName.
 		MasterClusterName string `yaml:"masterClusterName"`
 		// CurrentClusterName is the name of the current cluster
 		CurrentClusterName string `yaml:"currentClusterName"`
