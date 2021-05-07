@@ -312,6 +312,54 @@ func (h *historyArchiverSuite) TestArchive_Fail_NonRetriableErrorOption() {
 	h.Equal(errUploadNonRetriable, err)
 }
 
+func (h *historyArchiverSuite) TestArchive_Skip() {
+	ctx := context.Background()
+	mockCtrl := gomock.NewController(h.T())
+	URI, err := archiver.NewURI("gs://my-bucket-cad/cadence_archival/development")
+	h.NoError(err)
+	storageWrapper := &mocks.Client{}
+	storageWrapper.On("Exist", ctx, URI, mock.Anything).Return(true, nil)
+	storageWrapper.On("Upload", ctx, URI, mock.Anything, mock.Anything).Return(nil)
+
+	defer mockCtrl.Finish()
+	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
+	historyBlob := &archiver.HistoryBlob{
+		Header: &archiver.HistoryBlobHeader{
+			IsLast: common.BoolPtr(false),
+		},
+		Body: []*types.History{
+			{
+				Events: []*types.HistoryEvent{
+					{
+						EventID:   common.FirstEventID,
+						Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+						Version:   testCloseFailoverVersion,
+					},
+				},
+			},
+		},
+	}
+	gomock.InOrder(
+		historyIterator.EXPECT().HasNext().Return(true),
+		historyIterator.EXPECT().Next().Return(historyBlob, nil),
+		historyIterator.EXPECT().HasNext().Return(true),
+		historyIterator.EXPECT().Next().Return(nil, &types.EntityNotExistsError{Message: "workflow not found"}),
+	)
+
+	historyArchiver := newHistoryArchiver(h.container, historyIterator, storageWrapper)
+	request := &archiver.ArchiveHistoryRequest{
+		DomainID:             testDomainID,
+		DomainName:           testDomainName,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		BranchToken:          testBranchToken,
+		NextEventID:          testNextEventID,
+		CloseFailoverVersion: testCloseFailoverVersion,
+	}
+	err = historyArchiver.Archive(ctx, h.testArchivalURI, request)
+	h.NoError(err)
+}
+
 func (h *historyArchiverSuite) TestArchive_Success() {
 
 	ctx := context.Background()
