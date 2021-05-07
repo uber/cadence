@@ -896,6 +896,10 @@ func TestPayload(t *testing.T) {
 	for _, item := range [][]byte{nil, {}, testdata.Payload1} {
 		assert.Equal(t, item, ToPayload(FromPayload(item)))
 	}
+
+	assert.Equal(t, []byte{}, ToPayload(&apiv1.Payload{
+		Data: nil,
+	}))
 }
 func TestPayloadMap(t *testing.T) {
 	for _, item := range []map[string][]byte{nil, {}, testdata.PayloadMap} {
