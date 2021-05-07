@@ -145,6 +145,8 @@ func (s *server) startService() common.Daemon {
 	primaryClusterName := clusterMetadata.PrimaryClusterName
 	if len(primaryClusterName) == 0 {
 		primaryClusterName = clusterMetadata.MasterClusterName
+		log.Println("[Warning]MasterClusterName config is deprecated. " +
+			"Please replace it with PrimaryClusterName.")
 	}
 	params.ClusterMetadata = cluster.NewMetadata(
 		params.Logger,
