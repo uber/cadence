@@ -199,6 +199,8 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 		if shouldPause {
 			wfState = WorkflowPaused
 			resumeCh.Receive(ctx, nil)
+			// clean up all pending pause signal
+			cleanupChannel(pauseCh)
 		}
 		wfState = WorkflowRunning
 	}
@@ -233,7 +235,9 @@ func failoverDomainsByBatch(
 	domains []string,
 	params *FailoverParams,
 	pauseSignalHandler func(),
-	reverseFailover bool) (successDomains []string, failedDomains []string) {
+	reverseFailover bool,
+) (successDomains []string, failedDomains []string) {
+
 	totalNumOfDomains := len(domains)
 	batchSize := params.BatchFailoverSize
 	times := totalNumOfDomains/batchSize + 1
@@ -441,4 +445,12 @@ func FailoverActivity(ctx context.Context, params *FailoverActivityParams) (*Fai
 		SuccessDomains: successDomains,
 		FailedDomains:  failedDomains,
 	}, nil
+}
+
+func cleanupChannel(channel workflow.Channel) {
+	for {
+		if _, hasMore := channel.ReceiveAsyncWithMoreFlag(nil); !hasMore {
+			return
+		}
+	}
 }

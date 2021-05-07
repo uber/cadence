@@ -228,6 +228,11 @@ func failoverStart(c *cli.Context, params *startParams) {
 		options.ID = failovermanager.DrillWorkflowID
 		options.CronSchedule = params.cron
 	} else {
+
+		if len(params.cron) > 0 {
+			ErrorAndExit("The drill wait time is required when cron is specified.", nil)
+		}
+
 		// block if there is an on-going failover drill
 		if err := executePauseOrResume(c, failovermanager.DrillWorkflowID, true); err != nil {
 			switch err.(type) {
