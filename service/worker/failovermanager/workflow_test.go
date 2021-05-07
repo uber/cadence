@@ -71,6 +71,10 @@ func (s *failoverWorkflowTestSuite) SetupTest() {
 	s.activityEnv.RegisterActivityWithOptions(GetDomainsActivity, activity.RegisterOptions{Name: getDomainsActivityName})
 }
 
+func (s *failoverWorkflowTestSuite) TearDownTest() {
+	s.workflowEnv.AssertExpectations(s.T())
+}
+
 func (s *failoverWorkflowTestSuite) TestValidateParams() {
 	s.Error(validateParams(nil))
 	params := &FailoverParams{}
