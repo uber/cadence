@@ -11,6 +11,7 @@ CREATE TABLE executions_visibility (
   memo                 BLOB,
   encoding             VARCHAR(64) NOT NULL,
   task_list            VARCHAR(255) DEFAULT '' NOT NULL,
+  is_cron              BOOLEAN DEFAULT false NOT NULL,
 
   PRIMARY KEY  (domain_id, run_id)
 );

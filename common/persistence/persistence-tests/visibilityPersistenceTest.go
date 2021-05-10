@@ -147,6 +147,62 @@ func (s *VisibilityPersistenceSuite) TestBasicVisibility() {
 	s.assertClosedExecutionEquals(closeReq, resp.Executions[0])
 }
 
+// TestCronVisibility test
+func (s *VisibilityPersistenceSuite) TestCronVisibility() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	testDomainUUID := uuid.New()
+
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: "visibility-cron-workflow-test",
+		RunID:      "fb15e4b5-356f-466d-8c6d-a29223e5c537",
+	}
+
+	startTime := time.Now().Add(time.Second * -5).UnixNano()
+	startReq := &p.RecordWorkflowExecutionStartedRequest{
+		DomainUUID:       testDomainUUID,
+		Execution:        workflowExecution,
+		WorkflowTypeName: "visibility-cron-workflow",
+		StartTimestamp:   startTime,
+		IsCron:           true,
+	}
+	err0 := s.VisibilityMgr.RecordWorkflowExecutionStarted(ctx, startReq)
+	s.Nil(err0)
+
+	resp, err1 := s.VisibilityMgr.ListOpenWorkflowExecutions(ctx, &p.ListWorkflowExecutionsRequest{
+		DomainUUID:   testDomainUUID,
+		PageSize:     1,
+		EarliestTime: startTime,
+		LatestTime:   startTime,
+	})
+	s.Nil(err1)
+	s.Equal(1, len(resp.Executions))
+	s.True(resp.Executions[0].IsCron)
+
+	closeReq := &p.RecordWorkflowExecutionClosedRequest{
+		DomainUUID:       testDomainUUID,
+		Execution:        workflowExecution,
+		WorkflowTypeName: "visibility-workflow",
+		StartTimestamp:   startTime,
+		CloseTimestamp:   time.Now().UnixNano(),
+		HistoryLength:    5,
+		IsCron:           true,
+	}
+	err2 := s.VisibilityMgr.RecordWorkflowExecutionClosed(ctx, closeReq)
+	s.Nil(err2)
+
+	resp, err4 := s.VisibilityMgr.ListClosedWorkflowExecutions(ctx, &p.ListWorkflowExecutionsRequest{
+		DomainUUID:   testDomainUUID,
+		PageSize:     1,
+		EarliestTime: startTime,
+		LatestTime:   startTime,
+	})
+	s.Nil(err4)
+	s.Equal(1, len(resp.Executions))
+	s.True(resp.Executions[0].IsCron)
+}
+
 // TestBasicVisibilityTimeSkew test
 func (s *VisibilityPersistenceSuite) TestBasicVisibilityTimeSkew() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)

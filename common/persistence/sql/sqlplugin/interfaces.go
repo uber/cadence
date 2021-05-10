@@ -515,6 +515,7 @@ type (
 		HistoryLength    *int64
 		Memo             []byte
 		Encoding         string
+		IsCron           bool
 	}
 
 	// VisibilityFilter contains the column names within executions_visibility table that

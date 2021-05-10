@@ -32,14 +32,14 @@ import (
 
 const (
 	templateCreateWorkflowExecutionStarted = `INSERT INTO executions_visibility (` +
-		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding) ` +
-		`VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, is_cron) ` +
+		`VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          ON CONFLICT (domain_id, run_id) DO NOTHING`
 
 	templateCreateWorkflowExecutionClosed = `INSERT INTO executions_visibility (` +
-		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, close_time, close_status, history_length, memo, encoding) ` +
-		`VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		ON CONFLICT (domain_id, run_id) DO UPDATE 
+		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, close_time, close_status, history_length, memo, encoding, is_cron) ` +
+		`VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		ON CONFLICT (domain_id, run_id) DO UPDATE
 		  SET workflow_id = excluded.workflow_id,
 		      start_time = excluded.start_time,
 		      execution_time = excluded.execution_time,
@@ -48,7 +48,8 @@ const (
 			  close_status = excluded.close_status,
 			  history_length = excluded.history_length,
 			  memo = excluded.memo,
-			  encoding = excluded.encoding`
+			  encoding = excluded.encoding,
+				is_cron = excluded.is_cron`
 
 	// RunID condition is needed for correct pagination
 	templateConditions1 = ` AND domain_id = $1
@@ -65,7 +66,7 @@ const (
          ORDER BY start_time DESC, run_id
          LIMIT $7`
 
-	templateOpenFieldNames = `workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding`
+	templateOpenFieldNames = `workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, is_cron`
 	templateOpenSelect     = `SELECT ` + templateOpenFieldNames + ` FROM executions_visibility WHERE close_status IS NULL `
 
 	templateClosedSelect = `SELECT ` + templateOpenFieldNames + `, close_time, close_status, history_length
@@ -85,7 +86,7 @@ const (
 
 	templateGetClosedWorkflowExecutionsByStatus = templateClosedSelect + `AND close_status = $1` + templateConditions2
 
-	templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, execution_time, memo, encoding, close_time, workflow_type_name, close_status, history_length 
+	templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, execution_time, memo, encoding, close_time, workflow_type_name, close_status, history_length, is_cron
 		 FROM executions_visibility
 		 WHERE domain_id = $1 AND close_status IS NOT NULL
 		 AND run_id = $2`
@@ -107,7 +108,8 @@ func (pdb *db) InsertIntoVisibility(ctx context.Context, row *sqlplugin.Visibili
 		row.ExecutionTime,
 		row.WorkflowTypeName,
 		row.Memo,
-		row.Encoding)
+		row.Encoding,
+		row.IsCron)
 }
 
 // ReplaceIntoVisibility replaces an existing row if it exist or creates a new row in visibility table
@@ -127,7 +129,8 @@ func (pdb *db) ReplaceIntoVisibility(ctx context.Context, row *sqlplugin.Visibil
 			*row.CloseStatus,
 			*row.HistoryLength,
 			row.Memo,
-			row.Encoding)
+			row.Encoding,
+			row.IsCron)
 	default:
 		return nil, errCloseParams
 	}
