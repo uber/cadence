@@ -47,8 +47,6 @@ import (
 
 const (
 	maxEventID = 9999
-
-	cassandraProtoVersion = 4
 )
 
 // AdminShowWorkflow shows history
