@@ -71,7 +71,7 @@ services:
 clusterMetadata:
   enableGlobalDomain: true
   failoverVersionIncrement: 10
-  masterClusterName: "active"
+  primaryClusterName: "active"
   currentClusterName: "active"
   clusterInformation:
     active:
