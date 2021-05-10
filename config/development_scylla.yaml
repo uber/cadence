@@ -7,10 +7,12 @@ persistence:
       cassandra:
         hosts: "127.0.0.1"
         keyspace: "cadence"
+        protoVersion: 4
     scylla-visibility:
       cassandra:
         hosts: "127.0.0.1"
         keyspace: "cadence_visibility"
+        protoVersion: 4
 
 ringpop:
   name: cadence
