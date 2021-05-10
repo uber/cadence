@@ -58,9 +58,7 @@ func newMetadataPersistenceV2(
 func updateMetadata(ctx context.Context, tx sqlplugin.Tx, oldNotificationVersion int64) error {
 	result, err := tx.UpdateDomainMetadata(ctx, &sqlplugin.DomainMetadataRow{NotificationVersion: oldNotificationVersion})
 	if err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("Failed to update domain metadata. Error: %v", err),
-		}
+		return convertCommonErrors(tx, "updateDomainMetadata", "", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
@@ -70,7 +68,7 @@ func updateMetadata(ctx context.Context, tx sqlplugin.Tx, oldNotificationVersion
 		}
 	} else if rowsAffected != 1 {
 		return &types.InternalServiceError{
-			Message: fmt.Sprintf("Failed to update domain metadata. <>1 rows affected. Error: %v", err),
+			Message: fmt.Sprintf("Failed to update domain metadata. <>1 rows affected."),
 		}
 	}
 
@@ -80,9 +78,7 @@ func updateMetadata(ctx context.Context, tx sqlplugin.Tx, oldNotificationVersion
 func lockMetadata(ctx context.Context, tx sqlplugin.Tx) error {
 	err := tx.LockDomainMetadata(ctx)
 	if err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("Failed to lock domain metadata. Error: %v", err),
-		}
+		return convertCommonErrors(tx, "lockDomainMetadata", "", err)
 	}
 	return nil
 }
@@ -200,9 +196,7 @@ func (m *sqlMetadataManagerV2) GetDomain(
 				Message: fmt.Sprintf("Domain %s does not exist.", identity),
 			}
 		default:
-			return nil, &types.InternalServiceError{
-				Message: fmt.Sprintf("GetDomain operation failed. Error %v", err),
-			}
+			return nil, convertCommonErrors(m.db, "GetDomain", "", err)
 		}
 	}
 
@@ -362,9 +356,7 @@ func (m *sqlMetadataManagerV2) GetMetadata(
 ) (*persistence.GetMetadataResponse, error) {
 	row, err := m.db.SelectFromDomainMetadata(ctx)
 	if err != nil {
-		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("GetMetadata operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(m.db, "GetMetadata", "", err)
 	}
 	return &persistence.GetMetadataResponse{NotificationVersion: row.NotificationVersion}, nil
 }
@@ -386,9 +378,7 @@ func (m *sqlMetadataManagerV2) ListDomains(
 		if err == sql.ErrNoRows {
 			return &persistence.InternalListDomainsResponse{}, nil
 		}
-		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListDomains operation failed. Failed to get domain rows. Error: %v", err),
-		}
+		return nil, convertCommonErrors(m.db, "ListDomains", "Failed to get domain rows.", err)
 	}
 
 	var domains []*persistence.InternalGetDomainResponse

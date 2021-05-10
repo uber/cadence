@@ -143,7 +143,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 		if m.db.IsDupEntryError(err) {
 			return &p.ConditionFailedError{Msg: fmt.Sprintf("AppendHistoryNodes: row already exist: %v", err)}
 		}
-		return &types.InternalServiceError{Message: fmt.Sprintf("AppendHistoryEvents: %v", err)}
+		return convertCommonErrors(m.db, "AppendHistoryEvents", "", err)
 	}
 	return nil
 }
@@ -353,14 +353,14 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 	}
 	result, err := m.db.InsertIntoHistoryTree(ctx, row)
 	if err != nil {
-		return nil, err
+		return nil, convertCommonErrors(m.db, "ForkHistoryBranch", "", err)
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return nil, err
 	}
 	if rowsAffected != 1 {
-		return nil, fmt.Errorf("expected 1 row to be affected for tree table, got %v", rowsAffected)
+		return nil, types.InternalServiceError{Message: fmt.Sprintf("expected 1 row to be affected for tree table, got %v", rowsAffected)}
 	}
 	return resp, nil
 }

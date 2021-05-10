@@ -142,11 +142,18 @@ func (s *server) startService() common.Daemon {
 
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 
+	//TODO: remove this after 0.23 and mention a breaking change in config.
+	primaryClusterName := clusterMetadata.PrimaryClusterName
+	if len(primaryClusterName) == 0 {
+		primaryClusterName = clusterMetadata.MasterClusterName
+		log.Println("[Warning]MasterClusterName config is deprecated. " +
+			"Please replace it with PrimaryClusterName.")
+	}
 	params.ClusterMetadata = cluster.NewMetadata(
 		params.Logger,
 		dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, clusterMetadata.EnableGlobalDomain),
 		clusterMetadata.FailoverVersionIncrement,
-		clusterMetadata.MasterClusterName,
+		primaryClusterName,
 		clusterMetadata.CurrentClusterName,
 		clusterMetadata.ClusterInformation,
 	)
