@@ -50,6 +50,15 @@ func PluginRegistered(pluginName string) bool {
 	return ok
 }
 
+// GetRegisteredPluginNames returns the list of registered plugin names
+func GetRegisteredPluginNames() []string {
+	var plugins []string
+	for k := range supportedPlugins {
+		plugins = append(plugins, k)
+	}
+	return plugins
+}
+
 // NewSQLDB creates a returns a reference to a logical connection to the
 // underlying SQL database. The returned object is to tied to a single
 // SQL database and the object can be used to perform CRUD operations on
