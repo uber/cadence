@@ -11,7 +11,7 @@ You can find a list of previous releases on the [github releases](https://github
 - Added GRPC support. Cadence server will accept requests on both TChannel and GRPC. With dynamic config flag `system.enableGRPCOutbound` it will also switch to GRPC communication internally between server components.
 
 ### Fixed
-- Replace masterClusterName config with primaryClusterName(#4185)
+- This change contains breaking change on user config. The masterClusterName config key is deprecated and is replaced with primaryClusterName key. (#4185)
 
 ### Changed
 - Bump CLI version to v0.18.3 (#3959)
