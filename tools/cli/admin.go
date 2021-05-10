@@ -1029,6 +1029,17 @@ func newAdminFailoverCommands() []cli.Command {
 					Usage: "Optional domains to failover, eg d1,d2..,dn. " +
 						"Only provided domains in source cluster will be failover.",
 				},
+				cli.IntFlag{
+					Name: FlagFailoverDrillWaitTimeWithAlias,
+					Usage: "Optional failover drill wait time. " +
+						"After the wait time, the domains will be reset to original regions." +
+						"This field is required if the cron schedule is specified.",
+				},
+				cli.StringFlag{
+					Name: FlagCronSchedule,
+					Usage: "Optional cron schedule on failover drill. Please specify failover drill wait time " +
+						"if this field is specific",
+				},
 			},
 			Action: func(c *cli.Context) {
 				AdminFailoverStart(c)
@@ -1043,7 +1054,13 @@ func newAdminFailoverCommands() []cli.Command {
 					Name:  FlagRunIDWithAlias,
 					Usage: "Optional Failover workflow runID, default is latest runID",
 				},
+				cli.BoolFlag{
+					Name: FlagFailoverDrillWithAlias,
+					Usage: "Optional to pause failover workflow or failover drill workflow." +
+						" The default is normal failover workflow",
+				},
 			},
+
 			Action: func(c *cli.Context) {
 				AdminFailoverPause(c)
 			},
@@ -1057,6 +1074,11 @@ func newAdminFailoverCommands() []cli.Command {
 					Name:  FlagRunIDWithAlias,
 					Usage: "Optional Failover workflow runID, default is latest runID",
 				},
+				cli.BoolFlag{
+					Name: FlagFailoverDrillWithAlias,
+					Usage: "Optional to resume failover workflow or failover drill workflow." +
+						" The default is normal failover workflow",
+				},
 			},
 			Action: func(c *cli.Context) {
 				AdminFailoverResume(c)
@@ -1067,6 +1089,11 @@ func newAdminFailoverCommands() []cli.Command {
 			Aliases: []string{"q"},
 			Usage:   "query failover workflow state",
 			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name: FlagFailoverDrillWithAlias,
+					Usage: "Optional to query failover workflow or failover drill workflow." +
+						" The default is normal failover workflow",
+				},
 				cli.StringFlag{
 					Name:  FlagRunIDWithAlias,
 					Usage: "Optional Failover workflow runID, default is latest runID",
@@ -1088,6 +1115,11 @@ func newAdminFailoverCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagReasonWithAlias,
 					Usage: "Optional reason why abort",
+				},
+				cli.BoolFlag{
+					Name: FlagFailoverDrillWithAlias,
+					Usage: "Optional to abort failover workflow or failover drill workflow." +
+						" The default is normal failover workflow",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -1140,6 +1172,11 @@ func newAdminFailoverCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagWorkflowIDWithAlias,
 					Usage: "Ignore this. It is a dummy flag which will be forced overwrite",
+				},
+				cli.BoolFlag{
+					Name: FlagFailoverDrillWithAlias,
+					Usage: "Optional to query failover workflow or failover drill workflow." +
+						" The default is normal failover workflow",
 				},
 			},
 			Action: func(c *cli.Context) {
