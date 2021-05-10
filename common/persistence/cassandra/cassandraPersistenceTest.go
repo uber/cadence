@@ -118,13 +118,14 @@ func (s *TestCluster) TearDownTestDatabase() {
 // CreateSession from PersistenceTestCluster interface
 func (s *TestCluster) CreateSession() {
 	s.cluster = &gocql.ClusterConfig{
-		Hosts:       s.cfg.Hosts,
-		Port:        s.cfg.Port,
-		User:        s.cfg.User,
-		Password:    s.cfg.Password,
-		Keyspace:    "system",
-		Consistency: gocql.One,
-		Timeout:     40 * time.Second,
+		Hosts:        s.cfg.Hosts,
+		Port:         s.cfg.Port,
+		User:         s.cfg.User,
+		Password:     s.cfg.Password,
+		ProtoVersion: s.cfg.ProtoVersion,
+		Keyspace:     "system",
+		Consistency:  gocql.One,
+		Timeout:      40 * time.Second,
 	}
 
 	var err error

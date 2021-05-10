@@ -40,14 +40,15 @@ type (
 
 	// CQLClientConfig contains the configuration for cql client
 	CQLClientConfig struct {
-		Hosts       string
-		Port        int
-		User        string
-		Password    string
-		Keyspace    string
-		Timeout     int
-		NumReplicas int
-		TLS         *config.TLS
+		Hosts        string
+		Port         int
+		User         string
+		Password     string
+		Keyspace     string
+		Timeout      int
+		NumReplicas  int
+		ProtoVersion int
+		TLS          *config.TLS
 	}
 )
 
@@ -56,7 +57,6 @@ var errGetSchemaVersion = errors.New("Failed to get current schema version from 
 
 const (
 	DefaultTimeout       = 30 // Timeout in seconds
-	cqlProtoVersion      = 4  // default CQL protocol version
 	DefaultCassandraPort = 9042
 	SystemKeyspace       = "system"
 )
@@ -103,9 +103,9 @@ func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
 		User:         cfg.User,
 		Password:     cfg.Password,
 		Keyspace:     cfg.Keyspace,
+		ProtoVersion: cfg.ProtoVersion,
 		TLS:          cfg.TLS,
 		Timeout:      time.Duration(cfg.Timeout) * time.Second,
-		ProtoVersion: cqlProtoVersion,
 		Consistency:  gocql.All,
 	})
 	if err != nil {
