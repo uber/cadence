@@ -962,6 +962,11 @@ func getDBFlags() []cli.Flag {
 			},
 			Usage: "sql database decoding types",
 		},
+		cli.IntFlag{
+			Name:  FlagProtoVersion,
+			Value: 4,
+			Usage: "sql database protocol version",
+		},
 		cli.BoolFlag{
 			Name:  FlagEnableTLS,
 			Usage: "enable TLS over cassandra connection",
