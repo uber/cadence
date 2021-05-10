@@ -76,7 +76,7 @@ type (
 	TestClusterConfig struct {
 		FrontendAddress       string
 		EnableArchival        bool
-		IsMasterCluster       bool
+		IsPrimaryCluster      bool
 		ClusterNo             int
 		ClusterMetadata       config.ClusterMetadata
 		MessagingClientConfig *MessagingClientConfig
@@ -164,14 +164,14 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 func NewClusterMetadata(options *TestClusterConfig, logger log.Logger) cluster.Metadata {
 	clusterMetadata := cluster.GetTestClusterMetadata(
 		options.ClusterMetadata.EnableGlobalDomain,
-		options.IsMasterCluster,
+		options.IsPrimaryCluster,
 	)
-	if !options.IsMasterCluster && options.ClusterMetadata.MasterClusterName != "" { // xdc cluster metadata setup
+	if !options.IsPrimaryCluster && options.ClusterMetadata.PrimaryClusterName != "" { // xdc cluster metadata setup
 		clusterMetadata = cluster.NewMetadata(
 			logger,
 			dynamicconfig.GetBoolPropertyFn(options.ClusterMetadata.EnableGlobalDomain),
 			options.ClusterMetadata.FailoverVersionIncrement,
-			options.ClusterMetadata.MasterClusterName,
+			options.ClusterMetadata.PrimaryClusterName,
 			options.ClusterMetadata.CurrentClusterName,
 			options.ClusterMetadata.ClusterInformation,
 		)

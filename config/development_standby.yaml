@@ -71,7 +71,7 @@ clusterMetadata:
   replicationConsumer:
     type: kafka
   failoverVersionIncrement: 10
-  masterClusterName: "active"
+  primaryClusterName: "active"
   currentClusterName: "standby"
   clusterInformation:
     active:
