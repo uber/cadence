@@ -2089,6 +2089,7 @@ func FromPollForDecisionTaskResponse(t *types.PollForDecisionTaskResponse) *apiv
 		ScheduledTime:             unixNanoToTime(t.ScheduledTimestamp),
 		StartedTime:               unixNanoToTime(t.StartedTimestamp),
 		Queries:                   FromWorkflowQueryMap(t.Queries),
+		NextEventId:               t.NextEventID,
 	}
 }
 
@@ -2111,6 +2112,7 @@ func ToPollForDecisionTaskResponse(t *apiv1.PollForDecisionTaskResponse) *types.
 		ScheduledTimestamp:        timeToUnixNano(t.ScheduledTime),
 		StartedTimestamp:          timeToUnixNano(t.StartedTime),
 		Queries:                   ToWorkflowQueryMap(t.Queries),
+		NextEventID:               t.NextEventId,
 	}
 }
 

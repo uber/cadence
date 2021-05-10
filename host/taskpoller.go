@@ -148,6 +148,10 @@ Loop:
 			continue Loop
 		}
 
+		if response.GetNextEventID() == 0 {
+			p.Logger.Fatal("NextEventID is not set for decision or query task")
+		}
+
 		var events []*types.HistoryEvent
 		if response.Query == nil || !pollStickyTaskList {
 			// if not query task, should have some history events
