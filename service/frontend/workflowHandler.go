@@ -3687,7 +3687,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 		WorkflowExecution:         matchingResp.WorkflowExecution,
 		WorkflowType:              matchingResp.WorkflowType,
 		PreviousStartedEventID:    matchingResp.PreviousStartedEventID,
-		StartedEventID:            matchingResp.StartedEventID,
+		StartedEventID:            matchingResp.StartedEventID, // this field is not set for query tasks as there's no decision task started event
 		Query:                     matchingResp.Query,
 		BacklogCountHint:          matchingResp.BacklogCountHint,
 		Attempt:                   matchingResp.Attempt,
@@ -3697,6 +3697,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 		ScheduledTimestamp:        matchingResp.ScheduledTimestamp,
 		StartedTimestamp:          matchingResp.StartedTimestamp,
 		Queries:                   matchingResp.Queries,
+		NextEventID:               matchingResp.NextEventID,
 	}
 
 	return resp, nil

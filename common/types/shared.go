@@ -5267,6 +5267,7 @@ type PollForDecisionTaskResponse struct {
 	ScheduledTimestamp        *int64                    `json:"scheduledTimestamp,omitempty"`
 	StartedTimestamp          *int64                    `json:"startedTimestamp,omitempty"`
 	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
+	NextEventID               int64                     `json:"nextEventId,omitempty"`
 }
 
 // GetTaskToken is an internal getter (TBD...)
@@ -5377,6 +5378,14 @@ func (v *PollForDecisionTaskResponse) GetStartedTimestamp() (o int64) {
 func (v *PollForDecisionTaskResponse) GetQueries() (o map[string]*WorkflowQuery) {
 	if v != nil && v.Queries != nil {
 		return v.Queries
+	}
+	return
+}
+
+// GetNextEventID is an internal getter (TBD...)
+func (v *PollForDecisionTaskResponse) GetNextEventID() (o int64) {
+	if v != nil {
+		return v.NextEventID
 	}
 	return
 }
