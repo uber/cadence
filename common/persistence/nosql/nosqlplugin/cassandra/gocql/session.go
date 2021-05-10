@@ -68,7 +68,6 @@ func initSession(
 	config ClusterConfig,
 ) (*gocql.Session, error) {
 	cluster := newCassandraCluster(config)
-	cluster.ProtoVersion = config.ProtoVersion
 	cluster.Consistency = mustConvertConsistency(config.Consistency)
 	cluster.SerialConsistency = mustConvertSerialConsistency(config.SerialConsistency)
 	cluster.Timeout = config.Timeout
