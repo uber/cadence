@@ -362,21 +362,20 @@ func (d *domainCLIImpl) RebalanceDomains(c *cli.Context) {
 
 func (d *domainCLIImpl) rebalanceDomains(c *cli.Context) ([]string, []string) {
 	domains := d.getAllDomains(c)
-	shouldFailover := func(domain *types.DescribeDomainResponse) bool {
-		return len(getPreferredClusterName(domain.GetDomainInfo())) != 0 && isDomainFailoverManagedByCadence(domain)
+	shouldRebalance := func(domain *types.DescribeDomainResponse) bool {
+		return len(getPreferredClusterName(domain)) != 0 && isDomainFailoverManagedByCadence(domain)
 	}
 	var succeedDomains []string
 	var failedDomains []string
 	for _, domain := range domains {
-		if shouldFailover(domain) {
-			domainInfo := domain.GetDomainInfo()
-			domainName := domainInfo.GetName()
-			err := d.failover(c, domainName, getPreferredClusterName(domainInfo))
+		if shouldRebalance(domain) {
+			domainName := domain.GetDomainInfo().GetName()
+			err := d.failover(c, domainName, getPreferredClusterName(domain))
 			if err != nil {
-				printError(fmt.Sprintf("Failed failover domain: %s\n", domainName), err)
+				printError(fmt.Sprintf("Failed re-balance domain: %s\n", domainName), err)
 				failedDomains = append(failedDomains, domainName)
 			} else {
-				fmt.Printf("Success failover domain: %s\n", domainName)
+				fmt.Printf("Success re-balance domain: %s\n", domainName)
 				succeedDomains = append(succeedDomains, domainName)
 			}
 		}
@@ -685,6 +684,6 @@ func clustersToString(clusters []*types.ClusterReplicationConfiguration) string 
 	return res
 }
 
-func getPreferredClusterName(domainInfo *types.DomainInfo) string {
-	return domainInfo.GetData()[preferredClusterKey]
+func getPreferredClusterName(domain *types.DescribeDomainResponse) string {
+	return domain.GetDomainInfo().GetData()[common.DomainDataKeyForPreferredCluster]
 }

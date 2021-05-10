@@ -693,12 +693,6 @@ func newAdminClusterCommands() []cli.Command {
 			Aliases: []string{"rb"},
 			Usage: "Rebalance cluster will failover managed failover domains to preferred cluster. " +
 				"You can set the preference in domain data with PreferredCluster.",
-			Flags: []cli.Flag{
-				cli.StringSliceFlag{
-					Name:  FlagFailoverDomains,
-					Usage: "Optional domains to do rebalance, eg d1,d2..,dn. ",
-				},
-			},
 			Action: func(c *cli.Context) {
 				newDomainCLI(c, false).RebalanceDomains(c)
 			},
