@@ -186,6 +186,7 @@ var (
 		ScheduledTimestamp:        &Timestamp1,
 		StartedTimestamp:          &Timestamp2,
 		Queries:                   WorkflowQueryMap,
+		NextEventID:               EventID3,
 	}
 	RespondDecisionTaskCompletedRequest = types.RespondDecisionTaskCompletedRequest{
 		TaskToken:                  TaskToken,
