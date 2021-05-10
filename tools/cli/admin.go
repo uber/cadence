@@ -965,7 +965,7 @@ func getDBFlags() []cli.Flag {
 		cli.IntFlag{
 			Name:  FlagProtoVersion,
 			Value: 4,
-			Usage: "sql database protocol version",
+			Usage: "cassandra protocol version",
 		},
 		cli.BoolFlag{
 			Name:  FlagEnableTLS,

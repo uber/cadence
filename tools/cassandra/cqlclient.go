@@ -103,9 +103,9 @@ func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
 		User:         cfg.User,
 		Password:     cfg.Password,
 		Keyspace:     cfg.Keyspace,
-		ProtoVersion: cfg.ProtoVersion,
 		TLS:          cfg.TLS,
 		Timeout:      time.Duration(cfg.Timeout) * time.Second,
+		ProtoVersion: cfg.ProtoVersion,
 		Consistency:  gocql.All,
 	})
 	if err != nil {
