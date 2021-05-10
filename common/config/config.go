@@ -198,6 +198,8 @@ type (
 		MaxConns int `yaml:"maxConns"`
 		// TLS configuration
 		TLS *TLS `yaml:"tls"`
+		// ProtoVersion
+		ProtoVersion int `yaml:"protoVersion"`
 	}
 
 	// SQL is the configuration for connecting to a SQL backed datastore
