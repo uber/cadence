@@ -347,7 +347,7 @@ func initializeClusterMetadata(
 		logger,
 		dynamicconfig.GetBoolPropertyFn(clusterMetadata.EnableGlobalDomain),
 		clusterMetadata.FailoverVersionIncrement,
-		clusterMetadata.MasterClusterName,
+		clusterMetadata.PrimaryClusterName,
 		clusterMetadata.CurrentClusterName,
 		clusterMetadata.ClusterInformation,
 	)

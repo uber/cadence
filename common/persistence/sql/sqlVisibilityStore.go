@@ -77,7 +77,10 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(
 		Encoding:         string(request.Memo.GetEncoding()),
 	})
 
-	return err
+	if err != nil {
+		return convertCommonErrors(s.db, "RecordWorkflowExecutionStarted", "", err)
+	}
+	return nil
 }
 
 func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(
@@ -99,14 +102,18 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(
 		Encoding:         string(request.Memo.GetEncoding()),
 	})
 	if err != nil {
-		return err
+		return convertCommonErrors(s.db, "RecordWorkflowExecutionClosed", "", err)
 	}
 	noRowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("RecordWorkflowExecutionClosed rowsAffected error: %v", err)
+		return &types.InternalServiceError{
+			Message: fmt.Sprintf("RecordWorkflowExecutionClosed rowsAffected error: %v", err),
+		}
 	}
 	if noRowsAffected > 2 { // either adds a new row or deletes old row and adds new row
-		return fmt.Errorf("RecordWorkflowExecutionClosed unexpected numRows (%v) updated", noRowsAffected)
+		return &types.InternalServiceError{
+			Message: fmt.Sprintf("RecordWorkflowExecutionClosed unexpected numRows (%v) updated", noRowsAffected),
+		}
 	}
 	return nil
 }
@@ -259,9 +266,7 @@ func (s *sqlVisibilityStore) GetClosedWorkflowExecution(
 					execution.GetWorkflowID(), execution.GetRunID()),
 			}
 		}
-		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("GetClosedWorkflowExecution operation failed. Select failed: %v", err),
-		}
+		return nil, convertCommonErrors(s.db, "GetClosedWorkflowExecution", "", err)
 	}
 	rows[0].DomainID = request.DomainUUID
 	rows[0].RunID = execution.GetRunID()
@@ -278,7 +283,7 @@ func (s *sqlVisibilityStore) DeleteWorkflowExecution(
 		RunID:    &request.RunID,
 	})
 	if err != nil {
-		return &types.InternalServiceError{Message: err.Error()}
+		return convertCommonErrors(s.db, "DeleteWorkflowExecution", "", err)
 	}
 	return nil
 }
@@ -338,9 +343,7 @@ func (s *sqlVisibilityStore) listWorkflowExecutions(opName string, pageToken []b
 	}
 	rows, err := selectOp(readLevel)
 	if err != nil {
-		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("%v operation failed. Select failed: %v", opName, err),
-		}
+		return nil, convertCommonErrors(s.db, opName, "", err)
 	}
 	if len(rows) == 0 {
 		return &p.InternalListWorkflowExecutionsResponse{}, nil

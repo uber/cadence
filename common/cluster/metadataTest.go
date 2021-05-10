@@ -77,10 +77,10 @@ var (
 )
 
 // GetTestClusterMetadata return an cluster metadata instance, which is initialized
-func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool) Metadata {
-	masterClusterName := TestCurrentClusterName
-	if !isMasterCluster {
-		masterClusterName = TestAlternativeClusterName
+func GetTestClusterMetadata(enableGlobalDomain bool, isPrimaryCluster bool) Metadata {
+	primaryClusterName := TestCurrentClusterName
+	if !isPrimaryCluster {
+		primaryClusterName = TestAlternativeClusterName
 	}
 
 	if enableGlobalDomain {
@@ -88,7 +88,7 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool) Metad
 			loggerimpl.NewNopLogger(),
 			dynamicconfig.GetBoolPropertyFn(true),
 			TestFailoverVersionIncrement,
-			masterClusterName,
+			primaryClusterName,
 			TestCurrentClusterName,
 			TestAllClusterInfo,
 		)

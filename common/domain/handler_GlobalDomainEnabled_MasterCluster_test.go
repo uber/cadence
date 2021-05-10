@@ -47,7 +47,7 @@ import (
 )
 
 type (
-	domainHandlerGlobalDomainEnabledMasterClusterSuite struct {
+	domainHandlerGlobalDomainEnabledPrimaryClusterSuite struct {
 		suite.Suite
 		persistencetests.TestBase
 
@@ -63,12 +63,12 @@ type (
 	}
 )
 
-func TestDomainHandlerGlobalDomainEnabledMasterClusterSuite(t *testing.T) {
-	s := new(domainHandlerGlobalDomainEnabledMasterClusterSuite)
+func TestDomainHandlerGlobalDomainEnabledPrimaryClusterSuite(t *testing.T) {
+	s := new(domainHandlerGlobalDomainEnabledPrimaryClusterSuite)
 	suite.Run(t, s)
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) SetupSuite() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
@@ -79,11 +79,11 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) SetupSuite() {
 	s.TestBase.Setup()
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TearDownSuite() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TearDownSuite() {
 	s.TestBase.TearDownWorkflowStore()
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) SetupTest() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) SetupTest() {
 	logger := loggerimpl.NewNopLogger()
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1
@@ -117,12 +117,12 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) SetupTest() {
 	).(*handlerImpl)
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TearDownTest() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TearDownTest() {
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockArchiverProvider.AssertExpectations(s.T())
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDomain_LocalDomain_InvalidCluster() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestRegisterGetDomain_LocalDomain_InvalidCluster() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
@@ -151,7 +151,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDoma
 	s.IsType(&types.BadRequestError{}, err)
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDomain_LocalDomain_AllDefault() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestRegisterGetDomain_LocalDomain_AllDefault() {
 	domainName := s.getRandomDomainName()
 	isGlobalDomain := false
 	var clusters []*types.ClusterReplicationConfiguration
@@ -201,7 +201,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDoma
 	s.Equal(isGlobalDomain, resp.GetIsGlobalDomain())
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDomain_LocalDomain_NoDefault() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestRegisterGetDomain_LocalDomain_NoDefault() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
@@ -268,7 +268,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDoma
 	s.Equal(isGlobalDomain, resp.GetIsGlobalDomain())
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain_LocalDomain_NoAttrSet() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateGetDomain_LocalDomain_NoAttrSet() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
@@ -350,7 +350,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 	)
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain_LocalDomain_AllAttrSet() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateGetDomain_LocalDomain_AllAttrSet() {
 	domainName := s.getRandomDomainName()
 	isGlobalDomain := false
 	err := s.handler.RegisterDomain(context.Background(), &types.RegisterDomainRequest{
@@ -438,7 +438,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 	)
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestDeprecateGetDomain_LocalDomain() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestDeprecateGetDomain_LocalDomain() {
 	domainName := s.getRandomDomainName()
 	domain := s.setupLocalDomain(domainName)
 
@@ -457,7 +457,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestDeprecateGetDom
 	assertDomainEqual(s.Suite, getResp, expectedResp)
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDomain_GlobalDomain_AllDefault() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestRegisterGetDomain_GlobalDomain_AllDefault() {
 	domainName := s.getRandomDomainName()
 	isGlobalDomain := true
 	var clusters []*types.ClusterReplicationConfiguration
@@ -509,7 +509,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDoma
 	s.Equal(isGlobalDomain, resp.GetIsGlobalDomain())
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDomain_GlobalDomain_NoDefault() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestRegisterGetDomain_GlobalDomain_NoDefault() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
@@ -577,7 +577,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDoma
 	s.Equal(isGlobalDomain, resp.GetIsGlobalDomain())
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain_GlobalDomain_NoAttrSet() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateGetDomain_GlobalDomain_NoAttrSet() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
@@ -667,7 +667,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 	)
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain_GlobalDomain_AllAttrSet() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateGetDomain_GlobalDomain_AllAttrSet() {
 	domainName := s.getRandomDomainName()
 	activeClusterName := ""
 	clusters := []*types.ClusterReplicationConfiguration{}
@@ -766,7 +766,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 	)
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain_GlobalDomain_Failover() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateGetDomain_GlobalDomain_Failover() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
@@ -861,7 +861,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 	)
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateDomain_CoolDown() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateDomain_CoolDown() {
 	domainConfig := Config{
 		MinRetentionDays:  dc.GetIntPropertyFn(s.minRetentionDays),
 		MaxBadBinaryCount: dc.GetIntPropertyFilteredByDomain(s.maxBadBinaryCount),
@@ -935,7 +935,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateDomain_Co
 	s.Error(err)
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestDeprecateGetDomain_GlobalDomain() {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestDeprecateGetDomain_GlobalDomain() {
 	domainName := s.getRandomDomainName()
 	domain := s.setupGlobalDomain(domainName)
 
@@ -956,15 +956,15 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestDeprecateGetDom
 	assertDomainEqual(s.Suite, getResp, expectedResp)
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) getRandomDomainName() string {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) getRandomDomainName() string {
 	return "domain" + uuid.New()
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) setupLocalDomain(domainName string) *types.DescribeDomainResponse {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) setupLocalDomain(domainName string) *types.DescribeDomainResponse {
 	return setupLocalDomain(s.Suite, s.handler, s.ClusterMetadata, domainName)
 }
 
-func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) setupGlobalDomain(domainName string) *types.DescribeDomainResponse {
+func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) setupGlobalDomain(domainName string) *types.DescribeDomainResponse {
 	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
 	return setupGlobalDomain(s.Suite, s.handler, s.ClusterMetadata, domainName)
 }

@@ -25,8 +25,8 @@ import (
 )
 
 var (
-	// err indicating that this cluster is not the master, so cannot do domain registration or update
-	errNotMasterCluster                    = &types.BadRequestError{Message: "Cluster is not master cluster, cannot do domain registration or domain update."}
+	// err indicating that this cluster is not the primary, so cannot do domain registration or update
+	errNotPrimaryCluster                   = &types.BadRequestError{Message: "Cluster is not primary cluster, cannot do domain registration or domain update."}
 	errCannotRemoveClustersFromDomain      = &types.BadRequestError{Message: "Cannot remove existing replicated clusters from a domain."}
 	errActiveClusterNotInClusters          = &types.BadRequestError{Message: "Active cluster is not contained in all clusters."}
 	errCannotDoDomainFailoverAndUpdate     = &types.BadRequestError{Message: "Cannot set active cluster to current cluster when other parameters are set."}

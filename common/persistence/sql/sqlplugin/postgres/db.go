@@ -54,9 +54,37 @@ var _ sqlplugin.Tx = (*db)(nil)
 // check http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
 const ErrDupEntry = "23505"
 
+const ErrInsufficientResources = "53000"
+const ErrTooManyConnections = "53300"
+
 func (pdb *db) IsDupEntryError(err error) bool {
 	sqlErr, ok := err.(*pq.Error)
 	return ok && sqlErr.Code == ErrDupEntry
+}
+
+func (mdb *db) IsNotFoundError(err error) bool {
+	if err == sql.ErrNoRows {
+		return true
+	}
+	return false
+}
+
+func (mdb *db) IsTimeoutError(err error) bool {
+	if err == context.DeadlineExceeded {
+		return true
+	}
+	return false
+}
+
+func (mdb *db) IsThrottlingError(err error) bool {
+	sqlErr, ok := err.(*pq.Error)
+	if ok {
+		if sqlErr.Code == ErrTooManyConnections ||
+			sqlErr.Code == ErrInsufficientResources {
+			return true
+		}
+	}
+	return false
 }
 
 // newDB returns an instance of DB, which is a logical
