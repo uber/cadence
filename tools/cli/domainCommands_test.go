@@ -24,6 +24,7 @@ package cli
 
 import (
 	"flag"
+	"fmt"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -86,6 +87,37 @@ func (s *domainCommandsSuite) TestRebalanceDomains_Success() {
 	s.Equal(0, len(fail))
 }
 
+func (s *domainCommandsSuite) TestRebalanceDomains_UpdateDomain_Error() {
+	listDomainsResp := getListDomainsResponse()
+	preferredCluster := "active"
+	s.serverFrontendClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return(listDomainsResp, nil)
+	expectedUpdateRequest := &types.UpdateDomainRequest{
+		Name:              listDomainsResp.Domains[0].GetDomainInfo().GetName(),
+		ActiveClusterName: &preferredCluster,
+	}
+	s.serverFrontendClient.EXPECT().
+		UpdateDomain(gomock.Any(), expectedUpdateRequest).
+		Return(nil, fmt.Errorf("test")).Times(1)
+	success, fail := s.domainCLI.rebalanceDomains(s.cliCtx)
+	s.Equal(0, len(success))
+	s.Equal(1, len(fail))
+}
+
+func (s *domainCommandsSuite) TestRebalanceDomains_IsDryRun_Success() {
+	set := flag.NewFlagSet("test", 0)
+	set.Int(FlagContextTimeout, 10, "test flag")
+	set.Bool(FlagDryRun, true, "dry run")
+	cliCtx := cli.NewContext(nil, set, nil)
+	listDomainsResp := getListDomainsResponse()
+	s.serverFrontendClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return(listDomainsResp, nil)
+	s.serverFrontendClient.EXPECT().
+		UpdateDomain(gomock.Any(), gomock.Any()).
+		Return(&types.UpdateDomainResponse{}, nil).Times(0)
+	success, fail := s.domainCLI.rebalanceDomains(cliCtx)
+	s.Equal(1, len(success))
+	s.Equal(0, len(fail))
+}
+
 func (s *domainCommandsSuite) TestRebalanceDomains_NoManagedFailover_Skipped() {
 	listDomainsResp := getListDomainsResponse()
 	preferredCluster := "active"
@@ -129,6 +161,7 @@ func getListDomainsResponse() *types.ListDomainsResponse {
 						common.DomainDataKeyForPreferredCluster: "active",
 					},
 				},
+				IsGlobalDomain: true,
 			},
 		},
 		NextPageToken: nil,

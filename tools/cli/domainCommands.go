@@ -362,15 +362,23 @@ func (d *domainCLIImpl) RebalanceDomains(c *cli.Context) {
 
 func (d *domainCLIImpl) rebalanceDomains(c *cli.Context) ([]string, []string) {
 	domains := d.getAllDomains(c)
+	isDryRun := c.Bool(FlagDryRun)
 	shouldRebalance := func(domain *types.DescribeDomainResponse) bool {
-		return len(getPreferredClusterName(domain)) != 0 && isDomainFailoverManagedByCadence(domain)
+		return len(getPreferredClusterName(domain)) != 0 &&
+			isDomainFailoverManagedByCadence(domain) &&
+			domain.IsGlobalDomain &&
+			domain.GetDomainInfo().GetStatus() == types.DomainStatusRegistered
 	}
 	var succeedDomains []string
 	var failedDomains []string
 	for _, domain := range domains {
 		if shouldRebalance(domain) {
 			domainName := domain.GetDomainInfo().GetName()
-			err := d.failover(c, domainName, getPreferredClusterName(domain))
+			var err error
+			if !isDryRun {
+				err = d.failover(c, domainName, getPreferredClusterName(domain))
+			}
+
 			if err != nil {
 				printError(fmt.Sprintf("Failed re-balance domain: %s\n", domainName), err)
 				failedDomains = append(failedDomains, domainName)

@@ -67,8 +67,6 @@ const (
 	searchAttrInputSeparator = "|"
 
 	defaultGracefulFailoverTimeoutInSeconds = 60
-
-	preferredClusterKey = "PreferredCluster"
 )
 
 var envKeysForUserName = []string{
