@@ -441,9 +441,7 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(
 				newWorkflow.ExecutionInfo.CloseStatus,
 				startVersion,
 				lastWriteVersion); err != nil {
-				return &types.InternalServiceError{
-					Message: fmt.Sprintf("UpdateWorkflowExecution: failed to continue as new current execution. Error: %v", err),
-				}
+				return err
 			}
 		} else {
 			startVersion := updateWorkflow.StartVersion
@@ -462,9 +460,7 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(
 				executionInfo.CloseStatus,
 				startVersion,
 				lastWriteVersion); err != nil {
-				return &types.InternalServiceError{
-					Message: fmt.Sprintf("UpdateWorkflowExecution: failed to update current execution. Error: %v", err),
-				}
+				return err
 			}
 		}
 
