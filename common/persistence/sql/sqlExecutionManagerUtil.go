@@ -1035,7 +1035,7 @@ func createTimerTasks(
 
 	if int(rowsAffected) != len(timerTasks) {
 		return &types.InternalServiceError{
-			Message: fmt.Sprintf("createTimerTasks failed. Inserted %v instead of %v rows into timer_tasks. Error: %v", rowsAffected, len(timerTasks), err),
+			Message: fmt.Sprintf("createTimerTasks failed. Inserted %v instead of %v rows into timer_tasks.", rowsAffected, len(timerTasks)),
 		}
 	}
 
