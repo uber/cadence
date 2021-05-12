@@ -185,6 +185,9 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 	if err == sql.ErrNoRows || (err == nil && len(rows) == 0) {
 		return &p.InternalReadHistoryBranchResponse{}, nil
 	}
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "ReadHistoryBranch", "", err)
+	}
 
 	history := make([]*p.DataBlob, 0, int(request.PageSize))
 	eventBlob := &p.DataBlob{}
@@ -467,6 +470,9 @@ func (m *sqlHistoryV2Manager) GetAllHistoryTreeBranches(
 	if err == sql.ErrNoRows || (err == nil && len(rows) == 0) {
 		return &p.GetAllHistoryTreeBranchesResponse{}, nil
 	}
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "GetAllHistoryTreeBranches", "", err)
+	}
 	resp := &p.GetAllHistoryTreeBranchesResponse{}
 	resp.Branches = make([]p.HistoryBranchDetail, len(rows))
 	for i, row := range rows {
@@ -507,6 +513,9 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(
 	rows, err := m.db.SelectFromHistoryTree(ctx, treeFilter)
 	if err == sql.ErrNoRows || (err == nil && len(rows) == 0) {
 		return &p.InternalGetHistoryTreeResponse{}, nil
+	}
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "GetHistoryTree", "", err)
 	}
 	for _, row := range rows {
 		treeInfo, err := m.parser.HistoryTreeInfoFromBlob(row.Data, row.DataEncoding)
