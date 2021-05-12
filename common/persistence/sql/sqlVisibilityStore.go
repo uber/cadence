@@ -75,6 +75,7 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(
 		WorkflowTypeName: request.WorkflowTypeName,
 		Memo:             request.Memo.Data,
 		Encoding:         string(request.Memo.GetEncoding()),
+		IsCron:           request.IsCron,
 	})
 
 	if err != nil {
@@ -100,6 +101,7 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(
 		HistoryLength:    &request.HistoryLength,
 		Memo:             request.Memo.Data,
 		Encoding:         string(request.Memo.GetEncoding()),
+		IsCron:           request.IsCron,
 	})
 	if err != nil {
 		return convertCommonErrors(s.db, "RecordWorkflowExecutionClosed", "", err)
@@ -319,6 +321,7 @@ func (s *sqlVisibilityStore) rowToInfo(row *sqlplugin.VisibilityRow) *p.Internal
 		TypeName:      row.WorkflowTypeName,
 		StartTime:     row.StartTime,
 		ExecutionTime: row.ExecutionTime,
+		IsCron:        row.IsCron,
 		Memo:          p.NewDataBlob(row.Memo, common.EncodingType(row.Encoding)),
 	}
 	if row.CloseStatus != nil {
