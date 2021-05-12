@@ -141,6 +141,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(
 		InitiatedID:                        info.InitiatedID,
 		CompletionEventBatchID:             info.CompletionEventBatchID,
 		TaskList:                           info.TaskList,
+		IsCron:                             len(info.CronSchedule) > 0,
 		WorkflowTypeName:                   info.WorkflowTypeName,
 		WorkflowTimeout:                    int32(info.WorkflowTimeout.Seconds()),
 		DecisionStartToCloseTimeout:        int32(info.DecisionStartToCloseTimeout.Seconds()),
