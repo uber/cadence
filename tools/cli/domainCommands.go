@@ -355,24 +355,25 @@ func (d *domainCLIImpl) failoverDomains(c *cli.Context) ([]string, []string) {
 
 // RebalanceDomains is used for managed failover to rebalance with domain data PreferredCluster
 func (d *domainCLIImpl) RebalanceDomains(c *cli.Context) {
+	isDryRun := c.Bool(FlagDryRun)
 	// ask user for confirmation
-	prompt("You are trying to rebalance all managed domains, continue? Y/N")
-	d.rebalanceDomains(c)
+	if !isDryRun {
+		prompt("You are trying to rebalance all managed domains, continue? Y/N")
+	}
+	d.rebalanceDomains(c, isDryRun)
 }
 
-func (d *domainCLIImpl) rebalanceDomains(c *cli.Context) ([]string, []string) {
+func (d *domainCLIImpl) rebalanceDomains(c *cli.Context, isDryRun bool) ([]string, []string) {
 	domains := d.getAllDomains(c)
-	isDryRun := c.Bool(FlagDryRun)
-	shouldRebalance := func(domain *types.DescribeDomainResponse) bool {
-		return len(getPreferredClusterName(domain)) != 0 &&
-			isDomainFailoverManagedByCadence(domain) &&
-			domain.IsGlobalDomain &&
-			domain.GetDomainInfo().GetStatus() == types.DomainStatusRegistered
-	}
 	var succeedDomains []string
 	var failedDomains []string
+
 	for _, domain := range domains {
-		if shouldRebalance(domain) {
+		if shouldAllowRebalance(domain) {
+			if err := verifyPreferredCluster(domain); err != nil {
+				printError("Failed to verify preferred cluster", err)
+				continue
+			}
 			domainName := domain.GetDomainInfo().GetName()
 			var err error
 			if !isDryRun {
@@ -383,7 +384,7 @@ func (d *domainCLIImpl) rebalanceDomains(c *cli.Context) ([]string, []string) {
 				printError(fmt.Sprintf("Failed re-balance domain: %s\n", domainName), err)
 				failedDomains = append(failedDomains, domainName)
 			} else {
-				fmt.Printf("Success re-balance domain: %s\n", domainName)
+				fmt.Printf("Success re-balance domain %s to cluster %s.\n", domainName, getPreferredClusterName(domain))
 				succeedDomains = append(succeedDomains, domainName)
 			}
 		}
@@ -694,4 +695,22 @@ func clustersToString(clusters []*types.ClusterReplicationConfiguration) string 
 
 func getPreferredClusterName(domain *types.DescribeDomainResponse) string {
 	return domain.GetDomainInfo().GetData()[common.DomainDataKeyForPreferredCluster]
+}
+
+func shouldAllowRebalance(domain *types.DescribeDomainResponse) bool {
+	return isDomainFailoverManagedByCadence(domain) &&
+		domain.IsGlobalDomain &&
+		domain.GetDomainInfo().GetStatus() == types.DomainStatusRegistered &&
+		getPreferredClusterName(domain) != domain.ReplicationConfiguration.GetActiveClusterName()
+}
+
+func verifyPreferredCluster(domain *types.DescribeDomainResponse) error {
+	clusters := domain.ReplicationConfiguration.GetClusters()
+	preferCluster := getPreferredClusterName(domain)
+	for _, cluster := range clusters {
+		if cluster.GetClusterName() == preferCluster {
+			return nil
+		}
+	}
+	return fmt.Errorf("cannot find cluster %s in the domain clusters", preferCluster)
 }
