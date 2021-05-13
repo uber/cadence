@@ -737,7 +737,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 			FailedRequest: failRequest,
 		})
 		if err != nil {
-			return nil, wh.error(err, scope)
+			return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 		resp = &types.RecordActivityTaskHeartbeatResponse{CancelRequested: true}
 	} else {
@@ -746,7 +746,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 			HeartbeatRequest: heartbeatRequest,
 		})
 		if err != nil {
-			return nil, wh.error(err, scope)
+			return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	}
 
@@ -843,7 +843,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 			FailedRequest: failRequest,
 		})
 		if err != nil {
-			return nil, wh.error(err, scope)
+			return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 		resp = &types.RecordActivityTaskHeartbeatResponse{CancelRequested: true}
 	} else {
@@ -858,7 +858,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 			HeartbeatRequest: req,
 		})
 		if err != nil {
-			return nil, wh.error(err, scope)
+			return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	}
 
@@ -942,7 +942,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 			FailedRequest: failRequest,
 		})
 		if err != nil {
-			return wh.error(err, scope)
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	} else {
 		err = wh.GetHistoryClient().RespondActivityTaskCompleted(ctx, &types.HistoryRespondActivityTaskCompletedRequest{
@@ -950,7 +950,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 			CompleteRequest: completeRequest,
 		})
 		if err != nil {
-			return wh.error(err, scope)
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	}
 
@@ -1050,7 +1050,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 			FailedRequest: failRequest,
 		})
 		if err != nil {
-			return wh.error(err, scope)
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	} else {
 		req := &types.RespondActivityTaskCompletedRequest{
@@ -1064,7 +1064,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 			CompleteRequest: req,
 		})
 		if err != nil {
-			return wh.error(err, scope)
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	}
 
@@ -1147,7 +1147,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 		FailedRequest: failedRequest,
 	})
 	if err != nil {
-		return wh.error(err, scope)
+		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 	}
 	return nil
 }
@@ -1249,7 +1249,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 		FailedRequest: req,
 	})
 	if err != nil {
-		return wh.error(err, scope)
+		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 	}
 	return nil
 }
@@ -1332,7 +1332,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 			FailedRequest: failRequest,
 		})
 		if err != nil {
-			return wh.error(err, scope)
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	} else {
 		err = wh.GetHistoryClient().RespondActivityTaskCanceled(ctx, &types.HistoryRespondActivityTaskCanceledRequest{
@@ -1340,7 +1340,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 			CancelRequest: cancelRequest,
 		})
 		if err != nil {
-			return wh.error(err, scope)
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	}
 
@@ -1439,7 +1439,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 			FailedRequest: failRequest,
 		})
 		if err != nil {
-			return wh.error(err, scope)
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	} else {
 		req := &types.RespondActivityTaskCanceledRequest{
@@ -1453,7 +1453,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 			CancelRequest: req,
 		})
 		if err != nil {
-			return wh.error(err, scope)
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 		}
 	}
 
@@ -1517,7 +1517,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	}
 
 	if !wh.validIDLength(completeRequest.GetIdentity(), scope, domainName) {
-		return nil, wh.error(errIdentityTooLong, scope)
+		return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 	}
 
 	completedResp := &types.RespondDecisionTaskCompletedResponse{}
@@ -1622,7 +1622,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 		FailedRequest: failedRequest,
 	})
 	if err != nil {
-		return wh.error(err, scope)
+		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 	}
 	return nil
 }
@@ -2108,6 +2108,10 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	}, nil
 }
 
+func withSignalName(ctx context.Context, signalName string) context.Context {
+	return metrics.TagContext(ctx, metrics.SignalNameTag(signalName))
+}
+
 // SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in
 // WorkflowExecutionSignaled event recorded in the history and a decision task being created for the execution.
 func (wh *WorkflowHandler) SignalWorkflowExecution(
@@ -2116,6 +2120,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
+	ctx = withSignalName(ctx, signalRequest.GetSignalName())
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendSignalWorkflowExecutionScope, signalRequest)
 	defer sw.Stop()
 
@@ -2184,7 +2189,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		SignalRequest: signalRequest,
 	})
 	if err != nil {
-		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
+		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...))
 	}
 
 	return nil
@@ -2385,7 +2390,7 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 		TerminateRequest: terminateRequest,
 	})
 	if err != nil {
-		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
+		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...))
 	}
 
 	return nil
@@ -2490,7 +2495,7 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 		CancelRequest: cancelRequest,
 	})
 	if err != nil {
-		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
+		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...))
 	}
 
 	return nil
@@ -3100,7 +3105,7 @@ func (wh *WorkflowHandler) ResetStickyTaskList(
 		Execution:  resetRequest.Execution,
 	})
 	if err != nil {
-		return nil, wh.error(err, scope)
+		return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 	}
 	return &types.ResetStickyTaskListResponse{}, nil
 }
@@ -3526,6 +3531,9 @@ func (wh *WorkflowHandler) error(err error, scope metrics.Scope, tagsForErrorLog
 	case *types.EntityNotExistsError:
 		scope.IncCounter(metrics.CadenceErrEntityNotExistsCounter)
 		return err
+	case *types.WorkflowExecutionAlreadyCompletedError:
+		scope.IncCounter(metrics.CadenceErrWorkflowExecutionAlreadyCompletedCounter)
+		return err
 	case *types.WorkflowExecutionAlreadyStartedError:
 		scope.IncCounter(metrics.CadenceErrExecutionAlreadyStartedCounter)
 		return err
@@ -3684,7 +3692,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 		WorkflowExecution:         matchingResp.WorkflowExecution,
 		WorkflowType:              matchingResp.WorkflowType,
 		PreviousStartedEventID:    matchingResp.PreviousStartedEventID,
-		StartedEventID:            matchingResp.StartedEventID,
+		StartedEventID:            matchingResp.StartedEventID, // this field is not set for query tasks as there's no decision task started event
 		Query:                     matchingResp.Query,
 		BacklogCountHint:          matchingResp.BacklogCountHint,
 		Attempt:                   matchingResp.Attempt,
@@ -3694,6 +3702,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 		ScheduledTimestamp:        matchingResp.ScheduledTimestamp,
 		StartedTimestamp:          matchingResp.StartedTimestamp,
 		Queries:                   matchingResp.Queries,
+		NextEventID:               matchingResp.NextEventID,
 	}
 
 	return resp, nil
@@ -4026,4 +4035,24 @@ func checkRequiredDomainDataKVs(requiredDomainDataKeys map[string]interface{}, d
 		}
 	}
 	return nil
+}
+
+// Some error types are introduced later that some clients might not support
+// To make them backward compatible, we continue returning the legacy error types
+// for older clients
+func (wh *WorkflowHandler) normalizeVersionedErrors(ctx context.Context, err error) error {
+	switch err.(type) {
+	case *types.WorkflowExecutionAlreadyCompletedError:
+		call := yarpc.CallFromContext(ctx)
+		clientFeatureVersion := call.Header(common.FeatureVersionHeaderName)
+		clientImpl := call.Header(common.ClientImplHeaderName)
+		vErr := wh.versionChecker.SupportsWorkflowAlreadyCompletedError(clientImpl, clientFeatureVersion)
+		if vErr == nil {
+			return err
+		} else {
+			return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
+		}
+	default:
+		return err
+	}
 }

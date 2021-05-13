@@ -170,6 +170,7 @@ type (
 
 	// TasksRow represents a row in tasks table
 	TasksRow struct {
+		ShardID      int
 		DomainID     serialization.UUID
 		TaskType     int64
 		TaskID       int64
@@ -198,6 +199,7 @@ type (
 	// TasksFilter contains the column names within tasks table that
 	// can be used to filter results through a WHERE clause
 	TasksFilter struct {
+		ShardID              int
 		DomainID             serialization.UUID
 		TaskListName         string
 		TaskType             int64
@@ -513,6 +515,7 @@ type (
 		HistoryLength    *int64
 		Memo             []byte
 		Encoding         string
+		IsCron           bool
 	}
 
 	// VisibilityFilter contains the column names within executions_visibility table that
@@ -779,6 +782,8 @@ type (
 	// Tx defines the API for a SQL transaction
 	Tx interface {
 		tableCRUD
+		ErrorChecker
+
 		Commit() error
 		Rollback() error
 	}
@@ -786,10 +791,10 @@ type (
 	// DB defines the API for regular SQL operations of a Cadence server
 	DB interface {
 		tableCRUD
+		ErrorChecker
 
 		BeginTx(ctx context.Context) (Tx, error)
 		PluginName() string
-		IsDupEntryError(err error) bool
 		Close() error
 	}
 
@@ -798,5 +803,12 @@ type (
 		adminCRUD
 		PluginName() string
 		Close() error
+	}
+
+	ErrorChecker interface {
+		IsDupEntryError(err error) bool
+		IsNotFoundError(err error) bool
+		IsTimeoutError(err error) bool
+		IsThrottlingError(err error) bool
 	}
 )

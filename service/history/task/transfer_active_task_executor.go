@@ -298,6 +298,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	workflowCloseTimestamp := wfCloseTime
 	workflowCloseStatus := persistence.ToInternalWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 	workflowHistoryLength := mutableState.GetNextEventID() - 1
+	isCron := len(executionInfo.CronSchedule) > 0
 
 	startEvent, err := mutableState.GetStartEvent(ctx)
 	if err != nil {
@@ -327,6 +328,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		task.GetTaskID(),
 		visibilityMemo,
 		executionInfo.TaskList,
+		isCron,
 		searchAttr,
 	)
 	if err != nil {
@@ -353,7 +355,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 
 		// Check to see if the error is non-transient, in which case reset the error and continue with processing
 		switch err.(type) {
-		case *types.EntityNotExistsError:
+		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError:
 			err = nil
 		}
 	}
@@ -410,10 +412,6 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 	if task.DomainID == task.TargetDomainID && task.WorkflowID == task.TargetWorkflowID {
 		// it does not matter if the run ID is a mismatch
 		err = t.requestCancelExternalExecutionFailed(ctx, task, wfContext, targetDomainName, task.TargetWorkflowID, task.TargetRunID)
-		if _, ok := err.(*types.EntityNotExistsError); ok {
-			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
-			return nil
-		}
 		return err
 	}
 
@@ -750,6 +748,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	executionTimestamp := getWorkflowExecutionTimestamp(mutableState, startEvent)
 	visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
+	isCron := len(executionInfo.CronSchedule) > 0
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
@@ -767,6 +766,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 			workflowTimeout,
 			task.GetTaskID(),
 			executionInfo.TaskList,
+			isCron,
 			visibilityMemo,
 			searchAttr,
 		)
@@ -783,6 +783,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 		task.GetTaskID(),
 		executionInfo.TaskList,
 		visibilityMemo,
+		isCron,
 		searchAttr,
 	)
 }
@@ -993,9 +994,10 @@ func (t *transferActiveTaskExecutor) createFirstDecisionTask(
 	})
 
 	if err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); ok {
-			// Maybe child workflow execution already timedout or terminated
-			// Safe to discard the error and complete this transfer task
+		switch err.(type) {
+		// Maybe child workflow execution already timedout or terminated
+		// Safe to discard the error and complete this transfer task
+		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError:
 			return nil
 		}
 	}
@@ -1015,7 +1017,7 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionCompleted(
 	err := t.updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
+				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
 			}
 
 			initiatedEventID := task.ScheduleID
@@ -1033,9 +1035,10 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionCompleted(
 			return err
 		})
 
-	if _, ok := err.(*types.EntityNotExistsError); ok {
-		// this could happen if this is a duplicate processing of the task,
-		// or the execution has already completed.
+	switch err.(type) {
+	// this could happen if this is a duplicate processing of the task,
+	// or the execution has already completed.
+	case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError:
 		return nil
 	}
 	return err
@@ -1054,7 +1057,7 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionCompleted(
 	err := t.updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
+				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
 			}
 
 			initiatedEventID := task.ScheduleID
@@ -1073,11 +1076,13 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionCompleted(
 			return err
 		})
 
-	if _, ok := err.(*types.EntityNotExistsError); ok {
-		// this could happen if this is a duplicate processing of the task,
-		// or the execution has already completed.
+	switch err.(type) {
+	// this could happen if this is a duplicate processing of the task,
+	// or the execution has already completed.
+	case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError:
 		return nil
 	}
+
 	return err
 }
 
@@ -1093,7 +1098,7 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionFailed(
 	err := t.updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
+				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
 			}
 
 			initiatedEventID := task.ScheduleID
@@ -1113,9 +1118,10 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionFailed(
 			return err
 		})
 
-	if _, ok := err.(*types.EntityNotExistsError); ok {
-		// this could happen if this is a duplicate processing of the task,
-		// or the execution has already completed.
+	switch err.(type) {
+	// this could happen if this is a duplicate processing of the task,
+	// or the execution has already completed.
+	case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError:
 		return nil
 	}
 	return err
@@ -1134,7 +1140,7 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionFailed(
 	err := t.updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return &types.EntityNotExistsError{Message: "Workflow is not running."}
+				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
 			}
 
 			initiatedEventID := task.ScheduleID
@@ -1155,11 +1161,13 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionFailed(
 			return err
 		})
 
-	if _, ok := err.(*types.EntityNotExistsError); ok {
-		// this could happen if this is a duplicate processing of the task,
-		// or the execution has already completed.
+	switch err.(type) {
+	// this could happen if this is a duplicate processing of the task,
+	// or the execution has already completed.
+	case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError:
 		return nil
 	}
+
 	return err
 }
 
@@ -1458,7 +1466,7 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 			childInfo,
 		); err != nil {
 			switch err.(type) {
-			case *types.EntityNotExistsError, *types.CancellationAlreadyRequestedError:
+			case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.CancellationAlreadyRequestedError:
 				// expected error, no-op
 				break
 			default:

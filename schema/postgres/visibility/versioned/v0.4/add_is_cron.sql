@@ -1,0 +1,1 @@
+ALTER TABLE executions_visibility ADD is_cron boolean DEFAULT false;

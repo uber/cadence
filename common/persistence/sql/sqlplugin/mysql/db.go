@@ -25,6 +25,7 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/VividCortex/mysqlerr"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 
@@ -51,13 +52,50 @@ var _ sqlplugin.AdminDB = (*db)(nil)
 var _ sqlplugin.DB = (*db)(nil)
 var _ sqlplugin.Tx = (*db)(nil)
 
-// ErrDupEntry MySQL Error 1062 indicates a duplicate primary key i.e. the row already exists,
-// so we don't do the insert and return a ConditionalUpdate error.
-const ErrDupEntry = 1062
-
 func (mdb *db) IsDupEntryError(err error) bool {
 	sqlErr, ok := err.(*mysql.MySQLError)
-	return ok && sqlErr.Number == ErrDupEntry
+	// ErrDupEntry MySQL Error 1062 indicates a duplicate primary key i.e. the row already exists,
+	// so we don't do the insert and return a ConditionalUpdate error.
+	return ok && sqlErr.Number == mysqlerr.ER_DUP_ENTRY
+}
+
+func (mdb *db) IsNotFoundError(err error) bool {
+	if err == sql.ErrNoRows {
+		return true
+	}
+	return false
+}
+
+func (mdb *db) IsTimeoutError(err error) bool {
+	if err == context.DeadlineExceeded {
+		return true
+	}
+	sqlErr, ok := err.(*mysql.MySQLError)
+	if ok {
+		if sqlErr.Number == mysqlerr.ER_NET_READ_INTERRUPTED ||
+			sqlErr.Number == mysqlerr.ER_NET_WRITE_INTERRUPTED ||
+			sqlErr.Number == mysqlerr.ER_LOCK_WAIT_TIMEOUT ||
+			sqlErr.Number == mysqlerr.ER_XA_RBTIMEOUT ||
+			sqlErr.Number == mysqlerr.ER_QUERY_TIMEOUT ||
+			sqlErr.Number == mysqlerr.ER_LOCKING_SERVICE_TIMEOUT ||
+			sqlErr.Number == mysqlerr.ER_REGEXP_TIME_OUT {
+			return true
+		}
+	}
+	return false
+}
+
+func (mdb *db) IsThrottlingError(err error) bool {
+	sqlErr, ok := err.(*mysql.MySQLError)
+	if ok {
+		if sqlErr.Number == mysqlerr.ER_CON_COUNT_ERROR ||
+			sqlErr.Number == mysqlerr.ER_TOO_MANY_USER_CONNECTIONS ||
+			sqlErr.Number == mysqlerr.ER_TOO_MANY_CONCURRENT_TRXS ||
+			sqlErr.Number == mysqlerr.ER_CLONE_TOO_MANY_CONCURRENT_CLONES {
+			return true
+		}
+	}
+	return false
 }
 
 // newDB returns an instance of DB, which is a logical

@@ -37,14 +37,14 @@ type (
 		// IsGlobalDomainEnabled whether the global domain is enabled,
 		// this attr should be discarded when cross DC is made public
 		IsGlobalDomainEnabled() bool
-		// IsMasterCluster whether current cluster is master cluster
-		IsMasterCluster() bool
+		// IsPrimaryCluster whether current cluster is the primary cluster
+		IsPrimaryCluster() bool
 		// GetNextFailoverVersion return the next failover version for domain failover
 		GetNextFailoverVersion(string, int64) int64
 		// IsVersionFromSameCluster return true if 2 version are used for the same cluster
 		IsVersionFromSameCluster(version1 int64, version2 int64) bool
-		// GetMasterClusterName return the master cluster name
-		GetMasterClusterName() string
+		// GetPrimaryClusterName return the primary cluster name
+		GetPrimaryClusterName() string
 		// GetCurrentClusterName return the current cluster name
 		GetCurrentClusterName() string
 		// GetAllClusterInfo return the all cluster name -> corresponding info
@@ -60,9 +60,9 @@ type (
 		enableGlobalDomain dynamicconfig.BoolPropertyFn
 		// failoverVersionIncrement is the increment of each cluster's version when failover happen
 		failoverVersionIncrement int64
-		// masterClusterName is the name of the master cluster, only the master cluster can register / update domain
+		// primaryClusterName is the name of the primary cluster, only the primary cluster can register / update domain
 		// all clusters can do domain failover
-		masterClusterName string
+		primaryClusterName string
 		// currentClusterName is the name of the current cluster
 		currentClusterName string
 		// clusterInfo contains all cluster name -> corresponding information
@@ -77,15 +77,15 @@ func NewMetadata(
 	logger log.Logger,
 	enableGlobalDomain dynamicconfig.BoolPropertyFn,
 	failoverVersionIncrement int64,
-	masterClusterName string,
+	primaryClusterName string,
 	currentClusterName string,
 	clusterInfo map[string]config.ClusterInformation,
 ) Metadata {
 
 	if len(clusterInfo) == 0 {
 		panic("Empty cluster information")
-	} else if len(masterClusterName) == 0 {
-		panic("Master cluster name is empty")
+	} else if len(primaryClusterName) == 0 {
+		panic("Primary cluster name is empty")
 	} else if len(currentClusterName) == 0 {
 		panic("Current cluster name is empty")
 	} else if failoverVersionIncrement == 0 {
@@ -114,8 +114,8 @@ func NewMetadata(
 	if _, ok := clusterInfo[currentClusterName]; !ok {
 		panic("Current cluster is not specified in cluster info")
 	}
-	if _, ok := clusterInfo[masterClusterName]; !ok {
-		panic("Master cluster is not specified in cluster info")
+	if _, ok := clusterInfo[primaryClusterName]; !ok {
+		panic("Primary cluster is not specified in cluster info")
 	}
 	if len(versionToClusterName) != len(clusterInfo) {
 		panic("Cluster info initial versions have duplicates")
@@ -125,7 +125,7 @@ func NewMetadata(
 		logger:                   logger,
 		enableGlobalDomain:       enableGlobalDomain,
 		failoverVersionIncrement: failoverVersionIncrement,
-		masterClusterName:        masterClusterName,
+		primaryClusterName:       primaryClusterName,
 		currentClusterName:       currentClusterName,
 		clusterInfo:              clusterInfo,
 		versionToClusterName:     versionToClusterName,
@@ -160,13 +160,13 @@ func (metadata *metadataImpl) IsVersionFromSameCluster(version1 int64, version2 
 	return (version1-version2)%metadata.failoverVersionIncrement == 0
 }
 
-func (metadata *metadataImpl) IsMasterCluster() bool {
-	return metadata.masterClusterName == metadata.currentClusterName
+func (metadata *metadataImpl) IsPrimaryCluster() bool {
+	return metadata.primaryClusterName == metadata.currentClusterName
 }
 
-// GetMasterClusterName return the master cluster name
-func (metadata *metadataImpl) GetMasterClusterName() string {
-	return metadata.masterClusterName
+// GetPrimaryClusterName return the primary cluster name
+func (metadata *metadataImpl) GetPrimaryClusterName() string {
+	return metadata.primaryClusterName
 }
 
 // GetCurrentClusterName return the current cluster name

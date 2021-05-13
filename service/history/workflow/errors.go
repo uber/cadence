@@ -33,8 +33,10 @@ var (
 	ErrMaxAttemptsExceeded = errors.New("maximum attempts exceeded to update history")
 	// ErrActivityTaskNotFound is the error to indicate activity task could be duplicate and activity already completed
 	ErrActivityTaskNotFound = &types.EntityNotExistsError{Message: "activity task not found"}
+	// ErrNotExists is the error to indicate workflow doesn't exist
+	ErrNotExists = &types.EntityNotExistsError{Message: "workflow execution already completed"}
 	// ErrAlreadyCompleted is the error to indicate workflow execution already completed
-	ErrAlreadyCompleted = &types.EntityNotExistsError{Message: "workflow execution already completed"}
+	ErrAlreadyCompleted = &types.WorkflowExecutionAlreadyCompletedError{Message: "workflow execution already completed"}
 	// ErrParentMismatch is the error to parent execution is given and mismatch
 	ErrParentMismatch = &types.EntityNotExistsError{Message: "workflow parent does not match"}
 	// ErrDeserializingToken is the error to indicate task token is invalid

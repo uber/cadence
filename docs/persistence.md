@@ -17,7 +17,7 @@ brew services start cassandra
 cd $GOPATH/github.com/uber/cadence
 make install-schema
 ```
-> NOTE: See [CONTRIBUTING](../CONTRIBUTING.md) for prerequisite of make command.
+> NOTE: See [CONTRIBUTING](/CONTRIBUTING.md) for prerequisite of make command.
 >
 ### Start cadence server
 ```

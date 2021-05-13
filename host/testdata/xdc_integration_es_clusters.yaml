@@ -14,7 +14,7 @@
         noTaskWaitBackoffCoefficient: 1
         noTaskMaxWaitIntervalSecs: 2
     failoverVersionIncrement: 10
-    masterClusterName: "active-es"
+    primaryClusterName: "active-es"
     currentClusterName: "active-es"
     clusterInformation:
       active-es:
@@ -90,7 +90,7 @@
         noTaskWaitBackoffCoefficient: 1
         noTaskMaxWaitIntervalSecs: 2
     failoverVersionIncrement: 10
-    masterClusterName: "active-es"
+    primaryClusterName: "active-es"
     currentClusterName: "standby-es"
     clusterInformation:
       active-es:

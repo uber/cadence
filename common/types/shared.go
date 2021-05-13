@@ -2962,6 +2962,19 @@ func (v *EntityNotExistsError) GetActiveCluster() (o string) {
 	return
 }
 
+// WorkflowExecutionAlreadyCompletedError is an internal type (TBD...)
+type WorkflowExecutionAlreadyCompletedError struct {
+	Message string `json:"message,required"`
+}
+
+// GetMessage is an internal getter (TBD...)
+func (v *WorkflowExecutionAlreadyCompletedError) GetMessage() (o string) {
+	if v != nil {
+		return v.Message
+	}
+	return
+}
+
 // EventType is an internal type (TBD...)
 type EventType int32
 
@@ -5254,6 +5267,7 @@ type PollForDecisionTaskResponse struct {
 	ScheduledTimestamp        *int64                    `json:"scheduledTimestamp,omitempty"`
 	StartedTimestamp          *int64                    `json:"startedTimestamp,omitempty"`
 	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
+	NextEventID               int64                     `json:"nextEventId,omitempty"`
 }
 
 // GetTaskToken is an internal getter (TBD...)
@@ -5364,6 +5378,14 @@ func (v *PollForDecisionTaskResponse) GetStartedTimestamp() (o int64) {
 func (v *PollForDecisionTaskResponse) GetQueries() (o map[string]*WorkflowQuery) {
 	if v != nil && v.Queries != nil {
 		return v.Queries
+	}
+	return
+}
+
+// GetNextEventID is an internal getter (TBD...)
+func (v *PollForDecisionTaskResponse) GetNextEventID() (o int64) {
+	if v != nil {
+		return v.NextEventID
 	}
 	return
 }
@@ -9507,6 +9529,7 @@ type WorkflowExecutionInfo struct {
 	SearchAttributes  *SearchAttributes             `json:"searchAttributes,omitempty"`
 	AutoResetPoints   *ResetPoints                  `json:"autoResetPoints,omitempty"`
 	TaskList          string                        `json:"taskList,omitempty"`
+	IsCron            bool                          `json:"isCron,omitempty"`
 }
 
 // GetExecution is an internal getter (TBD...)
@@ -9609,6 +9632,14 @@ func (v *WorkflowExecutionInfo) GetAutoResetPoints() (o *ResetPoints) {
 func (v *WorkflowExecutionInfo) GetTaskList() (o string) {
 	if v != nil {
 		return v.TaskList
+	}
+	return
+}
+
+// GetIsCron is an internal getter (TBD...)
+func (v *WorkflowExecutionInfo) GetIsCron() (o bool) {
+	if v != nil {
+		return v.IsCron
 	}
 	return
 }

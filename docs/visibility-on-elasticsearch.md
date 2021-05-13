@@ -75,6 +75,25 @@ This part is used to config advanced visibility store to ElasticSearch.
  - `url` is for Cadence to discover ES 
  - `indices/visibility` is ElasticSearch index name for the deployment.  
 
+Optional TLS Support can be enabled by setting the TLS config as follows:
+```yaml
+elasticsearch:
+  url:
+    scheme: "https"
+    host: "127.0.0.1:9200"
+  indices:
+    visibility: cadence-visibility-dev
+  tls:
+    enabled: true
+    caFile: /secrets/cadence/elasticsearch_cert.pem
+    enableHostVerification: true
+    serverName: myServerName
+    certFile: /secrets/cadence/certfile.crt
+    keyFile: /secrets/cadence/keyfile.key
+    sslmode: false
+```
+
+Also need to add a kafka topic to visibility, as shown below.  
 ```
 kafka:
   ...
@@ -84,7 +103,6 @@ kafka:
       dlq-topic: cadence-visibility-dev-dlq
   ...
 ``` 
-Also need to add a kafka topic to visibility, see above for example.  
 
 There are dynamic configs to control ElasticSearch visibility features:
 - `system.advancedVisibilityWritingMode` is an int property to control how to write visibility to data store.  

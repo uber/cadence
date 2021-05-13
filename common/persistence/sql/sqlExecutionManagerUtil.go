@@ -61,14 +61,7 @@ func applyWorkflowMutationTx(
 		workflowID,
 		runID,
 		workflowMutation.Condition); err != nil {
-		switch err.(type) {
-		case *p.ConditionFailedError:
-			return err
-		default:
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("applyWorkflowMutationTx failed. Failed to lock executions row. Error: %v", err),
-			}
-		}
+		return err
 	}
 
 	if err := updateExecution(
@@ -80,9 +73,7 @@ func applyWorkflowMutationTx(
 		lastWriteVersion,
 		shardID,
 		parser); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Failed to update executions row. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := applyTasks(
@@ -111,9 +102,7 @@ func applyWorkflowMutationTx(
 		runID,
 		parser,
 	); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := updateTimerInfos(
@@ -127,9 +116,7 @@ func applyWorkflowMutationTx(
 		runID,
 		parser,
 	); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := updateChildExecutionInfos(
@@ -143,9 +130,7 @@ func applyWorkflowMutationTx(
 		runID,
 		parser,
 	); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := updateRequestCancelInfos(
@@ -159,9 +144,7 @@ func applyWorkflowMutationTx(
 		runID,
 		parser,
 	); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := updateSignalInfos(
@@ -175,9 +158,7 @@ func applyWorkflowMutationTx(
 		runID,
 		parser,
 	); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := updateSignalsRequested(
@@ -190,9 +171,7 @@ func applyWorkflowMutationTx(
 		workflowID,
 		runID,
 	); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
-		}
+		return err
 	}
 
 	if workflowMutation.ClearBufferedEvents {
@@ -204,9 +183,7 @@ func applyWorkflowMutationTx(
 			workflowID,
 			runID,
 		); err != nil {
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
-			}
+			return err
 		}
 	}
 
@@ -219,9 +196,7 @@ func applyWorkflowMutationTx(
 		workflowID,
 		runID,
 	); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
-		}
+		return err
 	}
 	return nil
 }
@@ -251,14 +226,7 @@ func applyWorkflowSnapshotTxAsReset(
 		workflowID,
 		runID,
 		workflowSnapshot.Condition); err != nil {
-		switch err.(type) {
-		case *p.ConditionFailedError:
-			return err
-		default:
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to lock executions row. Error: %v", err),
-			}
-		}
+		return err
 	}
 
 	if err := updateExecution(
@@ -270,9 +238,7 @@ func applyWorkflowSnapshotTxAsReset(
 		lastWriteVersion,
 		shardID,
 		parser); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to update executions row. Erorr: %v", err),
-		}
+		return err
 	}
 
 	if err := applyTasks(
@@ -297,9 +263,7 @@ func applyWorkflowSnapshotTxAsReset(
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to clear activity info map. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := updateActivityInfos(
@@ -312,9 +276,7 @@ func applyWorkflowSnapshotTxAsReset(
 		workflowID,
 		runID,
 		parser); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into activity info map after clearing. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := deleteTimerInfoMap(
@@ -324,9 +286,7 @@ func applyWorkflowSnapshotTxAsReset(
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to clear timer info map. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := updateTimerInfos(
@@ -339,9 +299,7 @@ func applyWorkflowSnapshotTxAsReset(
 		workflowID,
 		runID,
 		parser); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into timer info map after clearing. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := deleteChildExecutionInfoMap(
@@ -351,9 +309,7 @@ func applyWorkflowSnapshotTxAsReset(
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to clear child execution info map. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := updateChildExecutionInfos(
@@ -366,9 +322,7 @@ func applyWorkflowSnapshotTxAsReset(
 		workflowID,
 		runID,
 		parser); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into activity info map after clearing. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := deleteRequestCancelInfoMap(
@@ -378,9 +332,7 @@ func applyWorkflowSnapshotTxAsReset(
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to clear request cancel info map. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := updateRequestCancelInfos(
@@ -393,9 +345,7 @@ func applyWorkflowSnapshotTxAsReset(
 		workflowID,
 		runID,
 		parser); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into request cancel info map after clearing. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := deleteSignalInfoMap(
@@ -405,9 +355,7 @@ func applyWorkflowSnapshotTxAsReset(
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to clear signal info map. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := updateSignalInfos(
@@ -420,9 +368,7 @@ func applyWorkflowSnapshotTxAsReset(
 		workflowID,
 		runID,
 		parser); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into signal info map after clearing. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := deleteSignalsRequestedSet(
@@ -432,9 +378,7 @@ func applyWorkflowSnapshotTxAsReset(
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to clear signals requested set. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := updateSignalsRequested(
@@ -446,9 +390,7 @@ func applyWorkflowSnapshotTxAsReset(
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to insert into signals requested set after clearing. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := deleteBufferedEvents(
@@ -458,9 +400,7 @@ func applyWorkflowSnapshotTxAsReset(
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsReset failed. Failed to clear buffered events. Error: %v", err),
-		}
+		return err
 	}
 	return nil
 }
@@ -518,9 +458,7 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		workflowID,
 		runID,
 		parser); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into activity info map after clearing. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := updateTimerInfos(
@@ -533,9 +471,7 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		workflowID,
 		runID,
 		parser); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into timer info map after clearing. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := updateChildExecutionInfos(
@@ -548,9 +484,7 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		workflowID,
 		runID,
 		parser); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into activity info map after clearing. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := updateRequestCancelInfos(
@@ -563,9 +497,7 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		workflowID,
 		runID,
 		parser); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into request cancel info map after clearing. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := updateSignalInfos(
@@ -578,9 +510,7 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		workflowID,
 		runID,
 		parser); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into signal info map after clearing. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := updateSignalsRequested(
@@ -592,9 +522,7 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		domainID,
 		workflowID,
 		runID); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowSnapshotTxAsNew failed. Failed to insert into signals requested set after clearing. Error: %v", err),
-		}
+		return err
 	}
 
 	return nil
@@ -622,9 +550,7 @@ func applyTasks(
 		workflowID,
 		runID,
 		parser); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyTasks failed. Failed to create transfer tasks. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := createReplicationTasks(
@@ -637,9 +563,7 @@ func applyTasks(
 		runID,
 		parser,
 	); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyTasks failed. Failed to create replication tasks. Error: %v", err),
-		}
+		return err
 	}
 
 	if err := createTimerTasks(
@@ -651,9 +575,7 @@ func applyTasks(
 		workflowID,
 		runID,
 		parser); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("applyTasks failed. Failed to create timer tasks. Error: %v", err),
-		}
+		return err
 	}
 
 	return nil
@@ -676,9 +598,7 @@ func lockCurrentExecutionIfExists(
 	})
 	if err != nil {
 		if err != sql.ErrNoRows {
-			return nil, &types.InternalServiceError{
-				Message: fmt.Sprintf("lockCurrentExecutionIfExists failed. Failed to get current_executions row for (shard,domain,workflow) = (%v, %v, %v). Error: %v", shardID, domainID, workflowID, err),
-			}
+			return nil, convertCommonErrors(tx, "lockCurrentExecutionIfExists", fmt.Sprintf("Failed to get current_executions row for (shard,domain,workflow) = (%v, %v, %v).", shardID, domainID, workflowID), err)
 		}
 	}
 	size := len(rows)
@@ -734,9 +654,7 @@ func createOrUpdateCurrentExecution(
 			closeStatus,
 			row.StartVersion,
 			row.LastWriteVersion); err != nil {
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("createOrUpdateCurrentExecution failed. Failed to continue as new. Error: %v", err),
-			}
+			return err
 		}
 	case p.CreateWorkflowModeWorkflowIDReuse:
 		if err := updateCurrentExecution(
@@ -751,15 +669,11 @@ func createOrUpdateCurrentExecution(
 			closeStatus,
 			row.StartVersion,
 			row.LastWriteVersion); err != nil {
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("createOrUpdateCurrentExecution failed. Failed to reuse workflow ID. Error: %v", err),
-			}
+			return err
 		}
 	case p.CreateWorkflowModeBrandNew:
 		if _, err := tx.InsertIntoCurrentExecutions(ctx, &row); err != nil {
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("createOrUpdateCurrentExecution failed. Failed to insert into current_executions table. Error: %v", err),
-			}
+			return convertCommonErrors(tx, "createOrUpdateCurrentExecution", "Failed to insert into current_executions table.", err)
 		}
 	case p.CreateWorkflowModeZombie:
 		// noop
@@ -827,9 +741,7 @@ func lockNextEventID(
 				),
 			}
 		}
-		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("lockNextEventID failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(tx, "lockNextEventID", "", err)
 	}
 	result := int64(nextEventID)
 	return &result, nil
@@ -924,9 +836,7 @@ func createTransferTasks(
 
 	result, err := tx.InsertIntoTransferTasks(ctx, transferTasksRows)
 	if err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("createTransferTasks failed. Error: %v", err),
-		}
+		return convertCommonErrors(tx, "createTransferTasks", "", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
@@ -1022,9 +932,7 @@ func createReplicationTasks(
 
 	result, err := tx.InsertIntoReplicationTasks(ctx, replicationTasksRows)
 	if err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("createReplicationTasks failed. Error: %v", err),
-		}
+		return convertCommonErrors(tx, "createReplicationTasks", "", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
@@ -1116,9 +1024,7 @@ func createTimerTasks(
 
 	result, err := tx.InsertIntoTimerTasks(ctx, timerTasksRows)
 	if err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("createTimerTasks failed. Error: %v", err),
-		}
+		return convertCommonErrors(tx, "createTimerTasks", "", err)
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
@@ -1129,7 +1035,7 @@ func createTimerTasks(
 
 	if int(rowsAffected) != len(timerTasks) {
 		return &types.InternalServiceError{
-			Message: fmt.Sprintf("createTimerTasks failed. Inserted %v instead of %v rows into timer_tasks. Error: %v", rowsAffected, len(timerTasks), err),
+			Message: fmt.Sprintf("createTimerTasks failed. Inserted %v instead of %v rows into timer_tasks.", rowsAffected, len(timerTasks)),
 		}
 	}
 
@@ -1154,9 +1060,7 @@ func assertNotCurrentExecution(
 			// allow bypassing no current record
 			return nil
 		}
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("assertCurrentExecution failed. Unable to load current record. Error: %v", err),
-		}
+		return convertCommonErrors(tx, "assertCurrentExecution", "Unable to load current record.", err)
 	}
 	return assertRunIDMismatch(runID, currentRow.RunID)
 }
@@ -1256,9 +1160,7 @@ func assertCurrentExecution(
 		WorkflowID: workflowID,
 	})
 	if err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("assertCurrentExecution failed. Unable to load current record. Error: %v", err),
-		}
+		return convertCommonErrors(tx, "assertCurrentExecution", "Unable to load current record.", err)
 	}
 	return assertFn(currentRow)
 }
@@ -1301,9 +1203,7 @@ func updateCurrentExecution(
 		LastWriteVersion: lastWriteVersion,
 	})
 	if err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("updateCurrentExecution failed. Error: %v", err),
-		}
+		return convertCommonErrors(tx, "updateCurrentExecution", "", err)
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
@@ -1466,9 +1366,7 @@ func (m *sqlExecutionManager) createExecution(
 				LastWriteVersion: row.LastWriteVersion,
 			}
 		}
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("createExecution failed. Erorr: %v", err),
-		}
+		return convertCommonErrors(tx, "createExecution", "", err)
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
@@ -1519,9 +1417,7 @@ func updateExecution(
 	}
 	result, err := tx.UpdateExecutions(ctx, row)
 	if err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("updateExecution failed. Erorr: %v", err),
-		}
+		return convertCommonErrors(tx, "updateExecution", "", err)
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {

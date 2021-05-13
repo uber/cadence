@@ -5039,7 +5039,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_Failed() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
 
 	err = s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
-	s.EqualError(err, "EntityNotExistsError{Message: workflow execution already completed}")
+	s.EqualError(err, "WorkflowExecutionAlreadyCompletedError{Message: workflow execution already completed}")
 }
 
 func (s *engineSuite) TestRemoveSignalMutableState() {

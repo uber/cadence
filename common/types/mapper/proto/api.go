@@ -2089,6 +2089,7 @@ func FromPollForDecisionTaskResponse(t *types.PollForDecisionTaskResponse) *apiv
 		ScheduledTime:             unixNanoToTime(t.ScheduledTimestamp),
 		StartedTime:               unixNanoToTime(t.StartedTimestamp),
 		Queries:                   FromWorkflowQueryMap(t.Queries),
+		NextEventId:               t.NextEventID,
 	}
 }
 
@@ -2111,6 +2112,7 @@ func ToPollForDecisionTaskResponse(t *apiv1.PollForDecisionTaskResponse) *types.
 		ScheduledTimestamp:        timeToUnixNano(t.ScheduledTime),
 		StartedTimestamp:          timeToUnixNano(t.StartedTime),
 		Queries:                   ToWorkflowQueryMap(t.Queries),
+		NextEventID:               t.NextEventId,
 	}
 }
 
@@ -5148,6 +5150,13 @@ func FromPayload(data []byte) *apiv1.Payload {
 func ToPayload(p *apiv1.Payload) []byte {
 	if p == nil {
 		return nil
+	}
+	if p.Data == nil {
+		// FromPayload will not generate this case
+		// however, Data field will be dropped by the encoding if it's empty
+		// and receiver side will see nil for the Data field
+		// since we already know p is not nil, Data field must be an empty byte array
+		return []byte{}
 	}
 	return p.Data
 }

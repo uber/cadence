@@ -75,6 +75,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionStarted(
 		WorkflowTimeout:    common.SecondsToDuration(request.WorkflowTimeout),
 		TaskID:             request.TaskID,
 		TaskList:           request.TaskList,
+		IsCron:             request.IsCron,
 		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowID(), request.Execution.GetRunID()),
 		SearchAttributes:   request.SearchAttributes,
 	}
@@ -100,6 +101,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(
 		Status:             request.Status,
 		HistoryLength:      request.HistoryLength,
 		RetentionSeconds:   common.SecondsToDuration(request.RetentionSeconds),
+		IsCron:             request.IsCron,
 	}
 	return v.persistence.RecordWorkflowExecutionClosed(ctx, req)
 }
@@ -118,6 +120,7 @@ func (v *visibilityManagerImpl) UpsertWorkflowExecution(
 		TaskID:             request.TaskID,
 		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowID(), request.Execution.GetRunID()),
 		TaskList:           request.TaskList,
+		IsCron:             request.IsCron,
 		SearchAttributes:   request.SearchAttributes,
 	}
 	return v.persistence.UpsertWorkflowExecution(ctx, req)
@@ -366,6 +369,7 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 		Memo:             memo,
 		SearchAttributes: searchAttributes,
 		TaskList:         execution.TaskList,
+		IsCron:           execution.IsCron,
 	}
 
 	// for close records

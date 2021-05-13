@@ -122,7 +122,7 @@ func (handler *handlerImpl) HandleDecisionTaskScheduled(
 		handler.timeSource.Now(),
 		func(context execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, workflow.ErrAlreadyCompleted
+				return nil, workflow.ErrNotExists
 			}
 
 			if mutableState.HasProcessedOrPendingDecision() {
@@ -174,7 +174,7 @@ func (handler *handlerImpl) HandleDecisionTaskStarted(
 		handler.timeSource.Now(),
 		func(context execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, workflow.ErrAlreadyCompleted
+				return nil, workflow.ErrNotExists
 			}
 
 			decision, isRunning := mutableState.GetDecisionInfo(scheduleID)

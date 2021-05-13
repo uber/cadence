@@ -22,7 +22,9 @@ services:
   frontend:
     rpc:
       port: 7933
+      grpcPort: 7833
       bindOnLocalHost: true
+      grpcMaxMsgSize: 33554432
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
@@ -33,7 +35,9 @@ services:
   matching:
     rpc:
       port: 7935
+      grpcPort: 7835
       bindOnLocalHost: true
+      grpcMaxMsgSize: 33554432
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
@@ -44,7 +48,9 @@ services:
   history:
     rpc:
       port: 7934
+      grpcPort: 7834
       bindOnLocalHost: true
+      grpcMaxMsgSize: 33554432
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"

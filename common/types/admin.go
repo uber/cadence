@@ -44,8 +44,9 @@ func (v *AddSearchAttributeRequest) GetSecurityToken() (o string) {
 
 // DescribeClusterResponse is an internal type (TBD...)
 type DescribeClusterResponse struct {
-	SupportedClientVersions *SupportedClientVersions `json:"supportedClientVersions,omitempty"`
-	MembershipInfo          *MembershipInfo          `json:"membershipInfo,omitempty"`
+	SupportedClientVersions *SupportedClientVersions    `json:"supportedClientVersions,omitempty"`
+	MembershipInfo          *MembershipInfo             `json:"membershipInfo,omitempty"`
+	PersistenceInfo         map[string]*PersistenceInfo `json:"persistenceInfo,omitempty"`
 }
 
 // GetSupportedClientVersions is an internal getter (TBD...)
@@ -275,6 +276,26 @@ func (v *MembershipInfo) GetRings() (o []*RingInfo) {
 		return v.Rings
 	}
 	return
+}
+
+// PersistenceSetting is used to expose persistence engine settings
+type PersistenceSetting struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+// PersistenceFeature is used to expose store specific feature.
+// Feature can be cadence or store specific.
+type PersistenceFeature struct {
+	Key     string `json:"key"`
+	Enabled bool   `json:"enabled"`
+}
+
+// PersistenceInfo is used to expose store configuration
+type PersistenceInfo struct {
+	Backend  string                `json:"backend"`
+	Settings []*PersistenceSetting `json:"settings,omitempty"`
+	Features []*PersistenceFeature `json:"features,omitempty"`
 }
 
 // ResendReplicationTasksRequest is an internal type (TBD...)

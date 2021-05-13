@@ -259,10 +259,16 @@ func (s *Service) Start() {
 	thriftHandler := NewThriftHandler(handler)
 	thriftHandler.register(s.GetDispatcher())
 
+	grpcHandler := newGrpcHandler(handler)
+	grpcHandler.register(s.GetDispatcher())
+
 	s.adminHandler = NewAdminHandler(s, s.params, s.config)
 
 	adminThriftHandler := NewAdminThriftHandler(s.adminHandler)
 	adminThriftHandler.register(s.GetDispatcher())
+
+	adminGRPCHandler := newAdminGRPCHandler(s.adminHandler)
+	adminGRPCHandler.register(s.GetDispatcher())
 
 	// must start resource first
 	s.Resource.Start()

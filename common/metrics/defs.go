@@ -1582,6 +1582,7 @@ const (
 	CadenceErrDomainNotActiveCounter
 	CadenceErrServiceBusyCounter
 	CadenceErrEntityNotExistsCounter
+	CadenceErrWorkflowExecutionAlreadyCompletedCounter
 	CadenceErrExecutionAlreadyStartedCounter
 	CadenceErrDomainAlreadyExistsCounter
 	CadenceErrCancellationAlreadyRequestedCounter
@@ -1665,6 +1666,7 @@ const (
 	HistoryArchiverHistoryMutatedCount
 	HistoryArchiverTotalUploadSize
 	HistoryArchiverHistorySize
+	HistoryArchiverDuplicateArchivalsCount
 
 	// The following metrics are only used by internal history archiver implemention.
 	// TODO: move them to internal repo once cadence plugin model is in place.
@@ -1674,7 +1676,6 @@ const (
 	HistoryArchiverDeterministicConstructionCheckFailedCount
 	HistoryArchiverRunningBlobIntegrityCheckCount
 	HistoryArchiverBlobIntegrityCheckFailedCount
-	HistoryArchiverDuplicateArchivalsCount
 
 	VisibilityArchiverArchiveNonRetryableErrorCount
 	VisibilityArchiverArchiveTransientErrorCount
@@ -1862,6 +1863,9 @@ const (
 	SignalInfoCount
 	RequestCancelInfoCount
 	BufferedEventsCount
+	TransferTasksCount
+	TimerTasksCount
+	ReplicationTasksCount
 	DeleteActivityInfoCount
 	DeleteTimerInfoCount
 	DeleteChildInfoCount
@@ -2052,6 +2056,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceErrDomainNotActiveCounter:                    {metricName: "cadence_errors_domain_not_active", metricType: Counter},
 		CadenceErrServiceBusyCounter:                        {metricName: "cadence_errors_service_busy", metricType: Counter},
 		CadenceErrEntityNotExistsCounter:                    {metricName: "cadence_errors_entity_not_exists", metricType: Counter},
+		CadenceErrWorkflowExecutionAlreadyCompletedCounter:  {metricName: "cadence_errors_workflow_execution_already_completed", metricType: Counter},
 		CadenceErrExecutionAlreadyStartedCounter:            {metricName: "cadence_errors_execution_already_started", metricType: Counter},
 		CadenceErrDomainAlreadyExistsCounter:                {metricName: "cadence_errors_domain_already_exists", metricType: Counter},
 		CadenceErrCancellationAlreadyRequestedCounter:       {metricName: "cadence_errors_cancellation_already_requested", metricType: Counter},
@@ -2124,13 +2129,13 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryArchiverHistoryMutatedCount:                        {metricName: "history_archiver_history_mutated", metricType: Counter},
 		HistoryArchiverTotalUploadSize:                            {metricName: "history_archiver_total_upload_size", metricType: Timer},
 		HistoryArchiverHistorySize:                                {metricName: "history_archiver_history_size", metricType: Timer},
+		HistoryArchiverDuplicateArchivalsCount:                    {metricName: "history_archiver_duplicate_archivals", metricType: Counter},
 		HistoryArchiverBlobExistsCount:                            {metricName: "history_archiver_blob_exists", metricType: Counter},
 		HistoryArchiverBlobSize:                                   {metricName: "history_archiver_blob_size", metricType: Timer},
 		HistoryArchiverRunningDeterministicConstructionCheckCount: {metricName: "history_archiver_running_deterministic_construction_check", metricType: Counter},
 		HistoryArchiverDeterministicConstructionCheckFailedCount:  {metricName: "history_archiver_deterministic_construction_check_failed", metricType: Counter},
 		HistoryArchiverRunningBlobIntegrityCheckCount:             {metricName: "history_archiver_running_blob_integrity_check", metricType: Counter},
 		HistoryArchiverBlobIntegrityCheckFailedCount:              {metricName: "history_archiver_blob_integrity_check_failed", metricType: Counter},
-		HistoryArchiverDuplicateArchivalsCount:                    {metricName: "history_archiver_duplicate_archivals", metricType: Counter},
 		VisibilityArchiverArchiveNonRetryableErrorCount:           {metricName: "visibility_archiver_archive_non_retryable_error", metricType: Counter},
 		VisibilityArchiverArchiveTransientErrorCount:              {metricName: "visibility_archiver_archive_transient_error", metricType: Counter},
 		VisibilityArchiveSuccessCount:                             {metricName: "visibility_archiver_archive_success", metricType: Counter},
@@ -2417,6 +2422,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		FailoverMarkerInsertFailure:                       {metricName: "failover_marker_insert_failures", metricType: Counter},
 		FailoverMarkerNotificationFailure:                 {metricName: "failover_marker_notification_failures", metricType: Counter},
 		FailoverMarkerUpdateShardFailure:                  {metricName: "failover_marker_update_shard_failures", metricType: Counter},
+		TransferTasksCount:                                {metricName: "transfer_tasks_count", metricType: Timer},
+		TimerTasksCount:                                   {metricName: "timer_tasks_count", metricType: Timer},
+		ReplicationTasksCount:                             {metricName: "replication_tasks_count", metricType: Timer},
 	},
 	Matching: {
 		PollSuccessPerTaskListCounter:            {metricName: "poll_success_per_tl", metricRollupName: "poll_success"},

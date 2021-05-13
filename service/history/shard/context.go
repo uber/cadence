@@ -112,7 +112,7 @@ type (
 
 		CreateWorkflowExecution(ctx context.Context, request *persistence.CreateWorkflowExecutionRequest) (*persistence.CreateWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(ctx context.Context, request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error)
-		ConflictResolveWorkflowExecution(ctx context.Context, request *persistence.ConflictResolveWorkflowExecutionRequest) error
+		ConflictResolveWorkflowExecution(ctx context.Context, request *persistence.ConflictResolveWorkflowExecutionRequest) (*persistence.ConflictResolveWorkflowExecutionResponse, error)
 		AppendHistoryV2Events(ctx context.Context, request *persistence.AppendHistoryNodesRequest, domainID string, execution types.WorkflowExecution) (int, error)
 
 		ReplicateFailoverMarkers(ctx context.Context, makers []*persistence.FailoverMarkerTask) error
@@ -791,10 +791,10 @@ Update_Loop:
 func (s *contextImpl) ConflictResolveWorkflowExecution(
 	ctx context.Context,
 	request *persistence.ConflictResolveWorkflowExecutionRequest,
-) error {
+) (*persistence.ConflictResolveWorkflowExecutionResponse, error) {
 	ctx, cancel, err := s.ensureMinContextTimeout(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if cancel != nil {
 		defer cancel()
@@ -806,7 +806,7 @@ func (s *contextImpl) ConflictResolveWorkflowExecution(
 	// do not try to get domain cache within shard lock
 	domainEntry, err := s.GetDomainCache().GetDomainByID(domainID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	request.Encoding = s.getDefaultEncoding(domainEntry.GetInfo().Name)
 
@@ -823,7 +823,7 @@ func (s *contextImpl) ConflictResolveWorkflowExecution(
 			request.CurrentWorkflowMutation.TimerTasks,
 			&transferMaxReadLevel,
 		); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if err := s.allocateTaskIDsLocked(
@@ -834,7 +834,7 @@ func (s *contextImpl) ConflictResolveWorkflowExecution(
 		request.ResetWorkflowSnapshot.TimerTasks,
 		&transferMaxReadLevel,
 	); err != nil {
-		return err
+		return nil, err
 	}
 	if request.NewWorkflowSnapshot != nil {
 		if err := s.allocateTaskIDsLocked(
@@ -845,7 +845,7 @@ func (s *contextImpl) ConflictResolveWorkflowExecution(
 			request.NewWorkflowSnapshot.TimerTasks,
 			&transferMaxReadLevel,
 		); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
@@ -854,7 +854,7 @@ Conflict_Resolve_Loop:
 	for attempt := 0; attempt < conditionalRetryCount && ctx.Err() == nil; attempt++ {
 		currentRangeID := s.getRangeID()
 		request.RangeID = currentRangeID
-		err := s.executionManager.ConflictResolveWorkflowExecution(ctx, request)
+		resp, err := s.executionManager.ConflictResolveWorkflowExecution(ctx, request)
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
@@ -901,10 +901,10 @@ Conflict_Resolve_Loop:
 			}
 		}
 
-		return err
+		return resp, err
 	}
 
-	return errMaxAttemptsExceeded
+	return nil, errMaxAttemptsExceeded
 }
 
 func (s *contextImpl) ensureMinContextTimeout(

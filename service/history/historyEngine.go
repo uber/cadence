@@ -682,7 +682,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 			}
 			defer func() { runningWFCtx.GetReleaseFn()(retError) }()
 
-			return e.terminateAndStartWorkflow(
+			resp, err = e.terminateAndStartWorkflow(
 				ctx,
 				runningWFCtx,
 				workflowExecution,
@@ -691,6 +691,14 @@ func (e *historyEngineImpl) startWorkflowHelper(
 				startRequest,
 				nil,
 			)
+			switch err.(type) {
+			// By the time we try to terminate the workflow, it was already terminated
+			// So continue as if we didn't need to terminate it in the first place
+			case *types.WorkflowExecutionAlreadyCompletedError:
+				e.shard.GetLogger().Warn("Workflow completed while trying to terminate, will continue starting workflow", tag.Error(err))
+			default:
+				return resp, err
+			}
 		}
 		if err = e.applyWorkflowIDReusePolicyHelper(
 			t.StartRequestID,
@@ -1235,7 +1243,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 			})
 			clearStickinessStopWatch.Stop()
 			cancel()
-			if err != nil && err != workflow.ErrAlreadyCompleted {
+			if err != nil && err != workflow.ErrAlreadyCompleted && err != workflow.ErrNotExists {
 				return nil, err
 			}
 			scope.IncCounter(metrics.DirectQueryDispatchClearStickinessSuccessCount)
@@ -1462,6 +1470,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			HistoryLength:    mutableState.GetNextEventID() - common.FirstEventID,
 			AutoResetPoints:  executionInfo.AutoResetPoints,
 			Memo:             &types.Memo{Fields: executionInfo.Memo},
+			IsCron:           len(executionInfo.CronSchedule) > 0,
 			SearchAttributes: &types.SearchAttributes{IndexedFields: executionInfo.SearchAttributes},
 		},
 	}
@@ -1597,7 +1606,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 	err = workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, false, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return workflow.ErrAlreadyCompleted
+				return workflow.ErrNotExists
 			}
 
 			scheduleID := request.GetScheduleID()
@@ -2229,7 +2238,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 			if sRequest.GetWorkflowIDReusePolicy() == types.WorkflowIDReusePolicyTerminateIfRunning {
 				workflowExecution.RunID = uuid.New()
 				runningWFCtx := workflow.NewContext(wfContext, release, mutableState)
-				return e.terminateAndStartWorkflow(
+				resp, errTerm := e.terminateAndStartWorkflow(
 					ctx,
 					runningWFCtx,
 					workflowExecution,
@@ -2238,6 +2247,11 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 					nil,
 					signalWithStartRequest,
 				)
+				// By the time we try to terminate the workflow, it was already terminated
+				// So continue as if we didn't need to terminate it in the first place
+				if _, ok := errTerm.(*types.WorkflowExecutionAlreadyCompletedError); !ok {
+					return resp, errTerm
+				}
 			}
 
 			executionInfo := mutableState.GetExecutionInfo()
@@ -2324,7 +2338,7 @@ func (e *historyEngineImpl) RemoveSignalMutableState(
 	return workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, false, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return workflow.ErrAlreadyCompleted
+				return workflow.ErrNotExists
 			}
 
 			mutableState.DeleteSignalRequested(request.GetRequestID())
@@ -2393,7 +2407,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 	return workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, true, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return workflow.ErrAlreadyCompleted
+				return workflow.ErrNotExists
 			}
 
 			initiatedID := completionRequest.InitiatedID

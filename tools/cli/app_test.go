@@ -70,10 +70,6 @@ func (m *clientFactoryMock) ServerAdminClient(c *cli.Context) admin.Client {
 	return m.serverAdminClient
 }
 
-func (m *clientFactoryMock) CQLClient() gocql.Client {
-	return m.cqlClient
-}
-
 // this is the mock for yarpcCallOptions, make sure length are the same
 var callOptions = []interface{}{gomock.Any(), gomock.Any(), gomock.Any()}
 
@@ -617,6 +613,7 @@ func (s *cliAppSuite) TestAdminAddSearchAttribute() {
 func (s *cliAppSuite) TestAdminFailover() {
 	resp := &shared.StartWorkflowExecutionResponse{RunId: common.StringPtr(uuid.New())}
 	s.clientFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), gomock.Any()).Return(resp, nil)
+	s.clientFrontendClient.EXPECT().SignalWorkflowExecution(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	err := s.app.Run([]string{"", "admin", "cl", "fo", "start", "--tc", "standby", "--sc", "active"})
 	s.Nil(err)
 }

@@ -47,6 +47,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
+	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
@@ -75,7 +76,7 @@ type (
 	TestClusterConfig struct {
 		FrontendAddress       string
 		EnableArchival        bool
-		IsMasterCluster       bool
+		IsPrimaryCluster      bool
 		ClusterNo             int
 		ClusterMetadata       config.ClusterMetadata
 		MessagingClientConfig *MessagingClientConfig
@@ -163,14 +164,14 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 func NewClusterMetadata(options *TestClusterConfig, logger log.Logger) cluster.Metadata {
 	clusterMetadata := cluster.GetTestClusterMetadata(
 		options.ClusterMetadata.EnableGlobalDomain,
-		options.IsMasterCluster,
+		options.IsPrimaryCluster,
 	)
-	if !options.IsMasterCluster && options.ClusterMetadata.MasterClusterName != "" { // xdc cluster metadata setup
+	if !options.IsPrimaryCluster && options.ClusterMetadata.PrimaryClusterName != "" { // xdc cluster metadata setup
 		clusterMetadata = cluster.NewMetadata(
 			logger,
 			dynamicconfig.GetBoolPropertyFn(options.ClusterMetadata.EnableGlobalDomain),
 			options.ClusterMetadata.FailoverVersionIncrement,
-			options.ClusterMetadata.MasterClusterName,
+			options.ClusterMetadata.PrimaryClusterName,
 			options.ClusterMetadata.CurrentClusterName,
 			options.ClusterMetadata.ClusterInformation,
 		)

@@ -58,7 +58,7 @@ func NewCassandraDB(cfg config.Cassandra, logger log.Logger) (nosqlplugin.DB, er
 		return nil, err
 	}
 	return &cdb{
-		client:  cfg.CQLClient,
+		client:  gocql.NewClient(),
 		session: session,
 		logger:  logger,
 	}, nil

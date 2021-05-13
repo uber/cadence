@@ -70,6 +70,7 @@ func FromAdminDescribeClusterResponse(t *types.DescribeClusterResponse) *adminv1
 	return &adminv1.DescribeClusterResponse{
 		SupportedClientVersions: FromSupportedClientVersions(t.SupportedClientVersions),
 		MembershipInfo:          FromMembershipInfo(t.MembershipInfo),
+		PersistenceInfo:         FromPersistenceInfoMap(t.PersistenceInfo),
 	}
 }
 
@@ -80,6 +81,7 @@ func ToAdminDescribeClusterResponse(t *adminv1.DescribeClusterResponse) *types.D
 	return &types.DescribeClusterResponse{
 		SupportedClientVersions: ToSupportedClientVersions(t.SupportedClientVersions),
 		MembershipInfo:          ToMembershipInfo(t.MembershipInfo),
+		PersistenceInfo:         ToPersistenceInfoMap(t.PersistenceInfo),
 	}
 }
 

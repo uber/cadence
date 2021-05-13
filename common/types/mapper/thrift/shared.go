@@ -1972,6 +1972,26 @@ func ToEntityNotExistsError(t *shared.EntityNotExistsError) *types.EntityNotExis
 	}
 }
 
+// FromWorkflowExecutionAlreadyCompletedError converts internal WorkflowExecutionAlreadyCompletedError type to thrift
+func FromWorkflowExecutionAlreadyCompletedError(t *types.WorkflowExecutionAlreadyCompletedError) *shared.WorkflowExecutionAlreadyCompletedError {
+	if t == nil {
+		return nil
+	}
+	return &shared.WorkflowExecutionAlreadyCompletedError{
+		Message: t.Message,
+	}
+}
+
+// ToWorkflowExecutionAlreadyCompletedError converts thrift WorkflowExecutionAlreadyCompletedError type to internal
+func ToWorkflowExecutionAlreadyCompletedError(t *shared.WorkflowExecutionAlreadyCompletedError) *types.WorkflowExecutionAlreadyCompletedError {
+	if t == nil {
+		return nil
+	}
+	return &types.WorkflowExecutionAlreadyCompletedError{
+		Message: t.Message,
+	}
+}
+
 // FromEventType converts internal EventType type to thrift
 func FromEventType(t *types.EventType) *shared.EventType {
 	if t == nil {
@@ -3392,6 +3412,7 @@ func FromPollForDecisionTaskResponse(t *types.PollForDecisionTaskResponse) *shar
 		ScheduledTimestamp:        t.ScheduledTimestamp,
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   FromWorkflowQueryMap(t.Queries),
+		NextEventId:               &t.NextEventID,
 	}
 }
 
@@ -3415,6 +3436,7 @@ func ToPollForDecisionTaskResponse(t *shared.PollForDecisionTaskResponse) *types
 		ScheduledTimestamp:        t.ScheduledTimestamp,
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   ToWorkflowQueryMap(t.Queries),
+		NextEventID:               t.GetNextEventId(),
 	}
 }
 
@@ -6019,6 +6041,7 @@ func FromWorkflowExecutionInfo(t *types.WorkflowExecutionInfo) *shared.WorkflowE
 		SearchAttributes: FromSearchAttributes(t.SearchAttributes),
 		AutoResetPoints:  FromResetPoints(t.AutoResetPoints),
 		TaskList:         &t.TaskList,
+		IsCron:           &t.IsCron,
 	}
 }
 
@@ -6041,6 +6064,7 @@ func ToWorkflowExecutionInfo(t *shared.WorkflowExecutionInfo) *types.WorkflowExe
 		SearchAttributes: ToSearchAttributes(t.SearchAttributes),
 		AutoResetPoints:  ToResetPoints(t.AutoResetPoints),
 		TaskList:         t.GetTaskList(),
+		IsCron:           t.GetIsCron(),
 	}
 }
 

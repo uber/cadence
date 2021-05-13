@@ -24,18 +24,19 @@ import (
 	"context"
 
 	"github.com/urfave/cli"
-	clientFrontend "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/zap"
+
+	clientFrontend "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 
 	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	serverFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	cc "github.com/uber/cadence/common/client"
 )
 
 const (
@@ -48,7 +49,6 @@ type ClientFactory interface {
 	ClientFrontendClient(c *cli.Context) clientFrontend.Interface
 	ServerFrontendClient(c *cli.Context) frontend.Client
 	ServerAdminClient(c *cli.Context) admin.Client
-	CQLClient() gocql.Client
 }
 
 type clientFactory struct {
@@ -87,11 +87,6 @@ func (b *clientFactory) ServerAdminClient(c *cli.Context) admin.Client {
 	return admin.NewThriftClient(serverAdmin.New(b.dispatcher.ClientConfig(cadenceFrontendService)))
 }
 
-// CQLClient builds a gocql client for connecting to cassandra
-func (b *clientFactory) CQLClient() gocql.Client {
-	return gocql.NewClient()
-}
-
 func (b *clientFactory) ensureDispatcher(c *cli.Context) {
 	if b.dispatcher != nil {
 		return
@@ -127,6 +122,8 @@ type versionMiddleware struct {
 }
 
 func (vm *versionMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
-	request.Headers = request.Headers.With(common.ClientImplHeaderName, "cli")
+	request.Headers = request.Headers.
+		With(common.ClientImplHeaderName, cc.CLI).
+		With(common.FeatureVersionHeaderName, cc.SupportedCLIVersion)
 	return out.Call(ctx, request)
 }

@@ -26,7 +26,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/common/auth"
+	"github.com/uber/cadence/common/config"
 )
 
 // Note: this file defines the minimal interface that is needed by Cadence's cassandra
@@ -113,7 +113,7 @@ type (
 		Region            string
 		Datacenter        string
 		MaxConns          int
-		TLS               *auth.TLS
+		TLS               *config.TLS
 		ProtoVersion      int
 		Consistency       Consistency
 		SerialConsistency SerialConsistency

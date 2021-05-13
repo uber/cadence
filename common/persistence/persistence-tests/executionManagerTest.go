@@ -4122,10 +4122,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		},
 		Encoding: pickRandomEncoding(),
 	}
-	err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
+	_, err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
 	s.Error(err)
 	resetReq.Mode = p.ConflictResolveWorkflowModeUpdateCurrent
-	err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
+	_, err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
 	s.NoError(err)
 
 	currentRecord, err := s.ExecutionManager.GetCurrentExecution(ctx, &p.GetCurrentExecutionRequest{
@@ -4299,10 +4299,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		},
 		Encoding: pickRandomEncoding(),
 	}
-	err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
+	_, err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
 	s.Error(err)
 	resetReq.Mode = p.ConflictResolveWorkflowModeUpdateCurrent
-	err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
+	_, err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
 	s.NoError(err)
 
 	currentRecord, err := s.ExecutionManager.GetCurrentExecution(ctx, &p.GetCurrentExecutionRequest{
@@ -4423,10 +4423,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		CurrentWorkflowMutation: nil,
 		Encoding:                pickRandomEncoding(),
 	}
-	err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
+	_, err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
 	s.Error(err)
 	resetReq.Mode = p.ConflictResolveWorkflowModeUpdateCurrent
-	err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
+	_, err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
 	s.NoError(err)
 
 	currentRecord, err := s.ExecutionManager.GetCurrentExecution(ctx, &p.GetCurrentExecutionRequest{
@@ -4548,10 +4548,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		CurrentWorkflowMutation: nil,
 		Encoding:                pickRandomEncoding(),
 	}
-	err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
+	_, err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
 	s.Error(err)
 	resetReq.Mode = p.ConflictResolveWorkflowModeUpdateCurrent
-	err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
+	_, err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
 	s.NoError(err)
 
 	currentRecord, err := s.ExecutionManager.GetCurrentExecution(ctx, &p.GetCurrentExecutionRequest{
@@ -4690,10 +4690,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		CurrentWorkflowMutation: nil,
 		Encoding:                pickRandomEncoding(),
 	}
-	err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
+	_, err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
 	s.Error(err)
 	resetReq.Mode = p.ConflictResolveWorkflowModeBypassCurrent
-	err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
+	_, err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
 	s.NoError(err)
 
 	currentRecord, err := s.ExecutionManager.GetCurrentExecution(ctx, &p.GetCurrentExecutionRequest{
@@ -4837,10 +4837,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		CurrentWorkflowMutation: nil,
 		Encoding:                pickRandomEncoding(),
 	}
-	err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
+	_, err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
 	s.Error(err)
 	resetReq.Mode = p.ConflictResolveWorkflowModeBypassCurrent
-	err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
+	_, err = s.ExecutionManager.ConflictResolveWorkflowExecution(ctx, resetReq)
 	s.NoError(err)
 
 	currentRecord, err := s.ExecutionManager.GetCurrentExecution(ctx, &p.GetCurrentExecutionRequest{

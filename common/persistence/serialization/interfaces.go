@@ -106,6 +106,7 @@ type (
 		CompletionEvent                    []byte
 		CompletionEventEncoding            *string
 		TaskList                           *string
+		IsCron                             *bool
 		WorkflowTypeName                   *string
 		WorkflowTimeout                    *time.Duration
 		DecisionTaskTimeout                *time.Duration

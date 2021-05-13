@@ -1425,6 +1425,33 @@ func (s *workflowHandlerSuite) TestContextMetricsTags() {
 	s.Fail("counter not found")
 }
 
+func (s *workflowHandlerSuite) TestSignalMetricHasSignalName() {
+	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
+
+	signalRequest := &types.SignalWorkflowExecutionRequest{
+		SignalName: "test_signal",
+	}
+	wh.SignalWorkflowExecution(context.Background(), signalRequest)
+
+	expectedMetrics := make(map[string]bool)
+	expectedMetrics["test.cadence_requests"] = false
+	expectedMetrics["test.cadence_errors_bad_request"] = false
+
+	snapshot := s.mockResource.MetricsScope.Snapshot()
+	for _, counter := range snapshot.Counters() {
+		if _, ok := expectedMetrics[counter.Name()]; ok {
+			expectedMetrics[counter.Name()] = true
+		}
+		if val, ok := counter.Tags()["signalName"]; ok {
+			s.Equal(val, "test_signal")
+		} else {
+			s.Fail("Couldn't find signalName tag")
+		}
+	}
+	s.True(expectedMetrics["test.cadence_requests"])
+	s.True(expectedMetrics["test.cadence_errors_bad_request"])
+}
+
 func (s *workflowHandlerSuite) newConfig(dynamicClient dc.Client) *Config {
 	return NewConfig(
 		dc.NewCollection(

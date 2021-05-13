@@ -291,15 +291,15 @@ func (d *domainCLIImpl) DeprecateDomain(c *cli.Context) {
 	defer cancel()
 
 	if !force {
-	// check if there is any workflow in this domain, if exists, do not deprecate
+		// check if there is any workflow in this domain, if exists, do not deprecate
 		wfs, _ := listClosedWorkflow(getWorkflowClient(c), 1, 0, time.Now().UnixNano(), "", "", workflowStatusNotSet, nil, c)
 		if len(wfs) > 0 {
-			ErrorAndExit("Operation DeprecateDomain failed.", errors.New("Workflow history not cleared in this domain."))
+			ErrorAndExit("Operation DeprecateDomain failed.", errors.New("workflow history not cleared in this domain"))
 			return
 		}
 		wfs, _ = listOpenWorkflow(getWorkflowClient(c), 1, 0, time.Now().UnixNano(), "", "", nil, c)
 		if len(wfs) > 0 {
-			ErrorAndExit("Operation DeprecateDomain failed.", errors.New("Workflow still running in this domain."))
+			ErrorAndExit("Operation DeprecateDomain failed.", errors.New("workflow still running in this domain"))
 			return
 		}
 	}

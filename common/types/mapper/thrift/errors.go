@@ -49,6 +49,8 @@ func FromError(err error) error {
 		return FromDomainNotActiveError(e)
 	case *types.EntityNotExistsError:
 		return FromEntityNotExistsError(e)
+	case *types.WorkflowExecutionAlreadyCompletedError:
+		return FromWorkflowExecutionAlreadyCompletedError(e)
 	case *types.InternalDataInconsistencyError:
 		return FromInternalDataInconsistencyError(e)
 	case *types.InternalServiceError:
@@ -97,6 +99,8 @@ func ToError(err error) error {
 		return ToDomainNotActiveError(e)
 	case *shared.EntityNotExistsError:
 		return ToEntityNotExistsError(e)
+	case *shared.WorkflowExecutionAlreadyCompletedError:
+		return ToWorkflowExecutionAlreadyCompletedError(e)
 	case *shared.InternalDataInconsistencyError:
 		return ToInternalDataInconsistencyError(e)
 	case *shared.InternalServiceError:

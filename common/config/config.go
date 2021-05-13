@@ -29,9 +29,7 @@ import (
 	"github.com/uber/ringpop-go/discovery"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
 
 type (
@@ -84,6 +82,8 @@ type (
 	RPC struct {
 		// Port is the port  on which the channel will bind to
 		Port int `yaml:"port"`
+		// GRPCPort is the port on which the grpc listener will bind to
+		GRPCPort int `yaml:"grpcPort"`
 		// BindOnLocalHost is true if localhost is the bind address
 		BindOnLocalHost bool `yaml:"bindOnLocalHost"`
 		// BindOnIP can be used to bind service on specific ip (eg. `0.0.0.0`) -
@@ -94,6 +94,8 @@ type (
 		DisableLogging bool `yaml:"disableLogging"`
 		// LogLevel is the desired log level
 		LogLevel string `yaml:"logLevel"`
+		// GRPCMaxMsgSize allows overriding default (4MB) message size for gRPC
+		GRPCMaxMsgSize int `yaml:"grpcMaxMsgSize"`
 	}
 
 	// Blobstore contains the config for blobstore
@@ -195,9 +197,7 @@ type (
 		// MaxConns is the max number of connections to this datastore for a single keyspace
 		MaxConns int `yaml:"maxConns"`
 		// TLS configuration
-		TLS *auth.TLS `yaml:"tls"`
-		// CQLClient specifies a custom CQL client implementation, can not be specified through yaml
-		CQLClient gocql.Client `yaml:"-" json:"-"`
+		TLS *TLS `yaml:"tls"`
 	}
 
 	// SQL is the configuration for connecting to a SQL backed datastore
@@ -226,7 +226,7 @@ type (
 		// in a sharded sql database. The default value for this param is 1
 		NumShards int `yaml:"nShards"`
 		// TLS is the configuration for TLS connections
-		TLS *auth.TLS `yaml:"tls"`
+		TLS *TLS `yaml:"tls"`
 		// EncodingType is the configuration for the type of encoding used for sql blobs
 		EncodingType string `yaml:"encodingType"`
 		// DecodingTypes is the configuration for all the sql blob decoding types which need to be supported
@@ -262,8 +262,10 @@ type (
 		EnableGlobalDomain bool `yaml:"enableGlobalDomain"`
 		// FailoverVersionIncrement is the increment of each cluster version when failover happens
 		FailoverVersionIncrement int64 `yaml:"failoverVersionIncrement"`
-		// MasterClusterName is the master cluster name, only the master cluster can register / update domain
+		// PrimaryClusterName is the primary cluster name, only the primary cluster can register / update domain
 		// all clusters can do domain failover
+		PrimaryClusterName string `yaml:"primaryClusterName"`
+		// MasterClusterName is deprecated. Please use PrimaryClusterName.
 		MasterClusterName string `yaml:"masterClusterName"`
 		// CurrentClusterName is the name of the current cluster
 		CurrentClusterName string `yaml:"currentClusterName"`

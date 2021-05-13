@@ -39,6 +39,9 @@
       "HistoryLength": {
         "type": "integer"
       },
+      "IsCron": {
+        "type": "boolean"
+      },
       "KafkaKey": {
         "type": "keyword"
       },

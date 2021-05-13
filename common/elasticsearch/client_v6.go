@@ -120,6 +120,16 @@ func NewV6Client(
 		}
 		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(signingClient))
 	}
+	if connectConfig.TLS.Enabled {
+		var tlsClient *http.Client
+		var err error
+		tlsClient, err = buildTLSHTTPClient(connectConfig.TLS)
+		if err != nil {
+			return nil, err
+		}
+		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(tlsClient))
+	}
+
 	client, err := elastic.NewClient(clientOptFuncs...)
 	if err != nil {
 		return nil, err
@@ -606,6 +616,7 @@ func (c *elasticV6) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit
 		ExecutionTime:    time.Unix(0, source.ExecutionTime),
 		Memo:             p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
 		TaskList:         source.TaskList,
+		IsCron:           source.IsCron,
 		SearchAttributes: source.Attr,
 	}
 	if source.CloseTime != 0 {
