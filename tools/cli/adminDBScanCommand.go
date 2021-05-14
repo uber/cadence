@@ -252,12 +252,13 @@ func initializeExecutionStore(
 	switch dbType {
 	case "cassandra":
 		execStore = initializeCassandraExecutionClient(c, shardID, logger)
-	case "mysql":
-		execStore = initializeSQLExecutionStore(c, shardID, logger)
-	case "postgres":
-		execStore = initializeSQLExecutionStore(c, shardID, logger)
 	default:
-		ErrorAndExit("The DB type is not supported. Options are: cassandra, mysql, postgres.", nil)
+		if sql.PluginRegistered(dbType) {
+			execStore = initializeSQLExecutionStore(c, shardID, logger)
+		} else {
+			supportedDBs := append(sql.GetRegisteredPluginNames(), "cassandra")
+			ErrorAndExit(fmt.Sprintf("The DB type is not supported. Options are: %s.", supportedDBs), nil)
+		}
 	}
 
 	historyManager := persistence.NewExecutionManagerImpl(execStore, logger)

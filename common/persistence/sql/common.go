@@ -56,9 +56,7 @@ func (m *sqlStore) Close() {
 func (m *sqlStore) txExecute(ctx context.Context, operation string, f func(tx sqlplugin.Tx) error) error {
 	tx, err := m.db.BeginTx(ctx)
 	if err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("%s failed. Failed to start transaction. Error: %v", operation, err),
-		}
+		return convertCommonErrors(m.db, operation, "Failed to start transaction.", err)
 	}
 	err = f(tx)
 	if err != nil {
@@ -66,25 +64,10 @@ func (m *sqlStore) txExecute(ctx context.Context, operation string, f func(tx sq
 		if rollBackErr != nil {
 			m.logger.Error("transaction rollback error", tag.Error(rollBackErr))
 		}
-
-		switch err.(type) {
-		case *persistence.ConditionFailedError,
-			*persistence.CurrentWorkflowConditionFailedError,
-			*types.InternalServiceError,
-			*persistence.WorkflowExecutionAlreadyStartedError,
-			*types.DomainAlreadyExistsError,
-			*persistence.ShardOwnershipLostError:
-			return err
-		default:
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("%v: %v", operation, err),
-			}
-		}
+		return convertCommonErrors(m.db, operation, "", err)
 	}
 	if err := tx.Commit(); err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("%s operation failed. Failed to commit transaction. Error: %v", operation, err),
-		}
+		return convertCommonErrors(m.db, operation, "Failed to commit transaction.", err)
 	}
 	return nil
 }
@@ -125,4 +108,42 @@ func deserializePageToken(payload []byte) (int64, error) {
 		return 0, fmt.Errorf("Invalid token of %v length", len(payload))
 	}
 	return int64(binary.LittleEndian.Uint64(payload)), nil
+}
+
+func convertCommonErrors(
+	errChecker sqlplugin.ErrorChecker,
+	operation, message string,
+	err error,
+) error {
+	switch err.(type) {
+	case *persistence.ConditionFailedError,
+		*persistence.CurrentWorkflowConditionFailedError,
+		*persistence.WorkflowExecutionAlreadyStartedError,
+		*persistence.ShardOwnershipLostError,
+		*persistence.TimeoutError,
+		*types.DomainAlreadyExistsError,
+		*types.EntityNotExistsError,
+		*types.ServiceBusyError,
+		*types.InternalServiceError:
+		return err
+	}
+	if errChecker.IsNotFoundError(err) {
+		return &types.EntityNotExistsError{
+			Message: fmt.Sprintf("%v failed. %s Error: %v ", operation, message, err),
+		}
+	}
+
+	if errChecker.IsTimeoutError(err) {
+		return &persistence.TimeoutError{Msg: fmt.Sprintf("%v timed out. %s Error: %v", operation, message, err)}
+	}
+
+	if errChecker.IsThrottlingError(err) {
+		return &types.ServiceBusyError{
+			Message: fmt.Sprintf("%v operation failed. %s Error: %v", operation, message, err),
+		}
+	}
+
+	return &types.InternalServiceError{
+		Message: fmt.Sprintf("%v operation failed. %s Error: %v", operation, message, err),
+	}
 }

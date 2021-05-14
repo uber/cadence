@@ -340,6 +340,7 @@ type (
 		BranchToken        []byte
 		// Cron
 		CronSchedule      string
+		IsCron            bool
 		ExpirationSeconds int32 // TODO: is this field useful?
 	}
 

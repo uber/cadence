@@ -428,6 +428,14 @@ func (w *WorkflowExecutionInfo) GetTaskList() (o string) {
 	return
 }
 
+// GetIsCron internal sql blob getter
+func (w *WorkflowExecutionInfo) GetIsCron() (o bool) {
+	if w != nil && w.IsCron != nil {
+		return *w.IsCron
+	}
+	return
+}
+
 // GetWorkflowTypeName internal sql blob getter
 func (w *WorkflowExecutionInfo) GetWorkflowTypeName() (o string) {
 	if w != nil && w.WorkflowTypeName != nil {

@@ -515,6 +515,7 @@ type (
 		HistoryLength    *int64
 		Memo             []byte
 		Encoding         string
+		IsCron           bool
 	}
 
 	// VisibilityFilter contains the column names within executions_visibility table that
@@ -781,6 +782,8 @@ type (
 	// Tx defines the API for a SQL transaction
 	Tx interface {
 		tableCRUD
+		ErrorChecker
+
 		Commit() error
 		Rollback() error
 	}
@@ -788,10 +791,10 @@ type (
 	// DB defines the API for regular SQL operations of a Cadence server
 	DB interface {
 		tableCRUD
+		ErrorChecker
 
 		BeginTx(ctx context.Context) (Tx, error)
 		PluginName() string
-		IsDupEntryError(err error) bool
 		Close() error
 	}
 
@@ -800,5 +803,12 @@ type (
 		adminCRUD
 		PluginName() string
 		Close() error
+	}
+
+	ErrorChecker interface {
+		IsDupEntryError(err error) bool
+		IsNotFoundError(err error) bool
+		IsTimeoutError(err error) bool
+		IsThrottlingError(err error) bool
 	}
 )
