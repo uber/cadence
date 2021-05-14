@@ -45,8 +45,8 @@ type historyTreePageToken struct {
 	BranchID serialization.UUID
 }
 
-// newHistoryV2Persistence creates an instance of HistoryManager
-func newHistoryV2Persistence(
+// NewHistoryV2Persistence creates an instance of HistoryManager
+func NewHistoryV2Persistence(
 	db sqlplugin.DB,
 	logger log.Logger,
 	parser serialization.Parser,
