@@ -46,6 +46,7 @@ type (
 		historyEventsCRUD
 		messageQueueCRUD
 		domainCRUD
+		shardCRUD
 	}
 
 	// historyEventsCRUD is for History events storage system
@@ -132,6 +133,24 @@ type (
 		DeleteDomain(ctx context.Context, domainID *string, domainName *string) error
 		// right now domain metadata is just an integer as notification version
 		SelectDomainMetadata(ctx context.Context) (int64, error)
+	}
+
+	// shardCRUD is for shard storage of workflow execution.
+	// Note that this will be required to run conditional update with workflowCRUD. So in some nosql database like Cassandra,
+	// shardCRUD and workflowCRUD must be implemented within the same table. Because Cassandra only allows LightWeight transaction
+	// executed within a single table.
+	shardCRUD interface {
+		// InsertShard creates a new shard, return error is there is any.
+		// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
+		InsertShard(ctx context.Context, row *persistence.InternalShardInfo) (err error, applied bool, previous *persistence.InternalShardInfo)
+		// SelectShard gets a shard
+		SelectShard(ctx context.Context, shardID int) (err error, shard *persistence.InternalShardInfo)
+		// UpdateRangeID updates the rangeID, return error is there is any
+		// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
+		UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (err error, applied bool, previous *persistence.InternalShardInfo)
+		// UpdateShard updates a shard, return error is there is any.
+		// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
+		UpdateShard(ctx context.Context, row *persistence.InternalShardInfo) (err error, applied bool, previous *persistence.InternalShardInfo)
 	}
 
 	// DomainRow defines the row struct for queue message
