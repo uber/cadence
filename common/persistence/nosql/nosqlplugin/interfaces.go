@@ -179,15 +179,24 @@ type (
 	shardCRUD interface {
 		// InsertShard creates a new shard, return error is there is any.
 		// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-		InsertShard(ctx context.Context, row *persistence.InternalShardInfo) (err error, applied bool, previous *persistence.InternalShardInfo)
-		// SelectShard gets a shard
-		SelectShard(ctx context.Context, shardID int) (err error, shard *persistence.InternalShardInfo)
+		InsertShard(ctx context.Context, row *persistence.InternalShardInfo) (err error, applied bool, previous *ConflictedShardRow)
+		// SelectShard gets a shard, rangeID is the current rangeID in shard row
+		SelectShard(ctx context.Context, shardID int, currentClusterName string) (err error, rangeID int64, shard *persistence.InternalShardInfo)
 		// UpdateRangeID updates the rangeID, return error is there is any
 		// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-		UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (err error, applied bool, previous *persistence.InternalShardInfo)
+		UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (err error, applied bool, previous *ConflictedShardRow)
 		// UpdateShard updates a shard, return error is there is any.
 		// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-		UpdateShard(ctx context.Context, row *persistence.InternalShardInfo) (err error, applied bool, previous *persistence.InternalShardInfo)
+		UpdateShard(ctx context.Context, row *persistence.InternalShardInfo, previousRangeID int64) (err error, applied bool, previous *ConflictedShardRow)
+	}
+
+	// ConflictedShardRow contains the partial information about a shard returned when a conditional update fails
+	ConflictedShardRow struct {
+		ShardID int
+		// PreviousRangeID is the condition of previous change that used for conditional update
+		PreviousRangeID int64
+		// optional detailed information for logging purpose
+		Details string
 	}
 
 	// DomainRow defines the row struct for queue message
