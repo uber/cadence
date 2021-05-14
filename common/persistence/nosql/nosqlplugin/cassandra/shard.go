@@ -23,11 +23,12 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
-	"strings"
-	"time"
 )
 
 const (
@@ -92,7 +93,7 @@ const (
 
 // InsertShard creates a new shard, return error is there is any.
 // When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-func (db *cdb) InsertShard(ctx context.Context, row *persistence.InternalShardInfo) (error, bool, *nosqlplugin.ConflictedShardRow){
+func (db *cdb) InsertShard(ctx context.Context, row *persistence.InternalShardInfo) (error, bool, *nosqlplugin.ConflictedShardRow) {
 	cqlNowTimestamp := persistence.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	markerData, markerEncoding := persistence.FromDataBlob(row.PendingFailoverMarkers)
 	transferPQS, transferPQSEncoding := persistence.FromDataBlob(row.TransferProcessingQueueStates)
@@ -146,14 +147,14 @@ func convertToConflictedShardRow(shardID int, previousRangeID int64, previous ma
 		columns = append(columns, fmt.Sprintf("%s=%v", k, v))
 	}
 	return &nosqlplugin.ConflictedShardRow{
-		ShardID: shardID,
+		ShardID:         shardID,
 		PreviousRangeID: previousRangeID,
-		Details: strings.Join(columns, ","),
+		Details:         strings.Join(columns, ","),
 	}
 }
 
 // SelectShard gets a shard
-func (db *cdb) SelectShard(ctx context.Context, shardID int, currentClusterName string) (error, int64, *persistence.InternalShardInfo){
+func (db *cdb) SelectShard(ctx context.Context, shardID int, currentClusterName string) (error, int64, *persistence.InternalShardInfo) {
 	query := db.session.Query(templateGetShardQuery,
 		shardID,
 		rowTypeShard,
@@ -264,7 +265,7 @@ func convertToShardInfo(
 
 // UpdateRangeID updates the rangeID, return error is there is any
 // When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-func (db *cdb) UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (error, bool, *nosqlplugin.ConflictedShardRow){
+func (db *cdb) UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (error, bool, *nosqlplugin.ConflictedShardRow) {
 	query := db.session.Query(templateUpdateRangeIDQuery,
 		rangeID,
 		shardID,
@@ -292,7 +293,7 @@ func (db *cdb) UpdateRangeID(ctx context.Context, shardID int, rangeID int64, pr
 
 // UpdateShard updates a shard, return error is there is any.
 // When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-func (db *cdb) UpdateShard(ctx context.Context, row *persistence.InternalShardInfo, previousRangeID int64) (error, bool, *nosqlplugin.ConflictedShardRow){
+func (db *cdb) UpdateShard(ctx context.Context, row *persistence.InternalShardInfo, previousRangeID int64) (error, bool, *nosqlplugin.ConflictedShardRow) {
 	cqlNowTimestamp := persistence.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	markerData, markerEncoding := persistence.FromDataBlob(row.PendingFailoverMarkers)
 	transferPQS, transferPQSEncoding := persistence.FromDataBlob(row.TransferProcessingQueueStates)
