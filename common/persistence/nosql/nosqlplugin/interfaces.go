@@ -136,19 +136,24 @@ type (
 	}
 
 	// shardCRUD is for shard storage of workflow execution.
-	// Note that this will be required to run conditional update with workflowCRUD. So in some nosql database like Cassandra,
+	// Note 1: shard will be required to run conditional update with workflowCRUD. So in some nosql database like Cassandra,
 	// shardCRUD and workflowCRUD must be implemented within the same table. Because Cassandra only allows LightWeight transaction
 	// executed within a single table.
+	// Note 2: unlike Cassandra, most NoSQL databases don't return the previous rows when conditional write fails. In this case,
+	// an extra read query is needed to get the previous row.
 	shardCRUD interface {
-		// InsertShard creates a new shard, return error is there is any.
+		// InsertShard creates a new shard.
+		// Return error is there is any thing wrong, but not including conditional fails
 		// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
 		InsertShard(ctx context.Context, row *persistence.InternalShardInfo) (err error, applied bool, previous *ConflictedShardRow)
 		// SelectShard gets a shard, rangeID is the current rangeID in shard row
 		SelectShard(ctx context.Context, shardID int, currentClusterName string) (err error, rangeID int64, shard *persistence.InternalShardInfo)
-		// UpdateRangeID updates the rangeID, return error is there is any
+		// UpdateRangeID updates the rangeID
+		// Return error is there is any thing wrong, but not including conditional fails
 		// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
 		UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (err error, applied bool, previous *ConflictedShardRow)
-		// UpdateShard updates a shard, return error is there is any.
+		// UpdateShard updates a shard
+		// Return error is there is any thing wrong, but not including conditional fails
 		// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
 		UpdateShard(ctx context.Context, row *persistence.InternalShardInfo, previousRangeID int64) (err error, applied bool, previous *ConflictedShardRow)
 	}
