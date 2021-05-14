@@ -28,6 +28,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 )
@@ -2200,7 +2201,7 @@ func createChecksum(result map[string]interface{}) checksum.Checksum {
 }
 
 func convertCommonErrors(
-	errChecker gocql.ErrorChecker,
+	errChecker nosqlplugin.ErrorChecker,
 	operation string,
 	err error,
 ) error {

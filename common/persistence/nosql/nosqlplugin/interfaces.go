@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -36,7 +35,7 @@ type (
 		Close()
 
 		IsConditionFailedError(err error) bool
-		gocql.ErrorChecker
+		ErrorChecker
 
 		tableCRUD
 	}
@@ -46,6 +45,13 @@ type (
 		historyEventsCRUD
 		messageQueueCRUD
 		domainCRUD
+	}
+
+	// ErrorChecker checks for common nosql errors
+	ErrorChecker interface {
+		IsTimeoutError(error) bool
+		IsNotFoundError(error) bool
+		IsThrottlingError(error) bool
 	}
 
 	// historyEventsCRUD is for History events storage system
