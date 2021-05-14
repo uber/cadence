@@ -34,9 +34,7 @@ type (
 		PluginName() string
 		Close()
 
-		IsConditionFailedError(err error) bool
-		ErrorChecker
-
+		NoSQLErrorChecker
 		tableCRUD
 	}
 	// tableCRUD defines the API for interacting with the database tables
@@ -47,8 +45,14 @@ type (
 		domainCRUD
 	}
 
-	// ErrorChecker checks for common nosql errors
-	ErrorChecker interface {
+	// NoSQLErrorChecker checks for common nosql errors
+	NoSQLErrorChecker interface {
+		IsConditionFailedError(err error) bool
+		ClientErrorChecker
+	}
+
+	// ClientErrorChecker checks for common nosql errors on client
+	ClientErrorChecker interface {
 		IsTimeoutError(error) bool
 		IsNotFoundError(error) bool
 		IsThrottlingError(error) bool

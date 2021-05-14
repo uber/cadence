@@ -2201,7 +2201,7 @@ func createChecksum(result map[string]interface{}) checksum.Checksum {
 }
 
 func convertCommonErrors(
-	errChecker nosqlplugin.ErrorChecker,
+	errChecker nosqlplugin.ClientErrorChecker,
 	operation string,
 	err error,
 ) error {

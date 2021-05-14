@@ -40,7 +40,7 @@ type (
 	Client interface {
 		CreateSession(ClusterConfig) (Session, error)
 
-		nosqlplugin.ErrorChecker
+		nosqlplugin.ClientErrorChecker
 	}
 
 	// Session is the interface for interacting with the database.
