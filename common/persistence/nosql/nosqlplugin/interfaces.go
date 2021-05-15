@@ -143,22 +143,22 @@ type (
 	// an extra read query is needed to get the previous row.
 	shardCRUD interface {
 		// InsertShard creates a new shard.
-		// Return error is there is any thing wrong, but not including conditional fails
-		// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-		InsertShard(ctx context.Context, row *persistence.InternalShardInfo) (err error, applied bool, previous *ConflictedShardRow)
+		// Return error is there is any thing wrong
+		// When error IsConditionFailedError, also return the row that doesn't meet the condition
+		InsertShard(ctx context.Context, row *persistence.InternalShardInfo) (err error, previous *ConflictedShardRow)
 		// SelectShard gets a shard, rangeID is the current rangeID in shard row
 		SelectShard(ctx context.Context, shardID int, currentClusterName string) (err error, rangeID int64, shard *persistence.InternalShardInfo)
 		// UpdateRangeID updates the rangeID
-		// Return error is there is any thing wrong, but not including conditional fails
-		// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-		UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (err error, applied bool, previous *ConflictedShardRow)
+		// Return error is there is any thing wrong
+		// When error IsConditionFailedError, also return the row that doesn't meet the condition
+		UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (err error, previous *ConflictedShardRow)
 		// UpdateShard updates a shard
-		// Return error is there is any thing wrong, but not including conditional fails
-		// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-		UpdateShard(ctx context.Context, row *persistence.InternalShardInfo, previousRangeID int64) (err error, applied bool, previous *ConflictedShardRow)
+		// Return error is there is any thing wrong
+		// When error IsConditionFailedError, also return the row that doesn't meet the condition
+		UpdateShard(ctx context.Context, row *persistence.InternalShardInfo, previousRangeID int64) (err error, previous *ConflictedShardRow)
 	}
 
-	// ConflictedShardRow contains the partial information about a shard returned when a conditional update fails
+	// ConflictedShardRow contains the partial information about a shard returned when a conditional write fails
 	ConflictedShardRow struct {
 		ShardID int
 		// PreviousRangeID is the condition of previous change that used for conditional update
