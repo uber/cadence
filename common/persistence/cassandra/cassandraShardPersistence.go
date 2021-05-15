@@ -96,16 +96,15 @@ func (sh *nosqlShardManager) CreateShard(
 	request *p.InternalCreateShardRequest,
 ) error {
 
-	err, applied, previous := sh.db.InsertShard(ctx, request.ShardInfo)
+	err, previous := sh.db.InsertShard(ctx, request.ShardInfo)
 	if err != nil {
-		return convertCommonErrors(sh.db, "CreateShard", err)
-	}
-
-	if !applied {
-		return &p.ShardAlreadyExistError{
-			Msg: fmt.Sprintf("Shard already exists in executions table.  ShardId: %v, RangeId: %v",
-				previous.ShardID, previous.PreviousRangeID),
+		if sh.db.IsConditionFailedError(err) {
+			return &p.ShardAlreadyExistError{
+				Msg: fmt.Sprintf("Shard already exists in executions table.  ShardId: %v, RangeId: %v",
+					previous.ShardID, previous.PreviousRangeID),
+			}
 		}
+		return convertCommonErrors(sh.db, "CreateShard", err)
 	}
 
 	return nil
@@ -163,17 +162,16 @@ func (sh *nosqlShardManager) updateRangeID(
 	previousRangeID int64,
 ) error {
 
-	err, applied, previous := sh.db.UpdateRangeID(ctx, shardID, rangeID, previousRangeID)
+	err, previous := sh.db.UpdateRangeID(ctx, shardID, rangeID, previousRangeID)
 	if err != nil {
-		return convertCommonErrors(sh.db, "UpdateRangeID", err)
-	}
-
-	if !applied {
-		return &p.ShardOwnershipLostError{
-			ShardID: shardID,
-			Msg: fmt.Sprintf("Failed to update shard rangeID.  previous_range_id: %v, columns: (%v)",
-				previousRangeID, previous.Details),
+		if sh.db.IsConditionFailedError(err) {
+			return &p.ShardOwnershipLostError{
+				ShardID: shardID,
+				Msg: fmt.Sprintf("Failed to update shard rangeID.  previous_range_id: %v, columns: (%v)",
+					previousRangeID, previous.Details),
+			}
 		}
+		return convertCommonErrors(sh.db, "UpdateRangeID", err)
 	}
 
 	return nil
@@ -183,17 +181,16 @@ func (sh *nosqlShardManager) UpdateShard(
 	ctx context.Context,
 	request *p.InternalUpdateShardRequest,
 ) error {
-	err, applied, previous := sh.db.UpdateShard(ctx, request.ShardInfo, request.PreviousRangeID)
+	err, previous := sh.db.UpdateShard(ctx, request.ShardInfo, request.PreviousRangeID)
 	if err != nil {
-		return convertCommonErrors(sh.db, "UpdateShard", err)
-	}
-
-	if !applied {
-		return &p.ShardOwnershipLostError{
-			ShardID: request.ShardInfo.ShardID,
-			Msg: fmt.Sprintf("Failed to update shard.  previous_range_id: %v, columns: (%v)",
-				request.PreviousRangeID, previous.Details),
+		if sh.db.IsConditionFailedError(err) {
+			return &p.ShardOwnershipLostError{
+				ShardID: request.ShardInfo.ShardID,
+				Msg: fmt.Sprintf("Failed to update shard.  previous_range_id: %v, columns: (%v)",
+					request.PreviousRangeID, previous.Details),
+			}
 		}
+		return convertCommonErrors(sh.db, "UpdateShard", err)
 	}
 
 	return nil
