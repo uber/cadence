@@ -265,6 +265,12 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 	ctx context.Context,
 	request *p.InternalRecordWorkflowExecutionClosedRequest,
 ) error {
+	// Find how long to keep the row
+	retention := request.RetentionSeconds
+	if retention == 0 {
+		retention = defaultCloseTTLSeconds * time.Second
+	}
+
 	batch := v.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 
 	// First, remove execution from the open table
@@ -277,11 +283,6 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 
 	// Next, add a row in the closed table.
 
-	// Find how long to keep the row
-	retention := request.RetentionSeconds
-	if retention == 0 {
-		retention = defaultCloseTTLSeconds * time.Second
-	}
 	if int64(retention.Seconds()) > maxCassandraTTL {
 		batch.Query(templateCreateWorkflowExecutionClosed,
 			request.DomainUUID,

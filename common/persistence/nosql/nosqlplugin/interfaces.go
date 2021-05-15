@@ -47,6 +47,7 @@ type (
 		messageQueueCRUD
 		domainCRUD
 		shardCRUD
+		visibilityCRUD
 	}
 
 	// historyEventsCRUD is for History events storage system

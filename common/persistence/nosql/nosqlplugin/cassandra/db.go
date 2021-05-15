@@ -22,7 +22,6 @@ package cassandra
 
 import (
 	"errors"
-
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"

@@ -22,6 +22,7 @@
 package cassandra
 
 import (
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"time"
 
 	p "github.com/uber/cadence/common/persistence"
@@ -36,6 +37,8 @@ const (
 	// Cassandra max support time is 2038-01-19T03:14:06+00:00. Updated this to 5 years to support until year 2033
 	// See https://github.com/uber/cadence/issues/4200
 	maxCassandraTTL = int64(157680000)
+
+	cassandraLowConslevel = gocql.One
 )
 
 const (
