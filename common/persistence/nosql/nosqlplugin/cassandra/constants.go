@@ -33,6 +33,12 @@ var (
 )
 
 const (
+	// Cassandra max support time is 2038-01-19T03:14:06+00:00. Updated this to 5 years to support until year 2033
+	// See https://github.com/uber/cadence/issues/4200
+	maxCassandraTTL = int64(157680000)
+)
+
+const (
 	// Row types for table executions
 	rowTypeShard = iota
 	rowTypeExecution
