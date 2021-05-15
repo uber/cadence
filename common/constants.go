@@ -163,8 +163,12 @@ const (
 	AdvancedVisibilityWritingModeDual = "dual"
 )
 
-// DomainDataKeyForManagedFailover is key of DomainData for managed failover
-const DomainDataKeyForManagedFailover = "IsManagedByCadence"
+const (
+	// DomainDataKeyForManagedFailover is key of DomainData for managed failover
+	DomainDataKeyForManagedFailover = "IsManagedByCadence"
+	// DomainDataKeyForPreferredCluster is the key of DomainData for domain rebalance
+	DomainDataKeyForPreferredCluster = "PreferredCluster"
+)
 
 type (
 	// TaskType is the enum for representing different task types

@@ -46,11 +46,15 @@ const (
 	TaskListName = "cadence-sys-failoverManager-tasklist"
 	// WorkflowTypeName workflow type name
 	WorkflowTypeName = "cadence-sys-failoverManager-workflow"
+	// RebalanceWorkflowTypeName is rebalance workflow type name
+	RebalanceWorkflowTypeName = "cadence-sys-rebalance-workflow"
 	// WorkflowID will be reused to ensure only one workflow running
-	WorkflowID             = "cadence-failover-manager"
-	DrillWorkflowID        = WorkflowID + "-drill"
-	failoverActivityName   = "cadence-sys-failover-activity"
-	getDomainsActivityName = "cadence-sys-getDomains-activity"
+	WorkflowID                      = "cadence-failover-manager"
+	RebalanceWorkflowID             = "cadence-rebalance-workflow"
+	DrillWorkflowID                 = WorkflowID + "-drill"
+	failoverActivityName            = "cadence-sys-failover-activity"
+	getDomainsActivityName          = "cadence-sys-getDomains-activity"
+	getRebalanceDomainsActivityName = "cadence-sys-getRebalanceDomains-activity"
 
 	defaultBatchFailoverSize              = 20
 	defaultBatchFailoverWaitTimeInSeconds = 30
@@ -263,7 +267,10 @@ func failoverDomainsByBatch(
 			successDomains = append(successDomains, actResult.SuccessDomains...)
 			failedDomains = append(failedDomains, actResult.FailedDomains...)
 		}
-		workflow.Sleep(ctx, time.Duration(params.BatchFailoverWaitTimeInSeconds)*time.Second)
+
+		if i != times-1 {
+			workflow.Sleep(ctx, time.Duration(params.BatchFailoverWaitTimeInSeconds)*time.Second)
+		}
 	}
 	return
 }
