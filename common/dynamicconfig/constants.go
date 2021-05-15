@@ -158,7 +158,7 @@ const (
 	// Default value: domain.MinRetentionDays
 	// Allowed filters: N/A
 	MinRetentionDays
-	// MaxDecisionStartToCloseSeconds is the minimal allowed decision start to close timeout in seconds
+	// MaxDecisionStartToCloseSeconds is the maximum allowed value for decision start to close timeout in seconds
 	// KeyName: system.maxDecisionStartToCloseSeconds
 	// Value type: Int
 	// Default value: 240

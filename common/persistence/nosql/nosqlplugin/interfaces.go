@@ -52,6 +52,7 @@ type (
 		messageQueueCRUD
 		domainCRUD
 		shardCRUD
+		visibilityCRUD
 	}
 
 	// NoSQLErrorChecker checks for common nosql errors
