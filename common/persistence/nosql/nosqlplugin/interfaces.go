@@ -145,9 +145,9 @@ type (
 		// InsertShard creates a new shard.
 		// Return error is there is any thing wrong
 		// When error IsConditionFailedError, also return the row that doesn't meet the condition
-		InsertShard(ctx context.Context, row *persistence.InternalShardInfo) (err error, previous *ConflictedShardRow)
+		InsertShard(ctx context.Context, row *ShardRow) (err error, previous *ConflictedShardRow)
 		// SelectShard gets a shard, rangeID is the current rangeID in shard row
-		SelectShard(ctx context.Context, shardID int, currentClusterName string) (err error, rangeID int64, shard *persistence.InternalShardInfo)
+		SelectShard(ctx context.Context, shardID int, currentClusterName string) (err error, rangeID int64, shard *ShardRow)
 		// UpdateRangeID updates the rangeID
 		// Return error is there is any thing wrong
 		// When error IsConditionFailedError, also return the row that doesn't meet the condition
@@ -155,8 +155,12 @@ type (
 		// UpdateShard updates a shard
 		// Return error is there is any thing wrong
 		// When error IsConditionFailedError, also return the row that doesn't meet the condition
-		UpdateShard(ctx context.Context, row *persistence.InternalShardInfo, previousRangeID int64) (err error, previous *ConflictedShardRow)
+		UpdateShard(ctx context.Context, row *ShardRow, previousRangeID int64) (err error, previous *ConflictedShardRow)
 	}
+
+	// For now ShardRow is the same as persistence.InternalShardInfo
+	// Separate them later when there is a need.
+	ShardRow = persistence.InternalShardInfo
 
 	// ConflictedShardRow contains the partial information about a shard returned when a conditional write fails
 	ConflictedShardRow struct {

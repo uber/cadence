@@ -93,7 +93,7 @@ const (
 
 // InsertShard creates a new shard, return error is there is any.
 // When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-func (db *cdb) InsertShard(ctx context.Context, row *persistence.InternalShardInfo) (error, *nosqlplugin.ConflictedShardRow) {
+func (db *cdb) InsertShard(ctx context.Context, row *nosqlplugin.ShardRow) (error, *nosqlplugin.ConflictedShardRow) {
 	cqlNowTimestamp := persistence.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	markerData, markerEncoding := persistence.FromDataBlob(row.PendingFailoverMarkers)
 	transferPQS, transferPQSEncoding := persistence.FromDataBlob(row.TransferProcessingQueueStates)
@@ -154,7 +154,7 @@ func convertToConflictedShardRow(shardID int, previousRangeID int64, previous ma
 }
 
 // SelectShard gets a shard
-func (db *cdb) SelectShard(ctx context.Context, shardID int, currentClusterName string) (error, int64, *persistence.InternalShardInfo) {
+func (db *cdb) SelectShard(ctx context.Context, shardID int, currentClusterName string) (error, int64, *nosqlplugin.ShardRow) {
 	query := db.session.Query(templateGetShardQuery,
 		shardID,
 		rowTypeShard,
@@ -180,7 +180,7 @@ func convertToShardInfo(
 	currentCluster string,
 	rangeID int64,
 	shard map[string]interface{},
-) *persistence.InternalShardInfo {
+) *nosqlplugin.ShardRow {
 
 	var pendingFailoverMarkersRawData []byte
 	var pendingFailoverMarkersEncoding string
@@ -293,7 +293,7 @@ func (db *cdb) UpdateRangeID(ctx context.Context, shardID int, rangeID int64, pr
 
 // UpdateShard updates a shard, return error is there is any.
 // When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-func (db *cdb) UpdateShard(ctx context.Context, row *persistence.InternalShardInfo, previousRangeID int64) (error, *nosqlplugin.ConflictedShardRow) {
+func (db *cdb) UpdateShard(ctx context.Context, row *nosqlplugin.ShardRow, previousRangeID int64) (error, *nosqlplugin.ConflictedShardRow) {
 	cqlNowTimestamp := persistence.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	markerData, markerEncoding := persistence.FromDataBlob(row.PendingFailoverMarkers)
 	transferPQS, transferPQSEncoding := persistence.FromDataBlob(row.TransferProcessingQueueStates)
