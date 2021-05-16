@@ -23,6 +23,8 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"time"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
@@ -30,11 +32,10 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
-	"time"
 )
 
 const (
-	domainPartition        = 0
+	domainPartition = 0
 )
 
 const (

@@ -22,8 +22,9 @@
 package cassandra
 
 import (
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 
 	p "github.com/uber/cadence/common/persistence"
 )
