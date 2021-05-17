@@ -65,6 +65,7 @@ type (
 		stopC  chan struct{}
 		params *service.BootstrapParams
 		config *Config
+		dc     *dynamicconfig.Collection
 	}
 
 	// Config contains all the service config for worker
@@ -89,8 +90,13 @@ type (
 func NewService(
 	params *service.BootstrapParams,
 ) (resource.Resource, error) {
+	dc := dynamicconfig.NewCollection(
+		params.DynamicConfig,
+		params.Logger,
+		dynamicconfig.ClusterNameFilter(params.ClusterMetadata.GetCurrentClusterName()),
+	)
 
-	serviceConfig := NewConfig(params)
+	serviceConfig := NewConfig(params, dc)
 
 	serviceResource, err := resource.New(
 		params,
@@ -115,16 +121,12 @@ func NewService(
 		config:   serviceConfig,
 		params:   params,
 		stopC:    make(chan struct{}),
+		dc:       dc,
 	}, nil
 }
 
 // NewConfig builds the new Config for cadence-worker service
-func NewConfig(params *service.BootstrapParams) *Config {
-	dc := dynamicconfig.NewCollection(
-		params.DynamicConfig,
-		params.Logger,
-		dynamicconfig.ClusterNameFilter(params.ClusterMetadata.GetCurrentClusterName()),
-	)
+func NewConfig(params *service.BootstrapParams, dc *dynamicconfig.Collection) *Config {
 	config := &Config{
 		ArchiverConfig: &archiver.Config{
 			ArchiverConcurrency:           dc.GetIntProperty(dynamicconfig.WorkerArchiverConcurrency, 50),
@@ -273,7 +275,7 @@ func (s *Service) startScanner() {
 		Config:     *s.config.ScannerCfg,
 		TallyScope: s.params.MetricScope,
 	}
-	if err := scanner.New(s.Resource, params).Start(); err != nil {
+	if err := scanner.New(s.Resource, params, s.dc).Start(); err != nil {
 		s.GetLogger().Fatal("error starting scanner", tag.Error(err))
 	}
 }
