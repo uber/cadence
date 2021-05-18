@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
 // Note: this file defines the minimal interface that is needed by Cadence's cassandra
@@ -39,7 +40,7 @@ type (
 	Client interface {
 		CreateSession(ClusterConfig) (Session, error)
 
-		ErrorChecker
+		nosqlplugin.ClientErrorChecker
 	}
 
 	// Session is the interface for interacting with the database.
@@ -85,13 +86,6 @@ type (
 	// UUID represents a universally unique identifier
 	UUID interface {
 		String() string
-	}
-
-	// ErrorChecker checks for common gocql errors
-	ErrorChecker interface {
-		IsTimeoutError(error) bool
-		IsNotFoundError(error) bool
-		IsThrottlingError(error) bool
 	}
 
 	// BatchType is the type of the Batch operation
