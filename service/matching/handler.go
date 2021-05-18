@@ -392,7 +392,7 @@ func (h *handlerImpl) ListTaskListPartitions(
 	return response, hCtx.handleErr(err)
 }
 
-// ListTaskListPartitions returns information about partitions for a taskList
+// GetTaskListsForDomain returns information about partitions for a taskList
 func (h *handlerImpl) GetTaskListsForDomain(
 	ctx context.Context,
 	request *types.MatchingGetTaskListsForDomainRequest,

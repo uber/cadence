@@ -229,8 +229,10 @@ func (e *matchingEngineImpl) cacheTaskListByDomain(taskList *taskListID) error {
 		taskLists = map[string]bool{}
 	}
 
+	// there might be a race condition here if two goroutines tries to put the task list at the same time
+	// this is non-issue because we don't care as all tasklists should be populated eventually
 	taskLists[taskList.name] = true
-	e.taskListCache.PutIfNotExist(domainName, taskLists)
+	e.taskListCache.Put(domainName, taskLists)
 	return nil
 }
 
