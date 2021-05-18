@@ -29,11 +29,11 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/service/worker/scanner/tasklist"
 
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/worker"
@@ -67,8 +67,11 @@ func (s *scannerWorkflowTestSuite) TestScavengerActivity() {
 	ctx := scannerContext{
 		resource: mockResource,
 		cfg: Config{
-			GetOrphanTasksPageSizeFn:                    dynamicconfig.GetIntPropertyFn(common.DefaultScannerGetOrphanTasksPageSize),
-			EnableCleaningOrphanTaskInTasklistScavenger: dynamicconfig.GetBoolPropertyFn(true),
+			TaskListScannerOptions: tasklist.Options{
+				GetOrphanTasksPageSizeFn: dynamicconfig.GetIntPropertyFn(tasklist.DefaultScannerGetOrphanTasksPageSize),
+				EnableCleaning:           dynamicconfig.GetBoolPropertyFn(true),
+				ExecutorPollInterval:     time.Millisecond * 50,
+			},
 		},
 	}
 	env.SetTestTimeout(time.Second * 5)

@@ -139,12 +139,6 @@ const (
 )
 
 const (
-	DefaultScannerGetOrphanTasksPageSize                    = 1000
-	DefaultScannerBatchSizeForCompleteTasksLessThanAckLevel = 16
-	DefaultScannerMaxTasksProcessedPerTasklistJob           = 256
-)
-
-const (
 	// ArchivalEnabled is the status for enabling archival
 	ArchivalEnabled = "enabled"
 	// ArchivalDisabled is the status for disabling archival
