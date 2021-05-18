@@ -80,11 +80,11 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.GetSearchAttributesResponse, error)
 
-	GetTaskListsForDomain(
+	GetTaskListsByDomain(
 		ctx context.Context,
-		Request *shared.GetTaskListsForDomainRequest,
+		Request *shared.GetTaskListsByDomainRequest,
 		opts ...yarpc.CallOption,
-	) (*shared.GetTaskListsForDomainResponse, error)
+	) (*shared.GetTaskListsByDomainResponse, error)
 
 	GetWorkflowExecutionHistory(
 		ctx context.Context,
@@ -456,13 +456,13 @@ func (c client) GetSearchAttributes(
 	return
 }
 
-func (c client) GetTaskListsForDomain(
+func (c client) GetTaskListsByDomain(
 	ctx context.Context,
-	_Request *shared.GetTaskListsForDomainRequest,
+	_Request *shared.GetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
-) (success *shared.GetTaskListsForDomainResponse, err error) {
+) (success *shared.GetTaskListsByDomainResponse, err error) {
 
-	args := cadence.WorkflowService_GetTaskListsForDomain_Helper.Args(_Request)
+	args := cadence.WorkflowService_GetTaskListsByDomain_Helper.Args(_Request)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -470,12 +470,12 @@ func (c client) GetTaskListsForDomain(
 		return
 	}
 
-	var result cadence.WorkflowService_GetTaskListsForDomain_Result
+	var result cadence.WorkflowService_GetTaskListsByDomain_Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	success, err = cadence.WorkflowService_GetTaskListsForDomain_Helper.UnwrapResponse(&result)
+	success, err = cadence.WorkflowService_GetTaskListsByDomain_Helper.UnwrapResponse(&result)
 	return
 }
 

@@ -134,10 +134,10 @@ func (t ThriftHandler) ListTaskListPartitions(ctx context.Context, request *shar
 	return thrift.FromListTaskListPartitionsResponse(response), thrift.FromError(err)
 }
 
-// GetTaskListsForDomain forwards request to the underlying handler
-func (t ThriftHandler) GetTaskListsForDomain(ctx context.Context, request *shared.GetTaskListsForDomainRequest) (*shared.GetTaskListsForDomainResponse, error) {
-	response, err := t.h.GetTaskListsForDomain(ctx, thrift.ToGetTaskListsForDomainRequest(request))
-	return thrift.FromGetTaskListsForDomainResponse(response), thrift.FromError(err)
+// GetTaskListsByDomain forwards request to the underlying handler
+func (t ThriftHandler) GetTaskListsByDomain(ctx context.Context, request *shared.GetTaskListsByDomainRequest) (*shared.GetTaskListsByDomainResponse, error) {
+	response, err := t.h.GetTaskListsByDomain(ctx, thrift.ToGetTaskListsByDomainRequest(request))
+	return thrift.FromGetTaskListsByDomainResponse(response), thrift.FromError(err)
 }
 
 // ListWorkflowExecutions forwards request to the underlying handler

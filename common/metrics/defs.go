@@ -378,8 +378,8 @@ const (
 	MatchingClientDescribeTaskListScope
 	// MatchingClientListTaskListPartitionsScope tracks RPC calls to matching service
 	MatchingClientListTaskListPartitionsScope
-	// MatchingClientGetTaskListsForDomainScope tracks RPC calls to matching service
-	MatchingClientGetTaskListsForDomainScope
+	// MatchingClientGetTaskListsByDomainScope tracks RPC calls to matching service
+	MatchingClientGetTaskListsByDomainScope
 	// FrontendClientDeprecateDomainScope tracks RPC calls to frontend service
 	FrontendClientDeprecateDomainScope
 	// FrontendClientDescribeDomainScope tracks RPC calls to frontend service
@@ -468,8 +468,8 @@ const (
 	FrontendClientGetClusterInfoScope
 	// FrontendClientListTaskListPartitionsScope tracks RPC calls to frontend service
 	FrontendClientListTaskListPartitionsScope
-	// FrontendClientGetTaskListsForDomainScope tracks RPC calls to frontend service
-	FrontendClientGetTaskListsForDomainScope
+	// FrontendClientGetTaskListsByDomainScope tracks RPC calls to frontend service
+	FrontendClientGetTaskListsByDomainScope
 	// AdminClientAddSearchAttributeScope tracks RPC calls to admin service
 	AdminClientAddSearchAttributeScope
 	// AdminClientCloseShardScope tracks RPC calls to admin service
@@ -576,8 +576,8 @@ const (
 	DCRedirectionUpdateDomainScope
 	// DCRedirectionListTaskListPartitionsScope tracks RPC calls for dc redirection
 	DCRedirectionListTaskListPartitionsScope
-	// DCRedirectionGetTaskListsForDomainScope tracks RPC calls for dc redirection
-	DCRedirectionGetTaskListsForDomainScope
+	// DCRedirectionGetTaskListsByDomainScope tracks RPC calls for dc redirection
+	DCRedirectionGetTaskListsByDomainScope
 
 	// MessagingPublishScope tracks Publish calls made by service to messaging layer
 	MessagingClientPublishScope
@@ -798,8 +798,8 @@ const (
 	FrontendDescribeTaskListScope
 	// FrontendResetStickyTaskListScope is the metric scope for frontend.ResetStickyTaskList
 	FrontendListTaskListPartitionsScope
-	// FrontendGetTaskListsForDomainScope is the metric scope for frontend.ResetStickyTaskList
-	FrontendGetTaskListsForDomainScope
+	// FrontendGetTaskListsByDomainScope is the metric scope for frontend.ResetStickyTaskList
+	FrontendGetTaskListsByDomainScope
 	// FrontendResetStickyTaskListScope is the metric scope for frontend.ResetStickyTaskList
 	FrontendResetStickyTaskListScope
 	// FrontendListDomainsScope is the metric scope for frontend.ListDomain

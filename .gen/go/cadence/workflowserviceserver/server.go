@@ -72,10 +72,10 @@ type Interface interface {
 		ctx context.Context,
 	) (*shared.GetSearchAttributesResponse, error)
 
-	GetTaskListsForDomain(
+	GetTaskListsByDomain(
 		ctx context.Context,
-		Request *shared.GetTaskListsForDomainRequest,
-	) (*shared.GetTaskListsForDomainResponse, error)
+		Request *shared.GetTaskListsByDomainRequest,
+	) (*shared.GetTaskListsByDomainResponse, error)
 
 	GetWorkflowExecutionHistory(
 		ctx context.Context,
@@ -322,13 +322,13 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "GetTaskListsForDomain",
+				Name: "GetTaskListsByDomain",
 				HandlerSpec: thrift.HandlerSpec{
 
 					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetTaskListsForDomain),
+					Unary: thrift.UnaryHandler(h.GetTaskListsByDomain),
 				},
-				Signature:    "GetTaskListsForDomain(Request *shared.GetTaskListsForDomainRequest) (*shared.GetTaskListsForDomainResponse)",
+				Signature:    "GetTaskListsByDomain(Request *shared.GetTaskListsByDomainRequest) (*shared.GetTaskListsByDomainResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -896,17 +896,17 @@ func (h handler) GetSearchAttributes(ctx context.Context, body wire.Value) (thri
 	return response, err
 }
 
-func (h handler) GetTaskListsForDomain(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args cadence.WorkflowService_GetTaskListsForDomain_Args
+func (h handler) GetTaskListsByDomain(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_GetTaskListsByDomain_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
-			"could not decode Thrift request for service 'WorkflowService' procedure 'GetTaskListsForDomain': %w", err)
+			"could not decode Thrift request for service 'WorkflowService' procedure 'GetTaskListsByDomain': %w", err)
 	}
 
-	success, appErr := h.impl.GetTaskListsForDomain(ctx, args.Request)
+	success, appErr := h.impl.GetTaskListsByDomain(ctx, args.Request)
 
 	hadError := appErr != nil
-	result, err := cadence.WorkflowService_GetTaskListsForDomain_Helper.WrapResponse(success, appErr)
+	result, err := cadence.WorkflowService_GetTaskListsByDomain_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {

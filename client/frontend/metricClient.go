@@ -728,20 +728,20 @@ func (c *metricClient) ListTaskListPartitions(
 	return resp, err
 }
 
-func (c *metricClient) GetTaskListsForDomain(
+func (c *metricClient) GetTaskListsByDomain(
 	ctx context.Context,
-	request *types.GetTaskListsForDomainRequest,
+	request *types.GetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
-) (*types.GetTaskListsForDomainResponse, error) {
+) (*types.GetTaskListsByDomainResponse, error) {
 
-	c.metricsClient.IncCounter(metrics.FrontendClientGetTaskListsForDomainScope, metrics.CadenceClientRequests)
+	c.metricsClient.IncCounter(metrics.FrontendClientGetTaskListsByDomainScope, metrics.CadenceClientRequests)
 
-	sw := c.metricsClient.StartTimer(metrics.FrontendClientGetTaskListsForDomainScope, metrics.CadenceClientLatency)
-	resp, err := c.client.GetTaskListsForDomain(ctx, request, opts...)
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientGetTaskListsByDomainScope, metrics.CadenceClientLatency)
+	resp, err := c.client.GetTaskListsByDomain(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.FrontendClientGetTaskListsForDomainScope, metrics.CadenceClientFailures)
+		c.metricsClient.IncCounter(metrics.FrontendClientGetTaskListsByDomainScope, metrics.CadenceClientFailures)
 	}
 	return resp, err
 }

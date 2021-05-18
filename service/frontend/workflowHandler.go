@@ -3330,14 +3330,14 @@ func (wh *WorkflowHandler) ListTaskListPartitions(
 	return resp, err
 }
 
-// GetTaskListsForDomain returns all the partition and host for a taskList
-func (wh *WorkflowHandler) GetTaskListsForDomain(
+// GetTaskListsByDomain returns all the partition and host for a taskList
+func (wh *WorkflowHandler) GetTaskListsByDomain(
 	ctx context.Context,
-	request *types.GetTaskListsForDomainRequest,
-) (resp *types.GetTaskListsForDomainResponse, retError error) {
+	request *types.GetTaskListsByDomainRequest,
+) (resp *types.GetTaskListsByDomainResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendGetTaskListsForDomainScope, request)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendGetTaskListsByDomainScope, request)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -3356,7 +3356,7 @@ func (wh *WorkflowHandler) GetTaskListsForDomain(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	resp, err := wh.GetMatchingClient().GetTaskListsForDomain(ctx, &types.MatchingGetTaskListsForDomainRequest{
+	resp, err := wh.GetMatchingClient().GetTaskListsByDomain(ctx, &types.MatchingGetTaskListsByDomainRequest{
 		Domain: request.Domain,
 	})
 	return resp, err

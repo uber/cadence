@@ -232,22 +232,22 @@ func (c *clientImpl) ListTaskListPartitions(
 	return client.ListTaskListPartitions(ctx, request, opts...)
 }
 
-func (c *clientImpl) GetTaskListsForDomain(
+func (c *clientImpl) GetTaskListsByDomain(
 	ctx context.Context,
-	request *types.MatchingGetTaskListsForDomainRequest,
+	request *types.MatchingGetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
-) (*types.GetTaskListsForDomainResponse, error) {
+) (*types.GetTaskListsByDomainResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	clients := c.clients.GetAllClients()
 
-	var response *types.GetTaskListsForDomainResponse
+	var response *types.GetTaskListsByDomainResponse
 	for _, cl := range clients {
 		client, err := c.getClientForTaskList(cl)
 		if err != nil {
 			return nil, err
 		}
 
-		resp, err := c.getTaskListForDomain(client, ctx, request, opts...)
+		resp, err := c.getTaskListsByDomain(client, ctx, request, opts...)
 		if err != nil {
 			return nil, err
 		}
@@ -285,16 +285,16 @@ func (c *clientImpl) getClientForTaskList(key string) (Client, error) {
 	return client.(Client), nil
 }
 
-func (c *clientImpl) getTaskListForDomain(
+func (c *clientImpl) getTaskListsByDomain(
 	cl Client,
 	ctx context.Context,
-	request *types.MatchingGetTaskListsForDomainRequest,
+	request *types.MatchingGetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
-) (*types.GetTaskListsForDomainResponse, error) {
+) (*types.GetTaskListsByDomainResponse, error) {
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 
-	resp, err := cl.GetTaskListsForDomain(ctx, request, opts...)
+	resp, err := cl.GetTaskListsByDomain(ctx, request, opts...)
 	if err != nil {
 		return nil, err
 	}

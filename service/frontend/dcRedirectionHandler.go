@@ -1143,17 +1143,17 @@ func (handler *DCRedirectionHandlerImpl) ListTaskListPartitions(
 	return resp, err
 }
 
-// GetTaskListsForDomain API call
-func (handler *DCRedirectionHandlerImpl) GetTaskListsForDomain(
+// GetTaskListsByDomain API call
+func (handler *DCRedirectionHandlerImpl) GetTaskListsByDomain(
 	ctx context.Context,
-	request *types.GetTaskListsForDomainRequest,
-) (resp *types.GetTaskListsForDomainResponse, retError error) {
+	request *types.GetTaskListsByDomainRequest,
+) (resp *types.GetTaskListsByDomainResponse, retError error) {
 
-	var apiName = "GetTaskListsForDomain"
+	var apiName = "GetTaskListsByDomain"
 	var err error
 	var cluster string
 
-	scope, startTime := handler.beforeCall(metrics.DCRedirectionGetTaskListsForDomainScope)
+	scope, startTime := handler.beforeCall(metrics.DCRedirectionGetTaskListsByDomainScope)
 	defer func() {
 		handler.afterCall(scope, startTime, cluster, &retError)
 	}()
@@ -1162,10 +1162,10 @@ func (handler *DCRedirectionHandlerImpl) GetTaskListsForDomain(
 		cluster = targetDC
 		switch {
 		case targetDC == handler.currentClusterName:
-			resp, err = handler.frontendHandler.GetTaskListsForDomain(ctx, request)
+			resp, err = handler.frontendHandler.GetTaskListsByDomain(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.GetTaskListsForDomain(ctx, request)
+			resp, err = remoteClient.GetTaskListsByDomain(ctx, request)
 		}
 		return err
 	})

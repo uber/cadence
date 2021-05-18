@@ -1029,23 +1029,23 @@ func (c *errorInjectionClient) ListTaskListPartitions(
 	return resp, clientErr
 }
 
-func (c *errorInjectionClient) GetTaskListsForDomain(
+func (c *errorInjectionClient) GetTaskListsByDomain(
 	ctx context.Context,
-	request *types.GetTaskListsForDomainRequest,
+	request *types.GetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
-) (*types.GetTaskListsForDomainResponse, error) {
+) (*types.GetTaskListsByDomainResponse, error) {
 	fakeErr := errors.GenerateFakeError(c.errorRate)
 
-	var resp *types.GetTaskListsForDomainResponse
+	var resp *types.GetTaskListsByDomainResponse
 	var clientErr error
 	var forwardCall bool
 	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
-		resp, clientErr = c.client.GetTaskListsForDomain(ctx, request, opts...)
+		resp, clientErr = c.client.GetTaskListsByDomain(ctx, request, opts...)
 	}
 
 	if fakeErr != nil {
 		c.logger.Error(msgInjectedFakeErr,
-			tag.FrontendClientOperationGetTaskListsForDomain,
+			tag.FrontendClientOperationGetTaskListsByDomain,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
 			tag.ClientError(clientErr),

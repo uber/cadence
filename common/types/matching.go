@@ -253,13 +253,13 @@ func (v *MatchingListTaskListPartitionsRequest) GetTaskList() (o *TaskList) {
 	return
 }
 
-// MatchingGetTaskListsForDomainRequest is an internal type (TBD...)
-type MatchingGetTaskListsForDomainRequest struct {
+// MatchingGetTaskListsByDomainRequest is an internal type (TBD...)
+type MatchingGetTaskListsByDomainRequest struct {
 	Domain string `json:"domain,omitempty"`
 }
 
 // GetDomainName is an internal getter (TBD...)
-func (v *MatchingGetTaskListsForDomainRequest) GetDomain() (o string) {
+func (v *MatchingGetTaskListsByDomainRequest) GetDomain() (o string) {
 	if v != nil {
 		return v.Domain
 	}

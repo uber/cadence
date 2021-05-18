@@ -46,7 +46,7 @@ type (
 		CancelOutstandingPoll(context.Context, *types.CancelOutstandingPollRequest) error
 		DescribeTaskList(context.Context, *types.MatchingDescribeTaskListRequest) (*types.DescribeTaskListResponse, error)
 		ListTaskListPartitions(context.Context, *types.MatchingListTaskListPartitionsRequest) (*types.ListTaskListPartitionsResponse, error)
-		GetTaskListsForDomain(context.Context, *types.MatchingGetTaskListsForDomainRequest) (*types.GetTaskListsForDomainResponse, error)
+		GetTaskListsByDomain(context.Context, *types.MatchingGetTaskListsByDomainRequest) (*types.GetTaskListsByDomainResponse, error)
 		PollForActivityTask(context.Context, *types.MatchingPollForActivityTaskRequest) (*types.PollForActivityTaskResponse, error)
 		PollForDecisionTask(context.Context, *types.MatchingPollForDecisionTaskRequest) (*types.MatchingPollForDecisionTaskResponse, error)
 		QueryWorkflow(context.Context, *types.MatchingQueryWorkflowRequest) (*types.QueryWorkflowResponse, error)
@@ -392,11 +392,11 @@ func (h *handlerImpl) ListTaskListPartitions(
 	return response, hCtx.handleErr(err)
 }
 
-// GetTaskListsForDomain returns information about partitions for a taskList
-func (h *handlerImpl) GetTaskListsForDomain(
+// GetTaskListsByDomain returns information about partitions for a taskList
+func (h *handlerImpl) GetTaskListsByDomain(
 	ctx context.Context,
-	request *types.MatchingGetTaskListsForDomainRequest,
-) (resp *types.GetTaskListsForDomainResponse, retError error) {
+	request *types.MatchingGetTaskListsByDomainRequest,
+) (resp *types.GetTaskListsByDomainResponse, retError error) {
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	hCtx := newHandlerContext(
 		ctx,
@@ -414,7 +414,7 @@ func (h *handlerImpl) GetTaskListsForDomain(
 		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
 
-	response := h.engine.GetTaskListsForDomain(hCtx, request)
+	response := h.engine.GetTaskListsByDomain(hCtx, request)
 	return response, hCtx.handleErr(nil)
 }
 

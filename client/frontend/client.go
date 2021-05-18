@@ -691,11 +691,11 @@ func (c *clientImpl) ListTaskListPartitions(
 	return client.ListTaskListPartitions(ctx, request, opts...)
 }
 
-func (c *clientImpl) GetTaskListsForDomain(
+func (c *clientImpl) GetTaskListsByDomain(
 	ctx context.Context,
-	request *types.GetTaskListsForDomainRequest,
+	request *types.GetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
-) (*types.GetTaskListsForDomainResponse, error) {
+) (*types.GetTaskListsByDomainResponse, error) {
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
@@ -705,5 +705,5 @@ func (c *clientImpl) GetTaskListsForDomain(
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 
-	return client.GetTaskListsForDomain(ctx, request, opts...)
+	return client.GetTaskListsByDomain(ctx, request, opts...)
 }

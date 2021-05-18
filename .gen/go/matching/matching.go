@@ -1395,11 +1395,11 @@ func (v *DescribeTaskListRequest) IsSetDescRequest() bool {
 	return v != nil && v.DescRequest != nil
 }
 
-type GetTaskListsForDomainRequest struct {
+type GetTaskListsByDomainRequest struct {
 	Domain *string `json:"domain,omitempty"`
 }
 
-// ToWire translates a GetTaskListsForDomainRequest struct into a Thrift-level intermediate
+// ToWire translates a GetTaskListsByDomainRequest struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -1414,7 +1414,7 @@ type GetTaskListsForDomainRequest struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *GetTaskListsForDomainRequest) ToWire() (wire.Value, error) {
+func (v *GetTaskListsByDomainRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
 		i      int = 0
@@ -1434,11 +1434,11 @@ func (v *GetTaskListsForDomainRequest) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-// FromWire deserializes a GetTaskListsForDomainRequest struct from its Thrift-level
+// FromWire deserializes a GetTaskListsByDomainRequest struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a GetTaskListsForDomainRequest struct
+// An error is returned if we were unable to build a GetTaskListsByDomainRequest struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -1446,12 +1446,12 @@ func (v *GetTaskListsForDomainRequest) ToWire() (wire.Value, error) {
 //     return nil, err
 //   }
 //
-//   var v GetTaskListsForDomainRequest
+//   var v GetTaskListsByDomainRequest
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *GetTaskListsForDomainRequest) FromWire(w wire.Value) error {
+func (v *GetTaskListsByDomainRequest) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
@@ -1472,9 +1472,9 @@ func (v *GetTaskListsForDomainRequest) FromWire(w wire.Value) error {
 	return nil
 }
 
-// String returns a readable string representation of a GetTaskListsForDomainRequest
+// String returns a readable string representation of a GetTaskListsByDomainRequest
 // struct.
-func (v *GetTaskListsForDomainRequest) String() string {
+func (v *GetTaskListsByDomainRequest) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -1486,14 +1486,14 @@ func (v *GetTaskListsForDomainRequest) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("GetTaskListsForDomainRequest{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("GetTaskListsByDomainRequest{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this GetTaskListsForDomainRequest match the
-// provided GetTaskListsForDomainRequest.
+// Equals returns true if all the fields of this GetTaskListsByDomainRequest match the
+// provided GetTaskListsByDomainRequest.
 //
 // This function performs a deep comparison.
-func (v *GetTaskListsForDomainRequest) Equals(rhs *GetTaskListsForDomainRequest) bool {
+func (v *GetTaskListsByDomainRequest) Equals(rhs *GetTaskListsByDomainRequest) bool {
 	if v == nil {
 		return rhs == nil
 	} else if rhs == nil {
@@ -1507,8 +1507,8 @@ func (v *GetTaskListsForDomainRequest) Equals(rhs *GetTaskListsForDomainRequest)
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of GetTaskListsForDomainRequest.
-func (v *GetTaskListsForDomainRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+// fast logging of GetTaskListsByDomainRequest.
+func (v *GetTaskListsByDomainRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
 	}
@@ -1520,7 +1520,7 @@ func (v *GetTaskListsForDomainRequest) MarshalLogObject(enc zapcore.ObjectEncode
 
 // GetDomain returns the value of Domain if it is set or its
 // zero value if it is unset.
-func (v *GetTaskListsForDomainRequest) GetDomain() (o string) {
+func (v *GetTaskListsByDomainRequest) GetDomain() (o string) {
 	if v != nil && v.Domain != nil {
 		return *v.Domain
 	}
@@ -1529,7 +1529,7 @@ func (v *GetTaskListsForDomainRequest) GetDomain() (o string) {
 }
 
 // IsSetDomain returns true if Domain is not nil.
-func (v *GetTaskListsForDomainRequest) IsSetDomain() bool {
+func (v *GetTaskListsByDomainRequest) IsSetDomain() bool {
 	return v != nil && v.Domain != nil
 }
 
@@ -3929,14 +3929,14 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "matching",
 	Package:  "github.com/uber/cadence/.gen/go/matching",
 	FilePath: "matching.thrift",
-	SHA1:     "173a4a9100f524423643c8605b475cd1e8cf1eb0",
+	SHA1:     "920a7d1d3a231c08365ee74591e5ee7026ed82e3",
 	Includes: []*thriftreflect.ThriftModule{
 		shared.ThriftModule,
 	},
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\ninclude \"shared.thrift\"\n\nnamespace java com.uber.cadence.matching\n\n// TaskSource is the source from which a task was produced\nenum TaskSource {\n    HISTORY,    // Task produced by history service\n    DB_BACKLOG // Task produced from matching db backlog\n}\n\nstruct PollForDecisionTaskRequest {\n  10: optional string domainUUID\n  15: optional string pollerID\n  20: optional shared.PollForDecisionTaskRequest pollRequest\n  30: optional string forwardedFrom\n}\n\nstruct PollForDecisionTaskResponse {\n  10: optional binary taskToken\n  20: optional shared.WorkflowExecution workflowExecution\n  30: optional shared.WorkflowType workflowType\n  40: optional i64 (js.type = \"Long\") previousStartedEventId\n  50: optional i64 (js.type = \"Long\") startedEventId\n  51: optional i64 (js.type = \"Long\") attempt\n  60: optional i64 (js.type = \"Long\") nextEventId\n  65: optional i64 (js.type = \"Long\") backlogCountHint\n  70: optional bool stickyExecutionEnabled\n  80: optional shared.WorkflowQuery query\n  90: optional shared.TransientDecisionInfo decisionInfo\n  100: optional shared.TaskList WorkflowExecutionTaskList\n  110: optional i32 eventStoreVersion\n  120: optional binary branchToken\n  130: optional i64 (js.type = \"Long\") scheduledTimestamp\n  140: optional i64 (js.type = \"Long\") startedTimestamp\n  150: optional map<string, shared.WorkflowQuery> queries\n}\n\nstruct PollForActivityTaskRequest {\n  10: optional string domainUUID\n  15: optional string pollerID\n  20: optional shared.PollForActivityTaskRequest pollRequest\n  30: optional string forwardedFrom\n}\n\nstruct AddDecisionTaskRequest {\n  10: optional string domainUUID\n  20: optional shared.WorkflowExecution execution\n  30: optional shared.TaskList taskList\n  40: optional i64 (js.type = \"Long\") scheduleId\n  50: optional i32 scheduleToStartTimeoutSeconds\n  59: optional TaskSource source\n  60: optional string forwardedFrom\n}\n\nstruct AddActivityTaskRequest {\n  10: optional string domainUUID\n  20: optional shared.WorkflowExecution execution\n  30: optional string sourceDomainUUID\n  40: optional shared.TaskList taskList\n  50: optional i64 (js.type = \"Long\") scheduleId\n  60: optional i32 scheduleToStartTimeoutSeconds\n  69: optional TaskSource source\n  70: optional string forwardedFrom\n}\n\nstruct QueryWorkflowRequest {\n  10: optional string domainUUID\n  20: optional shared.TaskList taskList\n  30: optional shared.QueryWorkflowRequest queryRequest\n  40: optional string forwardedFrom\n}\n\nstruct RespondQueryTaskCompletedRequest {\n  10: optional string domainUUID\n  20: optional shared.TaskList taskList\n  30: optional string taskID\n  40: optional shared.RespondQueryTaskCompletedRequest completedRequest\n}\n\nstruct CancelOutstandingPollRequest {\n  10: optional string domainUUID\n  20: optional i32 taskListType\n  30: optional shared.TaskList taskList\n  40: optional string pollerID\n}\n\nstruct DescribeTaskListRequest {\n  10: optional string domainUUID\n  20: optional shared.DescribeTaskListRequest descRequest\n}\n\nstruct GetTaskListsForDomainRequest {\n  10: optional string domain\n}\n\nstruct ListTaskListPartitionsRequest {\n  10: optional string domain\n  20: optional shared.TaskList taskList\n}\n\n/**\n* MatchingService API is exposed to provide support for polling from long running applications.\n* Such applications are expected to have a worker which regularly polls for DecisionTask and ActivityTask.  For each\n* DecisionTask, application is expected to process the history of events for that session and respond back with next\n* decisions.  For each ActivityTask, application is expected to execute the actual logic for that task and respond back\n* with completion or failure.\n**/\nservice MatchingService {\n  /**\n  * PollForDecisionTask is called by frontend to process DecisionTask from a specific taskList.  A\n  * DecisionTask is dispatched to callers for active workflow executions, with pending decisions.\n  **/\n  PollForDecisionTaskResponse PollForDecisionTask(1: PollForDecisionTaskRequest pollRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * PollForActivityTask is called by frontend to process ActivityTask from a specific taskList.  ActivityTask\n  * is dispatched to callers whenever a ScheduleTask decision is made for a workflow execution.\n  **/\n  shared.PollForActivityTaskResponse PollForActivityTask(1: PollForActivityTaskRequest pollRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * AddDecisionTask is called by the history service when a decision task is scheduled, so that it can be dispatched\n  * by the MatchingEngine.\n  **/\n  void AddDecisionTask(1: AddDecisionTaskRequest addRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.RemoteSyncMatchedError remoteSyncMatchedError,\n    )\n\n  /**\n  * AddActivityTask is called by the history service when a decision task is scheduled, so that it can be dispatched\n  * by the MatchingEngine.\n  **/\n  void AddActivityTask(1: AddActivityTaskRequest addRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.RemoteSyncMatchedError remoteSyncMatchedError,\n    )\n\n  /**\n  * QueryWorkflow is called by frontend to query a workflow.\n  **/\n  shared.QueryWorkflowResponse QueryWorkflow(1: QueryWorkflowRequest queryRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.QueryFailedError queryFailedError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * RespondQueryTaskCompleted is called by frontend to respond query completed.\n  **/\n  void RespondQueryTaskCompleted(1: RespondQueryTaskCompletedRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n    * CancelOutstandingPoll is called by frontend to unblock long polls on matching for zombie pollers.\n    * Our rpc stack does not support context propagation, so when a client connection goes away frontend sees\n    * cancellation of context for that handler, but any corresponding calls (long-poll) to matching service does not\n    * see the cancellation propagated so it can unblock corresponding long-polls on its end.  This results is tasks\n    * being dispatched to zombie pollers in this situation.  This API is added so everytime frontend makes a long-poll\n    * api call to matching it passes in a pollerID and then calls this API when it detects client connection is closed\n    * to unblock long polls for this poller and prevent tasks being sent to these zombie pollers.\n    **/\n  void CancelOutstandingPoll(1: CancelOutstandingPollRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * DescribeTaskList returns information about the target tasklist, right now this API returns the\n  * pollers which polled this tasklist in last few minutes.\n  **/\n  shared.DescribeTaskListResponse DescribeTaskList(1: DescribeTaskListRequest request)\n    throws (\n        1: shared.BadRequestError badRequestError,\n        2: shared.InternalServiceError internalServiceError,\n        3: shared.EntityNotExistsError entityNotExistError,\n        4: shared.ServiceBusyError serviceBusyError,\n      )\n\n  /**\n  * GetTaskListsForDomainResponse returns the list of all the task lists for a domainName.\n  **/\n  shared.GetTaskListsForDomainResponse GetTaskListsForDomain(1: GetTaskListsForDomainRequest request)\n    throws (\n        1: shared.BadRequestError badRequestError,\n        2: shared.InternalServiceError internalServiceError,\n        3: shared.EntityNotExistsError entityNotExistError,\n        4: shared.ServiceBusyError serviceBusyError,\n      )\n\n  /**\n  * ListTaskListPartitions returns a map of partitionKey and hostAddress for a taskList\n  **/\n  shared.ListTaskListPartitionsResponse ListTaskListPartitions(1: ListTaskListPartitionsRequest request)\n    throws (\n        1: shared.BadRequestError badRequestError,\n        2: shared.InternalServiceError internalServiceError,\n        4: shared.ServiceBusyError serviceBusyError,\n    )\n}\n"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\ninclude \"shared.thrift\"\n\nnamespace java com.uber.cadence.matching\n\n// TaskSource is the source from which a task was produced\nenum TaskSource {\n    HISTORY,    // Task produced by history service\n    DB_BACKLOG // Task produced from matching db backlog\n}\n\nstruct PollForDecisionTaskRequest {\n  10: optional string domainUUID\n  15: optional string pollerID\n  20: optional shared.PollForDecisionTaskRequest pollRequest\n  30: optional string forwardedFrom\n}\n\nstruct PollForDecisionTaskResponse {\n  10: optional binary taskToken\n  20: optional shared.WorkflowExecution workflowExecution\n  30: optional shared.WorkflowType workflowType\n  40: optional i64 (js.type = \"Long\") previousStartedEventId\n  50: optional i64 (js.type = \"Long\") startedEventId\n  51: optional i64 (js.type = \"Long\") attempt\n  60: optional i64 (js.type = \"Long\") nextEventId\n  65: optional i64 (js.type = \"Long\") backlogCountHint\n  70: optional bool stickyExecutionEnabled\n  80: optional shared.WorkflowQuery query\n  90: optional shared.TransientDecisionInfo decisionInfo\n  100: optional shared.TaskList WorkflowExecutionTaskList\n  110: optional i32 eventStoreVersion\n  120: optional binary branchToken\n  130: optional i64 (js.type = \"Long\") scheduledTimestamp\n  140: optional i64 (js.type = \"Long\") startedTimestamp\n  150: optional map<string, shared.WorkflowQuery> queries\n}\n\nstruct PollForActivityTaskRequest {\n  10: optional string domainUUID\n  15: optional string pollerID\n  20: optional shared.PollForActivityTaskRequest pollRequest\n  30: optional string forwardedFrom\n}\n\nstruct AddDecisionTaskRequest {\n  10: optional string domainUUID\n  20: optional shared.WorkflowExecution execution\n  30: optional shared.TaskList taskList\n  40: optional i64 (js.type = \"Long\") scheduleId\n  50: optional i32 scheduleToStartTimeoutSeconds\n  59: optional TaskSource source\n  60: optional string forwardedFrom\n}\n\nstruct AddActivityTaskRequest {\n  10: optional string domainUUID\n  20: optional shared.WorkflowExecution execution\n  30: optional string sourceDomainUUID\n  40: optional shared.TaskList taskList\n  50: optional i64 (js.type = \"Long\") scheduleId\n  60: optional i32 scheduleToStartTimeoutSeconds\n  69: optional TaskSource source\n  70: optional string forwardedFrom\n}\n\nstruct QueryWorkflowRequest {\n  10: optional string domainUUID\n  20: optional shared.TaskList taskList\n  30: optional shared.QueryWorkflowRequest queryRequest\n  40: optional string forwardedFrom\n}\n\nstruct RespondQueryTaskCompletedRequest {\n  10: optional string domainUUID\n  20: optional shared.TaskList taskList\n  30: optional string taskID\n  40: optional shared.RespondQueryTaskCompletedRequest completedRequest\n}\n\nstruct CancelOutstandingPollRequest {\n  10: optional string domainUUID\n  20: optional i32 taskListType\n  30: optional shared.TaskList taskList\n  40: optional string pollerID\n}\n\nstruct DescribeTaskListRequest {\n  10: optional string domainUUID\n  20: optional shared.DescribeTaskListRequest descRequest\n}\n\nstruct GetTaskListsByDomainRequest {\n  10: optional string domain\n}\n\nstruct ListTaskListPartitionsRequest {\n  10: optional string domain\n  20: optional shared.TaskList taskList\n}\n\n/**\n* MatchingService API is exposed to provide support for polling from long running applications.\n* Such applications are expected to have a worker which regularly polls for DecisionTask and ActivityTask.  For each\n* DecisionTask, application is expected to process the history of events for that session and respond back with next\n* decisions.  For each ActivityTask, application is expected to execute the actual logic for that task and respond back\n* with completion or failure.\n**/\nservice MatchingService {\n  /**\n  * PollForDecisionTask is called by frontend to process DecisionTask from a specific taskList.  A\n  * DecisionTask is dispatched to callers for active workflow executions, with pending decisions.\n  **/\n  PollForDecisionTaskResponse PollForDecisionTask(1: PollForDecisionTaskRequest pollRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * PollForActivityTask is called by frontend to process ActivityTask from a specific taskList.  ActivityTask\n  * is dispatched to callers whenever a ScheduleTask decision is made for a workflow execution.\n  **/\n  shared.PollForActivityTaskResponse PollForActivityTask(1: PollForActivityTaskRequest pollRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * AddDecisionTask is called by the history service when a decision task is scheduled, so that it can be dispatched\n  * by the MatchingEngine.\n  **/\n  void AddDecisionTask(1: AddDecisionTaskRequest addRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.RemoteSyncMatchedError remoteSyncMatchedError,\n    )\n\n  /**\n  * AddActivityTask is called by the history service when a decision task is scheduled, so that it can be dispatched\n  * by the MatchingEngine.\n  **/\n  void AddActivityTask(1: AddActivityTaskRequest addRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.RemoteSyncMatchedError remoteSyncMatchedError,\n    )\n\n  /**\n  * QueryWorkflow is called by frontend to query a workflow.\n  **/\n  shared.QueryWorkflowResponse QueryWorkflow(1: QueryWorkflowRequest queryRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.QueryFailedError queryFailedError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * RespondQueryTaskCompleted is called by frontend to respond query completed.\n  **/\n  void RespondQueryTaskCompleted(1: RespondQueryTaskCompletedRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n    * CancelOutstandingPoll is called by frontend to unblock long polls on matching for zombie pollers.\n    * Our rpc stack does not support context propagation, so when a client connection goes away frontend sees\n    * cancellation of context for that handler, but any corresponding calls (long-poll) to matching service does not\n    * see the cancellation propagated so it can unblock corresponding long-polls on its end.  This results is tasks\n    * being dispatched to zombie pollers in this situation.  This API is added so everytime frontend makes a long-poll\n    * api call to matching it passes in a pollerID and then calls this API when it detects client connection is closed\n    * to unblock long polls for this poller and prevent tasks being sent to these zombie pollers.\n    **/\n  void CancelOutstandingPoll(1: CancelOutstandingPollRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * DescribeTaskList returns information about the target tasklist, right now this API returns the\n  * pollers which polled this tasklist in last few minutes.\n  **/\n  shared.DescribeTaskListResponse DescribeTaskList(1: DescribeTaskListRequest request)\n    throws (\n        1: shared.BadRequestError badRequestError,\n        2: shared.InternalServiceError internalServiceError,\n        3: shared.EntityNotExistsError entityNotExistError,\n        4: shared.ServiceBusyError serviceBusyError,\n      )\n\n  /**\n  * GetTaskListsByDomain returns the list of all the task lists for a domainName.\n  **/\n  shared.GetTaskListsByDomainResponse GetTaskListsByDomain(1: GetTaskListsByDomainRequest request)\n    throws (\n        1: shared.BadRequestError badRequestError,\n        2: shared.InternalServiceError internalServiceError,\n        3: shared.EntityNotExistsError entityNotExistError,\n        4: shared.ServiceBusyError serviceBusyError,\n      )\n\n  /**\n  * ListTaskListPartitions returns a map of partitionKey and hostAddress for a taskList\n  **/\n  shared.ListTaskListPartitionsResponse ListTaskListPartitions(1: ListTaskListPartitionsRequest request)\n    throws (\n        1: shared.BadRequestError badRequestError,\n        2: shared.InternalServiceError internalServiceError,\n        4: shared.ServiceBusyError serviceBusyError,\n    )\n}\n"
 
 // MatchingService_AddActivityTask_Args represents the arguments for the MatchingService.AddActivityTask function.
 //
@@ -6540,14 +6540,14 @@ func (v *MatchingService_DescribeTaskList_Result) EnvelopeType() wire.EnvelopeTy
 	return wire.Reply
 }
 
-// MatchingService_GetTaskListsForDomain_Args represents the arguments for the MatchingService.GetTaskListsForDomain function.
+// MatchingService_GetTaskListsByDomain_Args represents the arguments for the MatchingService.GetTaskListsByDomain function.
 //
-// The arguments for GetTaskListsForDomain are sent and received over the wire as this struct.
-type MatchingService_GetTaskListsForDomain_Args struct {
-	Request *GetTaskListsForDomainRequest `json:"request,omitempty"`
+// The arguments for GetTaskListsByDomain are sent and received over the wire as this struct.
+type MatchingService_GetTaskListsByDomain_Args struct {
+	Request *GetTaskListsByDomainRequest `json:"request,omitempty"`
 }
 
-// ToWire translates a MatchingService_GetTaskListsForDomain_Args struct into a Thrift-level intermediate
+// ToWire translates a MatchingService_GetTaskListsByDomain_Args struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -6562,7 +6562,7 @@ type MatchingService_GetTaskListsForDomain_Args struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *MatchingService_GetTaskListsForDomain_Args) ToWire() (wire.Value, error) {
+func (v *MatchingService_GetTaskListsByDomain_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
 		i      int = 0
@@ -6582,17 +6582,17 @@ func (v *MatchingService_GetTaskListsForDomain_Args) ToWire() (wire.Value, error
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _GetTaskListsForDomainRequest_Read(w wire.Value) (*GetTaskListsForDomainRequest, error) {
-	var v GetTaskListsForDomainRequest
+func _GetTaskListsByDomainRequest_Read(w wire.Value) (*GetTaskListsByDomainRequest, error) {
+	var v GetTaskListsByDomainRequest
 	err := v.FromWire(w)
 	return &v, err
 }
 
-// FromWire deserializes a MatchingService_GetTaskListsForDomain_Args struct from its Thrift-level
+// FromWire deserializes a MatchingService_GetTaskListsByDomain_Args struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a MatchingService_GetTaskListsForDomain_Args struct
+// An error is returned if we were unable to build a MatchingService_GetTaskListsByDomain_Args struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -6600,19 +6600,19 @@ func _GetTaskListsForDomainRequest_Read(w wire.Value) (*GetTaskListsForDomainReq
 //     return nil, err
 //   }
 //
-//   var v MatchingService_GetTaskListsForDomain_Args
+//   var v MatchingService_GetTaskListsByDomain_Args
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *MatchingService_GetTaskListsForDomain_Args) FromWire(w wire.Value) error {
+func (v *MatchingService_GetTaskListsByDomain_Args) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 1:
 			if field.Value.Type() == wire.TStruct {
-				v.Request, err = _GetTaskListsForDomainRequest_Read(field.Value)
+				v.Request, err = _GetTaskListsByDomainRequest_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -6624,9 +6624,9 @@ func (v *MatchingService_GetTaskListsForDomain_Args) FromWire(w wire.Value) erro
 	return nil
 }
 
-// String returns a readable string representation of a MatchingService_GetTaskListsForDomain_Args
+// String returns a readable string representation of a MatchingService_GetTaskListsByDomain_Args
 // struct.
-func (v *MatchingService_GetTaskListsForDomain_Args) String() string {
+func (v *MatchingService_GetTaskListsByDomain_Args) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -6638,14 +6638,14 @@ func (v *MatchingService_GetTaskListsForDomain_Args) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("MatchingService_GetTaskListsForDomain_Args{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("MatchingService_GetTaskListsByDomain_Args{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this MatchingService_GetTaskListsForDomain_Args match the
-// provided MatchingService_GetTaskListsForDomain_Args.
+// Equals returns true if all the fields of this MatchingService_GetTaskListsByDomain_Args match the
+// provided MatchingService_GetTaskListsByDomain_Args.
 //
 // This function performs a deep comparison.
-func (v *MatchingService_GetTaskListsForDomain_Args) Equals(rhs *MatchingService_GetTaskListsForDomain_Args) bool {
+func (v *MatchingService_GetTaskListsByDomain_Args) Equals(rhs *MatchingService_GetTaskListsByDomain_Args) bool {
 	if v == nil {
 		return rhs == nil
 	} else if rhs == nil {
@@ -6659,8 +6659,8 @@ func (v *MatchingService_GetTaskListsForDomain_Args) Equals(rhs *MatchingService
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of MatchingService_GetTaskListsForDomain_Args.
-func (v *MatchingService_GetTaskListsForDomain_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+// fast logging of MatchingService_GetTaskListsByDomain_Args.
+func (v *MatchingService_GetTaskListsByDomain_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
 	}
@@ -6672,7 +6672,7 @@ func (v *MatchingService_GetTaskListsForDomain_Args) MarshalLogObject(enc zapcor
 
 // GetRequest returns the value of Request if it is set or its
 // zero value if it is unset.
-func (v *MatchingService_GetTaskListsForDomain_Args) GetRequest() (o *GetTaskListsForDomainRequest) {
+func (v *MatchingService_GetTaskListsByDomain_Args) GetRequest() (o *GetTaskListsByDomainRequest) {
 	if v != nil && v.Request != nil {
 		return v.Request
 	}
@@ -6681,80 +6681,80 @@ func (v *MatchingService_GetTaskListsForDomain_Args) GetRequest() (o *GetTaskLis
 }
 
 // IsSetRequest returns true if Request is not nil.
-func (v *MatchingService_GetTaskListsForDomain_Args) IsSetRequest() bool {
+func (v *MatchingService_GetTaskListsByDomain_Args) IsSetRequest() bool {
 	return v != nil && v.Request != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the arguments.
 //
-// This will always be "GetTaskListsForDomain" for this struct.
-func (v *MatchingService_GetTaskListsForDomain_Args) MethodName() string {
-	return "GetTaskListsForDomain"
+// This will always be "GetTaskListsByDomain" for this struct.
+func (v *MatchingService_GetTaskListsByDomain_Args) MethodName() string {
+	return "GetTaskListsByDomain"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Call for this struct.
-func (v *MatchingService_GetTaskListsForDomain_Args) EnvelopeType() wire.EnvelopeType {
+func (v *MatchingService_GetTaskListsByDomain_Args) EnvelopeType() wire.EnvelopeType {
 	return wire.Call
 }
 
-// MatchingService_GetTaskListsForDomain_Helper provides functions that aid in handling the
-// parameters and return values of the MatchingService.GetTaskListsForDomain
+// MatchingService_GetTaskListsByDomain_Helper provides functions that aid in handling the
+// parameters and return values of the MatchingService.GetTaskListsByDomain
 // function.
-var MatchingService_GetTaskListsForDomain_Helper = struct {
-	// Args accepts the parameters of GetTaskListsForDomain in-order and returns
+var MatchingService_GetTaskListsByDomain_Helper = struct {
+	// Args accepts the parameters of GetTaskListsByDomain in-order and returns
 	// the arguments struct for the function.
 	Args func(
-		request *GetTaskListsForDomainRequest,
-	) *MatchingService_GetTaskListsForDomain_Args
+		request *GetTaskListsByDomainRequest,
+	) *MatchingService_GetTaskListsByDomain_Args
 
 	// IsException returns true if the given error can be thrown
-	// by GetTaskListsForDomain.
+	// by GetTaskListsByDomain.
 	//
-	// An error can be thrown by GetTaskListsForDomain only if the
+	// An error can be thrown by GetTaskListsByDomain only if the
 	// corresponding exception type was mentioned in the 'throws'
 	// section for it in the Thrift file.
 	IsException func(error) bool
 
-	// WrapResponse returns the result struct for GetTaskListsForDomain
+	// WrapResponse returns the result struct for GetTaskListsByDomain
 	// given its return value and error.
 	//
 	// This allows mapping values and errors returned by
-	// GetTaskListsForDomain into a serializable result struct.
+	// GetTaskListsByDomain into a serializable result struct.
 	// WrapResponse returns a non-nil error if the provided
-	// error cannot be thrown by GetTaskListsForDomain
+	// error cannot be thrown by GetTaskListsByDomain
 	//
-	//   value, err := GetTaskListsForDomain(args)
-	//   result, err := MatchingService_GetTaskListsForDomain_Helper.WrapResponse(value, err)
+	//   value, err := GetTaskListsByDomain(args)
+	//   result, err := MatchingService_GetTaskListsByDomain_Helper.WrapResponse(value, err)
 	//   if err != nil {
-	//     return fmt.Errorf("unexpected error from GetTaskListsForDomain: %v", err)
+	//     return fmt.Errorf("unexpected error from GetTaskListsByDomain: %v", err)
 	//   }
 	//   serialize(result)
-	WrapResponse func(*shared.GetTaskListsForDomainResponse, error) (*MatchingService_GetTaskListsForDomain_Result, error)
+	WrapResponse func(*shared.GetTaskListsByDomainResponse, error) (*MatchingService_GetTaskListsByDomain_Result, error)
 
-	// UnwrapResponse takes the result struct for GetTaskListsForDomain
+	// UnwrapResponse takes the result struct for GetTaskListsByDomain
 	// and returns the value or error returned by it.
 	//
-	// The error is non-nil only if GetTaskListsForDomain threw an
+	// The error is non-nil only if GetTaskListsByDomain threw an
 	// exception.
 	//
 	//   result := deserialize(bytes)
-	//   value, err := MatchingService_GetTaskListsForDomain_Helper.UnwrapResponse(result)
-	UnwrapResponse func(*MatchingService_GetTaskListsForDomain_Result) (*shared.GetTaskListsForDomainResponse, error)
+	//   value, err := MatchingService_GetTaskListsByDomain_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*MatchingService_GetTaskListsByDomain_Result) (*shared.GetTaskListsByDomainResponse, error)
 }{}
 
 func init() {
-	MatchingService_GetTaskListsForDomain_Helper.Args = func(
-		request *GetTaskListsForDomainRequest,
-	) *MatchingService_GetTaskListsForDomain_Args {
-		return &MatchingService_GetTaskListsForDomain_Args{
+	MatchingService_GetTaskListsByDomain_Helper.Args = func(
+		request *GetTaskListsByDomainRequest,
+	) *MatchingService_GetTaskListsByDomain_Args {
+		return &MatchingService_GetTaskListsByDomain_Args{
 			Request: request,
 		}
 	}
 
-	MatchingService_GetTaskListsForDomain_Helper.IsException = func(err error) bool {
+	MatchingService_GetTaskListsByDomain_Helper.IsException = func(err error) bool {
 		switch err.(type) {
 		case *shared.BadRequestError:
 			return true
@@ -6769,37 +6769,37 @@ func init() {
 		}
 	}
 
-	MatchingService_GetTaskListsForDomain_Helper.WrapResponse = func(success *shared.GetTaskListsForDomainResponse, err error) (*MatchingService_GetTaskListsForDomain_Result, error) {
+	MatchingService_GetTaskListsByDomain_Helper.WrapResponse = func(success *shared.GetTaskListsByDomainResponse, err error) (*MatchingService_GetTaskListsByDomain_Result, error) {
 		if err == nil {
-			return &MatchingService_GetTaskListsForDomain_Result{Success: success}, nil
+			return &MatchingService_GetTaskListsByDomain_Result{Success: success}, nil
 		}
 
 		switch e := err.(type) {
 		case *shared.BadRequestError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for MatchingService_GetTaskListsForDomain_Result.BadRequestError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for MatchingService_GetTaskListsByDomain_Result.BadRequestError")
 			}
-			return &MatchingService_GetTaskListsForDomain_Result{BadRequestError: e}, nil
+			return &MatchingService_GetTaskListsByDomain_Result{BadRequestError: e}, nil
 		case *shared.InternalServiceError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for MatchingService_GetTaskListsForDomain_Result.InternalServiceError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for MatchingService_GetTaskListsByDomain_Result.InternalServiceError")
 			}
-			return &MatchingService_GetTaskListsForDomain_Result{InternalServiceError: e}, nil
+			return &MatchingService_GetTaskListsByDomain_Result{InternalServiceError: e}, nil
 		case *shared.EntityNotExistsError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for MatchingService_GetTaskListsForDomain_Result.EntityNotExistError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for MatchingService_GetTaskListsByDomain_Result.EntityNotExistError")
 			}
-			return &MatchingService_GetTaskListsForDomain_Result{EntityNotExistError: e}, nil
+			return &MatchingService_GetTaskListsByDomain_Result{EntityNotExistError: e}, nil
 		case *shared.ServiceBusyError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for MatchingService_GetTaskListsForDomain_Result.ServiceBusyError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for MatchingService_GetTaskListsByDomain_Result.ServiceBusyError")
 			}
-			return &MatchingService_GetTaskListsForDomain_Result{ServiceBusyError: e}, nil
+			return &MatchingService_GetTaskListsByDomain_Result{ServiceBusyError: e}, nil
 		}
 
 		return nil, err
 	}
-	MatchingService_GetTaskListsForDomain_Helper.UnwrapResponse = func(result *MatchingService_GetTaskListsForDomain_Result) (success *shared.GetTaskListsForDomainResponse, err error) {
+	MatchingService_GetTaskListsByDomain_Helper.UnwrapResponse = func(result *MatchingService_GetTaskListsByDomain_Result) (success *shared.GetTaskListsByDomainResponse, err error) {
 		if result.BadRequestError != nil {
 			err = result.BadRequestError
 			return
@@ -6828,21 +6828,21 @@ func init() {
 
 }
 
-// MatchingService_GetTaskListsForDomain_Result represents the result of a MatchingService.GetTaskListsForDomain function call.
+// MatchingService_GetTaskListsByDomain_Result represents the result of a MatchingService.GetTaskListsByDomain function call.
 //
-// The result of a GetTaskListsForDomain execution is sent and received over the wire as this struct.
+// The result of a GetTaskListsByDomain execution is sent and received over the wire as this struct.
 //
 // Success is set only if the function did not throw an exception.
-type MatchingService_GetTaskListsForDomain_Result struct {
-	// Value returned by GetTaskListsForDomain after a successful execution.
-	Success              *shared.GetTaskListsForDomainResponse `json:"success,omitempty"`
-	BadRequestError      *shared.BadRequestError               `json:"badRequestError,omitempty"`
-	InternalServiceError *shared.InternalServiceError          `json:"internalServiceError,omitempty"`
-	EntityNotExistError  *shared.EntityNotExistsError          `json:"entityNotExistError,omitempty"`
-	ServiceBusyError     *shared.ServiceBusyError              `json:"serviceBusyError,omitempty"`
+type MatchingService_GetTaskListsByDomain_Result struct {
+	// Value returned by GetTaskListsByDomain after a successful execution.
+	Success              *shared.GetTaskListsByDomainResponse `json:"success,omitempty"`
+	BadRequestError      *shared.BadRequestError              `json:"badRequestError,omitempty"`
+	InternalServiceError *shared.InternalServiceError         `json:"internalServiceError,omitempty"`
+	EntityNotExistError  *shared.EntityNotExistsError         `json:"entityNotExistError,omitempty"`
+	ServiceBusyError     *shared.ServiceBusyError             `json:"serviceBusyError,omitempty"`
 }
 
-// ToWire translates a MatchingService_GetTaskListsForDomain_Result struct into a Thrift-level intermediate
+// ToWire translates a MatchingService_GetTaskListsByDomain_Result struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -6857,7 +6857,7 @@ type MatchingService_GetTaskListsForDomain_Result struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *MatchingService_GetTaskListsForDomain_Result) ToWire() (wire.Value, error) {
+func (v *MatchingService_GetTaskListsByDomain_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
 		i      int = 0
@@ -6907,23 +6907,23 @@ func (v *MatchingService_GetTaskListsForDomain_Result) ToWire() (wire.Value, err
 	}
 
 	if i != 1 {
-		return wire.Value{}, fmt.Errorf("MatchingService_GetTaskListsForDomain_Result should have exactly one field: got %v fields", i)
+		return wire.Value{}, fmt.Errorf("MatchingService_GetTaskListsByDomain_Result should have exactly one field: got %v fields", i)
 	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _GetTaskListsForDomainResponse_Read(w wire.Value) (*shared.GetTaskListsForDomainResponse, error) {
-	var v shared.GetTaskListsForDomainResponse
+func _GetTaskListsByDomainResponse_Read(w wire.Value) (*shared.GetTaskListsByDomainResponse, error) {
+	var v shared.GetTaskListsByDomainResponse
 	err := v.FromWire(w)
 	return &v, err
 }
 
-// FromWire deserializes a MatchingService_GetTaskListsForDomain_Result struct from its Thrift-level
+// FromWire deserializes a MatchingService_GetTaskListsByDomain_Result struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a MatchingService_GetTaskListsForDomain_Result struct
+// An error is returned if we were unable to build a MatchingService_GetTaskListsByDomain_Result struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -6931,19 +6931,19 @@ func _GetTaskListsForDomainResponse_Read(w wire.Value) (*shared.GetTaskListsForD
 //     return nil, err
 //   }
 //
-//   var v MatchingService_GetTaskListsForDomain_Result
+//   var v MatchingService_GetTaskListsByDomain_Result
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *MatchingService_GetTaskListsForDomain_Result) FromWire(w wire.Value) error {
+func (v *MatchingService_GetTaskListsByDomain_Result) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 0:
 			if field.Value.Type() == wire.TStruct {
-				v.Success, err = _GetTaskListsForDomainResponse_Read(field.Value)
+				v.Success, err = _GetTaskListsByDomainResponse_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -7001,15 +7001,15 @@ func (v *MatchingService_GetTaskListsForDomain_Result) FromWire(w wire.Value) er
 		count++
 	}
 	if count != 1 {
-		return fmt.Errorf("MatchingService_GetTaskListsForDomain_Result should have exactly one field: got %v fields", count)
+		return fmt.Errorf("MatchingService_GetTaskListsByDomain_Result should have exactly one field: got %v fields", count)
 	}
 
 	return nil
 }
 
-// String returns a readable string representation of a MatchingService_GetTaskListsForDomain_Result
+// String returns a readable string representation of a MatchingService_GetTaskListsByDomain_Result
 // struct.
-func (v *MatchingService_GetTaskListsForDomain_Result) String() string {
+func (v *MatchingService_GetTaskListsByDomain_Result) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -7037,14 +7037,14 @@ func (v *MatchingService_GetTaskListsForDomain_Result) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("MatchingService_GetTaskListsForDomain_Result{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("MatchingService_GetTaskListsByDomain_Result{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this MatchingService_GetTaskListsForDomain_Result match the
-// provided MatchingService_GetTaskListsForDomain_Result.
+// Equals returns true if all the fields of this MatchingService_GetTaskListsByDomain_Result match the
+// provided MatchingService_GetTaskListsByDomain_Result.
 //
 // This function performs a deep comparison.
-func (v *MatchingService_GetTaskListsForDomain_Result) Equals(rhs *MatchingService_GetTaskListsForDomain_Result) bool {
+func (v *MatchingService_GetTaskListsByDomain_Result) Equals(rhs *MatchingService_GetTaskListsByDomain_Result) bool {
 	if v == nil {
 		return rhs == nil
 	} else if rhs == nil {
@@ -7070,8 +7070,8 @@ func (v *MatchingService_GetTaskListsForDomain_Result) Equals(rhs *MatchingServi
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of MatchingService_GetTaskListsForDomain_Result.
-func (v *MatchingService_GetTaskListsForDomain_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+// fast logging of MatchingService_GetTaskListsByDomain_Result.
+func (v *MatchingService_GetTaskListsByDomain_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
 	}
@@ -7095,7 +7095,7 @@ func (v *MatchingService_GetTaskListsForDomain_Result) MarshalLogObject(enc zapc
 
 // GetSuccess returns the value of Success if it is set or its
 // zero value if it is unset.
-func (v *MatchingService_GetTaskListsForDomain_Result) GetSuccess() (o *shared.GetTaskListsForDomainResponse) {
+func (v *MatchingService_GetTaskListsByDomain_Result) GetSuccess() (o *shared.GetTaskListsByDomainResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -7104,13 +7104,13 @@ func (v *MatchingService_GetTaskListsForDomain_Result) GetSuccess() (o *shared.G
 }
 
 // IsSetSuccess returns true if Success is not nil.
-func (v *MatchingService_GetTaskListsForDomain_Result) IsSetSuccess() bool {
+func (v *MatchingService_GetTaskListsByDomain_Result) IsSetSuccess() bool {
 	return v != nil && v.Success != nil
 }
 
 // GetBadRequestError returns the value of BadRequestError if it is set or its
 // zero value if it is unset.
-func (v *MatchingService_GetTaskListsForDomain_Result) GetBadRequestError() (o *shared.BadRequestError) {
+func (v *MatchingService_GetTaskListsByDomain_Result) GetBadRequestError() (o *shared.BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -7119,13 +7119,13 @@ func (v *MatchingService_GetTaskListsForDomain_Result) GetBadRequestError() (o *
 }
 
 // IsSetBadRequestError returns true if BadRequestError is not nil.
-func (v *MatchingService_GetTaskListsForDomain_Result) IsSetBadRequestError() bool {
+func (v *MatchingService_GetTaskListsByDomain_Result) IsSetBadRequestError() bool {
 	return v != nil && v.BadRequestError != nil
 }
 
 // GetInternalServiceError returns the value of InternalServiceError if it is set or its
 // zero value if it is unset.
-func (v *MatchingService_GetTaskListsForDomain_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+func (v *MatchingService_GetTaskListsByDomain_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -7134,13 +7134,13 @@ func (v *MatchingService_GetTaskListsForDomain_Result) GetInternalServiceError()
 }
 
 // IsSetInternalServiceError returns true if InternalServiceError is not nil.
-func (v *MatchingService_GetTaskListsForDomain_Result) IsSetInternalServiceError() bool {
+func (v *MatchingService_GetTaskListsByDomain_Result) IsSetInternalServiceError() bool {
 	return v != nil && v.InternalServiceError != nil
 }
 
 // GetEntityNotExistError returns the value of EntityNotExistError if it is set or its
 // zero value if it is unset.
-func (v *MatchingService_GetTaskListsForDomain_Result) GetEntityNotExistError() (o *shared.EntityNotExistsError) {
+func (v *MatchingService_GetTaskListsByDomain_Result) GetEntityNotExistError() (o *shared.EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -7149,13 +7149,13 @@ func (v *MatchingService_GetTaskListsForDomain_Result) GetEntityNotExistError() 
 }
 
 // IsSetEntityNotExistError returns true if EntityNotExistError is not nil.
-func (v *MatchingService_GetTaskListsForDomain_Result) IsSetEntityNotExistError() bool {
+func (v *MatchingService_GetTaskListsByDomain_Result) IsSetEntityNotExistError() bool {
 	return v != nil && v.EntityNotExistError != nil
 }
 
 // GetServiceBusyError returns the value of ServiceBusyError if it is set or its
 // zero value if it is unset.
-func (v *MatchingService_GetTaskListsForDomain_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
+func (v *MatchingService_GetTaskListsByDomain_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -7164,22 +7164,22 @@ func (v *MatchingService_GetTaskListsForDomain_Result) GetServiceBusyError() (o 
 }
 
 // IsSetServiceBusyError returns true if ServiceBusyError is not nil.
-func (v *MatchingService_GetTaskListsForDomain_Result) IsSetServiceBusyError() bool {
+func (v *MatchingService_GetTaskListsByDomain_Result) IsSetServiceBusyError() bool {
 	return v != nil && v.ServiceBusyError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the result.
 //
-// This will always be "GetTaskListsForDomain" for this struct.
-func (v *MatchingService_GetTaskListsForDomain_Result) MethodName() string {
-	return "GetTaskListsForDomain"
+// This will always be "GetTaskListsByDomain" for this struct.
+func (v *MatchingService_GetTaskListsByDomain_Result) MethodName() string {
+	return "GetTaskListsByDomain"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Reply for this struct.
-func (v *MatchingService_GetTaskListsForDomain_Result) EnvelopeType() wire.EnvelopeType {
+func (v *MatchingService_GetTaskListsByDomain_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }
 

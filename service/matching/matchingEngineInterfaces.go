@@ -35,6 +35,6 @@ type (
 		CancelOutstandingPoll(hCtx *handlerContext, request *types.CancelOutstandingPollRequest) error
 		DescribeTaskList(hCtx *handlerContext, request *types.MatchingDescribeTaskListRequest) (*types.DescribeTaskListResponse, error)
 		ListTaskListPartitions(hCtx *handlerContext, request *types.MatchingListTaskListPartitionsRequest) (*types.ListTaskListPartitionsResponse, error)
-		GetTaskListsForDomain(hCtx *handlerContext, request *types.MatchingGetTaskListsForDomainRequest) *types.GetTaskListsForDomainResponse
+		GetTaskListsByDomain(hCtx *handlerContext, request *types.MatchingGetTaskListsByDomainRequest) *types.GetTaskListsByDomainResponse
 	}
 )

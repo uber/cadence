@@ -697,17 +697,17 @@ func (e *matchingEngineImpl) listTaskListPartitions(
 	return partitionHostInfo, nil
 }
 
-func (e *matchingEngineImpl) GetTaskListsForDomain(
+func (e *matchingEngineImpl) GetTaskListsByDomain(
 	hCtx *handlerContext,
-	request *types.MatchingGetTaskListsForDomainRequest,
-) *types.GetTaskListsForDomainResponse {
+	request *types.MatchingGetTaskListsByDomainRequest,
+) *types.GetTaskListsByDomainResponse {
 	taskLists := e.taskListCache.Get(request.GetDomain()).(map[string]bool)
 	var taskListNames []string
 	for taskList, _ := range taskLists {
 		taskListNames = append(taskListNames, taskList)
 	}
 
-	return &types.GetTaskListsForDomainResponse{
+	return &types.GetTaskListsByDomainResponse{
 		TaskListNames: taskListNames,
 	}
 }

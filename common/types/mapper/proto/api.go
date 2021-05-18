@@ -1713,38 +1713,38 @@ func ToListTaskListPartitionsResponse(t *apiv1.ListTaskListPartitionsResponse) *
 	}
 }
 
-func FromGetTaskListsForDomainRequest(t *types.GetTaskListsForDomainRequest) *apiv1.GetTaskListsForDomainRequest {
+func FromGetTaskListsByDomainRequest(t *types.GetTaskListsByDomainRequest) *apiv1.GetTaskListsByDomainRequest {
 	if t == nil {
 		return nil
 	}
-	return &apiv1.GetTaskListsForDomainRequest{
+	return &apiv1.GetTaskListsByDomainRequest{
 		Domain: t.Domain,
 	}
 }
 
-func ToGetTaskListsForDomainRequest(t *apiv1.GetTaskListsForDomainRequest) *types.GetTaskListsForDomainRequest {
+func ToGetTaskListsByDomainRequest(t *apiv1.GetTaskListsByDomainRequest) *types.GetTaskListsByDomainRequest {
 	if t == nil {
 		return nil
 	}
-	return &types.GetTaskListsForDomainRequest{
+	return &types.GetTaskListsByDomainRequest{
 		Domain: t.Domain,
 	}
 }
 
-func FromGetTaskListsForDomainResponse(t *types.GetTaskListsForDomainResponse) *apiv1.GetTaskListsForDomainResponse {
+func FromGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainResponse) *apiv1.GetTaskListsByDomainResponse {
 	if t == nil {
 		return nil
 	}
-	return &apiv1.GetTaskListsForDomainResponse{
+	return &apiv1.GetTaskListsByDomainResponse{
 		TaskListNames: t.GetTaskListNames(),
 	}
 }
 
-func ToGetTaskListsForDomainResponse(t *apiv1.GetTaskListsForDomainResponse) *types.GetTaskListsForDomainResponse {
+func ToGetTaskListsByDomainResponse(t *apiv1.GetTaskListsByDomainResponse) *types.GetTaskListsByDomainResponse {
 	if t == nil {
 		return nil
 	}
-	return &types.GetTaskListsForDomainResponse{
+	return &types.GetTaskListsByDomainResponse{
 		TaskListNames: t.GetTaskListNames(),
 	}
 }

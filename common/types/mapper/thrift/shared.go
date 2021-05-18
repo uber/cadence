@@ -2988,42 +2988,42 @@ func ToListTaskListPartitionsResponse(t *shared.ListTaskListPartitionsResponse) 
 	}
 }
 
-// FromGetTaskListsForDomainRequest converts internal GetTaskListsForDomainRequest type to thrift
-func FromGetTaskListsForDomainRequest(t *types.GetTaskListsForDomainRequest) *shared.GetTaskListsForDomainRequest {
+// FromGetTaskListsByDomainRequest converts internal GetTaskListsByDomainRequest type to thrift
+func FromGetTaskListsByDomainRequest(t *types.GetTaskListsByDomainRequest) *shared.GetTaskListsByDomainRequest {
 	if t == nil {
 		return nil
 	}
-	return &shared.GetTaskListsForDomainRequest{
+	return &shared.GetTaskListsByDomainRequest{
 		Domain: &t.Domain,
 	}
 }
 
-// ToGetTaskListsForDomainRequest converts thrift GetTaskListsForDomainRequest type to internal
-func ToGetTaskListsForDomainRequest(t *shared.GetTaskListsForDomainRequest) *types.GetTaskListsForDomainRequest {
+// ToGetTaskListsByDomainRequest converts thrift GetTaskListsByDomainRequest type to internal
+func ToGetTaskListsByDomainRequest(t *shared.GetTaskListsByDomainRequest) *types.GetTaskListsByDomainRequest {
 	if t == nil {
 		return nil
 	}
-	return &types.GetTaskListsForDomainRequest{
+	return &types.GetTaskListsByDomainRequest{
 		Domain: t.GetDomain(),
 	}
 }
 
-// FromGetTaskListsForDomainResponse converts internal GetTaskListsForDomainResponse type to thrift
-func FromGetTaskListsForDomainResponse(t *types.GetTaskListsForDomainResponse) *shared.GetTaskListsForDomainResponse {
+// FromGetTaskListsByDomainResponse converts internal GetTaskListsByDomainResponse type to thrift
+func FromGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainResponse) *shared.GetTaskListsByDomainResponse {
 	if t == nil {
 		return nil
 	}
-	return &shared.GetTaskListsForDomainResponse{
+	return &shared.GetTaskListsByDomainResponse{
 		TaskListNames: t.GetTaskListNames(),
 	}
 }
 
-// ToGetTaskListsForDomainResponse converts thrift GetTaskListsForDomainResponse type to internal
-func ToGetTaskListsForDomainResponse(t *shared.GetTaskListsForDomainResponse) *types.GetTaskListsForDomainResponse {
+// ToGetTaskListsByDomainResponse converts thrift GetTaskListsByDomainResponse type to internal
+func ToGetTaskListsByDomainResponse(t *shared.GetTaskListsByDomainResponse) *types.GetTaskListsByDomainResponse {
 	if t == nil {
 		return nil
 	}
-	return &types.GetTaskListsForDomainResponse{
+	return &types.GetTaskListsByDomainResponse{
 		TaskListNames: t.GetTaskListNames(),
 	}
 }

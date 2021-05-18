@@ -59,10 +59,10 @@ type Interface interface {
 		Request *matching.DescribeTaskListRequest,
 	) (*shared.DescribeTaskListResponse, error)
 
-	GetTaskListsForDomain(
+	GetTaskListsByDomain(
 		ctx context.Context,
-		Request *matching.GetTaskListsForDomainRequest,
-	) (*shared.GetTaskListsForDomainResponse, error)
+		Request *matching.GetTaskListsByDomainRequest,
+	) (*shared.GetTaskListsByDomainResponse, error)
 
 	ListTaskListPartitions(
 		ctx context.Context,
@@ -146,13 +146,13 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "GetTaskListsForDomain",
+				Name: "GetTaskListsByDomain",
 				HandlerSpec: thrift.HandlerSpec{
 
 					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetTaskListsForDomain),
+					Unary: thrift.UnaryHandler(h.GetTaskListsByDomain),
 				},
-				Signature:    "GetTaskListsForDomain(Request *matching.GetTaskListsForDomainRequest) (*shared.GetTaskListsForDomainResponse)",
+				Signature:    "GetTaskListsByDomain(Request *matching.GetTaskListsByDomainRequest) (*shared.GetTaskListsByDomainResponse)",
 				ThriftModule: matching.ThriftModule,
 			},
 
@@ -344,17 +344,17 @@ func (h handler) DescribeTaskList(ctx context.Context, body wire.Value) (thrift.
 	return response, err
 }
 
-func (h handler) GetTaskListsForDomain(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args matching.MatchingService_GetTaskListsForDomain_Args
+func (h handler) GetTaskListsByDomain(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args matching.MatchingService_GetTaskListsByDomain_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
-			"could not decode Thrift request for service 'MatchingService' procedure 'GetTaskListsForDomain': %w", err)
+			"could not decode Thrift request for service 'MatchingService' procedure 'GetTaskListsByDomain': %w", err)
 	}
 
-	success, appErr := h.impl.GetTaskListsForDomain(ctx, args.Request)
+	success, appErr := h.impl.GetTaskListsByDomain(ctx, args.Request)
 
 	hadError := appErr != nil
-	result, err := matching.MatchingService_GetTaskListsForDomain_Helper.WrapResponse(success, appErr)
+	result, err := matching.MatchingService_GetTaskListsByDomain_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {

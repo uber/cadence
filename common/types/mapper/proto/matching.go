@@ -200,38 +200,38 @@ func ToMatchingListTaskListPartitionsResponse(t *matchingv1.ListTaskListPartitio
 	}
 }
 
-func FromMatchingGetTaskListsForDomainRequest(t *types.MatchingGetTaskListsForDomainRequest) *matchingv1.GetTaskListsForDomainRequest {
+func FromMatchingGetTaskListsByDomainRequest(t *types.MatchingGetTaskListsByDomainRequest) *matchingv1.GetTaskListsByDomainRequest {
 	if t == nil {
 		return nil
 	}
-	return &matchingv1.GetTaskListsForDomainRequest{
+	return &matchingv1.GetTaskListsByDomainRequest{
 		Domain: t.Domain,
 	}
 }
 
-func ToMatchingGetTaskListsForDomainRequest(t *matchingv1.GetTaskListsForDomainRequest) *types.MatchingGetTaskListsForDomainRequest {
+func ToMatchingGetTaskListsByDomainRequest(t *matchingv1.GetTaskListsByDomainRequest) *types.MatchingGetTaskListsByDomainRequest {
 	if t == nil {
 		return nil
 	}
-	return &types.MatchingGetTaskListsForDomainRequest{
+	return &types.MatchingGetTaskListsByDomainRequest{
 		Domain: t.Domain,
 	}
 }
 
-func FromMatchingGetTaskListsForDomainResponse(t *types.GetTaskListsForDomainResponse) *matchingv1.GetTaskListsForDomainResponse {
+func FromMatchingGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainResponse) *matchingv1.GetTaskListsByDomainResponse {
 	if t == nil {
 		return nil
 	}
-	return &matchingv1.GetTaskListsForDomainResponse{
+	return &matchingv1.GetTaskListsByDomainResponse{
 		TaskListNames: t.GetTaskListNames(),
 	}
 }
 
-func ToMatchingGetTaskListsForDomainResponse(t *matchingv1.GetTaskListsForDomainResponse) *types.GetTaskListsForDomainResponse {
+func ToMatchingGetTaskListsByDomainResponse(t *matchingv1.GetTaskListsByDomainResponse) *types.GetTaskListsByDomainResponse {
 	if t == nil {
 		return nil
 	}
-	return &types.GetTaskListsForDomainResponse{
+	return &types.GetTaskListsByDomainResponse{
 		TaskListNames: t.GetTaskListNames(),
 	}
 }

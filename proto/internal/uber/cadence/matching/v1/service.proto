@@ -80,8 +80,8 @@ service MatchingAPI {
   // ListTaskListPartitions returns a map of partitionKey and hostAddress for a taskList
   rpc ListTaskListPartitions(ListTaskListPartitionsRequest) returns (ListTaskListPartitionsResponse);
 
-  // GetTaskListsForDomain returns all tasklist for a given domain
-  rpc GetTaskListsForDomain(GetTaskListsForDomainRequest) returns (GetTaskListsForDomainResponse);
+  // GetTaskListsByDomain returns all tasklist for a given domain
+  rpc GetTaskListsByDomain(GetTaskListsByDomainRequest) returns (GetTaskListsByDomainResponse);
 }
 
 message PollForDecisionTaskRequest {
@@ -216,11 +216,11 @@ message ListTaskListPartitionsResponse {
   repeated api.v1.TaskListPartitionMetadata decision_task_list_partitions = 2;
 }
 
-message GetTaskListsForDomainRequest {
+message GetTaskListsByDomainRequest {
   string domain = 1;
 }
 
-message GetTaskListsForDomainResponse {
+message GetTaskListsByDomainResponse {
   repeated string task_list_names = 1;
 }
 

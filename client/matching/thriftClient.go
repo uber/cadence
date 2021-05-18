@@ -84,13 +84,13 @@ func (t thriftClient) ListTaskListPartitions(
 	return thrift.ToListTaskListPartitionsResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) GetTaskListsForDomain(
+func (t thriftClient) GetTaskListsByDomain(
 	ctx context.Context,
-	request *types.MatchingGetTaskListsForDomainRequest,
+	request *types.MatchingGetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
-) (*types.GetTaskListsForDomainResponse, error) {
-	response, err := t.c.GetTaskListsForDomain(ctx, thrift.FromMatchingGetTaskListsForDomainRequest(request), opts...)
-	return thrift.ToGetTaskListsForDomainResponse(response), thrift.ToError(err)
+) (*types.GetTaskListsByDomainResponse, error) {
+	response, err := t.c.GetTaskListsByDomain(ctx, thrift.FromMatchingGetTaskListsByDomainRequest(request), opts...)
+	return thrift.ToGetTaskListsByDomainResponse(response), thrift.ToError(err)
 }
 
 func (t thriftClient) PollForActivityTask(

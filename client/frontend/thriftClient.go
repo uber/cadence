@@ -104,9 +104,9 @@ func (t thriftClient) ListTaskListPartitions(ctx context.Context, request *types
 	return thrift.ToListTaskListPartitionsResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) GetTaskListsForDomain(ctx context.Context, request *types.GetTaskListsForDomainRequest, opts ...yarpc.CallOption) (*types.GetTaskListsForDomainResponse, error) {
-	response, err := t.c.GetTaskListsForDomain(ctx, thrift.FromGetTaskListsForDomainRequest(request), opts...)
-	return thrift.ToGetTaskListsForDomainResponse(response), thrift.ToError(err)
+func (t thriftClient) GetTaskListsByDomain(ctx context.Context, request *types.GetTaskListsByDomainRequest, opts ...yarpc.CallOption) (*types.GetTaskListsByDomainResponse, error) {
+	response, err := t.c.GetTaskListsByDomain(ctx, thrift.FromGetTaskListsByDomainRequest(request), opts...)
+	return thrift.ToGetTaskListsByDomainResponse(response), thrift.ToError(err)
 }
 
 func (t thriftClient) ListWorkflowExecutions(ctx context.Context, request *types.ListWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*types.ListWorkflowExecutionsResponse, error) {
