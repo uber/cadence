@@ -103,7 +103,6 @@ func ProcessorWorkflow(ctx workflow.Context) error {
 
 // ProcessorActivity is activity for processing batch operation
 func ProcessorActivity(ctx context.Context, request Request) error {
-	time.Sleep(2 * time.Minute)
 	processor := ctx.Value(processorContextKey).(*Processor)
 	for _, execution := range request.Executions {
 		var err error
