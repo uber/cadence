@@ -38,7 +38,14 @@ type (
 		tableCRUD
 	}
 	// tableCRUD defines the API for interacting with the database tables
-	// NOTE: All SELECT interfaces require strong consistency. Using eventual consistency will not work.
+	// NOTE 1: All SELECT interfaces require strong consistency (eventual consistency will not work) unless specify in the method.
+	//
+	// NOTE 2: About schema: only the columns that need to be partition key, range key or index key are considered 'significant',
+	// which required to be in the schema.  All other non 'significant' columns are opaque for implementation.
+	// Therefore, it's recommended to use a data blob to store all the other columns, so that adding new
+	// column will not require schema changes. This approach has been proved very successful in MySQL/Postgres implementation of SQL interfaces.
+	// Cassandra implementation cannot do it due to backward-compatibility. Any other NoSQL implementation should use datablob for non-significant columns.
+	// Follow the comment for each tableCRUD for what are 'significant' columns.
 	tableCRUD interface {
 		historyEventsCRUD
 		messageQueueCRUD
@@ -58,16 +65,15 @@ type (
 		IsThrottlingError(error) bool
 	}
 
-	// historyEventsCRUD is for History events storage system
+	/**
+	 * historyEventsCRUD is for History events storage system
+	 * Recommendation: use two tables: history_tree for branch records and history_node for node records
+	 * if a single update query can operate on two tables.
+	 * Significant columns:
+	 * history_tree partition key: (shardID, treeID), range key: (branchID)
+	 * history_node partition key: (shardID, treeID), range key: (branchID, nodeID ASC, txnID DESC)
+	 */
 	historyEventsCRUD interface {
-		/**
-		* It can be implemented with two tables(history_tree for branch records and history_node for node records)
-		* ShardID is passed from application layer as the same shardID of the workflow. But it is not required for History events
-		* to be in the same shard as workflows. The pro of being the same shard is that when one DB partition goes down, the impact is lower.
-		* However, being in the same shard can cause some hot partition issue. Because sometimes history can grow very large, this could be worse.
-		* Therefore, Cadence built-in Cassandra plugin doesn't take use of ShardID at all.
-		**/
-
 		// InsertIntoHistoryTreeAndNode inserts one or two rows: tree row and node row(at least one of them)
 		InsertIntoHistoryTreeAndNode(ctx context.Context, treeRow *HistoryTreeRow, nodeRow *HistoryNodeRow) error
 
@@ -86,8 +92,14 @@ type (
 		SelectFromHistoryTree(ctx context.Context, filter *HistoryTreeFilter) ([]*HistoryTreeRow, error)
 	}
 
-	// messageQueueCRUD is for the message queue storage system
-	// Typically two tables(queue_message,and queue_metadata) are needed to implement this interface
+	/***
+	 * messageQueueCRUD is for the message queue storage system
+	 *
+	 * Recommendation: use two tables(queue_message,and queue_metadata) to implement this interface
+	 * Significant columns:
+	 * queue_message partition key: (queueType), range key: (messageID)
+	 * queue_metadata partition key: (queueType), range key: N/A
+	 */
 	messageQueueCRUD interface {
 		//Insert message into queue, return error if failed or already exists
 		// Must return conditionFailed error if row already exists
@@ -117,17 +129,24 @@ type (
 		GetQueueSize(ctx context.Context, queueType persistence.QueueType) (int64, error)
 	}
 
-	// domainCRUD is for domain + domain metadata storage system
-	// Ideally a domain operation should be implemented in transaction to be atomic if using multiple tables.
-	// For example, Cassandra uses two table, domains and domains_by_name_v2.
-	// But it is okay if not, as the nosqlMetadataManager will handle the edge cases.
-	//
-	// However, there is a special record as "domain metadata". Right now it is an integer number as notification version.
-	// The main purpose of it is to notify clusters that there is some changes in domains, so domain cache needs to refresh.
-	// It always increase by one, whenever a domain is updated or inserted.
-	// Updating this failover metadata with domain insert/update needs to be atomic.
-	// Because Batch LWTs is only allowed within one table and same partition.
-	// The Cassandra implementation stores it in the same table as domain in domains_by_name_v2.
+	/***
+	* domainCRUD is for domain + domain metadata storage system
+	*
+	* Recommendation: Use one table to implement
+	* Significant columns:
+	* domain: partition key( a constant value), range key(domainName), local secondary index(domainID)
+	*
+	* Note 1: About Cassandra's implementation: Because of historical reasons, Cassandra uses two table,
+	* domains and domains_by_name_v2. Therefore, Cassandra implementation lost the atomicity causing some edge cases,
+	* and the implementation is more complicated than it should be.
+	*
+	* Note 2: About the special record as "domain metadata". Right now it is an integer number as notification version.
+	* The main purpose of it is to notify clusters that there is some changes in domains, so domain cache needs to refresh.
+	* It always increase by one, whenever a domain is updated or inserted.
+	* Updating this failover metadata with domain insert/update needs to be atomic.
+	* Because Batch LWTs is only allowed within one table and same partition.
+	* The Cassandra implementation stores it in the same table as domain in domains_by_name_v2.
+	 */
 	domainCRUD interface {
 		// Insert a new record to domain, return error if failed or already exists
 		// Must return conditionFailed error if domainName already exists
