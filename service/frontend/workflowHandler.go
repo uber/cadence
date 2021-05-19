@@ -1925,11 +1925,8 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	}
 
 	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
-	historyRequest, err := common.CreateHistoryStartWorkflowRequest(
+	historyRequest := common.CreateHistoryStartWorkflowRequest(
 		domainID, startRequest, time.Now())
-	if err != nil {
-		return nil, wh.error(err, scope)
-	}
 
 	resp, err = wh.GetHistoryClient().StartWorkflowExecution(ctx, historyRequest)
 	if err != nil {

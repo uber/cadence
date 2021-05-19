@@ -1303,10 +1303,7 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 	}
 
 	now := t.shard.GetTimeSource().Now()
-	historyStartReq, historyReqError := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, now)
-	if historyReqError != nil {
-		return "", historyReqError
-	}
+	historyStartReq := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, now)
 
 	historyStartReq.ParentExecutionInfo = &types.ParentExecutionInfo{
 		DomainUUID: task.DomainID,

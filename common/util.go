@@ -103,7 +103,6 @@ var (
 	ErrContextTimeoutTooShort = &types.BadRequestError{Message: "Context timeout is too short."}
 	// ErrContextTimeoutNotSet is error for not setting a context timeout when calling a long poll API
 	ErrContextTimeoutNotSet = &types.BadRequestError{Message: "Context timeout is not set."}
-	ErrDelayStartSeconds    = &types.BadRequestError{Message: "Conflicting inputs: both DelayStartSeconds and Cron schedule is set"}
 )
 
 // AwaitWaitGroup calls Wait on the given wait
@@ -443,20 +442,22 @@ func CreateHistoryStartWorkflowRequest(
 	domainID string,
 	startRequest *types.StartWorkflowExecutionRequest,
 	now time.Time,
-) (*types.HistoryStartWorkflowExecutionRequest, error) {
+) *types.HistoryStartWorkflowExecutionRequest {
 	histRequest := &types.HistoryStartWorkflowExecutionRequest{
 		DomainUUID:   domainID,
 		StartRequest: startRequest,
 	}
 
-	firstDecisionTaskBackoffSeconds := backoff.GetBackoffForNextScheduleInSeconds(
-		startRequest.GetCronSchedule(), now, now)
 	delayStartSeconds := startRequest.GetDelayStartSeconds()
-	if delayStartSeconds > 0 && firstDecisionTaskBackoffSeconds > 0 {
-		return nil, ErrDelayStartSeconds
-	}
-	if delayStartSeconds > 0 {
-		firstDecisionTaskBackoffSeconds = delayStartSeconds
+	firstDecisionTaskBackoffSeconds := delayStartSeconds
+	if len(startRequest.GetCronSchedule()) > 0 {
+		delayedStartTime := now.Add(time.Second * time.Duration(delayStartSeconds))
+		firstDecisionTaskBackoffSeconds = backoff.GetBackoffForNextScheduleInSeconds(
+			startRequest.GetCronSchedule(), delayedStartTime, delayedStartTime)
+
+		// backoff seconds was calculated based on delayed start time, so we need to
+		// add the delayStartSeconds to that backoff.
+		firstDecisionTaskBackoffSeconds += delayStartSeconds
 	}
 
 	histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(firstDecisionTaskBackoffSeconds)
@@ -468,7 +469,7 @@ func CreateHistoryStartWorkflowRequest(
 		histRequest.ExpirationTimestamp = Int64Ptr(deadline.Round(time.Millisecond).UnixNano())
 	}
 
-	return histRequest, nil
+	return histRequest
 }
 
 // CheckEventBlobSizeLimit checks if a blob data exceeds limits. It logs a warning if it exceeds warnLimit,
