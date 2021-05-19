@@ -146,6 +146,8 @@ type (
 	* Updating this failover metadata with domain insert/update needs to be atomic.
 	* Because Batch LWTs is only allowed within one table and same partition.
 	* The Cassandra implementation stores it in the same table as domain in domains_by_name_v2.
+	*
+	* Note 3: It's okay to use a constant value for partition key because domain table is serving very small volume of traffic.
 	 */
 	domainCRUD interface {
 		// Insert a new record to domain, return error if failed or already exists
