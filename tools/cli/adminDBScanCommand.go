@@ -125,29 +125,14 @@ func checkExecution(
 	invariants []executions.InvariantFactory,
 	fetcher executions.ExecutionFetcher,
 ) (interface{}, invariant.ManagerCheckResult) {
-	client, session := connectToCassandra(c)
-	defer session.Close()
-	logger := loggerimpl.NewNopLogger()
+	execManager := initializeExecutionStore(c, common.WorkflowIDToHistoryShard(req.WorkflowID, numberOfShards), 0)
+	defer execManager.Close()
 
-	execStore, err := cassandra.NewWorkflowExecutionPersistence(
-		common.WorkflowIDToHistoryShard(req.WorkflowID, numberOfShards),
-		client,
-		session,
-		logger,
-	)
-
-	if err != nil {
-		ErrorAndExit("Failed to get execution store", err)
-	}
-
-	historyV2Mgr := persistence.NewHistoryV2ManagerImpl(
-		cassandra.NewHistoryV2PersistenceFromSession(client, session, logger),
-		logger,
-		dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
-	)
+	historyV2Mgr := initializeHistoryManager(c)
+	defer historyV2Mgr.Close()
 
 	pr := persistence.NewPersistenceRetryer(
-		persistence.NewExecutionManagerImpl(execStore, logger),
+		execManager,
 		historyV2Mgr,
 		common.CreatePersistenceRetryPolicy(),
 	)
@@ -261,9 +246,12 @@ func initializeExecutionStore(
 		}
 	}
 
-	historyManager := persistence.NewExecutionManagerImpl(execStore, logger)
+	executionManager := persistence.NewExecutionManagerImpl(execStore, logger)
+	if rps == 0 {
+		return executionManager
+	}
 	rateLimiter := quotas.NewSimpleRateLimiter(rps)
-	return persistence.NewWorkflowExecutionPersistenceRateLimitedClient(historyManager, rateLimiter, logger)
+	return persistence.NewWorkflowExecutionPersistenceRateLimitedClient(executionManager, rateLimiter, logger)
 }
 
 func initializeCassandraExecutionClient(
@@ -300,9 +288,59 @@ func initializeSQLExecutionStore(
 	}
 	execStore, err := sql.NewSQLExecutionStore(sqlDB, logger, shardID, getSQLParser(common.EncodingType(encodingType), decodingTypes...))
 	if err != nil {
-		ErrorAndExit("Failed to get execution store from cassandra config", err)
+		ErrorAndExit("Failed to get execution store from sql config", err)
 	}
 	return execStore
+}
+
+func initializeHistoryManager(c *cli.Context) persistence.HistoryManager {
+	var historyV2Mgr persistence.HistoryStore
+	dbType := c.String(FlagDBType)
+	logger := loggerimpl.NewNopLogger()
+	switch dbType {
+	case "cassandra":
+		historyV2Mgr = initializeCassandraHistoryStore(c, logger)
+	default:
+		if sql.PluginRegistered(dbType) {
+			historyV2Mgr = initializeSQLHistoryStore(c, logger)
+		} else {
+			supportedDBs := append(sql.GetRegisteredPluginNames(), "cassandra")
+			ErrorAndExit(fmt.Sprintf("The DB type is not supported. Options are: %s.", supportedDBs), nil)
+		}
+	}
+	historyStore := persistence.NewHistoryV2ManagerImpl(
+		historyV2Mgr,
+		logger,
+		dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
+	)
+	return historyStore
+}
+
+func initializeCassandraHistoryStore(
+	c *cli.Context,
+	logger log.Logger,
+) persistence.HistoryStore {
+	client, session := connectToCassandra(c)
+	historyV2Mgr := cassandra.NewHistoryV2PersistenceFromSession(client, session, logger)
+	return historyV2Mgr
+}
+
+func initializeSQLHistoryStore(
+	c *cli.Context,
+	logger log.Logger,
+) persistence.HistoryStore {
+	sqlDB := connectToSQL(c)
+	encodingType := c.String(FlagEncodingType)
+	decodingTypesStr := c.StringSlice(FlagDecodingTypes)
+	var decodingTypes []common.EncodingType
+	for _, dt := range decodingTypesStr {
+		decodingTypes = append(decodingTypes, common.EncodingType(dt))
+	}
+	historyV2Mgr, err := sql.NewHistoryV2Persistence(sqlDB, logger, getSQLParser(common.EncodingType(encodingType), decodingTypes...))
+	if err != nil {
+		ErrorAndExit("Failed to get history store from sql config", err)
+	}
+	return historyV2Mgr
 }
 
 func getSQLParser(encodingType common.EncodingType, decodingTypes ...common.EncodingType) serialization.Parser {

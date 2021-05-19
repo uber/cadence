@@ -22,11 +22,13 @@
 package cli
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/urfave/cli"
 
+	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/service/worker/scanner/executions"
 )
@@ -902,13 +904,13 @@ func newDBCommands() []cli.Command {
 	}
 }
 
-// TODO need to support other database: https://github.com/uber/cadence/issues/2777
 func getDBFlags() []cli.Flag {
+	supportedDBs := append(sql.GetRegisteredPluginNames(), "cassandra")
 	return []cli.Flag{
 		cli.StringFlag{
 			Name:  FlagDBType,
 			Value: "cassandra",
-			Usage: "persistence type. Current supported options are cassandra, mysql, postgres",
+			Usage: fmt.Sprintf("persistence type. Current supported options are %v", supportedDBs),
 		},
 		cli.StringFlag{
 			Name:  FlagDBAddress,
