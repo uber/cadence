@@ -32,7 +32,6 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/zap"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
@@ -77,13 +76,14 @@ func (s *ScavengerTestSuite) SetupTest() {
 		s.taskMgr,
 		metrics.NewClient(tally.NoopScope, metrics.Worker),
 		logger,
-		dynamicconfig.GetIntPropertyFn(common.DefaultScannerGetOrphanTasksPageSize),
-		dynamicconfig.GetIntPropertyFn(int(common.DefaultScannerBatchSizeForCompleteTasksLessThanAckLevel)),
-		dynamicconfig.GetIntPropertyFn(common.DefaultScannerMaxTasksProcessedPerTasklistJob),
-		dynamicconfig.GetBoolPropertyFn(false),
+		&Options{
+			EnableCleaning:           dynamicconfig.GetBoolPropertyFn(true),
+			TaskBatchSizeFn:          dynamicconfig.GetIntPropertyFn(16),
+			GetOrphanTasksPageSizeFn: dynamicconfig.GetIntPropertyFn(16),
+			ExecutorPollInterval:     time.Millisecond * 50,
+		},
 	)
 	s.scvgrCancelFn = scvgrCancelFn
-	executorPollInterval = time.Millisecond * 50
 }
 
 func (s *ScavengerTestSuite) TestAllExpiredTasks() {
