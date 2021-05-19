@@ -2801,10 +2801,7 @@ func getStartRequest(
 		DelayStartSeconds:                   request.DelayStartSeconds,
 	}
 
-	startRequest, err := common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
-	if err != nil {
-		return nil, err
-	}
+	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
 
 	return startRequest, nil
 }
