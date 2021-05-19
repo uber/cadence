@@ -242,11 +242,11 @@ func (s *Service) Stop() {
 
 func (s *Service) startParentClosePolicyProcessor() {
 	params := &parentclosepolicy.BootstrapParams{
-		ServiceClient: s.params.PublicClient,
-		MetricsClient: s.GetMetricsClient(),
-		Logger:        s.GetLogger(),
-		TallyScope:    s.params.MetricScope,
-		ClientBean:    s.GetClientBean(),
+		ServiceClient:  s.params.PublicClient,
+		MetricsClient:  s.GetMetricsClient(),
+		Logger:         s.GetLogger(),
+		TallyScope:     s.params.MetricScope,
+		FrontendClient: s.GetFrontendClient(), // frontend client with retry
 	}
 	processor := parentclosepolicy.New(params)
 	if err := processor.Start(); err != nil {

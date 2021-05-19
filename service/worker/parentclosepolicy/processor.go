@@ -28,7 +28,7 @@ import (
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/worker"
 
-	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -47,28 +47,28 @@ type (
 		Logger        log.Logger
 		// TallyScope is an instance of tally metrics scope
 		TallyScope tally.Scope
-		// ClientBean is an instance of client.Bean for a collection of clients
-		ClientBean client.Bean
+		// FrontendClient is an instance of frontend.Client for talking to frontend service
+		FrontendClient frontend.Client
 	}
 
 	// Processor is the background sub-system that execute workflow for ParentClosePolicy
 	Processor struct {
-		svcClient     workflowserviceclient.Interface
-		clientBean    client.Bean
-		metricsClient metrics.Client
-		tallyScope    tally.Scope
-		logger        log.Logger
+		svcClient      workflowserviceclient.Interface
+		frontendClient frontend.Client
+		metricsClient  metrics.Client
+		tallyScope     tally.Scope
+		logger         log.Logger
 	}
 )
 
 // New returns a new instance as daemon
 func New(params *BootstrapParams) *Processor {
 	return &Processor{
-		svcClient:     params.ServiceClient,
-		metricsClient: params.MetricsClient,
-		tallyScope:    params.TallyScope,
-		logger:        params.Logger.WithTags(tag.ComponentBatcher),
-		clientBean:    params.ClientBean,
+		svcClient:      params.ServiceClient,
+		metricsClient:  params.MetricsClient,
+		tallyScope:     params.TallyScope,
+		logger:         params.Logger.WithTags(tag.ComponentBatcher),
+		frontendClient: params.FrontendClient,
 	}
 }
 
