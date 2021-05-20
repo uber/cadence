@@ -124,7 +124,7 @@ func NewEngine(taskManager persistence.TaskManager,
 		config:               config,
 		lockableQueryTaskMap: lockableQueryTaskMap{queryTaskMap: make(map[string]chan *queryResult)},
 		domainCache:          domainCache,
-		taskListCache:        cache.NewSimple(),
+		taskListCache:        cache.NewSimple(nil),
 		versionChecker:       client.NewVersionChecker(),
 		keyResolver:          resolver,
 	}
