@@ -22,9 +22,14 @@ package cli
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
+	cclient "go.uber.org/cadence/client"
+
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/service/worker/failovermanager"
 
 	"github.com/uber/cadence/common/types"
 )
@@ -74,6 +79,38 @@ func AdminDescribeCluster(c *cli.Context) {
 	}
 
 	prettyPrintJSONObject(response)
+}
+
+func AdminRebalanceStart(c *cli.Context) {
+	client := getCadenceClient(c)
+	tcCtx, cancel := newContext(c)
+	defer cancel()
+
+	options := cclient.StartWorkflowOptions{
+		ID:                           failovermanager.RebalanceWorkflowID,
+		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
+		TaskList:                     failovermanager.TaskListName,
+		ExecutionStartToCloseTimeout: time.Minute,
+		Memo: map[string]interface{}{
+			common.MemoKeyForOperator: getOperator(),
+		},
+	}
+
+	rbParams := &failovermanager.RebalanceParams{
+		BatchFailoverSize:              100,
+		BatchFailoverWaitTimeInSeconds: 10,
+	}
+	wf, err := client.StartWorkflow(tcCtx, options, failovermanager.RebalanceWorkflowTypeName, rbParams)
+	if err != nil {
+		ErrorAndExit("Failed to start failover workflow", err)
+	}
+	fmt.Println("Rebalance workflow started")
+	fmt.Println("wid: " + wf.ID)
+	fmt.Println("rid: " + wf.RunID)
+}
+
+func AdminRebalanceList(c *cli.Context) {
+
 }
 
 func intValTypeToString(valType int) string {

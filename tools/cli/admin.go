@@ -690,6 +690,14 @@ func newAdminClusterCommands() []cli.Command {
 				newDomainCLI(c, false).FailoverDomains(c)
 			},
 		},
+		{
+			Name:    "rebalance",
+			Aliases: []string{"rb"},
+			Usage:   "Rebalance the domains active cluster",
+			Action: func(c *cli.Context) {
+				AdminRebalanceStart(c)
+			},
+		},
 	}
 }
 
