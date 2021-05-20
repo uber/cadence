@@ -97,7 +97,7 @@ func (s *FailoverManager) Start() error {
 		Tracer:                    opentracing.GlobalTracer(),
 	}
 	failoverWorker := worker.New(s.svcClient, common.SystemLocalDomainName, TaskListName, workerOpts)
-	failoverWorker.RegisterWorkflowWithOptions(FailoverWorkflow, workflow.RegisterOptions{Name: WorkflowTypeName})
+	failoverWorker.RegisterWorkflowWithOptions(FailoverWorkflow, workflow.RegisterOptions{Name: FailoverWorkflowTypeName})
 	failoverWorker.RegisterWorkflowWithOptions(RebalanceWorkflow, workflow.RegisterOptions{Name: RebalanceWorkflowTypeName})
 	failoverWorker.RegisterActivityWithOptions(FailoverActivity, activity.RegisterOptions{Name: failoverActivityName})
 	failoverWorker.RegisterActivityWithOptions(GetDomainsActivity, activity.RegisterOptions{Name: getDomainsActivityName})

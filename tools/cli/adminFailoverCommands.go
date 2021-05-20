@@ -134,15 +134,15 @@ func AdminFailoverRollback(c *cli.Context) {
 
 	runID := getRunID(c)
 
-	queryResult := query(tcCtx, client, failovermanager.WorkflowID, runID)
+	queryResult := query(tcCtx, client, failovermanager.FailoverWorkflowID, runID)
 	if isWorkflowRunning(queryResult) {
-		err := client.TerminateWorkflow(tcCtx, failovermanager.WorkflowID, runID, "Rollback", nil)
+		err := client.TerminateWorkflow(tcCtx, failovermanager.FailoverWorkflowID, runID, "Rollback", nil)
 		if err != nil {
 			ErrorAndExit("Failed to terminate failover workflow", err)
 		}
 	}
 	// query again
-	queryResult = query(tcCtx, client, failovermanager.WorkflowID, runID)
+	queryResult = query(tcCtx, client, failovermanager.FailoverWorkflowID, runID)
 	var rollbackDomains []string
 	// rollback includes both success and failed domains to make sure no leftover domains
 	rollbackDomains = append(rollbackDomains, queryResult.SuccessDomains...)
@@ -216,7 +216,7 @@ func failoverStart(c *cli.Context, params *startParams) {
 	defer cancel()
 
 	options := cclient.StartWorkflowOptions{
-		ID:                           failovermanager.WorkflowID,
+		ID:                           failovermanager.FailoverWorkflowID,
 		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
 		TaskList:                     failovermanager.TaskListName,
 		ExecutionStartToCloseTimeout: workflowTimeout,
@@ -256,7 +256,7 @@ func failoverStart(c *cli.Context, params *startParams) {
 		Domains:                        domains,
 		DrillWaitTime:                  drillWaitTime,
 	}
-	wf, err := client.StartWorkflow(tcCtx, options, failovermanager.WorkflowTypeName, foParams)
+	wf, err := client.StartWorkflow(tcCtx, options, failovermanager.FailoverWorkflowTypeName, foParams)
 	if err != nil {
 		ErrorAndExit("Failed to start failover workflow", err)
 	}
@@ -269,7 +269,7 @@ func getFailoverWorkflowID(c *cli.Context) string {
 	if c.Bool(FlagFailoverDrill) {
 		return failovermanager.DrillWorkflowID
 	}
-	return failovermanager.WorkflowID
+	return failovermanager.FailoverWorkflowID
 }
 
 func getOperator() string {

@@ -64,7 +64,7 @@ func TestFailoverWorkflowTestSuite(t *testing.T) {
 func (s *failoverWorkflowTestSuite) SetupTest() {
 	s.activityEnv = s.NewTestActivityEnvironment()
 	s.workflowEnv = s.NewTestWorkflowEnvironment()
-	s.workflowEnv.RegisterWorkflowWithOptions(FailoverWorkflow, workflow.RegisterOptions{Name: WorkflowTypeName})
+	s.workflowEnv.RegisterWorkflowWithOptions(FailoverWorkflow, workflow.RegisterOptions{Name: FailoverWorkflowTypeName})
 	s.workflowEnv.RegisterActivityWithOptions(FailoverActivity, activity.RegisterOptions{Name: failoverActivityName})
 	s.workflowEnv.RegisterActivityWithOptions(GetDomainsActivity, activity.RegisterOptions{Name: getDomainsActivityName})
 	s.activityEnv.RegisterActivityWithOptions(FailoverActivity, activity.RegisterOptions{Name: failoverActivityName})
@@ -89,7 +89,7 @@ func (s *failoverWorkflowTestSuite) TestValidateParams() {
 
 func (s *failoverWorkflowTestSuite) TestWorkflow_InvalidParams() {
 	params := &FailoverParams{}
-	s.workflowEnv.ExecuteWorkflow(WorkflowTypeName, params)
+	s.workflowEnv.ExecuteWorkflow(FailoverWorkflowTypeName, params)
 	s.True(s.workflowEnv.IsWorkflowCompleted())
 	s.Error(s.workflowEnv.GetWorkflowError())
 }
@@ -101,7 +101,7 @@ func (s *failoverWorkflowTestSuite) TestWorkflow_GetDomainActivityError() {
 		TargetCluster: "t",
 		SourceCluster: "s",
 	}
-	s.workflowEnv.ExecuteWorkflow(WorkflowTypeName, params)
+	s.workflowEnv.ExecuteWorkflow(FailoverWorkflowTypeName, params)
 	s.True(s.workflowEnv.IsWorkflowCompleted())
 	s.Equal("mockErr", s.workflowEnv.GetWorkflowError().Error())
 }
@@ -115,7 +115,7 @@ func (s *failoverWorkflowTestSuite) TestWorkflow_FailoverActivityError() {
 		TargetCluster: "t",
 		SourceCluster: "s",
 	}
-	s.workflowEnv.ExecuteWorkflow(WorkflowTypeName, params)
+	s.workflowEnv.ExecuteWorkflow(FailoverWorkflowTypeName, params)
 	var result FailoverResult
 	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
 	s.Equal(0, len(result.SuccessDomains))
@@ -133,7 +133,7 @@ func (s *failoverWorkflowTestSuite) TestWorkflow_Success() {
 		TargetCluster: "t",
 		SourceCluster: "s",
 	}
-	s.workflowEnv.ExecuteWorkflow(WorkflowTypeName, params)
+	s.workflowEnv.ExecuteWorkflow(FailoverWorkflowTypeName, params)
 	var result FailoverResult
 	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
 	s.Equal(mockFailoverActivityResult.SuccessDomains, result.SuccessDomains)
@@ -180,7 +180,7 @@ func (s *failoverWorkflowTestSuite) TestWorkflow_Success_Batches() {
 		BatchFailoverSize: 2,
 		Domains:           domains,
 	}
-	s.workflowEnv.ExecuteWorkflow(WorkflowTypeName, params)
+	s.workflowEnv.ExecuteWorkflow(FailoverWorkflowTypeName, params)
 
 	var result FailoverResult
 	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
@@ -215,7 +215,7 @@ func (s *failoverWorkflowTestSuite) TestWorkflow_Pause() {
 		BatchFailoverSize: 2,
 		Domains:           domains,
 	}
-	s.workflowEnv.ExecuteWorkflow(WorkflowTypeName, params)
+	s.workflowEnv.ExecuteWorkflow(FailoverWorkflowTypeName, params)
 
 	var result FailoverResult
 	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
@@ -244,7 +244,7 @@ func (s *failoverWorkflowTestSuite) TestWorkflow_WithDrillWaitTime_Success() {
 	s.workflowEnv.SetOnTimerFiredListener(func(timerID string) {
 		timerCount--
 	})
-	s.workflowEnv.ExecuteWorkflow(WorkflowTypeName, params)
+	s.workflowEnv.ExecuteWorkflow(FailoverWorkflowTypeName, params)
 	var result FailoverResult
 	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
 	s.Equal(mockFailoverActivityResult.SuccessDomains, result.SuccessDomains)
@@ -478,7 +478,7 @@ func (s *failoverWorkflowTestSuite) TestGetOperator() {
 		SourceCluster: "s",
 	}
 
-	s.workflowEnv.ExecuteWorkflow(WorkflowTypeName, params)
+	s.workflowEnv.ExecuteWorkflow(FailoverWorkflowTypeName, params)
 	var result FailoverResult
 	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
 

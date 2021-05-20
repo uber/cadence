@@ -44,14 +44,14 @@ const (
 	failoverManagerContextKey contextKey = "failoverManagerContext"
 	// TaskListName tasklist
 	TaskListName = "cadence-sys-failoverManager-tasklist"
-	// WorkflowTypeName workflow type name
-	WorkflowTypeName = "cadence-sys-failoverManager-workflow"
+	// FailoverWorkflowTypeName workflow type name
+	FailoverWorkflowTypeName = "cadence-sys-failoverManager-workflow"
 	// RebalanceWorkflowTypeName is rebalance workflow type name
 	RebalanceWorkflowTypeName = "cadence-sys-rebalance-workflow"
 	// WorkflowID will be reused to ensure only one workflow running
-	WorkflowID                      = "cadence-failover-manager"
+	FailoverWorkflowID              = "cadence-failover-manager"
 	RebalanceWorkflowID             = "cadence-rebalance-workflow"
-	DrillWorkflowID                 = WorkflowID + "-drill"
+	DrillWorkflowID                 = FailoverWorkflowID + "-drill"
 	failoverActivityName            = "cadence-sys-failover-activity"
 	getDomainsActivityName          = "cadence-sys-getDomains-activity"
 	getRebalanceDomainsActivityName = "cadence-sys-getRebalanceDomains-activity"

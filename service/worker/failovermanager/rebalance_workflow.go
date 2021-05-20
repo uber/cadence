@@ -111,21 +111,19 @@ func getPreferredClusterName(domain *types.DescribeDomainResponse) string {
 }
 
 func shouldAllowRebalance(domain *types.DescribeDomainResponse) bool {
+	preferCluster := getPreferredClusterName(domain)
 	return isDomainFailoverManagedByCadence(domain) &&
 		domain.IsGlobalDomain &&
 		domain.GetDomainInfo().GetStatus() == types.DomainStatusRegistered &&
-		getPreferredClusterName(domain) != domain.ReplicationConfiguration.GetActiveClusterName()
+		len(preferCluster) != 0 &&
+		preferCluster != domain.ReplicationConfiguration.GetActiveClusterName()
 }
 
 func getDomainsByCluster(domainData []*DomainRebalanceData) map[string][]string {
 	domainPerCluster := make(map[string][]string)
 	for _, domain := range domainData {
-		var domainList []string
-		if domains, ok := domainPerCluster[domain.PreferredCluster]; ok {
-			domainList = domains
-		}
-		domainList = append(domainList, domain.DomainName)
-		domainPerCluster[domain.PreferredCluster] = domainList
+		domainPerCluster[domain.PreferredCluster] = append(domainPerCluster[domain.PreferredCluster], domain.DomainName)
 	}
+
 	return domainPerCluster
 }

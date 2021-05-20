@@ -127,6 +127,19 @@ func (s *rebalanceWorkflowTestSuite) TestGetDomainsForRebalanceActivity_ReturnOn
 				},
 				IsGlobalDomain: true,
 			},
+			{
+				DomainInfo: &types.DomainInfo{
+					Name: "d5",
+					Data: map[string]string{
+						common.DomainDataKeyForManagedFailover: "true",
+					},
+				},
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
+					ActiveClusterName: "c1",
+					Clusters:          clusters,
+				},
+				IsGlobalDomain: true,
+			},
 		},
 	}
 	mockResource.FrontendClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return(domains, nil)
