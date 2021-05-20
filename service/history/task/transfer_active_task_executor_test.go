@@ -2269,11 +2269,8 @@ func (s *transferActiveTaskExecutorSuite) createChildWorkflowExecutionRequest(
 		InitiatedID: task.ScheduleID,
 	}
 
-	historyStartReq, err := common.CreateHistoryStartWorkflowRequest(
+	historyStartReq := common.CreateHistoryStartWorkflowRequest(
 		task.TargetDomainID, frontendStartReq, now)
-	if err != nil {
-		return nil, err
-	}
 
 	historyStartReq.ParentExecutionInfo = parentInfo
 	return historyStartReq, nil

@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/worker/scanner/shardscanner"
+	"github.com/uber/cadence/service/worker/scanner/tasklist"
 )
 
 const (
@@ -55,17 +56,15 @@ type (
 	Config struct {
 		// ScannerPersistenceMaxQPS the max rate of calls to persistence
 		// Right now is being used by historyScanner to determine the rate of persistence API calls
-		ScannerPersistenceMaxQPS                    dynamicconfig.IntPropertyFn
-		GetOrphanTasksPageSizeFn                    dynamicconfig.IntPropertyFn
-		TaskBatchSizeFn                             dynamicconfig.IntPropertyFn
-		EnableCleaningOrphanTaskInTasklistScavenger dynamicconfig.BoolPropertyFn
-		MaxTasksPerJobFn                            dynamicconfig.IntPropertyFn
+		ScannerPersistenceMaxQPS dynamicconfig.IntPropertyFn
+		// TaskListScannerEnabled indicates if taskList scanner should be started as part of scanner
+		TaskListScannerEnabled dynamicconfig.BoolPropertyFn
+		// TaskListScannerOptions contains options for TaskListScanner
+		TaskListScannerOptions tasklist.Options
 		// Persistence contains the persistence configuration
 		Persistence *config.Persistence
 		// ClusterMetadata contains the metadata for this cluster
 		ClusterMetadata cluster.Metadata
-		// TaskListScannerEnabled indicates if taskList scanner should be started as part of scanner
-		TaskListScannerEnabled dynamicconfig.BoolPropertyFn
 		// HistoryScannerEnabled indicates if history scanner should be started as part of scanner
 		HistoryScannerEnabled dynamicconfig.BoolPropertyFn
 		// ShardScanners is a list of shard scanner configs

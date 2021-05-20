@@ -137,7 +137,7 @@ func (s *Scavenger) deleteHandlerLog(info *p.TaskListInfo, nProcessed int, nDele
 }
 
 func (s *Scavenger) isTaskExpired(t *p.TaskInfo) bool {
-	return t.Expiry.After(epochStartTime) && time.Now().After(t.Expiry)
+	return t.Expiry.After(time.Unix(0, 0)) && time.Now().After(t.Expiry)
 }
 
 func (s *Scavenger) completeOrphanTasksHandler() handlerStatus {

@@ -165,11 +165,9 @@ func TaskListScavengerActivity(
 		res.GetTaskManager(),
 		res.GetMetricsClient(),
 		res.GetLogger(),
-		ctx.cfg.GetOrphanTasksPageSizeFn,
-		ctx.cfg.TaskBatchSizeFn,
-		ctx.cfg.MaxTasksPerJobFn,
-		ctx.cfg.EnableCleaningOrphanTaskInTasklistScavenger,
+		&ctx.cfg.TaskListScannerOptions,
 	)
+
 	res.GetLogger().Info("Starting task list scavenger")
 	scavenger.Start()
 	for scavenger.Alive() {

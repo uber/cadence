@@ -94,7 +94,7 @@ func (f *Factory) NewHistoryV2Store() (p.HistoryStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newHistoryV2Persistence(conn, f.logger, f.parser)
+	return NewHistoryV2Persistence(conn, f.logger, f.parser)
 }
 
 // NewMetadataStore returns a new metadata store

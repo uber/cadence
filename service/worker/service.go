@@ -48,6 +48,7 @@ import (
 	"github.com/uber/cadence/service/worker/scanner"
 	"github.com/uber/cadence/service/worker/scanner/executions"
 	"github.com/uber/cadence/service/worker/scanner/shardscanner"
+	"github.com/uber/cadence/service/worker/scanner/tasklist"
 	"github.com/uber/cadence/service/worker/scanner/timers"
 	"github.com/uber/cadence/service/worker/shadower"
 )
@@ -131,15 +132,17 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			TimeLimitPerArchivalIteration: dc.GetDurationProperty(dynamicconfig.WorkerTimeLimitPerArchivalIteration, archiver.MaxArchivalIterationTimeout()),
 		},
 		ScannerCfg: &scanner.Config{
-			ScannerPersistenceMaxQPS:                    dc.GetIntProperty(dynamicconfig.ScannerPersistenceMaxQPS, 5),
-			GetOrphanTasksPageSizeFn:                    dc.GetIntProperty(dynamicconfig.ScannerGetOrphanTasksPageSize, common.DefaultScannerGetOrphanTasksPageSize),
-			TaskBatchSizeFn:                             dc.GetIntProperty(dynamicconfig.ScannerBatchSizeForTasklistHandler, common.DefaultScannerGetOrphanTasksPageSize),
-			EnableCleaningOrphanTaskInTasklistScavenger: dc.GetBoolProperty(dynamicconfig.EnableCleaningOrphanTaskInTasklistScavenger, false),
-			MaxTasksPerJobFn:                            dc.GetIntProperty(dynamicconfig.ScannerMaxTasksProcessedPerTasklistJob, common.DefaultScannerMaxTasksProcessedPerTasklistJob),
-			Persistence:                                 &params.PersistenceConfig,
-			ClusterMetadata:                             params.ClusterMetadata,
-			TaskListScannerEnabled:                      dc.GetBoolProperty(dynamicconfig.TaskListScannerEnabled, true),
-			HistoryScannerEnabled:                       dc.GetBoolProperty(dynamicconfig.HistoryScannerEnabled, false),
+			ScannerPersistenceMaxQPS: dc.GetIntProperty(dynamicconfig.ScannerPersistenceMaxQPS, 5),
+			TaskListScannerOptions: tasklist.Options{
+				GetOrphanTasksPageSizeFn: dc.GetIntProperty(dynamicconfig.ScannerGetOrphanTasksPageSize, tasklist.DefaultScannerGetOrphanTasksPageSize),
+				TaskBatchSizeFn:          dc.GetIntProperty(dynamicconfig.ScannerBatchSizeForTasklistHandler, tasklist.DefaultScannerGetOrphanTasksPageSize),
+				EnableCleaning:           dc.GetBoolProperty(dynamicconfig.EnableCleaningOrphanTaskInTasklistScavenger, false),
+				MaxTasksPerJobFn:         dc.GetIntProperty(dynamicconfig.ScannerMaxTasksProcessedPerTasklistJob, tasklist.DefaultScannerMaxTasksProcessedPerTasklistJob),
+			},
+			Persistence:            &params.PersistenceConfig,
+			ClusterMetadata:        params.ClusterMetadata,
+			TaskListScannerEnabled: dc.GetBoolProperty(dynamicconfig.TaskListScannerEnabled, true),
+			HistoryScannerEnabled:  dc.GetBoolProperty(dynamicconfig.HistoryScannerEnabled, false),
 			ShardScanners: []*shardscanner.ScannerConfig{
 				executions.ConcreteExecutionScannerConfig(dc),
 				executions.CurrentExecutionScannerConfig(dc),
@@ -239,11 +242,11 @@ func (s *Service) Stop() {
 
 func (s *Service) startParentClosePolicyProcessor() {
 	params := &parentclosepolicy.BootstrapParams{
-		ServiceClient: s.params.PublicClient,
-		MetricsClient: s.GetMetricsClient(),
-		Logger:        s.GetLogger(),
-		TallyScope:    s.params.MetricScope,
-		ClientBean:    s.GetClientBean(),
+		ServiceClient:  s.params.PublicClient,
+		MetricsClient:  s.GetMetricsClient(),
+		Logger:         s.GetLogger(),
+		TallyScope:     s.params.MetricScope,
+		FrontendClient: s.GetFrontendClient(), // frontend client with retry
 	}
 	processor := parentclosepolicy.New(params)
 	if err := processor.Start(); err != nil {
