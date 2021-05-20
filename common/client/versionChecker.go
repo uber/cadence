@@ -176,6 +176,7 @@ func (vc *versionChecker) SupportsRawHistoryQuery(clientImpl string, clientFeatu
 
 // Returns error if workflowAlreadyCompletedError is not supported otherwise nil.
 // In case client version lookup fails assume the client does not support feature.
+// NOTE: Enabling this error will break customer code handling the workflow errors in their workflow
 func (vc *versionChecker) SupportsWorkflowAlreadyCompletedError(clientImpl string, clientFeatureVersion string) error {
 	return vc.featureSupported(clientImpl, clientFeatureVersion, workflowAlreadyCompletedError)
 }
