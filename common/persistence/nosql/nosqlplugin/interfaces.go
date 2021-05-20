@@ -173,6 +173,10 @@ type (
 	}
 
 	// shardCRUD is for shard storage of workflow execution.
+	//
+	// Recommendation: use one table if database support batch conditional update on multiple tables, otherwise combine with workflowCRUD (likeCassandra)
+	// shard: partition key(shardID), range key(N/A)
+	//
 	// Note 1: shard will be required to run conditional update with workflowCRUD. So in some nosql database like Cassandra,
 	// shardCRUD and workflowCRUD must be implemented within the same table. Because Cassandra only allows LightWeight transaction
 	// executed within a single table.
