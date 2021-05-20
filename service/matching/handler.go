@@ -414,8 +414,8 @@ func (h *handlerImpl) GetTaskListsByDomain(
 		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
 
-	response := h.engine.GetTaskListsByDomain(hCtx, request)
-	return response, hCtx.handleErr(nil)
+	response, err := h.engine.GetTaskListsByDomain(hCtx, request)
+	return response, hCtx.handleErr(err)
 }
 
 func (h *handlerImpl) domainName(id string) string {

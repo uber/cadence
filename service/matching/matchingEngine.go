@@ -169,8 +169,10 @@ func (e *matchingEngineImpl) String() string {
 // if successful creates one.
 func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID,
 	taskListKind *types.TaskListKind) (taskListManager, error) {
-	// Cache the task list in taskListCache
-	e.cacheTaskListByDomain(taskList)
+	// Cache user defined task list in taskListCache
+	if *taskListKind == types.TaskListKindNormal {
+		e.cacheTaskListByDomain(taskList)
+	}
 	// The first check is an optimization so almost all requests will have a task list manager
 	// and return avoiding the write lock
 	e.taskListsLock.RLock()
@@ -217,11 +219,7 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID,
 }
 
 func (e *matchingEngineImpl) cacheTaskListByDomain(taskList *taskListID) error {
-	domainName, err := e.domainCache.GetDomainName(taskList.domainID)
-	if err != nil {
-		return err
-	}
-	cachedTL := e.taskListCache.Get(domainName)
+	cachedTL := e.taskListCache.Get(taskList.domainID)
 	var taskLists map[string]bool
 	if cachedTL != nil {
 		taskLists = cachedTL.(map[string]bool)
@@ -232,7 +230,7 @@ func (e *matchingEngineImpl) cacheTaskListByDomain(taskList *taskListID) error {
 	// there might be a race condition here if two goroutines tries to put the task list at the same time
 	// this is non-issue because we don't care as all tasklists should be populated eventually
 	taskLists[taskList.name] = true
-	e.taskListCache.Put(domainName, taskLists)
+	e.taskListCache.Put(taskList.domainID, taskLists)
 	return nil
 }
 
@@ -700,8 +698,12 @@ func (e *matchingEngineImpl) listTaskListPartitions(
 func (e *matchingEngineImpl) GetTaskListsByDomain(
 	hCtx *handlerContext,
 	request *types.MatchingGetTaskListsByDomainRequest,
-) *types.GetTaskListsByDomainResponse {
-	taskLists := e.taskListCache.Get(request.GetDomain()).(map[string]bool)
+) (*types.GetTaskListsByDomainResponse, error) {
+	domainID, err := e.domainCache.GetDomainID(request.GetDomain())
+	if err != nil {
+		return nil, err
+	}
+	taskLists := e.taskListCache.Get(domainID).(map[string]bool)
 	var taskListNames []string
 	for taskList, _ := range taskLists {
 		taskListNames = append(taskListNames, taskList)
@@ -709,7 +711,7 @@ func (e *matchingEngineImpl) GetTaskListsByDomain(
 
 	return &types.GetTaskListsByDomainResponse{
 		TaskListNames: taskListNames,
-	}
+	}, nil
 }
 
 func (e *matchingEngineImpl) getHostInfo(partitionKey string) (string, error) {

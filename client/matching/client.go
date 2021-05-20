@@ -238,16 +238,13 @@ func (c *clientImpl) GetTaskListsByDomain(
 	opts ...yarpc.CallOption,
 ) (*types.GetTaskListsByDomainResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
+
+	// This result could be large
 	clients := c.clients.GetAllClients()
 
 	var response *types.GetTaskListsByDomainResponse
 	for _, cl := range clients {
-		client, err := c.getClientForTaskList(cl)
-		if err != nil {
-			return nil, err
-		}
-
-		resp, err := c.getTaskListsByDomain(client, ctx, request, opts...)
+		resp, err := c.getTaskListsByDomain(cl.(Client), ctx, request, opts...)
 		if err != nil {
 			return nil, err
 		}
