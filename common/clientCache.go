@@ -106,5 +106,6 @@ func (c *clientCacheImpl) GetAllClients() []interface{} {
 	for _, cl := range c.clients {
 		clients = append(clients, cl)
 	}
+	// this might return duplicate clients
 	return clients
 }

@@ -543,6 +543,12 @@ const (
 	// Default value: FALSE
 	// Allowed filters: DomainID
 	MatchingEnableTaskInfoLogByDomainID
+	// MatchingEnableTaskListCacheByDomainID is enables caching of tasklist names in matching engine
+	// KeyName: matching.enableTaskListCacheByDomainID
+	// Value type: Bool
+	// Default value: FALSE
+	// Allowed filters: DomainID
+	MatchingEnableTaskListCacheByDomainID
 
 	// key for history
 
@@ -1876,6 +1882,7 @@ var keys = map[Key]string{
 	MatchingShutdownDrainDuration:           "matching.shutdownDrainDuration",
 	MatchingErrorInjectionRate:              "matching.errorInjectionRate",
 	MatchingEnableTaskInfoLogByDomainID:     "matching.enableTaskInfoLogByDomainID",
+	MatchingEnableTaskListCacheByDomainID:   "matching.enableTaskListCacheByDomainID",
 
 	// history settings
 	HistoryRPS:                                            "history.rps",

@@ -124,7 +124,7 @@ func NewEngine(taskManager persistence.TaskManager,
 		config:               config,
 		lockableQueryTaskMap: lockableQueryTaskMap{queryTaskMap: make(map[string]chan *queryResult)},
 		domainCache:          domainCache,
-		taskListCache:        cache.NewSimple(nil),
+		taskListCache:        cache.NewSimple(),
 		versionChecker:       client.NewVersionChecker(),
 		keyResolver:          resolver,
 	}
@@ -170,9 +170,12 @@ func (e *matchingEngineImpl) String() string {
 func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID,
 	taskListKind *types.TaskListKind) (taskListManager, error) {
 	// Cache user defined task list in taskListCache
-	if *taskListKind == types.TaskListKindNormal {
-		e.cacheTaskListByDomain(taskList)
+	if e.config.EnableTaskListCache() {
+		if *taskListKind == types.TaskListKindNormal {
+			e.cacheTaskListByDomain(taskList)
+		}
 	}
+
 	// The first check is an optimization so almost all requests will have a task list manager
 	// and return avoiding the write lock
 	e.taskListsLock.RLock()
@@ -218,7 +221,7 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID,
 	return mgr, nil
 }
 
-func (e *matchingEngineImpl) cacheTaskListByDomain(taskList *taskListID) error {
+func (e *matchingEngineImpl) cacheTaskListByDomain(taskList *taskListID) {
 	cachedTL := e.taskListCache.Get(taskList.domainID)
 	var taskLists map[string]bool
 	if cachedTL != nil {
@@ -231,7 +234,18 @@ func (e *matchingEngineImpl) cacheTaskListByDomain(taskList *taskListID) error {
 	// this is non-issue because we don't care as all tasklists should be populated eventually
 	taskLists[taskList.name] = true
 	e.taskListCache.Put(taskList.domainID, taskLists)
-	return nil
+}
+
+func (e *matchingEngineImpl) removeFromTaskListCache(taskList *taskListID) {
+	cachedTL := e.taskListCache.Get(taskList.domainID)
+	var taskLists map[string]bool
+	if cachedTL != nil {
+		taskLists := cachedTL.(map[string]bool)
+		// there might be a race condition here but delete will be a no-op if the tasklist is already deleted
+		delete(taskLists, taskList.name)
+	}
+
+	e.taskListCache.Put(taskList.domainID, taskLists)
 }
 
 // For use in tests
@@ -244,6 +258,9 @@ func (e *matchingEngineImpl) updateTaskList(taskList *taskListID, mgr taskListMa
 func (e *matchingEngineImpl) removeTaskListManager(id *taskListID) {
 	e.taskListsLock.Lock()
 	defer e.taskListsLock.Unlock()
+	if e.config.EnableTaskListCache() {
+		e.removeFromTaskListCache(id)
+	}
 	delete(e.taskLists, *id)
 	e.metricsClient.Scope(metrics.MatchingTaskListMgrScope).UpdateGauge(
 		metrics.TaskListManagersGauge,
