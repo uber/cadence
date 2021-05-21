@@ -175,8 +175,8 @@ func getCadencePackageDir() (string, error) {
 	if err != nil {
 		panic(err)
 	}
-	cadenceIndex := strings.LastIndex(cadencePackageDir, "common/")
-	cadencePackageDir = cadencePackageDir[:cadenceIndex]
+	cadenceIndex := strings.LastIndex(cadencePackageDir, "/cadence/")
+	cadencePackageDir = cadencePackageDir[:cadenceIndex+len("/cadence/")]
 	if err != nil {
 		panic(err)
 	}
