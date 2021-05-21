@@ -145,6 +145,13 @@ const (
 )
 
 const (
+	// DefaultIDLengthWarnLimit is the warning length for various ID types
+	DefaultIDLengthWarnLimit = 128
+	// DefaultIDLengthErrorLimit is the maximum length allowed for various ID types
+	DefaultIDLengthErrorLimit = 1000
+)
+
+const (
 	// ArchivalEnabled is the status for enabling archival
 	ArchivalEnabled = "enabled"
 	// ArchivalDisabled is the status for disabling archival

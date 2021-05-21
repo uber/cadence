@@ -542,7 +542,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	}
 
 	request := startRequest.StartRequest
-	err := validateStartWorkflowExecutionRequest(request, e.config.MaxIDLengthLimit())
+	err := e.validateStartWorkflowExecutionRequest(request, metricsScope)
 	if err != nil {
 		return nil, err
 	}
@@ -2703,9 +2703,9 @@ func (e *historyEngineImpl) serializeQueueState(
 	return fmt.Sprintf("%v", state)
 }
 
-func validateStartWorkflowExecutionRequest(
+func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 	request *types.StartWorkflowExecutionRequest,
-	maxIDLengthLimit int,
+	metricsScope int,
 ) error {
 
 	if len(request.GetRequestID()) == 0 {
@@ -2723,16 +2723,38 @@ func validateStartWorkflowExecutionRequest(
 	if request.WorkflowType == nil || request.WorkflowType.GetName() == "" {
 		return &types.BadRequestError{Message: "Missing WorkflowType."}
 	}
-	if len(request.GetDomain()) > maxIDLengthLimit {
+
+	if !common.ValidIDLength(
+		request.GetDomain(),
+		e.metricsClient.Scope(metricsScope),
+		e.config.MaxIDLengthWarnLimit(),
+		e.config.DomainNameMaxLength(request.GetDomain()),
+		metrics.CadenceErrDomainNameExceededWarnLimit) {
 		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
-	if len(request.GetWorkflowID()) > maxIDLengthLimit {
+
+	if !common.ValidIDLength(
+		request.GetWorkflowID(),
+		e.metricsClient.Scope(metricsScope),
+		e.config.MaxIDLengthWarnLimit(),
+		e.config.WorkflowIDMaxLength(request.GetDomain()),
+		metrics.CadenceErrWorkflowIDExceededWarnLimit) {
 		return &types.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
-	if len(request.TaskList.GetName()) > maxIDLengthLimit {
+	if !common.ValidIDLength(
+		request.TaskList.GetName(),
+		e.metricsClient.Scope(metricsScope),
+		e.config.MaxIDLengthWarnLimit(),
+		e.config.TaskListNameMaxLength(request.GetDomain()),
+		metrics.CadenceErrTaskListNameExceededWarnLimit) {
 		return &types.BadRequestError{Message: "TaskList exceeds length limit."}
 	}
-	if len(request.WorkflowType.GetName()) > maxIDLengthLimit {
+	if !common.ValidIDLength(
+		request.WorkflowType.GetName(),
+		e.metricsClient.Scope(metricsScope),
+		e.config.MaxIDLengthWarnLimit(),
+		e.config.WorkflowTypeMaxLength(request.GetDomain()),
+		metrics.CadenceErrWorkflowTypeExceededWarnLimit) {
 		return &types.BadRequestError{Message: "WorkflowType exceeds length limit."}
 	}
 
