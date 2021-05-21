@@ -657,14 +657,10 @@ func (adh *adminHandlerImpl) GetDomainReplicationMessages(
 	if request.LastProcessedMessageID != nil {
 		lastProcessedMessageID = request.GetLastProcessedMessageID()
 	}
-
-	if lastProcessedMessageID != defaultLastMessageID {
-		err := adh.GetDomainReplicationQueue().UpdateAckLevel(ctx, lastProcessedMessageID, request.GetClusterName())
-		if err != nil {
-			adh.GetLogger().Warn("Failed to update domain replication queue ack level.",
-				tag.TaskID(int64(lastProcessedMessageID)),
-				tag.ClusterName(request.GetClusterName()))
-		}
+	if err := adh.GetDomainReplicationQueue().UpdateAckLevel(ctx, lastProcessedMessageID, request.GetClusterName()); err != nil {
+		adh.GetLogger().Warn("Failed to update domain replication queue ack level.",
+			tag.TaskID(int64(lastProcessedMessageID)),
+			tag.ClusterName(request.GetClusterName()))
 	}
 
 	return &types.GetDomainReplicationMessagesResponse{
