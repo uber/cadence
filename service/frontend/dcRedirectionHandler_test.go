@@ -856,7 +856,7 @@ func (s *dcRedirectionHandlerSuite) TestGetTaskListsByDomain() {
 	s.mockFrontendHandler.EXPECT().GetTaskListsByDomain(gomock.Any(), req).Return(&types.GetTaskListsByDomainResponse{}, nil).Times(1)
 	err = callFn(s.currentClusterName)
 	s.Nil(err)
-	s.mockRemoteFrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), req).Return(&types.ListTaskListPartitionsResponse{}, nil).Times(1)
+	s.mockRemoteFrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), req).Return(&types.GetTaskListsByDomainResponse{}, nil).Times(1)
 	err = callFn(s.alternativeClusterName)
 	s.Nil(err)
 }
