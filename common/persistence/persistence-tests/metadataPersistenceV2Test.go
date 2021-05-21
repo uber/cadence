@@ -870,7 +870,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	}
 	m.Equal(updateConfigVersion, resp5.ConfigVersion)
 	m.Equal(updateFailoverVersion, resp5.FailoverVersion)
-	m.Equal(updatePreviousFailoverVersion, resp4.PreviousFailoverVersion)
+	m.Equal(updatePreviousFailoverVersion, resp5.PreviousFailoverVersion)
 	m.Equal(updateFailoverNotificationVersion, resp5.FailoverNotificationVersion)
 	m.Equal(notificationVersion, resp5.NotificationVersion)
 	m.Equal(&failoverEndTime, resp5.FailoverEndTime)
@@ -931,11 +931,11 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	m.Equal(updateClusterActive, resp6.ReplicationConfig.ActiveClusterName)
 	m.Equal(len(updateClusters), len(resp6.ReplicationConfig.Clusters))
 	for index := range clusters {
-		m.Equal(updateClusters[index], resp4.ReplicationConfig.Clusters[index])
+		m.Equal(updateClusters[index], resp6.ReplicationConfig.Clusters[index])
 	}
 	m.Equal(updateConfigVersion, resp6.ConfigVersion)
 	m.Equal(updateFailoverVersion, resp6.FailoverVersion)
-	m.Equal(updatePreviousFailoverVersion, resp4.PreviousFailoverVersion)
+	m.Equal(updatePreviousFailoverVersion, resp6.PreviousFailoverVersion)
 	m.Equal(updateFailoverNotificationVersion, resp6.FailoverNotificationVersion)
 	m.Equal(notificationVersion, resp6.NotificationVersion)
 	m.Nil(resp6.FailoverEndTime)
