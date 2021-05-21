@@ -238,14 +238,12 @@ func (e *matchingEngineImpl) cacheTaskListByDomain(taskList *taskListID) {
 
 func (e *matchingEngineImpl) removeFromTaskListCache(taskList *taskListID) {
 	cachedTL := e.taskListCache.Get(taskList.domainID)
-	var taskLists map[string]bool
 	if cachedTL != nil {
 		taskLists := cachedTL.(map[string]bool)
 		// there might be a race condition here but delete will be a no-op if the tasklist is already deleted
 		delete(taskLists, taskList.name)
+		e.taskListCache.Put(taskList.domainID, taskLists)
 	}
-
-	e.taskListCache.Put(taskList.domainID, taskLists)
 }
 
 // For use in tests
