@@ -110,7 +110,9 @@ func AdminRebalanceStart(c *cli.Context) {
 }
 
 func AdminRebalanceList(c *cli.Context) {
-
+	c.Set(FlagWorkflowID, failovermanager.RebalanceWorkflowID)
+	c.GlobalSet(FlagDomain, common.SystemLocalDomainName)
+	ListWorkflow(c)
 }
 
 func intValTypeToString(valType int) string {

@@ -691,12 +691,10 @@ func newAdminClusterCommands() []cli.Command {
 			},
 		},
 		{
-			Name:    "rebalance",
-			Aliases: []string{"rb"},
-			Usage:   "Rebalance the domains active cluster",
-			Action: func(c *cli.Context) {
-				AdminRebalanceStart(c)
-			},
+			Name:        "rebalance",
+			Aliases:     []string{"rb"},
+			Usage:       "Rebalance the domains active cluster",
+			Subcommands: newAdminRebalanceCommands(),
 		},
 	}
 }
@@ -1194,5 +1192,37 @@ func newAdminFailoverCommands() []cli.Command {
 			},
 		},
 	}
+}
 
+func newAdminRebalanceCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:    "start",
+			Aliases: []string{"s"},
+			Usage:   "start rebalance workflow",
+			Flags:   []cli.Flag{},
+			Action: func(c *cli.Context) {
+				AdminRebalanceStart(c)
+			},
+		},
+		{
+			Name:    "list",
+			Aliases: []string{"l"},
+			Usage:   "list rebalance workflow runs closed/open.",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  FlagOpenWithAlias,
+					Usage: "List for open workflow executions, default is to list for closed ones",
+				},
+				cli.IntFlag{
+					Name:  FlagPageSizeWithAlias,
+					Value: 10,
+					Usage: "Result page size",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminRebalanceList(c)
+			},
+		},
+	}
 }
