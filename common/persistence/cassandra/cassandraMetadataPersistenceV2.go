@@ -118,6 +118,7 @@ func (m *nosqlDomainManager) UpdateDomain(
 		PreviousFailoverVersion:     request.PreviousFailoverVersion,
 		FailoverEndTime:             request.FailoverEndTime,
 		NotificationVersion:         request.NotificationVersion,
+		LastUpdatedTime:             request.LastUpdatedTime,
 	}
 
 	err = m.db.UpdateDomain(ctx, row)
