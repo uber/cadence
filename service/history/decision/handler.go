@@ -91,6 +91,7 @@ func NewHandler(
 		throttledLogger: shard.GetThrottledLogger().WithTags(tag.ComponentDecisionHandler),
 		attrValidator: newAttrValidator(
 			shard.GetDomainCache(),
+			shard.GetMetricsClient(),
 			config,
 			logger,
 		),
