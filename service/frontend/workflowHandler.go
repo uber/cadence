@@ -468,7 +468,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	}
 
 	domainName := pollRequest.GetDomain()
-	if pollRequest.GetDomain() == "" {
+	if domainName == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
