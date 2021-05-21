@@ -227,73 +227,73 @@ const (
 	// DomainNameMaxLength is the length limit for domain name
 	// KeyName: limit.domainNameLength
 	// Value type: Int
-	// Default value: 1000
+	// Default value: common.DefaultIDLengthErrorLimit (1000)
 	// Allowed filters: DomainName
 	DomainNameMaxLength
 	// IdentityMaxLength is the length limit for identity
 	// KeyName: limit.identityLength
 	// Value type: Int
-	// Default value: 1000
+	// Default value: common.DefaultIDLengthErrorLimit (1000)
 	// Allowed filters: DomainName
 	IdentityMaxLength
 	// WorkflowIDMaxLength is the length limit for workflowID
 	// KeyName: limit.workflowIDLength
 	// Value type: Int
-	// Default value: 1000
+	// Default value: common.DefaultIDLengthErrorLimit (1000)
 	// Allowed filters: DomainName
 	WorkflowIDMaxLength
 	// SignalNameMaxLength is the length limit for signal name
 	// KeyName: limit.signalNameLength
 	// Value type: Int
-	// Default value: 1000
+	// Default value: common.DefaultIDLengthErrorLimit (1000)
 	// Allowed filters: DomainName
 	SignalNameMaxLength
 	// WorkflowTypeMaxLength is the length limit for workflow type
 	// KeyName: limit.workflowTypeLength
 	// Value type: Int
-	// Default value: 1000
+	// Default value: common.DefaultIDLengthErrorLimit (1000)
 	// Allowed filters: DomainName
 	WorkflowTypeMaxLength
 	// RequestIDMaxLength is the length limit for requestID
 	// KeyName: limit.requestIDLength
 	// Value type: Int
-	// Default value: 1000
+	// Default value: common.DefaultIDLengthErrorLimit (1000)
 	// Allowed filters: DomainName
 	RequestIDMaxLength
 	// TaskListNameMaxLength is the length limit for task list name
 	// KeyName: limit.taskListNameLength
 	// Value type: Int
-	// Default value: 1000
+	// Default value: common.DefaultIDLengthErrorLimit (1000)
 	// Allowed filters: DomainName
 	TaskListNameMaxLength
 	// ActivityIDMaxLength is the length limit for activityID
 	// KeyName: limit.activityIDLength
 	// Value type: Int
-	// Default value: 1000
+	// Default value: common.DefaultIDLengthErrorLimit (1000)
 	// Allowed filters: DomainName
 	ActivityIDMaxLength
 	// ActivityTypeMaxLength is the length limit for activity type
 	// KeyName: limit.activityTypeLength
 	// Value type: Int
-	// Default value: 1000
+	// Default value: common.DefaultIDLengthErrorLimit (1000)
 	// Allowed filters: DomainName
 	ActivityTypeMaxLength
 	// MarkerNameMaxLength is the length limit for marker name
 	// KeyName: limit.markerNameLength
 	// Value type: Int
-	// Default value: 1000
+	// Default value: common.DefaultIDLengthErrorLimit (1000)
 	// Allowed filters: DomainName
 	MarkerNameMaxLength
 	// TimerIDMaxLength is the length limit for timerID
 	// KeyName: limit.timerIDLength
 	// Value type: Int
-	// Default value: 1000
+	// Default value: common.DefaultIDLengthErrorLimit (1000)
 	// Allowed filters: DomainName
 	TimerIDMaxLength
 	// MaxIDLengthWarnLimit is the warn length limit for various IDs, including: Domain, TaskList, WorkflowID, ActivityID, TimerID, WorkflowType, ActivityType, SignalName, MarkerName, ErrorReason/FailureReason/CancelCause, Identity, RequestID
 	// KeyName: limit.maxIDWarnLength
 	// Value type: Int
-	// Default value: 150
+	// Default value: common.DefaultIDLengthWarnLimit (128)
 	// Allowed filters: N/A
 	MaxIDLengthWarnLimit
 	// AdminErrorInjectionRate is the rate for injecting random error in admin client
