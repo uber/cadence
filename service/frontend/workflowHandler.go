@@ -4072,6 +4072,8 @@ func checkRequiredDomainDataKVs(requiredDomainDataKeys map[string]interface{}, d
 func (wh *WorkflowHandler) normalizeVersionedErrors(ctx context.Context, err error) error {
 	switch err.(type) {
 	case *types.WorkflowExecutionAlreadyCompletedError:
+		return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
+		/* TODO: re-enable the block below once we can rollout this *breaking* change
 		call := yarpc.CallFromContext(ctx)
 		clientFeatureVersion := call.Header(common.FeatureVersionHeaderName)
 		clientImpl := call.Header(common.ClientImplHeaderName)
@@ -4081,6 +4083,7 @@ func (wh *WorkflowHandler) normalizeVersionedErrors(ctx context.Context, err err
 		} else {
 			return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
 		}
+		*/
 	default:
 		return err
 	}
