@@ -765,12 +765,15 @@ func createTransferTasks(
 	transferTasksRows := make([]sqlplugin.TransferTasksRow, len(transferTasks))
 	for i, task := range transferTasks {
 		info := &serialization.TransferTaskInfo{
-			DomainID:         domainID,
-			WorkflowID:       &workflowID,
-			RunID:            runID,
-			TargetDomainID:   domainID,
-			TargetWorkflowID: common.StringPtr(p.TransferTaskTransferTargetWorkflowID),
-			ScheduleID:       common.Int64Ptr(0),
+			DomainID:            domainID,
+			WorkflowID:          workflowID,
+			RunID:               runID,
+			TaskType:            int16(task.GetType()),
+			TargetDomainID:      domainID,
+			TargetWorkflowID:    p.TransferTaskTransferTargetWorkflowID,
+			ScheduleID:          0,
+			Version:             task.GetVersion(),
+			VisibilityTimestamp: task.GetVisibilityTimestamp(),
 		}
 
 		transferTasksRows[i].ShardID = shardID
@@ -779,36 +782,36 @@ func createTransferTasks(
 		switch task.GetType() {
 		case p.TransferTaskTypeActivityTask:
 			info.TargetDomainID = serialization.MustParseUUID(task.(*p.ActivityTask).DomainID)
-			info.TaskList = &task.(*p.ActivityTask).TaskList
-			info.ScheduleID = &task.(*p.ActivityTask).ScheduleID
+			info.TaskList = task.(*p.ActivityTask).TaskList
+			info.ScheduleID = task.(*p.ActivityTask).ScheduleID
 
 		case p.TransferTaskTypeDecisionTask:
 			info.TargetDomainID = serialization.MustParseUUID(task.(*p.DecisionTask).DomainID)
-			info.TaskList = &task.(*p.DecisionTask).TaskList
-			info.ScheduleID = &task.(*p.DecisionTask).ScheduleID
+			info.TaskList = task.(*p.DecisionTask).TaskList
+			info.ScheduleID = task.(*p.DecisionTask).ScheduleID
 
 		case p.TransferTaskTypeCancelExecution:
 			info.TargetDomainID = serialization.MustParseUUID(task.(*p.CancelExecutionTask).TargetDomainID)
-			info.TargetWorkflowID = &task.(*p.CancelExecutionTask).TargetWorkflowID
+			info.TargetWorkflowID = task.(*p.CancelExecutionTask).TargetWorkflowID
 			if task.(*p.CancelExecutionTask).TargetRunID != "" {
 				info.TargetRunID = serialization.MustParseUUID(task.(*p.CancelExecutionTask).TargetRunID)
 			}
-			info.TargetChildWorkflowOnly = &task.(*p.CancelExecutionTask).TargetChildWorkflowOnly
-			info.ScheduleID = &task.(*p.CancelExecutionTask).InitiatedID
+			info.TargetChildWorkflowOnly = task.(*p.CancelExecutionTask).TargetChildWorkflowOnly
+			info.ScheduleID = task.(*p.CancelExecutionTask).InitiatedID
 
 		case p.TransferTaskTypeSignalExecution:
 			info.TargetDomainID = serialization.MustParseUUID(task.(*p.SignalExecutionTask).TargetDomainID)
-			info.TargetWorkflowID = &task.(*p.SignalExecutionTask).TargetWorkflowID
+			info.TargetWorkflowID = task.(*p.SignalExecutionTask).TargetWorkflowID
 			if task.(*p.SignalExecutionTask).TargetRunID != "" {
 				info.TargetRunID = serialization.MustParseUUID(task.(*p.SignalExecutionTask).TargetRunID)
 			}
-			info.TargetChildWorkflowOnly = &task.(*p.SignalExecutionTask).TargetChildWorkflowOnly
-			info.ScheduleID = &task.(*p.SignalExecutionTask).InitiatedID
+			info.TargetChildWorkflowOnly = task.(*p.SignalExecutionTask).TargetChildWorkflowOnly
+			info.ScheduleID = task.(*p.SignalExecutionTask).InitiatedID
 
 		case p.TransferTaskTypeStartChildExecution:
 			info.TargetDomainID = serialization.MustParseUUID(task.(*p.StartChildExecutionTask).TargetDomainID)
-			info.TargetWorkflowID = &task.(*p.StartChildExecutionTask).TargetWorkflowID
-			info.ScheduleID = &task.(*p.StartChildExecutionTask).InitiatedID
+			info.TargetWorkflowID = task.(*p.StartChildExecutionTask).TargetWorkflowID
+			info.ScheduleID = task.(*p.StartChildExecutionTask).InitiatedID
 
 		case p.TransferTaskTypeCloseExecution,
 			p.TransferTaskTypeRecordWorkflowStarted,
@@ -821,10 +824,6 @@ func createTransferTasks(
 				Message: fmt.Sprintf("createTransferTasks failed. Unknow transfer type: %v", task.GetType()),
 			}
 		}
-
-		info.TaskType = common.Int16Ptr(int16(task.GetType()))
-		info.Version = common.Int64Ptr(task.GetVersion())
-		info.VisibilityTimestamp = common.TimePtr(task.GetVisibilityTimestamp())
 
 		blob, err := parser.TransferTaskInfoToBlob(info)
 		if err != nil {
@@ -908,18 +907,18 @@ func createReplicationTasks(
 
 		blob, err := parser.ReplicationTaskInfoToBlob(&serialization.ReplicationTaskInfo{
 			DomainID:                domainID,
-			WorkflowID:              &workflowID,
+			WorkflowID:              workflowID,
 			RunID:                   runID,
-			TaskType:                common.Int16Ptr(int16(task.GetType())),
-			FirstEventID:            &firstEventID,
-			NextEventID:             &nextEventID,
-			Version:                 &version,
-			ScheduledID:             &activityScheduleID,
-			EventStoreVersion:       common.Int32Ptr(p.EventStoreVersion),
-			NewRunEventStoreVersion: common.Int32Ptr(p.EventStoreVersion),
+			TaskType:                int16(task.GetType()),
+			FirstEventID:            firstEventID,
+			NextEventID:             nextEventID,
+			Version:                 version,
+			ScheduledID:             activityScheduleID,
+			EventStoreVersion:       p.EventStoreVersion,
+			NewRunEventStoreVersion: p.EventStoreVersion,
 			BranchToken:             branchToken,
 			NewRunBranchToken:       newRunBranchToken,
-			CreationTimestamp:       common.TimePtr(task.GetVisibilityTimestamp()),
+			CreationTimestamp:       task.GetVisibilityTimestamp(),
 		})
 		if err != nil {
 			return err
@@ -969,27 +968,36 @@ func createTimerTasks(
 	timerTasksRows := make([]sqlplugin.TimerTasksRow, len(timerTasks))
 
 	for i, task := range timerTasks {
-		info := &serialization.TimerTaskInfo{}
+		info := &serialization.TimerTaskInfo{
+			DomainID:        domainID,
+			WorkflowID:      workflowID,
+			RunID:           runID,
+			TaskType:        int16(task.GetType()),
+			Version:         task.GetVersion(),
+			EventID:         common.EmptyEventID,
+			ScheduleAttempt: 0,
+		}
+
 		switch t := task.(type) {
 		case *p.DecisionTimeoutTask:
-			info.EventID = &t.EventID
+			info.EventID = t.EventID
 			info.TimeoutType = common.Int16Ptr(int16(t.TimeoutType))
-			info.ScheduleAttempt = &t.ScheduleAttempt
+			info.ScheduleAttempt = t.ScheduleAttempt
 
 		case *p.ActivityTimeoutTask:
-			info.EventID = &t.EventID
+			info.EventID = t.EventID
 			info.TimeoutType = common.Int16Ptr(int16(t.TimeoutType))
-			info.ScheduleAttempt = &t.Attempt
+			info.ScheduleAttempt = t.Attempt
 
 		case *p.UserTimerTask:
-			info.EventID = &t.EventID
+			info.EventID = t.EventID
 
 		case *p.ActivityRetryTimerTask:
-			info.EventID = &t.EventID
-			info.ScheduleAttempt = common.Int64Ptr(int64(t.Attempt))
+			info.EventID = t.EventID
+			info.ScheduleAttempt = int64(t.Attempt)
 
 		case *p.WorkflowBackoffTimerTask:
-			info.EventID = &t.EventID
+			info.EventID = t.EventID
 			info.TimeoutType = common.Int16Ptr(int16(t.TimeoutType))
 
 		case *p.WorkflowTimeoutTask:
@@ -1003,12 +1011,6 @@ func createTimerTasks(
 				Message: fmt.Sprintf("createTimerTasks failed. Unknown timer task: %v", task.GetType()),
 			}
 		}
-
-		info.DomainID = domainID
-		info.WorkflowID = &workflowID
-		info.RunID = runID
-		info.Version = common.Int64Ptr(task.GetVersion())
-		info.TaskType = common.Int16Ptr(int16(task.GetType()))
 
 		blob, err := parser.TimerTaskInfoToBlob(info)
 		if err != nil {
@@ -1229,79 +1231,82 @@ func buildExecutionRow(
 ) (row *sqlplugin.ExecutionsRow, err error) {
 
 	info := &serialization.WorkflowExecutionInfo{
-		TaskList:                           &executionInfo.TaskList,
-		WorkflowTypeName:                   &executionInfo.WorkflowTypeName,
-		WorkflowTimeout:                    &executionInfo.WorkflowTimeout,
-		DecisionTaskTimeout:                &executionInfo.DecisionStartToCloseTimeout,
+		TaskList:                           executionInfo.TaskList,
+		WorkflowTypeName:                   executionInfo.WorkflowTypeName,
+		WorkflowTimeout:                    executionInfo.WorkflowTimeout,
+		DecisionTaskTimeout:                executionInfo.DecisionStartToCloseTimeout,
 		ExecutionContext:                   executionInfo.ExecutionContext,
-		State:                              common.Int32Ptr(int32(executionInfo.State)),
-		CloseStatus:                        common.Int32Ptr(int32(executionInfo.CloseStatus)),
-		LastFirstEventID:                   &executionInfo.LastFirstEventID,
-		LastEventTaskID:                    &executionInfo.LastEventTaskID,
-		LastProcessedEvent:                 &executionInfo.LastProcessedEvent,
-		StartTimestamp:                     &executionInfo.StartTimestamp,
-		LastUpdatedTimestamp:               &executionInfo.LastUpdatedTimestamp,
-		CreateRequestID:                    &executionInfo.CreateRequestID,
-		DecisionVersion:                    &executionInfo.DecisionVersion,
-		DecisionScheduleID:                 &executionInfo.DecisionScheduleID,
-		DecisionStartedID:                  &executionInfo.DecisionStartedID,
-		DecisionRequestID:                  &executionInfo.DecisionRequestID,
-		DecisionTimeout:                    &executionInfo.DecisionTimeout,
-		DecisionAttempt:                    &executionInfo.DecisionAttempt,
-		DecisionStartedTimestamp:           &executionInfo.DecisionStartedTimestamp,
-		DecisionScheduledTimestamp:         &executionInfo.DecisionScheduledTimestamp,
-		DecisionOriginalScheduledTimestamp: &executionInfo.DecisionOriginalScheduledTimestamp,
-		StickyTaskList:                     &executionInfo.StickyTaskList,
-		StickyScheduleToStartTimeout:       &executionInfo.StickyScheduleToStartTimeout,
-		ClientLibraryVersion:               &executionInfo.ClientLibraryVersion,
-		ClientFeatureVersion:               &executionInfo.ClientFeatureVersion,
-		ClientImpl:                         &executionInfo.ClientImpl,
-		SignalCount:                        common.Int64Ptr(int64(executionInfo.SignalCount)),
-		HistorySize:                        &executionInfo.HistorySize,
-		CronSchedule:                       &executionInfo.CronSchedule,
+		State:                              int32(executionInfo.State),
+		CloseStatus:                        int32(executionInfo.CloseStatus),
+		LastFirstEventID:                   executionInfo.LastFirstEventID,
+		LastEventTaskID:                    executionInfo.LastEventTaskID,
+		LastProcessedEvent:                 executionInfo.LastProcessedEvent,
+		StartTimestamp:                     executionInfo.StartTimestamp,
+		LastUpdatedTimestamp:               executionInfo.LastUpdatedTimestamp,
+		CreateRequestID:                    executionInfo.CreateRequestID,
+		DecisionVersion:                    executionInfo.DecisionVersion,
+		DecisionScheduleID:                 executionInfo.DecisionScheduleID,
+		DecisionStartedID:                  executionInfo.DecisionStartedID,
+		DecisionRequestID:                  executionInfo.DecisionRequestID,
+		DecisionTimeout:                    executionInfo.DecisionTimeout,
+		DecisionAttempt:                    executionInfo.DecisionAttempt,
+		DecisionStartedTimestamp:           executionInfo.DecisionStartedTimestamp,
+		DecisionScheduledTimestamp:         executionInfo.DecisionScheduledTimestamp,
+		DecisionOriginalScheduledTimestamp: executionInfo.DecisionOriginalScheduledTimestamp,
+		StickyTaskList:                     executionInfo.StickyTaskList,
+		StickyScheduleToStartTimeout:       executionInfo.StickyScheduleToStartTimeout,
+		ClientLibraryVersion:               executionInfo.ClientLibraryVersion,
+		ClientFeatureVersion:               executionInfo.ClientFeatureVersion,
+		ClientImpl:                         executionInfo.ClientImpl,
+		SignalCount:                        int64(executionInfo.SignalCount),
+		HistorySize:                        executionInfo.HistorySize,
+		CronSchedule:                       executionInfo.CronSchedule,
 		CompletionEventBatchID:             &executionInfo.CompletionEventBatchID,
-		HasRetryPolicy:                     &executionInfo.HasRetryPolicy,
-		RetryAttempt:                       common.Int64Ptr(int64(executionInfo.Attempt)),
-		RetryInitialInterval:               &executionInfo.InitialInterval,
-		RetryBackoffCoefficient:            &executionInfo.BackoffCoefficient,
-		RetryMaximumInterval:               &executionInfo.MaximumInterval,
-		RetryMaximumAttempts:               &executionInfo.MaximumAttempts,
-		RetryExpiration:                    &executionInfo.ExpirationSeconds,
-		RetryExpirationTimestamp:           &executionInfo.ExpirationTime,
+		HasRetryPolicy:                     executionInfo.HasRetryPolicy,
+		RetryAttempt:                       int64(executionInfo.Attempt),
+		RetryInitialInterval:               executionInfo.InitialInterval,
+		RetryBackoffCoefficient:            executionInfo.BackoffCoefficient,
+		RetryMaximumInterval:               executionInfo.MaximumInterval,
+		RetryMaximumAttempts:               executionInfo.MaximumAttempts,
+		RetryExpiration:                    executionInfo.ExpirationSeconds,
+		RetryExpirationTimestamp:           executionInfo.ExpirationTime,
 		RetryNonRetryableErrors:            executionInfo.NonRetriableErrors,
-		EventStoreVersion:                  common.Int32Ptr(p.EventStoreVersion),
+		EventStoreVersion:                  p.EventStoreVersion,
 		EventBranchToken:                   executionInfo.BranchToken,
 		AutoResetPoints:                    executionInfo.AutoResetPoints.Data,
-		AutoResetPointsEncoding:            common.StringPtr(string(executionInfo.AutoResetPoints.GetEncoding())),
+		AutoResetPointsEncoding:            string(executionInfo.AutoResetPoints.GetEncoding()),
 		SearchAttributes:                   executionInfo.SearchAttributes,
 		Memo:                               executionInfo.Memo,
+		CompletionEventEncoding:            string(common.EncodingTypeEmpty),
+		VersionHistoriesEncoding:           string(common.EncodingTypeEmpty),
+		InitiatedID:                        common.EmptyEventID,
 	}
 
 	completionEvent := executionInfo.CompletionEvent
 	if completionEvent != nil {
 		info.CompletionEvent = completionEvent.Data
-		info.CompletionEventEncoding = common.StringPtr(string(completionEvent.Encoding))
+		info.CompletionEventEncoding = string(completionEvent.Encoding)
 	}
 
-	info.StartVersion = &startVersion
+	info.StartVersion = startVersion
 	if versionHistories == nil {
 		// this is allowed
 	} else {
 		info.VersionHistories = versionHistories.Data
-		info.VersionHistoriesEncoding = common.StringPtr(string(versionHistories.GetEncoding()))
+		info.VersionHistoriesEncoding = string(versionHistories.GetEncoding())
 	}
 
 	if executionInfo.ParentDomainID != "" {
 		info.ParentDomainID = serialization.MustParseUUID(executionInfo.ParentDomainID)
-		info.ParentWorkflowID = &executionInfo.ParentWorkflowID
+		info.ParentWorkflowID = executionInfo.ParentWorkflowID
 		info.ParentRunID = serialization.MustParseUUID(executionInfo.ParentRunID)
-		info.InitiatedID = &executionInfo.InitiatedID
+		info.InitiatedID = executionInfo.InitiatedID
 		info.CompletionEvent = nil
 	}
 
 	if executionInfo.CancelRequested {
-		info.CancelRequested = common.BoolPtr(true)
-		info.CancelRequestID = &executionInfo.CancelRequestID
+		info.CancelRequested = true
+		info.CancelRequestID = executionInfo.CancelRequestID
 	}
 
 	blob, err := parser.WorkflowExecutionInfoToBlob(info)
