@@ -1168,7 +1168,8 @@ func (s *engineSuite) TestValidateSignalRequest() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            "identity",
 	}
-	err := validateStartWorkflowExecutionRequest(startRequest, 999)
+
+	err := s.mockHistoryEngine.validateStartWorkflowExecutionRequest(startRequest, 0)
 	s.Error(err, "startRequest doesn't have request id, it should error out")
 }
 

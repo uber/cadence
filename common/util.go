@@ -203,6 +203,21 @@ func CreateReplicationServiceBusyRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
+// ValidIDLength checks if id is valid according to its length
+func ValidIDLength(
+	id string,
+	scope metrics.Scope,
+	warnLimit int,
+	errorLimit int,
+	metricsCounter int,
+) bool {
+	valid := len(id) <= errorLimit
+	if len(id) > warnLimit {
+		scope.IncCounter(metricsCounter)
+	}
+	return valid
+}
+
 // IsServiceTransientError checks if the error is a transient error.
 func IsServiceTransientError(err error) bool {
 	switch err.(type) {
