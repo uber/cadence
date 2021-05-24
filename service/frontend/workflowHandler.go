@@ -1564,20 +1564,20 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		return nil, errShuttingDown
 	}
 
-	histResp, err := wh.GetHistoryClient().RespondDecisionTaskCompleted(ctx, &types.HistoryRespondDecisionTaskCompletedRequest{
-		DomainUUID:      taskToken.DomainID,
-		CompleteRequest: completeRequest},
-	)
-	if err != nil {
-		return nil, wh.error(err, scope)
-	}
-
 	if !common.ValidIDLength(
 		completeRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
 		wh.config.IdentityMaxLength(domainName),
 		metrics.CadenceErrIdentityExceededWarnLimit) {
+		return nil, wh.error(errIdentityTooLong, scope)
+	}
+
+	histResp, err := wh.GetHistoryClient().RespondDecisionTaskCompleted(ctx, &types.HistoryRespondDecisionTaskCompletedRequest{
+		DomainUUID:      taskToken.DomainID,
+		CompleteRequest: completeRequest},
+	)
+	if err != nil {
 		return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope))
 	}
 
