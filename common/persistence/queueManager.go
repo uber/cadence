@@ -68,20 +68,7 @@ func (q *queueManager) DeleteMessagesBefore(ctx context.Context, messageID int64
 }
 
 func (q *queueManager) UpdateAckLevel(ctx context.Context, messageID int64, clusterName string) error {
-	ackLevels, err := q.persistence.GetAckLevels(ctx)
-	if err != nil {
-		return err
-	}
-	if ackLevel, ok := ackLevels[clusterName]; ok && messageID > ackLevel {
-		// Update if the ack level moves
-		if messageID > ackLevel {
-			return q.persistence.UpdateAckLevel(ctx, messageID, clusterName)
-		}
-	} else {
-		// Insert new ack level if there is no cluster found
-		return q.persistence.UpdateAckLevel(ctx, messageID, clusterName)
-	}
-	return nil
+	return q.persistence.UpdateAckLevel(ctx, messageID, clusterName)
 }
 
 func (q *queueManager) GetAckLevels(ctx context.Context) (map[string]int64, error) {
