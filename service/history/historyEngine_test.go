@@ -1,4 +1,5 @@
-// Copyright (c) 2017-2020 Uber Technologies Inc.
+// Copyright (c) 2017-2021 Uber Technologies Inc.
+// Portions of the Software are attributed to Copyright (c) 2021 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -4908,20 +4909,22 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_TimerFired() 
 	s.False(executionBuilder.HasBufferedEvents())
 }
 
-func (s *engineSuite) TestSignalWorkflowExecution() {
+func (s *engineSuite) TestSignalWorkflowExecution_InvalidRequest() {
 	signalRequest := &types.HistorySignalWorkflowExecutionRequest{}
 	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
 	s.Error(err)
+}
 
+func (s *engineSuite) TestSignalWorkflowExecution() {
 	we := types.WorkflowExecution{
-		WorkflowID: "wId",
+		WorkflowID: constants.TestWorkflowID,
 		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
 	signalName := "my signal name"
 	input := []byte("test input")
-	signalRequest = &types.HistorySignalWorkflowExecutionRequest{
+	signalRequest := &types.HistorySignalWorkflowExecutionRequest{
 		DomainUUID: constants.TestDomainID,
 		SignalRequest: &types.SignalWorkflowExecutionRequest{
 			Domain:            constants.TestDomainID,
@@ -4948,18 +4951,14 @@ func (s *engineSuite) TestSignalWorkflowExecution() {
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 
-	err = s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
+	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
 	s.Nil(err)
 }
 
 // Test signal decision by adding request ID
-func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest() {
-	signalRequest := &types.HistorySignalWorkflowExecutionRequest{}
-	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
-	s.Error(err)
-
+func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest_WorkflowOpen() {
 	we := types.WorkflowExecution{
-		WorkflowID: "wId2",
+		WorkflowID: constants.TestWorkflowID,
 		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
@@ -4967,7 +4966,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest() {
 	signalName := "my signal name 2"
 	input := []byte("test input 2")
 	requestID := uuid.New()
-	signalRequest = &types.HistorySignalWorkflowExecutionRequest{
+	signalRequest := &types.HistorySignalWorkflowExecutionRequest{
 		DomainUUID: constants.TestDomainID,
 		SignalRequest: &types.SignalWorkflowExecutionRequest{
 			Domain:            constants.TestDomainID,
@@ -4995,26 +4994,65 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest() {
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
-	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 
-	err = s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
+	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
 	s.Nil(err)
 }
 
-func (s *engineSuite) TestSignalWorkflowExecution_Failed() {
-	signalRequest := &types.HistorySignalWorkflowExecutionRequest{}
-	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
-	s.Error(err)
+func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest_WorkflowCompleted() {
+	we := types.WorkflowExecution{
+		WorkflowID: constants.TestWorkflowID,
+		RunID:      constants.TestRunID,
+	}
+	tasklist := "testTaskList"
+	identity := "testIdentity"
+	signalName := "my signal name 2"
+	input := []byte("test input 2")
+	requestID := uuid.New()
+	signalRequest := &types.HistorySignalWorkflowExecutionRequest{
+		DomainUUID: constants.TestDomainID,
+		SignalRequest: &types.SignalWorkflowExecutionRequest{
+			Domain:            constants.TestDomainID,
+			WorkflowExecution: &we,
+			Identity:          identity,
+			SignalName:        signalName,
+			Input:             input,
+			RequestID:         requestID,
+		},
+	}
 
+	msBuilder := execution.NewMutableStateBuilderWithEventV2(
+		s.mockHistoryEngine.shard,
+		loggerimpl.NewLoggerForTest(s.Suite),
+		we.GetRunID(),
+		constants.TestLocalDomainEntry,
+	)
+	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tasklist, []byte("input"), 100, 200, identity)
+	test.AddDecisionTaskScheduledEvent(msBuilder)
+	ms := execution.CreatePersistenceMutableState(msBuilder)
+	// assume duplicate request id
+	ms.SignalRequestedIDs = make(map[string]struct{})
+	ms.SignalRequestedIDs[requestID] = struct{}{}
+	ms.ExecutionInfo.DomainID = constants.TestDomainID
+	ms.ExecutionInfo.State = persistence.WorkflowStateCompleted
+	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
+
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
+
+	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
+	s.Nil(err)
+}
+
+func (s *engineSuite) TestSignalWorkflowExecution_WorkflowCompleted() {
 	we := &types.WorkflowExecution{
-		WorkflowID: "wId",
+		WorkflowID: constants.TestWorkflowID,
 		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
 	signalName := "my signal name"
 	input := []byte("test input")
-	signalRequest = &types.HistorySignalWorkflowExecutionRequest{
+	signalRequest := &types.HistorySignalWorkflowExecutionRequest{
 		DomainUUID: constants.TestDomainID,
 		SignalRequest: &types.SignalWorkflowExecutionRequest{
 			Domain:            constants.TestDomainID,
@@ -5039,7 +5077,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_Failed() {
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
 
-	err = s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
+	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
 	s.EqualError(err, "WorkflowExecutionAlreadyCompletedError{Message: workflow execution already completed}")
 }
 

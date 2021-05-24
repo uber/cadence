@@ -2144,18 +2144,27 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 		workflowExecution,
 		e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
+			// first deduplicate by request id for signal decision
+			// this is done before workflow running check so that already completed error
+			// won't be returned for duplicated signals even if the workflow is closed.
+			if requestID := request.GetRequestID(); requestID != "" {
+				if mutableState.IsSignalRequested(requestID) {
+					return &workflow.UpdateAction{
+						Noop:           true,
+						CreateDecision: false,
+					}, nil
+				}
+			}
+
+			if !mutableState.IsWorkflowExecutionRunning() {
+				return nil, workflow.ErrAlreadyCompleted
+			}
+
 			executionInfo := mutableState.GetExecutionInfo()
 			createDecisionTask := true
 			// Do not create decision task when the workflow is cron and the cron has not been started yet
 			if mutableState.GetExecutionInfo().CronSchedule != "" && !mutableState.HasProcessedOrPendingDecision() {
 				createDecisionTask = false
-			}
-			postActions := &workflow.UpdateAction{
-				CreateDecision: createDecisionTask,
-			}
-
-			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, workflow.ErrAlreadyCompleted
 			}
 
 			maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
@@ -2176,11 +2185,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 				}
 			}
 
-			// deduplicate by request id for signal decision
 			if requestID := request.GetRequestID(); requestID != "" {
-				if mutableState.IsSignalRequested(requestID) {
-					return postActions, nil
-				}
 				mutableState.AddSignalRequested(requestID)
 			}
 
@@ -2191,7 +2196,10 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 				return nil, &types.InternalServiceError{Message: "Unable to signal workflow execution."}
 			}
 
-			return postActions, nil
+			return &workflow.UpdateAction{
+				Noop:           false,
+				CreateDecision: createDecisionTask,
+			}, nil
 		})
 }
 
