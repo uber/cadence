@@ -22,9 +22,8 @@ package sql
 
 import (
 	"context"
-	"fmt"
-
 	"database/sql"
+	"fmt"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
@@ -133,7 +132,7 @@ func (q *sqlQueue) UpdateAckLevel(
 		}
 
 		// Ignore possibly delayed message
-		if clusterAckLevels[clusterName] > messageID {
+		if ackLevel, ok := clusterAckLevels[clusterName]; ok && ackLevel >= messageID {
 			return nil
 		}
 

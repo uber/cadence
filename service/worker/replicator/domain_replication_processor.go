@@ -49,6 +49,7 @@ const (
 
 func newDomainReplicationProcessor(
 	sourceCluster string,
+	currentCluster string,
 	logger log.Logger,
 	remotePeer admin.Client,
 	metricsClient metrics.Client,
@@ -67,6 +68,7 @@ func newDomainReplicationProcessor(
 		serviceResolver:        serviceResolver,
 		status:                 common.DaemonStatusInitialized,
 		sourceCluster:          sourceCluster,
+		currentCluster:         currentCluster,
 		logger:                 logger,
 		remotePeer:             remotePeer,
 		taskExecutor:           taskExecutor,
@@ -85,6 +87,7 @@ type (
 		serviceResolver        membership.ServiceResolver
 		status                 int32
 		sourceCluster          string
+		currentCluster         string
 		logger                 log.Logger
 		remotePeer             admin.Client
 		taskExecutor           domain.ReplicationTaskExecutor
@@ -141,6 +144,7 @@ func (p *domainReplicationProcessor) fetchDomainReplicationTasks() {
 	request := &types.GetDomainReplicationMessagesRequest{
 		LastRetrievedMessageID: common.Int64Ptr(p.lastRetrievedMessageID),
 		LastProcessedMessageID: common.Int64Ptr(p.lastProcessedMessageID),
+		ClusterName:            p.currentCluster,
 	}
 	response, err := p.remotePeer.GetDomainReplicationMessages(ctx, request)
 	defer cancel()
