@@ -56,9 +56,10 @@ var errNoHosts = errors.New("Cassandra Hosts list is empty or malformed")
 var errGetSchemaVersion = errors.New("Failed to get current schema version from cassandra")
 
 const (
-	DefaultTimeout       = 30 // Timeout in seconds
-	DefaultCassandraPort = 9042
-	SystemKeyspace       = "system"
+	DefaultTimeout               = 30 // Timeout in seconds
+	DefaultCassandraPort         = 9042
+	SystemKeyspace               = "system"
+	DefaultCassandraProtoVersion = 4
 )
 
 const (
@@ -92,6 +93,10 @@ var _ schema.DB = (*CqlClient)(nil)
 // NewCQLClient returns a new instance of CQLClient
 func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
 	var err error
+
+	if cfg.ProtoVersion == 0 {
+		cfg.ProtoVersion = DefaultCassandraProtoVersion
+	}
 
 	cqlClient := new(CqlClient)
 	cqlClient.cfg = cfg
