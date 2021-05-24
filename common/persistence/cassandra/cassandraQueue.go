@@ -364,7 +364,7 @@ func (q *nosqlQueue) updateAckLevel(
 	}
 
 	// Ignore possibly delayed message
-	if queueMetadata.ClusterAckLevels[clusterName] > messageID {
+	if ackLevel, ok := queueMetadata.ClusterAckLevels[clusterName]; ok && ackLevel >= messageID {
 		return nil
 	}
 

@@ -88,6 +88,7 @@ func (r *Replicator) Start() error {
 		if clusterName != currentClusterName {
 			processor := newDomainReplicationProcessor(
 				clusterName,
+				currentClusterName,
 				r.logger.WithTags(tag.ComponentReplicationTaskProcessor, tag.SourceCluster(clusterName)),
 				r.clientBean.GetRemoteAdminClient(clusterName),
 				r.metricsClient,
