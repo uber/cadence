@@ -40,14 +40,15 @@ type (
 
 	// CQLClientConfig contains the configuration for cql client
 	CQLClientConfig struct {
-		Hosts       string
-		Port        int
-		User        string
-		Password    string
-		Keyspace    string
-		Timeout     int
-		NumReplicas int
-		TLS         *config.TLS
+		Hosts        string
+		Port         int
+		User         string
+		Password     string
+		Keyspace     string
+		Timeout      int
+		NumReplicas  int
+		ProtoVersion int
+		TLS          *config.TLS
 	}
 )
 
@@ -55,10 +56,10 @@ var errNoHosts = errors.New("Cassandra Hosts list is empty or malformed")
 var errGetSchemaVersion = errors.New("Failed to get current schema version from cassandra")
 
 const (
-	DefaultTimeout       = 30 // Timeout in seconds
-	cqlProtoVersion      = 4  // default CQL protocol version
-	DefaultCassandraPort = 9042
-	SystemKeyspace       = "system"
+	DefaultTimeout               = 30 // Timeout in seconds
+	DefaultCassandraPort         = 9042
+	SystemKeyspace               = "system"
+	DefaultCassandraProtoVersion = 4
 )
 
 const (
@@ -93,6 +94,10 @@ var _ schema.DB = (*CqlClient)(nil)
 func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
 	var err error
 
+	if cfg.ProtoVersion == 0 {
+		cfg.ProtoVersion = DefaultCassandraProtoVersion
+	}
+
 	cqlClient := new(CqlClient)
 	cqlClient.cfg = cfg
 	cqlClient.nReplicas = cfg.NumReplicas
@@ -105,7 +110,7 @@ func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
 		Keyspace:     cfg.Keyspace,
 		TLS:          cfg.TLS,
 		Timeout:      time.Duration(cfg.Timeout) * time.Second,
-		ProtoVersion: cqlProtoVersion,
+		ProtoVersion: cfg.ProtoVersion,
 		Consistency:  gocql.All,
 	})
 	if err != nil {

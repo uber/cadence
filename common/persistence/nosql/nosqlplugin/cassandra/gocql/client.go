@@ -51,7 +51,13 @@ func RegisterClient(c Client) {
 func newCassandraCluster(cfg ClusterConfig) *gocql.ClusterConfig {
 	hosts := parseHosts(cfg.Hosts)
 	cluster := gocql.NewCluster(hosts...)
-	cluster.ProtoVersion = 4
+
+	// Keeping compatibility
+	if cfg.ProtoVersion == 0 {
+		cfg.ProtoVersion = 4
+	}
+
+	cluster.ProtoVersion = cfg.ProtoVersion
 	if cfg.Port > 0 {
 		cluster.Port = cfg.Port
 	}

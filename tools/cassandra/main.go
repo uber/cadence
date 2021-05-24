@@ -103,6 +103,12 @@ func BuildCLIOptions() *cli.App {
 			Name:  schema.CLIFlagQuiet,
 			Usage: "Don't set exit status to 1 on error",
 		},
+		cli.IntFlag{
+			Name:   schema.CLIFlagProtoVersion,
+			Value:  DefaultCassandraProtoVersion,
+			Usage:  "Protocol Version to connect to cassandra host",
+			EnvVar: "CASSANDRA_PROTOCOL_VERSION",
+		},
 
 		cli.BoolFlag{
 			Name:   schema.CLIFlagEnableTLS,

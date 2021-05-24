@@ -36,6 +36,10 @@ const (
 	CassandraPort = "CASSANDRA_DB_PORT"
 	// CassandraDefaultPort Cassandra default port
 	CassandraDefaultPort = "9042"
+	// CassandraProtoVersion env
+	CassandraProtoVersion = "CASSANDRA_PROTOCOL_VERSION"
+	// CassandraDefaultProtoVersion Cassandra default protocol version
+	CassandraDefaultProtoVersion = "4"
 
 	// MySQLSeeds env
 	MySQLSeeds = "MYSQL_SEEDS"
@@ -83,6 +87,13 @@ func SetupEnv() {
 		err := os.Setenv(CassandraPort, CassandraDefaultPort)
 		if err != nil {
 			panic(fmt.Sprintf("error setting env %v", CassandraPort))
+		}
+	}
+
+	if os.Getenv(CassandraProtoVersion) == "" {
+		err := os.Setenv(CassandraProtoVersion, CassandraDefaultProtoVersion)
+		if err != nil {
+			panic(fmt.Sprintf("error setting env %v", CassandraProtoVersion))
 		}
 	}
 
@@ -161,6 +172,19 @@ func GetCassandraPort() int {
 	p, err := strconv.Atoi(port)
 	if err != nil {
 		panic(fmt.Sprintf("error getting env %v", CassandraPort))
+	}
+	return p
+}
+
+// GetCassandraProtoVersion return the cassandra protocol version
+func GetCassandraProtoVersion() int {
+	protoVersion := os.Getenv(CassandraProtoVersion)
+	if protoVersion == "" {
+		protoVersion = CassandraDefaultProtoVersion
+	}
+	p, err := strconv.Atoi(protoVersion)
+	if err != nil {
+		panic(fmt.Sprintf("error getting env %v", CassandraProtoVersion))
 	}
 	return p
 }
