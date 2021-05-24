@@ -28,7 +28,6 @@ import (
 )
 
 const (
-	cassandraProtoVersion = 4
 	defaultSessionTimeout = 10 * time.Second
 )
 
