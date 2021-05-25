@@ -890,6 +890,30 @@ func (m *sqlExecutionManager) RangeCompleteTransferTask(
 	return nil
 }
 
+func (m *sqlExecutionManager) GetCrossClusterTasks(
+	ctx context.Context,
+	request *p.GetCrossClusterTasksRequest,
+) (*p.GetCrossClusterTasksResponse, error) {
+	// TODO: Implement GetCrossClusterTasks
+	panic("not implemented")
+}
+
+func (m *sqlExecutionManager) CompleteCrossClusterTask(
+	ctx context.Context,
+	request *p.CompleteCrossClusterTaskRequest,
+) error {
+	// TODO: Implement CompleteCrossClusterTask
+	panic("not implemented")
+}
+
+func (m *sqlExecutionManager) RangeCompleteCrossClusterTask(
+	ctx context.Context,
+	request *p.RangeCompleteCrossClusterTaskRequest,
+) error {
+	// TODO: Implement RangeCompleteCrossClusterTask
+	panic("not implemented")
+}
+
 func (m *sqlExecutionManager) GetReplicationTasks(
 	ctx context.Context,
 	request *p.GetReplicationTasksRequest,

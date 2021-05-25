@@ -111,6 +111,11 @@ type (
 		CompleteTransferTask(ctx context.Context, request *CompleteTransferTaskRequest) error
 		RangeCompleteTransferTask(ctx context.Context, request *RangeCompleteTransferTaskRequest) error
 
+		// Cross-cluster task related methods
+		GetCrossClusterTasks(ctx context.Context, request *GetCrossClusterTasksRequest) (*GetCrossClusterTasksResponse, error)
+		CompleteCrossClusterTask(ctx context.Context, request *CompleteCrossClusterTaskRequest) error
+		RangeCompleteCrossClusterTask(ctx context.Context, request *RangeCompleteCrossClusterTaskRequest) error
+
 		// Replication task related methods
 		GetReplicationTasks(ctx context.Context, request *GetReplicationTasksRequest) (*InternalGetReplicationTasksResponse, error)
 		CompleteReplicationTask(ctx context.Context, request *CompleteReplicationTaskRequest) error
@@ -453,9 +458,10 @@ type (
 		NewBufferedEvents         *DataBlob
 		ClearBufferedEvents       bool
 
-		TransferTasks    []Task
-		TimerTasks       []Task
-		ReplicationTasks []Task
+		TransferTasks     []Task
+		CrossClusterTasks []Task
+		TimerTasks        []Task
+		ReplicationTasks  []Task
 
 		Condition int64
 
@@ -476,9 +482,10 @@ type (
 		SignalInfos         []*SignalInfo
 		SignalRequestedIDs  []string
 
-		TransferTasks    []Task
-		TimerTasks       []Task
-		ReplicationTasks []Task
+		TransferTasks     []Task
+		CrossClusterTasks []Task
+		TimerTasks        []Task
+		ReplicationTasks  []Task
 
 		Condition int64
 

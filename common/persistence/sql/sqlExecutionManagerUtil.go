@@ -84,6 +84,7 @@ func applyWorkflowMutationTx(
 		workflowID,
 		runID,
 		workflowMutation.TransferTasks,
+		workflowMutation.CrossClusterTasks,
 		workflowMutation.ReplicationTasks,
 		workflowMutation.TimerTasks,
 		parser,
@@ -249,6 +250,7 @@ func applyWorkflowSnapshotTxAsReset(
 		workflowID,
 		runID,
 		workflowSnapshot.TransferTasks,
+		workflowSnapshot.CrossClusterTasks,
 		workflowSnapshot.ReplicationTasks,
 		workflowSnapshot.TimerTasks,
 		parser,
@@ -441,6 +443,7 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		workflowID,
 		runID,
 		workflowSnapshot.TransferTasks,
+		workflowSnapshot.CrossClusterTasks,
 		workflowSnapshot.ReplicationTasks,
 		workflowSnapshot.TimerTasks,
 		parser,
@@ -536,6 +539,7 @@ func applyTasks(
 	workflowID string,
 	runID serialization.UUID,
 	transferTasks []p.Task,
+	crossClusterTasks []p.Task,
 	replicationTasks []p.Task,
 	timerTasks []p.Task,
 	parser serialization.Parser,
@@ -553,6 +557,8 @@ func applyTasks(
 		return err
 	}
 
+	// TODO: createCrossClusterTasks
+
 	if err := createReplicationTasks(
 		ctx,
 		tx,
@@ -566,7 +572,7 @@ func applyTasks(
 		return err
 	}
 
-	if err := createTimerTasks(
+	return createTimerTasks(
 		ctx,
 		tx,
 		timerTasks,
@@ -574,11 +580,8 @@ func applyTasks(
 		domainID,
 		workflowID,
 		runID,
-		parser); err != nil {
-		return err
-	}
-
-	return nil
+		parser,
+	)
 }
 
 // lockCurrentExecutionIfExists returns current execution or nil if none is found for the workflowID

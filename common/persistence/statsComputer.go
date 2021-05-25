@@ -162,6 +162,7 @@ func (sc *statsComputer) computeWorkflowMutationStats(req *InternalWorkflowMutat
 	deleteRequestCancelInfoCount := len(req.DeleteRequestCancelInfos)
 
 	transferTasksCount := len(req.TransferTasks)
+	crossClusterTasksCount := len(req.CrossClusterTasks)
 	timerTasksCount := len(req.TimerTasks)
 	replicationTasksCount := len(req.ReplicationTasks)
 
@@ -191,6 +192,7 @@ func (sc *statsComputer) computeWorkflowMutationStats(req *InternalWorkflowMutat
 		DeleteSignalInfoCount:        deleteSignalInfoCount,
 		DeleteRequestCancelInfoCount: deleteRequestCancelInfoCount,
 		TransferTasksCount:           transferTasksCount,
+		CrossClusterTaskCount:        crossClusterTasksCount,
 		TimerTasksCount:              timerTasksCount,
 		ReplicationTasksCount:        replicationTasksCount,
 	}
@@ -230,6 +232,8 @@ func (sc *statsComputer) computeWorkflowSnapshotStats(req *InternalWorkflowSnaps
 	requestCancelInfoCount := len(req.RequestCancelInfos)
 
 	transferTasksCount := len(req.TransferTasks)
+	// TODO: cross-region task count
+	crossClusterTasksCount := len(req.CrossClusterTasks)
 	timerTasksCount := len(req.TimerTasks)
 	replicationTasksCount := len(req.ReplicationTasks)
 
@@ -252,6 +256,7 @@ func (sc *statsComputer) computeWorkflowSnapshotStats(req *InternalWorkflowSnaps
 		SignalInfoCount:        signalInfoCount,
 		RequestCancelInfoCount: requestCancelInfoCount,
 		TransferTasksCount:     transferTasksCount,
+		CrossClusterTaskCount:  crossClusterTasksCount,
 		TimerTasksCount:        timerTasksCount,
 		ReplicationTasksCount:  replicationTasksCount,
 	}
