@@ -156,7 +156,7 @@ type (
 		// SQL contains the config for a SQL based datastore
 		SQL *SQL `yaml:"sql"`
 		// NoSQL contains the config for a NoSQL based datastore
-		NoSQL *NoSQL `yaml:"sql"`
+		NoSQL *NoSQL `yaml:"nosql"`
 		// ElasticSearch contains the config for a ElasticSearch datastore
 		ElasticSearch *ElasticSearchConfig `yaml:"elasticsearch"`
 	}
@@ -187,7 +187,7 @@ type (
 
 	// NoSQL contains configuration to connect to NoSQL Database cluster
 	NoSQL struct {
-		// PluginName is the name of NoSQL plugin
+		// PluginName is the name of NoSQL plugin, default is "cassandra". Supported values: cassandra
 		PluginName string `yaml:"pluginName" validate:"nonzero"`
 		// Hosts is a csv of cassandra endpoints
 		Hosts string `yaml:"hosts" validate:"nonzero"`

@@ -45,10 +45,18 @@ func (c *Persistence) Validate() error {
 		if !ok {
 			return fmt.Errorf("persistence config: missing config for datastore %v", st)
 		}
-		if ds.SQL == nil && ds.Cassandra == nil {
+		if ds.Cassandra != nil {
+			if ds.NoSQL != nil {
+				return fmt.Errorf("persistence config: datastore %v: only one of Cassandra or NoSQL can be specified", st)
+			}
+			// for backward-compatibility
+			ds.NoSQL = ds.Cassandra
+			ds.NoSQL.PluginName = "cassandra"
+		}
+		if ds.SQL == nil && ds.NoSQL == nil {
 			return fmt.Errorf("persistence config: datastore %v: must provide config for one of cassandra or sql stores", st)
 		}
-		if ds.SQL != nil && ds.Cassandra != nil {
+		if ds.SQL != nil && ds.NoSQL != nil {
 			return fmt.Errorf("persistence config: datastore %v: only one of SQL or cassandra can be specified", st)
 		}
 		if ds.SQL != nil && ds.SQL.NumShards == 0 {
