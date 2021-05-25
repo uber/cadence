@@ -74,27 +74,28 @@ type (
 	VisibilityFilter struct {
 		ListRequest  persistence.InternalListWorkflowExecutionsRequest
 		FilterType   VisibilityFilterType
+		SortType     VisibilitySortType
 		WorkflowType string
 		WorkflowID   string
 		CloseStatus  int32
 	}
 
 	VisibilityFilterType int
+	VisibilitySortType   int
 )
 
 const (
 	// Sorted by StartTime
-	OpenSortedByStartTime VisibilityFilterType = iota
-	ClosedSortedByStartTime
-	OpenFilteredByWorkflowTypeSortedByStartTime
-	ClosedFilteredByWorkflowTypeSortedByStartTime
-	OpenFilteredByWorkflowIDSortedByStartTime
-	ClosedFilteredByWorkflowIDSortedByStartTime
-	ClosedFilteredByClosedStatusSortedByStartTime
+	AllOpen VisibilityFilterType = iota
+	AllClosed
+	OpenByWorkflowType
+	ClosedByWorkflowType
+	OpenByWorkflowID
+	ClosedByWorkflowID
+	ClosedByClosedStatus
+)
 
-	// Sorted by ClosedTime only valid when workflows are closed
-	ClosedSortedByClosedTime
-	ClosedFilteredByWorkflowTypeSortedByClosedTime
-	ClosedFilteredByWorkflowIDSortedByClosedTime
-	ClosedFilteredByClosedStatusSortedByClosedTIme
+const (
+	SortByStartTime VisibilitySortType = iota
+	SortByClosedTime
 )

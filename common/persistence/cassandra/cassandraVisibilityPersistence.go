@@ -148,7 +148,8 @@ func (v *nosqlVisibilityManager) ListOpenWorkflowExecutions(
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	resp, err := v.db.SelectVisibility(ctx, &nosqlplugin.VisibilityFilter{
 		ListRequest: *request,
-		FilterType:  nosqlplugin.OpenSortedByStartTime,
+		FilterType:  nosqlplugin.AllOpen,
+		SortType:    nosqlplugin.SortByStartTime,
 	})
 	if err != nil {
 		return nil, convertCommonErrors(v.db, "ListOpenWorkflowExecutions", err)
@@ -168,12 +169,14 @@ func (v *nosqlVisibilityManager) ListClosedWorkflowExecutions(
 	if v.sortByCloseTime {
 		filter = &nosqlplugin.VisibilityFilter{
 			ListRequest: *request,
-			FilterType:  nosqlplugin.ClosedSortedByClosedTime,
+			FilterType:  nosqlplugin.AllClosed,
+			SortType:    nosqlplugin.SortByClosedTime,
 		}
 	} else {
 		filter = &nosqlplugin.VisibilityFilter{
 			ListRequest: *request,
-			FilterType:  nosqlplugin.ClosedSortedByStartTime,
+			FilterType:  nosqlplugin.AllClosed,
+			SortType:    nosqlplugin.SortByStartTime,
 		}
 	}
 	resp, err := v.db.SelectVisibility(ctx, filter)
@@ -193,7 +196,8 @@ func (v *nosqlVisibilityManager) ListOpenWorkflowExecutionsByType(
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	resp, err := v.db.SelectVisibility(ctx, &nosqlplugin.VisibilityFilter{
 		ListRequest:  request.InternalListWorkflowExecutionsRequest,
-		FilterType:   nosqlplugin.OpenFilteredByWorkflowTypeSortedByStartTime,
+		FilterType:   nosqlplugin.OpenByWorkflowType,
+		SortType:     nosqlplugin.SortByStartTime,
 		WorkflowType: request.WorkflowTypeName,
 	})
 	if err != nil {
@@ -214,13 +218,15 @@ func (v *nosqlVisibilityManager) ListClosedWorkflowExecutionsByType(
 	if v.sortByCloseTime {
 		filter = &nosqlplugin.VisibilityFilter{
 			ListRequest:  request.InternalListWorkflowExecutionsRequest,
-			FilterType:   nosqlplugin.ClosedFilteredByWorkflowTypeSortedByClosedTime,
+			FilterType:   nosqlplugin.ClosedByWorkflowType,
+			SortType:     nosqlplugin.SortByClosedTime,
 			WorkflowType: request.WorkflowTypeName,
 		}
 	} else {
 		filter = &nosqlplugin.VisibilityFilter{
 			ListRequest:  request.InternalListWorkflowExecutionsRequest,
-			FilterType:   nosqlplugin.ClosedFilteredByWorkflowTypeSortedByStartTime,
+			FilterType:   nosqlplugin.ClosedByWorkflowType,
+			SortType:     nosqlplugin.SortByStartTime,
 			WorkflowType: request.WorkflowTypeName,
 		}
 	}
@@ -241,7 +247,8 @@ func (v *nosqlVisibilityManager) ListOpenWorkflowExecutionsByWorkflowID(
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	resp, err := v.db.SelectVisibility(ctx, &nosqlplugin.VisibilityFilter{
 		ListRequest: request.InternalListWorkflowExecutionsRequest,
-		FilterType:  nosqlplugin.OpenFilteredByWorkflowIDSortedByStartTime,
+		FilterType:  nosqlplugin.OpenByWorkflowID,
+		SortType:    nosqlplugin.SortByStartTime,
 		WorkflowID:  request.WorkflowID,
 	})
 	if err != nil {
@@ -262,13 +269,15 @@ func (v *nosqlVisibilityManager) ListClosedWorkflowExecutionsByWorkflowID(
 	if v.sortByCloseTime {
 		filter = &nosqlplugin.VisibilityFilter{
 			ListRequest: request.InternalListWorkflowExecutionsRequest,
-			FilterType:  nosqlplugin.ClosedFilteredByWorkflowIDSortedByClosedTime,
+			FilterType:  nosqlplugin.ClosedByWorkflowID,
+			SortType:    nosqlplugin.SortByClosedTime,
 			WorkflowID:  request.WorkflowID,
 		}
 	} else {
 		filter = &nosqlplugin.VisibilityFilter{
 			ListRequest: request.InternalListWorkflowExecutionsRequest,
-			FilterType:  nosqlplugin.ClosedFilteredByWorkflowIDSortedByStartTime,
+			FilterType:  nosqlplugin.ClosedByWorkflowID,
+			SortType:    nosqlplugin.SortByStartTime,
 			WorkflowID:  request.WorkflowID,
 		}
 	}
@@ -291,13 +300,15 @@ func (v *nosqlVisibilityManager) ListClosedWorkflowExecutionsByStatus(
 	if v.sortByCloseTime {
 		filter = &nosqlplugin.VisibilityFilter{
 			ListRequest: request.InternalListWorkflowExecutionsRequest,
-			FilterType:  nosqlplugin.ClosedFilteredByClosedStatusSortedByClosedTIme,
+			FilterType:  nosqlplugin.ClosedByClosedStatus,
+			SortType:    nosqlplugin.SortByClosedTime,
 			CloseStatus: int32(request.Status),
 		}
 	} else {
 		filter = &nosqlplugin.VisibilityFilter{
 			ListRequest: request.InternalListWorkflowExecutionsRequest,
-			FilterType:  nosqlplugin.ClosedFilteredByClosedStatusSortedByStartTime,
+			FilterType:  nosqlplugin.ClosedByClosedStatus,
+			SortType:    nosqlplugin.SortByStartTime,
 			CloseStatus: int32(request.Status),
 		}
 	}

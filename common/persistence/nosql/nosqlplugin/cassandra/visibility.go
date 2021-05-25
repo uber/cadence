@@ -345,34 +345,54 @@ func (db *cdb) DeleteVisibility(ctx context.Context, domainID, workflowID, runID
 
 func (db *cdb) SelectVisibility(ctx context.Context, filter *nosqlplugin.VisibilityFilter) (*nosqlplugin.SelectVisibilityResponse, error) {
 	switch filter.FilterType {
-	case nosqlplugin.OpenSortedByStartTime:
+	case nosqlplugin.AllOpen:
 		return db.openSortedyByStartTime(ctx, &filter.ListRequest)
-	case nosqlplugin.ClosedSortedByStartTime:
-		return db.closedSortedByStartTime(ctx, &filter.ListRequest)
-	case nosqlplugin.ClosedSortedByClosedTime:
-		return db.closedSortedByClosedTime(ctx, &filter.ListRequest)
+	case nosqlplugin.AllClosed:
+		switch filter.SortType {
+		case nosqlplugin.SortByStartTime:
+			return db.closedSortedByStartTime(ctx, &filter.ListRequest)
+		case nosqlplugin.SortByClosedTime:
+			return db.closedSortedByClosedTime(ctx, &filter.ListRequest)
+		default:
+			panic("not supported sorting type")
+		}
 
-	// workflowType
-	case nosqlplugin.OpenFilteredByWorkflowTypeSortedByStartTime:
+	// by workflowType
+	case nosqlplugin.OpenByWorkflowType:
 		return db.openFilteredByWorkflowTypeSortedByStartTime(ctx, &filter.ListRequest, filter.WorkflowType)
-	case nosqlplugin.ClosedFilteredByWorkflowTypeSortedByStartTime:
-		return db.closedFilteredByWorkflowTypeSortedByStartTime(ctx, &filter.ListRequest, filter.WorkflowType)
-	case nosqlplugin.ClosedFilteredByWorkflowTypeSortedByClosedTime:
-		return db.closedFilteredByWorkflowTypeSortedByClosedTime(ctx, &filter.ListRequest, filter.WorkflowType)
+	case nosqlplugin.ClosedByWorkflowType:
+		switch filter.SortType {
+		case nosqlplugin.SortByStartTime:
+			return db.closedFilteredByWorkflowTypeSortedByStartTime(ctx, &filter.ListRequest, filter.WorkflowType)
+		case nosqlplugin.SortByClosedTime:
+			return db.closedFilteredByWorkflowTypeSortedByClosedTime(ctx, &filter.ListRequest, filter.WorkflowType)
+		default:
+			panic("not supported sorting type")
+		}
 
-	// workflowID
-	case nosqlplugin.OpenFilteredByWorkflowIDSortedByStartTime:
+	// by workflowID
+	case nosqlplugin.OpenByWorkflowID:
 		return db.openFilteredByWorkflowIDSortedByStartTime(ctx, &filter.ListRequest, filter.WorkflowID)
-	case nosqlplugin.ClosedFilteredByWorkflowIDSortedByStartTime:
-		return db.closedFilteredByWorkflowIDSortedByStartTime(ctx, &filter.ListRequest, filter.WorkflowID)
-	case nosqlplugin.ClosedFilteredByWorkflowIDSortedByClosedTime:
-		return db.closedFilteredByWorkflowIDSortedByClosedTime(ctx, &filter.ListRequest, filter.WorkflowID)
+	case nosqlplugin.ClosedByWorkflowID:
+		switch filter.SortType {
+		case nosqlplugin.SortByStartTime:
+			return db.closedFilteredByWorkflowIDSortedByStartTime(ctx, &filter.ListRequest, filter.WorkflowID)
+		case nosqlplugin.SortByClosedTime:
+			return db.closedFilteredByWorkflowIDSortedByClosedTime(ctx, &filter.ListRequest, filter.WorkflowID)
+		default:
+			panic("not supported sorting type")
+		}
 
 	// closeStatus
-	case nosqlplugin.ClosedFilteredByClosedStatusSortedByStartTime:
-		return db.closedFilteredByClosedStatusSortedByStartTime(ctx, &filter.ListRequest, filter.CloseStatus)
-	case nosqlplugin.ClosedFilteredByClosedStatusSortedByClosedTIme:
-		return db.closedFilteredByClosedStatusSortedByClosedTime(ctx, &filter.ListRequest, filter.CloseStatus)
+	case nosqlplugin.ClosedByClosedStatus:
+		switch filter.SortType {
+		case nosqlplugin.SortByStartTime:
+			return db.closedFilteredByClosedStatusSortedByStartTime(ctx, &filter.ListRequest, filter.CloseStatus)
+		case nosqlplugin.SortByClosedTime:
+			return db.closedFilteredByClosedStatusSortedByClosedTime(ctx, &filter.ListRequest, filter.CloseStatus)
+		default:
+			panic("not supported sorting type")
+		}
 	default:
 		panic("no supported filter type")
 	}
