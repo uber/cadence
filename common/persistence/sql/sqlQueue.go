@@ -244,7 +244,7 @@ func (q *sqlQueue) UpdateDLQAckLevel(
 		}
 
 		// Ignore possibly delayed message
-		if clusterAckLevels[clusterName] > messageID {
+		if ackLevel, ok := clusterAckLevels[clusterName]; ok && ackLevel >= messageID {
 			return nil
 		}
 

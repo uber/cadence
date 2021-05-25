@@ -279,11 +279,11 @@ func (q *replicationQueueImpl) purgeAckedMessages() error {
 		}
 	}
 
-	err = q.queue.DeleteMessagesBefore(context.Background(), minAckLevel)
-	if err != nil {
-		return fmt.Errorf("failed to purge messages: %v", err)
+	if minAckLevel != int64(math.MaxInt64) {
+		if err = q.queue.DeleteMessagesBefore(context.Background(), minAckLevel); err != nil {
+			return fmt.Errorf("failed to purge messages: %v", err)
+		}
 	}
-
 	return nil
 }
 
