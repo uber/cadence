@@ -151,9 +151,12 @@ type (
 	// DataStore is the configuration for a single datastore
 	DataStore struct {
 		// Cassandra contains the config for a cassandra datastore
+		// Deprecated: please use NoSQL instead, the structure is backward-compatible
 		Cassandra *Cassandra `yaml:"cassandra"`
 		// SQL contains the config for a SQL based datastore
 		SQL *SQL `yaml:"sql"`
+		// NoSQL contains the config for a NoSQL based datastore
+		NoSQL *NoSQL `yaml:"sql"`
 		// ElasticSearch contains the config for a ElasticSearch datastore
 		ElasticSearch *ElasticSearchConfig `yaml:"elasticsearch"`
 	}
@@ -179,7 +182,13 @@ type (
 	}
 
 	// Cassandra contains configuration to connect to Cassandra cluster
-	Cassandra struct {
+	// Deprecated: please use NoSQL instead, the structure is backward-compatible
+	Cassandra = NoSQL
+
+	// NoSQL contains configuration to connect to NoSQL Database cluster
+	NoSQL struct {
+		// PluginName is the name of NoSQL plugin
+		PluginName string `yaml:"pluginName" validate:"nonzero"`
 		// Hosts is a csv of cassandra endpoints
 		Hosts string `yaml:"hosts" validate:"nonzero"`
 		// Port is the cassandra port used for connection by gocql client
@@ -198,6 +207,9 @@ type (
 		MaxConns int `yaml:"maxConns"`
 		// TLS configuration
 		TLS *TLS `yaml:"tls"`
+		// ConnectAttributes is a set of key-value attributes as a supplement/extension to the above common fields
+		// Use it when a configure is too specific to a particular NoSQL database that should not be in the common struct
+		ConnectAttributes map[string]string `yaml:"connectAttributes"`
 	}
 
 	// SQL is the configuration for connecting to a SQL backed datastore
