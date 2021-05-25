@@ -51,6 +51,7 @@ type (
 		historyEventsCRUD
 		messageQueueCRUD
 		domainCRUD
+		shardCRUD
 	}
 
 	// NoSQLErrorChecker checks for common nosql errors
@@ -169,6 +170,50 @@ type (
 		DeleteDomain(ctx context.Context, domainID *string, domainName *string) error
 		// right now domain metadata is just an integer as notification version
 		SelectDomainMetadata(ctx context.Context) (int64, error)
+	}
+
+	/**
+	* shardCRUD is for shard storage of workflow execution.
+
+	* Recommendation: use one table if database support batch conditional update on multiple tables, otherwise combine with workflowCRUD (likeCassandra)
+	*
+	* Significant columns:
+	* domain: partition key(shardID), range key(N/A), local secondary index(domainID), query condition column(rangeID)
+	*
+	* Note 1: shard will be required to run conditional update with workflowCRUD. So in some nosql database like Cassandra,
+	* shardCRUD and workflowCRUD must be implemented within the same table. Because Cassandra only allows LightWeight transaction
+	* executed within a single table.
+	* Note 2: unlike Cassandra, most NoSQL databases don't return the previous rows when conditional write fails. In this case,
+	* an extra read query is needed to get the previous row.
+	 */
+	shardCRUD interface {
+		// InsertShard creates a new shard.
+		// Return error is there is any thing wrong
+		// When error IsConditionFailedError, also return the row that doesn't meet the condition
+		InsertShard(ctx context.Context, row *ShardRow) (previous *ConflictedShardRow, err error)
+		// SelectShard gets a shard, rangeID is the current rangeID in shard row
+		SelectShard(ctx context.Context, shardID int, currentClusterName string) (rangeID int64, shard *ShardRow, err error)
+		// UpdateRangeID updates the rangeID
+		// Return error is there is any thing wrong
+		// When error IsConditionFailedError, also return the row that doesn't meet the condition
+		UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (previous *ConflictedShardRow, err error)
+		// UpdateShard updates a shard
+		// Return error is there is any thing wrong
+		// When error IsConditionFailedError, also return the row that doesn't meet the condition
+		UpdateShard(ctx context.Context, row *ShardRow, previousRangeID int64) (previous *ConflictedShardRow, err error)
+	}
+
+	// For now ShardRow is the same as persistence.InternalShardInfo
+	// Separate them later when there is a need.
+	ShardRow = persistence.InternalShardInfo
+
+	// ConflictedShardRow contains the partial information about a shard returned when a conditional write fails
+	ConflictedShardRow struct {
+		ShardID int
+		// PreviousRangeID is the condition of previous change that used for conditional update
+		PreviousRangeID int64
+		// optional detailed information for logging purpose
+		Details string
 	}
 
 	// DomainRow defines the row struct for queue message

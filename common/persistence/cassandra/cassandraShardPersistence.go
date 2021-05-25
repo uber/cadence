@@ -23,88 +23,36 @@ package cassandra
 import (
 	"context"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 )
 
-const (
-	templateShardType = `{` +
-		`shard_id: ?, ` +
-		`owner: ?, ` +
-		`range_id: ?, ` +
-		`stolen_since_renew: ?, ` +
-		`updated_at: ?, ` +
-		`replication_ack_level: ?, ` +
-		`transfer_ack_level: ?, ` +
-		`timer_ack_level: ?, ` +
-		`cluster_transfer_ack_level: ?, ` +
-		`cluster_timer_ack_level: ?, ` +
-		`transfer_processing_queue_states: ?, ` +
-		`transfer_processing_queue_states_encoding: ?, ` +
-		`timer_processing_queue_states: ?, ` +
-		`timer_processing_queue_states_encoding: ?, ` +
-		`domain_notification_version: ?, ` +
-		`cluster_replication_level: ?, ` +
-		`replication_dlq_ack_level: ?, ` +
-		`pending_failover_markers: ?, ` +
-		`pending_failover_markers_encoding: ? ` +
-		`}`
-
-	templateCreateShardQuery = `INSERT INTO executions (` +
-		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, shard, range_id)` +
-		`VALUES(?, ?, ?, ?, ?, ?, ?, ` + templateShardType + `, ?) IF NOT EXISTS`
-
-	templateGetShardQuery = `SELECT shard, range_id ` +
-		`FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ?`
-
-	templateUpdateShardQuery = `UPDATE executions ` +
-		`SET shard = ` + templateShardType + `, range_id = ? ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ? ` +
-		`IF range_id = ?`
-
-	templateUpdateRangeIDQuery = `UPDATE executions ` +
-		`SET range_id = ? ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ? ` +
-		`IF range_id = ?`
-)
-
 type (
 	// Implements ShardManager
-	cassandraShardPersistence struct {
-		cassandraStore
-		shardID            int
+	nosqlShardManager struct {
+		db                 nosqlplugin.DB
+		logger             log.Logger
 		currentClusterName string
 	}
 )
 
-var _ p.ShardStore = (*cassandraShardPersistence)(nil)
+var _ p.ShardStore = (*nosqlShardManager)(nil)
+
+func (sh *nosqlShardManager) GetName() string {
+	return sh.db.PluginName()
+}
+
+// Close releases the underlying resources held by this object
+func (sh *nosqlShardManager) Close() {
+	sh.db.Close()
+}
 
 // newShardPersistence is used to create an instance of ShardManager implementation
 func newShardPersistence(
@@ -112,18 +60,15 @@ func newShardPersistence(
 	clusterName string,
 	logger log.Logger,
 ) (p.ShardStore, error) {
-	session, err := cassandra.CreateSession(cfg)
+	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
+	db, err := cassandra.NewCassandraDB(cfg, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	return &cassandraShardPersistence{
-		cassandraStore: cassandraStore{
-			client:  gocql.NewClient(),
-			session: session,
-			logger:  logger,
-		},
-		shardID:            -1,
+	return &nosqlShardManager{
+		db:                 db,
+		logger:             logger,
 		currentClusterName: clusterName,
 	}, nil
 }
@@ -136,102 +81,53 @@ func NewShardPersistenceFromSession(
 	clusterName string,
 	logger log.Logger,
 ) p.ShardStore {
-	return &cassandraShardPersistence{
-		cassandraStore: cassandraStore{
-			client:  client,
-			session: session,
-			logger:  logger,
-		},
-		shardID:            -1,
+	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
+	db := cassandra.NewCassandraDBFromSession(client, session, logger)
+
+	return &nosqlShardManager{
+		db:                 db,
+		logger:             logger,
 		currentClusterName: clusterName,
 	}
 }
 
-func (d *cassandraShardPersistence) CreateShard(
+func (sh *nosqlShardManager) CreateShard(
 	ctx context.Context,
 	request *p.InternalCreateShardRequest,
 ) error {
-	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
-	shardInfo := request.ShardInfo
-	markerData, markerEncoding := p.FromDataBlob(shardInfo.PendingFailoverMarkers)
-	transferPQS, transferPQSEncoding := p.FromDataBlob(shardInfo.TransferProcessingQueueStates)
-	timerPQS, timerPQSEncoding := p.FromDataBlob(shardInfo.TimerProcessingQueueStates)
-	query := d.session.Query(templateCreateShardQuery,
-		shardInfo.ShardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
-		shardInfo.ShardID,
-		shardInfo.Owner,
-		shardInfo.RangeID,
-		shardInfo.StolenSinceRenew,
-		cqlNowTimestamp,
-		shardInfo.ReplicationAckLevel,
-		shardInfo.TransferAckLevel,
-		shardInfo.TimerAckLevel,
-		shardInfo.ClusterTransferAckLevel,
-		shardInfo.ClusterTimerAckLevel,
-		transferPQS,
-		transferPQSEncoding,
-		timerPQS,
-		timerPQSEncoding,
-		shardInfo.DomainNotificationVersion,
-		shardInfo.ClusterReplicationLevel,
-		shardInfo.ReplicationDLQAckLevel,
-		markerData,
-		markerEncoding,
-		shardInfo.RangeID,
-	).WithContext(ctx)
 
-	previous := make(map[string]interface{})
-	applied, err := query.MapScanCAS(previous)
+	previous, err := sh.db.InsertShard(ctx, request.ShardInfo)
 	if err != nil {
-		return convertCommonErrors(d.client, "CreateShard", err)
-	}
-
-	if !applied {
-		shard := previous["shard"].(map[string]interface{})
-		return &p.ShardAlreadyExistError{
-			Msg: fmt.Sprintf("Shard already exists in executions table.  ShardId: %v, RangeId: %v",
-				shard["shard_id"], shard["range_id"]),
+		if sh.db.IsConditionFailedError(err) {
+			return &p.ShardAlreadyExistError{
+				Msg: fmt.Sprintf("Shard already exists in executions table.  ShardId: %v, RangeId: %v",
+					previous.ShardID, previous.PreviousRangeID),
+			}
 		}
+		return convertCommonErrors(sh.db, "CreateShard", err)
 	}
 
 	return nil
 }
 
-func (d *cassandraShardPersistence) GetShard(
+func (sh *nosqlShardManager) GetShard(
 	ctx context.Context,
 	request *p.InternalGetShardRequest,
 ) (*p.InternalGetShardResponse, error) {
 	shardID := request.ShardID
-	query := d.session.Query(templateGetShardQuery,
-		shardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
-	).WithContext(ctx)
+	rangeID, shardInfo, err := sh.db.SelectShard(ctx, shardID, sh.currentClusterName)
 
-	result := make(map[string]interface{})
-	if err := query.MapScan(result); err != nil {
-		if d.client.IsNotFoundError(err) {
+	if err != nil {
+		if sh.db.IsNotFoundError(err) {
 			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Shard not found.  ShardId: %v", shardID),
 			}
 		}
 
-		return nil, convertCommonErrors(d.client, "GetShard", err)
+		return nil, convertCommonErrors(sh.db, "GetShard", err)
 	}
 
-	rangeID := result["range_id"].(int64)
-	shard := result["shard"].(map[string]interface{})
-	shardInfoRangeID := shard["range_id"].(int64)
+	shardInfoRangeID := shardInfo.RangeID
 
 	// check if rangeID column and rangeID field in shard column matches, if not we need to pick the larger
 	// rangeID.
@@ -241,15 +137,13 @@ func (d *cassandraShardPersistence) GetShard(
 		// 2. if we still return rangeID, CAS will work but rangeID will move backward which
 		// result in lost tasks, corrupted workflow history, etc.
 
-		d.logger.Warn("Corrupted shard rangeID", tag.ShardID(shardID), tag.ShardRangeID(shardInfoRangeID), tag.PreviousShardRangeID(rangeID))
-		if err := d.updateRangeID(ctx, shardID, shardInfoRangeID, rangeID); err != nil {
+		sh.logger.Warn("Corrupted shard rangeID", tag.ShardID(shardID), tag.ShardRangeID(shardInfoRangeID), tag.PreviousShardRangeID(rangeID))
+		if err := sh.updateRangeID(ctx, shardID, shardInfoRangeID, rangeID); err != nil {
 			return nil, err
 		}
-
-		// now we know rangeID column has the same value as shardInfoRangeID
-		rangeID = shardInfoRangeID
 	} else {
-		// no-op
+		// return the actual rangeID
+		shardInfo.RangeID = rangeID
 		//
 		// If shardInfoRangeID = rangeID, no corruption, so no action needed.
 		//
@@ -258,109 +152,45 @@ func (d *cassandraShardPersistence) GetShard(
 		// as the value from rangeID columns is returned, shardInfoRangeID will also be updated to the correct value.
 	}
 
-	info := createShardInfo(d.currentClusterName, rangeID, shard)
-
-	return &p.InternalGetShardResponse{ShardInfo: info}, nil
+	return &p.InternalGetShardResponse{ShardInfo: shardInfo}, nil
 }
 
-func (d *cassandraShardPersistence) updateRangeID(
+func (sh *nosqlShardManager) updateRangeID(
 	ctx context.Context,
 	shardID int,
 	rangeID int64,
 	previousRangeID int64,
 ) error {
-	query := d.session.Query(templateUpdateRangeIDQuery,
-		rangeID,
-		shardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
-		previousRangeID,
-	).WithContext(ctx)
 
-	previous := make(map[string]interface{})
-	applied, err := query.MapScanCAS(previous)
+	previous, err := sh.db.UpdateRangeID(ctx, shardID, rangeID, previousRangeID)
 	if err != nil {
-		return convertCommonErrors(d.client, "UpdateRangeID", err)
-	}
-
-	if !applied {
-		var columns []string
-		for k, v := range previous {
-			columns = append(columns, fmt.Sprintf("%s=%v", k, v))
+		if sh.db.IsConditionFailedError(err) {
+			return &p.ShardOwnershipLostError{
+				ShardID: shardID,
+				Msg: fmt.Sprintf("Failed to update shard rangeID.  previous_range_id: %v, columns: (%v)",
+					previousRangeID, previous.Details),
+			}
 		}
-
-		return &p.ShardOwnershipLostError{
-			ShardID: d.shardID,
-			Msg: fmt.Sprintf("Failed to update shard rangeID.  previous_range_id: %v, columns: (%v)",
-				previousRangeID, strings.Join(columns, ",")),
-		}
+		return convertCommonErrors(sh.db, "UpdateRangeID", err)
 	}
 
 	return nil
 }
 
-func (d *cassandraShardPersistence) UpdateShard(
+func (sh *nosqlShardManager) UpdateShard(
 	ctx context.Context,
 	request *p.InternalUpdateShardRequest,
 ) error {
-	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
-	shardInfo := request.ShardInfo
-	markerData, markerEncoding := p.FromDataBlob(shardInfo.PendingFailoverMarkers)
-	transferPQS, transferPQSEncoding := p.FromDataBlob(shardInfo.TransferProcessingQueueStates)
-	timerPQS, timerPQSEncoding := p.FromDataBlob(shardInfo.TimerProcessingQueueStates)
-
-	query := d.session.Query(templateUpdateShardQuery,
-		shardInfo.ShardID,
-		shardInfo.Owner,
-		shardInfo.RangeID,
-		shardInfo.StolenSinceRenew,
-		cqlNowTimestamp,
-		shardInfo.ReplicationAckLevel,
-		shardInfo.TransferAckLevel,
-		shardInfo.TimerAckLevel,
-		shardInfo.ClusterTransferAckLevel,
-		shardInfo.ClusterTimerAckLevel,
-		transferPQS,
-		transferPQSEncoding,
-		timerPQS,
-		timerPQSEncoding,
-		shardInfo.DomainNotificationVersion,
-		shardInfo.ClusterReplicationLevel,
-		shardInfo.ReplicationDLQAckLevel,
-		markerData,
-		markerEncoding,
-		shardInfo.RangeID,
-		shardInfo.ShardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
-		request.PreviousRangeID,
-	).WithContext(ctx)
-
-	previous := make(map[string]interface{})
-	applied, err := query.MapScanCAS(previous)
+	previous, err := sh.db.UpdateShard(ctx, request.ShardInfo, request.PreviousRangeID)
 	if err != nil {
-		return convertCommonErrors(d.client, "UpdateShard", err)
-	}
-
-	if !applied {
-		var columns []string
-		for k, v := range previous {
-			columns = append(columns, fmt.Sprintf("%s=%v", k, v))
+		if sh.db.IsConditionFailedError(err) {
+			return &p.ShardOwnershipLostError{
+				ShardID: request.ShardInfo.ShardID,
+				Msg: fmt.Sprintf("Failed to update shard.  previous_range_id: %v, columns: (%v)",
+					request.PreviousRangeID, previous.Details),
+			}
 		}
-
-		return &p.ShardOwnershipLostError{
-			ShardID: d.shardID,
-			Msg: fmt.Sprintf("Failed to update shard.  previous_range_id: %v, columns: (%v)",
-				request.PreviousRangeID, strings.Join(columns, ",")),
-		}
+		return convertCommonErrors(sh.db, "UpdateShard", err)
 	}
 
 	return nil
