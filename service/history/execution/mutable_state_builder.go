@@ -1689,7 +1689,6 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		return nil, err
 	}
 	if err := e.taskGenerator.GenerateRecordWorkflowStartedTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, err
@@ -1744,7 +1743,6 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(
 		return nil, err
 	}
 	if err := e.taskGenerator.GenerateRecordWorkflowStartedTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, err
@@ -1971,7 +1969,7 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 	}
 	exeInfo.SearchAttributes[definition.BinaryChecksums] = bytes
 	if e.shard.GetConfig().AdvancedVisibilityWritingMode() != common.AdvancedVisibilityWritingModeOff {
-		return e.taskGenerator.GenerateWorkflowSearchAttrTasks(e.unixNanoToTime(event.GetTimestamp()))
+		return e.taskGenerator.GenerateWorkflowSearchAttrTasks()
 	}
 	return nil
 }
@@ -2134,7 +2132,6 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateActivityTransferTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, nil, nil, err
@@ -2754,7 +2751,6 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiated
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateRequestCancelExternalTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, nil, err
@@ -2878,7 +2874,6 @@ func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionInitiatedEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateSignalExternalTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, nil, err
@@ -2923,9 +2918,7 @@ func (e *mutableStateBuilder) AddUpsertWorkflowSearchAttributesEvent(
 	event := e.hBuilder.AddUpsertWorkflowSearchAttributesEvent(decisionCompletedEventID, request)
 	e.ReplicateUpsertWorkflowSearchAttributesEvent(event)
 	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateWorkflowSearchAttrTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
-	); err != nil {
+	if err := e.taskGenerator.GenerateWorkflowSearchAttrTasks(); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -3411,7 +3404,6 @@ func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateChildWorkflowTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, nil, err
@@ -4514,9 +4506,7 @@ func (e *mutableStateBuilder) closeTransactionHandleWorkflowReset(
 		&domainEntry.GetConfig().BadBinaries,
 		e.GetExecutionInfo().AutoResetPoints,
 	); pt != nil {
-		if err := e.taskGenerator.GenerateWorkflowResetTasks(
-			e.unixNanoToTime(now.UnixNano()),
-		); err != nil {
+		if err := e.taskGenerator.GenerateWorkflowResetTasks(); err != nil {
 			return err
 		}
 		e.logInfo("Auto-Reset task is scheduled",

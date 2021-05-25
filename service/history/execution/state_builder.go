@@ -156,7 +156,6 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateRecordWorkflowStartedTasks(
-				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
 				return nil, err
@@ -204,7 +203,6 @@ func (b *stateBuilderImpl) ApplyEvents(
 			// there shall be no decision schedule to start timeout
 			// NOTE: at the beginning of the loop, stickyness is cleared
 			if err := taskGenerator.GenerateDecisionScheduleTasks(
-				b.unixNanoToTime(event.GetTimestamp()),
 				decision.ScheduleID,
 			); err != nil {
 				return nil, err
@@ -225,7 +223,6 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateDecisionStartTasks(
-				b.unixNanoToTime(event.GetTimestamp()),
 				decision.ScheduleID,
 			); err != nil {
 				return nil, err
@@ -256,7 +253,6 @@ func (b *stateBuilderImpl) ApplyEvents(
 				// there shall be no decision schedule to start timeout
 				// NOTE: at the beginning of the loop, stickyness is cleared
 				if err := taskGenerator.GenerateDecisionScheduleTasks(
-					b.unixNanoToTime(event.GetTimestamp()),
 					decision.ScheduleID,
 				); err != nil {
 					return nil, err
@@ -279,7 +275,6 @@ func (b *stateBuilderImpl) ApplyEvents(
 				// there shall be no decision schedule to start timeout
 				// NOTE: at the beginning of the loop, stickyness is cleared
 				if err := taskGenerator.GenerateDecisionScheduleTasks(
-					b.unixNanoToTime(event.GetTimestamp()),
 					decision.ScheduleID,
 				); err != nil {
 					return nil, err
@@ -295,7 +290,6 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateActivityTransferTasks(
-				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
 				return nil, err
@@ -382,7 +376,6 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateChildWorkflowTasks(
-				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
 				return nil, err
@@ -449,7 +442,6 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateRequestCancelExternalTasks(
-				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
 				return nil, err
@@ -481,7 +473,6 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateSignalExternalTasks(
-				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
 				return nil, err
@@ -520,9 +511,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 		case types.EventTypeUpsertWorkflowSearchAttributes:
 			b.mutableState.ReplicateUpsertWorkflowSearchAttributesEvent(event)
-			if err := taskGenerator.GenerateWorkflowSearchAttrTasks(
-				b.unixNanoToTime(event.GetTimestamp()),
-			); err != nil {
+			if err := taskGenerator.GenerateWorkflowSearchAttrTasks(); err != nil {
 				return nil, err
 			}
 

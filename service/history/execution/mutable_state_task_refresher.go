@@ -244,7 +244,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForRecordWorkflowStarted(
 
 	if executionInfo.CloseStatus == persistence.WorkflowCloseStatusNone {
 		return taskGenerator.GenerateRecordWorkflowStartedTasks(
-			now,
 			startEvent,
 		)
 	}
@@ -272,14 +271,12 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForDecision(
 	// decision already started
 	if decision.StartedID != common.EmptyEventID {
 		return taskGenerator.GenerateDecisionStartTasks(
-			now,
 			decision.ScheduleID,
 		)
 	}
 
 	// decision only scheduled
 	return taskGenerator.GenerateDecisionScheduleTasks(
-		now,
 		decision.ScheduleID,
 	)
 }
@@ -330,7 +327,6 @@ Loop:
 		}
 
 		if err := taskGenerator.GenerateActivityTransferTasks(
-			now,
 			scheduleEvent,
 		); err != nil {
 			return err
@@ -414,7 +410,6 @@ Loop:
 		}
 
 		if err := taskGenerator.GenerateChildWorkflowTasks(
-			now,
 			scheduleEvent,
 		); err != nil {
 			return err
@@ -455,7 +450,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForRequestCancelExternalWork
 		}
 
 		if err := taskGenerator.GenerateRequestCancelExternalTasks(
-			now,
 			initiateEvent,
 		); err != nil {
 			return err
@@ -496,7 +490,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForSignalExternalWorkflow(
 		}
 
 		if err := taskGenerator.GenerateSignalExternalTasks(
-			now,
 			initiateEvent,
 		); err != nil {
 			return err
@@ -513,9 +506,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowSearchAttr(
 	taskGenerator MutableStateTaskGenerator,
 ) error {
 
-	return taskGenerator.GenerateWorkflowSearchAttrTasks(
-		now,
-	)
+	return taskGenerator.GenerateWorkflowSearchAttrTasks()
 }
 
 func (r *mutableStateTaskRefresherImpl) getTimeSource(
