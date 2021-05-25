@@ -139,7 +139,7 @@ type (
 	*
 	* Significant columns:
 	* domain: partition key( a constant value), range key(domainName), local secondary index(domainID)
-	* domain_metadata: partition key( a constant value), range key(a constant value), query condition column(notificationVersion)
+	* domain_metadata: partition key( a constant value), range key(N/A), query condition column(notificationVersion)
 	*
 	* Note 1: About Cassandra's implementation: Because of historical reasons, Cassandra uses two table,
 	* domains and domains_by_name_v2. Therefore, Cassandra implementation lost the atomicity causing some edge cases,
