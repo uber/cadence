@@ -186,17 +186,17 @@ type (
 		// InsertShard creates a new shard.
 		// Return error is there is any thing wrong
 		// When error IsConditionFailedError, also return the row that doesn't meet the condition
-		InsertShard(ctx context.Context, row *ShardRow) (err error, previous *ConflictedShardRow)
+		InsertShard(ctx context.Context, row *ShardRow) (previous *ConflictedShardRow, err error)
 		// SelectShard gets a shard, rangeID is the current rangeID in shard row
-		SelectShard(ctx context.Context, shardID int, currentClusterName string) (err error, rangeID int64, shard *ShardRow)
+		SelectShard(ctx context.Context, shardID int, currentClusterName string) (rangeID int64, shard *ShardRow, err error)
 		// UpdateRangeID updates the rangeID
 		// Return error is there is any thing wrong
 		// When error IsConditionFailedError, also return the row that doesn't meet the condition
-		UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (err error, previous *ConflictedShardRow)
+		UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (previous *ConflictedShardRow, err error)
 		// UpdateShard updates a shard
 		// Return error is there is any thing wrong
 		// When error IsConditionFailedError, also return the row that doesn't meet the condition
-		UpdateShard(ctx context.Context, row *ShardRow, previousRangeID int64) (err error, previous *ConflictedShardRow)
+		UpdateShard(ctx context.Context, row *ShardRow, previousRangeID int64) (previous *ConflictedShardRow, err error)
 	}
 
 	// For now ShardRow is the same as persistence.InternalShardInfo

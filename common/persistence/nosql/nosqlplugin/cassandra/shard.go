@@ -93,7 +93,7 @@ const (
 
 // InsertShard creates a new shard, return error is there is any.
 // When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-func (db *cdb) InsertShard(ctx context.Context, row *nosqlplugin.ShardRow) (error, *nosqlplugin.ConflictedShardRow) {
+func (db *cdb) InsertShard(ctx context.Context, row *nosqlplugin.ShardRow) (*nosqlplugin.ConflictedShardRow, error) {
 	cqlNowTimestamp := persistence.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	markerData, markerEncoding := persistence.FromDataBlob(row.PendingFailoverMarkers)
 	transferPQS, transferPQSEncoding := persistence.FromDataBlob(row.TransferProcessingQueueStates)
@@ -131,11 +131,11 @@ func (db *cdb) InsertShard(ctx context.Context, row *nosqlplugin.ShardRow) (erro
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	if !applied {
-		return errConditionFailed, convertToConflictedShardRow(row.ShardID, row.RangeID, previous)
+		return convertToConflictedShardRow(row.ShardID, row.RangeID, previous), errConditionFailed
 	}
 
 	return nil, nil
@@ -154,7 +154,7 @@ func convertToConflictedShardRow(shardID int, previousRangeID int64, previous ma
 }
 
 // SelectShard gets a shard
-func (db *cdb) SelectShard(ctx context.Context, shardID int, currentClusterName string) (error, int64, *nosqlplugin.ShardRow) {
+func (db *cdb) SelectShard(ctx context.Context, shardID int, currentClusterName string) (int64, *nosqlplugin.ShardRow, error) {
 	query := db.session.Query(templateGetShardQuery,
 		shardID,
 		rowTypeShard,
@@ -167,13 +167,13 @@ func (db *cdb) SelectShard(ctx context.Context, shardID int, currentClusterName 
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		return err, 0, nil
+		return 0, nil, err
 	}
 
 	rangeID := result["range_id"].(int64)
 	shard := result["shard"].(map[string]interface{})
 	shardInfoRangeID := shard["range_id"].(int64)
-	return nil, rangeID, convertToShardInfo(currentClusterName, shardInfoRangeID, shard)
+	return rangeID, convertToShardInfo(currentClusterName, shardInfoRangeID, shard), nil
 }
 
 func convertToShardInfo(
@@ -265,7 +265,7 @@ func convertToShardInfo(
 
 // UpdateRangeID updates the rangeID, return error is there is any
 // When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-func (db *cdb) UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (error, *nosqlplugin.ConflictedShardRow) {
+func (db *cdb) UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (*nosqlplugin.ConflictedShardRow, error) {
 	query := db.session.Query(templateUpdateRangeIDQuery,
 		rangeID,
 		shardID,
@@ -281,11 +281,11 @@ func (db *cdb) UpdateRangeID(ctx context.Context, shardID int, rangeID int64, pr
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	if !applied {
-		return errConditionFailed, convertToConflictedShardRow(shardID, previousRangeID, previous)
+		return convertToConflictedShardRow(shardID, previousRangeID, previous), errConditionFailed
 	}
 
 	return nil, nil
@@ -293,7 +293,7 @@ func (db *cdb) UpdateRangeID(ctx context.Context, shardID int, rangeID int64, pr
 
 // UpdateShard updates a shard, return error is there is any.
 // When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-func (db *cdb) UpdateShard(ctx context.Context, row *nosqlplugin.ShardRow, previousRangeID int64) (error, *nosqlplugin.ConflictedShardRow) {
+func (db *cdb) UpdateShard(ctx context.Context, row *nosqlplugin.ShardRow, previousRangeID int64) (*nosqlplugin.ConflictedShardRow, error) {
 	cqlNowTimestamp := persistence.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	markerData, markerEncoding := persistence.FromDataBlob(row.PendingFailoverMarkers)
 	transferPQS, transferPQSEncoding := persistence.FromDataBlob(row.TransferProcessingQueueStates)
@@ -333,11 +333,11 @@ func (db *cdb) UpdateShard(ctx context.Context, row *nosqlplugin.ShardRow, previ
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	if !applied {
-		return errConditionFailed, convertToConflictedShardRow(row.ShardID, previousRangeID, previous)
+		return convertToConflictedShardRow(row.ShardID, previousRangeID, previous), errConditionFailed
 	}
 
 	return nil, nil

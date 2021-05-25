@@ -96,7 +96,7 @@ func (sh *nosqlShardManager) CreateShard(
 	request *p.InternalCreateShardRequest,
 ) error {
 
-	err, previous := sh.db.InsertShard(ctx, request.ShardInfo)
+	previous, err := sh.db.InsertShard(ctx, request.ShardInfo)
 	if err != nil {
 		if sh.db.IsConditionFailedError(err) {
 			return &p.ShardAlreadyExistError{
@@ -115,7 +115,7 @@ func (sh *nosqlShardManager) GetShard(
 	request *p.InternalGetShardRequest,
 ) (*p.InternalGetShardResponse, error) {
 	shardID := request.ShardID
-	err, rangeID, shardInfo := sh.db.SelectShard(ctx, shardID, sh.currentClusterName)
+	rangeID, shardInfo, err := sh.db.SelectShard(ctx, shardID, sh.currentClusterName)
 
 	if err != nil {
 		if sh.db.IsNotFoundError(err) {
@@ -162,7 +162,7 @@ func (sh *nosqlShardManager) updateRangeID(
 	previousRangeID int64,
 ) error {
 
-	err, previous := sh.db.UpdateRangeID(ctx, shardID, rangeID, previousRangeID)
+	previous, err := sh.db.UpdateRangeID(ctx, shardID, rangeID, previousRangeID)
 	if err != nil {
 		if sh.db.IsConditionFailedError(err) {
 			return &p.ShardOwnershipLostError{
@@ -181,7 +181,7 @@ func (sh *nosqlShardManager) UpdateShard(
 	ctx context.Context,
 	request *p.InternalUpdateShardRequest,
 ) error {
-	err, previous := sh.db.UpdateShard(ctx, request.ShardInfo, request.PreviousRangeID)
+	previous, err := sh.db.UpdateShard(ctx, request.ShardInfo, request.PreviousRangeID)
 	if err != nil {
 		if sh.db.IsConditionFailedError(err) {
 			return &p.ShardOwnershipLostError{
