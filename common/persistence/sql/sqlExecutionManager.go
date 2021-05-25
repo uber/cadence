@@ -1239,16 +1239,19 @@ func (m *sqlExecutionManager) PutReplicationTaskToDLQ(
 ) error {
 	replicationTask := request.TaskInfo
 	blob, err := m.parser.ReplicationTaskInfoToBlob(&serialization.ReplicationTaskInfo{
-		DomainID:          serialization.MustParseUUID(replicationTask.DomainID),
-		WorkflowID:        &replicationTask.WorkflowID,
-		RunID:             serialization.MustParseUUID(replicationTask.RunID),
-		TaskType:          common.Int16Ptr(int16(replicationTask.TaskType)),
-		FirstEventID:      &replicationTask.FirstEventID,
-		NextEventID:       &replicationTask.NextEventID,
-		Version:           &replicationTask.Version,
-		ScheduledID:       &replicationTask.ScheduledID,
-		BranchToken:       replicationTask.BranchToken,
-		NewRunBranchToken: replicationTask.NewRunBranchToken,
+		DomainID:                serialization.MustParseUUID(replicationTask.DomainID),
+		WorkflowID:              replicationTask.WorkflowID,
+		RunID:                   serialization.MustParseUUID(replicationTask.RunID),
+		TaskType:                int16(replicationTask.TaskType),
+		FirstEventID:            replicationTask.FirstEventID,
+		NextEventID:             replicationTask.NextEventID,
+		Version:                 replicationTask.Version,
+		ScheduledID:             replicationTask.ScheduledID,
+		EventStoreVersion:       p.EventStoreVersion,
+		NewRunEventStoreVersion: p.EventStoreVersion,
+		BranchToken:             replicationTask.BranchToken,
+		NewRunBranchToken:       replicationTask.NewRunBranchToken,
+		CreationTimestamp:       replicationTask.CreationTime,
 	})
 	if err != nil {
 		return err
@@ -1352,9 +1355,7 @@ func (m *sqlExecutionManager) populateWorkflowMutableState(
 		state.ExecutionInfo.ParentWorkflowID = info.GetParentWorkflowID()
 		state.ExecutionInfo.ParentRunID = info.ParentRunID.String()
 		state.ExecutionInfo.InitiatedID = info.GetInitiatedID()
-		if state.ExecutionInfo.CompletionEvent != nil {
-			state.ExecutionInfo.CompletionEvent = nil
-		}
+		state.ExecutionInfo.CompletionEvent = nil
 	}
 
 	if info.GetCancelRequested() {
