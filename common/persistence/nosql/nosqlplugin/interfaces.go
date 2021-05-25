@@ -172,16 +172,20 @@ type (
 		SelectDomainMetadata(ctx context.Context) (int64, error)
 	}
 
-	// shardCRUD is for shard storage of workflow execution.
-	//
-	// Recommendation: use one table if database support batch conditional update on multiple tables, otherwise combine with workflowCRUD (likeCassandra)
-	// shard: partition key(shardID), range key(N/A)
-	//
-	// Note 1: shard will be required to run conditional update with workflowCRUD. So in some nosql database like Cassandra,
-	// shardCRUD and workflowCRUD must be implemented within the same table. Because Cassandra only allows LightWeight transaction
-	// executed within a single table.
-	// Note 2: unlike Cassandra, most NoSQL databases don't return the previous rows when conditional write fails. In this case,
-	// an extra read query is needed to get the previous row.
+	/**
+	* shardCRUD is for shard storage of workflow execution.
+
+	* Recommendation: use one table if database support batch conditional update on multiple tables, otherwise combine with workflowCRUD (likeCassandra)
+	*
+	* Significant columns:
+	* domain: partition key(shardID), range key(N/A), local secondary index(domainID), query condition column(rangeID)
+	*
+	* Note 1: shard will be required to run conditional update with workflowCRUD. So in some nosql database like Cassandra,
+	* shardCRUD and workflowCRUD must be implemented within the same table. Because Cassandra only allows LightWeight transaction
+	* executed within a single table.
+	* Note 2: unlike Cassandra, most NoSQL databases don't return the previous rows when conditional write fails. In this case,
+	* an extra read query is needed to get the previous row.
+	 */
 	shardCRUD interface {
 		// InsertShard creates a new shard.
 		// Return error is there is any thing wrong
