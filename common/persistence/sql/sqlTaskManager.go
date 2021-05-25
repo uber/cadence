@@ -80,10 +80,10 @@ func (m *sqlTaskManager) LeaseTaskList(
 	if err != nil {
 		if err == sql.ErrNoRows {
 			tlInfo := &serialization.TaskListInfo{
-				AckLevel:        &ackLevel,
-				Kind:            common.Int16Ptr(int16(request.TaskListKind)),
-				ExpiryTimestamp: common.TimePtr(time.Unix(0, 0)),
-				LastUpdated:     common.TimePtr(time.Now()),
+				AckLevel:        ackLevel,
+				Kind:            int16(request.TaskListKind),
+				ExpiryTimestamp: time.Unix(0, 0),
+				LastUpdated:     time.Now(),
 			}
 			blob, err := m.parser.TaskListInfoToBlob(tlInfo)
 			if err != nil {
@@ -141,7 +141,7 @@ func (m *sqlTaskManager) LeaseTaskList(
 			return err1
 		}
 		now := time.Now()
-		tlInfo.LastUpdated = common.TimePtr(now)
+		tlInfo.LastUpdated = now
 		blob, err1 := m.parser.TaskListInfoToBlob(tlInfo)
 		if err1 != nil {
 			return err1
@@ -195,13 +195,13 @@ func (m *sqlTaskManager) UpdateTaskList(
 	shardID := m.shardID(request.TaskListInfo.DomainID, request.TaskListInfo.Name)
 	domainID := serialization.MustParseUUID(request.TaskListInfo.DomainID)
 	tlInfo := &serialization.TaskListInfo{
-		AckLevel:        common.Int64Ptr(request.TaskListInfo.AckLevel),
-		Kind:            common.Int16Ptr(int16(request.TaskListInfo.Kind)),
-		ExpiryTimestamp: common.TimePtr(time.Unix(0, 0)),
-		LastUpdated:     common.TimePtr(time.Now()),
+		AckLevel:        request.TaskListInfo.AckLevel,
+		Kind:            int16(request.TaskListInfo.Kind),
+		ExpiryTimestamp: time.Unix(0, 0),
+		LastUpdated:     time.Now(),
 	}
 	if request.TaskListInfo.Kind == persistence.TaskListKindSticky {
-		tlInfo.ExpiryTimestamp = common.TimePtr(stickyTaskListExpiry())
+		tlInfo.ExpiryTimestamp = stickyTaskListExpiry()
 	}
 
 	var resp *persistence.UpdateTaskListResponse
@@ -385,11 +385,11 @@ func (m *sqlTaskManager) CreateTasks(
 			expiryTime = time.Now().Add(ttl)
 		}
 		blob, err := m.parser.TaskInfoToBlob(&serialization.TaskInfo{
-			WorkflowID:       &v.Data.WorkflowID,
+			WorkflowID:       v.Data.WorkflowID,
 			RunID:            serialization.MustParseUUID(v.Data.RunID),
-			ScheduleID:       &v.Data.ScheduleID,
-			ExpiryTimestamp:  &expiryTime,
-			CreatedTimestamp: common.TimePtr(time.Now()),
+			ScheduleID:       v.Data.ScheduleID,
+			ExpiryTimestamp:  expiryTime,
+			CreatedTimestamp: time.Now(),
 		})
 		if err != nil {
 			return nil, err

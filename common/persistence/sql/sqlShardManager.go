@@ -232,44 +232,44 @@ func readLockShard(ctx context.Context, tx sqlplugin.Tx, shardID int, oldRangeID
 
 func shardInfoToShardsRow(s persistence.InternalShardInfo, parser serialization.Parser) (*sqlplugin.ShardsRow, error) {
 	var markerData []byte
-	var markerEncoding string
+	markerEncoding := string(common.EncodingTypeEmpty)
 	if s.PendingFailoverMarkers != nil {
 		markerData = s.PendingFailoverMarkers.Data
 		markerEncoding = string(s.PendingFailoverMarkers.Encoding)
 	}
 
 	var transferPQSData []byte
-	var transferPQSEncoding string
+	transferPQSEncoding := string(common.EncodingTypeEmpty)
 	if s.TransferProcessingQueueStates != nil {
 		transferPQSData = s.TransferProcessingQueueStates.Data
 		transferPQSEncoding = string(s.TransferProcessingQueueStates.Encoding)
 	}
 
 	var timerPQSData []byte
-	var timerPQSEncoding string
+	timerPQSEncoding := string(common.EncodingTypeEmpty)
 	if s.TimerProcessingQueueStates != nil {
 		timerPQSData = s.TimerProcessingQueueStates.Data
 		timerPQSEncoding = string(s.TimerProcessingQueueStates.Encoding)
 	}
 
 	shardInfo := &serialization.ShardInfo{
-		StolenSinceRenew:                      common.Int32Ptr(int32(s.StolenSinceRenew)),
-		UpdatedAt:                             &s.UpdatedAt,
-		ReplicationAckLevel:                   common.Int64Ptr(s.ReplicationAckLevel),
-		TransferAckLevel:                      common.Int64Ptr(s.TransferAckLevel),
-		TimerAckLevel:                         &s.TimerAckLevel,
+		StolenSinceRenew:                      int32(s.StolenSinceRenew),
+		UpdatedAt:                             s.UpdatedAt,
+		ReplicationAckLevel:                   s.ReplicationAckLevel,
+		TransferAckLevel:                      s.TransferAckLevel,
+		TimerAckLevel:                         s.TimerAckLevel,
 		ClusterTransferAckLevel:               s.ClusterTransferAckLevel,
 		ClusterTimerAckLevel:                  s.ClusterTimerAckLevel,
 		TransferProcessingQueueStates:         transferPQSData,
-		TransferProcessingQueueStatesEncoding: common.StringPtr(transferPQSEncoding),
+		TransferProcessingQueueStatesEncoding: transferPQSEncoding,
 		TimerProcessingQueueStates:            timerPQSData,
-		TimerProcessingQueueStatesEncoding:    common.StringPtr(timerPQSEncoding),
-		DomainNotificationVersion:             common.Int64Ptr(s.DomainNotificationVersion),
-		Owner:                                 &s.Owner,
+		TimerProcessingQueueStatesEncoding:    timerPQSEncoding,
+		DomainNotificationVersion:             s.DomainNotificationVersion,
+		Owner:                                 s.Owner,
 		ClusterReplicationLevel:               s.ClusterReplicationLevel,
 		ReplicationDlqAckLevel:                s.ReplicationDLQAckLevel,
 		PendingFailoverMarkers:                markerData,
-		PendingFailoverMarkersEncoding:        common.StringPtr(markerEncoding),
+		PendingFailoverMarkersEncoding:        markerEncoding,
 	}
 
 	blob, err := parser.ShardInfoToBlob(shardInfo)

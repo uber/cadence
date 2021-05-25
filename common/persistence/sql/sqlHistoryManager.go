@@ -94,8 +94,8 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 
 		treeInfo := &serialization.HistoryTreeInfo{
 			Ancestors:        ancestors,
-			Info:             &request.Info,
-			CreatedTimestamp: common.TimePtr(time.Now()),
+			Info:             request.Info,
+			CreatedTimestamp: time.Now(),
 		}
 
 		blob, err := m.parser.HistoryTreeInfoToBlob(treeInfo)
@@ -338,8 +338,8 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 
 	treeInfo := &serialization.HistoryTreeInfo{
 		Ancestors:        newAncestors,
-		Info:             &request.Info,
-		CreatedTimestamp: common.TimePtr(time.Now()),
+		Info:             request.Info,
+		CreatedTimestamp: time.Now(),
 	}
 
 	blob, err := m.parser.HistoryTreeInfoToBlob(treeInfo)
