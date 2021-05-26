@@ -99,13 +99,13 @@ type (
 		GetTimerProcessingQueueStates(cluster string) []*types.ProcessingQueueState
 		UpdateTimerProcessingQueueStates(cluster string, states []*types.ProcessingQueueState) error
 
-		UpdateTransferFailoverLevel(failoverID string, level persistence.TransferFailoverLevel) error
+		UpdateTransferFailoverLevel(failoverID string, level TransferFailoverLevel) error
 		DeleteTransferFailoverLevel(failoverID string) error
-		GetAllTransferFailoverLevels() map[string]persistence.TransferFailoverLevel
+		GetAllTransferFailoverLevels() map[string]TransferFailoverLevel
 
-		UpdateTimerFailoverLevel(failoverID string, level persistence.TimerFailoverLevel) error
+		UpdateTimerFailoverLevel(failoverID string, level TimerFailoverLevel) error
 		DeleteTimerFailoverLevel(failoverID string) error
-		GetAllTimerFailoverLevels() map[string]persistence.TimerFailoverLevel
+		GetAllTimerFailoverLevels() map[string]TimerFailoverLevel
 
 		GetDomainNotificationVersion() int64
 		UpdateDomainNotificationVersion(domainNotificationVersion int64) error
@@ -118,6 +118,24 @@ type (
 		ReplicateFailoverMarkers(ctx context.Context, makers []*persistence.FailoverMarkerTask) error
 		AddingPendingFailoverMarker(*types.FailoverMarkerAttributes) error
 		ValidateAndUpdateFailoverMarkers() ([]*types.FailoverMarkerAttributes, error)
+	}
+
+	// TransferFailoverLevel contains corresponding start / end level
+	TransferFailoverLevel struct {
+		StartTime    time.Time
+		MinLevel     int64
+		CurrentLevel int64
+		MaxLevel     int64
+		DomainIDs    map[string]struct{}
+	}
+
+	// TimerFailoverLevel contains domain IDs and corresponding start / end level
+	TimerFailoverLevel struct {
+		StartTime    time.Time
+		MinLevel     time.Time
+		CurrentLevel time.Time
+		MaxLevel     time.Time
+		DomainIDs    map[string]struct{}
 	}
 
 	contextImpl struct {
@@ -141,9 +159,11 @@ type (
 		transferSequenceNumber        int64
 		maxTransferSequenceNumber     int64
 		transferMaxReadLevel          int64
-		timerMaxReadLevelMap          map[string]time.Time         // cluster -> timerMaxReadLevel
-		transferProcessingQueueStates *types.ProcessingQueueStates // deserialized shardInfo.TransferProcessingQueueStates
-		timerProcessingQueueStates    *types.ProcessingQueueStates // deserialized shardInfo.TimerProcessingQueueStates
+		timerMaxReadLevelMap          map[string]time.Time             // cluster -> timerMaxReadLevel
+		transferProcessingQueueStates *types.ProcessingQueueStates     // deserialized shardInfo.TransferProcessingQueueStates
+		timerProcessingQueueStates    *types.ProcessingQueueStates     // deserialized shardInfo.TimerProcessingQueueStates
+		transferFailoverLevels        map[string]TransferFailoverLevel // uuid -> TransferFailoverLevel
+		timerFailoverLevels           map[string]TimerFailoverLevel    // uuid -> TimerFailoverLevel
 		pendingFailoverMarkers        []*types.FailoverMarkerAttributes
 
 		// exist only in memory
@@ -483,61 +503,61 @@ func (s *contextImpl) UpdateTimerProcessingQueueStates(cluster string, states []
 	return s.updateShardInfoLocked()
 }
 
-func (s *contextImpl) UpdateTransferFailoverLevel(failoverID string, level persistence.TransferFailoverLevel) error {
+func (s *contextImpl) UpdateTransferFailoverLevel(failoverID string, level TransferFailoverLevel) error {
 	s.Lock()
 	defer s.Unlock()
 
-	s.shardInfo.TransferFailoverLevels[failoverID] = level
-	return s.updateShardInfoLocked()
+	s.transferFailoverLevels[failoverID] = level
+	return nil
 }
 
 func (s *contextImpl) DeleteTransferFailoverLevel(failoverID string) error {
 	s.Lock()
 	defer s.Unlock()
 
-	if level, ok := s.shardInfo.TransferFailoverLevels[failoverID]; ok {
+	if level, ok := s.transferFailoverLevels[failoverID]; ok {
 		s.GetMetricsClient().RecordTimer(metrics.ShardInfoScope, metrics.ShardInfoTransferFailoverLatencyTimer, time.Since(level.StartTime))
-		delete(s.shardInfo.TransferFailoverLevels, failoverID)
+		delete(s.transferFailoverLevels, failoverID)
 	}
-	return s.updateShardInfoLocked()
+	return nil
 }
 
-func (s *contextImpl) GetAllTransferFailoverLevels() map[string]persistence.TransferFailoverLevel {
+func (s *contextImpl) GetAllTransferFailoverLevels() map[string]TransferFailoverLevel {
 	s.RLock()
 	defer s.RUnlock()
 
-	ret := map[string]persistence.TransferFailoverLevel{}
-	for k, v := range s.shardInfo.TransferFailoverLevels {
+	ret := map[string]TransferFailoverLevel{}
+	for k, v := range s.transferFailoverLevels {
 		ret[k] = v
 	}
 	return ret
 }
 
-func (s *contextImpl) UpdateTimerFailoverLevel(failoverID string, level persistence.TimerFailoverLevel) error {
+func (s *contextImpl) UpdateTimerFailoverLevel(failoverID string, level TimerFailoverLevel) error {
 	s.Lock()
 	defer s.Unlock()
 
-	s.shardInfo.TimerFailoverLevels[failoverID] = level
-	return s.updateShardInfoLocked()
+	s.timerFailoverLevels[failoverID] = level
+	return nil
 }
 
 func (s *contextImpl) DeleteTimerFailoverLevel(failoverID string) error {
 	s.Lock()
 	defer s.Unlock()
 
-	if level, ok := s.shardInfo.TimerFailoverLevels[failoverID]; ok {
+	if level, ok := s.timerFailoverLevels[failoverID]; ok {
 		s.GetMetricsClient().RecordTimer(metrics.ShardInfoScope, metrics.ShardInfoTimerFailoverLatencyTimer, time.Since(level.StartTime))
-		delete(s.shardInfo.TimerFailoverLevels, failoverID)
+		delete(s.timerFailoverLevels, failoverID)
 	}
-	return s.updateShardInfoLocked()
+	return nil
 }
 
-func (s *contextImpl) GetAllTimerFailoverLevels() map[string]persistence.TimerFailoverLevel {
+func (s *contextImpl) GetAllTimerFailoverLevels() map[string]TimerFailoverLevel {
 	s.RLock()
 	defer s.RUnlock()
 
-	ret := map[string]persistence.TimerFailoverLevel{}
-	for k, v := range s.shardInfo.TimerFailoverLevels {
+	ret := map[string]TimerFailoverLevel{}
+	for k, v := range s.timerFailoverLevels {
 		ret[k] = v
 	}
 	return ret
@@ -1175,8 +1195,8 @@ func (s *contextImpl) emitShardInfoMetricsLogsLocked() {
 	transferLag := s.transferMaxReadLevel - s.shardInfo.TransferAckLevel
 	timerLag := time.Since(s.shardInfo.TimerAckLevel)
 
-	transferFailoverInProgress := len(s.shardInfo.TransferFailoverLevels)
-	timerFailoverInProgress := len(s.shardInfo.TimerFailoverLevels)
+	transferFailoverInProgress := len(s.transferFailoverLevels)
+	timerFailoverInProgress := len(s.timerFailoverLevels)
 
 	if s.config.EmitShardDiffLog() &&
 		(logWarnTransferLevelDiff < diffTransferLevel ||
@@ -1560,6 +1580,8 @@ func acquireShard(
 		timerMaxReadLevelMap:           timerMaxReadLevelMap, // use ack to init read level
 		transferProcessingQueueStates:  transferProcessingQueueStates,
 		timerProcessingQueueStates:     timerProcessingQueueStates,
+		transferFailoverLevels:         make(map[string]TransferFailoverLevel),
+		timerFailoverLevels:            make(map[string]TimerFailoverLevel),
 		pendingFailoverMarkers:         []*types.FailoverMarkerAttributes{},
 		logger:                         shardItem.logger,
 		throttledLogger:                shardItem.throttledLogger,
@@ -1586,14 +1608,6 @@ func acquireShard(
 }
 
 func copyShardInfo(shardInfo *persistence.ShardInfo) *persistence.ShardInfo {
-	transferFailoverLevels := map[string]persistence.TransferFailoverLevel{}
-	for k, v := range shardInfo.TransferFailoverLevels {
-		transferFailoverLevels[k] = v
-	}
-	timerFailoverLevels := map[string]persistence.TimerFailoverLevel{}
-	for k, v := range shardInfo.TimerFailoverLevels {
-		timerFailoverLevels[k] = v
-	}
 	clusterTransferAckLevel := make(map[string]int64)
 	for k, v := range shardInfo.ClusterTransferAckLevel {
 		clusterTransferAckLevel[k] = v
@@ -1618,8 +1632,6 @@ func copyShardInfo(shardInfo *persistence.ShardInfo) *persistence.ShardInfo {
 		ReplicationAckLevel:           shardInfo.ReplicationAckLevel,
 		TransferAckLevel:              shardInfo.TransferAckLevel,
 		TimerAckLevel:                 shardInfo.TimerAckLevel,
-		TransferFailoverLevels:        transferFailoverLevels,
-		TimerFailoverLevels:           timerFailoverLevels,
 		ClusterTransferAckLevel:       clusterTransferAckLevel,
 		ClusterTimerAckLevel:          clusterTimerAckLevel,
 		TransferProcessingQueueStates: shardInfo.TransferProcessingQueueStates,

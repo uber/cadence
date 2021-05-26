@@ -258,29 +258,9 @@ type (
 		ClusterTimerAckLevel          map[string]time.Time              `json:"cluster_timer_ack_level"`
 		TransferProcessingQueueStates *types.ProcessingQueueStates      `json:"transfer_processing_queue_states"`
 		TimerProcessingQueueStates    *types.ProcessingQueueStates      `json:"timer_processing_queue_states"`
-		TransferFailoverLevels        map[string]TransferFailoverLevel  // uuid -> TransferFailoverLevel
-		TimerFailoverLevels           map[string]TimerFailoverLevel     // uuid -> TimerFailoverLevel
 		ClusterReplicationLevel       map[string]int64                  `json:"cluster_replication_level"`
 		DomainNotificationVersion     int64                             `json:"domain_notification_version"`
 		PendingFailoverMarkers        []*types.FailoverMarkerAttributes `json:"pending_failover_markers"`
-	}
-
-	// TransferFailoverLevel contains corresponding start / end level
-	TransferFailoverLevel struct {
-		StartTime    time.Time
-		MinLevel     int64
-		CurrentLevel int64
-		MaxLevel     int64
-		DomainIDs    map[string]struct{}
-	}
-
-	// TimerFailoverLevel contains domain IDs and corresponding start / end level
-	TimerFailoverLevel struct {
-		StartTime    time.Time
-		MinLevel     time.Time
-		CurrentLevel time.Time
-		MaxLevel     time.Time
-		DomainIDs    map[string]struct{}
 	}
 
 	// WorkflowExecutionInfo describes a workflow execution
