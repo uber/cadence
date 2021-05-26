@@ -24,12 +24,14 @@ package cassandra
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"math"
 	"time"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/types"
 )
@@ -282,10 +284,9 @@ func (t *nosqlTaskManager) GetTasks(
 	request *p.GetTasksRequest,
 ) (*p.InternalGetTasksResponse, error) {
 	if request.MaxReadLevel == nil {
-		return nil, &types.InternalServiceError{
-			Message: "getTasks: both readLevel and maxReadLevel MUST be specified for cassandra persistence",
-		}
+		request.MaxReadLevel = common.Int64Ptr(math.MaxInt64 - 1)
 	}
+
 	if request.ReadLevel > *request.MaxReadLevel {
 		return &p.InternalGetTasksResponse{}, nil
 	}
@@ -296,47 +297,35 @@ func (t *nosqlTaskManager) GetTasks(
 			TaskListName: request.TaskList,
 			TaskListType: request.TaskType,
 		},
-		MinTaskID: request.ReadLevel,
+		BatchSize: request.BatchSize,
+
+		// Change from exclusive to inclusive
+		MinTaskID: request.ReadLevel + 1,
+		// Change from inclusive to exclusive
+		MaxTaskID: *request.MaxReadLevel + 1,
 	})
-	//	// Reading tasklist tasks need to be quorum level consistent, otherwise we could loose task
-	//	query := t.session.Query(templateGetTasksQuery,
-	//		request.DomainID,
-	//		request.TaskList,
-	//		request.TaskType,
-	//		rowTypeTask,
-	//		request.ReadLevel,
-	//		*request.MaxReadLevel,
-	//	).PageSize(request.BatchSize).WithContext(ctx)
-	//
-	//	iter := query.Iter()
-	//	if iter == nil {
-	//		return nil, &types.InternalServiceError{
-	//			Message: "GetTasks operation failed.  Not able to create query iterator.",
-	//		}
-	//	}
-	//
-	//	response := &p.InternalGetTasksResponse{}
-	//	task := make(map[string]interface{})
-	//PopulateTasks:
-	//	for iter.MapScan(task) {
-	//		taskID, ok := task["task_id"]
-	//		if !ok { // no tasks, but static column record returned
-	//			continue
-	//		}
-	//		t := createTaskInfo(task["task"].(map[string]interface{}))
-	//		t.TaskID = taskID.(int64)
-	//		response.Tasks = append(response.Tasks, t)
-	//		if len(response.Tasks) == request.BatchSize {
-	//			break PopulateTasks
-	//		}
-	//		task = make(map[string]interface{}) // Reinitialize map as initialized fails on unmarshalling
-	//	}
-	//
-	//	if err := iter.Close(); err != nil {
-	//		return nil, convertCommonErrors(t.client, "GetTasks", err)
-	//	}
+
+	if err != nil {
+		return nil, convertCommonErrors(t.db, "GetTasks", err)
+	}
+
+	response := &p.InternalGetTasksResponse{}
+	for _, t := range resp {
+		response.Tasks = append(response.Tasks, toTaskInfo(t))
+	}
 
 	return response, nil
+}
+
+func toTaskInfo(t *nosqlplugin.TaskRow) *p.InternalTaskInfo {
+	return &p.InternalTaskInfo{
+		DomainID:    t.DomainID,
+		WorkflowID:  t.WorkflowID,
+		RunID:       t.RunID,
+		TaskID:      t.TaskID,
+		ScheduleID:  t.ScheduledID,
+		CreatedTime: t.CreatedTime,
+	}
 }
 
 // From TaskManager interface
@@ -345,17 +334,14 @@ func (t *nosqlTaskManager) CompleteTask(
 	request *p.CompleteTaskRequest,
 ) error {
 	tli := request.TaskList
-	query := t.session.Query(templateCompleteTaskQuery,
-		tli.DomainID,
-		tli.Name,
-		tli.TaskType,
-		rowTypeTask,
-		request.TaskID,
-	).WithContext(ctx)
-
-	err := query.Exec()
+	err := t.db.DeleteTask(ctx, &nosqlplugin.TaskRowPK{
+		DomainID:     tli.DomainID,
+		TaskListName: tli.Name,
+		TaskListType: tli.TaskType,
+		TaskID:       request.TaskID,
+	})
 	if err != nil {
-		return convertCommonErrors(t.client, "CompleteTask", err)
+		return convertCommonErrors(t.db, "CompleteTask", err)
 	}
 
 	return nil
@@ -368,16 +354,14 @@ func (t *nosqlTaskManager) CompleteTasksLessThan(
 	ctx context.Context,
 	request *p.CompleteTasksLessThanRequest,
 ) (int, error) {
-	query := t.session.Query(templateCompleteTasksLessThanQuery,
-		request.DomainID,
-		request.TaskListName,
-		request.TaskType,
-		rowTypeTask,
-		request.TaskID,
-	).WithContext(ctx)
-	err := query.Exec()
+	num, err := t.db.RangeDeleteTasks(ctx, &nosqlplugin.TaskRowPK{
+		DomainID:     request.DomainID,
+		TaskListName: request.TaskListName,
+		TaskListType: request.TaskType,
+		TaskID:       request.TaskID,
+	}, request.Limit)
 	if err != nil {
-		return 0, convertCommonErrors(t.client, "CompleteTasksLessThan", err)
+		return 0, convertCommonErrors(t.db, "CompleteTasksLessThan", err)
 	}
-	return p.UnknownNumRowsAffected, nil
+	return num, nil
 }

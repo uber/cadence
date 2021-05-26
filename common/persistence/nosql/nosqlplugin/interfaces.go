@@ -329,8 +329,9 @@ type (
 		// DeleteTask delete a single task
 		DeleteTask(ctx context.Context, row *TaskRowPK) error
 		// DeleteTask delete a batch tasks that taskIDs less than the row(exclusive)
-		// If TTL is not implemented, then should also return the number of rows deleted, otherwise persistence.UnknownNumRowsAffected
-		RangeDeleteTasks(ctx context.Context, maxTaskID *TaskRowPK) (rowsDeleted int, err error)
+		// Limit is the max number of tasks to delete.
+		// Also return the number of rows deleted -- if it's not supported then ignore the limit, and return persistence.UnknownNumRowsAffected
+		RangeDeleteTasks(ctx context.Context, maxTaskID *TaskRowPK, limit int) (rowsDeleted int, err error)
 	}
 
 	TasksFilter struct {

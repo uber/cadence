@@ -467,7 +467,9 @@ func (db *cdb) DeleteTask(ctx context.Context, row *nosqlplugin.TaskRowPK) error
 
 // DeleteTask delete a batch tasks that taskIDs less than the row
 // If TTL is not implemented, then should also return the number of rows deleted, otherwise persistence.UnknownNumRowsAffected
-func (db *cdb) RangeDeleteTasks(ctx context.Context, maxTaskID *nosqlplugin.TaskRowPK) (rowsDeleted int, err error) {
+// NOTE: This API ignores the `Limit` request parameter i.e. either all tasks leq the task_id will be deleted or an error will
+// be returned to the caller, because rowsDeleted is not supported by Cassandra
+func (db *cdb) RangeDeleteTasks(ctx context.Context, maxTaskID *nosqlplugin.TaskRowPK, _ int) (rowsDeleted int, err error) {
 	query := db.session.Query(templateCompleteTasksLessThanQuery,
 		maxTaskID.DomainID,
 		maxTaskID.TaskListName,
