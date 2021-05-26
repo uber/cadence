@@ -184,9 +184,9 @@ func newTaskPersistence(
 }
 
 func (d *cassandraTaskPersistence) GetOrphanTasks(ctx context.Context, request *p.GetOrphanTasksRequest) (*p.GetOrphanTasksResponse, error) {
-	// TODO: It's unclear if this's necessary or useful for Cassandra
+	// TODO: It's unclear if this's necessary or possible for NoSQL
 	return nil, &types.InternalServiceError{
-		Message: "Unimplemented call to GetOrphanTasks for Cassandra",
+		Message: "Unimplemented call to GetOrphanTasks for NoSQL",
 	}
 }
 
@@ -211,6 +211,7 @@ func (d *cassandraTaskPersistence) LeaseTaskList(
 	var rangeID, ackLevel int64
 	var tlDB map[string]interface{}
 	err := query.Scan(&rangeID, &tlDB)
+
 	if err != nil {
 		if d.client.IsNotFoundError(err) { // First time task list is used
 			query = d.session.Query(templateInsertTaskListQuery,
