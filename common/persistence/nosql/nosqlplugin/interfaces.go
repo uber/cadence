@@ -344,6 +344,7 @@ type (
 
 	TaskRowForInsert struct {
 		TaskRow
+		// <= 0 means no TTL
 		TTLSeconds int
 	}
 

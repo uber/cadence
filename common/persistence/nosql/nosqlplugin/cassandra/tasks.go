@@ -265,7 +265,7 @@ func (db *cdb) UpdateTaskListWithTTL(
 	)
 	// part 2 is for CAS and setting TTL for the rest of the columns
 	batch.Query(templateUpdateTaskListQueryWithTTLPart2,
-		stickyTaskListTTL,
+		ttlSeconds,
 		row.RangeID,
 		row.DomainID,
 		row.TaskListName,
