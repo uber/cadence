@@ -95,7 +95,7 @@ func (t *nosqlTaskManager) LeaseTaskList(
 		}
 	}
 	now := time.Now()
-	tasklist, err := t.db.SelectTaskList(ctx, &nosqlplugin.TaskListFilter{
+	currTL, err := t.db.SelectTaskList(ctx, &nosqlplugin.TaskListFilter{
 		DomainID:     request.DomainID,
 		TaskListName: request.TaskList,
 		TaskListType: request.TaskType,
@@ -104,7 +104,7 @@ func (t *nosqlTaskManager) LeaseTaskList(
 	var previous *nosqlplugin.TaskListRow
 	if err != nil {
 		if t.db.IsNotFoundError(err) { // First time task list is used
-			previous, err = t.db.InsertTaskList(ctx, &nosqlplugin.TaskListRow{
+			currTL = &nosqlplugin.TaskListRow{
 				DomainID:        request.DomainID,
 				TaskListName:    request.TaskList,
 				TaskListType:    request.TaskType,
@@ -112,35 +112,40 @@ func (t *nosqlTaskManager) LeaseTaskList(
 				TaskListKind:    request.TaskListKind,
 				AckLevel:        initialAckLevel,
 				LastUpdatedTime: now,
-			})
+			}
+			previous, err = t.db.InsertTaskList(ctx, currTL)
 		} else {
 			return nil, convertCommonErrors(t.db, "LeaseTaskList", err)
 		}
 	} else {
 		// if request.RangeID is > 0, we are trying to renew an already existing
 		// lease on the task list. If request.RangeID=0, we are trying to steal
-		// the tasklist from its current owner
-		if request.RangeID > 0 && request.RangeID != tasklist.RangeID {
+		// the currTL from its current owner
+		if request.RangeID > 0 && request.RangeID != currTL.RangeID {
 			return nil, &p.ConditionFailedError{
 				Msg: fmt.Sprintf("leaseTaskList:renew failed: taskList:%v, taskListType:%v, haveRangeID:%v, gotRangeID:%v",
-					request.TaskList, request.TaskType, request.RangeID, tasklist.RangeID),
+					request.TaskList, request.TaskType, request.RangeID, currTL.RangeID),
 			}
 		}
+
+		// Update the rangeID as this is an ownership change
+		currTL.RangeID += 1
+
 		previous, err = t.db.UpdateTaskList(ctx, &nosqlplugin.TaskListRow{
 			DomainID:        request.DomainID,
 			TaskListName:    request.TaskList,
 			TaskListType:    request.TaskType,
-			RangeID:         tasklist.RangeID + 1,
-			TaskListKind:    tasklist.TaskListKind,
-			AckLevel:        tasklist.AckLevel,
+			RangeID:         currTL.RangeID,
+			TaskListKind:    currTL.TaskListKind,
+			AckLevel:        currTL.AckLevel,
 			LastUpdatedTime: now,
-		}, tasklist.RangeID)
+		}, currTL.RangeID)
 	}
 	if err != nil {
 		if t.db.IsConditionFailedError(err) {
 			return nil, &p.ConditionFailedError{
 				Msg: fmt.Sprintf("leaseTaskList: taskList:%v, taskListType:%v, haveRangeID:%v, gotRangeID:%v",
-					request.TaskList, request.TaskType, tasklist.RangeID, previous.RangeID),
+					request.TaskList, request.TaskType, currTL.RangeID, previous.RangeID),
 			}
 		}
 		return nil, convertCommonErrors(t.db, "LeaseTaskList", err)
@@ -149,8 +154,8 @@ func (t *nosqlTaskManager) LeaseTaskList(
 		DomainID:    request.DomainID,
 		Name:        request.TaskList,
 		TaskType:    request.TaskType,
-		RangeID:     tasklist.RangeID + 1,
-		AckLevel:    tasklist.AckLevel,
+		RangeID:     currTL.RangeID,
+		AckLevel:    currTL.AckLevel,
 		Kind:        request.TaskListKind,
 		LastUpdated: now,
 	}
