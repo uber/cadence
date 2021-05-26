@@ -154,7 +154,7 @@ const (
 
 // Types of cross-cluster tasks
 const (
-	CrossClusterTaskTypeStartChildExecution = iota
+	CrossClusterTaskTypeStartChildExecution = iota + 1
 	CrossClusterTaskTypeCancelExecution
 	CrossClusterTaskTypeSignalExecution
 )
