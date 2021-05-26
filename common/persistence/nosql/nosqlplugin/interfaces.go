@@ -53,6 +53,7 @@ type (
 		domainCRUD
 		shardCRUD
 		visibilityCRUD
+		taskCRUD
 	}
 
 	// NoSQLErrorChecker checks for common nosql errors
@@ -275,6 +276,109 @@ type (
 
 	VisibilityFilterType int
 	VisibilitySortType   int
+
+	/**
+	* taskCRUD is for tasklist and worker tasks storage
+	* The task here is only referred to workflow/activity worker tasks. `Task` is a overloaded term in Cadence.
+	* There is another 'task' storage which is for internal purpose only in workflowCRUD.
+	*
+	* Recommendation: use two tables(tasklist + task) to implement
+	* tasklist table stores the metadata mainly for
+	*   * rangeID: ownership management, and taskID management  everytime a matching host claim ownership of a tasklist,
+	*              it must increase the value succesfully . also used as base section of the taskID. E.g, if rangeID is 1,
+	*              then allowed taskID ranged will be [100K, 2*100K-1].
+	*   * ackLevel: max taskID that can be safely deleted.
+	* Any task record is associated with a tasklist. Any updates on a task should use rangeID of the associated tasklist as condition.
+	*
+	* Significant columns:
+	* tasklist: partition key(domainID, taskListName, taskListType), range key(N/A), query condition column(rangeID)
+	* task:partition key(domainID, taskListName, taskListType), range key(taskID), query condition column(rangeID)
+	*
+	* NOTE 1: Cassandra implementation uses the same table for tasklist and task, because Cassandra only allows
+	*        batch conditional updates(LightWeight transaction) executed within a single table.
+	* NOTE 2: TTL(time to live records) is for auto-deleting task and some tasklists records. For databases that don't
+	*        support TTL, please implement ListTaskList method, and allows TaskListScavenger like MySQL/Postgres.
+	*        If TTL is supported, then ListTaskList can be a noop.
+	 */
+	taskCRUD interface {
+		// SelectTaskList returns a single tasklist row.
+		// Return IsNotFoundError if the row doesn't exist
+		SelectTaskList(ctx context.Context, filter *TaskListFilter) (error, *TaskListRow)
+		// InsertTaskList insert a single tasklist row
+		// Return IsConditionFailedError if the row already exists, and also the existing row
+		InsertTaskList(ctx context.Context, row *TaskListRow) (err error, previous *TaskListRow)
+		// UpdateTaskList updates a single tasklist row
+		// Return IsConditionFailedError if the condition doesn't meet, and also the previous row
+		UpdateTaskList(ctx context.Context, row *TaskListRow, previousRangeID int64) (err error, previous *TaskListRow)
+		// UpdateTaskList updates a single tasklist row, and set an TTL on the record
+		// Return IsConditionFailedError if the condition doesn't meet, and also the existing row
+		// Ignore TTL if it's not supported, which becomes exactly the same as UpdateTaskList, but ListTaskList must be
+		// implemented for TaskListScavenger
+		UpdateTaskListWithTTL(ctx context.Context, ttlSeconds int64, row *TaskListRow, previousRangeID int64) (err error, previous *TaskListRow)
+		// ListTaskList returns all tasklists.
+		// Noop if TTL is already implemented in other methods
+		ListTaskList(ctx context.Context, pageSize int, nextPageToken []byte) (error, *ListTaskListResult)
+		// DeleteTaskList deletes a single tasklist row
+		// Return IsConditionFailedError if the condition doesn't meet, and also the existing row
+		DeleteTaskList(ctx context.Context, filter *TaskListFilter) (error, *TaskListRow)
+		// InsertTasks inserts a batch of tasks
+		// Return IsConditionFailedError if the condition doesn't meet, and also the previous tasklist row
+		InsertTasks(ctx context.Context, tasksToInsert []*TaskRowForInsert, tasklistCondition *TaskListRow) (err error, previous *TaskListRow)
+		// SelectTasks return tasks that associated to a tasklist
+		SelectTasks(ctx context.Context, filter TasksFilter) (error, []*TaskRow)
+		// DeleteTask delete a single task
+		DeleteTask(ctx context.Context, row *TaskRowPK) error
+		// DeleteTask delete a batch tasks that taskIDs less than or equal to the row
+		// If TTL is not implemented, then should also return the number of rows deleted, otherwise persistence.UnknownNumRowsAffected
+		RangeDeleteTasks(ctx context.Context, row *TaskRowPK) (error, rowsDeleted int)
+	}
+
+	TasksFilter struct {
+		TaskListFilter
+		// Inclusive
+		MinTaskID int64
+		// Exclusive
+		MaxTaskID int64
+		BatchSize int
+	}
+
+	TaskRowForInsert struct {
+		TaskRow
+		TTLSeconds int
+	}
+
+	TaskRow struct {
+		TaskRowPK
+		WorkflowID  string
+		RunID       string
+		ScheduledID int64
+	}
+
+	TaskRowPK struct {
+		TaskListFilter
+		TaskID int64
+	}
+
+	TaskListFilter struct {
+		DomainID     string
+		TaskListName string
+		TaskListType int
+	}
+
+	TaskListRow struct {
+		DomainID     string
+		TaskListName string
+		TaskListType int
+
+		RangeID         int64
+		TaskListKind    int
+		LastUpdatedTime time.Time
+	}
+
+	ListTaskListResult struct {
+		TaskLists     []*TaskListRow
+		NextPageToken []byte
+	}
 
 	// For now ShardRow is the same as persistence.InternalShardInfo
 	// Separate them later when there is a need.
