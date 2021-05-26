@@ -104,6 +104,10 @@ func (m *shardManager) toInternalShardInfo(shardInfo *ShardInfo) (*InternalShard
 	if err != nil {
 		return nil, err
 	}
+	serializedCrossClusterProcessingQueueStates, err := m.serializer.SerializeProcessingQueueStates(shardInfo.CrossClusterProcessQueueStates, common.EncodingTypeThriftRW)
+	if err != nil {
+		return nil, err
+	}
 	serializedTimerProcessingQueueStates, err := m.serializer.SerializeProcessingQueueStates(shardInfo.TimerProcessingQueueStates, common.EncodingTypeThriftRW)
 	if err != nil {
 		return nil, err
@@ -114,24 +118,25 @@ func (m *shardManager) toInternalShardInfo(shardInfo *ShardInfo) (*InternalShard
 	}
 
 	return &InternalShardInfo{
-		ShardID:                       shardInfo.ShardID,
-		Owner:                         shardInfo.Owner,
-		RangeID:                       shardInfo.RangeID,
-		StolenSinceRenew:              shardInfo.StolenSinceRenew,
-		UpdatedAt:                     shardInfo.UpdatedAt,
-		ReplicationAckLevel:           shardInfo.ReplicationAckLevel,
-		ReplicationDLQAckLevel:        shardInfo.ReplicationDLQAckLevel,
-		TransferAckLevel:              shardInfo.TransferAckLevel,
-		TimerAckLevel:                 shardInfo.TimerAckLevel,
-		ClusterTransferAckLevel:       shardInfo.ClusterTransferAckLevel,
-		ClusterTimerAckLevel:          shardInfo.ClusterTimerAckLevel,
-		TransferProcessingQueueStates: serializedTransferProcessingQueueStates,
-		TimerProcessingQueueStates:    serializedTimerProcessingQueueStates,
-		ClusterReplicationLevel:       shardInfo.ClusterReplicationLevel,
-		DomainNotificationVersion:     shardInfo.DomainNotificationVersion,
-		PendingFailoverMarkers:        pendingFailoverMarker,
-		TransferFailoverLevels:        shardInfo.TransferFailoverLevels,
-		TimerFailoverLevels:           shardInfo.TimerFailoverLevels,
+		ShardID:                           shardInfo.ShardID,
+		Owner:                             shardInfo.Owner,
+		RangeID:                           shardInfo.RangeID,
+		StolenSinceRenew:                  shardInfo.StolenSinceRenew,
+		UpdatedAt:                         shardInfo.UpdatedAt,
+		ReplicationAckLevel:               shardInfo.ReplicationAckLevel,
+		ReplicationDLQAckLevel:            shardInfo.ReplicationDLQAckLevel,
+		TransferAckLevel:                  shardInfo.TransferAckLevel,
+		TimerAckLevel:                     shardInfo.TimerAckLevel,
+		ClusterTransferAckLevel:           shardInfo.ClusterTransferAckLevel,
+		ClusterTimerAckLevel:              shardInfo.ClusterTimerAckLevel,
+		TransferProcessingQueueStates:     serializedTransferProcessingQueueStates,
+		CrossClusterProcessingQueueStates: serializedCrossClusterProcessingQueueStates,
+		TimerProcessingQueueStates:        serializedTimerProcessingQueueStates,
+		ClusterReplicationLevel:           shardInfo.ClusterReplicationLevel,
+		DomainNotificationVersion:         shardInfo.DomainNotificationVersion,
+		PendingFailoverMarkers:            pendingFailoverMarker,
+		TransferFailoverLevels:            shardInfo.TransferFailoverLevels,
+		TimerFailoverLevels:               shardInfo.TimerFailoverLevels,
 	}, nil
 }
 
@@ -140,6 +145,10 @@ func (m *shardManager) fromInternalShardInfo(internalShardInfo *InternalShardInf
 		return nil, nil
 	}
 	transferProcessingQueueStates, err := m.serializer.DeserializeProcessingQueueStates(internalShardInfo.TransferProcessingQueueStates)
+	if err != nil {
+		return nil, err
+	}
+	crossClusterProcessingQueueStates, err := m.serializer.DeserializeProcessingQueueStates(internalShardInfo.CrossClusterProcessingQueueStates)
 	if err != nil {
 		return nil, err
 	}
@@ -153,23 +162,24 @@ func (m *shardManager) fromInternalShardInfo(internalShardInfo *InternalShardInf
 	}
 
 	return &ShardInfo{
-		ShardID:                       internalShardInfo.ShardID,
-		Owner:                         internalShardInfo.Owner,
-		RangeID:                       internalShardInfo.RangeID,
-		StolenSinceRenew:              internalShardInfo.StolenSinceRenew,
-		UpdatedAt:                     internalShardInfo.UpdatedAt,
-		ReplicationAckLevel:           internalShardInfo.ReplicationAckLevel,
-		ReplicationDLQAckLevel:        internalShardInfo.ReplicationDLQAckLevel,
-		TransferAckLevel:              internalShardInfo.TransferAckLevel,
-		TimerAckLevel:                 internalShardInfo.TimerAckLevel,
-		ClusterTransferAckLevel:       internalShardInfo.ClusterTransferAckLevel,
-		ClusterTimerAckLevel:          internalShardInfo.ClusterTimerAckLevel,
-		TransferProcessingQueueStates: transferProcessingQueueStates,
-		TimerProcessingQueueStates:    timerProcessingQueueStates,
-		ClusterReplicationLevel:       internalShardInfo.ClusterReplicationLevel,
-		DomainNotificationVersion:     internalShardInfo.DomainNotificationVersion,
-		PendingFailoverMarkers:        pendingFailoverMarker,
-		TransferFailoverLevels:        internalShardInfo.TransferFailoverLevels,
-		TimerFailoverLevels:           internalShardInfo.TimerFailoverLevels,
+		ShardID:                        internalShardInfo.ShardID,
+		Owner:                          internalShardInfo.Owner,
+		RangeID:                        internalShardInfo.RangeID,
+		StolenSinceRenew:               internalShardInfo.StolenSinceRenew,
+		UpdatedAt:                      internalShardInfo.UpdatedAt,
+		ReplicationAckLevel:            internalShardInfo.ReplicationAckLevel,
+		ReplicationDLQAckLevel:         internalShardInfo.ReplicationDLQAckLevel,
+		TransferAckLevel:               internalShardInfo.TransferAckLevel,
+		TimerAckLevel:                  internalShardInfo.TimerAckLevel,
+		ClusterTransferAckLevel:        internalShardInfo.ClusterTransferAckLevel,
+		ClusterTimerAckLevel:           internalShardInfo.ClusterTimerAckLevel,
+		TransferProcessingQueueStates:  transferProcessingQueueStates,
+		CrossClusterProcessQueueStates: crossClusterProcessingQueueStates,
+		TimerProcessingQueueStates:     timerProcessingQueueStates,
+		ClusterReplicationLevel:        internalShardInfo.ClusterReplicationLevel,
+		DomainNotificationVersion:      internalShardInfo.DomainNotificationVersion,
+		PendingFailoverMarkers:         pendingFailoverMarker,
+		TransferFailoverLevels:         internalShardInfo.TransferFailoverLevels,
+		TimerFailoverLevels:            internalShardInfo.TimerFailoverLevels,
 	}, nil
 }
