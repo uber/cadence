@@ -65,6 +65,7 @@ type (
 		AddSearchAttribute(context.Context, *types.AddSearchAttributeRequest) error
 		CloseShard(context.Context, *types.CloseShardRequest) error
 		DescribeCluster(context.Context) (*types.DescribeClusterResponse, error)
+		DescribeShardDistribution(context.Context, *types.DescribeShardDistributionRequest) (*types.DescribeShardDistributionResponse, error)
 		DescribeHistoryHost(context.Context, *types.DescribeHistoryHostRequest) (*types.DescribeHistoryHostResponse, error)
 		DescribeQueue(context.Context, *types.DescribeQueueRequest) (*types.DescribeQueueResponse, error)
 		DescribeWorkflowExecution(context.Context, *types.AdminDescribeWorkflowExecutionRequest) (*types.AdminDescribeWorkflowExecutionResponse, error)
@@ -353,6 +354,19 @@ func (adh *adminHandlerImpl) DescribeQueue(
 	}
 
 	return adh.GetHistoryClient().DescribeQueue(ctx, request)
+}
+
+// DescribeHistoryHost returns information about the internal states of a history host
+func (adh *adminHandlerImpl) DescribeShardDistribution(
+	ctx context.Context,
+	request *types.DescribeShardDistributionRequest,
+) (resp *types.DescribeShardDistributionResponse, retError error) {
+
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	_, sw := adh.startRequestProfile(metrics.AdminDescribeShardDistributionScope)
+	defer sw.Stop()
+
+	return adh.GetHistoryClient().DescribeShardDistribution(ctx, request)
 }
 
 // DescribeHistoryHost returns information about the internal states of a history host

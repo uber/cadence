@@ -65,6 +65,12 @@ func (t AdminThriftHandler) DescribeCluster(ctx context.Context) (*admin.Describ
 }
 
 // DescribeHistoryHost forwards request to the underlying handler
+func (t AdminThriftHandler) DescribeShardDistribution(ctx context.Context, request *shared.DescribeShardDistributionRequest) (*shared.DescribeShardDistributionResponse, error) {
+	response, err := t.h.DescribeShardDistribution(withThriftTag(ctx), thrift.ToDescribeShardDistributionRequest(request))
+	return thrift.FromDescribeShardDistributionResponse(response), thrift.FromError(err)
+}
+
+// DescribeHistoryHost forwards request to the underlying handler
 func (t AdminThriftHandler) DescribeHistoryHost(ctx context.Context, request *shared.DescribeHistoryHostRequest) (*shared.DescribeHistoryHostResponse, error) {
 	response, err := t.h.DescribeHistoryHost(withThriftTag(ctx), thrift.ToDescribeHistoryHostRequest(request))
 	return thrift.FromDescribeHistoryHostResponse(response), thrift.FromError(err)

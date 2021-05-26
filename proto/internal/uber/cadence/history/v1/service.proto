@@ -180,6 +180,9 @@ service HistoryAPI {
   // DescribeHistoryHost returns information about the internal states of a history host.
   rpc DescribeHistoryHost(DescribeHistoryHostRequest) returns (DescribeHistoryHostResponse);
 
+  // DescribeShardDistribution returns information about the internal states of a history host.
+  rpc DescribeShardDistribution(DescribeShardDistributionRequest) returns (DescribeShardDistributionResponse);
+
   // CloseShard close the shard.
   rpc CloseShard(CloseShardRequest) returns (CloseShardResponse);
 
@@ -546,6 +549,16 @@ message DescribeMutableStateResponse {
 }
 
 message DescribeHistoryHostRequest {
+}
+
+message DescribeShardDistributionRequest {
+  string role = 1;
+  int32 page_size = 2;
+  int32 page_id = 3;
+}
+message DescribeShardDistributionResponse {
+  int32 number_of_shards = 1;
+  map<int32, string> shards = 2;
 }
 
 message DescribeHistoryHostResponse {

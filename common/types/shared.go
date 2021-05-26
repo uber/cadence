@@ -2350,6 +2350,13 @@ type DescribeHistoryHostRequest struct {
 	ExecutionForHost *WorkflowExecution `json:"executionForHost,omitempty"`
 }
 
+// DescribeShardDistributionRequest is an internal type (TBD...)
+type DescribeShardDistributionRequest struct {
+	Role     *string `json:"role,omitempty"`
+	PageSize int32   `json:"pageSize,omitempty"`
+	PageID   int32   `json:"pageID,omitempty"`
+}
+
 // GetHostAddress is an internal getter (TBD...)
 func (v *DescribeHistoryHostRequest) GetHostAddress() (o string) {
 	if v != nil && v.HostAddress != nil {
@@ -2370,6 +2377,28 @@ func (v *DescribeHistoryHostRequest) GetShardIDForHost() (o int32) {
 func (v *DescribeHistoryHostRequest) GetExecutionForHost() (o *WorkflowExecution) {
 	if v != nil && v.ExecutionForHost != nil {
 		return v.ExecutionForHost
+	}
+	return
+}
+
+// DescribeHistoryHostResponse is an internal type (TBD...)
+type DescribeShardDistributionResponse struct {
+	NumberOfShards int32            `json:"numberOfShards,omitempty"`
+	Shards         map[int32]string `json:"shardIDs,omitempty"`
+}
+
+// GetNumberOfShards is an internal getter (TBD...)
+func (v *DescribeShardDistributionResponse) GetNumberOfShards() (o int32) {
+	if v != nil {
+		return v.NumberOfShards
+	}
+	return
+}
+
+// GetNumberOfShards is an internal getter (TBD...)
+func (v *DescribeShardDistributionResponse) GetShards() (o map[int32]string) {
+	if v != nil {
+		return v.Shards
 	}
 	return
 }

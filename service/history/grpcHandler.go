@@ -54,6 +54,11 @@ func (g grpcHandler) CloseShard(ctx context.Context, request *historyv1.CloseSha
 	return &historyv1.CloseShardResponse{}, proto.FromError(err)
 }
 
+func (g grpcHandler) DescribeShardDistribution(ctx context.Context, request *historyv1.DescribeShardDistributionRequest) (*historyv1.DescribeShardDistributionResponse, error) {
+	response, err := g.h.DescribeShardDistribution(withGRPCTag(ctx), proto.ToHistoryDescribeShardDistributionRequest(request))
+	return proto.FromHistoryDescribeShardDistributionResponse(response), proto.FromError(err)
+}
+
 func (g grpcHandler) DescribeHistoryHost(ctx context.Context, request *historyv1.DescribeHistoryHostRequest) (*historyv1.DescribeHistoryHostResponse, error) {
 	response, err := g.h.DescribeHistoryHost(withGRPCTag(ctx), proto.ToHistoryDescribeHistoryHostRequest(request))
 	return proto.FromHistoryDescribeHistoryHostResponse(response), proto.FromError(err)

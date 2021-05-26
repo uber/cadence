@@ -56,6 +56,7 @@ type (
 	Handler interface {
 		Health(context.Context) (*types.HealthStatus, error)
 		CloseShard(context.Context, *types.CloseShardRequest) error
+		DescribeShardDistribution(context.Context, *types.DescribeShardDistributionRequest) (*types.DescribeShardDistributionResponse, error)
 		DescribeHistoryHost(context.Context, *types.DescribeHistoryHostRequest) (*types.DescribeHistoryHostResponse, error)
 		DescribeMutableState(context.Context, *types.DescribeMutableStateRequest) (*types.DescribeMutableStateResponse, error)
 		DescribeQueue(context.Context, *types.DescribeQueueRequest) (*types.DescribeQueueResponse, error)
@@ -701,6 +702,42 @@ func (h *handlerImpl) StartWorkflowExecution(
 	}
 
 	return response, nil
+}
+
+func (h *handlerImpl) DescribeShardDistribution(
+	ctx context.Context,
+	request *types.DescribeShardDistributionRequest,
+) (resp *types.DescribeShardDistributionResponse, retError error) {
+	numShards := h.config.NumberOfShards
+	resp = &types.DescribeShardDistributionResponse{
+		NumberOfShards: 0,
+		Shards:         make(map[int32]string),
+	}
+	if len(*request.Role) == 0 {
+		*request.Role = "cadence-history"
+	}
+
+	offset := request.PageID * request.PageSize
+	// count all the shards but put only the ones falling into the requested page
+	addShardToResponse := func(shardID int, identity string) {
+		if resp.NumberOfShards >= offset && len(resp.Shards) < int(request.PageSize) {
+			resp.Shards[int32(shardID)] = identity
+		}
+		resp.NumberOfShards++
+	}
+
+	for shardID := 0; shardID < numShards; shardID++ {
+		info, err := h.GetHistoryServiceResolver().Lookup(string(rune(shardID)))
+		if err != nil {
+			addShardToResponse(shardID, "unknown")
+		} else {
+			label, _ := info.Label("serviceName")
+			if *request.Role == label || *request.Role == "all" {
+				addShardToResponse(shardID, fmt.Sprintf("%s,%s", label, info.Identity()))
+			}
+		}
+	}
+	return resp, nil
 }
 
 // DescribeHistoryHost returns information about the internal states of a history host

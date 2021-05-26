@@ -33,6 +33,7 @@ import (
 // Client is the interface exposed by history service client
 type Client interface {
 	CloseShard(context.Context, *types.CloseShardRequest, ...yarpc.CallOption) error
+	DescribeShardDistribution(context.Context, *types.DescribeShardDistributionRequest, ...yarpc.CallOption) (*types.DescribeShardDistributionResponse, error)
 	DescribeHistoryHost(context.Context, *types.DescribeHistoryHostRequest, ...yarpc.CallOption) (*types.DescribeHistoryHostResponse, error)
 	DescribeMutableState(context.Context, *types.DescribeMutableStateRequest, ...yarpc.CallOption) (*types.DescribeMutableStateResponse, error)
 	DescribeQueue(context.Context, *types.DescribeQueueRequest, ...yarpc.CallOption) (*types.DescribeQueueResponse, error)

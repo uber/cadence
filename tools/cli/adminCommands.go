@@ -503,6 +503,27 @@ func AdminCloseShard(c *cli.Context) {
 	}
 }
 
+// AdminDescribeShardDistribution describes shard distribution
+func AdminDescribeShardDistribution(c *cli.Context) {
+	adminClient := cFactory.ServerAdminClient(c)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	req := &types.DescribeShardDistributionRequest{
+		Role:     common.StringPtr(c.String(FlagRole)),
+		PageSize: int32(c.Int(FlagPageSize)),
+		PageID:   int32(c.Int(FlagPageID)),
+	}
+
+	resp, err := adminClient.DescribeShardDistribution(ctx, req)
+	if err != nil {
+		ErrorAndExit("Shard list failed", err)
+	}
+
+	prettyPrintJSONObject(resp)
+}
+
 // AdminDescribeHistoryHost describes history host
 func AdminDescribeHistoryHost(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)

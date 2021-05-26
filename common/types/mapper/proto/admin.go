@@ -85,6 +85,17 @@ func ToAdminDescribeClusterResponse(t *adminv1.DescribeClusterResponse) *types.D
 	}
 }
 
+func FromAdminDescribeShardDistributionRequest(t *types.DescribeShardDistributionRequest) *adminv1.DescribeShardDistributionRequest {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.DescribeShardDistributionRequest{
+		Role:     *t.Role,
+		PageSize: t.PageSize,
+		PageId:   t.PageID,
+	}
+}
+
 func FromAdminDescribeHistoryHostRequest(t *types.DescribeHistoryHostRequest) *adminv1.DescribeHistoryHostRequest {
 	if t == nil {
 		return nil
@@ -107,6 +118,17 @@ func FromAdminDescribeHistoryHostRequest(t *types.DescribeHistoryHostRequest) *a
 	panic("neither oneof field is set for DescribeHistoryHostRequest")
 }
 
+func ToAdminDescribeShardDistributionRequest(t *adminv1.DescribeShardDistributionRequest) *types.DescribeShardDistributionRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.DescribeShardDistributionRequest{
+		Role:     &t.Role,
+		PageSize: t.PageSize,
+		PageID:   t.PageId,
+	}
+}
+
 func ToAdminDescribeHistoryHostRequest(t *adminv1.DescribeHistoryHostRequest) *types.DescribeHistoryHostRequest {
 	if t == nil {
 		return nil
@@ -122,6 +144,16 @@ func ToAdminDescribeHistoryHostRequest(t *adminv1.DescribeHistoryHostRequest) *t
 	panic("neither oneof field is set for DescribeHistoryHostRequest")
 }
 
+func FromAdminDescribeShardDistributionResponse(t *types.DescribeShardDistributionResponse) *adminv1.DescribeShardDistributionResponse {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.DescribeShardDistributionResponse{
+		NumberOfShards: t.NumberOfShards,
+		Shards:         t.Shards,
+	}
+}
+
 func FromAdminDescribeHistoryHostResponse(t *types.DescribeHistoryHostResponse) *adminv1.DescribeHistoryHostResponse {
 	if t == nil {
 		return nil
@@ -132,6 +164,16 @@ func FromAdminDescribeHistoryHostResponse(t *types.DescribeHistoryHostResponse) 
 		DomainCache:           FromDomainCacheInfo(t.DomainCache),
 		ShardControllerStatus: t.ShardControllerStatus,
 		Address:               t.Address,
+	}
+}
+
+func ToAdminDescribeShardDistributionResponse(t *adminv1.DescribeShardDistributionResponse) *types.DescribeShardDistributionResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.DescribeShardDistributionResponse{
+		NumberOfShards: t.NumberOfShards,
+		Shards:         t.Shards,
 	}
 }
 
