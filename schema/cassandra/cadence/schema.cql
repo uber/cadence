@@ -18,7 +18,10 @@ CREATE TYPE shard (
   -- Mapping of cluster to corresponding list of transfer queue processing states
   transfer_processing_queue_states  blob,
   transfer_processing_queue_states_encoding  text,
-  -- Mapping of cluster to corresponding list of transfer queue processing states
+  -- Mapping of cluster to corresponding list of cross-cluster queue processing states
+  cross_cluster_processing_queue_states blob,
+  cross_cluster_processing_queue_states_encoding text,
+  -- Mapping of cluster to corresponding list of timer queue processing states
   timer_processing_queue_states     blob,
   timer_processing_queue_states_encoding     text,
   -- Mapping of (remote) cluster to corresponding replication level (last replicated task_id)
@@ -323,7 +326,7 @@ CREATE TYPE checksum (
 
 CREATE TABLE executions (
   shard_id                       int,
-  type                           int, -- enum RowType { Shard, Execution, TransferTask, TimerTask, ReplicationTask}
+  type                           int, -- enum RowType { Shard, Execution, TransferTask, TimerTask, ReplicationTask, CrossClusterTask}
   domain_id                      uuid,
   workflow_id                    text,
   run_id                         uuid,
@@ -333,6 +336,7 @@ CREATE TABLE executions (
   shard                          frozen<shard>,
   execution                      frozen<workflow_execution>,
   transfer                       frozen<transfer_task>,
+  cross_cluster                  frozen<transfer_task>, -- reuse the transfer_task type
   replication                    frozen<replication_task>,
   timer                          frozen<timer_task>,
   next_event_id                  bigint,  -- This is needed to make conditional updates on session history
