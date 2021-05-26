@@ -320,7 +320,7 @@ type (
 		ListTaskList(ctx context.Context, pageSize int, nextPageToken []byte) (*ListTaskListResult, error)
 		// DeleteTaskList deletes a single tasklist row
 		// Return IsConditionFailedError if the condition doesn't meet, and also the existing row
-		DeleteTaskList(ctx context.Context, filter *TaskListFilter) (*TaskListRow, error)
+		DeleteTaskList(ctx context.Context, filter *TaskListFilter, previousRangeID int64) (*TaskListRow, error)
 		// InsertTasks inserts a batch of tasks
 		// Return IsConditionFailedError if the condition doesn't meet, and also the previous tasklist row
 		InsertTasks(ctx context.Context, tasksToInsert []*TaskRowForInsert, tasklistCondition *TaskListRow) (previous *TaskListRow, err error)
@@ -328,7 +328,7 @@ type (
 		SelectTasks(ctx context.Context, filter *TasksFilter) ([]*TaskRow, error)
 		// DeleteTask delete a single task
 		DeleteTask(ctx context.Context, row *TaskRowPK) error
-		// DeleteTask delete a batch tasks that taskIDs less than or equal to the row
+		// DeleteTask delete a batch tasks that taskIDs less than the row(exclusive)
 		// If TTL is not implemented, then should also return the number of rows deleted, otherwise persistence.UnknownNumRowsAffected
 		RangeDeleteTasks(ctx context.Context, maxTaskID *TaskRowPK) (rowsDeleted int, err error)
 	}
@@ -356,6 +356,7 @@ type (
 		WorkflowID  string
 		RunID       string
 		ScheduledID int64
+		CreatedTime time.Time
 	}
 
 	TaskRowPK struct {

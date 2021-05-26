@@ -92,4 +92,5 @@ const (
 	emptyInitiatedID       = int64(-7)
 
 	stickyTaskListTTL = int32(24 * time.Hour / time.Second) // if sticky task_list stopped being updated, remove it in one day
+	maxCassandraTTL   = int64(157680000)
 )
