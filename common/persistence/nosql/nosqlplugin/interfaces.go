@@ -40,8 +40,9 @@ type (
 	// tableCRUD defines the API for interacting with the database tables
 	// NOTE 1: All SELECT interfaces require strong consistency (eventual consistency will not work) unless specify in the method.
 	//
-	// NOTE 2: About schema: only the columns that need to be partition key, range key or index key are considered 'significant',
-	// which required to be in the schema.  All other non 'significant' columns are opaque for implementation.
+	// NOTE 2: About schema: only the columns that need to be used directly in queries are considered 'significant',
+	// including partition key, range key or index key and conditional columns, are required to be in the schema.
+	// All other non 'significant' columns are opaque for implementation.
 	// Therefore, it's recommended to use a data blob to store all the other columns, so that adding new
 	// column will not require schema changes. This approach has been proved very successful in MySQL/Postgres implementation of SQL interfaces.
 	// Cassandra implementation cannot do it due to backward-compatibility. Any other NoSQL implementation should use datablob for non-significant columns.
@@ -50,6 +51,7 @@ type (
 		historyEventsCRUD
 		messageQueueCRUD
 		domainCRUD
+		shardCRUD
 	}
 
 	// NoSQLErrorChecker checks for common nosql errors
@@ -69,6 +71,7 @@ type (
 	 * historyEventsCRUD is for History events storage system
 	 * Recommendation: use two tables: history_tree for branch records and history_node for node records
 	 * if a single update query can operate on two tables.
+	 *
 	 * Significant columns:
 	 * history_tree partition key: (shardID, treeID), range key: (branchID)
 	 * history_node partition key: (shardID, treeID), range key: (branchID, nodeID ASC, txnID DESC)
@@ -96,9 +99,10 @@ type (
 	 * messageQueueCRUD is for the message queue storage system
 	 *
 	 * Recommendation: use two tables(queue_message,and queue_metadata) to implement this interface
+	 *
 	 * Significant columns:
 	 * queue_message partition key: (queueType), range key: (messageID)
-	 * queue_metadata partition key: (queueType), range key: N/A
+	 * queue_metadata partition key: (queueType), range key: N/A, query condition column(version)
 	 */
 	messageQueueCRUD interface {
 		//Insert message into queue, return error if failed or already exists
@@ -132,15 +136,18 @@ type (
 	/***
 	* domainCRUD is for domain + domain metadata storage system
 	*
-	* Recommendation: Use one table to implement
+	* Recommendation: two tables(domain, domain_metadata) to implement if conditional updates on two tables is supported
+	*
 	* Significant columns:
 	* domain: partition key( a constant value), range key(domainName), local secondary index(domainID)
+	* domain_metadata: partition key( a constant value), range key(N/A), query condition column(notificationVersion)
 	*
 	* Note 1: About Cassandra's implementation: Because of historical reasons, Cassandra uses two table,
 	* domains and domains_by_name_v2. Therefore, Cassandra implementation lost the atomicity causing some edge cases,
 	* and the implementation is more complicated than it should be.
 	*
-	* Note 2: About the special record as "domain metadata". Right now it is an integer number as notification version.
+	* Note 2: Cassandra doesn't support conditional updates on multiple tables. Hence the domain_metadata table is implemented
+	* as a special record as "domain metadata". It is an integer number as notification version.
 	* The main purpose of it is to notify clusters that there is some changes in domains, so domain cache needs to refresh.
 	* It always increase by one, whenever a domain is updated or inserted.
 	* Updating this failover metadata with domain insert/update needs to be atomic.
@@ -163,6 +170,50 @@ type (
 		DeleteDomain(ctx context.Context, domainID *string, domainName *string) error
 		// right now domain metadata is just an integer as notification version
 		SelectDomainMetadata(ctx context.Context) (int64, error)
+	}
+
+	/**
+	* shardCRUD is for shard storage of workflow execution.
+
+	* Recommendation: use one table if database support batch conditional update on multiple tables, otherwise combine with workflowCRUD (likeCassandra)
+	*
+	* Significant columns:
+	* domain: partition key(shardID), range key(N/A), local secondary index(domainID), query condition column(rangeID)
+	*
+	* Note 1: shard will be required to run conditional update with workflowCRUD. So in some nosql database like Cassandra,
+	* shardCRUD and workflowCRUD must be implemented within the same table. Because Cassandra only allows LightWeight transaction
+	* executed within a single table.
+	* Note 2: unlike Cassandra, most NoSQL databases don't return the previous rows when conditional write fails. In this case,
+	* an extra read query is needed to get the previous row.
+	 */
+	shardCRUD interface {
+		// InsertShard creates a new shard.
+		// Return error is there is any thing wrong
+		// When error IsConditionFailedError, also return the row that doesn't meet the condition
+		InsertShard(ctx context.Context, row *ShardRow) (previous *ConflictedShardRow, err error)
+		// SelectShard gets a shard, rangeID is the current rangeID in shard row
+		SelectShard(ctx context.Context, shardID int, currentClusterName string) (rangeID int64, shard *ShardRow, err error)
+		// UpdateRangeID updates the rangeID
+		// Return error is there is any thing wrong
+		// When error IsConditionFailedError, also return the row that doesn't meet the condition
+		UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (previous *ConflictedShardRow, err error)
+		// UpdateShard updates a shard
+		// Return error is there is any thing wrong
+		// When error IsConditionFailedError, also return the row that doesn't meet the condition
+		UpdateShard(ctx context.Context, row *ShardRow, previousRangeID int64) (previous *ConflictedShardRow, err error)
+	}
+
+	// For now ShardRow is the same as persistence.InternalShardInfo
+	// Separate them later when there is a need.
+	ShardRow = persistence.InternalShardInfo
+
+	// ConflictedShardRow contains the partial information about a shard returned when a conditional write fails
+	ConflictedShardRow struct {
+		ShardID int
+		// PreviousRangeID is the condition of previous change that used for conditional update
+		PreviousRangeID int64
+		// optional detailed information for logging purpose
+		Details string
 	}
 
 	// DomainRow defines the row struct for queue message

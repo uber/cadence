@@ -32,15 +32,13 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/cassandra"
-	"github.com/uber/cadence/common/quotas"
 )
 
-// Loader loads timer task information
-type Loader interface {
+// LoadCloser loads timer task information
+type LoadCloser interface {
 	Load() []*persistence.TimerTaskInfo
+	Close()
 }
 
 // Printer prints timer task information
@@ -48,21 +46,22 @@ type Printer interface {
 	Print(timers []*persistence.TimerTaskInfo) error
 }
 
-// Reporter wraps Loader, Printer and a filter on time task type and domainID
+// Reporter wraps LoadCloser, Printer and a filter on time task type and domainID
 type Reporter struct {
 	domainID   string
 	timerTypes []int
-	loader     Loader
+	loader     LoadCloser
 	printer    Printer
 	timeFormat string
 }
 
-type cassandraLoader struct {
-	ctx *cli.Context
+type dbLoadCloser struct {
+	ctx              *cli.Context
+	executionManager persistence.ExecutionManager
 }
 
-type fileLoader struct {
-	ctx *cli.Context
+type fileLoadCloser struct {
+	file *os.File
 }
 
 type histogramPrinter struct {
@@ -74,22 +73,30 @@ type jsonPrinter struct {
 	ctx *cli.Context
 }
 
-// NewCassLoader creates a new Loader to load timer task information from cassandra
-func NewCassLoader(c *cli.Context) Loader {
-	return &cassandraLoader{
-		ctx: c,
+// NewDBLoadCloser creates a new LoadCloser to load timer task information from database
+func NewDBLoadCloser(c *cli.Context) LoadCloser {
+	rps := c.Int(FlagRPS)
+	shardID := getRequiredIntOption(c, FlagShardID)
+	executionManager := initializeExecutionStore(c, shardID, rps)
+	return &dbLoadCloser{
+		ctx:              c,
+		executionManager: executionManager,
 	}
 }
 
-// NewFileLoader creates a new Loader to load timer task information from file
-func NewFileLoader(c *cli.Context) Loader {
-	return &fileLoader{
-		ctx: c,
+// NewFileLoadCloser creates a new LoadCloser to load timer task information from file
+func NewFileLoadCloser(c *cli.Context) LoadCloser {
+	file, err := os.Open(c.String(FlagInputFile))
+	if err != nil {
+		ErrorAndExit("cannot open file", err)
+	}
+	return &fileLoadCloser{
+		file: file,
 	}
 }
 
 // NewReporter creates a new Reporter
-func NewReporter(domain string, timerTypes []int, loader Loader, printer Printer) *Reporter {
+func NewReporter(domain string, timerTypes []int, loader LoadCloser, printer Printer) *Reporter {
 	return &Reporter{
 		timerTypes: timerTypes,
 		domainID:   domain,
@@ -152,12 +159,13 @@ func AdminTimers(c *cli.Context) {
 	}
 
 	// setup loader
-	var loader Loader
+	var loader LoadCloser
 	if !c.IsSet(FlagInputFile) {
-		loader = NewCassLoader(c)
+		loader = NewDBLoadCloser(c)
 	} else {
-		loader = NewFileLoader(c)
+		loader = NewFileLoadCloser(c)
 	}
+	defer loader.Close()
 
 	// setup printer
 	var printer Printer
@@ -208,12 +216,10 @@ func (jp *jsonPrinter) Print(timers []*persistence.TimerTaskInfo) error {
 	return nil
 }
 
-func (cl *cassandraLoader) Load() []*persistence.TimerTaskInfo {
-	rps := cl.ctx.Int(FlagRPS)
+func (cl *dbLoadCloser) Load() []*persistence.TimerTaskInfo {
 	batchSize := cl.ctx.Int(FlagBatchSize)
 	startDate := cl.ctx.String(FlagStartDate)
 	endDate := cl.ctx.String(FlagEndDate)
-	shardID := getRequiredIntOption(cl.ctx, FlagShardID)
 
 	st, err := parseSingleTs(startDate)
 	if err != nil {
@@ -223,23 +229,6 @@ func (cl *cassandraLoader) Load() []*persistence.TimerTaskInfo {
 	if err != nil {
 		ErrorAndExit("wrong date format for "+FlagEndDate, err)
 	}
-
-	client, session := connectToCassandra(cl.ctx)
-	defer session.Close()
-
-	limiter := quotas.NewSimpleRateLimiter(rps)
-	logger := loggerimpl.NewNopLogger()
-
-	execStore, err := cassandra.NewWorkflowExecutionPersistence(shardID, client, session, logger)
-	if err != nil {
-		ErrorAndExit("cannot get execution store", err)
-	}
-
-	ratelimitedClient := persistence.NewWorkflowExecutionPersistenceRateLimitedClient(
-		persistence.NewExecutionManagerImpl(execStore, logger),
-		limiter,
-		logger,
-	)
 
 	var timers []*persistence.TimerTaskInfo
 
@@ -261,7 +250,7 @@ func (cl *cassandraLoader) Load() []*persistence.TimerTaskInfo {
 			defer cancel()
 
 			var err error
-			resp, err = ratelimitedClient.GetTimerIndexTasks(ctx, &req)
+			resp, err = cl.executionManager.GetTimerIndexTasks(ctx, &req)
 			return err
 		}
 
@@ -281,13 +270,15 @@ func (cl *cassandraLoader) Load() []*persistence.TimerTaskInfo {
 	return timers
 }
 
-func (fl *fileLoader) Load() []*persistence.TimerTaskInfo {
-	file, err := os.Open(fl.ctx.String(FlagInputFile))
-	if err != nil {
-		ErrorAndExit("cannot open file", err)
+func (cl *dbLoadCloser) Close() {
+	if cl.executionManager != nil {
+		cl.executionManager.Close()
 	}
+}
+
+func (fl *fileLoadCloser) Load() []*persistence.TimerTaskInfo {
 	var data []*persistence.TimerTaskInfo
-	dec := json.NewDecoder(file)
+	dec := json.NewDecoder(fl.file)
 
 	for {
 		var timer persistence.TimerTaskInfo
@@ -299,6 +290,12 @@ func (fl *fileLoader) Load() []*persistence.TimerTaskInfo {
 		data = append(data, &timer)
 	}
 	return data
+}
+
+func (fl *fileLoadCloser) Close() {
+	if fl.file != nil {
+		fl.file.Close()
+	}
 }
 
 func (hp *histogramPrinter) Print(timers []*persistence.TimerTaskInfo) error {
