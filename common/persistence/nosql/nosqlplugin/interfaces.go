@@ -204,6 +204,78 @@ type (
 		UpdateShard(ctx context.Context, row *ShardRow, previousRangeID int64) (previous *ConflictedShardRow, err error)
 	}
 
+	/**
+	* visibilityCRUD is for visibility storage
+	*
+	* Recommendation: use one table with multiple indexes
+	*
+	* Significant columns:
+	* domain: partition key(domainID), range key(workflowID, runID),
+	*         local secondary index #1(startTime),
+	*         local secondary index #2(closedTime),
+	*         local secondary index #3(workflowType, startTime),
+	*         local secondary index #4(workflowType, closedTime),
+	*         local secondary index #5(workflowID, startTime),
+	*         local secondary index #6(workflowID, closedTime),
+	*         local secondary index #7(closeStatus, closedTime),
+	*
+	* NOTE 1: Cassandra implementation of visibility uses three tables: open_executions, closed_executions and closed_executions_v2,
+	* because Cassandra doesn't support cross-partition indexing.
+	* Records in open_executions and closed_executions are clustered by start_time. Records in  closed_executions_v2 are by close_time.
+	* This optimizes the performance, but introduce a lot of complexity.
+	* In some other databases, this may be be necessary. Please refer to MySQL/Postgres implementation which uses only
+	* one table with multiple indexes.
+	*
+	* NOTE 2: TTL(time to live records) is for auto-deleting expired records in visibility. For databases that don't support TTL,
+	* please implement DeleteVisibility method. If TTL is supported, then DeleteVisibility can be a noop.
+	 */
+	visibilityCRUD interface {
+		InsertVisibility(ctx context.Context, ttlSeconds int64, row *VisibilityRowForWrite) error
+		UpdateVisibility(ctx context.Context, ttlSeconds int64, row *VisibilityRowForWrite) error
+		SelectVisibility(ctx context.Context, filter *VisibilityFilter) (*SelectVisibilityResponse, error)
+		DeleteVisibility(ctx context.Context, domainID, workflowID, runID string) error
+		// TODO deprecated this in the future in favor of SelectVisibility
+		SelectOneClosedWorkflow(ctx context.Context, domainID, workflowID, runID string) (*VisibilityRowForRead, error)
+	}
+
+	VisibilityRowForWrite struct {
+		DomainID         string
+		RunID            string
+		WorkflowTypeName string
+		WorkflowID       string
+		StartTime        time.Time
+		ExecutionTime    time.Time
+		CloseStatus      int32
+		CloseTime        time.Time
+		HistoryLength    int64
+		Memo             []byte
+		Encoding         string
+		TaskList         string
+		IsCron           bool
+	}
+
+	// TODO unify with VisibilityRowForWrite in the future for consistency
+	VisibilityRowForRead = persistence.InternalVisibilityWorkflowExecutionInfo
+
+	SelectVisibilityResponse struct {
+		Executions    []*VisibilityRowForRead
+		NextPageToken []byte
+	}
+
+	// VisibilityFilter contains the column names within executions_visibility table that
+	// can be used to filter results through a WHERE clause
+	VisibilityFilter struct {
+		ListRequest  persistence.InternalListWorkflowExecutionsRequest
+		FilterType   VisibilityFilterType
+		SortType     VisibilitySortType
+		WorkflowType string
+		WorkflowID   string
+		CloseStatus  int32
+	}
+
+	VisibilityFilterType int
+	VisibilitySortType   int
+
 	// For now ShardRow is the same as persistence.InternalShardInfo
 	// Separate them later when there is a need.
 	ShardRow = persistence.InternalShardInfo
@@ -317,4 +389,20 @@ type (
 		TreeID   string
 		BranchID *string
 	}
+)
+
+const (
+	// Sorted by StartTime
+	AllOpen VisibilityFilterType = iota
+	AllClosed
+	OpenByWorkflowType
+	ClosedByWorkflowType
+	OpenByWorkflowID
+	ClosedByWorkflowID
+	ClosedByClosedStatus
+)
+
+const (
+	SortByStartTime VisibilitySortType = iota
+	SortByClosedTime
 )
