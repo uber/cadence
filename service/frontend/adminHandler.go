@@ -356,7 +356,7 @@ func (adh *adminHandlerImpl) DescribeQueue(
 	return adh.GetHistoryClient().DescribeQueue(ctx, request)
 }
 
-// DescribeHistoryHost returns information about the internal states of a history host
+// DescribeShardDistribution returns information about history shard distribution
 func (adh *adminHandlerImpl) DescribeShardDistribution(
 	ctx context.Context,
 	request *types.DescribeShardDistributionRequest,

@@ -26,9 +26,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"os"
 	"strconv"
 	"time"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -520,7 +522,39 @@ func AdminDescribeShardDistribution(c *cli.Context) {
 		ErrorAndExit("Shard list failed", err)
 	}
 
-	prettyPrintJSONObject(resp)
+	fmt.Printf("Total Number of Shards: %d \n", resp.NumberOfShards)
+	fmt.Printf("Number of Shards Returned: %d \n", len(resp.Shards))
+
+	if len(resp.Shards) == 0 {
+		return
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetBorder(false)
+	table.SetColumnSeparator("|")
+	header := []string{"ShardID", "Identity"}
+	headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue}
+	table.SetHeader(header)
+	table.SetHeaderColor(headerColor...)
+	table.SetHeaderLine(false)
+
+	OUTPUT_PAGE_SIZE := 10
+	outputPageSize := OUTPUT_PAGE_SIZE
+	for shardID, identity := range resp.Shards {
+		if outputPageSize == 0 {
+			table.Render()
+			table.ClearRows()
+			if !showNextPage() {
+				break
+			}
+			outputPageSize = OUTPUT_PAGE_SIZE
+		}
+		table.Append([]string{strconv.Itoa(int(shardID)), identity})
+		outputPageSize--
+	}
+	// output the remaining rows
+	table.Render()
+	table.ClearRows()
 }
 
 // AdminDescribeHistoryHost describes history host
