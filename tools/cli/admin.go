@@ -144,11 +144,6 @@ func newAdminShardManagementCommands() []cli.Command {
 			Aliases: []string{"l"},
 			Usage:   "List shard distribution",
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagRole,
-					Value: "cadence-history",
-					Usage: "Role of the shard",
-				},
 				cli.IntFlag{
 					Name:  FlagPageSize,
 					Value: 100,

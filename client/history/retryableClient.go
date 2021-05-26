@@ -67,23 +67,6 @@ func (c *retryableClient) StartWorkflowExecution(
 	return resp, err
 }
 
-func (c *retryableClient) DescribeShardDistribution(
-	ctx context.Context,
-	request *types.DescribeShardDistributionRequest,
-	opts ...yarpc.CallOption,
-) (*types.DescribeShardDistributionResponse, error) {
-
-	var resp *types.DescribeShardDistributionResponse
-	op := func() error {
-		var err error
-		resp, err = c.client.DescribeShardDistribution(ctx, request, opts...)
-		return err
-	}
-
-	err := backoff.Retry(op, c.policy, c.isRetryable)
-	return resp, err
-}
-
 func (c *retryableClient) DescribeHistoryHost(
 	ctx context.Context,
 	request *types.DescribeHistoryHostRequest,

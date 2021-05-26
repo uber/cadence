@@ -47,17 +47,6 @@ func ToHistoryCloseShardRequest(t *historyv1.CloseShardRequest) *types.CloseShar
 	}
 }
 
-func FromHistoryDescribeShardDistributionRequest(t *types.DescribeShardDistributionRequest) *historyv1.DescribeShardDistributionRequest {
-	if t == nil {
-		return nil
-	}
-	return &historyv1.DescribeShardDistributionRequest{
-		Role:     *t.Role,
-		PageSize: t.PageSize,
-		PageId:   t.PageID,
-	}
-}
-
 func FromHistoryDescribeHistoryHostRequest(t *types.DescribeHistoryHostRequest) *historyv1.DescribeHistoryHostRequest {
 	if t == nil {
 		return nil
@@ -65,32 +54,11 @@ func FromHistoryDescribeHistoryHostRequest(t *types.DescribeHistoryHostRequest) 
 	return &historyv1.DescribeHistoryHostRequest{}
 }
 
-func ToHistoryDescribeShardDistributionRequest(t *historyv1.DescribeShardDistributionRequest) *types.DescribeShardDistributionRequest {
-	if t == nil {
-		return nil
-	}
-	return &types.DescribeShardDistributionRequest{
-		Role:     &t.Role,
-		PageSize: t.PageSize,
-		PageID:   t.PageId,
-	}
-}
-
 func ToHistoryDescribeHistoryHostRequest(t *historyv1.DescribeHistoryHostRequest) *types.DescribeHistoryHostRequest {
 	if t == nil {
 		return nil
 	}
 	return &types.DescribeHistoryHostRequest{}
-}
-
-func FromHistoryDescribeShardDistributionResponse(t *types.DescribeShardDistributionResponse) *historyv1.DescribeShardDistributionResponse {
-	if t == nil {
-		return nil
-	}
-	return &historyv1.DescribeShardDistributionResponse{
-		NumberOfShards: t.NumberOfShards,
-		Shards:         t.Shards,
-	}
 }
 
 func FromHistoryDescribeHistoryHostResponse(t *types.DescribeHistoryHostResponse) *historyv1.DescribeHistoryHostResponse {
@@ -103,16 +71,6 @@ func FromHistoryDescribeHistoryHostResponse(t *types.DescribeHistoryHostResponse
 		DomainCache:           FromDomainCacheInfo(t.DomainCache),
 		ShardControllerStatus: t.ShardControllerStatus,
 		Address:               t.Address,
-	}
-}
-
-func ToHistoryDescribeShardDistributionResponse(t *historyv1.DescribeShardDistributionResponse) *types.DescribeShardDistributionResponse {
-	if t == nil {
-		return nil
-	}
-	return &types.DescribeShardDistributionResponse{
-		NumberOfShards: t.NumberOfShards,
-		Shards:         t.Shards,
 	}
 }
 

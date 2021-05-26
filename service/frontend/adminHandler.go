@@ -366,7 +366,23 @@ func (adh *adminHandlerImpl) DescribeShardDistribution(
 	_, sw := adh.startRequestProfile(metrics.AdminDescribeShardDistributionScope)
 	defer sw.Stop()
 
-	return adh.GetHistoryClient().DescribeShardDistribution(ctx, request)
+	numShards := adh.config.NumHistoryShards
+	resp = &types.DescribeShardDistributionResponse{
+		NumberOfShards: int32(numShards),
+		Shards:         make(map[int32]string),
+	}
+
+	offset := int(request.PageID * request.PageSize)
+	nextPageStart := offset + int(request.PageSize)
+	for shardID := offset; shardID < numShards && shardID < nextPageStart; shardID++ {
+		info, err := adh.GetHistoryServiceResolver().Lookup(string(rune(shardID)))
+		if err != nil {
+			resp.Shards[int32(shardID)] = "unknown"
+		} else {
+			resp.Shards[int32(shardID)] = info.Identity()
+		}
+	}
+	return resp, nil
 }
 
 // DescribeHistoryHost returns information about the internal states of a history host

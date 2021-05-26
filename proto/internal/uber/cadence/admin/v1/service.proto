@@ -117,9 +117,8 @@ message DescribeHistoryHostRequest {
 }
 
 message DescribeShardDistributionRequest {
-  string role = 1;
-  int32 page_size = 2;
-  int32 page_id = 3;
+  int32 page_size = 1;
+  int32 page_id = 2;
 }
 
 message DescribeShardDistributionResponse {

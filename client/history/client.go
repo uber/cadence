@@ -139,37 +139,6 @@ func (c *clientImpl) PollMutableState(
 	return response, nil
 }
 
-func (c *clientImpl) DescribeShardDistribution(
-	ctx context.Context,
-	request *types.DescribeShardDistributionRequest,
-	opts ...yarpc.CallOption,
-) (*types.DescribeShardDistributionResponse, error) {
-
-	var err error
-	var client Client
-
-	// Since this request isn't tied to a workflow, we are using shardID = 0
-	client, err = c.getClientForShardID(0)
-	if err != nil {
-		return nil, err
-	}
-
-	opts = common.AggregateYarpcOptions(ctx, opts...)
-	var response *types.DescribeShardDistributionResponse
-	op := func(ctx context.Context, client Client) error {
-		var err error
-		ctx, cancel := c.createContext(ctx)
-		defer cancel()
-		response, err = client.DescribeShardDistribution(ctx, request, opts...)
-		return err
-	}
-	err = c.executeWithRedirect(ctx, client, op)
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
-}
-
 func (c *clientImpl) DescribeHistoryHost(
 	ctx context.Context,
 	request *types.DescribeHistoryHostRequest,

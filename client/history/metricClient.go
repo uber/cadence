@@ -62,24 +62,6 @@ func (c *metricClient) StartWorkflowExecution(
 	return resp, err
 }
 
-func (c *metricClient) DescribeShardDistribution(
-	context context.Context,
-	request *types.DescribeShardDistributionRequest,
-	opts ...yarpc.CallOption,
-) (*types.DescribeShardDistributionResponse, error) {
-	c.metricsClient.IncCounter(metrics.HistoryClientDescribeShardDistributionScope, metrics.CadenceClientRequests)
-
-	sw := c.metricsClient.StartTimer(metrics.HistoryClientDescribeShardDistributionScope, metrics.CadenceClientLatency)
-	resp, err := c.client.DescribeShardDistribution(context, request, opts...)
-	sw.Stop()
-
-	if err != nil {
-		c.metricsClient.IncCounter(metrics.HistoryClientDescribeShardDistributionScope, metrics.CadenceClientFailures)
-	}
-
-	return resp, err
-}
-
 func (c *metricClient) DescribeHistoryHost(
 	context context.Context,
 	request *types.DescribeHistoryHostRequest,

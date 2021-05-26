@@ -46,7 +46,6 @@ const (
 	FlagRangeID                           = "range_id"
 	FlagRangeIDWithAlias                  = FlagRangeID + ", rid"
 	FlagWorkflowID                        = "workflow_id"
-	FlagRole                              = "role"
 	FlagWorkflowIDWithAlias               = FlagWorkflowID + ", wid, w"
 	FlagRunID                             = "run_id"
 	FlagTreeID                            = "tree_id"

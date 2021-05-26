@@ -292,8 +292,6 @@ const (
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientDescribeHistoryHostScope tracks RPC calls to history service
 	HistoryClientDescribeHistoryHostScope
-	// HistoryClientDescribeShardDistributionScope tracks RPC calls to history service
-	HistoryClientDescribeShardDistributionScope
 	// HistoryClientRemoveTaskScope tracks RPC calls to history service
 	HistoryClientRemoveTaskScope
 	// HistoryClientCloseShardScope tracks RPC calls to history service
@@ -1194,7 +1192,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 
 		HistoryClientStartWorkflowExecutionScope:              {operation: "HistoryClientStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientDescribeHistoryHostScope:                 {operation: "HistoryClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientDescribeShardDistributionScope:           {operation: "HistoryClientDescribeShardDistribution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientRemoveTaskScope:                          {operation: "HistoryClientRemoveTask", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientCloseShardScope:                          {operation: "HistoryClientCloseShard", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientResetQueueScope:                          {operation: "HistoryClientResetQueue", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},

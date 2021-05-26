@@ -43,11 +43,6 @@ func (g grpcClient) CloseShard(ctx context.Context, request *types.CloseShardReq
 	return proto.ToError(err)
 }
 
-func (g grpcClient) DescribeShardDistribution(ctx context.Context, request *types.DescribeShardDistributionRequest, opts ...yarpc.CallOption) (*types.DescribeShardDistributionResponse, error) {
-	response, err := g.c.DescribeShardDistribution(ctx, proto.FromHistoryDescribeShardDistributionRequest(request), opts...)
-	return proto.ToHistoryDescribeShardDistributionResponse(response), proto.ToError(err)
-}
-
 func (g grpcClient) DescribeHistoryHost(ctx context.Context, request *types.DescribeHistoryHostRequest, opts ...yarpc.CallOption) (*types.DescribeHistoryHostResponse, error) {
 	response, err := g.c.DescribeHistoryHost(ctx, proto.FromHistoryDescribeHistoryHostRequest(request), opts...)
 	return proto.ToHistoryDescribeHistoryHostResponse(response), proto.ToError(err)

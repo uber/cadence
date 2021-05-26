@@ -65,12 +65,6 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.DescribeQueueResponse, error)
 
-	DescribeShardDistribution(
-		ctx context.Context,
-		Request *shared.DescribeShardDistributionRequest,
-		opts ...yarpc.CallOption,
-	) (*shared.DescribeShardDistributionResponse, error)
-
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		DescribeRequest *history.DescribeWorkflowExecutionRequest,
@@ -395,29 +389,6 @@ func (c client) DescribeQueue(
 	}
 
 	success, err = history.HistoryService_DescribeQueue_Helper.UnwrapResponse(&result)
-	return
-}
-
-func (c client) DescribeShardDistribution(
-	ctx context.Context,
-	_Request *shared.DescribeShardDistributionRequest,
-	opts ...yarpc.CallOption,
-) (success *shared.DescribeShardDistributionResponse, err error) {
-
-	args := history.HistoryService_DescribeShardDistribution_Helper.Args(_Request)
-
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
-
-	var result history.HistoryService_DescribeShardDistribution_Result
-	if err = result.FromWire(body); err != nil {
-		return
-	}
-
-	success, err = history.HistoryService_DescribeShardDistribution_Helper.UnwrapResponse(&result)
 	return
 }
 

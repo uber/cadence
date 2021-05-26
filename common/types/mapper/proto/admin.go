@@ -90,7 +90,6 @@ func FromAdminDescribeShardDistributionRequest(t *types.DescribeShardDistributio
 		return nil
 	}
 	return &adminv1.DescribeShardDistributionRequest{
-		Role:     *t.Role,
 		PageSize: t.PageSize,
 		PageId:   t.PageID,
 	}
@@ -123,7 +122,6 @@ func ToAdminDescribeShardDistributionRequest(t *adminv1.DescribeShardDistributio
 		return nil
 	}
 	return &types.DescribeShardDistributionRequest{
-		Role:     &t.Role,
 		PageSize: t.PageSize,
 		PageID:   t.PageId,
 	}

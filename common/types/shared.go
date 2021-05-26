@@ -2352,9 +2352,8 @@ type DescribeHistoryHostRequest struct {
 
 // DescribeShardDistributionRequest is an internal type (TBD...)
 type DescribeShardDistributionRequest struct {
-	Role     *string `json:"role,omitempty"`
-	PageSize int32   `json:"pageSize,omitempty"`
-	PageID   int32   `json:"pageID,omitempty"`
+	PageSize int32 `json:"pageSize,omitempty"`
+	PageID   int32 `json:"pageID,omitempty"`
 }
 
 // GetHostAddress is an internal getter (TBD...)

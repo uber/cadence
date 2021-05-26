@@ -60,11 +60,6 @@ type Interface interface {
 		Request *shared.DescribeQueueRequest,
 	) (*shared.DescribeQueueResponse, error)
 
-	DescribeShardDistribution(
-		ctx context.Context,
-		Request *shared.DescribeShardDistributionRequest,
-	) (*shared.DescribeShardDistributionResponse, error)
-
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		DescribeRequest *history.DescribeWorkflowExecutionRequest,
@@ -293,17 +288,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.DescribeQueue),
 				},
 				Signature:    "DescribeQueue(Request *shared.DescribeQueueRequest) (*shared.DescribeQueueResponse)",
-				ThriftModule: history.ThriftModule,
-			},
-
-			thrift.Method{
-				Name: "DescribeShardDistribution",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.DescribeShardDistribution),
-				},
-				Signature:    "DescribeShardDistribution(Request *shared.DescribeShardDistributionRequest) (*shared.DescribeShardDistributionResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -694,7 +678,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 40)
+	procedures := make([]transport.Procedure, 0, 39)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -806,36 +790,6 @@ func (h handler) DescribeQueue(ctx context.Context, body wire.Value) (thrift.Res
 
 	hadError := appErr != nil
 	result, err := history.HistoryService_DescribeQueue_Helper.WrapResponse(success, appErr)
-
-	var response thrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
-		if namer, ok := appErr.(yarpcErrorNamer); ok {
-			response.ApplicationErrorName = namer.YARPCErrorName()
-		}
-		if extractor, ok := appErr.(yarpcErrorCoder); ok {
-			response.ApplicationErrorCode = extractor.YARPCErrorCode()
-		}
-		if appErr != nil {
-			response.ApplicationErrorDetails = appErr.Error()
-		}
-	}
-
-	return response, err
-}
-
-func (h handler) DescribeShardDistribution(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args history.HistoryService_DescribeShardDistribution_Args
-	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
-			"could not decode Thrift request for service 'HistoryService' procedure 'DescribeShardDistribution': %w", err)
-	}
-
-	success, appErr := h.impl.DescribeShardDistribution(ctx, args.Request)
-
-	hadError := appErr != nil
-	result, err := history.HistoryService_DescribeShardDistribution_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {

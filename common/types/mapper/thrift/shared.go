@@ -1550,7 +1550,6 @@ func FromDescribeShardDistributionRequest(t *types.DescribeShardDistributionRequ
 		return nil
 	}
 	return &shared.DescribeShardDistributionRequest{
-		Role:     t.Role,
 		PageSize: &t.PageSize,
 		PageID:   &t.PageID,
 	}
@@ -1574,9 +1573,8 @@ func ToDescribeShardDistributionRequest(t *shared.DescribeShardDistributionReque
 		return nil
 	}
 	return &types.DescribeShardDistributionRequest{
-		Role:     t.Role,
-		PageSize: *t.PageSize,
-		PageID:   *t.PageID,
+		PageSize: t.GetPageSize(),
+		PageID:   t.GetPageID(),
 	}
 }
 

@@ -511,7 +511,6 @@ func AdminDescribeShardDistribution(c *cli.Context) {
 	defer cancel()
 
 	req := &types.DescribeShardDistributionRequest{
-		Role:     common.StringPtr(c.String(FlagRole)),
 		PageSize: int32(c.Int(FlagPageSize)),
 		PageID:   int32(c.Int(FlagPageID)),
 	}
