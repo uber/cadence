@@ -143,6 +143,7 @@ func applyWorkflowMutationBatch(
 		workflowID,
 		runID,
 		workflowMutation.TransferTasks,
+		workflowMutation.CrossClusterTasks,
 		workflowMutation.ReplicationTasks,
 		workflowMutation.TimerTasks,
 	)
@@ -250,6 +251,7 @@ func applyWorkflowSnapshotBatchAsReset(
 		workflowID,
 		runID,
 		workflowSnapshot.TransferTasks,
+		workflowSnapshot.CrossClusterTasks,
 		workflowSnapshot.ReplicationTasks,
 		workflowSnapshot.TimerTasks,
 	)
@@ -353,6 +355,7 @@ func applyWorkflowSnapshotBatchAsNew(
 		workflowID,
 		runID,
 		workflowSnapshot.TransferTasks,
+		workflowSnapshot.CrossClusterTasks,
 		workflowSnapshot.ReplicationTasks,
 		workflowSnapshot.TimerTasks,
 	)
@@ -602,6 +605,7 @@ func applyTasks(
 	workflowID string,
 	runID string,
 	transferTasks []p.Task,
+	crossClusterTasks []p.Task,
 	replicationTasks []p.Task,
 	timerTasks []p.Task,
 ) error {
@@ -616,6 +620,8 @@ func applyTasks(
 	); err != nil {
 		return err
 	}
+
+	// TODO: create cross-cluster tasks
 
 	if err := createReplicationTasks(
 		batch,

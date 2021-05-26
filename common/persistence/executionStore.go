@@ -684,9 +684,10 @@ func (m *executionManagerImpl) SerializeWorkflowMutation(
 		NewBufferedEvents:         serializedNewBufferedEvents,
 		ClearBufferedEvents:       input.ClearBufferedEvents,
 
-		TransferTasks:    input.TransferTasks,
-		ReplicationTasks: input.ReplicationTasks,
-		TimerTasks:       input.TimerTasks,
+		TransferTasks:     input.TransferTasks,
+		CrossClusterTasks: input.CrossClusterTasks,
+		ReplicationTasks:  input.ReplicationTasks,
+		TimerTasks:        input.TimerTasks,
 
 		Condition: input.Condition,
 		Checksum:  input.Checksum,
@@ -741,9 +742,10 @@ func (m *executionManagerImpl) SerializeWorkflowSnapshot(
 		SignalInfos:         input.SignalInfos,
 		SignalRequestedIDs:  input.SignalRequestedIDs,
 
-		TransferTasks:    input.TransferTasks,
-		ReplicationTasks: input.ReplicationTasks,
-		TimerTasks:       input.TimerTasks,
+		TransferTasks:     input.TransferTasks,
+		CrossClusterTasks: input.CrossClusterTasks,
+		ReplicationTasks:  input.ReplicationTasks,
+		TimerTasks:        input.TimerTasks,
 
 		Condition: input.Condition,
 		Checksum:  input.Checksum,
@@ -859,6 +861,28 @@ func (m *executionManagerImpl) RangeCompleteTransferTask(
 	request *RangeCompleteTransferTaskRequest,
 ) error {
 	return m.persistence.RangeCompleteTransferTask(ctx, request)
+}
+
+// Cross-cluster task related methods
+func (m *executionManagerImpl) GetCrossClusterTasks(
+	ctx context.Context,
+	request *GetCrossClusterTasksRequest,
+) (*GetCrossClusterTasksResponse, error) {
+	return m.persistence.GetCrossClusterTasks(ctx, request)
+}
+
+func (m *executionManagerImpl) CompleteCrossClusterTask(
+	ctx context.Context,
+	request *CompleteCrossClusterTaskRequest,
+) error {
+	return m.persistence.CompleteCrossClusterTask(ctx, request)
+}
+
+func (m *executionManagerImpl) RangeCompleteCrossClusterTask(
+	ctx context.Context,
+	request *RangeCompleteCrossClusterTaskRequest,
+) error {
+	return m.persistence.RangeCompleteCrossClusterTask(ctx, request)
 }
 
 // Replication task related methods

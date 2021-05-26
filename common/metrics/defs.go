@@ -166,6 +166,12 @@ const (
 	PersistenceCompleteTransferTaskScope
 	// PersistenceRangeCompleteTransferTaskScope tracks CompleteTransferTasks calls made by service to persistence layer
 	PersistenceRangeCompleteTransferTaskScope
+	// PersistenceGetCrossClusterTasksScope tracks GetCrossClusterTasks calls made by service to persistence layer
+	PersistenceGetCrossClusterTasksScope
+	// PersistenceCompleteCrossClusterTaskScope tracks CompleteCrossClusterTasks calls made by service to persistence layer
+	PersistenceCompleteCrossClusterTaskScope
+	// PersistenceRangeCompleteCrossClusterTaskScope tracks CompleteCrossClusterTasks calls made by service to persistence layer
+	PersistenceRangeCompleteCrossClusterTaskScope
 	// PersistenceGetReplicationTasksScope tracks GetReplicationTasks calls made by service to persistence layer
 	PersistenceGetReplicationTasksScope
 	// PersistenceCompleteReplicationTaskScope tracks CompleteReplicationTasks calls made by service to persistence layer
@@ -1109,6 +1115,9 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetTransferTasksScope:                         {operation: "GetTransferTasks"},
 		PersistenceCompleteTransferTaskScope:                     {operation: "CompleteTransferTask"},
 		PersistenceRangeCompleteTransferTaskScope:                {operation: "RangeCompleteTransferTask"},
+		PersistenceGetCrossClusterTasksScope:                     {operation: "GetCrossClusterTasks"},
+		PersistenceCompleteCrossClusterTaskScope:                 {operation: "GetCrossClusterTasks"},
+		PersistenceRangeCompleteCrossClusterTaskScope:            {operation: "GetCrossClusterTasks"},
 		PersistenceGetReplicationTasksScope:                      {operation: "GetReplicationTasks"},
 		PersistenceCompleteReplicationTaskScope:                  {operation: "CompleteReplicationTask"},
 		PersistenceRangeCompleteReplicationTaskScope:             {operation: "RangeCompleteReplicationTask"},

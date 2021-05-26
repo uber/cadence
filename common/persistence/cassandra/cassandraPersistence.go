@@ -82,6 +82,7 @@ const (
 	// Row Constants for Replication Task DLQ Row. Source cluster name will be used as WorkflowID.
 	rowTypeDLQDomainID = "10000000-6000-f000-f000-000000000000"
 	rowTypeDLQRunID    = "30000000-6000-f000-f000-000000000000"
+	// TODO: add rowType for cross-region tasks
 	// Special TaskId constants
 	rowTypeExecutionTaskID = int64(-10)
 	rowTypeShardTaskID     = int64(-11)
@@ -98,6 +99,7 @@ const (
 	rowTypeTimerTask
 	rowTypeReplicationTask
 	rowTypeDLQ
+	// TODO: add row type
 )
 
 const (
@@ -1771,6 +1773,14 @@ func (d *cassandraPersistence) GetTransferTasks(
 	return response, nil
 }
 
+func (d *cassandraPersistence) GetCrossClusterTasks(
+	ctx context.Context,
+	request *p.GetCrossClusterTasksRequest,
+) (*p.GetCrossClusterTasksResponse, error) {
+	// TODO: Implement GetCrossClusterTasks
+	panic("not implemented")
+}
+
 func (d *cassandraPersistence) GetReplicationTasks(
 	ctx context.Context,
 	request *p.GetReplicationTasksRequest,
@@ -1864,6 +1874,22 @@ func (d *cassandraPersistence) RangeCompleteTransferTask(
 	}
 
 	return nil
+}
+
+func (d *cassandraPersistence) CompleteCrossClusterTask(
+	ctx context.Context,
+	request *p.CompleteCrossClusterTaskRequest,
+) error {
+	// TODO: Implement CompleteCrossClusterTask
+	panic("not implemented")
+}
+
+func (d *cassandraPersistence) RangeCompleteCrossClusterTask(
+	ctx context.Context,
+	request *p.RangeCompleteCrossClusterTaskRequest,
+) error {
+	// TODO: Implement RangeCompleteCrossClusterTask
+	panic("not implemented")
 }
 
 func (d *cassandraPersistence) CompleteReplicationTask(
