@@ -392,7 +392,6 @@ type (
 )
 
 const (
-	// Sorted by StartTime
 	AllOpen VisibilityFilterType = iota
 	AllClosed
 	OpenByWorkflowType
