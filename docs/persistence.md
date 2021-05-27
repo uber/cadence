@@ -100,7 +100,7 @@ persistence:
   numHistoryShards: 1024      -- Number of cadence history shards, this limits the scalability of single cadence cluster
   datastores:                 -- Map of datastore-name -> datastore connection params
     datastore1:
-      cassandra:
+      nosql:
          ...
     datastore2:
       sql:
@@ -121,7 +121,8 @@ persistence:
   ...
   datastores:
     datastore1:
-      cassandra:
+      nosql:
+        pluginName: "cassandra"
         hosts: "127.0.0.1,127.0.0.2"  -- CSV of cassandra hosts to connect to 
         User: "user-name"
         Password: "password"
@@ -157,11 +158,6 @@ persistence:
 
 # Adding support for new database
 
-## For Any Database
-Cadence can only work against a database that supports multi-row single shard transactions. The top level
-persistence API interface can be found [here](https://github.com/uber/cadence/blob/master/common/persistence/dataInterfaces.go).
-Currently this is only implemented with Cassandra. 
-
 ## For SQL Database
 As there are many shared concepts and functionalities in SQL database, we abstracted those common code so that is much easier to implement persistence interfaces with any SQL database. It requires your database supports SQL operations like explicit transaction(with pessimistic locking)
 
@@ -173,3 +169,12 @@ can be found [here](https://github.com/uber/cadence/blob/master/schema/mysql/v57
 
 Any database that supports this interface can be plugged in with cadence server. 
 We have implemented Postgres within the repo, and also here is [**an example**](https://github.com/longquanzheng/cadence-extensions/tree/master/cadence-sqlite) to implement any database externally. 
+
+## For other Non-SQL Database
+For databases that don't support SQL operations like explicit transaction(with pessimistic locking),
+Cadence requires at least supporting:
+ 1. Multi-row single shard conditional write(also called LightWeight transaction by Cassandra terminology)
+ 2. Strong consistency Read/Write operations   
+ 
+This NoSQL persistence API interface can be found [here](https://github.com/uber/cadence/blob/master/common/persistence/nosql/nosqlplugin/interfaces.go).
+Currently this is only implemented with Cassandra. DynamoDB and MongoDB are in progress.  

@@ -82,8 +82,8 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 		DefaultStore:    "default",
 		VisibilityStore: "visibility",
 		DataStores: map[string]config.DataStore{
-			"default":    {Cassandra: &defaultCfg},
-			"visibility": {Cassandra: &visibilityCfg},
+			"default":    {NoSQL: &defaultCfg},
+			"visibility": {NoSQL: &visibilityCfg},
 		},
 		TransactionSizeLimit: dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
 		ErrorInjectionRate:   dynamicconfig.GetFloatPropertyFn(0),
