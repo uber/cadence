@@ -25,6 +25,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -124,10 +125,10 @@ func (s *sqlVisibilityStore) UpsertWorkflowExecution(
 	ctx context.Context,
 	request *p.InternalUpsertWorkflowExecutionRequest,
 ) error {
-	if p.IsNopUpsertWorkflowRequest(request) {
+	if visibility.IsNopUpsertWorkflowRequest(request) {
 		return nil
 	}
-	return p.NewOperationNotSupportErrorForVis()
+	return visibility.NewOperationNotSupportErrorForVis()
 }
 
 func (s *sqlVisibilityStore) ListOpenWorkflowExecutions(
@@ -278,7 +279,7 @@ func (s *sqlVisibilityStore) GetClosedWorkflowExecution(
 
 func (s *sqlVisibilityStore) DeleteWorkflowExecution(
 	ctx context.Context,
-	request *p.VisibilityDeleteWorkflowExecutionRequest,
+	request *visibility.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
 	_, err := s.db.DeleteFromVisibility(ctx, &sqlplugin.VisibilityFilter{
 		DomainID: request.DomainID,
@@ -292,23 +293,23 @@ func (s *sqlVisibilityStore) DeleteWorkflowExecution(
 
 func (s *sqlVisibilityStore) ListWorkflowExecutions(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsByQueryRequest,
+	request *visibility.ListWorkflowExecutionsByQueryRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	return nil, visibility.NewOperationNotSupportErrorForVis()
 }
 
 func (s *sqlVisibilityStore) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsByQueryRequest,
+	request *visibility.ListWorkflowExecutionsByQueryRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	return nil, visibility.NewOperationNotSupportErrorForVis()
 }
 
 func (s *sqlVisibilityStore) CountWorkflowExecutions(
 	ctx context.Context,
-	request *p.CountWorkflowExecutionsRequest,
-) (*p.CountWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	request *visibility.CountWorkflowExecutionsRequest,
+) (*visibility.CountWorkflowExecutionsResponse, error) {
+	return nil, visibility.NewOperationNotSupportErrorForVis()
 }
 
 func (s *sqlVisibilityStore) rowToInfo(row *sqlplugin.VisibilityRow) *p.InternalVisibilityWorkflowExecutionInfo {

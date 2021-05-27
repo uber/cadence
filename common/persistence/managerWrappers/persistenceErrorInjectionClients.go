@@ -18,10 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistence
+package managerWrappers
 
 import (
 	"context"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"math/rand"
 
 	"github.com/uber/cadence/common/errors"
@@ -31,7 +33,7 @@ import (
 
 var (
 	// ErrFakeTimeout is a fake persistence timeout error.
-	ErrFakeTimeout = &TimeoutError{Msg: "Fake Persistence Timeout Error."}
+	ErrFakeTimeout = &persistence.TimeoutError{Msg: "Fake Persistence Timeout Error."}
 )
 
 var (
@@ -49,62 +51,62 @@ const (
 
 type (
 	shardErrorInjectionPersistenceClient struct {
-		persistence ShardManager
+		persistence persistence.ShardManager
 		errorRate   float64
 		logger      log.Logger
 	}
 
 	workflowExecutionErrorInjectionPersistenceClient struct {
-		persistence ExecutionManager
+		persistence persistence.ExecutionManager
 		errorRate   float64
 		logger      log.Logger
 	}
 
 	taskErrorInjectionPersistenceClient struct {
-		persistence TaskManager
+		persistence persistence.TaskManager
 		errorRate   float64
 		logger      log.Logger
 	}
 
 	historyErrorInjectionPersistenceClient struct {
-		persistence HistoryManager
+		persistence persistence.HistoryManager
 		errorRate   float64
 		logger      log.Logger
 	}
 
 	metadataErrorInjectionPersistenceClient struct {
-		persistence DomainManager
+		persistence persistence.DomainManager
 		errorRate   float64
 		logger      log.Logger
 	}
 
 	visibilityErrorInjectionPersistenceClient struct {
-		persistence VisibilityManager
+		persistence visibility.VisibilityManager
 		errorRate   float64
 		logger      log.Logger
 	}
 
 	queueErrorInjectionPersistenceClient struct {
-		persistence QueueManager
+		persistence persistence.QueueManager
 		errorRate   float64
 		logger      log.Logger
 	}
 )
 
-var _ ShardManager = (*shardErrorInjectionPersistenceClient)(nil)
-var _ ExecutionManager = (*workflowExecutionErrorInjectionPersistenceClient)(nil)
-var _ TaskManager = (*taskErrorInjectionPersistenceClient)(nil)
-var _ HistoryManager = (*historyErrorInjectionPersistenceClient)(nil)
-var _ DomainManager = (*metadataErrorInjectionPersistenceClient)(nil)
-var _ VisibilityManager = (*visibilityErrorInjectionPersistenceClient)(nil)
-var _ QueueManager = (*queueErrorInjectionPersistenceClient)(nil)
+var _ persistence.ShardManager = (*shardErrorInjectionPersistenceClient)(nil)
+var _ persistence.ExecutionManager = (*workflowExecutionErrorInjectionPersistenceClient)(nil)
+var _ persistence.TaskManager = (*taskErrorInjectionPersistenceClient)(nil)
+var _ persistence.HistoryManager = (*historyErrorInjectionPersistenceClient)(nil)
+var _ persistence.DomainManager = (*metadataErrorInjectionPersistenceClient)(nil)
+var _ visibility.VisibilityManager = (*visibilityErrorInjectionPersistenceClient)(nil)
+var _ persistence.QueueManager = (*queueErrorInjectionPersistenceClient)(nil)
 
 // NewShardPersistenceErrorInjectionClient creates an error injection client to manage shards
 func NewShardPersistenceErrorInjectionClient(
-	persistence ShardManager,
+	persistence persistence.ShardManager,
 	errorRate float64,
 	logger log.Logger,
-) ShardManager {
+) persistence.ShardManager {
 	return &shardErrorInjectionPersistenceClient{
 		persistence: persistence,
 		errorRate:   errorRate,
@@ -114,10 +116,10 @@ func NewShardPersistenceErrorInjectionClient(
 
 // NewWorkflowExecutionPersistenceErrorInjectionClient creates an error injection client to manage executions
 func NewWorkflowExecutionPersistenceErrorInjectionClient(
-	persistence ExecutionManager,
+	persistence persistence.ExecutionManager,
 	errorRate float64,
 	logger log.Logger,
-) ExecutionManager {
+) persistence.ExecutionManager {
 	return &workflowExecutionErrorInjectionPersistenceClient{
 		persistence: persistence,
 		errorRate:   errorRate,
@@ -127,10 +129,10 @@ func NewWorkflowExecutionPersistenceErrorInjectionClient(
 
 // NewTaskPersistenceErrorInjectionClient creates an error injection client to manage tasks
 func NewTaskPersistenceErrorInjectionClient(
-	persistence TaskManager,
+	persistence persistence.TaskManager,
 	errorRate float64,
 	logger log.Logger,
-) TaskManager {
+) persistence.TaskManager {
 	return &taskErrorInjectionPersistenceClient{
 		persistence: persistence,
 		errorRate:   errorRate,
@@ -140,10 +142,10 @@ func NewTaskPersistenceErrorInjectionClient(
 
 // NewHistoryPersistenceErrorInjectionClient creates an error injection HistoryManager client to manage workflow execution history
 func NewHistoryPersistenceErrorInjectionClient(
-	persistence HistoryManager,
+	persistence persistence.HistoryManager,
 	errorRate float64,
 	logger log.Logger,
-) HistoryManager {
+) persistence.HistoryManager {
 	return &historyErrorInjectionPersistenceClient{
 		persistence: persistence,
 		errorRate:   errorRate,
@@ -153,10 +155,10 @@ func NewHistoryPersistenceErrorInjectionClient(
 
 // NewMetadataPersistenceErrorInjectionClient creates an error injection DomainManager client to manage metadata
 func NewMetadataPersistenceErrorInjectionClient(
-	persistence DomainManager,
+	persistence persistence.DomainManager,
 	errorRate float64,
 	logger log.Logger,
-) DomainManager {
+) persistence.DomainManager {
 	return &metadataErrorInjectionPersistenceClient{
 		persistence: persistence,
 		errorRate:   errorRate,
@@ -166,10 +168,10 @@ func NewMetadataPersistenceErrorInjectionClient(
 
 // NewVisibilityPersistenceErrorInjectionClient creates an error injection client to manage visibility
 func NewVisibilityPersistenceErrorInjectionClient(
-	persistence VisibilityManager,
+	persistence visibility.VisibilityManager,
 	errorRate float64,
 	logger log.Logger,
-) VisibilityManager {
+) visibility.VisibilityManager {
 	return &visibilityErrorInjectionPersistenceClient{
 		persistence: persistence,
 		errorRate:   errorRate,
@@ -179,10 +181,10 @@ func NewVisibilityPersistenceErrorInjectionClient(
 
 // NewQueuePersistenceErrorInjectionClient creates an error injection client to manage queue
 func NewQueuePersistenceErrorInjectionClient(
-	persistence QueueManager,
+	persistence persistence.QueueManager,
 	errorRate float64,
 	logger log.Logger,
-) QueueManager {
+) persistence.QueueManager {
 	return &queueErrorInjectionPersistenceClient{
 		persistence: persistence,
 		errorRate:   errorRate,
@@ -196,7 +198,7 @@ func (p *shardErrorInjectionPersistenceClient) GetName() string {
 
 func (p *shardErrorInjectionPersistenceClient) CreateShard(
 	ctx context.Context,
-	request *CreateShardRequest,
+	request *persistence.CreateShardRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -215,11 +217,11 @@ func (p *shardErrorInjectionPersistenceClient) CreateShard(
 
 func (p *shardErrorInjectionPersistenceClient) GetShard(
 	ctx context.Context,
-	request *GetShardRequest,
-) (*GetShardResponse, error) {
+	request *persistence.GetShardRequest,
+) (*persistence.GetShardResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *GetShardResponse
+	var response *persistence.GetShardResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -235,7 +237,7 @@ func (p *shardErrorInjectionPersistenceClient) GetShard(
 
 func (p *shardErrorInjectionPersistenceClient) UpdateShard(
 	ctx context.Context,
-	request *UpdateShardRequest,
+	request *persistence.UpdateShardRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -266,11 +268,11 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) GetShardID() int {
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) CreateWorkflowExecution(
 	ctx context.Context,
-	request *CreateWorkflowExecutionRequest,
-) (*CreateWorkflowExecutionResponse, error) {
+	request *persistence.CreateWorkflowExecutionRequest,
+) (*persistence.CreateWorkflowExecutionResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *CreateWorkflowExecutionResponse
+	var response *persistence.CreateWorkflowExecutionResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -291,11 +293,11 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) CreateWorkflowExecuti
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) GetWorkflowExecution(
 	ctx context.Context,
-	request *GetWorkflowExecutionRequest,
-) (*GetWorkflowExecutionResponse, error) {
+	request *persistence.GetWorkflowExecutionRequest,
+) (*persistence.GetWorkflowExecutionResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *GetWorkflowExecutionResponse
+	var response *persistence.GetWorkflowExecutionResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -316,11 +318,11 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) GetWorkflowExecution(
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) UpdateWorkflowExecution(
 	ctx context.Context,
-	request *UpdateWorkflowExecutionRequest,
-) (*UpdateWorkflowExecutionResponse, error) {
+	request *persistence.UpdateWorkflowExecutionRequest,
+) (*persistence.UpdateWorkflowExecutionResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *UpdateWorkflowExecutionResponse
+	var response *persistence.UpdateWorkflowExecutionResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -341,11 +343,11 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) UpdateWorkflowExecuti
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) ConflictResolveWorkflowExecution(
 	ctx context.Context,
-	request *ConflictResolveWorkflowExecutionRequest,
-) (*ConflictResolveWorkflowExecutionResponse, error) {
+	request *persistence.ConflictResolveWorkflowExecutionRequest,
+) (*persistence.ConflictResolveWorkflowExecutionResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ConflictResolveWorkflowExecutionResponse
+	var response *persistence.ConflictResolveWorkflowExecutionResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -366,7 +368,7 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) ConflictResolveWorkfl
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) ResetWorkflowExecution(
 	ctx context.Context,
-	request *ResetWorkflowExecutionRequest,
+	request *persistence.ResetWorkflowExecutionRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -390,7 +392,7 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) ResetWorkflowExecutio
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) DeleteWorkflowExecution(
 	ctx context.Context,
-	request *DeleteWorkflowExecutionRequest,
+	request *persistence.DeleteWorkflowExecutionRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -414,7 +416,7 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) DeleteWorkflowExecuti
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) DeleteCurrentWorkflowExecution(
 	ctx context.Context,
-	request *DeleteCurrentWorkflowExecutionRequest,
+	request *persistence.DeleteCurrentWorkflowExecutionRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -438,11 +440,11 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) DeleteCurrentWorkflow
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) GetCurrentExecution(
 	ctx context.Context,
-	request *GetCurrentExecutionRequest,
-) (*GetCurrentExecutionResponse, error) {
+	request *persistence.GetCurrentExecutionRequest,
+) (*persistence.GetCurrentExecutionResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *GetCurrentExecutionResponse
+	var response *persistence.GetCurrentExecutionResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -463,11 +465,11 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) GetCurrentExecution(
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) ListCurrentExecutions(
 	ctx context.Context,
-	request *ListCurrentExecutionsRequest,
-) (*ListCurrentExecutionsResponse, error) {
+	request *persistence.ListCurrentExecutionsRequest,
+) (*persistence.ListCurrentExecutionsResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ListCurrentExecutionsResponse
+	var response *persistence.ListCurrentExecutionsResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -488,11 +490,11 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) ListCurrentExecutions
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) IsWorkflowExecutionExists(
 	ctx context.Context,
-	request *IsWorkflowExecutionExistsRequest,
-) (*IsWorkflowExecutionExistsResponse, error) {
+	request *persistence.IsWorkflowExecutionExistsRequest,
+) (*persistence.IsWorkflowExecutionExistsResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *IsWorkflowExecutionExistsResponse
+	var response *persistence.IsWorkflowExecutionExistsResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -513,11 +515,11 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) IsWorkflowExecutionEx
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) ListConcreteExecutions(
 	ctx context.Context,
-	request *ListConcreteExecutionsRequest,
-) (*ListConcreteExecutionsResponse, error) {
+	request *persistence.ListConcreteExecutionsRequest,
+) (*persistence.ListConcreteExecutionsResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ListConcreteExecutionsResponse
+	var response *persistence.ListConcreteExecutionsResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -538,11 +540,11 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) ListConcreteExecution
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) GetTransferTasks(
 	ctx context.Context,
-	request *GetTransferTasksRequest,
-) (*GetTransferTasksResponse, error) {
+	request *persistence.GetTransferTasksRequest,
+) (*persistence.GetTransferTasksResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *GetTransferTasksResponse
+	var response *persistence.GetTransferTasksResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -563,11 +565,11 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) GetTransferTasks(
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) GetCrossClusterTasks(
 	ctx context.Context,
-	request *GetCrossClusterTasksRequest,
-) (*GetCrossClusterTasksResponse, error) {
+	request *persistence.GetCrossClusterTasksRequest,
+) (*persistence.GetCrossClusterTasksResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *GetCrossClusterTasksResponse
+	var response *persistence.GetCrossClusterTasksResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -588,11 +590,11 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) GetCrossClusterTasks(
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) GetReplicationTasks(
 	ctx context.Context,
-	request *GetReplicationTasksRequest,
-) (*GetReplicationTasksResponse, error) {
+	request *persistence.GetReplicationTasksRequest,
+) (*persistence.GetReplicationTasksResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *GetReplicationTasksResponse
+	var response *persistence.GetReplicationTasksResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -613,7 +615,7 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) GetReplicationTasks(
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) CompleteTransferTask(
 	ctx context.Context,
-	request *CompleteTransferTaskRequest,
+	request *persistence.CompleteTransferTaskRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -637,7 +639,7 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) CompleteTransferTask(
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) RangeCompleteTransferTask(
 	ctx context.Context,
-	request *RangeCompleteTransferTaskRequest,
+	request *persistence.RangeCompleteTransferTaskRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -661,7 +663,7 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) RangeCompleteTransfer
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) CompleteCrossClusterTask(
 	ctx context.Context,
-	request *CompleteCrossClusterTaskRequest,
+	request *persistence.CompleteCrossClusterTaskRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -685,7 +687,7 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) CompleteCrossClusterT
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) RangeCompleteCrossClusterTask(
 	ctx context.Context,
-	request *RangeCompleteCrossClusterTaskRequest,
+	request *persistence.RangeCompleteCrossClusterTaskRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -709,7 +711,7 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) RangeCompleteCrossClu
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) CompleteReplicationTask(
 	ctx context.Context,
-	request *CompleteReplicationTaskRequest,
+	request *persistence.CompleteReplicationTaskRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -733,7 +735,7 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) CompleteReplicationTa
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) RangeCompleteReplicationTask(
 	ctx context.Context,
-	request *RangeCompleteReplicationTaskRequest,
+	request *persistence.RangeCompleteReplicationTaskRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -757,7 +759,7 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) RangeCompleteReplicat
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) PutReplicationTaskToDLQ(
 	ctx context.Context,
-	request *PutReplicationTaskToDLQRequest,
+	request *persistence.PutReplicationTaskToDLQRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -781,11 +783,11 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) PutReplicationTaskToD
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) GetReplicationTasksFromDLQ(
 	ctx context.Context,
-	request *GetReplicationTasksFromDLQRequest,
-) (*GetReplicationTasksFromDLQResponse, error) {
+	request *persistence.GetReplicationTasksFromDLQRequest,
+) (*persistence.GetReplicationTasksFromDLQResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *GetReplicationTasksFromDLQResponse
+	var response *persistence.GetReplicationTasksFromDLQResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -806,11 +808,11 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) GetReplicationTasksFr
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) GetReplicationDLQSize(
 	ctx context.Context,
-	request *GetReplicationDLQSizeRequest,
-) (*GetReplicationDLQSizeResponse, error) {
+	request *persistence.GetReplicationDLQSizeRequest,
+) (*persistence.GetReplicationDLQSizeResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *GetReplicationDLQSizeResponse
+	var response *persistence.GetReplicationDLQSizeResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -831,7 +833,7 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) GetReplicationDLQSize
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) DeleteReplicationTaskFromDLQ(
 	ctx context.Context,
-	request *DeleteReplicationTaskFromDLQRequest,
+	request *persistence.DeleteReplicationTaskFromDLQRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -855,7 +857,7 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) DeleteReplicationTask
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) RangeDeleteReplicationTaskFromDLQ(
 	ctx context.Context,
-	request *RangeDeleteReplicationTaskFromDLQRequest,
+	request *persistence.RangeDeleteReplicationTaskFromDLQRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -879,7 +881,7 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) RangeDeleteReplicatio
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) CreateFailoverMarkerTasks(
 	ctx context.Context,
-	request *CreateFailoverMarkersRequest,
+	request *persistence.CreateFailoverMarkersRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -903,11 +905,11 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) CreateFailoverMarkerT
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) GetTimerIndexTasks(
 	ctx context.Context,
-	request *GetTimerIndexTasksRequest,
-) (*GetTimerIndexTasksResponse, error) {
+	request *persistence.GetTimerIndexTasksRequest,
+) (*persistence.GetTimerIndexTasksResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *GetTimerIndexTasksResponse
+	var response *persistence.GetTimerIndexTasksResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -928,7 +930,7 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) GetTimerIndexTasks(
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) CompleteTimerTask(
 	ctx context.Context,
-	request *CompleteTimerTaskRequest,
+	request *persistence.CompleteTimerTaskRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -952,7 +954,7 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) CompleteTimerTask(
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) RangeCompleteTimerTask(
 	ctx context.Context,
-	request *RangeCompleteTimerTaskRequest,
+	request *persistence.RangeCompleteTimerTaskRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -984,11 +986,11 @@ func (p *taskErrorInjectionPersistenceClient) GetName() string {
 
 func (p *taskErrorInjectionPersistenceClient) CreateTasks(
 	ctx context.Context,
-	request *CreateTasksRequest,
-) (*CreateTasksResponse, error) {
+	request *persistence.CreateTasksRequest,
+) (*persistence.CreateTasksResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *CreateTasksResponse
+	var response *persistence.CreateTasksResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1009,11 +1011,11 @@ func (p *taskErrorInjectionPersistenceClient) CreateTasks(
 
 func (p *taskErrorInjectionPersistenceClient) GetTasks(
 	ctx context.Context,
-	request *GetTasksRequest,
-) (*GetTasksResponse, error) {
+	request *persistence.GetTasksRequest,
+) (*persistence.GetTasksResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *GetTasksResponse
+	var response *persistence.GetTasksResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1034,7 +1036,7 @@ func (p *taskErrorInjectionPersistenceClient) GetTasks(
 
 func (p *taskErrorInjectionPersistenceClient) CompleteTask(
 	ctx context.Context,
-	request *CompleteTaskRequest,
+	request *persistence.CompleteTaskRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -1058,7 +1060,7 @@ func (p *taskErrorInjectionPersistenceClient) CompleteTask(
 
 func (p *taskErrorInjectionPersistenceClient) CompleteTasksLessThan(
 	ctx context.Context,
-	request *CompleteTasksLessThanRequest,
+	request *persistence.CompleteTasksLessThanRequest,
 ) (int, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -1083,11 +1085,11 @@ func (p *taskErrorInjectionPersistenceClient) CompleteTasksLessThan(
 
 func (p *taskErrorInjectionPersistenceClient) GetOrphanTasks(
 	ctx context.Context,
-	request *GetOrphanTasksRequest,
-) (*GetOrphanTasksResponse, error) {
+	request *persistence.GetOrphanTasksRequest,
+) (*persistence.GetOrphanTasksResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *GetOrphanTasksResponse
+	var response *persistence.GetOrphanTasksResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1108,11 +1110,11 @@ func (p *taskErrorInjectionPersistenceClient) GetOrphanTasks(
 
 func (p *taskErrorInjectionPersistenceClient) LeaseTaskList(
 	ctx context.Context,
-	request *LeaseTaskListRequest,
-) (*LeaseTaskListResponse, error) {
+	request *persistence.LeaseTaskListRequest,
+) (*persistence.LeaseTaskListResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *LeaseTaskListResponse
+	var response *persistence.LeaseTaskListResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1133,11 +1135,11 @@ func (p *taskErrorInjectionPersistenceClient) LeaseTaskList(
 
 func (p *taskErrorInjectionPersistenceClient) UpdateTaskList(
 	ctx context.Context,
-	request *UpdateTaskListRequest,
-) (*UpdateTaskListResponse, error) {
+	request *persistence.UpdateTaskListRequest,
+) (*persistence.UpdateTaskListResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *UpdateTaskListResponse
+	var response *persistence.UpdateTaskListResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1158,11 +1160,11 @@ func (p *taskErrorInjectionPersistenceClient) UpdateTaskList(
 
 func (p *taskErrorInjectionPersistenceClient) ListTaskList(
 	ctx context.Context,
-	request *ListTaskListRequest,
-) (*ListTaskListResponse, error) {
+	request *persistence.ListTaskListRequest,
+) (*persistence.ListTaskListResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ListTaskListResponse
+	var response *persistence.ListTaskListResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1183,7 +1185,7 @@ func (p *taskErrorInjectionPersistenceClient) ListTaskList(
 
 func (p *taskErrorInjectionPersistenceClient) DeleteTaskList(
 	ctx context.Context,
-	request *DeleteTaskListRequest,
+	request *persistence.DeleteTaskListRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -1215,11 +1217,11 @@ func (p *metadataErrorInjectionPersistenceClient) GetName() string {
 
 func (p *metadataErrorInjectionPersistenceClient) CreateDomain(
 	ctx context.Context,
-	request *CreateDomainRequest,
-) (*CreateDomainResponse, error) {
+	request *persistence.CreateDomainRequest,
+) (*persistence.CreateDomainResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *CreateDomainResponse
+	var response *persistence.CreateDomainResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1240,11 +1242,11 @@ func (p *metadataErrorInjectionPersistenceClient) CreateDomain(
 
 func (p *metadataErrorInjectionPersistenceClient) GetDomain(
 	ctx context.Context,
-	request *GetDomainRequest,
-) (*GetDomainResponse, error) {
+	request *persistence.GetDomainRequest,
+) (*persistence.GetDomainResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *GetDomainResponse
+	var response *persistence.GetDomainResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1265,7 +1267,7 @@ func (p *metadataErrorInjectionPersistenceClient) GetDomain(
 
 func (p *metadataErrorInjectionPersistenceClient) UpdateDomain(
 	ctx context.Context,
-	request *UpdateDomainRequest,
+	request *persistence.UpdateDomainRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -1289,7 +1291,7 @@ func (p *metadataErrorInjectionPersistenceClient) UpdateDomain(
 
 func (p *metadataErrorInjectionPersistenceClient) DeleteDomain(
 	ctx context.Context,
-	request *DeleteDomainRequest,
+	request *persistence.DeleteDomainRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -1313,7 +1315,7 @@ func (p *metadataErrorInjectionPersistenceClient) DeleteDomain(
 
 func (p *metadataErrorInjectionPersistenceClient) DeleteDomainByName(
 	ctx context.Context,
-	request *DeleteDomainByNameRequest,
+	request *persistence.DeleteDomainByNameRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -1337,11 +1339,11 @@ func (p *metadataErrorInjectionPersistenceClient) DeleteDomainByName(
 
 func (p *metadataErrorInjectionPersistenceClient) ListDomains(
 	ctx context.Context,
-	request *ListDomainsRequest,
-) (*ListDomainsResponse, error) {
+	request *persistence.ListDomainsRequest,
+) (*persistence.ListDomainsResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ListDomainsResponse
+	var response *persistence.ListDomainsResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1362,10 +1364,10 @@ func (p *metadataErrorInjectionPersistenceClient) ListDomains(
 
 func (p *metadataErrorInjectionPersistenceClient) GetMetadata(
 	ctx context.Context,
-) (*GetMetadataResponse, error) {
+) (*persistence.GetMetadataResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *GetMetadataResponse
+	var response *persistence.GetMetadataResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1394,7 +1396,7 @@ func (p *visibilityErrorInjectionPersistenceClient) GetName() string {
 
 func (p *visibilityErrorInjectionPersistenceClient) RecordWorkflowExecutionStarted(
 	ctx context.Context,
-	request *RecordWorkflowExecutionStartedRequest,
+	request *visibility.RecordWorkflowExecutionStartedRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -1418,7 +1420,7 @@ func (p *visibilityErrorInjectionPersistenceClient) RecordWorkflowExecutionStart
 
 func (p *visibilityErrorInjectionPersistenceClient) RecordWorkflowExecutionClosed(
 	ctx context.Context,
-	request *RecordWorkflowExecutionClosedRequest,
+	request *visibility.RecordWorkflowExecutionClosedRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -1442,7 +1444,7 @@ func (p *visibilityErrorInjectionPersistenceClient) RecordWorkflowExecutionClose
 
 func (p *visibilityErrorInjectionPersistenceClient) UpsertWorkflowExecution(
 	ctx context.Context,
-	request *UpsertWorkflowExecutionRequest,
+	request *visibility.UpsertWorkflowExecutionRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -1466,11 +1468,11 @@ func (p *visibilityErrorInjectionPersistenceClient) UpsertWorkflowExecution(
 
 func (p *visibilityErrorInjectionPersistenceClient) ListOpenWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ListWorkflowExecutionsResponse
+	var response *visibility.ListWorkflowExecutionsResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1491,11 +1493,11 @@ func (p *visibilityErrorInjectionPersistenceClient) ListOpenWorkflowExecutions(
 
 func (p *visibilityErrorInjectionPersistenceClient) ListClosedWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ListWorkflowExecutionsResponse
+	var response *visibility.ListWorkflowExecutionsResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1516,11 +1518,11 @@ func (p *visibilityErrorInjectionPersistenceClient) ListClosedWorkflowExecutions
 
 func (p *visibilityErrorInjectionPersistenceClient) ListOpenWorkflowExecutionsByType(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByTypeRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByTypeRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ListWorkflowExecutionsResponse
+	var response *visibility.ListWorkflowExecutionsResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1541,11 +1543,11 @@ func (p *visibilityErrorInjectionPersistenceClient) ListOpenWorkflowExecutionsBy
 
 func (p *visibilityErrorInjectionPersistenceClient) ListClosedWorkflowExecutionsByType(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByTypeRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByTypeRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ListWorkflowExecutionsResponse
+	var response *visibility.ListWorkflowExecutionsResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1566,11 +1568,11 @@ func (p *visibilityErrorInjectionPersistenceClient) ListClosedWorkflowExecutions
 
 func (p *visibilityErrorInjectionPersistenceClient) ListOpenWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByWorkflowIDRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByWorkflowIDRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ListWorkflowExecutionsResponse
+	var response *visibility.ListWorkflowExecutionsResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1591,11 +1593,11 @@ func (p *visibilityErrorInjectionPersistenceClient) ListOpenWorkflowExecutionsBy
 
 func (p *visibilityErrorInjectionPersistenceClient) ListClosedWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByWorkflowIDRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByWorkflowIDRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ListWorkflowExecutionsResponse
+	var response *visibility.ListWorkflowExecutionsResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1616,11 +1618,11 @@ func (p *visibilityErrorInjectionPersistenceClient) ListClosedWorkflowExecutions
 
 func (p *visibilityErrorInjectionPersistenceClient) ListClosedWorkflowExecutionsByStatus(
 	ctx context.Context,
-	request *ListClosedWorkflowExecutionsByStatusRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListClosedWorkflowExecutionsByStatusRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ListWorkflowExecutionsResponse
+	var response *visibility.ListWorkflowExecutionsResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1641,11 +1643,11 @@ func (p *visibilityErrorInjectionPersistenceClient) ListClosedWorkflowExecutions
 
 func (p *visibilityErrorInjectionPersistenceClient) GetClosedWorkflowExecution(
 	ctx context.Context,
-	request *GetClosedWorkflowExecutionRequest,
-) (*GetClosedWorkflowExecutionResponse, error) {
+	request *visibility.GetClosedWorkflowExecutionRequest,
+) (*visibility.GetClosedWorkflowExecutionResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *GetClosedWorkflowExecutionResponse
+	var response *visibility.GetClosedWorkflowExecutionResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1666,7 +1668,7 @@ func (p *visibilityErrorInjectionPersistenceClient) GetClosedWorkflowExecution(
 
 func (p *visibilityErrorInjectionPersistenceClient) DeleteWorkflowExecution(
 	ctx context.Context,
-	request *VisibilityDeleteWorkflowExecutionRequest,
+	request *visibility.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -1690,11 +1692,11 @@ func (p *visibilityErrorInjectionPersistenceClient) DeleteWorkflowExecution(
 
 func (p *visibilityErrorInjectionPersistenceClient) ListWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByQueryRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByQueryRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ListWorkflowExecutionsResponse
+	var response *visibility.ListWorkflowExecutionsResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1715,11 +1717,11 @@ func (p *visibilityErrorInjectionPersistenceClient) ListWorkflowExecutions(
 
 func (p *visibilityErrorInjectionPersistenceClient) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByQueryRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByQueryRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ListWorkflowExecutionsResponse
+	var response *visibility.ListWorkflowExecutionsResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1740,11 +1742,11 @@ func (p *visibilityErrorInjectionPersistenceClient) ScanWorkflowExecutions(
 
 func (p *visibilityErrorInjectionPersistenceClient) CountWorkflowExecutions(
 	ctx context.Context,
-	request *CountWorkflowExecutionsRequest,
-) (*CountWorkflowExecutionsResponse, error) {
+	request *visibility.CountWorkflowExecutionsRequest,
+) (*visibility.CountWorkflowExecutionsResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *CountWorkflowExecutionsResponse
+	var response *visibility.CountWorkflowExecutionsResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1774,11 +1776,11 @@ func (p *historyErrorInjectionPersistenceClient) GetName() string {
 // AppendHistoryNodes add(or override) a node to a history branch
 func (p *historyErrorInjectionPersistenceClient) AppendHistoryNodes(
 	ctx context.Context,
-	request *AppendHistoryNodesRequest,
-) (*AppendHistoryNodesResponse, error) {
+	request *persistence.AppendHistoryNodesRequest,
+) (*persistence.AppendHistoryNodesResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *AppendHistoryNodesResponse
+	var response *persistence.AppendHistoryNodesResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1800,11 +1802,11 @@ func (p *historyErrorInjectionPersistenceClient) AppendHistoryNodes(
 // ReadHistoryBranch returns history node data for a branch
 func (p *historyErrorInjectionPersistenceClient) ReadHistoryBranch(
 	ctx context.Context,
-	request *ReadHistoryBranchRequest,
-) (*ReadHistoryBranchResponse, error) {
+	request *persistence.ReadHistoryBranchRequest,
+) (*persistence.ReadHistoryBranchResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ReadHistoryBranchResponse
+	var response *persistence.ReadHistoryBranchResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1826,11 +1828,11 @@ func (p *historyErrorInjectionPersistenceClient) ReadHistoryBranch(
 // ReadHistoryBranchByBatch returns history node data for a branch
 func (p *historyErrorInjectionPersistenceClient) ReadHistoryBranchByBatch(
 	ctx context.Context,
-	request *ReadHistoryBranchRequest,
-) (*ReadHistoryBranchByBatchResponse, error) {
+	request *persistence.ReadHistoryBranchRequest,
+) (*persistence.ReadHistoryBranchByBatchResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ReadHistoryBranchByBatchResponse
+	var response *persistence.ReadHistoryBranchByBatchResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1852,11 +1854,11 @@ func (p *historyErrorInjectionPersistenceClient) ReadHistoryBranchByBatch(
 // ReadHistoryBranchByBatch returns history node data for a branch
 func (p *historyErrorInjectionPersistenceClient) ReadRawHistoryBranch(
 	ctx context.Context,
-	request *ReadHistoryBranchRequest,
-) (*ReadRawHistoryBranchResponse, error) {
+	request *persistence.ReadHistoryBranchRequest,
+) (*persistence.ReadRawHistoryBranchResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ReadRawHistoryBranchResponse
+	var response *persistence.ReadRawHistoryBranchResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1878,11 +1880,11 @@ func (p *historyErrorInjectionPersistenceClient) ReadRawHistoryBranch(
 // ForkHistoryBranch forks a new branch from a old branch
 func (p *historyErrorInjectionPersistenceClient) ForkHistoryBranch(
 	ctx context.Context,
-	request *ForkHistoryBranchRequest,
-) (*ForkHistoryBranchResponse, error) {
+	request *persistence.ForkHistoryBranchRequest,
+) (*persistence.ForkHistoryBranchResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *ForkHistoryBranchResponse
+	var response *persistence.ForkHistoryBranchResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1904,7 +1906,7 @@ func (p *historyErrorInjectionPersistenceClient) ForkHistoryBranch(
 // DeleteHistoryBranch removes a branch
 func (p *historyErrorInjectionPersistenceClient) DeleteHistoryBranch(
 	ctx context.Context,
-	request *DeleteHistoryBranchRequest,
+	request *persistence.DeleteHistoryBranchRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
@@ -1929,11 +1931,11 @@ func (p *historyErrorInjectionPersistenceClient) DeleteHistoryBranch(
 // GetHistoryTree returns all branch information of a tree
 func (p *historyErrorInjectionPersistenceClient) GetHistoryTree(
 	ctx context.Context,
-	request *GetHistoryTreeRequest,
-) (*GetHistoryTreeResponse, error) {
+	request *persistence.GetHistoryTreeRequest,
+) (*persistence.GetHistoryTreeResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *GetHistoryTreeResponse
+	var response *persistence.GetHistoryTreeResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -1954,11 +1956,11 @@ func (p *historyErrorInjectionPersistenceClient) GetHistoryTree(
 
 func (p *historyErrorInjectionPersistenceClient) GetAllHistoryTreeBranches(
 	ctx context.Context,
-	request *GetAllHistoryTreeBranchesRequest,
-) (*GetAllHistoryTreeBranchesResponse, error) {
+	request *persistence.GetAllHistoryTreeBranchesRequest,
+) (*persistence.GetAllHistoryTreeBranchesResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *GetAllHistoryTreeBranchesResponse
+	var response *persistence.GetAllHistoryTreeBranchesResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -2009,10 +2011,10 @@ func (p *queueErrorInjectionPersistenceClient) ReadMessages(
 	ctx context.Context,
 	lastMessageID int64,
 	maxCount int,
-) ([]*QueueMessage, error) {
+) ([]*persistence.QueueMessage, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response []*QueueMessage
+	var response []*persistence.QueueMessage
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
@@ -2134,10 +2136,10 @@ func (p *queueErrorInjectionPersistenceClient) ReadMessagesFromDLQ(
 	lastMessageID int64,
 	pageSize int,
 	pageToken []byte,
-) ([]*QueueMessage, []byte, error) {
+) ([]*persistence.QueueMessage, []byte, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response []*QueueMessage
+	var response []*persistence.QueueMessage
 	var token []byte
 	var persistenceErr error
 	var forwardCall bool

@@ -25,6 +25,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/utils"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -2694,7 +2696,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
-	baseReq := persistence.ListWorkflowExecutionsRequest{
+	baseReq := visibility.ListWorkflowExecutionsRequest{
 		DomainUUID:    domainID,
 		Domain:        domain,
 		PageSize:      int(listRequest.GetMaximumPageSize()),
@@ -2703,14 +2705,14 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 		LatestTime:    listRequest.StartTimeFilter.GetLatestTime(),
 	}
 
-	var persistenceResp *persistence.ListWorkflowExecutionsResponse
+	var persistenceResp *visibility.ListWorkflowExecutionsResponse
 	if listRequest.ExecutionFilter != nil {
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
 		} else {
 			persistenceResp, err = wh.GetVisibilityManager().ListOpenWorkflowExecutionsByWorkflowID(
 				ctx,
-				&persistence.ListWorkflowExecutionsByWorkflowIDRequest{
+				&visibility.ListWorkflowExecutionsByWorkflowIDRequest{
 					ListWorkflowExecutionsRequest: baseReq,
 					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowID(),
 				})
@@ -2723,7 +2725,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 		} else {
 			persistenceResp, err = wh.GetVisibilityManager().ListOpenWorkflowExecutionsByType(
 				ctx,
-				&persistence.ListWorkflowExecutionsByTypeRequest{
+				&visibility.ListWorkflowExecutionsByTypeRequest{
 					ListWorkflowExecutionsRequest: baseReq,
 					WorkflowTypeName:              listRequest.TypeFilter.GetName(),
 				},
@@ -2911,7 +2913,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
-	baseReq := persistence.ListWorkflowExecutionsRequest{
+	baseReq := visibility.ListWorkflowExecutionsRequest{
 		DomainUUID:    domainID,
 		Domain:        domain,
 		PageSize:      int(listRequest.GetMaximumPageSize()),
@@ -2920,14 +2922,14 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 		LatestTime:    listRequest.StartTimeFilter.GetLatestTime(),
 	}
 
-	var persistenceResp *persistence.ListWorkflowExecutionsResponse
+	var persistenceResp *visibility.ListWorkflowExecutionsResponse
 	if listRequest.ExecutionFilter != nil {
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
 		} else {
 			persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutionsByWorkflowID(
 				ctx,
-				&persistence.ListWorkflowExecutionsByWorkflowIDRequest{
+				&visibility.ListWorkflowExecutionsByWorkflowIDRequest{
 					ListWorkflowExecutionsRequest: baseReq,
 					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowID(),
 				},
@@ -2941,7 +2943,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 		} else {
 			persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutionsByType(
 				ctx,
-				&persistence.ListWorkflowExecutionsByTypeRequest{
+				&visibility.ListWorkflowExecutionsByTypeRequest{
 					ListWorkflowExecutionsRequest: baseReq,
 					WorkflowTypeName:              listRequest.TypeFilter.GetName(),
 				},
@@ -2955,7 +2957,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 		} else {
 			persistenceResp, err = wh.GetVisibilityManager().ListClosedWorkflowExecutionsByStatus(
 				ctx,
-				&persistence.ListClosedWorkflowExecutionsByStatusRequest{
+				&visibility.ListClosedWorkflowExecutionsByStatusRequest{
 					ListWorkflowExecutionsRequest: baseReq,
 					Status:                        listRequest.GetStatusFilter(),
 				},
@@ -3027,7 +3029,7 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
-	req := &persistence.ListWorkflowExecutionsByQueryRequest{
+	req := &visibility.ListWorkflowExecutionsByQueryRequest{
 		DomainUUID:    domainID,
 		Domain:        domain,
 		PageSize:      int(listRequest.GetPageSize()),
@@ -3095,7 +3097,7 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
-	req := &persistence.ListWorkflowExecutionsByQueryRequest{
+	req := &visibility.ListWorkflowExecutionsByQueryRequest{
 		DomainUUID:    domainID,
 		Domain:        domain,
 		PageSize:      int(listRequest.GetPageSize()),
@@ -3154,7 +3156,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
-	req := &persistence.CountWorkflowExecutionsRequest{
+	req := &visibility.CountWorkflowExecutionsRequest{
 		DomainUUID: domainID,
 		Domain:     domain,
 		Query:      validatedQuery,
@@ -3543,7 +3545,7 @@ func (wh *WorkflowHandler) getHistory(
 	isFirstPage := len(nextPageToken) == 0
 	shardID := common.WorkflowIDToHistoryShard(execution.WorkflowID, wh.config.NumHistoryShards)
 	var err error
-	historyEvents, size, nextPageToken, err := persistence.ReadFullPageV2Events(ctx, wh.GetHistoryManager(), &persistence.ReadHistoryBranchRequest{
+	historyEvents, size, nextPageToken, err := utils.ReadFullPageV2Events(ctx, wh.GetHistoryManager(), &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,

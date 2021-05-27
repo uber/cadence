@@ -28,6 +28,7 @@ import (
 	"context"
 	ctx "context"
 	"errors"
+	"github.com/uber/cadence/common/persistence/utils"
 	"strconv"
 	"time"
 
@@ -449,7 +450,7 @@ func (t *taskAckManagerImpl) getPaginationFunc(
 ) collection.PaginationFn {
 
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
-		events, _, pageToken, pageHistorySize, err := persistence.PaginateHistory(
+		events, _, pageToken, pageHistorySize, err := utils.PaginateHistory(
 			ctx,
 			t.historyManager,
 			false,

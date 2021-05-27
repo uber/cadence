@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"math"
 	"regexp"
 	"strconv"
@@ -354,7 +355,7 @@ func (v *esVisibilityStore) GetClosedWorkflowExecution(
 
 func (v *esVisibilityStore) DeleteWorkflowExecution(
 	ctx context.Context,
-	request *p.VisibilityDeleteWorkflowExecutionRequest,
+	request *visibility.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
 	v.checkProducer()
 	msg := getVisibilityMessageForDeletion(
@@ -368,7 +369,7 @@ func (v *esVisibilityStore) DeleteWorkflowExecution(
 
 func (v *esVisibilityStore) ListWorkflowExecutions(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsByQueryRequest,
+	request *visibility.ListWorkflowExecutionsByQueryRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	checkPageSize(request)
@@ -401,7 +402,7 @@ func (v *esVisibilityStore) ListWorkflowExecutions(
 
 func (v *esVisibilityStore) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsByQueryRequest,
+	request *visibility.ListWorkflowExecutionsByQueryRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	checkPageSize(request)
@@ -435,9 +436,9 @@ func (v *esVisibilityStore) ScanWorkflowExecutions(
 
 func (v *esVisibilityStore) CountWorkflowExecutions(
 	ctx context.Context,
-	request *p.CountWorkflowExecutionsRequest,
+	request *visibility.CountWorkflowExecutionsRequest,
 ) (
-	*p.CountWorkflowExecutionsResponse, error) {
+	*visibility.CountWorkflowExecutionsResponse, error) {
 
 	queryDSL, err := getESQueryDSLForCount(request)
 	if err != nil {
@@ -451,7 +452,7 @@ func (v *esVisibilityStore) CountWorkflowExecutions(
 		}
 	}
 
-	response := &p.CountWorkflowExecutionsResponse{Count: count}
+	response := &visibility.CountWorkflowExecutionsResponse{Count: count}
 	return response, nil
 }
 
@@ -484,7 +485,7 @@ var (
 	}
 )
 
-func getESQueryDSLForScan(request *p.ListWorkflowExecutionsByQueryRequest) (string, error) {
+func getESQueryDSLForScan(request *visibility.ListWorkflowExecutionsByQueryRequest) (string, error) {
 	sql := getSQLFromListRequest(request)
 	dsl, err := getCustomizedDSLFromSQL(sql, request.DomainUUID)
 	if err != nil {
@@ -496,7 +497,7 @@ func getESQueryDSLForScan(request *p.ListWorkflowExecutionsByQueryRequest) (stri
 	return dsl.String(), nil
 }
 
-func getESQueryDSLForCount(request *p.CountWorkflowExecutionsRequest) (string, error) {
+func getESQueryDSLForCount(request *visibility.CountWorkflowExecutionsRequest) (string, error) {
 	sql := getSQLFromCountRequest(request)
 	dsl, err := getCustomizedDSLFromSQL(sql, request.DomainUUID)
 	if err != nil {
@@ -511,7 +512,7 @@ func getESQueryDSLForCount(request *p.CountWorkflowExecutionsRequest) (string, e
 	return dsl.String(), nil
 }
 
-func (v *esVisibilityStore) getESQueryDSL(request *p.ListWorkflowExecutionsByQueryRequest, token *es.ElasticVisibilityPageToken) (string, error) {
+func (v *esVisibilityStore) getESQueryDSL(request *visibility.ListWorkflowExecutionsByQueryRequest, token *es.ElasticVisibilityPageToken) (string, error) {
 	sql := getSQLFromListRequest(request)
 	dsl, err := getCustomizedDSLFromSQL(sql, request.DomainUUID)
 	if err != nil {
@@ -538,7 +539,7 @@ func (v *esVisibilityStore) getESQueryDSL(request *p.ListWorkflowExecutionsByQue
 	return dslStr, nil
 }
 
-func getSQLFromListRequest(request *p.ListWorkflowExecutionsByQueryRequest) string {
+func getSQLFromListRequest(request *visibility.ListWorkflowExecutionsByQueryRequest) string {
 	var sql string
 	query := strings.TrimSpace(request.Query)
 	if query == "" {
@@ -551,7 +552,7 @@ func getSQLFromListRequest(request *p.ListWorkflowExecutionsByQueryRequest) stri
 	return sql
 }
 
-func getSQLFromCountRequest(request *p.CountWorkflowExecutionsRequest) string {
+func getSQLFromCountRequest(request *visibility.CountWorkflowExecutionsRequest) string {
 	var sql string
 	if strings.TrimSpace(request.Query) == "" {
 		sql = "select * from dummy"
@@ -805,7 +806,7 @@ func getVisibilityMessageForDeletion(domainID, workflowID, runID string, docVers
 	return msg
 }
 
-func checkPageSize(request *p.ListWorkflowExecutionsByQueryRequest) {
+func checkPageSize(request *visibility.ListWorkflowExecutionsByQueryRequest) {
 	if request.PageSize == 0 {
 		request.PageSize = 1000
 	}

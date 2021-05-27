@@ -22,6 +22,7 @@ package task
 
 import (
 	"context"
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -271,7 +272,7 @@ func (t *timerTaskExecutorBase) deleteWorkflowVisibility(
 ) error {
 
 	op := func() error {
-		request := &persistence.VisibilityDeleteWorkflowExecutionRequest{
+		request := &visibility.VisibilityDeleteWorkflowExecutionRequest{
 			DomainID:   task.DomainID,
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,

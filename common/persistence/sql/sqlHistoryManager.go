@@ -24,6 +24,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/utils"
 	"time"
 
 	"github.com/uber/cadence/common/persistence/serialization"
@@ -68,7 +69,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 ) error {
 
 	branchInfo := request.BranchInfo
-	beginNodeID := p.GetBeginNodeID(branchInfo)
+	beginNodeID := utils.GetBeginNodeID(branchInfo)
 
 	if request.NodeID < beginNodeID {
 		return &p.InvalidPersistenceRequestError{
@@ -304,7 +305,7 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 	treeID := *forkB.TreeID
 	newAncestors := make([]*types.HistoryBranchRange, 0, len(forkB.Ancestors)+1)
 
-	beginNodeID := p.GetBeginNodeID(forkB)
+	beginNodeID := utils.GetBeginNodeID(forkB)
 	if beginNodeID >= request.ForkNodeID {
 		// this is the case that new branch's ancestors doesn't include the forking branch
 		for _, br := range forkB.Ancestors {
@@ -377,7 +378,7 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 	branch := request.BranchInfo
 	treeID := *branch.TreeID
 	brsToDelete := branch.Ancestors
-	beginNodeID := p.GetBeginNodeID(branch)
+	beginNodeID := utils.GetBeginNodeID(branch)
 	brsToDelete = append(brsToDelete, &types.HistoryBranchRange{
 		BranchID:    branch.BranchID,
 		BeginNodeID: common.Int64Ptr(beginNodeID),

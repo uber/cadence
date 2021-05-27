@@ -21,6 +21,7 @@
 package task
 
 import (
+	"github.com/uber/cadence/common/persistence/visibility"
 	"testing"
 	"time"
 
@@ -1167,7 +1168,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessRecordWorkflowStartedTask(
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, di.ScheduleID, di.Version)
 	executionInfo := mutableState.GetExecutionInfo()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", mock.Anything, &persistence.RecordWorkflowExecutionStartedRequest{
+	s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", mock.Anything, &visibility.RecordWorkflowExecutionStartedRequest{
 		DomainUUID: constants.TestDomainID,
 		Domain:     constants.TestDomainName,
 		Execution: types.WorkflowExecution{
@@ -1237,7 +1238,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttrib
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, di.ScheduleID, di.Version)
 	executionInfo := mutableState.GetExecutionInfo()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockVisibilityMgr.On("UpsertWorkflowExecution", mock.Anything, &persistence.UpsertWorkflowExecutionRequest{
+	s.mockVisibilityMgr.On("UpsertWorkflowExecution", mock.Anything, &visibility.UpsertWorkflowExecutionRequest{
 		DomainUUID: constants.TestDomainID,
 		Domain:     constants.TestDomainName,
 		Execution: types.WorkflowExecution{

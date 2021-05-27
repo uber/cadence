@@ -22,6 +22,7 @@ package task
 
 import (
 	"context"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -2148,7 +2149,7 @@ func (s *transferActiveTaskExecutorSuite) createRecordWorkflowExecutionStartedRe
 	task *persistence.TransferTaskInfo,
 	mutableState execution.MutableState,
 	backoffSeconds int32,
-) *persistence.RecordWorkflowExecutionStartedRequest {
+) *visibility.RecordWorkflowExecutionStartedRequest {
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: task.WorkflowID,
 		RunID:      task.RunID,
@@ -2157,7 +2158,7 @@ func (s *transferActiveTaskExecutorSuite) createRecordWorkflowExecutionStartedRe
 	executionTimestamp := time.Unix(0, startEvent.GetTimestamp()).Add(time.Duration(backoffSeconds) * time.Second)
 	isCron := len(executionInfo.CronSchedule) > 0
 
-	return &persistence.RecordWorkflowExecutionStartedRequest{
+	return &visibility.RecordWorkflowExecutionStartedRequest{
 		Domain:             domainName,
 		DomainUUID:         task.DomainID,
 		Execution:          workflowExecution,
@@ -2281,7 +2282,7 @@ func (s *transferActiveTaskExecutorSuite) createUpsertWorkflowSearchAttributesRe
 	startEvent *types.HistoryEvent,
 	task *persistence.TransferTaskInfo,
 	mutableState execution.MutableState,
-) *persistence.UpsertWorkflowExecutionRequest {
+) *visibility.UpsertWorkflowExecutionRequest {
 
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: task.WorkflowID,
@@ -2289,7 +2290,7 @@ func (s *transferActiveTaskExecutorSuite) createUpsertWorkflowSearchAttributesRe
 	}
 	executionInfo := mutableState.GetExecutionInfo()
 
-	return &persistence.UpsertWorkflowExecutionRequest{
+	return &visibility.UpsertWorkflowExecutionRequest{
 		Domain:           domainName,
 		DomainUUID:       task.DomainID,
 		Execution:        workflowExecution,

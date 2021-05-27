@@ -22,6 +22,8 @@ package persistencetests
 
 import (
 	"context"
+	"github.com/uber/cadence/common/persistence/managerWrappers"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"testing"
 	"time"
 
@@ -35,14 +37,13 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/mocks"
-	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
 type VisibilitySamplingSuite struct {
 	*require.Assertions // override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test, not merely log an error
 	suite.Suite
-	client       p.VisibilityManager
+	client       visibility.VisibilityManager
 	persistence  *mocks.VisibilityManager
 	metricClient *mmocks.Client
 }
@@ -73,7 +74,7 @@ func (s *VisibilitySamplingSuite) SetupTest() {
 		VisibilityListMaxQPS:   dynamicconfig.GetIntPropertyFilteredByDomain(1),
 	}
 	s.metricClient = &mmocks.Client{}
-	s.client = p.NewVisibilitySamplingClient(s.persistence, config, s.metricClient, loggerimpl.NewNopLogger())
+	s.client = managerWrappers.NewVisibilitySamplingClient(s.persistence, config, s.metricClient, loggerimpl.NewNopLogger())
 }
 
 func (s *VisibilitySamplingSuite) TearDownTest() {
@@ -85,7 +86,7 @@ func (s *VisibilitySamplingSuite) TestRecordWorkflowExecutionStarted() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	request := &p.RecordWorkflowExecutionStartedRequest{
+	request := &visibility.RecordWorkflowExecutionStartedRequest{
 		DomainUUID:       testDomainUUID,
 		Domain:           testDomain,
 		Execution:        testWorkflowExecution,
@@ -104,14 +105,14 @@ func (s *VisibilitySamplingSuite) TestRecordWorkflowExecutionClosed() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	request := &p.RecordWorkflowExecutionClosedRequest{
+	request := &visibility.RecordWorkflowExecutionClosedRequest{
 		DomainUUID:       testDomainUUID,
 		Domain:           testDomain,
 		Execution:        testWorkflowExecution,
 		WorkflowTypeName: testWorkflowTypeName,
 		Status:           types.WorkflowExecutionCloseStatusCompleted,
 	}
-	request2 := &p.RecordWorkflowExecutionClosedRequest{
+	request2 := &visibility.RecordWorkflowExecutionClosedRequest{
 		DomainUUID:       testDomainUUID,
 		Domain:           testDomain,
 		Execution:        testWorkflowExecution,
@@ -135,7 +136,7 @@ func (s *VisibilitySamplingSuite) TestListOpenWorkflowExecutions() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	request := &p.ListWorkflowExecutionsRequest{
+	request := &visibility.ListWorkflowExecutionsRequest{
 		DomainUUID: testDomainUUID,
 		Domain:     testDomain,
 	}
@@ -155,7 +156,7 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutions() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	request := &p.ListWorkflowExecutionsRequest{
+	request := &visibility.ListWorkflowExecutionsRequest{
 		DomainUUID: testDomainUUID,
 		Domain:     testDomain,
 	}
@@ -175,11 +176,11 @@ func (s *VisibilitySamplingSuite) TestListOpenWorkflowExecutionsByType() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	req := p.ListWorkflowExecutionsRequest{
+	req := visibility.ListWorkflowExecutionsRequest{
 		DomainUUID: testDomainUUID,
 		Domain:     testDomain,
 	}
-	request := &p.ListWorkflowExecutionsByTypeRequest{
+	request := &visibility.ListWorkflowExecutionsByTypeRequest{
 		ListWorkflowExecutionsRequest: req,
 		WorkflowTypeName:              testWorkflowTypeName,
 	}
@@ -199,11 +200,11 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByType() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	req := p.ListWorkflowExecutionsRequest{
+	req := visibility.ListWorkflowExecutionsRequest{
 		DomainUUID: testDomainUUID,
 		Domain:     testDomain,
 	}
-	request := &p.ListWorkflowExecutionsByTypeRequest{
+	request := &visibility.ListWorkflowExecutionsByTypeRequest{
 		ListWorkflowExecutionsRequest: req,
 		WorkflowTypeName:              testWorkflowTypeName,
 	}
@@ -223,11 +224,11 @@ func (s *VisibilitySamplingSuite) TestListOpenWorkflowExecutionsByWorkflowID() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	req := p.ListWorkflowExecutionsRequest{
+	req := visibility.ListWorkflowExecutionsRequest{
 		DomainUUID: testDomainUUID,
 		Domain:     testDomain,
 	}
-	request := &p.ListWorkflowExecutionsByWorkflowIDRequest{
+	request := &visibility.ListWorkflowExecutionsByWorkflowIDRequest{
 		ListWorkflowExecutionsRequest: req,
 		WorkflowID:                    testWorkflowExecution.GetWorkflowID(),
 	}
@@ -247,11 +248,11 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByWorkflowID()
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	req := p.ListWorkflowExecutionsRequest{
+	req := visibility.ListWorkflowExecutionsRequest{
 		DomainUUID: testDomainUUID,
 		Domain:     testDomain,
 	}
-	request := &p.ListWorkflowExecutionsByWorkflowIDRequest{
+	request := &visibility.ListWorkflowExecutionsByWorkflowIDRequest{
 		ListWorkflowExecutionsRequest: req,
 		WorkflowID:                    testWorkflowExecution.GetWorkflowID(),
 	}
@@ -271,11 +272,11 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByStatus() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	req := p.ListWorkflowExecutionsRequest{
+	req := visibility.ListWorkflowExecutionsRequest{
 		DomainUUID: testDomainUUID,
 		Domain:     testDomain,
 	}
-	request := &p.ListClosedWorkflowExecutionsByStatusRequest{
+	request := &visibility.ListClosedWorkflowExecutionsByStatusRequest{
 		ListWorkflowExecutionsRequest: req,
 		Status:                        types.WorkflowExecutionCloseStatusFailed,
 	}

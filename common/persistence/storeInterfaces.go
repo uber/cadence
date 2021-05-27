@@ -24,6 +24,7 @@ package persistence
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -174,10 +175,10 @@ type (
 		ListClosedWorkflowExecutionsByWorkflowID(ctx context.Context, request *InternalListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
 		ListClosedWorkflowExecutionsByStatus(ctx context.Context, request *InternalListClosedWorkflowExecutionsByStatusRequest) (*InternalListWorkflowExecutionsResponse, error)
 		GetClosedWorkflowExecution(ctx context.Context, request *InternalGetClosedWorkflowExecutionRequest) (*InternalGetClosedWorkflowExecutionResponse, error)
-		DeleteWorkflowExecution(ctx context.Context, request *VisibilityDeleteWorkflowExecutionRequest) error
-		ListWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsByQueryRequest) (*InternalListWorkflowExecutionsResponse, error)
-		ScanWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsByQueryRequest) (*InternalListWorkflowExecutionsResponse, error)
-		CountWorkflowExecutions(ctx context.Context, request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
+		DeleteWorkflowExecution(ctx context.Context, request *visibility.VisibilityDeleteWorkflowExecutionRequest) error
+		ListWorkflowExecutions(ctx context.Context, request *visibility.ListWorkflowExecutionsByQueryRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ScanWorkflowExecutions(ctx context.Context, request *visibility.ListWorkflowExecutionsByQueryRequest) (*InternalListWorkflowExecutionsResponse, error)
+		CountWorkflowExecutions(ctx context.Context, request *visibility.CountWorkflowExecutionsRequest) (*visibility.CountWorkflowExecutionsResponse, error)
 	}
 
 	// Queue is a store to enqueue and get messages

@@ -26,6 +26,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/managerWrappers"
 	"io"
 	"os"
 	"time"
@@ -250,7 +251,7 @@ func initializeExecutionStore(
 		return executionManager
 	}
 	rateLimiter := quotas.NewSimpleRateLimiter(rps)
-	return persistence.NewWorkflowExecutionPersistenceRateLimitedClient(executionManager, rateLimiter, logger)
+	return managerWrappers.NewWorkflowExecutionPersistenceRateLimitedClient(executionManager, rateLimiter, logger)
 }
 
 func initializeCassandraExecutionClient(

@@ -26,6 +26,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/validator"
 	"math"
 	"time"
 
@@ -120,7 +121,7 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(
 	workflowID := executionInfo.WorkflowID
 	runID := serialization.MustParseUUID(executionInfo.RunID)
 
-	if err := p.ValidateCreateWorkflowModeState(
+	if err := validator.ValidateCreateWorkflowModeState(
 		request.Mode,
 		newWorkflow,
 	); err != nil {
@@ -394,7 +395,7 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(
 	runID := serialization.MustParseUUID(executionInfo.RunID)
 	shardID := m.shardID
 
-	if err := p.ValidateUpdateWorkflowModeState(
+	if err := validator.ValidateUpdateWorkflowModeState(
 		request.Mode,
 		updateWorkflow,
 		newWorkflow,
@@ -595,7 +596,7 @@ func (m *sqlExecutionManager) conflictResolveWorkflowExecutionTx(
 	domainID := serialization.MustParseUUID(resetWorkflow.ExecutionInfo.DomainID)
 	workflowID := resetWorkflow.ExecutionInfo.WorkflowID
 
-	if err := p.ValidateConflictResolveWorkflowModeState(
+	if err := validator.ValidateConflictResolveWorkflowModeState(
 		request.Mode,
 		resetWorkflow,
 		newWorkflow,

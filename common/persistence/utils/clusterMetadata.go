@@ -18,7 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistence
+package utils
+
+import "github.com/uber/cadence/common/persistence"
 
 // GetOrUseDefaultActiveCluster return the current cluster name or use the input if valid
 func GetOrUseDefaultActiveCluster(currentClusterName string, activeClusterName string) string {
@@ -29,10 +31,10 @@ func GetOrUseDefaultActiveCluster(currentClusterName string, activeClusterName s
 }
 
 // GetOrUseDefaultClusters return the current cluster or use the input if valid
-func GetOrUseDefaultClusters(currentClusterName string, clusters []*ClusterReplicationConfig) []*ClusterReplicationConfig {
+func GetOrUseDefaultClusters(currentClusterName string, clusters []*persistence.ClusterReplicationConfig) []*persistence.ClusterReplicationConfig {
 	if len(clusters) == 0 {
-		return []*ClusterReplicationConfig{
-			&ClusterReplicationConfig{
+		return []*persistence.ClusterReplicationConfig{
+			&persistence.ClusterReplicationConfig{
 				ClusterName: currentClusterName,
 			},
 		}

@@ -26,6 +26,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/uber/cadence/common/persistence/utils"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
@@ -236,7 +237,7 @@ func (i *historyIterator) readHistory(ctx context.Context, firstEventID int64) (
 		PageSize:    i.historyPageSize,
 		ShardID:     common.IntPtr(i.request.ShardID),
 	}
-	historyBatches, _, _, err := persistence.ReadFullPageV2EventsByBatch(ctx, i.historyV2Manager, req)
+	historyBatches, _, _, err := utils.ReadFullPageV2EventsByBatch(ctx, i.historyV2Manager, req)
 	return historyBatches, err
 
 }

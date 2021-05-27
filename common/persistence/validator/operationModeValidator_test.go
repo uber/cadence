@@ -18,10 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistence
+package validator
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/persistence"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -56,16 +57,16 @@ func (s *validateOperationWorkflowModeStateSuite) TearDownTest() {
 func (s *validateOperationWorkflowModeStateSuite) TestCreateMode_UpdateCurrent() {
 
 	stateToError := map[int]bool{
-		WorkflowStateCreated:   false,
-		WorkflowStateRunning:   false,
-		WorkflowStateCompleted: true,
-		WorkflowStateZombie:    true,
+		persistence.WorkflowStateCreated:   false,
+		persistence.WorkflowStateRunning:   false,
+		persistence.WorkflowStateCompleted: true,
+		persistence.WorkflowStateZombie:    true,
 	}
 
-	creatModes := []CreateWorkflowMode{
-		CreateWorkflowModeBrandNew,
-		CreateWorkflowModeWorkflowIDReuse,
-		CreateWorkflowModeContinueAsNew,
+	creatModes := []persistence.CreateWorkflowMode{
+		persistence.CreateWorkflowModeBrandNew,
+		persistence.CreateWorkflowModeWorkflowIDReuse,
+		persistence.CreateWorkflowModeContinueAsNew,
 	}
 
 	for state, expectError := range stateToError {
@@ -84,15 +85,15 @@ func (s *validateOperationWorkflowModeStateSuite) TestCreateMode_UpdateCurrent()
 func (s *validateOperationWorkflowModeStateSuite) TestCreateMode_BypassCurrent() {
 
 	stateToError := map[int]bool{
-		WorkflowStateCreated:   true,
-		WorkflowStateRunning:   true,
-		WorkflowStateCompleted: true,
-		WorkflowStateZombie:    false,
+		persistence.WorkflowStateCreated:   true,
+		persistence.WorkflowStateRunning:   true,
+		persistence.WorkflowStateCompleted: true,
+		persistence.WorkflowStateZombie:    false,
 	}
 
 	for state, expectError := range stateToError {
 		testSnapshot := s.newTestWorkflowSnapshot(state)
-		err := ValidateCreateWorkflowModeState(CreateWorkflowModeZombie, testSnapshot)
+		err := ValidateCreateWorkflowModeState(persistence.CreateWorkflowModeZombie, testSnapshot)
 		if !expectError {
 			s.NoError(err, err)
 		} else {
@@ -105,15 +106,15 @@ func (s *validateOperationWorkflowModeStateSuite) TestUpdateMode_UpdateCurrent()
 
 	// only current workflow
 	stateToError := map[int]bool{
-		WorkflowStateCreated:   false,
-		WorkflowStateRunning:   false,
-		WorkflowStateCompleted: false,
-		WorkflowStateZombie:    true,
+		persistence.WorkflowStateCreated:   false,
+		persistence.WorkflowStateRunning:   false,
+		persistence.WorkflowStateCompleted: false,
+		persistence.WorkflowStateZombie:    true,
 	}
 	for state, expectError := range stateToError {
 		testCurrentMutation := s.newTestWorkflowMutation(state)
 		err := ValidateUpdateWorkflowModeState(
-			UpdateWorkflowModeUpdateCurrent,
+			persistence.UpdateWorkflowModeUpdateCurrent,
 			testCurrentMutation,
 			nil,
 		)
@@ -126,23 +127,23 @@ func (s *validateOperationWorkflowModeStateSuite) TestUpdateMode_UpdateCurrent()
 
 	// current workflow & new workflow
 	currentStateToError := map[int]bool{
-		WorkflowStateCreated:   true,
-		WorkflowStateRunning:   true,
-		WorkflowStateCompleted: false,
-		WorkflowStateZombie:    false,
+		persistence.WorkflowStateCreated:   true,
+		persistence.WorkflowStateRunning:   true,
+		persistence.WorkflowStateCompleted: false,
+		persistence.WorkflowStateZombie:    false,
 	}
 	newStateToError := map[int]bool{
-		WorkflowStateCreated:   false,
-		WorkflowStateRunning:   false,
-		WorkflowStateCompleted: true,
-		WorkflowStateZombie:    true,
+		persistence.WorkflowStateCreated:   false,
+		persistence.WorkflowStateRunning:   false,
+		persistence.WorkflowStateCompleted: true,
+		persistence.WorkflowStateZombie:    true,
 	}
 	for currentState, currentExpectError := range currentStateToError {
 		for newState, newExpectError := range newStateToError {
 			testCurrentMutation := s.newTestWorkflowMutation(currentState)
 			testNewSnapshot := s.newTestWorkflowSnapshot(newState)
 			err := ValidateUpdateWorkflowModeState(
-				UpdateWorkflowModeUpdateCurrent,
+				persistence.UpdateWorkflowModeUpdateCurrent,
 				testCurrentMutation,
 				&testNewSnapshot,
 			)
@@ -159,15 +160,15 @@ func (s *validateOperationWorkflowModeStateSuite) TestUpdateMode_BypassCurrent()
 
 	// only current workflow
 	stateToError := map[int]bool{
-		WorkflowStateCreated:   true,
-		WorkflowStateRunning:   true,
-		WorkflowStateCompleted: false,
-		WorkflowStateZombie:    false,
+		persistence.WorkflowStateCreated:   true,
+		persistence.WorkflowStateRunning:   true,
+		persistence.WorkflowStateCompleted: false,
+		persistence.WorkflowStateZombie:    false,
 	}
 	for state, expectError := range stateToError {
 		testMutation := s.newTestWorkflowMutation(state)
 		err := ValidateUpdateWorkflowModeState(
-			UpdateWorkflowModeBypassCurrent,
+			persistence.UpdateWorkflowModeBypassCurrent,
 			testMutation,
 			nil,
 		)
@@ -180,23 +181,23 @@ func (s *validateOperationWorkflowModeStateSuite) TestUpdateMode_BypassCurrent()
 
 	// current workflow & new workflow
 	currentStateToError := map[int]bool{
-		WorkflowStateCreated:   true,
-		WorkflowStateRunning:   true,
-		WorkflowStateCompleted: false,
-		WorkflowStateZombie:    false,
+		persistence.WorkflowStateCreated:   true,
+		persistence.WorkflowStateRunning:   true,
+		persistence.WorkflowStateCompleted: false,
+		persistence.WorkflowStateZombie:    false,
 	}
 	newStateToError := map[int]bool{
-		WorkflowStateCreated:   true,
-		WorkflowStateRunning:   true,
-		WorkflowStateCompleted: true,
-		WorkflowStateZombie:    false,
+		persistence.WorkflowStateCreated:   true,
+		persistence.WorkflowStateRunning:   true,
+		persistence.WorkflowStateCompleted: true,
+		persistence.WorkflowStateZombie:    false,
 	}
 	for currentState, currentExpectError := range currentStateToError {
 		for newState, newExpectError := range newStateToError {
 			testCurrentMutation := s.newTestWorkflowMutation(currentState)
 			testNewSnapshot := s.newTestWorkflowSnapshot(newState)
 			err := ValidateUpdateWorkflowModeState(
-				UpdateWorkflowModeBypassCurrent,
+				persistence.UpdateWorkflowModeBypassCurrent,
 				testCurrentMutation,
 				&testNewSnapshot,
 			)
@@ -213,15 +214,15 @@ func (s *validateOperationWorkflowModeStateSuite) TestConflictResolveMode_Update
 
 	// only reset workflow
 	stateToError := map[int]bool{
-		WorkflowStateCreated:   false,
-		WorkflowStateRunning:   false,
-		WorkflowStateCompleted: false,
-		WorkflowStateZombie:    true,
+		persistence.WorkflowStateCreated:   false,
+		persistence.WorkflowStateRunning:   false,
+		persistence.WorkflowStateCompleted: false,
+		persistence.WorkflowStateZombie:    true,
 	}
 	for state, expectError := range stateToError {
 		testSnapshot := s.newTestWorkflowSnapshot(state)
 		err := ValidateConflictResolveWorkflowModeState(
-			ConflictResolveWorkflowModeUpdateCurrent,
+			persistence.ConflictResolveWorkflowModeUpdateCurrent,
 			testSnapshot,
 			nil,
 			nil,
@@ -235,23 +236,23 @@ func (s *validateOperationWorkflowModeStateSuite) TestConflictResolveMode_Update
 
 	// reset workflow & new workflow
 	resetStateToError := map[int]bool{
-		WorkflowStateCreated:   true,
-		WorkflowStateRunning:   true,
-		WorkflowStateCompleted: false,
-		WorkflowStateZombie:    true,
+		persistence.WorkflowStateCreated:   true,
+		persistence.WorkflowStateRunning:   true,
+		persistence.WorkflowStateCompleted: false,
+		persistence.WorkflowStateZombie:    true,
 	}
 	newStateToError := map[int]bool{
-		WorkflowStateCreated:   false,
-		WorkflowStateRunning:   false,
-		WorkflowStateCompleted: true,
-		WorkflowStateZombie:    true,
+		persistence.WorkflowStateCreated:   false,
+		persistence.WorkflowStateRunning:   false,
+		persistence.WorkflowStateCompleted: true,
+		persistence.WorkflowStateZombie:    true,
 	}
 	for resetState, resetExpectError := range resetStateToError {
 		for newState, newExpectError := range newStateToError {
 			testResetSnapshot := s.newTestWorkflowSnapshot(resetState)
 			testNewSnapshot := s.newTestWorkflowSnapshot(newState)
 			err := ValidateConflictResolveWorkflowModeState(
-				ConflictResolveWorkflowModeUpdateCurrent,
+				persistence.ConflictResolveWorkflowModeUpdateCurrent,
 				testResetSnapshot,
 				&testNewSnapshot,
 				nil,
@@ -266,23 +267,23 @@ func (s *validateOperationWorkflowModeStateSuite) TestConflictResolveMode_Update
 
 	// reset workflow & current workflow
 	resetStateToError = map[int]bool{
-		WorkflowStateCreated:   false,
-		WorkflowStateRunning:   false,
-		WorkflowStateCompleted: false,
-		WorkflowStateZombie:    true,
+		persistence.WorkflowStateCreated:   false,
+		persistence.WorkflowStateRunning:   false,
+		persistence.WorkflowStateCompleted: false,
+		persistence.WorkflowStateZombie:    true,
 	}
 	currentStateToError := map[int]bool{
-		WorkflowStateCreated:   true,
-		WorkflowStateRunning:   true,
-		WorkflowStateCompleted: false,
-		WorkflowStateZombie:    false,
+		persistence.WorkflowStateCreated:   true,
+		persistence.WorkflowStateRunning:   true,
+		persistence.WorkflowStateCompleted: false,
+		persistence.WorkflowStateZombie:    false,
 	}
 	for resetState, resetExpectError := range resetStateToError {
 		for currentState, currentExpectError := range currentStateToError {
 			testResetSnapshot := s.newTestWorkflowSnapshot(resetState)
 			testCurrentSnapshot := s.newTestWorkflowMutation(currentState)
 			err := ValidateConflictResolveWorkflowModeState(
-				ConflictResolveWorkflowModeUpdateCurrent,
+				persistence.ConflictResolveWorkflowModeUpdateCurrent,
 				testResetSnapshot,
 				nil,
 				&testCurrentSnapshot,
@@ -297,22 +298,22 @@ func (s *validateOperationWorkflowModeStateSuite) TestConflictResolveMode_Update
 
 	// reset workflow & new workflow & current workflow
 	resetStateToError = map[int]bool{
-		WorkflowStateCreated:   true,
-		WorkflowStateRunning:   true,
-		WorkflowStateCompleted: false,
-		WorkflowStateZombie:    true,
+		persistence.WorkflowStateCreated:   true,
+		persistence.WorkflowStateRunning:   true,
+		persistence.WorkflowStateCompleted: false,
+		persistence.WorkflowStateZombie:    true,
 	}
 	newStateToError = map[int]bool{
-		WorkflowStateCreated:   false,
-		WorkflowStateRunning:   false,
-		WorkflowStateCompleted: true,
-		WorkflowStateZombie:    true,
+		persistence.WorkflowStateCreated:   false,
+		persistence.WorkflowStateRunning:   false,
+		persistence.WorkflowStateCompleted: true,
+		persistence.WorkflowStateZombie:    true,
 	}
 	currentStateToError = map[int]bool{
-		WorkflowStateCreated:   true,
-		WorkflowStateRunning:   true,
-		WorkflowStateCompleted: false,
-		WorkflowStateZombie:    false,
+		persistence.WorkflowStateCreated:   true,
+		persistence.WorkflowStateRunning:   true,
+		persistence.WorkflowStateCompleted: false,
+		persistence.WorkflowStateZombie:    false,
 	}
 	for resetState, resetExpectError := range resetStateToError {
 		for newState, newExpectError := range newStateToError {
@@ -321,7 +322,7 @@ func (s *validateOperationWorkflowModeStateSuite) TestConflictResolveMode_Update
 				testNewSnapshot := s.newTestWorkflowSnapshot(newState)
 				testCurrentSnapshot := s.newTestWorkflowMutation(currentState)
 				err := ValidateConflictResolveWorkflowModeState(
-					ConflictResolveWorkflowModeUpdateCurrent,
+					persistence.ConflictResolveWorkflowModeUpdateCurrent,
 					testResetSnapshot,
 					&testNewSnapshot,
 					&testCurrentSnapshot,
@@ -340,15 +341,15 @@ func (s *validateOperationWorkflowModeStateSuite) TestConflictResolveMode_Bypass
 
 	// only reset workflow
 	stateToError := map[int]bool{
-		WorkflowStateCreated:   true,
-		WorkflowStateRunning:   true,
-		WorkflowStateCompleted: false,
-		WorkflowStateZombie:    false,
+		persistence.WorkflowStateCreated:   true,
+		persistence.WorkflowStateRunning:   true,
+		persistence.WorkflowStateCompleted: false,
+		persistence.WorkflowStateZombie:    false,
 	}
 	for state, expectError := range stateToError {
 		testSnapshot := s.newTestWorkflowSnapshot(state)
 		err := ValidateConflictResolveWorkflowModeState(
-			ConflictResolveWorkflowModeBypassCurrent,
+			persistence.ConflictResolveWorkflowModeBypassCurrent,
 			testSnapshot,
 			nil,
 			nil,
@@ -362,23 +363,23 @@ func (s *validateOperationWorkflowModeStateSuite) TestConflictResolveMode_Bypass
 
 	// reset workflow & new workflow
 	resetStateToError := map[int]bool{
-		WorkflowStateCreated:   true,
-		WorkflowStateRunning:   true,
-		WorkflowStateCompleted: false,
-		WorkflowStateZombie:    true,
+		persistence.WorkflowStateCreated:   true,
+		persistence.WorkflowStateRunning:   true,
+		persistence.WorkflowStateCompleted: false,
+		persistence.WorkflowStateZombie:    true,
 	}
 	newStateToError := map[int]bool{
-		WorkflowStateCreated:   true,
-		WorkflowStateRunning:   true,
-		WorkflowStateCompleted: true,
-		WorkflowStateZombie:    false,
+		persistence.WorkflowStateCreated:   true,
+		persistence.WorkflowStateRunning:   true,
+		persistence.WorkflowStateCompleted: true,
+		persistence.WorkflowStateZombie:    false,
 	}
 	for resetState, resetExpectError := range resetStateToError {
 		for newState, newExpectError := range newStateToError {
 			testResetSnapshot := s.newTestWorkflowSnapshot(resetState)
 			testNewSnapshot := s.newTestWorkflowSnapshot(newState)
 			err := ValidateConflictResolveWorkflowModeState(
-				ConflictResolveWorkflowModeBypassCurrent,
+				persistence.ConflictResolveWorkflowModeBypassCurrent,
 				testResetSnapshot,
 				&testNewSnapshot,
 				nil,
@@ -397,9 +398,9 @@ func (s *validateOperationWorkflowModeStateSuite) TestConflictResolveMode_Bypass
 
 func (s *validateOperationWorkflowModeStateSuite) newTestWorkflowSnapshot(
 	state int,
-) InternalWorkflowSnapshot {
-	return InternalWorkflowSnapshot{
-		ExecutionInfo: &InternalWorkflowExecutionInfo{
+) persistence.InternalWorkflowSnapshot {
+	return persistence.InternalWorkflowSnapshot{
+		ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
 			State: state,
 		},
 	}
@@ -407,9 +408,9 @@ func (s *validateOperationWorkflowModeStateSuite) newTestWorkflowSnapshot(
 
 func (s *validateOperationWorkflowModeStateSuite) newTestWorkflowMutation(
 	state int,
-) InternalWorkflowMutation {
-	return InternalWorkflowMutation{
-		ExecutionInfo: &InternalWorkflowExecutionInfo{
+) persistence.InternalWorkflowMutation {
+	return persistence.InternalWorkflowMutation{
+		ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
 			State: state,
 		},
 	}

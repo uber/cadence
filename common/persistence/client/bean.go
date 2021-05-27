@@ -23,6 +23,7 @@
 package client
 
 import (
+	"github.com/uber/cadence/common/persistence/visibility"
 	"sync"
 
 	"github.com/uber/cadence/common/persistence"
@@ -39,8 +40,8 @@ type (
 		GetTaskManager() persistence.TaskManager
 		SetTaskManager(persistence.TaskManager)
 
-		GetVisibilityManager() persistence.VisibilityManager
-		SetVisibilityManager(persistence.VisibilityManager)
+		GetVisibilityManager() visibility.VisibilityManager
+		SetVisibilityManager(visibility.VisibilityManager)
 
 		GetDomainReplicationQueueManager() persistence.QueueManager
 		SetDomainReplicationQueueManager(persistence.QueueManager)
@@ -59,7 +60,7 @@ type (
 	BeanImpl struct {
 		metadataManager               persistence.DomainManager
 		taskManager                   persistence.TaskManager
-		visibilityManager             persistence.VisibilityManager
+		visibilityManager             visibility.VisibilityManager
 		domainReplicationQueueManager persistence.QueueManager
 		shardManager                  persistence.ShardManager
 		historyManager                persistence.HistoryManager
@@ -120,7 +121,7 @@ func NewBeanFromFactory(
 func NewBean(
 	metadataManager persistence.DomainManager,
 	taskManager persistence.TaskManager,
-	visibilityManager persistence.VisibilityManager,
+	visibilityManager visibility.VisibilityManager,
 	domainReplicationQueueManager persistence.QueueManager,
 	shardManager persistence.ShardManager,
 	historyManager persistence.HistoryManager,
@@ -180,7 +181,7 @@ func (s *BeanImpl) SetTaskManager(
 }
 
 // GetVisibilityManager get VisibilityManager
-func (s *BeanImpl) GetVisibilityManager() persistence.VisibilityManager {
+func (s *BeanImpl) GetVisibilityManager() visibility.VisibilityManager {
 
 	s.RLock()
 	defer s.RUnlock()
@@ -190,7 +191,7 @@ func (s *BeanImpl) GetVisibilityManager() persistence.VisibilityManager {
 
 // SetVisibilityManager set VisibilityManager
 func (s *BeanImpl) SetVisibilityManager(
-	visibilityManager persistence.VisibilityManager,
+	visibilityManager visibility.VisibilityManager,
 ) {
 
 	s.Lock()

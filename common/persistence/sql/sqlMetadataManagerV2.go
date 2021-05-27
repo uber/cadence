@@ -24,6 +24,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/utils"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -246,8 +247,8 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 			BadBinaries:              badBinaries,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
-			ActiveClusterName: persistence.GetOrUseDefaultActiveCluster(m.activeClusterName, domainInfo.GetActiveClusterName()),
-			Clusters:          persistence.GetOrUseDefaultClusters(m.activeClusterName, clusters),
+			ActiveClusterName: utils.GetOrUseDefaultActiveCluster(m.activeClusterName, domainInfo.GetActiveClusterName()),
+			Clusters:          utils.GetOrUseDefaultClusters(m.activeClusterName, clusters),
 		},
 		IsGlobalDomain:              row.IsGlobal,
 		FailoverVersion:             domainInfo.GetFailoverVersion(),

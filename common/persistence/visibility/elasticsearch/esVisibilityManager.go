@@ -26,7 +26,8 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
-	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/managerWrappers"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"github.com/uber/cadence/common/quotas"
 )
 
@@ -34,10 +35,10 @@ import (
 // In history, it only needs kafka producer for writing data;
 // In frontend, it only needs ES client and related config for reading data
 func NewESVisibilityManager(indexName string, esClient es.GenericClient, config *config.VisibilityConfig,
-	producer messaging.Producer, metricsClient metrics.Client, log log.Logger) p.VisibilityManager {
+	producer messaging.Producer, metricsClient metrics.Client, log log.Logger) visibility.VisibilityManager {
 
 	visibilityFromESStore := NewElasticSearchVisibilityStore(esClient, indexName, producer, config, log)
-	visibilityFromES := p.NewVisibilityManagerImpl(visibilityFromESStore, log)
+	visibilityFromES := visibility.NewVisibilityManagerImpl(visibilityFromESStore, log)
 
 	if config != nil {
 		// wrap with rate limiter
@@ -47,10 +48,10 @@ func NewESVisibilityManager(indexName string, esClient es.GenericClient, config 
 					return float64(config.MaxQPS())
 				},
 			)
-			visibilityFromES = p.NewVisibilityPersistenceRateLimitedClient(visibilityFromES, esRateLimiter, log)
+			visibilityFromES = managerWrappers.NewVisibilityPersistenceRateLimitedClient(visibilityFromES, esRateLimiter, log)
 		}
 		if config.EnableSampling != nil && config.EnableSampling() {
-			visibilityFromES = p.NewVisibilitySamplingClient(visibilityFromES, config, metricsClient, log)
+			visibilityFromES = managerWrappers.NewVisibilitySamplingClient(visibilityFromES, config, metricsClient, log)
 		}
 	}
 	if metricsClient != nil {

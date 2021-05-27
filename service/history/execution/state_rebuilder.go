@@ -26,6 +26,7 @@ import (
 	"context"
 	ctx "context"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/utils"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -245,7 +246,7 @@ func (r *stateRebuilderImpl) getPaginationFn(
 
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 
-		_, historyBatches, token, size, err := persistence.PaginateHistory(
+		_, historyBatches, token, size, err := utils.PaginateHistory(
 			ctx,
 			r.historyV2Mgr,
 			true,

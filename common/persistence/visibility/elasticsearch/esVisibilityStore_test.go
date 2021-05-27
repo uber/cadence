@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"strings"
 	"testing"
 	"time"
@@ -548,7 +549,7 @@ func (s *ESVisibilitySuite) TestShouldSearchAfter() {
 
 //nolint
 func (s *ESVisibilitySuite) TestGetESQueryDSL() {
-	request := &p.ListWorkflowExecutionsByQueryRequest{
+	request := &visibility.ListWorkflowExecutionsByQueryRequest{
 		DomainUUID: testDomainID,
 		PageSize:   10,
 	}
@@ -656,7 +657,7 @@ func (s *ESVisibilitySuite) TestGetESQueryDSL() {
 }
 
 func (s *ESVisibilitySuite) TestGetESQueryDSLForScan() {
-	request := &p.ListWorkflowExecutionsByQueryRequest{
+	request := &visibility.ListWorkflowExecutionsByQueryRequest{
 		DomainUUID: testDomainID,
 		PageSize:   10,
 	}
@@ -683,7 +684,7 @@ func (s *ESVisibilitySuite) TestGetESQueryDSLForScan() {
 }
 
 func (s *ESVisibilitySuite) TestGetESQueryDSLForCount() {
-	request := &p.CountWorkflowExecutionsRequest{
+	request := &visibility.CountWorkflowExecutionsRequest{
 		DomainUUID: testDomainID,
 	}
 
@@ -726,7 +727,7 @@ func (s *ESVisibilitySuite) TestListWorkflowExecutions() {
 		return true
 	})).Return(testSearchResult, nil).Once()
 
-	request := &p.ListWorkflowExecutionsByQueryRequest{
+	request := &visibility.ListWorkflowExecutionsByQueryRequest{
 		DomainUUID: testDomainID,
 		Domain:     testDomain,
 		PageSize:   10,
@@ -761,7 +762,7 @@ func (s *ESVisibilitySuite) TestScanWorkflowExecutions() {
 		return true
 	})).Return(testSearchResult, nil).Once()
 
-	request := &p.ListWorkflowExecutionsByQueryRequest{
+	request := &visibility.ListWorkflowExecutionsByQueryRequest{
 		DomainUUID: testDomainID,
 		Domain:     testDomain,
 		PageSize:   10,
@@ -798,7 +799,7 @@ func (s *ESVisibilitySuite) TestCountWorkflowExecutions() {
 		return true
 	})).Return(int64(1), nil).Once()
 
-	request := &p.CountWorkflowExecutionsRequest{
+	request := &visibility.CountWorkflowExecutionsRequest{
 		DomainUUID: testDomainID,
 		Domain:     testDomain,
 		Query:      `CloseStatus = 5`,

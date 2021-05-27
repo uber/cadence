@@ -24,6 +24,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	publicservicetest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
 
@@ -399,7 +400,7 @@ func (s *Test) GetTaskManager() persistence.TaskManager {
 }
 
 // GetVisibilityManager for testing
-func (s *Test) GetVisibilityManager() persistence.VisibilityManager {
+func (s *Test) GetVisibilityManager() visibility.VisibilityManager {
 	return s.VisibilityMgr
 }
 

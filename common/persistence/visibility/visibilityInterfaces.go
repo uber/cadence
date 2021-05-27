@@ -18,10 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistence
+package visibility
 
 import (
 	"context"
+	"github.com/uber/cadence/common/persistence"
 
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/types"
@@ -176,7 +177,7 @@ type (
 
 	// VisibilityManager is used to manage the visibility store
 	VisibilityManager interface {
-		Closeable
+		persistence.Closeable
 		GetName() string
 		RecordWorkflowExecutionStarted(ctx context.Context, request *RecordWorkflowExecutionStartedRequest) error
 		RecordWorkflowExecutionClosed(ctx context.Context, request *RecordWorkflowExecutionClosedRequest) error
@@ -203,7 +204,7 @@ func NewOperationNotSupportErrorForVis() error {
 }
 
 // IsNopUpsertWorkflowRequest return whether upsert request should be no-op
-func IsNopUpsertWorkflowRequest(request *InternalUpsertWorkflowExecutionRequest) bool {
+func IsNopUpsertWorkflowRequest(request *persistence.InternalUpsertWorkflowExecutionRequest) bool {
 	_, exist := request.SearchAttributes[definition.CadenceChangeVersion]
 	return exist
 }

@@ -18,31 +18,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistence
+package validator
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/persistence"
 
 	"github.com/uber/cadence/common/types"
 )
 
 var (
 	validWorkflowStates = map[int]struct{}{
-		WorkflowStateCreated:   {},
-		WorkflowStateRunning:   {},
-		WorkflowStateCompleted: {},
-		WorkflowStateZombie:    {},
-		WorkflowStateCorrupted: {},
+		persistence.WorkflowStateCreated:   {},
+		persistence.WorkflowStateRunning:   {},
+		persistence.WorkflowStateCompleted: {},
+		persistence.WorkflowStateZombie:    {},
+		persistence.WorkflowStateCorrupted: {},
 	}
 
 	validWorkflowCloseStatuses = map[int]struct{}{
-		WorkflowCloseStatusNone:           {},
-		WorkflowCloseStatusCompleted:      {},
-		WorkflowCloseStatusFailed:         {},
-		WorkflowCloseStatusCanceled:       {},
-		WorkflowCloseStatusTerminated:     {},
-		WorkflowCloseStatusContinuedAsNew: {},
-		WorkflowCloseStatusTimedOut:       {},
+		persistence.WorkflowCloseStatusNone:           {},
+		persistence.WorkflowCloseStatusCompleted:      {},
+		persistence.WorkflowCloseStatusFailed:         {},
+		persistence.WorkflowCloseStatusCanceled:       {},
+		persistence.WorkflowCloseStatusTerminated:     {},
+		persistence.WorkflowCloseStatusContinuedAsNew: {},
+		persistence.WorkflowCloseStatusTimedOut:       {},
 	}
 )
 
@@ -60,7 +61,7 @@ func ValidateCreateWorkflowStateCloseStatus(
 	}
 
 	// validate workflow state & close status
-	if state == WorkflowStateCompleted || closeStatus != WorkflowCloseStatusNone {
+	if state == persistence.WorkflowStateCompleted || closeStatus != persistence.WorkflowCloseStatusNone {
 		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Create workflow with invalid state: %v or close status: %v",
 				state, closeStatus),
@@ -83,8 +84,8 @@ func ValidateUpdateWorkflowStateCloseStatus(
 	}
 
 	// validate workflow state & close status
-	if closeStatus == WorkflowCloseStatusNone {
-		if state == WorkflowStateCompleted {
+	if closeStatus == persistence.WorkflowCloseStatusNone {
+		if state == persistence.WorkflowStateCompleted {
 			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Update workflow with invalid state: %v or close status: %v",
 					state, closeStatus),
@@ -97,7 +98,7 @@ func ValidateUpdateWorkflowStateCloseStatus(
 		// WorkflowCloseStatusTerminated
 		// WorkflowCloseStatusContinuedAsNew
 		// WorkflowCloseStatusTimedOut
-		if state != WorkflowStateCompleted {
+		if state != persistence.WorkflowStateCompleted {
 			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Update workflow with invalid state: %v or close status: %v",
 					state, closeStatus),
@@ -141,19 +142,19 @@ func ToInternalWorkflowExecutionCloseStatus(
 ) *types.WorkflowExecutionCloseStatus {
 
 	switch closeStatus {
-	case WorkflowCloseStatusNone:
+	case persistence.WorkflowCloseStatusNone:
 		return nil
-	case WorkflowCloseStatusCompleted:
+	case persistence.WorkflowCloseStatusCompleted:
 		return types.WorkflowExecutionCloseStatusCompleted.Ptr()
-	case WorkflowCloseStatusFailed:
+	case persistence.WorkflowCloseStatusFailed:
 		return types.WorkflowExecutionCloseStatusFailed.Ptr()
-	case WorkflowCloseStatusCanceled:
+	case persistence.WorkflowCloseStatusCanceled:
 		return types.WorkflowExecutionCloseStatusCanceled.Ptr()
-	case WorkflowCloseStatusTerminated:
+	case persistence.WorkflowCloseStatusTerminated:
 		return types.WorkflowExecutionCloseStatusTerminated.Ptr()
-	case WorkflowCloseStatusContinuedAsNew:
+	case persistence.WorkflowCloseStatusContinuedAsNew:
 		return types.WorkflowExecutionCloseStatusContinuedAsNew.Ptr()
-	case WorkflowCloseStatusTimedOut:
+	case persistence.WorkflowCloseStatusTimedOut:
 		return types.WorkflowExecutionCloseStatusTimedOut.Ptr()
 	default:
 		panic("Invalid value for enum WorkflowExecutionCloseStatus")
@@ -165,21 +166,21 @@ func FromInternalWorkflowExecutionCloseStatus(
 	closeStatus *types.WorkflowExecutionCloseStatus,
 ) int {
 	if closeStatus == nil {
-		return WorkflowCloseStatusNone
+		return persistence.WorkflowCloseStatusNone
 	}
 	switch *closeStatus {
 	case types.WorkflowExecutionCloseStatusCompleted:
-		return WorkflowCloseStatusCompleted
+		return persistence.WorkflowCloseStatusCompleted
 	case types.WorkflowExecutionCloseStatusFailed:
-		return WorkflowCloseStatusFailed
+		return persistence.WorkflowCloseStatusFailed
 	case types.WorkflowExecutionCloseStatusCanceled:
-		return WorkflowCloseStatusCanceled
+		return persistence.WorkflowCloseStatusCanceled
 	case types.WorkflowExecutionCloseStatusTerminated:
-		return WorkflowCloseStatusTerminated
+		return persistence.WorkflowCloseStatusTerminated
 	case types.WorkflowExecutionCloseStatusContinuedAsNew:
-		return WorkflowCloseStatusContinuedAsNew
+		return persistence.WorkflowCloseStatusContinuedAsNew
 	case types.WorkflowExecutionCloseStatusTimedOut:
-		return WorkflowCloseStatusTimedOut
+		return persistence.WorkflowCloseStatusTimedOut
 	default:
 		panic("Invalid value for enum WorkflowExecutionCloseStatus")
 	}

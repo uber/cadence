@@ -21,6 +21,8 @@
 package client
 
 import (
+	"github.com/uber/cadence/common/persistence/managerWrappers"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"sync"
 
 	"github.com/uber/cadence/common/log/tag"
@@ -55,7 +57,7 @@ type (
 		// NewExecutionManager returns a new execution manager for a given shardID
 		NewExecutionManager(shardID int) (p.ExecutionManager, error)
 		// NewVisibilityManager returns a new visibility manager
-		NewVisibilityManager() (p.VisibilityManager, error)
+		NewVisibilityManager() (visibility.VisibilityManager, error)
 		// NewDomainReplicationQueueManager returns a new queue for domain replication
 		NewDomainReplicationQueueManager() (p.QueueManager, error)
 	}
@@ -152,13 +154,13 @@ func (f *factoryImpl) NewTaskManager() (p.TaskManager, error) {
 	}
 	result := p.NewTaskManager(store)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = p.NewTaskPersistenceErrorInjectionClient(result, errorRate, f.logger)
+		result = managerWrappers.NewTaskPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = p.NewTaskPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = managerWrappers.NewTaskPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewTaskPersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = managerWrappers.NewTaskPersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
 	return result, nil
 }
@@ -172,13 +174,13 @@ func (f *factoryImpl) NewShardManager() (p.ShardManager, error) {
 	}
 	result := p.NewShardManager(store)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = p.NewShardPersistenceErrorInjectionClient(result, errorRate, f.logger)
+		result = managerWrappers.NewShardPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = p.NewShardPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = managerWrappers.NewShardPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewShardPersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = managerWrappers.NewShardPersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
 	return result, nil
 }
@@ -192,13 +194,13 @@ func (f *factoryImpl) NewHistoryManager() (p.HistoryManager, error) {
 	}
 	result := p.NewHistoryV2ManagerImpl(store, f.logger, f.config.TransactionSizeLimit)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = p.NewHistoryPersistenceErrorInjectionClient(result, errorRate, f.logger)
+		result = managerWrappers.NewHistoryPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = p.NewHistoryPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = managerWrappers.NewHistoryPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewHistoryPersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = managerWrappers.NewHistoryPersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
 	return result, nil
 }
@@ -214,13 +216,13 @@ func (f *factoryImpl) NewMetadataManager() (p.DomainManager, error) {
 	}
 	result := p.NewMetadataManagerImpl(store, f.logger)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = p.NewMetadataPersistenceErrorInjectionClient(result, errorRate, f.logger)
+		result = managerWrappers.NewMetadataPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = p.NewMetadataPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = managerWrappers.NewMetadataPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewMetadataPersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = managerWrappers.NewMetadataPersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
 	return result, nil
 }
@@ -234,19 +236,19 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 	}
 	result := p.NewExecutionManagerImpl(store, f.logger)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = p.NewWorkflowExecutionPersistenceErrorInjectionClient(result, errorRate, f.logger)
+		result = managerWrappers.NewWorkflowExecutionPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = p.NewWorkflowExecutionPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = managerWrappers.NewWorkflowExecutionPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewWorkflowExecutionPersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = managerWrappers.NewWorkflowExecutionPersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
 	return result, nil
 }
 
 // NewVisibilityManager returns a new visibility manager
-func (f *factoryImpl) NewVisibilityManager() (p.VisibilityManager, error) {
+func (f *factoryImpl) NewVisibilityManager() (visibility.VisibilityManager, error) {
 	visConfig := f.config.VisibilityConfig
 	enableReadFromClosedExecutionV2 := false
 	if visConfig != nil && visConfig.EnableReadFromClosedExecutionV2 != nil {
@@ -260,18 +262,18 @@ func (f *factoryImpl) NewVisibilityManager() (p.VisibilityManager, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := p.NewVisibilityManagerImpl(store, f.logger)
+	result := visibility.NewVisibilityManagerImpl(store, f.logger)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = p.NewVisibilityPersistenceErrorInjectionClient(result, errorRate, f.logger)
+		result = managerWrappers.NewVisibilityPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = p.NewVisibilityPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = managerWrappers.NewVisibilityPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if visConfig != nil && visConfig.EnableSampling() {
-		result = p.NewVisibilitySamplingClient(result, visConfig, f.metricsClient, f.logger)
+		result = managerWrappers.NewVisibilitySamplingClient(result, visConfig, f.metricsClient, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewVisibilityPersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = managerWrappers.NewVisibilityPersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
 
 	return result, nil
@@ -285,13 +287,13 @@ func (f *factoryImpl) NewDomainReplicationQueueManager() (p.QueueManager, error)
 	}
 	result := p.NewQueueManager(store)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = p.NewQueuePersistenceErrorInjectionClient(result, errorRate, f.logger)
+		result = managerWrappers.NewQueuePersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = p.NewQueuePersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = managerWrappers.NewQueuePersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewQueuePersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = managerWrappers.NewQueuePersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
 
 	return result, nil

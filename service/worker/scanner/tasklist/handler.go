@@ -21,6 +21,7 @@
 package tasklist
 
 import (
+	"github.com/uber/cadence/common/persistence/managerWrappers"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -144,7 +145,7 @@ func (s *Scavenger) completeOrphanTasksHandler() handlerStatus {
 	var nDeleted int
 	batchSize := s.getOrphanTasksPageSizeFn()
 	resp, err := s.getOrphanTasks(batchSize)
-	if err == p.ErrPersistenceLimitExceeded {
+	if err == managerWrappers.ErrPersistenceLimitExceeded {
 		s.logger.Info("scavenger.completeOrphanTasksHandler query was ratelimited; will retry")
 		return handlerStatusDefer
 	}
@@ -158,7 +159,7 @@ func (s *Scavenger) completeOrphanTasksHandler() handlerStatus {
 			Name:     taskKey.TaskListName,
 			TaskType: taskKey.TaskType,
 		}, taskKey.TaskID)
-		if err == p.ErrPersistenceLimitExceeded {
+		if err == managerWrappers.ErrPersistenceLimitExceeded {
 			s.logger.Info("scavenger.completeOrphanTasksHandler query was ratelimited; will retry")
 			return handlerStatusDefer
 		}

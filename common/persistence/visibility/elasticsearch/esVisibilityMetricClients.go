@@ -22,24 +22,24 @@ package elasticsearch
 
 import (
 	"context"
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
-	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
 type visibilityMetricsClient struct {
 	metricClient metrics.Client
-	persistence  p.VisibilityManager
+	persistence  visibility.VisibilityManager
 	logger       log.Logger
 }
 
-var _ p.VisibilityManager = (*visibilityMetricsClient)(nil)
+var _ visibility.VisibilityManager = (*visibilityMetricsClient)(nil)
 
 // NewVisibilityMetricsClient wrap visibility client with metrics
-func NewVisibilityMetricsClient(persistence p.VisibilityManager, metricClient metrics.Client, logger log.Logger) p.VisibilityManager {
+func NewVisibilityMetricsClient(persistence visibility.VisibilityManager, metricClient metrics.Client, logger log.Logger) visibility.VisibilityManager {
 	return &visibilityMetricsClient{
 		persistence:  persistence,
 		metricClient: metricClient,
@@ -53,7 +53,7 @@ func (p *visibilityMetricsClient) GetName() string {
 
 func (p *visibilityMetricsClient) RecordWorkflowExecutionStarted(
 	ctx context.Context,
-	request *p.RecordWorkflowExecutionStartedRequest,
+	request *visibility.RecordWorkflowExecutionStartedRequest,
 ) error {
 	p.metricClient.IncCounter(metrics.ElasticsearchRecordWorkflowExecutionStartedScope, metrics.ElasticsearchRequests)
 
@@ -70,7 +70,7 @@ func (p *visibilityMetricsClient) RecordWorkflowExecutionStarted(
 
 func (p *visibilityMetricsClient) RecordWorkflowExecutionClosed(
 	ctx context.Context,
-	request *p.RecordWorkflowExecutionClosedRequest,
+	request *visibility.RecordWorkflowExecutionClosedRequest,
 ) error {
 	p.metricClient.IncCounter(metrics.ElasticsearchRecordWorkflowExecutionClosedScope, metrics.ElasticsearchRequests)
 
@@ -87,7 +87,7 @@ func (p *visibilityMetricsClient) RecordWorkflowExecutionClosed(
 
 func (p *visibilityMetricsClient) UpsertWorkflowExecution(
 	ctx context.Context,
-	request *p.UpsertWorkflowExecutionRequest,
+	request *visibility.UpsertWorkflowExecutionRequest,
 ) error {
 	p.metricClient.IncCounter(metrics.ElasticsearchUpsertWorkflowExecutionScope, metrics.ElasticsearchRequests)
 
@@ -104,8 +104,8 @@ func (p *visibilityMetricsClient) UpsertWorkflowExecution(
 
 func (p *visibilityMetricsClient) ListOpenWorkflowExecutions(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsRequest,
-) (*p.ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	p.metricClient.IncCounter(metrics.ElasticsearchListOpenWorkflowExecutionsScope, metrics.ElasticsearchRequests)
 
 	sw := p.metricClient.StartTimer(metrics.ElasticsearchListOpenWorkflowExecutionsScope, metrics.ElasticsearchLatency)
@@ -121,8 +121,8 @@ func (p *visibilityMetricsClient) ListOpenWorkflowExecutions(
 
 func (p *visibilityMetricsClient) ListClosedWorkflowExecutions(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsRequest,
-) (*p.ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	p.metricClient.IncCounter(metrics.ElasticsearchListClosedWorkflowExecutionsScope, metrics.ElasticsearchRequests)
 
 	sw := p.metricClient.StartTimer(metrics.ElasticsearchListClosedWorkflowExecutionsScope, metrics.ElasticsearchLatency)
@@ -138,8 +138,8 @@ func (p *visibilityMetricsClient) ListClosedWorkflowExecutions(
 
 func (p *visibilityMetricsClient) ListOpenWorkflowExecutionsByType(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsByTypeRequest,
-) (*p.ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByTypeRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	p.metricClient.IncCounter(metrics.ElasticsearchListOpenWorkflowExecutionsByTypeScope, metrics.ElasticsearchRequests)
 
 	sw := p.metricClient.StartTimer(metrics.ElasticsearchListOpenWorkflowExecutionsByTypeScope, metrics.ElasticsearchLatency)
@@ -155,8 +155,8 @@ func (p *visibilityMetricsClient) ListOpenWorkflowExecutionsByType(
 
 func (p *visibilityMetricsClient) ListClosedWorkflowExecutionsByType(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsByTypeRequest,
-) (*p.ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByTypeRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	p.metricClient.IncCounter(metrics.ElasticsearchListClosedWorkflowExecutionsByTypeScope, metrics.ElasticsearchRequests)
 
 	sw := p.metricClient.StartTimer(metrics.ElasticsearchListClosedWorkflowExecutionsByTypeScope, metrics.ElasticsearchLatency)
@@ -172,8 +172,8 @@ func (p *visibilityMetricsClient) ListClosedWorkflowExecutionsByType(
 
 func (p *visibilityMetricsClient) ListOpenWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsByWorkflowIDRequest,
-) (*p.ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByWorkflowIDRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	p.metricClient.IncCounter(metrics.ElasticsearchListOpenWorkflowExecutionsByWorkflowIDScope, metrics.ElasticsearchRequests)
 
 	sw := p.metricClient.StartTimer(metrics.ElasticsearchListOpenWorkflowExecutionsByWorkflowIDScope, metrics.ElasticsearchLatency)
@@ -189,8 +189,8 @@ func (p *visibilityMetricsClient) ListOpenWorkflowExecutionsByWorkflowID(
 
 func (p *visibilityMetricsClient) ListClosedWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsByWorkflowIDRequest,
-) (*p.ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByWorkflowIDRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	p.metricClient.IncCounter(metrics.ElasticsearchListClosedWorkflowExecutionsByWorkflowIDScope, metrics.ElasticsearchRequests)
 
 	sw := p.metricClient.StartTimer(metrics.ElasticsearchListClosedWorkflowExecutionsByWorkflowIDScope, metrics.ElasticsearchLatency)
@@ -206,8 +206,8 @@ func (p *visibilityMetricsClient) ListClosedWorkflowExecutionsByWorkflowID(
 
 func (p *visibilityMetricsClient) ListClosedWorkflowExecutionsByStatus(
 	ctx context.Context,
-	request *p.ListClosedWorkflowExecutionsByStatusRequest,
-) (*p.ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListClosedWorkflowExecutionsByStatusRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	p.metricClient.IncCounter(metrics.ElasticsearchListClosedWorkflowExecutionsByStatusScope, metrics.ElasticsearchRequests)
 
 	sw := p.metricClient.StartTimer(metrics.ElasticsearchListClosedWorkflowExecutionsByStatusScope, metrics.ElasticsearchLatency)
@@ -223,8 +223,8 @@ func (p *visibilityMetricsClient) ListClosedWorkflowExecutionsByStatus(
 
 func (p *visibilityMetricsClient) GetClosedWorkflowExecution(
 	ctx context.Context,
-	request *p.GetClosedWorkflowExecutionRequest,
-) (*p.GetClosedWorkflowExecutionResponse, error) {
+	request *visibility.GetClosedWorkflowExecutionRequest,
+) (*visibility.GetClosedWorkflowExecutionResponse, error) {
 	p.metricClient.IncCounter(metrics.ElasticsearchGetClosedWorkflowExecutionScope, metrics.ElasticsearchRequests)
 
 	sw := p.metricClient.StartTimer(metrics.ElasticsearchGetClosedWorkflowExecutionScope, metrics.ElasticsearchLatency)
@@ -240,8 +240,8 @@ func (p *visibilityMetricsClient) GetClosedWorkflowExecution(
 
 func (p *visibilityMetricsClient) ListWorkflowExecutions(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsByQueryRequest,
-) (*p.ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByQueryRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	p.metricClient.IncCounter(metrics.ElasticsearchListWorkflowExecutionsScope, metrics.ElasticsearchRequests)
 
 	sw := p.metricClient.StartTimer(metrics.ElasticsearchListWorkflowExecutionsScope, metrics.ElasticsearchLatency)
@@ -257,8 +257,8 @@ func (p *visibilityMetricsClient) ListWorkflowExecutions(
 
 func (p *visibilityMetricsClient) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsByQueryRequest,
-) (*p.ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByQueryRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	p.metricClient.IncCounter(metrics.ElasticsearchScanWorkflowExecutionsScope, metrics.ElasticsearchRequests)
 
 	sw := p.metricClient.StartTimer(metrics.ElasticsearchScanWorkflowExecutionsScope, metrics.ElasticsearchLatency)
@@ -274,8 +274,8 @@ func (p *visibilityMetricsClient) ScanWorkflowExecutions(
 
 func (p *visibilityMetricsClient) CountWorkflowExecutions(
 	ctx context.Context,
-	request *p.CountWorkflowExecutionsRequest,
-) (*p.CountWorkflowExecutionsResponse, error) {
+	request *visibility.CountWorkflowExecutionsRequest,
+) (*visibility.CountWorkflowExecutionsResponse, error) {
 	p.metricClient.IncCounter(metrics.ElasticsearchCountWorkflowExecutionsScope, metrics.ElasticsearchRequests)
 
 	sw := p.metricClient.StartTimer(metrics.ElasticsearchCountWorkflowExecutionsScope, metrics.ElasticsearchLatency)
@@ -291,7 +291,7 @@ func (p *visibilityMetricsClient) CountWorkflowExecutions(
 
 func (p *visibilityMetricsClient) DeleteWorkflowExecution(
 	ctx context.Context,
-	request *p.VisibilityDeleteWorkflowExecutionRequest,
+	request *visibility.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
 	p.metricClient.IncCounter(metrics.ElasticsearchDeleteWorkflowExecutionsScope, metrics.ElasticsearchRequests)
 

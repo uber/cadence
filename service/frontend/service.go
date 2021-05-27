@@ -21,6 +21,7 @@
 package frontend
 
 import (
+	"github.com/uber/cadence/common/persistence/visibility"
 	"sync/atomic"
 	"time"
 
@@ -32,7 +33,6 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	espersistence "github.com/uber/cadence/common/persistence/visibility/elasticsearch"
 	"github.com/uber/cadence/common/resource"
@@ -196,10 +196,10 @@ func NewService(
 	visibilityManagerInitializer := func(
 		persistenceBean persistenceClient.Bean,
 		logger log.Logger,
-	) (persistence.VisibilityManager, error) {
+	) (visibility.VisibilityManager, error) {
 		visibilityFromDB := persistenceBean.GetVisibilityManager()
 
-		var visibilityFromES persistence.VisibilityManager
+		var visibilityFromES visibility.VisibilityManager
 		if params.ESConfig != nil {
 			visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
 			visibilityConfigForES := &config.VisibilityConfig{
@@ -211,7 +211,7 @@ func NewService(
 			visibilityFromES = espersistence.NewESVisibilityManager(visibilityIndexName, params.ESClient, visibilityConfigForES,
 				nil, params.MetricsClient, logger)
 		}
-		return persistence.NewVisibilityManagerWrapper(
+		return visibility.NewVisibilityManagerWrapper(
 			visibilityFromDB,
 			visibilityFromES,
 			serviceConfig.EnableReadVisibilityFromES,

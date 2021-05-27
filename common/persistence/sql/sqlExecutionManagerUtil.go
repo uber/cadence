@@ -26,6 +26,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/validator"
 	"time"
 
 	"github.com/uber/cadence/common/persistence/serialization"
@@ -1341,7 +1342,7 @@ func (m *sqlExecutionManager) createExecution(
 ) error {
 
 	// validate workflow state & close status
-	if err := p.ValidateCreateWorkflowStateCloseStatus(
+	if err := validator.ValidateCreateWorkflowStateCloseStatus(
 		executionInfo.State,
 		executionInfo.CloseStatus); err != nil {
 		return err
@@ -1403,7 +1404,7 @@ func updateExecution(
 ) error {
 
 	// validate workflow state & close status
-	if err := p.ValidateUpdateWorkflowStateCloseStatus(
+	if err := validator.ValidateUpdateWorkflowStateCloseStatus(
 		executionInfo.State,
 		executionInfo.CloseStatus); err != nil {
 		return err

@@ -21,6 +21,7 @@
 package resource
 
 import (
+	"github.com/uber/cadence/common/persistence/visibility"
 	"go.uber.org/yarpc"
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
@@ -96,7 +97,7 @@ type (
 
 		GetMetadataManager() persistence.DomainManager
 		GetTaskManager() persistence.TaskManager
-		GetVisibilityManager() persistence.VisibilityManager
+		GetVisibilityManager() visibility.VisibilityManager
 		GetShardManager() persistence.ShardManager
 		GetHistoryManager() persistence.HistoryManager
 		GetExecutionManager(int) (persistence.ExecutionManager, error)

@@ -26,6 +26,7 @@ import (
 	context "context"
 	ctx "context"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/utils"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -602,7 +603,7 @@ func (r *workflowResetterImpl) getPaginationFn(
 
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 
-		_, historyBatches, token, _, err := persistence.PaginateHistory(
+		_, historyBatches, token, _, err := utils.PaginateHistory(
 			ctx,
 			r.historyV2Mgr,
 			true,

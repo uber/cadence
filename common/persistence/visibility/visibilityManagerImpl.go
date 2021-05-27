@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistence
+package visibility
 
 import (
 	"context"
@@ -28,13 +28,14 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
 type (
 	visibilityManagerImpl struct {
-		serializer  PayloadSerializer
-		persistence VisibilityStore
+		serializer  persistence.PayloadSerializer
+		persistence persistence.VisibilityStore
 		logger      log.Logger
 	}
 )
@@ -45,10 +46,10 @@ const VisibilityEncoding = common.EncodingTypeThriftRW
 var _ VisibilityManager = (*visibilityManagerImpl)(nil)
 
 // NewVisibilityManagerImpl returns new VisibilityManager
-func NewVisibilityManagerImpl(persistence VisibilityStore, logger log.Logger) VisibilityManager {
+func NewVisibilityManagerImpl(visibilityStore persistence.VisibilityStore, logger log.Logger) VisibilityManager {
 	return &visibilityManagerImpl{
-		serializer:  NewPayloadSerializer(),
-		persistence: persistence,
+		serializer:  persistence.NewPayloadSerializer(),
+		persistence: visibilityStore,
 		logger:      logger,
 	}
 }
@@ -65,7 +66,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionStarted(
 	ctx context.Context,
 	request *RecordWorkflowExecutionStartedRequest,
 ) error {
-	req := &InternalRecordWorkflowExecutionStartedRequest{
+	req := &persistence.InternalRecordWorkflowExecutionStartedRequest{
 		DomainUUID:         request.DomainUUID,
 		WorkflowID:         request.Execution.GetWorkflowID(),
 		RunID:              request.Execution.GetRunID(),
@@ -86,7 +87,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(
 	ctx context.Context,
 	request *RecordWorkflowExecutionClosedRequest,
 ) error {
-	req := &InternalRecordWorkflowExecutionClosedRequest{
+	req := &persistence.InternalRecordWorkflowExecutionClosedRequest{
 		DomainUUID:         request.DomainUUID,
 		WorkflowID:         request.Execution.GetWorkflowID(),
 		RunID:              request.Execution.GetRunID(),
@@ -110,7 +111,7 @@ func (v *visibilityManagerImpl) UpsertWorkflowExecution(
 	ctx context.Context,
 	request *UpsertWorkflowExecutionRequest,
 ) error {
-	req := &InternalUpsertWorkflowExecutionRequest{
+	req := &persistence.InternalUpsertWorkflowExecutionRequest{
 		DomainUUID:         request.DomainUUID,
 		WorkflowID:         request.Execution.GetWorkflowID(),
 		RunID:              request.Execution.GetRunID(),
@@ -153,7 +154,7 @@ func (v *visibilityManagerImpl) ListOpenWorkflowExecutionsByType(
 	request *ListWorkflowExecutionsByTypeRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	internalListRequest := v.toInternalListWorkflowExecutionsRequest(&request.ListWorkflowExecutionsRequest)
-	internalRequest := &InternalListWorkflowExecutionsByTypeRequest{
+	internalRequest := &persistence.InternalListWorkflowExecutionsByTypeRequest{
 		WorkflowTypeName: request.WorkflowTypeName,
 	}
 	if internalListRequest != nil {
@@ -171,7 +172,7 @@ func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByType(
 	request *ListWorkflowExecutionsByTypeRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	internalListRequest := v.toInternalListWorkflowExecutionsRequest(&request.ListWorkflowExecutionsRequest)
-	internalRequest := &InternalListWorkflowExecutionsByTypeRequest{
+	internalRequest := &persistence.InternalListWorkflowExecutionsByTypeRequest{
 		WorkflowTypeName: request.WorkflowTypeName,
 	}
 	if internalListRequest != nil {
@@ -189,7 +190,7 @@ func (v *visibilityManagerImpl) ListOpenWorkflowExecutionsByWorkflowID(
 	request *ListWorkflowExecutionsByWorkflowIDRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	internalListRequest := v.toInternalListWorkflowExecutionsRequest(&request.ListWorkflowExecutionsRequest)
-	internalRequest := &InternalListWorkflowExecutionsByWorkflowIDRequest{
+	internalRequest := &persistence.InternalListWorkflowExecutionsByWorkflowIDRequest{
 		WorkflowID: request.WorkflowID,
 	}
 	if internalListRequest != nil {
@@ -207,7 +208,7 @@ func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByWorkflowID(
 	request *ListWorkflowExecutionsByWorkflowIDRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	internalListRequest := v.toInternalListWorkflowExecutionsRequest(&request.ListWorkflowExecutionsRequest)
-	internalRequest := &InternalListWorkflowExecutionsByWorkflowIDRequest{
+	internalRequest := &persistence.InternalListWorkflowExecutionsByWorkflowIDRequest{
 		WorkflowID: request.WorkflowID,
 	}
 	if internalListRequest != nil {
@@ -225,7 +226,7 @@ func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByStatus(
 	request *ListClosedWorkflowExecutionsByStatusRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	internalListRequest := v.toInternalListWorkflowExecutionsRequest(&request.ListWorkflowExecutionsRequest)
-	internalRequest := &InternalListClosedWorkflowExecutionsByStatusRequest{
+	internalRequest := &persistence.InternalListClosedWorkflowExecutionsByStatusRequest{
 		Status: request.Status,
 	}
 	if internalListRequest != nil {
@@ -242,7 +243,7 @@ func (v *visibilityManagerImpl) GetClosedWorkflowExecution(
 	ctx context.Context,
 	request *GetClosedWorkflowExecutionRequest,
 ) (*GetClosedWorkflowExecutionResponse, error) {
-	internalReq := &InternalGetClosedWorkflowExecutionRequest{
+	internalReq := &persistence.InternalGetClosedWorkflowExecutionRequest{
 		DomainUUID: request.DomainUUID,
 		Domain:     request.Domain,
 		Execution:  request.Execution,
@@ -290,7 +291,7 @@ func (v *visibilityManagerImpl) CountWorkflowExecutions(
 	return v.persistence.CountWorkflowExecutions(ctx, request)
 }
 
-func (v *visibilityManagerImpl) convertInternalGetResponse(internalResp *InternalGetClosedWorkflowExecutionResponse) *GetClosedWorkflowExecutionResponse {
+func (v *visibilityManagerImpl) convertInternalGetResponse(internalResp *persistence.InternalGetClosedWorkflowExecutionResponse) *GetClosedWorkflowExecutionResponse {
 	if internalResp == nil {
 		return nil
 	}
@@ -300,7 +301,7 @@ func (v *visibilityManagerImpl) convertInternalGetResponse(internalResp *Interna
 	return resp
 }
 
-func (v *visibilityManagerImpl) convertInternalListResponse(internalResp *InternalListWorkflowExecutionsResponse) *ListWorkflowExecutionsResponse {
+func (v *visibilityManagerImpl) convertInternalListResponse(internalResp *persistence.InternalListWorkflowExecutionsResponse) *ListWorkflowExecutionsResponse {
 	if internalResp == nil {
 		return nil
 	}
@@ -335,7 +336,7 @@ func (v *visibilityManagerImpl) getSearchAttributes(attr map[string]interface{})
 	}, nil
 }
 
-func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution *InternalVisibilityWorkflowExecutionInfo) *types.WorkflowExecutionInfo {
+func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution *persistence.InternalVisibilityWorkflowExecutionInfo) *types.WorkflowExecutionInfo {
 	// special handling of ExecutionTime for cron or retry
 	if execution.ExecutionTime.UnixNano() == 0 {
 		execution.ExecutionTime = execution.StartTime
@@ -382,7 +383,7 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 	return convertedExecution
 }
 
-func (v *visibilityManagerImpl) fromInternalListWorkflowExecutionsRequest(internalReq *InternalListWorkflowExecutionsRequest) *ListWorkflowExecutionsRequest {
+func (v *visibilityManagerImpl) fromInternalListWorkflowExecutionsRequest(internalReq *persistence.InternalListWorkflowExecutionsRequest) *ListWorkflowExecutionsRequest {
 	if internalReq == nil {
 		return nil
 	}
@@ -396,11 +397,11 @@ func (v *visibilityManagerImpl) fromInternalListWorkflowExecutionsRequest(intern
 	}
 }
 
-func (v *visibilityManagerImpl) toInternalListWorkflowExecutionsRequest(req *ListWorkflowExecutionsRequest) *InternalListWorkflowExecutionsRequest {
+func (v *visibilityManagerImpl) toInternalListWorkflowExecutionsRequest(req *ListWorkflowExecutionsRequest) *persistence.InternalListWorkflowExecutionsRequest {
 	if req == nil {
 		return nil
 	}
-	return &InternalListWorkflowExecutionsRequest{
+	return &persistence.InternalListWorkflowExecutionsRequest{
 		DomainUUID:    req.DomainUUID,
 		Domain:        req.Domain,
 		EarliestTime:  time.Unix(0, req.EarliestTime),
@@ -410,7 +411,7 @@ func (v *visibilityManagerImpl) toInternalListWorkflowExecutionsRequest(req *Lis
 	}
 }
 
-func (v *visibilityManagerImpl) serializeMemo(visibilityMemo *types.Memo, domainID, wID, rID string) *DataBlob {
+func (v *visibilityManagerImpl) serializeMemo(visibilityMemo *types.Memo, domainID, wID, rID string) *persistence.DataBlob {
 	memo, err := v.serializer.SerializeVisibilityMemo(visibilityMemo, VisibilityEncoding)
 	if err != nil {
 		v.logger.WithTags(
@@ -421,7 +422,7 @@ func (v *visibilityManagerImpl) serializeMemo(visibilityMemo *types.Memo, domain
 			Error("Unable to encode visibility memo")
 	}
 	if memo == nil {
-		return &DataBlob{}
+		return &persistence.DataBlob{}
 	}
 	return memo
 }

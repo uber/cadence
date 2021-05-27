@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/managerWrappers"
 	"net"
 	"strconv"
 	"sync"
@@ -597,7 +598,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 
 	var replicatorDomainCache cache.DomainCache
 	if c.workerConfig.EnableReplicator {
-		metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgr, service.GetMetricsClient(), c.logger)
+		metadataManager := managerWrappers.NewMetadataPersistenceMetricsClient(c.metadataMgr, service.GetMetricsClient(), c.logger)
 		replicatorDomainCache = cache.NewDomainCache(metadataManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetLogger())
 		replicatorDomainCache.Start()
 		c.startWorkerReplicator(params, service, replicatorDomainCache)
@@ -605,7 +606,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 
 	var clientWorkerDomainCache cache.DomainCache
 	if c.workerConfig.EnableArchiver {
-		metadataProxyManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgr, service.GetMetricsClient(), c.logger)
+		metadataProxyManager := managerWrappers.NewMetadataPersistenceMetricsClient(c.metadataMgr, service.GetMetricsClient(), c.logger)
 		clientWorkerDomainCache = cache.NewDomainCache(metadataProxyManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetLogger())
 		clientWorkerDomainCache.Start()
 		c.startWorkerClientWorker(params, service, clientWorkerDomainCache)

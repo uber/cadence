@@ -21,6 +21,7 @@
 package resource
 
 import (
+	"github.com/uber/cadence/common/persistence/visibility"
 	"math/rand"
 	"os"
 	"sync/atomic"
@@ -62,7 +63,7 @@ type (
 	VisibilityManagerInitializer func(
 		persistenceBean persistenceClient.Bean,
 		logger log.Logger,
-	) (persistence.VisibilityManager, error)
+	) (visibility.VisibilityManager, error)
 
 	// Impl contains all common resources shared across frontend / matching / history / worker
 	Impl struct {
@@ -112,7 +113,7 @@ type (
 		// persistence clients
 
 		persistenceBean persistenceClient.Bean
-		visibilityMgr   persistence.VisibilityManager
+		visibilityMgr   visibility.VisibilityManager
 
 		// loggers
 
@@ -585,7 +586,7 @@ func (h *Impl) GetTaskManager() persistence.TaskManager {
 }
 
 // GetVisibilityManager return visibility manager
-func (h *Impl) GetVisibilityManager() persistence.VisibilityManager {
+func (h *Impl) GetVisibilityManager() visibility.VisibilityManager {
 	return h.visibilityMgr
 }
 

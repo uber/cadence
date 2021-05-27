@@ -18,12 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistence
+package visibility
 
 import (
 	"context"
 	"fmt"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/types"

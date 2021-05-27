@@ -18,10 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistence
+package validator
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/persistence"
 
 	"github.com/uber/cadence/common/types"
 )
@@ -33,8 +34,8 @@ import (
 
 // ValidateCreateWorkflowModeState validate workflow creation mode & workflow state
 func ValidateCreateWorkflowModeState(
-	mode CreateWorkflowMode,
-	newWorkflowSnapshot InternalWorkflowSnapshot,
+	mode persistence.CreateWorkflowMode,
+	newWorkflowSnapshot persistence.InternalWorkflowSnapshot,
 ) error {
 
 	workflowState := newWorkflowSnapshot.ExecutionInfo.State
@@ -43,11 +44,11 @@ func ValidateCreateWorkflowModeState(
 	}
 
 	switch mode {
-	case CreateWorkflowModeBrandNew,
-		CreateWorkflowModeWorkflowIDReuse,
-		CreateWorkflowModeContinueAsNew:
-		if workflowState == WorkflowStateZombie ||
-			workflowState == WorkflowStateCompleted {
+	case persistence.CreateWorkflowModeBrandNew,
+		persistence.CreateWorkflowModeWorkflowIDReuse,
+		persistence.CreateWorkflowModeContinueAsNew:
+		if workflowState == persistence.WorkflowStateZombie ||
+			workflowState == persistence.WorkflowStateCompleted {
 			return newInvalidCreateWorkflowMode(
 				mode,
 				workflowState,
@@ -55,10 +56,10 @@ func ValidateCreateWorkflowModeState(
 		}
 		return nil
 
-	case CreateWorkflowModeZombie:
-		if workflowState == WorkflowStateCreated ||
-			workflowState == WorkflowStateRunning ||
-			workflowState == WorkflowStateCompleted {
+	case persistence.CreateWorkflowModeZombie:
+		if workflowState == persistence.WorkflowStateCreated ||
+			workflowState == persistence.WorkflowStateRunning ||
+			workflowState == persistence.WorkflowStateCompleted {
 			return newInvalidCreateWorkflowMode(
 				mode,
 				workflowState,
@@ -75,9 +76,9 @@ func ValidateCreateWorkflowModeState(
 
 // ValidateUpdateWorkflowModeState validate workflow update mode & workflow state
 func ValidateUpdateWorkflowModeState(
-	mode UpdateWorkflowMode,
-	currentWorkflowMutation InternalWorkflowMutation,
-	newWorkflowSnapshot *InternalWorkflowSnapshot,
+	mode persistence.UpdateWorkflowMode,
+	currentWorkflowMutation persistence.InternalWorkflowMutation,
+	newWorkflowSnapshot *persistence.InternalWorkflowSnapshot,
 ) error {
 
 	currentWorkflowState := currentWorkflowMutation.ExecutionInfo.State
@@ -93,7 +94,7 @@ func ValidateUpdateWorkflowModeState(
 	}
 
 	switch mode {
-	case UpdateWorkflowModeUpdateCurrent:
+	case persistence.UpdateWorkflowModeUpdateCurrent:
 		// update current record
 		// 1. current workflow only ->
 		//  current workflow cannot be zombie
@@ -103,22 +104,22 @@ func ValidateUpdateWorkflowModeState(
 
 		// case 1
 		if newWorkflowState == nil {
-			if currentWorkflowState == WorkflowStateZombie {
+			if currentWorkflowState == persistence.WorkflowStateZombie {
 				return newInvalidUpdateWorkflowMode(mode, currentWorkflowState)
 			}
 			return nil
 		}
 
 		// case 2
-		if currentWorkflowState == WorkflowStateCreated ||
-			currentWorkflowState == WorkflowStateRunning ||
-			*newWorkflowState == WorkflowStateZombie ||
-			*newWorkflowState == WorkflowStateCompleted {
+		if currentWorkflowState == persistence.WorkflowStateCreated ||
+			currentWorkflowState == persistence.WorkflowStateRunning ||
+			*newWorkflowState == persistence.WorkflowStateZombie ||
+			*newWorkflowState == persistence.WorkflowStateCompleted {
 			return newInvalidUpdateWorkflowWithNewMode(mode, currentWorkflowState, *newWorkflowState)
 		}
 		return nil
 
-	case UpdateWorkflowModeBypassCurrent:
+	case persistence.UpdateWorkflowModeBypassCurrent:
 		// bypass current record
 		// 1. current workflow only ->
 		//  current workflow cannot be created / running
@@ -128,19 +129,19 @@ func ValidateUpdateWorkflowModeState(
 
 		// case 1
 		if newWorkflowState == nil {
-			if currentWorkflowState == WorkflowStateCreated ||
-				currentWorkflowState == WorkflowStateRunning {
+			if currentWorkflowState == persistence.WorkflowStateCreated ||
+				currentWorkflowState == persistence.WorkflowStateRunning {
 				return newInvalidUpdateWorkflowMode(mode, currentWorkflowState)
 			}
 			return nil
 		}
 
 		// case 2
-		if currentWorkflowState == WorkflowStateCreated ||
-			currentWorkflowState == WorkflowStateRunning ||
-			*newWorkflowState == WorkflowStateCreated ||
-			*newWorkflowState == WorkflowStateRunning ||
-			*newWorkflowState == WorkflowStateCompleted {
+		if currentWorkflowState == persistence.WorkflowStateCreated ||
+			currentWorkflowState == persistence.WorkflowStateRunning ||
+			*newWorkflowState == persistence.WorkflowStateCreated ||
+			*newWorkflowState == persistence.WorkflowStateRunning ||
+			*newWorkflowState == persistence.WorkflowStateCompleted {
 			return newInvalidUpdateWorkflowWithNewMode(
 				mode,
 				currentWorkflowState,
@@ -158,10 +159,10 @@ func ValidateUpdateWorkflowModeState(
 
 // ValidateConflictResolveWorkflowModeState validate workflow conflict resolve mode & workflow state
 func ValidateConflictResolveWorkflowModeState(
-	mode ConflictResolveWorkflowMode,
-	resetWorkflowSnapshot InternalWorkflowSnapshot,
-	newWorkflowSnapshot *InternalWorkflowSnapshot,
-	currentWorkflowMutation *InternalWorkflowMutation,
+	mode persistence.ConflictResolveWorkflowMode,
+	resetWorkflowSnapshot persistence.InternalWorkflowSnapshot,
+	newWorkflowSnapshot *persistence.InternalWorkflowSnapshot,
+	currentWorkflowMutation *persistence.InternalWorkflowMutation,
 ) error {
 
 	resetWorkflowState := resetWorkflowSnapshot.ExecutionInfo.State
@@ -184,7 +185,7 @@ func ValidateConflictResolveWorkflowModeState(
 	}
 
 	switch mode {
-	case ConflictResolveWorkflowModeUpdateCurrent:
+	case persistence.ConflictResolveWorkflowModeUpdateCurrent:
 		// update current record
 		// 1. reset workflow only ->
 		//  reset workflow cannot be zombie
@@ -208,7 +209,7 @@ func ValidateConflictResolveWorkflowModeState(
 		if currentWorkflowState == nil {
 			// case 1
 			if newWorkflowState == nil {
-				if resetWorkflowState == WorkflowStateZombie {
+				if resetWorkflowState == persistence.WorkflowStateZombie {
 					return newInvalidConflictResolveWorkflowMode(
 						mode,
 						resetWorkflowState,
@@ -218,11 +219,11 @@ func ValidateConflictResolveWorkflowModeState(
 			}
 
 			// case 2
-			if resetWorkflowState == WorkflowStateCreated ||
-				resetWorkflowState == WorkflowStateRunning ||
-				resetWorkflowState == WorkflowStateZombie ||
-				*newWorkflowState == WorkflowStateZombie ||
-				*newWorkflowState == WorkflowStateCompleted {
+			if resetWorkflowState == persistence.WorkflowStateCreated ||
+				resetWorkflowState == persistence.WorkflowStateRunning ||
+				resetWorkflowState == persistence.WorkflowStateZombie ||
+				*newWorkflowState == persistence.WorkflowStateZombie ||
+				*newWorkflowState == persistence.WorkflowStateCompleted {
 				return newInvalidConflictResolveWorkflowWithNewMode(
 					mode,
 					resetWorkflowState,
@@ -235,9 +236,9 @@ func ValidateConflictResolveWorkflowModeState(
 		// case 3 & 4
 		// case 3
 		if newWorkflowState == nil {
-			if *currentWorkflowState == WorkflowStateCreated ||
-				*currentWorkflowState == WorkflowStateRunning ||
-				resetWorkflowState == WorkflowStateZombie {
+			if *currentWorkflowState == persistence.WorkflowStateCreated ||
+				*currentWorkflowState == persistence.WorkflowStateRunning ||
+				resetWorkflowState == persistence.WorkflowStateZombie {
 				return newInvalidConflictResolveWorkflowWithCurrentMode(
 					mode,
 					resetWorkflowState,
@@ -248,13 +249,13 @@ func ValidateConflictResolveWorkflowModeState(
 		}
 
 		// case 4
-		if *currentWorkflowState == WorkflowStateCreated ||
-			*currentWorkflowState == WorkflowStateRunning ||
-			resetWorkflowState == WorkflowStateCreated ||
-			resetWorkflowState == WorkflowStateRunning ||
-			resetWorkflowState == WorkflowStateZombie ||
-			*newWorkflowState == WorkflowStateZombie ||
-			*newWorkflowState == WorkflowStateCompleted {
+		if *currentWorkflowState == persistence.WorkflowStateCreated ||
+			*currentWorkflowState == persistence.WorkflowStateRunning ||
+			resetWorkflowState == persistence.WorkflowStateCreated ||
+			resetWorkflowState == persistence.WorkflowStateRunning ||
+			resetWorkflowState == persistence.WorkflowStateZombie ||
+			*newWorkflowState == persistence.WorkflowStateZombie ||
+			*newWorkflowState == persistence.WorkflowStateCompleted {
 			return newInvalidConflictResolveWorkflowWithCurrentWithNewMode(
 				mode,
 				resetWorkflowState,
@@ -264,7 +265,7 @@ func ValidateConflictResolveWorkflowModeState(
 		}
 		return nil
 
-	case ConflictResolveWorkflowModeBypassCurrent:
+	case persistence.ConflictResolveWorkflowModeBypassCurrent:
 		// bypass current record
 		// * current workflow cannot be set
 		// 1. reset workflow only ->
@@ -285,8 +286,8 @@ func ValidateConflictResolveWorkflowModeState(
 
 		// case 1
 		if newWorkflowState == nil {
-			if resetWorkflowState == WorkflowStateCreated ||
-				resetWorkflowState == WorkflowStateRunning {
+			if resetWorkflowState == persistence.WorkflowStateCreated ||
+				resetWorkflowState == persistence.WorkflowStateRunning {
 				return newInvalidConflictResolveWorkflowMode(
 					mode,
 					resetWorkflowState,
@@ -296,12 +297,12 @@ func ValidateConflictResolveWorkflowModeState(
 		}
 
 		// case 2
-		if resetWorkflowState == WorkflowStateCreated ||
-			resetWorkflowState == WorkflowStateRunning ||
-			resetWorkflowState == WorkflowStateZombie ||
-			*newWorkflowState == WorkflowStateCreated ||
-			*newWorkflowState == WorkflowStateRunning ||
-			*newWorkflowState == WorkflowStateCompleted {
+		if resetWorkflowState == persistence.WorkflowStateCreated ||
+			resetWorkflowState == persistence.WorkflowStateRunning ||
+			resetWorkflowState == persistence.WorkflowStateZombie ||
+			*newWorkflowState == persistence.WorkflowStateCreated ||
+			*newWorkflowState == persistence.WorkflowStateRunning ||
+			*newWorkflowState == persistence.WorkflowStateCompleted {
 			return newInvalidConflictResolveWorkflowWithNewMode(
 				mode,
 				resetWorkflowState,
@@ -319,11 +320,11 @@ func ValidateConflictResolveWorkflowModeState(
 
 func checkWorkflowState(state int) error {
 	switch state {
-	case WorkflowStateCreated,
-		WorkflowStateRunning,
-		WorkflowStateZombie,
-		WorkflowStateCompleted,
-		WorkflowStateCorrupted:
+	case persistence.WorkflowStateCreated,
+		persistence.WorkflowStateRunning,
+		persistence.WorkflowStateZombie,
+		persistence.WorkflowStateCompleted,
+		persistence.WorkflowStateCorrupted:
 		return nil
 	default:
 		return &types.InternalServiceError{
@@ -333,7 +334,7 @@ func checkWorkflowState(state int) error {
 }
 
 func newInvalidCreateWorkflowMode(
-	mode CreateWorkflowMode,
+	mode persistence.CreateWorkflowMode,
 	workflowState int,
 ) error {
 	return &types.InternalServiceError{
@@ -346,7 +347,7 @@ func newInvalidCreateWorkflowMode(
 }
 
 func newInvalidUpdateWorkflowMode(
-	mode UpdateWorkflowMode,
+	mode persistence.UpdateWorkflowMode,
 	currentWorkflowState int,
 ) error {
 	return &types.InternalServiceError{
@@ -359,7 +360,7 @@ func newInvalidUpdateWorkflowMode(
 }
 
 func newInvalidUpdateWorkflowWithNewMode(
-	mode UpdateWorkflowMode,
+	mode persistence.UpdateWorkflowMode,
 	currentWorkflowState int,
 	newWorkflowState int,
 ) error {
@@ -374,7 +375,7 @@ func newInvalidUpdateWorkflowWithNewMode(
 }
 
 func newInvalidConflictResolveWorkflowMode(
-	mode ConflictResolveWorkflowMode,
+	mode persistence.ConflictResolveWorkflowMode,
 	resetWorkflowState int,
 ) error {
 	return &types.InternalServiceError{
@@ -387,7 +388,7 @@ func newInvalidConflictResolveWorkflowMode(
 }
 
 func newInvalidConflictResolveWorkflowWithNewMode(
-	mode ConflictResolveWorkflowMode,
+	mode persistence.ConflictResolveWorkflowMode,
 	resetWorkflowState int,
 	newWorkflowState int,
 ) error {
@@ -402,7 +403,7 @@ func newInvalidConflictResolveWorkflowWithNewMode(
 }
 
 func newInvalidConflictResolveWorkflowWithCurrentMode(
-	mode ConflictResolveWorkflowMode,
+	mode persistence.ConflictResolveWorkflowMode,
 	resetWorkflowState int,
 	currentWorkflowState int,
 ) error {
@@ -417,7 +418,7 @@ func newInvalidConflictResolveWorkflowWithCurrentMode(
 }
 
 func newInvalidConflictResolveWorkflowWithCurrentWithNewMode(
-	mode ConflictResolveWorkflowMode,
+	mode persistence.ConflictResolveWorkflowMode,
 	resetWorkflowState int,
 	newWorkflowState int,
 	currentWorkflowState int,

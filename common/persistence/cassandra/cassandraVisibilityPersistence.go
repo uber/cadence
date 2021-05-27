@@ -23,6 +23,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -376,10 +377,10 @@ func (v *cassandraVisibilityPersistence) UpsertWorkflowExecution(
 	ctx context.Context,
 	request *p.InternalUpsertWorkflowExecutionRequest,
 ) error {
-	if p.IsNopUpsertWorkflowRequest(request) {
+	if visibility.IsNopUpsertWorkflowRequest(request) {
 		return nil
 	}
-	return p.NewOperationNotSupportErrorForVis()
+	return visibility.NewOperationNotSupportErrorForVis()
 }
 
 func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
@@ -690,29 +691,29 @@ func (v *cassandraVisibilityPersistence) GetClosedWorkflowExecution(
 // DeleteWorkflowExecution is a no-op since deletes are auto-handled by cassandra TTLs
 func (v *cassandraVisibilityPersistence) DeleteWorkflowExecution(
 	ctx context.Context,
-	request *p.VisibilityDeleteWorkflowExecutionRequest,
+	request *visibility.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
 	return nil
 }
 
 func (v *cassandraVisibilityPersistence) ListWorkflowExecutions(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsByQueryRequest,
+	request *visibility.ListWorkflowExecutionsByQueryRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	return nil, visibility.NewOperationNotSupportErrorForVis()
 }
 
 func (v *cassandraVisibilityPersistence) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	request *visibility.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+	return nil, visibility.NewOperationNotSupportErrorForVis()
 }
 
 func (v *cassandraVisibilityPersistence) CountWorkflowExecutions(
 	ctx context.Context,
-	request *p.CountWorkflowExecutionsRequest,
-) (*p.CountWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	request *visibility.CountWorkflowExecutionsRequest,
+) (*visibility.CountWorkflowExecutionsResponse, error) {
+	return nil, visibility.NewOperationNotSupportErrorForVis()
 }
 
 func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsOrderByClosedTime(

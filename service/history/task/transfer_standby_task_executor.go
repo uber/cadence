@@ -22,6 +22,7 @@ package task
 
 import (
 	"context"
+	"github.com/uber/cadence/common/persistence/validator"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -229,7 +230,7 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 		executionInfo := mutableState.GetExecutionInfo()
 		workflowTypeName := executionInfo.WorkflowTypeName
 		workflowCloseTimestamp := wfCloseTime
-		workflowCloseStatus := persistence.ToInternalWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
+		workflowCloseStatus := validator.ToInternalWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 		workflowHistoryLength := mutableState.GetNextEventID() - 1
 		startEvent, err := mutableState.GetStartEvent(ctx)
 		if err != nil {

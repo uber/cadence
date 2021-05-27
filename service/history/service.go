@@ -21,6 +21,7 @@
 package history
 
 import (
+	"github.com/uber/cadence/common/persistence/visibility"
 	"sync/atomic"
 	"time"
 
@@ -29,7 +30,6 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	espersistence "github.com/uber/cadence/common/persistence/visibility/elasticsearch"
 	"github.com/uber/cadence/common/service"
@@ -73,10 +73,10 @@ func NewService(
 	visibilityManagerInitializer := func(
 		persistenceBean persistenceClient.Bean,
 		logger log.Logger,
-	) (persistence.VisibilityManager, error) {
+	) (visibility.VisibilityManager, error) {
 		visibilityFromDB := persistenceBean.GetVisibilityManager()
 
-		var visibilityFromES persistence.VisibilityManager
+		var visibilityFromES visibility.VisibilityManager
 		if params.ESConfig != nil {
 			visibilityProducer, err := params.MessagingClient.NewProducer(common.VisibilityAppName)
 			if err != nil {
@@ -85,7 +85,7 @@ func NewService(
 			visibilityFromES = espersistence.NewESVisibilityManager("", nil, nil, visibilityProducer,
 				params.MetricsClient, logger)
 		}
-		return persistence.NewVisibilityManagerWrapper(
+		return visibility.NewVisibilityManagerWrapper(
 			visibilityFromDB,
 			visibilityFromES,
 			dynamicconfig.GetBoolPropertyFnFilteredByDomain(false), // history visibility never read

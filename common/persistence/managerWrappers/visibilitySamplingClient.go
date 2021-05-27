@@ -18,10 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistence
+package managerWrappers
 
 import (
 	"context"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"runtime"
 	"sync"
 
@@ -48,19 +49,19 @@ type visibilitySamplingClient struct {
 	rateLimitersForOpen   *domainToBucketMap
 	rateLimitersForClosed *domainToBucketMap
 	rateLimitersForList   *domainToBucketMap
-	persistence           VisibilityManager
+	persistence           visibility.VisibilityManager
 	config                *config.VisibilityConfig
 	metricClient          metrics.Client
 	logger                log.Logger
 }
 
-var _ VisibilityManager = (*visibilitySamplingClient)(nil)
+var _ visibility.VisibilityManager = (*visibilitySamplingClient)(nil)
 
 // NewVisibilitySamplingClient creates a client to manage visibility with sampling
 // For write requests, it will do sampling which will lose some records
 // For read requests, it will do sampling which will return service busy errors.
 // Note that this is different from NewVisibilityPersistenceRateLimitedClient which is overlapping with the read processing.
-func NewVisibilitySamplingClient(persistence VisibilityManager, config *config.VisibilityConfig, metricClient metrics.Client, logger log.Logger) VisibilityManager {
+func NewVisibilitySamplingClient(persistence visibility.VisibilityManager, config *config.VisibilityConfig, metricClient metrics.Client, logger log.Logger) visibility.VisibilityManager {
 	return &visibilitySamplingClient{
 		persistence:           persistence,
 		rateLimitersForOpen:   newDomainToBucketMap(),
@@ -105,7 +106,7 @@ func (m *domainToBucketMap) getRateLimiter(domain string, numOfPriority, qps int
 
 func (p *visibilitySamplingClient) RecordWorkflowExecutionStarted(
 	ctx context.Context,
-	request *RecordWorkflowExecutionStartedRequest,
+	request *visibility.RecordWorkflowExecutionStartedRequest,
 ) error {
 	domain := request.Domain
 	domainID := request.DomainUUID
@@ -128,7 +129,7 @@ func (p *visibilitySamplingClient) RecordWorkflowExecutionStarted(
 
 func (p *visibilitySamplingClient) RecordWorkflowExecutionClosed(
 	ctx context.Context,
-	request *RecordWorkflowExecutionClosedRequest,
+	request *visibility.RecordWorkflowExecutionClosedRequest,
 ) error {
 	domain := request.Domain
 	domainID := request.DomainUUID
@@ -152,7 +153,7 @@ func (p *visibilitySamplingClient) RecordWorkflowExecutionClosed(
 
 func (p *visibilitySamplingClient) UpsertWorkflowExecution(
 	ctx context.Context,
-	request *UpsertWorkflowExecutionRequest,
+	request *visibility.UpsertWorkflowExecutionRequest,
 ) error {
 	domain := request.Domain
 	domainID := request.DomainUUID
@@ -175,8 +176,8 @@ func (p *visibilitySamplingClient) UpsertWorkflowExecution(
 
 func (p *visibilitySamplingClient) ListOpenWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	if err := p.tryConsumeListToken(request.Domain); err != nil {
 		return nil, err
 	}
@@ -186,8 +187,8 @@ func (p *visibilitySamplingClient) ListOpenWorkflowExecutions(
 
 func (p *visibilitySamplingClient) ListClosedWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	if err := p.tryConsumeListToken(request.Domain); err != nil {
 		return nil, err
 	}
@@ -197,8 +198,8 @@ func (p *visibilitySamplingClient) ListClosedWorkflowExecutions(
 
 func (p *visibilitySamplingClient) ListOpenWorkflowExecutionsByType(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByTypeRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByTypeRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	if err := p.tryConsumeListToken(request.Domain); err != nil {
 		return nil, err
 	}
@@ -208,8 +209,8 @@ func (p *visibilitySamplingClient) ListOpenWorkflowExecutionsByType(
 
 func (p *visibilitySamplingClient) ListClosedWorkflowExecutionsByType(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByTypeRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByTypeRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	if err := p.tryConsumeListToken(request.Domain); err != nil {
 		return nil, err
 	}
@@ -219,8 +220,8 @@ func (p *visibilitySamplingClient) ListClosedWorkflowExecutionsByType(
 
 func (p *visibilitySamplingClient) ListOpenWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByWorkflowIDRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByWorkflowIDRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	if err := p.tryConsumeListToken(request.Domain); err != nil {
 		return nil, err
 	}
@@ -230,8 +231,8 @@ func (p *visibilitySamplingClient) ListOpenWorkflowExecutionsByWorkflowID(
 
 func (p *visibilitySamplingClient) ListClosedWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByWorkflowIDRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByWorkflowIDRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	if err := p.tryConsumeListToken(request.Domain); err != nil {
 		return nil, err
 	}
@@ -241,8 +242,8 @@ func (p *visibilitySamplingClient) ListClosedWorkflowExecutionsByWorkflowID(
 
 func (p *visibilitySamplingClient) ListClosedWorkflowExecutionsByStatus(
 	ctx context.Context,
-	request *ListClosedWorkflowExecutionsByStatusRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListClosedWorkflowExecutionsByStatusRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	if err := p.tryConsumeListToken(request.Domain); err != nil {
 		return nil, err
 	}
@@ -252,36 +253,36 @@ func (p *visibilitySamplingClient) ListClosedWorkflowExecutionsByStatus(
 
 func (p *visibilitySamplingClient) GetClosedWorkflowExecution(
 	ctx context.Context,
-	request *GetClosedWorkflowExecutionRequest,
-) (*GetClosedWorkflowExecutionResponse, error) {
+	request *visibility.GetClosedWorkflowExecutionRequest,
+) (*visibility.GetClosedWorkflowExecutionResponse, error) {
 	return p.persistence.GetClosedWorkflowExecution(ctx, request)
 }
 
 func (p *visibilitySamplingClient) DeleteWorkflowExecution(
 	ctx context.Context,
-	request *VisibilityDeleteWorkflowExecutionRequest,
+	request *visibility.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
 	return p.persistence.DeleteWorkflowExecution(ctx, request)
 }
 
 func (p *visibilitySamplingClient) ListWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByQueryRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByQueryRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	return p.persistence.ListWorkflowExecutions(ctx, request)
 }
 
 func (p *visibilitySamplingClient) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByQueryRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *visibility.ListWorkflowExecutionsByQueryRequest,
+) (*visibility.ListWorkflowExecutionsResponse, error) {
 	return p.persistence.ScanWorkflowExecutions(ctx, request)
 }
 
 func (p *visibilitySamplingClient) CountWorkflowExecutions(
 	ctx context.Context,
-	request *CountWorkflowExecutionsRequest,
-) (*CountWorkflowExecutionsResponse, error) {
+	request *visibility.CountWorkflowExecutionsRequest,
+) (*visibility.CountWorkflowExecutionsResponse, error) {
 	return p.persistence.CountWorkflowExecutions(ctx, request)
 }
 
@@ -293,7 +294,7 @@ func (p *visibilitySamplingClient) GetName() string {
 	return p.persistence.GetName()
 }
 
-func getRequestPriority(request *RecordWorkflowExecutionClosedRequest) int {
+func getRequestPriority(request *visibility.RecordWorkflowExecutionClosedRequest) int {
 	priority := 0
 	if request.Status == types.WorkflowExecutionCloseStatusCompleted {
 		priority = 1 // low priority for completed workflows

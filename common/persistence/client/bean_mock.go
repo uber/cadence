@@ -27,6 +27,7 @@
 package client
 
 import (
+	"github.com/uber/cadence/common/persistence/visibility"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -122,10 +123,10 @@ func (mr *MockBeanMockRecorder) SetTaskManager(arg0 interface{}) *gomock.Call {
 }
 
 // GetVisibilityManager mocks base method
-func (m *MockBean) GetVisibilityManager() persistence.VisibilityManager {
+func (m *MockBean) GetVisibilityManager() visibility.VisibilityManager {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetVisibilityManager")
-	ret0, _ := ret[0].(persistence.VisibilityManager)
+	ret0, _ := ret[0].(visibility.VisibilityManager)
 	return ret0
 }
 
@@ -136,7 +137,7 @@ func (mr *MockBeanMockRecorder) GetVisibilityManager() *gomock.Call {
 }
 
 // SetVisibilityManager mocks base method
-func (m *MockBean) SetVisibilityManager(arg0 persistence.VisibilityManager) {
+func (m *MockBean) SetVisibilityManager(arg0 visibility.VisibilityManager) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetVisibilityManager", arg0)
 }

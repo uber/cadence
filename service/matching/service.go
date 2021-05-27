@@ -21,13 +21,13 @@
 package matching
 
 import (
+	"github.com/uber/cadence/common/persistence/visibility"
 	"sync/atomic"
 	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
@@ -64,7 +64,7 @@ func NewService(
 		func(
 			persistenceBean persistenceClient.Bean,
 			logger log.Logger,
-		) (persistence.VisibilityManager, error) {
+		) (visibility.VisibilityManager, error) {
 			return persistenceBean.GetVisibilityManager(), nil
 		},
 	)

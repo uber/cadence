@@ -25,6 +25,7 @@ package domain
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/utils"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -159,7 +160,7 @@ func (d *handlerImpl) RegisterDomain(
 		clusterName := clusterConfig.GetClusterName()
 		clusters = append(clusters, &persistence.ClusterReplicationConfig{ClusterName: clusterName})
 	}
-	clusters = persistence.GetOrUseDefaultClusters(activeClusterName, clusters)
+	clusters = utils.GetOrUseDefaultClusters(activeClusterName, clusters)
 
 	currentHistoryArchivalState := neverEnabledState()
 	nextHistoryArchivalState := currentHistoryArchivalState

@@ -25,6 +25,8 @@ package worker
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/utils"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"sync/atomic"
 	"time"
 
@@ -101,7 +103,7 @@ func NewService(
 		func(
 			persistenceBean persistenceClient.Bean,
 			logger log.Logger,
-		) (persistence.VisibilityManager, error) {
+		) (visibility.VisibilityManager, error) {
 			return persistenceBean.GetVisibilityManager(), nil
 		},
 	)
@@ -388,7 +390,7 @@ func (s *Service) registerSystemDomain(domain string) {
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: currentClusterName,
-			Clusters:          persistence.GetOrUseDefaultClusters(currentClusterName, nil),
+			Clusters:          utils.GetOrUseDefaultClusters(currentClusterName, nil),
 		},
 		IsGlobalDomain:  false,
 		FailoverVersion: common.EmptyVersion,

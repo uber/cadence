@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/validator"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -296,7 +297,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 
 	workflowTypeName := executionInfo.WorkflowTypeName
 	workflowCloseTimestamp := wfCloseTime
-	workflowCloseStatus := persistence.ToInternalWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
+	workflowCloseStatus := validator.ToInternalWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 	workflowHistoryLength := mutableState.GetNextEventID() - 1
 	isCron := len(executionInfo.CronSchedule) > 0
 

@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"testing"
 	"time"
 
@@ -1231,7 +1232,7 @@ func (s *workflowHandlerSuite) TestListWorkflowExecutions() {
 	wh := s.getWorkflowHandler(config)
 
 	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
-	s.mockVisibilityMgr.On("ListWorkflowExecutions", mock.Anything, mock.Anything).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Once()
+	s.mockVisibilityMgr.On("ListWorkflowExecutions", mock.Anything, mock.Anything).Return(&visibility.ListWorkflowExecutionsResponse{}, nil).Once()
 
 	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   s.testDomain,
@@ -1260,7 +1261,7 @@ func (s *workflowHandlerSuite) TestScantWorkflowExecutions() {
 	wh := s.getWorkflowHandler(config)
 
 	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
-	s.mockVisibilityMgr.On("ScanWorkflowExecutions", mock.Anything, mock.Anything).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Once()
+	s.mockVisibilityMgr.On("ScanWorkflowExecutions", mock.Anything, mock.Anything).Return(&visibility.ListWorkflowExecutionsResponse{}, nil).Once()
 
 	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   s.testDomain,
@@ -1288,7 +1289,7 @@ func (s *workflowHandlerSuite) TestCountWorkflowExecutions() {
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 
 	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
-	s.mockVisibilityMgr.On("CountWorkflowExecutions", mock.Anything, mock.Anything).Return(&persistence.CountWorkflowExecutionsResponse{}, nil).Once()
+	s.mockVisibilityMgr.On("CountWorkflowExecutions", mock.Anything, mock.Anything).Return(&visibility.CountWorkflowExecutionsResponse{}, nil).Once()
 
 	countRequest := &types.CountWorkflowExecutionsRequest{
 		Domain: s.testDomain,

@@ -26,6 +26,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/validator"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -91,7 +93,7 @@ type (
 		clusterMetadata           cluster.Metadata
 		historyV2Mgr              persistence.HistoryManager
 		executionManager          persistence.ExecutionManager
-		visibilityMgr             persistence.VisibilityManager
+		visibilityMgr             visibility.VisibilityManager
 		txProcessor               queue.Processor
 		timerProcessor            queue.Processor
 		nDCReplicator             ndc.HistoryReplicator
@@ -134,7 +136,7 @@ var (
 // NewEngineWithShardContext creates an instance of history engine
 func NewEngineWithShardContext(
 	shard shard.Context,
-	visibilityMgr persistence.VisibilityManager,
+	visibilityMgr visibility.VisibilityManager,
 	matching matching.Client,
 	historyClient hc.Client,
 	publicClient workflowserviceclient.Interface,
@@ -1050,7 +1052,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 			return &types.HistoryQueryWorkflowResponse{
 				Response: &types.QueryWorkflowResponse{
 					QueryRejected: &types.QueryRejected{
-						CloseStatus: persistence.ToInternalWorkflowExecutionCloseStatus(int(closeStatus)),
+						CloseStatus: validator.ToInternalWorkflowExecutionCloseStatus(int(closeStatus)),
 					},
 				},
 			}, nil
@@ -1500,7 +1502,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	}
 	if executionInfo.State == persistence.WorkflowStateCompleted {
 		// for closed workflow
-		result.WorkflowExecutionInfo.CloseStatus = persistence.ToInternalWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
+		result.WorkflowExecutionInfo.CloseStatus = validator.ToInternalWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 		completionEvent, err := mutableState.GetCompletionEvent(ctx)
 		if err != nil {
 			return nil, err

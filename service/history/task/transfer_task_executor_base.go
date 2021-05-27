@@ -22,6 +22,7 @@ package task
 
 import (
 	"context"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"time"
 
 	"github.com/uber/cadence/client/matching"
@@ -54,7 +55,7 @@ type (
 		logger         log.Logger
 		metricsClient  metrics.Client
 		matchingClient matching.Client
-		visibilityMgr  persistence.VisibilityManager
+		visibilityMgr  visibility.VisibilityManager
 		config         *config.Config
 	}
 )
@@ -162,7 +163,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		}
 	}
 
-	request := &persistence.RecordWorkflowExecutionStartedRequest{
+	request := &visibility.RecordWorkflowExecutionStartedRequest{
 		DomainUUID: domainID,
 		Domain:     domain,
 		Execution: types.WorkflowExecution{
@@ -207,7 +208,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 		domain = defaultDomainName
 	}
 
-	request := &persistence.UpsertWorkflowExecutionRequest{
+	request := &visibility.UpsertWorkflowExecutionRequest{
 		DomainUUID: domainID,
 		Domain:     domain,
 		Execution: types.WorkflowExecution{
@@ -273,7 +274,7 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 	}
 
 	if recordWorkflowClose {
-		if err := t.visibilityMgr.RecordWorkflowExecutionClosed(ctx, &persistence.RecordWorkflowExecutionClosedRequest{
+		if err := t.visibilityMgr.RecordWorkflowExecutionClosed(ctx, &visibility.RecordWorkflowExecutionClosedRequest{
 			DomainUUID: domainID,
 			Domain:     domain,
 			Execution: types.WorkflowExecution{

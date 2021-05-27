@@ -23,6 +23,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/validator"
 	"reflect"
 	"strings"
 	"time"
@@ -768,7 +769,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 	workflowID := executionInfo.WorkflowID
 	runID := executionInfo.RunID
 
-	if err := p.ValidateCreateWorkflowModeState(
+	if err := validator.ValidateCreateWorkflowModeState(
 		request.Mode,
 		newWorkflow,
 	); err != nil {
@@ -1036,7 +1037,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 	runID := executionInfo.RunID
 	shardID := d.shardID
 
-	if err := p.ValidateUpdateWorkflowModeState(
+	if err := validator.ValidateUpdateWorkflowModeState(
 		request.Mode,
 		updateWorkflow,
 		newWorkflow,
@@ -1285,7 +1286,7 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 	domainID := resetWorkflow.ExecutionInfo.DomainID
 	workflowID := resetWorkflow.ExecutionInfo.WorkflowID
 
-	if err := p.ValidateConflictResolveWorkflowModeState(
+	if err := validator.ValidateConflictResolveWorkflowModeState(
 		request.Mode,
 		resetWorkflow,
 		newWorkflow,
