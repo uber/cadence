@@ -235,6 +235,7 @@ type (
 		SelectVisibility(ctx context.Context, filter *VisibilityFilter) (*SelectVisibilityResponse, error)
 		DeleteVisibility(ctx context.Context, domainID, workflowID, runID string) error
 		// TODO deprecated this in the future in favor of SelectVisibility
+		// Special case: return nil,nil if not found(since we will deprecate it, it's not worth refactor to be consistent)
 		SelectOneClosedWorkflow(ctx context.Context, domainID, workflowID, runID string) (*VisibilityRowForRead, error)
 	}
 

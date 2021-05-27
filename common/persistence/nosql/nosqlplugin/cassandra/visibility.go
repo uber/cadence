@@ -30,7 +30,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
-	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -333,10 +332,8 @@ func (db *cdb) SelectOneClosedWorkflow(
 
 	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	if !has {
-		return nil, &types.EntityNotExistsError{
-			Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
-				workflowID, runID),
-		}
+		// Special case: return nil,nil if not found(since we will deprecate it, it's not worth refactor to be consistent)
+		return nil, nil
 	}
 
 	if err := iter.Close(); err != nil {

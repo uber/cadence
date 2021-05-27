@@ -22,6 +22,8 @@ package cassandra
 
 import (
 	"context"
+	"fmt"
+	"github.com/uber/cadence/common/types"
 	"time"
 
 	"github.com/uber/cadence/common/config"
@@ -334,7 +336,13 @@ func (v *nosqlVisibilityManager) GetClosedWorkflowExecution(
 	if err != nil {
 		return nil, convertCommonErrors(v.db, "GetClosedWorkflowExecution", err)
 	}
-
+	if wfexecution == nil {
+		// Special case: this API return nil,nil if not found(since we will deprecate it, it's not worth refactor to be consistent)
+		return nil, &types.EntityNotExistsError{
+			Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
+				request.Execution.GetWorkflowID(), request.Execution.GetRunID()),
+		}
+	}
 	return &p.InternalGetClosedWorkflowExecutionResponse{
 		Execution: wfexecution,
 	}, nil
