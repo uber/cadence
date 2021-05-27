@@ -77,7 +77,7 @@ type (
 		ExecutionManager          p.ExecutionManager
 		TaskMgr                   p.TaskManager
 		HistoryV2Mgr              p.HistoryManager
-		MetadataManager           p.MetadataManager
+		MetadataManager           p.DomainManager
 		DomainReplicationQueueMgr p.QueueManager
 		ShardInfo                 *p.ShardInfo
 		TaskIDGenerator           TransferTaskIDGenerator

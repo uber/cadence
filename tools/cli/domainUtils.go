@@ -277,7 +277,7 @@ func loadConfig(
 
 func initializeDomainHandler(
 	logger log.Logger,
-	metadataMgr persistence.MetadataManager,
+	metadataMgr persistence.DomainManager,
 	clusterMetadata cluster.Metadata,
 	archivalMetadata archiver.ArchivalMetadata,
 	archiverProvider provider.ArchiverProvider,
@@ -315,7 +315,7 @@ func initializeMetadataMgr(
 	clusterMetadata cluster.Metadata,
 	metricsClient metrics.Client,
 	logger log.Logger,
-) persistence.MetadataManager {
+) persistence.DomainManager {
 
 	pConfig := serviceConfig.Persistence
 	pConfig.VisibilityConfig = &config.VisibilityConfig{

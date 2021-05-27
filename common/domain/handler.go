@@ -72,7 +72,7 @@ type (
 
 	// handlerImpl is the domain operation handler implementation
 	handlerImpl struct {
-		metadataMgr         persistence.MetadataManager
+		metadataMgr         persistence.DomainManager
 		clusterMetadata     cluster.Metadata
 		domainReplicator    Replicator
 		domainAttrValidator *AttrValidatorImpl
@@ -99,7 +99,7 @@ var _ Handler = (*handlerImpl)(nil)
 func NewHandler(
 	config Config,
 	logger log.Logger,
-	metadataMgr persistence.MetadataManager,
+	metadataMgr persistence.DomainManager,
 	clusterMetadata cluster.Metadata,
 	domainReplicator Replicator,
 	archivalMetadata archiver.ArchivalMetadata,

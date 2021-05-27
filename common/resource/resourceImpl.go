@@ -575,7 +575,7 @@ func (h *Impl) GetClientBean() client.Bean {
 // persistence clients
 
 // GetMetadataManager return metadata manager
-func (h *Impl) GetMetadataManager() persistence.MetadataManager {
+func (h *Impl) GetMetadataManager() persistence.DomainManager {
 	return h.persistenceBean.GetMetadataManager()
 }
 

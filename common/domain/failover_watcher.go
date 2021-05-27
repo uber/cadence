@@ -57,7 +57,7 @@ type (
 		refreshJitter   dynamicconfig.FloatPropertyFn
 		retryPolicy     backoff.RetryPolicy
 
-		metadataMgr persistence.MetadataManager
+		metadataMgr persistence.DomainManager
 		domainCache cache.DomainCache
 		timeSource  clock.TimeSource
 		metrics     metrics.Client
@@ -70,7 +70,7 @@ var _ FailoverWatcher = (*failoverWatcherImpl)(nil)
 // NewFailoverWatcher initializes domain failover processor
 func NewFailoverWatcher(
 	domainCache cache.DomainCache,
-	metadataMgr persistence.MetadataManager,
+	metadataMgr persistence.DomainManager,
 	timeSource clock.TimeSource,
 	refreshInterval dynamicconfig.DurationPropertyFn,
 	refreshJitter dynamicconfig.FloatPropertyFn,
@@ -170,7 +170,7 @@ func (p *failoverWatcherImpl) handleFailoverTimeout(
 
 // CleanPendingActiveState removes the pending active state from the domain
 func CleanPendingActiveState(
-	metadataMgr persistence.MetadataManager,
+	metadataMgr persistence.DomainManager,
 	domainID string,
 	failoverVersion int64,
 	policy backoff.RetryPolicy,

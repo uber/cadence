@@ -51,7 +51,7 @@ type (
 		// NewHistoryManager returns a new history manager
 		NewHistoryManager() (p.HistoryManager, error)
 		// NewMetadataManager returns a new metadata manager
-		NewMetadataManager() (p.MetadataManager, error)
+		NewMetadataManager() (p.DomainManager, error)
 		// NewExecutionManager returns a new execution manager for a given shardID
 		NewExecutionManager(shardID int) (p.ExecutionManager, error)
 		// NewVisibilityManager returns a new visibility manager
@@ -204,7 +204,7 @@ func (f *factoryImpl) NewHistoryManager() (p.HistoryManager, error) {
 }
 
 // NewMetadataManager returns a new metadata manager
-func (f *factoryImpl) NewMetadataManager() (p.MetadataManager, error) {
+func (f *factoryImpl) NewMetadataManager() (p.DomainManager, error) {
 	var err error
 	var store p.MetadataStore
 	ds := f.datastores[storeTypeMetadata]

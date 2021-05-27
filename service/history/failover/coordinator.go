@@ -70,7 +70,7 @@ type (
 		shutdownChan     chan struct{}
 		retryPolicy      backoff.RetryPolicy
 
-		metadataMgr   persistence.MetadataManager
+		metadataMgr   persistence.DomainManager
 		historyClient history.Client
 		config        *config.Config
 		timeSource    clock.TimeSource
@@ -98,7 +98,7 @@ type (
 
 // NewCoordinator initialize a failover coordinator
 func NewCoordinator(
-	metadataMgr persistence.MetadataManager,
+	metadataMgr persistence.DomainManager,
 	historyClient history.Client,
 	timeSource clock.TimeSource,
 	domainCache cache.DomainCache,

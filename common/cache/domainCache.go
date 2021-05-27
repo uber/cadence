@@ -106,7 +106,7 @@ type (
 		shutdownChan    chan struct{}
 		cacheNameToID   *atomic.Value
 		cacheByID       *atomic.Value
-		metadataMgr     persistence.MetadataManager
+		metadataMgr     persistence.DomainManager
 		clusterMetadata cluster.Metadata
 		timeSource      clock.TimeSource
 		metricsClient   metrics.Client
@@ -145,7 +145,7 @@ type (
 
 // NewDomainCache creates a new instance of cache for holding onto domain information to reduce the load on persistence
 func NewDomainCache(
-	metadataMgr persistence.MetadataManager,
+	metadataMgr persistence.DomainManager,
 	clusterMetadata cluster.Metadata,
 	metricsClient metrics.Client,
 	logger log.Logger,

@@ -33,8 +33,8 @@ type (
 	Bean interface {
 		Close()
 
-		GetMetadataManager() persistence.MetadataManager
-		SetMetadataManager(persistence.MetadataManager)
+		GetMetadataManager() persistence.DomainManager
+		SetMetadataManager(persistence.DomainManager)
 
 		GetTaskManager() persistence.TaskManager
 		SetTaskManager(persistence.TaskManager)
@@ -57,7 +57,7 @@ type (
 
 	// BeanImpl stores persistence managers
 	BeanImpl struct {
-		metadataManager               persistence.MetadataManager
+		metadataManager               persistence.DomainManager
 		taskManager                   persistence.TaskManager
 		visibilityManager             persistence.VisibilityManager
 		domainReplicationQueueManager persistence.QueueManager
@@ -118,7 +118,7 @@ func NewBeanFromFactory(
 
 // NewBean create a new store bean
 func NewBean(
-	metadataManager persistence.MetadataManager,
+	metadataManager persistence.DomainManager,
 	taskManager persistence.TaskManager,
 	visibilityManager persistence.VisibilityManager,
 	domainReplicationQueueManager persistence.QueueManager,
@@ -139,8 +139,8 @@ func NewBean(
 	}
 }
 
-// GetMetadataManager get MetadataManager
-func (s *BeanImpl) GetMetadataManager() persistence.MetadataManager {
+// GetMetadataManager get DomainManager
+func (s *BeanImpl) GetMetadataManager() persistence.DomainManager {
 
 	s.RLock()
 	defer s.RUnlock()
@@ -148,9 +148,9 @@ func (s *BeanImpl) GetMetadataManager() persistence.MetadataManager {
 	return s.metadataManager
 }
 
-// SetMetadataManager set MetadataManager
+// SetMetadataManager set DomainManager
 func (s *BeanImpl) SetMetadataManager(
-	metadataManager persistence.MetadataManager,
+	metadataManager persistence.DomainManager,
 ) {
 
 	s.Lock()

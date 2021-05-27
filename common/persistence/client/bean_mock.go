@@ -70,10 +70,10 @@ func (mr *MockBeanMockRecorder) Close() *gomock.Call {
 }
 
 // GetMetadataManager mocks base method
-func (m *MockBean) GetMetadataManager() persistence.MetadataManager {
+func (m *MockBean) GetMetadataManager() persistence.DomainManager {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMetadataManager")
-	ret0, _ := ret[0].(persistence.MetadataManager)
+	ret0, _ := ret[0].(persistence.DomainManager)
 	return ret0
 }
 
@@ -84,7 +84,7 @@ func (mr *MockBeanMockRecorder) GetMetadataManager() *gomock.Call {
 }
 
 // SetMetadataManager mocks base method
-func (m *MockBean) SetMetadataManager(arg0 persistence.MetadataManager) {
+func (m *MockBean) SetMetadataManager(arg0 persistence.DomainManager) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetMetadataManager", arg0)
 }

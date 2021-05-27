@@ -60,7 +60,7 @@ type (
 
 	metadataRateLimitedPersistenceClient struct {
 		rateLimiter quotas.Limiter
-		persistence MetadataManager
+		persistence DomainManager
 		logger      log.Logger
 	}
 
@@ -81,7 +81,7 @@ var _ ShardManager = (*shardRateLimitedPersistenceClient)(nil)
 var _ ExecutionManager = (*workflowExecutionRateLimitedPersistenceClient)(nil)
 var _ TaskManager = (*taskRateLimitedPersistenceClient)(nil)
 var _ HistoryManager = (*historyRateLimitedPersistenceClient)(nil)
-var _ MetadataManager = (*metadataRateLimitedPersistenceClient)(nil)
+var _ DomainManager = (*metadataRateLimitedPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityRateLimitedPersistenceClient)(nil)
 var _ QueueManager = (*queueRateLimitedPersistenceClient)(nil)
 
@@ -137,12 +137,12 @@ func NewHistoryPersistenceRateLimitedClient(
 	}
 }
 
-// NewMetadataPersistenceRateLimitedClient creates a MetadataManager client to manage metadata
+// NewMetadataPersistenceRateLimitedClient creates a DomainManager client to manage metadata
 func NewMetadataPersistenceRateLimitedClient(
-	persistence MetadataManager,
+	persistence DomainManager,
 	rateLimiter quotas.Limiter,
 	logger log.Logger,
-) MetadataManager {
+) DomainManager {
 	return &metadataRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,

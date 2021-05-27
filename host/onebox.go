@@ -95,7 +95,7 @@ type (
 		persistenceConfig             config.Persistence
 		dispatcherProvider            client.DispatcherProvider
 		messagingClient               messaging.Client
-		metadataMgr                   persistence.MetadataManager
+		metadataMgr                   persistence.DomainManager
 		historyV2Mgr                  persistence.HistoryManager
 		executionMgrFactory           persistence.ExecutionManagerFactory
 		domainReplicationQueue        domain.ReplicationQueue
@@ -129,7 +129,7 @@ type (
 		PersistenceConfig             config.Persistence
 		DispatcherProvider            client.DispatcherProvider
 		MessagingClient               messaging.Client
-		MetadataMgr                   persistence.MetadataManager
+		MetadataMgr                   persistence.DomainManager
 		HistoryV2Mgr                  persistence.HistoryManager
 		ExecutionMgrFactory           persistence.ExecutionManagerFactory
 		DomainReplicationQueue        domain.ReplicationQueue

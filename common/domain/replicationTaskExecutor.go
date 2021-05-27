@@ -64,7 +64,7 @@ type (
 	}
 
 	domainReplicationTaskExecutorImpl struct {
-		metadataManager persistence.MetadataManager
+		metadataManager persistence.DomainManager
 		timeSource      clock.TimeSource
 		logger          log.Logger
 	}
@@ -72,7 +72,7 @@ type (
 
 // NewReplicationTaskExecutor create a new instance of domain replicator
 func NewReplicationTaskExecutor(
-	metadataMgr persistence.MetadataManager,
+	metadataMgr persistence.DomainManager,
 	timeSource clock.TimeSource,
 	logger log.Logger,
 ) ReplicationTaskExecutor {

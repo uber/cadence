@@ -29,47 +29,47 @@ import (
 )
 
 type (
-	taskManager struct {
+	taskManagerImpl struct {
 		persistence TaskStore
 	}
 )
 
-var _ TaskManager = (*taskManager)(nil)
+var _ TaskManager = (*taskManagerImpl)(nil)
 
 // NewTaskManager returns a new TaskManager
 func NewTaskManager(
 	persistence TaskStore,
 ) TaskManager {
-	return &taskManager{
+	return &taskManagerImpl{
 		persistence: persistence,
 	}
 }
 
-func (t *taskManager) GetName() string {
+func (t *taskManagerImpl) GetName() string {
 	return t.persistence.GetName()
 }
 
-func (t *taskManager) Close() {
+func (t *taskManagerImpl) Close() {
 	t.persistence.Close()
 }
 
-func (t *taskManager) LeaseTaskList(ctx context.Context, request *LeaseTaskListRequest) (*LeaseTaskListResponse, error) {
+func (t *taskManagerImpl) LeaseTaskList(ctx context.Context, request *LeaseTaskListRequest) (*LeaseTaskListResponse, error) {
 	return t.persistence.LeaseTaskList(ctx, request)
 }
 
-func (t *taskManager) UpdateTaskList(ctx context.Context, request *UpdateTaskListRequest) (*UpdateTaskListResponse, error) {
+func (t *taskManagerImpl) UpdateTaskList(ctx context.Context, request *UpdateTaskListRequest) (*UpdateTaskListResponse, error) {
 	return t.persistence.UpdateTaskList(ctx, request)
 }
 
-func (t *taskManager) ListTaskList(ctx context.Context, request *ListTaskListRequest) (*ListTaskListResponse, error) {
+func (t *taskManagerImpl) ListTaskList(ctx context.Context, request *ListTaskListRequest) (*ListTaskListResponse, error) {
 	return t.persistence.ListTaskList(ctx, request)
 }
 
-func (t *taskManager) DeleteTaskList(ctx context.Context, request *DeleteTaskListRequest) error {
+func (t *taskManagerImpl) DeleteTaskList(ctx context.Context, request *DeleteTaskListRequest) error {
 	return t.persistence.DeleteTaskList(ctx, request)
 }
 
-func (t *taskManager) CreateTasks(ctx context.Context, request *CreateTasksRequest) (*CreateTasksResponse, error) {
+func (t *taskManagerImpl) CreateTasks(ctx context.Context, request *CreateTasksRequest) (*CreateTasksResponse, error) {
 	var internalCreateTasks []*InternalCreateTasksInfo
 	for _, task := range request.Tasks {
 		internalCreateTasks = append(internalCreateTasks, t.toInternalCreateTaskInfo(task))
@@ -85,7 +85,7 @@ func (t *taskManager) CreateTasks(ctx context.Context, request *CreateTasksReque
 	return &CreateTasksResponse{}, err
 }
 
-func (t *taskManager) GetTasks(ctx context.Context, request *GetTasksRequest) (*GetTasksResponse, error) {
+func (t *taskManagerImpl) GetTasks(ctx context.Context, request *GetTasksRequest) (*GetTasksResponse, error) {
 	internalResult, err := t.persistence.GetTasks(ctx, request)
 	if err != nil {
 		return nil, err
@@ -97,19 +97,19 @@ func (t *taskManager) GetTasks(ctx context.Context, request *GetTasksRequest) (*
 	return &GetTasksResponse{Tasks: taskInfo}, nil
 }
 
-func (t *taskManager) CompleteTask(ctx context.Context, request *CompleteTaskRequest) error {
+func (t *taskManagerImpl) CompleteTask(ctx context.Context, request *CompleteTaskRequest) error {
 	return t.persistence.CompleteTask(ctx, request)
 }
 
-func (t *taskManager) CompleteTasksLessThan(ctx context.Context, request *CompleteTasksLessThanRequest) (int, error) {
+func (t *taskManagerImpl) CompleteTasksLessThan(ctx context.Context, request *CompleteTasksLessThanRequest) (int, error) {
 	return t.persistence.CompleteTasksLessThan(ctx, request)
 }
 
-func (t *taskManager) GetOrphanTasks(ctx context.Context, request *GetOrphanTasksRequest) (*GetOrphanTasksResponse, error) {
+func (t *taskManagerImpl) GetOrphanTasks(ctx context.Context, request *GetOrphanTasksRequest) (*GetOrphanTasksResponse, error) {
 	return t.persistence.GetOrphanTasks(ctx, request)
 }
 
-func (t *taskManager) toInternalCreateTaskInfo(createTaskInfo *CreateTaskInfo) *InternalCreateTasksInfo {
+func (t *taskManagerImpl) toInternalCreateTaskInfo(createTaskInfo *CreateTaskInfo) *InternalCreateTasksInfo {
 	if createTaskInfo == nil {
 		return nil
 	}
@@ -120,7 +120,7 @@ func (t *taskManager) toInternalCreateTaskInfo(createTaskInfo *CreateTaskInfo) *
 	}
 }
 
-func (t *taskManager) toInternalTaskInfo(taskInfo *TaskInfo) *InternalTaskInfo {
+func (t *taskManagerImpl) toInternalTaskInfo(taskInfo *TaskInfo) *InternalTaskInfo {
 	if taskInfo == nil {
 		return nil
 	}
@@ -135,7 +135,7 @@ func (t *taskManager) toInternalTaskInfo(taskInfo *TaskInfo) *InternalTaskInfo {
 		CreatedTime:            taskInfo.CreatedTime,
 	}
 }
-func (t *taskManager) fromInternalTaskInfo(internalTaskInfo *InternalTaskInfo) *TaskInfo {
+func (t *taskManagerImpl) fromInternalTaskInfo(internalTaskInfo *InternalTaskInfo) *TaskInfo {
 	if internalTaskInfo == nil {
 		return nil
 	}
