@@ -102,6 +102,15 @@ func (mr *MockAdminHandlerMockRecorder) DescribeCluster(arg0 interface{}) *gomoc
 }
 
 // DescribeHistoryHost mocks base method
+func (m *MockAdminHandler) DescribeShardDistribution(arg0 context.Context, arg1 *types.DescribeShardDistributionRequest) (*types.DescribeShardDistributionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeShardDistribution", arg0, arg1)
+	ret0, _ := ret[0].(*types.DescribeShardDistributionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeHistoryHost mocks base method
 func (m *MockAdminHandler) DescribeHistoryHost(arg0 context.Context, arg1 *types.DescribeHistoryHostRequest) (*types.DescribeHistoryHostResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeHistoryHost", arg0, arg1)

@@ -56,6 +56,11 @@ func (g adminGRPCHandler) DescribeCluster(ctx context.Context, _ *adminv1.Descri
 	return proto.FromAdminDescribeClusterResponse(response), proto.FromError(err)
 }
 
+func (g adminGRPCHandler) DescribeShardDistribution(ctx context.Context, request *adminv1.DescribeShardDistributionRequest) (*adminv1.DescribeShardDistributionResponse, error) {
+	response, err := g.h.DescribeShardDistribution(withGRPCTag(ctx), proto.ToAdminDescribeShardDistributionRequest(request))
+	return proto.FromAdminDescribeShardDistributionResponse(response), proto.FromError(err)
+}
+
 func (g adminGRPCHandler) DescribeHistoryHost(ctx context.Context, request *adminv1.DescribeHistoryHostRequest) (*adminv1.DescribeHistoryHostResponse, error) {
 	response, err := g.h.DescribeHistoryHost(withGRPCTag(ctx), proto.ToAdminDescribeHistoryHostRequest(request))
 	return proto.FromAdminDescribeHistoryHostResponse(response), proto.FromError(err)

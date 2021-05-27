@@ -41,6 +41,9 @@ service AdminAPI {
   // DescribeHistoryHost returns information about the internal states of a history host.
   rpc DescribeHistoryHost(DescribeHistoryHostRequest) returns (DescribeHistoryHostResponse);
 
+  // DescribeShardDistribution returns information about shard distribution
+  rpc DescribeShardDistribution(DescribeShardDistributionRequest) returns (DescribeShardDistributionResponse);
+
   // CloseShard closes shard.
   rpc CloseShard(CloseShardRequest) returns (CloseShardResponse);
 
@@ -111,6 +114,16 @@ message DescribeHistoryHostRequest {
     int32 shard_id = 2;
     api.v1.WorkflowExecution workflow_execution = 3;
   }
+}
+
+message DescribeShardDistributionRequest {
+  int32 page_size = 1;
+  int32 page_id = 2;
+}
+
+message DescribeShardDistributionResponse {
+  int32 number_of_shards = 1;
+  map<int32, string> shards = 2;
 }
 
 message DescribeHistoryHostResponse {
