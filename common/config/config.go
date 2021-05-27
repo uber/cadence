@@ -208,7 +208,9 @@ type (
 		// TLS configuration
 		TLS *TLS `yaml:"tls"`
 		// ConnectAttributes is a set of key-value attributes as a supplement/extension to the above common fields
-		// Use it when a configure is too specific to a particular NoSQL database that should not be in the common struct
+		// Use it ONLY when a configure is too specific to a particular NoSQL database that should not be in the common struct
+		// Otherwise please add new fields to the struct for better documentation
+		// If being used in any database, update this comment here to make it clear
 		ConnectAttributes map[string]string `yaml:"connectAttributes"`
 	}
 
