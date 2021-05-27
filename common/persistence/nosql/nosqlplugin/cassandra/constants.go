@@ -91,5 +91,5 @@ const (
 	rowTypeShardTaskID     = int64(-11)
 	emptyInitiatedID       = int64(-7)
 
-	maxCassandraTTL   = int64(157680000)
+	maxCassandraTTL = int64(157680000)
 )
