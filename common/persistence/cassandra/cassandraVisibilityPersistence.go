@@ -23,7 +23,6 @@ package cassandra
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/types"
 	"time"
 
 	"github.com/uber/cadence/common/config"
@@ -31,6 +30,7 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+	"github.com/uber/cadence/common/types"
 )
 
 // Fixed domain values for now
