@@ -173,7 +173,8 @@ const (
 )
 
 // InsertVisibility creates a new visibility record, return error is there is any.
-func (db *cdb) InsertVisibility(ctx context.Context, ttlSeconds int64, row *nosqlplugin.VisibilityRowForWrite) error {
+// TODO: Cassandra implementation ignores search attributes
+func (db *cdb) InsertVisibility(ctx context.Context, ttlSeconds int64, row *nosqlplugin.VisibilityRowForInsert) error {
 	var query gocql.Query
 	if ttlSeconds > maxCassandraTTL {
 		query = db.session.Query(templateCreateWorkflowExecutionStarted,
@@ -183,9 +184,9 @@ func (db *cdb) InsertVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			row.RunID,
 			persistence.UnixNanoToDBTimestamp(row.StartTime.UnixNano()),
 			persistence.UnixNanoToDBTimestamp(row.ExecutionTime.UnixNano()),
-			row.WorkflowTypeName,
-			row.Memo,
-			row.Encoding,
+			row.TypeName,
+			row.Memo.Data,
+			row.Memo.GetEncoding(),
 			row.TaskList,
 			row.IsCron,
 		).WithContext(ctx)
@@ -197,9 +198,9 @@ func (db *cdb) InsertVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			row.RunID,
 			persistence.UnixNanoToDBTimestamp(row.StartTime.UnixNano()),
 			persistence.UnixNanoToDBTimestamp(row.ExecutionTime.UnixNano()),
-			row.WorkflowTypeName,
-			row.Memo,
-			row.Encoding,
+			row.TypeName,
+			row.Memo.Data,
+			row.Memo.GetEncoding(),
 			row.TaskList,
 			row.IsCron,
 			ttlSeconds,
@@ -209,16 +210,23 @@ func (db *cdb) InsertVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 	return query.Exec()
 }
 
-func (db *cdb) UpdateVisibility(ctx context.Context, ttlSeconds int64, row *nosqlplugin.VisibilityRowForWrite) error {
+func (db *cdb) UpdateVisibility(ctx context.Context, ttlSeconds int64, row *nosqlplugin.VisibilityRowForUpdate) error {
 	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 
-	// First, remove execution from the open table
-	batch.Query(templateDeleteWorkflowExecutionStarted,
-		row.DomainID,
-		domainPartition,
-		persistence.UnixNanoToDBTimestamp(row.StartTime.UnixNano()),
-		row.RunID,
-	)
+	if row.UpdateCloseToOpen {
+		// TODO implement it when where is a need
+		panic("not supported operation")
+	}
+
+	if row.UpdateOpenToClose {
+		// First, remove execution from the open table
+		batch.Query(templateDeleteWorkflowExecutionStarted,
+			row.DomainID,
+			domainPartition,
+			persistence.UnixNanoToDBTimestamp(row.StartTime.UnixNano()),
+			row.RunID,
+		)
+	}
 
 	// Next, add a row in the closed table.
 	if ttlSeconds > maxCassandraTTL {
@@ -230,11 +238,11 @@ func (db *cdb) UpdateVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			persistence.UnixNanoToDBTimestamp(row.StartTime.UnixNano()),
 			persistence.UnixNanoToDBTimestamp(row.ExecutionTime.UnixNano()),
 			persistence.UnixNanoToDBTimestamp(row.CloseTime.UnixNano()),
-			row.WorkflowTypeName,
-			row.CloseStatus,
+			row.TypeName,
+			row.Status,
 			row.HistoryLength,
-			row.Memo,
-			row.Encoding,
+			row.Memo.Data,
+			row.Memo.GetEncoding(),
 			row.TaskList,
 			row.IsCron,
 		)
@@ -247,11 +255,11 @@ func (db *cdb) UpdateVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			persistence.UnixNanoToDBTimestamp(row.StartTime.UnixNano()),
 			persistence.UnixNanoToDBTimestamp(row.ExecutionTime.UnixNano()),
 			persistence.UnixNanoToDBTimestamp(row.CloseTime.UnixNano()),
-			row.WorkflowTypeName,
-			row.CloseStatus,
+			row.TypeName,
+			row.Status,
 			row.HistoryLength,
-			row.Memo,
-			row.Encoding,
+			row.Memo.Data,
+			row.Memo.GetEncoding(),
 			row.TaskList,
 			row.IsCron,
 		)
@@ -264,11 +272,11 @@ func (db *cdb) UpdateVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			persistence.UnixNanoToDBTimestamp(row.StartTime.UnixNano()),
 			persistence.UnixNanoToDBTimestamp(row.ExecutionTime.UnixNano()),
 			persistence.UnixNanoToDBTimestamp(row.CloseTime.UnixNano()),
-			row.WorkflowTypeName,
-			row.CloseStatus,
+			row.TypeName,
+			row.Status,
 			row.HistoryLength,
-			row.Memo,
-			row.Encoding,
+			row.Memo.Data,
+			row.Memo.GetEncoding(),
 			row.TaskList,
 			row.IsCron,
 			ttlSeconds,
@@ -282,11 +290,11 @@ func (db *cdb) UpdateVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			persistence.UnixNanoToDBTimestamp(row.StartTime.UnixNano()),
 			persistence.UnixNanoToDBTimestamp(row.ExecutionTime.UnixNano()),
 			persistence.UnixNanoToDBTimestamp(row.CloseTime.UnixNano()),
-			row.WorkflowTypeName,
-			row.CloseStatus,
+			row.TypeName,
+			row.Status,
 			row.HistoryLength,
-			row.Memo,
-			row.Encoding,
+			row.Memo.Data,
+			row.Memo.GetEncoding(),
 			row.TaskList,
 			row.IsCron,
 			ttlSeconds,

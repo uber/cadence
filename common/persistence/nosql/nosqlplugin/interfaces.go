@@ -230,31 +230,30 @@ type (
 	* please implement DeleteVisibility method. If TTL is supported, then DeleteVisibility can be a noop.
 	 */
 	visibilityCRUD interface {
-		InsertVisibility(ctx context.Context, ttlSeconds int64, row *VisibilityRowForWrite) error
-		UpdateVisibility(ctx context.Context, ttlSeconds int64, row *VisibilityRowForWrite) error
+		InsertVisibility(ctx context.Context, ttlSeconds int64, row *VisibilityRowForInsert) error
+		UpdateVisibility(ctx context.Context, ttlSeconds int64, row *VisibilityRowForUpdate) error
 		SelectVisibility(ctx context.Context, filter *VisibilityFilter) (*SelectVisibilityResponse, error)
 		DeleteVisibility(ctx context.Context, domainID, workflowID, runID string) error
 		// TODO deprecated this in the future in favor of SelectVisibility
 		SelectOneClosedWorkflow(ctx context.Context, domainID, workflowID, runID string) (*VisibilityRowForRead, error)
 	}
 
-	VisibilityRowForWrite struct {
-		DomainID         string
-		RunID            string
-		WorkflowTypeName string
-		WorkflowID       string
-		StartTime        time.Time
-		ExecutionTime    time.Time
-		CloseStatus      int32
-		CloseTime        time.Time
-		HistoryLength    int64
-		Memo             []byte
-		Encoding         string
-		TaskList         string
-		IsCron           bool
+	VisibilityRowForInsert struct {
+		VisibilityRowForRead
+		DomainID string
 	}
 
-	// TODO unify with VisibilityRowForWrite in the future for consistency
+	VisibilityRowForUpdate struct {
+		VisibilityRowForRead
+		DomainID string
+		// NOTE: this is only for some implementation (e.g. Cassandra) that uses multiple tables,
+		// they needs to delete record from the open execution table. Ignore this field if not need it
+		UpdateOpenToClose bool
+		//  Similar as UpdateOpenToClose
+		UpdateCloseToOpen bool
+	}
+
+	// TODO separate in the future when need it
 	VisibilityRowForRead = persistence.InternalVisibilityWorkflowExecutionInfo
 
 	SelectVisibilityResponse struct {

@@ -29,7 +29,6 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 // Fixed domain values for now
@@ -80,17 +79,18 @@ func (v *nosqlVisibilityManager) RecordWorkflowExecutionStarted(
 ) error {
 	ttl := int64(request.WorkflowTimeout.Seconds()) + openExecutionTTLBuffer
 
-	err := v.db.InsertVisibility(ctx, ttl, &nosqlplugin.VisibilityRowForWrite{
-		DomainID:         request.DomainUUID,
-		WorkflowID:       request.WorkflowID,
-		RunID:            request.RunID,
-		WorkflowTypeName: request.WorkflowTypeName,
-		StartTime:        request.StartTimestamp,
-		ExecutionTime:    request.ExecutionTimestamp,
-		Memo:             request.Memo.Data,
-		Encoding:         string(request.Memo.GetEncoding()),
-		TaskList:         request.TaskList,
-		IsCron:           request.IsCron,
+	err := v.db.InsertVisibility(ctx, ttl, &nosqlplugin.VisibilityRowForInsert{
+		DomainID: request.DomainUUID,
+		VisibilityRowForRead: nosqlplugin.VisibilityRowForRead{
+			WorkflowID:    request.WorkflowID,
+			RunID:         request.RunID,
+			TypeName:      request.WorkflowTypeName,
+			StartTime:     request.StartTimestamp,
+			ExecutionTime: request.ExecutionTimestamp,
+			Memo:          request.Memo,
+			TaskList:      request.TaskList,
+			IsCron:        request.IsCron,
+		},
 	})
 	if err != nil {
 		return convertCommonErrors(v.db, "RecordWorkflowExecutionStarted", err)
@@ -109,21 +109,23 @@ func (v *nosqlVisibilityManager) RecordWorkflowExecutionClosed(
 		retention = defaultCloseTTLSeconds * time.Second
 	}
 
-	err := v.db.InsertVisibility(ctx, int64(retention.Seconds()), &nosqlplugin.VisibilityRowForWrite{
-		DomainID:         request.DomainUUID,
-		WorkflowID:       request.WorkflowID,
-		RunID:            request.RunID,
-		WorkflowTypeName: request.WorkflowTypeName,
-		StartTime:        request.StartTimestamp,
-		ExecutionTime:    request.ExecutionTimestamp,
-		Memo:             request.Memo.Data,
-		Encoding:         string(request.Memo.GetEncoding()),
-		TaskList:         request.TaskList,
-		IsCron:           request.IsCron,
-		//closed workflow attributes
-		CloseStatus:   int32(*thrift.FromWorkflowExecutionCloseStatus(&request.Status)),
-		CloseTime:     request.CloseTimestamp,
-		HistoryLength: request.HistoryLength,
+	err := v.db.UpdateVisibility(ctx, int64(retention.Seconds()), &nosqlplugin.VisibilityRowForUpdate{
+		DomainID:          request.DomainUUID,
+		UpdateOpenToClose: true,
+		VisibilityRowForRead: nosqlplugin.VisibilityRowForRead{
+			WorkflowID:    request.WorkflowID,
+			RunID:         request.RunID,
+			TypeName:      request.WorkflowTypeName,
+			StartTime:     request.StartTimestamp,
+			ExecutionTime: request.ExecutionTimestamp,
+			Memo:          request.Memo,
+			TaskList:      request.TaskList,
+			IsCron:        request.IsCron,
+			//closed workflow attributes
+			Status:        &request.Status,
+			CloseTime:     request.CloseTimestamp,
+			HistoryLength: request.HistoryLength,
+		},
 	})
 
 	if err != nil {
