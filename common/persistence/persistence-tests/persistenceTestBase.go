@@ -63,10 +63,10 @@ type (
 		DBUsername      string
 		DBPassword      string
 		DBHost          string
-		DBPort          int              `yaml:"-"`
-		StoreType       string           `yaml:"-"`
-		SchemaDir       string           `yaml:"-"`
-		ClusterMetadata cluster.Metadata `yaml:"-"`
+		DBPort          int                     `yaml:"-"`
+		StoreType       string                  `yaml:"-"`
+		SchemaDir       string                  `yaml:"-"`
+		ClusterMetadata cluster.FailoverManager `yaml:"-"`
 	}
 
 	// TestBase wraps the base setup needed to create workflows over persistence layer.
@@ -81,7 +81,7 @@ type (
 		DomainReplicationQueueMgr p.QueueManager
 		ShardInfo                 *p.ShardInfo
 		TaskIDGenerator           TransferTaskIDGenerator
-		ClusterMetadata           cluster.Metadata
+		ClusterMetadata           cluster.FailoverManager
 		ReadLevel                 int64
 		ReplicationReadLevel      int64
 		DefaultTestCluster        PersistenceTestCluster
@@ -94,7 +94,7 @@ type (
 	TestBaseParams struct {
 		DefaultTestCluster    PersistenceTestCluster
 		VisibilityTestCluster PersistenceTestCluster
-		ClusterMetadata       cluster.Metadata
+		ClusterMetadata       cluster.FailoverManager
 	}
 
 	// PersistenceTestCluster exposes management operations on a database

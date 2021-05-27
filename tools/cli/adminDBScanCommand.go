@@ -26,10 +26,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/managerWrappers"
 	"io"
 	"os"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/managerWrappers"
 
 	"github.com/urfave/cli"
 

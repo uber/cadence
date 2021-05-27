@@ -22,9 +22,10 @@ package managerWrappers
 
 import (
 	"context"
-	"github.com/uber/cadence/common/persistence/visibility"
 	"runtime"
 	"sync"
+
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/config"

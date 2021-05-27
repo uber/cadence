@@ -26,6 +26,7 @@ import (
 	context "context"
 	ctx "context"
 	"fmt"
+
 	"github.com/uber/cadence/common/persistence/utils"
 
 	"github.com/uber/cadence/common"
@@ -64,7 +65,7 @@ type (
 	workflowResetterImpl struct {
 		shard             shard.Context
 		domainCache       cache.DomainCache
-		clusterMetadata   cluster.Metadata
+		clusterMetadata   cluster.FailoverManager
 		historyV2Mgr      persistence.HistoryManager
 		executionCache    *execution.Cache
 		newStateRebuilder nDCStateRebuilderProvider

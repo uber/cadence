@@ -148,7 +148,7 @@ type (
 		shard            shard.Context
 		domainCache      cache.DomainCache
 		executionCache   *execution.Cache
-		clusterMetadata  cluster.Metadata
+		clusterMetadata  cluster.FailoverManager
 		historyV2Manager persistence.HistoryManager
 		serializer       persistence.PayloadSerializer
 		metricsClient    metrics.Client

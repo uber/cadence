@@ -24,8 +24,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/utils"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/utils"
 
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/types"

@@ -56,7 +56,7 @@ type (
 		mockEventsCache     *events.MockCache
 		mockTaskRefresher   *MockMutableStateTaskRefresher
 		mockDomainCache     *cache.MockDomainCache
-		mockClusterMetadata *cluster.MockMetadata
+		mockClusterMetadata *cluster.MockFailoverManager
 
 		mockHistoryV2Mgr *mocks.HistoryV2Manager
 		logger           log.Logger

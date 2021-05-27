@@ -50,7 +50,7 @@ type (
 		mockShard           *shard.TestContext
 		mockContext         *execution.MockContext
 		mockMutableState    *execution.MockMutableState
-		mockClusterMetadata *cluster.MockMetadata
+		mockClusterMetadata *cluster.MockFailoverManager
 
 		mockHistoryV2Manager *mocks.HistoryV2Manager
 

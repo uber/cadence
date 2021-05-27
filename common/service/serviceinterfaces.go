@@ -51,7 +51,7 @@ type (
 		GetDispatcher() *yarpc.Dispatcher
 		GetMembershipMonitor() membership.Monitor
 		GetHostInfo() *membership.HostInfo
-		GetClusterMetadata() cluster.Metadata
+		GetClusterMetadata() cluster.FailoverManager
 		GetMessagingClient() messaging.Client
 		GetBlobstoreClient() blobstore.Client
 		GetArchivalMetadata() archiver.ArchivalMetadata

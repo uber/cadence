@@ -63,7 +63,7 @@ type (
 		RPCFactory          common.RPCFactory
 		PProfInitializer    common.PProfInitializer
 		PersistenceConfig   config.Persistence
-		ClusterMetadata     cluster.Metadata
+		ClusterMetadata     cluster.FailoverManager
 		ReplicatorConfig    config.Replicator
 		MetricsClient       metrics.Client
 		MessagingClient     messaging.Client
@@ -106,7 +106,7 @@ type (
 		metricsScope           tally.Scope
 		runtimeMetricsReporter *metrics.RuntimeMetricsReporter
 		metricsClient          metrics.Client
-		clusterMetadata        cluster.Metadata
+		clusterMetadata        cluster.FailoverManager
 		messagingClient        messaging.Client
 		blobstoreClient        blobstore.Client
 		dynamicCollection      *dynamicconfig.Collection
@@ -275,7 +275,7 @@ func (h *serviceImpl) GetDispatcher() *yarpc.Dispatcher {
 }
 
 // GetClusterMetadata returns the service cluster metadata
-func (h *serviceImpl) GetClusterMetadata() cluster.Metadata {
+func (h *serviceImpl) GetClusterMetadata() cluster.FailoverManager {
 	return h.clusterMetadata
 }
 

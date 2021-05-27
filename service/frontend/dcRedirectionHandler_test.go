@@ -49,7 +49,7 @@ type (
 		mockResource             *resource.Test
 		mockFrontendHandler      *MockHandler
 		mockRemoteFrontendClient *frontend.MockClient
-		mockClusterMetadata      *cluster.MockMetadata
+		mockClusterMetadata      *cluster.MockFailoverManager
 
 		mockDCRedirectionPolicy *MockDCRedirectionPolicy
 

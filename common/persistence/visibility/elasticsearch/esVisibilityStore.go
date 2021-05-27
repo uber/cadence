@@ -25,12 +25,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/visibility"
 	"math"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/cch123/elasticsql"
 	"github.com/valyala/fastjson"

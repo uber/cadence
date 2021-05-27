@@ -60,7 +60,7 @@ type (
 		mockDomainCache  *cache.MockDomainCache
 		mockClientBean   *client.MockBean
 		adminClient      *admin.MockClient
-		clusterMetadata  *cluster.MockMetadata
+		clusterMetadata  *cluster.MockFailoverManager
 		executionManager *mocks.ExecutionManager
 		requestChan      chan *request
 		taskExecutor     *MockTaskExecutor

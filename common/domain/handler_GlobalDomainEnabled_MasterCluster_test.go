@@ -22,7 +22,6 @@ package domain
 
 import (
 	"context"
-	"github.com/uber/cadence/common/persistence/utils"
 	"log"
 	"os"
 	"testing"
@@ -44,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/common/persistence/utils"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -54,7 +54,7 @@ type (
 
 		minRetentionDays     int
 		maxBadBinaryCount    int
-		metadataMgr          persistence.DomainManager
+		domainManager        persistence.DomainManager
 		mockProducer         *mocks.KafkaProducer
 		mockDomainReplicator Replicator
 		archivalMetadata     archiver.ArchivalMetadata
@@ -89,7 +89,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) SetupTest() {
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1
 	s.maxBadBinaryCount = 10
-	s.metadataMgr = s.TestBase.MetadataManager
+	s.domainManager = s.TestBase.MetadataManager
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockDomainReplicator = NewDomainReplicator(s.mockProducer, logger)
 	s.archivalMetadata = archiver.NewArchivalMetadata(
@@ -109,7 +109,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) SetupTest() {
 	s.handler = NewHandler(
 		domainConfig,
 		logger,
-		s.metadataMgr,
+		s.domainManager,
 		s.ClusterMetadata,
 		s.mockDomainReplicator,
 		s.archivalMetadata,
@@ -871,7 +871,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateDomain_C
 	s.handler = NewHandler(
 		domainConfig,
 		loggerimpl.NewNopLogger(),
-		s.metadataMgr,
+		s.domainManager,
 		s.ClusterMetadata,
 		s.mockDomainReplicator,
 		s.archivalMetadata,
@@ -970,7 +970,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) setupGlobalDomain(
 	return setupGlobalDomain(s.Suite, s.handler, s.ClusterMetadata, domainName)
 }
 
-func setupGlobalDomain(s suite.Suite, handler *handlerImpl, clusterMetadata cluster.Metadata, domainName string) *types.DescribeDomainResponse {
+func setupGlobalDomain(s suite.Suite, handler *handlerImpl, clusterMetadata cluster.FailoverManager, domainName string) *types.DescribeDomainResponse {
 	description := "some random description"
 	email := "some random email"
 	retention := int32(7)

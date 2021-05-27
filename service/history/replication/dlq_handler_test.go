@@ -50,7 +50,7 @@ type (
 		config           *config.Config
 		mockClientBean   *client.MockBean
 		adminClient      *admin.MockClient
-		clusterMetadata  *cluster.MockMetadata
+		clusterMetadata  *cluster.MockFailoverManager
 		executionManager *mocks.ExecutionManager
 		shardManager     *mocks.ShardManager
 		taskExecutor     *MockTaskExecutor

@@ -278,7 +278,7 @@ func loadConfig(
 func initializeDomainHandler(
 	logger log.Logger,
 	metadataMgr persistence.DomainManager,
-	clusterMetadata cluster.Metadata,
+	clusterMetadata cluster.FailoverManager,
 	archivalMetadata archiver.ArchivalMetadata,
 	archiverProvider provider.ArchiverProvider,
 ) domain.Handler {
@@ -312,7 +312,7 @@ func initializeLogger(
 
 func initializeMetadataMgr(
 	serviceConfig *config.Config,
-	clusterMetadata cluster.Metadata,
+	clusterMetadata cluster.FailoverManager,
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) persistence.DomainManager {
@@ -340,7 +340,7 @@ func initializeMetadataMgr(
 func initializeClusterMetadata(
 	serviceConfig *config.Config,
 	logger log.Logger,
-) cluster.Metadata {
+) cluster.FailoverManager {
 
 	clusterMetadata := serviceConfig.ClusterMetadata
 	return cluster.NewMetadata(
@@ -370,7 +370,7 @@ func initializeArchivalMetadata(
 
 func initializeArchivalProvider(
 	serviceConfig *config.Config,
-	clusterMetadata cluster.Metadata,
+	clusterMetadata cluster.FailoverManager,
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) provider.ArchiverProvider {

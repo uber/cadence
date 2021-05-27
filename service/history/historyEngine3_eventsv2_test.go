@@ -63,7 +63,7 @@ type (
 		mockTimerProcessor  *queue.MockProcessor
 		mockEventsCache     *events.MockCache
 		mockDomainCache     *cache.MockDomainCache
-		mockClusterMetadata *cluster.MockMetadata
+		mockClusterMetadata *cluster.MockFailoverManager
 
 		historyEngine    *historyEngineImpl
 		mockExecutionMgr *mocks.ExecutionManager

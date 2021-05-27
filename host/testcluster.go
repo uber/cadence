@@ -161,7 +161,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 }
 
 // NewClusterMetadata returns cluster metdata from config
-func NewClusterMetadata(options *TestClusterConfig, logger log.Logger) cluster.Metadata {
+func NewClusterMetadata(options *TestClusterConfig, logger log.Logger) cluster.FailoverManager {
 	clusterMetadata := cluster.GetTestClusterMetadata(
 		options.ClusterMetadata.EnableGlobalDomain,
 		options.IsPrimaryCluster,

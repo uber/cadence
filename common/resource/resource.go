@@ -21,8 +21,9 @@
 package resource
 
 import (
-	"github.com/uber/cadence/common/persistence/visibility"
 	"go.uber.org/yarpc"
+
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 
@@ -58,7 +59,7 @@ type (
 		GetHostName() string
 		GetHostInfo() *membership.HostInfo
 		GetArchivalMetadata() archiver.ArchivalMetadata
-		GetClusterMetadata() cluster.Metadata
+		GetClusterMetadata() cluster.FailoverManager
 
 		// other common resources
 

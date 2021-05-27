@@ -31,14 +31,14 @@ import (
 type (
 	// AttrValidatorImpl is domain attr validator
 	AttrValidatorImpl struct {
-		clusterMetadata  cluster.Metadata
+		clusterMetadata  cluster.FailoverManager
 		minRetentionDays int32
 	}
 )
 
 // newAttrValidator create a new domain attr validator
 func newAttrValidator(
-	clusterMetadata cluster.Metadata,
+	clusterMetadata cluster.FailoverManager,
 	minRetentionDays int32,
 ) *AttrValidatorImpl {
 

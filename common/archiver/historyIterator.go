@@ -26,10 +26,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/uber/cadence/common/persistence/utils"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/utils"
 	"github.com/uber/cadence/common/types"
 )
 

@@ -54,7 +54,7 @@ type (
 		GetExecutionManager() persistence.ExecutionManager
 		GetHistoryManager() persistence.HistoryManager
 		GetDomainCache() cache.DomainCache
-		GetClusterMetadata() cluster.Metadata
+		GetClusterMetadata() cluster.FailoverManager
 		GetConfig() *config.Config
 		GetEventsCache() events.Cache
 		GetLogger() log.Logger

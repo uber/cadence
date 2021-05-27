@@ -77,7 +77,7 @@ var (
 )
 
 // GetTestClusterMetadata return an cluster metadata instance, which is initialized
-func GetTestClusterMetadata(enableGlobalDomain bool, isPrimaryCluster bool) Metadata {
+func GetTestClusterMetadata(enableGlobalDomain bool, isPrimaryCluster bool) FailoverManager {
 	primaryClusterName := TestCurrentClusterName
 	if !isPrimaryCluster {
 		primaryClusterName = TestAlternativeClusterName

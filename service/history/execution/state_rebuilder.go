@@ -26,8 +26,9 @@ import (
 	"context"
 	ctx "context"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/utils"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/utils"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -65,7 +66,7 @@ type (
 	stateRebuilderImpl struct {
 		shard           shard.Context
 		domainCache     cache.DomainCache
-		clusterMetadata cluster.Metadata
+		clusterMetadata cluster.FailoverManager
 		historyV2Mgr    persistence.HistoryManager
 		taskRefresher   MutableStateTaskRefresher
 

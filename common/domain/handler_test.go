@@ -22,7 +22,6 @@ package domain
 
 import (
 	"context"
-	"github.com/uber/cadence/common/persistence/utils"
 	"log"
 	"os"
 	"testing"
@@ -45,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/common/persistence/utils"
 	"github.com/uber/cadence/common/types"
 )
 

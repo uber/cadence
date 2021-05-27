@@ -37,7 +37,7 @@ import (
 type (
 	// Replicator is the processor for replication tasks
 	Replicator struct {
-		clusterMetadata               cluster.Metadata
+		clusterMetadata               cluster.FailoverManager
 		domainReplicationTaskExecutor domain.ReplicationTaskExecutor
 		clientBean                    client.Bean
 		domainProcessors              []*domainReplicationProcessor
@@ -52,7 +52,7 @@ type (
 
 // NewReplicator creates a new replicator for processing replication tasks
 func NewReplicator(
-	clusterMetadata cluster.Metadata,
+	clusterMetadata cluster.FailoverManager,
 	clientBean client.Bean,
 	logger log.Logger,
 	metricsClient metrics.Client,

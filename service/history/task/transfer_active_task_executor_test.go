@@ -22,11 +22,12 @@ package task
 
 import (
 	"context"
-	"github.com/uber/cadence/common/persistence/visibility"
 	"math/rand"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
@@ -70,7 +71,7 @@ type (
 		mockDomainCache     *cache.MockDomainCache
 		mockHistoryClient   *hclient.MockClient
 		mockMatchingClient  *matching.MockClient
-		mockClusterMetadata *cluster.MockMetadata
+		mockClusterMetadata *cluster.MockFailoverManager
 
 		mockVisibilityMgr           *mocks.VisibilityManager
 		mockExecutionMgr            *mocks.ExecutionManager

@@ -22,6 +22,7 @@ package utils
 
 import (
 	"context"
+
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )

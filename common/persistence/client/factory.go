@@ -21,9 +21,10 @@
 package client
 
 import (
+	"sync"
+
 	"github.com/uber/cadence/common/persistence/managerWrappers"
 	"github.com/uber/cadence/common/persistence/visibility"
-	"sync"
 
 	"github.com/uber/cadence/common/log/tag"
 

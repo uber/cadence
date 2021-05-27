@@ -25,11 +25,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/utils"
-	"github.com/uber/cadence/common/persistence/visibility"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/utils"
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc"

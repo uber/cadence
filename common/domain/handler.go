@@ -25,7 +25,6 @@ package domain
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/utils"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -39,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/utils"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -73,8 +73,8 @@ type (
 
 	// handlerImpl is the domain operation handler implementation
 	handlerImpl struct {
-		metadataMgr         persistence.DomainManager
-		clusterMetadata     cluster.Metadata
+		domainManager       persistence.DomainManager
+		failoverManager     cluster.FailoverManager
 		domainReplicator    Replicator
 		domainAttrValidator *AttrValidatorImpl
 		archivalMetadata    archiver.ArchivalMetadata
@@ -100,8 +100,8 @@ var _ Handler = (*handlerImpl)(nil)
 func NewHandler(
 	config Config,
 	logger log.Logger,
-	metadataMgr persistence.DomainManager,
-	clusterMetadata cluster.Metadata,
+	domainManager persistence.DomainManager,
+	clusterMetadata cluster.FailoverManager,
 	domainReplicator Replicator,
 	archivalMetadata archiver.ArchivalMetadata,
 	archiverProvider provider.ArchiverProvider,
@@ -109,8 +109,8 @@ func NewHandler(
 ) Handler {
 	return &handlerImpl{
 		logger:              logger,
-		metadataMgr:         metadataMgr,
-		clusterMetadata:     clusterMetadata,
+		domainManager:       domainManager,
+		failoverManager:     clusterMetadata,
 		domainReplicator:    domainReplicator,
 		domainAttrValidator: newAttrValidator(clusterMetadata, int32(config.MinRetentionDays())),
 		archivalMetadata:    archivalMetadata,
@@ -126,19 +126,19 @@ func (d *handlerImpl) RegisterDomain(
 	registerRequest *types.RegisterDomainRequest,
 ) error {
 
-	if !d.clusterMetadata.IsGlobalDomainEnabled() {
+	if !d.failoverManager.IsGlobalDomainEnabled() {
 		if registerRequest.IsGlobalDomain {
 			return &types.BadRequestError{Message: "Cannot register global domain when not enabled"}
 		}
 	} else {
 		// cluster global domain enabled
-		if !d.clusterMetadata.IsPrimaryCluster() && registerRequest.GetIsGlobalDomain() {
+		if !d.failoverManager.IsPrimaryCluster() && registerRequest.GetIsGlobalDomain() {
 			return errNotPrimaryCluster
 		}
 	}
 
 	// first check if the name is already registered as the local domain
-	_, err := d.metadataMgr.GetDomain(ctx, &persistence.GetDomainRequest{Name: registerRequest.GetName()})
+	_, err := d.domainManager.GetDomain(ctx, &persistence.GetDomainRequest{Name: registerRequest.GetName()})
 	switch err.(type) {
 	case nil:
 		// domain already exists, cannot proceed
@@ -150,7 +150,7 @@ func (d *handlerImpl) RegisterDomain(
 		return err
 	}
 
-	activeClusterName := d.clusterMetadata.GetCurrentClusterName()
+	activeClusterName := d.failoverManager.GetCurrentClusterName()
 	// input validation on cluster names
 	if registerRequest.ActiveClusterName != "" {
 		activeClusterName = registerRequest.GetActiveClusterName()
@@ -244,7 +244,7 @@ func (d *handlerImpl) RegisterDomain(
 
 	failoverVersion := common.EmptyVersion
 	if registerRequest.GetIsGlobalDomain() {
-		failoverVersion = d.clusterMetadata.GetNextFailoverVersion(activeClusterName, 0)
+		failoverVersion = d.failoverManager.GetNextFailoverVersion(activeClusterName, 0)
 	}
 
 	domainRequest := &persistence.CreateDomainRequest{
@@ -257,7 +257,7 @@ func (d *handlerImpl) RegisterDomain(
 		LastUpdatedTime:   d.timeSource.Now().UnixNano(),
 	}
 
-	domainResponse, err := d.metadataMgr.CreateDomain(ctx, domainRequest)
+	domainResponse, err := d.domainManager.CreateDomain(ctx, domainRequest)
 	if err != nil {
 		return err
 	}
@@ -298,7 +298,7 @@ func (d *handlerImpl) ListDomains(
 		pageSize = int(listRequest.GetPageSize())
 	}
 
-	resp, err := d.metadataMgr.ListDomains(ctx, &persistence.ListDomainsRequest{
+	resp, err := d.domainManager.ListDomains(ctx, &persistence.ListDomainsRequest{
 		PageSize:      pageSize,
 		NextPageToken: listRequest.NextPageToken,
 	})
@@ -336,7 +336,7 @@ func (d *handlerImpl) DescribeDomain(
 		Name: describeRequest.GetName(),
 		ID:   describeRequest.GetUUID(),
 	}
-	resp, err := d.metadataMgr.GetDomain(ctx, req)
+	resp, err := d.domainManager.GetDomain(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -359,12 +359,12 @@ func (d *handlerImpl) UpdateDomain(
 	// this version can be regarded as the lock on the v2 domain table
 	// and since we do not know which table will return the domain afterwards
 	// this call has to be made
-	metadata, err := d.metadataMgr.GetMetadata(ctx)
+	metadata, err := d.domainManager.GetMetadata(ctx)
 	if err != nil {
 		return nil, err
 	}
 	notificationVersion := metadata.NotificationVersion
-	getResponse, err := d.metadataMgr.GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()})
+	getResponse, err := d.domainManager.GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()})
 	if err != nil {
 		return nil, err
 	}
@@ -456,7 +456,7 @@ func (d *handlerImpl) UpdateDomain(
 			return nil, errInvalidGracefulFailover
 		}
 		// must start with the passive -> active cluster
-		if replicationConfig.ActiveClusterName != d.clusterMetadata.GetCurrentClusterName() {
+		if replicationConfig.ActiveClusterName != d.failoverManager.GetCurrentClusterName() {
 			return nil, errCannotDoGracefulFailoverFromCluster
 		}
 		if replicationConfig.ActiveClusterName == currentActiveCluster {
@@ -487,7 +487,7 @@ func (d *handlerImpl) UpdateDomain(
 			return nil, errCannotDoDomainFailoverAndUpdate
 		}
 
-		if !activeClusterChanged && !d.clusterMetadata.IsPrimaryCluster() {
+		if !activeClusterChanged && !d.failoverManager.IsPrimaryCluster() {
 			return nil, errNotPrimaryCluster
 		}
 	} else {
@@ -516,7 +516,7 @@ func (d *handlerImpl) UpdateDomain(
 				gracefulFailoverEndTime = nil
 				previousFailoverVersion = common.InitialPreviousFailoverVersion
 			}
-			failoverVersion = d.clusterMetadata.GetNextFailoverVersion(
+			failoverVersion = d.failoverManager.GetNextFailoverVersion(
 				replicationConfig.ActiveClusterName,
 				failoverVersion,
 			)
@@ -535,7 +535,7 @@ func (d *handlerImpl) UpdateDomain(
 			LastUpdatedTime:             lastUpdatedTime.UnixNano(),
 			NotificationVersion:         notificationVersion,
 		}
-		err = d.metadataMgr.UpdateDomain(ctx, updateReq)
+		err = d.domainManager.UpdateDomain(ctx, updateReq)
 		if err != nil {
 			return nil, err
 		}
@@ -580,18 +580,18 @@ func (d *handlerImpl) DeprecateDomain(
 	// this version can be regarded as the lock on the v2 domain table
 	// and since we do not know which table will return the domain afterwards
 	// this call has to be made
-	metadata, err := d.metadataMgr.GetMetadata(ctx)
+	metadata, err := d.domainManager.GetMetadata(ctx)
 	if err != nil {
 		return err
 	}
 	notificationVersion := metadata.NotificationVersion
-	getResponse, err := d.metadataMgr.GetDomain(ctx, &persistence.GetDomainRequest{Name: deprecateRequest.GetName()})
+	getResponse, err := d.domainManager.GetDomain(ctx, &persistence.GetDomainRequest{Name: deprecateRequest.GetName()})
 	if err != nil {
 		return err
 	}
 
 	isGlobalDomain := getResponse.IsGlobalDomain
-	if isGlobalDomain && !d.clusterMetadata.IsPrimaryCluster() {
+	if isGlobalDomain && !d.failoverManager.IsPrimaryCluster() {
 		return errNotPrimaryCluster
 	}
 	getResponse.ConfigVersion = getResponse.ConfigVersion + 1
@@ -609,7 +609,7 @@ func (d *handlerImpl) DeprecateDomain(
 		LastUpdatedTime:             d.timeSource.Now().UnixNano(),
 		NotificationVersion:         notificationVersion,
 	}
-	err = d.metadataMgr.UpdateDomain(ctx, updateReq)
+	err = d.domainManager.UpdateDomain(ctx, updateReq)
 	if err != nil {
 		return err
 	}

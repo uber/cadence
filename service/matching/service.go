@@ -21,9 +21,10 @@
 package matching
 
 import (
-	"github.com/uber/cadence/common/persistence/visibility"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"

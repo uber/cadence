@@ -150,7 +150,7 @@ type (
 		queryRegistry       query.Registry
 
 		shard           shard.Context
-		clusterMetadata cluster.Metadata
+		clusterMetadata cluster.FailoverManager
 		eventsCache     events.Cache
 		config          *config.Config
 		timeSource      clock.TimeSource

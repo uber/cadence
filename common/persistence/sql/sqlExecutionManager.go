@@ -26,9 +26,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/validator"
 	"math"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/validator"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"

@@ -22,6 +22,7 @@ package visibility
 
 import (
 	"context"
+
 	"github.com/uber/cadence/common/persistence"
 
 	"github.com/uber/cadence/common/definition"

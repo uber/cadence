@@ -22,10 +22,11 @@ package persistencetests
 
 import (
 	"context"
-	"github.com/uber/cadence/common/persistence/visibility"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"

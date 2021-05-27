@@ -22,9 +22,10 @@ package managerWrappers
 
 import (
 	"context"
+	"math/rand"
+
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/visibility"
-	"math/rand"
 
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"

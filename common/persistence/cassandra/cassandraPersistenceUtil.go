@@ -23,8 +23,9 @@ package cassandra
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/persistence/validator"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/validator"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"

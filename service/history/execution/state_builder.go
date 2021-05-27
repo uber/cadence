@@ -52,7 +52,7 @@ type (
 
 	stateBuilderImpl struct {
 		shard           shard.Context
-		clusterMetadata cluster.Metadata
+		clusterMetadata cluster.FailoverManager
 		domainCache     cache.DomainCache
 		logger          log.Logger
 

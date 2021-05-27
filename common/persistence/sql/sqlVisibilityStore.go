@@ -25,8 +25,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/visibility"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"

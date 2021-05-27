@@ -23,6 +23,7 @@ package visibility
 import (
 	"context"
 	"fmt"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/types"

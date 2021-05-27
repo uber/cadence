@@ -54,7 +54,7 @@ type (
 	branchManagerImpl struct {
 		shard           shard.Context
 		domainCache     cache.DomainCache
-		clusterMetadata cluster.Metadata
+		clusterMetadata cluster.FailoverManager
 		historyV2Mgr    persistence.HistoryManager
 
 		context      execution.Context

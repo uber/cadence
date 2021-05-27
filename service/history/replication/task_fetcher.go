@@ -89,7 +89,7 @@ var _ TaskFetchers = (*taskFetchersImpl)(nil)
 func NewTaskFetchers(
 	logger log.Logger,
 	config *config.Config,
-	clusterMetadata cluster.Metadata,
+	clusterMetadata cluster.FailoverManager,
 	clientBean client.Bean,
 ) TaskFetchers {
 

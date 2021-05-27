@@ -56,7 +56,7 @@ type (
 
 	workflowImpl struct {
 		domainCache     cache.DomainCache
-		clusterMetadata cluster.Metadata
+		clusterMetadata cluster.FailoverManager
 
 		ctx          context.Context
 		context      Context
@@ -69,7 +69,7 @@ type (
 func NewWorkflow(
 	ctx context.Context,
 	domainCache cache.DomainCache,
-	clusterMetadata cluster.Metadata,
+	clusterMetadata cluster.FailoverManager,
 	context Context,
 	mutableState MutableState,
 	releaseFn ReleaseFunc,

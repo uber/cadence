@@ -23,7 +23,6 @@ package cassandra
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/utils"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -33,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/persistence/utils"
 	"github.com/uber/cadence/common/types"
 )
 

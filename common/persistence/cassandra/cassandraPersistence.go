@@ -23,7 +23,6 @@ package cassandra
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/validator"
 	"reflect"
 	"strings"
 	"time"
@@ -32,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/persistence/validator"
 	"github.com/uber/cadence/common/types"
 )
 

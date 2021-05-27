@@ -34,31 +34,31 @@ import (
 	config "github.com/uber/cadence/common/config"
 )
 
-// MockMetadata is a mock of Metadata interface
-type MockMetadata struct {
+// MockFailoverManager is a mock of FailoverManager interface
+type MockFailoverManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockMetadataMockRecorder
 }
 
-// MockMetadataMockRecorder is the mock recorder for MockMetadata
+// MockMetadataMockRecorder is the mock recorder for MockFailoverManager
 type MockMetadataMockRecorder struct {
-	mock *MockMetadata
+	mock *MockFailoverManager
 }
 
-// NewMockMetadata creates a new mock instance
-func NewMockMetadata(ctrl *gomock.Controller) *MockMetadata {
-	mock := &MockMetadata{ctrl: ctrl}
+// NewMockFailoverManager creates a new mock instance
+func NewMockFailoverManager(ctrl *gomock.Controller) *MockFailoverManager {
+	mock := &MockFailoverManager{ctrl: ctrl}
 	mock.recorder = &MockMetadataMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockMetadata) EXPECT() *MockMetadataMockRecorder {
+func (m *MockFailoverManager) EXPECT() *MockMetadataMockRecorder {
 	return m.recorder
 }
 
 // IsGlobalDomainEnabled mocks base method
-func (m *MockMetadata) IsGlobalDomainEnabled() bool {
+func (m *MockFailoverManager) IsGlobalDomainEnabled() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsGlobalDomainEnabled")
 	ret0, _ := ret[0].(bool)
@@ -68,11 +68,11 @@ func (m *MockMetadata) IsGlobalDomainEnabled() bool {
 // IsGlobalDomainEnabled indicates an expected call of IsGlobalDomainEnabled
 func (mr *MockMetadataMockRecorder) IsGlobalDomainEnabled() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsGlobalDomainEnabled", reflect.TypeOf((*MockMetadata)(nil).IsGlobalDomainEnabled))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsGlobalDomainEnabled", reflect.TypeOf((*MockFailoverManager)(nil).IsGlobalDomainEnabled))
 }
 
 // IsPrimaryCluster mocks base method
-func (m *MockMetadata) IsPrimaryCluster() bool {
+func (m *MockFailoverManager) IsPrimaryCluster() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsPrimaryCluster")
 	ret0, _ := ret[0].(bool)
@@ -82,11 +82,11 @@ func (m *MockMetadata) IsPrimaryCluster() bool {
 // IsPrimaryCluster indicates an expected call of IsPrimartCluster
 func (mr *MockMetadataMockRecorder) IsPrimaryCluster() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsPrimaryCluster", reflect.TypeOf((*MockMetadata)(nil).IsPrimaryCluster))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsPrimaryCluster", reflect.TypeOf((*MockFailoverManager)(nil).IsPrimaryCluster))
 }
 
 // GetNextFailoverVersion mocks base method
-func (m *MockMetadata) GetNextFailoverVersion(arg0 string, arg1 int64) int64 {
+func (m *MockFailoverManager) GetNextFailoverVersion(arg0 string, arg1 int64) int64 {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetNextFailoverVersion", arg0, arg1)
 	ret0, _ := ret[0].(int64)
@@ -96,11 +96,11 @@ func (m *MockMetadata) GetNextFailoverVersion(arg0 string, arg1 int64) int64 {
 // GetNextFailoverVersion indicates an expected call of GetNextFailoverVersion
 func (mr *MockMetadataMockRecorder) GetNextFailoverVersion(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNextFailoverVersion", reflect.TypeOf((*MockMetadata)(nil).GetNextFailoverVersion), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNextFailoverVersion", reflect.TypeOf((*MockFailoverManager)(nil).GetNextFailoverVersion), arg0, arg1)
 }
 
 // IsVersionFromSameCluster mocks base method
-func (m *MockMetadata) IsVersionFromSameCluster(version1, version2 int64) bool {
+func (m *MockFailoverManager) IsVersionFromSameCluster(version1, version2 int64) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsVersionFromSameCluster", version1, version2)
 	ret0, _ := ret[0].(bool)
@@ -110,11 +110,11 @@ func (m *MockMetadata) IsVersionFromSameCluster(version1, version2 int64) bool {
 // IsVersionFromSameCluster indicates an expected call of IsVersionFromSameCluster
 func (mr *MockMetadataMockRecorder) IsVersionFromSameCluster(version1, version2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsVersionFromSameCluster", reflect.TypeOf((*MockMetadata)(nil).IsVersionFromSameCluster), version1, version2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsVersionFromSameCluster", reflect.TypeOf((*MockFailoverManager)(nil).IsVersionFromSameCluster), version1, version2)
 }
 
 // GetPrimaryClusterName mocks base method
-func (m *MockMetadata) GetPrimaryClusterName() string {
+func (m *MockFailoverManager) GetPrimaryClusterName() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPrimaryClusterName")
 	ret0, _ := ret[0].(string)
@@ -124,11 +124,11 @@ func (m *MockMetadata) GetPrimaryClusterName() string {
 // GetPrimaryClusterName indicates an expected call of GetPrimaryClusterName
 func (mr *MockMetadataMockRecorder) GetPrimaryClusterName() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrimaryClusterName", reflect.TypeOf((*MockMetadata)(nil).GetPrimaryClusterName))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrimaryClusterName", reflect.TypeOf((*MockFailoverManager)(nil).GetPrimaryClusterName))
 }
 
 // GetCurrentClusterName mocks base method
-func (m *MockMetadata) GetCurrentClusterName() string {
+func (m *MockFailoverManager) GetCurrentClusterName() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCurrentClusterName")
 	ret0, _ := ret[0].(string)
@@ -138,11 +138,11 @@ func (m *MockMetadata) GetCurrentClusterName() string {
 // GetCurrentClusterName indicates an expected call of GetCurrentClusterName
 func (mr *MockMetadataMockRecorder) GetCurrentClusterName() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentClusterName", reflect.TypeOf((*MockMetadata)(nil).GetCurrentClusterName))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentClusterName", reflect.TypeOf((*MockFailoverManager)(nil).GetCurrentClusterName))
 }
 
 // GetAllClusterInfo mocks base method
-func (m *MockMetadata) GetAllClusterInfo() map[string]config.ClusterInformation {
+func (m *MockFailoverManager) GetAllClusterInfo() map[string]config.ClusterInformation {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAllClusterInfo")
 	ret0, _ := ret[0].(map[string]config.ClusterInformation)
@@ -152,11 +152,11 @@ func (m *MockMetadata) GetAllClusterInfo() map[string]config.ClusterInformation 
 // GetAllClusterInfo indicates an expected call of GetAllClusterInfo
 func (mr *MockMetadataMockRecorder) GetAllClusterInfo() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllClusterInfo", reflect.TypeOf((*MockMetadata)(nil).GetAllClusterInfo))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllClusterInfo", reflect.TypeOf((*MockFailoverManager)(nil).GetAllClusterInfo))
 }
 
 // ClusterNameForFailoverVersion mocks base method
-func (m *MockMetadata) ClusterNameForFailoverVersion(failoverVersion int64) string {
+func (m *MockFailoverManager) ClusterNameForFailoverVersion(failoverVersion int64) string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ClusterNameForFailoverVersion", failoverVersion)
 	ret0, _ := ret[0].(string)
@@ -166,5 +166,5 @@ func (m *MockMetadata) ClusterNameForFailoverVersion(failoverVersion int64) stri
 // ClusterNameForFailoverVersion indicates an expected call of ClusterNameForFailoverVersion
 func (mr *MockMetadataMockRecorder) ClusterNameForFailoverVersion(failoverVersion interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterNameForFailoverVersion", reflect.TypeOf((*MockMetadata)(nil).ClusterNameForFailoverVersion), failoverVersion)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterNameForFailoverVersion", reflect.TypeOf((*MockFailoverManager)(nil).ClusterNameForFailoverVersion), failoverVersion)
 }

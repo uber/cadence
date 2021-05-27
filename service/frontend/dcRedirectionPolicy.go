@@ -82,7 +82,7 @@ var selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs = map[string]struct{}
 }
 
 // RedirectionPolicyGenerator generate corresponding redirection policy
-func RedirectionPolicyGenerator(clusterMetadata cluster.Metadata, config *Config,
+func RedirectionPolicyGenerator(clusterMetadata cluster.FailoverManager, config *Config,
 	domainCache cache.DomainCache, policy config.DCRedirectionPolicy) DCRedirectionPolicy {
 	switch policy.Policy {
 	case DCRedirectionPolicyDefault:

@@ -103,7 +103,7 @@ type (
 )
 
 // NewClientBean provides a collection of clients
-func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clusterMetadata cluster.Metadata) (Bean, error) {
+func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clusterMetadata cluster.FailoverManager) (Bean, error) {
 
 	historyClient, err := factory.NewHistoryClient()
 	if err != nil {

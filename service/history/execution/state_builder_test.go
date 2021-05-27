@@ -53,7 +53,7 @@ type (
 		mockDomainCache     *cache.MockDomainCache
 		mockTaskGenerator   *MockMutableStateTaskGenerator
 		mockMutableState    *MockMutableState
-		mockClusterMetadata *cluster.MockMetadata
+		mockClusterMetadata *cluster.MockFailoverManager
 
 		mockTaskGeneratorForNew *MockMutableStateTaskGenerator
 

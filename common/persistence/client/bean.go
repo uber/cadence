@@ -23,8 +23,9 @@
 package client
 
 import (
-	"github.com/uber/cadence/common/persistence/visibility"
 	"sync"
+
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/uber/cadence/common/persistence"
 )

@@ -21,9 +21,10 @@
 package task
 
 import (
-	"github.com/uber/cadence/common/persistence/visibility"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
@@ -60,7 +61,7 @@ type (
 		controller             *gomock.Controller
 		mockShard              *shard.TestContext
 		mockDomainCache        *cache.MockDomainCache
-		mockClusterMetadata    *cluster.MockMetadata
+		mockClusterMetadata    *cluster.MockFailoverManager
 		mockNDCHistoryResender *ndc.MockHistoryResender
 		mockMatchingClient     *matching.MockClient
 

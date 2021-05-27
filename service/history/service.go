@@ -21,9 +21,10 @@
 package history
 
 import (
-	"github.com/uber/cadence/common/persistence/visibility"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/uber/cadence/common"
 	sconfig "github.com/uber/cadence/common/config"

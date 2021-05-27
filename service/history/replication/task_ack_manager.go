@@ -28,9 +28,10 @@ import (
 	"context"
 	ctx "context"
 	"errors"
-	"github.com/uber/cadence/common/persistence/utils"
 	"strconv"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/utils"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"

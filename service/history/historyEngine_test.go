@@ -77,7 +77,7 @@ type (
 		mockDomainCache      *cache.MockDomainCache
 		mockHistoryClient    *hclient.MockClient
 		mockMatchingClient   *matching.MockClient
-		mockClusterMetadata  *cluster.MockMetadata
+		mockClusterMetadata  *cluster.MockFailoverManager
 		mockEventsReapplier  *ndc.MockEventsReapplier
 		mockWorkflowResetter *reset.MockWorkflowResetter
 

@@ -22,8 +22,9 @@ package task
 
 import (
 	"context"
-	"github.com/uber/cadence/common/persistence/visibility"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"

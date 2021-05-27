@@ -55,7 +55,7 @@ type (
 		mockShard           *shard.TestContext
 		mockDomainCache     *cache.MockDomainCache
 		mockMutableState    *execution.MockMutableState
-		mockClusterMetadata *cluster.MockMetadata
+		mockClusterMetadata *cluster.MockFailoverManager
 
 		mockExecutionMgr *mocks.ExecutionManager
 		mockHistoryMgr   *mocks.HistoryV2Manager

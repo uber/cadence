@@ -59,7 +59,7 @@ type (
 		mockEngine          *engine.MockEngine
 		mockDomainCache     *cache.MockDomainCache
 		mockMatchingClient  *matching.MockClient
-		mockClusterMetadata *cluster.MockMetadata
+		mockClusterMetadata *cluster.MockFailoverManager
 
 		mockExecutionMgr *mocks.ExecutionManager
 		mockHistoryV2Mgr *mocks.HistoryV2Manager

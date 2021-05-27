@@ -65,7 +65,7 @@ type (
 		HistoryV2Manager persistence.HistoryManager
 		Logger           log.Logger
 		MetricsClient    metrics.Client
-		ClusterMetadata  cluster.Metadata
+		ClusterMetadata  cluster.FailoverManager
 		DomainCache      cache.DomainCache
 	}
 
@@ -80,7 +80,7 @@ type (
 	VisibilityBootstrapContainer struct {
 		Logger          log.Logger
 		MetricsClient   metrics.Client
-		ClusterMetadata cluster.Metadata
+		ClusterMetadata cluster.FailoverManager
 		DomainCache     cache.DomainCache
 	}
 

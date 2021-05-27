@@ -22,6 +22,7 @@ package validator
 
 import (
 	"fmt"
+
 	"github.com/uber/cadence/common/persistence"
 
 	"github.com/uber/cadence/common/types"

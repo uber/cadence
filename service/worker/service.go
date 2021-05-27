@@ -25,10 +25,11 @@ package worker
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/utils"
-	"github.com/uber/cadence/common/persistence/visibility"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/utils"
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"

@@ -42,7 +42,7 @@ type (
 	Config struct {
 		AdminOperationToken dynamicconfig.StringPropertyFn
 		// ClusterMetadata contains the metadata for this cluster
-		ClusterMetadata cluster.Metadata
+		ClusterMetadata cluster.FailoverManager
 	}
 
 	// BootstrapParams contains the set of params needed to bootstrap

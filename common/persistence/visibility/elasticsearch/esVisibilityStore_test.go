@@ -25,10 +25,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/visibility"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

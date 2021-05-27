@@ -23,7 +23,6 @@ package cassandra
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/visibility"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -33,6 +32,7 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/persistence/visibility"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )

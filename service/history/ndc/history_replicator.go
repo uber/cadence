@@ -54,7 +54,7 @@ type (
 
 	historyReplicatorImpl struct {
 		shard              shard.Context
-		clusterMetadata    cluster.Metadata
+		clusterMetadata    cluster.FailoverManager
 		historyV2Manager   persistence.HistoryManager
 		historySerializer  persistence.PayloadSerializer
 		metricsClient      metrics.Client

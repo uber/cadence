@@ -22,6 +22,7 @@ package elasticsearch
 
 import (
 	"context"
+
 	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/uber/cadence/common/log"

@@ -54,7 +54,7 @@ type (
 
 	activityReplicatorImpl struct {
 		executionCache  *execution.Cache
-		clusterMetadata cluster.Metadata
+		clusterMetadata cluster.FailoverManager
 		logger          log.Logger
 	}
 )

@@ -91,7 +91,7 @@ var (
 )
 
 func newReplicationTask(
-	clusterMetadata cluster.Metadata,
+	clusterMetadata cluster.FailoverManager,
 	historySerializer persistence.PayloadSerializer,
 	taskStartTime time.Time,
 	logger log.Logger,

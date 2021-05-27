@@ -57,11 +57,11 @@ type (
 		refreshJitter   dynamicconfig.FloatPropertyFn
 		retryPolicy     backoff.RetryPolicy
 
-		metadataMgr persistence.DomainManager
-		domainCache cache.DomainCache
-		timeSource  clock.TimeSource
-		metrics     metrics.Client
-		logger      log.Logger
+		domainManager persistence.DomainManager
+		domainCache   cache.DomainCache
+		timeSource    clock.TimeSource
+		metrics       metrics.Client
+		logger        log.Logger
 	}
 )
 
@@ -70,7 +70,7 @@ var _ FailoverWatcher = (*failoverWatcherImpl)(nil)
 // NewFailoverWatcher initializes domain failover processor
 func NewFailoverWatcher(
 	domainCache cache.DomainCache,
-	metadataMgr persistence.DomainManager,
+	domainManager persistence.DomainManager,
 	timeSource clock.TimeSource,
 	refreshInterval dynamicconfig.DurationPropertyFn,
 	refreshJitter dynamicconfig.FloatPropertyFn,
@@ -90,7 +90,7 @@ func NewFailoverWatcher(
 		refreshJitter:   refreshJitter,
 		retryPolicy:     retryPolicy,
 		domainCache:     domainCache,
-		metadataMgr:     metadataMgr,
+		domainManager:   domainManager,
 		timeSource:      timeSource,
 		metrics:         metrics,
 		logger:          logger,
@@ -157,7 +157,7 @@ func (p *failoverWatcherImpl) handleFailoverTimeout(
 		domainID := domain.GetInfo().ID
 		// force failover the domain without setting the failover timeout
 		if err := CleanPendingActiveState(
-			p.metadataMgr,
+			p.domainManager,
 			domainID,
 			domain.GetFailoverVersion(),
 			p.retryPolicy,

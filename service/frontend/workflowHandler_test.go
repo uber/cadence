@@ -24,9 +24,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/uber/cadence/common/persistence/visibility"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
@@ -70,7 +71,7 @@ type (
 		mockResource        *resource.Test
 		mockDomainCache     *cache.MockDomainCache
 		mockHistoryClient   *history.MockClient
-		mockClusterMetadata *cluster.MockMetadata
+		mockClusterMetadata *cluster.MockFailoverManager
 
 		mockProducer           *mocks.KafkaProducer
 		mockMessagingClient    messaging.Client

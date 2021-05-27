@@ -21,10 +21,11 @@
 package tasklist
 
 import (
-	"github.com/uber/cadence/common/persistence/managerWrappers"
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/managerWrappers"
 
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"

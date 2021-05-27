@@ -21,11 +21,12 @@
 package resource
 
 import (
-	"github.com/uber/cadence/common/persistence/visibility"
 	"math/rand"
 	"os"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
@@ -76,7 +77,7 @@ type (
 		hostName        string
 		hostInfo        *membership.HostInfo
 		metricsScope    tally.Scope
-		clusterMetadata cluster.Metadata
+		clusterMetadata cluster.FailoverManager
 
 		// other common resources
 
@@ -432,7 +433,7 @@ func (h *Impl) GetHostInfo() *membership.HostInfo {
 }
 
 // GetClusterMetadata return cluster metadata
-func (h *Impl) GetClusterMetadata() cluster.Metadata {
+func (h *Impl) GetClusterMetadata() cluster.FailoverManager {
 	return h.clusterMetadata
 }
 

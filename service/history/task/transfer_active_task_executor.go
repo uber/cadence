@@ -24,8 +24,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/validator"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/validator"
 
 	"github.com/pborman/uuid"
 

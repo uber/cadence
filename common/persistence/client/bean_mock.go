@@ -27,8 +27,9 @@
 package client
 
 import (
-	"github.com/uber/cadence/common/persistence/visibility"
 	reflect "reflect"
+
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	gomock "github.com/golang/mock/gomock"
 

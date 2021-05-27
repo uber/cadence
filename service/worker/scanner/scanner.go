@@ -64,7 +64,7 @@ type (
 		// Persistence contains the persistence configuration
 		Persistence *config.Persistence
 		// ClusterMetadata contains the metadata for this cluster
-		ClusterMetadata cluster.Metadata
+		ClusterMetadata cluster.FailoverManager
 		// HistoryScannerEnabled indicates if history scanner should be started as part of scanner
 		HistoryScannerEnabled dynamicconfig.BoolPropertyFn
 		// ShardScanners is a list of shard scanner configs

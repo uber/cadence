@@ -51,7 +51,7 @@ type (
 		coordinator         *MockCoordinator
 		mockShard           *shard.TestContext
 		mockDomainCache     *cache.MockDomainCache
-		mockClusterMetadata *cluster.MockMetadata
+		mockClusterMetadata *cluster.MockFailoverManager
 		markerNotifier      *markerNotifierImpl
 	}
 )

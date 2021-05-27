@@ -32,8 +32,8 @@ import (
 )
 
 type (
-	// Metadata provides information about clusters
-	Metadata interface {
+	// FailoverManager provides information about clusters
+	FailoverManager interface {
 		// IsGlobalDomainEnabled whether the global domain is enabled,
 		// this attr should be discarded when cross DC is made public
 		IsGlobalDomainEnabled() bool
@@ -53,7 +53,7 @@ type (
 		ClusterNameForFailoverVersion(failoverVersion int64) string
 	}
 
-	metadataImpl struct {
+	failoverManagerImpl struct {
 		logger log.Logger
 		// EnableGlobalDomain whether the global domain is enabled,
 		// this attr should be discarded when cross DC is made public
@@ -72,7 +72,7 @@ type (
 	}
 )
 
-// NewMetadata create a new instance of Metadata
+// NewMetadata create a new instance of FailoverManager
 func NewMetadata(
 	logger log.Logger,
 	enableGlobalDomain dynamicconfig.BoolPropertyFn,
@@ -80,7 +80,7 @@ func NewMetadata(
 	primaryClusterName string,
 	currentClusterName string,
 	clusterInfo map[string]config.ClusterInformation,
-) Metadata {
+) FailoverManager {
 
 	if len(clusterInfo) == 0 {
 		panic("Empty cluster information")
@@ -121,7 +121,7 @@ func NewMetadata(
 		panic("Cluster info initial versions have duplicates")
 	}
 
-	return &metadataImpl{
+	return &failoverManagerImpl{
 		logger:                   logger,
 		enableGlobalDomain:       enableGlobalDomain,
 		failoverVersionIncrement: failoverVersionIncrement,
@@ -134,12 +134,12 @@ func NewMetadata(
 
 // IsGlobalDomainEnabled whether the global domain is enabled,
 // this attr should be discarded when cross DC is made public
-func (metadata *metadataImpl) IsGlobalDomainEnabled() bool {
+func (metadata *failoverManagerImpl) IsGlobalDomainEnabled() bool {
 	return metadata.enableGlobalDomain()
 }
 
 // GetNextFailoverVersion return the next failover version based on input
-func (metadata *metadataImpl) GetNextFailoverVersion(cluster string, currentFailoverVersion int64) int64 {
+func (metadata *failoverManagerImpl) GetNextFailoverVersion(cluster string, currentFailoverVersion int64) int64 {
 	info, ok := metadata.clusterInfo[cluster]
 	if !ok {
 		panic(fmt.Sprintf(
@@ -156,31 +156,31 @@ func (metadata *metadataImpl) GetNextFailoverVersion(cluster string, currentFail
 }
 
 // IsVersionFromSameCluster return true if 2 version are used for the same cluster
-func (metadata *metadataImpl) IsVersionFromSameCluster(version1 int64, version2 int64) bool {
+func (metadata *failoverManagerImpl) IsVersionFromSameCluster(version1 int64, version2 int64) bool {
 	return (version1-version2)%metadata.failoverVersionIncrement == 0
 }
 
-func (metadata *metadataImpl) IsPrimaryCluster() bool {
+func (metadata *failoverManagerImpl) IsPrimaryCluster() bool {
 	return metadata.primaryClusterName == metadata.currentClusterName
 }
 
 // GetPrimaryClusterName return the primary cluster name
-func (metadata *metadataImpl) GetPrimaryClusterName() string {
+func (metadata *failoverManagerImpl) GetPrimaryClusterName() string {
 	return metadata.primaryClusterName
 }
 
 // GetCurrentClusterName return the current cluster name
-func (metadata *metadataImpl) GetCurrentClusterName() string {
+func (metadata *failoverManagerImpl) GetCurrentClusterName() string {
 	return metadata.currentClusterName
 }
 
 // GetAllClusterInfo return the all cluster name -> corresponding information
-func (metadata *metadataImpl) GetAllClusterInfo() map[string]config.ClusterInformation {
+func (metadata *failoverManagerImpl) GetAllClusterInfo() map[string]config.ClusterInformation {
 	return metadata.clusterInfo
 }
 
 // ClusterNameForFailoverVersion return the corresponding cluster name for a given failover version
-func (metadata *metadataImpl) ClusterNameForFailoverVersion(failoverVersion int64) string {
+func (metadata *failoverManagerImpl) ClusterNameForFailoverVersion(failoverVersion int64) string {
 	if failoverVersion == common.EmptyVersion {
 		return metadata.currentClusterName
 	}

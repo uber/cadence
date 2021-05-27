@@ -26,9 +26,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"github.com/uber/cadence/common/persistence/validator"
 	"github.com/uber/cadence/common/persistence/visibility"
-	"time"
 
 	"github.com/pborman/uuid"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
@@ -90,7 +91,7 @@ type (
 		shard                     shard.Context
 		timeSource                clock.TimeSource
 		decisionHandler           decision.Handler
-		clusterMetadata           cluster.Metadata
+		clusterMetadata           cluster.FailoverManager
 		historyV2Mgr              persistence.HistoryManager
 		executionManager          persistence.ExecutionManager
 		visibilityMgr             visibility.VisibilityManager

@@ -24,9 +24,10 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
-	"github.com/uber/cadence/common/persistence/visibility"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	publicservicetest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
+
+	"github.com/uber/cadence/common/persistence/visibility"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
@@ -58,7 +59,7 @@ type (
 	// Test is the test implementation used for testing
 	Test struct {
 		MetricsScope    tally.TestScope
-		ClusterMetadata *cluster.MockMetadata
+		ClusterMetadata *cluster.MockFailoverManager
 
 		// other common resources
 
@@ -169,7 +170,7 @@ func NewTest(
 
 	return &Test{
 		MetricsScope:    scope,
-		ClusterMetadata: cluster.NewMockMetadata(controller),
+		ClusterMetadata: cluster.NewMockFailoverManager(controller),
 
 		// other common resources
 
@@ -245,7 +246,7 @@ func (s *Test) GetHostInfo() *membership.HostInfo {
 }
 
 // GetClusterMetadata for testing
-func (s *Test) GetClusterMetadata() cluster.Metadata {
+func (s *Test) GetClusterMetadata() cluster.FailoverManager {
 	return s.ClusterMetadata
 }
 

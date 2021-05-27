@@ -56,7 +56,7 @@ type (
 		mockUpdateManager    *MocktransactionManagerForExistingWorkflow
 		mockEventsReapplier  *MockEventsReapplier
 		mockWorkflowResetter *reset.MockWorkflowResetter
-		mockClusterMetadata  *cluster.MockMetadata
+		mockClusterMetadata  *cluster.MockFailoverManager
 
 		mockExecutionManager *mocks.ExecutionManager
 

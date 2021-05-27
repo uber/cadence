@@ -24,11 +24,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/common/persistence/managerWrappers"
 	"net"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/managerWrappers"
 
 	"github.com/pborman/uuid"
 	"github.com/uber-go/tally"
@@ -92,7 +93,7 @@ type (
 		frontendClient                frontendClient.Client
 		historyClient                 historyClient.Client
 		logger                        log.Logger
-		clusterMetadata               cluster.Metadata
+		clusterMetadata               cluster.FailoverManager
 		persistenceConfig             config.Persistence
 		dispatcherProvider            client.DispatcherProvider
 		messagingClient               messaging.Client
@@ -126,7 +127,7 @@ type (
 
 	// CadenceParams contains everything needed to bootstrap Cadence
 	CadenceParams struct {
-		ClusterMetadata               cluster.Metadata
+		ClusterMetadata               cluster.FailoverManager
 		PersistenceConfig             config.Persistence
 		DispatcherProvider            client.DispatcherProvider
 		MessagingClient               messaging.Client

@@ -22,8 +22,9 @@ package validator
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/persistence"
 	"testing"
+
+	"github.com/uber/cadence/common/persistence"
 
 	"github.com/stretchr/testify/suite"
 )

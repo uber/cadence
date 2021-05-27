@@ -53,7 +53,7 @@ type (
 		controller          *gomock.Controller
 		mockResource        *resource.Test
 		mockHistoryEngine   *engine.MockEngine
-		mockClusterMetadata *cluster.MockMetadata
+		mockClusterMetadata *cluster.MockFailoverManager
 		mockServiceResolver *membership.MockServiceResolver
 
 		hostInfo          *membership.HostInfo
