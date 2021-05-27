@@ -411,8 +411,12 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 		ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domainName), err)
 	}
 
+	clusters := "N/A, Not a global domain"
+	if resp.IsGlobalDomain {
+		clusters = clustersToString(resp.ReplicationConfiguration.Clusters)
+	}
 	var formatStr = "Name: %v\nUUID: %v\nDescription: %v\nOwnerEmail: %v\nDomainData: %v\nStatus: %v\nRetentionInDays: %v\n" +
-		"EmitMetrics: %v\nActiveClusterName: %v\nClusters: %v\nHistoryArchivalStatus: %v\n"
+		"EmitMetrics: %v\nIsGlobal(XDC)Domain: %v\nActiveClusterName: %v\nClusters: %v\nHistoryArchivalStatus: %v\n"
 	descValues := []interface{}{
 		resp.DomainInfo.GetName(),
 		resp.DomainInfo.GetUUID(),
@@ -422,8 +426,9 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 		resp.DomainInfo.GetStatus(),
 		resp.Configuration.GetWorkflowExecutionRetentionPeriodInDays(),
 		resp.Configuration.GetEmitMetric(),
+		resp.IsGlobalDomain,
 		resp.ReplicationConfiguration.GetActiveClusterName(),
-		clustersToString(resp.ReplicationConfiguration.Clusters),
+		clusters,
 		resp.Configuration.GetHistoryArchivalStatus().String(),
 	}
 	if resp.Configuration.GetHistoryArchivalURI() != "" {
