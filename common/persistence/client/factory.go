@@ -306,6 +306,9 @@ func (f *factoryImpl) Close() {
 func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limiter) {
 	f.datastores = make(map[storeType]Datastore, len(storeTypes))
 	defaultCfg := f.config.DataStores[f.config.DefaultStore]
+	if defaultCfg.Cassandra != nil {
+		f.logger.Warn("Cassandra config is deprecated, please use NoSQL with pluginName of cassandra.")
+	}
 	defaultDataStore := Datastore{ratelimit: limiters[f.config.DefaultStore]}
 	switch {
 	case defaultCfg.NoSQL != nil:
@@ -339,6 +342,9 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	}
 
 	visibilityCfg := f.config.DataStores[f.config.VisibilityStore]
+	if visibilityCfg.Cassandra != nil {
+		f.logger.Warn("Cassandra config is deprecated, please use NoSQL with pluginName of cassandra.")
+	}
 	visibilityDataStore := Datastore{ratelimit: limiters[f.config.VisibilityStore]}
 	switch {
 	case visibilityCfg.NoSQL != nil:
