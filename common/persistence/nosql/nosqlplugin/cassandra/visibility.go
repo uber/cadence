@@ -430,7 +430,7 @@ func (db *cdb) closedFilteredByWorkflowTypeSortedByStartTime(
 		persistence.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
 		workflowType,
 	).Consistency(cassandraLowConslevel).WithContext(ctx)
-	return processQuery(query, request, readOpenWorkflowExecutionRecord)
+	return processQuery(query, request, readClosedWorkflowExecutionRecord)
 }
 
 func (db *cdb) closedFilteredByWorkflowTypeSortedByClosedTime(
@@ -445,7 +445,7 @@ func (db *cdb) closedFilteredByWorkflowTypeSortedByClosedTime(
 		persistence.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
 		workflowType,
 	).Consistency(cassandraLowConslevel).WithContext(ctx)
-	return processQuery(query, request, readOpenWorkflowExecutionRecord)
+	return processQuery(query, request, readClosedWorkflowExecutionRecord)
 }
 
 func (db *cdb) openFilteredByWorkflowIDSortedByStartTime(
@@ -475,7 +475,7 @@ func (db *cdb) closedFilteredByWorkflowIDSortedByStartTime(
 		persistence.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
 		workflowID,
 	).Consistency(cassandraLowConslevel).WithContext(ctx)
-	return processQuery(query, request, readOpenWorkflowExecutionRecord)
+	return processQuery(query, request, readClosedWorkflowExecutionRecord)
 }
 
 func (db *cdb) closedFilteredByWorkflowIDSortedByClosedTime(
@@ -490,7 +490,7 @@ func (db *cdb) closedFilteredByWorkflowIDSortedByClosedTime(
 		persistence.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
 		workflowID,
 	).Consistency(cassandraLowConslevel).WithContext(ctx)
-	return processQuery(query, request, readOpenWorkflowExecutionRecord)
+	return processQuery(query, request, readClosedWorkflowExecutionRecord)
 }
 
 func (db *cdb) closedFilteredByClosedStatusSortedByStartTime(
@@ -505,7 +505,7 @@ func (db *cdb) closedFilteredByClosedStatusSortedByStartTime(
 		persistence.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
 		closeStatus,
 	).Consistency(cassandraLowConslevel).WithContext(ctx)
-	return processQuery(query, request, readOpenWorkflowExecutionRecord)
+	return processQuery(query, request, readClosedWorkflowExecutionRecord)
 }
 
 func (db *cdb) closedFilteredByClosedStatusSortedByClosedTime(
@@ -520,7 +520,7 @@ func (db *cdb) closedFilteredByClosedStatusSortedByClosedTime(
 		persistence.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
 		closeStatus,
 	).Consistency(cassandraLowConslevel).WithContext(ctx)
-	return processQuery(query, request, readOpenWorkflowExecutionRecord)
+	return processQuery(query, request, readClosedWorkflowExecutionRecord)
 }
 
 func (db *cdb) openSortedyByStartTime(
