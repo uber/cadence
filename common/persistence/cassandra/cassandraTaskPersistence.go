@@ -95,15 +95,17 @@ func (t *nosqlTaskManager) LeaseTaskList(
 		}
 	}
 	now := time.Now()
-	currTL, err := t.db.SelectTaskList(ctx, &nosqlplugin.TaskListFilter{
+	var err, selectErr error
+	var currTL *nosqlplugin.TaskListRow
+	currTL, selectErr = t.db.SelectTaskList(ctx, &nosqlplugin.TaskListFilter{
 		DomainID:     request.DomainID,
 		TaskListName: request.TaskList,
 		TaskListType: request.TaskType,
 	})
 
 	var previous *nosqlplugin.TaskListRow
-	if err != nil {
-		if t.db.IsNotFoundError(err) { // First time task list is used
+	if selectErr != nil {
+		if t.db.IsNotFoundError(selectErr) { // First time task list is used
 			currTL = &nosqlplugin.TaskListRow{
 				DomainID:        request.DomainID,
 				TaskListName:    request.TaskList,
@@ -139,7 +141,7 @@ func (t *nosqlTaskManager) LeaseTaskList(
 			TaskListKind:    currTL.TaskListKind,
 			AckLevel:        currTL.AckLevel,
 			LastUpdatedTime: now,
-		}, currTL.RangeID)
+		}, currTL.RangeID-1)
 	}
 	if err != nil {
 		if t.db.IsConditionFailedError(err) {
@@ -291,6 +293,10 @@ func (t *nosqlTaskManager) GetTasks(
 	if request.MaxReadLevel == nil {
 		request.MaxReadLevel = common.Int64Ptr(math.MaxInt64 - 1)
 	}
+	if *request.MaxReadLevel == math.MaxInt64 {
+		// fix overflow
+		*request.MaxReadLevel -= 1
+	}
 
 	if request.ReadLevel > *request.MaxReadLevel {
 		return &p.InternalGetTasksResponse{}, nil
@@ -363,7 +369,9 @@ func (t *nosqlTaskManager) CompleteTasksLessThan(
 		DomainID:     request.DomainID,
 		TaskListName: request.TaskListName,
 		TaskListType: request.TaskType,
-		TaskID:       request.TaskID,
+
+		// change from inclusive to exclusive
+		TaskID: request.TaskID + 1,
 	}, request.Limit)
 	if err != nil {
 		return 0, convertCommonErrors(t.db, "CompleteTasksLessThan", err)

@@ -147,14 +147,16 @@ func (db *cdb) SelectTaskList(ctx context.Context, filter *nosqlplugin.TaskListF
 	ackLevel := tlDB["ack_level"].(int64)
 	taskListKind := tlDB["kind"].(int)
 	lastUpdatedTime := tlDB["last_updated"].(time.Time)
+
 	return &nosqlplugin.TaskListRow{
-		DomainID: filter.DomainID,
+		DomainID:     filter.DomainID,
 		TaskListName: filter.TaskListName,
 		TaskListType: filter.TaskListType,
 
-		TaskListKind: taskListKind,
+		TaskListKind:    taskListKind,
 		LastUpdatedTime: lastUpdatedTime,
-		AckLevel: ackLevel,
+		AckLevel:        ackLevel,
+		RangeID:         rangeID,
 	}, nil
 }
 // InsertTaskList insert a single tasklist row
@@ -181,7 +183,7 @@ func (db *cdb) InsertTaskList(ctx context.Context, row *nosqlplugin.TaskListRow)
 		return nil, err
 	}
 
-	return handleTaskListAppliedError(applied, previous)
+	return handleTaskListAppliedError(applied, previous, row)
 }
 
 // UpdateTaskList updates a single tasklist row
@@ -213,32 +215,14 @@ func (db *cdb) UpdateTaskList(
 		return nil, err
 	}
 
-	return handleTaskListAppliedError(applied, previous)
+	return handleTaskListAppliedError(applied, previous, row)
 }
 
-func handleTaskListAppliedError(applied bool, previous map[string]interface{}) (*nosqlplugin.TaskListRow, error) {
+func handleTaskListAppliedError(applied bool, previous map[string]interface{}, row *nosqlplugin.TaskListRow) (*nosqlplugin.TaskListRow, error) {
 	if !applied {
-		domainID := previous["domain_id"].(gocql.UUID).String()
-		taskListName := previous["task_list_name"].(string)
-		taskListType := previous["task_list_name"].(int)
-
-		rangeID := previous["range_id"].(int64)
-		taslist := previous["task_list"].(map[string]interface{})
-
-		ackLevel := taslist["ack_level"].(int64)
-		taskListKind := taslist["kind"].(int)
-		lastUpdatedTime := taslist["last_updated"].(time.Time)
-
-		return &nosqlplugin.TaskListRow{
-			DomainID:     domainID,
-			TaskListName: taskListName,
-			TaskListType: taskListType,
-
-			RangeID:         rangeID,
-			AckLevel:        ackLevel,
-			TaskListKind:    taskListKind,
-			LastUpdatedTime: lastUpdatedTime,
-		}, errConditionFailed
+		// NOTE: Cassandra only returns the conflicted columns in this results
+		row.RangeID = previous["range_id"].(int64)
+		return row, errConditionFailed
 	}
 	return nil, nil
 }
@@ -285,7 +269,7 @@ func (db *cdb) UpdateTaskListWithTTL(
 	if err != nil {
 		return nil, err
 	}
-	return handleTaskListAppliedError(applied, previous)
+	return handleTaskListAppliedError(applied, previous, row)
 }
 
 // ListTaskList returns all tasklists.
@@ -312,7 +296,11 @@ func (db *cdb) DeleteTaskList(ctx context.Context, filter *nosqlplugin.TaskListF
 	if err != nil {
 		return nil, err
 	}
-	return handleTaskListAppliedError(applied, previous)
+	return handleTaskListAppliedError(applied, previous, &nosqlplugin.TaskListRow{
+		DomainID:     filter.DomainID,
+		TaskListName: filter.TaskListName,
+		TaskListType: filter.TaskListType,
+	})
 }
 
 // InsertTasks inserts a batch of tasks
@@ -385,7 +373,7 @@ func (db *cdb) InsertTasks(
 	if err != nil {
 		return nil, err
 	}
-	return handleTaskListAppliedError(applied, previous)
+	return handleTaskListAppliedError(applied, previous, tasklistCondition)
 }
 
 // SelectTasks return tasks that associated to a tasklist
