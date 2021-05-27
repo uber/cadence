@@ -1078,11 +1078,13 @@ type (
 
 	// CompleteCrossClusterTaskRequest is used to complete a task in the cross-cluster task queue
 	CompleteCrossClusterTaskRequest struct {
-		TaskID int64
+		TargetCluster string
+		TaskID        int64
 	}
 
 	// RangeCompleteCrossClusterTaskRequest is used to complete a range of tasks in the cross-cluster task queue
 	RangeCompleteCrossClusterTaskRequest struct {
+		TargetCluster        string
 		ExclusiveBeginTaskID int64
 		InclusiveEndTaskID   int64
 	}
