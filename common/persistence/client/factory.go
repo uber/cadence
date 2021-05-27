@@ -332,7 +332,7 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 			f.logger,
 			getSQLParser(f.logger, common.EncodingType(defaultCfg.SQL.EncodingType), decodingTypes...))
 	default:
-		f.logger.Fatal("invalid config: one of cassandra or sql params must be specified")
+		f.logger.Fatal("invalid config: one of nosql or sql params must be specified for defaultDataStore")
 	}
 
 	for _, st := range storeTypes {
@@ -341,7 +341,13 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 		}
 	}
 
-	visibilityCfg := f.config.DataStores[f.config.VisibilityStore]
+	visibilityCfg, ok := f.config.DataStores[f.config.VisibilityStore]
+	if !ok {
+		f.logger.Info("no visibilityStore is configured, will use advancedVisibilityStore")
+		// NOTE: f.datastores[storeTypeVisibility] will be nil
+		return
+	}
+
 	if visibilityCfg.Cassandra != nil {
 		f.logger.Warn("Cassandra config is deprecated, please use NoSQL with pluginName of cassandra.")
 	}
@@ -360,7 +366,7 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 			f.logger,
 			getSQLParser(f.logger, common.EncodingType(visibilityCfg.SQL.EncodingType), decodingTypes...))
 	default:
-		f.logger.Fatal("invalid config: one of cassandra or sql params must be specified")
+		f.logger.Fatal("invalid config: one of nosql or sql params must be specified for visibilityStore")
 	}
 
 	f.datastores[storeTypeVisibility] = visibilityDataStore
