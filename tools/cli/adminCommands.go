@@ -31,8 +31,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/uber/cadence/tools/common/schema"
-
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 
@@ -40,14 +38,13 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
-	cassp "github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
+	"github.com/uber/cadence/tools/common/schema"
 )
 
 const (

@@ -26,13 +26,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/tools/common/schema"
-
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/service/worker/scanner/executions"
+	"github.com/uber/cadence/tools/common/schema"
 )
 
 func newAdminWorkflowCommands() []cli.Command {
