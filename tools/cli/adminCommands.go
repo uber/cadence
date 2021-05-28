@@ -62,24 +62,30 @@ func AdminShowWorkflow(c *cli.Context) {
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	client, session := connectToCassandra(c)
 	serializer := persistence.NewPayloadSerializer()
 	var history []*persistence.DataBlob
 	if len(tid) != 0 {
-		histV2 := cassp.NewHistoryV2PersistenceFromSession(client, session, loggerimpl.NewNopLogger())
-		resp, err := histV2.ReadHistoryBranch(ctx, &persistence.InternalReadHistoryBranchRequest{
-			TreeID:    tid,
-			BranchID:  bid,
-			MinNodeID: 1,
-			MaxNodeID: maxEventID,
-			PageSize:  maxEventID,
-			ShardID:   sid,
+		thriftrwEncoder := codec.NewThriftRWEncoder()
+		histV2 := initializeHistoryManager(c)
+		branchToken, err := thriftrwEncoder.Encode(&shared.HistoryBranch{
+			TreeID: &tid,
+			BranchID: &bid,
+		})
+		if err != nil {
+			ErrorAndExit("encoding branch token err", err)
+		}
+		resp, err := histV2.ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
+			BranchToken: branchToken,
+			MinEventID: 1,
+			MaxEventID: maxEventID,
+			PageSize: maxEventID,
+			ShardID: &sid,
 		})
 		if err != nil {
 			ErrorAndExit("ReadHistoryBranch err", err)
 		}
 
-		history = resp.History
+		history = resp.HistoryEventBlobs
 	} else {
 		ErrorAndExit("need to specify TreeID/BranchID/ShardID", nil)
 	}
@@ -198,14 +204,16 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	domainID := ms.ExecutionInfo.DomainID
 	skipError := c.Bool(FlagSkipErrorMode)
 
-	ctx, cancel := newContext(c)
-	defer cancel()
-	client, session := connectToCassandra(c)
 	shardID := resp.GetShardID()
 	shardIDInt, err := strconv.Atoi(shardID)
 	if err != nil {
 		ErrorAndExit("strconv.Atoi(shardID) err", err)
 	}
+	ctx, cancel := newContext(c)
+	defer cancel()
+	histV2 := initializeHistoryManager(c)
+	defer histV2.Close()
+	exeStore := initializeExecutionStore(c, shardIDInt, 0)
 
 	branchInfo := shared.HistoryBranch{}
 	thriftrwEncoder := codec.NewThriftRWEncoder()
@@ -225,10 +233,9 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		}
 		fmt.Println("deleting history events for ...")
 		prettyPrintJSONObject(branchInfo)
-		histV2 := cassp.NewHistoryV2PersistenceFromSession(client, session, loggerimpl.NewNopLogger())
-		err = histV2.DeleteHistoryBranch(ctx, &persistence.InternalDeleteHistoryBranchRequest{
-			BranchInfo: *thrift.ToHistoryBranch(&branchInfo),
-			ShardID:    shardIDInt,
+		err = histV2.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
+			BranchToken: branchToken,
+			ShardID: &shardIDInt,
 		})
 		if err != nil {
 			if skipError {
@@ -239,7 +246,6 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		}
 	}
 
-	exeStore, _ := cassp.NewWorkflowExecutionPersistence(shardIDInt, client, session, loggerimpl.NewNopLogger())
 	req := &persistence.DeleteWorkflowExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: wid,
