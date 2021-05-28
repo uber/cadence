@@ -75,6 +75,22 @@ func (c *clientImpl) AddSearchAttribute(
 	return client.AddSearchAttribute(ctx, request, opts...)
 }
 
+func (c *clientImpl) DescribeShardDistribution(
+	ctx context.Context,
+	request *types.DescribeShardDistributionRequest,
+	opts ...yarpc.CallOption,
+) (*types.DescribeShardDistributionResponse, error) {
+
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.DescribeShardDistribution(ctx, request, opts...)
+}
+
 func (c *clientImpl) DescribeHistoryHost(
 	ctx context.Context,
 	request *types.DescribeHistoryHostRequest,

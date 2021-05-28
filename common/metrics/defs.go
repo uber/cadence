@@ -484,6 +484,8 @@ const (
 	AdminClientDescribeQueueScope
 	// AdminClientDescribeHistoryHostScope tracks RPC calls to admin service
 	AdminClientDescribeHistoryHostScope
+	// AdminClientDescribeShardDistributionScope tracks RPC calls to admin service
+	AdminClientDescribeShardDistributionScope
 	// AdminClientDescribeWorkflowExecutionScope tracks RPC calls to admin service
 	AdminClientDescribeWorkflowExecutionScope
 	// AdminClientGetWorkflowExecutionRawHistoryV2Scope tracks RPC calls to admin service
@@ -722,6 +724,8 @@ const (
 	AdminPurgeDLQMessagesScope
 	// AdminMergeDLQMessagesScope is the metric scope for admin.AdminMergeDLQMessagesScope
 	AdminMergeDLQMessagesScope
+	// AdminDescribeShardDistributionScope is the metric scope for admin.DescribeShardDistribution
+	AdminDescribeShardDistributionScope
 
 	NumAdminScopes
 )
@@ -1280,6 +1284,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendClientListTaskListPartitionsScope:             {operation: "FrontendClientListTaskListPartitions", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		AdminClientAddSearchAttributeScope:                    {operation: "AdminClientAddSearchAttribute", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientDescribeHistoryHostScope:                   {operation: "AdminClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDescribeShardDistributionScope:             {operation: "AdminClientDescribeShardDistribution", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientDescribeWorkflowExecutionScope:             {operation: "AdminClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientGetWorkflowExecutionRawHistoryV2Scope:      {operation: "AdminClientGetWorkflowExecutionRawHistoryV2", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientDescribeClusterScope:                       {operation: "AdminClientDescribeCluster", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
@@ -1386,6 +1391,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminPurgeDLQMessagesScope:                 {operation: "AdminPurgeDLQMessages"},
 		AdminMergeDLQMessagesScope:                 {operation: "AdminMergeDLQMessages"},
 		AdminDescribeHistoryHostScope:              {operation: "DescribeHistoryHost"},
+		AdminDescribeShardDistributionScope:        {operation: "AdminShardList"},
 		AdminAddSearchAttributeScope:               {operation: "AddSearchAttribute"},
 		AdminDescribeWorkflowExecutionScope:        {operation: "DescribeWorkflowExecution"},
 		AdminGetWorkflowExecutionRawHistoryScope:   {operation: "GetWorkflowExecutionRawHistory"},

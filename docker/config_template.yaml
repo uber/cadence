@@ -14,13 +14,15 @@ persistence:
         {{- $db := default .Env.DB "cassandra" | lower -}}
         {{- if or (eq $db "cassandra") (eq $db "scylla") }}
         default:
-            cassandra:
+            nosql:
+                pluginName: "cassandra"
                 hosts: {{ default .Env.CASSANDRA_SEEDS "" }}
                 keyspace: {{ default .Env.KEYSPACE "cadence" }}
                 user: {{ default .Env.CASSANDRA_USER "" }}
                 password: {{ default .Env.CASSANDRA_PASSWORD "" }}
         visibility:
-            cassandra:
+            nosql:
+                pluginName: "cassandra"
                 hosts: {{ default .Env.CASSANDRA_SEEDS "" }}
                 keyspace: {{ default .Env.VISIBILITY_KEYSPACE "cadence_visibility" }}
                 user: {{ default .Env.CASSANDRA_USER "" }}

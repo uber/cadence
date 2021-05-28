@@ -4,11 +4,13 @@ persistence:
   numHistoryShards: 4
   datastores:
     cass-default:
-      cassandra:
+      nosql:
+        pluginName: "cassandra"
         hosts: "127.0.0.1"
         keyspace: "cadence"
     cass-visibility:
-      cassandra:
+      nosql:
+        pluginName: "cassandra"
         hosts: "127.0.0.1"
         keyspace: "cadence_visibility"
 

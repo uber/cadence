@@ -268,6 +268,7 @@ var (
 var (
 	AdminClientOperationAddSearchAttribute               = clientOperation("admin-add-search-attribute")
 	AdminClientOperationDescribeHistoryHost              = clientOperation("admin-describe-history-host")
+	AdminClientOperationDescribeShardDistribution        = clientOperation("admin-shard-list")
 	AdminClientOperationRemoveTask                       = clientOperation("admin-remove-task")
 	AdminClientOperationCloseShard                       = clientOperation("admin-close-shard")
 	AdminClientOperationResetQueue                       = clientOperation("admin-reset-queue")

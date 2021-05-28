@@ -79,7 +79,7 @@ func (s *TestCluster) Config() config.Persistence {
 		DefaultStore:    "test",
 		VisibilityStore: "test",
 		DataStores: map[string]config.DataStore{
-			"test": {Cassandra: &cfg},
+			"test": {NoSQL: &cfg},
 		},
 		TransactionSizeLimit: dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
 		ErrorInjectionRate:   dynamicconfig.GetFloatPropertyFn(0),

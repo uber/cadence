@@ -227,6 +227,39 @@ func (mr *_MockClientRecorder) DescribeQueue(
 	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeQueue", args...)
 }
 
+// DescribeShardDistribution responds to a DescribeShardDistribution call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().DescribeShardDistribution(gomock.Any(), ...).Return(...)
+// 	... := client.DescribeShardDistribution(...)
+func (m *MockClient) DescribeShardDistribution(
+	ctx context.Context,
+	_Request *shared.DescribeShardDistributionRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.DescribeShardDistributionResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "DescribeShardDistribution", args...)
+	success, _ = ret[i].(*shared.DescribeShardDistributionResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) DescribeShardDistribution(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeShardDistribution", args...)
+}
+
 // DescribeWorkflowExecution responds to a DescribeWorkflowExecution call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.

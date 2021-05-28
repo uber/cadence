@@ -115,6 +115,7 @@ const (
 	FlagDeprecated                        = "deprecated"
 	FlagDeprecatedWithAlias               = FlagDeprecated + ", dep"
 	FlagForce                             = "force"
+	FlagPageID                            = "page_id"
 	FlagPageSize                          = "pagesize"
 	FlagPageSizeWithAlias                 = FlagPageSize + ", ps"
 	FlagEarliestTime                      = "earliest_time"

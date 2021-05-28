@@ -140,6 +140,26 @@ func newAdminShardManagementCommands() []cli.Command {
 			},
 		},
 		{
+			Name:    "list",
+			Aliases: []string{"l"},
+			Usage:   "List shard distribution",
+			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name:  FlagPageSize,
+					Value: 100,
+					Usage: "Max number of results to return",
+				},
+				cli.IntFlag{
+					Name:  FlagPageID,
+					Value: 0,
+					Usage: "Option to show results offset from pagesize * page_id",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminDescribeShardDistribution(c)
+			},
+		},
+		{
 			Name:    "setRangeID",
 			Aliases: []string{"srid"},
 			Usage:   "Force update shard rangeID",
