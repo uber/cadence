@@ -39,6 +39,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
+	"github.com/uber/cadence/common/config"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -2268,6 +2269,11 @@ func (s *ExecutionManagerSuite) TestReplicationTasks() {
 }
 
 func (s *ExecutionManagerSuite) TestCrossClusterTasks() {
+	if s.TestBase.Config().DefaultStore != config.StoreTypeCassandra {
+		// TODO: remove this check once cross cluster queue related methods is impelmented for SQL
+		s.T().Skip()
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -2320,10 +2326,10 @@ func (s *ExecutionManagerSuite) TestCrossClusterTasks() {
 	crossClusterTasks2 := &p.CrossClusterCancelExecutionTask{
 		TargetCluster: remoteClusterName2,
 		CancelExecutionTask: p.CancelExecutionTask{
-			VisibilityTimestamp: now,
-			TaskID:              s.GetNextSequenceNumber(),
-			TargetDomainID:      uuid.New(),
-			// TargetWorkflowID:        "target workflowID 3",
+			VisibilityTimestamp:     now,
+			TaskID:                  s.GetNextSequenceNumber(),
+			TargetDomainID:          uuid.New(),
+			TargetWorkflowID:        "target workflowID 3",
 			TargetRunID:             uuid.New(),
 			TargetChildWorkflowOnly: true,
 			InitiatedID:             6,

@@ -31,6 +31,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/config"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -104,6 +105,9 @@ func (s *ShardPersistenceSuite) TestGetShard() {
 
 // TestUpdateShard test
 func (s *ShardPersistenceSuite) TestUpdateShard() {
+	// TODO: remove after cross-cluster queue states is persisted in SQL
+	skipCrossClusterQueueCheck := s.TestBase.Config().DefaultStore != config.StoreTypeCassandra
+
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -177,7 +181,9 @@ func (s *ShardPersistenceSuite) TestUpdateShard() {
 	s.EqualTimes(updatedCurrentClusterTimerAckLevel, info1.ClusterTimerAckLevel[cluster.TestCurrentClusterName])
 	s.EqualTimes(updatedAlternativeClusterTimerAckLevel, info1.ClusterTimerAckLevel[cluster.TestAlternativeClusterName])
 	s.Equal(updatedInfo.TimerProcessingQueueStates, info1.TimerProcessingQueueStates)
-	s.Equal(updatedInfo.CrossClusterProcessQueueStates, info1.CrossClusterProcessQueueStates)
+	if !skipCrossClusterQueueCheck {
+		s.Equal(updatedInfo.CrossClusterProcessQueueStates, info1.CrossClusterProcessQueueStates)
+	}
 	s.Equal(updatedReplicationAckLevel, info1.ReplicationAckLevel)
 	s.Equal(updatedInfo.ReplicationDLQAckLevel, info1.ReplicationDLQAckLevel)
 	s.Equal(updatedStolenSinceRenew, info1.StolenSinceRenew)
@@ -203,7 +209,9 @@ func (s *ShardPersistenceSuite) TestUpdateShard() {
 	s.EqualTimes(updatedCurrentClusterTimerAckLevel, info2.ClusterTimerAckLevel[cluster.TestCurrentClusterName])
 	s.EqualTimes(updatedAlternativeClusterTimerAckLevel, info2.ClusterTimerAckLevel[cluster.TestAlternativeClusterName])
 	s.Equal(updatedInfo.TimerProcessingQueueStates, info2.TimerProcessingQueueStates)
-	s.Equal(updatedInfo.CrossClusterProcessQueueStates, info2.CrossClusterProcessQueueStates)
+	if !skipCrossClusterQueueCheck {
+		s.Equal(updatedInfo.CrossClusterProcessQueueStates, info2.CrossClusterProcessQueueStates)
+	}
 	s.Equal(updatedReplicationAckLevel, info2.ReplicationAckLevel)
 	s.Equal(updatedInfo.ReplicationDLQAckLevel, info2.ReplicationDLQAckLevel)
 	s.Equal(updatedStolenSinceRenew, info2.StolenSinceRenew)
@@ -249,17 +257,19 @@ func (s *ShardPersistenceSuite) TestCreateGetShardBackfill() {
 	resp, err := s.GetShard(ctx, shardID)
 	s.NoError(err)
 	s.EqualTimes(shardInfo.UpdatedAt, resp.UpdatedAt)
-	s.Equal(shardInfo.ClusterTransferAckLevel[currentClusterName], resp.ClusterTransferAckLevel[currentClusterName])
+	s.EqualTimes(shardInfo.TimerAckLevel, resp.TimerAckLevel)
 	s.EqualTimes(shardInfo.ClusterTimerAckLevel[currentClusterName], resp.ClusterTimerAckLevel[currentClusterName])
-	s.Equal(shardInfo.TimerAckLevel.UnixNano(), resp.TimerAckLevel.UnixNano())
-	s.Nil(resp.TransferProcessingQueueStates)
-	s.Nil(resp.CrossClusterProcessQueueStates)
-	s.Nil(resp.TimerProcessingQueueStates)
 
+	resp.TimerAckLevel = shardInfo.TimerAckLevel
+	resp.UpdatedAt = shardInfo.UpdatedAt
+	resp.ClusterTimerAckLevel = shardInfo.ClusterTimerAckLevel
 	s.Equal(shardInfo, resp)
 }
 
 func (s *ShardPersistenceSuite) TestCreateGetUpdateGetShard() {
+	// TODO: remove after cross-cluster queue states is persisted in SQL
+	skipCrossClusterQueueCheck := s.TestBase.Config().DefaultStore != config.StoreTypeCassandra
+
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -316,12 +326,16 @@ func (s *ShardPersistenceSuite) TestCreateGetUpdateGetShard() {
 	resp, err := s.GetShard(ctx, shardID)
 	s.NoError(err)
 	s.EqualTimes(shardInfo.UpdatedAt, resp.UpdatedAt)
+	s.EqualTimes(shardInfo.TimerAckLevel, resp.TimerAckLevel)
 	s.EqualTimes(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ClusterTimerAckLevel[cluster.TestCurrentClusterName])
 	s.EqualTimes(shardInfo.ClusterTimerAckLevel[cluster.TestAlternativeClusterName], resp.ClusterTimerAckLevel[cluster.TestAlternativeClusterName])
-	s.Equal(shardInfo.TimerAckLevel.UnixNano(), resp.TimerAckLevel.UnixNano())
-	s.Equal(shardInfo.TransferProcessingQueueStates, resp.TransferProcessingQueueStates)
-	s.Equal(shardInfo.CrossClusterProcessQueueStates, resp.CrossClusterProcessQueueStates)
-	s.Equal(shardInfo.TimerProcessingQueueStates, resp.TimerProcessingQueueStates)
+
+	if skipCrossClusterQueueCheck {
+		resp.CrossClusterProcessQueueStates = shardInfo.CrossClusterProcessQueueStates
+	}
+	resp.TimerAckLevel = shardInfo.TimerAckLevel
+	resp.UpdatedAt = shardInfo.UpdatedAt
+	resp.ClusterTimerAckLevel = shardInfo.ClusterTimerAckLevel
 	s.Equal(shardInfo, resp)
 
 	// test update && get
@@ -376,12 +390,16 @@ func (s *ShardPersistenceSuite) TestCreateGetUpdateGetShard() {
 	resp, err = s.GetShard(ctx, shardID)
 	s.NoError(err)
 	s.EqualTimes(shardInfo.UpdatedAt, resp.UpdatedAt)
+	s.EqualTimes(shardInfo.TimerAckLevel, resp.TimerAckLevel)
 	s.EqualTimes(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ClusterTimerAckLevel[cluster.TestCurrentClusterName])
 	s.EqualTimes(shardInfo.ClusterTimerAckLevel[cluster.TestAlternativeClusterName], resp.ClusterTimerAckLevel[cluster.TestAlternativeClusterName])
-	s.Equal(shardInfo.TimerAckLevel.UnixNano(), resp.TimerAckLevel.UnixNano())
-	s.Equal(shardInfo.TransferProcessingQueueStates, resp.TransferProcessingQueueStates)
-	s.Equal(shardInfo.CrossClusterProcessQueueStates, resp.CrossClusterProcessQueueStates)
-	s.Equal(shardInfo.TimerProcessingQueueStates, resp.TimerProcessingQueueStates)
+
+	if skipCrossClusterQueueCheck {
+		resp.CrossClusterProcessQueueStates = shardInfo.CrossClusterProcessQueueStates
+	}
+	resp.UpdatedAt = shardInfo.UpdatedAt
+	resp.TimerAckLevel = shardInfo.TimerAckLevel
+	resp.ClusterTimerAckLevel = shardInfo.ClusterTimerAckLevel
 	s.Equal(shardInfo, resp)
 }
 
