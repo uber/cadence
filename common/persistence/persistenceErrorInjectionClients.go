@@ -364,30 +364,6 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) ConflictResolveWorkfl
 	return response, persistenceErr
 }
 
-func (p *workflowExecutionErrorInjectionPersistenceClient) ResetWorkflowExecution(
-	ctx context.Context,
-	request *ResetWorkflowExecutionRequest,
-) error {
-	fakeErr := generateFakeError(p.errorRate)
-
-	var persistenceErr error
-	var forwardCall bool
-	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		persistenceErr = p.persistence.ResetWorkflowExecution(ctx, request)
-	}
-
-	if fakeErr != nil {
-		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationResetWorkflowExecution,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.StoreError(persistenceErr),
-		)
-		return fakeErr
-	}
-	return persistenceErr
-}
-
 func (p *workflowExecutionErrorInjectionPersistenceClient) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *DeleteWorkflowExecutionRequest,

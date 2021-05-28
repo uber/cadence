@@ -565,20 +565,6 @@ func (_m *ExecutionManager) RangeDeleteReplicationTaskFromDLQ(ctx context.Contex
 	return r0
 }
 
-// ResetWorkflowExecution provides a mock function with given fields: ctx, request
-func (_m *ExecutionManager) ResetWorkflowExecution(ctx context.Context, request *persistence.ResetWorkflowExecutionRequest) error {
-	ret := _m.Called(ctx, request)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *persistence.ResetWorkflowExecutionRequest) error); ok {
-		r0 = rf(ctx, request)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // UpdateWorkflowExecution provides a mock function with given fields: ctx, request
 func (_m *ExecutionManager) UpdateWorkflowExecution(ctx context.Context, request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error) {
 	ret := _m.Called(ctx, request)

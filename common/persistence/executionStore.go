@@ -557,39 +557,6 @@ func (m *executionManagerImpl) ConflictResolveWorkflowExecution(
 	return &ConflictResolveWorkflowExecutionResponse{MutableStateUpdateSessionStats: msuss}, nil
 }
 
-func (m *executionManagerImpl) ResetWorkflowExecution(
-	ctx context.Context,
-	request *ResetWorkflowExecutionRequest,
-) error {
-
-	serializedNewWorkflowSnapshot, err := m.SerializeWorkflowSnapshot(&request.NewWorkflowSnapshot, request.Encoding)
-	if err != nil {
-		return err
-	}
-	var serializedUpdateWorkflowSnapshot *InternalWorkflowMutation
-	if request.CurrentWorkflowMutation != nil {
-		serializedUpdateWorkflowSnapshot, err = m.SerializeWorkflowMutation(request.CurrentWorkflowMutation, request.Encoding)
-		if err != nil {
-			return err
-		}
-	}
-
-	newRequest := &InternalResetWorkflowExecutionRequest{
-		RangeID: request.RangeID,
-
-		BaseRunID:          request.BaseRunID,
-		BaseRunNextEventID: request.BaseRunNextEventID,
-
-		CurrentRunID:          request.CurrentRunID,
-		CurrentRunNextEventID: request.CurrentRunNextEventID,
-
-		CurrentWorkflowMutation: serializedUpdateWorkflowSnapshot,
-
-		NewWorkflowSnapshot: *serializedNewWorkflowSnapshot,
-	}
-	return m.persistence.ResetWorkflowExecution(ctx, newRequest)
-}
-
 func (m *executionManagerImpl) CreateWorkflowExecution(
 	ctx context.Context,
 	request *CreateWorkflowExecutionRequest,
