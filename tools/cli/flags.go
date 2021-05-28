@@ -273,6 +273,7 @@ const (
 	FlagShardMultiplier                   = "shard_multiplier"
 	FlagBucketSize                        = "bucket_size"
 	DelayStartSeconds                     = "delay_start_seconds"
+	FlagConnectionAttributes              = "conn_attrs"
 )
 
 var flagsForExecution = []cli.Flag{

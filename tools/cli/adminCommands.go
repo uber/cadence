@@ -43,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
+	"github.com/uber/cadence/tools/common/flag"
 )
 
 const (
@@ -327,18 +328,20 @@ func connectToSQL(c *cli.Context) sqlplugin.DB {
 	}
 	encodingType := c.String(FlagEncodingType)
 	decodingTypesStr := c.StringSlice(FlagDecodingTypes)
+	connectAttributes := c.Generic(FlagConnectionAttributes).(*flag.StringMap)
 
 	sqlConfig := &config.SQL{
 		ConnectAddr: net.JoinHostPort(
 			host,
 			c.String(FlagDBPort),
 		),
-		PluginName:    c.String(FlagDBType),
-		User:          c.String(FlagUsername),
-		Password:      c.String(FlagPassword),
-		DatabaseName:  getRequiredOption(c, FlagDatabaseName),
-		EncodingType:  encodingType,
-		DecodingTypes: decodingTypesStr,
+		PluginName:        c.String(FlagDBType),
+		User:              c.String(FlagUsername),
+		Password:          c.String(FlagPassword),
+		DatabaseName:      getRequiredOption(c, FlagDatabaseName),
+		EncodingType:      encodingType,
+		DecodingTypes:     decodingTypesStr,
+		ConnectAttributes: connectAttributes.Value(),
 	}
 
 	if c.Bool(FlagEnableTLS) {
