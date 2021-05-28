@@ -312,6 +312,7 @@ func (db *cdb) UpdateShard(ctx context.Context, row *nosqlplugin.ShardRow, previ
 	cqlNowTimestamp := persistence.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	markerData, markerEncoding := persistence.FromDataBlob(row.PendingFailoverMarkers)
 	transferPQS, transferPQSEncoding := persistence.FromDataBlob(row.TransferProcessingQueueStates)
+	crossClusterPQS, crossClusterPQSEncoding := persistence.FromDataBlob(row.CrossClusterProcessingQueueStates)
 	timerPQS, timerPQSEncoding := persistence.FromDataBlob(row.TimerProcessingQueueStates)
 
 	query := db.session.Query(templateUpdateShardQuery,
@@ -327,6 +328,8 @@ func (db *cdb) UpdateShard(ctx context.Context, row *nosqlplugin.ShardRow, previ
 		row.ClusterTimerAckLevel,
 		transferPQS,
 		transferPQSEncoding,
+		crossClusterPQS,
+		crossClusterPQSEncoding,
 		timerPQS,
 		timerPQSEncoding,
 		row.DomainNotificationVersion,

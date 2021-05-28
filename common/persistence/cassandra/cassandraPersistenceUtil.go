@@ -762,7 +762,7 @@ func createCrossClusterTasks(
 		var targetCluster string
 		var targetDomainID string
 		var targetWorkflowID string
-		var targetRunID string
+		targetRunID := p.CrossClusterTaskDefaultTargetRunID
 		targetChildWorkflowOnly := false
 		recordVisibility := false
 
@@ -1712,7 +1712,19 @@ func createTransferTaskInfo(
 func createCrossClusterTaskInfo(
 	result map[string]interface{},
 ) *p.CrossClusterTaskInfo {
-	return (*p.CrossClusterTaskInfo)(createTransferTaskInfo(result))
+	info := (*p.CrossClusterTaskInfo)(createTransferTaskInfo(result))
+	if p.CrossClusterTaskDefaultTargetRunID == p.TransferTaskTransferTargetRunID {
+		return info
+	}
+
+	// incase CrossClusterTaskDefaultTargetRunID is updated and not equal to TransferTaskTransferTargetRunID
+	if v, ok := result["target_run_id"]; ok {
+		info.TargetRunID = v.(gocql.UUID).String()
+		if info.TargetRunID == p.CrossClusterTaskDefaultTargetRunID {
+			info.TargetRunID = ""
+		}
+	}
+	return info
 }
 
 func createReplicationTaskInfo(
