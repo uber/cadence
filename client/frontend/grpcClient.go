@@ -147,12 +147,12 @@ func (g grpcClient) RegisterDomain(ctx context.Context, request *types.RegisterD
 }
 
 func (g grpcClient) RequestCancelWorkflowExecution(ctx context.Context, request *types.RequestCancelWorkflowExecutionRequest, opts ...yarpc.CallOption) error {
-	_, err := g.worker.RequestCancelWorkflowExecution(ctx, proto.FromRequestCancelWorkflowExecutionRequest(request), opts...)
+	_, err := g.workflow.RequestCancelWorkflowExecution(ctx, proto.FromRequestCancelWorkflowExecutionRequest(request), opts...)
 	return proto.ToError(err)
 }
 
 func (g grpcClient) ResetStickyTaskList(ctx context.Context, request *types.ResetStickyTaskListRequest, opts ...yarpc.CallOption) (*types.ResetStickyTaskListResponse, error) {
-	_, err := g.workflow.ResetStickyTaskList(ctx, proto.FromResetStickyTaskListRequest(request), opts...)
+	_, err := g.worker.ResetStickyTaskList(ctx, proto.FromResetStickyTaskListRequest(request), opts...)
 	return &types.ResetStickyTaskListResponse{}, proto.ToError(err)
 }
 

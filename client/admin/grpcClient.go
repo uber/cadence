@@ -53,6 +53,11 @@ func (g grpcClient) DescribeCluster(ctx context.Context, opts ...yarpc.CallOptio
 	return proto.ToAdminDescribeClusterResponse(response), proto.ToError(err)
 }
 
+func (g grpcClient) DescribeShardDistribution(ctx context.Context, request *types.DescribeShardDistributionRequest, opts ...yarpc.CallOption) (*types.DescribeShardDistributionResponse, error) {
+	response, err := g.c.DescribeShardDistribution(ctx, proto.FromAdminDescribeShardDistributionRequest(request), opts...)
+	return proto.ToAdminDescribeShardDistributionResponse(response), proto.ToError(err)
+}
+
 func (g grpcClient) DescribeHistoryHost(ctx context.Context, request *types.DescribeHistoryHostRequest, opts ...yarpc.CallOption) (*types.DescribeHistoryHostResponse, error) {
 	response, err := g.c.DescribeHistoryHost(ctx, proto.FromAdminDescribeHistoryHostRequest(request), opts...)
 	return proto.ToAdminDescribeHistoryHostResponse(response), proto.ToError(err)

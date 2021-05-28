@@ -35,6 +35,7 @@ type Client interface {
 	AddSearchAttribute(context.Context, *types.AddSearchAttributeRequest, ...yarpc.CallOption) error
 	CloseShard(context.Context, *types.CloseShardRequest, ...yarpc.CallOption) error
 	DescribeCluster(context.Context, ...yarpc.CallOption) (*types.DescribeClusterResponse, error)
+	DescribeShardDistribution(context.Context, *types.DescribeShardDistributionRequest, ...yarpc.CallOption) (*types.DescribeShardDistributionResponse, error)
 	DescribeHistoryHost(context.Context, *types.DescribeHistoryHostRequest, ...yarpc.CallOption) (*types.DescribeHistoryHostResponse, error)
 	DescribeQueue(context.Context, *types.DescribeQueueRequest, ...yarpc.CallOption) (*types.DescribeQueueResponse, error)
 	DescribeWorkflowExecution(context.Context, *types.AdminDescribeWorkflowExecutionRequest, ...yarpc.CallOption) (*types.AdminDescribeWorkflowExecutionResponse, error)
