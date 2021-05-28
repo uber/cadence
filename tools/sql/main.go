@@ -96,7 +96,7 @@ func BuildCLIOptions() *cli.App {
 		},
 		cli.StringFlag{
 			Name:   schema.CLIFlagConnectAttributes,
-			Usage:  "sql connect attributes",
+			Usage:  "sql connect attributes in URL encoded, eg \"tx_isolation=READ-COMMITTED\" or \"k1=v1&k2=v2\" ",
 			EnvVar: "SQL_CONNECT_ATTRIBUTES",
 		},
 		cli.BoolFlag{

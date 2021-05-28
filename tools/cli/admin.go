@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uber/cadence/tools/common/schema"
+
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common/persistence/sql"
@@ -1001,6 +1003,11 @@ func getDBFlags() []cli.Flag {
 		cli.BoolFlag{
 			Name:  FlagTLSEnableHostVerification,
 			Usage: "cassandra tls verify hostname and server cert (tls must be enabled)",
+		},
+		cli.StringFlag{
+			Name:   schema.CLIFlagConnectAttributes,
+			Usage:  "sql connect attributes in URL encoded, eg \"tx_isolation=READ-COMMITTED\" or \"k1=v1&k2=v2\" ",
+			EnvVar: "SQL_CONNECT_ATTRIBUTES",
 		},
 	}
 }

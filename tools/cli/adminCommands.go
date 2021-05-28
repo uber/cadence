@@ -26,9 +26,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/uber/cadence/tools/common/schema"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
@@ -341,6 +344,21 @@ func connectToSQL(c *cli.Context) sqlplugin.DB {
 		DatabaseName:  getRequiredOption(c, FlagDatabaseName),
 		EncodingType:  encodingType,
 		DecodingTypes: decodingTypesStr,
+	}
+
+	connectAttributesQueryString := c.GlobalString(schema.CLIOptConnectAttributes)
+	if connectAttributesQueryString != "" {
+		values, err := url.ParseQuery(connectAttributesQueryString)
+		if err != nil {
+			ErrorAndExit("invalid connect attributes: %v", err)
+		}
+		for key, vals := range values {
+			// check to ensure only one value is provider per key
+			if len(vals) > 1 {
+				ErrorAndExit(fmt.Sprintf("invalid connect attribute %v, only 1 value allowed: %v", key, vals), nil)
+			}
+			sqlConfig.ConnectAttributes[key] = vals[0]
+		}
 	}
 
 	if c.Bool(FlagEnableTLS) {
