@@ -324,23 +324,6 @@ func (p *workflowExecutionPersistenceClient) ConflictResolveWorkflowExecution(
 	return resp, err
 }
 
-func (p *workflowExecutionPersistenceClient) ResetWorkflowExecution(
-	ctx context.Context,
-	request *ResetWorkflowExecutionRequest,
-) error {
-	p.metricClient.IncCounter(metrics.PersistenceResetWorkflowExecutionScope, metrics.PersistenceRequests)
-
-	sw := p.metricClient.StartTimer(metrics.PersistenceResetWorkflowExecutionScope, metrics.PersistenceLatency)
-	err := p.persistence.ResetWorkflowExecution(ctx, request)
-	sw.Stop()
-
-	if err != nil {
-		p.updateErrorMetric(metrics.PersistenceResetWorkflowExecutionScope, err)
-	}
-
-	return err
-}
-
 func (p *workflowExecutionPersistenceClient) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *DeleteWorkflowExecutionRequest,

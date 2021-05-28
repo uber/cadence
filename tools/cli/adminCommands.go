@@ -37,9 +37,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
-	cassp "github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
@@ -68,7 +66,7 @@ func AdminShowWorkflow(c *cli.Context) {
 		thriftrwEncoder := codec.NewThriftRWEncoder()
 		histV2 := initializeHistoryManager(c)
 		branchToken, err := thriftrwEncoder.Encode(&shared.HistoryBranch{
-			TreeID: &tid,
+			TreeID:   &tid,
 			BranchID: &bid,
 		})
 		if err != nil {
@@ -76,10 +74,10 @@ func AdminShowWorkflow(c *cli.Context) {
 		}
 		resp, err := histV2.ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
 			BranchToken: branchToken,
-			MinEventID: 1,
-			MaxEventID: maxEventID,
-			PageSize: maxEventID,
-			ShardID: &sid,
+			MinEventID:  1,
+			MaxEventID:  maxEventID,
+			PageSize:    maxEventID,
+			ShardID:     &sid,
 		})
 		if err != nil {
 			ErrorAndExit("ReadHistoryBranch err", err)
@@ -235,7 +233,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		prettyPrintJSONObject(branchInfo)
 		err = histV2.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
 			BranchToken: branchToken,
-			ShardID: &shardIDInt,
+			ShardID:     &shardIDInt,
 		})
 		if err != nil {
 			if skipError {

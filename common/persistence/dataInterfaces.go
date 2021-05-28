@@ -926,27 +926,6 @@ type (
 		Encoding common.EncodingType // optional binary encoding type
 	}
 
-	// ResetWorkflowExecutionRequest is used to reset workflow execution state for current run and create new run
-	ResetWorkflowExecutionRequest struct {
-		RangeID int64
-
-		// for base run (we need to make sure the baseRun hasn't been deleted after forking)
-		BaseRunID          string
-		BaseRunNextEventID int64
-
-		// for current workflow record
-		CurrentRunID          string
-		CurrentRunNextEventID int64
-
-		// for current mutable state
-		CurrentWorkflowMutation *WorkflowMutation
-
-		// For new mutable state
-		NewWorkflowSnapshot WorkflowSnapshot
-
-		Encoding common.EncodingType // optional binary encoding type
-	}
-
 	// WorkflowEvents is used as generic workflow history events transaction container
 	WorkflowEvents struct {
 		DomainID    string
@@ -1627,7 +1606,6 @@ type (
 		GetWorkflowExecution(ctx context.Context, request *GetWorkflowExecutionRequest) (*GetWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(ctx context.Context, request *UpdateWorkflowExecutionRequest) (*UpdateWorkflowExecutionResponse, error)
 		ConflictResolveWorkflowExecution(ctx context.Context, request *ConflictResolveWorkflowExecutionRequest) (*ConflictResolveWorkflowExecutionResponse, error)
-		ResetWorkflowExecution(ctx context.Context, request *ResetWorkflowExecutionRequest) error
 		DeleteWorkflowExecution(ctx context.Context, request *DeleteWorkflowExecutionRequest) error
 		DeleteCurrentWorkflowExecution(ctx context.Context, request *DeleteCurrentWorkflowExecutionRequest) error
 		GetCurrentExecution(ctx context.Context, request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)

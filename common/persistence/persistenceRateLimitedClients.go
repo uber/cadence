@@ -276,18 +276,6 @@ func (p *workflowExecutionRateLimitedPersistenceClient) ConflictResolveWorkflowE
 	return resp, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) ResetWorkflowExecution(
-	ctx context.Context,
-	request *ResetWorkflowExecutionRequest,
-) error {
-	if ok := p.rateLimiter.Allow(); !ok {
-		return ErrPersistenceLimitExceeded
-	}
-
-	err := p.persistence.ResetWorkflowExecution(ctx, request)
-	return err
-}
-
 func (p *workflowExecutionRateLimitedPersistenceClient) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *DeleteWorkflowExecutionRequest,
