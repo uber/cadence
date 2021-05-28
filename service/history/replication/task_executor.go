@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ package replication
 import (
 	"context"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -133,7 +134,20 @@ func (e *taskExecutorImpl) handleActivityTask(
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
-	err = e.historyEngine.SyncActivity(ctx, request)
+
+	var syncActivityAction func() error
+	// Check if the number of shards between clusters are equal. If not, redirect the request.
+	if e.shard.GetShardID() != common.WorkflowIDToHistoryShard(attr.WorkflowID, e.shard.GetConfig().NumberOfShards) {
+		syncActivityAction = func() error {
+			return e.shard.GetService().GetClientBean().GetHistoryClient().SyncActivity(ctx, request)
+		}
+	} else {
+		syncActivityAction = func() error {
+			return e.historyEngine.SyncActivity(ctx, request)
+		}
+	}
+
+	err = syncActivityAction()
 	// Handle resend error
 	if retryErr, ok := e.convertRetryTaskV2Error(err); ok {
 		e.metricsClient.IncCounter(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientRequests)
@@ -173,7 +187,7 @@ func (e *taskExecutorImpl) handleActivityTask(
 		}
 	}
 	// should try again after back fill the history
-	return e.historyEngine.SyncActivity(ctx, request)
+	return syncActivityAction()
 }
 
 func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
@@ -203,7 +217,19 @@ func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
 
-	err = e.historyEngine.ReplicateEventsV2(ctx, request)
+	var historyReplicationAction func() error
+	// Check if the number of shards between clusters are equal. If not, redirect the request.
+	if e.shard.GetShardID() != common.WorkflowIDToHistoryShard(attr.WorkflowID, e.shard.GetConfig().NumberOfShards) {
+		historyReplicationAction = func() error {
+			return e.shard.GetService().GetClientBean().GetHistoryClient().ReplicateEventsV2(ctx, request)
+		}
+	} else {
+		historyReplicationAction = func() error {
+			return e.historyEngine.ReplicateEventsV2(ctx, request)
+		}
+	}
+
+	err = historyReplicationAction()
 	retryErr, ok := e.convertRetryTaskV2Error(err)
 	if !ok {
 		return err
@@ -244,7 +270,7 @@ func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
 		return err
 	}
 
-	return e.historyEngine.ReplicateEventsV2(ctx, request)
+	return historyReplicationAction()
 }
 
 func (e *taskExecutorImpl) handleFailoverReplicationTask(
