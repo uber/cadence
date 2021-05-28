@@ -346,7 +346,7 @@ func connectToSQL(c *cli.Context) sqlplugin.DB {
 		DecodingTypes: decodingTypesStr,
 	}
 
-	connectAttributesQueryString := c.GlobalString(schema.CLIOptConnectAttributes)
+	connectAttributesQueryString := c.String(schema.CLIOptConnectAttributes)
 	if connectAttributesQueryString != "" {
 		values, err := url.ParseQuery(connectAttributesQueryString)
 		if err != nil {
@@ -360,7 +360,7 @@ func connectToSQL(c *cli.Context) sqlplugin.DB {
 			sqlConfig.ConnectAttributes[key] = vals[0]
 		}
 	}
-
+	
 	if c.Bool(FlagEnableTLS) {
 		sqlConfig.TLS = &config.TLS{
 			Enabled:                true,
