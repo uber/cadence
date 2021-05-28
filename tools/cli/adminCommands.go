@@ -360,7 +360,7 @@ func connectToSQL(c *cli.Context) sqlplugin.DB {
 			sqlConfig.ConnectAttributes[key] = vals[0]
 		}
 	}
-	
+
 	if c.Bool(FlagEnableTLS) {
 		sqlConfig.TLS = &config.TLS{
 			Enabled:                true,
