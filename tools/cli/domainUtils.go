@@ -79,9 +79,10 @@ var (
 			Name:  FlagIsGlobalDomainWithAlias,
 			Usage: "Flag to indicate whether domain is a global domain",
 		},
-		cli.StringFlag{
+		cli.GenericFlag{
 			Name:  FlagDomainDataWithAlias,
-			Usage: "Domain data of key value pairs, in format of k1:v1,k2:v2,k3:v3",
+			Usage: "Domain data of key value pairs (must be in key1=value1,key2=value2,...,keyN=valueN format, e.g. cluster=dca or cluster=dca,instance=cadence)",
+			Value: &flag.StringMap{},
 		},
 		cli.StringFlag{
 			Name:  FlagSecurityTokenWithAlias,
