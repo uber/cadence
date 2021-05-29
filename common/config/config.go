@@ -143,7 +143,7 @@ type (
 		// DataStores contains the configuration for all datastores
 		DataStores map[string]DataStore `yaml:"datastores"`
 		// VisibilityConfig is config for visibility sampling
-		VisibilityConfig *VisibilityConfig `yaml:"-" json:"-"`
+		// VisibilityConfig *VisibilityConfig `yaml:"-" json:"-"`
 		// TransactionSizeLimit is the largest allowed transaction size
 		TransactionSizeLimit dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
 		// ErrorInjectionRate is the the rate for injecting random error
@@ -164,6 +164,7 @@ type (
 	}
 
 	// VisibilityConfig is config for visibility
+	// TODO remove it
 	VisibilityConfig struct {
 		// EnableSampling for visibility
 		EnableSampling dynamicconfig.BoolPropertyFn `yaml:"-" json:"-"`

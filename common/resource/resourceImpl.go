@@ -129,6 +129,32 @@ type (
 		membershipFactory      service.MembershipMonitorFactory
 		rpcFactory             common.RPCFactory
 	}
+
+	Config struct {
+		PersistenceMaxQPS       dynamicconfig.IntPropertyFn
+		PersistenceGlobalMaxQPS dynamicconfig.IntPropertyFn
+		ThrottledLoggerMaxRPS   dynamicconfig.IntPropertyFn
+
+		EnableReadVisibilityFromES    dynamicconfig.BoolPropertyFnWithDomainFilter
+		AdvancedVisibilityWritingMode dynamicconfig.StringPropertyFn
+
+		// EnableSampling for DB visibility
+		EnableDBVisibilitySampling dynamicconfig.BoolPropertyFn `yaml:"-" json:"-"`
+		// EnableReadFromClosedExecutionV2 read closed from v2 table
+		EnableReadDBVisibilityFromClosedExecutionV2 dynamicconfig.BoolPropertyFn `yaml:"-" json:"-"`
+		// VisibilityOpenMaxQPS max QPS for writing record open workflows
+		WriteDBVisibilityOpenMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
+		// VisibilityClosedMaxQPS max QPS for writing record closed workflows
+		WriteDBVisibilityClosedMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
+		// VisibilityListMaxQPS max QPS for list workflow
+		DBVisibilityListMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
+
+		// ESIndexMaxResultWindow ElasticSearch index setting max_result_window
+		ESIndexMaxResultWindow dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
+		// ValidSearchAttributes is legal indexed keys that can be used in list APIs
+		ValidSearchAttributes  dynamicconfig.MapPropertyFn                 `yaml:"-" json:"-"`
+		ESVisibilityListMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
+	}
 )
 
 var _ Resource = (*Impl)(nil)
@@ -137,14 +163,12 @@ var _ Resource = (*Impl)(nil)
 func New(
 	params *service.BootstrapParams,
 	serviceName string,
-	persistenceMaxQPS dynamicconfig.IntPropertyFn,
-	persistenceGlobalMaxQPS dynamicconfig.IntPropertyFn,
-	throttledLoggerMaxRPS dynamicconfig.IntPropertyFn,
-	visibilityManagerInitializer VisibilityManagerInitializer,
+	resourceConfig *Config,
+	//visibilityManagerInitializer VisibilityManagerInitializer,
 ) (impl *Impl, retError error) {
 
 	logger := params.Logger
-	throttledLogger := loggerimpl.NewThrottledLogger(logger, throttledLoggerMaxRPS)
+	throttledLogger := loggerimpl.NewThrottledLogger(logger, resourceConfig.ThrottledLoggerMaxRPS)
 
 	numShards := params.PersistenceConfig.NumHistoryShards
 	hostName, err := os.Hostname()
@@ -203,29 +227,27 @@ func New(
 	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
 		&params.PersistenceConfig,
 		func(...dynamicconfig.FilterOption) int {
-			if persistenceGlobalMaxQPS() > 0 {
+			if resourceConfig.PersistenceGlobalMaxQPS() > 0 {
 				ringSize, err := membershipMonitor.GetMemberCount(serviceName)
 				if err == nil && ringSize > 0 {
-					avgQuota := common.MaxInt(persistenceGlobalMaxQPS()/ringSize, 1)
-					return common.MinInt(avgQuota, persistenceMaxQPS())
+					avgQuota := common.MaxInt(resourceConfig.PersistenceGlobalMaxQPS()/ringSize, 1)
+					return common.MinInt(avgQuota, resourceConfig.PersistenceMaxQPS())
 				}
 			}
-			return persistenceMaxQPS()
+			return resourceConfig.PersistenceMaxQPS()
 		},
 		params.ClusterMetadata.GetCurrentClusterName(),
 		params.MetricsClient,
 		logger,
-	))
+	), params, resourceConfig)
 	if err != nil {
 		return nil, err
 	}
-	visibilityMgr, err := visibilityManagerInitializer(
-		persistenceBean,
-		logger,
-	)
-	if err != nil {
-		return nil, err
-	}
+	//visibilityMgr, err := visibilityManagerInitializer(
+	//	persistenceBean,
+	//	logger,
+	//)
+	visibilityMgr := persistenceBean.GetVisibilityManager()
 
 	domainCache := cache.NewDomainCache(
 		persistenceBean.GetMetadataManager(),

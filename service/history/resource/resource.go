@@ -84,15 +84,28 @@ func New(
 	params *service.BootstrapParams,
 	serviceName string,
 	config *config.Config,
-	visibilityManagerInitializer resource.VisibilityManagerInitializer,
 ) (historyResource Resource, retError error) {
 	serviceResource, err := resource.New(
 		params,
 		serviceName,
-		config.PersistenceMaxQPS,
-		config.PersistenceGlobalMaxQPS,
-		config.ThrottledLogRPS,
-		visibilityManagerInitializer,
+		&resource.Config{
+			PersistenceMaxQPS:       config.PersistenceMaxQPS,
+			PersistenceGlobalMaxQPS: config.PersistenceGlobalMaxQPS,
+			ThrottledLoggerMaxRPS:   config.ThrottledLogRPS,
+
+			EnableReadVisibilityFromES:    nil, // history visibility never read,
+			AdvancedVisibilityWritingMode: config.AdvancedVisibilityWritingMode,
+
+			EnableDBVisibilitySampling:                  config.EnableVisibilitySampling,
+			EnableReadDBVisibilityFromClosedExecutionV2: nil, // history visibility never read,
+			DBVisibilityListMaxQPS:                      nil, // history visibility never read,
+			WriteDBVisibilityOpenMaxQPS:                 config.VisibilityOpenMaxQPS,
+			WriteDBVisibilityClosedMaxQPS:               config.VisibilityClosedMaxQPS,
+
+			ESVisibilityListMaxQPS: nil, // history visibility never read,
+			ESIndexMaxResultWindow: nil, // history visibility never read,
+			ValidSearchAttributes:  nil, // history visibility never read,
+		},
 	)
 	if err != nil {
 		return nil, err
