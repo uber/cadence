@@ -130,6 +130,7 @@ type (
 		rpcFactory             common.RPCFactory
 	}
 
+	// Config is a subset of the service dynamic config
 	Config struct {
 		PersistenceMaxQPS       dynamicconfig.IntPropertyFn
 		PersistenceGlobalMaxQPS dynamicconfig.IntPropertyFn
@@ -138,20 +139,13 @@ type (
 		EnableReadVisibilityFromES    dynamicconfig.BoolPropertyFnWithDomainFilter
 		AdvancedVisibilityWritingMode dynamicconfig.StringPropertyFn
 
-		// EnableSampling for DB visibility
-		EnableDBVisibilitySampling dynamicconfig.BoolPropertyFn `yaml:"-" json:"-"`
-		// EnableReadFromClosedExecutionV2 read closed from v2 table
-		EnableReadDBVisibilityFromClosedExecutionV2 dynamicconfig.BoolPropertyFn `yaml:"-" json:"-"`
-		// VisibilityOpenMaxQPS max QPS for writing record open workflows
-		WriteDBVisibilityOpenMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-		// VisibilityClosedMaxQPS max QPS for writing record closed workflows
-		WriteDBVisibilityClosedMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-		// VisibilityListMaxQPS max QPS for list workflow
-		DBVisibilityListMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
+		EnableDBVisibilitySampling                  dynamicconfig.BoolPropertyFn                `yaml:"-" json:"-"`
+		EnableReadDBVisibilityFromClosedExecutionV2 dynamicconfig.BoolPropertyFn                `yaml:"-" json:"-"`
+		WriteDBVisibilityOpenMaxQPS                 dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
+		WriteDBVisibilityClosedMaxQPS               dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
+		DBVisibilityListMaxQPS                      dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
 
-		// ESIndexMaxResultWindow ElasticSearch index setting max_result_window
-		ESIndexMaxResultWindow dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
-		// ValidSearchAttributes is legal indexed keys that can be used in list APIs
+		ESIndexMaxResultWindow dynamicconfig.IntPropertyFn                 `yaml:"-" json:"-"`
 		ValidSearchAttributes  dynamicconfig.MapPropertyFn                 `yaml:"-" json:"-"`
 		ESVisibilityListMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
 	}
@@ -243,10 +237,6 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	//visibilityMgr, err := visibilityManagerInitializer(
-	//	persistenceBean,
-	//	logger,
-	//)
 	visibilityMgr := persistenceBean.GetVisibilityManager()
 
 	domainCache := cache.NewDomainCache(

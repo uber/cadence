@@ -42,8 +42,8 @@ var _ VisibilityManager = (*visibilityManagerWrapper)(nil)
 
 // NewVisibilityManagerWrapper create a visibility manager that operate on DB or ElasticSearch based on dynamic config.
 func NewVisibilityManagerWrapper(
-	visibilityManager VisibilityManager,
-	esVisibilityManager VisibilityManager,
+	visibilityManager VisibilityManager,   // can be nil
+	esVisibilityManager VisibilityManager, // can be nil
 	enableReadVisibilityFromES dynamicconfig.BoolPropertyFnWithDomainFilter,
 	advancedVisWritingMode dynamicconfig.StringPropertyFn,
 ) VisibilityManager {
