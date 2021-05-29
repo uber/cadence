@@ -30,6 +30,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uber/cadence/tools/common/flag"
+
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 
@@ -94,16 +96,12 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 		}
 	}
 
-	domainData := map[string]string{}
+	var domainData *flag.StringMap
 	if c.IsSet(FlagDomainData) {
-		domainDataStr := getRequiredOption(c, FlagDomainData)
-		domainData, err = parseDomainDataKVs(domainDataStr)
-		if err != nil {
-			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagDomainData), err)
-		}
+		domainData = c.Generic(FlagDomainData).(*flag.StringMap)
 	}
 	if len(requiredDomainDataKeys) > 0 {
-		err = checkRequiredDomainDataKVs(domainData)
+		err = checkRequiredDomainDataKVs(domainData.Value())
 		if err != nil {
 			ErrorAndExit("Domain data missed required data.", err)
 		}
@@ -131,7 +129,7 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 		Name:                                   domainName,
 		Description:                            description,
 		OwnerEmail:                             ownerEmail,
-		Data:                                   domainData,
+		Data:                                   domainData.Value(),
 		WorkflowExecutionRetentionPeriodInDays: int32(retentionDays),
 		Clusters:                               clusters,
 		ActiveClusterName:                      activeClusterName,
@@ -205,13 +203,9 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 		if c.IsSet(FlagOwnerEmail) {
 			ownerEmail = c.String(FlagOwnerEmail)
 		}
-		domainData := map[string]string{}
+		var domainData *flag.StringMap
 		if c.IsSet(FlagDomainData) {
-			domainDataStr := c.String(FlagDomainData)
-			domainData, err = parseDomainDataKVs(domainDataStr)
-			if err != nil {
-				ErrorAndExit("Domain data format is invalid.", err)
-			}
+			domainData = c.Generic(FlagDomainData).(*flag.StringMap)
 		}
 		if c.IsSet(FlagRetentionDays) {
 			retentionDays = int32(c.Int(FlagRetentionDays))
@@ -255,7 +249,7 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 			Name:                                   domainName,
 			Description:                            common.StringPtr(description),
 			OwnerEmail:                             common.StringPtr(ownerEmail),
-			Data:                                   domainData,
+			Data:                                   domainData.Value(),
 			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retentionDays),
 			EmitMetric:                             common.BoolPtr(emitMetric),
 			HistoryArchivalStatus:                  archivalStatus(c, FlagHistoryArchivalStatus),
