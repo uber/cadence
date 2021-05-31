@@ -27,15 +27,19 @@ type (
 		PersistenceGlobalMaxQPS IntPropertyFn
 		ThrottledLoggerMaxRPS   IntPropertyFn
 
-		EnableReadVisibilityFromES    BoolPropertyFnWithDomainFilter
+		// EnableReadVisibilityFromES is the read mode of visibility
+		EnableReadVisibilityFromES BoolPropertyFnWithDomainFilter
+		// AdvancedVisibilityWritingMode is the write mode of visibility
 		AdvancedVisibilityWritingMode StringPropertyFn
 
+		// configs for db visibility
 		EnableDBVisibilitySampling                  BoolPropertyFn                `yaml:"-" json:"-"`
 		EnableReadDBVisibilityFromClosedExecutionV2 BoolPropertyFn                `yaml:"-" json:"-"`
 		WriteDBVisibilityOpenMaxQPS                 IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
 		WriteDBVisibilityClosedMaxQPS               IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
 		DBVisibilityListMaxQPS                      IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
 
+		// configs for es visibility
 		ESIndexMaxResultWindow IntPropertyFn                 `yaml:"-" json:"-"`
 		ValidSearchAttributes  MapPropertyFn                 `yaml:"-" json:"-"`
 		ESVisibilityListMaxQPS IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`

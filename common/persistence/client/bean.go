@@ -26,7 +26,6 @@ import (
 	"sync"
 
 	"github.com/uber/cadence/common/dynamicconfig"
-
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 )
