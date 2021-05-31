@@ -530,6 +530,7 @@ type (
 		MinStartTime     *time.Time
 		MaxStartTime     *time.Time
 		PageSize         *int
+		IsCron           *bool
 	}
 
 	// QueueRow represents a row in queue table

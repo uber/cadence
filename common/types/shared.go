@@ -4237,6 +4237,7 @@ type ListArchivedWorkflowExecutionsRequest struct {
 	PageSize      int32  `json:"pageSize,omitempty"`
 	NextPageToken []byte `json:"nextPageToken,omitempty"`
 	Query         string `json:"query,omitempty"`
+	IsCron        *bool  `json:"isCron,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -4267,6 +4268,14 @@ func (v *ListArchivedWorkflowExecutionsRequest) GetNextPageToken() (o []byte) {
 func (v *ListArchivedWorkflowExecutionsRequest) GetQuery() (o string) {
 	if v != nil {
 		return v.Query
+	}
+	return
+}
+
+// GetQuery is an internal getter (TBD...)
+func (v *ListArchivedWorkflowExecutionsRequest) GetIsCron() (o *bool) {
+	if v != nil {
+		return v.IsCron
 	}
 	return
 }
@@ -4302,6 +4311,7 @@ type ListClosedWorkflowExecutionsRequest struct {
 	ExecutionFilter *WorkflowExecutionFilter      `json:"executionFilter,omitempty"`
 	TypeFilter      *WorkflowTypeFilter           `json:"typeFilter,omitempty"`
 	StatusFilter    *WorkflowExecutionCloseStatus `json:"statusFilter,omitempty"`
+	IsCron          *bool                         `json:"isCron,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -4356,6 +4366,14 @@ func (v *ListClosedWorkflowExecutionsRequest) GetTypeFilter() (o *WorkflowTypeFi
 func (v *ListClosedWorkflowExecutionsRequest) GetStatusFilter() (o WorkflowExecutionCloseStatus) {
 	if v != nil && v.StatusFilter != nil {
 		return *v.StatusFilter
+	}
+	return
+}
+
+// GetStatusFilter is an internal getter (TBD...)
+func (v *ListClosedWorkflowExecutionsRequest) GetIsCron() (o *bool) {
+	if v != nil {
+		return v.IsCron
 	}
 	return
 }
@@ -4434,6 +4452,7 @@ type ListOpenWorkflowExecutionsRequest struct {
 	StartTimeFilter *StartTimeFilter         `json:"StartTimeFilter,omitempty"`
 	ExecutionFilter *WorkflowExecutionFilter `json:"executionFilter,omitempty"`
 	TypeFilter      *WorkflowTypeFilter      `json:"typeFilter,omitempty"`
+	IsCron          *bool                    `json:"isCron,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -4480,6 +4499,14 @@ func (v *ListOpenWorkflowExecutionsRequest) GetExecutionFilter() (o *WorkflowExe
 func (v *ListOpenWorkflowExecutionsRequest) GetTypeFilter() (o *WorkflowTypeFilter) {
 	if v != nil && v.TypeFilter != nil {
 		return v.TypeFilter
+	}
+	return
+}
+
+// GetTypeFilter is an internal getter (TBD...)
+func (v *ListOpenWorkflowExecutionsRequest) GetIsCron() (o *bool) {
+	if v != nil {
+		return v.IsCron
 	}
 	return
 }
@@ -4556,6 +4583,7 @@ type ListWorkflowExecutionsRequest struct {
 	PageSize      int32  `json:"pageSize,omitempty"`
 	NextPageToken []byte `json:"nextPageToken,omitempty"`
 	Query         string `json:"query,omitempty"`
+	IsCron        *bool  `json:"isCron,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -4586,6 +4614,14 @@ func (v *ListWorkflowExecutionsRequest) GetNextPageToken() (o []byte) {
 func (v *ListWorkflowExecutionsRequest) GetQuery() (o string) {
 	if v != nil {
 		return v.Query
+	}
+	return
+}
+
+// GetQuery is an internal getter (TBD...)
+func (v *ListWorkflowExecutionsRequest) GetIsCron() (o *bool) {
+	if v != nil {
+		return v.IsCron
 	}
 	return
 }

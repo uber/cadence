@@ -100,6 +100,8 @@ type (
 		// Token to continue reading next page of workflow executions.
 		// Pass in empty slice for first page.
 		NextPageToken []byte
+		// Whether to filter by cron or non-cron workflows
+		IsCron *bool
 	}
 
 	// ListWorkflowExecutionsByQueryRequest is used to list executions in a domain
@@ -111,6 +113,7 @@ type (
 		// Pass in empty slice for first page.
 		NextPageToken []byte
 		Query         string
+		IsCron        *bool
 	}
 
 	// ListWorkflowExecutionsResponse is the response to ListWorkflowExecutionsRequest

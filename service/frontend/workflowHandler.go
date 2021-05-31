@@ -2701,6 +2701,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 		NextPageToken: listRequest.NextPageToken,
 		EarliestTime:  listRequest.StartTimeFilter.GetEarliestTime(),
 		LatestTime:    listRequest.StartTimeFilter.GetLatestTime(),
+		IsCron:        listRequest.IsCron,
 	}
 
 	var persistenceResp *persistence.ListWorkflowExecutionsResponse
@@ -2918,6 +2919,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 		NextPageToken: listRequest.NextPageToken,
 		EarliestTime:  listRequest.StartTimeFilter.GetEarliestTime(),
 		LatestTime:    listRequest.StartTimeFilter.GetLatestTime(),
+		IsCron:        listRequest.IsCron,
 	}
 
 	var persistenceResp *persistence.ListWorkflowExecutionsResponse
@@ -3033,6 +3035,7 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 		PageSize:      int(listRequest.GetPageSize()),
 		NextPageToken: listRequest.NextPageToken,
 		Query:         validatedQuery,
+		IsCron:        listRequest.IsCron,
 	}
 	persistenceResp, err := wh.GetVisibilityManager().ListWorkflowExecutions(ctx, req)
 	if err != nil {

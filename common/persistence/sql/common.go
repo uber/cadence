@@ -36,6 +36,19 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+type SelectType int
+
+const (
+	OpenWorkflowExecutions SelectType = iota
+	ClosedWorkflowExecutions
+	OpenWorkflowExecutionsByType
+	ClosedWorkflowExecutionsByType
+	OpenWorkflowExecutionsByID
+	ClosedWorkflowExecutionsByID
+	ClosedWorkflowExecutionsByStatus
+	ClosedWorkflowExecution
+)
+
 // TODO: Rename all SQL Managers to Stores
 type sqlStore struct {
 	db     sqlplugin.DB
@@ -146,4 +159,23 @@ func convertCommonErrors(
 	return &types.InternalServiceError{
 		Message: fmt.Sprintf("%v operation failed. %s Error: %v", operation, message, err),
 	}
+}
+
+func DynamicSelectArgs(
+	filter *sqlplugin.VisibilityFilter,
+	args []interface{},
+) []interface{} {
+	prepend := func(args []interface{}, newArg interface{}) []interface{} {
+		newArgs := make([]interface{}, len(args)+1)
+		newArgs[0] = newArg
+		for i := 0; i < len(args); i++ {
+			newArgs[i+1] = args[i]
+		}
+		return newArgs
+	}
+
+	if filter.IsCron != nil {
+		args = prepend(args, *filter.IsCron)
+	}
+	return args
 }

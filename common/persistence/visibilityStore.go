@@ -393,6 +393,7 @@ func (v *visibilityManagerImpl) fromInternalListWorkflowExecutionsRequest(intern
 		LatestTime:    internalReq.LatestTime.UnixNano(),
 		PageSize:      internalReq.PageSize,
 		NextPageToken: internalReq.NextPageToken,
+		IsCron:        internalReq.IsCron,
 	}
 }
 
@@ -407,6 +408,7 @@ func (v *visibilityManagerImpl) toInternalListWorkflowExecutionsRequest(req *Lis
 		LatestTime:    time.Unix(0, req.LatestTime),
 		PageSize:      req.PageSize,
 		NextPageToken: req.NextPageToken,
+		IsCron:        req.IsCron,
 	}
 }
 

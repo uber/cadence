@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 
+	s "github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
@@ -75,6 +76,58 @@ const (
 )
 
 var errCloseParams = errors.New("missing one of {closeStatus, closeTime, historyLength} params")
+
+// buildTemplate creates the Postgres query based on given
+func (mdb *db) buildTemplate(filter *sqlplugin.VisibilityFilter, selectType s.SelectType) string {
+	dynamicFilter := ""
+	if filter.IsCron != nil {
+		dynamicFilter = ` AND is_cron = ?`
+	}
+
+	// RunID condition is needed for correct pagination
+	templateConditions := ` AND domain_id = ?
+		 AND start_time >= ?
+		 AND start_time <= ?
+ 		 AND (run_id > ? OR start_time < ?)
+         ORDER BY start_time DESC, run_id
+         LIMIT ?`
+
+	templateStr := func(prefix string) string {
+		return dynamicFilter + prefix + templateConditions
+	}
+
+	switch selectType {
+	case s.OpenWorkflowExecutions:
+		return templateOpenSelect + templateStr("")
+	case s.ClosedWorkflowExecutions:
+		return templateClosedSelect + templateStr("")
+	case s.OpenWorkflowExecutionsByType:
+		return templateOpenSelect + templateStr(` AND workflow_type_name = ?`)
+	case s.ClosedWorkflowExecutionsByType:
+		return templateClosedSelect + templateStr(` AND workflow_type_name = ?`)
+	case s.OpenWorkflowExecutionsByID:
+		return templateOpenSelect + templateStr(` AND workflow_id = ?`)
+	case s.ClosedWorkflowExecutionsByID:
+		return templateClosedSelect + templateStr(` AND workflow_id = ?`)
+	case s.ClosedWorkflowExecutionsByStatus:
+		return templateClosedSelect + templateStr(` AND close_status = ?`)
+	case s.ClosedWorkflowExecution:
+		return `SELECT workflow_id, run_id, start_time, execution_time, memo, encoding, close_time, workflow_type_name, close_status, history_length, is_cron
+		FROM executions_visibility
+		WHERE domain_id = ? AND close_status IS NOT NULL
+		AND run_id = ?`
+	}
+	return ""
+}
+
+func (mdb *db) SelectContext(
+	ctx context.Context,
+	filter *sqlplugin.VisibilityFilter,
+	dest interface{},
+	query string,
+	args ...interface{}) error {
+	return mdb.conn.SelectContext(ctx, dest, query, s.DynamicSelectArgs(filter, args)...)
+}
 
 // InsertIntoVisibility inserts a row into visibility table. If an row already exist,
 // its left as such and no update will be made
@@ -141,11 +194,12 @@ func (mdb *db) SelectFromVisibility(ctx context.Context, filter *sqlplugin.Visib
 			rows = append(rows, row)
 		}
 	case filter.MinStartTime != nil && filter.WorkflowID != nil:
-		qry := templateGetOpenWorkflowExecutionsByID
+		qry := mdb.buildTemplate(filter, s.OpenWorkflowExecutionsByID)
 		if filter.Closed {
-			qry = templateGetClosedWorkflowExecutionsByID
+			qry = mdb.buildTemplate(filter, s.ClosedWorkflowExecutionsByID)
 		}
-		err = mdb.conn.SelectContext(ctx,
+		err = mdb.SelectContext(ctx,
+			filter,
 			&rows,
 			qry,
 			*filter.WorkflowID,
@@ -156,11 +210,12 @@ func (mdb *db) SelectFromVisibility(ctx context.Context, filter *sqlplugin.Visib
 			*filter.MinStartTime,
 			*filter.PageSize)
 	case filter.MinStartTime != nil && filter.WorkflowTypeName != nil:
-		qry := templateGetOpenWorkflowExecutionsByType
+		qry := mdb.buildTemplate(filter, s.OpenWorkflowExecutionsByType)
 		if filter.Closed {
-			qry = templateGetClosedWorkflowExecutionsByType
+			qry = mdb.buildTemplate(filter, s.ClosedWorkflowExecutionsByType)
 		}
-		err = mdb.conn.SelectContext(ctx,
+		err = mdb.SelectContext(ctx,
+			filter,
 			&rows,
 			qry,
 			*filter.WorkflowTypeName,
@@ -171,9 +226,10 @@ func (mdb *db) SelectFromVisibility(ctx context.Context, filter *sqlplugin.Visib
 			*filter.MaxStartTime,
 			*filter.PageSize)
 	case filter.MinStartTime != nil && filter.CloseStatus != nil:
-		err = mdb.conn.SelectContext(ctx,
+		err = mdb.SelectContext(ctx,
+			filter,
 			&rows,
-			templateGetClosedWorkflowExecutionsByStatus,
+			mdb.buildTemplate(filter, s.ClosedWorkflowExecutionsByStatus),
 			*filter.CloseStatus,
 			filter.DomainID,
 			mdb.converter.ToMySQLDateTime(*filter.MinStartTime),
@@ -182,11 +238,12 @@ func (mdb *db) SelectFromVisibility(ctx context.Context, filter *sqlplugin.Visib
 			mdb.converter.ToMySQLDateTime(*filter.MaxStartTime),
 			*filter.PageSize)
 	case filter.MinStartTime != nil:
-		qry := templateGetOpenWorkflowExecutions
+		qry := mdb.buildTemplate(filter, s.OpenWorkflowExecutions)
 		if filter.Closed {
-			qry = templateGetClosedWorkflowExecutions
+			qry = mdb.buildTemplate(filter, s.ClosedWorkflowExecutions)
 		}
-		err = mdb.conn.SelectContext(ctx,
+		err = mdb.SelectContext(ctx,
+			filter,
 			&rows,
 			qry,
 			filter.DomainID,

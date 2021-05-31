@@ -751,6 +751,8 @@ type (
 		// Token to continue reading next page of workflow executions.
 		// Pass in empty slice for first page.
 		NextPageToken []byte
+		// Whether results should be filtered by cron/non-cron workflows
+		IsCron *bool
 	}
 
 	// InternalDomainConfig describes the domain configuration

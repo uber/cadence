@@ -30,6 +30,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/client"
@@ -147,6 +148,41 @@ func (s *VisibilityPersistenceSuite) TestBasicVisibility() {
 	s.assertClosedExecutionEquals(closeReq, resp.Executions[0])
 }
 
+func (s *VisibilityPersistenceSuite) searchWorkflows(
+	ctx context.Context,
+	searchOpen bool,
+	testDomainUUID string,
+	startTime int64,
+	isCron *bool,
+	numExpected int,
+) {
+	req := p.ListWorkflowExecutionsRequest{
+		DomainUUID:   testDomainUUID,
+		PageSize:     1,
+		EarliestTime: startTime,
+		LatestTime:   startTime,
+	}
+	if isCron != nil {
+		req.IsCron = common.BoolPtr(*isCron)
+	}
+
+	if searchOpen {
+		resp, err := s.VisibilityMgr.ListOpenWorkflowExecutions(ctx, &req)
+		s.Nil(err)
+		s.Equal(numExpected, len(resp.Executions))
+		if isCron != nil && len(resp.Executions) > 0 {
+			s.Equal(resp.Executions[0].IsCron, *isCron)
+		}
+	} else {
+		resp, err := s.VisibilityMgr.ListClosedWorkflowExecutions(ctx, &req)
+		s.Nil(err)
+		s.Equal(numExpected, len(resp.Executions))
+		if isCron != nil && len(resp.Executions) > 0 {
+			s.Equal(resp.Executions[0].IsCron, *isCron)
+		}
+	}
+}
+
 // TestCronVisibility test
 func (s *VisibilityPersistenceSuite) TestCronVisibility() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -170,15 +206,9 @@ func (s *VisibilityPersistenceSuite) TestCronVisibility() {
 	err0 := s.VisibilityMgr.RecordWorkflowExecutionStarted(ctx, startReq)
 	s.Nil(err0)
 
-	resp, err1 := s.VisibilityMgr.ListOpenWorkflowExecutions(ctx, &p.ListWorkflowExecutionsRequest{
-		DomainUUID:   testDomainUUID,
-		PageSize:     1,
-		EarliestTime: startTime,
-		LatestTime:   startTime,
-	})
-	s.Nil(err1)
-	s.Equal(1, len(resp.Executions))
-	s.True(resp.Executions[0].IsCron)
+	s.searchWorkflows(ctx, true, testDomainUUID, startTime, common.BoolPtr(true), 1)
+	s.searchWorkflows(ctx, true, testDomainUUID, startTime, nil, 1)
+	s.searchWorkflows(ctx, true, testDomainUUID, startTime, common.BoolPtr(false), 0)
 
 	closeReq := &p.RecordWorkflowExecutionClosedRequest{
 		DomainUUID:       testDomainUUID,
@@ -192,15 +222,9 @@ func (s *VisibilityPersistenceSuite) TestCronVisibility() {
 	err2 := s.VisibilityMgr.RecordWorkflowExecutionClosed(ctx, closeReq)
 	s.Nil(err2)
 
-	resp, err4 := s.VisibilityMgr.ListClosedWorkflowExecutions(ctx, &p.ListWorkflowExecutionsRequest{
-		DomainUUID:   testDomainUUID,
-		PageSize:     1,
-		EarliestTime: startTime,
-		LatestTime:   startTime,
-	})
-	s.Nil(err4)
-	s.Equal(1, len(resp.Executions))
-	s.True(resp.Executions[0].IsCron)
+	s.searchWorkflows(ctx, false, testDomainUUID, startTime, common.BoolPtr(true), 1)
+	s.searchWorkflows(ctx, false, testDomainUUID, startTime, nil, 1)
+	s.searchWorkflows(ctx, false, testDomainUUID, startTime, common.BoolPtr(false), 0)
 }
 
 // TestBasicVisibilityTimeSkew test

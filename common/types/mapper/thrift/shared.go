@@ -2800,6 +2800,7 @@ func FromListArchivedWorkflowExecutionsRequest(t *types.ListArchivedWorkflowExec
 		PageSize:      &t.PageSize,
 		NextPageToken: t.NextPageToken,
 		Query:         &t.Query,
+		IsCron:        t.IsCron,
 	}
 }
 
@@ -2813,6 +2814,7 @@ func ToListArchivedWorkflowExecutionsRequest(t *shared.ListArchivedWorkflowExecu
 		PageSize:      t.GetPageSize(),
 		NextPageToken: t.NextPageToken,
 		Query:         t.GetQuery(),
+		IsCron:        t.IsCron,
 	}
 }
 
@@ -2851,6 +2853,7 @@ func FromListClosedWorkflowExecutionsRequest(t *types.ListClosedWorkflowExecutio
 		ExecutionFilter: FromWorkflowExecutionFilter(t.ExecutionFilter),
 		TypeFilter:      FromWorkflowTypeFilter(t.TypeFilter),
 		StatusFilter:    FromWorkflowExecutionCloseStatus(t.StatusFilter),
+		IsCron:          t.IsCron,
 	}
 }
 
@@ -2867,6 +2870,7 @@ func ToListClosedWorkflowExecutionsRequest(t *shared.ListClosedWorkflowExecution
 		ExecutionFilter: ToWorkflowExecutionFilter(t.ExecutionFilter),
 		TypeFilter:      ToWorkflowTypeFilter(t.TypeFilter),
 		StatusFilter:    ToWorkflowExecutionCloseStatus(t.StatusFilter),
+		IsCron:          t.IsCron,
 	}
 }
 
@@ -2948,6 +2952,7 @@ func FromListOpenWorkflowExecutionsRequest(t *types.ListOpenWorkflowExecutionsRe
 		StartTimeFilter: FromStartTimeFilter(t.StartTimeFilter),
 		ExecutionFilter: FromWorkflowExecutionFilter(t.ExecutionFilter),
 		TypeFilter:      FromWorkflowTypeFilter(t.TypeFilter),
+		IsCron:          t.IsCron,
 	}
 }
 
@@ -2963,6 +2968,7 @@ func ToListOpenWorkflowExecutionsRequest(t *shared.ListOpenWorkflowExecutionsReq
 		StartTimeFilter: ToStartTimeFilter(t.StartTimeFilter),
 		ExecutionFilter: ToWorkflowExecutionFilter(t.ExecutionFilter),
 		TypeFilter:      ToWorkflowTypeFilter(t.TypeFilter),
+		IsCron:          t.IsCron,
 	}
 }
 
@@ -3042,6 +3048,7 @@ func FromListWorkflowExecutionsRequest(t *types.ListWorkflowExecutionsRequest) *
 		PageSize:      &t.PageSize,
 		NextPageToken: t.NextPageToken,
 		Query:         &t.Query,
+		IsCron:        t.IsCron,
 	}
 }
 
@@ -3055,6 +3062,7 @@ func ToListWorkflowExecutionsRequest(t *shared.ListWorkflowExecutionsRequest) *t
 		PageSize:      t.GetPageSize(),
 		NextPageToken: t.NextPageToken,
 		Query:         t.GetQuery(),
+		IsCron:        t.IsCron,
 	}
 }
 

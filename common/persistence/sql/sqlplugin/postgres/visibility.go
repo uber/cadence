@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"strings"
 
+	s "github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
@@ -51,50 +52,81 @@ const (
 			  encoding = excluded.encoding,
 				is_cron = excluded.is_cron`
 
-	// RunID condition is needed for correct pagination
-	templateConditions1 = ` AND domain_id = $1
-		 AND start_time >= $2
-		 AND start_time <= $3
- 		 AND (run_id > $4 OR start_time < $5)
-         ORDER BY start_time DESC, run_id
-         LIMIT $6`
-
-	templateConditions2 = ` AND domain_id = $2
-		 AND start_time >= $3
-		 AND start_time <= $4
- 		 AND (run_id > $5 OR start_time < $6)
-         ORDER BY start_time DESC, run_id
-         LIMIT $7`
-
 	templateOpenFieldNames = `workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, is_cron`
 	templateOpenSelect     = `SELECT ` + templateOpenFieldNames + ` FROM executions_visibility WHERE close_status IS NULL `
 
 	templateClosedSelect = `SELECT ` + templateOpenFieldNames + `, close_time, close_status, history_length
 		 FROM executions_visibility WHERE close_status IS NOT NULL `
 
-	templateGetOpenWorkflowExecutions = templateOpenSelect + templateConditions1
-
-	templateGetClosedWorkflowExecutions = templateClosedSelect + templateConditions1
-
-	templateGetOpenWorkflowExecutionsByType = templateOpenSelect + `AND workflow_type_name = $1` + templateConditions2
-
-	templateGetClosedWorkflowExecutionsByType = templateClosedSelect + `AND workflow_type_name = $1` + templateConditions2
-
-	templateGetOpenWorkflowExecutionsByID = templateOpenSelect + `AND workflow_id = $1` + templateConditions2
-
-	templateGetClosedWorkflowExecutionsByID = templateClosedSelect + `AND workflow_id = $1` + templateConditions2
-
-	templateGetClosedWorkflowExecutionsByStatus = templateClosedSelect + `AND close_status = $1` + templateConditions2
-
-	templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, execution_time, memo, encoding, close_time, workflow_type_name, close_status, history_length, is_cron
-		 FROM executions_visibility
-		 WHERE domain_id = $1 AND close_status IS NOT NULL
-		 AND run_id = $2`
-
 	templateDeleteWorkflowExecution = "DELETE FROM executions_visibility WHERE domain_id=$1 AND run_id=$2"
 )
 
 var errCloseParams = errors.New("missing one of {closeStatus, closeTime, historyLength} params")
+
+// buildTemplate creates the Postgres query based on given
+func (pdb *db) buildTemplate(filter *sqlplugin.VisibilityFilter, selectType s.SelectType) string {
+	numParams := 0
+	dynamicFilter := ""
+	if filter.IsCron != nil {
+		dynamicFilter = ` AND is_cron = $%d`
+		numParams++
+	}
+
+	numParams += 6
+	// RunID condition is needed for correct pagination
+	templateConditions := ` AND domain_id = $%d
+		 AND start_time >= $%d
+		 AND start_time <= $%d
+ 		 AND (run_id > $%d OR start_time < $%d)
+         ORDER BY start_time DESC, run_id
+         LIMIT $%d`
+
+	// This function will help creating Postgres template with params like $1 $2 $3 ...
+	// with correct number of parameters
+	rangeSlice := func(numElems int) []interface{} {
+		out := make([]interface{}, numElems)
+		for i := 0; i < numElems; i++ {
+			out[i] = i + 1
+		}
+		return out
+	}
+
+	templateStr := func(prefix string, numParams int) string {
+		return fmt.Sprintf(dynamicFilter+prefix+templateConditions, rangeSlice(numParams)...)
+	}
+
+	switch selectType {
+	case s.OpenWorkflowExecutions:
+		return templateOpenSelect + templateStr("", numParams)
+	case s.ClosedWorkflowExecutions:
+		return templateClosedSelect + templateStr("", numParams)
+	case s.OpenWorkflowExecutionsByType:
+		return templateOpenSelect + templateStr(` AND workflow_type_name = $%d`, numParams+1)
+	case s.ClosedWorkflowExecutionsByType:
+		return templateClosedSelect + templateStr(` AND workflow_type_name = $%d`, numParams+1)
+	case s.OpenWorkflowExecutionsByID:
+		return templateOpenSelect + templateStr(` AND workflow_id = $%d`, numParams+1)
+	case s.ClosedWorkflowExecutionsByID:
+		return templateClosedSelect + templateStr(` AND workflow_id = $%d`, numParams+1)
+	case s.ClosedWorkflowExecutionsByStatus:
+		return templateClosedSelect + templateStr(` AND close_status = $%d`, numParams+1)
+	case s.ClosedWorkflowExecution:
+		return `SELECT workflow_id, run_id, start_time, execution_time, memo, encoding, close_time, workflow_type_name, close_status, history_length, is_cron
+		FROM executions_visibility
+		WHERE domain_id = $1 AND close_status IS NOT NULL
+		AND run_id = $2`
+	}
+	return ""
+}
+
+func (pdb *db) SelectContext(
+	ctx context.Context,
+	filter *sqlplugin.VisibilityFilter,
+	dest interface{},
+	query string,
+	args ...interface{}) error {
+	return pdb.conn.SelectContext(ctx, dest, query, s.DynamicSelectArgs(filter, args)...)
+}
 
 // InsertIntoVisibility inserts a row into visibility table. If an row already exist,
 // its left as such and no update will be made
@@ -154,16 +186,18 @@ func (pdb *db) SelectFromVisibility(ctx context.Context, filter *sqlplugin.Visib
 	switch {
 	case filter.MinStartTime == nil && filter.RunID != nil && filter.Closed:
 		var row sqlplugin.VisibilityRow
-		err = pdb.conn.GetContext(ctx, &row, templateGetClosedWorkflowExecution, filter.DomainID, *filter.RunID)
+		err = pdb.conn.GetContext(ctx, &row, pdb.buildTemplate(filter, s.ClosedWorkflowExecution), filter.DomainID, *filter.RunID)
 		if err == nil {
 			rows = append(rows, row)
 		}
 	case filter.MinStartTime != nil && filter.WorkflowID != nil:
-		qry := templateGetOpenWorkflowExecutionsByID
+		qry := pdb.buildTemplate(filter, s.OpenWorkflowExecutionsByID)
 		if filter.Closed {
-			qry = templateGetClosedWorkflowExecutionsByID
+			qry = pdb.buildTemplate(filter, s.ClosedWorkflowExecutionsByID)
 		}
-		err = pdb.conn.SelectContext(ctx, &rows,
+		err = pdb.SelectContext(ctx,
+			filter,
+			&rows,
 			qry,
 			*filter.WorkflowID,
 			filter.DomainID,
@@ -173,11 +207,13 @@ func (pdb *db) SelectFromVisibility(ctx context.Context, filter *sqlplugin.Visib
 			*filter.MinStartTime,
 			*filter.PageSize)
 	case filter.MinStartTime != nil && filter.WorkflowTypeName != nil:
-		qry := templateGetOpenWorkflowExecutionsByType
+		qry := pdb.buildTemplate(filter, s.OpenWorkflowExecutionsByType)
 		if filter.Closed {
-			qry = templateGetClosedWorkflowExecutionsByType
+			qry = pdb.buildTemplate(filter, s.ClosedWorkflowExecutionsByType)
 		}
-		err = pdb.conn.SelectContext(ctx, &rows,
+		err = pdb.SelectContext(ctx,
+			filter,
+			&rows,
 			qry,
 			*filter.WorkflowTypeName,
 			filter.DomainID,
@@ -187,8 +223,10 @@ func (pdb *db) SelectFromVisibility(ctx context.Context, filter *sqlplugin.Visib
 			*filter.MaxStartTime,
 			*filter.PageSize)
 	case filter.MinStartTime != nil && filter.CloseStatus != nil:
-		err = pdb.conn.SelectContext(ctx, &rows,
-			templateGetClosedWorkflowExecutionsByStatus,
+		err = pdb.SelectContext(ctx,
+			filter,
+			&rows,
+			pdb.buildTemplate(filter, s.ClosedWorkflowExecutionsByStatus),
 			*filter.CloseStatus,
 			filter.DomainID,
 			pdb.converter.ToPostgresDateTime(*filter.MinStartTime),
@@ -197,13 +235,15 @@ func (pdb *db) SelectFromVisibility(ctx context.Context, filter *sqlplugin.Visib
 			pdb.converter.ToPostgresDateTime(*filter.MaxStartTime),
 			*filter.PageSize)
 	case filter.MinStartTime != nil:
-		qry := templateGetOpenWorkflowExecutions
+		qry := pdb.buildTemplate(filter, s.OpenWorkflowExecutions)
 		if filter.Closed {
-			qry = templateGetClosedWorkflowExecutions
+			qry = pdb.buildTemplate(filter, s.ClosedWorkflowExecutions)
 		}
 		minSt := pdb.converter.ToPostgresDateTime(*filter.MinStartTime)
 		maxSt := pdb.converter.ToPostgresDateTime(*filter.MaxStartTime)
-		err = pdb.conn.SelectContext(ctx, &rows,
+		err = pdb.SelectContext(ctx,
+			filter,
+			&rows,
 			qry,
 			filter.DomainID,
 			minSt,

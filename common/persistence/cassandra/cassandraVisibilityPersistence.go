@@ -187,6 +187,19 @@ type (
 	}
 )
 
+func (v *cassandraVisibilityPersistence) Query(
+	request *p.InternalListWorkflowExecutionsRequest,
+	template string,
+	params ...interface{},
+) gocql.Query {
+	if request.IsCron != nil {
+		template += `AND is_cron = ? ALLOW FILTERING `
+		params = append(params, *request.IsCron)
+	}
+
+	return v.session.Query(template, params...)
+}
+
 // newVisibilityPersistence is used to create an instance of VisibilityManager implementation
 func newVisibilityPersistence(
 	listClosedOrderingByCloseTime bool,
@@ -386,7 +399,8 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
 	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	query := v.session.Query(templateGetOpenWorkflowExecutions,
+	query := v.Query(request,
+		templateGetOpenWorkflowExecutions,
 		request.DomainUUID,
 		domainPartition,
 		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
@@ -425,7 +439,8 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutions(
 	if v.sortByCloseTime {
 		return v.listClosedWorkflowExecutionsOrderByClosedTime(ctx, request)
 	}
-	query := v.session.Query(templateGetClosedWorkflowExecutions,
+	query := v.Query(request,
+		templateGetClosedWorkflowExecutions,
 		request.DomainUUID,
 		domainPartition,
 		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
@@ -461,7 +476,8 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByType(
 	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsByTypeRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	query := v.session.Query(templateGetOpenWorkflowExecutionsByType,
+	query := v.Query(&request.InternalListWorkflowExecutionsRequest,
+		templateGetOpenWorkflowExecutionsByType,
 		request.DomainUUID,
 		domainPartition,
 		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
@@ -501,7 +517,8 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByType(
 	if v.sortByCloseTime {
 		return v.listClosedWorkflowExecutionsByTypeOrderByClosedTime(ctx, request)
 	}
-	query := v.session.Query(templateGetClosedWorkflowExecutionsByType,
+	query := v.Query(&request.InternalListWorkflowExecutionsRequest,
+		templateGetClosedWorkflowExecutionsByType,
 		request.DomainUUID,
 		domainPartition,
 		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
@@ -618,7 +635,8 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByStatus(
 	if v.sortByCloseTime {
 		return v.listClosedWorkflowExecutionsByStatusOrderByClosedTime(ctx, request)
 	}
-	query := v.session.Query(templateGetClosedWorkflowExecutionsByStatus,
+	query := v.Query(&request.InternalListWorkflowExecutionsRequest,
+		templateGetClosedWorkflowExecutionsByStatus,
 		request.DomainUUID,
 		domainPartition,
 		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
@@ -719,7 +737,8 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsOrderByClos
 	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	query := v.session.Query(templateGetClosedWorkflowExecutionsV2,
+	query := v.Query(request,
+		templateGetClosedWorkflowExecutionsV2,
 		request.DomainUUID,
 		domainPartition,
 		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
@@ -755,7 +774,8 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByTypeOrder
 	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsByTypeRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	query := v.session.Query(templateGetClosedWorkflowExecutionsByTypeV2,
+	query := v.Query(&request.InternalListWorkflowExecutionsRequest,
+		templateGetClosedWorkflowExecutionsByTypeV2,
 		request.DomainUUID,
 		domainPartition,
 		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
@@ -792,7 +812,8 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByWorkflowI
 	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsByWorkflowIDRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	query := v.session.Query(templateGetClosedWorkflowExecutionsByIDV2,
+	query := v.Query(&request.InternalListWorkflowExecutionsRequest,
+		templateGetClosedWorkflowExecutionsByIDV2,
 		request.DomainUUID,
 		domainPartition,
 		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
@@ -829,7 +850,8 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByStatusOrd
 	ctx context.Context,
 	request *p.InternalListClosedWorkflowExecutionsByStatusRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	query := v.session.Query(templateGetClosedWorkflowExecutionsByStatusV2,
+	query := v.Query(&request.InternalListWorkflowExecutionsRequest,
+		templateGetClosedWorkflowExecutionsByStatusV2,
 		request.DomainUUID,
 		domainPartition,
 		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),

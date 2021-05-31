@@ -142,6 +142,7 @@ func (s *sqlVisibilityStore) ListOpenWorkflowExecutions(
 				MaxStartTime: &readLevel.Time,
 				RunID:        &readLevel.RunID,
 				PageSize:     &request.PageSize,
+				IsCron:       request.IsCron,
 			})
 		})
 }
@@ -159,6 +160,7 @@ func (s *sqlVisibilityStore) ListClosedWorkflowExecutions(
 				Closed:       true,
 				RunID:        &readLevel.RunID,
 				PageSize:     &request.PageSize,
+				IsCron:       request.IsCron,
 			})
 		})
 }
@@ -176,6 +178,7 @@ func (s *sqlVisibilityStore) ListOpenWorkflowExecutionsByType(
 				RunID:            &readLevel.RunID,
 				WorkflowTypeName: &request.WorkflowTypeName,
 				PageSize:         &request.PageSize,
+				IsCron:           request.IsCron,
 			})
 		})
 }
@@ -194,6 +197,7 @@ func (s *sqlVisibilityStore) ListClosedWorkflowExecutionsByType(
 				RunID:            &readLevel.RunID,
 				WorkflowTypeName: &request.WorkflowTypeName,
 				PageSize:         &request.PageSize,
+				IsCron:           request.IsCron,
 			})
 		})
 }
@@ -247,6 +251,7 @@ func (s *sqlVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 				RunID:        &readLevel.RunID,
 				CloseStatus:  common.Int32Ptr(int32(*thrift.FromWorkflowExecutionCloseStatus(&request.Status))),
 				PageSize:     &request.PageSize,
+				IsCron:       request.IsCron,
 			})
 		})
 }
@@ -333,7 +338,14 @@ func (s *sqlVisibilityStore) rowToInfo(row *sqlplugin.VisibilityRow) *p.Internal
 	return info
 }
 
-func (s *sqlVisibilityStore) listWorkflowExecutions(opName string, pageToken []byte, earliestTime time.Time, latestTime time.Time, selectOp func(readLevel *visibilityPageToken) ([]sqlplugin.VisibilityRow, error)) (*p.InternalListWorkflowExecutionsResponse, error) {
+func (s *sqlVisibilityStore) listWorkflowExecutions(
+	opName string,
+	pageToken []byte,
+	earliestTime time.Time,
+	latestTime time.Time,
+	selectOp func(readLevel *visibilityPageToken,
+	) ([]sqlplugin.VisibilityRow, error)) (*p.InternalListWorkflowExecutionsResponse, error) {
+
 	var readLevel *visibilityPageToken
 	var err error
 	if len(pageToken) > 0 {
