@@ -138,7 +138,6 @@ func New(
 	params *service.BootstrapParams,
 	serviceName string,
 	resourceConfig *dynamicconfig.ResourceConfig,
-	//visibilityManagerInitializer VisibilityManagerInitializer,
 ) (impl *Impl, retError error) {
 
 	logger := params.Logger

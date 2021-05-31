@@ -26,23 +26,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/service"
-
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/dynamicconfig"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/client"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 )
 
 type (
-	// VisibilityPersistenceSuite tests visibility persistence
-	VisibilityPersistenceSuite struct {
+	// DBVisibilityPersistenceSuite tests visibility persistence
+	// It only tests against DB based visibility, AdvancedVisibility test is in ESVisibilitySuite
+	DBVisibilityPersistenceSuite struct {
 		TestBase
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
@@ -52,7 +52,7 @@ type (
 )
 
 // SetupSuite implementation
-func (s *VisibilityPersistenceSuite) SetupSuite() {
+func (s *DBVisibilityPersistenceSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
@@ -82,13 +82,13 @@ func (s *VisibilityPersistenceSuite) SetupSuite() {
 }
 
 // SetupTest implementation
-func (s *VisibilityPersistenceSuite) SetupTest() {
+func (s *DBVisibilityPersistenceSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 }
 
 // TearDownSuite implementation
-func (s *VisibilityPersistenceSuite) TearDownSuite() {
+func (s *DBVisibilityPersistenceSuite) TearDownSuite() {
 	// TODO VisibilityMgr/Store is created with a separated code path, this is incorrect and may cause leaking connection
 	// And Postgres requires all connection to be closed before dropping a database
 	// https://github.com/uber/cadence/issues/2854
@@ -99,7 +99,7 @@ func (s *VisibilityPersistenceSuite) TearDownSuite() {
 }
 
 // TestBasicVisibility test
-func (s *VisibilityPersistenceSuite) TestBasicVisibility() {
+func (s *DBVisibilityPersistenceSuite) TestBasicVisibility() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -162,7 +162,7 @@ func (s *VisibilityPersistenceSuite) TestBasicVisibility() {
 }
 
 // TestCronVisibility test
-func (s *VisibilityPersistenceSuite) TestCronVisibility() {
+func (s *DBVisibilityPersistenceSuite) TestCronVisibility() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -218,7 +218,7 @@ func (s *VisibilityPersistenceSuite) TestCronVisibility() {
 }
 
 // TestBasicVisibilityTimeSkew test
-func (s *VisibilityPersistenceSuite) TestBasicVisibilityTimeSkew() {
+func (s *DBVisibilityPersistenceSuite) TestBasicVisibilityTimeSkew() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -277,7 +277,7 @@ func (s *VisibilityPersistenceSuite) TestBasicVisibilityTimeSkew() {
 }
 
 // TestVisibilityPagination test
-func (s *VisibilityPersistenceSuite) TestVisibilityPagination() {
+func (s *DBVisibilityPersistenceSuite) TestVisibilityPagination() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -354,7 +354,7 @@ func (s *VisibilityPersistenceSuite) TestVisibilityPagination() {
 }
 
 // TestFilteringByType test
-func (s *VisibilityPersistenceSuite) TestFilteringByType() {
+func (s *DBVisibilityPersistenceSuite) TestFilteringByType() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -437,7 +437,7 @@ func (s *VisibilityPersistenceSuite) TestFilteringByType() {
 }
 
 // TestFilteringByWorkflowID test
-func (s *VisibilityPersistenceSuite) TestFilteringByWorkflowID() {
+func (s *DBVisibilityPersistenceSuite) TestFilteringByWorkflowID() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -520,7 +520,7 @@ func (s *VisibilityPersistenceSuite) TestFilteringByWorkflowID() {
 }
 
 // TestFilteringByCloseStatus test
-func (s *VisibilityPersistenceSuite) TestFilteringByCloseStatus() {
+func (s *DBVisibilityPersistenceSuite) TestFilteringByCloseStatus() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -591,7 +591,7 @@ func (s *VisibilityPersistenceSuite) TestFilteringByCloseStatus() {
 }
 
 // TestGetClosedExecution test
-func (s *VisibilityPersistenceSuite) TestGetClosedExecution() {
+func (s *DBVisibilityPersistenceSuite) TestGetClosedExecution() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -641,7 +641,7 @@ func (s *VisibilityPersistenceSuite) TestGetClosedExecution() {
 }
 
 // TestClosedWithoutStarted test
-func (s *VisibilityPersistenceSuite) TestClosedWithoutStarted() {
+func (s *DBVisibilityPersistenceSuite) TestClosedWithoutStarted() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -681,7 +681,7 @@ func (s *VisibilityPersistenceSuite) TestClosedWithoutStarted() {
 }
 
 // TestMultipleUpserts test
-func (s *VisibilityPersistenceSuite) TestMultipleUpserts() {
+func (s *DBVisibilityPersistenceSuite) TestMultipleUpserts() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -728,7 +728,7 @@ func (s *VisibilityPersistenceSuite) TestMultipleUpserts() {
 }
 
 // TestDelete test
-func (s *VisibilityPersistenceSuite) TestDelete() {
+func (s *DBVisibilityPersistenceSuite) TestDelete() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -793,7 +793,7 @@ func (s *VisibilityPersistenceSuite) TestDelete() {
 }
 
 // TestUpsertWorkflowExecution test
-func (s *VisibilityPersistenceSuite) TestUpsertWorkflowExecution() {
+func (s *DBVisibilityPersistenceSuite) TestUpsertWorkflowExecution() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -840,7 +840,7 @@ func (s *VisibilityPersistenceSuite) TestUpsertWorkflowExecution() {
 	}
 }
 
-func (s *VisibilityPersistenceSuite) assertClosedExecutionEquals(
+func (s *DBVisibilityPersistenceSuite) assertClosedExecutionEquals(
 	req *p.RecordWorkflowExecutionClosedRequest, resp *types.WorkflowExecutionInfo) {
 	s.Equal(req.Execution.RunID, resp.Execution.RunID)
 	s.Equal(req.Execution.WorkflowID, resp.Execution.WorkflowID)
@@ -851,7 +851,7 @@ func (s *VisibilityPersistenceSuite) assertClosedExecutionEquals(
 	s.Equal(req.HistoryLength, resp.HistoryLength)
 }
 
-func (s *VisibilityPersistenceSuite) assertOpenExecutionEquals(
+func (s *DBVisibilityPersistenceSuite) assertOpenExecutionEquals(
 	req *p.RecordWorkflowExecutionStartedRequest, resp *types.WorkflowExecutionInfo) {
 	s.Equal(req.Execution.GetRunID(), resp.Execution.GetRunID())
 	s.Equal(req.Execution.WorkflowID, resp.Execution.WorkflowID)
@@ -862,6 +862,6 @@ func (s *VisibilityPersistenceSuite) assertOpenExecutionEquals(
 	s.Zero(resp.HistoryLength)
 }
 
-func (s *VisibilityPersistenceSuite) nanosToMillis(nanos int64) int64 {
+func (s *DBVisibilityPersistenceSuite) nanosToMillis(nanos int64) int64 {
 	return nanos / int64(time.Millisecond)
 }

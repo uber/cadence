@@ -23,9 +23,8 @@ package resource
 import (
 	"sync/atomic"
 
-	"github.com/uber/cadence/common/dynamicconfig"
-
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
