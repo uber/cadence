@@ -163,27 +163,6 @@ type (
 		ElasticSearch *ElasticSearchConfig `yaml:"elasticsearch"`
 	}
 
-	// VisibilityConfig is config for visibility
-	// TODO remove it
-	VisibilityConfig struct {
-		// EnableSampling for visibility
-		EnableSampling dynamicconfig.BoolPropertyFn `yaml:"-" json:"-"`
-		// EnableReadFromClosedExecutionV2 read closed from v2 table
-		EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn `yaml:"-" json:"-"`
-		// VisibilityOpenMaxQPS max QPS for record open workflows
-		VisibilityOpenMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-		// VisibilityClosedMaxQPS max QPS for record closed workflows
-		VisibilityClosedMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-		// VisibilityListMaxQPS max QPS for list workflow
-		VisibilityListMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-		// ESIndexMaxResultWindow ElasticSearch index setting max_result_window
-		ESIndexMaxResultWindow dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
-		// MaxQPS is overall max QPS
-		MaxQPS dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
-		// ValidSearchAttributes is legal indexed keys that can be used in list APIs
-		ValidSearchAttributes dynamicconfig.MapPropertyFn `yaml:"-" json:"-"`
-	}
-
 	// Cassandra contains configuration to connect to Cassandra cluster
 	// Deprecated: please use NoSQL instead, the structure is backward-compatible
 	Cassandra = NoSQL
