@@ -23,24 +23,22 @@ package client
 import (
 	"sync"
 
-	es "github.com/uber/cadence/common/elasticsearch"
-	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/persistence/elasticsearch"
-	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/service"
-
-	"github.com/uber/cadence/common/log/tag"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
+	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/persistence/elasticsearch"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/service"
 )
 
 type (
