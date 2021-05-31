@@ -254,12 +254,16 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 // NewVisibilityManager returns a new visibility manager
 func (f *factoryImpl) NewVisibilityManager(
 	params *service.BootstrapParams,
-	visibilityConfig *resource.Config,
+	resourceConfig *resource.Config,
 ) (p.VisibilityManager, error) {
+	if resourceConfig.EnableReadVisibilityFromES == nil && resourceConfig.AdvancedVisibilityWritingMode == nil {
+		// No need to create visibility manager as no read/write needed
+		return nil, nil
+	}
 	var visibilityFromDB, visibilityFromES p.VisibilityManager
 	var err error
 	if params.PersistenceConfig.VisibilityStore != "" {
-		visibilityFromDB, err = f.newDBVisibilityManager(visibilityConfig)
+		visibilityFromDB, err = f.newDBVisibilityManager(resourceConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -271,14 +275,15 @@ func (f *factoryImpl) NewVisibilityManager(
 			f.logger.Fatal("Creating visibility producer failed", tag.Error(err))
 		}
 		visibilityFromES = newESVisibilityManager(
-			visibilityIndexName, params.ESClient, visibilityConfig, visibilityProducer, params.MetricsClient, f.logger,
+			visibilityIndexName, params.ESClient, resourceConfig, visibilityProducer, params.MetricsClient, f.logger,
 		)
 	}
-	return p.NewVisibilityManagerWrapper(
+	return p.NewVisibilityDualManager(
 		visibilityFromDB,
 		visibilityFromES,
-		visibilityConfig.EnableReadVisibilityFromES,
-		visibilityConfig.AdvancedVisibilityWritingMode,
+		resourceConfig.EnableReadVisibilityFromES,
+		resourceConfig.AdvancedVisibilityWritingMode,
+		f.logger,
 	), nil
 }
 

@@ -77,7 +77,7 @@ type (
 func NewBeanFromFactory(
 	factory Factory,
 	params *service.BootstrapParams,
-	visibilityConfig *resource.Config,
+	resourceConfig *resource.Config,
 ) (*BeanImpl, error) {
 
 	metadataMgr, err := factory.NewMetadataManager()
@@ -90,7 +90,7 @@ func NewBeanFromFactory(
 		return nil, err
 	}
 
-	visibilityMgr, err := factory.NewVisibilityManager(params, visibilityConfig)
+	visibilityMgr, err := factory.NewVisibilityManager(params, resourceConfig)
 	if err != nil {
 		return nil, err
 	}

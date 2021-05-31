@@ -204,13 +204,13 @@ func NewService(
 			ThrottledLoggerMaxRPS:   serviceConfig.ThrottledLogRPS,
 
 			EnableReadVisibilityFromES:    serviceConfig.EnableReadVisibilityFromES,
-			AdvancedVisibilityWritingMode: nil, // frontend visibility never write
+			AdvancedVisibilityWritingMode: nil, // frontend service never write
 
 			EnableDBVisibilitySampling:                  serviceConfig.EnableVisibilitySampling,
 			EnableReadDBVisibilityFromClosedExecutionV2: serviceConfig.EnableReadFromClosedExecutionV2,
 			DBVisibilityListMaxQPS:                      serviceConfig.VisibilityListMaxQPS,
-			WriteDBVisibilityOpenMaxQPS:                 nil, // frontend never write
-			WriteDBVisibilityClosedMaxQPS:               nil, // frontend never write
+			WriteDBVisibilityOpenMaxQPS:                 nil, // service never write
+			WriteDBVisibilityClosedMaxQPS:               nil, // service never write
 
 			ESVisibilityListMaxQPS: serviceConfig.ESVisibilityListMaxQPS,
 			ESIndexMaxResultWindow: serviceConfig.ESIndexMaxResultWindow,

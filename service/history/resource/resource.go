@@ -93,18 +93,18 @@ func New(
 			PersistenceGlobalMaxQPS: config.PersistenceGlobalMaxQPS,
 			ThrottledLoggerMaxRPS:   config.ThrottledLogRPS,
 
-			EnableReadVisibilityFromES:    nil, // history visibility never read,
+			EnableReadVisibilityFromES:    nil, // history service never read,
 			AdvancedVisibilityWritingMode: config.AdvancedVisibilityWritingMode,
 
 			EnableDBVisibilitySampling:                  config.EnableVisibilitySampling,
-			EnableReadDBVisibilityFromClosedExecutionV2: nil, // history visibility never read,
-			DBVisibilityListMaxQPS:                      nil, // history visibility never read,
+			EnableReadDBVisibilityFromClosedExecutionV2: nil, // history service never read,
+			DBVisibilityListMaxQPS:                      nil, // history service never read,
 			WriteDBVisibilityOpenMaxQPS:                 config.VisibilityOpenMaxQPS,
 			WriteDBVisibilityClosedMaxQPS:               config.VisibilityClosedMaxQPS,
 
-			ESVisibilityListMaxQPS: nil, // history visibility never read,
-			ESIndexMaxResultWindow: nil, // history visibility never read,
-			ValidSearchAttributes:  nil, // history visibility never read,
+			ESVisibilityListMaxQPS: nil, // history service never read,
+			ESIndexMaxResultWindow: nil, // history service never read,
+			ValidSearchAttributes:  nil, // history service never read,
 		},
 	)
 	if err != nil {
