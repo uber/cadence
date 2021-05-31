@@ -23,6 +23,8 @@ package resource
 import (
 	"sync/atomic"
 
+	"github.com/uber/cadence/common/dynamicconfig"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/resource"
@@ -88,7 +90,7 @@ func New(
 	serviceResource, err := resource.New(
 		params,
 		serviceName,
-		&resource.Config{
+		&dynamicconfig.ResourceConfig{
 			PersistenceMaxQPS:       config.PersistenceMaxQPS,
 			PersistenceGlobalMaxQPS: config.PersistenceGlobalMaxQPS,
 			ThrottledLoggerMaxRPS:   config.ThrottledLogRPS,

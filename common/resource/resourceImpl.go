@@ -129,26 +129,6 @@ type (
 		membershipFactory      service.MembershipMonitorFactory
 		rpcFactory             common.RPCFactory
 	}
-
-	// Config is a subset of the service dynamic config
-	Config struct {
-		PersistenceMaxQPS       dynamicconfig.IntPropertyFn
-		PersistenceGlobalMaxQPS dynamicconfig.IntPropertyFn
-		ThrottledLoggerMaxRPS   dynamicconfig.IntPropertyFn
-
-		EnableReadVisibilityFromES    dynamicconfig.BoolPropertyFnWithDomainFilter
-		AdvancedVisibilityWritingMode dynamicconfig.StringPropertyFn
-
-		EnableDBVisibilitySampling                  dynamicconfig.BoolPropertyFn                `yaml:"-" json:"-"`
-		EnableReadDBVisibilityFromClosedExecutionV2 dynamicconfig.BoolPropertyFn                `yaml:"-" json:"-"`
-		WriteDBVisibilityOpenMaxQPS                 dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-		WriteDBVisibilityClosedMaxQPS               dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-		DBVisibilityListMaxQPS                      dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-
-		ESIndexMaxResultWindow dynamicconfig.IntPropertyFn                 `yaml:"-" json:"-"`
-		ValidSearchAttributes  dynamicconfig.MapPropertyFn                 `yaml:"-" json:"-"`
-		ESVisibilityListMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-	}
 )
 
 var _ Resource = (*Impl)(nil)
@@ -157,7 +137,7 @@ var _ Resource = (*Impl)(nil)
 func New(
 	params *service.BootstrapParams,
 	serviceName string,
-	resourceConfig *Config,
+	resourceConfig *dynamicconfig.ResourceConfig,
 	//visibilityManagerInitializer VisibilityManagerInitializer,
 ) (impl *Impl, retError error) {
 

@@ -37,7 +37,6 @@ import (
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/quotas"
-	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -59,7 +58,7 @@ type (
 		// NewExecutionManager returns a new execution manager for a given shardID
 		NewExecutionManager(shardID int) (p.ExecutionManager, error)
 		// NewVisibilityManager returns a new visibility manager
-		NewVisibilityManager(params *service.BootstrapParams, resourceConfig *resource.Config) (p.VisibilityManager, error)
+		NewVisibilityManager(params *service.BootstrapParams, resourceConfig *dynamicconfig.ResourceConfig) (p.VisibilityManager, error)
 		// NewDomainReplicationQueueManager returns a new queue for domain replication
 		NewDomainReplicationQueueManager() (p.QueueManager, error)
 	}
@@ -252,7 +251,7 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 // NewVisibilityManager returns a new visibility manager
 func (f *factoryImpl) NewVisibilityManager(
 	params *service.BootstrapParams,
-	resourceConfig *resource.Config,
+	resourceConfig *dynamicconfig.ResourceConfig,
 ) (p.VisibilityManager, error) {
 	if resourceConfig.EnableReadVisibilityFromES == nil && resourceConfig.AdvancedVisibilityWritingMode == nil {
 		// No need to create visibility manager as no read/write needed
@@ -291,7 +290,7 @@ func (f *factoryImpl) NewVisibilityManager(
 func newESVisibilityManager(
 	indexName string,
 	esClient es.GenericClient,
-	visibilityConfig *resource.Config,
+	visibilityConfig *dynamicconfig.ResourceConfig,
 	producer messaging.Producer,
 	metricsClient metrics.Client,
 	log log.Logger,
@@ -318,7 +317,7 @@ func newESVisibilityManager(
 }
 
 func (f *factoryImpl) newDBVisibilityManager(
-	visibilityConfig *resource.Config,
+	visibilityConfig *dynamicconfig.ResourceConfig,
 ) (p.VisibilityManager, error) {
 	enableReadFromClosedExecutionV2 := false
 	if visibilityConfig.EnableReadDBVisibilityFromClosedExecutionV2 != nil {

@@ -26,6 +26,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/service"
+
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -61,7 +65,17 @@ func (s *VisibilityPersistenceSuite) SetupSuite() {
 	visibilityFactory := client.NewFactory(&vCfg, nil, clusterName, nil, s.Logger)
 	// SQL currently doesn't have support for visibility manager
 	var err error
-	s.VisibilityMgr, err = visibilityFactory.NewVisibilityManager()
+	s.VisibilityMgr, err = visibilityFactory.NewVisibilityManager(
+		&service.BootstrapParams{
+			PersistenceConfig: config.Persistence{
+				VisibilityStore: "something not empty",
+			},
+		},
+		&dynamicconfig.ResourceConfig{
+			EnableReadDBVisibilityFromClosedExecutionV2: dynamicconfig.GetBoolPropertyFn(false),
+			EnableDBVisibilitySampling:                  dynamicconfig.GetBoolPropertyFn(false),
+		},
+	)
 	if err != nil {
 		s.fatalOnError("NewVisibilityManager", err)
 	}

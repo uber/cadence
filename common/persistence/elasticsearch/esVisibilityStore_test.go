@@ -44,7 +44,6 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
@@ -102,7 +101,7 @@ func (s *ESVisibilitySuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.mockESClient = &esMocks.GenericClient{}
-	config := &resource.Config{
+	config := &dynamicconfig.ResourceConfig{
 		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(esIndexMaxResultWindow),
 		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 	}
