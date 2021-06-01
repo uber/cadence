@@ -313,7 +313,10 @@ func (s *BeanImpl) Close() {
 
 	s.metadataManager.Close()
 	s.taskManager.Close()
-	s.visibilityManager.Close()
+	if s.visibilityManager != nil {
+		// visibilityManager can be nil
+		s.visibilityManager.Close()
+	}
 	s.domainReplicationQueueManager.Close()
 	s.shardManager.Close()
 	s.historyManager.Close()
