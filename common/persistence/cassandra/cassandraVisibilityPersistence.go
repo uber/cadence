@@ -83,7 +83,7 @@ func (v *nosqlVisibilityManager) RecordWorkflowExecutionStarted(
 
 	err := v.db.InsertVisibility(ctx, ttl, &nosqlplugin.VisibilityRowForInsert{
 		DomainID: request.DomainUUID,
-		VisibilityRowForRead: nosqlplugin.VisibilityRowForRead{
+		VisibilityRow: nosqlplugin.VisibilityRow{
 			WorkflowID:    request.WorkflowID,
 			RunID:         request.RunID,
 			TypeName:      request.WorkflowTypeName,
@@ -114,7 +114,7 @@ func (v *nosqlVisibilityManager) RecordWorkflowExecutionClosed(
 	err := v.db.UpdateVisibility(ctx, int64(retention.Seconds()), &nosqlplugin.VisibilityRowForUpdate{
 		DomainID:          request.DomainUUID,
 		UpdateOpenToClose: true,
-		VisibilityRowForRead: nosqlplugin.VisibilityRowForRead{
+		VisibilityRow: nosqlplugin.VisibilityRow{
 			WorkflowID:    request.WorkflowID,
 			RunID:         request.RunID,
 			TypeName:      request.WorkflowTypeName,
@@ -348,7 +348,6 @@ func (v *nosqlVisibilityManager) GetClosedWorkflowExecution(
 	}, nil
 }
 
-// DeleteWorkflowExecution is a no-op since deletes are auto-handled by cassandra TTLs
 func (v *nosqlVisibilityManager) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *p.VisibilityDeleteWorkflowExecutionRequest,

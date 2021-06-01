@@ -317,7 +317,7 @@ func (db *cdb) UpdateVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 func (db *cdb) SelectOneClosedWorkflow(
 	ctx context.Context,
 	domainID, workflowID, runID string,
-) (*nosqlplugin.VisibilityRowForRead, error) {
+) (*nosqlplugin.VisibilityRow, error) {
 	query := db.session.Query(templateGetClosedWorkflowExecution,
 		domainID,
 		domainPartition,

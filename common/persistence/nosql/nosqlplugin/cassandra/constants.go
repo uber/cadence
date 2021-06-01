@@ -24,9 +24,8 @@ package cassandra
 import (
 	"time"
 
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
-
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
 
 var (
@@ -39,6 +38,10 @@ const (
 	// See https://github.com/uber/cadence/issues/4200
 	maxCassandraTTL = int64(157680000)
 
+	// Although Cadence core data models always require strong consistency, reading visibility is a special case that
+	// eventual consistency is sufficient.
+	// That's because the engine layer writes into visibility with eventual consistency anyway(using transfer tasks)
+	// Do NOT use it in other places, unless you are sure it's the same special cases like reading visibility
 	cassandraLowConslevel = gocql.One
 )
 

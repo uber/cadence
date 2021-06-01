@@ -236,16 +236,16 @@ type (
 		DeleteVisibility(ctx context.Context, domainID, workflowID, runID string) error
 		// TODO deprecated this in the future in favor of SelectVisibility
 		// Special case: return nil,nil if not found(since we will deprecate it, it's not worth refactor to be consistent)
-		SelectOneClosedWorkflow(ctx context.Context, domainID, workflowID, runID string) (*VisibilityRowForRead, error)
+		SelectOneClosedWorkflow(ctx context.Context, domainID, workflowID, runID string) (*VisibilityRow, error)
 	}
 
 	VisibilityRowForInsert struct {
-		VisibilityRowForRead
+		VisibilityRow
 		DomainID string
 	}
 
 	VisibilityRowForUpdate struct {
-		VisibilityRowForRead
+		VisibilityRow
 		DomainID string
 		// NOTE: this is only for some implementation (e.g. Cassandra) that uses multiple tables,
 		// they needs to delete record from the open execution table. Ignore this field if not need it
@@ -255,10 +255,10 @@ type (
 	}
 
 	// TODO separate in the future when need it
-	VisibilityRowForRead = persistence.InternalVisibilityWorkflowExecutionInfo
+	VisibilityRow = persistence.InternalVisibilityWorkflowExecutionInfo
 
 	SelectVisibilityResponse struct {
-		Executions    []*VisibilityRowForRead
+		Executions    []*VisibilityRow
 		NextPageToken []byte
 	}
 
