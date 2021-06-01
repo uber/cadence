@@ -110,12 +110,9 @@ type (
 		clientBean        client.Bean
 
 		// persistence clients
-
 		persistenceBean persistenceClient.Bean
-		visibilityMgr   persistence.VisibilityManager
 
 		// loggers
-
 		logger          log.Logger
 		throttledLogger log.Logger
 
@@ -216,7 +213,6 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	visibilityMgr := persistenceBean.GetVisibilityManager()
 
 	domainCache := cache.NewDomainCache(
 		persistenceBean.GetMetadataManager(),
@@ -322,9 +318,7 @@ func New(
 		clientBean:        clientBean,
 
 		// persistence clients
-
 		persistenceBean: persistenceBean,
-		visibilityMgr:   visibilityMgr,
 
 		// loggers
 
@@ -403,7 +397,6 @@ func (h *Impl) Stop() {
 	}
 	h.runtimeMetricsReporter.Stop()
 	h.persistenceBean.Close()
-	h.visibilityMgr.Close()
 }
 
 // GetServiceName return service name
@@ -577,7 +570,7 @@ func (h *Impl) GetTaskManager() persistence.TaskManager {
 
 // GetVisibilityManager return visibility manager
 func (h *Impl) GetVisibilityManager() persistence.VisibilityManager {
-	return h.visibilityMgr
+	return h.persistenceBean.GetVisibilityManager()
 }
 
 // GetShardManager return shard manager
