@@ -56,7 +56,7 @@ var _ p.ExecutionStore = (*cassandraPersistence)(nil)
 // Where x is any hexadecimal value, E represents the entity type valid values are:
 // E = {DomainID = 1, WorkflowID = 2, RunID = 3}
 // R represents row type in executions table, valid values are:
-// R = {Shard = 1, Execution = 2, Transfer = 3, Timer = 4, Replication = 5}
+// R = {Shard = 1, Execution = 2, Transfer = 3, Timer = 4, Replication = 5, Replication_DLQ = 6, CrossCluster = 7}
 const (
 	// Special Domains related constants
 	emptyDomainID = "10000000-0000-f000-f000-000000000000"
@@ -82,7 +82,9 @@ const (
 	// Row Constants for Replication Task DLQ Row. Source cluster name will be used as WorkflowID.
 	rowTypeDLQDomainID = "10000000-6000-f000-f000-000000000000"
 	rowTypeDLQRunID    = "30000000-6000-f000-f000-000000000000"
-	// TODO: add rowType for cross-region tasks
+	// Row Constants for Cross Cluster Task Row
+	rowTypeCrossClusterDomainID = "10000000-7000-f000-f000-000000000000"
+	rowTypeCrossClusterRunID    = "30000000-7000-f000-f000-000000000000"
 	// Special TaskId constants
 	rowTypeExecutionTaskID = int64(-10)
 	rowTypeShardTaskID     = int64(-11)
@@ -99,7 +101,7 @@ const (
 	rowTypeTimerTask
 	rowTypeReplicationTask
 	rowTypeDLQ
-	// TODO: add row type
+	rowTypeCrossClusterTask
 )
 
 const (
@@ -180,6 +182,8 @@ const (
 		`record_visibility: ?, ` +
 		`version: ?` +
 		`}`
+
+	templateCrossClusterTaskType = templateTransferTaskType
 
 	templateReplicationTaskType = `{` +
 		`domain_id: ?, ` +
@@ -323,6 +327,10 @@ workflow_state = ? ` +
 	templateCreateTransferTaskQuery = `INSERT INTO executions (` +
 		`shard_id, type, domain_id, workflow_id, run_id, transfer, visibility_ts, task_id) ` +
 		`VALUES(?, ?, ?, ?, ?, ` + templateTransferTaskType + `, ?, ?)`
+
+	templateCreateCrossClusterTaskQuery = `INSERT INTO executions (` +
+		`shard_id, type, domain_id, workflow_id, run_id, cross_cluster, visibility_ts, task_id) ` +
+		`VALUES(?, ?, ?, ?, ?, ` + templateCrossClusterTaskType + `, ?, ?)`
 
 	templateCreateReplicationTaskQuery = `INSERT INTO executions (` +
 		`shard_id, type, domain_id, workflow_id, run_id, replication, visibility_ts, task_id) ` +
@@ -636,6 +644,17 @@ workflow_state = ? ` +
 		`and task_id > ? ` +
 		`and task_id <= ?`
 
+	templateGetCrossClusterTasksQuery = `SELECT cross_cluster ` +
+		`FROM executions ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and domain_id = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and visibility_ts = ? ` +
+		`and task_id > ? ` +
+		`and task_id <= ?`
+
 	templateGetReplicationTasksQuery = `SELECT replication ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
@@ -673,6 +692,10 @@ workflow_state = ? ` +
 		`and visibility_ts = ? ` +
 		`and task_id > ? ` +
 		`and task_id <= ?`
+
+	templateCompleteCrossClusterTaskQuery = templateCompleteTransferTaskQuery
+
+	templateRangeCompleteCrossClusterTaskQuery = templateRangeCompleteTransferTaskQuery
 
 	templateCompleteReplicationTaskBeforeQuery = `DELETE FROM executions ` +
 		`WHERE shard_id = ? ` +
@@ -1663,8 +1686,44 @@ func (d *cassandraPersistence) GetCrossClusterTasks(
 	ctx context.Context,
 	request *p.GetCrossClusterTasksRequest,
 ) (*p.GetCrossClusterTasksResponse, error) {
-	// TODO: Implement GetCrossClusterTasks
-	panic("not implemented")
+
+	// Reading cross-cluster tasks need to be quorum level consistent, otherwise we could loose task
+	query := d.session.Query(templateGetCrossClusterTasksQuery,
+		d.shardID,
+		rowTypeCrossClusterTask,
+		rowTypeCrossClusterDomainID,
+		request.TargetCluster, // workflowID field is used to store target cluster
+		rowTypeCrossClusterRunID,
+		defaultVisibilityTimestamp,
+		request.ReadLevel,
+		request.MaxReadLevel,
+	).PageSize(request.BatchSize).PageState(request.NextPageToken).WithContext(ctx)
+
+	iter := query.Iter()
+	if iter == nil {
+		return nil, &types.InternalServiceError{
+			Message: "GetCrossClusterTasks operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	response := &p.GetCrossClusterTasksResponse{}
+	task := make(map[string]interface{})
+	for iter.MapScan(task) {
+		t := createCrossClusterTaskInfo(task["cross_cluster"].(map[string]interface{}))
+		// Reset task map to get it ready for next scan
+		task = make(map[string]interface{})
+
+		response.Tasks = append(response.Tasks, t)
+	}
+	nextPageToken := iter.PageState()
+	response.NextPageToken = make([]byte, len(nextPageToken))
+	copy(response.NextPageToken, nextPageToken)
+
+	if err := iter.Close(); err != nil {
+		return nil, convertCommonErrors(d.client, "GetCrossClusterTasks", err)
+	}
+
+	return response, nil
 }
 
 func (d *cassandraPersistence) GetReplicationTasks(
@@ -1766,16 +1825,45 @@ func (d *cassandraPersistence) CompleteCrossClusterTask(
 	ctx context.Context,
 	request *p.CompleteCrossClusterTaskRequest,
 ) error {
-	// TODO: Implement CompleteCrossClusterTask
-	panic("not implemented")
+	query := d.session.Query(templateCompleteCrossClusterTaskQuery,
+		d.shardID,
+		rowTypeCrossClusterTask,
+		rowTypeCrossClusterDomainID,
+		request.TargetCluster,
+		rowTypeCrossClusterRunID,
+		defaultVisibilityTimestamp,
+		request.TaskID,
+	).WithContext(ctx)
+
+	err := query.Exec()
+	if err != nil {
+		return convertCommonErrors(d.client, "CompleteCrossClusterTask", err)
+	}
+
+	return nil
 }
 
 func (d *cassandraPersistence) RangeCompleteCrossClusterTask(
 	ctx context.Context,
 	request *p.RangeCompleteCrossClusterTaskRequest,
 ) error {
-	// TODO: Implement RangeCompleteCrossClusterTask
-	panic("not implemented")
+	query := d.session.Query(templateRangeCompleteCrossClusterTaskQuery,
+		d.shardID,
+		rowTypeCrossClusterTask,
+		rowTypeCrossClusterDomainID,
+		request.TargetCluster,
+		rowTypeCrossClusterRunID,
+		defaultVisibilityTimestamp,
+		request.ExclusiveBeginTaskID,
+		request.InclusiveEndTaskID,
+	).WithContext(ctx)
+
+	err := query.Exec()
+	if err != nil {
+		return convertCommonErrors(d.client, "RangeCompleteCrossClusterTask", err)
+	}
+
+	return nil
 }
 
 func (d *cassandraPersistence) CompleteReplicationTask(
