@@ -267,31 +267,11 @@ type (
 		ClusterTransferAckLevel           map[string]int64                  `json:"cluster_transfer_ack_level"`
 		ClusterTimerAckLevel              map[string]time.Time              `json:"cluster_timer_ack_level"`
 		TransferProcessingQueueStates     *types.ProcessingQueueStates      `json:"transfer_processing_queue_states"`
-		CrossClusterProcessingQueueStates *types.ProcessingQueueStates      `json:"cross_cluster_processing_queue_states"`
+		CrossClusterProcessingQueueStates *types.ProcessingQueueStates      `json:"cross_cluster_queue_states"`
 		TimerProcessingQueueStates        *types.ProcessingQueueStates      `json:"timer_processing_queue_states"`
-		TransferFailoverLevels            map[string]TransferFailoverLevel  // uuid -> TransferFailoverLevel
-		TimerFailoverLevels               map[string]TimerFailoverLevel     // uuid -> TimerFailoverLevel
 		ClusterReplicationLevel           map[string]int64                  `json:"cluster_replication_level"`
 		DomainNotificationVersion         int64                             `json:"domain_notification_version"`
 		PendingFailoverMarkers            []*types.FailoverMarkerAttributes `json:"pending_failover_markers"`
-	}
-
-	// TransferFailoverLevel contains corresponding start / end level
-	TransferFailoverLevel struct {
-		StartTime    time.Time
-		MinLevel     int64
-		CurrentLevel int64
-		MaxLevel     int64
-		DomainIDs    map[string]struct{}
-	}
-
-	// TimerFailoverLevel contains domain IDs and corresponding start / end level
-	TimerFailoverLevel struct {
-		StartTime    time.Time
-		MinLevel     time.Time
-		CurrentLevel time.Time
-		MaxLevel     time.Time
-		DomainIDs    map[string]struct{}
 	}
 
 	// WorkflowExecutionInfo describes a workflow execution
@@ -2619,14 +2599,6 @@ func (t *TimerTaskInfo) String() string {
 
 // Copy returns a shallow copy of shardInfo
 func (s *ShardInfo) Copy() *ShardInfo {
-	transferFailoverLevels := map[string]TransferFailoverLevel{}
-	for k, v := range s.TransferFailoverLevels {
-		transferFailoverLevels[k] = v
-	}
-	timerFailoverLevels := map[string]TimerFailoverLevel{}
-	for k, v := range s.TimerFailoverLevels {
-		timerFailoverLevels[k] = v
-	}
 	// TODO: do we really need to deep copy those fields?
 	clusterTransferAckLevel := make(map[string]int64)
 	for k, v := range s.ClusterTransferAckLevel {
@@ -2652,8 +2624,6 @@ func (s *ShardInfo) Copy() *ShardInfo {
 		ReplicationAckLevel:               s.ReplicationAckLevel,
 		TransferAckLevel:                  s.TransferAckLevel,
 		TimerAckLevel:                     s.TimerAckLevel,
-		TransferFailoverLevels:            transferFailoverLevels,
-		TimerFailoverLevels:               timerFailoverLevels,
 		ClusterTransferAckLevel:           clusterTransferAckLevel,
 		ClusterTimerAckLevel:              clusterTimerAckLevel,
 		TransferProcessingQueueStates:     s.TransferProcessingQueueStates,
