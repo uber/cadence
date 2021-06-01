@@ -209,8 +209,8 @@ func NewService(
 			EnableDBVisibilitySampling:                  serviceConfig.EnableVisibilitySampling,
 			EnableReadDBVisibilityFromClosedExecutionV2: serviceConfig.EnableReadFromClosedExecutionV2,
 			DBVisibilityListMaxQPS:                      serviceConfig.VisibilityListMaxQPS,
-			WriteDBVisibilityOpenMaxQPS:                 nil, // service never write
-			WriteDBVisibilityClosedMaxQPS:               nil, // service never write
+			WriteDBVisibilityOpenMaxQPS:                 nil, // frontend service never write
+			WriteDBVisibilityClosedMaxQPS:               nil, // frontend service never write
 
 			ESVisibilityListMaxQPS: serviceConfig.ESVisibilityListMaxQPS,
 			ESIndexMaxResultWindow: serviceConfig.ESIndexMaxResultWindow,
