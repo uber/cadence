@@ -255,25 +255,25 @@ type (
 
 	// ShardInfo describes a shard
 	ShardInfo struct {
-		ShardID                        int                               `json:"shard_id"`
-		Owner                          string                            `json:"owner"`
-		RangeID                        int64                             `json:"range_id"`
-		StolenSinceRenew               int                               `json:"stolen_since_renew"`
-		UpdatedAt                      time.Time                         `json:"updated_at"`
-		ReplicationAckLevel            int64                             `json:"replication_ack_level"`
-		ReplicationDLQAckLevel         map[string]int64                  `json:"replication_dlq_ack_level"`
-		TransferAckLevel               int64                             `json:"transfer_ack_level"`
-		TimerAckLevel                  time.Time                         `json:"timer_ack_level"`
-		ClusterTransferAckLevel        map[string]int64                  `json:"cluster_transfer_ack_level"`
-		ClusterTimerAckLevel           map[string]time.Time              `json:"cluster_timer_ack_level"`
-		TransferProcessingQueueStates  *types.ProcessingQueueStates      `json:"transfer_processing_queue_states"`
-		CrossClusterProcessQueueStates *types.ProcessingQueueStates      `json:"cross_cluster_queue_states"`
-		TimerProcessingQueueStates     *types.ProcessingQueueStates      `json:"timer_processing_queue_states"`
-		TransferFailoverLevels         map[string]TransferFailoverLevel  // uuid -> TransferFailoverLevel
-		TimerFailoverLevels            map[string]TimerFailoverLevel     // uuid -> TimerFailoverLevel
-		ClusterReplicationLevel        map[string]int64                  `json:"cluster_replication_level"`
-		DomainNotificationVersion      int64                             `json:"domain_notification_version"`
-		PendingFailoverMarkers         []*types.FailoverMarkerAttributes `json:"pending_failover_markers"`
+		ShardID                           int                               `json:"shard_id"`
+		Owner                             string                            `json:"owner"`
+		RangeID                           int64                             `json:"range_id"`
+		StolenSinceRenew                  int                               `json:"stolen_since_renew"`
+		UpdatedAt                         time.Time                         `json:"updated_at"`
+		ReplicationAckLevel               int64                             `json:"replication_ack_level"`
+		ReplicationDLQAckLevel            map[string]int64                  `json:"replication_dlq_ack_level"`
+		TransferAckLevel                  int64                             `json:"transfer_ack_level"`
+		TimerAckLevel                     time.Time                         `json:"timer_ack_level"`
+		ClusterTransferAckLevel           map[string]int64                  `json:"cluster_transfer_ack_level"`
+		ClusterTimerAckLevel              map[string]time.Time              `json:"cluster_timer_ack_level"`
+		TransferProcessingQueueStates     *types.ProcessingQueueStates      `json:"transfer_processing_queue_states"`
+		CrossClusterProcessingQueueStates *types.ProcessingQueueStates      `json:"cross_cluster_processing_queue_states"`
+		TimerProcessingQueueStates        *types.ProcessingQueueStates      `json:"timer_processing_queue_states"`
+		TransferFailoverLevels            map[string]TransferFailoverLevel  // uuid -> TransferFailoverLevel
+		TimerFailoverLevels               map[string]TimerFailoverLevel     // uuid -> TimerFailoverLevel
+		ClusterReplicationLevel           map[string]int64                  `json:"cluster_replication_level"`
+		DomainNotificationVersion         int64                             `json:"domain_notification_version"`
+		PendingFailoverMarkers            []*types.FailoverMarkerAttributes `json:"pending_failover_markers"`
 	}
 
 	// TransferFailoverLevel contains corresponding start / end level
@@ -2617,7 +2617,7 @@ func (t *TimerTaskInfo) String() string {
 	)
 }
 
-// Copy returns a copy of shardInfo
+// Copy returns a shallow copy of shardInfo
 func (s *ShardInfo) Copy() *ShardInfo {
 	transferFailoverLevels := map[string]TransferFailoverLevel{}
 	for k, v := range s.TransferFailoverLevels {
@@ -2627,6 +2627,7 @@ func (s *ShardInfo) Copy() *ShardInfo {
 	for k, v := range s.TimerFailoverLevels {
 		timerFailoverLevels[k] = v
 	}
+	// TODO: do we really need to deep copy those fields?
 	clusterTransferAckLevel := make(map[string]int64)
 	for k, v := range s.ClusterTransferAckLevel {
 		clusterTransferAckLevel[k] = v
@@ -2644,25 +2645,25 @@ func (s *ShardInfo) Copy() *ShardInfo {
 		replicationDLQAckLevel[k] = v
 	}
 	return &ShardInfo{
-		ShardID:                        s.ShardID,
-		Owner:                          s.Owner,
-		RangeID:                        s.RangeID,
-		StolenSinceRenew:               s.StolenSinceRenew,
-		ReplicationAckLevel:            s.ReplicationAckLevel,
-		TransferAckLevel:               s.TransferAckLevel,
-		TimerAckLevel:                  s.TimerAckLevel,
-		TransferFailoverLevels:         transferFailoverLevels,
-		TimerFailoverLevels:            timerFailoverLevels,
-		ClusterTransferAckLevel:        clusterTransferAckLevel,
-		ClusterTimerAckLevel:           clusterTimerAckLevel,
-		TransferProcessingQueueStates:  s.TransferProcessingQueueStates,
-		CrossClusterProcessQueueStates: s.CrossClusterProcessQueueStates,
-		TimerProcessingQueueStates:     s.TimerProcessingQueueStates,
-		DomainNotificationVersion:      s.DomainNotificationVersion,
-		ClusterReplicationLevel:        clusterReplicationLevel,
-		ReplicationDLQAckLevel:         replicationDLQAckLevel,
-		PendingFailoverMarkers:         s.PendingFailoverMarkers,
-		UpdatedAt:                      s.UpdatedAt,
+		ShardID:                           s.ShardID,
+		Owner:                             s.Owner,
+		RangeID:                           s.RangeID,
+		StolenSinceRenew:                  s.StolenSinceRenew,
+		ReplicationAckLevel:               s.ReplicationAckLevel,
+		TransferAckLevel:                  s.TransferAckLevel,
+		TimerAckLevel:                     s.TimerAckLevel,
+		TransferFailoverLevels:            transferFailoverLevels,
+		TimerFailoverLevels:               timerFailoverLevels,
+		ClusterTransferAckLevel:           clusterTransferAckLevel,
+		ClusterTimerAckLevel:              clusterTimerAckLevel,
+		TransferProcessingQueueStates:     s.TransferProcessingQueueStates,
+		CrossClusterProcessingQueueStates: s.CrossClusterProcessingQueueStates,
+		TimerProcessingQueueStates:        s.TimerProcessingQueueStates,
+		DomainNotificationVersion:         s.DomainNotificationVersion,
+		ClusterReplicationLevel:           clusterReplicationLevel,
+		ReplicationDLQAckLevel:            replicationDLQAckLevel,
+		PendingFailoverMarkers:            s.PendingFailoverMarkers,
+		UpdatedAt:                         s.UpdatedAt,
 	}
 }
 

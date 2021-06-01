@@ -376,6 +376,8 @@ func (r *mutableStateTaskGeneratorImpl) GenerateChildWorkflowTasks(
 	event *types.HistoryEvent,
 ) error {
 
+	r.mutableState.GetDomainEntry()
+
 	attr := event.StartChildWorkflowExecutionInitiatedEventAttributes
 	childWorkflowScheduleID := event.GetEventID()
 	childWorkflowTargetDomain := attr.GetDomain()

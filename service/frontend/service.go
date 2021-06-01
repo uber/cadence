@@ -339,4 +339,3 @@ func (s *Service) Stop() {
 	s.Resource.Stop()
 	s.params.Logger.Info("frontend stopped")
 }
-
