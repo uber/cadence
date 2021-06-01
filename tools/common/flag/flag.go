@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2017 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,12 +18,44 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package flag
 
-// NOTE: whenever there is a new data base schema update, plz update the following versions
+import (
+	"fmt"
+	"strings"
+)
 
-// Version is the Cassandra database release version
-const Version = "0.31"
+type (
+	StringMap map[string]string
+)
 
-// VisibilityVersion is the Cassandra visibility database release version
-const VisibilityVersion = "0.6"
+func (m *StringMap) Set(value string) error {
+	if m == nil {
+		return fmt.Errorf("StringMap is nil")
+	}
+	if *m == nil {
+		*m = make(map[string]string)
+	}
+	for _, s := range strings.Split(value, ",") {
+		kv := strings.Split(s, "=")
+		if len(kv) != 2 {
+			return fmt.Errorf("should be in 'key1=value1,key2=value2,...,keyN=valueN' format")
+		}
+		(*m)[kv[0]] = kv[1]
+	}
+	return nil
+}
+
+func (m *StringMap) String() string {
+	if m == nil {
+		return fmt.Sprintf("%v", map[string]string(nil))
+	}
+	return fmt.Sprintf("%v", *m)
+}
+
+func (m *StringMap) Value() map[string]string {
+	if m == nil {
+		return nil
+	}
+	return *m
+}

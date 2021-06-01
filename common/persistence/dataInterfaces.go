@@ -196,6 +196,9 @@ const (
 	// TransferTaskTransferTargetRunID is the the dummy run ID for transfer tasks of types
 	// that do not have a target workflow
 	TransferTaskTransferTargetRunID = "30000000-0000-f000-f000-000000000002"
+	// CrossClusterTaskDefaultTargetRunID is the the dummy run ID for cross-cluster tasks of types
+	// that do not have a target workflow
+	CrossClusterTaskDefaultTargetRunID = TransferTaskTransferTargetRunID
 
 	// indicate invalid workflow state transition
 	invalidStateTransitionMsg = "unable to change workflow state from %v to %v, close status %v"
@@ -1057,11 +1060,13 @@ type (
 
 	// CompleteCrossClusterTaskRequest is used to complete a task in the cross-cluster task queue
 	CompleteCrossClusterTaskRequest struct {
-		TaskID int64
+		TargetCluster string
+		TaskID        int64
 	}
 
 	// RangeCompleteCrossClusterTaskRequest is used to complete a range of tasks in the cross-cluster task queue
 	RangeCompleteCrossClusterTaskRequest struct {
+		TargetCluster        string
 		ExclusiveBeginTaskID int64
 		InclusiveEndTaskID   int64
 	}
@@ -2610,6 +2615,55 @@ func (t *TimerTaskInfo) String() string {
 		"{DomainID: %v, WorkflowID: %v, RunID: %v, VisibilityTimestamp: %v, TaskID: %v, TaskType: %v, TimeoutType: %v, EventID: %v, ScheduleAttempt: %v, Version: %v.}",
 		t.DomainID, t.WorkflowID, t.RunID, t.VisibilityTimestamp, t.TaskID, t.TaskType, t.TimeoutType, t.EventID, t.ScheduleAttempt, t.Version,
 	)
+}
+
+// Copy returns a copy of shardInfo
+func (s *ShardInfo) Copy() *ShardInfo {
+	transferFailoverLevels := map[string]TransferFailoverLevel{}
+	for k, v := range s.TransferFailoverLevels {
+		transferFailoverLevels[k] = v
+	}
+	timerFailoverLevels := map[string]TimerFailoverLevel{}
+	for k, v := range s.TimerFailoverLevels {
+		timerFailoverLevels[k] = v
+	}
+	clusterTransferAckLevel := make(map[string]int64)
+	for k, v := range s.ClusterTransferAckLevel {
+		clusterTransferAckLevel[k] = v
+	}
+	clusterTimerAckLevel := make(map[string]time.Time)
+	for k, v := range s.ClusterTimerAckLevel {
+		clusterTimerAckLevel[k] = v
+	}
+	clusterReplicationLevel := make(map[string]int64)
+	for k, v := range s.ClusterReplicationLevel {
+		clusterReplicationLevel[k] = v
+	}
+	replicationDLQAckLevel := make(map[string]int64)
+	for k, v := range s.ReplicationDLQAckLevel {
+		replicationDLQAckLevel[k] = v
+	}
+	return &ShardInfo{
+		ShardID:                        s.ShardID,
+		Owner:                          s.Owner,
+		RangeID:                        s.RangeID,
+		StolenSinceRenew:               s.StolenSinceRenew,
+		ReplicationAckLevel:            s.ReplicationAckLevel,
+		TransferAckLevel:               s.TransferAckLevel,
+		TimerAckLevel:                  s.TimerAckLevel,
+		TransferFailoverLevels:         transferFailoverLevels,
+		TimerFailoverLevels:            timerFailoverLevels,
+		ClusterTransferAckLevel:        clusterTransferAckLevel,
+		ClusterTimerAckLevel:           clusterTimerAckLevel,
+		TransferProcessingQueueStates:  s.TransferProcessingQueueStates,
+		CrossClusterProcessQueueStates: s.CrossClusterProcessQueueStates,
+		TimerProcessingQueueStates:     s.TimerProcessingQueueStates,
+		DomainNotificationVersion:      s.DomainNotificationVersion,
+		ClusterReplicationLevel:        clusterReplicationLevel,
+		ReplicationDLQAckLevel:         replicationDLQAckLevel,
+		PendingFailoverMarkers:         s.PendingFailoverMarkers,
+		UpdatedAt:                      s.UpdatedAt,
+	}
 }
 
 // SerializeClusterConfigs makes an array of *ClusterReplicationConfig serializable

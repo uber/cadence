@@ -45,6 +45,8 @@ const (
 		`cluster_timer_ack_level: ?, ` +
 		`transfer_processing_queue_states: ?, ` +
 		`transfer_processing_queue_states_encoding: ?, ` +
+		`cross_cluster_processing_queue_states: ?, ` +
+		`cross_cluster_processing_queue_states_encoding: ?, ` +
 		`timer_processing_queue_states: ?, ` +
 		`timer_processing_queue_states_encoding: ?, ` +
 		`domain_notification_version: ?, ` +
@@ -97,6 +99,7 @@ func (db *cdb) InsertShard(ctx context.Context, row *nosqlplugin.ShardRow) (*nos
 	cqlNowTimestamp := persistence.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	markerData, markerEncoding := persistence.FromDataBlob(row.PendingFailoverMarkers)
 	transferPQS, transferPQSEncoding := persistence.FromDataBlob(row.TransferProcessingQueueStates)
+	crossClusterPQS, crossClusterPQSEncoding := persistence.FromDataBlob(row.CrossClusterProcessingQueueStates)
 	timerPQS, timerPQSEncoding := persistence.FromDataBlob(row.TimerProcessingQueueStates)
 	query := db.session.Query(templateCreateShardQuery,
 		row.ShardID,
@@ -118,6 +121,8 @@ func (db *cdb) InsertShard(ctx context.Context, row *nosqlplugin.ShardRow) (*nos
 		row.ClusterTimerAckLevel,
 		transferPQS,
 		transferPQSEncoding,
+		crossClusterPQS,
+		crossClusterPQSEncoding,
 		timerPQS,
 		timerPQSEncoding,
 		row.DomainNotificationVersion,
@@ -186,6 +191,8 @@ func convertToShardInfo(
 	var pendingFailoverMarkersEncoding string
 	var transferProcessingQueueStatesRawData []byte
 	var transferProcessingQueueStatesEncoding string
+	var crossClusterProcessingQueueStatesRawData []byte
+	var crossClusterProcessingQueueStatesEncoding string
 	var timerProcessingQueueStatesRawData []byte
 	var timerProcessingQueueStatesEncoding string
 	info := &persistence.InternalShardInfo{}
@@ -214,6 +221,10 @@ func convertToShardInfo(
 			transferProcessingQueueStatesRawData = v.([]byte)
 		case "transfer_processing_queue_states_encoding":
 			transferProcessingQueueStatesEncoding = v.(string)
+		case "cross_cluster_processing_queue_states":
+			crossClusterProcessingQueueStatesRawData = v.([]byte)
+		case "cross_cluster_processing_queue_states_encoding":
+			crossClusterProcessingQueueStatesEncoding = v.(string)
 		case "timer_processing_queue_states":
 			timerProcessingQueueStatesRawData = v.([]byte)
 		case "timer_processing_queue_states_encoding":
@@ -254,6 +265,10 @@ func convertToShardInfo(
 	info.TransferProcessingQueueStates = persistence.NewDataBlob(
 		transferProcessingQueueStatesRawData,
 		common.EncodingType(transferProcessingQueueStatesEncoding),
+	)
+	info.CrossClusterProcessingQueueStates = persistence.NewDataBlob(
+		crossClusterProcessingQueueStatesRawData,
+		common.EncodingType(crossClusterProcessingQueueStatesEncoding),
 	)
 	info.TimerProcessingQueueStates = persistence.NewDataBlob(
 		timerProcessingQueueStatesRawData,
@@ -297,6 +312,7 @@ func (db *cdb) UpdateShard(ctx context.Context, row *nosqlplugin.ShardRow, previ
 	cqlNowTimestamp := persistence.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	markerData, markerEncoding := persistence.FromDataBlob(row.PendingFailoverMarkers)
 	transferPQS, transferPQSEncoding := persistence.FromDataBlob(row.TransferProcessingQueueStates)
+	crossClusterPQS, crossClusterPQSEncoding := persistence.FromDataBlob(row.CrossClusterProcessingQueueStates)
 	timerPQS, timerPQSEncoding := persistence.FromDataBlob(row.TimerProcessingQueueStates)
 
 	query := db.session.Query(templateUpdateShardQuery,
@@ -312,6 +328,8 @@ func (db *cdb) UpdateShard(ctx context.Context, row *nosqlplugin.ShardRow, previ
 		row.ClusterTimerAckLevel,
 		transferPQS,
 		transferPQSEncoding,
+		crossClusterPQS,
+		crossClusterPQSEncoding,
 		timerPQS,
 		timerPQSEncoding,
 		row.DomainNotificationVersion,
