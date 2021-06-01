@@ -509,8 +509,13 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 
 // NewForTest create new history service config for test
 func NewForTest() *Config {
+	return NewForTestByShardNumber(1)
+}
+
+// NewForTestByShardNumber create new history service config for test
+func NewForTestByShardNumber(shardNumber int) *Config {
 	dc := dynamicconfig.NewNopCollection()
-	config := New(dc, 1, config.StoreTypeCassandra, false)
+	config := New(dc, shardNumber, config.StoreTypeCassandra, false)
 	// reduce the duration of long poll to increase test speed
 	config.LongPollExpirationInterval = dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, 10*time.Second)
 	config.EnableConsistentQueryByDomain = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain, true)
