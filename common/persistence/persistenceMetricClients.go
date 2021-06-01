@@ -324,23 +324,6 @@ func (p *workflowExecutionPersistenceClient) ConflictResolveWorkflowExecution(
 	return resp, err
 }
 
-func (p *workflowExecutionPersistenceClient) ResetWorkflowExecution(
-	ctx context.Context,
-	request *ResetWorkflowExecutionRequest,
-) error {
-	p.metricClient.IncCounter(metrics.PersistenceResetWorkflowExecutionScope, metrics.PersistenceRequests)
-
-	sw := p.metricClient.StartTimer(metrics.PersistenceResetWorkflowExecutionScope, metrics.PersistenceLatency)
-	err := p.persistence.ResetWorkflowExecution(ctx, request)
-	sw.Stop()
-
-	if err != nil {
-		p.updateErrorMetric(metrics.PersistenceResetWorkflowExecutionScope, err)
-	}
-
-	return err
-}
-
 func (p *workflowExecutionPersistenceClient) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *DeleteWorkflowExecutionRequest,
@@ -460,6 +443,23 @@ func (p *workflowExecutionPersistenceClient) GetTransferTasks(
 	return response, err
 }
 
+func (p *workflowExecutionPersistenceClient) GetCrossClusterTasks(
+	ctx context.Context,
+	request *GetCrossClusterTasksRequest,
+) (*GetCrossClusterTasksResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceGetCrossClusterTasksScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceGetCrossClusterTasksScope, metrics.PersistenceLatency)
+	response, err := p.persistence.GetCrossClusterTasks(ctx, request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceGetCrossClusterTasksScope, err)
+	}
+
+	return response, err
+}
+
 func (p *workflowExecutionPersistenceClient) GetReplicationTasks(
 	ctx context.Context,
 	request *GetReplicationTasksRequest,
@@ -506,6 +506,40 @@ func (p *workflowExecutionPersistenceClient) RangeCompleteTransferTask(
 
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceRangeCompleteTransferTaskScope, err)
+	}
+
+	return err
+}
+
+func (p *workflowExecutionPersistenceClient) CompleteCrossClusterTask(
+	ctx context.Context,
+	request *CompleteCrossClusterTaskRequest,
+) error {
+	p.metricClient.IncCounter(metrics.PersistenceCompleteCrossClusterTaskScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceCompleteCrossClusterTaskScope, metrics.PersistenceLatency)
+	err := p.persistence.CompleteCrossClusterTask(ctx, request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceCompleteCrossClusterTaskScope, err)
+	}
+
+	return err
+}
+
+func (p *workflowExecutionPersistenceClient) RangeCompleteCrossClusterTask(
+	ctx context.Context,
+	request *RangeCompleteCrossClusterTaskRequest,
+) error {
+	p.metricClient.IncCounter(metrics.PersistenceRangeCompleteCrossClusterTaskScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceRangeCompleteCrossClusterTaskScope, metrics.PersistenceLatency)
+	err := p.persistence.RangeCompleteCrossClusterTask(ctx, request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceRangeCompleteCrossClusterTaskScope, err)
 	}
 
 	return err

@@ -557,39 +557,6 @@ func (m *executionManagerImpl) ConflictResolveWorkflowExecution(
 	return &ConflictResolveWorkflowExecutionResponse{MutableStateUpdateSessionStats: msuss}, nil
 }
 
-func (m *executionManagerImpl) ResetWorkflowExecution(
-	ctx context.Context,
-	request *ResetWorkflowExecutionRequest,
-) error {
-
-	serializedNewWorkflowSnapshot, err := m.SerializeWorkflowSnapshot(&request.NewWorkflowSnapshot, request.Encoding)
-	if err != nil {
-		return err
-	}
-	var serializedUpdateWorkflowSnapshot *InternalWorkflowMutation
-	if request.CurrentWorkflowMutation != nil {
-		serializedUpdateWorkflowSnapshot, err = m.SerializeWorkflowMutation(request.CurrentWorkflowMutation, request.Encoding)
-		if err != nil {
-			return err
-		}
-	}
-
-	newRequest := &InternalResetWorkflowExecutionRequest{
-		RangeID: request.RangeID,
-
-		BaseRunID:          request.BaseRunID,
-		BaseRunNextEventID: request.BaseRunNextEventID,
-
-		CurrentRunID:          request.CurrentRunID,
-		CurrentRunNextEventID: request.CurrentRunNextEventID,
-
-		CurrentWorkflowMutation: serializedUpdateWorkflowSnapshot,
-
-		NewWorkflowSnapshot: *serializedNewWorkflowSnapshot,
-	}
-	return m.persistence.ResetWorkflowExecution(ctx, newRequest)
-}
-
 func (m *executionManagerImpl) CreateWorkflowExecution(
 	ctx context.Context,
 	request *CreateWorkflowExecutionRequest,
@@ -684,9 +651,10 @@ func (m *executionManagerImpl) SerializeWorkflowMutation(
 		NewBufferedEvents:         serializedNewBufferedEvents,
 		ClearBufferedEvents:       input.ClearBufferedEvents,
 
-		TransferTasks:    input.TransferTasks,
-		ReplicationTasks: input.ReplicationTasks,
-		TimerTasks:       input.TimerTasks,
+		TransferTasks:     input.TransferTasks,
+		CrossClusterTasks: input.CrossClusterTasks,
+		ReplicationTasks:  input.ReplicationTasks,
+		TimerTasks:        input.TimerTasks,
 
 		Condition: input.Condition,
 		Checksum:  input.Checksum,
@@ -741,9 +709,10 @@ func (m *executionManagerImpl) SerializeWorkflowSnapshot(
 		SignalInfos:         input.SignalInfos,
 		SignalRequestedIDs:  input.SignalRequestedIDs,
 
-		TransferTasks:    input.TransferTasks,
-		ReplicationTasks: input.ReplicationTasks,
-		TimerTasks:       input.TimerTasks,
+		TransferTasks:     input.TransferTasks,
+		CrossClusterTasks: input.CrossClusterTasks,
+		ReplicationTasks:  input.ReplicationTasks,
+		TimerTasks:        input.TimerTasks,
 
 		Condition: input.Condition,
 		Checksum:  input.Checksum,
@@ -859,6 +828,28 @@ func (m *executionManagerImpl) RangeCompleteTransferTask(
 	request *RangeCompleteTransferTaskRequest,
 ) error {
 	return m.persistence.RangeCompleteTransferTask(ctx, request)
+}
+
+// Cross-cluster task related methods
+func (m *executionManagerImpl) GetCrossClusterTasks(
+	ctx context.Context,
+	request *GetCrossClusterTasksRequest,
+) (*GetCrossClusterTasksResponse, error) {
+	return m.persistence.GetCrossClusterTasks(ctx, request)
+}
+
+func (m *executionManagerImpl) CompleteCrossClusterTask(
+	ctx context.Context,
+	request *CompleteCrossClusterTaskRequest,
+) error {
+	return m.persistence.CompleteCrossClusterTask(ctx, request)
+}
+
+func (m *executionManagerImpl) RangeCompleteCrossClusterTask(
+	ctx context.Context,
+	request *RangeCompleteCrossClusterTaskRequest,
+) error {
+	return m.persistence.RangeCompleteCrossClusterTask(ctx, request)
 }
 
 // Replication task related methods

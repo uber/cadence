@@ -364,30 +364,6 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) ConflictResolveWorkfl
 	return response, persistenceErr
 }
 
-func (p *workflowExecutionErrorInjectionPersistenceClient) ResetWorkflowExecution(
-	ctx context.Context,
-	request *ResetWorkflowExecutionRequest,
-) error {
-	fakeErr := generateFakeError(p.errorRate)
-
-	var persistenceErr error
-	var forwardCall bool
-	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		persistenceErr = p.persistence.ResetWorkflowExecution(ctx, request)
-	}
-
-	if fakeErr != nil {
-		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationResetWorkflowExecution,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.StoreError(persistenceErr),
-		)
-		return fakeErr
-	}
-	return persistenceErr
-}
-
 func (p *workflowExecutionErrorInjectionPersistenceClient) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *DeleteWorkflowExecutionRequest,
@@ -561,6 +537,31 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) GetTransferTasks(
 	return response, persistenceErr
 }
 
+func (p *workflowExecutionErrorInjectionPersistenceClient) GetCrossClusterTasks(
+	ctx context.Context,
+	request *GetCrossClusterTasksRequest,
+) (*GetCrossClusterTasksResponse, error) {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var response *GetCrossClusterTasksResponse
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		response, persistenceErr = p.persistence.GetCrossClusterTasks(ctx, request)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationGetTransferTasks,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return nil, fakeErr
+	}
+	return response, persistenceErr
+}
+
 func (p *workflowExecutionErrorInjectionPersistenceClient) GetReplicationTasks(
 	ctx context.Context,
 	request *GetReplicationTasksRequest,
@@ -625,6 +626,54 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) RangeCompleteTransfer
 	if fakeErr != nil {
 		p.logger.Error(msgInjectedFakeErr,
 			tag.StoreOperationRangeCompleteTransferTask,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return fakeErr
+	}
+	return persistenceErr
+}
+
+func (p *workflowExecutionErrorInjectionPersistenceClient) CompleteCrossClusterTask(
+	ctx context.Context,
+	request *CompleteCrossClusterTaskRequest,
+) error {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		persistenceErr = p.persistence.CompleteCrossClusterTask(ctx, request)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationCompleteCrossClusterTask,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return fakeErr
+	}
+	return persistenceErr
+}
+
+func (p *workflowExecutionErrorInjectionPersistenceClient) RangeCompleteCrossClusterTask(
+	ctx context.Context,
+	request *RangeCompleteCrossClusterTaskRequest,
+) error {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		persistenceErr = p.persistence.RangeCompleteCrossClusterTask(ctx, request)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationRangeCompleteCrossClusterTask,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
 			tag.StoreError(persistenceErr),

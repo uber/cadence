@@ -204,7 +204,7 @@ func (db *cdb) InsertDomain(
 		row.LastUpdatedTime.UnixNano(),
 		metadataNotificationVersion,
 	)
-	db.updateMetadataBatch(ctx, batch, metadataNotificationVersion)
+	db.updateMetadataBatch(batch, metadataNotificationVersion)
 
 	previous := make(map[string]interface{})
 	applied, iter, err := db.session.MapExecuteBatchCAS(batch, previous)
@@ -247,7 +247,6 @@ func (db *cdb) InsertDomain(
 }
 
 func (db *cdb) updateMetadataBatch(
-	ctx context.Context,
 	batch gocql.Batch,
 	notificationVersion int64,
 ) {
@@ -304,7 +303,7 @@ func (db *cdb) UpdateDomain(
 		constDomainPartition,
 		row.Info.Name,
 	)
-	db.updateMetadataBatch(ctx, batch, row.NotificationVersion)
+	db.updateMetadataBatch(batch, row.NotificationVersion)
 
 	previous := make(map[string]interface{})
 	applied, iter, err := db.session.MapExecuteBatchCAS(batch, previous)

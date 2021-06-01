@@ -276,18 +276,6 @@ func (p *workflowExecutionRateLimitedPersistenceClient) ConflictResolveWorkflowE
 	return resp, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) ResetWorkflowExecution(
-	ctx context.Context,
-	request *ResetWorkflowExecutionRequest,
-) error {
-	if ok := p.rateLimiter.Allow(); !ok {
-		return ErrPersistenceLimitExceeded
-	}
-
-	err := p.persistence.ResetWorkflowExecution(ctx, request)
-	return err
-}
-
 func (p *workflowExecutionRateLimitedPersistenceClient) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *DeleteWorkflowExecutionRequest,
@@ -372,6 +360,18 @@ func (p *workflowExecutionRateLimitedPersistenceClient) GetTransferTasks(
 	return response, err
 }
 
+func (p *workflowExecutionRateLimitedPersistenceClient) GetCrossClusterTasks(
+	ctx context.Context,
+	request *GetCrossClusterTasksRequest,
+) (*GetCrossClusterTasksResponse, error) {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+
+	response, err := p.persistence.GetCrossClusterTasks(ctx, request)
+	return response, err
+}
+
 func (p *workflowExecutionRateLimitedPersistenceClient) GetReplicationTasks(
 	ctx context.Context,
 	request *GetReplicationTasksRequest,
@@ -405,6 +405,30 @@ func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteTransferTas
 	}
 
 	err := p.persistence.RangeCompleteTransferTask(ctx, request)
+	return err
+}
+
+func (p *workflowExecutionRateLimitedPersistenceClient) CompleteCrossClusterTask(
+	ctx context.Context,
+	request *CompleteCrossClusterTaskRequest,
+) error {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+
+	err := p.persistence.CompleteCrossClusterTask(ctx, request)
+	return err
+}
+
+func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteCrossClusterTask(
+	ctx context.Context,
+	request *RangeCompleteCrossClusterTaskRequest,
+) error {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+
+	err := p.persistence.RangeCompleteCrossClusterTask(ctx, request)
 	return err
 }
 

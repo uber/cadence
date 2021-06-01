@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/service/worker/scanner/executions"
+	"github.com/uber/cadence/tools/common/flag"
 )
 
 func newAdminWorkflowCommands() []cli.Command {
@@ -137,6 +138,26 @@ func newAdminShardManagementCommands() []cli.Command {
 			),
 			Action: func(c *cli.Context) {
 				AdminDescribeShard(c)
+			},
+		},
+		{
+			Name:    "list",
+			Aliases: []string{"l"},
+			Usage:   "List shard distribution",
+			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name:  FlagPageSize,
+					Value: 100,
+					Usage: "Max number of results to return",
+				},
+				cli.IntFlag{
+					Name:  FlagPageID,
+					Value: 0,
+					Usage: "Option to show results offset from pagesize * page_id",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminDescribeShardDistribution(c)
 			},
 		},
 		{
@@ -981,6 +1002,11 @@ func getDBFlags() []cli.Flag {
 		cli.BoolFlag{
 			Name:  FlagTLSEnableHostVerification,
 			Usage: "cassandra tls verify hostname and server cert (tls must be enabled)",
+		},
+		cli.GenericFlag{
+			Name:  FlagConnectionAttributes,
+			Usage: "a key-value set of sql database connection attributes (must be in key1=value1,key2=value2,...,keyN=valueN format, e.g. cluster=dca or cluster=dca,instance=cadence)",
+			Value: &flag.StringMap{},
 		},
 	}
 }

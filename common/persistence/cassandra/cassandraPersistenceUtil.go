@@ -143,6 +143,7 @@ func applyWorkflowMutationBatch(
 		workflowID,
 		runID,
 		workflowMutation.TransferTasks,
+		workflowMutation.CrossClusterTasks,
 		workflowMutation.ReplicationTasks,
 		workflowMutation.TimerTasks,
 	)
@@ -250,6 +251,7 @@ func applyWorkflowSnapshotBatchAsReset(
 		workflowID,
 		runID,
 		workflowSnapshot.TransferTasks,
+		workflowSnapshot.CrossClusterTasks,
 		workflowSnapshot.ReplicationTasks,
 		workflowSnapshot.TimerTasks,
 	)
@@ -353,6 +355,7 @@ func applyWorkflowSnapshotBatchAsNew(
 		workflowID,
 		runID,
 		workflowSnapshot.TransferTasks,
+		workflowSnapshot.CrossClusterTasks,
 		workflowSnapshot.ReplicationTasks,
 		workflowSnapshot.TimerTasks,
 	)
@@ -602,6 +605,7 @@ func applyTasks(
 	workflowID string,
 	runID string,
 	transferTasks []p.Task,
+	crossClusterTasks []p.Task,
 	replicationTasks []p.Task,
 	timerTasks []p.Task,
 ) error {
@@ -609,6 +613,17 @@ func applyTasks(
 	if err := createTransferTasks(
 		batch,
 		transferTasks,
+		shardID,
+		domainID,
+		workflowID,
+		runID,
+	); err != nil {
+		return err
+	}
+
+	if err := createCrossClusterTasks(
+		batch,
+		crossClusterTasks,
 		shardID,
 		domainID,
 		workflowID,
@@ -701,7 +716,7 @@ func createTransferTasks(
 
 		default:
 			return &types.InternalServiceError{
-				Message: fmt.Sprintf("Unknow transfer type: %v", task.GetType()),
+				Message: fmt.Sprintf("Unknown transfer type: %v", task.GetType()),
 			}
 		}
 
@@ -727,6 +742,82 @@ func createTransferTasks(
 			task.GetVersion(),
 			defaultVisibilityTimestamp,
 			task.GetTaskID())
+	}
+
+	return nil
+}
+
+func createCrossClusterTasks(
+	batch gocql.Batch,
+	crossClusterTasks []p.Task,
+	shardID int,
+	domainID string,
+	workflowID string,
+	runID string,
+) error {
+
+	for _, task := range crossClusterTasks {
+		var taskList string
+		var scheduleID int64
+		var targetCluster string
+		var targetDomainID string
+		var targetWorkflowID string
+		targetRunID := p.CrossClusterTaskDefaultTargetRunID
+		targetChildWorkflowOnly := false
+		recordVisibility := false
+
+		switch task.GetType() {
+		case p.CrossClusterTaskTypeStartChildExecution:
+			targetCluster = task.(*p.CrossClusterStartChildExecutionTask).TargetCluster
+			targetDomainID = task.(*p.CrossClusterStartChildExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*p.CrossClusterStartChildExecutionTask).TargetWorkflowID
+			scheduleID = task.(*p.CrossClusterStartChildExecutionTask).InitiatedID
+
+		case p.CrossClusterTaskTypeCancelExecution:
+			targetCluster = task.(*p.CrossClusterCancelExecutionTask).TargetCluster
+			targetDomainID = task.(*p.CrossClusterCancelExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*p.CrossClusterCancelExecutionTask).TargetWorkflowID
+			targetRunID = task.(*p.CrossClusterCancelExecutionTask).TargetRunID
+			targetChildWorkflowOnly = task.(*p.CrossClusterCancelExecutionTask).TargetChildWorkflowOnly
+			scheduleID = task.(*p.CrossClusterCancelExecutionTask).InitiatedID
+
+		case p.CrossClusterTaskTypeSignalExecution:
+			targetCluster = task.(*p.CrossClusterSignalExecutionTask).TargetCluster
+			targetDomainID = task.(*p.CrossClusterSignalExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*p.CrossClusterSignalExecutionTask).TargetWorkflowID
+			targetRunID = task.(*p.CrossClusterSignalExecutionTask).TargetRunID
+			targetChildWorkflowOnly = task.(*p.CrossClusterSignalExecutionTask).TargetChildWorkflowOnly
+			scheduleID = task.(*p.CrossClusterSignalExecutionTask).InitiatedID
+
+		default:
+			return &types.InternalServiceError{
+				Message: fmt.Sprintf("Unknown cross-cluster task type: %v", task.GetType()),
+			}
+		}
+
+		batch.Query(templateCreateCrossClusterTaskQuery,
+			shardID,
+			rowTypeCrossClusterTask,
+			rowTypeCrossClusterDomainID,
+			targetCluster,
+			rowTypeCrossClusterRunID,
+			domainID,
+			workflowID,
+			runID,
+			task.GetVisibilityTimestamp(),
+			task.GetTaskID(),
+			targetDomainID,
+			targetWorkflowID,
+			targetRunID,
+			targetChildWorkflowOnly,
+			taskList,
+			task.GetType(),
+			scheduleID,
+			recordVisibility,
+			task.GetVersion(),
+			defaultVisibilityTimestamp,
+			task.GetTaskID(),
+		)
 	}
 
 	return nil
@@ -1435,93 +1526,6 @@ func updateBufferedEvents(
 	}
 }
 
-func createShardInfo(
-	currentCluster string,
-	rangeID int64,
-	shard map[string]interface{},
-) *p.InternalShardInfo {
-
-	var pendingFailoverMarkersRawData []byte
-	var pendingFailoverMarkersEncoding string
-	var transferProcessingQueueStatesRawData []byte
-	var transferProcessingQueueStatesEncoding string
-	var timerProcessingQueueStatesRawData []byte
-	var timerProcessingQueueStatesEncoding string
-	info := &p.InternalShardInfo{}
-	info.RangeID = rangeID
-	for k, v := range shard {
-		switch k {
-		case "shard_id":
-			info.ShardID = v.(int)
-		case "owner":
-			info.Owner = v.(string)
-		case "stolen_since_renew":
-			info.StolenSinceRenew = v.(int)
-		case "updated_at":
-			info.UpdatedAt = v.(time.Time)
-		case "replication_ack_level":
-			info.ReplicationAckLevel = v.(int64)
-		case "transfer_ack_level":
-			info.TransferAckLevel = v.(int64)
-		case "timer_ack_level":
-			info.TimerAckLevel = v.(time.Time)
-		case "cluster_transfer_ack_level":
-			info.ClusterTransferAckLevel = v.(map[string]int64)
-		case "cluster_timer_ack_level":
-			info.ClusterTimerAckLevel = v.(map[string]time.Time)
-		case "transfer_processing_queue_states":
-			transferProcessingQueueStatesRawData = v.([]byte)
-		case "transfer_processing_queue_states_encoding":
-			transferProcessingQueueStatesEncoding = v.(string)
-		case "timer_processing_queue_states":
-			timerProcessingQueueStatesRawData = v.([]byte)
-		case "timer_processing_queue_states_encoding":
-			timerProcessingQueueStatesEncoding = v.(string)
-		case "domain_notification_version":
-			info.DomainNotificationVersion = v.(int64)
-		case "cluster_replication_level":
-			info.ClusterReplicationLevel = v.(map[string]int64)
-		case "replication_dlq_ack_level":
-			info.ReplicationDLQAckLevel = v.(map[string]int64)
-		case "pending_failover_markers":
-			pendingFailoverMarkersRawData = v.([]byte)
-		case "pending_failover_markers_encoding":
-			pendingFailoverMarkersEncoding = v.(string)
-		}
-	}
-
-	if info.ClusterTransferAckLevel == nil {
-		info.ClusterTransferAckLevel = map[string]int64{
-			currentCluster: info.TransferAckLevel,
-		}
-	}
-	if info.ClusterTimerAckLevel == nil {
-		info.ClusterTimerAckLevel = map[string]time.Time{
-			currentCluster: info.TimerAckLevel,
-		}
-	}
-	if info.ClusterReplicationLevel == nil {
-		info.ClusterReplicationLevel = make(map[string]int64)
-	}
-	if info.ReplicationDLQAckLevel == nil {
-		info.ReplicationDLQAckLevel = make(map[string]int64)
-	}
-	info.PendingFailoverMarkers = p.NewDataBlob(
-		pendingFailoverMarkersRawData,
-		common.EncodingType(pendingFailoverMarkersEncoding),
-	)
-	info.TransferProcessingQueueStates = p.NewDataBlob(
-		transferProcessingQueueStatesRawData,
-		common.EncodingType(transferProcessingQueueStatesEncoding),
-	)
-	info.TimerProcessingQueueStates = p.NewDataBlob(
-		timerProcessingQueueStatesRawData,
-		common.EncodingType(timerProcessingQueueStatesEncoding),
-	)
-
-	return info
-}
-
 func createWorkflowExecutionInfo(
 	result map[string]interface{},
 ) *p.InternalWorkflowExecutionInfo {
@@ -1702,6 +1706,24 @@ func createTransferTaskInfo(
 		}
 	}
 
+	return info
+}
+
+func createCrossClusterTaskInfo(
+	result map[string]interface{},
+) *p.CrossClusterTaskInfo {
+	info := (*p.CrossClusterTaskInfo)(createTransferTaskInfo(result))
+	if p.CrossClusterTaskDefaultTargetRunID == p.TransferTaskTransferTargetRunID {
+		return info
+	}
+
+	// incase CrossClusterTaskDefaultTargetRunID is updated and not equal to TransferTaskTransferTargetRunID
+	if v, ok := result["target_run_id"]; ok {
+		info.TargetRunID = v.(gocql.UUID).String()
+		if info.TargetRunID == p.CrossClusterTaskDefaultTargetRunID {
+			info.TargetRunID = ""
+		}
+	}
 	return info
 }
 

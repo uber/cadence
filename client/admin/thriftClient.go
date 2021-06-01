@@ -54,6 +54,11 @@ func (t thriftClient) DescribeCluster(ctx context.Context, opts ...yarpc.CallOpt
 	return thrift.ToDescribeClusterResponse(response), thrift.ToError(err)
 }
 
+func (t thriftClient) DescribeShardDistribution(ctx context.Context, request *types.DescribeShardDistributionRequest, opts ...yarpc.CallOption) (*types.DescribeShardDistributionResponse, error) {
+	response, err := t.c.DescribeShardDistribution(ctx, thrift.FromDescribeShardDistributionRequest(request), opts...)
+	return thrift.ToDescribeShardDistributionResponse(response), thrift.ToError(err)
+}
+
 func (t thriftClient) DescribeHistoryHost(ctx context.Context, request *types.DescribeHistoryHostRequest, opts ...yarpc.CallOption) (*types.DescribeHistoryHostResponse, error) {
 	response, err := t.c.DescribeHistoryHost(ctx, thrift.FromDescribeHistoryHostRequest(request), opts...)
 	return thrift.ToDescribeHistoryHostResponse(response), thrift.ToError(err)

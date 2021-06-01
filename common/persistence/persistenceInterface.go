@@ -98,7 +98,6 @@ type (
 		GetWorkflowExecution(ctx context.Context, request *InternalGetWorkflowExecutionRequest) (*InternalGetWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(ctx context.Context, request *InternalUpdateWorkflowExecutionRequest) error
 		ConflictResolveWorkflowExecution(ctx context.Context, request *InternalConflictResolveWorkflowExecutionRequest) error
-		ResetWorkflowExecution(ctx context.Context, request *InternalResetWorkflowExecutionRequest) error
 
 		CreateWorkflowExecution(ctx context.Context, request *InternalCreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
 		DeleteWorkflowExecution(ctx context.Context, request *DeleteWorkflowExecutionRequest) error
@@ -110,6 +109,11 @@ type (
 		GetTransferTasks(ctx context.Context, request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)
 		CompleteTransferTask(ctx context.Context, request *CompleteTransferTaskRequest) error
 		RangeCompleteTransferTask(ctx context.Context, request *RangeCompleteTransferTaskRequest) error
+
+		// Cross-cluster task related methods
+		GetCrossClusterTasks(ctx context.Context, request *GetCrossClusterTasksRequest) (*GetCrossClusterTasksResponse, error)
+		CompleteCrossClusterTask(ctx context.Context, request *CompleteCrossClusterTaskRequest) error
+		RangeCompleteCrossClusterTask(ctx context.Context, request *RangeCompleteCrossClusterTaskRequest) error
 
 		// Replication task related methods
 		GetReplicationTasks(ctx context.Context, request *GetReplicationTasksRequest) (*InternalGetReplicationTasksResponse, error)
@@ -412,25 +416,6 @@ type (
 		CurrentWorkflowMutation *InternalWorkflowMutation
 	}
 
-	// InternalResetWorkflowExecutionRequest is used to reset workflow execution state for Persistence Interface
-	InternalResetWorkflowExecutionRequest struct {
-		RangeID int64
-
-		// for base run (we need to make sure the baseRun hasn't been deleted after forking)
-		BaseRunID          string
-		BaseRunNextEventID int64
-
-		// for current workflow record
-		CurrentRunID          string
-		CurrentRunNextEventID int64
-
-		// for current mutable state
-		CurrentWorkflowMutation *InternalWorkflowMutation
-
-		// For new mutable state
-		NewWorkflowSnapshot InternalWorkflowSnapshot
-	}
-
 	// InternalWorkflowMutation is used as generic workflow execution state mutation for Persistence Interface
 	InternalWorkflowMutation struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
@@ -453,9 +438,10 @@ type (
 		NewBufferedEvents         *DataBlob
 		ClearBufferedEvents       bool
 
-		TransferTasks    []Task
-		TimerTasks       []Task
-		ReplicationTasks []Task
+		TransferTasks     []Task
+		CrossClusterTasks []Task
+		TimerTasks        []Task
+		ReplicationTasks  []Task
 
 		Condition int64
 
@@ -476,9 +462,10 @@ type (
 		SignalInfos         []*SignalInfo
 		SignalRequestedIDs  []string
 
-		TransferTasks    []Task
-		TimerTasks       []Task
-		ReplicationTasks []Task
+		TransferTasks     []Task
+		CrossClusterTasks []Task
+		TimerTasks        []Task
+		ReplicationTasks  []Task
 
 		Condition int64
 
@@ -807,22 +794,23 @@ type (
 
 	// InternalShardInfo describes a shard
 	InternalShardInfo struct {
-		ShardID                       int                  `json:"shard_id"`
-		Owner                         string               `json:"owner"`
-		RangeID                       int64                `json:"range_id"`
-		StolenSinceRenew              int                  `json:"stolen_since_renew"`
-		UpdatedAt                     time.Time            `json:"updated_at"`
-		ReplicationAckLevel           int64                `json:"replication_ack_level"`
-		ReplicationDLQAckLevel        map[string]int64     `json:"replication_dlq_ack_level"`
-		TransferAckLevel              int64                `json:"transfer_ack_level"`
-		TimerAckLevel                 time.Time            `json:"timer_ack_level"`
-		ClusterTransferAckLevel       map[string]int64     `json:"cluster_transfer_ack_level"`
-		ClusterTimerAckLevel          map[string]time.Time `json:"cluster_timer_ack_level"`
-		TransferProcessingQueueStates *DataBlob            `json:"transfer_processing_queue_states"`
-		TimerProcessingQueueStates    *DataBlob            `json:"timer_processing_queue_states"`
-		ClusterReplicationLevel       map[string]int64     `json:"cluster_replication_level"`
-		DomainNotificationVersion     int64                `json:"domain_notification_version"`
-		PendingFailoverMarkers        *DataBlob            `json:"pending_failover_markers"`
+		ShardID                           int                  `json:"shard_id"`
+		Owner                             string               `json:"owner"`
+		RangeID                           int64                `json:"range_id"`
+		StolenSinceRenew                  int                  `json:"stolen_since_renew"`
+		UpdatedAt                         time.Time            `json:"updated_at"`
+		ReplicationAckLevel               int64                `json:"replication_ack_level"`
+		ReplicationDLQAckLevel            map[string]int64     `json:"replication_dlq_ack_level"`
+		TransferAckLevel                  int64                `json:"transfer_ack_level"`
+		TimerAckLevel                     time.Time            `json:"timer_ack_level"`
+		ClusterTransferAckLevel           map[string]int64     `json:"cluster_transfer_ack_level"`
+		ClusterTimerAckLevel              map[string]time.Time `json:"cluster_timer_ack_level"`
+		TransferProcessingQueueStates     *DataBlob            `json:"transfer_processing_queue_states"`
+		CrossClusterProcessingQueueStates *DataBlob            `json:"cross_cluster_processing_queue_states"`
+		TimerProcessingQueueStates        *DataBlob            `json:"timer_processing_queue_states"`
+		ClusterReplicationLevel           map[string]int64     `json:"cluster_replication_level"`
+		DomainNotificationVersion         int64                `json:"domain_notification_version"`
+		PendingFailoverMarkers            *DataBlob            `json:"pending_failover_markers"`
 	}
 
 	// InternalCreateShardRequest is request to CreateShard

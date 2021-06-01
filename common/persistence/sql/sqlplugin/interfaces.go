@@ -633,6 +633,8 @@ type (
 		// When MinTaskID and MaxTaskID are not-nil, a range of rows are deleted.
 		DeleteFromTransferTasks(ctx context.Context, filter *TransferTasksFilter) (sql.Result, error)
 
+		// TODO: add cross-cluster tasks methods
+
 		InsertIntoTimerTasks(ctx context.Context, rows []TimerTasksRow) (sql.Result, error)
 		// SelectFromTimerTasks returns one or more rows from timer_tasks table
 		// Required filter Params - {shardID, taskID, minVisibilityTimestamp, maxVisibilityTimestamp, pageSize}

@@ -1051,7 +1051,7 @@ func (s *contextImpl) updateRangeIfNeededLocked() error {
 }
 
 func (s *contextImpl) renewRangeLocked(isStealing bool) error {
-	updatedShardInfo := copyShardInfo(s.shardInfo)
+	updatedShardInfo := s.shardInfo.Copy()
 	updatedShardInfo.RangeID++
 	if isStealing {
 		updatedShardInfo.StolenSinceRenew++
@@ -1139,7 +1139,7 @@ func (s *contextImpl) persistShardInfoLocked(
 	if !isForced && s.lastUpdated.Add(s.config.ShardUpdateMinInterval()).After(now) {
 		return nil
 	}
-	updatedShardInfo := copyShardInfo(s.shardInfo)
+	updatedShardInfo := s.shardInfo.Copy()
 	s.emitShardInfoMetricsLogsLocked()
 
 	err = s.GetShardManager().UpdateShard(context.Background(), &persistence.UpdateShardRequest{
@@ -1517,7 +1517,7 @@ func acquireShard(
 		return nil, err
 	}
 
-	updatedShardInfo := copyShardInfo(shardInfo)
+	updatedShardInfo := shardInfo.Copy()
 	ownershipChanged := shardInfo.Owner != shardItem.GetHostInfo().Identity()
 	updatedShardInfo.Owner = shardItem.GetHostInfo().Identity()
 
@@ -1605,43 +1605,4 @@ func acquireShard(
 	}
 
 	return context, nil
-}
-
-func copyShardInfo(shardInfo *persistence.ShardInfo) *persistence.ShardInfo {
-	clusterTransferAckLevel := make(map[string]int64)
-	for k, v := range shardInfo.ClusterTransferAckLevel {
-		clusterTransferAckLevel[k] = v
-	}
-	clusterTimerAckLevel := make(map[string]time.Time)
-	for k, v := range shardInfo.ClusterTimerAckLevel {
-		clusterTimerAckLevel[k] = v
-	}
-	clusterReplicationLevel := make(map[string]int64)
-	for k, v := range shardInfo.ClusterReplicationLevel {
-		clusterReplicationLevel[k] = v
-	}
-	replicationDLQAckLevel := make(map[string]int64)
-	for k, v := range shardInfo.ReplicationDLQAckLevel {
-		replicationDLQAckLevel[k] = v
-	}
-	shardInfoCopy := &persistence.ShardInfo{
-		ShardID:                       shardInfo.ShardID,
-		Owner:                         shardInfo.Owner,
-		RangeID:                       shardInfo.RangeID,
-		StolenSinceRenew:              shardInfo.StolenSinceRenew,
-		ReplicationAckLevel:           shardInfo.ReplicationAckLevel,
-		TransferAckLevel:              shardInfo.TransferAckLevel,
-		TimerAckLevel:                 shardInfo.TimerAckLevel,
-		ClusterTransferAckLevel:       clusterTransferAckLevel,
-		ClusterTimerAckLevel:          clusterTimerAckLevel,
-		TransferProcessingQueueStates: shardInfo.TransferProcessingQueueStates,
-		TimerProcessingQueueStates:    shardInfo.TimerProcessingQueueStates,
-		DomainNotificationVersion:     shardInfo.DomainNotificationVersion,
-		ClusterReplicationLevel:       clusterReplicationLevel,
-		ReplicationDLQAckLevel:        replicationDLQAckLevel,
-		PendingFailoverMarkers:        shardInfo.PendingFailoverMarkers,
-		UpdatedAt:                     shardInfo.UpdatedAt,
-	}
-
-	return shardInfoCopy
 }

@@ -32,7 +32,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"
@@ -329,7 +328,7 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 	versionHistory := p.NewVersionHistory(branchToken, []*p.VersionHistoryItem{
 		{decisionScheduleID, common.EmptyVersion},
 	})
-	verisonHistories := p.NewVersionHistories(versionHistory)
+	versionHistories := p.NewVersionHistories(versionHistory)
 	response, err := s.ExecutionManager.CreateWorkflowExecution(ctx, &p.CreateWorkflowExecutionRequest{
 		NewWorkflowSnapshot: p.WorkflowSnapshot{
 			ExecutionInfo: &p.WorkflowExecutionInfo{
@@ -364,7 +363,7 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 			},
 			TimerTasks:       timerTasks,
 			Checksum:         testWorkflowChecksum,
-			VersionHistories: verisonHistories,
+			VersionHistories: versionHistories,
 		},
 		RangeID: s.ShardInfo.RangeID,
 	})
@@ -392,130 +391,6 @@ func (s *TestBase) CreateWorkflowExecution(
 		executionContext, nextEventID, lastProcessedEventID, decisionScheduleID, nil, timerTasks)
 }
 
-// CreateWorkflowExecutionWithReplication is a utility method to create workflow executions
-func (s *TestBase) CreateWorkflowExecutionWithReplication(
-	ctx context.Context,
-	domainID string,
-	workflowExecution types.WorkflowExecution,
-	taskList string,
-	wType string,
-	wTimeout int32,
-	decisionTimeout int32,
-	nextEventID int64,
-	lastProcessedEventID int64,
-	decisionScheduleID int64,
-	txTasks []p.Task,
-) (*p.CreateWorkflowExecutionResponse, error) {
-
-	var transferTasks []p.Task
-	var replicationTasks []p.Task
-	for _, task := range txTasks {
-		switch t := task.(type) {
-		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask, *p.RecordWorkflowStartedTask:
-			transferTasks = append(transferTasks, t)
-		case *p.HistoryReplicationTask:
-			replicationTasks = append(replicationTasks, t)
-		default:
-			panic("Unknown transfer task type.")
-		}
-	}
-
-	transferTasks = append(transferTasks, &p.DecisionTask{
-		TaskID:     s.GetNextSequenceNumber(),
-		DomainID:   domainID,
-		TaskList:   taskList,
-		ScheduleID: decisionScheduleID,
-	})
-	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
-		{decisionScheduleID, common.EmptyVersion},
-	})
-	verisonHistories := p.NewVersionHistories(versionHistory)
-	response, err := s.ExecutionManager.CreateWorkflowExecution(ctx, &p.CreateWorkflowExecutionRequest{
-		NewWorkflowSnapshot: p.WorkflowSnapshot{
-			ExecutionInfo: &p.WorkflowExecutionInfo{
-				CreateRequestID:             uuid.New(),
-				DomainID:                    domainID,
-				WorkflowID:                  workflowExecution.GetWorkflowID(),
-				RunID:                       workflowExecution.GetRunID(),
-				TaskList:                    taskList,
-				WorkflowTypeName:            wType,
-				WorkflowTimeout:             wTimeout,
-				DecisionStartToCloseTimeout: decisionTimeout,
-				State:                       p.WorkflowStateRunning,
-				CloseStatus:                 p.WorkflowCloseStatusNone,
-				LastFirstEventID:            common.FirstEventID,
-				NextEventID:                 nextEventID,
-				LastProcessedEvent:          lastProcessedEventID,
-				DecisionScheduleID:          decisionScheduleID,
-				DecisionStartedID:           common.EmptyEventID,
-				DecisionTimeout:             1,
-			},
-			ExecutionStats:   &p.ExecutionStats{},
-			TransferTasks:    transferTasks,
-			ReplicationTasks: replicationTasks,
-			Checksum:         testWorkflowChecksum,
-			VersionHistories: verisonHistories,
-		},
-		RangeID: s.ShardInfo.RangeID,
-	})
-
-	return response, err
-}
-
-// CreateWorkflowExecutionManyTasks is a utility method to create workflow executions
-func (s *TestBase) CreateWorkflowExecutionManyTasks(ctx context.Context, domainID string, workflowExecution workflow.WorkflowExecution,
-	taskList string, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
-	decisionScheduleIDs []int64, activityScheduleIDs []int64) (*p.CreateWorkflowExecutionResponse, error) {
-
-	transferTasks := []p.Task{}
-	for _, decisionScheduleID := range decisionScheduleIDs {
-		transferTasks = append(transferTasks,
-			&p.DecisionTask{
-				TaskID:     s.GetNextSequenceNumber(),
-				DomainID:   domainID,
-				TaskList:   taskList,
-				ScheduleID: int64(decisionScheduleID),
-			})
-	}
-
-	for _, activityScheduleID := range activityScheduleIDs {
-		transferTasks = append(transferTasks,
-			&p.ActivityTask{
-				TaskID:     s.GetNextSequenceNumber(),
-				DomainID:   domainID,
-				TaskList:   taskList,
-				ScheduleID: int64(activityScheduleID),
-			})
-	}
-
-	response, err := s.ExecutionManager.CreateWorkflowExecution(ctx, &p.CreateWorkflowExecutionRequest{
-		NewWorkflowSnapshot: p.WorkflowSnapshot{
-			ExecutionInfo: &p.WorkflowExecutionInfo{
-				CreateRequestID:    uuid.New(),
-				DomainID:           domainID,
-				WorkflowID:         workflowExecution.GetWorkflowId(),
-				RunID:              workflowExecution.GetRunId(),
-				TaskList:           taskList,
-				ExecutionContext:   executionContext,
-				State:              p.WorkflowStateRunning,
-				CloseStatus:        p.WorkflowCloseStatusNone,
-				LastFirstEventID:   common.FirstEventID,
-				NextEventID:        nextEventID,
-				LastProcessedEvent: lastProcessedEventID,
-				DecisionScheduleID: common.EmptyEventID,
-				DecisionStartedID:  common.EmptyEventID,
-				DecisionTimeout:    1,
-			},
-			ExecutionStats: &p.ExecutionStats{},
-			TransferTasks:  transferTasks,
-			Checksum:       testWorkflowChecksum,
-		},
-		RangeID: s.ShardInfo.RangeID,
-	})
-
-	return response, err
-}
-
 // CreateChildWorkflowExecution is a utility method to create child workflow executions
 func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution,
 	parentDomainID string, parentExecution types.WorkflowExecution, initiatedID int64, taskList, wType string,
@@ -524,7 +399,7 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{decisionScheduleID, common.EmptyVersion},
 	})
-	verisonHistories := p.NewVersionHistories(versionHistory)
+	versionHistories := p.NewVersionHistories(versionHistory)
 	response, err := s.ExecutionManager.CreateWorkflowExecution(ctx, &p.CreateWorkflowExecutionRequest{
 		NewWorkflowSnapshot: p.WorkflowSnapshot{
 			ExecutionInfo: &p.WorkflowExecutionInfo{
@@ -560,7 +435,7 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 				},
 			},
 			TimerTasks:       timerTasks,
-			VersionHistories: verisonHistories,
+			VersionHistories: versionHistories,
 		},
 		RangeID: s.ShardInfo.RangeID,
 	})
@@ -629,7 +504,7 @@ func (s *TestBase) ContinueAsNewExecution(
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{decisionScheduleID, common.EmptyVersion},
 	})
-	verisonHistories := p.NewVersionHistories(versionHistory)
+	versionHistories := p.NewVersionHistories(versionHistory)
 
 	req := &p.UpdateWorkflowExecutionRequest{
 		UpdateWorkflowMutation: p.WorkflowMutation{
@@ -642,7 +517,7 @@ func (s *TestBase) ContinueAsNewExecution(
 			DeleteActivityInfos: nil,
 			UpsertTimerInfos:    nil,
 			DeleteTimerInfos:    nil,
-			VersionHistories:    verisonHistories,
+			VersionHistories:    versionHistories,
 		},
 		NewWorkflowSnapshot: &p.WorkflowSnapshot{
 			ExecutionInfo: &p.WorkflowExecutionInfo{
@@ -668,7 +543,7 @@ func (s *TestBase) ContinueAsNewExecution(
 			ExecutionStats:   updatedStats,
 			TransferTasks:    nil,
 			TimerTasks:       nil,
-			VersionHistories: verisonHistories,
+			VersionHistories: versionHistories,
 		},
 		RangeID:  s.ShardInfo.RangeID,
 		Encoding: pickRandomEncoding(),
@@ -1135,12 +1010,17 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(
 	deleteSignalRequestedIDs []string,
 ) error {
 
+	// TODO: use separate fields for those three task types
 	var transferTasks []p.Task
+	var crossClusterTasks []p.Task
 	var replicationTasks []p.Task
 	for _, task := range txTasks {
 		switch t := task.(type) {
-		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask, *p.RecordWorkflowStartedTask:
+		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask,
+			*p.RecordWorkflowStartedTask, *p.ResetWorkflowTask, *p.UpsertWorkflowSearchAttributesTask:
 			transferTasks = append(transferTasks, t)
+		case *p.CrossClusterStartChildExecutionTask, *p.CrossClusterCancelExecutionTask, *p.CrossClusterSignalExecutionTask:
+			crossClusterTasks = append(crossClusterTasks, t)
 		case *p.HistoryReplicationTask, *p.SyncActivityTask:
 			replicationTasks = append(replicationTasks, t)
 		default:
@@ -1182,9 +1062,10 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(
 			UpsertSignalRequestedIDs:  upsertSignalRequestedIDs,
 			DeleteSignalRequestedIDs:  deleteSignalRequestedIDs,
 
-			TransferTasks:    transferTasks,
-			ReplicationTasks: replicationTasks,
-			TimerTasks:       timerTasks,
+			TransferTasks:     transferTasks,
+			CrossClusterTasks: crossClusterTasks,
+			ReplicationTasks:  replicationTasks,
+			TimerTasks:        timerTasks,
 
 			Condition: condition,
 			Checksum:  testWorkflowChecksum,
@@ -1387,81 +1268,6 @@ func (s *TestBase) ConflictResolveWorkflowExecution(
 	return err
 }
 
-// ResetWorkflowExecution is  utility method to reset WF
-func (s *TestBase) ResetWorkflowExecution(
-	ctx context.Context,
-	condition int64,
-	info *p.WorkflowExecutionInfo,
-	executionStats *p.ExecutionStats,
-	activityInfos []*p.ActivityInfo,
-	timerInfos []*p.TimerInfo,
-	childExecutionInfos []*p.ChildExecutionInfo,
-	requestCancelInfos []*p.RequestCancelInfo,
-	signalInfos []*p.SignalInfo,
-	ids []string,
-	trasTasks []p.Task,
-	timerTasks []p.Task,
-	replTasks []p.Task,
-	updateCurr bool,
-	currInfo *p.WorkflowExecutionInfo,
-	currExecutionStats *p.ExecutionStats,
-	currTrasTasks,
-	currTimerTasks []p.Task,
-	forkRunID string,
-	forkRunNextEventID int64,
-) error {
-
-	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
-		{info.LastProcessedEvent, common.EmptyVersion},
-	})
-	verisonHistories := p.NewVersionHistories(versionHistory)
-
-	req := &p.ResetWorkflowExecutionRequest{
-		RangeID: s.ShardInfo.RangeID,
-
-		BaseRunID:          forkRunID,
-		BaseRunNextEventID: forkRunNextEventID,
-
-		CurrentRunID:          currInfo.RunID,
-		CurrentRunNextEventID: condition,
-
-		CurrentWorkflowMutation: nil,
-
-		NewWorkflowSnapshot: p.WorkflowSnapshot{
-			ExecutionInfo:  info,
-			ExecutionStats: executionStats,
-
-			ActivityInfos:       activityInfos,
-			TimerInfos:          timerInfos,
-			ChildExecutionInfos: childExecutionInfos,
-			RequestCancelInfos:  requestCancelInfos,
-			SignalInfos:         signalInfos,
-			SignalRequestedIDs:  ids,
-
-			TransferTasks:    trasTasks,
-			ReplicationTasks: replTasks,
-			TimerTasks:       timerTasks,
-			VersionHistories: verisonHistories,
-		},
-		Encoding: pickRandomEncoding(),
-	}
-
-	if updateCurr {
-		req.CurrentWorkflowMutation = &p.WorkflowMutation{
-			ExecutionInfo:  currInfo,
-			ExecutionStats: currExecutionStats,
-
-			TransferTasks: currTrasTasks,
-			TimerTasks:    currTimerTasks,
-
-			Condition:        condition,
-			VersionHistories: verisonHistories,
-		}
-	}
-
-	return s.ExecutionManager.ResetWorkflowExecution(ctx, req)
-}
-
 // DeleteWorkflowExecution is a utility method to delete a workflow execution
 func (s *TestBase) DeleteWorkflowExecution(ctx context.Context, info *p.WorkflowExecutionInfo) error {
 	return s.ExecutionManager.DeleteWorkflowExecution(ctx, &p.DeleteWorkflowExecutionRequest{
@@ -1481,6 +1287,7 @@ func (s *TestBase) DeleteCurrentWorkflowExecution(ctx context.Context, info *p.W
 }
 
 // GetTransferTasks is a utility method to get tasks from transfer task queue
+// Note: this method will save the load progress and continue from the save progress upon later invocations
 func (s *TestBase) GetTransferTasks(ctx context.Context, batchSize int, getAll bool) ([]*p.TransferTaskInfo, error) {
 	result := []*p.TransferTaskInfo{}
 	var token []byte
@@ -1511,7 +1318,35 @@ Loop:
 	return result, nil
 }
 
+// GetCrossClusterTasks is a utility method to get tasks from transfer task queue
+func (s *TestBase) GetCrossClusterTasks(ctx context.Context, targetCluster string, readLevel int64, batchSize int, getAll bool) ([]*p.CrossClusterTaskInfo, error) {
+	result := []*p.CrossClusterTaskInfo{}
+	var token []byte
+
+	for {
+		response, err := s.ExecutionManager.GetCrossClusterTasks(ctx, &p.GetCrossClusterTasksRequest{
+			TargetCluster: targetCluster,
+			ReadLevel:     readLevel,
+			MaxReadLevel:  int64(math.MaxInt64),
+			BatchSize:     batchSize,
+			NextPageToken: token,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		token = response.NextPageToken
+		result = append(result, response.Tasks...)
+		if len(response.NextPageToken) == 0 || !getAll {
+			break
+		}
+	}
+
+	return result, nil
+}
+
 // GetReplicationTasks is a utility method to get tasks from replication task queue
+// Note: this method will save the load progress and continue from the save progress upon later invocations
 func (s *TestBase) GetReplicationTasks(ctx context.Context, batchSize int, getAll bool) ([]*p.ReplicationTaskInfo, error) {
 	result := []*p.ReplicationTaskInfo{}
 	var token []byte
@@ -1645,6 +1480,23 @@ func (s *TestBase) CompleteTransferTask(ctx context.Context, taskID int64) error
 // RangeCompleteTransferTask is a utility method to complete a range of transfer tasks
 func (s *TestBase) RangeCompleteTransferTask(ctx context.Context, exclusiveBeginTaskID int64, inclusiveEndTaskID int64) error {
 	return s.ExecutionManager.RangeCompleteTransferTask(ctx, &p.RangeCompleteTransferTaskRequest{
+		ExclusiveBeginTaskID: exclusiveBeginTaskID,
+		InclusiveEndTaskID:   inclusiveEndTaskID,
+	})
+}
+
+// CompleteCrossClusterTask is a utility method to complete a cross-cluster task
+func (s *TestBase) CompleteCrossClusterTask(ctx context.Context, targetCluster string, taskID int64) error {
+	return s.ExecutionManager.CompleteCrossClusterTask(ctx, &p.CompleteCrossClusterTaskRequest{
+		TargetCluster: targetCluster,
+		TaskID:        taskID,
+	})
+}
+
+// RangeCompleteCrossClusterTask is a utility method to complete a range of cross-cluster tasks
+func (s *TestBase) RangeCompleteCrossClusterTask(ctx context.Context, targetCluster string, exclusiveBeginTaskID int64, inclusiveEndTaskID int64) error {
+	return s.ExecutionManager.RangeCompleteCrossClusterTask(ctx, &p.RangeCompleteCrossClusterTaskRequest{
+		TargetCluster:        targetCluster,
 		ExclusiveBeginTaskID: exclusiveBeginTaskID,
 		InclusiveEndTaskID:   inclusiveEndTaskID,
 	})

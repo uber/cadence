@@ -1544,6 +1544,17 @@ func FromDescribeHistoryHostRequest(t *types.DescribeHistoryHostRequest) *shared
 	}
 }
 
+// FromDescribeShardDistributionRequest converts internal DescribeHistoryHostRequest type to thrift
+func FromDescribeShardDistributionRequest(t *types.DescribeShardDistributionRequest) *shared.DescribeShardDistributionRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.DescribeShardDistributionRequest{
+		PageSize: &t.PageSize,
+		PageID:   &t.PageID,
+	}
+}
+
 // ToDescribeHistoryHostRequest converts thrift DescribeHistoryHostRequest type to internal
 func ToDescribeHistoryHostRequest(t *shared.DescribeHistoryHostRequest) *types.DescribeHistoryHostRequest {
 	if t == nil {
@@ -1553,6 +1564,17 @@ func ToDescribeHistoryHostRequest(t *shared.DescribeHistoryHostRequest) *types.D
 		HostAddress:      t.HostAddress,
 		ShardIDForHost:   t.ShardIdForHost,
 		ExecutionForHost: ToWorkflowExecution(t.ExecutionForHost),
+	}
+}
+
+// ToDescribeShardDistributionRequest converts thrift DescribeHistoryHostRequest type to internal
+func ToDescribeShardDistributionRequest(t *shared.DescribeShardDistributionRequest) *types.DescribeShardDistributionRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.DescribeShardDistributionRequest{
+		PageSize: t.GetPageSize(),
+		PageID:   t.GetPageID(),
 	}
 }
 
@@ -1570,6 +1592,17 @@ func FromDescribeHistoryHostResponse(t *types.DescribeHistoryHostResponse) *shar
 	}
 }
 
+// FromDescribeShardDistributionResponse converts internal DescribeHistoryHostResponse type to thrift
+func FromDescribeShardDistributionResponse(t *types.DescribeShardDistributionResponse) *shared.DescribeShardDistributionResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.DescribeShardDistributionResponse{
+		NumberOfShards: &t.NumberOfShards,
+		Shards:         t.Shards,
+	}
+}
+
 // ToDescribeHistoryHostResponse converts thrift DescribeHistoryHostResponse type to internal
 func ToDescribeHistoryHostResponse(t *shared.DescribeHistoryHostResponse) *types.DescribeHistoryHostResponse {
 	if t == nil {
@@ -1581,6 +1614,17 @@ func ToDescribeHistoryHostResponse(t *shared.DescribeHistoryHostResponse) *types
 		DomainCache:           ToDomainCacheInfo(t.DomainCache),
 		ShardControllerStatus: t.GetShardControllerStatus(),
 		Address:               t.GetAddress(),
+	}
+}
+
+// ToDescribeHistoryHostResponse converts thrift DescribeHistoryHostResponse type to internal
+func ToDescribeShardDistributionResponse(t *shared.DescribeShardDistributionResponse) *types.DescribeShardDistributionResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.DescribeShardDistributionResponse{
+		NumberOfShards: t.GetNumberOfShards(),
+		Shards:         t.Shards,
 	}
 }
 

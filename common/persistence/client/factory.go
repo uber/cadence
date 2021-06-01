@@ -306,10 +306,13 @@ func (f *factoryImpl) Close() {
 func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limiter) {
 	f.datastores = make(map[storeType]Datastore, len(storeTypes))
 	defaultCfg := f.config.DataStores[f.config.DefaultStore]
+	if defaultCfg.Cassandra != nil {
+		f.logger.Warn("Cassandra config is deprecated, please use NoSQL with pluginName of cassandra.")
+	}
 	defaultDataStore := Datastore{ratelimit: limiters[f.config.DefaultStore]}
 	switch {
-	case defaultCfg.Cassandra != nil:
-		defaultDataStore.factory = cassandra.NewFactory(*defaultCfg.Cassandra, clusterName, f.logger)
+	case defaultCfg.NoSQL != nil:
+		defaultDataStore.factory = cassandra.NewFactory(*defaultCfg.NoSQL, clusterName, f.logger)
 	case defaultCfg.SQL != nil:
 		if defaultCfg.SQL.EncodingType == "" {
 			defaultCfg.SQL.EncodingType = string(common.EncodingTypeThriftRW)
@@ -339,10 +342,13 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	}
 
 	visibilityCfg := f.config.DataStores[f.config.VisibilityStore]
+	if visibilityCfg.Cassandra != nil {
+		f.logger.Warn("Cassandra config is deprecated, please use NoSQL with pluginName of cassandra.")
+	}
 	visibilityDataStore := Datastore{ratelimit: limiters[f.config.VisibilityStore]}
 	switch {
-	case visibilityCfg.Cassandra != nil:
-		visibilityDataStore.factory = cassandra.NewFactory(*visibilityCfg.Cassandra, clusterName, f.logger)
+	case visibilityCfg.NoSQL != nil:
+		visibilityDataStore.factory = cassandra.NewFactory(*visibilityCfg.NoSQL, clusterName, f.logger)
 	case visibilityCfg.SQL != nil:
 		var decodingTypes []common.EncodingType
 		for _, dt := range visibilityCfg.SQL.DecodingTypes {

@@ -85,7 +85,7 @@ func (f *Factory) NewShardStore() (p.ShardStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newShardPersistence(conn, f.clusterName, f.logger, f.parser)
+	return NewShardPersistence(conn, f.clusterName, f.logger, f.parser)
 }
 
 // NewHistoryV2Store returns a new history store

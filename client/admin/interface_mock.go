@@ -117,6 +117,19 @@ func (mr *MockClientMockRecorder) DescribeCluster(arg0 interface{}, arg1 ...inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeCluster", reflect.TypeOf((*MockClient)(nil).DescribeCluster), varargs...)
 }
 
+// DescribeShardDistribution mocks base method
+func (m *MockClient) DescribeShardDistribution(arg0 context.Context, arg1 *types.DescribeShardDistributionRequest, arg2 ...yarpc.CallOption) (*types.DescribeShardDistributionResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeShardDistribution", varargs...)
+	ret0, _ := ret[0].(*types.DescribeShardDistributionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
 // DescribeHistoryHost mocks base method
 func (m *MockClient) DescribeHistoryHost(arg0 context.Context, arg1 *types.DescribeHistoryHostRequest, arg2 ...yarpc.CallOption) (*types.DescribeHistoryHostResponse, error) {
 	m.ctrl.T.Helper()

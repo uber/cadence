@@ -40,8 +40,8 @@ type sqlShardManager struct {
 	currentClusterName string
 }
 
-// newShardPersistence creates an instance of ShardStore
-func newShardPersistence(
+// NewShardPersistence creates an instance of ShardStore
+func NewShardPersistence(
 	db sqlplugin.DB,
 	currentClusterName string,
 	log log.Logger,
@@ -65,7 +65,7 @@ func (m *sqlShardManager) CreateShard(
 		ShardID: request.ShardInfo.ShardID,
 	}); err == nil {
 		return &persistence.ShardAlreadyExistError{
-			Msg: fmt.Sprintf("CreateShard operaiton failed. Shard with ID %v already exists.", request.ShardInfo.ShardID),
+			Msg: fmt.Sprintf("CreateShard operation failed. Shard with ID %v already exists.", request.ShardInfo.ShardID),
 		}
 	}
 

@@ -56,7 +56,7 @@ var _ p.ExecutionStore = (*cassandraPersistence)(nil)
 // Where x is any hexadecimal value, E represents the entity type valid values are:
 // E = {DomainID = 1, WorkflowID = 2, RunID = 3}
 // R represents row type in executions table, valid values are:
-// R = {Shard = 1, Execution = 2, Transfer = 3, Timer = 4, Replication = 5}
+// R = {Shard = 1, Execution = 2, Transfer = 3, Timer = 4, Replication = 5, Replication_DLQ = 6, CrossCluster = 7}
 const (
 	// Special Domains related constants
 	emptyDomainID = "10000000-0000-f000-f000-000000000000"
@@ -82,6 +82,9 @@ const (
 	// Row Constants for Replication Task DLQ Row. Source cluster name will be used as WorkflowID.
 	rowTypeDLQDomainID = "10000000-6000-f000-f000-000000000000"
 	rowTypeDLQRunID    = "30000000-6000-f000-f000-000000000000"
+	// Row Constants for Cross Cluster Task Row
+	rowTypeCrossClusterDomainID = "10000000-7000-f000-f000-000000000000"
+	rowTypeCrossClusterRunID    = "30000000-7000-f000-f000-000000000000"
 	// Special TaskId constants
 	rowTypeExecutionTaskID = int64(-10)
 	rowTypeShardTaskID     = int64(-11)
@@ -98,6 +101,7 @@ const (
 	rowTypeTimerTask
 	rowTypeReplicationTask
 	rowTypeDLQ
+	rowTypeCrossClusterTask
 )
 
 const (
@@ -178,6 +182,8 @@ const (
 		`record_visibility: ?, ` +
 		`version: ?` +
 		`}`
+
+	templateCrossClusterTaskType = templateTransferTaskType
 
 	templateReplicationTaskType = `{` +
 		`domain_id: ?, ` +
@@ -321,6 +327,10 @@ workflow_state = ? ` +
 	templateCreateTransferTaskQuery = `INSERT INTO executions (` +
 		`shard_id, type, domain_id, workflow_id, run_id, transfer, visibility_ts, task_id) ` +
 		`VALUES(?, ?, ?, ?, ?, ` + templateTransferTaskType + `, ?, ?)`
+
+	templateCreateCrossClusterTaskQuery = `INSERT INTO executions (` +
+		`shard_id, type, domain_id, workflow_id, run_id, cross_cluster, visibility_ts, task_id) ` +
+		`VALUES(?, ?, ?, ?, ?, ` + templateCrossClusterTaskType + `, ?, ?)`
 
 	templateCreateReplicationTaskQuery = `INSERT INTO executions (` +
 		`shard_id, type, domain_id, workflow_id, run_id, replication, visibility_ts, task_id) ` +
@@ -634,6 +644,17 @@ workflow_state = ? ` +
 		`and task_id > ? ` +
 		`and task_id <= ?`
 
+	templateGetCrossClusterTasksQuery = `SELECT cross_cluster ` +
+		`FROM executions ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and domain_id = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and visibility_ts = ? ` +
+		`and task_id > ? ` +
+		`and task_id <= ?`
+
 	templateGetReplicationTasksQuery = `SELECT replication ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
@@ -671,6 +692,10 @@ workflow_state = ? ` +
 		`and visibility_ts = ? ` +
 		`and task_id > ? ` +
 		`and task_id <= ?`
+
+	templateCompleteCrossClusterTaskQuery = templateCompleteTransferTaskQuery
+
+	templateRangeCompleteCrossClusterTaskQuery = templateRangeCompleteTransferTaskQuery
 
 	templateCompleteReplicationTaskBeforeQuery = `DELETE FROM executions ` +
 		`WHERE shard_id = ? ` +
@@ -1151,120 +1176,6 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 	if !applied {
 		return d.getExecutionConditionalUpdateFailure(previous, iter, executionInfo.RunID, updateWorkflow.Condition, request.RangeID, executionInfo.RunID)
 	}
-	return nil
-}
-
-//TODO: update query with version histories
-func (d *cassandraPersistence) ResetWorkflowExecution(
-	ctx context.Context,
-	request *p.InternalResetWorkflowExecutionRequest,
-) error {
-
-	batch := d.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
-
-	shardID := d.shardID
-
-	domainID := request.NewWorkflowSnapshot.ExecutionInfo.DomainID
-	workflowID := request.NewWorkflowSnapshot.ExecutionInfo.WorkflowID
-
-	baseRunID := request.BaseRunID
-	baseRunNextEventID := request.BaseRunNextEventID
-
-	currentRunID := request.CurrentRunID
-	currentRunNextEventID := request.CurrentRunNextEventID
-
-	newRunID := request.NewWorkflowSnapshot.ExecutionInfo.RunID
-	newExecutionInfo := request.NewWorkflowSnapshot.ExecutionInfo
-
-	lastWriteVersion := request.NewWorkflowSnapshot.LastWriteVersion
-
-	batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
-		newRunID,
-		newRunID,
-		newExecutionInfo.CreateRequestID,
-		newExecutionInfo.State,
-		newExecutionInfo.CloseStatus,
-		lastWriteVersion,
-		newExecutionInfo.State,
-		d.shardID,
-		rowTypeExecution,
-		newExecutionInfo.DomainID,
-		newExecutionInfo.WorkflowID,
-		permanentRunID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID,
-		currentRunID,
-	)
-
-	// for forkRun, check condition without updating anything to make sure the forkRun hasn't been deleted.
-	// Without this check, it will run into race condition with deleteHistoryEvent timer task
-	// we only do it when forkRun != currentRun
-	if baseRunID != currentRunID {
-		batch.Query(templateCheckWorkflowExecutionQuery,
-			baseRunNextEventID,
-			d.shardID,
-			rowTypeExecution,
-			domainID,
-			workflowID,
-			request.BaseRunID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			baseRunNextEventID,
-		)
-	}
-
-	if request.CurrentWorkflowMutation != nil {
-		if err := applyWorkflowMutationBatch(batch, shardID, request.CurrentWorkflowMutation); err != nil {
-			return err
-		}
-	} else {
-		// check condition without updating anything
-		batch.Query(templateCheckWorkflowExecutionQuery,
-			currentRunNextEventID,
-			d.shardID,
-			rowTypeExecution,
-			domainID,
-			workflowID,
-			currentRunID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			currentRunNextEventID,
-		)
-	}
-
-	if err := applyWorkflowSnapshotBatchAsNew(batch, shardID, &request.NewWorkflowSnapshot); err != nil {
-		return err
-	}
-
-	//Verifies that the RangeID has not changed
-	batch.Query(templateUpdateLeaseQuery,
-		request.RangeID,
-		d.shardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
-		request.RangeID,
-	)
-
-	previous := make(map[string]interface{})
-	applied, iter, err := d.session.MapExecuteBatchCAS(batch, previous)
-	defer func() {
-		if iter != nil {
-			iter.Close()
-		}
-	}()
-
-	if err != nil {
-		return convertCommonErrors(d.client, "ResetWorkflowExecution", err)
-	}
-
-	if !applied {
-		return d.getExecutionConditionalUpdateFailure(previous, iter, currentRunID, currentRunNextEventID, request.RangeID, currentRunID)
-	}
-
 	return nil
 }
 
@@ -1771,6 +1682,50 @@ func (d *cassandraPersistence) GetTransferTasks(
 	return response, nil
 }
 
+func (d *cassandraPersistence) GetCrossClusterTasks(
+	ctx context.Context,
+	request *p.GetCrossClusterTasksRequest,
+) (*p.GetCrossClusterTasksResponse, error) {
+
+	// Reading cross-cluster tasks need to be quorum level consistent, otherwise we could loose task
+	query := d.session.Query(templateGetCrossClusterTasksQuery,
+		d.shardID,
+		rowTypeCrossClusterTask,
+		rowTypeCrossClusterDomainID,
+		request.TargetCluster, // workflowID field is used to store target cluster
+		rowTypeCrossClusterRunID,
+		defaultVisibilityTimestamp,
+		request.ReadLevel,
+		request.MaxReadLevel,
+	).PageSize(request.BatchSize).PageState(request.NextPageToken).WithContext(ctx)
+
+	iter := query.Iter()
+	if iter == nil {
+		return nil, &types.InternalServiceError{
+			Message: "GetCrossClusterTasks operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	response := &p.GetCrossClusterTasksResponse{}
+	task := make(map[string]interface{})
+	for iter.MapScan(task) {
+		t := createCrossClusterTaskInfo(task["cross_cluster"].(map[string]interface{}))
+		// Reset task map to get it ready for next scan
+		task = make(map[string]interface{})
+
+		response.Tasks = append(response.Tasks, t)
+	}
+	nextPageToken := iter.PageState()
+	response.NextPageToken = make([]byte, len(nextPageToken))
+	copy(response.NextPageToken, nextPageToken)
+
+	if err := iter.Close(); err != nil {
+		return nil, convertCommonErrors(d.client, "GetCrossClusterTasks", err)
+	}
+
+	return response, nil
+}
+
 func (d *cassandraPersistence) GetReplicationTasks(
 	ctx context.Context,
 	request *p.GetReplicationTasksRequest,
@@ -1861,6 +1816,51 @@ func (d *cassandraPersistence) RangeCompleteTransferTask(
 	err := query.Exec()
 	if err != nil {
 		return convertCommonErrors(d.client, "RangeCompleteTransferTask", err)
+	}
+
+	return nil
+}
+
+func (d *cassandraPersistence) CompleteCrossClusterTask(
+	ctx context.Context,
+	request *p.CompleteCrossClusterTaskRequest,
+) error {
+	query := d.session.Query(templateCompleteCrossClusterTaskQuery,
+		d.shardID,
+		rowTypeCrossClusterTask,
+		rowTypeCrossClusterDomainID,
+		request.TargetCluster,
+		rowTypeCrossClusterRunID,
+		defaultVisibilityTimestamp,
+		request.TaskID,
+	).WithContext(ctx)
+
+	err := query.Exec()
+	if err != nil {
+		return convertCommonErrors(d.client, "CompleteCrossClusterTask", err)
+	}
+
+	return nil
+}
+
+func (d *cassandraPersistence) RangeCompleteCrossClusterTask(
+	ctx context.Context,
+	request *p.RangeCompleteCrossClusterTaskRequest,
+) error {
+	query := d.session.Query(templateRangeCompleteCrossClusterTaskQuery,
+		d.shardID,
+		rowTypeCrossClusterTask,
+		rowTypeCrossClusterDomainID,
+		request.TargetCluster,
+		rowTypeCrossClusterRunID,
+		defaultVisibilityTimestamp,
+		request.ExclusiveBeginTaskID,
+		request.InclusiveEndTaskID,
+	).WithContext(ctx)
+
+	err := query.Exec()
+	if err != nil {
+		return convertCommonErrors(d.client, "RangeCompleteCrossClusterTask", err)
 	}
 
 	return nil

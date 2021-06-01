@@ -21,6 +21,8 @@
 package frontend
 
 import (
+	"os"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -111,7 +113,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		VisibilityMaxPageSize:                       dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityMaxPageSize, 1000),
 		EnableVisibilitySampling:                    dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),
 		EnableReadFromClosedExecutionV2:             dc.GetBoolProperty(dynamicconfig.EnableReadFromClosedExecutionV2, false),
-		VisibilityListMaxQPS:                        dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityListMaxQPS, 10),
+		VisibilityListMaxQPS:                        dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityListMaxQPS, defaultVisibilityListMaxQPS()),
 		ESVisibilityListMaxQPS:                      dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendESVisibilityListMaxQPS, 30),
 		EnableReadVisibilityFromES:                  dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableReadVisibilityFromES, enableReadFromES),
 		ESIndexMaxResultWindow:                      dc.GetIntProperty(dynamicconfig.FrontendESIndexMaxResultWindow, 10000),
@@ -155,6 +157,17 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 			RequiredDomainDataKeys: dc.GetMapProperty(dynamicconfig.RequiredDomainDataKeys, nil),
 		},
 	}
+}
+
+// TODO remove this and return 10 always, after cadence-web improve the List requests with backoff retry
+// https://github.com/uber/cadence-web/issues/337
+func defaultVisibilityListMaxQPS() int {
+	cmd := strings.Join(os.Args, " ")
+	// NOTE: this is safe because only dev box should start cadence in a single box with 4 services, and only docker should use `--env docker`
+	if strings.Contains(cmd, "--root /etc/cadence --env docker start --services=history,matching,frontend,worker") {
+		return 10000
+	}
+	return 10
 }
 
 // Service represents the cadence-frontend service

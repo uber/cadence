@@ -115,6 +115,7 @@ const (
 	FlagDeprecated                        = "deprecated"
 	FlagDeprecatedWithAlias               = FlagDeprecated + ", dep"
 	FlagForce                             = "force"
+	FlagPageID                            = "page_id"
 	FlagPageSize                          = "pagesize"
 	FlagPageSizeWithAlias                 = FlagPageSize + ", ps"
 	FlagEarliestTime                      = "earliest_time"
@@ -272,6 +273,7 @@ const (
 	FlagShardMultiplier                   = "shard_multiplier"
 	FlagBucketSize                        = "bucket_size"
 	DelayStartSeconds                     = "delay_start_seconds"
+	FlagConnectionAttributes              = "conn_attrs"
 )
 
 var flagsForExecution = []cli.Flag{
