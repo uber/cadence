@@ -351,7 +351,7 @@ func (db *cdb) DeleteVisibility(ctx context.Context, domainID, workflowID, runID
 func (db *cdb) SelectVisibility(ctx context.Context, filter *nosqlplugin.VisibilityFilter) (*nosqlplugin.SelectVisibilityResponse, error) {
 	switch filter.FilterType {
 	case nosqlplugin.AllOpen:
-		return db.openSortedyByStartTime(ctx, &filter.ListRequest)
+		return db.openSortedByStartTime(ctx, &filter.ListRequest)
 	case nosqlplugin.AllClosed:
 		switch filter.SortType {
 		case nosqlplugin.SortByStartTime:
@@ -523,7 +523,7 @@ func (db *cdb) closedFilteredByClosedStatusSortedByClosedTime(
 	return processQuery(query, request, readClosedWorkflowExecutionRecord)
 }
 
-func (db *cdb) openSortedyByStartTime(
+func (db *cdb) openSortedByStartTime(
 	ctx context.Context,
 	request *persistence.InternalListWorkflowExecutionsRequest,
 ) (*nosqlplugin.SelectVisibilityResponse, error) {
