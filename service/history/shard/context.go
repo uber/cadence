@@ -80,11 +80,9 @@ type (
 		UpdateTransferAckLevel(ackLevel int64) error
 		GetTransferClusterAckLevel(cluster string) int64
 		UpdateTransferClusterAckLevel(cluster string, ackLevel int64) error
-		// Note: caller should not modify the returned processing queue states
 		GetTransferProcessingQueueStates(cluster string) []*types.ProcessingQueueState
 		UpdateTransferProcessingQueueStates(cluster string, states []*types.ProcessingQueueState) error
 
-		// Note: caller should not modify the returned processing queue states
 		GetCrossClusterProcessingQueueStates(cluster string) []*types.ProcessingQueueState
 		UpdateCrossClusterProcessingQueueStates(cluster string, states []*types.ProcessingQueueState) error
 
@@ -95,7 +93,6 @@ type (
 		UpdateTimerAckLevel(ackLevel time.Time) error
 		GetTimerClusterAckLevel(cluster string) time.Time
 		UpdateTimerClusterAckLevel(cluster string, ackLevel time.Time) error
-		// Note: caller should not modify the returned processing queue states
 		GetTimerProcessingQueueStates(cluster string) []*types.ProcessingQueueState
 		UpdateTimerProcessingQueueStates(cluster string, states []*types.ProcessingQueueState) error
 
@@ -115,9 +112,8 @@ type (
 		ConflictResolveWorkflowExecution(ctx context.Context, request *persistence.ConflictResolveWorkflowExecutionRequest) (*persistence.ConflictResolveWorkflowExecutionResponse, error)
 		AppendHistoryV2Events(ctx context.Context, request *persistence.AppendHistoryNodesRequest, domainID string, execution types.WorkflowExecution) (int, error)
 
-		ReplicateFailoverMarkers(ctx context.Context, makers []*persistence.FailoverMarkerTask) error
+		ReplicateFailoverMarkers(ctx context.Context, markers []*persistence.FailoverMarkerTask) error
 		AddingPendingFailoverMarker(*types.FailoverMarkerAttributes) error
-		// Note: caller should not modify the returned failover markers
 		ValidateAndUpdateFailoverMarkers() ([]*types.FailoverMarkerAttributes, error)
 	}
 
