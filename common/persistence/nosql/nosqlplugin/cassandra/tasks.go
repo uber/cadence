@@ -75,8 +75,8 @@ const (
 		`and task_list_name = ? ` +
 		`and task_list_type = ? ` +
 		`and type = ? ` +
-		`and task_id >= ? ` +
-		`and task_id < ?`
+		`and task_id > ? ` +
+		`and task_id <= ?`
 
 	templateCompleteTaskQuery = `DELETE FROM tasks ` +
 		`WHERE domain_id = ? ` +

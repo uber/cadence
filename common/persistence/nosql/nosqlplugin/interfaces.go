@@ -336,9 +336,9 @@ type (
 
 	TasksFilter struct {
 		TaskListFilter
-		// Inclusive
-		MinTaskID int64
 		// Exclusive
+		MinTaskID int64
+		// Inclusive
 		MaxTaskID int64
 		BatchSize int
 	}

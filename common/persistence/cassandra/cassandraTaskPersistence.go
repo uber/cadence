@@ -291,11 +291,7 @@ func (t *nosqlTaskManager) GetTasks(
 	request *p.GetTasksRequest,
 ) (*p.InternalGetTasksResponse, error) {
 	if request.MaxReadLevel == nil {
-		request.MaxReadLevel = common.Int64Ptr(math.MaxInt64 - 1)
-	}
-	if *request.MaxReadLevel == math.MaxInt64 {
-		// fix overflow
-		*request.MaxReadLevel -= 1
+		request.MaxReadLevel = common.Int64Ptr(math.MaxInt64)
 	}
 
 	if request.ReadLevel > *request.MaxReadLevel {
@@ -310,10 +306,8 @@ func (t *nosqlTaskManager) GetTasks(
 		},
 		BatchSize: request.BatchSize,
 
-		// Change from exclusive to inclusive
-		MinTaskID: request.ReadLevel + 1,
-		// Change from inclusive to exclusive
-		MaxTaskID: *request.MaxReadLevel + 1,
+		MinTaskID: request.ReadLevel,
+		MaxTaskID: *request.MaxReadLevel,
 	})
 
 	if err != nil {
