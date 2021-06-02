@@ -122,7 +122,7 @@ func (t *nosqlTaskManager) LeaseTaskList(
 	} else {
 		// if request.RangeID is > 0, we are trying to renew an already existing
 		// lease on the task list. If request.RangeID=0, we are trying to steal
-		// the currTL from its current owner
+		// the tasklist from its current owner
 		if request.RangeID > 0 && request.RangeID != currTL.RangeID {
 			return nil, &p.ConditionFailedError{
 				Msg: fmt.Sprintf("leaseTaskList:renew failed: taskList:%v, taskListType:%v, haveRangeID:%v, gotRangeID:%v",
