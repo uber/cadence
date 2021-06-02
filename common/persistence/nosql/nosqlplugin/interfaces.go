@@ -326,8 +326,6 @@ type (
 		InsertTasks(ctx context.Context, tasksToInsert []*TaskRowForInsert, tasklistCondition *TaskListRow) (previous *TaskListRow, err error)
 		// SelectTasks return tasks that associated to a tasklist
 		SelectTasks(ctx context.Context, filter *TasksFilter) ([]*TaskRow, error)
-		// DeleteTask delete a single task
-		DeleteTask(ctx context.Context, row *TaskRowPK) error
 		// DeleteTask delete a batch of tasks
 		// Also return the number of rows deleted -- if it's not supported then ignore the batchSize, and return persistence.UnknownNumRowsAffected
 		RangeDeleteTasks(ctx context.Context, filter *TasksFilter) (rowsDeleted int, err error)
@@ -358,13 +356,6 @@ type (
 		RunID       string
 		ScheduledID int64
 		CreatedTime time.Time
-	}
-
-	TaskRowPK struct {
-		DomainID     string
-		TaskListName string
-		TaskListType int
-		TaskID       int64
 	}
 
 	TaskListFilter struct {

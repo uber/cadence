@@ -339,11 +339,17 @@ func (t *nosqlTaskManager) CompleteTask(
 	request *p.CompleteTaskRequest,
 ) error {
 	tli := request.TaskList
-	err := t.db.DeleteTask(ctx, &nosqlplugin.TaskRowPK{
-		DomainID:     tli.DomainID,
-		TaskListName: tli.Name,
-		TaskListType: tli.TaskType,
-		TaskID:       request.TaskID,
+	_, err := t.db.RangeDeleteTasks(ctx, &nosqlplugin.TasksFilter{
+		TaskListFilter: nosqlplugin.TaskListFilter{
+			DomainID:     tli.DomainID,
+			TaskListName: tli.Name,
+			TaskListType: request.TaskList.TaskType,
+		},
+		// exclusive
+		MinTaskID: request.TaskID - 1,
+		// inclusive
+		MaxTaskID: request.TaskID,
+		BatchSize: 1,
 	})
 	if err != nil {
 		return convertCommonErrors(t.db, "CompleteTask", err)
