@@ -928,8 +928,8 @@ func (m *sqlExecutionManager) RangeCompleteReplicationTask(
 ) error {
 
 	if _, err := m.db.RangeDeleteFromReplicationTasks(ctx, &sqlplugin.ReplicationTasksFilter{
-		ShardID: m.shardID,
-		TaskID:  request.InclusiveEndTaskID,
+		ShardID:            m.shardID,
+		InclusiveEndTaskID: request.InclusiveEndTaskID,
 	}); err != nil {
 		return convertCommonErrors(m.db, "RangeCompleteReplicationTask", "", err)
 	}
