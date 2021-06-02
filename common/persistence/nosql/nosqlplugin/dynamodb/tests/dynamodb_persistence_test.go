@@ -22,7 +22,14 @@ package tests
 
 import (
 	"testing"
+
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/dynamodb"
 )
+
+func TestNoopStruct(t *testing.T) {
+	_, _ = dynamodb.NewDynamoDB(config.NoSQL{}, nil)
+}
 
 func TestDynamoDBHistoryPersistence(t *testing.T) {
 	//s := new(persistencetests.HistoryV2PersistenceSuite)

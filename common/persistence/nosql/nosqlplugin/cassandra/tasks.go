@@ -463,19 +463,6 @@ func createTaskInfo(
 	return info
 }
 
-// DeleteTask delete a single task
-func (db *cdb) DeleteTask(ctx context.Context, row *nosqlplugin.TaskRowPK) error {
-	query := db.session.Query(templateCompleteTaskQuery,
-		row.DomainID,
-		row.TaskListName,
-		row.TaskListType,
-		rowTypeTask,
-		row.TaskID,
-	).WithContext(ctx)
-
-	return query.Exec()
-}
-
 // DeleteTask delete a batch tasks that taskIDs less than the row
 // If TTL is not implemented, then should also return the number of rows deleted, otherwise persistence.UnknownNumRowsAffected
 // NOTE: This API ignores the `BatchSize` request parameter i.e. either all tasks leq the task_id will be deleted or an error will
