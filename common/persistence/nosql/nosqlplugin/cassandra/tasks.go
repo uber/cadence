@@ -90,7 +90,8 @@ const (
 		`AND task_list_name = ? ` +
 		`AND task_list_type = ? ` +
 		`AND type = ? ` +
-		`AND task_id < ? `
+		`AND task_id > ? ` +
+		`AND task_id <= ? `
 
 	templateGetTaskList = `SELECT ` +
 		`range_id, ` +
@@ -477,15 +478,16 @@ func (db *cdb) DeleteTask(ctx context.Context, row *nosqlplugin.TaskRowPK) error
 
 // DeleteTask delete a batch tasks that taskIDs less than the row
 // If TTL is not implemented, then should also return the number of rows deleted, otherwise persistence.UnknownNumRowsAffected
-// NOTE: This API ignores the `Limit` request parameter i.e. either all tasks leq the task_id will be deleted or an error will
+// NOTE: This API ignores the `BatchSize` request parameter i.e. either all tasks leq the task_id will be deleted or an error will
 // be returned to the caller, because rowsDeleted is not supported by Cassandra
-func (db *cdb) RangeDeleteTasks(ctx context.Context, maxTaskID *nosqlplugin.TaskRowPK, _ int) (rowsDeleted int, err error) {
+func (db *cdb) RangeDeleteTasks(ctx context.Context, filter *nosqlplugin.TasksFilter) (rowsDeleted int, err error) {
 	query := db.session.Query(templateCompleteTasksLessThanQuery,
-		maxTaskID.DomainID,
-		maxTaskID.TaskListName,
-		maxTaskID.TaskListType,
+		filter.DomainID,
+		filter.TaskListName,
+		filter.TaskListType,
 		rowTypeTask,
-		maxTaskID.TaskID,
+		filter.MinTaskID,
+		filter.MaxTaskID,
 	).WithContext(ctx)
 	err = query.Exec()
 	return p.UnknownNumRowsAffected, err

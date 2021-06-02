@@ -359,14 +359,23 @@ func (t *nosqlTaskManager) CompleteTasksLessThan(
 	ctx context.Context,
 	request *p.CompleteTasksLessThanRequest,
 ) (int, error) {
-	num, err := t.db.RangeDeleteTasks(ctx, &nosqlplugin.TaskRowPK{
-		DomainID:     request.DomainID,
-		TaskListName: request.TaskListName,
-		TaskListType: request.TaskType,
+	num, err := t.db.RangeDeleteTasks(ctx, &nosqlplugin.TasksFilter{
+		TaskListFilter: nosqlplugin.TaskListFilter{
+			DomainID:     request.DomainID,
+			TaskListName: request.TaskListName,
+			TaskListType: request.TaskType,
+		},
 
-		// change from inclusive to exclusive
-		TaskID: request.TaskID + 1,
-	}, request.Limit)
+		// NOTE: MinTaskID is supported in plugin interfaces but not exposed in dataInterfaces/persistenceInterfaces
+		// We may want to add it so that we can test it.
+		// https://github.com/uber/cadence/issues/4243
+		MinTaskID: 0,
+
+		// NOTE: request.TaskID is also inclusive, even though the name is CompleteTasksLessThan
+		MaxTaskID: request.TaskID,
+
+		BatchSize: request.Limit,
+	})
 	if err != nil {
 		return 0, convertCommonErrors(t.db, "CompleteTasksLessThan", err)
 	}
