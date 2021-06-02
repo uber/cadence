@@ -39,9 +39,6 @@ func (c *Persistence) DefaultStoreType() string {
 
 // Validate validates the persistence config
 func (c *Persistence) Validate() error {
-	if _, ok := c.DataStores[c.DefaultStore]; !ok {
-		return fmt.Errorf("persistence config: missing config for datastore %v", c.DefaultStore)
-	}
 	dbStoreKeys := []string{c.DefaultStore}
 
 	if _, ok := c.DataStores[c.VisibilityStore]; ok {
