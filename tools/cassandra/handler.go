@@ -27,6 +27,7 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common/config"
+	cassandra_db "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/schema/cassandra"
 	"github.com/uber/cadence/tools/common/schema"
 )
@@ -47,22 +48,35 @@ type SetupSchemaConfig struct {
 func VerifyCompatibleVersion(
 	cfg config.Persistence,
 ) error {
+	if ds, ok := cfg.DataStores[cfg.DefaultStore]; ok {
+		if err := verifyCompatibleVersion(ds, cassandra.Version); err != nil {
+			return err
+		}
+	}
 
-	ds, ok := cfg.DataStores[cfg.DefaultStore]
-	if ok && ds.Cassandra != nil {
-		err := CheckCompatibleVersion(*ds.Cassandra, cassandra.Version)
-		if err != nil {
+	if ds, ok := cfg.DataStores[cfg.VisibilityStore]; ok {
+		if err := verifyCompatibleVersion(ds, cassandra.VisibilityVersion); err != nil {
 			return err
 		}
 	}
-	ds, ok = cfg.DataStores[cfg.VisibilityStore]
-	if ok && ds.Cassandra != nil {
-		err := CheckCompatibleVersion(*ds.Cassandra, cassandra.VisibilityVersion)
-		if err != nil {
-			return err
-		}
-	}
+
 	return nil
+}
+
+func verifyCompatibleVersion(
+	ds config.DataStore,
+	expectedCassandraVersion string,
+) error {
+	if ds.NoSQL == nil {
+		// not using nosql
+		return nil
+	}
+
+	if ds.NoSQL.PluginName != cassandra_db.PluginName {
+		return fmt.Errorf("unknown NoSQL plugin name: %v", ds.NoSQL.PluginName)
+	}
+
+	return CheckCompatibleVersion(*ds.NoSQL, expectedCassandraVersion)
 }
 
 // CheckCompatibleVersion check the version compatibility

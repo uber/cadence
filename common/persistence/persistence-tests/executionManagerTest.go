@@ -2268,6 +2268,7 @@ func (s *ExecutionManagerSuite) TestReplicationTasks() {
 	}
 }
 
+// TestCrossClusterTasks test
 func (s *ExecutionManagerSuite) TestCrossClusterTasks() {
 	if s.TestBase.Config().DefaultStore != config.StoreTypeCassandra {
 		// TODO: remove this check once cross cluster queue related methods is impelmented for SQL
@@ -2447,7 +2448,7 @@ func (s *ExecutionManagerSuite) TestTransferTasksComplete() {
 	targetDomainID := "8bfb47be-5b57-4d66-9109-5fb35e20b1d0"
 	targetWorkflowID := "some random target domain ID"
 	targetRunID := uuid.New()
-	currentTransferID := s.GetTransferReadLevel()
+	currentTransferID := task1.TaskID
 	now := time.Now()
 	tasks := []p.Task{
 		&p.ActivityTask{now, currentTransferID + 10001, domainID, tasklist, scheduleID, 111},
@@ -2555,7 +2556,7 @@ func (s *ExecutionManagerSuite) TestTransferTasksRangeComplete() {
 	targetDomainID := "8bfb47be-5b57-4d66-9109-5fb35e20b1d0"
 	targetWorkflowID := "some random target domain ID"
 	targetRunID := uuid.New()
-	currentTransferID := s.GetTransferReadLevel()
+	currentTransferID := task1.TaskID
 	now := time.Now()
 	tasks := []p.Task{
 		&p.ActivityTask{now, currentTransferID + 10001, domainID, tasklist, scheduleID, 111},
@@ -3305,7 +3306,6 @@ func (s *ExecutionManagerSuite) TestReplicationTransferTaskTasks() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	s.ClearReplicationQueue()
 	domainID := "2466d7de-6602-4ad8-b939-fb8f8c36c711"
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: "replication-transfer-task-test",
@@ -3357,7 +3357,7 @@ func (s *ExecutionManagerSuite) TestReplicationTransferTaskTasks() {
 	s.Equal(int64(3), task1.NextEventID)
 	s.Equal(int64(9), task1.Version)
 
-	err = s.CompleteTransferTask(ctx, task1.TaskID)
+	err = s.CompleteReplicationTask(ctx, task1.TaskID)
 	s.NoError(err)
 	tasks2, err := s.GetReplicationTasks(ctx, 1, false)
 	s.NoError(err)
@@ -3369,7 +3369,6 @@ func (s *ExecutionManagerSuite) TestReplicationTransferTaskRangeComplete() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	s.ClearReplicationQueue()
 	domainID := uuid.New()
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: "replication-transfer-task--range-complete-test",

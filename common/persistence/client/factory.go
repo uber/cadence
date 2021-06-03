@@ -23,18 +23,22 @@ package client
 import (
 	"sync"
 
-	"github.com/uber/cadence/common/log/tag"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
+	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/persistence/elasticsearch"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/quotas"
+	rc "github.com/uber/cadence/common/resource/config"
+	"github.com/uber/cadence/common/service"
 )
 
 type (
@@ -55,7 +59,7 @@ type (
 		// NewExecutionManager returns a new execution manager for a given shardID
 		NewExecutionManager(shardID int) (p.ExecutionManager, error)
 		// NewVisibilityManager returns a new visibility manager
-		NewVisibilityManager() (p.VisibilityManager, error)
+		NewVisibilityManager(params *service.BootstrapParams, resourceConfig *rc.ResourceConfig) (p.VisibilityManager, error)
 		// NewDomainReplicationQueueManager returns a new queue for domain replication
 		NewDomainReplicationQueueManager() (p.QueueManager, error)
 	}
@@ -246,13 +250,81 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 }
 
 // NewVisibilityManager returns a new visibility manager
-func (f *factoryImpl) NewVisibilityManager() (p.VisibilityManager, error) {
-	visConfig := f.config.VisibilityConfig
+func (f *factoryImpl) NewVisibilityManager(
+	params *service.BootstrapParams,
+	resourceConfig *rc.ResourceConfig,
+) (p.VisibilityManager, error) {
+	if resourceConfig.EnableReadVisibilityFromES == nil && resourceConfig.AdvancedVisibilityWritingMode == nil {
+		// No need to create visibility manager as no read/write needed
+		return nil, nil
+	}
+	var visibilityFromDB, visibilityFromES p.VisibilityManager
+	var err error
+	if params.PersistenceConfig.VisibilityStore != "" {
+		visibilityFromDB, err = f.newDBVisibilityManager(resourceConfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if params.PersistenceConfig.AdvancedVisibilityStore != "" {
+		visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
+		visibilityProducer, err := params.MessagingClient.NewProducer(common.VisibilityAppName)
+		if err != nil {
+			f.logger.Fatal("Creating visibility producer failed", tag.Error(err))
+		}
+		visibilityFromES = newESVisibilityManager(
+			visibilityIndexName, params.ESClient, resourceConfig, visibilityProducer, params.MetricsClient, f.logger,
+		)
+	}
+	return p.NewVisibilityDualManager(
+		visibilityFromDB,
+		visibilityFromES,
+		resourceConfig.EnableReadVisibilityFromES,
+		resourceConfig.AdvancedVisibilityWritingMode,
+		f.logger,
+	), nil
+}
+
+// NewESVisibilityManager create a visibility manager for ElasticSearch
+// In history, it only needs kafka producer for writing data;
+// In frontend, it only needs ES client and related config for reading data
+func newESVisibilityManager(
+	indexName string,
+	esClient es.GenericClient,
+	visibilityConfig *rc.ResourceConfig,
+	producer messaging.Producer,
+	metricsClient metrics.Client,
+	log log.Logger,
+) p.VisibilityManager {
+
+	visibilityFromESStore := elasticsearch.NewElasticSearchVisibilityStore(esClient, indexName, producer, visibilityConfig, log)
+	visibilityFromES := p.NewVisibilityManagerImpl(visibilityFromESStore, log)
+
+	// wrap with rate limiter
+	if visibilityConfig.PersistenceMaxQPS != nil && visibilityConfig.PersistenceMaxQPS() != 0 {
+		esRateLimiter := quotas.NewDynamicRateLimiter(
+			func() float64 {
+				return float64(visibilityConfig.PersistenceMaxQPS())
+			},
+		)
+		visibilityFromES = p.NewVisibilityPersistenceRateLimitedClient(visibilityFromES, esRateLimiter, log)
+	}
+	if metricsClient != nil {
+		// wrap with metrics
+		visibilityFromES = elasticsearch.NewVisibilityMetricsClient(visibilityFromES, metricsClient, log)
+	}
+
+	return visibilityFromES
+}
+
+func (f *factoryImpl) newDBVisibilityManager(
+	visibilityConfig *rc.ResourceConfig,
+) (p.VisibilityManager, error) {
 	enableReadFromClosedExecutionV2 := false
-	if visConfig != nil && visConfig.EnableReadFromClosedExecutionV2 != nil {
-		enableReadFromClosedExecutionV2 = visConfig.EnableReadFromClosedExecutionV2()
+	if visibilityConfig.EnableReadDBVisibilityFromClosedExecutionV2 != nil {
+		enableReadFromClosedExecutionV2 = visibilityConfig.EnableReadDBVisibilityFromClosedExecutionV2()
 	} else {
-		f.logger.Warn("missing visibility and EnableReadFromClosedExecutionV2 config", tag.Value(visConfig))
+		f.logger.Warn("missing visibility and EnableReadFromClosedExecutionV2 config", tag.Value(visibilityConfig))
 	}
 
 	ds := f.datastores[storeTypeVisibility]
@@ -267,8 +339,12 @@ func (f *factoryImpl) NewVisibilityManager() (p.VisibilityManager, error) {
 	if ds.ratelimit != nil {
 		result = p.NewVisibilityPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
-	if visConfig != nil && visConfig.EnableSampling() {
-		result = p.NewVisibilitySamplingClient(result, visConfig, f.metricsClient, f.logger)
+	if visibilityConfig.EnableDBVisibilitySampling != nil && visibilityConfig.EnableDBVisibilitySampling() {
+		result = p.NewVisibilitySamplingClient(result, &p.SamplingConfig{
+			VisibilityClosedMaxQPS: visibilityConfig.WriteDBVisibilityClosedMaxQPS,
+			VisibilityListMaxQPS:   visibilityConfig.DBVisibilityListMaxQPS,
+			VisibilityOpenMaxQPS:   visibilityConfig.WriteDBVisibilityOpenMaxQPS,
+		}, f.metricsClient, f.logger)
 	}
 	if f.metricsClient != nil {
 		result = p.NewVisibilityPersistenceMetricsClient(result, f.metricsClient, f.logger)
@@ -332,7 +408,7 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 			f.logger,
 			getSQLParser(f.logger, common.EncodingType(defaultCfg.SQL.EncodingType), decodingTypes...))
 	default:
-		f.logger.Fatal("invalid config: one of cassandra or sql params must be specified")
+		f.logger.Fatal("invalid config: one of nosql or sql params must be specified for defaultDataStore")
 	}
 
 	for _, st := range storeTypes {
@@ -341,7 +417,13 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 		}
 	}
 
-	visibilityCfg := f.config.DataStores[f.config.VisibilityStore]
+	visibilityCfg, ok := f.config.DataStores[f.config.VisibilityStore]
+	if !ok {
+		f.logger.Info("no visibilityStore is configured, will use advancedVisibilityStore")
+		// NOTE: f.datastores[storeTypeVisibility] will be nil
+		return
+	}
+
 	if visibilityCfg.Cassandra != nil {
 		f.logger.Warn("Cassandra config is deprecated, please use NoSQL with pluginName of cassandra.")
 	}
@@ -360,7 +442,7 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 			f.logger,
 			getSQLParser(f.logger, common.EncodingType(visibilityCfg.SQL.EncodingType), decodingTypes...))
 	default:
-		f.logger.Fatal("invalid config: one of cassandra or sql params must be specified")
+		f.logger.Fatal("invalid config: one of nosql or sql params must be specified for visibilityStore")
 	}
 
 	f.datastores[storeTypeVisibility] = visibilityDataStore

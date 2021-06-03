@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,58 +21,44 @@
 package dynamodb
 
 import (
-	"errors"
-	"fmt"
+	"context"
 
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
-const (
-	// PluginName is the name of the plugin
-	PluginName = "dynamodb"
-)
-
-var (
-	errConditionFailed = errors.New("internal condition fail error")
-)
-
-// ddb represents a logical connection to DynamoDB database
-type ddb struct {
-	logger log.Logger
-}
-
-var _ nosqlplugin.DB = (*ddb)(nil)
-
-// NewDynamoDB return a new DB
-func NewDynamoDB(cfg config.NoSQL, logger log.Logger) (nosqlplugin.DB, error) {
-	return nil, fmt.Errorf("TODO")
-}
-
-func (db *ddb) Close() {
+func (db *ddb) InsertVisibility(
+	ctx context.Context,
+	ttlSeconds int64,
+	row *nosqlplugin.VisibilityRowForInsert,
+) error {
 	panic("TODO")
 }
 
-func (db *ddb) PluginName() string {
-	return PluginName
-}
-
-func (db *ddb) IsNotFoundError(err error) bool {
+func (db *ddb) UpdateVisibility(
+	ctx context.Context,
+	ttlSeconds int64,
+	row *nosqlplugin.VisibilityRowForUpdate,
+) error {
 	panic("TODO")
 }
 
-func (db *ddb) IsTimeoutError(err error) bool {
+func (db *ddb) SelectVisibility(
+	ctx context.Context,
+	filter *nosqlplugin.VisibilityFilter,
+) (*nosqlplugin.SelectVisibilityResponse, error) {
 	panic("TODO")
 }
 
-func (db *ddb) IsThrottlingError(err error) bool {
+func (db *ddb) DeleteVisibility(
+	ctx context.Context,
+	domainID, workflowID, runID string,
+) error {
 	panic("TODO")
 }
 
-func (db *ddb) IsConditionFailedError(err error) bool {
-	if err == errConditionFailed {
-		return true
-	}
-	return false
+func (db *ddb) SelectOneClosedWorkflow(
+	ctx context.Context,
+	domainID, workflowID, runID string,
+) (*nosqlplugin.VisibilityRow, error) {
+	panic("TODO")
 }
