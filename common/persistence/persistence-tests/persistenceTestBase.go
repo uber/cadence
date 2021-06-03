@@ -81,8 +81,6 @@ type (
 		ShardInfo                 *p.ShardInfo
 		TaskIDGenerator           TransferTaskIDGenerator
 		ClusterMetadata           cluster.Metadata
-		ReadLevel                 int64
-		ReplicationReadLevel      int64
 		DefaultTestCluster        PersistenceTestCluster
 		VisibilityTestCluster     PersistenceTestCluster
 		Logger                    log.Logger
@@ -217,9 +215,6 @@ func (s *TestBase) Setup() {
 	s.ExecutionManager, err = factory.NewExecutionManager(shardID)
 	s.fatalOnError("NewExecutionManager", err)
 
-	s.ReadLevel = 0
-	s.ReplicationReadLevel = 0
-
 	domainFilter := &types.DomainFilter{
 		DomainIDs:    []string{},
 		ReverseMatch: true,
@@ -234,7 +229,7 @@ func (s *TestBase) Setup() {
 			},
 		},
 	}
-	transferPQS := types.ProcessingQueueStates{transferPQSMap}
+	transferPQS := types.ProcessingQueueStates{StatesByCluster: transferPQSMap}
 	timerPQSMap := map[string][]*types.ProcessingQueueState{
 		s.ClusterMetadata.GetCurrentClusterName(): {
 			&types.ProcessingQueueState{
@@ -1287,7 +1282,6 @@ func (s *TestBase) DeleteCurrentWorkflowExecution(ctx context.Context, info *p.W
 }
 
 // GetTransferTasks is a utility method to get tasks from transfer task queue
-// Note: this method will save the load progress and continue from the save progress upon later invocations
 func (s *TestBase) GetTransferTasks(ctx context.Context, batchSize int, getAll bool) ([]*p.TransferTaskInfo, error) {
 	result := []*p.TransferTaskInfo{}
 	var token []byte
@@ -1295,8 +1289,8 @@ func (s *TestBase) GetTransferTasks(ctx context.Context, batchSize int, getAll b
 Loop:
 	for {
 		response, err := s.ExecutionManager.GetTransferTasks(ctx, &p.GetTransferTasksRequest{
-			ReadLevel:     s.GetTransferReadLevel(),
-			MaxReadLevel:  int64(math.MaxInt64),
+			ReadLevel:     0,
+			MaxReadLevel:  math.MaxInt64,
 			BatchSize:     batchSize,
 			NextPageToken: token,
 		})
@@ -1309,10 +1303,6 @@ Loop:
 		if len(token) == 0 || !getAll {
 			break Loop
 		}
-	}
-
-	for _, task := range result {
-		atomic.StoreInt64(&s.ReadLevel, task.TaskID)
 	}
 
 	return result, nil
@@ -1346,7 +1336,6 @@ func (s *TestBase) GetCrossClusterTasks(ctx context.Context, targetCluster strin
 }
 
 // GetReplicationTasks is a utility method to get tasks from replication task queue
-// Note: this method will save the load progress and continue from the save progress upon later invocations
 func (s *TestBase) GetReplicationTasks(ctx context.Context, batchSize int, getAll bool) ([]*p.ReplicationTaskInfo, error) {
 	result := []*p.ReplicationTaskInfo{}
 	var token []byte
@@ -1354,8 +1343,8 @@ func (s *TestBase) GetReplicationTasks(ctx context.Context, batchSize int, getAl
 Loop:
 	for {
 		response, err := s.ExecutionManager.GetReplicationTasks(ctx, &p.GetReplicationTasksRequest{
-			ReadLevel:     s.GetReplicationReadLevel(),
-			MaxReadLevel:  int64(math.MaxInt64),
+			ReadLevel:     0,
+			MaxReadLevel:  math.MaxInt64,
 			BatchSize:     batchSize,
 			NextPageToken: token,
 		})
@@ -1368,10 +1357,6 @@ Loop:
 		if len(token) == 0 || !getAll {
 			break Loop
 		}
-	}
-
-	for _, task := range result {
-		atomic.StoreInt64(&s.ReplicationReadLevel, task.TaskID)
 	}
 
 	return result, nil
@@ -1683,16 +1668,6 @@ func (s *TestBase) GetNextSequenceNumber() int64 {
 	return taskID
 }
 
-// GetTransferReadLevel returns the current read level for shard
-func (s *TestBase) GetTransferReadLevel() int64 {
-	return atomic.LoadInt64(&s.ReadLevel)
-}
-
-// GetReplicationReadLevel returns the current read level for shard
-func (s *TestBase) GetReplicationReadLevel() int64 {
-	return atomic.LoadInt64(&s.ReplicationReadLevel)
-}
-
 // ClearTasks completes all transfer tasks and replication tasks
 func (s *TestBase) ClearTasks() {
 	s.ClearTransferQueue()
@@ -1701,7 +1676,7 @@ func (s *TestBase) ClearTasks() {
 
 // ClearTransferQueue completes all tasks in transfer queue
 func (s *TestBase) ClearTransferQueue() {
-	s.Logger.Info("Clearing transfer tasks", tag.ShardRangeID(s.ShardInfo.RangeID), tag.ReadLevel(s.GetTransferReadLevel()))
+	s.Logger.Info("Clearing transfer tasks", tag.ShardRangeID(s.ShardInfo.RangeID))
 	tasks, err := s.GetTransferTasks(context.Background(), 100, true)
 	if err != nil {
 		s.Logger.Fatal("Error during cleanup", tag.Error(err))
@@ -1715,12 +1690,11 @@ func (s *TestBase) ClearTransferQueue() {
 	}
 
 	s.Logger.Info("Deleted transfer tasks.", tag.Counter(counter))
-	atomic.StoreInt64(&s.ReadLevel, 0)
 }
 
 // ClearReplicationQueue completes all tasks in replication queue
 func (s *TestBase) ClearReplicationQueue() {
-	s.Logger.Info("Clearing replication tasks", tag.ShardRangeID(s.ShardInfo.RangeID), tag.ReadLevel(s.GetReplicationReadLevel()))
+	s.Logger.Info("Clearing replication tasks", tag.ShardRangeID(s.ShardInfo.RangeID))
 	tasks, err := s.GetReplicationTasks(context.Background(), 100, true)
 	if err != nil {
 		s.Logger.Fatal("Error during cleanup", tag.Error(err))
@@ -1734,7 +1708,6 @@ func (s *TestBase) ClearReplicationQueue() {
 	}
 
 	s.Logger.Info("Deleted replication tasks.", tag.Counter(counter))
-	atomic.StoreInt64(&s.ReplicationReadLevel, 0)
 }
 
 // EqualTimesWithPrecision assertion that two times are equal within precision
@@ -1755,7 +1728,7 @@ func (s *TestBase) validateTimeRange(t time.Time, expectedDuration time.Duration
 	currentTime := time.Now()
 	diff := time.Duration(currentTime.UnixNano() - t.UnixNano())
 	if diff > expectedDuration {
-		s.Logger.Info("Check Current time, Application time, Differenrce", tag.Timestamp(t), tag.CursorTimestamp(currentTime), tag.Number(int64(diff)))
+		s.Logger.Info("Check Current time, Application time, Difference", tag.Timestamp(t), tag.CursorTimestamp(currentTime), tag.Number(int64(diff)))
 		return false
 	}
 	return true
