@@ -72,19 +72,22 @@ func verifyCompatibleVersion(
 	expectedVersions map[string]string,
 ) error {
 	var expectedVersion string
+	var cfg config.NoSQL
 	if ds.NoSQL != nil {
 		var ok bool
 		if expectedVersion, ok = expectedVersions[ds.NoSQL.PluginName]; !ok {
 			return fmt.Errorf("unknown NoSQL plugin name: %v", ds.NoSQL.PluginName)
 		}
+		cfg = *ds.NoSQL
 	} else if ds.Cassandra != nil {
 		expectedVersion = cassandra.VisibilityVersion
+		cfg = *ds.Cassandra
 	} else {
 		// not using nosql or cassandra
 		return nil
 	}
 
-	return CheckCompatibleVersion(*ds.NoSQL, expectedVersion)
+	return CheckCompatibleVersion(cfg, expectedVersion)
 }
 
 // CheckCompatibleVersion check the version compatibility
