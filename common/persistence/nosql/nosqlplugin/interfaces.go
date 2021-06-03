@@ -367,6 +367,10 @@ type (
 	* NOTE: Cassandra limits lightweight transaction to execute within one table. So the 6 tables + shard table are implemented
 	*   	via a single table `execution` in Cassandra, using `rowType` to differentiate the 7 tables, and using `permanentRunID`
 	*		to differentiate current_workflow and workflow_execution
+	* NOTE: Cassandra implementation uses 5 maps and a set to store activityInfo, timerInfo, childWorkflowInfo, requestCancels,
+	*		signalInfo and signalRequestedInfo.Those should be fine to be stored in the same record as its workflow_execution.
+	*		However, signalInfo stores the in progress signal data. It may be too big for a single record. For example, DynamoDB
+	*		requires 400KB of a record. In that case, it may be better to have a separate table for signalInfo.
 	 */
 	workflowCRUD interface {
 	}
