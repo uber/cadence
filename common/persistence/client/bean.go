@@ -26,6 +26,8 @@ import (
 	"sync"
 
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/resource/config"
+	"github.com/uber/cadence/common/service"
 )
 
 type (
@@ -73,6 +75,8 @@ type (
 // NewBeanFromFactory crate a new store bean using factory
 func NewBeanFromFactory(
 	factory Factory,
+	params *service.BootstrapParams,
+	resourceConfig *config.ResourceConfig,
 ) (*BeanImpl, error) {
 
 	metadataMgr, err := factory.NewMetadataManager()
@@ -85,7 +89,7 @@ func NewBeanFromFactory(
 		return nil, err
 	}
 
-	visibilityMgr, err := factory.NewVisibilityManager()
+	visibilityMgr, err := factory.NewVisibilityManager(params, resourceConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +313,10 @@ func (s *BeanImpl) Close() {
 
 	s.metadataManager.Close()
 	s.taskManager.Close()
-	s.visibilityManager.Close()
+	if s.visibilityManager != nil {
+		// visibilityManager can be nil
+		s.visibilityManager.Close()
+	}
 	s.domainReplicationQueueManager.Close()
 	s.shardManager.Close()
 	s.historyManager.Close()

@@ -1,6 +1,5 @@
 persistence:
   defaultStore: cass-default
-  visibilityStore: cass-visibility
   advancedVisibilityStore: es-visibility
   numHistoryShards: 4
   datastores:
@@ -9,11 +8,6 @@ persistence:
         pluginName: "cassandra"
         hosts: "127.0.0.1"
         keyspace: "cadence"
-    cass-visibility:
-      nosql:
-        pluginName: "cassandra"
-        hosts: "127.0.0.1"
-        keyspace: "cadence_visibility"
     es-visibility:
       elasticsearch:
         version: "v7"

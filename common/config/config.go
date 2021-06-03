@@ -129,8 +129,10 @@ type (
 		// DefaultStore is the name of the default data store to use
 		DefaultStore string `yaml:"defaultStore" validate:"nonzero"`
 		// VisibilityStore is the name of the datastore to be used for visibility records
-		VisibilityStore string `yaml:"visibilityStore" validate:"nonzero"`
+		// Must provide one of VisibilityStore and AdvancedVisibilityStore
+		VisibilityStore string `yaml:"visibilityStore"`
 		// AdvancedVisibilityStore is the name of the datastore to be used for visibility records
+		// Must provide one of VisibilityStore and AdvancedVisibilityStore
 		AdvancedVisibilityStore string `yaml:"advancedVisibilityStore"`
 		// HistoryMaxConns is the desired number of conns to history store. Value specified
 		// here overrides the MaxConns config specified as part of datastore
@@ -140,10 +142,10 @@ type (
 		NumHistoryShards int `yaml:"numHistoryShards" validate:"nonzero"`
 		// DataStores contains the configuration for all datastores
 		DataStores map[string]DataStore `yaml:"datastores"`
-		// VisibilityConfig is config for visibility sampling
-		VisibilityConfig *VisibilityConfig `yaml:"-" json:"-"`
+		// TODO: move dynamic config out of static config
 		// TransactionSizeLimit is the largest allowed transaction size
 		TransactionSizeLimit dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
+		// TODO: move dynamic config out of static config
 		// ErrorInjectionRate is the the rate for injecting random error
 		ErrorInjectionRate dynamicconfig.FloatPropertyFn `yaml:"-" json:"-"`
 	}
@@ -159,26 +161,6 @@ type (
 		NoSQL *NoSQL `yaml:"nosql"`
 		// ElasticSearch contains the config for a ElasticSearch datastore
 		ElasticSearch *ElasticSearchConfig `yaml:"elasticsearch"`
-	}
-
-	// VisibilityConfig is config for visibility
-	VisibilityConfig struct {
-		// EnableSampling for visibility
-		EnableSampling dynamicconfig.BoolPropertyFn `yaml:"-" json:"-"`
-		// EnableReadFromClosedExecutionV2 read closed from v2 table
-		EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn `yaml:"-" json:"-"`
-		// VisibilityOpenMaxQPS max QPS for record open workflows
-		VisibilityOpenMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-		// VisibilityClosedMaxQPS max QPS for record closed workflows
-		VisibilityClosedMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-		// VisibilityListMaxQPS max QPS for list workflow
-		VisibilityListMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-		// ESIndexMaxResultWindow ElasticSearch index setting max_result_window
-		ESIndexMaxResultWindow dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
-		// MaxQPS is overall max QPS
-		MaxQPS dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
-		// ValidSearchAttributes is legal indexed keys that can be used in list APIs
-		ValidSearchAttributes dynamicconfig.MapPropertyFn `yaml:"-" json:"-"`
 	}
 
 	// Cassandra contains configuration to connect to Cassandra cluster

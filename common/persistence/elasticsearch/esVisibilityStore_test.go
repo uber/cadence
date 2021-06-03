@@ -37,7 +37,6 @@ import (
 	"github.com/uber/cadence/.gen/go/indexer"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
 	es "github.com/uber/cadence/common/elasticsearch"
@@ -45,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
+	rc "github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
@@ -102,7 +102,7 @@ func (s *ESVisibilitySuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.mockESClient = &esMocks.GenericClient{}
-	config := &config.VisibilityConfig{
+	config := &rc.ResourceConfig{
 		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(esIndexMaxResultWindow),
 		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 	}
