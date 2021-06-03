@@ -49,17 +49,13 @@ func VerifyCompatibleVersion(
 	cfg config.Persistence,
 ) error {
 	if ds, ok := cfg.DataStores[cfg.DefaultStore]; ok {
-		if err := verifyCompatibleVersion(ds, map[string]string{
-			cassandra_db.PluginName: cassandra.Version,
-		}); err != nil {
+		if err := verifyCompatibleVersion(ds, cassandra.Version); err != nil {
 			return err
 		}
 	}
 
 	if ds, ok := cfg.DataStores[cfg.VisibilityStore]; ok {
-		if err := verifyCompatibleVersion(ds, map[string]string{
-			cassandra_db.PluginName: cassandra.VisibilityVersion,
-		}); err != nil {
+		if err := verifyCompatibleVersion(ds, cassandra.VisibilityVersion); err != nil {
 			return err
 		}
 	}
@@ -69,25 +65,18 @@ func VerifyCompatibleVersion(
 
 func verifyCompatibleVersion(
 	ds config.DataStore,
-	expectedVersions map[string]string,
+	expectedCassandraVersion string,
 ) error {
-	var expectedVersion string
-	var cfg config.NoSQL
-	if ds.NoSQL != nil {
-		var ok bool
-		if expectedVersion, ok = expectedVersions[ds.NoSQL.PluginName]; !ok {
-			return fmt.Errorf("unknown NoSQL plugin name: %v", ds.NoSQL.PluginName)
-		}
-		cfg = *ds.NoSQL
-	} else if ds.Cassandra != nil {
-		expectedVersion = cassandra.VisibilityVersion
-		cfg = *ds.Cassandra
-	} else {
-		// not using nosql or cassandra
+	if ds.NoSQL == nil {
+		// not using nosql
 		return nil
 	}
 
-	return CheckCompatibleVersion(cfg, expectedVersion)
+	if ds.NoSQL.PluginName != cassandra_db.PluginName {
+		return fmt.Errorf("unknown NoSQL plugin name: %v", ds.NoSQL.PluginName)
+	}
+
+	return CheckCompatibleVersion(*ds.NoSQL, expectedCassandraVersion)
 }
 
 // CheckCompatibleVersion check the version compatibility
