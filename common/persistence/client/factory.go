@@ -339,7 +339,7 @@ func (f *factoryImpl) newDBVisibilityManager(
 	if ds.ratelimit != nil {
 		result = p.NewVisibilityPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
-	if visibilityConfig.EnableDBVisibilitySampling() {
+	if visibilityConfig.EnableDBVisibilitySampling != nil && visibilityConfig.EnableDBVisibilitySampling() {
 		result = p.NewVisibilitySamplingClient(result, &p.SamplingConfig{
 			VisibilityClosedMaxQPS: visibilityConfig.WriteDBVisibilityClosedMaxQPS,
 			VisibilityListMaxQPS:   visibilityConfig.DBVisibilityListMaxQPS,
