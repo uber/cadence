@@ -54,6 +54,7 @@ type (
 		shardCRUD
 		visibilityCRUD
 		taskCRUD
+		workflowCRUD
 	}
 
 	// NoSQLErrorChecker checks for common nosql errors
@@ -329,6 +330,45 @@ type (
 		// DeleteTask delete a batch of tasks
 		// Also return the number of rows deleted -- if it's not supported then ignore the batchSize, and return persistence.UnknownNumRowsAffected
 		RangeDeleteTasks(ctx context.Context, filter *TasksFilter) (rowsDeleted int, err error)
+	}
+
+	/**
+	* workflowCRUD is for core data models of workflow execution.
+	*
+	* Recommendation: If possible, use 7 tables(current_workflow, workflow_execution, transfer_task, replication_task, cross_cluster_task, timer_task, replication_dlq_task) to implement
+	* current_workflow is to track the currentRunID of a workflowID for ensuring the ID-Uniqueness of Cadence workflows.
+	* 		Each record is for one workflowID
+	* workflow_execution is to store the core data of workflow execution.
+	*		Each record is for one runID(workflow execution run).
+	* Different from taskCRUD, transfer_task, replication_task, timer_task are all internal background tasks within Cadence server.
+	* transfer_task is to store the background tasks that need to be processed by historyEngine, right after the transaction.
+	*		There are lots of usage in historyEngine, like creating activity/childWF/etc task, and updating search attributes, etc.
+	* replication_task is to store also background tasks that need to be processed right after the transaction,
+	*		but only for CrossDC(XDC) replication feature. Each record is a replication task generated from a source cluster.
+	*		Replication task stores a reference to a batch of history events(see historyCRUD).
+	* timer_task is to store the durable timers that will fire in the future. Therefore this table should be indexed by the firingTime.
+	*		The durable timers are not only for workflow timers, but also for all kinds of timeouts, and workflow deletion, etc.
+	* The above 5 tables will be required to execute transaction write with the condition of shard record from shardCRUD.
+	* cross_cluster_task is to store also background tasks that need to be processed right after the transaction, and only for
+	*		but only for CrossDC(XDC) replication feature. Each record is a replication task generated for a target cluster.
+	*		CrossCluster task stores information similar to TransferTask.
+	* replication_dlq_task is DeadLetterQueue when target cluster pulling and applying replication task. Each record represents
+	*		a task for a target cluster.
+	*
+	* Significant columns:
+	* current_workflow: partition key(shardID), range key(domainID, workflowID), query condition column(currentRunID)
+	* workflow_execution: partition key(shardID), range key(domainID, workflowID, runID), query condition column(nextEventID)
+	* transfer_task: partition key(shardID), range key(taskID)
+	* replication_task: partition key(shardID), range key(taskID)
+	* cross_cluster_task: partition key(shardID), range key(clusterName, taskID)
+	* timer_task: partition key(shardID), range key(visibilityTimestamp)
+	* replication_dlq_task: partition key(shardID), range key(clusterName, taskID)
+	*
+	* NOTE: Cassandra limits lightweight transaction to execute within one table. So the 6 tables + shard table are implemented
+	*   	via a single table `execution` in Cassandra, using `rowType` to differentiate the 7 tables, and using `permanentRunID`
+	*		to differentiate current_workflow and workflow_execution
+	 */
+	workflowCRUD interface {
 	}
 
 	TasksFilter struct {
