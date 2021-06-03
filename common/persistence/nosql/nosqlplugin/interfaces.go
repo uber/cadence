@@ -24,6 +24,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -356,7 +357,7 @@ type (
 	*		a task for a target cluster.
 	*
 	* Significant columns:
-	* current_workflow: partition key(shardID), range key(domainID, workflowID), query condition column(currentRunID)
+	* current_workflow: partition key(shardID), range key(domainID, workflowID), query condition column(currentRunID, lastWriteVersion, state)
 	* workflow_execution: partition key(shardID), range key(domainID, workflowID, runID), query condition column(nextEventID)
 	* transfer_task: partition key(shardID), range key(taskID)
 	* replication_task: partition key(shardID), range key(taskID)
@@ -377,6 +378,138 @@ type (
 	*		it will require to read the whole activityInfo map for deleting.
 	 */
 	workflowCRUD interface {
+		// InsertWorkflowExecutionWithTasks is for creating a new workflow execution record. Within a transaction, it also:
+		// 1. Create or update the record of current_workflow with the same workflowID, based on CurrentWorkflowExecutionWriteMode,
+		//		and also check if the condition is met.
+		// 2. Create transfer tasks
+		// 3. Create timer tasks
+		// 4. Create replication tasks
+		// 5. Create crossCluster tasks
+		// 6. Create activityInfo
+		// 7. Create timerInfo
+		// 8. Create childWorkflowInfo
+		// 9. Create requestCancels
+		// 10. Create signalInfo
+		// 11. Create signalRequested
+		// 12. Check if the condition of shard rangeID is met
+		// It returns error if there is any. If any of the condition is not met, returns IsConditionFailedError and the ConditionFailureDetails
+		InsertWorkflowExecutionWithTasks(
+			currentWorkflowRequest *CurrentWorkflowWriteRequest,
+			execution *WorkflowExecutionRow,
+			transferTasks []*TransferTask,
+			crossClusterTasks []*CrossClusterTask,
+			replicationTasks []*ReplicationTask,
+			timerTasks []*TimerTask,
+			activityInfoMap map[int64]persistence.InternalActivityInfo,
+			timerInfoMap map[string]persistence.TimerInfo,
+			childWorkflowInfoMap map[int64]persistence.InternalChildExecutionInfo,
+			requestCancelInfoMap map[int64]persistence.RequestCancelInfo,
+			signalInfoMap map[int64]persistence.SignalInfo,
+			signalRequestedIDs []string,
+			shardCondition *ShardCondition,
+		) (*ConditionFailureDetails, error)
+	}
+
+	WorkflowExecutionRow struct {
+		persistence.InternalWorkflowExecutionInfo
+		VersionHistories *persistence.DataBlob
+		Checksums        *checksum.Checksum
+		LastWriteVersion int64
+	}
+
+	TimerTask struct {
+		Type int
+
+		DomainID            string
+		WorkflowID          string
+		RunID               string
+		visibilityTimestamp time.Time
+		TaskID              int64
+
+		TimeoutType int
+		EventID     int64
+		Attempt     int64
+		Version     int64
+	}
+
+	ReplicationTask struct {
+		Type int
+
+		DomainID            string
+		WorkflowID          string
+		RunID               string
+		visibilityTimestamp time.Time
+		TaskID              int64
+		FirstEventID        int64
+		nextEventID         int64
+		Version             int64
+		ActivityScheduleID  int64
+		EventStoreVersion   int
+		BranchToken         []byte
+		NewRunBranchToken   []byte
+	}
+
+	CrossClusterTask = TransferTask
+
+	TransferTask struct {
+		Type                    int
+		DomainID                string
+		WorkflowID              string
+		RunID                   string
+		visibilityTimestamp     time.Time
+		TaskID                  int64
+		TargetDomainID          string
+		TargetWorkflowID        string
+		TargetRunID             string
+		TargetChildWorkflowOnly bool
+		TaskList                string
+		ScheduleID              int64
+		RecordVisibility        bool
+		Version                 int64
+	}
+
+	ShardCondition struct {
+		ShardID        int64
+		CurrentRangeID int64
+	}
+
+	CurrentWorkflowWriteRequest struct {
+		WriteMode CurrentWorkflowWriteMode
+		CurrentWorkflowRow
+		PreviousRunID            *string
+		PreviousLastWriteVersion *int64
+		PreviousState            *int
+	}
+
+	CurrentWorkflowWriteMode int
+
+	CurrentWorkflowRow struct {
+		ShardID          int
+		DomainID         string
+		WorkflowID       string
+		RunID            string
+		State            int
+		CloseStatus      int
+		CreateRequestID  string
+		StartVersion     int64
+		LastWriteVersion int64
+	}
+
+	// Only one of the fields must be non-nil
+	ConditionFailureDetails struct {
+		UnknownConditionFailureDetails *string // return some info for logging
+		PreviousRangeIDNotMatch        *int64  // return the previous shardRangeID
+		WorkflowExecutionAlreadyExists *WorkflowExecutionAlreadyExists
+		CurrentRunIDNotMatch           *string // return the previous currentRunID
+	}
+
+	WorkflowExecutionAlreadyExists struct {
+		RunID            string
+		CreateRequestID  string
+		State            int
+		CloseStatus      int
+		LastWriteVersion int64
+		OtherInfo        string
 	}
 
 	TasksFilter struct {
@@ -557,3 +690,9 @@ const (
 	SortByStartTime VisibilitySortType = iota
 	SortByClosedTime
 )
+
+const (
+	CurrentWorkflowWriteModeNoop CurrentWorkflowWriteMode = iota
+	CurrentWorkflowWriteModeUpdate
+	CurrentWorkflowWriteModeInsert
+) 
