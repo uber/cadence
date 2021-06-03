@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
+	cassandra_db "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/tools/cassandra"
 )
@@ -70,11 +71,12 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 	}))
 
 	defaultCfg := config.Cassandra{
-		Hosts:    environment.GetCassandraAddress(),
-		Port:     cassandra.DefaultCassandraPort,
-		User:     "",
-		Password: "",
-		Keyspace: keyspace,
+		PluginName: cassandra_db.PluginName,
+		Hosts:      environment.GetCassandraAddress(),
+		Port:       cassandra.DefaultCassandraPort,
+		User:       "",
+		Password:   "",
+		Keyspace:   keyspace,
 	}
 	visibilityCfg := defaultCfg
 	visibilityCfg.Keyspace = visKeyspace
