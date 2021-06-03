@@ -28,16 +28,12 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/client"
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/persistence"
-	persistenceClient "github.com/uber/cadence/common/persistence/client"
-	espersistence "github.com/uber/cadence/common/persistence/elasticsearch"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -198,47 +194,29 @@ func NewService(
 		isAdvancedVisExistInConfig,
 		false,
 	)
-
 	params.PersistenceConfig.HistoryMaxConns = serviceConfig.HistoryMgrNumConns()
-	params.PersistenceConfig.VisibilityConfig = &config.VisibilityConfig{
-		VisibilityListMaxQPS:            serviceConfig.VisibilityListMaxQPS,
-		EnableSampling:                  serviceConfig.EnableVisibilitySampling,
-		EnableReadFromClosedExecutionV2: serviceConfig.EnableReadFromClosedExecutionV2,
-	}
-
-	visibilityManagerInitializer := func(
-		persistenceBean persistenceClient.Bean,
-		logger log.Logger,
-	) (persistence.VisibilityManager, error) {
-		visibilityFromDB := persistenceBean.GetVisibilityManager()
-
-		var visibilityFromES persistence.VisibilityManager
-		if params.ESConfig != nil {
-			visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
-			visibilityConfigForES := &config.VisibilityConfig{
-				MaxQPS:                 serviceConfig.PersistenceMaxQPS,
-				VisibilityListMaxQPS:   serviceConfig.ESVisibilityListMaxQPS,
-				ESIndexMaxResultWindow: serviceConfig.ESIndexMaxResultWindow,
-				ValidSearchAttributes:  serviceConfig.ValidSearchAttributes,
-			}
-			visibilityFromES = espersistence.NewESVisibilityManager(visibilityIndexName, params.ESClient, visibilityConfigForES,
-				nil, params.MetricsClient, logger)
-		}
-		return persistence.NewVisibilityManagerWrapper(
-			visibilityFromDB,
-			visibilityFromES,
-			serviceConfig.EnableReadVisibilityFromES,
-			dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff), // frontend visibility never write
-		), nil
-	}
 
 	serviceResource, err := resource.New(
 		params,
 		common.FrontendServiceName,
-		serviceConfig.PersistenceMaxQPS,
-		serviceConfig.PersistenceGlobalMaxQPS,
-		serviceConfig.ThrottledLogRPS,
-		visibilityManagerInitializer,
+		&config.ResourceConfig{
+			PersistenceMaxQPS:       serviceConfig.PersistenceMaxQPS,
+			PersistenceGlobalMaxQPS: serviceConfig.PersistenceGlobalMaxQPS,
+			ThrottledLoggerMaxRPS:   serviceConfig.ThrottledLogRPS,
+
+			EnableReadVisibilityFromES:    serviceConfig.EnableReadVisibilityFromES,
+			AdvancedVisibilityWritingMode: nil, // frontend service never write
+
+			EnableDBVisibilitySampling:                  serviceConfig.EnableVisibilitySampling,
+			EnableReadDBVisibilityFromClosedExecutionV2: serviceConfig.EnableReadFromClosedExecutionV2,
+			DBVisibilityListMaxQPS:                      serviceConfig.VisibilityListMaxQPS,
+			WriteDBVisibilityOpenMaxQPS:                 nil, // frontend service never write
+			WriteDBVisibilityClosedMaxQPS:               nil, // frontend service never write
+
+			ESVisibilityListMaxQPS: serviceConfig.ESVisibilityListMaxQPS,
+			ESIndexMaxResultWindow: serviceConfig.ESIndexMaxResultWindow,
+			ValidSearchAttributes:  serviceConfig.ValidSearchAttributes,
+		},
 	)
 	if err != nil {
 		return nil, err

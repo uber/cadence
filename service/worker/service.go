@@ -32,11 +32,10 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
-	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/archiver"
@@ -95,14 +94,11 @@ func NewService(
 	serviceResource, err := resource.New(
 		params,
 		common.WorkerServiceName,
-		serviceConfig.PersistenceMaxQPS,
-		serviceConfig.PersistenceGlobalMaxQPS,
-		serviceConfig.ThrottledLogRPS,
-		func(
-			persistenceBean persistenceClient.Bean,
-			logger log.Logger,
-		) (persistence.VisibilityManager, error) {
-			return persistenceBean.GetVisibilityManager(), nil
+		&config.ResourceConfig{
+			PersistenceMaxQPS:       serviceConfig.PersistenceMaxQPS,
+			PersistenceGlobalMaxQPS: serviceConfig.PersistenceGlobalMaxQPS,
+			ThrottledLoggerMaxRPS:   serviceConfig.ThrottledLogRPS,
+			// worker service doesn't need visibility config as it never call visibilityManager API
 		},
 	)
 	if err != nil {

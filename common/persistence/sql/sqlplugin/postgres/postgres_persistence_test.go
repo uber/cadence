@@ -71,7 +71,7 @@ func TestSQLExecutionManagerWithEventsV2(t *testing.T) {
 }
 
 func TestSQLVisibilityPersistenceSuite(t *testing.T) {
-	s := new(pt.VisibilityPersistenceSuite)
+	s := new(pt.DBVisibilityPersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
 	suite.Run(t, s)
