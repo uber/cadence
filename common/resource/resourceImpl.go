@@ -52,6 +52,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
+	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -134,7 +135,7 @@ var _ Resource = (*Impl)(nil)
 func New(
 	params *service.BootstrapParams,
 	serviceName string,
-	resourceConfig *dynamicconfig.ResourceConfig,
+	resourceConfig *config.ResourceConfig,
 ) (impl *Impl, retError error) {
 
 	logger := params.Logger

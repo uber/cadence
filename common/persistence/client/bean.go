@@ -25,8 +25,8 @@ package client
 import (
 	"sync"
 
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -76,7 +76,7 @@ type (
 func NewBeanFromFactory(
 	factory Factory,
 	params *service.BootstrapParams,
-	resourceConfig *dynamicconfig.ResourceConfig,
+	resourceConfig *config.ResourceConfig,
 ) (*BeanImpl, error) {
 
 	metadataMgr, err := factory.NewMetadataManager()

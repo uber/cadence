@@ -18,30 +18,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package dynamicconfig
+package config
+
+import "github.com/uber/cadence/common/dynamicconfig"
 
 type (
-	// ResourceConfig is a subset of the service dynamic config
+	// ResourceConfig is a subset of the service dynamic config for resource
+	// It's under a separate package to avoid circular dependency
 	ResourceConfig struct {
-		PersistenceMaxQPS       IntPropertyFn
-		PersistenceGlobalMaxQPS IntPropertyFn
-		ThrottledLoggerMaxRPS   IntPropertyFn
+		PersistenceMaxQPS       dynamicconfig.IntPropertyFn
+		PersistenceGlobalMaxQPS dynamicconfig.IntPropertyFn
+		ThrottledLoggerMaxRPS   dynamicconfig.IntPropertyFn
 
 		// EnableReadVisibilityFromES is the read mode of visibility
-		EnableReadVisibilityFromES BoolPropertyFnWithDomainFilter
+		EnableReadVisibilityFromES dynamicconfig.BoolPropertyFnWithDomainFilter
 		// AdvancedVisibilityWritingMode is the write mode of visibility
-		AdvancedVisibilityWritingMode StringPropertyFn
+		AdvancedVisibilityWritingMode dynamicconfig.StringPropertyFn
 
 		// configs for db visibility
-		EnableDBVisibilitySampling                  BoolPropertyFn                `yaml:"-" json:"-"`
-		EnableReadDBVisibilityFromClosedExecutionV2 BoolPropertyFn                `yaml:"-" json:"-"`
-		WriteDBVisibilityOpenMaxQPS                 IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-		WriteDBVisibilityClosedMaxQPS               IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-		DBVisibilityListMaxQPS                      IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
+		EnableDBVisibilitySampling                  dynamicconfig.BoolPropertyFn                `yaml:"-" json:"-"`
+		EnableReadDBVisibilityFromClosedExecutionV2 dynamicconfig.BoolPropertyFn                `yaml:"-" json:"-"`
+		WriteDBVisibilityOpenMaxQPS                 dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
+		WriteDBVisibilityClosedMaxQPS               dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
+		DBVisibilityListMaxQPS                      dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
 
 		// configs for es visibility
-		ESIndexMaxResultWindow IntPropertyFn                 `yaml:"-" json:"-"`
-		ValidSearchAttributes  MapPropertyFn                 `yaml:"-" json:"-"`
-		ESVisibilityListMaxQPS IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
+		ESIndexMaxResultWindow dynamicconfig.IntPropertyFn                 `yaml:"-" json:"-"`
+		ValidSearchAttributes  dynamicconfig.MapPropertyFn                 `yaml:"-" json:"-"`
+		ESVisibilityListMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
 	}
 )

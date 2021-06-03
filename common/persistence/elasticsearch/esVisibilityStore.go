@@ -31,8 +31,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/common/dynamicconfig"
-
 	"github.com/cch123/elasticsql"
 	"github.com/valyala/fastjson"
 
@@ -45,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	p "github.com/uber/cadence/common/persistence"
+	rc "github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
@@ -59,7 +58,7 @@ type (
 		index    string
 		producer messaging.Producer
 		logger   log.Logger
-		config   *dynamicconfig.ResourceConfig
+		config   *rc.ResourceConfig
 	}
 )
 
@@ -70,7 +69,7 @@ func NewElasticSearchVisibilityStore(
 	esClient es.GenericClient,
 	index string,
 	producer messaging.Producer,
-	config *dynamicconfig.ResourceConfig,
+	config *rc.ResourceConfig,
 	logger log.Logger,
 ) p.VisibilityStore {
 	return &esVisibilityStore{

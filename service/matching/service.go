@@ -27,6 +27,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -56,7 +57,7 @@ func NewService(
 	serviceResource, err := resource.New(
 		params,
 		common.MatchingServiceName,
-		&dynamicconfig.ResourceConfig{
+		&config.ResourceConfig{
 			PersistenceMaxQPS:       serviceConfig.PersistenceMaxQPS,
 			PersistenceGlobalMaxQPS: serviceConfig.PersistenceGlobalMaxQPS,
 			ThrottledLoggerMaxRPS:   serviceConfig.ThrottledLogRPS,

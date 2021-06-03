@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/client"
+	rc "github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 )
@@ -72,7 +73,7 @@ func (s *DBVisibilityPersistenceSuite) SetupSuite() {
 				VisibilityStore: "something not empty",
 			},
 		},
-		&dynamicconfig.ResourceConfig{
+		&rc.ResourceConfig{
 			EnableReadVisibilityFromES:                  dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
 			AdvancedVisibilityWritingMode:               dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff),
 			EnableReadDBVisibilityFromClosedExecutionV2: dynamicconfig.GetBoolPropertyFn(false),
