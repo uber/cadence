@@ -93,7 +93,7 @@ func NewService(
 
 	serviceResource, err := resource.New(
 		params,
-		common.MatchingServiceName,
+		common.WorkerServiceName,
 		&config.ResourceConfig{
 			PersistenceMaxQPS:       serviceConfig.PersistenceMaxQPS,
 			PersistenceGlobalMaxQPS: serviceConfig.PersistenceGlobalMaxQPS,
