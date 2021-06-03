@@ -371,6 +371,10 @@ type (
 	*		signalInfo and signalRequestedInfo.Those should be fine to be stored in the same record as its workflow_execution.
 	*		However, signalInfo stores the in progress signal data. It may be too big for a single record. For example, DynamoDB
 	*		requires 400KB of a record. In that case, it may be better to have a separate table for signalInfo.
+	* NOTE: Cassandra implementation of workflow_execution uses maps and set without "forzen". This has the advantage of deleting activity/timer/childWF/etc
+	*		by keys. The equivalent of this may require a read before overwriting the existing. Eg. [ "act1": <some data>, "act2": <some data>]
+	*		When deleting "act1", Cassandra implementation can delete without read. If storing in the same record of workflwo_execution,
+	*		it will require to read the whole activityInfo map for deleting.
 	 */
 	workflowCRUD interface {
 	}
