@@ -216,7 +216,7 @@ func New(
 	}
 
 	domainCache := cache.NewDomainCache(
-		persistenceBean.GetMetadataManager(),
+		persistenceBean.GetDomainManager(),
 		params.ClusterMetadata,
 		params.MetricsClient,
 		logger,
@@ -560,8 +560,8 @@ func (h *Impl) GetClientBean() client.Bean {
 // persistence clients
 
 // GetMetadataManager return metadata manager
-func (h *Impl) GetMetadataManager() persistence.MetadataManager {
-	return h.persistenceBean.GetMetadataManager()
+func (h *Impl) GetDomainManager() persistence.DomainManager {
+	return h.persistenceBean.GetDomainManager()
 }
 
 // GetTaskManager return task manager

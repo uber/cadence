@@ -31,7 +31,7 @@ import (
 
 type (
 
-	// domainManagerImpl implements MetadataManager based on MetadataStore and PayloadSerializer
+	// domainManagerImpl implements DomainManager based on MetadataStore and PayloadSerializer
 	domainManagerImpl struct {
 		serializer  PayloadSerializer
 		persistence MetadataStore
@@ -39,10 +39,10 @@ type (
 	}
 )
 
-var _ MetadataManager = (*domainManagerImpl)(nil)
+var _ DomainManager = (*domainManagerImpl)(nil)
 
-//NewMetadataManagerImpl returns new MetadataManager
-func NewMetadataManagerImpl(persistence MetadataStore, logger log.Logger) MetadataManager {
+//NewDomainManagerImpl returns new DomainManager
+func NewDomainManagerImpl(persistence MetadataStore, logger log.Logger) DomainManager {
 	return &domainManagerImpl{
 		serializer:  NewPayloadSerializer(),
 		persistence: persistence,
