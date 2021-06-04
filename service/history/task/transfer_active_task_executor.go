@@ -408,6 +408,8 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 		return err
 	}
 
+	// TODO: if cross-cluster, create cross-cluster task and complete
+
 	// handle workflow cancel itself
 	if task.DomainID == task.TargetDomainID && task.WorkflowID == task.TargetWorkflowID {
 		// it does not matter if the run ID is a mismatch
@@ -499,6 +501,8 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 	if err != nil {
 		return err
 	}
+
+	// TODO: if cross-cluster, create cross-cluster task and complete
 
 	// handle workflow signal itself
 	if task.DomainID == task.TargetDomainID && task.WorkflowID == task.TargetWorkflowID {
@@ -629,6 +633,8 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	if err != nil || !ok {
 		return err
 	}
+
+	// TODO: if cross-cluster, create cross-cluster task and complete
 
 	initiatedEvent, err := mutableState.GetChildExecutionInitiatedEvent(ctx, initiatedEventID)
 	if err != nil {
