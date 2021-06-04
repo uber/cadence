@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -45,17 +46,19 @@ type (
 	}
 
 	mutableStateTaskRefresherImpl struct {
-		config      *config.Config
-		domainCache cache.DomainCache
-		eventsCache events.Cache
-		logger      log.Logger
-		shardID     int
+		config          *config.Config
+		clusterMetadata cluster.Metadata
+		domainCache     cache.DomainCache
+		eventsCache     events.Cache
+		logger          log.Logger
+		shardID         int
 	}
 )
 
 // NewMutableStateTaskRefresher creates a new task refresher for mutable state
 func NewMutableStateTaskRefresher(
 	config *config.Config,
+	clusterMetadata cluster.Metadata,
 	domainCache cache.DomainCache,
 	eventsCache events.Cache,
 	logger log.Logger,
@@ -63,11 +66,12 @@ func NewMutableStateTaskRefresher(
 ) MutableStateTaskRefresher {
 
 	return &mutableStateTaskRefresherImpl{
-		config:      config,
-		domainCache: domainCache,
-		eventsCache: eventsCache,
-		logger:      logger,
-		shardID:     shardID,
+		config:          config,
+		clusterMetadata: clusterMetadata,
+		domainCache:     domainCache,
+		eventsCache:     eventsCache,
+		logger:          logger,
+		shardID:         shardID,
 	}
 }
 
@@ -78,6 +82,7 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 ) error {
 
 	taskGenerator := NewMutableStateTaskGenerator(
+		r.clusterMetadata,
 		r.domainCache,
 		r.logger,
 		mutableState,
