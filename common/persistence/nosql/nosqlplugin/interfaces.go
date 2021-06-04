@@ -399,17 +399,18 @@ type (
 		// 12. Check if the condition of shard rangeID is met
 		// It returns error if there is any. If any of the condition is not met, returns IsConditionFailedError and the ConditionFailureDetails
 		InsertWorkflowExecutionWithTasks(
+			ctx context.Context,
 			currentWorkflowRequest *CurrentWorkflowWriteRequest,
 			execution *WorkflowExecutionRow,
 			transferTasks []*TransferTask,
 			crossClusterTasks []*CrossClusterTask,
 			replicationTasks []*ReplicationTask,
 			timerTasks []*TimerTask,
-			activityInfoMap map[int64]persistence.InternalActivityInfo,
-			timerInfoMap map[string]persistence.TimerInfo,
-			childWorkflowInfoMap map[int64]persistence.InternalChildExecutionInfo,
-			requestCancelInfoMap map[int64]persistence.RequestCancelInfo,
-			signalInfoMap map[int64]persistence.SignalInfo,
+			activityInfoMap map[int64]*persistence.InternalActivityInfo,
+			timerInfoMap map[string]*persistence.TimerInfo,
+			childWorkflowInfoMap map[int64]*persistence.InternalChildExecutionInfo,
+			requestCancelInfoMap map[int64]*persistence.RequestCancelInfo,
+			signalInfoMap map[int64]*persistence.SignalInfo,
 			signalRequestedIDs []string,
 			shardCondition *ShardCondition,
 		) (*ConditionFailureDetails, error)
@@ -446,7 +447,7 @@ type (
 		visibilityTimestamp time.Time
 		TaskID              int64
 		FirstEventID        int64
-		nextEventID         int64
+		NextEventID         int64
 		Version             int64
 		ActivityScheduleID  int64
 		EventStoreVersion   int
@@ -454,14 +455,17 @@ type (
 		NewRunBranchToken   []byte
 	}
 
-	CrossClusterTask = TransferTask
+	CrossClusterTask struct {
+		TransferTask
+		TargetCluster string
+	}
 
 	TransferTask struct {
 		Type                    int
 		DomainID                string
 		WorkflowID              string
 		RunID                   string
-		visibilityTimestamp     time.Time
+		VisibilityTimestamp     time.Time
 		TaskID                  int64
 		TargetDomainID          string
 		TargetWorkflowID        string
@@ -474,7 +478,7 @@ type (
 	}
 
 	ShardCondition struct {
-		ShardID        int64
+		ShardID        int
 		CurrentRangeID int64
 	}
 

@@ -887,6 +887,16 @@ func FromDataBlob(blob *DataBlob) ([]byte, string) {
 	return blob.Data, string(blob.Encoding)
 }
 
+func (d *DataBlob) ToNilSafeDataBlob() *DataBlob {
+	if d != nil {
+		return d
+	}
+	return &DataBlob{}
+}
+func (d *DataBlob) GetEncodingString() string {
+	return string(d.Encoding)
+}
+
 // GetEncoding returns encoding type
 func (d *DataBlob) GetEncoding() common.EncodingType {
 	encodingStr := string(d.Encoding)

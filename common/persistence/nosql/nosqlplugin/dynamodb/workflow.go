@@ -22,22 +22,25 @@
 package dynamodb
 
 import (
+	"context"
+
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
 func (db *ddb) InsertWorkflowExecutionWithTasks(
+	ctx context.Context,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
 	execution *nosqlplugin.WorkflowExecutionRow,
 	transferTasks []*nosqlplugin.TransferTask,
 	crossClusterTasks []*nosqlplugin.CrossClusterTask,
 	replicationTasks []*nosqlplugin.ReplicationTask,
 	timerTasks []*nosqlplugin.TimerTask,
-	activityInfoMap map[int64]persistence.InternalActivityInfo,
-	timerInfoMap map[string]persistence.TimerInfo,
-	childWorkflowInfoMap map[int64]persistence.InternalChildExecutionInfo,
-	requestCancelInfoMap map[int64]persistence.RequestCancelInfo,
-	signalInfoMap map[int64]persistence.SignalInfo,
+	activityInfoMap map[int64]*persistence.InternalActivityInfo,
+	timerInfoMap map[string]*persistence.TimerInfo,
+	childWorkflowInfoMap map[int64]*persistence.InternalChildExecutionInfo,
+	requestCancelInfoMap map[int64]*persistence.RequestCancelInfo,
+	signalInfoMap map[int64]*persistence.SignalInfo,
 	signalRequestedIDs []string,
 	shardCondition *nosqlplugin.ShardCondition,
 ) (*nosqlplugin.ConditionFailureDetails, error){

@@ -53,6 +53,7 @@ const (
 	rowTypeTimerTask
 	rowTypeReplicationTask
 	rowTypeDLQ
+	rowTypeCrossClusterTask
 )
 
 // Guidelines for creating new special UUID constants
@@ -75,6 +76,9 @@ const (
 	rowTypeTransferDomainID   = "10000000-3000-f000-f000-000000000000"
 	rowTypeTransferWorkflowID = "20000000-3000-f000-f000-000000000000"
 	rowTypeTransferRunID      = "30000000-3000-f000-f000-000000000000"
+	// Row Constants for Cross Cluster Task Row
+	rowTypeCrossClusterDomainID = "10000000-7000-f000-f000-000000000000"
+	rowTypeCrossClusterRunID    = "30000000-7000-f000-f000-000000000000"
 	// Row Constants for Timer Task Row
 	rowTypeTimerDomainID   = "10000000-4000-f000-f000-000000000000"
 	rowTypeTimerWorkflowID = "20000000-4000-f000-f000-000000000000"
