@@ -22,8 +22,9 @@ package gocql
 
 import (
 	"crypto/tls"
-	"github.com/uber/cadence/environment"
 	"strings"
+
+	"github.com/uber/cadence/environment"
 
 	"github.com/gocql/gocql"
 )
