@@ -439,11 +439,6 @@ func (db *cdb) updateChildExecutionInfos(
 ) error {
 
 	for _, c := range childExecutionInfos {
-		startedRunID := emptyRunID
-		if c.StartedRunID != "" {
-			startedRunID = c.StartedRunID
-		}
-
 		batch.Query(templateUpdateChildExecutionInfoQuery,
 			c.InitiatedID,
 			c.Version,
@@ -452,7 +447,7 @@ func (db *cdb) updateChildExecutionInfos(
 			c.InitiatedEvent.Data,
 			c.StartedID,
 			c.StartedWorkflowID,
-			startedRunID,
+			c.StartedRunID,
 			c.StartedEvent.Data,
 			c.CreateRequestID,
 			c.InitiatedEvent.GetEncodingString(),
@@ -591,6 +586,11 @@ func (db *cdb) updateActivityInfos(
 	return nil
 }
 
+// NOTE: not sure why this is needed. We keep the behavior for safe during refactoring
+func (db *cdb) convertToCassandraTimestamp(in time.Time) time.Time {
+	return time.Unix(0, persistence.DBTimestampToUnixNano(in.UnixNano()))
+}
+
 func (db *cdb) createWorkflowExecution(
 	batch gocql.Batch,
 	shardID int,
@@ -599,6 +599,9 @@ func (db *cdb) createWorkflowExecution(
 	runID string,
 	execution *nosqlplugin.WorkflowExecutionRow,
 ) error {
+	execution.StartTimestamp = db.convertToCassandraTimestamp(execution.StartTimestamp)
+	execution.LastUpdatedTimestamp = db.convertToCassandraTimestamp(execution.LastUpdatedTimestamp)
+
 	batch.Query(templateCreateWorkflowExecutionWithVersionHistoriesQuery,
 		shardID,
 		domainID,
