@@ -834,12 +834,12 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 		return nil, err
 	}
 
-	crossClusterTasks, err := d.prepareCrossClusterTasksForWorkflowTxn(domainID, workflowID, runID, newWorkflow.TransferTasks)
+	crossClusterTasks, err := d.prepareCrossClusterTasksForWorkflowTxn(domainID, workflowID, runID, newWorkflow.CrossClusterTasks)
 	if err != nil {
 		return nil, err
 	}
 
-	replicationTasks, err := d.prepareReplicationTasksForWorkflowTxn(domainID, workflowID, runID, newWorkflow.TransferTasks)
+	replicationTasks, err := d.prepareReplicationTasksForWorkflowTxn(domainID, workflowID, runID, newWorkflow.ReplicationTasks)
 	if err != nil {
 		return nil, err
 	}
