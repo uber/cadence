@@ -40,6 +40,8 @@ const (
 	CassandraProtoVersion = "CASSANDRA_PROTOCOL_VERSION"
 	// CassandraDefaultProtoVersion Cassandra default protocol version
 	CassandraDefaultProtoVersion = "4"
+	// CassandraDefaultProtoVersionInteger Cassandra default protocol version int version
+	CassandraDefaultProtoVersionInteger = 4
 
 	// MySQLSeeds env
 	MySQLSeeds = "MYSQL_SEEDS"

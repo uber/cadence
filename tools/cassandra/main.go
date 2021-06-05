@@ -105,7 +105,6 @@ func BuildCLIOptions() *cli.App {
 		},
 		cli.IntFlag{
 			Name:   schema.CLIFlagProtoVersion,
-			Value:  cqlProtoVersion,
 			Usage:  "Protocol Version to connect to cassandra host",
 			EnvVar: "CASSANDRA_PROTOCOL_VERSION",
 		},

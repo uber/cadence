@@ -57,7 +57,6 @@ var errGetSchemaVersion = errors.New("Failed to get current schema version from 
 
 const (
 	DefaultTimeout       = 30 // Timeout in seconds
-	cqlProtoVersion      = 4  // default CQL protocol version
 	DefaultCassandraPort = 9042
 	SystemKeyspace       = "system"
 )
@@ -94,9 +93,6 @@ var _ schema.DB = (*CqlClient)(nil)
 func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
 	var err error
 
-	if cfg.ProtoVersion == 0 {
-		cfg.ProtoVersion = cqlProtoVersion
-	}
 	cqlClient := new(CqlClient)
 	cqlClient.cfg = cfg
 	cqlClient.nReplicas = cfg.NumReplicas

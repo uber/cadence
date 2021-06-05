@@ -22,6 +22,7 @@ package gocql
 
 import (
 	"crypto/tls"
+	"github.com/uber/cadence/environment"
 	"strings"
 
 	"github.com/gocql/gocql"
@@ -52,7 +53,7 @@ func newCassandraCluster(cfg ClusterConfig) *gocql.ClusterConfig {
 	hosts := parseHosts(cfg.Hosts)
 	cluster := gocql.NewCluster(hosts...)
 	if cfg.ProtoVersion == 0 {
-		cfg.ProtoVersion = 4
+		cfg.ProtoVersion = environment.CassandraDefaultProtoVersionInteger
 	}
 	cluster.ProtoVersion = cfg.ProtoVersion
 	if cfg.Port > 0 {
