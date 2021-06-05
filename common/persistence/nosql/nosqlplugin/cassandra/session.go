@@ -35,6 +35,9 @@ const (
 // CreateSession creates a new session
 // TODO this will be converted to private later, after all cassandra code moved to plugin pkg
 func CreateSession(cfg config.Cassandra) (gocql.Session, error) {
+	if cfg.ProtoVersion == 0 {
+		cfg.ProtoVersion = cassandraProtoVersion
+	}
 	return gocql.NewClient().CreateSession(gocql.ClusterConfig{
 		Hosts:             cfg.Hosts,
 		Port:              cfg.Port,
@@ -45,7 +48,7 @@ func CreateSession(cfg config.Cassandra) (gocql.Session, error) {
 		Datacenter:        cfg.Datacenter,
 		MaxConns:          cfg.MaxConns,
 		TLS:               cfg.TLS,
-		ProtoVersion:      cassandraProtoVersion,
+		ProtoVersion:      cfg.ProtoVersion,
 		Consistency:       gocql.LocalQuorum,
 		SerialConsistency: gocql.LocalSerial,
 		Timeout:           defaultSessionTimeout,

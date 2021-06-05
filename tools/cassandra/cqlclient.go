@@ -40,14 +40,15 @@ type (
 
 	// CQLClientConfig contains the configuration for cql client
 	CQLClientConfig struct {
-		Hosts       string
-		Port        int
-		User        string
-		Password    string
-		Keyspace    string
-		Timeout     int
-		NumReplicas int
-		TLS         *config.TLS
+		Hosts        string
+		Port         int
+		User         string
+		Password     string
+		Keyspace     string
+		Timeout      int
+		NumReplicas  int
+		ProtoVersion int
+		TLS          *config.TLS
 	}
 )
 
@@ -93,6 +94,9 @@ var _ schema.DB = (*CqlClient)(nil)
 func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
 	var err error
 
+	if cfg.ProtoVersion == 0 {
+		cfg.ProtoVersion = cqlProtoVersion
+	}
 	cqlClient := new(CqlClient)
 	cqlClient.cfg = cfg
 	cqlClient.nReplicas = cfg.NumReplicas
@@ -105,7 +109,7 @@ func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
 		Keyspace:     cfg.Keyspace,
 		TLS:          cfg.TLS,
 		Timeout:      time.Duration(cfg.Timeout) * time.Second,
-		ProtoVersion: cqlProtoVersion,
+		ProtoVersion: cfg.ProtoVersion,
 		Consistency:  gocql.All,
 	})
 	if err != nil {

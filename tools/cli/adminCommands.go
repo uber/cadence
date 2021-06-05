@@ -48,8 +48,6 @@ import (
 
 const (
 	maxEventID = 9999
-
-	cassandraProtoVersion = 4
 )
 
 // AdminShowWorkflow shows history
@@ -297,7 +295,7 @@ func connectToCassandra(c *cli.Context) (gocql.Client, gocql.Session) {
 		User:              c.String(FlagUsername),
 		Password:          c.String(FlagPassword),
 		Keyspace:          getRequiredOption(c, FlagKeyspace),
-		ProtoVersion:      cassandraProtoVersion,
+		ProtoVersion:      c.Int(FlagProtoVersion),
 		SerialConsistency: gocql.LocalSerial,
 		MaxConns:          20,
 		Consistency:       gocql.LocalQuorum,
