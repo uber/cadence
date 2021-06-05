@@ -1,3 +1,23 @@
+// Copyright (c) 2021 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 package cassandra
 
 import (
@@ -11,13 +31,12 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
 
-
 func (db *cdb) executeCreateWorkflowBatchTransaction(
 	batch gocql.Batch,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
 	execution *nosqlplugin.WorkflowExecutionRow,
 	shardCondition *nosqlplugin.ShardCondition,
-) (*nosqlplugin.ConditionFailureReason, error){
+) (*nosqlplugin.ConditionFailureReason, error) {
 	previous := make(map[string]interface{})
 	applied, iter, err := db.session.MapExecuteBatchCAS(batch, previous)
 	defer func() {
@@ -70,8 +89,8 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 					if currentWorkflowRequest.WriteMode == nosqlplugin.CurrentWorkflowWriteModeInsert {
 						return &nosqlplugin.ConditionFailureReason{
 							WorkflowExecutionAlreadyExists: &nosqlplugin.WorkflowExecutionAlreadyExists{
-								OtherInfo:              msg,
-								CreateRequestID:   executionInfo.CreateRequestID,
+								OtherInfo:        msg,
+								CreateRequestID:  executionInfo.CreateRequestID,
 								RunID:            executionInfo.RunID,
 								State:            executionInfo.State,
 								CloseStatus:      executionInfo.CloseStatus,
@@ -108,8 +127,8 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 				}
 				return &nosqlplugin.ConditionFailureReason{
 					WorkflowExecutionAlreadyExists: &nosqlplugin.WorkflowExecutionAlreadyExists{
-						OtherInfo:              msg,
-						CreateRequestID:   execution.CreateRequestID,
+						OtherInfo:        msg,
+						CreateRequestID:  execution.CreateRequestID,
 						RunID:            execution.RunID,
 						State:            execution.State,
 						CloseStatus:      execution.CloseStatus,
@@ -132,7 +151,6 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 	return nil, nil
 }
 
-
 func newUnknownConditionFailureReason(
 	rangeID int64,
 	row map[string]interface{},
@@ -153,7 +171,7 @@ func newUnknownConditionFailureReason(
 	}
 }
 
-func (db *cdb) assertShardRangeID(batch gocql.Batch, shardID int, rangeID int64) error{
+func (db *cdb) assertShardRangeID(batch gocql.Batch, shardID int, rangeID int64) error {
 	batch.Query(templateUpdateLeaseQuery,
 		rangeID,
 		shardID,
@@ -708,7 +726,7 @@ func (db *cdb) createOrUpdateCurrentWorkflow(
 			request.Row.State,
 		)
 	case nosqlplugin.CurrentWorkflowWriteModeUpdate:
-		if request.Condition == nil || request.Condition.GetCurrentRunID() == ""{
+		if request.Condition == nil || request.Condition.GetCurrentRunID() == "" {
 			return fmt.Errorf("CurrentWorkflowWriteModeUpdate require Condition.CurrentRunID")
 		}
 		if request.Condition.LastWriteVersion != nil && request.Condition.State != nil {
