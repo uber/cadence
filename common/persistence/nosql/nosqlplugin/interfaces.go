@@ -397,7 +397,7 @@ type (
 		// 10. Create signalInfo
 		// 11. Create signalRequested
 		// 12. Check if the condition of shard rangeID is met
-		// It returns error if there is any. If any of the condition is not met, returns IsConditionFailedError and the ConditionFailureDetails
+		// It returns error if there is any. If any of the condition is not met, returns IsConditionFailedError and the ConditionFailureReason
 		InsertWorkflowExecutionWithTasks(
 			ctx context.Context,
 			currentWorkflowRequest *CurrentWorkflowWriteRequest,
@@ -413,7 +413,7 @@ type (
 			signalInfoMap map[int64]*persistence.SignalInfo,
 			signalRequestedIDs []string,
 			shardCondition *ShardCondition,
-		) (*ConditionFailureDetails, error)
+		) (*ConditionFailureReason, error)
 	}
 
 	WorkflowExecutionRow struct {
@@ -429,7 +429,7 @@ type (
 		DomainID            string
 		WorkflowID          string
 		RunID               string
-		visibilityTimestamp time.Time
+		VisibilityTimestamp time.Time
 		TaskID              int64
 
 		TimeoutType int
@@ -444,7 +444,7 @@ type (
 		DomainID            string
 		WorkflowID          string
 		RunID               string
-		visibilityTimestamp time.Time
+		VisibilityTimestamp time.Time
 		TaskID              int64
 		FirstEventID        int64
 		NextEventID         int64
@@ -478,16 +478,20 @@ type (
 	}
 
 	ShardCondition struct {
-		ShardID        int
-		CurrentRangeID int64
+		ShardID int
+		RangeID int64
 	}
 
 	CurrentWorkflowWriteRequest struct {
 		WriteMode CurrentWorkflowWriteMode
 		CurrentWorkflowRow
-		PreviousRunID            *string
-		PreviousLastWriteVersion *int64
-		PreviousState            *int
+		Condition *CurrentWorkflowWriteCondition
+	}
+
+	CurrentWorkflowWriteCondition struct {
+		CurrentRunID     *string
+		LastWriteVersion *int64
+		State            *int
 	}
 
 	CurrentWorkflowWriteMode int
@@ -505,11 +509,11 @@ type (
 	}
 
 	// Only one of the fields must be non-nil
-	ConditionFailureDetails struct {
-		UnknownConditionFailureDetails *string // return some info for logging
-		PreviousRangeIDNotMatch        *int64  // return the previous shardRangeID
-		WorkflowExecutionAlreadyExists *WorkflowExecutionAlreadyExists
-		CurrentRunIDNotMatch           *string // return the previous currentRunID
+	ConditionFailureReason struct {
+		UnknownConditionFailureDetails   *string // return some info for logging
+		ShardRangeIDNotMatch             *int64  // return the previous shardRangeID
+		WorkflowExecutionAlreadyExists   *WorkflowExecutionAlreadyExists
+		CurrentWorkflowConditionFailInfo *string // return the logging info if fail on condition of CurrentWorkflow
 	}
 
 	WorkflowExecutionAlreadyExists struct {
@@ -704,4 +708,11 @@ const (
 	CurrentWorkflowWriteModeNoop CurrentWorkflowWriteMode = iota
 	CurrentWorkflowWriteModeUpdate
 	CurrentWorkflowWriteModeInsert
-) 
+)
+
+func (w *CurrentWorkflowWriteCondition) GetCurrentRunID() string {
+	if w == nil || w.CurrentRunID == nil {
+		return ""
+	}
+	return *w.CurrentRunID
+}
