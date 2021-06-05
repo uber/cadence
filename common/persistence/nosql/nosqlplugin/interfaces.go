@@ -386,18 +386,19 @@ type (
 		// InsertWorkflowExecutionWithTasks is for creating a new workflow execution record. Within a transaction, it also:
 		// 1. Create or update the record of current_workflow with the same workflowID, based on CurrentWorkflowExecutionWriteMode,
 		//		and also check if the condition is met.
-		// 2. Create transfer tasks
-		// 3. Create timer tasks
-		// 4. Create replication tasks
-		// 5. Create crossCluster tasks
-		// 6. Create activityInfo
-		// 7. Create timerInfo
-		// 8. Create childWorkflowInfo
-		// 9. Create requestCancels
-		// 10. Create signalInfo
-		// 11. Create signalRequested
-		// 12. Check if the condition of shard rangeID is met
-		// It returns error if there is any. If any of the condition is not met, returns IsConditionFailedError and the ConditionFailureReason
+		// 2. Create the workflow_execution record
+		// 3. Create transfer tasks
+		// 4. Create timer tasks
+		// 5. Create replication tasks
+		// 6. Create crossCluster tasks
+		// 7. Create activityInfo
+		// 8. Create timerInfo
+		// 9. Create childWorkflowInfo
+		// 10. Create requestCancels
+		// 11. Create signalInfo
+		// 12. Create signalRequested
+		// 13. Check if the condition of shard rangeID is met
+		// The API returns error if there is any. If any of the condition is not met, returns IsConditionFailedError and the ConditionFailureReason
 		InsertWorkflowExecutionWithTasks(
 			ctx context.Context,
 			currentWorkflowRequest *CurrentWorkflowWriteRequest,
