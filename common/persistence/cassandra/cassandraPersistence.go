@@ -30,6 +30,8 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 )
@@ -41,11 +43,11 @@ type (
 		logger  log.Logger
 	}
 
-	// Implements ExecutionManager
+	// Implements ExecutionStore
 	cassandraPersistence struct {
 		cassandraStore
-		shardID            int
-		currentClusterName string
+		shardID int
+		db      nosqlplugin.DB
 	}
 )
 
@@ -762,6 +764,8 @@ func NewWorkflowExecutionPersistence(
 	session gocql.Session,
 	logger log.Logger,
 ) (p.ExecutionStore, error) {
+	db := cassandra.NewCassandraDBFromSession(client, session, logger)
+
 	return &cassandraPersistence{
 		cassandraStore: cassandraStore{
 			client:  client,
@@ -769,6 +773,7 @@ func NewWorkflowExecutionPersistence(
 			logger:  logger,
 		},
 		shardID: shardID,
+		db:      db,
 	}, nil
 }
 
@@ -785,7 +790,6 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 
 	newWorkflow := request.NewWorkflowSnapshot
 	executionInfo := newWorkflow.ExecutionInfo
-	startVersion := newWorkflow.StartVersion
 	lastWriteVersion := newWorkflow.LastWriteVersion
 	domainID := executionInfo.DomainID
 	workflowID := executionInfo.WorkflowID
@@ -798,49 +802,88 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 		return nil, err
 	}
 
+	currentWorkflowWriteReq := nosqlplugin.CurrentWorkflowWriteRequest{
+		Row: nosqlplugin.CurrentWorkflowRow{
+			ShardID:          d.shardID,
+			DomainID:         domainID,
+			WorkflowID:       workflowID,
+			RunID:            runID,
+			State:            executionInfo.State,
+			CloseStatus:      executionInfo.CloseStatus,
+			CreateRequestID:  executionInfo.CreateRequestID,
+			LastWriteVersion: lastWriteVersion,
+		},
+	}
 	switch request.Mode {
 	case p.CreateWorkflowModeZombie:
 		// noop
-
+		currentWorkflowWriteReq.WriteMode = nosqlplugin.CurrentWorkflowWriteModeNoop
+	case p.CreateWorkflowModeContinueAsNew:
+		currentWorkflowWriteReq.WriteMode = nosqlplugin.CurrentWorkflowWriteModeUpdate
+		currentWorkflowWriteReq.Condition = &nosqlplugin.CurrentWorkflowWriteCondition{
+			CurrentRunID: common.StringPtr(request.PreviousRunID),
+		}
+	case p.CreateWorkflowModeWorkflowIDReuse:
+		currentWorkflowWriteReq.WriteMode = nosqlplugin.CurrentWorkflowWriteModeUpdate
+		currentWorkflowWriteReq.Condition = &nosqlplugin.CurrentWorkflowWriteCondition{
+			CurrentRunID:     common.StringPtr(request.PreviousRunID),
+			State:            common.IntPtr(p.WorkflowStateCompleted),
+			LastWriteVersion: common.Int64Ptr(request.PreviousLastWriteVersion),
+		}
+	case p.CreateWorkflowModeBrandNew:
+		currentWorkflowWriteReq.WriteMode = nosqlplugin.CurrentWorkflowWriteModeInsert
 	default:
-		if err := createOrUpdateCurrentExecution(
-			batch,
-			request.Mode,
-			d.shardID,
-			domainID,
-			workflowID,
-			runID,
-			executionInfo.State,
-			executionInfo.CloseStatus,
-			executionInfo.CreateRequestID,
-			startVersion,
-			lastWriteVersion,
-			request.PreviousRunID,
-			request.PreviousLastWriteVersion,
-		); err != nil {
-			return nil, err
+		return nil, &types.InternalServiceError{
+			Message: fmt.Sprintf("unknown mode: %v", request.Mode),
 		}
 	}
 
-	if err := applyWorkflowSnapshotBatchAsNew(
-		batch,
+	//if err := applyWorkflowSnapshotBatchAsNew(
+	//	batch,
+	//	d.shardID,
+	//	&newWorkflow,
+	//); err != nil {
+	//	return nil, err
+	//}
+
+	//execution *WorkflowExecutionRow,
+	//	transferTasks []*TransferTask,
+	//	crossClusterTasks []*CrossClusterTask,
+	//	replicationTasks []*ReplicationTask,
+	//	timerTasks []*TimerTask,
+	//	activityInfoMap map[int64]*persistence.InternalActivityInfo,
+	//	timerInfoMap map[string]*persistence.TimerInfo,
+	//	childWorkflowInfoMap map[int64]*persistence.InternalChildExecutionInfo,
+	//	requestCancelInfoMap map[int64]*persistence.RequestCancelInfo,
+	//	signalInfoMap map[int64]*persistence.SignalInfo,
+	//	signalRequestedIDs []string,
+	//	shardCondition *ShardCondition,
+	//
+
+	err := prepareWorkflowSnapshotBatchAsNew(
 		d.shardID,
 		&newWorkflow,
-	); err != nil {
+	)
+
+	if err != nil {
 		return nil, err
 	}
 
-	batch.Query(templateUpdateLeaseQuery,
-		request.RangeID,
-		d.shardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
-		request.RangeID,
-	)
+	shardCondition := nosqlplugin.ShardCondition{
+		ShardID: d.shardID,
+		RangeID: request.RangeID,
+	}
+	//batch.Query(templateUpdateLeaseQuery,
+	//	request.RangeID,
+	//	d.shardID,
+	//	rowTypeShard,
+	//	rowTypeShardDomainID,
+	//	rowTypeShardWorkflowID,
+	//	rowTypeShardRunID,
+	//	defaultVisibilityTimestamp,
+	//	rowTypeShardTaskID,
+	//	request.RangeID,
+	//)
 
 	previous := make(map[string]interface{})
 	applied, iter, err := d.session.MapExecuteBatchCAS(batch, previous)

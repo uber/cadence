@@ -484,7 +484,7 @@ type (
 
 	CurrentWorkflowWriteRequest struct {
 		WriteMode CurrentWorkflowWriteMode
-		CurrentWorkflowRow
+		Row       CurrentWorkflowRow
 		Condition *CurrentWorkflowWriteCondition
 	}
 
@@ -504,7 +504,6 @@ type (
 		State            int
 		CloseStatus      int
 		CreateRequestID  string
-		StartVersion     int64
 		LastWriteVersion int64
 	}
 
