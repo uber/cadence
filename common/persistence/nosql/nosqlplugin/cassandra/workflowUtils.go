@@ -604,9 +604,11 @@ func (db *cdb) updateActivityInfos(
 	return nil
 }
 
-// NOTE: not sure why this is needed. We keep the behavior for safe during refactoring
+// NOTE: not sure we still need it. We keep the behavior for safe during refactoring
+// In theory we can just return the input as output
+// TODO: remove it in the future
 func (db *cdb) convertToCassandraTimestamp(in time.Time) time.Time {
-	return time.Unix(0, persistence.DBTimestampToUnixNano(in.UnixNano()))
+	return time.Unix(0, persistence.DBTimestampToUnixNano(persistence.UnixNanoToDBTimestamp(in.UnixNano())))
 }
 
 func (db *cdb) createWorkflowExecution(
