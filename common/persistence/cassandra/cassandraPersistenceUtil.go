@@ -394,8 +394,8 @@ func createExecution(
 	}
 
 	// TODO we should set the start time and last update time on business logic layer
-	executionInfo.StartTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
-	executionInfo.LastUpdatedTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
+	executionInfo.StartTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis*1000*1000))
+	executionInfo.LastUpdatedTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis*1000*1000))
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
 
 	if versionHistories == nil {
