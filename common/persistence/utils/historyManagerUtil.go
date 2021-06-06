@@ -18,12 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistence
+package utils
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -32,8 +32,8 @@ import (
 // of data read, the next page token, and an error if present.
 func ReadFullPageV2Events(
 	ctx context.Context,
-	historyV2Mgr HistoryManager,
-	req *ReadHistoryBranchRequest,
+	historyV2Mgr persistence.HistoryManager,
+	req *persistence.ReadHistoryBranchRequest,
 ) ([]*types.HistoryEvent, int, []byte, error) {
 	historyEvents := []*types.HistoryEvent{}
 	size := int(0)
@@ -56,8 +56,8 @@ func ReadFullPageV2Events(
 // of data read, the next page token, and an error if present.
 func ReadFullPageV2EventsByBatch(
 	ctx context.Context,
-	historyV2Mgr HistoryManager,
-	req *ReadHistoryBranchRequest,
+	historyV2Mgr persistence.HistoryManager,
+	req *persistence.ReadHistoryBranchRequest,
 ) ([]*types.History, int, []byte, error) {
 	historyBatches := []*types.History{}
 	eventsRead := 0
@@ -92,7 +92,7 @@ func GetBeginNodeID(bi types.HistoryBranch) int64 {
 // PaginateHistory return paged history
 func PaginateHistory(
 	ctx context.Context,
-	historyV2Mgr HistoryManager,
+	historyV2Mgr persistence.HistoryManager,
 	byBatch bool,
 	branchToken []byte,
 	firstEventID int64,
@@ -107,7 +107,7 @@ func PaginateHistory(
 	var tokenOut []byte
 	var historySize int
 
-	req := &ReadHistoryBranchRequest{
+	req := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
@@ -139,11 +139,4 @@ func PaginateHistory(
 	}
 
 	return historyEvents, historyBatches, tokenOut, historySize, nil
-}
-
-func getShardID(shardID *int) (int, error) {
-	if shardID == nil {
-		return 0, fmt.Errorf("shardID is not set for persistence operation")
-	}
-	return *shardID, nil
 }

@@ -562,3 +562,10 @@ func (m *historyV2ManagerImpl) serializeToken(
 func (m *historyV2ManagerImpl) Close() {
 	m.persistence.Close()
 }
+
+func getShardID(shardID *int) (int, error) {
+	if shardID == nil {
+		return 0, fmt.Errorf("shardID is not set for persistence operation")
+	}
+	return *shardID, nil
+}

@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+	"github.com/uber/cadence/common/persistence/utils"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -246,8 +247,8 @@ func (m *sqlDomainStore) domainRowToGetDomainResponse(row *sqlplugin.DomainRow) 
 			BadBinaries:              badBinaries,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
-			ActiveClusterName: persistence.GetOrUseDefaultActiveCluster(m.activeClusterName, domainInfo.GetActiveClusterName()),
-			Clusters:          persistence.GetOrUseDefaultClusters(m.activeClusterName, clusters),
+			ActiveClusterName: utils.GetOrUseDefaultActiveCluster(m.activeClusterName, domainInfo.GetActiveClusterName()),
+			Clusters:          utils.GetOrUseDefaultClusters(m.activeClusterName, clusters),
 		},
 		IsGlobalDomain:              row.IsGlobal,
 		FailoverVersion:             domainInfo.GetFailoverVersion(),

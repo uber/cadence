@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/common/persistence/utils"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -183,7 +184,7 @@ func (s *domainHandlerGlobalDomainDisabledSuite) TestRegisterGetDomain_InvalidCl
 func (s *domainHandlerGlobalDomainDisabledSuite) TestRegisterGetDomain_AllDefault() {
 	domainName := s.getRandomDomainName()
 	var clusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range utils.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -244,7 +245,7 @@ func (s *domainHandlerGlobalDomainDisabledSuite) TestRegisterGetDomain_NoDefault
 	isGlobalDomain := false
 
 	var expectedClusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range utils.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		expectedClusters = append(expectedClusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -303,7 +304,7 @@ func (s *domainHandlerGlobalDomainDisabledSuite) TestUpdateGetDomain_NoAttrSet()
 	emitMetric := true
 	data := map[string]string{"some random key": "some random value"}
 	var clusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range utils.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -396,7 +397,7 @@ func (s *domainHandlerGlobalDomainDisabledSuite) TestUpdateGetDomain_AllAttrSet(
 	data := map[string]string{"some random key": "some random value"}
 
 	var expectedClusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range utils.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		expectedClusters = append(expectedClusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -499,7 +500,7 @@ func setupLocalDomain(s suite.Suite, handler *handlerImpl, clusterMetadata clust
 	emitMetric := true
 	data := map[string]string{"some random key": "some random value"}
 	var clusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(clusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range utils.GetOrUseDefaultClusters(clusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
