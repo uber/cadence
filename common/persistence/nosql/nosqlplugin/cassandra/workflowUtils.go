@@ -192,9 +192,9 @@ func (db *cdb) createTimerTasks(
 	domainID string,
 	workflowID string,
 	runID string,
-	transferTasks []*nosqlplugin.TimerTask,
+	timerTasks []*nosqlplugin.TimerTask,
 ) error {
-	for _, task := range transferTasks {
+	for _, task := range timerTasks {
 		// Ignoring possible type cast errors.
 		ts := persistence.UnixNanoToDBTimestamp(task.VisibilityTimestamp.UnixNano())
 
