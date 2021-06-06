@@ -947,7 +947,7 @@ func (d *cassandraPersistence) prepareTimerTasksForWorkflowTxn(
 			}
 		}
 
-		t := &nosqlplugin.TimerTask{
+		nt := &nosqlplugin.TimerTask{
 			Type:       task.GetType(),
 			DomainID:   domainID,
 			WorkflowID: workflowID,
@@ -961,7 +961,7 @@ func (d *cassandraPersistence) prepareTimerTasksForWorkflowTxn(
 			Attempt:     attempt,
 			Version:     task.GetVersion(),
 		}
-		tasks = append(tasks, t)
+		tasks = append(tasks, nt)
 	}
 
 	return tasks, nil
@@ -1003,7 +1003,7 @@ func (d *cassandraPersistence) prepareReplicationTasksForWorkflowTxn(
 			}
 		}
 
-		t := &nosqlplugin.ReplicationTask{
+		nt := &nosqlplugin.ReplicationTask{
 			Type:                task.GetType(),
 			DomainID:            domainID,
 			WorkflowID:          workflowID,
@@ -1018,7 +1018,7 @@ func (d *cassandraPersistence) prepareReplicationTasksForWorkflowTxn(
 			BranchToken:         branchToken,
 			NewRunBranchToken:   newRunBranchToken,
 		}
-		tasks = append(tasks, t)
+		tasks = append(tasks, nt)
 	}
 
 	return tasks, nil
@@ -1069,7 +1069,7 @@ func (d *cassandraPersistence) prepareCrossClusterTasksForWorkflowTxn(
 			}
 		}
 
-		t := &nosqlplugin.CrossClusterTask{
+		nt := &nosqlplugin.CrossClusterTask{
 			TransferTask: nosqlplugin.TransferTask{
 				Type:                    task.GetType(),
 				DomainID:                domainID,
@@ -1088,7 +1088,7 @@ func (d *cassandraPersistence) prepareCrossClusterTasksForWorkflowTxn(
 			},
 			TargetCluster: targetCluster,
 		}
-		tasks = append(tasks, t)
+		tasks = append(tasks, nt)
 	}
 
 	return tasks, nil
