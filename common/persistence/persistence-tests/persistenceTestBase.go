@@ -76,7 +76,7 @@ type (
 		ExecutionManager          p.ExecutionManager
 		TaskMgr                   p.TaskManager
 		HistoryV2Mgr              p.HistoryManager
-		MetadataManager           p.MetadataManager
+		DomainManager             p.DomainManager
 		DomainReplicationQueueMgr p.QueueManager
 		ShardInfo                 *p.ShardInfo
 		TaskIDGenerator           TransferTaskIDGenerator
@@ -202,8 +202,8 @@ func (s *TestBase) Setup() {
 	s.TaskMgr, err = factory.NewTaskManager()
 	s.fatalOnError("NewTaskManager", err)
 
-	s.MetadataManager, err = factory.NewMetadataManager()
-	s.fatalOnError("NewMetadataManager", err)
+	s.DomainManager, err = factory.NewDomainManager()
+	s.fatalOnError("NewDomainManager", err)
 
 	s.HistoryV2Mgr, err = factory.NewHistoryManager()
 	s.fatalOnError("NewHistoryManager", err)

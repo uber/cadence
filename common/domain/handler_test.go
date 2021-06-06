@@ -54,7 +54,7 @@ type (
 
 		minRetentionDays     int
 		maxBadBinaryCount    int
-		metadataMgr          persistence.MetadataManager
+		domainManager        persistence.DomainManager
 		mockProducer         *mocks.KafkaProducer
 		mockDomainReplicator Replicator
 		archivalMetadata     archiver.ArchivalMetadata
@@ -91,7 +91,7 @@ func (s *domainHandlerCommonSuite) SetupTest() {
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1
 	s.maxBadBinaryCount = 10
-	s.metadataMgr = s.TestBase.MetadataManager
+	s.domainManager = s.TestBase.DomainManager
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockDomainReplicator = NewDomainReplicator(s.mockProducer, logger)
 	s.archivalMetadata = archiver.NewArchivalMetadata(
@@ -111,7 +111,7 @@ func (s *domainHandlerCommonSuite) SetupTest() {
 	s.handler = NewHandler(
 		domainConfig,
 		logger,
-		s.metadataMgr,
+		s.domainManager,
 		s.ClusterMetadata,
 		s.mockDomainReplicator,
 		s.archivalMetadata,
@@ -440,7 +440,7 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_Success() {
 	}
 	err := s.handler.RegisterDomain(context.Background(), registerRequest)
 	s.NoError(err)
-	resp1, _ := s.metadataMgr.GetDomain(context.Background(), &persistence.GetDomainRequest{
+	resp1, _ := s.domainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{
 		Name: domain,
 	})
 	s.Equal("standby", resp1.ReplicationConfig.ActiveClusterName)
@@ -453,7 +453,7 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_Success() {
 	}
 	resp, err := s.handler.UpdateDomain(context.Background(), updateRequest)
 	s.NoError(err)
-	resp2, err := s.metadataMgr.GetDomain(context.Background(), &persistence.GetDomainRequest{
+	resp2, err := s.domainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{
 		ID: resp.GetDomainInfo().GetUUID(),
 	})
 	s.NoError(err)
@@ -591,7 +591,7 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_After_Force
 	}
 	_, err = s.handler.UpdateDomain(context.Background(), updateRequest)
 	s.NoError(err)
-	resp2, err := s.metadataMgr.GetDomain(context.Background(), &persistence.GetDomainRequest{
+	resp2, err := s.domainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{
 		ID: resp.GetDomainInfo().GetUUID(),
 	})
 	s.NoError(err)
