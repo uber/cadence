@@ -1272,10 +1272,10 @@ func (d *cassandraPersistence) prepareWorkflowExecutionForCreateWorkflowTxn(
 	executionInfo.LastUpdatedTimestamp = nowTimestamp
 	executionInfo.CompletionEvent = executionInfo.CompletionEvent.ToNilSafeDataBlob()
 	executionInfo.AutoResetPoints = executionInfo.AutoResetPoints.ToNilSafeDataBlob()
-	versionHistories = versionHistories.ToNilSafeDataBlob()
 	if versionHistories == nil {
 		return nil, &types.InternalServiceError{Message: "encounter empty version histories in createExecution"}
 	}
+	versionHistories = versionHistories.ToNilSafeDataBlob()
 	return &nosqlplugin.WorkflowExecutionRow{
 		InternalWorkflowExecutionInfo: *executionInfo,
 		VersionHistories:              versionHistories,
