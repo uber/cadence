@@ -36,7 +36,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/utils"
+	"github.com/uber/cadence/common/persistence/persistenceutils"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -247,7 +247,7 @@ func (r *stateRebuilderImpl) getPaginationFn(
 
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 
-		_, historyBatches, token, size, err := utils.PaginateHistory(
+		_, historyBatches, token, size, err := persistenceutils.PaginateHistory(
 			ctx,
 			r.historyV2Mgr,
 			true,

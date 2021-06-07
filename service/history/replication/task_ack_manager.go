@@ -40,7 +40,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/utils"
+	"github.com/uber/cadence/common/persistence/persistenceutils"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
 	exec "github.com/uber/cadence/service/history/execution"
@@ -450,7 +450,7 @@ func (t *taskAckManagerImpl) getPaginationFunc(
 ) collection.PaginationFn {
 
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
-		events, _, pageToken, pageHistorySize, err := utils.PaginateHistory(
+		events, _, pageToken, pageHistorySize, err := persistenceutils.PaginateHistory(
 			ctx,
 			t.historyManager,
 			false,
