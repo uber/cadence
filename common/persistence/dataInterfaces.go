@@ -1677,8 +1677,8 @@ type (
 		GetAllHistoryTreeBranches(ctx context.Context, request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error)
 	}
 
-	// MetadataManager is used to manage metadata CRUD for domain entities
-	MetadataManager interface {
+	// DomainManager is used to manage metadata CRUD for domain entities
+	DomainManager interface {
 		Closeable
 		GetName() string
 		CreateDomain(ctx context.Context, request *CreateDomainRequest) (*CreateDomainResponse, error)
