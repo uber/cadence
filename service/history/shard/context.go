@@ -1278,7 +1278,10 @@ func (s *contextImpl) allocateTransferIDsLocked(
 		}
 		s.logger.Debug(fmt.Sprintf("Assigning task ID: %v", id))
 		task.SetTaskID(id)
-		task.SetVisibilityTimestamp(now)
+		// only set task visibility timestamp if it's not set
+		if task.GetVisibilityTimestamp().IsZero() {
+			task.SetVisibilityTimestamp(now)
+		}
 		*transferMaxReadLevel = id
 	}
 	return nil

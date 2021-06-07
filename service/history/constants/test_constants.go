@@ -43,7 +43,7 @@ var (
 	// TestTargetDomainName is the targetDomainName for test
 	TestTargetDomainName = "some random target domain name"
 	// TestRemoteTargetDomainID is the remoteTargetDomainID for test
-	TestRemoteTargetDomainID = "deadbeef-0123-4567-890a-bcdef0123459"
+	TestRemoteTargetDomainID = "deadbeef-0123-4567-890a-bcdef0123460"
 	// TestRemoteTargetDomainName is the remoteTargetDomainName for test
 	TestRemoteTargetDomainName = "some random remote target domain name"
 	// TestChildDomainID is the childDomainID for test
