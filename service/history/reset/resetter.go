@@ -24,7 +24,6 @@ package reset
 
 import (
 	"context"
-	ctx "context"
 	"fmt"
 
 	"github.com/uber/cadence/common"
@@ -44,7 +43,7 @@ type (
 	// WorkflowResetter is the new NDC compatible workflow reset component
 	WorkflowResetter interface {
 		ResetWorkflow(
-			ctx ctx.Context,
+			ctx context.Context,
 			domainID string,
 			workflowID string,
 			baseRunID string,
@@ -96,7 +95,7 @@ func NewWorkflowResetter(
 }
 
 func (r *workflowResetterImpl) ResetWorkflow(
-	ctx ctx.Context,
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 	baseRunID string,
@@ -161,7 +160,7 @@ func (r *workflowResetterImpl) ResetWorkflow(
 }
 
 func (r *workflowResetterImpl) prepareResetWorkflow(
-	ctx ctx.Context,
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 	baseRunID string,
@@ -310,7 +309,7 @@ func (r *workflowResetterImpl) persistToDB(
 }
 
 func (r *workflowResetterImpl) replayResetWorkflow(
-	ctx ctx.Context,
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 	baseRunID string,
@@ -448,7 +447,7 @@ func (r *workflowResetterImpl) terminateWorkflow(
 }
 
 func (r *workflowResetterImpl) reapplyResetAndContinueAsNewWorkflowEvents(
-	ctx ctx.Context,
+	ctx context.Context,
 	resetMutableState execution.MutableState,
 	domainID string,
 	workflowID string,
