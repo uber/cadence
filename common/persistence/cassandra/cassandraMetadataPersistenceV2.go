@@ -25,12 +25,12 @@ import (
 	"fmt"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
-	"github.com/uber/cadence/common/persistence/utils"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -173,8 +173,8 @@ func (m *nosqlDomainManager) GetDomain(
 	if row.Info.Data == nil {
 		row.Info.Data = map[string]string{}
 	}
-	row.ReplicationConfig.ActiveClusterName = utils.GetOrUseDefaultActiveCluster(m.currentClusterName, row.ReplicationConfig.ActiveClusterName)
-	row.ReplicationConfig.Clusters = utils.GetOrUseDefaultClusters(m.currentClusterName, row.ReplicationConfig.Clusters)
+	row.ReplicationConfig.ActiveClusterName = cluster.GetOrUseDefaultActiveCluster(m.currentClusterName, row.ReplicationConfig.ActiveClusterName)
+	row.ReplicationConfig.Clusters = cluster.GetOrUseDefaultClusters(m.currentClusterName, row.ReplicationConfig.Clusters)
 
 	domainConfig, err := m.fromNoSQLInternalDomainConfig(row.Config)
 	if err != nil {
@@ -211,8 +211,8 @@ func (m *nosqlDomainManager) ListDomains(
 		if row.Info.Data == nil {
 			row.Info.Data = map[string]string{}
 		}
-		row.ReplicationConfig.ActiveClusterName = utils.GetOrUseDefaultActiveCluster(m.currentClusterName, row.ReplicationConfig.ActiveClusterName)
-		row.ReplicationConfig.Clusters = utils.GetOrUseDefaultClusters(m.currentClusterName, row.ReplicationConfig.Clusters)
+		row.ReplicationConfig.ActiveClusterName = cluster.GetOrUseDefaultActiveCluster(m.currentClusterName, row.ReplicationConfig.ActiveClusterName)
+		row.ReplicationConfig.Clusters = cluster.GetOrUseDefaultClusters(m.currentClusterName, row.ReplicationConfig.Clusters)
 
 		domainConfig, err := m.fromNoSQLInternalDomainConfig(row.Config)
 		if err != nil {

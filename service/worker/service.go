@@ -29,12 +29,12 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/utils"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
@@ -385,7 +385,7 @@ func (s *Service) registerSystemDomain(domain string) {
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: currentClusterName,
-			Clusters:          utils.GetOrUseDefaultClusters(currentClusterName, nil),
+			Clusters:          cluster.GetOrUseDefaultClusters(currentClusterName, nil),
 		},
 		IsGlobalDomain:  false,
 		FailoverVersion: common.EmptyVersion,

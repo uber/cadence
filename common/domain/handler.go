@@ -38,7 +38,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/utils"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -160,7 +159,7 @@ func (d *handlerImpl) RegisterDomain(
 		clusterName := clusterConfig.GetClusterName()
 		clusters = append(clusters, &persistence.ClusterReplicationConfig{ClusterName: clusterName})
 	}
-	clusters = utils.GetOrUseDefaultClusters(activeClusterName, clusters)
+	clusters = cluster.GetOrUseDefaultClusters(activeClusterName, clusters)
 
 	currentHistoryArchivalState := neverEnabledState()
 	nextHistoryArchivalState := currentHistoryArchivalState
