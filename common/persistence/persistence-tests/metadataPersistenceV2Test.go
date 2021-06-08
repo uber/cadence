@@ -573,7 +573,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 	resp2, err2 := m.GetDomain(ctx, id, "")
 	m.NoError(err2)
 	m.Equal(badBinaries, resp2.Config.BadBinaries)
-	metadata, err := m.MetadataManager.GetMetadata(ctx)
+	metadata, err := m.DomainManager.GetMetadata(ctx)
 	m.NoError(err)
 	notificationVersion := metadata.NotificationVersion
 
@@ -743,7 +743,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	resp2, err2 := m.GetDomain(ctx, id, "")
 	m.NoError(err2)
 	m.Nil(resp2.FailoverEndTime)
-	metadata, err := m.MetadataManager.GetMetadata(ctx)
+	metadata, err := m.DomainManager.GetMetadata(ctx)
 	m.NoError(err)
 	notificationVersion := metadata.NotificationVersion
 
@@ -1219,7 +1219,7 @@ func (m *MetadataPersistenceSuiteV2) CreateDomain(
 	lastUpdateTime int64,
 ) (*p.CreateDomainResponse, error) {
 
-	return m.MetadataManager.CreateDomain(ctx, &p.CreateDomainRequest{
+	return m.DomainManager.CreateDomain(ctx, &p.CreateDomainRequest{
 		Info:              info,
 		Config:            config,
 		ReplicationConfig: replicationConfig,
@@ -1232,7 +1232,7 @@ func (m *MetadataPersistenceSuiteV2) CreateDomain(
 
 // GetDomain helper method
 func (m *MetadataPersistenceSuiteV2) GetDomain(ctx context.Context, id, name string) (*p.GetDomainResponse, error) {
-	return m.MetadataManager.GetDomain(ctx, &p.GetDomainRequest{
+	return m.DomainManager.GetDomain(ctx, &p.GetDomainRequest{
 		ID:   id,
 		Name: name,
 	})
@@ -1253,7 +1253,7 @@ func (m *MetadataPersistenceSuiteV2) UpdateDomain(
 	lastUpdateTime int64,
 ) error {
 
-	return m.MetadataManager.UpdateDomain(ctx, &p.UpdateDomainRequest{
+	return m.DomainManager.UpdateDomain(ctx, &p.UpdateDomainRequest{
 		Info:                        info,
 		Config:                      config,
 		ReplicationConfig:           replicationConfig,
@@ -1270,14 +1270,14 @@ func (m *MetadataPersistenceSuiteV2) UpdateDomain(
 // DeleteDomain helper method
 func (m *MetadataPersistenceSuiteV2) DeleteDomain(ctx context.Context, id, name string) error {
 	if len(id) > 0 {
-		return m.MetadataManager.DeleteDomain(ctx, &p.DeleteDomainRequest{ID: id})
+		return m.DomainManager.DeleteDomain(ctx, &p.DeleteDomainRequest{ID: id})
 	}
-	return m.MetadataManager.DeleteDomainByName(ctx, &p.DeleteDomainByNameRequest{Name: name})
+	return m.DomainManager.DeleteDomainByName(ctx, &p.DeleteDomainByNameRequest{Name: name})
 }
 
 // ListDomains helper method
 func (m *MetadataPersistenceSuiteV2) ListDomains(ctx context.Context, pageSize int, pageToken []byte) (*p.ListDomainsResponse, error) {
-	return m.MetadataManager.ListDomains(ctx, &p.ListDomainsRequest{
+	return m.DomainManager.ListDomains(ctx, &p.ListDomainsRequest{
 		PageSize:      pageSize,
 		NextPageToken: pageToken,
 	})

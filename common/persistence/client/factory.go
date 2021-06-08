@@ -54,8 +54,8 @@ type (
 		NewShardManager() (p.ShardManager, error)
 		// NewHistoryManager returns a new history manager
 		NewHistoryManager() (p.HistoryManager, error)
-		// NewMetadataManager returns a new metadata manager
-		NewMetadataManager() (p.MetadataManager, error)
+		// NewDomainManager returns a new metadata manager
+		NewDomainManager() (p.DomainManager, error)
 		// NewExecutionManager returns a new execution manager for a given shardID
 		NewExecutionManager(shardID int) (p.ExecutionManager, error)
 		// NewVisibilityManager returns a new visibility manager
@@ -207,8 +207,8 @@ func (f *factoryImpl) NewHistoryManager() (p.HistoryManager, error) {
 	return result, nil
 }
 
-// NewMetadataManager returns a new metadata manager
-func (f *factoryImpl) NewMetadataManager() (p.MetadataManager, error) {
+// NewDomainManager returns a new metadata manager
+func (f *factoryImpl) NewDomainManager() (p.DomainManager, error) {
 	var err error
 	var store p.MetadataStore
 	ds := f.datastores[storeTypeMetadata]
@@ -216,15 +216,15 @@ func (f *factoryImpl) NewMetadataManager() (p.MetadataManager, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := p.NewMetadataManagerImpl(store, f.logger)
+	result := p.NewDomainManagerImpl(store, f.logger)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = p.NewMetadataPersistenceErrorInjectionClient(result, errorRate, f.logger)
+		result = p.NewDomainPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = p.NewMetadataPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = p.NewDomainPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewMetadataPersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = p.NewDomainPersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
 	return result, nil
 }
