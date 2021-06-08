@@ -122,7 +122,7 @@ func NewAdminHandler(
 ) *adminHandlerImpl {
 
 	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
-		resource.GetMetadataManager(),
+		resource.GetDomainManager(),
 		resource.GetTimeSource(),
 		resource.GetLogger(),
 	)
@@ -138,7 +138,7 @@ func NewAdminHandler(
 		),
 		domainFailoverWatcher: domain.NewFailoverWatcher(
 			resource.GetDomainCache(),
-			resource.GetMetadataManager(),
+			resource.GetDomainManager(),
 			resource.GetTimeSource(),
 			config.DomainFailoverRefreshInterval,
 			config.DomainFailoverRefreshTimerJitterCoefficient,

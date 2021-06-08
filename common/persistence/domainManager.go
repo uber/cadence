@@ -31,30 +31,30 @@ import (
 
 type (
 
-	// metadataManagerImpl implements MetadataManager based on MetadataStore and PayloadSerializer
-	metadataManagerImpl struct {
+	// domainManagerImpl implements DomainManager based on MetadataStore and PayloadSerializer
+	domainManagerImpl struct {
 		serializer  PayloadSerializer
 		persistence MetadataStore
 		logger      log.Logger
 	}
 )
 
-var _ MetadataManager = (*metadataManagerImpl)(nil)
+var _ DomainManager = (*domainManagerImpl)(nil)
 
-//NewMetadataManagerImpl returns new MetadataManager
-func NewMetadataManagerImpl(persistence MetadataStore, logger log.Logger) MetadataManager {
-	return &metadataManagerImpl{
+//NewDomainManagerImpl returns new DomainManager
+func NewDomainManagerImpl(persistence MetadataStore, logger log.Logger) DomainManager {
+	return &domainManagerImpl{
 		serializer:  NewPayloadSerializer(),
 		persistence: persistence,
 		logger:      logger,
 	}
 }
 
-func (m *metadataManagerImpl) GetName() string {
+func (m *domainManagerImpl) GetName() string {
 	return m.persistence.GetName()
 }
 
-func (m *metadataManagerImpl) CreateDomain(
+func (m *domainManagerImpl) CreateDomain(
 	ctx context.Context,
 	request *CreateDomainRequest,
 ) (*CreateDomainResponse, error) {
@@ -73,7 +73,7 @@ func (m *metadataManagerImpl) CreateDomain(
 	})
 }
 
-func (m *metadataManagerImpl) GetDomain(
+func (m *domainManagerImpl) GetDomain(
 	ctx context.Context,
 	request *GetDomainRequest,
 ) (*GetDomainResponse, error) {
@@ -105,7 +105,7 @@ func (m *metadataManagerImpl) GetDomain(
 	return resp, nil
 }
 
-func (m *metadataManagerImpl) UpdateDomain(
+func (m *domainManagerImpl) UpdateDomain(
 	ctx context.Context,
 	request *UpdateDomainRequest,
 ) error {
@@ -130,21 +130,21 @@ func (m *metadataManagerImpl) UpdateDomain(
 	return m.persistence.UpdateDomain(ctx, internalReq)
 }
 
-func (m *metadataManagerImpl) DeleteDomain(
+func (m *domainManagerImpl) DeleteDomain(
 	ctx context.Context,
 	request *DeleteDomainRequest,
 ) error {
 	return m.persistence.DeleteDomain(ctx, request)
 }
 
-func (m *metadataManagerImpl) DeleteDomainByName(
+func (m *domainManagerImpl) DeleteDomainByName(
 	ctx context.Context,
 	request *DeleteDomainByNameRequest,
 ) error {
 	return m.persistence.DeleteDomainByName(ctx, request)
 }
 
-func (m *metadataManagerImpl) ListDomains(
+func (m *domainManagerImpl) ListDomains(
 	ctx context.Context,
 	request *ListDomainsRequest,
 ) (*ListDomainsResponse, error) {
@@ -180,7 +180,7 @@ func (m *metadataManagerImpl) ListDomains(
 	}, nil
 }
 
-func (m *metadataManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalDomainConfig, error) {
+func (m *domainManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalDomainConfig, error) {
 	if c == nil {
 		return InternalDomainConfig{}, nil
 	}
@@ -202,7 +202,7 @@ func (m *metadataManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalD
 	}, nil
 }
 
-func (m *metadataManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig) (DomainConfig, error) {
+func (m *domainManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig) (DomainConfig, error) {
 	if ic == nil {
 		return DomainConfig{}, nil
 	}
@@ -224,12 +224,12 @@ func (m *metadataManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig)
 	}, nil
 }
 
-func (m *metadataManagerImpl) GetMetadata(
+func (m *domainManagerImpl) GetMetadata(
 	ctx context.Context,
 ) (*GetMetadataResponse, error) {
 	return m.persistence.GetMetadata(ctx)
 }
 
-func (m *metadataManagerImpl) Close() {
+func (m *domainManagerImpl) Close() {
 	m.persistence.Close()
 }

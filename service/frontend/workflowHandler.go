@@ -176,7 +176,7 @@ func NewWorkflowHandler(
 		domainHandler: domain.NewHandler(
 			config.domainConfig,
 			resource.GetLogger(),
-			resource.GetMetadataManager(),
+			resource.GetDomainManager(),
 			resource.GetClusterMetadata(),
 			domain.NewDomainReplicator(replicationMessageSink, resource.GetLogger()),
 			resource.GetArchivalMetadata(),
