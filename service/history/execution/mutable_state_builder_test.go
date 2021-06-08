@@ -796,7 +796,7 @@ func (s *mutableStateSuite) TestGetCloseEvent_WorkflowIsOpen() {
 	s.msBuilder.Load(mutableState)
 
 	closeEvent, err := s.msBuilder.GetCloseEvent(context.Background())
-	s.NoError(err)
+	s.Error(err)
 	s.Nil(closeEvent)
 }
 

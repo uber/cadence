@@ -67,6 +67,8 @@ var (
 	ErrMissingChildWorkflowInfo = &types.InternalServiceError{Message: "unable to get child workflow info"}
 	// ErrMissingWorkflowStartEvent indicates missing workflow start event
 	ErrMissingWorkflowStartEvent = &types.InternalServiceError{Message: "unable to get workflow start event"}
+	// ErrMissingWorkflowCloseEvent indicates missing workflow close event
+	ErrMissingWorkflowCloseEvent = &types.InternalServiceError{Message: "unable to get workflow close event"}
 	// ErrMissingWorkflowCompletionEvent indicates missing workflow completion event
 	ErrMissingWorkflowCompletionEvent = &types.InternalServiceError{Message: "unable to get workflow completion event"}
 	// ErrMissingActivityScheduledEvent indicates missing workflow activity scheduled event
@@ -1158,7 +1160,7 @@ func (e *mutableStateBuilder) GetCloseEvent(
 ) (*types.HistoryEvent, error) {
 
 	if e.GetExecutionInfo().CloseStatus == persistence.WorkflowCloseStatusNone {
-		return nil, nil
+		return nil, ErrMissingWorkflowCloseEvent
 	}
 
 	currentBranchToken, err := e.GetCurrentBranchToken()
