@@ -74,11 +74,11 @@ func (c *processingQueueCollection) AddTasks(
 	}
 }
 
-func (c *processingQueueCollection) GetTasks() map[task.Key]task.Task {
+func (c *processingQueueCollection) GetOutstandingTasks() map[task.Key]task.Task {
 
 	result := map[task.Key]task.Task{}
 	for _, queue := range c.queues {
-		for key, value := range queue.GetTasks() {
+		for key, value := range queue.GetOutstandingTasks() {
 			result[key] = value
 		}
 	}

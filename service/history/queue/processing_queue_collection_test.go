@@ -158,7 +158,7 @@ func (s *processingQueueCollectionSuite) TestAddTask_ReadFinished() {
 	s.Nil(queueCollection.ActiveQueue())
 }
 
-func (s *processingQueueCollectionSuite) TestGetTasks() {
+func (s *processingQueueCollectionSuite) TestGetOutstandingTasks() {
 	totalQueues := 4
 
 	mockQueues := []*MockProcessingQueue{}
@@ -173,7 +173,7 @@ func (s *processingQueueCollectionSuite) TestGetTasks() {
 
 	queueCollection := s.newTestProcessingQueueCollection(s.level, mockQueues)
 
-	tasks := queueCollection.GetTasks()
+	tasks := queueCollection.GetOutstandingTasks()
 	s.Equal(4, len(tasks))
 }
 

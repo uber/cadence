@@ -205,18 +205,18 @@ func (mr *MockProcessingQueueMockRecorder) AddTasks(arg0, arg1 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTasks", reflect.TypeOf((*MockProcessingQueue)(nil).AddTasks), arg0, arg1)
 }
 
-// GetTasks mocks base method
-func (m *MockProcessingQueue) GetTasks() map[task.Key]task.Task {
+// GetOutstandingTasks mocks base method
+func (m *MockProcessingQueue) GetOutstandingTasks() map[task.Key]task.Task {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTasks")
+	ret := m.ctrl.Call(m, "GetOutstandingTasks")
 	ret0, _ := ret[0].(map[task.Key]task.Task)
 	return ret0
 }
 
-// GetTasks indicates an expected call of GetTasks
-func (mr *MockProcessingQueueMockRecorder) GetTasks() *gomock.Call {
+// GetOutstandingTasks indicates an expected call of GetOutstandingTasks
+func (mr *MockProcessingQueueMockRecorder) GetOutstandingTasks() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTasks", reflect.TypeOf((*MockProcessingQueue)(nil).GetTasks))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOutstandingTasks", reflect.TypeOf((*MockProcessingQueue)(nil).GetOutstandingTasks))
 }
 
 // UpdateAckLevel mocks base method
@@ -348,18 +348,18 @@ func (mr *MockProcessingQueueCollectionMockRecorder) AddTasks(arg0, arg1 interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTasks", reflect.TypeOf((*MockProcessingQueueCollection)(nil).AddTasks), arg0, arg1)
 }
 
-// GetTasks mocks base method
-func (m *MockProcessingQueueCollection) GetTasks() map[task.Key]task.Task {
+// GetOutstandingTasks mocks base method
+func (m *MockProcessingQueueCollection) GetOutstandingTasks() map[task.Key]task.Task {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTasks")
+	ret := m.ctrl.Call(m, "GetOutstandingTasks")
 	ret0, _ := ret[0].(map[task.Key]task.Task)
 	return ret0
 }
 
-// GetTasks indicates an expected call of GetTasks
-func (mr *MockProcessingQueueCollectionMockRecorder) GetTasks() *gomock.Call {
+// GetOutstandingTasks indicates an expected call of GetOutstandingTasks
+func (mr *MockProcessingQueueCollectionMockRecorder) GetOutstandingTasks() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTasks", reflect.TypeOf((*MockProcessingQueueCollection)(nil).GetTasks))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOutstandingTasks", reflect.TypeOf((*MockProcessingQueueCollection)(nil).GetOutstandingTasks))
 }
 
 // UpdateAckLevels mocks base method

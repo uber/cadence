@@ -274,7 +274,7 @@ func (q *processingQueueImpl) AddTasks(
 	q.state.readLevel = newReadLevel
 }
 
-func (q *processingQueueImpl) GetTasks() map[task.Key]task.Task {
+func (q *processingQueueImpl) GetOutstandingTasks() map[task.Key]task.Task {
 	return q.outstandingTasks
 }
 
