@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/gocql/gocql"
+
 	"github.com/uber/cadence/environment"
 )
 
