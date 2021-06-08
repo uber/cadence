@@ -24,7 +24,7 @@ import (
 	"sort"
 	"testing"
 
-	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
@@ -108,6 +108,41 @@ func (s *processingQueueSuite) TestAddTasks() {
 	queue.AddTasks(tasks, newReadLevel)
 	s.Len(queue.outstandingTasks, len(taskKeys))
 	s.Equal(newReadLevel, queue.state.readLevel)
+}
+
+func (s *processingQueueSuite) TestGetTasks() {
+	ackLevel := testKey{ID: 1}
+	maxLevel := testKey{ID: 10}
+
+	taskKeys := []task.Key{
+		testKey{ID: 2},
+		testKey{ID: 3},
+		testKey{ID: 5},
+		testKey{ID: 9},
+	}
+	tasks := make(map[task.Key]task.Task)
+	for _, key := range taskKeys {
+		mockTask := task.NewMockTask(s.controller)
+		mockTask.EXPECT().GetDomainID().Return("some random domainID").AnyTimes()
+		mockTask.EXPECT().GetWorkflowID().Return("some random workflowID").AnyTimes()
+		mockTask.EXPECT().GetRunID().Return("some random runID").AnyTimes()
+		mockTask.EXPECT().GetTaskType().Return(0).AnyTimes()
+		tasks[key] = mockTask
+	}
+
+	queue := s.newTestProcessingQueue(
+		0,
+		ackLevel,
+		ackLevel,
+		maxLevel,
+		NewDomainFilter(nil, true),
+		make(map[task.Key]task.Task),
+	)
+
+	newReadLevel := testKey{ID: 10}
+	queue.AddTasks(tasks, newReadLevel)
+	s.Len(queue.outstandingTasks, len(taskKeys))
+	s.Equal(tasks, queue.GetTasks())
 }
 
 func (s *processingQueueSuite) TestUpdateAckLevel_WithPendingTasks() {

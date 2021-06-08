@@ -158,6 +158,25 @@ func (s *processingQueueCollectionSuite) TestAddTask_ReadFinished() {
 	s.Nil(queueCollection.ActiveQueue())
 }
 
+func (s *processingQueueCollectionSuite) TestGetTasks() {
+	totalQueues := 4
+
+	mockQueues := []*MockProcessingQueue{}
+	for i := 0; i != totalQueues; i++ {
+		mockQueues = append(mockQueues, NewMockProcessingQueue(s.controller))
+	}
+	for i := 0; i != totalQueues; i++ {
+		mockQueues[i].EXPECT().GetTasks().Return(map[task.Key]task.Task{
+			testKey{ID: i}:task.NewMockTask(s.controller),
+		}).Times(1)
+	}
+
+	queueCollection := s.newTestProcessingQueueCollection(s.level, mockQueues)
+
+	tasks := queueCollection.GetTasks()
+	s.Equal(4, len(tasks))
+}
+
 func (s *processingQueueCollectionSuite) TestUpdateAckLevels() {
 	totalQueues := 5
 	currentActiveIdx := 1

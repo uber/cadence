@@ -74,6 +74,17 @@ func (c *processingQueueCollection) AddTasks(
 	}
 }
 
+func (c *processingQueueCollection) GetTasks() map[task.Key]task.Task {
+
+	result := map[task.Key]task.Task{}
+	for _, queue := range c.queues {
+		for key, value := range queue.GetTasks() {
+			result[key] = value
+		}
+	}
+	return result
+}
+
 func (c *processingQueueCollection) UpdateAckLevels() (task.Key, int) {
 	if len(c.queues) == 0 {
 		return nil, 0

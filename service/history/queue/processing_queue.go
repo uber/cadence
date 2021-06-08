@@ -274,6 +274,10 @@ func (q *processingQueueImpl) AddTasks(
 	q.state.readLevel = newReadLevel
 }
 
+func (q *processingQueueImpl) GetTasks() map[task.Key]task.Task {
+	return q.outstandingTasks
+}
+
 func (q *processingQueueImpl) UpdateAckLevel() (task.Key, int) {
 	keys := make([]task.Key, 0, len(q.outstandingTasks))
 	for key := range q.outstandingTasks {
