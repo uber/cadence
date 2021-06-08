@@ -137,7 +137,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 		PersistenceConfig:             pConfig,
 		DispatcherProvider:            client.NewDNSYarpcDispatcherProvider(logger, 0),
 		MessagingClient:               messagingClient,
-		MetadataMgr:                   testBase.MetadataManager,
+		DomainManager:                 testBase.DomainManager,
 		HistoryV2Mgr:                  testBase.HistoryV2Mgr,
 		ExecutionMgrFactory:           testBase.ExecutionMgrFactory,
 		DomainReplicationQueue:        domainReplicationQueue,
@@ -150,7 +150,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 		HistoryConfig:                 options.HistoryConfig,
 		WorkerConfig:                  options.WorkerConfig,
 		MockAdminClient:               options.MockAdminClient,
-		DomainReplicationTaskExecutor: domain.NewReplicationTaskExecutor(testBase.MetadataManager, clock.NewRealTimeSource(), logger),
+		DomainReplicationTaskExecutor: domain.NewReplicationTaskExecutor(testBase.DomainManager, clock.NewRealTimeSource(), logger),
 	}
 	cluster := NewCadence(cadenceParams)
 	if err := cluster.Start(); err != nil {

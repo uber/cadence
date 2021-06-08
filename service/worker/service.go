@@ -276,7 +276,7 @@ func (s *Service) startScanner() {
 
 func (s *Service) startReplicator() {
 	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
-		s.Resource.GetMetadataManager(),
+		s.Resource.GetDomainManager(),
 		s.Resource.GetTimeSource(),
 		s.Resource.GetLogger(),
 	)
@@ -357,7 +357,7 @@ func (s *Service) startWorkflowShadower() {
 }
 
 func (s *Service) ensureDomainExists(domain string) {
-	_, err := s.GetMetadataManager().GetDomain(context.Background(), &persistence.GetDomainRequest{Name: domain})
+	_, err := s.GetDomainManager().GetDomain(context.Background(), &persistence.GetDomainRequest{Name: domain})
 	switch err.(type) {
 	case nil:
 		// noop
@@ -372,7 +372,7 @@ func (s *Service) ensureDomainExists(domain string) {
 func (s *Service) registerSystemDomain(domain string) {
 
 	currentClusterName := s.GetClusterMetadata().GetCurrentClusterName()
-	_, err := s.GetMetadataManager().CreateDomain(context.Background(), &persistence.CreateDomainRequest{
+	_, err := s.GetDomainManager().CreateDomain(context.Background(), &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          getDomainID(domain),
 			Name:        domain,
