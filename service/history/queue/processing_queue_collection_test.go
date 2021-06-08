@@ -167,7 +167,7 @@ func (s *processingQueueCollectionSuite) TestGetTasks() {
 	}
 	for i := 0; i != totalQueues; i++ {
 		mockQueues[i].EXPECT().GetTasks().Return(map[task.Key]task.Task{
-			testKey{ID: i}:task.NewMockTask(s.controller),
+			testKey{ID: i}: task.NewMockTask(s.controller),
 		}).Times(1)
 	}
 
