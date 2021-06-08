@@ -24,9 +24,8 @@ import (
 	"crypto/tls"
 	"strings"
 
-	"github.com/uber/cadence/environment"
-
 	"github.com/gocql/gocql"
+	"github.com/uber/cadence/environment"
 )
 
 var (
