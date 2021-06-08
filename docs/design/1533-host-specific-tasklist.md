@@ -41,7 +41,7 @@ The following sections will first go through the APIs exposed to users, explain 
 There will be four new APIs available when writing a workflow:
 
 ```go
-sessionCtx, err := workflow.**CreateSession**(ctx Context, so *SessionOptions)
+sessionCtx, err := workflow.CreateSession(ctx Context, so *SessionOptions)
 ```
 
 A user calls this API to create a session on the worker that polls the task list specified in the ActivityOptions (or in the StartWorkflowOptions if the task list name is not specified in the ActivityOptions). All activities executed within the returned sessionCtx (a new context which contains metadata information of the created session) are considered to be part of the session and will be executed on the same worker. The sessionCtx will be cancelled if the worker executing this session dies or CompleteSession() is called.
