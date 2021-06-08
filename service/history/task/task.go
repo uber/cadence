@@ -81,21 +81,6 @@ type (
 		queueType         QueueType
 		shouldProcessTask bool
 	}
-
-	crossClusterTaskImpl struct {
-		sync.Mutex
-		Info
-		shard         shard.Context
-		priority      int
-		attempt       int
-		timeSource    clock.TimeSource
-		submitTime    time.Time
-		logger        log.Logger
-		eventLogger   eventLogger
-		scopeIdx      int
-		scope         metrics.Scope
-		maxRetryCount dynamicconfig.IntPropertyFn
-	}
 )
 
 // NewTimerTask creates a new timer task
@@ -152,36 +137,6 @@ func NewTransferTask(
 		maxRetryCount,
 		redispatchFn,
 	)
-}
-
-func NewCrossClusterTask(
-	shard shard.Context,
-	taskInfo Info,
-	scopeIdx int,
-	logger log.Logger,
-	timeSource clock.TimeSource,
-	maxRetryCount dynamicconfig.IntPropertyFn,
-) Task {
-	var eventLogger eventLogger
-	if shard.GetConfig().EnableDebugMode &&
-		shard.GetConfig().EnableTaskInfoLogByDomainID(taskInfo.GetDomainID()) {
-		eventLogger = newEventLogger(logger, timeSource, defaultTaskEventLoggerSize)
-		eventLogger.AddEvent("Created task")
-	}
-
-	return &crossClusterTaskImpl{
-		Info:          taskInfo,
-		shard:         shard,
-		priority:      ctask.NoPriority,
-		attempt:       0,
-		timeSource:    timeSource,
-		submitTime:    timeSource.Now(),
-		logger:        logger,
-		eventLogger:   eventLogger,
-		scopeIdx:      scopeIdx,
-		scope:         nil,
-		maxRetryCount: maxRetryCount,
-	}
 }
 
 func newTask(

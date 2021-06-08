@@ -1152,6 +1152,36 @@ func (e *mutableStateBuilder) GetStartEvent(
 	return startEvent, nil
 }
 
+// GetCloseEvent returns the last event in history
+func (e *mutableStateBuilder) GetCloseEvent(
+	ctx context.Context,
+) (*types.HistoryEvent, error) {
+
+	if e.GetExecutionInfo().CloseStatus == persistence.WorkflowCloseStatusNone {
+		return nil, nil
+	}
+
+	currentBranchToken, err := e.GetCurrentBranchToken()
+	if err != nil {
+		return nil, err
+	}
+
+	closeEvent, err := e.eventsCache.GetEvent(
+		ctx,
+		e.shard.GetShardID(),
+		e.executionInfo.DomainID,
+		e.executionInfo.WorkflowID,
+		e.executionInfo.RunID,
+		common.FirstEventID,
+		e.GetNextEventID()-1,
+		currentBranchToken,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return closeEvent, nil
+}
+
 // DeletePendingChildExecution deletes details about a ChildExecutionInfo.
 func (e *mutableStateBuilder) DeletePendingChildExecution(
 	initiatedEventID int64,
@@ -2553,6 +2583,7 @@ func (e *mutableStateBuilder) AddCompletedWorkflowEvent(
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
 		e.unixNanoToTime(event.GetTimestamp()),
+		event,
 	); err != nil {
 		return nil, err
 	}
@@ -2593,6 +2624,7 @@ func (e *mutableStateBuilder) AddFailWorkflowEvent(
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
 		e.unixNanoToTime(event.GetTimestamp()),
+		event,
 	); err != nil {
 		return nil, err
 	}
@@ -2632,6 +2664,7 @@ func (e *mutableStateBuilder) AddTimeoutWorkflowEvent(
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
 		e.unixNanoToTime(event.GetTimestamp()),
+		event,
 	); err != nil {
 		return nil, err
 	}
@@ -2711,6 +2744,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
 		e.unixNanoToTime(event.GetTimestamp()),
+		event,
 	); err != nil {
 		return nil, err
 	}
@@ -3217,6 +3251,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
 		e.unixNanoToTime(event.GetTimestamp()),
+		event,
 	); err != nil {
 		return nil, err
 	}
@@ -3334,6 +3369,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
 		e.unixNanoToTime(continueAsNewEvent.GetTimestamp()),
+		continueAsNewEvent,
 	); err != nil {
 		return nil, nil, err
 	}

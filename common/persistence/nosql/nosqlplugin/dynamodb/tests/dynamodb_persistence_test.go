@@ -28,7 +28,7 @@ import (
 )
 
 // This is to make sure adding new noop method when adding new nosql interfaces
-// Remove it when any other tests are implemented. 
+// Remove it when any other tests are implemented.
 func TestNoopStruct(t *testing.T) {
 	_, _ = dynamodb.NewDynamoDB(config.NoSQL{}, nil)
 }
