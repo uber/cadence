@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	"math"
 	"sync"
 	"time"
 
@@ -821,16 +822,24 @@ func (c *clientImpl) GetReplicationMessages(
 		req.Tokens = append(req.Tokens, token)
 	}
 
+	// preserve some time to return partial of the result if context is timing out
+	now := time.Now()
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		deadline = now.Add(c.timeout)
+	}
+	requestTimeout := time.Duration(math.Ceil(float64(deadline.Sub(now)) * 0.95))
+	requestContext, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+
 	var wg sync.WaitGroup
 	wg.Add(len(requestsByClient))
 	respChan := make(chan *types.GetReplicationMessagesResponse, len(requestsByClient))
 	errChan := make(chan error, 1)
-	for client, req := range requestsByClient {
-		go func(client Client, request *types.GetReplicationMessagesRequest) {
-			defer wg.Done()
 
-			ctx, cancel := c.createContext(ctx)
-			defer cancel()
+	for client, req := range requestsByClient {
+		go func(ctx context.Context, client Client, request *types.GetReplicationMessagesRequest) {
+			defer wg.Done()
 			resp, err := client.GetReplicationMessages(ctx, request, opts...)
 			if err != nil {
 				c.logger.Warn("Failed to get replication tasks from client", tag.Error(err))
@@ -844,7 +853,7 @@ func (c *clientImpl) GetReplicationMessages(
 				return
 			}
 			respChan <- resp
-		}(client, req)
+		}(requestContext, client, req)
 	}
 
 	wg.Wait()
