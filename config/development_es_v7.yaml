@@ -8,6 +8,7 @@ persistence:
         pluginName: "cassandra"
         hosts: "127.0.0.1"
         keyspace: "cadence"
+        protoVersion: 4
     es-visibility:
       elasticsearch:
         version: "v7"
