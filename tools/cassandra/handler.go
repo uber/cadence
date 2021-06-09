@@ -86,13 +86,14 @@ func CheckCompatibleVersion(
 ) error {
 
 	client, err := NewCQLClient(&CQLClientConfig{
-		Hosts:    cfg.Hosts,
-		Port:     cfg.Port,
-		User:     cfg.User,
-		Password: cfg.Password,
-		Keyspace: cfg.Keyspace,
-		Timeout:  DefaultTimeout,
-		TLS:      cfg.TLS,
+		Hosts:        cfg.Hosts,
+		Port:         cfg.Port,
+		User:         cfg.User,
+		Password:     cfg.Password,
+		Keyspace:     cfg.Keyspace,
+		Timeout:      DefaultTimeout,
+		TLS:          cfg.TLS,
+		ProtoVersion: cfg.ProtoVersion,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create CQL Client: %v", err.Error())
@@ -175,6 +176,7 @@ func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 	cqlConfig.Timeout = cli.GlobalInt(schema.CLIOptTimeout)
 	cqlConfig.Keyspace = cli.GlobalString(schema.CLIOptKeyspace)
 	cqlConfig.NumReplicas = cli.Int(schema.CLIOptReplicationFactor)
+	cqlConfig.ProtoVersion = cli.Int(schema.CLIOptProtoVersion)
 
 	if cli.GlobalBool(schema.CLIFlagEnableTLS) {
 		cqlConfig.TLS = &config.TLS{
