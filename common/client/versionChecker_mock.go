@@ -32,6 +32,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+
+	"github.com/uber/cadence/.gen/go/shared"
 )
 
 // VersionCheckerMock is a mock of VersionChecker interface
@@ -114,9 +116,9 @@ func (mr *MockVersionCheckerMockRecorder) SupportsRawHistoryQuery(clientImpl, cl
 }
 
 // SupportsWorkflowAlreadyCompletedError mocks base method
-func (m *VersionCheckerMock) SupportsWorkflowAlreadyCompletedError(clientImpl, clientFeatureVersion string) error {
+func (m *VersionCheckerMock) SupportsWorkflowAlreadyCompletedError(clientImpl, clientFeatureVersion string, featureFlags shared.FeatureFlags) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SupportsWorkflowAlreadyCompletedError", clientImpl, clientFeatureVersion)
+	ret := m.ctrl.Call(m, "SupportsWorkflowAlreadyCompletedError", clientImpl, clientFeatureVersion, featureFlags)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
