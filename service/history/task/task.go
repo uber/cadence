@@ -85,16 +85,22 @@ type (
 	crossClusterTaskImpl struct {
 		sync.Mutex
 		Info
-		shard         shard.Context
-		priority      int
-		attempt       int
-		timeSource    clock.TimeSource
-		submitTime    time.Time
-		logger        log.Logger
-		eventLogger   eventLogger
-		scopeIdx      int
-		scope         metrics.Scope
-		maxRetryCount dynamicconfig.IntPropertyFn
+
+		shard           shard.Context
+		state           ctask.State
+		processingState ctask.CrossClusterTaskState
+		priority        int
+		attempt         int
+		timeSource      clock.TimeSource
+		submitTime      time.Time
+		logger          log.Logger
+		eventLogger     eventLogger
+		scopeIdx        int
+		scope           metrics.Scope
+		taskExecutor    Executor //TODO: wire up the dependency
+		taskProcessor   Processor //TODO: wire up the dependency
+		redispatchFn    func(task Task) //TODO: wire up the dependency
+		maxRetryCount   dynamicconfig.IntPropertyFn
 	}
 )
 
@@ -157,7 +163,6 @@ func NewTransferTask(
 func NewCrossClusterTask(
 	shard shard.Context,
 	taskInfo Info,
-	scopeIdx int,
 	logger log.Logger,
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
@@ -178,7 +183,7 @@ func NewCrossClusterTask(
 		submitTime:    timeSource.Now(),
 		logger:        logger,
 		eventLogger:   eventLogger,
-		scopeIdx:      scopeIdx,
+		scopeIdx:      GetCrossClusterTaskMetricsScope(taskInfo.GetTaskType()),
 		scope:         nil,
 		maxRetryCount: maxRetryCount,
 	}
@@ -437,6 +442,14 @@ func (t *taskImpl) GetQueueType() QueueType {
 	return t.queueType
 }
 
+func (t *taskImpl) GetFuture() {
+	panic("This task type does not support get future")
+}
+
+func (t *taskImpl) GetFutureSetter() {
+	panic("This task type does not support get future setter")
+}
+
 func (t *taskImpl) shouldResubmitOnNack() bool {
 	// TODO: for now only resubmit active task on Nack()
 	// we can also consider resubmit standby tasks that fails due to certain error types
@@ -485,4 +498,76 @@ func getDomainTagByID(
 		return metrics.DomainUnknownTag(), err
 	}
 	return metrics.DomainTag(domainName), nil
+}
+
+func (c *crossClusterTaskImpl) Execute() error {
+	panic("Not implement")
+}
+
+func (c *crossClusterTaskImpl) Ack() {
+	panic("Not implement")
+
+}
+
+func (c *crossClusterTaskImpl) Nack() {
+	panic("Not implement")
+
+}
+
+func (c *crossClusterTaskImpl) HandleErr(
+	err error,
+) (retErr error) {
+	panic("Not implement")
+}
+
+func (c *crossClusterTaskImpl) RetryErr(
+	err error,
+) bool {
+	panic("Not implement")
+}
+
+func (c *crossClusterTaskImpl) State() ctask.State {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.state
+}
+
+func (c *crossClusterTaskImpl) Priority() int {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.priority
+}
+
+func (c *crossClusterTaskImpl) SetPriority(
+	priority int,
+) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.priority = priority
+}
+
+func (c *crossClusterTaskImpl) GetShard() shard.Context {
+	return c.shard
+}
+
+func (c *crossClusterTaskImpl) GetAttempt() int {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.attempt
+}
+
+func (c *crossClusterTaskImpl) GetQueueType() QueueType {
+	return QueueTypeCrossCluster
+}
+
+func (c *crossClusterTaskImpl) GetFuture() {
+	panic("Not implement")
+}
+
+func (c *crossClusterTaskImpl) GetFutureSetter() {
+	panic("Not implement")
 }

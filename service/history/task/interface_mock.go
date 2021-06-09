@@ -426,6 +426,30 @@ func (mr *MockTaskMockRecorder) GetAttempt() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttempt", reflect.TypeOf((*MockTask)(nil).GetAttempt))
 }
 
+// GetFuture mocks base method
+func (m *MockTask) GetFuture() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "GetFuture")
+}
+
+// GetFuture indicates an expected call of GetFuture
+func (mr *MockTaskMockRecorder) GetFuture() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFuture", reflect.TypeOf((*MockTask)(nil).GetFuture))
+}
+
+// GetFutureSetter mocks base method
+func (m *MockTask) GetFutureSetter() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "GetFutureSetter")
+}
+
+// GetFutureSetter indicates an expected call of GetFutureSetter
+func (mr *MockTaskMockRecorder) GetFutureSetter() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFutureSetter", reflect.TypeOf((*MockTask)(nil).GetFutureSetter))
+}
+
 // MockKey is a mock of Key interface
 type MockKey struct {
 	ctrl     *gomock.Controller
