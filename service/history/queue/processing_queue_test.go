@@ -110,7 +110,7 @@ func (s *processingQueueSuite) TestAddTasks() {
 	s.Equal(newReadLevel, queue.state.readLevel)
 }
 
-func (s *processingQueueSuite) TestGetTasks() {
+func (s *processingQueueSuite) TestGetOutstandingTasks() {
 	ackLevel := testKey{ID: 1}
 	maxLevel := testKey{ID: 10}
 
@@ -142,7 +142,7 @@ func (s *processingQueueSuite) TestGetTasks() {
 	newReadLevel := testKey{ID: 10}
 	queue.AddTasks(tasks, newReadLevel)
 	s.Len(queue.outstandingTasks, len(taskKeys))
-	s.Equal(tasks, queue.GetTasks())
+	s.Equal(tasks, queue.GetOutstandingTasks())
 }
 
 func (s *processingQueueSuite) TestUpdateAckLevel_WithPendingTasks() {
