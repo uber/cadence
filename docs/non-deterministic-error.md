@@ -336,7 +336,7 @@ What if Non-deterministic code change has been deployed without GetVersions()?
 
 Sometimes we may forget to use GetVersions(), or misuse it. This could be a serious problem because after deployment, we probably cannot rollback: because some workflows has run with new code but some workflows has stuck. Rollback will save the stuck workflows but also stuck other workflows. 
 
-The best way is to use BinaryChecksum and Now() to let workflow diverge at the breaking changes. **workflow.GetInfo().****[BinaryChecksu**m](https://github.com/uber-go/cadence-client/issues/925) is the checksum of the binary that made that decision. **workflow.****[no**w](https://github.com/uber-go/cadence-client/issues/926)**()** is timestamp that the decision is made. For better experience, you should integrate with binaryChecksum is in a format of "**Your GIT_REF**" by **worker.SetBinaryChecksum()** API.
+The best way is to use BinaryChecksum and Now() to let workflow diverge at the breaking changes. **workflow.GetInfo().[BinaryChecksum](https://github.com/uber-go/cadence-client/issues/925)** is the checksum of the binary that made that decision. **workflow.[Now](https://github.com/uber-go/cadence-client/issues/926)()** is timestamp that the decision is made. For better experience, you should integrate with binaryChecksum is in a format of "**Your GIT_REF**" by **worker.SetBinaryChecksum()** API.
 
 Use the "extra decision" as an example. After deploy the code change, then there are workflow W1 stuck because of extra decision, however workflow W2 has started the two in-parallel activities. If we rollback the code, W1 will be fixed but W2 will be stuck. We can fix it by changing the code to:
 

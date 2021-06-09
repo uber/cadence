@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/resource"
@@ -151,6 +152,15 @@ func (s *controllerSuite) TestAcquireShardSuccess() {
 						cluster.TestCurrentClusterName:     currentClusterTimerAck,
 						cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 					},
+					TransferProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
+					CrossClusterProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
+					TimerProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
 					ClusterReplicationLevel: map[string]int64{},
 					ReplicationDLQAckLevel:  map[string]int64{},
 				},
@@ -231,6 +241,15 @@ func (s *controllerSuite) TestAcquireShardsConcurrently() {
 					ClusterTimerAckLevel: map[string]time.Time{
 						cluster.TestCurrentClusterName:     currentClusterTimerAck,
 						cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
+					},
+					TransferProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
+					CrossClusterProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
+					TimerProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
 					},
 					ClusterReplicationLevel: map[string]int64{},
 					ReplicationDLQAckLevel:  map[string]int64{},
@@ -320,6 +339,15 @@ func (s *controllerSuite) TestAcquireShardRenewSuccess() {
 					cluster.TestCurrentClusterName:     currentClusterTimerAck,
 					cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 				},
+				TransferProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
+				CrossClusterProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
+				TimerProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
 				ClusterReplicationLevel: map[string]int64{},
 				ReplicationDLQAckLevel:  map[string]int64{},
 			},
@@ -392,6 +420,15 @@ func (s *controllerSuite) TestAcquireShardRenewLookupFailed() {
 				ClusterTimerAckLevel: map[string]time.Time{
 					cluster.TestCurrentClusterName:     currentClusterTimerAck,
 					cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
+				},
+				TransferProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
+				CrossClusterProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
+				TimerProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
 				},
 				ClusterReplicationLevel: map[string]int64{},
 				ReplicationDLQAckLevel:  map[string]int64{},
@@ -600,6 +637,15 @@ func (s *controllerSuite) setupMocksForAcquireShard(shardID int, mockEngine *eng
 			ClusterTimerAckLevel: map[string]time.Time{
 				cluster.TestCurrentClusterName:     currentClusterTimerAck,
 				cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
+			},
+			TransferProcessingQueueStates: &types.ProcessingQueueStates{
+				StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+			},
+			CrossClusterProcessingQueueStates: &types.ProcessingQueueStates{
+				StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+			},
+			TimerProcessingQueueStates: &types.ProcessingQueueStates{
+				StatesByCluster: make(map[string][]*types.ProcessingQueueState),
 			},
 			ClusterReplicationLevel: map[string]int64{},
 			ReplicationDLQAckLevel:  map[string]int64{},

@@ -25,13 +25,8 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-	sconfig "github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/persistence"
-	persistenceClient "github.com/uber/cadence/common/persistence/client"
-	espersistence "github.com/uber/cadence/common/persistence/elasticsearch"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/resource"
@@ -63,41 +58,11 @@ func NewService(
 		params.PersistenceConfig.IsAdvancedVisibilityConfigExist())
 
 	params.PersistenceConfig.HistoryMaxConns = serviceConfig.HistoryMgrNumConns()
-	params.PersistenceConfig.VisibilityConfig = &sconfig.VisibilityConfig{
-		VisibilityOpenMaxQPS:            serviceConfig.VisibilityOpenMaxQPS,
-		VisibilityClosedMaxQPS:          serviceConfig.VisibilityClosedMaxQPS,
-		EnableSampling:                  serviceConfig.EnableVisibilitySampling,
-		EnableReadFromClosedExecutionV2: serviceConfig.EnableReadFromClosedExecutionV2,
-	}
-
-	visibilityManagerInitializer := func(
-		persistenceBean persistenceClient.Bean,
-		logger log.Logger,
-	) (persistence.VisibilityManager, error) {
-		visibilityFromDB := persistenceBean.GetVisibilityManager()
-
-		var visibilityFromES persistence.VisibilityManager
-		if params.ESConfig != nil {
-			visibilityProducer, err := params.MessagingClient.NewProducer(common.VisibilityAppName)
-			if err != nil {
-				logger.Fatal("Creating visibility producer failed", tag.Error(err))
-			}
-			visibilityFromES = espersistence.NewESVisibilityManager("", nil, nil, visibilityProducer,
-				params.MetricsClient, logger)
-		}
-		return persistence.NewVisibilityManagerWrapper(
-			visibilityFromDB,
-			visibilityFromES,
-			dynamicconfig.GetBoolPropertyFnFilteredByDomain(false), // history visibility never read
-			serviceConfig.AdvancedVisibilityWritingMode,
-		), nil
-	}
 
 	serviceResource, err := resource.New(
 		params,
 		common.HistoryServiceName,
 		serviceConfig,
-		visibilityManagerInitializer,
 	)
 	if err != nil {
 		return nil, err

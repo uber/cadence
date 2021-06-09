@@ -53,7 +53,7 @@ type (
 
 		minRetentionDays     int
 		maxBadBinaryCount    int
-		metadataMgr          persistence.MetadataManager
+		domainManager        persistence.DomainManager
 		mockProducer         *mocks.KafkaProducer
 		mockDomainReplicator Replicator
 		archivalMetadata     archiver.ArchivalMetadata
@@ -88,7 +88,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) SetupTest() {
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1
 	s.maxBadBinaryCount = 10
-	s.metadataMgr = s.TestBase.MetadataManager
+	s.domainManager = s.TestBase.DomainManager
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockDomainReplicator = NewDomainReplicator(s.mockProducer, logger)
 	s.archivalMetadata = archiver.NewArchivalMetadata(
@@ -108,7 +108,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) SetupTest() {
 	s.handler = NewHandler(
 		domainConfig,
 		logger,
-		s.metadataMgr,
+		s.domainManager,
 		s.ClusterMetadata,
 		s.mockDomainReplicator,
 		s.archivalMetadata,
@@ -514,7 +514,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	_, err := s.MetadataManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
+	_, err := s.DomainManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        domainName,
@@ -574,7 +574,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	_, err := s.MetadataManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
+	_, err := s.DomainManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        domainName,
@@ -647,7 +647,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	_, err := s.MetadataManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
+	_, err := s.DomainManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        domainName,
@@ -753,10 +753,10 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) setupLocalDomai
 }
 
 func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) setupGlobalDomainWithMetadataManager(domainName string) *types.DescribeDomainResponse {
-	return setupGlobalDomainWithMetadataManager(s.Suite, s.handler, s.ClusterMetadata, s.MetadataManager, domainName)
+	return setupGlobalDomainWithMetadataManager(s.Suite, s.handler, s.ClusterMetadata, s.DomainManager, domainName)
 }
 
-func setupGlobalDomainWithMetadataManager(s suite.Suite, handler *handlerImpl, clusterMetadata cluster.Metadata, metadataManager persistence.MetadataManager, domainName string) *types.DescribeDomainResponse {
+func setupGlobalDomainWithMetadataManager(s suite.Suite, handler *handlerImpl, clusterMetadata cluster.Metadata, domainManager persistence.DomainManager, domainName string) *types.DescribeDomainResponse {
 	description := "some random description"
 	email := "some random email"
 	retention := int32(7)
@@ -776,7 +776,7 @@ func setupGlobalDomainWithMetadataManager(s suite.Suite, handler *handlerImpl, c
 	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	_, err := metadataManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
+	_, err := domainManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        domainName,

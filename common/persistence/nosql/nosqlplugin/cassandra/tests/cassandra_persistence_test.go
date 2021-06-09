@@ -58,7 +58,7 @@ func TestCassandraShardPersistence(t *testing.T) {
 }
 
 func TestCassandraVisibilityPersistence(t *testing.T) {
-	s := new(persistencetests.VisibilityPersistenceSuite)
+	s := new(persistencetests.DBVisibilityPersistenceSuite)
 	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
 	suite.Run(t, s)

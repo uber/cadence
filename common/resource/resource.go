@@ -94,7 +94,7 @@ type (
 
 		// persistence clients
 
-		GetMetadataManager() persistence.MetadataManager
+		GetDomainManager() persistence.DomainManager
 		GetTaskManager() persistence.TaskManager
 		GetVisibilityManager() persistence.VisibilityManager
 		GetShardManager() persistence.ShardManager
