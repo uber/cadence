@@ -218,10 +218,14 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowClose(
 ) error {
 
 	executionInfo := mutableState.GetExecutionInfo()
-
 	if executionInfo.CloseStatus != persistence.WorkflowCloseStatusNone {
+		closeEvent, err := mutableState.GetCloseEvent(ctx)
+		if err != nil {
+			return err
+		}
 		return taskGenerator.GenerateWorkflowCloseTasks(
 			now,
+			closeEvent,
 		)
 	}
 
