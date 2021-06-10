@@ -66,6 +66,7 @@ type (
 		StoreType       string           `yaml:"-"`
 		SchemaDir       string           `yaml:"-"`
 		ClusterMetadata cluster.Metadata `yaml:"-"`
+		ProtoVersion    int              `yaml:"-"`
 	}
 
 	// TestBase wraps the base setup needed to create workflows over persistence layer.
@@ -76,7 +77,7 @@ type (
 		ExecutionManager          p.ExecutionManager
 		TaskMgr                   p.TaskManager
 		HistoryV2Mgr              p.HistoryManager
-		MetadataManager           p.MetadataManager
+		DomainManager             p.DomainManager
 		DomainReplicationQueueMgr p.QueueManager
 		ShardInfo                 *p.ShardInfo
 		TaskIDGenerator           TransferTaskIDGenerator
@@ -131,7 +132,7 @@ func NewTestBaseWithCassandra(options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
-	testCluster := cassandra.NewTestCluster(options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.SchemaDir)
+	testCluster := cassandra.NewTestCluster(options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.SchemaDir, options.ProtoVersion)
 	metadata := options.ClusterMetadata
 	if metadata == nil {
 		metadata = cluster.GetTestClusterMetadata(false, false)
@@ -202,8 +203,8 @@ func (s *TestBase) Setup() {
 	s.TaskMgr, err = factory.NewTaskManager()
 	s.fatalOnError("NewTaskManager", err)
 
-	s.MetadataManager, err = factory.NewMetadataManager()
-	s.fatalOnError("NewMetadataManager", err)
+	s.DomainManager, err = factory.NewDomainManager()
+	s.fatalOnError("NewDomainManager", err)
 
 	s.HistoryV2Mgr, err = factory.NewHistoryManager()
 	s.fatalOnError("NewHistoryManager", err)

@@ -67,6 +67,8 @@ var (
 	ErrMissingChildWorkflowInfo = &types.InternalServiceError{Message: "unable to get child workflow info"}
 	// ErrMissingWorkflowStartEvent indicates missing workflow start event
 	ErrMissingWorkflowStartEvent = &types.InternalServiceError{Message: "unable to get workflow start event"}
+	// ErrMissingWorkflowCloseEvent indicates missing workflow close event
+	ErrMissingWorkflowCloseEvent = &types.InternalServiceError{Message: "unable to get workflow close event"}
 	// ErrMissingWorkflowCompletionEvent indicates missing workflow completion event
 	ErrMissingWorkflowCompletionEvent = &types.InternalServiceError{Message: "unable to get workflow completion event"}
 	// ErrMissingActivityScheduledEvent indicates missing workflow activity scheduled event
@@ -1152,6 +1154,36 @@ func (e *mutableStateBuilder) GetStartEvent(
 		return nil, ErrMissingWorkflowStartEvent
 	}
 	return startEvent, nil
+}
+
+// GetCloseEvent returns the last event in history
+func (e *mutableStateBuilder) GetCloseEvent(
+	ctx context.Context,
+) (*types.HistoryEvent, error) {
+
+	if e.GetExecutionInfo().CloseStatus == persistence.WorkflowCloseStatusNone {
+		return nil, ErrMissingWorkflowCloseEvent
+	}
+
+	currentBranchToken, err := e.GetCurrentBranchToken()
+	if err != nil {
+		return nil, err
+	}
+
+	closeEvent, err := e.eventsCache.GetEvent(
+		ctx,
+		e.shard.GetShardID(),
+		e.executionInfo.DomainID,
+		e.executionInfo.WorkflowID,
+		e.executionInfo.RunID,
+		common.FirstEventID,
+		e.GetNextEventID()-1,
+		currentBranchToken,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return closeEvent, nil
 }
 
 // DeletePendingChildExecution deletes details about a ChildExecutionInfo.
@@ -2555,6 +2587,7 @@ func (e *mutableStateBuilder) AddCompletedWorkflowEvent(
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
 		e.unixNanoToTime(event.GetTimestamp()),
+		event,
 	); err != nil {
 		return nil, err
 	}
@@ -2595,6 +2628,7 @@ func (e *mutableStateBuilder) AddFailWorkflowEvent(
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
 		e.unixNanoToTime(event.GetTimestamp()),
+		event,
 	); err != nil {
 		return nil, err
 	}
@@ -2634,6 +2668,7 @@ func (e *mutableStateBuilder) AddTimeoutWorkflowEvent(
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
 		e.unixNanoToTime(event.GetTimestamp()),
+		event,
 	); err != nil {
 		return nil, err
 	}
@@ -2713,6 +2748,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
 		e.unixNanoToTime(event.GetTimestamp()),
+		event,
 	); err != nil {
 		return nil, err
 	}
@@ -3219,6 +3255,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
 		e.unixNanoToTime(event.GetTimestamp()),
+		event,
 	); err != nil {
 		return nil, err
 	}
@@ -3336,6 +3373,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
 		e.unixNanoToTime(continueAsNewEvent.GetTimestamp()),
+		continueAsNewEvent,
 	); err != nil {
 		return nil, nil, err
 	}

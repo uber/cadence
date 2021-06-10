@@ -73,17 +73,17 @@ func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateWorkflowStartTasks(
 }
 
 // GenerateWorkflowCloseTasks mocks base method
-func (m *MockMutableStateTaskGenerator) GenerateWorkflowCloseTasks(now time.Time) error {
+func (m *MockMutableStateTaskGenerator) GenerateWorkflowCloseTasks(now time.Time, closeEvent *types.HistoryEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateWorkflowCloseTasks", now)
+	ret := m.ctrl.Call(m, "GenerateWorkflowCloseTasks", now, closeEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // GenerateWorkflowCloseTasks indicates an expected call of GenerateWorkflowCloseTasks
-func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateWorkflowCloseTasks(now interface{}) *gomock.Call {
+func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateWorkflowCloseTasks(now, closeEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateWorkflowCloseTasks", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateWorkflowCloseTasks), now)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateWorkflowCloseTasks", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateWorkflowCloseTasks), now, closeEvent)
 }
 
 // GenerateRecordWorkflowStartedTasks mocks base method

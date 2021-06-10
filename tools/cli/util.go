@@ -45,6 +45,7 @@ import (
 	"go.uber.org/cadence/client"
 
 	"github.com/uber/cadence/common"
+	cc "github.com/uber/cadence/common/client"
 )
 
 // JSONHistorySerializer is used to encode history event in JSON
@@ -550,7 +551,13 @@ func ErrorAndExit(msg string, err error) {
 
 func getWorkflowClient(c *cli.Context) client.Client {
 	domain := getRequiredGlobalOption(c, FlagDomain)
-	return client.NewClient(cFactory.ClientFrontendClient(c), domain, &client.Options{})
+	return client.NewClient(
+		cFactory.ClientFrontendClient(c),
+		domain,
+		&client.Options{
+			FeatureFlags: cc.ToClientFeatureFlags(&cc.DefaultCLIFeatureFlags),
+		},
+	)
 }
 
 func getWorkflowClientWithOptionalDomain(c *cli.Context) client.Client {

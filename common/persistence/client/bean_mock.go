@@ -69,30 +69,30 @@ func (mr *MockBeanMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockBean)(nil).Close))
 }
 
-// GetMetadataManager mocks base method
-func (m *MockBean) GetMetadataManager() persistence.MetadataManager {
+// GetDomainManager mocks base method
+func (m *MockBean) GetDomainManager() persistence.DomainManager {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMetadataManager")
-	ret0, _ := ret[0].(persistence.MetadataManager)
+	ret := m.ctrl.Call(m, "GetDomainManager")
+	ret0, _ := ret[0].(persistence.DomainManager)
 	return ret0
 }
 
 // GetMetadataManager indicates an expected call of GetMetadataManager
 func (mr *MockBeanMockRecorder) GetMetadataManager() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetadataManager", reflect.TypeOf((*MockBean)(nil).GetMetadataManager))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainManager", reflect.TypeOf((*MockBean)(nil).GetDomainManager))
 }
 
 // SetMetadataManager mocks base method
-func (m *MockBean) SetMetadataManager(arg0 persistence.MetadataManager) {
+func (m *MockBean) SetDomainManager(arg0 persistence.DomainManager) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetMetadataManager", arg0)
+	m.ctrl.Call(m, "SetDomainManager", arg0)
 }
 
 // SetMetadataManager indicates an expected call of SetMetadataManager
 func (mr *MockBeanMockRecorder) SetMetadataManager(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMetadataManager", reflect.TypeOf((*MockBean)(nil).SetMetadataManager), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDomainManager", reflect.TypeOf((*MockBean)(nil).SetDomainManager), arg0)
 }
 
 // GetTaskManager mocks base method

@@ -64,23 +64,23 @@ type (
 	}
 
 	domainReplicationTaskExecutorImpl struct {
-		metadataManager persistence.MetadataManager
-		timeSource      clock.TimeSource
-		logger          log.Logger
+		domainManager persistence.DomainManager
+		timeSource    clock.TimeSource
+		logger        log.Logger
 	}
 )
 
 // NewReplicationTaskExecutor create a new instance of domain replicator
 func NewReplicationTaskExecutor(
-	metadataMgr persistence.MetadataManager,
+	domainManager persistence.DomainManager,
 	timeSource clock.TimeSource,
 	logger log.Logger,
 ) ReplicationTaskExecutor {
 
 	return &domainReplicationTaskExecutorImpl{
-		metadataManager: metadataMgr,
-		timeSource:      timeSource,
-		logger:          logger,
+		domainManager: domainManager,
+		timeSource:    timeSource,
+		logger:        logger,
 	}
 }
 
@@ -138,14 +138,14 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(
 		LastUpdatedTime: h.timeSource.Now().UnixNano(),
 	}
 
-	_, err = h.metadataManager.CreateDomain(ctx, request)
+	_, err = h.domainManager.CreateDomain(ctx, request)
 	if err != nil {
 		// SQL and Cassandra handle domain UUID collision differently
 		// here, whenever seeing a error replicating a domain
 		// do a check if there is a name / UUID collision
 
 		recordExists := true
-		resp, getErr := h.metadataManager.GetDomain(ctx, &persistence.GetDomainRequest{
+		resp, getErr := h.domainManager.GetDomain(ctx, &persistence.GetDomainRequest{
 			Name: task.Info.GetName(),
 		})
 		switch getErr.(type) {
@@ -161,7 +161,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(
 			return err
 		}
 
-		resp, getErr = h.metadataManager.GetDomain(ctx, &persistence.GetDomainRequest{
+		resp, getErr = h.domainManager.GetDomain(ctx, &persistence.GetDomainRequest{
 			ID: task.GetID(),
 		})
 		switch getErr.(type) {
@@ -196,7 +196,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 	}
 
 	// first we need to get the current notification version since we need to it for conditional update
-	metadata, err := h.metadataManager.GetMetadata(ctx)
+	metadata, err := h.domainManager.GetMetadata(ctx)
 	if err != nil {
 		return err
 	}
@@ -204,7 +204,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 
 	// plus, we need to check whether the config version is <= the config version set in the input
 	// plus, we need to check whether the failover version is <= the failover version set in the input
-	resp, err := h.metadataManager.GetDomain(ctx, &persistence.GetDomainRequest{
+	resp, err := h.domainManager.GetDomain(ctx, &persistence.GetDomainRequest{
 		Name: task.Info.GetName(),
 	})
 	if err != nil {
@@ -265,7 +265,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 		return nil
 	}
 
-	return h.metadataManager.UpdateDomain(ctx, request)
+	return h.domainManager.UpdateDomain(ctx, request)
 }
 
 func (h *domainReplicationTaskExecutorImpl) validateDomainReplicationTask(task *types.DomainTaskAttributes) error {
