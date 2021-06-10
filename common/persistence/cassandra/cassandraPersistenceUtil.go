@@ -2131,29 +2131,6 @@ func createHistoryEventBatchBlob(
 	return eventBatch
 }
 
-func createTaskInfo(
-	result map[string]interface{},
-) *p.InternalTaskInfo {
-
-	info := &p.InternalTaskInfo{}
-	for k, v := range result {
-		switch k {
-		case "domain_id":
-			info.DomainID = v.(gocql.UUID).String()
-		case "workflow_id":
-			info.WorkflowID = v.(string)
-		case "run_id":
-			info.RunID = v.(gocql.UUID).String()
-		case "schedule_id":
-			info.ScheduleID = v.(int64)
-		case "created_time":
-			info.CreatedTime = v.(time.Time)
-		}
-	}
-
-	return info
-}
-
 func createTimerTaskInfo(
 	result map[string]interface{},
 ) *p.TimerTaskInfo {

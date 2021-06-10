@@ -24,11 +24,105 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
+	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/constants"
 )
 
-func TestGetNextDecisionTimeout(t *testing.T) {
-	a := assert.New(t)
+type (
+	mutableStateTaskGeneratorSuite struct {
+		suite.Suite
+		*require.Assertions
+
+		controller       *gomock.Controller
+		mockDomainCache  *cache.MockDomainCache
+		mockMutableState *MockMutableState
+
+		taskGenerator *mutableStateTaskGeneratorImpl
+	}
+)
+
+func TestMutableStateTaskGeneratorSuite(t *testing.T) {
+	s := new(mutableStateTaskGeneratorSuite)
+	suite.Run(t, s)
+}
+
+func (s *mutableStateTaskGeneratorSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+
+	s.controller = gomock.NewController(s.T())
+	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
+	s.mockMutableState = NewMockMutableState(s.controller)
+
+	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestTargetDomainID).Return(constants.TestGlobalTargetDomainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestRemoteTargetDomainID).Return(constants.TestGlobalRemoteTargetDomainEntry, nil).AnyTimes()
+
+	s.taskGenerator = NewMutableStateTaskGenerator(
+		constants.TestClusterMetadata,
+		s.mockDomainCache,
+		loggerimpl.NewLoggerForTest(s.Suite),
+		s.mockMutableState,
+	).(*mutableStateTaskGeneratorImpl)
+}
+
+func (s *mutableStateTaskGeneratorSuite) TearDownTest() {
+	s.controller.Finish()
+}
+
+func (s *mutableStateTaskGeneratorSuite) TestIsCrossClusterTask() {
+	testCases := []struct {
+		sourceDomainID string
+		targetDomainID string
+		isCrossCluster bool
+		targetCluster  string
+	}{
+		{
+			sourceDomainID: constants.TestDomainID,
+			targetDomainID: constants.TestDomainID,
+			isCrossCluster: false,
+			targetCluster:  "",
+		},
+		{
+			// source domain is passive in the current cluster
+			sourceDomainID: constants.TestRemoteTargetDomainID,
+			targetDomainID: constants.TestDomainID,
+			isCrossCluster: false,
+			targetCluster:  "",
+		},
+		{
+			sourceDomainID: constants.TestDomainID,
+			targetDomainID: constants.TestTargetDomainID,
+			isCrossCluster: false,
+			targetCluster:  "",
+		},
+		{
+			sourceDomainID: constants.TestDomainID,
+			targetDomainID: constants.TestRemoteTargetDomainID,
+			isCrossCluster: true,
+			targetCluster:  cluster.TestAlternativeClusterName,
+		},
+	}
+
+	for _, tc := range testCases {
+		s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
+			DomainID: constants.TestDomainID,
+		})
+
+		targetCluster, isCrossCluster, err := s.taskGenerator.isCrossClusterTask(tc.targetDomainID)
+		s.NoError(err)
+		s.Equal(tc.isCrossCluster, isCrossCluster)
+		s.Equal(tc.targetCluster, targetCluster)
+	}
+}
+
+func (s *mutableStateTaskGeneratorSuite) TestGetNextDecisionTimeout() {
 	defaultStartToCloseTimeout := 10 * time.Second
 	expectedResult := []time.Duration{
 		defaultStartToCloseTimeout,
@@ -43,10 +137,9 @@ func TestGetNextDecisionTimeout(t *testing.T) {
 	for i := 0; i < len(expectedResult); i++ {
 		next := getNextDecisionTimeout(int64(i), defaultStartToCloseTimeout)
 		expected := expectedResult[i]
-		//print("Iter: ", i, ", Next Backoff: ", next.String(), "\n")
 		min, max := getNextBackoffRange(expected)
-		a.True(next >= min, "NextBackoff too low: actual: %v, expected: %v", next, expected)
-		a.True(next <= max, "NextBackoff too high: actual: %v, expected: %v", next, expected)
+		s.True(next >= min, "NextBackoff too low: actual: %v, expected: %v", next, expected)
+		s.True(next <= max, "NextBackoff too high: actual: %v, expected: %v", next, expected)
 	}
 }
 

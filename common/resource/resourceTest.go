@@ -389,7 +389,7 @@ func (s *Test) GetClientBean() client.Bean {
 // persistence clients
 
 // GetMetadataManager for testing
-func (s *Test) GetMetadataManager() persistence.MetadataManager {
+func (s *Test) GetDomainManager() persistence.DomainManager {
 	return s.MetadataMgr
 }
 

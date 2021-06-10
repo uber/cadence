@@ -4466,12 +4466,22 @@ func FromParentExecutionInfoFields(domainID, domainName *string, we *types.Workf
 	if domainID == nil && domainName == nil && we == nil && initiatedID == nil {
 		return nil
 	}
-	if domainID == nil || domainName == nil || we == nil || initiatedID == nil {
+	if domainName == nil || we == nil || initiatedID == nil {
 		panic("either all or none parent execution info must be set")
 	}
 
+	// Domain ID was added to unify parent execution info in several places.
+	// However it may not be present:
+	// - on older histories
+	// - if conversion involves thrift data types
+	// Fallback to empty string in those cases
+	parentDomainID := ""
+	if domainID != nil {
+		parentDomainID = *domainID
+	}
+
 	return &apiv1.ParentExecutionInfo{
-		DomainId:          *domainID,
+		DomainId:          parentDomainID,
 		DomainName:        *domainName,
 		WorkflowExecution: FromWorkflowExecution(we),
 		InitiatedId:       *initiatedID,

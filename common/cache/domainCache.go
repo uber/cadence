@@ -106,7 +106,7 @@ type (
 		shutdownChan    chan struct{}
 		cacheNameToID   *atomic.Value
 		cacheByID       *atomic.Value
-		metadataMgr     persistence.MetadataManager
+		domainManager   persistence.DomainManager
 		clusterMetadata cluster.Metadata
 		timeSource      clock.TimeSource
 		metricsClient   metrics.Client
@@ -145,7 +145,7 @@ type (
 
 // NewDomainCache creates a new instance of cache for holding onto domain information to reduce the load on persistence
 func NewDomainCache(
-	metadataMgr persistence.MetadataManager,
+	domainManager persistence.DomainManager,
 	clusterMetadata cluster.Metadata,
 	metricsClient metrics.Client,
 	logger log.Logger,
@@ -156,7 +156,7 @@ func NewDomainCache(
 		shutdownChan:     make(chan struct{}),
 		cacheNameToID:    &atomic.Value{},
 		cacheByID:        &atomic.Value{},
-		metadataMgr:      metadataMgr,
+		domainManager:    domainManager,
 		clusterMetadata:  clusterMetadata,
 		timeSource:       clock.NewRealTimeSource(),
 		metricsClient:    metricsClient,
@@ -450,7 +450,7 @@ func (c *domainCache) refreshDomainsLocked() error {
 	// this can guarantee that domains in the cache are not updated more than metadata record
 	ctx, cancel := context.WithTimeout(context.Background(), domainCachePersistenceTimeout)
 	defer cancel()
-	metadata, err := c.metadataMgr.GetMetadata(ctx)
+	metadata, err := c.domainManager.GetMetadata(ctx)
 	if err != nil {
 		return err
 	}
@@ -463,7 +463,7 @@ func (c *domainCache) refreshDomainsLocked() error {
 	for continuePage {
 		ctx, cancel := context.WithTimeout(context.Background(), domainCachePersistenceTimeout)
 		request.NextPageToken = token
-		response, err := c.metadataMgr.ListDomains(ctx, request)
+		response, err := c.domainManager.ListDomains(ctx, request)
 		cancel()
 		if err != nil {
 			return err
@@ -541,7 +541,7 @@ func (c *domainCache) checkDomainExists(
 	ctx, cancel := context.WithTimeout(context.Background(), domainCachePersistenceTimeout)
 	defer cancel()
 
-	_, err := c.metadataMgr.GetDomain(ctx, &persistence.GetDomainRequest{Name: name, ID: id})
+	_, err := c.domainManager.GetDomain(ctx, &persistence.GetDomainRequest{Name: name, ID: id})
 	return err
 }
 

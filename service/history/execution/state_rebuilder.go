@@ -88,6 +88,7 @@ func NewStateRebuilder(
 		historyV2Mgr:    shard.GetHistoryManager(),
 		taskRefresher: NewMutableStateTaskRefresher(
 			shard.GetConfig(),
+			shard.GetClusterMetadata(),
 			shard.GetDomainCache(),
 			shard.GetEventsCache(),
 			logger,
@@ -205,7 +206,7 @@ func (r *stateRebuilderImpl) initializeBuilders(
 		r.logger,
 		resetMutableStateBuilder,
 		func(mutableState MutableState) MutableStateTaskGenerator {
-			return NewMutableStateTaskGenerator(r.shard.GetDomainCache(), r.logger, mutableState)
+			return NewMutableStateTaskGenerator(r.shard.GetClusterMetadata(), r.shard.GetDomainCache(), r.logger, mutableState)
 		},
 	)
 	return resetMutableStateBuilder, stateBuilder

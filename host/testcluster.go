@@ -137,7 +137,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 		PersistenceConfig:             pConfig,
 		DispatcherProvider:            client.NewDNSYarpcDispatcherProvider(logger, 0),
 		MessagingClient:               messagingClient,
-		MetadataMgr:                   testBase.MetadataManager,
+		DomainManager:                 testBase.DomainManager,
 		HistoryV2Mgr:                  testBase.HistoryV2Mgr,
 		ExecutionMgrFactory:           testBase.ExecutionMgrFactory,
 		DomainReplicationQueue:        domainReplicationQueue,
@@ -150,7 +150,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 		HistoryConfig:                 options.HistoryConfig,
 		WorkerConfig:                  options.WorkerConfig,
 		MockAdminClient:               options.MockAdminClient,
-		DomainReplicationTaskExecutor: domain.NewReplicationTaskExecutor(testBase.MetadataManager, clock.NewRealTimeSource(), logger),
+		DomainReplicationTaskExecutor: domain.NewReplicationTaskExecutor(testBase.DomainManager, clock.NewRealTimeSource(), logger),
 	}
 	cluster := NewCadence(cadenceParams)
 	if err := cluster.Start(); err != nil {
@@ -186,7 +186,7 @@ func NewPersistenceTestCluster(clusterConfig *TestClusterConfig) persistencetest
 
 	var testCluster persistencetests.PersistenceTestCluster
 	if TestFlags.PersistenceType == config.StoreTypeCassandra {
-		testCluster = cassandra.NewTestCluster(clusterConfig.Persistence.DBName, clusterConfig.Persistence.DBUsername, clusterConfig.Persistence.DBPassword, clusterConfig.Persistence.DBHost, clusterConfig.Persistence.DBPort, clusterConfig.Persistence.SchemaDir)
+		testCluster = cassandra.NewTestCluster(clusterConfig.Persistence.DBName, clusterConfig.Persistence.DBUsername, clusterConfig.Persistence.DBPassword, clusterConfig.Persistence.DBHost, clusterConfig.Persistence.DBPort, clusterConfig.Persistence.SchemaDir, clusterConfig.Persistence.ProtoVersion)
 	} else if TestFlags.PersistenceType == config.StoreTypeSQL {
 		var ops *persistencetests.TestBaseOptions
 		if TestFlags.SQLPluginName == mysql.PluginName {

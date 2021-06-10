@@ -26,6 +26,8 @@ import (
 	"sync"
 
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/resource/config"
+	"github.com/uber/cadence/common/service"
 )
 
 type (
@@ -33,8 +35,8 @@ type (
 	Bean interface {
 		Close()
 
-		GetMetadataManager() persistence.MetadataManager
-		SetMetadataManager(persistence.MetadataManager)
+		GetDomainManager() persistence.DomainManager
+		SetDomainManager(persistence.DomainManager)
 
 		GetTaskManager() persistence.TaskManager
 		SetTaskManager(persistence.TaskManager)
@@ -57,7 +59,7 @@ type (
 
 	// BeanImpl stores persistence managers
 	BeanImpl struct {
-		metadataManager               persistence.MetadataManager
+		domainManager                 persistence.DomainManager
 		taskManager                   persistence.TaskManager
 		visibilityManager             persistence.VisibilityManager
 		domainReplicationQueueManager persistence.QueueManager
@@ -73,9 +75,11 @@ type (
 // NewBeanFromFactory crate a new store bean using factory
 func NewBeanFromFactory(
 	factory Factory,
+	params *service.BootstrapParams,
+	resourceConfig *config.ResourceConfig,
 ) (*BeanImpl, error) {
 
-	metadataMgr, err := factory.NewMetadataManager()
+	metadataMgr, err := factory.NewDomainManager()
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +89,7 @@ func NewBeanFromFactory(
 		return nil, err
 	}
 
-	visibilityMgr, err := factory.NewVisibilityManager()
+	visibilityMgr, err := factory.NewVisibilityManager(params, resourceConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +122,7 @@ func NewBeanFromFactory(
 
 // NewBean create a new store bean
 func NewBean(
-	metadataManager persistence.MetadataManager,
+	domainManager persistence.DomainManager,
 	taskManager persistence.TaskManager,
 	visibilityManager persistence.VisibilityManager,
 	domainReplicationQueueManager persistence.QueueManager,
@@ -127,7 +131,7 @@ func NewBean(
 	executionManagerFactory persistence.ExecutionManagerFactory,
 ) *BeanImpl {
 	return &BeanImpl{
-		metadataManager:               metadataManager,
+		domainManager:                 domainManager,
 		taskManager:                   taskManager,
 		visibilityManager:             visibilityManager,
 		domainReplicationQueueManager: domainReplicationQueueManager,
@@ -139,24 +143,24 @@ func NewBean(
 	}
 }
 
-// GetMetadataManager get MetadataManager
-func (s *BeanImpl) GetMetadataManager() persistence.MetadataManager {
+// GetDomainManager get DomainManager
+func (s *BeanImpl) GetDomainManager() persistence.DomainManager {
 
 	s.RLock()
 	defer s.RUnlock()
 
-	return s.metadataManager
+	return s.domainManager
 }
 
-// SetMetadataManager set MetadataManager
-func (s *BeanImpl) SetMetadataManager(
-	metadataManager persistence.MetadataManager,
+// SetMetadataManager set DomainManager
+func (s *BeanImpl) SetDomainManager(
+	domainManager persistence.DomainManager,
 ) {
 
 	s.Lock()
 	defer s.Unlock()
 
-	s.metadataManager = metadataManager
+	s.domainManager = domainManager
 }
 
 // GetTaskManager get TaskManager
@@ -307,9 +311,12 @@ func (s *BeanImpl) Close() {
 	s.Lock()
 	defer s.Unlock()
 
-	s.metadataManager.Close()
+	s.domainManager.Close()
 	s.taskManager.Close()
-	s.visibilityManager.Close()
+	if s.visibilityManager != nil {
+		// visibilityManager can be nil
+		s.visibilityManager.Close()
+	}
 	s.domainReplicationQueueManager.Close()
 	s.shardManager.Close()
 	s.historyManager.Close()

@@ -70,7 +70,7 @@ type (
 		shutdownChan     chan struct{}
 		retryPolicy      backoff.RetryPolicy
 
-		metadataMgr   persistence.MetadataManager
+		domainManager persistence.DomainManager
 		historyClient history.Client
 		config        *config.Config
 		timeSource    clock.TimeSource
@@ -98,7 +98,7 @@ type (
 
 // NewCoordinator initialize a failover coordinator
 func NewCoordinator(
-	metadataMgr persistence.MetadataManager,
+	domainManager persistence.DomainManager,
 	historyClient history.Client,
 	timeSource clock.TimeSource,
 	domainCache cache.DomainCache,
@@ -118,7 +118,7 @@ func NewCoordinator(
 		receiveChan:      make(chan *receiveRequest, receiveChanBufferSize),
 		shutdownChan:     make(chan struct{}),
 		retryPolicy:      retryPolicy,
-		metadataMgr:      metadataMgr,
+		domainManager:    domainManager,
 		historyClient:    historyClient,
 		timeSource:       timeSource,
 		domainCache:      domainCache,
@@ -269,7 +269,7 @@ func (c *coordinatorImpl) handleFailoverMarkers(
 
 	if len(record.shards) == c.config.NumberOfShards {
 		if err := domain.CleanPendingActiveState(
-			c.metadataMgr,
+			c.domainManager,
 			domainID,
 			record.failoverVersion,
 			c.retryPolicy,
