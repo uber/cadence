@@ -119,6 +119,17 @@ func (e *EntityNotExistsError) YARPCErrorCode() *yarpcerrors.Code {
 // Name is the error name for EntityNotExistsError.
 func (e *EntityNotExistsError) YARPCErrorName() string { return "EntityNotExistsError" }
 
+// YARPCErrorCode returns nil for FeatureNotEnabledError.
+//
+// This is derived from the rpc.code annotation on the Thrift exception.
+func (e *FeatureNotEnabledError) YARPCErrorCode() *yarpcerrors.Code {
+
+	return nil
+}
+
+// Name is the error name for FeatureNotEnabledError.
+func (e *FeatureNotEnabledError) YARPCErrorName() string { return "FeatureNotEnabledError" }
+
 // YARPCErrorCode returns nil for InternalDataInconsistencyError.
 //
 // This is derived from the rpc.code annotation on the Thrift exception.

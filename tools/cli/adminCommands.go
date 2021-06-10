@@ -35,6 +35,7 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence"
@@ -48,8 +49,6 @@ import (
 
 const (
 	maxEventID = 9999
-
-	cassandraProtoVersion = 4
 )
 
 // AdminShowWorkflow shows history
@@ -175,13 +174,16 @@ func describeMutableState(c *cli.Context) *types.AdminDescribeWorkflowExecutionR
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	resp, err := adminClient.DescribeWorkflowExecution(ctx, &types.AdminDescribeWorkflowExecutionRequest{
-		Domain: domain,
-		Execution: &types.WorkflowExecution{
-			WorkflowID: wid,
-			RunID:      rid,
+	resp, err := adminClient.DescribeWorkflowExecution(
+		ctx,
+		&types.AdminDescribeWorkflowExecutionRequest{
+			Domain: domain,
+			Execution: &types.WorkflowExecution{
+				WorkflowID: wid,
+				RunID:      rid,
+			},
 		},
-	})
+		cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Get workflow mutableState failed", err)
 	}
@@ -297,7 +299,7 @@ func connectToCassandra(c *cli.Context) (gocql.Client, gocql.Session) {
 		User:              c.String(FlagUsername),
 		Password:          c.String(FlagPassword),
 		Keyspace:          getRequiredOption(c, FlagKeyspace),
-		ProtoVersion:      cassandraProtoVersion,
+		ProtoVersion:      c.Int(FlagProtoVersion),
 		SerialConsistency: gocql.LocalSerial,
 		MaxConns:          20,
 		Consistency:       gocql.LocalQuorum,

@@ -84,6 +84,10 @@ func FromError(err error) error {
 			ClientImpl:        e.ClientImpl,
 			SupportedVersions: e.SupportedVersions,
 		}))
+	case *types.FeatureNotEnabledError:
+		return protobuf.NewError(yarpcerrors.CodeFailedPrecondition, "Feature flag not enabled", protobuf.WithErrorDetails(&apiv1.FeatureNotEnabledError{
+			FeatureFlag: e.FeatureFlag,
+		}))
 	case *types.DomainNotActiveError:
 		return protobuf.NewError(yarpcerrors.CodeFailedPrecondition, e.Message, protobuf.WithErrorDetails(&apiv1.DomainNotActiveError{
 			Domain:         e.DomainName,
@@ -198,6 +202,10 @@ func ToError(err error) error {
 				FeatureVersion:    details.FeatureVersion,
 				ClientImpl:        details.ClientImpl,
 				SupportedVersions: details.SupportedVersions,
+			}
+		case *apiv1.FeatureNotEnabledError:
+			return &types.FeatureNotEnabledError{
+				FeatureFlag: details.FeatureFlag,
 			}
 		case *apiv1.DomainNotActiveError:
 			return &types.DomainNotActiveError{
