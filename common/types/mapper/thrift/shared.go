@@ -736,6 +736,26 @@ func ToClientVersionNotSupportedError(t *shared.ClientVersionNotSupportedError) 
 	}
 }
 
+// FromFeatureNotEnabledError converts internal FeatureNotEnabledError type to thrift
+func FromFeatureNotEnabledError(t *types.FeatureNotEnabledError) *shared.FeatureNotEnabledError {
+	if t == nil {
+		return nil
+	}
+	return &shared.FeatureNotEnabledError{
+		FeatureFlag: t.FeatureFlag,
+	}
+}
+
+// ToFeatureNotEnabledError converts thrift FeatureNotEnabledError type to internal
+func ToFeatureNotEnabledError(t *shared.FeatureNotEnabledError) *types.FeatureNotEnabledError {
+	if t == nil {
+		return nil
+	}
+	return &types.FeatureNotEnabledError{
+		FeatureFlag: t.FeatureFlag,
+	}
+}
+
 // FromCloseShardRequest converts internal CloseShardRequest type to thrift
 func FromCloseShardRequest(t *types.CloseShardRequest) *shared.CloseShardRequest {
 	if t == nil {

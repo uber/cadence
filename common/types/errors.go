@@ -44,6 +44,12 @@ func (err ClientVersionNotSupportedError) Error() string {
 		err.SupportedVersions)
 }
 
+func (err FeatureNotEnabledError) Error() string {
+	return fmt.Sprintf("FeatureNotEnabledError{FeatureFlag: %v}",
+		err.FeatureFlag,
+	)
+}
+
 func (err CurrentBranchChangedError) Error() string {
 	return fmt.Sprintf("CurrentBranchChangedError{Message: %v, CurrentBranchToken: %v}",
 		err.Message,

@@ -1134,6 +1134,19 @@ func (v *ClientVersionNotSupportedError) GetSupportedVersions() (o string) {
 	return
 }
 
+// FeatureNotEnabledError is an internal type (TBD...)
+type FeatureNotEnabledError struct {
+	FeatureFlag string `json:"featureFlag,required"`
+}
+
+// GetFeatureFlag is an internal getter (TBD...)
+func (v *FeatureNotEnabledError) GetFeatureFlag() (o string) {
+	if v != nil {
+		return v.FeatureFlag
+	}
+	return
+}
+
 // CloseShardRequest is an internal type (TBD...)
 type CloseShardRequest struct {
 	ShardID int32 `json:"shardID,omitempty"`
