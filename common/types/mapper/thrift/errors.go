@@ -41,6 +41,8 @@ func FromError(err error) error {
 		return FromCancellationAlreadyRequestedError(e)
 	case *types.ClientVersionNotSupportedError:
 		return FromClientVersionNotSupportedError(e)
+	case *types.FeatureNotEnabledError:
+		return FromFeatureNotEnabledError(e)
 	case *types.CurrentBranchChangedError:
 		return FromCurrentBranchChangedError(e)
 	case *types.DomainAlreadyExistsError:
@@ -91,6 +93,8 @@ func ToError(err error) error {
 		return ToCancellationAlreadyRequestedError(e)
 	case *shared.ClientVersionNotSupportedError:
 		return ToClientVersionNotSupportedError(e)
+	case *shared.FeatureNotEnabledError:
+		return ToFeatureNotEnabledError(e)
 	case *shared.CurrentBranchChangedError:
 		return ToCurrentBranchChangedError(e)
 	case *shared.DomainAlreadyExistsError:
