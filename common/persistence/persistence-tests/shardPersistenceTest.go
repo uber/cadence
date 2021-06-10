@@ -157,7 +157,7 @@ func (s *ShardPersistenceSuite) TestUpdateShard() {
 		cluster.TestCurrentClusterName, 0, updatedCurrentClusterTimerAckLevel.UnixNano(),
 		cluster.TestAlternativeClusterName, 1, updatedAlternativeClusterTimerAckLevel.UnixNano(),
 	)
-	updatedInfo.CrossClusterProcessQueueStates = createProcessingQueueStates(
+	updatedInfo.CrossClusterProcessingQueueStates = createProcessingQueueStates(
 		cluster.TestAlternativeClusterName, 1, updatedAlternativeClusterCrossClusterAckLevel, "", 0, 0,
 	)
 	updatedInfo.ReplicationDLQAckLevel = map[string]int64{
@@ -182,7 +182,7 @@ func (s *ShardPersistenceSuite) TestUpdateShard() {
 	s.EqualTimes(updatedAlternativeClusterTimerAckLevel, info1.ClusterTimerAckLevel[cluster.TestAlternativeClusterName])
 	s.Equal(updatedInfo.TimerProcessingQueueStates, info1.TimerProcessingQueueStates)
 	if !skipCrossClusterQueueCheck {
-		s.Equal(updatedInfo.CrossClusterProcessQueueStates, info1.CrossClusterProcessQueueStates)
+		s.Equal(updatedInfo.CrossClusterProcessingQueueStates, info1.CrossClusterProcessingQueueStates)
 	}
 	s.Equal(updatedReplicationAckLevel, info1.ReplicationAckLevel)
 	s.Equal(updatedInfo.ReplicationDLQAckLevel, info1.ReplicationDLQAckLevel)
@@ -210,7 +210,7 @@ func (s *ShardPersistenceSuite) TestUpdateShard() {
 	s.EqualTimes(updatedAlternativeClusterTimerAckLevel, info2.ClusterTimerAckLevel[cluster.TestAlternativeClusterName])
 	s.Equal(updatedInfo.TimerProcessingQueueStates, info2.TimerProcessingQueueStates)
 	if !skipCrossClusterQueueCheck {
-		s.Equal(updatedInfo.CrossClusterProcessQueueStates, info2.CrossClusterProcessQueueStates)
+		s.Equal(updatedInfo.CrossClusterProcessingQueueStates, info2.CrossClusterProcessingQueueStates)
 	}
 	s.Equal(updatedReplicationAckLevel, info2.ReplicationAckLevel)
 	s.Equal(updatedInfo.ReplicationDLQAckLevel, info2.ReplicationDLQAckLevel)
@@ -312,12 +312,12 @@ func (s *ShardPersistenceSuite) TestCreateGetUpdateGetShard() {
 			cluster.TestCurrentClusterName:     currentClusterTimerAck,
 			cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 		},
-		TransferProcessingQueueStates:  transferPQS,
-		CrossClusterProcessQueueStates: crossClusterPQS,
-		TimerProcessingQueueStates:     timerPQS,
-		DomainNotificationVersion:      domainNotificationVersion,
-		ClusterReplicationLevel:        map[string]int64{},
-		ReplicationDLQAckLevel:         map[string]int64{},
+		TransferProcessingQueueStates:     transferPQS,
+		CrossClusterProcessingQueueStates: crossClusterPQS,
+		TimerProcessingQueueStates:        timerPQS,
+		DomainNotificationVersion:         domainNotificationVersion,
+		ClusterReplicationLevel:           map[string]int64{},
+		ReplicationDLQAckLevel:            map[string]int64{},
 	}
 	createRequest := &p.CreateShardRequest{
 		ShardInfo: shardInfo,
@@ -331,7 +331,7 @@ func (s *ShardPersistenceSuite) TestCreateGetUpdateGetShard() {
 	s.EqualTimes(shardInfo.ClusterTimerAckLevel[cluster.TestAlternativeClusterName], resp.ClusterTimerAckLevel[cluster.TestAlternativeClusterName])
 
 	if skipCrossClusterQueueCheck {
-		resp.CrossClusterProcessQueueStates = shardInfo.CrossClusterProcessQueueStates
+		resp.CrossClusterProcessingQueueStates = shardInfo.CrossClusterProcessingQueueStates
 	}
 	resp.TimerAckLevel = shardInfo.TimerAckLevel
 	resp.UpdatedAt = shardInfo.UpdatedAt
@@ -374,12 +374,12 @@ func (s *ShardPersistenceSuite) TestCreateGetUpdateGetShard() {
 			cluster.TestCurrentClusterName:     currentClusterTimerAck,
 			cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 		},
-		TransferProcessingQueueStates:  transferPQS,
-		CrossClusterProcessQueueStates: crossClusterPQS,
-		TimerProcessingQueueStates:     timerPQS,
-		DomainNotificationVersion:      domainNotificationVersion,
-		ClusterReplicationLevel:        map[string]int64{cluster.TestAlternativeClusterName: 12345},
-		ReplicationDLQAckLevel:         map[string]int64{},
+		TransferProcessingQueueStates:     transferPQS,
+		CrossClusterProcessingQueueStates: crossClusterPQS,
+		TimerProcessingQueueStates:        timerPQS,
+		DomainNotificationVersion:         domainNotificationVersion,
+		ClusterReplicationLevel:           map[string]int64{cluster.TestAlternativeClusterName: 12345},
+		ReplicationDLQAckLevel:            map[string]int64{},
 	}
 	updateRequest := &p.UpdateShardRequest{
 		ShardInfo:       shardInfo,
@@ -395,7 +395,7 @@ func (s *ShardPersistenceSuite) TestCreateGetUpdateGetShard() {
 	s.EqualTimes(shardInfo.ClusterTimerAckLevel[cluster.TestAlternativeClusterName], resp.ClusterTimerAckLevel[cluster.TestAlternativeClusterName])
 
 	if skipCrossClusterQueueCheck {
-		resp.CrossClusterProcessQueueStates = shardInfo.CrossClusterProcessQueueStates
+		resp.CrossClusterProcessingQueueStates = shardInfo.CrossClusterProcessingQueueStates
 	}
 	resp.UpdatedAt = shardInfo.UpdatedAt
 	resp.TimerAckLevel = shardInfo.TimerAckLevel

@@ -46,6 +46,7 @@ type (
 		) error
 		GenerateWorkflowCloseTasks(
 			now time.Time,
+			closeEvent *types.HistoryEvent,
 		) error
 		GenerateRecordWorkflowStartedTasks(
 			startEvent *types.HistoryEvent,
@@ -154,14 +155,13 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowStartTasks(
 
 func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 	now time.Time,
+	closeEvent *types.HistoryEvent,
 ) error {
 
-	currentVersion := r.mutableState.GetCurrentVersion()
 	executionInfo := r.mutableState.GetExecutionInfo()
-
 	r.mutableState.AddTransferTasks(&persistence.CloseExecutionTask{
 		// TaskID and VisibilityTimestamp are set by shard context
-		Version: currentVersion,
+		Version: closeEvent.GetVersion(),
 	})
 
 	retentionInDays := defaultWorkflowRetentionInDays
@@ -179,7 +179,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 	r.mutableState.AddTimerTasks(&persistence.DeleteHistoryEventTask{
 		// TaskID is set by shard
 		VisibilityTimestamp: now.Add(retentionDuration),
-		Version:             currentVersion,
+		Version:             closeEvent.GetVersion(),
 	})
 
 	return nil

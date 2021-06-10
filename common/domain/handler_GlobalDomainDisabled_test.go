@@ -52,7 +52,7 @@ type (
 
 		minRetentionDays     int
 		maxBadBinaryCount    int
-		metadataMgr          persistence.MetadataManager
+		domainManager        persistence.DomainManager
 		mockProducer         *mocks.KafkaProducer
 		mockDomainReplicator Replicator
 		archivalMetadata     archiver.ArchivalMetadata
@@ -87,7 +87,7 @@ func (s *domainHandlerGlobalDomainDisabledSuite) SetupTest() {
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1
 	s.maxBadBinaryCount = 10
-	s.metadataMgr = s.TestBase.MetadataManager
+	s.domainManager = s.TestBase.DomainManager
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockDomainReplicator = NewDomainReplicator(s.mockProducer, logger)
 	s.archivalMetadata = archiver.NewArchivalMetadata(
@@ -107,7 +107,7 @@ func (s *domainHandlerGlobalDomainDisabledSuite) SetupTest() {
 	s.handler = NewHandler(
 		domainConfig,
 		logger,
-		s.metadataMgr,
+		s.domainManager,
 		s.ClusterMetadata,
 		s.mockDomainReplicator,
 		s.archivalMetadata,

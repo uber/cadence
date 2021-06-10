@@ -30,8 +30,10 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
 	cadencehistory "github.com/uber/cadence/service/history"
@@ -51,17 +53,28 @@ func (s *IntegrationSuite) TestSignalWorkflow() {
 	taskList := &types.TaskList{}
 	taskList.Name = tl
 
-	// Send a signal to non-exist workflow
-	err0 := s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain: s.domainName,
-		WorkflowExecution: &types.WorkflowExecution{
+	signal := func(runID string, signalName string, signalInput []byte, opts ...yarpc.CallOption) error {
+		execution := types.WorkflowExecution{
 			WorkflowID: id,
-			RunID:      uuid.New(),
-		},
-		SignalName: "failed signal.",
-		Input:      nil,
-		Identity:   identity,
-	})
+		}
+		if len(runID) > 0 {
+			execution.RunID = runID
+		}
+		return s.engine.SignalWorkflowExecution(
+			createContext(),
+			&types.SignalWorkflowExecutionRequest{
+				Domain:            s.domainName,
+				WorkflowExecution: &execution,
+				SignalName:        signalName,
+				Input:             signalInput,
+				Identity:          identity,
+			},
+			opts...,
+		)
+	}
+
+	// Send a signal to non-exist workflow
+	err0 := signal(uuid.New(), "failed signal.", nil)
 	s.NotNil(err0)
 	s.IsType(&types.EntityNotExistsError{}, err0)
 
@@ -153,16 +166,7 @@ func (s *IntegrationSuite) TestSignalWorkflow() {
 	// Send first signal using RunID
 	signalName := "my signal"
 	signalInput := []byte("my signal input.")
-	err = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain: s.domainName,
-		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: id,
-			RunID:      we.RunID,
-		},
-		SignalName: signalName,
-		Input:      signalInput,
-		Identity:   identity,
-	})
+	err = signal(we.RunID, signalName, signalInput)
 	s.Nil(err)
 
 	// Process signal in decider
@@ -179,15 +183,7 @@ func (s *IntegrationSuite) TestSignalWorkflow() {
 	// Send another signal without RunID
 	signalName = "another signal"
 	signalInput = []byte("another signal input.")
-	err = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain: s.domainName,
-		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: id,
-		},
-		SignalName: signalName,
-		Input:      signalInput,
-		Identity:   identity,
-	})
+	err = signal("", signalName, signalInput)
 	s.Nil(err)
 
 	// Process signal in decider
@@ -214,18 +210,14 @@ func (s *IntegrationSuite) TestSignalWorkflow() {
 	s.Nil(err)
 
 	// Send signal to terminated workflow
-	err = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain: s.domainName,
-		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: id,
-			RunID:      we.RunID,
-		},
-		SignalName: "failed signal 1.",
-		Input:      nil,
-		Identity:   identity,
-	})
+	err = signal(we.RunID, "failed signal 1.", nil)
 	s.NotNil(err)
 	s.IsType(&types.EntityNotExistsError{}, err)
+
+	// Send signal by enabling WorkflowExecutionAlreadyCompletedError feature
+	err = signal(we.RunID, "failed signal 1.", nil, client.GetDefaultCLIYarpcCallOptions()...)
+	s.NotNil(err)
+	s.IsType(&types.WorkflowExecutionAlreadyCompletedError{}, err)
 }
 
 func (s *IntegrationSuite) TestSignalWorkflow_DuplicateRequest() {

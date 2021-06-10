@@ -176,7 +176,7 @@ func NewWorkflowHandler(
 		domainHandler: domain.NewHandler(
 			config.domainConfig,
 			resource.GetLogger(),
-			resource.GetMetadataManager(),
+			resource.GetDomainManager(),
 			resource.GetClusterMetadata(),
 			domain.NewDomainReplicator(replicationMessageSink, resource.GetLogger()),
 			resource.GetArchivalMetadata(),
@@ -4161,18 +4161,17 @@ func checkRequiredDomainDataKVs(requiredDomainDataKeys map[string]interface{}, d
 func (wh *WorkflowHandler) normalizeVersionedErrors(ctx context.Context, err error) error {
 	switch err.(type) {
 	case *types.WorkflowExecutionAlreadyCompletedError:
-		return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
-		/* TODO: re-enable the block below once we can rollout this *breaking* change
 		call := yarpc.CallFromContext(ctx)
 		clientFeatureVersion := call.Header(common.FeatureVersionHeaderName)
 		clientImpl := call.Header(common.ClientImplHeaderName)
-		vErr := wh.versionChecker.SupportsWorkflowAlreadyCompletedError(clientImpl, clientFeatureVersion)
+		featureFlags := client.GetFeatureFlagsFromHeader(call)
+
+		vErr := wh.versionChecker.SupportsWorkflowAlreadyCompletedError(clientImpl, clientFeatureVersion, featureFlags)
 		if vErr == nil {
 			return err
 		} else {
 			return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
 		}
-		*/
 	default:
 		return err
 	}
