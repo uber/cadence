@@ -49,8 +49,6 @@ type (
 		GetQueueType() QueueType
 		GetShard() shard.Context
 		GetAttempt() int
-		GetFuture()       //TODO: update return type
-		GetFutureSetter() //TODO: update return type
 	}
 
 	// Key identifies a Task and defines a total order among tasks

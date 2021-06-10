@@ -110,14 +110,3 @@ const (
 	// TaskStateNacked is the state for a task if it can not be processed
 	TaskStateNacked
 )
-
-const (
-	// CrossClusterTaskStateInit is the initial state of a task
-	CrossClusterTaskStateInit CrossClusterTaskState = iota + 1
-	// CrossClusterTaskStateReportSuccess is the state for a task received success response from remote cluster
-	CrossClusterTaskStateReportSuccess
-	// CrossClusterTaskStateReportFail is the state for a task received fail response from remote cluster
-	CrossClusterTaskStateReportFail
-	// CrossClusterTaskStateRecorded is the state for a task recorded the response in local cluster
-	CrossClusterTaskStateRecorded
-)
