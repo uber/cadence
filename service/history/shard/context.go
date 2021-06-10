@@ -609,6 +609,7 @@ func (s *contextImpl) CreateWorkflowExecution(
 		domainEntry,
 		workflowID,
 		request.NewWorkflowSnapshot.TransferTasks,
+		request.NewWorkflowSnapshot.CrossClusterTasks,
 		request.NewWorkflowSnapshot.ReplicationTasks,
 		request.NewWorkflowSnapshot.TimerTasks,
 		&transferMaxReadLevel,
@@ -712,6 +713,7 @@ func (s *contextImpl) UpdateWorkflowExecution(
 		domainEntry,
 		workflowID,
 		request.UpdateWorkflowMutation.TransferTasks,
+		request.UpdateWorkflowMutation.CrossClusterTasks,
 		request.UpdateWorkflowMutation.ReplicationTasks,
 		request.UpdateWorkflowMutation.TimerTasks,
 		&transferMaxReadLevel,
@@ -723,6 +725,7 @@ func (s *contextImpl) UpdateWorkflowExecution(
 			domainEntry,
 			workflowID,
 			request.NewWorkflowSnapshot.TransferTasks,
+			request.NewWorkflowSnapshot.CrossClusterTasks,
 			request.NewWorkflowSnapshot.ReplicationTasks,
 			request.NewWorkflowSnapshot.TimerTasks,
 			&transferMaxReadLevel,
@@ -821,6 +824,7 @@ func (s *contextImpl) ConflictResolveWorkflowExecution(
 			domainEntry,
 			workflowID,
 			request.CurrentWorkflowMutation.TransferTasks,
+			request.CurrentWorkflowMutation.CrossClusterTasks,
 			request.CurrentWorkflowMutation.ReplicationTasks,
 			request.CurrentWorkflowMutation.TimerTasks,
 			&transferMaxReadLevel,
@@ -832,6 +836,7 @@ func (s *contextImpl) ConflictResolveWorkflowExecution(
 		domainEntry,
 		workflowID,
 		request.ResetWorkflowSnapshot.TransferTasks,
+		request.ResetWorkflowSnapshot.CrossClusterTasks,
 		request.ResetWorkflowSnapshot.ReplicationTasks,
 		request.ResetWorkflowSnapshot.TimerTasks,
 		&transferMaxReadLevel,
@@ -843,6 +848,7 @@ func (s *contextImpl) ConflictResolveWorkflowExecution(
 			domainEntry,
 			workflowID,
 			request.NewWorkflowSnapshot.TransferTasks,
+			request.NewWorkflowSnapshot.CrossClusterTasks,
 			request.NewWorkflowSnapshot.ReplicationTasks,
 			request.NewWorkflowSnapshot.TimerTasks,
 			&transferMaxReadLevel,
@@ -1210,6 +1216,7 @@ func (s *contextImpl) allocateTaskIDsLocked(
 	domainEntry *cache.DomainCacheEntry,
 	workflowID string,
 	transferTasks []persistence.Task,
+	crossClusterTasks []persistence.Task,
 	replicationTasks []persistence.Task,
 	timerTasks []persistence.Task,
 	transferMaxReadLevel *int64,
@@ -1217,6 +1224,12 @@ func (s *contextImpl) allocateTaskIDsLocked(
 
 	if err := s.allocateTransferIDsLocked(
 		transferTasks,
+		transferMaxReadLevel,
+	); err != nil {
+		return err
+	}
+	if err := s.allocateTransferIDsLocked(
+		crossClusterTasks,
 		transferMaxReadLevel,
 	); err != nil {
 		return err
