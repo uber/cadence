@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/common/persistence/persistenceutils"
+	"github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/types"
 
