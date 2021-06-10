@@ -38,7 +38,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-type sqlTaskManager struct {
+type sqlTaskStore struct {
 	sqlStore
 	nShards int
 }
@@ -54,7 +54,7 @@ func newTaskPersistence(
 	log log.Logger,
 	parser serialization.Parser,
 ) (persistence.TaskStore, error) {
-	return &sqlTaskManager{
+	return &sqlTaskStore{
 		sqlStore: sqlStore{
 			db:     db,
 			logger: log,
@@ -64,7 +64,7 @@ func newTaskPersistence(
 	}, nil
 }
 
-func (m *sqlTaskManager) LeaseTaskList(
+func (m *sqlTaskStore) LeaseTaskList(
 	ctx context.Context,
 	request *persistence.LeaseTaskListRequest,
 ) (*persistence.LeaseTaskListResponse, error) {
@@ -188,7 +188,7 @@ func (m *sqlTaskManager) LeaseTaskList(
 	return resp, err
 }
 
-func (m *sqlTaskManager) UpdateTaskList(
+func (m *sqlTaskStore) UpdateTaskList(
 	ctx context.Context,
 	request *persistence.UpdateTaskListRequest,
 ) (*persistence.UpdateTaskListResponse, error) {
@@ -260,7 +260,7 @@ type taskListPageToken struct {
 // DomainID translates into byte array in SQL. The minUUID is not the minimum byte array.
 // This API could return incomplete result set.
 // https://github.com/uber/cadence/issues/3911
-func (m *sqlTaskManager) ListTaskList(
+func (m *sqlTaskStore) ListTaskList(
 	ctx context.Context,
 	request *persistence.ListTaskListRequest,
 ) (*persistence.ListTaskListResponse, error) {
@@ -331,7 +331,7 @@ func (m *sqlTaskManager) ListTaskList(
 	return resp, nil
 }
 
-func (m *sqlTaskManager) DeleteTaskList(
+func (m *sqlTaskStore) DeleteTaskList(
 	ctx context.Context,
 	request *persistence.DeleteTaskListRequest,
 ) error {
@@ -356,7 +356,7 @@ func (m *sqlTaskManager) DeleteTaskList(
 	return nil
 }
 
-func (m *sqlTaskManager) CreateTasks(
+func (m *sqlTaskStore) CreateTasks(
 	ctx context.Context,
 	request *persistence.InternalCreateTasksRequest,
 ) (*persistence.CreateTasksResponse, error) {
@@ -443,7 +443,7 @@ func (m *sqlTaskManager) CreateTasks(
 	return resp, err
 }
 
-func (m *sqlTaskManager) GetTasks(
+func (m *sqlTaskStore) GetTasks(
 	ctx context.Context,
 	request *persistence.GetTasksRequest,
 ) (*persistence.InternalGetTasksResponse, error) {
@@ -480,7 +480,7 @@ func (m *sqlTaskManager) GetTasks(
 	return &persistence.InternalGetTasksResponse{Tasks: tasks}, nil
 }
 
-func (m *sqlTaskManager) CompleteTask(
+func (m *sqlTaskStore) CompleteTask(
 	ctx context.Context,
 	request *persistence.CompleteTaskRequest,
 ) error {
@@ -498,7 +498,7 @@ func (m *sqlTaskManager) CompleteTask(
 	return nil
 }
 
-func (m *sqlTaskManager) CompleteTasksLessThan(
+func (m *sqlTaskStore) CompleteTasksLessThan(
 	ctx context.Context,
 	request *persistence.CompleteTasksLessThanRequest,
 ) (int, error) {
@@ -525,7 +525,7 @@ func (m *sqlTaskManager) CompleteTasksLessThan(
 // GetOrphanTasks gets tasks from the tasks table that belong to a task_list no longer present
 // in the task_lists table.
 // TODO: Limit this query to a specific shard at a time. See https://github.com/uber/cadence/issues/4064
-func (m *sqlTaskManager) GetOrphanTasks(ctx context.Context, request *persistence.GetOrphanTasksRequest) (*persistence.GetOrphanTasksResponse, error) {
+func (m *sqlTaskStore) GetOrphanTasks(ctx context.Context, request *persistence.GetOrphanTasksRequest) (*persistence.GetOrphanTasksResponse, error) {
 	rows, err := m.db.GetOrphanTasks(ctx, &sqlplugin.OrphanTasksFilter{
 		Limit: &request.Limit,
 	})
@@ -546,7 +546,7 @@ func (m *sqlTaskManager) GetOrphanTasks(ctx context.Context, request *persistenc
 	return &persistence.GetOrphanTasksResponse{Tasks: tasks}, nil
 }
 
-func (m *sqlTaskManager) shardID(domainID string, name string) int {
+func (m *sqlTaskStore) shardID(domainID string, name string) int {
 	id := farm.Hash32([]byte(domainID+"_"+name)) % uint32(m.nShards)
 	return int(id)
 }

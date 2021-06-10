@@ -155,7 +155,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestRegisterGetDom
 	domainName := s.getRandomDomainName()
 	isGlobalDomain := false
 	var clusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -217,7 +217,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestRegisterGetDom
 	isGlobalDomain := false
 
 	var expectedClusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		expectedClusters = append(expectedClusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -276,7 +276,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateGetDomai
 	emitMetric := true
 	data := map[string]string{"some random key": "some random value"}
 	var clusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -366,7 +366,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateGetDomai
 	emitMetric := true
 	data := map[string]string{"some random key": "some random value"}
 	var clusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -461,7 +461,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestRegisterGetDom
 	domainName := s.getRandomDomainName()
 	isGlobalDomain := true
 	var clusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -881,7 +881,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateDomain_C
 	domainName := s.getRandomDomainName()
 	isGlobalDomain := true
 	var clusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})

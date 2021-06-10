@@ -26,6 +26,7 @@ import (
 	"fmt"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/serialization"
@@ -33,19 +34,19 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-type sqlMetadataManagerV2 struct {
+type sqlDomainStore struct {
 	sqlStore
 	activeClusterName string
 }
 
-// newMetadataPersistenceV2 creates an instance of sqlMetadataManagerV2
+// newMetadataPersistenceV2 creates an instance of sqlDomainStore
 func newMetadataPersistenceV2(
 	db sqlplugin.DB,
 	currentClusterName string,
 	logger log.Logger,
 	parser serialization.Parser,
 ) (persistence.MetadataStore, error) {
-	return &sqlMetadataManagerV2{
+	return &sqlDomainStore{
 		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
@@ -83,7 +84,7 @@ func lockMetadata(ctx context.Context, tx sqlplugin.Tx) error {
 	return nil
 }
 
-func (m *sqlMetadataManagerV2) CreateDomain(
+func (m *sqlDomainStore) CreateDomain(
 	ctx context.Context,
 	request *persistence.InternalCreateDomainRequest,
 ) (*persistence.CreateDomainResponse, error) {
@@ -163,7 +164,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(
 	return resp, err
 }
 
-func (m *sqlMetadataManagerV2) GetDomain(
+func (m *sqlDomainStore) GetDomain(
 	ctx context.Context,
 	request *persistence.GetDomainRequest,
 ) (*persistence.InternalGetDomainResponse, error) {
@@ -209,7 +210,7 @@ func (m *sqlMetadataManagerV2) GetDomain(
 	return response, nil
 }
 
-func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.DomainRow) (*persistence.InternalGetDomainResponse, error) {
+func (m *sqlDomainStore) domainRowToGetDomainResponse(row *sqlplugin.DomainRow) (*persistence.InternalGetDomainResponse, error) {
 	domainInfo, err := m.parser.DomainInfoFromBlob(row.Data, row.DataEncoding)
 	if err != nil {
 		return nil, err
@@ -246,8 +247,8 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 			BadBinaries:              badBinaries,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
-			ActiveClusterName: persistence.GetOrUseDefaultActiveCluster(m.activeClusterName, domainInfo.GetActiveClusterName()),
-			Clusters:          persistence.GetOrUseDefaultClusters(m.activeClusterName, clusters),
+			ActiveClusterName: cluster.GetOrUseDefaultActiveCluster(m.activeClusterName, domainInfo.GetActiveClusterName()),
+			Clusters:          cluster.GetOrUseDefaultClusters(m.activeClusterName, clusters),
 		},
 		IsGlobalDomain:              row.IsGlobal,
 		FailoverVersion:             domainInfo.GetFailoverVersion(),
@@ -260,7 +261,7 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 	}, nil
 }
 
-func (m *sqlMetadataManagerV2) UpdateDomain(
+func (m *sqlDomainStore) UpdateDomain(
 	ctx context.Context,
 	request *persistence.InternalUpdateDomainRequest,
 ) error {
@@ -332,7 +333,7 @@ func (m *sqlMetadataManagerV2) UpdateDomain(
 	})
 }
 
-func (m *sqlMetadataManagerV2) DeleteDomain(
+func (m *sqlDomainStore) DeleteDomain(
 	ctx context.Context,
 	request *persistence.DeleteDomainRequest,
 ) error {
@@ -342,7 +343,7 @@ func (m *sqlMetadataManagerV2) DeleteDomain(
 	})
 }
 
-func (m *sqlMetadataManagerV2) DeleteDomainByName(
+func (m *sqlDomainStore) DeleteDomainByName(
 	ctx context.Context,
 	request *persistence.DeleteDomainByNameRequest,
 ) error {
@@ -352,7 +353,7 @@ func (m *sqlMetadataManagerV2) DeleteDomainByName(
 	})
 }
 
-func (m *sqlMetadataManagerV2) GetMetadata(
+func (m *sqlDomainStore) GetMetadata(
 	ctx context.Context,
 ) (*persistence.GetMetadataResponse, error) {
 	row, err := m.db.SelectFromDomainMetadata(ctx)
@@ -362,7 +363,7 @@ func (m *sqlMetadataManagerV2) GetMetadata(
 	return &persistence.GetMetadataResponse{NotificationVersion: row.NotificationVersion}, nil
 }
 
-func (m *sqlMetadataManagerV2) ListDomains(
+func (m *sqlDomainStore) ListDomains(
 	ctx context.Context,
 	request *persistence.ListDomainsRequest,
 ) (*persistence.InternalListDomainsResponse, error) {
