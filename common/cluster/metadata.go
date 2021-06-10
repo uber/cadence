@@ -33,7 +33,6 @@ import (
 
 type (
 	// Metadata provides information about clusters
-	// TODO: use a more informative name, e.g. FailoverMonitor
 	Metadata interface {
 		// IsGlobalDomainEnabled whether the global domain is enabled,
 		// this attr should be discarded when cross DC is made public
