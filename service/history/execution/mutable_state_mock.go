@@ -1055,6 +1055,21 @@ func (mr *MockMutableStateMockRecorder) GetStartEvent(arg0 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStartEvent", reflect.TypeOf((*MockMutableState)(nil).GetStartEvent), arg0)
 }
 
+// GetCloseEvent mocks base method
+func (m *MockMutableState) GetCloseEvent(arg0 context.Context) (*types.HistoryEvent, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCloseEvent", arg0)
+	ret0, _ := ret[0].(*types.HistoryEvent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCloseEvent indicates an expected call of GetCloseEvent
+func (mr *MockMutableStateMockRecorder) GetCloseEvent(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCloseEvent", reflect.TypeOf((*MockMutableState)(nil).GetCloseEvent), arg0)
+}
+
 // GetCurrentBranchToken mocks base method
 func (m *MockMutableState) GetCurrentBranchToken() ([]byte, error) {
 	m.ctrl.T.Helper()
@@ -2351,6 +2366,22 @@ func (mr *MockMutableStateMockRecorder) AddTransferTasks(transferTasks ...interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTransferTasks", reflect.TypeOf((*MockMutableState)(nil).AddTransferTasks), transferTasks...)
 }
 
+// AddCrossClusterTasks mocks base method
+func (m *MockMutableState) AddCrossClusterTasks(crossClusterTasks ...persistence.Task) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range crossClusterTasks {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "AddCrossClusterTasks", varargs...)
+}
+
+// AddCrossClusterTasks indicates an expected call of AddCrossClusterTasks
+func (mr *MockMutableStateMockRecorder) AddCrossClusterTasks(crossClusterTasks ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddCrossClusterTasks", reflect.TypeOf((*MockMutableState)(nil).AddCrossClusterTasks), crossClusterTasks...)
+}
+
 // AddTimerTasks mocks base method
 func (m *MockMutableState) AddTimerTasks(timerTasks ...persistence.Task) {
 	m.ctrl.T.Helper()
@@ -2381,6 +2412,20 @@ func (mr *MockMutableStateMockRecorder) GetTransferTasks() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTransferTasks", reflect.TypeOf((*MockMutableState)(nil).GetTransferTasks))
 }
 
+// GetCrossClusterTasks mocks base method
+func (m *MockMutableState) GetCrossClusterTasks() []persistence.Task {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCrossClusterTasks")
+	ret0, _ := ret[0].([]persistence.Task)
+	return ret0
+}
+
+// GetCrossClusterTasks indicates an expected call of GetCrossClusterTasks
+func (mr *MockMutableStateMockRecorder) GetCrossClusterTasks() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterTasks", reflect.TypeOf((*MockMutableState)(nil).GetCrossClusterTasks))
+}
+
 // GetTimerTasks mocks base method
 func (m *MockMutableState) GetTimerTasks() []persistence.Task {
 	m.ctrl.T.Helper()
@@ -2405,6 +2450,18 @@ func (m *MockMutableState) DeleteTransferTasks() {
 func (mr *MockMutableStateMockRecorder) DeleteTransferTasks() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTransferTasks", reflect.TypeOf((*MockMutableState)(nil).DeleteTransferTasks))
+}
+
+// DeleteCrossClusterTasks mocks base method
+func (m *MockMutableState) DeleteCrossClusterTasks() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "DeleteCrossClusterTasks")
+}
+
+// DeleteCrossClusterTasks indicates an expected call of DeleteCrossClusterTasks
+func (mr *MockMutableStateMockRecorder) DeleteCrossClusterTasks() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCrossClusterTasks", reflect.TypeOf((*MockMutableState)(nil).DeleteCrossClusterTasks))
 }
 
 // DeleteTimerTasks mocks base method

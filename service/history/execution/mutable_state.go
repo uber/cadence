@@ -124,6 +124,7 @@ type (
 		GetDecisionInfo(int64) (*DecisionInfo, bool)
 		GetDomainEntry() *cache.DomainCacheEntry
 		GetStartEvent(context.Context) (*types.HistoryEvent, error)
+		GetCloseEvent(context.Context) (*types.HistoryEvent, error)
 		GetCurrentBranchToken() ([]byte, error)
 		GetVersionHistories() *persistence.VersionHistories
 		GetCurrentVersion() int64
@@ -217,10 +218,13 @@ type (
 		UpdateWorkflowStateCloseStatus(state int, closeStatus int) error
 
 		AddTransferTasks(transferTasks ...persistence.Task)
+		AddCrossClusterTasks(crossClusterTasks ...persistence.Task)
 		AddTimerTasks(timerTasks ...persistence.Task)
 		GetTransferTasks() []persistence.Task
+		GetCrossClusterTasks() []persistence.Task
 		GetTimerTasks() []persistence.Task
 		DeleteTransferTasks()
+		DeleteCrossClusterTasks()
 		DeleteTimerTasks()
 
 		SetUpdateCondition(int64)

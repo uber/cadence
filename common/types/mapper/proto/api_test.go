@@ -767,6 +767,18 @@ func TestParentExecutionInfo(t *testing.T) {
 		assert.Equal(t, item, ToParentExecutionInfo(FromParentExecutionInfo(item)))
 	}
 }
+func TestParentExecutionInfoFields(t *testing.T) {
+	assert.Nil(t, FromParentExecutionInfoFields(nil, nil, nil, nil))
+	assert.Panics(t, func() { FromParentExecutionInfoFields(nil, &testdata.ParentExecutionInfo.Domain, nil, nil) })
+	info := FromParentExecutionInfoFields(nil,
+		&testdata.ParentExecutionInfo.Domain,
+		testdata.ParentExecutionInfo.Execution,
+		&testdata.ParentExecutionInfo.InitiatedID)
+	assert.Equal(t, "", *ToParentDomainID(info))
+	assert.Equal(t, testdata.ParentExecutionInfo.Domain, *ToParentDomainName(info))
+	assert.Equal(t, testdata.ParentExecutionInfo.Execution, ToParentWorkflowExecution(info))
+	assert.Equal(t, testdata.ParentExecutionInfo.InitiatedID, *ToParentInitiatedID(info))
+}
 func TestWorkflowExecutionInfo(t *testing.T) {
 	for _, item := range []*types.WorkflowExecutionInfo{nil, {}, &testdata.WorkflowExecutionInfo} {
 		assert.Equal(t, item, ToWorkflowExecutionInfo(FromWorkflowExecutionInfo(item)))

@@ -186,7 +186,7 @@ func NewPersistenceTestCluster(clusterConfig *TestClusterConfig) persistencetest
 
 	var testCluster persistencetests.PersistenceTestCluster
 	if TestFlags.PersistenceType == config.StoreTypeCassandra {
-		testCluster = cassandra.NewTestCluster(clusterConfig.Persistence.DBName, clusterConfig.Persistence.DBUsername, clusterConfig.Persistence.DBPassword, clusterConfig.Persistence.DBHost, clusterConfig.Persistence.DBPort, clusterConfig.Persistence.SchemaDir)
+		testCluster = cassandra.NewTestCluster(clusterConfig.Persistence.DBName, clusterConfig.Persistence.DBUsername, clusterConfig.Persistence.DBPassword, clusterConfig.Persistence.DBHost, clusterConfig.Persistence.DBPort, clusterConfig.Persistence.SchemaDir, clusterConfig.Persistence.ProtoVersion)
 	} else if TestFlags.PersistenceType == config.StoreTypeSQL {
 		var ops *persistencetests.TestBaseOptions
 		if TestFlags.SQLPluginName == mysql.PluginName {

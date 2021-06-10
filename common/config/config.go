@@ -189,6 +189,8 @@ type (
 		MaxConns int `yaml:"maxConns"`
 		// TLS configuration
 		TLS *TLS `yaml:"tls"`
+		// ProtoVersion
+		ProtoVersion int `yaml:"protoVersion"`
 		// ConnectAttributes is a set of key-value attributes as a supplement/extension to the above common fields
 		// Use it ONLY when a configure is too specific to a particular NoSQL database that should not be in the common struct
 		// Otherwise please add new fields to the struct for better documentation

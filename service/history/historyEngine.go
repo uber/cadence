@@ -3187,6 +3187,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 
 	mutableStateTaskRefresher := execution.NewMutableStateTaskRefresher(
 		e.shard.GetConfig(),
+		e.shard.GetClusterMetadata(),
 		e.shard.GetDomainCache(),
 		e.shard.GetEventsCache(),
 		e.shard.GetLogger(),

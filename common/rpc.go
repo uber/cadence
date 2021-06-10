@@ -41,6 +41,9 @@ const (
 	// Cadence server, for backward compatibility
 	FeatureVersionHeaderName = "cadence-client-feature-version"
 
+	// Header name to pass the feature flags from customer to client or server
+	ClientFeatureFlagsHeaderName = "cadence-client-feature-flags"
+
 	// ClientImplHeaderName refers to the name of the
 	// header that contains the client implementation
 	ClientImplHeaderName = "cadence-client-name"
