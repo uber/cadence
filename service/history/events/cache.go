@@ -177,7 +177,8 @@ func (e *cacheImpl) GetEvent(
 	shardID int,
 	domainID string,
 	workflowID string,
-	runID string, firstEventID int64,
+	runID string,
+	firstEventID int64,
 	eventID int64,
 	branchToken []byte,
 ) (*types.HistoryEvent, error) {
@@ -228,7 +229,7 @@ func (e *cacheImpl) PutEvent(
 
 func (e *cacheImpl) getHistoryEventFromStore(
 	ctx context.Context,
-	firstEventID,
+	firstEventID int64,
 	eventID int64,
 	branchToken []byte,
 	shardID int,

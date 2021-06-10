@@ -41,7 +41,7 @@ The following sections will first go through the APIs exposed to users, explain 
 There will be four new APIs available when writing a workflow:
 
 ```go
-sessionCtx, err := workflow.**CreateSession**(ctx Context, so *SessionOptions)
+sessionCtx, err := workflow.CreateSession(ctx Context, so *SessionOptions)
 ```
 
 A user calls this API to create a session on the worker that polls the task list specified in the ActivityOptions (or in the StartWorkflowOptions if the task list name is not specified in the ActivityOptions). All activities executed within the returned sessionCtx (a new context which contains metadata information of the created session) are considered to be part of the session and will be executed on the same worker. The sessionCtx will be cancelled if the worker executing this session dies or CompleteSession() is called.
@@ -56,19 +56,19 @@ When executing an activity within a session, a user might get three types of err
 3. Cancelled error: If a session activity has been scheduled before worker failure is detected, it will be cancelled afterwards and a cancelled error will be returned.
 
 ```go
-workflow.**CompleteSession**(sessionCtx Context)
+workflow.CompleteSession(sessionCtx Context)
 ```
 
 This API is used to complete a session. It releases the resources reserved on the worker and cancels the session context (therefore all the activities using that session context). It does nothing when the session is already closed or failed.
 
 ```go
-sessionInfoPtr := workflow.**GetSessionInfo**(sessionCtx Context)
+sessionInfoPtr := workflow.GetSessionInfo(sessionCtx Context)
 ```
 
 This API returns session metadata stored in the context. If the context passed in doesn’t contain any session metadata, this API will return a nil pointer. For now, the only exported fields in sessionInfo are: sessionID, which is a unique identifier for a session, and hostname. 
 
 ```go
-sessionCtx, err := workflow.**RecreateSession**(ctx Context, recreateToken []byte, so *SessionOptions)
+sessionCtx, err := workflow.RecreateSession(ctx Context, recreateToken []byte, so *SessionOptions)
 ```
 
 For long running sessions, user might want to split it into multiple runs while still wanting all the activities executed by the same worker. This API is designed for such a use case.

@@ -22,11 +22,14 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/go-version"
+	"go.uber.org/cadence/client"
 	"go.uber.org/yarpc"
 
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
@@ -77,6 +80,11 @@ const (
 var (
 	// ErrUnknownFeature indicates that requested feature is not known by version checker
 	ErrUnknownFeature = &types.BadRequestError{Message: "Unknown feature"}
+
+	// DefaultCLIFeatureFlags is the default FeatureFlags used by Cadence CLI
+	DefaultCLIFeatureFlags = shared.FeatureFlags{
+		WorkflowExecutionAlreadyCompletedErrorEnabled: common.BoolPtr(true),
+	}
 )
 
 type (
@@ -87,7 +95,7 @@ type (
 		SupportsStickyQuery(clientImpl string, clientFeatureVersion string) error
 		SupportsConsistentQuery(clientImpl string, clientFeatureVersion string) error
 		SupportsRawHistoryQuery(clientImpl string, clientFeatureVersion string) error
-		SupportsWorkflowAlreadyCompletedError(clientImpl string, clientFeatureVersion string) error
+		SupportsWorkflowAlreadyCompletedError(clientImpl string, clientFeatureVersion string, featureFlags shared.FeatureFlags) error
 	}
 
 	versionChecker struct {
@@ -96,6 +104,51 @@ type (
 		stickyQueryUnknownImplConstraints version.Constraints
 	}
 )
+
+// ToClientFeatureFlags returns Cadence client FeatureFlags version of idl.FeatureFlags
+func ToClientFeatureFlags(featureFlags *shared.FeatureFlags) client.FeatureFlags {
+	flags := client.FeatureFlags{}
+	if featureFlags != nil {
+		if featureFlags.WorkflowExecutionAlreadyCompletedErrorEnabled != nil {
+			flags.WorkflowExecutionAlreadyCompletedErrorEnabled = *featureFlags.WorkflowExecutionAlreadyCompletedErrorEnabled
+		}
+	}
+	return flags
+}
+
+// FeatureFlagsHeader returns the serialized version of the FeatureFlags
+func FeatureFlagsHeader(featureFlags shared.FeatureFlags) string {
+	serialized := ""
+	buf, err := json.Marshal(featureFlags)
+	if err == nil {
+		serialized = string(buf)
+	}
+	return serialized
+}
+
+// GetFeatureFlagsFromHeader returns FeatureFlags from yarpc headers
+func GetFeatureFlagsFromHeader(call *yarpc.Call) shared.FeatureFlags {
+	featureFlagsSerialized := call.Header(common.ClientFeatureFlagsHeaderName)
+
+	if len(featureFlagsSerialized) > 0 {
+		featureFlags := shared.FeatureFlags{}
+		errSerialize := json.Unmarshal([]byte(featureFlagsSerialized), &featureFlags)
+		if errSerialize == nil {
+			return featureFlags
+		}
+	}
+	return shared.FeatureFlags{}
+}
+
+// GetDefaultCLIYarpcCallOptions returns default yarpc options to use when sending rpc requests
+func GetDefaultCLIYarpcCallOptions() []yarpc.CallOption {
+	return []yarpc.CallOption{
+		yarpc.WithHeader(common.LibraryVersionHeaderName, "0.0.1"),
+		yarpc.WithHeader(common.FeatureVersionHeaderName, GoWorkerConsistentQueryVersion),
+		yarpc.WithHeader(common.ClientImplHeaderName, GoSDK),
+		yarpc.WithHeader(common.ClientFeatureFlagsHeaderName, FeatureFlagsHeader(DefaultCLIFeatureFlags)),
+	}
+}
 
 // NewVersionChecker constructs a new VersionChecker
 func NewVersionChecker() VersionChecker {
@@ -177,8 +230,11 @@ func (vc *versionChecker) SupportsRawHistoryQuery(clientImpl string, clientFeatu
 // Returns error if workflowAlreadyCompletedError is not supported otherwise nil.
 // In case client version lookup fails assume the client does not support feature.
 // NOTE: Enabling this error will break customer code handling the workflow errors in their workflow
-func (vc *versionChecker) SupportsWorkflowAlreadyCompletedError(clientImpl string, clientFeatureVersion string) error {
-	return vc.featureSupported(clientImpl, clientFeatureVersion, workflowAlreadyCompletedError)
+func (vc *versionChecker) SupportsWorkflowAlreadyCompletedError(clientImpl string, clientFeatureVersion string, featureFlags shared.FeatureFlags) error {
+	if featureFlags.WorkflowExecutionAlreadyCompletedErrorEnabled != nil && *featureFlags.WorkflowExecutionAlreadyCompletedErrorEnabled {
+		return vc.featureSupported(clientImpl, clientFeatureVersion, workflowAlreadyCompletedError)
+	}
+	return &shared.FeatureNotEnabledError{FeatureFlag: "WorkflowExecutionAlreadyCompletedErrorEnabled"}
 }
 
 func (vc *versionChecker) featureSupported(clientImpl string, clientFeatureVersion string, feature string) error {
