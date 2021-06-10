@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
@@ -88,7 +89,7 @@ func (s *transferQueueProcessorBaseSuite) TearDownTest() {
 	s.mockShard.Finish(s.T())
 }
 
-func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_NoNextPage_FullRead() {
+func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_NoNextPage_WithNextQueue() {
 	queueLevel := 0
 	ackLevel := newTransferTaskKey(0)
 	maxLevel := newTransferTaskKey(1000)
@@ -100,7 +101,7 @@ func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_NoNextPage
 			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
 		),
 		NewProcessingQueueState(
-			0,
+			queueLevel,
 			newTransferTaskKey(1000),
 			newTransferTaskKey(10000),
 			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
@@ -143,23 +144,22 @@ func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_NoNextPage
 		nil,
 	)
 
-	processorBase.processQueueCollections(map[int]struct{}{0: {}})
+	processorBase.processQueueCollections()
 
 	queueCollection := processorBase.processingQueueCollections[0]
 	s.NotNil(queueCollection.ActiveQueue())
 	s.True(taskKeyEquals(maxLevel, queueCollection.Queues()[0].State().ReadLevel()))
 
-	s.True(processorBase.nextPollTime[queueLevel].time.Before(processorBase.shard.GetTimeSource().Now()))
-	time.Sleep(time.Millisecond * 100)
+	s.True(processorBase.shouldProcess[queueLevel])
 	select {
-	case <-processorBase.nextPollTimer.FireChan():
+	case <-processorBase.processCh:
 	default:
-		s.Fail("poll timer should fire")
+		s.Fail("processCh should be unblocked")
 	}
 }
 
-func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_NoNextPage_PartialRead() {
-	queueLevel := 1 // non default queue
+func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_NoNextPage_NoNextQueue() {
+	queueLevel := 0
 	ackLevel := newTransferTaskKey(0)
 	maxLevel := newTransferTaskKey(1000)
 	shardMaxLevel := newTransferTaskKey(500)
@@ -208,23 +208,24 @@ func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_NoNextPage
 		nil,
 	)
 
-	processorBase.processQueueCollections(map[int]struct{}{1: {}})
+	processorBase.processQueueCollections()
 
 	queueCollection := processorBase.processingQueueCollections[0]
 	s.NotNil(queueCollection.ActiveQueue())
 	s.True(taskKeyEquals(shardMaxLevel, queueCollection.Queues()[0].State().ReadLevel()))
 
-	_, ok := processorBase.nextPollTime[queueLevel]
-	s.True(ok) // this is the poll time for max poll interval
-	time.Sleep(time.Millisecond * 100)
+	shouldProcess, ok := processorBase.shouldProcess[queueLevel]
+	if ok {
+		s.False(shouldProcess)
+	}
 	select {
-	case <-processorBase.nextPollTimer.FireChan():
-		s.Fail("poll timer should not fire")
+	case <-processorBase.processCh:
+		s.Fail("processCh should be blocked")
 	default:
 	}
 }
 
-func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_WithNextPage() {
+func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_WithNextPage_NotThrottled() {
 	queueLevel := 0
 	ackLevel := newTransferTaskKey(0)
 	maxLevel := newTransferTaskKey(1000)
@@ -277,19 +278,91 @@ func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_WithNextPa
 		nil,
 	)
 
-	processorBase.processQueueCollections(map[int]struct{}{0: {}})
+	processorBase.processQueueCollections()
 
 	queueCollection := processorBase.processingQueueCollections[0]
 	s.NotNil(queueCollection.ActiveQueue())
 	s.True(taskKeyEquals(newTransferTaskKey(500), queueCollection.Queues()[0].State().ReadLevel()))
 
-	s.True(processorBase.nextPollTime[queueLevel].time.Before(processorBase.shard.GetTimeSource().Now()))
-	time.Sleep(time.Millisecond * 100)
+	s.True(processorBase.shouldProcess[queueLevel])
 	select {
-	case <-processorBase.nextPollTimer.FireChan():
-
+	case <-processorBase.processCh:
 	default:
-		s.Fail("poll timer should fire")
+		s.Fail("processCh should be unblocked")
+	}
+}
+
+func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_WithNextPage_Throttled() {
+	queueLevel := defaultProcessingQueueLevel + 1
+	ackLevel := newTransferTaskKey(0)
+	maxLevel := newTransferTaskKey(1000)
+	processingQueueStates := []ProcessingQueueState{
+		NewProcessingQueueState(
+			queueLevel,
+			ackLevel,
+			maxLevel,
+			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
+		),
+	}
+	updateMaxReadLevel := func() task.Key {
+		return newTransferTaskKey(10000)
+	}
+	taskInfos := []*persistence.TransferTaskInfo{
+		{
+			TaskID:   500,
+			DomainID: "testDomain1",
+		},
+	}
+	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
+	mockExecutionManager.On("GetTransferTasks", mock.Anything, &persistence.GetTransferTasksRequest{
+		ReadLevel:    ackLevel.(transferTaskKey).taskID,
+		MaxReadLevel: maxLevel.(transferTaskKey).taskID,
+		BatchSize:    s.mockShard.GetConfig().TransferTaskBatchSize(),
+	}).Return(&persistence.GetTransferTasksResponse{
+		Tasks:         taskInfos,
+		NextPageToken: []byte{1, 2, 3},
+	}, nil).Once()
+
+	// return false to indicate that taskCh is full
+	// so the queue should backoff
+	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(false, nil).AnyTimes()
+
+	processorBase := s.newTestTransferQueueProcessorBase(
+		processingQueueStates,
+		updateMaxReadLevel,
+		nil,
+		nil,
+		nil,
+	)
+	processorBase.options.PollBackoffInterval = dynamicconfig.GetDurationPropertyFn(time.Millisecond * 100)
+
+	processorBase.processQueueCollections()
+
+	queueCollection := processorBase.processingQueueCollections[0]
+	s.NotNil(queueCollection.ActiveQueue())
+	s.True(taskKeyEquals(newTransferTaskKey(500), queueCollection.Queues()[0].State().ReadLevel()))
+
+	processorBase.processingLock.Lock()
+	s.False(processorBase.shouldProcess[queueLevel])
+	_, ok := processorBase.backoffTimer[queueLevel]
+	s.True(ok)
+	processorBase.processingLock.Unlock()
+	select {
+	case <-processorBase.processCh:
+		s.Fail("processCh should be blocked before the backoff timer fires")
+	default:
+	}
+
+	time.Sleep(time.Millisecond * 300)
+	processorBase.processingLock.Lock()
+	s.True(processorBase.shouldProcess[queueLevel])
+	_, ok = processorBase.backoffTimer[queueLevel]
+	s.False(ok)
+	processorBase.processingLock.Unlock()
+	select {
+	case <-processorBase.processCh:
+	default:
+		s.Fail("processCh should be unblocked after the backoff timer fires")
 	}
 }
 
@@ -358,7 +431,7 @@ func (s *transferQueueProcessorBaseSuite) newTestTransferQueueProcessorBase(
 	updateProcessingQueueStates updateProcessingQueueStatesFn,
 	transferQueueShutdown queueShutdownFn,
 ) *transferQueueProcessorBase {
-	return newTransferQueueProcessorBase(
+	processorBase := newTransferQueueProcessorBase(
 		s.mockShard,
 		processingQueueStates,
 		s.mockTaskProcessor,
@@ -372,4 +445,8 @@ func (s *transferQueueProcessorBaseSuite) newTestTransferQueueProcessorBase(
 		s.logger,
 		s.metricsClient,
 	)
+	for _, queueCollections := range processorBase.processingQueueCollections {
+		processorBase.shouldProcess[queueCollections.Level()] = true
+	}
+	return processorBase
 }
