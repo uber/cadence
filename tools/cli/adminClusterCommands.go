@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/service/worker/failovermanager"
 
+	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -60,7 +61,7 @@ func AdminAddSearchAttribute(c *cli.Context) {
 		SecurityToken: c.String(FlagSecurityToken),
 	}
 
-	err := adminClient.AddSearchAttribute(ctx, request)
+	err := adminClient.AddSearchAttribute(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Add search attribute failed.", err)
 	}
