@@ -40,9 +40,8 @@ When run tests and CLI command locally, Cadence by default uses a user `uber` wi
 You can use the following command to create user(role) and grant access. 
 In the mysql shell:
 ```
-> CREATE USER 'uber' IDENTIFIED BY 'uber';
-> GRANT All Privileges to 'uber';
-
+> CREATE USER 'uber'@'%' IDENTIFIED BY 'uber';
+> GRANT ALL PRIVILEGES ON *.* TO 'uber'@'%';
 ```
 ### Start cadence server
 ```

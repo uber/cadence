@@ -25,6 +25,8 @@ import (
 	"strings"
 
 	"github.com/gocql/gocql"
+
+	"github.com/uber/cadence/environment"
 )
 
 var (
@@ -51,7 +53,10 @@ func RegisterClient(c Client) {
 func newCassandraCluster(cfg ClusterConfig) *gocql.ClusterConfig {
 	hosts := parseHosts(cfg.Hosts)
 	cluster := gocql.NewCluster(hosts...)
-	cluster.ProtoVersion = 4
+	if cfg.ProtoVersion == 0 {
+		cfg.ProtoVersion = environment.CassandraDefaultProtoVersionInteger
+	}
+	cluster.ProtoVersion = cfg.ProtoVersion
 	if cfg.Port > 0 {
 		cluster.Port = cfg.Port
 	}

@@ -104,6 +104,8 @@ const (
 	CLIOptReplicationFactor = "replication-factor"
 	// CLIOptQuiet is the cli option for quiet mode
 	CLIOptQuiet = "quiet"
+	// CLIOptProtoVersion is the cli option for protocol version
+	CLIOptProtoVersion = "protocol-version"
 
 	// CLIFlagEndpoint is the cli flag for endpoint
 	CLIFlagEndpoint = CLIOptEndpoint + ", ep"
@@ -141,6 +143,8 @@ const (
 	CLIFlagReplicationFactor = CLIOptReplicationFactor + ", rf"
 	// CLIFlagQuiet is the cli flag for quiet mode
 	CLIFlagQuiet = CLIOptQuiet + ", q"
+	// CLIFlagProtoVersion is the cli flag for protocol version
+	CLIFlagProtoVersion = CLIOptProtoVersion + ", pv"
 
 	// CLIFlagEnableTLS enables cassandra client TLS
 	CLIFlagEnableTLS = "tls"
