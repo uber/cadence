@@ -184,6 +184,9 @@ func (t *transferQueueProcessorBase) Stop() {
 	for _, timer := range t.backoffTimer {
 		timer.Stop()
 	}
+	for level := range t.shouldProcess {
+		t.shouldProcess[level] = false
+	}
 	t.processingLock.Unlock()
 
 	if success := common.AwaitWaitGroup(&t.shutdownWG, time.Minute); !success {

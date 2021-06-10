@@ -353,7 +353,7 @@ func (s *transferQueueProcessorBaseSuite) TestProcessQueueCollections_WithNextPa
 	default:
 	}
 
-	time.Sleep(time.Millisecond * 100)
+	time.Sleep(time.Millisecond * 300)
 	processorBase.processingLock.Lock()
 	s.True(processorBase.shouldProcess[queueLevel])
 	_, ok = processorBase.backoffTimer[queueLevel]
