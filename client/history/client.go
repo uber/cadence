@@ -822,14 +822,14 @@ func (c *clientImpl) GetReplicationMessages(
 		req.Tokens = append(req.Tokens, token)
 	}
 
-	// preserve some time to return partial of the result if context is timing out
+	// preserve 5% timeout to return partial of the result if context is timing out
 	now := time.Now()
 	deadline, ok := ctx.Deadline()
 	if !ok {
 		deadline = now.Add(c.timeout)
 	}
 	requestTimeout := time.Duration(math.Ceil(float64(deadline.Sub(now)) * 0.95))
-	requestContext, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	requestContext, cancel := context.WithTimeout(ctx, requestTimeout)
 	defer cancel()
 
 	var wg sync.WaitGroup
