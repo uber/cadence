@@ -769,7 +769,7 @@ func TestParentExecutionInfo(t *testing.T) {
 }
 func TestParentExecutionInfoFields(t *testing.T) {
 	assert.Nil(t, FromParentExecutionInfoFields(nil, nil, nil, nil))
-	assert.Panics(t, func() { FromParentExecutionInfoFields(nil, &testdata.ParentExecutionInfo.Domain, nil, nil)} )
+	assert.Panics(t, func() { FromParentExecutionInfoFields(nil, &testdata.ParentExecutionInfo.Domain, nil, nil) })
 	info := FromParentExecutionInfoFields(nil,
 		&testdata.ParentExecutionInfo.Domain,
 		testdata.ParentExecutionInfo.Execution,

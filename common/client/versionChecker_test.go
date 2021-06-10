@@ -225,7 +225,7 @@ func (s *VersionCheckerSuite) TestSupportsConsistentQuery() {
 		},
 		{
 			clientImpl:           JavaSDK,
-			clientFeatureVersion: "1.5.0",
+			clientFeatureVersion: "1.4.0",
 			expectErr:            true,
 		},
 		{
