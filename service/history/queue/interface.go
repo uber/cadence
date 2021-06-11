@@ -56,6 +56,7 @@ type (
 		Split(ProcessingQueueSplitPolicy) []ProcessingQueue
 		Merge(ProcessingQueue) []ProcessingQueue
 		AddTasks(map[task.Key]task.Task, task.Key)
+		GetTask(task.Key) (task.Task, error)
 		UpdateAckLevel() (task.Key, int) // return new ack level and number of pending tasks
 		// TODO: add Offload() method
 	}
@@ -73,6 +74,7 @@ type (
 		Queues() []ProcessingQueue
 		ActiveQueue() ProcessingQueue
 		AddTasks(map[task.Key]task.Task, task.Key)
+		GetTask(task.Key) (task.Task, error)
 		UpdateAckLevels() (task.Key, int) // return min of all new ack levels and number of total pending tasks
 		Split(ProcessingQueueSplitPolicy) []ProcessingQueue
 		Merge([]ProcessingQueue)
