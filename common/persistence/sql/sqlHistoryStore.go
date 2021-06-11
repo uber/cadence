@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/types"
 
@@ -35,7 +36,7 @@ import (
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
-type sqlHistoryV2Manager struct {
+type sqlHistoryStore struct {
 	sqlStore
 }
 
@@ -52,7 +53,7 @@ func NewHistoryV2Persistence(
 	parser serialization.Parser,
 ) (p.HistoryStore, error) {
 
-	return &sqlHistoryV2Manager{
+	return &sqlHistoryStore{
 		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
@@ -62,13 +63,13 @@ func NewHistoryV2Persistence(
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
-func (m *sqlHistoryV2Manager) AppendHistoryNodes(
+func (m *sqlHistoryStore) AppendHistoryNodes(
 	ctx context.Context,
 	request *p.InternalAppendHistoryNodesRequest,
 ) error {
 
 	branchInfo := request.BranchInfo
-	beginNodeID := p.GetBeginNodeID(branchInfo)
+	beginNodeID := persistenceutils.GetBeginNodeID(branchInfo)
 
 	if request.NodeID < beginNodeID {
 		return &p.InvalidPersistenceRequestError{
@@ -149,7 +150,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 }
 
 // ReadHistoryBranch returns history node data for a branch
-func (m *sqlHistoryV2Manager) ReadHistoryBranch(
+func (m *sqlHistoryStore) ReadHistoryBranch(
 	ctx context.Context,
 	request *p.InternalReadHistoryBranchRequest,
 ) (*p.InternalReadHistoryBranchResponse, error) {
@@ -295,7 +296,7 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 //       \
 //       8[8,9]
 //
-func (m *sqlHistoryV2Manager) ForkHistoryBranch(
+func (m *sqlHistoryStore) ForkHistoryBranch(
 	ctx context.Context,
 	request *p.InternalForkHistoryBranchRequest,
 ) (*p.InternalForkHistoryBranchResponse, error) {
@@ -304,7 +305,7 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 	treeID := *forkB.TreeID
 	newAncestors := make([]*types.HistoryBranchRange, 0, len(forkB.Ancestors)+1)
 
-	beginNodeID := p.GetBeginNodeID(forkB)
+	beginNodeID := persistenceutils.GetBeginNodeID(forkB)
 	if beginNodeID >= request.ForkNodeID {
 		// this is the case that new branch's ancestors doesn't include the forking branch
 		for _, br := range forkB.Ancestors {
@@ -369,7 +370,7 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 }
 
 // DeleteHistoryBranch removes a branch
-func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
+func (m *sqlHistoryStore) DeleteHistoryBranch(
 	ctx context.Context,
 	request *p.InternalDeleteHistoryBranchRequest,
 ) error {
@@ -377,7 +378,7 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 	branch := request.BranchInfo
 	treeID := *branch.TreeID
 	brsToDelete := branch.Ancestors
-	beginNodeID := p.GetBeginNodeID(branch)
+	beginNodeID := persistenceutils.GetBeginNodeID(branch)
 	brsToDelete = append(brsToDelete, &types.HistoryBranchRange{
 		BranchID:    branch.BranchID,
 		BeginNodeID: common.Int64Ptr(beginNodeID),
@@ -446,7 +447,7 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 }
 
 // TODO: Limit the underlying query to a specific shard at a time. See https://github.com/uber/cadence/issues/4064
-func (m *sqlHistoryV2Manager) GetAllHistoryTreeBranches(
+func (m *sqlHistoryStore) GetAllHistoryTreeBranches(
 	ctx context.Context,
 	request *p.GetAllHistoryTreeBranchesRequest,
 ) (*p.GetAllHistoryTreeBranchesResponse, error) {
@@ -498,7 +499,7 @@ func (m *sqlHistoryV2Manager) GetAllHistoryTreeBranches(
 }
 
 // GetHistoryTree returns all branch information of a tree
-func (m *sqlHistoryV2Manager) GetHistoryTree(
+func (m *sqlHistoryStore) GetHistoryTree(
 	ctx context.Context,
 	request *p.InternalGetHistoryTreeRequest,
 ) (*p.InternalGetHistoryTreeResponse, error) {
