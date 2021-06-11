@@ -153,6 +153,8 @@ func newCrossClusterTask(
 	}
 }
 
+// Cross cluster signal workflow task
+
 func (c *crossClusterSignalWorkflowTask) Execute() error {
 	panic("Not implement")
 }
@@ -217,13 +219,15 @@ func (c *crossClusterSignalWorkflowTask) GetQueueType() QueueType {
 	return QueueTypeCrossCluster
 }
 
-func (c *crossClusterSignalWorkflowTask) IsReadyForPickup() bool {
+func (c *crossClusterSignalWorkflowTask) IsReadyForPoll() bool {
 	panic("Not implement")
 }
 
 func (c *crossClusterSignalWorkflowTask) Update(interface{}) error {
 	panic("Not implement")
 }
+
+// Cross cluster cancel workflow task
 
 func (c *crossClusterCancelWorkflowTask) Execute() error {
 	panic("Not implement")
@@ -289,13 +293,15 @@ func (c *crossClusterCancelWorkflowTask) GetQueueType() QueueType {
 	return QueueTypeCrossCluster
 }
 
-func (c *crossClusterCancelWorkflowTask) IsReadyForPickup() bool {
+func (c *crossClusterCancelWorkflowTask) IsReadyForPoll() bool {
 	panic("Not implement")
 }
 
 func (c *crossClusterCancelWorkflowTask) Update(interface{}) error {
 	panic("Not implement")
 }
+
+// Cross cluster start child workflow task
 
 func (c *crossClusterStartChildWorkflowTask) Execute() error {
 	panic("Not implement")
@@ -361,7 +367,7 @@ func (c *crossClusterStartChildWorkflowTask) GetQueueType() QueueType {
 	return QueueTypeCrossCluster
 }
 
-func (c *crossClusterStartChildWorkflowTask) IsReadyForPickup() bool {
+func (c *crossClusterStartChildWorkflowTask) IsReadyForPoll() bool {
 	panic("Not implement")
 }
 
