@@ -45,7 +45,7 @@ const (
 	// SupportedGoSDKVersion indicates the highest go sdk version server will accept requests from
 	SupportedGoSDKVersion = "1.7.0"
 	// SupportedJavaSDKVersion indicates the highest java sdk version server will accept requests from
-	SupportedJavaSDKVersion = "1.4.0"
+	SupportedJavaSDKVersion = "1.5.0"
 	// SupportedCLIVersion indicates the highest cli version server will accept requests from
 	SupportedCLIVersion = "1.7.0"
 
@@ -59,6 +59,8 @@ const (
 	GoWorkerConsistentQueryVersion = "1.5.0"
 	// JavaWorkerRawHistoryQueryVersion indicates the minimum client version of the java worker which supports RawHistoryQuery
 	JavaWorkerRawHistoryQueryVersion = "1.3.0"
+	// JavaWorkerConsistentQueryVersion indicates the minimum client version of the java worker which supports ConsistentQuery
+	JavaWorkerConsistentQueryVersion = "1.5.0"
 	// GoWorkerRawHistoryQueryVersion indicates the minimum client version of the go worker which supports RawHistoryQuery
 	GoWorkerRawHistoryQueryVersion = "1.6.0"
 	// CLIRawHistoryQueryVersion indicates the minimum CLI version of the go worker which supports RawHistoryQuery
@@ -161,6 +163,7 @@ func NewVersionChecker() VersionChecker {
 		},
 		JavaSDK: {
 			stickyQuery:                   mustNewConstraint(fmt.Sprintf(">=%v", JavaWorkerStickyQueryVersion)),
+			consistentQuery:               mustNewConstraint(fmt.Sprintf(">=%v", JavaWorkerConsistentQueryVersion)),
 			rawHistoryQuery:               mustNewConstraint(fmt.Sprintf(">=%v", JavaWorkerRawHistoryQueryVersion)),
 			workflowAlreadyCompletedError: mustNewConstraint(fmt.Sprintf(">=%v", JavaWorkflowAlreadyCompletedVersion)),
 		},
