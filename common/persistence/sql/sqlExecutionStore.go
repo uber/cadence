@@ -805,8 +805,41 @@ func (m *sqlExecutionStore) GetCrossClusterTasks(
 	ctx context.Context,
 	request *p.GetCrossClusterTasksRequest,
 ) (*p.GetCrossClusterTasksResponse, error) {
-	// TODO: Implement GetCrossClusterTasks
-	panic("not implemented")
+	rows, err := m.db.SelectFromCrossClusterTasks(ctx, &sqlplugin.CrossClusterTasksFilter{
+		TargetCluster: request.TargetCluster,
+		ShardID:       m.shardID,
+		MinTaskID:     &request.ReadLevel,
+		MaxTaskID:     &request.MaxReadLevel,
+	})
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return nil, convertCommonErrors(m.db, "GetCrossClusterTasks", "", err)
+		}
+	}
+	resp := &p.GetCrossClusterTasksResponse{Tasks: make([]*p.CrossClusterTaskInfo, len(rows))}
+	for i, row := range rows {
+		info, err := m.parser.CrossClusterTaskInfoFromBlob(row.Data, row.DataEncoding)
+		if err != nil {
+			return nil, err
+		}
+		resp.Tasks[i] = &p.CrossClusterTaskInfo{
+			TaskID:                  row.TaskID,
+			DomainID:                info.DomainID.String(),
+			WorkflowID:              info.GetWorkflowID(),
+			RunID:                   info.RunID.String(),
+			VisibilityTimestamp:     info.GetVisibilityTimestamp(),
+			TargetDomainID:          info.TargetDomainID.String(),
+			TargetWorkflowID:        info.GetTargetWorkflowID(),
+			TargetRunID:             info.TargetRunID.String(),
+			TargetChildWorkflowOnly: info.GetTargetChildWorkflowOnly(),
+			TaskList:                info.GetTaskList(),
+			TaskType:                int(info.GetTaskType()),
+			ScheduleID:              info.GetScheduleID(),
+			Version:                 info.GetVersion(),
+		}
+	}
+	return resp, nil
+
 }
 
 func (m *sqlExecutionStore) CompleteCrossClusterTask(

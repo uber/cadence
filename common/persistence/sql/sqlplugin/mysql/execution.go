@@ -84,12 +84,12 @@ workflow_id = :workflow_id
 `
 
 	getTransferTasksQuery = `SELECT task_id, data, data_encoding
- FROM transfer_tasks WHERE shard_id = ? AND task_id > ? AND task_id <= ? ORDER BY shard_id, task_id`
+FROM transfer_tasks WHERE shard_id = ? AND task_id > ? AND task_id <= ? ORDER BY shard_id, task_id`
 
 	createTransferTasksQuery = `INSERT INTO transfer_tasks(shard_id, task_id, data, data_encoding)
  VALUES(:shard_id, :task_id, :data, :data_encoding)`
 
-	getCrossClusterTasksQuery = `SELECT task_id, data, data_encoding
+	getCrossClusterTasksQuery = `SELECT target_cluster, shard_id, task_id, data, data_encoding
 FROM cross_cluster_tasks WHERE target_cluster = ? AND shard_id = ? AND task_id > ? AND task_id <= ? ORDER BY target_cluster, shard_id, task_id`
 
 	createCrossClusterTasksQuery = `INSERT INTO cross_cluster_tasks(target_cluster, shard_id, task_id, data, data_encoding)
@@ -261,11 +261,6 @@ func (mdb *db) InsertIntoTransferTasks(ctx context.Context, rows []sqlplugin.Tra
 	return mdb.conn.NamedExecContext(ctx, createTransferTasksQuery, rows)
 }
 
-// InsertIntoCrossClusterTasks inserts one or more rows into cross_cluster_tasks table
-func (mdb *db) InsertIntoCrossClusterTasks(ctx context.Context, rows []sqlplugin.CrossClusterTasksRow) (sql.Result, error) {
-	return mdb.conn.NamedExecContext(ctx, createCrossClusterTasksQuery, rows)
-}
-
 // SelectFromTransferTasks reads one or more rows from transfer_tasks table
 func (mdb *db) SelectFromTransferTasks(ctx context.Context, filter *sqlplugin.TransferTasksFilter) ([]sqlplugin.TransferTasksRow, error) {
 	var rows []sqlplugin.TransferTasksRow
@@ -282,6 +277,21 @@ func (mdb *db) DeleteFromTransferTasks(ctx context.Context, filter *sqlplugin.Tr
 		return mdb.conn.ExecContext(ctx, rangeDeleteTransferTaskQuery, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
 	}
 	return mdb.conn.ExecContext(ctx, deleteTransferTaskQuery, filter.ShardID, *filter.TaskID)
+}
+
+// InsertIntoCrossClusterTasks inserts one or more rows into cross_cluster_tasks table
+func (mdb *db) InsertIntoCrossClusterTasks(ctx context.Context, rows []sqlplugin.CrossClusterTasksRow) (sql.Result, error) {
+	return mdb.conn.NamedExecContext(ctx, createCrossClusterTasksQuery, rows)
+}
+
+// SelectFromCrossClusterTasks reads one or more rows from cross_cluster_tasks table
+func (mdb *db) SelectFromCrossClusterTasks(ctx context.Context, filter *sqlplugin.CrossClusterTasksFilter) ([]sqlplugin.CrossClusterTasksRow, error) {
+	var rows []sqlplugin.CrossClusterTasksRow
+	err := mdb.conn.SelectContext(ctx, &rows, getCrossClusterTasksQuery, filter.TargetCluster, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
+	if err != nil {
+		return nil, err
+	}
+	return rows, err
 }
 
 // InsertIntoTimerTasks inserts one or more rows into timer_tasks table

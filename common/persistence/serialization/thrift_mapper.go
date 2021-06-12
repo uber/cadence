@@ -596,6 +596,26 @@ func transferTaskInfoToThrift(info *TransferTaskInfo) *sqlblobs.TransferTaskInfo
 	}
 }
 
+func transferTaskInfoFromThrift(info *sqlblobs.TransferTaskInfo) *TransferTaskInfo {
+	if info == nil {
+		return nil
+	}
+	return &TransferTaskInfo{
+		DomainID:                info.DomainID,
+		WorkflowID:              info.GetWorkflowID(),
+		RunID:                   info.RunID,
+		TaskType:                info.GetTaskType(),
+		TargetDomainID:          info.TargetDomainID,
+		TargetWorkflowID:        info.GetTargetWorkflowID(),
+		TargetRunID:             info.TargetRunID,
+		TaskList:                info.GetTaskList(),
+		TargetChildWorkflowOnly: info.GetTargetChildWorkflowOnly(),
+		ScheduleID:              info.GetScheduleID(),
+		Version:                 info.GetVersion(),
+		VisibilityTimestamp:     timeFromUnixNano(info.GetVisibilityTimestampNanos()),
+	}
+}
+
 func crossClusterTaskInfoToThrift(info *CrossClusterTaskInfo) *sqlblobs.CrossClusterTaskInfo {
 	if info == nil {
 		return nil
@@ -616,11 +636,11 @@ func crossClusterTaskInfoToThrift(info *CrossClusterTaskInfo) *sqlblobs.CrossClu
 	}
 }
 
-func transferTaskInfoFromThrift(info *sqlblobs.TransferTaskInfo) *TransferTaskInfo {
+func crossClusterTaskInfoFromThrift(info *sqlblobs.CrossClusterTaskInfo) *CrossClusterTaskInfo {
 	if info == nil {
 		return nil
 	}
-	return &TransferTaskInfo{
+	return &CrossClusterTaskInfo{
 		DomainID:                info.DomainID,
 		WorkflowID:              info.GetWorkflowID(),
 		RunID:                   info.RunID,

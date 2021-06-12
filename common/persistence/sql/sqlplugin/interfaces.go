@@ -109,6 +109,16 @@ type (
 		MaxTaskID *int64
 	}
 
+	// CrossClusterTasksFilter contains the column names within cross_cluster_tasks table that
+	// can be used to filter results through a WHERE clause
+	CrossClusterTasksFilter struct {
+		TargetCluster string
+		ShardID       int
+		TaskID        *int64
+		MinTaskID     *int64
+		MaxTaskID     *int64
+	}
+
 	// ExecutionsRow represents a row in executions table
 	ExecutionsRow struct {
 		ShardID                  int
@@ -645,6 +655,13 @@ type (
 		// TODO: add cross-cluster tasks methods
 		// InsertIntoCrossClusterTasks adds a new row to the cross_cluster_tasks table
 		InsertIntoCrossClusterTasks(ctx context.Context, rows []CrossClusterTasksRow) (sql.Result, error)
+		// SelectFromCrossClusterTasks returns rows that match filter criteria from cross_cluster_tasks table.
+		// Required filter params - {shardID, minTaskID, maxTaskID}
+		SelectFromCrossClusterTasks(ctx context.Context, filter *CrossClusterTasksFilter) ([]CrossClusterTasksRow, error)
+		// DeleteFromCrossClusterTasks deletes one or more rows from cross_cluster_tasks table.
+		// Filter params - shardID is required. If TaskID is not nil, a single row is deleted.
+		// When MinTaskID and MaxTaskID are not-nil, a range of rows are deleted.
+		// DeleteFromCrossClusterTasks(ctx context.Context, filter *CrossClusterTasksFilter) (sql.Result, error)
 
 		InsertIntoTimerTasks(ctx context.Context, rows []TimerTasksRow) (sql.Result, error)
 		// SelectFromTimerTasks returns one or more rows from timer_tasks table

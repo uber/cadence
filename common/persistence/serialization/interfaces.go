@@ -337,6 +337,7 @@ type (
 		TaskInfoFromBlob([]byte, string) (*TaskInfo, error)
 		TaskListInfoFromBlob([]byte, string) (*TaskListInfo, error)
 		TransferTaskInfoFromBlob([]byte, string) (*TransferTaskInfo, error)
+		CrossClusterTaskInfoFromBlob([]byte, string) (*CrossClusterTaskInfo, error)
 		TimerTaskInfoFromBlob([]byte, string) (*TimerTaskInfo, error)
 		ReplicationTaskInfoFromBlob([]byte, string) (*ReplicationTaskInfo, error)
 	}
@@ -375,6 +376,7 @@ type (
 		taskInfoFromBlob([]byte) (*TaskInfo, error)
 		taskListInfoFromBlob([]byte) (*TaskListInfo, error)
 		transferTaskInfoFromBlob([]byte) (*TransferTaskInfo, error)
+		crossClusterTaskInfoFromBlob([]byte) (*CrossClusterTaskInfo, error)
 		timerTaskInfoFromBlob([]byte) (*TimerTaskInfo, error)
 		replicationTaskInfoFromBlob([]byte) (*ReplicationTaskInfo, error)
 	}

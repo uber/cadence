@@ -317,6 +317,14 @@ func (p *parser) TransferTaskInfoFromBlob(data []byte, encoding string) (*Transf
 	return decoder.transferTaskInfoFromBlob(data)
 }
 
+func (p *parser) CrossClusterTaskInfoFromBlob(data []byte, encoding string) (*CrossClusterTaskInfo, error) {
+	decoder, err := p.getCachedDecoder(common.EncodingType(encoding))
+	if err != nil {
+		return nil, err
+	}
+	return decoder.crossClusterTaskInfoFromBlob(data)
+}
+
 func (p *parser) TimerTaskInfoFromBlob(data []byte, encoding string) (*TimerTaskInfo, error) {
 	decoder, err := p.getCachedDecoder(common.EncodingType(encoding))
 	if err != nil {
