@@ -8,13 +8,11 @@ persistence:
         pluginName: "cassandra"
         hosts: "127.0.0.1"
         keyspace: "cadence_standby"
-        protoVersion: 4
     cass-visibility:
       nosql:
         pluginName: "cassandra"
         hosts: "127.0.0.1"
         keyspace: "cadence_visibility_standby"
-        protoVersion: 4
 
 ringpop:
   name: cadence_standby
