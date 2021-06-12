@@ -557,7 +557,17 @@ func applyTasks(
 		return err
 	}
 
-	// TODO: createCrossClusterTasks
+	if err := createCrossClusterTasks(
+		ctx,
+		tx,
+		crossClusterTasks,
+		shardID,
+		domainID,
+		workflowID,
+		runID,
+		parser); err != nil {
+		return err
+	}
 
 	if err := createReplicationTasks(
 		ctx,
@@ -748,6 +758,97 @@ func lockNextEventID(
 	}
 	result := int64(nextEventID)
 	return &result, nil
+}
+
+func createCrossClusterTasks(
+	ctx context.Context,
+	tx sqlplugin.Tx,
+	crossClusterTasks []p.Task,
+	shardID int,
+	domainID serialization.UUID,
+	workflowID string,
+	runID serialization.UUID,
+	parser serialization.Parser,
+) error {
+	if len(crossClusterTasks) == 0 {
+		return nil
+	}
+
+	crossClusterTasksRows := make([]sqlplugin.CrossClusterTasksRow, len(crossClusterTasks))
+	// panic("not implemented")
+
+	for i, task := range crossClusterTasks {
+		info := &serialization.CrossClusterTaskInfo{
+			DomainID:            domainID,
+			WorkflowID:          workflowID,
+			RunID:               runID,
+			TaskType:            int16(task.GetType()),
+			TargetDomainID:      domainID,
+			TargetWorkflowID:    p.TransferTaskTransferTargetWorkflowID,
+			ScheduleID:          0,
+			Version:             task.GetVersion(),
+			VisibilityTimestamp: task.GetVisibilityTimestamp(),
+		}
+
+		crossClusterTasksRows[i].ShardID = shardID
+		crossClusterTasksRows[i].TaskID = task.GetTaskID()
+
+		switch task.GetType() {
+		case p.CrossClusterTaskTypeStartChildExecution:
+			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterStartChildExecutionTask).TargetCluster
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.CrossClusterStartChildExecutionTask).TargetDomainID)
+			info.TargetWorkflowID = task.(*p.CrossClusterStartChildExecutionTask).TargetWorkflowID
+			info.ScheduleID = task.(*p.CrossClusterStartChildExecutionTask).InitiatedID
+
+		case p.CrossClusterTaskTypeCancelExecution:
+			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterCancelExecutionTask).TargetCluster
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.CrossClusterCancelExecutionTask).TargetDomainID)
+			info.TargetWorkflowID = task.(*p.CrossClusterCancelExecutionTask).TargetWorkflowID
+			info.TargetRunID = serialization.MustParseUUID(task.(*p.CrossClusterCancelExecutionTask).TargetRunID)
+			info.TargetChildWorkflowOnly = task.(*p.CrossClusterCancelExecutionTask).TargetChildWorkflowOnly
+			info.ScheduleID = task.(*p.CrossClusterCancelExecutionTask).InitiatedID
+
+		case p.CrossClusterTaskTypeSignalExecution:
+			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterSignalExecutionTask).TargetCluster
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.CrossClusterSignalExecutionTask).TargetDomainID)
+			info.TargetWorkflowID = task.(*p.CrossClusterSignalExecutionTask).TargetWorkflowID
+			info.TargetRunID = serialization.MustParseUUID(task.(*p.CrossClusterSignalExecutionTask).TargetRunID)
+			info.TargetChildWorkflowOnly = task.(*p.CrossClusterSignalExecutionTask).TargetChildWorkflowOnly
+			info.ScheduleID = task.(*p.CrossClusterSignalExecutionTask).InitiatedID
+
+		default:
+			return &types.InternalServiceError{
+				Message: fmt.Sprintf("Unknown cross-cluster task type: %v", task.GetType()),
+			}
+		}
+
+		blob, err := parser.CrossClusterTaskInfoToBlob(info)
+		if err != nil {
+			return err
+		}
+		crossClusterTasksRows[i].Data = blob.Data
+		crossClusterTasksRows[i].DataEncoding = string(blob.Encoding)
+	}
+
+	result, err := tx.InsertIntoCrossClusterTasks(ctx, crossClusterTasksRows)
+	if err != nil {
+		return convertCommonErrors(tx, "createCrossClusterTasks", "", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return &types.InternalServiceError{
+			Message: fmt.Sprintf("createTransferTasks failed. Could not verify number of rows inserted. Error: %v", err),
+		}
+	}
+
+	if int(rowsAffected) != len(crossClusterTasks) {
+		return &types.InternalServiceError{
+			Message: fmt.Sprintf("createCrossClusterTasks failed. Inserted %v instead of %v rows into transfer_tasks. Error: %v", rowsAffected, len(crossClusterTasks), err),
+		}
+	}
+
+	return nil
 }
 
 func createTransferTasks(

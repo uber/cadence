@@ -188,6 +188,17 @@ func (p *parser) TransferTaskInfoToBlob(info *TransferTaskInfo) (persistence.Dat
 	return db, nil
 }
 
+func (p *parser) CrossClusterTaskInfoToBlob(info *CrossClusterTaskInfo) (persistence.DataBlob, error) {
+	db := persistence.DataBlob{}
+	data, err := p.encoder.crossClusterTaskInfoToBlob(info)
+	if err != nil {
+		return db, err
+	}
+	db.Data = data
+	db.Encoding = p.encoder.encodingType()
+	return db, nil
+}
+
 func (p *parser) TimerTaskInfoToBlob(info *TimerTaskInfo) (persistence.DataBlob, error) {
 	db := persistence.DataBlob{}
 	data, err := p.encoder.timerTaskInfoToBlob(info)

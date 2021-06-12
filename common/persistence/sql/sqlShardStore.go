@@ -245,6 +245,13 @@ func shardInfoToShardsRow(s persistence.InternalShardInfo, parser serialization.
 		transferPQSEncoding = string(s.TransferProcessingQueueStates.Encoding)
 	}
 
+	var crossClusterPQS []byte
+	crossClusterPQSEncoding := string(common.EncodingTypeEmpty)
+	if s.CrossClusterProcessingQueueStates != nil {
+		crossClusterPQS = s.CrossClusterProcessingQueueStates.Data
+		crossClusterPQSEncoding = string(s.CrossClusterProcessingQueueStates.Encoding)
+	}
+
 	var timerPQSData []byte
 	timerPQSEncoding := string(common.EncodingTypeEmpty)
 	if s.TimerProcessingQueueStates != nil {
@@ -253,23 +260,25 @@ func shardInfoToShardsRow(s persistence.InternalShardInfo, parser serialization.
 	}
 
 	shardInfo := &serialization.ShardInfo{
-		StolenSinceRenew:                      int32(s.StolenSinceRenew),
-		UpdatedAt:                             s.UpdatedAt,
-		ReplicationAckLevel:                   s.ReplicationAckLevel,
-		TransferAckLevel:                      s.TransferAckLevel,
-		TimerAckLevel:                         s.TimerAckLevel,
-		ClusterTransferAckLevel:               s.ClusterTransferAckLevel,
-		ClusterTimerAckLevel:                  s.ClusterTimerAckLevel,
-		TransferProcessingQueueStates:         transferPQSData,
-		TransferProcessingQueueStatesEncoding: transferPQSEncoding,
-		TimerProcessingQueueStates:            timerPQSData,
-		TimerProcessingQueueStatesEncoding:    timerPQSEncoding,
-		DomainNotificationVersion:             s.DomainNotificationVersion,
-		Owner:                                 s.Owner,
-		ClusterReplicationLevel:               s.ClusterReplicationLevel,
-		ReplicationDlqAckLevel:                s.ReplicationDLQAckLevel,
-		PendingFailoverMarkers:                markerData,
-		PendingFailoverMarkersEncoding:        markerEncoding,
+		StolenSinceRenew:                          int32(s.StolenSinceRenew),
+		UpdatedAt:                                 s.UpdatedAt,
+		ReplicationAckLevel:                       s.ReplicationAckLevel,
+		TransferAckLevel:                          s.TransferAckLevel,
+		TimerAckLevel:                             s.TimerAckLevel,
+		ClusterTransferAckLevel:                   s.ClusterTransferAckLevel,
+		ClusterTimerAckLevel:                      s.ClusterTimerAckLevel,
+		TransferProcessingQueueStates:             transferPQSData,
+		TransferProcessingQueueStatesEncoding:     transferPQSEncoding,
+		CrossClusterProcessingQueueStates:         crossClusterPQS,
+		CrossClusterProcessingQueueStatesEncoding: crossClusterPQSEncoding,
+		TimerProcessingQueueStates:                timerPQSData,
+		TimerProcessingQueueStatesEncoding:        timerPQSEncoding,
+		DomainNotificationVersion:                 s.DomainNotificationVersion,
+		Owner:                                     s.Owner,
+		ClusterReplicationLevel:                   s.ClusterReplicationLevel,
+		ReplicationDlqAckLevel:                    s.ReplicationDLQAckLevel,
+		PendingFailoverMarkers:                    markerData,
+		PendingFailoverMarkersEncoding:            markerEncoding,
 	}
 
 	blob, err := parser.ShardInfoToBlob(shardInfo)

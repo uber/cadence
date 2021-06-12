@@ -91,6 +91,15 @@ type (
 		DataEncoding string
 	}
 
+	// CrossClusterTasksRow represents a row in cross_cluster_tasks table
+	CrossClusterTasksRow struct {
+		TargetCluster string
+		ShardID       int
+		TaskID        int64
+		Data          []byte
+		DataEncoding  string
+	}
+
 	// TransferTasksFilter contains the column names within transfer_tasks table that
 	// can be used to filter results through a WHERE clause
 	TransferTasksFilter struct {
@@ -634,6 +643,8 @@ type (
 		DeleteFromTransferTasks(ctx context.Context, filter *TransferTasksFilter) (sql.Result, error)
 
 		// TODO: add cross-cluster tasks methods
+		// InsertIntoCrossClusterTasks adds a new row to the cross_cluster_tasks table
+		InsertIntoCrossClusterTasks(ctx context.Context, rows []CrossClusterTasksRow) (sql.Result, error)
 
 		InsertIntoTimerTasks(ctx context.Context, rows []TimerTasksRow) (sql.Result, error)
 		// SelectFromTimerTasks returns one or more rows from timer_tasks table

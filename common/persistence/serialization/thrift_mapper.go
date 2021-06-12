@@ -596,6 +596,26 @@ func transferTaskInfoToThrift(info *TransferTaskInfo) *sqlblobs.TransferTaskInfo
 	}
 }
 
+func crossClusterTaskInfoToThrift(info *CrossClusterTaskInfo) *sqlblobs.CrossClusterTaskInfo {
+	if info == nil {
+		return nil
+	}
+	return &sqlblobs.CrossClusterTaskInfo{
+		DomainID:                 info.DomainID,
+		WorkflowID:               &info.WorkflowID,
+		RunID:                    info.RunID,
+		TaskType:                 &info.TaskType,
+		TargetDomainID:           info.TargetDomainID,
+		TargetWorkflowID:         &info.TargetWorkflowID,
+		TargetRunID:              info.TargetRunID,
+		TaskList:                 &info.TaskList,
+		TargetChildWorkflowOnly:  &info.TargetChildWorkflowOnly,
+		ScheduleID:               &info.ScheduleID,
+		Version:                  &info.Version,
+		VisibilityTimestampNanos: timeToUnixNanoPtr(info.VisibilityTimestamp),
+	}
+}
+
 func transferTaskInfoFromThrift(info *sqlblobs.TransferTaskInfo) *TransferTaskInfo {
 	if info == nil {
 		return nil
