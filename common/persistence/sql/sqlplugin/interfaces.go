@@ -661,7 +661,7 @@ type (
 		// DeleteFromCrossClusterTasks deletes one or more rows from cross_cluster_tasks table.
 		// Filter params - shardID is required. If TaskID is not nil, a single row is deleted.
 		// When MinTaskID and MaxTaskID are not-nil, a range of rows are deleted.
-		// DeleteFromCrossClusterTasks(ctx context.Context, filter *CrossClusterTasksFilter) (sql.Result, error)
+		DeleteFromCrossClusterTasks(ctx context.Context, filter *CrossClusterTasksFilter) (sql.Result, error)
 
 		InsertIntoTimerTasks(ctx context.Context, rows []TimerTasksRow) (sql.Result, error)
 		// SelectFromTimerTasks returns one or more rows from timer_tasks table

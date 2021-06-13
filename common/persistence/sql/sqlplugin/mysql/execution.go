@@ -89,14 +89,17 @@ FROM transfer_tasks WHERE shard_id = ? AND task_id > ? AND task_id <= ? ORDER BY
 	createTransferTasksQuery = `INSERT INTO transfer_tasks(shard_id, task_id, data, data_encoding)
  VALUES(:shard_id, :task_id, :data, :data_encoding)`
 
+	deleteTransferTaskQuery      = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id = ?`
+	rangeDeleteTransferTaskQuery = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id > ? AND task_id <= ?`
+
 	getCrossClusterTasksQuery = `SELECT target_cluster, shard_id, task_id, data, data_encoding
 FROM cross_cluster_tasks WHERE target_cluster = ? AND shard_id = ? AND task_id > ? AND task_id <= ? ORDER BY target_cluster, shard_id, task_id`
 
 	createCrossClusterTasksQuery = `INSERT INTO cross_cluster_tasks(target_cluster, shard_id, task_id, data, data_encoding)
 VALUES(:target_cluster, :shard_id, :task_id, :data, :data_encoding)`
 
-	deleteTransferTaskQuery      = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id = ?`
-	rangeDeleteTransferTaskQuery = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id > ? AND task_id <= ?`
+	deleteCrossClusterTaskQuery      = `DELETE FROM cross_cluster_tasks WHERE target_cluster = ? AND shard_id = ? AND task_id = ?`
+	rangeDeleteCrossClusterTaskQuery = `DELETE FROM cross_cluster_tasks WHERE target_cluster = ? AND shard_id = ? AND task_id > ? AND task_id <= ?`
 
 	createTimerTasksQuery = `INSERT INTO timer_tasks (shard_id, visibility_timestamp, task_id, data, data_encoding)
   VALUES (:shard_id, :visibility_timestamp, :task_id, :data, :data_encoding)`
@@ -292,6 +295,14 @@ func (mdb *db) SelectFromCrossClusterTasks(ctx context.Context, filter *sqlplugi
 		return nil, err
 	}
 	return rows, err
+}
+
+// DeleteFromCrossClusterTasks deletes one or more rows from cross_cluster_tasks table
+func (mdb *db) DeleteFromCrossClusterTasks(ctx context.Context, filter *sqlplugin.CrossClusterTasksFilter) (sql.Result, error) {
+	if filter.MinTaskID != nil {
+		return mdb.conn.ExecContext(ctx, rangeDeleteCrossClusterTaskQuery, filter.TargetCluster, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
+	}
+	return mdb.conn.ExecContext(ctx, deleteCrossClusterTaskQuery, filter.TargetCluster, filter.ShardID, *filter.TaskID)
 }
 
 // InsertIntoTimerTasks inserts one or more rows into timer_tasks table

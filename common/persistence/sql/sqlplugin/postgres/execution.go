@@ -95,8 +95,11 @@ workflow_id = :workflow_id
 	getCrossClusterTasksQuery = `SELECT target_cluster, shard_id, task_id, data, data_encoding
  FROM cross_cluster_tasks WHERE target_cluster = $1 AND shard_id = $2 AND task_id > $3 AND task_id <= $4 ORDER BY target_cluster, shard_id, task_id`
 
-	createCrossClusterTasksQuery = `INSERT INTO transfer_tasks(target_cluster, shard_id, task_id, data, data_encoding)
+	createCrossClusterTasksQuery = `INSERT INTO cross_cluster_tasks(target_cluster, shard_id, task_id, data, data_encoding)
  VALUES(:target_cluster, :shard_id, :task_id, :data, :data_encoding)`
+
+	deleteCrossClusterTaskQuery      = `DELETE FROM cross_cluster_tasks WHERE target_cluster = $1 AND shard_id = $2 AND task_id = $3`
+	rangeDeleteCrossClusterTaskQuery = `DELETE FROM cross_cluster_tasks WHERE target_cluster = $1 AND shard_id = $2 AND task_id > $3 AND task_id <= $4`
 
 	createTimerTasksQuery = `INSERT INTO timer_tasks (shard_id, visibility_timestamp, task_id, data, data_encoding)
   VALUES (:shard_id, :visibility_timestamp, :task_id, :data, :data_encoding)`
@@ -290,6 +293,14 @@ func (pdb *db) SelectFromCrossClusterTasks(ctx context.Context, filter *sqlplugi
 		return nil, err
 	}
 	return rows, err
+}
+
+// DeleteFromCrossClusterTasks deletes one or more rows from cross_cluster_tasks table
+func (pdb *db) DeleteFromCrossClusterTasks(ctx context.Context, filter *sqlplugin.CrossClusterTasksFilter) (sql.Result, error) {
+	if filter.MinTaskID != nil {
+		return pdb.conn.ExecContext(ctx, rangeDeleteCrossClusterTaskQuery, filter.TargetCluster, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
+	}
+	return pdb.conn.ExecContext(ctx, deleteCrossClusterTaskQuery, filter.TargetCluster, filter.ShardID, *filter.TaskID)
 }
 
 // InsertIntoTimerTasks inserts one or more rows into timer_tasks table
