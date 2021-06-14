@@ -290,12 +290,10 @@ func (f *taskFetcherImpl) getMessages(
 	}
 	response, err := f.remotePeer.GetReplicationMessages(ctx, request)
 	if err != nil {
-		if _, ok := err.(*types.ServiceBusyError); !ok {
-			return nil, err
-		}
+		return nil, err
 	}
 
-	return response.GetMessagesByShard(), err
+	return response.GetMessagesByShard(), nil
 }
 
 // GetSourceCluster returns the source cluster for the fetcher
