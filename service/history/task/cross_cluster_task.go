@@ -34,7 +34,7 @@ import (
 
 // cross cluster task state
 const (
-	processingStatePending processingState = iota + 1
+	processingStateInitialed processingState = iota + 1
 	processingStateResponseReported
 	processingStateResponseRecorded
 )
@@ -190,10 +190,6 @@ func (c *crossClusterSignalWorkflowTask) RetryErr(
 	panic("Not implement")
 }
 
-func (c *crossClusterSignalWorkflowTask) IsReadyForPoll() bool {
-	panic("Not implement")
-}
-
 func (c *crossClusterSignalWorkflowTask) Update(interface{}) error {
 	panic("Not implement")
 }
@@ -223,10 +219,6 @@ func (c *crossClusterCancelWorkflowTask) HandleErr(
 func (c *crossClusterCancelWorkflowTask) RetryErr(
 	err error,
 ) bool {
-	panic("Not implement")
-}
-
-func (c *crossClusterCancelWorkflowTask) IsReadyForPoll() bool {
 	panic("Not implement")
 }
 
@@ -306,4 +298,9 @@ func (c *crossClusterTaskBase) GetAttempt() int {
 
 func (c *crossClusterTaskBase) GetQueueType() QueueType {
 	return QueueTypeCrossCluster
+}
+
+func (c *crossClusterTaskBase) IsReadyForPoll() bool {
+	return c.state == ctask.TaskStatePending &&
+		(c.processingState == processingStateInitialed || c.processingState == processingStateResponseRecorded)
 }
