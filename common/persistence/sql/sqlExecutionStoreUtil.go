@@ -775,8 +775,6 @@ func createCrossClusterTasks(
 	}
 
 	crossClusterTasksRows := make([]sqlplugin.CrossClusterTasksRow, len(crossClusterTasks))
-	// panic("not implemented")
-
 	for i, task := range crossClusterTasks {
 		info := &serialization.CrossClusterTaskInfo{
 			DomainID:            domainID,
@@ -785,6 +783,7 @@ func createCrossClusterTasks(
 			TaskType:            int16(task.GetType()),
 			TargetDomainID:      domainID,
 			TargetWorkflowID:    p.TransferTaskTransferTargetWorkflowID,
+			TargetRunID:         serialization.UUID(p.CrossClusterTaskDefaultTargetRunID),
 			ScheduleID:          0,
 			Version:             task.GetVersion(),
 			VisibilityTimestamp: task.GetVisibilityTimestamp(),

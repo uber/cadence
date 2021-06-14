@@ -860,8 +860,14 @@ func (m *sqlExecutionStore) RangeCompleteCrossClusterTask(
 	ctx context.Context,
 	request *p.RangeCompleteCrossClusterTaskRequest,
 ) error {
-	// TODO: Implement RangeCompleteCrossClusterTask
-	panic("not implemented")
+	if _, err := m.db.DeleteFromCrossClusterTasks(ctx, &sqlplugin.CrossClusterTasksFilter{
+		TargetCluster: request.TargetCluster,
+		ShardID:       m.shardID,
+		MinTaskID:     &request.ExclusiveBeginTaskID,
+		MaxTaskID:     &request.InclusiveEndTaskID}); err != nil {
+		return convertCommonErrors(m.db, "RangeCompleteCrossClusterTask", "", err)
+	}
+	return nil
 }
 
 func (m *sqlExecutionStore) GetReplicationTasks(
