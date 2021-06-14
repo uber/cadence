@@ -609,7 +609,7 @@ func (db *cdb) updateActivityInfos(
 
 // NOTE: not sure we still need it. We keep the behavior for safe during refactoring
 // In theory we can just return the input as output
-// TODO: remove it in the future
+// TODO: if possible, remove it in the future or add more comment of why we need this conversion
 func (db *cdb) convertToCassandraTimestamp(in time.Time) time.Time {
 	return time.Unix(0, persistence.DBTimestampToUnixNano(persistence.UnixNanoToDBTimestamp(in.UnixNano())))
 }
