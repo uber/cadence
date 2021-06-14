@@ -51,6 +51,12 @@ type (
 		GetAttempt() int
 	}
 
+	CrossClusterTask interface {
+		Task
+		IsReadyForPoll() bool
+		Update(interface{}) error //TODO: update interface once the cross cluster response idl lands
+	}
+
 	// Key identifies a Task and defines a total order among tasks
 	Key interface {
 		Less(Key) bool
