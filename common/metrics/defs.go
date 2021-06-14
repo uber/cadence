@@ -970,6 +970,14 @@ const (
 	TimerStandbyTaskDeleteHistoryEventScope
 	// TimerStandbyTaskWorkflowBackoffTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
 	TimerStandbyTaskWorkflowBackoffTimerScope
+	// CrossClusterQueueProcessorScope is the scope used by all metric emitted by cross cluster queue processor
+	CrossClusterQueueProcessorScope
+	// CrossClusterTaskStartChildExecutionScope is the scope used by metric emitted by cross cluster queue processor for processing start child workflow task.
+	CrossClusterTaskStartChildExecutionScope
+	// CrossClusterTaskCancelExecutionScope is the scope used by metric emitted by cross cluster queue processor for processing cancel workflow task.
+	CrossClusterTaskCancelExecutionScope
+	// CrossClusterTaskTypeSignalExecutionScope is the scope used by metric emitted by cross cluster queue processor for processing signal workflow task.
+	CrossClusterTaskTypeSignalExecutionScope
 	// HistoryEventNotificationScope is the scope used by shard history event notification
 	HistoryEventNotificationScope
 	// ReplicatorQueueProcessorScope is the scope used by all metric emitted by replicator queue processor
@@ -1525,6 +1533,10 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TimerStandbyTaskActivityRetryTimerScope:                {operation: "TimerStandbyTaskActivityRetryTimer"},
 		TimerStandbyTaskWorkflowBackoffTimerScope:              {operation: "TimerStandbyTaskWorkflowBackoffTimer"},
 		TimerStandbyTaskDeleteHistoryEventScope:                {operation: "TimerStandbyTaskDeleteHistoryEvent"},
+		CrossClusterQueueProcessorScope:                        {operation: "CrossClusterQueueProcessor"},
+		CrossClusterTaskStartChildExecutionScope:               {operation: "CrossClusterTaskStartChildExecution"},
+		CrossClusterTaskCancelExecutionScope:                   {operation: "CrossClusterTaskCancelExecution"},
+		CrossClusterTaskTypeSignalExecutionScope:               {operation: "CrossClusterTaskTypeSignalExecution"},
 		HistoryEventNotificationScope:                          {operation: "HistoryEventNotification"},
 		ReplicatorQueueProcessorScope:                          {operation: "ReplicatorQueueProcessor"},
 		ReplicatorTaskHistoryScope:                             {operation: "ReplicatorTaskHistory"},
