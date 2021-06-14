@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -190,44 +190,6 @@ func (c *crossClusterSignalWorkflowTask) RetryErr(
 	panic("Not implement")
 }
 
-func (c *crossClusterSignalWorkflowTask) State() ctask.State {
-	c.Lock()
-	defer c.Unlock()
-
-	return c.state
-}
-
-func (c *crossClusterSignalWorkflowTask) Priority() int {
-	c.Lock()
-	defer c.Unlock()
-
-	return c.priority
-}
-
-func (c *crossClusterSignalWorkflowTask) SetPriority(
-	priority int,
-) {
-	c.Lock()
-	defer c.Unlock()
-
-	c.priority = priority
-}
-
-func (c *crossClusterSignalWorkflowTask) GetShard() shard.Context {
-	return c.shard
-}
-
-func (c *crossClusterSignalWorkflowTask) GetAttempt() int {
-	c.Lock()
-	defer c.Unlock()
-
-	return c.attempt
-}
-
-func (c *crossClusterSignalWorkflowTask) GetQueueType() QueueType {
-	return QueueTypeCrossCluster
-}
-
 func (c *crossClusterSignalWorkflowTask) IsReadyForPoll() bool {
 	panic("Not implement")
 }
@@ -262,44 +224,6 @@ func (c *crossClusterCancelWorkflowTask) RetryErr(
 	err error,
 ) bool {
 	panic("Not implement")
-}
-
-func (c *crossClusterCancelWorkflowTask) State() ctask.State {
-	c.Lock()
-	defer c.Unlock()
-
-	return c.state
-}
-
-func (c *crossClusterCancelWorkflowTask) Priority() int {
-	c.Lock()
-	defer c.Unlock()
-
-	return c.priority
-}
-
-func (c *crossClusterCancelWorkflowTask) SetPriority(
-	priority int,
-) {
-	c.Lock()
-	defer c.Unlock()
-
-	c.priority = priority
-}
-
-func (c *crossClusterCancelWorkflowTask) GetShard() shard.Context {
-	return c.shard
-}
-
-func (c *crossClusterCancelWorkflowTask) GetAttempt() int {
-	c.Lock()
-	defer c.Unlock()
-
-	return c.attempt
-}
-
-func (c *crossClusterCancelWorkflowTask) GetQueueType() QueueType {
-	return QueueTypeCrossCluster
 }
 
 func (c *crossClusterCancelWorkflowTask) IsReadyForPoll() bool {
@@ -338,21 +262,29 @@ func (c *crossClusterStartChildWorkflowTask) RetryErr(
 	panic("Not implement")
 }
 
-func (c *crossClusterStartChildWorkflowTask) State() ctask.State {
+func (c *crossClusterStartChildWorkflowTask) IsReadyForPoll() bool {
+	panic("Not implement")
+}
+
+func (c *crossClusterStartChildWorkflowTask) Update(interface{}) error {
+	panic("Not implement")
+}
+
+func (c *crossClusterTaskBase) State() ctask.State {
 	c.Lock()
 	defer c.Unlock()
 
 	return c.state
 }
 
-func (c *crossClusterStartChildWorkflowTask) Priority() int {
+func (c *crossClusterTaskBase) Priority() int {
 	c.Lock()
 	defer c.Unlock()
 
 	return c.priority
 }
 
-func (c *crossClusterStartChildWorkflowTask) SetPriority(
+func (c *crossClusterTaskBase) SetPriority(
 	priority int,
 ) {
 	c.Lock()
@@ -361,25 +293,17 @@ func (c *crossClusterStartChildWorkflowTask) SetPriority(
 	c.priority = priority
 }
 
-func (c *crossClusterStartChildWorkflowTask) GetShard() shard.Context {
+func (c *crossClusterTaskBase) GetShard() shard.Context {
 	return c.shard
 }
 
-func (c *crossClusterStartChildWorkflowTask) GetAttempt() int {
+func (c *crossClusterTaskBase) GetAttempt() int {
 	c.Lock()
 	defer c.Unlock()
 
 	return c.attempt
 }
 
-func (c *crossClusterStartChildWorkflowTask) GetQueueType() QueueType {
+func (c *crossClusterTaskBase) GetQueueType() QueueType {
 	return QueueTypeCrossCluster
-}
-
-func (c *crossClusterStartChildWorkflowTask) IsReadyForPoll() bool {
-	panic("Not implement")
-}
-
-func (c *crossClusterStartChildWorkflowTask) Update(interface{}) error {
-	panic("Not implement")
 }
