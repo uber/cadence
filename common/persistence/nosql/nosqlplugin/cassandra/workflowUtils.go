@@ -249,7 +249,8 @@ func (db *cdb) createReplicationTasks(
 			persistence.EventStoreVersion,
 			task.NewRunBranchToken,
 			task.VisibilityTimestamp.UnixNano(),
-			defaultVisibilityTimestamp, // ?? TODO?? should we use task.VisibilityTimestamp?
+			// NOTE: use a constant here instead of task.VisibilityTimestamp so that we can query tasks with the same visibilityTimestamp
+			defaultVisibilityTimestamp,
 			task.TaskID)
 	}
 	return nil
@@ -284,7 +285,8 @@ func (db *cdb) createTransferTasks(
 			task.ScheduleID,
 			task.RecordVisibility,
 			task.Version,
-			defaultVisibilityTimestamp, // ?? TODO?? should we use task.VisibilityTimestamp?
+			// NOTE: use a constant here instead of task.VisibilityTimestamp so that we can query tasks with the same visibilityTimestamp
+			defaultVisibilityTimestamp,
 			task.TaskID)
 	}
 	return nil
@@ -319,7 +321,8 @@ func (db *cdb) createCrossClusterTasks(
 			task.ScheduleID,
 			task.RecordVisibility,
 			task.Version,
-			defaultVisibilityTimestamp, // ?? TODO?? should we use task.VisibilityTimestamp?
+			// NOTE: use a constant here instead of task.VisibilityTimestamp so that we can query tasks with the same visibilityTimestamp
+			defaultVisibilityTimestamp,
 			task.TaskID,
 		)
 	}
