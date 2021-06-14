@@ -35,7 +35,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-type sqlShardManager struct {
+type sqlShardStore struct {
 	sqlStore
 	currentClusterName string
 }
@@ -47,7 +47,7 @@ func NewShardPersistence(
 	log log.Logger,
 	parser serialization.Parser,
 ) (persistence.ShardStore, error) {
-	return &sqlShardManager{
+	return &sqlShardStore{
 		sqlStore: sqlStore{
 			db:     db,
 			logger: log,
@@ -57,7 +57,7 @@ func NewShardPersistence(
 	}, nil
 }
 
-func (m *sqlShardManager) CreateShard(
+func (m *sqlShardStore) CreateShard(
 	ctx context.Context,
 	request *persistence.InternalCreateShardRequest,
 ) error {
@@ -83,7 +83,7 @@ func (m *sqlShardManager) CreateShard(
 	return nil
 }
 
-func (m *sqlShardManager) GetShard(
+func (m *sqlShardStore) GetShard(
 	ctx context.Context,
 	request *persistence.InternalGetShardRequest,
 ) (*persistence.InternalGetShardResponse, error) {
@@ -158,7 +158,7 @@ func (m *sqlShardManager) GetShard(
 	return resp, nil
 }
 
-func (m *sqlShardManager) UpdateShard(
+func (m *sqlShardStore) UpdateShard(
 	ctx context.Context,
 	request *persistence.InternalUpdateShardRequest,
 ) error {

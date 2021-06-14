@@ -128,7 +128,7 @@ func (f *Factory) NewQueue(queueType p.QueueType) (p.Queue, error) {
 		return nil, err
 	}
 
-	return newQueue(conn, f.logger, queueType)
+	return newQueueStore(conn, f.logger, queueType)
 }
 
 // Close closes the factory
