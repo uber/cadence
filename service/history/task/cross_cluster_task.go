@@ -34,22 +34,9 @@ import (
 
 // cross cluster task state
 const (
-	// task state
 	processingStatePending processingState = iota + 1
-
-	// signal workflow task
-	processingStateSignalWorkflowReported
-	processingStateSignalWorkflowRecorded
-
-	// cancel workflow task
-	processingStateCancelWorkflowReported
-	processingStateCancelWorkflowRecorded
-
-	// start child workflow task
-	processingStateStartChildWorkflowReported
-	processingStateStartChildWorkflowRecorded
-
-	// TODO: close workflow task
+	processingStateResponseReported
+	processingStateResponseRecorded
 )
 
 type (
