@@ -32,7 +32,29 @@ import (
 	"github.com/uber/cadence/service/history/shard"
 )
 
+// cross cluster task state
+const (
+	// task state
+	processingStatePending processingState = iota + 1
+
+	// signal workflow task
+	processingStateSignalWorkflowReported
+	processingStateSignalWorkflowRecorded
+
+	// cancel workflow task
+	processingStateCancelWorkflowReported
+	processingStateCancelWorkflowRecorded
+
+	// start child workflow task
+	processingStateStartChildWorkflowReported
+	processingStateStartChildWorkflowRecorded
+
+	// TODO: close workflow task
+)
+
 type (
+	processingState int
+
 	crossClusterSignalWorkflowTask struct {
 		*crossClusterTaskBase
 	}
@@ -51,7 +73,7 @@ type (
 
 		shard           shard.Context
 		state           ctask.State
-		processingState ctask.CrossClusterTaskState
+		processingState processingState
 		priority        int
 		attempt         int
 		timeSource      clock.TimeSource
