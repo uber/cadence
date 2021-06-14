@@ -475,7 +475,7 @@ func newAdminKafkaCommands() []cli.Command {
 		{
 			Name:    "rereplicate",
 			Aliases: []string{"rrp"},
-			Usage:   "Rereplicate replication tasks to target topic from history tables",
+			Usage:   "Rereplicate replication tasks from history tables",
 			Flags: append(getDBFlags(),
 				cli.StringFlag{
 					Name:  FlagSourceCluster,
