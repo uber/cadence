@@ -159,7 +159,7 @@ func (d *handlerImpl) RegisterDomain(
 		clusterName := clusterConfig.GetClusterName()
 		clusters = append(clusters, &persistence.ClusterReplicationConfig{ClusterName: clusterName})
 	}
-	clusters = persistence.GetOrUseDefaultClusters(activeClusterName, clusters)
+	clusters = cluster.GetOrUseDefaultClusters(activeClusterName, clusters)
 
 	currentHistoryArchivalState := neverEnabledState()
 	nextHistoryArchivalState := currentHistoryArchivalState
