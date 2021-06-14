@@ -341,7 +341,7 @@ type (
 	* 		Each record is for one workflowID
 	* workflow_execution is to store the core data of workflow execution.
 	*		Each record is for one runID(workflow execution run).
-	* Different from taskCRUD, transfer_task, replication_task, timer_task are all internal background tasks within Cadence server.
+	* Different from taskCRUD, transfer_task, replication_task, cross_cluster_task, timer_task are all internal background tasks within Cadence server.
 	* transfer_task is to store the background tasks that need to be processed by historyEngine, right after the transaction.
 	*		There are lots of usage in historyEngine, like creating activity/childWF/etc task, and updating search attributes, etc.
 	* replication_task is to store also background tasks that need to be processed right after the transaction,
@@ -349,10 +349,10 @@ type (
 	*		Replication task stores a reference to a batch of history events(see historyCRUD).
 	* timer_task is to store the durable timers that will fire in the future. Therefore this table should be indexed by the firingTime.
 	*		The durable timers are not only for workflow timers, but also for all kinds of timeouts, and workflow deletion, etc.
-	* The above 5 tables will be required to execute transaction write with the condition of shard record from shardCRUD.
 	* cross_cluster_task is to store also background tasks that need to be processed right after the transaction, and only for
 	*		but only for CrossDC(XDC) replication feature. Each record is a replication task generated for a target cluster.
 	*		CrossCluster task stores information similar to TransferTask.
+	* The above 6 tables will be required to execute transaction write with the condition of shard record from shardCRUD.
 	* replication_dlq_task is DeadLetterQueue when target cluster pulling and applying replication task. Each record represents
 	*		a task for a target cluster.
 	*
