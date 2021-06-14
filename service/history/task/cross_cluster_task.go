@@ -74,7 +74,7 @@ func NewCrossClusterSignalWorkflowTask(
 	logger log.Logger,
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
-) Task {
+) CrossClusterTask {
 	crossClusterTask := newCrossClusterTask(
 		shard,
 		taskInfo,
@@ -93,7 +93,7 @@ func NewCrossClusterCancelWorkflowTask(
 	logger log.Logger,
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
-) Task {
+) CrossClusterTask {
 	crossClusterTask := newCrossClusterTask(
 		shard,
 		taskInfo,
@@ -112,7 +112,7 @@ func NewCrossClusterStartChildWorkflowTask(
 	logger log.Logger,
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
-) Task {
+) CrossClusterTask {
 	crossClusterTask := newCrossClusterTask(
 		shard,
 		taskInfo,

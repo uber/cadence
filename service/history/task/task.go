@@ -392,13 +392,6 @@ func (t *taskImpl) GetQueueType() QueueType {
 	return t.queueType
 }
 
-func (t *taskImpl) IsReadyForPoll() bool {
-	t.Lock()
-	defer t.Unlock()
-
-	return t.state == ctask.TaskStatePending
-}
-
 func (t *taskImpl) shouldResubmitOnNack() bool {
 	// TODO: for now only resubmit active task on Nack()
 	// we can also consider resubmit standby tasks that fails due to certain error types

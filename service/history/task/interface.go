@@ -49,7 +49,12 @@ type (
 		GetQueueType() QueueType
 		GetShard() shard.Context
 		GetAttempt() int
+	}
+
+	CrossClusterTask interface {
+		Task
 		IsReadyForPoll() bool
+		Update(interface{}) error
 	}
 
 	// Key identifies a Task and defines a total order among tasks
