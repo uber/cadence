@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -88,6 +89,18 @@ type (
 		Redispatch(targetSize int)
 		Size() int
 	}
+
+	// Fetcher is a host level component for aggregating task fetch requests
+	// from all shards on the host and perform one fetching operation for
+	// aggregated requests.
+	Fetcher interface {
+		common.Daemon
+		GetSourceCluster() string
+		Fetch(shardID int, fetchParams ...interface{}) future.Future
+	}
+
+	//Fetchers is a group of Fetchers, one for each source cluster
+	Fetchers []Fetcher
 
 	// QueueType is the type of task queue
 	QueueType int

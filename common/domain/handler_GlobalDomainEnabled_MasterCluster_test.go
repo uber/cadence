@@ -517,7 +517,10 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestRegisterGetDom
 	emitMetric := true
 	activeClusterName := ""
 	clusters := []*types.ClusterReplicationConfiguration{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
+	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
 		}
@@ -586,7 +589,10 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateGetDomai
 	data := map[string]string{"some random key": "some random value"}
 	activeClusterName := ""
 	clusters := []*types.ClusterReplicationConfiguration{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
+	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
 		}
@@ -671,7 +677,10 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateGetDomai
 	domainName := s.getRandomDomainName()
 	activeClusterName := ""
 	clusters := []*types.ClusterReplicationConfiguration{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
+	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
 		}
@@ -776,7 +785,10 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateGetDomai
 	prevActiveClusterName := ""
 	nextActiveClusterName := s.ClusterMetadata.GetCurrentClusterName()
 	clusters := []*types.ClusterReplicationConfiguration{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
+	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
 		if clusterName != nextActiveClusterName {
 			prevActiveClusterName = clusterName
 		}
@@ -977,7 +989,10 @@ func setupGlobalDomain(s suite.Suite, handler *handlerImpl, clusterMetadata clus
 	data := map[string]string{"some random key": "some random value"}
 	activeClusterName := ""
 	clusters := []*types.ClusterReplicationConfiguration{}
-	for clusterName := range clusterMetadata.GetAllClusterInfo() {
+	for clusterName, info := range clusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
 		if clusterName != clusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
 		}
