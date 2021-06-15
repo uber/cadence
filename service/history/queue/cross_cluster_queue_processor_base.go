@@ -57,7 +57,7 @@ type (
 	}
 )
 
-// TODO: implement initialize taskInitializer this intializer should have a callback to update outstandingTaskCount
+// TODO: implement initialize taskInitializer. this initializer should have a callback to update outstandingTaskCount
 func newCrossClusterQueueProcessorBase(
 	shard shard.Context,
 	targetCluster string,
@@ -283,6 +283,12 @@ func (c *crossClusterQueueProcessorBase) updateTask(
 	crossClusterTask, ok := queueTask.(task.CrossClusterTask)
 	if ok {
 		if err := crossClusterTask.Update(remoteResponse); err != nil {
+			c.logger.Error("failed to update cross cluster task",
+				tag.TaskID(crossClusterTask.GetTaskID()),
+				tag.WorkflowDomainID(crossClusterTask.GetDomainID()),
+				tag.WorkflowID(crossClusterTask.GetWorkflowID()),
+				tag.WorkflowRunID(crossClusterTask.GetRunID()),
+				tag.Error(err))
 			return err
 		}
 	} else {
