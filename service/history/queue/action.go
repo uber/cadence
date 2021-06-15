@@ -20,6 +20,8 @@
 
 package queue
 
+import "github.com/uber/cadence/service/history/task"
+
 type (
 	// ActionType specifies the type of the Action
 	ActionType int
@@ -29,6 +31,8 @@ type (
 		ActionType               ActionType
 		ResetActionAttributes    *ResetActionAttributes
 		GetStateActionAttributes *GetStateActionAttributes
+		GetTasksAttributes       *GetTasksAttributes
+		UpdateTaskAttributes     *UpdateTaskAttributes
 		// add attributes for other action types here
 	}
 
@@ -37,6 +41,8 @@ type (
 		ActionType           ActionType
 		ResetActionResult    *ResetActionResult
 		GetStateActionResult *GetStateActionResult
+		GetTasksResult       *GetTasksResult
+		UpdateTaskResult     *UpdateTaskResult
 	}
 
 	// ResetActionAttributes contains the parameter for performing Reset Action
@@ -50,6 +56,21 @@ type (
 	GetStateActionResult struct {
 		States []ProcessingQueueState
 	}
+
+	// GetTasksAttributes contains the parameter to get tasks
+	GetTasksAttributes struct{}
+	// GetTasksResult is the result for performing GetTasks Action
+	GetTasksResult struct {
+		tasks []task.Task
+	}
+	// UpdateTaskAttributes contains the parameter to update task
+	UpdateTaskAttributes struct {
+		taskID int64
+		result interface{}
+	}
+	// UpdateTaskResult is the result for performing UpdateTask Action
+	UpdateTaskResult struct {
+	}
 )
 
 const (
@@ -57,7 +78,12 @@ const (
 	ActionTypeReset ActionType = iota + 1
 	// ActionTypeGetState is the ActionType for reading processing queue states
 	ActionTypeGetState
+	// ActionTypeGetTasks is the ActionType for get cross cluster tasks
+	ActionTypeGetTasks
+	// ActionTypeUpdateTask is the ActionType to update outstanding task
+	ActionTypeUpdateTask
 	// add more ActionType here
+
 )
 
 // NewResetAction creates a new action for reseting processing queue states

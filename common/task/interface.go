@@ -48,8 +48,6 @@ type (
 	// State represents the current state of a task
 	State int
 
-	CrossClusterTaskState State
-
 	// Task is the interface for tasks
 	Task interface {
 		// Execute process this task

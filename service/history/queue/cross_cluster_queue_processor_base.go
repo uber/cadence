@@ -22,7 +22,6 @@ package queue
 
 import (
 	"context"
-	"errors"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -34,40 +33,40 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
 
-var (
-	errTaskCallbackNotFound = errors.New("task callback not found")
-)
-
 type (
-	updateCallback func(interface{}) error
-
 	crossClusterQueueProcessorBase struct {
 		sync.Mutex
 
 		*processorBase
-		targetCluster    string
-		maxTaskCount     int
-		maxTaskID        *int64
-		initialReadLevel task.Key
-		taskInitializer  task.Initializer
-		outstandingTasks map[task.Key]updateCallback
+		targetCluster   string
+		taskInitializer task.Initializer
+
+		processingLock sync.Mutex
+		backoffTimer   map[int]*time.Timer
+		shouldProcess  map[int]bool
+
+		outstandingTaskCount int
+
+		notifyCh  chan struct{}
+		processCh chan struct{}
 	}
 )
 
-// TODO: add taskInitializer
-func newCrossClusterQueueProcessor(
+// TODO: implement initialize taskInitializer this intializer should have a callback to update outstandingTaskCount
+func newCrossClusterQueueProcessorBase(
 	shard shard.Context,
 	targetCluster string,
-	maxQueueLength int,
 	processingQueueStates []ProcessingQueueState,
 	taskProcessor task.Processor,
 	options *queueProcessorOptions,
 	updateProcessingQueueStates updateProcessingQueueStatesFn,
 	queueShutdown queueShutdownFn,
+	taskExecutor task.Executor,
 	logger log.Logger,
 	metricsClient metrics.Client,
 ) *crossClusterQueueProcessorBase {
@@ -91,11 +90,15 @@ func newCrossClusterQueueProcessor(
 		}
 	}
 	crossClusterQueueProcessorBase := &crossClusterQueueProcessorBase{
-		processorBase:    processorBase,
-		targetCluster:    targetCluster,
-		maxTaskCount:     maxQueueLength,
-		initialReadLevel: ackLevel,
-		outstandingTasks: make(map[task.Key]updateCallback),
+		processorBase: processorBase,
+		targetCluster: targetCluster,
+		// taskInitializer: // TODO
+
+		backoffTimer:  make(map[int]*time.Timer),
+		shouldProcess: make(map[int]bool),
+
+		notifyCh:  make(chan struct{}, 1),
+		processCh: make(chan struct{}, 1),
 	}
 
 	return crossClusterQueueProcessorBase
@@ -111,8 +114,11 @@ func (c *crossClusterQueueProcessorBase) Start() {
 
 	c.redispatcher.Start()
 
+	// trigger an initial load of tasks
+	c.notifyAllQueueCollections()
+
 	c.shutdownWG.Add(1)
-	go c.processorPump(c.initialReadLevel)
+	go c.processorPump()
 }
 
 func (c *crossClusterQueueProcessorBase) Stop() {
@@ -124,6 +130,14 @@ func (c *crossClusterQueueProcessorBase) Stop() {
 	defer c.logger.Info("Cross cluster queue processor state changed", tag.LifeCycleStopped)
 
 	close(c.shutdownCh)
+	c.processingLock.Lock()
+	for _, timer := range c.backoffTimer {
+		timer.Stop()
+	}
+	for level := range c.shouldProcess {
+		c.shouldProcess[level] = false
+	}
+	c.processingLock.Unlock()
 
 	if success := common.AwaitWaitGroup(&c.shutdownWG, time.Minute); !success {
 		c.logger.Warn("", tag.LifeCycleStopTimedout)
@@ -132,25 +146,28 @@ func (c *crossClusterQueueProcessorBase) Stop() {
 	c.redispatcher.Stop()
 }
 
-func (c *crossClusterQueueProcessorBase) processorPump(readLevel task.Key) {
+func (c *crossClusterQueueProcessorBase) processorPump() {
 	defer c.shutdownWG.Done()
 
 	updateAckTimer := time.NewTimer(backoff.JitDuration(
 		c.options.UpdateAckInterval(),
 		c.options.UpdateAckIntervalJitterCoefficient(),
 	))
-	nextPollTimer := time.NewTimer(backoff.JitDuration(
+	defer updateAckTimer.Stop()
+
+	maxPollTimer := time.NewTimer(backoff.JitDuration(
 		c.options.MaxPollInterval(),
 		c.options.MaxPollIntervalJitterCoefficient(),
 	))
-	defer updateAckTimer.Stop()
-	defer nextPollTimer.Stop()
+	defer maxPollTimer.Stop()
 
 processorPumpLoop:
 	for {
 		select {
 		case <-c.shutdownCh:
 			break processorPumpLoop
+		case <-c.notifyCh:
+			c.notifyAllQueueCollections()
 		case <-updateAckTimer.C:
 			processFinished, err := c.updateAckLevel()
 			if err == shard.ErrShardClosed || (err == nil && processFinished) {
@@ -161,26 +178,43 @@ processorPumpLoop:
 				c.options.UpdateAckInterval(),
 				c.options.UpdateAckIntervalJitterCoefficient(),
 			))
-		case <-nextPollTimer.C:
-			var err error
-			readLevel, err = c.refillOutstandingTasks(readLevel)
-			if err != nil {
-				//retry if the read tasks failed
-				nextPollTimer.Reset(backoff.JitDuration(
-					c.options.PollBackoffInterval(),
-					c.options.PollBackoffIntervalJitterCoefficient(),
-				))
-			}
-			nextPollTimer.Reset(backoff.JitDuration(
+		case <-maxPollTimer.C:
+			c.notifyAllQueueCollections()
+			maxPollTimer.Reset(backoff.JitDuration(
 				c.options.MaxPollInterval(),
 				c.options.MaxPollIntervalJitterCoefficient(),
 			))
+		case <-c.processCh:
+			maxRedispatchQueueSize := c.options.MaxRedispatchQueueSize()
+			if c.redispatcher.Size() > maxRedispatchQueueSize {
+				// has too many pending tasks in re-dispatch queue, block loading tasks from persistence
+				c.redispatcher.Redispatch(maxRedispatchQueueSize)
+				if c.redispatcher.Size() > maxRedispatchQueueSize {
+					// if redispatcher still has a large number of tasks
+					// this only happens when system is under very high load
+					// we should backoff here instead of keeping submitting tasks to task processor
+					time.Sleep(backoff.JitDuration(
+						c.options.PollBackoffInterval(),
+						c.options.PollBackoffIntervalJitterCoefficient(),
+					))
+				}
+				// re-enqueue the event to see if we need keep re-dispatching or load new tasks from persistence
+				select {
+				case c.processCh <- struct{}{}:
+				default:
+				}
+				continue processorPumpLoop
+			}
+			c.processQueueCollections()
+		case notification := <-c.actionNotifyCh:
+			c.handleActionNotification(notification)
 		}
 	}
 }
 
 func (c *crossClusterQueueProcessorBase) readTasks(
 	readLevel task.Key,
+	maxReadLevel task.Key,
 ) ([]*persistence.CrossClusterTaskInfo, bool, error) {
 
 	var response *persistence.GetCrossClusterTasksResponse
@@ -191,7 +225,7 @@ func (c *crossClusterQueueProcessorBase) readTasks(
 			&persistence.GetCrossClusterTasksRequest{
 				TargetCluster: c.targetCluster,
 				ReadLevel:     readLevel.(transferTaskKey).taskID,
-				MaxReadLevel:  math.MaxInt64,
+				MaxReadLevel:  maxReadLevel.(transferTaskKey).taskID,
 				BatchSize:     c.options.BatchSize(),
 			})
 		return err
@@ -207,30 +241,34 @@ func (c *crossClusterQueueProcessorBase) readTasks(
 
 func (c *crossClusterQueueProcessorBase) pollTasks() []task.Task {
 
-	c.Lock()
-	defer c.Unlock()
-
 	var result []task.Task
-	for key, _ := range c.outstandingTasks {
-		//TODO: uncomment the code when IsReadyForPoll is ready
-		_, err := c.getTask(key)
-		if err != nil {
-			continue
+	for _, queueTask := range c.getTasks() {
+		crossClusterTask, ok := queueTask.(task.CrossClusterTask)
+		if !ok {
+			panic("received non cross cluster task")
 		}
-		//if task.IsReadyForPoll() {
-		//	result = append(result, task)
-		//}
+		if crossClusterTask.IsReadyForPoll() {
+			result = append(result, crossClusterTask)
+		}
 	}
 	return result
 }
 
 func (c *crossClusterQueueProcessorBase) getTask(key task.Key) (task.Task, error) {
-	for _, queue := range c.processingQueueCollections {
-		if task, err := queue.GetTask(key); err == nil {
+	for _, collection := range c.processingQueueCollections {
+		if task, err := collection.GetTask(key); err == nil {
 			return task, nil
 		}
 	}
 	return nil, errTaskNotFound
+}
+
+func (c *crossClusterQueueProcessorBase) getTasks() []task.Task {
+	var outstandingTask []task.Task
+	for _, collection := range c.processingQueueCollections {
+		outstandingTask = append(outstandingTask, collection.GetTasks()...)
+	}
+	return outstandingTask
 }
 
 func (c *crossClusterQueueProcessorBase) updateTask(
@@ -238,103 +276,249 @@ func (c *crossClusterQueueProcessorBase) updateTask(
 	remoteResponse interface{},
 ) error {
 
-	c.Lock()
-	taskCallback, ok := c.outstandingTasks[taskKey]
-	c.Unlock()
-	if !ok {
-		return errTaskCallbackNotFound
-	}
-
-	task, err := c.getTask(taskKey)
+	queueTask, err := c.getTask(taskKey)
 	if err != nil {
 		return err
 	}
-
-	err = taskCallback(remoteResponse)
-	if err != nil {
-		return err
+	crossClusterTask, ok := queueTask.(task.CrossClusterTask)
+	if ok {
+		if err := crossClusterTask.Update(remoteResponse); err != nil {
+			return err
+		}
+	} else {
+		panic("Received non cross cluster task.")
 	}
 
 	// if the task fails to submit to main queue, it will use redispatch queue
-	_, err = c.submitTask(task)
+	_, err = c.submitTask(crossClusterTask)
 	return err
 }
 
-func (c *crossClusterQueueProcessorBase) refillOutstandingTasks(
-	readLevel task.Key,
-) (task.Key, error) {
-	c.Lock()
-	if !c.hasMoreTaskLocked(readLevel) || c.getAvailableSpaceLocked() <= 0 {
-		c.Unlock()
-		return readLevel, nil
-	}
-	c.Unlock()
-
-	tasks, _, err := c.readTasks(readLevel)
-	if err != nil {
-		return readLevel, err
-	}
-
-	if len(tasks) == 0 {
-		return readLevel, nil
-	}
-
-	c.Lock()
-	defer c.Unlock()
-	availableSpace := c.getAvailableSpaceLocked()
-	maxReadLevel := readLevel
-	for _, task := range tasks {
-		currentTaskKey := transferTaskKey{taskID: task.TaskID}
-		if _, ok := c.outstandingTasks[currentTaskKey]; ok {
-			continue
-		}
-		if availableSpace > 0 {
-			//newTask, cb := c.taskInitializer(task)
-			//taskPair := taskCallback{
-			//	task: newTask,
-			//	updateCallback: cb,
-			//}
-			fakeCallback := func(interface{}) error {
-				return nil
-			}
-			c.outstandingTasks[currentTaskKey] = fakeCallback
-			availableSpace--
-			taskID := newTransferTaskKey(task.TaskID)
-			if maxReadLevel.Less(taskID) {
-				maxReadLevel = taskID
-			}
-		} else {
-			return maxReadLevel, nil
-		}
-	}
-	return maxReadLevel, nil
+func (c *crossClusterQueueProcessorBase) addOutstandingTaskCountLocked(count int) {
+	c.outstandingTaskCount += count
 }
 
-func (c *crossClusterQueueProcessorBase) notifyNewTask(
-	tasks []persistence.Task,
-) {
+// TODO: this will be called in cross cluster task Acked function.
+func (c *crossClusterQueueProcessorBase) removeOutstandingTaskCountLocked(count int) {
+	c.outstandingTaskCount -= count
+}
 
-	if len(tasks) == 0 {
+func (c *crossClusterQueueProcessorBase) notifyAllQueueCollections() {
+	for _, queueCollection := range c.processingQueueCollections {
+		c.readyForProcess(queueCollection.Level())
+	}
+}
+
+func (c *crossClusterQueueProcessorBase) readyForProcess(level int) {
+	c.processingLock.Lock()
+	defer c.processingLock.Unlock()
+
+	if _, ok := c.backoffTimer[level]; ok {
+		// current level is being throttled
 		return
 	}
-	maxTaskID := tasks[0].GetTaskID()
-	for _, task := range tasks {
-		if maxTaskID < task.GetTaskID() {
-			maxTaskID = task.GetTaskID()
+
+	c.shouldProcess[level] = true
+
+	// trigger the actual processing
+	select {
+	case c.processCh <- struct{}{}:
+	default:
+	}
+}
+
+func (c *crossClusterQueueProcessorBase) setupBackoffTimer(level int) {
+	c.processingLock.Lock()
+	defer c.processingLock.Unlock()
+
+	c.metricsScope.IncCounter(metrics.ProcessingQueueThrottledCounter)
+	c.logger.Info("Throttled processing queue", tag.QueueLevel(level))
+
+	if _, ok := c.backoffTimer[level]; ok {
+		// there's an existing backoff timer, no-op
+		// this case should not happen
+		return
+	}
+
+	backoffDuration := backoff.JitDuration(
+		c.options.PollBackoffInterval(),
+		c.options.PollBackoffIntervalJitterCoefficient(),
+	)
+	c.backoffTimer[level] = time.AfterFunc(backoffDuration, func() {
+		select {
+		case <-c.shutdownCh:
+			return
+		default:
+		}
+
+		c.processingLock.Lock()
+		defer c.processingLock.Unlock()
+
+		c.shouldProcess[level] = true
+		delete(c.backoffTimer, level)
+
+		// trigger the actual processing
+		select {
+		case c.processCh <- struct{}{}:
+		default:
+		}
+	})
+}
+
+func (c *crossClusterQueueProcessorBase) handleActionNotification(notification actionNotification) {
+	c.processorBase.handleActionNotification(notification, func() {
+		switch notification.action.ActionType {
+		case ActionTypeReset:
+			c.readyForProcess(defaultProcessingQueueLevel)
+		case ActionTypeGetTasks:
+			tasks := c.getTasks()
+			notification.resultNotificationCh <- actionResultNotification{
+				result: &ActionResult{
+					ActionType: ActionTypeGetTasks,
+					GetTasksResult: &GetTasksResult{
+						tasks: tasks,
+					},
+				},
+			}
+		case ActionTypeUpdateTask:
+			action := notification.action.UpdateTaskAttributes
+			err := c.updateTask(newTransferTaskKey(action.taskID), action.result)
+			notification.resultNotificationCh <- actionResultNotification{
+				result: &ActionResult{
+					ActionType:       ActionTypeUpdateTask,
+					UpdateTaskResult: &UpdateTaskResult{},
+				},
+				err: err,
+			}
+		}
+	})
+}
+
+func (c *crossClusterQueueProcessorBase) processQueueCollections() {
+	for _, queueCollection := range c.processingQueueCollections {
+		level := queueCollection.Level()
+		c.processingLock.Lock()
+		if shouldProcess, ok := c.shouldProcess[level]; !ok || !shouldProcess {
+			continue
+		}
+		c.shouldProcess[level] = false
+		c.processingLock.Unlock()
+
+		activeQueue := queueCollection.ActiveQueue()
+		if activeQueue == nil {
+			// process for this queue collection has finished
+			// it's possible that new queue will be added to this collection later though,
+			// pollTime will be updated after split/merge
+			continue
+		}
+
+		readLevel := activeQueue.State().ReadLevel()
+		maxReadLevel := minTaskKey(activeQueue.State().MaxLevel(), c.updateMaxReadLevel())
+		domainFilter := activeQueue.State().DomainFilter()
+
+		if !readLevel.Less(maxReadLevel) {
+			// no task need to be processed for now, wait for new task notification
+			// note that if taskID for new task is still less than readLevel, the notification
+			// will just be a no-op and there's no DB requests.
+			continue
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), loadQueueTaskThrottleRetryDelay)
+		if err := c.rateLimiter.Wait(ctx); err != nil {
+			cancel()
+			if level != defaultProcessingQueueLevel {
+				c.setupBackoffTimer(level)
+			} else {
+				c.readyForProcess(level)
+			}
+			continue
+		}
+		cancel()
+
+		taskInfos, more, err := c.readTasks(readLevel, maxReadLevel)
+		if err != nil {
+			c.logger.Error("Processor unable to retrieve tasks", tag.Error(err))
+			c.readyForProcess(level) // re-enqueue the event
+			continue
+		}
+
+		tasks := make(map[task.Key]task.Task)
+		newTaskID := readLevel.(transferTaskKey).taskID
+
+		c.Lock()
+		for _, taskInfo := range taskInfos {
+			if !domainFilter.Filter(taskInfo.GetDomainID()) {
+				continue
+			}
+
+			if c.outstandingTaskCount > c.options.MaxPendingTaskSize() {
+				more = true
+				break
+			}
+			task := c.taskInitializer(taskInfo)
+			tasks[newTransferTaskKey(taskInfo.GetTaskID())] = task
+			newTaskID = task.GetTaskID()
+		}
+		c.addOutstandingTaskCountLocked(len(tasks))
+		c.Unlock()
+
+		var newReadLevel task.Key
+		if !more {
+			newReadLevel = maxReadLevel
+		} else {
+			newReadLevel = newTransferTaskKey(newTaskID)
+		}
+
+		queueCollection.AddTasks(tasks, newReadLevel)
+		newActiveQueue := queueCollection.ActiveQueue()
+		if more || (newActiveQueue != nil && newActiveQueue != activeQueue) {
+			// more tasks for the current active queue or the active queue has changed
+			c.readyForProcess(level)
 		}
 	}
+}
 
-	c.Lock()
-	defer c.Unlock()
-	if c.maxTaskID == nil || *c.maxTaskID < maxTaskID {
-		c.maxTaskID = &maxTaskID
+func (c *crossClusterQueueProcessorBase) notifyNewTask() {
+	select {
+	case c.notifyCh <- struct{}{}:
+	default:
 	}
 }
 
-func (c *crossClusterQueueProcessorBase) hasMoreTaskLocked(readLevel task.Key) bool {
-	return c.maxTaskID == nil || readLevel.Less(newTransferTaskKey(*c.maxTaskID))
-}
+func newCrossClusterQueueProcessorOptions(
+	config *config.Config,
+) *queueProcessorOptions {
+	options := &queueProcessorOptions{
+		BatchSize:                            config.CrossClusterTaskBatchSize,
+		MaxPollRPS:                           config.CrossClusterProcessorMaxPollRPS,
+		MaxPollInterval:                      config.CrossClusterProcessorMaxPollInterval,
+		MaxPollIntervalJitterCoefficient:     config.CrossClusterProcessorMaxPollIntervalJitterCoefficient,
+		UpdateAckInterval:                    config.CrossClusterProcessorUpdateAckInterval,
+		UpdateAckIntervalJitterCoefficient:   config.CrossClusterProcessorUpdateAckIntervalJitterCoefficient,
+		RedispatchIntervalJitterCoefficient:  config.TaskRedispatchIntervalJitterCoefficient,
+		MaxRedispatchQueueSize:               config.CrossClusterProcessorMaxRedispatchQueueSize,
+		SplitQueueInterval:                   config.CrossClusterProcessorSplitQueueInterval,
+		SplitQueueIntervalJitterCoefficient:  config.CrossClusterProcessorSplitQueueIntervalJitterCoefficient,
+		PollBackoffInterval:                  config.QueueProcessorPollBackoffInterval,
+		PollBackoffIntervalJitterCoefficient: config.QueueProcessorPollBackoffIntervalJitterCoefficient,
+		EnableValidator:                      config.CrossClusterProcessorEnableValidator,
+		ValidationInterval:                   config.CrossClusterProcessorValidationInterval,
+	}
 
-func (c *crossClusterQueueProcessorBase) getAvailableSpaceLocked() int {
-	return len(c.outstandingTasks)
+	options.EnableSplit = config.QueueProcessorEnableSplit
+	options.SplitMaxLevel = config.QueueProcessorSplitMaxLevel
+	options.EnableRandomSplitByDomainID = config.QueueProcessorEnableRandomSplitByDomainID
+	options.RandomSplitProbability = config.QueueProcessorRandomSplitProbability
+	options.EnablePendingTaskSplitByDomainID = config.QueueProcessorEnablePendingTaskSplitByDomainID
+	options.PendingTaskSplitThreshold = config.QueueProcessorPendingTaskSplitThreshold
+	options.EnableStuckTaskSplitByDomainID = config.QueueProcessorEnableStuckTaskSplitByDomainID
+	options.StuckTaskSplitThreshold = config.QueueProcessorStuckTaskSplitThreshold
+	options.SplitLookAheadDurationByDomainID = config.QueueProcessorSplitLookAheadDurationByDomainID
+
+	options.EnablePersistQueueStates = config.QueueProcessorEnablePersistQueueStates
+	options.EnableLoadQueueStates = config.QueueProcessorEnableLoadQueueStates
+
+	options.MetricScope = metrics.CrossClusterQueueProcessorScope
+	options.RedispatchInterval = config.ActiveTaskRedispatchInterval
+	return options
 }

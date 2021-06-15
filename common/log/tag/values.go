@@ -104,6 +104,7 @@ var (
 	ComponentEventsCache              = component("events-cache")
 	ComponentTransferQueue            = component("transfer-queue-processor")
 	ComponentTimerQueue               = component("timer-queue-processor")
+	ComponentCrossClusterQueue        = component("cross-cluster-queue-processor")
 	ComponentTimerBuilder             = component("timer-builder")
 	ComponentReplicatorQueue          = component("replicator-queue-processor")
 	ComponentShardController          = component("shard-controller")

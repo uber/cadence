@@ -53,11 +53,6 @@ type (
 		taskID int64
 	}
 
-	pollTime struct {
-		time       time.Time
-		changeable bool
-	}
-
 	transferQueueProcessorBase struct {
 		*processorBase
 
