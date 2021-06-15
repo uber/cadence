@@ -415,6 +415,11 @@ func newAdminDomainCommands() []cli.Command {
 					Name:  FlagDeprecatedWithAlias,
 					Usage: "List deprecated domains only, by default only domains in REGISTERED status are listed",
 				},
+				cli.StringFlag{
+					Name:  FlagPrefix,
+					Usage: "List domains that are matching to the given prefix",
+					Value: "",
+				},
 				cli.BoolFlag{
 					Name:  FlagPrintFullyDetailWithAlias,
 					Usage: "Print full domain detail",
