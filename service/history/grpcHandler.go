@@ -28,6 +28,7 @@ import (
 	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
 	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/proto"
 )
 
@@ -72,6 +73,10 @@ func (g grpcHandler) DescribeQueue(ctx context.Context, request *historyv1.Descr
 func (g grpcHandler) DescribeWorkflowExecution(ctx context.Context, request *historyv1.DescribeWorkflowExecutionRequest) (*historyv1.DescribeWorkflowExecutionResponse, error) {
 	response, err := g.h.DescribeWorkflowExecution(withGRPCTag(ctx), proto.ToHistoryDescribeWorkflowExecutionRequest(request))
 	return proto.FromHistoryDescribeWorkflowExecutionResponse(response), proto.FromError(err)
+}
+
+func (g grpcHandler) GetCrossClusterTasks(ctx context.Context, request *historyv1.GetCrossClusterTasksRequest) (*historyv1.GetCrossClusterTasksResponse, error) {
+	return nil, proto.FromError(types.InternalServiceError{Message: "not implemented"})
 }
 
 func (g grpcHandler) GetDLQReplicationMessages(ctx context.Context, request *historyv1.GetDLQReplicationMessagesRequest) (*historyv1.GetDLQReplicationMessagesResponse, error) {
@@ -197,6 +202,10 @@ func (g grpcHandler) RespondActivityTaskCompleted(ctx context.Context, request *
 func (g grpcHandler) RespondActivityTaskFailed(ctx context.Context, request *historyv1.RespondActivityTaskFailedRequest) (*historyv1.RespondActivityTaskFailedResponse, error) {
 	err := g.h.RespondActivityTaskFailed(withGRPCTag(ctx), proto.ToHistoryRespondActivityTaskFailedRequest(request))
 	return &historyv1.RespondActivityTaskFailedResponse{}, proto.FromError(err)
+}
+
+func (g grpcHandler) RespondCrossClusterTasksCompleted(ctx context.Context, request *historyv1.RespondCrossClusterTasksCompletedRequest) (*historyv1.RespondCrossClusterTasksCompletedResponse, error) {
+	return nil, proto.FromError(types.InternalServiceError{Message: "not implemented"})
 }
 
 func (g grpcHandler) RespondDecisionTaskCompleted(ctx context.Context, request *historyv1.RespondDecisionTaskCompletedRequest) (*historyv1.RespondDecisionTaskCompletedResponse, error) {

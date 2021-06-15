@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -84,6 +85,11 @@ func (t ThriftHandler) DescribeQueue(ctx context.Context, request *shared.Descri
 func (t ThriftHandler) DescribeWorkflowExecution(ctx context.Context, request *h.DescribeWorkflowExecutionRequest) (*shared.DescribeWorkflowExecutionResponse, error) {
 	response, err := t.h.DescribeWorkflowExecution(withThriftTag(ctx), thrift.ToHistoryDescribeWorkflowExecutionRequest(request))
 	return thrift.FromDescribeWorkflowExecutionResponse(response), thrift.FromError(err)
+}
+
+// GetCrossClusterTasks fetches cross cluster tasks
+func (t ThriftHandler) GetCrossClusterTasks(ctx context.Context, request *shared.GetCrossClusterTasksRequest) (*shared.GetCrossClusterTasksResponse, error) {
+	return nil, thrift.FromError(types.InternalServiceError{Message: "not implemented"})
 }
 
 // GetDLQReplicationMessages forwards request to the underlying handler
@@ -234,6 +240,11 @@ func (t ThriftHandler) RespondActivityTaskCompleted(ctx context.Context, request
 func (t ThriftHandler) RespondActivityTaskFailed(ctx context.Context, request *h.RespondActivityTaskFailedRequest) error {
 	err := t.h.RespondActivityTaskFailed(withThriftTag(ctx), thrift.ToHistoryRespondActivityTaskFailedRequest(request))
 	return thrift.FromError(err)
+}
+
+// RespondCrossClusterTasksCompleted responds the result of processing cross cluster tasks
+func (t ThriftHandler) RespondCrossClusterTasksCompleted(ctx context.Context, request *shared.RespondCrossClusterTasksCompletedRequest) (*shared.RespondCrossClusterTasksCompletedResponse, error) {
+	return nil, thrift.FromError(types.InternalServiceError{Message: "not implemented"})
 }
 
 // RespondDecisionTaskCompleted forwards request to the underlying handler
