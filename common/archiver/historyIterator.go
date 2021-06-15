@@ -29,7 +29,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/persistence-utils"
+	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/types"
 )
 

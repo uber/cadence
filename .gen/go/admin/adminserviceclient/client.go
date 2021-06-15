@@ -82,6 +82,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*admin.DescribeWorkflowExecutionResponse, error)
 
+	GetCrossClusterTasks(
+		ctx context.Context,
+		Request *shared.GetCrossClusterTasksRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.GetCrossClusterTasksResponse, error)
+
 	GetDLQReplicationMessages(
 		ctx context.Context,
 		Request *replicator.GetDLQReplicationMessagesRequest,
@@ -336,6 +342,29 @@ func (c client) DescribeWorkflowExecution(
 	}
 
 	success, err = admin.AdminService_DescribeWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetCrossClusterTasks(
+	ctx context.Context,
+	_Request *shared.GetCrossClusterTasksRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetCrossClusterTasksResponse, err error) {
+
+	args := admin.AdminService_GetCrossClusterTasks_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_GetCrossClusterTasks_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_GetCrossClusterTasks_Helper.UnwrapResponse(&result)
 	return
 }
 

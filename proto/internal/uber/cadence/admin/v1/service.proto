@@ -94,6 +94,9 @@ service AdminAPI {
 
   // ResendReplicationTasks requests replication tasks from remote cluster and apply tasks to current cluster.
   rpc ResendReplicationTasks(ResendReplicationTasksRequest) returns (ResendReplicationTasksResponse);
+
+  // GetCrossClusterTasks return cross cluster tasks based on cluster name.
+  rpc GetCrossClusterTasks(GetCrossClusterTasksRequest) returns (GetCrossClusterTasksResponse);
 }
 
 message DescribeWorkflowExecutionRequest {
@@ -299,4 +302,13 @@ message ResendReplicationTasksRequest {
 }
 
 message ResendReplicationTasksResponse {
+}
+
+message GetCrossClusterTasksRequest {
+  repeated int32 shard_ids = 1;
+  string target_cluster = 2;
+}
+
+message GetCrossClusterTasksResponse {
+  map<int32, shared.v1.CrossClusterTaskRequests> tasks_by_shard = 1;
 }

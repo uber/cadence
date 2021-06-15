@@ -27,9 +27,14 @@ package sharedv1
 
 import (
 	fmt "fmt"
+	io "io"
 	math "math"
+	math_bits "math/bits"
 
 	proto "github.com/gogo/protobuf/proto"
+	types "github.com/gogo/protobuf/types"
+
+	v1 "github.com/uber/cadence/.gen/proto/api/v1"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -74,8 +79,867 @@ func (TaskType) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_8958fa454fc8f819, []int{0}
 }
 
+type CrossClusterTaskType int32
+
+const (
+	CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_INVALID               CrossClusterTaskType = 0
+	CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_START_CHILD_EXECUTION CrossClusterTaskType = 1
+	CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_CANCEL_EXECUTION      CrossClusterTaskType = 2
+	CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_SIGNAL_EXECUTION      CrossClusterTaskType = 3
+)
+
+var CrossClusterTaskType_name = map[int32]string{
+	0: "CROSS_CLUSTER_TASK_TYPE_INVALID",
+	1: "CROSS_CLUSTER_TASK_TYPE_START_CHILD_EXECUTION",
+	2: "CROSS_CLUSTER_TASK_TYPE_CANCEL_EXECUTION",
+	3: "CROSS_CLUSTER_TASK_TYPE_SIGNAL_EXECUTION",
+}
+
+var CrossClusterTaskType_value = map[string]int32{
+	"CROSS_CLUSTER_TASK_TYPE_INVALID":               0,
+	"CROSS_CLUSTER_TASK_TYPE_START_CHILD_EXECUTION": 1,
+	"CROSS_CLUSTER_TASK_TYPE_CANCEL_EXECUTION":      2,
+	"CROSS_CLUSTER_TASK_TYPE_SIGNAL_EXECUTION":      3,
+}
+
+func (x CrossClusterTaskType) String() string {
+	return proto.EnumName(CrossClusterTaskType_name, int32(x))
+}
+
+func (CrossClusterTaskType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_8958fa454fc8f819, []int{1}
+}
+
+type CrossClusterTaskFailedCause int32
+
+const (
+	CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_INVALID                  CrossClusterTaskFailedCause = 0
+	CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_DOMAIN_NOT_ACTIVE        CrossClusterTaskFailedCause = 1
+	CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_DOMAIN_NOT_EXISTS        CrossClusterTaskFailedCause = 2
+	CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_ALREADY_RUNNING CrossClusterTaskFailedCause = 3
+	CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_NOT_EXISTS      CrossClusterTaskFailedCause = 4
+)
+
+var CrossClusterTaskFailedCause_name = map[int32]string{
+	0: "CROSS_CLUSTER_TASK_FAILED_CAUSE_INVALID",
+	1: "CROSS_CLUSTER_TASK_FAILED_CAUSE_DOMAIN_NOT_ACTIVE",
+	2: "CROSS_CLUSTER_TASK_FAILED_CAUSE_DOMAIN_NOT_EXISTS",
+	3: "CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_ALREADY_RUNNING",
+	4: "CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_NOT_EXISTS",
+}
+
+var CrossClusterTaskFailedCause_value = map[string]int32{
+	"CROSS_CLUSTER_TASK_FAILED_CAUSE_INVALID":                  0,
+	"CROSS_CLUSTER_TASK_FAILED_CAUSE_DOMAIN_NOT_ACTIVE":        1,
+	"CROSS_CLUSTER_TASK_FAILED_CAUSE_DOMAIN_NOT_EXISTS":        2,
+	"CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_ALREADY_RUNNING": 3,
+	"CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_NOT_EXISTS":      4,
+}
+
+func (x CrossClusterTaskFailedCause) String() string {
+	return proto.EnumName(CrossClusterTaskFailedCause_name, int32(x))
+}
+
+func (CrossClusterTaskFailedCause) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_8958fa454fc8f819, []int{2}
+}
+
+type CrossClusterTaskInfo struct {
+	DomainId             string                `protobuf:"bytes,1,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
+	WorkflowExecution    *v1.WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	TaskType             CrossClusterTaskType  `protobuf:"varint,3,opt,name=task_type,json=taskType,proto3,enum=uber.cadence.shared.v1.CrossClusterTaskType" json:"task_type,omitempty"`
+	TaskState            int32                 `protobuf:"varint,4,opt,name=task_state,json=taskState,proto3" json:"task_state,omitempty"`
+	TaskId               int64                 `protobuf:"varint,5,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	VisibilityTimestamp  *types.Timestamp      `protobuf:"bytes,6,opt,name=visibilityTimestamp,proto3" json:"visibilityTimestamp,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
+}
+
+func (m *CrossClusterTaskInfo) Reset()         { *m = CrossClusterTaskInfo{} }
+func (m *CrossClusterTaskInfo) String() string { return proto.CompactTextString(m) }
+func (*CrossClusterTaskInfo) ProtoMessage()    {}
+func (*CrossClusterTaskInfo) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8958fa454fc8f819, []int{0}
+}
+func (m *CrossClusterTaskInfo) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CrossClusterTaskInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CrossClusterTaskInfo.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CrossClusterTaskInfo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CrossClusterTaskInfo.Merge(m, src)
+}
+func (m *CrossClusterTaskInfo) XXX_Size() int {
+	return m.Size()
+}
+func (m *CrossClusterTaskInfo) XXX_DiscardUnknown() {
+	xxx_messageInfo_CrossClusterTaskInfo.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CrossClusterTaskInfo proto.InternalMessageInfo
+
+func (m *CrossClusterTaskInfo) GetDomainId() string {
+	if m != nil {
+		return m.DomainId
+	}
+	return ""
+}
+
+func (m *CrossClusterTaskInfo) GetWorkflowExecution() *v1.WorkflowExecution {
+	if m != nil {
+		return m.WorkflowExecution
+	}
+	return nil
+}
+
+func (m *CrossClusterTaskInfo) GetTaskType() CrossClusterTaskType {
+	if m != nil {
+		return m.TaskType
+	}
+	return CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_INVALID
+}
+
+func (m *CrossClusterTaskInfo) GetTaskState() int32 {
+	if m != nil {
+		return m.TaskState
+	}
+	return 0
+}
+
+func (m *CrossClusterTaskInfo) GetTaskId() int64 {
+	if m != nil {
+		return m.TaskId
+	}
+	return 0
+}
+
+func (m *CrossClusterTaskInfo) GetVisibilityTimestamp() *types.Timestamp {
+	if m != nil {
+		return m.VisibilityTimestamp
+	}
+	return nil
+}
+
+type CrossClusterStartChildExecutionRequestAttributes struct {
+	TargetDomainId           string                                                  `protobuf:"bytes,1,opt,name=target_domain_id,json=targetDomainId,proto3" json:"target_domain_id,omitempty"`
+	RequestId                string                                                  `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	InitiatedEventId         int64                                                   `protobuf:"varint,3,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
+	InitiatedEventAttributes *v1.StartChildWorkflowExecutionInitiatedEventAttributes `protobuf:"bytes,4,opt,name=initiated_event_attributes,json=initiatedEventAttributes,proto3" json:"initiated_event_attributes,omitempty"`
+	// targetRunID is for scheduling first decision task
+	// targetWorkflowID is available in initiatedEventAttributes
+	TargetRunId          string   `protobuf:"bytes,5,opt,name=target_run_id,json=targetRunId,proto3" json:"target_run_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CrossClusterStartChildExecutionRequestAttributes) Reset() {
+	*m = CrossClusterStartChildExecutionRequestAttributes{}
+}
+func (m *CrossClusterStartChildExecutionRequestAttributes) String() string {
+	return proto.CompactTextString(m)
+}
+func (*CrossClusterStartChildExecutionRequestAttributes) ProtoMessage() {}
+func (*CrossClusterStartChildExecutionRequestAttributes) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8958fa454fc8f819, []int{1}
+}
+func (m *CrossClusterStartChildExecutionRequestAttributes) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CrossClusterStartChildExecutionRequestAttributes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CrossClusterStartChildExecutionRequestAttributes.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CrossClusterStartChildExecutionRequestAttributes) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CrossClusterStartChildExecutionRequestAttributes.Merge(m, src)
+}
+func (m *CrossClusterStartChildExecutionRequestAttributes) XXX_Size() int {
+	return m.Size()
+}
+func (m *CrossClusterStartChildExecutionRequestAttributes) XXX_DiscardUnknown() {
+	xxx_messageInfo_CrossClusterStartChildExecutionRequestAttributes.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CrossClusterStartChildExecutionRequestAttributes proto.InternalMessageInfo
+
+func (m *CrossClusterStartChildExecutionRequestAttributes) GetTargetDomainId() string {
+	if m != nil {
+		return m.TargetDomainId
+	}
+	return ""
+}
+
+func (m *CrossClusterStartChildExecutionRequestAttributes) GetRequestId() string {
+	if m != nil {
+		return m.RequestId
+	}
+	return ""
+}
+
+func (m *CrossClusterStartChildExecutionRequestAttributes) GetInitiatedEventId() int64 {
+	if m != nil {
+		return m.InitiatedEventId
+	}
+	return 0
+}
+
+func (m *CrossClusterStartChildExecutionRequestAttributes) GetInitiatedEventAttributes() *v1.StartChildWorkflowExecutionInitiatedEventAttributes {
+	if m != nil {
+		return m.InitiatedEventAttributes
+	}
+	return nil
+}
+
+func (m *CrossClusterStartChildExecutionRequestAttributes) GetTargetRunId() string {
+	if m != nil {
+		return m.TargetRunId
+	}
+	return ""
+}
+
+type CrossClusterStartChildExecutionResponseAttributes struct {
+	RunId                string   `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CrossClusterStartChildExecutionResponseAttributes) Reset() {
+	*m = CrossClusterStartChildExecutionResponseAttributes{}
+}
+func (m *CrossClusterStartChildExecutionResponseAttributes) String() string {
+	return proto.CompactTextString(m)
+}
+func (*CrossClusterStartChildExecutionResponseAttributes) ProtoMessage() {}
+func (*CrossClusterStartChildExecutionResponseAttributes) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8958fa454fc8f819, []int{2}
+}
+func (m *CrossClusterStartChildExecutionResponseAttributes) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CrossClusterStartChildExecutionResponseAttributes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CrossClusterStartChildExecutionResponseAttributes.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CrossClusterStartChildExecutionResponseAttributes) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CrossClusterStartChildExecutionResponseAttributes.Merge(m, src)
+}
+func (m *CrossClusterStartChildExecutionResponseAttributes) XXX_Size() int {
+	return m.Size()
+}
+func (m *CrossClusterStartChildExecutionResponseAttributes) XXX_DiscardUnknown() {
+	xxx_messageInfo_CrossClusterStartChildExecutionResponseAttributes.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CrossClusterStartChildExecutionResponseAttributes proto.InternalMessageInfo
+
+func (m *CrossClusterStartChildExecutionResponseAttributes) GetRunId() string {
+	if m != nil {
+		return m.RunId
+	}
+	return ""
+}
+
+type CrossClusterCancelExecutionRequestAttributes struct {
+	TargetDomainId          string                `protobuf:"bytes,1,opt,name=target_domain_id,json=targetDomainId,proto3" json:"target_domain_id,omitempty"`
+	TargetWorkflowExecution *v1.WorkflowExecution `protobuf:"bytes,2,opt,name=target_workflow_execution,json=targetWorkflowExecution,proto3" json:"target_workflow_execution,omitempty"`
+	RequestId               string                `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	InitiatedEventId        int64                 `protobuf:"varint,4,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
+	ChildWorkflowOnly       bool                  `protobuf:"varint,5,opt,name=child_workflow_only,json=childWorkflowOnly,proto3" json:"child_workflow_only,omitempty"`
+	XXX_NoUnkeyedLiteral    struct{}              `json:"-"`
+	XXX_unrecognized        []byte                `json:"-"`
+	XXX_sizecache           int32                 `json:"-"`
+}
+
+func (m *CrossClusterCancelExecutionRequestAttributes) Reset() {
+	*m = CrossClusterCancelExecutionRequestAttributes{}
+}
+func (m *CrossClusterCancelExecutionRequestAttributes) String() string {
+	return proto.CompactTextString(m)
+}
+func (*CrossClusterCancelExecutionRequestAttributes) ProtoMessage() {}
+func (*CrossClusterCancelExecutionRequestAttributes) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8958fa454fc8f819, []int{3}
+}
+func (m *CrossClusterCancelExecutionRequestAttributes) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CrossClusterCancelExecutionRequestAttributes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CrossClusterCancelExecutionRequestAttributes.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CrossClusterCancelExecutionRequestAttributes) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CrossClusterCancelExecutionRequestAttributes.Merge(m, src)
+}
+func (m *CrossClusterCancelExecutionRequestAttributes) XXX_Size() int {
+	return m.Size()
+}
+func (m *CrossClusterCancelExecutionRequestAttributes) XXX_DiscardUnknown() {
+	xxx_messageInfo_CrossClusterCancelExecutionRequestAttributes.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CrossClusterCancelExecutionRequestAttributes proto.InternalMessageInfo
+
+func (m *CrossClusterCancelExecutionRequestAttributes) GetTargetDomainId() string {
+	if m != nil {
+		return m.TargetDomainId
+	}
+	return ""
+}
+
+func (m *CrossClusterCancelExecutionRequestAttributes) GetTargetWorkflowExecution() *v1.WorkflowExecution {
+	if m != nil {
+		return m.TargetWorkflowExecution
+	}
+	return nil
+}
+
+func (m *CrossClusterCancelExecutionRequestAttributes) GetRequestId() string {
+	if m != nil {
+		return m.RequestId
+	}
+	return ""
+}
+
+func (m *CrossClusterCancelExecutionRequestAttributes) GetInitiatedEventId() int64 {
+	if m != nil {
+		return m.InitiatedEventId
+	}
+	return 0
+}
+
+func (m *CrossClusterCancelExecutionRequestAttributes) GetChildWorkflowOnly() bool {
+	if m != nil {
+		return m.ChildWorkflowOnly
+	}
+	return false
+}
+
+type CrossClusterCancelExecutionResponseAttributes struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CrossClusterCancelExecutionResponseAttributes) Reset() {
+	*m = CrossClusterCancelExecutionResponseAttributes{}
+}
+func (m *CrossClusterCancelExecutionResponseAttributes) String() string {
+	return proto.CompactTextString(m)
+}
+func (*CrossClusterCancelExecutionResponseAttributes) ProtoMessage() {}
+func (*CrossClusterCancelExecutionResponseAttributes) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8958fa454fc8f819, []int{4}
+}
+func (m *CrossClusterCancelExecutionResponseAttributes) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CrossClusterCancelExecutionResponseAttributes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CrossClusterCancelExecutionResponseAttributes.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CrossClusterCancelExecutionResponseAttributes) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CrossClusterCancelExecutionResponseAttributes.Merge(m, src)
+}
+func (m *CrossClusterCancelExecutionResponseAttributes) XXX_Size() int {
+	return m.Size()
+}
+func (m *CrossClusterCancelExecutionResponseAttributes) XXX_DiscardUnknown() {
+	xxx_messageInfo_CrossClusterCancelExecutionResponseAttributes.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CrossClusterCancelExecutionResponseAttributes proto.InternalMessageInfo
+
+type CrossClusterSignalExecutionRequestAttributes struct {
+	TargetDomainId          string                `protobuf:"bytes,1,opt,name=target_domain_id,json=targetDomainId,proto3" json:"target_domain_id,omitempty"`
+	TargetWorkflowExecution *v1.WorkflowExecution `protobuf:"bytes,2,opt,name=target_workflow_execution,json=targetWorkflowExecution,proto3" json:"target_workflow_execution,omitempty"`
+	RequestId               string                `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	InitiatedEventId        int64                 `protobuf:"varint,4,opt,name=initiated_event_id,json=initiatedEventId,proto3" json:"initiated_event_id,omitempty"`
+	ChildWorkflowOnly       bool                  `protobuf:"varint,5,opt,name=child_workflow_only,json=childWorkflowOnly,proto3" json:"child_workflow_only,omitempty"`
+	SignalName              string                `protobuf:"bytes,6,opt,name=signal_name,json=signalName,proto3" json:"signal_name,omitempty"`
+	SignalInput             *v1.Payload           `protobuf:"bytes,7,opt,name=signal_input,json=signalInput,proto3" json:"signal_input,omitempty"`
+	Control                 []byte                `protobuf:"bytes,8,opt,name=control,proto3" json:"control,omitempty"`
+	XXX_NoUnkeyedLiteral    struct{}              `json:"-"`
+	XXX_unrecognized        []byte                `json:"-"`
+	XXX_sizecache           int32                 `json:"-"`
+}
+
+func (m *CrossClusterSignalExecutionRequestAttributes) Reset() {
+	*m = CrossClusterSignalExecutionRequestAttributes{}
+}
+func (m *CrossClusterSignalExecutionRequestAttributes) String() string {
+	return proto.CompactTextString(m)
+}
+func (*CrossClusterSignalExecutionRequestAttributes) ProtoMessage() {}
+func (*CrossClusterSignalExecutionRequestAttributes) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8958fa454fc8f819, []int{5}
+}
+func (m *CrossClusterSignalExecutionRequestAttributes) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CrossClusterSignalExecutionRequestAttributes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CrossClusterSignalExecutionRequestAttributes.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CrossClusterSignalExecutionRequestAttributes) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CrossClusterSignalExecutionRequestAttributes.Merge(m, src)
+}
+func (m *CrossClusterSignalExecutionRequestAttributes) XXX_Size() int {
+	return m.Size()
+}
+func (m *CrossClusterSignalExecutionRequestAttributes) XXX_DiscardUnknown() {
+	xxx_messageInfo_CrossClusterSignalExecutionRequestAttributes.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CrossClusterSignalExecutionRequestAttributes proto.InternalMessageInfo
+
+func (m *CrossClusterSignalExecutionRequestAttributes) GetTargetDomainId() string {
+	if m != nil {
+		return m.TargetDomainId
+	}
+	return ""
+}
+
+func (m *CrossClusterSignalExecutionRequestAttributes) GetTargetWorkflowExecution() *v1.WorkflowExecution {
+	if m != nil {
+		return m.TargetWorkflowExecution
+	}
+	return nil
+}
+
+func (m *CrossClusterSignalExecutionRequestAttributes) GetRequestId() string {
+	if m != nil {
+		return m.RequestId
+	}
+	return ""
+}
+
+func (m *CrossClusterSignalExecutionRequestAttributes) GetInitiatedEventId() int64 {
+	if m != nil {
+		return m.InitiatedEventId
+	}
+	return 0
+}
+
+func (m *CrossClusterSignalExecutionRequestAttributes) GetChildWorkflowOnly() bool {
+	if m != nil {
+		return m.ChildWorkflowOnly
+	}
+	return false
+}
+
+func (m *CrossClusterSignalExecutionRequestAttributes) GetSignalName() string {
+	if m != nil {
+		return m.SignalName
+	}
+	return ""
+}
+
+func (m *CrossClusterSignalExecutionRequestAttributes) GetSignalInput() *v1.Payload {
+	if m != nil {
+		return m.SignalInput
+	}
+	return nil
+}
+
+func (m *CrossClusterSignalExecutionRequestAttributes) GetControl() []byte {
+	if m != nil {
+		return m.Control
+	}
+	return nil
+}
+
+type CrossClusterSignalExecutionResponseAttributes struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CrossClusterSignalExecutionResponseAttributes) Reset() {
+	*m = CrossClusterSignalExecutionResponseAttributes{}
+}
+func (m *CrossClusterSignalExecutionResponseAttributes) String() string {
+	return proto.CompactTextString(m)
+}
+func (*CrossClusterSignalExecutionResponseAttributes) ProtoMessage() {}
+func (*CrossClusterSignalExecutionResponseAttributes) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8958fa454fc8f819, []int{6}
+}
+func (m *CrossClusterSignalExecutionResponseAttributes) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CrossClusterSignalExecutionResponseAttributes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CrossClusterSignalExecutionResponseAttributes.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CrossClusterSignalExecutionResponseAttributes) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CrossClusterSignalExecutionResponseAttributes.Merge(m, src)
+}
+func (m *CrossClusterSignalExecutionResponseAttributes) XXX_Size() int {
+	return m.Size()
+}
+func (m *CrossClusterSignalExecutionResponseAttributes) XXX_DiscardUnknown() {
+	xxx_messageInfo_CrossClusterSignalExecutionResponseAttributes.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CrossClusterSignalExecutionResponseAttributes proto.InternalMessageInfo
+
+type CrossClusterTaskRequest struct {
+	TaskInfo *CrossClusterTaskInfo `protobuf:"bytes,1,opt,name=task_info,json=taskInfo,proto3" json:"task_info,omitempty"`
+	// Types that are valid to be assigned to Attributes:
+	//	*CrossClusterTaskRequest_StartChildExecutionAttributes
+	//	*CrossClusterTaskRequest_CancelExecutionAttributes
+	//	*CrossClusterTaskRequest_SignalExecutionAttributes
+	Attributes           isCrossClusterTaskRequest_Attributes `protobuf_oneof:"attributes"`
+	XXX_NoUnkeyedLiteral struct{}                             `json:"-"`
+	XXX_unrecognized     []byte                               `json:"-"`
+	XXX_sizecache        int32                                `json:"-"`
+}
+
+func (m *CrossClusterTaskRequest) Reset()         { *m = CrossClusterTaskRequest{} }
+func (m *CrossClusterTaskRequest) String() string { return proto.CompactTextString(m) }
+func (*CrossClusterTaskRequest) ProtoMessage()    {}
+func (*CrossClusterTaskRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8958fa454fc8f819, []int{7}
+}
+func (m *CrossClusterTaskRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CrossClusterTaskRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CrossClusterTaskRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CrossClusterTaskRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CrossClusterTaskRequest.Merge(m, src)
+}
+func (m *CrossClusterTaskRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *CrossClusterTaskRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_CrossClusterTaskRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CrossClusterTaskRequest proto.InternalMessageInfo
+
+type isCrossClusterTaskRequest_Attributes interface {
+	isCrossClusterTaskRequest_Attributes()
+	MarshalTo([]byte) (int, error)
+	Size() int
+}
+
+type CrossClusterTaskRequest_StartChildExecutionAttributes struct {
+	StartChildExecutionAttributes *CrossClusterStartChildExecutionRequestAttributes `protobuf:"bytes,2,opt,name=startChildExecutionAttributes,proto3,oneof" json:"startChildExecutionAttributes,omitempty"`
+}
+type CrossClusterTaskRequest_CancelExecutionAttributes struct {
+	CancelExecutionAttributes *CrossClusterCancelExecutionRequestAttributes `protobuf:"bytes,3,opt,name=cancelExecutionAttributes,proto3,oneof" json:"cancelExecutionAttributes,omitempty"`
+}
+type CrossClusterTaskRequest_SignalExecutionAttributes struct {
+	SignalExecutionAttributes *CrossClusterSignalExecutionRequestAttributes `protobuf:"bytes,4,opt,name=signalExecutionAttributes,proto3,oneof" json:"signalExecutionAttributes,omitempty"`
+}
+
+func (*CrossClusterTaskRequest_StartChildExecutionAttributes) isCrossClusterTaskRequest_Attributes() {
+}
+func (*CrossClusterTaskRequest_CancelExecutionAttributes) isCrossClusterTaskRequest_Attributes() {}
+func (*CrossClusterTaskRequest_SignalExecutionAttributes) isCrossClusterTaskRequest_Attributes() {}
+
+func (m *CrossClusterTaskRequest) GetAttributes() isCrossClusterTaskRequest_Attributes {
+	if m != nil {
+		return m.Attributes
+	}
+	return nil
+}
+
+func (m *CrossClusterTaskRequest) GetTaskInfo() *CrossClusterTaskInfo {
+	if m != nil {
+		return m.TaskInfo
+	}
+	return nil
+}
+
+func (m *CrossClusterTaskRequest) GetStartChildExecutionAttributes() *CrossClusterStartChildExecutionRequestAttributes {
+	if x, ok := m.GetAttributes().(*CrossClusterTaskRequest_StartChildExecutionAttributes); ok {
+		return x.StartChildExecutionAttributes
+	}
+	return nil
+}
+
+func (m *CrossClusterTaskRequest) GetCancelExecutionAttributes() *CrossClusterCancelExecutionRequestAttributes {
+	if x, ok := m.GetAttributes().(*CrossClusterTaskRequest_CancelExecutionAttributes); ok {
+		return x.CancelExecutionAttributes
+	}
+	return nil
+}
+
+func (m *CrossClusterTaskRequest) GetSignalExecutionAttributes() *CrossClusterSignalExecutionRequestAttributes {
+	if x, ok := m.GetAttributes().(*CrossClusterTaskRequest_SignalExecutionAttributes); ok {
+		return x.SignalExecutionAttributes
+	}
+	return nil
+}
+
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*CrossClusterTaskRequest) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
+		(*CrossClusterTaskRequest_StartChildExecutionAttributes)(nil),
+		(*CrossClusterTaskRequest_CancelExecutionAttributes)(nil),
+		(*CrossClusterTaskRequest_SignalExecutionAttributes)(nil),
+	}
+}
+
+type CrossClusterTaskResponse struct {
+	TaskId      int64                       `protobuf:"varint,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	TaskType    CrossClusterTaskType        `protobuf:"varint,2,opt,name=task_type,json=taskType,proto3,enum=uber.cadence.shared.v1.CrossClusterTaskType" json:"task_type,omitempty"`
+	FailedCause CrossClusterTaskFailedCause `protobuf:"varint,3,opt,name=failed_cause,json=failedCause,proto3,enum=uber.cadence.shared.v1.CrossClusterTaskFailedCause" json:"failed_cause,omitempty"`
+	// Types that are valid to be assigned to Attributes:
+	//	*CrossClusterTaskResponse_StartChildExecutionAttributes
+	//	*CrossClusterTaskResponse_CancelExecutionAttributes
+	//	*CrossClusterTaskResponse_SignalExecutionAttributes
+	Attributes           isCrossClusterTaskResponse_Attributes `protobuf_oneof:"attributes"`
+	XXX_NoUnkeyedLiteral struct{}                              `json:"-"`
+	XXX_unrecognized     []byte                                `json:"-"`
+	XXX_sizecache        int32                                 `json:"-"`
+}
+
+func (m *CrossClusterTaskResponse) Reset()         { *m = CrossClusterTaskResponse{} }
+func (m *CrossClusterTaskResponse) String() string { return proto.CompactTextString(m) }
+func (*CrossClusterTaskResponse) ProtoMessage()    {}
+func (*CrossClusterTaskResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8958fa454fc8f819, []int{8}
+}
+func (m *CrossClusterTaskResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CrossClusterTaskResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CrossClusterTaskResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CrossClusterTaskResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CrossClusterTaskResponse.Merge(m, src)
+}
+func (m *CrossClusterTaskResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *CrossClusterTaskResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_CrossClusterTaskResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CrossClusterTaskResponse proto.InternalMessageInfo
+
+type isCrossClusterTaskResponse_Attributes interface {
+	isCrossClusterTaskResponse_Attributes()
+	MarshalTo([]byte) (int, error)
+	Size() int
+}
+
+type CrossClusterTaskResponse_StartChildExecutionAttributes struct {
+	StartChildExecutionAttributes *CrossClusterStartChildExecutionResponseAttributes `protobuf:"bytes,4,opt,name=startChildExecutionAttributes,proto3,oneof" json:"startChildExecutionAttributes,omitempty"`
+}
+type CrossClusterTaskResponse_CancelExecutionAttributes struct {
+	CancelExecutionAttributes *CrossClusterCancelExecutionResponseAttributes `protobuf:"bytes,5,opt,name=cancelExecutionAttributes,proto3,oneof" json:"cancelExecutionAttributes,omitempty"`
+}
+type CrossClusterTaskResponse_SignalExecutionAttributes struct {
+	SignalExecutionAttributes *CrossClusterSignalExecutionResponseAttributes `protobuf:"bytes,6,opt,name=signalExecutionAttributes,proto3,oneof" json:"signalExecutionAttributes,omitempty"`
+}
+
+func (*CrossClusterTaskResponse_StartChildExecutionAttributes) isCrossClusterTaskResponse_Attributes() {
+}
+func (*CrossClusterTaskResponse_CancelExecutionAttributes) isCrossClusterTaskResponse_Attributes() {}
+func (*CrossClusterTaskResponse_SignalExecutionAttributes) isCrossClusterTaskResponse_Attributes() {}
+
+func (m *CrossClusterTaskResponse) GetAttributes() isCrossClusterTaskResponse_Attributes {
+	if m != nil {
+		return m.Attributes
+	}
+	return nil
+}
+
+func (m *CrossClusterTaskResponse) GetTaskId() int64 {
+	if m != nil {
+		return m.TaskId
+	}
+	return 0
+}
+
+func (m *CrossClusterTaskResponse) GetTaskType() CrossClusterTaskType {
+	if m != nil {
+		return m.TaskType
+	}
+	return CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_INVALID
+}
+
+func (m *CrossClusterTaskResponse) GetFailedCause() CrossClusterTaskFailedCause {
+	if m != nil {
+		return m.FailedCause
+	}
+	return CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_INVALID
+}
+
+func (m *CrossClusterTaskResponse) GetStartChildExecutionAttributes() *CrossClusterStartChildExecutionResponseAttributes {
+	if x, ok := m.GetAttributes().(*CrossClusterTaskResponse_StartChildExecutionAttributes); ok {
+		return x.StartChildExecutionAttributes
+	}
+	return nil
+}
+
+func (m *CrossClusterTaskResponse) GetCancelExecutionAttributes() *CrossClusterCancelExecutionResponseAttributes {
+	if x, ok := m.GetAttributes().(*CrossClusterTaskResponse_CancelExecutionAttributes); ok {
+		return x.CancelExecutionAttributes
+	}
+	return nil
+}
+
+func (m *CrossClusterTaskResponse) GetSignalExecutionAttributes() *CrossClusterSignalExecutionResponseAttributes {
+	if x, ok := m.GetAttributes().(*CrossClusterTaskResponse_SignalExecutionAttributes); ok {
+		return x.SignalExecutionAttributes
+	}
+	return nil
+}
+
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*CrossClusterTaskResponse) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
+		(*CrossClusterTaskResponse_StartChildExecutionAttributes)(nil),
+		(*CrossClusterTaskResponse_CancelExecutionAttributes)(nil),
+		(*CrossClusterTaskResponse_SignalExecutionAttributes)(nil),
+	}
+}
+
+type CrossClusterTaskRequests struct {
+	TaskRequests         []*CrossClusterTaskRequest `protobuf:"bytes,1,rep,name=task_requests,json=taskRequests,proto3" json:"task_requests,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                   `json:"-"`
+	XXX_unrecognized     []byte                     `json:"-"`
+	XXX_sizecache        int32                      `json:"-"`
+}
+
+func (m *CrossClusterTaskRequests) Reset()         { *m = CrossClusterTaskRequests{} }
+func (m *CrossClusterTaskRequests) String() string { return proto.CompactTextString(m) }
+func (*CrossClusterTaskRequests) ProtoMessage()    {}
+func (*CrossClusterTaskRequests) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8958fa454fc8f819, []int{9}
+}
+func (m *CrossClusterTaskRequests) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CrossClusterTaskRequests) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CrossClusterTaskRequests.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CrossClusterTaskRequests) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CrossClusterTaskRequests.Merge(m, src)
+}
+func (m *CrossClusterTaskRequests) XXX_Size() int {
+	return m.Size()
+}
+func (m *CrossClusterTaskRequests) XXX_DiscardUnknown() {
+	xxx_messageInfo_CrossClusterTaskRequests.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CrossClusterTaskRequests proto.InternalMessageInfo
+
+func (m *CrossClusterTaskRequests) GetTaskRequests() []*CrossClusterTaskRequest {
+	if m != nil {
+		return m.TaskRequests
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterEnum("uber.cadence.shared.v1.TaskType", TaskType_name, TaskType_value)
+	proto.RegisterEnum("uber.cadence.shared.v1.CrossClusterTaskType", CrossClusterTaskType_name, CrossClusterTaskType_value)
+	proto.RegisterEnum("uber.cadence.shared.v1.CrossClusterTaskFailedCause", CrossClusterTaskFailedCause_name, CrossClusterTaskFailedCause_value)
+	proto.RegisterType((*CrossClusterTaskInfo)(nil), "uber.cadence.shared.v1.CrossClusterTaskInfo")
+	proto.RegisterType((*CrossClusterStartChildExecutionRequestAttributes)(nil), "uber.cadence.shared.v1.CrossClusterStartChildExecutionRequestAttributes")
+	proto.RegisterType((*CrossClusterStartChildExecutionResponseAttributes)(nil), "uber.cadence.shared.v1.CrossClusterStartChildExecutionResponseAttributes")
+	proto.RegisterType((*CrossClusterCancelExecutionRequestAttributes)(nil), "uber.cadence.shared.v1.CrossClusterCancelExecutionRequestAttributes")
+	proto.RegisterType((*CrossClusterCancelExecutionResponseAttributes)(nil), "uber.cadence.shared.v1.CrossClusterCancelExecutionResponseAttributes")
+	proto.RegisterType((*CrossClusterSignalExecutionRequestAttributes)(nil), "uber.cadence.shared.v1.CrossClusterSignalExecutionRequestAttributes")
+	proto.RegisterType((*CrossClusterSignalExecutionResponseAttributes)(nil), "uber.cadence.shared.v1.CrossClusterSignalExecutionResponseAttributes")
+	proto.RegisterType((*CrossClusterTaskRequest)(nil), "uber.cadence.shared.v1.CrossClusterTaskRequest")
+	proto.RegisterType((*CrossClusterTaskResponse)(nil), "uber.cadence.shared.v1.CrossClusterTaskResponse")
+	proto.RegisterType((*CrossClusterTaskRequests)(nil), "uber.cadence.shared.v1.CrossClusterTaskRequests")
 }
 
 func init() {
@@ -83,18 +947,2744 @@ func init() {
 }
 
 var fileDescriptor_8958fa454fc8f819 = []byte{
-	// 204 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x52, 0x2a, 0x4d, 0x4a, 0x2d,
-	0xd2, 0x4f, 0x4e, 0x4c, 0x49, 0xcd, 0x4b, 0x4e, 0xd5, 0x2f, 0xce, 0x48, 0x2c, 0x4a, 0x4d, 0xd1,
-	0x2f, 0x33, 0xd4, 0x2f, 0x2c, 0x4d, 0x2d, 0x4d, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x12,
-	0x03, 0xa9, 0xd1, 0x83, 0xaa, 0xd1, 0x83, 0xa8, 0xd1, 0x2b, 0x33, 0xd4, 0xca, 0xe4, 0xe2, 0x08,
-	0x49, 0x2c, 0xce, 0x0e, 0xa9, 0x2c, 0x48, 0x15, 0x12, 0xe5, 0x12, 0x0c, 0x71, 0x0c, 0xf6, 0x8e,
-	0x0f, 0x89, 0x0c, 0x70, 0x8d, 0xf7, 0xf4, 0x0b, 0x73, 0xf4, 0xf1, 0x74, 0x11, 0x60, 0x10, 0x12,
-	0xe3, 0x12, 0x42, 0x08, 0x87, 0x04, 0x39, 0xfa, 0x05, 0xbb, 0xb9, 0x06, 0x09, 0x30, 0x0a, 0x09,
-	0x73, 0xf1, 0x23, 0x89, 0x7b, 0xfa, 0xba, 0x06, 0x09, 0x30, 0x09, 0x49, 0x72, 0x89, 0x22, 0x04,
-	0x83, 0x5c, 0x03, 0x7c, 0x3c, 0x9d, 0x1d, 0x43, 0x3c, 0xfd, 0xfd, 0x04, 0x98, 0x9d, 0x9c, 0x4f,
-	0x3c, 0x92, 0x63, 0xbc, 0xf0, 0x48, 0x8e, 0xf1, 0xc1, 0x23, 0x39, 0xc6, 0x28, 0xd3, 0xf4, 0xcc,
-	0x92, 0x8c, 0xd2, 0x24, 0xbd, 0xe4, 0xfc, 0x5c, 0x7d, 0x14, 0xf7, 0xeb, 0xa5, 0xa7, 0xe6, 0xe9,
-	0x83, 0x1d, 0x8d, 0xf0, 0x8a, 0x35, 0x84, 0x55, 0x66, 0x98, 0xc4, 0x06, 0x96, 0x31, 0x06, 0x04,
-	0x00, 0x00, 0xff, 0xff, 0x50, 0xb6, 0xf6, 0xfb, 0xf4, 0x00, 0x00, 0x00,
+	// 1159 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x57, 0x4f, 0x6f, 0xe3, 0x44,
+	0x14, 0xaf, 0x93, 0xfe, 0xcb, 0xa4, 0x2c, 0xe9, 0x94, 0x6e, 0xdd, 0x2e, 0x6d, 0x43, 0x90, 0x20,
+	0x2a, 0x5d, 0x87, 0xb4, 0x5a, 0x81, 0x04, 0x12, 0xf2, 0x3a, 0xee, 0xd6, 0x6c, 0x36, 0xa9, 0xc6,
+	0x6e, 0xbb, 0xcb, 0xc5, 0x72, 0xe2, 0x49, 0x3a, 0x6a, 0x62, 0x67, 0xed, 0x71, 0x4a, 0xee, 0x2c,
+	0xe2, 0x08, 0xe2, 0x83, 0x70, 0xe2, 0xc0, 0x37, 0x40, 0x9c, 0x38, 0x71, 0xe1, 0x82, 0xfa, 0x49,
+	0x90, 0xc7, 0x4e, 0xe3, 0xfc, 0xf7, 0xee, 0x72, 0xe4, 0x96, 0xbc, 0xf9, 0xbd, 0x37, 0xef, 0xbd,
+	0xdf, 0x6f, 0xde, 0x8c, 0x41, 0xce, 0xab, 0x61, 0xa7, 0x50, 0x37, 0x4c, 0x6c, 0xd5, 0x71, 0xc1,
+	0xbd, 0x32, 0x1c, 0x6c, 0x16, 0xba, 0xc5, 0xc2, 0x4b, 0x0f, 0x7b, 0x58, 0xe8, 0x38, 0x36, 0xb5,
+	0xe1, 0x7d, 0x1f, 0x23, 0x84, 0x18, 0x21, 0xc0, 0x08, 0xdd, 0xe2, 0xce, 0x7e, 0xd3, 0xb6, 0x9b,
+	0x2d, 0x5c, 0x60, 0xa8, 0x9a, 0xd7, 0x28, 0x50, 0xd2, 0xc6, 0x2e, 0x35, 0xda, 0x9d, 0xc0, 0x71,
+	0x27, 0x3b, 0x14, 0xdc, 0xe8, 0x10, 0x3f, 0x72, 0xdd, 0x6e, 0xb7, 0x6d, 0x2b, 0x44, 0x7c, 0x30,
+	0x09, 0x71, 0x45, 0x5c, 0x6a, 0x3b, 0xbd, 0x00, 0x92, 0xfb, 0x3b, 0x01, 0xde, 0x93, 0x1c, 0xdb,
+	0x75, 0xa5, 0x96, 0xe7, 0x52, 0xec, 0x68, 0x86, 0x7b, 0xad, 0x58, 0x0d, 0x1b, 0x3e, 0x00, 0x29,
+	0xd3, 0x6e, 0x1b, 0xc4, 0xd2, 0x89, 0xc9, 0x73, 0x59, 0x2e, 0x9f, 0x42, 0xab, 0x81, 0x41, 0x31,
+	0xe1, 0x39, 0x80, 0x37, 0xb6, 0x73, 0xdd, 0x68, 0xd9, 0x37, 0x3a, 0xfe, 0x16, 0xd7, 0x3d, 0x4a,
+	0x6c, 0x8b, 0x4f, 0x64, 0xb9, 0x7c, 0xfa, 0xe8, 0x23, 0x61, 0xa8, 0x20, 0xa3, 0x43, 0x84, 0x6e,
+	0x51, 0xb8, 0x0c, 0xe1, 0x72, 0x1f, 0x8d, 0xd6, 0x6f, 0x46, 0x4d, 0x50, 0x01, 0x29, 0x6a, 0xb8,
+	0xd7, 0x3a, 0xed, 0x75, 0x30, 0x9f, 0xcc, 0x72, 0xf9, 0x7b, 0x47, 0x87, 0xc2, 0xe4, 0xf6, 0x08,
+	0xa3, 0x49, 0x6b, 0xbd, 0x0e, 0x46, 0xab, 0x34, 0xfc, 0x05, 0x77, 0x01, 0x60, 0xa1, 0x5c, 0x6a,
+	0x50, 0xcc, 0x2f, 0x66, 0xb9, 0xfc, 0x12, 0x62, 0xc1, 0x55, 0xdf, 0x00, 0xb7, 0xc0, 0x0a, 0x5b,
+	0x26, 0x26, 0xbf, 0x94, 0xe5, 0xf2, 0x49, 0xb4, 0xec, 0xff, 0x55, 0x4c, 0x58, 0x06, 0x1b, 0x5d,
+	0xe2, 0x92, 0x1a, 0x69, 0x11, 0xda, 0xd3, 0xfa, 0x1d, 0xe7, 0x97, 0x59, 0x69, 0x3b, 0x42, 0xc0,
+	0x89, 0xd0, 0xe7, 0x44, 0xb8, 0x43, 0xa0, 0x49, 0x6e, 0xb9, 0xbf, 0x12, 0xe0, 0xd3, 0x68, 0xa2,
+	0x2a, 0x35, 0x1c, 0x2a, 0x5d, 0x91, 0x96, 0x39, 0xe8, 0x03, 0x7e, 0xe9, 0x61, 0x97, 0x8a, 0x94,
+	0x3a, 0xa4, 0xe6, 0x51, 0xec, 0xc2, 0x3c, 0xc8, 0x50, 0xc3, 0x69, 0x62, 0xaa, 0x8f, 0x12, 0x70,
+	0x2f, 0xb0, 0x97, 0xfa, 0x34, 0xec, 0x02, 0xe0, 0x04, 0xee, 0x3e, 0x26, 0xc1, 0x30, 0xa9, 0xd0,
+	0xa2, 0x98, 0xf0, 0x10, 0x40, 0x62, 0x11, 0x4a, 0x0c, 0x8a, 0x4d, 0x1d, 0x77, 0xb1, 0xc5, 0x60,
+	0x49, 0x56, 0x6f, 0xe6, 0x6e, 0x45, 0xf6, 0x17, 0x14, 0x13, 0x7e, 0xcf, 0x81, 0x9d, 0x51, 0xb8,
+	0x71, 0x97, 0x15, 0x6b, 0x61, 0xfa, 0xe8, 0x74, 0x22, 0xb9, 0x83, 0xb2, 0xc6, 0x68, 0x56, 0x86,
+	0xb6, 0x19, 0x54, 0x89, 0x78, 0x32, 0x65, 0x05, 0xe6, 0xc0, 0x3b, 0x61, 0xfd, 0x8e, 0x67, 0xf5,
+	0x19, 0x4a, 0xa1, 0x74, 0x60, 0x44, 0x9e, 0xa5, 0x98, 0xb9, 0xaf, 0x41, 0x71, 0x6e, 0x5f, 0xdd,
+	0x8e, 0x6d, 0xb9, 0x38, 0x12, 0x78, 0x13, 0x2c, 0x87, 0x11, 0x83, 0x76, 0x2e, 0x39, 0x2c, 0xd6,
+	0x6f, 0x09, 0x70, 0x18, 0x0d, 0x26, 0x19, 0x56, 0x1d, 0xb7, 0xfe, 0x13, 0x82, 0x6a, 0x60, 0x3b,
+	0x44, 0xbe, 0xf5, 0x71, 0xd9, 0x0a, 0x02, 0x8d, 0x2d, 0x8c, 0x88, 0x20, 0x19, 0x4f, 0x04, 0x8b,
+	0x53, 0x44, 0x20, 0x80, 0x8d, 0xba, 0xdf, 0xc6, 0x41, 0xbe, 0xb6, 0xd5, 0xea, 0x31, 0x06, 0x56,
+	0xd1, 0x7a, 0x3d, 0x4a, 0x71, 0xd5, 0x6a, 0xf5, 0x72, 0x05, 0xf0, 0x70, 0x66, 0xeb, 0x46, 0x39,
+	0xc8, 0xfd, 0x9a, 0x1c, 0x6e, 0xb6, 0x4a, 0x9a, 0x96, 0xf1, 0x7f, 0xb3, 0xe3, 0x34, 0x1b, 0xee,
+	0x83, 0xb4, 0xcb, 0xda, 0xa5, 0x5b, 0x46, 0x1b, 0xb3, 0x99, 0x94, 0x42, 0x20, 0x30, 0x55, 0x8c,
+	0x36, 0x86, 0x5f, 0x81, 0xb5, 0x10, 0x40, 0xac, 0x8e, 0x47, 0xf9, 0x15, 0x56, 0xf4, 0xfb, 0x13,
+	0x8b, 0x3e, 0x33, 0x7a, 0x2d, 0xdb, 0x30, 0x51, 0x18, 0x52, 0xf1, 0x1d, 0x20, 0x0f, 0x56, 0xea,
+	0xb6, 0x45, 0x1d, 0xbb, 0xc5, 0xaf, 0x66, 0xb9, 0xfc, 0x1a, 0xea, 0xff, 0x1d, 0x25, 0x7a, 0x8c,
+	0xb6, 0x31, 0xa2, 0x7f, 0x5e, 0x04, 0x5b, 0xa3, 0x33, 0x3a, 0x64, 0xf7, 0x6e, 0xce, 0x13, 0xab,
+	0x61, 0x33, 0x32, 0xd3, 0xf1, 0xe7, 0xbc, 0x7f, 0x39, 0x05, 0x73, 0x9e, 0x5d, 0x53, 0x3f, 0x72,
+	0x60, 0xd7, 0x1d, 0x3f, 0xfd, 0x83, 0x44, 0x42, 0xe6, 0x4f, 0xe3, 0xc4, 0x8f, 0x33, 0x9e, 0x4f,
+	0x17, 0xd0, 0xec, 0x0d, 0xe1, 0x77, 0x1c, 0xd8, 0xae, 0x0f, 0x1f, 0x84, 0x48, 0x3a, 0x49, 0x96,
+	0x4e, 0x29, 0x4e, 0x3a, 0xf3, 0x06, 0xd1, 0xe9, 0x02, 0x9a, 0xbe, 0x11, 0x4b, 0xc3, 0x1d, 0xa6,
+	0x49, 0x1c, 0x1d, 0xe7, 0xb1, 0xd2, 0x98, 0x77, 0x44, 0xfd, 0x34, 0xa6, 0x6e, 0xf4, 0x78, 0x0d,
+	0x80, 0xc1, 0x2d, 0x92, 0xfb, 0x61, 0x09, 0xf0, 0xe3, 0xaa, 0x08, 0xc4, 0x13, 0xbd, 0x94, 0xb9,
+	0xa1, 0x4b, 0x79, 0xe8, 0x5d, 0x90, 0x78, 0xab, 0x77, 0xc1, 0x05, 0x58, 0x6b, 0x18, 0xa4, 0x85,
+	0x4d, 0xbd, 0x6e, 0x78, 0x6e, 0xff, 0x95, 0x71, 0x1c, 0x37, 0xda, 0x09, 0xf3, 0x95, 0x7c, 0x57,
+	0x94, 0x6e, 0x0c, 0xfe, 0xc0, 0x9f, 0xe6, 0xea, 0x30, 0xe8, 0xb8, 0xf2, 0xc6, 0x3a, 0x1c, 0x3d,
+	0x61, 0xf3, 0x85, 0xf8, 0x6a, 0xa6, 0x10, 0x97, 0x58, 0x3e, 0xf2, 0x1b, 0x09, 0x71, 0x42, 0x2e,
+	0x33, 0x94, 0xf8, 0x6a, 0xa6, 0x12, 0x97, 0xe3, 0xe7, 0x31, 0x77, 0xea, 0xbc, 0x8e, 0x14, 0x3b,
+	0x93, 0x94, 0xc8, 0xa4, 0xed, 0x42, 0xcd, 0x7f, 0x82, 0xb8, 0xd7, 0x7a, 0x38, 0xd9, 0x5d, 0x9e,
+	0xcb, 0x26, 0xf3, 0xe9, 0xa3, 0x42, 0x5c, 0x99, 0x84, 0x81, 0xd0, 0x1a, 0x8d, 0x44, 0x3d, 0x20,
+	0x60, 0xb5, 0xaf, 0x48, 0xb8, 0x09, 0xd6, 0x35, 0x51, 0x7d, 0xaa, 0x6b, 0x2f, 0xce, 0x64, 0x5d,
+	0xa9, 0x5c, 0x88, 0x65, 0xa5, 0x94, 0x59, 0x80, 0xf7, 0x01, 0x1c, 0x98, 0x35, 0x24, 0x56, 0xd4,
+	0x13, 0x19, 0x65, 0x38, 0xb8, 0x01, 0xde, 0x8d, 0xd8, 0x95, 0x67, 0x32, 0xca, 0x24, 0xe0, 0x36,
+	0xd8, 0x1c, 0x18, 0x91, 0x7c, 0x56, 0x56, 0x24, 0x51, 0x53, 0xaa, 0x95, 0x4c, 0xf2, 0xe0, 0x0f,
+	0x6e, 0xfc, 0x59, 0xcf, 0xf6, 0xfd, 0x10, 0xec, 0x4b, 0xa8, 0xaa, 0xaa, 0xba, 0x54, 0x3e, 0x57,
+	0x35, 0x19, 0xe9, 0x93, 0xb2, 0x28, 0x82, 0x87, 0xd3, 0x40, 0xaa, 0x26, 0x22, 0x4d, 0x97, 0x4e,
+	0x95, 0x72, 0x49, 0x97, 0x9f, 0xcb, 0xd2, 0x39, 0xdb, 0x90, 0x83, 0x87, 0x20, 0x3f, 0xcd, 0x45,
+	0x12, 0x2b, 0x92, 0x5c, 0x8e, 0xa0, 0x13, 0xb3, 0xd0, 0xaa, 0xf2, 0xa4, 0x22, 0x46, 0xd1, 0xc9,
+	0x83, 0x5f, 0x12, 0xe0, 0xc1, 0x8c, 0x83, 0x08, 0x3f, 0x01, 0x1f, 0x4f, 0x88, 0x76, 0x22, 0x2a,
+	0x65, 0xb9, 0xa4, 0x4b, 0xe2, 0xb9, 0x1a, 0xad, 0xed, 0x11, 0x28, 0xce, 0x03, 0x97, 0xaa, 0xcf,
+	0x44, 0xa5, 0xa2, 0x57, 0xaa, 0x9a, 0x2e, 0x4a, 0x9a, 0x72, 0x21, 0x67, 0xb8, 0xd7, 0x74, 0x93,
+	0x9f, 0x2b, 0xaa, 0xa6, 0x66, 0x12, 0xf0, 0x4b, 0xf0, 0xf9, 0x3c, 0xb7, 0xcb, 0x2a, 0x7a, 0x7a,
+	0x52, 0xae, 0x5e, 0xea, 0x62, 0x19, 0xc9, 0x62, 0xe9, 0x85, 0x8e, 0xce, 0x2b, 0x15, 0xa5, 0xf2,
+	0x24, 0x93, 0x84, 0x9f, 0x81, 0xe3, 0xd8, 0xde, 0x91, 0x6d, 0x17, 0x1f, 0x4b, 0xbf, 0xdf, 0xee,
+	0x71, 0x7f, 0xde, 0xee, 0x71, 0xff, 0xdc, 0xee, 0x71, 0xdf, 0x3c, 0x6a, 0x12, 0x7a, 0xe5, 0xd5,
+	0x84, 0xba, 0xdd, 0x2e, 0x0c, 0x7d, 0x11, 0x0a, 0x4d, 0x6c, 0x05, 0xdf, 0x97, 0x83, 0x6f, 0xd3,
+	0x2f, 0x82, 0x5f, 0xdd, 0x62, 0x6d, 0x99, 0xad, 0x1c, 0xff, 0x1b, 0x00, 0x00, 0xff, 0xff, 0x7a,
+	0xbe, 0x21, 0x2a, 0xc5, 0x0e, 0x00, 0x00,
 }
+
+func (m *CrossClusterTaskInfo) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CrossClusterTaskInfo) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterTaskInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.VisibilityTimestamp != nil {
+		{
+			size, err := m.VisibilityTimestamp.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintQueue(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x32
+	}
+	if m.TaskId != 0 {
+		i = encodeVarintQueue(dAtA, i, uint64(m.TaskId))
+		i--
+		dAtA[i] = 0x28
+	}
+	if m.TaskState != 0 {
+		i = encodeVarintQueue(dAtA, i, uint64(m.TaskState))
+		i--
+		dAtA[i] = 0x20
+	}
+	if m.TaskType != 0 {
+		i = encodeVarintQueue(dAtA, i, uint64(m.TaskType))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.WorkflowExecution != nil {
+		{
+			size, err := m.WorkflowExecution.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintQueue(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.DomainId) > 0 {
+		i -= len(m.DomainId)
+		copy(dAtA[i:], m.DomainId)
+		i = encodeVarintQueue(dAtA, i, uint64(len(m.DomainId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CrossClusterStartChildExecutionRequestAttributes) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CrossClusterStartChildExecutionRequestAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterStartChildExecutionRequestAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.TargetRunId) > 0 {
+		i -= len(m.TargetRunId)
+		copy(dAtA[i:], m.TargetRunId)
+		i = encodeVarintQueue(dAtA, i, uint64(len(m.TargetRunId)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if m.InitiatedEventAttributes != nil {
+		{
+			size, err := m.InitiatedEventAttributes.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintQueue(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.InitiatedEventId != 0 {
+		i = encodeVarintQueue(dAtA, i, uint64(m.InitiatedEventId))
+		i--
+		dAtA[i] = 0x18
+	}
+	if len(m.RequestId) > 0 {
+		i -= len(m.RequestId)
+		copy(dAtA[i:], m.RequestId)
+		i = encodeVarintQueue(dAtA, i, uint64(len(m.RequestId)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.TargetDomainId) > 0 {
+		i -= len(m.TargetDomainId)
+		copy(dAtA[i:], m.TargetDomainId)
+		i = encodeVarintQueue(dAtA, i, uint64(len(m.TargetDomainId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CrossClusterStartChildExecutionResponseAttributes) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CrossClusterStartChildExecutionResponseAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterStartChildExecutionResponseAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.RunId) > 0 {
+		i -= len(m.RunId)
+		copy(dAtA[i:], m.RunId)
+		i = encodeVarintQueue(dAtA, i, uint64(len(m.RunId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CrossClusterCancelExecutionRequestAttributes) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CrossClusterCancelExecutionRequestAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterCancelExecutionRequestAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.ChildWorkflowOnly {
+		i--
+		if m.ChildWorkflowOnly {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x28
+	}
+	if m.InitiatedEventId != 0 {
+		i = encodeVarintQueue(dAtA, i, uint64(m.InitiatedEventId))
+		i--
+		dAtA[i] = 0x20
+	}
+	if len(m.RequestId) > 0 {
+		i -= len(m.RequestId)
+		copy(dAtA[i:], m.RequestId)
+		i = encodeVarintQueue(dAtA, i, uint64(len(m.RequestId)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.TargetWorkflowExecution != nil {
+		{
+			size, err := m.TargetWorkflowExecution.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintQueue(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.TargetDomainId) > 0 {
+		i -= len(m.TargetDomainId)
+		copy(dAtA[i:], m.TargetDomainId)
+		i = encodeVarintQueue(dAtA, i, uint64(len(m.TargetDomainId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CrossClusterCancelExecutionResponseAttributes) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CrossClusterCancelExecutionResponseAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterCancelExecutionResponseAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CrossClusterSignalExecutionRequestAttributes) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CrossClusterSignalExecutionRequestAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterSignalExecutionRequestAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.Control) > 0 {
+		i -= len(m.Control)
+		copy(dAtA[i:], m.Control)
+		i = encodeVarintQueue(dAtA, i, uint64(len(m.Control)))
+		i--
+		dAtA[i] = 0x42
+	}
+	if m.SignalInput != nil {
+		{
+			size, err := m.SignalInput.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintQueue(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x3a
+	}
+	if len(m.SignalName) > 0 {
+		i -= len(m.SignalName)
+		copy(dAtA[i:], m.SignalName)
+		i = encodeVarintQueue(dAtA, i, uint64(len(m.SignalName)))
+		i--
+		dAtA[i] = 0x32
+	}
+	if m.ChildWorkflowOnly {
+		i--
+		if m.ChildWorkflowOnly {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x28
+	}
+	if m.InitiatedEventId != 0 {
+		i = encodeVarintQueue(dAtA, i, uint64(m.InitiatedEventId))
+		i--
+		dAtA[i] = 0x20
+	}
+	if len(m.RequestId) > 0 {
+		i -= len(m.RequestId)
+		copy(dAtA[i:], m.RequestId)
+		i = encodeVarintQueue(dAtA, i, uint64(len(m.RequestId)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.TargetWorkflowExecution != nil {
+		{
+			size, err := m.TargetWorkflowExecution.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintQueue(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.TargetDomainId) > 0 {
+		i -= len(m.TargetDomainId)
+		copy(dAtA[i:], m.TargetDomainId)
+		i = encodeVarintQueue(dAtA, i, uint64(len(m.TargetDomainId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CrossClusterSignalExecutionResponseAttributes) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CrossClusterSignalExecutionResponseAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterSignalExecutionResponseAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CrossClusterTaskRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CrossClusterTaskRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterTaskRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.Attributes != nil {
+		{
+			size := m.Attributes.Size()
+			i -= size
+			if _, err := m.Attributes.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+		}
+	}
+	if m.TaskInfo != nil {
+		{
+			size, err := m.TaskInfo.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintQueue(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CrossClusterTaskRequest_StartChildExecutionAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterTaskRequest_StartChildExecutionAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.StartChildExecutionAttributes != nil {
+		{
+			size, err := m.StartChildExecutionAttributes.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintQueue(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	return len(dAtA) - i, nil
+}
+func (m *CrossClusterTaskRequest_CancelExecutionAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterTaskRequest_CancelExecutionAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.CancelExecutionAttributes != nil {
+		{
+			size, err := m.CancelExecutionAttributes.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintQueue(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	return len(dAtA) - i, nil
+}
+func (m *CrossClusterTaskRequest_SignalExecutionAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterTaskRequest_SignalExecutionAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.SignalExecutionAttributes != nil {
+		{
+			size, err := m.SignalExecutionAttributes.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintQueue(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x22
+	}
+	return len(dAtA) - i, nil
+}
+func (m *CrossClusterTaskResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CrossClusterTaskResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterTaskResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.Attributes != nil {
+		{
+			size := m.Attributes.Size()
+			i -= size
+			if _, err := m.Attributes.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+		}
+	}
+	if m.FailedCause != 0 {
+		i = encodeVarintQueue(dAtA, i, uint64(m.FailedCause))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.TaskType != 0 {
+		i = encodeVarintQueue(dAtA, i, uint64(m.TaskType))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.TaskId != 0 {
+		i = encodeVarintQueue(dAtA, i, uint64(m.TaskId))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CrossClusterTaskResponse_StartChildExecutionAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterTaskResponse_StartChildExecutionAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.StartChildExecutionAttributes != nil {
+		{
+			size, err := m.StartChildExecutionAttributes.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintQueue(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x22
+	}
+	return len(dAtA) - i, nil
+}
+func (m *CrossClusterTaskResponse_CancelExecutionAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterTaskResponse_CancelExecutionAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.CancelExecutionAttributes != nil {
+		{
+			size, err := m.CancelExecutionAttributes.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintQueue(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x2a
+	}
+	return len(dAtA) - i, nil
+}
+func (m *CrossClusterTaskResponse_SignalExecutionAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterTaskResponse_SignalExecutionAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.SignalExecutionAttributes != nil {
+		{
+			size, err := m.SignalExecutionAttributes.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintQueue(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x32
+	}
+	return len(dAtA) - i, nil
+}
+func (m *CrossClusterTaskRequests) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CrossClusterTaskRequests) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterTaskRequests) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.TaskRequests) > 0 {
+		for iNdEx := len(m.TaskRequests) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.TaskRequests[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintQueue(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func encodeVarintQueue(dAtA []byte, offset int, v uint64) int {
+	offset -= sovQueue(v)
+	base := offset
+	for v >= 1<<7 {
+		dAtA[offset] = uint8(v&0x7f | 0x80)
+		v >>= 7
+		offset++
+	}
+	dAtA[offset] = uint8(v)
+	return base
+}
+func (m *CrossClusterTaskInfo) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.DomainId)
+	if l > 0 {
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	if m.WorkflowExecution != nil {
+		l = m.WorkflowExecution.Size()
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	if m.TaskType != 0 {
+		n += 1 + sovQueue(uint64(m.TaskType))
+	}
+	if m.TaskState != 0 {
+		n += 1 + sovQueue(uint64(m.TaskState))
+	}
+	if m.TaskId != 0 {
+		n += 1 + sovQueue(uint64(m.TaskId))
+	}
+	if m.VisibilityTimestamp != nil {
+		l = m.VisibilityTimestamp.Size()
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *CrossClusterStartChildExecutionRequestAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.TargetDomainId)
+	if l > 0 {
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	l = len(m.RequestId)
+	if l > 0 {
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	if m.InitiatedEventId != 0 {
+		n += 1 + sovQueue(uint64(m.InitiatedEventId))
+	}
+	if m.InitiatedEventAttributes != nil {
+		l = m.InitiatedEventAttributes.Size()
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	l = len(m.TargetRunId)
+	if l > 0 {
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *CrossClusterStartChildExecutionResponseAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.RunId)
+	if l > 0 {
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *CrossClusterCancelExecutionRequestAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.TargetDomainId)
+	if l > 0 {
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	if m.TargetWorkflowExecution != nil {
+		l = m.TargetWorkflowExecution.Size()
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	l = len(m.RequestId)
+	if l > 0 {
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	if m.InitiatedEventId != 0 {
+		n += 1 + sovQueue(uint64(m.InitiatedEventId))
+	}
+	if m.ChildWorkflowOnly {
+		n += 2
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *CrossClusterCancelExecutionResponseAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *CrossClusterSignalExecutionRequestAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.TargetDomainId)
+	if l > 0 {
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	if m.TargetWorkflowExecution != nil {
+		l = m.TargetWorkflowExecution.Size()
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	l = len(m.RequestId)
+	if l > 0 {
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	if m.InitiatedEventId != 0 {
+		n += 1 + sovQueue(uint64(m.InitiatedEventId))
+	}
+	if m.ChildWorkflowOnly {
+		n += 2
+	}
+	l = len(m.SignalName)
+	if l > 0 {
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	if m.SignalInput != nil {
+		l = m.SignalInput.Size()
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	l = len(m.Control)
+	if l > 0 {
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *CrossClusterSignalExecutionResponseAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *CrossClusterTaskRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.TaskInfo != nil {
+		l = m.TaskInfo.Size()
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	if m.Attributes != nil {
+		n += m.Attributes.Size()
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *CrossClusterTaskRequest_StartChildExecutionAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.StartChildExecutionAttributes != nil {
+		l = m.StartChildExecutionAttributes.Size()
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	return n
+}
+func (m *CrossClusterTaskRequest_CancelExecutionAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.CancelExecutionAttributes != nil {
+		l = m.CancelExecutionAttributes.Size()
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	return n
+}
+func (m *CrossClusterTaskRequest_SignalExecutionAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.SignalExecutionAttributes != nil {
+		l = m.SignalExecutionAttributes.Size()
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	return n
+}
+func (m *CrossClusterTaskResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.TaskId != 0 {
+		n += 1 + sovQueue(uint64(m.TaskId))
+	}
+	if m.TaskType != 0 {
+		n += 1 + sovQueue(uint64(m.TaskType))
+	}
+	if m.FailedCause != 0 {
+		n += 1 + sovQueue(uint64(m.FailedCause))
+	}
+	if m.Attributes != nil {
+		n += m.Attributes.Size()
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *CrossClusterTaskResponse_StartChildExecutionAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.StartChildExecutionAttributes != nil {
+		l = m.StartChildExecutionAttributes.Size()
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	return n
+}
+func (m *CrossClusterTaskResponse_CancelExecutionAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.CancelExecutionAttributes != nil {
+		l = m.CancelExecutionAttributes.Size()
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	return n
+}
+func (m *CrossClusterTaskResponse_SignalExecutionAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.SignalExecutionAttributes != nil {
+		l = m.SignalExecutionAttributes.Size()
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	return n
+}
+func (m *CrossClusterTaskRequests) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.TaskRequests) > 0 {
+		for _, e := range m.TaskRequests {
+			l = e.Size()
+			n += 1 + l + sovQueue(uint64(l))
+		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func sovQueue(x uint64) (n int) {
+	return (math_bits.Len64(x|1) + 6) / 7
+}
+func sozQueue(x uint64) (n int) {
+	return sovQueue(uint64((x << 1) ^ uint64((int64(x) >> 63))))
+}
+func (m *CrossClusterTaskInfo) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQueue
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CrossClusterTaskInfo: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CrossClusterTaskInfo: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DomainId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.DomainId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field WorkflowExecution", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.WorkflowExecution == nil {
+				m.WorkflowExecution = &v1.WorkflowExecution{}
+			}
+			if err := m.WorkflowExecution.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TaskType", wireType)
+			}
+			m.TaskType = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TaskType |= CrossClusterTaskType(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TaskState", wireType)
+			}
+			m.TaskState = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TaskState |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TaskId", wireType)
+			}
+			m.TaskId = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TaskId |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field VisibilityTimestamp", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.VisibilityTimestamp == nil {
+				m.VisibilityTimestamp = &types.Timestamp{}
+			}
+			if err := m.VisibilityTimestamp.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQueue(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CrossClusterStartChildExecutionRequestAttributes) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQueue
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CrossClusterStartChildExecutionRequestAttributes: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CrossClusterStartChildExecutionRequestAttributes: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TargetDomainId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.TargetDomainId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RequestId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RequestId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InitiatedEventId", wireType)
+			}
+			m.InitiatedEventId = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.InitiatedEventId |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InitiatedEventAttributes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.InitiatedEventAttributes == nil {
+				m.InitiatedEventAttributes = &v1.StartChildWorkflowExecutionInitiatedEventAttributes{}
+			}
+			if err := m.InitiatedEventAttributes.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TargetRunId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.TargetRunId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQueue(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CrossClusterStartChildExecutionResponseAttributes) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQueue
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CrossClusterStartChildExecutionResponseAttributes: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CrossClusterStartChildExecutionResponseAttributes: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RunId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RunId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQueue(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CrossClusterCancelExecutionRequestAttributes) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQueue
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CrossClusterCancelExecutionRequestAttributes: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CrossClusterCancelExecutionRequestAttributes: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TargetDomainId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.TargetDomainId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TargetWorkflowExecution", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.TargetWorkflowExecution == nil {
+				m.TargetWorkflowExecution = &v1.WorkflowExecution{}
+			}
+			if err := m.TargetWorkflowExecution.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RequestId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RequestId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InitiatedEventId", wireType)
+			}
+			m.InitiatedEventId = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.InitiatedEventId |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChildWorkflowOnly", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.ChildWorkflowOnly = bool(v != 0)
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQueue(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CrossClusterCancelExecutionResponseAttributes) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQueue
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CrossClusterCancelExecutionResponseAttributes: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CrossClusterCancelExecutionResponseAttributes: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQueue(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CrossClusterSignalExecutionRequestAttributes) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQueue
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CrossClusterSignalExecutionRequestAttributes: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CrossClusterSignalExecutionRequestAttributes: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TargetDomainId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.TargetDomainId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TargetWorkflowExecution", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.TargetWorkflowExecution == nil {
+				m.TargetWorkflowExecution = &v1.WorkflowExecution{}
+			}
+			if err := m.TargetWorkflowExecution.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RequestId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RequestId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InitiatedEventId", wireType)
+			}
+			m.InitiatedEventId = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.InitiatedEventId |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChildWorkflowOnly", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.ChildWorkflowOnly = bool(v != 0)
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SignalName", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SignalName = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SignalInput", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.SignalInput == nil {
+				m.SignalInput = &v1.Payload{}
+			}
+			if err := m.SignalInput.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Control", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Control = append(m.Control[:0], dAtA[iNdEx:postIndex]...)
+			if m.Control == nil {
+				m.Control = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQueue(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CrossClusterSignalExecutionResponseAttributes) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQueue
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CrossClusterSignalExecutionResponseAttributes: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CrossClusterSignalExecutionResponseAttributes: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQueue(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CrossClusterTaskRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQueue
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CrossClusterTaskRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CrossClusterTaskRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TaskInfo", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.TaskInfo == nil {
+				m.TaskInfo = &CrossClusterTaskInfo{}
+			}
+			if err := m.TaskInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field StartChildExecutionAttributes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &CrossClusterStartChildExecutionRequestAttributes{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Attributes = &CrossClusterTaskRequest_StartChildExecutionAttributes{v}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CancelExecutionAttributes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &CrossClusterCancelExecutionRequestAttributes{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Attributes = &CrossClusterTaskRequest_CancelExecutionAttributes{v}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SignalExecutionAttributes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &CrossClusterSignalExecutionRequestAttributes{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Attributes = &CrossClusterTaskRequest_SignalExecutionAttributes{v}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQueue(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CrossClusterTaskResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQueue
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CrossClusterTaskResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CrossClusterTaskResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TaskId", wireType)
+			}
+			m.TaskId = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TaskId |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TaskType", wireType)
+			}
+			m.TaskType = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TaskType |= CrossClusterTaskType(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FailedCause", wireType)
+			}
+			m.FailedCause = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.FailedCause |= CrossClusterTaskFailedCause(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field StartChildExecutionAttributes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &CrossClusterStartChildExecutionResponseAttributes{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Attributes = &CrossClusterTaskResponse_StartChildExecutionAttributes{v}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CancelExecutionAttributes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &CrossClusterCancelExecutionResponseAttributes{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Attributes = &CrossClusterTaskResponse_CancelExecutionAttributes{v}
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SignalExecutionAttributes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &CrossClusterSignalExecutionResponseAttributes{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Attributes = &CrossClusterTaskResponse_SignalExecutionAttributes{v}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQueue(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CrossClusterTaskRequests) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQueue
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CrossClusterTaskRequests: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CrossClusterTaskRequests: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TaskRequests", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.TaskRequests = append(m.TaskRequests, &CrossClusterTaskRequest{})
+			if err := m.TaskRequests[len(m.TaskRequests)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQueue(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func skipQueue(dAtA []byte) (n int, err error) {
+	l := len(dAtA)
+	iNdEx := 0
+	depth := 0
+	for iNdEx < l {
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return 0, ErrIntOverflowQueue
+			}
+			if iNdEx >= l {
+				return 0, io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		wireType := int(wire & 0x7)
+		switch wireType {
+		case 0:
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return 0, ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return 0, io.ErrUnexpectedEOF
+				}
+				iNdEx++
+				if dAtA[iNdEx-1] < 0x80 {
+					break
+				}
+			}
+		case 1:
+			iNdEx += 8
+		case 2:
+			var length int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return 0, ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return 0, io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				length |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if length < 0 {
+				return 0, ErrInvalidLengthQueue
+			}
+			iNdEx += length
+		case 3:
+			depth++
+		case 4:
+			if depth == 0 {
+				return 0, ErrUnexpectedEndOfGroupQueue
+			}
+			depth--
+		case 5:
+			iNdEx += 4
+		default:
+			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
+		}
+		if iNdEx < 0 {
+			return 0, ErrInvalidLengthQueue
+		}
+		if depth == 0 {
+			return iNdEx, nil
+		}
+	}
+	return 0, io.ErrUnexpectedEOF
+}
+
+var (
+	ErrInvalidLengthQueue        = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowQueue          = fmt.Errorf("proto: integer overflow")
+	ErrUnexpectedEndOfGroupQueue = fmt.Errorf("proto: unexpected end of group")
+)

@@ -24,9 +24,103 @@ package uber.cadence.shared.v1;
 
 option go_package = "github.com/uber/cadence/.gen/proto/shared/v1;sharedv1";
 
+import "google/protobuf/timestamp.proto";
+import "uber/cadence/api/v1/common.proto";
+import "uber/cadence/api/v1/history.proto";
+
 enum TaskType {
   TASK_TYPE_INVALID = 0;
   TASK_TYPE_TRANSFER = 1;
   TASK_TYPE_TIMER = 2;
   TASK_TYPE_REPLICATION = 3;
+  // TODO: add TASK_TYPE_CROSS_CLUSTER 
+  // when updating RemoveTask, Reset/DescribeQueue API
+  // for supporting cross cluster task queue
+}
+
+enum CrossClusterTaskType {
+  CROSS_CLUSTER_TASK_TYPE_INVALID = 0;
+  CROSS_CLUSTER_TASK_TYPE_START_CHILD_EXECUTION = 1;
+  CROSS_CLUSTER_TASK_TYPE_CANCEL_EXECUTION = 2;
+  CROSS_CLUSTER_TASK_TYPE_SIGNAL_EXECUTION = 3;
+}
+
+enum CrossClusterTaskFailedCause {
+  CROSS_CLUSTER_TASK_FAILED_CAUSE_INVALID = 0;
+  CROSS_CLUSTER_TASK_FAILED_CAUSE_DOMAIN_NOT_ACTIVE = 1;
+  CROSS_CLUSTER_TASK_FAILED_CAUSE_DOMAIN_NOT_EXISTS = 2;
+  CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_ALREADY_RUNNING = 3;
+  CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_NOT_EXISTS = 4;
+}
+
+message CrossClusterTaskInfo {
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  CrossClusterTaskType task_type = 3;
+  int32 task_state = 4;
+  int64 task_id = 5;
+  google.protobuf.Timestamp visibilityTimestamp = 6;
+}
+
+message CrossClusterStartChildExecutionRequestAttributes {
+  string target_domain_id = 1;
+  string request_id = 2;
+  int64 initiated_event_id = 3;
+  api.v1.StartChildWorkflowExecutionInitiatedEventAttributes initiated_event_attributes = 4;
+  // targetRunID is for scheduling first decision task 
+  // targetWorkflowID is available in initiatedEventAttributes
+  string target_run_id = 5;
+}
+
+message CrossClusterStartChildExecutionResponseAttributes {
+  string run_id = 1;
+}
+
+message CrossClusterCancelExecutionRequestAttributes {
+  string target_domain_id = 1;
+  api.v1.WorkflowExecution target_workflow_execution = 2;
+  string request_id = 3;
+  int64 initiated_event_id = 4;
+  bool child_workflow_only = 5;
+}
+
+message CrossClusterCancelExecutionResponseAttributes {
+}
+
+message CrossClusterSignalExecutionRequestAttributes {
+  string target_domain_id = 1;
+  api.v1.WorkflowExecution target_workflow_execution = 2;
+  string request_id = 3;
+  int64 initiated_event_id = 4;
+  bool child_workflow_only = 5;
+  string signal_name = 6;
+  api.v1.Payload signal_input = 7;
+  bytes control = 8;
+}
+
+message CrossClusterSignalExecutionResponseAttributes {
+}
+
+message CrossClusterTaskRequest {
+  CrossClusterTaskInfo task_info = 1;
+  oneof attributes {
+    CrossClusterStartChildExecutionRequestAttributes startChildExecutionAttributes = 2;
+    CrossClusterCancelExecutionRequestAttributes cancelExecutionAttributes = 3;
+    CrossClusterSignalExecutionRequestAttributes signalExecutionAttributes = 4;
+  }
+}
+
+message CrossClusterTaskResponse {
+  int64 task_id = 1;
+  CrossClusterTaskType task_type = 2;
+  CrossClusterTaskFailedCause failed_cause = 3;
+  oneof attributes {
+    CrossClusterStartChildExecutionResponseAttributes startChildExecutionAttributes = 4;
+    CrossClusterCancelExecutionResponseAttributes cancelExecutionAttributes = 5;
+    CrossClusterSignalExecutionResponseAttributes signalExecutionAttributes = 6;
+  }
+}
+
+message CrossClusterTaskRequests {
+  repeated CrossClusterTaskRequest task_requests = 1;
 }
