@@ -36,7 +36,7 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
 	execution *nosqlplugin.WorkflowExecutionRow,
 	shardCondition *nosqlplugin.ShardCondition,
-) (*nosqlplugin.ConditionFailureReason, error) {
+) error {
 	previous := make(map[string]interface{})
 	applied, iter, err := db.session.MapExecuteBatchCAS(batch, previous)
 	defer func() {
@@ -46,7 +46,7 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 	}()
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if !applied {
@@ -64,9 +64,9 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 			if rowType == rowTypeShard {
 				if rangeID, ok := previous["range_id"].(int64); ok && rangeID != shardCondition.RangeID {
 					// CreateWorkflowExecution failed because rangeID was modified
-					return &nosqlplugin.ConditionFailureReason{
+					return &nosqlplugin.WorkflowOperationConditionFailure{
 						ShardRangeIDNotMatch: common.Int64Ptr(rangeID),
-					}, errConditionFailed
+					}
 				}
 
 			} else if rowType == rowTypeExecution && runID == permanentRunID {
@@ -87,7 +87,7 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 						executionInfo.WorkflowID, executionInfo.RunID, shardCondition.RangeID, strings.Join(columns, ","))
 
 					if currentWorkflowRequest.WriteMode == nosqlplugin.CurrentWorkflowWriteModeInsert {
-						return &nosqlplugin.ConditionFailureReason{
+						return &nosqlplugin.WorkflowOperationConditionFailure{
 							WorkflowExecutionAlreadyExists: &nosqlplugin.WorkflowExecutionAlreadyExists{
 								OtherInfo:        msg,
 								CreateRequestID:  executionInfo.CreateRequestID,
@@ -96,11 +96,11 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 								CloseStatus:      executionInfo.CloseStatus,
 								LastWriteVersion: lastWriteVersion,
 							},
-						}, errConditionFailed
+						}
 					}
-					return &nosqlplugin.ConditionFailureReason{
+					return &nosqlplugin.WorkflowOperationConditionFailure{
 						CurrentWorkflowConditionFailInfo: &msg,
-					}, errConditionFailed
+					}
 
 				}
 
@@ -108,16 +108,16 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 					// currentRunID on previous run has been changed, return to caller to handle
 					msg := fmt.Sprintf("Workflow execution creation condition failed by mismatch runID. WorkflowId: %v, Expected Current RunID: %v, Actual Current RunID: %v",
 						execution.WorkflowID, currentWorkflowRequest.Condition.GetCurrentRunID(), prevRunID)
-					return &nosqlplugin.ConditionFailureReason{
+					return &nosqlplugin.WorkflowOperationConditionFailure{
 						CurrentWorkflowConditionFailInfo: &msg,
-					}, errConditionFailed
+					}
 				}
 
 				msg := fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, CurrentRunID: %v, columns: (%v)",
 					execution.WorkflowID, execution.RunID, strings.Join(columns, ","))
-				return &nosqlplugin.ConditionFailureReason{
+				return &nosqlplugin.WorkflowOperationConditionFailure{
 					CurrentWorkflowConditionFailInfo: &msg,
-				}, errConditionFailed
+				}
 			} else if rowType == rowTypeExecution && execution.RunID == runID {
 				msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v",
 					execution.WorkflowID, execution.RunID, shardCondition.RangeID)
@@ -125,7 +125,7 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 				if previous["workflow_last_write_version"] != nil {
 					lastWriteVersion = previous["workflow_last_write_version"].(int64)
 				}
-				return &nosqlplugin.ConditionFailureReason{
+				return &nosqlplugin.WorkflowOperationConditionFailure{
 					WorkflowExecutionAlreadyExists: &nosqlplugin.WorkflowExecutionAlreadyExists{
 						OtherInfo:        msg,
 						CreateRequestID:  execution.CreateRequestID,
@@ -134,7 +134,7 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 						CloseStatus:      execution.CloseStatus,
 						LastWriteVersion: lastWriteVersion,
 					},
-				}, errConditionFailed
+				}
 			}
 
 			previous = make(map[string]interface{})
@@ -145,16 +145,16 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 			}
 		}
 
-		return newUnknownConditionFailureReason(shardCondition.RangeID, previous), errConditionFailed
+		return newUnknownConditionFailureReason(shardCondition.RangeID, previous)
 	}
 
-	return nil, nil
+	return nil
 }
 
 func newUnknownConditionFailureReason(
 	rangeID int64,
 	row map[string]interface{},
-) *nosqlplugin.ConditionFailureReason {
+) *nosqlplugin.WorkflowOperationConditionFailure {
 	// At this point we only know that the write was not applied.
 	// It's much safer to return ShardOwnershipLostError as the default to force the application to reload
 	// shard to recover from such errors
@@ -166,7 +166,7 @@ func newUnknownConditionFailureReason(
 	msg := fmt.Sprintf("Failed to operate on workflow execution.  Request RangeID: %v, columns: (%v)",
 		rangeID, strings.Join(columns, ","))
 
-	return &nosqlplugin.ConditionFailureReason{
+	return &nosqlplugin.WorkflowOperationConditionFailure{
 		UnknownConditionFailureDetails: &msg,
 	}
 }

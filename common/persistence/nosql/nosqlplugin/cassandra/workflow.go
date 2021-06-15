@@ -44,7 +44,7 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 	signalInfoMap map[int64]*persistence.SignalInfo,
 	signalRequestedIDs []string,
 	shardCondition *nosqlplugin.ShardCondition,
-) (*nosqlplugin.ConditionFailureReason, error) {
+) error {
 	shardID := shardCondition.ShardID
 	domainID := execution.DomainID
 	workflowID := execution.WorkflowID
@@ -54,59 +54,59 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 
 	err := db.createOrUpdateCurrentWorkflow(batch, shardID, domainID, workflowID, currentWorkflowRequest)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = db.createWorkflowExecution(batch, shardID, domainID, workflowID, runID, execution)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = db.updateActivityInfos(batch, shardID, domainID, workflowID, runID, activityInfoMap, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	err = db.updateTimerInfos(batch, shardID, domainID, workflowID, runID, timerInfoMap, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	err = db.updateChildExecutionInfos(batch, shardID, domainID, workflowID, runID, childWorkflowInfoMap, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	err = db.updateRequestCancelInfos(batch, shardID, domainID, workflowID, runID, requestCancelInfoMap, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	err = db.updateSignalInfos(batch, shardID, domainID, workflowID, runID, signalInfoMap, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	err = db.updateSignalsRequested(batch, shardID, domainID, workflowID, runID, signalRequestedIDs, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = db.createTransferTasks(batch, shardID, domainID, workflowID, runID, transferTasks)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	err = db.createReplicationTasks(batch, shardID, domainID, workflowID, runID, replicationTasks)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	err = db.createCrossClusterTasks(batch, shardID, domainID, workflowID, runID, crossClusterTasks)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	err = db.createTimerTasks(batch, shardID, domainID, workflowID, runID, timerTasks)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = db.assertShardRangeID(batch, shardID, shardCondition.RangeID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	return db.executeCreateWorkflowBatchTransaction(batch, currentWorkflowRequest, execution, shardCondition)

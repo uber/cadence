@@ -854,7 +854,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 		RangeID: request.RangeID,
 	}
 
-	conditionFailureReason, err := d.db.InsertWorkflowExecutionWithTasks(
+	err = d.db.InsertWorkflowExecutionWithTasks(
 		ctx,
 		currentWorkflowWriteReq, execution,
 		transferTasks, crossClusterTasks, replicationTasks, timerTasks,
@@ -862,31 +862,32 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 		shardCondition,
 	)
 	if err != nil {
-		if d.db.IsConditionFailedError(err) {
+		conditionFailureErr, isConditionFailedError := err.(*nosqlplugin.WorkflowOperationConditionFailure)
+		if isConditionFailedError {
 			switch {
-			case conditionFailureReason.UnknownConditionFailureDetails != nil:
+			case conditionFailureErr.UnknownConditionFailureDetails != nil:
 				return nil, &p.ShardOwnershipLostError{
 					ShardID: d.shardID,
-					Msg:     *conditionFailureReason.UnknownConditionFailureDetails,
+					Msg:     *conditionFailureErr.UnknownConditionFailureDetails,
 				}
-			case conditionFailureReason.ShardRangeIDNotMatch != nil:
+			case conditionFailureErr.ShardRangeIDNotMatch != nil:
 				return nil, &p.ShardOwnershipLostError{
 					ShardID: d.shardID,
 					Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, Actual RangeID: %v",
-						request.RangeID, *conditionFailureReason.ShardRangeIDNotMatch),
+						request.RangeID, *conditionFailureErr.ShardRangeIDNotMatch),
 				}
-			case conditionFailureReason.CurrentWorkflowConditionFailInfo != nil:
+			case conditionFailureErr.CurrentWorkflowConditionFailInfo != nil:
 				return nil, &p.CurrentWorkflowConditionFailedError{
-					Msg: *conditionFailureReason.CurrentWorkflowConditionFailInfo,
+					Msg: *conditionFailureErr.CurrentWorkflowConditionFailInfo,
 				}
-			case conditionFailureReason.WorkflowExecutionAlreadyExists != nil:
+			case conditionFailureErr.WorkflowExecutionAlreadyExists != nil:
 				return nil, &p.WorkflowExecutionAlreadyStartedError{
-					Msg:              conditionFailureReason.WorkflowExecutionAlreadyExists.OtherInfo,
-					StartRequestID:   conditionFailureReason.WorkflowExecutionAlreadyExists.CreateRequestID,
-					RunID:            conditionFailureReason.WorkflowExecutionAlreadyExists.RunID,
-					State:            conditionFailureReason.WorkflowExecutionAlreadyExists.State,
-					CloseStatus:      conditionFailureReason.WorkflowExecutionAlreadyExists.CloseStatus,
-					LastWriteVersion: conditionFailureReason.WorkflowExecutionAlreadyExists.LastWriteVersion,
+					Msg:              conditionFailureErr.WorkflowExecutionAlreadyExists.OtherInfo,
+					StartRequestID:   conditionFailureErr.WorkflowExecutionAlreadyExists.CreateRequestID,
+					RunID:            conditionFailureErr.WorkflowExecutionAlreadyExists.RunID,
+					State:            conditionFailureErr.WorkflowExecutionAlreadyExists.State,
+					CloseStatus:      conditionFailureErr.WorkflowExecutionAlreadyExists.CloseStatus,
+					LastWriteVersion: conditionFailureErr.WorkflowExecutionAlreadyExists.LastWriteVersion,
 				}
 			default:
 				// If ever runs into this branch, there is bug in the code either in here, or in the implementation of nosql plugin

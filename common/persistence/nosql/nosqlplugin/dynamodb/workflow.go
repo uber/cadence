@@ -43,6 +43,6 @@ func (db *ddb) InsertWorkflowExecutionWithTasks(
 	signalInfoMap map[int64]*persistence.SignalInfo,
 	signalRequestedIDs []string,
 	shardCondition *nosqlplugin.ShardCondition,
-) (*nosqlplugin.ConditionFailureReason, error) {
+) error {
 	panic("TODO")
 }

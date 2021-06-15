@@ -398,7 +398,7 @@ type (
 		// 11. Create signalInfo
 		// 12. Create signalRequested
 		// 13. Check if the condition of shard rangeID is met
-		// The API returns error if there is any. If any of the condition is not met, returns IsConditionFailedError and the ConditionFailureReason
+		// The API returns error if there is any. If any of the condition is not met, returns WorkflowOperationConditionFailure
 		InsertWorkflowExecutionWithTasks(
 			ctx context.Context,
 			currentWorkflowRequest *CurrentWorkflowWriteRequest,
@@ -414,7 +414,7 @@ type (
 			signalInfoMap map[int64]*persistence.SignalInfo,
 			signalRequestedIDs []string,
 			shardCondition *ShardCondition,
-		) (*ConditionFailureReason, error)
+		) error
 	}
 
 	WorkflowExecutionRow struct {
@@ -509,7 +509,7 @@ type (
 	}
 
 	// Only one of the fields must be non-nil
-	ConditionFailureReason struct {
+	WorkflowOperationConditionFailure struct {
 		UnknownConditionFailureDetails   *string // return some info for logging
 		ShardRangeIDNotMatch             *int64  // return the previous shardRangeID
 		WorkflowExecutionAlreadyExists   *WorkflowExecutionAlreadyExists
@@ -715,4 +715,8 @@ func (w *CurrentWorkflowWriteCondition) GetCurrentRunID() string {
 		return ""
 	}
 	return *w.CurrentRunID
+}
+
+func (e *WorkflowOperationConditionFailure) Error() string {
+	return "condition failure"
 }
