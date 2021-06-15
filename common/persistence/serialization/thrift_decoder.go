@@ -136,7 +136,7 @@ func (d *thriftDecoder) transferTaskInfoFromBlob(data []byte) (*TransferTaskInfo
 }
 
 func (d *thriftDecoder) crossClusterTaskInfoFromBlob(data []byte) (*CrossClusterTaskInfo, error) {
-	result := &sqlblobs.CrossClusterTaskInfo{}
+	result := &sqlblobsCrossClusterTaskInfo{}
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
 	}

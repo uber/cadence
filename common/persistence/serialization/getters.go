@@ -148,6 +148,22 @@ func (s *ShardInfo) GetTransferProcessingQueueStatesEncoding() (o string) {
 	return
 }
 
+// GetCrossClusterProcessingQueueStates internal sql blob getter
+func (s *ShardInfo) GetCrossClusterProcessingQueueStates() (o []byte) {
+	if s != nil {
+		return s.CrossClusterProcessingQueueStates
+	}
+	return
+}
+
+// GetCrossClusterProcessingQueueStatesEncoding internal sql blob getter
+func (s *ShardInfo) GetCrossClusterProcessingQueueStatesEncoding() (o string) {
+	if s != nil {
+		return s.CrossClusterProcessingQueueStatesEncoding
+	}
+	return
+}
+
 // GetTimerProcessingQueueStates internal sql blob getter
 func (s *ShardInfo) GetTimerProcessingQueueStates() (o []byte) {
 	if s != nil {
@@ -1470,102 +1486,6 @@ func (t *TransferTaskInfo) GetVersion() (o int64) {
 
 // GetVisibilityTimestamp internal sql blob getter
 func (t *TransferTaskInfo) GetVisibilityTimestamp() time.Time {
-	if t != nil {
-		return t.VisibilityTimestamp
-	}
-	return time.Unix(0, 0)
-}
-
-// GetDomainID internal sql blob getter
-func (t *CrossClusterTaskInfo) GetDomainID() (o []byte) {
-	if t != nil {
-		return t.DomainID
-	}
-	return
-}
-
-// GetWorkflowID internal sql blob getter
-func (t *CrossClusterTaskInfo) GetWorkflowID() (o string) {
-	if t != nil {
-		return t.WorkflowID
-	}
-	return
-}
-
-// GetRunID internal sql blob getter
-func (t *CrossClusterTaskInfo) GetRunID() (o []byte) {
-	if t != nil {
-		return t.RunID
-	}
-	return
-}
-
-// GetTaskType internal sql blob getter
-func (t *CrossClusterTaskInfo) GetTaskType() (o int16) {
-	if t != nil {
-		return t.TaskType
-	}
-	return
-}
-
-// GetTargetDomainID internal sql blob getter
-func (t *CrossClusterTaskInfo) GetTargetDomainID() (o []byte) {
-	if t != nil {
-		return t.TargetDomainID
-	}
-	return
-}
-
-// GetTargetWorkflowID internal sql blob getter
-func (t *CrossClusterTaskInfo) GetTargetWorkflowID() (o string) {
-	if t != nil {
-		return t.TargetWorkflowID
-	}
-	return
-}
-
-// GetTargetRunID internal sql blob getter
-func (t *CrossClusterTaskInfo) GetTargetRunID() (o []byte) {
-	if t != nil {
-		return t.TargetRunID
-	}
-	return
-}
-
-// GetTaskList internal sql blob getter
-func (t *CrossClusterTaskInfo) GetTaskList() (o string) {
-	if t != nil {
-		return t.TaskList
-	}
-	return
-}
-
-// GetTargetChildWorkflowOnly internal sql blob getter
-func (t *CrossClusterTaskInfo) GetTargetChildWorkflowOnly() (o bool) {
-	if t != nil {
-		return t.TargetChildWorkflowOnly
-	}
-	return
-}
-
-// GetScheduleID internal sql blob getter
-func (t *CrossClusterTaskInfo) GetScheduleID() (o int64) {
-	if t != nil {
-		return t.ScheduleID
-	}
-	return
-}
-
-// GetVersion internal sql blob getter
-func (t *CrossClusterTaskInfo) GetVersion() (o int64) {
-	if t != nil {
-		return t.Version
-	}
-	return
-}
-
-// GetVisibilityTimestamp internal sql blob getter
-func (t *CrossClusterTaskInfo) GetVisibilityTimestamp() time.Time {
 	if t != nil {
 		return t.VisibilityTimestamp
 	}

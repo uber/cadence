@@ -27,6 +27,7 @@ import (
 
 	"go.uber.org/thriftrw/wire"
 
+	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -272,7 +273,11 @@ type (
 	}
 
 	// CrossClusterTask blob in a serialization agnostic format
-	CrossClusterTaskInfo TransferTaskInfo
+	// Cross cluster tasks are exactly like transfer tasks so
+	// instead of creating another struct and duplicating the same
+	// logic everywhere. We reuse TransferTaskInfo
+	CrossClusterTaskInfo         = TransferTaskInfo
+	sqlblobsCrossClusterTaskInfo = sqlblobs.TransferTaskInfo
 
 	// TimerTaskInfo blob in a serialization agnostic format
 	TimerTaskInfo struct {

@@ -379,7 +379,10 @@ type (
 	}
 
 	// CrossClusterTaskInfo describes a cross-cluster task
-	CrossClusterTaskInfo TransferTaskInfo
+	// Cross cluster tasks are exactly like transfer tasks so
+	// instead of creating another struct and duplicating the same
+	// logic everywhere. We reuse TransferTaskInfo
+	CrossClusterTaskInfo = TransferTaskInfo
 
 	// ReplicationTaskInfo describes the replication task created for replication of history events
 	ReplicationTaskInfo struct {
@@ -2470,49 +2473,6 @@ func (t *TransferTaskInfo) GetDomainID() string {
 
 // String returns a string representation for transfer task
 func (t *TransferTaskInfo) String() string {
-	return fmt.Sprintf(
-		"{DomainID: %v, WorkflowID: %v, RunID: %v, TaskID: %v, TargetDomainID: %v, TargetWorkflowID %v, TargetRunID: %v, TargetChildWorkflowOnly: %v, TaskList: %v, TaskType: %v, ScheduleID: %v, Version: %v.}",
-		t.DomainID, t.WorkflowID, t.RunID, t.TaskID, t.TargetDomainID, t.TargetWorkflowID, t.TargetRunID, t.TargetChildWorkflowOnly, t.TaskList, t.TaskType, t.ScheduleID, t.Version,
-	)
-}
-
-// GetTaskID returns the task ID for cross-cluster task
-func (t *CrossClusterTaskInfo) GetTaskID() int64 {
-	return t.TaskID
-}
-
-// GetVersion returns the task version for cross-cluster task
-func (t *CrossClusterTaskInfo) GetVersion() int64 {
-	return t.Version
-}
-
-// GetTaskType returns the task type for cross-cluster task
-func (t *CrossClusterTaskInfo) GetTaskType() int {
-	return t.TaskType
-}
-
-// GetVisibilityTimestamp returns the task type for cross-cluster task
-func (t *CrossClusterTaskInfo) GetVisibilityTimestamp() time.Time {
-	return t.VisibilityTimestamp
-}
-
-// GetWorkflowID returns the workflow ID for cross-cluster task
-func (t *CrossClusterTaskInfo) GetWorkflowID() string {
-	return t.WorkflowID
-}
-
-// GetRunID returns the run ID for cross-cluster task
-func (t *CrossClusterTaskInfo) GetRunID() string {
-	return t.RunID
-}
-
-// GetDomainID returns the domain ID for cross-cluster task
-func (t *CrossClusterTaskInfo) GetDomainID() string {
-	return t.DomainID
-}
-
-// String returns a string representation for cross-cluster task
-func (t *CrossClusterTaskInfo) String() string {
 	return fmt.Sprintf(
 		"{DomainID: %v, WorkflowID: %v, RunID: %v, TaskID: %v, TargetDomainID: %v, TargetWorkflowID %v, TargetRunID: %v, TargetChildWorkflowOnly: %v, TaskList: %v, TaskType: %v, ScheduleID: %v, Version: %v.}",
 		t.DomainID, t.WorkflowID, t.RunID, t.TaskID, t.TargetDomainID, t.TargetWorkflowID, t.TargetRunID, t.TargetChildWorkflowOnly, t.TaskList, t.TaskType, t.ScheduleID, t.Version,

@@ -620,44 +620,12 @@ func transferTaskInfoFromThrift(info *sqlblobs.TransferTaskInfo) *TransferTaskIn
 	}
 }
 
-func crossClusterTaskInfoToThrift(info *CrossClusterTaskInfo) *sqlblobs.CrossClusterTaskInfo {
-	if info == nil {
-		return nil
-	}
-	return &sqlblobs.CrossClusterTaskInfo{
-		DomainID:                 info.DomainID,
-		WorkflowID:               &info.WorkflowID,
-		RunID:                    info.RunID,
-		TaskType:                 &info.TaskType,
-		TargetDomainID:           info.TargetDomainID,
-		TargetWorkflowID:         &info.TargetWorkflowID,
-		TargetRunID:              info.TargetRunID,
-		TaskList:                 &info.TaskList,
-		TargetChildWorkflowOnly:  &info.TargetChildWorkflowOnly,
-		ScheduleID:               &info.ScheduleID,
-		Version:                  &info.Version,
-		VisibilityTimestampNanos: timeToUnixNanoPtr(info.VisibilityTimestamp),
-	}
+func crossClusterTaskInfoToThrift(info *CrossClusterTaskInfo) *sqlblobsCrossClusterTaskInfo {
+	return transferTaskInfoToThrift(info)
 }
 
-func crossClusterTaskInfoFromThrift(info *sqlblobs.CrossClusterTaskInfo) *CrossClusterTaskInfo {
-	if info == nil {
-		return nil
-	}
-	return &CrossClusterTaskInfo{
-		DomainID:                info.DomainID,
-		WorkflowID:              info.GetWorkflowID(),
-		RunID:                   info.RunID,
-		TaskType:                info.GetTaskType(),
-		TargetDomainID:          info.TargetDomainID,
-		TargetWorkflowID:        info.GetTargetWorkflowID(),
-		TargetRunID:             info.TargetRunID,
-		TaskList:                info.GetTaskList(),
-		TargetChildWorkflowOnly: info.GetTargetChildWorkflowOnly(),
-		ScheduleID:              info.GetScheduleID(),
-		Version:                 info.GetVersion(),
-		VisibilityTimestamp:     timeFromUnixNano(info.GetVisibilityTimestampNanos()),
-	}
+func crossClusterTaskInfoFromThrift(info *sqlblobsCrossClusterTaskInfo) *CrossClusterTaskInfo {
+	return transferTaskInfoFromThrift(info)
 }
 
 func timerTaskInfoToThrift(info *TimerTaskInfo) *sqlblobs.TimerTaskInfo {

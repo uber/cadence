@@ -92,7 +92,7 @@ workflow_id = :workflow_id
 	deleteTransferTaskQuery      = `DELETE FROM transfer_tasks WHERE shard_id = $1 AND task_id = $2`
 	rangeDeleteTransferTaskQuery = `DELETE FROM transfer_tasks WHERE shard_id = $1 AND task_id > $2 AND task_id <= $3`
 
-	getCrossClusterTasksQuery = `SELECT target_cluster, shard_id, task_id, data, data_encoding
+	getCrossClusterTasksQuery = `SELECT task_id, data, data_encoding
  FROM cross_cluster_tasks WHERE target_cluster = $1 AND shard_id = $2 AND task_id > $3 AND task_id <= $4 ORDER BY target_cluster, shard_id, task_id`
 
 	createCrossClusterTasksQuery = `INSERT INTO cross_cluster_tasks(target_cluster, shard_id, task_id, data, data_encoding)
