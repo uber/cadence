@@ -93,7 +93,7 @@ FROM transfer_tasks WHERE shard_id = ? AND task_id > ? AND task_id <= ? ORDER BY
 	rangeDeleteTransferTaskQuery = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id > ? AND task_id <= ?`
 
 	getCrossClusterTasksQuery = `SELECT task_id, data, data_encoding
-FROM cross_cluster_tasks WHERE target_cluster = ? AND shard_id = ? AND task_id > ? AND task_id <= ? ORDER BY target_cluster, shard_id, task_id`
+FROM cross_cluster_tasks WHERE target_cluster = ? AND shard_id = ? AND task_id > ? AND task_id <= ? ORDER BY task_id`
 
 	createCrossClusterTasksQuery = `INSERT INTO cross_cluster_tasks(target_cluster, shard_id, task_id, data, data_encoding)
 VALUES(:target_cluster, :shard_id, :task_id, :data, :data_encoding)`
