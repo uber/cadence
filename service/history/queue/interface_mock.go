@@ -205,6 +205,35 @@ func (mr *MockProcessingQueueMockRecorder) AddTasks(arg0, arg1 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTasks", reflect.TypeOf((*MockProcessingQueue)(nil).AddTasks), arg0, arg1)
 }
 
+// GetTask mocks base method
+func (m *MockProcessingQueue) GetTask(arg0 task.Key) (task.Task, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTask", arg0)
+	ret0, _ := ret[0].(task.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTask indicates an expected call of GetTask
+func (mr *MockProcessingQueueMockRecorder) GetTask(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTask", reflect.TypeOf((*MockProcessingQueue)(nil).GetTask), arg0)
+}
+
+// GetTasks mocks base method
+func (m *MockProcessingQueue) GetTasks() []task.Task {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTasks")
+	ret0, _ := ret[0].([]task.Task)
+	return ret0
+}
+
+// GetTasks indicates an expected call of GetTasks
+func (mr *MockProcessingQueueMockRecorder) GetTasks() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTasks", reflect.TypeOf((*MockProcessingQueue)(nil).GetTasks))
+}
+
 // UpdateAckLevel mocks base method
 func (m *MockProcessingQueue) UpdateAckLevel() (task.Key, int) {
 	m.ctrl.T.Helper()
@@ -332,6 +361,35 @@ func (m *MockProcessingQueueCollection) AddTasks(arg0 map[task.Key]task.Task, ar
 func (mr *MockProcessingQueueCollectionMockRecorder) AddTasks(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTasks", reflect.TypeOf((*MockProcessingQueueCollection)(nil).AddTasks), arg0, arg1)
+}
+
+// GetTask mocks base method
+func (m *MockProcessingQueueCollection) GetTask(arg0 task.Key) (task.Task, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTask", arg0)
+	ret0, _ := ret[0].(task.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTask indicates an expected call of GetTask
+func (mr *MockProcessingQueueCollectionMockRecorder) GetTask(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTask", reflect.TypeOf((*MockProcessingQueueCollection)(nil).GetTask), arg0)
+}
+
+// GetTasks mocks base method
+func (m *MockProcessingQueueCollection) GetTasks() []task.Task {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTasks")
+	ret0, _ := ret[0].([]task.Task)
+	return ret0
+}
+
+// GetTasks indicates an expected call of GetTasks
+func (mr *MockProcessingQueueCollectionMockRecorder) GetTasks() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTasks", reflect.TypeOf((*MockProcessingQueueCollection)(nil).GetTasks))
 }
 
 // UpdateAckLevels mocks base method
