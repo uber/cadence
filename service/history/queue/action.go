@@ -64,6 +64,7 @@ type (
 		tasks []task.Task
 	}
 	// UpdateTaskAttributes contains the parameter to update task
+	// TODO: replace result interface with defined data struct
 	UpdateTaskAttributes struct {
 		taskID int64
 		result interface{}

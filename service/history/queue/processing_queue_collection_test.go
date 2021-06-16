@@ -175,7 +175,7 @@ func (s *processingQueueCollectionSuite) TestGetTask_Success() {
 	queueCollection := s.newTestProcessingQueueCollection(s.level, mockQueues)
 	queueCollection.activeQueue = mockQueues[currentActiveIdx]
 
-	newTask, err := queueCollection.GetTask(testKey{ID:1})
+	newTask, err := queueCollection.GetTask(testKey{ID: 1})
 	s.NoError(err)
 	s.Equal(mockTask, newTask)
 }
@@ -195,7 +195,7 @@ func (s *processingQueueCollectionSuite) TestGetTask_NoTaskFound_Fail() {
 	queueCollection := s.newTestProcessingQueueCollection(s.level, mockQueues)
 	queueCollection.activeQueue = mockQueues[currentActiveIdx]
 
-	newTask, err := queueCollection.GetTask(testKey{ID:1})
+	newTask, err := queueCollection.GetTask(testKey{ID: 1})
 	s.Error(err)
 	s.Nil(newTask)
 }
@@ -237,7 +237,7 @@ func (s *processingQueueCollectionSuite) TestGetTasks_EmptyTask() {
 	queueCollection.activeQueue = mockQueues[currentActiveIdx]
 
 	newTasks := queueCollection.GetTasks()
-	s.Equal(0,len(newTasks))
+	s.Equal(0, len(newTasks))
 }
 
 func (s *processingQueueCollectionSuite) TestUpdateAckLevels() {

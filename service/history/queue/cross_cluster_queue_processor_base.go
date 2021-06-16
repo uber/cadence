@@ -22,7 +22,6 @@ package queue
 
 import (
 	"context"
-	"math"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -57,13 +56,13 @@ type (
 	}
 )
 
-// TODO: implement initialize taskInitializer. this initializer should have a callback to update outstandingTaskCount
 func newCrossClusterQueueProcessorBase(
 	shard shard.Context,
 	targetCluster string,
 	processingQueueStates []ProcessingQueueState,
 	taskProcessor task.Processor,
 	options *queueProcessorOptions,
+	updateMaxReadLevel updateMaxReadLevelFn,
 	updateProcessingQueueStates updateProcessingQueueStatesFn,
 	queueShutdown queueShutdownFn,
 	taskExecutor task.Executor,
@@ -75,7 +74,7 @@ func newCrossClusterQueueProcessorBase(
 		processingQueueStates,
 		taskProcessor,
 		options,
-		nil,
+		updateMaxReadLevel,
 		nil,
 		updateProcessingQueueStates,
 		queueShutdown,
@@ -83,16 +82,22 @@ func newCrossClusterQueueProcessorBase(
 		metricsClient,
 	)
 
-	ackLevel := newTransferTaskKey(math.MaxInt64)
-	for _, state := range processingQueueStates {
-		if state.AckLevel().Less(ackLevel) {
-			ackLevel = state.AckLevel()
-		}
-	}
 	crossClusterQueueProcessorBase := &crossClusterQueueProcessorBase{
 		processorBase: processorBase,
 		targetCluster: targetCluster,
-		// taskInitializer: // TODO
+		// TODO: implement initialize taskInitializer.
+		taskInitializer: func(taskInfo task.Info) task.Task {
+			switch taskInfo.GetTaskType() {
+			default:
+				return task.NewCrossClusterSignalWorkflowTask(
+					shard,
+					taskInfo,
+					task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
+					shard.GetTimeSource(),
+					shard.GetConfig().CrossClusterTaskMaxRetryCount,
+				)
+			}
+		},
 
 		backoffTimer:  make(map[int]*time.Timer),
 		shouldProcess: make(map[int]bool),
@@ -372,32 +377,35 @@ func (c *crossClusterQueueProcessorBase) setupBackoffTimer(level int) {
 }
 
 func (c *crossClusterQueueProcessorBase) handleActionNotification(notification actionNotification) {
-	c.processorBase.handleActionNotification(notification, func() {
-		switch notification.action.ActionType {
-		case ActionTypeReset:
-			c.readyForProcess(defaultProcessingQueueLevel)
-		case ActionTypeGetTasks:
-			tasks := c.pollTasks()
-			notification.resultNotificationCh <- actionResultNotification{
-				result: &ActionResult{
-					ActionType: ActionTypeGetTasks,
-					GetTasksResult: &GetTasksResult{
-						tasks: tasks,
-					},
+	switch notification.action.ActionType {
+	case ActionTypeGetTasks:
+		tasks := c.pollTasks()
+		notification.resultNotificationCh <- actionResultNotification{
+			result: &ActionResult{
+				ActionType: ActionTypeGetTasks,
+				GetTasksResult: &GetTasksResult{
+					tasks: tasks,
 				},
-			}
-		case ActionTypeUpdateTask:
-			action := notification.action.UpdateTaskAttributes
-			err := c.updateTask(newTransferTaskKey(action.taskID), action.result)
-			notification.resultNotificationCh <- actionResultNotification{
-				result: &ActionResult{
-					ActionType:       ActionTypeUpdateTask,
-					UpdateTaskResult: &UpdateTaskResult{},
-				},
-				err: err,
-			}
+			},
 		}
-	})
+	case ActionTypeUpdateTask:
+		action := notification.action.UpdateTaskAttributes
+		err := c.updateTask(newTransferTaskKey(action.taskID), action.result)
+		notification.resultNotificationCh <- actionResultNotification{
+			result: &ActionResult{
+				ActionType:       ActionTypeUpdateTask,
+				UpdateTaskResult: &UpdateTaskResult{},
+			},
+			err: err,
+		}
+	default:
+		c.processorBase.handleActionNotification(notification, func() {
+			switch notification.action.ActionType {
+			case ActionTypeReset:
+				c.readyForProcess(defaultProcessingQueueLevel)
+			}
+		})
+	}
 }
 
 func (c *crossClusterQueueProcessorBase) processQueueCollections() {

@@ -130,6 +130,10 @@ func newCrossClusterQueueProcessor(
 
 	logger = logger.WithTags(tag.ClusterName(clusterName))
 
+	updateMaxReadLevel := func() task.Key {
+		return newTransferTaskKey(shard.GetTransferMaxReadLevel())
+	}
+
 	updateProcessingQueueStates := func(states []ProcessingQueueState) error {
 		pStates := convertToPersistenceTransferProcessingQueueStates(states)
 		return shard.UpdateCrossClusterProcessingQueueStates(clusterName, pStates)
@@ -145,6 +149,7 @@ func newCrossClusterQueueProcessor(
 		convertFromPersistenceTransferProcessingQueueStates(shard.GetCrossClusterProcessingQueueStates(clusterName)),
 		taskProcessor,
 		options,
+		updateMaxReadLevel,
 		updateProcessingQueueStates,
 		queueShutdown,
 		taskExecutor,
