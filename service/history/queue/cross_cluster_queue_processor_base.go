@@ -377,7 +377,7 @@ func (c *crossClusterQueueProcessorBase) handleActionNotification(notification a
 		case ActionTypeReset:
 			c.readyForProcess(defaultProcessingQueueLevel)
 		case ActionTypeGetTasks:
-			tasks := c.getTasks()
+			tasks := c.pollTasks()
 			notification.resultNotificationCh <- actionResultNotification{
 				result: &ActionResult{
 					ActionType: ActionTypeGetTasks,
