@@ -427,6 +427,20 @@ func (mr *MockTaskMockRecorder) GetAttempt() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttempt", reflect.TypeOf((*MockTask)(nil).GetAttempt))
 }
 
+// IsReadyForPoll mocks base method
+func (m *MockTask) IsReadyForPoll() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsReadyForPoll")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsReadyForPoll indicates an expected call of IsReadyForPoll
+func (mr *MockTaskMockRecorder) IsReadyForPoll() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReadyForPoll", reflect.TypeOf((*MockTask)(nil).IsReadyForPoll))
+}
+
 // MockKey is a mock of Key interface
 type MockKey struct {
 	ctrl     *gomock.Controller

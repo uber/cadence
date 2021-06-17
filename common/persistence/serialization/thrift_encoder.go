@@ -84,6 +84,10 @@ func (e *thriftEncoder) transferTaskInfoToBlob(info *TransferTaskInfo) ([]byte, 
 	return thriftRWEncode(transferTaskInfoToThrift(info))
 }
 
+func (e *thriftEncoder) crossClusterTaskInfoToBlob(info *CrossClusterTaskInfo) ([]byte, error) {
+	return thriftRWEncode(crossClusterTaskInfoToThrift(info))
+}
+
 func (e *thriftEncoder) timerTaskInfoToBlob(info *TimerTaskInfo) ([]byte, error) {
 	return thriftRWEncode(timerTaskInfoToThrift(info))
 }

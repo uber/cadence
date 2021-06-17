@@ -52,6 +52,12 @@ type (
 		GetAttempt() int
 	}
 
+	CrossClusterTask interface {
+		Task
+		IsReadyForPoll() bool
+		Update(interface{}) error //TODO: update interface once the cross cluster response idl lands
+	}
+
 	// Key identifies a Task and defines a total order among tasks
 	Key interface {
 		Less(Key) bool
@@ -117,4 +123,6 @@ const (
 	QueueTypeStandbyTimer
 	// QueueTypeReplication is the queue type for replication queue processor
 	QueueTypeReplication
+	// QueueTypeCrossCluster is the queue type for cross cluster queue processor
+	QueueTypeCrossCluster
 )

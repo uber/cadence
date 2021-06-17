@@ -415,6 +415,11 @@ func newAdminDomainCommands() []cli.Command {
 					Name:  FlagDeprecatedWithAlias,
 					Usage: "List deprecated domains only, by default only domains in REGISTERED status are listed",
 				},
+				cli.StringFlag{
+					Name:  FlagPrefix,
+					Usage: "List domains that are matching to the given prefix",
+					Value: "",
+				},
 				cli.BoolFlag{
 					Name:  FlagPrintFullyDetailWithAlias,
 					Usage: "Print full domain detail",
@@ -475,7 +480,7 @@ func newAdminKafkaCommands() []cli.Command {
 		{
 			Name:    "rereplicate",
 			Aliases: []string{"rrp"},
-			Usage:   "Rereplicate replication tasks to target topic from history tables",
+			Usage:   "Rereplicate replication tasks from history tables",
 			Flags: append(getDBFlags(),
 				cli.StringFlag{
 					Name:  FlagSourceCluster,

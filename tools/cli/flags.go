@@ -112,6 +112,7 @@ const (
 	FlagMore                              = "more"
 	FlagMoreWithAlias                     = FlagMore + ", m"
 	FlagAll                               = "all"
+	FlagPrefix                            = "prefix"
 	FlagAllWithAlias                      = FlagAll + ", a"
 	FlagDeprecated                        = "deprecated"
 	FlagDeprecatedWithAlias               = FlagDeprecated + ", dep"

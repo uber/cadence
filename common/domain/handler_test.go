@@ -271,7 +271,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 	isGlobalDomain1 := false
 	activeClusterName1 := s.ClusterMetadata.GetCurrentClusterName()
 	var cluster1 []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		cluster1 = append(cluster1, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
