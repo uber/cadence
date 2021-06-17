@@ -894,6 +894,7 @@ func (d *DataBlob) ToNilSafeDataBlob() *DataBlob {
 	}
 	return &DataBlob{}
 }
+
 func (d *DataBlob) GetEncodingString() string {
 	return string(d.Encoding)
 }
