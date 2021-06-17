@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/storage v1.6.0
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/Shopify/sarama v1.23.0
-	github.com/VividCortex/mysqlerr v1.0.0 // indirect
+	github.com/VividCortex/mysqlerr v1.0.0
 	github.com/apache/thrift v0.13.0
 	github.com/aws/aws-sdk-go v1.34.13
 	github.com/benbjohnson/clock v0.0.0-20161215174838-7dc76406b6d3 // indirect
