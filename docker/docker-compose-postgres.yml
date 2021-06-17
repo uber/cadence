@@ -16,7 +16,7 @@ services:
     ports:
       - '9090:9090'
   cadence:
-    image: ubercadence/server:0.21.0-auto-setup
+    image: ubercadence/server:0.21.3-auto-setup
     ports:
       - "8000:8000"
       - "8001:8001"
@@ -41,7 +41,7 @@ services:
       - postgres
       - prometheus
   cadence-web:
-    image: ubercadence/web:v3.25.0
+    image: ubercadence/web:v3.27.0
     environment:
       - "CADENCE_TCHANNEL_PEERS=cadence:7933"
     ports:
