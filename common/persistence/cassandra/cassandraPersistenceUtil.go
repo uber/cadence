@@ -974,7 +974,6 @@ func createOrUpdateCurrentExecution(
 	state int,
 	closeStatus int,
 	createRequestID string,
-	startVersion int64,
 	lastWriteVersion int64,
 	previousRunID string,
 	previousLastWriteVersion int64,

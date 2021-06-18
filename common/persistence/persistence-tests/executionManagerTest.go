@@ -1306,7 +1306,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(int64(1), info0.LastFirstEventID)
 	s.Equal(int64(3), info0.NextEventID)
 	s.Equal(int64(0), info0.LastProcessedEvent)
-	s.Equal(true, s.validateTimeRange(info0.LastUpdatedTimestamp, time.Hour))
+	s.Equal(true, s.validateTimeRange(info0.LastUpdatedTimestamp, time.Minute))
+	s.Equal(true, s.validateTimeRange(info0.StartTimestamp, time.Minute))
 	s.Equal(int64(0), info0.DecisionVersion)
 	s.Equal(int64(2), info0.DecisionScheduleID)
 	s.Equal(common.EmptyEventID, info0.DecisionStartedID)
@@ -1387,6 +1388,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(int64(5), info1.NextEventID)
 	s.Equal(int64(2), info1.LastProcessedEvent)
 	s.Equal(true, s.validateTimeRange(info1.LastUpdatedTimestamp, time.Hour))
+	s.Equal(info0.StartTimestamp.UnixNano(), info1.StartTimestamp.UnixNano())
 	s.Equal(int64(666), info1.DecisionVersion)
 	s.Equal(int64(2), info1.DecisionScheduleID)
 	s.Equal(common.EmptyEventID, info1.DecisionStartedID)
@@ -5226,6 +5228,7 @@ func copyWorkflowExecutionInfo(sourceInfo *p.WorkflowExecutionInfo) *p.WorkflowE
 		NextEventID:                 sourceInfo.NextEventID,
 		LastProcessedEvent:          sourceInfo.LastProcessedEvent,
 		LastUpdatedTimestamp:        sourceInfo.LastUpdatedTimestamp,
+		StartTimestamp:              sourceInfo.StartTimestamp,
 		CreateRequestID:             sourceInfo.CreateRequestID,
 		DecisionVersion:             sourceInfo.DecisionVersion,
 		DecisionScheduleID:          sourceInfo.DecisionScheduleID,
