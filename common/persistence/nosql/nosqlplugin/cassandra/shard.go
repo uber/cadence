@@ -140,19 +140,20 @@ func (db *cdb) InsertShard(ctx context.Context, row *nosqlplugin.ShardRow) error
 	}
 
 	if !applied {
-		return convertToConflictedShardRow(row.RangeID, previous)
+		return convertToConflictedShardRow(previous)
 	}
 
 	return nil
 }
 
-func convertToConflictedShardRow(previousRangeID int64, previous map[string]interface{}) error {
+func convertToConflictedShardRow(previous map[string]interface{}) error {
+	rangeID := previous["range_id"].(int64)
 	var columns []string
 	for k, v := range previous {
 		columns = append(columns, fmt.Sprintf("%s=%v", k, v))
 	}
 	return &nosqlplugin.ShardOperationConditionFailure{
-		RangeID: previousRangeID,
+		RangeID: rangeID,
 		Details: strings.Join(columns, ","),
 	}
 }
@@ -299,7 +300,7 @@ func (db *cdb) UpdateRangeID(ctx context.Context, shardID int, rangeID int64, pr
 	}
 
 	if !applied {
-		return convertToConflictedShardRow(previousRangeID, previous)
+		return convertToConflictedShardRow(previous)
 	}
 
 	return nil
@@ -354,7 +355,7 @@ func (db *cdb) UpdateShard(ctx context.Context, row *nosqlplugin.ShardRow, previ
 	}
 
 	if !applied {
-		return convertToConflictedShardRow(previousRangeID, previous)
+		return convertToConflictedShardRow(previous)
 	}
 
 	return nil
