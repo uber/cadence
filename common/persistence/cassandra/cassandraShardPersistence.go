@@ -101,8 +101,8 @@ func (sh *nosqlShardManager) CreateShard(
 		conditionFailure, ok := err.(*nosqlplugin.ShardOperationConditionFailure)
 		if ok {
 			return &p.ShardAlreadyExistError{
-				Msg: fmt.Sprintf("Shard already exists in executions table.  ShardId: %v, RangeId: %v",
-					request.ShardInfo.ShardID, conditionFailure.RangeID),
+				Msg: fmt.Sprintf("Shard already exists in executions table.  ShardId: %v, request_range_id: %v, actual_range_id : %v, columns: (%v)",
+					request.ShardInfo.ShardID, request.ShardInfo.RangeID, conditionFailure.RangeID, conditionFailure.Details),
 			}
 		}
 		return convertCommonErrors(sh.db, "CreateShard", err)
