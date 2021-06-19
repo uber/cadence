@@ -35,7 +35,7 @@ type (
 		PluginName() string
 		Close()
 
-		NoSQLErrorChecker
+		ClientErrorChecker
 		tableCRUD
 	}
 	// tableCRUD defines the API for interacting with the database tables
@@ -56,12 +56,6 @@ type (
 		visibilityCRUD
 		taskCRUD
 		workflowCRUD
-	}
-
-	// NoSQLErrorChecker checks for common nosql errors
-	NoSQLErrorChecker interface {
-		IsConditionFailedError(err error) bool
-		ClientErrorChecker
 	}
 
 	// ClientErrorChecker checks for common nosql errors on client
@@ -162,9 +156,10 @@ type (
 	 */
 	domainCRUD interface {
 		// Insert a new record to domain, return error if failed or already exists
-		// Must return conditionFailed error if domainName already exists
+		// Must return DomainAlreadyExistsError error if domainName already exists
 		InsertDomain(ctx context.Context, row *DomainRow) error
 		// Update domain data
+		// Must return ConditionFailure error if update condition doesn't match
 		UpdateDomain(ctx context.Context, row *DomainRow) error
 		// Get one domain data, either by domainID or domainName
 		SelectDomain(ctx context.Context, domainID *string, domainName *string) (*DomainRow, error)
@@ -193,18 +188,18 @@ type (
 	shardCRUD interface {
 		// InsertShard creates a new shard.
 		// Return error is there is any thing wrong
-		// When error IsConditionFailedError, also return the row that doesn't meet the condition
-		InsertShard(ctx context.Context, row *ShardRow) (previous *ConflictedShardRow, err error)
+		// Return the ShardOperationConditionFailure when doesn't meet the condition
+		InsertShard(ctx context.Context, row *ShardRow) error
 		// SelectShard gets a shard, rangeID is the current rangeID in shard row
 		SelectShard(ctx context.Context, shardID int, currentClusterName string) (rangeID int64, shard *ShardRow, err error)
 		// UpdateRangeID updates the rangeID
 		// Return error is there is any thing wrong
-		// When error IsConditionFailedError, also return the row that doesn't meet the condition
-		UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (previous *ConflictedShardRow, err error)
+		// Return the ShardOperationConditionFailure when doesn't meet the condition
+		UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) error
 		// UpdateShard updates a shard
 		// Return error is there is any thing wrong
-		// When error IsConditionFailedError, also return the row that doesn't meet the condition
-		UpdateShard(ctx context.Context, row *ShardRow, previousRangeID int64) (previous *ConflictedShardRow, err error)
+		// Return the ShardOperationConditionFailure when doesn't meet the condition
+		UpdateShard(ctx context.Context, row *ShardRow, previousRangeID int64) error
 	}
 
 	/**
@@ -307,25 +302,25 @@ type (
 		// Return IsNotFoundError if the row doesn't exist
 		SelectTaskList(ctx context.Context, filter *TaskListFilter) (*TaskListRow, error)
 		// InsertTaskList insert a single tasklist row
-		// Return IsConditionFailedError if the row already exists, and also the existing row
-		InsertTaskList(ctx context.Context, row *TaskListRow) (previous *TaskListRow, err error)
+		// Return TaskOperationConditionFailure if the row already exists
+		InsertTaskList(ctx context.Context, row *TaskListRow) error
 		// UpdateTaskList updates a single tasklist row
-		// Return IsConditionFailedError if the condition doesn't meet, and also the previous row
-		UpdateTaskList(ctx context.Context, row *TaskListRow, previousRangeID int64) (previous *TaskListRow, err error)
+		// Return TaskOperationConditionFailure if the condition doesn't meet
+		UpdateTaskList(ctx context.Context, row *TaskListRow, previousRangeID int64) error
 		// UpdateTaskList updates a single tasklist row, and set an TTL on the record
-		// Return IsConditionFailedError if the condition doesn't meet, and also the existing row
+		// Return TaskOperationConditionFailure if the condition doesn't meet
 		// Ignore TTL if it's not supported, which becomes exactly the same as UpdateTaskList, but ListTaskList must be
 		// implemented for TaskListScavenger
-		UpdateTaskListWithTTL(ctx context.Context, ttlSeconds int64, row *TaskListRow, previousRangeID int64) (previous *TaskListRow, err error)
+		UpdateTaskListWithTTL(ctx context.Context, ttlSeconds int64, row *TaskListRow, previousRangeID int64) error
 		// ListTaskList returns all tasklists.
 		// Noop if TTL is already implemented in other methods
 		ListTaskList(ctx context.Context, pageSize int, nextPageToken []byte) (*ListTaskListResult, error)
 		// DeleteTaskList deletes a single tasklist row
-		// Return IsConditionFailedError if the condition doesn't meet, and also the existing row
-		DeleteTaskList(ctx context.Context, filter *TaskListFilter, previousRangeID int64) (*TaskListRow, error)
+		// Return TaskOperationConditionFailure if the condition doesn't meet
+		DeleteTaskList(ctx context.Context, filter *TaskListFilter, previousRangeID int64) error
 		// InsertTasks inserts a batch of tasks
-		// Return IsConditionFailedError if the condition doesn't meet, and also the previous tasklist row
-		InsertTasks(ctx context.Context, tasksToInsert []*TaskRowForInsert, tasklistCondition *TaskListRow) (previous *TaskListRow, err error)
+		// Return TaskOperationConditionFailure if the condition doesn't meet
+		InsertTasks(ctx context.Context, tasksToInsert []*TaskRowForInsert, tasklistCondition *TaskListRow) error
 		// SelectTasks return tasks that associated to a tasklist
 		SelectTasks(ctx context.Context, filter *TasksFilter) ([]*TaskRow, error)
 		// DeleteTask delete a batch of tasks
@@ -506,14 +501,6 @@ type (
 		CloseStatus      int
 		CreateRequestID  string
 		LastWriteVersion int64
-	}
-
-	// Only one of the fields must be non-nil
-	WorkflowOperationConditionFailure struct {
-		UnknownConditionFailureDetails   *string // return some info for logging
-		ShardRangeIDNotMatch             *int64  // return the previous shardRangeID
-		WorkflowExecutionAlreadyExists   *WorkflowExecutionAlreadyExists
-		CurrentWorkflowConditionFailInfo *string // return the logging info if fail on condition of CurrentWorkflow
 	}
 
 	WorkflowExecutionAlreadyExists struct {
@@ -715,8 +702,4 @@ func (w *CurrentWorkflowWriteCondition) GetCurrentRunID() string {
 		return ""
 	}
 	return *w.CurrentRunID
-}
-
-func (e *WorkflowOperationConditionFailure) Error() string {
-	return "condition failure"
 }

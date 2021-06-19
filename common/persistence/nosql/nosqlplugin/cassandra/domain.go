@@ -240,7 +240,7 @@ func (db *cdb) InsertDomain(
 		}
 
 		db.logger.Warn("Create domain operation failed because of condition update failure on domain metadata record")
-		return errConditionFailed
+		return &nosqlplugin.ConditionFailure{}
 	}
 
 	return nil
@@ -317,7 +317,7 @@ func (db *cdb) UpdateDomain(
 		return err
 	}
 	if !applied {
-		return errConditionFailed
+		return &nosqlplugin.ConditionFailure{}
 	}
 	return nil
 }
