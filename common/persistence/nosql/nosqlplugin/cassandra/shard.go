@@ -94,7 +94,7 @@ const (
 )
 
 // InsertShard creates a new shard, return error is there is any.
-// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
+// Return ShardOperationConditionFailure if the condition doesn't meet
 func (db *cdb) InsertShard(ctx context.Context, row *nosqlplugin.ShardRow) error {
 	cqlNowTimestamp := persistence.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	markerData, markerEncoding := persistence.FromDataBlob(row.PendingFailoverMarkers)

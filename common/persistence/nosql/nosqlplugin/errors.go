@@ -30,18 +30,27 @@ type (
 		CurrentWorkflowConditionFailInfo *string // return the logging info if fail on condition of CurrentWorkflow
 	}
 
+	WorkflowExecutionAlreadyExists struct {
+		RunID            string
+		CreateRequestID  string
+		State            int
+		CloseStatus      int
+		LastWriteVersion int64
+		OtherInfo        string
+	}
+
 	TaskOperationConditionFailure struct {
 		RangeID int64
-		Details string
+		Details string // detail info for logging
 	}
 
 	ShardOperationConditionFailure struct {
 		RangeID int64
-		Details string
+		Details string // detail info for logging
 	}
 
 	ConditionFailure struct {
-		Details string
+		Details string // detail info for logging
 	}
 )
 

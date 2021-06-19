@@ -28,7 +28,7 @@ import (
 )
 
 // Insert a new record to domain, return error if failed or already exists
-// Must return conditionFailed error if domainName already exists
+// Return ConditionFailure if the condition doesn't meet
 func (db *ddb) InsertDomain(
 	ctx context.Context,
 	row *nosqlplugin.DomainRow,

@@ -503,15 +503,6 @@ type (
 		LastWriteVersion int64
 	}
 
-	WorkflowExecutionAlreadyExists struct {
-		RunID            string
-		CreateRequestID  string
-		State            int
-		CloseStatus      int
-		LastWriteVersion int64
-		OtherInfo        string
-	}
-
 	TasksFilter struct {
 		TaskListFilter
 		// Exclusive

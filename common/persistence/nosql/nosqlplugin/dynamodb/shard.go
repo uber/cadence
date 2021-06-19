@@ -27,7 +27,7 @@ import (
 )
 
 // InsertShard creates a new shard, return error is there is any.
-// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
+// Return ShardOperationConditionFailure if the condition doesn't meet
 func (db *ddb) InsertShard(ctx context.Context, row *nosqlplugin.ShardRow) error {
 	panic("TODO")
 }
@@ -38,13 +38,13 @@ func (db *ddb) SelectShard(ctx context.Context, shardID int, currentClusterName 
 }
 
 // UpdateRangeID updates the rangeID, return error is there is any
-// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
+// Return ShardOperationConditionFailure if the condition doesn't meet
 func (db *ddb) UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) error {
 	panic("TODO")
 }
 
 // UpdateShard updates a shard, return error is there is any.
-// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
+// Return ShardOperationConditionFailure if the condition doesn't meet
 func (db *ddb) UpdateShard(ctx context.Context, row *nosqlplugin.ShardRow, previousRangeID int64) error {
 	panic("TODO")
 }
