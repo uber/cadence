@@ -156,7 +156,7 @@ type (
 	 */
 	domainCRUD interface {
 		// Insert a new record to domain, return error if failed or already exists
-		// Must return DomainAlreadyExistsError error if domainName already exists
+		// Must return ConditionFailure error if domainName already exists
 		InsertDomain(ctx context.Context, row *DomainRow) error
 		// Update domain data
 		// Must return ConditionFailure error if update condition doesn't match

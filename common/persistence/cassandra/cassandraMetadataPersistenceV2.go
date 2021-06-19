@@ -91,8 +91,10 @@ func (m *nosqlDomainManager) CreateDomain(
 	err = m.db.InsertDomain(ctx, row)
 
 	if err != nil {
-		if _, ok := err.(*types.DomainAlreadyExistsError); ok {
-			return nil, err
+		if conditionFailure, ok := err.(*nosqlplugin.ConditionFailure); ok {
+			return nil, &types.DomainAlreadyExistsError{
+				Message: conditionFailure.Details,
+			}
 		}
 		return nil, convertCommonErrors(m.db, "CreateDomain", err)
 	}

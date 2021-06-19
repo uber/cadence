@@ -228,8 +228,8 @@ func (db *cdb) InsertDomain(
 			// first iter MapScan is done inside MapExecuteBatchCAS
 			if domain, ok := previous["name"].(string); ok && domain == row.Info.Name {
 				db.logger.Warn("Domain already exists", tag.WorkflowDomainName(domain))
-				return &types.DomainAlreadyExistsError{
-					Message: fmt.Sprintf("Domain %v already exists", previous["domain"]),
+				return &nosqlplugin.ConditionFailure{
+					Details: fmt.Sprintf("Domain %v already exists", previous["domain"]),
 				}
 			}
 
