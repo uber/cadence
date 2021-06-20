@@ -22,6 +22,7 @@ package config
 
 import (
 	"encoding/json"
+	"log"
 	"time"
 
 	"github.com/uber-go/tally/m3"
@@ -437,6 +438,10 @@ func (c *Config) ValidateAndFillDefaults() error {
 func (c *Config) validate() error {
 	if err := c.Persistence.Validate(); err != nil {
 		return err
+	}
+	if !c.ClusterMetadata.EnableGlobalDomain {
+		log.Println("[WARN] Local domain is now deprecated. Please update config to enable global domain(ClusterMetadata->EnableGlobalDomain)." +
+			"Global domain of single cluster has zero overhead, but only advantages for future migration and fail over. Please check Cadence documentation for more details.")
 	}
 	return c.Archival.Validate(&c.DomainDefaults.Archival)
 }
