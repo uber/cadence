@@ -17,6 +17,7 @@ You can find a list of previous releases on the [github releases](https://github
 - Bump CLI version to v0.19.0
 - Change `--connect-attributes` in `cadence-sql-tool` from URL encoding to the format of k1=v1,k2=v2...
 - Change `--domain_data` in `cadence domain update/register` from the format of k1:v1,k2:v2... to the format of k1=v1,k2=v2...
+- Deprecate local domains. All new domains should be created as global domains.
 
 ## [0.18.0] - 2021-01-22
 
