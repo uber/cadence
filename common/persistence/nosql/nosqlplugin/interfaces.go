@@ -155,8 +155,9 @@ type (
 	* Note 3: It's okay to use a constant value for partition key because domain table is serving very small volume of traffic.
 	 */
 	domainCRUD interface {
-		// Insert a new record to domain, return error if failed or already exists
-		// Must return ConditionFailure error if domainName already exists
+		// Insert a new record to domain
+		// return types.DomainAlreadyExistsError error if failed or already exists
+		// Must return ConditionFailure error if other condition doesn't match
 		InsertDomain(ctx context.Context, row *DomainRow) error
 		// Update domain data
 		// Must return ConditionFailure error if update condition doesn't match

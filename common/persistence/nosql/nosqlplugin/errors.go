@@ -49,9 +49,7 @@ type (
 		Details string // detail info for logging
 	}
 
-	ConditionFailure struct {
-		Details string // detail info for logging
-	}
+	ConditionFailure struct{}
 )
 
 var _ error = (*WorkflowOperationConditionFailure)(nil)

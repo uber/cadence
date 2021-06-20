@@ -149,8 +149,9 @@ const (
 		`WHERE domains_partition = ? `
 )
 
-// Insert a new record to domain, return error if failed or already exists
-// Must return conditionFailed error if domainName already exists
+// Insert a new record to domain
+// return types.DomainAlreadyExistsError error if failed or already exists
+// Must return ConditionFailure error if other condition doesn't match
 func (db *cdb) InsertDomain(
 	ctx context.Context,
 	row *nosqlplugin.DomainRow,
@@ -228,8 +229,8 @@ func (db *cdb) InsertDomain(
 			// first iter MapScan is done inside MapExecuteBatchCAS
 			if domain, ok := previous["name"].(string); ok && domain == row.Info.Name {
 				db.logger.Warn("Domain already exists", tag.WorkflowDomainName(domain))
-				return &nosqlplugin.ConditionFailure{
-					Details: fmt.Sprintf("Domain %v already exists", previous["domain"]),
+				return &types.DomainAlreadyExistsError{
+					Message: fmt.Sprintf("Domain %v already exists", previous["domain"]),
 				}
 			}
 
