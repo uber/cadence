@@ -24,7 +24,6 @@ package dynamodb
 import (
 	"context"
 
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
@@ -36,12 +35,6 @@ func (db *ddb) InsertWorkflowExecutionWithTasks(
 	crossClusterTasks []*nosqlplugin.CrossClusterTask,
 	replicationTasks []*nosqlplugin.ReplicationTask,
 	timerTasks []*nosqlplugin.TimerTask,
-	activityInfoMap map[int64]*persistence.InternalActivityInfo,
-	timerInfoMap map[string]*persistence.TimerInfo,
-	childWorkflowInfoMap map[int64]*persistence.InternalChildExecutionInfo,
-	requestCancelInfoMap map[int64]*persistence.RequestCancelInfo,
-	signalInfoMap map[int64]*persistence.SignalInfo,
-	signalRequestedIDs []string,
 	shardCondition *nosqlplugin.ShardCondition,
 ) error {
 	panic("TODO")

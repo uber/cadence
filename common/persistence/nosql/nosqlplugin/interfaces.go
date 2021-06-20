@@ -403,12 +403,6 @@ type (
 			crossClusterTasks []*CrossClusterTask,
 			replicationTasks []*ReplicationTask,
 			timerTasks []*TimerTask,
-			activityInfoMap map[int64]*persistence.InternalActivityInfo,
-			timerInfoMap map[string]*persistence.TimerInfo,
-			childWorkflowInfoMap map[int64]*persistence.InternalChildExecutionInfo,
-			requestCancelInfoMap map[int64]*persistence.RequestCancelInfo,
-			signalInfoMap map[int64]*persistence.SignalInfo,
-			signalRequestedIDs []string,
 			shardCondition *ShardCondition,
 		) error
 	}
@@ -418,6 +412,13 @@ type (
 		VersionHistories *persistence.DataBlob
 		Checksums        *checksum.Checksum
 		LastWriteVersion int64
+		// 5 maps and a set
+		ActivityInfoMap      map[int64]*persistence.InternalActivityInfo
+		TimerInfoMap         map[string]*persistence.TimerInfo
+		ChildWorkflowInfoMap map[int64]*persistence.InternalChildExecutionInfo
+		RequestCancelInfoMap map[int64]*persistence.RequestCancelInfo
+		SignalInfoMap        map[int64]*persistence.SignalInfo
+		SignalRequestedIDs   []string
 	}
 
 	TimerTask struct {

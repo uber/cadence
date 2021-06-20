@@ -24,7 +24,6 @@ package cassandra
 import (
 	"context"
 
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
@@ -37,12 +36,6 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 	crossClusterTasks []*nosqlplugin.CrossClusterTask,
 	replicationTasks []*nosqlplugin.ReplicationTask,
 	timerTasks []*nosqlplugin.TimerTask,
-	activityInfoMap map[int64]*persistence.InternalActivityInfo,
-	timerInfoMap map[string]*persistence.TimerInfo,
-	childWorkflowInfoMap map[int64]*persistence.InternalChildExecutionInfo,
-	requestCancelInfoMap map[int64]*persistence.RequestCancelInfo,
-	signalInfoMap map[int64]*persistence.SignalInfo,
-	signalRequestedIDs []string,
 	shardCondition *nosqlplugin.ShardCondition,
 ) error {
 	shardID := shardCondition.ShardID
@@ -61,6 +54,13 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 	if err != nil {
 		return err
 	}
+
+	activityInfoMap := execution.ActivityInfoMap
+	timerInfoMap := execution.TimerInfoMap
+	childWorkflowInfoMap := execution.ChildWorkflowInfoMap
+	requestCancelInfoMap := execution.RequestCancelInfoMap
+	signalInfoMap := execution.SignalInfoMap
+	signalRequestedIDs := execution.SignalRequestedIDs
 
 	err = db.updateActivityInfos(batch, shardID, domainID, workflowID, runID, activityInfoMap, nil)
 	if err != nil {

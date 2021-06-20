@@ -805,27 +805,27 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 		return nil, err
 	}
 
-	activityInfos, err := d.prepareActivityInfosForWorkflowTxn(newWorkflow.ActivityInfos)
+	execution.ActivityInfoMap, err = d.prepareActivityInfosForWorkflowTxn(newWorkflow.ActivityInfos)
 	if err != nil {
 		return nil, err
 	}
-	timerInfos, err := d.prepareTimerInfosForWorkflowTxn(newWorkflow.TimerInfos)
+	execution.TimerInfoMap, err = d.prepareTimerInfosForWorkflowTxn(newWorkflow.TimerInfos)
 	if err != nil {
 		return nil, err
 	}
-	childWorkflowInfos, err := d.prepareChildWFInfosForWorkflowTxn(newWorkflow.ChildExecutionInfos)
+	execution.ChildWorkflowInfoMap, err = d.prepareChildWFInfosForWorkflowTxn(newWorkflow.ChildExecutionInfos)
 	if err != nil {
 		return nil, err
 	}
-	requestCancelInfoMap, err := d.prepareRequestCancelsForWorkflowTxn(newWorkflow.RequestCancelInfos)
+	execution.RequestCancelInfoMap, err = d.prepareRequestCancelsForWorkflowTxn(newWorkflow.RequestCancelInfos)
 	if err != nil {
 		return nil, err
 	}
-	signalInfos, err := d.prepareSignalInfosForWorkflowTxn(newWorkflow.SignalInfos)
+	execution.SignalInfoMap, err = d.prepareSignalInfosForWorkflowTxn(newWorkflow.SignalInfos)
 	if err != nil {
 		return nil, err
 	}
-	signalRequestedIDs := newWorkflow.SignalRequestedIDs
+	execution.SignalRequestedIDs = newWorkflow.SignalRequestedIDs
 
 	transferTasks, err := d.prepareTransferTasksForWorkflowTxn(domainID, workflowID, runID, newWorkflow.TransferTasks)
 	if err != nil {
@@ -856,7 +856,6 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 		ctx,
 		currentWorkflowWriteReq, execution,
 		transferTasks, crossClusterTasks, replicationTasks, timerTasks,
-		activityInfos, timerInfos, childWorkflowInfos, requestCancelInfoMap, signalInfos, signalRequestedIDs,
 		shardCondition,
 	)
 	if err != nil {
