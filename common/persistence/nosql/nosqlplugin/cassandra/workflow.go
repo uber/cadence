@@ -31,7 +31,7 @@ import (
 func (db *cdb) InsertWorkflowExecutionWithTasks(
 	ctx context.Context,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
-	execution *nosqlplugin.WorkflowExecutionRow,
+	execution *nosqlplugin.WorkflowExecutionRequest,
 	transferTasks []*nosqlplugin.TransferTask,
 	crossClusterTasks []*nosqlplugin.CrossClusterTask,
 	replicationTasks []*nosqlplugin.ReplicationTask,
@@ -55,12 +55,12 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 		return err
 	}
 
-	activityInfoMap := execution.ActivityInfoMap
-	timerInfoMap := execution.TimerInfoMap
-	childWorkflowInfoMap := execution.ChildWorkflowInfoMap
-	requestCancelInfoMap := execution.RequestCancelInfoMap
-	signalInfoMap := execution.SignalInfoMap
-	signalRequestedIDs := execution.SignalRequestedIDs
+	activityInfoMap := execution.ActivityInfoToAdd
+	timerInfoMap := execution.TimerInfoMapToAdd
+	childWorkflowInfoMap := execution.ChildWorkflowInfoToAdd
+	requestCancelInfoMap := execution.RequestCancelInfoToAdd
+	signalInfoMap := execution.SignalInfoToAdd
+	signalRequestedIDs := execution.SignalRequestedIDsToAdd
 
 	err = db.updateActivityInfos(batch, shardID, domainID, workflowID, runID, activityInfoMap, nil)
 	if err != nil {

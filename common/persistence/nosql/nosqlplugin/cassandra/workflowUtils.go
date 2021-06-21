@@ -34,7 +34,7 @@ import (
 func (db *cdb) executeCreateWorkflowBatchTransaction(
 	batch gocql.Batch,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
-	execution *nosqlplugin.WorkflowExecutionRow,
+	execution *nosqlplugin.WorkflowExecutionRequest,
 	shardCondition *nosqlplugin.ShardCondition,
 ) error {
 	previous := make(map[string]interface{})
@@ -620,7 +620,7 @@ func (db *cdb) createWorkflowExecution(
 	domainID string,
 	workflowID string,
 	runID string,
-	execution *nosqlplugin.WorkflowExecutionRow,
+	execution *nosqlplugin.WorkflowExecutionRequest,
 ) error {
 	execution.StartTimestamp = db.convertToCassandraTimestamp(execution.StartTimestamp)
 	execution.LastUpdatedTimestamp = db.convertToCassandraTimestamp(execution.LastUpdatedTimestamp)

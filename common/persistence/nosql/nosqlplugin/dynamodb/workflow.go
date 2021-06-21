@@ -30,7 +30,7 @@ import (
 func (db *ddb) InsertWorkflowExecutionWithTasks(
 	ctx context.Context,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
-	execution *nosqlplugin.WorkflowExecutionRow,
+	execution *nosqlplugin.WorkflowExecutionRequest,
 	transferTasks []*nosqlplugin.TransferTask,
 	crossClusterTasks []*nosqlplugin.CrossClusterTask,
 	replicationTasks []*nosqlplugin.ReplicationTask,

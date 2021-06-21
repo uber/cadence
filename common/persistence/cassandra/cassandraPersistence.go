@@ -805,27 +805,27 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 		return nil, err
 	}
 
-	execution.ActivityInfoMap, err = d.prepareActivityInfosForWorkflowTxn(newWorkflow.ActivityInfos)
+	execution.ActivityInfoToAdd, err = d.prepareActivityInfosForWorkflowTxn(newWorkflow.ActivityInfos)
 	if err != nil {
 		return nil, err
 	}
-	execution.TimerInfoMap, err = d.prepareTimerInfosForWorkflowTxn(newWorkflow.TimerInfos)
+	execution.TimerInfoMapToAdd, err = d.prepareTimerInfosForWorkflowTxn(newWorkflow.TimerInfos)
 	if err != nil {
 		return nil, err
 	}
-	execution.ChildWorkflowInfoMap, err = d.prepareChildWFInfosForWorkflowTxn(newWorkflow.ChildExecutionInfos)
+	execution.ChildWorkflowInfoToAdd, err = d.prepareChildWFInfosForWorkflowTxn(newWorkflow.ChildExecutionInfos)
 	if err != nil {
 		return nil, err
 	}
-	execution.RequestCancelInfoMap, err = d.prepareRequestCancelsForWorkflowTxn(newWorkflow.RequestCancelInfos)
+	execution.RequestCancelInfoToAdd, err = d.prepareRequestCancelsForWorkflowTxn(newWorkflow.RequestCancelInfos)
 	if err != nil {
 		return nil, err
 	}
-	execution.SignalInfoMap, err = d.prepareSignalInfosForWorkflowTxn(newWorkflow.SignalInfos)
+	execution.SignalInfoToAdd, err = d.prepareSignalInfosForWorkflowTxn(newWorkflow.SignalInfos)
 	if err != nil {
 		return nil, err
 	}
-	execution.SignalRequestedIDs = newWorkflow.SignalRequestedIDs
+	execution.SignalRequestedIDsToAdd = newWorkflow.SignalRequestedIDs
 
 	transferTasks, err := d.prepareTransferTasksForWorkflowTxn(domainID, workflowID, runID, newWorkflow.TransferTasks)
 	if err != nil {
@@ -1250,7 +1250,7 @@ func (d *cassandraPersistence) prepareWorkflowExecutionForCreateWorkflowTxn(
 	checksum checksum.Checksum,
 	nowTimestamp time.Time,
 	lastWriteVersion int64,
-) (*nosqlplugin.WorkflowExecutionRow, error) {
+) (*nosqlplugin.WorkflowExecutionRequest, error) {
 	// validate workflow state & close status
 	if err := p.ValidateCreateWorkflowStateCloseStatus(
 		executionInfo.State,
@@ -1274,7 +1274,7 @@ func (d *cassandraPersistence) prepareWorkflowExecutionForCreateWorkflowTxn(
 		return nil, &types.InternalServiceError{Message: "encounter empty version histories in createExecution"}
 	}
 	versionHistories = versionHistories.ToNilSafeDataBlob()
-	return &nosqlplugin.WorkflowExecutionRow{
+	return &nosqlplugin.WorkflowExecutionRequest{
 		InternalWorkflowExecutionInfo: *executionInfo,
 		VersionHistories:              versionHistories,
 		Checksums:                     &checksum,
