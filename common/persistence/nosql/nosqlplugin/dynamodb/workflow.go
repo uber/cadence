@@ -45,6 +45,7 @@ func (db *ddb) UpdateWorkflowExecutionWithTasks(
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
 	mutatedExecution *nosqlplugin.WorkflowExecutionRequest,
 	insertedExecution *nosqlplugin.WorkflowExecutionRequest,
+	overriddenExecution *nosqlplugin.WorkflowExecutionRequest,
 	transferTasks []*nosqlplugin.TransferTask,
 	crossClusterTasks []*nosqlplugin.CrossClusterTask,
 	replicationTasks []*nosqlplugin.ReplicationTask,
