@@ -23,7 +23,6 @@ package cassandra
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
@@ -51,42 +50,7 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 		return err
 	}
 
-	err = db.createWorkflowExecution(batch, shardID, domainID, workflowID, runID, execution)
-	if err != nil {
-		return err
-	}
-
-	activityInfoMap := execution.ActivityInfos
-	timerInfoMap := execution.TimerInfos
-	childWorkflowInfoMap := execution.ChildWorkflowInfos
-	requestCancelInfoMap := execution.RequestCancelInfos
-	signalInfoMap := execution.SignalInfos
-	signalRequestedIDs := execution.SignalRequestedIDs
-	if execution.MapsWriteMode != nosqlplugin.WorkflowExecutionMapsWriteModeAdd {
-		return fmt.Errorf("InsertWorkflowExecutionWithTasks should only support WorkflowExecutionMapsWriteModeAdd")
-	}
-
-	err = db.updateActivityInfos(batch, shardID, domainID, workflowID, runID, activityInfoMap, nil)
-	if err != nil {
-		return err
-	}
-	err = db.updateTimerInfos(batch, shardID, domainID, workflowID, runID, timerInfoMap, nil)
-	if err != nil {
-		return err
-	}
-	err = db.updateChildExecutionInfos(batch, shardID, domainID, workflowID, runID, childWorkflowInfoMap, nil)
-	if err != nil {
-		return err
-	}
-	err = db.updateRequestCancelInfos(batch, shardID, domainID, workflowID, runID, requestCancelInfoMap, nil)
-	if err != nil {
-		return err
-	}
-	err = db.updateSignalInfos(batch, shardID, domainID, workflowID, runID, signalInfoMap, nil)
-	if err != nil {
-		return err
-	}
-	err = db.updateSignalsRequested(batch, shardID, domainID, workflowID, runID, signalRequestedIDs, nil)
+	err = db.createWorkflowExecutionWithMergeMaps(batch, shardID, domainID, workflowID, runID, execution)
 	if err != nil {
 		return err
 	}
@@ -125,7 +89,7 @@ func (db *cdb) UpdateWorkflowExecutionWithTasks(
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
 	mutatedExecution *nosqlplugin.WorkflowExecutionRequest,
 	insertedExecution *nosqlplugin.WorkflowExecutionRequest,
-	overriddenExecution *nosqlplugin.WorkflowExecutionRequest,
+	resetExecution *nosqlplugin.WorkflowExecutionRequest,
 	transferTasks []*nosqlplugin.TransferTask,
 	crossClusterTasks []*nosqlplugin.CrossClusterTask,
 	replicationTasks []*nosqlplugin.ReplicationTask,

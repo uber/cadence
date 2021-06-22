@@ -409,7 +409,7 @@ type (
 		//		childWorkflowInfoMap, signalInfoMap and signalRequestedIDs)
 		// 3. if insertedExecution is not nil, then also insert a new workflow_execution record including basic info and add to 6 maps(activityInfoMap, timerInfoMap,
 		//		childWorkflowInfoMap, signalInfoMap and signalRequestedIDs
-		// 4. if overriddenExecution is not nil, then also update the workflow_execution record including basic info and reset/override 6 maps(activityInfoMap, timerInfoMap,
+		// 4. if resetExecution is not nil, then also update the workflow_execution record including basic info and reset/override 6 maps(activityInfoMap, timerInfoMap,
 		//		childWorkflowInfoMap, signalInfoMap and signalRequestedIDs
 		// 5. Create transfer tasks
 		// 6. Create timer tasks
@@ -422,7 +422,7 @@ type (
 			currentWorkflowRequest *CurrentWorkflowWriteRequest,
 			mutatedExecution *WorkflowExecutionRequest,
 			insertedExecution *WorkflowExecutionRequest,
-			overriddenExecution *WorkflowExecutionRequest,
+			resetExecution *WorkflowExecutionRequest,
 			transferTasks []*TransferTask,
 			crossClusterTasks []*CrossClusterTask,
 			replicationTasks []*ReplicationTask,
@@ -444,7 +444,7 @@ type (
 		// MapsWriteMode controls how to write into the six maps(activityInfoMap, timerInfoMap, childWorkflowInfoMap, signalInfoMap and signalRequestedIDs)
 		MapsWriteMode WorkflowExecutionMapsWriteMode
 
-		// For WorkflowExecutionMapsWriteMode of add, update and override
+		// For WorkflowExecutionMapsWriteMode of merge, mergeAndDelete and reset
 		ActivityInfos      map[int64]*persistence.InternalActivityInfo
 		TimerInfos         map[string]*persistence.TimerInfo
 		ChildWorkflowInfos map[int64]*persistence.InternalChildExecutionInfo
@@ -452,7 +452,7 @@ type (
 		SignalInfos        map[int64]*persistence.SignalInfo
 		SignalRequestedIDs []string // This map has no value, hence use array to store keys
 
-		// For WorkflowExecutionMapsWriteMode of update only
+		// For WorkflowExecutionMapsWriteMode of delete only
 		ActivityInfoKeysToDelete       []int64
 		TimerInfoKeysToDelete          []string
 		ChildWorkflowInfoKeysToDelete  []int64
@@ -733,12 +733,12 @@ const (
 )
 
 const (
-	// Add mode will insert new entry to maps
-	WorkflowExecutionMapsWriteModeAdd WorkflowExecutionMapsWriteMode = iota
-	// Update mode will insert new entry to maps and delete entries from maps
-	WorkflowExecutionMapsWriteModeUpdate
-	// Override mode will override the whole maps
-	WorkflowExecutionMapsWriteModeOverride
+	// Merge mode will upsert new entry to maps
+	WorkflowExecutionMapsWriteModeMerge WorkflowExecutionMapsWriteMode = iota
+	// MergeAndDelete mode will upsert new entry to maps and also delete entries from maps
+	WorkflowExecutionMapsWriteModeMergeAndDelete
+	// Override mode will reset(override) the whole maps
+	WorkflowExecutionMapsWriteModeReset
 )
 func (w *CurrentWorkflowWriteCondition) GetCurrentRunID() string {
 	if w == nil || w.CurrentRunID == nil {

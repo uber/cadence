@@ -614,6 +614,52 @@ func (db *cdb) convertToCassandraTimestamp(in time.Time) time.Time {
 	return time.Unix(0, persistence.DBTimestampToUnixNano(persistence.UnixNanoToDBTimestamp(in.UnixNano())))
 }
 
+func (db *cdb) createWorkflowExecutionWithMergeMaps(
+	batch gocql.Batch,
+	shardID int,
+	domainID string,
+	workflowID string,
+	runID string,
+	execution *nosqlplugin.WorkflowExecutionRequest,
+) error {
+	err := db.createWorkflowExecution(batch, shardID, domainID, workflowID, runID, execution)
+	if err != nil {
+		return err
+	}
+
+	activityInfoMap := execution.ActivityInfos
+	timerInfoMap := execution.TimerInfos
+	childWorkflowInfoMap := execution.ChildWorkflowInfos
+	requestCancelInfoMap := execution.RequestCancelInfos
+	signalInfoMap := execution.SignalInfos
+	signalRequestedIDs := execution.SignalRequestedIDs
+	if execution.MapsWriteMode != nosqlplugin.WorkflowExecutionMapsWriteModeMerge {
+		return fmt.Errorf("InsertWorkflowExecutionWithTasks should only support WorkflowExecutionMapsWriteModeMerge")
+	}
+
+	err = db.updateActivityInfos(batch, shardID, domainID, workflowID, runID, activityInfoMap, nil)
+	if err != nil {
+		return err
+	}
+	err = db.updateTimerInfos(batch, shardID, domainID, workflowID, runID, timerInfoMap, nil)
+	if err != nil {
+		return err
+	}
+	err = db.updateChildExecutionInfos(batch, shardID, domainID, workflowID, runID, childWorkflowInfoMap, nil)
+	if err != nil {
+		return err
+	}
+	err = db.updateRequestCancelInfos(batch, shardID, domainID, workflowID, runID, requestCancelInfoMap, nil)
+	if err != nil {
+		return err
+	}
+	err = db.updateSignalInfos(batch, shardID, domainID, workflowID, runID, signalInfoMap, nil)
+	if err != nil {
+		return err
+	}
+	return db.updateSignalsRequested(batch, shardID, domainID, workflowID, runID, signalRequestedIDs, nil)
+}
+
 func (db *cdb) createWorkflowExecution(
 	batch gocql.Batch,
 	shardID int,
