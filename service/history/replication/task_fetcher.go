@@ -39,6 +39,8 @@ import (
 	"github.com/uber/cadence/service/history/config"
 )
 
+// TODO: reuse the interface and implementation defined in history/task package
+
 const (
 	fetchTaskRequestTimeout = 60 * time.Second
 	requestChanBufferSize   = 1000
@@ -224,7 +226,7 @@ func (f *taskFetcherImpl) fetchTasks() {
 			if err != nil {
 				if _, ok := err.(*types.ServiceBusyError); ok {
 					// slow down replication when source cluster is busy
-					timer.Reset(f.config.ReplicationTaskFetcherErrorRetryWait())
+					timer.Reset(f.config.ReplicationTaskFetcherServiceBusyWait())
 				} else {
 					timer.Reset(backoff.JitDuration(
 						f.config.ReplicationTaskFetcherErrorRetryWait(),
@@ -288,12 +290,10 @@ func (f *taskFetcherImpl) getMessages(
 	}
 	response, err := f.remotePeer.GetReplicationMessages(ctx, request)
 	if err != nil {
-		if _, ok := err.(*types.ServiceBusyError); !ok {
-			return nil, err
-		}
+		return nil, err
 	}
 
-	return response.GetMessagesByShard(), err
+	return response.GetMessagesByShard(), nil
 }
 
 // GetSourceCluster returns the source cluster for the fetcher

@@ -126,7 +126,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestRegisterGet
 	domainName := s.getRandomDomainName()
 	isGlobalDomain := false
 	var clusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -188,7 +188,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestRegisterGet
 	isGlobalDomain := false
 
 	var expectedClusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		expectedClusters = append(expectedClusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -247,7 +247,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 	emitMetric := true
 	data := map[string]string{"some random key": "some random value"}
 	var clusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -337,7 +337,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 	emitMetric := true
 	data := map[string]string{"some random key": "some random value"}
 	var clusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -432,7 +432,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestRegisterGet
 	domainName := s.getRandomDomainName()
 	isGlobalDomain := true
 	var clusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -460,7 +460,10 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestRegisterGet
 	emitMetric := true
 	activeClusterName := ""
 	clusters := []*types.ClusterReplicationConfiguration{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
+	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
 		}
@@ -501,7 +504,10 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 	emitMetric := true
 	activeClusterName := ""
 	clusters := []*persistence.ClusterReplicationConfig{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
+	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
 		}
@@ -557,7 +563,10 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 	activeClusterName := ""
 	clusters := []*types.ClusterReplicationConfiguration{}
 	clustersDB := []*persistence.ClusterReplicationConfig{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
+	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
 		}
@@ -630,7 +639,10 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 	nextActiveClusterName := s.ClusterMetadata.GetCurrentClusterName()
 	clusters := []*types.ClusterReplicationConfiguration{}
 	clustersDB := []*persistence.ClusterReplicationConfig{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
+	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			prevActiveClusterName = clusterName
 		}

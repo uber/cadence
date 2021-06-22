@@ -1,0 +1,8 @@
+{
+  "CurrVersion": "0.4",
+  "MinCompatibleVersion": "0.4",
+  "Description": "create cross cluster table",
+  "SchemaUpdateCqlFiles": [
+    "cross_cluster_table.sql"
+  ]
+}

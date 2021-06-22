@@ -184,6 +184,22 @@ func GetTimerTaskMetricScope(
 	}
 }
 
+// GetCrossClusterTaskMetricsScope returns the metrics scope index for cross cluster task
+func GetCrossClusterTaskMetricsScope(
+	taskType int,
+) int {
+	switch taskType {
+	case persistence.CrossClusterTaskTypeStartChildExecution:
+		return metrics.CrossClusterTaskStartChildExecutionScope
+	case persistence.CrossClusterTaskTypeCancelExecution:
+		return metrics.CrossClusterTaskCancelExecutionScope
+	case persistence.CrossClusterTaskTypeSignalExecution:
+		return metrics.CrossClusterTaskTypeSignalExecutionScope
+	default:
+		return metrics.CrossClusterQueueProcessorScope
+	}
+}
+
 // verifyTaskVersion, will return true if failover version check is successful
 func verifyTaskVersion(
 	shard shard.Context,

@@ -44,7 +44,7 @@ const VisibilityEncoding = common.EncodingTypeThriftRW
 
 var _ VisibilityManager = (*visibilityManagerImpl)(nil)
 
-// NewVisibilityManagerImpl returns new VisibilityManager
+// NewVisibilityManagerImpl returns new VisibilityManager via a VisibilityStore
 func NewVisibilityManagerImpl(persistence VisibilityStore, logger log.Logger) VisibilityManager {
 	return &visibilityManagerImpl{
 		serializer:  NewPayloadSerializer(),

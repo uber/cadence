@@ -24,6 +24,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -54,6 +55,7 @@ type (
 		shardCRUD
 		visibilityCRUD
 		taskCRUD
+		workflowCRUD
 	}
 
 	// NoSQLErrorChecker checks for common nosql errors
@@ -331,6 +333,198 @@ type (
 		RangeDeleteTasks(ctx context.Context, filter *TasksFilter) (rowsDeleted int, err error)
 	}
 
+	/**
+	* workflowCRUD is for core data models of workflow execution.
+	*
+	* Recommendation: If possible, use 7 tables(current_workflow, workflow_execution, transfer_task, replication_task, cross_cluster_task, timer_task, replication_dlq_task) to implement
+	* current_workflow is to track the currentRunID of a workflowID for ensuring the ID-Uniqueness of Cadence workflows.
+	* 		Each record is for one workflowID
+	* workflow_execution is to store the core data of workflow execution.
+	*		Each record is for one runID(workflow execution run).
+	* Different from taskCRUD, transfer_task, replication_task, cross_cluster_task, timer_task are all internal background tasks within Cadence server.
+	* transfer_task is to store the background tasks that need to be processed by historyEngine, right after the transaction.
+	*		There are lots of usage in historyEngine, like creating activity/childWF/etc task, and updating search attributes, etc.
+	* replication_task is to store also background tasks that need to be processed right after the transaction,
+	*		but only for CrossDC(XDC) replication feature. Each record is a replication task generated from a source cluster.
+	*		Replication task stores a reference to a batch of history events(see historyCRUD).
+	* timer_task is to store the durable timers that will fire in the future. Therefore this table should be indexed by the firingTime.
+	*		The durable timers are not only for workflow timers, but also for all kinds of timeouts, and workflow deletion, etc.
+	* cross_cluster_task is to store also background tasks that need to be processed right after the transaction, and only for
+	*		but only for cross cluster feature. Each record is a cross cluster task generated for a target cluster.
+	*		CrossCluster task stores information similar to TransferTask.
+	* The above 6 tables will be required to execute transaction write with the condition of shard record from shardCRUD.
+	* replication_dlq_task is DeadLetterQueue when target cluster pulling and applying replication task. Each record represents
+	*		a task for a target cluster.
+	*
+	* Significant columns:
+	* current_workflow: partition key(shardID), range key(domainID, workflowID), query condition column(currentRunID, lastWriteVersion, state)
+	* workflow_execution: partition key(shardID), range key(domainID, workflowID, runID), query condition column(nextEventID)
+	* transfer_task: partition key(shardID), range key(taskID)
+	* replication_task: partition key(shardID), range key(taskID)
+	* cross_cluster_task: partition key(shardID), range key(clusterName, taskID)
+	* timer_task: partition key(shardID), range key(visibilityTimestamp)
+	* replication_dlq_task: partition key(shardID), range key(clusterName, taskID)
+	*
+	* NOTE: Cassandra limits lightweight transaction to execute within one table. So the 6 tables + shard table are implemented
+	*   	via a single table `execution` in Cassandra, using `rowType` to differentiate the 7 tables, and using `permanentRunID`
+	*		to differentiate current_workflow and workflow_execution
+	* NOTE: Cassandra implementation uses 5 maps and a set to store activityInfo, timerInfo, childWorkflowInfo, requestCancels,
+	*		signalInfo and signalRequestedInfo.Those should be fine to be stored in the same record as its workflow_execution.
+	*		However, signalInfo stores the in progress signal data. It may be too big for a single record. For example, DynamoDB
+	*		requires 400KB of a record. In that case, it may be better to have a separate table for signalInfo.
+	* NOTE: Cassandra implementation of workflow_execution uses maps and set without "frozen". This has the advantage of deleting activity/timer/childWF/etc
+	*		by keys. The equivalent of this may require a read before overwriting the existing. Eg. [ "act1": <some data>, "act2": <some data>]
+	*		When deleting "act1", Cassandra implementation can delete without read. If storing in the same record of workflwo_execution,
+	*		it will require to read the whole activityInfo map for deleting.
+	* NOTE: Optional optimization: taskID that are writing into internal tasks(transfer/replication/crossCluster) are immutable and always increasing.
+	*		So it is possible to write the tasks in a single record, indexing by the lowest or highest taskID.
+	*		This approach can't be used by timerTasks as timers are ordered by visibilityTimestamp.
+	*		This is useful for DynamoDB because a transaction cannot contain more than 25 unique items.
+	*
+	 */
+	workflowCRUD interface {
+		// InsertWorkflowExecutionWithTasks is for creating a new workflow execution record. Within a transaction, it also:
+		// 1. Create or update the record of current_workflow with the same workflowID, based on CurrentWorkflowExecutionWriteMode,
+		//		and also check if the condition is met.
+		// 2. Create the workflow_execution record
+		// 3. Create transfer tasks
+		// 4. Create timer tasks
+		// 5. Create replication tasks
+		// 6. Create crossCluster tasks
+		// 7. Create activityInfo
+		// 8. Create timerInfo
+		// 9. Create childWorkflowInfo
+		// 10. Create requestCancels
+		// 11. Create signalInfo
+		// 12. Create signalRequested
+		// 13. Check if the condition of shard rangeID is met
+		// The API returns error if there is any. If any of the condition is not met, returns WorkflowOperationConditionFailure
+		InsertWorkflowExecutionWithTasks(
+			ctx context.Context,
+			currentWorkflowRequest *CurrentWorkflowWriteRequest,
+			execution *WorkflowExecutionRow,
+			transferTasks []*TransferTask,
+			crossClusterTasks []*CrossClusterTask,
+			replicationTasks []*ReplicationTask,
+			timerTasks []*TimerTask,
+			activityInfoMap map[int64]*persistence.InternalActivityInfo,
+			timerInfoMap map[string]*persistence.TimerInfo,
+			childWorkflowInfoMap map[int64]*persistence.InternalChildExecutionInfo,
+			requestCancelInfoMap map[int64]*persistence.RequestCancelInfo,
+			signalInfoMap map[int64]*persistence.SignalInfo,
+			signalRequestedIDs []string,
+			shardCondition *ShardCondition,
+		) error
+	}
+
+	WorkflowExecutionRow struct {
+		persistence.InternalWorkflowExecutionInfo
+		VersionHistories *persistence.DataBlob
+		Checksums        *checksum.Checksum
+		LastWriteVersion int64
+	}
+
+	TimerTask struct {
+		Type int
+
+		DomainID            string
+		WorkflowID          string
+		RunID               string
+		VisibilityTimestamp time.Time
+		TaskID              int64
+
+		TimeoutType int
+		EventID     int64
+		Attempt     int64
+		Version     int64
+	}
+
+	ReplicationTask struct {
+		Type int
+
+		DomainID            string
+		WorkflowID          string
+		RunID               string
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		FirstEventID        int64
+		NextEventID         int64
+		Version             int64
+		ActivityScheduleID  int64
+		EventStoreVersion   int
+		BranchToken         []byte
+		NewRunBranchToken   []byte
+	}
+
+	CrossClusterTask struct {
+		TransferTask
+		TargetCluster string
+	}
+
+	TransferTask struct {
+		Type                    int
+		DomainID                string
+		WorkflowID              string
+		RunID                   string
+		VisibilityTimestamp     time.Time
+		TaskID                  int64
+		TargetDomainID          string
+		TargetWorkflowID        string
+		TargetRunID             string
+		TargetChildWorkflowOnly bool
+		TaskList                string
+		ScheduleID              int64
+		RecordVisibility        bool
+		Version                 int64
+	}
+
+	ShardCondition struct {
+		ShardID int
+		RangeID int64
+	}
+
+	CurrentWorkflowWriteRequest struct {
+		WriteMode CurrentWorkflowWriteMode
+		Row       CurrentWorkflowRow
+		Condition *CurrentWorkflowWriteCondition
+	}
+
+	CurrentWorkflowWriteCondition struct {
+		CurrentRunID     *string
+		LastWriteVersion *int64
+		State            *int
+	}
+
+	CurrentWorkflowWriteMode int
+
+	CurrentWorkflowRow struct {
+		ShardID          int
+		DomainID         string
+		WorkflowID       string
+		RunID            string
+		State            int
+		CloseStatus      int
+		CreateRequestID  string
+		LastWriteVersion int64
+	}
+
+	// Only one of the fields must be non-nil
+	WorkflowOperationConditionFailure struct {
+		UnknownConditionFailureDetails   *string // return some info for logging
+		ShardRangeIDNotMatch             *int64  // return the previous shardRangeID
+		WorkflowExecutionAlreadyExists   *WorkflowExecutionAlreadyExists
+		CurrentWorkflowConditionFailInfo *string // return the logging info if fail on condition of CurrentWorkflow
+	}
+
+	WorkflowExecutionAlreadyExists struct {
+		RunID            string
+		CreateRequestID  string
+		State            int
+		CloseStatus      int
+		LastWriteVersion int64
+		OtherInfo        string
+	}
+
 	TasksFilter struct {
 		TaskListFilter
 		// Exclusive
@@ -509,3 +703,20 @@ const (
 	SortByStartTime VisibilitySortType = iota
 	SortByClosedTime
 )
+
+const (
+	CurrentWorkflowWriteModeNoop CurrentWorkflowWriteMode = iota
+	CurrentWorkflowWriteModeUpdate
+	CurrentWorkflowWriteModeInsert
+)
+
+func (w *CurrentWorkflowWriteCondition) GetCurrentRunID() string {
+	if w == nil || w.CurrentRunID == nil {
+		return ""
+	}
+	return *w.CurrentRunID
+}
+
+func (e *WorkflowOperationConditionFailure) Error() string {
+	return "condition failure"
+}
