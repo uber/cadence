@@ -23,6 +23,7 @@ package cassandra
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
@@ -55,12 +56,15 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 		return err
 	}
 
-	activityInfoMap := execution.ActivityInfoToAdd
-	timerInfoMap := execution.TimerInfoMapToAdd
-	childWorkflowInfoMap := execution.ChildWorkflowInfoToAdd
-	requestCancelInfoMap := execution.RequestCancelInfoToAdd
-	signalInfoMap := execution.SignalInfoToAdd
-	signalRequestedIDs := execution.SignalRequestedIDsToAdd
+	activityInfoMap := execution.ActivityInfos
+	timerInfoMap := execution.TimerInfos
+	childWorkflowInfoMap := execution.ChildWorkflowInfos
+	requestCancelInfoMap := execution.RequestCancelInfos
+	signalInfoMap := execution.SignalInfos
+	signalRequestedIDs := execution.SignalRequestedIDs
+	if execution.MapsWriteMode != nosqlplugin.WorkflowExecutionMapsWriteModeAdd {
+		return fmt.Errorf("InsertWorkflowExecutionWithTasks should only support WorkflowExecutionMapsWriteModeAdd")
+	}
 
 	err = db.updateActivityInfos(batch, shardID, domainID, workflowID, runID, activityInfoMap, nil)
 	if err != nil {
@@ -110,4 +114,22 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 	}
 
 	return db.executeCreateWorkflowBatchTransaction(batch, currentWorkflowRequest, execution, shardCondition)
+}
+
+func (db *cdb) SelectCurrentWorkflow(ctx context.Context, domainID, workflowID string) (*nosqlplugin.CurrentWorkflowRow, error) {
+	panic("TODO")
+}
+
+func (db *cdb) UpdateWorkflowExecutionWithTasks(
+	ctx context.Context,
+	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
+	mutatedExecution *nosqlplugin.WorkflowExecutionRequest,
+	insertedExecution *nosqlplugin.WorkflowExecutionRequest,
+	transferTasks []*nosqlplugin.TransferTask,
+	crossClusterTasks []*nosqlplugin.CrossClusterTask,
+	replicationTasks []*nosqlplugin.ReplicationTask,
+	timerTasks []*nosqlplugin.TimerTask,
+	shardCondition *nosqlplugin.ShardCondition,
+) error {
+	panic("TODO")
 }

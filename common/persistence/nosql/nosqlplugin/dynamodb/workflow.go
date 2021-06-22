@@ -39,3 +39,21 @@ func (db *ddb) InsertWorkflowExecutionWithTasks(
 ) error {
 	panic("TODO")
 }
+
+func (db *ddb) UpdateWorkflowExecutionWithTasks(
+	ctx context.Context,
+	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
+	mutatedExecution *nosqlplugin.WorkflowExecutionRequest,
+	insertedExecution *nosqlplugin.WorkflowExecutionRequest,
+	transferTasks []*nosqlplugin.TransferTask,
+	crossClusterTasks []*nosqlplugin.CrossClusterTask,
+	replicationTasks []*nosqlplugin.ReplicationTask,
+	timerTasks []*nosqlplugin.TimerTask,
+	shardCondition *nosqlplugin.ShardCondition,
+) error {
+	panic("TODO")
+}
+
+func (db *ddb) SelectCurrentWorkflow(ctx context.Context, domainID, workflowID string) (*nosqlplugin.CurrentWorkflowRow, error) {
+	panic("TODO")
+}

@@ -364,11 +364,11 @@ type (
 	* NOTE: Cassandra limits lightweight transaction to execute within one table. So the 6 tables + shard table are implemented
 	*   	via a single table `execution` in Cassandra, using `rowType` to differentiate the 7 tables, and using `permanentRunID`
 	*		to differentiate current_workflow and workflow_execution
-	* NOTE: Cassandra implementation uses 5 maps and a set to store activityInfo, timerInfo, childWorkflowInfo, requestCancels,
+	* NOTE: Cassandra implementation uses 6 maps to store activityInfo, timerInfo, childWorkflowInfo, requestCancels,
 	*		signalInfo and signalRequestedInfo.Those should be fine to be stored in the same record as its workflow_execution.
 	*		However, signalInfo stores the in progress signal data. It may be too big for a single record. For example, DynamoDB
 	*		requires 400KB of a record. In that case, it may be better to have a separate table for signalInfo.
-	* NOTE: Cassandra implementation of workflow_execution uses maps and set without "frozen". This has the advantage of deleting activity/timer/childWF/etc
+	* NOTE: Cassandra implementation of workflow_execution uses maps without "frozen". This has the advantage of deleting activity/timer/childWF/etc
 	*		by keys. The equivalent of this may require a read before overwriting the existing. Eg. [ "act1": <some data>, "act2": <some data>]
 	*		When deleting "act1", Cassandra implementation can delete without read. If storing in the same record of workflwo_execution,
 	*		it will require to read the whole activityInfo map for deleting.
@@ -382,8 +382,8 @@ type (
 		// InsertWorkflowExecutionWithTasks is for creating a new workflow execution record. Within a transaction, it also:
 		// 1. Create or update the record of current_workflow with the same workflowID, based on CurrentWorkflowExecutionWriteMode,
 		//		and also check if the condition is met.
-		// 2. Create the workflow_execution record, including basic info and 5 maps and a set(activityInfoMap, timerInfoMap,
-		//		childWorkflowInfoMap, signalInfoMap and signalRequestedIDs
+		// 2. Create the workflow_execution record, including basic info and 6 maps(activityInfoMap, timerInfoMap,
+		//		childWorkflowInfoMap, signalInfoMap and signalRequestedIDs)
 		// 3. Create transfer tasks
 		// 4. Create timer tasks
 		// 5. Create replication tasks
@@ -405,49 +405,63 @@ type (
 		// Within a transaction, it also:
 		// 1. If currentWorkflowRequest is not nil, Update the record of current_workflow with the same workflowID, based on CurrentWorkflowExecutionWriteMode,
 		//		and also check if the condition is met.
-		// 2. Update mutatedExecution as workflow_execution record, including basic info and 5 maps and a set(activityInfoMap, timerInfoMap,
+		// 2. Update mutatedExecution as workflow_execution record, including basic info and 6 maps(activityInfoMap, timerInfoMap,
+		//		childWorkflowInfoMap, signalInfoMap and signalRequestedIDs)
+		// 3. if insertedExecution is not nil, then also insert a new workflow_execution record including basic info and add to 6 maps(activityInfoMap, timerInfoMap,
 		//		childWorkflowInfoMap, signalInfoMap and signalRequestedIDs
-		// 3. if insertedExecution is not nil, then also insert a new workflow_execution record including basic info and 5 maps and a set(activityInfoMap, timerInfoMap,
+		// 4. if overriddenExecution is not nil, then also update the workflow_execution record including basic info and reset/override 6 maps(activityInfoMap, timerInfoMap,
 		//		childWorkflowInfoMap, signalInfoMap and signalRequestedIDs
-		// 4. Create transfer tasks
-		// 5. Create timer tasks
-		// 6. Create replication tasks
-		// 7. Create crossCluster tasks
-		// 8. Check if the condition of shard rangeID is met
+		// 5. Create transfer tasks
+		// 6. Create timer tasks
+		// 7. Create replication tasks
+		// 8. Create crossCluster tasks
+		// 9. Check if the condition of shard rangeID is met
 		// The API returns error if there is any. If any of the condition is not met, returns WorkflowOperationConditionFailure
 		UpdateWorkflowExecutionWithTasks(
 			ctx context.Context,
 			currentWorkflowRequest *CurrentWorkflowWriteRequest,
 			mutatedExecution *WorkflowExecutionRequest,
 			insertedExecution *WorkflowExecutionRequest,
+			overriddenExecution *WorkflowExecutionRequest,
 			transferTasks []*TransferTask,
 			crossClusterTasks []*CrossClusterTask,
 			replicationTasks []*ReplicationTask,
 			timerTasks []*TimerTask,
 			shardCondition *ShardCondition,
 		) error
+
+		// Return the current_workflow row
+		SelectCurrentWorkflow(ctx context.Context, domainID, workflowID string) (*CurrentWorkflowRow, error)
 	}
 
 	WorkflowExecutionRequest struct {
+		// basic information/data
 		persistence.InternalWorkflowExecutionInfo
 		VersionHistories *persistence.DataBlob
 		Checksums        *checksum.Checksum
 		LastWriteVersion int64
-		// Adding to 5 maps and a set
-		ActivityInfoToAdd       map[int64]*persistence.InternalActivityInfo
-		TimerInfoMapToAdd       map[string]*persistence.TimerInfo
-		ChildWorkflowInfoToAdd  map[int64]*persistence.InternalChildExecutionInfo
-		RequestCancelInfoToAdd  map[int64]*persistence.RequestCancelInfo
-		SignalInfoToAdd         map[int64]*persistence.SignalInfo
-		SignalRequestedIDsToAdd []string
-		// Deleting from 5 maps and a set
-		ActivityInfoToDelete       []int64
-		TimerInfoMapToDelete       []string
-		ChildWorkflowInfoToDelete  []int64
-		RequestCancelInfoToDelete  []int64
-		SignalInfoToDelete         []int64
-		SignalRequestedIDsToDelete []string
+
+		// MapsWriteMode controls how to write into the six maps(activityInfoMap, timerInfoMap, childWorkflowInfoMap, signalInfoMap and signalRequestedIDs)
+		MapsWriteMode WorkflowExecutionMapsWriteMode
+
+		// For WorkflowExecutionMapsWriteMode of add, update and override
+		ActivityInfos      map[int64]*persistence.InternalActivityInfo
+		TimerInfos         map[string]*persistence.TimerInfo
+		ChildWorkflowInfos map[int64]*persistence.InternalChildExecutionInfo
+		RequestCancelInfos map[int64]*persistence.RequestCancelInfo
+		SignalInfos        map[int64]*persistence.SignalInfo
+		SignalRequestedIDs []string // This map has no value, hence use array to store keys
+
+		// For WorkflowExecutionMapsWriteMode of update only
+		ActivityInfoKeysToDelete       []int64
+		TimerInfoKeysToDelete          []string
+		ChildWorkflowInfoKeysToDelete  []int64
+		RequestCancelInfoKeysToDelete  []int64
+		SignalInfoKeysToDelete         []int64
+		SignalRequestedIDsKeysToDelete []string
 	}
+
+	WorkflowExecutionMapsWriteMode int
 
 	TimerTask struct {
 		Type int
@@ -718,6 +732,14 @@ const (
 	CurrentWorkflowWriteModeInsert
 )
 
+const (
+	// Add mode will insert new entry to maps
+	WorkflowExecutionMapsWriteModeAdd WorkflowExecutionMapsWriteMode = iota
+	// Update mode will insert new entry to maps and delete entries from maps
+	WorkflowExecutionMapsWriteModeUpdate
+	// Override mode will override the whole maps
+	WorkflowExecutionMapsWriteModeOverride
+)
 func (w *CurrentWorkflowWriteCondition) GetCurrentRunID() string {
 	if w == nil || w.CurrentRunID == nil {
 		return ""

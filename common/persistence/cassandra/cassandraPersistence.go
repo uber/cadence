@@ -805,27 +805,28 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 		return nil, err
 	}
 
-	execution.ActivityInfoToAdd, err = d.prepareActivityInfosForWorkflowTxn(newWorkflow.ActivityInfos)
+	execution.ActivityInfos, err = d.prepareActivityInfosForWorkflowTxn(newWorkflow.ActivityInfos)
 	if err != nil {
 		return nil, err
 	}
-	execution.TimerInfoMapToAdd, err = d.prepareTimerInfosForWorkflowTxn(newWorkflow.TimerInfos)
+	execution.TimerInfos, err = d.prepareTimerInfosForWorkflowTxn(newWorkflow.TimerInfos)
 	if err != nil {
 		return nil, err
 	}
-	execution.ChildWorkflowInfoToAdd, err = d.prepareChildWFInfosForWorkflowTxn(newWorkflow.ChildExecutionInfos)
+	execution.ChildWorkflowInfos, err = d.prepareChildWFInfosForWorkflowTxn(newWorkflow.ChildExecutionInfos)
 	if err != nil {
 		return nil, err
 	}
-	execution.RequestCancelInfoToAdd, err = d.prepareRequestCancelsForWorkflowTxn(newWorkflow.RequestCancelInfos)
+	execution.RequestCancelInfos, err = d.prepareRequestCancelsForWorkflowTxn(newWorkflow.RequestCancelInfos)
 	if err != nil {
 		return nil, err
 	}
-	execution.SignalInfoToAdd, err = d.prepareSignalInfosForWorkflowTxn(newWorkflow.SignalInfos)
+	execution.SignalInfos, err = d.prepareSignalInfosForWorkflowTxn(newWorkflow.SignalInfos)
 	if err != nil {
 		return nil, err
 	}
-	execution.SignalRequestedIDsToAdd = newWorkflow.SignalRequestedIDs
+	execution.SignalRequestedIDs = newWorkflow.SignalRequestedIDs
+	execution.MapsWriteMode = nosqlplugin.WorkflowExecutionMapsWriteModeAdd
 
 	transferTasks, err := d.prepareTransferTasksForWorkflowTxn(domainID, workflowID, runID, newWorkflow.TransferTasks)
 	if err != nil {
