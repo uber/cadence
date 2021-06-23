@@ -55,6 +55,6 @@ func (db *ddb) UpdateWorkflowExecutionWithTasks(
 	panic("TODO")
 }
 
-func (db *ddb) SelectCurrentWorkflow(ctx context.Context, domainID, workflowID string) (*nosqlplugin.CurrentWorkflowRow, error) {
+func (db *ddb) SelectCurrentWorkflow(ctx context.Context, shardID int, domainID, workflowID string) (*nosqlplugin.CurrentWorkflowRow, error) {
 	panic("TODO")
 }

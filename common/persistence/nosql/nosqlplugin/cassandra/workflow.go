@@ -24,6 +24,7 @@ package cassandra
 import (
 	"context"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
@@ -80,8 +81,41 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 	return db.executeCreateWorkflowBatchTransaction(batch, currentWorkflowRequest, execution, shardCondition)
 }
 
-func (db *cdb) SelectCurrentWorkflow(ctx context.Context, domainID, workflowID string) (*nosqlplugin.CurrentWorkflowRow, error) {
-	panic("TODO")
+func (db *cdb) SelectCurrentWorkflow(
+	ctx context.Context,
+	shardID int, domainID, workflowID string,
+) (*nosqlplugin.CurrentWorkflowRow, error) {
+	query := db.session.Query(templateGetCurrentExecutionQuery,
+		shardID,
+		rowTypeExecution,
+		domainID,
+		workflowID,
+		permanentRunID,
+		defaultVisibilityTimestamp,
+		rowTypeExecutionTaskID,
+	).WithContext(ctx)
+
+	result := make(map[string]interface{})
+	if err := query.MapScan(result); err != nil {
+		return nil, err
+	}
+
+	currentRunID := result["current_run_id"].(gocql.UUID).String()
+	executionInfo := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
+	lastWriteVersion := common.EmptyVersion
+	if result["workflow_last_write_version"] != nil {
+		lastWriteVersion = result["workflow_last_write_version"].(int64)
+	}
+	return &nosqlplugin.CurrentWorkflowRow{
+		ShardID:          shardID,
+		DomainID:         domainID,
+		WorkflowID:       workflowID,
+		RunID:            currentRunID,
+		CreateRequestID:  executionInfo.CreateRequestID,
+		State:            executionInfo.State,
+		CloseStatus:      executionInfo.CloseStatus,
+		LastWriteVersion: lastWriteVersion,
+	}, nil
 }
 
 func (db *cdb) UpdateWorkflowExecutionWithTasks(
