@@ -103,7 +103,6 @@ func (t *nosqlTaskManager) LeaseTaskList(
 		TaskListType: request.TaskType,
 	})
 
-	var previous *nosqlplugin.TaskListRow
 	if selectErr != nil {
 		if t.db.IsNotFoundError(selectErr) { // First time task list is used
 			currTL = &nosqlplugin.TaskListRow{
@@ -115,7 +114,7 @@ func (t *nosqlTaskManager) LeaseTaskList(
 				AckLevel:        initialAckLevel,
 				LastUpdatedTime: now,
 			}
-			previous, err = t.db.InsertTaskList(ctx, currTL)
+			err = t.db.InsertTaskList(ctx, currTL)
 		} else {
 			return nil, convertCommonErrors(t.db, "LeaseTaskList", err)
 		}
@@ -133,7 +132,7 @@ func (t *nosqlTaskManager) LeaseTaskList(
 		// Update the rangeID as this is an ownership change
 		currTL.RangeID += 1
 
-		previous, err = t.db.UpdateTaskList(ctx, &nosqlplugin.TaskListRow{
+		err = t.db.UpdateTaskList(ctx, &nosqlplugin.TaskListRow{
 			DomainID:        request.DomainID,
 			TaskListName:    request.TaskList,
 			TaskListType:    request.TaskType,
@@ -144,10 +143,11 @@ func (t *nosqlTaskManager) LeaseTaskList(
 		}, currTL.RangeID-1)
 	}
 	if err != nil {
-		if t.db.IsConditionFailedError(err) {
+		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
+		if ok {
 			return nil, &p.ConditionFailedError{
 				Msg: fmt.Sprintf("leaseTaskList: taskList:%v, taskListType:%v, haveRangeID:%v, gotRangeID:%v",
-					request.TaskList, request.TaskType, currTL.RangeID, previous.RangeID),
+					request.TaskList, request.TaskType, currTL.RangeID, conditionFailure.RangeID),
 			}
 		}
 		return nil, convertCommonErrors(t.db, "LeaseTaskList", err)
@@ -171,7 +171,6 @@ func (t *nosqlTaskManager) UpdateTaskList(
 ) (*p.UpdateTaskListResponse, error) {
 	tli := request.TaskListInfo
 	var err error
-	var previous *nosqlplugin.TaskListRow
 	taskListToUpdate := &nosqlplugin.TaskListRow{
 		DomainID:        tli.DomainID,
 		TaskListName:    tli.Name,
@@ -183,16 +182,17 @@ func (t *nosqlTaskManager) UpdateTaskList(
 	}
 
 	if tli.Kind == p.TaskListKindSticky { // if task_list is sticky, then update with TTL
-		previous, err = t.db.UpdateTaskListWithTTL(ctx, stickyTaskListTTL, taskListToUpdate, tli.RangeID)
+		err = t.db.UpdateTaskListWithTTL(ctx, stickyTaskListTTL, taskListToUpdate, tli.RangeID)
 	} else {
-		previous, err = t.db.UpdateTaskList(ctx, taskListToUpdate, tli.RangeID)
+		err = t.db.UpdateTaskList(ctx, taskListToUpdate, tli.RangeID)
 	}
 
 	if err != nil {
-		if t.db.IsConditionFailedError(err) {
+		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
+		if ok {
 			return nil, &p.ConditionFailedError{
 				Msg: fmt.Sprintf("Failed to update task list. name: %v, type: %v, rangeID: %v, columns: (%v)",
-					tli.Name, tli.TaskType, tli.RangeID, previous),
+					tli.Name, tli.TaskType, tli.RangeID, conditionFailure.Details),
 			}
 		}
 		return nil, convertCommonErrors(t.db, "UpdateTaskList", err)
@@ -214,17 +214,18 @@ func (t *nosqlTaskManager) DeleteTaskList(
 	ctx context.Context,
 	request *p.DeleteTaskListRequest,
 ) error {
-	previous, err := t.db.DeleteTaskList(ctx, &nosqlplugin.TaskListFilter{
+	err := t.db.DeleteTaskList(ctx, &nosqlplugin.TaskListFilter{
 		DomainID:     request.DomainID,
 		TaskListName: request.TaskListName,
 		TaskListType: request.TaskListType,
 	}, request.RangeID)
 
 	if err != nil {
-		if t.db.IsConditionFailedError(err) {
+		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
+		if ok {
 			return &p.ConditionFailedError{
 				Msg: fmt.Sprintf("Failed to delete task list. name: %v, type: %v, rangeID: %v, columns: (%v)",
-					request.TaskListName, request.TaskListType, request.RangeID, previous),
+					request.TaskListName, request.TaskListType, request.RangeID, conditionFailure.Details),
 			}
 		}
 		return convertCommonErrors(t.db, "DeleteTaskList", err)
@@ -258,13 +259,14 @@ func (t *nosqlTaskManager) CreateTasks(
 		})
 	}
 
-	previous, err := t.db.InsertTasks(ctx, tasks, toTaskListRow(request.TaskListInfo))
+	err := t.db.InsertTasks(ctx, tasks, toTaskListRow(request.TaskListInfo))
 
 	if err != nil {
-		if t.db.IsConditionFailedError(err) {
+		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
+		if ok {
 			return nil, &p.ConditionFailedError{
 				Msg: fmt.Sprintf("Failed to insert tasks. name: %v, type: %v, rangeID: %v, columns: (%v)",
-					request.TaskListInfo.Name, request.TaskListInfo.TaskType, request.TaskListInfo.RangeID, previous),
+					request.TaskListInfo.Name, request.TaskListInfo.TaskType, request.TaskListInfo.RangeID, conditionFailure.Details),
 			}
 		}
 		return nil, convertCommonErrors(t.db, "CreateTasks", err)
