@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,26 +18,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package nosql
 
 import (
-	"github.com/uber/cadence/common/log"
+	"fmt"
+
+	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/common/types"
 )
 
-type (
-	// a shared struct for all managers in this package
-	nosqlStore struct {
-		logger log.Logger
-		db     nosqlplugin.DB
+func convertCommonErrors(
+	errChecker nosqlplugin.ClientErrorChecker,
+	operation string,
+	err error,
+) error {
+	if errChecker.IsNotFoundError(err) {
+		return &types.EntityNotExistsError{
+			Message: fmt.Sprintf("%v failed. Error: %v ", operation, err),
+		}
 	}
-)
 
-func (nm *nosqlStore) GetName() string {
-	return nm.db.PluginName()
-}
+	if errChecker.IsTimeoutError(err) {
+		return &p.TimeoutError{Msg: fmt.Sprintf("%v timed out. Error: %v", operation, err)}
+	}
 
-// Close releases the underlying resources held by this object
-func (nm *nosqlStore) Close() {
-	nm.db.Close()
+	if errChecker.IsThrottlingError(err) {
+		return &types.ServiceBusyError{
+			Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
+		}
+	}
+
+	return &types.InternalServiceError{
+		Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
+	}
 }

@@ -32,8 +32,8 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/elasticsearch"
+	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/quotas"
@@ -388,7 +388,7 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	defaultDataStore := Datastore{ratelimit: limiters[f.config.DefaultStore]}
 	switch {
 	case defaultCfg.NoSQL != nil:
-		defaultDataStore.factory = cassandra.NewFactory(*defaultCfg.NoSQL, clusterName, f.logger)
+		defaultDataStore.factory = nosql.NewFactory(*defaultCfg.NoSQL, clusterName, f.logger)
 	case defaultCfg.SQL != nil:
 		if defaultCfg.SQL.EncodingType == "" {
 			defaultCfg.SQL.EncodingType = string(common.EncodingTypeThriftRW)
@@ -430,7 +430,7 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	visibilityDataStore := Datastore{ratelimit: limiters[f.config.VisibilityStore]}
 	switch {
 	case visibilityCfg.NoSQL != nil:
-		visibilityDataStore.factory = cassandra.NewFactory(*visibilityCfg.NoSQL, clusterName, f.logger)
+		visibilityDataStore.factory = nosql.NewFactory(*visibilityCfg.NoSQL, clusterName, f.logger)
 	case visibilityCfg.SQL != nil:
 		var decodingTypes []common.EncodingType
 		for _, dt := range visibilityCfg.SQL.DecodingTypes {

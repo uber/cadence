@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/quotas"
@@ -336,7 +337,7 @@ func initializeCassandraHistoryStore(
 	logger log.Logger,
 ) persistence.HistoryStore {
 	client, session := connectToCassandra(c)
-	historyV2Mgr := cassandra.NewNoSQLHistoryStoreFromSession(client, session, logger)
+	historyV2Mgr := nosql.NewNoSQLHistoryStoreFromSession(client, session, logger)
 	return historyV2Mgr
 }
 
@@ -372,7 +373,7 @@ func initializeCassandraShardStore(
 	logger log.Logger,
 ) persistence.ShardStore {
 	client, session := connectToCassandra(c)
-	return cassandra.NewNoSQLShardStoreFromSession(client, session, currentClusterName, loggerimpl.NewNopLogger())
+	return nosql.NewNoSQLShardStoreFromSession(client, session, currentClusterName, loggerimpl.NewNopLogger())
 }
 
 func initializeSQLShardStore(

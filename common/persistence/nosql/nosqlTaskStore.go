@@ -19,7 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package nosql
 
 import (
 	"context"
@@ -43,8 +43,9 @@ type (
 )
 
 const (
-	initialRangeID  = 1 // Id of the first range of a new task list
-	initialAckLevel = 0
+	initialRangeID    = 1 // Id of the first range of a new task list
+	initialAckLevel   = 0
+	stickyTaskListTTL = int64(24 * time.Hour / time.Second) // if sticky task_list stopped being updated, remove it in one day
 )
 
 var _ p.TaskStore = (*nosqlTaskStore)(nil)

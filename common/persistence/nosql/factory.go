@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package nosql
 
 import (
 	"sync"
@@ -26,6 +26,7 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
+	cassandra2 "github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
@@ -149,7 +150,7 @@ func (f *executionStoreFactory) close() {
 
 // new implements ExecutionStoreFactory interface
 func (f *executionStoreFactory) new(shardID int) (p.ExecutionStore, error) {
-	pmgr, err := NewWorkflowExecutionPersistence(shardID, f.client, f.session, f.logger)
+	pmgr, err := cassandra2.NewWorkflowExecutionPersistence(shardID, f.client, f.session, f.logger)
 	if err != nil {
 		return nil, err
 	}
