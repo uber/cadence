@@ -56,7 +56,7 @@ func (db *cdb) InsertIntoQueue(
 	}
 
 	if !applied {
-		return &nosqlplugin.ConditionFailure{}
+		return nosqlplugin.NewConditionFailure("queue")
 	}
 	return nil
 }
@@ -222,7 +222,7 @@ func (db *cdb) UpdateQueueMetadataCas(
 		return err
 	}
 	if !applied {
-		return &nosqlplugin.ConditionFailure{}
+		return nosqlplugin.NewConditionFailure("queue")
 	}
 
 	return nil

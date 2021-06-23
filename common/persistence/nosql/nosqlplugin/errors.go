@@ -20,6 +20,8 @@
 
 package nosqlplugin
 
+import "fmt"
+
 // Condition Errors for NoSQL interfaces
 type (
 	// Only one of the fields must be non-nil
@@ -49,29 +51,36 @@ type (
 		Details string // detail info for logging
 	}
 
-	ConditionFailure struct{}
+	ConditionFailure struct {
+		componentName string
+	}
 )
 
 var _ error = (*WorkflowOperationConditionFailure)(nil)
 
 func (e *WorkflowOperationConditionFailure) Error() string {
-	return "condition failure"
+	return "workflow operation condition failure"
 }
 
 var _ error = (*TaskOperationConditionFailure)(nil)
 
 func (e *TaskOperationConditionFailure) Error() string {
-	return "condition failure"
+	return "task operation condition failure"
 }
 
 var _ error = (*ShardOperationConditionFailure)(nil)
 
 func (e *ShardOperationConditionFailure) Error() string {
-	return "condition failure"
+	return "shard operation condition failure"
 }
 
 var _ error = (*ConditionFailure)(nil)
 
+func NewConditionFailure(name string) error {
+	return &ConditionFailure{
+		componentName: name,
+	}
+}
 func (e *ConditionFailure) Error() string {
-	return "condition failure"
+	return fmt.Sprintf("%s operation condition failure", e.componentName)
 }
