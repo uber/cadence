@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -158,4 +159,9 @@ func (t AdminThriftHandler) ResendReplicationTasks(ctx context.Context, request 
 func (t AdminThriftHandler) ResetQueue(ctx context.Context, request *shared.ResetQueueRequest) error {
 	err := t.h.ResetQueue(withThriftTag(ctx), thrift.ToResetQueueRequest(request))
 	return thrift.FromError(err)
+}
+
+// GetCrossClusterTasks fetches cross cluster tasks
+func (t AdminThriftHandler) GetCrossClusterTasks(ctx context.Context, request *shared.GetCrossClusterTasksRequest) (*shared.GetCrossClusterTasksResponse, error) {
+	return nil, thrift.FromError(types.InternalServiceError{Message: "not implemented"})
 }

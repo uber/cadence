@@ -28,7 +28,7 @@ import (
 )
 
 //Insert message into queue, return error if failed or already exists
-// Must return conditionFailed error if row already exists
+// Return ConditionFailure if the condition doesn't meet
 func (db *ddb) InsertIntoQueue(
 	ctx context.Context,
 	row *nosqlplugin.QueueMessageRow,
@@ -101,7 +101,7 @@ func (db *ddb) InsertQueueMetadata(
 
 // **Conditionally** update a queue metadata row, if current version is matched(meaning current == row.Version - 1),
 // then the current version will increase by one when updating the metadata row
-// it should return error if the condition is not met
+// Return ConditionFailure if the condition doesn't meet
 func (db *ddb) UpdateQueueMetadataCas(
 	ctx context.Context,
 	row nosqlplugin.QueueMetadataRow,

@@ -32,6 +32,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
+	persistence "github.com/uber/cadence/common/persistence"
 	types "github.com/uber/cadence/common/types"
 )
 
@@ -238,6 +239,20 @@ func (m *MockMutableStateTaskGenerator) GenerateWorkflowResetTasks() error {
 func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateWorkflowResetTasks() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateWorkflowResetTasks", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateWorkflowResetTasks))
+}
+
+// GenerateCrossClusterTaskFromTransferTask mocks base method
+func (m *MockMutableStateTaskGenerator) GenerateCrossClusterTaskFromTransferTask(transferTask *persistence.TransferTaskInfo, targetCluster string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GenerateCrossClusterTaskFromTransferTask", transferTask, targetCluster)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// GenerateCrossClusterTaskFromTransferTask indicates an expected call of GenerateCrossClusterTaskFromTransferTask
+func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateCrossClusterTaskFromTransferTask(transferTask, targetCluster interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateCrossClusterTaskFromTransferTask", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateCrossClusterTaskFromTransferTask), transferTask, targetCluster)
 }
 
 // GenerateActivityTimerTasks mocks base method

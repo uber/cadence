@@ -43,7 +43,7 @@ const (
 )
 
 //Insert message into queue, return error if failed or already exists
-// Must return conditionFailed error if row already exists
+// Must return ConditionFailure error if row already exists
 func (db *cdb) InsertIntoQueue(
 	ctx context.Context,
 	row *nosqlplugin.QueueMessageRow,
@@ -56,7 +56,7 @@ func (db *cdb) InsertIntoQueue(
 	}
 
 	if !applied {
-		return errConditionFailed
+		return nosqlplugin.NewConditionFailure("queue")
 	}
 	return nil
 }
@@ -202,7 +202,7 @@ func (db *cdb) InsertQueueMetadata(
 
 // **Conditionally** update a queue metadata row, if current version is matched(meaning current == row.Version - 1),
 // then the current version will increase by one when updating the metadata row
-// it should return error if the condition is not met
+// it should return ConditionFailure if the condition is not met
 func (db *cdb) UpdateQueueMetadataCas(
 	ctx context.Context,
 	row nosqlplugin.QueueMetadataRow,
@@ -222,7 +222,7 @@ func (db *cdb) UpdateQueueMetadataCas(
 		return err
 	}
 	if !applied {
-		return errConditionFailed
+		return nosqlplugin.NewConditionFailure("queue")
 	}
 
 	return nil

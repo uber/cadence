@@ -78,6 +78,10 @@ func (d *protoDecoder) transferTaskInfoFromBlob(data []byte) (*TransferTaskInfo,
 	panic("not implemented")
 }
 
+func (d *protoDecoder) crossClusterTaskInfoFromBlob(data []byte) (*CrossClusterTaskInfo, error) {
+	panic("not implemented")
+}
+
 func (d *protoDecoder) timerTaskInfoFromBlob(data []byte) (*TimerTaskInfo, error) {
 	panic("not implemented")
 }

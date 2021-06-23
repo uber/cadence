@@ -32,6 +32,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
+	future "github.com/uber/cadence/common/future"
 	task "github.com/uber/cadence/common/task"
 	shard "github.com/uber/cadence/service/history/shard"
 )
@@ -426,6 +427,20 @@ func (mr *MockTaskMockRecorder) GetAttempt() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttempt", reflect.TypeOf((*MockTask)(nil).GetAttempt))
 }
 
+// IsReadyForPoll mocks base method
+func (m *MockTask) IsReadyForPoll() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsReadyForPoll")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsReadyForPoll indicates an expected call of IsReadyForPoll
+func (mr *MockTaskMockRecorder) IsReadyForPoll() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReadyForPoll", reflect.TypeOf((*MockTask)(nil).IsReadyForPoll))
+}
+
 // MockKey is a mock of Key interface
 type MockKey struct {
 	ctrl     *gomock.Controller
@@ -708,4 +723,84 @@ func (m *MockRedispatcher) Size() int {
 func (mr *MockRedispatcherMockRecorder) Size() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Size", reflect.TypeOf((*MockRedispatcher)(nil).Size))
+}
+
+// MockFetcher is a mock of Fetcher interface
+type MockFetcher struct {
+	ctrl     *gomock.Controller
+	recorder *MockFetcherMockRecorder
+}
+
+// MockFetcherMockRecorder is the mock recorder for MockFetcher
+type MockFetcherMockRecorder struct {
+	mock *MockFetcher
+}
+
+// NewMockFetcher creates a new mock instance
+func NewMockFetcher(ctrl *gomock.Controller) *MockFetcher {
+	mock := &MockFetcher{ctrl: ctrl}
+	mock.recorder = &MockFetcherMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockFetcher) EXPECT() *MockFetcherMockRecorder {
+	return m.recorder
+}
+
+// Start mocks base method
+func (m *MockFetcher) Start() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Start")
+}
+
+// Start indicates an expected call of Start
+func (mr *MockFetcherMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockFetcher)(nil).Start))
+}
+
+// Stop mocks base method
+func (m *MockFetcher) Stop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop
+func (mr *MockFetcherMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockFetcher)(nil).Stop))
+}
+
+// GetSourceCluster mocks base method
+func (m *MockFetcher) GetSourceCluster() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSourceCluster")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetSourceCluster indicates an expected call of GetSourceCluster
+func (mr *MockFetcherMockRecorder) GetSourceCluster() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSourceCluster", reflect.TypeOf((*MockFetcher)(nil).GetSourceCluster))
+}
+
+// Fetch mocks base method
+func (m *MockFetcher) Fetch(shardID int, fetchParams ...interface{}) future.Future {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{shardID}
+	for _, a := range fetchParams {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Fetch", varargs...)
+	ret0, _ := ret[0].(future.Future)
+	return ret0
+}
+
+// Fetch indicates an expected call of Fetch
+func (mr *MockFetcherMockRecorder) Fetch(shardID interface{}, fetchParams ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{shardID}, fetchParams...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fetch", reflect.TypeOf((*MockFetcher)(nil).Fetch), varargs...)
 }
