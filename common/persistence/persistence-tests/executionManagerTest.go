@@ -39,6 +39,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
+	"github.com/uber/cadence/common/config"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -2271,6 +2272,11 @@ func (s *ExecutionManagerSuite) TestReplicationTasks() {
 
 // TestCrossClusterTasks test
 func (s *ExecutionManagerSuite) TestCrossClusterTasks() {
+	if s.TestBase.Config().DefaultStore != config.StoreTypeCassandra {
+		// TODO: remove this check once cross cluster queue related methods is impelmented for SQL
+		s.T().Skip()
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
