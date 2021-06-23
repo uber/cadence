@@ -35,7 +35,7 @@ import (
 )
 
 type (
-	// Implements ShardManager
+	// Implements ShardStore
 	nosqlShardStore struct {
 		nosqlStore
 		currentClusterName string
@@ -44,7 +44,7 @@ type (
 
 var _ p.ShardStore = (*nosqlShardStore)(nil)
 
-// newNoSQLShardStore is used to create an instance of ShardManager implementation
+// newNoSQLShardStore is used to create an instance of ShardStore implementation
 func newNoSQLShardStore(
 	cfg config.Cassandra,
 	clusterName string,
@@ -65,7 +65,7 @@ func newNoSQLShardStore(
 	}, nil
 }
 
-// NewNoSQLShardStoreFromSession is used to create an instance of ShardManager implementation
+// NewNoSQLShardStoreFromSession is used to create an instance of ShardStore implementation
 // It is being used by some admin toolings
 func NewNoSQLShardStoreFromSession(
 	client gocql.Client,

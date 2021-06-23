@@ -50,7 +50,7 @@ const (
 
 var _ p.TaskStore = (*nosqlTaskStore)(nil)
 
-// newNoSQLTaskStore is used to create an instance of TaskManager implementation
+// newNoSQLTaskStore is used to create an instance of TaskStore implementation
 func newNoSQLTaskStore(
 	cfg config.Cassandra,
 	logger log.Logger,
@@ -76,7 +76,6 @@ func (t *nosqlTaskStore) GetOrphanTasks(ctx context.Context, request *p.GetOrpha
 	}
 }
 
-// From TaskManager interface
 func (t *nosqlTaskStore) LeaseTaskList(
 	ctx context.Context,
 	request *p.LeaseTaskListRequest,
@@ -156,7 +155,6 @@ func (t *nosqlTaskStore) LeaseTaskList(
 	return &p.LeaseTaskListResponse{TaskListInfo: tli}, nil
 }
 
-// From TaskManager interface
 func (t *nosqlTaskStore) UpdateTaskList(
 	ctx context.Context,
 	request *p.UpdateTaskListRequest,
@@ -226,7 +224,6 @@ func (t *nosqlTaskStore) DeleteTaskList(
 	return nil
 }
 
-// From TaskManager interface
 func (t *nosqlTaskStore) CreateTasks(
 	ctx context.Context,
 	request *p.InternalCreateTasksRequest,
@@ -279,7 +276,6 @@ func toTaskListRow(info *p.TaskListInfo) *nosqlplugin.TaskListRow {
 	}
 }
 
-// From TaskManager interface
 func (t *nosqlTaskStore) GetTasks(
 	ctx context.Context,
 	request *p.GetTasksRequest,
@@ -327,7 +323,6 @@ func toTaskInfo(t *nosqlplugin.TaskRow) *p.InternalTaskInfo {
 	}
 }
 
-// From TaskManager interface
 func (t *nosqlTaskStore) CompleteTask(
 	ctx context.Context,
 	request *p.CompleteTaskRequest,

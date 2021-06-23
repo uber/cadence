@@ -46,7 +46,7 @@ type (
 	}
 )
 
-// newNoSQLVisibilityStore is used to create an instance of VisibilityManager implementation
+// newNoSQLVisibilityStore is used to create an instance of VisibilityStore implementation
 func newNoSQLVisibilityStore(
 	listClosedOrderingByCloseTime bool,
 	cfg config.Cassandra,

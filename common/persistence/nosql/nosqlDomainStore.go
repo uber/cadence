@@ -41,7 +41,7 @@ type (
 	}
 )
 
-// newNoSQLDomainStore is used to create an instance of HistoryManager implementation
+// newNoSQLDomainStore is used to create an instance of DomainStore implementation
 func newNoSQLDomainStore(
 	cfg config.Cassandra,
 	currentClusterName string,

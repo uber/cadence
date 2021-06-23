@@ -26,7 +26,7 @@ import (
 )
 
 type (
-	// a shared struct for all managers in this package
+	// a shared struct for all stores in this package
 	nosqlStore struct {
 		logger log.Logger
 		db     nosqlplugin.DB

@@ -59,7 +59,7 @@ func NewNoSQLHistoryStoreFromSession(
 	}
 }
 
-// newNoSQLHistoryStore is used to create an instance of HistoryManager implementation
+// newNoSQLHistoryStore is used to create an instance of HistoryStore implementation
 func newNoSQLHistoryStore(
 	cfg config.Cassandra,
 	logger log.Logger,
