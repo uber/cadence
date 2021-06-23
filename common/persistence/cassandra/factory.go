@@ -59,22 +59,22 @@ func NewFactory(cfg config.Cassandra, clusterName string, logger log.Logger) *Fa
 
 // NewTaskStore returns a new task store
 func (f *Factory) NewTaskStore() (p.TaskStore, error) {
-	return newTaskPersistence(f.cfg, f.logger)
+	return newNoSQLTaskStore(f.cfg, f.logger)
 }
 
 // NewShardStore returns a new shard store
 func (f *Factory) NewShardStore() (p.ShardStore, error) {
-	return newShardPersistence(f.cfg, f.clusterName, f.logger)
+	return newNoSQLShardStore(f.cfg, f.clusterName, f.logger)
 }
 
 // NewHistoryV2Store returns a new history store
 func (f *Factory) NewHistoryV2Store() (p.HistoryStore, error) {
-	return newHistoryV2Persistence(f.cfg, f.logger)
+	return newNoSQLHistoryStore(f.cfg, f.logger)
 }
 
 // NewMetadataStore returns a metadata store that understands only v2
-func (f *Factory) NewMetadataStore() (p.MetadataStore, error) {
-	return newMetadataPersistenceV2(f.cfg, f.clusterName, f.logger)
+func (f *Factory) NewMetadataStore() (p.DomainStore, error) {
+	return newNoSQLDomainStore(f.cfg, f.clusterName, f.logger)
 }
 
 // NewExecutionStore returns an ExecutionStore for a given shardID
@@ -88,12 +88,12 @@ func (f *Factory) NewExecutionStore(shardID int) (p.ExecutionStore, error) {
 
 // NewVisibilityStore returns a visibility store
 func (f *Factory) NewVisibilityStore(sortByCloseTime bool) (p.VisibilityStore, error) {
-	return newVisibilityPersistence(sortByCloseTime, f.cfg, f.logger)
+	return newNoSQLVisibilityStore(sortByCloseTime, f.cfg, f.logger)
 }
 
 // NewQueue returns a new queue backed by cassandra
 func (f *Factory) NewQueue(queueType p.QueueType) (p.Queue, error) {
-	return newQueue(f.cfg, f.logger, queueType)
+	return newNoSQLQueueStore(f.cfg, f.logger, queueType)
 }
 
 // Close closes the factory

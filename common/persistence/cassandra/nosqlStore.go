@@ -27,17 +27,17 @@ import (
 
 type (
 	// a shared struct for all managers in this package
-	nosqlManager struct {
+	nosqlStore struct {
 		logger log.Logger
 		db     nosqlplugin.DB
 	}
 )
 
-func (nm *nosqlManager) GetName() string {
+func (nm *nosqlStore) GetName() string {
 	return nm.db.PluginName()
 }
 
 // Close releases the underlying resources held by this object
-func (nm *nosqlManager) Close() {
+func (nm *nosqlStore) Close() {
 	nm.db.Close()
 }

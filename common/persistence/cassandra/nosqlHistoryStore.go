@@ -37,14 +37,13 @@ import (
 )
 
 type (
-	nosqlHistoryManager struct {
-		db     nosqlplugin.DB
-		logger log.Logger
+	nosqlHistoryStore struct {
+		nosqlStore
 	}
 )
 
-// NewHistoryV2PersistenceFromSession returns new HistoryStore
-func NewHistoryV2PersistenceFromSession(
+// NewNoSQLHistoryStoreFromSession returns new HistoryStore
+func NewNoSQLHistoryStoreFromSession(
 	client gocql.Client,
 	session gocql.Session,
 	logger log.Logger,
@@ -52,11 +51,16 @@ func NewHistoryV2PersistenceFromSession(
 	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
 	db := cassandra.NewCassandraDBFromSession(client, session, logger)
 
-	return &nosqlHistoryManager{db: db, logger: logger}
+	return &nosqlHistoryStore{
+		nosqlStore: nosqlStore{
+			db:     db,
+			logger: logger,
+		},
+	}
 }
 
-// newHistoryPersistence is used to create an instance of HistoryManager implementation
-func newHistoryV2Persistence(
+// newNoSQLHistoryStore is used to create an instance of HistoryManager implementation
+func newNoSQLHistoryStore(
 	cfg config.Cassandra,
 	logger log.Logger,
 ) (p.HistoryStore, error) {
@@ -67,21 +71,17 @@ func newHistoryV2Persistence(
 		return nil, err
 	}
 
-	return &nosqlHistoryManager{db: db, logger: logger}, nil
-}
-
-func (h *nosqlHistoryManager) GetName() string {
-	return h.db.PluginName()
-}
-
-// Close releases the underlying resources held by this object
-func (h *nosqlHistoryManager) Close() {
-	h.db.Close()
+	return &nosqlHistoryStore{
+		nosqlStore: nosqlStore{
+			db:     db,
+			logger: logger,
+		},
+	}, nil
 }
 
 // AppendHistoryNodes upsert a batch of events as a single node to a history branch
 // Note that it's not allowed to append above the branch's ancestors' nodes, which means nodeID >= ForkNodeID
-func (h *nosqlHistoryManager) AppendHistoryNodes(
+func (h *nosqlHistoryStore) AppendHistoryNodes(
 	ctx context.Context,
 	request *p.InternalAppendHistoryNodesRequest,
 ) error {
@@ -130,7 +130,7 @@ func (h *nosqlHistoryManager) AppendHistoryNodes(
 
 // ReadHistoryBranch returns history node data for a branch
 // NOTE: For branch that has ancestors, we need to query Cassandra multiple times, because it doesn't support OR/UNION operator
-func (h *nosqlHistoryManager) ReadHistoryBranch(
+func (h *nosqlHistoryStore) ReadHistoryBranch(
 	ctx context.Context,
 	request *p.InternalReadHistoryBranchRequest,
 ) (*p.InternalReadHistoryBranchResponse, error) {
@@ -245,7 +245,7 @@ func (h *nosqlHistoryManager) ReadHistoryBranch(
 //       \
 //       8[8,9]
 //
-func (h *nosqlHistoryManager) ForkHistoryBranch(
+func (h *nosqlHistoryStore) ForkHistoryBranch(
 	ctx context.Context,
 	request *p.InternalForkHistoryBranchRequest,
 ) (*p.InternalForkHistoryBranchResponse, error) {
@@ -311,7 +311,7 @@ func (h *nosqlHistoryManager) ForkHistoryBranch(
 }
 
 // DeleteHistoryBranch removes a branch
-func (h *nosqlHistoryManager) DeleteHistoryBranch(
+func (h *nosqlHistoryStore) DeleteHistoryBranch(
 	ctx context.Context,
 	request *p.InternalDeleteHistoryBranchRequest,
 ) error {
@@ -384,7 +384,7 @@ func (h *nosqlHistoryManager) DeleteHistoryBranch(
 	return nil
 }
 
-func (h *nosqlHistoryManager) GetAllHistoryTreeBranches(
+func (h *nosqlHistoryStore) GetAllHistoryTreeBranches(
 	ctx context.Context,
 	request *p.GetAllHistoryTreeBranchesRequest,
 ) (*p.GetAllHistoryTreeBranchesResponse, error) {
@@ -415,7 +415,7 @@ func (h *nosqlHistoryManager) GetAllHistoryTreeBranches(
 }
 
 // GetHistoryTree returns all branch information of a tree
-func (h *nosqlHistoryManager) GetHistoryTree(
+func (h *nosqlHistoryStore) GetHistoryTree(
 	ctx context.Context,
 	request *p.InternalGetHistoryTreeRequest,
 ) (*p.InternalGetHistoryTreeResponse, error) {

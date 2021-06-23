@@ -37,10 +37,8 @@ import (
 )
 
 type (
-	// Implements TaskManager
-	nosqlTaskManager struct {
-		db     nosqlplugin.DB
-		logger log.Logger
+	nosqlTaskStore struct {
+		nosqlStore
 	}
 )
 
@@ -49,10 +47,10 @@ const (
 	initialAckLevel = 0
 )
 
-var _ p.TaskStore = (*nosqlTaskManager)(nil)
+var _ p.TaskStore = (*nosqlTaskStore)(nil)
 
-// newTaskPersistence is used to create an instance of TaskManager implementation
-func newTaskPersistence(
+// newNoSQLTaskStore is used to create an instance of TaskManager implementation
+func newNoSQLTaskStore(
 	cfg config.Cassandra,
 	logger log.Logger,
 ) (p.TaskStore, error) {
@@ -62,22 +60,15 @@ func newTaskPersistence(
 		return nil, err
 	}
 
-	return &nosqlTaskManager{
-		db:     db,
-		logger: logger,
+	return &nosqlTaskStore{
+		nosqlStore: nosqlStore{
+			db:     db,
+			logger: logger,
+		},
 	}, nil
 }
 
-func (t *nosqlTaskManager) GetName() string {
-	return t.db.PluginName()
-}
-
-// Close releases the underlying resources held by this object
-func (t *nosqlTaskManager) Close() {
-	t.db.Close()
-}
-
-func (t *nosqlTaskManager) GetOrphanTasks(ctx context.Context, request *p.GetOrphanTasksRequest) (*p.GetOrphanTasksResponse, error) {
+func (t *nosqlTaskStore) GetOrphanTasks(ctx context.Context, request *p.GetOrphanTasksRequest) (*p.GetOrphanTasksResponse, error) {
 	// TODO: It's unclear if this's necessary or possible for NoSQL
 	return nil, &types.InternalServiceError{
 		Message: "Unimplemented call to GetOrphanTasks for NoSQL",
@@ -85,7 +76,7 @@ func (t *nosqlTaskManager) GetOrphanTasks(ctx context.Context, request *p.GetOrp
 }
 
 // From TaskManager interface
-func (t *nosqlTaskManager) LeaseTaskList(
+func (t *nosqlTaskStore) LeaseTaskList(
 	ctx context.Context,
 	request *p.LeaseTaskListRequest,
 ) (*p.LeaseTaskListResponse, error) {
@@ -165,7 +156,7 @@ func (t *nosqlTaskManager) LeaseTaskList(
 }
 
 // From TaskManager interface
-func (t *nosqlTaskManager) UpdateTaskList(
+func (t *nosqlTaskStore) UpdateTaskList(
 	ctx context.Context,
 	request *p.UpdateTaskListRequest,
 ) (*p.UpdateTaskListResponse, error) {
@@ -201,7 +192,7 @@ func (t *nosqlTaskManager) UpdateTaskList(
 	return &p.UpdateTaskListResponse{}, nil
 }
 
-func (t *nosqlTaskManager) ListTaskList(
+func (t *nosqlTaskStore) ListTaskList(
 	_ context.Context,
 	_ *p.ListTaskListRequest,
 ) (*p.ListTaskListResponse, error) {
@@ -210,7 +201,7 @@ func (t *nosqlTaskManager) ListTaskList(
 	}
 }
 
-func (t *nosqlTaskManager) DeleteTaskList(
+func (t *nosqlTaskStore) DeleteTaskList(
 	ctx context.Context,
 	request *p.DeleteTaskListRequest,
 ) error {
@@ -235,7 +226,7 @@ func (t *nosqlTaskManager) DeleteTaskList(
 }
 
 // From TaskManager interface
-func (t *nosqlTaskManager) CreateTasks(
+func (t *nosqlTaskStore) CreateTasks(
 	ctx context.Context,
 	request *p.InternalCreateTasksRequest,
 ) (*p.CreateTasksResponse, error) {
@@ -288,7 +279,7 @@ func toTaskListRow(info *p.TaskListInfo) *nosqlplugin.TaskListRow {
 }
 
 // From TaskManager interface
-func (t *nosqlTaskManager) GetTasks(
+func (t *nosqlTaskStore) GetTasks(
 	ctx context.Context,
 	request *p.GetTasksRequest,
 ) (*p.InternalGetTasksResponse, error) {
@@ -336,7 +327,7 @@ func toTaskInfo(t *nosqlplugin.TaskRow) *p.InternalTaskInfo {
 }
 
 // From TaskManager interface
-func (t *nosqlTaskManager) CompleteTask(
+func (t *nosqlTaskStore) CompleteTask(
 	ctx context.Context,
 	request *p.CompleteTaskRequest,
 ) error {
@@ -363,7 +354,7 @@ func (t *nosqlTaskManager) CompleteTask(
 // CompleteTasksLessThan deletes all tasks less than or equal to the given task id. This API ignores the
 // Limit request parameter i.e. either all tasks leq the task_id will be deleted or an error will
 // be returned to the caller
-func (t *nosqlTaskManager) CompleteTasksLessThan(
+func (t *nosqlTaskStore) CompleteTasksLessThan(
 	ctx context.Context,
 	request *p.CompleteTasksLessThanRequest,
 ) (int, error) {

@@ -336,7 +336,7 @@ func initializeCassandraHistoryStore(
 	logger log.Logger,
 ) persistence.HistoryStore {
 	client, session := connectToCassandra(c)
-	historyV2Mgr := cassandra.NewHistoryV2PersistenceFromSession(client, session, logger)
+	historyV2Mgr := cassandra.NewNoSQLHistoryStoreFromSession(client, session, logger)
 	return historyV2Mgr
 }
 
@@ -372,7 +372,7 @@ func initializeCassandraShardStore(
 	logger log.Logger,
 ) persistence.ShardStore {
 	client, session := connectToCassandra(c)
-	return cassandra.NewShardPersistenceFromSession(client, session, currentClusterName, loggerimpl.NewNopLogger())
+	return cassandra.NewNoSQLShardStoreFromSession(client, session, currentClusterName, loggerimpl.NewNopLogger())
 }
 
 func initializeSQLShardStore(

@@ -75,7 +75,7 @@ type (
 		// NewHistoryV2Store returns a new historyV2 store
 		NewHistoryV2Store() (p.HistoryStore, error)
 		// NewMetadataStore returns a new metadata store
-		NewMetadataStore() (p.MetadataStore, error)
+		NewMetadataStore() (p.DomainStore, error)
 		// NewExecutionStore returns an execution store for given shardID
 		NewExecutionStore(shardID int) (p.ExecutionStore, error)
 		// NewVisibilityStore returns a new visibility store,
@@ -210,7 +210,7 @@ func (f *factoryImpl) NewHistoryManager() (p.HistoryManager, error) {
 // NewDomainManager returns a new metadata manager
 func (f *factoryImpl) NewDomainManager() (p.DomainManager, error) {
 	var err error
-	var store p.MetadataStore
+	var store p.DomainStore
 	ds := f.datastores[storeTypeMetadata]
 	store, err = ds.factory.NewMetadataStore()
 	if err != nil {

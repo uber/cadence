@@ -98,7 +98,7 @@ func (f *Factory) NewHistoryV2Store() (p.HistoryStore, error) {
 }
 
 // NewMetadataStore returns a new metadata store
-func (f *Factory) NewMetadataStore() (p.MetadataStore, error) {
+func (f *Factory) NewMetadataStore() (p.DomainStore, error) {
 	conn, err := f.dbConn.get()
 	if err != nil {
 		return nil, err
