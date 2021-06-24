@@ -140,3 +140,19 @@ func (g adminGRPCHandler) ResetQueue(ctx context.Context, request *adminv1.Reset
 func (g adminGRPCHandler) GetCrossClusterTasks(ctx context.Context, request *adminv1.GetCrossClusterTasksRequest) (*adminv1.GetCrossClusterTasksResponse, error) {
 	return nil, proto.FromError(types.InternalServiceError{Message: "not implemented"})
 }
+
+func (g adminGRPCHandler) GetDynamicConfig(ctx context.Context, request *adminv1.GetDynamicConfigRequest) (*adminv1.GetDynamicConfigResponse, error) {
+	return nil, proto.FromError(types.InternalServiceError{Message: "not implemented"})
+}
+
+func (g adminGRPCHandler) UpdateDynamicConfig(ctx context.Context, request *adminv1.UpdateDynamicConfigRequest) (*adminv1.UpdateDynamicConfigResponse, error) {
+	return nil, proto.FromError(types.InternalServiceError{Message: "not implemented"})
+}
+
+func (g adminGRPCHandler) RestoreDynamicConfig(ctx context.Context, request *adminv1.RestoreDynamicConfigRequest) (*adminv1.RestoreDynamicConfigResponse, error) {
+	return nil, proto.FromError(types.InternalServiceError{Message: "not implemented"})
+}
+
+func (g adminGRPCHandler) ListDynamicConfig(ctx context.Context, request *adminv1.ListDynamicConfigRequest) (*adminv1.ListDynamicConfigResponse, error) {
+	return nil, proto.FromError(types.InternalServiceError{Message: "not implemented"})
+}

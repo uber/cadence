@@ -165,3 +165,19 @@ func (t AdminThriftHandler) ResetQueue(ctx context.Context, request *shared.Rese
 func (t AdminThriftHandler) GetCrossClusterTasks(ctx context.Context, request *shared.GetCrossClusterTasksRequest) (*shared.GetCrossClusterTasksResponse, error) {
 	return nil, thrift.FromError(types.InternalServiceError{Message: "not implemented"})
 }
+
+func (t AdminThriftHandler) GetDynamicConfig(ctx context.Context, request *admin.GetDynamicConfigRequest) (*admin.GetDynamicConfigResponse, error) {
+	return nil, thrift.FromError(types.InternalServiceError{Message: "not implemented"})
+}
+
+func (t AdminThriftHandler) UpdateDynamicConfig(ctx context.Context, request *admin.UpdateDynamicConfigRequest) error {
+	return thrift.FromError(types.InternalServiceError{Message: "not implemented"})
+}
+
+func (t AdminThriftHandler) RestoreDynamicConfig(ctx context.Context, request *admin.RestoreDynamicConfigRequest) error {
+	return thrift.FromError(types.InternalServiceError{Message: "not implemented"})
+}
+
+func (t AdminThriftHandler) ListDynamicConfig(ctx context.Context) (*admin.ListDynamicConfigResponse, error) {
+	return nil, thrift.FromError(types.InternalServiceError{Message: "not implemented"})
+}
