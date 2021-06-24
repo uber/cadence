@@ -97,6 +97,18 @@ service AdminAPI {
 
   // GetCrossClusterTasks return cross cluster tasks based on cluster name.
   rpc GetCrossClusterTasks(GetCrossClusterTasksRequest) returns (GetCrossClusterTasksResponse);
+
+  // GetDynamicConfig returns values associated with a specified dynamic config parameter.
+  rpc GetDynamicConfig(GetDynamicConfigRequest) returns (GetDynamicConfigResponse);
+
+  // UpdateDynamicConfig is used to update one or more values associated with a specified dynamic config parameter.
+  rpc UpdateDynamicConfig(UpdateDynamicConfigRequest) returns (UpdateDynamicConfigResponse);
+
+  // RestoreDynamicConfig is used to remove one or all values associated with a specified dynamic config parameter.
+  rpc RestoreDynamicConfig(RestoreDynamicConfigRequest) returns (RestoreDynamicConfigResponse);
+
+  // ListDynamicConfig returns all dynamic config parameters and associated values.
+  rpc ListDynamicConfig(ListDynamicConfigRequest) returns (ListDynamicConfigResponse);
 }
 
 message DescribeWorkflowExecutionRequest {
@@ -311,4 +323,62 @@ message GetCrossClusterTasksRequest {
 
 message GetCrossClusterTasksResponse {
   map<int32, shared.v1.CrossClusterTaskRequests> tasks_by_shard = 1;
+}
+
+/* If get_all is True, then all provided filters are ignored and all values associated with config_name
+will be returned. If get_all is False and no filters are specified (or no filter match), fallback value
+will be returned. If get_all is False and a filter(s) is specified, value that matches filter will be returned.
+If config_name cannot be found in database, default value will be returned. */
+message GetDynamicConfigRequest {
+	string config_name = 1;
+  bool get_all = 2;
+	repeated DynamicConfigFilter filters = 3;
+}
+
+message GetDynamicConfigResponse {
+	repeated DynamicConfigValue config_values = 1;
+  // Message regarding value source and/or type (is default, is fallback, from database, etc.)
+	string value_source = 2;
+}
+
+/* If filters field is not specified in DynamicConfigValue, value will update fallback value which supersedes
+the default value defined in codebase. */
+message UpdateDynamicConfigRequest {
+	string config_name = 1;
+	repeated DynamicConfigValue config_values = 2;
+}
+
+message UpdateDynamicConfigResponse {
+}
+
+// If no filters are specified, all values associated with config_name will be removed.
+message RestoreDynamicConfigRequest {
+	string config_name = 1;
+	repeated DynamicConfigFilter filters = 2;
+}
+
+message RestoreDynamicConfigResponse {
+}
+
+message ListDynamicConfigRequest {
+}
+
+message ListDynamicConfigResponse {
+	repeated DynamicConfigEntry entries = 1;
+}
+
+message DynamicConfigEntry {
+	string name = 1;
+	string default_value = 2;
+	repeated DynamicConfigValue values = 3;
+}
+
+message DynamicConfigValue {
+	string value = 1;
+	repeated DynamicConfigFilter filters = 2;
+}
+
+message DynamicConfigFilter {
+	string name = 1;
+	string value = 2;
 }
