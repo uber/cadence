@@ -467,3 +467,253 @@ func ToHostInfoArray(t []*admin.HostInfo) []*types.HostInfo {
 	}
 	return v
 }
+
+//FromGetDynamicConfigRequest converts internal GetDynamicConfigRequest type to thrift
+func FromGetDynamicConfigRequest(t *types.GetDynamicConfigRequest) *admin.GetDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &admin.GetDynamicConfigRequest{
+		ConfigName: &t.ConfigName,
+		GetAll:     &t.GetAll,
+		Filters:    FromDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//ToGetDynamicConfigRequest converts thrift GetDynamicConfigRequest type to internal
+func ToGetDynamicConfigRequest(t *admin.GetDynamicConfigRequest) *types.GetDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetDynamicConfigRequest{
+		ConfigName: t.GetConfigName(),
+		GetAll:     t.GetGetAll(),
+		Filters:    ToDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//FromGetDynamicConfigResponse converts internal GetDynamicConfigResponse type to thrift
+func FromGetDynamicConfigResponse(t *types.GetDynamicConfigResponse) *admin.GetDynamicConfigResponse {
+	if t == nil {
+		return nil
+	}
+	return &admin.GetDynamicConfigResponse{
+		ConfigValues: FromDynamicConfigValueArray(t.ConfigValues),
+		ValueSource:  &t.ValueSource,
+	}
+}
+
+//ToGetDynamicConfigResponse converts thrift GetDynamicConfigResponse type to internal
+func ToGetDynamicConfigResponse(t *admin.GetDynamicConfigResponse) *types.GetDynamicConfigResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.GetDynamicConfigResponse{
+		ConfigValues: ToDynamicConfigValueArray(t.ConfigValues),
+		ValueSource:  t.GetValueSource(),
+	}
+}
+
+//FromUpdateDynamicConfigRequest converts internal UpdateDynamicConfigRequest type to thrift
+func FromUpdateDynamicConfigRequest(t *types.UpdateDynamicConfigRequest) *admin.UpdateDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &admin.UpdateDynamicConfigRequest{
+		ConfigName:   &t.ConfigName,
+		ConfigValues: FromDynamicConfigValueArray(t.ConfigValues),
+	}
+}
+
+//ToUpdateDynamicConfigRequest converts thrift UpdateDynamicConfigRequest type to internal
+func ToUpdateDynamicConfigRequest(t *admin.UpdateDynamicConfigRequest) *types.UpdateDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.UpdateDynamicConfigRequest{
+		ConfigName:   t.GetConfigName(),
+		ConfigValues: ToDynamicConfigValueArray(t.ConfigValues),
+	}
+}
+
+//FromRestoreDynamicConfigRequest converts internal RestoreDynamicConfigRequest type to thrift
+func FromRestoreDynamicConfigRequest(t *types.RestoreDynamicConfigRequest) *admin.RestoreDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &admin.RestoreDynamicConfigRequest{
+		ConfigName: &t.ConfigName,
+		Filters:    FromDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//ToRestoreDynamicConfigRequest converts thrift RestoreDynamicConfigRequest type to internal
+func ToRestoreDynamicConfigRequest(t *admin.RestoreDynamicConfigRequest) *types.RestoreDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.RestoreDynamicConfigRequest{
+		ConfigName: t.GetConfigName(),
+		Filters:    ToDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//FromListDynamicConfigResponse converts internal ListDynamicConfigResponse type to thrift
+func FromListDynamicConfigResponse(t *types.ListDynamicConfigResponse) *admin.ListDynamicConfigResponse {
+	if t == nil {
+		return nil
+	}
+	return &admin.ListDynamicConfigResponse{
+		Entries: FromDynamicConfigEntryArray(t.Entries),
+	}
+}
+
+//ToListDynamicConfigResponse converts thrift ListDynamicConfigResponse type to internal
+func ToListDynamicConfigResponse(t *admin.ListDynamicConfigResponse) *types.ListDynamicConfigResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.ListDynamicConfigResponse{
+		Entries: ToDynamicConfigEntryArray(t.Entries),
+	}
+}
+
+//FromDynamicConfigEntryArray converts internal DynamicConfigEntry array type to thrift
+func FromDynamicConfigEntryArray(t []*types.DynamicConfigEntry) []*admin.DynamicConfigEntry {
+	if t == nil {
+		return nil
+	}
+	v := make([]*admin.DynamicConfigEntry, len(t))
+	for i := range t {
+		v[i] = FromDynamicConfigEntry(t[i])
+	}
+	return v
+}
+
+//ToDynamicConfigEntryArray converts thrift DynamicConfigEntry array type to internal
+func ToDynamicConfigEntryArray(t []*admin.DynamicConfigEntry) []*types.DynamicConfigEntry {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.DynamicConfigEntry, len(t))
+	for i := range t {
+		v[i] = ToDynamicConfigEntry(t[i])
+	}
+	return v
+}
+
+//FromDynamicConfigEntry converts internal DynamicConfigEntry type to thrift
+func FromDynamicConfigEntry(t *types.DynamicConfigEntry) *admin.DynamicConfigEntry {
+	if t == nil {
+		return nil
+	}
+	return &admin.DynamicConfigEntry{
+		Name:         &t.Name,
+		DefaultValue: &t.DefaultValue,
+		Values:       FromDynamicConfigValueArray(t.Values),
+	}
+}
+
+//ToDynamicConfigEntry converts thrift DynamicConfigEntry type to internal
+func ToDynamicConfigEntry(t *admin.DynamicConfigEntry) *types.DynamicConfigEntry {
+	if t == nil {
+		return nil
+	}
+	return &types.DynamicConfigEntry{
+		Name:         t.GetName(),
+		DefaultValue: t.GetDefaultValue(),
+		Values:       ToDynamicConfigValueArray(t.Values),
+	}
+}
+
+//FromDynamicConfigValueArray converts internal DynamicConfigValue array type to thrift
+func FromDynamicConfigValueArray(t []*types.DynamicConfigValue) []*admin.DynamicConfigValue {
+	if t == nil {
+		return nil
+	}
+	v := make([]*admin.DynamicConfigValue, len(t))
+	for i := range t {
+		v[i] = FromDynamicConfigValue(t[i])
+	}
+	return v
+}
+
+//ToDynamicConfigValueArray converts thrift DynamicConfigValue array type to internal
+func ToDynamicConfigValueArray(t []*admin.DynamicConfigValue) []*types.DynamicConfigValue {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.DynamicConfigValue, len(t))
+	for i := range t {
+		v[i] = ToDynamicConfigValue(t[i])
+	}
+	return v
+}
+
+//FromDynamicConfigValue converts internal DynamicConfigValue type to thrift
+func FromDynamicConfigValue(t *types.DynamicConfigValue) *admin.DynamicConfigValue {
+	if t == nil {
+		return nil
+	}
+	return &admin.DynamicConfigValue{
+		Value:   &t.Value,
+		Filters: FromDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//ToDynamicConfigValue converts thrift DynamicConfigValue type to internal
+func ToDynamicConfigValue(t *admin.DynamicConfigValue) *types.DynamicConfigValue {
+	if t == nil {
+		return nil
+	}
+	return &types.DynamicConfigValue{
+		Value:   t.GetValue(),
+		Filters: ToDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//FromDynamicConfigFilterArray converts internal DynamicConfigFilter array type to thrift
+func FromDynamicConfigFilterArray(t []*types.DynamicConfigFilter) []*admin.DynamicConfigFilter {
+	if t == nil {
+		return nil
+	}
+	v := make([]*admin.DynamicConfigFilter, len(t))
+	for i := range t {
+		v[i] = FromDynamicConfigFilter(t[i])
+	}
+	return v
+}
+
+//ToDynamicConfigFilterArray converts thrift DynamicConfigFilter array type to internal
+func ToDynamicConfigFilterArray(t []*admin.DynamicConfigFilter) []*types.DynamicConfigFilter {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.DynamicConfigFilter, len(t))
+	for i := range t {
+		v[i] = ToDynamicConfigFilter(t[i])
+	}
+	return v
+}
+
+//FromDynamicConfigFilter converts internal DynamicConfigFilter type to thrift
+func FromDynamicConfigFilter(t *types.DynamicConfigFilter) *admin.DynamicConfigFilter {
+	if t == nil {
+		return nil
+	}
+	return &admin.DynamicConfigFilter{
+		Name:  &t.Name,
+		Value: &t.Value,
+	}
+}
+
+//ToDynamicConfigFilter converts thrift DynamicConfigFilter type to internal
+func ToDynamicConfigFilter(t *admin.DynamicConfigFilter) *types.DynamicConfigFilter {
+	if t == nil {
+		return nil
+	}
+	return &types.DynamicConfigFilter{
+		Name:  t.GetName(),
+		Value: t.GetValue(),
+	}
+}
