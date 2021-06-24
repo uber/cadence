@@ -128,7 +128,7 @@ func (d *handlerImpl) RegisterDomain(
 	if !d.clusterMetadata.IsGlobalDomainEnabled() {
 		if registerRequest.IsGlobalDomain {
 			return &types.BadRequestError{Message: "Cannot register global domain when not enabled. Please update config to enable global domain(recommended), " +
-				"or use \"--global_domain false\" to create legacy local domain. Global domain of single cluster has zero overhead, but only advantages for future migration and fail over. Please check Cadence documentation for more details."}
+				"or specify explicit parameter to create legacy local domain. Global domain of single cluster has zero overhead, but only advantages for future migration and fail over. Please check Cadence documentation for more details."}
 		}
 	} else {
 		// cluster global domain enabled
