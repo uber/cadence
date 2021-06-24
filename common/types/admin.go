@@ -404,3 +404,163 @@ func (v *RingInfo) GetMembers() (o []*HostInfo) {
 	}
 	return
 }
+
+type GetDynamicConfigRequest struct {
+	ConfigName string                 `json:"configName,omitempty"`
+	GetAll     bool                   `json:"getAll,omitempty"`
+	Filters    []*DynamicConfigFilter `json:"filters,omitempty"`
+}
+
+func (v *GetDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil {
+		return v.ConfigName
+	}
+	return
+}
+
+func (v *GetDynamicConfigRequest) GetGetAll() (o bool) {
+	if v != nil {
+		return v.GetAll
+	}
+	return
+}
+
+func (v *GetDynamicConfigRequest) GetFilters() (o []*DynamicConfigFilter) {
+	if v != nil && v.Filters != nil {
+		return v.Filters
+	}
+	return
+}
+
+type GetDynamicConfigResponse struct {
+	ConfigValues []*DynamicConfigValue `json:"configValues,omitempty"`
+	ValueSource  string                `json:"valueSource,omitempty"`
+}
+
+func (v *GetDynamicConfigResponse) GetConfigValues() (o []*DynamicConfigValue) {
+	if v != nil && v.ConfigValues != nil {
+		return v.ConfigValues
+	}
+	return
+}
+
+func (v *GetDynamicConfigResponse) GetValueSource() (o string) {
+	if v != nil {
+		return v.ValueSource
+	}
+	return
+}
+
+type UpdateDynamicConfigRequest struct {
+	ConfigName   string                `json:"configName,omitempty"`
+	ConfigValues []*DynamicConfigValue `json:"configValues,omitempty"`
+}
+
+func (v *UpdateDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil {
+		return v.ConfigName
+	}
+	return
+}
+
+func (v *UpdateDynamicConfigRequest) GetConfigValues() (o []*DynamicConfigValue) {
+	if v != nil && v.ConfigValues != nil {
+		return v.ConfigValues
+	}
+	return
+}
+
+type RestoreDynamicConfigRequest struct {
+	ConfigName string                 `json:"configName,omitempty"`
+	Filters    []*DynamicConfigFilter `json:"filters,omitempty"`
+}
+
+func (v *RestoreDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil {
+		return v.ConfigName
+	}
+	return
+}
+
+func (v *RestoreDynamicConfigRequest) GetFilters() (o []*DynamicConfigFilter) {
+	if v != nil && v.Filters != nil {
+		return v.Filters
+	}
+	return
+}
+
+type ListDynamicConfigResponse struct {
+	Entries []*DynamicConfigEntry `json:"entries,omitempty"`
+}
+
+func (v *ListDynamicConfigResponse) GetEntries() (o []*DynamicConfigEntry) {
+	if v != nil && v.Entries != nil {
+		return v.Entries
+	}
+	return
+}
+
+type DynamicConfigEntry struct {
+	Name         string                `json:"name,omitempty"`
+	DefaultValue string                `json:"defaultValue,omitempty"`
+	Values       []*DynamicConfigValue `json:"values,omitempty"`
+}
+
+func (v *DynamicConfigEntry) GetName() (o string) {
+	if v != nil {
+		return v.Name
+	}
+	return
+}
+
+func (v *DynamicConfigEntry) GetDefaultValue() (o string) {
+	if v != nil {
+		return v.DefaultValue
+	}
+	return
+}
+
+func (v *DynamicConfigEntry) GetValues() (o []*DynamicConfigValue) {
+	if v != nil && v.Values != nil {
+		return v.Values
+	}
+	return
+}
+
+type DynamicConfigValue struct {
+	Value   string                 `json:"value,omitempty"`
+	Filters []*DynamicConfigFilter `json:"filters,omitempty"`
+}
+
+func (v *DynamicConfigValue) GetValue() (o string) {
+	if v != nil {
+		return v.Value
+	}
+	return
+}
+
+func (v *DynamicConfigValue) GetFilters() (o []*DynamicConfigFilter) {
+	if v != nil && v.Filters != nil {
+		return v.Filters
+	}
+	return
+}
+
+type DynamicConfigFilter struct {
+	Name  string `json:"name,omitempty"`
+	Value string `json:"value,omitempty"`
+}
+
+func (v *DynamicConfigFilter) GetName() (o string) {
+	if v != nil {
+		return v.Name
+	}
+	return
+}
+
+func (v *DynamicConfigFilter) GetValue() (o string) {
+	if v != nil {
+		return v.Value
+	}
+	return
+}
