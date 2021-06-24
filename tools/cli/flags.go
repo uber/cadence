@@ -38,6 +38,7 @@ const (
 	FlagDBPort                            = "db_port"
 	FlagDBRegion                          = "db_region"
 	FlagHistoryAddressWithAlias           = FlagHistoryAddress + ", had"
+	FlagProtoVersion                      = "protocol_version"
 	FlagDomainID                          = "domain_id"
 	FlagDomain                            = "domain"
 	FlagDomainWithAlias                   = FlagDomain + ", do"
@@ -111,6 +112,7 @@ const (
 	FlagMore                              = "more"
 	FlagMoreWithAlias                     = FlagMore + ", m"
 	FlagAll                               = "all"
+	FlagPrefix                            = "prefix"
 	FlagAllWithAlias                      = FlagAll + ", a"
 	FlagDeprecated                        = "deprecated"
 	FlagDeprecatedWithAlias               = FlagDeprecated + ", dep"
@@ -273,6 +275,7 @@ const (
 	FlagShardMultiplier                   = "shard_multiplier"
 	FlagBucketSize                        = "bucket_size"
 	DelayStartSeconds                     = "delay_start_seconds"
+	FlagConnectionAttributes              = "conn_attrs"
 )
 
 var flagsForExecution = []cli.Flag{

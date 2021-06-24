@@ -54,7 +54,7 @@ type (
 
 		minRetentionDays     int
 		maxBadBinaryCount    int
-		metadataMgr          persistence.MetadataManager
+		domainManager        persistence.DomainManager
 		mockProducer         *mocks.KafkaProducer
 		mockDomainReplicator Replicator
 		archivalMetadata     archiver.ArchivalMetadata
@@ -91,7 +91,7 @@ func (s *domainHandlerCommonSuite) SetupTest() {
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1
 	s.maxBadBinaryCount = 10
-	s.metadataMgr = s.TestBase.MetadataManager
+	s.domainManager = s.TestBase.DomainManager
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockDomainReplicator = NewDomainReplicator(s.mockProducer, logger)
 	s.archivalMetadata = archiver.NewArchivalMetadata(
@@ -111,7 +111,7 @@ func (s *domainHandlerCommonSuite) SetupTest() {
 	s.handler = NewHandler(
 		domainConfig,
 		logger,
-		s.metadataMgr,
+		s.domainManager,
 		s.ClusterMetadata,
 		s.mockDomainReplicator,
 		s.archivalMetadata,
@@ -271,7 +271,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 	isGlobalDomain1 := false
 	activeClusterName1 := s.ClusterMetadata.GetCurrentClusterName()
 	var cluster1 []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		cluster1 = append(cluster1, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -296,7 +296,10 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 	isGlobalDomain2 := true
 	activeClusterName2 := ""
 	var cluster2 []*types.ClusterReplicationConfiguration
-	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
+	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName2 = clusterName
 		}
@@ -337,7 +340,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 	}
 	delete(domains, common.SystemLocalDomainName)
 	s.Equal(map[string]*types.DescribeDomainResponse{
-		domainName1: &types.DescribeDomainResponse{
+		domainName1: {
 			DomainInfo: &types.DomainInfo{
 				Name:        domainName1,
 				Status:      types.DomainStatusRegistered.Ptr(),
@@ -362,7 +365,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 			FailoverVersion: common.EmptyVersion,
 			IsGlobalDomain:  isGlobalDomain1,
 		},
-		domainName2: &types.DescribeDomainResponse{
+		domainName2: {
 			DomainInfo: &types.DomainInfo{
 				Name:        domainName2,
 				Status:      types.DomainStatusRegistered.Ptr(),
@@ -430,17 +433,13 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_Success() {
 		IsGlobalDomain:                         true,
 		ActiveClusterName:                      "standby",
 		Clusters: []*types.ClusterReplicationConfiguration{
-			{
-				s.ClusterMetadata.GetCurrentClusterName(),
-			},
-			{
-				"standby",
-			},
+			{ClusterName: s.ClusterMetadata.GetCurrentClusterName()},
+			{ClusterName: "standby"},
 		},
 	}
 	err := s.handler.RegisterDomain(context.Background(), registerRequest)
 	s.NoError(err)
-	resp1, _ := s.metadataMgr.GetDomain(context.Background(), &persistence.GetDomainRequest{
+	resp1, _ := s.domainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{
 		Name: domain,
 	})
 	s.Equal("standby", resp1.ReplicationConfig.ActiveClusterName)
@@ -453,7 +452,7 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_Success() {
 	}
 	resp, err := s.handler.UpdateDomain(context.Background(), updateRequest)
 	s.NoError(err)
-	resp2, err := s.metadataMgr.GetDomain(context.Background(), &persistence.GetDomainRequest{
+	resp2, err := s.domainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{
 		ID: resp.GetDomainInfo().GetUUID(),
 	})
 	s.NoError(err)
@@ -472,12 +471,8 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_NotCurrentA
 		IsGlobalDomain:                         true,
 		ActiveClusterName:                      "active",
 		Clusters: []*types.ClusterReplicationConfiguration{
-			{
-				"active",
-			},
-			{
-				"standby",
-			},
+			{ClusterName: "active"},
+			{ClusterName: "standby"},
 		},
 	}
 	err := s.handler.RegisterDomain(context.Background(), registerRequest)
@@ -502,12 +497,8 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_OngoingFail
 		IsGlobalDomain:                         true,
 		ActiveClusterName:                      "standby",
 		Clusters: []*types.ClusterReplicationConfiguration{
-			{
-				s.ClusterMetadata.GetCurrentClusterName(),
-			},
-			{
-				"standby",
-			},
+			{ClusterName: s.ClusterMetadata.GetCurrentClusterName()},
+			{ClusterName: "standby"},
 		},
 	}
 	err := s.handler.RegisterDomain(context.Background(), registerRequest)
@@ -534,12 +525,8 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_NoUpdateAct
 		IsGlobalDomain:                         true,
 		ActiveClusterName:                      "standby",
 		Clusters: []*types.ClusterReplicationConfiguration{
-			{
-				s.ClusterMetadata.GetCurrentClusterName(),
-			},
-			{
-				"standby",
-			},
+			{ClusterName: s.ClusterMetadata.GetCurrentClusterName()},
+			{ClusterName: "standby"},
 		},
 	}
 	err := s.handler.RegisterDomain(context.Background(), registerRequest)
@@ -564,12 +551,8 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_After_Force
 		IsGlobalDomain:                         true,
 		ActiveClusterName:                      "standby",
 		Clusters: []*types.ClusterReplicationConfiguration{
-			{
-				s.ClusterMetadata.GetCurrentClusterName(),
-			},
-			{
-				"standby",
-			},
+			{ClusterName: s.ClusterMetadata.GetCurrentClusterName()},
+			{ClusterName: "standby"},
 		},
 	}
 	err := s.handler.RegisterDomain(context.Background(), registerRequest)
@@ -591,7 +574,7 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_After_Force
 	}
 	_, err = s.handler.UpdateDomain(context.Background(), updateRequest)
 	s.NoError(err)
-	resp2, err := s.metadataMgr.GetDomain(context.Background(), &persistence.GetDomainRequest{
+	resp2, err := s.domainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{
 		ID: resp.GetDomainInfo().GetUUID(),
 	})
 	s.NoError(err)
@@ -608,12 +591,8 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_ForceFailover_SameActiveClus
 		IsGlobalDomain:                         true,
 		ActiveClusterName:                      "standby",
 		Clusters: []*types.ClusterReplicationConfiguration{
-			{
-				s.ClusterMetadata.GetCurrentClusterName(),
-			},
-			{
-				"standby",
-			},
+			{ClusterName: s.ClusterMetadata.GetCurrentClusterName()},
+			{ClusterName: "standby"},
 		},
 	}
 	err := s.handler.RegisterDomain(context.Background(), registerRequest)

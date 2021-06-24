@@ -46,6 +46,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/types"
@@ -176,7 +177,7 @@ func NewWorkflowHandler(
 		domainHandler: domain.NewHandler(
 			config.domainConfig,
 			resource.GetLogger(),
-			resource.GetMetadataManager(),
+			resource.GetDomainManager(),
 			resource.GetClusterMetadata(),
 			domain.NewDomainReplicator(replicationMessageSink, resource.GetLogger()),
 			resource.GetArchivalMetadata(),
@@ -3543,7 +3544,7 @@ func (wh *WorkflowHandler) getHistory(
 	isFirstPage := len(nextPageToken) == 0
 	shardID := common.WorkflowIDToHistoryShard(execution.WorkflowID, wh.config.NumHistoryShards)
 	var err error
-	historyEvents, size, nextPageToken, err := persistence.ReadFullPageV2Events(ctx, wh.GetHistoryManager(), &persistence.ReadHistoryBranchRequest{
+	historyEvents, size, nextPageToken, err := persistenceutils.ReadFullPageV2Events(ctx, wh.GetHistoryManager(), &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
@@ -4161,18 +4162,17 @@ func checkRequiredDomainDataKVs(requiredDomainDataKeys map[string]interface{}, d
 func (wh *WorkflowHandler) normalizeVersionedErrors(ctx context.Context, err error) error {
 	switch err.(type) {
 	case *types.WorkflowExecutionAlreadyCompletedError:
-		return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
-		/* TODO: re-enable the block below once we can rollout this *breaking* change
 		call := yarpc.CallFromContext(ctx)
 		clientFeatureVersion := call.Header(common.FeatureVersionHeaderName)
 		clientImpl := call.Header(common.ClientImplHeaderName)
-		vErr := wh.versionChecker.SupportsWorkflowAlreadyCompletedError(clientImpl, clientFeatureVersion)
+		featureFlags := client.GetFeatureFlagsFromHeader(call)
+
+		vErr := wh.versionChecker.SupportsWorkflowAlreadyCompletedError(clientImpl, clientFeatureVersion, featureFlags)
 		if vErr == nil {
 			return err
 		} else {
 			return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
 		}
-		*/
 	default:
 		return err
 	}

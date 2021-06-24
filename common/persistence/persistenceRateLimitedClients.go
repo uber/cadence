@@ -60,7 +60,7 @@ type (
 
 	metadataRateLimitedPersistenceClient struct {
 		rateLimiter quotas.Limiter
-		persistence MetadataManager
+		persistence DomainManager
 		logger      log.Logger
 	}
 
@@ -81,7 +81,7 @@ var _ ShardManager = (*shardRateLimitedPersistenceClient)(nil)
 var _ ExecutionManager = (*workflowExecutionRateLimitedPersistenceClient)(nil)
 var _ TaskManager = (*taskRateLimitedPersistenceClient)(nil)
 var _ HistoryManager = (*historyRateLimitedPersistenceClient)(nil)
-var _ MetadataManager = (*metadataRateLimitedPersistenceClient)(nil)
+var _ DomainManager = (*metadataRateLimitedPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityRateLimitedPersistenceClient)(nil)
 var _ QueueManager = (*queueRateLimitedPersistenceClient)(nil)
 
@@ -137,12 +137,12 @@ func NewHistoryPersistenceRateLimitedClient(
 	}
 }
 
-// NewMetadataPersistenceRateLimitedClient creates a MetadataManager client to manage metadata
-func NewMetadataPersistenceRateLimitedClient(
-	persistence MetadataManager,
+// NewDomainPersistenceRateLimitedClient creates a DomainManager client to manage metadata
+func NewDomainPersistenceRateLimitedClient(
+	persistence DomainManager,
 	rateLimiter quotas.Limiter,
 	logger log.Logger,
-) MetadataManager {
+) DomainManager {
 	return &metadataRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -274,18 +274,6 @@ func (p *workflowExecutionRateLimitedPersistenceClient) ConflictResolveWorkflowE
 
 	resp, err := p.persistence.ConflictResolveWorkflowExecution(ctx, request)
 	return resp, err
-}
-
-func (p *workflowExecutionRateLimitedPersistenceClient) ResetWorkflowExecution(
-	ctx context.Context,
-	request *ResetWorkflowExecutionRequest,
-) error {
-	if ok := p.rateLimiter.Allow(); !ok {
-		return ErrPersistenceLimitExceeded
-	}
-
-	err := p.persistence.ResetWorkflowExecution(ctx, request)
-	return err
 }
 
 func (p *workflowExecutionRateLimitedPersistenceClient) DeleteWorkflowExecution(

@@ -76,6 +76,7 @@ func loadCassandraSchema(
 	keyspace string,
 	override bool,
 	tls *config.TLS,
+	protoVersion int,
 ) (err error) {
 
 	tmpFile, err := ioutil.TempFile("", "_cadence_")
@@ -102,10 +103,11 @@ func loadCassandraSchema(
 
 	config := &cassandra.SetupSchemaConfig{
 		CQLClientConfig: cassandra.CQLClientConfig{
-			Hosts:    hosts,
-			Port:     port,
-			Keyspace: keyspace,
-			TLS:      tls,
+			Hosts:        hosts,
+			Port:         port,
+			Keyspace:     keyspace,
+			TLS:          tls,
+			ProtoVersion: protoVersion,
 		},
 		SetupConfig: schema.SetupConfig{
 			SchemaFilePath:    tmpFile.Name(),

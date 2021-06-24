@@ -134,7 +134,7 @@ func (q *nosqlQueue) tryEnqueue(
 		Payload:   messagePayload,
 	})
 	if err != nil {
-		if q.db.IsConditionFailedError(err) {
+		if _, ok := err.(*nosqlplugin.ConditionFailure); ok {
 			return emptyMessageID, &persistence.ConditionFailedError{Msg: fmt.Sprintf("message ID %v exists in queue", messageID)}
 		}
 
@@ -334,7 +334,7 @@ func (q *nosqlQueue) updateQueueMetadata(
 ) error {
 	err := q.db.UpdateQueueMetadataCas(ctx, *metadata)
 	if err != nil {
-		if q.db.IsConditionFailedError(err) {
+		if _, ok := err.(*nosqlplugin.ConditionFailure); ok {
 			return &types.InternalServiceError{
 				Message: fmt.Sprintf("UpdateQueueMetadata operation encounter concurrent write."),
 			}

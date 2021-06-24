@@ -192,7 +192,7 @@ func (h *handlerImpl) Start() {
 	h.historyEventNotifier.Start()
 
 	h.failoverCoordinator = failover.NewCoordinator(
-		h.GetMetadataManager(),
+		h.GetDomainManager(),
 		h.GetHistoryClient(),
 		h.GetTimeSource(),
 		h.GetDomainCache(),

@@ -73,7 +73,7 @@ type (
 	}
 
 	metadataErrorInjectionPersistenceClient struct {
-		persistence MetadataManager
+		persistence DomainManager
 		errorRate   float64
 		logger      log.Logger
 	}
@@ -95,7 +95,7 @@ var _ ShardManager = (*shardErrorInjectionPersistenceClient)(nil)
 var _ ExecutionManager = (*workflowExecutionErrorInjectionPersistenceClient)(nil)
 var _ TaskManager = (*taskErrorInjectionPersistenceClient)(nil)
 var _ HistoryManager = (*historyErrorInjectionPersistenceClient)(nil)
-var _ MetadataManager = (*metadataErrorInjectionPersistenceClient)(nil)
+var _ DomainManager = (*metadataErrorInjectionPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityErrorInjectionPersistenceClient)(nil)
 var _ QueueManager = (*queueErrorInjectionPersistenceClient)(nil)
 
@@ -151,12 +151,12 @@ func NewHistoryPersistenceErrorInjectionClient(
 	}
 }
 
-// NewMetadataPersistenceErrorInjectionClient creates an error injection MetadataManager client to manage metadata
-func NewMetadataPersistenceErrorInjectionClient(
-	persistence MetadataManager,
+// NewDomainPersistenceErrorInjectionClient creates an error injection DomainManager client to manage metadata
+func NewDomainPersistenceErrorInjectionClient(
+	persistence DomainManager,
 	errorRate float64,
 	logger log.Logger,
-) MetadataManager {
+) DomainManager {
 	return &metadataErrorInjectionPersistenceClient{
 		persistence: persistence,
 		errorRate:   errorRate,
@@ -362,30 +362,6 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) ConflictResolveWorkfl
 		return nil, fakeErr
 	}
 	return response, persistenceErr
-}
-
-func (p *workflowExecutionErrorInjectionPersistenceClient) ResetWorkflowExecution(
-	ctx context.Context,
-	request *ResetWorkflowExecutionRequest,
-) error {
-	fakeErr := generateFakeError(p.errorRate)
-
-	var persistenceErr error
-	var forwardCall bool
-	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		persistenceErr = p.persistence.ResetWorkflowExecution(ctx, request)
-	}
-
-	if fakeErr != nil {
-		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationResetWorkflowExecution,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.StoreError(persistenceErr),
-		)
-		return fakeErr
-	}
-	return persistenceErr
 }
 
 func (p *workflowExecutionErrorInjectionPersistenceClient) DeleteWorkflowExecution(

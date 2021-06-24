@@ -22,6 +22,7 @@ package dynamodb
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
@@ -39,14 +40,14 @@ var (
 
 // ddb represents a logical connection to DynamoDB database
 type ddb struct {
-	logger  log.Logger
+	logger log.Logger
 }
 
 var _ nosqlplugin.DB = (*ddb)(nil)
 
 // NewDynamoDB return a new DB
 func NewDynamoDB(cfg config.NoSQL, logger log.Logger) (nosqlplugin.DB, error) {
-	panic("TODO")
+	return nil, fmt.Errorf("TODO")
 }
 
 func (db *ddb) Close() {

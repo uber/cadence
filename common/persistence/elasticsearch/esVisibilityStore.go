@@ -37,13 +37,13 @@ import (
 	"github.com/uber/cadence/.gen/go/indexer"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/definition"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	p "github.com/uber/cadence/common/persistence"
+	rc "github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
@@ -58,7 +58,7 @@ type (
 		index    string
 		producer messaging.Producer
 		logger   log.Logger
-		config   *config.VisibilityConfig
+		config   *rc.ResourceConfig
 	}
 )
 
@@ -69,7 +69,7 @@ func NewElasticSearchVisibilityStore(
 	esClient es.GenericClient,
 	index string,
 	producer messaging.Producer,
-	config *config.VisibilityConfig,
+	config *rc.ResourceConfig,
 	logger log.Logger,
 ) p.VisibilityStore {
 	return &esVisibilityStore{

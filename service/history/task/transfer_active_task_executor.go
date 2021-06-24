@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -403,10 +404,17 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 		return err
 	}
 
-	targetDomainName, err := t.shard.GetDomainCache().GetDomainName(task.TargetDomainID)
+	targetDomainEntry, err := t.shard.GetDomainCache().GetDomainByID(task.TargetDomainID)
 	if err != nil {
+		// TODO: handle the case where target domain does not exist
 		return err
 	}
+
+	if targetCluster, isCrossCluster := t.isCrossClusterTask(targetDomainEntry); isCrossCluster {
+		return t.generateCrossClusterTask(ctx, wfContext, task, targetCluster)
+	}
+
+	targetDomainName := targetDomainEntry.GetInfo().Name
 
 	// handle workflow cancel itself
 	if task.DomainID == task.TargetDomainID && task.WorkflowID == task.TargetWorkflowID {
@@ -495,10 +503,17 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		return err
 	}
 
-	targetDomainName, err := t.shard.GetDomainCache().GetDomainName(task.TargetDomainID)
+	targetDomainEntry, err := t.shard.GetDomainCache().GetDomainByID(task.TargetDomainID)
 	if err != nil {
+		// TODO: handle the case where target domain does not exist
 		return err
 	}
+
+	if targetCluster, isCrossCluster := t.isCrossClusterTask(targetDomainEntry); isCrossCluster {
+		return t.generateCrossClusterTask(ctx, wfContext, task, targetCluster)
+	}
+
+	targetDomainName := targetDomainEntry.GetInfo().Name
 
 	// handle workflow signal itself
 	if task.DomainID == task.TargetDomainID && task.WorkflowID == task.TargetWorkflowID {
@@ -610,16 +625,6 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		domainName = task.DomainID
 	}
 
-	// Get target domain name
-	var targetDomainName string
-	if targetDomainName, err = t.shard.GetDomainCache().GetDomainName(task.TargetDomainID); err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); !ok {
-			return err
-		}
-		// it is possible that the domain got deleted. Use domainID instead as this is only needed for the history event
-		targetDomainName = task.TargetDomainID
-	}
-
 	initiatedEventID := task.ScheduleID
 	childInfo, ok := mutableState.GetChildExecutionInfo(initiatedEventID)
 	if !ok {
@@ -628,6 +633,25 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	ok, err = verifyTaskVersion(t.shard, t.logger, task.DomainID, childInfo.Version, task.Version, task)
 	if err != nil || !ok {
 		return err
+	}
+
+	// Get target domain name
+	var targetDomainName string
+	var targetDomainEntry *cache.DomainCacheEntry
+	if targetDomainEntry, err = t.shard.GetDomainCache().GetDomainByID(task.TargetDomainID); err != nil {
+		if _, ok := err.(*types.EntityNotExistsError); !ok {
+			return err
+		}
+		// TODO: handle the case where target domain does not exist
+
+		// it is possible that the domain got deleted. Use domainID instead as this is only needed for the history event
+		targetDomainName = task.TargetDomainID
+	} else {
+		if targetCluster, isCrossCluster := t.isCrossClusterTask(targetDomainEntry); isCrossCluster {
+			return t.generateCrossClusterTask(ctx, wfContext, task, targetCluster)
+		}
+
+		targetDomainName = targetDomainEntry.GetInfo().Name
 	}
 
 	initiatedEvent, err := mutableState.GetChildExecutionInitiatedEvent(ctx, initiatedEventID)
@@ -1169,6 +1193,42 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionFailed(
 	}
 
 	return err
+}
+
+func (t *transferActiveTaskExecutor) isCrossClusterTask(
+	targetDomainEntry *cache.DomainCacheEntry,
+) (string, bool) {
+	targetCluster := targetDomainEntry.GetReplicationConfig().ActiveClusterName
+	if targetCluster != t.shard.GetClusterMetadata().GetCurrentClusterName() {
+		return targetCluster, true
+	}
+	return "", false
+}
+
+func (t *transferActiveTaskExecutor) generateCrossClusterTask(
+	ctx context.Context,
+	wfContext execution.Context,
+	task *persistence.TransferTaskInfo,
+	targetCluster string,
+) error {
+	return t.updateWorkflowExecution(
+		ctx,
+		wfContext,
+		false,
+		func(ctx context.Context, mutableState execution.MutableState) error {
+			if !mutableState.IsWorkflowExecutionRunning() {
+				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
+			}
+
+			taskGenerator := execution.NewMutableStateTaskGenerator(
+				t.shard.GetClusterMetadata(),
+				t.shard.GetDomainCache(),
+				t.logger,
+				mutableState,
+			)
+			return taskGenerator.GenerateCrossClusterTaskFromTransferTask(task, targetCluster)
+		},
+	)
 }
 
 func (t *transferActiveTaskExecutor) updateWorkflowExecution(

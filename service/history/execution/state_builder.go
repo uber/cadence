@@ -525,6 +525,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
+				event,
 			); err != nil {
 				return nil, err
 			}
@@ -539,6 +540,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
+				event,
 			); err != nil {
 				return nil, err
 			}
@@ -553,6 +555,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
+				event,
 			); err != nil {
 				return nil, err
 			}
@@ -567,6 +570,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
+				event,
 			); err != nil {
 				return nil, err
 			}
@@ -581,6 +585,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
+				event,
 			); err != nil {
 				return nil, err
 			}
@@ -623,6 +628,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
 				b.unixNanoToTime(event.GetTimestamp()),
+				event,
 			); err != nil {
 				return nil, err
 			}

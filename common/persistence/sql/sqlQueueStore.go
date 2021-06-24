@@ -36,19 +36,19 @@ const (
 )
 
 type (
-	sqlQueue struct {
+	sqlQueueStore struct {
 		queueType persistence.QueueType
 		logger    log.Logger
 		sqlStore
 	}
 )
 
-func newQueue(
+func newQueueStore(
 	db sqlplugin.DB,
 	logger log.Logger,
 	queueType persistence.QueueType,
 ) (persistence.Queue, error) {
-	return &sqlQueue{
+	return &sqlQueueStore{
 		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
@@ -58,7 +58,7 @@ func newQueue(
 	}, nil
 }
 
-func (q *sqlQueue) EnqueueMessage(
+func (q *sqlQueueStore) EnqueueMessage(
 	ctx context.Context,
 	messagePayload []byte,
 ) error {
@@ -77,7 +77,7 @@ func (q *sqlQueue) EnqueueMessage(
 	})
 }
 
-func (q *sqlQueue) ReadMessages(
+func (q *sqlQueueStore) ReadMessages(
 	ctx context.Context,
 	lastMessageID int64,
 	maxCount int,
@@ -104,7 +104,7 @@ func newQueueRow(
 	return &sqlplugin.QueueRow{QueueType: queueType, MessageID: messageID, MessagePayload: payload}
 }
 
-func (q *sqlQueue) DeleteMessagesBefore(
+func (q *sqlQueueStore) DeleteMessagesBefore(
 	ctx context.Context,
 	messageID int64,
 ) error {
@@ -116,7 +116,7 @@ func (q *sqlQueue) DeleteMessagesBefore(
 	return nil
 }
 
-func (q *sqlQueue) UpdateAckLevel(
+func (q *sqlQueueStore) UpdateAckLevel(
 	ctx context.Context,
 	messageID int64,
 	clusterName string,
@@ -141,7 +141,7 @@ func (q *sqlQueue) UpdateAckLevel(
 	})
 }
 
-func (q *sqlQueue) GetAckLevels(
+func (q *sqlQueueStore) GetAckLevels(
 	ctx context.Context,
 ) (map[string]int64, error) {
 	result, err := q.db.GetAckLevels(ctx, q.queueType, false)
@@ -151,7 +151,7 @@ func (q *sqlQueue) GetAckLevels(
 	return result, nil
 }
 
-func (q *sqlQueue) EnqueueMessageToDLQ(
+func (q *sqlQueueStore) EnqueueMessageToDLQ(
 	ctx context.Context,
 	messagePayload []byte,
 ) error {
@@ -170,7 +170,7 @@ func (q *sqlQueue) EnqueueMessageToDLQ(
 	})
 }
 
-func (q *sqlQueue) ReadMessagesFromDLQ(
+func (q *sqlQueueStore) ReadMessagesFromDLQ(
 	ctx context.Context,
 	firstMessageID int64,
 	lastMessageID int64,
@@ -205,7 +205,7 @@ func (q *sqlQueue) ReadMessagesFromDLQ(
 	return messages, newPagingToken, nil
 }
 
-func (q *sqlQueue) DeleteMessageFromDLQ(
+func (q *sqlQueueStore) DeleteMessageFromDLQ(
 	ctx context.Context,
 	messageID int64,
 ) error {
@@ -216,7 +216,7 @@ func (q *sqlQueue) DeleteMessageFromDLQ(
 	return nil
 }
 
-func (q *sqlQueue) RangeDeleteMessagesFromDLQ(
+func (q *sqlQueueStore) RangeDeleteMessagesFromDLQ(
 	ctx context.Context,
 	firstMessageID int64,
 	lastMessageID int64,
@@ -228,7 +228,7 @@ func (q *sqlQueue) RangeDeleteMessagesFromDLQ(
 	return nil
 }
 
-func (q *sqlQueue) UpdateDLQAckLevel(
+func (q *sqlQueueStore) UpdateDLQAckLevel(
 	ctx context.Context,
 	messageID int64,
 	clusterName string,
@@ -253,7 +253,7 @@ func (q *sqlQueue) UpdateDLQAckLevel(
 	})
 }
 
-func (q *sqlQueue) GetDLQAckLevels(
+func (q *sqlQueueStore) GetDLQAckLevels(
 	ctx context.Context,
 ) (map[string]int64, error) {
 	result, err := q.db.GetAckLevels(ctx, q.getDLQTypeFromQueueType(), false)
@@ -263,7 +263,7 @@ func (q *sqlQueue) GetDLQAckLevels(
 	return result, nil
 }
 
-func (q *sqlQueue) GetDLQSize(
+func (q *sqlQueueStore) GetDLQSize(
 	ctx context.Context,
 ) (int64, error) {
 	result, err := q.db.GetQueueSize(ctx, q.getDLQTypeFromQueueType())
@@ -273,6 +273,6 @@ func (q *sqlQueue) GetDLQSize(
 	return result, nil
 }
 
-func (q *sqlQueue) getDLQTypeFromQueueType() persistence.QueueType {
+func (q *sqlQueueStore) getDLQTypeFromQueueType() persistence.QueueType {
 	return -q.queueType
 }

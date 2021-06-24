@@ -50,4 +50,3 @@ func (db *ddb) SelectAllHistoryTrees(ctx context.Context, nextPageToken []byte, 
 func (db *ddb) SelectFromHistoryTree(ctx context.Context, filter *nosqlplugin.HistoryTreeFilter) ([]*nosqlplugin.HistoryTreeRow, error) {
 	panic("TODO")
 }
-

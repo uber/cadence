@@ -35,22 +35,20 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
-	cassp "github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
+	"github.com/uber/cadence/tools/common/flag"
 )
 
 const (
 	maxEventID = 9999
-
-	cassandraProtoVersion = 4
 )
 
 // AdminShowWorkflow shows history
@@ -68,7 +66,7 @@ func AdminShowWorkflow(c *cli.Context) {
 		thriftrwEncoder := codec.NewThriftRWEncoder()
 		histV2 := initializeHistoryManager(c)
 		branchToken, err := thriftrwEncoder.Encode(&shared.HistoryBranch{
-			TreeID: &tid,
+			TreeID:   &tid,
 			BranchID: &bid,
 		})
 		if err != nil {
@@ -76,10 +74,10 @@ func AdminShowWorkflow(c *cli.Context) {
 		}
 		resp, err := histV2.ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
 			BranchToken: branchToken,
-			MinEventID: 1,
-			MaxEventID: maxEventID,
-			PageSize: maxEventID,
-			ShardID: &sid,
+			MinEventID:  1,
+			MaxEventID:  maxEventID,
+			PageSize:    maxEventID,
+			ShardID:     &sid,
 		})
 		if err != nil {
 			ErrorAndExit("ReadHistoryBranch err", err)
@@ -176,13 +174,16 @@ func describeMutableState(c *cli.Context) *types.AdminDescribeWorkflowExecutionR
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	resp, err := adminClient.DescribeWorkflowExecution(ctx, &types.AdminDescribeWorkflowExecutionRequest{
-		Domain: domain,
-		Execution: &types.WorkflowExecution{
-			WorkflowID: wid,
-			RunID:      rid,
+	resp, err := adminClient.DescribeWorkflowExecution(
+		ctx,
+		&types.AdminDescribeWorkflowExecutionRequest{
+			Domain: domain,
+			Execution: &types.WorkflowExecution{
+				WorkflowID: wid,
+				RunID:      rid,
+			},
 		},
-	})
+		cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Get workflow mutableState failed", err)
 	}
@@ -235,7 +236,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		prettyPrintJSONObject(branchInfo)
 		err = histV2.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
 			BranchToken: branchToken,
-			ShardID: &shardIDInt,
+			ShardID:     &shardIDInt,
 		})
 		if err != nil {
 			if skipError {
@@ -298,7 +299,7 @@ func connectToCassandra(c *cli.Context) (gocql.Client, gocql.Session) {
 		User:              c.String(FlagUsername),
 		Password:          c.String(FlagPassword),
 		Keyspace:          getRequiredOption(c, FlagKeyspace),
-		ProtoVersion:      cassandraProtoVersion,
+		ProtoVersion:      c.Int(FlagProtoVersion),
 		SerialConsistency: gocql.LocalSerial,
 		MaxConns:          20,
 		Consistency:       gocql.LocalQuorum,
@@ -329,18 +330,20 @@ func connectToSQL(c *cli.Context) sqlplugin.DB {
 	}
 	encodingType := c.String(FlagEncodingType)
 	decodingTypesStr := c.StringSlice(FlagDecodingTypes)
+	connectAttributes := c.Generic(FlagConnectionAttributes).(*flag.StringMap)
 
 	sqlConfig := &config.SQL{
 		ConnectAddr: net.JoinHostPort(
 			host,
 			c.String(FlagDBPort),
 		),
-		PluginName:    c.String(FlagDBType),
-		User:          c.String(FlagUsername),
-		Password:      c.String(FlagPassword),
-		DatabaseName:  getRequiredOption(c, FlagDatabaseName),
-		EncodingType:  encodingType,
-		DecodingTypes: decodingTypesStr,
+		PluginName:        c.String(FlagDBType),
+		User:              c.String(FlagUsername),
+		Password:          c.String(FlagPassword),
+		DatabaseName:      getRequiredOption(c, FlagDatabaseName),
+		EncodingType:      encodingType,
+		DecodingTypes:     decodingTypesStr,
+		ConnectAttributes: connectAttributes.Value(),
 	}
 
 	if c.Bool(FlagEnableTLS) {

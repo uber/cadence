@@ -76,7 +76,7 @@ type (
 		GetOrphanTasks(ctx context.Context, request *GetOrphanTasksRequest) (*GetOrphanTasksResponse, error)
 	}
 
-	// MetadataStore is a lower level of MetadataManager
+	// MetadataStore is a lower level of DomainManager
 	MetadataStore interface {
 		Closeable
 		GetName() string
@@ -98,7 +98,6 @@ type (
 		GetWorkflowExecution(ctx context.Context, request *InternalGetWorkflowExecutionRequest) (*InternalGetWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(ctx context.Context, request *InternalUpdateWorkflowExecutionRequest) error
 		ConflictResolveWorkflowExecution(ctx context.Context, request *InternalConflictResolveWorkflowExecutionRequest) error
-		ResetWorkflowExecution(ctx context.Context, request *InternalResetWorkflowExecutionRequest) error
 
 		CreateWorkflowExecution(ctx context.Context, request *InternalCreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
 		DeleteWorkflowExecution(ctx context.Context, request *DeleteWorkflowExecutionRequest) error
@@ -415,25 +414,6 @@ type (
 
 		// current workflow
 		CurrentWorkflowMutation *InternalWorkflowMutation
-	}
-
-	// InternalResetWorkflowExecutionRequest is used to reset workflow execution state for Persistence Interface
-	InternalResetWorkflowExecutionRequest struct {
-		RangeID int64
-
-		// for base run (we need to make sure the baseRun hasn't been deleted after forking)
-		BaseRunID          string
-		BaseRunNextEventID int64
-
-		// for current workflow record
-		CurrentRunID          string
-		CurrentRunNextEventID int64
-
-		// for current mutable state
-		CurrentWorkflowMutation *InternalWorkflowMutation
-
-		// For new mutable state
-		NewWorkflowSnapshot InternalWorkflowSnapshot
 	}
 
 	// InternalWorkflowMutation is used as generic workflow execution state mutation for Persistence Interface
@@ -814,24 +794,23 @@ type (
 
 	// InternalShardInfo describes a shard
 	InternalShardInfo struct {
-		ShardID                       int                              `json:"shard_id"`
-		Owner                         string                           `json:"owner"`
-		RangeID                       int64                            `json:"range_id"`
-		StolenSinceRenew              int                              `json:"stolen_since_renew"`
-		UpdatedAt                     time.Time                        `json:"updated_at"`
-		ReplicationAckLevel           int64                            `json:"replication_ack_level"`
-		ReplicationDLQAckLevel        map[string]int64                 `json:"replication_dlq_ack_level"`
-		TransferAckLevel              int64                            `json:"transfer_ack_level"`
-		TimerAckLevel                 time.Time                        `json:"timer_ack_level"`
-		ClusterTransferAckLevel       map[string]int64                 `json:"cluster_transfer_ack_level"`
-		ClusterTimerAckLevel          map[string]time.Time             `json:"cluster_timer_ack_level"`
-		TransferProcessingQueueStates *DataBlob                        `json:"transfer_processing_queue_states"`
-		TimerProcessingQueueStates    *DataBlob                        `json:"timer_processing_queue_states"`
-		TransferFailoverLevels        map[string]TransferFailoverLevel // uuid -> TransferFailoverLevel
-		TimerFailoverLevels           map[string]TimerFailoverLevel    // uuid -> TimerFailoverLevel
-		ClusterReplicationLevel       map[string]int64                 `json:"cluster_replication_level"`
-		DomainNotificationVersion     int64                            `json:"domain_notification_version"`
-		PendingFailoverMarkers        *DataBlob                        `json:"pending_failover_markers"`
+		ShardID                           int                  `json:"shard_id"`
+		Owner                             string               `json:"owner"`
+		RangeID                           int64                `json:"range_id"`
+		StolenSinceRenew                  int                  `json:"stolen_since_renew"`
+		UpdatedAt                         time.Time            `json:"updated_at"`
+		ReplicationAckLevel               int64                `json:"replication_ack_level"`
+		ReplicationDLQAckLevel            map[string]int64     `json:"replication_dlq_ack_level"`
+		TransferAckLevel                  int64                `json:"transfer_ack_level"`
+		TimerAckLevel                     time.Time            `json:"timer_ack_level"`
+		ClusterTransferAckLevel           map[string]int64     `json:"cluster_transfer_ack_level"`
+		ClusterTimerAckLevel              map[string]time.Time `json:"cluster_timer_ack_level"`
+		TransferProcessingQueueStates     *DataBlob            `json:"transfer_processing_queue_states"`
+		CrossClusterProcessingQueueStates *DataBlob            `json:"cross_cluster_processing_queue_states"`
+		TimerProcessingQueueStates        *DataBlob            `json:"timer_processing_queue_states"`
+		ClusterReplicationLevel           map[string]int64     `json:"cluster_replication_level"`
+		DomainNotificationVersion         int64                `json:"domain_notification_version"`
+		PendingFailoverMarkers            *DataBlob            `json:"pending_failover_markers"`
 	}
 
 	// InternalCreateShardRequest is request to CreateShard
@@ -906,6 +885,18 @@ func FromDataBlob(blob *DataBlob) ([]byte, string) {
 		return nil, ""
 	}
 	return blob.Data, string(blob.Encoding)
+}
+
+// Convert a *Datablob to safe that calling its method won't run into NPE
+func (d *DataBlob) ToNilSafeDataBlob() *DataBlob {
+	if d != nil {
+		return d
+	}
+	return &DataBlob{}
+}
+
+func (d *DataBlob) GetEncodingString() string {
+	return string(d.Encoding)
 }
 
 // GetEncoding returns encoding type

@@ -21,16 +21,10 @@
 package cassandra
 
 import (
-	"errors"
-
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
-)
-
-var (
-	errConditionFailed = errors.New("internal condition fail error")
 )
 
 // cdb represents a logical connection to Cassandra database
@@ -84,11 +78,4 @@ func (db *cdb) IsTimeoutError(err error) bool {
 
 func (db *cdb) IsThrottlingError(err error) bool {
 	return db.client.IsThrottlingError(err)
-}
-
-func (db *cdb) IsConditionFailedError(err error) bool {
-	if err == errConditionFailed {
-		return true
-	}
-	return false
 }

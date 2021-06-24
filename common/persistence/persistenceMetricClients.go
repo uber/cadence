@@ -56,7 +56,7 @@ type (
 
 	metadataPersistenceClient struct {
 		metricClient metrics.Client
-		persistence  MetadataManager
+		persistence  DomainManager
 		logger       log.Logger
 	}
 
@@ -77,7 +77,7 @@ var _ ShardManager = (*shardPersistenceClient)(nil)
 var _ ExecutionManager = (*workflowExecutionPersistenceClient)(nil)
 var _ TaskManager = (*taskPersistenceClient)(nil)
 var _ HistoryManager = (*historyPersistenceClient)(nil)
-var _ MetadataManager = (*metadataPersistenceClient)(nil)
+var _ DomainManager = (*metadataPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityPersistenceClient)(nil)
 var _ QueueManager = (*queuePersistenceClient)(nil)
 
@@ -133,12 +133,12 @@ func NewHistoryPersistenceMetricsClient(
 	}
 }
 
-// NewMetadataPersistenceMetricsClient creates a MetadataManager client to manage metadata
-func NewMetadataPersistenceMetricsClient(
-	persistence MetadataManager,
+// NewDomainPersistenceMetricsClient creates a DomainManager client to manage metadata
+func NewDomainPersistenceMetricsClient(
+	persistence DomainManager,
 	metricClient metrics.Client,
 	logger log.Logger,
-) MetadataManager {
+) DomainManager {
 	return &metadataPersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
@@ -322,23 +322,6 @@ func (p *workflowExecutionPersistenceClient) ConflictResolveWorkflowExecution(
 	}
 
 	return resp, err
-}
-
-func (p *workflowExecutionPersistenceClient) ResetWorkflowExecution(
-	ctx context.Context,
-	request *ResetWorkflowExecutionRequest,
-) error {
-	p.metricClient.IncCounter(metrics.PersistenceResetWorkflowExecutionScope, metrics.PersistenceRequests)
-
-	sw := p.metricClient.StartTimer(metrics.PersistenceResetWorkflowExecutionScope, metrics.PersistenceLatency)
-	err := p.persistence.ResetWorkflowExecution(ctx, request)
-	sw.Stop()
-
-	if err != nil {
-		p.updateErrorMetric(metrics.PersistenceResetWorkflowExecutionScope, err)
-	}
-
-	return err
 }
 
 func (p *workflowExecutionPersistenceClient) DeleteWorkflowExecution(

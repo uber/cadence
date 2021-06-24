@@ -45,6 +45,8 @@ const (
 		`cluster_timer_ack_level: ?, ` +
 		`transfer_processing_queue_states: ?, ` +
 		`transfer_processing_queue_states_encoding: ?, ` +
+		`cross_cluster_processing_queue_states: ?, ` +
+		`cross_cluster_processing_queue_states_encoding: ?, ` +
 		`timer_processing_queue_states: ?, ` +
 		`timer_processing_queue_states_encoding: ?, ` +
 		`domain_notification_version: ?, ` +
@@ -92,11 +94,12 @@ const (
 )
 
 // InsertShard creates a new shard, return error is there is any.
-// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-func (db *cdb) InsertShard(ctx context.Context, row *nosqlplugin.ShardRow) (*nosqlplugin.ConflictedShardRow, error) {
+// Return ShardOperationConditionFailure if the condition doesn't meet
+func (db *cdb) InsertShard(ctx context.Context, row *nosqlplugin.ShardRow) error {
 	cqlNowTimestamp := persistence.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	markerData, markerEncoding := persistence.FromDataBlob(row.PendingFailoverMarkers)
 	transferPQS, transferPQSEncoding := persistence.FromDataBlob(row.TransferProcessingQueueStates)
+	crossClusterPQS, crossClusterPQSEncoding := persistence.FromDataBlob(row.CrossClusterProcessingQueueStates)
 	timerPQS, timerPQSEncoding := persistence.FromDataBlob(row.TimerProcessingQueueStates)
 	query := db.session.Query(templateCreateShardQuery,
 		row.ShardID,
@@ -118,6 +121,8 @@ func (db *cdb) InsertShard(ctx context.Context, row *nosqlplugin.ShardRow) (*nos
 		row.ClusterTimerAckLevel,
 		transferPQS,
 		transferPQSEncoding,
+		crossClusterPQS,
+		crossClusterPQSEncoding,
 		timerPQS,
 		timerPQSEncoding,
 		row.DomainNotificationVersion,
@@ -131,25 +136,25 @@ func (db *cdb) InsertShard(ctx context.Context, row *nosqlplugin.ShardRow) (*nos
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if !applied {
-		return convertToConflictedShardRow(row.ShardID, row.RangeID, previous), errConditionFailed
+		return convertToConflictedShardRow(previous)
 	}
 
-	return nil, nil
+	return nil
 }
 
-func convertToConflictedShardRow(shardID int, previousRangeID int64, previous map[string]interface{}) *nosqlplugin.ConflictedShardRow {
+func convertToConflictedShardRow(previous map[string]interface{}) error {
+	rangeID := previous["range_id"].(int64)
 	var columns []string
 	for k, v := range previous {
 		columns = append(columns, fmt.Sprintf("%s=%v", k, v))
 	}
-	return &nosqlplugin.ConflictedShardRow{
-		ShardID:         shardID,
-		PreviousRangeID: previousRangeID,
-		Details:         strings.Join(columns, ","),
+	return &nosqlplugin.ShardOperationConditionFailure{
+		RangeID: rangeID,
+		Details: strings.Join(columns, ","),
 	}
 }
 
@@ -186,6 +191,8 @@ func convertToShardInfo(
 	var pendingFailoverMarkersEncoding string
 	var transferProcessingQueueStatesRawData []byte
 	var transferProcessingQueueStatesEncoding string
+	var crossClusterProcessingQueueStatesRawData []byte
+	var crossClusterProcessingQueueStatesEncoding string
 	var timerProcessingQueueStatesRawData []byte
 	var timerProcessingQueueStatesEncoding string
 	info := &persistence.InternalShardInfo{}
@@ -214,6 +221,10 @@ func convertToShardInfo(
 			transferProcessingQueueStatesRawData = v.([]byte)
 		case "transfer_processing_queue_states_encoding":
 			transferProcessingQueueStatesEncoding = v.(string)
+		case "cross_cluster_processing_queue_states":
+			crossClusterProcessingQueueStatesRawData = v.([]byte)
+		case "cross_cluster_processing_queue_states_encoding":
+			crossClusterProcessingQueueStatesEncoding = v.(string)
 		case "timer_processing_queue_states":
 			timerProcessingQueueStatesRawData = v.([]byte)
 		case "timer_processing_queue_states_encoding":
@@ -255,6 +266,10 @@ func convertToShardInfo(
 		transferProcessingQueueStatesRawData,
 		common.EncodingType(transferProcessingQueueStatesEncoding),
 	)
+	info.CrossClusterProcessingQueueStates = persistence.NewDataBlob(
+		crossClusterProcessingQueueStatesRawData,
+		common.EncodingType(crossClusterProcessingQueueStatesEncoding),
+	)
 	info.TimerProcessingQueueStates = persistence.NewDataBlob(
 		timerProcessingQueueStatesRawData,
 		common.EncodingType(timerProcessingQueueStatesEncoding),
@@ -264,8 +279,8 @@ func convertToShardInfo(
 }
 
 // UpdateRangeID updates the rangeID, return error is there is any
-// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-func (db *cdb) UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (*nosqlplugin.ConflictedShardRow, error) {
+// Return ShardOperationConditionFailure if the condition doesn't meet
+func (db *cdb) UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) error {
 	query := db.session.Query(templateUpdateRangeIDQuery,
 		rangeID,
 		shardID,
@@ -281,22 +296,23 @@ func (db *cdb) UpdateRangeID(ctx context.Context, shardID int, rangeID int64, pr
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if !applied {
-		return convertToConflictedShardRow(shardID, previousRangeID, previous), errConditionFailed
+		return convertToConflictedShardRow(previous)
 	}
 
-	return nil, nil
+	return nil
 }
 
 // UpdateShard updates a shard, return error is there is any.
-// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-func (db *cdb) UpdateShard(ctx context.Context, row *nosqlplugin.ShardRow, previousRangeID int64) (*nosqlplugin.ConflictedShardRow, error) {
+// Return ShardOperationConditionFailure if the condition doesn't meet
+func (db *cdb) UpdateShard(ctx context.Context, row *nosqlplugin.ShardRow, previousRangeID int64) error {
 	cqlNowTimestamp := persistence.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	markerData, markerEncoding := persistence.FromDataBlob(row.PendingFailoverMarkers)
 	transferPQS, transferPQSEncoding := persistence.FromDataBlob(row.TransferProcessingQueueStates)
+	crossClusterPQS, crossClusterPQSEncoding := persistence.FromDataBlob(row.CrossClusterProcessingQueueStates)
 	timerPQS, timerPQSEncoding := persistence.FromDataBlob(row.TimerProcessingQueueStates)
 
 	query := db.session.Query(templateUpdateShardQuery,
@@ -312,6 +328,8 @@ func (db *cdb) UpdateShard(ctx context.Context, row *nosqlplugin.ShardRow, previ
 		row.ClusterTimerAckLevel,
 		transferPQS,
 		transferPQSEncoding,
+		crossClusterPQS,
+		crossClusterPQSEncoding,
 		timerPQS,
 		timerPQSEncoding,
 		row.DomainNotificationVersion,
@@ -333,12 +351,12 @@ func (db *cdb) UpdateShard(ctx context.Context, row *nosqlplugin.ShardRow, previ
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if !applied {
-		return convertToConflictedShardRow(row.ShardID, previousRangeID, previous), errConditionFailed
+		return convertToConflictedShardRow(previous)
 	}
 
-	return nil, nil
+	return nil
 }

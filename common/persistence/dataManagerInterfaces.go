@@ -196,6 +196,9 @@ const (
 	// TransferTaskTransferTargetRunID is the the dummy run ID for transfer tasks of types
 	// that do not have a target workflow
 	TransferTaskTransferTargetRunID = "30000000-0000-f000-f000-000000000002"
+	// CrossClusterTaskDefaultTargetRunID is the the dummy run ID for cross-cluster tasks of types
+	// that do not have a target workflow
+	CrossClusterTaskDefaultTargetRunID = TransferTaskTransferTargetRunID
 
 	// indicate invalid workflow state transition
 	invalidStateTransitionMsg = "unable to change workflow state from %v to %v, close status %v"
@@ -252,42 +255,23 @@ type (
 
 	// ShardInfo describes a shard
 	ShardInfo struct {
-		ShardID                       int                               `json:"shard_id"`
-		Owner                         string                            `json:"owner"`
-		RangeID                       int64                             `json:"range_id"`
-		StolenSinceRenew              int                               `json:"stolen_since_renew"`
-		UpdatedAt                     time.Time                         `json:"updated_at"`
-		ReplicationAckLevel           int64                             `json:"replication_ack_level"`
-		ReplicationDLQAckLevel        map[string]int64                  `json:"replication_dlq_ack_level"`
-		TransferAckLevel              int64                             `json:"transfer_ack_level"`
-		TimerAckLevel                 time.Time                         `json:"timer_ack_level"`
-		ClusterTransferAckLevel       map[string]int64                  `json:"cluster_transfer_ack_level"`
-		ClusterTimerAckLevel          map[string]time.Time              `json:"cluster_timer_ack_level"`
-		TransferProcessingQueueStates *types.ProcessingQueueStates      `json:"transfer_processing_queue_states"`
-		TimerProcessingQueueStates    *types.ProcessingQueueStates      `json:"timer_processing_queue_states"`
-		TransferFailoverLevels        map[string]TransferFailoverLevel  // uuid -> TransferFailoverLevel
-		TimerFailoverLevels           map[string]TimerFailoverLevel     // uuid -> TimerFailoverLevel
-		ClusterReplicationLevel       map[string]int64                  `json:"cluster_replication_level"`
-		DomainNotificationVersion     int64                             `json:"domain_notification_version"`
-		PendingFailoverMarkers        []*types.FailoverMarkerAttributes `json:"pending_failover_markers"`
-	}
-
-	// TransferFailoverLevel contains corresponding start / end level
-	TransferFailoverLevel struct {
-		StartTime    time.Time
-		MinLevel     int64
-		CurrentLevel int64
-		MaxLevel     int64
-		DomainIDs    map[string]struct{}
-	}
-
-	// TimerFailoverLevel contains domain IDs and corresponding start / end level
-	TimerFailoverLevel struct {
-		StartTime    time.Time
-		MinLevel     time.Time
-		CurrentLevel time.Time
-		MaxLevel     time.Time
-		DomainIDs    map[string]struct{}
+		ShardID                           int                               `json:"shard_id"`
+		Owner                             string                            `json:"owner"`
+		RangeID                           int64                             `json:"range_id"`
+		StolenSinceRenew                  int                               `json:"stolen_since_renew"`
+		UpdatedAt                         time.Time                         `json:"updated_at"`
+		ReplicationAckLevel               int64                             `json:"replication_ack_level"`
+		ReplicationDLQAckLevel            map[string]int64                  `json:"replication_dlq_ack_level"`
+		TransferAckLevel                  int64                             `json:"transfer_ack_level"`
+		TimerAckLevel                     time.Time                         `json:"timer_ack_level"`
+		ClusterTransferAckLevel           map[string]int64                  `json:"cluster_transfer_ack_level"`
+		ClusterTimerAckLevel              map[string]time.Time              `json:"cluster_timer_ack_level"`
+		TransferProcessingQueueStates     *types.ProcessingQueueStates      `json:"transfer_processing_queue_states"`
+		CrossClusterProcessingQueueStates *types.ProcessingQueueStates      `json:"cross_cluster_queue_states"`
+		TimerProcessingQueueStates        *types.ProcessingQueueStates      `json:"timer_processing_queue_states"`
+		ClusterReplicationLevel           map[string]int64                  `json:"cluster_replication_level"`
+		DomainNotificationVersion         int64                             `json:"domain_notification_version"`
+		PendingFailoverMarkers            []*types.FailoverMarkerAttributes `json:"pending_failover_markers"`
 	}
 
 	// WorkflowExecutionInfo describes a workflow execution
@@ -395,7 +379,10 @@ type (
 	}
 
 	// CrossClusterTaskInfo describes a cross-cluster task
-	CrossClusterTaskInfo TransferTaskInfo
+	// Cross cluster tasks are exactly like transfer tasks so
+	// instead of creating another struct and duplicating the same
+	// logic everywhere. We reuse TransferTaskInfo
+	CrossClusterTaskInfo = TransferTaskInfo
 
 	// ReplicationTaskInfo describes the replication task created for replication of history events
 	ReplicationTaskInfo struct {
@@ -802,7 +789,7 @@ type (
 		ShardInfo *ShardInfo
 	}
 
-	// UpdateShardRequest  is used to update shard information
+	// UpdateShardRequest is used to update shard information
 	UpdateShardRequest struct {
 		ShardInfo       *ShardInfo
 		PreviousRangeID int64
@@ -921,27 +908,6 @@ type (
 
 		// current workflow
 		CurrentWorkflowMutation *WorkflowMutation
-
-		Encoding common.EncodingType // optional binary encoding type
-	}
-
-	// ResetWorkflowExecutionRequest is used to reset workflow execution state for current run and create new run
-	ResetWorkflowExecutionRequest struct {
-		RangeID int64
-
-		// for base run (we need to make sure the baseRun hasn't been deleted after forking)
-		BaseRunID          string
-		BaseRunNextEventID int64
-
-		// for current workflow record
-		CurrentRunID          string
-		CurrentRunNextEventID int64
-
-		// for current mutable state
-		CurrentWorkflowMutation *WorkflowMutation
-
-		// For new mutable state
-		NewWorkflowSnapshot WorkflowSnapshot
 
 		Encoding common.EncodingType // optional binary encoding type
 	}
@@ -1077,11 +1043,13 @@ type (
 
 	// CompleteCrossClusterTaskRequest is used to complete a task in the cross-cluster task queue
 	CompleteCrossClusterTaskRequest struct {
-		TaskID int64
+		TargetCluster string
+		TaskID        int64
 	}
 
 	// RangeCompleteCrossClusterTaskRequest is used to complete a range of tasks in the cross-cluster task queue
 	RangeCompleteCrossClusterTaskRequest struct {
+		TargetCluster        string
 		ExclusiveBeginTaskID int64
 		InclusiveEndTaskID   int64
 	}
@@ -1626,7 +1594,6 @@ type (
 		GetWorkflowExecution(ctx context.Context, request *GetWorkflowExecutionRequest) (*GetWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(ctx context.Context, request *UpdateWorkflowExecutionRequest) (*UpdateWorkflowExecutionResponse, error)
 		ConflictResolveWorkflowExecution(ctx context.Context, request *ConflictResolveWorkflowExecutionRequest) (*ConflictResolveWorkflowExecutionResponse, error)
-		ResetWorkflowExecution(ctx context.Context, request *ResetWorkflowExecutionRequest) error
 		DeleteWorkflowExecution(ctx context.Context, request *DeleteWorkflowExecutionRequest) error
 		DeleteCurrentWorkflowExecution(ctx context.Context, request *DeleteCurrentWorkflowExecutionRequest) error
 		GetCurrentExecution(ctx context.Context, request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
@@ -1713,8 +1680,8 @@ type (
 		GetAllHistoryTreeBranches(ctx context.Context, request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error)
 	}
 
-	// MetadataManager is used to manage metadata CRUD for domain entities
-	MetadataManager interface {
+	// DomainManager is used to manage metadata CRUD for domain entities
+	DomainManager interface {
 		Closeable
 		GetName() string
 		CreateDomain(ctx context.Context, request *CreateDomainRequest) (*CreateDomainResponse, error)
@@ -2512,49 +2479,6 @@ func (t *TransferTaskInfo) String() string {
 	)
 }
 
-// GetTaskID returns the task ID for cross-cluster task
-func (t *CrossClusterTaskInfo) GetTaskID() int64 {
-	return t.TaskID
-}
-
-// GetVersion returns the task version for cross-cluster task
-func (t *CrossClusterTaskInfo) GetVersion() int64 {
-	return t.Version
-}
-
-// GetTaskType returns the task type for cross-cluster task
-func (t *CrossClusterTaskInfo) GetTaskType() int {
-	return t.TaskType
-}
-
-// GetVisibilityTimestamp returns the task type for cross-cluster task
-func (t *CrossClusterTaskInfo) GetVisibilityTimestamp() time.Time {
-	return t.VisibilityTimestamp
-}
-
-// GetWorkflowID returns the workflow ID for cross-cluster task
-func (t *CrossClusterTaskInfo) GetWorkflowID() string {
-	return t.WorkflowID
-}
-
-// GetRunID returns the run ID for cross-cluster task
-func (t *CrossClusterTaskInfo) GetRunID() string {
-	return t.RunID
-}
-
-// GetDomainID returns the domain ID for cross-cluster task
-func (t *CrossClusterTaskInfo) GetDomainID() string {
-	return t.DomainID
-}
-
-// String returns a string representation for cross-cluster task
-func (t *CrossClusterTaskInfo) String() string {
-	return fmt.Sprintf(
-		"{DomainID: %v, WorkflowID: %v, RunID: %v, TaskID: %v, TargetDomainID: %v, TargetWorkflowID %v, TargetRunID: %v, TargetChildWorkflowOnly: %v, TaskList: %v, TaskType: %v, ScheduleID: %v, Version: %v.}",
-		t.DomainID, t.WorkflowID, t.RunID, t.TaskID, t.TargetDomainID, t.TargetWorkflowID, t.TargetRunID, t.TargetChildWorkflowOnly, t.TaskList, t.TaskType, t.ScheduleID, t.Version,
-	)
-}
-
 // GetTaskID returns the task ID for replication task
 func (t *ReplicationTaskInfo) GetTaskID() int64 {
 	return t.TaskID
@@ -2631,6 +2555,46 @@ func (t *TimerTaskInfo) String() string {
 		"{DomainID: %v, WorkflowID: %v, RunID: %v, VisibilityTimestamp: %v, TaskID: %v, TaskType: %v, TimeoutType: %v, EventID: %v, ScheduleAttempt: %v, Version: %v.}",
 		t.DomainID, t.WorkflowID, t.RunID, t.VisibilityTimestamp, t.TaskID, t.TaskType, t.TimeoutType, t.EventID, t.ScheduleAttempt, t.Version,
 	)
+}
+
+// Copy returns a shallow copy of shardInfo
+func (s *ShardInfo) Copy() *ShardInfo {
+	// TODO: do we really need to deep copy those fields?
+	clusterTransferAckLevel := make(map[string]int64)
+	for k, v := range s.ClusterTransferAckLevel {
+		clusterTransferAckLevel[k] = v
+	}
+	clusterTimerAckLevel := make(map[string]time.Time)
+	for k, v := range s.ClusterTimerAckLevel {
+		clusterTimerAckLevel[k] = v
+	}
+	clusterReplicationLevel := make(map[string]int64)
+	for k, v := range s.ClusterReplicationLevel {
+		clusterReplicationLevel[k] = v
+	}
+	replicationDLQAckLevel := make(map[string]int64)
+	for k, v := range s.ReplicationDLQAckLevel {
+		replicationDLQAckLevel[k] = v
+	}
+	return &ShardInfo{
+		ShardID:                           s.ShardID,
+		Owner:                             s.Owner,
+		RangeID:                           s.RangeID,
+		StolenSinceRenew:                  s.StolenSinceRenew,
+		ReplicationAckLevel:               s.ReplicationAckLevel,
+		TransferAckLevel:                  s.TransferAckLevel,
+		TimerAckLevel:                     s.TimerAckLevel,
+		ClusterTransferAckLevel:           clusterTransferAckLevel,
+		ClusterTimerAckLevel:              clusterTimerAckLevel,
+		TransferProcessingQueueStates:     s.TransferProcessingQueueStates,
+		CrossClusterProcessingQueueStates: s.CrossClusterProcessingQueueStates,
+		TimerProcessingQueueStates:        s.TimerProcessingQueueStates,
+		DomainNotificationVersion:         s.DomainNotificationVersion,
+		ClusterReplicationLevel:           clusterReplicationLevel,
+		ReplicationDLQAckLevel:            replicationDLQAckLevel,
+		PendingFailoverMarkers:            s.PendingFailoverMarkers,
+		UpdatedAt:                         s.UpdatedAt,
+	}
 }
 
 // SerializeClusterConfigs makes an array of *ClusterReplicationConfig serializable

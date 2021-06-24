@@ -621,7 +621,16 @@ func applyTasks(
 		return err
 	}
 
-	// TODO: create cross-cluster tasks
+	if err := createCrossClusterTasks(
+		batch,
+		crossClusterTasks,
+		shardID,
+		domainID,
+		workflowID,
+		runID,
+	); err != nil {
+		return err
+	}
 
 	if err := createReplicationTasks(
 		batch,
@@ -707,7 +716,7 @@ func createTransferTasks(
 
 		default:
 			return &types.InternalServiceError{
-				Message: fmt.Sprintf("Unknow transfer type: %v", task.GetType()),
+				Message: fmt.Sprintf("Unknown transfer type: %v", task.GetType()),
 			}
 		}
 
@@ -733,6 +742,82 @@ func createTransferTasks(
 			task.GetVersion(),
 			defaultVisibilityTimestamp,
 			task.GetTaskID())
+	}
+
+	return nil
+}
+
+func createCrossClusterTasks(
+	batch gocql.Batch,
+	crossClusterTasks []p.Task,
+	shardID int,
+	domainID string,
+	workflowID string,
+	runID string,
+) error {
+
+	for _, task := range crossClusterTasks {
+		var taskList string
+		var scheduleID int64
+		var targetCluster string
+		var targetDomainID string
+		var targetWorkflowID string
+		targetRunID := p.CrossClusterTaskDefaultTargetRunID
+		targetChildWorkflowOnly := false
+		recordVisibility := false
+
+		switch task.GetType() {
+		case p.CrossClusterTaskTypeStartChildExecution:
+			targetCluster = task.(*p.CrossClusterStartChildExecutionTask).TargetCluster
+			targetDomainID = task.(*p.CrossClusterStartChildExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*p.CrossClusterStartChildExecutionTask).TargetWorkflowID
+			scheduleID = task.(*p.CrossClusterStartChildExecutionTask).InitiatedID
+
+		case p.CrossClusterTaskTypeCancelExecution:
+			targetCluster = task.(*p.CrossClusterCancelExecutionTask).TargetCluster
+			targetDomainID = task.(*p.CrossClusterCancelExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*p.CrossClusterCancelExecutionTask).TargetWorkflowID
+			targetRunID = task.(*p.CrossClusterCancelExecutionTask).TargetRunID
+			targetChildWorkflowOnly = task.(*p.CrossClusterCancelExecutionTask).TargetChildWorkflowOnly
+			scheduleID = task.(*p.CrossClusterCancelExecutionTask).InitiatedID
+
+		case p.CrossClusterTaskTypeSignalExecution:
+			targetCluster = task.(*p.CrossClusterSignalExecutionTask).TargetCluster
+			targetDomainID = task.(*p.CrossClusterSignalExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*p.CrossClusterSignalExecutionTask).TargetWorkflowID
+			targetRunID = task.(*p.CrossClusterSignalExecutionTask).TargetRunID
+			targetChildWorkflowOnly = task.(*p.CrossClusterSignalExecutionTask).TargetChildWorkflowOnly
+			scheduleID = task.(*p.CrossClusterSignalExecutionTask).InitiatedID
+
+		default:
+			return &types.InternalServiceError{
+				Message: fmt.Sprintf("Unknown cross-cluster task type: %v", task.GetType()),
+			}
+		}
+
+		batch.Query(templateCreateCrossClusterTaskQuery,
+			shardID,
+			rowTypeCrossClusterTask,
+			rowTypeCrossClusterDomainID,
+			targetCluster,
+			rowTypeCrossClusterRunID,
+			domainID,
+			workflowID,
+			runID,
+			task.GetVisibilityTimestamp(),
+			task.GetTaskID(),
+			targetDomainID,
+			targetWorkflowID,
+			targetRunID,
+			targetChildWorkflowOnly,
+			taskList,
+			task.GetType(),
+			scheduleID,
+			recordVisibility,
+			task.GetVersion(),
+			defaultVisibilityTimestamp,
+			task.GetTaskID(),
+		)
 	}
 
 	return nil
@@ -889,7 +974,6 @@ func createOrUpdateCurrentExecution(
 	state int,
 	closeStatus int,
 	createRequestID string,
-	startVersion int64,
 	lastWriteVersion int64,
 	previousRunID string,
 	previousLastWriteVersion int64,
@@ -1624,6 +1708,24 @@ func createTransferTaskInfo(
 	return info
 }
 
+func createCrossClusterTaskInfo(
+	result map[string]interface{},
+) *p.CrossClusterTaskInfo {
+	info := (*p.CrossClusterTaskInfo)(createTransferTaskInfo(result))
+	if p.CrossClusterTaskDefaultTargetRunID == p.TransferTaskTransferTargetRunID {
+		return info
+	}
+
+	// incase CrossClusterTaskDefaultTargetRunID is updated and not equal to TransferTaskTransferTargetRunID
+	if v, ok := result["target_run_id"]; ok {
+		info.TargetRunID = v.(gocql.UUID).String()
+		if info.TargetRunID == p.CrossClusterTaskDefaultTargetRunID {
+			info.TargetRunID = ""
+		}
+	}
+	return info
+}
+
 func createReplicationTaskInfo(
 	result map[string]interface{},
 ) *p.InternalReplicationTaskInfo {
@@ -2026,29 +2128,6 @@ func createHistoryEventBatchBlob(
 	}
 
 	return eventBatch
-}
-
-func createTaskInfo(
-	result map[string]interface{},
-) *p.InternalTaskInfo {
-
-	info := &p.InternalTaskInfo{}
-	for k, v := range result {
-		switch k {
-		case "domain_id":
-			info.DomainID = v.(gocql.UUID).String()
-		case "workflow_id":
-			info.WorkflowID = v.(string)
-		case "run_id":
-			info.RunID = v.(gocql.UUID).String()
-		case "schedule_id":
-			info.ScheduleID = v.(int64)
-		case "created_time":
-			info.CreatedTime = v.(time.Time)
-		}
-	}
-
-	return info
 }
 
 func createTimerTaskInfo(

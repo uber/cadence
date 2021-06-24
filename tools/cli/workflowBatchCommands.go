@@ -32,7 +32,14 @@ import (
 	cclient "go.uber.org/cadence/client"
 
 	"github.com/uber/cadence/common"
+	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/service/worker/batcher"
+)
+
+var (
+	DefaultClientOptions = cclient.Options{
+		FeatureFlags: cc.ToClientFeatureFlags(&cc.DefaultCLIFeatureFlags),
+	}
 )
 
 // TerminateBatchJob stops abatch job
@@ -40,7 +47,7 @@ func TerminateBatchJob(c *cli.Context) {
 	jobID := getRequiredOption(c, FlagJobID)
 	reason := getRequiredOption(c, FlagReason)
 	svcClient := cFactory.ClientFrontendClient(c)
-	client := cclient.NewClient(svcClient, common.BatcherLocalDomainName, &cclient.Options{})
+	client := cclient.NewClient(svcClient, common.BatcherLocalDomainName, &DefaultClientOptions)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 	err := client.TerminateWorkflow(tcCtx, jobID, "", reason, nil)
@@ -58,7 +65,7 @@ func DescribeBatchJob(c *cli.Context) {
 	jobID := getRequiredOption(c, FlagJobID)
 
 	svcClient := cFactory.ClientFrontendClient(c)
-	client := cclient.NewClient(svcClient, common.BatcherLocalDomainName, &cclient.Options{})
+	client := cclient.NewClient(svcClient, common.BatcherLocalDomainName, &DefaultClientOptions)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 	wf, err := client.DescribeWorkflowExecution(tcCtx, jobID, "")
@@ -93,7 +100,7 @@ func ListBatchJobs(c *cli.Context) {
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	pageSize := c.Int(FlagPageSize)
 	svcClient := cFactory.ClientFrontendClient(c)
-	client := cclient.NewClient(svcClient, common.BatcherLocalDomainName, &cclient.Options{})
+	client := cclient.NewClient(svcClient, common.BatcherLocalDomainName, &DefaultClientOptions)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 	resp, err := client.ListWorkflow(tcCtx, &shared.ListWorkflowExecutionsRequest{
@@ -143,7 +150,7 @@ func StartBatchJob(c *cli.Context) {
 	rps := c.Int(FlagRPS)
 
 	svcClient := cFactory.ClientFrontendClient(c)
-	client := cclient.NewClient(svcClient, common.BatcherLocalDomainName, &cclient.Options{})
+	client := cclient.NewClient(svcClient, common.BatcherLocalDomainName, &DefaultClientOptions)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 	resp, err := client.CountWorkflow(tcCtx, &shared.CountWorkflowExecutionsRequest{
