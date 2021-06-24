@@ -403,7 +403,7 @@ func (h *handlerImpl) GetTaskListsByDomain(
 		request.GetDomain(),
 		nil,
 		h.metricsClient,
-		metrics.MatchingListTaskListPartitionsScope,
+		metrics.MatchingGetTaskListsByDomainScope,
 		h.GetLogger(),
 	)
 

@@ -167,8 +167,10 @@ func (e *matchingEngineImpl) String() string {
 
 // Returns taskListManager for a task list. If not already cached gets new range from DB and
 // if successful creates one.
-func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID,
-	taskListKind *types.TaskListKind) (taskListManager, error) {
+func (e *matchingEngineImpl) getTaskListManager(
+	taskList *taskListID,
+	taskListKind *types.TaskListKind,
+) (taskListManager, error) {
 	// Cache user defined task list in taskListCache
 	if e.config.EnableTaskListCache() {
 		if *taskListKind == types.TaskListKindNormal {
@@ -223,23 +225,23 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID,
 
 func (e *matchingEngineImpl) cacheTaskListByDomain(taskList *taskListID) {
 	cachedTL := e.taskListCache.Get(taskList.domainID)
-	var taskLists map[string]bool
+	var taskLists map[string]struct{}
 	if cachedTL != nil {
-		taskLists = cachedTL.(map[string]bool)
+		taskLists = cachedTL.(map[string]struct{})
 	} else {
-		taskLists = map[string]bool{}
+		taskLists = make(map[string]struct{})
 	}
 
 	// there might be a race condition here if two goroutines tries to put the task list at the same time
 	// this is non-issue because we don't care as all tasklists should be populated eventually
-	taskLists[taskList.name] = true
+	taskLists[taskList.name] = struct{}{}
 	e.taskListCache.Put(taskList.domainID, taskLists)
 }
 
 func (e *matchingEngineImpl) removeFromTaskListCache(taskList *taskListID) {
 	cachedTL := e.taskListCache.Get(taskList.domainID)
 	if cachedTL != nil {
-		taskLists := cachedTL.(map[string]bool)
+		taskLists := cachedTL.(map[string]struct{})
 		// there might be a race condition here but delete will be a no-op if the tasklist is already deleted
 		delete(taskLists, taskList.name)
 		e.taskListCache.Put(taskList.domainID, taskLists)

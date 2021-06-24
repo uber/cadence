@@ -1052,6 +1052,8 @@ const (
 	MatchingDescribeTaskListScope
 	// MatchingListTaskListPartitionsScope tracks ListTaskListPartitions API calls received by service
 	MatchingListTaskListPartitionsScope
+	// MatchingGetTaskListsByDomainScope tracks GetTaskListsByDomain API calls received by service
+	MatchingGetTaskListsByDomainScope
 
 	NumMatchingScopes
 )
@@ -1561,6 +1563,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MatchingCancelOutstandingPollScope:     {operation: "CancelOutstandingPoll"},
 		MatchingDescribeTaskListScope:          {operation: "DescribeTaskList"},
 		MatchingListTaskListPartitionsScope:    {operation: "ListTaskListPartitions"},
+		MatchingGetTaskListsByDomainScope:      {operation: "GetTaskListsByDomain"},
 	},
 	// Worker Scope Names
 	Worker: {

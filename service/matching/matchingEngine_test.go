@@ -147,6 +147,7 @@ func newMatchingEngine(
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		config:          config,
 		domainCache:     mockDomainCache,
+		taskListCache:   cache.NewSimple(nil),
 	}
 }
 
@@ -1595,6 +1596,71 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 	}
 }
 
+func (s *matchingEngineSuite) TestCacheTaskListByDomain_NormalTaskList_Success() {
+	taskList := &taskListID{
+		qualifiedTaskListName: qualifiedTaskListName{
+			name: "task-list",
+		},
+		domainID: uuid.New(),
+		taskType: 0,
+	}
+	_, err := s.matchingEngine.getTaskListManager(taskList, types.TaskListKindNormal.Ptr())
+	s.NoError(err)
+
+	taskListMap := s.matchingEngine.taskListCache.Get(taskList.domainID).(map[string]struct{})
+	_, ok := taskListMap[taskList.name]
+	s.True(ok)
+}
+
+func (s *matchingEngineSuite) TestCacheTaskListByDomain_StickyTaskList_Empty() {
+	taskList := &taskListID{
+		qualifiedTaskListName: qualifiedTaskListName{
+			name: "task-list",
+		},
+		domainID: uuid.New(),
+		taskType: 0,
+	}
+	_, err := s.matchingEngine.getTaskListManager(taskList, types.TaskListKindSticky.Ptr())
+	s.NoError(err)
+
+	taskListMap := s.matchingEngine.taskListCache.Get(taskList.domainID)
+	s.Nil(taskListMap)
+}
+
+func (s *matchingEngineSuite) TestRemoveFromTaskListCache_Success() {
+	taskList := &taskListID{
+		qualifiedTaskListName: qualifiedTaskListName{
+			name: "task-list",
+		},
+		domainID: uuid.New(),
+		taskType: 0,
+	}
+	_, err := s.matchingEngine.getTaskListManager(taskList, types.TaskListKindNormal.Ptr())
+	s.NoError(err)
+
+	taskListMap := s.matchingEngine.taskListCache.Get(taskList.domainID).(map[string]struct{})
+	_, ok := taskListMap[taskList.name]
+	s.True(ok)
+
+	s.matchingEngine.removeFromTaskListCache(taskList)
+	taskListResult := s.matchingEngine.taskListCache.Get(taskList.domainID).(map[string]struct{})
+	s.Equal(0, len(taskListResult))
+}
+
+func (s *matchingEngineSuite) TestRemoveFromTaskListCache_EmptyList_Success() {
+	taskList := &taskListID{
+		qualifiedTaskListName: qualifiedTaskListName{
+			name: "task-list",
+		},
+		domainID: uuid.New(),
+		taskType: 0,
+	}
+
+	s.matchingEngine.removeFromTaskListCache(taskList)
+	taskListResult := s.matchingEngine.taskListCache.Get(taskList.domainID)
+	s.Nil(taskListResult)
+}
+
 func (s *matchingEngineSuite) setupRecordActivityTaskStartedMock(tlName string) {
 	activityTypeName := "activity1"
 	activityID := "activityId1"
@@ -1973,5 +2039,6 @@ func defaultTestConfig() *Config {
 	config := NewConfig(dynamicconfig.NewNopCollection())
 	config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(100 * time.Millisecond)
 	config.MaxTaskDeleteBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(1)
+	config.EnableTaskListCache = dynamicconfig.GetBoolPropertyFn(true)
 	return config
 }
