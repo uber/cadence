@@ -10266,7 +10266,7 @@ type CrossClusterTaskInfo struct {
 	TaskType            *CrossClusterTaskType `json:"taskType,omitempty"`
 	TaskState           int16                 `json:"taskState,omitempty"`
 	TaskID              int64                 `json:"taskID,omitempty"`
-	VisibilityTimestamp int64                 `json:"visibilityTimestamp,omitempty"`
+	VisibilityTimestamp *int64                `json:"visibilityTimestamp,omitempty"`
 }
 
 // GetDomainID is an internal getter (TBD...)
@@ -10319,8 +10319,8 @@ func (v *CrossClusterTaskInfo) GetTaskID() (o int64) {
 
 // GetVisibilityTimestamp is an internal getter (TBD...)
 func (v *CrossClusterTaskInfo) GetVisibilityTimestamp() (o int64) {
-	if v != nil {
-		return v.VisibilityTimestamp
+	if v != nil && v.VisibilityTimestamp != nil {
+		return *v.VisibilityTimestamp
 	}
 	return
 }
@@ -10658,13 +10658,13 @@ func (v *GetCrossClusterTasksRequest) GetTargetCluster() (o string) {
 	return
 }
 
-// RespondCrossClusterTasksCompletedRequestGetCrossClusterTasksResponse is an internal type (TBD...)
-type RespondCrossClusterTasksCompletedRequestGetCrossClusterTasksResponse struct {
+// GetCrossClusterTasksResponse is an internal type (TBD...)
+type GetCrossClusterTasksResponse struct {
 	TasksByShard map[int32][]*CrossClusterTaskRequest `json:"tasksByShard,omitempty"`
 }
 
 // GetTasksByShard is an internal getter (TBD...)
-func (v *RespondCrossClusterTasksCompletedRequestGetCrossClusterTasksResponse) GetTasksByShard() (o map[int32][]*CrossClusterTaskRequest) {
+func (v *GetCrossClusterTasksResponse) GetTasksByShard() (o map[int32][]*CrossClusterTaskRequest) {
 	if v != nil && v.TasksByShard != nil {
 		return v.TasksByShard
 	}

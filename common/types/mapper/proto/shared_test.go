@@ -188,6 +188,55 @@ func TestEventIDVersionPair(t *testing.T) {
 	assert.Equal(t, testdata.Version1, *ToEventVersion(pair))
 }
 
+func TestCrossClusterTaskInfo(t *testing.T) {
+	for _, item := range []*types.CrossClusterTaskInfo{nil, {}, &testdata.CrossClusterTaskInfo} {
+		assert.Equal(t, item, ToCrossClusterTaskInfo(FromCrossClusterTaskInfo(item)))
+	}
+}
+
+func TestCrossClusterTaskRequest(t *testing.T) {
+	for _, item := range []*types.CrossClusterTaskRequest{
+		nil,
+		{},
+		&testdata.CrossClusterTaskRequestStartChildExecution,
+		&testdata.CrossClusterTaskRequestCancelExecution,
+		&testdata.CrossClusterTaskRequestSignalExecution,
+	} {
+		assert.Equal(t, item, ToCrossClusterTaskRequest(FromCrossClusterTaskRequest(item)))
+	}
+}
+
+func TestCrossClusterTaskResponse(t *testing.T) {
+	for _, item := range []*types.CrossClusterTaskResponse{
+		nil,
+		{},
+		&testdata.CrossClusterTaskResponseStartChildExecution,
+		&testdata.CrossClusterTaskResponseCancelExecution,
+		&testdata.CrossClusterTaskResponseSignalExecution,
+	} {
+		assert.Equal(t, item, ToCrossClusterTaskResponse(FromCrossClusterTaskResponse(item)))
+	}
+}
+
+func TestCrossClusterTaskRequestArray(t *testing.T) {
+	for _, item := range [][]*types.CrossClusterTaskRequest{nil, {}, testdata.CrossClusterTaskRequestArray} {
+		assert.Equal(t, item, ToCrossClusterTaskRequestArray(FromCrossClusterTaskRequestArray(item)))
+	}
+}
+
+func TestCrossClusterTaskResponseArray(t *testing.T) {
+	for _, item := range [][]*types.CrossClusterTaskResponse{nil, {}, testdata.CrossClusterTaskResponseArray} {
+		assert.Equal(t, item, ToCrossClusterTaskResponseArray(FromCrossClusterTaskResponseArray(item)))
+	}
+}
+
+func TestCrossClusterTaskRequestMap(t *testing.T) {
+	for _, item := range []map[int32][]*types.CrossClusterTaskRequest{nil, {}, testdata.CrossClusterTaskRequestMap} {
+		assert.Equal(t, item, ToCrossClusterTaskRequestMap(FromCrossClusterTaskRequestMap(item)))
+	}
+}
+
+// TODO: can we remove the following tests?
 /*
 func TestHostInfo(t *testing.T) {
 	item := testdata.HostInfo

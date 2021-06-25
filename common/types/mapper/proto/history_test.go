@@ -317,3 +317,27 @@ func TestHistoryTerminateWorkflowExecutionRequest(t *testing.T) {
 		assert.Equal(t, item, ToHistoryTerminateWorkflowExecutionRequest(FromHistoryTerminateWorkflowExecutionRequest(item)))
 	}
 }
+
+func TestHistoryGetCrossClusterTasksRequest(t *testing.T) {
+	for _, item := range []*types.GetCrossClusterTasksRequest{nil, {}, &testdata.HistoryGetCrossClusterTasksRequest} {
+		assert.Equal(t, item, ToHistoryGetCrossClusterTasksRequest(FromHistoryGetCrossClusterTasksRequest(item)))
+	}
+}
+
+func TestHistoryGetCrossClusterTasksResponse(t *testing.T) {
+	for _, item := range []*types.GetCrossClusterTasksResponse{nil, {}, &testdata.HistoryGetCrossClusterTasksResponse} {
+		assert.Equal(t, item, ToHistoryGetCrossClusterTasksResponse(FromHistoryGetCrossClusterTasksResponse(item)))
+	}
+}
+
+func TestHistoryRespondCrossClusterTasksCompletedRequest(t *testing.T) {
+	for _, item := range []*types.RespondCrossClusterTasksCompletedRequest{nil, {}, &testdata.HistoryRespondCrossClusterTasksCompletedRequest} {
+		assert.Equal(t, item, ToHistoryRespondCrossClusterTasksCompletedRequest(FromHistoryRespondCrossClusterTasksCompletedRequest(item)))
+	}
+}
+
+func TestHistoryRespondCrossClusterTasksCompletedResponse(t *testing.T) {
+	for _, item := range []*types.RespondCrossClusterTasksCompletedResponse{nil, {}, &testdata.HistoryRespondCrossClusterTasksCompletedResponse} {
+		assert.Equal(t, item, ToHistoryRespondCrossClusterTasksCompletedResponse(FromHistoryRespondCrossClusterTasksCompletedResponse(item)))
+	}
+}
