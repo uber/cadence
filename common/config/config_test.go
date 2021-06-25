@@ -66,6 +66,9 @@ func TestFillingDefaultRpcName(t *testing.T) {
 
 func TestConfigFallbacks(t *testing.T) {
 	cfg := &Config{
+		ClusterMetadata: &ClusterMetadata{
+			EnableGlobalDomain: true,
+		},
 		Persistence: Persistence{
 			DefaultStore:    "default",
 			VisibilityStore: "cass",
@@ -94,4 +97,32 @@ func TestConfigFallbacks(t *testing.T) {
 	assert.NotEmpty(t, cfg.Persistence.DataStores["cass"].Cassandra, "cassandra config should remain after update")
 	assert.NotEmpty(t, cfg.Persistence.DataStores["cass"].NoSQL, "nosql config should contain cassandra config / not be empty")
 	assert.NotZero(t, cfg.Persistence.DataStores["default"].SQL.NumShards, "num shards should be nonzero")
+}
+
+func TestConfigEmptyClusterMetadata(t *testing.T) {
+	cfg := &Config{
+		Persistence: Persistence{
+			DefaultStore:    "default",
+			VisibilityStore: "cass",
+			DataStores: map[string]DataStore{
+				"default": {
+					SQL: &SQL{
+						PluginName:      "fake",
+						ConnectProtocol: "tcp",
+						ConnectAddr:     "192.168.0.1:3306",
+						DatabaseName:    "db1",
+						NumShards:       0, // default value, should be changed
+					},
+				},
+				"cass": {
+					Cassandra: &NoSQL{
+						Hosts: "127.0.0.1",
+					},
+					// no sql or nosql, should be populated from cassandra
+				},
+			},
+		},
+	}
+	err := cfg.ValidateAndFillDefaults()
+	require.Error(t, err)
 }

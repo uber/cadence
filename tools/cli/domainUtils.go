@@ -77,7 +77,8 @@ var (
 		},
 		cli.StringFlag{
 			Name:  FlagIsGlobalDomainWithAlias,
-			Usage: "Flag to indicate whether domain is a global domain",
+			Usage: "Flag to indicate whether domain is a global domain. Default to true. Local domain is now legacy.",
+			Value: "true",
 		},
 		cli.GenericFlag{
 			Name:  FlagDomainDataWithAlias,
