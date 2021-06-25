@@ -98,20 +98,3 @@ func (c *clientCacheImpl) GetClientForClientKey(clientKey string) (interface{}, 
 	c.clients[clientKey] = client
 	return client, nil
 }
-
-func (c *clientCacheImpl) GetAllClients() []interface{} {
-	c.cacheLock.Lock()
-	clientSet := make(map[interface{}]struct{})
-	for _, cl := range c.clients {
-		if _, ok := clientSet[cl]; !ok {
-			clientSet[cl] = struct{}{}
-		}
-	}
-	c.cacheLock.Unlock()
-
-	clients := make([]interface{}, 0, len(clientSet))
-	for _, cl := range clientSet {
-		clients = append(clients, cl)
-	}
-	return clients
-}

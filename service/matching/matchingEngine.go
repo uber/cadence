@@ -171,17 +171,15 @@ func (e *matchingEngineImpl) getTaskListManager(
 	taskList *taskListID,
 	taskListKind *types.TaskListKind,
 ) (taskListManager, error) {
-	// Cache user defined task list in taskListCache
-	if e.config.EnableTaskListCache(taskList.domainID) {
-		if *taskListKind == types.TaskListKindNormal {
-			e.cacheTaskListByDomain(taskList)
-		}
-	}
 
 	// The first check is an optimization so almost all requests will have a task list manager
 	// and return avoiding the write lock
 	e.taskListsLock.RLock()
 	if result, ok := e.taskLists[*taskList]; ok {
+		// Cache user defined task list in taskListCache
+		if e.config.EnableTaskListCache(taskList.domainID) {
+			e.cacheTaskListByDomain(taskList, *taskListKind)
+		}
 		e.taskListsLock.RUnlock()
 		return result, nil
 	}
@@ -189,6 +187,10 @@ func (e *matchingEngineImpl) getTaskListManager(
 	// If it gets here, write lock and check again in case a task list is created between the two locks
 	e.taskListsLock.Lock()
 	if result, ok := e.taskLists[*taskList]; ok {
+		// Cache user defined task list in taskListCache
+		if e.config.EnableTaskListCache(taskList.domainID) {
+			e.cacheTaskListByDomain(taskList, *taskListKind)
+		}
 		e.taskListsLock.Unlock()
 		return result, nil
 	}
@@ -213,6 +215,10 @@ func (e *matchingEngineImpl) getTaskListManager(
 		metrics.TaskListManagersGauge,
 		float64(len(e.taskLists)),
 	)
+	// Cache user defined task list in taskListCache
+	if e.config.EnableTaskListCache(taskList.domainID) {
+		e.cacheTaskListByDomain(taskList, *taskListKind)
+	}
 	e.taskListsLock.Unlock()
 	err = mgr.Start()
 	if err != nil {
@@ -223,7 +229,14 @@ func (e *matchingEngineImpl) getTaskListManager(
 	return mgr, nil
 }
 
-func (e *matchingEngineImpl) cacheTaskListByDomain(taskList *taskListID) {
+func (e *matchingEngineImpl) cacheTaskListByDomain(
+	taskList *taskListID,
+	taskListKind types.TaskListKind,
+) {
+	if taskListKind != types.TaskListKindNormal {
+		return
+	}
+
 	cachedTL := e.taskListCache.Get(taskList.domainID)
 	var taskLists map[string]struct{}
 	if cachedTL != nil {
@@ -233,7 +246,7 @@ func (e *matchingEngineImpl) cacheTaskListByDomain(taskList *taskListID) {
 	}
 
 	// there might be a race condition here if two goroutines tries to put the task list at the same time
-	// this is non-issue because we don't care as all tasklists should be populated eventually
+	// this is non-issue because we don't care as all task lists should be populated eventually
 	taskLists[taskList.name] = struct{}{}
 	e.taskListCache.Put(taskList.domainID, taskLists)
 }
