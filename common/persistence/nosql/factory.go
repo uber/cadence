@@ -26,6 +26,7 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
+
 	// NOTE: this package will be refactored and removed soon
 	cassandraOld "github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
@@ -69,13 +70,13 @@ func (f *Factory) NewShardStore() (p.ShardStore, error) {
 	return newNoSQLShardStore(f.cfg, f.clusterName, f.logger)
 }
 
-// NewHistoryV2Store returns a new history store
-func (f *Factory) NewHistoryV2Store() (p.HistoryStore, error) {
+// NewHistoryStore returns a new history store
+func (f *Factory) NewHistoryStore() (p.HistoryStore, error) {
 	return newNoSQLHistoryStore(f.cfg, f.logger)
 }
 
-// NewMetadataStore returns a metadata store that understands only v2
-func (f *Factory) NewMetadataStore() (p.DomainStore, error) {
+// NewDomainStore returns a metadata store that understands only v2
+func (f *Factory) NewDomainStore() (p.DomainStore, error) {
 	return newNoSQLDomainStore(f.cfg, f.clusterName, f.logger)
 }
 

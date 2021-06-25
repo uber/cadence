@@ -337,8 +337,7 @@ func initializeCassandraHistoryStore(
 	logger log.Logger,
 ) persistence.HistoryStore {
 	client, session := connectToCassandra(c)
-	historyV2Mgr := nosql.NewNoSQLHistoryStoreFromSession(client, session, logger)
-	return historyV2Mgr
+	return nosql.NewNoSQLHistoryStoreFromSession(client, session, logger)
 }
 
 func initializeSQLHistoryStore(
