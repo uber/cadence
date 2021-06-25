@@ -22,6 +22,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -438,6 +439,9 @@ func (c *Config) ValidateAndFillDefaults() error {
 func (c *Config) validate() error {
 	if err := c.Persistence.Validate(); err != nil {
 		return err
+	}
+	if c.ClusterMetadata == nil {
+		return fmt.Errorf("ClusterMetadata cannot be empty")
 	}
 	if !c.ClusterMetadata.EnableGlobalDomain {
 		log.Println("[WARN] Local domain is now deprecated. Please update config to enable global domain(ClusterMetadata->EnableGlobalDomain)." +
