@@ -40,12 +40,17 @@ const (
 	DefaultLongPollTimeout = time.Minute * 2
 )
 
-type clientImpl struct {
-	timeout         time.Duration
-	longPollTimeout time.Duration
-	clients         common.ClientCache
-	loadBalancer    LoadBalancer
-}
+type (
+	clientIterator func() ([]interface{}, error)
+
+	clientImpl struct {
+		timeout         time.Duration
+		longPollTimeout time.Duration
+		clients         common.ClientCache
+		loadBalancer    LoadBalancer
+		clientIterator  clientIterator
+	}
+)
 
 // NewClient creates a new history service TChannel client
 func NewClient(
@@ -53,12 +58,14 @@ func NewClient(
 	longPollTimeout time.Duration,
 	clients common.ClientCache,
 	lb LoadBalancer,
+	clientIterator clientIterator,
 ) Client {
 	return &clientImpl{
 		timeout:         timeout,
 		longPollTimeout: longPollTimeout,
 		clients:         clients,
 		loadBalancer:    lb,
+		clientIterator:  clientIterator,
 	}
 }
 
@@ -238,9 +245,10 @@ func (c *clientImpl) GetTaskListsByDomain(
 	opts ...yarpc.CallOption,
 ) (*types.GetTaskListsByDomainResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-
-	// This result could be large
-	clients := c.clients.GetAllClients()
+	clients, err := c.clientIterator()
+	if err != nil {
+		return nil, err
+	}
 
 	var response *types.GetTaskListsByDomainResponse
 	for _, cl := range clients {
@@ -291,9 +299,5 @@ func (c *clientImpl) getTaskListsByDomain(
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 
-	resp, err := cl.GetTaskListsByDomain(ctx, request, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return resp, nil
+	return cl.GetTaskListsByDomain(ctx, request, opts...)
 }

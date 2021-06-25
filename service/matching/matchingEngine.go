@@ -172,7 +172,7 @@ func (e *matchingEngineImpl) getTaskListManager(
 	taskListKind *types.TaskListKind,
 ) (taskListManager, error) {
 	// Cache user defined task list in taskListCache
-	if e.config.EnableTaskListCache() {
+	if e.config.EnableTaskListCache(taskList.domainID) {
 		if *taskListKind == types.TaskListKindNormal {
 			e.cacheTaskListByDomain(taskList)
 		}
@@ -258,7 +258,7 @@ func (e *matchingEngineImpl) updateTaskList(taskList *taskListID, mgr taskListMa
 func (e *matchingEngineImpl) removeTaskListManager(id *taskListID) {
 	e.taskListsLock.Lock()
 	defer e.taskListsLock.Unlock()
-	if e.config.EnableTaskListCache() {
+	if e.config.EnableTaskListCache(id.domainID) {
 		e.removeFromTaskListCache(id)
 	}
 	delete(e.taskLists, *id)

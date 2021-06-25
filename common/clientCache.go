@@ -30,8 +30,6 @@ type (
 		GetClientForKey(key string) (interface{}, error)
 		GetClientForClientKey(clientKey string) (interface{}, error)
 		GetHostNameForKey(key string) (string, error)
-
-		GetAllClients() []interface{}
 	}
 
 	keyResolver    func(string) (string, error)
