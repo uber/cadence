@@ -22,6 +22,8 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"time"
 
 	"github.com/uber-go/tally/m3"
@@ -170,7 +172,7 @@ type (
 	// NoSQL contains configuration to connect to NoSQL Database cluster
 	NoSQL struct {
 		// PluginName is the name of NoSQL plugin, default is "cassandra". Supported values: cassandra
-		PluginName string `yaml:"pluginName" validate:"nonzero"`
+		PluginName string `yaml:"pluginName"`
 		// Hosts is a csv of cassandra endpoints
 		Hosts string `yaml:"hosts" validate:"nonzero"`
 		// Port is the cassandra port used for connection by gocql client
@@ -180,7 +182,7 @@ type (
 		// Password is the cassandra password used for authentication by gocql client
 		Password string `yaml:"password"`
 		// Keyspace is the cassandra keyspace
-		Keyspace string `yaml:"keyspace" validate:"nonzero"`
+		Keyspace string `yaml:"keyspace"`
 		// Region is the region filter arg for cassandra
 		Region string `yaml:"region"`
 		// Datacenter is the data center filter arg for cassandra
@@ -437,6 +439,13 @@ func (c *Config) ValidateAndFillDefaults() error {
 func (c *Config) validate() error {
 	if err := c.Persistence.Validate(); err != nil {
 		return err
+	}
+	if c.ClusterMetadata == nil {
+		return fmt.Errorf("ClusterMetadata cannot be empty")
+	}
+	if !c.ClusterMetadata.EnableGlobalDomain {
+		log.Println("[WARN] Local domain is now deprecated. Please update config to enable global domain(ClusterMetadata->EnableGlobalDomain)." +
+			"Global domain of single cluster has zero overhead, but only advantages for future migration and fail over. Please check Cadence documentation for more details.")
 	}
 	return c.Archival.Validate(&c.DomainDefaults.Archival)
 }

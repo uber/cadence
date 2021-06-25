@@ -71,6 +71,8 @@ func (c *Persistence) Validate() error {
 		if ds.SQL != nil && ds.SQL.NumShards == 0 {
 			ds.SQL.NumShards = 1
 		}
+		// write changes back to DataStores, as ds is a value object
+		c.DataStores[st] = ds
 	}
 	return nil
 }
