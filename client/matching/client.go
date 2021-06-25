@@ -22,6 +22,7 @@ package matching
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"go.uber.org/yarpc"
@@ -250,18 +251,48 @@ func (c *clientImpl) GetTaskListsByDomain(
 		return nil, err
 	}
 
-	var response *types.GetTaskListsByDomainResponse
+	var wg sync.WaitGroup
+	wg.Add(len(clients))
+	respChan := make(chan *types.GetTaskListsByDomainResponse, len(clients))
+	errChan := make(chan error, 1)
 	for _, cl := range clients {
-		resp, err := c.getTaskListsByDomain(cl.(Client), ctx, request, opts...)
-		if err != nil {
-			return nil, err
-		}
-		for _, tl := range resp.TaskListNames {
-			response.TaskListNames = append(response.TaskListNames, tl)
-		}
+		go func(client Client, request *types.MatchingGetTaskListsByDomainRequest) {
+			defer wg.Done()
+
+			resp, err := c.getTaskListsByDomain(cl.(Client), ctx, request, opts...)
+			if err != nil {
+				select {
+				case errChan <- err:
+				default:
+				}
+				return
+			}
+			respChan <- resp
+		}(cl.(Client), request)
+	}
+	wg.Wait()
+	close(respChan)
+	close(errChan)
+	if len(errChan) > 0 {
+		err = <-errChan
+		return nil, err
 	}
 
-	return response, nil
+	// De-dup task list within a domain
+	taskListMap := make(map[string]struct{})
+	for resp := range respChan {
+		for _, tl := range resp.TaskListNames {
+			if _, ok := taskListMap[tl]; !ok {
+				taskListMap[tl] = struct{}{}
+			}
+		}
+	}
+	var taskListNames []string
+	for tl := range taskListMap {
+		taskListNames = append(taskListNames, tl)
+	}
+
+	return &types.GetTaskListsByDomainResponse{TaskListNames: taskListNames}, nil
 }
 
 func (c *clientImpl) createContext(
