@@ -176,10 +176,6 @@ func (e *matchingEngineImpl) getTaskListManager(
 	// and return avoiding the write lock
 	e.taskListsLock.RLock()
 	if result, ok := e.taskLists[*taskList]; ok {
-		// Cache user defined task list in taskListCache
-		if e.config.EnableTaskListCache(taskList.domainID) {
-			e.cacheTaskListByDomain(taskList, *taskListKind)
-		}
 		e.taskListsLock.RUnlock()
 		return result, nil
 	}
@@ -187,10 +183,6 @@ func (e *matchingEngineImpl) getTaskListManager(
 	// If it gets here, write lock and check again in case a task list is created between the two locks
 	e.taskListsLock.Lock()
 	if result, ok := e.taskLists[*taskList]; ok {
-		// Cache user defined task list in taskListCache
-		if e.config.EnableTaskListCache(taskList.domainID) {
-			e.cacheTaskListByDomain(taskList, *taskListKind)
-		}
 		e.taskListsLock.Unlock()
 		return result, nil
 	}
@@ -217,7 +209,7 @@ func (e *matchingEngineImpl) getTaskListManager(
 	)
 	// Cache user defined task list in taskListCache
 	if e.config.EnableTaskListCache(taskList.domainID) {
-		e.cacheTaskListByDomain(taskList, *taskListKind)
+		e.cacheTaskListByDomainLocked(taskList, *taskListKind)
 	}
 	e.taskListsLock.Unlock()
 	err = mgr.Start()
@@ -229,7 +221,7 @@ func (e *matchingEngineImpl) getTaskListManager(
 	return mgr, nil
 }
 
-func (e *matchingEngineImpl) cacheTaskListByDomain(
+func (e *matchingEngineImpl) cacheTaskListByDomainLocked(
 	taskList *taskListID,
 	taskListKind types.TaskListKind,
 ) {
@@ -251,7 +243,7 @@ func (e *matchingEngineImpl) cacheTaskListByDomain(
 	e.taskListCache.Put(taskList.domainID, taskLists)
 }
 
-func (e *matchingEngineImpl) removeFromTaskListCache(taskList *taskListID) {
+func (e *matchingEngineImpl) removeFromTaskListCacheLocked(taskList *taskListID) {
 	cachedTL := e.taskListCache.Get(taskList.domainID)
 	if cachedTL != nil {
 		taskLists := cachedTL.(map[string]struct{})
@@ -272,7 +264,7 @@ func (e *matchingEngineImpl) removeTaskListManager(id *taskListID) {
 	e.taskListsLock.Lock()
 	defer e.taskListsLock.Unlock()
 	if e.config.EnableTaskListCache(id.domainID) {
-		e.removeFromTaskListCache(id)
+		e.removeFromTaskListCacheLocked(id)
 	}
 	delete(e.taskLists, *id)
 	e.metricsClient.Scope(metrics.MatchingTaskListMgrScope).UpdateGauge(

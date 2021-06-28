@@ -839,7 +839,7 @@ func (s *dcRedirectionHandlerSuite) TestListTaskListPartitions() {
 }
 
 func (s *dcRedirectionHandlerSuite) TestGetTaskListsByDomain() {
-	apiName := "ListTaskListPartitions"
+	apiName := "GetTaskListsByDomain"
 
 	s.mockDCRedirectionPolicy.On("WithDomainNameRedirect",
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)

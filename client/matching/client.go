@@ -251,6 +251,7 @@ func (c *clientImpl) GetTaskListsByDomain(
 		return nil, err
 	}
 
+	// TODO: use Future interface
 	var wg sync.WaitGroup
 	wg.Add(len(clients))
 	respChan := make(chan *types.GetTaskListsByDomainResponse, len(clients))
