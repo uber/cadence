@@ -540,3 +540,29 @@ func (c *errorInjectionClient) ResendReplicationTasks(
 	}
 	return clientErr
 }
+
+func (c *errorInjectionClient) GetCrossClusterTasks(
+	ctx context.Context,
+	request *types.GetCrossClusterTasksRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetCrossClusterTasksResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.GetCrossClusterTasksResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.GetCrossClusterTasks(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationGetCrossClusterTasks,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}

@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -60,6 +61,7 @@ type (
 		DescribeMutableState(context.Context, *types.DescribeMutableStateRequest) (*types.DescribeMutableStateResponse, error)
 		DescribeQueue(context.Context, *types.DescribeQueueRequest) (*types.DescribeQueueResponse, error)
 		DescribeWorkflowExecution(context.Context, *types.HistoryDescribeWorkflowExecutionRequest) (*types.DescribeWorkflowExecutionResponse, error)
+		GetCrossClusterTasks(context.Context, *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error)
 		GetDLQReplicationMessages(context.Context, *types.GetDLQReplicationMessagesRequest) (*types.GetDLQReplicationMessagesResponse, error)
 		GetMutableState(context.Context, *types.GetMutableStateRequest) (*types.GetMutableStateResponse, error)
 		GetReplicationMessages(context.Context, *types.GetReplicationMessagesRequest) (*types.GetReplicationMessagesResponse, error)
@@ -85,6 +87,7 @@ type (
 		RespondActivityTaskCanceled(context.Context, *types.HistoryRespondActivityTaskCanceledRequest) error
 		RespondActivityTaskCompleted(context.Context, *types.HistoryRespondActivityTaskCompletedRequest) error
 		RespondActivityTaskFailed(context.Context, *types.HistoryRespondActivityTaskFailedRequest) error
+		RespondCrossClusterTasksCompleted(context.Context, *types.RespondCrossClusterTasksCompletedRequest) (*types.RespondCrossClusterTasksCompletedResponse, error)
 		RespondDecisionTaskCompleted(context.Context, *types.HistoryRespondDecisionTaskCompletedRequest) (*types.HistoryRespondDecisionTaskCompletedResponse, error)
 		RespondDecisionTaskFailed(context.Context, *types.HistoryRespondDecisionTaskFailedRequest) error
 		ScheduleDecisionTask(context.Context, *types.ScheduleDecisionTaskRequest) error
@@ -1834,6 +1837,34 @@ func (h *handlerImpl) NotifyFailoverMarkers(
 		h.failoverCoordinator.ReceiveFailoverMarkers(token.GetShardIDs(), token.GetFailoverMarker())
 	}
 	return nil
+}
+
+func (h *handlerImpl) GetCrossClusterTasks(
+	ctx context.Context,
+	request *types.GetCrossClusterTasksRequest,
+) (resp *types.GetCrossClusterTasksResponse, retError error) {
+	defer log.CapturePanic(h.GetLogger(), &retError)
+	h.startWG.Wait()
+
+	_, sw := h.startRequestProfile(ctx, metrics.HistoryGetCrossClusterTasksScope)
+	defer sw.Stop()
+
+	// TODO: implement this API when cross cluster queue is implemented
+	return nil, errors.New("not implemented")
+}
+
+func (h *handlerImpl) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	request *types.RespondCrossClusterTasksCompletedRequest,
+) (resp *types.RespondCrossClusterTasksCompletedResponse, retError error) {
+	defer log.CapturePanic(h.GetLogger(), &retError)
+	h.startWG.Wait()
+
+	_, sw := h.startRequestProfile(ctx, metrics.HistoryRespondCrossClusterTasksCompletedScope)
+	defer sw.Stop()
+
+	// TODO: implement this API when cross cluster queue is implemented
+	return nil, errors.New("not implemented")
 }
 
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various

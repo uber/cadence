@@ -81,6 +81,7 @@ type (
 		RemoveTask(context.Context, *types.RemoveTaskRequest) error
 		ResendReplicationTasks(context.Context, *types.ResendReplicationTasksRequest) error
 		ResetQueue(context.Context, *types.ResetQueueRequest) error
+		GetCrossClusterTasks(context.Context, *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error)
 	}
 
 	// adminHandlerImpl is an implementation for admin service independent of wire protocol
@@ -294,8 +295,10 @@ func (adh *adminHandlerImpl) RemoveTask(
 	if request == nil || request.Type == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
-	err := adh.GetHistoryClient().RemoveTask(ctx, request)
-	return err
+	if err := adh.GetHistoryClient().RemoveTask(ctx, request); err != nil {
+		return adh.error(err, scope)
+	}
+	return nil
 }
 
 // CloseShard returns information about the internal states of a history host
@@ -311,8 +314,10 @@ func (adh *adminHandlerImpl) CloseShard(
 	if request == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
-	err := adh.GetHistoryClient().CloseShard(ctx, request)
-	return err
+	if err := adh.GetHistoryClient().CloseShard(ctx, request); err != nil {
+		return adh.error(err, scope)
+	}
+	return nil
 }
 
 // ResetQueue resets processing queue states
@@ -332,8 +337,10 @@ func (adh *adminHandlerImpl) ResetQueue(
 		return adh.error(errClusterNameNotSet, scope)
 	}
 
-	err := adh.GetHistoryClient().ResetQueue(ctx, request)
-	return err
+	if err := adh.GetHistoryClient().ResetQueue(ctx, request); err != nil {
+		return adh.error(err, scope)
+	}
+	return nil
 }
 
 // DescribeQueue describes processing queue states
@@ -994,6 +1001,30 @@ func (adh *adminHandlerImpl) ResendReplicationTasks(
 		nil,
 		nil,
 	)
+}
+
+func (adh *adminHandlerImpl) GetCrossClusterTasks(
+	ctx context.Context,
+	request *types.GetCrossClusterTasksRequest,
+) (resp *types.GetCrossClusterTasksResponse, err error) {
+
+	defer log.CapturePanic(adh.GetLogger(), &err)
+	scope, sw := adh.startRequestProfile(metrics.AdminGetCrossClusterTasksScope)
+	defer sw.Stop()
+
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+	if request.TargetCluster == "" {
+		return nil, adh.error(errClusterNameNotSet, scope)
+	}
+
+	// resp, err := adh.GetHistoryRawClient().GetCrossClusterTasks(ctx, request)
+	// if err != nil {
+	// 	return nil, adh.error(err, scope)
+	// }
+	// return resp, nil
+	return nil, nil // TODO
 }
 
 func (adh *adminHandlerImpl) validateGetWorkflowExecutionRawHistoryV2Request(

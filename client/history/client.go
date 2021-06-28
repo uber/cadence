@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
@@ -823,13 +824,7 @@ func (c *clientImpl) GetReplicationMessages(
 	}
 
 	// preserve 5% timeout to return partial of the result if context is timing out
-	now := time.Now()
-	deadline, ok := ctx.Deadline()
-	if !ok {
-		deadline = now.Add(c.timeout)
-	}
-	requestTimeout := time.Duration(math.Ceil(float64(deadline.Sub(now)) * 0.95))
-	requestContext, cancel := context.WithTimeout(ctx, requestTimeout)
+	requestContext, cancel := c.createChildContext(ctx, 0.05)
 	defer cancel()
 
 	var wg sync.WaitGroup
@@ -1018,6 +1013,122 @@ func (c *clientImpl) NotifyFailoverMarkers(
 		}
 	}
 	return nil
+}
+
+func (c *clientImpl) GetCrossClusterTasks(
+	ctx context.Context,
+	request *types.GetCrossClusterTasksRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetCrossClusterTasksResponse, error) {
+	requestByClient := make(map[Client]*types.GetCrossClusterTasksRequest)
+	for _, shardID := range request.GetShardIDs() {
+		client, err := c.getClientForShardID(int(shardID))
+		if err != nil {
+			return nil, err
+		}
+
+		if _, ok := requestByClient[client]; !ok {
+			requestByClient[client] = &types.GetCrossClusterTasksRequest{
+				TargetCluster: request.TargetCluster,
+			}
+		}
+		requestByClient[client].ShardIDs = append(requestByClient[client].ShardIDs, shardID)
+	}
+
+	var wg sync.WaitGroup
+	futureByClient := make(map[Client]future.Future, len(requestByClient))
+	for client, req := range requestByClient {
+		future, settable := future.NewFuture()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			settable.Set(client.GetCrossClusterTasks(ctx, req))
+		}()
+
+		futureByClient[client] = future
+	}
+
+	// preserve 5% timeout to return partial of the result if context is timing out
+	ctx, cancel := c.createChildContext(ctx, 0.05)
+	defer cancel()
+	response := &types.GetCrossClusterTasksResponse{
+		TasksByShard: make(map[int32][]*types.CrossClusterTaskRequest),
+	}
+	var err error
+	for _, future := range futureByClient {
+		var resp *types.GetCrossClusterTasksResponse
+		if futureErr := future.Get(ctx, &resp); futureErr != nil {
+			c.logger.Error("Failed to get cross cluster tasks", tag.Error(futureErr))
+			// TODO: return error for each shard and perform backoff at shard level.
+			// and ensure every shardID in request has a response (either tasks or failed cause).
+			//
+			// for _, failedShardID := range requestByClient[client].ShardIDs {
+			// 	response.FailedCauseByShard[failedShardID] = ...
+			// }
+			//
+			// for now following the pattern for getting replication tasks:
+			// ignore errors other than service busy, so that task fetcher in target
+			// cluster can slow down.
+			if common.IsServiceBusyError(futureErr) {
+				err = futureErr
+			}
+		} else {
+			for shardID, tasks := range resp.TasksByShard {
+				response.TasksByShard[shardID] = tasks
+			}
+		}
+	}
+	wg.Wait()
+
+	return response, err
+}
+
+func (c *clientImpl) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	request *types.RespondCrossClusterTasksCompletedRequest,
+	opts ...yarpc.CallOption,
+) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	client, err := c.getClientForShardID(int(request.GetShardID()))
+	if err != nil {
+		return nil, err
+	}
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+
+	var response *types.RespondCrossClusterTasksCompletedResponse
+	op := func(ctx context.Context, client Client) error {
+		var err error
+		ctx, cancel := c.createContext(ctx)
+		defer cancel()
+		response, err = client.RespondCrossClusterTasksCompleted(ctx, request, opts...)
+		return err
+	}
+
+	err = c.executeWithRedirect(ctx, client, op)
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
+func (c *clientImpl) createChildContext(
+	parent context.Context,
+	tailroom float64,
+) (context.Context, context.CancelFunc) {
+	if parent == nil {
+		return nil, func() {}
+	}
+	if parent.Err() != nil {
+		return parent, func() {}
+	}
+
+	now := time.Now()
+	deadline, ok := parent.Deadline()
+	if !ok || deadline.Before(now) {
+		return parent, func() {}
+	}
+
+	newDeadline := now.Add(time.Duration(math.Ceil(float64(deadline.Sub(now)) * (1.0 - tailroom))))
+	return context.WithDeadline(parent, newDeadline)
 }
 
 func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {
