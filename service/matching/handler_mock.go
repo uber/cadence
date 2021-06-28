@@ -146,7 +146,7 @@ func (mr *MockHandlerMockRecorder) ListTaskListPartitions(arg0, arg1 interface{}
 }
 
 // GetTaskListsByDomain mocks base method
-func (m *MockHandler) GetTaskListsByDomain(arg0 context.Context, arg1 *types.MatchingGetTaskListsByDomainRequest) (*types.GetTaskListsByDomainResponse, error) {
+func (m *MockHandler) GetTaskListsByDomain(arg0 context.Context, arg1 *types.GetTaskListsByDomainRequest) (*types.GetTaskListsByDomainResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetTaskListsByDomain", arg0, arg1)
 	ret0, _ := ret[0].(*types.GetTaskListsByDomainResponse)

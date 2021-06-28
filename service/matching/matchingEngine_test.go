@@ -1642,7 +1642,7 @@ func (s *matchingEngineSuite) TestRemoveFromTaskListCache_Success() {
 	_, ok := taskListMap[taskList.name]
 	s.True(ok)
 
-	s.matchingEngine.removeFromTaskListCache(taskList)
+	s.matchingEngine.removeFromTaskListCacheLocked(taskList)
 	taskListResult := s.matchingEngine.taskListCache.Get(taskList.domainID).(map[string]struct{})
 	s.Equal(0, len(taskListResult))
 }
@@ -1656,7 +1656,7 @@ func (s *matchingEngineSuite) TestRemoveFromTaskListCache_EmptyList_Success() {
 		taskType: 0,
 	}
 
-	s.matchingEngine.removeFromTaskListCache(taskList)
+	s.matchingEngine.removeFromTaskListCacheLocked(taskList)
 	taskListResult := s.matchingEngine.taskListCache.Get(taskList.domainID)
 	s.Nil(taskListResult)
 }
