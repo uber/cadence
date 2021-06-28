@@ -82,9 +82,9 @@ type (
 	SequentialTaskQueue interface {
 		// QueueID return the ID of the queue, as well as the tasks inside (same)
 		QueueID() interface{}
-		// Offer push an task to the task set
+		// Add push an task to the task set
 		Add(task Task)
-		// Poll pop an task from the task set
+		// Remove pop an task from the task set
 		Remove() Task
 		// IsEmpty indicate if the task set is empty
 		IsEmpty() bool

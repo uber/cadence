@@ -25,6 +25,7 @@ import (
 
 	"github.com/urfave/cli"
 
+	cliflag "github.com/uber/cadence/tools/common/flag"
 	"github.com/uber/cadence/tools/common/schema"
 )
 
@@ -94,9 +95,10 @@ func BuildCLIOptions() *cli.App {
 			Name:  schema.CLIFlagQuiet,
 			Usage: "Don't set exit status to 1 on error",
 		},
-		cli.StringFlag{
+		cli.GenericFlag{
 			Name:   schema.CLIFlagConnectAttributes,
-			Usage:  "sql connect attributes",
+			Value:  &cliflag.StringMap{},
+			Usage:  "sql connect attributes (must be in key1=value1,key2=value2,...,keyN=valueN format, e.g. cluster=dca or cluster=dca,instance=cadence)",
 			EnvVar: "SQL_CONNECT_ATTRIBUTES",
 		},
 		cli.BoolFlag{

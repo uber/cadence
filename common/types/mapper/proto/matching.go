@@ -200,7 +200,7 @@ func ToMatchingListTaskListPartitionsResponse(t *matchingv1.ListTaskListPartitio
 	}
 }
 
-func FromMatchingGetTaskListsByDomainRequest(t *types.MatchingGetTaskListsByDomainRequest) *matchingv1.GetTaskListsByDomainRequest {
+func FromMatchingGetTaskListsByDomainRequest(t *types.GetTaskListsByDomainRequest) *matchingv1.GetTaskListsByDomainRequest {
 	if t == nil {
 		return nil
 	}
@@ -209,11 +209,11 @@ func FromMatchingGetTaskListsByDomainRequest(t *types.MatchingGetTaskListsByDoma
 	}
 }
 
-func ToMatchingGetTaskListsByDomainRequest(t *matchingv1.GetTaskListsByDomainRequest) *types.MatchingGetTaskListsByDomainRequest {
+func ToMatchingGetTaskListsByDomainRequest(t *matchingv1.GetTaskListsByDomainRequest) *types.GetTaskListsByDomainRequest {
 	if t == nil {
 		return nil
 	}
-	return &types.MatchingGetTaskListsByDomainRequest{
+	return &types.GetTaskListsByDomainRequest{
 		Domain: t.Domain,
 	}
 }

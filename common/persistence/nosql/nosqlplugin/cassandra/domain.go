@@ -149,8 +149,9 @@ const (
 		`WHERE domains_partition = ? `
 )
 
-// Insert a new record to domain, return error if failed or already exists
-// Must return conditionFailed error if domainName already exists
+// Insert a new record to domain
+// return types.DomainAlreadyExistsError error if failed or already exists
+// Must return ConditionFailure error if other condition doesn't match
 func (db *cdb) InsertDomain(
 	ctx context.Context,
 	row *nosqlplugin.DomainRow,
@@ -204,7 +205,7 @@ func (db *cdb) InsertDomain(
 		row.LastUpdatedTime.UnixNano(),
 		metadataNotificationVersion,
 	)
-	db.updateMetadataBatch(ctx, batch, metadataNotificationVersion)
+	db.updateMetadataBatch(batch, metadataNotificationVersion)
 
 	previous := make(map[string]interface{})
 	applied, iter, err := db.session.MapExecuteBatchCAS(batch, previous)
@@ -240,14 +241,13 @@ func (db *cdb) InsertDomain(
 		}
 
 		db.logger.Warn("Create domain operation failed because of condition update failure on domain metadata record")
-		return errConditionFailed
+		return nosqlplugin.NewConditionFailure("domain")
 	}
 
 	return nil
 }
 
 func (db *cdb) updateMetadataBatch(
-	ctx context.Context,
 	batch gocql.Batch,
 	notificationVersion int64,
 ) {
@@ -304,7 +304,7 @@ func (db *cdb) UpdateDomain(
 		constDomainPartition,
 		row.Info.Name,
 	)
-	db.updateMetadataBatch(ctx, batch, row.NotificationVersion)
+	db.updateMetadataBatch(batch, row.NotificationVersion)
 
 	previous := make(map[string]interface{})
 	applied, iter, err := db.session.MapExecuteBatchCAS(batch, previous)
@@ -318,7 +318,7 @@ func (db *cdb) UpdateDomain(
 		return err
 	}
 	if !applied {
-		return errConditionFailed
+		return nosqlplugin.NewConditionFailure("domain")
 	}
 	return nil
 }

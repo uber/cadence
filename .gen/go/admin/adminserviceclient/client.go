@@ -70,11 +70,23 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.DescribeQueueResponse, error)
 
+	DescribeShardDistribution(
+		ctx context.Context,
+		Request *shared.DescribeShardDistributionRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.DescribeShardDistributionResponse, error)
+
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		Request *admin.DescribeWorkflowExecutionRequest,
 		opts ...yarpc.CallOption,
 	) (*admin.DescribeWorkflowExecutionResponse, error)
+
+	GetCrossClusterTasks(
+		ctx context.Context,
+		Request *shared.GetCrossClusterTasksRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.GetCrossClusterTasksResponse, error)
 
 	GetDLQReplicationMessages(
 		ctx context.Context,
@@ -287,6 +299,29 @@ func (c client) DescribeQueue(
 	return
 }
 
+func (c client) DescribeShardDistribution(
+	ctx context.Context,
+	_Request *shared.DescribeShardDistributionRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.DescribeShardDistributionResponse, err error) {
+
+	args := admin.AdminService_DescribeShardDistribution_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_DescribeShardDistribution_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_DescribeShardDistribution_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) DescribeWorkflowExecution(
 	ctx context.Context,
 	_Request *admin.DescribeWorkflowExecutionRequest,
@@ -307,6 +342,29 @@ func (c client) DescribeWorkflowExecution(
 	}
 
 	success, err = admin.AdminService_DescribeWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetCrossClusterTasks(
+	ctx context.Context,
+	_Request *shared.GetCrossClusterTasksRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetCrossClusterTasksResponse, err error) {
+
+	args := admin.AdminService_GetCrossClusterTasks_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_GetCrossClusterTasks_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_GetCrossClusterTasks_Helper.UnwrapResponse(&result)
 	return
 }
 

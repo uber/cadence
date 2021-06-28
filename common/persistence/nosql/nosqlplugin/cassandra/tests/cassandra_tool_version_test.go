@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
+	cassandra_db "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/tools/cassandra"
 )
@@ -70,11 +71,12 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 	}))
 
 	defaultCfg := config.Cassandra{
-		Hosts:    environment.GetCassandraAddress(),
-		Port:     cassandra.DefaultCassandraPort,
-		User:     "",
-		Password: "",
-		Keyspace: keyspace,
+		PluginName: cassandra_db.PluginName,
+		Hosts:      environment.GetCassandraAddress(),
+		Port:       cassandra.DefaultCassandraPort,
+		User:       "",
+		Password:   "",
+		Keyspace:   keyspace,
 	}
 	visibilityCfg := defaultCfg
 	visibilityCfg.Keyspace = visKeyspace
@@ -82,8 +84,8 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 		DefaultStore:    "default",
 		VisibilityStore: "visibility",
 		DataStores: map[string]config.DataStore{
-			"default":    {Cassandra: &defaultCfg},
-			"visibility": {Cassandra: &visibilityCfg},
+			"default":    {NoSQL: &defaultCfg},
+			"visibility": {NoSQL: &visibilityCfg},
 		},
 		TransactionSizeLimit: dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
 		ErrorInjectionRate:   dynamicconfig.GetFloatPropertyFn(0),
@@ -110,11 +112,12 @@ func (s *VersionTestSuite) TestCheckCompatibleVersion() {
 
 func (s *VersionTestSuite) createKeyspace(keyspace string) func() {
 	cfg := &cassandra.CQLClientConfig{
-		Hosts:       environment.GetCassandraAddress(),
-		Port:        cassandra.DefaultCassandraPort,
-		Keyspace:    "system",
-		Timeout:     cassandra.DefaultTimeout,
-		NumReplicas: 1,
+		Hosts:        environment.GetCassandraAddress(),
+		Port:         cassandra.DefaultCassandraPort,
+		Keyspace:     "system",
+		Timeout:      cassandra.DefaultTimeout,
+		NumReplicas:  1,
+		ProtoVersion: environment.GetCassandraProtoVersion(),
 	}
 	client, err := cassandra.NewCQLClient(cfg)
 	s.NoError(err)

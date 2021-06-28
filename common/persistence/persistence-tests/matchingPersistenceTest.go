@@ -141,10 +141,6 @@ func (s *MatchingPersistenceSuite) TestGetTasksWithNoMaxReadLevel() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	if s.TaskMgr.GetName() == "cassandra" {
-		//this test is not applicable for cassandra persistence
-		return
-	}
 	domainID := "f1116985-d1f1-40e0-aba9-83344db915bc"
 	workflowExecution := types.WorkflowExecution{WorkflowID: "complete-decision-task-test",
 		RunID: "2aa0a74e-16ee-4f27-983d-48b07ec1915d"}
@@ -556,6 +552,9 @@ func (s *MatchingPersistenceSuite) TestListWithMultipleTaskList() {
 }
 
 func (s *MatchingPersistenceSuite) TestGetOrphanTasks() {
+	if os.Getenv("SKIP_GET_ORPHAN_TASKS") != "" {
+		s.T().Skipf("GetOrphanTasks not supported in %v", s.TaskMgr.GetName())
+	}
 	if s.TaskMgr.GetName() == "cassandra" {
 		// GetOrphanTasks API is currently not supported in cassandra"
 		return

@@ -719,7 +719,7 @@ func (e *matchingEngineImpl) listTaskListPartitions(
 
 func (e *matchingEngineImpl) GetTaskListsByDomain(
 	hCtx *handlerContext,
-	request *types.MatchingGetTaskListsByDomainRequest,
+	request *types.GetTaskListsByDomainRequest,
 ) (*types.GetTaskListsByDomainResponse, error) {
 	domainID, err := e.domainCache.GetDomainID(request.GetDomain())
 	if err != nil {

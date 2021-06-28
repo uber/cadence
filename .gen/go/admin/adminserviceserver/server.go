@@ -64,10 +64,20 @@ type Interface interface {
 		Request *shared.DescribeQueueRequest,
 	) (*shared.DescribeQueueResponse, error)
 
+	DescribeShardDistribution(
+		ctx context.Context,
+		Request *shared.DescribeShardDistributionRequest,
+	) (*shared.DescribeShardDistributionResponse, error)
+
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		Request *admin.DescribeWorkflowExecutionRequest,
 	) (*admin.DescribeWorkflowExecutionResponse, error)
+
+	GetCrossClusterTasks(
+		ctx context.Context,
+		Request *shared.GetCrossClusterTasksRequest,
+	) (*shared.GetCrossClusterTasksResponse, error)
 
 	GetDLQReplicationMessages(
 		ctx context.Context,
@@ -197,6 +207,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "DescribeShardDistribution",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.DescribeShardDistribution),
+				},
+				Signature:    "DescribeShardDistribution(Request *shared.DescribeShardDistributionRequest) (*shared.DescribeShardDistributionResponse)",
+				ThriftModule: admin.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "DescribeWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -204,6 +225,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.DescribeWorkflowExecution),
 				},
 				Signature:    "DescribeWorkflowExecution(Request *admin.DescribeWorkflowExecutionRequest) (*admin.DescribeWorkflowExecutionResponse)",
+				ThriftModule: admin.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "GetCrossClusterTasks",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.GetCrossClusterTasks),
+				},
+				Signature:    "GetCrossClusterTasks(Request *shared.GetCrossClusterTasksRequest) (*shared.GetCrossClusterTasksResponse)",
 				ThriftModule: admin.ThriftModule,
 			},
 
@@ -341,7 +373,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 18)
+	procedures := make([]transport.Procedure, 0, 20)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -502,6 +534,36 @@ func (h handler) DescribeQueue(ctx context.Context, body wire.Value) (thrift.Res
 	return response, err
 }
 
+func (h handler) DescribeShardDistribution(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args admin.AdminService_DescribeShardDistribution_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'DescribeShardDistribution': %w", err)
+	}
+
+	success, appErr := h.impl.DescribeShardDistribution(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_DescribeShardDistribution_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
 func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_DescribeWorkflowExecution_Args
 	if err := args.FromWire(body); err != nil {
@@ -513,6 +575,36 @@ func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value)
 
 	hadError := appErr != nil
 	result, err := admin.AdminService_DescribeWorkflowExecution_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) GetCrossClusterTasks(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args admin.AdminService_GetCrossClusterTasks_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'GetCrossClusterTasks': %w", err)
+	}
+
+	success, appErr := h.impl.GetCrossClusterTasks(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_GetCrossClusterTasks_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {

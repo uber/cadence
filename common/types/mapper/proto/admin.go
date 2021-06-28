@@ -85,6 +85,16 @@ func ToAdminDescribeClusterResponse(t *adminv1.DescribeClusterResponse) *types.D
 	}
 }
 
+func FromAdminDescribeShardDistributionRequest(t *types.DescribeShardDistributionRequest) *adminv1.DescribeShardDistributionRequest {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.DescribeShardDistributionRequest{
+		PageSize: t.PageSize,
+		PageId:   t.PageID,
+	}
+}
+
 func FromAdminDescribeHistoryHostRequest(t *types.DescribeHistoryHostRequest) *adminv1.DescribeHistoryHostRequest {
 	if t == nil {
 		return nil
@@ -107,6 +117,16 @@ func FromAdminDescribeHistoryHostRequest(t *types.DescribeHistoryHostRequest) *a
 	panic("neither oneof field is set for DescribeHistoryHostRequest")
 }
 
+func ToAdminDescribeShardDistributionRequest(t *adminv1.DescribeShardDistributionRequest) *types.DescribeShardDistributionRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.DescribeShardDistributionRequest{
+		PageSize: t.PageSize,
+		PageID:   t.PageId,
+	}
+}
+
 func ToAdminDescribeHistoryHostRequest(t *adminv1.DescribeHistoryHostRequest) *types.DescribeHistoryHostRequest {
 	if t == nil {
 		return nil
@@ -122,6 +142,16 @@ func ToAdminDescribeHistoryHostRequest(t *adminv1.DescribeHistoryHostRequest) *t
 	panic("neither oneof field is set for DescribeHistoryHostRequest")
 }
 
+func FromAdminDescribeShardDistributionResponse(t *types.DescribeShardDistributionResponse) *adminv1.DescribeShardDistributionResponse {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.DescribeShardDistributionResponse{
+		NumberOfShards: t.NumberOfShards,
+		Shards:         t.Shards,
+	}
+}
+
 func FromAdminDescribeHistoryHostResponse(t *types.DescribeHistoryHostResponse) *adminv1.DescribeHistoryHostResponse {
 	if t == nil {
 		return nil
@@ -132,6 +162,16 @@ func FromAdminDescribeHistoryHostResponse(t *types.DescribeHistoryHostResponse) 
 		DomainCache:           FromDomainCacheInfo(t.DomainCache),
 		ShardControllerStatus: t.ShardControllerStatus,
 		Address:               t.Address,
+	}
+}
+
+func ToAdminDescribeShardDistributionResponse(t *adminv1.DescribeShardDistributionResponse) *types.DescribeShardDistributionResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.DescribeShardDistributionResponse{
+		NumberOfShards: t.NumberOfShards,
+		Shards:         t.Shards,
 	}
 }
 
@@ -634,5 +674,47 @@ func ToAdminResetQueueRequest(t *adminv1.ResetQueueRequest) *types.ResetQueueReq
 		ShardID:     t.ShardId,
 		ClusterName: t.ClusterName,
 		Type:        ToTaskType(t.TaskType),
+	}
+}
+
+// FromAdminGetCrossClusterTasksRequest converts internal GetCrossClusterTasksRequest type to proto
+func FromAdminGetCrossClusterTasksRequest(t *types.GetCrossClusterTasksRequest) *adminv1.GetCrossClusterTasksRequest {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.GetCrossClusterTasksRequest{
+		ShardIds:      t.ShardIDs,
+		TargetCluster: t.TargetCluster,
+	}
+}
+
+// ToAdminGetCrossClusterTasksRequest converts proto GetCrossClusterTasksRequest type to internal
+func ToAdminGetCrossClusterTasksRequest(t *adminv1.GetCrossClusterTasksRequest) *types.GetCrossClusterTasksRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetCrossClusterTasksRequest{
+		ShardIDs:      t.ShardIds,
+		TargetCluster: t.TargetCluster,
+	}
+}
+
+// FromAdminGetCrossClusterTasksResponse converts internal GetCrossClusterTasksResponse type to proto
+func FromAdminGetCrossClusterTasksResponse(t *types.GetCrossClusterTasksResponse) *adminv1.GetCrossClusterTasksResponse {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.GetCrossClusterTasksResponse{
+		TasksByShard: FromCrossClusterTaskRequestMap(t.TasksByShard),
+	}
+}
+
+// ToAdminGetCrossClusterTasksResponse converts proto GetCrossClusterTasksResponse type to internal
+func ToAdminGetCrossClusterTasksResponse(t *adminv1.GetCrossClusterTasksResponse) *types.GetCrossClusterTasksResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.GetCrossClusterTasksResponse{
+		TasksByShard: ToCrossClusterTaskRequestMap(t.TasksByShard),
 	}
 }

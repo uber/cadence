@@ -27,6 +27,7 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common/config"
+	cassandra_db "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/schema/cassandra"
 	"github.com/uber/cadence/tools/common/schema"
 )
@@ -47,22 +48,35 @@ type SetupSchemaConfig struct {
 func VerifyCompatibleVersion(
 	cfg config.Persistence,
 ) error {
+	if ds, ok := cfg.DataStores[cfg.DefaultStore]; ok {
+		if err := verifyCompatibleVersion(ds, cassandra.Version); err != nil {
+			return err
+		}
+	}
 
-	ds, ok := cfg.DataStores[cfg.DefaultStore]
-	if ok && ds.Cassandra != nil {
-		err := CheckCompatibleVersion(*ds.Cassandra, cassandra.Version)
-		if err != nil {
+	if ds, ok := cfg.DataStores[cfg.VisibilityStore]; ok {
+		if err := verifyCompatibleVersion(ds, cassandra.VisibilityVersion); err != nil {
 			return err
 		}
 	}
-	ds, ok = cfg.DataStores[cfg.VisibilityStore]
-	if ok && ds.Cassandra != nil {
-		err := CheckCompatibleVersion(*ds.Cassandra, cassandra.VisibilityVersion)
-		if err != nil {
-			return err
-		}
-	}
+
 	return nil
+}
+
+func verifyCompatibleVersion(
+	ds config.DataStore,
+	expectedCassandraVersion string,
+) error {
+	if ds.NoSQL == nil {
+		// not using nosql
+		return nil
+	}
+
+	if ds.NoSQL.PluginName != cassandra_db.PluginName {
+		return fmt.Errorf("unknown NoSQL plugin name: %v", ds.NoSQL.PluginName)
+	}
+
+	return CheckCompatibleVersion(*ds.NoSQL, expectedCassandraVersion)
 }
 
 // CheckCompatibleVersion check the version compatibility
@@ -72,13 +86,14 @@ func CheckCompatibleVersion(
 ) error {
 
 	client, err := NewCQLClient(&CQLClientConfig{
-		Hosts:    cfg.Hosts,
-		Port:     cfg.Port,
-		User:     cfg.User,
-		Password: cfg.Password,
-		Keyspace: cfg.Keyspace,
-		Timeout:  DefaultTimeout,
-		TLS:      cfg.TLS,
+		Hosts:        cfg.Hosts,
+		Port:         cfg.Port,
+		User:         cfg.User,
+		Password:     cfg.Password,
+		Keyspace:     cfg.Keyspace,
+		Timeout:      DefaultTimeout,
+		TLS:          cfg.TLS,
+		ProtoVersion: cfg.ProtoVersion,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create CQL Client: %v", err.Error())
@@ -161,6 +176,7 @@ func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 	cqlConfig.Timeout = cli.GlobalInt(schema.CLIOptTimeout)
 	cqlConfig.Keyspace = cli.GlobalString(schema.CLIOptKeyspace)
 	cqlConfig.NumReplicas = cli.Int(schema.CLIOptReplicationFactor)
+	cqlConfig.ProtoVersion = cli.Int(schema.CLIOptProtoVersion)
 
 	if cli.GlobalBool(schema.CLIFlagEnableTLS) {
 		cqlConfig.TLS = &config.TLS{

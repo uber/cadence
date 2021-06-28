@@ -22,6 +22,8 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"time"
 
 	"github.com/uber-go/tally/m3"
@@ -129,8 +131,10 @@ type (
 		// DefaultStore is the name of the default data store to use
 		DefaultStore string `yaml:"defaultStore" validate:"nonzero"`
 		// VisibilityStore is the name of the datastore to be used for visibility records
-		VisibilityStore string `yaml:"visibilityStore" validate:"nonzero"`
+		// Must provide one of VisibilityStore and AdvancedVisibilityStore
+		VisibilityStore string `yaml:"visibilityStore"`
 		// AdvancedVisibilityStore is the name of the datastore to be used for visibility records
+		// Must provide one of VisibilityStore and AdvancedVisibilityStore
 		AdvancedVisibilityStore string `yaml:"advancedVisibilityStore"`
 		// HistoryMaxConns is the desired number of conns to history store. Value specified
 		// here overrides the MaxConns config specified as part of datastore
@@ -140,10 +144,10 @@ type (
 		NumHistoryShards int `yaml:"numHistoryShards" validate:"nonzero"`
 		// DataStores contains the configuration for all datastores
 		DataStores map[string]DataStore `yaml:"datastores"`
-		// VisibilityConfig is config for visibility sampling
-		VisibilityConfig *VisibilityConfig `yaml:"-" json:"-"`
+		// TODO: move dynamic config out of static config
 		// TransactionSizeLimit is the largest allowed transaction size
 		TransactionSizeLimit dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
+		// TODO: move dynamic config out of static config
 		// ErrorInjectionRate is the the rate for injecting random error
 		ErrorInjectionRate dynamicconfig.FloatPropertyFn `yaml:"-" json:"-"`
 	}
@@ -151,35 +155,24 @@ type (
 	// DataStore is the configuration for a single datastore
 	DataStore struct {
 		// Cassandra contains the config for a cassandra datastore
+		// Deprecated: please use NoSQL instead, the structure is backward-compatible
 		Cassandra *Cassandra `yaml:"cassandra"`
 		// SQL contains the config for a SQL based datastore
 		SQL *SQL `yaml:"sql"`
+		// NoSQL contains the config for a NoSQL based datastore
+		NoSQL *NoSQL `yaml:"nosql"`
 		// ElasticSearch contains the config for a ElasticSearch datastore
 		ElasticSearch *ElasticSearchConfig `yaml:"elasticsearch"`
 	}
 
-	// VisibilityConfig is config for visibility
-	VisibilityConfig struct {
-		// EnableSampling for visibility
-		EnableSampling dynamicconfig.BoolPropertyFn `yaml:"-" json:"-"`
-		// EnableReadFromClosedExecutionV2 read closed from v2 table
-		EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn `yaml:"-" json:"-"`
-		// VisibilityOpenMaxQPS max QPS for record open workflows
-		VisibilityOpenMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-		// VisibilityClosedMaxQPS max QPS for record closed workflows
-		VisibilityClosedMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-		// VisibilityListMaxQPS max QPS for list workflow
-		VisibilityListMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
-		// ESIndexMaxResultWindow ElasticSearch index setting max_result_window
-		ESIndexMaxResultWindow dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
-		// MaxQPS is overall max QPS
-		MaxQPS dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
-		// ValidSearchAttributes is legal indexed keys that can be used in list APIs
-		ValidSearchAttributes dynamicconfig.MapPropertyFn `yaml:"-" json:"-"`
-	}
-
 	// Cassandra contains configuration to connect to Cassandra cluster
-	Cassandra struct {
+	// Deprecated: please use NoSQL instead, the structure is backward-compatible
+	Cassandra = NoSQL
+
+	// NoSQL contains configuration to connect to NoSQL Database cluster
+	NoSQL struct {
+		// PluginName is the name of NoSQL plugin, default is "cassandra". Supported values: cassandra
+		PluginName string `yaml:"pluginName"`
 		// Hosts is a csv of cassandra endpoints
 		Hosts string `yaml:"hosts" validate:"nonzero"`
 		// Port is the cassandra port used for connection by gocql client
@@ -189,7 +182,7 @@ type (
 		// Password is the cassandra password used for authentication by gocql client
 		Password string `yaml:"password"`
 		// Keyspace is the cassandra keyspace
-		Keyspace string `yaml:"keyspace" validate:"nonzero"`
+		Keyspace string `yaml:"keyspace"`
 		// Region is the region filter arg for cassandra
 		Region string `yaml:"region"`
 		// Datacenter is the data center filter arg for cassandra
@@ -198,6 +191,13 @@ type (
 		MaxConns int `yaml:"maxConns"`
 		// TLS configuration
 		TLS *TLS `yaml:"tls"`
+		// ProtoVersion
+		ProtoVersion int `yaml:"protoVersion"`
+		// ConnectAttributes is a set of key-value attributes as a supplement/extension to the above common fields
+		// Use it ONLY when a configure is too specific to a particular NoSQL database that should not be in the common struct
+		// Otherwise please add new fields to the struct for better documentation
+		// If being used in any database, update this comment here to make it clear
+		ConnectAttributes map[string]string `yaml:"connectAttributes"`
 	}
 
 	// SQL is the configuration for connecting to a SQL backed datastore
@@ -439,6 +439,13 @@ func (c *Config) ValidateAndFillDefaults() error {
 func (c *Config) validate() error {
 	if err := c.Persistence.Validate(); err != nil {
 		return err
+	}
+	if c.ClusterMetadata == nil {
+		return fmt.Errorf("ClusterMetadata cannot be empty")
+	}
+	if !c.ClusterMetadata.EnableGlobalDomain {
+		log.Println("[WARN] Local domain is now deprecated. Please update config to enable global domain(ClusterMetadata->EnableGlobalDomain)." +
+			"Global domain of single cluster has zero overhead, but only advantages for future migration and fail over. Please check Cadence documentation for more details.")
 	}
 	return c.Archival.Validate(&c.DomainDefaults.Archival)
 }

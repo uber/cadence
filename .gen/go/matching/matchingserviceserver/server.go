@@ -61,7 +61,7 @@ type Interface interface {
 
 	GetTaskListsByDomain(
 		ctx context.Context,
-		Request *matching.GetTaskListsByDomainRequest,
+		Request *shared.GetTaskListsByDomainRequest,
 	) (*shared.GetTaskListsByDomainResponse, error)
 
 	ListTaskListPartitions(
@@ -152,7 +152,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.GetTaskListsByDomain),
 				},
-				Signature:    "GetTaskListsByDomain(Request *matching.GetTaskListsByDomainRequest) (*shared.GetTaskListsByDomainResponse)",
+				Signature:    "GetTaskListsByDomain(Request *shared.GetTaskListsByDomainRequest) (*shared.GetTaskListsByDomainResponse)",
 				ThriftModule: matching.ThriftModule,
 			},
 

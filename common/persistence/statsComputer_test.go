@@ -105,8 +105,9 @@ func (s *statsComputerSuite) TestComputeWorkflowMutationStats() {
 		DeleteChildExecutionInfos: []int64{0},
 		DeleteSignalInfos:         nil,
 		DeleteRequestCancelInfos:  []int64{},
-		TransferTasks:             []Task{},
-		TimerTasks:                []Task{},
+		TransferTasks:             []Task{&ActivityTask{}, &DecisionTask{}},
+		CrossClusterTasks:         []Task{&CrossClusterCancelExecutionTask{}},
+		TimerTasks:                []Task{&UserTimerTask{}},
 		ReplicationTasks:          []Task{},
 	}
 	stats := s.sc.computeWorkflowMutationStats(ms)
@@ -127,6 +128,7 @@ func (s *statsComputerSuite) TestComputeWorkflowMutationStats() {
 	s.Equal(len(ms.DeleteSignalInfos), stats.DeleteSignalInfoCount)
 	s.Equal(len(ms.DeleteRequestCancelInfos), stats.DeleteRequestCancelInfoCount)
 	s.Equal(len(ms.TransferTasks), stats.TransferTasksCount)
+	s.Equal(len(ms.CrossClusterTasks), stats.CrossClusterTaskCount)
 	s.Equal(len(ms.TimerTasks), stats.TimerTasksCount)
 	s.Equal(len(ms.ReplicationTasks), stats.ReplicationTasksCount)
 	s.Equal(stats.ExecutionInfoSize+stats.ActivityInfoSize+stats.TimerInfoSize+stats.ChildInfoSize+stats.SignalInfoSize+stats.BufferedEventsSize, stats.MutableStateSize)
@@ -145,8 +147,9 @@ func (s *statsComputerSuite) TestComputeWorkflowSnapshotStats() {
 		ChildExecutionInfos: []*InternalChildExecutionInfo{c1, c1, c1, c1},
 		SignalInfos:         []*SignalInfo{s1},
 		RequestCancelInfos:  []*RequestCancelInfo{r1},
-		TransferTasks:       []Task{},
-		TimerTasks:          []Task{},
+		TransferTasks:       []Task{&ActivityTask{}, &DecisionTask{}},
+		CrossClusterTasks:   []Task{&CrossClusterCancelExecutionTask{}},
+		TimerTasks:          []Task{&UserTimerTask{}},
 		ReplicationTasks:    []Task{},
 	}
 	stats := s.sc.computeWorkflowSnapshotStats(ms)
@@ -161,6 +164,7 @@ func (s *statsComputerSuite) TestComputeWorkflowSnapshotStats() {
 	s.Equal(len(ms.SignalInfos), stats.SignalInfoCount)
 	s.Equal(len(ms.RequestCancelInfos), stats.RequestCancelInfoCount)
 	s.Equal(len(ms.TransferTasks), stats.TransferTasksCount)
+	s.Equal(len(ms.CrossClusterTasks), stats.CrossClusterTaskCount)
 	s.Equal(len(ms.TimerTasks), stats.TimerTasksCount)
 	s.Equal(len(ms.ReplicationTasks), stats.ReplicationTasksCount)
 	s.Equal(stats.ExecutionInfoSize+stats.ActivityInfoSize+stats.TimerInfoSize+stats.ChildInfoSize+stats.SignalInfoSize+stats.BufferedEventsSize, stats.MutableStateSize)

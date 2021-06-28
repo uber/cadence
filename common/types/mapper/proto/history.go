@@ -1390,3 +1390,89 @@ func ToHistoryTerminateWorkflowExecutionRequest(t *historyv1.TerminateWorkflowEx
 		DomainUUID:       t.DomainId,
 	}
 }
+
+// FromHistoryGetCrossClusterTasksRequest converts internal GetCrossClusterTasksRequest type to proto
+func FromHistoryGetCrossClusterTasksRequest(t *types.GetCrossClusterTasksRequest) *historyv1.GetCrossClusterTasksRequest {
+	if t == nil {
+		return nil
+	}
+	return &historyv1.GetCrossClusterTasksRequest{
+		ShardIds:      t.ShardIDs,
+		TargetCluster: t.TargetCluster,
+	}
+}
+
+// ToHistoryGetCrossClusterTasksRequest converts proto GetCrossClusterTasksRequest type to internal
+func ToHistoryGetCrossClusterTasksRequest(t *historyv1.GetCrossClusterTasksRequest) *types.GetCrossClusterTasksRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetCrossClusterTasksRequest{
+		ShardIDs:      t.ShardIds,
+		TargetCluster: t.TargetCluster,
+	}
+}
+
+// FromHistoryGetCrossClusterTasksResponse converts internal GetCrossClusterTasksResponse type to proto
+func FromHistoryGetCrossClusterTasksResponse(t *types.GetCrossClusterTasksResponse) *historyv1.GetCrossClusterTasksResponse {
+	if t == nil {
+		return nil
+	}
+	return &historyv1.GetCrossClusterTasksResponse{
+		TasksByShard: FromCrossClusterTaskRequestMap(t.TasksByShard),
+	}
+}
+
+// ToHistoryGetCrossClusterTasksResponse converts proto GetCrossClusterTasksResponse type to internal
+func ToHistoryGetCrossClusterTasksResponse(t *historyv1.GetCrossClusterTasksResponse) *types.GetCrossClusterTasksResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.GetCrossClusterTasksResponse{
+		TasksByShard: ToCrossClusterTaskRequestMap(t.TasksByShard),
+	}
+}
+
+// FromHistoryRespondCrossClusterTasksCompletedRequest converts internal RespondCrossClusterTasksCompletedRequest type to thrift
+func FromHistoryRespondCrossClusterTasksCompletedRequest(t *types.RespondCrossClusterTasksCompletedRequest) *historyv1.RespondCrossClusterTasksCompletedRequest {
+	if t == nil {
+		return nil
+	}
+	return &historyv1.RespondCrossClusterTasksCompletedRequest{
+		ShardId:       t.ShardID,
+		TargetCluster: t.TargetCluster,
+		TaskResponses: FromCrossClusterTaskResponseArray(t.TaskResponses),
+	}
+}
+
+// ToHistoryRespondCrossClusterTasksCompletedRequest converts thrift RespondCrossClusterTasksCompletedRequest type to internal
+func ToHistoryRespondCrossClusterTasksCompletedRequest(t *historyv1.RespondCrossClusterTasksCompletedRequest) *types.RespondCrossClusterTasksCompletedRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.RespondCrossClusterTasksCompletedRequest{
+		ShardID:       t.ShardId,
+		TargetCluster: t.TargetCluster,
+		TaskResponses: ToCrossClusterTaskResponseArray(t.TaskResponses),
+	}
+}
+
+// FromHistoryRespondCrossClusterTasksCompletedResponse converts internal RespondCrossClusterTasksCompletedResponse type to thrift
+func FromHistoryRespondCrossClusterTasksCompletedResponse(t *types.RespondCrossClusterTasksCompletedResponse) *historyv1.RespondCrossClusterTasksCompletedResponse {
+	if t == nil {
+		return nil
+	}
+	return &historyv1.RespondCrossClusterTasksCompletedResponse{
+		Tasks: FromCrossClusterTaskRequestArray(t.Tasks),
+	}
+}
+
+// ToHistoryRespondCrossClusterTasksCompletedResponse converts thrift RespondCrossClusterTasksCompletedResponse type to internal
+func ToHistoryRespondCrossClusterTasksCompletedResponse(t *historyv1.RespondCrossClusterTasksCompletedResponse) *types.RespondCrossClusterTasksCompletedResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.RespondCrossClusterTasksCompletedResponse{
+		Tasks: ToCrossClusterTaskRequestArray(t.Tasks),
+	}
+}

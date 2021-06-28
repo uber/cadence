@@ -288,7 +288,7 @@ func (c *errorInjectionClient) ListTaskListPartitions(
 
 func (c *errorInjectionClient) GetTaskListsByDomain(
 	ctx context.Context,
-	request *types.MatchingGetTaskListsByDomainRequest,
+	request *types.GetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
 ) (*types.GetTaskListsByDomainResponse, error) {
 	fakeErr := errors.GenerateFakeError(c.errorRate)

@@ -188,7 +188,7 @@ func (c *retryableClient) ListTaskListPartitions(
 
 func (c *retryableClient) GetTaskListsByDomain(
 	ctx context.Context,
-	request *types.MatchingGetTaskListsByDomainRequest,
+	request *types.GetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
 ) (*types.GetTaskListsByDomainResponse, error) {
 

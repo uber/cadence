@@ -1,0 +1,8 @@
+{
+  "CurrVersion": "0.31",
+  "MinCompatibleVersion": "0.31",
+  "Description": "Add cross cluster queue and states",
+  "SchemaUpdateCqlFiles": [
+    "cross_cluster_queue.cql"
+  ]
+}

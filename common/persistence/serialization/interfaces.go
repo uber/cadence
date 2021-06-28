@@ -27,6 +27,7 @@ import (
 
 	"go.uber.org/thriftrw/wire"
 
+	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -35,267 +36,276 @@ import (
 type (
 	// ShardInfo blob in a serialization agnostic format
 	ShardInfo struct {
-		StolenSinceRenew                      *int32
-		UpdatedAt                             *time.Time
-		ReplicationAckLevel                   *int64
-		TransferAckLevel                      *int64
-		TimerAckLevel                         *time.Time
-		DomainNotificationVersion             *int64
-		ClusterTransferAckLevel               map[string]int64
-		ClusterTimerAckLevel                  map[string]time.Time
-		Owner                                 *string
-		ClusterReplicationLevel               map[string]int64
-		PendingFailoverMarkers                []byte
-		PendingFailoverMarkersEncoding        *string
-		ReplicationDlqAckLevel                map[string]int64
-		TransferProcessingQueueStates         []byte
-		TransferProcessingQueueStatesEncoding *string
-		TimerProcessingQueueStates            []byte
-		TimerProcessingQueueStatesEncoding    *string
+		StolenSinceRenew                          int32
+		UpdatedAt                                 time.Time
+		ReplicationAckLevel                       int64
+		TransferAckLevel                          int64
+		TimerAckLevel                             time.Time
+		DomainNotificationVersion                 int64
+		ClusterTransferAckLevel                   map[string]int64
+		ClusterTimerAckLevel                      map[string]time.Time
+		Owner                                     string
+		ClusterReplicationLevel                   map[string]int64
+		PendingFailoverMarkers                    []byte
+		PendingFailoverMarkersEncoding            string
+		ReplicationDlqAckLevel                    map[string]int64
+		TransferProcessingQueueStates             []byte
+		TransferProcessingQueueStatesEncoding     string
+		CrossClusterProcessingQueueStates         []byte
+		CrossClusterProcessingQueueStatesEncoding string
+		TimerProcessingQueueStates                []byte
+		TimerProcessingQueueStatesEncoding        string
 	}
 
 	// DomainInfo blob in a serialization agnostic format
 	DomainInfo struct {
-		Name                        *string
-		Description                 *string
-		Owner                       *string
-		Status                      *int32
-		Retention                   *time.Duration
-		EmitMetric                  *bool
-		ArchivalBucket              *string
-		ArchivalStatus              *int16
-		ConfigVersion               *int64
-		NotificationVersion         *int64
-		FailoverNotificationVersion *int64
-		FailoverVersion             *int64
-		ActiveClusterName           *string
+		Name                        string // TODO: This field seems not to be required. We already store domain name in another column.
+		Description                 string
+		Owner                       string
+		Status                      int32
+		Retention                   time.Duration
+		EmitMetric                  bool
+		ArchivalBucket              string
+		ArchivalStatus              int16
+		ConfigVersion               int64
+		NotificationVersion         int64
+		FailoverNotificationVersion int64
+		FailoverVersion             int64
+		ActiveClusterName           string
 		Clusters                    []string
 		Data                        map[string]string
 		BadBinaries                 []byte
-		BadBinariesEncoding         *string
-		HistoryArchivalStatus       *int16
-		HistoryArchivalURI          *string
-		VisibilityArchivalStatus    *int16
-		VisibilityArchivalURI       *string
-		FailoverEndTimestamp        *time.Time
-		PreviousFailoverVersion     *int64
-		LastUpdatedTimestamp        *time.Time
+		BadBinariesEncoding         string
+		HistoryArchivalStatus       int16
+		HistoryArchivalURI          string
+		VisibilityArchivalStatus    int16
+		VisibilityArchivalURI       string
+		FailoverEndTimestamp        *time.Time // TODO: There is logic checking if it's nil, should revisit this
+		PreviousFailoverVersion     int64
+		LastUpdatedTimestamp        time.Time
 	}
 
 	// HistoryBranchRange blob in a serialization agnostic format
 	HistoryBranchRange struct {
-		BranchID    *string
-		BeginNodeID *int64
-		EndNodeID   *int64
+		BranchID    string
+		BeginNodeID int64
+		EndNodeID   int64
 	}
 
 	// HistoryTreeInfo blob in a serialization agnostic format
 	HistoryTreeInfo struct {
-		CreatedTimestamp *time.Time
+		CreatedTimestamp time.Time
 		Ancestors        []*types.HistoryBranchRange
-		Info             *string
+		Info             string
 	}
 
 	// WorkflowExecutionInfo blob in a serialization agnostic format
 	WorkflowExecutionInfo struct {
 		ParentDomainID                     UUID
-		ParentWorkflowID                   *string
+		ParentWorkflowID                   string
 		ParentRunID                        UUID
-		InitiatedID                        *int64
-		CompletionEventBatchID             *int64
+		InitiatedID                        int64
+		CompletionEventBatchID             *int64 // TODO: This is not updated because of backward compatibility issue. Should revisit it later.
 		CompletionEvent                    []byte
-		CompletionEventEncoding            *string
-		TaskList                           *string
-		IsCron                             *bool
-		WorkflowTypeName                   *string
-		WorkflowTimeout                    *time.Duration
-		DecisionTaskTimeout                *time.Duration
+		CompletionEventEncoding            string
+		TaskList                           string
+		IsCron                             bool
+		WorkflowTypeName                   string
+		WorkflowTimeout                    time.Duration
+		DecisionTaskTimeout                time.Duration
 		ExecutionContext                   []byte
-		State                              *int32
-		CloseStatus                        *int32
-		StartVersion                       *int64
-		LastWriteEventID                   *int64
-		LastEventTaskID                    *int64
-		LastFirstEventID                   *int64
-		LastProcessedEvent                 *int64
-		StartTimestamp                     *time.Time
-		LastUpdatedTimestamp               *time.Time
-		DecisionVersion                    *int64
-		DecisionScheduleID                 *int64
-		DecisionStartedID                  *int64
-		DecisionTimeout                    *time.Duration
-		DecisionAttempt                    *int64
-		DecisionStartedTimestamp           *time.Time
-		DecisionScheduledTimestamp         *time.Time
-		CancelRequested                    *bool
-		DecisionOriginalScheduledTimestamp *time.Time
-		CreateRequestID                    *string
-		DecisionRequestID                  *string
-		CancelRequestID                    *string
-		StickyTaskList                     *string
-		StickyScheduleToStartTimeout       *time.Duration
-		RetryAttempt                       *int64
-		RetryInitialInterval               *time.Duration
-		RetryMaximumInterval               *time.Duration
-		RetryMaximumAttempts               *int32
-		RetryExpiration                    *time.Duration
-		RetryBackoffCoefficient            *float64
-		RetryExpirationTimestamp           *time.Time
+		State                              int32
+		CloseStatus                        int32
+		StartVersion                       int64
+		LastWriteEventID                   *int64 // TODO: We have logic checking if LastWriteEventID != nil. The field seems to be deprecated. Should revisit it later.
+		LastEventTaskID                    int64
+		LastFirstEventID                   int64
+		LastProcessedEvent                 int64
+		StartTimestamp                     time.Time
+		LastUpdatedTimestamp               time.Time
+		DecisionVersion                    int64
+		DecisionScheduleID                 int64
+		DecisionStartedID                  int64
+		DecisionTimeout                    time.Duration
+		DecisionAttempt                    int64
+		DecisionStartedTimestamp           time.Time
+		DecisionScheduledTimestamp         time.Time
+		CancelRequested                    bool
+		DecisionOriginalScheduledTimestamp time.Time
+		CreateRequestID                    string
+		DecisionRequestID                  string
+		CancelRequestID                    string
+		StickyTaskList                     string
+		StickyScheduleToStartTimeout       time.Duration
+		RetryAttempt                       int64
+		RetryInitialInterval               time.Duration
+		RetryMaximumInterval               time.Duration
+		RetryMaximumAttempts               int32
+		RetryExpiration                    time.Duration
+		RetryBackoffCoefficient            float64
+		RetryExpirationTimestamp           time.Time
 		RetryNonRetryableErrors            []string
-		HasRetryPolicy                     *bool
-		CronSchedule                       *string
-		EventStoreVersion                  *int32
+		HasRetryPolicy                     bool
+		CronSchedule                       string
+		EventStoreVersion                  int32
 		EventBranchToken                   []byte
-		SignalCount                        *int64
-		HistorySize                        *int64
-		ClientLibraryVersion               *string
-		ClientFeatureVersion               *string
-		ClientImpl                         *string
+		SignalCount                        int64
+		HistorySize                        int64
+		ClientLibraryVersion               string
+		ClientFeatureVersion               string
+		ClientImpl                         string
 		AutoResetPoints                    []byte
-		AutoResetPointsEncoding            *string
+		AutoResetPointsEncoding            string
 		SearchAttributes                   map[string][]byte
 		Memo                               map[string][]byte
 		VersionHistories                   []byte
-		VersionHistoriesEncoding           *string
+		VersionHistoriesEncoding           string
 	}
 
 	// ActivityInfo blob in a serialization agnostic format
 	ActivityInfo struct {
-		Version                  *int64
-		ScheduledEventBatchID    *int64
+		Version                  int64
+		ScheduledEventBatchID    int64
 		ScheduledEvent           []byte
-		ScheduledEventEncoding   *string
-		ScheduledTimestamp       *time.Time
-		StartedID                *int64
+		ScheduledEventEncoding   string
+		ScheduledTimestamp       time.Time
+		StartedID                int64
 		StartedEvent             []byte
-		StartedEventEncoding     *string
-		StartedTimestamp         *time.Time
-		ActivityID               *string
-		RequestID                *string
-		ScheduleToStartTimeout   *time.Duration
-		ScheduleToCloseTimeout   *time.Duration
-		StartToCloseTimeout      *time.Duration
-		HeartbeatTimeout         *time.Duration
-		CancelRequested          *bool
-		CancelRequestID          *int64
-		TimerTaskStatus          *int32
-		Attempt                  *int32
-		TaskList                 *string
-		StartedIdentity          *string
-		HasRetryPolicy           *bool
-		RetryInitialInterval     *time.Duration
-		RetryMaximumInterval     *time.Duration
-		RetryMaximumAttempts     *int32
-		RetryExpirationTimestamp *time.Time
-		RetryBackoffCoefficient  *float64
+		StartedEventEncoding     string
+		StartedTimestamp         time.Time
+		ActivityID               string
+		RequestID                string
+		ScheduleToStartTimeout   time.Duration
+		ScheduleToCloseTimeout   time.Duration
+		StartToCloseTimeout      time.Duration
+		HeartbeatTimeout         time.Duration
+		CancelRequested          bool
+		CancelRequestID          int64
+		TimerTaskStatus          int32
+		Attempt                  int32
+		TaskList                 string
+		StartedIdentity          string
+		HasRetryPolicy           bool
+		RetryInitialInterval     time.Duration
+		RetryMaximumInterval     time.Duration
+		RetryMaximumAttempts     int32
+		RetryExpirationTimestamp time.Time
+		RetryBackoffCoefficient  float64
 		RetryNonRetryableErrors  []string
-		RetryLastFailureReason   *string
-		RetryLastWorkerIdentity  *string
+		RetryLastFailureReason   string
+		RetryLastWorkerIdentity  string
 		RetryLastFailureDetails  []byte
 	}
 
 	// ChildExecutionInfo blob in a serialization agnostic format
 	ChildExecutionInfo struct {
-		Version                *int64
-		InitiatedEventBatchID  *int64
-		StartedID              *int64
+		Version                int64
+		InitiatedEventBatchID  int64
+		StartedID              int64
 		InitiatedEvent         []byte
-		InitiatedEventEncoding *string
-		StartedWorkflowID      *string
+		InitiatedEventEncoding string
+		StartedWorkflowID      string
 		StartedRunID           UUID
 		StartedEvent           []byte
-		StartedEventEncoding   *string
-		CreateRequestID        *string
-		DomainName             *string
-		WorkflowTypeName       *string
-		ParentClosePolicy      *int32
+		StartedEventEncoding   string
+		CreateRequestID        string
+		DomainName             string
+		WorkflowTypeName       string
+		ParentClosePolicy      int32
 	}
 
 	// SignalInfo blob in a serialization agnostic format
 	SignalInfo struct {
-		Version               *int64
-		InitiatedEventBatchID *int64
-		RequestID             *string
-		Name                  *string
+		Version               int64
+		InitiatedEventBatchID int64
+		RequestID             string
+		Name                  string
 		Input                 []byte
 		Control               []byte
 	}
 
 	// RequestCancelInfo blob in a serialization agnostic format
 	RequestCancelInfo struct {
-		Version               *int64
-		InitiatedEventBatchID *int64
-		CancelRequestID       *string
+		Version               int64
+		InitiatedEventBatchID int64
+		CancelRequestID       string
 	}
 
 	// TimerInfo blob in a serialization agnostic format
 	TimerInfo struct {
-		Version         *int64
-		StartedID       *int64
-		ExpiryTimestamp *time.Time
-		TaskID          *int64
+		Version         int64
+		StartedID       int64
+		ExpiryTimestamp time.Time
+		TaskID          int64
 	}
 
 	// TaskInfo blob in a serialization agnostic format
 	TaskInfo struct {
-		WorkflowID       *string
+		WorkflowID       string
 		RunID            UUID
-		ScheduleID       *int64
-		ExpiryTimestamp  *time.Time
-		CreatedTimestamp *time.Time
+		ScheduleID       int64
+		ExpiryTimestamp  time.Time
+		CreatedTimestamp time.Time
 	}
 
 	// TaskListInfo blob in a serialization agnostic format
 	TaskListInfo struct {
-		Kind            *int16
-		AckLevel        *int64
-		ExpiryTimestamp *time.Time
-		LastUpdated     *time.Time
+		Kind            int16
+		AckLevel        int64
+		ExpiryTimestamp time.Time
+		LastUpdated     time.Time
 	}
 
 	// TransferTaskInfo blob in a serialization agnostic format
 	TransferTaskInfo struct {
 		DomainID                UUID
-		WorkflowID              *string
+		WorkflowID              string
 		RunID                   UUID
-		TaskType                *int16
+		TaskType                int16
 		TargetDomainID          UUID
-		TargetWorkflowID        *string
+		TargetWorkflowID        string
 		TargetRunID             UUID
-		TaskList                *string
-		TargetChildWorkflowOnly *bool
-		ScheduleID              *int64
-		Version                 *int64
-		VisibilityTimestamp     *time.Time
+		TaskList                string
+		TargetChildWorkflowOnly bool
+		ScheduleID              int64
+		Version                 int64
+		VisibilityTimestamp     time.Time
 	}
+
+	// CrossClusterTask blob in a serialization agnostic format
+	// Cross cluster tasks are exactly like transfer tasks so
+	// instead of creating another struct and duplicating the same
+	// logic everywhere. We reuse TransferTaskInfo
+	CrossClusterTaskInfo         = TransferTaskInfo
+	sqlblobsCrossClusterTaskInfo = sqlblobs.TransferTaskInfo
 
 	// TimerTaskInfo blob in a serialization agnostic format
 	TimerTaskInfo struct {
 		DomainID        UUID
-		WorkflowID      *string
+		WorkflowID      string
 		RunID           UUID
-		TaskType        *int16
-		TimeoutType     *int16
-		Version         *int64
-		ScheduleAttempt *int64
-		EventID         *int64
+		TaskType        int16
+		TimeoutType     *int16 // TODO: The default value for TimeoutType doesn't make sense. No equivalent value for nil.
+		Version         int64
+		ScheduleAttempt int64
+		EventID         int64
 	}
 
 	// ReplicationTaskInfo blob in a serialization agnostic format
 	ReplicationTaskInfo struct {
 		DomainID                UUID
-		WorkflowID              *string
+		WorkflowID              string
 		RunID                   UUID
-		TaskType                *int16
-		Version                 *int64
-		FirstEventID            *int64
-		NextEventID             *int64
-		ScheduledID             *int64
-		EventStoreVersion       *int32
-		NewRunEventStoreVersion *int32
+		TaskType                int16
+		Version                 int64
+		FirstEventID            int64
+		NextEventID             int64
+		ScheduledID             int64
+		EventStoreVersion       int32
+		NewRunEventStoreVersion int32
 		BranchToken             []byte
 		NewRunBranchToken       []byte
-		CreationTimestamp       *time.Time
+		CreationTimestamp       time.Time
 	}
 )
 
@@ -316,6 +326,7 @@ type (
 		TaskInfoToBlob(*TaskInfo) (persistence.DataBlob, error)
 		TaskListInfoToBlob(*TaskListInfo) (persistence.DataBlob, error)
 		TransferTaskInfoToBlob(*TransferTaskInfo) (persistence.DataBlob, error)
+		CrossClusterTaskInfoToBlob(*CrossClusterTaskInfo) (persistence.DataBlob, error)
 		TimerTaskInfoToBlob(*TimerTaskInfo) (persistence.DataBlob, error)
 		ReplicationTaskInfoToBlob(*ReplicationTaskInfo) (persistence.DataBlob, error)
 
@@ -331,6 +342,7 @@ type (
 		TaskInfoFromBlob([]byte, string) (*TaskInfo, error)
 		TaskListInfoFromBlob([]byte, string) (*TaskListInfo, error)
 		TransferTaskInfoFromBlob([]byte, string) (*TransferTaskInfo, error)
+		CrossClusterTaskInfoFromBlob([]byte, string) (*CrossClusterTaskInfo, error)
 		TimerTaskInfoFromBlob([]byte, string) (*TimerTaskInfo, error)
 		ReplicationTaskInfoFromBlob([]byte, string) (*ReplicationTaskInfo, error)
 	}
@@ -349,6 +361,7 @@ type (
 		taskInfoToBlob(*TaskInfo) ([]byte, error)
 		taskListInfoToBlob(*TaskListInfo) ([]byte, error)
 		transferTaskInfoToBlob(*TransferTaskInfo) ([]byte, error)
+		crossClusterTaskInfoToBlob(*CrossClusterTaskInfo) ([]byte, error)
 		timerTaskInfoToBlob(*TimerTaskInfo) ([]byte, error)
 		replicationTaskInfoToBlob(*ReplicationTaskInfo) ([]byte, error)
 		encodingType() common.EncodingType
@@ -368,6 +381,7 @@ type (
 		taskInfoFromBlob([]byte) (*TaskInfo, error)
 		taskListInfoFromBlob([]byte) (*TaskListInfo, error)
 		transferTaskInfoFromBlob([]byte) (*TransferTaskInfo, error)
+		crossClusterTaskInfoFromBlob([]byte) (*CrossClusterTaskInfo, error)
 		timerTaskInfoFromBlob([]byte) (*TimerTaskInfo, error)
 		replicationTaskInfoFromBlob([]byte) (*ReplicationTaskInfo, error)
 	}

@@ -289,4 +289,8 @@ var (
 		DomainUUID:       DomainID,
 		TerminateRequest: &TerminateWorkflowExecutionRequest,
 	}
+	HistoryGetCrossClusterTasksRequest               = GetCrossClusterTasksRequest
+	HistoryGetCrossClusterTasksResponse              = GetCrossClusterTasksResponse
+	HistoryRespondCrossClusterTasksCompletedRequest  = RespondCrossClusterTasksCompletedRequest
+	HistoryRespondCrossClusterTasksCompletedResponse = RespondCrossClusterTasksCompletedResponse
 )

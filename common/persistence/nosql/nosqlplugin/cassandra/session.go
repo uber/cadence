@@ -28,7 +28,6 @@ import (
 )
 
 const (
-	cassandraProtoVersion = 4
 	defaultSessionTimeout = 10 * time.Second
 )
 
@@ -45,7 +44,7 @@ func CreateSession(cfg config.Cassandra) (gocql.Session, error) {
 		Datacenter:        cfg.Datacenter,
 		MaxConns:          cfg.MaxConns,
 		TLS:               cfg.TLS,
-		ProtoVersion:      cassandraProtoVersion,
+		ProtoVersion:      cfg.ProtoVersion,
 		Consistency:       gocql.LocalQuorum,
 		SerialConsistency: gocql.LocalSerial,
 		Timeout:           defaultSessionTimeout,

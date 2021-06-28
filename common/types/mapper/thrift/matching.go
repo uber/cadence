@@ -151,26 +151,6 @@ func FromMatchingListTaskListPartitionsRequest(t *types.MatchingListTaskListPart
 	}
 }
 
-// ToMatchingGetTaskListsByDomainRequest converts thrift GetTaskListsByDomainRequest type to internal
-func ToMatchingGetTaskListsByDomainRequest(t *matching.GetTaskListsByDomainRequest) *types.MatchingGetTaskListsByDomainRequest {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingGetTaskListsByDomainRequest{
-		Domain: t.GetDomain(),
-	}
-}
-
-// FromMatchingGetTaskListsByDomainRequest converts internal GetTaskListsByDomainRequest type to thrift
-func FromMatchingGetTaskListsByDomainRequest(t *types.MatchingGetTaskListsByDomainRequest) *matching.GetTaskListsByDomainRequest {
-	if t == nil {
-		return nil
-	}
-	return &matching.GetTaskListsByDomainRequest{
-		Domain: &t.Domain,
-	}
-}
-
 // ToMatchingListTaskListPartitionsRequest converts thrift ListTaskListPartitionsRequest type to internal
 func ToMatchingListTaskListPartitionsRequest(t *matching.ListTaskListPartitionsRequest) *types.MatchingListTaskListPartitionsRequest {
 	if t == nil {

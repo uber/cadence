@@ -104,6 +104,7 @@ docker run -e CASSANDRA_SEEDS=10.x.x.x                  -- csv of cassandra serv
     -e KEYSPACE=<keyspace>                              -- Cassandra keyspace
     -e VISIBILITY_KEYSPACE=<visibility_keyspace>        -- Cassandra visibility keyspace, if using basic visibility 
     -e KAFKA_SEEDS=10.x.x.x                             -- Kafka broker seed, if using ElasticSearch + Kafka for advanced visibility feature
+    -e CASSANDRA_PROTOCOL_VERSION=<protocol_version>    -- Cassandra protocol version
     -e ES_SEEDS=10.x.x.x                                -- ElasticSearch seed , if using ElasticSearch + Kafka for advanced visibility feature
     -e RINGPOP_SEEDS=10.x.x.x,10.x.x.x                  -- csv of ipaddrs for gossip bootstrap
     -e STATSD_ENDPOINT=10.x.x.x:8125                    -- statsd server endpoint

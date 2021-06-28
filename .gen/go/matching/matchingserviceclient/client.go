@@ -66,7 +66,7 @@ type Interface interface {
 
 	GetTaskListsByDomain(
 		ctx context.Context,
-		Request *matching.GetTaskListsByDomainRequest,
+		Request *shared.GetTaskListsByDomainRequest,
 		opts ...yarpc.CallOption,
 	) (*shared.GetTaskListsByDomainResponse, error)
 
@@ -219,7 +219,7 @@ func (c client) DescribeTaskList(
 
 func (c client) GetTaskListsByDomain(
 	ctx context.Context,
-	_Request *matching.GetTaskListsByDomainRequest,
+	_Request *shared.GetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
 ) (success *shared.GetTaskListsByDomainResponse, err error) {
 

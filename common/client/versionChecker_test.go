@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 
@@ -224,7 +225,7 @@ func (s *VersionCheckerSuite) TestSupportsConsistentQuery() {
 		},
 		{
 			clientImpl:           JavaSDK,
-			clientFeatureVersion: "1.5.0",
+			clientFeatureVersion: "1.4.0",
 			expectErr:            true,
 		},
 		{
@@ -410,14 +411,18 @@ func (s *VersionCheckerSuite) TestSupportsWorkflowAlreadyCompletedError() {
 		},
 	}
 
+	featureFlags := shared.FeatureFlags{
+		WorkflowExecutionAlreadyCompletedErrorEnabled: common.BoolPtr(true),
+	}
+
 	for _, tc := range testCases {
 		vc := NewVersionChecker()
 		if tc.expectErr {
-			err := vc.SupportsWorkflowAlreadyCompletedError(tc.clientImpl, tc.clientFeatureVersion)
+			err := vc.SupportsWorkflowAlreadyCompletedError(tc.clientImpl, tc.clientFeatureVersion, featureFlags)
 			s.Error(err)
 			s.IsType(&types.ClientVersionNotSupportedError{}, err)
 		} else {
-			s.NoError(vc.SupportsWorkflowAlreadyCompletedError(tc.clientImpl, tc.clientFeatureVersion))
+			s.NoError(vc.SupportsWorkflowAlreadyCompletedError(tc.clientImpl, tc.clientFeatureVersion, featureFlags))
 		}
 	}
 }

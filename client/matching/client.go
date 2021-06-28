@@ -242,7 +242,7 @@ func (c *clientImpl) ListTaskListPartitions(
 
 func (c *clientImpl) GetTaskListsByDomain(
 	ctx context.Context,
-	request *types.MatchingGetTaskListsByDomainRequest,
+	request *types.GetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
 ) (*types.GetTaskListsByDomainResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
@@ -257,7 +257,7 @@ func (c *clientImpl) GetTaskListsByDomain(
 	respChan := make(chan *types.GetTaskListsByDomainResponse, len(clients))
 	errChan := make(chan error, 1)
 	for _, cl := range clients {
-		go func(client Client, request *types.MatchingGetTaskListsByDomainRequest) {
+		go func(client Client, request *types.GetTaskListsByDomainRequest) {
 			defer wg.Done()
 
 			resp, err := c.getTaskListsByDomain(cl.(Client), ctx, request, opts...)
@@ -325,7 +325,7 @@ func (c *clientImpl) getClientForTaskList(key string) (Client, error) {
 func (c *clientImpl) getTaskListsByDomain(
 	cl Client,
 	ctx context.Context,
-	request *types.MatchingGetTaskListsByDomainRequest,
+	request *types.GetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
 ) (*types.GetTaskListsByDomainResponse, error) {
 	ctx, cancel := c.createContext(ctx)

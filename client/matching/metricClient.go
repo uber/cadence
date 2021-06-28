@@ -244,7 +244,7 @@ func (c *metricClient) ListTaskListPartitions(
 
 func (c *metricClient) GetTaskListsByDomain(
 	ctx context.Context,
-	request *types.MatchingGetTaskListsByDomainRequest,
+	request *types.GetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
 ) (*types.GetTaskListsByDomainResponse, error) {
 	c.metricsClient.IncCounter(metrics.MatchingClientGetTaskListsByDomainScope, metrics.CadenceClientRequests)

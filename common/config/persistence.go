@@ -39,21 +39,40 @@ func (c *Persistence) DefaultStoreType() string {
 
 // Validate validates the persistence config
 func (c *Persistence) Validate() error {
-	stores := []string{c.DefaultStore, c.VisibilityStore}
-	for _, st := range stores {
+	dbStoreKeys := []string{c.DefaultStore}
+
+	if _, ok := c.DataStores[c.VisibilityStore]; ok {
+		dbStoreKeys = append(dbStoreKeys, c.VisibilityStore)
+	} else {
+		if _, ok := c.DataStores[c.AdvancedVisibilityStore]; !ok {
+			return fmt.Errorf(" Must provide one of VisibilityStore and AdvancedVisibilityStore")
+		}
+	}
+
+	for _, st := range dbStoreKeys {
 		ds, ok := c.DataStores[st]
 		if !ok {
 			return fmt.Errorf("persistence config: missing config for datastore %v", st)
 		}
-		if ds.SQL == nil && ds.Cassandra == nil {
-			return fmt.Errorf("persistence config: datastore %v: must provide config for one of cassandra or sql stores", st)
+		if ds.Cassandra != nil {
+			if ds.NoSQL != nil {
+				return fmt.Errorf("persistence config: datastore %v: only one of Cassandra or NoSQL can be specified", st)
+			}
+			// for backward-compatibility
+			ds.NoSQL = ds.Cassandra
+			ds.NoSQL.PluginName = "cassandra"
 		}
-		if ds.SQL != nil && ds.Cassandra != nil {
-			return fmt.Errorf("persistence config: datastore %v: only one of SQL or cassandra can be specified", st)
+		if ds.SQL == nil && ds.NoSQL == nil {
+			return fmt.Errorf("persistence config: datastore %v: must provide config for one of SQL or NoSQL stores", st)
+		}
+		if ds.SQL != nil && ds.NoSQL != nil {
+			return fmt.Errorf("persistence config: datastore %v: only one of SQL or NoSQL can be specified", st)
 		}
 		if ds.SQL != nil && ds.SQL.NumShards == 0 {
 			ds.SQL.NumShards = 1
 		}
+		// write changes back to DataStores, as ds is a value object
+		c.DataStores[st] = ds
 	}
 	return nil
 }

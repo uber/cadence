@@ -86,10 +86,10 @@ func (t thriftClient) ListTaskListPartitions(
 
 func (t thriftClient) GetTaskListsByDomain(
 	ctx context.Context,
-	request *types.MatchingGetTaskListsByDomainRequest,
+	request *types.GetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
 ) (*types.GetTaskListsByDomainResponse, error) {
-	response, err := t.c.GetTaskListsByDomain(ctx, thrift.FromMatchingGetTaskListsByDomainRequest(request), opts...)
+	response, err := t.c.GetTaskListsByDomain(ctx, thrift.FromGetTaskListsByDomainRequest(request), opts...)
 	return thrift.ToGetTaskListsByDomainResponse(response), thrift.ToError(err)
 }
 

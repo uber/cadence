@@ -85,7 +85,7 @@ func (f *Factory) NewShardStore() (p.ShardStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newShardPersistence(conn, f.clusterName, f.logger, f.parser)
+	return NewShardPersistence(conn, f.clusterName, f.logger, f.parser)
 }
 
 // NewHistoryV2Store returns a new history store
@@ -128,7 +128,7 @@ func (f *Factory) NewQueue(queueType p.QueueType) (p.Queue, error) {
 		return nil, err
 	}
 
-	return newQueue(conn, f.logger, queueType)
+	return newQueueStore(conn, f.logger, queueType)
 }
 
 // Close closes the factory

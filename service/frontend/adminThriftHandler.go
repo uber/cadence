@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -62,6 +63,12 @@ func (t AdminThriftHandler) CloseShard(ctx context.Context, request *shared.Clos
 func (t AdminThriftHandler) DescribeCluster(ctx context.Context) (*admin.DescribeClusterResponse, error) {
 	response, err := t.h.DescribeCluster(withThriftTag(ctx))
 	return thrift.FromDescribeClusterResponse(response), thrift.FromError(err)
+}
+
+// DescribeHistoryHost forwards request to the underlying handler
+func (t AdminThriftHandler) DescribeShardDistribution(ctx context.Context, request *shared.DescribeShardDistributionRequest) (*shared.DescribeShardDistributionResponse, error) {
+	response, err := t.h.DescribeShardDistribution(withThriftTag(ctx), thrift.ToDescribeShardDistributionRequest(request))
+	return thrift.FromDescribeShardDistributionResponse(response), thrift.FromError(err)
 }
 
 // DescribeHistoryHost forwards request to the underlying handler
@@ -152,4 +159,9 @@ func (t AdminThriftHandler) ResendReplicationTasks(ctx context.Context, request 
 func (t AdminThriftHandler) ResetQueue(ctx context.Context, request *shared.ResetQueueRequest) error {
 	err := t.h.ResetQueue(withThriftTag(ctx), thrift.ToResetQueueRequest(request))
 	return thrift.FromError(err)
+}
+
+// GetCrossClusterTasks fetches cross cluster tasks
+func (t AdminThriftHandler) GetCrossClusterTasks(ctx context.Context, request *shared.GetCrossClusterTasksRequest) (*shared.GetCrossClusterTasksResponse, error) {
+	return nil, thrift.FromError(types.InternalServiceError{Message: "not implemented"})
 }

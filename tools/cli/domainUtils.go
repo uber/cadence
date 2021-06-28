@@ -23,6 +23,8 @@ package cli
 import (
 	"strings"
 
+	"github.com/uber/cadence/tools/common/flag"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
 	"github.com/urfave/cli"
@@ -75,11 +77,13 @@ var (
 		},
 		cli.StringFlag{
 			Name:  FlagIsGlobalDomainWithAlias,
-			Usage: "Flag to indicate whether domain is a global domain",
+			Usage: "Flag to indicate whether domain is a global domain. Default to true. Local domain is now legacy.",
+			Value: "true",
 		},
-		cli.StringFlag{
+		cli.GenericFlag{
 			Name:  FlagDomainDataWithAlias,
-			Usage: "Domain data of key value pairs, in format of k1:v1,k2:v2,k3:v3",
+			Usage: "Domain data of key value pairs (must be in key1=value1,key2=value2,...,keyN=valueN format, e.g. cluster=dca or cluster=dca,instance=cadence)",
+			Value: &flag.StringMap{},
 		},
 		cli.StringFlag{
 			Name:  FlagSecurityTokenWithAlias,
@@ -127,9 +131,10 @@ var (
 			Name:  FlagClustersWithAlias,
 			Usage: "Clusters",
 		},
-		cli.StringFlag{
+		cli.GenericFlag{
 			Name:  FlagDomainDataWithAlias,
-			Usage: "Domain data of key value pairs, in format of k1:v1,k2:v2,k3:v3 ",
+			Usage: "Domain data of key value pairs (must be in key1=value1,key2=value2,...,keyN=valueN format, e.g. cluster=dca or cluster=dca,instance=cadence)",
+			Value: &flag.StringMap{},
 		},
 		cli.StringFlag{
 			Name:  FlagSecurityTokenWithAlias,
@@ -245,7 +250,7 @@ func initializeAdminDomainHandler(
 		configuration,
 		logger,
 	)
-	metadataMgr := initializeMetadataMgr(
+	metadataMgr := initializeDomainMgr(
 		configuration,
 		clusterMetadata,
 		metricsClient,
@@ -277,7 +282,7 @@ func loadConfig(
 
 func initializeDomainHandler(
 	logger log.Logger,
-	metadataMgr persistence.MetadataManager,
+	domainManager persistence.DomainManager,
 	clusterMetadata cluster.Metadata,
 	archivalMetadata archiver.ArchivalMetadata,
 	archiverProvider provider.ArchiverProvider,
@@ -291,7 +296,7 @@ func initializeDomainHandler(
 	return domain.NewHandler(
 		domainConfig,
 		logger,
-		metadataMgr,
+		domainManager,
 		clusterMetadata,
 		initializeDomainReplicator(logger),
 		archivalMetadata,
@@ -310,19 +315,14 @@ func initializeLogger(
 	return loggerimpl.NewLogger(zapLogger)
 }
 
-func initializeMetadataMgr(
+func initializeDomainMgr(
 	serviceConfig *config.Config,
 	clusterMetadata cluster.Metadata,
 	metricsClient metrics.Client,
 	logger log.Logger,
-) persistence.MetadataManager {
+) persistence.DomainManager {
 
 	pConfig := serviceConfig.Persistence
-	pConfig.VisibilityConfig = &config.VisibilityConfig{
-		VisibilityListMaxQPS:            dynamicconfig.GetIntPropertyFilteredByDomain(dependencyMaxQPS),
-		EnableSampling:                  dynamicconfig.GetBoolPropertyFn(false), // not used by domain operation
-		EnableReadFromClosedExecutionV2: dynamicconfig.GetBoolPropertyFn(false), // not used by domain operation
-	}
 	pFactory := client.NewFactory(
 		&pConfig,
 		dynamicconfig.GetIntPropertyFn(dependencyMaxQPS),
@@ -330,7 +330,7 @@ func initializeMetadataMgr(
 		metricsClient,
 		logger,
 	)
-	metadata, err := pFactory.NewMetadataManager()
+	metadata, err := pFactory.NewDomainManager()
 	if err != nil {
 		ErrorAndExit("Unable to initialize metadata manager.", err)
 	}

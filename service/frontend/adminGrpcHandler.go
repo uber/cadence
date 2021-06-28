@@ -26,6 +26,7 @@ import (
 	"go.uber.org/yarpc"
 
 	adminv1 "github.com/uber/cadence/.gen/proto/admin/v1"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/proto"
 )
 
@@ -54,6 +55,11 @@ func (g adminGRPCHandler) CloseShard(ctx context.Context, request *adminv1.Close
 func (g adminGRPCHandler) DescribeCluster(ctx context.Context, _ *adminv1.DescribeClusterRequest) (*adminv1.DescribeClusterResponse, error) {
 	response, err := g.h.DescribeCluster(withGRPCTag(ctx))
 	return proto.FromAdminDescribeClusterResponse(response), proto.FromError(err)
+}
+
+func (g adminGRPCHandler) DescribeShardDistribution(ctx context.Context, request *adminv1.DescribeShardDistributionRequest) (*adminv1.DescribeShardDistributionResponse, error) {
+	response, err := g.h.DescribeShardDistribution(withGRPCTag(ctx), proto.ToAdminDescribeShardDistributionRequest(request))
+	return proto.FromAdminDescribeShardDistributionResponse(response), proto.FromError(err)
 }
 
 func (g adminGRPCHandler) DescribeHistoryHost(ctx context.Context, request *adminv1.DescribeHistoryHostRequest) (*adminv1.DescribeHistoryHostResponse, error) {
@@ -129,4 +135,8 @@ func (g adminGRPCHandler) ResendReplicationTasks(ctx context.Context, request *a
 func (g adminGRPCHandler) ResetQueue(ctx context.Context, request *adminv1.ResetQueueRequest) (*adminv1.ResetQueueResponse, error) {
 	err := g.h.ResetQueue(withGRPCTag(ctx), proto.ToAdminResetQueueRequest(request))
 	return &adminv1.ResetQueueResponse{}, proto.FromError(err)
+}
+
+func (g adminGRPCHandler) GetCrossClusterTasks(ctx context.Context, request *adminv1.GetCrossClusterTasksRequest) (*adminv1.GetCrossClusterTasksResponse, error) {
+	return nil, proto.FromError(types.InternalServiceError{Message: "not implemented"})
 }

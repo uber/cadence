@@ -155,7 +155,7 @@ func (mr *MockClientMockRecorder) ListTaskListPartitions(arg0, arg1 interface{},
 }
 
 // GetTaskListsByDomain mocks base method
-func (m *MockClient) GetTaskListsByDomain(arg0 context.Context, arg1 *types.MatchingGetTaskListsByDomainRequest, arg2 ...yarpc.CallOption) (*types.GetTaskListsByDomainResponse, error) {
+func (m *MockClient) GetTaskListsByDomain(arg0 context.Context, arg1 *types.GetTaskListsByDomainRequest, arg2 ...yarpc.CallOption) (*types.GetTaskListsByDomainResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {

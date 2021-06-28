@@ -122,6 +122,9 @@ func (s *QueuePersistenceSuite) TestQueueMetadataOperations() {
 	err = s.UpdateAckLevel(ctx, 25, "test2")
 	s.Require().NoError(err)
 
+	err = s.UpdateAckLevel(ctx, 24, "test2")
+	s.Require().NoError(err)
+
 	clusterAckLevels, err = s.GetAckLevels(ctx)
 	s.Require().NoError(err)
 	s.Assert().Len(clusterAckLevels, 2)

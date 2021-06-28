@@ -201,7 +201,7 @@ func (mr *_MockClientRecorder) DescribeTaskList(
 // 	... := client.GetTaskListsByDomain(...)
 func (m *MockClient) GetTaskListsByDomain(
 	ctx context.Context,
-	_Request *matching.GetTaskListsByDomainRequest,
+	_Request *shared.GetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
 ) (success *shared.GetTaskListsByDomainResponse, err error) {
 

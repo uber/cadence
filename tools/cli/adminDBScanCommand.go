@@ -233,17 +233,16 @@ func initializeExecutionStore(
 
 	var execStore persistence.ExecutionStore
 	dbType := c.String(FlagDBType)
+	if !isDBTypeSupported(dbType) {
+		supportedDBs := append(sql.GetRegisteredPluginNames(), "cassandra")
+		ErrorAndExit(fmt.Sprintf("The DB type is not supported. Options are: %s.", supportedDBs), nil)
+	}
 	logger := loggerimpl.NewNopLogger()
 	switch dbType {
 	case "cassandra":
 		execStore = initializeCassandraExecutionClient(c, shardID, logger)
 	default:
-		if sql.PluginRegistered(dbType) {
-			execStore = initializeSQLExecutionStore(c, shardID, logger)
-		} else {
-			supportedDBs := append(sql.GetRegisteredPluginNames(), "cassandra")
-			ErrorAndExit(fmt.Sprintf("The DB type is not supported. Options are: %s.", supportedDBs), nil)
-		}
+		execStore = initializeSQLExecutionStore(c, shardID, logger)
 	}
 
 	executionManager := persistence.NewExecutionManagerImpl(execStore, logger)
@@ -296,17 +295,16 @@ func initializeSQLExecutionStore(
 func initializeHistoryManager(c *cli.Context) persistence.HistoryManager {
 	var historyV2Mgr persistence.HistoryStore
 	dbType := c.String(FlagDBType)
+	if !isDBTypeSupported(dbType) {
+		supportedDBs := append(sql.GetRegisteredPluginNames(), "cassandra")
+		ErrorAndExit(fmt.Sprintf("The DB type is not supported. Options are: %s.", supportedDBs), nil)
+	}
 	logger := loggerimpl.NewNopLogger()
 	switch dbType {
 	case "cassandra":
 		historyV2Mgr = initializeCassandraHistoryStore(c, logger)
 	default:
-		if sql.PluginRegistered(dbType) {
-			historyV2Mgr = initializeSQLHistoryStore(c, logger)
-		} else {
-			supportedDBs := append(sql.GetRegisteredPluginNames(), "cassandra")
-			ErrorAndExit(fmt.Sprintf("The DB type is not supported. Options are: %s.", supportedDBs), nil)
-		}
+		historyV2Mgr = initializeSQLHistoryStore(c, logger)
 	}
 	historyStore := persistence.NewHistoryV2ManagerImpl(
 		historyV2Mgr,
@@ -314,6 +312,23 @@ func initializeHistoryManager(c *cli.Context) persistence.HistoryManager {
 		dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
 	)
 	return historyStore
+}
+
+func initializeShardManager(c *cli.Context) persistence.ShardManager {
+	var shardStore persistence.ShardStore
+	dbType := c.String(FlagDBType)
+	if !isDBTypeSupported(dbType) {
+		supportedDBs := append(sql.GetRegisteredPluginNames(), "cassandra")
+		ErrorAndExit(fmt.Sprintf("The DB type is not supported. Options are: %s.", supportedDBs), nil)
+	}
+	logger := loggerimpl.NewNopLogger()
+	switch dbType {
+	case "cassandra":
+		shardStore = initializeCassandraShardStore(c, "current-cluster", logger)
+	default:
+		shardStore = initializeSQLShardStore(c, "current-cluster", logger)
+	}
+	return persistence.NewShardManager(shardStore)
 }
 
 func initializeCassandraHistoryStore(
@@ -349,4 +364,39 @@ func getSQLParser(encodingType common.EncodingType, decodingTypes ...common.Enco
 		ErrorAndExit("failed to initialize sql parser", err)
 	}
 	return parser
+}
+
+func initializeCassandraShardStore(
+	c *cli.Context,
+	currentClusterName string,
+	logger log.Logger,
+) persistence.ShardStore {
+	client, session := connectToCassandra(c)
+	return cassandra.NewShardPersistenceFromSession(client, session, currentClusterName, loggerimpl.NewNopLogger())
+}
+
+func initializeSQLShardStore(
+	c *cli.Context,
+	currentClusterName string,
+	logger log.Logger,
+) persistence.ShardStore {
+	sqlDB := connectToSQL(c)
+	encodingType := c.String(FlagEncodingType)
+	decodingTypesStr := c.StringSlice(FlagDecodingTypes)
+	var decodingTypes []common.EncodingType
+	for _, dt := range decodingTypesStr {
+		decodingTypes = append(decodingTypes, common.EncodingType(dt))
+	}
+	shardStore, err := sql.NewShardPersistence(sqlDB, currentClusterName, logger, getSQLParser(common.EncodingType(encodingType), decodingTypes...))
+	if err != nil {
+		ErrorAndExit("Failed to get shard store from sql config", err)
+	}
+	return shardStore
+}
+
+func isDBTypeSupported(dbType string) bool {
+	if sql.PluginRegistered(dbType) || dbType == "cassandra" {
+		return true
+	}
+	return false
 }

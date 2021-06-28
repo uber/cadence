@@ -172,4 +172,6 @@ var (
 		ClusterName: ClusterName1,
 		Type:        common.Int32Ptr(QueueType),
 	}
+	AdminGetCrossClusterTasksRequest  = GetCrossClusterTasksRequest
+	AdminGetCrossClusterTasksResponse = GetCrossClusterTasksResponse
 )

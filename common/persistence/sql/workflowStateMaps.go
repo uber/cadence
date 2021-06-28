@@ -51,36 +51,36 @@ func updateActivityInfos(
 			startEvent, startEncoding := persistence.FromDataBlob(activityInfo.StartedEvent)
 
 			info := &serialization.ActivityInfo{
-				Version:                  &activityInfo.Version,
-				ScheduledEventBatchID:    &activityInfo.ScheduledEventBatchID,
+				Version:                  activityInfo.Version,
+				ScheduledEventBatchID:    activityInfo.ScheduledEventBatchID,
 				ScheduledEvent:           scheduledEvent,
-				ScheduledEventEncoding:   common.StringPtr(scheduledEncoding),
-				ScheduledTimestamp:       &activityInfo.ScheduledTime,
-				StartedID:                &activityInfo.StartedID,
+				ScheduledEventEncoding:   scheduledEncoding,
+				ScheduledTimestamp:       activityInfo.ScheduledTime,
+				StartedID:                activityInfo.StartedID,
 				StartedEvent:             startEvent,
-				StartedEventEncoding:     common.StringPtr(startEncoding),
-				StartedTimestamp:         &activityInfo.StartedTime,
-				ActivityID:               &activityInfo.ActivityID,
-				RequestID:                &activityInfo.RequestID,
-				ScheduleToStartTimeout:   &activityInfo.ScheduleToStartTimeout,
-				ScheduleToCloseTimeout:   &activityInfo.ScheduleToCloseTimeout,
-				StartToCloseTimeout:      &activityInfo.StartToCloseTimeout,
-				HeartbeatTimeout:         &activityInfo.HeartbeatTimeout,
-				CancelRequested:          &activityInfo.CancelRequested,
-				CancelRequestID:          &activityInfo.CancelRequestID,
-				TimerTaskStatus:          &activityInfo.TimerTaskStatus,
-				Attempt:                  &activityInfo.Attempt,
-				TaskList:                 &activityInfo.TaskList,
-				StartedIdentity:          &activityInfo.StartedIdentity,
-				HasRetryPolicy:           &activityInfo.HasRetryPolicy,
-				RetryInitialInterval:     &activityInfo.InitialInterval,
-				RetryBackoffCoefficient:  &activityInfo.BackoffCoefficient,
-				RetryMaximumInterval:     &activityInfo.MaximumInterval,
-				RetryExpirationTimestamp: &activityInfo.ExpirationTime,
-				RetryMaximumAttempts:     &activityInfo.MaximumAttempts,
+				StartedEventEncoding:     startEncoding,
+				StartedTimestamp:         activityInfo.StartedTime,
+				ActivityID:               activityInfo.ActivityID,
+				RequestID:                activityInfo.RequestID,
+				ScheduleToStartTimeout:   activityInfo.ScheduleToStartTimeout,
+				ScheduleToCloseTimeout:   activityInfo.ScheduleToCloseTimeout,
+				StartToCloseTimeout:      activityInfo.StartToCloseTimeout,
+				HeartbeatTimeout:         activityInfo.HeartbeatTimeout,
+				CancelRequested:          activityInfo.CancelRequested,
+				CancelRequestID:          activityInfo.CancelRequestID,
+				TimerTaskStatus:          activityInfo.TimerTaskStatus,
+				Attempt:                  activityInfo.Attempt,
+				TaskList:                 activityInfo.TaskList,
+				StartedIdentity:          activityInfo.StartedIdentity,
+				HasRetryPolicy:           activityInfo.HasRetryPolicy,
+				RetryInitialInterval:     activityInfo.InitialInterval,
+				RetryBackoffCoefficient:  activityInfo.BackoffCoefficient,
+				RetryMaximumInterval:     activityInfo.MaximumInterval,
+				RetryExpirationTimestamp: activityInfo.ExpirationTime,
+				RetryMaximumAttempts:     activityInfo.MaximumAttempts,
 				RetryNonRetryableErrors:  activityInfo.NonRetriableErrors,
-				RetryLastFailureReason:   &activityInfo.LastFailureReason,
-				RetryLastWorkerIdentity:  &activityInfo.LastWorkerIdentity,
+				RetryLastFailureReason:   activityInfo.LastFailureReason,
+				RetryLastWorkerIdentity:  activityInfo.LastWorkerIdentity,
 				RetryLastFailureDetails:  activityInfo.LastFailureDetails,
 			}
 			blob, err := parser.ActivityInfoToBlob(info)
@@ -225,13 +225,13 @@ func updateTimerInfos(
 		rows := make([]sqlplugin.TimerInfoMapsRow, len(timerInfos))
 		for i, timerInfo := range timerInfos {
 			blob, err := parser.TimerInfoToBlob(&serialization.TimerInfo{
-				Version:         &timerInfo.Version,
-				StartedID:       &timerInfo.StartedID,
-				ExpiryTimestamp: &timerInfo.ExpiryTime,
+				Version:         timerInfo.Version,
+				StartedID:       timerInfo.StartedID,
+				ExpiryTimestamp: timerInfo.ExpiryTime,
 				// TaskID is a misleading variable, it actually serves
 				// the purpose of indicating whether a timer task is
 				// generated for this timer info
-				TaskID: &timerInfo.TaskStatus,
+				TaskID: timerInfo.TaskStatus,
 			})
 			if err != nil {
 				return err
@@ -345,19 +345,19 @@ func updateChildExecutionInfos(
 			startEvent, startEncoding := persistence.FromDataBlob(childExecutionInfo.StartedEvent)
 
 			info := &serialization.ChildExecutionInfo{
-				Version:                &childExecutionInfo.Version,
-				InitiatedEventBatchID:  &childExecutionInfo.InitiatedEventBatchID,
+				Version:                childExecutionInfo.Version,
+				InitiatedEventBatchID:  childExecutionInfo.InitiatedEventBatchID,
 				InitiatedEvent:         initiateEvent,
-				InitiatedEventEncoding: &initiateEncoding,
+				InitiatedEventEncoding: initiateEncoding,
 				StartedEvent:           startEvent,
-				StartedEventEncoding:   &startEncoding,
-				StartedID:              &childExecutionInfo.StartedID,
-				StartedWorkflowID:      &childExecutionInfo.StartedWorkflowID,
+				StartedEventEncoding:   startEncoding,
+				StartedID:              childExecutionInfo.StartedID,
+				StartedWorkflowID:      childExecutionInfo.StartedWorkflowID,
 				StartedRunID:           serialization.MustParseUUID(childExecutionInfo.StartedRunID),
-				CreateRequestID:        &childExecutionInfo.CreateRequestID,
-				DomainName:             &childExecutionInfo.DomainName,
-				WorkflowTypeName:       &childExecutionInfo.WorkflowTypeName,
-				ParentClosePolicy:      common.Int32Ptr(int32(childExecutionInfo.ParentClosePolicy)),
+				CreateRequestID:        childExecutionInfo.CreateRequestID,
+				DomainName:             childExecutionInfo.DomainName,
+				WorkflowTypeName:       childExecutionInfo.WorkflowTypeName,
+				ParentClosePolicy:      int32(childExecutionInfo.ParentClosePolicy),
 			}
 			blob, err := parser.ChildExecutionInfoToBlob(info)
 			if err != nil {
@@ -479,9 +479,9 @@ func updateRequestCancelInfos(
 		rows := make([]sqlplugin.RequestCancelInfoMapsRow, len(requestCancelInfos))
 		for i, requestCancelInfo := range requestCancelInfos {
 			blob, err := parser.RequestCancelInfoToBlob(&serialization.RequestCancelInfo{
-				Version:               &requestCancelInfo.Version,
-				InitiatedEventBatchID: &requestCancelInfo.InitiatedEventBatchID,
-				CancelRequestID:       &requestCancelInfo.CancelRequestID,
+				Version:               requestCancelInfo.Version,
+				InitiatedEventBatchID: requestCancelInfo.InitiatedEventBatchID,
+				CancelRequestID:       requestCancelInfo.CancelRequestID,
 			})
 			if err != nil {
 				return err
@@ -590,10 +590,10 @@ func updateSignalInfos(
 		rows := make([]sqlplugin.SignalInfoMapsRow, len(signalInfos))
 		for i, signalInfo := range signalInfos {
 			blob, err := parser.SignalInfoToBlob(&serialization.SignalInfo{
-				Version:               &signalInfo.Version,
-				InitiatedEventBatchID: &signalInfo.InitiatedEventBatchID,
-				RequestID:             &signalInfo.SignalRequestID,
-				Name:                  &signalInfo.SignalName,
+				Version:               signalInfo.Version,
+				InitiatedEventBatchID: signalInfo.InitiatedEventBatchID,
+				RequestID:             signalInfo.SignalRequestID,
+				Name:                  signalInfo.SignalName,
 				Input:                 signalInfo.Input,
 				Control:               signalInfo.Control,
 			})

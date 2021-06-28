@@ -1,17 +1,13 @@
 persistence:
   defaultStore: cass-default
-  visibilityStore: cass-visibility
   advancedVisibilityStore: es-visibility
   numHistoryShards: 4
   datastores:
     cass-default:
-      cassandra:
+      nosql:
+        pluginName: "cassandra"
         hosts: "127.0.0.1"
         keyspace: "cadence"
-    cass-visibility:
-      cassandra:
-        hosts: "127.0.0.1"
-        keyspace: "cadence_visibility"
     es-visibility:
       elasticsearch:
         version: "v7"
@@ -76,7 +72,7 @@ services:
       port: 7940
 
 clusterMetadata:
-  enableGlobalDomain: false
+  enableGlobalDomain: true
   failoverVersionIncrement: 10
   primaryClusterName: "active"
   currentClusterName: "active"
