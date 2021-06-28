@@ -609,7 +609,7 @@ func FromDynamicConfigEntry(t *types.DynamicConfigEntry) *admin.DynamicConfigEnt
 	}
 	return &admin.DynamicConfigEntry{
 		Name:         &t.Name,
-		DefaultValue: &t.DefaultValue,
+		DefaultValue: FromDataBlob(t.DefaultValue),
 		Values:       FromDynamicConfigValueArray(t.Values),
 	}
 }
@@ -621,7 +621,7 @@ func ToDynamicConfigEntry(t *admin.DynamicConfigEntry) *types.DynamicConfigEntry
 	}
 	return &types.DynamicConfigEntry{
 		Name:         t.GetName(),
-		DefaultValue: t.GetDefaultValue(),
+		DefaultValue: ToDataBlob(t.GetDefaultValue()),
 		Values:       ToDynamicConfigValueArray(t.Values),
 	}
 }
@@ -656,7 +656,7 @@ func FromDynamicConfigValue(t *types.DynamicConfigValue) *admin.DynamicConfigVal
 		return nil
 	}
 	return &admin.DynamicConfigValue{
-		Value:   &t.Value,
+		Value:   FromDataBlob(t.Value),
 		Filters: FromDynamicConfigFilterArray(t.Filters),
 	}
 }
@@ -667,7 +667,7 @@ func ToDynamicConfigValue(t *admin.DynamicConfigValue) *types.DynamicConfigValue
 		return nil
 	}
 	return &types.DynamicConfigValue{
-		Value:   t.GetValue(),
+		Value:   ToDataBlob(t.Value),
 		Filters: ToDynamicConfigFilterArray(t.Filters),
 	}
 }
@@ -703,7 +703,7 @@ func FromDynamicConfigFilter(t *types.DynamicConfigFilter) *admin.DynamicConfigF
 	}
 	return &admin.DynamicConfigFilter{
 		Name:  &t.Name,
-		Value: &t.Value,
+		Value: FromDataBlob(t.Value),
 	}
 }
 
@@ -714,6 +714,6 @@ func ToDynamicConfigFilter(t *admin.DynamicConfigFilter) *types.DynamicConfigFil
 	}
 	return &types.DynamicConfigFilter{
 		Name:  t.GetName(),
-		Value: t.GetValue(),
+		Value: ToDataBlob(t.Value),
 	}
 }
