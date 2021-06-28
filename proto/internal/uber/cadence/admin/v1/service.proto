@@ -369,16 +369,16 @@ message ListDynamicConfigResponse {
 
 message DynamicConfigEntry {
 	string name = 1;
-	string default_value = 2;
+	api.v1.DataBlob default_value = 2;
 	repeated DynamicConfigValue values = 3;
 }
 
 message DynamicConfigValue {
-	string value = 1;
+	api.v1.DataBlob value = 1;
 	repeated DynamicConfigFilter filters = 2;
 }
 
 message DynamicConfigFilter {
 	string name = 1;
-	string value = 2;
+	api.v1.DataBlob value = 2;
 }
