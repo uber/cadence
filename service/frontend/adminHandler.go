@@ -1019,12 +1019,11 @@ func (adh *adminHandlerImpl) GetCrossClusterTasks(
 		return nil, adh.error(errClusterNameNotSet, scope)
 	}
 
-	// resp, err := adh.GetHistoryRawClient().GetCrossClusterTasks(ctx, request)
-	// if err != nil {
-	// 	return nil, adh.error(err, scope)
-	// }
-	// return resp, nil
-	return nil, nil // TODO
+	resp, err = adh.GetHistoryRawClient().GetCrossClusterTasks(ctx, request)
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+	return resp, nil
 }
 
 func (adh *adminHandlerImpl) validateGetWorkflowExecutionRawHistoryV2Request(
