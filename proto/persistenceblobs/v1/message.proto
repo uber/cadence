@@ -1284,24 +1284,3 @@ enum WorkflowBackoffType {
     WORKFLOW_BACKOFF_TYPE_RETRY = 1;
     WORKFLOW_BACKOFF_TYPE_CRON = 2;
 }
-
-message DynamicConfigBlob {
-    int32 schema_version = 1;
-    repeated DynamicConfigEntry entries = 2;
-}
-
-message DynamicConfigEntry {
-	string name = 1;
-	string default_value = 2;
-	repeated DynamicConfigValue values = 3;
-}
-
-message DynamicConfigValue {
-	string value = 1;
-	optional repeated DynamicConfigFilter filters = 2;
-}
-
-message DynamicConfigFilter {
-	string name = 1;
-	string value = 2;
-}
