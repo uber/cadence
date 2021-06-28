@@ -86,10 +86,18 @@ func newCrossClusterQueueProcessorBase(
 	crossClusterQueueProcessorBase := &crossClusterQueueProcessorBase{
 		processorBase: processorBase,
 		targetCluster: targetCluster,
-		// TODO: implement initialize taskInitializer.
+		// TODO: inject task executor
 		taskInitializer: func(taskInfo task.Info) task.Task {
 			switch taskInfo.GetTaskType() {
-			default:
+			case persistence.CrossClusterTaskTypeStartChildExecution:
+				return task.NewCrossClusterStartChildWorkflowTask(
+					shard,
+					taskInfo,
+					task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
+					shard.GetTimeSource(),
+					shard.GetConfig().CrossClusterTaskMaxRetryCount,
+				)
+			case persistence.CrossClusterTaskTypeSignalExecution:
 				return task.NewCrossClusterSignalWorkflowTask(
 					shard,
 					taskInfo,
@@ -97,6 +105,16 @@ func newCrossClusterQueueProcessorBase(
 					shard.GetTimeSource(),
 					shard.GetConfig().CrossClusterTaskMaxRetryCount,
 				)
+			case persistence.CrossClusterTaskTypeCancelExecution:
+				return task.NewCrossClusterCancelWorkflowTask(
+					shard,
+					taskInfo,
+					task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
+					shard.GetTimeSource(),
+					shard.GetConfig().CrossClusterTaskMaxRetryCount,
+				)
+			default:
+				panic(fmt.Sprintf("received unsupported cross cluster task type: %v", taskInfo.GetTaskType()))
 			}
 		},
 
