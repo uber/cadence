@@ -552,6 +552,9 @@ func (s *MatchingPersistenceSuite) TestListWithMultipleTaskList() {
 }
 
 func (s *MatchingPersistenceSuite) TestGetOrphanTasks() {
+	if os.Getenv("SKIP_GET_ORPHAN_TASKS") != "" {
+		s.T().Skipf("GetOrphanTasks not supported in %v", s.TaskMgr.GetName())
+	}
 	if s.TaskMgr.GetName() == "cassandra" {
 		// GetOrphanTasks API is currently not supported in cassandra"
 		return
