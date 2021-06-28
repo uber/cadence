@@ -84,7 +84,6 @@ const (
 	// ActionTypeUpdateTask is the ActionType to update outstanding task
 	ActionTypeUpdateTask
 	// add more ActionType here
-
 )
 
 // NewResetAction creates a new action for reseting processing queue states

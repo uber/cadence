@@ -21,11 +21,8 @@
 package queue
 
 import (
-	"context"
 	"fmt"
-	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -39,11 +36,6 @@ import (
 )
 
 type (
-	queueProcessorWithAckLevel struct {
-		queue    *crossClusterQueueProcessorBase
-		ackLevel int64
-	}
-
 	crossClusterQueueProcessor struct {
 		shard         shard.Context
 		historyEngine engine.Engine
@@ -57,10 +49,9 @@ type (
 
 		status       int32
 		shutdownChan chan struct{}
-		shutdownWG   sync.WaitGroup
 
-		taskExecutor            task.Executor
-		queueProcessorByCluster map[string]*queueProcessorWithAckLevel
+		taskExecutor    task.Executor
+		queueProcessors map[string]*crossClusterQueueProcessorBase
 	}
 )
 
@@ -75,7 +66,7 @@ func NewCrossClusterQueueProcessor(
 	currentClusterName := shard.GetClusterMetadata().GetCurrentClusterName()
 	config := shard.GetConfig()
 
-	queueProcessorByCluster := make(map[string]*queueProcessorWithAckLevel)
+	queueProcessors := make(map[string]*crossClusterQueueProcessorBase)
 	for clusterName, info := range shard.GetClusterMetadata().GetAllClusterInfo() {
 		if !info.Enabled || clusterName == currentClusterName {
 			continue
@@ -88,33 +79,21 @@ func NewCrossClusterQueueProcessor(
 			taskExecutor,
 			logger,
 		)
-		ackLevel := maximumTransferTaskKey
-		for _, state := range queueProcessor.getProcessingQueueStates().GetStateActionResult.States {
-			ackLevel = minTaskKey(ackLevel, state.AckLevel())
-		}
-
-		if ackLevel == maximumTransferTaskKey {
-			panic(fmt.Sprintf("no ack level is defined in cross cluster queeu with cluster: %v", clusterName))
-		}
-
-		queueProcessorByCluster[clusterName] = &queueProcessorWithAckLevel{
-			queue:    queueProcessor,
-			ackLevel: ackLevel.(transferTaskKey).taskID,
-		}
+		queueProcessors[clusterName] = queueProcessor
 	}
 
 	return &crossClusterQueueProcessor{
-		shard:                   shard,
-		historyEngine:           historyEngine,
-		taskProcessor:           taskProcessor,
-		config:                  config,
-		isGlobalDomainEnabled:   shard.GetClusterMetadata().IsGlobalDomainEnabled(),
-		metricsClient:           shard.GetMetricsClient(),
-		logger:                  logger,
-		status:                  common.DaemonStatusInitialized,
-		shutdownChan:            make(chan struct{}),
-		taskExecutor:            taskExecutor, //?
-		queueProcessorByCluster: queueProcessorByCluster,
+		shard:                 shard,
+		historyEngine:         historyEngine,
+		taskProcessor:         taskProcessor,
+		config:                config,
+		isGlobalDomainEnabled: shard.GetClusterMetadata().IsGlobalDomainEnabled(),
+		metricsClient:         shard.GetMetricsClient(),
+		logger:                logger,
+		status:                common.DaemonStatusInitialized,
+		shutdownChan:          make(chan struct{}),
+		taskExecutor:          taskExecutor,
+		queueProcessors:       queueProcessors,
 	}
 }
 
@@ -164,13 +143,10 @@ func (c *crossClusterQueueProcessor) Start() {
 	}
 
 	if c.isGlobalDomainEnabled {
-		for _, queueProcessor := range c.queueProcessorByCluster {
-			queueProcessor.queue.Start()
+		for _, queueProcessor := range c.queueProcessors {
+			queueProcessor.Start()
 		}
 	}
-
-	c.shutdownWG.Add(1)
-	go c.completeTaskLoop()
 }
 
 func (c *crossClusterQueueProcessor) Stop() {
@@ -179,13 +155,12 @@ func (c *crossClusterQueueProcessor) Stop() {
 	}
 
 	if c.isGlobalDomainEnabled {
-		for _, queueProcessor := range c.queueProcessorByCluster {
-			queueProcessor.queue.Stop()
+		for _, queueProcessor := range c.queueProcessors {
+			queueProcessor.Stop()
 		}
 	}
 
 	close(c.shutdownChan)
-	common.AwaitWaitGroup(&c.shutdownWG, time.Minute)
 }
 
 func (c *crossClusterQueueProcessor) NotifyNewTask(
@@ -197,11 +172,11 @@ func (c *crossClusterQueueProcessor) NotifyNewTask(
 		return
 	}
 
-	queueProcessor, ok := c.queueProcessorByCluster[clusterName]
+	queueProcessor, ok := c.queueProcessors[clusterName]
 	if !ok {
 		panic(fmt.Sprintf("Cannot find cross cluster processor for %s.", clusterName))
 	}
-	queueProcessor.queue.notifyNewTask()
+	queueProcessor.notifyNewTask()
 }
 
 func (c *crossClusterQueueProcessor) HandleAction(
@@ -209,12 +184,12 @@ func (c *crossClusterQueueProcessor) HandleAction(
 	action *Action,
 ) (*ActionResult, error) {
 
-	queueProcessor, ok := c.queueProcessorByCluster[clusterName]
+	queueProcessor, ok := c.queueProcessors[clusterName]
 	if !ok {
 		return nil, fmt.Errorf("failed to find the cross cluster queue with cluster name: %v", clusterName)
 	}
 
-	resultNotificationCh, added := queueProcessor.queue.addAction(action)
+	resultNotificationCh, added := queueProcessor.addAction(action)
 	if !added {
 		return nil, errProcessorShutdown
 	}
@@ -237,81 +212,4 @@ func (c *crossClusterQueueProcessor) LockTaskProcessing() {
 
 func (c *crossClusterQueueProcessor) UnlockTaskProcessing() {
 	panic("cross cluster queue doesn't provide locking")
-}
-
-func (c *crossClusterQueueProcessor) completeTaskLoop() {
-	defer c.shutdownWG.Done()
-
-	completeTimer := time.NewTimer(c.config.CrossClusterProcessorCompleteTaskInterval())
-	defer completeTimer.Stop()
-
-	for {
-		select {
-		case <-c.shutdownChan:
-			// before shutdown, make sure the ack level is up to date
-			if err := c.completeTask(); err != nil {
-				c.logger.Error("Error complete cross cluster task", tag.Error(err))
-			}
-			return
-		case <-completeTimer.C:
-			for attempt := 0; attempt < c.config.CrossClusterProcessorCompleteTaskFailureRetryCount(); attempt++ {
-				err := c.completeTask()
-				if err == nil {
-					break
-				}
-
-				c.logger.Error("Failed to complete cross cluster task", tag.Error(err))
-				if err == shard.ErrShardClosed {
-					// shard closed, trigger shutdown and bail out
-					go c.Stop()
-					return
-				}
-				backoff := time.Duration(attempt * 100)
-				time.Sleep(backoff * time.Millisecond)
-
-				select {
-				case <-c.shutdownChan:
-					// break the retry loop if shutdown chan is closed
-					break
-				default:
-				}
-			}
-
-			completeTimer.Reset(c.config.CrossClusterProcessorCompleteTaskInterval())
-		}
-	}
-}
-
-func (c *crossClusterQueueProcessor) completeTask() error {
-	if c.isGlobalDomainEnabled {
-		for clusterName, queueProcessor := range c.queueProcessorByCluster {
-			newAckLevel := maximumTransferTaskKey
-			actionResult, err := c.HandleAction(clusterName, NewGetStateAction())
-			if err != nil {
-				return err
-			}
-			for _, queueState := range actionResult.GetStateActionResult.States {
-				newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
-			}
-
-			newAckLevelTaskID := newAckLevel.(transferTaskKey).taskID
-			c.logger.Debug(fmt.Sprintf("Start completing cross cluster task from: %v, to %v.", queueProcessor.ackLevel, newAckLevelTaskID))
-			c.metricsClient.IncCounter(metrics.CrossClusterQueueProcessorScope, metrics.TaskBatchCompleteCounter)
-
-			if queueProcessor.ackLevel >= newAckLevelTaskID {
-				return nil
-			}
-
-			if err := c.shard.GetExecutionManager().RangeCompleteCrossClusterTask(context.Background(), &persistence.RangeCompleteCrossClusterTaskRequest{
-				TargetCluster:        clusterName,
-				ExclusiveBeginTaskID: queueProcessor.ackLevel,
-				InclusiveEndTaskID:   newAckLevelTaskID,
-			}); err != nil {
-				return err
-			}
-
-			queueProcessor.ackLevel = newAckLevelTaskID
-		}
-	}
-	return nil
 }

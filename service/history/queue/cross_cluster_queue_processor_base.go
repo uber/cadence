@@ -22,6 +22,7 @@ package queue
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -166,6 +167,7 @@ func (c *crossClusterQueueProcessorBase) processorPump() {
 	))
 	defer maxPollTimer.Stop()
 
+	var ackLevel int64
 processorPumpLoop:
 	for {
 		select {
@@ -178,6 +180,11 @@ processorPumpLoop:
 			if err == shard.ErrShardClosed || (err == nil && processFinished) {
 				go c.Stop()
 				break processorPumpLoop
+			}
+			ackLevel, err = c.completeAckTasks(ackLevel)
+			if err != nil {
+				c.logger.Error("failed to complete ack tasks", tag.Error(err))
+				c.metricsScope.IncCounter(metrics.TaskBatchCompleteFailure)
 			}
 			updateAckTimer.Reset(backoff.JitDuration(
 				c.options.UpdateAckInterval(),
@@ -198,10 +205,7 @@ processorPumpLoop:
 					// if redispatcher still has a large number of tasks
 					// this only happens when system is under very high load
 					// we should backoff here instead of keeping submitting tasks to task processor
-					time.Sleep(backoff.JitDuration(
-						c.options.PollBackoffInterval(),
-						c.options.PollBackoffIntervalJitterCoefficient(),
-					))
+					c.resetBackoffTimer()
 				}
 				// re-enqueue the event to see if we need keep re-dispatching or load new tasks from persistence
 				select {
@@ -215,6 +219,42 @@ processorPumpLoop:
 			c.handleActionNotification(notification)
 		}
 	}
+}
+func (c *crossClusterQueueProcessorBase) completeAckTasks(ackLevel int64) (int64, error) {
+	notification := actionNotification{
+		action:               NewGetStateAction(),
+		resultNotificationCh: make(chan actionResultNotification, 1),
+	}
+	c.handleActionNotification(notification)
+	var newAckLevel task.Key
+	select {
+	case resultNotification := <-notification.resultNotificationCh:
+		if resultNotification.err != nil {
+			return ackLevel, resultNotification.err
+		}
+		for _, queueState := range resultNotification.result.GetStateActionResult.States {
+			newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
+		}
+	case <-c.shutdownCh:
+		return ackLevel, nil
+	}
+	newAckLevelTaskID := newAckLevel.(transferTaskKey).taskID
+	c.logger.Debug(fmt.Sprintf("Start completing cross cluster task from: %v, to %v.", ackLevel, newAckLevelTaskID))
+	c.metricsScope.IncCounter(metrics.TaskBatchCompleteCounter)
+
+	if ackLevel >= newAckLevelTaskID {
+		return ackLevel, nil
+	}
+
+	if err := c.shard.GetExecutionManager().RangeCompleteCrossClusterTask(context.Background(), &persistence.RangeCompleteCrossClusterTaskRequest{
+		TargetCluster:        c.targetCluster,
+		ExclusiveBeginTaskID: ackLevel,
+		InclusiveEndTaskID:   newAckLevelTaskID,
+	}); err != nil {
+		return ackLevel, nil
+	}
+
+	return newAckLevelTaskID, nil
 }
 
 func (c *crossClusterQueueProcessorBase) readTasks(
@@ -338,6 +378,38 @@ func (c *crossClusterQueueProcessorBase) readyForProcess(level int) {
 	}
 }
 
+func (c *crossClusterQueueProcessorBase) resetBackoffTimer() {
+	c.processingLock.Lock()
+	defer c.processingLock.Unlock()
+
+	for _, queueCollection := range c.processingQueueCollections {
+		level := queueCollection.Level()
+		backoffDuration := backoff.JitDuration(
+			c.options.PollBackoffInterval(),
+			c.options.PollBackoffIntervalJitterCoefficient(),
+		)
+		c.backoffTimer[level] = time.AfterFunc(backoffDuration, func() {
+			select {
+			case <-c.shutdownCh:
+				return
+			default:
+			}
+
+			c.processingLock.Lock()
+			defer c.processingLock.Unlock()
+
+			c.shouldProcess[level] = true
+			delete(c.backoffTimer, level)
+
+			// trigger the actual processing
+			select {
+			case c.processCh <- struct{}{}:
+			default:
+			}
+		})
+	}
+}
+
 func (c *crossClusterQueueProcessorBase) setupBackoffTimer(level int) {
 	c.processingLock.Lock()
 	defer c.processingLock.Unlock()
@@ -456,25 +528,24 @@ func (c *crossClusterQueueProcessorBase) processQueueCollections() {
 			continue
 		}
 
+		c.Lock()
+		if c.outstandingTaskCount > c.options.MaxPendingTaskSize() {
+			more = true
+			break
+		}
+		c.addOutstandingTaskCountLocked(len(taskInfos))
+		c.Unlock()
+
 		tasks := make(map[task.Key]task.Task)
 		newTaskID := readLevel.(transferTaskKey).taskID
-
-		c.Lock()
 		for _, taskInfo := range taskInfos {
 			if !domainFilter.Filter(taskInfo.GetDomainID()) {
 				continue
-			}
-
-			if c.outstandingTaskCount > c.options.MaxPendingTaskSize() {
-				more = true
-				break
 			}
 			task := c.taskInitializer(taskInfo)
 			tasks[newTransferTaskKey(taskInfo.GetTaskID())] = task
 			newTaskID = task.GetTaskID()
 		}
-		c.addOutstandingTaskCountLocked(len(tasks))
-		c.Unlock()
 
 		var newReadLevel task.Key
 		if !more {
