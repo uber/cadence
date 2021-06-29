@@ -332,7 +332,7 @@ type (
 	/**
 	* workflowCRUD is for core data models of workflow execution.
 	*
-	* Recommendation: If possible, use 7 tables(current_workflow, workflow_execution, transfer_task, replication_task, cross_cluster_task, timer_task, replication_dlq_task) to implement
+	* Recommendation: If possible, use 8 tables(current_workflow, workflow_execution, transfer_task, replication_task, cross_cluster_task, timer_task, buffered_event_list, replication_dlq_task) to implement
 	* current_workflow is to track the currentRunID of a workflowID for ensuring the ID-Uniqueness of Cadence workflows.
 	* 		Each record is for one workflowID
 	* workflow_execution is to store the core data of workflow execution.
@@ -348,7 +348,8 @@ type (
 	* cross_cluster_task is to store also background tasks that need to be processed right after the transaction, and only for
 	*		but only for cross cluster feature. Each record is a cross cluster task generated for a target cluster.
 	*		CrossCluster task stores information similar to TransferTask.
-	* The above 6 tables will be required to execute transaction write with the condition of shard record from shardCRUD.
+	* buffered_event_list is to store the buffered event of a workflow execution
+	* The above 7 tables will be required to execute transaction write with the condition of shard record from shardCRUD.
 	* replication_dlq_task is DeadLetterQueue when target cluster pulling and applying replication task. Each record represents
 	*		a task for a target cluster.
 	*
@@ -359,6 +360,7 @@ type (
 	* replication_task: partition key(shardID), range key(taskID)
 	* cross_cluster_task: partition key(shardID), range key(clusterName, taskID)
 	* timer_task: partition key(shardID), range key(visibilityTimestamp)
+	* buffered_event_list: partition key(shardID), range key(domainID, workflowID, runID)
 	* replication_dlq_task: partition key(shardID), range key(clusterName, taskID)
 	*
 	* NOTE: Cassandra limits lightweight transaction to execute within one table. So the 6 tables + shard table are implemented
@@ -440,6 +442,8 @@ type (
 		VersionHistories *persistence.DataBlob
 		Checksums        *checksum.Checksum
 		LastWriteVersion int64
+		// condition checking for updating execution info
+		PreviousNextEventIDCondition *int64
 
 		// MapsWriteMode controls how to write into the six maps(activityInfoMap, timerInfoMap, childWorkflowInfoMap, signalInfoMap and signalRequestedIDs)
 		MapsWriteMode WorkflowExecutionMapsWriteMode
@@ -459,9 +463,16 @@ type (
 		RequestCancelInfoKeysToDelete  []int64
 		SignalInfoKeysToDelete         []int64
 		SignalRequestedIDsKeysToDelete []string
+
+		// EventBufferWriteMode controls how to write into the buffered event list
+		// only needed for UpdateWorkflowExecutionWithTasks API
+		EventBufferWriteMode EventBufferWriteMode
+		// the batch of event to be appended, only for EventBufferWriteModeAppend
+		NewBufferedEventBatch *persistence.DataBlob
 	}
 
 	WorkflowExecutionMapsWriteMode int
+	EventBufferWriteMode           int
 
 	TimerTask struct {
 		Type int
@@ -740,6 +751,16 @@ const (
 	// Override mode will reset(override) the whole maps
 	WorkflowExecutionMapsWriteModeReset
 )
+
+const (
+	// not doing anything to the event buffer
+	EventBufferWriteModeNone EventBufferWriteMode = iota
+	// append a new event to the event buffer
+	EventBufferWriteModeAppend
+	// clear(delete all event from) the event buffer
+	EventBufferWriteModeClear
+)
+
 func (w *CurrentWorkflowWriteCondition) GetCurrentRunID() string {
 	if w == nil || w.CurrentRunID == nil {
 		return ""
