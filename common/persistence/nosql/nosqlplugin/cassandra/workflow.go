@@ -167,7 +167,7 @@ func (db *cdb) UpdateWorkflowExecutionWithTasks(
 	}
 
 	if resetExecution != nil {
-		err = db.resetWorkflowExecutionAndResetMapsAndEventBuffer(batch, shardID, domainID, workflowID, resetExecution)
+		err = db.resetWorkflowExecutionAndMapsAndEventBuffer(batch, shardID, domainID, workflowID, resetExecution)
 		if err != nil {
 			return err
 		}

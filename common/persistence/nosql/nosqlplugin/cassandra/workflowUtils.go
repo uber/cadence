@@ -1043,7 +1043,7 @@ func (db *cdb) createWorkflowExecutionWithMergeMaps(
 	return db.updateSignalsRequested(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalRequestedIDs, nil)
 }
 
-func (db *cdb) resetWorkflowExecutionAndResetMapsAndEventBuffer(
+func (db *cdb) resetWorkflowExecutionAndMapsAndEventBuffer(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
