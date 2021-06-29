@@ -209,7 +209,9 @@ func (e *matchingEngineImpl) getTaskListManager(
 	)
 	// Cache user defined task list in taskListCache
 	if e.config.EnableTaskListCache(taskList.domainID) {
-		e.cacheTaskListByDomainLocked(taskList, *taskListKind)
+		if taskListKind != nil {
+			e.cacheTaskListByDomainLocked(taskList, *taskListKind)
+		}
 	}
 	e.taskListsLock.Unlock()
 	err = mgr.Start()
