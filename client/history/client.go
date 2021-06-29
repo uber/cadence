@@ -1035,22 +1035,20 @@ func (c *clientImpl) GetCrossClusterTasks(
 		requestByClient[client].ShardIDs = append(requestByClient[client].ShardIDs, shardID)
 	}
 
-	var wg sync.WaitGroup
+	// preserve 5% timeout to return partial of the result if context is timing out
+	ctx, cancel := c.createChildContext(ctx, 0.05)
+	defer cancel()
+
 	futureByClient := make(map[Client]future.Future, len(requestByClient))
 	for client, req := range requestByClient {
 		future, settable := future.NewFuture()
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
 			settable.Set(client.GetCrossClusterTasks(ctx, req))
 		}()
 
 		futureByClient[client] = future
 	}
 
-	// preserve 5% timeout to return partial of the result if context is timing out
-	ctx, cancel := c.createChildContext(ctx, 0.05)
-	defer cancel()
 	response := &types.GetCrossClusterTasksResponse{
 		TasksByShard: make(map[int32][]*types.CrossClusterTaskRequest),
 	}
@@ -1078,7 +1076,8 @@ func (c *clientImpl) GetCrossClusterTasks(
 			}
 		}
 	}
-	wg.Wait()
+	// not using a waitGroup for created goroutines as once all futures are unblocked,
+	// those goroutines will eventually be completed
 
 	return response, err
 }
