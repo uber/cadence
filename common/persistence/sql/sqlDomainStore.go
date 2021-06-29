@@ -45,7 +45,7 @@ func newMetadataPersistenceV2(
 	currentClusterName string,
 	logger log.Logger,
 	parser serialization.Parser,
-) (persistence.MetadataStore, error) {
+) (persistence.DomainStore, error) {
 	return &sqlDomainStore{
 		sqlStore: sqlStore{
 			db:     db,

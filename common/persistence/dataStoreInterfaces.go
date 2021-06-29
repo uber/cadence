@@ -76,8 +76,8 @@ type (
 		GetOrphanTasks(ctx context.Context, request *GetOrphanTasksRequest) (*GetOrphanTasksResponse, error)
 	}
 
-	// MetadataStore is a lower level of DomainManager
-	MetadataStore interface {
+	// DomainStore is a lower level of DomainManager
+	DomainStore interface {
 		Closeable
 		GetName() string
 		CreateDomain(ctx context.Context, request *InternalCreateDomainRequest) (*CreateDomainResponse, error)

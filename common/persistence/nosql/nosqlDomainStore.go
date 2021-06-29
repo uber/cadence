@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package nosql
 
 import (
 	"context"
@@ -35,26 +35,26 @@ import (
 )
 
 type (
-	nosqlDomainManager struct {
-		nosqlManager
+	nosqlDomainStore struct {
+		nosqlStore
 		currentClusterName string
 	}
 )
 
-// newMetadataPersistenceV2 is used to create an instance of HistoryManager implementation
-func newMetadataPersistenceV2(
+// newNoSQLDomainStore is used to create an instance of DomainStore implementation
+func newNoSQLDomainStore(
 	cfg config.Cassandra,
 	currentClusterName string,
 	logger log.Logger,
-) (p.MetadataStore, error) {
+) (p.DomainStore, error) {
 	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
 	db, err := cassandra.NewCassandraDB(cfg, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	return &nosqlDomainManager{
-		nosqlManager: nosqlManager{
+	return &nosqlDomainStore{
+		nosqlStore: nosqlStore{
 			db:     db,
 			logger: logger,
 		},
@@ -67,7 +67,7 @@ func newMetadataPersistenceV2(
 // 'Domains' table and then do a conditional insert into domains_by_name table.  If the conditional write fails we
 // delete the orphaned entry from domains table.  There is a chance delete entry could fail and we never delete the
 // orphaned entry from domains table.  We might need a background job to delete those orphaned record.
-func (m *nosqlDomainManager) CreateDomain(
+func (m *nosqlDomainStore) CreateDomain(
 	ctx context.Context,
 	request *p.InternalCreateDomainRequest,
 ) (*p.CreateDomainResponse, error) {
@@ -100,7 +100,7 @@ func (m *nosqlDomainManager) CreateDomain(
 	return &p.CreateDomainResponse{ID: request.Info.ID}, nil
 }
 
-func (m *nosqlDomainManager) UpdateDomain(
+func (m *nosqlDomainStore) UpdateDomain(
 	ctx context.Context,
 	request *p.InternalUpdateDomainRequest,
 ) error {
@@ -130,7 +130,7 @@ func (m *nosqlDomainManager) UpdateDomain(
 	return nil
 }
 
-func (m *nosqlDomainManager) GetDomain(
+func (m *nosqlDomainStore) GetDomain(
 	ctx context.Context,
 	request *p.GetDomainRequest,
 ) (*p.InternalGetDomainResponse, error) {
@@ -198,7 +198,7 @@ func (m *nosqlDomainManager) GetDomain(
 	}, nil
 }
 
-func (m *nosqlDomainManager) ListDomains(
+func (m *nosqlDomainStore) ListDomains(
 	ctx context.Context,
 	request *p.ListDomainsRequest,
 ) (*p.InternalListDomainsResponse, error) {
@@ -242,7 +242,7 @@ func (m *nosqlDomainManager) ListDomains(
 	}, nil
 }
 
-func (m *nosqlDomainManager) DeleteDomain(
+func (m *nosqlDomainStore) DeleteDomain(
 	ctx context.Context,
 	request *p.DeleteDomainRequest,
 ) error {
@@ -253,7 +253,7 @@ func (m *nosqlDomainManager) DeleteDomain(
 	return nil
 }
 
-func (m *nosqlDomainManager) DeleteDomainByName(
+func (m *nosqlDomainStore) DeleteDomainByName(
 	ctx context.Context,
 	request *p.DeleteDomainByNameRequest,
 ) error {
@@ -264,7 +264,7 @@ func (m *nosqlDomainManager) DeleteDomainByName(
 	return nil
 }
 
-func (m *nosqlDomainManager) GetMetadata(
+func (m *nosqlDomainStore) GetMetadata(
 	ctx context.Context,
 ) (*p.GetMetadataResponse, error) {
 	notificationVersion, err := m.db.SelectDomainMetadata(ctx)
@@ -274,7 +274,7 @@ func (m *nosqlDomainManager) GetMetadata(
 	return &p.GetMetadataResponse{NotificationVersion: notificationVersion}, nil
 }
 
-func (m *nosqlDomainManager) toNoSQLInternalDomainConfig(
+func (m *nosqlDomainStore) toNoSQLInternalDomainConfig(
 	domainConfig *p.InternalDomainConfig,
 ) (*nosqlplugin.NoSQLInternalDomainConfig, error) {
 	return &nosqlplugin.NoSQLInternalDomainConfig{
@@ -290,7 +290,7 @@ func (m *nosqlDomainManager) toNoSQLInternalDomainConfig(
 	}, nil
 }
 
-func (m *nosqlDomainManager) fromNoSQLInternalDomainConfig(
+func (m *nosqlDomainStore) fromNoSQLInternalDomainConfig(
 	domainConfig *nosqlplugin.NoSQLInternalDomainConfig,
 ) (*p.InternalDomainConfig, error) {
 	return &p.InternalDomainConfig{
