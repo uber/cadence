@@ -23,6 +23,7 @@ package cassandra
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
@@ -42,7 +43,6 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 	shardID := shardCondition.ShardID
 	domainID := execution.DomainID
 	workflowID := execution.WorkflowID
-	runID := execution.RunID
 
 	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 
@@ -51,24 +51,24 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 		return err
 	}
 
-	err = db.createWorkflowExecutionWithMergeMaps(batch, shardID, domainID, workflowID, runID, execution)
+	err = db.createWorkflowExecutionWithMergeMaps(batch, shardID, domainID, workflowID, execution)
 	if err != nil {
 		return err
 	}
 
-	err = db.createTransferTasks(batch, shardID, domainID, workflowID, runID, transferTasks)
+	err = db.createTransferTasks(batch, shardID, domainID, workflowID, transferTasks)
 	if err != nil {
 		return err
 	}
-	err = db.createReplicationTasks(batch, shardID, domainID, workflowID, runID, replicationTasks)
+	err = db.createReplicationTasks(batch, shardID, domainID, workflowID, replicationTasks)
 	if err != nil {
 		return err
 	}
-	err = db.createCrossClusterTasks(batch, shardID, domainID, workflowID, runID, crossClusterTasks)
+	err = db.createCrossClusterTasks(batch, shardID, domainID, workflowID, crossClusterTasks)
 	if err != nil {
 		return err
 	}
-	err = db.createTimerTasks(batch, shardID, domainID, workflowID, runID, timerTasks)
+	err = db.createTimerTasks(batch, shardID, domainID, workflowID, timerTasks)
 	if err != nil {
 		return err
 	}
@@ -130,5 +130,70 @@ func (db *cdb) UpdateWorkflowExecutionWithTasks(
 	timerTasks []*nosqlplugin.TimerTask,
 	shardCondition *nosqlplugin.ShardCondition,
 ) error {
-	panic("TODO")
+	shardID := shardCondition.ShardID
+	var domainID, workflowID string
+	var previousNextEventIDCondition int64
+	if mutatedExecution != nil {
+		domainID = mutatedExecution.DomainID
+		workflowID = mutatedExecution.WorkflowID
+		previousNextEventIDCondition = *mutatedExecution.PreviousNextEventIDCondition
+	} else if resetExecution != nil {
+		domainID = resetExecution.DomainID
+		workflowID = resetExecution.WorkflowID
+		previousNextEventIDCondition = *resetExecution.PreviousNextEventIDCondition
+	} else {
+		return fmt.Errorf("at least one of mutatedExecution and resetExecution should be provided")
+	}
+
+	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
+
+	err := db.createOrUpdateCurrentWorkflow(batch, shardID, domainID, workflowID, currentWorkflowRequest)
+	if err != nil {
+		return err
+	}
+
+	if mutatedExecution != nil {
+		err = db.updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(batch, shardID, domainID, workflowID, mutatedExecution)
+		if err != nil {
+			return err
+		}
+	}
+
+	if insertedExecution != nil {
+		err = db.createWorkflowExecutionWithMergeMaps(batch, shardID, domainID, workflowID, insertedExecution)
+		if err != nil {
+			return err
+		}
+	}
+
+	if resetExecution != nil {
+		err = db.resetWorkflowExecutionAndResetMapsAndEventBuffer(batch, shardID, domainID, workflowID, resetExecution)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = db.createTransferTasks(batch, shardID, domainID, workflowID, transferTasks)
+	if err != nil {
+		return err
+	}
+	err = db.createReplicationTasks(batch, shardID, domainID, workflowID, replicationTasks)
+	if err != nil {
+		return err
+	}
+	err = db.createCrossClusterTasks(batch, shardID, domainID, workflowID, crossClusterTasks)
+	if err != nil {
+		return err
+	}
+	err = db.createTimerTasks(batch, shardID, domainID, workflowID, timerTasks)
+	if err != nil {
+		return err
+	}
+
+	err = db.assertShardRangeID(batch, shardID, shardCondition.RangeID)
+	if err != nil {
+		return err
+	}
+
+	return db.executeUpdateWorkflowBatchTransaction(batch, currentWorkflowRequest, previousNextEventIDCondition, shardCondition)
 }
