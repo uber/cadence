@@ -1882,40 +1882,24 @@ func (d *cassandraPersistence) GetCurrentExecution(
 	request *p.GetCurrentExecutionRequest,
 ) (*p.GetCurrentExecutionResponse,
 	error) {
-	query := d.session.Query(templateGetCurrentExecutionQuery,
-		d.shardID,
-		rowTypeExecution,
-		request.DomainID,
-		request.WorkflowID,
-		permanentRunID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID,
-	).WithContext(ctx)
+	result, err := d.db.SelectCurrentWorkflow(ctx, d.shardID, request.DomainID, request.WorkflowID)
 
-	result := make(map[string]interface{})
-	if err := query.MapScan(result); err != nil {
+	if err != nil {
 		if d.client.IsNotFoundError(err) {
 			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v",
 					request.WorkflowID),
 			}
 		}
-
 		return nil, convertCommonErrors(d.client, "GetCurrentExecution", err)
 	}
 
-	currentRunID := result["current_run_id"].(gocql.UUID).String()
-	executionInfo := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
-	lastWriteVersion := common.EmptyVersion
-	if result["workflow_last_write_version"] != nil {
-		lastWriteVersion = result["workflow_last_write_version"].(int64)
-	}
 	return &p.GetCurrentExecutionResponse{
-		RunID:            currentRunID,
-		StartRequestID:   executionInfo.CreateRequestID,
-		State:            executionInfo.State,
-		CloseStatus:      executionInfo.CloseStatus,
-		LastWriteVersion: lastWriteVersion,
+		RunID:            result.RunID,
+		StartRequestID:   result.CreateRequestID,
+		State:            result.State,
+		CloseStatus:      result.CloseStatus,
+		LastWriteVersion: result.LastWriteVersion,
 	}, nil
 }
 
