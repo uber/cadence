@@ -962,6 +962,8 @@ func (d *cassandraPersistence) prepareUpdateWorkflowExecutionRequestWithMapsAndE
 		executionRequest.NewBufferedEventBatch = workflowMutation.NewBufferedEvents
 	}
 
+	// condition
+	executionRequest.PreviousNextEventIDCondition = &workflowMutation.Condition
 	return executionRequest, nil
 }
 
@@ -1286,7 +1288,7 @@ func (d *cassandraPersistence) prepareActivityInfosForWorkflowTxn(
 			return nil, p.NewCadenceSerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", scheduleEncoding, startEncoding))
 		}
 		a.ScheduledEvent = a.ScheduledEvent.ToNilSafeDataBlob()
-		a.StartedEvent = a.ScheduledEvent.ToNilSafeDataBlob()
+		a.StartedEvent = a.StartedEvent.ToNilSafeDataBlob()
 		m[a.ScheduleID] = a
 	}
 	return m, nil
@@ -1695,13 +1697,6 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 		nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks,
 		shardCondition)
 
-	//if err != nil {
-	//	return convertCommonErrors(d.client, "UpdateWorkflowExecution", err)
-	//}
-	//
-	//if !applied {
-	//	return d.getExecutionConditionalUpdateFailure(previous, iter, executionInfo.RunID, updateWorkflow.Condition, request.RangeID, executionInfo.RunID)
-	//}
 	if err != nil {
 		conditionFailureErr, isConditionFailedError := err.(*nosqlplugin.WorkflowOperationConditionFailure)
 		if isConditionFailedError {
