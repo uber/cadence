@@ -188,13 +188,8 @@ func (c *crossClusterQueueProcessorBase) processLoop() {
 	))
 	defer maxPollTimer.Stop()
 
-	validationTimer := time.NewTimer(backoff.JitDuration(
-		c.options.ValidationInterval(),
-		c.options.ValidationIntervalJitterCoefficient(),
-	))
-	defer validationTimer.Stop()
-
 	var ackLevel int64
+	lastPollTime := time.Now()
 processorPumpLoop:
 	for {
 		select {
@@ -202,13 +197,6 @@ processorPumpLoop:
 			break processorPumpLoop
 		case <-c.notifyCh:
 			c.notifyAllQueueCollections()
-		case <-validationTimer.C:
-			// Loop all outstanding task and validate task status
-			c.validateOutstandingTasks()
-			validationTimer.Reset(backoff.JitDuration(
-				c.options.ValidationInterval(),
-				c.options.ValidationIntervalJitterCoefficient(),
-			))
 		case <-updateAckTimer.C:
 			processFinished, err := c.updateAckLevel()
 			if err == shard.ErrShardClosed || (err == nil && processFinished) {
@@ -226,6 +214,11 @@ processorPumpLoop:
 			))
 		case <-maxPollTimer.C:
 			c.notifyAllQueueCollections()
+			if time.Now().After(lastPollTime.Add(c.options.ValidationInterval())) {
+				// No polling is happening and loop all outstanding task and validate task status
+				c.validateOutstandingTasks()
+				lastPollTime = time.Now()
+			}
 			maxPollTimer.Reset(backoff.JitDuration(
 				c.options.MaxPollInterval(),
 				c.options.MaxPollIntervalJitterCoefficient(),
@@ -251,6 +244,7 @@ processorPumpLoop:
 			c.processQueueCollections()
 		case notification := <-c.actionNotifyCh:
 			c.handleActionNotification(notification)
+			lastPollTime = time.Now()
 		}
 	}
 }
@@ -672,7 +666,6 @@ func newCrossClusterQueueProcessorOptions(
 		PollBackoffIntervalJitterCoefficient: config.QueueProcessorPollBackoffIntervalJitterCoefficient,
 		EnableValidator:                      config.CrossClusterProcessorEnableValidator,
 		ValidationInterval:                   config.CrossClusterProcessorValidationInterval,
-		ValidationIntervalJitterCoefficient:  config.CrossClusterProcessorValidationIntervalJitterCoefficient,
 	}
 
 	options.EnableSplit = config.QueueProcessorEnableSplit
