@@ -72,6 +72,7 @@ type (
 		EnableLoadQueueStates                dynamicconfig.BoolPropertyFn
 		EnableValidator                      dynamicconfig.BoolPropertyFn
 		ValidationInterval                   dynamicconfig.DurationPropertyFn
+		ValidationIntervalJitterCoefficient  dynamicconfig.FloatPropertyFn
 		MaxPendingTaskSize                   dynamicconfig.IntPropertyFn
 		MetricScope                          int
 	}

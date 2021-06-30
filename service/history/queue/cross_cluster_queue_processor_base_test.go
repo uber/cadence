@@ -219,13 +219,13 @@ func (s *crossClusterQueueProcessorBaseSuite) TestReadTasks_Success() {
 			DomainID: "testDomain1",
 		},
 	}
-	readLevel := newTransferTaskKey(1)
-	maxReadLevel := newTransferTaskKey(10)
+	readLevel := newCrossClusterTaskKey(1)
+	maxReadLevel := newCrossClusterTaskKey(10)
 	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
 	mockExecutionManager.On("GetCrossClusterTasks", mock.Anything, &persistence.GetCrossClusterTasksRequest{
 		TargetCluster: clusterName,
-		ReadLevel:     readLevel.(transferTaskKey).taskID,
-		MaxReadLevel:  maxReadLevel.(transferTaskKey).taskID,
+		ReadLevel:     readLevel.(crossClusterTaskKey).taskID,
+		MaxReadLevel:  maxReadLevel.(crossClusterTaskKey).taskID,
 		BatchSize:     s.mockShard.GetConfig().CrossClusterTaskBatchSize(),
 	}).Return(&persistence.GetCrossClusterTasksResponse{
 		Tasks:         taskInfos,
@@ -255,13 +255,13 @@ func (s *crossClusterQueueProcessorBaseSuite) TestReadTasks_Error() {
 		nil,
 		nil,
 	)
-	readLevel := newTransferTaskKey(1)
-	maxReadLevel := newTransferTaskKey(10)
+	readLevel := newCrossClusterTaskKey(1)
+	maxReadLevel := newCrossClusterTaskKey(10)
 	mockExecutionManager := s.mockShard.Resource.ExecutionMgr
 	mockExecutionManager.On("GetCrossClusterTasks", mock.Anything, &persistence.GetCrossClusterTasksRequest{
 		TargetCluster: clusterName,
-		ReadLevel:     readLevel.(transferTaskKey).taskID,
-		MaxReadLevel:  maxReadLevel.(transferTaskKey).taskID,
+		ReadLevel:     readLevel.(crossClusterTaskKey).taskID,
+		MaxReadLevel:  maxReadLevel.(crossClusterTaskKey).taskID,
 		BatchSize:     s.mockShard.GetConfig().CrossClusterTaskBatchSize(),
 	}).Return(nil, errors.New("test")).Once()
 
@@ -393,8 +393,8 @@ func (s *crossClusterQueueProcessorBaseSuite) TestUpdateTask_SubmitTask_Redispat
 func (s *crossClusterQueueProcessorBaseSuite) TestProcessQueueCollections_NoNextPage_WithNextQueue() {
 	clusterName := "test"
 	queueLevel := 0
-	ackLevel := newTransferTaskKey(0)
-	maxLevel := newTransferTaskKey(1000)
+	ackLevel := newCrossClusterTaskKey(0)
+	maxLevel := newCrossClusterTaskKey(1000)
 	processingQueueStates := []ProcessingQueueState{
 		NewProcessingQueueState(
 			queueLevel,
@@ -404,13 +404,13 @@ func (s *crossClusterQueueProcessorBaseSuite) TestProcessQueueCollections_NoNext
 		),
 		NewProcessingQueueState(
 			queueLevel,
-			newTransferTaskKey(1000),
-			newTransferTaskKey(10000),
+			newCrossClusterTaskKey(1000),
+			newCrossClusterTaskKey(10000),
 			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
 		),
 	}
 	updateMaxReadLevel := func() task.Key {
-		return newTransferTaskKey(10000)
+		return newCrossClusterTaskKey(10000)
 	}
 
 	processorBase := s.newTestCrossClusterQueueProcessorBase(
@@ -424,14 +424,17 @@ func (s *crossClusterQueueProcessorBaseSuite) TestProcessQueueCollections_NoNext
 	taskInfos := []*persistence.CrossClusterTaskInfo{
 		{
 			TaskID:   1,
+			TaskType: 1,
 			DomainID: "testDomain1",
 		},
 		{
 			TaskID:   10,
+			TaskType: 1,
 			DomainID: "testDomain2",
 		},
 		{
 			TaskID:   100,
+			TaskType: 1,
 			DomainID: "testDomain1",
 		},
 	}
@@ -461,9 +464,9 @@ func (s *crossClusterQueueProcessorBaseSuite) TestProcessQueueCollections_NoNext
 func (s *crossClusterQueueProcessorBaseSuite) TestProcessQueueCollections_NoNextPage_NoNextQueue() {
 	clusterName := "test"
 	queueLevel := 0
-	ackLevel := newTransferTaskKey(0)
-	maxLevel := newTransferTaskKey(1000)
-	shardMaxLevel := newTransferTaskKey(500)
+	ackLevel := newCrossClusterTaskKey(0)
+	maxLevel := newCrossClusterTaskKey(1000)
+	shardMaxLevel := newCrossClusterTaskKey(500)
 	processingQueueStates := []ProcessingQueueState{
 		NewProcessingQueueState(
 			queueLevel,
@@ -478,14 +481,17 @@ func (s *crossClusterQueueProcessorBaseSuite) TestProcessQueueCollections_NoNext
 	taskInfos := []*persistence.CrossClusterTaskInfo{
 		{
 			TaskID:   1,
+			TaskType: 1,
 			DomainID: "testDomain1",
 		},
 		{
 			TaskID:   10,
+			TaskType: 1,
 			DomainID: "testDomain2",
 		},
 		{
 			TaskID:   100,
+			TaskType: 1,
 			DomainID: "testDomain1",
 		},
 	}
@@ -566,9 +572,9 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_Updat
 	clusterName := "test"
 	processingQueueState := newProcessingQueueState(
 		0,
-		newTransferTaskKey(1),
-		newTransferTaskKey(1),
-		newTransferTaskKey(10),
+		newCrossClusterTaskKey(1),
+		newCrossClusterTaskKey(1),
+		newCrossClusterTaskKey(10),
 		NewDomainFilter(map[string]struct{}{}, true),
 	)
 
@@ -584,9 +590,9 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_Updat
 	mockTask.EXPECT().GetTaskID().Return(int64(10)).AnyTimes()
 	mockTask.EXPECT().Update(gomock.Any()).Return(nil).AnyTimes()
 	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).AnyTimes()
-	taskKey := newTransferTaskKey(10)
+	taskKey := newCrossClusterTaskKey(10)
 	newTaskMap := map[task.Key]task.Task{taskKey: mockTask}
-	processorBase.processingQueueCollections[0].AddTasks(newTaskMap, newTransferTaskKey(11))
+	processorBase.processingQueueCollections[0].AddTasks(newTaskMap, newCrossClusterTaskKey(11))
 	notification := actionNotification{
 		action: &Action{
 			ActionType: ActionTypeUpdateTask,
@@ -609,9 +615,9 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_Updat
 	clusterName := "test"
 	processingQueueState := newProcessingQueueState(
 		0,
-		newTransferTaskKey(1),
-		newTransferTaskKey(1),
-		newTransferTaskKey(10),
+		newCrossClusterTaskKey(1),
+		newCrossClusterTaskKey(1),
+		newCrossClusterTaskKey(10),
 		NewDomainFilter(map[string]struct{}{}, true),
 	)
 
@@ -629,9 +635,9 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_Updat
 	mockTask.EXPECT().GetWorkflowID().Return("workflowID").AnyTimes()
 	mockTask.EXPECT().GetRunID().Return("runID").AnyTimes()
 	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).AnyTimes()
-	taskKey := newTransferTaskKey(10)
+	taskKey := newCrossClusterTaskKey(10)
 	newTaskMap := map[task.Key]task.Task{taskKey: mockTask}
-	processorBase.processingQueueCollections[0].AddTasks(newTaskMap, newTransferTaskKey(11))
+	processorBase.processingQueueCollections[0].AddTasks(newTaskMap, newCrossClusterTaskKey(11))
 	notification := actionNotification{
 		action: &Action{
 			ActionType: ActionTypeUpdateTask,

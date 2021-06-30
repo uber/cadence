@@ -33,12 +33,15 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
 
 type (
+	crossClusterTaskKey = transferTaskKey
+
 	crossClusterQueueProcessorBase struct {
 		sync.Mutex
 
@@ -142,7 +145,7 @@ func (c *crossClusterQueueProcessorBase) Start() {
 	c.notifyAllQueueCollections()
 
 	c.shutdownWG.Add(1)
-	go c.processorPump()
+	go c.processLoop()
 }
 
 func (c *crossClusterQueueProcessorBase) Stop() {
@@ -170,7 +173,7 @@ func (c *crossClusterQueueProcessorBase) Stop() {
 	c.redispatcher.Stop()
 }
 
-func (c *crossClusterQueueProcessorBase) processorPump() {
+func (c *crossClusterQueueProcessorBase) processLoop() {
 	defer c.shutdownWG.Done()
 
 	updateAckTimer := time.NewTimer(backoff.JitDuration(
@@ -185,6 +188,12 @@ func (c *crossClusterQueueProcessorBase) processorPump() {
 	))
 	defer maxPollTimer.Stop()
 
+	validationTimer := time.NewTimer(backoff.JitDuration(
+		c.options.ValidationInterval(),
+		c.options.ValidationIntervalJitterCoefficient(),
+	))
+	defer validationTimer.Stop()
+
 	var ackLevel int64
 processorPumpLoop:
 	for {
@@ -193,6 +202,13 @@ processorPumpLoop:
 			break processorPumpLoop
 		case <-c.notifyCh:
 			c.notifyAllQueueCollections()
+		case <-validationTimer.C:
+			// Loop all outstanding task and validate task status
+			c.validateOutstandingTasks()
+			validationTimer.Reset(backoff.JitDuration(
+				c.options.ValidationInterval(),
+				c.options.ValidationIntervalJitterCoefficient(),
+			))
 		case <-updateAckTimer.C:
 			processFinished, err := c.updateAckLevel()
 			if err == shard.ErrShardClosed || (err == nil && processFinished) {
@@ -480,7 +496,7 @@ func (c *crossClusterQueueProcessorBase) handleActionNotification(notification a
 		}
 	case ActionTypeUpdateTask:
 		action := notification.action.UpdateTaskAttributes
-		err := c.updateTask(newTransferTaskKey(action.taskID), action.result)
+		err := c.updateTask(newCrossClusterTaskKey(action.taskID), action.result)
 		notification.resultNotificationCh <- actionResultNotification{
 			result: &ActionResult{
 				ActionType:       ActionTypeUpdateTask,
@@ -561,7 +577,7 @@ func (c *crossClusterQueueProcessorBase) processQueueCollections() {
 				continue
 			}
 			task := c.taskInitializer(taskInfo)
-			tasks[newTransferTaskKey(taskInfo.GetTaskID())] = task
+			tasks[newCrossClusterTaskKey(taskInfo.GetTaskID())] = task
 			newTaskID = task.GetTaskID()
 		}
 
@@ -569,7 +585,7 @@ func (c *crossClusterQueueProcessorBase) processQueueCollections() {
 		if !more {
 			newReadLevel = maxReadLevel
 		} else {
-			newReadLevel = newTransferTaskKey(newTaskID)
+			newReadLevel = newCrossClusterTaskKey(newTaskID)
 		}
 
 		queueCollection.AddTasks(tasks, newReadLevel)
@@ -585,6 +601,56 @@ func (c *crossClusterQueueProcessorBase) notifyNewTask() {
 	select {
 	case c.notifyCh <- struct{}{}:
 	default:
+	}
+}
+
+func (c *crossClusterQueueProcessorBase) validateOutstandingTasks() {
+	tasks := c.getTasks()
+	for _, task := range tasks {
+		if c.isDomainChanged(task) || c.isSourceWorkflowClosed(task) {
+			_, err := c.submitTask(task)
+			if err != nil {
+				// the queue is shutting down
+				return
+			}
+		}
+	}
+}
+
+func (c *crossClusterQueueProcessorBase) isDomainChanged(task task.Task) bool {
+	currentCluster := c.shard.GetClusterMetadata().GetCurrentClusterName()
+	domainEntry, err := c.shard.GetDomainCache().GetDomainByID(task.GetDomainID())
+	if err != nil {
+		c.logger.Error("failed to look up domain.", tag.Error(err))
+		c.metricsScope.IncCounter(metrics.QueueValidatorValidationFailure)
+		return false
+	}
+	return currentCluster != domainEntry.GetReplicationConfig().ActiveClusterName
+}
+
+func (c *crossClusterQueueProcessorBase) isSourceWorkflowClosed(task task.Task) bool {
+	resp, err := c.shard.GetEngine().DescribeWorkflowExecution(context.Background(), &types.HistoryDescribeWorkflowExecutionRequest{
+		DomainUUID: task.GetDomainID(),
+		Request: &types.DescribeWorkflowExecutionRequest{
+			Execution: &types.WorkflowExecution{
+				WorkflowID: "",
+				RunID:      "",
+			},
+		},
+	})
+	if err != nil {
+		c.logger.Error("failed to describe workflow.", tag.Error(err))
+		c.metricsScope.IncCounter(metrics.QueueValidatorValidationFailure)
+		return false
+	}
+	return resp.WorkflowExecutionInfo.CloseStatus != nil
+}
+
+func newCrossClusterTaskKey(
+	taskID int64,
+) task.Key {
+	return crossClusterTaskKey{
+		taskID: taskID,
 	}
 }
 
@@ -606,6 +672,7 @@ func newCrossClusterQueueProcessorOptions(
 		PollBackoffIntervalJitterCoefficient: config.QueueProcessorPollBackoffIntervalJitterCoefficient,
 		EnableValidator:                      config.CrossClusterProcessorEnableValidator,
 		ValidationInterval:                   config.CrossClusterProcessorValidationInterval,
+		ValidationIntervalJitterCoefficient:  config.CrossClusterProcessorValidationIntervalJitterCoefficient,
 	}
 
 	options.EnableSplit = config.QueueProcessorEnableSplit

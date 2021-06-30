@@ -110,7 +110,7 @@ func newCrossClusterQueueProcessor(
 	logger = logger.WithTags(tag.ClusterName(clusterName))
 
 	updateMaxReadLevel := func() task.Key {
-		return newTransferTaskKey(shard.GetTransferMaxReadLevel())
+		return newCrossClusterTaskKey(shard.GetTransferMaxReadLevel())
 	}
 
 	updateProcessingQueueStates := func(states []ProcessingQueueState) error {

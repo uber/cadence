@@ -1185,6 +1185,12 @@ const (
 	// Default value: 30*time.Second
 	// Allowed filters: N/A
 	CrossClusterProcessorValidationInterval
+	// CrossClusterProcessorValidationIntervalJitterCoefficient is the update interval jitter coefficient
+	// KeyName: history.crossClusterProcessorValidationIntervalJitterCoefficient
+	// Value type: Float64
+	// Default value: 0.15
+	// Allowed filters: N/A
+	CrossClusterProcessorValidationIntervalJitterCoefficient
 
 	// ReplicatorTaskBatchSize is batch size for ReplicatorProcessor
 	// KeyName: history.replicatorTaskBatchSize
@@ -2139,6 +2145,7 @@ var keys = map[Key]string{
 	CrossClusterProcessorMaxRedispatchQueueSize:              "history.crossClusterProcessorMaxRedispatchQueueSize",
 	CrossClusterProcessorEnableValidator:                     "history.crossClusterProcessorEnableValidator",
 	CrossClusterProcessorValidationInterval:                  "history.crossClusterProcessorValidationInterval",
+	CrossClusterProcessorValidationIntervalJitterCoefficient: "history.crossClusterProcessorValidationIntervalJitterCoefficient",
 
 	ReplicatorTaskBatchSize:                               "history.replicatorTaskBatchSize",
 	ReplicatorTaskWorkerCount:                             "history.replicatorTaskWorkerCount",

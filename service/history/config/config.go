@@ -170,6 +170,7 @@ type Config struct {
 	CrossClusterProcessorMaxRedispatchQueueSize              dynamicconfig.IntPropertyFn
 	CrossClusterProcessorEnableValidator                     dynamicconfig.BoolPropertyFn
 	CrossClusterProcessorValidationInterval                  dynamicconfig.DurationPropertyFn
+	CrossClusterProcessorValidationIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 
 	// ReplicatorQueueProcessor settings
 	ReplicatorTaskBatchSize                               dynamicconfig.IntPropertyFn
@@ -429,21 +430,22 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TransferProcessorValidationInterval:                  dc.GetDurationProperty(dynamicconfig.TransferProcessorValidationInterval, 30*time.Second),
 		TransferProcessorVisibilityArchivalTimeLimit:         dc.GetDurationProperty(dynamicconfig.TransferProcessorVisibilityArchivalTimeLimit, 200*time.Millisecond),
 
-		CrossClusterTaskBatchSize:                                dc.GetIntProperty(dynamicconfig.TransferTaskBatchSize, 100),
-		CrossClusterProcessorMaxPollRPS:                          dc.GetIntProperty(dynamicconfig.TransferProcessorMaxPollRPS, 20),
-		CrossClusterTaskWorkerCount:                              dc.GetIntProperty(dynamicconfig.TransferTaskWorkerCount, 10),
-		CrossClusterTaskMaxRetryCount:                            dc.GetIntProperty(dynamicconfig.TransferTaskMaxRetryCount, 100),
-		CrossClusterProcessorCompleteTaskFailureRetryCount:       dc.GetIntProperty(dynamicconfig.TransferProcessorCompleteTransferFailureRetryCount, 10),
-		CrossClusterProcessorMaxPollInterval:                     dc.GetDurationProperty(dynamicconfig.TransferProcessorMaxPollInterval, 1*time.Minute),
-		CrossClusterProcessorMaxPollIntervalJitterCoefficient:    dc.GetFloat64Property(dynamicconfig.TransferProcessorMaxPollIntervalJitterCoefficient, 0.15),
-		CrossClusterProcessorSplitQueueInterval:                  dc.GetDurationProperty(dynamicconfig.TransferProcessorSplitQueueInterval, 1*time.Minute),
-		CrossClusterProcessorSplitQueueIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TransferProcessorSplitQueueIntervalJitterCoefficient, 0.15),
-		CrossClusterProcessorUpdateAckInterval:                   dc.GetDurationProperty(dynamicconfig.TransferProcessorUpdateAckInterval, 30*time.Second),
-		CrossClusterProcessorUpdateAckIntervalJitterCoefficient:  dc.GetFloat64Property(dynamicconfig.TransferProcessorUpdateAckIntervalJitterCoefficient, 0.15),
-		CrossClusterProcessorCompleteTaskInterval:                dc.GetDurationProperty(dynamicconfig.TransferProcessorCompleteTransferInterval, 60*time.Second),
-		CrossClusterProcessorMaxRedispatchQueueSize:              dc.GetIntProperty(dynamicconfig.TransferProcessorMaxRedispatchQueueSize, 10000),
-		CrossClusterProcessorEnableValidator:                     dc.GetBoolProperty(dynamicconfig.TransferProcessorEnableValidator, false),
-		CrossClusterProcessorValidationInterval:                  dc.GetDurationProperty(dynamicconfig.TransferProcessorValidationInterval, 30*time.Second),
+		CrossClusterTaskBatchSize:                                dc.GetIntProperty(dynamicconfig.CrossClusterTaskBatchSize, 100),
+		CrossClusterProcessorMaxPollRPS:                          dc.GetIntProperty(dynamicconfig.CrossClusterProcessorMaxPollRPS, 20),
+		CrossClusterTaskWorkerCount:                              dc.GetIntProperty(dynamicconfig.CrossClusterTaskWorkerCount, 10),
+		CrossClusterTaskMaxRetryCount:                            dc.GetIntProperty(dynamicconfig.CrossClusterTaskMaxRetryCount, 100),
+		CrossClusterProcessorCompleteTaskFailureRetryCount:       dc.GetIntProperty(dynamicconfig.CrossClusterProcessorCompleteTaskFailureRetryCount, 10),
+		CrossClusterProcessorMaxPollInterval:                     dc.GetDurationProperty(dynamicconfig.CrossClusterProcessorMaxPollInterval, 1*time.Minute),
+		CrossClusterProcessorMaxPollIntervalJitterCoefficient:    dc.GetFloat64Property(dynamicconfig.CrossClusterProcessorMaxPollIntervalJitterCoefficient, 0.15),
+		CrossClusterProcessorSplitQueueInterval:                  dc.GetDurationProperty(dynamicconfig.CrossClusterProcessorSplitQueueInterval, 1*time.Minute),
+		CrossClusterProcessorSplitQueueIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.CrossClusterProcessorSplitQueueIntervalJitterCoefficient, 0.15),
+		CrossClusterProcessorUpdateAckInterval:                   dc.GetDurationProperty(dynamicconfig.CrossClusterProcessorUpdateAckInterval, 30*time.Second),
+		CrossClusterProcessorUpdateAckIntervalJitterCoefficient:  dc.GetFloat64Property(dynamicconfig.CrossClusterProcessorUpdateAckIntervalJitterCoefficient, 0.15),
+		CrossClusterProcessorCompleteTaskInterval:                dc.GetDurationProperty(dynamicconfig.CrossClusterProcessorCompleteTaskInterval, 60*time.Second),
+		CrossClusterProcessorMaxRedispatchQueueSize:              dc.GetIntProperty(dynamicconfig.CrossClusterProcessorMaxRedispatchQueueSize, 10000),
+		CrossClusterProcessorEnableValidator:                     dc.GetBoolProperty(dynamicconfig.CrossClusterProcessorEnableValidator, false),
+		CrossClusterProcessorValidationInterval:                  dc.GetDurationProperty(dynamicconfig.CrossClusterProcessorValidationInterval, 30*time.Second),
+		CrossClusterProcessorValidationIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.CrossClusterProcessorValidationIntervalJitterCoefficient, 0.15),
 
 		ReplicatorTaskBatchSize:                               dc.GetIntProperty(dynamicconfig.ReplicatorTaskBatchSize, 100),
 		ReplicatorTaskWorkerCount:                             dc.GetIntProperty(dynamicconfig.ReplicatorTaskWorkerCount, 10),
