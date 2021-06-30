@@ -51,4 +51,5 @@ type Client interface {
 	RemoveTask(context.Context, *types.RemoveTaskRequest, ...yarpc.CallOption) error
 	ResendReplicationTasks(context.Context, *types.ResendReplicationTasksRequest, ...yarpc.CallOption) error
 	ResetQueue(context.Context, *types.ResetQueueRequest, ...yarpc.CallOption) error
+	GetCrossClusterTasks(context.Context, *types.GetCrossClusterTasksRequest, ...yarpc.CallOption) (*types.GetCrossClusterTasksResponse, error)
 }

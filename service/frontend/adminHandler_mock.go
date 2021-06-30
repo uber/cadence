@@ -101,13 +101,19 @@ func (mr *MockAdminHandlerMockRecorder) DescribeCluster(arg0 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeCluster", reflect.TypeOf((*MockAdminHandler)(nil).DescribeCluster), arg0)
 }
 
-// DescribeHistoryHost mocks base method
+// DescribeShardDistribution mocks base method
 func (m *MockAdminHandler) DescribeShardDistribution(arg0 context.Context, arg1 *types.DescribeShardDistributionRequest) (*types.DescribeShardDistributionResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeShardDistribution", arg0, arg1)
 	ret0, _ := ret[0].(*types.DescribeShardDistributionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
+}
+
+// DescribeShardDistribution indicates an expected call of DescribeShardDistribution
+func (mr *MockAdminHandlerMockRecorder) DescribeShardDistribution(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeShardDistribution", reflect.TypeOf((*MockAdminHandler)(nil).DescribeShardDistribution), arg0, arg1)
 }
 
 // DescribeHistoryHost mocks base method
@@ -327,4 +333,19 @@ func (m *MockAdminHandler) ResetQueue(arg0 context.Context, arg1 *types.ResetQue
 func (mr *MockAdminHandlerMockRecorder) ResetQueue(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetQueue", reflect.TypeOf((*MockAdminHandler)(nil).ResetQueue), arg0, arg1)
+}
+
+// GetCrossClusterTasks mocks base method
+func (m *MockAdminHandler) GetCrossClusterTasks(arg0 context.Context, arg1 *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCrossClusterTasks", arg0, arg1)
+	ret0, _ := ret[0].(*types.GetCrossClusterTasksResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCrossClusterTasks indicates an expected call of GetCrossClusterTasks
+func (mr *MockAdminHandlerMockRecorder) GetCrossClusterTasks(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterTasks", reflect.TypeOf((*MockAdminHandler)(nil).GetCrossClusterTasks), arg0, arg1)
 }

@@ -132,3 +132,8 @@ func (g grpcClient) ResetQueue(ctx context.Context, request *types.ResetQueueReq
 	_, err := g.c.ResetQueue(ctx, proto.FromAdminResetQueueRequest(request), opts...)
 	return proto.ToError(err)
 }
+
+func (g grpcClient) GetCrossClusterTasks(ctx context.Context, request *types.GetCrossClusterTasksRequest, opts ...yarpc.CallOption) (*types.GetCrossClusterTasksResponse, error) {
+	response, err := g.c.GetCrossClusterTasks(ctx, proto.FromAdminGetCrossClusterTasksRequest(request), opts...)
+	return proto.ToAdminGetCrossClusterTasksResponse(response), proto.ToError(err)
+}

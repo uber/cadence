@@ -313,3 +313,18 @@ func (c *retryableClient) ResendReplicationTasks(
 	}
 	return backoff.Retry(op, c.policy, c.isRetryable)
 }
+
+func (c *retryableClient) GetCrossClusterTasks(
+	ctx context.Context,
+	request *types.GetCrossClusterTasksRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetCrossClusterTasksResponse, error) {
+	var resp *types.GetCrossClusterTasksResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetCrossClusterTasks(ctx, request, opts...)
+		return err
+	}
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}
