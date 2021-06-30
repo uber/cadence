@@ -88,8 +88,8 @@ func (f *Factory) NewShardStore() (p.ShardStore, error) {
 	return NewShardPersistence(conn, f.clusterName, f.logger, f.parser)
 }
 
-// NewHistoryV2Store returns a new history store
-func (f *Factory) NewHistoryV2Store() (p.HistoryStore, error) {
+// NewHistoryStore returns a new history store
+func (f *Factory) NewHistoryStore() (p.HistoryStore, error) {
 	conn, err := f.dbConn.get()
 	if err != nil {
 		return nil, err
@@ -97,8 +97,8 @@ func (f *Factory) NewHistoryV2Store() (p.HistoryStore, error) {
 	return NewHistoryV2Persistence(conn, f.logger, f.parser)
 }
 
-// NewMetadataStore returns a new metadata store
-func (f *Factory) NewMetadataStore() (p.MetadataStore, error) {
+// NewDomainStore returns a new metadata store
+func (f *Factory) NewDomainStore() (p.DomainStore, error) {
 	conn, err := f.dbConn.get()
 	if err != nil {
 		return nil, err

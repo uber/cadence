@@ -32,8 +32,8 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/elasticsearch"
+	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/quotas"
@@ -72,10 +72,10 @@ type (
 		NewTaskStore() (p.TaskStore, error)
 		// NewShardStore returns a new shard store
 		NewShardStore() (p.ShardStore, error)
-		// NewHistoryV2Store returns a new historyV2 store
-		NewHistoryV2Store() (p.HistoryStore, error)
-		// NewMetadataStore returns a new metadata store
-		NewMetadataStore() (p.MetadataStore, error)
+		// NewHistoryStore returns a new history store
+		NewHistoryStore() (p.HistoryStore, error)
+		// NewDomainStore returns a new metadata store
+		NewDomainStore() (p.DomainStore, error)
 		// NewExecutionStore returns an execution store for given shardID
 		NewExecutionStore(shardID int) (p.ExecutionStore, error)
 		// NewVisibilityStore returns a new visibility store,
@@ -190,7 +190,7 @@ func (f *factoryImpl) NewShardManager() (p.ShardManager, error) {
 // NewHistoryManager returns a new history manager
 func (f *factoryImpl) NewHistoryManager() (p.HistoryManager, error) {
 	ds := f.datastores[storeTypeHistory]
-	store, err := ds.factory.NewHistoryV2Store()
+	store, err := ds.factory.NewHistoryStore()
 	if err != nil {
 		return nil, err
 	}
@@ -210,9 +210,9 @@ func (f *factoryImpl) NewHistoryManager() (p.HistoryManager, error) {
 // NewDomainManager returns a new metadata manager
 func (f *factoryImpl) NewDomainManager() (p.DomainManager, error) {
 	var err error
-	var store p.MetadataStore
+	var store p.DomainStore
 	ds := f.datastores[storeTypeMetadata]
-	store, err = ds.factory.NewMetadataStore()
+	store, err = ds.factory.NewDomainStore()
 	if err != nil {
 		return nil, err
 	}
@@ -388,7 +388,7 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	defaultDataStore := Datastore{ratelimit: limiters[f.config.DefaultStore]}
 	switch {
 	case defaultCfg.NoSQL != nil:
-		defaultDataStore.factory = cassandra.NewFactory(*defaultCfg.NoSQL, clusterName, f.logger)
+		defaultDataStore.factory = nosql.NewFactory(*defaultCfg.NoSQL, clusterName, f.logger)
 	case defaultCfg.SQL != nil:
 		if defaultCfg.SQL.EncodingType == "" {
 			defaultCfg.SQL.EncodingType = string(common.EncodingTypeThriftRW)
@@ -430,7 +430,7 @@ func (f *factoryImpl) init(clusterName string, limiters map[string]quotas.Limite
 	visibilityDataStore := Datastore{ratelimit: limiters[f.config.VisibilityStore]}
 	switch {
 	case visibilityCfg.NoSQL != nil:
-		visibilityDataStore.factory = cassandra.NewFactory(*visibilityCfg.NoSQL, clusterName, f.logger)
+		visibilityDataStore.factory = nosql.NewFactory(*visibilityCfg.NoSQL, clusterName, f.logger)
 	case visibilityCfg.SQL != nil:
 		var decodingTypes []common.EncodingType
 		for _, dt := range visibilityCfg.SQL.DecodingTypes {
