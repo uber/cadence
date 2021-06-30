@@ -951,7 +951,7 @@ func (d *cassandraPersistence) prepareUpdateWorkflowExecutionRequestWithMapsAndE
 	executionRequest.SignalRequestedIDsKeysToDelete = workflowMutation.DeleteSignalRequestedIDs
 
 	// map write mode
-	executionRequest.MapsWriteMode = nosqlplugin.WorkflowExecutionMapsWriteModeMergeAndDelete
+	executionRequest.MapsWriteMode = nosqlplugin.WorkflowExecutionMapsWriteModeUpdate
 
 	// prepare to write buffer event
 	executionRequest.EventBufferWriteMode = nosqlplugin.EventBufferWriteModeNone

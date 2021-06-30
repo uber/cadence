@@ -1157,8 +1157,8 @@ func (db *cdb) updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(
 		}
 	}
 
-	if execution.MapsWriteMode != nosqlplugin.WorkflowExecutionMapsWriteModeMergeAndDelete {
-		return fmt.Errorf("should only support WorkflowExecutionMapsWriteModeMergeAndDelete")
+	if execution.MapsWriteMode != nosqlplugin.WorkflowExecutionMapsWriteModeUpdate {
+		return fmt.Errorf("should only support WorkflowExecutionMapsWriteModeUpdate")
 	}
 
 	err = db.updateActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos, execution.ActivityInfoKeysToDelete)

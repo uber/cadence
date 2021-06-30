@@ -448,7 +448,7 @@ type (
 		// MapsWriteMode controls how to write into the six maps(activityInfoMap, timerInfoMap, childWorkflowInfoMap, signalInfoMap and signalRequestedIDs)
 		MapsWriteMode WorkflowExecutionMapsWriteMode
 
-		// For WorkflowExecutionMapsWriteMode of merge, mergeAndDelete and reset
+		// For WorkflowExecutionMapsWriteMode of create, update and reset
 		ActivityInfos      map[int64]*persistence.InternalActivityInfo
 		TimerInfos         map[string]*persistence.TimerInfo
 		ChildWorkflowInfos map[int64]*persistence.InternalChildExecutionInfo
@@ -456,7 +456,7 @@ type (
 		SignalInfos        map[int64]*persistence.SignalInfo
 		SignalRequestedIDs []string // This map has no value, hence use array to store keys
 
-		// For WorkflowExecutionMapsWriteMode of delete only
+		// For WorkflowExecutionMapsWriteMode of update only
 		ActivityInfoKeysToDelete       []int64
 		TimerInfoKeysToDelete          []string
 		ChildWorkflowInfoKeysToDelete  []int64
@@ -747,7 +747,7 @@ const (
 	// Merge mode will upsert new entry to maps
 	WorkflowExecutionMapsWriteModeCreate WorkflowExecutionMapsWriteMode = iota
 	// MergeAndDelete mode will upsert new entry to maps and also delete entries from maps
-	WorkflowExecutionMapsWriteModeMergeAndDelete
+	WorkflowExecutionMapsWriteModeUpdate
 	// Override mode will reset(override) the whole maps
 	WorkflowExecutionMapsWriteModeReset
 )
