@@ -687,18 +687,13 @@ func resetChildExecutionInfoMap(
 	cMap := make(map[int64]map[string]interface{})
 	for _, c := range childExecutionInfos {
 		cInfo := make(map[string]interface{})
-		initiatedEventData, initiatedEncoding := persistence.FromDataBlob(c.InitiatedEvent)
-		startedEventData, startEncoding := persistence.FromDataBlob(c.StartedEvent)
-		if c.StartedEvent != nil && initiatedEncoding != startEncoding {
-			return nil, persistence.NewCadenceSerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", initiatedEncoding, startEncoding))
-		}
 		cInfo["version"] = c.Version
-		cInfo["event_data_encoding"] = initiatedEncoding
+		cInfo["event_data_encoding"] = c.InitiatedEvent.GetEncodingString()
 		cInfo["initiated_id"] = c.InitiatedID
 		cInfo["initiated_event_batch_id"] = c.InitiatedEventBatchID
-		cInfo["initiated_event"] = initiatedEventData
+		cInfo["initiated_event"] = c.InitiatedEvent.Data
 		cInfo["started_id"] = c.StartedID
-		cInfo["started_event"] = startedEventData
+		cInfo["started_event"] = c.StartedEvent.Data
 		cInfo["create_request_id"] = c.CreateRequestID
 		cInfo["started_workflow_id"] = c.StartedWorkflowID
 		startedRunID := emptyRunID
@@ -879,20 +874,15 @@ func resetActivityInfoMap(
 
 	aMap := make(map[int64]map[string]interface{})
 	for _, a := range activityInfos {
-		scheduledEventData, scheduleEncoding := persistence.FromDataBlob(a.ScheduledEvent)
-		startedEventData, startEncoding := persistence.FromDataBlob(a.StartedEvent)
-		if a.StartedEvent != nil && scheduleEncoding != startEncoding {
-			return nil, persistence.NewCadenceSerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", scheduleEncoding, startEncoding))
-		}
 		aInfo := make(map[string]interface{})
 		aInfo["version"] = a.Version
-		aInfo["event_data_encoding"] = scheduleEncoding
+		aInfo["event_data_encoding"] = a.ScheduledEvent.GetEncodingString()
 		aInfo["schedule_id"] = a.ScheduleID
 		aInfo["scheduled_event_batch_id"] = a.ScheduledEventBatchID
-		aInfo["scheduled_event"] = scheduledEventData
+		aInfo["scheduled_event"] = a.ScheduledEvent.Data
 		aInfo["scheduled_time"] = a.ScheduledTime
 		aInfo["started_id"] = a.StartedID
-		aInfo["started_event"] = startedEventData
+		aInfo["started_event"] = a.StartedEvent.Data
 		aInfo["started_time"] = a.StartedTime
 		aInfo["activity_id"] = a.ActivityID
 		aInfo["request_id"] = a.RequestID
