@@ -107,3 +107,15 @@ func TestRespondCrossClusterTasksCompletedResponse(t *testing.T) {
 		assert.Equal(t, item, thrift.ToRespondCrossClusterTasksCompletedResponse(thrift.FromRespondCrossClusterTasksCompletedResponse(item)))
 	}
 }
+
+func TestGetTaskListsByDomainRequest(t *testing.T) {
+	for _, item := range []*types.GetTaskListsByDomainRequest{nil, {}, &testdata.MatchingGetTaskListsByDomainRequest} {
+		assert.Equal(t, item, thrift.ToGetTaskListsByDomainRequest(thrift.FromGetTaskListsByDomainRequest(item)))
+	}
+}
+
+func TestGetTaskListsByDomainResponse(t *testing.T) {
+	for _, item := range []*types.GetTaskListsByDomainResponse{nil, {}, &testdata.MatchingGetTaskListsByDomainResponse} {
+		assert.Equal(t, item, thrift.ToGetTaskListsByDomainResponse(thrift.FromGetTaskListsByDomainResponse(item)))
+	}
+}

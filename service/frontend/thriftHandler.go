@@ -136,7 +136,7 @@ func (t ThriftHandler) ListTaskListPartitions(ctx context.Context, request *shar
 
 // GetTaskListsByDomain forwards request to the underlying handler
 func (t ThriftHandler) GetTaskListsByDomain(ctx context.Context, request *shared.GetTaskListsByDomainRequest) (*shared.GetTaskListsByDomainResponse, error) {
-	response, err := t.h.GetTaskListsByDomain(ctx, thrift.ToGetTaskListsByDomainRequest(request))
+	response, err := t.h.GetTaskListsByDomain(withThriftTag(ctx), thrift.ToGetTaskListsByDomainRequest(request))
 	return thrift.FromGetTaskListsByDomainResponse(response), thrift.FromError(err)
 }
 

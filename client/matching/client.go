@@ -26,9 +26,8 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/common/future"
-
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -43,7 +42,7 @@ const (
 )
 
 type (
-	clientIterator func() ([]interface{}, error)
+	clientIterator func() ([]Client, error)
 
 	clientImpl struct {
 		timeout         time.Duration
@@ -255,9 +254,9 @@ func (c *clientImpl) GetTaskListsByDomain(
 	var futures []future.Future
 	for _, client := range clients {
 		future, settable := future.NewFuture()
-		go func() {
-			settable.Set(client.(Client).GetTaskListsByDomain(ctx, request, opts...))
-		}()
+		go func(client Client) {
+			settable.Set(client.GetTaskListsByDomain(ctx, request, opts...))
+		}(client)
 
 		futures = append(futures, future)
 	}
@@ -267,11 +266,10 @@ func (c *clientImpl) GetTaskListsByDomain(
 		var resp *types.GetTaskListsByDomainResponse
 		if err = future.Get(ctx, &resp); err != nil {
 			return nil, err
-		} else {
-			for _, tl := range resp.TaskListNames {
-				if _, ok := taskListMap[tl]; !ok {
-					taskListMap[tl] = struct{}{}
-				}
+		}
+		for _, tl := range resp.TaskListNames {
+			if _, ok := taskListMap[tl]; !ok {
+				taskListMap[tl] = struct{}{}
 			}
 		}
 	}

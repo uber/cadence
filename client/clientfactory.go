@@ -185,13 +185,13 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		return cf.newMatchingThriftClient(clientKey)
 	}
 
-	clientFetcher := func() ([]interface{}, error) {
+	clientFetcher := func() ([]matching.Client, error) {
 		resolver, err := cf.monitor.GetResolver(common.MatchingServiceName)
 		if err != nil {
 			return nil, err
 		}
 
-		var result []interface{}
+		var result []matching.Client
 		for _, host := range resolver.Members() {
 			hostAddress := host.GetAddress()
 			if cf.enableGRPCOutbound {
