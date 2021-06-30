@@ -1042,9 +1042,9 @@ func (c *clientImpl) GetCrossClusterTasks(
 	futureByClient := make(map[Client]future.Future, len(requestByClient))
 	for client, req := range requestByClient {
 		future, settable := future.NewFuture()
-		go func() {
+		go func(ctx context.Context, client Client, req *types.GetCrossClusterTasksRequest) {
 			settable.Set(client.GetCrossClusterTasks(ctx, req))
-		}()
+		}(ctx, client, req)
 
 		futureByClient[client] = future
 	}
@@ -1067,7 +1067,7 @@ func (c *clientImpl) GetCrossClusterTasks(
 			// for now following the pattern for getting replication tasks:
 			// ignore errors other than service busy, so that task fetcher in target
 			// cluster can slow down.
-			if common.IsServiceBusyError(futureErr) {
+			if err == nil && common.IsServiceBusyError(futureErr) {
 				err = futureErr
 			}
 		} else {
