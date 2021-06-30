@@ -902,6 +902,52 @@ func (d *cassandraPersistence) prepareCreateWorkflowExecutionRequestWithMaps(
 	return executionRequest, nil
 }
 
+func (d *cassandraPersistence) prepareResetWorkflowExecutionRequestWithMapsAndEventBuffer(
+	resetWorkflow *p.InternalWorkflowSnapshot,
+) (*nosqlplugin.WorkflowExecutionRequest, error) {
+	executionInfo := resetWorkflow.ExecutionInfo
+	lastWriteVersion := resetWorkflow.LastWriteVersion
+	checkSum := resetWorkflow.Checksum
+	versionHistories := resetWorkflow.VersionHistories
+	nowTimestamp := time.Now()
+
+	executionRequest, err := d.prepareUpdateWorkflowExecutionTxn(
+		executionInfo, versionHistories, checkSum,
+		nowTimestamp, lastWriteVersion,
+	)
+	if err != nil {
+		return nil, err
+	}
+	//reset 6 maps
+	executionRequest.ActivityInfos, err = d.prepareActivityInfosForWorkflowTxn(resetWorkflow.ActivityInfos)
+	if err != nil {
+		return nil, err
+	}
+	executionRequest.TimerInfos, err = d.prepareTimerInfosForWorkflowTxn(resetWorkflow.TimerInfos)
+	if err != nil {
+		return nil, err
+	}
+	executionRequest.ChildWorkflowInfos, err = d.prepareChildWFInfosForWorkflowTxn(resetWorkflow.ChildExecutionInfos)
+	if err != nil {
+		return nil, err
+	}
+	executionRequest.RequestCancelInfos, err = d.prepareRequestCancelsForWorkflowTxn(resetWorkflow.RequestCancelInfos)
+	if err != nil {
+		return nil, err
+	}
+	executionRequest.SignalInfos, err = d.prepareSignalInfosForWorkflowTxn(resetWorkflow.SignalInfos)
+	if err != nil {
+		return nil, err
+	}
+	executionRequest.SignalRequestedIDs = resetWorkflow.SignalRequestedIDs
+	executionRequest.MapsWriteMode = nosqlplugin.WorkflowExecutionMapsWriteModeReset
+	// delete buffered events
+	executionRequest.EventBufferWriteMode = nosqlplugin.EventBufferWriteModeClear
+	// condition
+	executionRequest.PreviousNextEventIDCondition = &resetWorkflow.Condition
+	return executionRequest, nil
+}
+
 func (d *cassandraPersistence) prepareUpdateWorkflowExecutionRequestWithMapsAndEventBuffer(
 	workflowMutation *p.InternalWorkflowMutation,
 ) (*nosqlplugin.WorkflowExecutionRequest, error) {
@@ -1660,6 +1706,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 	var nosqlTimerTasks []*nosqlplugin.TimerTask
 	var err error
 
+	// 1. current
 	mutateExecution, err = d.prepareUpdateWorkflowExecutionRequestWithMapsAndEventBuffer(&updateWorkflow)
 	if err != nil {
 		return err
@@ -1673,6 +1720,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 		return err
 	}
 
+	// 2. new 
 	if newWorkflow != nil {
 		insertExecution, err = d.prepareCreateWorkflowExecutionRequestWithMaps(newWorkflow)
 
@@ -1697,48 +1745,16 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 		nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks,
 		shardCondition)
 
-	if err != nil {
-		conditionFailureErr, isConditionFailedError := err.(*nosqlplugin.WorkflowOperationConditionFailure)
-		if isConditionFailedError {
-			switch {
-			case conditionFailureErr.UnknownConditionFailureDetails != nil:
-				return &p.ConditionFailedError{
-					Msg: *conditionFailureErr.UnknownConditionFailureDetails,
-				}
-			case conditionFailureErr.ShardRangeIDNotMatch != nil:
-				return &p.ShardOwnershipLostError{
-					ShardID: d.shardID,
-					Msg: fmt.Sprintf("Failed to update workflow execution.  Request RangeID: %v, Actual RangeID: %v",
-						request.RangeID, *conditionFailureErr.ShardRangeIDNotMatch),
-				}
-			case conditionFailureErr.CurrentWorkflowConditionFailInfo != nil:
-				return &p.CurrentWorkflowConditionFailedError{
-					Msg: *conditionFailureErr.CurrentWorkflowConditionFailInfo,
-				}
-			default:
-				// If ever runs into this branch, there is bug in the code either in here, or in the implementation of nosql plugin
-				err := fmt.Errorf("expected conditionFailureReason error")
-				d.logger.Error("A code bug exists in persistence layer, please investigate ASAP", tag.Error(err))
-				return err
-			}
-		}
-		return convertCommonErrors(d.client, "UpdateWorkflowExecution", err)
-	}
-
-	return nil
+	return d.processUpdateWorkflowResult(err, request.RangeID)
 }
 
 func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 	ctx context.Context,
 	request *p.InternalConflictResolveWorkflowExecutionRequest,
 ) error {
-	batch := d.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
-
 	currentWorkflow := request.CurrentWorkflowMutation
 	resetWorkflow := request.ResetWorkflowSnapshot
 	newWorkflow := request.NewWorkflowSnapshot
-
-	shardID := d.shardID
 
 	domainID := resetWorkflow.ExecutionInfo.DomainID
 	workflowID := resetWorkflow.ExecutionInfo.WorkflowID
@@ -1752,6 +1768,7 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 		return err
 	}
 
+	var currentWorkflowWriteReq *nosqlplugin.CurrentWorkflowWriteRequest
 	var prevRunID string
 
 	switch request.Mode {
@@ -1763,7 +1780,9 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 			resetWorkflow.ExecutionInfo.RunID); err != nil {
 			return err
 		}
-
+		currentWorkflowWriteReq = &nosqlplugin.CurrentWorkflowWriteRequest{
+			WriteMode: nosqlplugin.CurrentWorkflowWriteModeNoop,
+		}
 	case p.ConflictResolveWorkflowModeUpdateCurrent:
 		executionInfo := resetWorkflow.ExecutionInfo
 		lastWriteVersion := resetWorkflow.LastWriteVersion
@@ -1771,52 +1790,28 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 			executionInfo = newWorkflow.ExecutionInfo
 			lastWriteVersion = newWorkflow.LastWriteVersion
 		}
-		runID := executionInfo.RunID
-		createRequestID := executionInfo.CreateRequestID
-		state := executionInfo.State
-		closeStatus := executionInfo.CloseStatus
 
 		if currentWorkflow != nil {
 			prevRunID = currentWorkflow.ExecutionInfo.RunID
-
-			batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
-				runID,
-				runID,
-				createRequestID,
-				state,
-				closeStatus,
-				lastWriteVersion,
-				state,
-				shardID,
-				rowTypeExecution,
-				domainID,
-				workflowID,
-				permanentRunID,
-				defaultVisibilityTimestamp,
-				rowTypeExecutionTaskID,
-				prevRunID,
-			)
 		} else {
 			// reset workflow is current
 			prevRunID = resetWorkflow.ExecutionInfo.RunID
-
-			batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
-				runID,
-				runID,
-				createRequestID,
-				state,
-				closeStatus,
-				lastWriteVersion,
-				state,
-				shardID,
-				rowTypeExecution,
-				domainID,
-				workflowID,
-				permanentRunID,
-				defaultVisibilityTimestamp,
-				rowTypeExecutionTaskID,
-				prevRunID,
-			)
+		}
+		currentWorkflowWriteReq = &nosqlplugin.CurrentWorkflowWriteRequest{
+			WriteMode: nosqlplugin.CurrentWorkflowWriteModeUpdate,
+			Row: nosqlplugin.CurrentWorkflowRow{
+				ShardID:          d.shardID,
+				DomainID:         domainID,
+				WorkflowID:       workflowID,
+				RunID:            executionInfo.RunID,
+				State:            executionInfo.State,
+				CloseStatus:      executionInfo.CloseStatus,
+				CreateRequestID:  executionInfo.CreateRequestID,
+				LastWriteVersion: lastWriteVersion,
+			},
+			Condition: &nosqlplugin.CurrentWorkflowWriteCondition{
+				CurrentRunID: &prevRunID,
+			},
 		}
 
 	default:
@@ -1825,144 +1820,100 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 		}
 	}
 
-	if err := applyWorkflowSnapshotBatchAsReset(batch,
-		shardID,
-		&resetWorkflow); err != nil {
+	var mutateExecution, insertExecution, resetExecution *nosqlplugin.WorkflowExecutionRequest
+	var nosqlTransferTasks []*nosqlplugin.TransferTask
+	var nosqlCrossClusterTasks []*nosqlplugin.CrossClusterTask
+	var nosqlReplicationTasks []*nosqlplugin.ReplicationTask
+	var nosqlTimerTasks []*nosqlplugin.TimerTask
+	var err error
+
+	// 1. current
+	if currentWorkflow != nil {
+		mutateExecution, err = d.prepareUpdateWorkflowExecutionRequestWithMapsAndEventBuffer(currentWorkflow)
+		if err != nil {
+			return err
+		}
+		nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks, err = d.prepareNoSQLTasksForWorkflowTxn(
+			domainID, workflowID, currentWorkflow.ExecutionInfo.RunID,
+			currentWorkflow.TransferTasks, currentWorkflow.CrossClusterTasks, currentWorkflow.ReplicationTasks, currentWorkflow.TimerTasks,
+			nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	// 2. reset 
+	resetExecution, err = d.prepareResetWorkflowExecutionRequestWithMapsAndEventBuffer(&resetWorkflow)
+	if err != nil {
+		return err
+	}
+	nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks, err = d.prepareNoSQLTasksForWorkflowTxn(
+		domainID, workflowID, resetWorkflow.ExecutionInfo.RunID,
+		resetWorkflow.TransferTasks, resetWorkflow.CrossClusterTasks, resetWorkflow.ReplicationTasks, resetWorkflow.TimerTasks,
+		nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks,
+	)
+	if err != nil {
 		return err
 	}
 
-	if currentWorkflow != nil {
-		if err := applyWorkflowMutationBatch(batch, shardID, currentWorkflow); err != nil {
-			return err
-		}
-	}
+	// 3. new
 	if newWorkflow != nil {
-		if err := applyWorkflowSnapshotBatchAsNew(batch, shardID, newWorkflow); err != nil {
+		insertExecution, err = d.prepareCreateWorkflowExecutionRequestWithMaps(newWorkflow)
+
+		nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks, err = d.prepareNoSQLTasksForWorkflowTxn(
+			domainID, workflowID, newWorkflow.ExecutionInfo.RunID,
+			newWorkflow.TransferTasks, newWorkflow.CrossClusterTasks, newWorkflow.ReplicationTasks, newWorkflow.TimerTasks,
+			nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks,
+		)
+		if err != nil {
 			return err
 		}
 	}
 
-	// Verifies that the RangeID has not changed
-	batch.Query(templateUpdateLeaseQuery,
-		request.RangeID,
-		d.shardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
-		request.RangeID,
-	)
-
-	previous := make(map[string]interface{})
-	applied, iter, err := d.session.MapExecuteBatchCAS(batch, previous)
-	defer func() {
-		if iter != nil {
-			_ = iter.Close()
-		}
-	}()
-
-	if err != nil {
-		return convertCommonErrors(d.client, "ConflictResolveWorkflowExecution", err)
+	shardCondition := &nosqlplugin.ShardCondition{
+		ShardID: d.shardID,
+		RangeID: request.RangeID,
 	}
 
-	if !applied {
-		return d.getExecutionConditionalUpdateFailure(previous, iter, resetWorkflow.ExecutionInfo.RunID, request.ResetWorkflowSnapshot.Condition, request.RangeID, prevRunID)
-	}
-	return nil
+	err = d.db.UpdateWorkflowExecutionWithTasks(
+		ctx, currentWorkflowWriteReq,
+		mutateExecution, insertExecution, resetExecution,
+		nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks,
+		shardCondition)
+	return d.processUpdateWorkflowResult(err, request.RangeID)
 }
 
-func (d *cassandraPersistence) getExecutionConditionalUpdateFailure(
-	previous map[string]interface{},
-	iter gocql.Iter,
-	requestRunID string,
-	requestCondition int64,
-	requestRangeID int64,
-	requestConditionalRunID string,
-) error {
-	// There can be three reasons why the query does not get applied: the RangeID has changed, or the next_event_id or current_run_id check failed.
-	// Check the row info returned by Cassandra to figure out which one it is.
-	rangeIDUnmatch := false
-	actualRangeID := int64(0)
-	nextEventIDUnmatch := false
-	actualNextEventID := int64(0)
-	runIDUnmatch := false
-	actualCurrRunID := ""
-	var allPrevious []map[string]interface{}
-
-GetFailureReasonLoop:
-	for {
-		rowType, ok := previous["type"].(int)
-		if !ok {
-			// This should never happen, as all our rows have the type field.
-			break GetFailureReasonLoop
-		}
-
-		runID := previous["run_id"].(gocql.UUID).String()
-
-		if rowType == rowTypeShard {
-			if actualRangeID, ok = previous["range_id"].(int64); ok && actualRangeID != requestRangeID {
-				// UpdateWorkflowExecution failed because rangeID was modified
-				rangeIDUnmatch = true
-			}
-		} else if rowType == rowTypeExecution && runID == requestRunID {
-			if actualNextEventID, ok = previous["next_event_id"].(int64); ok && actualNextEventID != requestCondition {
-				// UpdateWorkflowExecution failed because next event ID is unexpected
-				nextEventIDUnmatch = true
-			}
-		} else if rowType == rowTypeExecution && runID == permanentRunID {
-			// UpdateWorkflowExecution failed because current_run_id is unexpected
-			if actualCurrRunID = previous["current_run_id"].(gocql.UUID).String(); actualCurrRunID != requestConditionalRunID {
-				// UpdateWorkflowExecution failed because next event ID is unexpected
-				runIDUnmatch = true
+func (d *cassandraPersistence) processUpdateWorkflowResult(err error, rangeID int64) error {
+	if err != nil {
+		conditionFailureErr, isConditionFailedError := err.(*nosqlplugin.WorkflowOperationConditionFailure)
+		if isConditionFailedError {
+			switch {
+			case conditionFailureErr.UnknownConditionFailureDetails != nil:
+				return &p.ConditionFailedError{
+					Msg: *conditionFailureErr.UnknownConditionFailureDetails,
+				}
+			case conditionFailureErr.ShardRangeIDNotMatch != nil:
+				return &p.ShardOwnershipLostError{
+					ShardID: d.shardID,
+					Msg: fmt.Sprintf("Failed to update workflow execution.  Request RangeID: %v, Actual RangeID: %v",
+						rangeID, *conditionFailureErr.ShardRangeIDNotMatch),
+				}
+			case conditionFailureErr.CurrentWorkflowConditionFailInfo != nil:
+				return &p.CurrentWorkflowConditionFailedError{
+					Msg: *conditionFailureErr.CurrentWorkflowConditionFailInfo,
+				}
+			default:
+				// If ever runs into this branch, there is bug in the code either in here, or in the implementation of nosql plugin
+				err := fmt.Errorf("unexpected conditionFailureReason error")
+				d.logger.Error("A code bug exists in persistence layer, please investigate ASAP", tag.Error(err))
+				return err
 			}
 		}
-
-		allPrevious = append(allPrevious, previous)
-		previous = make(map[string]interface{})
-		if !iter.MapScan(previous) {
-			// Cassandra returns the actual row that caused a condition failure, so we should always return
-			// from the checks above, but just in case.
-			break GetFailureReasonLoop
-		}
+		return convertCommonErrors(d.client, "UpdateWorkflowExecution", err)
 	}
 
-	if rangeIDUnmatch {
-		return &p.ShardOwnershipLostError{
-			ShardID: d.shardID,
-			Msg: fmt.Sprintf("Failed to update mutable state.  Request RangeID: %v, Actual RangeID: %v",
-				requestRangeID, actualRangeID),
-		}
-	}
-
-	if runIDUnmatch {
-		return &p.CurrentWorkflowConditionFailedError{
-			Msg: fmt.Sprintf("Failed to update mutable state.  Request Condition: %v, Actual Value: %v, Request Current RunID: %v, Actual Value: %v",
-				requestCondition, actualNextEventID, requestConditionalRunID, actualCurrRunID),
-		}
-	}
-
-	if nextEventIDUnmatch {
-		return &p.ConditionFailedError{
-			Msg: fmt.Sprintf("Failed to update mutable state.  Request Condition: %v, Actual Value: %v, Request Current RunID: %v, Actual Value: %v",
-				requestCondition, actualNextEventID, requestConditionalRunID, actualCurrRunID),
-		}
-	}
-
-	// At this point we only know that the write was not applied.
-	var columns []string
-	columnID := 0
-	for _, previous := range allPrevious {
-		for k, v := range previous {
-			columns = append(columns, fmt.Sprintf("%v: %s=%v", columnID, k, v))
-		}
-		columnID++
-	}
-	return &p.ConditionFailedError{
-		Msg: fmt.Sprintf("Failed to reset mutable state. ShardID: %v, RangeID: %v, Condition: %v, Request Current RunID: %v, columns: (%v)",
-			d.shardID, requestRangeID, requestCondition, requestConditionalRunID, strings.Join(columns, ",")),
-	}
+	return nil
 }
 
 func (d *cassandraPersistence) assertNotCurrentExecution(
