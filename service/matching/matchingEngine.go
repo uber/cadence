@@ -78,7 +78,6 @@ type (
 		config               *Config
 		lockableQueryTaskMap lockableQueryTaskMap
 		domainCache          cache.DomainCache
-		taskListCache        cache.Cache
 		versionChecker       client.VersionChecker
 		keyResolver          membership.ServiceResolver
 	}
@@ -124,7 +123,6 @@ func NewEngine(taskManager persistence.TaskManager,
 		config:               config,
 		lockableQueryTaskMap: lockableQueryTaskMap{queryTaskMap: make(map[string]chan *queryResult)},
 		domainCache:          domainCache,
-		taskListCache:        cache.NewSimple(nil),
 		versionChecker:       client.NewVersionChecker(),
 		keyResolver:          resolver,
 	}
@@ -207,12 +205,6 @@ func (e *matchingEngineImpl) getTaskListManager(
 		metrics.TaskListManagersGauge,
 		float64(len(e.taskLists)),
 	)
-	// Cache user defined task list in taskListCache
-	if e.config.EnableTaskListCache(taskList.domainID) {
-		if taskListKind != nil {
-			e.cacheTaskListByDomainLocked(taskList, *taskListKind)
-		}
-	}
 	e.taskListsLock.Unlock()
 	err = mgr.Start()
 	if err != nil {
@@ -223,36 +215,16 @@ func (e *matchingEngineImpl) getTaskListManager(
 	return mgr, nil
 }
 
-func (e *matchingEngineImpl) cacheTaskListByDomainLocked(
-	taskList *taskListID,
-	taskListKind types.TaskListKind,
-) {
-	if taskListKind != types.TaskListKindNormal {
-		return
+func (e *matchingEngineImpl) getTaskListByDomainLocked(
+	domainID string,
+) []string {
+	var taskLists []string
+	for tl := range e.taskLists {
+		if tl.taskListKind == types.TaskListKindNormal && tl.domainID == domainID {
+			taskLists = append(taskLists, tl.qualifiedTaskListName.baseName)
+		}
 	}
-
-	cachedTL := e.taskListCache.Get(taskList.domainID)
-	var taskLists map[string]struct{}
-	if cachedTL != nil {
-		taskLists = cachedTL.(map[string]struct{})
-	} else {
-		taskLists = make(map[string]struct{})
-	}
-
-	// there might be a race condition here if two goroutines tries to put the task list at the same time
-	// this is non-issue because we don't care as all task lists should be populated eventually
-	taskLists[taskList.name] = struct{}{}
-	e.taskListCache.Put(taskList.domainID, taskLists)
-}
-
-func (e *matchingEngineImpl) removeFromTaskListCacheLocked(taskList *taskListID) {
-	cachedTL := e.taskListCache.Get(taskList.domainID)
-	if cachedTL != nil {
-		taskLists := cachedTL.(map[string]struct{})
-		// there might be a race condition here but delete will be a no-op if the tasklist is already deleted
-		delete(taskLists, taskList.name)
-		e.taskListCache.Put(taskList.domainID, taskLists)
-	}
+	return taskLists
 }
 
 // For use in tests
@@ -265,9 +237,7 @@ func (e *matchingEngineImpl) updateTaskList(taskList *taskListID, mgr taskListMa
 func (e *matchingEngineImpl) removeTaskListManager(id *taskListID) {
 	e.taskListsLock.Lock()
 	defer e.taskListsLock.Unlock()
-	if e.config.EnableTaskListCache(id.domainID) {
-		e.removeFromTaskListCacheLocked(id)
-	}
+
 	delete(e.taskLists, *id)
 	e.metricsClient.Scope(metrics.MatchingTaskListMgrScope).UpdateGauge(
 		metrics.TaskListManagersGauge,
@@ -281,8 +251,8 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	request *types.AddDecisionTaskRequest,
 ) (bool, error) {
 	domainID := request.GetDomainUUID()
-	taskListName := request.TaskList.GetName()
-	taskListKind := request.TaskList.Kind
+	taskListName := request.GetTaskList().GetName()
+	taskListKind := request.GetTaskList().Kind
 	taskListType := persistence.TaskListTypeDecision
 
 	e.emitInfoOrDebugLog(
@@ -297,7 +267,7 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		tag.WorkflowTaskListKind(int32(request.GetTaskList().GetKind())),
 	)
 
-	taskList, err := newTaskListID(domainID, taskListName, taskListType)
+	taskList, err := newTaskListID(domainID, taskListName, taskListType, taskListKind)
 	if err != nil {
 		return false, err
 	}
@@ -329,7 +299,8 @@ func (e *matchingEngineImpl) AddActivityTask(
 	request *types.AddActivityTaskRequest,
 ) (bool, error) {
 	domainID := request.GetDomainUUID()
-	taskListName := request.TaskList.GetName()
+	taskListName := request.GetTaskList().GetName()
+	taskListKind := request.GetTaskList().Kind
 	taskListType := persistence.TaskListTypeActivity
 
 	e.emitInfoOrDebugLog(
@@ -344,12 +315,12 @@ func (e *matchingEngineImpl) AddActivityTask(
 		tag.WorkflowTaskListKind(int32(request.GetTaskList().GetKind())),
 	)
 
-	taskList, err := newTaskListID(domainID, taskListName, taskListType)
+	taskList, err := newTaskListID(domainID, taskListName, taskListType, taskListKind)
 	if err != nil {
 		return false, err
 	}
 
-	tlMgr, err := e.getTaskListManager(taskList, request.TaskList.Kind)
+	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
 		return false, err
 	}
@@ -378,7 +349,8 @@ func (e *matchingEngineImpl) PollForDecisionTask(
 	domainID := req.GetDomainUUID()
 	pollerID := req.GetPollerID()
 	request := req.PollRequest
-	taskListName := request.TaskList.GetName()
+	taskListName := request.GetTaskList().GetName()
+	taskListKind := request.GetTaskList().Kind
 	e.logger.Debug("Received PollForDecisionTask for taskList",
 		tag.WorkflowTaskListName(taskListName),
 		tag.WorkflowDomainID(domainID),
@@ -389,7 +361,7 @@ pollLoop:
 			return nil, err
 		}
 
-		taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
+		taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision, taskListKind)
 		if err != nil {
 			return nil, err
 		}
@@ -481,7 +453,8 @@ func (e *matchingEngineImpl) PollForActivityTask(
 	domainID := req.GetDomainUUID()
 	pollerID := req.GetPollerID()
 	request := req.PollRequest
-	taskListName := request.TaskList.GetName()
+	taskListName := request.GetTaskList().GetName()
+	taskListKind := request.GetTaskList().Kind
 	e.logger.Debug("Received PollForActivityTask",
 		tag.WorkflowTaskListName(taskListName),
 		tag.WorkflowDomainID(domainID),
@@ -494,7 +467,7 @@ pollLoop:
 			return nil, err
 		}
 
-		taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity)
+		taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity, taskListKind)
 		if err != nil {
 			return nil, err
 		}
@@ -557,9 +530,9 @@ func (e *matchingEngineImpl) QueryWorkflow(
 	queryRequest *types.MatchingQueryWorkflowRequest,
 ) (*types.QueryWorkflowResponse, error) {
 	domainID := queryRequest.GetDomainUUID()
-	taskListName := queryRequest.TaskList.GetName()
-	taskListKind := queryRequest.TaskList.Kind
-	taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
+	taskListName := queryRequest.GetTaskList().GetName()
+	taskListKind := queryRequest.GetTaskList().Kind
+	taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision, taskListKind)
 	if err != nil {
 		return nil, err
 	}
@@ -635,14 +608,15 @@ func (e *matchingEngineImpl) CancelOutstandingPoll(
 ) error {
 	domainID := request.GetDomainUUID()
 	taskListType := int(request.GetTaskListType())
-	taskListName := request.TaskList.GetName()
+	taskListName := request.GetTaskList().GetName()
+	taskListKind := request.GetTaskList().Kind
 	pollerID := request.GetPollerID()
 
-	taskList, err := newTaskListID(domainID, taskListName, taskListType)
+	taskList, err := newTaskListID(domainID, taskListName, taskListType, taskListKind)
 	if err != nil {
 		return err
 	}
-	taskListKind := request.TaskList.Kind
+
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
 		return err
@@ -661,12 +635,14 @@ func (e *matchingEngineImpl) DescribeTaskList(
 	if request.DescRequest.GetTaskListType() == types.TaskListTypeActivity {
 		taskListType = persistence.TaskListTypeActivity
 	}
-	taskListName := request.DescRequest.TaskList.GetName()
-	taskList, err := newTaskListID(domainID, taskListName, taskListType)
+	taskListName := request.GetDescRequest().GetTaskList().GetName()
+	taskListKind := request.GetDescRequest().GetTaskList().Kind
+
+	taskList, err := newTaskListID(domainID, taskListName, taskListType, taskListKind)
 	if err != nil {
 		return nil, err
 	}
-	taskListKind := request.DescRequest.TaskList.Kind
+
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
 		return nil, err
@@ -727,14 +703,12 @@ func (e *matchingEngineImpl) GetTaskListsByDomain(
 	if err != nil {
 		return nil, err
 	}
-	taskLists := e.taskListCache.Get(domainID).(map[string]bool)
-	var taskListNames []string
-	for taskList, _ := range taskLists {
-		taskListNames = append(taskListNames, taskList)
-	}
 
+	e.taskListsLock.RLock()
+	defer e.taskListsLock.RUnlock()
+	taskLists := e.getTaskListByDomainLocked(domainID)
 	return &types.GetTaskListsByDomainResponse{
-		TaskListNames: taskListNames,
+		TaskListNames: taskLists,
 	}, nil
 }
 
@@ -756,7 +730,7 @@ func (e *matchingEngineImpl) getAllPartitions(
 		return partitionKeys, err
 	}
 	taskList := request.GetTaskList()
-	taskListID, err := newTaskListID(domainID, taskList.GetName(), taskListType)
+	taskListID, err := newTaskListID(domainID, taskList.GetName(), taskListType, taskList.Kind)
 	rootPartition := taskListID.GetRoot()
 
 	partitionKeys = append(partitionKeys, rootPartition)

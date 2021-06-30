@@ -22,10 +22,11 @@ package matching
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"go.uber.org/yarpc"
+
+	"github.com/uber/cadence/common/future"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
@@ -251,43 +252,30 @@ func (c *clientImpl) GetTaskListsByDomain(
 		return nil, err
 	}
 
-	// TODO: use Future interface
-	var wg sync.WaitGroup
-	wg.Add(len(clients))
-	respChan := make(chan *types.GetTaskListsByDomainResponse, len(clients))
-	errChan := make(chan error, 1)
-	for _, cl := range clients {
-		go func(client Client, request *types.GetTaskListsByDomainRequest) {
-			defer wg.Done()
+	var futures []future.Future
+	for _, client := range clients {
+		future, settable := future.NewFuture()
+		go func() {
+			settable.Set(client.(Client).GetTaskListsByDomain(ctx, request, opts...))
+		}()
 
-			resp, err := c.getTaskListsByDomain(cl.(Client), ctx, request, opts...)
-			if err != nil {
-				select {
-				case errChan <- err:
-				default:
-				}
-				return
-			}
-			respChan <- resp
-		}(cl.(Client), request)
-	}
-	wg.Wait()
-	close(respChan)
-	close(errChan)
-	if len(errChan) > 0 {
-		err = <-errChan
-		return nil, err
+		futures = append(futures, future)
 	}
 
-	// De-dup task list within a domain
 	taskListMap := make(map[string]struct{})
-	for resp := range respChan {
-		for _, tl := range resp.TaskListNames {
-			if _, ok := taskListMap[tl]; !ok {
-				taskListMap[tl] = struct{}{}
+	for _, future := range futures {
+		var resp *types.GetTaskListsByDomainResponse
+		if err = future.Get(ctx, &resp); err != nil {
+			return nil, err
+		} else {
+			for _, tl := range resp.TaskListNames {
+				if _, ok := taskListMap[tl]; !ok {
+					taskListMap[tl] = struct{}{}
+				}
 			}
 		}
 	}
+
 	var taskListNames []string
 	for tl := range taskListMap {
 		taskListNames = append(taskListNames, tl)
