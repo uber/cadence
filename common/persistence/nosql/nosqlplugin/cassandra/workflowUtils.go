@@ -1016,8 +1016,8 @@ func (db *cdb) createWorkflowExecutionWithMergeMaps(
 		return fmt.Errorf("should only support EventBufferWriteModeNone")
 	}
 
-	if execution.MapsWriteMode != nosqlplugin.WorkflowExecutionMapsWriteModeMerge {
-		return fmt.Errorf("should only support WorkflowExecutionMapsWriteModeMerge")
+	if execution.MapsWriteMode != nosqlplugin.WorkflowExecutionMapsWriteModeCreate {
+		return fmt.Errorf("should only support WorkflowExecutionMapsWriteModeCreate")
 	}
 
 	err = db.updateActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos, nil)

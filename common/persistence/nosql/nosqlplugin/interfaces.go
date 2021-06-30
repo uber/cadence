@@ -745,7 +745,7 @@ const (
 
 const (
 	// Merge mode will upsert new entry to maps
-	WorkflowExecutionMapsWriteModeMerge WorkflowExecutionMapsWriteMode = iota
+	WorkflowExecutionMapsWriteModeCreate WorkflowExecutionMapsWriteMode = iota
 	// MergeAndDelete mode will upsert new entry to maps and also delete entries from maps
 	WorkflowExecutionMapsWriteModeMergeAndDelete
 	// Override mode will reset(override) the whole maps
