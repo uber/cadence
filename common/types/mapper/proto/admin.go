@@ -677,6 +677,48 @@ func ToAdminResetQueueRequest(t *adminv1.ResetQueueRequest) *types.ResetQueueReq
 	}
 }
 
+// FromAdminGetCrossClusterTasksRequest converts internal GetCrossClusterTasksRequest type to proto
+func FromAdminGetCrossClusterTasksRequest(t *types.GetCrossClusterTasksRequest) *adminv1.GetCrossClusterTasksRequest {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.GetCrossClusterTasksRequest{
+		ShardIds:      t.ShardIDs,
+		TargetCluster: t.TargetCluster,
+	}
+}
+
+// ToAdminGetCrossClusterTasksRequest converts proto GetCrossClusterTasksRequest type to internal
+func ToAdminGetCrossClusterTasksRequest(t *adminv1.GetCrossClusterTasksRequest) *types.GetCrossClusterTasksRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetCrossClusterTasksRequest{
+		ShardIDs:      t.ShardIds,
+		TargetCluster: t.TargetCluster,
+	}
+}
+
+// FromAdminGetCrossClusterTasksResponse converts internal GetCrossClusterTasksResponse type to proto
+func FromAdminGetCrossClusterTasksResponse(t *types.GetCrossClusterTasksResponse) *adminv1.GetCrossClusterTasksResponse {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.GetCrossClusterTasksResponse{
+		TasksByShard: FromCrossClusterTaskRequestMap(t.TasksByShard),
+	}
+}
+
+// ToAdminGetCrossClusterTasksResponse converts proto GetCrossClusterTasksResponse type to internal
+func ToAdminGetCrossClusterTasksResponse(t *adminv1.GetCrossClusterTasksResponse) *types.GetCrossClusterTasksResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.GetCrossClusterTasksResponse{
+		TasksByShard: ToCrossClusterTaskRequestMap(t.TasksByShard),
+	}
+}
+
 //FromGetDynamicConfigRequest converts internal GetDynamicConfigRequest type to proto
 func FromGetDynamicConfigRequest(t *types.GetDynamicConfigRequest) *adminv1.GetDynamicConfigRequest {
 	if t == nil {

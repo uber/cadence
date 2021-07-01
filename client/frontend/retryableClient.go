@@ -601,3 +601,18 @@ func (c *retryableClient) ListTaskListPartitions(
 	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
+
+func (c *retryableClient) GetTaskListsByDomain(
+	ctx context.Context,
+	request *types.GetTaskListsByDomainRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetTaskListsByDomainResponse, error) {
+	var resp *types.GetTaskListsByDomainResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetTaskListsByDomain(ctx, request, opts...)
+		return err
+	}
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}

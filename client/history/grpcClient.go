@@ -63,6 +63,11 @@ func (g grpcClient) DescribeWorkflowExecution(ctx context.Context, request *type
 	return proto.ToHistoryDescribeWorkflowExecutionResponse(response), proto.ToError(err)
 }
 
+func (g grpcClient) GetCrossClusterTasks(ctx context.Context, request *types.GetCrossClusterTasksRequest, opts ...yarpc.CallOption) (*types.GetCrossClusterTasksResponse, error) {
+	response, err := g.c.GetCrossClusterTasks(ctx, proto.FromHistoryGetCrossClusterTasksRequest(request), opts...)
+	return proto.ToHistoryGetCrossClusterTasksResponse(response), proto.ToError(err)
+}
+
 func (g grpcClient) GetDLQReplicationMessages(ctx context.Context, request *types.GetDLQReplicationMessagesRequest, opts ...yarpc.CallOption) (*types.GetDLQReplicationMessagesResponse, error) {
 	response, err := g.c.GetDLQReplicationMessages(ctx, proto.FromHistoryGetDLQReplicationMessagesRequest(request), opts...)
 	return proto.ToHistoryGetDLQReplicationMessagesResponse(response), proto.ToError(err)
@@ -186,6 +191,11 @@ func (g grpcClient) RespondActivityTaskCompleted(ctx context.Context, request *t
 func (g grpcClient) RespondActivityTaskFailed(ctx context.Context, request *types.HistoryRespondActivityTaskFailedRequest, opts ...yarpc.CallOption) error {
 	_, err := g.c.RespondActivityTaskFailed(ctx, proto.FromHistoryRespondActivityTaskFailedRequest(request), opts...)
 	return proto.ToError(err)
+}
+
+func (g grpcClient) RespondCrossClusterTasksCompleted(ctx context.Context, request *types.RespondCrossClusterTasksCompletedRequest, opts ...yarpc.CallOption) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	response, err := g.c.RespondCrossClusterTasksCompleted(ctx, proto.FromHistoryRespondCrossClusterTasksCompletedRequest(request), opts...)
+	return proto.ToHistoryRespondCrossClusterTasksCompletedResponse(response), proto.ToError(err)
 }
 
 func (g grpcClient) RespondDecisionTaskCompleted(ctx context.Context, request *types.HistoryRespondDecisionTaskCompletedRequest, opts ...yarpc.CallOption) (*types.HistoryRespondDecisionTaskCompletedResponse, error) {

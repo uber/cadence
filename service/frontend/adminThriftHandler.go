@@ -29,7 +29,6 @@ import (
 	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -65,7 +64,7 @@ func (t AdminThriftHandler) DescribeCluster(ctx context.Context) (*admin.Describ
 	return thrift.FromDescribeClusterResponse(response), thrift.FromError(err)
 }
 
-// DescribeHistoryHost forwards request to the underlying handler
+// DescribeShardDistribution forwards request to the underlying handler
 func (t AdminThriftHandler) DescribeShardDistribution(ctx context.Context, request *shared.DescribeShardDistributionRequest) (*shared.DescribeShardDistributionResponse, error) {
 	response, err := t.h.DescribeShardDistribution(withThriftTag(ctx), thrift.ToDescribeShardDistributionRequest(request))
 	return thrift.FromDescribeShardDistributionResponse(response), thrift.FromError(err)
@@ -163,7 +162,8 @@ func (t AdminThriftHandler) ResetQueue(ctx context.Context, request *shared.Rese
 
 // GetCrossClusterTasks fetches cross cluster tasks
 func (t AdminThriftHandler) GetCrossClusterTasks(ctx context.Context, request *shared.GetCrossClusterTasksRequest) (*shared.GetCrossClusterTasksResponse, error) {
-	return nil, thrift.FromError(types.InternalServiceError{Message: "not implemented"})
+	response, err := t.h.GetCrossClusterTasks(withThriftTag(ctx), thrift.ToGetCrossClusterTasksRequest(request))
+	return thrift.FromGetCrossClusterTasksResponse(response), thrift.FromError(err)
 }
 
 func (t AdminThriftHandler) GetDynamicConfig(ctx context.Context, request *admin.GetDynamicConfigRequest) (*admin.GetDynamicConfigResponse, error) {

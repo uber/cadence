@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package nosql
 
 import (
 	"context"
@@ -35,27 +35,17 @@ import (
 )
 
 type (
-	// Implements ShardManager
-	nosqlShardManager struct {
-		db                 nosqlplugin.DB
-		logger             log.Logger
+	// Implements ShardStore
+	nosqlShardStore struct {
+		nosqlStore
 		currentClusterName string
 	}
 )
 
-var _ p.ShardStore = (*nosqlShardManager)(nil)
+var _ p.ShardStore = (*nosqlShardStore)(nil)
 
-func (sh *nosqlShardManager) GetName() string {
-	return sh.db.PluginName()
-}
-
-// Close releases the underlying resources held by this object
-func (sh *nosqlShardManager) Close() {
-	sh.db.Close()
-}
-
-// newShardPersistence is used to create an instance of ShardManager implementation
-func newShardPersistence(
+// newNoSQLShardStore is used to create an instance of ShardStore implementation
+func newNoSQLShardStore(
 	cfg config.Cassandra,
 	clusterName string,
 	logger log.Logger,
@@ -66,16 +56,18 @@ func newShardPersistence(
 		return nil, err
 	}
 
-	return &nosqlShardManager{
-		db:                 db,
-		logger:             logger,
+	return &nosqlShardStore{
+		nosqlStore: nosqlStore{
+			db:     db,
+			logger: logger,
+		},
 		currentClusterName: clusterName,
 	}, nil
 }
 
-// NewShardPersistenceFromSession is used to create an instance of ShardManager implementation
+// NewNoSQLShardStoreFromSession is used to create an instance of ShardStore implementation
 // It is being used by some admin toolings
-func NewShardPersistenceFromSession(
+func NewNoSQLShardStoreFromSession(
 	client gocql.Client,
 	session gocql.Session,
 	clusterName string,
@@ -84,14 +76,16 @@ func NewShardPersistenceFromSession(
 	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
 	db := cassandra.NewCassandraDBFromSession(client, session, logger)
 
-	return &nosqlShardManager{
-		db:                 db,
-		logger:             logger,
+	return &nosqlShardStore{
+		nosqlStore: nosqlStore{
+			db:     db,
+			logger: logger,
+		},
 		currentClusterName: clusterName,
 	}
 }
 
-func (sh *nosqlShardManager) CreateShard(
+func (sh *nosqlShardStore) CreateShard(
 	ctx context.Context,
 	request *p.InternalCreateShardRequest,
 ) error {
@@ -111,7 +105,7 @@ func (sh *nosqlShardManager) CreateShard(
 	return nil
 }
 
-func (sh *nosqlShardManager) GetShard(
+func (sh *nosqlShardStore) GetShard(
 	ctx context.Context,
 	request *p.InternalGetShardRequest,
 ) (*p.InternalGetShardResponse, error) {
@@ -156,7 +150,7 @@ func (sh *nosqlShardManager) GetShard(
 	return &p.InternalGetShardResponse{ShardInfo: shardInfo}, nil
 }
 
-func (sh *nosqlShardManager) updateRangeID(
+func (sh *nosqlShardStore) updateRangeID(
 	ctx context.Context,
 	shardID int,
 	rangeID int64,
@@ -179,7 +173,7 @@ func (sh *nosqlShardManager) updateRangeID(
 	return nil
 }
 
-func (sh *nosqlShardManager) UpdateShard(
+func (sh *nosqlShardStore) UpdateShard(
 	ctx context.Context,
 	request *p.InternalUpdateShardRequest,
 ) error {

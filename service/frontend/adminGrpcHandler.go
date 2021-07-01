@@ -26,7 +26,6 @@ import (
 	"go.uber.org/yarpc"
 
 	adminv1 "github.com/uber/cadence/.gen/proto/admin/v1"
-	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/proto"
 )
 
@@ -138,7 +137,8 @@ func (g adminGRPCHandler) ResetQueue(ctx context.Context, request *adminv1.Reset
 }
 
 func (g adminGRPCHandler) GetCrossClusterTasks(ctx context.Context, request *adminv1.GetCrossClusterTasksRequest) (*adminv1.GetCrossClusterTasksResponse, error) {
-	return nil, proto.FromError(types.InternalServiceError{Message: "not implemented"})
+	response, err := g.h.GetCrossClusterTasks(withGRPCTag(ctx), proto.ToAdminGetCrossClusterTasksRequest(request))
+	return proto.FromAdminGetCrossClusterTasksResponse(response), proto.FromError(err)
 }
 
 func (g adminGRPCHandler) GetDynamicConfig(ctx context.Context, request *adminv1.GetDynamicConfigRequest) (*adminv1.GetDynamicConfigResponse, error) {

@@ -88,7 +88,7 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 	securityToken := c.String(FlagSecurityToken)
 	var err error
 
-	isGlobalDomain := false
+	isGlobalDomain := true
 	if c.IsSet(FlagIsGlobalDomain) {
 		isGlobalDomain, err = strconv.ParseBool(c.String(FlagIsGlobalDomain))
 		if err != nil {

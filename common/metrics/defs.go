@@ -366,6 +366,10 @@ const (
 	HistoryClientRefreshWorkflowTasksScope
 	// HistoryClientNotifyFailoverMarkersScope tracks RPC calls to history service
 	HistoryClientNotifyFailoverMarkersScope
+	// HistoryClientGetCrossClusterTasksScope tracks RPC calls to history service
+	HistoryClientGetCrossClusterTasksScope
+	// HistoryClientRespondCrossClusterTasksCompletedScope tracks RPC calls to history service
+	HistoryClientRespondCrossClusterTasksCompletedScope
 	// MatchingClientPollForDecisionTaskScope tracks RPC calls to matching service
 	MatchingClientPollForDecisionTaskScope
 	// MatchingClientPollForActivityTaskScope tracks RPC calls to matching service
@@ -384,6 +388,8 @@ const (
 	MatchingClientDescribeTaskListScope
 	// MatchingClientListTaskListPartitionsScope tracks RPC calls to matching service
 	MatchingClientListTaskListPartitionsScope
+	// MatchingClientGetTaskListsByDomainScope tracks RPC calls to matching service
+	MatchingClientGetTaskListsByDomainScope
 	// FrontendClientDeprecateDomainScope tracks RPC calls to frontend service
 	FrontendClientDeprecateDomainScope
 	// FrontendClientDescribeDomainScope tracks RPC calls to frontend service
@@ -472,6 +478,8 @@ const (
 	FrontendClientGetClusterInfoScope
 	// FrontendClientListTaskListPartitionsScope tracks RPC calls to frontend service
 	FrontendClientListTaskListPartitionsScope
+	// FrontendClientGetTaskListsByDomainScope tracks RPC calls to frontend service
+	FrontendClientGetTaskListsByDomainScope
 	// AdminClientAddSearchAttributeScope tracks RPC calls to admin service
 	AdminClientAddSearchAttributeScope
 	// AdminClientCloseShardScope tracks RPC calls to admin service
@@ -502,6 +510,8 @@ const (
 	AdminClientRefreshWorkflowTasksScope
 	// AdminClientResendReplicationTasksScope tracks RPC calls to admin service
 	AdminClientResendReplicationTasksScope
+	// AdminClientGetCrossClusterTasksScope tracks RPC calls to Admin service
+	AdminClientGetCrossClusterTasksScope
 	// DCRedirectionDeprecateDomainScope tracks RPC calls for dc redirection
 	DCRedirectionDeprecateDomainScope
 	// DCRedirectionDescribeDomainScope tracks RPC calls for dc redirection
@@ -580,6 +590,8 @@ const (
 	DCRedirectionUpdateDomainScope
 	// DCRedirectionListTaskListPartitionsScope tracks RPC calls for dc redirection
 	DCRedirectionListTaskListPartitionsScope
+	// DCRedirectionGetTaskListsByDomainScope tracks RPC calls for dc redirection
+	DCRedirectionGetTaskListsByDomainScope
 
 	// MessagingPublishScope tracks Publish calls made by service to messaging layer
 	MessagingClientPublishScope
@@ -726,6 +738,8 @@ const (
 	AdminMergeDLQMessagesScope
 	// AdminDescribeShardDistributionScope is the metric scope for admin.DescribeShardDistribution
 	AdminDescribeShardDistributionScope
+	// AdminGetCrossClusterTasksScope is the metric scope for admin.GetCrossClusterTasks
+	AdminGetCrossClusterTasksScope
 
 	NumAdminScopes
 )
@@ -802,6 +816,8 @@ const (
 	FrontendDescribeTaskListScope
 	// FrontendResetStickyTaskListScope is the metric scope for frontend.ResetStickyTaskList
 	FrontendListTaskListPartitionsScope
+	// FrontendGetTaskListsByDomainScope is the metric scope for frontend.ResetStickyTaskList
+	FrontendGetTaskListsByDomainScope
 	// FrontendResetStickyTaskListScope is the metric scope for frontend.ResetStickyTaskList
 	FrontendResetStickyTaskListScope
 	// FrontendListDomainsScope is the metric scope for frontend.ListDomain
@@ -886,12 +902,16 @@ const (
 	HistoryMergeDLQMessagesScope
 	// HistoryShardControllerScope is the scope used by shard controller
 	HistoryShardControllerScope
-	// HistoryReapplyEventsScope is the scope used by event reapplication
+	// HistoryReapplyEventsScope tracks ReapplyEvents API calls received by service
 	HistoryReapplyEventsScope
-	// HistoryRefreshWorkflowTasksScope is the scope used by refresh workflow tasks API
+	// HistoryRefreshWorkflowTasksScope tracks RefreshWorkflowTasks API calls received by service
 	HistoryRefreshWorkflowTasksScope
-	// HistoryNotifyFailoverMarkersScope is the scope used by refresh workflow tasks API
+	// HistoryNotifyFailoverMarkersScope is the scope used by notify failover marker API
 	HistoryNotifyFailoverMarkersScope
+	// HistoryGetCrossClusterTasksScope tracks GetCrossClusterTasks API calls received by service
+	HistoryGetCrossClusterTasksScope
+	// HistoryRespondCrossClusterTasksCompletedScope tracks RespondCrossClusterTasksCompleted API calls received by service
+	HistoryRespondCrossClusterTasksCompletedScope
 	// TaskPriorityAssignerScope is the scope used by all metric emitted by task priority assigner
 	TaskPriorityAssignerScope
 	// TransferQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
@@ -1062,6 +1082,8 @@ const (
 	MatchingDescribeTaskListScope
 	// MatchingListTaskListPartitionsScope tracks ListTaskListPartitions API calls received by service
 	MatchingListTaskListPartitionsScope
+	// MatchingGetTaskListsByDomainScope tracks GetTaskListsByDomain API calls received by service
+	MatchingGetTaskListsByDomainScope
 
 	NumMatchingScopes
 )
@@ -1237,6 +1259,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientMergeDLQMessagesScope:                    {operation: "HistoryClientMergeDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientRefreshWorkflowTasksScope:                {operation: "HistoryClientRefreshWorkflowTasksScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientNotifyFailoverMarkersScope:               {operation: "HistoryClientNotifyFailoverMarkersScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientGetCrossClusterTasksScope:                {operation: "HistoryClientGetCrossClusterTasks", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRespondCrossClusterTasksCompletedScope:   {operation: "HistoryClientRespondCrossClusterTasksCompleted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		MatchingClientPollForDecisionTaskScope:                {operation: "MatchingClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
 		MatchingClientPollForActivityTaskScope:                {operation: "MatchingClientPollForActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
 		MatchingClientAddActivityTaskScope:                    {operation: "MatchingClientAddActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
@@ -1246,6 +1270,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MatchingClientCancelOutstandingPollScope:              {operation: "MatchingClientCancelOutstandingPoll", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
 		MatchingClientDescribeTaskListScope:                   {operation: "MatchingClientDescribeTaskList", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
 		MatchingClientListTaskListPartitionsScope:             {operation: "MatchingClientListTaskListPartitions", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientGetTaskListsByDomainScope:               {operation: "MatchingClientGetTaskListsByDomain", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
 		FrontendClientDeprecateDomainScope:                    {operation: "FrontendClientDeprecateDomain", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientDescribeDomainScope:                     {operation: "FrontendClientDescribeDomain", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientDescribeTaskListScope:                   {operation: "FrontendClientDescribeTaskList", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
@@ -1290,6 +1315,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendClientReapplyEventsScope:                      {operation: "FrontendClientReapplyEventsScope", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientGetClusterInfoScope:                     {operation: "FrontendClientGetClusterInfoScope", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientListTaskListPartitionsScope:             {operation: "FrontendClientListTaskListPartitions", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientGetTaskListsByDomainScope:               {operation: "FrontendClientGetTaskListsByDomain", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		AdminClientAddSearchAttributeScope:                    {operation: "AdminClientAddSearchAttribute", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientDescribeHistoryHostScope:                   {operation: "AdminClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientDescribeShardDistributionScope:             {operation: "AdminClientDescribeShardDistribution", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
@@ -1305,6 +1331,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminClientReadDLQMessagesScope:                       {operation: "AdminClientReadDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientPurgeDLQMessagesScope:                      {operation: "AdminClientPurgeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientMergeDLQMessagesScope:                      {operation: "AdminClientMergeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetCrossClusterTasksScope:                  {operation: "AdminClientGetCrossClusterTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		DCRedirectionDeprecateDomainScope:                     {operation: "DCRedirectionDeprecateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionDescribeDomainScope:                      {operation: "DCRedirectionDescribeDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionDescribeTaskListScope:                    {operation: "DCRedirectionDescribeTaskList", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
@@ -1344,6 +1371,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		DCRedirectionTerminateWorkflowExecutionScope:          {operation: "DCRedirectionTerminateWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionUpdateDomainScope:                        {operation: "DCRedirectionUpdateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionListTaskListPartitionsScope:              {operation: "DCRedirectionListTaskListPartitions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionGetTaskListsByDomainScope:                {operation: "DCRedirectionGetTaskListsByDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 
 		MessagingClientPublishScope:      {operation: "MessagingClientPublish"},
 		MessagingClientPublishBatchScope: {operation: "MessagingClientPublishBatch"},
@@ -1410,6 +1438,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminReapplyEventsScope:                    {operation: "ReapplyEvents"},
 		AdminRefreshWorkflowTasksScope:             {operation: "RefreshWorkflowTasks"},
 		AdminResendReplicationTasksScope:           {operation: "ResendReplicationTasks"},
+		AdminGetCrossClusterTasksScope:             {operation: "AdminGetCrossClusterTasksScope"},
 
 		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},
 		FrontendPollForDecisionTaskScope:                {operation: "PollForDecisionTask"},
@@ -1447,6 +1476,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendQueryWorkflowScope:                      {operation: "QueryWorkflow"},
 		FrontendDescribeWorkflowExecutionScope:          {operation: "DescribeWorkflowExecution"},
 		FrontendListTaskListPartitionsScope:             {operation: "FrontendListTaskListPartitions"},
+		FrontendGetTaskListsByDomainScope:               {operation: "FrontendGetTaskListsByDomain"},
 		FrontendDescribeTaskListScope:                   {operation: "DescribeTaskList"},
 		FrontendResetStickyTaskListScope:                {operation: "ResetStickyTaskList"},
 		FrontendGetSearchAttributesScope:                {operation: "GetSearchAttributes"},
@@ -1494,6 +1524,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryReapplyEventsScope:                              {operation: "EventReapplication"},
 		HistoryRefreshWorkflowTasksScope:                       {operation: "RefreshWorkflowTasks"},
 		HistoryNotifyFailoverMarkersScope:                      {operation: "NotifyFailoverMarkers"},
+		HistoryGetCrossClusterTasksScope:                       {operation: "GetCrossClusterTasks"},
+		HistoryRespondCrossClusterTasksCompletedScope:          {operation: "RespondCrossClusterTasksCompleted"},
 		TaskPriorityAssignerScope:                              {operation: "TaskPriorityAssigner"},
 		TransferQueueProcessorScope:                            {operation: "TransferQueueProcessor"},
 		TransferActiveQueueProcessorScope:                      {operation: "TransferActiveQueueProcessor"},
@@ -1576,6 +1608,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MatchingCancelOutstandingPollScope:     {operation: "CancelOutstandingPoll"},
 		MatchingDescribeTaskListScope:          {operation: "DescribeTaskList"},
 		MatchingListTaskListPartitionsScope:    {operation: "ListTaskListPartitions"},
+		MatchingGetTaskListsByDomainScope:      {operation: "GetTaskListsByDomain"},
 	},
 	// Worker Scope Names
 	Worker: {

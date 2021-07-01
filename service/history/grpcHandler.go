@@ -28,7 +28,6 @@ import (
 	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
 	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/proto"
 )
 
@@ -76,7 +75,8 @@ func (g grpcHandler) DescribeWorkflowExecution(ctx context.Context, request *his
 }
 
 func (g grpcHandler) GetCrossClusterTasks(ctx context.Context, request *historyv1.GetCrossClusterTasksRequest) (*historyv1.GetCrossClusterTasksResponse, error) {
-	return nil, proto.FromError(types.InternalServiceError{Message: "not implemented"})
+	response, err := g.h.GetCrossClusterTasks(withGRPCTag(ctx), proto.ToHistoryGetCrossClusterTasksRequest(request))
+	return proto.FromHistoryGetCrossClusterTasksResponse(response), proto.FromError(err)
 }
 
 func (g grpcHandler) GetDLQReplicationMessages(ctx context.Context, request *historyv1.GetDLQReplicationMessagesRequest) (*historyv1.GetDLQReplicationMessagesResponse, error) {
@@ -205,7 +205,8 @@ func (g grpcHandler) RespondActivityTaskFailed(ctx context.Context, request *his
 }
 
 func (g grpcHandler) RespondCrossClusterTasksCompleted(ctx context.Context, request *historyv1.RespondCrossClusterTasksCompletedRequest) (*historyv1.RespondCrossClusterTasksCompletedResponse, error) {
-	return nil, proto.FromError(types.InternalServiceError{Message: "not implemented"})
+	response, err := g.h.RespondCrossClusterTasksCompleted(withGRPCTag(ctx), proto.ToHistoryRespondCrossClusterTasksCompletedRequest(request))
+	return proto.FromHistoryRespondCrossClusterTasksCompletedResponse(response), proto.FromError(err)
 }
 
 func (g grpcHandler) RespondDecisionTaskCompleted(ctx context.Context, request *historyv1.RespondDecisionTaskCompletedRequest) (*historyv1.RespondDecisionTaskCompletedResponse, error) {

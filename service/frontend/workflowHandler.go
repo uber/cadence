@@ -3461,6 +3461,38 @@ func (wh *WorkflowHandler) ListTaskListPartitions(
 	return resp, err
 }
 
+// GetTaskListsByDomain returns all the partition and host for a taskList
+func (wh *WorkflowHandler) GetTaskListsByDomain(
+	ctx context.Context,
+	request *types.GetTaskListsByDomainRequest,
+) (resp *types.GetTaskListsByDomainResponse, retError error) {
+	defer log.CapturePanic(wh.GetLogger(), &retError)
+
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendGetTaskListsByDomainScope, request)
+	defer sw.Stop()
+
+	if wh.isShuttingDown() {
+		return nil, errShuttingDown
+	}
+
+	if request == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
+
+	if ok := wh.allow(request); !ok {
+		return nil, wh.error(createServiceBusyError(), scope)
+	}
+
+	if request.GetDomain() == "" {
+		return nil, wh.error(errDomainNotSet, scope)
+	}
+
+	resp, err := wh.GetMatchingClient().GetTaskListsByDomain(ctx, &types.GetTaskListsByDomainRequest{
+		Domain: request.Domain,
+	})
+	return resp, err
+}
+
 func (wh *WorkflowHandler) getRawHistory(
 	ctx context.Context,
 	scope metrics.Scope,

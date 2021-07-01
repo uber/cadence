@@ -1028,3 +1028,29 @@ func (c *errorInjectionClient) ListTaskListPartitions(
 	}
 	return resp, clientErr
 }
+
+func (c *errorInjectionClient) GetTaskListsByDomain(
+	ctx context.Context,
+	request *types.GetTaskListsByDomainRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetTaskListsByDomainResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.GetTaskListsByDomainResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.GetTaskListsByDomain(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.FrontendClientOperationGetTaskListsByDomain,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}

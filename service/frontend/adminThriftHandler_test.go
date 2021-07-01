@@ -146,4 +146,10 @@ func TestAdminThriftHandler(t *testing.T) {
 		err := th.ResetQueue(ctx, &shared.ResetQueueRequest{})
 		assert.Equal(t, expectedErr, err)
 	})
+	t.Run("GetCrossClusterTasks", func(t *testing.T) {
+		h.EXPECT().GetCrossClusterTasks(taggedCtx, &types.GetCrossClusterTasksRequest{}).Return(&types.GetCrossClusterTasksResponse{}, internalErr).Times(1)
+		resp, err := th.GetCrossClusterTasks(ctx, &shared.GetCrossClusterTasksRequest{})
+		assert.Equal(t, shared.GetCrossClusterTasksResponse{}, *resp)
+		assert.Equal(t, expectedErr, err)
+	})
 }
