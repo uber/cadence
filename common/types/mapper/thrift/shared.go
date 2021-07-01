@@ -3052,6 +3052,46 @@ func ToListTaskListPartitionsResponse(t *shared.ListTaskListPartitionsResponse) 
 	}
 }
 
+// FromGetTaskListsByDomainRequest converts internal GetTaskListsByDomainRequest type to thrift
+func FromGetTaskListsByDomainRequest(t *types.GetTaskListsByDomainRequest) *shared.GetTaskListsByDomainRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.GetTaskListsByDomainRequest{
+		DomainName: &t.Domain,
+	}
+}
+
+// ToGetTaskListsByDomainRequest converts thrift GetTaskListsByDomainRequest type to internal
+func ToGetTaskListsByDomainRequest(t *shared.GetTaskListsByDomainRequest) *types.GetTaskListsByDomainRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetTaskListsByDomainRequest{
+		Domain: t.GetDomainName(),
+	}
+}
+
+// FromGetTaskListsByDomainResponse converts internal GetTaskListsByDomainResponse type to thrift
+func FromGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainResponse) *shared.GetTaskListsByDomainResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.GetTaskListsByDomainResponse{
+		TaskListNames: t.GetTaskListNames(),
+	}
+}
+
+// ToGetTaskListsByDomainResponse converts thrift GetTaskListsByDomainResponse type to internal
+func ToGetTaskListsByDomainResponse(t *shared.GetTaskListsByDomainResponse) *types.GetTaskListsByDomainResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.GetTaskListsByDomainResponse{
+		TaskListNames: t.GetTaskListNames(),
+	}
+}
+
 // FromListWorkflowExecutionsRequest converts internal ListWorkflowExecutionsRequest type to thrift
 func FromListWorkflowExecutionsRequest(t *types.ListWorkflowExecutionsRequest) *shared.ListWorkflowExecutionsRequest {
 	if t == nil {

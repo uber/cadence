@@ -1103,6 +1103,7 @@ func (s *IntegrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 
 	stickyTaskList := &types.TaskList{}
 	stickyTaskList.Name = stl
+	stickyTaskList.Kind = types.TaskListKindSticky.Ptr()
 	stickyScheduleToStartTimeoutSeconds := common.Int32Ptr(10)
 
 	// Start workflow execution

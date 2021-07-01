@@ -64,6 +64,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.DescribeTaskListResponse, error)
 
+	GetTaskListsByDomain(
+		ctx context.Context,
+		Request *shared.GetTaskListsByDomainRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.GetTaskListsByDomainResponse, error)
+
 	ListTaskListPartitions(
 		ctx context.Context,
 		Request *matching.ListTaskListPartitionsRequest,
@@ -208,6 +214,29 @@ func (c client) DescribeTaskList(
 	}
 
 	success, err = matching.MatchingService_DescribeTaskList_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetTaskListsByDomain(
+	ctx context.Context,
+	_Request *shared.GetTaskListsByDomainRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetTaskListsByDomainResponse, err error) {
+
+	args := matching.MatchingService_GetTaskListsByDomain_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result matching.MatchingService_GetTaskListsByDomain_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = matching.MatchingService_GetTaskListsByDomain_Helper.UnwrapResponse(&result)
 	return
 }
 

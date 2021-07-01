@@ -4563,6 +4563,32 @@ func (v *ListTaskListPartitionsResponse) GetDecisionTaskListPartitions() (o []*T
 	return
 }
 
+// GetTaskListsByDomainRequest is an internal type (TBD...)
+type GetTaskListsByDomainRequest struct {
+	Domain string `json:"domain,omitempty"`
+}
+
+// GetDomain is an internal getter (TBD...)
+func (v *GetTaskListsByDomainRequest) GetDomain() (o string) {
+	if v != nil {
+		return v.Domain
+	}
+	return
+}
+
+// GetTaskListsByDomainResponse is an internal type (TBD...)
+type GetTaskListsByDomainResponse struct {
+	TaskListNames []string `json:"taskListNames,omitempty"`
+}
+
+// GetTaskListNames is an internal getter (TBD...)
+func (v *GetTaskListsByDomainResponse) GetTaskListNames() (o []string) {
+	if v != nil && v.TaskListNames != nil {
+		return v.TaskListNames
+	}
+	return
+}
+
 // ListWorkflowExecutionsRequest is an internal type (TBD...)
 type ListWorkflowExecutionsRequest struct {
 	Domain        string `json:"domain,omitempty"`
