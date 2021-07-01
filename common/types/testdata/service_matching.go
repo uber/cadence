@@ -137,4 +137,11 @@ var (
 		TaskID:           "TaskID",
 		CompletedRequest: &RespondQueryTaskCompletedRequest,
 	}
+	MatchingGetTaskListsByDomainRequest = types.GetTaskListsByDomainRequest{
+		Domain: DomainName,
+	}
+
+	MatchingGetTaskListsByDomainResponse = types.GetTaskListsByDomainResponse{
+		TaskListNames: []string{},
+	}
 )

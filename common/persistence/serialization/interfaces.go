@@ -27,6 +27,7 @@ import (
 
 	"go.uber.org/thriftrw/wire"
 
+	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -35,23 +36,25 @@ import (
 type (
 	// ShardInfo blob in a serialization agnostic format
 	ShardInfo struct {
-		StolenSinceRenew                      int32
-		UpdatedAt                             time.Time
-		ReplicationAckLevel                   int64
-		TransferAckLevel                      int64
-		TimerAckLevel                         time.Time
-		DomainNotificationVersion             int64
-		ClusterTransferAckLevel               map[string]int64
-		ClusterTimerAckLevel                  map[string]time.Time
-		Owner                                 string
-		ClusterReplicationLevel               map[string]int64
-		PendingFailoverMarkers                []byte
-		PendingFailoverMarkersEncoding        string
-		ReplicationDlqAckLevel                map[string]int64
-		TransferProcessingQueueStates         []byte
-		TransferProcessingQueueStatesEncoding string
-		TimerProcessingQueueStates            []byte
-		TimerProcessingQueueStatesEncoding    string
+		StolenSinceRenew                          int32
+		UpdatedAt                                 time.Time
+		ReplicationAckLevel                       int64
+		TransferAckLevel                          int64
+		TimerAckLevel                             time.Time
+		DomainNotificationVersion                 int64
+		ClusterTransferAckLevel                   map[string]int64
+		ClusterTimerAckLevel                      map[string]time.Time
+		Owner                                     string
+		ClusterReplicationLevel                   map[string]int64
+		PendingFailoverMarkers                    []byte
+		PendingFailoverMarkersEncoding            string
+		ReplicationDlqAckLevel                    map[string]int64
+		TransferProcessingQueueStates             []byte
+		TransferProcessingQueueStatesEncoding     string
+		CrossClusterProcessingQueueStates         []byte
+		CrossClusterProcessingQueueStatesEncoding string
+		TimerProcessingQueueStates                []byte
+		TimerProcessingQueueStatesEncoding        string
 	}
 
 	// DomainInfo blob in a serialization agnostic format
@@ -269,6 +272,13 @@ type (
 		VisibilityTimestamp     time.Time
 	}
 
+	// CrossClusterTask blob in a serialization agnostic format
+	// Cross cluster tasks are exactly like transfer tasks so
+	// instead of creating another struct and duplicating the same
+	// logic everywhere. We reuse TransferTaskInfo
+	CrossClusterTaskInfo         = TransferTaskInfo
+	sqlblobsCrossClusterTaskInfo = sqlblobs.TransferTaskInfo
+
 	// TimerTaskInfo blob in a serialization agnostic format
 	TimerTaskInfo struct {
 		DomainID        UUID
@@ -316,6 +326,7 @@ type (
 		TaskInfoToBlob(*TaskInfo) (persistence.DataBlob, error)
 		TaskListInfoToBlob(*TaskListInfo) (persistence.DataBlob, error)
 		TransferTaskInfoToBlob(*TransferTaskInfo) (persistence.DataBlob, error)
+		CrossClusterTaskInfoToBlob(*CrossClusterTaskInfo) (persistence.DataBlob, error)
 		TimerTaskInfoToBlob(*TimerTaskInfo) (persistence.DataBlob, error)
 		ReplicationTaskInfoToBlob(*ReplicationTaskInfo) (persistence.DataBlob, error)
 
@@ -331,6 +342,7 @@ type (
 		TaskInfoFromBlob([]byte, string) (*TaskInfo, error)
 		TaskListInfoFromBlob([]byte, string) (*TaskListInfo, error)
 		TransferTaskInfoFromBlob([]byte, string) (*TransferTaskInfo, error)
+		CrossClusterTaskInfoFromBlob([]byte, string) (*CrossClusterTaskInfo, error)
 		TimerTaskInfoFromBlob([]byte, string) (*TimerTaskInfo, error)
 		ReplicationTaskInfoFromBlob([]byte, string) (*ReplicationTaskInfo, error)
 	}
@@ -349,6 +361,7 @@ type (
 		taskInfoToBlob(*TaskInfo) ([]byte, error)
 		taskListInfoToBlob(*TaskListInfo) ([]byte, error)
 		transferTaskInfoToBlob(*TransferTaskInfo) ([]byte, error)
+		crossClusterTaskInfoToBlob(*CrossClusterTaskInfo) ([]byte, error)
 		timerTaskInfoToBlob(*TimerTaskInfo) ([]byte, error)
 		replicationTaskInfoToBlob(*ReplicationTaskInfo) ([]byte, error)
 		encodingType() common.EncodingType
@@ -368,6 +381,7 @@ type (
 		taskInfoFromBlob([]byte) (*TaskInfo, error)
 		taskListInfoFromBlob([]byte) (*TaskListInfo, error)
 		transferTaskInfoFromBlob([]byte) (*TransferTaskInfo, error)
+		crossClusterTaskInfoFromBlob([]byte) (*CrossClusterTaskInfo, error)
 		timerTaskInfoFromBlob([]byte) (*TimerTaskInfo, error)
 		replicationTaskInfoFromBlob([]byte) (*ReplicationTaskInfo, error)
 	}

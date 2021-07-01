@@ -19,7 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package nosql
 
 import (
 	"context"
@@ -37,22 +37,21 @@ import (
 )
 
 type (
-	// Implements TaskManager
-	nosqlTaskManager struct {
-		db     nosqlplugin.DB
-		logger log.Logger
+	nosqlTaskStore struct {
+		nosqlStore
 	}
 )
 
 const (
-	initialRangeID  = 1 // Id of the first range of a new task list
-	initialAckLevel = 0
+	initialRangeID    = 1 // Id of the first range of a new task list
+	initialAckLevel   = 0
+	stickyTaskListTTL = int64(24 * time.Hour / time.Second) // if sticky task_list stopped being updated, remove it in one day
 )
 
-var _ p.TaskStore = (*nosqlTaskManager)(nil)
+var _ p.TaskStore = (*nosqlTaskStore)(nil)
 
-// newTaskPersistence is used to create an instance of TaskManager implementation
-func newTaskPersistence(
+// newNoSQLTaskStore is used to create an instance of TaskStore implementation
+func newNoSQLTaskStore(
 	cfg config.Cassandra,
 	logger log.Logger,
 ) (p.TaskStore, error) {
@@ -62,30 +61,22 @@ func newTaskPersistence(
 		return nil, err
 	}
 
-	return &nosqlTaskManager{
-		db:     db,
-		logger: logger,
+	return &nosqlTaskStore{
+		nosqlStore: nosqlStore{
+			db:     db,
+			logger: logger,
+		},
 	}, nil
 }
 
-func (t *nosqlTaskManager) GetName() string {
-	return t.db.PluginName()
-}
-
-// Close releases the underlying resources held by this object
-func (t *nosqlTaskManager) Close() {
-	t.db.Close()
-}
-
-func (t *nosqlTaskManager) GetOrphanTasks(ctx context.Context, request *p.GetOrphanTasksRequest) (*p.GetOrphanTasksResponse, error) {
+func (t *nosqlTaskStore) GetOrphanTasks(ctx context.Context, request *p.GetOrphanTasksRequest) (*p.GetOrphanTasksResponse, error) {
 	// TODO: It's unclear if this's necessary or possible for NoSQL
 	return nil, &types.InternalServiceError{
 		Message: "Unimplemented call to GetOrphanTasks for NoSQL",
 	}
 }
 
-// From TaskManager interface
-func (t *nosqlTaskManager) LeaseTaskList(
+func (t *nosqlTaskStore) LeaseTaskList(
 	ctx context.Context,
 	request *p.LeaseTaskListRequest,
 ) (*p.LeaseTaskListResponse, error) {
@@ -103,7 +94,6 @@ func (t *nosqlTaskManager) LeaseTaskList(
 		TaskListType: request.TaskType,
 	})
 
-	var previous *nosqlplugin.TaskListRow
 	if selectErr != nil {
 		if t.db.IsNotFoundError(selectErr) { // First time task list is used
 			currTL = &nosqlplugin.TaskListRow{
@@ -115,7 +105,7 @@ func (t *nosqlTaskManager) LeaseTaskList(
 				AckLevel:        initialAckLevel,
 				LastUpdatedTime: now,
 			}
-			previous, err = t.db.InsertTaskList(ctx, currTL)
+			err = t.db.InsertTaskList(ctx, currTL)
 		} else {
 			return nil, convertCommonErrors(t.db, "LeaseTaskList", err)
 		}
@@ -133,7 +123,7 @@ func (t *nosqlTaskManager) LeaseTaskList(
 		// Update the rangeID as this is an ownership change
 		currTL.RangeID += 1
 
-		previous, err = t.db.UpdateTaskList(ctx, &nosqlplugin.TaskListRow{
+		err = t.db.UpdateTaskList(ctx, &nosqlplugin.TaskListRow{
 			DomainID:        request.DomainID,
 			TaskListName:    request.TaskList,
 			TaskListType:    request.TaskType,
@@ -144,10 +134,11 @@ func (t *nosqlTaskManager) LeaseTaskList(
 		}, currTL.RangeID-1)
 	}
 	if err != nil {
-		if t.db.IsConditionFailedError(err) {
+		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
+		if ok {
 			return nil, &p.ConditionFailedError{
 				Msg: fmt.Sprintf("leaseTaskList: taskList:%v, taskListType:%v, haveRangeID:%v, gotRangeID:%v",
-					request.TaskList, request.TaskType, currTL.RangeID, previous.RangeID),
+					request.TaskList, request.TaskType, currTL.RangeID, conditionFailure.RangeID),
 			}
 		}
 		return nil, convertCommonErrors(t.db, "LeaseTaskList", err)
@@ -164,14 +155,12 @@ func (t *nosqlTaskManager) LeaseTaskList(
 	return &p.LeaseTaskListResponse{TaskListInfo: tli}, nil
 }
 
-// From TaskManager interface
-func (t *nosqlTaskManager) UpdateTaskList(
+func (t *nosqlTaskStore) UpdateTaskList(
 	ctx context.Context,
 	request *p.UpdateTaskListRequest,
 ) (*p.UpdateTaskListResponse, error) {
 	tli := request.TaskListInfo
 	var err error
-	var previous *nosqlplugin.TaskListRow
 	taskListToUpdate := &nosqlplugin.TaskListRow{
 		DomainID:        tli.DomainID,
 		TaskListName:    tli.Name,
@@ -183,16 +172,17 @@ func (t *nosqlTaskManager) UpdateTaskList(
 	}
 
 	if tli.Kind == p.TaskListKindSticky { // if task_list is sticky, then update with TTL
-		previous, err = t.db.UpdateTaskListWithTTL(ctx, stickyTaskListTTL, taskListToUpdate, tli.RangeID)
+		err = t.db.UpdateTaskListWithTTL(ctx, stickyTaskListTTL, taskListToUpdate, tli.RangeID)
 	} else {
-		previous, err = t.db.UpdateTaskList(ctx, taskListToUpdate, tli.RangeID)
+		err = t.db.UpdateTaskList(ctx, taskListToUpdate, tli.RangeID)
 	}
 
 	if err != nil {
-		if t.db.IsConditionFailedError(err) {
+		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
+		if ok {
 			return nil, &p.ConditionFailedError{
 				Msg: fmt.Sprintf("Failed to update task list. name: %v, type: %v, rangeID: %v, columns: (%v)",
-					tli.Name, tli.TaskType, tli.RangeID, previous),
+					tli.Name, tli.TaskType, tli.RangeID, conditionFailure.Details),
 			}
 		}
 		return nil, convertCommonErrors(t.db, "UpdateTaskList", err)
@@ -201,7 +191,7 @@ func (t *nosqlTaskManager) UpdateTaskList(
 	return &p.UpdateTaskListResponse{}, nil
 }
 
-func (t *nosqlTaskManager) ListTaskList(
+func (t *nosqlTaskStore) ListTaskList(
 	_ context.Context,
 	_ *p.ListTaskListRequest,
 ) (*p.ListTaskListResponse, error) {
@@ -210,21 +200,22 @@ func (t *nosqlTaskManager) ListTaskList(
 	}
 }
 
-func (t *nosqlTaskManager) DeleteTaskList(
+func (t *nosqlTaskStore) DeleteTaskList(
 	ctx context.Context,
 	request *p.DeleteTaskListRequest,
 ) error {
-	previous, err := t.db.DeleteTaskList(ctx, &nosqlplugin.TaskListFilter{
+	err := t.db.DeleteTaskList(ctx, &nosqlplugin.TaskListFilter{
 		DomainID:     request.DomainID,
 		TaskListName: request.TaskListName,
 		TaskListType: request.TaskListType,
 	}, request.RangeID)
 
 	if err != nil {
-		if t.db.IsConditionFailedError(err) {
+		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
+		if ok {
 			return &p.ConditionFailedError{
 				Msg: fmt.Sprintf("Failed to delete task list. name: %v, type: %v, rangeID: %v, columns: (%v)",
-					request.TaskListName, request.TaskListType, request.RangeID, previous),
+					request.TaskListName, request.TaskListType, request.RangeID, conditionFailure.Details),
 			}
 		}
 		return convertCommonErrors(t.db, "DeleteTaskList", err)
@@ -233,8 +224,7 @@ func (t *nosqlTaskManager) DeleteTaskList(
 	return nil
 }
 
-// From TaskManager interface
-func (t *nosqlTaskManager) CreateTasks(
+func (t *nosqlTaskStore) CreateTasks(
 	ctx context.Context,
 	request *p.InternalCreateTasksRequest,
 ) (*p.CreateTasksResponse, error) {
@@ -258,13 +248,14 @@ func (t *nosqlTaskManager) CreateTasks(
 		})
 	}
 
-	previous, err := t.db.InsertTasks(ctx, tasks, toTaskListRow(request.TaskListInfo))
+	err := t.db.InsertTasks(ctx, tasks, toTaskListRow(request.TaskListInfo))
 
 	if err != nil {
-		if t.db.IsConditionFailedError(err) {
+		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
+		if ok {
 			return nil, &p.ConditionFailedError{
 				Msg: fmt.Sprintf("Failed to insert tasks. name: %v, type: %v, rangeID: %v, columns: (%v)",
-					request.TaskListInfo.Name, request.TaskListInfo.TaskType, request.TaskListInfo.RangeID, previous),
+					request.TaskListInfo.Name, request.TaskListInfo.TaskType, request.TaskListInfo.RangeID, conditionFailure.Details),
 			}
 		}
 		return nil, convertCommonErrors(t.db, "CreateTasks", err)
@@ -285,8 +276,7 @@ func toTaskListRow(info *p.TaskListInfo) *nosqlplugin.TaskListRow {
 	}
 }
 
-// From TaskManager interface
-func (t *nosqlTaskManager) GetTasks(
+func (t *nosqlTaskStore) GetTasks(
 	ctx context.Context,
 	request *p.GetTasksRequest,
 ) (*p.InternalGetTasksResponse, error) {
@@ -333,8 +323,7 @@ func toTaskInfo(t *nosqlplugin.TaskRow) *p.InternalTaskInfo {
 	}
 }
 
-// From TaskManager interface
-func (t *nosqlTaskManager) CompleteTask(
+func (t *nosqlTaskStore) CompleteTask(
 	ctx context.Context,
 	request *p.CompleteTaskRequest,
 ) error {
@@ -361,7 +350,7 @@ func (t *nosqlTaskManager) CompleteTask(
 // CompleteTasksLessThan deletes all tasks less than or equal to the given task id. This API ignores the
 // Limit request parameter i.e. either all tasks leq the task_id will be deleted or an error will
 // be returned to the caller
-func (t *nosqlTaskManager) CompleteTasksLessThan(
+func (t *nosqlTaskStore) CompleteTasksLessThan(
 	ctx context.Context,
 	request *p.CompleteTasksLessThanRequest,
 ) (int, error) {

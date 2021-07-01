@@ -34,22 +34,22 @@ func (db *ddb) SelectTaskList(ctx context.Context, filter *nosqlplugin.TaskListF
 
 // InsertTaskList insert a single tasklist row
 // Return IsConditionFailedError if the row already exists, and also the existing row
-func (db *ddb) InsertTaskList(ctx context.Context, row *nosqlplugin.TaskListRow) (*nosqlplugin.TaskListRow, error) {
+func (db *ddb) InsertTaskList(ctx context.Context, row *nosqlplugin.TaskListRow) error {
 	panic("TODO")
 }
 
 // UpdateTaskList updates a single tasklist row
-// Return IsConditionFailedError if the condition doesn't meet, and also the previous row
+// Return TaskOperationConditionFailure if the condition doesn't meet
 func (db *ddb) UpdateTaskList(
 	ctx context.Context,
 	row *nosqlplugin.TaskListRow,
 	previousRangeID int64,
-) (*nosqlplugin.TaskListRow, error) {
+) error {
 	panic("TODO")
 }
 
 // UpdateTaskList updates a single tasklist row, and set an TTL on the record
-// Return IsConditionFailedError if the condition doesn't meet, and also the existing row
+// Return TaskOperationConditionFailure if the condition doesn't meet
 // Ignore TTL if it's not supported, which becomes exactly the same as UpdateTaskList, but ListTaskList must be
 // implemented for TaskListScavenger
 func (db *ddb) UpdateTaskListWithTTL(
@@ -57,7 +57,7 @@ func (db *ddb) UpdateTaskListWithTTL(
 	ttlSeconds int64,
 	row *nosqlplugin.TaskListRow,
 	previousRangeID int64,
-) (*nosqlplugin.TaskListRow, error) {
+) error {
 	panic("TODO")
 }
 
@@ -68,18 +68,18 @@ func (db *ddb) ListTaskList(ctx context.Context, pageSize int, nextPageToken []b
 }
 
 // DeleteTaskList deletes a single tasklist row
-// Return IsConditionFailedError if the condition doesn't meet, and also the existing row
-func (db *ddb) DeleteTaskList(ctx context.Context, filter *nosqlplugin.TaskListFilter, previousRangeID int64) (*nosqlplugin.TaskListRow, error) {
+// Return TaskOperationConditionFailure if the condition doesn't meet
+func (db *ddb) DeleteTaskList(ctx context.Context, filter *nosqlplugin.TaskListFilter, previousRangeID int64) error {
 	panic("TODO")
 }
 
 // InsertTasks inserts a batch of tasks
-// Return IsConditionFailedError if the condition doesn't meet, and also the previous tasklist row
+// Return TaskOperationConditionFailure if the condition doesn't meet
 func (db *ddb) InsertTasks(
 	ctx context.Context,
 	tasksToInsert []*nosqlplugin.TaskRowForInsert,
 	tasklistCondition *nosqlplugin.TaskListRow,
-) (*nosqlplugin.TaskListRow, error) {
+) error {
 	panic("TODO")
 }
 

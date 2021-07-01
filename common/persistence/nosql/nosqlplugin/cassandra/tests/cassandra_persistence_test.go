@@ -29,7 +29,7 @@ import (
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 )
 
-func TestCassandraHistoryV2Persistence(t *testing.T) {
+func TestCassandraHistoryPersistence(t *testing.T) {
 	s := new(persistencetests.HistoryV2PersistenceSuite)
 	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
@@ -43,7 +43,7 @@ func TestCassandraMatchingPersistence(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func TestCassandraMetadataPersistenceV2(t *testing.T) {
+func TestCassandraDomainPersistence(t *testing.T) {
 	s := new(persistencetests.MetadataPersistenceSuiteV2)
 	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()

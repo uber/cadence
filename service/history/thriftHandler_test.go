@@ -82,6 +82,12 @@ func TestThriftHandler(t *testing.T) {
 		assert.Equal(t, shared.DescribeWorkflowExecutionResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
+	t.Run("GetCrossClusterTasks", func(t *testing.T) {
+		h.EXPECT().GetCrossClusterTasks(taggedCtx, &types.GetCrossClusterTasksRequest{}).Return(&types.GetCrossClusterTasksResponse{}, internalErr).Times(1)
+		resp, err := th.GetCrossClusterTasks(ctx, &shared.GetCrossClusterTasksRequest{})
+		assert.Equal(t, shared.GetCrossClusterTasksResponse{}, *resp)
+		assert.Equal(t, expectedErr, err)
+	})
 	t.Run("GetDLQReplicationMessages", func(t *testing.T) {
 		h.EXPECT().GetDLQReplicationMessages(taggedCtx, &types.GetDLQReplicationMessagesRequest{}).Return(&types.GetDLQReplicationMessagesResponse{}, internalErr).Times(1)
 		resp, err := th.GetDLQReplicationMessages(ctx, &replicator.GetDLQReplicationMessagesRequest{})
@@ -239,6 +245,12 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("RespondActivityTaskFailed", func(t *testing.T) {
 		h.EXPECT().RespondActivityTaskFailed(taggedCtx, &types.HistoryRespondActivityTaskFailedRequest{}).Return(internalErr).Times(1)
 		err := th.RespondActivityTaskFailed(ctx, &hist.RespondActivityTaskFailedRequest{})
+		assert.Equal(t, expectedErr, err)
+	})
+	t.Run("RespondCrossClusterTasksCompleted", func(t *testing.T) {
+		h.EXPECT().RespondCrossClusterTasksCompleted(taggedCtx, &types.RespondCrossClusterTasksCompletedRequest{}).Return(&types.RespondCrossClusterTasksCompletedResponse{}, internalErr).Times(1)
+		resp, err := th.RespondCrossClusterTasksCompleted(ctx, &shared.RespondCrossClusterTasksCompletedRequest{})
+		assert.Equal(t, shared.RespondCrossClusterTasksCompletedResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("RespondDecisionTaskCompleted", func(t *testing.T) {

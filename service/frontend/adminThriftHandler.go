@@ -64,7 +64,7 @@ func (t AdminThriftHandler) DescribeCluster(ctx context.Context) (*admin.Describ
 	return thrift.FromDescribeClusterResponse(response), thrift.FromError(err)
 }
 
-// DescribeHistoryHost forwards request to the underlying handler
+// DescribeShardDistribution forwards request to the underlying handler
 func (t AdminThriftHandler) DescribeShardDistribution(ctx context.Context, request *shared.DescribeShardDistributionRequest) (*shared.DescribeShardDistributionResponse, error) {
 	response, err := t.h.DescribeShardDistribution(withThriftTag(ctx), thrift.ToDescribeShardDistributionRequest(request))
 	return thrift.FromDescribeShardDistributionResponse(response), thrift.FromError(err)
@@ -158,4 +158,10 @@ func (t AdminThriftHandler) ResendReplicationTasks(ctx context.Context, request 
 func (t AdminThriftHandler) ResetQueue(ctx context.Context, request *shared.ResetQueueRequest) error {
 	err := t.h.ResetQueue(withThriftTag(ctx), thrift.ToResetQueueRequest(request))
 	return thrift.FromError(err)
+}
+
+// GetCrossClusterTasks fetches cross cluster tasks
+func (t AdminThriftHandler) GetCrossClusterTasks(ctx context.Context, request *shared.GetCrossClusterTasksRequest) (*shared.GetCrossClusterTasksResponse, error) {
+	response, err := t.h.GetCrossClusterTasks(withThriftTag(ctx), thrift.ToGetCrossClusterTasksRequest(request))
+	return thrift.FromGetCrossClusterTasksResponse(response), thrift.FromError(err)
 }

@@ -64,6 +64,11 @@ func (t thriftClient) DescribeWorkflowExecution(ctx context.Context, request *ty
 	return thrift.ToDescribeWorkflowExecutionResponse(response), thrift.ToError(err)
 }
 
+func (t thriftClient) GetCrossClusterTasks(ctx context.Context, request *types.GetCrossClusterTasksRequest, opts ...yarpc.CallOption) (*types.GetCrossClusterTasksResponse, error) {
+	response, err := t.c.GetCrossClusterTasks(ctx, thrift.FromGetCrossClusterTasksRequest(request), opts...)
+	return thrift.ToGetCrossClusterTasksResponse(response), thrift.ToError(err)
+}
+
 func (t thriftClient) GetDLQReplicationMessages(ctx context.Context, request *types.GetDLQReplicationMessagesRequest, opts ...yarpc.CallOption) (*types.GetDLQReplicationMessagesResponse, error) {
 	response, err := t.c.GetDLQReplicationMessages(ctx, thrift.FromGetDLQReplicationMessagesRequest(request), opts...)
 	return thrift.ToGetDLQReplicationMessagesResponse(response), thrift.ToError(err)
@@ -187,6 +192,11 @@ func (t thriftClient) RespondActivityTaskCompleted(ctx context.Context, request 
 func (t thriftClient) RespondActivityTaskFailed(ctx context.Context, request *types.HistoryRespondActivityTaskFailedRequest, opts ...yarpc.CallOption) error {
 	err := t.c.RespondActivityTaskFailed(ctx, thrift.FromHistoryRespondActivityTaskFailedRequest(request), opts...)
 	return thrift.ToError(err)
+}
+
+func (t thriftClient) RespondCrossClusterTasksCompleted(ctx context.Context, request *types.RespondCrossClusterTasksCompletedRequest, opts ...yarpc.CallOption) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	response, err := t.c.RespondCrossClusterTasksCompleted(ctx, thrift.FromRespondCrossClusterTasksCompletedRequest(request), opts...)
+	return thrift.ToRespondCrossClusterTasksCompletedResponse(response), thrift.ToError(err)
 }
 
 func (t thriftClient) RespondDecisionTaskCompleted(ctx context.Context, request *types.HistoryRespondDecisionTaskCompletedRequest, opts ...yarpc.CallOption) (*types.HistoryRespondDecisionTaskCompletedResponse, error) {

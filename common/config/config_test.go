@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/uber/cadence/common"
 )
@@ -61,4 +62,67 @@ func TestFillingDefaultRpcName(t *testing.T) {
 
 	cfg.fillDefaults()
 	assert.Equal(t, "cadence-frontend", cfg.ClusterMetadata.ClusterInformation["clusterA"].RPCName)
+}
+
+func TestConfigFallbacks(t *testing.T) {
+	cfg := &Config{
+		ClusterMetadata: &ClusterMetadata{
+			EnableGlobalDomain: true,
+		},
+		Persistence: Persistence{
+			DefaultStore:    "default",
+			VisibilityStore: "cass",
+			DataStores: map[string]DataStore{
+				"default": {
+					SQL: &SQL{
+						PluginName:      "fake",
+						ConnectProtocol: "tcp",
+						ConnectAddr:     "192.168.0.1:3306",
+						DatabaseName:    "db1",
+						NumShards:       0, // default value, should be changed
+					},
+				},
+				"cass": {
+					Cassandra: &NoSQL{
+						Hosts: "127.0.0.1",
+					},
+					// no sql or nosql, should be populated from cassandra
+				},
+			},
+		},
+	}
+	err := cfg.ValidateAndFillDefaults()
+	require.NoError(t, err) // sanity check, must be valid or the later tests are potentially useless
+
+	assert.NotEmpty(t, cfg.Persistence.DataStores["cass"].Cassandra, "cassandra config should remain after update")
+	assert.NotEmpty(t, cfg.Persistence.DataStores["cass"].NoSQL, "nosql config should contain cassandra config / not be empty")
+	assert.NotZero(t, cfg.Persistence.DataStores["default"].SQL.NumShards, "num shards should be nonzero")
+}
+
+func TestConfigEmptyClusterMetadata(t *testing.T) {
+	cfg := &Config{
+		Persistence: Persistence{
+			DefaultStore:    "default",
+			VisibilityStore: "cass",
+			DataStores: map[string]DataStore{
+				"default": {
+					SQL: &SQL{
+						PluginName:      "fake",
+						ConnectProtocol: "tcp",
+						ConnectAddr:     "192.168.0.1:3306",
+						DatabaseName:    "db1",
+						NumShards:       0, // default value, should be changed
+					},
+				},
+				"cass": {
+					Cassandra: &NoSQL{
+						Hosts: "127.0.0.1",
+					},
+					// no sql or nosql, should be populated from cassandra
+				},
+			},
+		},
+	}
+	err := cfg.ValidateAndFillDefaults()
+	require.Error(t, err)
 }

@@ -2393,7 +2393,7 @@ func (v *DescribeHistoryHostRequest) GetExecutionForHost() (o *WorkflowExecution
 	return
 }
 
-// DescribeHistoryHostResponse is an internal type (TBD...)
+// DescribeShardDistributionResponse is an internal type (TBD...)
 type DescribeShardDistributionResponse struct {
 	NumberOfShards int32            `json:"numberOfShards,omitempty"`
 	Shards         map[int32]string `json:"shardIDs,omitempty"`
@@ -2407,7 +2407,7 @@ func (v *DescribeShardDistributionResponse) GetNumberOfShards() (o int32) {
 	return
 }
 
-// GetNumberOfShards is an internal getter (TBD...)
+// GetShards is an internal getter (TBD...)
 func (v *DescribeShardDistributionResponse) GetShards() (o map[int32]string) {
 	if v != nil {
 		return v.Shards
@@ -4559,6 +4559,32 @@ func (v *ListTaskListPartitionsResponse) GetActivityTaskListPartitions() (o []*T
 func (v *ListTaskListPartitionsResponse) GetDecisionTaskListPartitions() (o []*TaskListPartitionMetadata) {
 	if v != nil && v.DecisionTaskListPartitions != nil {
 		return v.DecisionTaskListPartitions
+	}
+	return
+}
+
+// GetTaskListsByDomainRequest is an internal type (TBD...)
+type GetTaskListsByDomainRequest struct {
+	Domain string `json:"domain,omitempty"`
+}
+
+// GetDomain is an internal getter (TBD...)
+func (v *GetTaskListsByDomainRequest) GetDomain() (o string) {
+	if v != nil {
+		return v.Domain
+	}
+	return
+}
+
+// GetTaskListsByDomainResponse is an internal type (TBD...)
+type GetTaskListsByDomainResponse struct {
+	TaskListNames []string `json:"taskListNames,omitempty"`
+}
+
+// GetTaskListNames is an internal getter (TBD...)
+func (v *GetTaskListsByDomainResponse) GetTaskListNames() (o []string) {
+	if v != nil && v.TaskListNames != nil {
+		return v.TaskListNames
 	}
 	return
 }
@@ -10131,6 +10157,586 @@ type WorkflowTypeFilter struct {
 func (v *WorkflowTypeFilter) GetName() (o string) {
 	if v != nil {
 		return v.Name
+	}
+	return
+}
+
+// CrossClusterTaskType is an internal type (TBD...)
+type CrossClusterTaskType int32
+
+// Ptr is a helper function for getting pointer value
+func (e CrossClusterTaskType) Ptr() *CrossClusterTaskType {
+	return &e
+}
+
+// String returns a readable string representation of CrossClusterTaskType.
+func (e CrossClusterTaskType) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "StartChildExecution"
+	case 1:
+		return "CancelExecution"
+	case 2:
+		return "SignalExecution"
+	}
+	return fmt.Sprintf("CrossClusterTaskType(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *CrossClusterTaskType) UnmarshalText(value []byte) error {
+	switch s := strings.ToUpper(string(value)); s {
+	case "STARTCHILDEXECUTION":
+		*e = CrossClusterTaskTypeStartChildExecution
+		return nil
+	case "CANCELEXECUTION":
+		*e = CrossClusterTaskTypeCancelExecution
+		return nil
+	case "SIGNALEXECUTION":
+		*e = CrossClusterTaskTypeSignalExecution
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "CrossClusterTaskType", err)
+		}
+		*e = CrossClusterTaskType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes CrossClusterTaskType to text.
+func (e CrossClusterTaskType) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
+const (
+	// CrossClusterTaskTypeStartChildExecution is an option for CrossClusterTaskType
+	CrossClusterTaskTypeStartChildExecution CrossClusterTaskType = iota
+	// CrossClusterTaskTypeCancelExecution is an option for CrossClusterTaskType
+	CrossClusterTaskTypeCancelExecution
+	// CrossClusterTaskTypeSignalExecution is an option for CrossClusterTaskType
+	CrossClusterTaskTypeSignalExecution
+)
+
+// CrossClusterTaskFailedCause is an internal type (TBD...)
+type CrossClusterTaskFailedCause int32
+
+// Ptr is a helper function for getting pointer value
+func (e CrossClusterTaskFailedCause) Ptr() *CrossClusterTaskFailedCause {
+	return &e
+}
+
+// String returns a readable string representation of CrossClusterTaskFailedCause.
+func (e CrossClusterTaskFailedCause) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "DOMAIN_NOT_ACTIVE"
+	case 1:
+		return "DOMAIN_NOT_EXISTS"
+	case 2:
+		return "WORKFLOW_ALREADY_RUNNING"
+	case 3:
+		return "WORKFLOW_NOT_EXISTS"
+	}
+	return fmt.Sprintf("CrossClusterTaskFailedCause(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *CrossClusterTaskFailedCause) UnmarshalText(value []byte) error {
+	switch s := strings.ToUpper(string(value)); s {
+	case "DOMAIN_NOT_ACTIVE":
+		*e = CrossClusterTaskFailedCauseDomainNotActive
+		return nil
+	case "DOMAIN_NOT_EXISTS":
+		*e = CrossClusterTaskFailedCauseDomainNotExists
+		return nil
+	case "WORKFLOW_ALREADY_RUNNING":
+		*e = CrossClusterTaskFailedCauseWorkflowAlreadyRunning
+		return nil
+	case "WORKFLOW_NOT_EXISTS":
+		*e = CrossClusterTaskFailedCauseWorkflowNotExists
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "CrossClusterTaskFailedCause", err)
+		}
+		*e = CrossClusterTaskFailedCause(val)
+		return nil
+	}
+}
+
+// MarshalText encodes CrossClusterTaskFailedCause to text.
+func (e CrossClusterTaskFailedCause) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
+const (
+	// CrossClusterTaskFailedCauseDomainNotActive is an option for CrossClusterTaskFailedCause
+	CrossClusterTaskFailedCauseDomainNotActive CrossClusterTaskFailedCause = iota
+	// CrossClusterTaskFailedCauseDomainNotExists is an option for CrossClusterTaskFailedCause
+	CrossClusterTaskFailedCauseDomainNotExists
+	// CrossClusterTaskFailedCauseWorkflowAlreadyRunning is an option for CrossClusterTaskFailedCause
+	CrossClusterTaskFailedCauseWorkflowAlreadyRunning
+	// CrossClusterTaskFailedCauseWorkflowNotExists is an option for CrossClusterTaskFailedCause
+	CrossClusterTaskFailedCauseWorkflowNotExists
+)
+
+// CrossClusterTaskInfo is an internal type (TBD...)
+type CrossClusterTaskInfo struct {
+	DomainID            string                `json:"domainID,omitempty"`
+	WorkflowID          string                `json:"workflowID,omitempty"`
+	RunID               string                `json:"runID,omitempty"`
+	TaskType            *CrossClusterTaskType `json:"taskType,omitempty"`
+	TaskState           int16                 `json:"taskState,omitempty"`
+	TaskID              int64                 `json:"taskID,omitempty"`
+	VisibilityTimestamp *int64                `json:"visibilityTimestamp,omitempty"`
+}
+
+// GetDomainID is an internal getter (TBD...)
+func (v *CrossClusterTaskInfo) GetDomainID() (o string) {
+	if v != nil {
+		return v.DomainID
+	}
+	return
+}
+
+// GetWorkflowID is an internal getter (TBD...)
+func (v *CrossClusterTaskInfo) GetWorkflowID() (o string) {
+	if v != nil {
+		return v.WorkflowID
+	}
+	return
+}
+
+// GetRunID is an internal getter (TBD...)
+func (v *CrossClusterTaskInfo) GetRunID() (o string) {
+	if v != nil {
+		return v.RunID
+	}
+	return
+}
+
+// GetTaskType is an internal getter (TBD...)
+func (v *CrossClusterTaskInfo) GetTaskType() (o CrossClusterTaskType) {
+	if v != nil && v.TaskType != nil {
+		return *v.TaskType
+	}
+	return
+}
+
+// GetTaskState is an internal getter (TBD...)
+func (v *CrossClusterTaskInfo) GetTaskState() (o int16) {
+	if v != nil {
+		return v.TaskState
+	}
+	return
+}
+
+// GetTaskID is an internal getter (TBD...)
+func (v *CrossClusterTaskInfo) GetTaskID() (o int64) {
+	if v != nil {
+		return v.TaskID
+	}
+	return
+}
+
+// GetVisibilityTimestamp is an internal getter (TBD...)
+func (v *CrossClusterTaskInfo) GetVisibilityTimestamp() (o int64) {
+	if v != nil && v.VisibilityTimestamp != nil {
+		return *v.VisibilityTimestamp
+	}
+	return
+}
+
+// CrossClusterStartChildExecutionRequestAttributes is an internal type (TBD...)
+type CrossClusterStartChildExecutionRequestAttributes struct {
+	TargetDomainID           string                                               `json:"targetDomainID,omitempty"`
+	RequestID                string                                               `json:"requestID,omitempty"`
+	InitiatedEventID         int64                                                `json:"initiatedEventID,omitempty"`
+	InitiatedEventAttributes *StartChildWorkflowExecutionInitiatedEventAttributes `json:"initiatedEventAttributes,omitempty"`
+	TargetRunID              *string                                              `json:"targetRunID,omitempty"`
+}
+
+// GetTargetDomainID is an internal getter (TBD...)
+func (v *CrossClusterStartChildExecutionRequestAttributes) GetTargetDomainID() (o string) {
+	if v != nil {
+		return v.TargetDomainID
+	}
+	return
+}
+
+// GetRequestID is an internal getter (TBD...)
+func (v *CrossClusterStartChildExecutionRequestAttributes) GetRequestID() (o string) {
+	if v != nil {
+		return v.RequestID
+	}
+	return
+}
+
+// GetInitiatedEventID is an internal getter (TBD...)
+func (v *CrossClusterStartChildExecutionRequestAttributes) GetInitiatedEventID() (o int64) {
+	if v != nil {
+		return v.InitiatedEventID
+	}
+	return
+}
+
+// GetInitiatedEventAttributes is an internal getter (TBD...)
+func (v *CrossClusterStartChildExecutionRequestAttributes) GetInitiatedEventAttributes() (o *StartChildWorkflowExecutionInitiatedEventAttributes) {
+	if v != nil && v.InitiatedEventAttributes != nil {
+		return v.InitiatedEventAttributes
+	}
+	return
+}
+
+// GetTargetRunID is an internal getter (TBD...)
+func (v *CrossClusterStartChildExecutionRequestAttributes) GetTargetRunID() (o string) {
+	if v != nil && v.TargetRunID != nil {
+		return *v.TargetRunID
+	}
+	return
+}
+
+// CrossClusterStartChildExecutionResponseAttributes is an internal type (TBD...)
+type CrossClusterStartChildExecutionResponseAttributes struct {
+	RunID string `json:"runID,omitempty"`
+}
+
+// GetRunID is an internal getter (TBD...)
+func (v *CrossClusterStartChildExecutionResponseAttributes) GetRunID() (o string) {
+	if v != nil {
+		return v.RunID
+	}
+	return
+}
+
+// CrossClusterCancelExecutionRequestAttributes is an internal type (TBD...)
+type CrossClusterCancelExecutionRequestAttributes struct {
+	TargetDomainID    string `json:"targetDomainID,omitempty"`
+	TargetWorkflowID  string `json:"targetWorkflowID,omitempty"`
+	TargetRunID       string `json:"targetRunID,omitempty"`
+	RequestID         string `json:"requestID,omitempty"`
+	InitiatedEventID  int64  `json:"initiatedEventID,omitempty"`
+	ChildWorkflowOnly bool   `json:"childWorkflowOnly,omitempty"`
+}
+
+// GetTargetDomainID is an internal getter (TBD...)
+func (v *CrossClusterCancelExecutionRequestAttributes) GetTargetDomainID() (o string) {
+	if v != nil {
+		return v.TargetDomainID
+	}
+	return
+}
+
+// GetTargetWorkflowID is an internal getter (TBD...)
+func (v *CrossClusterCancelExecutionRequestAttributes) GetTargetWorkflowID() (o string) {
+	if v != nil {
+		return v.TargetWorkflowID
+	}
+	return
+}
+
+// GetTargetRunID is an internal getter (TBD...)
+func (v *CrossClusterCancelExecutionRequestAttributes) GetTargetRunID() (o string) {
+	if v != nil {
+		return v.TargetRunID
+	}
+	return
+}
+
+// GetRequestID is an internal getter (TBD...)
+func (v *CrossClusterCancelExecutionRequestAttributes) GetRequestID() (o string) {
+	if v != nil {
+		return v.RequestID
+	}
+	return
+}
+
+// GetInitiatedEventID is an internal getter (TBD...)
+func (v *CrossClusterCancelExecutionRequestAttributes) GetInitiatedEventID() (o int64) {
+	if v != nil {
+		return v.InitiatedEventID
+	}
+	return
+}
+
+// GetChildWorkflowOnly is an internal getter (TBD...)
+func (v *CrossClusterCancelExecutionRequestAttributes) GetChildWorkflowOnly() (o bool) {
+	if v != nil {
+		return v.ChildWorkflowOnly
+	}
+	return
+}
+
+// CrossClusterCancelExecutionResponseAttributes is an internal type (TBD...)
+type CrossClusterCancelExecutionResponseAttributes struct {
+}
+
+// CrossClusterSignalExecutionRequestAttributes is an internal type (TBD...)
+type CrossClusterSignalExecutionRequestAttributes struct {
+	TargetDomainID    string `json:"targetDomainID,omitempty"`
+	TargetWorkflowID  string `json:"targetWorkflowID,omitempty"`
+	TargetRunID       string `json:"targetRunID,omitempty"`
+	RequestID         string `json:"requestID,omitempty"`
+	InitiatedEventID  int64  `json:"initiatedEventID,omitempty"`
+	ChildWorkflowOnly bool   `json:"childWorkflowOnly,omitempty"`
+	SignalName        string `json:"signalName,omitempty"`
+	SignalInput       []byte `json:"signalInput,omitempty"`
+	Control           []byte `json:"control,omitempty"`
+}
+
+// GetTargetDomainID is an internal getter (TBD...)
+func (v *CrossClusterSignalExecutionRequestAttributes) GetTargetDomainID() (o string) {
+	if v != nil {
+		return v.TargetDomainID
+	}
+	return
+}
+
+// GetTargetWorkflowID is an internal getter (TBD...)
+func (v *CrossClusterSignalExecutionRequestAttributes) GetTargetWorkflowID() (o string) {
+	if v != nil {
+		return v.TargetWorkflowID
+	}
+	return
+}
+
+// GetTargetRunID is an internal getter (TBD...)
+func (v *CrossClusterSignalExecutionRequestAttributes) GetTargetRunID() (o string) {
+	if v != nil {
+		return v.TargetRunID
+	}
+	return
+}
+
+// GetRequestID is an internal getter (TBD...)
+func (v *CrossClusterSignalExecutionRequestAttributes) GetRequestID() (o string) {
+	if v != nil {
+		return v.RequestID
+	}
+	return
+}
+
+// GetInitiatedEventID is an internal getter (TBD...)
+func (v *CrossClusterSignalExecutionRequestAttributes) GetInitiatedEventID() (o int64) {
+	if v != nil {
+		return v.InitiatedEventID
+	}
+	return
+}
+
+// GetChildWorkflowOnly is an internal getter (TBD...)
+func (v *CrossClusterSignalExecutionRequestAttributes) GetChildWorkflowOnly() (o bool) {
+	if v != nil {
+		return v.ChildWorkflowOnly
+	}
+	return
+}
+
+// GetSignalName is an internal getter (TBD...)
+func (v *CrossClusterSignalExecutionRequestAttributes) GetSignalName() (o string) {
+	if v != nil {
+		return v.SignalName
+	}
+	return
+}
+
+// GetSignalInput is an internal getter (TBD...)
+func (v *CrossClusterSignalExecutionRequestAttributes) GetSignalInput() (o []byte) {
+	if v != nil && v.SignalInput != nil {
+		return v.SignalInput
+	}
+	return
+}
+
+// GetControl is an internal getter (TBD...)
+func (v *CrossClusterSignalExecutionRequestAttributes) GetControl() (o []byte) {
+	if v != nil && v.Control != nil {
+		return v.Control
+	}
+	return
+}
+
+// CrossClusterSignalExecutionResponseAttributes is an internal type (TBD...)
+type CrossClusterSignalExecutionResponseAttributes struct {
+}
+
+// CrossClusterTaskRequest is an internal type (TBD...)
+type CrossClusterTaskRequest struct {
+	TaskInfo                      *CrossClusterTaskInfo                             `json:"taskInfo,omitempty"`
+	StartChildExecutionAttributes *CrossClusterStartChildExecutionRequestAttributes `json:"startChildExecutionAttributes,omitempty"`
+	CancelExecutionAttributes     *CrossClusterCancelExecutionRequestAttributes     `json:"cancelExecutionAttributes,omitempty"`
+	SignalExecutionAttributes     *CrossClusterSignalExecutionRequestAttributes     `json:"signalExecutionAttributes,omitempty"`
+}
+
+// GetTaskInfo is an internal getter (TBD...)
+func (v *CrossClusterTaskRequest) GetTaskInfo() (o *CrossClusterTaskInfo) {
+	if v != nil && v.TaskInfo != nil {
+		return v.TaskInfo
+	}
+	return
+}
+
+// GetStartChildExecutionAttributes is an internal getter (TBD...)
+func (v *CrossClusterTaskRequest) GetStartChildExecutionAttributes() (o *CrossClusterStartChildExecutionRequestAttributes) {
+	if v != nil && v.StartChildExecutionAttributes != nil {
+		return v.StartChildExecutionAttributes
+	}
+	return
+}
+
+// GetCancelExecutionAttributes is an internal getter (TBD...)
+func (v *CrossClusterTaskRequest) GetCancelExecutionAttributes() (o *CrossClusterCancelExecutionRequestAttributes) {
+	if v != nil && v.CancelExecutionAttributes != nil {
+		return v.CancelExecutionAttributes
+	}
+	return
+}
+
+// GetSignalExecutionAttributes is an internal getter (TBD...)
+func (v *CrossClusterTaskRequest) GetSignalExecutionAttributes() (o *CrossClusterSignalExecutionRequestAttributes) {
+	if v != nil && v.SignalExecutionAttributes != nil {
+		return v.SignalExecutionAttributes
+	}
+	return
+}
+
+// CrossClusterTaskResponse is an internal type (TBD...)
+type CrossClusterTaskResponse struct {
+	TaskID                        int64                                              `json:"taskID,omitempty"`
+	TaskType                      *CrossClusterTaskType                              `json:"taskType,omitempty"`
+	FailedCause                   *CrossClusterTaskFailedCause                       `json:"failedCause,omitempty"`
+	StartChildExecutionAttributes *CrossClusterStartChildExecutionResponseAttributes `json:"startChildExecutionAttributes,omitempty"`
+	CancelExecutionAttributes     *CrossClusterCancelExecutionResponseAttributes     `json:"cancelExecutionAttributes,omitempty"`
+	SignalExecutionAttributes     *CrossClusterSignalExecutionResponseAttributes     `json:"signalExecutionAttributes,omitempty"`
+}
+
+// GetTaskID is an internal getter (TBD...)
+func (v *CrossClusterTaskResponse) GetTaskID() (o int64) {
+	if v != nil {
+		return v.TaskID
+	}
+	return
+}
+
+// GetTaskType is an internal getter (TBD...)
+func (v *CrossClusterTaskResponse) GetTaskType() (o CrossClusterTaskType) {
+	if v != nil && v.TaskType != nil {
+		return *v.TaskType
+	}
+	return
+}
+
+// GetFailedCause is an internal getter (TBD...)
+func (v *CrossClusterTaskResponse) GetFailedCause() (o CrossClusterTaskFailedCause) {
+	if v != nil && v.FailedCause != nil {
+		return *v.FailedCause
+	}
+	return
+}
+
+// GetStartChildExecutionAttributes is an internal getter (TBD...)
+func (v *CrossClusterTaskResponse) GetStartChildExecutionAttributes() (o *CrossClusterStartChildExecutionResponseAttributes) {
+	if v != nil && v.StartChildExecutionAttributes != nil {
+		return v.StartChildExecutionAttributes
+	}
+	return
+}
+
+// GetCancelExecutionAttributes is an internal getter (TBD...)
+func (v *CrossClusterTaskResponse) GetCancelExecutionAttributes() (o *CrossClusterCancelExecutionResponseAttributes) {
+	if v != nil && v.CancelExecutionAttributes != nil {
+		return v.CancelExecutionAttributes
+	}
+	return
+}
+
+// GetSignalExecutionAttributes is an internal getter (TBD...)
+func (v *CrossClusterTaskResponse) GetSignalExecutionAttributes() (o *CrossClusterSignalExecutionResponseAttributes) {
+	if v != nil && v.SignalExecutionAttributes != nil {
+		return v.SignalExecutionAttributes
+	}
+	return
+}
+
+// GetCrossClusterTasksRequest is an internal type (TBD...)
+type GetCrossClusterTasksRequest struct {
+	ShardIDs      []int32 `json:"shardIDs,omitempty"`
+	TargetCluster string  `json:"targetCluster,omitempty"`
+}
+
+// GetShardIDs is an internal getter (TBD...)
+func (v *GetCrossClusterTasksRequest) GetShardIDs() (o []int32) {
+	if v != nil && v.ShardIDs != nil {
+		return v.ShardIDs
+	}
+	return
+}
+
+// GetTargetCluster is an internal getter (TBD...)
+func (v *GetCrossClusterTasksRequest) GetTargetCluster() (o string) {
+	if v != nil {
+		return v.TargetCluster
+	}
+	return
+}
+
+// GetCrossClusterTasksResponse is an internal type (TBD...)
+type GetCrossClusterTasksResponse struct {
+	TasksByShard map[int32][]*CrossClusterTaskRequest `json:"tasksByShard,omitempty"`
+}
+
+// GetTasksByShard is an internal getter (TBD...)
+func (v *GetCrossClusterTasksResponse) GetTasksByShard() (o map[int32][]*CrossClusterTaskRequest) {
+	if v != nil && v.TasksByShard != nil {
+		return v.TasksByShard
+	}
+	return
+}
+
+// RespondCrossClusterTasksCompletedRequest is an internal type (TBD...)
+type RespondCrossClusterTasksCompletedRequest struct {
+	ShardID       int32                       `json:"shardID,omitempty"`
+	TargetCluster string                      `json:"targetCluster,omitempty"`
+	TaskResponses []*CrossClusterTaskResponse `json:"taskResponses,omitempty"`
+}
+
+// GetShardID is an internal getter (TBD...)
+func (v *RespondCrossClusterTasksCompletedRequest) GetShardID() (o int32) {
+	if v != nil {
+		return v.ShardID
+	}
+	return
+}
+
+// GetTargetCluster is an internal getter (TBD...)
+func (v *RespondCrossClusterTasksCompletedRequest) GetTargetCluster() (o string) {
+	if v != nil {
+		return v.TargetCluster
+	}
+	return
+}
+
+// GetTaskResponses is an internal getter (TBD...)
+func (v *RespondCrossClusterTasksCompletedRequest) GetTaskResponses() (o []*CrossClusterTaskResponse) {
+	if v != nil && v.TaskResponses != nil {
+		return v.TaskResponses
+	}
+	return
+}
+
+// RespondCrossClusterTasksCompletedResponse is an internal type (TBD...)
+type RespondCrossClusterTasksCompletedResponse struct {
+	Tasks []*CrossClusterTaskRequest `json:"tasks,omitempty"`
+}
+
+// GetTasks is an internal getter (TBD...)
+func (v *RespondCrossClusterTasksCompletedResponse) GetTasks() (o []*CrossClusterTaskRequest) {
+	if v != nil && v.Tasks != nil {
+		return v.Tasks
 	}
 	return
 }

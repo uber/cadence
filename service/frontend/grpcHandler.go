@@ -116,6 +116,11 @@ func (g grpcHandler) ListTaskListPartitions(ctx context.Context, request *apiv1.
 	return proto.FromListTaskListPartitionsResponse(response), proto.FromError(err)
 }
 
+func (g grpcHandler) GetTaskListsByDomain(ctx context.Context, request *apiv1.GetTaskListsByDomainRequest) (*apiv1.GetTaskListsByDomainResponse, error) {
+	response, err := g.h.GetTaskListsByDomain(withGRPCTag(ctx), proto.ToGetTaskListsByDomainRequest(request))
+	return proto.FromGetTaskListsByDomainResponse(response), proto.FromError(err)
+}
+
 func (g grpcHandler) ListWorkflowExecutions(ctx context.Context, request *apiv1.ListWorkflowExecutionsRequest) (*apiv1.ListWorkflowExecutionsResponse, error) {
 	response, err := g.h.ListWorkflowExecutions(withGRPCTag(ctx), proto.ToListWorkflowExecutionsRequest(request))
 	return proto.FromListWorkflowExecutionsResponse(response), proto.FromError(err)

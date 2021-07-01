@@ -22,28 +22,14 @@ package dynamodb
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
 // InsertShard creates a new shard, return error is there is any.
-// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-func (db *ddb) InsertShard(ctx context.Context, row *nosqlplugin.ShardRow) (*nosqlplugin.ConflictedShardRow, error) {
+// Return ShardOperationConditionFailure if the condition doesn't meet
+func (db *ddb) InsertShard(ctx context.Context, row *nosqlplugin.ShardRow) error {
 	panic("TODO")
-}
-
-func convertToConflictedShardRow(shardID int, previousRangeID int64, previous map[string]interface{}) *nosqlplugin.ConflictedShardRow {
-	var columns []string
-	for k, v := range previous {
-		columns = append(columns, fmt.Sprintf("%s=%v", k, v))
-	}
-	return &nosqlplugin.ConflictedShardRow{
-		ShardID:         shardID,
-		PreviousRangeID: previousRangeID,
-		Details:         strings.Join(columns, ","),
-	}
 }
 
 // SelectShard gets a shard
@@ -52,13 +38,13 @@ func (db *ddb) SelectShard(ctx context.Context, shardID int, currentClusterName 
 }
 
 // UpdateRangeID updates the rangeID, return error is there is any
-// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-func (db *ddb) UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) (*nosqlplugin.ConflictedShardRow, error) {
+// Return ShardOperationConditionFailure if the condition doesn't meet
+func (db *ddb) UpdateRangeID(ctx context.Context, shardID int, rangeID int64, previousRangeID int64) error {
 	panic("TODO")
 }
 
 // UpdateShard updates a shard, return error is there is any.
-// When error is nil, return applied=true if there is a conflict, and return the conflicted row as previous
-func (db *ddb) UpdateShard(ctx context.Context, row *nosqlplugin.ShardRow, previousRangeID int64) (*nosqlplugin.ConflictedShardRow, error) {
+// Return ShardOperationConditionFailure if the condition doesn't meet
+func (db *ddb) UpdateShard(ctx context.Context, row *nosqlplugin.ShardRow, previousRangeID int64) error {
 	panic("TODO")
 }

@@ -193,6 +193,39 @@ func (mr *_MockClientRecorder) DescribeTaskList(
 	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeTaskList", args...)
 }
 
+// GetTaskListsByDomain responds to a GetTaskListsByDomain call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().GetTaskListsByDomain(gomock.Any(), ...).Return(...)
+// 	... := client.GetTaskListsByDomain(...)
+func (m *MockClient) GetTaskListsByDomain(
+	ctx context.Context,
+	_Request *shared.GetTaskListsByDomainRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetTaskListsByDomainResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "GetTaskListsByDomain", args...)
+	success, _ = ret[i].(*shared.GetTaskListsByDomainResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) GetTaskListsByDomain(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "GetTaskListsByDomain", args...)
+}
+
 // ListTaskListPartitions responds to a ListTaskListPartitions call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.

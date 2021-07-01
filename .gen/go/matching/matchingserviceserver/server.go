@@ -59,6 +59,11 @@ type Interface interface {
 		Request *matching.DescribeTaskListRequest,
 	) (*shared.DescribeTaskListResponse, error)
 
+	GetTaskListsByDomain(
+		ctx context.Context,
+		Request *shared.GetTaskListsByDomainRequest,
+	) (*shared.GetTaskListsByDomainResponse, error)
+
 	ListTaskListPartitions(
 		ctx context.Context,
 		Request *matching.ListTaskListPartitionsRequest,
@@ -141,6 +146,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "GetTaskListsByDomain",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.GetTaskListsByDomain),
+				},
+				Signature:    "GetTaskListsByDomain(Request *shared.GetTaskListsByDomainRequest) (*shared.GetTaskListsByDomainResponse)",
+				ThriftModule: matching.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "ListTaskListPartitions",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -197,7 +213,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 9)
+	procedures := make([]transport.Procedure, 0, 10)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -309,6 +325,36 @@ func (h handler) DescribeTaskList(ctx context.Context, body wire.Value) (thrift.
 
 	hadError := appErr != nil
 	result, err := matching.MatchingService_DescribeTaskList_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) GetTaskListsByDomain(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args matching.MatchingService_GetTaskListsByDomain_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'MatchingService' procedure 'GetTaskListsByDomain': %w", err)
+	}
+
+	success, appErr := h.impl.GetTaskListsByDomain(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := matching.MatchingService_GetTaskListsByDomain_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {

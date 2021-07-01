@@ -24,6 +24,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	p "github.com/uber/cadence/common/persistence"
@@ -183,8 +184,8 @@ func (db *cdb) SelectTaskList(ctx context.Context, filter *nosqlplugin.TaskListF
 }
 
 // InsertTaskList insert a single tasklist row
-// Return IsConditionFailedError if the row already exists, and also the existing row
-func (db *cdb) InsertTaskList(ctx context.Context, row *nosqlplugin.TaskListRow) (*nosqlplugin.TaskListRow, error) {
+// Return TaskOperationConditionFailure if the condition doesn't meet
+func (db *cdb) InsertTaskList(ctx context.Context, row *nosqlplugin.TaskListRow) error {
 	query := db.session.Query(templateInsertTaskListQuery,
 		row.DomainID,
 		row.TaskListName,
@@ -203,19 +204,19 @@ func (db *cdb) InsertTaskList(ctx context.Context, row *nosqlplugin.TaskListRow)
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return handleTaskListAppliedError(applied, previous, row)
+	return handleTaskListAppliedError(applied, previous)
 }
 
 // UpdateTaskList updates a single tasklist row
-// Return IsConditionFailedError if the condition doesn't meet, and also the previous row
+// Return TaskOperationConditionFailure if the condition doesn't meet
 func (db *cdb) UpdateTaskList(
 	ctx context.Context,
 	row *nosqlplugin.TaskListRow,
 	previousRangeID int64,
-) (*nosqlplugin.TaskListRow, error) {
+) error {
 	query := db.session.Query(templateUpdateTaskListQuery,
 		row.RangeID,
 		row.DomainID,
@@ -235,23 +236,30 @@ func (db *cdb) UpdateTaskList(
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return handleTaskListAppliedError(applied, previous, row)
+	return handleTaskListAppliedError(applied, previous)
 }
 
-func handleTaskListAppliedError(applied bool, previous map[string]interface{}, row *nosqlplugin.TaskListRow) (*nosqlplugin.TaskListRow, error) {
+func handleTaskListAppliedError(applied bool, previous map[string]interface{}) error {
 	if !applied {
 		// NOTE: Cassandra only returns the conflicted columns in this results
-		row.RangeID = previous["range_id"].(int64)
-		return row, errConditionFailed
+		rangeID := previous["range_id"].(int64)
+		var columns []string
+		for k, v := range previous {
+			columns = append(columns, fmt.Sprintf("%s=%v", k, v))
+		}
+		return &nosqlplugin.TaskOperationConditionFailure{
+			RangeID: rangeID,
+			Details: strings.Join(columns, ","),
+		}
 	}
-	return nil, nil
+	return nil
 }
 
 // UpdateTaskList updates a single tasklist row, and set an TTL on the record
-// Return IsConditionFailedError if the condition doesn't meet, and also the existing row
+// Return TaskOperationConditionFailure if the condition doesn't meet
 // Ignore TTL if it's not supported, which becomes exactly the same as UpdateTaskList, but ListTaskList must be
 // implemented for TaskListScavenger
 func (db *cdb) UpdateTaskListWithTTL(
@@ -259,7 +267,7 @@ func (db *cdb) UpdateTaskListWithTTL(
 	ttlSeconds int64,
 	row *nosqlplugin.TaskListRow,
 	previousRangeID int64,
-) (*nosqlplugin.TaskListRow, error) {
+) error {
 	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 	// part 1 is used to set TTL on primary key as UPDATE can't set TTL for primary key
 	batch.Query(templateUpdateTaskListQueryWithTTLPart1,
@@ -290,9 +298,9 @@ func (db *cdb) UpdateTaskListWithTTL(
 	previous := make(map[string]interface{})
 	applied, _, err := db.session.MapExecuteBatchCAS(batch, previous)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return handleTaskListAppliedError(applied, previous, row)
+	return handleTaskListAppliedError(applied, previous)
 }
 
 // ListTaskList returns all tasklists.
@@ -304,8 +312,8 @@ func (db *cdb) ListTaskList(ctx context.Context, pageSize int, nextPageToken []b
 }
 
 // DeleteTaskList deletes a single tasklist row
-// Return IsConditionFailedError if the condition doesn't meet, and also the existing row
-func (db *cdb) DeleteTaskList(ctx context.Context, filter *nosqlplugin.TaskListFilter, previousRangeID int64) (*nosqlplugin.TaskListRow, error) {
+// Return TaskOperationConditionFailure if the condition doesn't meet
+func (db *cdb) DeleteTaskList(ctx context.Context, filter *nosqlplugin.TaskListFilter, previousRangeID int64) error {
 	query := db.session.Query(templateDeleteTaskListQuery,
 		filter.DomainID,
 		filter.TaskListName,
@@ -317,13 +325,9 @@ func (db *cdb) DeleteTaskList(ctx context.Context, filter *nosqlplugin.TaskListF
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return handleTaskListAppliedError(applied, previous, &nosqlplugin.TaskListRow{
-		DomainID:     filter.DomainID,
-		TaskListName: filter.TaskListName,
-		TaskListType: filter.TaskListType,
-	})
+	return handleTaskListAppliedError(applied, previous)
 }
 
 // InsertTasks inserts a batch of tasks
@@ -332,7 +336,7 @@ func (db *cdb) InsertTasks(
 	ctx context.Context,
 	tasksToInsert []*nosqlplugin.TaskRowForInsert,
 	tasklistCondition *nosqlplugin.TaskListRow,
-) (*nosqlplugin.TaskListRow, error) {
+) error {
 	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 	domainID := tasklistCondition.DomainID
 	taskListName := tasklistCondition.TaskListName
@@ -394,9 +398,9 @@ func (db *cdb) InsertTasks(
 	previous := make(map[string]interface{})
 	applied, _, err := db.session.MapExecuteBatchCAS(batch, previous)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return handleTaskListAppliedError(applied, previous, tasklistCondition)
+	return handleTaskListAppliedError(applied, previous)
 }
 
 // SelectTasks return tasks that associated to a tasklist

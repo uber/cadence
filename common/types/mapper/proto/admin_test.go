@@ -172,3 +172,15 @@ func TestAdminResetQueueRequest(t *testing.T) {
 		assert.Equal(t, item, ToAdminResetQueueRequest(FromAdminResetQueueRequest(item)))
 	}
 }
+
+func TestAdminGetCrossClusterTasksRequest(t *testing.T) {
+	for _, item := range []*types.GetCrossClusterTasksRequest{nil, {}, &testdata.AdminGetCrossClusterTasksRequest} {
+		assert.Equal(t, item, ToAdminGetCrossClusterTasksRequest(FromAdminGetCrossClusterTasksRequest(item)))
+	}
+}
+
+func TestAdminGetCrossClusterTasksResponse(t *testing.T) {
+	for _, item := range []*types.GetCrossClusterTasksResponse{nil, {}, &testdata.AdminGetCrossClusterTasksResponse} {
+		assert.Equal(t, item, ToAdminGetCrossClusterTasksResponse(FromAdminGetCrossClusterTasksResponse(item)))
+	}
+}

@@ -135,3 +135,8 @@ func (g adminGRPCHandler) ResetQueue(ctx context.Context, request *adminv1.Reset
 	err := g.h.ResetQueue(withGRPCTag(ctx), proto.ToAdminResetQueueRequest(request))
 	return &adminv1.ResetQueueResponse{}, proto.FromError(err)
 }
+
+func (g adminGRPCHandler) GetCrossClusterTasks(ctx context.Context, request *adminv1.GetCrossClusterTasksRequest) (*adminv1.GetCrossClusterTasksResponse, error) {
+	response, err := g.h.GetCrossClusterTasks(withGRPCTag(ctx), proto.ToAdminGetCrossClusterTasksRequest(request))
+	return proto.FromAdminGetCrossClusterTasksResponse(response), proto.FromError(err)
+}
