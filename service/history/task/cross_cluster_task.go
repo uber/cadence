@@ -26,9 +26,11 @@ import (
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	ctask "github.com/uber/cadence/common/task"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -75,6 +77,19 @@ type (
 		maxRetryCount   dynamicconfig.IntPropertyFn
 	}
 )
+
+// NewCrossClusterTaskForTargetCluster creates a CrossClusterTask
+// for the processing logic at target cluster
+func NewCrossClusterTaskForTargetCluster(
+	shard shard.Context,
+	taskRequest *types.CrossClusterTaskRequest,
+	logger log.Logger,
+	maxRetryCount dynamicconfig.IntPropertyFn,
+) (CrossClusterTask, future.Future) {
+	// TODO: create CrossClusterTasks based on request
+	future, _ := future.NewFuture()
+	return &crossClusterSignalWorkflowTask{}, future
+}
 
 // NewCrossClusterSignalWorkflowTask initialize cross cluster signal workflow task and task future
 func NewCrossClusterSignalWorkflowTask(
@@ -301,6 +316,9 @@ func (c *crossClusterTaskBase) GetQueueType() QueueType {
 }
 
 func (c *crossClusterTaskBase) IsReadyForPoll() bool {
+	c.Lock()
+	defer c.Unlock()
+
 	return c.state == ctask.TaskStatePending &&
 		(c.processingState == processingStateInitialed || c.processingState == processingStateResponseRecorded)
 }

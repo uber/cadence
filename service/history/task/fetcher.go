@@ -21,6 +21,7 @@
 package task
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"sync/atomic"
@@ -34,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -47,16 +49,17 @@ type (
 	}
 
 	fetchRequest struct {
-		shardID  int
+		shardID  int32
 		params   []interface{}
 		settable future.Settable
 	}
 
 	fetchTaskFunc func(
 		clientBean client.Bean,
+		sourceCluster string,
 		currentCluster string,
-		requestByShard map[int]fetchRequest,
-	) (map[int]interface{}, error)
+		requestByShard map[int32]fetchRequest,
+	) (map[int32]interface{}, error)
 
 	fetcherImpl struct {
 		status         int32
@@ -104,12 +107,31 @@ func NewCrossClusterTaskFetchers(
 
 func crossClusterTaskFetchFn(
 	clientBean client.Bean,
+	sourceCluster string,
 	currentCluster string,
-	requestByShard map[int]fetchRequest,
-) (map[int]interface{}, error) {
-	// TODO: implement the fetch func after the
-	// API for fetching tasks is created.
-	return nil, errors.New("not implemented")
+	requestByShard map[int32]fetchRequest,
+) (map[int32]interface{}, error) {
+	adminClient := clientBean.GetRemoteAdminClient(sourceCluster)
+	shardIDs := make([]int32, 0, len(requestByShard))
+	for shardID := range requestByShard {
+		shardIDs = append(shardIDs, shardID)
+	}
+	request := &types.GetCrossClusterTasksRequest{
+		ShardIDs:      shardIDs,
+		TargetCluster: currentCluster,
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), defaultFetchTimeout)
+	defer cancel()
+	resp, err := adminClient.GetCrossClusterTasks(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	responseByShard := make(map[int32]interface{}, len(resp.TasksByShard))
+	for shardID, tasks := range resp.TasksByShard {
+		responseByShard[shardID] = tasks
+	}
+	return responseByShard, nil
 }
 
 func newTaskFetchers(
@@ -214,7 +236,7 @@ func (f *fetcherImpl) Fetch(
 	future, settable := future.NewFuture()
 
 	f.requestChan <- fetchRequest{
-		shardID:  shardID,
+		shardID:  int32(shardID),
 		params:   fetchParams,
 		settable: settable,
 	}
@@ -236,7 +258,7 @@ func (f *fetcherImpl) aggregator() {
 		f.options.TimerJitterCoefficient(),
 	))
 
-	outstandingRequests := make(map[int]fetchRequest)
+	outstandingRequests := make(map[int32]fetchRequest)
 
 	for {
 		select {
@@ -273,13 +295,13 @@ func (f *fetcherImpl) aggregator() {
 }
 
 func (f *fetcherImpl) fetch(
-	outstandingRequests map[int]fetchRequest,
+	outstandingRequests map[int32]fetchRequest,
 ) error {
 	if len(outstandingRequests) == 0 {
 		return nil
 	}
 
-	tasksByShard, err := f.fetchTaskFunc(f.clientBean, f.currentCluster, outstandingRequests)
+	tasksByShard, err := f.fetchTaskFunc(f.clientBean, f.sourceCluster, f.currentCluster, outstandingRequests)
 	if err != nil {
 		f.logger.Error("Failed to fetch tasks", tag.Error(err))
 		return err

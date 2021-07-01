@@ -982,8 +982,10 @@ const (
 	TimerStandbyTaskDeleteHistoryEventScope
 	// TimerStandbyTaskWorkflowBackoffTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
 	TimerStandbyTaskWorkflowBackoffTimerScope
-	// CrossClusterQueueProcessorScope is the scope used by all metric emitted by cross cluster queue processor
+	// CrossClusterQueueProcessorScope is the scope used by all metric emitted by cross cluster queue processor in the source cluster
 	CrossClusterQueueProcessorScope
+	// CrossClusterTaskProcessorScope is the scope used by all metric emitted by cross cluster task processor in the target cluster
+	CrossClusterTaskProcessorScope
 	// CrossClusterTaskStartChildExecutionScope is the scope used by metric emitted by cross cluster queue processor for processing start child workflow task.
 	CrossClusterTaskStartChildExecutionScope
 	// CrossClusterTaskCancelExecutionScope is the scope used by metric emitted by cross cluster queue processor for processing cancel workflow task.
@@ -1552,6 +1554,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TimerStandbyTaskWorkflowBackoffTimerScope:              {operation: "TimerStandbyTaskWorkflowBackoffTimer"},
 		TimerStandbyTaskDeleteHistoryEventScope:                {operation: "TimerStandbyTaskDeleteHistoryEvent"},
 		CrossClusterQueueProcessorScope:                        {operation: "CrossClusterQueueProcessor"},
+		CrossClusterTaskProcessorScope:                         {operation: "CrossClusterTaskProcessor"},
 		CrossClusterTaskStartChildExecutionScope:               {operation: "CrossClusterTaskStartChildExecution"},
 		CrossClusterTaskCancelExecutionScope:                   {operation: "CrossClusterTaskCancelExecution"},
 		CrossClusterTaskTypeSignalExecutionScope:               {operation: "CrossClusterTaskTypeSignalExecution"},

@@ -141,10 +141,11 @@ func (s *fetcherSuite) TestAggregator() {
 
 func (s *fetcherSuite) testFetchTaskFn(
 	clientBean client.Bean,
+	sourceCluster string,
 	currentCluster string,
-	tokenByShard map[int]fetchRequest,
-) (map[int]interface{}, error) {
-	results := make(map[int]interface{}, len(tokenByShard))
+	tokenByShard map[int32]fetchRequest,
+) (map[int32]interface{}, error) {
+	results := make(map[int32]interface{}, len(tokenByShard))
 	for shardID, request := range tokenByShard {
 		results[shardID] = testFetchResult{
 			fetchParams: request.params,
