@@ -304,7 +304,7 @@ func (c *crossClusterQueueProcessorBase) readTasks(
 		return err
 	}
 
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, persistence.IsTransientError)
+	err := backoff.Retry(op, persistenceOperationRetryPolicy, persistence.IsBackgroundTransientError)
 	if err != nil {
 		return nil, false, err
 	}
@@ -558,8 +558,9 @@ func (c *crossClusterQueueProcessorBase) processQueueCollections() {
 
 		c.Lock()
 		if c.outstandingTaskCount > c.options.MaxPendingTaskSize() {
-			more = true
-			break
+			c.logger.Warn("too many outstanding tasks in cross cluster queue.")
+			c.Unlock()
+			return
 		}
 		c.addOutstandingTaskCountLocked(len(taskInfos))
 		c.Unlock()
