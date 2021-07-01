@@ -80,6 +80,10 @@ func (e *protoEncoder) transferTaskInfoToBlob(*TransferTaskInfo) ([]byte, error)
 	panic("not implemented")
 }
 
+func (e *protoEncoder) crossClusterTaskInfoToBlob(*CrossClusterTaskInfo) ([]byte, error) {
+	panic("not implemented")
+}
+
 func (e *protoEncoder) timerTaskInfoToBlob(*TimerTaskInfo) ([]byte, error) {
 	panic("not implemented")
 }

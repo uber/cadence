@@ -76,8 +76,8 @@ type (
 		GetOrphanTasks(ctx context.Context, request *GetOrphanTasksRequest) (*GetOrphanTasksResponse, error)
 	}
 
-	// MetadataStore is a lower level of DomainManager
-	MetadataStore interface {
+	// DomainStore is a lower level of DomainManager
+	DomainStore interface {
 		Closeable
 		GetName() string
 		CreateDomain(ctx context.Context, request *InternalCreateDomainRequest) (*CreateDomainResponse, error)
@@ -885,6 +885,18 @@ func FromDataBlob(blob *DataBlob) ([]byte, string) {
 		return nil, ""
 	}
 	return blob.Data, string(blob.Encoding)
+}
+
+// Convert a *Datablob to safe that calling its method won't run into NPE
+func (d *DataBlob) ToNilSafeDataBlob() *DataBlob {
+	if d != nil {
+		return d
+	}
+	return &DataBlob{}
+}
+
+func (d *DataBlob) GetEncodingString() string {
+	return string(d.Encoding)
 }
 
 // GetEncoding returns encoding type

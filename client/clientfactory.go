@@ -185,11 +185,41 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		return cf.newMatchingThriftClient(clientKey)
 	}
 
+	clientFetcher := func() ([]matching.Client, error) {
+		resolver, err := cf.monitor.GetResolver(common.MatchingServiceName)
+		if err != nil {
+			return nil, err
+		}
+
+		var result []matching.Client
+		for _, host := range resolver.Members() {
+			hostAddress := host.GetAddress()
+			if cf.enableGRPCOutbound {
+				hostAddress, err = cf.rpcFactory.ReplaceGRPCPort(common.MatchingServiceName, hostAddress)
+				if err != nil {
+					return nil, err
+				}
+				client, err := cf.newMatchingGRPCClient(hostAddress)
+				if err != nil {
+					return nil, err
+				}
+				result = append(result, client)
+			}
+			client, err := cf.newMatchingThriftClient(hostAddress)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, client)
+		}
+		return result, nil
+	}
+
 	client := matching.NewClient(
 		timeout,
 		longPollTimeout,
 		common.NewClientCache(keyResolver, clientProvider),
 		matching.NewLoadBalancer(domainIDToName, cf.dynConfig),
+		clientFetcher,
 	)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.MatchingErrorInjectionRate, 0)(); errorRate != 0 {
 		client = matching.NewErrorInjectionClient(client, errorRate, cf.logger)

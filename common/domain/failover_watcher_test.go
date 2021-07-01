@@ -119,9 +119,7 @@ func (s *failoverWatcherSuite) TestCleanPendingActiveState() {
 	replicationConfig := &persistence.DomainReplicationConfig{
 		ActiveClusterName: "active",
 		Clusters: []*persistence.ClusterReplicationConfig{
-			{
-				"active",
-			},
+			{ClusterName: "active"},
 		},
 	}
 
@@ -206,9 +204,7 @@ func (s *failoverWatcherSuite) TestHandleFailoverTimeout() {
 	replicationConfig := &persistence.DomainReplicationConfig{
 		ActiveClusterName: "active",
 		Clusters: []*persistence.ClusterReplicationConfig{
-			{
-				"active",
-			},
+			{ClusterName: "active"},
 		},
 	}
 	endtime := common.Int64Ptr(s.timeSource.Now().UnixNano() - 1)

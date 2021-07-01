@@ -74,6 +74,11 @@ func (g grpcHandler) DescribeWorkflowExecution(ctx context.Context, request *his
 	return proto.FromHistoryDescribeWorkflowExecutionResponse(response), proto.FromError(err)
 }
 
+func (g grpcHandler) GetCrossClusterTasks(ctx context.Context, request *historyv1.GetCrossClusterTasksRequest) (*historyv1.GetCrossClusterTasksResponse, error) {
+	response, err := g.h.GetCrossClusterTasks(withGRPCTag(ctx), proto.ToHistoryGetCrossClusterTasksRequest(request))
+	return proto.FromHistoryGetCrossClusterTasksResponse(response), proto.FromError(err)
+}
+
 func (g grpcHandler) GetDLQReplicationMessages(ctx context.Context, request *historyv1.GetDLQReplicationMessagesRequest) (*historyv1.GetDLQReplicationMessagesResponse, error) {
 	response, err := g.h.GetDLQReplicationMessages(withGRPCTag(ctx), proto.ToHistoryGetDLQReplicationMessagesRequest(request))
 	return proto.FromHistoryGetDLQReplicationMessagesResponse(response), proto.FromError(err)
@@ -197,6 +202,11 @@ func (g grpcHandler) RespondActivityTaskCompleted(ctx context.Context, request *
 func (g grpcHandler) RespondActivityTaskFailed(ctx context.Context, request *historyv1.RespondActivityTaskFailedRequest) (*historyv1.RespondActivityTaskFailedResponse, error) {
 	err := g.h.RespondActivityTaskFailed(withGRPCTag(ctx), proto.ToHistoryRespondActivityTaskFailedRequest(request))
 	return &historyv1.RespondActivityTaskFailedResponse{}, proto.FromError(err)
+}
+
+func (g grpcHandler) RespondCrossClusterTasksCompleted(ctx context.Context, request *historyv1.RespondCrossClusterTasksCompletedRequest) (*historyv1.RespondCrossClusterTasksCompletedResponse, error) {
+	response, err := g.h.RespondCrossClusterTasksCompleted(withGRPCTag(ctx), proto.ToHistoryRespondCrossClusterTasksCompletedRequest(request))
+	return proto.FromHistoryRespondCrossClusterTasksCompletedResponse(response), proto.FromError(err)
 }
 
 func (g grpcHandler) RespondDecisionTaskCompleted(ctx context.Context, request *historyv1.RespondDecisionTaskCompletedRequest) (*historyv1.RespondDecisionTaskCompletedResponse, error) {

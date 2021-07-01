@@ -20,6 +20,7 @@ persistence:
                 keyspace: {{ default .Env.KEYSPACE "cadence" }}
                 user: {{ default .Env.CASSANDRA_USER "" }}
                 password: {{ default .Env.CASSANDRA_PASSWORD "" }}
+                protocolVersion: {{ default .Env.CASSANDRA_PROTOCOL_VERSION "4" }}
         visibility:
             nosql:
                 pluginName: "cassandra"
@@ -27,6 +28,7 @@ persistence:
                 keyspace: {{ default .Env.VISIBILITY_KEYSPACE "cadence_visibility" }}
                 user: {{ default .Env.CASSANDRA_USER "" }}
                 password: {{ default .Env.CASSANDRA_PASSWORD "" }}
+                protocolVersion: {{ default .Env.CASSANDRA_PROTOCOL_VERSION "4" }}
         {{- else if eq $db "mysql" }}
         default:
             sql:
@@ -199,7 +201,7 @@ services:
         {{- end }}
 
 clusterMetadata:
-    enableGlobalDomain: {{ default .Env.ENABLE_GLOBAL_DOMAIN "false" }}
+    enableGlobalDomain: {{ default .Env.ENABLE_GLOBAL_DOMAIN "true" }}
     failoverVersionIncrement: 10
     primaryClusterName: "primary"
     {{- if .Env.IS_NOT_PRIMARY }}

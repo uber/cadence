@@ -133,3 +133,8 @@ func (t thriftClient) ResetQueue(ctx context.Context, request *types.ResetQueueR
 	err := t.c.ResetQueue(ctx, thrift.FromResetQueueRequest(request), opts...)
 	return thrift.ToError(err)
 }
+
+func (t thriftClient) GetCrossClusterTasks(ctx context.Context, request *types.GetCrossClusterTasksRequest, opts ...yarpc.CallOption) (*types.GetCrossClusterTasksResponse, error) {
+	response, err := t.c.GetCrossClusterTasks(ctx, thrift.FromGetCrossClusterTasksRequest(request), opts...)
+	return thrift.ToGetCrossClusterTasksResponse(response), thrift.ToError(err)
+}

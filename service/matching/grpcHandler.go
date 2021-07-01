@@ -74,6 +74,11 @@ func (g grpcHandler) ListTaskListPartitions(ctx context.Context, request *matchi
 	return proto.FromMatchingListTaskListPartitionsResponse(response), proto.FromError(err)
 }
 
+func (g grpcHandler) GetTaskListsByDomain(ctx context.Context, request *matchingv1.GetTaskListsByDomainRequest) (*matchingv1.GetTaskListsByDomainResponse, error) {
+	response, err := g.h.GetTaskListsByDomain(withGRPCTag(ctx), proto.ToMatchingGetTaskListsByDomainRequest(request))
+	return proto.FromMatchingGetTaskListsByDomainResponse(response), proto.FromError(err)
+}
+
 func (g grpcHandler) PollForActivityTask(ctx context.Context, request *matchingv1.PollForActivityTaskRequest) (*matchingv1.PollForActivityTaskResponse, error) {
 	response, err := g.h.PollForActivityTask(withGRPCTag(ctx), proto.ToMatchingPollForActivityTaskRequest(request))
 	return proto.FromMatchingPollForActivityTaskResponse(response), proto.FromError(err)

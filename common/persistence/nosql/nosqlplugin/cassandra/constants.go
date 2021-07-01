@@ -53,6 +53,7 @@ const (
 	rowTypeTimerTask
 	rowTypeReplicationTask
 	rowTypeDLQ
+	rowTypeCrossClusterTask
 )
 
 // Guidelines for creating new special UUID constants
@@ -60,7 +61,7 @@ const (
 // Where x is any hexadecimal value, E represents the entity type valid values are:
 // E = {DomainID = 1, WorkflowID = 2, RunID = 3}
 // R represents row type in executions table, valid values are:
-// R = {Shard = 1, Execution = 2, Transfer = 3, Timer = 4, Replication = 5}
+// R = {Shard = 0, Execution = 1, Transfer = 2, Timer = 3, Replication = 4, DLQ = 5, CrossCluster = 6}
 const (
 	// Special Domains related constants
 	emptyDomainID = "10000000-0000-f000-f000-000000000000"
@@ -75,6 +76,9 @@ const (
 	rowTypeTransferDomainID   = "10000000-3000-f000-f000-000000000000"
 	rowTypeTransferWorkflowID = "20000000-3000-f000-f000-000000000000"
 	rowTypeTransferRunID      = "30000000-3000-f000-f000-000000000000"
+	// Row Constants for Cross Cluster Task Row
+	rowTypeCrossClusterDomainID = "10000000-7000-f000-f000-000000000000"
+	rowTypeCrossClusterRunID    = "30000000-7000-f000-f000-000000000000"
 	// Row Constants for Timer Task Row
 	rowTypeTimerDomainID   = "10000000-4000-f000-f000-000000000000"
 	rowTypeTimerWorkflowID = "20000000-4000-f000-f000-000000000000"

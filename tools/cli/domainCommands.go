@@ -88,7 +88,7 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 	securityToken := c.String(FlagSecurityToken)
 	var err error
 
-	isGlobalDomain := false
+	isGlobalDomain := true
 	if c.IsSet(FlagIsGlobalDomain) {
 		isGlobalDomain, err = strconv.ParseBool(c.String(FlagIsGlobalDomain))
 		if err != nil {
@@ -458,6 +458,7 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 
 func (d *domainCLIImpl) ListDomains(c *cli.Context) {
 	pageSize := c.Int(FlagPageSize)
+	prefix := c.String(FlagPrefix)
 	printAll := c.Bool(FlagAll)
 	printDeprecated := c.Bool(FlagDeprecated)
 	printFull := c.Bool(FlagPrintFullyDetail)
@@ -469,6 +470,18 @@ func (d *domainCLIImpl) ListDomains(c *cli.Context) {
 
 	domains := d.getAllDomains(c)
 	var filteredDomains []*types.DescribeDomainResponse
+
+	// Only list domains that are matching to the prefix if prefix is provided
+	if len(prefix) > 0 {
+		var prefixDomains []*types.DescribeDomainResponse
+		for _, domain := range domains {
+			if strings.Index(domain.DomainInfo.Name, prefix) == 0 {
+				prefixDomains = append(prefixDomains, domain)
+			}
+		}
+		domains = prefixDomains
+	}
+
 	if printAll {
 		filteredDomains = domains
 	} else {

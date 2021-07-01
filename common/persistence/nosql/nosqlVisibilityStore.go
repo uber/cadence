@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package nosql
 
 import (
 	"context"
@@ -40,14 +40,14 @@ const (
 )
 
 type (
-	nosqlVisibilityManager struct {
+	nosqlVisibilityStore struct {
 		sortByCloseTime bool
-		db              nosqlplugin.DB
+		nosqlStore
 	}
 )
 
-// newVisibilityPersistence is used to create an instance of VisibilityManager implementation
-func newVisibilityPersistence(
+// newNoSQLVisibilityStore is used to create an instance of VisibilityStore implementation
+func newNoSQLVisibilityStore(
 	listClosedOrderingByCloseTime bool,
 	cfg config.Cassandra,
 	logger log.Logger,
@@ -58,22 +58,16 @@ func newVisibilityPersistence(
 		return nil, err
 	}
 
-	return &nosqlVisibilityManager{
+	return &nosqlVisibilityStore{
 		sortByCloseTime: listClosedOrderingByCloseTime,
-		db:              db,
+		nosqlStore: nosqlStore{
+			db:     db,
+			logger: logger,
+		},
 	}, nil
 }
 
-func (v *nosqlVisibilityManager) GetName() string {
-	return v.db.PluginName()
-}
-
-// Close releases the underlying resources held by this object
-func (v *nosqlVisibilityManager) Close() {
-	v.db.Close()
-}
-
-func (v *nosqlVisibilityManager) RecordWorkflowExecutionStarted(
+func (v *nosqlVisibilityStore) RecordWorkflowExecutionStarted(
 	ctx context.Context,
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
@@ -99,7 +93,7 @@ func (v *nosqlVisibilityManager) RecordWorkflowExecutionStarted(
 	return nil
 }
 
-func (v *nosqlVisibilityManager) RecordWorkflowExecutionClosed(
+func (v *nosqlVisibilityStore) RecordWorkflowExecutionClosed(
 	ctx context.Context,
 	request *p.InternalRecordWorkflowExecutionClosedRequest,
 ) error {
@@ -134,7 +128,7 @@ func (v *nosqlVisibilityManager) RecordWorkflowExecutionClosed(
 	return nil
 }
 
-func (v *nosqlVisibilityManager) UpsertWorkflowExecution(
+func (v *nosqlVisibilityStore) UpsertWorkflowExecution(
 	ctx context.Context,
 	request *p.InternalUpsertWorkflowExecutionRequest,
 ) error {
@@ -144,7 +138,7 @@ func (v *nosqlVisibilityManager) UpsertWorkflowExecution(
 	return p.NewOperationNotSupportErrorForVis()
 }
 
-func (v *nosqlVisibilityManager) ListOpenWorkflowExecutions(
+func (v *nosqlVisibilityStore) ListOpenWorkflowExecutions(
 	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -163,7 +157,7 @@ func (v *nosqlVisibilityManager) ListOpenWorkflowExecutions(
 	}, nil
 }
 
-func (v *nosqlVisibilityManager) ListClosedWorkflowExecutions(
+func (v *nosqlVisibilityStore) ListClosedWorkflowExecutions(
 	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -192,7 +186,7 @@ func (v *nosqlVisibilityManager) ListClosedWorkflowExecutions(
 	}, nil
 }
 
-func (v *nosqlVisibilityManager) ListOpenWorkflowExecutionsByType(
+func (v *nosqlVisibilityStore) ListOpenWorkflowExecutionsByType(
 	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsByTypeRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -212,7 +206,7 @@ func (v *nosqlVisibilityManager) ListOpenWorkflowExecutionsByType(
 	}, nil
 }
 
-func (v *nosqlVisibilityManager) ListClosedWorkflowExecutionsByType(
+func (v *nosqlVisibilityStore) ListClosedWorkflowExecutionsByType(
 	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsByTypeRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -243,7 +237,7 @@ func (v *nosqlVisibilityManager) ListClosedWorkflowExecutionsByType(
 	}, nil
 }
 
-func (v *nosqlVisibilityManager) ListOpenWorkflowExecutionsByWorkflowID(
+func (v *nosqlVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsByWorkflowIDRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -263,7 +257,7 @@ func (v *nosqlVisibilityManager) ListOpenWorkflowExecutionsByWorkflowID(
 	}, nil
 }
 
-func (v *nosqlVisibilityManager) ListClosedWorkflowExecutionsByWorkflowID(
+func (v *nosqlVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsByWorkflowIDRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -294,7 +288,7 @@ func (v *nosqlVisibilityManager) ListClosedWorkflowExecutionsByWorkflowID(
 	}, nil
 }
 
-func (v *nosqlVisibilityManager) ListClosedWorkflowExecutionsByStatus(
+func (v *nosqlVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 	ctx context.Context,
 	request *p.InternalListClosedWorkflowExecutionsByStatusRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -325,7 +319,7 @@ func (v *nosqlVisibilityManager) ListClosedWorkflowExecutionsByStatus(
 	}, nil
 }
 
-func (v *nosqlVisibilityManager) GetClosedWorkflowExecution(
+func (v *nosqlVisibilityStore) GetClosedWorkflowExecution(
 	ctx context.Context,
 	request *p.InternalGetClosedWorkflowExecutionRequest,
 ) (*p.InternalGetClosedWorkflowExecutionResponse, error) {
@@ -346,7 +340,7 @@ func (v *nosqlVisibilityManager) GetClosedWorkflowExecution(
 	}, nil
 }
 
-func (v *nosqlVisibilityManager) DeleteWorkflowExecution(
+func (v *nosqlVisibilityStore) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *p.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
@@ -357,20 +351,20 @@ func (v *nosqlVisibilityManager) DeleteWorkflowExecution(
 	return nil
 }
 
-func (v *nosqlVisibilityManager) ListWorkflowExecutions(
+func (v *nosqlVisibilityStore) ListWorkflowExecutions(
 	ctx context.Context,
 	request *p.ListWorkflowExecutionsByQueryRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	return nil, p.NewOperationNotSupportErrorForVis()
 }
 
-func (v *nosqlVisibilityManager) ScanWorkflowExecutions(
+func (v *nosqlVisibilityStore) ScanWorkflowExecutions(
 	ctx context.Context,
 	request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	return nil, p.NewOperationNotSupportErrorForVis()
 }
 
-func (v *nosqlVisibilityManager) CountWorkflowExecutions(
+func (v *nosqlVisibilityStore) CountWorkflowExecutions(
 	ctx context.Context,
 	request *p.CountWorkflowExecutionsRequest,
 ) (*p.CountWorkflowExecutionsResponse, error) {

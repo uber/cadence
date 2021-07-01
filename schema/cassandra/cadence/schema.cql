@@ -123,7 +123,7 @@ CREATE TYPE transfer_task (
   target_run_id              uuid,   -- The external run ID that this transfer task is doing work for.
   target_child_workflow_only boolean, -- The whether target child workflow only.
   task_list                  text,
-  type                       int,    -- enum TaskType {ActivityTask, DecisionTask, DeleteExecution, CancelExecution, StartChildExecution, ReplicationTask}
+  type                       int,    -- enum TaskType For local: {Decision, Activity, CloseExecution, CancelExecution, StartChildExecution, SignalExecution, RecordWorkflowStarted, ResetWorkflow, UpsertWorkflowSearchAttributes}, or for crossCluster {StartChildExecution, CancelExecution, SignalExecution}
   schedule_id                bigint,
   version                    bigint, -- the failover version when this task is created, used to compare against the mutable state, in case the events got overwritten
   record_visibility          boolean, -- indicates whether or not to create a visibility record
@@ -134,7 +134,7 @@ CREATE TYPE replication_task (
   workflow_id                text,   -- The workflow ID that this replication task belongs to
   run_id                     uuid,   -- The run ID that this replication task belongs to
   task_id                    bigint,
-  type                       int,    -- enum TaskType {History, Heartbeat}
+  type                       int,    -- enum TaskType {History, SyncActivity, FailoverMarker}
   first_event_id             bigint,  -- Used by ReplicationTask to set the first event ID of the applied transaction
   next_event_id              bigint,  -- Used by ReplicationTask to set the next event ID of the applied transaction
   version                    bigint,  -- Used by ReplicationTask to set the failover version of the applied transaction
