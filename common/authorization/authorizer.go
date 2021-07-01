@@ -38,6 +38,7 @@ type (
 		Actor      string
 		APIName    string
 		DomainName string
+		TaskList   *string
 	}
 
 	// Result is result from authority.
