@@ -22,7 +22,11 @@
 
 package authorization
 
-import "context"
+import (
+	"context"
+
+	"github.com/uber/cadence/common/types"
+)
 
 const (
 	// DecisionDeny means auth decision is deny
@@ -38,7 +42,7 @@ type (
 		Actor      string
 		APIName    string
 		DomainName string
-		TaskList   *string
+		TaskList   *types.TaskList
 	}
 
 	// Result is result from authority.

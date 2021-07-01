@@ -329,7 +329,7 @@ func (a *AccessControlledWorkflowHandler) PollForActivityTask(
 	attr := &authorization.Attributes{
 		APIName:    "PollForActivityTask",
 		DomainName: request.GetDomain(),
-		TaskList:   &request.TaskList.Name,
+		TaskList:   request.TaskList,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -353,7 +353,7 @@ func (a *AccessControlledWorkflowHandler) PollForDecisionTask(
 	attr := &authorization.Attributes{
 		APIName:    "PollForDecisionTask",
 		DomainName: request.GetDomain(),
-		TaskList:   &request.TaskList.Name,
+		TaskList:   request.TaskList,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
