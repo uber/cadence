@@ -28,16 +28,14 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/types"
 )
 
 type (
 	// taskListID is the key that uniquely identifies a task list
 	taskListID struct {
 		qualifiedTaskListName
-		domainID     string
-		taskType     int
-		taskListKind types.TaskListKind
+		domainID string
+		taskType int
 	}
 	// qualifiedTaskListName refers to the fully qualified task list name
 	qualifiedTaskListName struct {
@@ -124,26 +122,21 @@ func (tn *qualifiedTaskListName) init() error {
 	return nil
 }
 
-// newTaskListID returns taskListID which uniquely identfies as task list
+// newTaskListID returns taskListID which uniquely identifies as task list
 func newTaskListID(
 	domainID string,
 	taskListName string,
 	taskType int,
-	taskListKind *types.TaskListKind,
 ) (*taskListID, error) {
 	name, err := newTaskListName(taskListName)
 	if err != nil {
 		return nil, err
-	}
-	if taskListKind == nil {
-		taskListKind = types.TaskListKindNormal.Ptr()
 	}
 
 	return &taskListID{
 		qualifiedTaskListName: name,
 		domainID:              domainID,
 		taskType:              taskType,
-		taskListKind:          *taskListKind,
 	}, nil
 }
 
