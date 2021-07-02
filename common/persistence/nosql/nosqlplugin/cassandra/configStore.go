@@ -27,9 +27,10 @@ import (
 )
 
 const (
-	templateSelectLatestConfig = `SELECT * FROM configStore WHERE row_type = 'dynamic_config' LIMIT 1;`
+	templateSelectLatestConfig = `SELECT * FROM clusterConfig WHERE row_type = 'dynamic_config' LIMIT 1;`
 
-	templateInsertConfig = `INSERT INTO test_cadence.cluster_info (row_type, version, timestamp, values, encoding) VALUES (?, ?, ?, ?, ?);`
+	templateInsertConfig = `INSERT INTO clusterConfig (row_type, version, timestamp, values, encoding) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS;`
+	//for version value, put x + 1 where x is the cached copy version.
 )
 
 func (db *cdb) InsertConfig(ctx context.Context, row *nosqlplugin.ConfigStoreRow) error {
