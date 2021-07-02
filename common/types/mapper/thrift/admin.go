@@ -475,8 +475,6 @@ func FromGetDynamicConfigRequest(t *types.GetDynamicConfigRequest) *admin.GetDyn
 	}
 	return &admin.GetDynamicConfigRequest{
 		ConfigName: &t.ConfigName,
-		GetAll:     &t.GetAll,
-		Filters:    FromDynamicConfigFilterArray(t.Filters),
 	}
 }
 
@@ -487,8 +485,6 @@ func ToGetDynamicConfigRequest(t *admin.GetDynamicConfigRequest) *types.GetDynam
 	}
 	return &types.GetDynamicConfigRequest{
 		ConfigName: t.GetConfigName(),
-		GetAll:     t.GetGetAll(),
-		Filters:    ToDynamicConfigFilterArray(t.Filters),
 	}
 }
 
@@ -498,7 +494,7 @@ func FromGetDynamicConfigResponse(t *types.GetDynamicConfigResponse) *admin.GetD
 		return nil
 	}
 	return &admin.GetDynamicConfigResponse{
-		ConfigValues: FromDynamicConfigValueArray(t.ConfigValues),
+		ConfigValues: FromDynamicConfigEntry(t.ConfigValues),
 		ValueSource:  &t.ValueSource,
 	}
 }
@@ -509,7 +505,7 @@ func ToGetDynamicConfigResponse(t *admin.GetDynamicConfigResponse) *types.GetDyn
 		return nil
 	}
 	return &types.GetDynamicConfigResponse{
-		ConfigValues: ToDynamicConfigValueArray(t.ConfigValues),
+		ConfigValues: ToDynamicConfigEntry(t.ConfigValues),
 		ValueSource:  t.GetValueSource(),
 	}
 }

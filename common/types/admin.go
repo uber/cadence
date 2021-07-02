@@ -406,9 +406,7 @@ func (v *RingInfo) GetMembers() (o []*HostInfo) {
 }
 
 type GetDynamicConfigRequest struct {
-	ConfigName string                 `json:"configName,omitempty"`
-	GetAll     bool                   `json:"getAll,omitempty"`
-	Filters    []*DynamicConfigFilter `json:"filters,omitempty"`
+	ConfigName string `json:"configName,omitempty"`
 }
 
 func (v *GetDynamicConfigRequest) GetConfigName() (o string) {
@@ -418,26 +416,12 @@ func (v *GetDynamicConfigRequest) GetConfigName() (o string) {
 	return
 }
 
-func (v *GetDynamicConfigRequest) GetGetAll() (o bool) {
-	if v != nil {
-		return v.GetAll
-	}
-	return
-}
-
-func (v *GetDynamicConfigRequest) GetFilters() (o []*DynamicConfigFilter) {
-	if v != nil && v.Filters != nil {
-		return v.Filters
-	}
-	return
-}
-
 type GetDynamicConfigResponse struct {
-	ConfigValues []*DynamicConfigValue `json:"configValues,omitempty"`
-	ValueSource  string                `json:"valueSource,omitempty"`
+	ConfigValues *DynamicConfigEntry `json:"configValues,omitempty"`
+	ValueSource  string              `json:"valueSource,omitempty"`
 }
 
-func (v *GetDynamicConfigResponse) GetConfigValues() (o []*DynamicConfigValue) {
+func (v *GetDynamicConfigResponse) GetConfigValues() (o *DynamicConfigEntry) {
 	if v != nil && v.ConfigValues != nil {
 		return v.ConfigValues
 	}
