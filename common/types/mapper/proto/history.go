@@ -1420,7 +1420,7 @@ func FromHistoryGetCrossClusterTasksResponse(t *types.GetCrossClusterTasksRespon
 	}
 	return &historyv1.GetCrossClusterTasksResponse{
 		TasksByShard:       FromCrossClusterTaskRequestMap(t.TasksByShard),
-		FailedCauseByShard: FromGetCrossClusterTaskFailedCauseMap(t.FailedCauseByShard),
+		FailedCauseByShard: FromGetTaskFailedCauseMap(t.FailedCauseByShard),
 	}
 }
 
@@ -1431,7 +1431,7 @@ func ToHistoryGetCrossClusterTasksResponse(t *historyv1.GetCrossClusterTasksResp
 	}
 	return &types.GetCrossClusterTasksResponse{
 		TasksByShard:       ToCrossClusterTaskRequestMap(t.TasksByShard),
-		FailedCauseByShard: ToGetCrossClusterTaskFailedCauseMap(t.FailedCauseByShard),
+		FailedCauseByShard: ToGetTaskFailedCauseMap(t.FailedCauseByShard),
 	}
 }
 

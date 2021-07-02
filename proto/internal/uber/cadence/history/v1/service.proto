@@ -687,7 +687,7 @@ message GetCrossClusterTasksRequest {
 
 message GetCrossClusterTasksResponse {
   map<int32, shared.v1.CrossClusterTaskRequests> tasks_by_shard = 1;
-  map<int32, shared.v1.GetCrossClusterTaskFailedCause> failed_cause_by_shard = 2;
+  map<int32, shared.v1.GetTaskFailedCause> failed_cause_by_shard = 2;
 }
 
 message RespondCrossClusterTasksCompletedRequest {

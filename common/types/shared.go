@@ -10298,16 +10298,16 @@ const (
 	CrossClusterTaskFailedCauseUncategorized
 )
 
-// GetCrossClusterTaskFailedCause is an internal type (TBD...)
-type GetCrossClusterTaskFailedCause int32
+// GetTaskFailedCause is an internal type (TBD...)
+type GetTaskFailedCause int32
 
 // Ptr is a helper function for getting pointer value
-func (e GetCrossClusterTaskFailedCause) Ptr() *GetCrossClusterTaskFailedCause {
+func (e GetTaskFailedCause) Ptr() *GetTaskFailedCause {
 	return &e
 }
 
 // String returns a readable string representation of GetCrossClusterTaskFailedCause.
-func (e GetCrossClusterTaskFailedCause) String() string {
+func (e GetTaskFailedCause) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
@@ -10323,44 +10323,44 @@ func (e GetCrossClusterTaskFailedCause) String() string {
 }
 
 // UnmarshalText parses enum value from string representation
-func (e *GetCrossClusterTaskFailedCause) UnmarshalText(value []byte) error {
+func (e *GetTaskFailedCause) UnmarshalText(value []byte) error {
 	switch s := strings.ToUpper(string(value)); s {
 	case "SERVICE_BUSY":
-		*e = GetCrossClusterTaskFailedCauseServiceBusy
+		*e = GetTaskFailedCauseServiceBusy
 		return nil
 	case "TIMEOUT":
-		*e = GetCrossClusterTaskFailedCauseTimeout
+		*e = GetTaskFailedCauseTimeout
 		return nil
 	case "SHARD_OWNERSHIP_LOST":
-		*e = GetCrossClusterTaskFailedCauseShardOwnershipLost
+		*e = GetTaskFailedCauseShardOwnershipLost
 		return nil
 	case "UNCATEGORIZED":
-		*e = GetCrossClusterTaskFailedCauseUncategorized
+		*e = GetTaskFailedCauseUncategorized
 		return nil
 	default:
 		val, err := strconv.ParseInt(s, 10, 32)
 		if err != nil {
 			return fmt.Errorf("unknown enum value %q for %q: %v", s, "GetCrossClusterTaskFailedCause", err)
 		}
-		*e = GetCrossClusterTaskFailedCause(val)
+		*e = GetTaskFailedCause(val)
 		return nil
 	}
 }
 
 // MarshalText encodes GetCrossClusterTaskFailedCause to text.
-func (e GetCrossClusterTaskFailedCause) MarshalText() ([]byte, error) {
+func (e GetTaskFailedCause) MarshalText() ([]byte, error) {
 	return []byte(e.String()), nil
 }
 
 const (
-	// GetCrossClusterTaskFailedCauseServiceBusy is an option for GetCrossClusterTaskFailedCause
-	GetCrossClusterTaskFailedCauseServiceBusy GetCrossClusterTaskFailedCause = iota
-	// GetCrossClusterTaskFailedCauseTimeout is an option for GetCrossClusterTaskFailedCause
-	GetCrossClusterTaskFailedCauseTimeout
-	// GetCrossClusterTaskFailedCauseShardOwnershipLost is an option for GetCrossClusterTaskFailedCause
-	GetCrossClusterTaskFailedCauseShardOwnershipLost
-	// GetCrossClusterTaskFailedCauseUncategorized is an option for GetCrossClusterTaskFailedCause
-	GetCrossClusterTaskFailedCauseUncategorized
+	// GetTaskFailedCauseServiceBusy is an option for GetCrossClusterTaskFailedCause
+	GetTaskFailedCauseServiceBusy GetTaskFailedCause = iota
+	// GetTaskFailedCauseTimeout is an option for GetCrossClusterTaskFailedCause
+	GetTaskFailedCauseTimeout
+	// GetTaskFailedCauseShardOwnershipLost is an option for GetCrossClusterTaskFailedCause
+	GetTaskFailedCauseShardOwnershipLost
+	// GetTaskFailedCauseUncategorized is an option for GetCrossClusterTaskFailedCause
+	GetTaskFailedCauseUncategorized
 )
 
 // CrossClusterTaskInfo is an internal type (TBD...)
@@ -10765,8 +10765,8 @@ func (v *GetCrossClusterTasksRequest) GetTargetCluster() (o string) {
 
 // GetCrossClusterTasksResponse is an internal type (TBD...)
 type GetCrossClusterTasksResponse struct {
-	TasksByShard       map[int32][]*CrossClusterTaskRequest     `json:"tasksByShard,omitempty"`
-	FailedCauseByShard map[int32]GetCrossClusterTaskFailedCause `json:"failedCauseByShard,omitempty"`
+	TasksByShard       map[int32][]*CrossClusterTaskRequest `json:"tasksByShard,omitempty"`
+	FailedCauseByShard map[int32]GetTaskFailedCause         `json:"failedCauseByShard,omitempty"`
 }
 
 // GetTasksByShard is an internal getter (TBD...)
@@ -10778,7 +10778,7 @@ func (v *GetCrossClusterTasksResponse) GetTasksByShard() (o map[int32][]*CrossCl
 }
 
 // GetFailedCauseByShard is an internal getter (TBD...)
-func (v *GetCrossClusterTasksResponse) GetFailedCauseByShard() (o map[int32]GetCrossClusterTaskFailedCause) {
+func (v *GetCrossClusterTasksResponse) GetFailedCauseByShard() (o map[int32]GetTaskFailedCause) {
 	if v != nil && v.FailedCauseByShard != nil {
 		return v.FailedCauseByShard
 	}

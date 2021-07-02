@@ -706,7 +706,7 @@ func FromAdminGetCrossClusterTasksResponse(t *types.GetCrossClusterTasksResponse
 	}
 	return &adminv1.GetCrossClusterTasksResponse{
 		TasksByShard:       FromCrossClusterTaskRequestMap(t.TasksByShard),
-		FailedCauseByShard: FromGetCrossClusterTaskFailedCauseMap(t.FailedCauseByShard),
+		FailedCauseByShard: FromGetTaskFailedCauseMap(t.FailedCauseByShard),
 	}
 }
 
@@ -717,6 +717,6 @@ func ToAdminGetCrossClusterTasksResponse(t *adminv1.GetCrossClusterTasksResponse
 	}
 	return &types.GetCrossClusterTasksResponse{
 		TasksByShard:       ToCrossClusterTaskRequestMap(t.TasksByShard),
-		FailedCauseByShard: ToGetCrossClusterTaskFailedCauseMap(t.FailedCauseByShard),
+		FailedCauseByShard: ToGetTaskFailedCauseMap(t.FailedCauseByShard),
 	}
 }
