@@ -1322,7 +1322,7 @@ func (e *historyEngineImpl) getMutableState(
 		NextEventID:                          mutableState.GetNextEventID(),
 		PreviousStartedEventID:               common.Int64Ptr(mutableState.GetPreviousStartedEventID()),
 		TaskList:                             &types.TaskList{Name: executionInfo.TaskList},
-		StickyTaskList:                       &types.TaskList{Name: executionInfo.StickyTaskList},
+		StickyTaskList:                       &types.TaskList{Name: executionInfo.StickyTaskList, Kind: types.TaskListKindSticky.Ptr()},
 		ClientLibraryVersion:                 executionInfo.ClientLibraryVersion,
 		ClientFeatureVersion:                 executionInfo.ClientFeatureVersion,
 		ClientImpl:                           executionInfo.ClientImpl,

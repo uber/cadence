@@ -124,7 +124,7 @@ func (tn *qualifiedTaskListName) init() error {
 	return nil
 }
 
-// newTaskListID returns taskListID which uniquely identfies as task list
+// newTaskListID returns taskListID which uniquely identifies as task list
 func newTaskListID(
 	domainID string,
 	taskListName string,
