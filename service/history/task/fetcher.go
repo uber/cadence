@@ -90,6 +90,7 @@ var (
 
 // NewCrossClusterTaskFetchers creates a set of task fetchers,
 // one for each source cluster
+// The future returned by Fetcher.Get() will have value type []*types.CrossClusterTaskRequest
 func NewCrossClusterTaskFetchers(
 	clusterMetadata cluster.Metadata,
 	clientBean client.Bean,

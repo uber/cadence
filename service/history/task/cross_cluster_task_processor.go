@@ -60,6 +60,7 @@ type (
 		redispatcher  Redispatcher
 		taskFetcher   Fetcher
 		options       *CrossClusterTaskProcessorOptions
+		retryPolicy   backoff.RetryPolicy
 		logger        log.Logger
 		metricsScope  metrics.Scope
 
@@ -117,6 +118,9 @@ func newCrossClusterTaskProcessor(
 		tag.SourceCluster(taskFetcher.GetSourceCluster()),
 	)
 	metricsScope := shard.GetMetricsClient().Scope(metrics.CrossClusterTaskProcessorScope)
+	retryPolicy := backoff.NewExponentialRetryPolicy(time.Millisecond * 100)
+	retryPolicy.SetMaximumInterval(time.Second)
+	retryPolicy.SetExpirationInterval(options.TaskWaitInterval())
 	return &crossClusterTaskProcessor{
 		shard:         shard,
 		taskProcessor: taskProcessor,
@@ -131,6 +135,7 @@ func newCrossClusterTaskProcessor(
 			metricsScope,
 		),
 		options:      options,
+		retryPolicy:  retryPolicy,
 		logger:       logger,
 		metricsScope: metricsScope,
 
@@ -149,6 +154,9 @@ func (p *crossClusterTaskProcessor) Start() {
 	p.redispatcher.Start()
 
 	p.shutdownWG.Add(2)
+	go p.processLoop()
+	go p.respondPendingTaskLoop()
+
 	p.logger.Info("Task processor started.", tag.LifeCycleStarted)
 }
 
@@ -205,7 +213,9 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 	taskRequests []*types.CrossClusterTaskRequest,
 ) {
 	taskRequests = p.dedupTaskRequests(taskRequests)
-	for len(taskRequests) != 0 && !p.hasShutdown() {
+	// it's ok to drop task requests,
+	// the same request will be sent by the source cluster again upon next fetch
+	for len(taskRequests) != 0 && !p.hasShutdown() && p.numPendingTasks() < p.options.MaxPendingTasks() {
 
 		taskFutures := make([]future.Future, len(taskRequests))
 		for idx, taskRequest := range taskRequests {
@@ -301,6 +311,13 @@ func (p *crossClusterTaskProcessor) respondPendingTaskLoop() {
 		case <-p.shutdownCh:
 			return
 		case <-respondTimer.C:
+			// reset the timer first so that if respond task retried for some time
+			// we won't an additional TaskWaitInterval before checking the status of
+			// pending tasks
+			respondTimer.Reset(backoff.JitDuration(
+				p.options.TaskWaitInterval(),
+				p.options.TimerJitterCoefficient(),
+			))
 			p.taskLock.Lock()
 			respondRequest := &types.RespondCrossClusterTasksCompletedRequest{
 				ShardID:       int32(p.shard.GetShardID()),
@@ -325,6 +342,9 @@ func (p *crossClusterTaskProcessor) respondPendingTaskLoop() {
 				}
 			}
 			p.taskLock.Unlock()
+			if len(respondRequest.TaskResponses) == 0 {
+				continue
+			}
 
 			_, err := p.respondTaskCompletedWithRetry(respondRequest)
 			if err == nil {
@@ -337,14 +357,12 @@ func (p *crossClusterTaskProcessor) respondPendingTaskLoop() {
 				p.taskLock.Unlock()
 			}
 
-			waitInterval := p.options.TaskWaitInterval()
 			if common.IsServiceBusyError(err) {
-				waitInterval = p.options.ServiceBusyBackoffInterval()
+				respondTimer.Reset(backoff.JitDuration(
+					p.options.ServiceBusyBackoffInterval(),
+					p.options.TimerJitterCoefficient(),
+				))
 			}
-			respondTimer.Reset(backoff.JitDuration(
-				waitInterval,
-				p.options.TimerJitterCoefficient(),
-			))
 		}
 	}
 }
@@ -385,7 +403,7 @@ func (p *crossClusterTaskProcessor) respondTaskCompletedWithRetry(
 			response, err = p.shard.GetService().GetHistoryRawClient().RespondCrossClusterTasksCompleted(ctx, request)
 			return err
 		},
-		backoff.NewExponentialRetryPolicy(time.Second), // TODO: change this retry policy
+		p.retryPolicy,
 		func(err error) bool {
 			if common.IsServiceBusyError(err) {
 				return false
@@ -411,7 +429,7 @@ func (p *crossClusterTaskProcessor) submitTask(
 		}
 	}
 
-	p.logger.Error("Failed to submit task", tag.Error(err))
+	// p.logger.Error("Failed to submit task", tag.Error(err))
 	if err != nil || !submitted {
 		p.redispatcher.AddTask(task)
 	}

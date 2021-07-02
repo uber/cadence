@@ -22,9 +22,11 @@ package task
 
 import (
 	"context"
+	"math/rand"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -34,6 +36,9 @@ import (
 	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/constants"
 )
 
@@ -41,6 +46,8 @@ type (
 	fetcherSuite struct {
 		suite.Suite
 		*require.Assertions
+
+		controller *gomock.Controller
 
 		options *FetcherOptions
 		logger  log.Logger
@@ -59,6 +66,8 @@ func TestFetcherSuite(t *testing.T) {
 func (s *fetcherSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
+	s.controller = gomock.NewController(s.T())
+
 	s.options = &FetcherOptions{
 		Parallelism:            dynamicconfig.GetIntPropertyFn(3),
 		AggregationInterval:    dynamicconfig.GetDurationPropertyFn(time.Millisecond * 100),
@@ -67,8 +76,74 @@ func (s *fetcherSuite) SetupTest() {
 	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 }
 
-func (s *fetcherSuite) TestCrossClusterTaskFetchFn() {
-	// TODO: add test for crossClusterTaskFetchFn
+func (s *fetcherSuite) TearDownTest() {
+	s.controller.Finish()
+}
+
+func (s *fetcherSuite) TestCrossClusterTaskFetchers() {
+	sourceCluster := cluster.TestAlternativeClusterName
+	currentCluster := cluster.TestCurrentClusterName
+
+	shardIDs := []int32{1, 10, 123}
+	tasksByShard := make(map[int32][]*types.CrossClusterTaskRequest)
+
+	mockResource := resource.NewTest(s.controller, metrics.History)
+	mockResource.RemoteAdminClient.EXPECT().GetCrossClusterTasks(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, request *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error) {
+			s.Equal(currentCluster, request.GetTargetCluster())
+			resp := &types.GetCrossClusterTasksResponse{
+				TasksByShard: make(map[int32][]*types.CrossClusterTaskRequest),
+			}
+			for _, shardID := range request.GetShardIDs() {
+				_, ok := tasksByShard[shardID]
+				s.False(ok)
+
+				numTasks := rand.Intn(10)
+				taskRequests := make([]*types.CrossClusterTaskRequest, numTasks)
+				for i := 0; i != numTasks; i++ {
+					taskRequests[i] = &types.CrossClusterTaskRequest{
+						TaskInfo: &types.CrossClusterTaskInfo{
+							TaskID: rand.Int63n(10000),
+						},
+					}
+				}
+				resp.TasksByShard[shardID] = taskRequests
+				tasksByShard[shardID] = taskRequests
+			}
+			return resp, nil
+		},
+	).AnyTimes()
+
+	crossClusterTaskFetchers := NewCrossClusterTaskFetchers(
+		constants.TestClusterMetadata,
+		mockResource.GetClientBean(),
+		s.options,
+		s.logger,
+	)
+	var fetcher Fetcher
+	for _, f := range crossClusterTaskFetchers {
+		if f.GetSourceCluster() == sourceCluster {
+			s.Nil(fetcher)
+			fetcher = f
+		}
+	}
+	s.NotNil(fetcher)
+
+	fetcher.Start()
+	futures := make(map[int32]future.Future, len(shardIDs))
+	for _, shardID := range shardIDs {
+		futures[shardID] = fetcher.Fetch(int(shardID))
+	}
+
+	for shardID, future := range futures {
+		var taskRequests []*types.CrossClusterTaskRequest
+		err := future.Get(context.Background(), &taskRequests)
+		s.NoError(err)
+		s.Equal(tasksByShard[shardID], taskRequests)
+	}
+
+	fetcher.Stop()
+	mockResource.Finish(s.T())
 }
 
 func (s *fetcherSuite) TestNewTaskFetchers() {

@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 	ctask "github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/shard"
@@ -75,11 +76,16 @@ type (
 		taskProcessor   Processor       //TODO: wire up the dependency
 		redispatchFn    func(task Task) //TODO: wire up the dependency
 		maxRetryCount   dynamicconfig.IntPropertyFn
+		settable        future.Settable
 	}
 )
 
 // NewCrossClusterTaskForTargetCluster creates a CrossClusterTask
 // for the processing logic at target cluster
+// the returned the Future will be unblocked when after the task
+// is processed. The future value has type types.CrossClusterTaskResponse
+// and there will be not error returned for this future. All errors will
+// be recorded by the FailedCause field in the response.
 func NewCrossClusterTaskForTargetCluster(
 	shard shard.Context,
 	taskRequest *types.CrossClusterTaskRequest,
@@ -87,8 +93,16 @@ func NewCrossClusterTaskForTargetCluster(
 	maxRetryCount dynamicconfig.IntPropertyFn,
 ) (CrossClusterTask, future.Future) {
 	// TODO: create CrossClusterTasks based on request
-	future, _ := future.NewFuture()
-	return &crossClusterSignalWorkflowTask{}, future
+	// for now create a dummy CrossClusterTask for testing
+	future, settable := future.NewFuture()
+	return &crossClusterSignalWorkflowTask{
+		crossClusterTaskBase: &crossClusterTaskBase{
+			Info: &persistence.CrossClusterTaskInfo{
+				TaskID: taskRequest.TaskInfo.TaskID,
+			},
+			settable: settable,
+		},
+	}, future
 }
 
 // NewCrossClusterSignalWorkflowTask initialize cross cluster signal workflow task and task future
@@ -184,13 +198,17 @@ func (c *crossClusterSignalWorkflowTask) Execute() error {
 }
 
 func (c *crossClusterSignalWorkflowTask) Ack() {
-	panic("Not implement")
-
+	// TODO: rewrite the implementation
+	// current impl is just for testing purpose
+	if c.settable != nil {
+		c.settable.Set(types.CrossClusterTaskResponse{
+			TaskID: c.Info.GetTaskID(),
+		}, nil)
+	}
 }
 
 func (c *crossClusterSignalWorkflowTask) Nack() {
 	panic("Not implement")
-
 }
 
 func (c *crossClusterSignalWorkflowTask) HandleErr(
@@ -217,7 +235,6 @@ func (c *crossClusterCancelWorkflowTask) Execute() error {
 
 func (c *crossClusterCancelWorkflowTask) Ack() {
 	panic("Not implement")
-
 }
 
 func (c *crossClusterCancelWorkflowTask) Nack() {
