@@ -357,7 +357,7 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 	).Return(nil)
 
 	// Poll needs to happen before MustOffer, or else it goes into the non-blocking path.
-	ensureAsyncReady(time.Second, func(ctx context.Context) {
+	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.Poll(ctx)
 		t.Nil(err)
 		t.NotNil(task)
@@ -365,6 +365,7 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 
 	t.NoError(t.matcher.MustOffer(ctx, task))
 	cancel()
+	wait()
 	t.NotNil(req)
 	t.NoError(err)
 	t.True(remoteSyncMatch)
