@@ -62,6 +62,8 @@ var (
 type (
 	// AdminHandler interface for admin service
 	AdminHandler interface {
+		common.Daemon
+
 		AddSearchAttribute(context.Context, *types.AddSearchAttributeRequest) error
 		CloseShard(context.Context, *types.CloseShardRequest) error
 		DescribeCluster(context.Context) (*types.DescribeClusterResponse, error)
@@ -120,7 +122,7 @@ func NewAdminHandler(
 	resource resource.Resource,
 	params *service.BootstrapParams,
 	config *Config,
-) *adminHandlerImpl {
+) AdminHandler {
 
 	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
 		resource.GetDomainManager(),

@@ -40,6 +40,8 @@ var _ Handler = (*handlerImpl)(nil)
 type (
 	// Handler interface for matching service
 	Handler interface {
+		common.Daemon
+
 		Health(context.Context) (*types.HealthStatus, error)
 		AddActivityTask(context.Context, *types.AddActivityTaskRequest) error
 		AddDecisionTask(context.Context, *types.AddDecisionTaskRequest) error
@@ -73,7 +75,7 @@ var (
 func NewHandler(
 	resource resource.Resource,
 	config *Config,
-) *handlerImpl {
+) Handler {
 	handler := &handlerImpl{
 		Resource:      resource,
 		config:        config,

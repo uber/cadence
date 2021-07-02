@@ -307,15 +307,3 @@ func (c *clientImpl) getClientForTaskList(key string) (Client, error) {
 	}
 	return client.(Client), nil
 }
-
-func (c *clientImpl) getTaskListsByDomain(
-	cl Client,
-	ctx context.Context,
-	request *types.GetTaskListsByDomainRequest,
-	opts ...yarpc.CallOption,
-) (*types.GetTaskListsByDomainResponse, error) {
-	ctx, cancel := c.createContext(ctx)
-	defer cancel()
-
-	return cl.GetTaskListsByDomain(ctx, request, opts...)
-}

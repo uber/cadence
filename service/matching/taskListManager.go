@@ -68,10 +68,10 @@ type (
 		// GetTask blocks waiting for a task Returns error when context deadline is exceeded
 		// maxDispatchPerSecond is the max rate at which tasks are allowed to be dispatched
 		// from this task list to pollers
-		GetTask(ctx context.Context, maxDispatchPerSecond *float64) (*internalTask, error)
+		GetTask(ctx context.Context, maxDispatchPerSecond *float64) (*InternalTask, error)
 		// DispatchTask dispatches a task to a poller. When there are no pollers to pick
 		// up the task, this method will return error. Task will not be persisted to db
-		DispatchTask(ctx context.Context, task *internalTask) error
+		DispatchTask(ctx context.Context, task *InternalTask) error
 		// DispatchQueryTask will dispatch query to local or remote poller. If forwarded then result or error is returned,
 		// if dispatched to local poller then nil and nil is returned.
 		DispatchQueryTask(ctx context.Context, taskID string, request *types.MatchingQueryWorkflowRequest) (*types.QueryWorkflowResponse, error)
@@ -271,7 +271,7 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 // DispatchTask dispatches a task to a poller. When there are no pollers to pick
 // up the task or if rate limit is exceeded, this method will return error. Task
 // *will not* be persisted to db
-func (c *taskListManagerImpl) DispatchTask(ctx context.Context, task *internalTask) error {
+func (c *taskListManagerImpl) DispatchTask(ctx context.Context, task *InternalTask) error {
 	return c.matcher.MustOffer(ctx, task)
 }
 
@@ -294,7 +294,7 @@ func (c *taskListManagerImpl) DispatchQueryTask(
 func (c *taskListManagerImpl) GetTask(
 	ctx context.Context,
 	maxDispatchPerSecond *float64,
-) (*internalTask, error) {
+) (*InternalTask, error) {
 	task, err := c.getTask(ctx, maxDispatchPerSecond)
 	if err != nil {
 		return nil, err
@@ -304,7 +304,7 @@ func (c *taskListManagerImpl) GetTask(
 	return task, nil
 }
 
-func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond *float64) (*internalTask, error) {
+func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond *float64) (*InternalTask, error) {
 	// We need to set a shorter timeout than the original ctx; otherwise, by the time ctx deadline is
 	// reached, instead of emptyTask, context timeout error is returned to the frontend by the rpc stack,
 	// which counts against our SLO. By shortening the timeout by a very small amount, the emptyTask can be

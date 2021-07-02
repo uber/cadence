@@ -52,9 +52,14 @@ import (
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package history github.com/uber/cadence/service/history Handler
 
+const shardOwnershipTransferDelay = 5 * time.Second
+
 type (
 	// Handler interface for history service
 	Handler interface {
+		common.Daemon
+
+		PrepareToStop(time.Duration) time.Duration
 		Health(context.Context) (*types.HealthStatus, error)
 		CloseShard(context.Context, *types.CloseShardRequest) error
 		DescribeHistoryHost(context.Context, *types.DescribeHistoryHostRequest) (*types.DescribeHistoryHostResponse, error)
@@ -136,7 +141,7 @@ var (
 func NewHandler(
 	resource resource.Resource,
 	config *config.Config,
-) *handlerImpl {
+) Handler {
 	handler := &handlerImpl{
 		Resource:        resource,
 		config:          config,
@@ -214,7 +219,7 @@ func (h *handlerImpl) Start() {
 
 // Stop stops the handler
 func (h *handlerImpl) Stop() {
-	h.PrepareToStop()
+	h.prepareToShutDown()
 	h.replicationTaskFetchers.Stop()
 	h.queueTaskProcessor.Stop()
 	h.controller.Stop()
@@ -223,7 +228,17 @@ func (h *handlerImpl) Stop() {
 }
 
 // PrepareToStop starts graceful traffic drain in preparation for shutdown
-func (h *handlerImpl) PrepareToStop() {
+func (h *handlerImpl) PrepareToStop(remainingTime time.Duration) time.Duration {
+	h.GetLogger().Info("ShutdownHandler: Initiating shardController shutdown")
+	h.controller.PrepareToStop()
+	h.GetLogger().Info("ShutdownHandler: Waiting for traffic to drain")
+	remainingTime = common.SleepWithMinDuration(shardOwnershipTransferDelay, remainingTime)
+	h.GetLogger().Info("ShutdownHandler: No longer taking rpc requests")
+	h.prepareToShutDown()
+	return remainingTime
+}
+
+func (h *handlerImpl) prepareToShutDown() {
 	atomic.StoreInt32(&h.shuttingDown, 1)
 }
 

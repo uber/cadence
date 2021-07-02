@@ -751,7 +751,7 @@ func (e *matchingEngineImpl) getAllPartitions(
 // Loads a task from persistence and wraps it in a task context
 func (e *matchingEngineImpl) getTask(
 	ctx context.Context, taskList *taskListID, maxDispatchPerSecond *float64, taskListKind *types.TaskListKind,
-) (*internalTask, error) {
+) (*InternalTask, error) {
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
 		return nil, err
@@ -773,7 +773,7 @@ func (e *matchingEngineImpl) unloadTaskList(id *taskListID) {
 
 // Populate the decision task response based on context and scheduled/started events.
 func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
-	task *internalTask,
+	task *InternalTask,
 	historyResponse *types.RecordDecisionTaskStartedResponse,
 	scope metrics.Scope,
 ) *types.MatchingPollForDecisionTaskResponse {
@@ -812,7 +812,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 
 // Populate the activity task response based on context and scheduled/started events.
 func (e *matchingEngineImpl) createPollForActivityTaskResponse(
-	task *internalTask,
+	task *InternalTask,
 	historyResponse *types.RecordActivityTaskStartedResponse,
 	scope metrics.Scope,
 ) *types.PollForActivityTaskResponse {
@@ -864,7 +864,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 func (e *matchingEngineImpl) recordDecisionTaskStarted(
 	ctx context.Context,
 	pollReq *types.PollForDecisionTaskRequest,
-	task *internalTask,
+	task *InternalTask,
 ) (*types.RecordDecisionTaskStartedResponse, error) {
 	request := &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        task.event.DomainID,
@@ -893,7 +893,7 @@ func (e *matchingEngineImpl) recordDecisionTaskStarted(
 func (e *matchingEngineImpl) recordActivityTaskStarted(
 	ctx context.Context,
 	pollReq *types.PollForActivityTaskRequest,
-	task *internalTask,
+	task *InternalTask,
 ) (*types.RecordActivityTaskStartedResponse, error) {
 	request := &types.RecordActivityTaskStartedRequest{
 		DomainUUID:        task.event.DomainID,

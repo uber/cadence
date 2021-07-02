@@ -318,10 +318,9 @@ func (p *visibilitySamplingClient) tryConsumeListToken(domain string) error {
 	if ok {
 		p.logger.Debug("List API request consumed QPS token", tag.WorkflowDomainName(domain), tag.Name(callerFuncName(2)))
 		return nil
-	} else {
-		p.logger.Debug("List API request is being sampled", tag.WorkflowDomainName(domain), tag.Name(callerFuncName(2)))
-		return errPersistenceLimitExceededForList
 	}
+	p.logger.Debug("List API request is being sampled", tag.WorkflowDomainName(domain), tag.Name(callerFuncName(2)))
+	return errPersistenceLimitExceededForList
 }
 
 func callerFuncName(skip int) string {

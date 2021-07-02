@@ -36,7 +36,7 @@ type Service struct {
 	resource.Resource
 
 	status  int32
-	handler *handlerImpl
+	handler Handler
 	stopC   chan struct{}
 	config  *Config
 }

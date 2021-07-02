@@ -124,7 +124,7 @@ func HistoryScavengerActivity(
 	activityCtx context.Context,
 ) (history.ScavengerHeartbeatDetails, error) {
 
-	ctx, err := GetScannerContext(activityCtx)
+	ctx, err := getScannerContext(activityCtx)
 	if err != nil {
 		return history.ScavengerHeartbeatDetails{}, err
 	}
@@ -155,7 +155,7 @@ func HistoryScavengerActivity(
 func TaskListScavengerActivity(
 	activityCtx context.Context,
 ) error {
-	ctx, err := GetScannerContext(activityCtx)
+	ctx, err := getScannerContext(activityCtx)
 	if err != nil {
 		return err
 	}
