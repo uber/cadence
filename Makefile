@@ -417,6 +417,7 @@ INTEG_TEST_XDC_ROOT=./host/xdc
 INTEG_TEST_XDC_DIR=hostxdc
 INTEG_TEST_NDC_ROOT=./host/ndc
 INTEG_TEST_NDC_DIR=hostndc
+OPT_OUT_TEST=./bench/% ./canary/%
 
 TEST_TIMEOUT ?= 20m
 TEST_ARG ?= -race $(if $(test_v),-v) -timeout $(TEST_TIMEOUT)
@@ -433,7 +434,7 @@ endif
 # all directories with *_test.go files in them (exclude host/xdc)
 TEST_DIRS := $(filter-out $(INTEG_TEST_XDC_ROOT)%, $(sort $(dir $(filter %_test.go,$(ALL_SRC)))))
 # all tests other than end-to-end integration test fall into the pkg_test category
-PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
+PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)% $(OPT_OUT_TEST), $(TEST_DIRS))
 
 # Code coverage output files
 COVER_ROOT                      := $(BUILD)/coverage

@@ -21,6 +21,8 @@
 package clitest
 
 import (
+	"fmt"
+	"log"
 	"net"
 	"strconv"
 
@@ -64,7 +66,7 @@ func (s *SQLConnTestSuite) SetupTest() {
 func (s *SQLConnTestSuite) SetupSuite() {
 	conn, err := newTestConn("", s.pluginName)
 	if err != nil {
-		s.Log.Fatal("error creating sql conn, ", tag.Error(err))
+		log.Fatal(fmt.Sprintf("failed creating sql conn with error: %v", tag.Error(err)))
 	}
 	s.SetupSuiteBase(conn)
 }
