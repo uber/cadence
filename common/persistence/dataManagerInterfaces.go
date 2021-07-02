@@ -1716,6 +1716,14 @@ type (
 		QueueType QueueType `json:"queue_type"`
 		Payload   []byte    `json:"message_payload"`
 	}
+
+	ConfigStoreManager interface {
+		Closeable
+		GetDynamicConfig(ctx context.Context, request *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error)
+		UpdateDynamicConfig(ctx context.Context, request *types.UpdateDynamicConfigRequest) error
+		RestoreDynamicConfig(ctx context.Context, request *types.RestoreDynamicConfigRequest) error
+		ListDynamicConfig(ctx context.Context) (*types.ListDynamicConfigResponse, error)
+	}
 )
 
 func (e *InvalidPersistenceRequestError) Error() string {

@@ -331,12 +331,10 @@ will be returned. If get_all is False and a filter(s) is specified, value that m
 If config_name cannot be found in database, default value will be returned. */
 message GetDynamicConfigRequest {
 	string config_name = 1;
-  bool get_all = 2;
-	repeated DynamicConfigFilter filters = 3;
 }
 
 message GetDynamicConfigResponse {
-	repeated DynamicConfigValue config_values = 1;
+	DynamicConfigEntry config_values = 1;
   // Message regarding value source and/or type (is default, is fallback, from database, etc.)
 	string value_source = 2;
 }

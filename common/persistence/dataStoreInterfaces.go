@@ -179,6 +179,14 @@ type (
 		CountWorkflowExecutions(ctx context.Context, request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
 	}
 
+	ConfigStore interface {
+		Closeable
+		GetDynamicConfig(ctx context.Context, request *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error)
+		UpdateDynamicConfig(ctx context.Context, request *types.UpdateDynamicConfigRequest) error
+		RestoreDynamicConfig(ctx context.Context, request *types.RestoreDynamicConfigRequest) error
+		ListDynamicConfig(ctx context.Context) (*types.ListDynamicConfigResponse, error)
+	}
+
 	// Queue is a store to enqueue and get messages
 	Queue interface {
 		Closeable
