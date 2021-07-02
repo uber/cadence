@@ -267,8 +267,10 @@ func loadMutableStateForTimerTask(
 		}
 		// after refresh, still mutable state's next event ID <= task ID
 		if timerTask.EventID >= msBuilder.GetNextEventID() {
-			metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.DataInconsistentCounter)
+			domainName := msBuilder.GetDomainEntry().GetInfo().Name
+			metricsClient.Scope(metrics.TimerQueueProcessorScope, metrics.DomainTag(domainName)).IncCounter(metrics.DataInconsistentCounter)
 			logger.Error("Timer Task Processor: task event ID >= MS NextEventID, skip.",
+				tag.WorkflowDomainName(domainName),
 				tag.WorkflowDomainID(timerTask.DomainID),
 				tag.WorkflowID(timerTask.WorkflowID),
 				tag.WorkflowRunID(timerTask.RunID),
@@ -320,8 +322,10 @@ func loadMutableStateForTransferTask(
 		}
 		// after refresh, still mutable state's next event ID <= task ID
 		if transferTask.ScheduleID >= msBuilder.GetNextEventID() {
-			metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.DataInconsistentCounter)
+			domainName := msBuilder.GetDomainEntry().GetInfo().Name
+			metricsClient.Scope(metrics.TransferQueueProcessorScope, metrics.DomainTag(domainName)).IncCounter(metrics.DataInconsistentCounter)
 			logger.Error("Transfer Task Processor: task event ID >= MS NextEventID, skip.",
+				tag.WorkflowDomainName(domainName),
 				tag.WorkflowDomainID(transferTask.DomainID),
 				tag.WorkflowID(transferTask.WorkflowID),
 				tag.WorkflowRunID(transferTask.RunID),
