@@ -80,6 +80,7 @@ type (
 		// DescribeTaskList returns information about the target tasklist
 		DescribeTaskList(includeTaskListStatus bool) *types.DescribeTaskListResponse
 		String() string
+		GetTaskListKind() types.TaskListKind
 	}
 
 	// Single task list in memory state
@@ -405,6 +406,10 @@ func (c *taskListManagerImpl) String() string {
 	fmt.Fprintf(buf, "MaxReadLevel=%v\n", c.taskAckManager.GetReadLevel())
 
 	return buf.String()
+}
+
+func (c *taskListManagerImpl) GetTaskListKind() types.TaskListKind {
+	return c.taskListKind
 }
 
 // completeTask marks a task as processed. Only tasks created by taskReader (i.e. backlog from db) reach
