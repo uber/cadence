@@ -58,6 +58,30 @@ func (m *MockAdminHandler) EXPECT() *MockAdminHandlerMockRecorder {
 	return m.recorder
 }
 
+// Start mocks base method
+func (m *MockAdminHandler) Start() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Start")
+}
+
+// Start indicates an expected call of Start
+func (mr *MockAdminHandlerMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockAdminHandler)(nil).Start))
+}
+
+// Stop mocks base method
+func (m *MockAdminHandler) Stop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop
+func (mr *MockAdminHandlerMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockAdminHandler)(nil).Stop))
+}
+
 // AddSearchAttribute mocks base method
 func (m *MockAdminHandler) AddSearchAttribute(arg0 context.Context, arg1 *types.AddSearchAttributeRequest) error {
 	m.ctrl.T.Helper()
