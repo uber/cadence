@@ -81,6 +81,7 @@ func (s *fetcherSuite) TearDownTest() {
 }
 
 func (s *fetcherSuite) TestCrossClusterTaskFetchers() {
+	s.options.Parallelism = dynamicconfig.GetIntPropertyFn(1)
 	sourceCluster := cluster.TestAlternativeClusterName
 	currentCluster := cluster.TestCurrentClusterName
 

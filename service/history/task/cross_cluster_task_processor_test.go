@@ -146,7 +146,10 @@ func (s *crossClusterTaskProcessorSuite) testRespondPendingTasks(failedToRespond
 	}
 
 	s.mockShard.Resource.HistoryClient.EXPECT().RespondCrossClusterTasksCompleted(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, request *types.RespondCrossClusterTasksCompletedRequest) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+		func(
+			_ context.Context,
+			request *types.RespondCrossClusterTasksCompletedRequest,
+		) (*types.RespondCrossClusterTasksCompletedResponse, error) {
 			select {
 			case <-processor.shutdownCh:
 			default:
@@ -213,12 +216,17 @@ func (s *crossClusterTaskProcessorSuite) testProcessTaskRequests(failedToRespond
 				t.Ack()
 			}
 			// redispatcher interval is set to 1hr, basically disabled
+			// so that it won't re-submit tasks and we can easily count
+			// how many task submits are attempted
 			return submitted, nil
 		},
 	).Times(numTasks - 1) // -1 since there's a duplicate task
 
 	s.mockShard.Resource.HistoryClient.EXPECT().RespondCrossClusterTasksCompleted(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, request *types.RespondCrossClusterTasksCompletedRequest) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+		func(
+			_ context.Context,
+			request *types.RespondCrossClusterTasksCompletedRequest,
+		) (*types.RespondCrossClusterTasksCompletedResponse, error) {
 			s.Len(request.TaskResponses, completedTasks)
 			s.Equal(s.mockShard.Resource.GetClusterMetadata().GetCurrentClusterName(), request.TargetCluster)
 			s.Equal(s.mockShard.GetShardID(), int(request.GetShardID()))
@@ -269,7 +277,10 @@ func (s *crossClusterTaskProcessorSuite) TestProcessLoop() {
 	totalGetRequests := 3
 	numGetRequests := 0
 	s.mockShard.Resource.RemoteAdminClient.EXPECT().GetCrossClusterTasks(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, request *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error) {
+		func(
+			_ context.Context,
+			request *types.GetCrossClusterTasksRequest,
+		) (*types.GetCrossClusterTasksResponse, error) {
 			numGetRequests++
 			if numGetRequests == totalGetRequests {
 				close(processor.shutdownCh)
