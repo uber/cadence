@@ -217,15 +217,15 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 	// the same request will be sent by the source cluster again upon next fetch
 	for len(taskRequests) != 0 && !p.hasShutdown() && p.numPendingTasks() < p.options.MaxPendingTasks() {
 
-		taskFutures := make([]future.Future, len(taskRequests))
-		for idx, taskRequest := range taskRequests {
+		taskFutures := make(map[int64]future.Future, len(taskRequests))
+		for _, taskRequest := range taskRequests {
 			crossClusterTask, future := NewCrossClusterTaskForTargetCluster(
 				p.shard,
 				taskRequest,
 				p.logger,
 				p.options.TaskMaxRetryCount,
 			)
-			taskFutures[idx] = future
+			taskFutures[taskRequest.TaskInfo.GetTaskID()] = future
 
 			if err := p.submitTask(crossClusterTask); err != nil {
 				return
@@ -240,7 +240,7 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 		}
 		taskWaitContext, cancel := context.WithTimeout(context.Background(), p.options.TaskWaitInterval())
 		deadlineExceeded := false
-		for idx, taskFuture := range taskFutures {
+		for taskID, taskFuture := range taskFutures {
 			if deadlineExceeded && !taskFuture.IsReady() {
 				continue
 			}
@@ -248,8 +248,8 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 			var taskResponse types.CrossClusterTaskResponse
 			if err := taskFuture.Get(taskWaitContext, &taskResponse); err != nil {
 				if err == context.DeadlineExceeded {
-					// switch to a valid context here, otherwise Get() will also return an error
-					// this is fine since we will only be calling Get() with background context
+					// switch to a valid context here, otherwise Get() will always return an error.
+					// using context.Background() is fine since we will only be calling Get() with it
 					// when the future is ready
 					taskWaitContext = context.Background()
 					deadlineExceeded = true
@@ -259,13 +259,13 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 				// this case should not happen,
 				// task failure should be converted to FailCause in the response by the processing logic
 				taskResponse = types.CrossClusterTaskResponse{
-					TaskID: taskRequests[idx].TaskInfo.GetTaskID(),
+					TaskID: taskID,
 					// TODO: uncomment this following line when the Unknown cause is added
 					// FailedCause: types.CrossClusterTaskFailedCauseUnknown.Ptr(),
 				}
-			} else {
-				respondRequest.TaskResponses = append(respondRequest.TaskResponses, &taskResponse)
+				p.logger.Error("Encountered unknown error from cross cluster task future", tag.Error(err))
 			}
+			respondRequest.TaskResponses = append(respondRequest.TaskResponses, &taskResponse)
 		}
 		cancel()
 
@@ -282,12 +282,11 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 		// move tasks that are still running or failed to respond to pendingTasks map
 		// so that the respond can be done later
 		p.taskLock.Lock()
-		for idx, request := range taskRequests {
-			taskID := request.TaskInfo.GetTaskID()
+		for taskID, future := range taskFutures {
 			if _, ok := successfullyRespondedTaskIDs[taskID]; ok {
 				continue
 			}
-			p.pendingTasks[taskID] = taskFutures[idx]
+			p.pendingTasks[taskID] = future
 		}
 		p.taskLock.Unlock()
 
@@ -311,9 +310,9 @@ func (p *crossClusterTaskProcessor) respondPendingTaskLoop() {
 		case <-p.shutdownCh:
 			return
 		case <-respondTimer.C:
-			// reset the timer first so that if respond task retried for some time
-			// we won't an additional TaskWaitInterval before checking the status of
-			// pending tasks
+			// reset the timer first so that if respond task API call retried for some time
+			// we won't add an additional TaskWaitInterval before checking the status of
+			// pending tasks again
 			respondTimer.Reset(backoff.JitDuration(
 				p.options.TaskWaitInterval(),
 				p.options.TimerJitterCoefficient(),
@@ -429,7 +428,7 @@ func (p *crossClusterTaskProcessor) submitTask(
 		}
 	}
 
-	// p.logger.Error("Failed to submit task", tag.Error(err))
+	p.logger.Error("Failed to submit task", tag.Error(err))
 	if err != nil || !submitted {
 		p.redispatcher.AddTask(task)
 	}
