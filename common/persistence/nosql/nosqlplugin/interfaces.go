@@ -56,6 +56,7 @@ type (
 		visibilityCRUD
 		taskCRUD
 		workflowCRUD
+		configStoreCRUD
 	}
 
 	// ClientErrorChecker checks for common nosql errors on client
@@ -413,6 +414,19 @@ type (
 		) error
 	}
 
+	/***
+	* configStoreCRUD is for storing dynamic configuration parameters
+	*
+	* Recommendation: one table
+	*
+	* Significant columns:
+	* domain: partition key(row_type), range key(version)
+	 */
+	configStoreCRUD interface {
+		InsertConfig(ctx context.Context, row *ConfigStoreRow) error
+		SelectLatestConfig(ctx context.Context) (*ConfigStoreRow, error)
+	}
+
 	WorkflowExecutionRow struct {
 		persistence.InternalWorkflowExecutionInfo
 		VersionHistories *persistence.DataBlob
@@ -665,6 +679,13 @@ type (
 		ShardID  int
 		TreeID   string
 		BranchID *string
+	}
+
+	ConfigStoreRow struct {
+		RowType   string
+		Version   int64
+		Timestamp time.Time
+		Values    *persistence.DataBlob
 	}
 )
 
