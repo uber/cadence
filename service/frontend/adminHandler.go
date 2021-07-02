@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination adminHandler_mock.go -package frontend github.com/uber/cadence/service/frontend AdminHandler
+
 package frontend
 
 import (
@@ -56,8 +58,6 @@ const (
 var (
 	errMaxMessageIDNotSet = &types.BadRequestError{Message: "Max messageID is not set."}
 )
-
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination adminHandler_mock.go -package frontend github.com/uber/cadence/service/frontend AdminHandler
 
 type (
 	// AdminHandler interface for admin service
