@@ -1116,6 +1116,10 @@ func FromCrossClusterTaskFailedCause(t *types.CrossClusterTaskFailedCause) share
 		return sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_ALREADY_RUNNING
 	case types.CrossClusterTaskFailedCauseWorkflowNotExists:
 		return sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_NOT_EXISTS
+	case types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
+		return sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_ALREADY_COMPLETED
+	case types.CrossClusterTaskFailedCauseUncategorized:
+		return sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_UNCATEGORIZED
 	}
 	panic("unexpected enum value")
 }
@@ -1133,6 +1137,46 @@ func ToCrossClusterTaskFailedCause(t sharedv1.CrossClusterTaskFailedCause) *type
 		return types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning.Ptr()
 	case sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_NOT_EXISTS:
 		return types.CrossClusterTaskFailedCauseWorkflowNotExists.Ptr()
+	case sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_ALREADY_COMPLETED:
+		return types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted.Ptr()
+	case sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_UNCATEGORIZED:
+		return types.CrossClusterTaskFailedCauseUncategorized.Ptr()
+
+	}
+	panic("unexpected enum value")
+}
+
+// FromGetCrossClusterTaskFailedCause converts internal GetCrossClusterTaskFailedCause type to proto
+func FromGetCrossClusterTaskFailedCause(t *types.GetCrossClusterTaskFailedCause) sharedv1.GetCrossClusterTaskFailedCause {
+	if t == nil {
+		return sharedv1.GetCrossClusterTaskFailedCause_GET_CROSS_CLUSTER_TASK_FAILED_CAUSE_INVALID
+	}
+	switch *t {
+	case types.GetCrossClusterTaskFailedCauseServiceBusy:
+		return sharedv1.GetCrossClusterTaskFailedCause_GET_CROSS_CLUSTER_TASK_FAILED_CAUSE_SERVICE_BUSY
+	case types.GetCrossClusterTaskFailedCauseTimeout:
+		return sharedv1.GetCrossClusterTaskFailedCause_GET_CROSS_CLUSTER_TASK_FAILED_CAUSE_TIMEOUT
+	case types.GetCrossClusterTaskFailedCauseShardOwnershipLost:
+		return sharedv1.GetCrossClusterTaskFailedCause_GET_CROSS_CLUSTER_TASK_FAILED_CAUSE_SHARD_OWNERSHIP_LOST
+	case types.GetCrossClusterTaskFailedCauseUncategorized:
+		return sharedv1.GetCrossClusterTaskFailedCause_GET_CROSS_CLUSTER_TASK_FAILED_CAUSE_UNCATEGORIZED
+	}
+	panic("unexpected enum value")
+}
+
+// ToGetCrossClusterTaskFailedCause converts proto GetCrossClusterTaskFailedCause type to internal
+func ToGetCrossClusterTaskFailedCause(t sharedv1.GetCrossClusterTaskFailedCause) *types.GetCrossClusterTaskFailedCause {
+	switch t {
+	case sharedv1.GetCrossClusterTaskFailedCause_GET_CROSS_CLUSTER_TASK_FAILED_CAUSE_INVALID:
+		return nil
+	case sharedv1.GetCrossClusterTaskFailedCause_GET_CROSS_CLUSTER_TASK_FAILED_CAUSE_SERVICE_BUSY:
+		return types.GetCrossClusterTaskFailedCauseServiceBusy.Ptr()
+	case sharedv1.GetCrossClusterTaskFailedCause_GET_CROSS_CLUSTER_TASK_FAILED_CAUSE_TIMEOUT:
+		return types.GetCrossClusterTaskFailedCauseTimeout.Ptr()
+	case sharedv1.GetCrossClusterTaskFailedCause_GET_CROSS_CLUSTER_TASK_FAILED_CAUSE_SHARD_OWNERSHIP_LOST:
+		return types.GetCrossClusterTaskFailedCauseShardOwnershipLost.Ptr()
+	case sharedv1.GetCrossClusterTaskFailedCause_GET_CROSS_CLUSTER_TASK_FAILED_CAUSE_UNCATEGORIZED:
+		return types.GetCrossClusterTaskFailedCauseUncategorized.Ptr()
 	}
 	panic("unexpected enum value")
 }
@@ -1452,6 +1496,32 @@ func ToCrossClusterTaskRequestMap(t map[int32]*sharedv1.CrossClusterTaskRequests
 	v := make(map[int32][]*types.CrossClusterTaskRequest, len(t))
 	for key := range t {
 		v[key] = ToCrossClusterTaskRequestArray(t[key])
+	}
+	return v
+}
+
+// FromGetCrossClusterTaskFailedCauseMap converts internal GetCrossClusterTaskFailedCause type map to proto
+func FromGetCrossClusterTaskFailedCauseMap(t map[int32]types.GetCrossClusterTaskFailedCause) map[int32]sharedv1.GetCrossClusterTaskFailedCause {
+	if t == nil {
+		return nil
+	}
+	v := make(map[int32]sharedv1.GetCrossClusterTaskFailedCause, len(t))
+	for key, value := range t {
+		v[key] = FromGetCrossClusterTaskFailedCause(&value)
+	}
+	return v
+}
+
+// ToGetCrossClusterTaskFailedCauseMap converts proto GetCrossClusterTaskFailedCause type map to internal
+func ToGetCrossClusterTaskFailedCauseMap(t map[int32]sharedv1.GetCrossClusterTaskFailedCause) map[int32]types.GetCrossClusterTaskFailedCause {
+	if t == nil {
+		return nil
+	}
+	v := make(map[int32]types.GetCrossClusterTaskFailedCause, len(t))
+	for key := range t {
+		if internalValue := ToGetCrossClusterTaskFailedCause(t[key]); internalValue != nil {
+			v[key] = *internalValue
+		}
 	}
 	return v
 }
