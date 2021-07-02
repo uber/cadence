@@ -1719,7 +1719,7 @@ func newTestTaskListManager() *testTaskListManager {
 }
 
 func newTestTaskListID(domainID string, name string, taskType int) *taskListID {
-	result, err := newTaskListID(domainID, name, taskType, nil)
+	result, err := newTaskListID(domainID, name, taskType)
 	if err != nil {
 		panic(fmt.Sprintf("newTaskListID failed with error %v", err))
 	}
