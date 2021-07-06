@@ -49,12 +49,12 @@ type (
 	// Cassandra implementation cannot do it due to backward-compatibility. Any other NoSQL implementation should use datablob for non-significant columns.
 	// Follow the comment for each tableCRUD for what are 'significant' columns.
 	tableCRUD interface {
-		historyEventsCRUD
-		messageQueueCRUD
-		domainCRUD
-		shardCRUD
-		visibilityCRUD
-		taskCRUD
+		HistoryEventsCRUD
+		MessageQueueCRUD
+		DomainCRUD
+		ShardCRUD
+		VisibilityCRUD
+		TaskCRUD
 		WorkflowCRUD
 	}
 
@@ -66,7 +66,7 @@ type (
 	}
 
 	/**
-	 * historyEventsCRUD is for History events storage system
+	 * HistoryEventsCRUD is for History events storage system
 	 * Recommendation: use two tables: history_tree for branch records and history_node for node records
 	 * if a single update query can operate on two tables.
 	 *
@@ -74,7 +74,7 @@ type (
 	 * history_tree partition key: (shardID, treeID), range key: (branchID)
 	 * history_node partition key: (shardID, treeID), range key: (branchID, nodeID ASC, txnID DESC)
 	 */
-	historyEventsCRUD interface {
+	HistoryEventsCRUD interface {
 		// InsertIntoHistoryTreeAndNode inserts one or two rows: tree row and node row(at least one of them)
 		InsertIntoHistoryTreeAndNode(ctx context.Context, treeRow *HistoryTreeRow, nodeRow *HistoryNodeRow) error
 
@@ -94,7 +94,7 @@ type (
 	}
 
 	/***
-	 * messageQueueCRUD is for the message queue storage system
+	 * MessageQueueCRUD is for the message queue storage system
 	 *
 	 * Recommendation: use two tables(queue_message,and queue_metadata) to implement this interface
 	 *
@@ -102,7 +102,7 @@ type (
 	 * queue_message partition key: (queueType), range key: (messageID)
 	 * queue_metadata partition key: (queueType), range key: N/A, query condition column(version)
 	 */
-	messageQueueCRUD interface {
+	MessageQueueCRUD interface {
 		//Insert message into queue, return error if failed or already exists
 		// Must return conditionFailed error if row already exists
 		InsertIntoQueue(ctx context.Context, row *QueueMessageRow) error
@@ -132,7 +132,7 @@ type (
 	}
 
 	/***
-	* domainCRUD is for domain + domain metadata storage system
+	* DomainCRUD is for domain + domain metadata storage system
 	*
 	* Recommendation: two tables(domain, domain_metadata) to implement if conditional updates on two tables is supported
 	*
@@ -154,7 +154,7 @@ type (
 	*
 	* Note 3: It's okay to use a constant value for partition key because domain table is serving very small volume of traffic.
 	 */
-	domainCRUD interface {
+	DomainCRUD interface {
 		// Insert a new record to domain
 		// return types.DomainAlreadyExistsError error if failed or already exists
 		// Must return ConditionFailure error if other condition doesn't match
@@ -173,7 +173,7 @@ type (
 	}
 
 	/**
-	* shardCRUD is for shard storage of workflow execution.
+	* ShardCRUD is for shard storage of workflow execution.
 
 	* Recommendation: use one table if database support batch conditional update on multiple tables, otherwise combine with WorkflowCRUD (likeCassandra)
 	*
@@ -181,12 +181,12 @@ type (
 	* domain: partition key(shardID), range key(N/A), local secondary index(domainID), query condition column(rangeID)
 	*
 	* Note 1: shard will be required to run conditional update with WorkflowCRUD. So in some nosql database like Cassandra,
-	* shardCRUD and WorkflowCRUD must be implemented within the same table. Because Cassandra only allows LightWeight transaction
+	* ShardCRUD and WorkflowCRUD must be implemented within the same table. Because Cassandra only allows LightWeight transaction
 	* executed within a single table.
 	* Note 2: unlike Cassandra, most NoSQL databases don't return the previous rows when conditional write fails. In this case,
 	* an extra read query is needed to get the previous row.
 	 */
-	shardCRUD interface {
+	ShardCRUD interface {
 		// InsertShard creates a new shard.
 		// Return error is there is any thing wrong
 		// Return the ShardOperationConditionFailure when doesn't meet the condition
@@ -204,7 +204,7 @@ type (
 	}
 
 	/**
-	* visibilityCRUD is for visibility storage
+	* VisibilityCRUD is for visibility storage
 	*
 	* Recommendation: use one table with multiple indexes
 	*
@@ -228,7 +228,7 @@ type (
 	* NOTE 2: TTL(time to live records) is for auto-deleting expired records in visibility. For databases that don't support TTL,
 	* please implement DeleteVisibility method. If TTL is supported, then DeleteVisibility can be a noop.
 	 */
-	visibilityCRUD interface {
+	VisibilityCRUD interface {
 		InsertVisibility(ctx context.Context, ttlSeconds int64, row *VisibilityRowForInsert) error
 		UpdateVisibility(ctx context.Context, ttlSeconds int64, row *VisibilityRowForUpdate) error
 		SelectVisibility(ctx context.Context, filter *VisibilityFilter) (*SelectVisibilityResponse, error)
@@ -276,7 +276,7 @@ type (
 	VisibilitySortType   int
 
 	/**
-	* taskCRUD is for tasklist and worker tasks storage
+	* TaskCRUD is for tasklist and worker tasks storage
 	* The task here is only referred to workflow/activity worker tasks. `Task` is a overloaded term in Cadence.
 	* There is another 'task' storage which is for internal purpose only in WorkflowCRUD.
 	*
@@ -298,7 +298,7 @@ type (
 	*        support TTL, please implement ListTaskList method, and allows TaskListScavenger like MySQL/Postgres.
 	*        If TTL is supported, then ListTaskList can be a noop.
 	 */
-	taskCRUD interface {
+	TaskCRUD interface {
 		// SelectTaskList returns a single tasklist row.
 		// Return IsNotFoundError if the row doesn't exist
 		SelectTaskList(ctx context.Context, filter *TaskListFilter) (*TaskListRow, error)
@@ -337,7 +337,7 @@ type (
 	* 		Each record is for one workflowID
 	* workflow_execution is to store the core data of workflow execution.
 	*		Each record is for one runID(workflow execution run).
-	* Different from taskCRUD, transfer_task, replication_task, cross_cluster_task, timer_task are all internal background tasks within Cadence server.
+	* Different from TaskCRUD, transfer_task, replication_task, cross_cluster_task, timer_task are all internal background tasks within Cadence server.
 	* transfer_task is to store the background tasks that need to be processed by historyEngine, right after the transaction.
 	*		There are lots of usage in historyEngine, like creating activity/childWF/etc task, and updating search attributes, etc.
 	* replication_task is to store also background tasks that need to be processed right after the transaction,
@@ -349,7 +349,7 @@ type (
 	*		but only for cross cluster feature. Each record is a cross cluster task generated for a target cluster.
 	*		CrossCluster task stores information similar to TransferTask.
 	* buffered_event_list is to store the buffered event of a workflow execution
-	* The above 7 tables will be required to execute transaction write with the condition of shard record from shardCRUD.
+	* The above 7 tables will be required to execute transaction write with the condition of shard record from ShardCRUD.
 	* replication_dlq_task is DeadLetterQueue when target cluster pulling and applying replication task. Each record represents
 	*		a task for a target cluster.
 	*
