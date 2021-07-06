@@ -10,7 +10,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func createWorkflowExecutionInfo(
+func parseWorkflowExecutionInfo(
 	result map[string]interface{},
 ) *persistence.InternalWorkflowExecutionInfo {
 
@@ -150,7 +150,7 @@ func createWorkflowExecutionInfo(
 }
 
 // TODO: remove this after all 2DC workflows complete
-func createReplicationState(
+func parseReplicationState(
 	result map[string]interface{},
 ) *persistence.ReplicationState {
 
@@ -173,7 +173,7 @@ func createReplicationState(
 			info.LastReplicationInfo = make(map[string]*persistence.ReplicationInfo)
 			replicationInfoMap := v.(map[string]map[string]interface{})
 			for key, value := range replicationInfoMap {
-				info.LastReplicationInfo[key] = createReplicationInfo(value)
+				info.LastReplicationInfo[key] = parseReplicationInfo(value)
 			}
 		}
 	}
@@ -181,7 +181,7 @@ func createReplicationState(
 	return info
 }
 
-func createReplicationInfo(
+func parseReplicationInfo(
 	result map[string]interface{},
 ) *persistence.ReplicationInfo {
 
@@ -198,9 +198,7 @@ func createReplicationInfo(
 	return info
 }
 
-
-
-func createActivityInfo(
+func parseActivityInfo(
 	domainID string,
 	result map[string]interface{},
 ) *persistence.InternalActivityInfo {
@@ -285,7 +283,7 @@ func createActivityInfo(
 	return info
 }
 
-func createTimerInfo(
+func parseTimerInfo(
 	result map[string]interface{},
 ) *persistence.TimerInfo {
 
@@ -310,7 +308,7 @@ func createTimerInfo(
 	return info
 }
 
-func createChildExecutionInfo(
+func parseChildExecutionInfo(
 	result map[string]interface{},
 ) *persistence.InternalChildExecutionInfo {
 
@@ -353,7 +351,7 @@ func createChildExecutionInfo(
 	return info
 }
 
-func createRequestCancelInfo(
+func parseRequestCancelInfo(
 	result map[string]interface{},
 ) *persistence.RequestCancelInfo {
 
@@ -374,7 +372,7 @@ func createRequestCancelInfo(
 	return info
 }
 
-func createSignalInfo(
+func parseSignalInfo(
 	result map[string]interface{},
 ) *persistence.SignalInfo {
 
@@ -401,7 +399,7 @@ func createSignalInfo(
 	return info
 }
 
-func createHistoryEventBatchBlob(
+func parseHistoryEventBatchBlob(
 	result map[string]interface{},
 ) *persistence.DataBlob {
 
@@ -418,7 +416,7 @@ func createHistoryEventBatchBlob(
 	return eventBatch
 }
 
-func createTimerTaskInfo(
+func parseTimerTaskInfo(
 	result map[string]interface{},
 ) *persistence.TimerTaskInfo {
 
@@ -451,7 +449,7 @@ func createTimerTaskInfo(
 	return info
 }
 
-func createChecksum(result map[string]interface{}) checksum.Checksum {
+func parseChecksum(result map[string]interface{}) checksum.Checksum {
 	csum := checksum.Checksum{}
 	if len(result) == 0 {
 		return csum

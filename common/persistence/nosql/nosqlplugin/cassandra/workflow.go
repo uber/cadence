@@ -102,7 +102,7 @@ func (db *cdb) SelectCurrentWorkflow(
 	}
 
 	currentRunID := result["current_run_id"].(gocql.UUID).String()
-	executionInfo := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
+	executionInfo := parseWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
 	lastWriteVersion := common.EmptyVersion
 	if result["workflow_last_write_version"] != nil {
 		lastWriteVersion = result["workflow_last_write_version"].(int64)
@@ -216,17 +216,17 @@ func (db *cdb) SelectWorkflowExecution(ctx context.Context, shardID int, domainI
 	}
 
 	state := &nosqlplugin.WorkflowExecution{}
-	info := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
+	info := parseWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
 	state.ExecutionInfo = info
 	state.VersionHistories = p.NewDataBlob(result["version_histories"].([]byte), common.EncodingType(result["version_histories_encoding"].(string)))
 	// TODO: remove this after all 2DC workflows complete
-	replicationState := createReplicationState(result["replication_state"].(map[string]interface{}))
+	replicationState := parseReplicationState(result["replication_state"].(map[string]interface{}))
 	state.ReplicationState = replicationState
 
 	activityInfos := make(map[int64]*p.InternalActivityInfo)
 	aMap := result["activity_map"].(map[int64]map[string]interface{})
 	for key, value := range aMap {
-		info := createActivityInfo(domainID, value)
+		info := parseActivityInfo(domainID, value)
 		activityInfos[key] = info
 	}
 	state.ActivityInfos = activityInfos
@@ -234,7 +234,7 @@ func (db *cdb) SelectWorkflowExecution(ctx context.Context, shardID int, domainI
 	timerInfos := make(map[string]*p.TimerInfo)
 	tMap := result["timer_map"].(map[string]map[string]interface{})
 	for key, value := range tMap {
-		info := createTimerInfo(value)
+		info := parseTimerInfo(value)
 		timerInfos[key] = info
 	}
 	state.TimerInfos = timerInfos
@@ -242,7 +242,7 @@ func (db *cdb) SelectWorkflowExecution(ctx context.Context, shardID int, domainI
 	childExecutionInfos := make(map[int64]*p.InternalChildExecutionInfo)
 	cMap := result["child_executions_map"].(map[int64]map[string]interface{})
 	for key, value := range cMap {
-		info := createChildExecutionInfo(value)
+		info := parseChildExecutionInfo(value)
 		childExecutionInfos[key] = info
 	}
 	state.ChildExecutionInfos = childExecutionInfos
@@ -250,7 +250,7 @@ func (db *cdb) SelectWorkflowExecution(ctx context.Context, shardID int, domainI
 	requestCancelInfos := make(map[int64]*p.RequestCancelInfo)
 	rMap := result["request_cancel_map"].(map[int64]map[string]interface{})
 	for key, value := range rMap {
-		info := createRequestCancelInfo(value)
+		info := parseRequestCancelInfo(value)
 		requestCancelInfos[key] = info
 	}
 	state.RequestCancelInfos = requestCancelInfos
@@ -258,7 +258,7 @@ func (db *cdb) SelectWorkflowExecution(ctx context.Context, shardID int, domainI
 	signalInfos := make(map[int64]*p.SignalInfo)
 	sMap := result["signal_map"].(map[int64]map[string]interface{})
 	for key, value := range sMap {
-		info := createSignalInfo(value)
+		info := parseSignalInfo(value)
 		signalInfos[key] = info
 	}
 	state.SignalInfos = signalInfos
@@ -273,11 +273,11 @@ func (db *cdb) SelectWorkflowExecution(ctx context.Context, shardID int, domainI
 	eList := result["buffered_events_list"].([]map[string]interface{})
 	bufferedEventsBlobs := make([]*p.DataBlob, 0, len(eList))
 	for _, v := range eList {
-		blob := createHistoryEventBatchBlob(v)
+		blob := parseHistoryEventBatchBlob(v)
 		bufferedEventsBlobs = append(bufferedEventsBlobs, blob)
 	}
 	state.BufferedEvents = bufferedEventsBlobs
 
-	state.Checksum = createChecksum(result["checksum"].(map[string]interface{}))
+	state.Checksum = parseChecksum(result["checksum"].(map[string]interface{}))
 	return state, nil
 }
