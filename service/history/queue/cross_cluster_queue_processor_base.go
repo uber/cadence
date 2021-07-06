@@ -285,6 +285,20 @@ processorPumpLoop:
 				}
 				continue processorPumpLoop
 			}
+
+			c.Lock()
+			pendingTaskCount := c.outstandingTaskCount
+			c.Unlock()
+			if pendingTaskCount > c.options.MaxPendingTaskSize() {
+				c.resetBackoffTimer()
+
+				select {
+				case c.processCh <- struct{}{}:
+				default:
+				}
+				continue processorPumpLoop
+			}
+
 			c.processQueueCollections()
 		case notification := <-c.actionNotifyCh:
 			c.handleActionNotification(notification)
@@ -310,7 +324,7 @@ func (c *crossClusterQueueProcessorBase) completeAckTasks(nextAckLevel int64) (i
 		ExclusiveBeginTaskID: c.ackLevel,
 		InclusiveEndTaskID:   nextAckLevel,
 	}); err != nil {
-		return c.ackLevel, nil
+		return c.ackLevel, err
 	}
 
 	return nextAckLevel, nil
