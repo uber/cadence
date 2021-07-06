@@ -23,8 +23,9 @@ package cassandra
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
@@ -32,23 +33,16 @@ import (
 func (db *cdb) InsertWorkflowExecutionWithTasks(
 	ctx context.Context,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
-	execution *nosqlplugin.WorkflowExecutionRow,
+	execution *nosqlplugin.WorkflowExecutionRequest,
 	transferTasks []*nosqlplugin.TransferTask,
 	crossClusterTasks []*nosqlplugin.CrossClusterTask,
 	replicationTasks []*nosqlplugin.ReplicationTask,
 	timerTasks []*nosqlplugin.TimerTask,
-	activityInfoMap map[int64]*persistence.InternalActivityInfo,
-	timerInfoMap map[string]*persistence.TimerInfo,
-	childWorkflowInfoMap map[int64]*persistence.InternalChildExecutionInfo,
-	requestCancelInfoMap map[int64]*persistence.RequestCancelInfo,
-	signalInfoMap map[int64]*persistence.SignalInfo,
-	signalRequestedIDs []string,
 	shardCondition *nosqlplugin.ShardCondition,
 ) error {
 	shardID := shardCondition.ShardID
 	domainID := execution.DomainID
 	workflowID := execution.WorkflowID
-	runID := execution.RunID
 
 	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 
@@ -57,49 +51,24 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 		return err
 	}
 
-	err = db.createWorkflowExecution(batch, shardID, domainID, workflowID, runID, execution)
+	err = db.createWorkflowExecutionWithMergeMaps(batch, shardID, domainID, workflowID, execution)
 	if err != nil {
 		return err
 	}
 
-	err = db.updateActivityInfos(batch, shardID, domainID, workflowID, runID, activityInfoMap, nil)
+	err = db.createTransferTasks(batch, shardID, domainID, workflowID, transferTasks)
 	if err != nil {
 		return err
 	}
-	err = db.updateTimerInfos(batch, shardID, domainID, workflowID, runID, timerInfoMap, nil)
+	err = db.createReplicationTasks(batch, shardID, domainID, workflowID, replicationTasks)
 	if err != nil {
 		return err
 	}
-	err = db.updateChildExecutionInfos(batch, shardID, domainID, workflowID, runID, childWorkflowInfoMap, nil)
+	err = db.createCrossClusterTasks(batch, shardID, domainID, workflowID, crossClusterTasks)
 	if err != nil {
 		return err
 	}
-	err = db.updateRequestCancelInfos(batch, shardID, domainID, workflowID, runID, requestCancelInfoMap, nil)
-	if err != nil {
-		return err
-	}
-	err = db.updateSignalInfos(batch, shardID, domainID, workflowID, runID, signalInfoMap, nil)
-	if err != nil {
-		return err
-	}
-	err = db.updateSignalsRequested(batch, shardID, domainID, workflowID, runID, signalRequestedIDs, nil)
-	if err != nil {
-		return err
-	}
-
-	err = db.createTransferTasks(batch, shardID, domainID, workflowID, runID, transferTasks)
-	if err != nil {
-		return err
-	}
-	err = db.createReplicationTasks(batch, shardID, domainID, workflowID, runID, replicationTasks)
-	if err != nil {
-		return err
-	}
-	err = db.createCrossClusterTasks(batch, shardID, domainID, workflowID, runID, crossClusterTasks)
-	if err != nil {
-		return err
-	}
-	err = db.createTimerTasks(batch, shardID, domainID, workflowID, runID, timerTasks)
+	err = db.createTimerTasks(batch, shardID, domainID, workflowID, timerTasks)
 	if err != nil {
 		return err
 	}
@@ -110,4 +79,121 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 	}
 
 	return db.executeCreateWorkflowBatchTransaction(batch, currentWorkflowRequest, execution, shardCondition)
+}
+
+func (db *cdb) SelectCurrentWorkflow(
+	ctx context.Context,
+	shardID int, domainID, workflowID string,
+) (*nosqlplugin.CurrentWorkflowRow, error) {
+	query := db.session.Query(templateGetCurrentExecutionQuery,
+		shardID,
+		rowTypeExecution,
+		domainID,
+		workflowID,
+		permanentRunID,
+		defaultVisibilityTimestamp,
+		rowTypeExecutionTaskID,
+	).WithContext(ctx)
+
+	result := make(map[string]interface{})
+	if err := query.MapScan(result); err != nil {
+		return nil, err
+	}
+
+	currentRunID := result["current_run_id"].(gocql.UUID).String()
+	executionInfo := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
+	lastWriteVersion := common.EmptyVersion
+	if result["workflow_last_write_version"] != nil {
+		lastWriteVersion = result["workflow_last_write_version"].(int64)
+	}
+	return &nosqlplugin.CurrentWorkflowRow{
+		ShardID:          shardID,
+		DomainID:         domainID,
+		WorkflowID:       workflowID,
+		RunID:            currentRunID,
+		CreateRequestID:  executionInfo.CreateRequestID,
+		State:            executionInfo.State,
+		CloseStatus:      executionInfo.CloseStatus,
+		LastWriteVersion: lastWriteVersion,
+	}, nil
+}
+
+func (db *cdb) UpdateWorkflowExecutionWithTasks(
+	ctx context.Context,
+	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
+	mutatedExecution *nosqlplugin.WorkflowExecutionRequest,
+	insertedExecution *nosqlplugin.WorkflowExecutionRequest,
+	resetExecution *nosqlplugin.WorkflowExecutionRequest,
+	transferTasks []*nosqlplugin.TransferTask,
+	crossClusterTasks []*nosqlplugin.CrossClusterTask,
+	replicationTasks []*nosqlplugin.ReplicationTask,
+	timerTasks []*nosqlplugin.TimerTask,
+	shardCondition *nosqlplugin.ShardCondition,
+) error {
+	shardID := shardCondition.ShardID
+	var domainID, workflowID string
+	var previousNextEventIDCondition int64
+	if mutatedExecution != nil {
+		domainID = mutatedExecution.DomainID
+		workflowID = mutatedExecution.WorkflowID
+		previousNextEventIDCondition = *mutatedExecution.PreviousNextEventIDCondition
+	} else if resetExecution != nil {
+		domainID = resetExecution.DomainID
+		workflowID = resetExecution.WorkflowID
+		previousNextEventIDCondition = *resetExecution.PreviousNextEventIDCondition
+	} else {
+		return fmt.Errorf("at least one of mutatedExecution and resetExecution should be provided")
+	}
+
+	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
+
+	err := db.createOrUpdateCurrentWorkflow(batch, shardID, domainID, workflowID, currentWorkflowRequest)
+	if err != nil {
+		return err
+	}
+
+	if mutatedExecution != nil {
+		err = db.updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(batch, shardID, domainID, workflowID, mutatedExecution)
+		if err != nil {
+			return err
+		}
+	}
+
+	if insertedExecution != nil {
+		err = db.createWorkflowExecutionWithMergeMaps(batch, shardID, domainID, workflowID, insertedExecution)
+		if err != nil {
+			return err
+		}
+	}
+
+	if resetExecution != nil {
+		err = db.resetWorkflowExecutionAndMapsAndEventBuffer(batch, shardID, domainID, workflowID, resetExecution)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = db.createTransferTasks(batch, shardID, domainID, workflowID, transferTasks)
+	if err != nil {
+		return err
+	}
+	err = db.createReplicationTasks(batch, shardID, domainID, workflowID, replicationTasks)
+	if err != nil {
+		return err
+	}
+	err = db.createCrossClusterTasks(batch, shardID, domainID, workflowID, crossClusterTasks)
+	if err != nil {
+		return err
+	}
+	err = db.createTimerTasks(batch, shardID, domainID, workflowID, timerTasks)
+	if err != nil {
+		return err
+	}
+
+	err = db.assertShardRangeID(batch, shardID, shardCondition.RangeID)
+	if err != nil {
+		return err
+	}
+
+	return db.executeUpdateWorkflowBatchTransaction(batch, currentWorkflowRequest, previousNextEventIDCondition, shardCondition)
 }
