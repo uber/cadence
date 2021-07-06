@@ -55,7 +55,7 @@ type (
 		shardCRUD
 		visibilityCRUD
 		taskCRUD
-		workflowCRUD
+		WorkflowCRUD
 	}
 
 	// ClientErrorChecker checks for common nosql errors on client
@@ -175,13 +175,13 @@ type (
 	/**
 	* shardCRUD is for shard storage of workflow execution.
 
-	* Recommendation: use one table if database support batch conditional update on multiple tables, otherwise combine with workflowCRUD (likeCassandra)
+	* Recommendation: use one table if database support batch conditional update on multiple tables, otherwise combine with WorkflowCRUD (likeCassandra)
 	*
 	* Significant columns:
 	* domain: partition key(shardID), range key(N/A), local secondary index(domainID), query condition column(rangeID)
 	*
-	* Note 1: shard will be required to run conditional update with workflowCRUD. So in some nosql database like Cassandra,
-	* shardCRUD and workflowCRUD must be implemented within the same table. Because Cassandra only allows LightWeight transaction
+	* Note 1: shard will be required to run conditional update with WorkflowCRUD. So in some nosql database like Cassandra,
+	* shardCRUD and WorkflowCRUD must be implemented within the same table. Because Cassandra only allows LightWeight transaction
 	* executed within a single table.
 	* Note 2: unlike Cassandra, most NoSQL databases don't return the previous rows when conditional write fails. In this case,
 	* an extra read query is needed to get the previous row.
@@ -278,7 +278,7 @@ type (
 	/**
 	* taskCRUD is for tasklist and worker tasks storage
 	* The task here is only referred to workflow/activity worker tasks. `Task` is a overloaded term in Cadence.
-	* There is another 'task' storage which is for internal purpose only in workflowCRUD.
+	* There is another 'task' storage which is for internal purpose only in WorkflowCRUD.
 	*
 	* Recommendation: use two tables(tasklist + task) to implement
 	* tasklist table stores the metadata mainly for
@@ -330,7 +330,7 @@ type (
 	}
 
 	/**
-	* workflowCRUD is for core data models of workflow execution.
+	* WorkflowCRUD is for core data models of workflow execution.
 	*
 	* Recommendation: If possible, use 8 tables(current_workflow, workflow_execution, transfer_task, replication_task, cross_cluster_task, timer_task, buffered_event_list, replication_dlq_task) to implement
 	* current_workflow is to track the currentRunID of a workflowID for ensuring the ID-Uniqueness of Cadence workflows.
@@ -380,7 +380,7 @@ type (
 	*		This is useful for DynamoDB because a transaction cannot contain more than 25 unique items.
 	*
 	 */
-	workflowCRUD interface {
+	WorkflowCRUD interface {
 		// InsertWorkflowExecutionWithTasks is for creating a new workflow execution record. Within a transaction, it also:
 		// 1. Create or update the record of current_workflow with the same workflowID, based on CurrentWorkflowExecutionWriteMode,
 		//		and also check if the condition is met.
@@ -436,6 +436,11 @@ type (
 		SelectCurrentWorkflow(ctx context.Context, shardID int, domainID, workflowID string) (*CurrentWorkflowRow, error)
 		// Return the workflow execution row
 		SelectWorkflowExecution(ctx context.Context, shardID int, domainID, workflowID, runID string) (*WorkflowExecution, error)
+
+		// Delete the current_workflow row, if currentRunIDCondition is met
+		DeleteCurrentWorkflow(ctx context.Context, shardID int, domainID, workflowID, currentRunIDCondition string) error
+		// Delete the workflow execution row
+		DeleteWorkflowExecution(ctx context.Context, shardID int, domainID, workflowID, runID string) error
 	}
 
 	WorkflowExecution = persistence.InternalWorkflowMutableState

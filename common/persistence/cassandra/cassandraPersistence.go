@@ -1428,17 +1428,7 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *p.DeleteWorkflowExecutionRequest,
 ) error {
-	query := d.session.Query(templateDeleteWorkflowExecutionMutableStateQuery,
-		d.shardID,
-		rowTypeExecution,
-		request.DomainID,
-		request.WorkflowID,
-		request.RunID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID,
-	).WithContext(ctx)
-
-	err := query.Exec()
+	err := d.db.DeleteWorkflowExecution(ctx, d.shardID, request.DomainID, request.WorkflowID, request.RunID)
 	if err != nil {
 		return convertCommonErrors(d.client, "DeleteWorkflowExecution", err)
 	}
@@ -1450,18 +1440,7 @@ func (d *cassandraPersistence) DeleteCurrentWorkflowExecution(
 	ctx context.Context,
 	request *p.DeleteCurrentWorkflowExecutionRequest,
 ) error {
-	query := d.session.Query(templateDeleteWorkflowExecutionCurrentRowQuery,
-		d.shardID,
-		rowTypeExecution,
-		request.DomainID,
-		request.WorkflowID,
-		permanentRunID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID,
-		request.RunID,
-	).WithContext(ctx)
-
-	err := query.Exec()
+	err := d.db.DeleteCurrentWorkflow(ctx, d.shardID, request.DomainID, request.WorkflowID, request.RunID)
 	if err != nil {
 		return convertCommonErrors(d.client, "DeleteWorkflowCurrentRow", err)
 	}

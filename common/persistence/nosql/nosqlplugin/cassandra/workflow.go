@@ -31,6 +31,8 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
 
+var _ nosqlplugin.WorkflowCRUD = (*cdb)(nil)
+
 func (db *cdb) InsertWorkflowExecutionWithTasks(
 	ctx context.Context,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
@@ -280,4 +282,33 @@ func (db *cdb) SelectWorkflowExecution(ctx context.Context, shardID int, domainI
 
 	state.Checksum = parseChecksum(result["checksum"].(map[string]interface{}))
 	return state, nil
+}
+
+func (db *cdb) DeleteCurrentWorkflow(ctx context.Context, shardID int, domainID, workflowID, currentRunIDCondition string) error {
+	query := db.session.Query(templateDeleteWorkflowExecutionCurrentRowQuery,
+		shardID,
+		rowTypeExecution,
+		domainID,
+		workflowID,
+		permanentRunID,
+		defaultVisibilityTimestamp,
+		rowTypeExecutionTaskID,
+		currentRunIDCondition,
+	).WithContext(ctx)
+
+	return query.Exec()
+}
+
+func (db *cdb) DeleteWorkflowExecution(ctx context.Context, shardID int, domainID, workflowID, runID string) error {
+	query := db.session.Query(templateDeleteWorkflowExecutionMutableStateQuery,
+		shardID,
+		rowTypeExecution,
+		domainID,
+		workflowID,
+		runID,
+		defaultVisibilityTimestamp,
+		rowTypeExecutionTaskID,
+	).WithContext(ctx)
+
+	return query.Exec()
 }

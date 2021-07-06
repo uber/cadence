@@ -27,6 +27,8 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
+var _ nosqlplugin.WorkflowCRUD = (*ddb)(nil)
+
 func (db *ddb) InsertWorkflowExecutionWithTasks(
 	ctx context.Context,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
@@ -60,5 +62,13 @@ func (db *ddb) SelectCurrentWorkflow(ctx context.Context, shardID int, domainID,
 }
 
 func (db *ddb) SelectWorkflowExecution(ctx context.Context, shardID int, domainID, workflowID, runID string) (*nosqlplugin.WorkflowExecution, error) {
+	panic("TODO")
+}
+
+func (db *ddb) DeleteCurrentWorkflow(ctx context.Context, shardID int, domainID, workflowID, currentRunIDCondition string) error {
+	panic("TODO")
+}
+
+func (db *ddb) DeleteWorkflowExecution(ctx context.Context, shardID int, domainID, workflowID, runID string) error {
 	panic("TODO")
 }
