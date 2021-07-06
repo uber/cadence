@@ -61,8 +61,9 @@ type (
 		outstandingTaskCount int
 		ackLevel             int64
 
-		notifyCh  chan struct{}
-		processCh chan struct{}
+		notifyCh         chan struct{}
+		processCh        chan struct{}
+		failoverNotifyCh chan struct{}
 	}
 )
 
@@ -170,8 +171,9 @@ func newCrossClusterQueueProcessorBaseHelper(
 		backoffTimer:  make(map[int]*time.Timer),
 		shouldProcess: make(map[int]bool),
 
-		notifyCh:  make(chan struct{}, 1),
-		processCh: make(chan struct{}, 1),
+		notifyCh:         make(chan struct{}, 1),
+		processCh:        make(chan struct{}, 1),
+		failoverNotifyCh: make(chan struct{}, 1),
 	}
 
 	return crossClusterQueueProcessorBase
@@ -286,6 +288,8 @@ processorPumpLoop:
 			c.processQueueCollections()
 		case notification := <-c.actionNotifyCh:
 			c.handleActionNotification(notification)
+		case <-c.failoverNotifyCh:
+			c.validateOutstandingTasks()
 		}
 	}
 }
@@ -348,8 +352,7 @@ func (c *crossClusterQueueProcessorBase) pollTasks() []*types.CrossClusterTaskRe
 			panic("received non cross cluster task")
 		}
 		if crossClusterTask.IsReadyForPoll() {
-			request := c.getCrossClusterTaskRequest(crossClusterTask)
-			result = append(result, request)
+			result = append(result, crossClusterTask.GetCrossClusterRequest())
 		}
 	}
 	return result
@@ -373,17 +376,29 @@ func (c *crossClusterQueueProcessorBase) getTasks() []task.Task {
 }
 
 func (c *crossClusterQueueProcessorBase) updateTask(
-	taskKey task.Key,
-	remoteResponse interface{},
+	response *types.CrossClusterTaskResponse,
 ) error {
 
-	queueTask, err := c.getTask(taskKey)
+	queueTask, err := c.getTask(newCrossClusterTaskKey(response.GetTaskID()))
 	if err != nil {
 		return err
 	}
 	crossClusterTask, ok := queueTask.(task.CrossClusterTask)
 	if ok {
-		if err := crossClusterTask.Update(remoteResponse); err != nil {
+
+		var responseResult interface{}
+		switch crossClusterTask.GetTaskType() {
+		case persistence.CrossClusterTaskTypeStartChildExecution:
+			responseResult = response.StartChildExecutionAttributes
+		case persistence.CrossClusterTaskTypeSignalExecution:
+			responseResult = response.SignalExecutionAttributes
+		case persistence.CrossClusterTaskTypeCancelExecution:
+			responseResult = response.CancelExecutionAttributes
+		default:
+			panic(fmt.Sprintf("received unsupported cross cluster task type: %v", crossClusterTask.GetTaskType()))
+		}
+
+		if err := crossClusterTask.Update(responseResult); err != nil {
 			c.logger.Error("failed to update cross cluster task",
 				tag.TaskID(crossClusterTask.GetTaskID()),
 				tag.WorkflowDomainID(crossClusterTask.GetDomainID()),
@@ -500,16 +515,15 @@ func (c *crossClusterQueueProcessorBase) handleActionNotification(notification a
 	case ActionTypeUpdateTask:
 		action := notification.action.UpdateTaskAttributes
 		var err error
-		for taskID, response := range action.tasksByID {
-			if err = c.updateTask(newCrossClusterTaskKey(taskID), response); err != nil {
+		for _, task := range action.tasks {
+			if err = c.updateTask(task); err != nil {
 				break
 			}
 		}
-
 		notification.resultNotificationCh <- actionResultNotification{
 			result: &ActionResult{
 				ActionType:       ActionTypeUpdateTask,
-				UpdateTaskResult: &UpdateTaskResult{},
+				UpdateTaskResult: &UpdateTasksResult{},
 			},
 			err: err,
 		}
@@ -614,6 +628,13 @@ func (c *crossClusterQueueProcessorBase) notifyNewTask() {
 	}
 }
 
+func (c *crossClusterQueueProcessorBase) notifyDomainFailover() {
+	select {
+	case c.failoverNotifyCh <- struct{}{}:
+	default:
+	}
+}
+
 // validateOutstandingTasks will be triggered when the cluster received a domain fail over event
 func (c *crossClusterQueueProcessorBase) validateOutstandingTasks() {
 	tasks := c.getTasks()
@@ -626,34 +647,6 @@ func (c *crossClusterQueueProcessorBase) validateOutstandingTasks() {
 			}
 		}
 	}
-}
-
-func (c *crossClusterQueueProcessorBase) getCrossClusterTaskRequest(t task.CrossClusterTask) *types.CrossClusterTaskRequest {
-	visibilityTimestamp := t.GetVisibilityTimestamp().UnixNano()
-	request := &types.CrossClusterTaskRequest{
-		TaskInfo: &types.CrossClusterTaskInfo{
-			DomainID:            t.GetDomainID(),
-			WorkflowID:          t.GetWorkflowID(),
-			RunID:               t.GetRunID(),
-			TaskType:            types.CrossClusterTaskType(t.GetTaskType()).Ptr(),
-			TaskState:           int16(t.State()),
-			TaskID:              t.GetTaskID(),
-			VisibilityTimestamp: &visibilityTimestamp,
-		},
-	}
-
-	switch t.GetTaskType() {
-	case persistence.CrossClusterTaskTypeStartChildExecution:
-
-	case persistence.CrossClusterTaskTypeSignalExecution:
-
-	case persistence.CrossClusterTaskTypeCancelExecution:
-
-	default:
-		panic(fmt.Sprintf("received unsupported cross cluster task type: %v", t.GetTaskType()))
-	}
-
-	return request
 }
 
 func newCrossClusterTaskKey(

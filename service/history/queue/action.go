@@ -34,7 +34,7 @@ type (
 		ResetActionAttributes    *ResetActionAttributes
 		GetStateActionAttributes *GetStateActionAttributes
 		GetTasksAttributes       *GetTasksAttributes
-		UpdateTaskAttributes     *UpdateTaskAttributes
+		UpdateTaskAttributes     *UpdateTasksAttributes
 		// add attributes for other action types here
 	}
 
@@ -44,7 +44,7 @@ type (
 		ResetActionResult    *ResetActionResult
 		GetStateActionResult *GetStateActionResult
 		GetTasksResult       *GetTasksResult
-		UpdateTaskResult     *UpdateTaskResult
+		UpdateTaskResult     *UpdateTasksResult
 	}
 
 	// ResetActionAttributes contains the parameter for performing Reset Action
@@ -65,13 +65,12 @@ type (
 	GetTasksResult struct {
 		tasks []*types.CrossClusterTaskRequest
 	}
-	// UpdateTaskAttributes contains the parameter to update task
-	// TODO: replace result interface with defined data struct
-	UpdateTaskAttributes struct {
-		tasksByID map[int64]interface{}
+	// UpdateTasksAttributes contains the parameter to update task
+	UpdateTasksAttributes struct {
+		tasks []*types.CrossClusterTaskResponse
 	}
-	// UpdateTaskResult is the result for performing UpdateTask Action
-	UpdateTaskResult struct {
+	// UpdateTasksResult is the result for performing UpdateTask Action
+	UpdateTasksResult struct {
 	}
 )
 

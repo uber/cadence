@@ -32,6 +32,8 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
+	"github.com/uber/cadence/common/types"
+
 	ctask "github.com/uber/cadence/common/task"
 
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -301,6 +303,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestPollTasks_OneTaskReady_ReturnO
 	readyTask.EXPECT().GetTaskType().Return(1).AnyTimes()
 	readyTask.EXPECT().State().Return(ctask.State(0)).AnyTimes()
 	readyTask.EXPECT().GetTaskID().Return(int64(0)).AnyTimes()
+	readyTask.EXPECT().GetCrossClusterRequest().Return(nil).AnyTimes()
 	notReadyTask := task.NewMockCrossClusterTask(s.controller)
 	notReadyTask.EXPECT().GetDomainID().Return(uuid.New()).AnyTimes()
 	notReadyTask.EXPECT().IsReadyForPoll().Return(false)
@@ -314,9 +317,9 @@ func (s *crossClusterQueueProcessorBaseSuite) TestUpdateTask_Success() {
 	clusterName := "test"
 	processingQueueState := newProcessingQueueState(
 		0,
-		testKey{ID: 1},
-		testKey{ID: 1},
-		testKey{ID: 10},
+		newCrossClusterTaskKey(1),
+		newCrossClusterTaskKey(1),
+		newCrossClusterTaskKey(10),
 		NewDomainFilter(map[string]struct{}{}, true),
 	)
 
@@ -331,10 +334,13 @@ func (s *crossClusterQueueProcessorBaseSuite) TestUpdateTask_Success() {
 	crossClusterTask := task.NewMockCrossClusterTask(s.controller)
 	crossClusterTask.EXPECT().GetDomainID().Return(uuid.New()).AnyTimes()
 	crossClusterTask.EXPECT().Update(gomock.Any()).Return(nil).Times(1)
+	crossClusterTask.EXPECT().GetTaskType().Return(1).AnyTimes()
 	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).Times(1)
-	newTaskMap := map[task.Key]task.Task{testKey{ID: 2}: crossClusterTask}
-	processorBase.processingQueueCollections[0].AddTasks(newTaskMap, testKey{ID: 10})
-	err := processorBase.updateTask(testKey{ID: 2}, nil)
+	newTaskMap := map[task.Key]task.Task{newCrossClusterTaskKey(2): crossClusterTask}
+	processorBase.processingQueueCollections[0].AddTasks(newTaskMap, newCrossClusterTaskKey(10))
+	err := processorBase.updateTask(&types.CrossClusterTaskResponse{
+		TaskID: int64(2),
+	})
 	s.NoError(err)
 }
 
@@ -342,9 +348,9 @@ func (s *crossClusterQueueProcessorBaseSuite) TestUpdateTask_UpdateTask_Fail() {
 	clusterName := "test"
 	processingQueueState := newProcessingQueueState(
 		0,
-		testKey{ID: 1},
-		testKey{ID: 1},
-		testKey{ID: 10},
+		newCrossClusterTaskKey(1),
+		newCrossClusterTaskKey(1),
+		newCrossClusterTaskKey(10),
 		NewDomainFilter(map[string]struct{}{}, true),
 	)
 
@@ -362,10 +368,13 @@ func (s *crossClusterQueueProcessorBaseSuite) TestUpdateTask_UpdateTask_Fail() {
 	crossClusterTask.EXPECT().GetWorkflowID().Return("workflowID").Times(1)
 	crossClusterTask.EXPECT().GetRunID().Return("runID").Times(1)
 	crossClusterTask.EXPECT().Update(gomock.Any()).Return(errors.New("test")).Times(1)
+	crossClusterTask.EXPECT().GetTaskType().Return(1).AnyTimes()
 	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).Times(0)
-	newTaskMap := map[task.Key]task.Task{testKey{ID: 2}: crossClusterTask}
-	processorBase.processingQueueCollections[0].AddTasks(newTaskMap, testKey{ID: 10})
-	err := processorBase.updateTask(testKey{ID: 2}, nil)
+	newTaskMap := map[task.Key]task.Task{newCrossClusterTaskKey(2): crossClusterTask}
+	processorBase.processingQueueCollections[0].AddTasks(newTaskMap, newCrossClusterTaskKey(10))
+	err := processorBase.updateTask(&types.CrossClusterTaskResponse{
+		TaskID: int64(2),
+	})
 	s.Error(err)
 }
 
@@ -373,9 +382,9 @@ func (s *crossClusterQueueProcessorBaseSuite) TestUpdateTask_SubmitTask_Redispat
 	clusterName := "test"
 	processingQueueState := newProcessingQueueState(
 		0,
-		testKey{ID: 1},
-		testKey{ID: 1},
-		testKey{ID: 10},
+		newCrossClusterTaskKey(1),
+		newCrossClusterTaskKey(1),
+		newCrossClusterTaskKey(10),
 		NewDomainFilter(map[string]struct{}{}, true),
 	)
 
@@ -391,10 +400,13 @@ func (s *crossClusterQueueProcessorBaseSuite) TestUpdateTask_SubmitTask_Redispat
 	crossClusterTask.EXPECT().GetDomainID().Return(uuid.New()).AnyTimes()
 	crossClusterTask.EXPECT().Update(gomock.Any()).Return(nil).Times(1)
 	crossClusterTask.EXPECT().Priority().Return(0).AnyTimes()
+	crossClusterTask.EXPECT().GetTaskType().Return(1).AnyTimes()
 	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(false, errors.New("test")).Times(1)
-	newTaskMap := map[task.Key]task.Task{testKey{ID: 2}: crossClusterTask}
-	processorBase.processingQueueCollections[0].AddTasks(newTaskMap, testKey{ID: 10})
-	err := processorBase.updateTask(testKey{ID: 2}, nil)
+	newTaskMap := map[task.Key]task.Task{newCrossClusterTaskKey(2): crossClusterTask}
+	processorBase.processingQueueCollections[0].AddTasks(newTaskMap, newCrossClusterTaskKey(10))
+	err := processorBase.updateTask(&types.CrossClusterTaskResponse{
+		TaskID: int64(2),
+	})
 	s.NoError(err)
 }
 
@@ -563,6 +575,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_GetTa
 	mockTask.EXPECT().GetTaskType().Return(1).AnyTimes()
 	mockTask.EXPECT().State().Return(ctask.State(0)).AnyTimes()
 	mockTask.EXPECT().GetTaskID().Return(int64(0)).AnyTimes()
+	mockTask.EXPECT().GetCrossClusterRequest().Return(nil).AnyTimes()
 	taskKey := testKey{ID: 10}
 	newTaskMap := map[task.Key]task.Task{taskKey: mockTask}
 	processorBase.processingQueueCollections[0].AddTasks(newTaskMap, testKey{ID: 11})
@@ -603,6 +616,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_Updat
 	mockTask.EXPECT().GetDomainID().Return(uuid.New()).AnyTimes()
 	mockTask.EXPECT().GetTaskID().Return(int64(10)).AnyTimes()
 	mockTask.EXPECT().Update(gomock.Any()).Return(nil).AnyTimes()
+	mockTask.EXPECT().GetTaskType().Return(1).AnyTimes()
 	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).AnyTimes()
 	taskKey := newCrossClusterTaskKey(10)
 	newTaskMap := map[task.Key]task.Task{taskKey: mockTask}
@@ -610,8 +624,13 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_Updat
 	notification := actionNotification{
 		action: &Action{
 			ActionType: ActionTypeUpdateTask,
-			UpdateTaskAttributes: &UpdateTaskAttributes{
-				tasksByID: map[int64]interface{}{int64(10): struct{}{}},
+			UpdateTaskAttributes: &UpdateTasksAttributes{
+				tasks: []*types.CrossClusterTaskResponse{
+					{
+						TaskID:   int64(10),
+						TaskType: types.CrossClusterTaskType(1).Ptr(),
+					},
+				},
 			},
 		},
 		resultNotificationCh: make(chan actionResultNotification, 1),
@@ -648,6 +667,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_Updat
 	mockTask.EXPECT().Update(gomock.Any()).Return(errors.New("test")).AnyTimes()
 	mockTask.EXPECT().GetWorkflowID().Return("workflowID").AnyTimes()
 	mockTask.EXPECT().GetRunID().Return("runID").AnyTimes()
+	mockTask.EXPECT().GetTaskType().Return(1).AnyTimes()
 	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).AnyTimes()
 	taskKey := newCrossClusterTaskKey(10)
 	newTaskMap := map[task.Key]task.Task{taskKey: mockTask}
@@ -655,8 +675,12 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_Updat
 	notification := actionNotification{
 		action: &Action{
 			ActionType: ActionTypeUpdateTask,
-			UpdateTaskAttributes: &UpdateTaskAttributes{
-				tasksByID: map[int64]interface{}{int64(10): struct{}{}},
+			UpdateTaskAttributes: &UpdateTasksAttributes{
+				tasks: []*types.CrossClusterTaskResponse{
+					{
+						TaskID: int64(10),
+					},
+				},
 			},
 		},
 		resultNotificationCh: make(chan actionResultNotification, 1),

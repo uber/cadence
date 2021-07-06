@@ -34,6 +34,7 @@ import (
 
 	future "github.com/uber/cadence/common/future"
 	task "github.com/uber/cadence/common/task"
+	types "github.com/uber/cadence/common/types"
 	shard "github.com/uber/cadence/service/history/shard"
 )
 
@@ -736,6 +737,20 @@ func (m *MockCrossClusterTask) Update(arg0 interface{}) error {
 func (mr *MockCrossClusterTaskMockRecorder) Update(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockCrossClusterTask)(nil).Update), arg0)
+}
+
+// GetCrossClusterRequest mocks base method
+func (m *MockCrossClusterTask) GetCrossClusterRequest() *types.CrossClusterTaskRequest {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCrossClusterRequest")
+	ret0, _ := ret[0].(*types.CrossClusterTaskRequest)
+	return ret0
+}
+
+// GetCrossClusterRequest indicates an expected call of GetCrossClusterRequest
+func (mr *MockCrossClusterTaskMockRecorder) GetCrossClusterRequest() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterRequest", reflect.TypeOf((*MockCrossClusterTask)(nil).GetCrossClusterRequest))
 }
 
 // MockKey is a mock of Key interface

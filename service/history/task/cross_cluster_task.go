@@ -347,3 +347,7 @@ func (c *crossClusterTaskBase) IsReadyForPoll() bool {
 	return c.state == ctask.TaskStatePending &&
 		(c.processingState == processingStateInitialed || c.processingState == processingStateResponseRecorded)
 }
+
+func (c *crossClusterTaskBase) GetCrossClusterRequest() *types.CrossClusterTaskRequest {
+	panic("Not implement")
+}
