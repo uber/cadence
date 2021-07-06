@@ -29,6 +29,7 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/types"
 )
 
 var _ nosqlplugin.WorkflowCRUD = (*cdb)(nil)
@@ -311,4 +312,42 @@ func (db *cdb) DeleteWorkflowExecution(ctx context.Context, shardID int, domainI
 	).WithContext(ctx)
 
 	return query.Exec()
+}
+
+func (db *cdb) SelectAllCurrentWorkflows(ctx context.Context, shardID int, pageToken []byte, pageSize int) ([]*p.CurrentWorkflowExecution, []byte, error) {
+	query := db.session.Query(
+		templateListCurrentExecutionsQuery,
+		shardID,
+		rowTypeExecution,
+	).PageSize(pageSize).PageState(pageToken).WithContext(ctx)
+
+	iter := query.Iter()
+	if iter == nil {
+		return nil, nil, &types.InternalServiceError{
+			Message: "ListCurrentExecutions operation failed. Not able to create query iterator.",
+		}
+	}
+	result := make(map[string]interface{})
+	var executions []*p.CurrentWorkflowExecution
+	for iter.MapScan(result) {
+		runID := result["run_id"].(gocql.UUID).String()
+		if runID != permanentRunID {
+			result = make(map[string]interface{})
+			continue
+		}
+		executions = append(executions, &p.CurrentWorkflowExecution{
+			DomainID:     result["domain_id"].(gocql.UUID).String(),
+			WorkflowID:   result["workflow_id"].(string),
+			RunID:        permanentRunID,
+			State:        result["workflow_state"].(int),
+			CurrentRunID: result["current_run_id"].(gocql.UUID).String(),
+		})
+		result = make(map[string]interface{})
+	}
+	nextPageToken := iter.PageState()
+	newPageToken := make([]byte, len(nextPageToken))
+	copy(newPageToken, nextPageToken)
+
+	err := iter.Close()
+	return executions, newPageToken, err
 }

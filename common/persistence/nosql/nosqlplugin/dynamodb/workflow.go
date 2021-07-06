@@ -24,6 +24,7 @@ package dynamodb
 import (
 	"context"
 
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
@@ -70,5 +71,9 @@ func (db *ddb) DeleteCurrentWorkflow(ctx context.Context, shardID int, domainID,
 }
 
 func (db *ddb) DeleteWorkflowExecution(ctx context.Context, shardID int, domainID, workflowID, runID string) error {
+	panic("TODO")
+}
+
+func (db *ddb) SelectAllCurrentWorkflows(ctx context.Context, shardID int, pageToken []byte, pageSize int) ([]*persistence.CurrentWorkflowExecution, []byte, error) {
 	panic("TODO")
 }

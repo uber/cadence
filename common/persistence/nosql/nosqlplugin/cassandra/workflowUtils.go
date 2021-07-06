@@ -78,7 +78,7 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 
 				if execution, ok := previous["execution"].(map[string]interface{}); ok {
 					// CreateWorkflowExecution failed because it already exists
-					executionInfo := createWorkflowExecutionInfo(execution)
+					executionInfo := parseWorkflowExecutionInfo(execution)
 					lastWriteVersion := common.EmptyVersion
 					if previous["workflow_last_write_version"] != nil {
 						lastWriteVersion = previous["workflow_last_write_version"].(int64)

@@ -1478,43 +1478,14 @@ func (d *cassandraPersistence) ListCurrentExecutions(
 	ctx context.Context,
 	request *p.ListCurrentExecutionsRequest,
 ) (*p.ListCurrentExecutionsResponse, error) {
-	query := d.session.Query(
-		templateListCurrentExecutionsQuery,
-		d.shardID,
-		rowTypeExecution,
-	).PageSize(request.PageSize).PageState(request.PageToken).WithContext(ctx)
-
-	iter := query.Iter()
-	if iter == nil {
-		return nil, &types.InternalServiceError{
-			Message: "ListCurrentExecutions operation failed. Not able to create query iterator.",
-		}
-	}
-	response := &p.ListCurrentExecutionsResponse{}
-	result := make(map[string]interface{})
-	for iter.MapScan(result) {
-		runID := result["run_id"].(gocql.UUID).String()
-		if runID != permanentRunID {
-			result = make(map[string]interface{})
-			continue
-		}
-		response.Executions = append(response.Executions, &p.CurrentWorkflowExecution{
-			DomainID:     result["domain_id"].(gocql.UUID).String(),
-			WorkflowID:   result["workflow_id"].(string),
-			RunID:        permanentRunID,
-			State:        result["workflow_state"].(int),
-			CurrentRunID: result["current_run_id"].(gocql.UUID).String(),
-		})
-		result = make(map[string]interface{})
-	}
-	nextPageToken := iter.PageState()
-	response.PageToken = make([]byte, len(nextPageToken))
-	copy(response.PageToken, nextPageToken)
-
-	if err := iter.Close(); err != nil {
+	executions, token, err := d.db.SelectAllCurrentWorkflows(ctx, d.shardID, request.PageToken, request.PageSize)
+	if err != nil {
 		return nil, convertCommonErrors(d.client, "ListCurrentExecutions", err)
 	}
-	return response, nil
+	return &p.ListCurrentExecutionsResponse{
+		Executions: executions,
+		PageToken:  token,
+	}, nil
 }
 
 func (d *cassandraPersistence) IsWorkflowExecutionExists(
