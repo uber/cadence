@@ -1803,6 +1803,7 @@ const (
 	TaskNotActiveCounter
 	TaskLimitExceededCounter
 	TaskBatchCompleteCounter
+	TaskBatchCompleteFailure
 	TaskProcessingLatency
 	TaskQueueLatency
 
@@ -1840,6 +1841,7 @@ const (
 	QueueValidatorDropTaskCounter
 	QueueValidatorInvalidLoadCounter
 	QueueValidatorValidationCounter
+	QueueValidatorValidationFailure
 
 	ActivityE2ELatency
 	ActivityLostCounter
@@ -2327,6 +2329,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TransferTaskMissingEventCounterPerDomain: {metricName: "transfer_task_missing_event_counter_per_domain", metricRollupName: "transfer_task_missing_event_counter", metricType: Counter},
 
 		TaskBatchCompleteCounter:                          {metricName: "task_batch_complete_counter", metricType: Counter},
+		TaskBatchCompleteFailure:                          {metricName: "task_batch_complete_error", metricType: Counter},
 		TaskRedispatchQueuePendingTasksTimer:              {metricName: "task_redispatch_queue_pending_tasks", metricType: Timer},
 		TransferTaskThrottledCounter:                      {metricName: "transfer_task_throttled_counter", metricType: Counter},
 		TimerTaskThrottledCounter:                         {metricName: "timer_task_throttled_counter", metricType: Counter},
@@ -2342,6 +2345,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		QueueValidatorDropTaskCounter:                     {metricName: "queue_validator_drop_task_counter", metricType: Counter},
 		QueueValidatorInvalidLoadCounter:                  {metricName: "queue_validator_invalid_load_counter", metricType: Counter},
 		QueueValidatorValidationCounter:                   {metricName: "queue_validator_validation_counter", metricType: Counter},
+		QueueValidatorValidationFailure:                   {metricName: "queue_validator_validation_error", metricType: Counter},
 		ActivityE2ELatency:                                {metricName: "activity_end_to_end_latency", metricType: Timer},
 		ActivityLostCounter:                               {metricName: "activity_lost", metricType: Counter},
 		AckLevelUpdateCounter:                             {metricName: "ack_level_update", metricType: Counter},

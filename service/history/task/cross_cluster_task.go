@@ -227,6 +227,10 @@ func (c *crossClusterSignalWorkflowTask) Update(interface{}) error {
 	panic("Not implement")
 }
 
+func (c *crossClusterSignalWorkflowTask) IsValid() bool {
+	panic("Not implement")
+}
+
 // Cross cluster cancel workflow task
 
 func (c *crossClusterCancelWorkflowTask) Execute() error {
@@ -258,6 +262,10 @@ func (c *crossClusterCancelWorkflowTask) Update(interface{}) error {
 	panic("Not implement")
 }
 
+func (c *crossClusterCancelWorkflowTask) IsValid() bool {
+	panic("Not implement")
+}
+
 // Cross cluster start child workflow task
 
 func (c *crossClusterStartChildWorkflowTask) Execute() error {
@@ -286,11 +294,11 @@ func (c *crossClusterStartChildWorkflowTask) RetryErr(
 	panic("Not implement")
 }
 
-func (c *crossClusterStartChildWorkflowTask) IsReadyForPoll() bool {
+func (c *crossClusterStartChildWorkflowTask) Update(interface{}) error {
 	panic("Not implement")
 }
 
-func (c *crossClusterStartChildWorkflowTask) Update(interface{}) error {
+func (c *crossClusterStartChildWorkflowTask) IsValid() bool {
 	panic("Not implement")
 }
 
@@ -338,4 +346,8 @@ func (c *crossClusterTaskBase) IsReadyForPoll() bool {
 
 	return c.state == ctask.TaskStatePending &&
 		(c.processingState == processingStateInitialed || c.processingState == processingStateResponseRecorded)
+}
+
+func (c *crossClusterTaskBase) GetCrossClusterRequest() *types.CrossClusterTaskRequest {
+	panic("Not implement")
 }
