@@ -2743,3 +2743,13 @@ func IsTransientError(err error) bool {
 
 	return false
 }
+
+// IsBackgroundTransientError checks if the error is a transient error on background jobs
+func IsBackgroundTransientError(err error) bool {
+	switch err.(type) {
+	case *types.InternalServiceError, *TimeoutError:
+		return true
+	}
+
+	return false
+}
