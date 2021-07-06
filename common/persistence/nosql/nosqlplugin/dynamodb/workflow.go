@@ -24,25 +24,37 @@ package dynamodb
 import (
 	"context"
 
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
 func (db *ddb) InsertWorkflowExecutionWithTasks(
 	ctx context.Context,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
-	execution *nosqlplugin.WorkflowExecutionRow,
+	execution *nosqlplugin.WorkflowExecutionRequest,
 	transferTasks []*nosqlplugin.TransferTask,
 	crossClusterTasks []*nosqlplugin.CrossClusterTask,
 	replicationTasks []*nosqlplugin.ReplicationTask,
 	timerTasks []*nosqlplugin.TimerTask,
-	activityInfoMap map[int64]*persistence.InternalActivityInfo,
-	timerInfoMap map[string]*persistence.TimerInfo,
-	childWorkflowInfoMap map[int64]*persistence.InternalChildExecutionInfo,
-	requestCancelInfoMap map[int64]*persistence.RequestCancelInfo,
-	signalInfoMap map[int64]*persistence.SignalInfo,
-	signalRequestedIDs []string,
 	shardCondition *nosqlplugin.ShardCondition,
 ) error {
+	panic("TODO")
+}
+
+func (db *ddb) UpdateWorkflowExecutionWithTasks(
+	ctx context.Context,
+	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
+	mutatedExecution *nosqlplugin.WorkflowExecutionRequest,
+	insertedExecution *nosqlplugin.WorkflowExecutionRequest,
+	resetExecution *nosqlplugin.WorkflowExecutionRequest,
+	transferTasks []*nosqlplugin.TransferTask,
+	crossClusterTasks []*nosqlplugin.CrossClusterTask,
+	replicationTasks []*nosqlplugin.ReplicationTask,
+	timerTasks []*nosqlplugin.TimerTask,
+	shardCondition *nosqlplugin.ShardCondition,
+) error {
+	panic("TODO")
+}
+
+func (db *ddb) SelectCurrentWorkflow(ctx context.Context, shardID int, domainID, workflowID string) (*nosqlplugin.CurrentWorkflowRow, error) {
 	panic("TODO")
 }

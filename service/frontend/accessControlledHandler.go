@@ -329,6 +329,7 @@ func (a *AccessControlledWorkflowHandler) PollForActivityTask(
 	attr := &authorization.Attributes{
 		APIName:    "PollForActivityTask",
 		DomainName: request.GetDomain(),
+		TaskList:   request.TaskList,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -352,6 +353,7 @@ func (a *AccessControlledWorkflowHandler) PollForDecisionTask(
 	attr := &authorization.Attributes{
 		APIName:    "PollForDecisionTask",
 		DomainName: request.GetDomain(),
+		TaskList:   request.TaskList,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -711,6 +713,29 @@ func (a *AccessControlledWorkflowHandler) ListTaskListPartitions(
 	}
 
 	return a.frontendHandler.ListTaskListPartitions(ctx, request)
+}
+
+// GetTaskListsByDomain API call
+func (a *AccessControlledWorkflowHandler) GetTaskListsByDomain(
+	ctx context.Context,
+	request *types.GetTaskListsByDomainRequest,
+) (*types.GetTaskListsByDomainResponse, error) {
+
+	scope := a.getMetricsScopeWithDomain(metrics.FrontendGetTaskListsByDomainScope, request)
+
+	attr := &authorization.Attributes{
+		APIName:    "GetTaskListsByDomain",
+		DomainName: request.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
+	if err != nil {
+		return nil, err
+	}
+	if !isAuthorized {
+		return nil, errUnauthorized
+	}
+
+	return a.frontendHandler.GetTaskListsByDomain(ctx, request)
 }
 
 // UpdateDomain API call
