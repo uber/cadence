@@ -53,11 +53,6 @@ type (
 		taskID int64
 	}
 
-	pollTime struct {
-		time       time.Time
-		changeable bool
-	}
-
 	transferQueueProcessorBase struct {
 		*processorBase
 
@@ -328,7 +323,7 @@ processorPumpLoop:
 
 			t.processQueueCollections()
 		case <-updateAckTimer.C:
-			processFinished, err := t.updateAckLevel()
+			processFinished, _, err := t.updateAckLevel()
 			if err == shard.ErrShardClosed || (err == nil && processFinished) {
 				go t.Stop()
 				break processorPumpLoop
@@ -514,7 +509,7 @@ func (t *transferQueueProcessorBase) readTasks(
 		return err
 	}
 
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, persistence.IsTransientError)
+	err := backoff.Retry(op, persistenceOperationRetryPolicy, persistence.IsBackgroundTransientError)
 	if err != nil {
 		return nil, false, err
 	}
