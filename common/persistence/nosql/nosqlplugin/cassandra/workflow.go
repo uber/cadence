@@ -324,7 +324,7 @@ func (db *cdb) SelectAllCurrentWorkflows(ctx context.Context, shardID int, pageT
 	iter := query.Iter()
 	if iter == nil {
 		return nil, nil, &types.InternalServiceError{
-			Message: "ListCurrentExecutions operation failed. Not able to create query iterator.",
+			Message: "SelectAllCurrentWorkflows operation failed. Not able to create query iterator.",
 		}
 	}
 	result := make(map[string]interface{})
@@ -350,4 +350,42 @@ func (db *cdb) SelectAllCurrentWorkflows(ctx context.Context, shardID int, pageT
 
 	err := iter.Close()
 	return executions, newPageToken, err
+}
+
+func (db *cdb) SelectAllWorkflowExecutions(ctx context.Context, shardID int, pageToken []byte, pageSize int) ([]*p.InternalListConcreteExecutionsEntity, []byte, error) {
+	query := db.session.Query(
+		templateListWorkflowExecutionQuery,
+		shardID,
+		rowTypeExecution,
+	).PageSize(pageSize).PageState(pageToken).WithContext(ctx)
+
+	iter := query.Iter()
+	if iter == nil {
+		return nil, nil, &types.InternalServiceError{
+			Message: "SelectAllWorkflowExecutions operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	result := make(map[string]interface{})
+	var executions []*p.InternalListConcreteExecutionsEntity
+	for iter.MapScan(result) {
+		runID := result["run_id"].(gocql.UUID).String()
+		if runID == permanentRunID {
+			result = make(map[string]interface{})
+			continue
+		}
+		executions = append(executions, &p.InternalListConcreteExecutionsEntity{
+			ExecutionInfo:    parseWorkflowExecutionInfo(result["execution"].(map[string]interface{})),
+			VersionHistories: p.NewDataBlob(result["version_histories"].([]byte), common.EncodingType(result["version_histories_encoding"].(string))),
+		})
+		result = make(map[string]interface{})
+	}
+	nextPageToken := iter.PageState()
+	nextPageToken = make([]byte, len(nextPageToken))
+	copy(nextPageToken, nextPageToken)
+
+	if err := iter.Close(); err != nil {
+		return nil, nil, err
+	}
+	return executions, nextPageToken, nil
 }

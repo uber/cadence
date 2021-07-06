@@ -77,3 +77,7 @@ func (db *ddb) DeleteWorkflowExecution(ctx context.Context, shardID int, domainI
 func (db *ddb) SelectAllCurrentWorkflows(ctx context.Context, shardID int, pageToken []byte, pageSize int) ([]*persistence.CurrentWorkflowExecution, []byte, error) {
 	panic("TODO")
 }
+
+func (db *ddb) SelectAllWorkflowExecutions(ctx context.Context, shardID int, pageToken []byte, pageSize int) ([]*persistence.InternalListConcreteExecutionsEntity, []byte, error) {
+	panic("TODO")
+}

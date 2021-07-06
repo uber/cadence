@@ -1517,42 +1517,14 @@ func (d *cassandraPersistence) ListConcreteExecutions(
 	ctx context.Context,
 	request *p.ListConcreteExecutionsRequest,
 ) (*p.InternalListConcreteExecutionsResponse, error) {
-	query := d.session.Query(
-		templateListWorkflowExecutionQuery,
-		d.shardID,
-		rowTypeExecution,
-	).PageSize(request.PageSize).PageState(request.PageToken).WithContext(ctx)
-
-	iter := query.Iter()
-	if iter == nil {
-		return nil, &types.InternalServiceError{
-			Message: "ListConcreteExecutions operation failed.  Not able to create query iterator.",
-		}
-	}
-
-	response := &p.InternalListConcreteExecutionsResponse{}
-	result := make(map[string]interface{})
-	for iter.MapScan(result) {
-		runID := result["run_id"].(gocql.UUID).String()
-		if runID == permanentRunID {
-			result = make(map[string]interface{})
-			continue
-		}
-		response.Executions = append(response.Executions, &p.InternalListConcreteExecutionsEntity{
-			ExecutionInfo:    createWorkflowExecutionInfo(result["execution"].(map[string]interface{})),
-			VersionHistories: p.NewDataBlob(result["version_histories"].([]byte), common.EncodingType(result["version_histories_encoding"].(string))),
-		})
-		result = make(map[string]interface{})
-	}
-	nextPageToken := iter.PageState()
-	response.NextPageToken = make([]byte, len(nextPageToken))
-	copy(response.NextPageToken, nextPageToken)
-
-	if err := iter.Close(); err != nil {
+	executions, nextPageToken, err := d.db.SelectAllWorkflowExecutions(ctx, d.shardID, request.PageToken, request.PageSize)
+	if err != nil {
 		return nil, convertCommonErrors(d.client, "ListConcreteExecutions", err)
 	}
-
-	return response, nil
+	return &p.InternalListConcreteExecutionsResponse{
+		Executions:    executions,
+		NextPageToken: nextPageToken,
+	}, nil
 }
 
 func (d *cassandraPersistence) GetTransferTasks(

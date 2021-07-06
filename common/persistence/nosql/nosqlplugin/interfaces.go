@@ -438,6 +438,8 @@ type (
 		SelectAllCurrentWorkflows(ctx context.Context, shardID int, pageToken []byte, pageSize int) ([]*persistence.CurrentWorkflowExecution, []byte, error)
 		// Return the workflow execution row
 		SelectWorkflowExecution(ctx context.Context, shardID int, domainID, workflowID, runID string) (*WorkflowExecution, error)
+		// Paging through all  workflow execution rows in a shard
+		SelectAllWorkflowExecutions(ctx context.Context, shardID int, pageToken []byte, pageSize int) ([]*persistence.InternalListConcreteExecutionsEntity, []byte, error)
 
 		// Delete the current_workflow row, if currentRunIDCondition is met
 		DeleteCurrentWorkflow(ctx context.Context, shardID int, domainID, workflowID, currentRunIDCondition string) error
