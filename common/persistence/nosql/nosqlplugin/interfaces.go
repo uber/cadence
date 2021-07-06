@@ -753,11 +753,11 @@ const (
 )
 
 const (
-	// not doing anything to the event buffer
+	// EventBufferWriteModeNone is for not doing anything to the event buffer
 	EventBufferWriteModeNone EventBufferWriteMode = iota
-	// append a new event to the event buffer
+	// EventBufferWriteModeAppend will append a new event to the event buffer
 	EventBufferWriteModeAppend
-	// clear(delete all event from) the event buffer
+	// EventBufferWriteModeClear will clear(delete all event from) the event buffer
 	EventBufferWriteModeClear
 )
 
