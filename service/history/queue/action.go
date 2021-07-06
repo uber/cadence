@@ -20,7 +20,9 @@
 
 package queue
 
-import "github.com/uber/cadence/service/history/task"
+import (
+	"github.com/uber/cadence/common/types"
+)
 
 type (
 	// ActionType specifies the type of the Action
@@ -61,13 +63,12 @@ type (
 	GetTasksAttributes struct{}
 	// GetTasksResult is the result for performing GetTasks Action
 	GetTasksResult struct {
-		tasks []task.Task
+		tasks []*types.CrossClusterTaskRequest
 	}
 	// UpdateTaskAttributes contains the parameter to update task
 	// TODO: replace result interface with defined data struct
 	UpdateTaskAttributes struct {
-		taskID int64
-		result interface{}
+		tasksByID map[int64]interface{}
 	}
 	// UpdateTaskResult is the result for performing UpdateTask Action
 	UpdateTaskResult struct {

@@ -41,8 +41,7 @@ type (
 		historyEngine engine.Engine
 		taskProcessor task.Processor
 
-		config                *config.Config
-		isGlobalDomainEnabled bool
+		config *config.Config
 
 		metricsClient metrics.Client
 		logger        log.Logger
@@ -72,7 +71,7 @@ func NewCrossClusterQueueProcessor(
 			continue
 		}
 
-		queueProcessor := newCrossClusterQueueProcessor(
+		queueProcessor := newCrossClusterQueueProcessorBase(
 			shard,
 			clusterName,
 			taskProcessor,
@@ -83,58 +82,17 @@ func NewCrossClusterQueueProcessor(
 	}
 
 	return &crossClusterQueueProcessor{
-		shard:                 shard,
-		historyEngine:         historyEngine,
-		taskProcessor:         taskProcessor,
-		config:                config,
-		isGlobalDomainEnabled: shard.GetClusterMetadata().IsGlobalDomainEnabled(),
-		metricsClient:         shard.GetMetricsClient(),
-		logger:                logger,
-		status:                common.DaemonStatusInitialized,
-		shutdownChan:          make(chan struct{}),
-		taskExecutor:          taskExecutor,
-		queueProcessors:       queueProcessors,
+		shard:           shard,
+		historyEngine:   historyEngine,
+		taskProcessor:   taskProcessor,
+		config:          config,
+		metricsClient:   shard.GetMetricsClient(),
+		logger:          logger,
+		status:          common.DaemonStatusInitialized,
+		shutdownChan:    make(chan struct{}),
+		taskExecutor:    taskExecutor,
+		queueProcessors: queueProcessors,
 	}
-}
-
-func newCrossClusterQueueProcessor(
-	shard shard.Context,
-	clusterName string,
-	taskProcessor task.Processor,
-	taskExecutor task.Executor,
-	logger log.Logger,
-) *crossClusterQueueProcessorBase {
-	config := shard.GetConfig()
-	options := newCrossClusterQueueProcessorOptions(config)
-
-	logger = logger.WithTags(tag.ClusterName(clusterName))
-
-	updateMaxReadLevel := func() task.Key {
-		return newCrossClusterTaskKey(shard.GetTransferMaxReadLevel())
-	}
-
-	updateProcessingQueueStates := func(states []ProcessingQueueState) error {
-		pStates := convertToPersistenceTransferProcessingQueueStates(states)
-		return shard.UpdateCrossClusterProcessingQueueStates(clusterName, pStates)
-	}
-
-	queueShutdown := func() error {
-		return nil
-	}
-
-	return newCrossClusterQueueProcessorBase(
-		shard,
-		clusterName,
-		convertFromPersistenceTransferProcessingQueueStates(shard.GetCrossClusterProcessingQueueStates(clusterName)),
-		taskProcessor,
-		options,
-		updateMaxReadLevel,
-		updateProcessingQueueStates,
-		queueShutdown,
-		taskExecutor,
-		logger,
-		shard.GetMetricsClient(),
-	)
 }
 
 func (c *crossClusterQueueProcessor) Start() {
@@ -142,7 +100,7 @@ func (c *crossClusterQueueProcessor) Start() {
 		return
 	}
 
-	if c.isGlobalDomainEnabled {
+	if c.shard.GetClusterMetadata().IsGlobalDomainEnabled() {
 		for _, queueProcessor := range c.queueProcessors {
 			queueProcessor.Start()
 		}
@@ -154,10 +112,8 @@ func (c *crossClusterQueueProcessor) Stop() {
 		return
 	}
 
-	if c.isGlobalDomainEnabled {
-		for _, queueProcessor := range c.queueProcessors {
-			queueProcessor.Stop()
-		}
+	for _, queueProcessor := range c.queueProcessors {
+		queueProcessor.Stop()
 	}
 
 	close(c.shutdownChan)
@@ -203,7 +159,9 @@ func (c *crossClusterQueueProcessor) HandleAction(
 }
 
 func (c *crossClusterQueueProcessor) FailoverDomain(map[string]struct{}) {
-	panic("failover domain is not expected in cross cluster queue")
+	for _, queueBase := range c.queueProcessors {
+		queueBase.validateOutstandingTasks()
+	}
 }
 
 func (c *crossClusterQueueProcessor) LockTaskProcessing() {

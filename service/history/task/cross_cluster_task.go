@@ -194,6 +194,10 @@ func (c *crossClusterSignalWorkflowTask) Update(interface{}) error {
 	panic("Not implement")
 }
 
+func (c *crossClusterSignalWorkflowTask) IsValid() bool {
+	panic("Not implement")
+}
+
 // Cross cluster cancel workflow task
 
 func (c *crossClusterCancelWorkflowTask) Execute() error {
@@ -226,6 +230,10 @@ func (c *crossClusterCancelWorkflowTask) Update(interface{}) error {
 	panic("Not implement")
 }
 
+func (c *crossClusterCancelWorkflowTask) IsValid() bool {
+	panic("Not implement")
+}
+
 // Cross cluster start child workflow task
 
 func (c *crossClusterStartChildWorkflowTask) Execute() error {
@@ -255,6 +263,10 @@ func (c *crossClusterStartChildWorkflowTask) RetryErr(
 }
 
 func (c *crossClusterStartChildWorkflowTask) Update(interface{}) error {
+	panic("Not implement")
+}
+
+func (c *crossClusterStartChildWorkflowTask) IsValid() bool {
 	panic("Not implement")
 }
 

@@ -72,8 +72,9 @@ type (
 		EnableLoadQueueStates                dynamicconfig.BoolPropertyFn
 		EnableValidator                      dynamicconfig.BoolPropertyFn
 		ValidationInterval                   dynamicconfig.DurationPropertyFn
-		MaxPendingTaskSize                   dynamicconfig.IntPropertyFn
-		MetricScope                          int
+		// MaxPendingTaskSize is used in cross cluster queue to limit the pending task count
+		MaxPendingTaskSize dynamicconfig.IntPropertyFn
+		MetricScope        int
 	}
 
 	actionNotification struct {
@@ -166,7 +167,7 @@ func newProcessorBase(
 	}
 }
 
-func (p *processorBase) updateAckLevel() (bool, error) {
+func (p *processorBase) updateAckLevel() (bool, task.Key, error) {
 	p.metricsScope.IncCounter(metrics.AckLevelUpdateCounter)
 	var minAckLevel task.Key
 	totalPengingTasks := 0
@@ -192,9 +193,9 @@ func (p *processorBase) updateAckLevel() (bool, error) {
 		if err != nil {
 			p.logger.Error("Error shutdown queue", tag.Error(err))
 			// return error so that shutdown callback can be retried
-			return false, err
+			return false, nil, err
 		}
-		return true, nil
+		return true, nil, nil
 	}
 
 	if totalPengingTasks > warnPendingTasks {
@@ -208,17 +209,17 @@ func (p *processorBase) updateAckLevel() (bool, error) {
 		if err := p.updateProcessingQueueStates(states); err != nil {
 			p.logger.Error("Error persisting processing queue states", tag.Error(err), tag.OperationFailed)
 			p.metricsScope.IncCounter(metrics.AckLevelUpdateFailedCounter)
-			return false, err
+			return false, minAckLevel, err
 		}
 	} else {
 		if err := p.updateClusterAckLevel(minAckLevel); err != nil {
 			p.logger.Error("Error updating ack level for shard", tag.Error(err), tag.OperationFailed)
 			p.metricsScope.IncCounter(metrics.AckLevelUpdateFailedCounter)
-			return false, err
+			return false, minAckLevel, err
 		}
 	}
 
-	return false, nil
+	return false, minAckLevel, nil
 }
 
 func (p *processorBase) initializeSplitPolicy(

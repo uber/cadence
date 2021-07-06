@@ -710,6 +710,20 @@ func (mr *MockCrossClusterTaskMockRecorder) IsReadyForPoll() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReadyForPoll", reflect.TypeOf((*MockCrossClusterTask)(nil).IsReadyForPoll))
 }
 
+// IsValid mocks base method
+func (m *MockCrossClusterTask) IsValid() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsValid")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsValid indicates an expected call of IsValid
+func (mr *MockCrossClusterTaskMockRecorder) IsValid() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsValid", reflect.TypeOf((*MockCrossClusterTask)(nil).IsValid))
+}
+
 // Update mocks base method
 func (m *MockCrossClusterTask) Update(arg0 interface{}) error {
 	m.ctrl.T.Helper()

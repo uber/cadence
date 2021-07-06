@@ -55,6 +55,7 @@ type (
 	CrossClusterTask interface {
 		Task
 		IsReadyForPoll() bool
+		IsValid() bool
 		Update(interface{}) error //TODO: update interface once the cross cluster response idl lands
 	}
 
