@@ -61,7 +61,7 @@ func NewCrossClusterQueueProcessor(
 	taskProcessor task.Processor,
 	taskExecutor task.Executor,
 ) Processor {
-	logger := shard.GetLogger().WithTags(tag.ComponentCrossClusterQueue)
+	logger := shard.GetLogger().WithTags(tag.ComponentCrossClusterQueueProcessor)
 	currentClusterName := shard.GetClusterMetadata().GetCurrentClusterName()
 	config := shard.GetConfig()
 
