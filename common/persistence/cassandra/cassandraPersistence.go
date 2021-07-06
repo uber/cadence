@@ -23,7 +23,6 @@ package cassandra
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -1075,18 +1074,8 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 ) (*p.InternalGetWorkflowExecutionResponse, error) {
 
 	execution := request.Execution
-	query := d.session.Query(templateGetWorkflowExecutionQuery,
-		d.shardID,
-		rowTypeExecution,
-		request.DomainID,
-		execution.WorkflowID,
-		execution.RunID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID,
-	).WithContext(ctx)
-
-	result := make(map[string]interface{})
-	if err := query.MapScan(result); err != nil {
+	state, err := d.db.SelectWorkflowExecution(ctx, d.shardID, request.DomainID, execution.WorkflowID, execution.RunID)
+	if err != nil {
 		if d.client.IsNotFoundError(err) {
 			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
@@ -1096,71 +1085,6 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 
 		return nil, convertCommonErrors(d.client, "GetWorkflowExecution", err)
 	}
-
-	state := &p.InternalWorkflowMutableState{}
-	info := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
-	state.ExecutionInfo = info
-	state.VersionHistories = p.NewDataBlob(result["version_histories"].([]byte), common.EncodingType(result["version_histories_encoding"].(string)))
-	// TODO: remove this after all 2DC workflows complete
-	replicationState := createReplicationState(result["replication_state"].(map[string]interface{}))
-	state.ReplicationState = replicationState
-
-	activityInfos := make(map[int64]*p.InternalActivityInfo)
-	aMap := result["activity_map"].(map[int64]map[string]interface{})
-	for key, value := range aMap {
-		info := createActivityInfo(request.DomainID, value)
-		activityInfos[key] = info
-	}
-	state.ActivityInfos = activityInfos
-
-	timerInfos := make(map[string]*p.TimerInfo)
-	tMap := result["timer_map"].(map[string]map[string]interface{})
-	for key, value := range tMap {
-		info := createTimerInfo(value)
-		timerInfos[key] = info
-	}
-	state.TimerInfos = timerInfos
-
-	childExecutionInfos := make(map[int64]*p.InternalChildExecutionInfo)
-	cMap := result["child_executions_map"].(map[int64]map[string]interface{})
-	for key, value := range cMap {
-		info := createChildExecutionInfo(value)
-		childExecutionInfos[key] = info
-	}
-	state.ChildExecutionInfos = childExecutionInfos
-
-	requestCancelInfos := make(map[int64]*p.RequestCancelInfo)
-	rMap := result["request_cancel_map"].(map[int64]map[string]interface{})
-	for key, value := range rMap {
-		info := createRequestCancelInfo(value)
-		requestCancelInfos[key] = info
-	}
-	state.RequestCancelInfos = requestCancelInfos
-
-	signalInfos := make(map[int64]*p.SignalInfo)
-	sMap := result["signal_map"].(map[int64]map[string]interface{})
-	for key, value := range sMap {
-		info := createSignalInfo(value)
-		signalInfos[key] = info
-	}
-	state.SignalInfos = signalInfos
-
-	signalRequestedIDs := make(map[string]struct{})
-	sList := mustConvertToSlice(result["signal_requested"])
-	for _, v := range sList {
-		signalRequestedIDs[v.(gocql.UUID).String()] = struct{}{}
-	}
-	state.SignalRequestedIDs = signalRequestedIDs
-
-	eList := result["buffered_events_list"].([]map[string]interface{})
-	bufferedEventsBlobs := make([]*p.DataBlob, 0, len(eList))
-	for _, v := range eList {
-		blob := createHistoryEventBatchBlob(v)
-		bufferedEventsBlobs = append(bufferedEventsBlobs, blob)
-	}
-	state.BufferedEvents = bufferedEventsBlobs
-
-	state.Checksum = createChecksum(result["checksum"].(map[string]interface{}))
 
 	return &p.InternalGetWorkflowExecutionResponse{State: state}, nil
 }
@@ -2289,18 +2213,4 @@ func createReplicationState(
 	}
 
 	return info
-}
-
-func mustConvertToSlice(value interface{}) []interface{} {
-	v := reflect.ValueOf(value)
-	switch v.Kind() {
-	case reflect.Slice, reflect.Array:
-		result := make([]interface{}, v.Len())
-		for i := 0; i < v.Len(); i++ {
-			result[i] = v.Index(i).Interface()
-		}
-		return result
-	default:
-		panic(fmt.Sprintf("Unable to convert %v to slice", value))
-	}
 }
