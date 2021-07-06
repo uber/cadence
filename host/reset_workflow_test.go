@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Uber Technologies Inc.
+// Copyright (c) 2017-2021 Uber Technologies Inc.
 // Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
