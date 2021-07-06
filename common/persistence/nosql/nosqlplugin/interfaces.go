@@ -434,7 +434,11 @@ type (
 
 		// Return the current_workflow row
 		SelectCurrentWorkflow(ctx context.Context, shardID int, domainID, workflowID string) (*CurrentWorkflowRow, error)
+		// Return the workflow execution row
+		SelectWorkflowExecution(ctx context.Context, shardID int, domainID, workflowID, runID string) (*WorkflowExecution, error)
 	}
+
+	WorkflowExecution = persistence.InternalWorkflowMutableState
 
 	WorkflowExecutionRequest struct {
 		// basic information/data

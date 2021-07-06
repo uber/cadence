@@ -26,6 +26,7 @@ import (
 	"fmt"
 
 	"github.com/uber/cadence/common"
+	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
@@ -196,4 +197,87 @@ func (db *cdb) UpdateWorkflowExecutionWithTasks(
 	}
 
 	return db.executeUpdateWorkflowBatchTransaction(batch, currentWorkflowRequest, previousNextEventIDCondition, shardCondition)
+}
+
+func (db *cdb) SelectWorkflowExecution(ctx context.Context, shardID int, domainID, workflowID, runID string) (*nosqlplugin.WorkflowExecution, error) {
+	query := db.session.Query(templateGetWorkflowExecutionQuery,
+		shardID,
+		rowTypeExecution,
+		domainID,
+		workflowID,
+		runID,
+		defaultVisibilityTimestamp,
+		rowTypeExecutionTaskID,
+	).WithContext(ctx)
+
+	result := make(map[string]interface{})
+	if err := query.MapScan(result); err != nil {
+		return nil, err
+	}
+
+	state := &nosqlplugin.WorkflowExecution{}
+	info := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
+	state.ExecutionInfo = info
+	state.VersionHistories = p.NewDataBlob(result["version_histories"].([]byte), common.EncodingType(result["version_histories_encoding"].(string)))
+	// TODO: remove this after all 2DC workflows complete
+	replicationState := createReplicationState(result["replication_state"].(map[string]interface{}))
+	state.ReplicationState = replicationState
+
+	activityInfos := make(map[int64]*p.InternalActivityInfo)
+	aMap := result["activity_map"].(map[int64]map[string]interface{})
+	for key, value := range aMap {
+		info := createActivityInfo(domainID, value)
+		activityInfos[key] = info
+	}
+	state.ActivityInfos = activityInfos
+
+	timerInfos := make(map[string]*p.TimerInfo)
+	tMap := result["timer_map"].(map[string]map[string]interface{})
+	for key, value := range tMap {
+		info := createTimerInfo(value)
+		timerInfos[key] = info
+	}
+	state.TimerInfos = timerInfos
+
+	childExecutionInfos := make(map[int64]*p.InternalChildExecutionInfo)
+	cMap := result["child_executions_map"].(map[int64]map[string]interface{})
+	for key, value := range cMap {
+		info := createChildExecutionInfo(value)
+		childExecutionInfos[key] = info
+	}
+	state.ChildExecutionInfos = childExecutionInfos
+
+	requestCancelInfos := make(map[int64]*p.RequestCancelInfo)
+	rMap := result["request_cancel_map"].(map[int64]map[string]interface{})
+	for key, value := range rMap {
+		info := createRequestCancelInfo(value)
+		requestCancelInfos[key] = info
+	}
+	state.RequestCancelInfos = requestCancelInfos
+
+	signalInfos := make(map[int64]*p.SignalInfo)
+	sMap := result["signal_map"].(map[int64]map[string]interface{})
+	for key, value := range sMap {
+		info := createSignalInfo(value)
+		signalInfos[key] = info
+	}
+	state.SignalInfos = signalInfos
+
+	signalRequestedIDs := make(map[string]struct{})
+	sList := mustConvertToSlice(result["signal_requested"])
+	for _, v := range sList {
+		signalRequestedIDs[v.(gocql.UUID).String()] = struct{}{}
+	}
+	state.SignalRequestedIDs = signalRequestedIDs
+
+	eList := result["buffered_events_list"].([]map[string]interface{})
+	bufferedEventsBlobs := make([]*p.DataBlob, 0, len(eList))
+	for _, v := range eList {
+		blob := createHistoryEventBatchBlob(v)
+		bufferedEventsBlobs = append(bufferedEventsBlobs, blob)
+	}
+	state.BufferedEvents = bufferedEventsBlobs
+
+	state.Checksum = createChecksum(result["checksum"].(map[string]interface{}))
+	return state, nil
 }

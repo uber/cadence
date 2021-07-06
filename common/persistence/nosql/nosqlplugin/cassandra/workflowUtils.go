@@ -22,6 +22,7 @@ package cassandra
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -1427,141 +1428,16 @@ func (db *cdb) createOrUpdateCurrentWorkflow(
 	return nil
 }
 
-func createWorkflowExecutionInfo(
-	result map[string]interface{},
-) *persistence.InternalWorkflowExecutionInfo {
-
-	info := &persistence.InternalWorkflowExecutionInfo{}
-	var completionEventData []byte
-	var completionEventEncoding common.EncodingType
-	var autoResetPoints []byte
-	var autoResetPointsEncoding common.EncodingType
-
-	for k, v := range result {
-		switch k {
-		case "domain_id":
-			info.DomainID = v.(gocql.UUID).String()
-		case "workflow_id":
-			info.WorkflowID = v.(string)
-		case "run_id":
-			info.RunID = v.(gocql.UUID).String()
-		case "parent_domain_id":
-			info.ParentDomainID = v.(gocql.UUID).String()
-			if info.ParentDomainID == emptyDomainID {
-				info.ParentDomainID = ""
-			}
-		case "parent_workflow_id":
-			info.ParentWorkflowID = v.(string)
-		case "parent_run_id":
-			info.ParentRunID = v.(gocql.UUID).String()
-			if info.ParentRunID == emptyRunID {
-				info.ParentRunID = ""
-			}
-		case "initiated_id":
-			info.InitiatedID = v.(int64)
-		case "completion_event_batch_id":
-			info.CompletionEventBatchID = v.(int64)
-		case "completion_event":
-			completionEventData = v.([]byte)
-		case "completion_event_data_encoding":
-			completionEventEncoding = common.EncodingType(v.(string))
-		case "auto_reset_points":
-			autoResetPoints = v.([]byte)
-		case "auto_reset_points_encoding":
-			autoResetPointsEncoding = common.EncodingType(v.(string))
-		case "task_list":
-			info.TaskList = v.(string)
-		case "workflow_type_name":
-			info.WorkflowTypeName = v.(string)
-		case "workflow_timeout":
-			info.WorkflowTimeout = common.SecondsToDuration(int64(v.(int)))
-		case "decision_task_timeout":
-			info.DecisionStartToCloseTimeout = common.SecondsToDuration(int64(v.(int)))
-		case "execution_context":
-			info.ExecutionContext = v.([]byte)
-		case "state":
-			info.State = v.(int)
-		case "close_status":
-			info.CloseStatus = v.(int)
-		case "last_first_event_id":
-			info.LastFirstEventID = v.(int64)
-		case "last_event_task_id":
-			info.LastEventTaskID = v.(int64)
-		case "next_event_id":
-			info.NextEventID = v.(int64)
-		case "last_processed_event":
-			info.LastProcessedEvent = v.(int64)
-		case "start_time":
-			info.StartTimestamp = v.(time.Time)
-		case "last_updated_time":
-			info.LastUpdatedTimestamp = v.(time.Time)
-		case "create_request_id":
-			info.CreateRequestID = v.(gocql.UUID).String()
-		case "signal_count":
-			info.SignalCount = int32(v.(int))
-		case "history_size":
-			info.HistorySize = v.(int64)
-		case "decision_version":
-			info.DecisionVersion = v.(int64)
-		case "decision_schedule_id":
-			info.DecisionScheduleID = v.(int64)
-		case "decision_started_id":
-			info.DecisionStartedID = v.(int64)
-		case "decision_request_id":
-			info.DecisionRequestID = v.(string)
-		case "decision_timeout":
-			info.DecisionTimeout = common.SecondsToDuration(int64(v.(int)))
-		case "decision_attempt":
-			info.DecisionAttempt = v.(int64)
-		case "decision_timestamp":
-			info.DecisionStartedTimestamp = time.Unix(0, v.(int64))
-		case "decision_scheduled_timestamp":
-			info.DecisionScheduledTimestamp = time.Unix(0, v.(int64))
-		case "decision_original_scheduled_timestamp":
-			info.DecisionOriginalScheduledTimestamp = time.Unix(0, v.(int64))
-		case "cancel_requested":
-			info.CancelRequested = v.(bool)
-		case "cancel_request_id":
-			info.CancelRequestID = v.(string)
-		case "sticky_task_list":
-			info.StickyTaskList = v.(string)
-		case "sticky_schedule_to_start_timeout":
-			info.StickyScheduleToStartTimeout = common.SecondsToDuration(int64(v.(int)))
-		case "client_library_version":
-			info.ClientLibraryVersion = v.(string)
-		case "client_feature_version":
-			info.ClientFeatureVersion = v.(string)
-		case "client_impl":
-			info.ClientImpl = v.(string)
-		case "attempt":
-			info.Attempt = int32(v.(int))
-		case "has_retry_policy":
-			info.HasRetryPolicy = v.(bool)
-		case "init_interval":
-			info.InitialInterval = common.SecondsToDuration(int64(v.(int)))
-		case "backoff_coefficient":
-			info.BackoffCoefficient = v.(float64)
-		case "max_interval":
-			info.MaximumInterval = common.SecondsToDuration(int64(v.(int)))
-		case "max_attempts":
-			info.MaximumAttempts = int32(v.(int))
-		case "expiration_time":
-			info.ExpirationTime = v.(time.Time)
-		case "non_retriable_errors":
-			info.NonRetriableErrors = v.([]string)
-		case "branch_token":
-			info.BranchToken = v.([]byte)
-		case "cron_schedule":
-			info.CronSchedule = v.(string)
-		case "expiration_seconds":
-			info.ExpirationSeconds = common.SecondsToDuration(int64(v.(int)))
-		case "search_attributes":
-			info.SearchAttributes = v.(map[string][]byte)
-		case "memo":
-			info.Memo = v.(map[string][]byte)
+func mustConvertToSlice(value interface{}) []interface{} {
+	v := reflect.ValueOf(value)
+	switch v.Kind() {
+	case reflect.Slice, reflect.Array:
+		result := make([]interface{}, v.Len())
+		for i := 0; i < v.Len(); i++ {
+			result[i] = v.Index(i).Interface()
 		}
+		return result
+	default:
+		panic(fmt.Sprintf("Unable to convert %v to slice", value))
 	}
-	info.CompletionEvent = persistence.NewDataBlob(completionEventData, completionEventEncoding)
-	info.AutoResetPoints = persistence.NewDataBlob(autoResetPoints, autoResetPointsEncoding)
-	return info
 }
