@@ -159,7 +159,7 @@ func (s *crossClusterTaskProcessorSuite) testRespondPendingTasks(failedToRespond
 			s.Len(request.TaskResponses, completedTasks)
 			s.Equal(s.mockShard.Resource.GetClusterMetadata().GetCurrentClusterName(), request.TargetCluster)
 			s.Equal(s.mockShard.GetShardID(), int(request.GetShardID()))
-			// s.False(request.GetFetchNewTasks())
+			s.False(request.GetFetchNewTasks())
 			if failedToRespond {
 				return nil, errors.New("some random error")
 			}
@@ -230,7 +230,7 @@ func (s *crossClusterTaskProcessorSuite) testProcessTaskRequests(failedToRespond
 			s.Len(request.TaskResponses, completedTasks)
 			s.Equal(s.mockShard.Resource.GetClusterMetadata().GetCurrentClusterName(), request.TargetCluster)
 			s.Equal(s.mockShard.GetShardID(), int(request.GetShardID()))
-			// s.True(request.GetFetchNewTasks())
+			s.True(request.GetFetchNewTasks())
 			if failedToRespond {
 				return nil, errors.New("some random error")
 			}

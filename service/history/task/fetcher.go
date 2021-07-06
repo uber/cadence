@@ -117,6 +117,9 @@ func crossClusterTaskFetchFn(
 	for shardID := range requestByShard {
 		shardIDs = append(shardIDs, shardID)
 	}
+	// number of tasks returned will be controlled by source cluster.
+	// if there are lots of tasks in the source cluster, they will be
+	// returned in batches.
 	request := &types.GetCrossClusterTasksRequest{
 		ShardIDs:      shardIDs,
 		TargetCluster: currentCluster,

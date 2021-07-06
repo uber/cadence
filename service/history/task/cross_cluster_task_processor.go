@@ -235,8 +235,7 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 		respondRequest := &types.RespondCrossClusterTasksCompletedRequest{
 			ShardID:       int32(p.shard.GetShardID()),
 			TargetCluster: p.shard.GetClusterMetadata().GetCurrentClusterName(),
-			// TODO: uncomment the following line when the field is added
-			// FetchNewTasks: common.BoolPtr(p.numPendingTasks() < p.options.MaxPendingTasks()),
+			FetchNewTasks: p.numPendingTasks() < p.options.MaxPendingTasks(),
 		}
 		taskWaitContext, cancel := context.WithTimeout(context.Background(), p.options.TaskWaitInterval())
 		deadlineExceeded := false
@@ -259,11 +258,10 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 				// this case should not happen,
 				// task failure should be converted to FailCause in the response by the processing logic
 				taskResponse = types.CrossClusterTaskResponse{
-					TaskID: taskID,
-					// TODO: uncomment this following line when the Unknown cause is added
-					// FailedCause: types.CrossClusterTaskFailedCauseUnknown.Ptr(),
+					TaskID:      taskID,
+					FailedCause: types.CrossClusterTaskFailedCauseUncategorized.Ptr(),
 				}
-				p.logger.Error("Encountered unknown error from cross cluster task future", tag.Error(err))
+				p.logger.Error("Encountered uncategorized error from cross cluster task future", tag.Error(err))
 			}
 			respondRequest.TaskResponses = append(respondRequest.TaskResponses, &taskResponse)
 		}
@@ -321,8 +319,7 @@ func (p *crossClusterTaskProcessor) respondPendingTaskLoop() {
 			respondRequest := &types.RespondCrossClusterTasksCompletedRequest{
 				ShardID:       int32(p.shard.GetShardID()),
 				TargetCluster: p.shard.GetClusterMetadata().GetCurrentClusterName(),
-				// TODO: uncomment this following line when the field is added
-				// FetchNewTasks: common.BoolPtr(false),
+				FetchNewTasks: false,
 			}
 			for taskID, taskFuture := range p.pendingTasks {
 				if taskFuture.IsReady() {
@@ -331,11 +328,10 @@ func (p *crossClusterTaskProcessor) respondPendingTaskLoop() {
 						// this case should not happen,
 						// task failure should be converted to FailCause in the response by the processing logic
 						taskResponse = types.CrossClusterTaskResponse{
-							TaskID: taskID,
-							// TODO: uncomment this following line when the Unknown cause is added
-							// FailedCause: types.CrossClusterTaskFailedCauseUnknown.Ptr(),
+							TaskID:      taskID,
+							FailedCause: types.CrossClusterTaskFailedCauseUncategorized.Ptr(),
 						}
-						p.logger.Error("Encountered unknown error from cross cluster task future", tag.Error(err))
+						p.logger.Error("Encountered uncategorized error from cross cluster task future", tag.Error(err))
 					}
 					respondRequest.TaskResponses = append(respondRequest.TaskResponses, &taskResponse)
 				}
