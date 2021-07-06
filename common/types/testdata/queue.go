@@ -104,17 +104,25 @@ var (
 		ShardID + 1: {},
 		ShardID + 2: CrossClusterTaskRequestArray,
 	}
+	GetCrossClusterTaskFailedCauseMap = map[int32]types.GetTaskFailedCause{
+		ShardID + 3: types.GetTaskFailedCauseServiceBusy,
+		ShardID + 4: types.GetTaskFailedCauseTimeout,
+		ShardID + 5: types.GetTaskFailedCauseShardOwnershipLost,
+		ShardID + 6: types.GetTaskFailedCauseUncategorized,
+	}
 	GetCrossClusterTasksRequest = types.GetCrossClusterTasksRequest{
 		ShardIDs:      []int32{ShardID},
 		TargetCluster: ClusterName1,
 	}
 	GetCrossClusterTasksResponse = types.GetCrossClusterTasksResponse{
-		TasksByShard: CrossClusterTaskRequestMap,
+		TasksByShard:       CrossClusterTaskRequestMap,
+		FailedCauseByShard: GetCrossClusterTaskFailedCauseMap,
 	}
 	RespondCrossClusterTasksCompletedRequest = types.RespondCrossClusterTasksCompletedRequest{
 		ShardID:       ShardID,
 		TargetCluster: ClusterName1,
 		TaskResponses: CrossClusterTaskResponseArray,
+		FetchNewTasks: true,
 	}
 	RespondCrossClusterTasksCompletedResponse = types.RespondCrossClusterTasksCompletedResponse{
 		Tasks: CrossClusterTaskRequestArray,

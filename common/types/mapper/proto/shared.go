@@ -1116,6 +1116,10 @@ func FromCrossClusterTaskFailedCause(t *types.CrossClusterTaskFailedCause) share
 		return sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_ALREADY_RUNNING
 	case types.CrossClusterTaskFailedCauseWorkflowNotExists:
 		return sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_NOT_EXISTS
+	case types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
+		return sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_ALREADY_COMPLETED
+	case types.CrossClusterTaskFailedCauseUncategorized:
+		return sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_UNCATEGORIZED
 	}
 	panic("unexpected enum value")
 }
@@ -1133,6 +1137,46 @@ func ToCrossClusterTaskFailedCause(t sharedv1.CrossClusterTaskFailedCause) *type
 		return types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning.Ptr()
 	case sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_NOT_EXISTS:
 		return types.CrossClusterTaskFailedCauseWorkflowNotExists.Ptr()
+	case sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_ALREADY_COMPLETED:
+		return types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted.Ptr()
+	case sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_UNCATEGORIZED:
+		return types.CrossClusterTaskFailedCauseUncategorized.Ptr()
+
+	}
+	panic("unexpected enum value")
+}
+
+// FromGetTaskFailedCause converts internal GetTaskFailedCause type to proto
+func FromGetTaskFailedCause(t *types.GetTaskFailedCause) sharedv1.GetTaskFailedCause {
+	if t == nil {
+		return sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_INVALID
+	}
+	switch *t {
+	case types.GetTaskFailedCauseServiceBusy:
+		return sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_SERVICE_BUSY
+	case types.GetTaskFailedCauseTimeout:
+		return sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_TIMEOUT
+	case types.GetTaskFailedCauseShardOwnershipLost:
+		return sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_SHARD_OWNERSHIP_LOST
+	case types.GetTaskFailedCauseUncategorized:
+		return sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_UNCATEGORIZED
+	}
+	panic("unexpected enum value")
+}
+
+// ToGetTaskFailedCause converts proto GetTaskFailedCause type to internal
+func ToGetTaskFailedCause(t sharedv1.GetTaskFailedCause) *types.GetTaskFailedCause {
+	switch t {
+	case sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_INVALID:
+		return nil
+	case sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_SERVICE_BUSY:
+		return types.GetTaskFailedCauseServiceBusy.Ptr()
+	case sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_TIMEOUT:
+		return types.GetTaskFailedCauseTimeout.Ptr()
+	case sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_SHARD_OWNERSHIP_LOST:
+		return types.GetTaskFailedCauseShardOwnershipLost.Ptr()
+	case sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_UNCATEGORIZED:
+		return types.GetTaskFailedCauseUncategorized.Ptr()
 	}
 	panic("unexpected enum value")
 }
@@ -1452,6 +1496,32 @@ func ToCrossClusterTaskRequestMap(t map[int32]*sharedv1.CrossClusterTaskRequests
 	v := make(map[int32][]*types.CrossClusterTaskRequest, len(t))
 	for key := range t {
 		v[key] = ToCrossClusterTaskRequestArray(t[key])
+	}
+	return v
+}
+
+// FromGetTaskFailedCauseMap converts internal GetTaskFailedCause type map to proto
+func FromGetTaskFailedCauseMap(t map[int32]types.GetTaskFailedCause) map[int32]sharedv1.GetTaskFailedCause {
+	if t == nil {
+		return nil
+	}
+	v := make(map[int32]sharedv1.GetTaskFailedCause, len(t))
+	for key, value := range t {
+		v[key] = FromGetTaskFailedCause(&value)
+	}
+	return v
+}
+
+// ToGetTaskFailedCauseMap converts proto GetTaskFailedCause type map to internal
+func ToGetTaskFailedCauseMap(t map[int32]sharedv1.GetTaskFailedCause) map[int32]types.GetTaskFailedCause {
+	if t == nil {
+		return nil
+	}
+	v := make(map[int32]types.GetTaskFailedCause, len(t))
+	for key := range t {
+		if internalValue := ToGetTaskFailedCause(t[key]); internalValue != nil {
+			v[key] = *internalValue
+		}
 	}
 	return v
 }
