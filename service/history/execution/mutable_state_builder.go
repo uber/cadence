@@ -3974,6 +3974,8 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 	// impact the checksum calculation
 	checksum := e.generateChecksum()
 
+	e.closeTransactionAsMutationRemoveDeletedInfos()
+
 	workflowMutation := &persistence.WorkflowMutation{
 		ExecutionInfo:    e.executionInfo,
 		VersionHistories: e.versionHistories,
@@ -4706,4 +4708,42 @@ func (e *mutableStateBuilder) logDataInconsistency() {
 		tag.WorkflowID(workflowID),
 		tag.WorkflowRunID(runID),
 	)
+}
+
+func (e *mutableStateBuilder) closeTransactionAsMutationRemoveDeletedInfos() {
+	for info := range e.updateActivityInfos {
+		if _, ok := e.deleteActivityInfos[info.ScheduleID]; ok {
+			delete(e.updateActivityInfos, info)
+		}
+	}
+
+	for info := range e.updateTimerInfos {
+		if _, ok := e.deleteTimerInfos[info.TimerID]; ok {
+			delete(e.updateTimerInfos, info)
+		}
+	}
+
+	for info := range e.updateChildExecutionInfos {
+		if _, ok := e.deleteChildExecutionInfos[info.InitiatedID]; ok {
+			delete(e.updateChildExecutionInfos, info)
+		}
+	}
+
+	for info := range e.updateRequestCancelInfos {
+		if _, ok := e.deleteRequestCancelInfos[info.InitiatedID]; ok {
+			delete(e.updateRequestCancelInfos, info)
+		}
+	}
+
+	for info := range e.updateSignalInfos {
+		if _, ok := e.deleteSignalInfos[info.InitiatedID]; ok {
+			delete(e.updateSignalInfos, info)
+		}
+	}
+
+	for info := range e.updateSignalRequestedIDs {
+		if _, ok := e.deleteSignalRequestedIDs[info]; ok {
+			delete(e.updateSignalRequestedIDs, info)
+		}
+	}
 }
