@@ -1519,43 +1519,15 @@ func (d *cassandraPersistence) GetTransferTasks(
 	request *p.GetTransferTasksRequest,
 ) (*p.GetTransferTasksResponse, error) {
 
-	// Reading transfer tasks need to be quorum level consistent, otherwise we could loose task
-	query := d.session.Query(templateGetTransferTasksQuery,
-		d.shardID,
-		rowTypeTransferTask,
-		rowTypeTransferDomainID,
-		rowTypeTransferWorkflowID,
-		rowTypeTransferRunID,
-		defaultVisibilityTimestamp,
-		request.ReadLevel,
-		request.MaxReadLevel,
-	).PageSize(request.BatchSize).PageState(request.NextPageToken).WithContext(ctx)
-
-	iter := query.Iter()
-	if iter == nil {
-		return nil, &types.InternalServiceError{
-			Message: "GetTransferTasks operation failed.  Not able to create query iterator.",
-		}
-	}
-
-	response := &p.GetTransferTasksResponse{}
-	task := make(map[string]interface{})
-	for iter.MapScan(task) {
-		t := createTransferTaskInfo(task["transfer"].(map[string]interface{}))
-		// Reset task map to get it ready for next scan
-		task = make(map[string]interface{})
-
-		response.Tasks = append(response.Tasks, t)
-	}
-	nextPageToken := iter.PageState()
-	response.NextPageToken = make([]byte, len(nextPageToken))
-	copy(response.NextPageToken, nextPageToken)
-
-	if err := iter.Close(); err != nil {
+	tasks, nextPageToken, err := d.db.SelectTransferTasksOrderByTaskID(ctx, d.shardID, request.BatchSize, request.NextPageToken, request.ReadLevel, request.MaxReadLevel)
+	if err != nil {
 		return nil, convertCommonErrors(d.client, "GetTransferTasks", err)
 	}
 
-	return response, nil
+	return &p.GetTransferTasksResponse{
+		Tasks:         tasks,
+		NextPageToken: nextPageToken,
+	}, nil
 }
 
 func (d *cassandraPersistence) GetCrossClusterTasks(
@@ -1656,17 +1628,7 @@ func (d *cassandraPersistence) CompleteTransferTask(
 	ctx context.Context,
 	request *p.CompleteTransferTaskRequest,
 ) error {
-	query := d.session.Query(templateCompleteTransferTaskQuery,
-		d.shardID,
-		rowTypeTransferTask,
-		rowTypeTransferDomainID,
-		rowTypeTransferWorkflowID,
-		rowTypeTransferRunID,
-		defaultVisibilityTimestamp,
-		request.TaskID,
-	).WithContext(ctx)
-
-	err := query.Exec()
+	err := d.db.DeleteTransferTask(ctx, d.shardID, request.TaskID)
 	if err != nil {
 		return convertCommonErrors(d.client, "CompleteTransferTask", err)
 	}
@@ -1678,18 +1640,7 @@ func (d *cassandraPersistence) RangeCompleteTransferTask(
 	ctx context.Context,
 	request *p.RangeCompleteTransferTaskRequest,
 ) error {
-	query := d.session.Query(templateRangeCompleteTransferTaskQuery,
-		d.shardID,
-		rowTypeTransferTask,
-		rowTypeTransferDomainID,
-		rowTypeTransferWorkflowID,
-		rowTypeTransferRunID,
-		defaultVisibilityTimestamp,
-		request.ExclusiveBeginTaskID,
-		request.InclusiveEndTaskID,
-	).WithContext(ctx)
-
-	err := query.Exec()
+	err := d.db.RangeDeleteTransferTasks(ctx, d.shardID, request.ExclusiveBeginTaskID, request.InclusiveEndTaskID)
 	if err != nil {
 		return convertCommonErrors(d.client, "RangeCompleteTransferTask", err)
 	}

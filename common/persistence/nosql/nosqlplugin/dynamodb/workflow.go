@@ -85,3 +85,15 @@ func (db *ddb) SelectAllWorkflowExecutions(ctx context.Context, shardID int, pag
 func (db *ddb) IsWorkflowExecutionExists(ctx context.Context, shardID int, domainID, workflowID, runID string) (bool, error) {
 	panic("TODO")
 }
+
+func (db *ddb) SelectTransferTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64, ) ([]*nosqlplugin.TransferTask, []byte, error) {
+	panic("TODO")
+}
+
+func (db *ddb) DeleteTransferTask(ctx context.Context, shardID int, taskID int64) error {
+	panic("TODO")
+}
+
+func (db *ddb) RangeDeleteTransferTasks(ctx context.Context, shardID int, exclusiveBeginTaskID, inclusiveEndTaskID int64) error {
+	panic("TODO")
+}

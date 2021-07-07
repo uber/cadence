@@ -469,6 +469,105 @@ func parseTimerTaskInfo(
 	return info
 }
 
+func parseTransferTaskInfo(
+	result map[string]interface{},
+) *persistence.TransferTaskInfo {
+
+	info := &persistence.TransferTaskInfo{}
+	for k, v := range result {
+		switch k {
+		case "domain_id":
+			info.DomainID = v.(gocql.UUID).String()
+		case "workflow_id":
+			info.WorkflowID = v.(string)
+		case "run_id":
+			info.RunID = v.(gocql.UUID).String()
+		case "visibility_ts":
+			info.VisibilityTimestamp = v.(time.Time)
+		case "task_id":
+			info.TaskID = v.(int64)
+		case "target_domain_id":
+			info.TargetDomainID = v.(gocql.UUID).String()
+		case "target_workflow_id":
+			info.TargetWorkflowID = v.(string)
+		case "target_run_id":
+			info.TargetRunID = v.(gocql.UUID).String()
+			if info.TargetRunID == persistence.TransferTaskTransferTargetRunID {
+				info.TargetRunID = ""
+			}
+		case "target_child_workflow_only":
+			info.TargetChildWorkflowOnly = v.(bool)
+		case "task_list":
+			info.TaskList = v.(string)
+		case "type":
+			info.TaskType = v.(int)
+		case "schedule_id":
+			info.ScheduleID = v.(int64)
+		case "record_visibility":
+			info.RecordVisibility = v.(bool)
+		case "version":
+			info.Version = v.(int64)
+		}
+	}
+
+	return info
+}
+
+func parseCrossClusterTaskInfo(
+	result map[string]interface{},
+) *persistence.CrossClusterTaskInfo {
+	info := (*persistence.CrossClusterTaskInfo)(parseTransferTaskInfo(result))
+	if persistence.CrossClusterTaskDefaultTargetRunID == persistence.TransferTaskTransferTargetRunID {
+		return info
+	}
+
+	// incase CrossClusterTaskDefaultTargetRunID is updated and not equal to TransferTaskTransferTargetRunID
+	if v, ok := result["target_run_id"]; ok {
+		info.TargetRunID = v.(gocql.UUID).String()
+		if info.TargetRunID == persistence.CrossClusterTaskDefaultTargetRunID {
+			info.TargetRunID = ""
+		}
+	}
+	return info
+}
+
+func parseReplicationTaskInfo(
+	result map[string]interface{},
+) *persistence.InternalReplicationTaskInfo {
+
+	info := &persistence.InternalReplicationTaskInfo{}
+	for k, v := range result {
+		switch k {
+		case "domain_id":
+			info.DomainID = v.(gocql.UUID).String()
+		case "workflow_id":
+			info.WorkflowID = v.(string)
+		case "run_id":
+			info.RunID = v.(gocql.UUID).String()
+		case "task_id":
+			info.TaskID = v.(int64)
+		case "type":
+			info.TaskType = v.(int)
+		case "first_event_id":
+			info.FirstEventID = v.(int64)
+		case "next_event_id":
+			info.NextEventID = v.(int64)
+		case "version":
+			info.Version = v.(int64)
+		case "scheduled_id":
+			info.ScheduledID = v.(int64)
+		case "branch_token":
+			info.BranchToken = v.([]byte)
+		case "new_run_branch_token":
+			info.NewRunBranchToken = v.([]byte)
+		case "created_time":
+			info.CreationTime = time.Unix(0, v.(int64))
+		}
+	}
+
+	return info
+}
+
 func parseChecksum(result map[string]interface{}) checksum.Checksum {
 	csum := checksum.Checksum{}
 	if len(result) == 0 {

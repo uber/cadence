@@ -432,21 +432,31 @@ type (
 			shardCondition *ShardCondition,
 		) error
 
+		// current_workflow table
 		// Return the current_workflow row
 		SelectCurrentWorkflow(ctx context.Context, shardID int, domainID, workflowID string) (*CurrentWorkflowRow, error)
 		// Paging through all current_workflow rows in a shard
 		SelectAllCurrentWorkflows(ctx context.Context, shardID int, pageToken []byte, pageSize int) ([]*persistence.CurrentWorkflowExecution, []byte, error)
+		// Delete the current_workflow row, if currentRunIDCondition is met
+		DeleteCurrentWorkflow(ctx context.Context, shardID int, domainID, workflowID, currentRunIDCondition string) error
+
+		// workflow_execution table
 		// Return the workflow execution row
 		SelectWorkflowExecution(ctx context.Context, shardID int, domainID, workflowID, runID string) (*WorkflowExecution, error)
 		// Paging through all  workflow execution rows in a shard
 		SelectAllWorkflowExecutions(ctx context.Context, shardID int, pageToken []byte, pageSize int) ([]*persistence.InternalListConcreteExecutionsEntity, []byte, error)
 		// Return whether or not an execution is existing.
 		IsWorkflowExecutionExists(ctx context.Context, shardID int, domainID, workflowID, runID string) (bool, error)
-
-		// Delete the current_workflow row, if currentRunIDCondition is met
-		DeleteCurrentWorkflow(ctx context.Context, shardID int, domainID, workflowID, currentRunIDCondition string) error
 		// Delete the workflow execution row
 		DeleteWorkflowExecution(ctx context.Context, shardID int, domainID, workflowID, runID string) error
+
+		// transfer_task table
+		// within a shard, paging through transfer tasks order by taskID(ASC), filtered by minTaskID(exclusive) and maxTaskID(inclusive)
+		SelectTransferTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64, ) ([]*TransferTask, []byte, error)
+		// delete a single transfer task
+		DeleteTransferTask(ctx context.Context, shardID int, taskID int64) error
+		// delete a range of transfer tasks
+		RangeDeleteTransferTasks(ctx context.Context, shardID int, exclusiveBeginTaskID, inclusiveEndTaskID int64) error
 	}
 
 	WorkflowExecution = persistence.InternalWorkflowMutableState

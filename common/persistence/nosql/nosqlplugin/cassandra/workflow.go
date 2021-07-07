@@ -411,3 +411,69 @@ func (db *cdb) IsWorkflowExecutionExists(ctx context.Context, shardID int, domai
 	}
 	return true, nil
 }
+
+func (db *cdb) SelectTransferTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64, ) ([]*nosqlplugin.TransferTask, []byte, error) {
+	// Reading transfer tasks need to be quorum level consistent, otherwise we could loose task
+	query := db.session.Query(templateGetTransferTasksQuery,
+		shardID,
+		rowTypeTransferTask,
+		rowTypeTransferDomainID,
+		rowTypeTransferWorkflowID,
+		rowTypeTransferRunID,
+		defaultVisibilityTimestamp,
+		exclusiveMinTaskID,
+		inclusiveMaxTaskID,
+	).PageSize(pageSize).PageState(pageToken).WithContext(ctx)
+
+	iter := query.Iter()
+	if iter == nil {
+		return nil, nil, &types.InternalServiceError{
+			Message: "SelectTransferTasksOrderByTaskID operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	var tasks []*nosqlplugin.TransferTask
+	task := make(map[string]interface{})
+	for iter.MapScan(task) {
+		t := parseTransferTaskInfo(task["transfer"].(map[string]interface{}))
+		// Reset task map to get it ready for next scan
+		task = make(map[string]interface{})
+
+		tasks = append(tasks, t)
+	}
+	nextPageToken := iter.PageState()
+	nextPageToken = make([]byte, len(nextPageToken))
+	copy(nextPageToken, nextPageToken)
+
+	err := iter.Close()
+	return tasks, nextPageToken, err
+}
+
+func (db *cdb) DeleteTransferTask(ctx context.Context, shardID int, taskID int64) error {
+	query := db.session.Query(templateCompleteTransferTaskQuery,
+		shardID,
+		rowTypeTransferTask,
+		rowTypeTransferDomainID,
+		rowTypeTransferWorkflowID,
+		rowTypeTransferRunID,
+		defaultVisibilityTimestamp,
+		taskID,
+	).WithContext(ctx)
+
+	return query.Exec()
+}
+
+func (db *cdb) RangeDeleteTransferTasks(ctx context.Context, shardID int, exclusiveBeginTaskID, inclusiveEndTaskID int64) error {
+	query := db.session.Query(templateRangeCompleteTransferTaskQuery,
+		shardID,
+		rowTypeTransferTask,
+		rowTypeTransferDomainID,
+		rowTypeTransferWorkflowID,
+		rowTypeTransferRunID,
+		defaultVisibilityTimestamp,
+		exclusiveBeginTaskID,
+		inclusiveEndTaskID,
+	).WithContext(ctx)
+
+	return query.Exec()
+}
