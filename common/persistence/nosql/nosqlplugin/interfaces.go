@@ -423,8 +423,8 @@ type (
 	* domain: partition key(row_type), range key(version)
 	 */
 	configStoreCRUD interface {
-		InsertConfig(ctx context.Context, row *persistence.InternalStoreEntry) error
-		SelectLatestConfig(ctx context.Context, row_type string) (*persistence.InternalStoreEntry, error)
+		InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error
+		SelectLatestConfig(ctx context.Context, row_type string) (*persistence.InternalConfigStoreEntry, error)
 	}
 
 	WorkflowExecutionRow struct {
