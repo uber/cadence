@@ -29,6 +29,7 @@ import (
 	ctx "context"
 	"errors"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -52,6 +53,8 @@ var (
 	errUnknownQueueTask       = errors.New("unknown task type")
 	errUnknownReplicationTask = errors.New("unknown replication task")
 	defaultHistoryPageSize    = 1000
+	minReadTaskSize           = 20
+	maxReplicationLatency     = int64(40)
 )
 
 type (
@@ -76,6 +79,9 @@ type (
 		historyManager   persistence.HistoryManager
 		rateLimiter      *quotas.DynamicRateLimiter
 		retryPolicy      backoff.RetryPolicy
+
+		taskLock             sync.Mutex
+		lastTaskCreationTime time.Time
 
 		metricsClient metrics.Client
 		logger        log.Logger
@@ -102,15 +108,16 @@ func NewTaskAckManager(
 	retryPolicy.SetBackoffCoefficient(1)
 
 	return &taskAckManagerImpl{
-		shard:               shard,
-		executionCache:      executionCache,
-		executionManager:    shard.GetExecutionManager(),
-		historyManager:      shard.GetHistoryManager(),
-		rateLimiter:         rateLimiter,
-		retryPolicy:         retryPolicy,
-		metricsClient:       shard.GetMetricsClient(),
-		logger:              shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
-		fetchTasksBatchSize: config.ReplicatorProcessorFetchTasksBatchSize,
+		shard:                shard,
+		executionCache:       executionCache,
+		executionManager:     shard.GetExecutionManager(),
+		historyManager:       shard.GetHistoryManager(),
+		rateLimiter:          rateLimiter,
+		retryPolicy:          retryPolicy,
+		lastTaskCreationTime: time.Now(),
+		metricsClient:        shard.GetMetricsClient(),
+		logger:               shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
+		fetchTasksBatchSize:  config.ReplicatorProcessorFetchTasksBatchSize,
 	}
 }
 
@@ -148,11 +155,13 @@ func (t *taskAckManagerImpl) GetTasks(
 		metrics.InstanceTag(strconv.Itoa(shardID)),
 	)
 	taskGeneratedTimer := replicationScope.StartTimer(metrics.TaskLatency)
-	taskInfoList, hasMore, err := t.readTasksWithBatchSize(ctx, lastReadTaskID, t.fetchTasksBatchSize(shardID))
+	batchSize := t.getBatchSize()
+	taskInfoList, hasMore, err := t.readTasksWithBatchSize(ctx, lastReadTaskID, batchSize)
 	if err != nil {
 		return nil, err
 	}
 
+	var lastTaskCreationTime time.Time
 	var replicationTasks []*types.ReplicationTask
 	readLevel := lastReadTaskID
 TaskInfoLoop:
@@ -189,8 +198,10 @@ TaskInfoLoop:
 		if replicationTask != nil {
 			replicationTasks = append(replicationTasks, replicationTask)
 		}
+		if taskInfo.GetVisibilityTimestamp().After(lastTaskCreationTime) {
+			lastTaskCreationTime = taskInfo.GetVisibilityTimestamp()
+		}
 	}
-
 	taskGeneratedTimer.Stop()
 
 	replicationScope.RecordTimer(
@@ -216,6 +227,10 @@ TaskInfoLoop:
 	); err != nil {
 		t.logger.Error("error updating replication level for shard", tag.Error(err), tag.OperationFailed)
 	}
+
+	t.taskLock.Lock()
+	t.lastTaskCreationTime = lastTaskCreationTime
+	t.taskLock.Unlock()
 
 	return &types.ReplicationMessages{
 		ReplicationTasks:       replicationTasks,
@@ -623,6 +638,24 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 			return replicationTask, nil
 		},
 	)
+}
+
+func (t *taskAckManagerImpl) getBatchSize() int {
+
+	t.taskLock.Lock()
+	taskLatency := int64(time.Now().Sub(t.lastTaskCreationTime) / time.Second)
+	t.taskLock.Unlock()
+
+	if taskLatency < 0 {
+		taskLatency = 0
+	}
+
+	shardID := t.shard.GetShardID()
+	defaultBatchSize := t.fetchTasksBatchSize(shardID)
+	if taskLatency >= maxReplicationLatency {
+		return defaultBatchSize
+	}
+	return minReadTaskSize + int(float64(taskLatency)/float64(maxReplicationLatency)*float64(defaultBatchSize))
 }
 
 func skipTask(pollingCluster string, domainEntity *cache.DomainCacheEntry) bool {
