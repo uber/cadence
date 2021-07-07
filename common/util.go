@@ -141,7 +141,7 @@ func CreatePersistenceRetryPolicy() backoff.RetryPolicy {
 }
 
 // CreatePersistenceRetryPolicyWithContext create a retry policy for persistence layer operations
-// with expires when the context expires
+// which has an expiration interval computed based on the context's deadline
 func CreatePersistenceRetryPolicyWithContext(ctx context.Context) backoff.RetryPolicy {
 	if ctx == nil {
 		return CreatePersistenceRetryPolicy()
