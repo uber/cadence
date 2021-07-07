@@ -62,21 +62,21 @@ func (pdb *db) IsDupEntryError(err error) bool {
 	return ok && sqlErr.Code == ErrDupEntry
 }
 
-func (mdb *db) IsNotFoundError(err error) bool {
+func (pdb *db) IsNotFoundError(err error) bool {
 	if err == sql.ErrNoRows {
 		return true
 	}
 	return false
 }
 
-func (mdb *db) IsTimeoutError(err error) bool {
+func (pdb *db) IsTimeoutError(err error) bool {
 	if err == context.DeadlineExceeded {
 		return true
 	}
 	return false
 }
 
-func (mdb *db) IsThrottlingError(err error) bool {
+func (pdb *db) IsThrottlingError(err error) bool {
 	sqlErr, ok := err.(*pq.Error)
 	if ok {
 		if sqlErr.Code == ErrTooManyConnections ||

@@ -48,7 +48,8 @@ import (
 )
 
 const (
-	maxEventID = 9999
+	maxEventID      = 9999
+	tableRenderSize = 10
 )
 
 // AdminShowWorkflow shows history
@@ -547,8 +548,7 @@ func AdminDescribeShardDistribution(c *cli.Context) {
 	table.SetHeaderColor(headerColor...)
 	table.SetHeaderLine(false)
 
-	OUTPUT_PAGE_SIZE := 10
-	outputPageSize := OUTPUT_PAGE_SIZE
+	outputPageSize := tableRenderSize
 	for shardID, identity := range resp.Shards {
 		if outputPageSize == 0 {
 			table.Render()
@@ -556,7 +556,7 @@ func AdminDescribeShardDistribution(c *cli.Context) {
 			if !showNextPage() {
 				break
 			}
-			outputPageSize = OUTPUT_PAGE_SIZE
+			outputPageSize = tableRenderSize
 		}
 		table.Append([]string{strconv.Itoa(int(shardID)), identity})
 		outputPageSize--

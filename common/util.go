@@ -900,3 +900,13 @@ func MicrosecondsToDuration(d int64) time.Duration {
 func NanosecondsToDuration(d int64) time.Duration {
 	return time.Duration(d) * time.Nanosecond
 }
+
+// SleepWithMinDuration sleeps for the minimum of desired and available duration
+// returns the remaining available time duration
+func SleepWithMinDuration(desired time.Duration, available time.Duration) time.Duration {
+	d := MinDuration(desired, available)
+	if d > 0 {
+		time.Sleep(d)
+	}
+	return available - d
+}
