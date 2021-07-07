@@ -45,8 +45,12 @@ func updateActivityInfos(
 ) error {
 
 	if len(activityInfos) > 0 {
-		rows := make([]sqlplugin.ActivityInfoMapsRow, len(activityInfos))
-		for i, activityInfo := range activityInfos {
+		deleteInfoMap := convertDeleteInfosToMap(deleteInfos)
+		rows := make([]sqlplugin.ActivityInfoMapsRow, 0, len(activityInfos))
+		for _, activityInfo := range activityInfos {
+			if _, ok := deleteInfoMap[activityInfo.ScheduleID]; ok {
+				continue // skip updating this row because it will be deleted in the same transaction
+			}
 			scheduledEvent, scheduledEncoding := persistence.FromDataBlob(activityInfo.ScheduledEvent)
 			startEvent, startEncoding := persistence.FromDataBlob(activityInfo.StartedEvent)
 
@@ -87,7 +91,7 @@ func updateActivityInfos(
 			if err != nil {
 				return err
 			}
-			rows[i] = sqlplugin.ActivityInfoMapsRow{
+			rows = append(rows, sqlplugin.ActivityInfoMapsRow{
 				ShardID:                  int64(shardID),
 				DomainID:                 domainID,
 				WorkflowID:               workflowID,
@@ -97,11 +101,12 @@ func updateActivityInfos(
 				LastHeartbeatDetails:     activityInfo.Details,
 				Data:                     blob.Data,
 				DataEncoding:             string(blob.Encoding),
-			}
+			})
 		}
-
-		if _, err := tx.ReplaceIntoActivityInfoMaps(ctx, rows); err != nil {
-			return convertCommonErrors(tx, "updateActivityInfos", "Failed to execute update query.", err)
+		if len(rows) > 0 {
+			if _, err := tx.ReplaceIntoActivityInfoMaps(ctx, rows); err != nil {
+				return convertCommonErrors(tx, "updateActivityInfos", "Failed to execute update query.", err)
+			}
 		}
 	}
 
@@ -222,8 +227,15 @@ func updateTimerInfos(
 ) error {
 
 	if len(timerInfos) > 0 {
-		rows := make([]sqlplugin.TimerInfoMapsRow, len(timerInfos))
-		for i, timerInfo := range timerInfos {
+		deleteInfoMap := make(map[string]struct{}, len(deleteInfos))
+		for _, deleteInfo := range deleteInfos {
+			deleteInfoMap[deleteInfo] = struct{}{}
+		}
+		rows := make([]sqlplugin.TimerInfoMapsRow, 0, len(timerInfos))
+		for _, timerInfo := range timerInfos {
+			if _, ok := deleteInfoMap[timerInfo.TimerID]; ok {
+				continue // skip updating this row because it will be deleted in the same transaction
+			}
 			blob, err := parser.TimerInfoToBlob(&serialization.TimerInfo{
 				Version:         timerInfo.Version,
 				StartedID:       timerInfo.StartedID,
@@ -236,7 +248,7 @@ func updateTimerInfos(
 			if err != nil {
 				return err
 			}
-			rows[i] = sqlplugin.TimerInfoMapsRow{
+			rows = append(rows, sqlplugin.TimerInfoMapsRow{
 				ShardID:      int64(shardID),
 				DomainID:     domainID,
 				WorkflowID:   workflowID,
@@ -244,10 +256,12 @@ func updateTimerInfos(
 				TimerID:      timerInfo.TimerID,
 				Data:         blob.Data,
 				DataEncoding: string(blob.Encoding),
-			}
+			})
 		}
-		if _, err := tx.ReplaceIntoTimerInfoMaps(ctx, rows); err != nil {
-			return convertCommonErrors(tx, "updateTimerInfos", "Failed to execute update query.", err)
+		if len(rows) > 0 {
+			if _, err := tx.ReplaceIntoTimerInfoMaps(ctx, rows); err != nil {
+				return convertCommonErrors(tx, "updateTimerInfos", "Failed to execute update query.", err)
+			}
 		}
 	}
 
@@ -339,8 +353,12 @@ func updateChildExecutionInfos(
 ) error {
 
 	if len(childExecutionInfos) > 0 {
-		rows := make([]sqlplugin.ChildExecutionInfoMapsRow, len(childExecutionInfos))
-		for i, childExecutionInfo := range childExecutionInfos {
+		deleteInfoMap := convertDeleteInfosToMap(deleteInfos)
+		rows := make([]sqlplugin.ChildExecutionInfoMapsRow, 0, len(childExecutionInfos))
+		for _, childExecutionInfo := range childExecutionInfos {
+			if _, ok := deleteInfoMap[childExecutionInfo.InitiatedID]; ok {
+				continue // skip updating this row because it will be deleted in the same transaction
+			}
 			initiateEvent, initiateEncoding := persistence.FromDataBlob(childExecutionInfo.InitiatedEvent)
 			startEvent, startEncoding := persistence.FromDataBlob(childExecutionInfo.StartedEvent)
 
@@ -363,7 +381,7 @@ func updateChildExecutionInfos(
 			if err != nil {
 				return err
 			}
-			rows[i] = sqlplugin.ChildExecutionInfoMapsRow{
+			rows = append(rows, sqlplugin.ChildExecutionInfoMapsRow{
 				ShardID:      int64(shardID),
 				DomainID:     domainID,
 				WorkflowID:   workflowID,
@@ -371,10 +389,12 @@ func updateChildExecutionInfos(
 				InitiatedID:  childExecutionInfo.InitiatedID,
 				Data:         blob.Data,
 				DataEncoding: string(blob.Encoding),
-			}
+			})
 		}
-		if _, err := tx.ReplaceIntoChildExecutionInfoMaps(ctx, rows); err != nil {
-			return convertCommonErrors(tx, "updateChildExecutionInfos", "Failed to execute update query.", err)
+		if len(rows) > 0 {
+			if _, err := tx.ReplaceIntoChildExecutionInfoMaps(ctx, rows); err != nil {
+				return convertCommonErrors(tx, "updateChildExecutionInfos", "Failed to execute update query.", err)
+			}
 		}
 	}
 
@@ -476,8 +496,12 @@ func updateRequestCancelInfos(
 ) error {
 
 	if len(requestCancelInfos) > 0 {
-		rows := make([]sqlplugin.RequestCancelInfoMapsRow, len(requestCancelInfos))
-		for i, requestCancelInfo := range requestCancelInfos {
+		deleteInfoMap := convertDeleteInfosToMap(deleteInfos)
+		rows := make([]sqlplugin.RequestCancelInfoMapsRow, 0, len(requestCancelInfos))
+		for _, requestCancelInfo := range requestCancelInfos {
+			if _, ok := deleteInfoMap[requestCancelInfo.InitiatedID]; ok {
+				continue // skip updating this row because it will be deleted in the same transaction
+			}
 			blob, err := parser.RequestCancelInfoToBlob(&serialization.RequestCancelInfo{
 				Version:               requestCancelInfo.Version,
 				InitiatedEventBatchID: requestCancelInfo.InitiatedEventBatchID,
@@ -486,7 +510,7 @@ func updateRequestCancelInfos(
 			if err != nil {
 				return err
 			}
-			rows[i] = sqlplugin.RequestCancelInfoMapsRow{
+			rows = append(rows, sqlplugin.RequestCancelInfoMapsRow{
 				ShardID:      int64(shardID),
 				DomainID:     domainID,
 				WorkflowID:   workflowID,
@@ -494,11 +518,12 @@ func updateRequestCancelInfos(
 				InitiatedID:  requestCancelInfo.InitiatedID,
 				Data:         blob.Data,
 				DataEncoding: string(blob.Encoding),
-			}
+			})
 		}
-
-		if _, err := tx.ReplaceIntoRequestCancelInfoMaps(ctx, rows); err != nil {
-			return convertCommonErrors(tx, "updateRequestCancelInfos", "Failed to execute update query.", err)
+		if len(rows) > 0 {
+			if _, err := tx.ReplaceIntoRequestCancelInfoMaps(ctx, rows); err != nil {
+				return convertCommonErrors(tx, "updateRequestCancelInfos", "Failed to execute update query.", err)
+			}
 		}
 	}
 
@@ -587,8 +612,12 @@ func updateSignalInfos(
 ) error {
 
 	if len(signalInfos) > 0 {
-		rows := make([]sqlplugin.SignalInfoMapsRow, len(signalInfos))
-		for i, signalInfo := range signalInfos {
+		deleteInfoMap := convertDeleteInfosToMap(deleteInfos)
+		rows := make([]sqlplugin.SignalInfoMapsRow, 0, len(signalInfos))
+		for _, signalInfo := range signalInfos {
+			if _, ok := deleteInfoMap[signalInfo.InitiatedID]; ok {
+				continue // skip updating this row because it will be deleted in the same transaction
+			}
 			blob, err := parser.SignalInfoToBlob(&serialization.SignalInfo{
 				Version:               signalInfo.Version,
 				InitiatedEventBatchID: signalInfo.InitiatedEventBatchID,
@@ -600,7 +629,7 @@ func updateSignalInfos(
 			if err != nil {
 				return err
 			}
-			rows[i] = sqlplugin.SignalInfoMapsRow{
+			rows = append(rows, sqlplugin.SignalInfoMapsRow{
 				ShardID:      int64(shardID),
 				DomainID:     domainID,
 				WorkflowID:   workflowID,
@@ -608,11 +637,12 @@ func updateSignalInfos(
 				InitiatedID:  signalInfo.InitiatedID,
 				Data:         blob.Data,
 				DataEncoding: string(blob.Encoding),
-			}
+			})
 		}
-
-		if _, err := tx.ReplaceIntoSignalInfoMaps(ctx, rows); err != nil {
-			return convertCommonErrors(tx, "updateSignalInfos", "Failed to execute update query.", err)
+		if len(rows) > 0 {
+			if _, err := tx.ReplaceIntoSignalInfoMaps(ctx, rows); err != nil {
+				return convertCommonErrors(tx, "updateSignalInfos", "Failed to execute update query.", err)
+			}
 		}
 	}
 
@@ -689,4 +719,12 @@ func deleteSignalInfoMap(
 		return convertCommonErrors(tx, "deleteSignalInfoMap", "", err)
 	}
 	return nil
+}
+
+func convertDeleteInfosToMap(deleteInfos []int64) map[int64]struct{} {
+	deleteInfoMap := make(map[int64]struct{}, len(deleteInfos))
+	for _, deleteInfo := range deleteInfos {
+		deleteInfoMap[deleteInfo] = struct{}{}
+	}
+	return deleteInfoMap
 }

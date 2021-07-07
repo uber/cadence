@@ -43,18 +43,27 @@ func updateSignalsRequested(
 ) error {
 
 	if len(signalRequestedIDs) > 0 {
-		rows := make([]sqlplugin.SignalsRequestedSetsRow, len(signalRequestedIDs))
-		for i, v := range signalRequestedIDs {
-			rows[i] = sqlplugin.SignalsRequestedSetsRow{
+		deleteSignalRequestIDMap := make(map[string]struct{}, len(deleteSignalRequestIDs))
+		for _, deldeleteSignalRequestID := range deleteSignalRequestIDs {
+			deleteSignalRequestIDMap[deldeleteSignalRequestID] = struct{}{}
+		}
+		rows := make([]sqlplugin.SignalsRequestedSetsRow, 0, len(signalRequestedIDs))
+		for _, v := range signalRequestedIDs {
+			if _,ok := deleteSignalRequestIDMap[v]; ok {
+				continue // skip updating this row because it will be deleted in the same transaction
+			}
+			rows = append(rows, sqlplugin.SignalsRequestedSetsRow{
 				ShardID:    int64(shardID),
 				DomainID:   domainID,
 				WorkflowID: workflowID,
 				RunID:      runID,
 				SignalID:   v,
-			}
+			})
 		}
-		if _, err := tx.InsertIntoSignalsRequestedSets(ctx, rows); err != nil {
-			return convertCommonErrors(tx, "updateSignalsRequested", "Failed to execute update query.", err)
+		if len(rows) > 0 {
+			if _, err := tx.InsertIntoSignalsRequestedSets(ctx, rows); err != nil {
+				return convertCommonErrors(tx, "updateSignalsRequested", "Failed to execute update query.", err)
+			}
 		}
 	}
 
