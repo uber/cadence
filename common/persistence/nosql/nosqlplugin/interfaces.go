@@ -423,8 +423,8 @@ type (
 	* domain: partition key(row_type), range key(version)
 	 */
 	configStoreCRUD interface {
-		InsertConfig(ctx context.Context, row *ConfigStoreRow) error
-		SelectLatestConfig(ctx context.Context) (*ConfigStoreRow, error)
+		InsertConfig(ctx context.Context, row *persistence.InternalStoreEntry) error
+		SelectLatestConfig(ctx context.Context, row_type string) (*persistence.InternalStoreEntry, error)
 	}
 
 	WorkflowExecutionRow struct {
@@ -679,13 +679,6 @@ type (
 		ShardID  int
 		TreeID   string
 		BranchID *string
-	}
-
-	ConfigStoreRow struct {
-		RowType   string
-		Version   int64
-		Timestamp time.Time
-		Values    *persistence.DataBlob
 	}
 )
 

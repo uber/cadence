@@ -181,10 +181,15 @@ type (
 
 	ConfigStore interface {
 		Closeable
-		GetDynamicConfig(ctx context.Context, request *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error)
-		UpdateDynamicConfig(ctx context.Context, request *types.UpdateDynamicConfigRequest) error
-		RestoreDynamicConfig(ctx context.Context, request *types.RestoreDynamicConfigRequest) error
-		ListDynamicConfig(ctx context.Context) (*types.ListDynamicConfigResponse, error)
+		FetchConfig(ctx context.Context, config_type string) (*InternalConfigStoreEntry, error)
+		UpdateConfig(ctx context.Context, value *InternalConfigStoreEntry) error
+	}
+
+	InternalConfigStoreEntry struct {
+		RowType   string
+		Version   int64
+		Timestamp time.Time
+		Values    *DataBlob
 	}
 
 	// Queue is a store to enqueue and get messages

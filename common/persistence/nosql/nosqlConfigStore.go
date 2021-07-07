@@ -27,7 +27,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
-	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -54,29 +53,15 @@ func newNoSQLConfigStore(
 	}, nil
 }
 
-func (m *nosqlConfigStore) GetDynamicConfig(
-	ctx context.Context,
-	request *types.GetDynamicConfigRequest,
-) (*types.GetDynamicConfigResponse, error) {
-	return nil, nil
+func (m *nosqlConfigStore) FetchConfig(ctx context.Context, config_type string) (*p.InternalConfigStoreEntry, error) {
+	entry, err := m.db.SelectLatestConfig(ctx, config_type)
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "FetchConfig", err)
+	}
+	return entry, nil
 }
 
-func (m *nosqlConfigStore) UpdateDynamicConfig(
-	ctx context.Context,
-	request *types.UpdateDynamicConfigRequest,
-) error {
-	return nil
-}
-
-func (m *nosqlConfigStore) RestoreDynamicConfig(
-	ctx context.Context,
-	request *types.RestoreDynamicConfigRequest,
-) error {
-	return nil
-}
-
-func (m *nosqlConfigStore) ListDynamicConfig(
-	ctx context.Context,
-) (*types.ListDynamicConfigResponse, error) {
-	return nil, nil
+func (m *nosqlConfigStore) UpdateConfig(ctx context.Context, value *p.InternalConfigStoreEntry) error {
+	err := m.db.InsertConfig(ctx, value)
+	return convertCommonErrors(m.db, "UpdateConfig", err)
 }

@@ -22,21 +22,51 @@ package cassandra
 
 import (
 	"context"
+	"fmt"
+	"time"
 
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence"
 )
 
 const (
-	templateSelectLatestConfig = `SELECT * FROM clusterConfig WHERE row_type = 'dynamic_config' LIMIT 1;`
+	templateSelectLatestConfig = `SELECT row_type, version, timestamp, values, encoding FROM cluster_config WHERE row_type = '?' LIMIT 1;`
 
-	templateInsertConfig = `INSERT INTO clusterConfig (row_type, version, timestamp, values, encoding) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS;`
-	//for version value, put x + 1 where x is the cached copy version.
+	templateInsertConfig = `INSERT INTO cluster_config (row_type, version, timestamp, values, encoding) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS;`
+	//for version value, x + 1 where x is the cached copy version.
 )
 
-func (db *cdb) InsertConfig(ctx context.Context, row *nosqlplugin.ConfigStoreRow) error {
+func (db *cdb) InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error {
+	query := db.session.Query(templateInsertConfig, row.RowType, row.Version+1, row.Timestamp, row.Values.Data, row.Values.Encoding).WithContext(ctx)
+	applied, err := query.MapScanCAS(make(map[string]interface{}))
+	if err != nil {
+		return err
+	}
+	if !applied {
+		return fmt.Errorf("InsertConfig operation failed because of version collision")
+	}
 	return nil
 }
 
-func (db *cdb) SelectLatestConfig(ctx context.Context) (*nosqlplugin.ConfigStoreRow, error) {
-	return nil, nil
+func (db *cdb) SelectLatestConfig(ctx context.Context, row_type string) (*persistence.InternalConfigStoreEntry, error) {
+	var version int64
+	var timestamp time.Time
+	var data []byte
+	var encoding common.EncodingType
+
+	query := db.session.Query(templateInsertConfig, row_type).WithContext(ctx)
+	err := query.Scan(&row_type, &version, &timestamp, &data, &encoding)
+	if err != nil {
+		return nil, err
+	}
+
+	return &persistence.InternalConfigStoreEntry{
+		RowType:   row_type,
+		Version:   version,
+		Timestamp: timestamp,
+		Values: &persistence.DataBlob{
+			Data:     data,
+			Encoding: encoding,
+		},
+	}, err
 }

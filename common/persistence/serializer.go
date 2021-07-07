@@ -66,13 +66,13 @@ type (
 		SerializePendingFailoverMarkers(markers []*types.FailoverMarkerAttributes, encodingType common.EncodingType) (*DataBlob, error)
 		DeserializePendingFailoverMarkers(data *DataBlob) ([]*types.FailoverMarkerAttributes, error)
 
-		// serialize/deserialize processing queue states
+		// serialize/deserialize processing queue statesss
 		SerializeProcessingQueueStates(states *types.ProcessingQueueStates, encodingType common.EncodingType) (*DataBlob, error)
 		DeserializeProcessingQueueStates(data *DataBlob) (*types.ProcessingQueueStates, error)
 
 		// serialize/deserialize DynamicConfigBlob
-		SerializeDynamicConfigBlob(blob *configStore.DynamicConfigBlob, encodingType common.EncodingType) (*DataBlob, error)
-		DeserializeDynamicConfigBlob(data *DataBlob) (*configStore.DynamicConfigBlob, error)
+		SerializeDynamicConfigBlob(blob *types.DynamicConfigBlob, encodingType common.EncodingType) (*DataBlob, error)
+		DeserializeDynamicConfigBlob(data *DataBlob) (*types.DynamicConfigBlob, error)
 	}
 
 	// CadenceSerializationError is an error type for cadence serialization
@@ -239,19 +239,19 @@ func (t *serializerImpl) DeserializeProcessingQueueStates(
 	return &states, err
 }
 
-func (t *serializerImpl) SerializeDynamicConfigBlob(blob *configStore.DynamicConfigBlob, encodingType common.EncodingType) (*DataBlob, error) {
+func (t *serializerImpl) SerializeDynamicConfigBlob(blob *types.DynamicConfigBlob, encodingType common.EncodingType) (*DataBlob, error) {
 	if blob == nil {
 		return nil, nil
 	}
 	return t.serialize(blob, encodingType)
 }
 
-func (t *serializerImpl) DeserializeDynamicConfigBlob(data *DataBlob) (*configStore.DynamicConfigBlob, error) {
+func (t *serializerImpl) DeserializeDynamicConfigBlob(data *DataBlob) (*types.DynamicConfigBlob, error) {
 	if data == nil {
 		return nil, nil
 	}
 
-	var blob configStore.DynamicConfigBlob
+	var blob types.DynamicConfigBlob
 	if len(data.Data) == 0 {
 		return &blob, nil
 	}

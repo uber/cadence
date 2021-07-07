@@ -1719,10 +1719,14 @@ type (
 
 	ConfigStoreManager interface {
 		Closeable
-		GetDynamicConfig(ctx context.Context, request *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error)
-		UpdateDynamicConfig(ctx context.Context, request *types.UpdateDynamicConfigRequest) error
-		RestoreDynamicConfig(ctx context.Context, request *types.RestoreDynamicConfigRequest) error
-		ListDynamicConfig(ctx context.Context) (*types.ListDynamicConfigResponse, error)
+		FetchDynamicConfig(ctx context.Context) (*DynamicConfigSnapshot, error)
+		UpdateDynamicConfig(ctx context.Context, snapshot *DynamicConfigSnapshot) error
+		//can add functions for config types other than dynamic config
+	}
+
+	DynamicConfigSnapshot struct {
+		Version int64
+		Values  *types.DynamicConfigBlob
 	}
 )
 

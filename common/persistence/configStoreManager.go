@@ -22,9 +22,10 @@ package persistence
 
 import (
 	"context"
+	"time"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -52,29 +53,35 @@ func (m *configStoreManagerImpl) Close() {
 	m.persistence.Close()
 }
 
-func (m *configStoreManagerImpl) GetDynamicConfig(
-	ctx context.Context,
-	request *types.GetDynamicConfigRequest,
-) (*types.GetDynamicConfigResponse, error) {
-	return nil, nil
+func (m *configStoreManagerImpl) FetchDynamicConfig(ctx context.Context) (*DynamicConfigSnapshot, error) {
+	values, err := m.persistence.FetchConfig(ctx, "dynamic_config")
+	if err != nil {
+		return nil, err
+	}
+
+	config, err := m.serializer.DeserializeDynamicConfigBlob(values.Values)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DynamicConfigSnapshot{
+		Version: values.Version,
+		Values:  config,
+	}, nil
 }
 
-func (m *configStoreManagerImpl) UpdateDynamicConfig(
-	ctx context.Context,
-	request *types.UpdateDynamicConfigRequest,
-) error {
-	return nil
-}
+func (m *configStoreManagerImpl) UpdateDynamicConfig(ctx context.Context, snapshot *DynamicConfigSnapshot) error {
+	blob, err := m.serializer.SerializeDynamicConfigBlob(snapshot.Values, common.EncodingTypeThriftRW)
+	if err != nil {
+		return err
+	}
 
-func (m *configStoreManagerImpl) RestoreDynamicConfig(
-	ctx context.Context,
-	request *types.RestoreDynamicConfigRequest,
-) error {
-	return nil
-}
+	entry := &InternalConfigStoreEntry{
+		RowType:   "dynamic_config",
+		Version:   snapshot.Version,
+		Timestamp: time.Now(),
+		Values:    blob,
+	}
 
-func (m *configStoreManagerImpl) ListDynamicConfig(
-	ctx context.Context,
-) (*types.ListDynamicConfigResponse, error) {
-	return nil, nil
+	return m.persistence.UpdateConfig(ctx, entry)
 }
