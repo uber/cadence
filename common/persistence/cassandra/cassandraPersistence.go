@@ -138,72 +138,6 @@ const (
 		`and task_id = ? ` +
 		`IF range_id = ?`
 
-	// TODO: remove replication_state after all 2DC workflows complete
-	templateGetWorkflowExecutionQuery = `SELECT execution, replication_state, activity_map, timer_map, ` +
-		`child_executions_map, request_cancel_map, signal_map, signal_requested, buffered_events_list, ` +
-		`buffered_replication_tasks_map, version_histories, version_histories_encoding, checksum ` +
-		`FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ?`
-
-	templateListCurrentExecutionsQuery = `SELECT domain_id, workflow_id, run_id, current_run_id, workflow_state ` +
-		`FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ?`
-
-	templateIsWorkflowExecutionExistsQuery = `SELECT shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id ` +
-		`FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ?`
-
-	templateListWorkflowExecutionQuery = `SELECT run_id, execution, version_histories, version_histories_encoding ` +
-		`FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ?`
-
-	templateDeleteWorkflowExecutionMutableStateQuery = `DELETE FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ? `
-
-	templateDeleteWorkflowExecutionCurrentRowQuery = templateDeleteWorkflowExecutionMutableStateQuery + " if current_run_id = ? "
-
-	templateGetTransferTasksQuery = `SELECT transfer ` +
-		`FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id > ? ` +
-		`and task_id <= ?`
-
-	templateGetCrossClusterTasksQuery = `SELECT cross_cluster ` +
-		`FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id > ? ` +
-		`and task_id <= ?`
-
 	templateGetReplicationTasksQuery = `SELECT replication ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
@@ -242,50 +176,9 @@ const (
 		`and task_id > ? ` +
 		`and task_id <= ?`
 
-	templateCompleteCrossClusterTaskQuery = templateCompleteTransferTaskQuery
-
-	templateRangeCompleteCrossClusterTaskQuery = templateRangeCompleteTransferTaskQuery
-
-	templateCompleteReplicationTaskBeforeQuery = `DELETE FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id <= ?`
-
 	templateCompleteReplicationTaskQuery = templateCompleteTransferTaskQuery
 
 	templateRangeCompleteReplicationTaskQuery = templateRangeCompleteTransferTaskQuery
-
-	templateGetTimerTasksQuery = `SELECT timer ` +
-		`FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ?` +
-		`and domain_id = ? ` +
-		`and workflow_id = ?` +
-		`and run_id = ?` +
-		`and visibility_ts >= ? ` +
-		`and visibility_ts < ?`
-
-	templateCompleteTimerTaskQuery = `DELETE FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ?` +
-		`and run_id = ?` +
-		`and visibility_ts = ? ` +
-		`and task_id = ?`
-
-	templateRangeCompleteTimerTaskQuery = `DELETE FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ?` +
-		`and run_id = ?` +
-		`and visibility_ts >= ? ` +
-		`and visibility_ts < ?`
 )
 
 var (
@@ -1923,36 +1816,4 @@ func newShardOwnershipLostError(
 		Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, columns: (%v)",
 			rangeID, strings.Join(columns, ",")),
 	}
-}
-
-// TODO: remove this after all 2DC workflows complete
-func createReplicationState(
-	result map[string]interface{},
-) *p.ReplicationState {
-
-	if len(result) == 0 {
-		return nil
-	}
-
-	info := &p.ReplicationState{}
-	for k, v := range result {
-		switch k {
-		case "current_version":
-			info.CurrentVersion = v.(int64)
-		case "start_version":
-			info.StartVersion = v.(int64)
-		case "last_write_version":
-			info.LastWriteVersion = v.(int64)
-		case "last_write_event_id":
-			info.LastWriteEventID = v.(int64)
-		case "last_replication_info":
-			info.LastReplicationInfo = make(map[string]*p.ReplicationInfo)
-			replicationInfoMap := v.(map[string]map[string]interface{})
-			for key, value := range replicationInfoMap {
-				info.LastReplicationInfo[key] = createReplicationInfo(value)
-			}
-		}
-	}
-
-	return info
 }
