@@ -50,6 +50,7 @@ type (
 		GetQueueType() QueueType
 		GetShard() shard.Context
 		GetAttempt() int
+		GetInfo() Info
 	}
 
 	CrossClusterTask interface {
@@ -65,7 +66,7 @@ type (
 
 	// Executor contains the execution logic for Task
 	Executor interface {
-		Execute(taskInfo Info, shouldProcessTask bool) error
+		Execute(task Task, shouldProcessTask bool) error
 	}
 
 	// Filter filters Task

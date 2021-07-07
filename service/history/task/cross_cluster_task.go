@@ -294,6 +294,10 @@ func (c *crossClusterStartChildWorkflowTask) Update(interface{}) error {
 	panic("Not implement")
 }
 
+func (c *crossClusterTaskBase) GetInfo() Info {
+	return c.Info
+}
+
 func (c *crossClusterTaskBase) State() ctask.State {
 	c.Lock()
 	defer c.Unlock()
