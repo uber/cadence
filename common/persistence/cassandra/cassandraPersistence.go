@@ -618,7 +618,7 @@ func (d *cassandraPersistence) prepareTimerTasksForWorkflowTxn(
 		}
 
 		nt := &nosqlplugin.TimerTask{
-			Type:       task.GetType(),
+			TaskType:   task.GetType(),
 			DomainID:   domainID,
 			WorkflowID: workflowID,
 			RunID:      runID,
@@ -626,10 +626,10 @@ func (d *cassandraPersistence) prepareTimerTasksForWorkflowTxn(
 			VisibilityTimestamp: task.GetVisibilityTimestamp(),
 			TaskID:              task.GetTaskID(),
 
-			TimeoutType: timeoutType,
-			EventID:     eventID,
-			Attempt:     attempt,
-			Version:     task.GetVersion(),
+			TimeoutType:     timeoutType,
+			EventID:         eventID,
+			ScheduleAttempt: attempt,
+			Version:         task.GetVersion(),
 		}
 		tasks = append(tasks, nt)
 	}
@@ -674,19 +674,18 @@ func (d *cassandraPersistence) prepareReplicationTasksForWorkflowTxn(
 		}
 
 		nt := &nosqlplugin.ReplicationTask{
-			Type:                task.GetType(),
-			DomainID:            domainID,
-			WorkflowID:          workflowID,
-			RunID:               runID,
-			VisibilityTimestamp: task.GetVisibilityTimestamp(),
-			TaskID:              task.GetTaskID(),
-			FirstEventID:        firstEventID,
-			NextEventID:         nextEventID,
-			Version:             version,
-			ActivityScheduleID:  activityScheduleID,
-			EventStoreVersion:   p.EventStoreVersion,
-			BranchToken:         branchToken,
-			NewRunBranchToken:   newRunBranchToken,
+			TaskType:          task.GetType(),
+			DomainID:          domainID,
+			WorkflowID:        workflowID,
+			RunID:             runID,
+			CreationTime:      task.GetVisibilityTimestamp().UnixNano(),
+			TaskID:            task.GetTaskID(),
+			FirstEventID:      firstEventID,
+			NextEventID:       nextEventID,
+			Version:           version,
+			ScheduledID:       activityScheduleID,
+			BranchToken:       branchToken,
+			NewRunBranchToken: newRunBranchToken,
 		}
 		tasks = append(tasks, nt)
 	}
@@ -741,7 +740,7 @@ func (d *cassandraPersistence) prepareCrossClusterTasksForWorkflowTxn(
 
 		nt := &nosqlplugin.CrossClusterTask{
 			TransferTask: nosqlplugin.TransferTask{
-				Type:                    task.GetType(),
+				TaskType:                task.GetType(),
 				DomainID:                domainID,
 				WorkflowID:              workflowID,
 				RunID:                   runID,
@@ -861,7 +860,7 @@ func (d *cassandraPersistence) prepareTransferTasksForWorkflowTxn(
 			}
 		}
 		t := &nosqlplugin.TransferTask{
-			Type:                    task.GetType(),
+			TaskType:                task.GetType(),
 			DomainID:                domainID,
 			WorkflowID:              workflowID,
 			RunID:                   runID,

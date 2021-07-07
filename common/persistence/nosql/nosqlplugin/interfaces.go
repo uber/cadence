@@ -489,59 +489,16 @@ type (
 	WorkflowExecutionMapsWriteMode int
 	EventBufferWriteMode           int
 
-	TimerTask struct {
-		Type int
+	TimerTask = persistence.TimerTaskInfo
 
-		DomainID            string
-		WorkflowID          string
-		RunID               string
-		VisibilityTimestamp time.Time
-		TaskID              int64
-
-		TimeoutType int
-		EventID     int64
-		Attempt     int64
-		Version     int64
-	}
-
-	ReplicationTask struct {
-		Type int
-
-		DomainID            string
-		WorkflowID          string
-		RunID               string
-		VisibilityTimestamp time.Time
-		TaskID              int64
-		FirstEventID        int64
-		NextEventID         int64
-		Version             int64
-		ActivityScheduleID  int64
-		EventStoreVersion   int
-		BranchToken         []byte
-		NewRunBranchToken   []byte
-	}
+	ReplicationTask persistence.ReplicationTaskInfo
 
 	CrossClusterTask struct {
 		TransferTask
 		TargetCluster string
 	}
 
-	TransferTask struct {
-		Type                    int
-		DomainID                string
-		WorkflowID              string
-		RunID                   string
-		VisibilityTimestamp     time.Time
-		TaskID                  int64
-		TargetDomainID          string
-		TargetWorkflowID        string
-		TargetRunID             string
-		TargetChildWorkflowOnly bool
-		TaskList                string
-		ScheduleID              int64
-		RecordVisibility        bool
-		Version                 int64
-	}
+	TransferTask = persistence.TransferTaskInfo
 
 	ShardCondition struct {
 		ShardID int
