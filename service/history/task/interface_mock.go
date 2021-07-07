@@ -428,6 +428,20 @@ func (mr *MockTaskMockRecorder) GetAttempt() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttempt", reflect.TypeOf((*MockTask)(nil).GetAttempt))
 }
 
+// GetInfo mocks base method
+func (m *MockTask) GetInfo() Info {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInfo")
+	ret0, _ := ret[0].(Info)
+	return ret0
+}
+
+// GetInfo indicates an expected call of GetInfo
+func (mr *MockTaskMockRecorder) GetInfo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInfo", reflect.TypeOf((*MockTask)(nil).GetInfo))
+}
+
 // MockCrossClusterTask is a mock of CrossClusterTask interface
 type MockCrossClusterTask struct {
 	ctrl     *gomock.Controller
@@ -697,6 +711,20 @@ func (mr *MockCrossClusterTaskMockRecorder) GetAttempt() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttempt", reflect.TypeOf((*MockCrossClusterTask)(nil).GetAttempt))
 }
 
+// GetInfo mocks base method
+func (m *MockCrossClusterTask) GetInfo() Info {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInfo")
+	ret0, _ := ret[0].(Info)
+	return ret0
+}
+
+// GetInfo indicates an expected call of GetInfo
+func (mr *MockCrossClusterTaskMockRecorder) GetInfo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInfo", reflect.TypeOf((*MockCrossClusterTask)(nil).GetInfo))
+}
+
 // IsReadyForPoll mocks base method
 func (m *MockCrossClusterTask) IsReadyForPoll() bool {
 	m.ctrl.T.Helper()
@@ -814,17 +842,17 @@ func (m *MockExecutor) EXPECT() *MockExecutorMockRecorder {
 }
 
 // Execute mocks base method
-func (m *MockExecutor) Execute(taskInfo Info, shouldProcessTask bool) error {
+func (m *MockExecutor) Execute(task Task, shouldProcessTask bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Execute", taskInfo, shouldProcessTask)
+	ret := m.ctrl.Call(m, "Execute", task, shouldProcessTask)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Execute indicates an expected call of Execute
-func (mr *MockExecutorMockRecorder) Execute(taskInfo, shouldProcessTask interface{}) *gomock.Call {
+func (mr *MockExecutorMockRecorder) Execute(task, shouldProcessTask interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockExecutor)(nil).Execute), taskInfo, shouldProcessTask)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockExecutor)(nil).Execute), task, shouldProcessTask)
 }
 
 // MockPriorityAssigner is a mock of PriorityAssigner interface

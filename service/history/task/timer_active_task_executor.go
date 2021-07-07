@@ -65,10 +65,10 @@ func NewTimerActiveTaskExecutor(
 }
 
 func (t *timerActiveTaskExecutor) Execute(
-	taskInfo Info,
+	task Task,
 	shouldProcessTask bool,
 ) error {
-	timerTask, ok := taskInfo.(*persistence.TimerTaskInfo)
+	timerTask, ok := task.GetInfo().(*persistence.TimerTaskInfo)
 	if !ok {
 		return errUnexpectedTask
 	}
