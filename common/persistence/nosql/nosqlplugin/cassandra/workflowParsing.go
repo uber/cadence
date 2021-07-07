@@ -26,6 +26,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 )
@@ -533,7 +534,7 @@ func parseCrossClusterTaskInfo(
 
 func parseReplicationTaskInfo(
 	result map[string]interface{},
-) *persistence.InternalReplicationTaskInfo {
+) *nosqlplugin.ReplicationTask {
 
 	info := &persistence.InternalReplicationTaskInfo{}
 	for k, v := range result {

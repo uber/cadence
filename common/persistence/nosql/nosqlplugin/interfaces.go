@@ -465,6 +465,22 @@ type (
 		DeleteTimerTask(ctx context.Context, shardID int, taskID int64, visibilityTimestamp time.Time) error
 		// delete a range of timer tasks
 		RangeDeleteTimerTasks(ctx context.Context, shardID int, inclusiveMinTime, exclusiveMaxTime time.Time) error
+
+		// replication_task table
+		// within a shard, paging through replication tasks order by taskID(ASC), filtered by minTaskID(exclusive) and maxTaskID(inclusive)
+		SelectReplicationTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*ReplicationTask, []byte, error)
+		// delete a single transfer task
+		DeleteReplicationTask(ctx context.Context, shardID int, taskID int64) error
+		// delete a range of transfer tasks
+		RangeDeleteReplicationTasks(ctx context.Context, shardID int, inclusiveEndTaskID int64) error
+
+		// cross_cluster_task table
+		// within a shard, paging through replication tasks order by taskID(ASC), filtered by minTaskID(exclusive) and maxTaskID(inclusive)
+		SelectCrossClusterTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, targetCluster string, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*CrossClusterTask, []byte, error)
+		// delete a single transfer task
+		DeleteCrossClusterTask(ctx context.Context, shardID int, targetCluster string, taskID int64) error
+		// delete a range of transfer tasks
+		RangeDeleteCrossClusterTasks(ctx context.Context, shardID int, targetCluster string, exclusiveBeginTaskID, inclusiveEndTaskID int64) error
 	}
 
 	WorkflowExecution = persistence.InternalWorkflowMutableState
@@ -509,7 +525,7 @@ type (
 
 	TimerTask = persistence.TimerTaskInfo
 
-	ReplicationTask persistence.ReplicationTaskInfo
+	ReplicationTask = persistence.InternalReplicationTaskInfo
 
 	CrossClusterTask struct {
 		TransferTask

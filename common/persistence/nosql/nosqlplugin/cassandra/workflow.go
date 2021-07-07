@@ -539,3 +539,112 @@ func (db *cdb) RangeDeleteTimerTasks(ctx context.Context, shardID int, inclusive
 
 	return query.Exec()
 }
+
+func (db *cdb) SelectReplicationTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*nosqlplugin.ReplicationTask, []byte, error) {
+	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
+	query := db.session.Query(templateGetReplicationTasksQuery,
+		shardID,
+		rowTypeReplicationTask,
+		rowTypeReplicationDomainID,
+		rowTypeReplicationWorkflowID,
+		rowTypeReplicationRunID,
+		defaultVisibilityTimestamp,
+		exclusiveMinTaskID,
+		inclusiveMaxTaskID,
+	).PageSize(pageSize).PageState(pageToken).WithContext(ctx)
+	return populateGetReplicationTasks(query)
+}
+
+func (db *cdb) DeleteReplicationTask(ctx context.Context, shardID int, taskID int64) error {
+	query := db.session.Query(templateCompleteReplicationTaskQuery,
+		shardID,
+		rowTypeReplicationTask,
+		rowTypeReplicationDomainID,
+		rowTypeReplicationWorkflowID,
+		rowTypeReplicationRunID,
+		defaultVisibilityTimestamp,
+		taskID,
+	).WithContext(ctx)
+
+	return query.Exec()
+}
+
+func (db *cdb) RangeDeleteReplicationTasks(ctx context.Context, shardID int, inclusiveEndTaskID int64) error {
+	query := db.session.Query(templateCompleteReplicationTaskBeforeQuery,
+		shardID,
+		rowTypeReplicationTask,
+		rowTypeReplicationDomainID,
+		rowTypeReplicationWorkflowID,
+		rowTypeReplicationRunID,
+		defaultVisibilityTimestamp,
+		inclusiveEndTaskID,
+	).WithContext(ctx)
+
+	return query.Exec()
+}
+
+func (db *cdb) SelectCrossClusterTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, targetCluster string, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*nosqlplugin.CrossClusterTask, []byte, error) {
+	// Reading cross-cluster tasks need to be quorum level consistent, otherwise we could loose task
+	query := db.session.Query(templateGetCrossClusterTasksQuery,
+		shardID,
+		rowTypeCrossClusterTask,
+		rowTypeCrossClusterDomainID,
+		targetCluster, // workflowID field is used to store target cluster
+		rowTypeCrossClusterRunID,
+		defaultVisibilityTimestamp,
+		exclusiveMinTaskID,
+		inclusiveMaxTaskID,
+	).PageSize(pageSize).PageState(pageToken).WithContext(ctx)
+
+	iter := query.Iter()
+	if iter == nil {
+		return nil, nil, &types.InternalServiceError{
+			Message: "SelectCrossClusterTasksOrderByTaskID operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	var tasks []*nosqlplugin.CrossClusterTask
+	task := make(map[string]interface{})
+	for iter.MapScan(task) {
+		t := parseCrossClusterTaskInfo(task["cross_cluster"].(map[string]interface{}))
+		// Reset task map to get it ready for next scan
+		task = make(map[string]interface{})
+
+		tasks = append(tasks, &nosqlplugin.CrossClusterTask{
+			TransferTask:  *t,
+			TargetCluster: targetCluster,
+		})
+	}
+	nextPageToken := getNextPageToken(iter)
+	err := iter.Close()
+	return tasks, nextPageToken, err
+}
+
+func (db *cdb) DeleteCrossClusterTask(ctx context.Context, shardID int, targetCluster string, taskID int64) error {
+	query := db.session.Query(templateCompleteCrossClusterTaskQuery,
+		shardID,
+		rowTypeCrossClusterTask,
+		rowTypeCrossClusterDomainID,
+		targetCluster,
+		rowTypeCrossClusterRunID,
+		defaultVisibilityTimestamp,
+		taskID,
+	).WithContext(ctx)
+
+	return query.Exec()
+}
+
+func (db *cdb) RangeDeleteCrossClusterTasks(ctx context.Context, shardID int, targetCluster string, exclusiveBeginTaskID, inclusiveEndTaskID int64) error {
+	query := db.session.Query(templateRangeCompleteCrossClusterTaskQuery,
+		shardID,
+		rowTypeCrossClusterTask,
+		rowTypeCrossClusterDomainID,
+		targetCluster,
+		rowTypeCrossClusterRunID,
+		defaultVisibilityTimestamp,
+		exclusiveBeginTaskID,
+		inclusiveEndTaskID,
+	).WithContext(ctx)
+
+	return query.Exec()
+}

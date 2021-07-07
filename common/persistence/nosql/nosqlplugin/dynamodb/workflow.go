@@ -110,3 +110,27 @@ func (db *ddb) DeleteTimerTask(ctx context.Context, shardID int, taskID int64, v
 func (db *ddb) RangeDeleteTimerTasks(ctx context.Context, shardID int, inclusiveMinTime, exclusiveMaxTime time.Time) error {
 	panic("TODO")
 }
+
+func (db *ddb) SelectReplicationTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*nosqlplugin.ReplicationTask, []byte, error) {
+	panic("TODO")
+}
+
+func (db *ddb) DeleteReplicationTask(ctx context.Context, shardID int, taskID int64) error {
+	panic("TODO")
+}
+
+func (db *ddb) RangeDeleteReplicationTasks(ctx context.Context, shardID int, inclusiveEndTaskID int64) error {
+	panic("TODO")
+}
+
+func (db *ddb) SelectCrossClusterTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, targetCluster string, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*nosqlplugin.CrossClusterTask, []byte, error) {
+	panic("TODO")
+}
+
+func (db *ddb) DeleteCrossClusterTask(ctx context.Context, shardID int, targetCluster string, taskID int64) error {
+	panic("TODO")
+}
+
+func (db *ddb) RangeDeleteCrossClusterTasks(ctx context.Context, shardID int, targetCluster string, exclusiveBeginTaskID, inclusiveEndTaskID int64) error {
+	panic("TODO")
+}

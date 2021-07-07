@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/types"
 )
 
 func (db *cdb) executeCreateWorkflowBatchTransaction(
@@ -359,7 +360,7 @@ func (db *cdb) createReplicationTasks(
 			task.BranchToken,
 			persistence.EventStoreVersion,
 			task.NewRunBranchToken,
-			task.CreationTime,
+			task.CreationTime.UnixNano(),
 			// NOTE: use a constant here instead of task.VisibilityTimestamp so that we can query tasks with the same visibilityTimestamp
 			defaultVisibilityTimestamp,
 			task.TaskID)
@@ -1448,4 +1449,29 @@ func mustConvertToSlice(value interface{}) []interface{} {
 	default:
 		panic(fmt.Sprintf("Unable to convert %v to slice", value))
 	}
+}
+
+func populateGetReplicationTasks(
+	query gocql.Query,
+) ([]*nosqlplugin.ReplicationTask, []byte, error) {
+	iter := query.Iter()
+	if iter == nil {
+		return nil, nil, &types.InternalServiceError{
+			Message: "populateGetReplicationTasks operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	var tasks []*nosqlplugin.ReplicationTask
+	task := make(map[string]interface{})
+	for iter.MapScan(task) {
+		t := parseReplicationTaskInfo(task["replication"].(map[string]interface{}))
+		// Reset task map to get it ready for next scan
+		task = make(map[string]interface{})
+
+		tasks = append(tasks, t)
+	}
+	nextPageToken := getNextPageToken(iter)
+	err := iter.Close()
+
+	return tasks, nextPageToken, err
 }

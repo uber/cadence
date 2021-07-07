@@ -678,7 +678,7 @@ func (d *cassandraPersistence) prepareReplicationTasksForWorkflowTxn(
 			DomainID:          domainID,
 			WorkflowID:        workflowID,
 			RunID:             runID,
-			CreationTime:      task.GetVisibilityTimestamp().UnixNano(),
+			CreationTime:      task.GetVisibilityTimestamp(),
 			TaskID:            task.GetTaskID(),
 			FirstEventID:      firstEventID,
 			NextEventID:       nextEventID,
@@ -1535,43 +1535,20 @@ func (d *cassandraPersistence) GetCrossClusterTasks(
 	request *p.GetCrossClusterTasksRequest,
 ) (*p.GetCrossClusterTasksResponse, error) {
 
-	// Reading cross-cluster tasks need to be quorum level consistent, otherwise we could loose task
-	query := d.session.Query(templateGetCrossClusterTasksQuery,
-		d.shardID,
-		rowTypeCrossClusterTask,
-		rowTypeCrossClusterDomainID,
-		request.TargetCluster, // workflowID field is used to store target cluster
-		rowTypeCrossClusterRunID,
-		defaultVisibilityTimestamp,
-		request.ReadLevel,
-		request.MaxReadLevel,
-	).PageSize(request.BatchSize).PageState(request.NextPageToken).WithContext(ctx)
+	cTasks, nextPageToken, err := d.db.SelectCrossClusterTasksOrderByTaskID(ctx, d.shardID, request.BatchSize, request.NextPageToken, request.TargetCluster, request.ReadLevel, request.MaxReadLevel)
 
-	iter := query.Iter()
-	if iter == nil {
-		return nil, &types.InternalServiceError{
-			Message: "GetCrossClusterTasks operation failed.  Not able to create query iterator.",
-		}
-	}
-
-	response := &p.GetCrossClusterTasksResponse{}
-	task := make(map[string]interface{})
-	for iter.MapScan(task) {
-		t := createCrossClusterTaskInfo(task["cross_cluster"].(map[string]interface{}))
-		// Reset task map to get it ready for next scan
-		task = make(map[string]interface{})
-
-		response.Tasks = append(response.Tasks, t)
-	}
-	nextPageToken := iter.PageState()
-	response.NextPageToken = make([]byte, len(nextPageToken))
-	copy(response.NextPageToken, nextPageToken)
-
-	if err := iter.Close(); err != nil {
+	if err != nil {
 		return nil, convertCommonErrors(d.client, "GetCrossClusterTasks", err)
 	}
 
-	return response, nil
+	var tTasks []*p.CrossClusterTaskInfo
+	for _, t := range cTasks {
+		tTasks = append(tTasks, &t.TransferTask)
+	}
+	return &p.GetCrossClusterTasksResponse{
+		Tasks:         tTasks,
+		NextPageToken: nextPageToken,
+	}, nil
 }
 
 func (d *cassandraPersistence) GetReplicationTasks(
@@ -1579,19 +1556,14 @@ func (d *cassandraPersistence) GetReplicationTasks(
 	request *p.GetReplicationTasksRequest,
 ) (*p.InternalGetReplicationTasksResponse, error) {
 
-	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
-	query := d.session.Query(templateGetReplicationTasksQuery,
-		d.shardID,
-		rowTypeReplicationTask,
-		rowTypeReplicationDomainID,
-		rowTypeReplicationWorkflowID,
-		rowTypeReplicationRunID,
-		defaultVisibilityTimestamp,
-		request.ReadLevel,
-		request.MaxReadLevel,
-	).PageSize(request.BatchSize).PageState(request.NextPageToken).WithContext(ctx)
-
-	return d.populateGetReplicationTasksResponse(query)
+	tasks, nextPageToken, err := d.db.SelectReplicationTasksOrderByTaskID(ctx, d.shardID, request.BatchSize, request.NextPageToken, request.ReadLevel, request.MaxReadLevel)
+	if err != nil {
+		return nil, convertCommonErrors(d.client, "GetReplicationTasks", err)
+	}
+	return &p.InternalGetReplicationTasksResponse{
+		Tasks:         tasks,
+		NextPageToken: nextPageToken,
+	}, nil
 }
 
 func (d *cassandraPersistence) populateGetReplicationTasksResponse(
@@ -1652,17 +1624,8 @@ func (d *cassandraPersistence) CompleteCrossClusterTask(
 	ctx context.Context,
 	request *p.CompleteCrossClusterTaskRequest,
 ) error {
-	query := d.session.Query(templateCompleteCrossClusterTaskQuery,
-		d.shardID,
-		rowTypeCrossClusterTask,
-		rowTypeCrossClusterDomainID,
-		request.TargetCluster,
-		rowTypeCrossClusterRunID,
-		defaultVisibilityTimestamp,
-		request.TaskID,
-	).WithContext(ctx)
 
-	err := query.Exec()
+	err := d.db.DeleteCrossClusterTask(ctx, d.shardID, request.TargetCluster, request.TaskID)
 	if err != nil {
 		return convertCommonErrors(d.client, "CompleteCrossClusterTask", err)
 	}
@@ -1674,18 +1637,8 @@ func (d *cassandraPersistence) RangeCompleteCrossClusterTask(
 	ctx context.Context,
 	request *p.RangeCompleteCrossClusterTaskRequest,
 ) error {
-	query := d.session.Query(templateRangeCompleteCrossClusterTaskQuery,
-		d.shardID,
-		rowTypeCrossClusterTask,
-		rowTypeCrossClusterDomainID,
-		request.TargetCluster,
-		rowTypeCrossClusterRunID,
-		defaultVisibilityTimestamp,
-		request.ExclusiveBeginTaskID,
-		request.InclusiveEndTaskID,
-	).WithContext(ctx)
 
-	err := query.Exec()
+	err := d.db.RangeDeleteCrossClusterTasks(ctx, d.shardID, request.TargetCluster, request.ExclusiveBeginTaskID, request.InclusiveEndTaskID)
 	if err != nil {
 		return convertCommonErrors(d.client, "RangeCompleteCrossClusterTask", err)
 	}
@@ -1697,17 +1650,7 @@ func (d *cassandraPersistence) CompleteReplicationTask(
 	ctx context.Context,
 	request *p.CompleteReplicationTaskRequest,
 ) error {
-	query := d.session.Query(templateCompleteReplicationTaskQuery,
-		d.shardID,
-		rowTypeReplicationTask,
-		rowTypeReplicationDomainID,
-		rowTypeReplicationWorkflowID,
-		rowTypeReplicationRunID,
-		defaultVisibilityTimestamp,
-		request.TaskID,
-	).WithContext(ctx)
-
-	err := query.Exec()
+	err := d.db.DeleteReplicationTask(ctx, d.shardID, request.TaskID)
 	if err != nil {
 		return convertCommonErrors(d.client, "CompleteReplicationTask", err)
 	}
@@ -1720,17 +1663,7 @@ func (d *cassandraPersistence) RangeCompleteReplicationTask(
 	request *p.RangeCompleteReplicationTaskRequest,
 ) error {
 
-	query := d.session.Query(templateCompleteReplicationTaskBeforeQuery,
-		d.shardID,
-		rowTypeReplicationTask,
-		rowTypeReplicationDomainID,
-		rowTypeReplicationWorkflowID,
-		rowTypeReplicationRunID,
-		defaultVisibilityTimestamp,
-		request.InclusiveEndTaskID,
-	).WithContext(ctx)
-
-	err := query.Exec()
+	err := d.db.RangeDeleteReplicationTasks(ctx, d.shardID, request.InclusiveEndTaskID)
 	if err != nil {
 		return convertCommonErrors(d.client, "RangeCompleteReplicationTask", err)
 	}
