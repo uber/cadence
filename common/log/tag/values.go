@@ -262,6 +262,9 @@ var (
 	StoreOperationGetDLQAckLevels            = storeOperation("get-dlq-ack-levels")
 	StoreOperationGetDLQSize                 = storeOperation("get-dlq-size")
 	StoreOperationDeleteMessageFromDLQ       = storeOperation("delete-message-from-dlq")
+
+	StoreOperationFetchDynamicConfig  = storeOperation("fetch-dynamic-config")
+	StoreOperationUpdateDynamicConfig = storeOperation("update-dynamic-config")
 )
 
 // Pre-defined values for TagSysClientOperation

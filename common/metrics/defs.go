@@ -288,6 +288,10 @@ const (
 	PersistenceGetDLQAckLevelScope
 	// PersistenceGetDLQSizeScope tracks GetDLQSize calls made by service to persistence layer
 	PersistenceGetDLQSizeScope
+	// PersistenceFetchDynamicConfigLevelScope tracks FetchDynamicConfig calls made by service to persistence layer
+	PersistenceFetchDynamicConfigScope
+	// PersistenceUpdateDynamicConfigLevelScope tracks UpdateDynamicConfig calls made by service to persistence layer
+	PersistenceUpdateDynamicConfigScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientDescribeHistoryHostScope tracks RPC calls to history service
@@ -1217,6 +1221,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceUpdateDLQAckLevelScope:                        {operation: "UpdateDLQAckLevel"},
 		PersistenceGetDLQAckLevelScope:                           {operation: "GetDLQAckLevel"},
 		PersistenceGetDLQSizeScope:                               {operation: "GetDLQSize"},
+		PersistenceFetchDynamicConfigScope:                       {operation: "FetchDynamicConfig"},
+		PersistenceUpdateDynamicConfigScope:                      {operation: "UpdateDynamicConfig"},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 

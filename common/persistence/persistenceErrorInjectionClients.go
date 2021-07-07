@@ -89,6 +89,12 @@ type (
 		errorRate   float64
 		logger      log.Logger
 	}
+
+	configStoreErrorInjectionPersistenceClient struct {
+		persistence ConfigStoreManager
+		errorRate   float64
+		logger      log.Logger
+	}
 )
 
 var _ ShardManager = (*shardErrorInjectionPersistenceClient)(nil)
@@ -98,6 +104,7 @@ var _ HistoryManager = (*historyErrorInjectionPersistenceClient)(nil)
 var _ DomainManager = (*metadataErrorInjectionPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityErrorInjectionPersistenceClient)(nil)
 var _ QueueManager = (*queueErrorInjectionPersistenceClient)(nil)
+var _ ConfigStoreManager = (*configStoreErrorInjectionPersistenceClient)(nil)
 
 // NewShardPersistenceErrorInjectionClient creates an error injection client to manage shards
 func NewShardPersistenceErrorInjectionClient(
@@ -184,6 +191,19 @@ func NewQueuePersistenceErrorInjectionClient(
 	logger log.Logger,
 ) QueueManager {
 	return &queueErrorInjectionPersistenceClient{
+		persistence: persistence,
+		errorRate:   errorRate,
+		logger:      logger,
+	}
+}
+
+// NewConfigStoreErrorInjectionPersistenceClient creates an error injection client to manage config store
+func NewConfigStoreErrorInjectionPersistenceClient(
+	persistence ConfigStoreManager,
+	errorRate float64,
+	logger log.Logger,
+) ConfigStoreManager {
+	return &configStoreErrorInjectionPersistenceClient{
 		persistence: persistence,
 		errorRate:   errorRate,
 		logger:      logger,
@@ -2256,6 +2276,53 @@ func (p *queueErrorInjectionPersistenceClient) DeleteMessageFromDLQ(
 }
 
 func (p *queueErrorInjectionPersistenceClient) Close() {
+	p.persistence.Close()
+}
+
+func (p *configStoreErrorInjectionPersistenceClient) FetchDynamicConfig(ctx context.Context) (*DynamicConfigSnapshot, error) {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var response *DynamicConfigSnapshot
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		response, persistenceErr = p.persistence.FetchDynamicConfig(ctx)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationFetchDynamicConfig,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return nil, fakeErr
+	}
+	return response, persistenceErr
+}
+
+func (p *configStoreErrorInjectionPersistenceClient) UpdateDynamicConfig(ctx context.Context, snapshot *DynamicConfigSnapshot) error {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		persistenceErr = p.persistence.UpdateDynamicConfig(ctx, snapshot)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationUpdateDynamicConfig,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return fakeErr
+	}
+	return persistenceErr
+}
+
+func (p *configStoreErrorInjectionPersistenceClient) Close() {
 	p.persistence.Close()
 }
 
