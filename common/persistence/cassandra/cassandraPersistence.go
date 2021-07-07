@@ -1492,25 +1492,13 @@ func (d *cassandraPersistence) IsWorkflowExecutionExists(
 	ctx context.Context,
 	request *p.IsWorkflowExecutionExistsRequest,
 ) (*p.IsWorkflowExecutionExistsResponse, error) {
-	query := d.session.Query(templateIsWorkflowExecutionExistsQuery,
-		d.shardID,
-		rowTypeExecution,
-		request.DomainID,
-		request.WorkflowID,
-		request.RunID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID,
-	).WithContext(ctx)
-
-	result := make(map[string]interface{})
-	if err := query.MapScan(result); err != nil {
-		if d.client.IsNotFoundError(err) {
-			return &p.IsWorkflowExecutionExistsResponse{Exists: false}, nil
-		}
-
+	exists, err := d.db.IsWorkflowExecutionExists(ctx, d.shardID, request.DomainID, request.WorkflowID, request.RunID)
+	if err != nil {
 		return nil, convertCommonErrors(d.client, "IsWorkflowExecutionExists", err)
 	}
-	return &p.IsWorkflowExecutionExistsResponse{Exists: true}, nil
+	return &p.IsWorkflowExecutionExistsResponse{
+		Exists: exists,
+	}, nil
 }
 
 func (d *cassandraPersistence) ListConcreteExecutions(

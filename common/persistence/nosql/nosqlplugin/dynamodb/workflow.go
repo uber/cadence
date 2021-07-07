@@ -81,3 +81,7 @@ func (db *ddb) SelectAllCurrentWorkflows(ctx context.Context, shardID int, pageT
 func (db *ddb) SelectAllWorkflowExecutions(ctx context.Context, shardID int, pageToken []byte, pageSize int) ([]*persistence.InternalListConcreteExecutionsEntity, []byte, error) {
 	panic("TODO")
 }
+
+func (db *ddb) IsWorkflowExecutionExists(ctx context.Context, shardID int, domainID, workflowID, runID string) (bool, error) {
+	panic("TODO")
+}

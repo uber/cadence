@@ -389,3 +389,25 @@ func (db *cdb) SelectAllWorkflowExecutions(ctx context.Context, shardID int, pag
 	}
 	return executions, nextPageToken, nil
 }
+
+func (db *cdb) IsWorkflowExecutionExists(ctx context.Context, shardID int, domainID, workflowID, runID string) (bool, error) {
+	query := db.session.Query(templateIsWorkflowExecutionExistsQuery,
+		shardID,
+		rowTypeExecution,
+		domainID,
+		workflowID,
+		runID,
+		defaultVisibilityTimestamp,
+		rowTypeExecutionTaskID,
+	).WithContext(ctx)
+
+	result := make(map[string]interface{})
+	if err := query.MapScan(result); err != nil {
+		if db.client.IsNotFoundError(err) {
+			return false, nil
+		}
+
+		return false, err
+	}
+	return true, nil
+}
