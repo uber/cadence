@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,11 +23,14 @@ package host
 import (
 	"bytes"
 	"encoding/binary"
+	"flag"
 	"strconv"
+	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
@@ -39,6 +42,25 @@ type SizeLimitIntegrationSuite struct {
 	// not merely log an error
 	*require.Assertions
 	IntegrationBase
+}
+
+func TestSizeLimitIntegrationSuite(t *testing.T) {
+	flag.Parse()
+
+	clusterConfig, err := GetTestClusterConfig("testdata/integration_sizelimit_cluster.yaml")
+	if err != nil {
+		panic(err)
+	}
+	testCluster := NewPersistenceTestCluster(clusterConfig)
+
+	s := new(SizeLimitIntegrationSuite)
+	params := IntegrationBaseParams{
+		DefaultTestCluster:    testCluster,
+		VisibilityTestCluster: testCluster,
+		TestClusterConfig:     clusterConfig,
+	}
+	s.IntegrationBase = NewIntegrationBase(params)
+	suite.Run(t, s)
 }
 
 // This cluster use customized threshold for history config

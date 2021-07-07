@@ -121,7 +121,7 @@ func (t *nosqlTaskStore) LeaseTaskList(
 		}
 
 		// Update the rangeID as this is an ownership change
-		currTL.RangeID += 1
+		currTL.RangeID++
 
 		err = t.db.UpdateTaskList(ctx, &nosqlplugin.TaskListRow{
 			DomainID:        request.DomainID,

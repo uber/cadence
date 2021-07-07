@@ -172,7 +172,7 @@ type Service struct {
 
 	status       int32
 	handler      *WorkflowHandler
-	adminHandler *adminHandlerImpl
+	adminHandler AdminHandler
 	stopC        chan struct{}
 	config       *Config
 	params       *service.BootstrapParams

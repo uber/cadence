@@ -188,7 +188,7 @@ func applyWorkflowMutationTx(
 		}
 	}
 
-	if err := updateBufferedEvents(
+	return updateBufferedEvents(
 		ctx,
 		tx,
 		workflowMutation.NewBufferedEvents,
@@ -196,10 +196,7 @@ func applyWorkflowMutationTx(
 		domainID,
 		workflowID,
 		runID,
-	); err != nil {
-		return err
-	}
-	return nil
+	)
 }
 
 func applyWorkflowSnapshotTxAsReset(
@@ -395,16 +392,13 @@ func applyWorkflowSnapshotTxAsReset(
 		return err
 	}
 
-	if err := deleteBufferedEvents(
+	return deleteBufferedEvents(
 		ctx,
 		tx,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return err
-	}
-	return nil
+		runID)
 }
 
 func (m *sqlExecutionStore) applyWorkflowSnapshotTxAsNew(
@@ -516,7 +510,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotTxAsNew(
 		return err
 	}
 
-	if err := updateSignalsRequested(
+	return updateSignalsRequested(
 		ctx,
 		tx,
 		workflowSnapshot.SignalRequestedIDs,
@@ -524,11 +518,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotTxAsNew(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
-		return err
-	}
-
-	return nil
+		runID)
 }
 
 func applyTasks(

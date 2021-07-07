@@ -22,7 +22,9 @@ package metrics
 
 import "context"
 
-const contextTagsKey = "metrics.Tags"
+type contextTag string
+
+const contextTagsKey = contextTag("metrics.Tags")
 
 func TagContext(ctx context.Context, tag Tag) context.Context {
 	tags, ok := ctx.Value(contextTagsKey).([]Tag)
