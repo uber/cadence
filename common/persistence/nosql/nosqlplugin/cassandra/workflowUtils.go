@@ -991,6 +991,14 @@ func (db *cdb) convertToCassandraTimestamp(in time.Time) time.Time {
 	return time.Unix(0, persistence.DBTimestampToUnixNano(persistence.UnixNanoToDBTimestamp(in.UnixNano())))
 }
 
+// TODO: if possible, remove the copy in the future, or add comment of why we need it
+func getNextPageToken(iter gocql.Iter) []byte {
+	nextPageToken := iter.PageState()
+	newPageToken := make([]byte, len(nextPageToken))
+	copy(newPageToken, nextPageToken)
+	return newPageToken
+}
+
 func (db *cdb) createWorkflowExecutionWithMergeMaps(
 	batch gocql.Batch,
 	shardID int,

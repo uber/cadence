@@ -345,12 +345,10 @@ func (db *cdb) SelectAllCurrentWorkflows(ctx context.Context, shardID int, pageT
 		})
 		result = make(map[string]interface{})
 	}
-	nextPageToken := iter.PageState()
-	newPageToken := make([]byte, len(nextPageToken))
-	copy(newPageToken, nextPageToken)
+	nextPageToken := getNextPageToken(iter)
 
 	err := iter.Close()
-	return executions, newPageToken, err
+	return executions, nextPageToken, err
 }
 
 func (db *cdb) SelectAllWorkflowExecutions(ctx context.Context, shardID int, pageToken []byte, pageSize int) ([]*p.InternalListConcreteExecutionsEntity, []byte, error) {
@@ -381,9 +379,7 @@ func (db *cdb) SelectAllWorkflowExecutions(ctx context.Context, shardID int, pag
 		})
 		result = make(map[string]interface{})
 	}
-	nextPageToken := iter.PageState()
-	nextPageToken = make([]byte, len(nextPageToken))
-	copy(nextPageToken, nextPageToken)
+	nextPageToken := getNextPageToken(iter)
 
 	if err := iter.Close(); err != nil {
 		return nil, nil, err
@@ -442,9 +438,7 @@ func (db *cdb) SelectTransferTasksOrderByTaskID(ctx context.Context, shardID, pa
 
 		tasks = append(tasks, t)
 	}
-	nextPageToken := iter.PageState()
-	nextPageToken = make([]byte, len(nextPageToken))
-	copy(nextPageToken, nextPageToken)
+	nextPageToken := getNextPageToken(iter)
 
 	err := iter.Close()
 	return tasks, nextPageToken, err
@@ -509,9 +503,7 @@ func (db *cdb) SelectTimerTasksOrderByVisibilityTime(ctx context.Context, shardI
 
 		timers = append(timers, t)
 	}
-	nextPageToken := iter.PageState()
-	nextPageToken = make([]byte, len(nextPageToken))
-	copy(nextPageToken, nextPageToken)
+	nextPageToken := getNextPageToken(iter)
 
 	err := iter.Close()
 	return timers, nextPageToken, err
