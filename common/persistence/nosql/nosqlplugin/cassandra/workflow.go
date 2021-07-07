@@ -24,6 +24,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
@@ -473,6 +474,75 @@ func (db *cdb) RangeDeleteTransferTasks(ctx context.Context, shardID int, exclus
 		defaultVisibilityTimestamp,
 		exclusiveBeginTaskID,
 		inclusiveEndTaskID,
+	).WithContext(ctx)
+
+	return query.Exec()
+}
+
+func (db *cdb) SelectTimerTasksOrderByVisibilityTime(ctx context.Context, shardID, pageSize int, pageToken []byte, inclusiveMinTime, exclusiveMaxTime time.Time) ([]*nosqlplugin.TimerTask, []byte, error) {
+	// Reading timer tasks need to be quorum level consistent, otherwise we could loose task
+	minTimestamp := p.UnixNanoToDBTimestamp(inclusiveMinTime.UnixNano())
+	maxTimestamp := p.UnixNanoToDBTimestamp(exclusiveMaxTime.UnixNano())
+	query := db.session.Query(templateGetTimerTasksQuery,
+		shardID,
+		rowTypeTimerTask,
+		rowTypeTimerDomainID,
+		rowTypeTimerWorkflowID,
+		rowTypeTimerRunID,
+		minTimestamp,
+		maxTimestamp,
+	).PageSize(pageSize).PageState(pageToken).WithContext(ctx)
+
+	iter := query.Iter()
+	if iter == nil {
+		return nil, nil, &types.InternalServiceError{
+			Message: "SelectTimerTasksOrderByVisibilityTime operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	var timers []*nosqlplugin.TimerTask
+	task := make(map[string]interface{})
+	for iter.MapScan(task) {
+		t := parseTimerTaskInfo(task["timer"].(map[string]interface{}))
+		// Reset task map to get it ready for next scan
+		task = make(map[string]interface{})
+
+		timers = append(timers, t)
+	}
+	nextPageToken := iter.PageState()
+	nextPageToken = make([]byte, len(nextPageToken))
+	copy(nextPageToken, nextPageToken)
+
+	err := iter.Close()
+	return timers, nextPageToken, err
+}
+
+func (db *cdb) DeleteTimerTask(ctx context.Context, shardID int, taskID int64, visibilityTimestamp time.Time) error {
+	ts := p.UnixNanoToDBTimestamp(visibilityTimestamp.UnixNano())
+	query := db.session.Query(templateCompleteTimerTaskQuery,
+		shardID,
+		rowTypeTimerTask,
+		rowTypeTimerDomainID,
+		rowTypeTimerWorkflowID,
+		rowTypeTimerRunID,
+		ts,
+		taskID,
+	).WithContext(ctx)
+
+	return query.Exec()
+}
+
+func (db *cdb) RangeDeleteTimerTasks(ctx context.Context, shardID int, inclusiveMinTime, exclusiveMaxTime time.Time) error {
+	start := p.UnixNanoToDBTimestamp(inclusiveMinTime.UnixNano())
+	end := p.UnixNanoToDBTimestamp(exclusiveMaxTime.UnixNano())
+	query := db.session.Query(templateRangeCompleteTimerTaskQuery,
+		shardID,
+		rowTypeTimerTask,
+		rowTypeTimerDomainID,
+		rowTypeTimerWorkflowID,
+		rowTypeTimerRunID,
+		start,
+		end,
 	).WithContext(ctx)
 
 	return query.Exec()

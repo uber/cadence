@@ -23,6 +23,7 @@ package dynamodb
 
 import (
 	"context"
+	"time"
 
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
@@ -95,5 +96,17 @@ func (db *ddb) DeleteTransferTask(ctx context.Context, shardID int, taskID int64
 }
 
 func (db *ddb) RangeDeleteTransferTasks(ctx context.Context, shardID int, exclusiveBeginTaskID, inclusiveEndTaskID int64) error {
+	panic("TODO")
+}
+
+func (db *ddb) SelectTimerTasksOrderByVisibilityTime(ctx context.Context, shardID, pageSize int, pageToken []byte, inclusiveMinTime, exclusiveMaxTime time.Time) ([]*nosqlplugin.TimerTask, []byte, error) {
+	panic("TODO")
+}
+
+func (db *ddb) DeleteTimerTask(ctx context.Context, shardID int, taskID int64, visibilityTimestamp time.Time) error {
+	panic("TODO")
+}
+
+func (db *ddb) RangeDeleteTimerTasks(ctx context.Context, shardID int, inclusiveMinTime, exclusiveMaxTime time.Time) error {
 	panic("TODO")
 }

@@ -452,11 +452,19 @@ type (
 
 		// transfer_task table
 		// within a shard, paging through transfer tasks order by taskID(ASC), filtered by minTaskID(exclusive) and maxTaskID(inclusive)
-		SelectTransferTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64, ) ([]*TransferTask, []byte, error)
+		SelectTransferTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*TransferTask, []byte, error)
 		// delete a single transfer task
 		DeleteTransferTask(ctx context.Context, shardID int, taskID int64) error
 		// delete a range of transfer tasks
 		RangeDeleteTransferTasks(ctx context.Context, shardID int, exclusiveBeginTaskID, inclusiveEndTaskID int64) error
+
+		// timer_task table
+		// within a shard, paging through timer tasks order by taskID(ASC), filtered by visibilityTimestamp
+		SelectTimerTasksOrderByVisibilityTime(ctx context.Context, shardID, pageSize int, pageToken []byte, inclusiveMinTime, exclusiveMaxTime time.Time) ([]*TimerTask, []byte, error)
+		// delete a single timer task
+		DeleteTimerTask(ctx context.Context, shardID int, taskID int64, visibilityTimestamp time.Time) error
+		// delete a range of timer tasks
+		RangeDeleteTimerTasks(ctx context.Context, shardID int, inclusiveMinTime, exclusiveMaxTime time.Time) error
 	}
 
 	WorkflowExecution = persistence.InternalWorkflowMutableState

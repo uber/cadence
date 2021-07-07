@@ -1742,18 +1742,7 @@ func (d *cassandraPersistence) CompleteTimerTask(
 	ctx context.Context,
 	request *p.CompleteTimerTaskRequest,
 ) error {
-	ts := p.UnixNanoToDBTimestamp(request.VisibilityTimestamp.UnixNano())
-	query := d.session.Query(templateCompleteTimerTaskQuery,
-		d.shardID,
-		rowTypeTimerTask,
-		rowTypeTimerDomainID,
-		rowTypeTimerWorkflowID,
-		rowTypeTimerRunID,
-		ts,
-		request.TaskID,
-	).WithContext(ctx)
-
-	err := query.Exec()
+	err := d.db.DeleteTimerTask(ctx, d.shardID, request.TaskID, request.VisibilityTimestamp)
 	if err != nil {
 		return convertCommonErrors(d.client, "CompleteTimerTask", err)
 	}
@@ -1765,19 +1754,7 @@ func (d *cassandraPersistence) RangeCompleteTimerTask(
 	ctx context.Context,
 	request *p.RangeCompleteTimerTaskRequest,
 ) error {
-	start := p.UnixNanoToDBTimestamp(request.InclusiveBeginTimestamp.UnixNano())
-	end := p.UnixNanoToDBTimestamp(request.ExclusiveEndTimestamp.UnixNano())
-	query := d.session.Query(templateRangeCompleteTimerTaskQuery,
-		d.shardID,
-		rowTypeTimerTask,
-		rowTypeTimerDomainID,
-		rowTypeTimerWorkflowID,
-		rowTypeTimerRunID,
-		start,
-		end,
-	).WithContext(ctx)
-
-	err := query.Exec()
+	err := d.db.RangeDeleteTimerTasks(ctx, d.shardID, request.InclusiveBeginTimestamp, request.ExclusiveEndTimestamp)
 	if err != nil {
 		return convertCommonErrors(d.client, "RangeCompleteTimerTask", err)
 	}
@@ -1789,44 +1766,16 @@ func (d *cassandraPersistence) GetTimerIndexTasks(
 	ctx context.Context,
 	request *p.GetTimerIndexTasksRequest,
 ) (*p.GetTimerIndexTasksResponse, error) {
-	// Reading timer tasks need to be quorum level consistent, otherwise we could loose task
-	minTimestamp := p.UnixNanoToDBTimestamp(request.MinTimestamp.UnixNano())
-	maxTimestamp := p.UnixNanoToDBTimestamp(request.MaxTimestamp.UnixNano())
-	query := d.session.Query(templateGetTimerTasksQuery,
-		d.shardID,
-		rowTypeTimerTask,
-		rowTypeTimerDomainID,
-		rowTypeTimerWorkflowID,
-		rowTypeTimerRunID,
-		minTimestamp,
-		maxTimestamp,
-	).PageSize(request.BatchSize).PageState(request.NextPageToken).WithContext(ctx)
 
-	iter := query.Iter()
-	if iter == nil {
-		return nil, &types.InternalServiceError{
-			Message: "GetTimerTasks operation failed.  Not able to create query iterator.",
-		}
-	}
-
-	response := &p.GetTimerIndexTasksResponse{}
-	task := make(map[string]interface{})
-	for iter.MapScan(task) {
-		t := createTimerTaskInfo(task["timer"].(map[string]interface{}))
-		// Reset task map to get it ready for next scan
-		task = make(map[string]interface{})
-
-		response.Timers = append(response.Timers, t)
-	}
-	nextPageToken := iter.PageState()
-	response.NextPageToken = make([]byte, len(nextPageToken))
-	copy(response.NextPageToken, nextPageToken)
-
-	if err := iter.Close(); err != nil {
+	timers, nextPageToken, err := d.db.SelectTimerTasksOrderByVisibilityTime(ctx, d.shardID, request.BatchSize, request.NextPageToken, request.MinTimestamp, request.MaxTimestamp)
+	if err != nil {
 		return nil, convertCommonErrors(d.client, "GetTimerTasks", err)
 	}
 
-	return response, nil
+	return &p.GetTimerIndexTasksResponse{
+		Timers:        timers,
+		NextPageToken: nextPageToken,
+	}, nil
 }
 
 func (d *cassandraPersistence) PutReplicationTaskToDLQ(
