@@ -1279,7 +1279,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 		return err
 	}
 
-	// 2. new 
+	// 2. new
 	if newWorkflow != nil {
 		insertExecution, err = d.prepareCreateWorkflowExecutionRequestWithMaps(newWorkflow)
 
@@ -1402,7 +1402,7 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 		}
 	}
 
-	// 2. reset 
+	// 2. reset
 	resetExecution, err = d.prepareResetWorkflowExecutionRequestWithMapsAndEventBuffer(&resetWorkflow)
 	if err != nil {
 		return err

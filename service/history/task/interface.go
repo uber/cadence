@@ -28,6 +28,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/task"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -56,7 +57,9 @@ type (
 	CrossClusterTask interface {
 		Task
 		IsReadyForPoll() bool
+		IsValid() bool
 		Update(interface{}) error //TODO: update interface once the cross cluster response idl lands
+		GetCrossClusterRequest() *types.CrossClusterTaskRequest
 	}
 
 	// Key identifies a Task and defines a total order among tasks
