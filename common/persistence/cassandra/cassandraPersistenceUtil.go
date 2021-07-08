@@ -101,43 +101,6 @@ func createReplicationTasks(
 	return nil
 }
 
-func createReplicationTaskInfo(
-	result map[string]interface{},
-) *p.InternalReplicationTaskInfo {
-
-	info := &p.InternalReplicationTaskInfo{}
-	for k, v := range result {
-		switch k {
-		case "domain_id":
-			info.DomainID = v.(gocql.UUID).String()
-		case "workflow_id":
-			info.WorkflowID = v.(string)
-		case "run_id":
-			info.RunID = v.(gocql.UUID).String()
-		case "task_id":
-			info.TaskID = v.(int64)
-		case "type":
-			info.TaskType = v.(int)
-		case "first_event_id":
-			info.FirstEventID = v.(int64)
-		case "next_event_id":
-			info.NextEventID = v.(int64)
-		case "version":
-			info.Version = v.(int64)
-		case "scheduled_id":
-			info.ScheduledID = v.(int64)
-		case "branch_token":
-			info.BranchToken = v.([]byte)
-		case "new_run_branch_token":
-			info.NewRunBranchToken = v.([]byte)
-		case "created_time":
-			info.CreationTime = time.Unix(0, v.(int64))
-		}
-	}
-
-	return info
-}
-
 func convertCommonErrors(
 	errChecker nosqlplugin.ClientErrorChecker,
 	operation string,
@@ -865,48 +828,6 @@ func (d *cassandraPersistence) assertNotCurrentExecution(
 		return &p.ConditionFailedError{
 			Msg: fmt.Sprintf("Assertion on current record failed. Current run ID is not expected: %v", resp.RunID),
 		}
-	}
-
-	return nil
-}
-
-func (d *cassandraPersistence) populateGetReplicationTasksResponse(
-	query gocql.Query,
-) (*p.InternalGetReplicationTasksResponse, error) {
-	iter := query.Iter()
-	if iter == nil {
-		return nil, &types.InternalServiceError{
-			Message: "GetReplicationTasks operation failed.  Not able to create query iterator.",
-		}
-	}
-
-	response := &p.InternalGetReplicationTasksResponse{}
-	task := make(map[string]interface{})
-	for iter.MapScan(task) {
-		t := createReplicationTaskInfo(task["replication"].(map[string]interface{}))
-		// Reset task map to get it ready for next scan
-		task = make(map[string]interface{})
-
-		response.Tasks = append(response.Tasks, t)
-	}
-	nextPageToken := iter.PageState()
-	response.NextPageToken = make([]byte, len(nextPageToken))
-	copy(response.NextPageToken, nextPageToken)
-
-	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(d.client, "GetReplicationTasks", err)
-	}
-
-	return response, nil
-}
-
-func (d *cassandraPersistence) CompleteTransferTask(
-	ctx context.Context,
-	request *p.CompleteTransferTaskRequest,
-) error {
-	err := d.db.DeleteTransferTask(ctx, d.shardID, request.TaskID)
-	if err != nil {
-		return convertCommonErrors(d.client, "CompleteTransferTask", err)
 	}
 
 	return nil

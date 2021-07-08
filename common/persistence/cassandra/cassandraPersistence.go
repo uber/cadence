@@ -751,6 +751,18 @@ func (d *cassandraPersistence) GetReplicationTasks(
 	}, nil
 }
 
+func (d *cassandraPersistence) CompleteTransferTask(
+	ctx context.Context,
+	request *p.CompleteTransferTaskRequest,
+) error {
+	err := d.db.DeleteTransferTask(ctx, d.shardID, request.TaskID)
+	if err != nil {
+		return convertCommonErrors(d.client, "CompleteTransferTask", err)
+	}
+
+	return nil
+}
+
 func (d *cassandraPersistence) RangeCompleteTransferTask(
 	ctx context.Context,
 	request *p.RangeCompleteTransferTaskRequest,
