@@ -858,34 +858,8 @@ func (d *cassandraPersistence) PutReplicationTaskToDLQ(
 	ctx context.Context,
 	request *p.InternalPutReplicationTaskToDLQRequest,
 ) error {
-	task := request.TaskInfo
 
-	// Use source cluster name as the workflow id for replication dlq
-	query := d.session.Query(templateCreateReplicationTaskQuery,
-		d.shardID,
-		rowTypeDLQ,
-		rowTypeDLQDomainID,
-		request.SourceClusterName,
-		rowTypeDLQRunID,
-		task.DomainID,
-		task.WorkflowID,
-		task.RunID,
-		task.TaskID,
-		task.TaskType,
-		task.FirstEventID,
-		task.NextEventID,
-		task.Version,
-		task.ScheduledID,
-		p.EventStoreVersion,
-		task.BranchToken,
-		p.EventStoreVersion,
-		task.NewRunBranchToken,
-		defaultVisibilityTimestamp,
-		defaultVisibilityTimestamp,
-		task.TaskID,
-	).WithContext(ctx)
-
-	err := query.Exec()
+	err := d.db.InsertReplicationDLQTask(ctx, d.shardID, request.SourceClusterName, *request.TaskInfo)
 	if err != nil {
 		return convertCommonErrors(d.client, "PutReplicationTaskToDLQ", err)
 	}
@@ -897,19 +871,14 @@ func (d *cassandraPersistence) GetReplicationTasksFromDLQ(
 	ctx context.Context,
 	request *p.GetReplicationTasksFromDLQRequest,
 ) (*p.InternalGetReplicationTasksFromDLQResponse, error) {
-	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
-	query := d.session.Query(templateGetReplicationTasksQuery,
-		d.shardID,
-		rowTypeDLQ,
-		rowTypeDLQDomainID,
-		request.SourceClusterName,
-		rowTypeDLQRunID,
-		defaultVisibilityTimestamp,
-		request.ReadLevel,
-		request.MaxReadLevel,
-	).PageSize(request.BatchSize).PageState(request.NextPageToken).WithContext(ctx)
-
-	return d.populateGetReplicationTasksResponse(query)
+	tasks, nextPageToken, err := d.db.SelectReplicationDLQTasksOrderByTaskID(ctx, d.shardID, request.SourceClusterName, request.BatchSize, request.NextPageToken, request.ReadLevel, request.MaxReadLevel)
+	if err != nil {
+		return nil, convertCommonErrors(d.client, "GetReplicationTasks", err)
+	}
+	return &p.InternalGetReplicationTasksResponse{
+		Tasks:         tasks,
+		NextPageToken: nextPageToken,
+	}, nil
 }
 
 func (d *cassandraPersistence) GetReplicationDLQSize(

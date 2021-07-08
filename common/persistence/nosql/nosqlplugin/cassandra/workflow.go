@@ -648,3 +648,48 @@ func (db *cdb) RangeDeleteCrossClusterTasks(ctx context.Context, shardID int, ta
 
 	return query.Exec()
 }
+
+func (db *cdb) InsertReplicationDLQTask(ctx context.Context, shardID int, sourceCluster string, task nosqlplugin.ReplicationTask) error {
+	// Use source cluster name as the workflow id for replication dlq
+	query := db.session.Query(templateCreateReplicationTaskQuery,
+		shardID,
+		rowTypeDLQ,
+		rowTypeDLQDomainID,
+		sourceCluster,
+		rowTypeDLQRunID,
+		task.DomainID,
+		task.WorkflowID,
+		task.RunID,
+		task.TaskID,
+		task.TaskType,
+		task.FirstEventID,
+		task.NextEventID,
+		task.Version,
+		task.ScheduledID,
+		p.EventStoreVersion,
+		task.BranchToken,
+		p.EventStoreVersion,
+		task.NewRunBranchToken,
+		defaultVisibilityTimestamp,
+		defaultVisibilityTimestamp,
+		task.TaskID,
+	).WithContext(ctx)
+
+	return query.Exec()
+}
+
+func (db *cdb) SelectReplicationDLQTasksOrderByTaskID(ctx context.Context, shardID int, sourceCluster string, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*nosqlplugin.ReplicationTask, []byte, error) {
+	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
+	query := db.session.Query(templateGetReplicationTasksQuery,
+		shardID,
+		rowTypeDLQ,
+		rowTypeDLQDomainID,
+		sourceCluster,
+		rowTypeDLQRunID,
+		defaultVisibilityTimestamp,
+		exclusiveMinTaskID,
+		inclusiveMaxTaskID,
+	).PageSize(pageSize).PageState(pageToken).WithContext(ctx)
+
+	return populateGetReplicationTasks(query)
+}

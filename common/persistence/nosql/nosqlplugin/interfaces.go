@@ -481,6 +481,12 @@ type (
 		DeleteCrossClusterTask(ctx context.Context, shardID int, targetCluster string, taskID int64) error
 		// delete a range of transfer tasks
 		RangeDeleteCrossClusterTasks(ctx context.Context, shardID int, targetCluster string, exclusiveBeginTaskID, inclusiveEndTaskID int64) error
+
+		// replication_dlq_task
+		// insert a new replication task to DLQ
+		InsertReplicationDLQTask(ctx context.Context, shardID int, sourceCluster string, task ReplicationTask) error
+		// within a shard, for a sourceCluster, paging through replication tasks order by taskID(ASC), filtered by minTaskID(exclusive) and maxTaskID(inclusive)
+		SelectReplicationDLQTasksOrderByTaskID(ctx context.Context, shardID int, sourceCluster string, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*ReplicationTask, []byte, error)
 	}
 
 	WorkflowExecution = persistence.InternalWorkflowMutableState

@@ -134,3 +134,11 @@ func (db *ddb) DeleteCrossClusterTask(ctx context.Context, shardID int, targetCl
 func (db *ddb) RangeDeleteCrossClusterTasks(ctx context.Context, shardID int, targetCluster string, exclusiveBeginTaskID, inclusiveEndTaskID int64) error {
 	panic("TODO")
 }
+
+func (db *ddb) InsertReplicationDLQTask(ctx context.Context, shardID int, sourceCluster string, task nosqlplugin.ReplicationTask) error {
+	panic("TODO")
+}
+
+func (db *ddb) SelectReplicationDLQTasksOrderByTaskID(ctx context.Context, shardID int, sourceCluster string, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*nosqlplugin.ReplicationTask, []byte, error) {
+	panic("TODO")
+}
