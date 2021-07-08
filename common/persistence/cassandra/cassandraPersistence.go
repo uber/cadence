@@ -23,7 +23,6 @@ package cassandra
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/uber/cadence/common/log"
@@ -938,81 +937,31 @@ func (d *cassandraPersistence) CreateFailoverMarkerTasks(
 	request *p.CreateFailoverMarkersRequest,
 ) error {
 
-	batch := d.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
+	var nosqlTasks []*nosqlplugin.ReplicationTask
 	for _, task := range request.Markers {
-		t := []p.Task{task}
-		if err := createReplicationTasks(
-			batch,
-			t,
-			d.shardID,
-			task.DomainID,
-			rowTypeReplicationWorkflowID,
-			rowTypeReplicationRunID,
-		); err != nil {
+		ts := []p.Task{task}
+
+		tasks, err := d.prepareReplicationTasksForWorkflowTxn(task.DomainID, rowTypeReplicationWorkflowID, rowTypeReplicationRunID, ts)
+		if err != nil {
 			return err
 		}
+		nosqlTasks = append(nosqlTasks, tasks...)
 	}
 
-	// Verifies that the RangeID has not changed
-	batch.Query(templateUpdateLeaseQuery,
-		request.RangeID,
-		d.shardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
-		request.RangeID,
-	)
+	err := d.db.InsertReplicationTask(ctx, nosqlTasks, nosqlplugin.ShardCondition{
+		ShardID: d.shardID,
+		RangeID: request.RangeID,
+	})
 
-	previous := make(map[string]interface{})
-	applied, iter, err := d.session.MapExecuteBatchCAS(batch, previous)
-	defer func() {
-		if iter != nil {
-			_ = iter.Close()
-		}
-	}()
 	if err != nil {
-		return convertCommonErrors(d.client, "CreateFailoverMarkerTasks", err)
-	}
-
-	if !applied {
-		rowType, ok := previous["type"].(int)
-		if !ok {
-			// This should never happen, as all our rows have the type field.
-			panic("Encounter row type not found")
-		}
-		if rowType == rowTypeShard {
-			if rangeID, ok := previous["range_id"].(int64); ok && rangeID != request.RangeID {
-				// CreateWorkflowExecution failed because rangeID was modified
-				return &p.ShardOwnershipLostError{
-					ShardID: d.shardID,
-					Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, Actual RangeID: %v",
-						request.RangeID, rangeID),
-				}
+		conditionFailureErr, isConditionFailedError := err.(*nosqlplugin.ShardOperationConditionFailure)
+		if isConditionFailedError {
+			return &p.ShardOwnershipLostError{
+				ShardID: d.shardID,
+				Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, columns: (%v)",
+					conditionFailureErr.RangeID, conditionFailureErr.Details),
 			}
 		}
-		return newShardOwnershipLostError(d.shardID, request.RangeID, previous)
 	}
 	return nil
-}
-
-func newShardOwnershipLostError(
-	shardID int,
-	rangeID int64,
-	row map[string]interface{},
-) error {
-	// At this point we only know that the write was not applied.
-	// It's much safer to return ShardOwnershipLostError as the default to force the application to reload
-	// shard to recover from such errors
-	var columns []string
-	for k, v := range row {
-		columns = append(columns, fmt.Sprintf("%s=%v", k, v))
-	}
-	return &p.ShardOwnershipLostError{
-		ShardID: shardID,
-		Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, columns: (%v)",
-			rangeID, strings.Join(columns, ",")),
-	}
 }

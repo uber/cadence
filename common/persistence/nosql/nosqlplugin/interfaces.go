@@ -473,6 +473,8 @@ type (
 		DeleteReplicationTask(ctx context.Context, shardID int, taskID int64) error
 		// delete a range of replication tasks
 		RangeDeleteReplicationTasks(ctx context.Context, shardID int, inclusiveEndTaskID int64) error
+		// insert replication task with shard condition check
+		InsertReplicationTask(ctx context.Context, tasks []*ReplicationTask, condition ShardCondition) error
 
 		// cross_cluster_task table
 		// within a shard, paging through replication tasks order by taskID(ASC), filtered by minTaskID(exclusive) and maxTaskID(inclusive)

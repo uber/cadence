@@ -31,75 +31,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 )
-
-func createReplicationTasks(
-	batch gocql.Batch,
-	replicationTasks []p.Task,
-	shardID int,
-	domainID string,
-	workflowID string,
-	runID string,
-) error {
-
-	for _, task := range replicationTasks {
-		// Replication task specific information
-		firstEventID := common.EmptyEventID
-		nextEventID := common.EmptyEventID
-		version := common.EmptyVersion //nolint:ineffassign
-		activityScheduleID := common.EmptyEventID
-		var branchToken, newRunBranchToken []byte
-
-		switch task.GetType() {
-		case p.ReplicationTaskTypeHistory:
-			histTask := task.(*p.HistoryReplicationTask)
-			branchToken = histTask.BranchToken
-			newRunBranchToken = histTask.NewRunBranchToken
-			firstEventID = histTask.FirstEventID
-			nextEventID = histTask.NextEventID
-			version = task.GetVersion()
-
-		case p.ReplicationTaskTypeSyncActivity:
-			version = task.GetVersion()
-			activityScheduleID = task.(*p.SyncActivityTask).ScheduledID
-
-		case p.ReplicationTaskTypeFailoverMarker:
-			version = task.GetVersion()
-
-		default:
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("Unknow replication type: %v", task.GetType()),
-			}
-		}
-
-		batch.Query(templateCreateReplicationTaskQuery,
-			shardID,
-			rowTypeReplicationTask,
-			rowTypeReplicationDomainID,
-			rowTypeReplicationWorkflowID,
-			rowTypeReplicationRunID,
-			domainID,
-			workflowID,
-			runID,
-			task.GetTaskID(),
-			task.GetType(),
-			firstEventID,
-			nextEventID,
-			version,
-			activityScheduleID,
-			p.EventStoreVersion,
-			branchToken,
-			p.EventStoreVersion,
-			newRunBranchToken,
-			task.GetVisibilityTimestamp().UnixNano(),
-			defaultVisibilityTimestamp,
-			task.GetTaskID())
-	}
-
-	return nil
-}
 
 func convertCommonErrors(
 	errChecker nosqlplugin.ClientErrorChecker,

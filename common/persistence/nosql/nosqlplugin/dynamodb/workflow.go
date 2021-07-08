@@ -123,6 +123,10 @@ func (db *ddb) RangeDeleteReplicationTasks(ctx context.Context, shardID int, inc
 	panic("TODO")
 }
 
+func (db *ddb) InsertReplicationTask(ctx context.Context, tasks []*nosqlplugin.ReplicationTask, condition nosqlplugin.ShardCondition) error {
+	panic("TODO")
+}
+
 func (db *ddb) SelectCrossClusterTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, targetCluster string, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*nosqlplugin.CrossClusterTask, []byte, error) {
 	panic("TODO")
 }
