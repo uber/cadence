@@ -489,7 +489,7 @@ func (d *nosqlExecutionStore) DeleteCurrentWorkflowExecution(
 ) error {
 	err := d.db.DeleteCurrentWorkflow(ctx, d.shardID, request.DomainID, request.WorkflowID, request.RunID)
 	if err != nil {
-		return convertCommonErrors(d.db, "DeleteWorkflowCurrentRow", err)
+		return convertCommonErrors(d.db, "DeleteCurrentWorkflowExecution", err)
 	}
 
 	return nil
@@ -748,7 +748,7 @@ func (d *nosqlExecutionStore) GetReplicationTasksFromDLQ(
 ) (*p.InternalGetReplicationTasksFromDLQResponse, error) {
 	tasks, nextPageToken, err := d.db.SelectReplicationDLQTasksOrderByTaskID(ctx, d.shardID, request.SourceClusterName, request.BatchSize, request.NextPageToken, request.ReadLevel, request.MaxReadLevel)
 	if err != nil {
-		return nil, convertCommonErrors(d.db, "GetReplicationTasks", err)
+		return nil, convertCommonErrors(d.db, "GetReplicationTasksFromDLQ", err)
 	}
 	return &p.InternalGetReplicationTasksResponse{
 		Tasks:         tasks,
