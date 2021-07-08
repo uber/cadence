@@ -27,6 +27,7 @@ import (
 
 	"github.com/pborman/uuid"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/definition"
@@ -315,7 +316,11 @@ func (c *Cache) getCurrentExecutionWithRetry(
 		return err
 	}
 
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, persistence.IsTransientError)
+	err := backoff.Retry(
+		op,
+		common.CreatePersistenceRetryPolicyWithContext(ctx),
+		persistence.IsTransientError,
+	)
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.HistoryCacheGetCurrentExecutionScope, metrics.CacheFailures)
 		return nil, err
