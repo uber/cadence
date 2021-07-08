@@ -142,3 +142,15 @@ func (db *ddb) InsertReplicationDLQTask(ctx context.Context, shardID int, source
 func (db *ddb) SelectReplicationDLQTasksOrderByTaskID(ctx context.Context, shardID int, sourceCluster string, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*nosqlplugin.ReplicationTask, []byte, error) {
 	panic("TODO")
 }
+
+func (db *ddb) SelectReplicationDLQTasksCount(ctx context.Context, shardID int, sourceCluster string) (int64, error) {
+	panic("TODO")
+}
+
+func (db *ddb) DeleteReplicationDLQTask(ctx context.Context, shardID int, sourceCluster string, taskID int64) error {
+	panic("TODO")
+}
+
+func (db *ddb) RangeDeleteReplicationDLQTasks(ctx context.Context, shardID int, sourceCluster string, exclusiveBeginTaskID, inclusiveEndTaskID int64) error {
+	panic("TODO")
+}

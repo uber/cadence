@@ -693,3 +693,51 @@ func (db *cdb) SelectReplicationDLQTasksOrderByTaskID(ctx context.Context, shard
 
 	return populateGetReplicationTasks(query)
 }
+
+func (db *cdb) SelectReplicationDLQTasksCount(ctx context.Context, shardID int, sourceCluster string) (int64, error) {
+	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
+	query := db.session.Query(templateGetDLQSizeQuery,
+		shardID,
+		rowTypeDLQ,
+		rowTypeDLQDomainID,
+		sourceCluster,
+		rowTypeDLQRunID,
+	).WithContext(ctx)
+
+	result := make(map[string]interface{})
+	if err := query.MapScan(result); err != nil {
+		return -1, err
+	}
+
+	queueSize := result["count"].(int64)
+	return queueSize, nil
+}
+
+func (db *cdb) DeleteReplicationDLQTask(ctx context.Context, shardID int, sourceCluster string, taskID int64) error {
+	query := db.session.Query(templateCompleteReplicationTaskQuery,
+		shardID,
+		rowTypeDLQ,
+		rowTypeDLQDomainID,
+		sourceCluster,
+		rowTypeDLQRunID,
+		defaultVisibilityTimestamp,
+		taskID,
+	).WithContext(ctx)
+
+	return query.Exec()
+}
+
+func (db *cdb) RangeDeleteReplicationDLQTasks(ctx context.Context, shardID int, sourceCluster string, exclusiveBeginTaskID, inclusiveEndTaskID int64) error {
+	query := db.session.Query(templateRangeCompleteReplicationTaskQuery,
+		shardID,
+		rowTypeDLQ,
+		rowTypeDLQDomainID,
+		sourceCluster,
+		rowTypeDLQRunID,
+		defaultVisibilityTimestamp,
+		exclusiveBeginTaskID,
+		inclusiveEndTaskID,
+	).WithContext(ctx)
+
+	return query.Exec()
+}

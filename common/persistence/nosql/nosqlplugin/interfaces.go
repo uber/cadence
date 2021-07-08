@@ -469,9 +469,9 @@ type (
 		// replication_task table
 		// within a shard, paging through replication tasks order by taskID(ASC), filtered by minTaskID(exclusive) and maxTaskID(inclusive)
 		SelectReplicationTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*ReplicationTask, []byte, error)
-		// delete a single transfer task
+		// delete a single replication task
 		DeleteReplicationTask(ctx context.Context, shardID int, taskID int64) error
-		// delete a range of transfer tasks
+		// delete a range of replication tasks
 		RangeDeleteReplicationTasks(ctx context.Context, shardID int, inclusiveEndTaskID int64) error
 
 		// cross_cluster_task table
@@ -487,6 +487,12 @@ type (
 		InsertReplicationDLQTask(ctx context.Context, shardID int, sourceCluster string, task ReplicationTask) error
 		// within a shard, for a sourceCluster, paging through replication tasks order by taskID(ASC), filtered by minTaskID(exclusive) and maxTaskID(inclusive)
 		SelectReplicationDLQTasksOrderByTaskID(ctx context.Context, shardID int, sourceCluster string, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*ReplicationTask, []byte, error)
+		// return the DLQ size
+		SelectReplicationDLQTasksCount(ctx context.Context, shardID int, sourceCluster string) (int64, error)
+		// delete a single replication DLQ task
+		DeleteReplicationDLQTask(ctx context.Context, shardID int, sourceCluster string, taskID int64) error
+		// delete a range of replication DLQ tasks
+		RangeDeleteReplicationDLQTasks(ctx context.Context, shardID int, sourceCluster string, exclusiveBeginTaskID, inclusiveEndTaskID int64) error
 	}
 
 	WorkflowExecution = persistence.InternalWorkflowMutableState

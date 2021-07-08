@@ -886,23 +886,12 @@ func (d *cassandraPersistence) GetReplicationDLQSize(
 	request *p.GetReplicationDLQSizeRequest,
 ) (*p.GetReplicationDLQSizeResponse, error) {
 
-	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
-	query := d.session.Query(templateGetDLQSizeQuery,
-		d.shardID,
-		rowTypeDLQ,
-		rowTypeDLQDomainID,
-		request.SourceClusterName,
-		rowTypeDLQRunID,
-	).WithContext(ctx)
-
-	result := make(map[string]interface{})
-	if err := query.MapScan(result); err != nil {
+	size, err := d.db.SelectReplicationDLQTasksCount(ctx, d.shardID, request.SourceClusterName)
+	if err != nil {
 		return nil, convertCommonErrors(d.client, "GetReplicationDLQSize", err)
 	}
-
-	queueSize := result["count"].(int64)
 	return &p.GetReplicationDLQSizeResponse{
-		Size: queueSize,
+		Size: size,
 	}, nil
 }
 
@@ -911,17 +900,7 @@ func (d *cassandraPersistence) DeleteReplicationTaskFromDLQ(
 	request *p.DeleteReplicationTaskFromDLQRequest,
 ) error {
 
-	query := d.session.Query(templateCompleteReplicationTaskQuery,
-		d.shardID,
-		rowTypeDLQ,
-		rowTypeDLQDomainID,
-		request.SourceClusterName,
-		rowTypeDLQRunID,
-		defaultVisibilityTimestamp,
-		request.TaskID,
-	).WithContext(ctx)
-
-	err := query.Exec()
+	err := d.db.DeleteReplicationDLQTask(ctx, d.shardID, request.SourceClusterName, request.TaskID)
 	if err != nil {
 		return convertCommonErrors(d.client, "DeleteReplicationTaskFromDLQ", err)
 	}
@@ -934,18 +913,7 @@ func (d *cassandraPersistence) RangeDeleteReplicationTaskFromDLQ(
 	request *p.RangeDeleteReplicationTaskFromDLQRequest,
 ) error {
 
-	query := d.session.Query(templateRangeCompleteReplicationTaskQuery,
-		d.shardID,
-		rowTypeDLQ,
-		rowTypeDLQDomainID,
-		request.SourceClusterName,
-		rowTypeDLQRunID,
-		defaultVisibilityTimestamp,
-		request.ExclusiveBeginTaskID,
-		request.InclusiveEndTaskID,
-	).WithContext(ctx)
-
-	err := query.Exec()
+	err := d.db.RangeDeleteReplicationDLQTasks(ctx, d.shardID, request.SourceClusterName, request.ExclusiveBeginTaskID, request.InclusiveEndTaskID)
 	if err != nil {
 		return convertCommonErrors(d.client, "RangeDeleteReplicationTaskFromDLQ", err)
 	}
