@@ -19,7 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package nosql
 
 import (
 	"context"
@@ -34,33 +34,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func convertCommonErrors(
-	errChecker nosqlplugin.ClientErrorChecker,
-	operation string,
-	err error,
-) error {
-	if errChecker.IsNotFoundError(err) {
-		return &types.EntityNotExistsError{
-			Message: fmt.Sprintf("%v failed. Error: %v ", operation, err),
-		}
-	}
-
-	if errChecker.IsTimeoutError(err) {
-		return &p.TimeoutError{Msg: fmt.Sprintf("%v timed out. Error: %v", operation, err)}
-	}
-
-	if errChecker.IsThrottlingError(err) {
-		return &types.ServiceBusyError{
-			Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
-		}
-	}
-
-	return &types.InternalServiceError{
-		Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
-	}
-}
-
-func (d *cassandraPersistence) prepareCreateWorkflowExecutionRequestWithMaps(
+func (d *nosqlExecutionStore) prepareCreateWorkflowExecutionRequestWithMaps(
 	newWorkflow *p.InternalWorkflowSnapshot,
 ) (*nosqlplugin.WorkflowExecutionRequest, error) {
 	executionInfo := newWorkflow.ExecutionInfo
@@ -102,7 +76,7 @@ func (d *cassandraPersistence) prepareCreateWorkflowExecutionRequestWithMaps(
 	return executionRequest, nil
 }
 
-func (d *cassandraPersistence) prepareResetWorkflowExecutionRequestWithMapsAndEventBuffer(
+func (d *nosqlExecutionStore) prepareResetWorkflowExecutionRequestWithMapsAndEventBuffer(
 	resetWorkflow *p.InternalWorkflowSnapshot,
 ) (*nosqlplugin.WorkflowExecutionRequest, error) {
 	executionInfo := resetWorkflow.ExecutionInfo
@@ -148,7 +122,7 @@ func (d *cassandraPersistence) prepareResetWorkflowExecutionRequestWithMapsAndEv
 	return executionRequest, nil
 }
 
-func (d *cassandraPersistence) prepareUpdateWorkflowExecutionRequestWithMapsAndEventBuffer(
+func (d *nosqlExecutionStore) prepareUpdateWorkflowExecutionRequestWithMapsAndEventBuffer(
 	workflowMutation *p.InternalWorkflowMutation,
 ) (*nosqlplugin.WorkflowExecutionRequest, error) {
 	executionInfo := workflowMutation.ExecutionInfo
@@ -213,7 +187,7 @@ func (d *cassandraPersistence) prepareUpdateWorkflowExecutionRequestWithMapsAndE
 	return executionRequest, nil
 }
 
-func (d *cassandraPersistence) prepareTimerTasksForWorkflowTxn(
+func (d *nosqlExecutionStore) prepareTimerTasksForWorkflowTxn(
 	domainID, workflowID, runID string,
 	timerTasks []p.Task,
 ) ([]*nosqlplugin.TimerTask, error) {
@@ -279,7 +253,7 @@ func (d *cassandraPersistence) prepareTimerTasksForWorkflowTxn(
 	return tasks, nil
 }
 
-func (d *cassandraPersistence) prepareReplicationTasksForWorkflowTxn(
+func (d *nosqlExecutionStore) prepareReplicationTasksForWorkflowTxn(
 	domainID, workflowID, runID string,
 	replicationTasks []p.Task,
 ) ([]*nosqlplugin.ReplicationTask, error) {
@@ -335,7 +309,7 @@ func (d *cassandraPersistence) prepareReplicationTasksForWorkflowTxn(
 	return tasks, nil
 }
 
-func (d *cassandraPersistence) prepareCrossClusterTasksForWorkflowTxn(
+func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 	domainID, workflowID, runID string,
 	crossClusterTasks []p.Task,
 ) ([]*nosqlplugin.CrossClusterTask, error) {
@@ -405,7 +379,7 @@ func (d *cassandraPersistence) prepareCrossClusterTasksForWorkflowTxn(
 	return tasks, nil
 }
 
-func (d *cassandraPersistence) prepareNoSQLTasksForWorkflowTxn(
+func (d *nosqlExecutionStore) prepareNoSQLTasksForWorkflowTxn(
 	domainID, workflowID, runID string,
 	persistenceTransferTasks, persistenceCrossClusterTasks, persistenceReplicationTasks, persistenceTimerTasks []p.Task,
 	transferTasksToAppend []*nosqlplugin.TransferTask,
@@ -439,7 +413,7 @@ func (d *cassandraPersistence) prepareNoSQLTasksForWorkflowTxn(
 	return transferTasksToAppend, crossClusterTasksToAppend, replicationTasksToAppend, timerTasksToAppend, nil
 }
 
-func (d *cassandraPersistence) prepareTransferTasksForWorkflowTxn(
+func (d *nosqlExecutionStore) prepareTransferTasksForWorkflowTxn(
 	domainID, workflowID, runID string,
 	transferTasks []p.Task,
 ) ([]*nosqlplugin.TransferTask, error) {
@@ -522,7 +496,7 @@ func (d *cassandraPersistence) prepareTransferTasksForWorkflowTxn(
 	return tasks, nil
 }
 
-func (d *cassandraPersistence) prepareActivityInfosForWorkflowTxn(
+func (d *nosqlExecutionStore) prepareActivityInfosForWorkflowTxn(
 	activityInfos []*p.InternalActivityInfo,
 ) (map[int64]*p.InternalActivityInfo, error) {
 	m := map[int64]*p.InternalActivityInfo{}
@@ -539,7 +513,7 @@ func (d *cassandraPersistence) prepareActivityInfosForWorkflowTxn(
 	return m, nil
 }
 
-func (d *cassandraPersistence) prepareTimerInfosForWorkflowTxn(
+func (d *nosqlExecutionStore) prepareTimerInfosForWorkflowTxn(
 	timerInfo []*p.TimerInfo,
 ) (map[string]*p.TimerInfo, error) {
 	m := map[string]*p.TimerInfo{}
@@ -549,7 +523,7 @@ func (d *cassandraPersistence) prepareTimerInfosForWorkflowTxn(
 	return m, nil
 }
 
-func (d *cassandraPersistence) prepareChildWFInfosForWorkflowTxn(
+func (d *nosqlExecutionStore) prepareChildWFInfosForWorkflowTxn(
 	childWFInfos []*p.InternalChildExecutionInfo,
 ) (map[int64]*p.InternalChildExecutionInfo, error) {
 	m := map[int64]*p.InternalChildExecutionInfo{}
@@ -571,7 +545,7 @@ func (d *cassandraPersistence) prepareChildWFInfosForWorkflowTxn(
 	return m, nil
 }
 
-func (d *cassandraPersistence) prepareRequestCancelsForWorkflowTxn(
+func (d *nosqlExecutionStore) prepareRequestCancelsForWorkflowTxn(
 	requestCancels []*p.RequestCancelInfo,
 ) (map[int64]*p.RequestCancelInfo, error) {
 	m := map[int64]*p.RequestCancelInfo{}
@@ -581,7 +555,7 @@ func (d *cassandraPersistence) prepareRequestCancelsForWorkflowTxn(
 	return m, nil
 }
 
-func (d *cassandraPersistence) prepareSignalInfosForWorkflowTxn(
+func (d *nosqlExecutionStore) prepareSignalInfosForWorkflowTxn(
 	signalInfos []*p.SignalInfo,
 ) (map[int64]*p.SignalInfo, error) {
 	m := map[int64]*p.SignalInfo{}
@@ -591,7 +565,7 @@ func (d *cassandraPersistence) prepareSignalInfosForWorkflowTxn(
 	return m, nil
 }
 
-func (d *cassandraPersistence) prepareUpdateWorkflowExecutionTxn(
+func (d *nosqlExecutionStore) prepareUpdateWorkflowExecutionTxn(
 	executionInfo *p.InternalWorkflowExecutionInfo,
 	versionHistories *p.DataBlob,
 	checksum checksum.Checksum,
@@ -627,7 +601,7 @@ func (d *cassandraPersistence) prepareUpdateWorkflowExecutionTxn(
 	}, nil
 }
 
-func (d *cassandraPersistence) prepareCreateWorkflowExecutionTxn(
+func (d *nosqlExecutionStore) prepareCreateWorkflowExecutionTxn(
 	executionInfo *p.InternalWorkflowExecutionInfo,
 	versionHistories *p.DataBlob,
 	checksum checksum.Checksum,
@@ -665,7 +639,7 @@ func (d *cassandraPersistence) prepareCreateWorkflowExecutionTxn(
 	}, nil
 }
 
-func (d *cassandraPersistence) prepareCurrentWorkflowRequestForCreateWorkflowTxn(
+func (d *nosqlExecutionStore) prepareCurrentWorkflowRequestForCreateWorkflowTxn(
 	domainID, workflowID, runID string,
 	executionInfo *p.InternalWorkflowExecutionInfo,
 	lastWriteVersion int64,
@@ -709,7 +683,7 @@ func (d *cassandraPersistence) prepareCurrentWorkflowRequestForCreateWorkflowTxn
 	return currentWorkflowWriteReq, nil
 }
 
-func (d *cassandraPersistence) processUpdateWorkflowResult(err error, rangeID int64) error {
+func (d *nosqlExecutionStore) processUpdateWorkflowResult(err error, rangeID int64) error {
 	if err != nil {
 		conditionFailureErr, isConditionFailedError := err.(*nosqlplugin.WorkflowOperationConditionFailure)
 		if isConditionFailedError {
@@ -735,13 +709,13 @@ func (d *cassandraPersistence) processUpdateWorkflowResult(err error, rangeID in
 				return err
 			}
 		}
-		return convertCommonErrors(d.client, "UpdateWorkflowExecution", err)
+		return convertCommonErrors(d.db, "UpdateWorkflowExecution", err)
 	}
 
 	return nil
 }
 
-func (d *cassandraPersistence) assertNotCurrentExecution(
+func (d *nosqlExecutionStore) assertNotCurrentExecution(
 	ctx context.Context,
 	domainID string,
 	workflowID string,

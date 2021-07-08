@@ -18,12 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package nosql
 
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -35,23 +34,17 @@ import (
 )
 
 type (
-	cassandraStore struct {
-		client  gocql.Client
-		session gocql.Session
-		logger  log.Logger
-	}
-
 	// Implements ExecutionStore
-	cassandraPersistence struct {
-		cassandraStore
+	nosqlExecutionStore struct {
 		shardID int
-		db      nosqlplugin.DB
+		nosqlStore
 	}
 )
 
-var _ p.ExecutionStore = (*cassandraPersistence)(nil)
+var _ p.ExecutionStore = (*nosqlExecutionStore)(nil)
 
-// Guidelines for creating new special UUID constants
+// Guidelines for creating new special UUID constants for all NoSQL
+// For DB specific constants(e.g. Cassandra), create them in the db specific package. 
 // Each UUID should be of the form: E0000000-R000-f000-f000-00000000000x
 // Where x is any hexadecimal value, E represents the entity type valid values are:
 // E = {DomainID = 1, WorkflowID = 2, RunID = 3}
@@ -61,141 +54,14 @@ const (
 	// Special Domains related constants
 	emptyDomainID = "10000000-0000-f000-f000-000000000000"
 	// Special Run IDs
-	emptyRunID     = "30000000-0000-f000-f000-000000000000"
-	permanentRunID = "30000000-0000-f000-f000-000000000001"
-	// Row Constants for Shard Row
-	rowTypeShardDomainID   = "10000000-1000-f000-f000-000000000000"
-	rowTypeShardWorkflowID = "20000000-1000-f000-f000-000000000000"
-	rowTypeShardRunID      = "30000000-1000-f000-f000-000000000000"
-	// Row Constants for Transfer Task Row
-	rowTypeTransferDomainID   = "10000000-3000-f000-f000-000000000000"
-	rowTypeTransferWorkflowID = "20000000-3000-f000-f000-000000000000"
-	rowTypeTransferRunID      = "30000000-3000-f000-f000-000000000000"
-	// Row Constants for Timer Task Row
-	rowTypeTimerDomainID   = "10000000-4000-f000-f000-000000000000"
-	rowTypeTimerWorkflowID = "20000000-4000-f000-f000-000000000000"
-	rowTypeTimerRunID      = "30000000-4000-f000-f000-000000000000"
-	// Row Constants for Replication Task Row
-	rowTypeReplicationDomainID   = "10000000-5000-f000-f000-000000000000"
+	emptyRunID                   = "30000000-0000-f000-f000-000000000000"
 	rowTypeReplicationWorkflowID = "20000000-5000-f000-f000-000000000000"
 	rowTypeReplicationRunID      = "30000000-5000-f000-f000-000000000000"
-	// Row Constants for Replication Task DLQ Row. Source cluster name will be used as WorkflowID.
-	rowTypeDLQDomainID = "10000000-6000-f000-f000-000000000000"
-	rowTypeDLQRunID    = "30000000-6000-f000-f000-000000000000"
-	// Row Constants for Cross Cluster Task Row
-	rowTypeCrossClusterDomainID = "10000000-7000-f000-f000-000000000000"
-	rowTypeCrossClusterRunID    = "30000000-7000-f000-f000-000000000000"
-	// Special TaskId constants
-	rowTypeExecutionTaskID = int64(-10)
-	rowTypeShardTaskID     = int64(-11)
-	emptyInitiatedID       = int64(-7)
+	emptyInitiatedID             = int64(-7)
 )
 
-const (
-	// Row types for table executions
-	rowTypeShard = iota
-	rowTypeExecution
-	rowTypeTransferTask
-	rowTypeTimerTask
-	rowTypeReplicationTask
-	rowTypeDLQ
-	rowTypeCrossClusterTask
-)
-
-const (
-	templateReplicationTaskType = `{` +
-		`domain_id: ?, ` +
-		`workflow_id: ?, ` +
-		`run_id: ?, ` +
-		`task_id: ?, ` +
-		`type: ?, ` +
-		`first_event_id: ?,` +
-		`next_event_id: ?,` +
-		`version: ?,` +
-		`scheduled_id: ?, ` +
-		`event_store_version: ?, ` +
-		`branch_token: ?, ` +
-		`new_run_event_store_version: ?, ` +
-		`new_run_branch_token: ?, ` +
-		`created_time: ? ` +
-		`}`
-
-	templateCreateReplicationTaskQuery = `INSERT INTO executions (` +
-		`shard_id, type, domain_id, workflow_id, run_id, replication, visibility_ts, task_id) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateReplicationTaskType + `, ?, ?)`
-
-	templateUpdateLeaseQuery = `UPDATE executions ` +
-		`SET range_id = ? ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ? ` +
-		`IF range_id = ?`
-
-	templateGetReplicationTasksQuery = `SELECT replication ` +
-		`FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id > ? ` +
-		`and task_id <= ?`
-
-	templateGetDLQSizeQuery = `SELECT count(1) as count ` +
-		`FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ?`
-
-	templateCompleteTransferTaskQuery = `DELETE FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ?`
-
-	templateRangeCompleteTransferTaskQuery = `DELETE FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id > ? ` +
-		`and task_id <= ?`
-
-	templateCompleteReplicationTaskQuery = templateCompleteTransferTaskQuery
-
-	templateRangeCompleteReplicationTaskQuery = templateRangeCompleteTransferTaskQuery
-)
-
-var (
-	defaultDateTime            = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
-	defaultVisibilityTimestamp = p.UnixNanoToDBTimestamp(defaultDateTime.UnixNano())
-)
-
-func (d *cassandraStore) GetName() string {
-	return cassandraPersistenceName
-}
-
-// Close releases the underlying resources held by this object
-func (d *cassandraStore) Close() {
-	if d.session != nil {
-		d.session.Close()
-	}
-}
-
-// NewWorkflowExecutionPersistence is used to create an instance of workflowExecutionManager implementation
-func NewWorkflowExecutionPersistence(
+// NewExecutionStore is used to create an instance of ExecutionStore implementation
+func NewExecutionStore(
 	shardID int,
 	client gocql.Client,
 	session gocql.Session,
@@ -203,22 +69,20 @@ func NewWorkflowExecutionPersistence(
 ) (p.ExecutionStore, error) {
 	db := cassandra.NewCassandraDBFromSession(client, session, logger)
 
-	return &cassandraPersistence{
-		cassandraStore: cassandraStore{
-			client:  client,
-			session: session,
-			logger:  logger,
+	return &nosqlExecutionStore{
+		nosqlStore: nosqlStore{
+			logger: logger,
+			db:     db,
 		},
 		shardID: shardID,
-		db:      db,
 	}, nil
 }
 
-func (d *cassandraPersistence) GetShardID() int {
+func (d *nosqlExecutionStore) GetShardID() int {
 	return d.shardID
 }
 
-func (d *cassandraPersistence) CreateWorkflowExecution(
+func (d *nosqlExecutionStore) CreateWorkflowExecution(
 	ctx context.Context,
 	request *p.InternalCreateWorkflowExecutionRequest,
 ) (*p.CreateWorkflowExecutionResponse, error) {
@@ -302,13 +166,13 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 				return nil, err
 			}
 		}
-		return nil, convertCommonErrors(d.client, "CreateWorkflowExecution", err)
+		return nil, convertCommonErrors(d.db, "CreateWorkflowExecution", err)
 	}
 
 	return &p.CreateWorkflowExecutionResponse{}, nil
 }
 
-func (d *cassandraPersistence) GetWorkflowExecution(
+func (d *nosqlExecutionStore) GetWorkflowExecution(
 	ctx context.Context,
 	request *p.InternalGetWorkflowExecutionRequest,
 ) (*p.InternalGetWorkflowExecutionResponse, error) {
@@ -316,20 +180,20 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 	execution := request.Execution
 	state, err := d.db.SelectWorkflowExecution(ctx, d.shardID, request.DomainID, execution.WorkflowID, execution.RunID)
 	if err != nil {
-		if d.client.IsNotFoundError(err) {
+		if d.db.IsNotFoundError(err) {
 			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
 					execution.WorkflowID, execution.RunID),
 			}
 		}
 
-		return nil, convertCommonErrors(d.client, "GetWorkflowExecution", err)
+		return nil, convertCommonErrors(d.db, "GetWorkflowExecution", err)
 	}
 
 	return &p.InternalGetWorkflowExecutionResponse{State: state}, nil
 }
 
-func (d *cassandraPersistence) UpdateWorkflowExecution(
+func (d *nosqlExecutionStore) UpdateWorkflowExecution(
 	ctx context.Context,
 	request *p.InternalUpdateWorkflowExecutionRequest,
 ) error {
@@ -471,7 +335,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 	return d.processUpdateWorkflowResult(err, request.RangeID)
 }
 
-func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
+func (d *nosqlExecutionStore) ConflictResolveWorkflowExecution(
 	ctx context.Context,
 	request *p.InternalConflictResolveWorkflowExecutionRequest,
 ) error {
@@ -607,31 +471,31 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 	return d.processUpdateWorkflowResult(err, request.RangeID)
 }
 
-func (d *cassandraPersistence) DeleteWorkflowExecution(
+func (d *nosqlExecutionStore) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *p.DeleteWorkflowExecutionRequest,
 ) error {
 	err := d.db.DeleteWorkflowExecution(ctx, d.shardID, request.DomainID, request.WorkflowID, request.RunID)
 	if err != nil {
-		return convertCommonErrors(d.client, "DeleteWorkflowExecution", err)
+		return convertCommonErrors(d.db, "DeleteWorkflowExecution", err)
 	}
 
 	return nil
 }
 
-func (d *cassandraPersistence) DeleteCurrentWorkflowExecution(
+func (d *nosqlExecutionStore) DeleteCurrentWorkflowExecution(
 	ctx context.Context,
 	request *p.DeleteCurrentWorkflowExecutionRequest,
 ) error {
 	err := d.db.DeleteCurrentWorkflow(ctx, d.shardID, request.DomainID, request.WorkflowID, request.RunID)
 	if err != nil {
-		return convertCommonErrors(d.client, "DeleteWorkflowCurrentRow", err)
+		return convertCommonErrors(d.db, "DeleteWorkflowCurrentRow", err)
 	}
 
 	return nil
 }
 
-func (d *cassandraPersistence) GetCurrentExecution(
+func (d *nosqlExecutionStore) GetCurrentExecution(
 	ctx context.Context,
 	request *p.GetCurrentExecutionRequest,
 ) (*p.GetCurrentExecutionResponse,
@@ -639,13 +503,13 @@ func (d *cassandraPersistence) GetCurrentExecution(
 	result, err := d.db.SelectCurrentWorkflow(ctx, d.shardID, request.DomainID, request.WorkflowID)
 
 	if err != nil {
-		if d.client.IsNotFoundError(err) {
+		if d.db.IsNotFoundError(err) {
 			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v",
 					request.WorkflowID),
 			}
 		}
-		return nil, convertCommonErrors(d.client, "GetCurrentExecution", err)
+		return nil, convertCommonErrors(d.db, "GetCurrentExecution", err)
 	}
 
 	return &p.GetCurrentExecutionResponse{
@@ -657,13 +521,13 @@ func (d *cassandraPersistence) GetCurrentExecution(
 	}, nil
 }
 
-func (d *cassandraPersistence) ListCurrentExecutions(
+func (d *nosqlExecutionStore) ListCurrentExecutions(
 	ctx context.Context,
 	request *p.ListCurrentExecutionsRequest,
 ) (*p.ListCurrentExecutionsResponse, error) {
 	executions, token, err := d.db.SelectAllCurrentWorkflows(ctx, d.shardID, request.PageToken, request.PageSize)
 	if err != nil {
-		return nil, convertCommonErrors(d.client, "ListCurrentExecutions", err)
+		return nil, convertCommonErrors(d.db, "ListCurrentExecutions", err)
 	}
 	return &p.ListCurrentExecutionsResponse{
 		Executions: executions,
@@ -671,26 +535,26 @@ func (d *cassandraPersistence) ListCurrentExecutions(
 	}, nil
 }
 
-func (d *cassandraPersistence) IsWorkflowExecutionExists(
+func (d *nosqlExecutionStore) IsWorkflowExecutionExists(
 	ctx context.Context,
 	request *p.IsWorkflowExecutionExistsRequest,
 ) (*p.IsWorkflowExecutionExistsResponse, error) {
 	exists, err := d.db.IsWorkflowExecutionExists(ctx, d.shardID, request.DomainID, request.WorkflowID, request.RunID)
 	if err != nil {
-		return nil, convertCommonErrors(d.client, "IsWorkflowExecutionExists", err)
+		return nil, convertCommonErrors(d.db, "IsWorkflowExecutionExists", err)
 	}
 	return &p.IsWorkflowExecutionExistsResponse{
 		Exists: exists,
 	}, nil
 }
 
-func (d *cassandraPersistence) ListConcreteExecutions(
+func (d *nosqlExecutionStore) ListConcreteExecutions(
 	ctx context.Context,
 	request *p.ListConcreteExecutionsRequest,
 ) (*p.InternalListConcreteExecutionsResponse, error) {
 	executions, nextPageToken, err := d.db.SelectAllWorkflowExecutions(ctx, d.shardID, request.PageToken, request.PageSize)
 	if err != nil {
-		return nil, convertCommonErrors(d.client, "ListConcreteExecutions", err)
+		return nil, convertCommonErrors(d.db, "ListConcreteExecutions", err)
 	}
 	return &p.InternalListConcreteExecutionsResponse{
 		Executions:    executions,
@@ -698,14 +562,14 @@ func (d *cassandraPersistence) ListConcreteExecutions(
 	}, nil
 }
 
-func (d *cassandraPersistence) GetTransferTasks(
+func (d *nosqlExecutionStore) GetTransferTasks(
 	ctx context.Context,
 	request *p.GetTransferTasksRequest,
 ) (*p.GetTransferTasksResponse, error) {
 
 	tasks, nextPageToken, err := d.db.SelectTransferTasksOrderByTaskID(ctx, d.shardID, request.BatchSize, request.NextPageToken, request.ReadLevel, request.MaxReadLevel)
 	if err != nil {
-		return nil, convertCommonErrors(d.client, "GetTransferTasks", err)
+		return nil, convertCommonErrors(d.db, "GetTransferTasks", err)
 	}
 
 	return &p.GetTransferTasksResponse{
@@ -714,7 +578,7 @@ func (d *cassandraPersistence) GetTransferTasks(
 	}, nil
 }
 
-func (d *cassandraPersistence) GetCrossClusterTasks(
+func (d *nosqlExecutionStore) GetCrossClusterTasks(
 	ctx context.Context,
 	request *p.GetCrossClusterTasksRequest,
 ) (*p.GetCrossClusterTasksResponse, error) {
@@ -722,7 +586,7 @@ func (d *cassandraPersistence) GetCrossClusterTasks(
 	cTasks, nextPageToken, err := d.db.SelectCrossClusterTasksOrderByTaskID(ctx, d.shardID, request.BatchSize, request.NextPageToken, request.TargetCluster, request.ReadLevel, request.MaxReadLevel)
 
 	if err != nil {
-		return nil, convertCommonErrors(d.client, "GetCrossClusterTasks", err)
+		return nil, convertCommonErrors(d.db, "GetCrossClusterTasks", err)
 	}
 
 	var tTasks []*p.CrossClusterTaskInfo
@@ -735,14 +599,14 @@ func (d *cassandraPersistence) GetCrossClusterTasks(
 	}, nil
 }
 
-func (d *cassandraPersistence) GetReplicationTasks(
+func (d *nosqlExecutionStore) GetReplicationTasks(
 	ctx context.Context,
 	request *p.GetReplicationTasksRequest,
 ) (*p.InternalGetReplicationTasksResponse, error) {
 
 	tasks, nextPageToken, err := d.db.SelectReplicationTasksOrderByTaskID(ctx, d.shardID, request.BatchSize, request.NextPageToken, request.ReadLevel, request.MaxReadLevel)
 	if err != nil {
-		return nil, convertCommonErrors(d.client, "GetReplicationTasks", err)
+		return nil, convertCommonErrors(d.db, "GetReplicationTasks", err)
 	}
 	return &p.InternalGetReplicationTasksResponse{
 		Tasks:         tasks,
@@ -750,113 +614,113 @@ func (d *cassandraPersistence) GetReplicationTasks(
 	}, nil
 }
 
-func (d *cassandraPersistence) CompleteTransferTask(
+func (d *nosqlExecutionStore) CompleteTransferTask(
 	ctx context.Context,
 	request *p.CompleteTransferTaskRequest,
 ) error {
 	err := d.db.DeleteTransferTask(ctx, d.shardID, request.TaskID)
 	if err != nil {
-		return convertCommonErrors(d.client, "CompleteTransferTask", err)
+		return convertCommonErrors(d.db, "CompleteTransferTask", err)
 	}
 
 	return nil
 }
 
-func (d *cassandraPersistence) RangeCompleteTransferTask(
+func (d *nosqlExecutionStore) RangeCompleteTransferTask(
 	ctx context.Context,
 	request *p.RangeCompleteTransferTaskRequest,
 ) error {
 	err := d.db.RangeDeleteTransferTasks(ctx, d.shardID, request.ExclusiveBeginTaskID, request.InclusiveEndTaskID)
 	if err != nil {
-		return convertCommonErrors(d.client, "RangeCompleteTransferTask", err)
+		return convertCommonErrors(d.db, "RangeCompleteTransferTask", err)
 	}
 
 	return nil
 }
 
-func (d *cassandraPersistence) CompleteCrossClusterTask(
+func (d *nosqlExecutionStore) CompleteCrossClusterTask(
 	ctx context.Context,
 	request *p.CompleteCrossClusterTaskRequest,
 ) error {
 
 	err := d.db.DeleteCrossClusterTask(ctx, d.shardID, request.TargetCluster, request.TaskID)
 	if err != nil {
-		return convertCommonErrors(d.client, "CompleteCrossClusterTask", err)
+		return convertCommonErrors(d.db, "CompleteCrossClusterTask", err)
 	}
 
 	return nil
 }
 
-func (d *cassandraPersistence) RangeCompleteCrossClusterTask(
+func (d *nosqlExecutionStore) RangeCompleteCrossClusterTask(
 	ctx context.Context,
 	request *p.RangeCompleteCrossClusterTaskRequest,
 ) error {
 
 	err := d.db.RangeDeleteCrossClusterTasks(ctx, d.shardID, request.TargetCluster, request.ExclusiveBeginTaskID, request.InclusiveEndTaskID)
 	if err != nil {
-		return convertCommonErrors(d.client, "RangeCompleteCrossClusterTask", err)
+		return convertCommonErrors(d.db, "RangeCompleteCrossClusterTask", err)
 	}
 
 	return nil
 }
 
-func (d *cassandraPersistence) CompleteReplicationTask(
+func (d *nosqlExecutionStore) CompleteReplicationTask(
 	ctx context.Context,
 	request *p.CompleteReplicationTaskRequest,
 ) error {
 	err := d.db.DeleteReplicationTask(ctx, d.shardID, request.TaskID)
 	if err != nil {
-		return convertCommonErrors(d.client, "CompleteReplicationTask", err)
+		return convertCommonErrors(d.db, "CompleteReplicationTask", err)
 	}
 
 	return nil
 }
 
-func (d *cassandraPersistence) RangeCompleteReplicationTask(
+func (d *nosqlExecutionStore) RangeCompleteReplicationTask(
 	ctx context.Context,
 	request *p.RangeCompleteReplicationTaskRequest,
 ) error {
 
 	err := d.db.RangeDeleteReplicationTasks(ctx, d.shardID, request.InclusiveEndTaskID)
 	if err != nil {
-		return convertCommonErrors(d.client, "RangeCompleteReplicationTask", err)
+		return convertCommonErrors(d.db, "RangeCompleteReplicationTask", err)
 	}
 
 	return nil
 }
 
-func (d *cassandraPersistence) CompleteTimerTask(
+func (d *nosqlExecutionStore) CompleteTimerTask(
 	ctx context.Context,
 	request *p.CompleteTimerTaskRequest,
 ) error {
 	err := d.db.DeleteTimerTask(ctx, d.shardID, request.TaskID, request.VisibilityTimestamp)
 	if err != nil {
-		return convertCommonErrors(d.client, "CompleteTimerTask", err)
+		return convertCommonErrors(d.db, "CompleteTimerTask", err)
 	}
 
 	return nil
 }
 
-func (d *cassandraPersistence) RangeCompleteTimerTask(
+func (d *nosqlExecutionStore) RangeCompleteTimerTask(
 	ctx context.Context,
 	request *p.RangeCompleteTimerTaskRequest,
 ) error {
 	err := d.db.RangeDeleteTimerTasks(ctx, d.shardID, request.InclusiveBeginTimestamp, request.ExclusiveEndTimestamp)
 	if err != nil {
-		return convertCommonErrors(d.client, "RangeCompleteTimerTask", err)
+		return convertCommonErrors(d.db, "RangeCompleteTimerTask", err)
 	}
 
 	return nil
 }
 
-func (d *cassandraPersistence) GetTimerIndexTasks(
+func (d *nosqlExecutionStore) GetTimerIndexTasks(
 	ctx context.Context,
 	request *p.GetTimerIndexTasksRequest,
 ) (*p.GetTimerIndexTasksResponse, error) {
 
 	timers, nextPageToken, err := d.db.SelectTimerTasksOrderByVisibilityTime(ctx, d.shardID, request.BatchSize, request.NextPageToken, request.MinTimestamp, request.MaxTimestamp)
 	if err != nil {
-		return nil, convertCommonErrors(d.client, "GetTimerTasks", err)
+		return nil, convertCommonErrors(d.db, "GetTimerTasks", err)
 	}
 
 	return &p.GetTimerIndexTasksResponse{
@@ -865,26 +729,26 @@ func (d *cassandraPersistence) GetTimerIndexTasks(
 	}, nil
 }
 
-func (d *cassandraPersistence) PutReplicationTaskToDLQ(
+func (d *nosqlExecutionStore) PutReplicationTaskToDLQ(
 	ctx context.Context,
 	request *p.InternalPutReplicationTaskToDLQRequest,
 ) error {
 
 	err := d.db.InsertReplicationDLQTask(ctx, d.shardID, request.SourceClusterName, *request.TaskInfo)
 	if err != nil {
-		return convertCommonErrors(d.client, "PutReplicationTaskToDLQ", err)
+		return convertCommonErrors(d.db, "PutReplicationTaskToDLQ", err)
 	}
 
 	return nil
 }
 
-func (d *cassandraPersistence) GetReplicationTasksFromDLQ(
+func (d *nosqlExecutionStore) GetReplicationTasksFromDLQ(
 	ctx context.Context,
 	request *p.GetReplicationTasksFromDLQRequest,
 ) (*p.InternalGetReplicationTasksFromDLQResponse, error) {
 	tasks, nextPageToken, err := d.db.SelectReplicationDLQTasksOrderByTaskID(ctx, d.shardID, request.SourceClusterName, request.BatchSize, request.NextPageToken, request.ReadLevel, request.MaxReadLevel)
 	if err != nil {
-		return nil, convertCommonErrors(d.client, "GetReplicationTasks", err)
+		return nil, convertCommonErrors(d.db, "GetReplicationTasks", err)
 	}
 	return &p.InternalGetReplicationTasksResponse{
 		Tasks:         tasks,
@@ -892,47 +756,47 @@ func (d *cassandraPersistence) GetReplicationTasksFromDLQ(
 	}, nil
 }
 
-func (d *cassandraPersistence) GetReplicationDLQSize(
+func (d *nosqlExecutionStore) GetReplicationDLQSize(
 	ctx context.Context,
 	request *p.GetReplicationDLQSizeRequest,
 ) (*p.GetReplicationDLQSizeResponse, error) {
 
 	size, err := d.db.SelectReplicationDLQTasksCount(ctx, d.shardID, request.SourceClusterName)
 	if err != nil {
-		return nil, convertCommonErrors(d.client, "GetReplicationDLQSize", err)
+		return nil, convertCommonErrors(d.db, "GetReplicationDLQSize", err)
 	}
 	return &p.GetReplicationDLQSizeResponse{
 		Size: size,
 	}, nil
 }
 
-func (d *cassandraPersistence) DeleteReplicationTaskFromDLQ(
+func (d *nosqlExecutionStore) DeleteReplicationTaskFromDLQ(
 	ctx context.Context,
 	request *p.DeleteReplicationTaskFromDLQRequest,
 ) error {
 
 	err := d.db.DeleteReplicationDLQTask(ctx, d.shardID, request.SourceClusterName, request.TaskID)
 	if err != nil {
-		return convertCommonErrors(d.client, "DeleteReplicationTaskFromDLQ", err)
+		return convertCommonErrors(d.db, "DeleteReplicationTaskFromDLQ", err)
 	}
 
 	return nil
 }
 
-func (d *cassandraPersistence) RangeDeleteReplicationTaskFromDLQ(
+func (d *nosqlExecutionStore) RangeDeleteReplicationTaskFromDLQ(
 	ctx context.Context,
 	request *p.RangeDeleteReplicationTaskFromDLQRequest,
 ) error {
 
 	err := d.db.RangeDeleteReplicationDLQTasks(ctx, d.shardID, request.SourceClusterName, request.ExclusiveBeginTaskID, request.InclusiveEndTaskID)
 	if err != nil {
-		return convertCommonErrors(d.client, "RangeDeleteReplicationTaskFromDLQ", err)
+		return convertCommonErrors(d.db, "RangeDeleteReplicationTaskFromDLQ", err)
 	}
 
 	return nil
 }
 
-func (d *cassandraPersistence) CreateFailoverMarkerTasks(
+func (d *nosqlExecutionStore) CreateFailoverMarkerTasks(
 	ctx context.Context,
 	request *p.CreateFailoverMarkersRequest,
 ) error {
