@@ -44,7 +44,7 @@ func NewCliApp() *cli.App {
 
 	app := cli.NewApp()
 	app.Name = "cadence"
-	app.Usage = "A command-line tool for cadence users. "
+	app.Usage = "A command-line tool for cadence users"
 	app.Version = version
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
