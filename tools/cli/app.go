@@ -35,8 +35,10 @@ func SetFactory(factory ClientFactory) {
 func NewCliApp() *cli.App {
 	app := cli.NewApp()
 	app.Name = "cadence"
-	app.Usage = "A command-line tool for cadence users"
-	app.Version = client.SupportedCLIVersion
+	app.Usage = "A command-line tool for cadence users. "
+	app.Version = client.SupportedCLIVersion +
+		"\n NOTE: CLI versioning is different from release versions, it's for compatibility checking between server and client/CLI." +
+		"A Cadence server is always backward compatible to older versions, but not accepting newer than it can support."
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:   FlagAddressWithAlias,
