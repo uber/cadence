@@ -1,117 +1,28 @@
-persistence:
-  defaultStore: cass-default
-  visibilityStore: cass-visibility
-  numHistoryShards: 4
-  datastores:
-    cass-default:
-      nosql:
-        pluginName: "cassandra"
-        hosts: "127.0.0.1"
-        keyspace: "cadence"
-    cass-visibility:
-      nosql:
-        pluginName: "cassandra"
-        hosts: "127.0.0.1"
-        keyspace: "cadence_visibility"
-
-ringpop:
-  name: cadence
-  bootstrapMode: hosts
-  bootstrapHosts: [ "127.0.0.1:7933", "127.0.0.1:7934", "127.0.0.1:7935" ]
-  maxJoinDuration: 30s
-
 services:
   frontend:
-    rpc:
-      port: 7933
-      grpcPort: 7833
-      bindOnLocalHost: true
     metrics:
+      statsd: ~
       prometheus:
         timerType: "histogram"
         listenAddress: "127.0.0.1:8000"
-    pprof:
-      port: 7936
 
   matching:
-    rpc:
-      port: 7935
-      grpcPort: 7835
-      bindOnLocalHost: true
     metrics:
+      statsd: ~
       prometheus:
         timerType: "histogram"
         listenAddress: "127.0.0.1:8001"
-    pprof:
-      port: 7938
 
   history:
-    rpc:
-      port: 7934
-      grpcPort: 7834
-      bindOnLocalHost: true
     metrics:
+      statsd: ~
       prometheus:
         timerType: "histogram"
         listenAddress: "127.0.0.1:8002"
-    pprof:
-      port: 7937
 
   worker:
-    rpc:
-      port: 7939
-      bindOnLocalHost: true
     metrics:
+      statsd: ~
       prometheus:
         timerType: "histogram"
         listenAddress: "127.0.0.1:8003"
-    pprof:
-      port: 7940
-
-clusterMetadata:
-  enableGlobalDomain: true
-  failoverVersionIncrement: 10
-  primaryClusterName: "active"
-  currentClusterName: "active"
-  clusterInformation:
-    active:
-      enabled: true
-      initialFailoverVersion: 0
-      rpcName: "cadence-frontend"
-      rpcAddress: "localhost:7933"
-
-dcRedirectionPolicy:
-  policy: "noop"
-  toDC: ""
-
-archival:
-  history:
-    status: "enabled"
-    enableRead: true
-    provider:
-      filestore:
-        fileMode: "0666"
-        dirMode: "0766"
-  visibility:
-    status: "enabled"
-    enableRead: true
-    provider:
-      filestore:
-        fileMode: "0666"
-        dirMode: "0766"
-
-domainDefaults:
-  archival:
-    history:
-      status: "enabled"
-      URI: "file:///tmp/cadence_archival/development"
-    visibility:
-      status: "enabled"
-      URI: "file:///tmp/cadence_vis_archival/development"
-
-publicClient:
-  hostPort: "localhost:7933"
-
-blobstore:
-  filestore:
-    outputDirectory: "/tmp/blobstore"
