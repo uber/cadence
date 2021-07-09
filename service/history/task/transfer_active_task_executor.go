@@ -103,11 +103,11 @@ func NewTransferActiveTaskExecutor(
 }
 
 func (t *transferActiveTaskExecutor) Execute(
-	taskInfo Info,
+	task Task,
 	shouldProcessTask bool,
 ) error {
 
-	task, ok := taskInfo.(*persistence.TransferTaskInfo)
+	transferTask, ok := task.GetInfo().(*persistence.TransferTaskInfo)
 	if !ok {
 		return errUnexpectedTask
 	}
@@ -119,25 +119,25 @@ func (t *transferActiveTaskExecutor) Execute(
 	ctx, cancel := context.WithTimeout(context.Background(), taskDefaultTimeout)
 	defer cancel()
 
-	switch task.TaskType {
+	switch transferTask.TaskType {
 	case persistence.TransferTaskTypeActivityTask:
-		return t.processActivityTask(ctx, task)
+		return t.processActivityTask(ctx, transferTask)
 	case persistence.TransferTaskTypeDecisionTask:
-		return t.processDecisionTask(ctx, task)
+		return t.processDecisionTask(ctx, transferTask)
 	case persistence.TransferTaskTypeCloseExecution:
-		return t.processCloseExecution(ctx, task)
+		return t.processCloseExecution(ctx, transferTask)
 	case persistence.TransferTaskTypeCancelExecution:
-		return t.processCancelExecution(ctx, task)
+		return t.processCancelExecution(ctx, transferTask)
 	case persistence.TransferTaskTypeSignalExecution:
-		return t.processSignalExecution(ctx, task)
+		return t.processSignalExecution(ctx, transferTask)
 	case persistence.TransferTaskTypeStartChildExecution:
-		return t.processStartChildExecution(ctx, task)
+		return t.processStartChildExecution(ctx, transferTask)
 	case persistence.TransferTaskTypeRecordWorkflowStarted:
-		return t.processRecordWorkflowStarted(ctx, task)
+		return t.processRecordWorkflowStarted(ctx, transferTask)
 	case persistence.TransferTaskTypeResetWorkflow:
-		return t.processResetWorkflow(ctx, task)
+		return t.processResetWorkflow(ctx, transferTask)
 	case persistence.TransferTaskTypeUpsertWorkflowSearchAttributes:
-		return t.processUpsertWorkflowSearchAttributes(ctx, task)
+		return t.processUpsertWorkflowSearchAttributes(ctx, transferTask)
 	default:
 		return errUnknownTransferTask
 	}

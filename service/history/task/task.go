@@ -208,7 +208,7 @@ func (t *taskImpl) Execute() error {
 	}()
 
 	t.logEvent("Executing task", t.shouldProcessTask)
-	return t.taskExecutor.Execute(t.Info, t.shouldProcessTask)
+	return t.taskExecutor.Execute(t, t.shouldProcessTask)
 }
 
 func (t *taskImpl) HandleErr(
@@ -386,6 +386,10 @@ func (t *taskImpl) GetAttempt() int {
 	defer t.Unlock()
 
 	return t.attempt
+}
+
+func (t *taskImpl) GetInfo() Info {
+	return t.Info
 }
 
 func (t *taskImpl) GetQueueType() QueueType {

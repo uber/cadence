@@ -277,9 +277,9 @@ func NewScannerContext(ctx context.Context, workflowName string, scannerContext 
 	return context.WithValue(ctx, contextKey(workflowName), scannerContext)
 }
 
-// GetScannerContext extracts scanner context from activity context
+// getScannerContext extracts scanner context from activity context
 // it uses typed, private key to reduce access scope
-func GetScannerContext(ctx context.Context) (scannerContext, error) {
+func getScannerContext(ctx context.Context) (scannerContext, error) {
 	info := activity.GetInfo(ctx)
 	if info.WorkflowType == nil {
 		return scannerContext{}, fmt.Errorf("workflowType is nil")

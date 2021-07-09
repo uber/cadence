@@ -140,6 +140,23 @@ func CreatePersistenceRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
+// CreatePersistenceRetryPolicyWithContext create a retry policy for persistence layer operations
+// which has an expiration interval computed based on the context's deadline
+func CreatePersistenceRetryPolicyWithContext(ctx context.Context) backoff.RetryPolicy {
+	if ctx == nil {
+		return CreatePersistenceRetryPolicy()
+	}
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return CreatePersistenceRetryPolicy()
+	}
+
+	policy := backoff.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
+	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
+	policy.SetExpirationInterval(deadline.Sub(time.Now()))
+	return policy
+}
+
 // CreateHistoryServiceRetryPolicy creates a retry policy for calls to history service
 func CreateHistoryServiceRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(historyServiceOperationInitialInterval)
@@ -899,4 +916,14 @@ func MicrosecondsToDuration(d int64) time.Duration {
 // NanosecondsToDuration converts number of nanoseconds to time.Duration
 func NanosecondsToDuration(d int64) time.Duration {
 	return time.Duration(d) * time.Nanosecond
+}
+
+// SleepWithMinDuration sleeps for the minimum of desired and available duration
+// returns the remaining available time duration
+func SleepWithMinDuration(desired time.Duration, available time.Duration) time.Duration {
+	d := MinDuration(desired, available)
+	if d > 0 {
+		time.Sleep(d)
+	}
+	return available - d
 }
