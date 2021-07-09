@@ -38,7 +38,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql"
@@ -261,7 +260,7 @@ func initializeCassandraExecutionClient(
 ) persistence.ExecutionStore {
 
 	client, session := connectToCassandra(c)
-	execStore, err := cassandra.NewWorkflowExecutionPersistence(
+	execStore, err := nosql.NewExecutionStore(
 		shardID,
 		client,
 		session,

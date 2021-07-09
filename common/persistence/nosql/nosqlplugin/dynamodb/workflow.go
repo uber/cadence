@@ -23,9 +23,13 @@ package dynamodb
 
 import (
 	"context"
+	"time"
 
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
+
+var _ nosqlplugin.WorkflowCRUD = (*ddb)(nil)
 
 func (db *ddb) InsertWorkflowExecutionWithTasks(
 	ctx context.Context,
@@ -56,5 +60,101 @@ func (db *ddb) UpdateWorkflowExecutionWithTasks(
 }
 
 func (db *ddb) SelectCurrentWorkflow(ctx context.Context, shardID int, domainID, workflowID string) (*nosqlplugin.CurrentWorkflowRow, error) {
+	panic("TODO")
+}
+
+func (db *ddb) SelectWorkflowExecution(ctx context.Context, shardID int, domainID, workflowID, runID string) (*nosqlplugin.WorkflowExecution, error) {
+	panic("TODO")
+}
+
+func (db *ddb) DeleteCurrentWorkflow(ctx context.Context, shardID int, domainID, workflowID, currentRunIDCondition string) error {
+	panic("TODO")
+}
+
+func (db *ddb) DeleteWorkflowExecution(ctx context.Context, shardID int, domainID, workflowID, runID string) error {
+	panic("TODO")
+}
+
+func (db *ddb) SelectAllCurrentWorkflows(ctx context.Context, shardID int, pageToken []byte, pageSize int) ([]*persistence.CurrentWorkflowExecution, []byte, error) {
+	panic("TODO")
+}
+
+func (db *ddb) SelectAllWorkflowExecutions(ctx context.Context, shardID int, pageToken []byte, pageSize int) ([]*persistence.InternalListConcreteExecutionsEntity, []byte, error) {
+	panic("TODO")
+}
+
+func (db *ddb) IsWorkflowExecutionExists(ctx context.Context, shardID int, domainID, workflowID, runID string) (bool, error) {
+	panic("TODO")
+}
+
+func (db *ddb) SelectTransferTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64, ) ([]*nosqlplugin.TransferTask, []byte, error) {
+	panic("TODO")
+}
+
+func (db *ddb) DeleteTransferTask(ctx context.Context, shardID int, taskID int64) error {
+	panic("TODO")
+}
+
+func (db *ddb) RangeDeleteTransferTasks(ctx context.Context, shardID int, exclusiveBeginTaskID, inclusiveEndTaskID int64) error {
+	panic("TODO")
+}
+
+func (db *ddb) SelectTimerTasksOrderByVisibilityTime(ctx context.Context, shardID, pageSize int, pageToken []byte, inclusiveMinTime, exclusiveMaxTime time.Time) ([]*nosqlplugin.TimerTask, []byte, error) {
+	panic("TODO")
+}
+
+func (db *ddb) DeleteTimerTask(ctx context.Context, shardID int, taskID int64, visibilityTimestamp time.Time) error {
+	panic("TODO")
+}
+
+func (db *ddb) RangeDeleteTimerTasks(ctx context.Context, shardID int, inclusiveMinTime, exclusiveMaxTime time.Time) error {
+	panic("TODO")
+}
+
+func (db *ddb) SelectReplicationTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*nosqlplugin.ReplicationTask, []byte, error) {
+	panic("TODO")
+}
+
+func (db *ddb) DeleteReplicationTask(ctx context.Context, shardID int, taskID int64) error {
+	panic("TODO")
+}
+
+func (db *ddb) RangeDeleteReplicationTasks(ctx context.Context, shardID int, inclusiveEndTaskID int64) error {
+	panic("TODO")
+}
+
+func (db *ddb) InsertReplicationTask(ctx context.Context, tasks []*nosqlplugin.ReplicationTask, condition nosqlplugin.ShardCondition) error {
+	panic("TODO")
+}
+
+func (db *ddb) SelectCrossClusterTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, targetCluster string, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*nosqlplugin.CrossClusterTask, []byte, error) {
+	panic("TODO")
+}
+
+func (db *ddb) DeleteCrossClusterTask(ctx context.Context, shardID int, targetCluster string, taskID int64) error {
+	panic("TODO")
+}
+
+func (db *ddb) RangeDeleteCrossClusterTasks(ctx context.Context, shardID int, targetCluster string, exclusiveBeginTaskID, inclusiveEndTaskID int64) error {
+	panic("TODO")
+}
+
+func (db *ddb) InsertReplicationDLQTask(ctx context.Context, shardID int, sourceCluster string, task nosqlplugin.ReplicationTask) error {
+	panic("TODO")
+}
+
+func (db *ddb) SelectReplicationDLQTasksOrderByTaskID(ctx context.Context, shardID int, sourceCluster string, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*nosqlplugin.ReplicationTask, []byte, error) {
+	panic("TODO")
+}
+
+func (db *ddb) SelectReplicationDLQTasksCount(ctx context.Context, shardID int, sourceCluster string) (int64, error) {
+	panic("TODO")
+}
+
+func (db *ddb) DeleteReplicationDLQTask(ctx context.Context, shardID int, sourceCluster string, taskID int64) error {
+	panic("TODO")
+}
+
+func (db *ddb) RangeDeleteReplicationDLQTasks(ctx context.Context, shardID int, sourceCluster string, exclusiveBeginTaskID, inclusiveEndTaskID int64) error {
 	panic("TODO")
 }
