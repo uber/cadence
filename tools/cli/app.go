@@ -22,12 +22,8 @@ package cli
 
 import (
 	"github.com/urfave/cli"
-)
 
-const (
-	// Version is the controlled version string. It should be updated every time
-	// before we release a new version.
-	Version = "0.19.0"
+	"github.com/uber/cadence/common/client"
 )
 
 // SetFactory is used to set the ClientFactory global
@@ -40,7 +36,7 @@ func NewCliApp() *cli.App {
 	app := cli.NewApp()
 	app.Name = "cadence"
 	app.Usage = "A command-line tool for cadence users"
-	app.Version = Version
+	app.Version = client.SupportedCLIVersion
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:   FlagAddressWithAlias,
