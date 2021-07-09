@@ -140,6 +140,23 @@ func CreatePersistenceRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
+// CreatePersistenceRetryPolicyWithContext create a retry policy for persistence layer operations
+// which has an expiration interval computed based on the context's deadline
+func CreatePersistenceRetryPolicyWithContext(ctx context.Context) backoff.RetryPolicy {
+	if ctx == nil {
+		return CreatePersistenceRetryPolicy()
+	}
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return CreatePersistenceRetryPolicy()
+	}
+
+	policy := backoff.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
+	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
+	policy.SetExpirationInterval(deadline.Sub(time.Now()))
+	return policy
+}
+
 // CreateHistoryServiceRetryPolicy creates a retry policy for calls to history service
 func CreateHistoryServiceRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(historyServiceOperationInitialInterval)
