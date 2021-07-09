@@ -62,7 +62,36 @@ type (
 		DomainDefaults DomainDefaults `yaml:"domainDefaults"`
 		// Blobstore is the config for setting up blobstore
 		Blobstore Blobstore `yaml:"blobstore"`
+		// Authorization is the config for setting up authorization
+		Authorization Authorization `yaml:authorization`
 	}
+
+	Authorization struct {
+		OAuthAuthorizer OAuthAuthorizer `yaml:"oauthAuthorizer"`
+		NoopAuthorizer NoopAuthorizer `yaml:"noopAuthorizer"`
+	}
+
+	NoopAuthorizer  struct {
+		Enable bool `yaml:"enable"`
+	}
+
+	OAuthAuthorizer struct {
+		Enable bool `yaml:"enable"`
+		// Credentials to verify/create the JWT
+		JwtCredentials JwtCredentials `yaml:"jwtCredentials"`
+		// TTL: How long a JWT can be valid since timeAtIssue(iat)
+		JwtTTL int64 `yaml:"jwtTTL"`
+	}
+
+	JwtCredentials  struct {
+		// support: RS256 (RSA using SHA256)
+		Algorithm string `yaml:"algorithm"`
+		// for verifying JWT token passed in from external clients
+		PublicKey string `yaml:"publicKey"`
+		// for creating JWT token
+		PrivateKey string `yaml:"privateKey"`
+	}
+
 
 	// Service contains the service specific config items
 	Service struct {
