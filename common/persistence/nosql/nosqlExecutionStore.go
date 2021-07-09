@@ -67,6 +67,7 @@ func NewExecutionStore(
 	session gocql.Session,
 	logger log.Logger,
 ) (p.ExecutionStore, error) {
+	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
 	db := cassandra.NewCassandraDBFromSession(client, session, logger)
 
 	return &nosqlExecutionStore{
