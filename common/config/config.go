@@ -68,10 +68,10 @@ type (
 
 	Authorization struct {
 		OAuthAuthorizer OAuthAuthorizer `yaml:"oauthAuthorizer"`
-		NoopAuthorizer NoopAuthorizer `yaml:"noopAuthorizer"`
+		NoopAuthorizer  NoopAuthorizer  `yaml:"noopAuthorizer"`
 	}
 
-	NoopAuthorizer  struct {
+	NoopAuthorizer struct {
 		Enable bool `yaml:"enable"`
 	}
 
@@ -83,7 +83,7 @@ type (
 		JwtTTL int64 `yaml:"jwtTTL"`
 	}
 
-	JwtCredentials  struct {
+	JwtCredentials struct {
 		// support: RS256 (RSA using SHA256)
 		Algorithm string `yaml:"algorithm"`
 		// for verifying JWT token passed in from external clients
@@ -91,7 +91,6 @@ type (
 		// for creating JWT token
 		PrivateKey string `yaml:"privateKey"`
 	}
-
 
 	// Service contains the service specific config items
 	Service struct {
