@@ -21,9 +21,12 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/metrics"
 )
 
 // SetFactory is used to set the ClientFactory global
@@ -33,12 +36,16 @@ func SetFactory(factory ClientFactory) {
 
 // NewCliApp instantiates a new instance of the CLI application.
 func NewCliApp() *cli.App {
+	version := fmt.Sprintf("CLI version: %v (for compatibility checking between server and client/CLI)\n"+
+		"\t\tRelease version:%v\n"+
+		"\t\tBuild revision:%v\n"+
+		"\t\tNote: server is always backward compatible to CLI older versions, but not accepting newer than it can support.",
+		client.SupportedCLIVersion, metrics.Version, metrics.Revision)
+
 	app := cli.NewApp()
 	app.Name = "cadence"
 	app.Usage = "A command-line tool for cadence users. "
-	app.Version = client.SupportedCLIVersion +
-		"\n NOTE: CLI versioning is different from release versions, it's for compatibility checking between server and client/CLI." +
-		"A Cadence server is always backward compatible to older versions, but not accepting newer than it can support."
+	app.Version = version
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:   FlagAddressWithAlias,
