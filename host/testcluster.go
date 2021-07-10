@@ -134,6 +134,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 		metricsClient,
 		logger,
 	)
+	aConfig := noopAuthorizationConfig()
 	cadenceParams := &CadenceParams{
 		ClusterMetadata:               params.ClusterMetadata,
 		PersistenceConfig:             pConfig,
@@ -153,6 +154,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 		WorkerConfig:                  options.WorkerConfig,
 		MockAdminClient:               options.MockAdminClient,
 		DomainReplicationTaskExecutor: domain.NewReplicationTaskExecutor(testBase.DomainManager, clock.NewRealTimeSource(), logger),
+		AuthorizationConfig:           aConfig,
 	}
 	cluster := NewCadence(cadenceParams)
 	if err := cluster.Start(); err != nil {
@@ -160,6 +162,17 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 	}
 
 	return &TestCluster{testBase: testBase, archiverBase: archiverBase, host: cluster}, nil
+}
+
+func noopAuthorizationConfig() config.Authorization {
+	return config.Authorization{
+		OAuthAuthorizer: config.OAuthAuthorizer{
+			Enable: false,
+		},
+		NoopAuthorizer:  config.NoopAuthorizer{
+			Enable: true,
+		},
+	}
 }
 
 // NewClusterMetadata returns cluster metdata from config

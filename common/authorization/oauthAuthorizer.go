@@ -24,32 +24,31 @@ import (
     "context"
     "encoding/json"
     "fmt"
-    "strings"
+    "github.com/uber/cadence/common"
+    "go.uber.org/yarpc"
     "time"
 
     "github.com/cristalhq/jwt/v3"
-    "google.golang.org/grpc/metadata"
-
     "github.com/uber/cadence/common/config"
 )
 
 type oauthAuthority struct {
-    cfg *config.Config
+    authorizationCfg config.OAuthAuthorizer
 }
 
 type jwtClaims struct {
-    name       string
-    permission string
-    domain     string
-    iat        int64
+    Name       string
+    Permission string
+    Domain     string
+    Iat        int64
 }
 
 // NewOAuthAuthorizer creates a no-op authority
 func NewOAuthAuthorizer(
-    cfg *config.Config,
+    authorizationCfg config.OAuthAuthorizer,
 ) Authorizer {
     return &oauthAuthority{
-        cfg: cfg,
+        authorizationCfg: authorizationCfg,
     }
 }
 
@@ -57,32 +56,24 @@ func (a *oauthAuthority) Authorize(
     ctx context.Context,
     attributes *Attributes,
 ) (Result, error) {
-
-    md, ok := metadata.FromIncomingContext(ctx)
-    if !ok {
-        return Result{Decision: DecisionDeny}, fmt.Errorf("ctx metadata was not found. Unable to authorize")
-    }
-    authorization, ok := md["authorization"]
-    if !ok {
-        return Result{Decision: DecisionDeny}, fmt.Errorf("authorization header not populated")
-    }
+    call := yarpc.CallFromContext(ctx)
+    token :=  call.Header(common.AuthorizationTokenHeaderName)
     // parseTokenAndVerify could either return the claims or a bool. I'm returning the claims currently
     // because we might use it to populate values in the context
-    _, err := a.parseTokenAndVerify(authorization)
+    _, err := a.parseTokenAndVerify(token)
     if err != nil {
         return Result{Decision: DecisionDeny}, err
     }
     return Result{Decision: DecisionAllow}, nil
 }
 
-func (a *oauthAuthority) parseTokenAndVerify(authorization []string) (*jwtClaims, error) {
-    key := []byte(a.cfg.Authorization.OAuthAuthorizer.JwtCredentials.PrivateKey)
-    algorithm := jwt.Algorithm(a.cfg.Authorization.OAuthAuthorizer.JwtCredentials.Algorithm)
+func (a *oauthAuthority) parseTokenAndVerify(tokenStr string) (*jwtClaims, error) {
+    key := []byte(a.authorizationCfg.JwtCredentials.PrivateKey)
+    algorithm := jwt.Algorithm(a.authorizationCfg.JwtCredentials.Algorithm)
     verifier, err := jwt.NewVerifierHS(algorithm, key)
     if err != nil {
         return nil, err
     }
-    tokenStr := strings.Join(authorization, ".")
     token, verifyErr := jwt.ParseAndVerifyString(tokenStr, verifier)
     if verifyErr != nil {
         return nil, verifyErr
@@ -101,7 +92,7 @@ func (a *oauthAuthority) parseTokenAndVerify(authorization []string) (*jwtClaims
 }
 
 func (a *oauthAuthority) validateClaims(claims jwtClaims) error {
-    if claims.iat < time.Now().Unix() {
+    if claims.Iat < time.Now().Unix() {
         return fmt.Errorf("JWT has expired")
     }
 
