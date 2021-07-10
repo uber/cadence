@@ -33,13 +33,11 @@ import (
 	"github.com/uber/cadence/tools/common/schema"
 )
 
-const cassandraPersistenceName = "cassandra"
-
-// CreateCassandraKeyspace creates the keyspace using this session for given replica count
-func CreateCassandraKeyspace(s gocql.Session, keyspace string, replicas int, overwrite bool) (err error) {
+// createCassandraKeyspace creates the keyspace using this session for given replica count
+func createCassandraKeyspace(s gocql.Session, keyspace string, replicas int, overwrite bool) (err error) {
 	// if overwrite flag is set, drop the keyspace and create a new one
 	if overwrite {
-		err = DropCassandraKeyspace(s, keyspace)
+		err = dropCassandraKeyspace(s, keyspace)
 		if err != nil {
 			log.Error(`drop keyspace error`, err)
 			return
@@ -56,8 +54,8 @@ func CreateCassandraKeyspace(s gocql.Session, keyspace string, replicas int, ove
 	return
 }
 
-// DropCassandraKeyspace drops the given keyspace, if it exists
-func DropCassandraKeyspace(s gocql.Session, keyspace string) (err error) {
+// dropCassandraKeyspace drops the given keyspace, if it exists
+func dropCassandraKeyspace(s gocql.Session, keyspace string) (err error) {
 	err = s.Query(fmt.Sprintf("DROP KEYSPACE IF EXISTS %s", keyspace)).Exec()
 	if err != nil {
 		log.Error(`drop keyspace error`, err)

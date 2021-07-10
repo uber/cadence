@@ -141,7 +141,7 @@ func (s *TestCluster) CreateSession() {
 
 // CreateDatabase from PersistenceTestCluster interface
 func (s *TestCluster) CreateDatabase() {
-	err := CreateCassandraKeyspace(s.session, s.DatabaseName(), 1, true)
+	err := createCassandraKeyspace(s.session, s.DatabaseName(), 1, true)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -151,7 +151,7 @@ func (s *TestCluster) CreateDatabase() {
 
 // DropDatabase from PersistenceTestCluster interface
 func (s *TestCluster) DropDatabase() {
-	err := DropCassandraKeyspace(s.session, s.DatabaseName())
+	err := dropCassandraKeyspace(s.session, s.DatabaseName())
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		log.Fatal(err)
 	}
