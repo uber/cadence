@@ -63,12 +63,11 @@ const (
 // NewExecutionStore is used to create an instance of ExecutionStore implementation
 func NewExecutionStore(
 	shardID int,
-	client gocql.Client,
 	session gocql.Session,
 	logger log.Logger,
 ) (p.ExecutionStore, error) {
 	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
-	db := cassandra.NewCassandraDBFromSession(client, session, logger)
+	db := cassandra.NewCassandraDBFromSession(session, logger)
 
 	return &nosqlExecutionStore{
 		nosqlStore: nosqlStore{

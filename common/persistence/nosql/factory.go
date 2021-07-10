@@ -42,7 +42,6 @@ type (
 	}
 
 	executionStoreFactory struct {
-		client  gocql.Client
 		session gocql.Session
 		logger  log.Logger
 	}
@@ -138,7 +137,6 @@ func newExecutionStoreFactory(
 	}
 
 	return &executionStoreFactory{
-		client:  gocql.NewClient(),
 		session: session,
 		logger:  logger,
 	}, nil
@@ -150,7 +148,7 @@ func (f *executionStoreFactory) close() {
 
 // new implements ExecutionStoreFactory interface
 func (f *executionStoreFactory) new(shardID int) (p.ExecutionStore, error) {
-	pmgr, err := NewExecutionStore(shardID, f.client, f.session, f.logger)
+	pmgr, err := NewExecutionStore(shardID, f.session, f.logger)
 	if err != nil {
 		return nil, err
 	}

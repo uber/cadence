@@ -44,12 +44,11 @@ type (
 
 // NewNoSQLHistoryStoreFromSession returns new HistoryStore
 func NewNoSQLHistoryStoreFromSession(
-	client gocql.Client,
 	session gocql.Session,
 	logger log.Logger,
 ) p.HistoryStore {
 	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
-	db := cassandra.NewCassandraDBFromSession(client, session, logger)
+	db := cassandra.NewCassandraDBFromSession(session, logger)
 
 	return &nosqlHistoryStore{
 		nosqlStore: nosqlStore{

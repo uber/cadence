@@ -68,13 +68,12 @@ func newNoSQLShardStore(
 // NewNoSQLShardStoreFromSession is used to create an instance of ShardStore implementation
 // It is being used by some admin toolings
 func NewNoSQLShardStoreFromSession(
-	client gocql.Client,
 	session gocql.Session,
 	clusterName string,
 	logger log.Logger,
 ) p.ShardStore {
 	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
-	db := cassandra.NewCassandraDBFromSession(client, session, logger)
+	db := cassandra.NewCassandraDBFromSession(session, logger)
 
 	return &nosqlShardStore{
 		nosqlStore: nosqlStore{

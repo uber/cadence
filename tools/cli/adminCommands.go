@@ -287,7 +287,7 @@ func readOneRow(query gocql.Query) (map[string]interface{}, error) {
 	return result, err
 }
 
-func connectToCassandra(c *cli.Context) (gocql.Client, gocql.Session) {
+func connectToCassandra(c *cli.Context) gocql.Session {
 	host := getRequiredOption(c, FlagDBAddress)
 	if !c.IsSet(FlagDBPort) {
 		ErrorAndExit("cassandra port is required", nil)
@@ -316,12 +316,11 @@ func connectToCassandra(c *cli.Context) (gocql.Client, gocql.Session) {
 		}
 	}
 
-	client := gocql.NewClient()
-	session, err := client.CreateSession(clusterConfig)
+	session, err := gocql.NewClient().CreateSession(clusterConfig)
 	if err != nil {
 		ErrorAndExit("connect to Cassandra failed", err)
 	}
-	return client, session
+	return session
 }
 
 func connectToSQL(c *cli.Context) sqlplugin.DB {
@@ -372,7 +371,7 @@ func AdminGetDomainIDOrName(c *cli.Context) {
 		ErrorAndExit("Need either domainName or domainID", nil)
 	}
 
-	_, session := connectToCassandra(c)
+	session := connectToCassandra(c)
 
 	if len(domainID) > 0 {
 		tmpl := "select domain from domains where id = ? "
