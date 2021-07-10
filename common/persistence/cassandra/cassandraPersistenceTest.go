@@ -90,15 +90,15 @@ func (s *TestCluster) Config() config.Persistence {
 	}
 }
 
-// DatabaseName from PersistenceTestCluster interface
-func (s *TestCluster) DatabaseName() string {
+// databaseName from PersistenceTestCluster interface
+func (s *TestCluster) databaseName() string {
 	return s.keyspace
 }
 
 // SetupTestDatabase from PersistenceTestCluster interface
 func (s *TestCluster) SetupTestDatabase() {
-	s.CreateSession()
-	s.CreateDatabase()
+	s.createSession()
+	s.createDatabase()
 	schemaDir := s.schemaDir + "/"
 
 	if !strings.HasPrefix(schemaDir, "/") && !strings.HasPrefix(schemaDir, "../") {
@@ -109,18 +109,18 @@ func (s *TestCluster) SetupTestDatabase() {
 		schemaDir = cadencePackageDir + schemaDir
 	}
 
-	s.LoadSchema([]string{"schema.cql"}, schemaDir)
-	s.LoadVisibilitySchema([]string{"schema.cql"}, schemaDir)
+	s.loadSchema([]string{"schema.cql"}, schemaDir)
+	s.loadVisibilitySchema([]string{"schema.cql"}, schemaDir)
 }
 
 // TearDownTestDatabase from PersistenceTestCluster interface
 func (s *TestCluster) TearDownTestDatabase() {
-	s.DropDatabase()
+	s.dropDatabase()
 	s.session.Close()
 }
 
-// CreateSession from PersistenceTestCluster interface
-func (s *TestCluster) CreateSession() {
+// createSession from PersistenceTestCluster interface
+func (s *TestCluster) createSession() {
 	s.cluster = &gocql.ClusterConfig{
 		Hosts:        s.cfg.Hosts,
 		Port:         s.cfg.Port,
@@ -139,37 +139,37 @@ func (s *TestCluster) CreateSession() {
 	}
 }
 
-// CreateDatabase from PersistenceTestCluster interface
-func (s *TestCluster) CreateDatabase() {
-	err := createCassandraKeyspace(s.session, s.DatabaseName(), 1, true)
+// createDatabase from PersistenceTestCluster interface
+func (s *TestCluster) createDatabase() {
+	err := createCassandraKeyspace(s.session, s.databaseName(), 1, true)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	s.cluster.Keyspace = s.DatabaseName()
+	s.cluster.Keyspace = s.databaseName()
 }
 
-// DropDatabase from PersistenceTestCluster interface
-func (s *TestCluster) DropDatabase() {
-	err := dropCassandraKeyspace(s.session, s.DatabaseName())
+// dropDatabase from PersistenceTestCluster interface
+func (s *TestCluster) dropDatabase() {
+	err := dropCassandraKeyspace(s.session, s.databaseName())
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		log.Fatal(err)
 	}
 }
 
-// LoadSchema from PersistenceTestCluster interface
-func (s *TestCluster) LoadSchema(fileNames []string, schemaDir string) {
+// loadSchema from PersistenceTestCluster interface
+func (s *TestCluster) loadSchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "/cadence"
-	err := loadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Hosts, s.cluster.Port, s.DatabaseName(), true, nil, s.cluster.ProtoVersion)
+	err := loadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Hosts, s.cluster.Port, s.databaseName(), true, nil, s.cluster.ProtoVersion)
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		log.Fatal(err)
 	}
 }
 
-// LoadVisibilitySchema from PersistenceTestCluster interface
-func (s *TestCluster) LoadVisibilitySchema(fileNames []string, schemaDir string) {
+// loadVisibilitySchema from PersistenceTestCluster interface
+func (s *TestCluster) loadVisibilitySchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "visibility"
-	err := loadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Hosts, s.cluster.Port, s.DatabaseName(), false, nil, s.cluster.ProtoVersion)
+	err := loadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Hosts, s.cluster.Port, s.databaseName(), false, nil, s.cluster.ProtoVersion)
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		log.Fatal(err)
 	}
