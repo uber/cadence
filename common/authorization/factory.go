@@ -23,10 +23,10 @@ package authorization
 import "github.com/uber/cadence/common/config"
 
 func NewAuthorizer(authorization config.Authorization) Authorizer {
-    switch true {
-    case authorization.OAuthAuthorizer.Enable:
-        return NewOAuthAuthorizer(authorization.OAuthAuthorizer)
-    default:
-        return NewNopAuthorizer()
-    }
+	switch true {
+	case authorization.OAuthAuthorizer.Enable:
+		return NewOAuthAuthorizer(authorization.OAuthAuthorizer)
+	default:
+		return NewNopAuthorizer()
+	}
 }

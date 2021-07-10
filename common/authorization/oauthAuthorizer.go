@@ -21,80 +21,83 @@
 package authorization
 
 import (
-    "context"
-    "encoding/json"
-    "fmt"
-    "github.com/uber/cadence/common"
-    "go.uber.org/yarpc"
-    "time"
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
 
-    "github.com/cristalhq/jwt/v3"
-    "github.com/uber/cadence/common/config"
+	"go.uber.org/yarpc"
+
+	"github.com/uber/cadence/common"
+
+	"github.com/cristalhq/jwt/v3"
+
+	"github.com/uber/cadence/common/config"
 )
 
 type oauthAuthority struct {
-    authorizationCfg config.OAuthAuthorizer
+	authorizationCfg config.OAuthAuthorizer
 }
 
 type jwtClaims struct {
-    Name       string
-    Permission string
-    Domain     string
-    Iat        int64
+	Name       string
+	Permission string
+	Domain     string
+	Iat        int64
 }
 
 // NewOAuthAuthorizer creates a no-op authority
 func NewOAuthAuthorizer(
-    authorizationCfg config.OAuthAuthorizer,
+	authorizationCfg config.OAuthAuthorizer,
 ) Authorizer {
-    return &oauthAuthority{
-        authorizationCfg: authorizationCfg,
-    }
+	return &oauthAuthority{
+		authorizationCfg: authorizationCfg,
+	}
 }
 
 func (a *oauthAuthority) Authorize(
-    ctx context.Context,
-    attributes *Attributes,
+	ctx context.Context,
+	attributes *Attributes,
 ) (Result, error) {
-    call := yarpc.CallFromContext(ctx)
-    token :=  call.Header(common.AuthorizationTokenHeaderName)
-    // parseTokenAndVerify could either return the claims or a bool. I'm returning the claims currently
-    // because we might use it to populate values in the context
-    _, err := a.parseTokenAndVerify(token)
-    if err != nil {
-        return Result{Decision: DecisionDeny}, err
-    }
-    return Result{Decision: DecisionAllow}, nil
+	call := yarpc.CallFromContext(ctx)
+	token := call.Header(common.AuthorizationTokenHeaderName)
+	// parseTokenAndVerify could either return the claims or a bool. I'm returning the claims currently
+	// because we might use it to populate values in the context
+	_, err := a.parseTokenAndVerify(token)
+	if err != nil {
+		return Result{Decision: DecisionDeny}, err
+	}
+	return Result{Decision: DecisionAllow}, nil
 }
 
 func (a *oauthAuthority) parseTokenAndVerify(tokenStr string) (*jwtClaims, error) {
-    key := []byte(a.authorizationCfg.JwtCredentials.PrivateKey)
-    algorithm := jwt.Algorithm(a.authorizationCfg.JwtCredentials.Algorithm)
-    verifier, err := jwt.NewVerifierHS(algorithm, key)
-    if err != nil {
-        return nil, err
-    }
-    token, verifyErr := jwt.ParseAndVerifyString(tokenStr, verifier)
-    if verifyErr != nil {
-        return nil, verifyErr
-    }
-    var claims jwtClaims
-    claimsErr := json.Unmarshal(token.RawClaims(), &claims)
-    if claimsErr != nil {
-        return nil, err
-    }
-    validationErr := a.validateClaims(claims)
-    if validationErr != nil {
-        return nil, validationErr
-    }
+	key := []byte(a.authorizationCfg.JwtCredentials.PrivateKey)
+	algorithm := jwt.Algorithm(a.authorizationCfg.JwtCredentials.Algorithm)
+	verifier, err := jwt.NewVerifierHS(algorithm, key)
+	if err != nil {
+		return nil, err
+	}
+	token, verifyErr := jwt.ParseAndVerifyString(tokenStr, verifier)
+	if verifyErr != nil {
+		return nil, verifyErr
+	}
+	var claims jwtClaims
+	claimsErr := json.Unmarshal(token.RawClaims(), &claims)
+	if claimsErr != nil {
+		return nil, err
+	}
+	validationErr := a.validateClaims(claims)
+	if validationErr != nil {
+		return nil, validationErr
+	}
 
-    return &claims, nil
+	return &claims, nil
 }
 
 func (a *oauthAuthority) validateClaims(claims jwtClaims) error {
-    if claims.Iat < time.Now().Unix() {
-        return fmt.Errorf("JWT has expired")
-    }
+	if claims.Iat < time.Now().Unix() {
+		return fmt.Errorf("JWT has expired")
+	}
 
-    return nil
+	return nil
 }

@@ -169,7 +169,7 @@ func noopAuthorizationConfig() config.Authorization {
 		OAuthAuthorizer: config.OAuthAuthorizer{
 			Enable: false,
 		},
-		NoopAuthorizer:  config.NoopAuthorizer{
+		NoopAuthorizer: config.NoopAuthorizer{
 			Enable: true,
 		},
 	}
