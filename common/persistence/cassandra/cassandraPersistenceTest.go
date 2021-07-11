@@ -21,45 +21,35 @@
 package cassandra
 
 import (
-	"os"
-	"strings"
-	"time"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/persistence/nosql"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
 	"github.com/uber/cadence/environment"
 )
 
-const (
-	testSchemaDir = "schema/cassandra/"
-)
 
 // testCluster allows executing cassandra operations in testing.
 type testCluster struct {
-	keyspace  string
-	schemaDir string
-	cluster   *gocql.ClusterConfig
-	session   gocql.Session
-	cfg       config.Cassandra
+	keyspace string
+	cfg      config.NoSQL
+	adminDB  nosqlplugin.AdminDB
 }
 
 var _ testcluster.PersistenceTestCluster = (*testCluster)(nil)
 
 // NewTestCluster returns a new cassandra test cluster
-func NewTestCluster(keyspace, username, password, host string, port int, schemaDir string, protoVersion int) testcluster.PersistenceTestCluster {
-	var result testCluster
-	result.keyspace = keyspace
+func NewTestCluster(keyspace, username, password, host string, port int, protoVersion int) testcluster.PersistenceTestCluster {
+	var tc testCluster
+	tc.keyspace = keyspace
 	if port == 0 {
 		port = environment.GetCassandraPort()
-	}
-	if schemaDir == "" {
-		schemaDir = testSchemaDir
 	}
 	if host == "" {
 		host = environment.GetCassandraAddress()
@@ -67,9 +57,8 @@ func NewTestCluster(keyspace, username, password, host string, port int, schemaD
 	if protoVersion == 0 {
 		protoVersion = environment.GetCassandraProtoVersion()
 	}
-	result.schemaDir = schemaDir
-	result.cfg = config.NoSQL{
-		PluginName:   cassandra.PluginName,
+	tc.cfg = config.NoSQL{
+		PluginName:   cassandra.PluginName, // TODO
 		User:         username,
 		Password:     password,
 		Hosts:        host,
@@ -78,7 +67,12 @@ func NewTestCluster(keyspace, username, password, host string, port int, schemaD
 		Keyspace:     keyspace,
 		ProtoVersion: protoVersion,
 	}
-	return &result
+	var err error
+	tc.adminDB, err = nosql.NewNoSQLAdminDB(&tc.cfg, loggerimpl.NewNopLogger())
+	if err != nil {
+		log.Fatal(err)
+	}
+	return &tc
 }
 
 // Config returns the persistence config for connecting to this test cluster
@@ -102,93 +96,16 @@ func (s *testCluster) databaseName() string {
 
 // SetupTestDatabase from PersistenceTestCluster interface
 func (s *testCluster) SetupTestDatabase() {
-	s.createSession()
-	s.createDatabase()
-	schemaDir := s.schemaDir + "/"
-
-	if !strings.HasPrefix(schemaDir, "/") && !strings.HasPrefix(schemaDir, "../") {
-		cadencePackageDir, err := getCadencePackageDir()
-		if err != nil {
-			log.Fatal(err)
-		}
-		schemaDir = cadencePackageDir + schemaDir
+	err := s.adminDB.SetupTestDatabase()
+	if err != nil {
+		log.Fatal(err)
 	}
-
-	s.loadSchema([]string{"schema.cql"}, schemaDir)
-	s.loadVisibilitySchema([]string{"schema.cql"}, schemaDir)
 }
 
 // TearDownTestDatabase from PersistenceTestCluster interface
 func (s *testCluster) TearDownTestDatabase() {
-	s.dropDatabase()
-	s.session.Close()
-}
-
-// createSession from PersistenceTestCluster interface
-func (s *testCluster) createSession() {
-	s.cluster = &gocql.ClusterConfig{
-		Hosts:        s.cfg.Hosts,
-		Port:         s.cfg.Port,
-		User:         s.cfg.User,
-		Password:     s.cfg.Password,
-		ProtoVersion: s.cfg.ProtoVersion,
-		Keyspace:     "system",
-		Consistency:  gocql.One,
-		Timeout:      40 * time.Second,
-	}
-
-	var err error
-	s.session, err = gocql.GetOrCreateClient().CreateSession(*s.cluster)
-	if err != nil {
-		log.Fatal(`CreateSession`, err)
-	}
-}
-
-// createDatabase from PersistenceTestCluster interface
-func (s *testCluster) createDatabase() {
-	err := createCassandraKeyspace(s.session, s.databaseName(), 1, true)
+	err := s.adminDB.TeardownTestDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	s.cluster.Keyspace = s.databaseName()
-}
-
-// dropDatabase from PersistenceTestCluster interface
-func (s *testCluster) dropDatabase() {
-	err := dropCassandraKeyspace(s.session, s.databaseName())
-	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
-		log.Fatal(err)
-	}
-}
-
-// loadSchema from PersistenceTestCluster interface
-func (s *testCluster) loadSchema(fileNames []string, schemaDir string) {
-	workflowSchemaDir := schemaDir + "/cadence"
-	err := loadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Hosts, s.cluster.Port, s.databaseName(), true, nil, s.cluster.ProtoVersion)
-	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
-		log.Fatal(err)
-	}
-}
-
-// loadVisibilitySchema from PersistenceTestCluster interface
-func (s *testCluster) loadVisibilitySchema(fileNames []string, schemaDir string) {
-	workflowSchemaDir := schemaDir + "visibility"
-	err := loadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Hosts, s.cluster.Port, s.databaseName(), false, nil, s.cluster.ProtoVersion)
-	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
-		log.Fatal(err)
-	}
-}
-
-func getCadencePackageDir() (string, error) {
-	cadencePackageDir, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	cadenceIndex := strings.LastIndex(cadencePackageDir, "/cadence/")
-	cadencePackageDir = cadencePackageDir[:cadenceIndex+len("/cadence/")]
-	if err != nil {
-		panic(err)
-	}
-	return cadencePackageDir, err
 }

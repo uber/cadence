@@ -48,6 +48,9 @@ func (p *plugin) CreateDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.DB,
 
 // CreateAdminDB initialize the AdminDB object
 func (p *plugin) CreateAdminDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.AdminDB, error) {
+	if cfg.Keyspace == "" {
+		cfg.Keyspace = "system"
+	}
 	return p.doCreateDB(cfg, logger)
 }
 
