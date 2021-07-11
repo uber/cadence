@@ -40,7 +40,6 @@ type (
 	}
 
 	executionStoreFactory struct {
-		//session gocql.Session
 		db     nosqlplugin.DB
 		logger log.Logger
 	}
