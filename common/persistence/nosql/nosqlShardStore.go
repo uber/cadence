@@ -29,7 +29,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -45,12 +44,11 @@ var _ p.ShardStore = (*nosqlShardStore)(nil)
 
 // newNoSQLShardStore is used to create an instance of ShardStore implementation
 func newNoSQLShardStore(
-	cfg config.Cassandra,
+	cfg config.NoSQL,
 	clusterName string,
 	logger log.Logger,
 ) (p.ShardStore, error) {
-	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
-	db, err := cassandra.NewCassandraDB(cfg, logger)
+	db, err := NewNoSQLDB(&cfg, logger)
 	if err != nil {
 		return nil, err
 	}
