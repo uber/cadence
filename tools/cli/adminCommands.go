@@ -38,7 +38,10 @@ import (
 	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
@@ -287,27 +290,24 @@ func readOneRow(query gocql.Query) (map[string]interface{}, error) {
 	return result, err
 }
 
-func connectToCassandra(c *cli.Context) gocql.Session {
+func connectToCassandra(c *cli.Context) (nosqlplugin.DB, nosqlplugin.AdminDB) {
 	host := getRequiredOption(c, FlagDBAddress)
 	if !c.IsSet(FlagDBPort) {
 		ErrorAndExit("cassandra port is required", nil)
 	}
 
-	clusterConfig := gocql.ClusterConfig{
-		Hosts:             host,
-		Port:              c.Int(FlagDBPort),
-		Region:            c.String(FlagDBRegion),
-		User:              c.String(FlagUsername),
-		Password:          c.String(FlagPassword),
-		Keyspace:          getRequiredOption(c, FlagKeyspace),
-		ProtoVersion:      c.Int(FlagProtoVersion),
-		SerialConsistency: gocql.LocalSerial,
-		MaxConns:          20,
-		Consistency:       gocql.LocalQuorum,
-		Timeout:           10 * time.Second,
+	cfg := config.NoSQL{
+		Hosts:        host,
+		Port:         c.Int(FlagDBPort),
+		Region:       c.String(FlagDBRegion),
+		User:         c.String(FlagUsername),
+		Password:     c.String(FlagPassword),
+		Keyspace:     getRequiredOption(c, FlagKeyspace),
+		ProtoVersion: c.Int(FlagProtoVersion),
+		MaxConns:     20,
 	}
 	if c.Bool(FlagEnableTLS) {
-		clusterConfig.TLS = &config.TLS{
+		cfg.TLS = &config.TLS{
 			Enabled:                true,
 			CertFile:               c.String(FlagTLSCertPath),
 			KeyFile:                c.String(FlagTLSKeyPath),
@@ -316,11 +316,15 @@ func connectToCassandra(c *cli.Context) gocql.Session {
 		}
 	}
 
-	session, err := gocql.GetOrCreateClient().CreateSession(clusterConfig)
+	db, err := nosql.NewNoSQLDB(&cfg, loggerimpl.NewNopLogger())
 	if err != nil {
 		ErrorAndExit("connect to Cassandra failed", err)
 	}
-	return session
+	adminDB, err := nosql.NewNoSQLAdminDB(&cfg, loggerimpl.NewNopLogger())
+	if err != nil {
+		ErrorAndExit("connect to Cassandra failed", err)
+	}
+	return db, adminDB
 }
 
 func connectToSQL(c *cli.Context) sqlplugin.DB {

@@ -30,7 +30,6 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -68,13 +67,10 @@ func newNoSQLShardStore(
 // NewNoSQLShardStoreFromSession is used to create an instance of ShardStore implementation
 // It is being used by some admin toolings
 func NewNoSQLShardStoreFromSession(
-	session gocql.Session,
+	db nosqlplugin.DB,
 	clusterName string,
 	logger log.Logger,
 ) p.ShardStore {
-	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
-	db := cassandra.NewCassandraDBFromSession(session, logger)
-
 	return &nosqlShardStore{
 		nosqlStore: nosqlStore{
 			db:     db,

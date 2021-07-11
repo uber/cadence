@@ -28,8 +28,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -63,12 +61,9 @@ const (
 // NewExecutionStore is used to create an instance of ExecutionStore implementation
 func NewExecutionStore(
 	shardID int,
-	session gocql.Session,
+	db nosqlplugin.DB,
 	logger log.Logger,
 ) (p.ExecutionStore, error) {
-	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
-	db := cassandra.NewCassandraDBFromSession(session, logger)
-
 	return &nosqlExecutionStore{
 		nosqlStore: nosqlStore{
 			logger: logger,

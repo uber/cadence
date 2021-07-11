@@ -24,6 +24,7 @@ import (
 	"fmt"
 
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
@@ -63,23 +64,23 @@ func GetRegisteredPluginNames() []string {
 // underlying SQL database. The returned object is to tied to a single
 // SQL database and the object can be used to perform CRUD operations on
 // the tables in the database
-func NewSQLDB(cfg *config.NoSQL) (nosqlplugin.DB, error) {
+func NewNoSQLDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.DB, error) {
 	plugin, ok := supportedPlugins[cfg.PluginName]
 
 	if !ok {
 		return nil, fmt.Errorf("not supported plugin %v, only supported: %v", cfg.PluginName, supportedPlugins)
 	}
 
-	return plugin.CreateDB(cfg)
+	return plugin.CreateDB(cfg, logger)
 }
 
 // NewSQLAdminDB returns a AdminDB
-func NewSQLAdminDB(cfg *config.NoSQL) (nosqlplugin.AdminDB, error) {
+func NewNoSQLAdminDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.AdminDB, error) {
 	plugin, ok := supportedPlugins[cfg.PluginName]
 
 	if !ok {
 		return nil, fmt.Errorf("not supported plugin %v, only supported: %v", cfg.PluginName, supportedPlugins)
 	}
 
-	return plugin.CreateAdminDB(cfg)
+	return plugin.CreateAdminDB(cfg, logger)
 }

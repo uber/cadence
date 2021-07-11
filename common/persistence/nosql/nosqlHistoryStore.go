@@ -31,7 +31,6 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/types"
 )
@@ -44,11 +43,9 @@ type (
 
 // NewNoSQLHistoryStoreFromSession returns new HistoryStore
 func NewNoSQLHistoryStoreFromSession(
-	session gocql.Session,
+	db nosqlplugin.DB,
 	logger log.Logger,
 ) p.HistoryStore {
-	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
-	db := cassandra.NewCassandraDBFromSession(session, logger)
 
 	return &nosqlHistoryStore{
 		nosqlStore: nosqlStore{
