@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/environment"
 )
 
@@ -39,8 +40,8 @@ const (
 	testSchemaDir = "schema/cassandra/"
 )
 
-// TestCluster allows executing cassandra operations in testing.
-type TestCluster struct {
+// testCluster allows executing cassandra operations in testing.
+type testCluster struct {
 	keyspace  string
 	schemaDir string
 	cluster   *gocql.ClusterConfig
@@ -48,9 +49,11 @@ type TestCluster struct {
 	cfg       config.Cassandra
 }
 
+var _ pt.PersistenceTestCluster = (*testCluster)(nil)
+
 // NewTestCluster returns a new cassandra test cluster
-func NewTestCluster(keyspace, username, password, host string, port int, schemaDir string, protoVersion int) *TestCluster {
-	var result TestCluster
+func NewTestCluster(keyspace, username, password, host string, port int, schemaDir string, protoVersion int) pt.PersistenceTestCluster {
+	var result testCluster
 	result.keyspace = keyspace
 	if port == 0 {
 		port = environment.GetCassandraPort()
@@ -79,7 +82,7 @@ func NewTestCluster(keyspace, username, password, host string, port int, schemaD
 }
 
 // Config returns the persistence config for connecting to this test cluster
-func (s *TestCluster) Config() config.Persistence {
+func (s *testCluster) Config() config.Persistence {
 	cfg := s.cfg
 	return config.Persistence{
 		DefaultStore:    "test",
@@ -93,12 +96,12 @@ func (s *TestCluster) Config() config.Persistence {
 }
 
 // databaseName from PersistenceTestCluster interface
-func (s *TestCluster) databaseName() string {
+func (s *testCluster) databaseName() string {
 	return s.keyspace
 }
 
 // SetupTestDatabase from PersistenceTestCluster interface
-func (s *TestCluster) SetupTestDatabase() {
+func (s *testCluster) SetupTestDatabase() {
 	s.createSession()
 	s.createDatabase()
 	schemaDir := s.schemaDir + "/"
@@ -116,13 +119,13 @@ func (s *TestCluster) SetupTestDatabase() {
 }
 
 // TearDownTestDatabase from PersistenceTestCluster interface
-func (s *TestCluster) TearDownTestDatabase() {
+func (s *testCluster) TearDownTestDatabase() {
 	s.dropDatabase()
 	s.session.Close()
 }
 
 // createSession from PersistenceTestCluster interface
-func (s *TestCluster) createSession() {
+func (s *testCluster) createSession() {
 	s.cluster = &gocql.ClusterConfig{
 		Hosts:        s.cfg.Hosts,
 		Port:         s.cfg.Port,
@@ -142,7 +145,7 @@ func (s *TestCluster) createSession() {
 }
 
 // createDatabase from PersistenceTestCluster interface
-func (s *TestCluster) createDatabase() {
+func (s *testCluster) createDatabase() {
 	err := createCassandraKeyspace(s.session, s.databaseName(), 1, true)
 	if err != nil {
 		log.Fatal(err)
@@ -152,7 +155,7 @@ func (s *TestCluster) createDatabase() {
 }
 
 // dropDatabase from PersistenceTestCluster interface
-func (s *TestCluster) dropDatabase() {
+func (s *testCluster) dropDatabase() {
 	err := dropCassandraKeyspace(s.session, s.databaseName())
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		log.Fatal(err)
@@ -160,7 +163,7 @@ func (s *TestCluster) dropDatabase() {
 }
 
 // loadSchema from PersistenceTestCluster interface
-func (s *TestCluster) loadSchema(fileNames []string, schemaDir string) {
+func (s *testCluster) loadSchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "/cadence"
 	err := loadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Hosts, s.cluster.Port, s.databaseName(), true, nil, s.cluster.ProtoVersion)
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
@@ -169,7 +172,7 @@ func (s *TestCluster) loadSchema(fileNames []string, schemaDir string) {
 }
 
 // loadVisibilitySchema from PersistenceTestCluster interface
-func (s *TestCluster) loadVisibilitySchema(fileNames []string, schemaDir string) {
+func (s *testCluster) loadVisibilitySchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "visibility"
 	err := loadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Hosts, s.cluster.Port, s.databaseName(), false, nil, s.cluster.ProtoVersion)
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {

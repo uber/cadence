@@ -31,19 +31,22 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
+	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/environment"
 )
 
-// TestCluster allows executing cassandra operations in testing.
-type TestCluster struct {
+// testCluster allows executing cassandra operations in testing.
+type testCluster struct {
 	dbName    string
 	schemaDir string
 	cfg       config.SQL
 }
 
+var _ pt.PersistenceTestCluster = (*testCluster)(nil)
+
 // NewTestCluster returns a new SQL test cluster
-func NewTestCluster(pluginName, dbName, username, password, host string, port int, schemaDir string) *TestCluster {
-	var result TestCluster
+func NewTestCluster(pluginName, dbName, username, password, host string, port int, schemaDir string) pt.PersistenceTestCluster {
+	var result testCluster
 	result.dbName = dbName
 	if port == 0 {
 		port = environment.GetMySQLPort()
@@ -67,12 +70,12 @@ func NewTestCluster(pluginName, dbName, username, password, host string, port in
 }
 
 // DatabaseName from PersistenceTestCluster interface
-func (s *TestCluster) DatabaseName() string {
+func (s *testCluster) DatabaseName() string {
 	return s.dbName
 }
 
 // SetupTestDatabase from PersistenceTestCluster interface
-func (s *TestCluster) SetupTestDatabase() {
+func (s *testCluster) SetupTestDatabase() {
 	s.CreateDatabase()
 
 	schemaDir := s.schemaDir + "/"
@@ -88,7 +91,7 @@ func (s *TestCluster) SetupTestDatabase() {
 }
 
 // Config returns the persistence config for connecting to this test cluster
-func (s *TestCluster) Config() config.Persistence {
+func (s *testCluster) Config() config.Persistence {
 	cfg := s.cfg
 	return config.Persistence{
 		DefaultStore:    "test",
@@ -102,12 +105,12 @@ func (s *TestCluster) Config() config.Persistence {
 }
 
 // TearDownTestDatabase from PersistenceTestCluster interface
-func (s *TestCluster) TearDownTestDatabase() {
+func (s *testCluster) TearDownTestDatabase() {
 	s.DropDatabase()
 }
 
 // CreateDatabase from PersistenceTestCluster interface
-func (s *TestCluster) CreateDatabase() {
+func (s *testCluster) CreateDatabase() {
 	cfg2 := s.cfg
 	// NOTE need to connect with empty name to create new database
 	cfg2.DatabaseName = ""
@@ -128,7 +131,7 @@ func (s *TestCluster) CreateDatabase() {
 }
 
 // DropDatabase from PersistenceTestCluster interface
-func (s *TestCluster) DropDatabase() {
+func (s *testCluster) DropDatabase() {
 	cfg2 := s.cfg
 	// NOTE need to connect with empty name to drop the database
 	cfg2.DatabaseName = ""
@@ -149,7 +152,7 @@ func (s *TestCluster) DropDatabase() {
 }
 
 // LoadSchema from PersistenceTestCluster interface
-func (s *TestCluster) LoadSchema(fileNames []string, schemaDir string) {
+func (s *testCluster) LoadSchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "/cadence"
 	err := s.loadDatabaseSchema(workflowSchemaDir, fileNames, true)
 	if err != nil {
@@ -158,7 +161,7 @@ func (s *TestCluster) LoadSchema(fileNames []string, schemaDir string) {
 }
 
 // LoadVisibilitySchema from PersistenceTestCluster interface
-func (s *TestCluster) LoadVisibilitySchema(fileNames []string, schemaDir string) {
+func (s *testCluster) LoadVisibilitySchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "/visibility"
 	err := s.loadDatabaseSchema(workflowSchemaDir, fileNames, true)
 	if err != nil {
@@ -177,7 +180,7 @@ func getCadencePackageDir() (string, error) {
 }
 
 // loadDatabaseSchema loads the schema from the given .sql files on this database
-func (s *TestCluster) loadDatabaseSchema(dir string, fileNames []string, override bool) (err error) {
+func (s *testCluster) loadDatabaseSchema(dir string, fileNames []string, override bool) (err error) {
 	db, err := NewSQLAdminDB(&s.cfg)
 	if err != nil {
 		panic(err)

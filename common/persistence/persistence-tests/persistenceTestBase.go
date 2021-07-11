@@ -95,13 +95,6 @@ type (
 		ClusterMetadata       cluster.Metadata
 	}
 
-	// PersistenceTestCluster exposes management operations on a database
-	PersistenceTestCluster interface {
-		SetupTestDatabase()
-		TearDownTestDatabase()
-		Config() config.Persistence
-	}
-
 	// TestTransferTaskIDGenerator helper
 	TestTransferTaskIDGenerator struct {
 		seqNum int64
