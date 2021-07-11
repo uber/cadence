@@ -34,7 +34,7 @@ const (
 // CreateSession creates a new session
 // TODO this will be converted to private later, after all cassandra code moved to plugin pkg
 func CreateSession(cfg config.Cassandra) (gocql.Session, error) {
-	return gocql.NewClient().CreateSession(gocql.ClusterConfig{
+	return gocql.GetOrCreateClient().CreateSession(gocql.ClusterConfig{
 		Hosts:             cfg.Hosts,
 		Port:              cfg.Port,
 		User:              cfg.User,

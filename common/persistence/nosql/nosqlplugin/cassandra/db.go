@@ -39,7 +39,7 @@ var _ nosqlplugin.DB = (*cdb)(nil)
 // NewCassandraDBFromSession returns a DB from a session
 func NewCassandraDBFromSession(session gocql.Session, logger log.Logger) nosqlplugin.DB {
 	return &cdb{
-		client:  gocql.NewClient(),
+		client:  gocql.GetOrCreateClient(),
 		session: session,
 		logger:  logger,
 	}
@@ -52,7 +52,7 @@ func NewCassandraDB(cfg config.Cassandra, logger log.Logger) (nosqlplugin.DB, er
 		return nil, err
 	}
 	return &cdb{
-		client:  gocql.NewClient(),
+		client:  gocql.GetOrCreateClient(),
 		session: session,
 		logger:  logger,
 	}, nil

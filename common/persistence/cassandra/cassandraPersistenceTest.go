@@ -133,7 +133,7 @@ func (s *TestCluster) createSession() {
 	}
 
 	var err error
-	s.session, err = gocql.NewClient().CreateSession(*s.cluster)
+	s.session, err = gocql.GetOrCreateClient().CreateSession(*s.cluster)
 	if err != nil {
 		log.Fatal(`CreateSession`, err)
 	}

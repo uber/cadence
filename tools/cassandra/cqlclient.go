@@ -96,7 +96,7 @@ func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
 	cqlClient := new(CqlClient)
 	cqlClient.cfg = cfg
 	cqlClient.nReplicas = cfg.NumReplicas
-	cqlClient.session, err = gocql.NewClient().CreateSession(gocql.ClusterConfig{
+	cqlClient.session, err = gocql.GetOrCreateClient().CreateSession(gocql.ClusterConfig{
 		Hosts:        cfg.Hosts,
 		Port:         cfg.Port,
 		User:         cfg.User,
