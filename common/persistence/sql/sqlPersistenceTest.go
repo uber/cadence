@@ -76,7 +76,7 @@ func (s *testCluster) DatabaseName() string {
 
 // SetupTestDatabase from PersistenceTestCluster interface
 func (s *testCluster) SetupTestDatabase() {
-	s.CreateDatabase()
+	s.createDatabase()
 
 	schemaDir := s.schemaDir + "/"
 	if !strings.HasPrefix(schemaDir, "/") && !strings.HasPrefix(schemaDir, "../") {
@@ -86,8 +86,8 @@ func (s *testCluster) SetupTestDatabase() {
 		}
 		schemaDir = cadencePackageDir + schemaDir
 	}
-	s.LoadSchema([]string{"schema.sql"}, schemaDir)
-	s.LoadVisibilitySchema([]string{"schema.sql"}, schemaDir)
+	s.loadSchema([]string{"schema.sql"}, schemaDir)
+	s.loadVisibilitySchema([]string{"schema.sql"}, schemaDir)
 }
 
 // Config returns the persistence config for connecting to this test cluster
@@ -106,11 +106,11 @@ func (s *testCluster) Config() config.Persistence {
 
 // TearDownTestDatabase from PersistenceTestCluster interface
 func (s *testCluster) TearDownTestDatabase() {
-	s.DropDatabase()
+	s.dropDatabase()
 }
 
-// CreateDatabase from PersistenceTestCluster interface
-func (s *testCluster) CreateDatabase() {
+// createDatabase from PersistenceTestCluster interface
+func (s *testCluster) createDatabase() {
 	cfg2 := s.cfg
 	// NOTE need to connect with empty name to create new database
 	cfg2.DatabaseName = ""
@@ -130,8 +130,8 @@ func (s *testCluster) CreateDatabase() {
 	}
 }
 
-// DropDatabase from PersistenceTestCluster interface
-func (s *testCluster) DropDatabase() {
+// dropDatabase from PersistenceTestCluster interface
+func (s *testCluster) dropDatabase() {
 	cfg2 := s.cfg
 	// NOTE need to connect with empty name to drop the database
 	cfg2.DatabaseName = ""
@@ -151,8 +151,8 @@ func (s *testCluster) DropDatabase() {
 	}
 }
 
-// LoadSchema from PersistenceTestCluster interface
-func (s *testCluster) LoadSchema(fileNames []string, schemaDir string) {
+// loadSchema from PersistenceTestCluster interface
+func (s *testCluster) loadSchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "/cadence"
 	err := s.loadDatabaseSchema(workflowSchemaDir, fileNames, true)
 	if err != nil {
@@ -160,8 +160,8 @@ func (s *testCluster) LoadSchema(fileNames []string, schemaDir string) {
 	}
 }
 
-// LoadVisibilitySchema from PersistenceTestCluster interface
-func (s *testCluster) LoadVisibilitySchema(fileNames []string, schemaDir string) {
+// loadVisibilitySchema from PersistenceTestCluster interface
+func (s *testCluster) loadVisibilitySchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "/visibility"
 	err := s.loadDatabaseSchema(workflowSchemaDir, fileNames, true)
 	if err != nil {

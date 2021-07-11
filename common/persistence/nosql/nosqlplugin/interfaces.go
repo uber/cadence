@@ -40,6 +40,8 @@ type (
 	AdminDB interface {
 		// generic query method
 		QueryOneRow(queryTemplate string, args ...interface{}) (row map[string]interface{}, err error)
+		SetupTestDatabase() error
+		TeardownTestDatabase() error
 	}
 
 	// DB defines the API for regular NoSQL operations of a Cadence server

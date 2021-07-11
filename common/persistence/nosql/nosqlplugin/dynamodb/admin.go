@@ -21,6 +21,20 @@
 
 package dynamodb
 
-func (db *ddb) QueryOneRow(queryTemplate string, args ...interface{}) (row map[string]interface{}, err error){
+import (
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+)
+
+var _ nosqlplugin.AdminDB = (*ddb)(nil)
+
+func (db *ddb) QueryOneRow(queryTemplate string, args ...interface{}) (row map[string]interface{}, err error) {
+	panic("TODO")
+}
+
+func (db *ddb) SetupTestDatabase() error {
+	panic("TODO")
+}
+
+func (db *ddb) TeardownTestDatabase() error {
 	panic("TODO")
 }

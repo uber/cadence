@@ -21,6 +21,7 @@
 package cassandra
 
 import (
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
@@ -31,16 +32,18 @@ type cdb struct {
 	logger  log.Logger
 	client  gocql.Client
 	session gocql.Session
+	cfg     *config.NoSQL
 }
 
 var _ nosqlplugin.DB = (*cdb)(nil)
 
 // newCassandraDBFromSession returns a DB from a session
-func newCassandraDBFromSession(session gocql.Session, logger log.Logger) *cdb {
+func newCassandraDBFromSession(cfg *config.NoSQL, session gocql.Session, logger log.Logger) *cdb {
 	return &cdb{
 		client:  gocql.GetOrCreateClient(),
 		session: session,
 		logger:  logger,
+		cfg:     cfg,
 	}
 }
 
