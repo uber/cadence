@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/environment"
 )
@@ -64,7 +65,8 @@ func NewTestCluster(keyspace, username, password, host string, port int, schemaD
 		protoVersion = environment.GetCassandraProtoVersion()
 	}
 	result.schemaDir = schemaDir
-	result.cfg = config.Cassandra{
+	result.cfg = config.NoSQL{
+		PluginName:   cassandra.PluginName,
 		User:         username,
 		Password:     password,
 		Hosts:        host,

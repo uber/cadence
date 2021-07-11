@@ -46,7 +46,7 @@ func (p *plugin) CreateDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.DB,
 	return p.doCreateDB(cfg, logger)
 }
 
-// CreateAdminDB initialize the db object
+// CreateAdminDB initialize the AdminDB object
 func (p *plugin) CreateAdminDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.AdminDB, error) {
 	return p.doCreateDB(cfg, logger)
 }
