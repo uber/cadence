@@ -20,7 +20,56 @@
 
 package cassandra
 
+import (
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/persistence/nosql"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+)
+
 const (
 	// PluginName is the name of the plugin
 	PluginName = "cassandra"
 )
+
+type plugin struct{}
+
+var _ nosqlplugin.Plugin = (*plugin)(nil)
+
+func init() {
+	nosql.RegisterPlugin(PluginName, &plugin{})
+}
+
+// CreateDB initialize the db object
+func (p *plugin) CreateDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.DB, error) {
+	session, err := gocql.GetOrCreateClient().CreateSession(toGoCqlConfig(cfg))
+	if err != nil {
+		return nil, err
+	}
+	db := NewCassandraDBFromSession(session, logger)
+	return db, nil
+}
+
+// CreateAdminDB initialize the db object
+func (p *plugin) CreateAdminDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.AdminDB, error) {
+	panic("TODO")
+}
+
+func toGoCqlConfig(cfg *config.NoSQL) gocql.ClusterConfig {
+	return gocql.ClusterConfig{
+		Hosts:             cfg.Hosts,
+		Port:              cfg.Port,
+		User:              cfg.User,
+		Password:          cfg.Password,
+		Keyspace:          cfg.Keyspace,
+		Region:            cfg.Region,
+		Datacenter:        cfg.Datacenter,
+		MaxConns:          cfg.MaxConns,
+		TLS:               cfg.TLS,
+		ProtoVersion:      cfg.ProtoVersion,
+		Consistency:       gocql.LocalQuorum,
+		SerialConsistency: gocql.LocalSerial,
+		Timeout:           defaultSessionTimeout,
+	}
+}
