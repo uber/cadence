@@ -43,17 +43,21 @@ func init() {
 
 // CreateDB initialize the db object
 func (p *plugin) CreateDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.DB, error) {
+	return p.doCreateDB(cfg, logger)
+}
+
+// CreateAdminDB initialize the db object
+func (p *plugin) CreateAdminDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.AdminDB, error) {
+	return p.doCreateDB(cfg, logger)
+}
+
+func (p *plugin) doCreateDB(cfg *config.NoSQL, logger log.Logger) (*cdb, error) {
 	session, err := gocql.GetOrCreateClient().CreateSession(toGoCqlConfig(cfg))
 	if err != nil {
 		return nil, err
 	}
 	db := newCassandraDBFromSession(session, logger)
 	return db, nil
-}
-
-// CreateAdminDB initialize the db object
-func (p *plugin) CreateAdminDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.AdminDB, error) {
-	panic("TODO")
 }
 
 func toGoCqlConfig(cfg *config.NoSQL) gocql.ClusterConfig {

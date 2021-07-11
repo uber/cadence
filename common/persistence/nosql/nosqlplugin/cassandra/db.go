@@ -36,7 +36,7 @@ type cdb struct {
 var _ nosqlplugin.DB = (*cdb)(nil)
 
 // newCassandraDBFromSession returns a DB from a session
-func newCassandraDBFromSession(session gocql.Session, logger log.Logger) nosqlplugin.DB {
+func newCassandraDBFromSession(session gocql.Session, logger log.Logger) *cdb {
 	return &cdb{
 		client:  gocql.GetOrCreateClient(),
 		session: session,

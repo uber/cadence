@@ -21,7 +21,11 @@
 
 package cassandra
 
-func (db *cdb) QueryOneRow(queryTemplate string, args ...interface{}) (row map[string]interface{}, err error){
+import "github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+
+var _ nosqlplugin.AdminDB = (*cdb)(nil)
+
+func (db *cdb) QueryOneRow(queryTemplate string, args ...interface{}) (row map[string]interface{}, err error) {
 	query := db.session.Query(queryTemplate, args...)
 	result := make(map[string]interface{})
 	err = query.MapScan(result)
