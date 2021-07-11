@@ -31,7 +31,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
-	pt "github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
 	"github.com/uber/cadence/environment"
 )
 
@@ -42,10 +42,10 @@ type testCluster struct {
 	cfg       config.SQL
 }
 
-var _ pt.PersistenceTestCluster = (*testCluster)(nil)
+var _ testcluster.PersistenceTestCluster = (*testCluster)(nil)
 
 // NewTestCluster returns a new SQL test cluster
-func NewTestCluster(pluginName, dbName, username, password, host string, port int, schemaDir string) pt.PersistenceTestCluster {
+func NewTestCluster(pluginName, dbName, username, password, host string, port int, schemaDir string) testcluster.PersistenceTestCluster {
 	var result testCluster
 	result.dbName = dbName
 	if port == 0 {

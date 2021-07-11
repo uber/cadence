@@ -47,6 +47,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
 
 	// the import is a test dependency
 	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
@@ -194,12 +195,12 @@ func NewClusterMetadata(options *TestClusterConfig, logger log.Logger) cluster.M
 	return clusterMetadata
 }
 
-func NewPersistenceTestCluster(clusterConfig *TestClusterConfig) persistencetests.PersistenceTestCluster {
+func NewPersistenceTestCluster(clusterConfig *TestClusterConfig) testcluster.PersistenceTestCluster {
 	// NOTE: Override here to keep consistent. clusterConfig will be used in the test for some purposes.
 	clusterConfig.Persistence.StoreType = TestFlags.PersistenceType
 	clusterConfig.Persistence.SQLDBPluginName = TestFlags.SQLPluginName
 
-	var testCluster persistencetests.PersistenceTestCluster
+	var testCluster testcluster.PersistenceTestCluster
 	if TestFlags.PersistenceType == config.StoreTypeCassandra {
 		testCluster = cassandra.NewTestCluster(clusterConfig.Persistence.DBName, clusterConfig.Persistence.DBUsername, clusterConfig.Persistence.DBPassword, clusterConfig.Persistence.DBHost, clusterConfig.Persistence.DBPort, clusterConfig.Persistence.SchemaDir, clusterConfig.Persistence.ProtoVersion)
 	} else if TestFlags.PersistenceType == config.StoreTypeSQL {
