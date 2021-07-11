@@ -28,8 +28,10 @@ import (
 )
 
 type (
+	// WorkflowExecution stores workflow execution metadata
 	WorkflowExecution = persistence.InternalWorkflowMutableState
 
+	// WorkflowExecutionRequest is for creating/updating a workflow execution
 	WorkflowExecutionRequest struct {
 		// basic information/data
 		persistence.InternalWorkflowExecutionInfo
@@ -65,39 +67,50 @@ type (
 		NewBufferedEventBatch *persistence.DataBlob
 	}
 
+	// WorkflowExecutionMapsWriteMode controls how to write WorkflowExecutionMaps
 	WorkflowExecutionMapsWriteMode int
-	EventBufferWriteMode           int
+	// EventBufferWriteMode controls how to write EventBuffer
+	EventBufferWriteMode int
 
+	// TimerTask is background timer task
 	TimerTask = persistence.TimerTaskInfo
 
+	// ReplicationTask is for replication
 	ReplicationTask = persistence.InternalReplicationTaskInfo
 
+	// CrossClusterTask is for cross cluster transfer task
 	CrossClusterTask struct {
 		TransferTask
 		TargetCluster string
 	}
 
+	// TransferTask is for regular transfer task
 	TransferTask = persistence.TransferTaskInfo
 
+	// ShardCondition is the condition for making changes within a shard
 	ShardCondition struct {
 		ShardID int
 		RangeID int64
 	}
 
+	// CurrentWorkflowWriteRequest is for insert/update current_workflow record
 	CurrentWorkflowWriteRequest struct {
 		WriteMode CurrentWorkflowWriteMode
 		Row       CurrentWorkflowRow
 		Condition *CurrentWorkflowWriteCondition
 	}
 
+	// CurrentWorkflowWriteCondition is the condition for updating current_workflow record
 	CurrentWorkflowWriteCondition struct {
 		CurrentRunID     *string
 		LastWriteVersion *int64
 		State            *int
 	}
 
+	// CurrentWorkflowWriteMode controls how to write current_workflow
 	CurrentWorkflowWriteMode int
 
+	// CurrentWorkflowRow is the current_workflow row
 	CurrentWorkflowRow struct {
 		ShardID          int
 		DomainID         string
@@ -109,6 +122,7 @@ type (
 		LastWriteVersion int64
 	}
 
+	// TasksFilter is for filtering tasks
 	TasksFilter struct {
 		TaskListFilter
 		// Exclusive
@@ -118,12 +132,14 @@ type (
 		BatchSize int
 	}
 
+	// TaskRowForInsert is the struct to inserting task
 	TaskRowForInsert struct {
 		TaskRow
 		// <= 0 means no TTL
 		TTLSeconds int
 	}
 
+	// TaskRow represent a task row
 	TaskRow struct {
 		DomainID     string
 		TaskListName string
@@ -136,12 +152,14 @@ type (
 		CreatedTime time.Time
 	}
 
+	// TaskListFilter is for filtering tasklist
 	TaskListFilter struct {
 		DomainID     string
 		TaskListName string
 		TaskListType int
 	}
 
+	// TaskListRow is a tasklist row
 	TaskListRow struct {
 		DomainID     string
 		TaskListName string
@@ -153,12 +171,13 @@ type (
 		LastUpdatedTime time.Time
 	}
 
+	// ListTaskListResult is the result of list tasklists
 	ListTaskListResult struct {
 		TaskLists     []*TaskListRow
 		NextPageToken []byte
 	}
 
-	// For now ShardRow is the same as persistence.InternalShardInfo
+	// ShardRow is the same as persistence.InternalShardInfo
 	// Separate them later when there is a need.
 	ShardRow = persistence.InternalShardInfo
 
@@ -283,17 +302,20 @@ const (
 	ClosedByClosedStatus
 )
 
+// enums of VisibilitySortType
 const (
 	SortByStartTime VisibilitySortType = iota
 	SortByClosedTime
 )
 
+// enums of CurrentWorkflowWriteMode
 const (
 	CurrentWorkflowWriteModeNoop CurrentWorkflowWriteMode = iota
 	CurrentWorkflowWriteModeUpdate
 	CurrentWorkflowWriteModeInsert
 )
 
+// enums of WorkflowExecutionMapsWriteMode
 const (
 	// WorkflowExecutionMapsWriteModeCreate will upsert new entry to maps
 	WorkflowExecutionMapsWriteModeCreate WorkflowExecutionMapsWriteMode = iota
@@ -312,6 +334,7 @@ const (
 	EventBufferWriteModeClear
 )
 
+// GetCurrentRunID returns the current runID
 func (w *CurrentWorkflowWriteCondition) GetCurrentRunID() string {
 	if w == nil || w.CurrentRunID == nil {
 		return ""

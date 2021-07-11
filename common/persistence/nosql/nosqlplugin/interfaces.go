@@ -24,10 +24,20 @@ import (
 	"context"
 	"time"
 
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence"
 )
 
 type (
+	// Plugin defines the interface for any SQL database that needs to implement
+	Plugin interface {
+		CreateDB(cfg *config.NoSQL) (DB, error)
+		CreateAdminDB(cfg *config.NoSQL) (AdminDB, error)
+	}
+
+	AdminDB interface {
+	}
+
 	// DB defines the API for regular NoSQL operations of a Cadence server
 	DB interface {
 		PluginName() string
