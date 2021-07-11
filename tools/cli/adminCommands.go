@@ -284,12 +284,6 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	fmt.Println("delete current row successfully")
 }
 
-func readOneRow(query gocql.Query) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-	err := query.MapScan(result)
-	return result, err
-}
-
 func connectToCassandra(c *cli.Context) (nosqlplugin.DB, nosqlplugin.AdminDB) {
 	host := getRequiredOption(c, FlagDBAddress)
 	if !c.IsSet(FlagDBPort) {
@@ -375,12 +369,11 @@ func AdminGetDomainIDOrName(c *cli.Context) {
 		ErrorAndExit("Need either domainName or domainID", nil)
 	}
 
-	session := connectToCassandra(c)
+	_, adminDB := connectToCassandra(c)
 
 	if len(domainID) > 0 {
 		tmpl := "select domain from domains where id = ? "
-		query := session.Query(tmpl, domainID)
-		res, err := readOneRow(query)
+		res, err := adminDB.QueryOneRow(tmpl, domainID)
 		if err != nil {
 			ErrorAndExit("readOneRow", err)
 		}
@@ -391,13 +384,11 @@ func AdminGetDomainIDOrName(c *cli.Context) {
 		tmpl := "select domain from domains_by_name where name = ?"
 		tmplV2 := "select domain from domains_by_name_v2 where domains_partition=0 and name = ?"
 
-		query := session.Query(tmpl, domainName)
-		res, err := readOneRow(query)
+		res, err := adminDB.QueryOneRow(tmpl, domainName)
 		if err != nil {
 			fmt.Printf("v1 return error: %v , trying v2...\n", err)
 
-			query := session.Query(tmplV2, domainName)
-			res, err := readOneRow(query)
+			res, err := adminDB.QueryOneRow(tmplV2, domainName)
 			if err != nil {
 				ErrorAndExit("readOneRow for v2", err)
 			}
