@@ -36,7 +36,10 @@ type (
 		CreateAdminDB(cfg *config.NoSQL, logger log.Logger) (AdminDB, error)
 	}
 
+	// AdminDB is for tooling and testing
 	AdminDB interface {
+		// generic query method
+		QueryOneRow(queryTemplate string, args ...interface{}) (row map[string]interface{}, err error)
 	}
 
 	// DB defines the API for regular NoSQL operations of a Cadence server
