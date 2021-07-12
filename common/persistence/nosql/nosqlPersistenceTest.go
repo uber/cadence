@@ -69,11 +69,6 @@ func (s *testCluster) Config() config.Persistence {
 	}
 }
 
-// databaseName from PersistenceTestCluster interface
-func (s *testCluster) databaseName() string {
-	return s.keyspace
-}
-
 // SetupTestDatabase from PersistenceTestCluster interface
 func (s *testCluster) SetupTestDatabase() {
 	// the keyspace is not created yet, so use empty and let the NoSQL DB to decide how to connect

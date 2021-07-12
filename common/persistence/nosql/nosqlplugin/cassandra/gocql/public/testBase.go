@@ -21,6 +21,7 @@
 package public
 
 import (
+	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra" // needed to load cassandra plugin
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 )
 
