@@ -21,6 +21,8 @@
 package cassandra
 
 import (
+	"time"
+
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence/nosql"
@@ -31,7 +33,8 @@ import (
 
 const (
 	// PluginName is the name of the plugin
-	PluginName = "cassandra"
+	PluginName            = "cassandra"
+	defaultSessionTimeout = 10 * time.Second
 )
 
 type plugin struct{}
