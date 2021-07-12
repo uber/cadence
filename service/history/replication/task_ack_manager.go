@@ -29,7 +29,7 @@ import (
 	ctx "context"
 	"errors"
 	"strconv"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -54,7 +54,6 @@ var (
 	errUnknownReplicationTask = errors.New("unknown replication task")
 	defaultHistoryPageSize    = 1000
 	minReadTaskSize           = 20
-	maxReplicationLatency     = int64(40)
 )
 
 type (
@@ -80,8 +79,8 @@ type (
 		rateLimiter      *quotas.DynamicRateLimiter
 		retryPolicy      backoff.RetryPolicy
 
-		taskLock             sync.Mutex
-		lastTaskCreationTime time.Time
+		lastTaskCreationTime atomic.Value
+		maxAllowedLatencyFn  dynamicconfig.IntPropertyFn
 
 		metricsClient metrics.Client
 		logger        log.Logger
@@ -107,6 +106,9 @@ func NewTaskAckManager(
 	retryPolicy.SetMaximumAttempts(config.ReplicatorReadTaskMaxRetryCount())
 	retryPolicy.SetBackoffCoefficient(1)
 
+	taskCreatedTime := atomic.Value{}
+	taskCreatedTime.Store(time.Now())
+
 	return &taskAckManagerImpl{
 		shard:                shard,
 		executionCache:       executionCache,
@@ -114,7 +116,8 @@ func NewTaskAckManager(
 		historyManager:       shard.GetHistoryManager(),
 		rateLimiter:          rateLimiter,
 		retryPolicy:          retryPolicy,
-		lastTaskCreationTime: time.Now(),
+		lastTaskCreationTime: taskCreatedTime,
+		maxAllowedLatencyFn:  config.ReplicatorUpperLatency,
 		metricsClient:        shard.GetMetricsClient(),
 		logger:               shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
 		fetchTasksBatchSize:  config.ReplicatorProcessorFetchTasksBatchSize,
@@ -227,10 +230,7 @@ TaskInfoLoop:
 	); err != nil {
 		t.logger.Error("error updating replication level for shard", tag.Error(err), tag.OperationFailed)
 	}
-
-	t.taskLock.Lock()
-	t.lastTaskCreationTime = lastTaskCreationTime
-	t.taskLock.Unlock()
+	t.lastTaskCreationTime.Store(lastTaskCreationTime)
 
 	return &types.ReplicationMessages{
 		ReplicationTasks:       replicationTasks,
@@ -642,16 +642,14 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 
 func (t *taskAckManagerImpl) getBatchSize() int {
 
-	t.taskLock.Lock()
-	taskLatency := int64(time.Now().Sub(t.lastTaskCreationTime) / time.Second)
-	t.taskLock.Unlock()
-
+	taskLatency := int(time.Now().Sub(t.lastTaskCreationTime.Load().(time.Time)) / time.Second)
 	if taskLatency < 0 {
 		taskLatency = 0
 	}
 
 	shardID := t.shard.GetShardID()
 	defaultBatchSize := t.fetchTasksBatchSize(shardID)
+	maxReplicationLatency := t.maxAllowedLatencyFn()
 	if taskLatency >= maxReplicationLatency {
 		return defaultBatchSize
 	}
