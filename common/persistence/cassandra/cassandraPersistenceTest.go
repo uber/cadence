@@ -28,7 +28,6 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence/nosql"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
 	"github.com/uber/cadence/environment"
@@ -39,7 +38,6 @@ import (
 type testCluster struct {
 	keyspace string
 	cfg      config.NoSQL
-	adminDB  nosqlplugin.AdminDB
 }
 
 var _ testcluster.PersistenceTestCluster = (*testCluster)(nil)
@@ -67,22 +65,16 @@ func NewTestCluster(keyspace, username, password, host string, port int, protoVe
 		Keyspace:     keyspace,
 		ProtoVersion: protoVersion,
 	}
-	var err error
-	tc.adminDB, err = nosql.NewNoSQLAdminDB(&tc.cfg, loggerimpl.NewNopLogger())
-	if err != nil {
-		log.Fatal(err)
-	}
 	return &tc
 }
 
 // Config returns the persistence config for connecting to this test cluster
 func (s *testCluster) Config() config.Persistence {
-	cfg := s.cfg
 	return config.Persistence{
 		DefaultStore:    "test",
 		VisibilityStore: "test",
 		DataStores: map[string]config.DataStore{
-			"test": {NoSQL: &cfg},
+			"test": {NoSQL: &s.cfg},
 		},
 		TransactionSizeLimit: dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
 		ErrorInjectionRate:   dynamicconfig.GetFloatPropertyFn(0),
@@ -96,7 +88,15 @@ func (s *testCluster) databaseName() string {
 
 // SetupTestDatabase from PersistenceTestCluster interface
 func (s *testCluster) SetupTestDatabase() {
-	err := s.adminDB.SetupTestDatabase()
+	// the keyspace is not created yet, so use empty and let the NoSQL DB to decide how to connect
+	s.cfg.Keyspace = ""
+	adminDB, err := nosql.NewNoSQLAdminDB(&s.cfg, loggerimpl.NewNopLogger())
+	s.cfg.Keyspace = s.keyspace // change it back
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = adminDB.SetupTestDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -104,7 +104,11 @@ func (s *testCluster) SetupTestDatabase() {
 
 // TearDownTestDatabase from PersistenceTestCluster interface
 func (s *testCluster) TearDownTestDatabase() {
-	err := s.adminDB.TeardownTestDatabase()
+	adminDB, err := nosql.NewNoSQLAdminDB(&s.cfg, loggerimpl.NewNopLogger())
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = adminDB.TeardownTestDatabase()
 	if err != nil {
 		log.Fatal(err)
 	}
