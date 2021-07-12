@@ -475,7 +475,15 @@ func (c *Config) validate() error {
 		log.Println("[WARN] Local domain is now deprecated. Please update config to enable global domain(ClusterMetadata->EnableGlobalDomain)." +
 			"Global domain of single cluster has zero overhead, but only advantages for future migration and fail over. Please check Cadence documentation for more details.")
 	}
-	return c.Archival.Validate(&c.DomainDefaults.Archival)
+	if err := c.Archival.Validate(&c.DomainDefaults.Archival); err != nil {
+		return err
+	}
+
+	if err := c.Authorization.Validate(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *Config) fillDefaults() error {

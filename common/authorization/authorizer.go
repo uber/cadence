@@ -33,6 +33,13 @@ const (
 	DecisionDeny Decision = iota + 1
 	// DecisionAllow means auth decision is allow
 	DecisionAllow
+
+	// PermissionRead means the user can write on the domain level APIs
+	PermissionRead Permission = "read"
+	// PermissionWrite means the user can write on the domain level APIs
+	PermissionWrite Permission = "write"
+	// PermissionAdmin means the user can read+write on the domain level APIs
+	PermissionAdmin Permission = "admin"
 )
 
 type (
@@ -52,6 +59,9 @@ type (
 
 	// Decision is enum type for auth decision
 	Decision int
+
+	// Permission is enum type for auth permission
+	Permission string
 )
 
 // Authorizer is an interface for authorization
