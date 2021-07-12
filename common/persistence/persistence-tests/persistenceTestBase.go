@@ -58,7 +58,7 @@ type (
 
 	// TestBaseOptions options to configure workflow test base.
 	TestBaseOptions struct {
-		SQLDBPluginName string
+		DBPluginName    string
 		DBName          string
 		DBUsername      string
 		DBPassword      string
@@ -126,7 +126,7 @@ func NewTestBaseWithCassandra(options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
-	testCluster := cassandra.NewTestCluster(options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.ProtoVersion)
+	testCluster := cassandra.NewTestCluster(options.DBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.ProtoVersion)
 	metadata := options.ClusterMetadata
 	if metadata == nil {
 		metadata = cluster.GetTestClusterMetadata(false, false)
@@ -144,7 +144,7 @@ func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
-	testCluster := sql.NewTestCluster(options.SQLDBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.SchemaDir)
+	testCluster := sql.NewTestCluster(options.DBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.SchemaDir)
 	metadata := options.ClusterMetadata
 	if metadata == nil {
 		metadata = cluster.GetTestClusterMetadata(false, false)
@@ -155,18 +155,6 @@ func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
 		ClusterMetadata:       metadata,
 	}
 	return NewTestBaseFromParams(params)
-}
-
-// NewTestBase returns a persistence test base backed by either cassandra or sql
-func NewTestBase(options *TestBaseOptions) TestBase {
-	switch options.StoreType {
-	case config.StoreTypeSQL:
-		return NewTestBaseWithSQL(options)
-	case config.StoreTypeCassandra:
-		return NewTestBaseWithCassandra(options)
-	default:
-		panic("invalid storeType " + options.StoreType)
-	}
 }
 
 // Config returns the persistence configuration for this test

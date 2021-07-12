@@ -26,6 +26,7 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/environment"
 )
 
 const (
@@ -61,6 +62,15 @@ func (p *plugin) doCreateDB(cfg *config.NoSQL, logger log.Logger) (*cdb, error) 
 }
 
 func toGoCqlConfig(cfg *config.NoSQL) gocql.ClusterConfig {
+	if cfg.Port == 0 {
+		cfg.Port = environment.GetCassandraPort()
+	}
+	if cfg.Hosts == "" {
+		cfg.Hosts = environment.GetCassandraAddress()
+	}
+	if cfg.ProtoVersion == 0 {
+		cfg.ProtoVersion = environment.GetCassandraProtoVersion()
+	}
 	return gocql.ClusterConfig{
 		Hosts:             cfg.Hosts,
 		Port:              cfg.Port,

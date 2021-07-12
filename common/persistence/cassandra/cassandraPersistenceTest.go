@@ -28,9 +28,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence/nosql"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
-	"github.com/uber/cadence/environment"
 )
 
 
@@ -43,20 +41,11 @@ type testCluster struct {
 var _ testcluster.PersistenceTestCluster = (*testCluster)(nil)
 
 // NewTestCluster returns a new cassandra test cluster
-func NewTestCluster(keyspace, username, password, host string, port int, protoVersion int) testcluster.PersistenceTestCluster {
+func NewTestCluster(pluginName, keyspace, username, password, host string, port int, protoVersion int) testcluster.PersistenceTestCluster {
 	var tc testCluster
 	tc.keyspace = keyspace
-	if port == 0 {
-		port = environment.GetCassandraPort()
-	}
-	if host == "" {
-		host = environment.GetCassandraAddress()
-	}
-	if protoVersion == 0 {
-		protoVersion = environment.GetCassandraProtoVersion()
-	}
 	tc.cfg = config.NoSQL{
-		PluginName:   cassandra.PluginName, // TODO
+		PluginName:   pluginName,
 		User:         username,
 		Password:     password,
 		Hosts:        host,

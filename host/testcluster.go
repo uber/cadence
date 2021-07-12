@@ -198,11 +198,12 @@ func NewClusterMetadata(options *TestClusterConfig, logger log.Logger) cluster.M
 func NewPersistenceTestCluster(clusterConfig *TestClusterConfig) testcluster.PersistenceTestCluster {
 	// NOTE: Override here to keep consistent. clusterConfig will be used in the test for some purposes.
 	clusterConfig.Persistence.StoreType = TestFlags.PersistenceType
-	clusterConfig.Persistence.SQLDBPluginName = TestFlags.SQLPluginName
+	clusterConfig.Persistence.DBPluginName = TestFlags.SQLPluginName
 
 	var testCluster testcluster.PersistenceTestCluster
 	if TestFlags.PersistenceType == config.StoreTypeCassandra {
-		testCluster = cassandra.NewTestCluster(clusterConfig.Persistence.DBName, clusterConfig.Persistence.DBUsername, clusterConfig.Persistence.DBPassword, clusterConfig.Persistence.DBHost, clusterConfig.Persistence.DBPort, clusterConfig.Persistence.ProtoVersion)
+		ops := clusterConfig.Persistence
+		testCluster = cassandra.NewTestCluster(ops.DBPluginName, ops.DBName, ops.DBUsername, ops.DBPassword, ops.DBHost, ops.DBPort, ops.ProtoVersion)
 	} else if TestFlags.PersistenceType == config.StoreTypeSQL {
 		var ops *persistencetests.TestBaseOptions
 		if TestFlags.SQLPluginName == mysql.PluginName {

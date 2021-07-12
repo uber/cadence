@@ -27,5 +27,8 @@ import (
 // NewTestBaseWithPublicCassandra returns a persistence test base backed by cassandra datastore
 // It is only being used by testing against external/public Cassandra, which require to load the default gocql client
 func NewTestBaseWithPublicCassandra(options *persistencetests.TestBaseOptions) persistencetests.TestBase {
+	if options.DBPluginName == "" {
+		options.DBPluginName = "cassandra"
+	}
 	return persistencetests.NewTestBaseWithCassandra(options)
 }
