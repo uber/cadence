@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package nosql
 
 import (
 	log "github.com/sirupsen/logrus"
@@ -27,7 +27,6 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
 )
 
@@ -79,7 +78,7 @@ func (s *testCluster) databaseName() string {
 func (s *testCluster) SetupTestDatabase() {
 	// the keyspace is not created yet, so use empty and let the NoSQL DB to decide how to connect
 	s.cfg.Keyspace = ""
-	adminDB, err := nosql.NewNoSQLAdminDB(&s.cfg, loggerimpl.NewNopLogger())
+	adminDB, err := NewNoSQLAdminDB(&s.cfg, loggerimpl.NewNopLogger())
 	s.cfg.Keyspace = s.keyspace // change it back
 
 	if err != nil {
@@ -93,7 +92,7 @@ func (s *testCluster) SetupTestDatabase() {
 
 // TearDownTestDatabase from PersistenceTestCluster interface
 func (s *testCluster) TearDownTestDatabase() {
-	adminDB, err := nosql.NewNoSQLAdminDB(&s.cfg, loggerimpl.NewNopLogger())
+	adminDB, err := NewNoSQLAdminDB(&s.cfg, loggerimpl.NewNopLogger())
 	if err != nil {
 		log.Fatal(err)
 	}
