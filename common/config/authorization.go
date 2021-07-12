@@ -21,42 +21,42 @@
 package config
 
 import (
-    "fmt"
+	"fmt"
 )
 
 // Validate validates the persistence config
 func (a *Authorization) Validate() error {
-    if a.OAuthAuthorizer.Enable && a.NoopAuthorizer.Enable {
-        return fmt.Errorf("[AuthorizationConfig] More than one authorizer is enabled")
-    }
+	if a.OAuthAuthorizer.Enable && a.NoopAuthorizer.Enable {
+		return fmt.Errorf("[AuthorizationConfig] More than one authorizer is enabled")
+	}
 
-    if a.OAuthAuthorizer.Enable {
-        if oauthError := a.validateOAuth(); oauthError != nil {
-            return oauthError
-        }
-    }
+	if a.OAuthAuthorizer.Enable {
+		if oauthError := a.validateOAuth(); oauthError != nil {
+			return oauthError
+		}
+	}
 
-    return nil
+	return nil
 }
 
 func (a *Authorization) validateOAuth() error {
-    oauthConfig := a.OAuthAuthorizer
+	oauthConfig := a.OAuthAuthorizer
 
-    if oauthConfig.JwtTTL <= 0 {
-        return fmt.Errorf("[OAuthConfig] TTL must be greater than 0")
-    }
+	if oauthConfig.JwtTTL <= 0 {
+		return fmt.Errorf("[OAuthConfig] TTL must be greater than 0")
+	}
 
-    if oauthConfig.JwtCredentials.PrivateKey == "" {
-        return fmt.Errorf("[OAuthConfig] PrivateKey can't be empty")
-    }
+	if oauthConfig.JwtCredentials.PrivateKey == "" {
+		return fmt.Errorf("[OAuthConfig] PrivateKey can't be empty")
+	}
 
-    if oauthConfig.JwtCredentials.PublicKey == "" {
-        return fmt.Errorf("[OAuthConfig] PublicKey can't be empty")
-    }
+	if oauthConfig.JwtCredentials.PublicKey == "" {
+		return fmt.Errorf("[OAuthConfig] PublicKey can't be empty")
+	}
 
-    if oauthConfig.JwtCredentials.Algorithm != "RS256" {
-        return fmt.Errorf("[OAuthConfig] The only supported Algorithm is RS256")
-    }
+	if oauthConfig.JwtCredentials.Algorithm != "RS256" {
+		return fmt.Errorf("[OAuthConfig] The only supported Algorithm is RS256")
+	}
 
-    return nil
+	return nil
 }

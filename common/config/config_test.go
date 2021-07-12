@@ -131,9 +131,9 @@ func TestConfigErrorInAuthorizationConfig(t *testing.T) {
 	cfg := &Config{
 		Authorization: Authorization{
 			OAuthAuthorizer: OAuthAuthorizer{
-				Enable:         true,
+				Enable: true,
 			},
-			NoopAuthorizer:  NoopAuthorizer{
+			NoopAuthorizer: NoopAuthorizer{
 				Enable: true,
 			},
 		},

@@ -21,49 +21,51 @@
 package authorization
 
 import (
-    "github.com/stretchr/testify/assert"
-    "github.com/uber/cadence/common/config"
-    "testing"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/uber/cadence/common/config"
 )
 
 func cfgNoop() config.Authorization {
-    return config.Authorization{
-        OAuthAuthorizer: config.OAuthAuthorizer{
-            Enable: false,
-        },
-        NoopAuthorizer:  config.NoopAuthorizer{
-            Enable: true,
-        },
-    }
+	return config.Authorization{
+		OAuthAuthorizer: config.OAuthAuthorizer{
+			Enable: false,
+		},
+		NoopAuthorizer: config.NoopAuthorizer{
+			Enable: true,
+		},
+	}
 }
 
 func cfgOAuth() config.Authorization {
-    return config.Authorization{
-        OAuthAuthorizer: config.OAuthAuthorizer{
-            Enable:         true,
-            JwtCredentials: config.JwtCredentials{
-                Algorithm:  "RS256",
-                PublicKey:  "public",
-                PrivateKey: "private",
-            },
-            JwtTTL:         12345,
-        },
-    }
+	return config.Authorization{
+		OAuthAuthorizer: config.OAuthAuthorizer{
+			Enable: true,
+			JwtCredentials: config.JwtCredentials{
+				Algorithm:  "RS256",
+				PublicKey:  "public",
+				PrivateKey: "private",
+			},
+			JwtTTL: 12345,
+		},
+	}
 }
 
 func TestFactoryNoopAuthorizer(t *testing.T) {
-    cfgOAuthVar := cfgOAuth()
+	cfgOAuthVar := cfgOAuth()
 
-    var tests = []struct {
-        cfg config.Authorization
-        expected Authorizer
-    } {
-        {cfgNoop(),&nopAuthority{}},
-        {cfgOAuthVar, &oauthAuthority{authorizationCfg: cfgOAuthVar.OAuthAuthorizer}},
-    }
+	var tests = []struct {
+		cfg      config.Authorization
+		expected Authorizer
+	}{
+		{cfgNoop(), &nopAuthority{}},
+		{cfgOAuthVar, &oauthAuthority{authorizationCfg: cfgOAuthVar.OAuthAuthorizer}},
+	}
 
-    for _, test := range tests {
-        authorizer := NewAuthorizer(test.cfg)
-        assert.Equal(t, authorizer, test.expected)
-    }
+	for _, test := range tests {
+		authorizer := NewAuthorizer(test.cfg)
+		assert.Equal(t, authorizer, test.expected)
+	}
 }
