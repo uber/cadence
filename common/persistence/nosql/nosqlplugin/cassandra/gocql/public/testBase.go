@@ -30,5 +30,5 @@ func NewTestBaseWithPublicCassandra(options *persistencetests.TestBaseOptions) p
 	if options.DBPluginName == "" {
 		options.DBPluginName = "cassandra"
 	}
-	return persistencetests.NewTestBaseWithCassandra(options)
+	return persistencetests.NewTestBaseWithNoSQL(options)
 }
