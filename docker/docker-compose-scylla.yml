@@ -26,6 +26,7 @@ services:
       - "7934:7934"
       - "7935:7935"
       - "7939:7939"
+      - "7833:7833"
     environment:
       - "DB=scylla"
       - "CASSANDRA_SEEDS=scylla"

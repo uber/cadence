@@ -5,7 +5,7 @@ Quickstart for development with local Cadence server
 
 Following steps will bring up the docker container running cadence server
 along with all its dependencies (cassandra, prometheus, grafana). Exposes cadence
-frontend on port 7933, web on port 8088, and grafana on port 3000.
+frontend on ports 7933 (tchannel) / 7833 (grpc), web on port 8088, and grafana on port 3000.
 
 ```
 cd $GOPATH/src/github.com/uber/cadence/docker
