@@ -43,10 +43,6 @@ var _ Handler = (*AccessControlledWorkflowHandler)(nil)
 
 // NewAccessControlledHandlerImpl creates frontend handler with authentication support
 func NewAccessControlledHandlerImpl(wfHandler Handler, resource resource.Resource, authorizer authorization.Authorizer) *AccessControlledWorkflowHandler {
-	if authorizer == nil {
-		authorizer = authorization.NewNopAuthorizer()
-	}
-
 	return &AccessControlledWorkflowHandler{
 		Resource:        resource,
 		frontendHandler: wfHandler,

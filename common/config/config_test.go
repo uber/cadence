@@ -126,3 +126,19 @@ func TestConfigEmptyClusterMetadata(t *testing.T) {
 	err := cfg.ValidateAndFillDefaults()
 	require.Error(t, err)
 }
+
+func TestConfigErrorInAuthorizationConfig(t *testing.T) {
+	cfg := &Config{
+		Authorization: Authorization{
+			OAuthAuthorizer: OAuthAuthorizer{
+				Enable: true,
+			},
+			NoopAuthorizer: NoopAuthorizer{
+				Enable: true,
+			},
+		},
+	}
+
+	err := cfg.ValidateAndFillDefaults()
+	require.Error(t, err)
+}

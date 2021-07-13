@@ -22,7 +22,10 @@ package common
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -926,4 +929,18 @@ func SleepWithMinDuration(desired time.Duration, available time.Duration) time.D
 		time.Sleep(d)
 	}
 	return available - d
+}
+
+func StringToRSAPublicKey(publicKeyString string) (*rsa.PublicKey, error) {
+	block, _ := pem.Decode([]byte(publicKeyString))
+	if block == nil {
+		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
+	}
+
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse DER encoded public key: " + err.Error())
+	}
+	publicKey := pub.(*rsa.PublicKey)
+	return publicKey, nil
 }
