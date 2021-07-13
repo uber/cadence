@@ -48,11 +48,13 @@ type (
 )
 
 func failOnPanic(t *testing.T) {
-	r := recover()
-	if r != nil {
-		t.Errorf("test panicked: %v %s", r, debug.Stack())
-		t.FailNow()
-	}
+	defer func() {
+		r := recover()
+		if r != nil {
+			t.Errorf("test panicked: %v %s", r, debug.Stack())
+			t.FailNow()
+		}
+	}()
 }
 
 // SetupSuite implementation

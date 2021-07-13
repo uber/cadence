@@ -30,7 +30,7 @@ import (
 )
 
 var (
-	registered Client = nil
+	registered Client
 )
 
 // NewClient gets a gocql client based registered object
