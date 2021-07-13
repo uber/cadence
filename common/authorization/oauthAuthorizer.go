@@ -26,12 +26,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cristalhq/jwt/v3"
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common"
-
-	"github.com/cristalhq/jwt/v3"
-
 	"github.com/uber/cadence/common/config"
 )
 
@@ -40,6 +38,7 @@ type oauthAuthority struct {
 }
 
 type jwtClaims struct {
+	Sub        string
 	Name       string
 	Permission string
 	Domain     string
@@ -63,17 +62,20 @@ func (a *oauthAuthority) Authorize(
 	token := call.Header(common.AuthorizationTokenHeaderName)
 	// parseTokenAndVerify could either return the claims or a bool. I'm returning the claims currently
 	// because we might use it to populate values in the context
-	_, err := a.parseTokenAndVerify(token)
+	_, err := a.parseTokenAndVerify(token, attributes)
 	if err != nil {
 		return Result{Decision: DecisionDeny}, err
 	}
 	return Result{Decision: DecisionAllow}, nil
 }
 
-func (a *oauthAuthority) parseTokenAndVerify(tokenStr string) (*jwtClaims, error) {
-	key := []byte(a.authorizationCfg.JwtCredentials.PrivateKey)
+func (a *oauthAuthority) parseTokenAndVerify(tokenStr string, attributes *Attributes) (*jwtClaims, error) {
+	publicKey, err := common.StringToRSAPublicKey(a.authorizationCfg.JwtCredentials.PublicKey)
+	if err != nil {
+		return nil, err
+	}
 	algorithm := jwt.Algorithm(a.authorizationCfg.JwtCredentials.Algorithm)
-	verifier, err := jwt.NewVerifierHS(algorithm, key)
+	verifier, err := jwt.NewVerifierRS(algorithm, publicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +88,7 @@ func (a *oauthAuthority) parseTokenAndVerify(tokenStr string) (*jwtClaims, error
 	if claimsErr != nil {
 		return nil, err
 	}
-	validationErr := a.validateClaims(claims)
+	validationErr := a.validateClaims(claims, attributes)
 	if validationErr != nil {
 		return nil, validationErr
 	}
@@ -94,9 +96,15 @@ func (a *oauthAuthority) parseTokenAndVerify(tokenStr string) (*jwtClaims, error
 	return &claims, nil
 }
 
-func (a *oauthAuthority) validateClaims(claims jwtClaims) error {
+func (a *oauthAuthority) validateClaims(claims jwtClaims, attributes *Attributes) error {
 	if claims.Iat < time.Now().Unix() {
 		return fmt.Errorf("JWT has expired")
+	}
+	if claims.Name != attributes.Actor {
+		return fmt.Errorf("domain in token doesn't match with current domain")
+	}
+	if claims.Domain != attributes.DomainName {
+		return fmt.Errorf("domain in token doesn't match with current domain")
 	}
 
 	return nil
