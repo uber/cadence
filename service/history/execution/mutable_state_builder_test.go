@@ -842,6 +842,71 @@ func (s *mutableStateSuite) TestGetCloseEvent_Error() {
 	s.Nil(closeEvent)
 }
 
+func (s *mutableStateSuite) TestCloseTransactionAsMutationRemoveDeletedInfos() {
+	s.msBuilder.updateActivityInfos = map[*persistence.ActivityInfo]struct{}{
+		&persistence.ActivityInfo{
+			ScheduleID: 0,
+		}: struct{}{},
+		&persistence.ActivityInfo{
+			ScheduleID: 1,
+		}: struct{}{},
+	}
+	s.msBuilder.deleteActivityInfos = map[int64]struct{}{0: struct{}{}}
+	s.msBuilder.updateTimerInfos = map[*persistence.TimerInfo]struct{}{
+		&persistence.TimerInfo{
+			TimerID: "0",
+		}: struct{}{},
+		&persistence.TimerInfo{
+			TimerID: "1",
+		}: struct{}{},
+	}
+	s.msBuilder.deleteTimerInfos = map[string]struct{}{"0": struct{}{}}
+	s.msBuilder.updateChildExecutionInfos = map[*persistence.ChildExecutionInfo]struct{}{
+		&persistence.ChildExecutionInfo{
+			InitiatedID: 0,
+		}: struct{}{},
+		&persistence.ChildExecutionInfo{
+			InitiatedID: 1,
+		}: struct{}{},
+	}
+	s.msBuilder.deleteChildExecutionInfos = map[int64]struct{}{0: struct{}{}}
+	s.msBuilder.updateRequestCancelInfos = map[*persistence.RequestCancelInfo]struct{}{
+		&persistence.RequestCancelInfo{
+			InitiatedID: 0,
+		}: struct{}{},
+		&persistence.RequestCancelInfo{
+			InitiatedID: 1,
+		}: struct{}{},
+	}
+	s.msBuilder.deleteRequestCancelInfos = map[int64]struct{}{0: struct{}{}}
+	s.msBuilder.updateSignalInfos = map[*persistence.SignalInfo]struct{}{
+		&persistence.SignalInfo{
+			InitiatedID: 0,
+		}: struct{}{},
+		&persistence.SignalInfo{
+			InitiatedID: 1,
+		}: struct{}{},
+	}
+	s.msBuilder.deleteSignalInfos = map[int64]struct{}{0: struct{}{}}
+	s.msBuilder.updateSignalRequestedIDs = map[string]struct{}{"0": struct{}{}, "1": struct{}{}}
+	s.msBuilder.deleteSignalRequestedIDs = map[string]struct{}{"0": struct{}{}}
+
+	s.msBuilder.closeTransactionAsMutationRemoveDeletedInfos()
+
+	s.Len(s.msBuilder.updateActivityInfos, 1)
+	s.Equal(convertUpdateActivityInfos(s.msBuilder.updateActivityInfos)[0].ScheduleID, int64(1))
+	s.Len(s.msBuilder.updateTimerInfos, 1)
+	s.Equal(convertUpdateTimerInfos(s.msBuilder.updateTimerInfos)[0].TimerID, "1")
+	s.Len(s.msBuilder.updateChildExecutionInfos, 1)
+	s.Equal(convertUpdateChildExecutionInfos(s.msBuilder.updateChildExecutionInfos)[0].InitiatedID, int64(1))
+	s.Len(s.msBuilder.updateRequestCancelInfos, 1)
+	s.Equal(convertUpdateRequestCancelInfos(s.msBuilder.updateRequestCancelInfos)[0].InitiatedID, int64(1))
+	s.Len(s.msBuilder.updateSignalInfos, 1)
+	s.Equal(convertUpdateSignalInfos(s.msBuilder.updateSignalInfos)[0].InitiatedID, int64(1))
+	s.Len(s.msBuilder.updateSignalRequestedIDs, 1)
+	s.Equal(convertStringSetToSlice(s.msBuilder.updateSignalRequestedIDs)[0], "1")
+}
+
 func (s *mutableStateSuite) newDomainCacheEntry() *cache.DomainCacheEntry {
 	return cache.NewDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: "mutableStateTest"},
