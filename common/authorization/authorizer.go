@@ -33,7 +33,9 @@ const (
 	DecisionDeny Decision = iota + 1
 	// DecisionAllow means auth decision is allow
 	DecisionAllow
+)
 
+const (
 	// PermissionRead means the user can write on the domain level APIs
 	PermissionRead Permission = "read"
 	// PermissionWrite means the user can write on the domain level APIs
