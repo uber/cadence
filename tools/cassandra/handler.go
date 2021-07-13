@@ -27,7 +27,6 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common/config"
-	cassandra_db "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/schema/cassandra"
 	"github.com/uber/cadence/tools/common/schema"
 )
@@ -72,7 +71,7 @@ func verifyCompatibleVersion(
 		return nil
 	}
 
-	if ds.NoSQL.PluginName != cassandra_db.PluginName {
+	if ds.NoSQL.PluginName != "cassandra" {
 		return fmt.Errorf("unknown NoSQL plugin name: %v", ds.NoSQL.PluginName)
 	}
 

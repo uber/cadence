@@ -70,7 +70,7 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 		"./tool", "-k", visKeyspace, "-q", "setup-schema", "-f", visCqlFile, "-version", "10.0", "-o",
 	}))
 
-	defaultCfg := config.Cassandra{
+	defaultCfg := config.NoSQL{
 		PluginName: cassandra_db.PluginName,
 		Hosts:      environment.GetCassandraAddress(),
 		Port:       cassandra.DefaultCassandraPort,
@@ -160,12 +160,13 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 		os.RemoveAll(subdir + "/v" + actual)
 	}
 
-	cfg := config.Cassandra{
-		Hosts:    environment.GetCassandraAddress(),
-		Port:     cassandra.DefaultCassandraPort,
-		User:     "",
-		Password: "",
-		Keyspace: keyspace,
+	cfg := config.NoSQL{
+		PluginName: cassandra_db.PluginName,
+		Hosts:      environment.GetCassandraAddress(),
+		Port:       cassandra.DefaultCassandraPort,
+		User:       "",
+		Password:   "",
+		Keyspace:   keyspace,
 	}
 	err = cassandra.CheckCompatibleVersion(cfg, expected)
 	if len(errStr) > 0 {

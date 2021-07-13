@@ -1,4 +1,5 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,35 +19,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package testcluster
 
-import (
-	"time"
+import "github.com/uber/cadence/common/config"
 
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+type (
+	// PersistenceTestCluster exposes management operations on a database
+	PersistenceTestCluster interface {
+		SetupTestDatabase()
+		TearDownTestDatabase()
+		Config() config.Persistence
+	}
 )
-
-const (
-	defaultSessionTimeout = 10 * time.Second
-)
-
-// CreateSession creates a new session
-// TODO this will be converted to private later, after all cassandra code moved to plugin pkg
-func CreateSession(cfg config.Cassandra) (gocql.Session, error) {
-	return gocql.NewClient().CreateSession(gocql.ClusterConfig{
-		Hosts:             cfg.Hosts,
-		Port:              cfg.Port,
-		User:              cfg.User,
-		Password:          cfg.Password,
-		Keyspace:          cfg.Keyspace,
-		Region:            cfg.Region,
-		Datacenter:        cfg.Datacenter,
-		MaxConns:          cfg.MaxConns,
-		TLS:               cfg.TLS,
-		ProtoVersion:      cfg.ProtoVersion,
-		Consistency:       gocql.LocalQuorum,
-		SerialConsistency: gocql.LocalSerial,
-		Timeout:           defaultSessionTimeout,
-	})
-}

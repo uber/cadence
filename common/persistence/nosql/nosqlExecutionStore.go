@@ -28,8 +28,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -44,7 +42,7 @@ type (
 var _ p.ExecutionStore = (*nosqlExecutionStore)(nil)
 
 // Guidelines for creating new special UUID constants for all NoSQL
-// For DB specific constants(e.g. Cassandra), create them in the db specific package. 
+// For DB specific constants(e.g. Cassandra), create them in the db specific package.
 // Each UUID should be of the form: E0000000-R000-f000-f000-00000000000x
 // Where x is any hexadecimal value, E represents the entity type valid values are:
 // E = {DomainID = 1, WorkflowID = 2, RunID = 3}
@@ -63,13 +61,9 @@ const (
 // NewExecutionStore is used to create an instance of ExecutionStore implementation
 func NewExecutionStore(
 	shardID int,
-	client gocql.Client,
-	session gocql.Session,
+	db nosqlplugin.DB,
 	logger log.Logger,
 ) (p.ExecutionStore, error) {
-	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
-	db := cassandra.NewCassandraDBFromSession(client, session, logger)
-
 	return &nosqlExecutionStore{
 		nosqlStore: nosqlStore{
 			logger: logger,

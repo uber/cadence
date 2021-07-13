@@ -38,7 +38,11 @@ import (
 	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	cassandra_db "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
@@ -281,33 +285,25 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	fmt.Println("delete current row successfully")
 }
 
-func readOneRow(query gocql.Query) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-	err := query.MapScan(result)
-	return result, err
-}
-
-func connectToCassandra(c *cli.Context) (gocql.Client, gocql.Session) {
+func connectToCassandra(c *cli.Context) (nosqlplugin.DB, nosqlplugin.AdminDB) {
 	host := getRequiredOption(c, FlagDBAddress)
 	if !c.IsSet(FlagDBPort) {
 		ErrorAndExit("cassandra port is required", nil)
 	}
 
-	clusterConfig := gocql.ClusterConfig{
-		Hosts:             host,
-		Port:              c.Int(FlagDBPort),
-		Region:            c.String(FlagDBRegion),
-		User:              c.String(FlagUsername),
-		Password:          c.String(FlagPassword),
-		Keyspace:          getRequiredOption(c, FlagKeyspace),
-		ProtoVersion:      c.Int(FlagProtoVersion),
-		SerialConsistency: gocql.LocalSerial,
-		MaxConns:          20,
-		Consistency:       gocql.LocalQuorum,
-		Timeout:           10 * time.Second,
+	cfg := config.NoSQL{
+		PluginName:   cassandra_db.PluginName,
+		Hosts:        host,
+		Port:         c.Int(FlagDBPort),
+		Region:       c.String(FlagDBRegion),
+		User:         c.String(FlagUsername),
+		Password:     c.String(FlagPassword),
+		Keyspace:     getRequiredOption(c, FlagKeyspace),
+		ProtoVersion: c.Int(FlagProtoVersion),
+		MaxConns:     20,
 	}
 	if c.Bool(FlagEnableTLS) {
-		clusterConfig.TLS = &config.TLS{
+		cfg.TLS = &config.TLS{
 			Enabled:                true,
 			CertFile:               c.String(FlagTLSCertPath),
 			KeyFile:                c.String(FlagTLSKeyPath),
@@ -316,12 +312,15 @@ func connectToCassandra(c *cli.Context) (gocql.Client, gocql.Session) {
 		}
 	}
 
-	client := gocql.NewClient()
-	session, err := client.CreateSession(clusterConfig)
+	db, err := nosql.NewNoSQLDB(&cfg, loggerimpl.NewNopLogger())
 	if err != nil {
 		ErrorAndExit("connect to Cassandra failed", err)
 	}
-	return client, session
+	adminDB, err := nosql.NewNoSQLAdminDB(&cfg, loggerimpl.NewNopLogger())
+	if err != nil {
+		ErrorAndExit("connect to Cassandra failed", err)
+	}
+	return db, adminDB
 }
 
 func connectToSQL(c *cli.Context) sqlplugin.DB {
@@ -372,12 +371,11 @@ func AdminGetDomainIDOrName(c *cli.Context) {
 		ErrorAndExit("Need either domainName or domainID", nil)
 	}
 
-	_, session := connectToCassandra(c)
+	_, adminDB := connectToCassandra(c)
 
 	if len(domainID) > 0 {
 		tmpl := "select domain from domains where id = ? "
-		query := session.Query(tmpl, domainID)
-		res, err := readOneRow(query)
+		res, err := adminDB.QueryOneRow(tmpl, domainID)
 		if err != nil {
 			ErrorAndExit("readOneRow", err)
 		}
@@ -388,13 +386,11 @@ func AdminGetDomainIDOrName(c *cli.Context) {
 		tmpl := "select domain from domains_by_name where name = ?"
 		tmplV2 := "select domain from domains_by_name_v2 where domains_partition=0 and name = ?"
 
-		query := session.Query(tmpl, domainName)
-		res, err := readOneRow(query)
+		res, err := adminDB.QueryOneRow(tmpl, domainName)
 		if err != nil {
 			fmt.Printf("v1 return error: %v , trying v2...\n", err)
 
-			query := session.Query(tmplV2, domainName)
-			res, err := readOneRow(query)
+			res, err := adminDB.QueryOneRow(tmplV2, domainName)
 			if err != nil {
 				ErrorAndExit("readOneRow for v2", err)
 			}

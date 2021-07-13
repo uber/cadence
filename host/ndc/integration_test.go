@@ -44,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
 	test "github.com/uber/cadence/common/testing"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/host"
@@ -69,14 +70,14 @@ type (
 		standByTaskID               int64
 
 		clusterConfigs        []*host.TestClusterConfig
-		defaultTestCluster    pt.PersistenceTestCluster
-		visibilityTestCluster pt.PersistenceTestCluster
+		defaultTestCluster    testcluster.PersistenceTestCluster
+		visibilityTestCluster testcluster.PersistenceTestCluster
 	}
 
 	NDCIntegrationTestSuiteParams struct {
 		ClusterConfigs        []*host.TestClusterConfig
-		DefaultTestCluster    pt.PersistenceTestCluster
-		VisibilityTestCluster pt.PersistenceTestCluster
+		DefaultTestCluster    testcluster.PersistenceTestCluster
+		VisibilityTestCluster testcluster.PersistenceTestCluster
 	}
 )
 

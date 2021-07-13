@@ -33,8 +33,8 @@ var (
 	registered Client = nil
 )
 
-// NewClient gets a gocql client based registered object
-func NewClient() Client {
+// GetOrCreateClient gets a gocql client based registered object
+func GetOrCreateClient() Client {
 	if registered == nil {
 		panic("binary build error: gocql client is not registered yet!")
 	}
