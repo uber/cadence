@@ -665,6 +665,10 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 			WorkflowID: childInfo.StartedWorkflowID,
 			RunID:      childInfo.StartedRunID,
 		}
+		// NOTE: do not access anything related mutable state after this lock release
+		// release the context lock since we no longer need mutable state builder and
+		// the rest of logic is making RPC call, which takes time.
+		release(nil)
 		return t.createFirstDecisionTask(ctx, task.TargetDomainID, childExecution)
 	}
 
@@ -698,6 +702,11 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	if err != nil {
 		return err
 	}
+
+	// NOTE: do not access anything related mutable state after this lock release
+	// release the context lock since we no longer need mutable state builder and
+	// the rest of logic is making RPC call, which takes time.
+	release(nil)
 	// Finally create first decision task for Child execution so it is really started
 	return t.createFirstDecisionTask(ctx, task.TargetDomainID, &types.WorkflowExecution{
 		WorkflowID: task.TargetWorkflowID,
