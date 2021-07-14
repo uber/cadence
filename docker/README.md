@@ -5,7 +5,7 @@ Quickstart for development with local Cadence server
 
 Following steps will bring up the docker container running cadence server
 along with all its dependencies (cassandra, prometheus, grafana). Exposes cadence
-frontend on port 7933, web on port 8088, and grafana on port 3000.
+frontend on ports 7933 (tchannel) / 7833 (grpc), web on port 8088, and grafana on port 3000.
 
 ```
 cd $GOPATH/src/github.com/uber/cadence/docker
@@ -104,7 +104,7 @@ docker run -e CASSANDRA_SEEDS=10.x.x.x                  -- csv of cassandra serv
     -e KEYSPACE=<keyspace>                              -- Cassandra keyspace
     -e VISIBILITY_KEYSPACE=<visibility_keyspace>        -- Cassandra visibility keyspace, if using basic visibility 
     -e KAFKA_SEEDS=10.x.x.x                             -- Kafka broker seed, if using ElasticSearch + Kafka for advanced visibility feature
-    -e CASSANDRA_PROTOCOL_VERSION=<protocol_version>    -- Cassandra protocol version
+    -e CASSANDRA_PROTO_VERSION=<protocol_version>       -- Cassandra protocol version
     -e ES_SEEDS=10.x.x.x                                -- ElasticSearch seed , if using ElasticSearch + Kafka for advanced visibility feature
     -e RINGPOP_SEEDS=10.x.x.x,10.x.x.x                  -- csv of ipaddrs for gossip bootstrap
     -e STATSD_ENDPOINT=10.x.x.x:8125                    -- statsd server endpoint

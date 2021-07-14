@@ -23,6 +23,7 @@ package cassandra
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/types"
 )
 
 func (db *cdb) executeCreateWorkflowBatchTransaction(
@@ -78,7 +80,7 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 
 				if execution, ok := previous["execution"].(map[string]interface{}); ok {
 					// CreateWorkflowExecution failed because it already exists
-					executionInfo := createWorkflowExecutionInfo(execution)
+					executionInfo := parseWorkflowExecutionInfo(execution)
 					lastWriteVersion := common.EmptyVersion
 					if previous["workflow_last_write_version"] != nil {
 						lastWriteVersion = previous["workflow_last_write_version"].(int64)
@@ -321,10 +323,10 @@ func (db *cdb) createTimerTasks(
 			task.RunID,
 			ts,
 			task.TaskID,
-			task.Type,
+			task.TaskType,
 			task.TimeoutType,
 			task.EventID,
-			task.Attempt,
+			task.ScheduleAttempt,
 			task.Version,
 			ts,
 			task.TaskID)
@@ -350,16 +352,16 @@ func (db *cdb) createReplicationTasks(
 			workflowID,
 			task.RunID,
 			task.TaskID,
-			task.Type,
+			task.TaskType,
 			task.FirstEventID,
 			task.NextEventID,
 			task.Version,
-			task.ActivityScheduleID,
+			task.ScheduledID,
 			persistence.EventStoreVersion,
 			task.BranchToken,
 			persistence.EventStoreVersion,
 			task.NewRunBranchToken,
-			task.VisibilityTimestamp.UnixNano(),
+			task.CreationTime.UnixNano(),
 			// NOTE: use a constant here instead of task.VisibilityTimestamp so that we can query tasks with the same visibilityTimestamp
 			defaultVisibilityTimestamp,
 			task.TaskID)
@@ -391,7 +393,7 @@ func (db *cdb) createTransferTasks(
 			task.TargetRunID,
 			task.TargetChildWorkflowOnly,
 			task.TaskList,
-			task.Type,
+			task.TaskType,
 			task.ScheduleID,
 			task.RecordVisibility,
 			task.Version,
@@ -426,7 +428,7 @@ func (db *cdb) createCrossClusterTasks(
 			task.TargetRunID,
 			task.TargetChildWorkflowOnly,
 			task.TaskList,
-			task.Type,
+			task.TaskType,
 			task.ScheduleID,
 			task.RecordVisibility,
 			task.Version,
@@ -991,6 +993,14 @@ func (db *cdb) convertToCassandraTimestamp(in time.Time) time.Time {
 	return time.Unix(0, persistence.DBTimestampToUnixNano(persistence.UnixNanoToDBTimestamp(in.UnixNano())))
 }
 
+// TODO: if possible, remove the copy in the future, or add comment of why we need it
+func getNextPageToken(iter gocql.Iter) []byte {
+	nextPageToken := iter.PageState()
+	newPageToken := make([]byte, len(nextPageToken))
+	copy(newPageToken, nextPageToken)
+	return newPageToken
+}
+
 func (db *cdb) createWorkflowExecutionWithMergeMaps(
 	batch gocql.Batch,
 	shardID int,
@@ -1428,141 +1438,41 @@ func (db *cdb) createOrUpdateCurrentWorkflow(
 	return nil
 }
 
-func createWorkflowExecutionInfo(
-	result map[string]interface{},
-) *persistence.InternalWorkflowExecutionInfo {
+func mustConvertToSlice(value interface{}) []interface{} {
+	v := reflect.ValueOf(value)
+	switch v.Kind() {
+	case reflect.Slice, reflect.Array:
+		result := make([]interface{}, v.Len())
+		for i := 0; i < v.Len(); i++ {
+			result[i] = v.Index(i).Interface()
+		}
+		return result
+	default:
+		panic(fmt.Sprintf("Unable to convert %v to slice", value))
+	}
+}
 
-	info := &persistence.InternalWorkflowExecutionInfo{}
-	var completionEventData []byte
-	var completionEventEncoding common.EncodingType
-	var autoResetPoints []byte
-	var autoResetPointsEncoding common.EncodingType
-
-	for k, v := range result {
-		switch k {
-		case "domain_id":
-			info.DomainID = v.(gocql.UUID).String()
-		case "workflow_id":
-			info.WorkflowID = v.(string)
-		case "run_id":
-			info.RunID = v.(gocql.UUID).String()
-		case "parent_domain_id":
-			info.ParentDomainID = v.(gocql.UUID).String()
-			if info.ParentDomainID == emptyDomainID {
-				info.ParentDomainID = ""
-			}
-		case "parent_workflow_id":
-			info.ParentWorkflowID = v.(string)
-		case "parent_run_id":
-			info.ParentRunID = v.(gocql.UUID).String()
-			if info.ParentRunID == emptyRunID {
-				info.ParentRunID = ""
-			}
-		case "initiated_id":
-			info.InitiatedID = v.(int64)
-		case "completion_event_batch_id":
-			info.CompletionEventBatchID = v.(int64)
-		case "completion_event":
-			completionEventData = v.([]byte)
-		case "completion_event_data_encoding":
-			completionEventEncoding = common.EncodingType(v.(string))
-		case "auto_reset_points":
-			autoResetPoints = v.([]byte)
-		case "auto_reset_points_encoding":
-			autoResetPointsEncoding = common.EncodingType(v.(string))
-		case "task_list":
-			info.TaskList = v.(string)
-		case "workflow_type_name":
-			info.WorkflowTypeName = v.(string)
-		case "workflow_timeout":
-			info.WorkflowTimeout = common.SecondsToDuration(int64(v.(int)))
-		case "decision_task_timeout":
-			info.DecisionStartToCloseTimeout = common.SecondsToDuration(int64(v.(int)))
-		case "execution_context":
-			info.ExecutionContext = v.([]byte)
-		case "state":
-			info.State = v.(int)
-		case "close_status":
-			info.CloseStatus = v.(int)
-		case "last_first_event_id":
-			info.LastFirstEventID = v.(int64)
-		case "last_event_task_id":
-			info.LastEventTaskID = v.(int64)
-		case "next_event_id":
-			info.NextEventID = v.(int64)
-		case "last_processed_event":
-			info.LastProcessedEvent = v.(int64)
-		case "start_time":
-			info.StartTimestamp = v.(time.Time)
-		case "last_updated_time":
-			info.LastUpdatedTimestamp = v.(time.Time)
-		case "create_request_id":
-			info.CreateRequestID = v.(gocql.UUID).String()
-		case "signal_count":
-			info.SignalCount = int32(v.(int))
-		case "history_size":
-			info.HistorySize = v.(int64)
-		case "decision_version":
-			info.DecisionVersion = v.(int64)
-		case "decision_schedule_id":
-			info.DecisionScheduleID = v.(int64)
-		case "decision_started_id":
-			info.DecisionStartedID = v.(int64)
-		case "decision_request_id":
-			info.DecisionRequestID = v.(string)
-		case "decision_timeout":
-			info.DecisionTimeout = common.SecondsToDuration(int64(v.(int)))
-		case "decision_attempt":
-			info.DecisionAttempt = v.(int64)
-		case "decision_timestamp":
-			info.DecisionStartedTimestamp = time.Unix(0, v.(int64))
-		case "decision_scheduled_timestamp":
-			info.DecisionScheduledTimestamp = time.Unix(0, v.(int64))
-		case "decision_original_scheduled_timestamp":
-			info.DecisionOriginalScheduledTimestamp = time.Unix(0, v.(int64))
-		case "cancel_requested":
-			info.CancelRequested = v.(bool)
-		case "cancel_request_id":
-			info.CancelRequestID = v.(string)
-		case "sticky_task_list":
-			info.StickyTaskList = v.(string)
-		case "sticky_schedule_to_start_timeout":
-			info.StickyScheduleToStartTimeout = common.SecondsToDuration(int64(v.(int)))
-		case "client_library_version":
-			info.ClientLibraryVersion = v.(string)
-		case "client_feature_version":
-			info.ClientFeatureVersion = v.(string)
-		case "client_impl":
-			info.ClientImpl = v.(string)
-		case "attempt":
-			info.Attempt = int32(v.(int))
-		case "has_retry_policy":
-			info.HasRetryPolicy = v.(bool)
-		case "init_interval":
-			info.InitialInterval = common.SecondsToDuration(int64(v.(int)))
-		case "backoff_coefficient":
-			info.BackoffCoefficient = v.(float64)
-		case "max_interval":
-			info.MaximumInterval = common.SecondsToDuration(int64(v.(int)))
-		case "max_attempts":
-			info.MaximumAttempts = int32(v.(int))
-		case "expiration_time":
-			info.ExpirationTime = v.(time.Time)
-		case "non_retriable_errors":
-			info.NonRetriableErrors = v.([]string)
-		case "branch_token":
-			info.BranchToken = v.([]byte)
-		case "cron_schedule":
-			info.CronSchedule = v.(string)
-		case "expiration_seconds":
-			info.ExpirationSeconds = common.SecondsToDuration(int64(v.(int)))
-		case "search_attributes":
-			info.SearchAttributes = v.(map[string][]byte)
-		case "memo":
-			info.Memo = v.(map[string][]byte)
+func populateGetReplicationTasks(
+	query gocql.Query,
+) ([]*nosqlplugin.ReplicationTask, []byte, error) {
+	iter := query.Iter()
+	if iter == nil {
+		return nil, nil, &types.InternalServiceError{
+			Message: "populateGetReplicationTasks operation failed.  Not able to create query iterator.",
 		}
 	}
-	info.CompletionEvent = persistence.NewDataBlob(completionEventData, completionEventEncoding)
-	info.AutoResetPoints = persistence.NewDataBlob(autoResetPoints, autoResetPointsEncoding)
-	return info
+
+	var tasks []*nosqlplugin.ReplicationTask
+	task := make(map[string]interface{})
+	for iter.MapScan(task) {
+		t := parseReplicationTaskInfo(task["replication"].(map[string]interface{}))
+		// Reset task map to get it ready for next scan
+		task = make(map[string]interface{})
+
+		tasks = append(tasks, t)
+	}
+	nextPageToken := getNextPageToken(iter)
+	err := iter.Close()
+
+	return tasks, nextPageToken, err
 }
