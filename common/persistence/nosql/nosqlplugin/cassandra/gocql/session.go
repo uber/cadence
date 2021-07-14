@@ -50,7 +50,7 @@ type (
 
 func NewSession(
 	config ClusterConfig,
-) (*session, error) {
+) (Session, error) {
 	gocqlSession, err := initSession(config)
 	if err != nil {
 		return nil, err
