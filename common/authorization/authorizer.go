@@ -52,6 +52,7 @@ type (
 		APIName    string
 		DomainName string
 		TaskList   *types.TaskList
+		Permission Permission
 	}
 
 	// Result is result from authority.

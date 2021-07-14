@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -84,10 +84,7 @@ func (a *oauthAuthority) parseTokenAndVerify(tokenStr string, attributes *Attrib
 		return nil, verifyErr
 	}
 	var claims jwtClaims
-	claimsErr := json.Unmarshal(token.RawClaims(), &claims)
-	if claimsErr != nil {
-		return nil, err
-	}
+	_ = json.Unmarshal(token.RawClaims(), &claims)
 	validationErr := a.validateClaims(claims, attributes)
 	if validationErr != nil {
 		return nil, validationErr
@@ -101,7 +98,7 @@ func (a *oauthAuthority) validateClaims(claims jwtClaims, attributes *Attributes
 		return fmt.Errorf("JWT has expired")
 	}
 	if claims.Name != attributes.Actor {
-		return fmt.Errorf("domain in token doesn't match with current domain")
+		return fmt.Errorf("name in token doesn't match with current name")
 	}
 	if claims.Domain != attributes.DomainName {
 		return fmt.Errorf("domain in token doesn't match with current domain")
