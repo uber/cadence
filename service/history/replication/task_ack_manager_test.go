@@ -25,6 +25,7 @@ package replication
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1075,19 +1076,22 @@ func (s *taskAckManagerSuite) TestSkipTask_ReturnFalse() {
 }
 
 func (s *taskAckManagerSuite) TestGetBatchSize_UpperLimit() {
-	s.ackManager.lastTaskCreationTime = time.Now().Add(time.Duration(-maxReplicationLatency) * time.Second)
+	s.ackManager.lastTaskCreationTime = atomic.Value{}
+	s.ackManager.lastTaskCreationTime.Store(time.Now().Add(time.Duration(-s.ackManager.maxAllowedLatencyFn()) * time.Second))
 	size := s.ackManager.getBatchSize()
 	s.Equal(s.ackManager.fetchTasksBatchSize(0), size)
 }
 
 func (s *taskAckManagerSuite) TestGetBatchSize_ValidRange() {
-	s.ackManager.lastTaskCreationTime = time.Now().Add(-8 * time.Second)
+	s.ackManager.lastTaskCreationTime = atomic.Value{}
+	s.ackManager.lastTaskCreationTime.Store(time.Now().Add(-8 * time.Second))
 	size := s.ackManager.getBatchSize()
 	s.True(minReadTaskSize+5 <= size)
 }
 
 func (s *taskAckManagerSuite) TestGetBatchSize_InvalidRange() {
-	s.ackManager.lastTaskCreationTime = time.Now().Add(time.Minute)
+	s.ackManager.lastTaskCreationTime = atomic.Value{}
+	s.ackManager.lastTaskCreationTime.Store(time.Now().Add(time.Minute))
 	size := s.ackManager.getBatchSize()
 	s.Equal(minReadTaskSize, size)
 }
