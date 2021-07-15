@@ -26,6 +26,10 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
+	"github.com/uber/cadence/common/log/tag"
+
 	"github.com/cristalhq/jwt/v3"
 	"go.uber.org/yarpc"
 
@@ -43,9 +47,10 @@ type jwtClaims struct {
 	Permission string
 	Domain     string
 	Iat        int64
+	TTL        int64
 }
 
-// NewOAuthAuthorizer creates a no-op authority
+// NewOAuthAuthorizer creates a oauth authority
 func NewOAuthAuthorizer(
 	authorizationCfg config.OAuthAuthorizer,
 ) Authorizer {
@@ -54,6 +59,7 @@ func NewOAuthAuthorizer(
 	}
 }
 
+// Authorize defines the logic to verify get claims from token
 func (a *oauthAuthority) Authorize(
 	ctx context.Context,
 	attributes *Attributes,
@@ -62,9 +68,14 @@ func (a *oauthAuthority) Authorize(
 	token := call.Header(common.AuthorizationTokenHeaderName)
 	// parseTokenAndVerify could either return the claims or a bool. I'm returning the claims currently
 	// because we might use it to populate values in the context
-	_, err := a.parseTokenAndVerify(token, attributes)
+	claims, err := a.parseTokenAndVerify(token, attributes)
 	if err != nil {
 		return Result{Decision: DecisionDeny}, err
+	}
+	validationErr := a.validateClaims(claims, attributes)
+	if validationErr != nil {
+		log.Debug("request is not authorized", tag.Error(err))
+		return Result{Decision: DecisionDeny}, nil
 	}
 	return Result{Decision: DecisionAllow}, nil
 }
@@ -85,23 +96,18 @@ func (a *oauthAuthority) parseTokenAndVerify(tokenStr string, attributes *Attrib
 	}
 	var claims jwtClaims
 	_ = json.Unmarshal(token.RawClaims(), &claims)
-	validationErr := a.validateClaims(claims, attributes)
-	if validationErr != nil {
-		return nil, validationErr
-	}
-
 	return &claims, nil
 }
 
-func (a *oauthAuthority) validateClaims(claims jwtClaims, attributes *Attributes) error {
-	if claims.Iat < time.Now().Unix() {
+func (a *oauthAuthority) validateClaims(claims *jwtClaims, attributes *Attributes) error {
+	if claims.Iat+claims.TTL < time.Now().Unix() {
 		return fmt.Errorf("JWT has expired")
-	}
-	if claims.Name != attributes.Actor {
-		return fmt.Errorf("name in token doesn't match with current name")
 	}
 	if claims.Domain != attributes.DomainName {
 		return fmt.Errorf("domain in token doesn't match with current domain")
+	}
+	if NewPermission(claims.Permission) < attributes.Permission {
+		return fmt.Errorf("token doesn't have the right permission")
 	}
 
 	return nil

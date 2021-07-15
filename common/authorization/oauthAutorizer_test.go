@@ -24,6 +24,8 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/cristalhq/jwt/v3"
+
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
@@ -84,28 +86,28 @@ func getMocksBase(t *testing.T) Mocks {
 	cfg := config.OAuthAuthorizer{
 		Enable: true,
 		JwtCredentials: config.JwtCredentials{
-			Algorithm:  "RS256",
+			Algorithm:  jwt.RS256.String(),
 			PublicKey:  pubKeyTest,
 			PrivateKey: privKeyTest,
 		},
 		JwtTTL: 100000,
 	}
-	// https://jwt.io/#debugger-io?token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwicGVybWlzc2lvbiI6InJlYWQiLCJkb21haW4iOiJ0ZXN0LWRvbWFpbiIsImlhdCI6MTkxNjIzOTAyMX0.m9W50TgDsfDgquFAmKQh5olJqbyueWpPWGV3bSeH3uVVgjER-og5AyeEj4v--6WyF6R48etuK40YEI3jlf5oAf_o0hhvCfYcSQS59RmGvPtfpNLTk1WCEjZPxnQ7BKbGZ7Mc99Ey5VLceFqwB4kEgHUJhrRzf3ClMYG2V-45r4qmxOsdQyQSxBSJ-G8LTDJR_BDUvXFA6mdXGwsTRGkj-dYD_EgbECRNqysEG784YAMxJB7RHbaTZs6KpjDw04k4wKDFCQZUpshB3O3F3DFakYtaV4G0GeHxydEyRMIE1OtlCbnIoqnwAslnzADSdEQo4kjsVseDbUq3f8S8EDIARw&publicKey=-----BEGIN%20PUBLIC%20KEY-----%0AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAscukltHilaq%2Bo5gIVE4P%0AGwWl%2BesvJ2EaEpWw6ogr98Un11YJ4oKkwIkLw4iIo0tveCINA3cZmxaW1RejRWKE%0AqYFtQ1rYd6BsnFAHXWh2R3A1FtpG6ANUEGkE7OAJe2%2FL42E%2FImJ%2BGQxRvartInDM%0AyfiRfB7%2BL2n3wG%2BNi%2BhBNMtAaX4Wwbj2hup21Jjuo96TuhcGImBFBATGWaYR2wqe%0A%2F6by9wJexPHlY%2F1uDp3SnzF1dCLjp76SGCfyYqOGC%2FPxhQi7mDxeH9%2FtIC%2Blt%2FSz%0Awc1n8gZLtlRlZHinvYa8lhWXqVYw6WD8h4LTgALq9iY%2BbeD1PFQSY1GkQtt0RhRw%0AeQIDAQAB%0A-----END%20PUBLIC%20KEY-----
-	token := `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ikp
-		vaG4gRG9lIiwicGVybWlzc2lvbiI6InJlYWQiLCJkb21haW4iOiJ0ZXN0LWRvbWFpbiIsImlhdCI6MTkx
-		NjIzOTAyMX0.m9W50TgDsfDgquFAmKQh5olJqbyueWpPWGV3bSeH3uVVgjER-og5AyeEj4v--6WyF6R48
-		etuK40YEI3jlf5oAf_o0hhvCfYcSQS59RmGvPtfpNLTk1WCEjZPxnQ7BKbGZ7Mc99Ey5VLceFqwB4kEgH
-		UJhrRzf3ClMYG2V-45r4qmxOsdQyQSxBSJ-G8LTDJR_BDUvXFA6mdXGwsTRGkj-dYD_EgbECRNqysEG78
-		4YAMxJB7RHbaTZs6KpjDw04k4wKDFCQZUpshB3O3F3DFakYtaV4G0GeHxydEyRMIE1OtlCbnIoqnwAsln
-		zADSdEQo4kjsVseDbUq3f8S8EDIARw`
-	// https://jwt.io/#debugger-io?token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwicGVybWlzc2lvbiI6InJlYWQiLCJkb21haW4iOiJ0ZXN0LWRvbWFpbiIsImlhdCI6MTQxNjIzOTAyMX0.NL7U8gZYQ5igRJwic5zeebB-g6mOG0LqPT7vRZqccz9vGqx96MNt7ox3605zn1XRseE-Tbe2bcJtPbJ5aTBq03tmt02CUL1VYddUsCtwxdiLu-UQcj5D6fgua5U1e94DoVpkX5i4n0nK7VnxaQEHvX4FSzlHql28hXPe-vvQ8fRfuxO8POSaSWHJOpdvOJ1fw1t_AMjRkqPwQyGGVvvUgobXKeBmrP0uGPfhfQb8JRnE5bMGUr6vh9mG4QqteikisRhz7bEDMHDqpC62IeTiYsrpEiaeTGkxpNTNsAtrjHwhvQ1oe40FSl6rxdfY2z2g4x-tPId97-KJAv2aDjTdHQ&publicKey=-----BEGIN%20PUBLIC%20KEY-----%0AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAscukltHilaq%2Bo5gIVE4P%0AGwWl%2BesvJ2EaEpWw6ogr98Un11YJ4oKkwIkLw4iIo0tveCINA3cZmxaW1RejRWKE%0AqYFtQ1rYd6BsnFAHXWh2R3A1FtpG6ANUEGkE7OAJe2%2FL42E%2FImJ%2BGQxRvartInDM%0AyfiRfB7%2BL2n3wG%2BNi%2BhBNMtAaX4Wwbj2hup21Jjuo96TuhcGImBFBATGWaYR2wqe%0A%2F6by9wJexPHlY%2F1uDp3SnzF1dCLjp76SGCfyYqOGC%2FPxhQi7mDxeH9%2FtIC%2Blt%2FSz%0Awc1n8gZLtlRlZHinvYa8lhWXqVYw6WD8h4LTgALq9iY%2BbeD1PFQSY1GkQtt0RhRw%0AeQIDAQAB%0A-----END%20PUBLIC%20KEY-----
+	// https://jwt.io/#debugger-io?token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwicGVybWlzc2lvbiI6InJlYWQiLCJkb21haW4iOiJ0ZXN0LWRvbWFpbiIsImlhdCI6MTYyNjMzNjQ2MywiVFRMIjozMDAwMDAwMDB9.r1e83j6J392u4oAM7S7RYEDpeEilGThev2rK6RxqRXJIYiQlqKo1siDQjgHmj5PNUyEAQJF54CcXiaWJpTPWiPOxuRGtfJbUjSTnU2TiLvUiYU9bYt5U1w_UdlGzOD0ULhXPv2bzujAgtuQiRutwpljuQZwqqSDzILAMZlD5NMhEajYbE1P_0kv7esHO4oofTh__G3VZ_2fEi52GA8lwqoqBH3tQ1RK5QblnK5zMG5zBy8yK6JUmdoAGnKugjkJdDu8ERI4lNeIaWhD6kV8lksmPY0CxLfbmqLP3BIhvRF7zOeI1ocwa_4lpk4U6QRZ2w4hyGSEtD3sMmz1wl_uQCw&publicKey=-----BEGIN%20PUBLIC%20KEY-----%0AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAscukltHilaq%2Bo5gIVE4P%0AGwWl%2BesvJ2EaEpWw6ogr98Un11YJ4oKkwIkLw4iIo0tveCINA3cZmxaW1RejRWKE%0AqYFtQ1rYd6BsnFAHXWh2R3A1FtpG6ANUEGkE7OAJe2%2FL42E%2FImJ%2BGQxRvartInDM%0AyfiRfB7%2BL2n3wG%2BNi%2BhBNMtAaX4Wwbj2hup21Jjuo96TuhcGImBFBATGWaYR2wqe%0A%2F6by9wJexPHlY%2F1uDp3SnzF1dCLjp76SGCfyYqOGC%2FPxhQi7mDxeH9%2FtIC%2Blt%2FSz%0Awc1n8gZLtlRlZHinvYa8lhWXqVYw6WD8h4LTgALq9iY%2BbeD1PFQSY1GkQtt0RhRw%0AeQIDAQAB%0A-----END%20PUBLIC%20KEY-----
+	token := `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik
+		pvaG4gRG9lIiwicGVybWlzc2lvbiI6InJlYWQiLCJkb21haW4iOiJ0ZXN0LWRvbWFpbiIsImlhdCI6MTYyNjMzNjQ
+		2MywiVFRMIjozMDAwMDAwMDB9.r1e83j6J392u4oAM7S7RYEDpeEilGThev2rK6RxqRXJIYiQlqKo1siDQjgHmj5P
+		NUyEAQJF54CcXiaWJpTPWiPOxuRGtfJbUjSTnU2TiLvUiYU9bYt5U1w_UdlGzOD0ULhXPv2bzujAgtuQiRutwplju
+		QZwqqSDzILAMZlD5NMhEajYbE1P_0kv7esHO4oofTh__G3VZ_2fEi52GA8lwqoqBH3tQ1RK5QblnK5zMG5zBy8yK6
+		JUmdoAGnKugjkJdDu8ERI4lNeIaWhD6kV8lksmPY0CxLfbmqLP3BIhvRF7zOeI1ocwa_4lpk4U6QRZ2w4hyGSEtD3
+		sMmz1wl_uQCw`
+	// https://jwt.io/#debugger-io?token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwicGVybWlzc2lvbiI6InJlYWQiLCJkb21haW4iOiJ0ZXN0LWRvbWFpbiIsImlhdCI6MTYyNjMzNjQ2MywiVFRMIjoxfQ.P_T3O54F_aiHcaMwyeh2GXtzgWhyKSLkuu8rtGAylK0HOsHYRIkbjdx251kaDEf2B-QP6KKCiXhDgZ_Q42Tb477zjl9IYGRqEj9JZ7PwGuRWCEZWUaFHgB4XmkviHDMamBB5jqg2I2XYklyNO3r2m45_AcQ3dAU4uLiwBwSVKy_YsMldEvGKMC86JvGcYPhu-LLvrJSViQVyuBGjUor6YREuadAZHyKuoMunLq5b_BW2hTf_67kGiyRL5_DxBBGbiNeHDPNoBUNUAx4Nbe1rAckREL8VULVFC_HZ0bDiM7KMJJ0t6zLcgP8Z3Q3341nfhv9r3qG_6U343ZgTPZfQNQ&publicKey=-----BEGIN%20PUBLIC%20KEY-----%0AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAscukltHilaq%2Bo5gIVE4P%0AGwWl%2BesvJ2EaEpWw6ogr98Un11YJ4oKkwIkLw4iIo0tveCINA3cZmxaW1RejRWKE%0AqYFtQ1rYd6BsnFAHXWh2R3A1FtpG6ANUEGkE7OAJe2%2FL42E%2FImJ%2BGQxRvartInDM%0AyfiRfB7%2BL2n3wG%2BNi%2BhBNMtAaX4Wwbj2hup21Jjuo96TuhcGImBFBATGWaYR2wqe%0A%2F6by9wJexPHlY%2F1uDp3SnzF1dCLjp76SGCfyYqOGC%2FPxhQi7mDxeH9%2FtIC%2Blt%2FSz%0Awc1n8gZLtlRlZHinvYa8lhWXqVYw6WD8h4LTgALq9iY%2BbeD1PFQSY1GkQtt0RhRw%0AeQIDAQAB%0A-----END%20PUBLIC%20KEY-----
 	tokenExpiredIat := `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwib
-		mFtZSI6IkpvaG4gRG9lIiwicGVybWlzc2lvbiI6InJlYWQiLCJkb21haW4iOiJ0ZXN0LWRvbWFpbiIsIm
-		lhdCI6MTQxNjIzOTAyMX0.NL7U8gZYQ5igRJwic5zeebB-g6mOG0LqPT7vRZqccz9vGqx96MNt7ox3605
-		zn1XRseE-Tbe2bcJtPbJ5aTBq03tmt02CUL1VYddUsCtwxdiLu-UQcj5D6fgua5U1e94DoVpkX5i4n0nK
-		7VnxaQEHvX4FSzlHql28hXPe-vvQ8fRfuxO8POSaSWHJOpdvOJ1fw1t_AMjRkqPwQyGGVvvUgobXKeBmr
-		P0uGPfhfQb8JRnE5bMGUr6vh9mG4QqteikisRhz7bEDMHDqpC62IeTiYsrpEiaeTGkxpNTNsAtrjHwhvQ
-		1oe40FSl6rxdfY2z2g4x-tPId97-KJAv2aDjTdHQ`
+		mFtZSI6IkpvaG4gRG9lIiwicGVybWlzc2lvbiI6InJlYWQiLCJkb21haW4iOiJ0ZXN0LWRvbWFpbiIsImlhdCI6MTY
+		yNjMzNjQ2MywiVFRMIjoxfQ.P_T3O54F_aiHcaMwyeh2GXtzgWhyKSLkuu8rtGAylK0HOsHYRIkbjdx251kaDEf2B-
+		QP6KKCiXhDgZ_Q42Tb477zjl9IYGRqEj9JZ7PwGuRWCEZWUaFHgB4XmkviHDMamBB5jqg2I2XYklyNO3r2m45_AcQ3
+		dAU4uLiwBwSVKy_YsMldEvGKMC86JvGcYPhu-LLvrJSViQVyuBGjUor6YREuadAZHyKuoMunLq5b_BW2hTf_67kGiy
+		RL5_DxBBGbiNeHDPNoBUNUAx4Nbe1rAckREL8VULVFC_HZ0bDiM7KMJJ0t6zLcgP8Z3Q3341nfhv9r3qG_6U343ZgT
+		PZfQNQ`
 
 	re := regexp.MustCompile(`\r?\n?\t`)
 	token = re.ReplaceAllString(token, "")
@@ -123,6 +125,7 @@ func getMocksBase(t *testing.T) Mocks {
 		APIName:    "",
 		DomainName: "test-domain",
 		TaskList:   nil,
+		Permission: PermissionRead,
 	}
 
 	return Mocks{
@@ -180,18 +183,19 @@ func TestIatExpiredToken(t *testing.T) {
 	err := call.ReadFromRequest(&transport.Request{
 		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, mocks.tokenExpiredIat),
 	})
+	assert.NoError(t, err)
 	authorizer := NewOAuthAuthorizer(mocks.cfg)
-	result, err := authorizer.Authorize(ctx, &mocks.att)
-	assert.EqualError(t, err, "JWT has expired")
+	result, _ := authorizer.Authorize(ctx, &mocks.att)
+	//assert.EqualError(t, err, "JWT has expired")
 	assert.Equal(t, result.Decision, DecisionDeny)
 }
 
-func TestIncorrectNameInAttributes(t *testing.T) {
+func TestIncorrectPermissionInAttributes(t *testing.T) {
 	mocks := getMocksBase(t)
-	mocks.att.Actor = "Rodrigo"
+	mocks.att.Permission = PermissionWrite
 	authorizer := NewOAuthAuthorizer(mocks.cfg)
-	result, err := authorizer.Authorize(mocks.ctx, &mocks.att)
-	assert.EqualError(t, err, "name in token doesn't match with current name")
+	result, _ := authorizer.Authorize(mocks.ctx, &mocks.att)
+	//assert.EqualError(t, err, "name in token doesn't match with current name")
 	assert.Equal(t, result.Decision, DecisionDeny)
 }
 
@@ -199,7 +203,7 @@ func TestIncorrectDomainInAttributes(t *testing.T) {
 	mocks := getMocksBase(t)
 	mocks.att.DomainName = "myotherdomain"
 	authorizer := NewOAuthAuthorizer(mocks.cfg)
-	result, err := authorizer.Authorize(mocks.ctx, &mocks.att)
-	assert.EqualError(t, err, "domain in token doesn't match with current domain")
+	result, _ := authorizer.Authorize(mocks.ctx, &mocks.att)
+	//assert.EqualError(t, err, "permission in token doesn't match with API permission")
 	assert.Equal(t, result.Decision, DecisionDeny)
 }

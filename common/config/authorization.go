@@ -22,6 +22,8 @@ package config
 
 import (
 	"fmt"
+
+	"github.com/cristalhq/jwt/v3"
 )
 
 // Validate validates the persistence config
@@ -45,18 +47,14 @@ func (a *Authorization) validateOAuth() error {
 	if oauthConfig.JwtTTL <= 0 {
 		return fmt.Errorf("[OAuthConfig] TTL must be greater than 0")
 	}
-
 	if oauthConfig.JwtCredentials.PrivateKey == "" {
 		return fmt.Errorf("[OAuthConfig] PrivateKey can't be empty")
 	}
-
 	if oauthConfig.JwtCredentials.PublicKey == "" {
 		return fmt.Errorf("[OAuthConfig] PublicKey can't be empty")
 	}
-
-	if oauthConfig.JwtCredentials.Algorithm != "RS256" {
+	if oauthConfig.JwtCredentials.Algorithm != jwt.RS256.String() {
 		return fmt.Errorf("[OAuthConfig] The only supported Algorithm is RS256")
 	}
-
 	return nil
 }

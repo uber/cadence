@@ -23,6 +23,8 @@ package authorization
 import (
 	"testing"
 
+	"github.com/cristalhq/jwt/v3"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/config"
@@ -44,7 +46,7 @@ func cfgOAuth() config.Authorization {
 		OAuthAuthorizer: config.OAuthAuthorizer{
 			Enable: true,
 			JwtCredentials: config.JwtCredentials{
-				Algorithm:  "RS256",
+				Algorithm:  jwt.RS256.String(),
 				PublicKey:  "public",
 				PrivateKey: "private",
 			},

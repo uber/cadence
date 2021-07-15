@@ -37,11 +37,11 @@ const (
 
 const (
 	// PermissionRead means the user can write on the domain level APIs
-	PermissionRead Permission = "read"
+	PermissionRead Permission = iota + 1
 	// PermissionWrite means the user can write on the domain level APIs
-	PermissionWrite Permission = "write"
+	PermissionWrite
 	// PermissionAdmin means the user can read+write on the domain level APIs
-	PermissionAdmin Permission = "admin"
+	PermissionAdmin
 )
 
 type (
@@ -64,8 +64,21 @@ type (
 	Decision int
 
 	// Permission is enum type for auth permission
-	Permission string
+	Permission int
 )
+
+func NewPermission(permission string) Permission {
+	switch permission {
+	case "read":
+		return PermissionRead
+	case "write":
+		return PermissionWrite
+	case "admin":
+		return PermissionAdmin
+	default:
+		return -1
+	}
+}
 
 // Authorizer is an interface for authorization
 type Authorizer interface {
