@@ -25,7 +25,6 @@ import (
 	"testing"
 
 	"github.com/cristalhq/jwt/v3"
-
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"

@@ -26,15 +26,13 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
-	"github.com/uber/cadence/common/log/tag"
-
 	"github.com/cristalhq/jwt/v3"
+	log "github.com/sirupsen/logrus"
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log/tag"
 )
 
 type oauthAuthority struct {

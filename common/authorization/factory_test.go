@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/cristalhq/jwt/v3"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/config"
