@@ -66,7 +66,7 @@ func (a *oauthAuthority) Authorize(
 	token := call.Header(common.AuthorizationTokenHeaderName)
 	// parseTokenAndVerify could either return the claims or a bool. I'm returning the claims currently
 	// because we might use it to populate values in the context
-	claims, err := a.parseTokenAndVerify(token, attributes)
+	claims, err := a.parseToken(token, attributes)
 	if err != nil {
 		return Result{Decision: DecisionDeny}, err
 	}
@@ -78,7 +78,7 @@ func (a *oauthAuthority) Authorize(
 	return Result{Decision: DecisionAllow}, nil
 }
 
-func (a *oauthAuthority) parseTokenAndVerify(tokenStr string, attributes *Attributes) (*jwtClaims, error) {
+func (a *oauthAuthority) parseToken(tokenStr string, attributes *Attributes) (*jwtClaims, error) {
 	publicKey, err := common.StringToRSAPublicKey(a.authorizationCfg.JwtCredentials.PublicKey)
 	if err != nil {
 		return nil, err
