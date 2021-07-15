@@ -42,13 +42,6 @@ const (
 
 var _ nosqlplugin.AdminDB = (*cdb)(nil)
 
-func (db *cdb) QueryOneRow(queryTemplate string, args ...interface{}) (row map[string]interface{}, err error) {
-	query := db.session.Query(queryTemplate, args...)
-	result := make(map[string]interface{})
-	err = query.MapScan(result)
-	return result, err
-}
-
 func (db *cdb) SetupTestDatabase() error {
 	err := createCassandraKeyspace(db.session, db.cfg.Keyspace, 1, true)
 	if err != nil {

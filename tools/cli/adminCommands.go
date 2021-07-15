@@ -22,6 +22,7 @@
 package cli
 
 import (
+	ctx "context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -43,7 +44,6 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	cassandra_db "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/types"
@@ -371,37 +371,20 @@ func AdminGetDomainIDOrName(c *cli.Context) {
 		ErrorAndExit("Need either domainName or domainID", nil)
 	}
 
-	_, adminDB := connectToCassandra(c)
+	db, _ := connectToCassandra(c)
 
 	if len(domainID) > 0 {
-		tmpl := "select domain from domains where id = ? "
-		res, err := adminDB.QueryOneRow(tmpl, domainID)
+		domain, err := db.SelectDomain(ctx.Background(), &domainID, nil)
 		if err != nil {
-			ErrorAndExit("readOneRow", err)
+			ErrorAndExit("SelectDomain error", err)
 		}
-		domain := res["domain"].(map[string]interface{})
-		domainName := domain["name"].(string)
-		fmt.Printf("domainName for domainID %v is %v \n", domainID, domainName)
+		fmt.Printf("domainName for domainID %v is %v \n", domainID, domain.Info.Name)
 	} else {
-		tmpl := "select domain from domains_by_name where name = ?"
-		tmplV2 := "select domain from domains_by_name_v2 where domains_partition=0 and name = ?"
-
-		res, err := adminDB.QueryOneRow(tmpl, domainName)
+		domain, err := db.SelectDomain(ctx.Background(), nil, &domainName)
 		if err != nil {
-			fmt.Printf("v1 return error: %v , trying v2...\n", err)
-
-			res, err := adminDB.QueryOneRow(tmplV2, domainName)
-			if err != nil {
-				ErrorAndExit("readOneRow for v2", err)
-			}
-			domain := res["domain"].(map[string]interface{})
-			domainID := domain["id"].(gocql.UUID).String()
-			fmt.Printf("domainID for domainName %v is %v \n", domainName, domainID)
-		} else {
-			domain := res["domain"].(map[string]interface{})
-			domainID := domain["id"].(gocql.UUID).String()
-			fmt.Printf("domainID for domainName %v is %v \n", domainName, domainID)
+			ErrorAndExit("SelectDomain error", err)
 		}
+		fmt.Printf("domainID for domainName %v is %v \n", domain.Info.ID, domainID)
 	}
 }
 

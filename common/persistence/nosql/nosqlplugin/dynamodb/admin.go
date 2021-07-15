@@ -27,10 +27,6 @@ import (
 
 var _ nosqlplugin.AdminDB = (*ddb)(nil)
 
-func (db *ddb) QueryOneRow(queryTemplate string, args ...interface{}) (row map[string]interface{}, err error) {
-	panic("TODO")
-}
-
 func (db *ddb) SetupTestDatabase() error {
 	panic("TODO")
 }

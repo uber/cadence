@@ -38,8 +38,6 @@ type (
 
 	// AdminDB is for tooling and testing
 	AdminDB interface {
-		// generic query method
-		QueryOneRow(queryTemplate string, args ...interface{}) (row map[string]interface{}, err error)
 		SetupTestDatabase() error
 		TeardownTestDatabase() error
 	}
