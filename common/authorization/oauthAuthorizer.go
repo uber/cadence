@@ -63,12 +63,15 @@ func (a *oauthAuthority) Authorize(
 	attributes *Attributes,
 ) (Result, error) {
 	call := yarpc.CallFromContext(ctx)
-	token := call.Header(common.AuthorizationTokenHeaderName)
-	// parseTokenAndVerify could either return the claims or a bool. I'm returning the claims currently
-	// because we might use it to populate values in the context
-	claims, err := a.parseToken(token, attributes)
+	verifier, err := a.getVerifier()
 	if err != nil {
 		return Result{Decision: DecisionDeny}, err
+	}
+	token := call.Header(common.AuthorizationTokenHeaderName)
+	claims, err := a.parseToken(token, verifier)
+	if err != nil {
+		log.Debug("request is not authorized", tag.Error(err))
+		return Result{Decision: DecisionDeny}, nil
 	}
 	validationErr := a.validateClaims(claims, attributes)
 	if validationErr != nil {
@@ -78,7 +81,7 @@ func (a *oauthAuthority) Authorize(
 	return Result{Decision: DecisionAllow}, nil
 }
 
-func (a *oauthAuthority) parseToken(tokenStr string, attributes *Attributes) (*jwtClaims, error) {
+func (a *oauthAuthority) getVerifier() (jwt.Verifier, error) {
 	publicKey, err := common.StringToRSAPublicKey(a.authorizationCfg.JwtCredentials.PublicKey)
 	if err != nil {
 		return nil, err
@@ -88,6 +91,10 @@ func (a *oauthAuthority) parseToken(tokenStr string, attributes *Attributes) (*j
 	if err != nil {
 		return nil, err
 	}
+	return verifier, nil
+}
+
+func (a *oauthAuthority) parseToken(tokenStr string, verifier jwt.Verifier) (*jwtClaims, error) {
 	token, verifyErr := jwt.ParseAndVerifyString(tokenStr, verifier)
 	if verifyErr != nil {
 		return nil, verifyErr
@@ -98,6 +105,9 @@ func (a *oauthAuthority) parseToken(tokenStr string, attributes *Attributes) (*j
 }
 
 func (a *oauthAuthority) validateClaims(claims *jwtClaims, attributes *Attributes) error {
+	if claims.TTL > a.authorizationCfg.MaxJwtTTL {
+		return fmt.Errorf("TTL in token is larger than MaxTTL allowed")
+	}
 	if claims.Iat+claims.TTL < time.Now().Unix() {
 		return fmt.Errorf("JWT has expired")
 	}

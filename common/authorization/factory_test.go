@@ -49,7 +49,7 @@ func cfgOAuth() config.Authorization {
 				PublicKey:  "public",
 				PrivateKey: "private",
 			},
-			JwtTTL: 12345,
+			MaxJwtTTL: 12345,
 		},
 	}
 }

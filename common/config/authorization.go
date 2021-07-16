@@ -44,8 +44,8 @@ func (a *Authorization) Validate() error {
 func (a *Authorization) validateOAuth() error {
 	oauthConfig := a.OAuthAuthorizer
 
-	if oauthConfig.JwtTTL <= 0 {
-		return fmt.Errorf("[OAuthConfig] TTL must be greater than 0")
+	if oauthConfig.MaxJwtTTL <= 0 {
+		return fmt.Errorf("[OAuthConfig] MaxTTL must be greater than 0")
 	}
 	if oauthConfig.JwtCredentials.PrivateKey == "" {
 		return fmt.Errorf("[OAuthConfig] PrivateKey can't be empty")

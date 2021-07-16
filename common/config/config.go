@@ -79,8 +79,8 @@ type (
 		Enable bool `yaml:"enable"`
 		// Credentials to verify/create the JWT
 		JwtCredentials JwtCredentials `yaml:"jwtCredentials"`
-		// TTL: How long a JWT can be valid since timeAtIssue(iat)
-		JwtTTL int64 `yaml:"jwtTTL"`
+		// Max of TTL in the claim
+		MaxJwtTTL int64 `yaml:"maxJwtTTL"`
 	}
 
 	JwtCredentials struct {
