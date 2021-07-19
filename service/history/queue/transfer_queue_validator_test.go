@@ -80,6 +80,7 @@ func (s *transferQueueValidatorSuite) SetupTest() {
 
 	s.processor = &transferQueueProcessorBase{
 		processorBase: &processorBase{
+			shard: s.mockShard,
 			processingQueueCollections: newProcessingQueueCollections(
 				[]ProcessingQueueState{
 					NewProcessingQueueState(
