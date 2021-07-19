@@ -1507,7 +1507,7 @@ func (p *queuePersistenceClient) EnqueueMessage(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceEnqueueMessageScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceEnqueueMessageScope, err)
 	}
 
 	return err
@@ -1525,7 +1525,7 @@ func (p *queuePersistenceClient) ReadMessages(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceReadQueueMessagesScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceReadQueueMessagesScope, err)
 	}
 
 	return result, err
@@ -1543,7 +1543,7 @@ func (p *queuePersistenceClient) UpdateAckLevel(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceUpdateAckLevelScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceUpdateAckLevelScope, err)
 	}
 
 	return err
@@ -1559,7 +1559,7 @@ func (p *queuePersistenceClient) GetAckLevels(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceGetAckLevelScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceGetAckLevelScope, err)
 	}
 
 	return result, err
@@ -1576,7 +1576,7 @@ func (p *queuePersistenceClient) DeleteMessagesBefore(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceDeleteQueueMessagesScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceDeleteQueueMessagesScope, err)
 	}
 
 	return err
@@ -1593,7 +1593,7 @@ func (p *queuePersistenceClient) EnqueueMessageToDLQ(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceEnqueueMessageToDLQScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceEnqueueMessageToDLQScope, err)
 	}
 
 	return err
@@ -1613,7 +1613,7 @@ func (p *queuePersistenceClient) ReadMessagesFromDLQ(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceReadQueueMessagesFromDLQScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceReadQueueMessagesFromDLQScope, err)
 	}
 
 	return result, token, err
@@ -1630,7 +1630,7 @@ func (p *queuePersistenceClient) DeleteMessageFromDLQ(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceDeleteQueueMessageFromDLQScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceDeleteQueueMessageFromDLQScope, err)
 	}
 
 	return err
@@ -1648,7 +1648,7 @@ func (p *queuePersistenceClient) RangeDeleteMessagesFromDLQ(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceRangeDeleteMessagesFromDLQScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceRangeDeleteMessagesFromDLQScope, err)
 	}
 
 	return err
@@ -1666,7 +1666,7 @@ func (p *queuePersistenceClient) UpdateDLQAckLevel(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceUpdateDLQAckLevelScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceUpdateDLQAckLevelScope, err)
 	}
 
 	return err
@@ -1682,7 +1682,7 @@ func (p *queuePersistenceClient) GetDLQAckLevels(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceGetDLQAckLevelScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceGetDLQAckLevelScope, err)
 	}
 
 	return result, err
@@ -1698,10 +1698,25 @@ func (p *queuePersistenceClient) GetDLQSize(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceGetDLQSizeScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceGetDLQSizeScope, err)
 	}
 
 	return result, err
+}
+
+func (p *queuePersistenceClient) updateErrorMetric(scope int, err error) {
+	switch err.(type) {
+	case *TimeoutError:
+		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
+		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	case *types.ServiceBusyError:
+		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
+		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	default:
+		p.logger.Error("Operation failed with internal error.",
+			tag.Error(err), tag.MetricScope(scope))
+		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	}
 }
 
 func (p *queuePersistenceClient) Close() {
