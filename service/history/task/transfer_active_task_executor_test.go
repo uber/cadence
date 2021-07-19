@@ -196,7 +196,6 @@ func (s *transferActiveTaskExecutorSuite) SetupTest() {
 		execution.NewCache(s.mockShard),
 		nil,
 		s.logger,
-		s.mockShard.GetMetricsClient(),
 		config,
 	).(*transferActiveTaskExecutor)
 	s.transferActiveTaskExecutor.parentClosePolicyClient = s.mockParentClosePolicyClient
@@ -2013,5 +2012,5 @@ func (s *transferActiveTaskExecutorSuite) createPersistenceMutableState(
 func (s *transferActiveTaskExecutorSuite) newTransferTaskFromInfo(
 	info *persistence.TransferTaskInfo,
 ) Task {
-	return NewTransferTask(s.mockShard, info, QueueTypeActiveTransfer, s.logger, nil, nil, nil, nil, s.mockShard.GetTimeSource(), nil)
+	return NewTransferTask(s.mockShard, info, QueueTypeActiveTransfer, s.logger, nil, nil, nil, nil, nil)
 }

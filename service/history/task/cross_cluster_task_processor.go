@@ -57,6 +57,7 @@ type (
 	crossClusterTaskProcessor struct {
 		shard         shard.Context
 		taskProcessor Processor
+		taskExecutor  Executor
 		redispatcher  Redispatcher
 		taskFetcher   Fetcher
 		options       *CrossClusterTaskProcessorOptions
@@ -124,7 +125,12 @@ func newCrossClusterTaskProcessor(
 	return &crossClusterTaskProcessor{
 		shard:         shard,
 		taskProcessor: taskProcessor,
-		taskFetcher:   taskFetcher,
+		taskExecutor: NewCrossClusterTargetTaskExecutor(
+			shard,
+			logger,
+			shard.GetConfig(),
+		),
+		taskFetcher: taskFetcher,
 		redispatcher: NewRedispatcher(
 			taskProcessor,
 			&RedispatcherOptions{
@@ -222,7 +228,12 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 			crossClusterTask, future := NewCrossClusterTaskForTargetCluster(
 				p.shard,
 				taskRequest,
+				p.taskExecutor,
 				p.logger,
+				func(t Task) {
+					// the only possible error is processor shutdown which is safe to discard
+					_ = p.submitTask(t)
+				},
 				p.options.TaskMaxRetryCount,
 			)
 			taskFutures[taskRequest.TaskInfo.GetTaskID()] = future
@@ -415,7 +426,7 @@ func (p *crossClusterTaskProcessor) respondTaskCompletedWithRetry(
 // so that the submission can be retried later
 // error will be returned by this function only when the shard has been shutdown
 func (p *crossClusterTaskProcessor) submitTask(
-	task CrossClusterTask,
+	task Task,
 ) error {
 	submitted, err := p.taskProcessor.TrySubmit(task)
 	if err != nil {
