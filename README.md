@@ -9,7 +9,7 @@ This repo contains the source code of the Cadence server. To implement workflows
 
 See Maxim's talk at [Data@Scale Conference](https://atscaleconference.com/videos/cadence-microservice-architecture-beyond-requestreply) for an architectural overview of Cadence.
 
-## Getting Started
+## Getting Startedwhy
 
 ### Start the cadence-server locally
 
