@@ -35,7 +35,7 @@ type (
 	}
 )
 
-func newNoSQLConfigStore(
+func NewNoSQLConfigStore(
 	cfg config.NoSQL,
 	logger log.Logger,
 ) (p.ConfigStore, error) {
