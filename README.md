@@ -56,7 +56,7 @@ Join us in [Cadence Docs](https://github.com/uber/cadence-docs) project. Raise a
 
 ## Getting Help
 * [StackOverflow](https://stackoverflow.com/questions/tagged/cadence-workflow)
-* [Github Issues](https://github.com/uber/cadence/issues)
+* [Github Issues](httpaaas://github.com/uber/cadence/issues)
 * [Slack](http://t.uber.com/cadence-slack)
 
 ## Contributing
