@@ -79,7 +79,6 @@ type (
 		submitTime     time.Time
 		logger         log.Logger
 		eventLogger    eventLogger
-		scopeIdx       int
 		scope          metrics.Scope
 		taskExecutor   Executor
 		resubmitTaskFn func(task Task)
@@ -101,6 +100,7 @@ func NewCrossClusterSourceTask(
 		crossClusterTaskBase: newCrossClusterTaskBase(
 			shard,
 			taskInfo,
+			processingStateInitialized,
 			taskExecutor,
 			logger,
 			shard.GetTimeSource(),
@@ -110,13 +110,13 @@ func NewCrossClusterSourceTask(
 	}
 }
 
-// NewCrossClusterTaskForTargetCluster creates a cross cluster task
-// for the processing it at the target cluster
+// NewCrossClusterTargetTask is called at the target cluster
+// to process the cross cluster task
 // the returned the Future will be unblocked when after the task
 // is processed. The future value has type types.CrossClusterTaskResponse
 // and there will be not error returned for this future. All errors will
 // be recorded by the FailedCause field in the response.
-func NewCrossClusterTaskForTargetCluster(
+func NewCrossClusterTargetTask(
 	shard shard.Context,
 	taskRequest *types.CrossClusterTaskRequest,
 	taskExecutor Executor,
@@ -162,6 +162,7 @@ func NewCrossClusterTaskForTargetCluster(
 		crossClusterTaskBase: newCrossClusterTaskBase(
 			shard,
 			info,
+			processingState(taskRequest.TaskInfo.TaskState),
 			taskExecutor,
 			logger,
 			shard.GetTimeSource(),
@@ -176,6 +177,7 @@ func NewCrossClusterTaskForTargetCluster(
 func newCrossClusterTaskBase(
 	shard shard.Context,
 	taskInfo Info,
+	processingState processingState,
 	taskExecutor Executor,
 	logger log.Logger,
 	timeSource clock.TimeSource,
@@ -190,16 +192,21 @@ func newCrossClusterTaskBase(
 	}
 
 	return &crossClusterTaskBase{
-		Info:           taskInfo,
-		shard:          shard,
-		priority:       ctask.NoPriority,
-		attempt:        0,
-		timeSource:     timeSource,
-		submitTime:     timeSource.Now(),
-		logger:         logger,
-		eventLogger:    eventLogger,
-		scopeIdx:       GetCrossClusterTaskMetricsScope(taskInfo.GetTaskType()),
-		scope:          nil,
+		Info:            taskInfo,
+		shard:           shard,
+		state:           ctask.TaskStatePending,
+		processingState: processingState,
+		priority:        ctask.NoPriority,
+		attempt:         0,
+		timeSource:      timeSource,
+		submitTime:      timeSource.Now(),
+		logger:          logger,
+		eventLogger:     eventLogger,
+		scope: getOrCreateDomainTaggedScope(
+			shard,
+			GetCrossClusterTaskMetricsScope(taskInfo.GetTaskType()), taskInfo.GetDomainID(),
+			logger,
+		),
 		resubmitTaskFn: resubmitTaskFn,
 		maxRetryCount:  maxRetryCount(),
 	}
@@ -246,10 +253,6 @@ func (t *crossClusterSourceTask) GetCrossClusterRequest() *types.CrossClusterTas
 // cross cluster target task methods
 
 func (t *crossClusterTargetTask) Execute() error {
-	if t.scope == nil {
-		t.scope = getOrCreateDomainTaggedScope(t.shard, t.scopeIdx, t.GetDomainID(), t.logger)
-	}
-
 	executionStartTime := t.timeSource.Now()
 
 	defer func() {

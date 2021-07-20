@@ -27,6 +27,7 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -36,6 +37,7 @@ import (
 )
 
 var (
+	errUnknownCrossClusterTask      = errors.New("Unknown cross cluster task")
 	errUnknownTaskProcessingState   = errors.New("unknown cross cluster task processing state")
 	errMissingTaskRequestAttributes = errors.New("request attributes not specified")
 	errDomainNotExists              = errors.New("domain not exists")
@@ -121,7 +123,7 @@ func (t *crossClusterTargetTaskExecutor) Execute(
 	case persistence.CrossClusterTaskTypeSignalExecution:
 		response.SignalExecutionAttributes, err = t.executeSignalExecutionTask(ctx, targetTask)
 	default:
-		err = errUnknownTransferTask
+		err = errUnknownCrossClusterTask
 	}
 
 	var retryable bool
@@ -146,7 +148,7 @@ func (t *crossClusterTargetTaskExecutor) executeStartChildExecutionTask(
 		return nil, errMissingTaskRequestAttributes
 	}
 
-	targetDomainName, err := t.verifyAndTargetDomainName(attributes.TargetDomainID)
+	targetDomainName, err := t.verifyDomainActive(attributes.TargetDomainID)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +200,7 @@ func (t *crossClusterTargetTaskExecutor) executeCancelExecutionTask(
 		return nil, errMissingTaskRequestAttributes
 	}
 
-	targetDomainName, err := t.verifyAndTargetDomainName(attributes.TargetDomainID)
+	targetDomainName, err := t.verifyDomainActive(attributes.TargetDomainID)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +230,7 @@ func (t *crossClusterTargetTaskExecutor) executeSignalExecutionTask(
 		return nil, errMissingTaskRequestAttributes
 	}
 
-	targetDomainName, err := t.verifyAndTargetDomainName(attributes.TargetDomainID)
+	targetDomainName, err := t.verifyDomainActive(attributes.TargetDomainID)
 	if err != nil {
 		return nil, err
 	}
@@ -281,25 +283,24 @@ func (t *crossClusterTargetTaskExecutor) convertErrorToFailureCause(
 		return types.CrossClusterTaskFailedCauseDomainNotActive.Ptr(), false
 	}
 
-	if err == errDomainNotExists {
+	switch err {
+	case errDomainNotExists:
 		return types.CrossClusterTaskFailedCauseDomainNotExists.Ptr(), false
-	}
-	if err == errDomainStandby {
+	case errDomainStandby:
 		return types.CrossClusterTaskFailedCauseDomainNotActive.Ptr(), false
-	}
-	if err == ErrTaskPendingActive {
+	case ErrTaskPendingActive:
 		return types.CrossClusterTaskFailedCauseDomainNotActive.Ptr(), true
+	default:
+		retryable := err != errUnknownTaskProcessingState && err != errMissingTaskRequestAttributes
+		t.logger.Error("encountered uncategorized error when processing target cross cluster task", tag.Error(err))
+		return types.CrossClusterTaskFailedCauseUncategorized.Ptr(), retryable
 	}
-	if err == errUnknownTaskProcessingState || err == errMissingTaskRequestAttributes {
-		return types.CrossClusterTaskFailedCauseUncategorized.Ptr(), false
-	}
-	return types.CrossClusterTaskFailedCauseUncategorized.Ptr(), true
 }
 
-func (t *crossClusterTargetTaskExecutor) verifyAndTargetDomainName(
-	targetDomainID string,
+func (t *crossClusterTargetTaskExecutor) verifyDomainActive(
+	domainID string,
 ) (string, error) {
-	entry, err := t.shard.GetDomainCache().GetDomainByID(targetDomainID)
+	entry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
 	if err != nil {
 		if common.IsEntityNotExistsError(err) {
 			// return a special error here so that we can tell the difference from

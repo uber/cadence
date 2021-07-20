@@ -644,6 +644,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 
 	// ChildExecution already started, just create DecisionTask and complete transfer task
 	if childInfo.StartedID != common.EmptyEventID {
+		// entity not exist error is checked and ignored in HandleErr() method in task.go
 		return createFirstDecisionTask(
 			ctx,
 			t.historyClient,
@@ -688,6 +689,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	}
 
 	// Finally create first decision task for Child execution so it is really started
+	// entity not exist error is checked and ignored in HandleErr() method in task.go
 	return createFirstDecisionTask(
 		ctx,
 		t.historyClient,
@@ -1015,7 +1017,9 @@ func createFirstDecisionTask(
 		switch err.(type) {
 		// Maybe child workflow execution already timedout or terminated
 		// Safe to discard the error and complete this transfer task
-		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError:
+		// cross cluster task need to catch entity not exist error
+		// as the target domain may failover before first decision is scheduled.
+		case *types.WorkflowExecutionAlreadyCompletedError:
 			return nil
 		}
 	}
@@ -1357,7 +1361,14 @@ func removeSignalMutableStateWithRetry(
 		return historyClient.RemoveSignalMutableState(ctx, removeSignalRequest)
 	}
 
-	return backoff.Retry(op, taskRetryPolicy, common.IsServiceTransientError)
+	err := backoff.Retry(op, taskRetryPolicy, common.IsServiceTransientError)
+	if err != nil && common.IsEntityNotExistsError(err) {
+		// it's safe to discard entity not exists error here
+		// as there's nothing to remove.
+		// for cross cluster task, we don't have to return the error to the source cluster
+		return nil
+	}
+	return err
 }
 
 func startWorkflowWithRetry(

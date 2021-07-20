@@ -225,7 +225,7 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 
 		taskFutures := make(map[int64]future.Future, len(taskRequests))
 		for _, taskRequest := range taskRequests {
-			crossClusterTask, future := NewCrossClusterTaskForTargetCluster(
+			crossClusterTask, future := NewCrossClusterTargetTask(
 				p.shard,
 				taskRequest,
 				p.taskExecutor,
