@@ -45,7 +45,7 @@ func TestTTLIsZero(t *testing.T) {
 		OAuthAuthorizer: OAuthAuthorizer{
 			Enable:         true,
 			JwtCredentials: JwtCredentials{},
-			JwtTTL:         0,
+			MaxJwtTTL:         0,
 		},
 		NoopAuthorizer: NoopAuthorizer{
 			Enable: false,
@@ -53,7 +53,7 @@ func TestTTLIsZero(t *testing.T) {
 	}
 
 	err := cfg.Validate()
-	assert.EqualError(t, err, "[OAuthConfig] TTL must be greater than 0")
+	assert.EqualError(t, err, "[OAuthConfig] MaxTTL must be greater than 0")
 }
 
 func TestPrivateKeyIsEmpty(t *testing.T) {
@@ -65,7 +65,7 @@ func TestPrivateKeyIsEmpty(t *testing.T) {
 				PublicKey:  "",
 				PrivateKey: "",
 			},
-			JwtTTL: 1000000,
+			MaxJwtTTL: 1000000,
 		},
 		NoopAuthorizer: NoopAuthorizer{
 			Enable: false,
@@ -85,7 +85,7 @@ func TestPublicKeyIsEmpty(t *testing.T) {
 				PublicKey:  "",
 				PrivateKey: "private",
 			},
-			JwtTTL: 1000000,
+			MaxJwtTTL: 1000000,
 		},
 		NoopAuthorizer: NoopAuthorizer{
 			Enable: false,
@@ -105,7 +105,7 @@ func TestAlgorithmIsInvalid(t *testing.T) {
 				PublicKey:  "public",
 				PrivateKey: "private",
 			},
-			JwtTTL: 1000000,
+			MaxJwtTTL: 1000000,
 		},
 		NoopAuthorizer: NoopAuthorizer{
 			Enable: false,
@@ -125,7 +125,7 @@ func TestCorrectValidation(t *testing.T) {
 				PublicKey:  "public",
 				PrivateKey: "private",
 			},
-			JwtTTL: 1000000,
+			MaxJwtTTL: 1000000,
 		},
 		NoopAuthorizer: NoopAuthorizer{
 			Enable: false,
