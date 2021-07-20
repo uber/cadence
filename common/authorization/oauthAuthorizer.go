@@ -27,16 +27,17 @@ import (
 	"time"
 
 	"github.com/cristalhq/jwt/v3"
-	log "github.com/sirupsen/logrus"
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 )
 
 type oauthAuthority struct {
 	authorizationCfg config.OAuthAuthorizer
+	log              log.Logger
 }
 
 type jwtClaims struct {
@@ -51,9 +52,11 @@ type jwtClaims struct {
 // NewOAuthAuthorizer creates a oauth authority
 func NewOAuthAuthorizer(
 	authorizationCfg config.OAuthAuthorizer,
+	log log.Logger,
 ) Authorizer {
 	return &oauthAuthority{
 		authorizationCfg: authorizationCfg,
+		log:              log,
 	}
 }
 
@@ -70,12 +73,12 @@ func (a *oauthAuthority) Authorize(
 	token := call.Header(common.AuthorizationTokenHeaderName)
 	claims, err := a.parseToken(token, verifier)
 	if err != nil {
-		log.Debug("request is not authorized", tag.Error(err))
+		a.log.Debug("request is not authorized", tag.Error(err))
 		return Result{Decision: DecisionDeny}, nil
 	}
-	validationErr := a.validateClaims(claims, attributes)
-	if validationErr != nil {
-		log.Debug("request is not authorized", tag.Error(err))
+	err = a.validateClaims(claims, attributes)
+	if err != nil {
+		a.log.Debug("request is not authorized", tag.Error(err))
 		return Result{Decision: DecisionDeny}, nil
 	}
 	return Result{Decision: DecisionAllow}, nil

@@ -24,10 +24,27 @@ import (
 	"testing"
 
 	"github.com/cristalhq/jwt/v3"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 )
+
+type (
+	factorySuite struct {
+		suite.Suite
+		logger log.Logger
+	}
+)
+
+func TestFactorySuite(t *testing.T) {
+	suite.Run(t, new(factorySuite))
+}
+
+func (s *factorySuite) SetupTest() {
+	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+}
 
 func cfgNoop() config.Authorization {
 	return config.Authorization{
@@ -54,19 +71,18 @@ func cfgOAuth() config.Authorization {
 	}
 }
 
-func TestFactoryNoopAuthorizer(t *testing.T) {
+func (s *factorySuite) TestFactoryNoopAuthorizer() {
 	cfgOAuthVar := cfgOAuth()
-
 	var tests = []struct {
 		cfg      config.Authorization
 		expected Authorizer
 	}{
 		{cfgNoop(), &nopAuthority{}},
-		{cfgOAuthVar, &oauthAuthority{authorizationCfg: cfgOAuthVar.OAuthAuthorizer}},
+		{cfgOAuthVar, &oauthAuthority{authorizationCfg: cfgOAuthVar.OAuthAuthorizer, log: s.logger}},
 	}
 
 	for _, test := range tests {
-		authorizer := NewAuthorizer(test.cfg)
-		assert.Equal(t, authorizer, test.expected)
+		authorizer := NewAuthorizer(test.cfg, s.logger)
+		s.Equal(authorizer, test.expected)
 	}
 }

@@ -21,17 +21,21 @@
 package authorization
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
 	"github.com/cristalhq/jwt/v3"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
 	"go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"golang.org/x/net/context"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 )
 
 var pubKeyTest = `-----BEGIN PUBLIC KEY-----
@@ -73,16 +77,25 @@ NPORuXcugxIBMHWyseOS7lrtrlSBxU9gntS7jHdM3IMrrUy9YZBvPvFGP0wLdpKM
 nvt3vT46hs3n28XZpb18uRkSDw==
 -----END PRIVATE KEY-----`
 
-type Mocks struct {
-	cfg             config.OAuthAuthorizer
-	token           string
-	tokenExpiredIat string
-	ctx             context.Context
-	att             Attributes
+type (
+	oauthSuite struct {
+		suite.Suite
+		logger          *log.MockLogger
+		cfg             config.OAuthAuthorizer
+		att             Attributes
+		token           string
+		tokenExpiredIat string
+		ctx             context.Context
+	}
+)
+
+func TestOAuthSuite(t *testing.T) {
+	suite.Run(t, new(oauthSuite))
 }
 
-func getMocksBase(t *testing.T) Mocks {
-	cfg := config.OAuthAuthorizer{
+func (s *oauthSuite) SetupTest() {
+	s.logger = &log.MockLogger{}
+	s.cfg = config.OAuthAuthorizer{
 		Enable: true,
 		JwtCredentials: config.JwtCredentials{
 			Algorithm:  jwt.RS256.String(),
@@ -92,7 +105,7 @@ func getMocksBase(t *testing.T) Mocks {
 		MaxJwtTTL: 300000001,
 	}
 	// https://jwt.io/#debugger-io?token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwicGVybWlzc2lvbiI6InJlYWQiLCJkb21haW4iOiJ0ZXN0LWRvbWFpbiIsImlhdCI6MTYyNjMzNjQ2MywiVFRMIjozMDAwMDAwMDB9.r1e83j6J392u4oAM7S7RYEDpeEilGThev2rK6RxqRXJIYiQlqKo1siDQjgHmj5PNUyEAQJF54CcXiaWJpTPWiPOxuRGtfJbUjSTnU2TiLvUiYU9bYt5U1w_UdlGzOD0ULhXPv2bzujAgtuQiRutwpljuQZwqqSDzILAMZlD5NMhEajYbE1P_0kv7esHO4oofTh__G3VZ_2fEi52GA8lwqoqBH3tQ1RK5QblnK5zMG5zBy8yK6JUmdoAGnKugjkJdDu8ERI4lNeIaWhD6kV8lksmPY0CxLfbmqLP3BIhvRF7zOeI1ocwa_4lpk4U6QRZ2w4hyGSEtD3sMmz1wl_uQCw&publicKey=-----BEGIN%20PUBLIC%20KEY-----%0AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAscukltHilaq%2Bo5gIVE4P%0AGwWl%2BesvJ2EaEpWw6ogr98Un11YJ4oKkwIkLw4iIo0tveCINA3cZmxaW1RejRWKE%0AqYFtQ1rYd6BsnFAHXWh2R3A1FtpG6ANUEGkE7OAJe2%2FL42E%2FImJ%2BGQxRvartInDM%0AyfiRfB7%2BL2n3wG%2BNi%2BhBNMtAaX4Wwbj2hup21Jjuo96TuhcGImBFBATGWaYR2wqe%0A%2F6by9wJexPHlY%2F1uDp3SnzF1dCLjp76SGCfyYqOGC%2FPxhQi7mDxeH9%2FtIC%2Blt%2FSz%0Awc1n8gZLtlRlZHinvYa8lhWXqVYw6WD8h4LTgALq9iY%2BbeD1PFQSY1GkQtt0RhRw%0AeQIDAQAB%0A-----END%20PUBLIC%20KEY-----
-	token := `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik
+	s.token = `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik
 		pvaG4gRG9lIiwicGVybWlzc2lvbiI6InJlYWQiLCJkb21haW4iOiJ0ZXN0LWRvbWFpbiIsImlhdCI6MTYyNjMzNjQ
 		2MywiVFRMIjozMDAwMDAwMDB9.r1e83j6J392u4oAM7S7RYEDpeEilGThev2rK6RxqRXJIYiQlqKo1siDQjgHmj5P
 		NUyEAQJF54CcXiaWJpTPWiPOxuRGtfJbUjSTnU2TiLvUiYU9bYt5U1w_UdlGzOD0ULhXPv2bzujAgtuQiRutwplju
@@ -100,7 +113,7 @@ func getMocksBase(t *testing.T) Mocks {
 		JUmdoAGnKugjkJdDu8ERI4lNeIaWhD6kV8lksmPY0CxLfbmqLP3BIhvRF7zOeI1ocwa_4lpk4U6QRZ2w4hyGSEtD3
 		sMmz1wl_uQCw`
 	// https://jwt.io/#debugger-io?token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwicGVybWlzc2lvbiI6InJlYWQiLCJkb21haW4iOiJ0ZXN0LWRvbWFpbiIsImlhdCI6MTYyNjMzNjQ2MywiVFRMIjoxfQ.P_T3O54F_aiHcaMwyeh2GXtzgWhyKSLkuu8rtGAylK0HOsHYRIkbjdx251kaDEf2B-QP6KKCiXhDgZ_Q42Tb477zjl9IYGRqEj9JZ7PwGuRWCEZWUaFHgB4XmkviHDMamBB5jqg2I2XYklyNO3r2m45_AcQ3dAU4uLiwBwSVKy_YsMldEvGKMC86JvGcYPhu-LLvrJSViQVyuBGjUor6YREuadAZHyKuoMunLq5b_BW2hTf_67kGiyRL5_DxBBGbiNeHDPNoBUNUAx4Nbe1rAckREL8VULVFC_HZ0bDiM7KMJJ0t6zLcgP8Z3Q3341nfhv9r3qG_6U343ZgTPZfQNQ&publicKey=-----BEGIN%20PUBLIC%20KEY-----%0AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAscukltHilaq%2Bo5gIVE4P%0AGwWl%2BesvJ2EaEpWw6ogr98Un11YJ4oKkwIkLw4iIo0tveCINA3cZmxaW1RejRWKE%0AqYFtQ1rYd6BsnFAHXWh2R3A1FtpG6ANUEGkE7OAJe2%2FL42E%2FImJ%2BGQxRvartInDM%0AyfiRfB7%2BL2n3wG%2BNi%2BhBNMtAaX4Wwbj2hup21Jjuo96TuhcGImBFBATGWaYR2wqe%0A%2F6by9wJexPHlY%2F1uDp3SnzF1dCLjp76SGCfyYqOGC%2FPxhQi7mDxeH9%2FtIC%2Blt%2FSz%0Awc1n8gZLtlRlZHinvYa8lhWXqVYw6WD8h4LTgALq9iY%2BbeD1PFQSY1GkQtt0RhRw%0AeQIDAQAB%0A-----END%20PUBLIC%20KEY-----
-	tokenExpiredIat := `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwib
+	s.tokenExpiredIat = `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwib
 		mFtZSI6IkpvaG4gRG9lIiwicGVybWlzc2lvbiI6InJlYWQiLCJkb21haW4iOiJ0ZXN0LWRvbWFpbiIsImlhdCI6MTY
 		yNjMzNjQ2MywiVFRMIjoxfQ.P_T3O54F_aiHcaMwyeh2GXtzgWhyKSLkuu8rtGAylK0HOsHYRIkbjdx251kaDEf2B-
 		QP6KKCiXhDgZ_Q42Tb477zjl9IYGRqEj9JZ7PwGuRWCEZWUaFHgB4XmkviHDMamBB5jqg2I2XYklyNO3r2m45_AcQ3
@@ -109,110 +122,108 @@ func getMocksBase(t *testing.T) Mocks {
 		PZfQNQ`
 
 	re := regexp.MustCompile(`\r?\n?\t`)
-	token = re.ReplaceAllString(token, "")
-	tokenExpiredIat = re.ReplaceAllString(tokenExpiredIat, "")
+	s.token = re.ReplaceAllString(s.token, "")
+	s.tokenExpiredIat = re.ReplaceAllString(s.tokenExpiredIat, "")
 
 	ctx := context.Background()
 	ctx, call := encoding.NewInboundCall(ctx)
 	err := call.ReadFromRequest(&transport.Request{
-		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, token),
+		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, s.token),
 	})
-	assert.NoError(t, err)
-
-	att := Attributes{
+	s.NoError(err)
+	s.att = Attributes{
 		Actor:      "John Doe",
 		APIName:    "",
 		DomainName: "test-domain",
 		TaskList:   nil,
 		Permission: PermissionRead,
 	}
-
-	return Mocks{
-		cfg:             cfg,
-		ctx:             ctx,
-		token:           token,
-		tokenExpiredIat: tokenExpiredIat,
-		att:             att,
-	}
+	s.ctx = ctx
 }
 
-func TestCorrectPayload(t *testing.T) {
-	mocks := getMocksBase(t)
-	authorizer := NewOAuthAuthorizer(mocks.cfg)
-	result, err := authorizer.Authorize(mocks.ctx, &mocks.att)
-	assert.NoError(t, err)
-	assert.Equal(t, result.Decision, DecisionAllow)
+func (s *oauthSuite) TearDownTest() {
+	s.logger.AssertExpectations(s.T())
 }
 
-func TestIncorrectPublicKey(t *testing.T) {
-	mocks := getMocksBase(t)
-	mocks.cfg.JwtCredentials.PublicKey = "incorrectPublicKey"
-	authorizer := NewOAuthAuthorizer(mocks.cfg)
-	result, err := authorizer.Authorize(mocks.ctx, &mocks.att)
-	assert.EqualError(t, err, "failed to parse PEM block containing the public key")
-	assert.Equal(t, result.Decision, DecisionDeny)
+func (s *oauthSuite) TestCorrectPayload() {
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	result, err := authorizer.Authorize(s.ctx, &s.att)
+	s.NoError(err)
+	s.Equal(result.Decision, DecisionAllow)
 }
 
-func TestIncorrectAlgorithm(t *testing.T) {
-	mocks := getMocksBase(t)
-	mocks.cfg.JwtCredentials.Algorithm = "SHA256"
-	authorizer := NewOAuthAuthorizer(mocks.cfg)
-	result, err := authorizer.Authorize(mocks.ctx, &mocks.att)
-	assert.EqualError(t, err, "jwt: algorithm is not supported")
-	assert.Equal(t, result.Decision, DecisionDeny)
+func (s *oauthSuite) TestIncorrectPublicKey() {
+	s.cfg.JwtCredentials.PublicKey = "incorrectPublicKey"
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	result, err := authorizer.Authorize(s.ctx, &s.att)
+	s.EqualError(err, "failed to parse PEM block containing the public key")
+	s.Equal(result.Decision, DecisionDeny)
 }
 
-func TestMaxTTLLargerInToken(t *testing.T) {
-	mocks := getMocksBase(t)
-	mocks.cfg.MaxJwtTTL = 1
-	authorizer := NewOAuthAuthorizer(mocks.cfg)
-	result, _ := authorizer.Authorize(mocks.ctx, &mocks.att)
-	//assert.EqualError(t, err, "TTL in token is larger than MaxTTL allowed")
-	assert.Equal(t, result.Decision, DecisionDeny)
+func (s *oauthSuite) TestIncorrectAlgorithm() {
+	s.cfg.JwtCredentials.Algorithm = "SHA256"
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	result, err := authorizer.Authorize(s.ctx, &s.att)
+	s.EqualError(err, "jwt: algorithm is not supported")
+	s.Equal(result.Decision, DecisionDeny)
 }
 
-func TestIncorrectToken(t *testing.T) {
-	mocks := getMocksBase(t)
+func (s *oauthSuite) TestMaxTTLLargerInToken() {
+	s.cfg.MaxJwtTTL = 1
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "TTL in token is larger than MaxTTL allowed"
+	}))
+	result, _ := authorizer.Authorize(s.ctx, &s.att)
+	s.Equal(result.Decision, DecisionDeny)
+}
+
+func (s *oauthSuite) TestIncorrectToken() {
 	ctx := context.Background()
 	ctx, call := encoding.NewInboundCall(ctx)
 	err := call.ReadFromRequest(&transport.Request{
 		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, "test"),
 	})
-	assert.NoError(t, err)
-	authorizer := NewOAuthAuthorizer(mocks.cfg)
-	result, _ := authorizer.Authorize(ctx, &mocks.att)
-	//assert.EqualError(t, err, "jwt: token format is not valid")
-	assert.Equal(t, result.Decision, DecisionDeny)
+	s.NoError(err)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "jwt: token format is not valid"
+	}))
+	result, _ := authorizer.Authorize(ctx, &s.att)
+	s.Equal(result.Decision, DecisionDeny)
 }
 
-func TestIatExpiredToken(t *testing.T) {
-	mocks := getMocksBase(t)
+func (s *oauthSuite) TestIatExpiredToken() {
 	ctx := context.Background()
 	ctx, call := encoding.NewInboundCall(ctx)
 	err := call.ReadFromRequest(&transport.Request{
-		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, mocks.tokenExpiredIat),
+		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, s.tokenExpiredIat),
 	})
-	assert.NoError(t, err)
-	authorizer := NewOAuthAuthorizer(mocks.cfg)
-	result, _ := authorizer.Authorize(ctx, &mocks.att)
-	//assert.EqualError(t, err, "JWT has expired")
-	assert.Equal(t, result.Decision, DecisionDeny)
+	s.NoError(err)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "JWT has expired"
+	}))
+	result, _ := authorizer.Authorize(ctx, &s.att)
+	s.Equal(result.Decision, DecisionDeny)
 }
 
-func TestIncorrectPermissionInAttributes(t *testing.T) {
-	mocks := getMocksBase(t)
-	mocks.att.Permission = PermissionWrite
-	authorizer := NewOAuthAuthorizer(mocks.cfg)
-	result, _ := authorizer.Authorize(mocks.ctx, &mocks.att)
-	//assert.EqualError(t, err, "name in token doesn't match with current name")
-	assert.Equal(t, result.Decision, DecisionDeny)
+func (s *oauthSuite) TestIncorrectPermissionInAttributes() {
+	s.att.Permission = PermissionWrite
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have the right permission"
+	}))
+	result, _ := authorizer.Authorize(s.ctx, &s.att)
+	s.Equal(result.Decision, DecisionDeny)
 }
 
-func TestIncorrectDomainInAttributes(t *testing.T) {
-	mocks := getMocksBase(t)
-	mocks.att.DomainName = "myotherdomain"
-	authorizer := NewOAuthAuthorizer(mocks.cfg)
-	result, _ := authorizer.Authorize(mocks.ctx, &mocks.att)
-	//assert.EqualError(t, err, "permission in token doesn't match with API permission")
-	assert.Equal(t, result.Decision, DecisionDeny)
+func (s *oauthSuite) TestIncorrectDomainInAttributes() {
+	s.att.DomainName = "myotherdomain"
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "domain in token doesn't match with current domain"
+	}))
+	result, _ := authorizer.Authorize(s.ctx, &s.att)
+	s.Equal(result.Decision, DecisionDeny)
 }

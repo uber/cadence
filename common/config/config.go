@@ -479,11 +479,7 @@ func (c *Config) validate() error {
 		return err
 	}
 
-	if err := c.Authorization.Validate(); err != nil {
-		return err
-	}
-
-	return nil
+	return c.Authorization.Validate()
 }
 
 func (c *Config) fillDefaults() error {

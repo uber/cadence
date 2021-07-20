@@ -20,12 +20,15 @@
 
 package authorization
 
-import "github.com/uber/cadence/common/config"
+import (
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log"
+)
 
-func NewAuthorizer(authorization config.Authorization) Authorizer {
+func NewAuthorizer(authorization config.Authorization, logger log.Logger) Authorizer {
 	switch true {
 	case authorization.OAuthAuthorizer.Enable:
-		return NewOAuthAuthorizer(authorization.OAuthAuthorizer)
+		return NewOAuthAuthorizer(authorization.OAuthAuthorizer, logger)
 	default:
 		return NewNopAuthorizer()
 	}
