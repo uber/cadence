@@ -85,7 +85,7 @@ func (a *oauthAuthority) Authorize(
 }
 
 func (a *oauthAuthority) getVerifier() (jwt.Verifier, error) {
-	publicKey, err := common.StringToRSAPublicKey(a.authorizationCfg.JwtCredentials.PublicKey)
+	publicKey, err := common.LoadRSAPublicKey(a.authorizationCfg.JwtCredentials.PublicKey)
 	if err != nil {
 		return nil, err
 	}
