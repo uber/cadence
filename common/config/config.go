@@ -62,6 +62,34 @@ type (
 		DomainDefaults DomainDefaults `yaml:"domainDefaults"`
 		// Blobstore is the config for setting up blobstore
 		Blobstore Blobstore `yaml:"blobstore"`
+		// Authorization is the config for setting up authorization
+		Authorization Authorization `yaml:authorization`
+	}
+
+	Authorization struct {
+		OAuthAuthorizer OAuthAuthorizer `yaml:"oauthAuthorizer"`
+		NoopAuthorizer  NoopAuthorizer  `yaml:"noopAuthorizer"`
+	}
+
+	NoopAuthorizer struct {
+		Enable bool `yaml:"enable"`
+	}
+
+	OAuthAuthorizer struct {
+		Enable bool `yaml:"enable"`
+		// Credentials to verify/create the JWT
+		JwtCredentials JwtCredentials `yaml:"jwtCredentials"`
+		// Max of TTL in the claim
+		MaxJwtTTL int64 `yaml:"maxJwtTTL"`
+	}
+
+	JwtCredentials struct {
+		// support: RS256 (RSA using SHA256)
+		Algorithm string `yaml:"algorithm"`
+		// for verifying JWT token passed in from external clients
+		PublicKey string `yaml:"publicKey"`
+		// for creating JWT token
+		PrivateKey string `yaml:"privateKey"`
 	}
 
 	// Service contains the service specific config items
@@ -447,7 +475,11 @@ func (c *Config) validate() error {
 		log.Println("[WARN] Local domain is now deprecated. Please update config to enable global domain(ClusterMetadata->EnableGlobalDomain)." +
 			"Global domain of single cluster has zero overhead, but only advantages for future migration and fail over. Please check Cadence documentation for more details.")
 	}
-	return c.Archival.Validate(&c.DomainDefaults.Archival)
+	if err := c.Archival.Validate(&c.DomainDefaults.Archival); err != nil {
+		return err
+	}
+
+	return c.Authorization.Validate()
 }
 
 func (c *Config) fillDefaults() error {
