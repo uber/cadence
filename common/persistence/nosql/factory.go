@@ -95,7 +95,7 @@ func (f *Factory) NewVisibilityStore(sortByCloseTime bool) (p.VisibilityStore, e
 }
 
 func (f *Factory) NewConfigStore() (p.ConfigStore, error) {
-	return newNoSQLConfigStore(f.cfg, f.logger)
+	return NewNoSQLConfigStore(f.cfg, f.logger)
 }
 
 // NewQueue returns a new queue backed by cassandra

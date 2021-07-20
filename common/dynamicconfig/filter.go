@@ -30,6 +30,10 @@ func (f Filter) String() string {
 	return filters[f]
 }
 
+func ParseFilter(filterName string) Filter {
+	return parseFilter(filterName)
+}
+
 func parseFilter(filterName string) Filter {
 	switch filterName {
 	case "domainName":

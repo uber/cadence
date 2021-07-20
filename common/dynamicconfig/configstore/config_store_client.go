@@ -18,22 +18,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package dynamicconfig
+package configstore
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
 
+	dc "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
-var _ Client = (*configStoreClient)(nil)
+var _ dc.Client = (*configStoreClient)(nil)
 
 const (
 	configStoreMinPollInterval = time.Second * 5
@@ -54,8 +56,14 @@ type configStoreClient struct {
 	logger             log.Logger
 }
 
+type cacheEntry struct {
+	cache_version  int64
+	schema_version int64
+	dc_entries     map[string]*types.DynamicConfigEntry
+}
+
 // NewConfigStoreClient creates a config store client
-func NewConfigStoreClient(client_cfg *ConfigStoreClientConfig, manager persistence.ConfigStoreManager, logger log.Logger, doneCh chan struct{}) (Client, error) {
+func NewConfigStoreClient(client_cfg *ConfigStoreClientConfig, manager persistence.ConfigStoreManager, logger log.Logger, doneCh chan struct{}) (dc.Client, error) {
 	//persistence_cfg config.NoSQL
 	if err := validateConfigStoreClientConfig(client_cfg); err != nil {
 		return nil, err
@@ -93,15 +101,15 @@ func NewConfigStoreClient(client_cfg *ConfigStoreClientConfig, manager persisten
 	return client, nil
 }
 
-func (csc *configStoreClient) GetValue(name Key, defaultValue interface{}) (interface{}, error) {
+func (csc *configStoreClient) GetValue(name dc.Key, defaultValue interface{}) (interface{}, error) {
 	return csc.getValueWithFilters(name, nil, defaultValue)
 }
 
-func (csc *configStoreClient) GetValueWithFilters(name Key, filters map[Filter]interface{}, defaultValue interface{}) (interface{}, error) {
+func (csc *configStoreClient) GetValueWithFilters(name dc.Key, filters map[dc.Filter]interface{}, defaultValue interface{}) (interface{}, error) {
 	return csc.getValueWithFilters(name, filters, defaultValue)
 }
 
-func (csc *configStoreClient) GetIntValue(name Key, filters map[Filter]interface{}, defaultValue int) (int, error) {
+func (csc *configStoreClient) GetIntValue(name dc.Key, filters map[dc.Filter]interface{}, defaultValue int) (int, error) {
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -113,7 +121,7 @@ func (csc *configStoreClient) GetIntValue(name Key, filters map[Filter]interface
 	return defaultValue, errors.New("value type is not int")
 }
 
-func (csc *configStoreClient) GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
+func (csc *configStoreClient) GetFloatValue(name dc.Key, filters map[dc.Filter]interface{}, defaultValue float64) (float64, error) {
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -127,7 +135,7 @@ func (csc *configStoreClient) GetFloatValue(name Key, filters map[Filter]interfa
 	return defaultValue, errors.New("value type is not float64")
 }
 
-func (csc *configStoreClient) GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
+func (csc *configStoreClient) GetBoolValue(name dc.Key, filters map[dc.Filter]interface{}, defaultValue bool) (bool, error) {
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -139,7 +147,7 @@ func (csc *configStoreClient) GetBoolValue(name Key, filters map[Filter]interfac
 	return defaultValue, errors.New("value type is not bool")
 }
 
-func (csc *configStoreClient) GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error) {
+func (csc *configStoreClient) GetStringValue(name dc.Key, filters map[dc.Filter]interface{}, defaultValue string) (string, error) {
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -152,7 +160,7 @@ func (csc *configStoreClient) GetStringValue(name Key, filters map[Filter]interf
 }
 
 func (csc *configStoreClient) GetMapValue(
-	name Key, filters map[Filter]interface{}, defaultValue map[string]interface{},
+	name dc.Key, filters map[dc.Filter]interface{}, defaultValue map[string]interface{},
 ) (map[string]interface{}, error) {
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
@@ -165,7 +173,7 @@ func (csc *configStoreClient) GetMapValue(
 }
 
 func (csc *configStoreClient) GetDurationValue(
-	name Key, filters map[Filter]interface{}, defaultValue time.Duration,
+	name dc.Key, filters map[dc.Filter]interface{}, defaultValue time.Duration,
 ) (time.Duration, error) {
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
@@ -184,9 +192,25 @@ func (csc *configStoreClient) GetDurationValue(
 	return durationVal, nil
 }
 
-func (csc *configStoreClient) UpdateValue(name Key, value interface{}) error {
-	return nil
+func (csc *configStoreClient) UpdateValue(name dc.Key, value interface{}) error {
+	//add retry logic
+	currentCached := csc.values.Load().(cacheEntry)
 
+	newEntries := make([]*types.DynamicConfigEntry, 0, len(currentCached.dc_entries))
+	for _, v := range currentCached.dc_entries {
+		newEntries = append(newEntries, v)
+	}
+
+	newSnapshot := &persistence.DynamicConfigSnapshot{
+		Version: currentCached.cache_version + 1,
+		Values: &types.DynamicConfigBlob{
+			SchemaVersion: currentCached.schema_version,
+			Entries:       newEntries,
+		},
+	}
+	csc.configStoreManager.UpdateDynamicConfig(context.TODO(), newSnapshot)
+
+	return nil
 }
 
 func (csc *configStoreClient) update() error {
@@ -194,11 +218,11 @@ func (csc *configStoreClient) update() error {
 		csc.lastUpdatedTime = time.Now()
 	}()
 
-	dc_snapshot, err := csc.configStoreManager.FetchDynamicConfig(nil)
+	dc_snapshot, err := csc.configStoreManager.FetchDynamicConfig(context.TODO())
 	//if same version, then no need to store again (not yet implemented)
 
 	if err != nil {
-		return fmt.Errorf("Failed to fetch dynamic config snapshot %v", err)
+		return fmt.Errorf("failed to fetch dynamic config snapshot %v", err)
 	}
 
 	return csc.storeValues(dc_snapshot)
@@ -211,7 +235,11 @@ func (csc *configStoreClient) storeValues(snapshot *persistence.DynamicConfigSna
 		dc_entry_map[entry.Name] = entry
 	}
 
-	csc.values.Store(dc_entry_map)
+	csc.values.Store(cacheEntry{
+		cache_version:  snapshot.Version,
+		schema_version: snapshot.Values.SchemaVersion,
+		dc_entries:     dc_entry_map,
+	})
 	csc.logger.Info("Updated dynamic config")
 	return nil
 }
@@ -233,16 +261,17 @@ func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {
 		err := json.Unmarshal(blob.Data, v)
 		return v, err
 	default:
-		return nil, errors.New("Unsupported blob encoding")
+		return nil, errors.New("unsupported blob encoding")
 	}
 }
 
-func (csc *configStoreClient) getValueWithFilters(key Key, filters map[Filter]interface{}, defaultValue interface{}) (interface{}, error) {
-	keyName := keys[key]
-	values := csc.values.Load().(map[string]*types.DynamicConfigEntry)
+func (csc *configStoreClient) getValueWithFilters(key dc.Key, filters map[dc.Filter]interface{}, defaultValue interface{}) (interface{}, error) {
+	keyName := dc.Keys[key]
+	cached := csc.values.Load().(cacheEntry)
+	dc_entries := cached.dc_entries
 	found := false
 
-	for _, dc_value := range values[keyName].Values {
+	for _, dc_value := range dc_entries[keyName].Values {
 		if len(dc_value.Filters) == 0 {
 			parsed_val, err := convertFromDataBlob(dc_value.Value)
 			if err == nil {
@@ -258,18 +287,18 @@ func (csc *configStoreClient) getValueWithFilters(key Key, filters map[Filter]in
 	}
 
 	if !found {
-		return defaultValue, notFoundError
+		return defaultValue, dc.NotFoundError
 	}
 	return defaultValue, nil
 }
 
-func matchFilters(dc_value *types.DynamicConfigValue, filters map[Filter]interface{}) bool {
+func matchFilters(dc_value *types.DynamicConfigValue, filters map[dc.Filter]interface{}) bool {
 	if len(dc_value.Filters) > len(filters) {
 		return false
 	}
 
 	for _, value_filter := range dc_value.Filters {
-		filterKey := parseFilter(value_filter.Name)
+		filterKey := dc.ParseFilter(value_filter.Name)
 		if filters[filterKey] == nil {
 			return false
 		}

@@ -51,3 +51,5 @@ type Client interface {
 var notFoundError = &types.EntityNotExistsError{
 	Message: "unable to find key",
 }
+
+var NotFoundError = notFoundError

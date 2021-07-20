@@ -2146,3 +2146,4 @@ var keys = map[Key]string{
 	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
 	WorkerBlobIntegrityCheckProbability:             "worker.BlobIntegrityCheckProbability",
 }
+var Keys = keys
