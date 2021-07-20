@@ -1280,7 +1280,7 @@ const (
 	// MaximumSignalsPerExecution is max number of signals supported by single execution
 	// KeyName: history.maximumSignalsPerExecution
 	// Value type: Int
-	// Default value: 0
+	// Default value: 10000
 	// Allowed filters: DomainName
 	MaximumSignalsPerExecution
 	// ShardUpdateMinInterval is the minimal time interval which the shard info can be updated
