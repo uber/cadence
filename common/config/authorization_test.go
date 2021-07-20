@@ -45,7 +45,7 @@ func TestTTLIsZero(t *testing.T) {
 		OAuthAuthorizer: OAuthAuthorizer{
 			Enable:         true,
 			JwtCredentials: JwtCredentials{},
-			MaxJwtTTL:         0,
+			MaxJwtTTL:      0,
 		},
 		NoopAuthorizer: NoopAuthorizer{
 			Enable: false,
