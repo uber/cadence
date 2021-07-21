@@ -153,10 +153,6 @@ type (
 
 var _ Context = (*contextImpl)(nil)
 
-var (
-	persistenceOperationRetryPolicy = common.CreatePersistenceRetryPolicy()
-)
-
 // NewContext creates a new workflow execution context
 func NewContext(
 	domainID string,
@@ -1003,7 +999,7 @@ func (c *contextImpl) appendHistoryV2EventsWithRetry(
 
 	err := backoff.Retry(
 		op,
-		persistenceOperationRetryPolicy,
+		common.CreatePersistenceRetryPolicyWithContext(ctx),
 		persistence.IsTransientError,
 	)
 	return int64(resp), err
@@ -1033,7 +1029,7 @@ func (c *contextImpl) createWorkflowExecutionWithRetry(
 
 	err := backoff.Retry(
 		op,
-		persistenceOperationRetryPolicy,
+		common.CreatePersistenceRetryPolicyWithContext(ctx),
 		isRetryable,
 	)
 	switch err.(type) {
@@ -1071,7 +1067,7 @@ func (c *contextImpl) getWorkflowExecutionWithRetry(
 
 	err := backoff.Retry(
 		op,
-		persistenceOperationRetryPolicy,
+		common.CreatePersistenceRetryPolicyWithContext(ctx),
 		persistence.IsTransientError,
 	)
 	switch err.(type) {
@@ -1114,7 +1110,8 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 	}
 
 	err := backoff.Retry(
-		op, persistenceOperationRetryPolicy,
+		op,
+		common.CreatePersistenceRetryPolicyWithContext(ctx),
 		isRetryable,
 	)
 	switch err.(type) {

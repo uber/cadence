@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,21 +18,43 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package config
 
 import (
-	"os"
+	"fmt"
 
-	"github.com/uber/cadence/cmd/server/cadence"
-	"github.com/uber/cadence/common/metrics"
-	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"              // needed to load cassandra plugin
-	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public" // needed to load the default gocql client
-	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"                      // needed to load mysql plugin
-	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres"                   // needed to load postgres plugin
+	"github.com/cristalhq/jwt/v3"
 )
 
-// main entry point for the cadence server
-func main() {
-	app := cadence.BuildCLI(metrics.Version, metrics.Revision)
-	app.Run(os.Args)
+// Validate validates the persistence config
+func (a *Authorization) Validate() error {
+	if a.OAuthAuthorizer.Enable && a.NoopAuthorizer.Enable {
+		return fmt.Errorf("[AuthorizationConfig] More than one authorizer is enabled")
+	}
+
+	if a.OAuthAuthorizer.Enable {
+		if oauthError := a.validateOAuth(); oauthError != nil {
+			return oauthError
+		}
+	}
+
+	return nil
+}
+
+func (a *Authorization) validateOAuth() error {
+	oauthConfig := a.OAuthAuthorizer
+
+	if oauthConfig.MaxJwtTTL <= 0 {
+		return fmt.Errorf("[OAuthConfig] MaxTTL must be greater than 0")
+	}
+	if oauthConfig.JwtCredentials.PrivateKey == "" {
+		return fmt.Errorf("[OAuthConfig] PrivateKey can't be empty")
+	}
+	if oauthConfig.JwtCredentials.PublicKey == "" {
+		return fmt.Errorf("[OAuthConfig] PublicKey can't be empty")
+	}
+	if oauthConfig.JwtCredentials.Algorithm != jwt.RS256.String() {
+		return fmt.Errorf("[OAuthConfig] The only supported Algorithm is RS256")
+	}
+	return nil
 }

@@ -417,7 +417,7 @@ func (db *cdb) SelectTasks(ctx context.Context, filter *nosqlplugin.TasksFilter)
 
 	iter := query.Iter()
 	if iter == nil {
-		return nil, fmt.Errorf("GetTasks operation failed.  Not able to create query iterator.")
+		return nil, fmt.Errorf("selectTasks operation failed.  Not able to create query iterator")
 	}
 
 	var response []*nosqlplugin.TaskRow

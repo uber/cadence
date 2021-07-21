@@ -62,11 +62,11 @@ func convertPendingActivityInfos(
 }
 
 func convertUpdateActivityInfos(
-	inputs map[*persistence.ActivityInfo]struct{},
+	inputs map[int64]*persistence.ActivityInfo,
 ) []*persistence.ActivityInfo {
 
 	outputs := make([]*persistence.ActivityInfo, 0, len(inputs))
-	for item := range inputs {
+	for _, item := range inputs {
 		outputs = append(outputs, item)
 	}
 	return outputs
@@ -113,11 +113,11 @@ func convertPendingTimerInfos(
 }
 
 func convertUpdateTimerInfos(
-	inputs map[*persistence.TimerInfo]struct{},
+	inputs map[string]*persistence.TimerInfo,
 ) []*persistence.TimerInfo {
 
 	outputs := make([]*persistence.TimerInfo, 0, len(inputs))
-	for item := range inputs {
+	for _, item := range inputs {
 		outputs = append(outputs, item)
 	}
 	return outputs
@@ -146,11 +146,11 @@ func convertPendingChildExecutionInfos(
 }
 
 func convertUpdateChildExecutionInfos(
-	inputs map[*persistence.ChildExecutionInfo]struct{},
+	inputs map[int64]*persistence.ChildExecutionInfo,
 ) []*persistence.ChildExecutionInfo {
 
 	outputs := make([]*persistence.ChildExecutionInfo, 0, len(inputs))
-	for item := range inputs {
+	for _, item := range inputs {
 		outputs = append(outputs, item)
 	}
 	return outputs
@@ -168,11 +168,11 @@ func convertPendingRequestCancelInfos(
 }
 
 func convertUpdateRequestCancelInfos(
-	inputs map[*persistence.RequestCancelInfo]struct{},
+	inputs map[int64]*persistence.RequestCancelInfo,
 ) []*persistence.RequestCancelInfo {
 
 	outputs := make([]*persistence.RequestCancelInfo, 0, len(inputs))
-	for item := range inputs {
+	for _, item := range inputs {
 		outputs = append(outputs, item)
 	}
 	return outputs
@@ -190,11 +190,11 @@ func convertPendingSignalInfos(
 }
 
 func convertUpdateSignalInfos(
-	inputs map[*persistence.SignalInfo]struct{},
+	inputs map[int64]*persistence.SignalInfo,
 ) []*persistence.SignalInfo {
 
 	outputs := make([]*persistence.SignalInfo, 0, len(inputs))
-	for item := range inputs {
+	for _, item := range inputs {
 		outputs = append(outputs, item)
 	}
 	return outputs

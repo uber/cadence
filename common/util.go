@@ -22,7 +22,10 @@ package common
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -137,6 +140,23 @@ func CreatePersistenceRetryPolicy() backoff.RetryPolicy {
 	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
 	policy.SetExpirationInterval(retryPersistenceOperationExpirationInterval)
 
+	return policy
+}
+
+// CreatePersistenceRetryPolicyWithContext create a retry policy for persistence layer operations
+// which has an expiration interval computed based on the context's deadline
+func CreatePersistenceRetryPolicyWithContext(ctx context.Context) backoff.RetryPolicy {
+	if ctx == nil {
+		return CreatePersistenceRetryPolicy()
+	}
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return CreatePersistenceRetryPolicy()
+	}
+
+	policy := backoff.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
+	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
+	policy.SetExpirationInterval(deadline.Sub(time.Now()))
 	return policy
 }
 
@@ -909,4 +929,18 @@ func SleepWithMinDuration(desired time.Duration, available time.Duration) time.D
 		time.Sleep(d)
 	}
 	return available - d
+}
+
+func StringToRSAPublicKey(publicKeyString string) (*rsa.PublicKey, error) {
+	block, _ := pem.Decode([]byte(publicKeyString))
+	if block == nil {
+		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
+	}
+
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse DER encoded public key: " + err.Error())
+	}
+	publicKey := pub.(*rsa.PublicKey)
+	return publicKey, nil
 }

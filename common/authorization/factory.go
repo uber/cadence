@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,21 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package authorization
 
 import (
-	"os"
-
-	"github.com/uber/cadence/cmd/server/cadence"
-	"github.com/uber/cadence/common/metrics"
-	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"              // needed to load cassandra plugin
-	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public" // needed to load the default gocql client
-	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"                      // needed to load mysql plugin
-	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres"                   // needed to load postgres plugin
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log"
 )
 
-// main entry point for the cadence server
-func main() {
-	app := cadence.BuildCLI(metrics.Version, metrics.Revision)
-	app.Run(os.Args)
+func NewAuthorizer(authorization config.Authorization, logger log.Logger) Authorizer {
+	switch true {
+	case authorization.OAuthAuthorizer.Enable:
+		return NewOAuthAuthorizer(authorization.OAuthAuthorizer, logger)
+	default:
+		return NewNopAuthorizer()
+	}
 }
