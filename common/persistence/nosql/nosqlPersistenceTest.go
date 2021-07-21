@@ -30,7 +30,6 @@ import (
 	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
 )
 
-
 // testCluster allows executing cassandra operations in testing.
 type testCluster struct {
 	keyspace string
