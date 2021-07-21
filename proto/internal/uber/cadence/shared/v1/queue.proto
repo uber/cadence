@@ -33,9 +33,7 @@ enum TaskType {
   TASK_TYPE_TRANSFER = 1;
   TASK_TYPE_TIMER = 2;
   TASK_TYPE_REPLICATION = 3;
-  // TODO: add TASK_TYPE_CROSS_CLUSTER 
-  // when updating RemoveTask, Reset/DescribeQueue API
-  // for supporting cross cluster task queue
+  TASK_TYPE_CROSS_CLUSTER = 4;
 }
 
 enum CrossClusterTaskType {

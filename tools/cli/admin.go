@@ -208,11 +208,15 @@ func newAdminShardManagementCommands() []cli.Command {
 				},
 				cli.IntFlag{
 					Name:  FlagTaskType,
-					Usage: "task type: 2 (transfer task), 3 (timer task) or 4 (replication task)",
+					Usage: "task type: 2 (transfer task), 3 (timer task), 4 (replication task) or 6 (cross-cluster task)",
 				},
 				cli.Int64Flag{
 					Name:  FlagTaskVisibilityTimestamp,
 					Usage: "task visibility timestamp in nano (required for removing timer task)",
+				},
+				cli.StringFlag{
+					Name:  FlagCluster,
+					Usage: "target cluster of the task (required for removing cross-cluster task)",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -1033,7 +1037,7 @@ func getQueueCommandFlags() []cli.Flag {
 		},
 		cli.IntFlag{
 			Name:  FlagQueueType,
-			Usage: "queue type: 2 (transfer queue) or 3 (timer queue)",
+			Usage: "queue type: 2 (transfer queue), 3 (timer queue) or 6 (cross-cluster queue)",
 		},
 	}
 }

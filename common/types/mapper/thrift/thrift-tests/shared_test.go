@@ -36,6 +36,12 @@ import (
 // "github.com/uber/cadence/common/persistence" imports
 // "github.com/uber/cadence/common/types/mapper/thrift"
 
+func TestRemoveTaskRequest(t *testing.T) {
+	for _, item := range []*types.RemoveTaskRequest{nil, {}, &testdata.AdminRemoveTaskRequest} {
+		assert.Equal(t, item, thrift.ToRemoveTaskRequest(thrift.FromRemoveTaskRequest(item)))
+	}
+}
+
 func TestCrossClusterTaskInfo(t *testing.T) {
 	for _, item := range []*types.CrossClusterTaskInfo{nil, {}, &testdata.CrossClusterTaskInfo} {
 		assert.Equal(t, item, thrift.ToCrossClusterTaskInfo(thrift.FromCrossClusterTaskInfo(item)))

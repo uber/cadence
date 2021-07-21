@@ -79,7 +79,8 @@ const (
 )
 
 var (
-	errDomainDeprecated = &types.BadRequestError{Message: "Domain is deprecated."}
+	errDomainDeprecated    = &types.BadRequestError{Message: "Domain is deprecated."}
+	errQueueNotInitialized = types.BadRequestError{Message: "Requested queue processor not initialized"}
 )
 
 type (
@@ -94,6 +95,7 @@ type (
 		visibilityMgr             persistence.VisibilityManager
 		txProcessor               queue.Processor
 		timerProcessor            queue.Processor
+		crossClusterProcessor     queue.Processor
 		nDCReplicator             ndc.HistoryReplicator
 		nDCActivityReplicator     ndc.ActivityReplicator
 		historyEventNotifier      events.Notifier
@@ -221,6 +223,14 @@ func NewEngineWithShardContext(
 		historyEngImpl.archivalClient,
 		openExecutionCheck,
 	)
+
+	// TODO: uncomment the following when cross cluster queue processor impl is ready
+	// and also add necessary Start(), Stop(), NotifyFailover() call in this file.
+	// historyEngImpl.crossClusterProcessor = queue.NewCrossClusterQueueProcessor(
+	// 	shard,
+	// 	historyEngImpl,
+	// 	queueTaskProcessor,
+	// )
 
 	historyEngImpl.eventsReapplier = ndc.NewEventsReapplier(shard.GetMetricsClient(), logger)
 
@@ -2674,6 +2684,18 @@ func (e *historyEngineImpl) ResetTimerQueue(
 	return err
 }
 
+func (e *historyEngineImpl) ResetCrossClusterQueue(
+	ctx context.Context,
+	clusterName string,
+) error {
+	if e.crossClusterProcessor == nil {
+		return errQueueNotInitialized
+	}
+
+	_, err := e.crossClusterProcessor.HandleAction(clusterName, queue.NewResetAction())
+	return err
+}
+
 func (e *historyEngineImpl) DescribeTransferQueue(
 	ctx context.Context,
 	clusterName string,
@@ -2686,6 +2708,17 @@ func (e *historyEngineImpl) DescribeTimerQueue(
 	clusterName string,
 ) (*types.DescribeQueueResponse, error) {
 	return e.describeQueue(e.timerProcessor, clusterName)
+}
+
+func (e *historyEngineImpl) DescribeCrossClusterQueue(
+	ctx context.Context,
+	clusterName string,
+) (*types.DescribeQueueResponse, error) {
+	if e.crossClusterProcessor == nil {
+		return nil, errQueueNotInitialized
+	}
+
+	return e.describeQueue(e.crossClusterProcessor, clusterName)
 }
 
 func (e *historyEngineImpl) describeQueue(
