@@ -25,6 +25,7 @@ import "github.com/uber/cadence/common/config"
 
 type (
 	// PersistenceTestCluster exposes management operations on a database
+	// NOTE: Putting this interface in separate package to avoid cycle dependency
 	PersistenceTestCluster interface {
 		SetupTestDatabase()
 		TearDownTestDatabase()

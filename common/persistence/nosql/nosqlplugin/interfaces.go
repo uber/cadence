@@ -30,7 +30,7 @@ import (
 )
 
 type (
-	// Plugin defines the interface for any SQL database that needs to implement
+	// Plugin defines the interface for any NoSQL database that needs to implement
 	Plugin interface {
 		CreateDB(cfg *config.NoSQL, logger log.Logger) (DB, error)
 		CreateAdminDB(cfg *config.NoSQL, logger log.Logger) (AdminDB, error)
