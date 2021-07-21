@@ -56,7 +56,7 @@ func (p *plugin) CreateAdminDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugi
 }
 
 func (p *plugin) doCreateDB(cfg *config.NoSQL, logger log.Logger) (*cdb, error) {
-	session, err := gocql.GetOrCreateClient().CreateSession(toGoCqlConfig(cfg))
+	session, err := gocql.GetRegisteredClient().CreateSession(toGoCqlConfig(cfg))
 	if err != nil {
 		return nil, err
 	}
