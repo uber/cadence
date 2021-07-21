@@ -71,6 +71,9 @@ func verifyCompatibleVersion(
 		return nil
 	}
 
+	// Use hardcoded instead of constant because of cycle dependency issue.
+	// However, this file will be refactor to support NoSQL soon. After the refactoring, cycle dependency issue
+	// should be gone and we can use constant at that time
 	if ds.NoSQL.PluginName != "cassandra" {
 		return fmt.Errorf("unknown NoSQL plugin name: %v", ds.NoSQL.PluginName)
 	}

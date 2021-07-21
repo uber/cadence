@@ -22,7 +22,6 @@
 package cli
 
 import (
-	ctx "context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -373,14 +372,16 @@ func AdminGetDomainIDOrName(c *cli.Context) {
 
 	db, _ := connectToCassandra(c)
 
+	ctx, cancel := newContext(c)
+	defer cancel()
 	if len(domainID) > 0 {
-		domain, err := db.SelectDomain(ctx.Background(), &domainID, nil)
+		domain, err := db.SelectDomain(ctx, &domainID, nil)
 		if err != nil {
 			ErrorAndExit("SelectDomain error", err)
 		}
 		fmt.Printf("domainName for domainID %v is %v \n", domainID, domain.Info.Name)
 	} else {
-		domain, err := db.SelectDomain(ctx.Background(), nil, &domainName)
+		domain, err := db.SelectDomain(ctx, nil, &domainName)
 		if err != nil {
 			ErrorAndExit("SelectDomain error", err)
 		}
