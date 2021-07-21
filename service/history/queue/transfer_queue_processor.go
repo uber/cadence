@@ -105,7 +105,6 @@ func NewTransferQueueProcessor(
 		executionCache,
 		workflowResetter,
 		logger,
-		shard.GetMetricsClient(),
 		config,
 	)
 
@@ -140,7 +139,6 @@ func NewTransferQueueProcessor(
 			executionCache,
 			historyResender,
 			logger,
-			shard.GetMetricsClient(),
 			clusterName,
 			config,
 		)

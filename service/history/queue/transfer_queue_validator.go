@@ -62,11 +62,11 @@ type (
 
 func newTransferQueueValidator(
 	processor *transferQueueProcessorBase,
-	timeSource clock.TimeSource,
 	validationInterval dynamicconfig.DurationPropertyFn,
 	logger log.Logger,
 	metricsScope metrics.Scope,
 ) *transferQueueValidator {
+	timeSource := processor.shard.GetTimeSource()
 	return &transferQueueValidator{
 		processor:    processor,
 		timeSource:   timeSource,

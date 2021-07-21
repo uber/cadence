@@ -1193,5 +1193,5 @@ func (s *timerStandbyTaskExecutorSuite) createPersistenceMutableState(
 func (s *timerStandbyTaskExecutorSuite) newTimerTaskFromInfo(
 	info *persistence.TimerTaskInfo,
 ) Task {
-	return NewTimerTask(s.mockShard, info, QueueTypeStandbyTimer, s.logger, nil, nil, nil, nil, s.mockShard.GetTimeSource(), nil)
+	return NewTimerTask(s.mockShard, info, QueueTypeStandbyTimer, s.logger, nil, nil, nil, nil, nil)
 }
