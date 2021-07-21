@@ -611,6 +611,7 @@ func FromAdminRemoveTaskRequest(t *types.RemoveTaskRequest) *adminv1.RemoveTaskR
 		TaskType:       FromTaskType(t.Type),
 		TaskId:         t.TaskID,
 		VisibilityTime: unixNanoToTime(t.VisibilityTimestamp),
+		ClusterName:    t.ClusterName,
 	}
 }
 
@@ -623,6 +624,7 @@ func ToAdminRemoveTaskRequest(t *adminv1.RemoveTaskRequest) *types.RemoveTaskReq
 		Type:                ToTaskType(t.TaskType),
 		TaskID:              t.TaskId,
 		VisibilityTimestamp: timeToUnixNano(t.VisibilityTime),
+		ClusterName:         t.ClusterName,
 	}
 }
 

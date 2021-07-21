@@ -6125,6 +6125,7 @@ type RemoveTaskRequest struct {
 	Type                *int32 `json:"type,omitempty"`
 	TaskID              int64  `json:"taskID,omitempty"`
 	VisibilityTimestamp *int64 `json:"visibilityTimestamp,omitempty"`
+	ClusterName         string `json:"clusterName,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -6155,6 +6156,14 @@ func (v *RemoveTaskRequest) GetTaskID() (o int64) {
 func (v *RemoveTaskRequest) GetVisibilityTimestamp() (o int64) {
 	if v != nil && v.VisibilityTimestamp != nil {
 		return *v.VisibilityTimestamp
+	}
+	return
+}
+
+// GetClusterName is an internal getter (TBD...)
+func (v *RemoveTaskRequest) GetClusterName() (o string) {
+	if v != nil {
+		return v.ClusterName
 	}
 	return
 }

@@ -778,6 +778,11 @@ func (h *handlerImpl) RemoveTask(
 		return executionMgr.CompleteReplicationTask(ctx, &persistence.CompleteReplicationTaskRequest{
 			TaskID: request.GetTaskID(),
 		})
+	case common.TaskTypeCrossCluster:
+		return executionMgr.CompleteCrossClusterTask(ctx, &persistence.CompleteCrossClusterTaskRequest{
+			TargetCluster: request.GetClusterName(),
+			TaskID:        request.GetTaskID(),
+		})
 	default:
 		return errInvalidTaskType
 	}
@@ -814,6 +819,8 @@ func (h *handlerImpl) ResetQueue(
 		err = engine.ResetTransferQueue(ctx, request.GetClusterName())
 	case common.TaskTypeTimer:
 		err = engine.ResetTimerQueue(ctx, request.GetClusterName())
+	case common.TaskTypeCrossCluster:
+		err = engine.ResetCrossClusterQueue(ctx, request.GetClusterName())
 	default:
 		err = errInvalidTaskType
 	}
@@ -846,6 +853,8 @@ func (h *handlerImpl) DescribeQueue(
 		resp, err = engine.DescribeTransferQueue(ctx, request.GetClusterName())
 	case common.TaskTypeTimer:
 		resp, err = engine.DescribeTimerQueue(ctx, request.GetClusterName())
+	case common.TaskTypeCrossCluster:
+		resp, err = engine.DescribeCrossClusterQueue(ctx, request.GetClusterName())
 	default:
 		err = errInvalidTaskType
 	}
