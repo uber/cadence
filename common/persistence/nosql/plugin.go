@@ -30,7 +30,7 @@ import (
 
 var supportedPlugins = map[string]nosqlplugin.Plugin{}
 
-// RegisterPlugin will register a SQL plugin
+// RegisterPlugin will register a NoSQL plugin
 func RegisterPlugin(pluginName string, plugin nosqlplugin.Plugin) {
 	if _, ok := supportedPlugins[pluginName]; ok {
 		panic("plugin " + pluginName + " already registered")
@@ -38,7 +38,7 @@ func RegisterPlugin(pluginName string, plugin nosqlplugin.Plugin) {
 	supportedPlugins[pluginName] = plugin
 }
 
-// RegisterPluginIfNotExists will register a SQL plugin only if a plugin with same name has not already been registered
+// RegisterPluginIfNotExists will register a NoSQL plugin only if a plugin with same name has not already been registered
 func RegisterPluginIfNotExists(pluginName string, plugin nosqlplugin.Plugin) {
 	if _, ok := supportedPlugins[pluginName]; !ok {
 		supportedPlugins[pluginName] = plugin
@@ -60,9 +60,9 @@ func GetRegisteredPluginNames() []string {
 	return plugins
 }
 
-// NewSQLDB creates a returns a reference to a logical connection to the
-// underlying SQL database. The returned object is to tied to a single
-// SQL database and the object can be used to perform CRUD operations on
+// NewNoSQLDB creates a returns a reference to a logical connection to the
+// underlying NoSQL database. The returned object is to tied to a single
+// NoSQL database and the object can be used to perform CRUD operations on
 // the tables in the database
 func NewNoSQLDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.DB, error) {
 	plugin, ok := supportedPlugins[cfg.PluginName]
@@ -74,7 +74,7 @@ func NewNoSQLDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.DB, error) {
 	return plugin.CreateDB(cfg, logger)
 }
 
-// NewSQLAdminDB returns a AdminDB
+// NewNoSQLAdminDB returns a AdminDB
 func NewNoSQLAdminDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.AdminDB, error) {
 	plugin, ok := supportedPlugins[cfg.PluginName]
 
