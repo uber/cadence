@@ -79,5 +79,6 @@ type (
 		NotifyNewHistoryEvent(event *events.Notification)
 		NotifyNewTransferTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
 		NotifyNewTimerTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
+		NotifyNewCrossClusterTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
 	}
 )
