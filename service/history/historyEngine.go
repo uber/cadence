@@ -79,7 +79,9 @@ const (
 )
 
 var (
-	errDomainDeprecated    = &types.BadRequestError{Message: "Domain is deprecated."}
+	errDomainDeprecated = &types.BadRequestError{Message: "Domain is deprecated."}
+
+	// TODO: remove this error when cross-cluster queue is wired up and initialized
 	errQueueNotInitialized = types.BadRequestError{Message: "Requested queue processor not initialized"}
 )
 
