@@ -337,7 +337,7 @@ func (a *AccessControlledWorkflowHandler) PollForActivityTask(
 		APIName:    "PollForActivityTask",
 		DomainName: request.GetDomain(),
 		TaskList:   request.TaskList,
-		Permission: authorization.PermissionRead,
+		Permission: authorization.PermissionWrite,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -362,7 +362,7 @@ func (a *AccessControlledWorkflowHandler) PollForDecisionTask(
 		APIName:    "PollForDecisionTask",
 		DomainName: request.GetDomain(),
 		TaskList:   request.TaskList,
-		Permission: authorization.PermissionRead,
+		Permission: authorization.PermissionWrite,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -434,7 +434,7 @@ func (a *AccessControlledWorkflowHandler) RegisterDomain(
 	attr := &authorization.Attributes{
 		APIName:    "RegisterDomain",
 		DomainName: request.GetName(),
-		Permission: authorization.PermissionWrite,
+		Permission: authorization.PermissionAdmin,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -746,7 +746,7 @@ func (a *AccessControlledWorkflowHandler) GetTaskListsByDomain(
 	attr := &authorization.Attributes{
 		APIName:    "GetTaskListsByDomain",
 		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionAdmin,
+		Permission: authorization.PermissionRead,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -770,7 +770,7 @@ func (a *AccessControlledWorkflowHandler) UpdateDomain(
 	attr := &authorization.Attributes{
 		APIName:    "UpdateDomain",
 		DomainName: request.GetName(),
-		Permission: authorization.PermissionRead,
+		Permission: authorization.PermissionAdmin,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
