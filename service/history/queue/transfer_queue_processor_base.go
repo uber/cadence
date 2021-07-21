@@ -121,7 +121,6 @@ func newTransferQueueProcessorBase(
 				taskExecutor,
 				taskProcessor,
 				processorBase.redispatcher.AddTask,
-				shard.GetTimeSource(),
 				shard.GetConfig().TransferTaskMaxRetryCount,
 			)
 		},
@@ -139,7 +138,6 @@ func newTransferQueueProcessorBase(
 	if shard.GetConfig().EnableDebugMode && options.EnableValidator() {
 		transferQueueProcessorBase.validator = newTransferQueueValidator(
 			transferQueueProcessorBase,
-			shard.GetTimeSource(),
 			options.ValidationInterval,
 			logger,
 			metricsClient.Scope(options.MetricScope),

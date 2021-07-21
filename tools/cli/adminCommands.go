@@ -38,8 +38,11 @@ import (
 	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/persistence/nosql"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	cassandra_db "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/types"
@@ -281,33 +284,25 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	fmt.Println("delete current row successfully")
 }
 
-func readOneRow(query gocql.Query) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-	err := query.MapScan(result)
-	return result, err
-}
-
-func connectToCassandra(c *cli.Context) (gocql.Client, gocql.Session) {
+func connectToCassandra(c *cli.Context) (nosqlplugin.DB, nosqlplugin.AdminDB) {
 	host := getRequiredOption(c, FlagDBAddress)
 	if !c.IsSet(FlagDBPort) {
 		ErrorAndExit("cassandra port is required", nil)
 	}
 
-	clusterConfig := gocql.ClusterConfig{
-		Hosts:             host,
-		Port:              c.Int(FlagDBPort),
-		Region:            c.String(FlagDBRegion),
-		User:              c.String(FlagUsername),
-		Password:          c.String(FlagPassword),
-		Keyspace:          getRequiredOption(c, FlagKeyspace),
-		ProtoVersion:      c.Int(FlagProtoVersion),
-		SerialConsistency: gocql.LocalSerial,
-		MaxConns:          20,
-		Consistency:       gocql.LocalQuorum,
-		Timeout:           10 * time.Second,
+	cfg := config.NoSQL{
+		PluginName:   cassandra_db.PluginName,
+		Hosts:        host,
+		Port:         c.Int(FlagDBPort),
+		Region:       c.String(FlagDBRegion),
+		User:         c.String(FlagUsername),
+		Password:     c.String(FlagPassword),
+		Keyspace:     getRequiredOption(c, FlagKeyspace),
+		ProtoVersion: c.Int(FlagProtoVersion),
+		MaxConns:     20,
 	}
 	if c.Bool(FlagEnableTLS) {
-		clusterConfig.TLS = &config.TLS{
+		cfg.TLS = &config.TLS{
 			Enabled:                true,
 			CertFile:               c.String(FlagTLSCertPath),
 			KeyFile:                c.String(FlagTLSKeyPath),
@@ -316,12 +311,15 @@ func connectToCassandra(c *cli.Context) (gocql.Client, gocql.Session) {
 		}
 	}
 
-	client := gocql.NewClient()
-	session, err := client.CreateSession(clusterConfig)
+	db, err := nosql.NewNoSQLDB(&cfg, loggerimpl.NewNopLogger())
 	if err != nil {
 		ErrorAndExit("connect to Cassandra failed", err)
 	}
-	return client, session
+	adminDB, err := nosql.NewNoSQLAdminDB(&cfg, loggerimpl.NewNopLogger())
+	if err != nil {
+		ErrorAndExit("connect to Cassandra failed", err)
+	}
+	return db, adminDB
 }
 
 func connectToSQL(c *cli.Context) sqlplugin.DB {
@@ -372,40 +370,22 @@ func AdminGetDomainIDOrName(c *cli.Context) {
 		ErrorAndExit("Need either domainName or domainID", nil)
 	}
 
-	_, session := connectToCassandra(c)
+	db, _ := connectToCassandra(c)
 
+	ctx, cancel := newContext(c)
+	defer cancel()
 	if len(domainID) > 0 {
-		tmpl := "select domain from domains where id = ? "
-		query := session.Query(tmpl, domainID)
-		res, err := readOneRow(query)
+		domain, err := db.SelectDomain(ctx, &domainID, nil)
 		if err != nil {
-			ErrorAndExit("readOneRow", err)
+			ErrorAndExit("SelectDomain error", err)
 		}
-		domain := res["domain"].(map[string]interface{})
-		domainName := domain["name"].(string)
-		fmt.Printf("domainName for domainID %v is %v \n", domainID, domainName)
+		fmt.Printf("domainName for domainID %v is %v \n", domainID, domain.Info.Name)
 	} else {
-		tmpl := "select domain from domains_by_name where name = ?"
-		tmplV2 := "select domain from domains_by_name_v2 where domains_partition=0 and name = ?"
-
-		query := session.Query(tmpl, domainName)
-		res, err := readOneRow(query)
+		domain, err := db.SelectDomain(ctx, nil, &domainName)
 		if err != nil {
-			fmt.Printf("v1 return error: %v , trying v2...\n", err)
-
-			query := session.Query(tmplV2, domainName)
-			res, err := readOneRow(query)
-			if err != nil {
-				ErrorAndExit("readOneRow for v2", err)
-			}
-			domain := res["domain"].(map[string]interface{})
-			domainID := domain["id"].(gocql.UUID).String()
-			fmt.Printf("domainID for domainName %v is %v \n", domainName, domainID)
-		} else {
-			domain := res["domain"].(map[string]interface{})
-			domainID := domain["id"].(gocql.UUID).String()
-			fmt.Printf("domainID for domainName %v is %v \n", domainName, domainID)
+			ErrorAndExit("SelectDomain error", err)
 		}
+		fmt.Printf("domainID for domainName %v is %v \n", domain.Info.ID, domainID)
 	}
 }
 
