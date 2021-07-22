@@ -181,12 +181,12 @@ type (
 
 	ConfigStore interface {
 		Closeable
-		FetchConfig(ctx context.Context, config_type string) (*InternalConfigStoreEntry, error)
+		FetchConfig(ctx context.Context, config_type ConfigType) (*InternalConfigStoreEntry, error)
 		UpdateConfig(ctx context.Context, value *InternalConfigStoreEntry) error
 	}
 
 	InternalConfigStoreEntry struct {
-		RowType   string
+		RowType   int
 		Version   int64
 		Timestamp time.Time
 		Values    *DataBlob

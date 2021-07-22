@@ -53,8 +53,8 @@ func (m *configStoreManagerImpl) Close() {
 	m.persistence.Close()
 }
 
-func (m *configStoreManagerImpl) FetchDynamicConfig(ctx context.Context) (*DynamicConfigSnapshot, error) {
-	values, err := m.persistence.FetchConfig(ctx, "dynamic_config")
+func (m *configStoreManagerImpl) FetchDynamicConfig(ctx context.Context) (*FetchDynamicConfigResponse, error) {
+	values, err := m.persistence.FetchConfig(ctx, DynamicConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -64,21 +64,21 @@ func (m *configStoreManagerImpl) FetchDynamicConfig(ctx context.Context) (*Dynam
 		return nil, err
 	}
 
-	return &DynamicConfigSnapshot{
+	return &FetchDynamicConfigResponse{Snapshot: &DynamicConfigSnapshot{
 		Version: values.Version,
 		Values:  config,
-	}, nil
+	}}, nil
 }
 
-func (m *configStoreManagerImpl) UpdateDynamicConfig(ctx context.Context, snapshot *DynamicConfigSnapshot) error {
-	blob, err := m.serializer.SerializeDynamicConfigBlob(snapshot.Values, common.EncodingTypeThriftRW)
+func (m *configStoreManagerImpl) UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest) error {
+	blob, err := m.serializer.SerializeDynamicConfigBlob(request.Snapshot.Values, common.EncodingTypeThriftRW)
 	if err != nil {
 		return err
 	}
 
 	entry := &InternalConfigStoreEntry{
-		RowType:   "dynamic_config",
-		Version:   snapshot.Version,
+		RowType:   int(DynamicConfig),
+		Version:   request.Snapshot.Version,
 		Timestamp: time.Now(),
 		Values:    blob,
 	}

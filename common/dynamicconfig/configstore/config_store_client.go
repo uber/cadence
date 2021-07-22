@@ -28,10 +28,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/config"
 	dc "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -44,7 +46,8 @@ const (
 // ConfigStoreClientConfig is the config for the config store based dynamic config client.
 // It specifies how often the cached config should be updated by checking underlying database.
 type ConfigStoreClientConfig struct {
-	PollInterval time.Duration `yaml:"pollInterval"`
+	PollInterval        time.Duration `yaml:"pollInterval"`
+	UpdateRetryAttempts int           `yaml:"updateRetryAttempts"`
 }
 
 type configStoreClient struct {
@@ -63,21 +66,20 @@ type cacheEntry struct {
 }
 
 // NewConfigStoreClient creates a config store client
-func NewConfigStoreClient(client_cfg *ConfigStoreClientConfig, manager persistence.ConfigStoreManager, logger log.Logger, doneCh chan struct{}) (dc.Client, error) {
-	//persistence_cfg config.NoSQL
+func NewConfigStoreClient(client_cfg *ConfigStoreClientConfig, persistence_cfg config.NoSQL, logger log.Logger, doneCh chan struct{}) (dc.Client, error) {
 	if err := validateConfigStoreClientConfig(client_cfg); err != nil {
 		return nil, err
 	}
 
-	// store, err := nosql.NewNoSQLConfigStore(persistence_cfg, logger)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	store, err := nosql.NewNoSQLConfigStore(persistence_cfg, logger)
+	if err != nil {
+		return nil, err
+	}
 
 	client := &configStoreClient{
 		config:             client_cfg,
 		doneCh:             doneCh,
-		configStoreManager: manager, //persistence.NewConfigStoreManagerImpl(store, logger),
+		configStoreManager: persistence.NewConfigStoreManagerImpl(store, logger),
 		logger:             logger,
 	}
 	if err := client.update(); err != nil {
@@ -193,8 +195,13 @@ func (csc *configStoreClient) GetDurationValue(
 }
 
 func (csc *configStoreClient) UpdateValue(name dc.Key, value interface{}) error {
-	//add retry logic
-	//entire value replace or just add new entry
+	return csc.updateValue(name, value, csc.config.UpdateRetryAttempts)
+}
+
+func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryAttempts int) error {
+	//since values are not unique, no way to know if you are trying to update a specific value
+	//or if you want to add another of the same value with different filters.
+	//UpdateValue will replace everything associated with dc key.
 	currentCached := csc.values.Load().(cacheEntry)
 	keyName := dc.Keys[name]
 	var newEntries []*types.DynamicConfigEntry
@@ -212,9 +219,6 @@ func (csc *configStoreClient) UpdateValue(name dc.Key, value interface{}) error 
 			})
 	}
 
-	//since values are not unique, no way to know if you are trying to update a specific value
-	//or if you want to add another of the same value with different filters.
-	//UpdateValue will replace everything associated with dc key.
 	for _, entry := range currentCached.dc_entries {
 		if entryExists && entry == existingEntry {
 			newEntries = append(newEntries,
@@ -235,8 +239,26 @@ func (csc *configStoreClient) UpdateValue(name dc.Key, value interface{}) error 
 			Entries:       newEntries,
 		},
 	}
-	csc.configStoreManager.UpdateDynamicConfig(context.TODO(), newSnapshot)
 
+	err := csc.configStoreManager.UpdateDynamicConfig(
+		context.TODO(),
+		&persistence.UpdateDynamicConfigRequest{
+			Snapshot: newSnapshot,
+		},
+	)
+
+	if err != nil {
+		if _, ok := err.(*persistence.ConditionFailedError); ok && retryAttempts > 0 {
+			//fetch new config and retry
+			err := csc.update()
+			if err != nil {
+				return err
+			}
+			return csc.updateValue(name, value, retryAttempts-1)
+		} else {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -310,7 +332,7 @@ func (csc *configStoreClient) update() error {
 		return fmt.Errorf("failed to fetch dynamic config snapshot %v", err)
 	}
 
-	return csc.storeValues(dc_snapshot)
+	return csc.storeValues(dc_snapshot.Snapshot)
 }
 
 func (csc *configStoreClient) storeValues(snapshot *persistence.DynamicConfigSnapshot) error {

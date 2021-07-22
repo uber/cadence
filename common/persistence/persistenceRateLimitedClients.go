@@ -1201,7 +1201,7 @@ func (p *queueRateLimitedPersistenceClient) Close() {
 	p.persistence.Close()
 }
 
-func (p *configStoreRateLimitedPersistenceClient) FetchDynamicConfig(ctx context.Context) (*DynamicConfigSnapshot, error) {
+func (p *configStoreRateLimitedPersistenceClient) FetchDynamicConfig(ctx context.Context) (*FetchDynamicConfigResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
@@ -1209,11 +1209,11 @@ func (p *configStoreRateLimitedPersistenceClient) FetchDynamicConfig(ctx context
 	return p.persistence.FetchDynamicConfig(ctx)
 }
 
-func (p *configStoreRateLimitedPersistenceClient) UpdateDynamicConfig(ctx context.Context, snapshot *DynamicConfigSnapshot) error {
+func (p *configStoreRateLimitedPersistenceClient) UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
-	return p.persistence.UpdateDynamicConfig(ctx, snapshot)
+	return p.persistence.UpdateDynamicConfig(ctx, request)
 }
 
 func (p *configStoreRateLimitedPersistenceClient) Close() {

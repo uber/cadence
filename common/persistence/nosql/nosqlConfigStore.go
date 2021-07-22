@@ -22,10 +22,13 @@ package nosql
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 )
 
@@ -53,8 +56,8 @@ func NewNoSQLConfigStore(
 	}, nil
 }
 
-func (m *nosqlConfigStore) FetchConfig(ctx context.Context, config_type string) (*p.InternalConfigStoreEntry, error) {
-	entry, err := m.db.SelectLatestConfig(ctx, config_type)
+func (m *nosqlConfigStore) FetchConfig(ctx context.Context, config_type p.ConfigType) (*p.InternalConfigStoreEntry, error) {
+	entry, err := m.db.SelectLatestConfig(ctx, int(config_type))
 	if err != nil {
 		return nil, convertCommonErrors(m.db, "FetchConfig", err)
 	}
@@ -63,5 +66,11 @@ func (m *nosqlConfigStore) FetchConfig(ctx context.Context, config_type string) 
 
 func (m *nosqlConfigStore) UpdateConfig(ctx context.Context, value *p.InternalConfigStoreEntry) error {
 	err := m.db.InsertConfig(ctx, value)
-	return convertCommonErrors(m.db, "UpdateConfig", err)
+	if err != nil {
+		if _, ok := err.(*nosqlplugin.ConditionFailure); ok {
+			return &persistence.ConditionFailedError{Msg: fmt.Sprintf("Version %v already exists.", value.Version)}
+		}
+		return convertCommonErrors(m.db, "UpdateConfig", err)
+	}
+	return nil
 }

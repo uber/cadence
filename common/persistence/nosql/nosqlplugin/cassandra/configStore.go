@@ -22,11 +22,11 @@ package cassandra
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
 const (
@@ -43,12 +43,12 @@ func (db *cdb) InsertConfig(ctx context.Context, row *persistence.InternalConfig
 		return err
 	}
 	if !applied {
-		return fmt.Errorf("InsertConfig operation failed because of version collision")
+		return nosqlplugin.NewConditionFailure("InsertConfig operation failed because of version collision")
 	}
 	return nil
 }
 
-func (db *cdb) SelectLatestConfig(ctx context.Context, row_type string) (*persistence.InternalConfigStoreEntry, error) {
+func (db *cdb) SelectLatestConfig(ctx context.Context, row_type int) (*persistence.InternalConfigStoreEntry, error) {
 	var version int64
 	var timestamp time.Time
 	var data []byte

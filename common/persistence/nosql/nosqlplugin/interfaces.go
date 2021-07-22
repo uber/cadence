@@ -424,7 +424,7 @@ type (
 	 */
 	configStoreCRUD interface {
 		InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error
-		SelectLatestConfig(ctx context.Context, row_type string) (*persistence.InternalConfigStoreEntry, error)
+		SelectLatestConfig(ctx context.Context, row_type int) (*persistence.InternalConfigStoreEntry, error)
 	}
 
 	WorkflowExecutionRow struct {

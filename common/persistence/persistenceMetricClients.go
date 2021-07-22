@@ -1728,7 +1728,7 @@ func (p *queuePersistenceClient) Close() {
 	p.persistence.Close()
 }
 
-func (p *configStorePersistenceClient) FetchDynamicConfig(ctx context.Context) (*DynamicConfigSnapshot, error) {
+func (p *configStorePersistenceClient) FetchDynamicConfig(ctx context.Context) (*FetchDynamicConfigResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceFetchDynamicConfigScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceFetchDynamicConfigScope, metrics.PersistenceLatency)
@@ -1742,11 +1742,11 @@ func (p *configStorePersistenceClient) FetchDynamicConfig(ctx context.Context) (
 	return result, err
 }
 
-func (p *configStorePersistenceClient) UpdateDynamicConfig(ctx context.Context, snapshot *DynamicConfigSnapshot) error {
+func (p *configStorePersistenceClient) UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest) error {
 	p.metricClient.IncCounter(metrics.PersistenceUpdateDynamicConfigScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceUpdateDynamicConfigScope, metrics.PersistenceLatency)
-	err := p.persistence.UpdateDynamicConfig(ctx, snapshot)
+	err := p.persistence.UpdateDynamicConfig(ctx, request)
 	sw.Stop()
 
 	if err != nil {

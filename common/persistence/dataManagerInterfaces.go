@@ -206,6 +206,12 @@ const (
 
 const numItemsInGarbageInfo = 3
 
+type ConfigType int
+
+const (
+	DynamicConfig ConfigType = 0
+)
+
 type (
 	// InvalidPersistenceRequestError represents invalid request to persistence
 	InvalidPersistenceRequestError struct {
@@ -1570,6 +1576,21 @@ type (
 		Markers []*FailoverMarkerTask
 	}
 
+	// FetchDynamicConfigResponse is a response to FetchDynamicConfigResponse
+	FetchDynamicConfigResponse struct {
+		Snapshot *DynamicConfigSnapshot
+	}
+
+	// UpdateDynamicConfigRequest is a request to update dynamic config with snapshot
+	UpdateDynamicConfigRequest struct {
+		Snapshot *DynamicConfigSnapshot
+	}
+
+	DynamicConfigSnapshot struct {
+		Version int64
+		Values  *types.DynamicConfigBlob
+	}
+
 	// Closeable is an interface for any entity that supports a close operation to release resources
 	Closeable interface {
 		Close()
@@ -1719,14 +1740,9 @@ type (
 
 	ConfigStoreManager interface {
 		Closeable
-		FetchDynamicConfig(ctx context.Context) (*DynamicConfigSnapshot, error)
-		UpdateDynamicConfig(ctx context.Context, snapshot *DynamicConfigSnapshot) error
+		FetchDynamicConfig(ctx context.Context) (*FetchDynamicConfigResponse, error)
+		UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest) error
 		//can add functions for config types other than dynamic config
-	}
-
-	DynamicConfigSnapshot struct {
-		Version int64
-		Values  *types.DynamicConfigBlob
 	}
 )
 
