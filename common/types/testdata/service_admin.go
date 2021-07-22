@@ -156,6 +156,7 @@ var (
 		Type:                common.Int32Ptr(QueueType),
 		TaskID:              TaskID,
 		VisibilityTimestamp: &Timestamp1,
+		ClusterName:         ClusterName1,
 	}
 	AdminResendReplicationTasksRequest = types.ResendReplicationTasksRequest{
 		DomainID:      DomainID,

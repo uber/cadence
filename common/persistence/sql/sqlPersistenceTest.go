@@ -31,19 +31,22 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
 	"github.com/uber/cadence/environment"
 )
 
-// TestCluster allows executing cassandra operations in testing.
-type TestCluster struct {
+// testCluster allows executing cassandra operations in testing.
+type testCluster struct {
 	dbName    string
 	schemaDir string
 	cfg       config.SQL
 }
 
+var _ testcluster.PersistenceTestCluster = (*testCluster)(nil)
+
 // NewTestCluster returns a new SQL test cluster
-func NewTestCluster(pluginName, dbName, username, password, host string, port int, schemaDir string) *TestCluster {
-	var result TestCluster
+func NewTestCluster(pluginName, dbName, username, password, host string, port int, schemaDir string) testcluster.PersistenceTestCluster {
+	var result testCluster
 	result.dbName = dbName
 	if port == 0 {
 		port = environment.GetMySQLPort()
@@ -67,13 +70,13 @@ func NewTestCluster(pluginName, dbName, username, password, host string, port in
 }
 
 // DatabaseName from PersistenceTestCluster interface
-func (s *TestCluster) DatabaseName() string {
+func (s *testCluster) DatabaseName() string {
 	return s.dbName
 }
 
 // SetupTestDatabase from PersistenceTestCluster interface
-func (s *TestCluster) SetupTestDatabase() {
-	s.CreateDatabase()
+func (s *testCluster) SetupTestDatabase() {
+	s.createDatabase()
 
 	schemaDir := s.schemaDir + "/"
 	if !strings.HasPrefix(schemaDir, "/") && !strings.HasPrefix(schemaDir, "../") {
@@ -83,12 +86,12 @@ func (s *TestCluster) SetupTestDatabase() {
 		}
 		schemaDir = cadencePackageDir + schemaDir
 	}
-	s.LoadSchema([]string{"schema.sql"}, schemaDir)
-	s.LoadVisibilitySchema([]string{"schema.sql"}, schemaDir)
+	s.loadSchema([]string{"schema.sql"}, schemaDir)
+	s.loadVisibilitySchema([]string{"schema.sql"}, schemaDir)
 }
 
 // Config returns the persistence config for connecting to this test cluster
-func (s *TestCluster) Config() config.Persistence {
+func (s *testCluster) Config() config.Persistence {
 	cfg := s.cfg
 	return config.Persistence{
 		DefaultStore:    "test",
@@ -102,12 +105,12 @@ func (s *TestCluster) Config() config.Persistence {
 }
 
 // TearDownTestDatabase from PersistenceTestCluster interface
-func (s *TestCluster) TearDownTestDatabase() {
-	s.DropDatabase()
+func (s *testCluster) TearDownTestDatabase() {
+	s.dropDatabase()
 }
 
-// CreateDatabase from PersistenceTestCluster interface
-func (s *TestCluster) CreateDatabase() {
+// createDatabase from PersistenceTestCluster interface
+func (s *testCluster) createDatabase() {
 	cfg2 := s.cfg
 	// NOTE need to connect with empty name to create new database
 	cfg2.DatabaseName = ""
@@ -127,8 +130,8 @@ func (s *TestCluster) CreateDatabase() {
 	}
 }
 
-// DropDatabase from PersistenceTestCluster interface
-func (s *TestCluster) DropDatabase() {
+// dropDatabase from PersistenceTestCluster interface
+func (s *testCluster) dropDatabase() {
 	cfg2 := s.cfg
 	// NOTE need to connect with empty name to drop the database
 	cfg2.DatabaseName = ""
@@ -148,8 +151,8 @@ func (s *TestCluster) DropDatabase() {
 	}
 }
 
-// LoadSchema from PersistenceTestCluster interface
-func (s *TestCluster) LoadSchema(fileNames []string, schemaDir string) {
+// loadSchema from PersistenceTestCluster interface
+func (s *testCluster) loadSchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "/cadence"
 	err := s.loadDatabaseSchema(workflowSchemaDir, fileNames, true)
 	if err != nil {
@@ -157,8 +160,8 @@ func (s *TestCluster) LoadSchema(fileNames []string, schemaDir string) {
 	}
 }
 
-// LoadVisibilitySchema from PersistenceTestCluster interface
-func (s *TestCluster) LoadVisibilitySchema(fileNames []string, schemaDir string) {
+// loadVisibilitySchema from PersistenceTestCluster interface
+func (s *testCluster) loadVisibilitySchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "/visibility"
 	err := s.loadDatabaseSchema(workflowSchemaDir, fileNames, true)
 	if err != nil {
@@ -177,7 +180,7 @@ func getCadencePackageDir() (string, error) {
 }
 
 // loadDatabaseSchema loads the schema from the given .sql files on this database
-func (s *TestCluster) loadDatabaseSchema(dir string, fileNames []string, override bool) (err error) {
+func (s *testCluster) loadDatabaseSchema(dir string, fileNames []string, override bool) (err error) {
 	db, err := NewSQLAdminDB(&s.cfg)
 	if err != nil {
 		panic(err)

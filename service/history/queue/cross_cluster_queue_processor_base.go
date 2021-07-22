@@ -133,40 +133,9 @@ func newCrossClusterQueueProcessorBaseHelper(
 		metricsClient,
 	)
 
-	crossClusterQueueProcessorBase := &crossClusterQueueProcessorBase{
+	base := &crossClusterQueueProcessorBase{
 		processorBase: processorBase,
 		targetCluster: targetCluster,
-		// TODO: inject task executor
-		taskInitializer: func(taskInfo task.Info) task.Task {
-			switch taskInfo.GetTaskType() {
-			case persistence.CrossClusterTaskTypeStartChildExecution:
-				return task.NewCrossClusterStartChildWorkflowTask(
-					shard,
-					taskInfo,
-					task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
-					shard.GetTimeSource(),
-					shard.GetConfig().CrossClusterTaskMaxRetryCount,
-				)
-			case persistence.CrossClusterTaskTypeSignalExecution:
-				return task.NewCrossClusterSignalWorkflowTask(
-					shard,
-					taskInfo,
-					task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
-					shard.GetTimeSource(),
-					shard.GetConfig().CrossClusterTaskMaxRetryCount,
-				)
-			case persistence.CrossClusterTaskTypeCancelExecution:
-				return task.NewCrossClusterCancelWorkflowTask(
-					shard,
-					taskInfo,
-					task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
-					shard.GetTimeSource(),
-					shard.GetConfig().CrossClusterTaskMaxRetryCount,
-				)
-			default:
-				panic(fmt.Sprintf("received unsupported cross cluster task type: %v", taskInfo.GetTaskType()))
-			}
-		},
 
 		backoffTimer:  make(map[int]*time.Timer),
 		shouldProcess: make(map[int]bool),
@@ -175,8 +144,19 @@ func newCrossClusterQueueProcessorBaseHelper(
 		processCh:        make(chan struct{}, 1),
 		failoverNotifyCh: make(chan struct{}, 1),
 	}
-
-	return crossClusterQueueProcessorBase
+	base.taskInitializer = func(taskInfo task.Info) task.Task {
+		return task.NewCrossClusterSourceTask(
+			shard,
+			taskInfo,
+			taskExecutor,
+			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
+			func(t task.Task) {
+				_, _ = base.submitTask(t)
+			},
+			shard.GetConfig().CrossClusterTaskMaxRetryCount,
+		)
+	}
+	return base
 }
 
 func (c *crossClusterQueueProcessorBase) Start() {

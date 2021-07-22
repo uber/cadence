@@ -1445,5 +1445,5 @@ func (s *timerActiveTaskExecutorSuite) getMutableStateFromCache(
 func (s *timerActiveTaskExecutorSuite) newTimerTaskFromInfo(
 	info *persistence.TimerTaskInfo,
 ) Task {
-	return NewTimerTask(s.mockShard, info, QueueTypeActiveTimer, s.logger, nil, nil, nil, nil, s.mockShard.GetTimeSource(), nil)
+	return NewTimerTask(s.mockShard, info, QueueTypeActiveTimer, s.logger, nil, nil, nil, nil, nil)
 }
