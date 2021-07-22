@@ -938,7 +938,7 @@ func LoadRSAPublicKey(path string) (*rsa.PublicKey, error) {
 		return nil, fmt.Errorf("invalid public key path %s", path)
 	}
 	block, _ := pem.Decode(key)
-	if block == nil {
+	if block == nil || block.Type != "PUBLIC KEY" {
 		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
 	}
 
