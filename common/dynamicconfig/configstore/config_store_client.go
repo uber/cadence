@@ -194,11 +194,38 @@ func (csc *configStoreClient) GetDurationValue(
 
 func (csc *configStoreClient) UpdateValue(name dc.Key, value interface{}) error {
 	//add retry logic
+	//entire value replace or just add new entry
 	currentCached := csc.values.Load().(cacheEntry)
+	keyName := dc.Keys[name]
+	var newEntries []*types.DynamicConfigEntry
 
-	newEntries := make([]*types.DynamicConfigEntry, 0, len(currentCached.dc_entries))
-	for _, v := range currentCached.dc_entries {
-		newEntries = append(newEntries, v)
+	existingEntry, entryExists := currentCached.dc_entries[keyName]
+	if entryExists {
+		newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dc_entries))
+	} else {
+		newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dc_entries)+1)
+		newEntries = append(newEntries,
+			&types.DynamicConfigEntry{
+				Name:         keyName,
+				DefaultValue: nil,
+				Values:       value.([]*types.DynamicConfigValue),
+			})
+	}
+
+	//since values are not unique, no way to know if you are trying to update a specific value
+	//or if you want to add another of the same value with different filters.
+	//UpdateValue will replace everything associated with dc key.
+	for _, entry := range currentCached.dc_entries {
+		if entryExists && entry == existingEntry {
+			newEntries = append(newEntries,
+				&types.DynamicConfigEntry{
+					Name:         keyName,
+					DefaultValue: nil,
+					Values:       value.([]*types.DynamicConfigValue),
+				})
+		} else {
+			newEntries = append(newEntries, copyDynamicConfigEntry(entry))
+		}
 	}
 
 	newSnapshot := &persistence.DynamicConfigSnapshot{
@@ -211,6 +238,64 @@ func (csc *configStoreClient) UpdateValue(name dc.Key, value interface{}) error 
 	csc.configStoreManager.UpdateDynamicConfig(context.TODO(), newSnapshot)
 
 	return nil
+}
+
+func copyDynamicConfigEntry(entry *types.DynamicConfigEntry) *types.DynamicConfigEntry {
+	if entry == nil {
+		return nil
+	}
+
+	new_values := make([]*types.DynamicConfigValue, 0, len(entry.Values))
+	for _, value := range entry.Values {
+		new_values = append(new_values, copyDynamicConfigValue(value))
+	}
+
+	return &types.DynamicConfigEntry{
+		Name:         entry.Name,
+		DefaultValue: copyDataBlob(entry.DefaultValue),
+		Values:       new_values,
+	}
+}
+
+func copyDynamicConfigValue(value *types.DynamicConfigValue) *types.DynamicConfigValue {
+	if value == nil {
+		return nil
+	}
+
+	new_filters := make([]*types.DynamicConfigFilter, 0, len(value.Filters))
+	for _, filter := range value.Filters {
+		new_filters = append(new_filters, copyDynamicConfigFilter(filter))
+	}
+
+	return &types.DynamicConfigValue{
+		Value:   copyDataBlob(value.Value),
+		Filters: new_filters,
+	}
+}
+
+func copyDynamicConfigFilter(filter *types.DynamicConfigFilter) *types.DynamicConfigFilter {
+	if filter == nil {
+		return nil
+	}
+
+	return &types.DynamicConfigFilter{
+		Name:  filter.Name,
+		Value: copyDataBlob(filter.Value),
+	}
+}
+
+func copyDataBlob(blob *types.DataBlob) *types.DataBlob {
+	if blob == nil {
+		return nil
+	}
+
+	new_data := make([]byte, len(blob.Data))
+	copy(new_data, blob.Data)
+
+	return &types.DataBlob{
+		EncodingType: blob.EncodingType,
+		Data:         new_data,
+	}
 }
 
 func (csc *configStoreClient) update() error {
