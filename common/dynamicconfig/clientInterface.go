@@ -48,8 +48,6 @@ type Client interface {
 	UpdateValue(name Key, value interface{}) error
 }
 
-var notFoundError = &types.EntityNotExistsError{
+var NotFoundError = &types.EntityNotExistsError{
 	Message: "unable to find key",
 }
-
-var NotFoundError = notFoundError

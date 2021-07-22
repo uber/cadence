@@ -24,9 +24,9 @@ package dynamicconfig
 type Key int
 
 func (k Key) String() string {
-	keyName, ok := keys[k]
+	keyName, ok := Keys[k]
 	if !ok {
-		return keys[unknownKey]
+		return Keys[unknownKey]
 	}
 	return keyName
 }
@@ -1819,7 +1819,7 @@ const (
 )
 
 // Mapping from Key to keyName, where keyName are used dynamic config source.
-var keys = map[Key]string{
+var Keys = map[Key]string{
 	unknownKey: "unknownKey",
 
 	// tests keys
@@ -2146,4 +2146,3 @@ var keys = map[Key]string{
 	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
 	WorkerBlobIntegrityCheckProbability:             "worker.BlobIntegrityCheckProbability",
 }
-var Keys = keys
