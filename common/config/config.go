@@ -311,13 +311,6 @@ type (
 		RPCAddress string `yaml:"rpcAddress"`
 	}
 
-	// ReplicationTaskProcessorConfig is the config for replication task processor.
-	ReplicationTaskProcessorConfig struct {
-		NoTaskInitialWaitIntervalSecs int     `yaml:"noTaskInitialWaitIntervalSecs"`
-		NoTaskWaitBackoffCoefficient  float64 `yaml:"noTaskWaitBackoffCoefficient"`
-		NoTaskMaxWaitIntervalSecs     int     `yaml:"noTaskMaxWaitIntervalSecs"`
-	}
-
 	// DCRedirectionPolicy contains the frontend datacenter redirection policy
 	DCRedirectionPolicy struct {
 		Policy string `yaml:"policy"`
