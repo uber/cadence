@@ -63,11 +63,11 @@ type (
 	GetTasksAttributes struct{}
 	// GetTasksResult is the result for performing GetTasks Action
 	GetTasksResult struct {
-		tasks []*types.CrossClusterTaskRequest
+		TaskRequests []*types.CrossClusterTaskRequest
 	}
 	// UpdateTasksAttributes contains the parameter to update task
 	UpdateTasksAttributes struct {
-		tasks []*types.CrossClusterTaskResponse
+		TaskResponses []*types.CrossClusterTaskResponse
 	}
 	// UpdateTasksResult is the result for performing UpdateTask Action
 	UpdateTasksResult struct {
@@ -99,5 +99,26 @@ func NewGetStateAction() *Action {
 	return &Action{
 		ActionType:               ActionTypeGetState,
 		GetStateActionAttributes: &GetStateActionAttributes{},
+	}
+}
+
+// NewGetTasksAction creates a queue action for fetching cross cluster tasks
+func NewGetTasksAction() *Action {
+	return &Action{
+		ActionType:         ActionTypeGetTasks,
+		GetTasksAttributes: &GetTasksAttributes{},
+	}
+}
+
+// NewUpdateTasksAction creates a queue action for responding cross cluster task
+// processing results
+func NewUpdateTasksAction(
+	taskResponses []*types.CrossClusterTaskResponse,
+) *Action {
+	return &Action{
+		ActionType: ActionTypeUpdateTask,
+		UpdateTaskAttributes: &UpdateTasksAttributes{
+			TaskResponses: taskResponses,
+		},
 	}
 }

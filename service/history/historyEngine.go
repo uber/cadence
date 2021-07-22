@@ -3243,6 +3243,35 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 	return nil
 }
 
+func (e *historyEngineImpl) GetCrossClusterTasks(
+	ctx context.Context,
+	targetCluster string,
+) ([]*types.CrossClusterTaskRequest, error) {
+	if e.crossClusterProcessor == nil {
+		return nil, errQueueNotInitialized
+	}
+
+	actionResult, err := e.crossClusterProcessor.HandleAction(targetCluster, queue.NewGetTasksAction())
+	if err != nil {
+		return nil, err
+	}
+
+	return actionResult.GetTasksResult.TaskRequests, nil
+}
+
+func (e *historyEngineImpl) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	targetCluster string,
+	responses []*types.CrossClusterTaskResponse,
+) error {
+	if e.crossClusterProcessor == nil {
+		return errQueueNotInitialized
+	}
+
+	_, err := e.crossClusterProcessor.HandleAction(targetCluster, queue.NewUpdateTasksAction(responses))
+	return err
+}
+
 func (e *historyEngineImpl) newChildContext(
 	parentCtx context.Context,
 ) (context.Context, context.CancelFunc) {
