@@ -985,6 +985,8 @@ func FromTaskType(t *int32) sharedv1.TaskType {
 		return sharedv1.TaskType_TASK_TYPE_TIMER
 	case common.TaskTypeReplication:
 		return sharedv1.TaskType_TASK_TYPE_REPLICATION
+	case common.TaskTypeCrossCluster:
+		return sharedv1.TaskType_TASK_TYPE_CROSS_CLUSTER
 	}
 	panic("unexpected enum value")
 }
@@ -999,6 +1001,8 @@ func ToTaskType(t sharedv1.TaskType) *int32 {
 		return common.Int32Ptr(int32(common.TaskTypeTimer))
 	case sharedv1.TaskType_TASK_TYPE_REPLICATION:
 		return common.Int32Ptr(int32(common.TaskTypeReplication))
+	case sharedv1.TaskType_TASK_TYPE_CROSS_CLUSTER:
+		return common.Int32Ptr(int32(common.TaskTypeCrossCluster))
 	}
 	panic("unexpected enum value")
 }

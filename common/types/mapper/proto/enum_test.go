@@ -401,6 +401,7 @@ func TestTaskType(t *testing.T) {
 		common.Int32Ptr(int32(common.TaskTypeTransfer)),
 		common.Int32Ptr(int32(common.TaskTypeTimer)),
 		common.Int32Ptr(int32(common.TaskTypeReplication)),
+		common.Int32Ptr(int32(common.TaskTypeCrossCluster)),
 	} {
 		assert.Equal(t, item, ToTaskType(FromTaskType(item)))
 	}

@@ -259,11 +259,10 @@ func initializeCassandraExecutionClient(
 	logger log.Logger,
 ) persistence.ExecutionStore {
 
-	client, session := connectToCassandra(c)
+	db, _ := connectToCassandra(c)
 	execStore, err := nosql.NewExecutionStore(
 		shardID,
-		client,
-		session,
+		db,
 		logger,
 	)
 	if err != nil {
@@ -335,8 +334,8 @@ func initializeCassandraHistoryStore(
 	c *cli.Context,
 	logger log.Logger,
 ) persistence.HistoryStore {
-	client, session := connectToCassandra(c)
-	return nosql.NewNoSQLHistoryStoreFromSession(client, session, logger)
+	db, _ := connectToCassandra(c)
+	return nosql.NewNoSQLHistoryStoreFromSession(db, logger)
 }
 
 func initializeSQLHistoryStore(
@@ -370,8 +369,8 @@ func initializeCassandraShardStore(
 	currentClusterName string,
 	logger log.Logger,
 ) persistence.ShardStore {
-	client, session := connectToCassandra(c)
-	return nosql.NewNoSQLShardStoreFromSession(client, session, currentClusterName, loggerimpl.NewNopLogger())
+	db, _ := connectToCassandra(c)
+	return nosql.NewNoSQLShardStoreFromSession(db, currentClusterName, logger)
 }
 
 func initializeSQLShardStore(

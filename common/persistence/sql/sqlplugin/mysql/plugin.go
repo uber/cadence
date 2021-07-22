@@ -248,12 +248,12 @@ const (
 // GetTestClusterOption return test options
 func GetTestClusterOption() *pt.TestBaseOptions {
 	return &pt.TestBaseOptions{
-		SQLDBPluginName: PluginName,
-		DBUsername:      testUser,
-		DBPassword:      testPassword,
-		DBHost:          environment.GetMySQLAddress(),
-		DBPort:          environment.GetMySQLPort(),
-		SchemaDir:       testSchemaDir,
-		StoreType:       config.StoreTypeSQL,
+		DBPluginName: PluginName,
+		DBUsername:   testUser,
+		DBPassword:   testPassword,
+		DBHost:       environment.GetMySQLAddress(),
+		DBPort:       environment.GetMySQLPort(),
+		SchemaDir:    testSchemaDir,
+		StoreType:    config.StoreTypeSQL,
 	}
 }

@@ -21,13 +21,16 @@
 package task
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	ctask "github.com/uber/cadence/common/task"
@@ -37,136 +40,148 @@ import (
 
 // cross cluster task state
 const (
-	processingStateInitialed processingState = iota + 1
+	processingStateInitialized processingState = iota + 1
 	processingStateResponseReported
 	processingStateResponseRecorded
 )
 
 type (
+	// processingState is a more detailed state description
+	// when the tasks is being processed and state is TaskStatePending
 	processingState int
 
-	crossClusterSignalWorkflowTask struct {
+	crossClusterTargetTask struct {
 		*crossClusterTaskBase
+
+		request  *types.CrossClusterTaskRequest
+		response *types.CrossClusterTaskResponse
+		settable future.Settable
 	}
 
-	crossClusterCancelWorkflowTask struct {
+	crossClusterSourceTask struct {
 		*crossClusterTaskBase
-	}
 
-	crossClusterStartChildWorkflowTask struct {
-		*crossClusterTaskBase
+		// TODO: add more fields here for processing tasks
+		// in the source cluster
 	}
 
 	crossClusterTaskBase struct {
-		sync.Mutex
-		Info //TODO: provide cross cluster task info detail
+		Info
 
-		shard           shard.Context
+		sync.Mutex
 		state           ctask.State
 		processingState processingState
 		priority        int
 		attempt         int
-		timeSource      clock.TimeSource
-		submitTime      time.Time
-		logger          log.Logger
-		eventLogger     eventLogger
-		scopeIdx        int
-		scope           metrics.Scope
-		taskExecutor    Executor        //TODO: wire up the dependency
-		taskProcessor   Processor       //TODO: wire up the dependency
-		redispatchFn    func(task Task) //TODO: wire up the dependency
-		maxRetryCount   dynamicconfig.IntPropertyFn
-		settable        future.Settable
+
+		shard          shard.Context
+		timeSource     clock.TimeSource
+		submitTime     time.Time
+		logger         log.Logger
+		eventLogger    eventLogger
+		scope          metrics.Scope
+		taskExecutor   Executor
+		resubmitTaskFn func(task Task)
+		maxRetryCount  int
 	}
 )
 
-// NewCrossClusterTaskForTargetCluster creates a CrossClusterTask
-// for the processing logic at target cluster
+// NewCrossClusterSourceTask creates a cross cluster task
+// for the processing it at the source cluster
+func NewCrossClusterSourceTask(
+	shard shard.Context,
+	taskInfo Info,
+	taskExecutor Executor,
+	logger log.Logger,
+	resubmitTaskFn func(task Task),
+	maxRetryCount dynamicconfig.IntPropertyFn,
+) Task {
+	return &crossClusterSourceTask{
+		crossClusterTaskBase: newCrossClusterTaskBase(
+			shard,
+			taskInfo,
+			processingStateInitialized,
+			taskExecutor,
+			logger,
+			shard.GetTimeSource(),
+			resubmitTaskFn,
+			maxRetryCount,
+		),
+	}
+}
+
+// NewCrossClusterTargetTask is called at the target cluster
+// to process the cross cluster task
 // the returned the Future will be unblocked when after the task
 // is processed. The future value has type types.CrossClusterTaskResponse
 // and there will be not error returned for this future. All errors will
 // be recorded by the FailedCause field in the response.
-func NewCrossClusterTaskForTargetCluster(
+func NewCrossClusterTargetTask(
 	shard shard.Context,
 	taskRequest *types.CrossClusterTaskRequest,
+	taskExecutor Executor,
 	logger log.Logger,
+	resubmitTaskFn func(task Task),
 	maxRetryCount dynamicconfig.IntPropertyFn,
-) (CrossClusterTask, future.Future) {
-	// TODO: create CrossClusterTasks based on request
-	// for now create a dummy CrossClusterTask for testing
+) (Task, future.Future) {
+	info := &persistence.CrossClusterTaskInfo{
+		DomainID:            taskRequest.TaskInfo.DomainID,
+		WorkflowID:          taskRequest.TaskInfo.WorkflowID,
+		RunID:               taskRequest.TaskInfo.RunID,
+		VisibilityTimestamp: time.Unix(0, taskRequest.TaskInfo.GetVisibilityTimestamp()),
+		TaskID:              taskRequest.TaskInfo.TaskID,
+		Version:             common.EmptyVersion, // we don't need version information at target cluster
+	}
+	switch taskRequest.TaskInfo.GetTaskType() {
+	case types.CrossClusterTaskTypeStartChildExecution:
+		info.TaskType = persistence.CrossClusterTaskTypeStartChildExecution
+		info.TargetDomainID = taskRequest.StartChildExecutionAttributes.TargetDomainID
+		info.TargetWorkflowID = taskRequest.StartChildExecutionAttributes.InitiatedEventAttributes.WorkflowID
+		info.TargetRunID = taskRequest.StartChildExecutionAttributes.GetTargetRunID()
+		info.ScheduleID = taskRequest.StartChildExecutionAttributes.InitiatedEventID
+	case types.CrossClusterTaskTypeCancelExecution:
+		info.TaskType = persistence.CrossClusterTaskTypeCancelExecution
+		info.TargetDomainID = taskRequest.CancelExecutionAttributes.TargetDomainID
+		info.TargetWorkflowID = taskRequest.CancelExecutionAttributes.TargetWorkflowID
+		info.TargetRunID = taskRequest.CancelExecutionAttributes.TargetRunID
+		info.ScheduleID = taskRequest.CancelExecutionAttributes.InitiatedEventID
+		info.TargetChildWorkflowOnly = taskRequest.CancelExecutionAttributes.ChildWorkflowOnly
+	case types.CrossClusterTaskTypeSignalExecution:
+		info.TaskType = persistence.CrossClusterTaskTypeSignalExecution
+		info.TargetDomainID = taskRequest.SignalExecutionAttributes.TargetDomainID
+		info.TargetWorkflowID = taskRequest.SignalExecutionAttributes.TargetWorkflowID
+		info.TargetRunID = taskRequest.SignalExecutionAttributes.TargetRunID
+		info.ScheduleID = taskRequest.SignalExecutionAttributes.InitiatedEventID
+		info.TargetChildWorkflowOnly = taskRequest.SignalExecutionAttributes.ChildWorkflowOnly
+	default:
+		panic(fmt.Sprintf("unknown cross cluster task type: %v", taskRequest.TaskInfo.GetTaskType()))
+	}
+
 	future, settable := future.NewFuture()
-	return &crossClusterSignalWorkflowTask{
-		crossClusterTaskBase: &crossClusterTaskBase{
-			Info: &persistence.CrossClusterTaskInfo{
-				TaskID: taskRequest.TaskInfo.TaskID,
-			},
-			settable: settable,
-		},
+	return &crossClusterTargetTask{
+		crossClusterTaskBase: newCrossClusterTaskBase(
+			shard,
+			info,
+			processingState(taskRequest.TaskInfo.TaskState),
+			taskExecutor,
+			logger,
+			shard.GetTimeSource(),
+			resubmitTaskFn,
+			maxRetryCount,
+		),
+		request:  taskRequest,
+		settable: settable,
 	}, future
 }
 
-// NewCrossClusterSignalWorkflowTask initialize cross cluster signal workflow task and task future
-func NewCrossClusterSignalWorkflowTask(
+func newCrossClusterTaskBase(
 	shard shard.Context,
 	taskInfo Info,
+	processingState processingState,
+	taskExecutor Executor,
 	logger log.Logger,
 	timeSource clock.TimeSource,
-	maxRetryCount dynamicconfig.IntPropertyFn,
-) CrossClusterTask {
-	crossClusterTask := newCrossClusterTask(
-		shard,
-		taskInfo,
-		logger,
-		timeSource,
-		maxRetryCount)
-	return &crossClusterSignalWorkflowTask{
-		crossClusterTask,
-	}
-}
-
-// NewCrossClusterCancelWorkflowTask initialize cross cluster cancel workflow task and task future
-func NewCrossClusterCancelWorkflowTask(
-	shard shard.Context,
-	taskInfo Info,
-	logger log.Logger,
-	timeSource clock.TimeSource,
-	maxRetryCount dynamicconfig.IntPropertyFn,
-) CrossClusterTask {
-	crossClusterTask := newCrossClusterTask(
-		shard,
-		taskInfo,
-		logger,
-		timeSource,
-		maxRetryCount)
-	return &crossClusterCancelWorkflowTask{
-		crossClusterTask,
-	}
-}
-
-// NewCrossClusterStartChildWorkflowTask initialize cross cluster start child workflow task and task future
-func NewCrossClusterStartChildWorkflowTask(
-	shard shard.Context,
-	taskInfo Info,
-	logger log.Logger,
-	timeSource clock.TimeSource,
-	maxRetryCount dynamicconfig.IntPropertyFn,
-) CrossClusterTask {
-	crossClusterTask := newCrossClusterTask(
-		shard,
-		taskInfo,
-		logger,
-		timeSource,
-		maxRetryCount)
-	return &crossClusterStartChildWorkflowTask{
-		crossClusterTask,
-	}
-}
-
-func newCrossClusterTask(
-	shard shard.Context,
-	taskInfo Info,
-	logger log.Logger,
-	timeSource clock.TimeSource,
+	resubmitTaskFn func(task Task),
 	maxRetryCount dynamicconfig.IntPropertyFn,
 ) *crossClusterTaskBase {
 	var eventLogger eventLogger
@@ -177,181 +192,178 @@ func newCrossClusterTask(
 	}
 
 	return &crossClusterTaskBase{
-		Info:          taskInfo,
-		shard:         shard,
-		priority:      ctask.NoPriority,
-		attempt:       0,
-		timeSource:    timeSource,
-		submitTime:    timeSource.Now(),
-		logger:        logger,
-		eventLogger:   eventLogger,
-		scopeIdx:      GetCrossClusterTaskMetricsScope(taskInfo.GetTaskType()),
-		scope:         nil,
-		maxRetryCount: maxRetryCount,
+		Info:            taskInfo,
+		shard:           shard,
+		state:           ctask.TaskStatePending,
+		processingState: processingState,
+		priority:        ctask.NoPriority,
+		attempt:         0,
+		timeSource:      timeSource,
+		submitTime:      timeSource.Now(),
+		logger:          logger,
+		eventLogger:     eventLogger,
+		scope: getOrCreateDomainTaggedScope(
+			shard,
+			GetCrossClusterTaskMetricsScope(taskInfo.GetTaskType()), taskInfo.GetDomainID(),
+			logger,
+		),
+		resubmitTaskFn: resubmitTaskFn,
+		maxRetryCount:  maxRetryCount(),
 	}
 }
 
-// Cross cluster signal workflow task
+// cross cluster source task methods
 
-func (c *crossClusterSignalWorkflowTask) Execute() error {
+func (t *crossClusterSourceTask) Execute() error {
 	panic("Not implement")
 }
 
-func (c *crossClusterSignalWorkflowTask) Ack() {
-	// TODO: rewrite the implementation
-	// current impl is just for testing purpose
-	if c.settable != nil {
-		c.settable.Set(types.CrossClusterTaskResponse{
-			TaskID: c.Info.GetTaskID(),
-		}, nil)
+func (t *crossClusterSourceTask) Ack() {
+	panic("Not implement")
+}
+
+func (t *crossClusterSourceTask) Nack() {
+	panic("Not implement")
+}
+
+func (t *crossClusterSourceTask) HandleErr(
+	err error,
+) (retErr error) {
+	panic("Not implement")
+}
+
+func (t *crossClusterSourceTask) RetryErr(
+	err error,
+) bool {
+	panic("Not implement")
+}
+
+func (t *crossClusterSourceTask) IsReadyForPoll() bool {
+	t.Lock()
+	defer t.Unlock()
+
+	return t.state == ctask.TaskStatePending &&
+		(t.processingState == processingStateInitialized || t.processingState == processingStateResponseRecorded)
+}
+
+func (t *crossClusterSourceTask) GetCrossClusterRequest() *types.CrossClusterTaskRequest {
+	panic("Not implement")
+}
+
+// cross cluster target task methods
+
+func (t *crossClusterTargetTask) Execute() error {
+	executionStartTime := t.timeSource.Now()
+
+	defer func() {
+		t.scope.IncCounter(metrics.TaskRequestsPerDomain)
+		t.scope.RecordTimer(metrics.TaskProcessingLatencyPerDomain, time.Since(executionStartTime))
+	}()
+
+	logEvent(t.eventLogger, "Executing task")
+	return t.taskExecutor.Execute(t, true)
+}
+
+func (t *crossClusterTargetTask) Ack() {
+	t.Lock()
+	t.state = ctask.TaskStateAcked
+	t.Unlock()
+
+	logEvent(t.eventLogger, "Acked task")
+	t.completeTask()
+}
+
+func (t *crossClusterTargetTask) Nack() {
+	t.Lock()
+	if t.attempt < t.maxRetryCount {
+		t.resubmitTaskFn(t)
+		t.Unlock()
+		return
 	}
+	t.state = ctask.TaskStateNacked
+	t.Unlock()
+
+	logEvent(t.eventLogger, "Nacked task")
+	t.completeTask()
 }
 
-func (c *crossClusterSignalWorkflowTask) Nack() {
-	panic("Not implement")
-}
-
-func (c *crossClusterSignalWorkflowTask) HandleErr(
+func (t *crossClusterTargetTask) HandleErr(
 	err error,
 ) (retErr error) {
-	panic("Not implement")
+	logEvent(t.eventLogger, "Failed to handle error", retErr)
+
+	t.Lock()
+	t.attempt++
+	t.Unlock()
+
+	t.scope.IncCounter(metrics.TaskFailuresPerDomain)
+	t.logger.Error("Fail to process task", tag.Error(err), tag.LifeCycleProcessingFailed)
+	return err
 }
 
-func (c *crossClusterSignalWorkflowTask) RetryErr(
+func (t *crossClusterTargetTask) RetryErr(
 	err error,
 ) bool {
-	panic("Not implement")
+	if err == ErrTaskPendingActive {
+		return false
+	}
+
+	return true
 }
 
-func (c *crossClusterSignalWorkflowTask) Update(interface{}) error {
-	panic("Not implement")
+func (t *crossClusterTargetTask) completeTask() {
+	t.scope.RecordTimer(metrics.TaskAttemptTimerPerDomain, time.Duration(t.attempt))
+	t.scope.RecordTimer(metrics.TaskLatencyPerDomain, time.Since(t.submitTime))
+	t.scope.RecordTimer(metrics.TaskQueueLatencyPerDomain, time.Since(t.GetVisibilityTimestamp()))
+
+	if t.eventLogger != nil && t.attempt != 0 {
+		// only dump events when the task has been retried
+		t.eventLogger.FlushEvents("Task processing events")
+	}
+
+	t.settable.Set(*t.response, nil)
 }
 
-func (c *crossClusterSignalWorkflowTask) IsValid() bool {
-	panic("Not implement")
+// cross cluster task base method shared by both source and target task impl
+
+func (t *crossClusterTaskBase) GetInfo() Info {
+	return t.Info
 }
 
-// Cross cluster cancel workflow task
+func (t *crossClusterTaskBase) State() ctask.State {
+	t.Lock()
+	defer t.Unlock()
 
-func (c *crossClusterCancelWorkflowTask) Execute() error {
-	panic("Not implement")
+	return t.state
 }
 
-func (c *crossClusterCancelWorkflowTask) Ack() {
-	panic("Not implement")
+func (t *crossClusterTaskBase) Priority() int {
+	t.Lock()
+	defer t.Unlock()
+
+	return t.priority
 }
 
-func (c *crossClusterCancelWorkflowTask) Nack() {
-	panic("Not implement")
-
-}
-
-func (c *crossClusterCancelWorkflowTask) HandleErr(
-	err error,
-) (retErr error) {
-	panic("Not implement")
-}
-
-func (c *crossClusterCancelWorkflowTask) RetryErr(
-	err error,
-) bool {
-	panic("Not implement")
-}
-
-func (c *crossClusterCancelWorkflowTask) Update(interface{}) error {
-	panic("Not implement")
-}
-
-func (c *crossClusterCancelWorkflowTask) IsValid() bool {
-	panic("Not implement")
-}
-
-// Cross cluster start child workflow task
-
-func (c *crossClusterStartChildWorkflowTask) Execute() error {
-	panic("Not implement")
-}
-
-func (c *crossClusterStartChildWorkflowTask) Ack() {
-	panic("Not implement")
-
-}
-
-func (c *crossClusterStartChildWorkflowTask) Nack() {
-	panic("Not implement")
-
-}
-
-func (c *crossClusterStartChildWorkflowTask) HandleErr(
-	err error,
-) (retErr error) {
-	panic("Not implement")
-}
-
-func (c *crossClusterStartChildWorkflowTask) RetryErr(
-	err error,
-) bool {
-	panic("Not implement")
-}
-
-func (c *crossClusterStartChildWorkflowTask) Update(interface{}) error {
-	panic("Not implement")
-}
-
-func (c *crossClusterStartChildWorkflowTask) IsValid() bool {
-	panic("Not implement")
-}
-
-func (c *crossClusterTaskBase) GetInfo() Info {
-	return c.Info
-}
-
-func (c *crossClusterTaskBase) State() ctask.State {
-	c.Lock()
-	defer c.Unlock()
-
-	return c.state
-}
-
-func (c *crossClusterTaskBase) Priority() int {
-	c.Lock()
-	defer c.Unlock()
-
-	return c.priority
-}
-
-func (c *crossClusterTaskBase) SetPriority(
+func (t *crossClusterTaskBase) SetPriority(
 	priority int,
 ) {
-	c.Lock()
-	defer c.Unlock()
+	t.Lock()
+	defer t.Unlock()
 
-	c.priority = priority
+	t.priority = priority
 }
 
-func (c *crossClusterTaskBase) GetShard() shard.Context {
-	return c.shard
+func (t *crossClusterTaskBase) GetShard() shard.Context {
+	return t.shard
 }
 
-func (c *crossClusterTaskBase) GetAttempt() int {
-	c.Lock()
-	defer c.Unlock()
+func (t *crossClusterTaskBase) GetAttempt() int {
+	t.Lock()
+	defer t.Unlock()
 
-	return c.attempt
+	return t.attempt
 }
 
-func (c *crossClusterTaskBase) GetQueueType() QueueType {
+func (t *crossClusterTaskBase) GetQueueType() QueueType {
 	return QueueTypeCrossCluster
-}
-
-func (c *crossClusterTaskBase) IsReadyForPoll() bool {
-	c.Lock()
-	defer c.Unlock()
-
-	return c.state == ctask.TaskStatePending &&
-		(c.processingState == processingStateInitialed || c.processingState == processingStateResponseRecorded)
-}
-
-func (c *crossClusterTaskBase) GetCrossClusterRequest() *types.CrossClusterTaskRequest {
-	panic("Not implement")
 }
