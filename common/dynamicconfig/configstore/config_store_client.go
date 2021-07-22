@@ -41,6 +41,9 @@ var _ dc.Client = (*configStoreClient)(nil)
 
 const (
 	configStoreMinPollInterval = time.Second * 5
+	// defaultFetchTimeout        = time.Second * 3
+	// defaultUpdateTimeout       = time.Second * 3
+	// defaultRetryAttempts       = 1
 )
 
 // ConfigStoreClientConfig is the config for the config store based dynamic config client.
@@ -48,6 +51,8 @@ const (
 type ConfigStoreClientConfig struct {
 	PollInterval        time.Duration `yaml:"pollInterval"`
 	UpdateRetryAttempts int           `yaml:"updateRetryAttempts"`
+	FetchTimeout        time.Duration `yaml:"FetchTimeout"`
+	UpdateTimeout       time.Duration `yaml:"UpdateTimeout"`
 }
 
 type configStoreClient struct {
@@ -63,6 +68,11 @@ type cacheEntry struct {
 	cache_version  int64
 	schema_version int64
 	dc_entries     map[string]*types.DynamicConfigEntry
+}
+
+type fetchResult struct {
+	snapshot *persistence.DynamicConfigSnapshot
+	err      error
 }
 
 // NewConfigStoreClient creates a config store client
@@ -240,26 +250,35 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 		},
 	}
 
-	err := csc.configStoreManager.UpdateDynamicConfig(
-		context.TODO(),
-		&persistence.UpdateDynamicConfigRequest{
-			Snapshot: newSnapshot,
-		},
-	)
+	updateCh := make(chan error)
+	go func() {
+		updateCh <- csc.configStoreManager.UpdateDynamicConfig(
+			context.TODO(),
+			&persistence.UpdateDynamicConfigRequest{
+				Snapshot: newSnapshot,
+			},
+		)
+	}()
 
-	if err != nil {
-		if _, ok := err.(*persistence.ConditionFailedError); ok && retryAttempts > 0 {
-			//fetch new config and retry
-			err := csc.update()
-			if err != nil {
+	select {
+	case err := <-updateCh:
+		if err != nil {
+			if _, ok := err.(*persistence.ConditionFailedError); ok && retryAttempts > 0 {
+				//fetch new config and retry
+				err := csc.update()
+				if err != nil {
+					return err
+				}
+				return csc.updateValue(name, value, retryAttempts-1)
+			} else {
 				return err
 			}
-			return csc.updateValue(name, value, retryAttempts-1)
-		} else {
-			return err
 		}
+		return nil
+	case <-time.After(csc.config.UpdateTimeout):
+		return errors.New("Timeout error on update")
+		//should we retry on timeout errors
 	}
-	return nil
 }
 
 func copyDynamicConfigEntry(entry *types.DynamicConfigEntry) *types.DynamicConfigEntry {
@@ -321,18 +340,26 @@ func copyDataBlob(blob *types.DataBlob) *types.DataBlob {
 }
 
 func (csc *configStoreClient) update() error {
-	defer func() {
-		csc.lastUpdatedTime = time.Now()
+	fetchCh := make(chan *fetchResult)
+	go func() {
+		res, err := csc.configStoreManager.FetchDynamicConfig(context.TODO())
+		fetchCh <- &fetchResult{snapshot: res.Snapshot, err: err}
 	}()
 
-	dc_snapshot, err := csc.configStoreManager.FetchDynamicConfig(context.TODO())
-	//if same version, then no need to store again (not yet implemented)
+	select {
+	case fetchRes := <-fetchCh:
+		if fetchRes.err != nil {
+			return fmt.Errorf("Failed to fetch dynamic config snapshot %v", fetchRes.err)
+		}
 
-	if err != nil {
-		return fmt.Errorf("failed to fetch dynamic config snapshot %v", err)
+		defer func() {
+			csc.lastUpdatedTime = time.Now()
+		}()
+
+		return csc.storeValues(fetchRes.snapshot)
+	case <-time.After(csc.config.FetchTimeout):
+		return errors.New("Timeout error on fetch")
 	}
-
-	return csc.storeValues(dc_snapshot.Snapshot)
 }
 
 func (csc *configStoreClient) storeValues(snapshot *persistence.DynamicConfigSnapshot) error {
@@ -357,6 +384,15 @@ func validateConfigStoreClientConfig(config *ConfigStoreClientConfig) error {
 	}
 	if config.PollInterval < configStoreMinPollInterval {
 		return fmt.Errorf("poll interval should be at least %v", configStoreMinPollInterval)
+	}
+	if config.UpdateRetryAttempts < 0 {
+		return errors.New("UpdateRetryAttempts must be non-negative")
+	}
+	if config.FetchTimeout <= 0 {
+		return errors.New("FetchTimeout must be positive")
+	}
+	if config.UpdateTimeout <= 0 {
+		return errors.New("UpdateTimeout must be positive")
 	}
 	return nil
 }

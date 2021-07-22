@@ -209,7 +209,7 @@ const numItemsInGarbageInfo = 3
 type ConfigType int
 
 const (
-	DynamicConfig ConfigType = 0
+	DynamicConfig ConfigType = iota
 )
 
 type (
