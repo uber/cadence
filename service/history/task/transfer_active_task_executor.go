@@ -410,7 +410,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 		return err
 	}
 
-	if targetCluster, isCrossCluster := t.isCrossClusterTask(targetDomainEntry); isCrossCluster {
+	if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
 		return t.generateCrossClusterTask(ctx, wfContext, task, targetCluster)
 	}
 
@@ -509,7 +509,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		return err
 	}
 
-	if targetCluster, isCrossCluster := t.isCrossClusterTask(targetDomainEntry); isCrossCluster {
+	if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
 		return t.generateCrossClusterTask(ctx, wfContext, task, targetCluster)
 	}
 
@@ -647,7 +647,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		// it is possible that the domain got deleted. Use domainID instead as this is only needed for the history event
 		targetDomainName = task.TargetDomainID
 	} else {
-		if targetCluster, isCrossCluster := t.isCrossClusterTask(targetDomainEntry); isCrossCluster {
+		if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
 			return t.generateCrossClusterTask(ctx, wfContext, task, targetCluster)
 		}
 
@@ -1196,8 +1196,13 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionFailed(
 }
 
 func (t *transferActiveTaskExecutor) isCrossClusterTask(
+	sourceDomainID string,
 	targetDomainEntry *cache.DomainCacheEntry,
 ) (string, bool) {
+	if sourceDomainID == targetDomainEntry.GetInfo().ID {
+		return "", false
+	}
+
 	targetCluster := targetDomainEntry.GetReplicationConfig().ActiveClusterName
 	if targetCluster != t.shard.GetClusterMetadata().GetCurrentClusterName() {
 		return targetCluster, true
