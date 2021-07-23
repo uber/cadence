@@ -86,9 +86,9 @@ type (
 	JwtCredentials struct {
 		// support: RS256 (RSA using SHA256)
 		Algorithm string `yaml:"algorithm"`
-		// for verifying JWT token passed in from external clients
+		// Public Key Path for verifying JWT token passed in from external clients
 		PublicKey string `yaml:"publicKey"`
-		// for creating JWT token
+		// Private Key Path for creating JWT token
 		PrivateKey string `yaml:"privateKey"`
 	}
 
