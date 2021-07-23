@@ -129,6 +129,7 @@ func (e *taskExecutorImpl) handleActivityTask(
 		Details:            attr.Details,
 		Attempt:            attr.Attempt,
 		LastFailureReason:  attr.LastFailureReason,
+		LastFailureDetails: attr.LastFailureDetails,
 		LastWorkerIdentity: attr.LastWorkerIdentity,
 		VersionHistory:     attr.GetVersionHistory(),
 	}
