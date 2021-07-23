@@ -95,7 +95,7 @@ type (
 		config                *Config
 		domainDLQHandler      domain.DLQMessageHandler
 		domainFailoverWatcher domain.FailoverWatcher
-		eventSerializder      persistence.PayloadSerializer
+		eventSerializer       persistence.PayloadSerializer
 		esClient              elasticsearch.GenericClient
 	}
 
@@ -114,7 +114,6 @@ type (
 
 var (
 	adminServiceRetryPolicy = common.CreateAdminServiceRetryPolicy()
-	resendStartEventID      = common.Int64Ptr(0)
 )
 
 // NewAdminHandler creates a thrift handler for the cadence admin service
@@ -148,8 +147,8 @@ func NewAdminHandler(
 			resource.GetMetricsClient(),
 			resource.GetLogger(),
 		),
-		eventSerializder: persistence.NewPayloadSerializer(),
-		esClient:         params.ESClient,
+		eventSerializer: persistence.NewPayloadSerializer(),
+		esClient:        params.ESClient,
 	}
 }
 
@@ -989,7 +988,7 @@ func (adh *adminHandlerImpl) ResendReplicationTasks(
 		func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 			return adh.GetHistoryClient().ReplicateEventsV2(ctx, request)
 		},
-		adh.eventSerializder,
+		adh.eventSerializer,
 		nil,
 		nil,
 		adh.GetLogger(),
@@ -998,10 +997,10 @@ func (adh *adminHandlerImpl) ResendReplicationTasks(
 		request.DomainID,
 		request.GetWorkflowID(),
 		request.GetRunID(),
-		resendStartEventID,
+		request.StartEventID,
 		request.StartVersion,
-		nil,
-		nil,
+		request.EndEventID,
+		request.EndVersion,
 	)
 }
 
@@ -1046,13 +1045,6 @@ func (adh *adminHandlerImpl) validateGetWorkflowExecutionRawHistoryV2Request(
 	pageSize := int(request.GetMaximumPageSize())
 	if pageSize <= 0 {
 		return &types.BadRequestError{Message: "Invalid PageSize."}
-	}
-
-	if request.StartEventID == nil &&
-		request.StartEventVersion == nil &&
-		request.EndEventID == nil &&
-		request.EndEventVersion == nil {
-		return &types.BadRequestError{Message: "Invalid event query range."}
 	}
 
 	if (request.StartEventID != nil && request.StartEventVersion == nil) ||
