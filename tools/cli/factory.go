@@ -23,6 +23,8 @@ package cli
 import (
 	"context"
 
+	"github.com/uber/cadence/bench/lib"
+
 	"github.com/urfave/cli"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -124,6 +126,7 @@ type versionMiddleware struct {
 func (vm *versionMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	request.Headers = request.Headers.
 		With(common.ClientImplHeaderName, cc.CLI).
-		With(common.FeatureVersionHeaderName, cc.SupportedCLIVersion)
+		With(common.FeatureVersionHeaderName, cc.SupportedCLIVersion).
+		With(common.AuthorizationTokenHeaderName, ctx.Value(lib.CtxKeyJWT).(string))
 	return out.Call(ctx, request)
 }

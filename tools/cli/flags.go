@@ -276,6 +276,7 @@ const (
 	FlagBucketSize                        = "bucket_size"
 	DelayStartSeconds                     = "delay_start_seconds"
 	FlagConnectionAttributes              = "conn_attrs"
+	FlagJWT                               = "jwt"
 )
 
 var flagsForExecution = []cli.Flag{
@@ -286,6 +287,10 @@ var flagsForExecution = []cli.Flag{
 	cli.StringFlag{
 		Name:  FlagRunIDWithAlias,
 		Usage: "RunID",
+	},
+	cli.StringFlag{
+		Name:  FlagJWT,
+		Usage: "JWT token for authentication",
 	},
 }
 

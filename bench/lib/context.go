@@ -41,6 +41,9 @@ const (
 
 	// CtxKeyCadenceClient is the name of the context key for the cadence client this cadence worker listens to
 	CtxKeyCadenceClient = ContextKey("ctxKeyCadenceClient")
+
+	// CtxKeyJWT is the name of the context key for the JWT
+	CtxKeyJWT = ContextKey("ctxKeyJWT")
 )
 
 // RuntimeContext contains all of the context information

@@ -453,3 +453,7 @@ func getConfigDir(c *cli.Context) string {
 	}
 	return dirPath
 }
+
+func getJWT(c *cli.Context) string {
+	return c.String(FlagJWT)
+}
