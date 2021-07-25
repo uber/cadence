@@ -156,7 +156,6 @@ func (a *AccessControlledWorkflowHandler) DescribeWorkflowExecution(
 	ctx context.Context,
 	request *types.DescribeWorkflowExecutionRequest,
 ) (*types.DescribeWorkflowExecutionResponse, error) {
-
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendDescribeWorkflowExecutionScope, request)
 
 	attr := &authorization.Attributes{

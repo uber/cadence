@@ -1,0 +1,8 @@
+authorization:
+  oauthAuthorizer:
+    enable: true
+    maxJwtTTL: 100000
+    jwtCredentials:
+      algorithm: "RS256"
+      publicKey: "common/authorization/keytest.pub"
+      privateKey: "common/authorization/keytest"
