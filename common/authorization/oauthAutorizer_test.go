@@ -60,8 +60,8 @@ func (s *oauthSuite) SetupTest() {
 		Enable: true,
 		JwtCredentials: config.JwtCredentials{
 			Algorithm:  jwt.RS256.String(),
-			PublicKey:  "./keytest.pub",
-			PrivateKey: "./keytest",
+			PublicKey:  "../../config/credentials/keytest.pub",
+			PrivateKey: "../../config/credentials/keytest",
 		},
 		MaxJwtTTL: 300000001,
 	}

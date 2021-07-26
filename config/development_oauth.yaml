@@ -112,5 +112,5 @@ authorization:
     maxJwtTTL: 600000000
     jwtCredentials:
       algorithm: "RS256"
-      publicKey: "common/authorization/keytest.pub"
-      privateKey: "common/authorization/keytest"
+      publicKey: "config/credentials/keytest.pub"
+      privateKey: "config/credentials/keytest"
