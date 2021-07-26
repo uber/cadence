@@ -23,8 +23,6 @@ package cli
 import (
 	"context"
 
-	"github.com/uber/cadence/bench/lib"
-
 	"github.com/urfave/cli"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -44,6 +42,14 @@ import (
 const (
 	cadenceClientName      = "cadence-client"
 	cadenceFrontendService = "cadence-frontend"
+)
+
+// ContextKey is an alias for string, used as context key
+type ContextKey string
+
+const (
+	// CtxKeyJWT is the name of the context key for the JWT
+	CtxKeyJWT = ContextKey("ctxKeyJWT")
 )
 
 // ClientFactory is used to construct rpc clients
@@ -127,6 +133,10 @@ func (vm *versionMiddleware) Call(ctx context.Context, request *transport.Reques
 	request.Headers = request.Headers.
 		With(common.ClientImplHeaderName, cc.CLI).
 		With(common.FeatureVersionHeaderName, cc.SupportedCLIVersion).
-		With(common.AuthorizationTokenHeaderName, ctx.Value(lib.CtxKeyJWT).(string))
+		With(common.AuthorizationTokenHeaderName, ctx.Value(CtxKeyJWT).(string))
 	return out.Call(ctx, request)
+}
+
+func getJWT(c *cli.Context) string {
+	return c.String(FlagJWT)
 }

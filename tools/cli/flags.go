@@ -288,10 +288,6 @@ var flagsForExecution = []cli.Flag{
 		Name:  FlagRunIDWithAlias,
 		Usage: "RunID",
 	},
-	cli.StringFlag{
-		Name:  FlagJWT,
-		Usage: "JWT token for authentication",
-	},
 }
 
 var flagsOfExecutionForShow = []cli.Flag{

@@ -38,8 +38,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/bench/lib"
-
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 	"github.com/valyala/fastjson"
@@ -766,7 +764,7 @@ func getCliIdentity() string {
 }
 
 func populateContextFromCLIContext(ctx context.Context, cliCtx *cli.Context) context.Context {
-	ctx = context.WithValue(ctx, lib.CtxKeyJWT, getJWT(cliCtx))
+	ctx = context.WithValue(ctx, CtxKeyJWT, getJWT(cliCtx))
 	return ctx
 }
 

@@ -61,7 +61,7 @@ func NewCliApp() *cli.App {
 		},
 		cli.StringFlag{
 			Name:   FlagJWT,
-			Usage:  "cadence workflow domain",
+			Usage:  "optional JWT for authorization",
 			EnvVar: "CADENCE_CLI_JWT",
 		},
 	}
