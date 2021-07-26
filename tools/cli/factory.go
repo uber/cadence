@@ -138,5 +138,5 @@ func (vm *versionMiddleware) Call(ctx context.Context, request *transport.Reques
 }
 
 func getJWT(c *cli.Context) string {
-	return c.String(FlagJWT)
+	return c.GlobalString(FlagJWT)
 }
