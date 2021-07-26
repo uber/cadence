@@ -63,7 +63,7 @@ type (
 		// Blobstore is the config for setting up blobstore
 		Blobstore Blobstore `yaml:"blobstore"`
 		// Authorization is the config for setting up authorization
-		Authorization Authorization `yaml:"authorization""`
+		Authorization Authorization `yaml:"authorization"`
 	}
 
 	Authorization struct {
