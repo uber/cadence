@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"math/rand"
+	"sync/atomic"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -53,7 +54,7 @@ type (
 	}
 )
 
-func TestWorkflowHandlerSuite(t *testing.T) {
+func TestHandlerSuite(t *testing.T) {
 	s := new(handlerSuite)
 	suite.Run(t, s)
 }
@@ -77,29 +78,17 @@ func (s *handlerSuite) TearDownTest() {
 	s.controller.Finish()
 }
 
-func (s *handlerSuite) TestGetCrossClusterTasks_RandomSuccessFailure() {
-	s.testGetCrossClusterTasks(context.Background())
-}
-
-func (s *handlerSuite) TestGetCrossClusterTasks_ContextCancelled() {
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	s.testGetCrossClusterTasks(ctx)
-}
-
-func (s *handlerSuite) testGetCrossClusterTasks(
-	ctx context.Context,
-) {
+func (s *handlerSuite) TestGetCrossClusterTasks() {
 	numShards := 10
 	targetCluster := cluster.TestAlternativeClusterName
 	var shardIDs []int32
-	numSucceeded := 0
+	numSucceeded := int32(0)
 	numTasksPerShard := rand.Intn(10)
 	s.mockEngine.EXPECT().GetCrossClusterTasks(gomock.Any(), targetCluster).DoAndReturn(
 		func(_ context.Context, _ string) ([]*types.CrossClusterTaskRequest, error) {
 			succeeded := rand.Intn(2) == 0
 			if succeeded {
-				numSucceeded++
+				atomic.AddInt32(&numSucceeded, 1)
 				return make([]*types.CrossClusterTaskRequest, numTasksPerShard), nil
 			}
 			return nil, errors.New("some random error")
@@ -113,19 +102,14 @@ func (s *handlerSuite) testGetCrossClusterTasks(
 		TargetCluster: targetCluster,
 	}
 
-	response, err := s.handler.GetCrossClusterTasks(ctx, request)
+	response, err := s.handler.GetCrossClusterTasks(context.Background(), request)
 	s.NoError(err)
 	s.NotNil(response)
 
-	if ctx.Err() != nil {
-		s.Empty(response.TasksByShard)
-		s.Len(response.FailedCauseByShard, numShards)
-	} else {
-		s.Len(response.TasksByShard, numSucceeded)
-		s.Len(response.FailedCauseByShard, numShards-numSucceeded)
-		for _, tasksRequests := range response.GetTasksByShard() {
-			s.Len(tasksRequests, numTasksPerShard)
-		}
+	s.Len(response.TasksByShard, int(numSucceeded))
+	s.Len(response.FailedCauseByShard, numShards-int(numSucceeded))
+	for _, tasksRequests := range response.GetTasksByShard() {
+		s.Len(tasksRequests, numTasksPerShard)
 	}
 }
 
