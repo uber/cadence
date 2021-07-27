@@ -29,7 +29,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 )
 
 type (
@@ -42,8 +41,7 @@ func NewNoSQLConfigStore(
 	cfg config.NoSQL,
 	logger log.Logger,
 ) (p.ConfigStore, error) {
-	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
-	db, err := cassandra.NewCassandraDB(cfg, logger)
+	db, err := NewNoSQLDB(&cfg, logger)
 	if err != nil {
 		return nil, err
 	}

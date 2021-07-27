@@ -182,7 +182,7 @@ func (s *configSuite) TestUpdateConfig() {
 
 func TestDynamicConfigKeyIsMapped(t *testing.T) {
 	for i := unknownKey; i < lastKeyForTest; i++ {
-		key, ok := keys[i]
+		key, ok := Keys[i]
 		require.True(t, ok)
 		require.NotEmpty(t, key)
 	}

@@ -68,6 +68,7 @@ type (
 		VisibilityCRUD
 		TaskCRUD
 		WorkflowCRUD
+		ConfigStoreCRUD
 	}
 
 	// ClientErrorChecker checks for common nosql errors on client
