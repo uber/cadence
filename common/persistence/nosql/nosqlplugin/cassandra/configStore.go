@@ -30,14 +30,14 @@ import (
 )
 
 const (
-	templateSelectLatestConfig = `SELECT row_type, version, timestamp, values, encoding FROM cluster_config WHERE row_type = '?' LIMIT 1;`
+	templateSelectLatestConfig = `SELECT row_type, version, timestamp, values, encoding FROM cluster_config WHERE row_type = ? LIMIT 1;`
 
 	templateInsertConfig = `INSERT INTO cluster_config (row_type, version, timestamp, values, encoding) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS;`
 	//for version value, x + 1 where x is the cached copy version.
 )
 
 func (db *cdb) InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error {
-	query := db.session.Query(templateInsertConfig, row.RowType, row.Version+1, row.Timestamp, row.Values.Data, row.Values.Encoding).WithContext(ctx)
+	query := db.session.Query(templateInsertConfig, row.RowType, row.Version, row.Timestamp, row.Values.Data, row.Values.Encoding).WithContext(ctx)
 	applied, err := query.MapScanCAS(make(map[string]interface{}))
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func (db *cdb) SelectLatestConfig(ctx context.Context, row_type int) (*persisten
 	var data []byte
 	var encoding common.EncodingType
 
-	query := db.session.Query(templateInsertConfig, row_type).WithContext(ctx)
+	query := db.session.Query(templateSelectLatestConfig, row_type).WithContext(ctx)
 	err := query.Scan(&row_type, &version, &timestamp, &data, &encoding)
 	if err != nil {
 		return nil, err

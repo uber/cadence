@@ -21,12 +21,21 @@
 package persistencetests
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"os"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
+
+//Currently you cannot clear or remove any entries in cluster_config table
+//Therefore, Teardown and Setup of Test DB is required before every test.
 
 type (
 	// ConfigStorePersistenceSuite contains config store persistence tests
@@ -53,5 +62,115 @@ func (s *ConfigStorePersistenceSuite) SetupTest() {
 
 // TearDownSuite implementation
 func (s *ConfigStorePersistenceSuite) TearDownSuite() {
+	s.TearDownWorkflowStore()
+}
+
+//Tests if error is returned when trying to fetch dc values from empty table
+func (s *ConfigStorePersistenceSuite) TestFetchFromEmptyTable() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
 	s.DefaultTestCluster.TearDownTestDatabase()
+	s.DefaultTestCluster.SetupTestDatabase()
+
+	snapshot, err := s.FetchDynamicConfig(ctx)
+	s.Nil(snapshot)
+	s.NotNil(err)
+}
+
+func (s *ConfigStorePersistenceSuite) TestUpdateSimpleSuccess() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	s.DefaultTestCluster.TearDownTestDatabase()
+	s.DefaultTestCluster.SetupTestDatabase()
+
+	snapshot := generateRandomSnapshot(1)
+	err := s.UpdateDynamicConfig(ctx, snapshot)
+	s.Nil(err)
+
+	ret_snapshot, err := s.FetchDynamicConfig(ctx)
+	s.NotNil(snapshot)
+	s.Nil(err)
+	s.Equal(snapshot.Version, ret_snapshot.Version)
+	s.Equal(snapshot.Values.Entries[0].Name, ret_snapshot.Values.Entries[0].Name)
+}
+
+func (s *ConfigStorePersistenceSuite) TestUpdateVersionCollisionFailure() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	s.DefaultTestCluster.TearDownTestDatabase()
+	s.DefaultTestCluster.SetupTestDatabase()
+
+	snapshot := generateRandomSnapshot(1)
+	err := s.UpdateDynamicConfig(ctx, snapshot)
+	s.Nil(err)
+
+	err = s.UpdateDynamicConfig(ctx, snapshot)
+	var cond_err *persistence.ConditionFailedError
+	s.True(errors.As(err, &cond_err))
+}
+
+func (s *ConfigStorePersistenceSuite) TestUpdateIncrementalVersionSuccess() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	s.DefaultTestCluster.TearDownTestDatabase()
+	s.DefaultTestCluster.SetupTestDatabase()
+
+	snapshot2 := generateRandomSnapshot(2)
+	err := s.UpdateDynamicConfig(ctx, snapshot2)
+	s.Nil(err)
+	snapshot3 := generateRandomSnapshot(3)
+	err = s.UpdateDynamicConfig(ctx, snapshot3)
+	s.Nil(err)
+}
+
+func (s *ConfigStorePersistenceSuite) TestFetchLatestVersionSuccess() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	s.DefaultTestCluster.TearDownTestDatabase()
+	s.DefaultTestCluster.SetupTestDatabase()
+
+	snapshot2 := generateRandomSnapshot(2)
+	err := s.UpdateDynamicConfig(ctx, snapshot2)
+	s.Nil(err)
+	snapshot3 := generateRandomSnapshot(3)
+	err = s.UpdateDynamicConfig(ctx, snapshot3)
+	s.Nil(err)
+
+	snapshot, err := s.FetchDynamicConfig(ctx)
+	s.NotNil(snapshot)
+	s.Nil(err)
+	s.Equal(int64(3), snapshot.Version)
+}
+
+func generateRandomSnapshot(version int64) *persistence.DynamicConfigSnapshot {
+	data, _ := json.Marshal("test_value")
+
+	values := make([]*types.DynamicConfigValue, 1)
+	values[0] = &types.DynamicConfigValue{
+		Value: &types.DataBlob{
+			EncodingType: types.EncodingTypeJSON.Ptr(),
+			Data:         data,
+		},
+		Filters: nil,
+	}
+
+	entries := make([]*types.DynamicConfigEntry, 1)
+	entries[0] = &types.DynamicConfigEntry{
+		Name:         "test_parameter",
+		DefaultValue: nil,
+		Values:       values,
+	}
+
+	return &persistence.DynamicConfigSnapshot{
+		Version: version,
+		Values: &types.DynamicConfigBlob{
+			SchemaVersion: 1,
+			Entries:       entries,
+		},
+	}
 }

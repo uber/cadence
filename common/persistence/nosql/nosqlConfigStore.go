@@ -66,7 +66,7 @@ func (m *nosqlConfigStore) UpdateConfig(ctx context.Context, value *p.InternalCo
 	err := m.db.InsertConfig(ctx, value)
 	if err != nil {
 		if _, ok := err.(*nosqlplugin.ConditionFailure); ok {
-			return &persistence.ConditionFailedError{Msg: fmt.Sprintf("Version %v already exists.", value.Version)}
+			return &persistence.ConditionFailedError{Msg: fmt.Sprintf("Version %v already exists. Condition Failed", value.Version)}
 		}
 		return convertCommonErrors(m.db, "UpdateConfig", err)
 	}

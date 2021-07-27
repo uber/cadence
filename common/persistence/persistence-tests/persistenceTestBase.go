@@ -87,6 +87,7 @@ type (
 		VisibilityTestCluster     testcluster.PersistenceTestCluster
 		Logger                    log.Logger
 		PayloadSerializer         p.PayloadSerializer
+		ConfigStoreManager        p.ConfigStoreManager
 	}
 
 	// TestBaseParams defines the input of TestBase
@@ -193,6 +194,9 @@ func (s *TestBase) Setup() {
 
 	s.ShardMgr, err = factory.NewShardManager()
 	s.fatalOnError("NewShardManager", err)
+
+	s.ConfigStoreManager, err = factory.NewConfigStoreManager()
+	s.fatalOnError("NewConfigStoreManager", err)
 
 	s.ExecutionMgrFactory = factory
 	s.ExecutionManager, err = factory.NewExecutionManager(shardID)
@@ -1896,4 +1900,16 @@ func pickRandomEncoding() common.EncodingType {
 
 func int64Ptr(i int64) *int64 {
 	return &i
+}
+
+func (s *TestBase) FetchDynamicConfig(ctx context.Context) (*p.DynamicConfigSnapshot, error) {
+	response, err := s.ConfigStoreManager.FetchDynamicConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return response.Snapshot, nil
+}
+
+func (s *TestBase) UpdateDynamicConfig(ctx context.Context, snapshot *p.DynamicConfigSnapshot) error {
+	return s.ConfigStoreManager.UpdateDynamicConfig(ctx, &p.UpdateDynamicConfigRequest{Snapshot: snapshot})
 }

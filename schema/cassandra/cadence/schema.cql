@@ -485,3 +485,12 @@ PRIMARY KEY (queue_type)
 )  WITH COMPACTION = {
      'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
    };
+
+CREATE TABLE cluster_config (
+  row_type int,
+  version int,
+  timestamp timestamp,
+  values blob,
+  encoding text,
+PRIMARY KEY (row_type, version)
+) WITH CLUSTERING ORDER BY (version DESC);
