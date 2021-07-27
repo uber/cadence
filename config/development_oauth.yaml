@@ -1,0 +1,116 @@
+persistence:
+  defaultStore: cass-default
+  visibilityStore: cass-visibility
+  numHistoryShards: 4
+  datastores:
+    cass-default:
+      nosql:
+        pluginName: "cassandra"
+        hosts: "127.0.0.1"
+        keyspace: "cadence"
+    cass-visibility:
+      nosql:
+        pluginName: "cassandra"
+        hosts: "127.0.0.1"
+        keyspace: "cadence_visibility"
+
+ringpop:
+  name: cadence
+  bootstrapMode: hosts
+  bootstrapHosts: [ "127.0.0.1:7933", "127.0.0.1:7934", "127.0.0.1:7935" ]
+  maxJoinDuration: 30s
+
+services:
+  frontend:
+    rpc:
+      port: 7933
+      grpcPort: 7833
+      bindOnLocalHost: true
+      grpcMaxMsgSize: 33554432
+    metrics:
+      statsd:
+        hostPort: "127.0.0.1:8125"
+        prefix: "cadence"
+    pprof:
+      port: 7936
+
+  matching:
+    rpc:
+      port: 7935
+      grpcPort: 7835
+      bindOnLocalHost: true
+      grpcMaxMsgSize: 33554432
+    metrics:
+      statsd:
+        hostPort: "127.0.0.1:8125"
+        prefix: "cadence"
+    pprof:
+      port: 7938
+
+  history:
+    rpc:
+      port: 7934
+      grpcPort: 7834
+      bindOnLocalHost: true
+      grpcMaxMsgSize: 33554432
+    metrics:
+      statsd:
+        hostPort: "127.0.0.1:8125"
+        prefix: "cadence"
+    pprof:
+      port: 7937
+
+  worker:
+    rpc:
+      port: 7939
+      bindOnLocalHost: true
+    metrics:
+      statsd:
+        hostPort: "127.0.0.1:8125"
+        prefix: "cadence"
+    pprof:
+      port: 7940
+
+clusterMetadata:
+  enableGlobalDomain: true
+  failoverVersionIncrement: 10
+  masterClusterName: "active"
+  currentClusterName: "active"
+  clusterInformation:
+    active:
+      enabled: true
+      initialFailoverVersion: 0
+      rpcName: "cadence-frontend"
+      rpcAddress: "localhost:7933"
+
+dcRedirectionPolicy:
+  policy: "noop"
+  toDC: ""
+
+archival:
+  history:
+    status: "disabled"
+
+  visibility:
+    status: "disabled"
+
+
+publicClient:
+  hostPort: "localhost:7933"
+
+dynamicConfigClient:
+  filepath: "config/dynamicconfig/development_oauth.yaml"
+  pollInterval: "10s"
+
+blobstore:
+  filestore:
+    outputDirectory: "/tmp/blobstore"
+
+authorization:
+  oauthAuthorizer:
+    enable: true
+    maxJwtTTL: 600000000
+    jwtCredentials:
+      algorithm: "RS256"
+      publicKey: "config/credentials/keytest.pub"
+      privateKey: "config/credentials/keytest"
