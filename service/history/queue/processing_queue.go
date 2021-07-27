@@ -21,6 +21,7 @@
 package queue
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -29,6 +30,10 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	t "github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/task"
+)
+
+var (
+	errTaskNotFound = errors.New("task not found")
 )
 
 type (
@@ -272,6 +277,21 @@ func (q *processingQueueImpl) AddTasks(
 	}
 
 	q.state.readLevel = newReadLevel
+}
+
+func (q *processingQueueImpl) GetTask(key task.Key) (task.Task, error) {
+	if task, ok := q.outstandingTasks[key]; ok {
+		return task, nil
+	}
+	return nil, errTaskNotFound
+}
+
+func (q *processingQueueImpl) GetTasks() []task.Task {
+	var outstandingTask []task.Task
+	for _, task := range q.outstandingTasks {
+		outstandingTask = append(outstandingTask, task)
+	}
+	return outstandingTask
 }
 
 func (q *processingQueueImpl) UpdateAckLevel() (task.Key, int) {

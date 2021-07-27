@@ -29,6 +29,7 @@ package history
 import (
 	context "context"
 	reflect "reflect"
+	"time"
 
 	gomock "github.com/golang/mock/gomock"
 
@@ -56,6 +57,44 @@ func NewMockHandler(ctrl *gomock.Controller) *MockHandler {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockHandler) EXPECT() *MockHandlerMockRecorder {
 	return m.recorder
+}
+
+// Start mocks base method
+func (m *MockHandler) Start() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Start")
+}
+
+// Start indicates an expected call of Start
+func (mr *MockHandlerMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockHandler)(nil).Start))
+}
+
+// Stop mocks base method
+func (m *MockHandler) Stop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop
+func (mr *MockHandlerMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockHandler)(nil).Stop))
+}
+
+// PrepareToStop mocks base method
+func (m *MockHandler) PrepareToStop(arg0 time.Duration) time.Duration {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrepareToStop", arg0)
+	ret0, _ := ret[0].(time.Duration)
+	return ret0
+}
+
+// PrepareToStop indicates an expected call of PrepareToStop
+func (mr *MockHandlerMockRecorder) PrepareToStop(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareToStop", reflect.TypeOf((*MockHandler)(nil).PrepareToStop), arg0)
 }
 
 // Health mocks base method

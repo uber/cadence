@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,36 +18,43 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// +build esintegration
-
-// to run locally, make sure kafka and es is running,
-// then run cmd `go test -v ./host -run TestElasticsearchIntegrationSuite -tags esintegration`
-package host
+package config
 
 import (
-	"flag"
-	"testing"
+	"fmt"
 
-	"github.com/stretchr/testify/suite"
-
-	"github.com/uber/cadence/environment"
+	"github.com/cristalhq/jwt/v3"
 )
 
-func TestElasticsearchIntegrationSuite(t *testing.T) {
-	flag.Parse()
-
-	clusterConfig, err := GetTestClusterConfig("testdata/integration_elasticsearch_" + environment.GetESVersion() + "_cluster.yaml")
-	if err != nil {
-		panic(err)
+// Validate validates the persistence config
+func (a *Authorization) Validate() error {
+	if a.OAuthAuthorizer.Enable && a.NoopAuthorizer.Enable {
+		return fmt.Errorf("[AuthorizationConfig] More than one authorizer is enabled")
 	}
-	testCluster := NewPersistenceTestCluster(clusterConfig)
 
-	s := new(ElasticSearchIntegrationSuite)
-	params := IntegrationBaseParams{
-		DefaultTestCluster:    testCluster,
-		VisibilityTestCluster: testCluster,
-		TestClusterConfig:     clusterConfig,
+	if a.OAuthAuthorizer.Enable {
+		if oauthError := a.validateOAuth(); oauthError != nil {
+			return oauthError
+		}
 	}
-	s.IntegrationBase = NewIntegrationBase(params)
-	suite.Run(t, s)
+
+	return nil
+}
+
+func (a *Authorization) validateOAuth() error {
+	oauthConfig := a.OAuthAuthorizer
+
+	if oauthConfig.MaxJwtTTL <= 0 {
+		return fmt.Errorf("[OAuthConfig] MaxTTL must be greater than 0")
+	}
+	if oauthConfig.JwtCredentials.PrivateKey == "" {
+		return fmt.Errorf("[OAuthConfig] PrivateKey can't be empty")
+	}
+	if oauthConfig.JwtCredentials.PublicKey == "" {
+		return fmt.Errorf("[OAuthConfig] PublicKey can't be empty")
+	}
+	if oauthConfig.JwtCredentials.Algorithm != jwt.RS256.String() {
+		return fmt.Errorf("[OAuthConfig] The only supported Algorithm is RS256")
+	}
+	return nil
 }

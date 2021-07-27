@@ -93,7 +93,6 @@ func NewTimerTask(
 	taskExecutor Executor,
 	taskProcessor Processor,
 	redispatchFn func(task Task),
-	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
 ) Task {
 	return newTask(
@@ -105,7 +104,6 @@ func NewTimerTask(
 		taskFilter,
 		taskExecutor,
 		taskProcessor,
-		timeSource,
 		maxRetryCount,
 		redispatchFn,
 	)
@@ -121,7 +119,6 @@ func NewTransferTask(
 	taskExecutor Executor,
 	taskProcessor Processor,
 	redispatchFn func(task Task),
-	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
 ) Task {
 	return newTask(
@@ -133,7 +130,6 @@ func NewTransferTask(
 		taskFilter,
 		taskExecutor,
 		taskProcessor,
-		timeSource,
 		maxRetryCount,
 		redispatchFn,
 	)
@@ -148,10 +144,10 @@ func newTask(
 	taskFilter Filter,
 	taskExecutor Executor,
 	taskProcessor Processor,
-	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
 	redispatchFn func(task Task),
 ) *taskImpl {
+	timeSource := shard.GetTimeSource()
 	var eventLogger eventLogger
 	if shard.GetConfig().EnableDebugMode &&
 		(queueType == QueueTypeActiveTimer || queueType == QueueTypeActiveTransfer) &&
@@ -193,7 +189,7 @@ func (t *taskImpl) Execute() error {
 	var err error
 	t.shouldProcessTask, err = t.taskFilter(t.Info)
 	if err != nil {
-		t.logEvent("TaskFilter execution failed", err)
+		logEvent(t.eventLogger, "TaskFilter execution failed", err)
 		time.Sleep(loadDomainEntryForTaskRetryDelay)
 		return err
 	}
@@ -207,8 +203,8 @@ func (t *taskImpl) Execute() error {
 		}
 	}()
 
-	t.logEvent("Executing task", t.shouldProcessTask)
-	return t.taskExecutor.Execute(t.Info, t.shouldProcessTask)
+	logEvent(t.eventLogger, "Executing task", t.shouldProcessTask)
+	return t.taskExecutor.Execute(t, t.shouldProcessTask)
 }
 
 func (t *taskImpl) HandleErr(
@@ -216,7 +212,7 @@ func (t *taskImpl) HandleErr(
 ) (retErr error) {
 	defer func() {
 		if retErr != nil {
-			t.logEvent("Failed to handle error", retErr)
+			logEvent(t.eventLogger, "Failed to handle error", retErr)
 
 			t.Lock()
 			defer t.Unlock()
@@ -234,7 +230,7 @@ func (t *taskImpl) HandleErr(
 		return nil
 	}
 
-	t.logEvent("Handling task processing error", err)
+	logEvent(t.eventLogger, "Handling task processing error", err)
 
 	if _, ok := err.(*types.EntityNotExistsError); ok {
 		return nil
@@ -320,7 +316,7 @@ func (t *taskImpl) RetryErr(
 }
 
 func (t *taskImpl) Ack() {
-	t.logEvent("Acked task")
+	logEvent(t.eventLogger, "Acked task")
 
 	t.Lock()
 	defer t.Unlock()
@@ -339,7 +335,7 @@ func (t *taskImpl) Ack() {
 }
 
 func (t *taskImpl) Nack() {
-	t.logEvent("Nacked task")
+	logEvent(t.eventLogger, "Nacked task")
 
 	t.Lock()
 	t.state = ctask.TaskStateNacked
@@ -388,6 +384,10 @@ func (t *taskImpl) GetAttempt() int {
 	return t.attempt
 }
 
+func (t *taskImpl) GetInfo() Info {
+	return t.Info
+}
+
 func (t *taskImpl) GetQueueType() QueueType {
 	return t.queueType
 }
@@ -400,12 +400,13 @@ func (t *taskImpl) shouldResubmitOnNack() bool {
 		(t.queueType == QueueTypeActiveTransfer || t.queueType == QueueTypeActiveTimer)
 }
 
-func (t *taskImpl) logEvent(
+func logEvent(
+	eventLogger eventLogger,
 	msg string,
 	detail ...interface{},
 ) {
-	if t.eventLogger != nil {
-		t.eventLogger.AddEvent(msg, detail...)
+	if eventLogger != nil {
+		eventLogger.AddEvent(msg, detail...)
 	}
 }
 

@@ -64,7 +64,6 @@ func newTransferTaskExecutorBase(
 	archiverClient archiver.Client,
 	executionCache *execution.Cache,
 	logger log.Logger,
-	metricsClient metrics.Client,
 	config *config.Config,
 ) *transferTaskExecutorBase {
 	return &transferTaskExecutorBase{
@@ -72,7 +71,7 @@ func newTransferTaskExecutorBase(
 		archiverClient: archiverClient,
 		executionCache: executionCache,
 		logger:         logger,
-		metricsClient:  metricsClient,
+		metricsClient:  shard.GetMetricsClient(),
 		matchingClient: shard.GetService().GetMatchingClient(),
 		visibilityMgr:  shard.GetService().GetVisibilityManager(),
 		config:         config,

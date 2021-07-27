@@ -53,11 +53,6 @@ type (
 		taskID int64
 	}
 
-	pollTime struct {
-		time       time.Time
-		changeable bool
-	}
-
 	transferQueueProcessorBase struct {
 		*processorBase
 
@@ -126,7 +121,6 @@ func newTransferQueueProcessorBase(
 				taskExecutor,
 				taskProcessor,
 				processorBase.redispatcher.AddTask,
-				shard.GetTimeSource(),
 				shard.GetConfig().TransferTaskMaxRetryCount,
 			)
 		},
@@ -144,7 +138,6 @@ func newTransferQueueProcessorBase(
 	if shard.GetConfig().EnableDebugMode && options.EnableValidator() {
 		transferQueueProcessorBase.validator = newTransferQueueValidator(
 			transferQueueProcessorBase,
-			shard.GetTimeSource(),
 			options.ValidationInterval,
 			logger,
 			metricsClient.Scope(options.MetricScope),
@@ -328,7 +321,7 @@ processorPumpLoop:
 
 			t.processQueueCollections()
 		case <-updateAckTimer.C:
-			processFinished, err := t.updateAckLevel()
+			processFinished, _, err := t.updateAckLevel()
 			if err == shard.ErrShardClosed || (err == nil && processFinished) {
 				go t.Stop()
 				break processorPumpLoop
@@ -514,7 +507,7 @@ func (t *transferQueueProcessorBase) readTasks(
 		return err
 	}
 
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, persistence.IsTransientError)
+	err := backoff.Retry(op, persistenceOperationRetryPolicy, persistence.IsBackgroundTransientError)
 	if err != nil {
 		return nil, false, err
 	}

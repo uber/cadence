@@ -30,11 +30,11 @@ import (
 )
 
 var (
-	registered Client = nil
+	registered Client
 )
 
-// NewClient gets a gocql client based registered object
-func NewClient() Client {
+// GetRegisteredClient gets a gocql client based registered object
+func GetRegisteredClient() Client {
 	if registered == nil {
 		panic("binary build error: gocql client is not registered yet!")
 	}

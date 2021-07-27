@@ -207,8 +207,9 @@ func (s *processorBaseSuite) TestUpdateAckLevel_Transfer_ProcessedFinished() {
 		queueShutdownFn,
 	)
 
-	processFinished, err := processorBase.updateAckLevel()
+	processFinished, ackLevel, err := processorBase.updateAckLevel()
 	s.NoError(err)
+	s.Nil(ackLevel)
 	s.True(processFinished)
 	s.True(queueShutdown)
 }
@@ -248,10 +249,11 @@ func (s *processorBaseSuite) TestUpdateAckLevel_Tranfer_ProcessNotFinished() {
 		nil,
 	)
 
-	processFinished, err := processorBase.updateAckLevel()
+	processFinished, ackLevel, err := processorBase.updateAckLevel()
 	s.NoError(err)
 	s.False(processFinished)
 	s.Equal(int64(2), updateAckLevel)
+	s.Equal(int64(2), ackLevel.(transferTaskKey).taskID)
 }
 
 func (s *processorBaseSuite) TestUpdateAckLevel_Timer_UpdateAckLevel() {
@@ -284,10 +286,11 @@ func (s *processorBaseSuite) TestUpdateAckLevel_Timer_UpdateAckLevel() {
 
 	timerQueueProcessBase := s.newTestProcessorBase(processingQueueStates, nil, updateTransferAckLevelFn, nil, nil)
 	timerQueueProcessBase.options.EnablePersistQueueStates = dynamicconfig.GetBoolPropertyFn(true)
-	processFinished, err := timerQueueProcessBase.updateAckLevel()
+	processFinished, ackLevel, err := timerQueueProcessBase.updateAckLevel()
 	s.NoError(err)
 	s.False(processFinished)
 	s.Equal(now.Add(-5*time.Second), updateAckLevel)
+	s.Equal(now.Add(-5*time.Second), ackLevel.(timerTaskKey).visibilityTimestamp)
 }
 
 func (s *processorBaseSuite) TestUpdateAckLevel_Timer_UpdateQueueStates() {
@@ -321,10 +324,11 @@ func (s *processorBaseSuite) TestUpdateAckLevel_Timer_UpdateQueueStates() {
 
 	timerQueueProcessBase := s.newTestProcessorBase(processingQueueStates, nil, nil, updateProcessingQueueStates, nil)
 	timerQueueProcessBase.options.EnablePersistQueueStates = dynamicconfig.GetBoolPropertyFn(true)
-	processFinished, err := timerQueueProcessBase.updateAckLevel()
+	processFinished, ackLevel, err := timerQueueProcessBase.updateAckLevel()
 	s.NoError(err)
 	s.False(processFinished)
 	s.Equal(len(processingQueueStates), len(pState))
+	s.Equal(now.Add(-5*time.Second), ackLevel.(timerTaskKey).visibilityTimestamp)
 }
 
 func (s *processorBaseSuite) newTestProcessorBase(

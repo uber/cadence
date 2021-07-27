@@ -22,8 +22,12 @@ package common
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -137,6 +141,23 @@ func CreatePersistenceRetryPolicy() backoff.RetryPolicy {
 	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
 	policy.SetExpirationInterval(retryPersistenceOperationExpirationInterval)
 
+	return policy
+}
+
+// CreatePersistenceRetryPolicyWithContext create a retry policy for persistence layer operations
+// which has an expiration interval computed based on the context's deadline
+func CreatePersistenceRetryPolicyWithContext(ctx context.Context) backoff.RetryPolicy {
+	if ctx == nil {
+		return CreatePersistenceRetryPolicy()
+	}
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return CreatePersistenceRetryPolicy()
+	}
+
+	policy := backoff.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
+	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
+	policy.SetExpirationInterval(deadline.Sub(time.Now()))
 	return policy
 }
 
@@ -899,4 +920,32 @@ func MicrosecondsToDuration(d int64) time.Duration {
 // NanosecondsToDuration converts number of nanoseconds to time.Duration
 func NanosecondsToDuration(d int64) time.Duration {
 	return time.Duration(d) * time.Nanosecond
+}
+
+// SleepWithMinDuration sleeps for the minimum of desired and available duration
+// returns the remaining available time duration
+func SleepWithMinDuration(desired time.Duration, available time.Duration) time.Duration {
+	d := MinDuration(desired, available)
+	if d > 0 {
+		time.Sleep(d)
+	}
+	return available - d
+}
+
+func LoadRSAPublicKey(path string) (*rsa.PublicKey, error) {
+	key, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("invalid public key path %s", path)
+	}
+	block, _ := pem.Decode(key)
+	if block == nil || block.Type != "PUBLIC KEY" {
+		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
+	}
+
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse DER encoded public key: " + err.Error())
+	}
+	publicKey := pub.(*rsa.PublicKey)
+	return publicKey, nil
 }

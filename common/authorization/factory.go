@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,32 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package ndc
+package authorization
 
 import (
-	"flag"
-	"testing"
-
-	"github.com/stretchr/testify/suite"
-
-	"github.com/uber/cadence/host"
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log"
 )
 
-func TestNDCIntegrationTestSuite(t *testing.T) {
-	flag.Parse()
-
-	clusterConfigs, err := host.GetTestClusterConfigs("../testdata/ndc_integration_test_clusters.yaml")
-	if err != nil {
-		panic(err)
+func NewAuthorizer(authorization config.Authorization, logger log.Logger) Authorizer {
+	switch true {
+	case authorization.OAuthAuthorizer.Enable:
+		return NewOAuthAuthorizer(authorization.OAuthAuthorizer, logger)
+	default:
+		return NewNopAuthorizer()
 	}
-	clusterConfigs[0].WorkerConfig = &host.WorkerConfig{}
-	clusterConfigs[1].WorkerConfig = &host.WorkerConfig{}
-	testCluster := host.NewPersistenceTestCluster(clusterConfigs[0])
-	params := NDCIntegrationTestSuiteParams{
-		ClusterConfigs:        clusterConfigs,
-		DefaultTestCluster:    testCluster,
-		VisibilityTestCluster: testCluster,
-	}
-	s := NewNDCIntegrationTestSuite(params)
-	suite.Run(t, s)
 }

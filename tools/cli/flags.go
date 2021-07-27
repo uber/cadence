@@ -276,6 +276,7 @@ const (
 	FlagBucketSize                        = "bucket_size"
 	DelayStartSeconds                     = "delay_start_seconds"
 	FlagConnectionAttributes              = "conn_attrs"
+	FlagJWT                               = "jwt"
 )
 
 var flagsForExecution = []cli.Flag{

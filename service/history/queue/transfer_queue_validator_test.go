@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
@@ -50,9 +49,8 @@ type (
 		mockLogger      *log.MockLogger
 		mockMetricScope *mocks.Scope
 
-		timeSource clock.TimeSource
-		processor  *transferQueueProcessorBase
-		validator  *transferQueueValidator
+		processor *transferQueueProcessorBase
+		validator *transferQueueValidator
 	}
 )
 
@@ -80,9 +78,9 @@ func (s *transferQueueValidatorSuite) SetupTest() {
 	s.mockLogger = &log.MockLogger{}
 	s.mockMetricScope = &mocks.Scope{}
 
-	s.timeSource = clock.NewRealTimeSource()
 	s.processor = &transferQueueProcessorBase{
 		processorBase: &processorBase{
+			shard: s.mockShard,
 			processingQueueCollections: newProcessingQueueCollections(
 				[]ProcessingQueueState{
 					NewProcessingQueueState(
@@ -99,7 +97,6 @@ func (s *transferQueueValidatorSuite) SetupTest() {
 	}
 	s.validator = newTransferQueueValidator(
 		s.processor,
-		s.timeSource,
 		dynamicconfig.GetDurationPropertyFn(testValidationInterval),
 		s.mockLogger,
 		s.mockMetricScope,
@@ -177,9 +174,7 @@ func (s *transferQueueValidatorSuite) TestAckTasks_NoTaskLost() {
 				TaskID: pendingTask.GetTaskID(),
 			},
 			task.QueueTypeActiveTransfer,
-			nil, nil, nil, nil, nil,
-			s.timeSource,
-			nil,
+			nil, nil, nil, nil, nil, nil,
 		)
 	}
 
@@ -210,9 +205,7 @@ func (s *transferQueueValidatorSuite) TestAckTasks_TaskLost() {
 				TaskID: pendingTask.GetTaskID(),
 			},
 			task.QueueTypeActiveTransfer,
-			nil, nil, nil, nil, nil,
-			s.timeSource,
-			nil,
+			nil, nil, nil, nil, nil, nil,
 		)
 	}
 

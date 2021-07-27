@@ -37,7 +37,7 @@ const (
 	// CassandraDefaultPort Cassandra default port
 	CassandraDefaultPort = "9042"
 	// CassandraProtoVersion env
-	CassandraProtoVersion = "CASSANDRA_PROTOCOL_VERSION"
+	CassandraProtoVersion = "CASSANDRA_PROTO_VERSION"
 	// CassandraDefaultProtoVersion Cassandra default protocol version
 	CassandraDefaultProtoVersion = "4"
 	// CassandraDefaultProtoVersionInteger Cassandra default protocol version int version

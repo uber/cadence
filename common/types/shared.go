@@ -6125,6 +6125,7 @@ type RemoveTaskRequest struct {
 	Type                *int32 `json:"type,omitempty"`
 	TaskID              int64  `json:"taskID,omitempty"`
 	VisibilityTimestamp *int64 `json:"visibilityTimestamp,omitempty"`
+	ClusterName         string `json:"clusterName,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -6155,6 +6156,14 @@ func (v *RemoveTaskRequest) GetTaskID() (o int64) {
 func (v *RemoveTaskRequest) GetVisibilityTimestamp() (o int64) {
 	if v != nil && v.VisibilityTimestamp != nil {
 		return *v.VisibilityTimestamp
+	}
+	return
+}
+
+// GetClusterName is an internal getter (TBD...)
+func (v *RemoveTaskRequest) GetClusterName() (o string) {
+	if v != nil {
+		return v.ClusterName
 	}
 	return
 }
@@ -10239,6 +10248,10 @@ func (e CrossClusterTaskFailedCause) String() string {
 		return "WORKFLOW_ALREADY_RUNNING"
 	case 3:
 		return "WORKFLOW_NOT_EXISTS"
+	case 4:
+		return "WORKFLOW_ALREADY_COMPLETED"
+	case 5:
+		return "UNCATEGORIZED"
 	}
 	return fmt.Sprintf("CrossClusterTaskFailedCause(%d)", w)
 }
@@ -10257,6 +10270,12 @@ func (e *CrossClusterTaskFailedCause) UnmarshalText(value []byte) error {
 		return nil
 	case "WORKFLOW_NOT_EXISTS":
 		*e = CrossClusterTaskFailedCauseWorkflowNotExists
+		return nil
+	case "WORKFLOW_ALREADY_COMPLETED":
+		*e = CrossClusterTaskFailedCauseWorkflowAlreadyCompleted
+		return nil
+	case "UNCATEGORIZED":
+		*e = CrossClusterTaskFailedCauseUncategorized
 		return nil
 	default:
 		val, err := strconv.ParseInt(s, 10, 32)
@@ -10282,6 +10301,75 @@ const (
 	CrossClusterTaskFailedCauseWorkflowAlreadyRunning
 	// CrossClusterTaskFailedCauseWorkflowNotExists is an option for CrossClusterTaskFailedCause
 	CrossClusterTaskFailedCauseWorkflowNotExists
+	//CrossClusterTaskFailedCauseWorkflowAlreadyCompleted is an option for CrossClusterTaskFailedCause
+	CrossClusterTaskFailedCauseWorkflowAlreadyCompleted
+	// CrossClusterTaskFailedCauseUncategorized is an option for CrossClusterTaskFailedCause
+	CrossClusterTaskFailedCauseUncategorized
+)
+
+// GetTaskFailedCause is an internal type (TBD...)
+type GetTaskFailedCause int32
+
+// Ptr is a helper function for getting pointer value
+func (e GetTaskFailedCause) Ptr() *GetTaskFailedCause {
+	return &e
+}
+
+// String returns a readable string representation of GetCrossClusterTaskFailedCause.
+func (e GetTaskFailedCause) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "SERVICE_BUSY"
+	case 1:
+		return "TIMEOUT"
+	case 2:
+		return "SHARD_OWNERSHIP_LOST"
+	case 3:
+		return "UNCATEGORIZED"
+	}
+	return fmt.Sprintf("GetCrossClusterTaskFailedCause(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *GetTaskFailedCause) UnmarshalText(value []byte) error {
+	switch s := strings.ToUpper(string(value)); s {
+	case "SERVICE_BUSY":
+		*e = GetTaskFailedCauseServiceBusy
+		return nil
+	case "TIMEOUT":
+		*e = GetTaskFailedCauseTimeout
+		return nil
+	case "SHARD_OWNERSHIP_LOST":
+		*e = GetTaskFailedCauseShardOwnershipLost
+		return nil
+	case "UNCATEGORIZED":
+		*e = GetTaskFailedCauseUncategorized
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "GetCrossClusterTaskFailedCause", err)
+		}
+		*e = GetTaskFailedCause(val)
+		return nil
+	}
+}
+
+// MarshalText encodes GetCrossClusterTaskFailedCause to text.
+func (e GetTaskFailedCause) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
+const (
+	// GetTaskFailedCauseServiceBusy is an option for GetCrossClusterTaskFailedCause
+	GetTaskFailedCauseServiceBusy GetTaskFailedCause = iota
+	// GetTaskFailedCauseTimeout is an option for GetCrossClusterTaskFailedCause
+	GetTaskFailedCauseTimeout
+	// GetTaskFailedCauseShardOwnershipLost is an option for GetCrossClusterTaskFailedCause
+	GetTaskFailedCauseShardOwnershipLost
+	// GetTaskFailedCauseUncategorized is an option for GetCrossClusterTaskFailedCause
+	GetTaskFailedCauseUncategorized
 )
 
 // CrossClusterTaskInfo is an internal type (TBD...)
@@ -10686,7 +10774,8 @@ func (v *GetCrossClusterTasksRequest) GetTargetCluster() (o string) {
 
 // GetCrossClusterTasksResponse is an internal type (TBD...)
 type GetCrossClusterTasksResponse struct {
-	TasksByShard map[int32][]*CrossClusterTaskRequest `json:"tasksByShard,omitempty"`
+	TasksByShard       map[int32][]*CrossClusterTaskRequest `json:"tasksByShard,omitempty"`
+	FailedCauseByShard map[int32]GetTaskFailedCause         `json:"failedCauseByShard,omitempty"`
 }
 
 // GetTasksByShard is an internal getter (TBD...)
@@ -10697,11 +10786,20 @@ func (v *GetCrossClusterTasksResponse) GetTasksByShard() (o map[int32][]*CrossCl
 	return
 }
 
+// GetFailedCauseByShard is an internal getter (TBD...)
+func (v *GetCrossClusterTasksResponse) GetFailedCauseByShard() (o map[int32]GetTaskFailedCause) {
+	if v != nil && v.FailedCauseByShard != nil {
+		return v.FailedCauseByShard
+	}
+	return
+}
+
 // RespondCrossClusterTasksCompletedRequest is an internal type (TBD...)
 type RespondCrossClusterTasksCompletedRequest struct {
 	ShardID       int32                       `json:"shardID,omitempty"`
 	TargetCluster string                      `json:"targetCluster,omitempty"`
 	TaskResponses []*CrossClusterTaskResponse `json:"taskResponses,omitempty"`
+	FetchNewTasks bool                        `json:"fetchNewTasks,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -10724,6 +10822,14 @@ func (v *RespondCrossClusterTasksCompletedRequest) GetTargetCluster() (o string)
 func (v *RespondCrossClusterTasksCompletedRequest) GetTaskResponses() (o []*CrossClusterTaskResponse) {
 	if v != nil && v.TaskResponses != nil {
 		return v.TaskResponses
+	}
+	return
+}
+
+// GetFetchNewTasks is an internal getter (TBD...)
+func (v *RespondCrossClusterTasksCompletedRequest) GetFetchNewTasks() (o bool) {
+	if v != nil {
+		return v.FetchNewTasks
 	}
 	return
 }

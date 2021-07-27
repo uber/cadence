@@ -1,4 +1,5 @@
-// Copyright (c) 2016 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,30 +19,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package host
+package testcluster
 
-import (
-	"flag"
-	"testing"
+import "github.com/uber/cadence/common/config"
 
-	"github.com/stretchr/testify/suite"
+type (
+	// PersistenceTestCluster exposes management operations on a database
+	// NOTE: Putting this interface in separate package to avoid cycle dependency
+	PersistenceTestCluster interface {
+		SetupTestDatabase()
+		TearDownTestDatabase()
+		Config() config.Persistence
+	}
 )
-
-func TestSizeLimitIntegrationSuite(t *testing.T) {
-	flag.Parse()
-
-	clusterConfig, err := GetTestClusterConfig("testdata/integration_sizelimit_cluster.yaml")
-	if err != nil {
-		panic(err)
-	}
-	testCluster := NewPersistenceTestCluster(clusterConfig)
-
-	s := new(SizeLimitIntegrationSuite)
-	params := IntegrationBaseParams{
-		DefaultTestCluster:    testCluster,
-		VisibilityTestCluster: testCluster,
-		TestClusterConfig:     clusterConfig,
-	}
-	s.IntegrationBase = NewIntegrationBase(params)
-	suite.Run(t, s)
-}

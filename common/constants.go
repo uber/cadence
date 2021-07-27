@@ -178,11 +178,17 @@ type (
 
 const (
 	// TaskTypeTransfer is the task type for transfer task
-	TaskTypeTransfer TaskType = iota + 2 // starting from 2 here to be consistent with the row type define for cassandra
+	// starting from 2 here to be consistent with the row type define for cassandra
+	// TODO: we can remove +2 from the following definition
+	// we don't have to make them consistent with cassandra definition
+	// there's also no row type for sql or other nosql persistence implementation
+	TaskTypeTransfer TaskType = iota + 2
 	// TaskTypeTimer is the task type for timer task
 	TaskTypeTimer
 	// TaskTypeReplication is the task type for replication task
 	TaskTypeReplication
+	// TaskTypeCrossCluster is the task type for cross cluster task
+	TaskTypeCrossCluster TaskType = 6
 )
 
 // StickyTaskConditionFailedErrorMsg error msg for sticky task ConditionFailedError

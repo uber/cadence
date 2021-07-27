@@ -899,6 +899,7 @@ func FromHistoryRemoveTaskRequest(t *types.RemoveTaskRequest) *historyv1.RemoveT
 		TaskType:       FromTaskType(t.Type),
 		TaskId:         t.TaskID,
 		VisibilityTime: unixNanoToTime(t.VisibilityTimestamp),
+		ClusterName:    t.ClusterName,
 	}
 }
 
@@ -911,6 +912,7 @@ func ToHistoryRemoveTaskRequest(t *historyv1.RemoveTaskRequest) *types.RemoveTas
 		Type:                ToTaskType(t.TaskType),
 		TaskID:              t.TaskId,
 		VisibilityTimestamp: timeToUnixNano(t.VisibilityTime),
+		ClusterName:         t.ClusterName,
 	}
 }
 
@@ -1419,7 +1421,8 @@ func FromHistoryGetCrossClusterTasksResponse(t *types.GetCrossClusterTasksRespon
 		return nil
 	}
 	return &historyv1.GetCrossClusterTasksResponse{
-		TasksByShard: FromCrossClusterTaskRequestMap(t.TasksByShard),
+		TasksByShard:       FromCrossClusterTaskRequestMap(t.TasksByShard),
+		FailedCauseByShard: FromGetTaskFailedCauseMap(t.FailedCauseByShard),
 	}
 }
 
@@ -1429,7 +1432,8 @@ func ToHistoryGetCrossClusterTasksResponse(t *historyv1.GetCrossClusterTasksResp
 		return nil
 	}
 	return &types.GetCrossClusterTasksResponse{
-		TasksByShard: ToCrossClusterTaskRequestMap(t.TasksByShard),
+		TasksByShard:       ToCrossClusterTaskRequestMap(t.TasksByShard),
+		FailedCauseByShard: ToGetTaskFailedCauseMap(t.FailedCauseByShard),
 	}
 }
 
@@ -1442,6 +1446,7 @@ func FromHistoryRespondCrossClusterTasksCompletedRequest(t *types.RespondCrossCl
 		ShardId:       t.ShardID,
 		TargetCluster: t.TargetCluster,
 		TaskResponses: FromCrossClusterTaskResponseArray(t.TaskResponses),
+		FetchNewTasks: t.FetchNewTasks,
 	}
 }
 
@@ -1454,6 +1459,7 @@ func ToHistoryRespondCrossClusterTasksCompletedRequest(t *historyv1.RespondCross
 		ShardID:       t.ShardId,
 		TargetCluster: t.TargetCluster,
 		TaskResponses: ToCrossClusterTaskResponseArray(t.TaskResponses),
+		FetchNewTasks: t.FetchNewTasks,
 	}
 }
 

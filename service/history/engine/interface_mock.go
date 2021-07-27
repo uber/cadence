@@ -591,6 +591,20 @@ func (mr *MockEngineMockRecorder) ResetTimerQueue(ctx, clusterName interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetTimerQueue", reflect.TypeOf((*MockEngine)(nil).ResetTimerQueue), ctx, clusterName)
 }
 
+// ResetCrossClusterQueue mocks base method
+func (m *MockEngine) ResetCrossClusterQueue(ctx context.Context, clusterName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResetCrossClusterQueue", ctx, clusterName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ResetCrossClusterQueue indicates an expected call of ResetCrossClusterQueue
+func (mr *MockEngineMockRecorder) ResetCrossClusterQueue(ctx, clusterName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetCrossClusterQueue", reflect.TypeOf((*MockEngine)(nil).ResetCrossClusterQueue), ctx, clusterName)
+}
+
 // DescribeTransferQueue mocks base method
 func (m *MockEngine) DescribeTransferQueue(ctx context.Context, clusterName string) (*types.DescribeQueueResponse, error) {
 	m.ctrl.T.Helper()
@@ -619,6 +633,21 @@ func (m *MockEngine) DescribeTimerQueue(ctx context.Context, clusterName string)
 func (mr *MockEngineMockRecorder) DescribeTimerQueue(ctx, clusterName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTimerQueue", reflect.TypeOf((*MockEngine)(nil).DescribeTimerQueue), ctx, clusterName)
+}
+
+// DescribeCrossClusterQueue mocks base method
+func (m *MockEngine) DescribeCrossClusterQueue(ctx context.Context, clusterName string) (*types.DescribeQueueResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeCrossClusterQueue", ctx, clusterName)
+	ret0, _ := ret[0].(*types.DescribeQueueResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeCrossClusterQueue indicates an expected call of DescribeCrossClusterQueue
+func (mr *MockEngineMockRecorder) DescribeCrossClusterQueue(ctx, clusterName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeCrossClusterQueue", reflect.TypeOf((*MockEngine)(nil).DescribeCrossClusterQueue), ctx, clusterName)
 }
 
 // NotifyNewHistoryEvent mocks base method

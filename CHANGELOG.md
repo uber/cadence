@@ -18,6 +18,7 @@ You can find a list of previous releases on the [github releases](https://github
 - Change `--connect-attributes` in `cadence-sql-tool` from URL encoding to the format of k1=v1,k2=v2...
 - Change `--domain_data` in `cadence domain update/register` from the format of k1:v1,k2:v2... to the format of k1=v1,k2=v2...
 - Deprecate local domains. All new domains should be created as global domains.
+- Server will deep merge configuration files when loading. No need to copy the whole config section, specify only those fields that needs overriding. (#4165)
 
 ## [0.18.0] - 2021-01-22
 

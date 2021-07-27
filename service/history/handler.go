@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package history github.com/uber/cadence/service/history Handler
+
 package history
 
 import (
@@ -50,11 +52,14 @@ import (
 	"github.com/uber/cadence/service/history/task"
 )
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package history github.com/uber/cadence/service/history Handler
+const shardOwnershipTransferDelay = 5 * time.Second
 
 type (
 	// Handler interface for history service
 	Handler interface {
+		common.Daemon
+
+		PrepareToStop(time.Duration) time.Duration
 		Health(context.Context) (*types.HealthStatus, error)
 		CloseShard(context.Context, *types.CloseShardRequest) error
 		DescribeHistoryHost(context.Context, *types.DescribeHistoryHostRequest) (*types.DescribeHistoryHostResponse, error)
@@ -136,7 +141,7 @@ var (
 func NewHandler(
 	resource resource.Resource,
 	config *config.Config,
-) *handlerImpl {
+) Handler {
 	handler := &handlerImpl{
 		Resource:        resource,
 		config:          config,
@@ -214,7 +219,7 @@ func (h *handlerImpl) Start() {
 
 // Stop stops the handler
 func (h *handlerImpl) Stop() {
-	h.PrepareToStop()
+	h.prepareToShutDown()
 	h.replicationTaskFetchers.Stop()
 	h.queueTaskProcessor.Stop()
 	h.controller.Stop()
@@ -223,7 +228,17 @@ func (h *handlerImpl) Stop() {
 }
 
 // PrepareToStop starts graceful traffic drain in preparation for shutdown
-func (h *handlerImpl) PrepareToStop() {
+func (h *handlerImpl) PrepareToStop(remainingTime time.Duration) time.Duration {
+	h.GetLogger().Info("ShutdownHandler: Initiating shardController shutdown")
+	h.controller.PrepareToStop()
+	h.GetLogger().Info("ShutdownHandler: Waiting for traffic to drain")
+	remainingTime = common.SleepWithMinDuration(shardOwnershipTransferDelay, remainingTime)
+	h.GetLogger().Info("ShutdownHandler: No longer taking rpc requests")
+	h.prepareToShutDown()
+	return remainingTime
+}
+
+func (h *handlerImpl) prepareToShutDown() {
 	atomic.StoreInt32(&h.shuttingDown, 1)
 }
 
@@ -763,6 +778,11 @@ func (h *handlerImpl) RemoveTask(
 		return executionMgr.CompleteReplicationTask(ctx, &persistence.CompleteReplicationTaskRequest{
 			TaskID: request.GetTaskID(),
 		})
+	case common.TaskTypeCrossCluster:
+		return executionMgr.CompleteCrossClusterTask(ctx, &persistence.CompleteCrossClusterTaskRequest{
+			TargetCluster: request.GetClusterName(),
+			TaskID:        request.GetTaskID(),
+		})
 	default:
 		return errInvalidTaskType
 	}
@@ -799,6 +819,8 @@ func (h *handlerImpl) ResetQueue(
 		err = engine.ResetTransferQueue(ctx, request.GetClusterName())
 	case common.TaskTypeTimer:
 		err = engine.ResetTimerQueue(ctx, request.GetClusterName())
+	case common.TaskTypeCrossCluster:
+		err = engine.ResetCrossClusterQueue(ctx, request.GetClusterName())
 	default:
 		err = errInvalidTaskType
 	}
@@ -831,6 +853,8 @@ func (h *handlerImpl) DescribeQueue(
 		resp, err = engine.DescribeTransferQueue(ctx, request.GetClusterName())
 	case common.TaskTypeTimer:
 		resp, err = engine.DescribeTimerQueue(ctx, request.GetClusterName())
+	case common.TaskTypeCrossCluster:
+		resp, err = engine.DescribeCrossClusterQueue(ctx, request.GetClusterName())
 	default:
 		err = errInvalidTaskType
 	}

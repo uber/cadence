@@ -53,7 +53,6 @@ func NewTransferStandbyTaskExecutor(
 	executionCache *execution.Cache,
 	historyResender ndc.HistoryResender,
 	logger log.Logger,
-	metricsClient metrics.Client,
 	clusterName string,
 	config *config.Config,
 ) Executor {
@@ -63,7 +62,6 @@ func NewTransferStandbyTaskExecutor(
 			archiverClient,
 			executionCache,
 			logger,
-			metricsClient,
 			config,
 		),
 		clusterName:     clusterName,
@@ -72,11 +70,11 @@ func NewTransferStandbyTaskExecutor(
 }
 
 func (t *transferStandbyTaskExecutor) Execute(
-	taskInfo Info,
+	task Task,
 	shouldProcessTask bool,
 ) error {
 
-	transferTask, ok := taskInfo.(*persistence.TransferTaskInfo)
+	transferTask, ok := task.GetInfo().(*persistence.TransferTaskInfo)
 	if !ok {
 		return errUnexpectedTask
 	}

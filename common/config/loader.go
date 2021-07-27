@@ -22,12 +22,11 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 
+	uconfig "go.uber.org/config"
 	"gopkg.in/validator.v2"
-	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -80,17 +79,18 @@ func Load(env string, configDir string, zone string, config interface{}) error {
 
 	log.Printf("Loading configFiles=%v\n", files)
 
+	var options []uconfig.YAMLOption
 	for _, f := range files {
-		// This is tagged nosec because the file names being read are for config files that are not user supplied
-		// #nosec
-		data, err := ioutil.ReadFile(f)
-		if err != nil {
-			return err
-		}
-		err = yaml.Unmarshal(data, config)
-		if err != nil {
-			return err
-		}
+		options = append(options, uconfig.File(f))
+	}
+	yaml, err := uconfig.NewYAML(options...)
+	if err != nil {
+		return err
+	}
+
+	err = yaml.Get(uconfig.Root).Populate(config)
+	if err != nil {
+		return err
 	}
 
 	return validator.Validate(config)

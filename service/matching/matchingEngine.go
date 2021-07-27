@@ -219,8 +219,8 @@ func (e *matchingEngineImpl) getTaskListByDomainLocked(
 	domainID string,
 ) []string {
 	var taskLists []string
-	for tl := range e.taskLists {
-		if tl.taskListKind == types.TaskListKindNormal && tl.domainID == domainID {
+	for tl, tlm := range e.taskLists {
+		if tlm.GetTaskListKind() == types.TaskListKindNormal && tl.domainID == domainID {
 			taskLists = append(taskLists, tl.qualifiedTaskListName.baseName)
 		}
 	}
@@ -267,7 +267,7 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		tag.WorkflowTaskListKind(int32(request.GetTaskList().GetKind())),
 	)
 
-	taskList, err := newTaskListID(domainID, taskListName, taskListType, taskListKind)
+	taskList, err := newTaskListID(domainID, taskListName, taskListType)
 	if err != nil {
 		return false, err
 	}
@@ -315,7 +315,7 @@ func (e *matchingEngineImpl) AddActivityTask(
 		tag.WorkflowTaskListKind(int32(request.GetTaskList().GetKind())),
 	)
 
-	taskList, err := newTaskListID(domainID, taskListName, taskListType, taskListKind)
+	taskList, err := newTaskListID(domainID, taskListName, taskListType)
 	if err != nil {
 		return false, err
 	}
@@ -361,7 +361,7 @@ pollLoop:
 			return nil, err
 		}
 
-		taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision, taskListKind)
+		taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
 		if err != nil {
 			return nil, err
 		}
@@ -370,7 +370,7 @@ pollLoop:
 		// long-poll when frontend calls CancelOutstandingPoll API
 		pollerCtx := context.WithValue(hCtx.Context, pollerIDKey, pollerID)
 		pollerCtx = context.WithValue(pollerCtx, identityKey, request.GetIdentity())
-		task, err := e.getTask(pollerCtx, taskList, nil, request.TaskList.Kind)
+		task, err := e.getTask(pollerCtx, taskList, nil, taskListKind)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if err == ErrNoTasks || err == errPumpClosed {
@@ -454,7 +454,6 @@ func (e *matchingEngineImpl) PollForActivityTask(
 	pollerID := req.GetPollerID()
 	request := req.PollRequest
 	taskListName := request.GetTaskList().GetName()
-	taskListKind := request.GetTaskList().Kind
 	e.logger.Debug("Received PollForActivityTask",
 		tag.WorkflowTaskListName(taskListName),
 		tag.WorkflowDomainID(domainID),
@@ -467,7 +466,7 @@ pollLoop:
 			return nil, err
 		}
 
-		taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity, taskListKind)
+		taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity)
 		if err != nil {
 			return nil, err
 		}
@@ -532,7 +531,7 @@ func (e *matchingEngineImpl) QueryWorkflow(
 	domainID := queryRequest.GetDomainUUID()
 	taskListName := queryRequest.GetTaskList().GetName()
 	taskListKind := queryRequest.GetTaskList().Kind
-	taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision, taskListKind)
+	taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
 	if err != nil {
 		return nil, err
 	}
@@ -612,7 +611,7 @@ func (e *matchingEngineImpl) CancelOutstandingPoll(
 	taskListKind := request.GetTaskList().Kind
 	pollerID := request.GetPollerID()
 
-	taskList, err := newTaskListID(domainID, taskListName, taskListType, taskListKind)
+	taskList, err := newTaskListID(domainID, taskListName, taskListType)
 	if err != nil {
 		return err
 	}
@@ -638,7 +637,7 @@ func (e *matchingEngineImpl) DescribeTaskList(
 	taskListName := request.GetDescRequest().GetTaskList().GetName()
 	taskListKind := request.GetDescRequest().GetTaskList().Kind
 
-	taskList, err := newTaskListID(domainID, taskListName, taskListType, taskListKind)
+	taskList, err := newTaskListID(domainID, taskListName, taskListType)
 	if err != nil {
 		return nil, err
 	}
@@ -730,7 +729,7 @@ func (e *matchingEngineImpl) getAllPartitions(
 		return partitionKeys, err
 	}
 	taskList := request.GetTaskList()
-	taskListID, err := newTaskListID(domainID, taskList.GetName(), taskListType, taskList.Kind)
+	taskListID, err := newTaskListID(domainID, taskList.GetName(), taskListType)
 	rootPartition := taskListID.GetRoot()
 
 	partitionKeys = append(partitionKeys, rootPartition)
@@ -751,7 +750,7 @@ func (e *matchingEngineImpl) getAllPartitions(
 // Loads a task from persistence and wraps it in a task context
 func (e *matchingEngineImpl) getTask(
 	ctx context.Context, taskList *taskListID, maxDispatchPerSecond *float64, taskListKind *types.TaskListKind,
-) (*internalTask, error) {
+) (*InternalTask, error) {
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
 		return nil, err
@@ -773,7 +772,7 @@ func (e *matchingEngineImpl) unloadTaskList(id *taskListID) {
 
 // Populate the decision task response based on context and scheduled/started events.
 func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
-	task *internalTask,
+	task *InternalTask,
 	historyResponse *types.RecordDecisionTaskStartedResponse,
 	scope metrics.Scope,
 ) *types.MatchingPollForDecisionTaskResponse {
@@ -812,7 +811,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 
 // Populate the activity task response based on context and scheduled/started events.
 func (e *matchingEngineImpl) createPollForActivityTaskResponse(
-	task *internalTask,
+	task *InternalTask,
 	historyResponse *types.RecordActivityTaskStartedResponse,
 	scope metrics.Scope,
 ) *types.PollForActivityTaskResponse {
@@ -864,7 +863,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 func (e *matchingEngineImpl) recordDecisionTaskStarted(
 	ctx context.Context,
 	pollReq *types.PollForDecisionTaskRequest,
-	task *internalTask,
+	task *InternalTask,
 ) (*types.RecordDecisionTaskStartedResponse, error) {
 	request := &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        task.event.DomainID,
@@ -893,7 +892,7 @@ func (e *matchingEngineImpl) recordDecisionTaskStarted(
 func (e *matchingEngineImpl) recordActivityTaskStarted(
 	ctx context.Context,
 	pollReq *types.PollForActivityTaskRequest,
-	task *internalTask,
+	task *InternalTask,
 ) (*types.RecordActivityTaskStartedResponse, error) {
 	request := &types.RecordActivityTaskStartedRequest{
 		DomainUUID:        task.event.DomainID,

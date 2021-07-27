@@ -611,6 +611,7 @@ func FromAdminRemoveTaskRequest(t *types.RemoveTaskRequest) *adminv1.RemoveTaskR
 		TaskType:       FromTaskType(t.Type),
 		TaskId:         t.TaskID,
 		VisibilityTime: unixNanoToTime(t.VisibilityTimestamp),
+		ClusterName:    t.ClusterName,
 	}
 }
 
@@ -623,6 +624,7 @@ func ToAdminRemoveTaskRequest(t *adminv1.RemoveTaskRequest) *types.RemoveTaskReq
 		Type:                ToTaskType(t.TaskType),
 		TaskID:              t.TaskId,
 		VisibilityTimestamp: timeToUnixNano(t.VisibilityTime),
+		ClusterName:         t.ClusterName,
 	}
 }
 
@@ -705,7 +707,8 @@ func FromAdminGetCrossClusterTasksResponse(t *types.GetCrossClusterTasksResponse
 		return nil
 	}
 	return &adminv1.GetCrossClusterTasksResponse{
-		TasksByShard: FromCrossClusterTaskRequestMap(t.TasksByShard),
+		TasksByShard:       FromCrossClusterTaskRequestMap(t.TasksByShard),
+		FailedCauseByShard: FromGetTaskFailedCauseMap(t.FailedCauseByShard),
 	}
 }
 
@@ -715,7 +718,8 @@ func ToAdminGetCrossClusterTasksResponse(t *adminv1.GetCrossClusterTasksResponse
 		return nil
 	}
 	return &types.GetCrossClusterTasksResponse{
-		TasksByShard: ToCrossClusterTaskRequestMap(t.TasksByShard),
+		TasksByShard:       ToCrossClusterTaskRequestMap(t.TasksByShard),
+		FailedCauseByShard: ToGetTaskFailedCauseMap(t.FailedCauseByShard),
 	}
 }
 

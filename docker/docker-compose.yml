@@ -27,6 +27,7 @@ services:
      - "7934:7934"
      - "7935:7935"
      - "7939:7939"
+     - "7833:7833"
     environment:
       - "CASSANDRA_SEEDS=cassandra"
       - "PROMETHEUS_ENDPOINT_0=0.0.0.0:8000"

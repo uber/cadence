@@ -161,6 +161,7 @@ message RemoveTaskRequest {
   shared.v1.TaskType task_type = 2;
   int64 task_id = 3;
   google.protobuf.Timestamp visibility_time = 4;
+  string cluster_name = 5;
 }
 
 message RemoveTaskResponse {
@@ -323,6 +324,7 @@ message GetCrossClusterTasksRequest {
 
 message GetCrossClusterTasksResponse {
   map<int32, shared.v1.CrossClusterTaskRequests> tasks_by_shard = 1;
+  map<int32, shared.v1.GetTaskFailedCause> failed_cause_by_shard = 2;
 }
 
 /* If get_all is True, then all provided filters are ignored and all values associated with config_name

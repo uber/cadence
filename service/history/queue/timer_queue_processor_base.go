@@ -128,7 +128,6 @@ func newTimerQueueProcessorBase(
 				taskExecutor,
 				taskProcessor,
 				processorBase.redispatcher.AddTask,
-				shard.GetTimeSource(),
 				shard.GetConfig().TimerTaskMaxRetryCount,
 			)
 		},
@@ -240,7 +239,7 @@ processorPumpLoop:
 
 			t.processQueueCollections(levels)
 		case <-updateAckTimer.C:
-			processFinished, err := t.updateAckLevel()
+			processFinished, _, err := t.updateAckLevel()
 			if err == shard.ErrShardClosed || (err == nil && processFinished) {
 				go t.Stop()
 				break processorPumpLoop

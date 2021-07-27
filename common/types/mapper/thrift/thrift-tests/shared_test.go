@@ -36,6 +36,12 @@ import (
 // "github.com/uber/cadence/common/persistence" imports
 // "github.com/uber/cadence/common/types/mapper/thrift"
 
+func TestRemoveTaskRequest(t *testing.T) {
+	for _, item := range []*types.RemoveTaskRequest{nil, {}, &testdata.AdminRemoveTaskRequest} {
+		assert.Equal(t, item, thrift.ToRemoveTaskRequest(thrift.FromRemoveTaskRequest(item)))
+	}
+}
+
 func TestCrossClusterTaskInfo(t *testing.T) {
 	for _, item := range []*types.CrossClusterTaskInfo{nil, {}, &testdata.CrossClusterTaskInfo} {
 		assert.Equal(t, item, thrift.ToCrossClusterTaskInfo(thrift.FromCrossClusterTaskInfo(item)))
@@ -81,6 +87,12 @@ func TestCrossClusterTaskResponseArray(t *testing.T) {
 func TestCrossClusterTaskRequestMap(t *testing.T) {
 	for _, item := range []map[int32][]*types.CrossClusterTaskRequest{nil, {}, testdata.CrossClusterTaskRequestMap} {
 		assert.Equal(t, item, thrift.ToCrossClusterTaskRequestMap(thrift.FromCrossClusterTaskRequestMap(item)))
+	}
+}
+
+func TestGetTaskFailedCauseMap(t *testing.T) {
+	for _, item := range []map[int32]types.GetTaskFailedCause{nil, {}, testdata.GetCrossClusterTaskFailedCauseMap} {
+		assert.Equal(t, item, thrift.ToGetTaskFailedCauseMap(thrift.FromGetTaskFailedCauseMap(item)))
 	}
 }
 

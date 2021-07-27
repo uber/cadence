@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,10 @@ package ndc
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	"go.uber.org/yarpc"
@@ -42,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
 	test "github.com/uber/cadence/common/testing"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/host"
@@ -67,14 +70,14 @@ type (
 		standByTaskID               int64
 
 		clusterConfigs        []*host.TestClusterConfig
-		defaultTestCluster    pt.PersistenceTestCluster
-		visibilityTestCluster pt.PersistenceTestCluster
+		defaultTestCluster    testcluster.PersistenceTestCluster
+		visibilityTestCluster testcluster.PersistenceTestCluster
 	}
 
 	NDCIntegrationTestSuiteParams struct {
 		ClusterConfigs        []*host.TestClusterConfig
-		DefaultTestCluster    pt.PersistenceTestCluster
-		VisibilityTestCluster pt.PersistenceTestCluster
+		DefaultTestCluster    testcluster.PersistenceTestCluster
+		VisibilityTestCluster testcluster.PersistenceTestCluster
 	}
 )
 
@@ -86,6 +89,25 @@ var (
 		{ClusterName: clusterName[2]},
 	}
 )
+
+func TestNDCIntegrationTestSuite(t *testing.T) {
+	flag.Parse()
+
+	clusterConfigs, err := host.GetTestClusterConfigs("../testdata/ndc_integration_test_clusters.yaml")
+	if err != nil {
+		panic(err)
+	}
+	clusterConfigs[0].WorkerConfig = &host.WorkerConfig{}
+	clusterConfigs[1].WorkerConfig = &host.WorkerConfig{}
+	testCluster := host.NewPersistenceTestCluster(clusterConfigs[0])
+	params := NDCIntegrationTestSuiteParams{
+		ClusterConfigs:        clusterConfigs,
+		DefaultTestCluster:    testCluster,
+		VisibilityTestCluster: testCluster,
+	}
+	s := NewNDCIntegrationTestSuite(params)
+	suite.Run(t, s)
+}
 
 func NewNDCIntegrationTestSuite(params NDCIntegrationTestSuiteParams) *NDCIntegrationTestSuite {
 	return &NDCIntegrationTestSuite{

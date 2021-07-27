@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination adminHandler_mock.go -package frontend github.com/uber/cadence/service/frontend AdminHandler
+
 package frontend
 
 import (
@@ -57,11 +59,11 @@ var (
 	errMaxMessageIDNotSet = &types.BadRequestError{Message: "Max messageID is not set."}
 )
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination adminHandler_mock.go -package frontend github.com/uber/cadence/service/frontend AdminHandler
-
 type (
 	// AdminHandler interface for admin service
 	AdminHandler interface {
+		common.Daemon
+
 		AddSearchAttribute(context.Context, *types.AddSearchAttributeRequest) error
 		CloseShard(context.Context, *types.CloseShardRequest) error
 		DescribeCluster(context.Context) (*types.DescribeClusterResponse, error)
@@ -120,7 +122,7 @@ func NewAdminHandler(
 	resource resource.Resource,
 	params *service.BootstrapParams,
 	config *Config,
-) *adminHandlerImpl {
+) AdminHandler {
 
 	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
 		resource.GetDomainManager(),
