@@ -35,3 +35,7 @@ func (a *nopAuthority) Authorize(
 ) (Result, error) {
 	return Result{Decision: DecisionAllow}, nil
 }
+
+func (a *nopAuthority) Authenticate(_ context.Context, _ interface{}) (interface{}, error) {
+	return nil, nil
+}

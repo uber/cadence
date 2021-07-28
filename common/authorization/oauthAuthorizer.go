@@ -84,6 +84,26 @@ func (a *oauthAuthority) Authorize(
 	return Result{Decision: DecisionAllow}, nil
 }
 
+// Authenticate defines the logic to authenticate a user
+func (a *oauthAuthority) Authenticate(
+	_ context.Context,
+	claims interface{},
+) (interface{}, error) {
+	privateKey, err := common.LoadRSAPrivateKey(a.authorizationCfg.JwtCredentials.PrivateKey)
+	algorithm := jwt.Algorithm(a.authorizationCfg.JwtCredentials.Algorithm)
+	signer, err := jwt.NewSignerRS(algorithm, privateKey)
+	if err != nil {
+		return nil, err
+	}
+	builder := jwt.NewBuilder(signer)
+	token, err := builder.Build(claims)
+	if token == nil {
+		return nil, err
+	}
+	tokenString := token.String()
+	return &tokenString, nil
+}
+
 func (a *oauthAuthority) getVerifier() (jwt.Verifier, error) {
 	publicKey, err := common.LoadRSAPublicKey(a.authorizationCfg.JwtCredentials.PublicKey)
 	if err != nil {

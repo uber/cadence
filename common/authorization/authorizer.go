@@ -83,4 +83,5 @@ func NewPermission(permission string) Permission {
 // Authorizer is an interface for authorization
 type Authorizer interface {
 	Authorize(ctx context.Context, attributes *Attributes) (Result, error)
+	Authenticate(ctx context.Context, attributes interface{}) (interface{}, error)
 }

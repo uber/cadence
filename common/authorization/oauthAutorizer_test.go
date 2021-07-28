@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/cristalhq/jwt/v3"
 	"github.com/stretchr/testify/mock"
@@ -47,6 +48,7 @@ type (
 		token           string
 		tokenExpiredIat string
 		ctx             context.Context
+		claims          jwtClaims
 	}
 )
 
@@ -100,6 +102,14 @@ func (s *oauthSuite) SetupTest() {
 		Permission: PermissionRead,
 	}
 	s.ctx = ctx
+	s.claims = jwtClaims{
+		Sub:        "test",
+		Name:       "Test",
+		Permission: "write",
+		Domain:     "test-domain",
+		Iat:        time.Now().Unix(),
+		TTL:        300000,
+	}
 }
 
 func (s *oauthSuite) TearDownTest() {
@@ -187,4 +197,11 @@ func (s *oauthSuite) TestIncorrectDomainInAttributes() {
 	}))
 	result, _ := authorizer.Authorize(s.ctx, &s.att)
 	s.Equal(result.Decision, DecisionDeny)
+}
+
+func (s *oauthSuite) TestCorrectTokenCreation() {
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	result, err := authorizer.Authenticate(s.ctx, &s.att)
+	s.NoError(err)
+	s.Equal(result, nil)
 }
