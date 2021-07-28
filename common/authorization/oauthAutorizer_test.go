@@ -116,14 +116,14 @@ func (s *oauthSuite) TearDownTest() {
 	s.logger.AssertExpectations(s.T())
 }
 
-func (s *oauthSuite) TestCorrectPayload() {
+func (s *oauthSuite) TestCorrectPayloadAuthorize() {
 	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
 	result, err := authorizer.Authorize(s.ctx, &s.att)
 	s.NoError(err)
 	s.Equal(result.Decision, DecisionAllow)
 }
 
-func (s *oauthSuite) TestIncorrectPublicKey() {
+func (s *oauthSuite) TestIncorrectPublicKeyAuthorize() {
 	s.cfg.JwtCredentials.PublicKey = "incorrectPublicKey"
 	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
 	result, err := authorizer.Authorize(s.ctx, &s.att)
@@ -131,7 +131,7 @@ func (s *oauthSuite) TestIncorrectPublicKey() {
 	s.Equal(result.Decision, DecisionDeny)
 }
 
-func (s *oauthSuite) TestIncorrectAlgorithm() {
+func (s *oauthSuite) TestIncorrectAlgorithmAuthorize() {
 	s.cfg.JwtCredentials.Algorithm = "SHA256"
 	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
 	result, err := authorizer.Authorize(s.ctx, &s.att)
@@ -139,7 +139,7 @@ func (s *oauthSuite) TestIncorrectAlgorithm() {
 	s.Equal(result.Decision, DecisionDeny)
 }
 
-func (s *oauthSuite) TestMaxTTLLargerInToken() {
+func (s *oauthSuite) TestMaxTTLLargerInTokenAuthorize() {
 	s.cfg.MaxJwtTTL = 1
 	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
@@ -149,7 +149,7 @@ func (s *oauthSuite) TestMaxTTLLargerInToken() {
 	s.Equal(result.Decision, DecisionDeny)
 }
 
-func (s *oauthSuite) TestIncorrectToken() {
+func (s *oauthSuite) TestIncorrectTokenAuthorize() {
 	ctx := context.Background()
 	ctx, call := encoding.NewInboundCall(ctx)
 	err := call.ReadFromRequest(&transport.Request{
@@ -164,7 +164,7 @@ func (s *oauthSuite) TestIncorrectToken() {
 	s.Equal(result.Decision, DecisionDeny)
 }
 
-func (s *oauthSuite) TestIatExpiredToken() {
+func (s *oauthSuite) TestIatExpiredTokenAuthorize() {
 	ctx := context.Background()
 	ctx, call := encoding.NewInboundCall(ctx)
 	err := call.ReadFromRequest(&transport.Request{
@@ -179,7 +179,7 @@ func (s *oauthSuite) TestIatExpiredToken() {
 	s.Equal(result.Decision, DecisionDeny)
 }
 
-func (s *oauthSuite) TestIncorrectPermissionInAttributes() {
+func (s *oauthSuite) TestIncorrectPermissionInAttributesAuthorize() {
 	s.att.Permission = PermissionWrite
 	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
@@ -189,7 +189,7 @@ func (s *oauthSuite) TestIncorrectPermissionInAttributes() {
 	s.Equal(result.Decision, DecisionDeny)
 }
 
-func (s *oauthSuite) TestIncorrectDomainInAttributes() {
+func (s *oauthSuite) TestIncorrectDomainInAttributesAuthorize() {
 	s.att.DomainName = "myotherdomain"
 	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
@@ -199,9 +199,41 @@ func (s *oauthSuite) TestIncorrectDomainInAttributes() {
 	s.Equal(result.Decision, DecisionDeny)
 }
 
-func (s *oauthSuite) TestCorrectTokenCreation() {
+func (s *oauthSuite) TestCorrectTokenCreationAuthenticate() {
 	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
-	result, err := authorizer.Authenticate(s.ctx, &s.att)
+	result, err := authorizer.Authenticate(s.ctx, s.claims)
 	s.NoError(err)
-	s.Equal(result, nil)
+	ctx := context.Background()
+	ctx, call := encoding.NewInboundCall(ctx)
+	token := result.(*string)
+	err = call.ReadFromRequest(&transport.Request{
+		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, *token),
+	})
+	s.NoError(err)
+	decision, err := authorizer.Authorize(ctx, &s.att)
+	s.NoError(err)
+	s.Equal(decision.Decision, DecisionAllow)
+}
+
+func (s *oauthSuite) TestIncorrectPrivateKeyForTokenCreationAuthenticate() {
+	s.cfg.JwtCredentials.PrivateKey = "NotAPrivateKey"
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	token, err := authorizer.Authenticate(s.ctx, s.claims)
+	s.EqualError(err, "invalid private key path NotAPrivateKey")
+	s.Nil(token)
+}
+
+func (s *oauthSuite) TestIncorrectAlgorithmAuthenticate() {
+	s.cfg.JwtCredentials.Algorithm = "SHA256"
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	token, err := authorizer.Authenticate(s.ctx, s.claims)
+	s.EqualError(err, "jwt: algorithm is not supported")
+	s.Nil(token)
+}
+
+func (s *oauthSuite) TestIncorrectClaimsType() {
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	token, err := authorizer.Authenticate(s.ctx, "claims")
+	s.EqualError(err, "jwtClaims type expected, string provided")
+	s.Nil(token)
 }

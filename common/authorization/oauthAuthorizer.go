@@ -89,14 +89,21 @@ func (a *oauthAuthority) Authenticate(
 	_ context.Context,
 	claims interface{},
 ) (interface{}, error) {
+	claimsJwt, ok := claims.(jwtClaims)
+	if !ok {
+		return nil, fmt.Errorf("jwtClaims type expected, %T provided", claims)
+	}
 	privateKey, err := common.LoadRSAPrivateKey(a.authorizationCfg.JwtCredentials.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
 	algorithm := jwt.Algorithm(a.authorizationCfg.JwtCredentials.Algorithm)
 	signer, err := jwt.NewSignerRS(algorithm, privateKey)
 	if err != nil {
 		return nil, err
 	}
 	builder := jwt.NewBuilder(signer)
-	token, err := builder.Build(claims)
+	token, err := builder.Build(claimsJwt)
 	if token == nil {
 		return nil, err
 	}
