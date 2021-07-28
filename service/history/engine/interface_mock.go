@@ -714,3 +714,15 @@ func (mr *MockEngineMockRecorder) NotifyNewTimerTasks(executionInfo, tasks inter
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTimerTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewTimerTasks), executionInfo, tasks)
 }
+
+// NotifyNewCrossClusterTasks mocks base method
+func (m *MockEngine) NotifyNewCrossClusterTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "NotifyNewCrossClusterTasks", executionInfo, tasks)
+}
+
+// NotifyNewCrossClusterTasks indicates an expected call of NotifyNewCrossClusterTasks
+func (mr *MockEngineMockRecorder) NotifyNewCrossClusterTasks(executionInfo, tasks interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewCrossClusterTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewCrossClusterTasks), executionInfo, tasks)
+}

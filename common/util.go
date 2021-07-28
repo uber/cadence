@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"math/rand"
 	"sort"
@@ -957,10 +958,14 @@ func SleepWithMinDuration(desired time.Duration, available time.Duration) time.D
 	return available - d
 }
 
-// StringToRSAPublicKey converts public key from string to rsa.PublicKey type
-func StringToRSAPublicKey(publicKeyString string) (*rsa.PublicKey, error) {
-	block, _ := pem.Decode([]byte(publicKeyString))
-	if block == nil {
+// LoadRSAPublicKey loads a rsa.PublicKey from the given filepath
+func LoadRSAPublicKey(path string) (*rsa.PublicKey, error) {
+	key, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("invalid public key path %s", path)
+	}
+	block, _ := pem.Decode(key)
+	if block == nil || block.Type != "PUBLIC KEY" {
 		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
 	}
 

@@ -763,12 +763,18 @@ func getCliIdentity() string {
 	return fmt.Sprintf("cadence-cli@%s", hostName)
 }
 
+func populateContextFromCLIContext(ctx context.Context, cliCtx *cli.Context) context.Context {
+	ctx = context.WithValue(ctx, CtxKeyJWT, getJWT(cliCtx))
+	return ctx
+}
+
 func newContext(c *cli.Context) (context.Context, context.CancelFunc) {
 	contextTimeout := defaultContextTimeout
 	if c.GlobalInt(FlagContextTimeout) > 0 {
 		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
 	}
-	return context.WithTimeout(context.Background(), contextTimeout)
+	ctx := populateContextFromCLIContext(context.Background(), c)
+	return context.WithTimeout(ctx, contextTimeout)
 }
 
 func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc) {
