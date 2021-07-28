@@ -63,7 +63,7 @@ type (
 		// Blobstore is the config for setting up blobstore
 		Blobstore Blobstore `yaml:"blobstore"`
 		// Authorization is the config for setting up authorization
-		Authorization Authorization `yaml:authorization`
+		Authorization Authorization `yaml:"authorization"`
 	}
 
 	Authorization struct {
@@ -86,9 +86,9 @@ type (
 	JwtCredentials struct {
 		// support: RS256 (RSA using SHA256)
 		Algorithm string `yaml:"algorithm"`
-		// for verifying JWT token passed in from external clients
+		// Public Key Path for verifying JWT token passed in from external clients
 		PublicKey string `yaml:"publicKey"`
-		// for creating JWT token
+		// Private Key Path for creating JWT token
 		PrivateKey string `yaml:"privateKey"`
 	}
 
@@ -309,13 +309,6 @@ type (
 		RPCName string `yaml:"rpcName"`
 		// Address indicate the remote service address(Host:Port). Host can be DNS name.
 		RPCAddress string `yaml:"rpcAddress"`
-	}
-
-	// ReplicationTaskProcessorConfig is the config for replication task processor.
-	ReplicationTaskProcessorConfig struct {
-		NoTaskInitialWaitIntervalSecs int     `yaml:"noTaskInitialWaitIntervalSecs"`
-		NoTaskWaitBackoffCoefficient  float64 `yaml:"noTaskWaitBackoffCoefficient"`
-		NoTaskMaxWaitIntervalSecs     int     `yaml:"noTaskMaxWaitIntervalSecs"`
 	}
 
 	// DCRedirectionPolicy contains the frontend datacenter redirection policy

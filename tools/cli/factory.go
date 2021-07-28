@@ -44,6 +44,14 @@ const (
 	cadenceFrontendService = "cadence-frontend"
 )
 
+// ContextKey is an alias for string, used as context key
+type ContextKey string
+
+const (
+	// CtxKeyJWT is the name of the context key for the JWT
+	CtxKeyJWT = ContextKey("ctxKeyJWT")
+)
+
 // ClientFactory is used to construct rpc clients
 type ClientFactory interface {
 	ClientFrontendClient(c *cli.Context) clientFrontend.Interface
@@ -124,6 +132,11 @@ type versionMiddleware struct {
 func (vm *versionMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	request.Headers = request.Headers.
 		With(common.ClientImplHeaderName, cc.CLI).
-		With(common.FeatureVersionHeaderName, cc.SupportedCLIVersion)
+		With(common.FeatureVersionHeaderName, cc.SupportedCLIVersion).
+		With(common.AuthorizationTokenHeaderName, ctx.Value(CtxKeyJWT).(string))
 	return out.Call(ctx, request)
+}
+
+func getJWT(c *cli.Context) string {
+	return c.GlobalString(FlagJWT)
 }

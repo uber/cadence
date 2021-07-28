@@ -59,6 +59,11 @@ func NewCliApp() *cli.App {
 			Usage:  "optional timeout for context of RPC call in seconds",
 			EnvVar: "CADENCE_CONTEXT_TIMEOUT",
 		},
+		cli.StringFlag{
+			Name:   FlagJWT,
+			Usage:  "optional JWT for authorization",
+			EnvVar: "CADENCE_CLI_JWT",
+		},
 	}
 	app.Commands = []cli.Command{
 		{
