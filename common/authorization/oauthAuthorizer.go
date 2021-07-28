@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/cristalhq/jwt/v3"
@@ -43,12 +44,12 @@ type oauthAuthority struct {
 }
 
 type jwtClaims struct {
-	Sub        string
-	Name       string
-	Permission string
-	Domain     string
-	Iat        int64
-	TTL        int64
+	Sub    string
+	Name   string
+	Groups string // separated by space
+	Admin  bool
+	Iat    int64
+	TTL    int64
 }
 
 // NewOAuthAuthorizer creates a oauth authority
@@ -80,7 +81,15 @@ func (a *oauthAuthority) Authorize(
 		a.log.Debug("request is not authorized", tag.Error(err))
 		return Result{Decision: DecisionDeny}, nil
 	}
-	err = a.validateClaims(claims, attributes)
+	if claims.Admin {
+		return Result{Decision: DecisionAllow}, nil
+	}
+	domain, err := a.domainCache.GetDomain(attributes.DomainName)
+	if err != nil {
+		return Result{Decision: DecisionDeny}, err
+	}
+
+	err = a.validateClaims(claims, attributes, domain.GetInfo().Data)
 	if err != nil {
 		a.log.Debug("request is not authorized", tag.Error(err))
 		return Result{Decision: DecisionDeny}, nil
@@ -111,19 +120,33 @@ func (a *oauthAuthority) parseToken(tokenStr string, verifier jwt.Verifier) (*jw
 	return &claims, nil
 }
 
-func (a *oauthAuthority) validateClaims(claims *jwtClaims, attributes *Attributes) error {
+func (a *oauthAuthority) validateClaims(claims *jwtClaims, attributes *Attributes, data map[string]string) error {
 	if claims.TTL > a.authorizationCfg.MaxJwtTTL {
 		return fmt.Errorf("TTL in token is larger than MaxTTL allowed")
 	}
 	if claims.Iat+claims.TTL < time.Now().Unix() {
 		return fmt.Errorf("JWT has expired")
 	}
-	if claims.Domain != attributes.DomainName {
-		return fmt.Errorf("domain in token doesn't match with current domain")
-	}
-	if NewPermission(claims.Permission) < attributes.Permission {
-		return fmt.Errorf("token doesn't have the right permission")
-	}
 
-	return nil
+	groups := ""
+	switch attributes.Permission {
+	case PermissionRead:
+		groups = data[common.DomainDataKeyForReadGroups]
+	case PermissionWrite:
+		groups = data[common.DomainDataKeyForWriteGroups]
+	default:
+		return fmt.Errorf("code bug, this shouldn't happen")
+	}
+	// groups are separated by space
+	allowedGroups := strings.Split(groups, " ")
+	grantedGroups := strings.Split(claims.Groups, " ")
+
+	for _, group1 := range allowedGroups {
+		for _, group2 := range grantedGroups {
+			if group1 == group2 {
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("token doesn't have the right permission")
 }
