@@ -22,7 +22,6 @@ package history
 
 import (
 	"context"
-	"math"
 	"sync"
 	"time"
 
@@ -824,7 +823,7 @@ func (c *clientImpl) GetReplicationMessages(
 	}
 
 	// preserve 5% timeout to return partial of the result if context is timing out
-	requestContext, cancel := c.createChildContext(ctx, 0.05)
+	requestContext, cancel := common.CreateChildContext(ctx, 0.05)
 	defer cancel()
 
 	var wg sync.WaitGroup
@@ -1036,7 +1035,7 @@ func (c *clientImpl) GetCrossClusterTasks(
 	}
 
 	// preserve 5% timeout to return partial of the result if context is timing out
-	ctx, cancel := c.createChildContext(ctx, 0.05)
+	ctx, cancel := common.CreateChildContext(ctx, 0.05)
 	defer cancel()
 
 	futureByClient := make(map[Client]future.Future, len(requestByClient))
@@ -1050,36 +1049,29 @@ func (c *clientImpl) GetCrossClusterTasks(
 	}
 
 	response := &types.GetCrossClusterTasksResponse{
-		TasksByShard: make(map[int32][]*types.CrossClusterTaskRequest),
+		TasksByShard:       make(map[int32][]*types.CrossClusterTaskRequest),
+		FailedCauseByShard: make(map[int32]types.GetTaskFailedCause),
 	}
-	var err error
-	for _, future := range futureByClient {
+	for client, future := range futureByClient {
 		var resp *types.GetCrossClusterTasksResponse
 		if futureErr := future.Get(ctx, &resp); futureErr != nil {
 			c.logger.Error("Failed to get cross cluster tasks", tag.Error(futureErr))
-			// TODO: return error for each shard and perform backoff at shard level.
-			// and ensure every shardID in request has a response (either tasks or failed cause).
-			//
-			// for _, failedShardID := range requestByClient[client].ShardIDs {
-			// 	response.FailedCauseByShard[failedShardID] = ...
-			// }
-			//
-			// for now following the pattern for getting replication tasks:
-			// ignore errors other than service busy, so that task fetcher in target
-			// cluster can slow down.
-			if err == nil && common.IsServiceBusyError(futureErr) {
-				err = futureErr
+			for _, failedShardID := range requestByClient[client].ShardIDs {
+				response.FailedCauseByShard[failedShardID] = common.ConvertErrToGetTaskFailedCause(futureErr)
 			}
 		} else {
 			for shardID, tasks := range resp.TasksByShard {
 				response.TasksByShard[shardID] = tasks
+			}
+			for shardID, failedCause := range resp.FailedCauseByShard {
+				response.FailedCauseByShard[shardID] = failedCause
 			}
 		}
 	}
 	// not using a waitGroup for created goroutines as once all futures are unblocked,
 	// those goroutines will eventually be completed
 
-	return response, err
+	return response, nil
 }
 
 func (c *clientImpl) RespondCrossClusterTasksCompleted(
@@ -1107,27 +1099,6 @@ func (c *clientImpl) RespondCrossClusterTasksCompleted(
 		return nil, err
 	}
 	return response, nil
-}
-
-func (c *clientImpl) createChildContext(
-	parent context.Context,
-	tailroom float64,
-) (context.Context, context.CancelFunc) {
-	if parent == nil {
-		return nil, func() {}
-	}
-	if parent.Err() != nil {
-		return parent, func() {}
-	}
-
-	now := time.Now()
-	deadline, ok := parent.Deadline()
-	if !ok || deadline.Before(now) {
-		return parent, func() {}
-	}
-
-	newDeadline := now.Add(time.Duration(math.Ceil(float64(deadline.Sub(now)) * (1.0 - tailroom))))
-	return context.WithDeadline(parent, newDeadline)
 }
 
 func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {

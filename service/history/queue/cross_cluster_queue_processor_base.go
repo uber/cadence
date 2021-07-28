@@ -502,14 +502,14 @@ func (c *crossClusterQueueProcessorBase) handleActionNotification(notification a
 			result: &ActionResult{
 				ActionType: ActionTypeGetTasks,
 				GetTasksResult: &GetTasksResult{
-					tasks: tasks,
+					TaskRequests: tasks,
 				},
 			},
 		}
 	case ActionTypeUpdateTask:
-		action := notification.action.UpdateTaskAttributes
+		actionAttr := notification.action.UpdateTaskAttributes
 		var err error
-		for _, task := range action.tasks {
+		for _, task := range actionAttr.TaskResponses {
 			if err = c.updateTask(task); err != nil {
 				break
 			}
