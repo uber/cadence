@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/cristalhq/jwt/v3"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/yarpc/api/encoding"
@@ -33,6 +34,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -46,6 +48,8 @@ type (
 		att             Attributes
 		token           string
 		tokenExpiredIat string
+		controller      *gomock.Controller
+		domainCache     cache.DomainCache
 		ctx             context.Context
 	}
 )
@@ -99,6 +103,9 @@ func (s *oauthSuite) SetupTest() {
 		TaskList:   nil,
 		Permission: PermissionRead,
 	}
+
+	s.controller = gomock.NewController(s.T())
+	s.domainCache = cache.NewMockDomainCache(s.controller)
 	s.ctx = ctx
 }
 
@@ -107,7 +114,7 @@ func (s *oauthSuite) TearDownTest() {
 }
 
 func (s *oauthSuite) TestCorrectPayload() {
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	result, err := authorizer.Authorize(s.ctx, &s.att)
 	s.NoError(err)
 	s.Equal(result.Decision, DecisionAllow)
@@ -115,7 +122,7 @@ func (s *oauthSuite) TestCorrectPayload() {
 
 func (s *oauthSuite) TestIncorrectPublicKey() {
 	s.cfg.JwtCredentials.PublicKey = "incorrectPublicKey"
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	result, err := authorizer.Authorize(s.ctx, &s.att)
 	s.EqualError(err, "invalid public key path incorrectPublicKey")
 	s.Equal(result.Decision, DecisionDeny)
@@ -123,7 +130,7 @@ func (s *oauthSuite) TestIncorrectPublicKey() {
 
 func (s *oauthSuite) TestIncorrectAlgorithm() {
 	s.cfg.JwtCredentials.Algorithm = "SHA256"
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	result, err := authorizer.Authorize(s.ctx, &s.att)
 	s.EqualError(err, "jwt: algorithm is not supported")
 	s.Equal(result.Decision, DecisionDeny)
@@ -131,7 +138,7 @@ func (s *oauthSuite) TestIncorrectAlgorithm() {
 
 func (s *oauthSuite) TestMaxTTLLargerInToken() {
 	s.cfg.MaxJwtTTL = 1
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
 		return fmt.Sprintf("%v", t[0].Field().Interface) == "TTL in token is larger than MaxTTL allowed"
 	}))
@@ -146,7 +153,7 @@ func (s *oauthSuite) TestIncorrectToken() {
 		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, "test"),
 	})
 	s.NoError(err)
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
 		return fmt.Sprintf("%v", t[0].Field().Interface) == "jwt: token format is not valid"
 	}))
@@ -161,7 +168,7 @@ func (s *oauthSuite) TestIatExpiredToken() {
 		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, s.tokenExpiredIat),
 	})
 	s.NoError(err)
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
 		return fmt.Sprintf("%v", t[0].Field().Interface) == "JWT has expired"
 	}))
@@ -171,7 +178,7 @@ func (s *oauthSuite) TestIatExpiredToken() {
 
 func (s *oauthSuite) TestIncorrectPermissionInAttributes() {
 	s.att.Permission = PermissionWrite
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
 		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have the right permission"
 	}))
@@ -181,7 +188,7 @@ func (s *oauthSuite) TestIncorrectPermissionInAttributes() {
 
 func (s *oauthSuite) TestIncorrectDomainInAttributes() {
 	s.att.DomainName = "myotherdomain"
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
 		return fmt.Sprintf("%v", t[0].Field().Interface) == "domain in token doesn't match with current domain"
 	}))
