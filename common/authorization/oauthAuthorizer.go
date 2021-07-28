@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -37,6 +38,7 @@ import (
 
 type oauthAuthority struct {
 	authorizationCfg config.OAuthAuthorizer
+	domainCache      cache.DomainCache
 	log              log.Logger
 }
 
@@ -53,9 +55,11 @@ type jwtClaims struct {
 func NewOAuthAuthorizer(
 	authorizationCfg config.OAuthAuthorizer,
 	log log.Logger,
+	domainCache cache.DomainCache,
 ) Authorizer {
 	return &oauthAuthority{
 		authorizationCfg: authorizationCfg,
+		domainCache:      domainCache,
 		log:              log,
 	}
 }
