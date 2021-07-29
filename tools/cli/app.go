@@ -64,6 +64,11 @@ func NewCliApp() *cli.App {
 			Usage:  "optional JWT for authorization",
 			EnvVar: "CADENCE_CLI_JWT",
 		},
+		cli.StringFlag{
+			Name:   FlagJWTPrivateKey,
+			Usage:  "optional private key path to create JWT",
+			EnvVar: "CADENCE_CLI_JWT_PRIVATE_KEY",
+		},
 	}
 	app.Commands = []cli.Command{
 		{

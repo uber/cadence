@@ -277,6 +277,7 @@ const (
 	DelayStartSeconds                     = "delay_start_seconds"
 	FlagConnectionAttributes              = "conn_attrs"
 	FlagJWT                               = "jwt"
+	FlagJWTPrivateKey                     = "jwt-private-key"
 )
 
 var flagsForExecution = []cli.Flag{

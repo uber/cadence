@@ -38,6 +38,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cristalhq/jwt/v3"
+
+	"github.com/uber/cadence/common/authorization"
+
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 	"github.com/valyala/fastjson"
@@ -763,8 +767,27 @@ func getCliIdentity() string {
 	return fmt.Sprintf("cadence-cli@%s", hostName)
 }
 
+func processJWTFlags(ctx context.Context, cliCtx *cli.Context) context.Context {
+	path := getJWTPrivateKey(cliCtx)
+	t := getJWT(cliCtx)
+	var token string
+
+	if t != "" {
+		token = t
+	} else if path != "" {
+		createdToken, err := createJWT(path)
+		if err != nil {
+			ErrorAndExit("Error creating JWT token", err)
+		}
+		token = *createdToken
+	}
+
+	ctx = context.WithValue(ctx, CtxKeyJWT, token)
+	return ctx
+}
+
 func populateContextFromCLIContext(ctx context.Context, cliCtx *cli.Context) context.Context {
-	ctx = context.WithValue(ctx, CtxKeyJWT, getJWT(cliCtx))
+	ctx = processJWTFlags(ctx, cliCtx)
 	return ctx
 }
 
@@ -1006,4 +1029,30 @@ func getInputFile(inputFile string) *os.File {
 		ErrorAndExit(fmt.Sprintf("Failed to open input file for reading: %v", inputFile), err)
 	}
 	return f
+}
+
+// Authenticate defines the logic to authenticate a user
+func createJWT(keyPath string) (*string, error) {
+	claims := authorization.JWTClaims{
+		Admin: true,
+		Iat:   time.Now().Unix(),
+		TTL:   60 * 10,
+	}
+
+	privateKey, err := common.LoadRSAPrivateKey(keyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	signer, err := jwt.NewSignerRS(jwt.RS256, privateKey)
+	if err != nil {
+		return nil, err
+	}
+	builder := jwt.NewBuilder(signer)
+	token, err := builder.Build(claims)
+	if token == nil {
+		return nil, err
+	}
+	tokenString := token.String()
+	return &tokenString, nil
 }

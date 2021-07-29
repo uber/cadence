@@ -44,14 +44,14 @@ import (
 type (
 	oauthSuite struct {
 		suite.Suite
-		logger          *log.MockLogger
-		cfg             config.OAuthAuthorizer
-		att             Attributes
-		token           string
-		controller      *gomock.Controller
-		domainCache     *cache.MockDomainCache
-		ctx             context.Context
-		domainEntry     *cache.DomainCacheEntry
+		logger      *log.MockLogger
+		cfg         config.OAuthAuthorizer
+		att         Attributes
+		token       string
+		controller  *gomock.Controller
+		domainCache *cache.MockDomainCache
+		ctx         context.Context
+		domainEntry *cache.DomainCacheEntry
 	}
 )
 
@@ -88,12 +88,11 @@ func (s *oauthSuite) SetupTest() {
 
 	s.domainEntry = cache.NewGlobalDomainCacheEntryForTest(
 		&persistence.DomainInfo{
-			ID: "test-domain-id",
+			ID:   "test-domain-id",
 			Name: "test-domain",
 			Data: map[string]string{
 				common.DomainDataKeyForReadGroups: "c",
 			},
-
 		},
 		&persistence.DomainConfig{Retention: 1},
 		&persistence.DomainReplicationConfig{

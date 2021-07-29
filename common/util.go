@@ -22,12 +22,8 @@ package common
 
 import (
 	"context"
-	"crypto/rsa"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"math/rand"
 	"sort"
@@ -956,25 +952,6 @@ func SleepWithMinDuration(desired time.Duration, available time.Duration) time.D
 		time.Sleep(d)
 	}
 	return available - d
-}
-
-// LoadRSAPublicKey loads a rsa.PublicKey from the given filepath
-func LoadRSAPublicKey(path string) (*rsa.PublicKey, error) {
-	key, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("invalid public key path %s", path)
-	}
-	block, _ := pem.Decode(key)
-	if block == nil || block.Type != "PUBLIC KEY" {
-		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
-	}
-
-	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse DER encoded public key: " + err.Error())
-	}
-	publicKey := pub.(*rsa.PublicKey)
-	return publicKey, nil
 }
 
 // ConvertErrToGetTaskFailedCause converts error to GetTaskFailedCause
