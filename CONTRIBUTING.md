@@ -34,7 +34,9 @@ make bins
 
 
 
-:warning: Note: If running into any compiling issue
+:warning: Note: 
+
+If running into any compiling issue
 >0. For proto/thrift errors, run `git submodule update --init --recursive` to fix 
 >1. Make sure you upgrade to the latest stable version of Golang.
 > 2. Check if this document is outdated by comparing with the building steps in [Dockerfile](https://github.com/uber/cadence/blob/master/Dockerfile)
