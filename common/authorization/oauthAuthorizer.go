@@ -81,6 +81,11 @@ func (a *oauthAuthority) Authorize(
 		a.log.Debug("request is not authorized", tag.Error(err))
 		return Result{Decision: DecisionDeny}, nil
 	}
+	err = a.validateTTL(claims)
+	if err != nil {
+		a.log.Debug("request is not authorized", tag.Error(err))
+		return Result{Decision: DecisionDeny}, nil
+	}
 	if claims.Admin {
 		return Result{Decision: DecisionAllow}, nil
 	}
@@ -89,7 +94,7 @@ func (a *oauthAuthority) Authorize(
 		return Result{Decision: DecisionDeny}, err
 	}
 
-	err = a.validateClaims(claims, attributes, domain.GetInfo().Data)
+	err = a.validatePermission(claims, attributes, domain.GetInfo().Data)
 	if err != nil {
 		a.log.Debug("request is not authorized", tag.Error(err))
 		return Result{Decision: DecisionDeny}, nil
@@ -120,14 +125,17 @@ func (a *oauthAuthority) parseToken(tokenStr string, verifier jwt.Verifier) (*jw
 	return &claims, nil
 }
 
-func (a *oauthAuthority) validateClaims(claims *jwtClaims, attributes *Attributes, data map[string]string) error {
+func (a *oauthAuthority) validateTTL(claims *jwtClaims) error {
 	if claims.TTL > a.authorizationCfg.MaxJwtTTL {
 		return fmt.Errorf("TTL in token is larger than MaxTTL allowed")
 	}
 	if claims.Iat+claims.TTL < time.Now().Unix() {
 		return fmt.Errorf("JWT has expired")
 	}
+	return nil
+}
 
+func (a *oauthAuthority) validatePermission(claims *jwtClaims, attributes *Attributes, data map[string]string) error {
 	groups := ""
 	switch attributes.Permission {
 	case PermissionRead:
@@ -138,15 +146,15 @@ func (a *oauthAuthority) validateClaims(claims *jwtClaims, attributes *Attribute
 		return fmt.Errorf("code bug, this shouldn't happen")
 	}
 	// groups are separated by space
-	allowedGroups := strings.Split(groups, " ")
-	grantedGroups := strings.Split(claims.Groups, " ")
+	jwtGroups := strings.Split(groups, " ")
+	allowedGroups := strings.Split(claims.Groups, " ")
 
-	for _, group1 := range allowedGroups {
-		for _, group2 := range grantedGroups {
+	for _, group1 := range jwtGroups {
+		for _, group2 := range allowedGroups {
 			if group1 == group2 {
 				return nil
 			}
 		}
 	}
-	return fmt.Errorf("token doesn't have the right permission")
+	return fmt.Errorf("token doesn't have the right permission, jwt groups: %v, allowed groups: %v", jwtGroups, allowedGroups)
 }
