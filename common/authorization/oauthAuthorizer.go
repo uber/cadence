@@ -52,6 +52,8 @@ type jwtClaims struct {
 	TTL    int64
 }
 
+const groupSeparator = " "
+
 // NewOAuthAuthorizer creates a oauth authority
 func NewOAuthAuthorizer(
 	authorizationCfg config.OAuthAuthorizer,
@@ -139,15 +141,19 @@ func (a *oauthAuthority) validatePermission(claims *jwtClaims, attributes *Attri
 	groups := ""
 	switch attributes.Permission {
 	case PermissionRead:
-		groups = data[common.DomainDataKeyForReadGroups]
+		groups = data[common.DomainDataKeyForReadGroups] + groupSeparator + data[common.DomainDataKeyForWriteGroups]
 	case PermissionWrite:
 		groups = data[common.DomainDataKeyForWriteGroups]
 	default:
-		return fmt.Errorf("code bug, this shouldn't happen")
+		if claims.Admin {
+			return nil
+		} else {
+			return fmt.Errorf("token doesn't have permission for admin API")
+		}
 	}
 	// groups are separated by space
-	jwtGroups := strings.Split(groups, " ")
-	allowedGroups := strings.Split(claims.Groups, " ")
+	jwtGroups := strings.Split(groups, groupSeparator)
+	allowedGroups := strings.Split(claims.Groups, groupSeparator)
 
 	for _, group1 := range jwtGroups {
 		for _, group2 := range allowedGroups {
