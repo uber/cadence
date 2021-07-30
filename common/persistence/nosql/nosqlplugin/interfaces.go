@@ -519,6 +519,6 @@ type (
 	 */
 	ConfigStoreCRUD interface {
 		InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error
-		SelectLatestConfig(ctx context.Context, row_type int) (*persistence.InternalConfigStoreEntry, error)
+		SelectLatestConfig(ctx context.Context, rowType int) (*persistence.InternalConfigStoreEntry, error)
 	}
 )

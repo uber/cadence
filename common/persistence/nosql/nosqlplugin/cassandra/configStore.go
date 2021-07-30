@@ -48,20 +48,20 @@ func (db *cdb) InsertConfig(ctx context.Context, row *persistence.InternalConfig
 	return nil
 }
 
-func (db *cdb) SelectLatestConfig(ctx context.Context, row_type int) (*persistence.InternalConfigStoreEntry, error) {
+func (db *cdb) SelectLatestConfig(ctx context.Context, rowType int) (*persistence.InternalConfigStoreEntry, error) {
 	var version int64
 	var timestamp time.Time
 	var data []byte
 	var encoding common.EncodingType
 
-	query := db.session.Query(templateSelectLatestConfig, row_type).WithContext(ctx)
-	err := query.Scan(&row_type, &version, &timestamp, &data, &encoding)
+	query := db.session.Query(templateSelectLatestConfig, rowType).WithContext(ctx)
+	err := query.Scan(&rowType, &version, &timestamp, &data, &encoding)
 	if err != nil {
 		return nil, err
 	}
 
 	return &persistence.InternalConfigStoreEntry{
-		RowType:   row_type,
+		RowType:   rowType,
 		Version:   version,
 		Timestamp: timestamp,
 		Values: &persistence.DataBlob{

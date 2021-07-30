@@ -65,9 +65,9 @@ type configStoreClient struct {
 }
 
 type cacheEntry struct {
-	cache_version  int64
-	schema_version int64
-	dc_entries     map[string]*types.DynamicConfigEntry
+	cacheVersion  int64
+	schemaVersion int64
+	dcEntries     map[string]*types.DynamicConfigEntry
 }
 
 type fetchResult struct {
@@ -76,18 +76,18 @@ type fetchResult struct {
 }
 
 // NewConfigStoreClient creates a config store client
-func NewConfigStoreClient(client_cfg *ConfigStoreClientConfig, persistence_cfg *config.NoSQL, logger log.Logger, doneCh chan struct{}) (dc.Client, error) {
-	if err := validateConfigStoreClientConfig(client_cfg); err != nil {
+func NewConfigStoreClient(clientCfg *ConfigStoreClientConfig, persistenceCfg *config.NoSQL, logger log.Logger, doneCh chan struct{}) (dc.Client, error) {
+	if err := validateConfigStoreClientConfig(clientCfg); err != nil {
 		return nil, err
 	}
 
-	store, err := nosql.NewNoSQLConfigStore(*persistence_cfg, logger)
+	store, err := nosql.NewNoSQLConfigStore(*persistenceCfg, logger)
 	if err != nil {
 		return nil, err
 	}
 
 	client := &configStoreClient{
-		config:             client_cfg,
+		config:             clientCfg,
 		doneCh:             doneCh,
 		configStoreManager: persistence.NewConfigStoreManagerImpl(store, logger),
 		logger:             logger,
@@ -207,11 +207,11 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 	keyName := dc.Keys[name]
 	var newEntries []*types.DynamicConfigEntry
 
-	existingEntry, entryExists := currentCached.dc_entries[keyName]
+	existingEntry, entryExists := currentCached.dcEntries[keyName]
 	if entryExists {
-		newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dc_entries))
+		newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
 	} else {
-		newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dc_entries)+1)
+		newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries)+1)
 		newEntries = append(newEntries,
 			&types.DynamicConfigEntry{
 				Name:         keyName,
@@ -220,7 +220,7 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 			})
 	}
 
-	for _, entry := range currentCached.dc_entries {
+	for _, entry := range currentCached.dcEntries {
 		if entryExists && entry == existingEntry {
 			newEntries = append(newEntries,
 				&types.DynamicConfigEntry{
@@ -234,9 +234,9 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 	}
 
 	newSnapshot := &persistence.DynamicConfigSnapshot{
-		Version: currentCached.cache_version + 1,
+		Version: currentCached.cacheVersion + 1,
 		Values: &types.DynamicConfigBlob{
-			SchemaVersion: currentCached.schema_version,
+			SchemaVersion: currentCached.schemaVersion,
 			Entries:       newEntries,
 		},
 	}
@@ -261,16 +261,16 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 					return err
 				}
 				return csc.updateValue(name, value, retryAttempts-1)
-			} else {
-				if retryAttempts == 0 {
-					return errors.New("Ran out of retry attempts on update")
-				}
-				return err
 			}
+
+			if retryAttempts == 0 {
+				return errors.New("ran out of retry attempts on update")
+			}
+			return err
 		}
 		return nil
 	case <-time.After(csc.config.UpdateTimeout):
-		return errors.New("Timeout error on update")
+		return errors.New("timeout error on update")
 		//should we retry on timeout errors
 	}
 }
@@ -280,15 +280,15 @@ func copyDynamicConfigEntry(entry *types.DynamicConfigEntry) *types.DynamicConfi
 		return nil
 	}
 
-	new_values := make([]*types.DynamicConfigValue, 0, len(entry.Values))
+	newValues := make([]*types.DynamicConfigValue, 0, len(entry.Values))
 	for _, value := range entry.Values {
-		new_values = append(new_values, copyDynamicConfigValue(value))
+		newValues = append(newValues, copyDynamicConfigValue(value))
 	}
 
 	return &types.DynamicConfigEntry{
 		Name:         entry.Name,
 		DefaultValue: copyDataBlob(entry.DefaultValue),
-		Values:       new_values,
+		Values:       newValues,
 	}
 }
 
@@ -297,14 +297,14 @@ func copyDynamicConfigValue(value *types.DynamicConfigValue) *types.DynamicConfi
 		return nil
 	}
 
-	new_filters := make([]*types.DynamicConfigFilter, 0, len(value.Filters))
+	newFilters := make([]*types.DynamicConfigFilter, 0, len(value.Filters))
 	for _, filter := range value.Filters {
-		new_filters = append(new_filters, copyDynamicConfigFilter(filter))
+		newFilters = append(newFilters, copyDynamicConfigFilter(filter))
 	}
 
 	return &types.DynamicConfigValue{
 		Value:   copyDataBlob(value.Value),
-		Filters: new_filters,
+		Filters: newFilters,
 	}
 }
 
@@ -324,12 +324,12 @@ func copyDataBlob(blob *types.DataBlob) *types.DataBlob {
 		return nil
 	}
 
-	new_data := make([]byte, len(blob.Data))
-	copy(new_data, blob.Data)
+	newData := make([]byte, len(blob.Data))
+	copy(newData, blob.Data)
 
 	return &types.DataBlob{
 		EncodingType: blob.EncodingType,
-		Data:         new_data,
+		Data:         newData,
 	}
 }
 
@@ -347,7 +347,7 @@ func (csc *configStoreClient) update() error {
 	select {
 	case fetchRes := <-fetchCh:
 		if fetchRes.err != nil || fetchRes.snapshot == nil {
-			return fmt.Errorf("Failed to fetch dynamic config snapshot %v", fetchRes.err)
+			return fmt.Errorf("failed to fetch dynamic config snapshot %v", fetchRes.err)
 		}
 
 		defer func() {
@@ -356,21 +356,21 @@ func (csc *configStoreClient) update() error {
 
 		return csc.storeValues(fetchRes.snapshot)
 	case <-time.After(csc.config.FetchTimeout):
-		return errors.New("Timeout error on fetch")
+		return errors.New("timeout error on fetch")
 	}
 }
 
 func (csc *configStoreClient) storeValues(snapshot *persistence.DynamicConfigSnapshot) error {
 	//Converting the list of dynamic config entries into a map for better lookup performance
-	dc_entry_map := make(map[string]*types.DynamicConfigEntry)
+	dcEntryMap := make(map[string]*types.DynamicConfigEntry)
 	for _, entry := range snapshot.Values.Entries {
-		dc_entry_map[entry.Name] = entry
+		dcEntryMap[entry.Name] = entry
 	}
 
 	csc.values.Store(cacheEntry{
-		cache_version:  snapshot.Version,
-		schema_version: snapshot.Values.SchemaVersion,
-		dc_entries:     dc_entry_map,
+		cacheVersion:  snapshot.Version,
+		schemaVersion: snapshot.Values.SchemaVersion,
+		dcEntries:     dcEntryMap,
 	})
 	csc.logger.Info("Updated dynamic config")
 	return nil
@@ -381,20 +381,20 @@ func (csc *configStoreClient) getValueWithFilters(key dc.Key, filters map[dc.Fil
 	cached := csc.values.Load().(cacheEntry)
 	found := false
 
-	if entry, ok := cached.dc_entries[keyName]; ok && entry != nil {
-		for _, dc_value := range entry.Values {
-			if len(dc_value.Filters) == 0 {
-				parsed_val, err := convertFromDataBlob(dc_value.Value)
+	if entry, ok := cached.dcEntries[keyName]; ok && entry != nil {
+		for _, dcValue := range entry.Values {
+			if len(dcValue.Filters) == 0 {
+				parsedVal, err := convertFromDataBlob(dcValue.Value)
 
 				if err == nil {
-					defaultValue = parsed_val
+					defaultValue = parsedVal
 					found = true
 				}
 				continue
 			}
 
-			if matchFilters(dc_value, filters) {
-				return convertFromDataBlob(dc_value.Value)
+			if matchFilters(dcValue, filters) {
+				return convertFromDataBlob(dcValue.Value)
 			}
 		}
 	}
@@ -404,19 +404,19 @@ func (csc *configStoreClient) getValueWithFilters(key dc.Key, filters map[dc.Fil
 	return defaultValue, dc.NotFoundError
 }
 
-func matchFilters(dc_value *types.DynamicConfigValue, filters map[dc.Filter]interface{}) bool {
-	if len(dc_value.Filters) > len(filters) {
+func matchFilters(dcValue *types.DynamicConfigValue, filters map[dc.Filter]interface{}) bool {
+	if len(dcValue.Filters) > len(filters) {
 		return false
 	}
 
-	for _, value_filter := range dc_value.Filters {
-		filterKey := dc.ParseFilter(value_filter.Name)
+	for _, valueFilter := range dcValue.Filters {
+		filterKey := dc.ParseFilter(valueFilter.Name)
 		if filters[filterKey] == nil {
 			return false
 		}
 
-		request_value, err := convertFromDataBlob(value_filter.Value)
-		if err != nil || filters[filterKey] != request_value {
+		requestValue, err := convertFromDataBlob(valueFilter.Value)
+		if err != nil || filters[filterKey] != requestValue {
 			return false
 		}
 	}

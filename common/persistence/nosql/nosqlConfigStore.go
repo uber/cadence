@@ -54,8 +54,8 @@ func NewNoSQLConfigStore(
 	}, nil
 }
 
-func (m *nosqlConfigStore) FetchConfig(ctx context.Context, config_type p.ConfigType) (*p.InternalConfigStoreEntry, error) {
-	entry, err := m.db.SelectLatestConfig(ctx, int(config_type))
+func (m *nosqlConfigStore) FetchConfig(ctx context.Context, configType p.ConfigType) (*p.InternalConfigStoreEntry, error) {
+	entry, err := m.db.SelectLatestConfig(ctx, int(configType))
 	if err != nil {
 		return nil, convertCommonErrors(m.db, "FetchConfig", err)
 	}

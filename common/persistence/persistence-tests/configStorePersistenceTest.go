@@ -89,11 +89,11 @@ func (s *ConfigStorePersistenceSuite) TestUpdateSimpleSuccess() {
 	err := s.UpdateDynamicConfig(ctx, snapshot)
 	s.Nil(err)
 
-	ret_snapshot, err := s.FetchDynamicConfig(ctx)
+	retSnapshot, err := s.FetchDynamicConfig(ctx)
 	s.NotNil(snapshot)
 	s.Nil(err)
-	s.Equal(snapshot.Version, ret_snapshot.Version)
-	s.Equal(snapshot.Values.Entries[0].Name, ret_snapshot.Values.Entries[0].Name)
+	s.Equal(snapshot.Version, retSnapshot.Version)
+	s.Equal(snapshot.Values.Entries[0].Name, retSnapshot.Values.Entries[0].Name)
 }
 
 func (s *ConfigStorePersistenceSuite) TestUpdateVersionCollisionFailure() {
@@ -108,8 +108,8 @@ func (s *ConfigStorePersistenceSuite) TestUpdateVersionCollisionFailure() {
 	s.Nil(err)
 
 	err = s.UpdateDynamicConfig(ctx, snapshot)
-	var cond_err *persistence.ConditionFailedError
-	s.True(errors.As(err, &cond_err))
+	var condErr *persistence.ConditionFailedError
+	s.True(errors.As(err, &condErr))
 }
 
 func (s *ConfigStorePersistenceSuite) TestUpdateIncrementalVersionSuccess() {

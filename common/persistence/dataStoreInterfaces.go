@@ -181,7 +181,7 @@ type (
 
 	ConfigStore interface {
 		Closeable
-		FetchConfig(ctx context.Context, config_type ConfigType) (*InternalConfigStoreEntry, error)
+		FetchConfig(ctx context.Context, configType ConfigType) (*InternalConfigStoreEntry, error)
 		UpdateConfig(ctx context.Context, value *InternalConfigStoreEntry) error
 	}
 
