@@ -254,9 +254,7 @@ func (s *Service) Start() {
 	// Additional decorations
 	var handler Handler = s.handler
 	handler = NewDCRedirectionHandler(handler, s, s.config, s.params.DCRedirectionPolicy)
-	if s.params.Authorizer != nil {
-		handler = NewAccessControlledHandlerImpl(handler, s, s.params.Authorizer)
-	}
+	handler = NewAccessControlledHandlerImpl(handler, s, s.params.Authorizer, s.params.AuthorizationConfig)
 
 	// Register the latest (most decorated) handler
 	thriftHandler := NewThriftHandler(handler)
