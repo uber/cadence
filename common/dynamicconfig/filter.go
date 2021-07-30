@@ -24,8 +24,8 @@ package dynamicconfig
 type Filter int
 
 func (f Filter) String() string {
-	if f <= unknownFilter || f > ClusterName {
-		return filters[unknownFilter]
+	if f <= UnknownFilter || f > ClusterName {
+		return filters[UnknownFilter]
 	}
 	return filters[f]
 }
@@ -45,7 +45,7 @@ func ParseFilter(filterName string) Filter {
 	case "clusterName":
 		return ClusterName
 	default:
-		return unknownFilter
+		return UnknownFilter
 	}
 }
 
@@ -60,7 +60,7 @@ var filters = []string{
 }
 
 const (
-	unknownFilter Filter = iota
+	UnknownFilter Filter = iota
 	// DomainName is the domain name
 	DomainName
 	// DomainID is the domain id
@@ -74,8 +74,8 @@ const (
 	// ClusterName is the cluster name in a multi-region setup
 	ClusterName
 
-	// lastFilterTypeForTest must be the last one in this const group for testing purpose
-	lastFilterTypeForTest
+	// LastFilterTypeForTest must be the last one in this const group for testing purpose
+	LastFilterTypeForTest
 )
 
 // FilterOption is used to provide filters for dynamic config keys

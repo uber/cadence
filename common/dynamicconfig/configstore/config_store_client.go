@@ -40,7 +40,7 @@ import (
 var _ dc.Client = (*configStoreClient)(nil)
 
 const (
-	configStoreMinPollInterval = time.Second * 5
+	configStoreMinPollInterval = time.Second * 2
 	// defaultFetchTimeout        = time.Second * 3
 	// defaultUpdateTimeout       = time.Second * 3
 	// defaultRetryAttempts       = 1
@@ -76,12 +76,12 @@ type fetchResult struct {
 }
 
 // NewConfigStoreClient creates a config store client
-func NewConfigStoreClient(client_cfg *ConfigStoreClientConfig, persistence_cfg config.NoSQL, logger log.Logger, doneCh chan struct{}) (dc.Client, error) {
+func NewConfigStoreClient(client_cfg *ConfigStoreClientConfig, persistence_cfg *config.NoSQL, logger log.Logger, doneCh chan struct{}) (dc.Client, error) {
 	if err := validateConfigStoreClientConfig(client_cfg); err != nil {
 		return nil, err
 	}
 
-	store, err := nosql.NewNoSQLConfigStore(persistence_cfg, logger)
+	store, err := nosql.NewNoSQLConfigStore(*persistence_cfg, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func NewConfigStoreClient(client_cfg *ConfigStoreClientConfig, persistence_cfg c
 			case <-ticker.C:
 				err := client.update()
 				if err != nil {
-					client.logger.Error("Failed to update cached dynamic config", tag.Error(err))
+					client.logger.Error("Failed to update dynamic config", tag.Error(err))
 				}
 			case <-client.doneCh:
 				ticker.Stop()
@@ -122,29 +122,20 @@ func (csc *configStoreClient) GetValueWithFilters(name dc.Key, filters map[dc.Fi
 }
 
 func (csc *configStoreClient) GetIntValue(name dc.Key, filters map[dc.Filter]interface{}, defaultValue int) (int, error) {
-	val, err := csc.getValueWithFilters(name, filters, defaultValue)
+	val, err := csc.getFloatValue(name, filters, 0)
 	if err != nil {
 		return defaultValue, err
 	}
 
-	if intVal, ok := val.(int); ok {
-		return intVal, nil
+	if val != float64(int64(val)) {
+		return defaultValue, errors.New("value type is not int")
 	}
-	return defaultValue, errors.New("value type is not int")
+
+	return int(val), nil
 }
 
 func (csc *configStoreClient) GetFloatValue(name dc.Key, filters map[dc.Filter]interface{}, defaultValue float64) (float64, error) {
-	val, err := csc.getValueWithFilters(name, filters, defaultValue)
-	if err != nil {
-		return defaultValue, err
-	}
-
-	if floatVal, ok := val.(float64); ok {
-		return floatVal, nil
-	} else if intVal, ok := val.(int); ok {
-		return float64(intVal), nil
-	}
-	return defaultValue, errors.New("value type is not float64")
+	return csc.getFloatValue(name, filters, defaultValue)
 }
 
 func (csc *configStoreClient) GetBoolValue(name dc.Key, filters map[dc.Filter]interface{}, defaultValue bool) (bool, error) {
@@ -271,6 +262,9 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 				}
 				return csc.updateValue(name, value, retryAttempts-1)
 			} else {
+				if retryAttempts == 0 {
+					return errors.New("Ran out of retry attempts on update")
+				}
 				return err
 			}
 		}
@@ -343,12 +337,16 @@ func (csc *configStoreClient) update() error {
 	fetchCh := make(chan *fetchResult)
 	go func() {
 		res, err := csc.configStoreManager.FetchDynamicConfig(context.TODO())
-		fetchCh <- &fetchResult{snapshot: res.Snapshot, err: err}
+		if res == nil {
+			fetchCh <- &fetchResult{snapshot: nil, err: err}
+		} else {
+			fetchCh <- &fetchResult{snapshot: res.Snapshot, err: err}
+		}
 	}()
 
 	select {
 	case fetchRes := <-fetchCh:
-		if fetchRes.err != nil {
+		if fetchRes.err != nil || fetchRes.snapshot == nil {
 			return fmt.Errorf("Failed to fetch dynamic config snapshot %v", fetchRes.err)
 		}
 
@@ -378,6 +376,67 @@ func (csc *configStoreClient) storeValues(snapshot *persistence.DynamicConfigSna
 	return nil
 }
 
+func (csc *configStoreClient) getValueWithFilters(key dc.Key, filters map[dc.Filter]interface{}, defaultValue interface{}) (interface{}, error) {
+	keyName := dc.Keys[key]
+	cached := csc.values.Load().(cacheEntry)
+	found := false
+
+	if entry, ok := cached.dc_entries[keyName]; ok && entry != nil {
+		for _, dc_value := range entry.Values {
+			if len(dc_value.Filters) == 0 {
+				parsed_val, err := convertFromDataBlob(dc_value.Value)
+
+				if err == nil {
+					defaultValue = parsed_val
+					found = true
+				}
+				continue
+			}
+
+			if matchFilters(dc_value, filters) {
+				return convertFromDataBlob(dc_value.Value)
+			}
+		}
+	}
+	if found {
+		return defaultValue, nil
+	}
+	return defaultValue, dc.NotFoundError
+}
+
+func matchFilters(dc_value *types.DynamicConfigValue, filters map[dc.Filter]interface{}) bool {
+	if len(dc_value.Filters) > len(filters) {
+		return false
+	}
+
+	for _, value_filter := range dc_value.Filters {
+		filterKey := dc.ParseFilter(value_filter.Name)
+		if filters[filterKey] == nil {
+			return false
+		}
+
+		request_value, err := convertFromDataBlob(value_filter.Value)
+		if err != nil || filters[filterKey] != request_value {
+			return false
+		}
+	}
+	return true
+}
+
+func (csc *configStoreClient) getFloatValue(name dc.Key, filters map[dc.Filter]interface{}, defaultValue float64) (float64, error) {
+	val, err := csc.getValueWithFilters(name, filters, defaultValue)
+	if err != nil {
+		return defaultValue, err
+	}
+
+	if floatVal, ok := val.(float64); ok {
+		return floatVal, nil
+	} else if intVal, ok := val.(int); ok {
+		return float64(intVal), nil
+	}
+	return defaultValue, errors.New("value type is not float64")
+}
+
 func validateConfigStoreClientConfig(config *ConfigStoreClientConfig) error {
 	if config == nil {
 		return errors.New("no config found for config store based dynamic config client")
@@ -401,55 +460,9 @@ func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {
 	switch *blob.EncodingType {
 	case types.EncodingTypeJSON: //
 		var v interface{}
-		err := json.Unmarshal(blob.Data, v)
+		err := json.Unmarshal(blob.Data, &v)
 		return v, err
 	default:
 		return nil, errors.New("unsupported blob encoding")
 	}
-}
-
-func (csc *configStoreClient) getValueWithFilters(key dc.Key, filters map[dc.Filter]interface{}, defaultValue interface{}) (interface{}, error) {
-	keyName := dc.Keys[key]
-	cached := csc.values.Load().(cacheEntry)
-	dc_entries := cached.dc_entries
-	found := false
-
-	for _, dc_value := range dc_entries[keyName].Values {
-		if len(dc_value.Filters) == 0 {
-			parsed_val, err := convertFromDataBlob(dc_value.Value)
-			if err == nil {
-				defaultValue = parsed_val
-				found = true
-			}
-			continue
-		}
-
-		if matchFilters(dc_value, filters) {
-			return convertFromDataBlob(dc_value.Value)
-		}
-	}
-
-	if !found {
-		return defaultValue, dc.NotFoundError
-	}
-	return defaultValue, nil
-}
-
-func matchFilters(dc_value *types.DynamicConfigValue, filters map[dc.Filter]interface{}) bool {
-	if len(dc_value.Filters) > len(filters) {
-		return false
-	}
-
-	for _, value_filter := range dc_value.Filters {
-		filterKey := dc.ParseFilter(value_filter.Name)
-		if filters[filterKey] == nil {
-			return false
-		}
-
-		request_value, err := convertFromDataBlob(value_filter.Value)
-		if err != nil || filters[filterKey] != request_value {
-			return false
-		}
-	}
-	return true
 }
