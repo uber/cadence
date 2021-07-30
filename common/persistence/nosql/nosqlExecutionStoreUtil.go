@@ -348,6 +348,13 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 			targetChildWorkflowOnly = task.(*p.CrossClusterSignalExecutionTask).TargetChildWorkflowOnly
 			scheduleID = task.(*p.CrossClusterSignalExecutionTask).InitiatedID
 
+		case p.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+			targetCluster = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetCluster
+			targetDomainID = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetDomainID
+			targetWorkflowID = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetWorkflowID
+			targetRunID = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetRunID
+			scheduleID = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).InitiatedID
+
 		default:
 			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("Unknown cross-cluster task type: %v", task.GetType()),

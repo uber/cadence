@@ -25,6 +25,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -59,6 +60,7 @@ var (
 )
 
 var (
+	errNotImplemented      = errors.New("not implemented")
 	errUnknownTransferTask = errors.New("Unknown transfer task")
 	errWorkflowBusy        = errors.New("Unable to get workflow execution lock within specified timeout")
 )
@@ -338,6 +340,15 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 
 	// Communicate the result to parent execution if this is Child Workflow execution
 	if replyToParentWorkflow {
+		targetDomainEntry, err := t.shard.GetDomainCache().GetDomainByID(parentDomainID)
+		if err != nil {
+			return err
+		}
+		if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
+			// TODO: consider moving this logic to GenerateWorkflowCloseTasks and uxxse here as a back-up to save latency
+			return t.generateCrossClusterTask(ctx, wfContext, task, targetCluster)
+		}
+
 		recordChildCompletionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 		defer cancel()
 		err = t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &types.RecordChildExecutionCompletedRequest{
@@ -1226,7 +1237,12 @@ func (t *transferActiveTaskExecutor) generateCrossClusterTask(
 		wfContext,
 		false,
 		func(ctx context.Context, mutableState execution.MutableState) error {
-			if !mutableState.IsWorkflowExecutionRunning() {
+			if task.TaskType == persistence.TransferTaskTypeCloseExecution {
+				if !mutableState.IsWorkflowCompleted() {
+					return &types.BadRequestError{Message: "Workflow execution is still running, should have been completed."}
+				}
+			} else if !mutableState.IsWorkflowExecutionRunning() {
+				debug.PrintStack()
 				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
 			}
 

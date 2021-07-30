@@ -805,6 +805,13 @@ func createCrossClusterTasks(
 			info.TargetChildWorkflowOnly = task.(*p.CrossClusterSignalExecutionTask).TargetChildWorkflowOnly
 			info.ScheduleID = task.(*p.CrossClusterSignalExecutionTask).InitiatedID
 
+		case p.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetCluster
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetDomainID)
+			info.TargetWorkflowID = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetWorkflowID
+			info.TargetRunID = serialization.MustParseUUID(task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetRunID)
+			info.ScheduleID = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).InitiatedID
+
 		default:
 			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Unknown cross-cluster task type: %v", task.GetType()),

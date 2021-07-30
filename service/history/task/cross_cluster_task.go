@@ -153,6 +153,7 @@ func NewCrossClusterTargetTask(
 		info.TargetRunID = taskRequest.SignalExecutionAttributes.TargetRunID
 		info.ScheduleID = taskRequest.SignalExecutionAttributes.InitiatedEventID
 		info.TargetChildWorkflowOnly = taskRequest.SignalExecutionAttributes.ChildWorkflowOnly
+	// TODO: implement recordChildWorkflowExeuctionComplete
 	default:
 		panic(fmt.Sprintf("unknown cross cluster task type: %v", taskRequest.TaskInfo.GetTaskType()))
 	}

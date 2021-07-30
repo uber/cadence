@@ -159,6 +159,7 @@ const (
 	CrossClusterTaskTypeStartChildExecution = iota + 1
 	CrossClusterTaskTypeCancelExecution
 	CrossClusterTaskTypeSignalExecution
+	CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete
 )
 
 // Types of replication tasks
@@ -574,6 +575,17 @@ type (
 		Version             int64
 	}
 
+	// RecordChildCompletionTask identifies a task completing a child execution
+	RecordWorkflowExecutionCompleteTask struct {
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		TargetDomainID      string
+		TargetWorkflowID    string
+		TargetRunID         string
+		InitiatedID         int64
+		Version             int64
+	}
+
 	// CrossClusterStartChildExecutionTask is the cross-cluster version of StartChildExecutionTask
 	CrossClusterStartChildExecutionTask struct {
 		StartChildExecutionTask
@@ -591,6 +603,13 @@ type (
 	// CrossClusterSignalExecutionTask is the cross-cluster version of SignalExecutionTask
 	CrossClusterSignalExecutionTask struct {
 		SignalExecutionTask
+
+		TargetCluster string
+	}
+
+	// CrossClusterRecordChildWorkflowExecutionCompleteTask is the cross-cluster version of RecordChildCompletionTask
+	CrossClusterRecordChildWorkflowExecutionCompleteTask struct {
+		RecordWorkflowExecutionCompleteTask
 
 		TargetCluster string
 	}
@@ -2276,6 +2295,41 @@ func (u *SignalExecutionTask) SetVisibilityTimestamp(timestamp time.Time) {
 	u.VisibilityTimestamp = timestamp
 }
 
+// GetType returns the type of the signal transfer task
+func (u *RecordWorkflowExecutionCompleteTask) GetType() int {
+	return TransferTaskTypeCloseExecution
+}
+
+// GetVersion returns the version of the signal transfer task
+func (u *RecordWorkflowExecutionCompleteTask) GetVersion() int64 {
+	return u.Version
+}
+
+// SetVersion returns the version of the signal transfer task
+func (u *RecordWorkflowExecutionCompleteTask) SetVersion(version int64) {
+	u.Version = version
+}
+
+// GetTaskID returns the sequence ID of the signal transfer task.
+func (u *RecordWorkflowExecutionCompleteTask) GetTaskID() int64 {
+	return u.TaskID
+}
+
+// SetTaskID sets the sequence ID of the signal transfer task.
+func (u *RecordWorkflowExecutionCompleteTask) SetTaskID(id int64) {
+	u.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (u *RecordWorkflowExecutionCompleteTask) GetVisibilityTimestamp() time.Time {
+	return u.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (u *RecordWorkflowExecutionCompleteTask) SetVisibilityTimestamp(timestamp time.Time) {
+	u.VisibilityTimestamp = timestamp
+}
+
 // GetType returns the type of the upsert search attributes transfer task
 func (u *UpsertWorkflowSearchAttributesTask) GetType() int {
 	return TransferTaskTypeUpsertWorkflowSearchAttributes
@@ -2359,6 +2413,11 @@ func (c *CrossClusterCancelExecutionTask) GetType() int {
 // GetType returns of type of the cross-cluster signal task
 func (c *CrossClusterSignalExecutionTask) GetType() int {
 	return CrossClusterTaskTypeSignalExecution
+}
+
+// GetType returns of type of the cross-cluster record child workflow completion task
+func (c *CrossClusterRecordChildWorkflowExecutionCompleteTask) GetType() int {
+	return CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete
 }
 
 // GetType returns the type of the history replication task

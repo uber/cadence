@@ -10652,12 +10652,56 @@ func (v *CrossClusterSignalExecutionRequestAttributes) GetControl() (o []byte) {
 type CrossClusterSignalExecutionResponseAttributes struct {
 }
 
+type CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes struct {
+	TargetDomainID   string `json:"targetDomainID,omitempty"`
+	TargetWorkflowID string `json:"targetWorkflowID,omitempty"`
+	TargetRunID      string `json:"targetRunID,omitempty"`
+	InitiatedEventID int64  `json:"initiatedEventID,omitempty"`
+}
+
+// GetTargetDomainID is an internal getter (TBD...)
+func (v *CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes) GetTargetDomainID() (o string) {
+	if v != nil {
+		return v.TargetDomainID
+	}
+	return
+}
+
+// GetTargetWorkflowID is an internal getter (TBD...)
+func (v *CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes) GetTargetWorkflowID() (o string) {
+	if v != nil {
+		return v.TargetWorkflowID
+	}
+	return
+}
+
+// GetTargetRunID is an internal getter (TBD...)
+func (v *CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes) GetTargetRunID() (o string) {
+	if v != nil {
+		return v.TargetRunID
+	}
+	return
+}
+
+// GetInitiatedEventID is an internal getter (TBD...)
+func (v *CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes) GetInitiatedEventID() (o int64) {
+	if v != nil {
+		return v.InitiatedEventID
+	}
+	return
+}
+
+// CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes is an internal type (TBD...)
+type CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes struct {
+}
+
 // CrossClusterTaskRequest is an internal type (TBD...)
 type CrossClusterTaskRequest struct {
-	TaskInfo                      *CrossClusterTaskInfo                             `json:"taskInfo,omitempty"`
-	StartChildExecutionAttributes *CrossClusterStartChildExecutionRequestAttributes `json:"startChildExecutionAttributes,omitempty"`
-	CancelExecutionAttributes     *CrossClusterCancelExecutionRequestAttributes     `json:"cancelExecutionAttributes,omitempty"`
-	SignalExecutionAttributes     *CrossClusterSignalExecutionRequestAttributes     `json:"signalExecutionAttributes,omitempty"`
+	TaskInfo                                       *CrossClusterTaskInfo                                              `json:"taskInfo,omitempty"`
+	StartChildExecutionAttributes                  *CrossClusterStartChildExecutionRequestAttributes                  `json:"startChildExecutionAttributes,omitempty"`
+	CancelExecutionAttributes                      *CrossClusterCancelExecutionRequestAttributes                      `json:"cancelExecutionAttributes,omitempty"`
+	SignalExecutionAttributes                      *CrossClusterSignalExecutionRequestAttributes                      `json:"signalExecutionAttributes,omitempty"`
+	RecordChildWorkflowExecutionCompleteAttributes *CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes `json:"RecordChildWorkflowExecutionCompleteAttributes,omitempty"`
 }
 
 // GetTaskInfo is an internal getter (TBD...)
@@ -10692,14 +10736,23 @@ func (v *CrossClusterTaskRequest) GetSignalExecutionAttributes() (o *CrossCluste
 	return
 }
 
+// GetSignalExecutionAttributes is an internal getter (TBD...)
+func (v *CrossClusterTaskRequest) GetRecordChildWorkflowExecutionCompleteAttributes() (o *CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes) {
+	if v != nil && v.RecordChildWorkflowExecutionCompleteAttributes != nil {
+		return v.RecordChildWorkflowExecutionCompleteAttributes
+	}
+	return
+}
+
 // CrossClusterTaskResponse is an internal type (TBD...)
 type CrossClusterTaskResponse struct {
-	TaskID                        int64                                              `json:"taskID,omitempty"`
-	TaskType                      *CrossClusterTaskType                              `json:"taskType,omitempty"`
-	FailedCause                   *CrossClusterTaskFailedCause                       `json:"failedCause,omitempty"`
-	StartChildExecutionAttributes *CrossClusterStartChildExecutionResponseAttributes `json:"startChildExecutionAttributes,omitempty"`
-	CancelExecutionAttributes     *CrossClusterCancelExecutionResponseAttributes     `json:"cancelExecutionAttributes,omitempty"`
-	SignalExecutionAttributes     *CrossClusterSignalExecutionResponseAttributes     `json:"signalExecutionAttributes,omitempty"`
+	TaskID                                         int64                                                               `json:"taskID,omitempty"`
+	TaskType                                       *CrossClusterTaskType                                               `json:"taskType,omitempty"`
+	FailedCause                                    *CrossClusterTaskFailedCause                                        `json:"failedCause,omitempty"`
+	StartChildExecutionAttributes                  *CrossClusterStartChildExecutionResponseAttributes                  `json:"startChildExecutionAttributes,omitempty"`
+	CancelExecutionAttributes                      *CrossClusterCancelExecutionResponseAttributes                      `json:"cancelExecutionAttributes,omitempty"`
+	SignalExecutionAttributes                      *CrossClusterSignalExecutionResponseAttributes                      `json:"signalExecutionAttributes,omitempty"`
+	RecordChildWorkflowExecutionCompleteAttributes *CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes `json:"RecordChildWorkflowExecutionCompleteAttributes,omitempty"`
 }
 
 // GetTaskID is an internal getter (TBD...)
@@ -10746,6 +10799,14 @@ func (v *CrossClusterTaskResponse) GetCancelExecutionAttributes() (o *CrossClust
 func (v *CrossClusterTaskResponse) GetSignalExecutionAttributes() (o *CrossClusterSignalExecutionResponseAttributes) {
 	if v != nil && v.SignalExecutionAttributes != nil {
 		return v.SignalExecutionAttributes
+	}
+	return
+}
+
+// GetSignalExecutionAttributes is an internal getter (TBD...)
+func (v *CrossClusterTaskResponse) GetRecordChildWorkflowExecutionCompleteAttributes() (o *CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes) {
+	if v != nil && v.RecordChildWorkflowExecutionCompleteAttributes != nil {
+		return v.RecordChildWorkflowExecutionCompleteAttributes
 	}
 	return
 }
