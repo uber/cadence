@@ -228,7 +228,7 @@ func (p *esProcessorImpl) hashFn(key interface{}) uint32 {
 	return uint32(common.WorkflowIDToHistoryShard(id, numOfShards))
 }
 
-// 409 - Version Conflict
+// 409 - ReleaseVersion Conflict
 // 404 - Not Found
 func isResponseSuccess(status int) bool {
 	if status >= 200 && status < 300 || status == 409 || status == 404 {

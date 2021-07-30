@@ -514,7 +514,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 			// LastHeartBeatUpdatedTime must be valid when getting the sync activity replication task
 			heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
 
-			//Version history uses when replicate the sync activity task
+			//ReleaseVersion history uses when replicate the sync activity task
 			var versionHistory *types.VersionHistory
 			if versionHistories != nil {
 				rawVersionHistory, err := versionHistories.GetCurrentVersionHistory()
