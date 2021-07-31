@@ -222,7 +222,7 @@ func (s *oauthSuite) TestIncorrectPermission() {
 	s.att.Permission = Permission(15)
 	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
-		return fmt.Sprintf("%v", t[0].Field().Interface) == "code bug, this shouldn't happen"
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have permission for admin API"
 	}))
 	result, _ := authorizer.Authorize(s.ctx, &s.att)
 	s.Equal(result.Decision, DecisionDeny)
