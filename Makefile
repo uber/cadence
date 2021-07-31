@@ -366,7 +366,7 @@ BINS  += cadence
 TOOLS += cadence
 cadence: $(BUILD)/lint
 	@echo "compiling cadence with OS: $(GOOS), ARCH: $(GOARCH)"
-	@go build -o $@ cmd/tools/cli/main.go
+	@go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/tools/cli/main.go
 
 BINS += cadence-server
 cadence-server: $(BUILD)/lint

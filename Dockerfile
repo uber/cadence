@@ -14,6 +14,8 @@ RUN go build -mod=readonly -o /go/bin/tcheck github.com/uber/tcheck
 # Build Cadence binaries
 FROM golang:1.13.6-alpine AS builder
 
+ARG RELEASE_VERSION
+
 RUN apk add --update --no-cache ca-certificates make git curl mercurial bzr unzip
 
 WORKDIR /cadence
@@ -27,6 +29,8 @@ RUN go mod download
 
 COPY . .
 RUN rm -fr .bin .build
+
+ENV CADENCE_RELEASE_VERSION=$RELEASE_VERSION
 
 # bypass codegen, use committed files.  must be run separately, before building things.
 RUN make .fake-codegen
