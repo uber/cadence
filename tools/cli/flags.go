@@ -278,6 +278,7 @@ const (
 	FlagConnectionAttributes              = "conn_attrs"
 	FlagJWT                               = "jwt"
 	FlagJWTPrivateKey                     = "jwt-private-key"
+	FlagJWTPrivateKeyWithAlias            = FlagJWTPrivateKey + ", jwt-pk"
 )
 
 var flagsForExecution = []cli.Flag{
