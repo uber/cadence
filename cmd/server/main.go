@@ -33,6 +33,6 @@ import (
 
 // main entry point for the cadence server
 func main() {
-	app := cadence.BuildCLI(metrics.Version, metrics.Revision)
+	app := cadence.BuildCLI(metrics.ReleaseVersion, metrics.Revision)
 	app.Run(os.Args)
 }
