@@ -145,7 +145,11 @@ func (a *oauthAuthority) validatePermission(claims *jwtClaims, attributes *Attri
 	case PermissionWrite:
 		groups = data[common.DomainDataKeyForWriteGroups]
 	default:
-		return fmt.Errorf("token doesn't have permission for admin API")
+		if claims.Admin {
+			return nil
+		} else {
+			return fmt.Errorf("token doesn't have permission for admin API")
+		}
 	}
 	// groups are separated by space
 	jwtGroups := strings.Split(groups, groupSeparator)
