@@ -39,9 +39,6 @@ import (
 	"time"
 
 	"github.com/cristalhq/jwt/v3"
-
-	"github.com/uber/cadence/common/authorization"
-
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 	"github.com/valyala/fastjson"
@@ -49,6 +46,7 @@ import (
 	"go.uber.org/cadence/client"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/authorization"
 	cc "github.com/uber/cadence/common/client"
 )
 
@@ -1031,7 +1029,7 @@ func getInputFile(inputFile string) *os.File {
 	return f
 }
 
-// Authenticate defines the logic to authenticate a user
+// createJWT defines the logic to create a JWT
 func createJWT(keyPath string) (*string, error) {
 	claims := authorization.JWTClaims{
 		Admin: true,
