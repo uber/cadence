@@ -43,7 +43,7 @@ type oauthAuthority struct {
 	log              log.Logger
 }
 
-type jwtClaims struct {
+type JWTClaims struct {
 	Sub    string
 	Name   string
 	Groups string // separated by space
@@ -117,17 +117,17 @@ func (a *oauthAuthority) getVerifier() (jwt.Verifier, error) {
 	return verifier, nil
 }
 
-func (a *oauthAuthority) parseToken(tokenStr string, verifier jwt.Verifier) (*jwtClaims, error) {
+func (a *oauthAuthority) parseToken(tokenStr string, verifier jwt.Verifier) (*JWTClaims, error) {
 	token, verifyErr := jwt.ParseAndVerifyString(tokenStr, verifier)
 	if verifyErr != nil {
 		return nil, verifyErr
 	}
-	var claims jwtClaims
+	var claims JWTClaims
 	_ = json.Unmarshal(token.RawClaims(), &claims)
 	return &claims, nil
 }
 
-func (a *oauthAuthority) validateTTL(claims *jwtClaims) error {
+func (a *oauthAuthority) validateTTL(claims *JWTClaims) error {
 	if claims.TTL > a.authorizationCfg.MaxJwtTTL {
 		return fmt.Errorf("TTL in token is larger than MaxTTL allowed")
 	}
@@ -137,7 +137,7 @@ func (a *oauthAuthority) validateTTL(claims *jwtClaims) error {
 	return nil
 }
 
-func (a *oauthAuthority) validatePermission(claims *jwtClaims, attributes *Attributes, data map[string]string) error {
+func (a *oauthAuthority) validatePermission(claims *JWTClaims, attributes *Attributes, data map[string]string) error {
 	groups := ""
 	switch attributes.Permission {
 	case PermissionRead:
@@ -145,18 +145,14 @@ func (a *oauthAuthority) validatePermission(claims *jwtClaims, attributes *Attri
 	case PermissionWrite:
 		groups = data[common.DomainDataKeyForWriteGroups]
 	default:
-		if claims.Admin {
-			return nil
-		} else {
-			return fmt.Errorf("token doesn't have permission for admin API")
-		}
+		return fmt.Errorf("token doesn't have permission for %v API", attributes.Permission)
 	}
 	// groups are separated by space
-	jwtGroups := strings.Split(groups, groupSeparator)
-	allowedGroups := strings.Split(claims.Groups, groupSeparator)
+	allowedGroups := strings.Split(groups, groupSeparator)    // groups that allowed by domain configuration(in domainData)
+	jwtGroups := strings.Split(claims.Groups, groupSeparator) // groups that the request has associated with
 
-	for _, group1 := range jwtGroups {
-		for _, group2 := range allowedGroups {
+	for _, group1 := range allowedGroups {
+		for _, group2 := range jwtGroups {
 			if group1 == group2 {
 				return nil
 			}

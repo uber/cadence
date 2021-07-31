@@ -211,7 +211,7 @@ func (s *oauthSuite) TestDifferentGroup() {
 	s.att.Permission = PermissionWrite
 	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
-		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have the right permission, jwt groups: [], allowed groups: [a b c]"
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have the right permission, jwt groups: [a b c], allowed groups: []"
 	}))
 	result, _ := authorizer.Authorize(s.ctx, &s.att)
 	s.Equal(result.Decision, DecisionDeny)
@@ -222,8 +222,9 @@ func (s *oauthSuite) TestIncorrectPermission() {
 	s.att.Permission = Permission(15)
 	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
-		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have permission for admin API"
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have permission for 15 API"
 	}))
-	result, _ := authorizer.Authorize(s.ctx, &s.att)
+	result, err := authorizer.Authorize(s.ctx, &s.att)
+	s.NoError(err)
 	s.Equal(result.Decision, DecisionDeny)
 }
