@@ -67,15 +67,24 @@ cd docker
 docker-compose up
 ```
 
-DIY: Building an image for any branch and restarting
+DIY: Building an image for any tag or branch
 -----------------------------------------
-Replace **YOUR_TAG** and **YOUR_CHECKOUT_BRANCH** in the below command to build:
+Replace **YOUR_TAG** and **YOUR_CHECKOUT_BRANCH_OR_TAG** in the below command to build:
+You can checkout a [release tag](https://github.com/uber/cadence/tags) (e.g. v0.21.3) or any branch you are interested.
+
 ```
 cd $GOPATH/src/github.com/uber/cadence
-git checkout YOUR_CHECKOUT_BRANCH
-docker build . -t ubercadence/server:YOUR_TAG
+git checkout YOUR_CHECKOUT_BRANCH_OR_TAG 
+docker build . -t ubercadence/<imageName>:YOUR_TAG
 ```
-Or for auto-setup images:
+
+You can specify `--build-arg TARGET=<target>` to build different binaries.
+There are three targets supported:
+* server. Default target if not specified. This will build a regular server binary.
+* auto-setup. The image will setup all the DB/ElasticSearch schema during startup.
+* cli. This image is for [CLI](https://cadenceworkflow.io/docs/cli/). 
+
+For example of auto-setup images:
 ```
 cd $GOPATH/src/github.com/uber/cadence
 git checkout YOUR_CHECKOUT_BRANCH
@@ -87,9 +96,6 @@ Then stop service and remove all containers using the below commands.
 docker-compose down
 docker-compose up
 ```
-
-Note that with `TARGET=auto-setup`, the images will setup all the DB/ElasticSearch schema during startup.
-By default, the image will not setup schema if you leave TARGET empty.
 
 Using docker image for production
 =========================
