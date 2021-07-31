@@ -37,8 +37,8 @@ func SetFactory(factory ClientFactory) {
 // NewCliApp instantiates a new instance of the CLI application.
 func NewCliApp() *cli.App {
 	version := fmt.Sprintf("CLI feature version: %v \n"+
-		"   Release version:%v\n"+
-		"   Build revision:%v\n"+
+		"   Release version: %v\n"+
+		"   Build commit: %v\n"+
 		"   Note: CLI feature version is for compatibility checking between server and CLI if enabled feature checking. Server is always backward compatible to older CLI versions, but not accepting newer than it can support.",
 		client.SupportedCLIVersion, metrics.ReleaseVersion, metrics.Revision)
 
