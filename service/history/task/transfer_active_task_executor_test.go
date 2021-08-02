@@ -628,86 +628,45 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_Duplication() 
 }
 
 func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent() {
-
-	workflowExecution := types.WorkflowExecution{
-		WorkflowID: "some random workflow ID",
-		RunID:      uuid.New(),
-	}
-	workflowType := "some random workflow type"
-	taskListName := "some random task list"
-
-	parentDomainID := "some random parent domain ID"
-	parentInitiatedID := int64(3222)
-	parentDomainName := "some random parent domain Name"
-	parentExecution := types.WorkflowExecution{
-		WorkflowID: "some random parent workflow ID",
-		RunID:      uuid.New(),
-	}
-	s.mockDomainCache.EXPECT().GetDomainByID(parentDomainID).Return(s.domainEntry, nil).AnyTimes()
-
-	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
-		s.mockShard,
-		s.logger,
-		s.version,
-		workflowExecution.GetRunID(),
+	s.testProcessCloseExecution_HasParent(
 		s.domainEntry,
-	)
-	_, err := mutableState.AddWorkflowExecutionStartedEvent(
-		workflowExecution,
-		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: s.domainID,
-			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: workflowType},
-				TaskList:                            &types.TaskList{Name: taskListName},
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-			},
-			ParentExecutionInfo: &types.ParentExecutionInfo{
-				DomainUUID:  parentDomainID,
-				Domain:      parentDomainName,
-				Execution:   &parentExecution,
-				InitiatedID: parentInitiatedID,
-			},
+		func(
+			mutableState execution.MutableState,
+			workflowExecution, targetExecution types.WorkflowExecution,
+		) {
+			s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything, mock.Anything).Return(nil).Once()
+			s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
 		},
 	)
-	s.Nil(err)
-
-	di := test.AddDecisionTaskScheduledEvent(mutableState)
-	event := test.AddDecisionTaskStartedEvent(mutableState, di.ScheduleID, taskListName, uuid.New())
-	di.StartedID = event.GetEventID()
-	event = test.AddDecisionTaskCompletedEvent(mutableState, di.ScheduleID, di.StartedID, nil, "some random identity")
-
-	taskID := int64(59)
-	event = test.AddCompleteWorkflowEvent(mutableState, event.GetEventID(), nil)
-
-	transferTask := s.newTransferTaskFromInfo(&persistence.TransferTaskInfo{
-		Version:    s.version,
-		DomainID:   s.domainID,
-		WorkflowID: workflowExecution.GetWorkflowID(),
-		RunID:      workflowExecution.GetRunID(),
-		TaskID:     taskID,
-		TaskList:   taskListName,
-		TaskType:   persistence.TransferTaskTypeCloseExecution,
-		ScheduleID: event.GetEventID(),
-	})
-
-	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventID(), event.GetVersion())
-	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockHistoryClient.EXPECT().RecordChildExecutionCompleted(gomock.Any(), &types.RecordChildExecutionCompletedRequest{
-		DomainUUID:         parentDomainID,
-		WorkflowExecution:  &parentExecution,
-		InitiatedID:        parentInitiatedID,
-		CompletedExecution: &workflowExecution,
-		CompletionEvent:    event,
-	}).Return(nil).AnyTimes()
-	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything, mock.Anything).Return(nil).Once()
-	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
-
-	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
-	s.Nil(err)
 }
 
-func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasCrossClusterParent() {
+func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParentCrossCluster() {
+	s.testProcessCloseExecution_HasParent(
+		s.remoteTargetDomainEntry,
+		func(
+			mutableState execution.MutableState,
+			workflowExecution, targetExecution types.WorkflowExecution,
+		) {
+			s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything, mock.Anything).Return(nil).Once()
+			s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
+			s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(int64(-24)).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
+			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
+				crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
+				s.Len(crossClusterTasks, 1)
+				s.Equal(persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete, crossClusterTasks[0].GetType())
+				return true
+			})).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
+		},
+	)
+}
+
+func (s *transferActiveTaskExecutorSuite) testProcessCloseExecution_HasParent(
+	domainEntry *cache.DomainCacheEntry,
+	setupMockFn func(
+		mutableState execution.MutableState,
+		workflowExecution, targetExecution types.WorkflowExecution,
+	),
+) {
 
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: "some random workflow ID",
@@ -723,7 +682,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasCrossClus
 		WorkflowID: "some random parent workflow ID",
 		RunID:      uuid.New(),
 	}
-	s.mockDomainCache.EXPECT().GetDomainByID(parentDomainID).Return(s.remoteTargetDomainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainByID(parentDomainID).Return(domainEntry, nil).AnyTimes()
 
 	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
@@ -780,11 +739,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasCrossClus
 		CompletedExecution: &workflowExecution,
 		CompletionEvent:    event,
 	}).Return(nil).AnyTimes()
-	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything, mock.Anything).Return(nil).Once()
-	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
-	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(
-		&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: nil}, nil)
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(int64(-24)).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
+	setupMockFn(mutableState, workflowExecution, parentExecution)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
 	s.Nil(err)

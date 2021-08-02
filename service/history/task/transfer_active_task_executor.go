@@ -60,7 +60,6 @@ var (
 )
 
 var (
-	errNotImplemented      = errors.New("not implemented")
 	errUnknownTransferTask = errors.New("Unknown transfer task")
 	errWorkflowBusy        = errors.New("Unable to get workflow execution lock within specified timeout")
 )

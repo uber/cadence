@@ -126,18 +126,18 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateCrossClusterTaskFromTransfe
 	targetCluster := cluster.TestAlternativeClusterName
 	now := time.Now()
 	testCases := []struct {
-		tranferTask              *persistence.TransferTaskInfo
+		transferTask             *persistence.TransferTaskInfo
 		expectError              bool
 		expectedCrossClusterTask persistence.Task
 	}{
 		{
-			tranferTask: &persistence.TransferTaskInfo{
+			transferTask: &persistence.TransferTaskInfo{
 				TaskType: persistence.TransferTaskTypeActivityTask,
 			},
 			expectError: true,
 		},
 		{
-			tranferTask: &persistence.TransferTaskInfo{
+			transferTask: &persistence.TransferTaskInfo{
 				TaskType:                persistence.TransferTaskTypeCancelExecution,
 				TargetDomainID:          constants.TestTargetDomainID,
 				TargetWorkflowID:        constants.TestWorkflowID,
@@ -158,7 +158,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateCrossClusterTaskFromTransfe
 			},
 		},
 		{
-			tranferTask: &persistence.TransferTaskInfo{
+			transferTask: &persistence.TransferTaskInfo{
 				TaskType:                persistence.TransferTaskTypeSignalExecution,
 				TargetDomainID:          constants.TestTargetDomainID,
 				TargetWorkflowID:        constants.TestWorkflowID,
@@ -179,7 +179,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateCrossClusterTaskFromTransfe
 			},
 		},
 		{
-			tranferTask: &persistence.TransferTaskInfo{
+			transferTask: &persistence.TransferTaskInfo{
 				TaskType:         persistence.TransferTaskTypeStartChildExecution,
 				TargetDomainID:   constants.TestTargetDomainID,
 				TargetWorkflowID: constants.TestWorkflowID,
@@ -195,14 +195,33 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateCrossClusterTaskFromTransfe
 				},
 			},
 		},
+		{
+			transferTask: &persistence.TransferTaskInfo{
+				TaskType:         persistence.TransferTaskTypeCloseExecution,
+				TargetDomainID:   constants.TestTargetDomainID,
+				TargetWorkflowID: constants.TestWorkflowID,
+				TargetRunID:      constants.TestRunID,
+				ScheduleID:       int64(123),
+			},
+			expectError: false,
+			expectedCrossClusterTask: &persistence.CrossClusterRecordChildWorkflowExecutionCompleteTask{
+				TargetCluster: targetCluster,
+				RecordWorkflowExecutionCompleteTask: persistence.RecordWorkflowExecutionCompleteTask{
+					TargetDomainID:   constants.TestTargetDomainID,
+					TargetWorkflowID: constants.TestWorkflowID,
+					TargetRunID:      constants.TestRunID,
+					InitiatedID:      int64(123),
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		var actualCrossClusterTask persistence.Task
 		if !tc.expectError {
-			tc.tranferTask.Version = int64(101)
+			tc.transferTask.Version = int64(101)
 			tc.expectedCrossClusterTask.SetVersion(int64(101))
-			tc.tranferTask.VisibilityTimestamp = now
+			tc.transferTask.VisibilityTimestamp = now
 			tc.expectedCrossClusterTask.SetVisibilityTimestamp(now)
 
 			s.mockMutableState.EXPECT().AddCrossClusterTasks(gomock.Any()).Do(
@@ -212,7 +231,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateCrossClusterTaskFromTransfe
 			).MaxTimes(1)
 		}
 
-		err := s.taskGenerator.GenerateCrossClusterTaskFromTransferTask(tc.tranferTask, targetCluster)
+		err := s.taskGenerator.GenerateCrossClusterTaskFromTransferTask(tc.transferTask, targetCluster)
 		if tc.expectError {
 			s.Error(err)
 		} else {
