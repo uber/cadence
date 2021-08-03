@@ -23,6 +23,7 @@ package configstore
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -485,14 +486,13 @@ func (s *configStoreClientSuite) TestGetStringValue() {
 	s.Equal("constrained-string", v)
 }
 
-//not working, json float vs int on key2
 func (s *configStoreClientSuite) TestGetMapValue() {
 	var defaultVal map[string]interface{}
 	v, err := s.client.GetMapValue(dc.TestGetMapPropertyKey, nil, defaultVal)
 	s.NoError(err)
 	expectedVal := map[string]interface{}{
 		"key1": "1",
-		"key2": 1,
+		"key2": float64(1),
 		"key3": []interface{}{
 			false,
 			map[string]interface{}{
@@ -704,6 +704,20 @@ func (s *configStoreClientSuite) TestMatchFilters() {
 	}
 }
 
+func (s *configStoreClientSuite) TestUpdateConfig_NilOverwrite() {
+	s.mockManager.EXPECT().
+		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
+			if request.Snapshot.Values.Entries[0].Name != dc.Keys[dc.TestGetBoolPropertyKey] {
+				return nil
+			}
+			return errors.New("entry not removed")
+		}).AnyTimes()
+
+	err := s.client.UpdateValue(dc.TestGetBoolPropertyKey, nil)
+	s.NoError(err)
+}
+
 func (s *configStoreClientSuite) TestUpdateConfig_NoRetrySuccess() {
 	s.mockManager.EXPECT().
 		UpdateDynamicConfig(gomock.Any(), EqSnapshotVersion(2)).
@@ -765,7 +779,7 @@ func (s *configStoreClientSuite) TestUpdateConfig_RetryFailure() {
 	s.Error(err)
 }
 
-func (s *configStoreClientSuite) TestUpdateTimeout() {
+func (s *configStoreClientSuite) TestUpdateConfig_Timeout() {
 	s.mockManager.EXPECT().
 		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, _ *p.UpdateDynamicConfigRequest) error {

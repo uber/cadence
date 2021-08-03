@@ -166,18 +166,26 @@ func (t AdminThriftHandler) GetCrossClusterTasks(ctx context.Context, request *s
 	return thrift.FromGetCrossClusterTasksResponse(response), thrift.FromError(err)
 }
 
+// GetDynamicConfig fetches dynamic config value
 func (t AdminThriftHandler) GetDynamicConfig(ctx context.Context, request *admin.GetDynamicConfigRequest) (*admin.GetDynamicConfigResponse, error) {
-	return nil, thrift.FromError(types.InternalServiceError{Message: "not implemented"})
+	response, err := t.h.GetDynamicConfig(withThriftTag(ctx), thrift.ToGetDynamicConfigRequest(request))
+	return thrift.FromGetDynamicConfigResponse(response), thrift.FromError(err)
 }
 
+// UpdateDynamicConfig updates dynamic config value
 func (t AdminThriftHandler) UpdateDynamicConfig(ctx context.Context, request *admin.UpdateDynamicConfigRequest) error {
-	return thrift.FromError(types.InternalServiceError{Message: "not implemented"})
+	err := t.h.UpdateDynamicConfig(withThriftTag(ctx), thrift.ToUpdateDynamicConfigRequest(request))
+	return thrift.FromError(err)
 }
 
+// RestoreDynamicConfig deletes dynamic config value from config store based on filter
 func (t AdminThriftHandler) RestoreDynamicConfig(ctx context.Context, request *admin.RestoreDynamicConfigRequest) error {
-	return thrift.FromError(types.InternalServiceError{Message: "not implemented"})
+	err := t.h.RestoreDynamicConfig(withThriftTag(ctx), thrift.ToRestoreDynamicConfigRequest(request))
+	return thrift.FromError(err)
 }
 
-func (t AdminThriftHandler) ListDynamicConfig(ctx context.Context) (*admin.ListDynamicConfigResponse, error) {
-	return nil, thrift.FromError(types.InternalServiceError{Message: "not implemented"})
+// ListDynamicConfig fetches all values associated to specified dc parameters or all otherwise
+func (t AdminThriftHandler) ListDynamicConfig(ctx context.Context, request *admin.ListDynamicConfigRequest) (*admin.ListDynamicConfigResponse, error) {
+	response, err := t.h.ListDynamicConfig(withThriftTag(ctx), thrift.ToListDynamicConfigRequest(request))
+	return thrift.FromListDynamicConfigResponse(response), thrift.FromError(err)
 }

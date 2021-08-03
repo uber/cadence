@@ -32,6 +32,7 @@ import (
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/types"
 )
 
 var _ Client = (*fileBasedClient)(nil)
@@ -210,6 +211,13 @@ func (fc *fileBasedClient) UpdateValue(name Key, value interface{}) error {
 	}
 
 	return fc.storeValues(currentValues)
+}
+
+func (fc *fileBasedClient) RestoreValue(name Key, filters map[Filter]interface{}) error {
+	return errors.New("not supported for file based client")
+}
+func (fc *fileBasedClient) ListValue(name Key) ([]*types.DynamicConfigEntry, error) {
+	return nil, errors.New("not supported for file based client")
 }
 
 func (fc *fileBasedClient) update() error {

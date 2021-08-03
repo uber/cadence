@@ -749,8 +749,8 @@ func FromGetDynamicConfigResponse(t *types.GetDynamicConfigResponse) *adminv1.Ge
 		return nil
 	}
 	return &adminv1.GetDynamicConfigResponse{
-		ConfigValues: FromDynamicConfigEntry(t.ConfigValues),
-		ValueSource:  t.ValueSource,
+		Value:       FromDataBlob(t.Value),
+		ValueSource: t.ValueSource,
 	}
 }
 
@@ -760,8 +760,8 @@ func ToGetDynamicConfigResponse(t *adminv1.GetDynamicConfigResponse) *types.GetD
 		return nil
 	}
 	return &types.GetDynamicConfigResponse{
-		ConfigValues: ToDynamicConfigEntry(t.ConfigValues),
-		ValueSource:  t.ValueSource,
+		Value:       ToDataBlob(t.Value),
+		ValueSource: t.ValueSource,
 	}
 }
 
@@ -806,6 +806,26 @@ func ToRestoreDynamicConfigRequest(t *adminv1.RestoreDynamicConfigRequest) *type
 	return &types.RestoreDynamicConfigRequest{
 		ConfigName: t.ConfigName,
 		Filters:    ToDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//FromListDynamicConfigRequest converts internal ListDynamicConfigRequest type to proto
+func FromListDynamicConfigRequest(t *types.ListDynamicConfigRequest) *adminv1.ListDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.ListDynamicConfigRequest{
+		ConfigName: t.ConfigName,
+	}
+}
+
+//ToListDynamicConfigRequest converts proto ListDynamicConfigRequest type to internal
+func ToListDynamicConfigRequest(t *adminv1.ListDynamicConfigRequest) *types.ListDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.ListDynamicConfigRequest{
+		ConfigName: t.ConfigName,
 	}
 }
 

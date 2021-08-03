@@ -22,6 +22,10 @@
 package dynamodb
 
 import (
+	"context"
+	"errors"
+
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
@@ -33,4 +37,12 @@ func (db *ddb) SetupTestDatabase() error {
 
 func (db *ddb) TeardownTestDatabase() error {
 	panic("TODO")
+}
+
+func (db *ddb) InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error {
+	return errors.New("TODO")
+}
+
+func (db *ddb) SelectLatestConfig(ctx context.Context, rowType int) (*persistence.InternalConfigStoreEntry, error) {
+	return nil, errors.New("TODO")
 }

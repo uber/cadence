@@ -417,13 +417,13 @@ func (v *GetDynamicConfigRequest) GetConfigName() (o string) {
 }
 
 type GetDynamicConfigResponse struct {
-	ConfigValues *DynamicConfigEntry `json:"configValues,omitempty"`
-	ValueSource  string              `json:"valueSource,omitempty"`
+	Value       *DataBlob `json:"value,omitempty"`
+	ValueSource string    `json:"valueSource,omitempty"`
 }
 
-func (v *GetDynamicConfigResponse) GetConfigValues() (o *DynamicConfigEntry) {
-	if v != nil && v.ConfigValues != nil {
-		return v.ConfigValues
+func (v *GetDynamicConfigResponse) GetValue() (o *DataBlob) {
+	if v != nil && v.Value != nil {
+		return v.Value
 	}
 	return
 }
@@ -469,6 +469,17 @@ func (v *RestoreDynamicConfigRequest) GetConfigName() (o string) {
 func (v *RestoreDynamicConfigRequest) GetFilters() (o []*DynamicConfigFilter) {
 	if v != nil && v.Filters != nil {
 		return v.Filters
+	}
+	return
+}
+
+type ListDynamicConfigRequest struct {
+	ConfigName string `json:"configName,omitempty"`
+}
+
+func (v *ListDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil {
+		return v.ConfigName
 	}
 	return
 }

@@ -21,8 +21,11 @@
 package dynamicconfig
 
 import (
+	"errors"
 	"sync"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 )
 
 type inMemoryClient struct {
@@ -131,4 +134,11 @@ func (mc *inMemoryClient) GetDurationValue(
 func (mc *inMemoryClient) UpdateValue(key Key, value interface{}) error {
 	mc.SetValue(key, value)
 	return nil
+}
+
+func (mc *inMemoryClient) RestoreValue(name Key, filters map[Filter]interface{}) error {
+	return errors.New("not supported for file based client")
+}
+func (mc *inMemoryClient) ListValue(name Key) ([]*types.DynamicConfigEntry, error) {
+	return nil, errors.New("not supported for file based client")
 }

@@ -162,6 +162,8 @@ func (csc *configStoreClient) GetStringValue(name dc.Key, filters map[dc.Filter]
 	return defaultValue, errors.New("value type is not string")
 }
 
+// Note that all number types (ex: ints) will be returned as float64.
+// It is the caller's responsibility to convert based on their context for value type.
 func (csc *configStoreClient) GetMapValue(
 	name dc.Key, filters map[dc.Filter]interface{}, defaultValue map[string]interface{},
 ) (map[string]interface{}, error) {
@@ -199,6 +201,58 @@ func (csc *configStoreClient) UpdateValue(name dc.Key, value interface{}) error 
 	return csc.updateValue(name, value, csc.config.UpdateRetryAttempts)
 }
 
+func (csc *configStoreClient) RestoreValue(name dc.Key, filters map[dc.Filter]interface{}) error {
+	currentCached := csc.values.Load().(cacheEntry)
+	if currentCached.dcEntries == nil {
+		return dc.NotFoundError
+	}
+
+	val, ok := currentCached.dcEntries[dc.Keys[name]]
+	if !ok || name == dc.UnknownKey {
+		return dc.NotFoundError
+	}
+
+	newValues := make([]*types.DynamicConfigValue, 0, len(val.Values))
+	for _, dcValue := range val.Values {
+		if !matchFilters(dcValue, filters) || len(dcValue.Filters) == 0 {
+			newValues = append(newValues, copyDynamicConfigValue(dcValue))
+		}
+	}
+	return csc.UpdateValue(name, &types.DynamicConfigEntry{
+		Name:         val.Name,
+		DefaultValue: val.DefaultValue,
+		Values:       newValues,
+	})
+}
+
+func (csc *configStoreClient) ListValue(name dc.Key) ([]*types.DynamicConfigEntry, error) {
+	var err error
+	err = nil
+	var resList []*types.DynamicConfigEntry
+
+	currentCached := csc.values.Load().(cacheEntry)
+	if currentCached.dcEntries == nil {
+		return nil, dc.NotFoundError
+	}
+
+	if val, ok := currentCached.dcEntries[dc.Keys[name]]; !ok || name == dc.UnknownKey {
+		//if key is not known/specified, return all entries
+		resList = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
+		for _, entry := range currentCached.dcEntries {
+			resList = append(resList, copyDynamicConfigEntry(entry))
+		}
+		if !ok {
+			err = dc.NotFoundError
+		}
+	} else {
+		//if key is known, return just that specific entry
+		resList = make([]*types.DynamicConfigEntry, 0, 1)
+		resList = append(resList, val)
+	}
+
+	return resList, err
+}
+
 func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryAttempts int) error {
 	//since values are not unique, no way to know if you are trying to update a specific value
 	//or if you want to add another of the same value with different filters.
@@ -208,28 +262,50 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 	var newEntries []*types.DynamicConfigEntry
 
 	existingEntry, entryExists := currentCached.dcEntries[keyName]
-	if entryExists {
-		newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
-	} else {
-		newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries)+1)
-		newEntries = append(newEntries,
-			&types.DynamicConfigEntry{
-				Name:         keyName,
-				DefaultValue: nil,
-				Values:       value.([]*types.DynamicConfigValue),
-			})
-	}
 
-	for _, entry := range currentCached.dcEntries {
-		if entryExists && entry == existingEntry {
+	if value == nil {
+		if entryExists {
+			newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries)-1)
+		} else {
+			newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
+		}
+
+		for _, entry := range currentCached.dcEntries {
+			if entryExists && entry == existingEntry {
+				continue
+			} else {
+				newEntries = append(newEntries, copyDynamicConfigEntry(entry))
+			}
+		}
+	} else {
+		dcValues, ok := value.([]*types.DynamicConfigValue)
+		if !ok {
+			return errors.New("invalid value")
+		}
+
+		if entryExists {
+			newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
+		} else {
+			newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries)+1)
 			newEntries = append(newEntries,
 				&types.DynamicConfigEntry{
 					Name:         keyName,
 					DefaultValue: nil,
-					Values:       value.([]*types.DynamicConfigValue),
+					Values:       dcValues,
 				})
-		} else {
-			newEntries = append(newEntries, copyDynamicConfigEntry(entry))
+		}
+
+		for _, entry := range currentCached.dcEntries {
+			if entryExists && entry == existingEntry {
+				newEntries = append(newEntries,
+					&types.DynamicConfigEntry{
+						Name:         keyName,
+						DefaultValue: nil,
+						Values:       dcValues,
+					})
+			} else {
+				newEntries = append(newEntries, copyDynamicConfigEntry(entry))
+			}
 		}
 	}
 
@@ -458,7 +534,7 @@ func validateConfigStoreClientConfig(config *ConfigStoreClientConfig) error {
 
 func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {
 	switch *blob.EncodingType {
-	case types.EncodingTypeJSON: //
+	case types.EncodingTypeJSON:
 		var v interface{}
 		err := json.Unmarshal(blob.Data, &v)
 		return v, err

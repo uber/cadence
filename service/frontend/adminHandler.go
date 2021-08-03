@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
+	dc "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -84,6 +85,10 @@ type (
 		ResendReplicationTasks(context.Context, *types.ResendReplicationTasksRequest) error
 		ResetQueue(context.Context, *types.ResetQueueRequest) error
 		GetCrossClusterTasks(context.Context, *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error)
+		GetDynamicConfig(context.Context, *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error)
+		UpdateDynamicConfig(context.Context, *types.UpdateDynamicConfigRequest) error
+		RestoreDynamicConfig(context.Context, *types.RestoreDynamicConfigRequest) error
+		ListDynamicConfig(context.Context, *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error)
 	}
 
 	// adminHandlerImpl is an implementation for admin service independent of wire protocol
@@ -95,7 +100,7 @@ type (
 		config                *Config
 		domainDLQHandler      domain.DLQMessageHandler
 		domainFailoverWatcher domain.FailoverWatcher
-		eventSerializder      persistence.PayloadSerializer
+		eventSerializer       persistence.PayloadSerializer
 		esClient              elasticsearch.GenericClient
 	}
 
@@ -148,8 +153,8 @@ func NewAdminHandler(
 			resource.GetMetricsClient(),
 			resource.GetLogger(),
 		),
-		eventSerializder: persistence.NewPayloadSerializer(),
-		esClient:         params.ESClient,
+		eventSerializer: persistence.NewPayloadSerializer(),
+		esClient:        params.ESClient,
 	}
 }
 
@@ -989,7 +994,7 @@ func (adh *adminHandlerImpl) ResendReplicationTasks(
 		func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 			return adh.GetHistoryClient().ReplicateEventsV2(ctx, request)
 		},
-		adh.eventSerializder,
+		adh.eventSerializer,
 		nil,
 		nil,
 		adh.GetLogger(),
@@ -1252,4 +1257,94 @@ func deserializeRawHistoryToken(bytes []byte) (*getWorkflowRawHistoryV2Token, er
 	token := &getWorkflowRawHistoryV2Token{}
 	err := json.Unmarshal(bytes, token)
 	return token, err
+}
+
+func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error) {
+	keyVal, err := checkValidKey(request.ConfigName)
+	if err != nil {
+		return nil, errors.New("invalid dynamic config parameter name")
+	}
+
+	value, err := adh.params.DynamicConfig.GetValue(keyVal, nil)
+	if err != nil {
+		return nil, err
+	}
+	data, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	return &types.GetDynamicConfigResponse{
+		Value: &types.DataBlob{
+			EncodingType: types.EncodingTypeJSON.Ptr(),
+			Data:         data,
+		},
+		ValueSource: "Config Store",
+	}, nil
+}
+
+func (adh *adminHandlerImpl) UpdateDynamicConfig(ctx context.Context, request *types.UpdateDynamicConfigRequest) error {
+	keyVal, err := checkValidKey(request.ConfigName)
+	if err != nil {
+		return errors.New("invalid dynamic config parameter name")
+	}
+
+	return adh.params.DynamicConfig.UpdateValue(keyVal, request.ConfigValues)
+}
+
+func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *types.RestoreDynamicConfigRequest) error {
+	keyVal, err := checkValidKey(request.ConfigName)
+	if err != nil {
+		return errors.New("invalid dynamic config parameter name")
+	}
+
+	filters := make(map[dc.Filter]interface{})
+	for _, filter := range request.Filters {
+		val, err := convertFromDataBlob(filter.Value)
+		if err != nil {
+			return err
+		}
+		filters[dc.ParseFilter(filter.Name)] = val
+	}
+
+	return adh.params.DynamicConfig.RestoreValue(keyVal, filters)
+}
+
+func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error) {
+	keyVal, err := checkValidKey(request.ConfigName)
+	if err != nil {
+		entries, err2 := adh.params.DynamicConfig.ListValue(dc.UnknownKey)
+		if err2 != nil {
+			err = err2
+		}
+		return &types.ListDynamicConfigResponse{
+			Entries: entries,
+		}, err
+	}
+
+	entries, err2 := adh.params.DynamicConfig.ListValue(keyVal)
+	if err2 != nil {
+		err = err2
+	}
+	return &types.ListDynamicConfigResponse{
+		Entries: entries,
+	}, err
+}
+
+func checkValidKey(keyName string) (dynamicconfig.Key, error) {
+	keyVal, ok := dynamicconfig.KeyNames[keyName]
+	if !ok {
+		return dynamicconfig.UnknownKey, errors.New("invalid dynamic config parameter name")
+	}
+	return keyVal, nil
+}
+
+func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {
+	switch *blob.EncodingType {
+	case types.EncodingTypeJSON:
+		var v interface{}
+		err := json.Unmarshal(blob.Data, &v)
+		return v, err
+	default:
+		return nil, errors.New("unsupported blob encoding")
+	}
 }
