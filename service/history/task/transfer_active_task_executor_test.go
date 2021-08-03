@@ -739,6 +739,7 @@ func (s *transferActiveTaskExecutorSuite) testProcessCloseExecution_HasParent(
 		CompletedExecution: &workflowExecution,
 		CompletionEvent:    event,
 	}).Return(nil).AnyTimes()
+	s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything, mock.Anything).Return(nil).Times(1)
 	setupMockFn(mutableState, workflowExecution, parentExecution)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)

@@ -345,24 +345,24 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		}
 		if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
 			// TODO: consider moving this logic to GenerateWorkflowCloseTasks and uxxse here as a back-up to save latency
-			return t.generateCrossClusterTask(ctx, wfContext, task, targetCluster)
+			err = t.generateCrossClusterTask(ctx, wfContext, task, targetCluster)
+		} else {
+			recordChildCompletionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
+			defer cancel()
+			err = t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &types.RecordChildExecutionCompletedRequest{
+				DomainUUID: parentDomainID,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: parentWorkflowID,
+					RunID:      parentRunID,
+				},
+				InitiatedID: initiatedID,
+				CompletedExecution: &types.WorkflowExecution{
+					WorkflowID: task.WorkflowID,
+					RunID:      task.RunID,
+				},
+				CompletionEvent: completionEvent,
+			})
 		}
-
-		recordChildCompletionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
-		defer cancel()
-		err = t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &types.RecordChildExecutionCompletedRequest{
-			DomainUUID: parentDomainID,
-			WorkflowExecution: &types.WorkflowExecution{
-				WorkflowID: parentWorkflowID,
-				RunID:      parentRunID,
-			},
-			InitiatedID: initiatedID,
-			CompletedExecution: &types.WorkflowExecution{
-				WorkflowID: task.WorkflowID,
-				RunID:      task.RunID,
-			},
-			CompletionEvent: completionEvent,
-		})
 
 		// Check to see if the error is non-transient, in which case reset the error and continue with processing
 		switch err.(type) {
