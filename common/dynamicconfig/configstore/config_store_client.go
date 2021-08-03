@@ -202,6 +202,8 @@ func (csc *configStoreClient) UpdateValue(name dc.Key, value interface{}) error 
 }
 
 func (csc *configStoreClient) RestoreValue(name dc.Key, filters map[dc.Filter]interface{}) error {
+	//if empty filter provided, update fallback value.
+	//if u want to remove entire entry, just do update value with empty
 	currentCached := csc.values.Load().(cacheEntry)
 	if currentCached.dcEntries == nil {
 		return dc.NotFoundError

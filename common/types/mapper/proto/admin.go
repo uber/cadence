@@ -730,6 +730,7 @@ func FromGetDynamicConfigRequest(t *types.GetDynamicConfigRequest) *adminv1.GetD
 	}
 	return &adminv1.GetDynamicConfigRequest{
 		ConfigName: t.ConfigName,
+		Filters:    FromDynamicConfigFilterArray(t.Filters),
 	}
 }
 
@@ -740,6 +741,7 @@ func ToGetDynamicConfigRequest(t *adminv1.GetDynamicConfigRequest) *types.GetDyn
 	}
 	return &types.GetDynamicConfigRequest{
 		ConfigName: t.ConfigName,
+		Filters:    ToDynamicConfigFilterArray(t.Filters),
 	}
 }
 

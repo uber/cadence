@@ -333,6 +333,7 @@ will be returned. If get_all is False and a filter(s) is specified, value that m
 If config_name cannot be found in database, default value will be returned. */
 message GetDynamicConfigRequest {
 	string config_name = 1;
+  repeated DynamicConfigFilter filters = 2;
 }
 
 message GetDynamicConfigResponse {

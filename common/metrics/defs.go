@@ -744,6 +744,14 @@ const (
 	AdminDescribeShardDistributionScope
 	// AdminGetCrossClusterTasksScope is the metric scope for admin.GetCrossClusterTasks
 	AdminGetCrossClusterTasksScope
+	// AdminGetDynamicConfigScope is the metric scope for admin.GetDynamicConfig
+	AdminGetDynamicConfigScope
+	// AdminUpdateDynamicConfigScope is the metric scope for admin.UpdateDynamicConfig
+	AdminUpdateDynamicConfigScope
+	// AdminRestoreDynamicConfigScope is the metric scope for admin.RestoreDynamicConfig
+	AdminRestoreDynamicConfigScope
+	// AdminListDynamicConfigScope is the metric scope for admin.ListDynamicConfig
+	AdminListDynamicConfigScope
 
 	NumAdminScopes
 )
@@ -1447,6 +1455,10 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminRefreshWorkflowTasksScope:             {operation: "RefreshWorkflowTasks"},
 		AdminResendReplicationTasksScope:           {operation: "ResendReplicationTasks"},
 		AdminGetCrossClusterTasksScope:             {operation: "AdminGetCrossClusterTasksScope"},
+		AdminGetDynamicConfigScope:                 {operation: "AdminGetDynamicConfigScope"},
+		AdminUpdateDynamicConfigScope:              {operation: "AdminUpdateDynamicConfigScope"},
+		AdminRestoreDynamicConfigScope:             {operation: "AdminRestoreDynamicConfigScope"},
+		AdminListDynamicConfigScope:                {operation: "AdminListDynamicConfigScope"},
 
 		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},
 		FrontendPollForDecisionTaskScope:                {operation: "PollForDecisionTask"},

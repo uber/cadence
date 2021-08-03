@@ -130,6 +130,7 @@ var (
 	errEmptyReplicationInfo                       = &types.BadRequestError{Message: "Replication task info is not set."}
 	errEmptyQueueType                             = &types.BadRequestError{Message: "Queue type is not set."}
 	errShuttingDown                               = &types.InternalServiceError{Message: "Shutting down"}
+	errInvalidFilters                             = &types.BadRequestError{Message: "Request Filters are invalid, unable to parse."}
 
 	// err for archival
 	errHistoryNotFound = &types.BadRequestError{Message: "Requested workflow history not found, may have passed retention period."}

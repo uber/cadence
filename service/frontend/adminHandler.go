@@ -1259,20 +1259,39 @@ func deserializeRawHistoryToken(bytes []byte) (*getWorkflowRawHistoryV2Token, er
 	return token, err
 }
 
-func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error) {
-	keyVal, err := checkValidKey(request.ConfigName)
-	if err != nil {
-		return nil, errors.New("invalid dynamic config parameter name")
+func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *types.GetDynamicConfigRequest) (_ *types.GetDynamicConfigResponse, retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	scope, sw := adh.startRequestProfile(metrics.AdminGetDynamicConfigScope)
+	defer sw.Stop()
+
+	if request == nil || request.ConfigName == "" {
+		return nil, adh.error(errRequestNotSet, scope)
 	}
 
-	value, err := adh.params.DynamicConfig.GetValue(keyVal, nil)
+	keyVal, err := checkValidKey(request.ConfigName)
 	if err != nil {
-		return nil, err
+		return nil, adh.error(err, scope)
 	}
+
+	var value interface{}
+	if request.Filters == nil {
+		value, err = adh.params.DynamicConfig.GetValue(keyVal, nil)
+		if err != nil {
+			return nil, adh.error(err, scope)
+		}
+	} else {
+		convFilters, err := convertFilterMapToList(request.Filters)
+		if err != nil {
+			return nil, adh.error(err, scope)
+		}
+		value, err = adh.params.DynamicConfig.GetValueWithFilters(keyVal, convFilters, nil)
+	}
+
 	data, err := json.Marshal(value)
 	if err != nil {
-		return nil, err
+		return nil, adh.error(err, scope)
 	}
+
 	return &types.GetDynamicConfigResponse{
 		Value: &types.DataBlob{
 			EncodingType: types.EncodingTypeJSON.Ptr(),
@@ -1282,39 +1301,64 @@ func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *type
 	}, nil
 }
 
-func (adh *adminHandlerImpl) UpdateDynamicConfig(ctx context.Context, request *types.UpdateDynamicConfigRequest) error {
+func (adh *adminHandlerImpl) UpdateDynamicConfig(ctx context.Context, request *types.UpdateDynamicConfigRequest) (retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	scope, sw := adh.startRequestProfile(metrics.AdminUpdateDynamicConfigScope)
+	defer sw.Stop()
+
+	if request == nil {
+		return adh.error(errRequestNotSet, scope)
+	}
+
 	keyVal, err := checkValidKey(request.ConfigName)
 	if err != nil {
-		return errors.New("invalid dynamic config parameter name")
+		return adh.error(err, scope)
 	}
 
 	return adh.params.DynamicConfig.UpdateValue(keyVal, request.ConfigValues)
 }
 
-func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *types.RestoreDynamicConfigRequest) error {
+func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *types.RestoreDynamicConfigRequest) (retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	scope, sw := adh.startRequestProfile(metrics.AdminRestoreDynamicConfigScope)
+	defer sw.Stop()
+
+	if request == nil || request.ConfigName == "" {
+		return adh.error(errRequestNotSet, scope)
+	}
+
 	keyVal, err := checkValidKey(request.ConfigName)
 	if err != nil {
-		return errors.New("invalid dynamic config parameter name")
+		return adh.error(err, scope)
 	}
 
-	filters := make(map[dc.Filter]interface{})
-	for _, filter := range request.Filters {
-		val, err := convertFromDataBlob(filter.Value)
+	var filters map[dc.Filter]interface{}
+
+	if request.Filters == nil {
+		filters = nil
+	} else {
+		filters, err = convertFilterMapToList(request.Filters)
 		if err != nil {
-			return err
+			return adh.error(errInvalidFilters, scope)
 		}
-		filters[dc.ParseFilter(filter.Name)] = val
 	}
-
 	return adh.params.DynamicConfig.RestoreValue(keyVal, filters)
 }
 
-func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error) {
+func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest) (_ *types.ListDynamicConfigResponse, retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	scope, sw := adh.startRequestProfile(metrics.AdminListDynamicConfigScope)
+	defer sw.Stop()
+
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+
 	keyVal, err := checkValidKey(request.ConfigName)
 	if err != nil {
 		entries, err2 := adh.params.DynamicConfig.ListValue(dc.UnknownKey)
 		if err2 != nil {
-			err = err2
+			err = adh.error(err2, scope)
 		}
 		return &types.ListDynamicConfigResponse{
 			Entries: entries,
@@ -1323,7 +1367,7 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 
 	entries, err2 := adh.params.DynamicConfig.ListValue(keyVal)
 	if err2 != nil {
-		err = err2
+		err = adh.error(err2, scope)
 	}
 	return &types.ListDynamicConfigResponse{
 		Entries: entries,
@@ -1347,4 +1391,17 @@ func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {
 	default:
 		return nil, errors.New("unsupported blob encoding")
 	}
+}
+
+func convertFilterMapToList(filters []*types.DynamicConfigFilter) (map[dc.Filter]interface{}, error) {
+	newFilters := make(map[dc.Filter]interface{})
+
+	for _, filter := range filters {
+		val, err := convertFromDataBlob(filter.Value)
+		if err != nil {
+			return nil, err
+		}
+		newFilters[dc.ParseFilter(filter.Name)] = val
+	}
+	return newFilters, nil
 }

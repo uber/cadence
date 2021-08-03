@@ -406,12 +406,20 @@ func (v *RingInfo) GetMembers() (o []*HostInfo) {
 }
 
 type GetDynamicConfigRequest struct {
-	ConfigName string `json:"configName,omitempty"`
+	ConfigName string                 `json:"configName,omitempty"`
+	Filters    []*DynamicConfigFilter `json:"filters,omitempty"`
 }
 
 func (v *GetDynamicConfigRequest) GetConfigName() (o string) {
 	if v != nil {
 		return v.ConfigName
+	}
+	return
+}
+
+func (v *GetDynamicConfigRequest) GetFilters() (o []*DynamicConfigFilter) {
+	if v != nil && v.Filters != nil {
+		return v.Filters
 	}
 	return
 }
