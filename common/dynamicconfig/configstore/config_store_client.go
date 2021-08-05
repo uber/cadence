@@ -214,12 +214,21 @@ func (csc *configStoreClient) RestoreValue(name dc.Key, filters map[dc.Filter]in
 		return dc.NotFoundError
 	}
 
-	newValues := make([]*types.DynamicConfigValue, 0, len(val.Values))
-	for _, dcValue := range val.Values {
-		if !matchFilters(dcValue, filters) || len(dcValue.Filters) == 0 {
-			newValues = append(newValues, copyDynamicConfigValue(dcValue))
+	newValues := make([]*types.DynamicConfigValue, 0, len(val.Values)-1)
+	if filters == nil {
+		for _, dcValue := range val.Values {
+			if len(dcValue.Filters) != 0 {
+				newValues = append(newValues, copyDynamicConfigValue(dcValue))
+			}
+		}
+	} else {
+		for _, dcValue := range val.Values {
+			if !matchFilters(dcValue, filters) || len(dcValue.Filters) == 0 {
+				newValues = append(newValues, copyDynamicConfigValue(dcValue))
+			}
 		}
 	}
+
 	return csc.UpdateValue(name, &types.DynamicConfigEntry{
 		Name:         val.Name,
 		DefaultValue: val.DefaultValue,

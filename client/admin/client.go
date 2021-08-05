@@ -374,6 +374,66 @@ func (c *clientImpl) GetCrossClusterTasks(
 	return client.GetCrossClusterTasks(ctx, request, opts...)
 }
 
+func (c *clientImpl) GetDynamicConfig(
+	ctx context.Context,
+	request *types.GetDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetDynamicConfigResponse, error) {
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContextWithLargeTimeout(ctx)
+	defer cancel()
+	return client.GetDynamicConfig(ctx, request, opts...)
+}
+
+func (c *clientImpl) UpdateDynamicConfig(
+	ctx context.Context,
+	request *types.UpdateDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) error {
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return err
+	}
+	ctx, cancel := c.createContextWithLargeTimeout(ctx)
+	defer cancel()
+	return client.UpdateDynamicConfig(ctx, request, opts...)
+}
+
+func (c *clientImpl) RestoreDynamicConfig(
+	ctx context.Context,
+	request *types.RestoreDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) error {
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return err
+	}
+	ctx, cancel := c.createContextWithLargeTimeout(ctx)
+	defer cancel()
+	return client.RestoreDynamicConfig(ctx, request, opts...)
+}
+
+func (c *clientImpl) ListDynamicConfig(
+	ctx context.Context,
+	request *types.ListDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (*types.ListDynamicConfigResponse, error) {
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContextWithLargeTimeout(ctx)
+	defer cancel()
+	return client.ListDynamicConfig(ctx, request, opts...)
+}
+
 func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {
 	if parent == nil {
 		return context.WithTimeout(context.Background(), c.timeout)

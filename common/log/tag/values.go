@@ -291,6 +291,10 @@ var (
 	AdminClientOperationRefreshWorkflowTasks             = clientOperation("admin-refresh-wf-tasks")
 	AdminClientOperationResendReplicationTasks           = clientOperation("admin-resend-replication-tasks")
 	AdminClientOperationGetCrossClusterTasks             = clientOperation("admin-get-cross-cluster-tasks")
+	AdminClientOperationGetDynamicConfig                 = clientOperation("admin-get-dynamic-config")
+	AdminClientOperationUpdateDynamicConfig              = clientOperation("admin-update-dynamic-config")
+	AdminClientOperationRestoreDynamicConfig             = clientOperation("admin-restore-dynamic-config")
+	AdminClientOperationListDynamicConfig                = clientOperation("admin-list-dynamic-config")
 
 	FrontendClientOperationDeprecateDomain                  = clientOperation("frontend-deprecate-domain")
 	FrontendClientOperationDescribeDomain                   = clientOperation("frontend-describe-domain")

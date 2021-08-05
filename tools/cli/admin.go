@@ -1266,3 +1266,76 @@ func newAdminRebalanceCommands() []cli.Command {
 		},
 	}
 }
+
+func newAdminConfigStoreCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:    "get-dynamic-config",
+			Aliases: []string{"getdc", "g"},
+			Usage:   "Get Dynamic Config Value",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagDynamicConfigName,
+					Usage: "Name of Dynamic Config parameter to get value of",
+				},
+				cli.StringFlag{
+					Name:  FlagDynamicConfigFilters,
+					Usage: "Optional. Value returned will satisfy specified filters. If no filters specified, default value will be returned. JSON string of type []*DynamicConfigFilter",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminGetDynamicConfig(c)
+			},
+		},
+		{
+			Name:    "update-dynamic-config",
+			Aliases: []string{"updc", "u"},
+			Usage:   "Update Dynamic Config Value",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagDynamicConfigName,
+					Usage: "Name of Dynamic Config parameter to update value of",
+				},
+				cli.StringFlag{
+					Name:  FlagDynamicConfigValue,
+					Usage: "Optional. Existing value is overriden with provided value if specified, otherwise existing value will be erased. JSON string of type []*DynamicConfigValue",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminUpdateDynamicConfig(c)
+			},
+		},
+		{
+			Name:    "restore-dynamic-config",
+			Aliases: []string{"resdc", "r"},
+			Usage:   "Restore Dynamic Config Value",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagDynamicConfigName,
+					Usage: "Name of Dynamic Config parameter to restore",
+				},
+				cli.StringFlag{
+					Name:  FlagDynamicConfigFilters,
+					Usage: "Optional. If filters is specified, all values associated with config that match filter will be erased. Otherwise, only default (fallback) value will be erased. JSON string of type []*DynamicConfigFilter",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminRestoreDynamicConfig(c)
+			},
+		},
+		{
+			Name:    "list-dynamic-config",
+			Aliases: []string{"listdc", "l"},
+			Usage:   "List Dynamic Config Value",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagDynamicConfigName,
+					Usage: "Optional. If specified, return all values associated with config. Otherwise return all value for all dynamic config parameters",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminListDynamicConfig(c)
+			},
+		},
+	}
+}

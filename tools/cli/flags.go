@@ -277,6 +277,9 @@ const (
 	DelayStartSeconds                     = "delay_start_seconds"
 	FlagConnectionAttributes              = "conn_attrs"
 	FlagJWT                               = "jwt"
+	FlagDynamicConfigName                 = "dynamic_config_name"
+	FlagDynamicConfigFilters              = "dynamic_config_filters"
+	FlagDynamicConfigValue                = "dynamic_config_value"
 )
 
 var flagsForExecution = []cli.Flag{
