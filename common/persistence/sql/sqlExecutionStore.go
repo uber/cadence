@@ -29,6 +29,8 @@ import (
 	"math"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
@@ -266,90 +268,80 @@ func (m *sqlExecutionStore) GetWorkflowExecution(
 	runID := serialization.MustParseUUID(request.Execution.RunID)
 	wfID := request.Execution.WorkflowID
 
-	// get executions
-	executionsChan := make(chan []sqlplugin.ExecutionsRow)
-	executionsErrChan := make(chan error)
-	go func() {
-		executions, err := m.getExecutions(ctx, request, domainID, wfID, runID)
-		executionsChan <- executions
-		executionsErrChan <- err
-	}()
+	var executionsError error
+	var executions []sqlplugin.ExecutionsRow
+	var activityInfos map[int64]*p.InternalActivityInfo
+	var timerInfos map[string]*p.TimerInfo
+	var childExecutionInfos map[int64]*p.InternalChildExecutionInfo
+	var requestCancelInfos map[int64]*p.RequestCancelInfo
+	var signalInfos map[int64]*p.SignalInfo
+	var bufferedEvents []*p.DataBlob
+	var signalsRequested map[string]struct{}
 
-	// get activity info map
-	activityInfoChan := make(chan map[int64]*p.InternalActivityInfo)
-	activityInfoErrChan := make(chan error)
-	go func() {
-		activityInfos, err := getActivityInfoMap(
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		executions, executionsError = m.getExecutions(ctx, request, domainID, wfID, runID)
+		return executionsError
+	})
+
+	g.Go(func() error {
+		var err error
+		activityInfos, err = getActivityInfoMap(
 			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
-		activityInfoChan <- activityInfos
-		activityInfoErrChan <- err
-	}()
+		return err
+	})
 
-	// get timer info map
-	timerInfoChan := make(chan map[string]*p.TimerInfo)
-	timerInfoErrChan := make(chan error)
-	go func() {
-		timerInfos, err := getTimerInfoMap(
+	g.Go(func() error {
+		var err error
+		timerInfos, err = getTimerInfoMap(
 			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
-		timerInfoChan <- timerInfos
-		timerInfoErrChan <- err
-	}()
+		return err
+	})
 
-	// get child execution info map
-	childExecutionInfoChan := make(chan map[int64]*p.InternalChildExecutionInfo)
-	childExecutionInfoErrChan := make(chan error)
-	go func() {
-		childExecutionInfos, err := getChildExecutionInfoMap(
+	g.Go(func() error {
+		var err error
+		childExecutionInfos, err = getChildExecutionInfoMap(
 			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
-		childExecutionInfoChan <- childExecutionInfos
-		childExecutionInfoErrChan <- err
-	}()
+		return err
+	})
 
-	// get request cancel info map
-	requestCancelInfoChan := make(chan map[int64]*p.RequestCancelInfo)
-	requestCancelInfoErrChan := make(chan error)
-	go func() {
-		requestCancelInfos, err := getRequestCancelInfoMap(
+	g.Go(func() error {
+		var err error
+		requestCancelInfos, err = getRequestCancelInfoMap(
 			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
-		requestCancelInfoChan <- requestCancelInfos
-		requestCancelInfoErrChan <- err
-	}()
+		return err
+	})
 
-	// get signal info map
-	signalInfoChan := make(chan map[int64]*p.SignalInfo)
-	signalInfoErrChan := make(chan error)
-	go func() {
-		signalInfos, err := getSignalInfoMap(
+	g.Go(func() error {
+		var err error
+		signalInfos, err = getSignalInfoMap(
 			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
-		signalInfoChan <- signalInfos
-		signalInfoErrChan <- err
-	}()
+		return err
+	})
 
-	// get buffered events
-	bufferedEventChan := make(chan []*p.DataBlob)
-	bufferedEventErrChan := make(chan error)
-	go func() {
-		bufferedEvents, err := getBufferedEvents(
+	g.Go(func() error {
+		var err error
+		bufferedEvents, err = getBufferedEvents(
 			ctx, m.db, m.shardID, domainID, wfID, runID)
-		bufferedEventChan <- bufferedEvents
-		bufferedEventErrChan <- err
-	}()
+		return err
+	})
 
-	// get signals requested
-	signalsRequestedChan := make(chan map[string]struct{})
-	signalsRequestedErrChan := make(chan error)
-	go func() {
-		signalsRequested, err := getSignalsRequested(
+	g.Go(func() error {
+		var err error
+		signalsRequested, err = getSignalsRequested(
 			ctx, m.db, m.shardID, domainID, wfID, runID)
-		signalsRequestedChan <- signalsRequested
-		signalsRequestedErrChan <- err
-	}()
+		return err
+	})
 
-	// assign state values
-	executionsErr := <-executionsErrChan
-	executions := <-executionsChan
-	if executionsErr != nil {
-		return nil, executionsErr
+	err := g.Wait()
+	if executionsError != nil {
+		return nil, executionsError
+	}
+	if err != nil {
+		return nil, &types.InternalServiceError{
+			Message: fmt.Sprintf("GetWorkflowExecution: failed. Error: %v", err),
+		}
 	}
 
 	state, err := m.populateWorkflowMutableState(executions[0])
@@ -358,48 +350,13 @@ func (m *sqlExecutionStore) GetWorkflowExecution(
 			Message: fmt.Sprintf("GetWorkflowExecution: failed. Error: %v", err),
 		}
 	}
-
-	err = <-activityInfoErrChan
-	if err != nil {
-		return nil, err
-	}
-	state.ActivityInfos = <-activityInfoChan
-
-	err = <-timerInfoErrChan
-	if err != nil {
-		return nil, err
-	}
-	state.TimerInfos = <-timerInfoChan
-
-	err = <-childExecutionInfoErrChan
-	if err != nil {
-		return nil, err
-	}
-	state.ChildExecutionInfos = <-childExecutionInfoChan
-
-	err = <-requestCancelInfoErrChan
-	if err != nil {
-		return nil, err
-	}
-	state.RequestCancelInfos = <-requestCancelInfoChan
-
-	err = <-signalInfoErrChan
-	if err != nil {
-		return nil, err
-	}
-	state.SignalInfos = <-signalInfoChan
-
-	err = <-bufferedEventErrChan
-	if err != nil {
-		return nil, err
-	}
-	state.BufferedEvents = <-bufferedEventChan
-
-	err = <-signalsRequestedErrChan
-	if err != nil {
-		return nil, err
-	}
-	state.SignalRequestedIDs = <-signalsRequestedChan
+	state.ActivityInfos = activityInfos
+	state.TimerInfos = timerInfos
+	state.ChildExecutionInfos = childExecutionInfos
+	state.RequestCancelInfos = requestCancelInfos
+	state.SignalInfos = signalInfos
+	state.BufferedEvents = bufferedEvents
+	state.SignalRequestedIDs = signalsRequested
 
 	return &p.InternalGetWorkflowExecutionResponse{State: state}, nil
 }
