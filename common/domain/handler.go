@@ -911,7 +911,12 @@ func (d *handlerImpl) updateReplicationConfig(
 			config.Clusters,
 			clustersNew,
 		); err != nil {
-			return config, clusterUpdated, activeClusterUpdated, err
+			// TODO: https://github.com/uber/cadence/issues/4345
+			// Right now we only have checking if clusters to remove are "current active cluster". See validateDomainReplicationConfigForGlobalDomain 
+			// However, there could be edge cases that a cluster is in "pending active" state during graceful failover.
+			// It's better to do this check so that people won't make mistake.
+			// However, this is not critical -- even this happens, they can add the active cluster back
+			d.logger.Warn("removing replica clusters from domain replication group")
 		}
 		config.Clusters = clustersNew
 	}
