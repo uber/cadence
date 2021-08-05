@@ -382,6 +382,8 @@ func (s *configStoreClientSuite) SetupTest() {
 			Snapshot: snapshot1,
 		}, nil).
 		AnyTimes()
+
+	configStoreClient.update()
 }
 
 func (s *configStoreClientSuite) TestGetValue() {
@@ -455,6 +457,13 @@ func (s *configStoreClientSuite) TestGetIntValue_WrongType() {
 	s.Equal(defaultValue, v)
 }
 
+func (s *configStoreClientSuite) TestGetIntValue_WrongTypeKey() {
+	defaultValue := 2000
+	v, err := s.client.GetIntValue(dc.TestGetMapPropertyKey, nil, defaultValue)
+	s.Error(err)
+	s.Equal(defaultValue, v)
+}
+
 func (s *configStoreClientSuite) TestGetFloatValue() {
 	v, err := s.client.GetFloatValue(dc.TestGetFloat64PropertyKey, nil, 1)
 	s.NoError(err)
@@ -477,6 +486,12 @@ func (s *configStoreClientSuite) TestGetBoolValue() {
 	s.Equal(false, v)
 }
 
+func (s *configStoreClientSuite) TestGetBoolValue_WrongTypeKey() {
+	v, err := s.client.GetBoolValue(dc.TestGetIntPropertyKey, nil, true)
+	s.Error(err)
+	s.Equal(true, v)
+}
+
 func (s *configStoreClientSuite) TestGetStringValue() {
 	filters := map[dc.Filter]interface{}{
 		dc.TaskListName: "random tasklist",
@@ -484,6 +499,12 @@ func (s *configStoreClientSuite) TestGetStringValue() {
 	v, err := s.client.GetStringValue(dc.TestGetStringPropertyKey, filters, "defaultString")
 	s.NoError(err)
 	s.Equal("constrained-string", v)
+}
+
+func (s *configStoreClientSuite) TestGetStringValue_WrongTypeKey() {
+	v, err := s.client.GetStringValue(dc.TestGetMapPropertyKey, nil, "defaultString")
+	s.Error(err)
+	s.Equal("defaultString", v)
 }
 
 func (s *configStoreClientSuite) TestGetMapValue() {
@@ -532,7 +553,7 @@ func (s *configStoreClientSuite) TestGetDurationValue_NotStringRepresentation() 
 func (s *configStoreClientSuite) TestGetDurationValue_ParseFailed() {
 	filters := map[dc.Filter]interface{}{
 		dc.DomainName:   "samples-domain",
-		dc.TaskListName: "longIdleTimeTasklist",
+		dc.TaskListName: "longIdleTimeTaskList",
 	}
 	v, err := s.client.GetDurationValue(dc.TestGetDurationPropertyKey, filters, time.Second)
 	s.Error(err)
@@ -570,6 +591,16 @@ func (s *configStoreClientSuite) TestValidateConfig_InvalidConfig() {
 			PollInterval:        time.Second * 2,
 			UpdateRetryAttempts: 0,
 			FetchTimeout:        time.Second * 0,
+			UpdateTimeout:       time.Second * 0,
+		},
+		nil, nil, nil)
+	s.Error(err)
+
+	_, err = NewConfigStoreClient(
+		&ConfigStoreClientConfig{
+			PollInterval:        time.Second * 2,
+			UpdateRetryAttempts: 1,
+			FetchTimeout:        time.Second * 1,
 			UpdateTimeout:       time.Second * 0,
 		},
 		nil, nil, nil)
@@ -704,7 +735,7 @@ func (s *configStoreClientSuite) TestMatchFilters() {
 	}
 }
 
-func (s *configStoreClientSuite) TestUpdateConfig_NilOverwrite() {
+func (s *configStoreClientSuite) TestUpdateValue_NilOverwrite() {
 	s.mockManager.EXPECT().
 		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
@@ -718,7 +749,7 @@ func (s *configStoreClientSuite) TestUpdateConfig_NilOverwrite() {
 	s.NoError(err)
 }
 
-func (s *configStoreClientSuite) TestUpdateConfig_NoRetrySuccess() {
+func (s *configStoreClientSuite) TestUpdateValue_NoRetrySuccess() {
 	s.mockManager.EXPECT().
 		UpdateDynamicConfig(gomock.Any(), EqSnapshotVersion(2)).
 		Return(nil).MaxTimes(1)
@@ -743,14 +774,56 @@ func (s *configStoreClientSuite) TestUpdateConfig_NoRetrySuccess() {
 			Snapshot: snapshot2,
 		}, nil).MaxTimes(1)
 
-	time.Sleep(2)
+	time.Sleep(2 * time.Second)
 
 	v, err := s.client.GetValue(dc.TestGetBoolPropertyKey, false)
 	s.NoError(err)
 	s.Equal(true, v)
 }
 
-func (s *configStoreClientSuite) TestUpdateConfig_RetrySuccess() {
+func (s *configStoreClientSuite) TestUpdateValue_SuccessNewKey() {
+	values := []*types.DynamicConfigValue{
+		{
+			Value: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper(true),
+			},
+			Filters: nil,
+		},
+	}
+
+	s.mockManager = p.NewMockConfigStoreManager(s.mockController)
+	configStoreClient, ok := s.client.(*configStoreClient)
+	s.Require().True(ok)
+	configStoreClient.configStoreManager = s.mockManager
+
+	s.mockManager.EXPECT().
+		FetchDynamicConfig(gomock.Any()).
+		Return(&p.FetchDynamicConfigResponse{
+			Snapshot: &p.DynamicConfigSnapshot{
+				Version: 1,
+				Values: &types.DynamicConfigBlob{
+					SchemaVersion: 1,
+					Entries:       nil,
+				},
+			},
+		}, nil).
+		AnyTimes()
+
+	s.mockManager.EXPECT().
+		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
+			s.Equal(1, len(request.Snapshot.Values.Entries))
+			s.Equal(request.Snapshot.Values.Entries[0].Values, values)
+			return nil
+		}).AnyTimes()
+
+	time.Sleep(3 * time.Second)
+	err := s.client.UpdateValue(dc.TestGetBoolPropertyKey, values)
+	s.NoError(err)
+}
+
+func (s *configStoreClientSuite) TestUpdateValue_RetrySuccess() {
 	s.mockManager.EXPECT().
 		UpdateDynamicConfig(gomock.Any(), EqSnapshotVersion(2)).
 		Return(&p.ConditionFailedError{}).AnyTimes()
@@ -770,7 +843,7 @@ func (s *configStoreClientSuite) TestUpdateConfig_RetrySuccess() {
 	s.NoError(err)
 }
 
-func (s *configStoreClientSuite) TestUpdateConfig_RetryFailure() {
+func (s *configStoreClientSuite) TestUpdateValue_RetryFailure() {
 	s.mockManager.EXPECT().
 		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
 		Return(&p.ConditionFailedError{}).MaxTimes(retryAttempts + 1)
@@ -779,7 +852,7 @@ func (s *configStoreClientSuite) TestUpdateConfig_RetryFailure() {
 	s.Error(err)
 }
 
-func (s *configStoreClientSuite) TestUpdateConfig_Timeout() {
+func (s *configStoreClientSuite) TestUpdateValue_Timeout() {
 	s.mockManager.EXPECT().
 		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, _ *p.UpdateDynamicConfigRequest) error {
@@ -789,6 +862,118 @@ func (s *configStoreClientSuite) TestUpdateConfig_Timeout() {
 
 	err := s.client.UpdateValue(dc.TestGetDurationPropertyKey, []*types.DynamicConfigValue{})
 	s.Error(err)
+}
+
+func (s *configStoreClientSuite) TestRestoreValue_NoFilter() {
+	s.mockManager.EXPECT().
+		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
+			for _, entry := range request.Snapshot.Values.Entries {
+				if entry.Name == dc.TestGetBoolPropertyKey.String() {
+					for _, value := range entry.Values {
+						s.Equal(value.Value.Data, jsonMarshalHelper(true))
+						if value.Filters == nil {
+							return errors.New("fallback value not restored.")
+						}
+					}
+				}
+			}
+			return nil
+		}).AnyTimes()
+
+	err := s.client.RestoreValue(dc.TestGetBoolPropertyKey, nil)
+	s.NoError(err)
+}
+
+func (s *configStoreClientSuite) TestRestoreValue_FilterNoMatch() {
+	s.mockManager.EXPECT().
+		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
+			for _, res_entry := range request.Snapshot.Values.Entries {
+				for _, ori_entry := range snapshot1.Values.Entries {
+					if ori_entry.Name == res_entry.Name {
+						s.Equal(res_entry.Values, ori_entry.Values)
+					}
+				}
+			}
+			return nil
+		}).AnyTimes()
+
+	noMatchFilter := map[dc.Filter]interface{}{
+		dc.DomainName: "unknown-domain",
+	}
+
+	err := s.client.RestoreValue(dc.TestGetBoolPropertyKey, noMatchFilter)
+	s.NoError(err)
+}
+
+func (s *configStoreClientSuite) TestRestoreValue_FilterMatch() {
+	s.mockManager.EXPECT().
+		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
+			for _, res_entry := range request.Snapshot.Values.Entries {
+				if res_entry.Name == dc.TestGetBoolPropertyKey.String() {
+					s.Equal(2, len(res_entry.Values))
+				}
+			}
+			return nil
+		}).AnyTimes()
+
+	filters := map[dc.Filter]interface{}{
+		dc.DomainName: "samples-domain",
+	}
+
+	err := s.client.RestoreValue(dc.TestGetBoolPropertyKey, filters)
+	s.NoError(err)
+}
+
+func (s *configStoreClientSuite) TestListValues_NoKey() {
+	val, err := s.client.ListValue(dc.UnknownKey)
+	s.NoError(err)
+	for _, res_entry := range val {
+		for _, ori_entry := range snapshot1.Values.Entries {
+			if ori_entry.Name == res_entry.Name {
+				s.Equal(res_entry.Values, ori_entry.Values)
+			}
+		}
+	}
+}
+
+func (s *configStoreClientSuite) TestListValues_SpecifiedKey() {
+	val, err := s.client.ListValue(dc.TestGetDurationPropertyKey)
+	s.NoError(err)
+	s.Equal(1, len(val))
+	for _, ori_entry := range snapshot1.Values.Entries {
+		if ori_entry.Name == val[0].Name {
+			s.Equal(val[0], ori_entry)
+		}
+	}
+}
+
+func (s *configStoreClientSuite) TestListValues_EmptyCache() {
+	s.mockManager = p.NewMockConfigStoreManager(s.mockController)
+	configStoreClient, ok := s.client.(*configStoreClient)
+	s.Require().True(ok)
+	configStoreClient.configStoreManager = s.mockManager
+
+	s.mockManager.EXPECT().
+		FetchDynamicConfig(gomock.Any()).
+		Return(&p.FetchDynamicConfigResponse{
+			Snapshot: &p.DynamicConfigSnapshot{
+				Version: 1,
+				Values: &types.DynamicConfigBlob{
+					SchemaVersion: 1,
+					Entries:       nil,
+				},
+			},
+		}, nil).
+		MaxTimes(1)
+
+	time.Sleep(2 * time.Second)
+
+	val, err := s.client.ListValue(dc.UnknownKey)
+	s.NoError(err)
+	s.Nil(val)
 }
 
 func jsonMarshalHelper(v interface{}) []byte {

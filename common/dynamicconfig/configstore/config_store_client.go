@@ -214,36 +214,30 @@ func (csc *configStoreClient) RestoreValue(name dc.Key, filters map[dc.Filter]in
 		return dc.NotFoundError
 	}
 
-	newValues := make([]*types.DynamicConfigValue, 0, len(val.Values)-1)
+	newValues := make([]*types.DynamicConfigValue, 0, len(val.Values))
 	if filters == nil {
 		for _, dcValue := range val.Values {
-			if len(dcValue.Filters) != 0 {
+			if dcValue.Filters != nil {
 				newValues = append(newValues, copyDynamicConfigValue(dcValue))
 			}
 		}
 	} else {
 		for _, dcValue := range val.Values {
-			if !matchFilters(dcValue, filters) || len(dcValue.Filters) == 0 {
+			if !matchFilters(dcValue, filters) || dcValue.Filters == nil {
 				newValues = append(newValues, copyDynamicConfigValue(dcValue))
 			}
 		}
 	}
 
-	return csc.UpdateValue(name, &types.DynamicConfigEntry{
-		Name:         val.Name,
-		DefaultValue: val.DefaultValue,
-		Values:       newValues,
-	})
+	return csc.UpdateValue(name, newValues)
 }
 
 func (csc *configStoreClient) ListValue(name dc.Key) ([]*types.DynamicConfigEntry, error) {
-	var err error
-	err = nil
 	var resList []*types.DynamicConfigEntry
 
 	currentCached := csc.values.Load().(cacheEntry)
 	if currentCached.dcEntries == nil {
-		return nil, dc.NotFoundError
+		return nil, nil
 	}
 
 	if val, ok := currentCached.dcEntries[dc.Keys[name]]; !ok || name == dc.UnknownKey {
@@ -252,16 +246,13 @@ func (csc *configStoreClient) ListValue(name dc.Key) ([]*types.DynamicConfigEntr
 		for _, entry := range currentCached.dcEntries {
 			resList = append(resList, copyDynamicConfigEntry(entry))
 		}
-		if !ok {
-			err = dc.NotFoundError
-		}
 	} else {
 		//if key is known, return just that specific entry
 		resList = make([]*types.DynamicConfigEntry, 0, 1)
 		resList = append(resList, val)
 	}
 
-	return resList, err
+	return resList, nil
 }
 
 func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryAttempts int) error {
@@ -384,9 +375,14 @@ func copyDynamicConfigValue(value *types.DynamicConfigValue) *types.DynamicConfi
 		return nil
 	}
 
-	newFilters := make([]*types.DynamicConfigFilter, 0, len(value.Filters))
-	for _, filter := range value.Filters {
-		newFilters = append(newFilters, copyDynamicConfigFilter(filter))
+	var newFilters []*types.DynamicConfigFilter
+	if value.Filters == nil {
+		newFilters = nil
+	} else {
+		newFilters = make([]*types.DynamicConfigFilter, 0, len(value.Filters))
+		for _, filter := range value.Filters {
+			newFilters = append(newFilters, copyDynamicConfigFilter(filter))
+		}
 	}
 
 	return &types.DynamicConfigValue{
@@ -449,9 +445,14 @@ func (csc *configStoreClient) update() error {
 
 func (csc *configStoreClient) storeValues(snapshot *persistence.DynamicConfigSnapshot) error {
 	//Converting the list of dynamic config entries into a map for better lookup performance
-	dcEntryMap := make(map[string]*types.DynamicConfigEntry)
-	for _, entry := range snapshot.Values.Entries {
-		dcEntryMap[entry.Name] = entry
+	var dcEntryMap map[string]*types.DynamicConfigEntry
+	if snapshot.Values.Entries == nil {
+		dcEntryMap = nil
+	} else {
+		dcEntryMap = make(map[string]*types.DynamicConfigEntry)
+		for _, entry := range snapshot.Values.Entries {
+			dcEntryMap[entry.Name] = entry
+		}
 	}
 
 	csc.values.Store(cacheEntry{
@@ -518,8 +519,6 @@ func (csc *configStoreClient) getFloatValue(name dc.Key, filters map[dc.Filter]i
 
 	if floatVal, ok := val.(float64); ok {
 		return floatVal, nil
-	} else if intVal, ok := val.(int); ok {
-		return float64(intVal), nil
 	}
 	return defaultValue, errors.New("value type is not float64")
 }
