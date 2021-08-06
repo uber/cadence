@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/dynamicconfig/configstore"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -113,9 +114,15 @@ func (s *server) startService() common.Daemon {
 	params.UpdateLoggerWithServiceName(params.Name)
 	params.PersistenceConfig = s.cfg.Persistence
 
-	params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger, s.doneC)
+	//params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger, s.doneC)
+	params.DynamicConfig, err = configstore.NewConfigStoreClient(
+		&s.cfg.ConfigStoreClient,
+		s.cfg.Persistence.DataStores[s.cfg.Persistence.DefaultStore].NoSQL,
+		params.Logger,
+		s.doneC,
+	)
 	if err != nil {
-		log.Printf("error creating file based dynamic config client, use no-op config client instead. error: %v", err)
+		log.Printf("error creating config store based dynamic config client, use no-op config client instead. error: %v", err)
 		params.DynamicConfig = dynamicconfig.NewNopClient()
 	}
 	clusterMetadata := s.cfg.ClusterMetadata

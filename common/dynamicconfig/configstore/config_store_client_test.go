@@ -873,7 +873,7 @@ func (s *configStoreClientSuite) TestRestoreValue_NoFilter() {
 					for _, value := range entry.Values {
 						s.Equal(value.Value.Data, jsonMarshalHelper(true))
 						if value.Filters == nil {
-							return errors.New("fallback value not restored.")
+							return errors.New("fallback value not restored")
 						}
 					}
 				}
@@ -889,10 +889,10 @@ func (s *configStoreClientSuite) TestRestoreValue_FilterNoMatch() {
 	s.mockManager.EXPECT().
 		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
-			for _, res_entry := range request.Snapshot.Values.Entries {
-				for _, ori_entry := range snapshot1.Values.Entries {
-					if ori_entry.Name == res_entry.Name {
-						s.Equal(res_entry.Values, ori_entry.Values)
+			for _, resEntry := range request.Snapshot.Values.Entries {
+				for _, oriEntry := range snapshot1.Values.Entries {
+					if oriEntry.Name == resEntry.Name {
+						s.Equal(resEntry.Values, oriEntry.Values)
 					}
 				}
 			}
@@ -911,9 +911,9 @@ func (s *configStoreClientSuite) TestRestoreValue_FilterMatch() {
 	s.mockManager.EXPECT().
 		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
-			for _, res_entry := range request.Snapshot.Values.Entries {
-				if res_entry.Name == dc.TestGetBoolPropertyKey.String() {
-					s.Equal(2, len(res_entry.Values))
+			for _, resEntry := range request.Snapshot.Values.Entries {
+				if resEntry.Name == dc.TestGetBoolPropertyKey.String() {
+					s.Equal(2, len(resEntry.Values))
 				}
 			}
 			return nil
@@ -930,10 +930,10 @@ func (s *configStoreClientSuite) TestRestoreValue_FilterMatch() {
 func (s *configStoreClientSuite) TestListValues_NoKey() {
 	val, err := s.client.ListValue(dc.UnknownKey)
 	s.NoError(err)
-	for _, res_entry := range val {
-		for _, ori_entry := range snapshot1.Values.Entries {
-			if ori_entry.Name == res_entry.Name {
-				s.Equal(res_entry.Values, ori_entry.Values)
+	for _, resEntry := range val {
+		for _, oriEntry := range snapshot1.Values.Entries {
+			if oriEntry.Name == resEntry.Name {
+				s.Equal(resEntry.Values, oriEntry.Values)
 			}
 		}
 	}
@@ -943,9 +943,9 @@ func (s *configStoreClientSuite) TestListValues_SpecifiedKey() {
 	val, err := s.client.ListValue(dc.TestGetDurationPropertyKey)
 	s.NoError(err)
 	s.Equal(1, len(val))
-	for _, ori_entry := range snapshot1.Values.Entries {
-		if ori_entry.Name == val[0].Name {
-			s.Equal(val[0], ori_entry)
+	for _, oriEntry := range snapshot1.Values.Entries {
+		if oriEntry.Name == val[0].Name {
+			s.Equal(val[0], oriEntry)
 		}
 	}
 }

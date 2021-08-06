@@ -32,6 +32,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/dynamicconfig/configstore/configstoreconfig"
 )
 
 type (
@@ -58,6 +59,8 @@ type (
 		// DynamicConfigClient is the config for setting up the file based dynamic config client
 		// Filepath would be relative to the root directory when the path wasn't absolute.
 		DynamicConfigClient dynamicconfig.FileBasedClientConfig `yaml:"dynamicConfigClient"`
+		// ConfigStoreClient is the config for setting up the config store based dynamic config client
+		ConfigStoreClient configstoreconfig.ConfigStoreClientConfig `yaml:"configStoreClient"`
 		// DomainDefaults is the default config for every domain
 		DomainDefaults DomainDefaults `yaml:"domainDefaults"`
 		// Blobstore is the config for setting up blobstore

@@ -30,6 +30,7 @@ import (
 
 	"github.com/uber/cadence/common/config"
 	dc "github.com/uber/cadence/common/dynamicconfig"
+	csc "github.com/uber/cadence/common/dynamicconfig/configstore/configstoreconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
@@ -46,19 +47,10 @@ const (
 	// defaultRetryAttempts       = 1
 )
 
-// ConfigStoreClientConfig is the config for the config store based dynamic config client.
-// It specifies how often the cached config should be updated by checking underlying database.
-type ConfigStoreClientConfig struct {
-	PollInterval        time.Duration `yaml:"pollInterval"`
-	UpdateRetryAttempts int           `yaml:"updateRetryAttempts"`
-	FetchTimeout        time.Duration `yaml:"FetchTimeout"`
-	UpdateTimeout       time.Duration `yaml:"UpdateTimeout"`
-}
-
 type configStoreClient struct {
 	values             atomic.Value
 	lastUpdatedTime    time.Time
-	config             *ConfigStoreClientConfig
+	config             *csc.ConfigStoreClientConfig
 	configStoreManager persistence.ConfigStoreManager
 	doneCh             chan struct{}
 	logger             log.Logger
@@ -76,7 +68,7 @@ type fetchResult struct {
 }
 
 // NewConfigStoreClient creates a config store client
-func NewConfigStoreClient(clientCfg *ConfigStoreClientConfig, persistenceCfg *config.NoSQL, logger log.Logger, doneCh chan struct{}) (dc.Client, error) {
+func NewConfigStoreClient(clientCfg *csc.ConfigStoreClientConfig, persistenceCfg *config.NoSQL, logger log.Logger, doneCh chan struct{}) (dc.Client, error) {
 	if err := validateConfigStoreClientConfig(clientCfg); err != nil {
 		return nil, err
 	}
@@ -523,7 +515,7 @@ func (csc *configStoreClient) getFloatValue(name dc.Key, filters map[dc.Filter]i
 	return defaultValue, errors.New("value type is not float64")
 }
 
-func validateConfigStoreClientConfig(config *ConfigStoreClientConfig) error {
+func validateConfigStoreClientConfig(config *csc.ConfigStoreClientConfig) error {
 	if config == nil {
 		return errors.New("no config found for config store based dynamic config client")
 	}

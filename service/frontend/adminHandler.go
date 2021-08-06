@@ -1376,7 +1376,7 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 
 func checkValidKey(keyName string) (dynamicconfig.Key, error) {
 	keyVal, ok := dynamicconfig.KeyNames[keyName]
-	if !ok {
+	if !ok || keyVal == dynamicconfig.UnknownKey {
 		return dynamicconfig.UnknownKey, errors.New("invalid dynamic config parameter name")
 	}
 	return keyVal, nil
