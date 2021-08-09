@@ -27,7 +27,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"runtime/debug"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
@@ -216,14 +219,13 @@ func (m *sqlExecutionStore) createWorkflowExecutionTx(
 	return &p.CreateWorkflowExecutionResponse{}, nil
 }
 
-func (m *sqlExecutionStore) GetWorkflowExecution(
+func (m *sqlExecutionStore) getExecutions(
 	ctx context.Context,
 	request *p.InternalGetWorkflowExecutionRequest,
-) (*p.InternalGetWorkflowExecutionResponse, error) {
-
-	domainID := serialization.MustParseUUID(request.DomainID)
-	runID := serialization.MustParseUUID(request.Execution.RunID)
-	wfID := request.Execution.WorkflowID
+	domainID serialization.UUID,
+	wfID string,
+	runID serialization.UUID,
+) ([]sqlplugin.ExecutionsRow, error) {
 	executions, err := m.db.SelectFromExecutions(ctx, &sqlplugin.ExecutionsFilter{
 		ShardID: m.shardID, DomainID: domainID, WorkflowID: wfID, RunID: runID})
 
@@ -252,7 +254,101 @@ func (m *sqlExecutionStore) GetWorkflowExecution(
 
 	if len(executions) != 1 {
 		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("GetWorkflowExecution return more than one results."),
+			Message: "GetWorkflowExecution return more than one results.",
+		}
+	}
+	return executions, nil
+}
+
+func (m *sqlExecutionStore) GetWorkflowExecution(
+	ctx context.Context,
+	request *p.InternalGetWorkflowExecutionRequest,
+) (resp *p.InternalGetWorkflowExecutionResponse, e error) {
+	recoverPanic := func(err *error) {
+		if r := recover(); r != nil {
+			*err = fmt.Errorf("DB operation panicked: %v %s", r, debug.Stack())
+		}
+	}
+
+	domainID := serialization.MustParseUUID(request.DomainID)
+	runID := serialization.MustParseUUID(request.Execution.RunID)
+	wfID := request.Execution.WorkflowID
+
+	var executions []sqlplugin.ExecutionsRow
+	var activityInfos map[int64]*p.InternalActivityInfo
+	var timerInfos map[string]*p.TimerInfo
+	var childExecutionInfos map[int64]*p.InternalChildExecutionInfo
+	var requestCancelInfos map[int64]*p.RequestCancelInfo
+	var signalInfos map[int64]*p.SignalInfo
+	var bufferedEvents []*p.DataBlob
+	var signalsRequested map[string]struct{}
+
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		executions, e = m.getExecutions(ctx, request, domainID, wfID, runID)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		activityInfos, e = getActivityInfoMap(
+			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		timerInfos, e = getTimerInfoMap(
+			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		childExecutionInfos, e = getChildExecutionInfoMap(
+			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		requestCancelInfos, e = getRequestCancelInfoMap(
+			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		signalInfos, e = getSignalInfoMap(
+			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		bufferedEvents, e = getBufferedEvents(
+			ctx, m.db, m.shardID, domainID, wfID, runID)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		signalsRequested, e = getSignalsRequested(
+			ctx, m.db, m.shardID, domainID, wfID, runID)
+		return e
+	})
+
+	err := g.Wait()
+	if err != nil {
+		switch err := err.(type) {
+		case *types.EntityNotExistsError:
+			return nil, err
+		default:
+			return nil, &types.InternalServiceError{
+				Message: fmt.Sprintf("GetWorkflowExecution: failed. Error: %v", err),
+			}
 		}
 	}
 
@@ -262,109 +358,13 @@ func (m *sqlExecutionStore) GetWorkflowExecution(
 			Message: fmt.Sprintf("GetWorkflowExecution: failed. Error: %v", err),
 		}
 	}
-
-	{
-		var err error
-		state.ActivityInfos, err = getActivityInfoMap(
-			ctx,
-			m.db,
-			m.shardID,
-			domainID,
-			wfID,
-			runID,
-			m.parser)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	{
-		var err error
-		state.TimerInfos, err = getTimerInfoMap(
-			ctx,
-			m.db,
-			m.shardID,
-			domainID,
-			wfID,
-			runID,
-			m.parser)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	{
-		var err error
-		state.ChildExecutionInfos, err = getChildExecutionInfoMap(
-			ctx,
-			m.db,
-			m.shardID,
-			domainID,
-			wfID,
-			runID,
-			m.parser)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	{
-		var err error
-		state.RequestCancelInfos, err = getRequestCancelInfoMap(
-			ctx,
-			m.db,
-			m.shardID,
-			domainID,
-			wfID,
-			runID,
-			m.parser)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	{
-		var err error
-		state.SignalInfos, err = getSignalInfoMap(
-			ctx,
-			m.db,
-			m.shardID,
-			domainID,
-			wfID,
-			runID,
-			m.parser)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	{
-		var err error
-		state.BufferedEvents, err = getBufferedEvents(
-			ctx,
-			m.db,
-			m.shardID,
-			domainID,
-			wfID,
-			runID)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	{
-		var err error
-		state.SignalRequestedIDs, err = getSignalsRequested(
-			ctx,
-			m.db,
-			m.shardID,
-			domainID,
-			wfID,
-			runID)
-		if err != nil {
-			return nil, err
-		}
-	}
+	state.ActivityInfos = activityInfos
+	state.TimerInfos = timerInfos
+	state.ChildExecutionInfos = childExecutionInfos
+	state.RequestCancelInfos = requestCancelInfos
+	state.SignalInfos = signalInfos
+	state.BufferedEvents = bufferedEvents
+	state.SignalRequestedIDs = signalsRequested
 
 	return &p.InternalGetWorkflowExecutionResponse{State: state}, nil
 }
