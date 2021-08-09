@@ -342,8 +342,13 @@ func (m *sqlExecutionStore) GetWorkflowExecution(
 
 	err := g.Wait()
 	if err != nil {
-		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("GetWorkflowExecution: failed. Error: %v", err),
+		switch err := err.(type) {
+		case *types.EntityNotExistsError:
+			return nil, err
+		default:
+			return nil, &types.InternalServiceError{
+				Message: fmt.Sprintf("GetWorkflowExecution: failed. Error: %v", err),
+			}
 		}
 	}
 
