@@ -539,12 +539,12 @@ install-schema: cadence-cassandra-tool
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility update-schema -d ./schema/cassandra/visibility/versioned
 
 install-schema-mysql: cadence-sql-tool
-	./cadence-sql-tool --ep 127.0.0.1 create --db cadence
-	./cadence-sql-tool --ep 127.0.0.1 --db cadence setup-schema -v 0.0
-	./cadence-sql-tool --ep 127.0.0.1 --db cadence update-schema -d ./schema/mysql/v57/cadence/versioned
-	./cadence-sql-tool --ep 127.0.0.1 create --db cadence_visibility
-	./cadence-sql-tool --ep 127.0.0.1 --db cadence_visibility setup-schema -v 0.0
-	./cadence-sql-tool --ep 127.0.0.1 --db cadence_visibility update-schema -d ./schema/mysql/v57/visibility/versioned
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence create --db cadence
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence setup-schema -v 0.0
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence update-schema -d ./schema/mysql/v57/cadence/versioned
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence create --db cadence_visibility
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence_visibility setup-schema -v 0.0
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence_visibility update-schema -d ./schema/mysql/v57/visibility/versioned
 
 install-schema-postgres: cadence-sql-tool
 	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres create --db cadence

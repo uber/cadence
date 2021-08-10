@@ -5,4 +5,6 @@ services:
     ports:
       - "3306:3306"
     environment:
-      - "MYSQL_ROOT_PASSWORD=root"
+      - "MYSQL_ROOT_PASSWORD=cadence"
+      - "MYSQL_USER=cadence"
+      - "MYSQL_PASSWORD=cadence"

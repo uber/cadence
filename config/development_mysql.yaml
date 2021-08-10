@@ -8,8 +8,8 @@ persistence:
         databaseName: "cadence"
         connectAddr: "127.0.0.1:3306"
         connectProtocol: "tcp"
-        user: "uber"
-        password: "uber"
+        user: "cadence"
+        password: "cadence"
         maxConns: 20
         maxIdleConns: 20
         maxConnLifetime: "1h"
@@ -19,8 +19,8 @@ persistence:
         databaseName: "cadence_visibility"
         connectAddr: "127.0.0.1:3306"
         connectProtocol: "tcp"
-        user: "uber"
-        password: "uber"
+        user: "cadence"
+        password: "cadence"
         maxConns: 2
         maxIdleConns: 2
         maxConnLifetime: "1h"
