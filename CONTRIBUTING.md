@@ -32,9 +32,12 @@ After check out and go to the Cadence repo, compile the `cadence` service and he
 make bins
 ``` 
 
->Note: If running into any compiling issue, 
->1. Make sure you upgrade to the latest stable version of Golang.
-> 2. Check if this document is outdated by comparing with the building steps in [Dockerfile](https://github.com/uber/cadence/blob/master/Dockerfile)
+:warning: Note: 
+
+If running into any compiling issue
+>1. For proto/thrift errors, run `git submodule update --init --recursive` to fix  
+>2. Make sure you upgrade to the latest stable version of Golang.
+>3. Check if this document is outdated by comparing with the building steps in [Dockerfile](https://github.com/uber/cadence/blob/master/Dockerfile)
 * Database. The default setup of Cadence depends on Cassandra. Before running the Cadence or tests you must have `cassandra` dependency(or equivalent database in the below notes)
 
 >Note: This section assumes you are working with Cassandra. Please refer to [persistence documentation](https://github.com/uber/cadence/blob/master/docs/persistence.md) if you want to test with others like MySQL/Postgres.
