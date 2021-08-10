@@ -75,22 +75,20 @@ Also use `docker-compose -f ./docker/dev/cassandra.yml down` to stop and clean u
 
 * Alternatively, use `./docker/dev/mysql.yml` for MySQL dependency
 * Alternatively, use `./docker/dev/postgres.yml` for PostgreSQL dependency 
-* Alternatively, use `./docker/dev/cassandra-esv7-kafka.yml` for Cassandra, ElasticSearch(v7) and Kafka dependencies
-* Alternatively, use `./docker/dev/mysql-esv7-kafka.yml` for MySQL, ElasticSearch(v7) and Kafka dependencies
-* Alternatively, use `./docker/dev/postgres-esv7-kafka.yml` for Postgres, ElasticSearch(v7) and Kafka dependencies 
+* Alternatively, use `./docker/dev/cassandra-esv7-kafka.yml` for Cassandra, ElasticSearch(v7) and Kafka/ZooKeeper dependencies
 
 ### 3. Schema installation 
 Based on the above dependency setup, you also need to install the schemas. 
 
 * If you use `cassandra.yml` or `cassandra-esv7-kafka.yml`, then run `make install-schema` to install Casandra schemas 
-* If you use `mysql.yml` or `mysql-esv7-kafka.yml`, then run `install-schema-mysql` to install MySQL schemas
-* If you use `postgres.yml` or `postgres-esv7-kafka.yml`, then run `install-schema-postgres` to install Postgres schemas
+* If you use `mysql.yml` then run `install-schema-mysql` to install MySQL schemas
+* If you use `postgres.yml` then run `install-schema-postgres` to install Postgres schemas
 
-Beside database schema, you will also need to install ElasticSearch schema if you use  `[cassandra|mysql|postgres]-esv7-kafka.yml`:
+Beside database schema, you will also need to install ElasticSearch schema if you use  `cassandra-esv7-kafka.yml`:
 Run below commands:
 ```bash
 export ES_SCHEMA_FILE=./schema/elasticsearch/v7/visibility/index_template.json
-curl -X PUT "http://127.0.0.1:9200/_template/cadence-visibility-template" -H 'Content-Type: application/json' --data-binary "@$SCHEMA_FILE"
+curl -X PUT "http://127.0.0.1:9200/_template/cadence-visibility-template" -H 'Content-Type: application/json' --data-binary "@$ES_SCHEMA_FILE"
 curl -X PUT "http://127.0.0.1:9200/cadence-visibility-dev"
 ```
 They will create an index template and an index in ElasticSearch. 
@@ -103,18 +101,17 @@ Then you will be able to run a basic local Cadence server for development:
 ```bash
 ./cadence-server start
 ```
+  * If you use `mysql.yml` then run `./cadence-server --zone mysql start`
+  * If you use `postgres.yml` then run `./cadence-server --zone postgres start`   
+  * If you use `cassandra-esv7-kafka.yml` then run `./cadence-server --zone es_v7 start`
+  
 Then register a domain:
 ```
 ./cadence --do samples-domain domain register
 ```
 
-# If you use SQL DB, then run:
-./cadence-server --zone <mysql/postgres> start
-```
+Then run a helloworld from [Go Client Sample](https://github.com/uber-common/cadence-samples/) or [Java Client Sample](https://github.com/uber/cadence-java-samples) 
 
-You can run some workflow [samples](https://github.com/uber-common/cadence-samples) to test the development server.
- 
-> This basic local server doesn't have some features like advanced visibility, archival, which require more dependency than Cassandra/Database and setup. 
 
 ## Issues to start with
 
