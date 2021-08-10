@@ -1278,9 +1278,9 @@ func newAdminConfigStoreCommands() []cli.Command {
 					Name:  FlagDynamicConfigName,
 					Usage: "Name of Dynamic Config parameter to get value of",
 				},
-				cli.StringFlag{
-					Name:  FlagDynamicConfigFilters,
-					Usage: "Optional. Value returned will satisfy specified filters. If no filters specified, default value will be returned. JSON string of type []*DynamicConfigFilter",
+				cli.StringSliceFlag{
+					Name:  FlagDynamicConfigFilter,
+					Usage: `Optional. Can be specified multiple times for multiple filters. ex: --dynamic-config-filter '{"Name":"domainName","Value":"global-samples-domain"}'`,
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -1296,9 +1296,9 @@ func newAdminConfigStoreCommands() []cli.Command {
 					Name:  FlagDynamicConfigName,
 					Usage: "Name of Dynamic Config parameter to update value of",
 				},
-				cli.StringFlag{
+				cli.StringSliceFlag{
 					Name:  FlagDynamicConfigValue,
-					Usage: "Optional. Existing value is overriden with provided value if specified, otherwise existing value will be erased. JSON string of type []*DynamicConfigValue",
+					Usage: `Optional. Can be specified multiple times for multiple values. ex: --dynamic-config-value '{"Value":true,"Filters":[]}'`,
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -1314,9 +1314,9 @@ func newAdminConfigStoreCommands() []cli.Command {
 					Name:  FlagDynamicConfigName,
 					Usage: "Name of Dynamic Config parameter to restore",
 				},
-				cli.StringFlag{
-					Name:  FlagDynamicConfigFilters,
-					Usage: "Optional. If filters is specified, all values associated with config that match filter will be erased. Otherwise, only default (fallback) value will be erased. JSON string of type []*DynamicConfigFilter",
+				cli.StringSliceFlag{
+					Name:  FlagDynamicConfigFilter,
+					Usage: `Optional. Can be specified multiple times for multiple filters. ex: --dynamic-config-filter '{"Name":"domainName","Value":"global-samples-domain"}'`,
 				},
 			},
 			Action: func(c *cli.Context) {

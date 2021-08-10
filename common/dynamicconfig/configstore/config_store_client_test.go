@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	dc "github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/dynamicconfig/configstore/configstoreconfig"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql"
@@ -338,7 +339,7 @@ func (s *configStoreClientSuite) SetupSuite() {
 	nosql.RegisterPlugin("cassandra", mockPlugin)
 
 	s.client, err = NewConfigStoreClient(
-		&ConfigStoreClientConfig{
+		&configstoreconfig.ConfigStoreClientConfig{
 			PollInterval:        time.Second * 2,
 			UpdateRetryAttempts: retryAttempts,
 			FetchTimeout:        time.Second * 1,
@@ -402,6 +403,7 @@ func (s *configStoreClientSuite) TestGetValueWithFilters() {
 	filters := map[dc.Filter]interface{}{
 		dc.DomainName: "global-samples-domain",
 	}
+
 	v, err := s.client.GetValueWithFilters(dc.TestGetBoolPropertyKey, filters, false)
 	s.NoError(err)
 	s.Equal(true, v)
@@ -567,7 +569,7 @@ func (s *configStoreClientSuite) TestValidateConfig_ConfigNotExist() {
 
 func (s *configStoreClientSuite) TestValidateConfig_InvalidConfig() {
 	_, err := NewConfigStoreClient(
-		&ConfigStoreClientConfig{
+		&configstoreconfig.ConfigStoreClientConfig{
 			PollInterval:        time.Second * 1,
 			UpdateRetryAttempts: 0,
 			FetchTimeout:        time.Second * 3,
@@ -577,7 +579,7 @@ func (s *configStoreClientSuite) TestValidateConfig_InvalidConfig() {
 	s.Error(err)
 
 	_, err = NewConfigStoreClient(
-		&ConfigStoreClientConfig{
+		&configstoreconfig.ConfigStoreClientConfig{
 			PollInterval:        time.Second * 2,
 			UpdateRetryAttempts: -1,
 			FetchTimeout:        time.Second * 2,
@@ -587,7 +589,7 @@ func (s *configStoreClientSuite) TestValidateConfig_InvalidConfig() {
 	s.Error(err)
 
 	_, err = NewConfigStoreClient(
-		&ConfigStoreClientConfig{
+		&configstoreconfig.ConfigStoreClientConfig{
 			PollInterval:        time.Second * 2,
 			UpdateRetryAttempts: 0,
 			FetchTimeout:        time.Second * 0,
@@ -597,7 +599,7 @@ func (s *configStoreClientSuite) TestValidateConfig_InvalidConfig() {
 	s.Error(err)
 
 	_, err = NewConfigStoreClient(
-		&ConfigStoreClientConfig{
+		&configstoreconfig.ConfigStoreClientConfig{
 			PollInterval:        time.Second * 2,
 			UpdateRetryAttempts: 1,
 			FetchTimeout:        time.Second * 1,
@@ -763,6 +765,7 @@ func (s *configStoreClientSuite) TestUpdateValue_NoRetrySuccess() {
 			Filters: nil,
 		},
 	}
+
 	err := s.client.UpdateValue(dc.TestGetBoolPropertyKey, values)
 	s.NoError(err)
 

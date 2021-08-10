@@ -278,7 +278,7 @@ const (
 	FlagConnectionAttributes              = "conn_attrs"
 	FlagJWT                               = "jwt"
 	FlagDynamicConfigName                 = "dynamic_config_name"
-	FlagDynamicConfigFilters              = "dynamic_config_filters"
+	FlagDynamicConfigFilter               = "dynamic_config_filter"
 	FlagDynamicConfigValue                = "dynamic_config_value"
 )
 

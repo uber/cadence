@@ -29,24 +29,36 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+type cliEntry struct {
+	Name         string
+	DefaultValue interface{} `json:"defaultValue,omitempty"`
+	Values       []*cliValue
+}
+
+type cliValue struct {
+	Value   interface{}
+	Filters []*cliFilter
+}
+
+type cliFilter struct {
+	Name  string
+	Value interface{}
+}
+
 // AdminGetDynamicConfig gets value of specified dynamic config parameter matching specified filter
 func AdminGetDynamicConfig(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)
 
 	dcName := getRequiredOption(c, FlagDynamicConfigName)
-	filters := c.String(FlagDynamicConfigFilters)
+	// filters := c.String(FlagDynamicConfigFilters)
+	filters := c.StringSlice(FlagDynamicConfigFilter)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	var parsedFilters []*types.DynamicConfigFilter
-	if filters != "" {
-		err := json.Unmarshal([]byte(filters), &parsedFilters)
-		if err != nil {
-			ErrorAndExit("Unable to parse filters string into type []*DynamicConfigFilter", err)
-		}
-	} else {
-		parsedFilters = nil
+	parsedFilters, err := parseInputFilterArray(filters)
+	if err != nil {
+		ErrorAndExit("Failed to parse input filter array", err)
 	}
 
 	req := &types.GetDynamicConfigRequest{
@@ -59,7 +71,13 @@ func AdminGetDynamicConfig(c *cli.Context) {
 		ErrorAndExit("Failed to get dynamic config value", err)
 	}
 
-	prettyPrintJSONObject(val)
+	var umVal interface{}
+	err = json.Unmarshal(val.Value.Data, &umVal)
+	if err != nil {
+		ErrorAndExit("Failed to unmarshal response", err)
+	}
+
+	prettyPrintJSONObject(umVal)
 }
 
 // AdminUpdateDynamicConfig updates specified dynamic config parameter with specified values
@@ -67,16 +85,27 @@ func AdminUpdateDynamicConfig(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)
 
 	dcName := getRequiredOption(c, FlagDynamicConfigName)
-	dcValue := c.String(FlagDynamicConfigFilters)
+	dcValues := c.StringSlice(FlagDynamicConfigValue)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
 
 	var parsedValues []*types.DynamicConfigValue
-	if dcValue != "" {
-		err := json.Unmarshal([]byte(dcValue), &parsedValues)
-		if err != nil {
-			ErrorAndExit("Unable to parse value string into type []*DynamicConfigValue", err)
+
+	if dcValues != nil {
+		parsedValues = make([]*types.DynamicConfigValue, 0, len(dcValues))
+
+		for _, valueString := range dcValues {
+			var parsedInputValue *cliValue
+			err := json.Unmarshal([]byte(valueString), &parsedInputValue)
+			if err != nil {
+				ErrorAndExit("Unable to unmarshal value to inputValue", err)
+			}
+			parsedValue, err := convertFromInputValue(parsedInputValue)
+			if err != nil {
+				ErrorAndExit("Unable to convert from inputValue to DynamicConfigValue", err)
+			}
+			parsedValues = append(parsedValues, parsedValue)
 		}
 	} else {
 		parsedValues = nil
@@ -91,7 +120,7 @@ func AdminUpdateDynamicConfig(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("Failed to update dynamic config value", err)
 	}
-	fmt.Println("Dynamic Config %s updated", dcName)
+	fmt.Printf("Dynamic Config %s updated\n", dcName)
 }
 
 // AdminRestoreDynamicConfig removes values of specified dynamic config parameter matching specified filter
@@ -99,19 +128,14 @@ func AdminRestoreDynamicConfig(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)
 
 	dcName := getRequiredOption(c, FlagDynamicConfigName)
-	filters := c.String(FlagDynamicConfigFilters)
+	filters := c.StringSlice(FlagDynamicConfigFilter)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	var parsedFilters []*types.DynamicConfigFilter
-	if filters != "" {
-		err := json.Unmarshal([]byte(filters), &parsedFilters)
-		if err != nil {
-			ErrorAndExit("Unable to parse filters string into type []*DynamicConfigFilter", err)
-		}
-	} else {
-		parsedFilters = nil
+	parsedFilters, err := parseInputFilterArray(filters)
+	if err != nil {
+		ErrorAndExit("Failed to parse input filter array", err)
 	}
 
 	req := &types.RestoreDynamicConfigRequest{
@@ -119,11 +143,11 @@ func AdminRestoreDynamicConfig(c *cli.Context) {
 		Filters:    parsedFilters,
 	}
 
-	err := adminClient.RestoreDynamicConfig(ctx, req)
+	err = adminClient.RestoreDynamicConfig(ctx, req)
 	if err != nil {
 		ErrorAndExit("Failed to restore dynamic config value", err)
 	}
-	fmt.Println("Dynamic Config %s restored", dcName)
+	fmt.Printf("Dynamic Config %s restored\n", dcName)
 }
 
 // AdminListDynamicConfig lists all values associated with specified dynamic config parameter or all values for all dc parameter if none is specified.
@@ -144,5 +168,136 @@ func AdminListDynamicConfig(c *cli.Context) {
 		ErrorAndExit("Failed to list dynamic config value(s)", err)
 	}
 
-	prettyPrintJSONObject(val)
+	if val == nil || val.Entries == nil || len(val.Entries) == 0 {
+		fmt.Printf("No dynamic config values stored to list.")
+	} else {
+		cliEntries := make([]*cliEntry, 0, len(val.Entries))
+		for _, dcEntry := range val.Entries {
+			cliEntry, err := convertToInputEntry(dcEntry)
+			if err != nil {
+				fmt.Printf("Cannot parse list response.")
+			}
+			cliEntries = append(cliEntries, cliEntry)
+		}
+		prettyPrintJSONObject(cliEntries)
+	}
+}
+
+func convertToInputEntry(dcEntry *types.DynamicConfigEntry) (*cliEntry, error) {
+	newValues := make([]*cliValue, 0, len(dcEntry.Values))
+	for _, value := range dcEntry.Values {
+		newValue, err := convertToInputValue(value)
+		if err != nil {
+			return nil, err
+		}
+		newValues = append(newValues, newValue)
+	}
+	return &cliEntry{
+		Name:         dcEntry.Name,
+		DefaultValue: dcEntry.DefaultValue,
+		Values:       newValues,
+	}, nil
+}
+
+func convertToInputValue(dcValue *types.DynamicConfigValue) (*cliValue, error) {
+	newFilters := make([]*cliFilter, 0, len(dcValue.Filters))
+	for _, filter := range dcValue.Filters {
+		newFilter, err := convertToInputFilter(filter)
+		if err != nil {
+			return nil, err
+		}
+		newFilters = append(newFilters, newFilter)
+	}
+
+	var val interface{}
+	err := json.Unmarshal(dcValue.Value.Data, &val)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cliValue{
+		Value:   val,
+		Filters: newFilters,
+	}, nil
+}
+
+func convertToInputFilter(dcFilter *types.DynamicConfigFilter) (*cliFilter, error) {
+	var val interface{}
+	err := json.Unmarshal(dcFilter.Value.Data, &val)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cliFilter{
+		Name:  dcFilter.Name,
+		Value: val,
+	}, nil
+}
+
+func convertFromInputValue(inputValue *cliValue) (*types.DynamicConfigValue, error) {
+	encodedValue, err := json.Marshal(inputValue.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	blob := &types.DataBlob{
+		EncodingType: types.EncodingTypeJSON.Ptr(),
+		Data:         encodedValue,
+	}
+
+	dcFilters := make([]*types.DynamicConfigFilter, 0, len(inputValue.Filters))
+	for _, inputFilter := range inputValue.Filters {
+		dcFilter, err := convertFromInputFilter(inputFilter)
+		if err != nil {
+			return nil, err
+		}
+		dcFilters = append(dcFilters, dcFilter)
+	}
+
+	return &types.DynamicConfigValue{
+		Value:   blob,
+		Filters: dcFilters,
+	}, nil
+}
+
+func convertFromInputFilter(inputFilter *cliFilter) (*types.DynamicConfigFilter, error) {
+	encodedValue, err := json.Marshal(inputFilter.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.DynamicConfigFilter{
+		Name: inputFilter.Name,
+		Value: &types.DataBlob{
+			EncodingType: types.EncodingTypeJSON.Ptr(),
+			Data:         encodedValue,
+		},
+	}, nil
+}
+
+func parseInputFilterArray(inputFilters []string) ([]*types.DynamicConfigFilter, error) {
+	var parsedFilters []*types.DynamicConfigFilter
+
+	if inputFilters != nil {
+		parsedFilters = make([]*types.DynamicConfigFilter, 0, len(inputFilters))
+
+		for _, filterString := range inputFilters {
+			var parsedInputFilter *cliFilter
+			err := json.Unmarshal([]byte(filterString), &parsedInputFilter)
+			if err != nil {
+				return nil, err
+			}
+
+			filter, err := convertFromInputFilter(parsedInputFilter)
+			if err != nil {
+				return nil, err
+			}
+
+			parsedFilters = append(parsedFilters, filter)
+		}
+	} else {
+		parsedFilters = nil
+	}
+
+	return parsedFilters, nil
 }

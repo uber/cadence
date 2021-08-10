@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"sync/atomic"
 	"time"
 
@@ -42,9 +43,6 @@ var _ dc.Client = (*configStoreClient)(nil)
 
 const (
 	configStoreMinPollInterval = time.Second * 2
-	// defaultFetchTimeout        = time.Second * 3
-	// defaultUpdateTimeout       = time.Second * 3
-	// defaultRetryAttempts       = 1
 )
 
 type configStoreClient struct {
@@ -114,20 +112,33 @@ func (csc *configStoreClient) GetValueWithFilters(name dc.Key, filters map[dc.Fi
 }
 
 func (csc *configStoreClient) GetIntValue(name dc.Key, filters map[dc.Filter]interface{}, defaultValue int) (int, error) {
-	val, err := csc.getFloatValue(name, filters, 0)
+	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
 	}
 
-	if val != float64(int64(val)) {
+	floatVal, ok := val.(float64)
+	if !ok {
 		return defaultValue, errors.New("value type is not int")
 	}
 
-	return int(val), nil
+	if floatVal != math.Trunc(floatVal) {
+		return defaultValue, errors.New("value type is not int")
+	}
+
+	return int(floatVal), nil
 }
 
 func (csc *configStoreClient) GetFloatValue(name dc.Key, filters map[dc.Filter]interface{}, defaultValue float64) (float64, error) {
-	return csc.getFloatValue(name, filters, defaultValue)
+	val, err := csc.getValueWithFilters(name, filters, defaultValue)
+	if err != nil {
+		return defaultValue, err
+	}
+
+	if floatVal, ok := val.(float64); ok {
+		return floatVal, nil
+	}
+	return defaultValue, errors.New("value type is not float64")
 }
 
 func (csc *configStoreClient) GetBoolValue(name dc.Key, filters map[dc.Filter]interface{}, defaultValue bool) (bool, error) {
@@ -179,6 +190,10 @@ func (csc *configStoreClient) GetDurationValue(
 
 	durationString, ok := val.(string)
 	if !ok {
+		durVal, ok2 := val.(time.Duration)
+		if ok2 {
+			return durVal, nil
+		}
 		return defaultValue, errors.New("value type is not string")
 	}
 
@@ -196,7 +211,12 @@ func (csc *configStoreClient) UpdateValue(name dc.Key, value interface{}) error 
 func (csc *configStoreClient) RestoreValue(name dc.Key, filters map[dc.Filter]interface{}) error {
 	//if empty filter provided, update fallback value.
 	//if u want to remove entire entry, just do update value with empty
-	currentCached := csc.values.Load().(cacheEntry)
+	loaded := csc.values.Load()
+	if loaded == nil {
+		return dc.NotFoundError
+	}
+	currentCached := loaded.(cacheEntry)
+
 	if currentCached.dcEntries == nil {
 		return dc.NotFoundError
 	}
@@ -227,7 +247,12 @@ func (csc *configStoreClient) RestoreValue(name dc.Key, filters map[dc.Filter]in
 func (csc *configStoreClient) ListValue(name dc.Key) ([]*types.DynamicConfigEntry, error) {
 	var resList []*types.DynamicConfigEntry
 
-	currentCached := csc.values.Load().(cacheEntry)
+	loaded := csc.values.Load()
+	if loaded == nil {
+		return nil, nil
+	}
+	currentCached := loaded.(cacheEntry)
+
 	if currentCached.dcEntries == nil {
 		return nil, nil
 	}
@@ -251,18 +276,25 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 	//since values are not unique, no way to know if you are trying to update a specific value
 	//or if you want to add another of the same value with different filters.
 	//UpdateValue will replace everything associated with dc key.
-	currentCached := csc.values.Load().(cacheEntry)
+	loaded := csc.values.Load()
+	var currentCached cacheEntry
+	if loaded == nil {
+		currentCached = cacheEntry{
+			cacheVersion:  0,
+			schemaVersion: 0,
+			dcEntries:     map[string]*types.DynamicConfigEntry{},
+		}
+	} else {
+		currentCached = loaded.(cacheEntry)
+	}
+
 	keyName := dc.Keys[name]
 	var newEntries []*types.DynamicConfigEntry
 
 	existingEntry, entryExists := currentCached.dcEntries[keyName]
 
-	if value == nil {
-		if entryExists {
-			newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries)-1)
-		} else {
-			newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
-		}
+	if value == nil || len(value.([]*types.DynamicConfigValue)) == 0 {
+		newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
 
 		for _, entry := range currentCached.dcEntries {
 			if entryExists && entry == existingEntry {
@@ -290,7 +322,7 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 		}
 
 		for _, entry := range currentCached.dcEntries {
-			if entryExists && entry == existingEntry {
+			if entryExists && entry.Name == keyName {
 				newEntries = append(newEntries,
 					&types.DynamicConfigEntry{
 						Name:         keyName,
@@ -421,15 +453,19 @@ func (csc *configStoreClient) update() error {
 
 	select {
 	case fetchRes := <-fetchCh:
-		if fetchRes.err != nil || fetchRes.snapshot == nil {
+		if fetchRes.err != nil {
 			return fmt.Errorf("failed to fetch dynamic config snapshot %v", fetchRes.err)
 		}
 
-		defer func() {
-			csc.lastUpdatedTime = time.Now()
-		}()
+		if fetchRes.snapshot != nil {
+			defer func() {
+				csc.lastUpdatedTime = time.Now()
+			}()
 
-		return csc.storeValues(fetchRes.snapshot)
+			return csc.storeValues(fetchRes.snapshot)
+		}
+
+		return nil
 	case <-time.After(csc.config.FetchTimeout):
 		return errors.New("timeout error on fetch")
 	}
@@ -458,7 +494,11 @@ func (csc *configStoreClient) storeValues(snapshot *persistence.DynamicConfigSna
 
 func (csc *configStoreClient) getValueWithFilters(key dc.Key, filters map[dc.Filter]interface{}, defaultValue interface{}) (interface{}, error) {
 	keyName := dc.Keys[key]
-	cached := csc.values.Load().(cacheEntry)
+	loaded := csc.values.Load()
+	if loaded == nil {
+		return defaultValue, nil
+	}
+	cached := loaded.(cacheEntry)
 	found := false
 
 	if entry, ok := cached.dcEntries[keyName]; ok && entry != nil {
@@ -501,18 +541,6 @@ func matchFilters(dcValue *types.DynamicConfigValue, filters map[dc.Filter]inter
 		}
 	}
 	return true
-}
-
-func (csc *configStoreClient) getFloatValue(name dc.Key, filters map[dc.Filter]interface{}, defaultValue float64) (float64, error) {
-	val, err := csc.getValueWithFilters(name, filters, defaultValue)
-	if err != nil {
-		return defaultValue, err
-	}
-
-	if floatVal, ok := val.(float64); ok {
-		return floatVal, nil
-	}
-	return defaultValue, errors.New("value type is not float64")
 }
 
 func validateConfigStoreClientConfig(config *csc.ConfigStoreClientConfig) error {

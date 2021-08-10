@@ -1358,11 +1358,11 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 	if err != nil {
 		entries, err2 := adh.params.DynamicConfig.ListValue(dc.UnknownKey)
 		if err2 != nil {
-			err = adh.error(err2, scope)
+			return nil, adh.error(err2, scope)
 		}
 		return &types.ListDynamicConfigResponse{
 			Entries: entries,
-		}, err
+		}, nil
 	}
 
 	entries, err2 := adh.params.DynamicConfig.ListValue(keyVal)

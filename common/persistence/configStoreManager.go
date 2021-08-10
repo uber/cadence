@@ -55,7 +55,7 @@ func (m *configStoreManagerImpl) Close() {
 
 func (m *configStoreManagerImpl) FetchDynamicConfig(ctx context.Context) (*FetchDynamicConfigResponse, error) {
 	values, err := m.persistence.FetchConfig(ctx, DynamicConfig)
-	if err != nil {
+	if err != nil || values == nil {
 		return nil, err
 	}
 
