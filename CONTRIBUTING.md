@@ -55,6 +55,8 @@ If running into any compiling issue
 * Database. The default setup of Cadence depends on Cassandra. Before running the Cadence or tests you must have `cassandra` dependency(or equivalent database in the below notes)
 
 ### 2. Setup Dependency
+NOTE: you may skip this section if you have installed the dependencies in any other ways, for example, using homebrew.
+
 Cadence's core data model can be running with different persistence storages, including Cassandra,MySQL and Postgres.
 Please refer to [persistence documentation](https://github.com/uber/cadence/blob/master/docs/persistence.md) if you want to learn more.
 Cadence's visibility data model can be running with either Cassandra/MySQL/Postgres database, or ElasticSearch+Kafka. The latter provides [advanced visibility feature](./docs/visibility-on-elasticsearch.md)
