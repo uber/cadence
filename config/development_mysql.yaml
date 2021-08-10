@@ -8,7 +8,7 @@ persistence:
         databaseName: "cadence"
         connectAddr: "127.0.0.1:3306"
         connectProtocol: "tcp"
-        user: "cadence"
+        user: "root"
         password: "cadence"
         maxConns: 20
         maxIdleConns: 20
@@ -19,7 +19,7 @@ persistence:
         databaseName: "cadence_visibility"
         connectAddr: "127.0.0.1:3306"
         connectProtocol: "tcp"
-        user: "cadence"
+        user: "root"
         password: "cadence"
         maxConns: 2
         maxIdleConns: 2
