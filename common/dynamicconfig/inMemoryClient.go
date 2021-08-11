@@ -139,6 +139,7 @@ func (mc *inMemoryClient) UpdateValue(key Key, value interface{}) error {
 func (mc *inMemoryClient) RestoreValue(name Key, filters map[Filter]interface{}) error {
 	return errors.New("not supported for file based client")
 }
-func (mc *inMemoryClient) ListValue() ([]*types.DynamicConfigEntry, error) {
+
+func (mc *inMemoryClient) ListValue(name Key) ([]*types.DynamicConfigEntry, error) {
 	return nil, errors.New("not supported for file based client")
 }

@@ -261,7 +261,7 @@ func (csc *configStoreClient) RestoreValue(name dc.Key, filters map[dc.Filter]in
 	return csc.UpdateValue(name, newValues)
 }
 
-func (csc *configStoreClient) ListValue() ([]*types.DynamicConfigEntry, error) {
+func (csc *configStoreClient) ListValue(name dc.Key) ([]*types.DynamicConfigEntry, error) {
 	var resList []*types.DynamicConfigEntry
 
 	loaded := csc.values.Load()
@@ -274,9 +274,16 @@ func (csc *configStoreClient) ListValue() ([]*types.DynamicConfigEntry, error) {
 		return nil, nil
 	}
 
-	resList = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
-	for _, entry := range currentCached.dcEntries {
-		resList = append(resList, copyDynamicConfigEntry(entry))
+	if val, ok := currentCached.dcEntries[dc.Keys[name]]; !ok || name == dc.UnknownKey {
+		//if key is not known/specified, return all entries
+		resList = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
+		for _, entry := range currentCached.dcEntries {
+			resList = append(resList, copyDynamicConfigEntry(entry))
+		}
+	} else {
+		//if key is known, return just that specific entry
+		resList = make([]*types.DynamicConfigEntry, 0, 1)
+		resList = append(resList, val)
 	}
 
 	return resList, nil

@@ -47,7 +47,7 @@ type Client interface {
 	// UpdateValue takes value as map and updates by overriding. It doesn't support update with filters.
 	UpdateValue(name Key, value interface{}) error
 	RestoreValue(name Key, filters map[Filter]interface{}) error
-	ListValue() ([]*types.DynamicConfigEntry, error)
+	ListValue(name Key) ([]*types.DynamicConfigEntry, error)
 }
 
 var NotFoundError = &types.EntityNotExistsError{

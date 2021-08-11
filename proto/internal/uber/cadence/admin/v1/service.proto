@@ -360,6 +360,7 @@ message RestoreDynamicConfigResponse {
 }
 
 message ListDynamicConfigRequest {
+  string config_name = 1;
 }
 
 message ListDynamicConfigResponse {

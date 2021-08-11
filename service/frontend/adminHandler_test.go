@@ -594,9 +594,6 @@ func (s *adminHandlerSuite) Test_ConfigStore_NilRequest() {
 
 	err = handler.RestoreDynamicConfig(ctx, nil)
 	s.Error(err)
-
-	_, err = handler.ListDynamicConfig(ctx)
-	s.Error(err)
 }
 
 func (s *adminHandlerSuite) Test_ConfigStore_InvalidKey() {

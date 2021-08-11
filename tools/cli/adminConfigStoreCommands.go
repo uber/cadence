@@ -26,6 +26,7 @@ import (
 
 	"github.com/urfave/cli"
 
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -55,33 +56,57 @@ func AdminGetDynamicConfig(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	parsedFilters, err := parseInputFilterArray(filters)
-	if err != nil {
-		ErrorAndExit("Failed to parse input filter array", err)
-	}
+	if filters == nil || len(filters) == 0 {
+		req := &types.ListDynamicConfigRequest{
+			ConfigName: dcName,
+		}
 
-	req := &types.GetDynamicConfigRequest{
-		ConfigName: dcName,
-		Filters:    parsedFilters,
-	}
+		val, err := adminClient.ListDynamicConfig(ctx, req)
+		if err != nil {
+			ErrorAndExit("Failed to get dynamic config value(s)", err)
+		}
 
-	val, err := adminClient.GetDynamicConfig(ctx, req)
-	if err != nil {
-		ErrorAndExit("Failed to get dynamic config value", err)
-	}
-
-	var umVal interface{}
-	err = json.Unmarshal(val.Value.Data, &umVal)
-	if err != nil {
-		ErrorAndExit("Failed to unmarshal response", err)
-	}
-
-	if umVal == nil {
-		fmt.Printf("No values stored for specified dynamic config.\n")
+		if val == nil || val.Entries == nil || len(val.Entries) == 0 {
+			fmt.Printf("No dynamic config values stored to list.\n")
+		} else {
+			cliEntries := make([]*cliEntry, 0, len(val.Entries))
+			for _, dcEntry := range val.Entries {
+				cliEntry, err := convertToInputEntry(dcEntry)
+				if err != nil {
+					fmt.Printf("Cannot parse list response.\n")
+				}
+				cliEntries = append(cliEntries, cliEntry)
+			}
+			prettyPrintJSONObject(cliEntries)
+		}
 	} else {
-		prettyPrintJSONObject(umVal)
-	}
+		parsedFilters, err := parseInputFilterArray(filters)
+		if err != nil {
+			ErrorAndExit("Failed to parse input filter array", err)
+		}
 
+		req := &types.GetDynamicConfigRequest{
+			ConfigName: dcName,
+			Filters:    parsedFilters,
+		}
+
+		val, err := adminClient.GetDynamicConfig(ctx, req)
+		if err != nil {
+			ErrorAndExit("Failed to get dynamic config value", err)
+		}
+
+		var umVal interface{}
+		err = json.Unmarshal(val.Value.Data, &umVal)
+		if err != nil {
+			ErrorAndExit("Failed to unmarshal response", err)
+		}
+
+		if umVal == nil {
+			fmt.Printf("No values stored for specified dynamic config.\n")
+		} else {
+			prettyPrintJSONObject(umVal)
+		}
+	}
 }
 
 // AdminUpdateDynamicConfig updates specified dynamic config parameter with specified values
@@ -161,7 +186,11 @@ func AdminListDynamicConfig(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	val, err := adminClient.ListDynamicConfig(ctx)
+	req := &types.ListDynamicConfigRequest{
+		ConfigName: dynamicconfig.UnknownKey.String(),
+	}
+
+	val, err := adminClient.ListDynamicConfig(ctx, req)
 	if err != nil {
 		ErrorAndExit("Failed to list dynamic config value(s)", err)
 	}
@@ -275,7 +304,9 @@ func convertFromInputFilter(inputFilter *cliFilter) (*types.DynamicConfigFilter,
 func parseInputFilterArray(inputFilters []string) ([]*types.DynamicConfigFilter, error) {
 	var parsedFilters []*types.DynamicConfigFilter
 
-	if inputFilters != nil {
+	if len(inputFilters) == 1 && (inputFilters[0] == "" || inputFilters[0] == "{}") {
+		parsedFilters = nil
+	} else {
 		parsedFilters = make([]*types.DynamicConfigFilter, 0, len(inputFilters))
 
 		for _, filterString := range inputFilters {
@@ -292,8 +323,6 @@ func parseInputFilterArray(inputFilters []string) ([]*types.DynamicConfigFilter,
 
 			parsedFilters = append(parsedFilters, filter)
 		}
-	} else {
-		parsedFilters = nil
 	}
 
 	return parsedFilters, nil

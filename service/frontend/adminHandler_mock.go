@@ -250,18 +250,18 @@ func (mr *MockAdminHandlerMockRecorder) GetWorkflowExecutionRawHistoryV2(arg0, a
 }
 
 // ListDynamicConfig mocks base method.
-func (m *MockAdminHandler) ListDynamicConfig(arg0 context.Context) (*types.ListDynamicConfigResponse, error) {
+func (m *MockAdminHandler) ListDynamicConfig(arg0 context.Context, arg1 *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDynamicConfig", arg0)
+	ret := m.ctrl.Call(m, "ListDynamicConfig", arg0, arg1)
 	ret0, _ := ret[0].(*types.ListDynamicConfigResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListDynamicConfig indicates an expected call of ListDynamicConfig.
-func (mr *MockAdminHandlerMockRecorder) ListDynamicConfig(arg0 interface{}) *gomock.Call {
+func (mr *MockAdminHandlerMockRecorder) ListDynamicConfig(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDynamicConfig", reflect.TypeOf((*MockAdminHandler)(nil).ListDynamicConfig), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDynamicConfig", reflect.TypeOf((*MockAdminHandler)(nil).ListDynamicConfig), arg0, arg1)
 }
 
 // MergeDLQMessages mocks base method.

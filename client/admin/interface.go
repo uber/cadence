@@ -55,5 +55,5 @@ type Client interface {
 	GetDynamicConfig(context.Context, *types.GetDynamicConfigRequest, ...yarpc.CallOption) (*types.GetDynamicConfigResponse, error)
 	UpdateDynamicConfig(context.Context, *types.UpdateDynamicConfigRequest, ...yarpc.CallOption) error
 	RestoreDynamicConfig(context.Context, *types.RestoreDynamicConfigRequest, ...yarpc.CallOption) error
-	ListDynamicConfig(context.Context, ...yarpc.CallOption) (*types.ListDynamicConfigResponse, error)
+	ListDynamicConfig(context.Context, *types.ListDynamicConfigRequest, ...yarpc.CallOption) (*types.ListDynamicConfigResponse, error)
 }

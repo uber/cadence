@@ -368,12 +368,13 @@ func (c *retryableClient) RestoreDynamicConfig(
 
 func (c *retryableClient) ListDynamicConfig(
 	ctx context.Context,
+	request *types.ListDynamicConfigRequest,
 	opts ...yarpc.CallOption,
 ) (*types.ListDynamicConfigResponse, error) {
 	var resp *types.ListDynamicConfigResponse
 	op := func() error {
 		var err error
-		resp, err = c.client.ListDynamicConfig(ctx, opts...)
+		resp, err = c.client.ListDynamicConfig(ctx, request, opts...)
 		return err
 	}
 	err := backoff.Retry(op, c.policy, c.isRetryable)

@@ -473,6 +473,17 @@ func (v *RestoreDynamicConfigRequest) GetFilters() (o []*DynamicConfigFilter) {
 	return
 }
 
+type ListDynamicConfigRequest struct {
+	ConfigName string `json:"configName,omitempty"`
+}
+
+func (v *ListDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil {
+		return v.ConfigName
+	}
+	return
+}
+
 type ListDynamicConfigResponse struct {
 	Entries []*DynamicConfigEntry `json:"entries,omitempty"`
 }

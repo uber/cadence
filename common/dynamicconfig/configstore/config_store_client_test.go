@@ -900,7 +900,7 @@ func (s *configStoreClientSuite) TestRestoreValue_FilterMatch() {
 
 func (s *configStoreClientSuite) TestListValues() {
 	defaultTestSetup(s)
-	val, err := s.client.ListValue()
+	val, err := s.client.ListValue(dc.UnknownKey)
 	s.NoError(err)
 	for _, resEntry := range val {
 		for _, oriEntry := range snapshot1.Values.Entries {
@@ -927,7 +927,7 @@ func (s *configStoreClientSuite) TestListValues_EmptyCache() {
 
 	s.client.update()
 
-	val, err := s.client.ListValue()
+	val, err := s.client.ListValue(dc.UnknownKey)
 	s.NoError(err)
 	s.Nil(val)
 }

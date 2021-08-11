@@ -88,7 +88,7 @@ type (
 		GetDynamicConfig(context.Context, *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error)
 		UpdateDynamicConfig(context.Context, *types.UpdateDynamicConfigRequest) error
 		RestoreDynamicConfig(context.Context, *types.RestoreDynamicConfigRequest) error
-		ListDynamicConfig(context.Context) (*types.ListDynamicConfigResponse, error)
+		ListDynamicConfig(context.Context, *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error)
 	}
 
 	// adminHandlerImpl is an implementation for admin service independent of wire protocol
@@ -1344,15 +1344,32 @@ func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *
 	return adh.params.DynamicConfig.RestoreValue(keyVal, filters)
 }
 
-func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context) (_ *types.ListDynamicConfigResponse, retError error) {
+func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest) (_ *types.ListDynamicConfigResponse, retError error) {
 	defer log.CapturePanic(adh.GetLogger(), &retError)
 	scope, sw := adh.startRequestProfile(metrics.AdminListDynamicConfigScope)
 	defer sw.Stop()
 
-	entries, err := adh.params.DynamicConfig.ListValue()
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+
+	keyVal, err := checkValidKey(request.ConfigName)
 	if err != nil {
+		entries, err2 := adh.params.DynamicConfig.ListValue(dc.UnknownKey)
+		if err2 != nil {
+			return nil, adh.error(err2, scope)
+		}
+		return &types.ListDynamicConfigResponse{
+			Entries: entries,
+		}, nil
+	}
+
+	entries, err2 := adh.params.DynamicConfig.ListValue(keyVal)
+	if err2 != nil {
+		err = adh.error(err2, scope)
 		return nil, adh.error(err, scope)
 	}
+
 	return &types.ListDynamicConfigResponse{
 		Entries: entries,
 	}, nil

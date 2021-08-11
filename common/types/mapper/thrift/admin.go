@@ -564,6 +564,26 @@ func FromListDynamicConfigResponse(t *types.ListDynamicConfigResponse) *admin.Li
 	}
 }
 
+//FromListDynamicConfigRequest converts internal ListDynamicConfigRequest type to thrift
+func FromListDynamicConfigRequest(t *types.ListDynamicConfigRequest) *admin.ListDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &admin.ListDynamicConfigRequest{
+		ConfigName: &t.ConfigName,
+	}
+}
+
+//ToListDynamicConfigRequest converts thrift ListDynamicConfigRequest type to internal
+func ToListDynamicConfigRequest(t *admin.ListDynamicConfigRequest) *types.ListDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.ListDynamicConfigRequest{
+		ConfigName: t.GetConfigName(),
+	}
+}
+
 //ToListDynamicConfigResponse converts thrift ListDynamicConfigResponse type to internal
 func ToListDynamicConfigResponse(t *admin.ListDynamicConfigResponse) *types.ListDynamicConfigResponse {
 	if t == nil {

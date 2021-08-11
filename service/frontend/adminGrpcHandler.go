@@ -157,6 +157,6 @@ func (g adminGRPCHandler) RestoreDynamicConfig(ctx context.Context, request *adm
 }
 
 func (g adminGRPCHandler) ListDynamicConfig(ctx context.Context, request *adminv1.ListDynamicConfigRequest) (*adminv1.ListDynamicConfigResponse, error) {
-	response, err := g.h.ListDynamicConfig(withGRPCTag(ctx))
+	response, err := g.h.ListDynamicConfig(withGRPCTag(ctx), proto.ToListDynamicConfigRequest(request))
 	return proto.FromListDynamicConfigResponse(response), proto.FromError(err)
 }

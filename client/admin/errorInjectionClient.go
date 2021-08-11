@@ -645,6 +645,7 @@ func (c *errorInjectionClient) RestoreDynamicConfig(
 
 func (c *errorInjectionClient) ListDynamicConfig(
 	ctx context.Context,
+	request *types.ListDynamicConfigRequest,
 	opts ...yarpc.CallOption,
 ) (*types.ListDynamicConfigResponse, error) {
 	fakeErr := errors.GenerateFakeError(c.errorRate)
@@ -653,7 +654,7 @@ func (c *errorInjectionClient) ListDynamicConfig(
 	var clientErr error
 	var forwardCall bool
 	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
-		resp, clientErr = c.client.ListDynamicConfig(ctx, opts...)
+		resp, clientErr = c.client.ListDynamicConfig(ctx, request, opts...)
 	}
 
 	if fakeErr != nil {

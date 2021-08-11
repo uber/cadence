@@ -809,6 +809,26 @@ func ToRestoreDynamicConfigRequest(t *adminv1.RestoreDynamicConfigRequest) *type
 	}
 }
 
+//FromListDynamicConfigRequest converts internal ListDynamicConfigRequest type to proto
+func FromListDynamicConfigRequest(t *types.ListDynamicConfigRequest) *adminv1.ListDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.ListDynamicConfigRequest{
+		ConfigName: t.ConfigName,
+	}
+}
+
+//ToListDynamicConfigRequest converts proto ListDynamicConfigRequest type to internal
+func ToListDynamicConfigRequest(t *adminv1.ListDynamicConfigRequest) *types.ListDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.ListDynamicConfigRequest{
+		ConfigName: t.ConfigName,
+	}
+}
+
 //FromListDynamicConfigResponse converts internal ListDynamicConfigResponse type to proto
 func FromListDynamicConfigResponse(t *types.ListDynamicConfigResponse) *adminv1.ListDynamicConfigResponse {
 	if t == nil {

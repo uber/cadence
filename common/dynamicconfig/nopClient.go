@@ -79,7 +79,8 @@ func (mc *nopClient) UpdateValue(name Key, value interface{}) error {
 func (mc *nopClient) RestoreValue(name Key, filters map[Filter]interface{}) error {
 	return errors.New("not supported for file based client")
 }
-func (mc *nopClient) ListValue() ([]*types.DynamicConfigEntry, error) {
+
+func (mc *nopClient) ListValue(name Key) ([]*types.DynamicConfigEntry, error) {
 	return nil, errors.New("not supported for file based client")
 }
 

@@ -446,12 +446,13 @@ func (c *metricClient) RestoreDynamicConfig(
 
 func (c *metricClient) ListDynamicConfig(
 	ctx context.Context,
+	request *types.ListDynamicConfigRequest,
 	opts ...yarpc.CallOption,
 ) (*types.ListDynamicConfigResponse, error) {
 	c.metricsClient.IncCounter(metrics.AdminClientListDynamicConfigScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientListDynamicConfigScope, metrics.CadenceClientLatency)
-	resp, err := c.client.ListDynamicConfig(ctx, opts...)
+	resp, err := c.client.ListDynamicConfig(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
