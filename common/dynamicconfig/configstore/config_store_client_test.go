@@ -32,7 +32,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	dc "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/dynamicconfig/configstore/configstoreconfig"
@@ -50,7 +49,7 @@ const (
 type configStoreClientSuite struct {
 	suite.Suite
 	*require.Assertions
-	client         dc.Client
+	client         *configStoreClient
 	mockManager    *p.MockConfigStoreManager
 	mockController *gomock.Controller
 	doneCh         chan struct{}
@@ -63,88 +62,15 @@ func TestConfigStoreClientSuite(t *testing.T) {
 	suite.Run(t, s)
 }
 
-// func (s *configStoreClientSuite) SetupSuite() {
-// 	s.doneCh = make(chan struct{})
-// 	s.mockController = gomock.NewController(s.T())
-
-// }
-
-type eqSnapshotVersionMatcher struct {
-	version int64
-}
-
-func (e eqSnapshotVersionMatcher) Matches(x interface{}) bool {
-	arg, ok := x.(*p.UpdateDynamicConfigRequest)
-	if !ok {
-		return false
-	}
-	return e.version == arg.Snapshot.Version
-}
-
-func (e eqSnapshotVersionMatcher) String() string {
-	return fmt.Sprintf("Version match %d.\n", e.version)
-}
-
-func EqSnapshotVersion(version int64) gomock.Matcher {
-	return eqSnapshotVersionMatcher{version}
-}
-
 func (s *configStoreClientSuite) SetupSuite() {
 	s.doneCh = make(chan struct{})
 	s.mockController = gomock.NewController(s.T())
 
-	mockDB := nosqlplugin.NewMockDB(s.mockController)
-	mockDB.EXPECT().
-		InsertConfig(gomock.Any(), gomock.Any()).
-		Return(nil).AnyTimes()
-
-	blob, err := p.NewPayloadSerializer().SerializeDynamicConfigBlob(snapshot1.Values, common.EncodingTypeThriftRW)
-	s.Require().NoError(err)
-
-	mockDB.EXPECT().
-		SelectLatestConfig(gomock.Any(), gomock.Any()).
-		Return(&p.InternalConfigStoreEntry{
-			RowType:   1,
-			Version:   1,
-			Timestamp: time.Now(),
-			Values:    blob,
-		}, nil).AnyTimes()
-
-	mockDB.EXPECT().
-		IsNotFoundError(gomock.Any()).
-		Return(true).AnyTimes()
-
 	mockPlugin := nosqlplugin.NewMockPlugin(s.mockController)
 	mockPlugin.EXPECT().
 		CreateDB(gomock.Any(), gomock.Any()).
-		Return(mockDB, nil).AnyTimes()
+		Return(nil, nil).AnyTimes()
 	nosql.RegisterPlugin("cassandra", mockPlugin)
-
-	s.client, err = NewConfigStoreClient(
-		&configstoreconfig.ConfigStoreClientConfig{
-			PollInterval:        time.Second * 2,
-			UpdateRetryAttempts: retryAttempts,
-			FetchTimeout:        time.Second * 1,
-			UpdateTimeout:       time.Second * 1,
-		},
-		&config.NoSQL{
-			PluginName: "cassandra",
-		}, log.NewNoop(), s.doneCh)
-	s.Require().NoError(err)
-
-	s.mockManager = p.NewMockConfigStoreManager(s.mockController)
-	configStoreClient, ok := s.client.(*configStoreClient)
-	s.Require().True(ok)
-	configStoreClient.configStoreManager = s.mockManager
-
-	s.mockManager.EXPECT().
-		FetchDynamicConfig(gomock.Any()).
-		Return(&p.FetchDynamicConfigResponse{
-			Snapshot: snapshot1,
-		}, nil).
-		AnyTimes()
-
-	time.Sleep(2 * time.Second)
 }
 
 func (s *configStoreClientSuite) TearDownSuite() {
@@ -372,34 +298,51 @@ func (s *configStoreClientSuite) SetupTest() {
 		},
 	}
 
-	s.mockManager = p.NewMockConfigStoreManager(s.mockController)
-	configStoreClient, ok := s.client.(*configStoreClient)
-	s.Require().True(ok)
-	configStoreClient.configStoreManager = s.mockManager
+	var err error
+	s.client, err = newConfigStoreClient(
+		&configstoreconfig.ConfigStoreClientConfig{
+			PollInterval:        time.Second * 2,
+			UpdateRetryAttempts: retryAttempts,
+			FetchTimeout:        time.Second * 1,
+			UpdateTimeout:       time.Second * 1,
+		},
+		&config.NoSQL{
+			PluginName: "cassandra",
+		}, log.NewNoop(), s.doneCh)
+	s.Require().NoError(err)
 
+	s.mockManager = p.NewMockConfigStoreManager(s.mockController)
+	s.client.configStoreManager = s.mockManager
+}
+
+func defaultTestSetup(s *configStoreClientSuite) {
 	s.mockManager.EXPECT().
 		FetchDynamicConfig(gomock.Any()).
 		Return(&p.FetchDynamicConfigResponse{
 			Snapshot: snapshot1,
 		}, nil).
 		AnyTimes()
-
-	configStoreClient.update()
+	err := s.client.startUpdate()
+	s.NoError(err)
 }
 
 func (s *configStoreClientSuite) TestGetValue() {
+	defaultTestSetup(s)
 	v, err := s.client.GetValue(dc.TestGetBoolPropertyKey, true)
 	s.NoError(err)
 	s.Equal(false, v)
 }
 
 func (s *configStoreClientSuite) TestGetValue_NonExistKey() {
+	defaultTestSetup(s)
 	v, err := s.client.GetValue(dc.LastKeyForTest, true)
 	s.Error(err)
 	s.Equal(v, true)
 }
 
 func (s *configStoreClientSuite) TestGetValueWithFilters() {
+	defaultTestSetup(s)
+
 	filters := map[dc.Filter]interface{}{
 		dc.DomainName: "global-samples-domain",
 	}
@@ -425,6 +368,7 @@ func (s *configStoreClientSuite) TestGetValueWithFilters() {
 }
 
 func (s *configStoreClientSuite) TestGetValueWithFilters_UnknownFilter() {
+	defaultTestSetup(s)
 	filters := map[dc.Filter]interface{}{
 		dc.DomainName:    "global-samples-domain1",
 		dc.UnknownFilter: "unknown-filter1",
@@ -435,12 +379,14 @@ func (s *configStoreClientSuite) TestGetValueWithFilters_UnknownFilter() {
 }
 
 func (s *configStoreClientSuite) TestGetIntValue() {
+	defaultTestSetup(s)
 	v, err := s.client.GetIntValue(dc.TestGetIntPropertyKey, nil, 1)
 	s.NoError(err)
 	s.Equal(1000, v)
 }
 
 func (s *configStoreClientSuite) TestGetIntValue_FilterNotMatch() {
+	defaultTestSetup(s)
 	filters := map[dc.Filter]interface{}{
 		dc.DomainName: "samples-domain",
 	}
@@ -450,6 +396,7 @@ func (s *configStoreClientSuite) TestGetIntValue_FilterNotMatch() {
 }
 
 func (s *configStoreClientSuite) TestGetIntValue_WrongType() {
+	defaultTestSetup(s)
 	defaultValue := 2000
 	filters := map[dc.Filter]interface{}{
 		dc.DomainName: "global-samples-domain",
@@ -460,6 +407,7 @@ func (s *configStoreClientSuite) TestGetIntValue_WrongType() {
 }
 
 func (s *configStoreClientSuite) TestGetIntValue_WrongTypeKey() {
+	defaultTestSetup(s)
 	defaultValue := 2000
 	v, err := s.client.GetIntValue(dc.TestGetMapPropertyKey, nil, defaultValue)
 	s.Error(err)
@@ -467,12 +415,14 @@ func (s *configStoreClientSuite) TestGetIntValue_WrongTypeKey() {
 }
 
 func (s *configStoreClientSuite) TestGetFloatValue() {
+	defaultTestSetup(s)
 	v, err := s.client.GetFloatValue(dc.TestGetFloat64PropertyKey, nil, 1)
 	s.NoError(err)
 	s.Equal(12.0, v)
 }
 
 func (s *configStoreClientSuite) TestGetFloatValue_WrongType() {
+	defaultTestSetup(s)
 	filters := map[dc.Filter]interface{}{
 		dc.DomainName: "samples-domain",
 	}
@@ -483,18 +433,21 @@ func (s *configStoreClientSuite) TestGetFloatValue_WrongType() {
 }
 
 func (s *configStoreClientSuite) TestGetBoolValue() {
+	defaultTestSetup(s)
 	v, err := s.client.GetBoolValue(dc.TestGetBoolPropertyKey, nil, true)
 	s.NoError(err)
 	s.Equal(false, v)
 }
 
 func (s *configStoreClientSuite) TestGetBoolValue_WrongTypeKey() {
+	defaultTestSetup(s)
 	v, err := s.client.GetBoolValue(dc.TestGetIntPropertyKey, nil, true)
 	s.Error(err)
 	s.Equal(true, v)
 }
 
 func (s *configStoreClientSuite) TestGetStringValue() {
+	defaultTestSetup(s)
 	filters := map[dc.Filter]interface{}{
 		dc.TaskListName: "random tasklist",
 	}
@@ -504,12 +457,14 @@ func (s *configStoreClientSuite) TestGetStringValue() {
 }
 
 func (s *configStoreClientSuite) TestGetStringValue_WrongTypeKey() {
+	defaultTestSetup(s)
 	v, err := s.client.GetStringValue(dc.TestGetMapPropertyKey, nil, "defaultString")
 	s.Error(err)
 	s.Equal("defaultString", v)
 }
 
 func (s *configStoreClientSuite) TestGetMapValue() {
+	defaultTestSetup(s)
 	var defaultVal map[string]interface{}
 	v, err := s.client.GetMapValue(dc.TestGetMapPropertyKey, nil, defaultVal)
 	s.NoError(err)
@@ -528,6 +483,7 @@ func (s *configStoreClientSuite) TestGetMapValue() {
 }
 
 func (s *configStoreClientSuite) TestGetMapValue_WrongType() {
+	defaultTestSetup(s)
 	var defaultVal map[string]interface{}
 	filters := map[dc.Filter]interface{}{
 		dc.TaskListName: "random tasklist",
@@ -538,12 +494,14 @@ func (s *configStoreClientSuite) TestGetMapValue_WrongType() {
 }
 
 func (s *configStoreClientSuite) TestGetDurationValue() {
+	defaultTestSetup(s)
 	v, err := s.client.GetDurationValue(dc.TestGetDurationPropertyKey, nil, time.Second)
 	s.NoError(err)
 	s.Equal(time.Minute, v)
 }
 
 func (s *configStoreClientSuite) TestGetDurationValue_NotStringRepresentation() {
+	defaultTestSetup(s)
 	filters := map[dc.Filter]interface{}{
 		dc.DomainName: "samples-domain",
 	}
@@ -553,6 +511,7 @@ func (s *configStoreClientSuite) TestGetDurationValue_NotStringRepresentation() 
 }
 
 func (s *configStoreClientSuite) TestGetDurationValue_ParseFailed() {
+	defaultTestSetup(s)
 	filters := map[dc.Filter]interface{}{
 		dc.DomainName:   "samples-domain",
 		dc.TaskListName: "longIdleTimeTaskList",
@@ -738,6 +697,8 @@ func (s *configStoreClientSuite) TestMatchFilters() {
 }
 
 func (s *configStoreClientSuite) TestUpdateValue_NilOverwrite() {
+	defaultTestSetup(s)
+
 	s.mockManager.EXPECT().
 		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
@@ -752,6 +713,8 @@ func (s *configStoreClientSuite) TestUpdateValue_NilOverwrite() {
 }
 
 func (s *configStoreClientSuite) TestUpdateValue_NoRetrySuccess() {
+	defaultTestSetup(s)
+
 	s.mockManager.EXPECT().
 		UpdateDynamicConfig(gomock.Any(), EqSnapshotVersion(2)).
 		Return(nil).MaxTimes(1)
@@ -777,7 +740,8 @@ func (s *configStoreClientSuite) TestUpdateValue_NoRetrySuccess() {
 			Snapshot: snapshot2,
 		}, nil).MaxTimes(1)
 
-	time.Sleep(2 * time.Second)
+	err = s.client.update()
+	s.NoError(err)
 
 	v, err := s.client.GetValue(dc.TestGetBoolPropertyKey, false)
 	s.NoError(err)
@@ -794,11 +758,6 @@ func (s *configStoreClientSuite) TestUpdateValue_SuccessNewKey() {
 			Filters: nil,
 		},
 	}
-
-	s.mockManager = p.NewMockConfigStoreManager(s.mockController)
-	configStoreClient, ok := s.client.(*configStoreClient)
-	s.Require().True(ok)
-	configStoreClient.configStoreManager = s.mockManager
 
 	s.mockManager.EXPECT().
 		FetchDynamicConfig(gomock.Any()).
@@ -821,7 +780,7 @@ func (s *configStoreClientSuite) TestUpdateValue_SuccessNewKey() {
 			return nil
 		}).AnyTimes()
 
-	time.Sleep(3 * time.Second)
+	s.client.update()
 	err := s.client.UpdateValue(dc.TestGetBoolPropertyKey, values)
 	s.NoError(err)
 }
@@ -842,11 +801,15 @@ func (s *configStoreClientSuite) TestUpdateValue_RetrySuccess() {
 			Snapshot: snapshot1,
 		}, nil).AnyTimes()
 
+	s.client.update()
+
 	err := s.client.UpdateValue(dc.TestGetBoolPropertyKey, []*types.DynamicConfigValue{})
 	s.NoError(err)
 }
 
 func (s *configStoreClientSuite) TestUpdateValue_RetryFailure() {
+	defaultTestSetup(s)
+
 	s.mockManager.EXPECT().
 		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
 		Return(&p.ConditionFailedError{}).MaxTimes(retryAttempts + 1)
@@ -856,6 +819,7 @@ func (s *configStoreClientSuite) TestUpdateValue_RetryFailure() {
 }
 
 func (s *configStoreClientSuite) TestUpdateValue_Timeout() {
+	defaultTestSetup(s)
 	s.mockManager.EXPECT().
 		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, _ *p.UpdateDynamicConfigRequest) error {
@@ -868,6 +832,7 @@ func (s *configStoreClientSuite) TestUpdateValue_Timeout() {
 }
 
 func (s *configStoreClientSuite) TestRestoreValue_NoFilter() {
+	defaultTestSetup(s)
 	s.mockManager.EXPECT().
 		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
@@ -889,6 +854,8 @@ func (s *configStoreClientSuite) TestRestoreValue_NoFilter() {
 }
 
 func (s *configStoreClientSuite) TestRestoreValue_FilterNoMatch() {
+	defaultTestSetup(s)
+
 	s.mockManager.EXPECT().
 		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
@@ -911,6 +878,7 @@ func (s *configStoreClientSuite) TestRestoreValue_FilterNoMatch() {
 }
 
 func (s *configStoreClientSuite) TestRestoreValue_FilterMatch() {
+	defaultTestSetup(s)
 	s.mockManager.EXPECT().
 		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
@@ -931,6 +899,7 @@ func (s *configStoreClientSuite) TestRestoreValue_FilterMatch() {
 }
 
 func (s *configStoreClientSuite) TestListValues() {
+	defaultTestSetup(s)
 	val, err := s.client.ListValue()
 	s.NoError(err)
 	for _, resEntry := range val {
@@ -943,11 +912,6 @@ func (s *configStoreClientSuite) TestListValues() {
 }
 
 func (s *configStoreClientSuite) TestListValues_EmptyCache() {
-	s.mockManager = p.NewMockConfigStoreManager(s.mockController)
-	configStoreClient, ok := s.client.(*configStoreClient)
-	s.Require().True(ok)
-	configStoreClient.configStoreManager = s.mockManager
-
 	s.mockManager.EXPECT().
 		FetchDynamicConfig(gomock.Any()).
 		Return(&p.FetchDynamicConfigResponse{
@@ -961,7 +925,7 @@ func (s *configStoreClientSuite) TestListValues_EmptyCache() {
 		}, nil).
 		MaxTimes(1)
 
-	time.Sleep(2 * time.Second)
+	s.client.update()
 
 	val, err := s.client.ListValue()
 	s.NoError(err)
@@ -971,4 +935,24 @@ func (s *configStoreClientSuite) TestListValues_EmptyCache() {
 func jsonMarshalHelper(v interface{}) []byte {
 	data, _ := json.Marshal(v)
 	return data
+}
+
+type eqSnapshotVersionMatcher struct {
+	version int64
+}
+
+func (e eqSnapshotVersionMatcher) Matches(x interface{}) bool {
+	arg, ok := x.(*p.UpdateDynamicConfigRequest)
+	if !ok {
+		return false
+	}
+	return e.version == arg.Snapshot.Version
+}
+
+func (e eqSnapshotVersionMatcher) String() string {
+	return fmt.Sprintf("Version match %d.\n", e.version)
+}
+
+func EqSnapshotVersion(version int64) gomock.Matcher {
+	return eqSnapshotVersionMatcher{version}
 }

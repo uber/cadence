@@ -71,7 +71,7 @@ func NewConfigStoreClient(clientCfg *csc.ConfigStoreClientConfig, persistenceCfg
 	if err != nil {
 		return nil, err
 	}
-	err = startUpdate(client)
+	err = client.startUpdate()
 	if err != nil {
 		return nil, err
 	}
@@ -98,20 +98,20 @@ func newConfigStoreClient(clientCfg *csc.ConfigStoreClientConfig, persistenceCfg
 	return client, nil
 }
 
-func startUpdate(client *configStoreClient) error {
-	if err := client.update(); err != nil {
+func (csc *configStoreClient) startUpdate() error {
+	if err := csc.update(); err != nil {
 		return err
 	}
 	go func() {
-		ticker := time.NewTicker(client.config.PollInterval)
+		ticker := time.NewTicker(csc.config.PollInterval)
 		for {
 			select {
 			case <-ticker.C:
-				err := client.update()
+				err := csc.update()
 				if err != nil {
-					client.logger.Error("Failed to update dynamic config", tag.Error(err))
+					csc.logger.Error("Failed to update dynamic config", tag.Error(err))
 				}
-			case <-client.doneCh:
+			case <-csc.doneCh:
 				ticker.Stop()
 				return
 			}
