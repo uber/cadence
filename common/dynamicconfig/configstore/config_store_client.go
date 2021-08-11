@@ -67,6 +67,18 @@ type fetchResult struct {
 
 // NewConfigStoreClient creates a config store client
 func NewConfigStoreClient(clientCfg *csc.ConfigStoreClientConfig, persistenceCfg *config.NoSQL, logger log.Logger, doneCh chan struct{}) (dc.Client, error) {
+	client, err := newConfigStoreClient(clientCfg, persistenceCfg, logger, doneCh)
+	if err != nil {
+		return nil, err
+	}
+	err = startUpdate(client)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
+}
+
+func newConfigStoreClient(clientCfg *csc.ConfigStoreClientConfig, persistenceCfg *config.NoSQL, logger log.Logger, doneCh chan struct{}) (*configStoreClient, error) {
 	if err := validateConfigStoreClientConfig(clientCfg); err != nil {
 		return nil, err
 	}
@@ -82,8 +94,13 @@ func NewConfigStoreClient(clientCfg *csc.ConfigStoreClientConfig, persistenceCfg
 		configStoreManager: persistence.NewConfigStoreManagerImpl(store, logger),
 		logger:             logger,
 	}
+
+	return client, nil
+}
+
+func startUpdate(client *configStoreClient) error {
 	if err := client.update(); err != nil {
-		return nil, err
+		return err
 	}
 	go func() {
 		ticker := time.NewTicker(client.config.PollInterval)
@@ -100,7 +117,7 @@ func NewConfigStoreClient(clientCfg *csc.ConfigStoreClientConfig, persistenceCfg
 			}
 		}
 	}()
-	return client, nil
+	return nil
 }
 
 func (csc *configStoreClient) GetValue(name dc.Key, defaultValue interface{}) (interface{}, error) {
@@ -229,13 +246,13 @@ func (csc *configStoreClient) RestoreValue(name dc.Key, filters map[dc.Filter]in
 	newValues := make([]*types.DynamicConfigValue, 0, len(val.Values))
 	if filters == nil {
 		for _, dcValue := range val.Values {
-			if dcValue.Filters != nil {
+			if dcValue.Filters != nil || len(dcValue.Filters) != 0 {
 				newValues = append(newValues, copyDynamicConfigValue(dcValue))
 			}
 		}
 	} else {
 		for _, dcValue := range val.Values {
-			if !matchFilters(dcValue, filters) || dcValue.Filters == nil {
+			if !matchFilters(dcValue, filters) || dcValue.Filters == nil || len(dcValue.Filters) == 0 {
 				newValues = append(newValues, copyDynamicConfigValue(dcValue))
 			}
 		}
@@ -244,7 +261,7 @@ func (csc *configStoreClient) RestoreValue(name dc.Key, filters map[dc.Filter]in
 	return csc.UpdateValue(name, newValues)
 }
 
-func (csc *configStoreClient) ListValue(name dc.Key) ([]*types.DynamicConfigEntry, error) {
+func (csc *configStoreClient) ListValue() ([]*types.DynamicConfigEntry, error) {
 	var resList []*types.DynamicConfigEntry
 
 	loaded := csc.values.Load()
@@ -257,16 +274,9 @@ func (csc *configStoreClient) ListValue(name dc.Key) ([]*types.DynamicConfigEntr
 		return nil, nil
 	}
 
-	if val, ok := currentCached.dcEntries[dc.Keys[name]]; !ok || name == dc.UnknownKey {
-		//if key is not known/specified, return all entries
-		resList = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
-		for _, entry := range currentCached.dcEntries {
-			resList = append(resList, copyDynamicConfigEntry(entry))
-		}
-	} else {
-		//if key is known, return just that specific entry
-		resList = make([]*types.DynamicConfigEntry, 0, 1)
-		resList = append(resList, val)
+	resList = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
+	for _, entry := range currentCached.dcEntries {
+		resList = append(resList, copyDynamicConfigEntry(entry))
 	}
 
 	return resList, nil
@@ -315,9 +325,8 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 			newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries)+1)
 			newEntries = append(newEntries,
 				&types.DynamicConfigEntry{
-					Name:         keyName,
-					DefaultValue: nil,
-					Values:       dcValues,
+					Name:   keyName,
+					Values: dcValues,
 				})
 		}
 
@@ -325,9 +334,8 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 			if entryExists && entry.Name == keyName {
 				newEntries = append(newEntries,
 					&types.DynamicConfigEntry{
-						Name:         keyName,
-						DefaultValue: nil,
-						Values:       dcValues,
+						Name:   keyName,
+						Values: dcValues,
 					})
 			} else {
 				newEntries = append(newEntries, copyDynamicConfigEntry(entry))
@@ -388,9 +396,8 @@ func copyDynamicConfigEntry(entry *types.DynamicConfigEntry) *types.DynamicConfi
 	}
 
 	return &types.DynamicConfigEntry{
-		Name:         entry.Name,
-		DefaultValue: copyDataBlob(entry.DefaultValue),
-		Values:       newValues,
+		Name:   entry.Name,
+		Values: newValues,
 	}
 }
 

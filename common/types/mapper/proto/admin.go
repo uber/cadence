@@ -751,8 +751,7 @@ func FromGetDynamicConfigResponse(t *types.GetDynamicConfigResponse) *adminv1.Ge
 		return nil
 	}
 	return &adminv1.GetDynamicConfigResponse{
-		Value:       FromDataBlob(t.Value),
-		ValueSource: t.ValueSource,
+		Value: FromDataBlob(t.Value),
 	}
 }
 
@@ -762,8 +761,7 @@ func ToGetDynamicConfigResponse(t *adminv1.GetDynamicConfigResponse) *types.GetD
 		return nil
 	}
 	return &types.GetDynamicConfigResponse{
-		Value:       ToDataBlob(t.Value),
-		ValueSource: t.ValueSource,
+		Value: ToDataBlob(t.Value),
 	}
 }
 
@@ -808,26 +806,6 @@ func ToRestoreDynamicConfigRequest(t *adminv1.RestoreDynamicConfigRequest) *type
 	return &types.RestoreDynamicConfigRequest{
 		ConfigName: t.ConfigName,
 		Filters:    ToDynamicConfigFilterArray(t.Filters),
-	}
-}
-
-//FromListDynamicConfigRequest converts internal ListDynamicConfigRequest type to proto
-func FromListDynamicConfigRequest(t *types.ListDynamicConfigRequest) *adminv1.ListDynamicConfigRequest {
-	if t == nil {
-		return nil
-	}
-	return &adminv1.ListDynamicConfigRequest{
-		ConfigName: t.ConfigName,
-	}
-}
-
-//ToListDynamicConfigRequest converts proto ListDynamicConfigRequest type to internal
-func ToListDynamicConfigRequest(t *adminv1.ListDynamicConfigRequest) *types.ListDynamicConfigRequest {
-	if t == nil {
-		return nil
-	}
-	return &types.ListDynamicConfigRequest{
-		ConfigName: t.ConfigName,
 	}
 }
 
@@ -881,9 +859,8 @@ func FromDynamicConfigEntry(t *types.DynamicConfigEntry) *adminv1.DynamicConfigE
 		return nil
 	}
 	return &adminv1.DynamicConfigEntry{
-		Name:         t.Name,
-		DefaultValue: FromDataBlob(t.DefaultValue),
-		Values:       FromDynamicConfigValueArray(t.Values),
+		Name:   t.Name,
+		Values: FromDynamicConfigValueArray(t.Values),
 	}
 }
 
@@ -893,9 +870,8 @@ func ToDynamicConfigEntry(t *adminv1.DynamicConfigEntry) *types.DynamicConfigEnt
 		return nil
 	}
 	return &types.DynamicConfigEntry{
-		Name:         t.Name,
-		DefaultValue: ToDataBlob(t.DefaultValue),
-		Values:       ToDynamicConfigValueArray(t.Values),
+		Name:   t.Name,
+		Values: ToDynamicConfigValueArray(t.Values),
 	}
 }
 

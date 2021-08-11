@@ -50,7 +50,6 @@ func AdminGetDynamicConfig(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)
 
 	dcName := getRequiredOption(c, FlagDynamicConfigName)
-	// filters := c.String(FlagDynamicConfigFilters)
 	filters := c.StringSlice(FlagDynamicConfigFilter)
 
 	ctx, cancel := newContext(c)
@@ -77,7 +76,12 @@ func AdminGetDynamicConfig(c *cli.Context) {
 		ErrorAndExit("Failed to unmarshal response", err)
 	}
 
-	prettyPrintJSONObject(umVal)
+	if umVal == nil {
+		fmt.Printf("No values stored for specified dynamic config.\n")
+	} else {
+		prettyPrintJSONObject(umVal)
+	}
+
 }
 
 // AdminUpdateDynamicConfig updates specified dynamic config parameter with specified values
@@ -154,28 +158,22 @@ func AdminRestoreDynamicConfig(c *cli.Context) {
 func AdminListDynamicConfig(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)
 
-	dcName := c.String(FlagDynamicConfigName)
-
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	req := &types.ListDynamicConfigRequest{
-		ConfigName: dcName,
-	}
-
-	val, err := adminClient.ListDynamicConfig(ctx, req)
+	val, err := adminClient.ListDynamicConfig(ctx)
 	if err != nil {
 		ErrorAndExit("Failed to list dynamic config value(s)", err)
 	}
 
 	if val == nil || val.Entries == nil || len(val.Entries) == 0 {
-		fmt.Printf("No dynamic config values stored to list.")
+		fmt.Printf("No dynamic config values stored to list.\n")
 	} else {
 		cliEntries := make([]*cliEntry, 0, len(val.Entries))
 		for _, dcEntry := range val.Entries {
 			cliEntry, err := convertToInputEntry(dcEntry)
 			if err != nil {
-				fmt.Printf("Cannot parse list response.")
+				fmt.Printf("Cannot parse list response.\n")
 			}
 			cliEntries = append(cliEntries, cliEntry)
 		}
@@ -193,9 +191,8 @@ func convertToInputEntry(dcEntry *types.DynamicConfigEntry) (*cliEntry, error) {
 		newValues = append(newValues, newValue)
 	}
 	return &cliEntry{
-		Name:         dcEntry.Name,
-		DefaultValue: dcEntry.DefaultValue,
-		Values:       newValues,
+		Name:   dcEntry.Name,
+		Values: newValues,
 	}, nil
 }
 

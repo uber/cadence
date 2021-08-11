@@ -38,3 +38,60 @@ func (v *DynamicConfigBlob) GetEntries() (o []*DynamicConfigEntry) {
 	}
 	return
 }
+
+type DynamicConfigEntry struct {
+	Name   string                `json:"name,omitempty"`
+	Values []*DynamicConfigValue `json:"values,omitempty"`
+}
+
+func (v *DynamicConfigEntry) GetName() (o string) {
+	if v != nil {
+		return v.Name
+	}
+	return
+}
+
+func (v *DynamicConfigEntry) GetValues() (o []*DynamicConfigValue) {
+	if v != nil && v.Values != nil {
+		return v.Values
+	}
+	return
+}
+
+type DynamicConfigValue struct {
+	Value   *DataBlob              `json:"value,omitempty"`
+	Filters []*DynamicConfigFilter `json:"filters,omitempty"`
+}
+
+func (v *DynamicConfigValue) GetValue() (o *DataBlob) {
+	if v != nil {
+		return v.Value
+	}
+	return
+}
+
+func (v *DynamicConfigValue) GetFilters() (o []*DynamicConfigFilter) {
+	if v != nil && v.Filters != nil {
+		return v.Filters
+	}
+	return
+}
+
+type DynamicConfigFilter struct {
+	Name  string    `json:"name,omitempty"`
+	Value *DataBlob `json:"value,omitempty"`
+}
+
+func (v *DynamicConfigFilter) GetName() (o string) {
+	if v != nil {
+		return v.Name
+	}
+	return
+}
+
+func (v *DynamicConfigFilter) GetValue() (o *DataBlob) {
+	if v != nil {
+		return v.Value
+	}
+	return
+}

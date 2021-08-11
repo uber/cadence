@@ -421,7 +421,6 @@ func (c *clientImpl) RestoreDynamicConfig(
 
 func (c *clientImpl) ListDynamicConfig(
 	ctx context.Context,
-	request *types.ListDynamicConfigRequest,
 	opts ...yarpc.CallOption,
 ) (*types.ListDynamicConfigResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
@@ -431,7 +430,7 @@ func (c *clientImpl) ListDynamicConfig(
 	}
 	ctx, cancel := c.createContextWithLargeTimeout(ctx)
 	defer cancel()
-	return client.ListDynamicConfig(ctx, request, opts...)
+	return client.ListDynamicConfig(ctx, opts...)
 }
 
 func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {

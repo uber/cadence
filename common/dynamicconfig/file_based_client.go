@@ -216,7 +216,7 @@ func (fc *fileBasedClient) UpdateValue(name Key, value interface{}) error {
 func (fc *fileBasedClient) RestoreValue(name Key, filters map[Filter]interface{}) error {
 	return errors.New("not supported for file based client")
 }
-func (fc *fileBasedClient) ListValue(name Key) ([]*types.DynamicConfigEntry, error) {
+func (fc *fileBasedClient) ListValue() ([]*types.DynamicConfigEntry, error) {
 	return nil, errors.New("not supported for file based client")
 }
 

@@ -171,8 +171,8 @@ func (d *dynamicClient) OverrideValue(name dynamicconfig.Key, value interface{})
 	d.overrides[name] = value
 }
 
-func (d *dynamicClient) ListValue(name dynamicconfig.Key) ([]*types.DynamicConfigEntry, error) {
-	return d.client.ListValue(name)
+func (d *dynamicClient) ListValue() ([]*types.DynamicConfigEntry, error) {
+	return d.client.ListValue()
 }
 
 func (d *dynamicClient) RestoreValue(name dynamicconfig.Key, filters map[dynamicconfig.Filter]interface{}) error {

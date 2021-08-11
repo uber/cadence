@@ -153,7 +153,7 @@ func (g grpcClient) RestoreDynamicConfig(ctx context.Context, request *types.Res
 	return proto.ToError(err)
 }
 
-func (g grpcClient) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest, opts ...yarpc.CallOption) (*types.ListDynamicConfigResponse, error) {
-	response, err := g.c.ListDynamicConfig(ctx, proto.FromListDynamicConfigRequest(request), opts...)
+func (g grpcClient) ListDynamicConfig(ctx context.Context, opts ...yarpc.CallOption) (*types.ListDynamicConfigResponse, error) {
+	response, err := g.c.ListDynamicConfig(ctx, nil, opts...)
 	return proto.ToListDynamicConfigResponse(response), proto.ToError(err)
 }

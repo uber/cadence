@@ -23,6 +23,7 @@ package persistencetests
 
 import (
 	"context"
+	"errors"
 	"math"
 	"math/rand"
 	"sync/atomic"
@@ -1906,6 +1907,9 @@ func (s *TestBase) FetchDynamicConfig(ctx context.Context) (*p.DynamicConfigSnap
 	response, err := s.ConfigStoreManager.FetchDynamicConfig(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if response == nil {
+		return nil, errors.New("nil FetchDynamicConfig response")
 	}
 	return response.Snapshot, nil
 }

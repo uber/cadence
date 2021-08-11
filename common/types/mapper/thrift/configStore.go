@@ -47,3 +47,141 @@ func ToDynamicConfigBlob(t *configStore.DynamicConfigBlob) *types.DynamicConfigB
 		Entries:       ToDynamicConfigEntryArray(t.Entries),
 	}
 }
+
+//FromDynamicConfigEntryArray converts internal DynamicConfigEntry array type to thrift
+func FromDynamicConfigEntryArray(t []*types.DynamicConfigEntry) []*configStore.DynamicConfigEntry {
+	if t == nil {
+		return nil
+	}
+	v := make([]*configStore.DynamicConfigEntry, len(t))
+	for i := range t {
+		v[i] = FromDynamicConfigEntry(t[i])
+	}
+	return v
+}
+
+//ToDynamicConfigEntryArray converts thrift DynamicConfigEntry array type to internal
+func ToDynamicConfigEntryArray(t []*configStore.DynamicConfigEntry) []*types.DynamicConfigEntry {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.DynamicConfigEntry, len(t))
+	for i := range t {
+		v[i] = ToDynamicConfigEntry(t[i])
+	}
+	return v
+}
+
+//FromDynamicConfigEntry converts internal DynamicConfigEntry type to thrift
+func FromDynamicConfigEntry(t *types.DynamicConfigEntry) *configStore.DynamicConfigEntry {
+	if t == nil {
+		return nil
+	}
+	return &configStore.DynamicConfigEntry{
+		Name:   &t.Name,
+		Values: FromDynamicConfigValueArray(t.Values),
+	}
+}
+
+//ToDynamicConfigEntry converts thrift DynamicConfigEntry type to internal
+func ToDynamicConfigEntry(t *configStore.DynamicConfigEntry) *types.DynamicConfigEntry {
+	if t == nil {
+		return nil
+	}
+	return &types.DynamicConfigEntry{
+		Name:   t.GetName(),
+		Values: ToDynamicConfigValueArray(t.Values),
+	}
+}
+
+//FromDynamicConfigValueArray converts internal DynamicConfigValue array type to thrift
+func FromDynamicConfigValueArray(t []*types.DynamicConfigValue) []*configStore.DynamicConfigValue {
+	if t == nil {
+		return nil
+	}
+	v := make([]*configStore.DynamicConfigValue, len(t))
+	for i := range t {
+		v[i] = FromDynamicConfigValue(t[i])
+	}
+	return v
+}
+
+//ToDynamicConfigValueArray converts thrift DynamicConfigValue array type to internal
+func ToDynamicConfigValueArray(t []*configStore.DynamicConfigValue) []*types.DynamicConfigValue {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.DynamicConfigValue, len(t))
+	for i := range t {
+		v[i] = ToDynamicConfigValue(t[i])
+	}
+	return v
+}
+
+//FromDynamicConfigValue converts internal DynamicConfigValue type to thrift
+func FromDynamicConfigValue(t *types.DynamicConfigValue) *configStore.DynamicConfigValue {
+	if t == nil {
+		return nil
+	}
+	return &configStore.DynamicConfigValue{
+		Value:   FromDataBlob(t.Value),
+		Filters: FromDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//ToDynamicConfigValue converts thrift DynamicConfigValue type to internal
+func ToDynamicConfigValue(t *configStore.DynamicConfigValue) *types.DynamicConfigValue {
+	if t == nil {
+		return nil
+	}
+	return &types.DynamicConfigValue{
+		Value:   ToDataBlob(t.Value),
+		Filters: ToDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//FromDynamicConfigFilterArray converts internal DynamicConfigFilter array type to thrift
+func FromDynamicConfigFilterArray(t []*types.DynamicConfigFilter) []*configStore.DynamicConfigFilter {
+	if t == nil {
+		return nil
+	}
+	v := make([]*configStore.DynamicConfigFilter, len(t))
+	for i := range t {
+		v[i] = FromDynamicConfigFilter(t[i])
+	}
+	return v
+}
+
+//ToDynamicConfigFilterArray converts thrift DynamicConfigFilter array type to internal
+func ToDynamicConfigFilterArray(t []*configStore.DynamicConfigFilter) []*types.DynamicConfigFilter {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.DynamicConfigFilter, len(t))
+	for i := range t {
+		v[i] = ToDynamicConfigFilter(t[i])
+	}
+	return v
+}
+
+//FromDynamicConfigFilter converts internal DynamicConfigFilter type to thrift
+func FromDynamicConfigFilter(t *types.DynamicConfigFilter) *configStore.DynamicConfigFilter {
+	if t == nil {
+		return nil
+	}
+	return &configStore.DynamicConfigFilter{
+		Name:  &t.Name,
+		Value: FromDataBlob(t.Value),
+	}
+}
+
+//ToDynamicConfigFilter converts thrift DynamicConfigFilter type to internal
+func ToDynamicConfigFilter(t *configStore.DynamicConfigFilter) *types.DynamicConfigFilter {
+	if t == nil {
+		return nil
+	}
+	return &types.DynamicConfigFilter{
+		Name:  t.GetName(),
+		Value: ToDataBlob(t.Value),
+	}
+}

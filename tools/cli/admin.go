@@ -1327,12 +1327,7 @@ func newAdminConfigStoreCommands() []cli.Command {
 			Name:    "list-dynamic-config",
 			Aliases: []string{"listdc", "l"},
 			Usage:   "List Dynamic Config Value",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagDynamicConfigName,
-					Usage: "Optional. If specified, return all values associated with config. Otherwise return all value for all dynamic config parameters",
-				},
-			},
+			Flags:   []cli.Flag{},
 			Action: func(c *cli.Context) {
 				AdminListDynamicConfig(c)
 			},

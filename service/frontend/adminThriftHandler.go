@@ -185,7 +185,7 @@ func (t AdminThriftHandler) RestoreDynamicConfig(ctx context.Context, request *a
 }
 
 // ListDynamicConfig fetches all values associated to specified dc parameters or all otherwise
-func (t AdminThriftHandler) ListDynamicConfig(ctx context.Context, request *admin.ListDynamicConfigRequest) (*admin.ListDynamicConfigResponse, error) {
-	response, err := t.h.ListDynamicConfig(withThriftTag(ctx), thrift.ToListDynamicConfigRequest(request))
+func (t AdminThriftHandler) ListDynamicConfig(ctx context.Context) (*admin.ListDynamicConfigResponse, error) {
+	response, err := t.h.ListDynamicConfig(withThriftTag(ctx))
 	return thrift.FromListDynamicConfigResponse(response), thrift.FromError(err)
 }

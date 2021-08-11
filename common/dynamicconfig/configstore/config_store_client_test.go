@@ -47,27 +47,6 @@ const (
 	retryAttempts = 2
 )
 
-type eqSnapshotVersionMatcher struct {
-	version int64
-}
-
-func (e eqSnapshotVersionMatcher) Matches(x interface{}) bool {
-	arg, ok := x.(*p.UpdateDynamicConfigRequest)
-	if !ok {
-		return false
-	}
-
-	return e.version == arg.Snapshot.Version
-}
-
-func (e eqSnapshotVersionMatcher) String() string {
-	return fmt.Sprintf("Version match %d.\n", e.version)
-}
-
-func EqSnapshotVersion(version int64) gomock.Matcher {
-	return eqSnapshotVersionMatcher{version}
-}
-
 type configStoreClientSuite struct {
 	suite.Suite
 	*require.Assertions
@@ -80,231 +59,34 @@ type configStoreClientSuite struct {
 var snapshot1 *p.DynamicConfigSnapshot
 
 func TestConfigStoreClientSuite(t *testing.T) {
-	snapshot1 = &p.DynamicConfigSnapshot{
-		Version: 1,
-		Values: &types.DynamicConfigBlob{
-			SchemaVersion: 1,
-			Entries: []*types.DynamicConfigEntry{
-				{
-					Name:         dc.Keys[dc.TestGetBoolPropertyKey],
-					DefaultValue: nil,
-					Values: []*types.DynamicConfigValue{
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeJSON.Ptr(),
-								Data:         jsonMarshalHelper(false),
-							},
-							Filters: nil,
-						},
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeJSON.Ptr(),
-								Data:         jsonMarshalHelper(true),
-							},
-							Filters: []*types.DynamicConfigFilter{
-								{
-									Name: "domainName",
-									Value: &types.DataBlob{
-										EncodingType: types.EncodingTypeJSON.Ptr(),
-										Data:         jsonMarshalHelper("global-samples-domain"),
-									},
-								},
-							},
-						},
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeJSON.Ptr(),
-								Data:         jsonMarshalHelper(true),
-							},
-							Filters: []*types.DynamicConfigFilter{
-								{
-									Name: "domainName",
-									Value: &types.DataBlob{
-										EncodingType: types.EncodingTypeJSON.Ptr(),
-										Data:         jsonMarshalHelper("samples-domain"),
-									},
-								},
-							},
-						},
-					},
-				},
-				{
-					Name:         dc.Keys[dc.TestGetIntPropertyKey],
-					DefaultValue: nil,
-					Values: []*types.DynamicConfigValue{
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeJSON.Ptr(),
-								Data:         jsonMarshalHelper(1000),
-							},
-							Filters: nil,
-						},
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeJSON.Ptr(),
-								Data:         jsonMarshalHelper(1000.1),
-							},
-							Filters: []*types.DynamicConfigFilter{
-								{
-									Name: "domainName",
-									Value: &types.DataBlob{
-										EncodingType: types.EncodingTypeJSON.Ptr(),
-										Data:         jsonMarshalHelper("global-samples-domain"),
-									},
-								},
-							},
-						},
-					},
-				},
-				{
-					Name:         dc.Keys[dc.TestGetFloat64PropertyKey],
-					DefaultValue: nil,
-					Values: []*types.DynamicConfigValue{
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeJSON.Ptr(),
-								Data:         jsonMarshalHelper(12),
-							},
-							Filters: nil,
-						},
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeJSON.Ptr(),
-								Data:         jsonMarshalHelper("wrong type"),
-							},
-							Filters: []*types.DynamicConfigFilter{
-								{
-									Name: "domainName",
-									Value: &types.DataBlob{
-										EncodingType: types.EncodingTypeJSON.Ptr(),
-										Data:         jsonMarshalHelper("samples-domain"),
-									},
-								},
-							},
-						},
-					},
-				},
-				{
-					Name:         dc.Keys[dc.TestGetStringPropertyKey],
-					DefaultValue: nil,
-					Values: []*types.DynamicConfigValue{
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeJSON.Ptr(),
-								Data:         jsonMarshalHelper("some random string"),
-							},
-							Filters: nil,
-						},
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeJSON.Ptr(),
-								Data:         jsonMarshalHelper("constrained-string"),
-							},
-							Filters: []*types.DynamicConfigFilter{
-								{
-									Name: "taskListName",
-									Value: &types.DataBlob{
-										EncodingType: types.EncodingTypeJSON.Ptr(),
-										Data:         jsonMarshalHelper("random tasklist"),
-									},
-								},
-							},
-						},
-					},
-				},
-				{
-					Name:         dc.Keys[dc.TestGetMapPropertyKey],
-					DefaultValue: nil,
-					Values: []*types.DynamicConfigValue{
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeJSON.Ptr(),
-								Data: jsonMarshalHelper(map[string]interface{}{
-									"key1": "1",
-									"key2": 1,
-									"key3": []interface{}{
-										false,
-										map[string]interface{}{
-											"key4": true,
-											"key5": 2.1,
-										},
-									},
-								}),
-							},
-							Filters: nil,
-						},
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeJSON.Ptr(),
-								Data:         jsonMarshalHelper("1"),
-							},
-							Filters: []*types.DynamicConfigFilter{
-								{
-									Name: "taskListName",
-									Value: &types.DataBlob{
-										EncodingType: types.EncodingTypeJSON.Ptr(),
-										Data:         jsonMarshalHelper("random tasklist"),
-									},
-								},
-							},
-						},
-					},
-				},
-				{
-					Name:         dc.Keys[dc.TestGetDurationPropertyKey],
-					DefaultValue: nil,
-					Values: []*types.DynamicConfigValue{
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeJSON.Ptr(),
-								Data:         jsonMarshalHelper("1m"),
-							},
-							Filters: nil,
-						},
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeJSON.Ptr(),
-								Data:         jsonMarshalHelper("wrong duration string"),
-							},
-							Filters: []*types.DynamicConfigFilter{
-								{
-									Name: "domainName",
-									Value: &types.DataBlob{
-										EncodingType: types.EncodingTypeJSON.Ptr(),
-										Data:         jsonMarshalHelper("samples-domain"),
-									},
-								},
-								{
-									Name: "taskListName",
-									Value: &types.DataBlob{
-										EncodingType: types.EncodingTypeJSON.Ptr(),
-										Data:         jsonMarshalHelper("longIdleTimeTaskList"),
-									},
-								},
-							},
-						},
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeJSON.Ptr(),
-								Data:         jsonMarshalHelper(2),
-							},
-							Filters: []*types.DynamicConfigFilter{
-								{
-									Name: "domainName",
-									Value: &types.DataBlob{
-										EncodingType: types.EncodingTypeJSON.Ptr(),
-										Data:         jsonMarshalHelper("samples-domain"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
 	s := new(configStoreClientSuite)
 	suite.Run(t, s)
+}
+
+// func (s *configStoreClientSuite) SetupSuite() {
+// 	s.doneCh = make(chan struct{})
+// 	s.mockController = gomock.NewController(s.T())
+
+// }
+
+type eqSnapshotVersionMatcher struct {
+	version int64
+}
+
+func (e eqSnapshotVersionMatcher) Matches(x interface{}) bool {
+	arg, ok := x.(*p.UpdateDynamicConfigRequest)
+	if !ok {
+		return false
+	}
+	return e.version == arg.Snapshot.Version
+}
+
+func (e eqSnapshotVersionMatcher) String() string {
+	return fmt.Sprintf("Version match %d.\n", e.version)
+}
+
+func EqSnapshotVersion(version int64) gomock.Matcher {
+	return eqSnapshotVersionMatcher{version}
 }
 
 func (s *configStoreClientSuite) SetupSuite() {
@@ -371,6 +153,224 @@ func (s *configStoreClientSuite) TearDownSuite() {
 
 func (s *configStoreClientSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
+
+	snapshot1 = &p.DynamicConfigSnapshot{
+		Version: 1,
+		Values: &types.DynamicConfigBlob{
+			SchemaVersion: 1,
+			Entries: []*types.DynamicConfigEntry{
+				{
+					Name: dc.Keys[dc.TestGetBoolPropertyKey],
+					Values: []*types.DynamicConfigValue{
+						{
+							Value: &types.DataBlob{
+								EncodingType: types.EncodingTypeJSON.Ptr(),
+								Data:         jsonMarshalHelper(false),
+							},
+							Filters: nil,
+						},
+						{
+							Value: &types.DataBlob{
+								EncodingType: types.EncodingTypeJSON.Ptr(),
+								Data:         jsonMarshalHelper(true),
+							},
+							Filters: []*types.DynamicConfigFilter{
+								{
+									Name: "domainName",
+									Value: &types.DataBlob{
+										EncodingType: types.EncodingTypeJSON.Ptr(),
+										Data:         jsonMarshalHelper("global-samples-domain"),
+									},
+								},
+							},
+						},
+						{
+							Value: &types.DataBlob{
+								EncodingType: types.EncodingTypeJSON.Ptr(),
+								Data:         jsonMarshalHelper(true),
+							},
+							Filters: []*types.DynamicConfigFilter{
+								{
+									Name: "domainName",
+									Value: &types.DataBlob{
+										EncodingType: types.EncodingTypeJSON.Ptr(),
+										Data:         jsonMarshalHelper("samples-domain"),
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Name: dc.Keys[dc.TestGetIntPropertyKey],
+					Values: []*types.DynamicConfigValue{
+						{
+							Value: &types.DataBlob{
+								EncodingType: types.EncodingTypeJSON.Ptr(),
+								Data:         jsonMarshalHelper(1000),
+							},
+							Filters: nil,
+						},
+						{
+							Value: &types.DataBlob{
+								EncodingType: types.EncodingTypeJSON.Ptr(),
+								Data:         jsonMarshalHelper(1000.1),
+							},
+							Filters: []*types.DynamicConfigFilter{
+								{
+									Name: "domainName",
+									Value: &types.DataBlob{
+										EncodingType: types.EncodingTypeJSON.Ptr(),
+										Data:         jsonMarshalHelper("global-samples-domain"),
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Name: dc.Keys[dc.TestGetFloat64PropertyKey],
+					Values: []*types.DynamicConfigValue{
+						{
+							Value: &types.DataBlob{
+								EncodingType: types.EncodingTypeJSON.Ptr(),
+								Data:         jsonMarshalHelper(12),
+							},
+							Filters: nil,
+						},
+						{
+							Value: &types.DataBlob{
+								EncodingType: types.EncodingTypeJSON.Ptr(),
+								Data:         jsonMarshalHelper("wrong type"),
+							},
+							Filters: []*types.DynamicConfigFilter{
+								{
+									Name: "domainName",
+									Value: &types.DataBlob{
+										EncodingType: types.EncodingTypeJSON.Ptr(),
+										Data:         jsonMarshalHelper("samples-domain"),
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Name: dc.Keys[dc.TestGetStringPropertyKey],
+					Values: []*types.DynamicConfigValue{
+						{
+							Value: &types.DataBlob{
+								EncodingType: types.EncodingTypeJSON.Ptr(),
+								Data:         jsonMarshalHelper("some random string"),
+							},
+							Filters: nil,
+						},
+						{
+							Value: &types.DataBlob{
+								EncodingType: types.EncodingTypeJSON.Ptr(),
+								Data:         jsonMarshalHelper("constrained-string"),
+							},
+							Filters: []*types.DynamicConfigFilter{
+								{
+									Name: "taskListName",
+									Value: &types.DataBlob{
+										EncodingType: types.EncodingTypeJSON.Ptr(),
+										Data:         jsonMarshalHelper("random tasklist"),
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Name: dc.Keys[dc.TestGetMapPropertyKey],
+					Values: []*types.DynamicConfigValue{
+						{
+							Value: &types.DataBlob{
+								EncodingType: types.EncodingTypeJSON.Ptr(),
+								Data: jsonMarshalHelper(map[string]interface{}{
+									"key1": "1",
+									"key2": 1,
+									"key3": []interface{}{
+										false,
+										map[string]interface{}{
+											"key4": true,
+											"key5": 2.1,
+										},
+									},
+								}),
+							},
+							Filters: nil,
+						},
+						{
+							Value: &types.DataBlob{
+								EncodingType: types.EncodingTypeJSON.Ptr(),
+								Data:         jsonMarshalHelper("1"),
+							},
+							Filters: []*types.DynamicConfigFilter{
+								{
+									Name: "taskListName",
+									Value: &types.DataBlob{
+										EncodingType: types.EncodingTypeJSON.Ptr(),
+										Data:         jsonMarshalHelper("random tasklist"),
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Name: dc.Keys[dc.TestGetDurationPropertyKey],
+					Values: []*types.DynamicConfigValue{
+						{
+							Value: &types.DataBlob{
+								EncodingType: types.EncodingTypeJSON.Ptr(),
+								Data:         jsonMarshalHelper("1m"),
+							},
+							Filters: nil,
+						},
+						{
+							Value: &types.DataBlob{
+								EncodingType: types.EncodingTypeJSON.Ptr(),
+								Data:         jsonMarshalHelper("wrong duration string"),
+							},
+							Filters: []*types.DynamicConfigFilter{
+								{
+									Name: "domainName",
+									Value: &types.DataBlob{
+										EncodingType: types.EncodingTypeJSON.Ptr(),
+										Data:         jsonMarshalHelper("samples-domain"),
+									},
+								},
+								{
+									Name: "taskListName",
+									Value: &types.DataBlob{
+										EncodingType: types.EncodingTypeJSON.Ptr(),
+										Data:         jsonMarshalHelper("longIdleTimeTaskList"),
+									},
+								},
+							},
+						},
+						{
+							Value: &types.DataBlob{
+								EncodingType: types.EncodingTypeJSON.Ptr(),
+								Data:         jsonMarshalHelper(2),
+							},
+							Filters: []*types.DynamicConfigFilter{
+								{
+									Name: "domainName",
+									Value: &types.DataBlob{
+										EncodingType: types.EncodingTypeJSON.Ptr(),
+										Data:         jsonMarshalHelper("samples-domain"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 
 	s.mockManager = p.NewMockConfigStoreManager(s.mockController)
 	configStoreClient, ok := s.client.(*configStoreClient)
@@ -930,25 +930,14 @@ func (s *configStoreClientSuite) TestRestoreValue_FilterMatch() {
 	s.NoError(err)
 }
 
-func (s *configStoreClientSuite) TestListValues_NoKey() {
-	val, err := s.client.ListValue(dc.UnknownKey)
+func (s *configStoreClientSuite) TestListValues() {
+	val, err := s.client.ListValue()
 	s.NoError(err)
 	for _, resEntry := range val {
 		for _, oriEntry := range snapshot1.Values.Entries {
 			if oriEntry.Name == resEntry.Name {
 				s.Equal(resEntry.Values, oriEntry.Values)
 			}
-		}
-	}
-}
-
-func (s *configStoreClientSuite) TestListValues_SpecifiedKey() {
-	val, err := s.client.ListValue(dc.TestGetDurationPropertyKey)
-	s.NoError(err)
-	s.Equal(1, len(val))
-	for _, oriEntry := range snapshot1.Values.Entries {
-		if oriEntry.Name == val[0].Name {
-			s.Equal(val[0], oriEntry)
 		}
 	}
 }
@@ -974,7 +963,7 @@ func (s *configStoreClientSuite) TestListValues_EmptyCache() {
 
 	time.Sleep(2 * time.Second)
 
-	val, err := s.client.ListValue(dc.UnknownKey)
+	val, err := s.client.ListValue()
 	s.NoError(err)
 	s.Nil(val)
 }

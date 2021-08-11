@@ -161,9 +161,8 @@ func generateRandomSnapshot(version int64) *persistence.DynamicConfigSnapshot {
 
 	entries := make([]*types.DynamicConfigEntry, 1)
 	entries[0] = &types.DynamicConfigEntry{
-		Name:         "test_parameter",
-		DefaultValue: nil,
-		Values:       values,
+		Name:   "test_parameter",
+		Values: values,
 	}
 
 	return &persistence.DynamicConfigSnapshot{

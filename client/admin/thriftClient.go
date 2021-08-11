@@ -154,7 +154,7 @@ func (t thriftClient) RestoreDynamicConfig(ctx context.Context, request *types.R
 	return thrift.ToError(err)
 }
 
-func (t thriftClient) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest, opts ...yarpc.CallOption) (*types.ListDynamicConfigResponse, error) {
-	response, err := t.c.ListDynamicConfig(ctx, thrift.FromListDynamicConfigRequest(request), opts...)
+func (t thriftClient) ListDynamicConfig(ctx context.Context, opts ...yarpc.CallOption) (*types.ListDynamicConfigResponse, error) {
+	response, err := t.c.ListDynamicConfig(ctx, opts...)
 	return thrift.ToListDynamicConfigResponse(response), thrift.ToError(err)
 }
