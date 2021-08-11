@@ -117,15 +117,16 @@ domainDefaults:
 publicClient:
   hostPort: "localhost:7933"
 
-dynamicConfigClient:
-  filepath: "config/dynamicconfig/development.yaml"
-  pollInterval: "10s"
-
-configStoreClient:
-  pollInterval: "7s"
-  updateRetryAttempts: 2
-  FetchTimeout: "2s"
-  UpdateTimeout: "2s"
+dynamicconfig:
+  client: configstore
+  configstore:
+    pollInterval: "7s"
+    updateRetryAttempts: 2
+    FetchTimeout: "2s"
+    UpdateTimeout: "2s"
+  filebased:
+    filepath: "config/dynamicconfig/development.yaml"
+    pollInterval: "10s"
 
 blobstore:
   filestore:

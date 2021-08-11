@@ -58,9 +58,7 @@ type (
 		PublicClient PublicClient `yaml:"publicClient"`
 		// DynamicConfigClient is the config for setting up the file based dynamic config client
 		// Filepath would be relative to the root directory when the path wasn't absolute.
-		DynamicConfigClient dynamicconfig.FileBasedClientConfig `yaml:"dynamicConfigClient"`
-		// ConfigStoreClient is the config for setting up the config store based dynamic config client
-		ConfigStoreClient configstoreconfig.ConfigStoreClientConfig `yaml:"configStoreClient"`
+		DynamicConfig DynamicConfig `yaml:"dynamicconfig"`
 		// DomainDefaults is the default config for every domain
 		DomainDefaults DomainDefaults `yaml:"domainDefaults"`
 		// Blobstore is the config for setting up blobstore
@@ -72,6 +70,12 @@ type (
 	Authorization struct {
 		OAuthAuthorizer OAuthAuthorizer `yaml:"oauthAuthorizer"`
 		NoopAuthorizer  NoopAuthorizer  `yaml:"noopAuthorizer"`
+	}
+
+	DynamicConfig struct {
+		Client      string                                    `yaml:"client"`
+		ConfigStore configstoreconfig.ConfigStoreClientConfig `yaml:"configstore"`
+		FileBased   dynamicconfig.FileBasedClientConfig       `yaml:"filebased"`
 	}
 
 	NoopAuthorizer struct {

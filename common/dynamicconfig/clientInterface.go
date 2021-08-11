@@ -28,6 +28,13 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+const (
+	DynamicConfigConfigStoreClient = "configstore"
+	DynamicConfigFileBasedClient   = "filebased"
+	DynamicConfigInMemoryClient    = "memory"
+	DynamicConfigNopClient         = "nop"
+)
+
 // Client allows fetching values from a dynamic configuration system NOTE: This does not have async
 // options right now. In the interest of keeping it minimal, we can add when requirement arises.
 type Client interface {

@@ -114,13 +114,23 @@ func (s *server) startService() common.Daemon {
 	params.UpdateLoggerWithServiceName(params.Name)
 	params.PersistenceConfig = s.cfg.Persistence
 
-	//params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger, s.doneC)
-	params.DynamicConfig, err = configstore.NewConfigStoreClient(
-		&s.cfg.ConfigStoreClient,
-		s.cfg.Persistence.DataStores[s.cfg.Persistence.DefaultStore].NoSQL,
-		params.Logger,
-		s.doneC,
-	)
+	switch s.cfg.DynamicConfig.Client {
+	case dynamicconfig.DynamicConfigConfigStoreClient:
+		params.DynamicConfig, err = configstore.NewConfigStoreClient(
+			&s.cfg.DynamicConfig.ConfigStore,
+			s.cfg.Persistence.DataStores[s.cfg.Persistence.DefaultStore].NoSQL,
+			params.Logger,
+			s.doneC,
+		)
+		log.Printf("Initializing Config Store Dynamic Config Client\n")
+	case dynamicconfig.DynamicConfigFileBasedClient:
+		params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfig.FileBased, params.Logger, s.doneC)
+		log.Printf("Initializing File Based Dynamic Config Client\n")
+	default:
+		params.DynamicConfig = dynamicconfig.NewNopClient()
+		err = nil
+	}
+
 	if err != nil {
 		log.Printf("error creating config store based dynamic config client, use no-op config client instead. error: %v", err)
 		params.DynamicConfig = dynamicconfig.NewNopClient()

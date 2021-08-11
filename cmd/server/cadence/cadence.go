@@ -56,7 +56,7 @@ func startHandler(c *cli.Context) {
 	if cfg.Log.Level == "debug" {
 		log.Printf("config=\n%v\n", cfg.String())
 	}
-	cfg.DynamicConfigClient.Filepath = constructPathIfNeed(rootDir, cfg.DynamicConfigClient.Filepath)
+	cfg.DynamicConfig.FileBased.Filepath = constructPathIfNeed(rootDir, cfg.DynamicConfig.FileBased.Filepath)
 
 	if err := cfg.ValidateAndFillDefaults(); err != nil {
 		log.Fatalf("config validation failed: %v", err)
