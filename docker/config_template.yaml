@@ -284,3 +284,12 @@ dynamicconfig:
 blobstore:
   filestore:
     outputDirectory: {{ default .Env.FILE_BLOB_STORE_OUTPUT_DIRECTYORY "" }}
+
+authorization:
+    oauthAuthorizer:
+        enable: {{ default .Env.ENABLE_OAUTH "false" }}
+        maxJwtTTL: {{ default .Env.OAUTH_MAX_JWT_TTL 86400 }}
+        jwtCredentials:
+            algorithm: "RS256"
+            publicKey: {{ default .Env.OAUTH_PUBLIC_KEY "" }}
+            privateKey: {{ default .Env.OAUTH_PRIVATE_KEY "" }}
