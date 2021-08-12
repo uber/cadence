@@ -23,22 +23,22 @@ package thrift
 import (
 	"github.com/uber/cadence/common/types"
 
-	"github.com/uber/cadence/.gen/go/configStore"
+	"github.com/uber/cadence/.gen/go/config"
 )
 
 // FromDynamicConfigBlob converts internal DynamicConfigBlob type to thrift
-func FromDynamicConfigBlob(t *types.DynamicConfigBlob) *configStore.DynamicConfigBlob {
+func FromDynamicConfigBlob(t *types.DynamicConfigBlob) *config.DynamicConfigBlob {
 	if t == nil {
 		return nil
 	}
-	return &configStore.DynamicConfigBlob{
+	return &config.DynamicConfigBlob{
 		SchemaVersion: &t.SchemaVersion,
 		Entries:       FromDynamicConfigEntryArray(t.Entries),
 	}
 }
 
 // ToDynamicConfigBlob converts thrift DynamicConfigBlob type to internal
-func ToDynamicConfigBlob(t *configStore.DynamicConfigBlob) *types.DynamicConfigBlob {
+func ToDynamicConfigBlob(t *config.DynamicConfigBlob) *types.DynamicConfigBlob {
 	if t == nil {
 		return nil
 	}
@@ -49,11 +49,11 @@ func ToDynamicConfigBlob(t *configStore.DynamicConfigBlob) *types.DynamicConfigB
 }
 
 //FromDynamicConfigEntryArray converts internal DynamicConfigEntry array type to thrift
-func FromDynamicConfigEntryArray(t []*types.DynamicConfigEntry) []*configStore.DynamicConfigEntry {
+func FromDynamicConfigEntryArray(t []*types.DynamicConfigEntry) []*config.DynamicConfigEntry {
 	if t == nil {
 		return nil
 	}
-	v := make([]*configStore.DynamicConfigEntry, len(t))
+	v := make([]*config.DynamicConfigEntry, len(t))
 	for i := range t {
 		v[i] = FromDynamicConfigEntry(t[i])
 	}
@@ -61,7 +61,7 @@ func FromDynamicConfigEntryArray(t []*types.DynamicConfigEntry) []*configStore.D
 }
 
 //ToDynamicConfigEntryArray converts thrift DynamicConfigEntry array type to internal
-func ToDynamicConfigEntryArray(t []*configStore.DynamicConfigEntry) []*types.DynamicConfigEntry {
+func ToDynamicConfigEntryArray(t []*config.DynamicConfigEntry) []*types.DynamicConfigEntry {
 	if t == nil {
 		return nil
 	}
@@ -73,18 +73,18 @@ func ToDynamicConfigEntryArray(t []*configStore.DynamicConfigEntry) []*types.Dyn
 }
 
 //FromDynamicConfigEntry converts internal DynamicConfigEntry type to thrift
-func FromDynamicConfigEntry(t *types.DynamicConfigEntry) *configStore.DynamicConfigEntry {
+func FromDynamicConfigEntry(t *types.DynamicConfigEntry) *config.DynamicConfigEntry {
 	if t == nil {
 		return nil
 	}
-	return &configStore.DynamicConfigEntry{
+	return &config.DynamicConfigEntry{
 		Name:   &t.Name,
 		Values: FromDynamicConfigValueArray(t.Values),
 	}
 }
 
 //ToDynamicConfigEntry converts thrift DynamicConfigEntry type to internal
-func ToDynamicConfigEntry(t *configStore.DynamicConfigEntry) *types.DynamicConfigEntry {
+func ToDynamicConfigEntry(t *config.DynamicConfigEntry) *types.DynamicConfigEntry {
 	if t == nil {
 		return nil
 	}
@@ -95,11 +95,11 @@ func ToDynamicConfigEntry(t *configStore.DynamicConfigEntry) *types.DynamicConfi
 }
 
 //FromDynamicConfigValueArray converts internal DynamicConfigValue array type to thrift
-func FromDynamicConfigValueArray(t []*types.DynamicConfigValue) []*configStore.DynamicConfigValue {
+func FromDynamicConfigValueArray(t []*types.DynamicConfigValue) []*config.DynamicConfigValue {
 	if t == nil {
 		return nil
 	}
-	v := make([]*configStore.DynamicConfigValue, len(t))
+	v := make([]*config.DynamicConfigValue, len(t))
 	for i := range t {
 		v[i] = FromDynamicConfigValue(t[i])
 	}
@@ -107,7 +107,7 @@ func FromDynamicConfigValueArray(t []*types.DynamicConfigValue) []*configStore.D
 }
 
 //ToDynamicConfigValueArray converts thrift DynamicConfigValue array type to internal
-func ToDynamicConfigValueArray(t []*configStore.DynamicConfigValue) []*types.DynamicConfigValue {
+func ToDynamicConfigValueArray(t []*config.DynamicConfigValue) []*types.DynamicConfigValue {
 	if t == nil {
 		return nil
 	}
@@ -119,18 +119,18 @@ func ToDynamicConfigValueArray(t []*configStore.DynamicConfigValue) []*types.Dyn
 }
 
 //FromDynamicConfigValue converts internal DynamicConfigValue type to thrift
-func FromDynamicConfigValue(t *types.DynamicConfigValue) *configStore.DynamicConfigValue {
+func FromDynamicConfigValue(t *types.DynamicConfigValue) *config.DynamicConfigValue {
 	if t == nil {
 		return nil
 	}
-	return &configStore.DynamicConfigValue{
+	return &config.DynamicConfigValue{
 		Value:   FromDataBlob(t.Value),
 		Filters: FromDynamicConfigFilterArray(t.Filters),
 	}
 }
 
 //ToDynamicConfigValue converts thrift DynamicConfigValue type to internal
-func ToDynamicConfigValue(t *configStore.DynamicConfigValue) *types.DynamicConfigValue {
+func ToDynamicConfigValue(t *config.DynamicConfigValue) *types.DynamicConfigValue {
 	if t == nil {
 		return nil
 	}
@@ -141,11 +141,11 @@ func ToDynamicConfigValue(t *configStore.DynamicConfigValue) *types.DynamicConfi
 }
 
 //FromDynamicConfigFilterArray converts internal DynamicConfigFilter array type to thrift
-func FromDynamicConfigFilterArray(t []*types.DynamicConfigFilter) []*configStore.DynamicConfigFilter {
+func FromDynamicConfigFilterArray(t []*types.DynamicConfigFilter) []*config.DynamicConfigFilter {
 	if t == nil {
 		return nil
 	}
-	v := make([]*configStore.DynamicConfigFilter, len(t))
+	v := make([]*config.DynamicConfigFilter, len(t))
 	for i := range t {
 		v[i] = FromDynamicConfigFilter(t[i])
 	}
@@ -153,7 +153,7 @@ func FromDynamicConfigFilterArray(t []*types.DynamicConfigFilter) []*configStore
 }
 
 //ToDynamicConfigFilterArray converts thrift DynamicConfigFilter array type to internal
-func ToDynamicConfigFilterArray(t []*configStore.DynamicConfigFilter) []*types.DynamicConfigFilter {
+func ToDynamicConfigFilterArray(t []*config.DynamicConfigFilter) []*types.DynamicConfigFilter {
 	if t == nil {
 		return nil
 	}
@@ -165,18 +165,18 @@ func ToDynamicConfigFilterArray(t []*configStore.DynamicConfigFilter) []*types.D
 }
 
 //FromDynamicConfigFilter converts internal DynamicConfigFilter type to thrift
-func FromDynamicConfigFilter(t *types.DynamicConfigFilter) *configStore.DynamicConfigFilter {
+func FromDynamicConfigFilter(t *types.DynamicConfigFilter) *config.DynamicConfigFilter {
 	if t == nil {
 		return nil
 	}
-	return &configStore.DynamicConfigFilter{
+	return &config.DynamicConfigFilter{
 		Name:  &t.Name,
 		Value: FromDataBlob(t.Value),
 	}
 }
 
 //ToDynamicConfigFilter converts thrift DynamicConfigFilter type to internal
-func ToDynamicConfigFilter(t *configStore.DynamicConfigFilter) *types.DynamicConfigFilter {
+func ToDynamicConfigFilter(t *config.DynamicConfigFilter) *types.DynamicConfigFilter {
 	if t == nil {
 		return nil
 	}

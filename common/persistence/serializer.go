@@ -24,7 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/configStore"
+	"github.com/uber/cadence/.gen/go/config"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -392,7 +392,7 @@ func (t *serializerImpl) thriftrwDecode(data []byte, target interface{}) error {
 		*target = *thrift.ToProcessingQueueStates(&thriftTarget)
 		return nil
 	case *types.DynamicConfigBlob:
-		thriftTarget := configStore.DynamicConfigBlob{}
+		thriftTarget := config.DynamicConfigBlob{}
 		if err := t.thriftrwEncoder.Decode(data, &thriftTarget); err != nil {
 			return err
 		}
