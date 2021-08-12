@@ -310,7 +310,7 @@ func (t *taskImpl) HandleErr(
 func (t *taskImpl) RetryErr(
 	err error,
 ) bool {
-	if err == errWorkflowBusy || err == ErrTaskRedispatch || err == ErrTaskPendingActive || common.IsContextTimeoutError(err) {
+	if err == errWorkflowBusy || err == ErrTaskRedispatch || err == ErrTaskPendingActive || common.IsContextTimeoutError(err) || common.IsServiceBusyError(err) {
 		return false
 	}
 

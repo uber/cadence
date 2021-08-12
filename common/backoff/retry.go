@@ -125,6 +125,45 @@ func Retry(operation Operation, policy RetryPolicy, isRetryable IsRetryable) err
 	}
 }
 
+// ThrottleRetry uses a different retry policy when throttling happens
+func ThrottleRetry(operation Operation, policy RetryPolicy, isRetryable IsRetryable, throttlePolicy RetryPolicy, isThrottle IsRetryable) error {
+	var prevErr error
+	var err error
+	var next time.Duration
+	var retrier Retrier
+
+	r := NewRetrier(policy, SystemClock)
+	tr := NewRetrier(throttlePolicy, SystemClock)
+	for {
+		// record the previous error before an operation
+		prevErr = err
+
+		// operation completed successfully.  No need to retry.
+		if err = operation(); err == nil {
+			return nil
+		}
+
+		if isThrottle != nil && isThrottle(err) {
+			retrier = tr
+		} else if isRetryable != nil && isRetryable(err) {
+			retrier = r
+		} else {
+			if prevErr != nil {
+				return prevErr
+			}
+			return err
+		}
+		if next = retrier.NextBackOff(); next == done {
+			if prevErr != nil {
+				return prevErr
+			}
+			return err
+		}
+
+		time.Sleep(next)
+	}
+}
+
 // IgnoreErrors can be used as IsRetryable handler for Retry function to exclude certain errors from the retry list
 func IgnoreErrors(errorsToExclude []error) func(error) bool {
 	return func(err error) bool {

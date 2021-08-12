@@ -79,6 +79,10 @@ const (
 	replicationServiceBusyMaxInterval        = 10 * time.Second
 	replicationServiceBusyExpirationInterval = 5 * time.Minute
 
+	serviceBusyInitialInterval    = time.Second
+	serviceBusyMaxInterval        = 10 * time.Second
+	serviceBusyExpirationInterval = 30 * time.Second
+
 	contextExpireThreshold = 10 * time.Millisecond
 
 	// FailureReasonCompleteResultExceedsLimit is failureReason for complete result exceeds limit
@@ -220,6 +224,32 @@ func CreateReplicationServiceBusyRetryPolicy() backoff.RetryPolicy {
 	policy.SetMaximumInterval(replicationServiceBusyMaxInterval)
 	policy.SetExpirationInterval(replicationServiceBusyExpirationInterval)
 
+	return policy
+}
+
+// CreateServiceBusyRetryPolicy creates a retry policy to handle service busy
+func CreateServiceBusyRetryPolicy() backoff.RetryPolicy {
+	policy := backoff.NewExponentialRetryPolicy(serviceBusyInitialInterval)
+	policy.SetMaximumInterval(serviceBusyMaxInterval)
+	policy.SetExpirationInterval(serviceBusyExpirationInterval)
+
+	return policy
+}
+
+// CreateServiceBusyRetryPolicyWithContext create a retry policy to handle service busy
+// which has an expiration interval computed based on the context's deadline
+func CreateServiceBusyRetryPolicyWithContext(ctx context.Context) backoff.RetryPolicy {
+	if ctx == nil {
+		return CreatePersistenceRetryPolicy()
+	}
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return CreatePersistenceRetryPolicy()
+	}
+
+	policy := backoff.NewExponentialRetryPolicy(serviceBusyInitialInterval)
+	policy.SetMaximumInterval(serviceBusyMaxInterval)
+	policy.SetExpirationInterval(deadline.Sub(time.Now()))
 	return policy
 }
 

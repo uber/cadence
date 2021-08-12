@@ -90,6 +90,7 @@ var (
 	emptyPollForActivityTaskResponse   = &types.PollForActivityTaskResponse{}
 	persistenceOperationRetryPolicy    = common.CreatePersistenceRetryPolicy()
 	historyServiceOperationRetryPolicy = common.CreateHistoryServiceRetryPolicy()
+	serviceBusyRetryPolicy             = common.CreateServiceBusyRetryPolicy()
 
 	// ErrNoTasks is exported temporarily for integration test
 	ErrNoTasks    = errors.New("No tasks")
@@ -879,13 +880,13 @@ func (e *matchingEngineImpl) recordDecisionTaskStarted(
 		resp, err = e.historyService.RecordDecisionTaskStarted(ctx, request)
 		return err
 	}
-	err := backoff.Retry(op, historyServiceOperationRetryPolicy, func(err error) bool {
+	err := backoff.ThrottleRetry(op, historyServiceOperationRetryPolicy, func(err error) bool {
 		switch err.(type) {
-		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError:
+		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError, *types.ServiceBusyError:
 			return false
 		}
 		return true
-	})
+	}, serviceBusyRetryPolicy, common.IsServiceBusyError)
 	return resp, err
 }
 
@@ -908,13 +909,13 @@ func (e *matchingEngineImpl) recordActivityTaskStarted(
 		resp, err = e.historyService.RecordActivityTaskStarted(ctx, request)
 		return err
 	}
-	err := backoff.Retry(op, historyServiceOperationRetryPolicy, func(err error) bool {
+	err := backoff.ThrottleRetry(op, historyServiceOperationRetryPolicy, func(err error) bool {
 		switch err.(type) {
-		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError:
+		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError, *types.ServiceBusyError:
 			return false
 		}
 		return true
-	})
+	}, serviceBusyRetryPolicy, common.IsServiceBusyError)
 	return resp, err
 }
 

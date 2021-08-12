@@ -1367,7 +1367,7 @@ func requestCancelExternalExecutionWithRetry(
 		return historyClient.RequestCancelWorkflowExecution(requestCancelCtx, request)
 	}
 
-	err := backoff.Retry(op, taskRetryPolicy, common.IsServiceTransientError)
+	err := backoff.Retry(op, taskRetryPolicy, isTransientError)
 	if _, ok := err.(*types.CancellationAlreadyRequestedError); ok {
 		// err is CancellationAlreadyRequestedError
 		// this could happen if target workflow cancellation is already requested
@@ -1413,7 +1413,7 @@ func signalExternalExecutionWithRetry(
 		return historyClient.SignalWorkflowExecution(signalCtx, request)
 	}
 
-	return backoff.Retry(op, taskRetryPolicy, common.IsServiceTransientError)
+	return backoff.Retry(op, taskRetryPolicy, isTransientError)
 }
 
 func removeSignalMutableStateWithRetry(
@@ -1438,7 +1438,7 @@ func removeSignalMutableStateWithRetry(
 		return historyClient.RemoveSignalMutableState(ctx, removeSignalRequest)
 	}
 
-	err := backoff.Retry(op, taskRetryPolicy, common.IsServiceTransientError)
+	err := backoff.Retry(op, taskRetryPolicy, isTransientError)
 	if err != nil && common.IsEntityNotExistsError(err) {
 		// it's safe to discard entity not exists error here
 		// as there's nothing to remove.
@@ -1507,7 +1507,7 @@ func startWorkflowWithRetry(
 		return err
 	}
 
-	if err := backoff.Retry(op, taskRetryPolicy, common.IsServiceTransientError); err != nil {
+	if err := backoff.Retry(op, taskRetryPolicy, isTransientError); err != nil {
 		return "", err
 	}
 	return response.GetRunID(), nil

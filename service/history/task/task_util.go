@@ -421,3 +421,10 @@ func (m *mockTaskMatcher) Matches(x interface{}) bool {
 func (m *mockTaskMatcher) String() string {
 	return fmt.Sprintf("is equal to %v", m.task)
 }
+
+func isTransientError(err error) bool {
+	if common.IsServiceBusyError(err) {
+		return false
+	}
+	return common.IsServiceTransientError(err)
+}

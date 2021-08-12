@@ -25,6 +25,7 @@ package persistence
 import (
 	"context"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 )
 
@@ -75,12 +76,11 @@ func (pr *persistenceRetryer) ListConcreteExecutions(
 		resp, err = pr.execManager.ListConcreteExecutions(ctx, req)
 		return err
 	}
-	var err error
-	err = backoff.Retry(op, pr.policy, IsTransientError)
-	if err == nil {
-		return resp, nil
+	err := backoff.ThrottleRetry(op, pr.policy, IsBackgroundTransientError, common.CreateServiceBusyRetryPolicyWithContext(ctx), common.IsServiceBusyError)
+	if err != nil {
+		return nil, err
 	}
-	return nil, err
+	return resp, nil
 }
 
 // GetWorkflowExecution retries GetWorkflowExecution
@@ -94,7 +94,7 @@ func (pr *persistenceRetryer) GetWorkflowExecution(
 		resp, err = pr.execManager.GetWorkflowExecution(ctx, req)
 		return err
 	}
-	err := backoff.Retry(op, pr.policy, IsTransientError)
+	err := backoff.ThrottleRetry(op, pr.policy, IsBackgroundTransientError, common.CreateServiceBusyRetryPolicyWithContext(ctx), common.IsServiceBusyError)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (pr *persistenceRetryer) GetCurrentExecution(
 		resp, err = pr.execManager.GetCurrentExecution(ctx, req)
 		return err
 	}
-	err := backoff.Retry(op, pr.policy, IsTransientError)
+	err := backoff.ThrottleRetry(op, pr.policy, IsBackgroundTransientError, common.CreateServiceBusyRetryPolicyWithContext(ctx), common.IsServiceBusyError)
 	if err != nil {
 		return nil, err
 	}
@@ -130,12 +130,11 @@ func (pr *persistenceRetryer) ListCurrentExecutions(
 		resp, err = pr.execManager.ListCurrentExecutions(ctx, req)
 		return err
 	}
-	var err error
-	err = backoff.Retry(op, pr.policy, IsTransientError)
-	if err == nil {
-		return resp, nil
+	err := backoff.ThrottleRetry(op, pr.policy, IsBackgroundTransientError, common.CreateServiceBusyRetryPolicyWithContext(ctx), common.IsServiceBusyError)
+	if err != nil {
+		return nil, err
 	}
-	return nil, err
+	return resp, nil
 }
 
 // IsWorkflowExecutionExists retries IsWorkflowExecutionExists
@@ -149,7 +148,7 @@ func (pr *persistenceRetryer) IsWorkflowExecutionExists(
 		resp, err = pr.execManager.IsWorkflowExecutionExists(ctx, req)
 		return err
 	}
-	err := backoff.Retry(op, pr.policy, IsTransientError)
+	err := backoff.ThrottleRetry(op, pr.policy, IsBackgroundTransientError, common.CreateServiceBusyRetryPolicyWithContext(ctx), common.IsServiceBusyError)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +166,7 @@ func (pr *persistenceRetryer) ReadHistoryBranch(
 		resp, err = pr.historyManager.ReadHistoryBranch(ctx, req)
 		return err
 	}
-	err := backoff.Retry(op, pr.policy, IsTransientError)
+	err := backoff.ThrottleRetry(op, pr.policy, IsBackgroundTransientError, common.CreateServiceBusyRetryPolicyWithContext(ctx), common.IsServiceBusyError)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +181,7 @@ func (pr *persistenceRetryer) DeleteWorkflowExecution(
 	op := func() error {
 		return pr.execManager.DeleteWorkflowExecution(ctx, req)
 	}
-	return backoff.Retry(op, pr.policy, IsTransientError)
+	return backoff.ThrottleRetry(op, pr.policy, IsBackgroundTransientError, common.CreateServiceBusyRetryPolicyWithContext(ctx), common.IsServiceBusyError)
 }
 
 // DeleteCurrentWorkflowExecution retries DeleteCurrentWorkflowExecution
@@ -193,7 +192,7 @@ func (pr *persistenceRetryer) DeleteCurrentWorkflowExecution(
 	op := func() error {
 		return pr.execManager.DeleteCurrentWorkflowExecution(ctx, req)
 	}
-	return backoff.Retry(op, pr.policy, IsTransientError)
+	return backoff.ThrottleRetry(op, pr.policy, IsBackgroundTransientError, common.CreateServiceBusyRetryPolicyWithContext(ctx), common.IsServiceBusyError)
 }
 
 // GetShardID return shard id
@@ -212,7 +211,7 @@ func (pr *persistenceRetryer) GetTimerIndexTasks(
 		resp, err = pr.execManager.GetTimerIndexTasks(ctx, req)
 		return err
 	}
-	err := backoff.Retry(op, pr.policy, IsTransientError)
+	err := backoff.ThrottleRetry(op, pr.policy, IsBackgroundTransientError, common.CreateServiceBusyRetryPolicyWithContext(ctx), common.IsServiceBusyError)
 
 	if err != nil {
 		return nil, err
@@ -230,5 +229,5 @@ func (pr *persistenceRetryer) CompleteTimerTask(
 		return pr.execManager.CompleteTimerTask(ctx, request)
 	}
 
-	return backoff.Retry(op, pr.policy, IsTransientError)
+	return backoff.ThrottleRetry(op, pr.policy, IsBackgroundTransientError, common.CreateServiceBusyRetryPolicyWithContext(ctx), common.IsServiceBusyError)
 }

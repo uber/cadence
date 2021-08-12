@@ -1001,10 +1001,12 @@ func (c *contextImpl) appendHistoryV2EventsWithRetry(
 		return err
 	}
 
-	err := backoff.Retry(
+	err := backoff.ThrottleRetry(
 		op,
 		common.CreatePersistenceRetryPolicyWithContext(ctx),
-		persistence.IsTransientError,
+		persistence.IsBackgroundTransientError,
+		common.CreateServiceBusyRetryPolicyWithContext(ctx),
+		common.IsServiceBusyError,
 	)
 	return int64(resp), err
 }
@@ -1028,13 +1030,15 @@ func (c *contextImpl) createWorkflowExecutionWithRetry(
 			// on the first start workflow execution request.
 			return false
 		}
-		return persistence.IsTransientError(err)
+		return persistence.IsBackgroundTransientError(err)
 	}
 
-	err := backoff.Retry(
+	err := backoff.ThrottleRetry(
 		op,
 		common.CreatePersistenceRetryPolicyWithContext(ctx),
 		isRetryable,
+		common.CreateServiceBusyRetryPolicyWithContext(ctx),
+		common.IsServiceBusyError,
 	)
 	switch err.(type) {
 	case nil:
@@ -1069,10 +1073,12 @@ func (c *contextImpl) getWorkflowExecutionWithRetry(
 		return err
 	}
 
-	err := backoff.Retry(
+	err := backoff.ThrottleRetry(
 		op,
 		common.CreatePersistenceRetryPolicyWithContext(ctx),
-		persistence.IsTransientError,
+		persistence.IsBackgroundTransientError,
+		common.CreateServiceBusyRetryPolicyWithContext(ctx),
+		common.IsServiceBusyError,
 	)
 	switch err.(type) {
 	case nil:
@@ -1110,13 +1116,15 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 			// timeout error is not retryable for update workflow execution
 			return false
 		}
-		return persistence.IsTransientError(err)
+		return persistence.IsBackgroundTransientError(err)
 	}
 
-	err := backoff.Retry(
+	err := backoff.ThrottleRetry(
 		op,
 		common.CreatePersistenceRetryPolicyWithContext(ctx),
 		isRetryable,
+		common.CreateServiceBusyRetryPolicyWithContext(ctx),
+		common.IsServiceBusyError,
 	)
 	switch err.(type) {
 	case nil:

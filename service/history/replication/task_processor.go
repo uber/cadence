@@ -380,25 +380,20 @@ func (p *taskProcessorImpl) handleSyncShardStatus(
 }
 
 func (p *taskProcessorImpl) processSingleTask(replicationTask *types.ReplicationTask) error {
-	retryTransientError := func() error {
-		return backoff.Retry(
-			func() error {
-				select {
-				case <-p.done:
-					// if the processor is stopping, skip the task
-					// the ack level will not update and the new shard owner will retry the task.
-					return nil
-				default:
-					return p.processTaskOnce(replicationTask)
-				}
-			},
-			p.taskRetryPolicy,
-			isTransientRetryableError)
+	op := func() error {
+		select {
+		case <-p.done:
+			// if the processor is stopping, skip the task
+			// the ack level will not update and the new shard owner will retry the task.
+			return nil
+		default:
+			return p.processTaskOnce(replicationTask)
+		}
 	}
-
-	//Handle service busy error
-	err := backoff.Retry(
-		retryTransientError,
+	err := backoff.ThrottleRetry(
+		op,
+		p.taskRetryPolicy,
+		isTransientRetryableError,
 		common.CreateReplicationServiceBusyRetryPolicy(),
 		common.IsServiceBusyError,
 	)

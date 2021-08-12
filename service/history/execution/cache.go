@@ -318,10 +318,12 @@ func (c *Cache) getCurrentExecutionWithRetry(
 		return err
 	}
 
-	err := backoff.Retry(
+	err := backoff.ThrottleRetry(
 		op,
 		common.CreatePersistenceRetryPolicyWithContext(ctx),
-		persistence.IsTransientError,
+		persistence.IsBackgroundTransientError,
+		common.CreateServiceBusyRetryPolicyWithContext(ctx),
+		common.IsServiceBusyError,
 	)
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.HistoryCacheGetCurrentExecutionScope, metrics.CacheFailures)

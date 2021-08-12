@@ -210,10 +210,12 @@ func CleanPendingActiveState(
 		op := func() error {
 			return domainManager.UpdateDomain(context.Background(), updateReq)
 		}
-		if err := backoff.Retry(
+		if err := backoff.ThrottleRetry(
 			op,
 			policy,
 			isUpdateDomainRetryable,
+			common.CreateServiceBusyRetryPolicy(),
+			common.IsServiceBusyError,
 		); err != nil {
 			return err
 		}

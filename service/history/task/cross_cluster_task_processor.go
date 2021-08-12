@@ -411,12 +411,7 @@ func (p *crossClusterTaskProcessor) respondTaskCompletedWithRetry(
 			return err
 		},
 		p.retryPolicy,
-		func(err error) bool {
-			if common.IsServiceBusyError(err) {
-				return false
-			}
-			return common.IsServiceTransientError(err)
-		},
+		isTransientError,
 	)
 
 	return response, err
