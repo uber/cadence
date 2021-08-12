@@ -37,6 +37,7 @@ import (
 	wire "go.uber.org/thriftrw/wire"
 	zapcore "go.uber.org/zap/zapcore"
 
+	configStore "github.com/uber/cadence/.gen/go/configStore"
 	replicator "github.com/uber/cadence/.gen/go/replicator"
 	shared "github.com/uber/cadence/.gen/go/shared"
 )
@@ -1116,6 +1117,407 @@ func (v *DescribeWorkflowExecutionResponse) IsSetMutableStateInDatabase() bool {
 	return v != nil && v.MutableStateInDatabase != nil
 }
 
+type GetDynamicConfigRequest struct {
+	ConfigName *string                            `json:"configName,omitempty"`
+	Filters    []*configStore.DynamicConfigFilter `json:"filters,omitempty"`
+}
+
+type _List_DynamicConfigFilter_ValueList []*configStore.DynamicConfigFilter
+
+func (v _List_DynamicConfigFilter_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_DynamicConfigFilter_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_DynamicConfigFilter_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_DynamicConfigFilter_ValueList) Close() {}
+
+// ToWire translates a GetDynamicConfigRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *GetDynamicConfigRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.ConfigName != nil {
+		w, err = wire.NewValueString(*(v.ConfigName)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.Filters != nil {
+		w, err = wire.NewValueList(_List_DynamicConfigFilter_ValueList(v.Filters)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _DynamicConfigFilter_Read(w wire.Value) (*configStore.DynamicConfigFilter, error) {
+	var v configStore.DynamicConfigFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_DynamicConfigFilter_Read(l wire.ValueList) ([]*configStore.DynamicConfigFilter, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*configStore.DynamicConfigFilter, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _DynamicConfigFilter_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
+}
+
+// FromWire deserializes a GetDynamicConfigRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a GetDynamicConfigRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v GetDynamicConfigRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *GetDynamicConfigRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ConfigName = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TList {
+				v.Filters, err = _List_DynamicConfigFilter_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a GetDynamicConfigRequest
+// struct.
+func (v *GetDynamicConfigRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.ConfigName != nil {
+		fields[i] = fmt.Sprintf("ConfigName: %v", *(v.ConfigName))
+		i++
+	}
+	if v.Filters != nil {
+		fields[i] = fmt.Sprintf("Filters: %v", v.Filters)
+		i++
+	}
+
+	return fmt.Sprintf("GetDynamicConfigRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _List_DynamicConfigFilter_Equals(lhs, rhs []*configStore.DynamicConfigFilter) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Equals returns true if all the fields of this GetDynamicConfigRequest match the
+// provided GetDynamicConfigRequest.
+//
+// This function performs a deep comparison.
+func (v *GetDynamicConfigRequest) Equals(rhs *GetDynamicConfigRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.ConfigName, rhs.ConfigName) {
+		return false
+	}
+	if !((v.Filters == nil && rhs.Filters == nil) || (v.Filters != nil && rhs.Filters != nil && _List_DynamicConfigFilter_Equals(v.Filters, rhs.Filters))) {
+		return false
+	}
+
+	return true
+}
+
+type _List_DynamicConfigFilter_Zapper []*configStore.DynamicConfigFilter
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_DynamicConfigFilter_Zapper.
+func (l _List_DynamicConfigFilter_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
+	}
+	return err
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of GetDynamicConfigRequest.
+func (v *GetDynamicConfigRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.ConfigName != nil {
+		enc.AddString("configName", *v.ConfigName)
+	}
+	if v.Filters != nil {
+		err = multierr.Append(err, enc.AddArray("filters", (_List_DynamicConfigFilter_Zapper)(v.Filters)))
+	}
+	return err
+}
+
+// GetConfigName returns the value of ConfigName if it is set or its
+// zero value if it is unset.
+func (v *GetDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil && v.ConfigName != nil {
+		return *v.ConfigName
+	}
+
+	return
+}
+
+// IsSetConfigName returns true if ConfigName is not nil.
+func (v *GetDynamicConfigRequest) IsSetConfigName() bool {
+	return v != nil && v.ConfigName != nil
+}
+
+// GetFilters returns the value of Filters if it is set or its
+// zero value if it is unset.
+func (v *GetDynamicConfigRequest) GetFilters() (o []*configStore.DynamicConfigFilter) {
+	if v != nil && v.Filters != nil {
+		return v.Filters
+	}
+
+	return
+}
+
+// IsSetFilters returns true if Filters is not nil.
+func (v *GetDynamicConfigRequest) IsSetFilters() bool {
+	return v != nil && v.Filters != nil
+}
+
+type GetDynamicConfigResponse struct {
+	Value *shared.DataBlob `json:"value,omitempty"`
+}
+
+// ToWire translates a GetDynamicConfigResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *GetDynamicConfigResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Value != nil {
+		w, err = v.Value.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _DataBlob_Read(w wire.Value) (*shared.DataBlob, error) {
+	var v shared.DataBlob
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a GetDynamicConfigResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a GetDynamicConfigResponse struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v GetDynamicConfigResponse
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *GetDynamicConfigResponse) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.Value, err = _DataBlob_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a GetDynamicConfigResponse
+// struct.
+func (v *GetDynamicConfigResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Value != nil {
+		fields[i] = fmt.Sprintf("Value: %v", v.Value)
+		i++
+	}
+
+	return fmt.Sprintf("GetDynamicConfigResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this GetDynamicConfigResponse match the
+// provided GetDynamicConfigResponse.
+//
+// This function performs a deep comparison.
+func (v *GetDynamicConfigResponse) Equals(rhs *GetDynamicConfigResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Value == nil && rhs.Value == nil) || (v.Value != nil && rhs.Value != nil && v.Value.Equals(rhs.Value))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of GetDynamicConfigResponse.
+func (v *GetDynamicConfigResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Value != nil {
+		err = multierr.Append(err, enc.AddObject("value", v.Value))
+	}
+	return err
+}
+
+// GetValue returns the value of Value if it is set or its
+// zero value if it is unset.
+func (v *GetDynamicConfigResponse) GetValue() (o *shared.DataBlob) {
+	if v != nil && v.Value != nil {
+		return v.Value
+	}
+
+	return
+}
+
+// IsSetValue returns true if Value is not nil.
+func (v *GetDynamicConfigResponse) IsSetValue() bool {
+	return v != nil && v.Value != nil
+}
+
 // StartEventId defines the beginning of the event to fetch. The first event is exclusive.
 // EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.
 type GetWorkflowExecutionRawHistoryV2Request struct {
@@ -1666,12 +2068,6 @@ func (v *GetWorkflowExecutionRawHistoryV2Response) ToWire() (wire.Value, error) 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _DataBlob_Read(w wire.Value) (*shared.DataBlob, error) {
-	var v shared.DataBlob
-	err := v.FromWire(w)
-	return &v, err
-}
-
 func _List_DataBlob_Read(l wire.ValueList) ([]*shared.DataBlob, error) {
 	if l.ValueType() != wire.TStruct {
 		return nil, nil
@@ -2021,6 +2417,359 @@ func (v *HostInfo) GetIdentity() (o string) {
 // IsSetIdentity returns true if Identity is not nil.
 func (v *HostInfo) IsSetIdentity() bool {
 	return v != nil && v.Identity != nil
+}
+
+type ListDynamicConfigRequest struct {
+	ConfigName *string `json:"configName,omitempty"`
+}
+
+// ToWire translates a ListDynamicConfigRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *ListDynamicConfigRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.ConfigName != nil {
+		w, err = wire.NewValueString(*(v.ConfigName)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a ListDynamicConfigRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a ListDynamicConfigRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v ListDynamicConfigRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *ListDynamicConfigRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ConfigName = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a ListDynamicConfigRequest
+// struct.
+func (v *ListDynamicConfigRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.ConfigName != nil {
+		fields[i] = fmt.Sprintf("ConfigName: %v", *(v.ConfigName))
+		i++
+	}
+
+	return fmt.Sprintf("ListDynamicConfigRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this ListDynamicConfigRequest match the
+// provided ListDynamicConfigRequest.
+//
+// This function performs a deep comparison.
+func (v *ListDynamicConfigRequest) Equals(rhs *ListDynamicConfigRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.ConfigName, rhs.ConfigName) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of ListDynamicConfigRequest.
+func (v *ListDynamicConfigRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.ConfigName != nil {
+		enc.AddString("configName", *v.ConfigName)
+	}
+	return err
+}
+
+// GetConfigName returns the value of ConfigName if it is set or its
+// zero value if it is unset.
+func (v *ListDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil && v.ConfigName != nil {
+		return *v.ConfigName
+	}
+
+	return
+}
+
+// IsSetConfigName returns true if ConfigName is not nil.
+func (v *ListDynamicConfigRequest) IsSetConfigName() bool {
+	return v != nil && v.ConfigName != nil
+}
+
+type ListDynamicConfigResponse struct {
+	Entries []*configStore.DynamicConfigEntry `json:"entries,omitempty"`
+}
+
+type _List_DynamicConfigEntry_ValueList []*configStore.DynamicConfigEntry
+
+func (v _List_DynamicConfigEntry_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_DynamicConfigEntry_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_DynamicConfigEntry_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_DynamicConfigEntry_ValueList) Close() {}
+
+// ToWire translates a ListDynamicConfigResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *ListDynamicConfigResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Entries != nil {
+		w, err = wire.NewValueList(_List_DynamicConfigEntry_ValueList(v.Entries)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _DynamicConfigEntry_Read(w wire.Value) (*configStore.DynamicConfigEntry, error) {
+	var v configStore.DynamicConfigEntry
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_DynamicConfigEntry_Read(l wire.ValueList) ([]*configStore.DynamicConfigEntry, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*configStore.DynamicConfigEntry, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _DynamicConfigEntry_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
+}
+
+// FromWire deserializes a ListDynamicConfigResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a ListDynamicConfigResponse struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v ListDynamicConfigResponse
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *ListDynamicConfigResponse) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TList {
+				v.Entries, err = _List_DynamicConfigEntry_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a ListDynamicConfigResponse
+// struct.
+func (v *ListDynamicConfigResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Entries != nil {
+		fields[i] = fmt.Sprintf("Entries: %v", v.Entries)
+		i++
+	}
+
+	return fmt.Sprintf("ListDynamicConfigResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _List_DynamicConfigEntry_Equals(lhs, rhs []*configStore.DynamicConfigEntry) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Equals returns true if all the fields of this ListDynamicConfigResponse match the
+// provided ListDynamicConfigResponse.
+//
+// This function performs a deep comparison.
+func (v *ListDynamicConfigResponse) Equals(rhs *ListDynamicConfigResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Entries == nil && rhs.Entries == nil) || (v.Entries != nil && rhs.Entries != nil && _List_DynamicConfigEntry_Equals(v.Entries, rhs.Entries))) {
+		return false
+	}
+
+	return true
+}
+
+type _List_DynamicConfigEntry_Zapper []*configStore.DynamicConfigEntry
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_DynamicConfigEntry_Zapper.
+func (l _List_DynamicConfigEntry_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
+	}
+	return err
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of ListDynamicConfigResponse.
+func (v *ListDynamicConfigResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Entries != nil {
+		err = multierr.Append(err, enc.AddArray("entries", (_List_DynamicConfigEntry_Zapper)(v.Entries)))
+	}
+	return err
+}
+
+// GetEntries returns the value of Entries if it is set or its
+// zero value if it is unset.
+func (v *ListDynamicConfigResponse) GetEntries() (o []*configStore.DynamicConfigEntry) {
+	if v != nil && v.Entries != nil {
+		return v.Entries
+	}
+
+	return
+}
+
+// IsSetEntries returns true if Entries is not nil.
+func (v *ListDynamicConfigResponse) IsSetEntries() bool {
+	return v != nil && v.Entries != nil
 }
 
 type MembershipInfo struct {
@@ -3598,6 +4347,186 @@ func (v *ResendReplicationTasksRequest) IsSetEndVersion() bool {
 	return v != nil && v.EndVersion != nil
 }
 
+type RestoreDynamicConfigRequest struct {
+	ConfigName *string                            `json:"configName,omitempty"`
+	Filters    []*configStore.DynamicConfigFilter `json:"filters,omitempty"`
+}
+
+// ToWire translates a RestoreDynamicConfigRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *RestoreDynamicConfigRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.ConfigName != nil {
+		w, err = wire.NewValueString(*(v.ConfigName)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.Filters != nil {
+		w, err = wire.NewValueList(_List_DynamicConfigFilter_ValueList(v.Filters)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a RestoreDynamicConfigRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a RestoreDynamicConfigRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v RestoreDynamicConfigRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *RestoreDynamicConfigRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ConfigName = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TList {
+				v.Filters, err = _List_DynamicConfigFilter_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a RestoreDynamicConfigRequest
+// struct.
+func (v *RestoreDynamicConfigRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.ConfigName != nil {
+		fields[i] = fmt.Sprintf("ConfigName: %v", *(v.ConfigName))
+		i++
+	}
+	if v.Filters != nil {
+		fields[i] = fmt.Sprintf("Filters: %v", v.Filters)
+		i++
+	}
+
+	return fmt.Sprintf("RestoreDynamicConfigRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this RestoreDynamicConfigRequest match the
+// provided RestoreDynamicConfigRequest.
+//
+// This function performs a deep comparison.
+func (v *RestoreDynamicConfigRequest) Equals(rhs *RestoreDynamicConfigRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.ConfigName, rhs.ConfigName) {
+		return false
+	}
+	if !((v.Filters == nil && rhs.Filters == nil) || (v.Filters != nil && rhs.Filters != nil && _List_DynamicConfigFilter_Equals(v.Filters, rhs.Filters))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of RestoreDynamicConfigRequest.
+func (v *RestoreDynamicConfigRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.ConfigName != nil {
+		enc.AddString("configName", *v.ConfigName)
+	}
+	if v.Filters != nil {
+		err = multierr.Append(err, enc.AddArray("filters", (_List_DynamicConfigFilter_Zapper)(v.Filters)))
+	}
+	return err
+}
+
+// GetConfigName returns the value of ConfigName if it is set or its
+// zero value if it is unset.
+func (v *RestoreDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil && v.ConfigName != nil {
+		return *v.ConfigName
+	}
+
+	return
+}
+
+// IsSetConfigName returns true if ConfigName is not nil.
+func (v *RestoreDynamicConfigRequest) IsSetConfigName() bool {
+	return v != nil && v.ConfigName != nil
+}
+
+// GetFilters returns the value of Filters if it is set or its
+// zero value if it is unset.
+func (v *RestoreDynamicConfigRequest) GetFilters() (o []*configStore.DynamicConfigFilter) {
+	if v != nil && v.Filters != nil {
+		return v.Filters
+	}
+
+	return
+}
+
+// IsSetFilters returns true if Filters is not nil.
+func (v *RestoreDynamicConfigRequest) IsSetFilters() bool {
+	return v != nil && v.Filters != nil
+}
+
 type RingInfo struct {
 	Role        *string     `json:"role,omitempty"`
 	MemberCount *int32      `json:"memberCount,omitempty"`
@@ -3895,20 +4824,280 @@ func (v *RingInfo) IsSetMembers() bool {
 	return v != nil && v.Members != nil
 }
 
+type UpdateDynamicConfigRequest struct {
+	ConfigName   *string                           `json:"configName,omitempty"`
+	ConfigValues []*configStore.DynamicConfigValue `json:"configValues,omitempty"`
+}
+
+type _List_DynamicConfigValue_ValueList []*configStore.DynamicConfigValue
+
+func (v _List_DynamicConfigValue_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_DynamicConfigValue_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_DynamicConfigValue_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_DynamicConfigValue_ValueList) Close() {}
+
+// ToWire translates a UpdateDynamicConfigRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *UpdateDynamicConfigRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.ConfigName != nil {
+		w, err = wire.NewValueString(*(v.ConfigName)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.ConfigValues != nil {
+		w, err = wire.NewValueList(_List_DynamicConfigValue_ValueList(v.ConfigValues)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _DynamicConfigValue_Read(w wire.Value) (*configStore.DynamicConfigValue, error) {
+	var v configStore.DynamicConfigValue
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_DynamicConfigValue_Read(l wire.ValueList) ([]*configStore.DynamicConfigValue, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*configStore.DynamicConfigValue, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _DynamicConfigValue_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
+}
+
+// FromWire deserializes a UpdateDynamicConfigRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a UpdateDynamicConfigRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v UpdateDynamicConfigRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *UpdateDynamicConfigRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ConfigName = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TList {
+				v.ConfigValues, err = _List_DynamicConfigValue_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a UpdateDynamicConfigRequest
+// struct.
+func (v *UpdateDynamicConfigRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.ConfigName != nil {
+		fields[i] = fmt.Sprintf("ConfigName: %v", *(v.ConfigName))
+		i++
+	}
+	if v.ConfigValues != nil {
+		fields[i] = fmt.Sprintf("ConfigValues: %v", v.ConfigValues)
+		i++
+	}
+
+	return fmt.Sprintf("UpdateDynamicConfigRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _List_DynamicConfigValue_Equals(lhs, rhs []*configStore.DynamicConfigValue) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Equals returns true if all the fields of this UpdateDynamicConfigRequest match the
+// provided UpdateDynamicConfigRequest.
+//
+// This function performs a deep comparison.
+func (v *UpdateDynamicConfigRequest) Equals(rhs *UpdateDynamicConfigRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.ConfigName, rhs.ConfigName) {
+		return false
+	}
+	if !((v.ConfigValues == nil && rhs.ConfigValues == nil) || (v.ConfigValues != nil && rhs.ConfigValues != nil && _List_DynamicConfigValue_Equals(v.ConfigValues, rhs.ConfigValues))) {
+		return false
+	}
+
+	return true
+}
+
+type _List_DynamicConfigValue_Zapper []*configStore.DynamicConfigValue
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_DynamicConfigValue_Zapper.
+func (l _List_DynamicConfigValue_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
+	}
+	return err
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of UpdateDynamicConfigRequest.
+func (v *UpdateDynamicConfigRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.ConfigName != nil {
+		enc.AddString("configName", *v.ConfigName)
+	}
+	if v.ConfigValues != nil {
+		err = multierr.Append(err, enc.AddArray("configValues", (_List_DynamicConfigValue_Zapper)(v.ConfigValues)))
+	}
+	return err
+}
+
+// GetConfigName returns the value of ConfigName if it is set or its
+// zero value if it is unset.
+func (v *UpdateDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil && v.ConfigName != nil {
+		return *v.ConfigName
+	}
+
+	return
+}
+
+// IsSetConfigName returns true if ConfigName is not nil.
+func (v *UpdateDynamicConfigRequest) IsSetConfigName() bool {
+	return v != nil && v.ConfigName != nil
+}
+
+// GetConfigValues returns the value of ConfigValues if it is set or its
+// zero value if it is unset.
+func (v *UpdateDynamicConfigRequest) GetConfigValues() (o []*configStore.DynamicConfigValue) {
+	if v != nil && v.ConfigValues != nil {
+		return v.ConfigValues
+	}
+
+	return
+}
+
+// IsSetConfigValues returns true if ConfigValues is not nil.
+func (v *UpdateDynamicConfigRequest) IsSetConfigValues() bool {
+	return v != nil && v.ConfigValues != nil
+}
+
 // ThriftModule represents the IDL file used to generate this package.
 var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "admin",
 	Package:  "github.com/uber/cadence/.gen/go/admin",
 	FilePath: "admin.thrift",
-	SHA1:     "efb17c9e45fd04ca6f6087ed46f9a15c97e3e8cf",
+	SHA1:     "c1e043657741b0a029794810a65caa1cf33c6476",
 	Includes: []*thriftreflect.ThriftModule{
+		configStore.ThriftModule,
 		replicator.ThriftModule,
 		shared.ThriftModule,
 	},
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\ninclude \"replicator.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privilege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeShardDistribution returns information about history shards within the cluster\n  **/\n  shared.DescribeShardDistributionResponse DescribeShardDistribution(1: shared.DescribeShardDistributionRequest request)\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void ResetQueue(1: shared.ResetQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  shared.DescribeQueueResponse DescribeQueue(1: shared.DescribeQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDomainReplicationMessagesResponse GetDomainReplicationMessages(1: replicator.GetDomainReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDLQReplicationMessagesResponse GetDLQReplicationMessages(1: replicator.GetDLQReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReapplyEvents applies stale events to the current workflow and current run\n  **/\n  void ReapplyEvents(1: shared.ReapplyEventsRequest reapplyEventsRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.DomainNotActiveError domainNotActiveError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * DescribeCluster returns information about cadence cluster\n  **/\n  DescribeClusterResponse DescribeCluster()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReadDLQMessages returns messages from DLQ\n  **/\n  replicator.ReadDLQMessagesResponse ReadDLQMessages(1: replicator.ReadDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * PurgeDLQMessages purges messages from DLQ\n  **/\n  void PurgeDLQMessages(1: replicator.PurgeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * MergeDLQMessages merges messages from DLQ\n  **/\n  replicator.MergeDLQMessagesResponse MergeDLQMessages(1: replicator.MergeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * RefreshWorkflowTasks refreshes all tasks of a workflow\n  **/\n  void RefreshWorkflowTasks(1: shared.RefreshWorkflowTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.DomainNotActiveError domainNotActiveError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * ResendReplicationTasks requests replication tasks from remote cluster and apply tasks to current cluster\n  **/\n  void ResendReplicationTasks(1: ResendReplicationTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n      3: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * GetCrossClusterTasks fetches cross cluster tasks\n  **/\n  shared.GetCrossClusterTasksResponse GetCrossClusterTasks(1: shared.GetCrossClusterTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") startEventVersion\n  50: optional i64 (js.type = \"Long\") endEventId\n  60: optional i64 (js.type = \"Long\") endEventVersion\n  70: optional i32 maximumPageSize\n  80: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n  20: optional string securityToken\n}\n\nstruct HostInfo {\n  10: optional string Identity\n}\n\nstruct RingInfo {\n  10: optional string role\n  20: optional i32 memberCount\n  30: optional list<HostInfo> members\n}\n\nstruct MembershipInfo {\n  10: optional HostInfo currentHost\n  20: optional list<string> reachableMembers\n  30: optional list<RingInfo> rings\n}\n\nstruct PersistenceSetting {\n  10: optional string key\n  20: optional string value\n}\n\nstruct PersistenceFeature {\n  10: optional string key\n  20: optional bool enabled\n}\n\nstruct PersistenceInfo {\n  10: optional string backend\n  20: optional list<PersistenceSetting> settings\n  30: optional list<PersistenceFeature> features\n}\n\nstruct DescribeClusterResponse {\n  10: optional shared.SupportedClientVersions supportedClientVersions\n  20: optional MembershipInfo membershipInfo\n  30: optional map<string,PersistenceInfo> persistenceInfo\n}\n\nstruct ResendReplicationTasksRequest {\n  10: optional string domainID\n  20: optional string workflowID\n  30: optional string runID\n  40: optional string remoteCluster\n  50: optional i64 (js.type = \"Long\") startEventID\n  60: optional i64 (js.type = \"Long\") startVersion\n  70: optional i64 (js.type = \"Long\") endEventID\n  80: optional i64 (js.type = \"Long\") endVersion\n}"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\ninclude \"replicator.thrift\"\ninclude \"configStore.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privilege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeShardDistribution returns information about history shards within the cluster\n  **/\n  shared.DescribeShardDistributionResponse DescribeShardDistribution(1: shared.DescribeShardDistributionRequest request)\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void ResetQueue(1: shared.ResetQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  shared.DescribeQueueResponse DescribeQueue(1: shared.DescribeQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDomainReplicationMessagesResponse GetDomainReplicationMessages(1: replicator.GetDomainReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDLQReplicationMessagesResponse GetDLQReplicationMessages(1: replicator.GetDLQReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReapplyEvents applies stale events to the current workflow and current run\n  **/\n  void ReapplyEvents(1: shared.ReapplyEventsRequest reapplyEventsRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.DomainNotActiveError domainNotActiveError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * DescribeCluster returns information about cadence cluster\n  **/\n  DescribeClusterResponse DescribeCluster()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReadDLQMessages returns messages from DLQ\n  **/\n  replicator.ReadDLQMessagesResponse ReadDLQMessages(1: replicator.ReadDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * PurgeDLQMessages purges messages from DLQ\n  **/\n  void PurgeDLQMessages(1: replicator.PurgeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * MergeDLQMessages merges messages from DLQ\n  **/\n  replicator.MergeDLQMessagesResponse MergeDLQMessages(1: replicator.MergeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * RefreshWorkflowTasks refreshes all tasks of a workflow\n  **/\n  void RefreshWorkflowTasks(1: shared.RefreshWorkflowTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.DomainNotActiveError domainNotActiveError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * ResendReplicationTasks requests replication tasks from remote cluster and apply tasks to current cluster\n  **/\n  void ResendReplicationTasks(1: ResendReplicationTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n      3: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * GetCrossClusterTasks fetches cross cluster tasks\n  **/\n  shared.GetCrossClusterTasksResponse GetCrossClusterTasks(1: shared.GetCrossClusterTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * GetDynamicConfig returns values associated with a specified dynamic config parameter.\n  **/\n  GetDynamicConfigResponse GetDynamicConfig(1: GetDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  void UpdateDynamicConfig(1: UpdateDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  void RestoreDynamicConfig(1: RestoreDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  ListDynamicConfigResponse ListDynamicConfig(1: ListDynamicConfigRequest request)\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") startEventVersion\n  50: optional i64 (js.type = \"Long\") endEventId\n  60: optional i64 (js.type = \"Long\") endEventVersion\n  70: optional i32 maximumPageSize\n  80: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n  20: optional string securityToken\n}\n\nstruct HostInfo {\n  10: optional string Identity\n}\n\nstruct RingInfo {\n  10: optional string role\n  20: optional i32 memberCount\n  30: optional list<HostInfo> members\n}\n\nstruct MembershipInfo {\n  10: optional HostInfo currentHost\n  20: optional list<string> reachableMembers\n  30: optional list<RingInfo> rings\n}\n\nstruct PersistenceSetting {\n  10: optional string key\n  20: optional string value\n}\n\nstruct PersistenceFeature {\n  10: optional string key\n  20: optional bool enabled\n}\n\nstruct PersistenceInfo {\n  10: optional string backend\n  20: optional list<PersistenceSetting> settings\n  30: optional list<PersistenceFeature> features\n}\n\nstruct DescribeClusterResponse {\n  10: optional shared.SupportedClientVersions supportedClientVersions\n  20: optional MembershipInfo membershipInfo\n  30: optional map<string,PersistenceInfo> persistenceInfo\n}\n\nstruct ResendReplicationTasksRequest {\n  10: optional string domainID\n  20: optional string workflowID\n  30: optional string runID\n  40: optional string remoteCluster\n  50: optional i64 (js.type = \"Long\") startEventID\n  60: optional i64 (js.type = \"Long\") startVersion\n  70: optional i64 (js.type = \"Long\") endEventID\n  80: optional i64 (js.type = \"Long\") endVersion\n}\n\nstruct GetDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<configStore.DynamicConfigFilter> filters\n}\n\nstruct GetDynamicConfigResponse {\n  10: optional shared.DataBlob value\n}\n\nstruct UpdateDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<configStore.DynamicConfigValue> configValues\n}\n\nstruct RestoreDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<configStore.DynamicConfigFilter> filters\n}\n\nstruct ListDynamicConfigRequest {\n  10: optional string configName\n}\n\nstruct ListDynamicConfigResponse {\n  10: optional list<configStore.DynamicConfigEntry> entries\n}\n\n"
 
 // AdminService_AddSearchAttribute_Args represents the arguments for the AdminService.AddSearchAttribute function.
 //
@@ -9532,6 +10721,537 @@ func (v *AdminService_GetDomainReplicationMessages_Result) EnvelopeType() wire.E
 	return wire.Reply
 }
 
+// AdminService_GetDynamicConfig_Args represents the arguments for the AdminService.GetDynamicConfig function.
+//
+// The arguments for GetDynamicConfig are sent and received over the wire as this struct.
+type AdminService_GetDynamicConfig_Args struct {
+	Request *GetDynamicConfigRequest `json:"request,omitempty"`
+}
+
+// ToWire translates a AdminService_GetDynamicConfig_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_GetDynamicConfig_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _GetDynamicConfigRequest_Read(w wire.Value) (*GetDynamicConfigRequest, error) {
+	var v GetDynamicConfigRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_GetDynamicConfig_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_GetDynamicConfig_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_GetDynamicConfig_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_GetDynamicConfig_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _GetDynamicConfigRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_GetDynamicConfig_Args
+// struct.
+func (v *AdminService_GetDynamicConfig_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_GetDynamicConfig_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_GetDynamicConfig_Args match the
+// provided AdminService_GetDynamicConfig_Args.
+//
+// This function performs a deep comparison.
+func (v *AdminService_GetDynamicConfig_Args) Equals(rhs *AdminService_GetDynamicConfig_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_GetDynamicConfig_Args.
+func (v *AdminService_GetDynamicConfig_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *AdminService_GetDynamicConfig_Args) GetRequest() (o *GetDynamicConfigRequest) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *AdminService_GetDynamicConfig_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "GetDynamicConfig" for this struct.
+func (v *AdminService_GetDynamicConfig_Args) MethodName() string {
+	return "GetDynamicConfig"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *AdminService_GetDynamicConfig_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// AdminService_GetDynamicConfig_Helper provides functions that aid in handling the
+// parameters and return values of the AdminService.GetDynamicConfig
+// function.
+var AdminService_GetDynamicConfig_Helper = struct {
+	// Args accepts the parameters of GetDynamicConfig in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		request *GetDynamicConfigRequest,
+	) *AdminService_GetDynamicConfig_Args
+
+	// IsException returns true if the given error can be thrown
+	// by GetDynamicConfig.
+	//
+	// An error can be thrown by GetDynamicConfig only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for GetDynamicConfig
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// GetDynamicConfig into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by GetDynamicConfig
+	//
+	//   value, err := GetDynamicConfig(args)
+	//   result, err := AdminService_GetDynamicConfig_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from GetDynamicConfig: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*GetDynamicConfigResponse, error) (*AdminService_GetDynamicConfig_Result, error)
+
+	// UnwrapResponse takes the result struct for GetDynamicConfig
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if GetDynamicConfig threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := AdminService_GetDynamicConfig_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_GetDynamicConfig_Result) (*GetDynamicConfigResponse, error)
+}{}
+
+func init() {
+	AdminService_GetDynamicConfig_Helper.Args = func(
+		request *GetDynamicConfigRequest,
+	) *AdminService_GetDynamicConfig_Args {
+		return &AdminService_GetDynamicConfig_Args{
+			Request: request,
+		}
+	}
+
+	AdminService_GetDynamicConfig_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		case *shared.InternalServiceError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	AdminService_GetDynamicConfig_Helper.WrapResponse = func(success *GetDynamicConfigResponse, err error) (*AdminService_GetDynamicConfig_Result, error) {
+		if err == nil {
+			return &AdminService_GetDynamicConfig_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_GetDynamicConfig_Result.BadRequestError")
+			}
+			return &AdminService_GetDynamicConfig_Result{BadRequestError: e}, nil
+		case *shared.InternalServiceError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_GetDynamicConfig_Result.InternalServiceError")
+			}
+			return &AdminService_GetDynamicConfig_Result{InternalServiceError: e}, nil
+		}
+
+		return nil, err
+	}
+	AdminService_GetDynamicConfig_Helper.UnwrapResponse = func(result *AdminService_GetDynamicConfig_Result) (success *GetDynamicConfigResponse, err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+		if result.InternalServiceError != nil {
+			err = result.InternalServiceError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// AdminService_GetDynamicConfig_Result represents the result of a AdminService.GetDynamicConfig function call.
+//
+// The result of a GetDynamicConfig execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type AdminService_GetDynamicConfig_Result struct {
+	// Value returned by GetDynamicConfig after a successful execution.
+	Success              *GetDynamicConfigResponse    `json:"success,omitempty"`
+	BadRequestError      *shared.BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *shared.InternalServiceError `json:"internalServiceError,omitempty"`
+}
+
+// ToWire translates a AdminService_GetDynamicConfig_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_GetDynamicConfig_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [3]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.InternalServiceError != nil {
+		w, err = v.InternalServiceError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_GetDynamicConfig_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _GetDynamicConfigResponse_Read(w wire.Value) (*GetDynamicConfigResponse, error) {
+	var v GetDynamicConfigResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_GetDynamicConfig_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_GetDynamicConfig_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_GetDynamicConfig_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_GetDynamicConfig_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _GetDynamicConfigResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TStruct {
+				v.InternalServiceError, err = _InternalServiceError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_GetDynamicConfig_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_GetDynamicConfig_Result
+// struct.
+func (v *AdminService_GetDynamicConfig_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [3]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+	if v.InternalServiceError != nil {
+		fields[i] = fmt.Sprintf("InternalServiceError: %v", v.InternalServiceError)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_GetDynamicConfig_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_GetDynamicConfig_Result match the
+// provided AdminService_GetDynamicConfig_Result.
+//
+// This function performs a deep comparison.
+func (v *AdminService_GetDynamicConfig_Result) Equals(rhs *AdminService_GetDynamicConfig_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+	if !((v.InternalServiceError == nil && rhs.InternalServiceError == nil) || (v.InternalServiceError != nil && rhs.InternalServiceError != nil && v.InternalServiceError.Equals(rhs.InternalServiceError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_GetDynamicConfig_Result.
+func (v *AdminService_GetDynamicConfig_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	if v.InternalServiceError != nil {
+		err = multierr.Append(err, enc.AddObject("internalServiceError", v.InternalServiceError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *AdminService_GetDynamicConfig_Result) GetSuccess() (o *GetDynamicConfigResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *AdminService_GetDynamicConfig_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_GetDynamicConfig_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *AdminService_GetDynamicConfig_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// GetInternalServiceError returns the value of InternalServiceError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_GetDynamicConfig_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+	if v != nil && v.InternalServiceError != nil {
+		return v.InternalServiceError
+	}
+
+	return
+}
+
+// IsSetInternalServiceError returns true if InternalServiceError is not nil.
+func (v *AdminService_GetDynamicConfig_Result) IsSetInternalServiceError() bool {
+	return v != nil && v.InternalServiceError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "GetDynamicConfig" for this struct.
+func (v *AdminService_GetDynamicConfig_Result) MethodName() string {
+	return "GetDynamicConfig"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *AdminService_GetDynamicConfig_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
 // AdminService_GetReplicationMessages_Args represents the arguments for the AdminService.GetReplicationMessages function.
 //
 // The arguments for GetReplicationMessages are sent and received over the wire as this struct.
@@ -10815,6 +12535,481 @@ func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Result) MethodName() stri
 //
 // This will always be Reply for this struct.
 func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// AdminService_ListDynamicConfig_Args represents the arguments for the AdminService.ListDynamicConfig function.
+//
+// The arguments for ListDynamicConfig are sent and received over the wire as this struct.
+type AdminService_ListDynamicConfig_Args struct {
+	Request *ListDynamicConfigRequest `json:"request,omitempty"`
+}
+
+// ToWire translates a AdminService_ListDynamicConfig_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_ListDynamicConfig_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _ListDynamicConfigRequest_Read(w wire.Value) (*ListDynamicConfigRequest, error) {
+	var v ListDynamicConfigRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_ListDynamicConfig_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_ListDynamicConfig_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_ListDynamicConfig_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_ListDynamicConfig_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _ListDynamicConfigRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_ListDynamicConfig_Args
+// struct.
+func (v *AdminService_ListDynamicConfig_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_ListDynamicConfig_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_ListDynamicConfig_Args match the
+// provided AdminService_ListDynamicConfig_Args.
+//
+// This function performs a deep comparison.
+func (v *AdminService_ListDynamicConfig_Args) Equals(rhs *AdminService_ListDynamicConfig_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_ListDynamicConfig_Args.
+func (v *AdminService_ListDynamicConfig_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *AdminService_ListDynamicConfig_Args) GetRequest() (o *ListDynamicConfigRequest) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *AdminService_ListDynamicConfig_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "ListDynamicConfig" for this struct.
+func (v *AdminService_ListDynamicConfig_Args) MethodName() string {
+	return "ListDynamicConfig"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *AdminService_ListDynamicConfig_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// AdminService_ListDynamicConfig_Helper provides functions that aid in handling the
+// parameters and return values of the AdminService.ListDynamicConfig
+// function.
+var AdminService_ListDynamicConfig_Helper = struct {
+	// Args accepts the parameters of ListDynamicConfig in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		request *ListDynamicConfigRequest,
+	) *AdminService_ListDynamicConfig_Args
+
+	// IsException returns true if the given error can be thrown
+	// by ListDynamicConfig.
+	//
+	// An error can be thrown by ListDynamicConfig only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for ListDynamicConfig
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// ListDynamicConfig into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by ListDynamicConfig
+	//
+	//   value, err := ListDynamicConfig(args)
+	//   result, err := AdminService_ListDynamicConfig_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from ListDynamicConfig: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*ListDynamicConfigResponse, error) (*AdminService_ListDynamicConfig_Result, error)
+
+	// UnwrapResponse takes the result struct for ListDynamicConfig
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if ListDynamicConfig threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := AdminService_ListDynamicConfig_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_ListDynamicConfig_Result) (*ListDynamicConfigResponse, error)
+}{}
+
+func init() {
+	AdminService_ListDynamicConfig_Helper.Args = func(
+		request *ListDynamicConfigRequest,
+	) *AdminService_ListDynamicConfig_Args {
+		return &AdminService_ListDynamicConfig_Args{
+			Request: request,
+		}
+	}
+
+	AdminService_ListDynamicConfig_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.InternalServiceError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	AdminService_ListDynamicConfig_Helper.WrapResponse = func(success *ListDynamicConfigResponse, err error) (*AdminService_ListDynamicConfig_Result, error) {
+		if err == nil {
+			return &AdminService_ListDynamicConfig_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.InternalServiceError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_ListDynamicConfig_Result.InternalServiceError")
+			}
+			return &AdminService_ListDynamicConfig_Result{InternalServiceError: e}, nil
+		}
+
+		return nil, err
+	}
+	AdminService_ListDynamicConfig_Helper.UnwrapResponse = func(result *AdminService_ListDynamicConfig_Result) (success *ListDynamicConfigResponse, err error) {
+		if result.InternalServiceError != nil {
+			err = result.InternalServiceError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// AdminService_ListDynamicConfig_Result represents the result of a AdminService.ListDynamicConfig function call.
+//
+// The result of a ListDynamicConfig execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type AdminService_ListDynamicConfig_Result struct {
+	// Value returned by ListDynamicConfig after a successful execution.
+	Success              *ListDynamicConfigResponse   `json:"success,omitempty"`
+	InternalServiceError *shared.InternalServiceError `json:"internalServiceError,omitempty"`
+}
+
+// ToWire translates a AdminService_ListDynamicConfig_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_ListDynamicConfig_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.InternalServiceError != nil {
+		w, err = v.InternalServiceError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_ListDynamicConfig_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _ListDynamicConfigResponse_Read(w wire.Value) (*ListDynamicConfigResponse, error) {
+	var v ListDynamicConfigResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_ListDynamicConfig_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_ListDynamicConfig_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_ListDynamicConfig_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_ListDynamicConfig_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _ListDynamicConfigResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.InternalServiceError, err = _InternalServiceError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_ListDynamicConfig_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_ListDynamicConfig_Result
+// struct.
+func (v *AdminService_ListDynamicConfig_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.InternalServiceError != nil {
+		fields[i] = fmt.Sprintf("InternalServiceError: %v", v.InternalServiceError)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_ListDynamicConfig_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_ListDynamicConfig_Result match the
+// provided AdminService_ListDynamicConfig_Result.
+//
+// This function performs a deep comparison.
+func (v *AdminService_ListDynamicConfig_Result) Equals(rhs *AdminService_ListDynamicConfig_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.InternalServiceError == nil && rhs.InternalServiceError == nil) || (v.InternalServiceError != nil && rhs.InternalServiceError != nil && v.InternalServiceError.Equals(rhs.InternalServiceError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_ListDynamicConfig_Result.
+func (v *AdminService_ListDynamicConfig_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.InternalServiceError != nil {
+		err = multierr.Append(err, enc.AddObject("internalServiceError", v.InternalServiceError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *AdminService_ListDynamicConfig_Result) GetSuccess() (o *ListDynamicConfigResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *AdminService_ListDynamicConfig_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetInternalServiceError returns the value of InternalServiceError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_ListDynamicConfig_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+	if v != nil && v.InternalServiceError != nil {
+		return v.InternalServiceError
+	}
+
+	return
+}
+
+// IsSetInternalServiceError returns true if InternalServiceError is not nil.
+func (v *AdminService_ListDynamicConfig_Result) IsSetInternalServiceError() bool {
+	return v != nil && v.InternalServiceError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "ListDynamicConfig" for this struct.
+func (v *AdminService_ListDynamicConfig_Result) MethodName() string {
+	return "ListDynamicConfig"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *AdminService_ListDynamicConfig_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }
 
@@ -15493,5 +17688,947 @@ func (v *AdminService_ResetQueue_Result) MethodName() string {
 //
 // This will always be Reply for this struct.
 func (v *AdminService_ResetQueue_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// AdminService_RestoreDynamicConfig_Args represents the arguments for the AdminService.RestoreDynamicConfig function.
+//
+// The arguments for RestoreDynamicConfig are sent and received over the wire as this struct.
+type AdminService_RestoreDynamicConfig_Args struct {
+	Request *RestoreDynamicConfigRequest `json:"request,omitempty"`
+}
+
+// ToWire translates a AdminService_RestoreDynamicConfig_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_RestoreDynamicConfig_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _RestoreDynamicConfigRequest_Read(w wire.Value) (*RestoreDynamicConfigRequest, error) {
+	var v RestoreDynamicConfigRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_RestoreDynamicConfig_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_RestoreDynamicConfig_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_RestoreDynamicConfig_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_RestoreDynamicConfig_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _RestoreDynamicConfigRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_RestoreDynamicConfig_Args
+// struct.
+func (v *AdminService_RestoreDynamicConfig_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_RestoreDynamicConfig_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_RestoreDynamicConfig_Args match the
+// provided AdminService_RestoreDynamicConfig_Args.
+//
+// This function performs a deep comparison.
+func (v *AdminService_RestoreDynamicConfig_Args) Equals(rhs *AdminService_RestoreDynamicConfig_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_RestoreDynamicConfig_Args.
+func (v *AdminService_RestoreDynamicConfig_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *AdminService_RestoreDynamicConfig_Args) GetRequest() (o *RestoreDynamicConfigRequest) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *AdminService_RestoreDynamicConfig_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "RestoreDynamicConfig" for this struct.
+func (v *AdminService_RestoreDynamicConfig_Args) MethodName() string {
+	return "RestoreDynamicConfig"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *AdminService_RestoreDynamicConfig_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// AdminService_RestoreDynamicConfig_Helper provides functions that aid in handling the
+// parameters and return values of the AdminService.RestoreDynamicConfig
+// function.
+var AdminService_RestoreDynamicConfig_Helper = struct {
+	// Args accepts the parameters of RestoreDynamicConfig in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		request *RestoreDynamicConfigRequest,
+	) *AdminService_RestoreDynamicConfig_Args
+
+	// IsException returns true if the given error can be thrown
+	// by RestoreDynamicConfig.
+	//
+	// An error can be thrown by RestoreDynamicConfig only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for RestoreDynamicConfig
+	// given the error returned by it. The provided error may
+	// be nil if RestoreDynamicConfig did not fail.
+	//
+	// This allows mapping errors returned by RestoreDynamicConfig into a
+	// serializable result struct. WrapResponse returns a
+	// non-nil error if the provided error cannot be thrown by
+	// RestoreDynamicConfig
+	//
+	//   err := RestoreDynamicConfig(args)
+	//   result, err := AdminService_RestoreDynamicConfig_Helper.WrapResponse(err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from RestoreDynamicConfig: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(error) (*AdminService_RestoreDynamicConfig_Result, error)
+
+	// UnwrapResponse takes the result struct for RestoreDynamicConfig
+	// and returns the erorr returned by it (if any).
+	//
+	// The error is non-nil only if RestoreDynamicConfig threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   err := AdminService_RestoreDynamicConfig_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_RestoreDynamicConfig_Result) error
+}{}
+
+func init() {
+	AdminService_RestoreDynamicConfig_Helper.Args = func(
+		request *RestoreDynamicConfigRequest,
+	) *AdminService_RestoreDynamicConfig_Args {
+		return &AdminService_RestoreDynamicConfig_Args{
+			Request: request,
+		}
+	}
+
+	AdminService_RestoreDynamicConfig_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		case *shared.InternalServiceError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	AdminService_RestoreDynamicConfig_Helper.WrapResponse = func(err error) (*AdminService_RestoreDynamicConfig_Result, error) {
+		if err == nil {
+			return &AdminService_RestoreDynamicConfig_Result{}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_RestoreDynamicConfig_Result.BadRequestError")
+			}
+			return &AdminService_RestoreDynamicConfig_Result{BadRequestError: e}, nil
+		case *shared.InternalServiceError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_RestoreDynamicConfig_Result.InternalServiceError")
+			}
+			return &AdminService_RestoreDynamicConfig_Result{InternalServiceError: e}, nil
+		}
+
+		return nil, err
+	}
+	AdminService_RestoreDynamicConfig_Helper.UnwrapResponse = func(result *AdminService_RestoreDynamicConfig_Result) (err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+		if result.InternalServiceError != nil {
+			err = result.InternalServiceError
+			return
+		}
+		return
+	}
+
+}
+
+// AdminService_RestoreDynamicConfig_Result represents the result of a AdminService.RestoreDynamicConfig function call.
+//
+// The result of a RestoreDynamicConfig execution is sent and received over the wire as this struct.
+type AdminService_RestoreDynamicConfig_Result struct {
+	BadRequestError      *shared.BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *shared.InternalServiceError `json:"internalServiceError,omitempty"`
+}
+
+// ToWire translates a AdminService_RestoreDynamicConfig_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_RestoreDynamicConfig_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.InternalServiceError != nil {
+		w, err = v.InternalServiceError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+
+	if i > 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_RestoreDynamicConfig_Result should have at most one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a AdminService_RestoreDynamicConfig_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_RestoreDynamicConfig_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_RestoreDynamicConfig_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_RestoreDynamicConfig_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TStruct {
+				v.InternalServiceError, err = _InternalServiceError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+	if count > 1 {
+		return fmt.Errorf("AdminService_RestoreDynamicConfig_Result should have at most one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_RestoreDynamicConfig_Result
+// struct.
+func (v *AdminService_RestoreDynamicConfig_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+	if v.InternalServiceError != nil {
+		fields[i] = fmt.Sprintf("InternalServiceError: %v", v.InternalServiceError)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_RestoreDynamicConfig_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_RestoreDynamicConfig_Result match the
+// provided AdminService_RestoreDynamicConfig_Result.
+//
+// This function performs a deep comparison.
+func (v *AdminService_RestoreDynamicConfig_Result) Equals(rhs *AdminService_RestoreDynamicConfig_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+	if !((v.InternalServiceError == nil && rhs.InternalServiceError == nil) || (v.InternalServiceError != nil && rhs.InternalServiceError != nil && v.InternalServiceError.Equals(rhs.InternalServiceError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_RestoreDynamicConfig_Result.
+func (v *AdminService_RestoreDynamicConfig_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	if v.InternalServiceError != nil {
+		err = multierr.Append(err, enc.AddObject("internalServiceError", v.InternalServiceError))
+	}
+	return err
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_RestoreDynamicConfig_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *AdminService_RestoreDynamicConfig_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// GetInternalServiceError returns the value of InternalServiceError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_RestoreDynamicConfig_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+	if v != nil && v.InternalServiceError != nil {
+		return v.InternalServiceError
+	}
+
+	return
+}
+
+// IsSetInternalServiceError returns true if InternalServiceError is not nil.
+func (v *AdminService_RestoreDynamicConfig_Result) IsSetInternalServiceError() bool {
+	return v != nil && v.InternalServiceError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "RestoreDynamicConfig" for this struct.
+func (v *AdminService_RestoreDynamicConfig_Result) MethodName() string {
+	return "RestoreDynamicConfig"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *AdminService_RestoreDynamicConfig_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// AdminService_UpdateDynamicConfig_Args represents the arguments for the AdminService.UpdateDynamicConfig function.
+//
+// The arguments for UpdateDynamicConfig are sent and received over the wire as this struct.
+type AdminService_UpdateDynamicConfig_Args struct {
+	Request *UpdateDynamicConfigRequest `json:"request,omitempty"`
+}
+
+// ToWire translates a AdminService_UpdateDynamicConfig_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_UpdateDynamicConfig_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _UpdateDynamicConfigRequest_Read(w wire.Value) (*UpdateDynamicConfigRequest, error) {
+	var v UpdateDynamicConfigRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_UpdateDynamicConfig_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_UpdateDynamicConfig_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_UpdateDynamicConfig_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_UpdateDynamicConfig_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _UpdateDynamicConfigRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_UpdateDynamicConfig_Args
+// struct.
+func (v *AdminService_UpdateDynamicConfig_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_UpdateDynamicConfig_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_UpdateDynamicConfig_Args match the
+// provided AdminService_UpdateDynamicConfig_Args.
+//
+// This function performs a deep comparison.
+func (v *AdminService_UpdateDynamicConfig_Args) Equals(rhs *AdminService_UpdateDynamicConfig_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_UpdateDynamicConfig_Args.
+func (v *AdminService_UpdateDynamicConfig_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *AdminService_UpdateDynamicConfig_Args) GetRequest() (o *UpdateDynamicConfigRequest) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *AdminService_UpdateDynamicConfig_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "UpdateDynamicConfig" for this struct.
+func (v *AdminService_UpdateDynamicConfig_Args) MethodName() string {
+	return "UpdateDynamicConfig"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *AdminService_UpdateDynamicConfig_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// AdminService_UpdateDynamicConfig_Helper provides functions that aid in handling the
+// parameters and return values of the AdminService.UpdateDynamicConfig
+// function.
+var AdminService_UpdateDynamicConfig_Helper = struct {
+	// Args accepts the parameters of UpdateDynamicConfig in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		request *UpdateDynamicConfigRequest,
+	) *AdminService_UpdateDynamicConfig_Args
+
+	// IsException returns true if the given error can be thrown
+	// by UpdateDynamicConfig.
+	//
+	// An error can be thrown by UpdateDynamicConfig only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for UpdateDynamicConfig
+	// given the error returned by it. The provided error may
+	// be nil if UpdateDynamicConfig did not fail.
+	//
+	// This allows mapping errors returned by UpdateDynamicConfig into a
+	// serializable result struct. WrapResponse returns a
+	// non-nil error if the provided error cannot be thrown by
+	// UpdateDynamicConfig
+	//
+	//   err := UpdateDynamicConfig(args)
+	//   result, err := AdminService_UpdateDynamicConfig_Helper.WrapResponse(err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from UpdateDynamicConfig: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(error) (*AdminService_UpdateDynamicConfig_Result, error)
+
+	// UnwrapResponse takes the result struct for UpdateDynamicConfig
+	// and returns the erorr returned by it (if any).
+	//
+	// The error is non-nil only if UpdateDynamicConfig threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   err := AdminService_UpdateDynamicConfig_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_UpdateDynamicConfig_Result) error
+}{}
+
+func init() {
+	AdminService_UpdateDynamicConfig_Helper.Args = func(
+		request *UpdateDynamicConfigRequest,
+	) *AdminService_UpdateDynamicConfig_Args {
+		return &AdminService_UpdateDynamicConfig_Args{
+			Request: request,
+		}
+	}
+
+	AdminService_UpdateDynamicConfig_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		case *shared.InternalServiceError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	AdminService_UpdateDynamicConfig_Helper.WrapResponse = func(err error) (*AdminService_UpdateDynamicConfig_Result, error) {
+		if err == nil {
+			return &AdminService_UpdateDynamicConfig_Result{}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_UpdateDynamicConfig_Result.BadRequestError")
+			}
+			return &AdminService_UpdateDynamicConfig_Result{BadRequestError: e}, nil
+		case *shared.InternalServiceError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_UpdateDynamicConfig_Result.InternalServiceError")
+			}
+			return &AdminService_UpdateDynamicConfig_Result{InternalServiceError: e}, nil
+		}
+
+		return nil, err
+	}
+	AdminService_UpdateDynamicConfig_Helper.UnwrapResponse = func(result *AdminService_UpdateDynamicConfig_Result) (err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+		if result.InternalServiceError != nil {
+			err = result.InternalServiceError
+			return
+		}
+		return
+	}
+
+}
+
+// AdminService_UpdateDynamicConfig_Result represents the result of a AdminService.UpdateDynamicConfig function call.
+//
+// The result of a UpdateDynamicConfig execution is sent and received over the wire as this struct.
+type AdminService_UpdateDynamicConfig_Result struct {
+	BadRequestError      *shared.BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *shared.InternalServiceError `json:"internalServiceError,omitempty"`
+}
+
+// ToWire translates a AdminService_UpdateDynamicConfig_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_UpdateDynamicConfig_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.InternalServiceError != nil {
+		w, err = v.InternalServiceError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+
+	if i > 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_UpdateDynamicConfig_Result should have at most one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a AdminService_UpdateDynamicConfig_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_UpdateDynamicConfig_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_UpdateDynamicConfig_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_UpdateDynamicConfig_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TStruct {
+				v.InternalServiceError, err = _InternalServiceError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+	if count > 1 {
+		return fmt.Errorf("AdminService_UpdateDynamicConfig_Result should have at most one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_UpdateDynamicConfig_Result
+// struct.
+func (v *AdminService_UpdateDynamicConfig_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+	if v.InternalServiceError != nil {
+		fields[i] = fmt.Sprintf("InternalServiceError: %v", v.InternalServiceError)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_UpdateDynamicConfig_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_UpdateDynamicConfig_Result match the
+// provided AdminService_UpdateDynamicConfig_Result.
+//
+// This function performs a deep comparison.
+func (v *AdminService_UpdateDynamicConfig_Result) Equals(rhs *AdminService_UpdateDynamicConfig_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+	if !((v.InternalServiceError == nil && rhs.InternalServiceError == nil) || (v.InternalServiceError != nil && rhs.InternalServiceError != nil && v.InternalServiceError.Equals(rhs.InternalServiceError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_UpdateDynamicConfig_Result.
+func (v *AdminService_UpdateDynamicConfig_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	if v.InternalServiceError != nil {
+		err = multierr.Append(err, enc.AddObject("internalServiceError", v.InternalServiceError))
+	}
+	return err
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_UpdateDynamicConfig_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *AdminService_UpdateDynamicConfig_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// GetInternalServiceError returns the value of InternalServiceError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_UpdateDynamicConfig_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+	if v != nil && v.InternalServiceError != nil {
+		return v.InternalServiceError
+	}
+
+	return
+}
+
+// IsSetInternalServiceError returns true if InternalServiceError is not nil.
+func (v *AdminService_UpdateDynamicConfig_Result) IsSetInternalServiceError() bool {
+	return v != nil && v.InternalServiceError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "UpdateDynamicConfig" for this struct.
+func (v *AdminService_UpdateDynamicConfig_Result) MethodName() string {
+	return "UpdateDynamicConfig"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *AdminService_UpdateDynamicConfig_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }

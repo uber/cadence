@@ -392,6 +392,39 @@ func (mr *_MockClientRecorder) GetDomainReplicationMessages(
 	return mr.mock.ctrl.RecordCall(mr.mock, "GetDomainReplicationMessages", args...)
 }
 
+// GetDynamicConfig responds to a GetDynamicConfig call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().GetDynamicConfig(gomock.Any(), ...).Return(...)
+// 	... := client.GetDynamicConfig(...)
+func (m *MockClient) GetDynamicConfig(
+	ctx context.Context,
+	_Request *admin.GetDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.GetDynamicConfigResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "GetDynamicConfig", args...)
+	success, _ = ret[i].(*admin.GetDynamicConfigResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) GetDynamicConfig(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "GetDynamicConfig", args...)
+}
+
 // GetReplicationMessages responds to a GetReplicationMessages call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -456,6 +489,39 @@ func (mr *_MockClientRecorder) GetWorkflowExecutionRawHistoryV2(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _GetRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "GetWorkflowExecutionRawHistoryV2", args...)
+}
+
+// ListDynamicConfig responds to a ListDynamicConfig call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().ListDynamicConfig(gomock.Any(), ...).Return(...)
+// 	... := client.ListDynamicConfig(...)
+func (m *MockClient) ListDynamicConfig(
+	ctx context.Context,
+	_Request *admin.ListDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.ListDynamicConfigResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "ListDynamicConfig", args...)
+	success, _ = ret[i].(*admin.ListDynamicConfigResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) ListDynamicConfig(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "ListDynamicConfig", args...)
 }
 
 // MergeDLQMessages responds to a MergeDLQMessages call based on the mock expectations. This
@@ -708,4 +774,66 @@ func (mr *_MockClientRecorder) ResetQueue(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _Request}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "ResetQueue", args...)
+}
+
+// RestoreDynamicConfig responds to a RestoreDynamicConfig call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().RestoreDynamicConfig(gomock.Any(), ...).Return(...)
+// 	... := client.RestoreDynamicConfig(...)
+func (m *MockClient) RestoreDynamicConfig(
+	ctx context.Context,
+	_Request *admin.RestoreDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "RestoreDynamicConfig", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) RestoreDynamicConfig(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "RestoreDynamicConfig", args...)
+}
+
+// UpdateDynamicConfig responds to a UpdateDynamicConfig call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().UpdateDynamicConfig(gomock.Any(), ...).Return(...)
+// 	... := client.UpdateDynamicConfig(...)
+func (m *MockClient) UpdateDynamicConfig(
+	ctx context.Context,
+	_Request *admin.UpdateDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "UpdateDynamicConfig", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) UpdateDynamicConfig(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "UpdateDynamicConfig", args...)
 }
