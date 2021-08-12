@@ -1866,6 +1866,8 @@ const (
 	DecisionAttemptTimer
 	StaleMutableStateCounter
 	DataInconsistentCounter
+	TimerResurrectionCounter
+	ActivityResurrectionCounter
 	AutoResetPointsLimitExceededCounter
 	AutoResetPointCorruptionCounter
 	ConcurrencyUpdateFailureCounter
@@ -2369,6 +2371,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DecisionAttemptTimer:                              {metricName: "decision_attempt", metricType: Timer},
 		StaleMutableStateCounter:                          {metricName: "stale_mutable_state", metricType: Counter},
 		DataInconsistentCounter:                           {metricName: "data_inconsistent", metricType: Counter},
+		TimerResurrectionCounter:                          {metricName: "timer_resurrection", metricType: Counter},
+		ActivityResurrectionCounter:                       {metricName: "activity_resurrection", metricType: Counter},
 		AutoResetPointsLimitExceededCounter:               {metricName: "auto_reset_points_exceed_limit", metricType: Counter},
 		AutoResetPointCorruptionCounter:                   {metricName: "auto_reset_point_corruption", metricType: Counter},
 		ConcurrencyUpdateFailureCounter:                   {metricName: "concurrency_update_failure", metricType: Counter},

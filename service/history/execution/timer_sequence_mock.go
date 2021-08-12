@@ -57,11 +57,12 @@ func (m *MockTimerSequence) EXPECT() *MockTimerSequenceMockRecorder {
 }
 
 // IsExpired mocks base method
-func (m *MockTimerSequence) IsExpired(referenceTime time.Time, TimerSequenceID TimerSequenceID) bool {
+func (m *MockTimerSequence) IsExpired(referenceTime time.Time, TimerSequenceID TimerSequenceID) (time.Duration, bool) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsExpired", referenceTime, TimerSequenceID)
-	ret0, _ := ret[0].(bool)
-	return ret0
+	ret0, _ := ret[0].(time.Duration)
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
 }
 
 // IsExpired indicates an expected call of IsExpired
