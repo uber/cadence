@@ -288,6 +288,10 @@ const (
 	PersistenceGetDLQAckLevelScope
 	// PersistenceGetDLQSizeScope tracks GetDLQSize calls made by service to persistence layer
 	PersistenceGetDLQSizeScope
+	// PersistenceFetchDynamicConfigScope tracks FetchDynamicConfig calls made by service to persistence layer
+	PersistenceFetchDynamicConfigScope
+	// PersistenceUpdateDynamicConfigScope tracks UpdateDynamicConfig calls made by service to persistence layer
+	PersistenceUpdateDynamicConfigScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientDescribeHistoryHostScope tracks RPC calls to history service
@@ -512,6 +516,14 @@ const (
 	AdminClientResendReplicationTasksScope
 	// AdminClientGetCrossClusterTasksScope tracks RPC calls to Admin service
 	AdminClientGetCrossClusterTasksScope
+	// AdminClientGetDynamicConfigScope tracks RPC calls to admin service
+	AdminClientGetDynamicConfigScope
+	// AdminClientUpdateDynamicConfigScope tracks RPC calls to admin service
+	AdminClientUpdateDynamicConfigScope
+	// AdminClientRestoreDynamicConfigScope tracks RPC calls to admin service
+	AdminClientRestoreDynamicConfigScope
+	// AdminClientListDynamicConfigScope tracks RPC calls to admin service
+	AdminClientListDynamicConfigScope
 	// DCRedirectionDeprecateDomainScope tracks RPC calls for dc redirection
 	DCRedirectionDeprecateDomainScope
 	// DCRedirectionDescribeDomainScope tracks RPC calls for dc redirection
@@ -740,6 +752,14 @@ const (
 	AdminDescribeShardDistributionScope
 	// AdminGetCrossClusterTasksScope is the metric scope for admin.GetCrossClusterTasks
 	AdminGetCrossClusterTasksScope
+	// AdminGetDynamicConfigScope is the metric scope for admin.GetDynamicConfig
+	AdminGetDynamicConfigScope
+	// AdminUpdateDynamicConfigScope is the metric scope for admin.UpdateDynamicConfig
+	AdminUpdateDynamicConfigScope
+	// AdminRestoreDynamicConfigScope is the metric scope for admin.RestoreDynamicConfig
+	AdminRestoreDynamicConfigScope
+	// AdminListDynamicConfigScope is the metric scope for admin.ListDynamicConfig
+	AdminListDynamicConfigScope
 
 	NumAdminScopes
 )
@@ -1219,6 +1239,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceUpdateDLQAckLevelScope:                        {operation: "UpdateDLQAckLevel"},
 		PersistenceGetDLQAckLevelScope:                           {operation: "GetDLQAckLevel"},
 		PersistenceGetDLQSizeScope:                               {operation: "GetDLQSize"},
+		PersistenceFetchDynamicConfigScope:                       {operation: "FetchDynamicConfig"},
+		PersistenceUpdateDynamicConfigScope:                      {operation: "UpdateDynamicConfig"},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 
@@ -1334,6 +1356,10 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminClientPurgeDLQMessagesScope:                      {operation: "AdminClientPurgeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientMergeDLQMessagesScope:                      {operation: "AdminClientMergeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientGetCrossClusterTasksScope:                  {operation: "AdminClientGetCrossClusterTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetDynamicConfigScope:                      {operation: "AdminClientGetDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientUpdateDynamicConfigScope:                   {operation: "AdminClientUpdateDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientRestoreDynamicConfigScope:                  {operation: "AdminClientRestoreDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientListDynamicConfigScope:                     {operation: "AdminClientListDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		DCRedirectionDeprecateDomainScope:                     {operation: "DCRedirectionDeprecateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionDescribeDomainScope:                      {operation: "DCRedirectionDescribeDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionDescribeTaskListScope:                    {operation: "DCRedirectionDescribeTaskList", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
@@ -1441,6 +1467,10 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminRefreshWorkflowTasksScope:             {operation: "RefreshWorkflowTasks"},
 		AdminResendReplicationTasksScope:           {operation: "ResendReplicationTasks"},
 		AdminGetCrossClusterTasksScope:             {operation: "AdminGetCrossClusterTasksScope"},
+		AdminGetDynamicConfigScope:                 {operation: "AdminGetDynamicConfigScope"},
+		AdminUpdateDynamicConfigScope:              {operation: "AdminUpdateDynamicConfigScope"},
+		AdminRestoreDynamicConfigScope:             {operation: "AdminRestoreDynamicConfigScope"},
+		AdminListDynamicConfigScope:                {operation: "AdminListDynamicConfigScope"},
 
 		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},
 		FrontendPollForDecisionTaskScope:                {operation: "PollForDecisionTask"},

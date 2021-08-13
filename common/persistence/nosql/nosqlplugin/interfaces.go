@@ -68,6 +68,7 @@ type (
 		VisibilityCRUD
 		TaskCRUD
 		WorkflowCRUD
+		ConfigStoreCRUD
 	}
 
 	// ClientErrorChecker checks for common nosql errors on client
@@ -186,7 +187,6 @@ type (
 
 	/**
 	* ShardCRUD is for shard storage of workflow execution.
-
 	* Recommendation: use one table if database support batch conditional update on multiple tables, otherwise combine with WorkflowCRUD (likeCassandra)
 	*
 	* Significant columns:
@@ -507,5 +507,18 @@ type (
 		DeleteReplicationDLQTask(ctx context.Context, shardID int, sourceCluster string, taskID int64) error
 		// delete a range of replication DLQ tasks
 		RangeDeleteReplicationDLQTasks(ctx context.Context, shardID int, sourceCluster string, exclusiveBeginTaskID, inclusiveEndTaskID int64) error
+	}
+
+	/***
+	* configStoreCRUD is for storing dynamic configuration parameters
+	*
+	* Recommendation: one table
+	*
+	* Significant columns:
+	* domain: partition key(row_type), range key(version)
+	 */
+	ConfigStoreCRUD interface {
+		InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error
+		SelectLatestConfig(ctx context.Context, rowType int) (*persistence.InternalConfigStoreEntry, error)
 	}
 )

@@ -1,0 +1,8 @@
+{
+  "CurrVersion": "0.32",
+  "MinCompatibleVersion": "0.32",
+  "Description": "Added cluster_config table for config store support",
+  "SchemaUpdateCqlFiles": [
+    "config_store.cql"
+  ]
+}

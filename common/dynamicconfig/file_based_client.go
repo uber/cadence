@@ -32,6 +32,7 @@ import (
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/types"
 )
 
 var _ Client = (*fileBasedClient)(nil)
@@ -186,7 +187,7 @@ func (fc *fileBasedClient) GetDurationValue(
 }
 
 func (fc *fileBasedClient) UpdateValue(name Key, value interface{}) error {
-	keyName := keys[name]
+	keyName := Keys[name]
 	currentValues := make(map[string][]*constrainedValue)
 
 	confContent, err := ioutil.ReadFile(fc.config.Filepath)
@@ -210,6 +211,14 @@ func (fc *fileBasedClient) UpdateValue(name Key, value interface{}) error {
 	}
 
 	return fc.storeValues(currentValues)
+}
+
+func (fc *fileBasedClient) RestoreValue(name Key, filters map[Filter]interface{}) error {
+	return errors.New("not supported for file based client")
+}
+
+func (fc *fileBasedClient) ListValue(name Key) ([]*types.DynamicConfigEntry, error) {
+	return nil, errors.New("not supported for file based client")
 }
 
 func (fc *fileBasedClient) update() error {
@@ -260,7 +269,7 @@ func (fc *fileBasedClient) storeValues(newValues map[string][]*constrainedValue)
 }
 
 func (fc *fileBasedClient) getValueWithFilters(key Key, filters map[Filter]interface{}, defaultValue interface{}) (interface{}, error) {
-	keyName := keys[key]
+	keyName := Keys[key]
 	values := fc.values.Load().(map[string][]*constrainedValue)
 	found := false
 	for _, constrainedValue := range values[keyName] {
@@ -275,7 +284,7 @@ func (fc *fileBasedClient) getValueWithFilters(key Key, filters map[Filter]inter
 		}
 	}
 	if !found {
-		return defaultValue, notFoundError
+		return defaultValue, NotFoundError
 	}
 	return defaultValue, nil
 }
@@ -287,7 +296,7 @@ func match(v *constrainedValue, filters map[Filter]interface{}) bool {
 	}
 
 	for constrain, constrainedValue := range v.Constraints {
-		constrainKey := parseFilter(constrain)
+		constrainKey := ParseFilter(constrain)
 		if filters[constrainKey] == nil || filters[constrainKey] != constrainedValue {
 			return false
 		}

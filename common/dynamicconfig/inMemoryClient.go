@@ -21,8 +21,11 @@
 package dynamicconfig
 
 import (
+	"errors"
 	"sync"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 )
 
 type inMemoryClient struct {
@@ -52,7 +55,7 @@ func (mc *inMemoryClient) GetValue(key Key, defaultValue interface{}) (interface
 	if val, ok := mc.globalValues[key]; ok {
 		return val, nil
 	}
-	return defaultValue, notFoundError
+	return defaultValue, NotFoundError
 }
 
 func (mc *inMemoryClient) GetValueWithFilters(
@@ -71,7 +74,7 @@ func (mc *inMemoryClient) GetIntValue(name Key, filters map[Filter]interface{}, 
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(int), nil
 	}
-	return defaultValue, notFoundError
+	return defaultValue, NotFoundError
 }
 
 func (mc *inMemoryClient) GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
@@ -81,7 +84,7 @@ func (mc *inMemoryClient) GetFloatValue(name Key, filters map[Filter]interface{}
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(float64), nil
 	}
-	return defaultValue, notFoundError
+	return defaultValue, NotFoundError
 }
 
 func (mc *inMemoryClient) GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
@@ -91,7 +94,7 @@ func (mc *inMemoryClient) GetBoolValue(name Key, filters map[Filter]interface{},
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(bool), nil
 	}
-	return defaultValue, notFoundError
+	return defaultValue, NotFoundError
 }
 
 func (mc *inMemoryClient) GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error) {
@@ -101,7 +104,7 @@ func (mc *inMemoryClient) GetStringValue(name Key, filters map[Filter]interface{
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(string), nil
 	}
-	return defaultValue, notFoundError
+	return defaultValue, NotFoundError
 }
 
 func (mc *inMemoryClient) GetMapValue(
@@ -113,7 +116,7 @@ func (mc *inMemoryClient) GetMapValue(
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(map[string]interface{}), nil
 	}
-	return defaultValue, notFoundError
+	return defaultValue, NotFoundError
 }
 
 func (mc *inMemoryClient) GetDurationValue(
@@ -125,10 +128,18 @@ func (mc *inMemoryClient) GetDurationValue(
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(time.Duration), nil
 	}
-	return defaultValue, notFoundError
+	return defaultValue, NotFoundError
 }
 
 func (mc *inMemoryClient) UpdateValue(key Key, value interface{}) error {
 	mc.SetValue(key, value)
 	return nil
+}
+
+func (mc *inMemoryClient) RestoreValue(name Key, filters map[Filter]interface{}) error {
+	return errors.New("not supported for file based client")
+}
+
+func (mc *inMemoryClient) ListValue(name Key) ([]*types.DynamicConfigEntry, error) {
+	return nil, errors.New("not supported for file based client")
 }

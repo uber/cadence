@@ -32,6 +32,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
+	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
 )
 
 type (
@@ -57,7 +58,12 @@ type (
 		PublicClient PublicClient `yaml:"publicClient"`
 		// DynamicConfigClient is the config for setting up the file based dynamic config client
 		// Filepath would be relative to the root directory when the path wasn't absolute.
+		// Included for backwards compatibility, please transition to DynamicConfig
+		// If both are specified, DynamicConig will be used.
 		DynamicConfigClient dynamicconfig.FileBasedClientConfig `yaml:"dynamicConfigClient"`
+		// DynamicConfig is the config for setting up all dynamic config clients
+		// Allows for changes in client without needing code change
+		DynamicConfig DynamicConfig `yaml:"dynamicconfig"`
 		// DomainDefaults is the default config for every domain
 		DomainDefaults DomainDefaults `yaml:"domainDefaults"`
 		// Blobstore is the config for setting up blobstore
@@ -69,6 +75,12 @@ type (
 	Authorization struct {
 		OAuthAuthorizer OAuthAuthorizer `yaml:"oauthAuthorizer"`
 		NoopAuthorizer  NoopAuthorizer  `yaml:"noopAuthorizer"`
+	}
+
+	DynamicConfig struct {
+		Client      string                              `yaml:"client"`
+		ConfigStore c.ClientConfig                      `yaml:"configstore"`
+		FileBased   dynamicconfig.FileBasedClientConfig `yaml:"filebased"`
 	}
 
 	NoopAuthorizer struct {
