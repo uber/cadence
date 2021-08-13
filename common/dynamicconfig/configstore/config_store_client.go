@@ -82,7 +82,7 @@ func NewConfigStoreClient(clientCfg *csc.ClientConfig, persistenceCfg *config.Pe
 	if persistenceCfg == nil {
 		return nil, errors.New("persistence cfg is nil")
 	} else if persistenceCfg.DefaultStore != "cass-default" {
-		return nil, errors.New("persistence cfg default store is not Cassandra")
+		return nil, fmt.Errorf("persistence cfg default store is not Cassandra")
 	} else if store, ok := persistenceCfg.DataStores[persistenceCfg.DefaultStore]; !ok {
 		return nil, errors.New("persistence cfg datastores missing Cassandra")
 	} else if store.NoSQL == nil {

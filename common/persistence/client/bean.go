@@ -25,6 +25,7 @@ package client
 import (
 	"sync"
 
+	cconfig "github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
@@ -114,12 +115,12 @@ func NewBeanFromFactory(
 	}
 
 	var configStoreMgr persistence.ConfigStoreManager
-	if params.PersistenceConfig.DefaultStore != "cass-default" {
-		configStoreMgr = nil
-	} else {
-		configStoreMgr, err = factory.NewConfigStoreManager()
-		if err != nil {
-			return nil, err
+	if datastore, ok := params.PersistenceConfig.DataStores[params.PersistenceConfig.DefaultStore]; ok {
+		if datastore.NoSQL != nil && datastore.NoSQL.PluginName == cconfig.StoreTypeCassandra {
+			configStoreMgr, err = factory.NewConfigStoreManager()
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

@@ -30,7 +30,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/config"
+	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -67,6 +68,10 @@ func (s *ConfigStorePersistenceSuite) TearDownSuite() {
 
 //Tests if error is returned when trying to fetch dc values from empty table
 func (s *ConfigStorePersistenceSuite) TestFetchFromEmptyTable() {
+	if !validDatabaseCheck(s.Config()) {
+		s.T().Skip()
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -79,6 +84,10 @@ func (s *ConfigStorePersistenceSuite) TestFetchFromEmptyTable() {
 }
 
 func (s *ConfigStorePersistenceSuite) TestUpdateSimpleSuccess() {
+	if !validDatabaseCheck(s.Config()) {
+		s.T().Skip()
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -97,6 +106,10 @@ func (s *ConfigStorePersistenceSuite) TestUpdateSimpleSuccess() {
 }
 
 func (s *ConfigStorePersistenceSuite) TestUpdateVersionCollisionFailure() {
+	if !validDatabaseCheck(s.Config()) {
+		s.T().Skip()
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -108,11 +121,15 @@ func (s *ConfigStorePersistenceSuite) TestUpdateVersionCollisionFailure() {
 	s.Nil(err)
 
 	err = s.UpdateDynamicConfig(ctx, snapshot)
-	var condErr *persistence.ConditionFailedError
+	var condErr *p.ConditionFailedError
 	s.True(errors.As(err, &condErr))
 }
 
 func (s *ConfigStorePersistenceSuite) TestUpdateIncrementalVersionSuccess() {
+	if !validDatabaseCheck(s.Config()) {
+		s.T().Skip()
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -128,6 +145,10 @@ func (s *ConfigStorePersistenceSuite) TestUpdateIncrementalVersionSuccess() {
 }
 
 func (s *ConfigStorePersistenceSuite) TestFetchLatestVersionSuccess() {
+	if !validDatabaseCheck(s.Config()) {
+		s.T().Skip()
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -147,7 +168,7 @@ func (s *ConfigStorePersistenceSuite) TestFetchLatestVersionSuccess() {
 	s.Equal(int64(3), snapshot.Version)
 }
 
-func generateRandomSnapshot(version int64) *persistence.DynamicConfigSnapshot {
+func generateRandomSnapshot(version int64) *p.DynamicConfigSnapshot {
 	data, _ := json.Marshal("test_value")
 
 	values := make([]*types.DynamicConfigValue, 1)
@@ -165,11 +186,35 @@ func generateRandomSnapshot(version int64) *persistence.DynamicConfigSnapshot {
 		Values: values,
 	}
 
-	return &persistence.DynamicConfigSnapshot{
+	return &p.DynamicConfigSnapshot{
 		Version: version,
 		Values: &types.DynamicConfigBlob{
 			SchemaVersion: 1,
 			Entries:       entries,
 		},
 	}
+}
+
+func validDatabaseCheck(cfg config.Persistence) bool {
+	if datastore, ok := cfg.DataStores[cfg.DefaultStore]; ok {
+		if datastore.NoSQL != nil && datastore.NoSQL.PluginName == config.StoreTypeCassandra {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *ConfigStorePersistenceSuite) FetchDynamicConfig(ctx context.Context) (*p.DynamicConfigSnapshot, error) {
+	response, err := s.ConfigStoreManager.FetchDynamicConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if response == nil {
+		return nil, errors.New("nil FetchDynamicConfig response")
+	}
+	return response.Snapshot, nil
+}
+
+func (s *ConfigStorePersistenceSuite) UpdateDynamicConfig(ctx context.Context, snapshot *p.DynamicConfigSnapshot) error {
+	return s.ConfigStoreManager.UpdateDynamicConfig(ctx, &p.UpdateDynamicConfigRequest{Snapshot: snapshot})
 }
