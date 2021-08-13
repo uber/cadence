@@ -1369,6 +1369,7 @@ func FromCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes(t *ty
 		TargetDomainId:          t.TargetDomainID,
 		TargetWorkflowExecution: FromWorkflowRunPair(t.TargetWorkflowID, t.TargetRunID),
 		InitiatedEventId:        t.InitiatedEventID,
+		CompletionEvent:         FromHistoryEvent(t.CompletionEvent),
 	}
 }
 
@@ -1382,6 +1383,7 @@ func ToCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes(t *shar
 		TargetWorkflowID: ToWorkflowID(t.TargetWorkflowExecution),
 		TargetRunID:      ToRunID(t.TargetWorkflowExecution),
 		InitiatedEventID: t.InitiatedEventId,
+		CompletionEvent:  ToHistoryEvent(t.CompletionEvent),
 	}
 }
 

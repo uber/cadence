@@ -10653,10 +10653,11 @@ type CrossClusterSignalExecutionResponseAttributes struct {
 }
 
 type CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes struct {
-	TargetDomainID   string `json:"targetDomainID,omitempty"`
-	TargetWorkflowID string `json:"targetWorkflowID,omitempty"`
-	TargetRunID      string `json:"targetRunID,omitempty"`
-	InitiatedEventID int64  `json:"initiatedEventID,omitempty"`
+	TargetDomainID   string        `json:"targetDomainID,omitempty"`
+	TargetWorkflowID string        `json:"targetWorkflowID,omitempty"`
+	TargetRunID      string        `json:"targetRunID,omitempty"`
+	InitiatedEventID int64         `json:"initiatedEventID,omitempty"`
+	CompletionEvent  *HistoryEvent `json:"completionEvent,omitempty"`
 }
 
 // GetTargetDomainID is an internal getter (TBD...)

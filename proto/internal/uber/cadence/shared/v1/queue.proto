@@ -113,6 +113,7 @@ message CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes {
   string target_domain_id = 1;
   api.v1.WorkflowExecution target_workflow_execution = 2;
   int64 initiated_event_id = 3;
+  api.v1.HistoryEvent completion_event = 4;
 }
 
 message CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes {
