@@ -21,13 +21,12 @@
 package cli
 
 import (
-	"github.com/urfave/cli"
-)
+	"fmt"
 
-const (
-	// Version is the controlled version string. It should be updated every time
-	// before we release a new version.
-	Version = "0.19.0"
+	"github.com/urfave/cli"
+
+	"github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/metrics"
 )
 
 // SetFactory is used to set the ClientFactory global
@@ -37,10 +36,16 @@ func SetFactory(factory ClientFactory) {
 
 // NewCliApp instantiates a new instance of the CLI application.
 func NewCliApp() *cli.App {
+	version := fmt.Sprintf("CLI feature version: %v \n"+
+		"   Release version: %v\n"+
+		"   Build commit: %v\n"+
+		"   Note: CLI feature version is for compatibility checking between server and CLI if enabled feature checking. Server is always backward compatible to older CLI versions, but not accepting newer than it can support.",
+		client.SupportedCLIVersion, metrics.ReleaseVersion, metrics.Revision)
+
 	app := cli.NewApp()
 	app.Name = "cadence"
 	app.Usage = "A command-line tool for cadence users"
-	app.Version = Version
+	app.Version = version
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:   FlagAddressWithAlias,
@@ -61,8 +66,13 @@ func NewCliApp() *cli.App {
 		},
 		cli.StringFlag{
 			Name:   FlagJWT,
-			Usage:  "optional JWT for authorization",
+			Usage:  "optional JWT for authorization. Either this or --jwt-private-key is needed for jwt authorization",
 			EnvVar: "CADENCE_CLI_JWT",
+		},
+		cli.StringFlag{
+			Name:   FlagJWTPrivateKeyWithAlias,
+			Usage:  "optional private key path to create JWT. Either this or --jwt is needed for jwt authorization. --jwt flag has priority over this one if both provided",
+			EnvVar: "CADENCE_CLI_JWT_PRIVATE_KEY",
 		},
 	}
 	app.Commands = []cli.Command{

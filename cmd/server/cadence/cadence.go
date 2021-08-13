@@ -21,6 +21,7 @@
 package cadence
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -31,6 +32,7 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/tools/cassandra"
 	"github.com/uber/cadence/tools/sql"
@@ -162,12 +164,19 @@ func constructPathIfNeed(dir string, file string) string {
 }
 
 // BuildCLI is the main entry point for the cadence server
-func BuildCLI(version string, revision string) *cli.App {
+func BuildCLI(releaseVersion string, gitRevision string) *cli.App {
+	version := fmt.Sprintf(" Release version: %v \n"+
+		"   Build commit: %v\n"+
+		"   Max Support CLI feature version: %v \n"+
+		"   Max Support GoSDK feature version: %v \n"+
+		"   Max Support JavaSDK feature version: %v \n"+
+		"   Note:  Feature version is for compatibility checking between server and clients if enabled feature checking. Server is always backward compatible to older CLI versions, but not accepting newer than it can support.",
+		releaseVersion, gitRevision, client.SupportedCLIVersion, client.SupportedGoSDKVersion, client.SupportedJavaSDKVersion)
 
 	app := cli.NewApp()
 	app.Name = "cadence"
 	app.Usage = "Cadence server"
-	app.Version = version + "-" + revision
+	app.Version = version
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{

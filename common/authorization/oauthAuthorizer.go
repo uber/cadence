@@ -24,12 +24,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/cristalhq/jwt/v3"
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -37,25 +39,30 @@ import (
 
 type oauthAuthority struct {
 	authorizationCfg config.OAuthAuthorizer
+	domainCache      cache.DomainCache
 	log              log.Logger
 }
 
-type jwtClaims struct {
-	Sub        string
-	Name       string
-	Permission string
-	Domain     string
-	Iat        int64
-	TTL        int64
+type JWTClaims struct {
+	Sub    string
+	Name   string
+	Groups string // separated by space
+	Admin  bool
+	Iat    int64
+	TTL    int64
 }
+
+const groupSeparator = " "
 
 // NewOAuthAuthorizer creates a oauth authority
 func NewOAuthAuthorizer(
 	authorizationCfg config.OAuthAuthorizer,
 	log log.Logger,
+	domainCache cache.DomainCache,
 ) Authorizer {
 	return &oauthAuthority{
 		authorizationCfg: authorizationCfg,
+		domainCache:      domainCache,
 		log:              log,
 	}
 }
@@ -76,7 +83,20 @@ func (a *oauthAuthority) Authorize(
 		a.log.Debug("request is not authorized", tag.Error(err))
 		return Result{Decision: DecisionDeny}, nil
 	}
-	err = a.validateClaims(claims, attributes)
+	err = a.validateTTL(claims)
+	if err != nil {
+		a.log.Debug("request is not authorized", tag.Error(err))
+		return Result{Decision: DecisionDeny}, nil
+	}
+	if claims.Admin {
+		return Result{Decision: DecisionAllow}, nil
+	}
+	domain, err := a.domainCache.GetDomain(attributes.DomainName)
+	if err != nil {
+		return Result{Decision: DecisionDeny}, err
+	}
+
+	err = a.validatePermission(claims, attributes, domain.GetInfo().Data)
 	if err != nil {
 		a.log.Debug("request is not authorized", tag.Error(err))
 		return Result{Decision: DecisionDeny}, nil
@@ -97,29 +117,46 @@ func (a *oauthAuthority) getVerifier() (jwt.Verifier, error) {
 	return verifier, nil
 }
 
-func (a *oauthAuthority) parseToken(tokenStr string, verifier jwt.Verifier) (*jwtClaims, error) {
+func (a *oauthAuthority) parseToken(tokenStr string, verifier jwt.Verifier) (*JWTClaims, error) {
 	token, verifyErr := jwt.ParseAndVerifyString(tokenStr, verifier)
 	if verifyErr != nil {
 		return nil, verifyErr
 	}
-	var claims jwtClaims
+	var claims JWTClaims
 	_ = json.Unmarshal(token.RawClaims(), &claims)
 	return &claims, nil
 }
 
-func (a *oauthAuthority) validateClaims(claims *jwtClaims, attributes *Attributes) error {
+func (a *oauthAuthority) validateTTL(claims *JWTClaims) error {
 	if claims.TTL > a.authorizationCfg.MaxJwtTTL {
 		return fmt.Errorf("TTL in token is larger than MaxTTL allowed")
 	}
 	if claims.Iat+claims.TTL < time.Now().Unix() {
 		return fmt.Errorf("JWT has expired")
 	}
-	if claims.Domain != attributes.DomainName {
-		return fmt.Errorf("domain in token doesn't match with current domain")
-	}
-	if NewPermission(claims.Permission) < attributes.Permission {
-		return fmt.Errorf("token doesn't have the right permission")
-	}
-
 	return nil
+}
+
+func (a *oauthAuthority) validatePermission(claims *JWTClaims, attributes *Attributes, data map[string]string) error {
+	groups := ""
+	switch attributes.Permission {
+	case PermissionRead:
+		groups = data[common.DomainDataKeyForReadGroups] + groupSeparator + data[common.DomainDataKeyForWriteGroups]
+	case PermissionWrite:
+		groups = data[common.DomainDataKeyForWriteGroups]
+	default:
+		return fmt.Errorf("token doesn't have permission for %v API", attributes.Permission)
+	}
+	// groups are separated by space
+	allowedGroups := strings.Split(groups, groupSeparator)    // groups that allowed by domain configuration(in domainData)
+	jwtGroups := strings.Split(claims.Groups, groupSeparator) // groups that the request has associated with
+
+	for _, group1 := range allowedGroups {
+		for _, group2 := range jwtGroups {
+			if group1 == group2 {
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("token doesn't have the right permission, jwt groups: %v, allowed groups: %v", jwtGroups, allowedGroups)
 }

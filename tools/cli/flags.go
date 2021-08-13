@@ -277,9 +277,14 @@ const (
 	DelayStartSeconds                     = "delay_start_seconds"
 	FlagConnectionAttributes              = "conn_attrs"
 	FlagJWT                               = "jwt"
+<<<<<<< HEAD
 	FlagDynamicConfigName                 = "dynamic_config_name"
 	FlagDynamicConfigFilter               = "dynamic_config_filter"
 	FlagDynamicConfigValue                = "dynamic_config_value"
+=======
+	FlagJWTPrivateKey                     = "jwt-private-key"
+	FlagJWTPrivateKeyWithAlias            = FlagJWTPrivateKey + ", jwt-pk"
+>>>>>>> origin/master
 )
 
 var flagsForExecution = []cli.Flag{

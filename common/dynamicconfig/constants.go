@@ -1778,7 +1778,7 @@ const (
 	// EnableBatcher is decides whether start batcher in our worker
 	// KeyName: worker.enableBatcher
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: TRUE
 	// Allowed filters: N/A
 	EnableBatcher
 	// EnableParentClosePolicyWorker is decides whether or not enable system workers for processing parent close policy task
@@ -1796,13 +1796,13 @@ const (
 	// EnableFailoverManager is indicates if failover manager is enabled
 	// KeyName: system.enableFailoverManager
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: TRUE
 	// Allowed filters: N/A
 	EnableFailoverManager
 	// EnableWorkflowShadower indicates if workflow shadower is enabled
 	// KeyName: system.enableWorkflowShadower
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: TRUE
 	// Allowed filters: N/A
 	EnableWorkflowShadower
 	// ConcreteExecutionFixerDomainAllow is which domains are allowed to be fixed by concrete fixer workflow

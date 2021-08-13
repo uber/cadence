@@ -22,12 +22,9 @@ package common
 
 import (
 	"context"
-	"crypto/rsa"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"math"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -328,6 +325,31 @@ func IsValidContext(ctx context.Context) error {
 		return context.DeadlineExceeded
 	}
 	return nil
+}
+
+// CreateChildContext creates a child context which shorted context timeout
+// from the given parent context
+// tailroom must be in range [0, 1] and
+// (1-tailroom) * parent timeout will be the new child context timeout
+func CreateChildContext(
+	parent context.Context,
+	tailroom float64,
+) (context.Context, context.CancelFunc) {
+	if parent == nil {
+		return nil, func() {}
+	}
+	if parent.Err() != nil {
+		return parent, func() {}
+	}
+
+	now := time.Now()
+	deadline, ok := parent.Deadline()
+	if !ok || deadline.Before(now) {
+		return parent, func() {}
+	}
+
+	newDeadline := now.Add(time.Duration(math.Ceil(float64(deadline.Sub(now)) * (1.0 - tailroom))))
+	return context.WithDeadline(parent, newDeadline)
 }
 
 // GenerateRandomString is used for generate test string
@@ -932,20 +954,16 @@ func SleepWithMinDuration(desired time.Duration, available time.Duration) time.D
 	return available - d
 }
 
-func LoadRSAPublicKey(path string) (*rsa.PublicKey, error) {
-	key, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("invalid public key path %s", path)
+// ConvertErrToGetTaskFailedCause converts error to GetTaskFailedCause
+func ConvertErrToGetTaskFailedCause(err error) types.GetTaskFailedCause {
+	if IsContextTimeoutError(err) {
+		return types.GetTaskFailedCauseTimeout
 	}
-	block, _ := pem.Decode(key)
-	if block == nil || block.Type != "PUBLIC KEY" {
-		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
+	if IsServiceBusyError(err) {
+		return types.GetTaskFailedCauseServiceBusy
 	}
-
-	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse DER encoded public key: " + err.Error())
+	if _, ok := err.(*types.ShardOwnershipLostError); ok {
+		return types.GetTaskFailedCauseShardOwnershipLost
 	}
-	publicKey := pub.(*rsa.PublicKey)
-	return publicKey, nil
+	return types.GetTaskFailedCauseUncategorized
 }

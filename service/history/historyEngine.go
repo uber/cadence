@@ -2670,6 +2670,38 @@ func (e *historyEngineImpl) NotifyNewTimerTasks(
 	}
 }
 
+func (e *historyEngineImpl) NotifyNewCrossClusterTasks(
+	executionInfo *persistence.WorkflowExecutionInfo,
+	tasks []persistence.Task,
+) {
+	if e.crossClusterProcessor == nil {
+		// TODO: remove this check when crossClusterProcessor is wired up and initialized
+		return
+	}
+
+	taskByTargetCluster := make(map[string][]persistence.Task)
+	for _, task := range tasks {
+		// TODO: consider defining a new interface in persistence package
+		// for cross cluster tasks and add a method for returning the target cluster
+		var targetCluster string
+		switch crossClusterTask := task.(type) {
+		case *persistence.CrossClusterStartChildExecutionTask:
+			targetCluster = crossClusterTask.TargetCluster
+		case *persistence.CrossClusterCancelExecutionTask:
+			targetCluster = crossClusterTask.TargetCluster
+		case *persistence.CrossClusterSignalExecutionTask:
+			targetCluster = crossClusterTask.TargetCluster
+		default:
+			panic("encountered unknown cross cluster task type")
+		}
+		taskByTargetCluster[targetCluster] = append(taskByTargetCluster[targetCluster], task)
+	}
+
+	for targetCluster, tasks := range taskByTargetCluster {
+		e.crossClusterProcessor.NotifyNewTask(targetCluster, executionInfo, tasks)
+	}
+}
+
 func (e *historyEngineImpl) ResetTransferQueue(
 	ctx context.Context,
 	clusterName string,
@@ -3241,6 +3273,35 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		return err
 	}
 	return nil
+}
+
+func (e *historyEngineImpl) GetCrossClusterTasks(
+	ctx context.Context,
+	targetCluster string,
+) ([]*types.CrossClusterTaskRequest, error) {
+	if e.crossClusterProcessor == nil {
+		return nil, errQueueNotInitialized
+	}
+
+	actionResult, err := e.crossClusterProcessor.HandleAction(targetCluster, queue.NewGetTasksAction())
+	if err != nil {
+		return nil, err
+	}
+
+	return actionResult.GetTasksResult.TaskRequests, nil
+}
+
+func (e *historyEngineImpl) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	targetCluster string,
+	responses []*types.CrossClusterTaskResponse,
+) error {
+	if e.crossClusterProcessor == nil {
+		return errQueueNotInitialized
+	}
+
+	_, err := e.crossClusterProcessor.HandleAction(targetCluster, queue.NewUpdateTasksAction(responses))
+	return err
 }
 
 func (e *historyEngineImpl) newChildContext(

@@ -24,7 +24,6 @@ package history
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -36,6 +35,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -1873,8 +1873,56 @@ func (h *handlerImpl) GetCrossClusterTasks(
 	_, sw := h.startRequestProfile(ctx, metrics.HistoryGetCrossClusterTasksScope)
 	defer sw.Stop()
 
-	// TODO: implement this API when cross cluster queue is implemented
-	return nil, errors.New("not implemented")
+	if h.isShuttingDown() {
+		return nil, errShuttingDown
+	}
+
+	ctx, cancel := common.CreateChildContext(ctx, 0.05)
+	defer cancel()
+
+	futureByShardID := make(map[int32]future.Future, len(request.ShardIDs))
+	for _, shardID := range request.ShardIDs {
+		future, settable := future.NewFuture()
+		futureByShardID[shardID] = future
+		go func(shardID int32) {
+			logger := h.GetLogger().WithTags(tag.ShardID(int(shardID)))
+			engine, err := h.controller.GetEngineForShard(int(shardID))
+			if err != nil {
+				logger.Error("History engine not found for shard", tag.Error(err))
+				var owner string
+				if info, err := h.GetHistoryServiceResolver().Lookup(strconv.Itoa(int(shardID))); err == nil {
+					owner = info.GetAddress()
+				}
+				settable.Set(nil, shard.CreateShardOwnershipLostError(h.GetHostInfo().GetAddress(), owner))
+				return
+			}
+
+			if tasks, err := engine.GetCrossClusterTasks(ctx, request.TargetCluster); err != nil {
+				logger.Error("Failed to get cross cluster tasks", tag.Error(err))
+				settable.Set(nil, h.convertError(err))
+			} else {
+				settable.Set(tasks, nil)
+			}
+		}(shardID)
+	}
+
+	response := &types.GetCrossClusterTasksResponse{
+		TasksByShard:       make(map[int32][]*types.CrossClusterTaskRequest),
+		FailedCauseByShard: make(map[int32]types.GetTaskFailedCause),
+	}
+	for shardID, future := range futureByShardID {
+		var taskRequests []*types.CrossClusterTaskRequest
+		if futureErr := future.Get(ctx, &taskRequests); futureErr != nil {
+			response.FailedCauseByShard[shardID] = common.ConvertErrToGetTaskFailedCause(futureErr)
+		} else {
+			response.TasksByShard[shardID] = taskRequests
+		}
+	}
+	// not using a waitGroup for created goroutines here
+	// as once all futures are unblocked,
+	// those goroutines will eventually be completed
+
+	return response, nil
 }
 
 func (h *handlerImpl) RespondCrossClusterTasksCompleted(
@@ -1884,11 +1932,31 @@ func (h *handlerImpl) RespondCrossClusterTasksCompleted(
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
-	_, sw := h.startRequestProfile(ctx, metrics.HistoryRespondCrossClusterTasksCompletedScope)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryRespondCrossClusterTasksCompletedScope)
 	defer sw.Stop()
 
-	// TODO: implement this API when cross cluster queue is implemented
-	return nil, errors.New("not implemented")
+	if h.isShuttingDown() {
+		return nil, errShuttingDown
+	}
+
+	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
+	if err != nil {
+		return nil, h.error(err, scope, "", "")
+	}
+
+	err = engine.RespondCrossClusterTasksCompleted(ctx, request.TargetCluster, request.TaskResponses)
+	if err != nil {
+		return nil, h.error(err, scope, "", "")
+	}
+
+	response := &types.RespondCrossClusterTasksCompletedResponse{}
+	if request.FetchNewTasks {
+		response.Tasks, err = engine.GetCrossClusterTasks(ctx, request.TargetCluster)
+		if err != nil {
+			return nil, h.error(err, scope, "", "")
+		}
+	}
+	return response, nil
 }
 
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various
