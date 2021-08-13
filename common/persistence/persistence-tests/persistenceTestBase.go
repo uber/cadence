@@ -197,7 +197,11 @@ func (s *TestBase) Setup() {
 	s.fatalOnError("NewShardManager", err)
 
 	s.ConfigStoreManager, err = factory.NewConfigStoreManager()
-	s.fatalOnError("NewConfigStoreManager", err)
+	if err.Error() == "sql config store not yet implemented" {
+		s.ConfigStoreManager = nil
+	} else {
+		s.fatalOnError("NewConfigStoreManager", err)
+	}
 
 	s.ExecutionMgrFactory = factory
 	s.ExecutionManager, err = factory.NewExecutionManager(shardID)
