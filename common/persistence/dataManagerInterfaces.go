@@ -19,6 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination dataManagerInterfaces_mock.go -self_package github.com/uber/cadence/common/persistence
+
 package persistence
 
 import (
@@ -205,6 +207,12 @@ const (
 )
 
 const numItemsInGarbageInfo = 3
+
+type ConfigType int
+
+const (
+	DynamicConfig ConfigType = iota
+)
 
 type (
 	// InvalidPersistenceRequestError represents invalid request to persistence
@@ -1570,6 +1578,21 @@ type (
 		Markers []*FailoverMarkerTask
 	}
 
+	// FetchDynamicConfigResponse is a response to FetchDynamicConfigResponse
+	FetchDynamicConfigResponse struct {
+		Snapshot *DynamicConfigSnapshot
+	}
+
+	// UpdateDynamicConfigRequest is a request to update dynamic config with snapshot
+	UpdateDynamicConfigRequest struct {
+		Snapshot *DynamicConfigSnapshot
+	}
+
+	DynamicConfigSnapshot struct {
+		Version int64
+		Values  *types.DynamicConfigBlob
+	}
+
 	// Closeable is an interface for any entity that supports a close operation to release resources
 	Closeable interface {
 		Close()
@@ -1715,6 +1738,13 @@ type (
 		ID        int64     `json:"message_id"`
 		QueueType QueueType `json:"queue_type"`
 		Payload   []byte    `json:"message_payload"`
+	}
+
+	ConfigStoreManager interface {
+		Closeable
+		FetchDynamicConfig(ctx context.Context) (*FetchDynamicConfigResponse, error)
+		UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest) error
+		//can add functions for config types other than dynamic config
 	}
 )
 

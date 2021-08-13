@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/dynamicconfig/configstore"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -112,9 +113,31 @@ func (s *server) startService() common.Daemon {
 	params.UpdateLoggerWithServiceName(params.Name)
 	params.PersistenceConfig = s.cfg.Persistence
 
-	params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger, s.doneC)
+	err = nil
+	if s.cfg.DynamicConfig.Client == "" {
+		//try to fallback to legacy dynamicClientConfig
+		params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger, s.doneC)
+	} else {
+		switch s.cfg.DynamicConfig.Client {
+		case dynamicconfig.DynamicConfigConfigStoreClient:
+			log.Printf("Trying to initialize Config Store Dynamic Config Client\n")
+			params.DynamicConfig, err = configstore.NewConfigStoreClient(
+				&s.cfg.DynamicConfig.ConfigStore,
+				&s.cfg.Persistence,
+				params.Logger,
+				s.doneC,
+			)
+		case dynamicconfig.DynamicConfigFileBasedClient:
+			log.Printf("Trying to initialize File Based Dynamic Config Client\n")
+			params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfig.FileBased, params.Logger, s.doneC)
+		default:
+			log.Printf("Trying to initialize Nop Config Client\n")
+			params.DynamicConfig = dynamicconfig.NewNopClient()
+		}
+	}
+
 	if err != nil {
-		log.Printf("error creating file based dynamic config client, use no-op config client instead. error: %v", err)
+		log.Printf("error creating dynamic config client, using no-op config client instead. error: %v", err)
 		params.DynamicConfig = dynamicconfig.NewNopClient()
 	}
 	clusterMetadata := s.cfg.ClusterMetadata

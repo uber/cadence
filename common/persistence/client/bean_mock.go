@@ -77,20 +77,20 @@ func (m *MockBean) GetDomainManager() persistence.DomainManager {
 	return ret0
 }
 
-// GetMetadataManager indicates an expected call of GetMetadataManager
-func (mr *MockBeanMockRecorder) GetMetadataManager() *gomock.Call {
+// GetDomainManager indicates an expected call of GetDomainManager
+func (mr *MockBeanMockRecorder) GetDomainManager() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainManager", reflect.TypeOf((*MockBean)(nil).GetDomainManager))
 }
 
-// SetMetadataManager mocks base method
+// SetDomainManager mocks base method
 func (m *MockBean) SetDomainManager(arg0 persistence.DomainManager) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetDomainManager", arg0)
 }
 
-// SetMetadataManager indicates an expected call of SetMetadataManager
-func (mr *MockBeanMockRecorder) SetMetadataManager(arg0 interface{}) *gomock.Call {
+// SetDomainManager indicates an expected call of SetDomainManager
+func (mr *MockBeanMockRecorder) SetDomainManager(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDomainManager", reflect.TypeOf((*MockBean)(nil).SetDomainManager), arg0)
 }
@@ -250,4 +250,30 @@ func (m *MockBean) SetExecutionManager(arg0 int, arg1 persistence.ExecutionManag
 func (mr *MockBeanMockRecorder) SetExecutionManager(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetExecutionManager", reflect.TypeOf((*MockBean)(nil).SetExecutionManager), arg0, arg1)
+}
+
+// GetConfigStoreManager mocks base method
+func (m *MockBean) GetConfigStoreManager() persistence.ConfigStoreManager {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetConfigStoreManager")
+	ret0, _ := ret[0].(persistence.ConfigStoreManager)
+	return ret0
+}
+
+// GetConfigStoreManager indicates an expected call of GetConfigStoreManager
+func (mr *MockBeanMockRecorder) GetConfigStoreManager() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfigStoreManager", reflect.TypeOf((*MockBean)(nil).GetConfigStoreManager))
+}
+
+// SetConfigStoreManager mocks base method
+func (m *MockBean) SetConfigStoreManager(arg0 persistence.ConfigStoreManager) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetConfigStoreManager", arg0)
+}
+
+// SetConfigStoreManager indicates an expected call of SetConfigStoreManager
+func (mr *MockBeanMockRecorder) SetConfigStoreManager(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetConfigStoreManager", reflect.TypeOf((*MockBean)(nil).SetConfigStoreManager), arg0)
 }

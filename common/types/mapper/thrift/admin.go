@@ -467,3 +467,129 @@ func ToHostInfoArray(t []*admin.HostInfo) []*types.HostInfo {
 	}
 	return v
 }
+
+//FromGetDynamicConfigRequest converts internal GetDynamicConfigRequest type to thrift
+func FromGetDynamicConfigRequest(t *types.GetDynamicConfigRequest) *admin.GetDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &admin.GetDynamicConfigRequest{
+		ConfigName: &t.ConfigName,
+		Filters:    FromDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//ToGetDynamicConfigRequest converts thrift GetDynamicConfigRequest type to internal
+func ToGetDynamicConfigRequest(t *admin.GetDynamicConfigRequest) *types.GetDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetDynamicConfigRequest{
+		ConfigName: t.GetConfigName(),
+		Filters:    ToDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//FromGetDynamicConfigResponse converts internal GetDynamicConfigResponse type to thrift
+func FromGetDynamicConfigResponse(t *types.GetDynamicConfigResponse) *admin.GetDynamicConfigResponse {
+	if t == nil {
+		return nil
+	}
+	return &admin.GetDynamicConfigResponse{
+		Value: FromDataBlob(t.Value),
+	}
+}
+
+//ToGetDynamicConfigResponse converts thrift GetDynamicConfigResponse type to internal
+func ToGetDynamicConfigResponse(t *admin.GetDynamicConfigResponse) *types.GetDynamicConfigResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.GetDynamicConfigResponse{
+		Value: ToDataBlob(t.Value),
+	}
+}
+
+//FromUpdateDynamicConfigRequest converts internal UpdateDynamicConfigRequest type to thrift
+func FromUpdateDynamicConfigRequest(t *types.UpdateDynamicConfigRequest) *admin.UpdateDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &admin.UpdateDynamicConfigRequest{
+		ConfigName:   &t.ConfigName,
+		ConfigValues: FromDynamicConfigValueArray(t.ConfigValues),
+	}
+}
+
+//ToUpdateDynamicConfigRequest converts thrift UpdateDynamicConfigRequest type to internal
+func ToUpdateDynamicConfigRequest(t *admin.UpdateDynamicConfigRequest) *types.UpdateDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.UpdateDynamicConfigRequest{
+		ConfigName:   t.GetConfigName(),
+		ConfigValues: ToDynamicConfigValueArray(t.ConfigValues),
+	}
+}
+
+//FromRestoreDynamicConfigRequest converts internal RestoreDynamicConfigRequest type to thrift
+func FromRestoreDynamicConfigRequest(t *types.RestoreDynamicConfigRequest) *admin.RestoreDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &admin.RestoreDynamicConfigRequest{
+		ConfigName: &t.ConfigName,
+		Filters:    FromDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//ToRestoreDynamicConfigRequest converts thrift RestoreDynamicConfigRequest type to internal
+func ToRestoreDynamicConfigRequest(t *admin.RestoreDynamicConfigRequest) *types.RestoreDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.RestoreDynamicConfigRequest{
+		ConfigName: t.GetConfigName(),
+		Filters:    ToDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//FromListDynamicConfigResponse converts internal ListDynamicConfigResponse type to thrift
+func FromListDynamicConfigResponse(t *types.ListDynamicConfigResponse) *admin.ListDynamicConfigResponse {
+	if t == nil {
+		return nil
+	}
+	return &admin.ListDynamicConfigResponse{
+		Entries: FromDynamicConfigEntryArray(t.Entries),
+	}
+}
+
+//FromListDynamicConfigRequest converts internal ListDynamicConfigRequest type to thrift
+func FromListDynamicConfigRequest(t *types.ListDynamicConfigRequest) *admin.ListDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &admin.ListDynamicConfigRequest{
+		ConfigName: &t.ConfigName,
+	}
+}
+
+//ToListDynamicConfigRequest converts thrift ListDynamicConfigRequest type to internal
+func ToListDynamicConfigRequest(t *admin.ListDynamicConfigRequest) *types.ListDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.ListDynamicConfigRequest{
+		ConfigName: t.GetConfigName(),
+	}
+}
+
+//ToListDynamicConfigResponse converts thrift ListDynamicConfigResponse type to internal
+func ToListDynamicConfigResponse(t *admin.ListDynamicConfigResponse) *types.ListDynamicConfigResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.ListDynamicConfigResponse{
+		Entries: ToDynamicConfigEntryArray(t.Entries),
+	}
+}
