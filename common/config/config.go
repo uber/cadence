@@ -59,6 +59,7 @@ type (
 		// DynamicConfigClient is the config for setting up the file based dynamic config client
 		// Filepath would be relative to the root directory when the path wasn't absolute.
 		// Included for backwards compatibility, please transition to DynamicConfig
+		// If both are specified, DynamicConig will be used.
 		DynamicConfigClient dynamicconfig.FileBasedClientConfig `yaml:"dynamicConfigClient"`
 		// DynamicConfig is the config for setting up all dynamic config clients
 		// Allows for changes in client without needing code change
