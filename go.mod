@@ -23,7 +23,7 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gocql/gocql v0.0.0-20191126110522-1982a06ad6b9
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/mock v1.6.0
+	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/go-cmp v0.5.4 // indirect
 	github.com/google/uuid v1.1.2
@@ -67,11 +67,11 @@ require (
 	go.uber.org/thriftrw v1.25.0
 	go.uber.org/yarpc v1.53.2
 	go.uber.org/zap v1.13.0
-	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
+	golang.org/x/net v0.0.0-20201031054903-ff519b6c9102
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/text v0.3.4 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
-	golang.org/x/tools v0.1.1
+	golang.org/x/tools v0.1.0
 	gonum.org/v1/gonum v0.7.0
 	google.golang.org/api v0.26.0
 	google.golang.org/appengine v1.6.7 // indirect

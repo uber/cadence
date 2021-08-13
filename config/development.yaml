@@ -117,10 +117,14 @@ domainDefaults:
 publicClient:
   hostPort: "localhost:7933"
 
+dynamicConfigClient:
+  filepath: "config/dynamicconfig/development.yaml"
+  pollInterval: "10s"
+
 dynamicconfig:
-  client: configstore
+  client: filebased
   configstore:
-    pollInterval: "7s"
+    pollInterval: "10s"
     updateRetryAttempts: 2
     FetchTimeout: "2s"
     UpdateTimeout: "2s"

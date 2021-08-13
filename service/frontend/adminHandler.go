@@ -58,6 +58,7 @@ const (
 
 var (
 	errMaxMessageIDNotSet = &types.BadRequestError{Message: "Max messageID is not set."}
+	errInvalidFilters     = &types.BadRequestError{Message: "Request Filters are invalid, unable to parse."}
 )
 
 type (
@@ -1280,7 +1281,7 @@ func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *type
 			return nil, adh.error(err, scope)
 		}
 	} else {
-		convFilters, err := convertFilterMapToList(request.Filters)
+		convFilters, err := convertFilterListToMap(request.Filters)
 		if err != nil {
 			return nil, adh.error(err, scope)
 		}
@@ -1336,7 +1337,7 @@ func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *
 	if request.Filters == nil {
 		filters = nil
 	} else {
-		filters, err = convertFilterMapToList(request.Filters)
+		filters, err = convertFilterListToMap(request.Filters)
 		if err != nil {
 			return adh.error(errInvalidFilters, scope)
 		}
@@ -1394,7 +1395,7 @@ func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {
 	}
 }
 
-func convertFilterMapToList(filters []*types.DynamicConfigFilter) (map[dc.Filter]interface{}, error) {
+func convertFilterListToMap(filters []*types.DynamicConfigFilter) (map[dc.Filter]interface{}, error) {
 	newFilters := make(map[dc.Filter]interface{})
 
 	for _, filter := range filters {

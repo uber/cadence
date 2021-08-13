@@ -114,25 +114,31 @@ func (s *server) startService() common.Daemon {
 	params.UpdateLoggerWithServiceName(params.Name)
 	params.PersistenceConfig = s.cfg.Persistence
 
-	switch s.cfg.DynamicConfig.Client {
-	case dynamicconfig.DynamicConfigConfigStoreClient:
-		params.DynamicConfig, err = configstore.NewConfigStoreClient(
-			&s.cfg.DynamicConfig.ConfigStore,
-			s.cfg.Persistence.DataStores[s.cfg.Persistence.DefaultStore].NoSQL,
-			params.Logger,
-			s.doneC,
-		)
-		log.Printf("Initializing Config Store Dynamic Config Client\n")
-	case dynamicconfig.DynamicConfigFileBasedClient:
-		params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfig.FileBased, params.Logger, s.doneC)
-		log.Printf("Initializing File Based Dynamic Config Client\n")
-	default:
-		params.DynamicConfig = dynamicconfig.NewNopClient()
-		err = nil
+	err = nil
+	if s.cfg.DynamicConfig.Client == "" {
+		//try to fallback to legacy dynamicClientConfig
+		params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger, s.doneC)
+	} else {
+		switch s.cfg.DynamicConfig.Client {
+		case dynamicconfig.DynamicConfigConfigStoreClient:
+			log.Printf("Trying to initialize Config Store Dynamic Config Client\n")
+			params.DynamicConfig, err = configstore.NewConfigStoreClient(
+				&s.cfg.DynamicConfig.ConfigStore,
+				&s.cfg.Persistence,
+				params.Logger,
+				s.doneC,
+			)
+		case dynamicconfig.DynamicConfigFileBasedClient:
+			log.Printf("Trying to initialize File Based Dynamic Config Client\n")
+			params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfig.FileBased, params.Logger, s.doneC)
+		default:
+			log.Printf("Trying to initialize Nop Config Client\n")
+			params.DynamicConfig = dynamicconfig.NewNopClient()
+		}
 	}
 
 	if err != nil {
-		log.Printf("error creating config store based dynamic config client, use no-op config client instead. error: %v", err)
+		log.Printf("error creating dynamic config client, using no-op config client instead. error: %v", err)
 		params.DynamicConfig = dynamicconfig.NewNopClient()
 	}
 	clusterMetadata := s.cfg.ClusterMetadata

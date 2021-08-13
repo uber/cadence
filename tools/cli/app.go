@@ -156,8 +156,8 @@ func NewCliApp() *cli.App {
 					Subcommands: newAdminQueueCommands(),
 				},
 				{
-					Name:        "config_store",
-					Aliases:     []string{"cs"},
+					Name:        "config",
+					Aliases:     []string{"c"},
 					Usage:       "Run admin operation on config store",
 					Subcommands: newAdminConfigStoreCommands(),
 				},

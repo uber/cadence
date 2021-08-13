@@ -1,5 +1,4 @@
-// Copyright (c) 2021 Uber Technologies, Inc.
-// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,15 +21,16 @@
 package dynamodb
 
 import (
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"context"
+	"errors"
+
+	"github.com/uber/cadence/common/persistence"
 )
 
-var _ nosqlplugin.AdminDB = (*ddb)(nil)
-
-func (db *ddb) SetupTestDatabase() error {
-	panic("TODO")
+func (db *ddb) InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error {
+	return errors.New("TODO")
 }
 
-func (db *ddb) TeardownTestDatabase() error {
-	panic("TODO")
+func (db *ddb) SelectLatestConfig(ctx context.Context, rowType int) (*persistence.InternalConfigStoreEntry, error) {
+	return nil, errors.New("TODO")
 }

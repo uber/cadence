@@ -384,7 +384,7 @@ func (c *clientImpl) GetDynamicConfig(
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := c.createContextWithLargeTimeout(ctx)
+	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return client.GetDynamicConfig(ctx, request, opts...)
 }
@@ -399,7 +399,7 @@ func (c *clientImpl) UpdateDynamicConfig(
 	if err != nil {
 		return err
 	}
-	ctx, cancel := c.createContextWithLargeTimeout(ctx)
+	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return client.UpdateDynamicConfig(ctx, request, opts...)
 }
@@ -414,7 +414,7 @@ func (c *clientImpl) RestoreDynamicConfig(
 	if err != nil {
 		return err
 	}
-	ctx, cancel := c.createContextWithLargeTimeout(ctx)
+	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return client.RestoreDynamicConfig(ctx, request, opts...)
 }
@@ -429,7 +429,7 @@ func (c *clientImpl) ListDynamicConfig(
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := c.createContextWithLargeTimeout(ctx)
+	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return client.ListDynamicConfig(ctx, request, opts...)
 }

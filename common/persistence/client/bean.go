@@ -113,9 +113,14 @@ func NewBeanFromFactory(
 		return nil, err
 	}
 
-	configStoreMgr, err := factory.NewConfigStoreManager()
-	if err != nil {
-		return nil, err
+	var configStoreMgr persistence.ConfigStoreManager
+	if params.PersistenceConfig.DefaultStore != "cass-default" {
+		configStoreMgr = nil
+	} else {
+		configStoreMgr, err = factory.NewConfigStoreManager()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return NewBean(

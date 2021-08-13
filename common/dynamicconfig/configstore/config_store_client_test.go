@@ -34,7 +34,7 @@ import (
 
 	"github.com/uber/cadence/common/config"
 	dc "github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/dynamicconfig/configstore/configstoreconfig"
+	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql"
@@ -300,7 +300,7 @@ func (s *configStoreClientSuite) SetupTest() {
 
 	var err error
 	s.client, err = newConfigStoreClient(
-		&configstoreconfig.ConfigStoreClientConfig{
+		&c.ClientConfig{
 			PollInterval:        time.Second * 2,
 			UpdateRetryAttempts: retryAttempts,
 			FetchTimeout:        time.Second * 1,
@@ -521,50 +521,45 @@ func (s *configStoreClientSuite) TestGetDurationValue_ParseFailed() {
 	s.Equal(time.Second, v)
 }
 
-func (s *configStoreClientSuite) TestValidateConfig_ConfigNotExist() {
-	_, err := NewConfigStoreClient(nil, nil, nil, nil)
-	s.Error(err)
-}
-
 func (s *configStoreClientSuite) TestValidateConfig_InvalidConfig() {
-	_, err := NewConfigStoreClient(
-		&configstoreconfig.ConfigStoreClientConfig{
+	err := validateClientConfig(
+		&c.ClientConfig{
 			PollInterval:        time.Second * 1,
 			UpdateRetryAttempts: 0,
 			FetchTimeout:        time.Second * 3,
 			UpdateTimeout:       time.Second * 4,
 		},
-		nil, nil, nil)
+	)
 	s.Error(err)
 
-	_, err = NewConfigStoreClient(
-		&configstoreconfig.ConfigStoreClientConfig{
+	err = validateClientConfig(
+		&c.ClientConfig{
 			PollInterval:        time.Second * 2,
 			UpdateRetryAttempts: -1,
 			FetchTimeout:        time.Second * 2,
 			UpdateTimeout:       time.Second * 2,
 		},
-		nil, nil, nil)
+	)
 	s.Error(err)
 
-	_, err = NewConfigStoreClient(
-		&configstoreconfig.ConfigStoreClientConfig{
+	err = validateClientConfig(
+		&c.ClientConfig{
 			PollInterval:        time.Second * 2,
 			UpdateRetryAttempts: 0,
 			FetchTimeout:        time.Second * 0,
 			UpdateTimeout:       time.Second * 0,
 		},
-		nil, nil, nil)
+	)
 	s.Error(err)
 
-	_, err = NewConfigStoreClient(
-		&configstoreconfig.ConfigStoreClientConfig{
+	err = validateClientConfig(
+		&c.ClientConfig{
 			PollInterval:        time.Second * 2,
 			UpdateRetryAttempts: 1,
 			FetchTimeout:        time.Second * 1,
 			UpdateTimeout:       time.Second * 0,
 		},
-		nil, nil, nil)
+	)
 	s.Error(err)
 }
 

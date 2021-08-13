@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@ import (
 
 	"github.com/uber/cadence/common/config"
 	dc "github.com/uber/cadence/common/dynamicconfig"
-	csc "github.com/uber/cadence/common/dynamicconfig/configstore/configstoreconfig"
+	csc "github.com/uber/cadence/common/dynamicconfig/configstore/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
@@ -45,10 +45,17 @@ const (
 	configStoreMinPollInterval = time.Second * 2
 )
 
+var defaultConfigValues = &csc.ClientConfig{
+	PollInterval:        time.Second * 10,
+	UpdateRetryAttempts: 1,
+	FetchTimeout:        2,
+	UpdateTimeout:       2,
+}
+
 type configStoreClient struct {
 	values             atomic.Value
 	lastUpdatedTime    time.Time
-	config             *csc.ConfigStoreClientConfig
+	config             *csc.ClientConfig
 	configStoreManager persistence.ConfigStoreManager
 	doneCh             chan struct{}
 	logger             log.Logger
@@ -66,8 +73,23 @@ type fetchResult struct {
 }
 
 // NewConfigStoreClient creates a config store client
-func NewConfigStoreClient(clientCfg *csc.ConfigStoreClientConfig, persistenceCfg *config.NoSQL, logger log.Logger, doneCh chan struct{}) (dc.Client, error) {
-	client, err := newConfigStoreClient(clientCfg, persistenceCfg, logger, doneCh)
+func NewConfigStoreClient(clientCfg *csc.ClientConfig, persistenceCfg *config.Persistence, logger log.Logger, doneCh chan struct{}) (dc.Client, error) {
+	if err := validateClientConfig(clientCfg); err != nil {
+		logger.Error("Invalid Client Config Values, Using Default Values")
+		clientCfg = defaultConfigValues
+	}
+
+	if persistenceCfg == nil {
+		return nil, errors.New("persistence cfg is nil")
+	} else if persistenceCfg.DefaultStore != "cass-default" {
+		return nil, errors.New("persistence cfg default store is not Cassandra")
+	} else if store, ok := persistenceCfg.DataStores[persistenceCfg.DefaultStore]; !ok {
+		return nil, errors.New("persistence cfg datastores missing Cassandra")
+	} else if store.NoSQL == nil {
+		return nil, errors.New("NoSQL struct is nil")
+	}
+
+	client, err := newConfigStoreClient(clientCfg, persistenceCfg.DataStores[persistenceCfg.DefaultStore].NoSQL, logger, doneCh)
 	if err != nil {
 		return nil, err
 	}
@@ -78,11 +100,7 @@ func NewConfigStoreClient(clientCfg *csc.ConfigStoreClientConfig, persistenceCfg
 	return client, nil
 }
 
-func newConfigStoreClient(clientCfg *csc.ConfigStoreClientConfig, persistenceCfg *config.NoSQL, logger log.Logger, doneCh chan struct{}) (*configStoreClient, error) {
-	if err := validateConfigStoreClientConfig(clientCfg); err != nil {
-		return nil, err
-	}
-
+func newConfigStoreClient(clientCfg *csc.ClientConfig, persistenceCfg *config.NoSQL, logger log.Logger, doneCh chan struct{}) (*configStoreClient, error) {
 	store, err := nosql.NewNoSQLConfigStore(*persistenceCfg, logger)
 	if err != nil {
 		return nil, err
@@ -205,20 +223,20 @@ func (csc *configStoreClient) GetDurationValue(
 		return defaultValue, err
 	}
 
-	durationString, ok := val.(string)
-	if !ok {
-		durVal, ok2 := val.(time.Duration)
-		if ok2 {
-			return durVal, nil
+	var durVal time.Duration
+	switch v := val.(type) {
+	case string:
+		durVal, err = time.ParseDuration(v)
+		if err != nil {
+			return defaultValue, errors.New("value string encoding cannot be parsed into duration")
 		}
-		return defaultValue, errors.New("value type is not string")
+	case time.Duration:
+		durVal = v
+	default:
+		return defaultValue, errors.New("value type is not duration")
 	}
 
-	durationVal, err := time.ParseDuration(durationString)
-	if err != nil {
-		return defaultValue, fmt.Errorf("failed to parse duration: %v", err)
-	}
-	return durationVal, nil
+	return durVal, nil
 }
 
 func (csc *configStoreClient) UpdateValue(name dc.Key, value interface{}) error {
@@ -358,18 +376,21 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 		},
 	}
 
-	updateCh := make(chan error)
-	go func() {
-		updateCh <- csc.configStoreManager.UpdateDynamicConfig(
-			context.TODO(),
-			&persistence.UpdateDynamicConfigRequest{
-				Snapshot: newSnapshot,
-			},
-		)
-	}()
+	ctx, cancel := context.WithTimeout(context.Background(), csc.config.UpdateTimeout)
+	defer cancel()
+
+	err := csc.configStoreManager.UpdateDynamicConfig(
+		ctx,
+		&persistence.UpdateDynamicConfigRequest{
+			Snapshot: newSnapshot,
+		},
+	)
 
 	select {
-	case err := <-updateCh:
+	case <-ctx.Done():
+		//potentially we can retry on timeout
+		return errors.New("timeout error on update")
+	default:
 		if err != nil {
 			if _, ok := err.(*persistence.ConditionFailedError); ok && retryAttempts > 0 {
 				//fetch new config and retry
@@ -386,9 +407,6 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 			return err
 		}
 		return nil
-	case <-time.After(csc.config.UpdateTimeout):
-		return errors.New("timeout error on update")
-		//should we retry on timeout errors
 	}
 }
 
@@ -455,34 +473,28 @@ func copyDataBlob(blob *types.DataBlob) *types.DataBlob {
 }
 
 func (csc *configStoreClient) update() error {
-	fetchCh := make(chan *fetchResult)
-	go func() {
-		res, err := csc.configStoreManager.FetchDynamicConfig(context.TODO())
-		if res == nil {
-			fetchCh <- &fetchResult{snapshot: nil, err: err}
-		} else {
-			fetchCh <- &fetchResult{snapshot: res.Snapshot, err: err}
-		}
-	}()
+	ctx, cancel := context.WithTimeout(context.Background(), csc.config.FetchTimeout)
+	defer cancel()
+
+	res, err := csc.configStoreManager.FetchDynamicConfig(ctx)
 
 	select {
-	case fetchRes := <-fetchCh:
-		if fetchRes.err != nil {
-			return fmt.Errorf("failed to fetch dynamic config snapshot %v", fetchRes.err)
+	case <-ctx.Done():
+		return errors.New("timeout error on fetch")
+	default:
+		if err != nil {
+			return fmt.Errorf("failed to fetch dynamic config snapshot %v", err)
 		}
 
-		if fetchRes.snapshot != nil {
+		if res != nil && res.Snapshot != nil {
 			defer func() {
 				csc.lastUpdatedTime = time.Now()
 			}()
 
-			return csc.storeValues(fetchRes.snapshot)
+			return csc.storeValues(res.Snapshot)
 		}
-
-		return nil
-	case <-time.After(csc.config.FetchTimeout):
-		return errors.New("timeout error on fetch")
 	}
+	return nil
 }
 
 func (csc *configStoreClient) storeValues(snapshot *persistence.DynamicConfigSnapshot) error {
@@ -557,7 +569,7 @@ func matchFilters(dcValue *types.DynamicConfigValue, filters map[dc.Filter]inter
 	return true
 }
 
-func validateConfigStoreClientConfig(config *csc.ConfigStoreClientConfig) error {
+func validateClientConfig(config *csc.ClientConfig) error {
 	if config == nil {
 		return errors.New("no config found for config store based dynamic config client")
 	}
