@@ -31,6 +31,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.uber.org/cadence/internal/common/auth"
+	clientworker "go.uber.org/cadence/worker"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -65,9 +67,13 @@ type (
 		SetRemoteFrontendClient(cluster string, client frontend.Client)
 	}
 
-	// DispatcherProvider provides a diapatcher to a given address
+	DispatcherOptions struct {
+		AuthProvider *auth.AuthorizationProvider
+	}
+
+	// DispatcherProvider provides a dispatcher to a given address
 	DispatcherProvider interface {
-		Get(name string, address string) (*yarpc.Dispatcher, error)
+		Get(name string, address string, options *DispatcherOptions) (*yarpc.Dispatcher, error)
 	}
 
 	clientBeanImpl struct {
@@ -256,7 +262,7 @@ func NewDNSYarpcDispatcherProvider(logger log.Logger, interval time.Duration) Di
 	}
 }
 
-func (p *dnsDispatcherProvider) Get(serviceName string, address string) (*yarpc.Dispatcher, error) {
+func (p *dnsDispatcherProvider) Get(serviceName string, address string, options *DispatcherOptions) (*yarpc.Dispatcher, error) {
 	tchanTransport, err := tchannel.NewTransport(
 		tchannel.ServiceName(serviceName),
 		// this aim to get rid of the annoying popup about accepting incoming network connections

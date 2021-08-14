@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+	clientworker "go.uber.org/cadence/worker"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
@@ -197,8 +198,13 @@ func (s *server) startService() common.Daemon {
 		}
 	}
 
-	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, s.cfg.PublicClient.HostPort)
+	// will return empty array if not enabled
+	privateKey, err := s.cfg.Authorization.OAuthAuthorizer.GetPrivateKey()
 	if err != nil {
+		log.Fatalf("invalid private key path %s", s.cfg.Authorization.OAuthAuthorizer.JwtCredentials.PrivateKey)
+	}
+	authProvider := clientworker.NewJwtAuthorizationProvider(privateKey)
+	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, s.cfg.PublicClient.HostPort, &client.DispatcherOptions{AuthProvider: &authProvider}); if err != nil {
 		log.Fatalf("failed to construct dispatcher: %v", err)
 	}
 	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))

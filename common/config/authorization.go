@@ -22,6 +22,7 @@ package config
 
 import (
 	"fmt"
+	"io/ioutil"
 
 	"github.com/cristalhq/jwt/v3"
 )
@@ -57,4 +58,28 @@ func (a *Authorization) validateOAuth() error {
 		return fmt.Errorf("[OAuthConfig] The only supported Algorithm is RS256")
 	}
 	return nil
+}
+
+func (o *OAuthAuthorizer) GetPrivateKey() ([]byte, error) {
+	if !o.Enable || len(o.JwtCredentials.PrivateKeyLoaded) > 0 {
+		return o.JwtCredentials.PrivateKeyLoaded, nil
+	}
+	var err error
+	o.JwtCredentials.PrivateKeyLoaded, err = ioutil.ReadFile(o.JwtCredentials.PrivateKey)
+	if err != nil {
+		return nil, fmt.Errorf("invalid private key path %s", o.JwtCredentials.PrivateKey)
+	}
+	return o.JwtCredentials.PrivateKeyLoaded, nil
+}
+
+func (o *OAuthAuthorizer) GetPublicKey() ([]byte, error) {
+	if !o.Enable || len(o.JwtCredentials.PublicKeyLoaded) > 0{
+		return o.JwtCredentials.PublicKeyLoaded, nil
+	}
+	var err error
+	o.JwtCredentials.PublicKeyLoaded, err = ioutil.ReadFile(o.JwtCredentials.PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("invalid public key path %s", o.JwtCredentials.PublicKey)
+	}
+	return o.JwtCredentials.PublicKeyLoaded, nil
 }

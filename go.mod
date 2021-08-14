@@ -13,7 +13,7 @@ require (
 	github.com/benbjohnson/clock v0.0.0-20161215174838-7dc76406b6d3 // indirect
 	github.com/cactus/go-statsd-client/statsd v0.0.0-20191106001114-12b4e2b38748
 	github.com/cch123/elasticsql v0.0.0-20190321073543-a1a440758eb9
-	github.com/cristalhq/jwt/v3 v3.0.14
+	github.com/cristalhq/jwt/v3 v3.1.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13
 	github.com/dmarkham/enumer v1.5.1
@@ -22,7 +22,7 @@ require (
 	github.com/fatih/color v1.10.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gocql/gocql v0.0.0-20191126110522-1982a06ad6b9
-	github.com/gogo/protobuf v1.3.1
+	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/go-cmp v0.5.4 // indirect
@@ -60,12 +60,12 @@ require (
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.opencensus.io v0.22.5 // indirect
 	go.uber.org/atomic v1.7.0
-	go.uber.org/cadence v0.17.1-0.20210609205819-61495d91ff9d
+	go.uber.org/cadence v0.17.1-0.20210806184645-7c70757e7c7f
 	go.uber.org/config v1.4.0
-	go.uber.org/fx v1.10.0
+	go.uber.org/fx v1.13.1
 	go.uber.org/multierr v1.6.0
 	go.uber.org/thriftrw v1.25.0
-	go.uber.org/yarpc v1.53.2
+	go.uber.org/yarpc v1.55.0
 	go.uber.org/zap v1.13.0
 	golang.org/x/net v0.0.0-20201031054903-ff519b6c9102
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
