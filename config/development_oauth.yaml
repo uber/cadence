@@ -90,10 +90,19 @@ dcRedirectionPolicy:
 archival:
   history:
     status: "disabled"
-
+    enableRead: false
   visibility:
     status: "disabled"
+    enableRead: false
 
+domainDefaults:
+  archival:
+    history:
+      status: "disabled"
+      URI: ""
+    visibility:
+      status: "disabled"
+      URI: ""
 
 publicClient:
   hostPort: "localhost:7933"
