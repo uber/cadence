@@ -90,17 +90,27 @@ dcRedirectionPolicy:
 archival:
   history:
     status: "disabled"
-
+    enableRead: false
   visibility:
     status: "disabled"
+    enableRead: false
 
+domainDefaults:
+  archival:
+    history:
+      status: "disabled"
+      URI: ""
+    visibility:
+      status: "disabled"
+      URI: ""
 
 publicClient:
   hostPort: "localhost:7933"
 
-dynamicConfigClient:
-  filepath: "config/dynamicconfig/development_oauth.yaml"
-  pollInterval: "10s"
+dynamicconfig:
+  client: filebased
+  filebased:
+    filepath: "config/dynamicconfig/development_oauth.yaml"
 
 blobstore:
   filestore:

@@ -179,6 +179,19 @@ type (
 		CountWorkflowExecutions(ctx context.Context, request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
 	}
 
+	ConfigStore interface {
+		Closeable
+		FetchConfig(ctx context.Context, configType ConfigType) (*InternalConfigStoreEntry, error)
+		UpdateConfig(ctx context.Context, value *InternalConfigStoreEntry) error
+	}
+
+	InternalConfigStoreEntry struct {
+		RowType   int
+		Version   int64
+		Timestamp time.Time
+		Values    *DataBlob
+	}
+
 	// Queue is a store to enqueue and get messages
 	Queue interface {
 		Closeable

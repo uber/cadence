@@ -79,7 +79,7 @@ func (m *MockMetadata) IsPrimaryCluster() bool {
 	return ret0
 }
 
-// IsPrimaryCluster indicates an expected call of IsPrimartCluster
+// IsPrimaryCluster indicates an expected call of IsPrimaryCluster
 func (mr *MockMetadataMockRecorder) IsPrimaryCluster() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsPrimaryCluster", reflect.TypeOf((*MockMetadata)(nil).IsPrimaryCluster))

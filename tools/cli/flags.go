@@ -279,6 +279,9 @@ const (
 	FlagJWT                               = "jwt"
 	FlagJWTPrivateKey                     = "jwt-private-key"
 	FlagJWTPrivateKeyWithAlias            = FlagJWTPrivateKey + ", jwt-pk"
+	FlagDynamicConfigName                 = "dynamic_config_name"
+	FlagDynamicConfigFilter               = "dynamic_config_filter"
+	FlagDynamicConfigValue                = "dynamic_config_value"
 )
 
 var flagsForExecution = []cli.Flag{

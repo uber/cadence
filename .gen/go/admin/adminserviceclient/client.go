@@ -100,6 +100,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*replicator.GetDomainReplicationMessagesResponse, error)
 
+	GetDynamicConfig(
+		ctx context.Context,
+		Request *admin.GetDynamicConfigRequest,
+		opts ...yarpc.CallOption,
+	) (*admin.GetDynamicConfigResponse, error)
+
 	GetReplicationMessages(
 		ctx context.Context,
 		Request *replicator.GetReplicationMessagesRequest,
@@ -111,6 +117,12 @@ type Interface interface {
 		GetRequest *admin.GetWorkflowExecutionRawHistoryV2Request,
 		opts ...yarpc.CallOption,
 	) (*admin.GetWorkflowExecutionRawHistoryV2Response, error)
+
+	ListDynamicConfig(
+		ctx context.Context,
+		Request *admin.ListDynamicConfigRequest,
+		opts ...yarpc.CallOption,
+	) (*admin.ListDynamicConfigResponse, error)
 
 	MergeDLQMessages(
 		ctx context.Context,
@@ -157,6 +169,18 @@ type Interface interface {
 	ResetQueue(
 		ctx context.Context,
 		Request *shared.ResetQueueRequest,
+		opts ...yarpc.CallOption,
+	) error
+
+	RestoreDynamicConfig(
+		ctx context.Context,
+		Request *admin.RestoreDynamicConfigRequest,
+		opts ...yarpc.CallOption,
+	) error
+
+	UpdateDynamicConfig(
+		ctx context.Context,
+		Request *admin.UpdateDynamicConfigRequest,
 		opts ...yarpc.CallOption,
 	) error
 }
@@ -414,6 +438,29 @@ func (c client) GetDomainReplicationMessages(
 	return
 }
 
+func (c client) GetDynamicConfig(
+	ctx context.Context,
+	_Request *admin.GetDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.GetDynamicConfigResponse, err error) {
+
+	args := admin.AdminService_GetDynamicConfig_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_GetDynamicConfig_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_GetDynamicConfig_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) GetReplicationMessages(
 	ctx context.Context,
 	_Request *replicator.GetReplicationMessagesRequest,
@@ -457,6 +504,29 @@ func (c client) GetWorkflowExecutionRawHistoryV2(
 	}
 
 	success, err = admin.AdminService_GetWorkflowExecutionRawHistoryV2_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ListDynamicConfig(
+	ctx context.Context,
+	_Request *admin.ListDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.ListDynamicConfigResponse, err error) {
+
+	args := admin.AdminService_ListDynamicConfig_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_ListDynamicConfig_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_ListDynamicConfig_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -641,5 +711,51 @@ func (c client) ResetQueue(
 	}
 
 	err = admin.AdminService_ResetQueue_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RestoreDynamicConfig(
+	ctx context.Context,
+	_Request *admin.RestoreDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := admin.AdminService_RestoreDynamicConfig_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_RestoreDynamicConfig_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = admin.AdminService_RestoreDynamicConfig_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) UpdateDynamicConfig(
+	ctx context.Context,
+	_Request *admin.UpdateDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := admin.AdminService_UpdateDynamicConfig_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_UpdateDynamicConfig_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = admin.AdminService_UpdateDynamicConfig_Helper.UnwrapResponse(&result)
 	return
 }

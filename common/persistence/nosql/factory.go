@@ -94,6 +94,11 @@ func (f *Factory) NewQueue(queueType p.QueueType) (p.Queue, error) {
 	return newNoSQLQueueStore(f.cfg, f.logger, queueType)
 }
 
+// NewConfigStore returns a new config store
+func (f *Factory) NewConfigStore() (p.ConfigStore, error) {
+	return NewNoSQLConfigStore(f.cfg, f.logger)
+}
+
 // Close closes the factory
 func (f *Factory) Close() {
 	f.Lock()
