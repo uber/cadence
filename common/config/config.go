@@ -324,7 +324,7 @@ type (
 		RPCName string `yaml:"rpcName"`
 		// Address indicate the remote service address(Host:Port). Host can be DNS name.
 		// For currentCluster, it's usually the same as publicClient.hostPort
-		// Default to publicClient.hostPort if empty 
+		// Default to publicClient.hostPort if empty
 		RPCAddress string `yaml:"rpcAddress"`
 	}
 

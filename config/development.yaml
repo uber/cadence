@@ -80,8 +80,6 @@ clusterMetadata:
     active:
       enabled: true
       initialFailoverVersion: 0
-      rpcName: "cadence-frontend"
-      rpcAddress: "localhost:7933"
 
 dcRedirectionPolicy:
   policy: "noop"
