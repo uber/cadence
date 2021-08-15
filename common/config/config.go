@@ -54,7 +54,7 @@ type (
 		Kafka KafkaConfig `yaml:"kafka"`
 		// Archival is the config for archival
 		Archival Archival `yaml:"archival"`
-		// PublicClient is config for connecting to cadence frontend
+		// PublicClient is config for sys worker service connecting to cadence frontend
 		PublicClient PublicClient `yaml:"publicClient"`
 		// DynamicConfigClient is the config for setting up the file based dynamic config client
 		// Filepath would be relative to the root directory when the path wasn't absolute.
@@ -297,29 +297,34 @@ type (
 		LevelKey string `yaml:"levelKey"`
 	}
 
-	// ClusterMetadata contains the all cluster which participated in cross DC
+	// ClusterMetadata contains the all clusters participated in a replication group(aka XDC/GlobalDomain)
 	ClusterMetadata struct {
 		EnableGlobalDomain bool `yaml:"enableGlobalDomain"`
 		// FailoverVersionIncrement is the increment of each cluster version when failover happens
+		// It decides the maximum number clusters in this replication groups
 		FailoverVersionIncrement int64 `yaml:"failoverVersionIncrement"`
 		// PrimaryClusterName is the primary cluster name, only the primary cluster can register / update domain
 		// all clusters can do domain failover
 		PrimaryClusterName string `yaml:"primaryClusterName"`
 		// MasterClusterName is deprecated. Please use PrimaryClusterName.
 		MasterClusterName string `yaml:"masterClusterName"`
-		// CurrentClusterName is the name of the current cluster
+		// CurrentClusterName is the name of the cluster of current deployment
 		CurrentClusterName string `yaml:"currentClusterName"`
-		// ClusterInformation contains all cluster names to corresponding information about that cluster
+		// ClusterInformation contains information for each cluster within the replication group
+		// Key is the clusterName
 		ClusterInformation map[string]ClusterInformation `yaml:"clusterInformation"`
 	}
 
 	// ClusterInformation contains the information about each cluster which participated in cross DC
 	ClusterInformation struct {
-		Enabled                bool  `yaml:"enabled"`
+		Enabled bool `yaml:"enabled"`
+		// InitialFailoverVersion is the identifier of each cluster. 0 <= the value < failoverVersionIncrement
 		InitialFailoverVersion int64 `yaml:"initialFailoverVersion"`
 		// RPCName indicate the remote service name
 		RPCName string `yaml:"rpcName"`
 		// Address indicate the remote service address(Host:Port). Host can be DNS name.
+		// For currentCluster, it's usually the same as publicClient.hostPort
+		// Default to publicClient.hostPort if empty 
 		RPCAddress string `yaml:"rpcAddress"`
 	}
 
@@ -473,6 +478,9 @@ func (c *Config) validate() error {
 	if err := c.Persistence.Validate(); err != nil {
 		return err
 	}
+	if c.PublicClient.HostPort == "" {
+		return fmt.Errorf("publicClient.hostPort cannot be empty")
+	}
 	if c.ClusterMetadata == nil {
 		return fmt.Errorf("ClusterMetadata cannot be empty")
 	}
@@ -502,15 +510,21 @@ func (c *Config) fillDefaults() error {
 			c.Persistence.DataStores[k] = store
 		}
 	}
-	// filling RPCName with a default value if empty
-	if c.ClusterMetadata != nil {
-		for k, cluster := range c.ClusterMetadata.ClusterInformation {
-			if cluster.RPCName == "" {
-				cluster.RPCName = "cadence-frontend"
-				c.ClusterMetadata.ClusterInformation[k] = cluster
+
+	for name, cluster := range c.ClusterMetadata.ClusterInformation {
+		if cluster.RPCName == "" {
+			// filling RPCName with a default value if empty
+			cluster.RPCName = "cadence-frontend"
+		}
+		if name == c.ClusterMetadata.CurrentClusterName {
+			if cluster.RPCAddress == "" {
+				// filling current cluster's RPC address from publicClient if empty
+				cluster.RPCAddress = c.PublicClient.HostPort
 			}
 		}
+		c.ClusterMetadata.ClusterInformation[name] = cluster
 	}
+
 	return nil
 }
 

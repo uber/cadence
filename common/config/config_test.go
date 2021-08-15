@@ -51,17 +51,22 @@ func TestFillingDefaultSQLEncodingDecodingTypes(t *testing.T) {
 	assert.Equal(t, []string{string(common.EncodingTypeThriftRW)}, cfg.Persistence.DataStores["sql"].SQL.DecodingTypes)
 }
 
-func TestFillingDefaultRpcName(t *testing.T) {
+func TestFillingDefaultRpcNameAndAddress(t *testing.T) {
 	cfg := &Config{
 		ClusterMetadata: &ClusterMetadata{
+			CurrentClusterName: "clusterA",
 			ClusterInformation: map[string]ClusterInformation{
 				"clusterA": {},
 			},
+		},
+		PublicClient: PublicClient{
+			HostPort: "127.0.0.1:7933",
 		},
 	}
 
 	cfg.fillDefaults()
 	assert.Equal(t, "cadence-frontend", cfg.ClusterMetadata.ClusterInformation["clusterA"].RPCName)
+	assert.Equal(t, "127.0.0.1:7933", cfg.ClusterMetadata.ClusterInformation["clusterA"].RPCAddress)
 }
 
 func TestConfigFallbacks(t *testing.T) {
