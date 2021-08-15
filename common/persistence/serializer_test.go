@@ -21,6 +21,7 @@
 package persistence
 
 import (
+	"encoding/json"
 	"sync"
 	"testing"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/types"
@@ -164,6 +166,25 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 		},
 	}
 	processingQueueStates := &types.ProcessingQueueStates{StatesByCluster: processingQueueStateMap}
+
+	boolFalseEnc, _ := json.Marshal(false)
+	dcBlob := &types.DynamicConfigBlob{
+		SchemaVersion: 1,
+		Entries: []*types.DynamicConfigEntry{
+			{
+				Name: dynamicconfig.Keys[dynamicconfig.TestGetBoolPropertyKey],
+				Values: []*types.DynamicConfigValue{
+					{
+						Value: &types.DataBlob{
+							EncodingType: types.EncodingTypeJSON.Ptr(),
+							Data:         boolFalseEnc,
+						},
+						Filters: nil,
+					},
+				},
+			},
+		},
+	}
 
 	for i := 0; i < concurrency; i++ {
 
@@ -471,6 +492,34 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			dProcessingQueueStatesEmpty, err := serializer.DeserializeProcessingQueueStates(processingQueueStatesEmpty)
 			s.Nil(err)
 			s.Equal(dProcessingQueueStatesEmpty, processingQueueStates)
+
+			// serialize dynamic config blob
+
+			nilDynamicConfigBlob, err := serializer.SerializeDynamicConfigBlob(nil, common.EncodingTypeJSON)
+			s.Nil(err)
+			s.Nil(nilDynamicConfigBlob)
+
+			dynamicConfigBlobJSON, err := serializer.SerializeDynamicConfigBlob(dcBlob, common.EncodingTypeJSON)
+			s.Nil(err)
+			s.NotNil(dynamicConfigBlobJSON)
+
+			dynamicConfigBlobThrift, err := serializer.SerializeDynamicConfigBlob(dcBlob, common.EncodingTypeThriftRW)
+			s.Nil(err)
+			s.NotNil(dynamicConfigBlobThrift)
+
+			// deserialize dynamic config blob
+
+			dNilDynamicConfigBlob, err := serializer.DeserializeDynamicConfigBlob(nil)
+			s.Nil(err)
+			s.Nil(dNilDynamicConfigBlob)
+
+			dDynamicConfigBlobJSON, err := serializer.DeserializeDynamicConfigBlob(dynamicConfigBlobJSON)
+			s.Nil(err)
+			s.Equal(dDynamicConfigBlobJSON, dcBlob)
+
+			dDynamicConfigBlobThrift, err := serializer.DeserializeDynamicConfigBlob(dynamicConfigBlobThrift)
+			s.Nil(err)
+			s.Equal(dDynamicConfigBlobThrift, dcBlob)
 
 		}()
 	}

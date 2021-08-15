@@ -87,6 +87,7 @@ type (
 		VisibilityTestCluster     testcluster.PersistenceTestCluster
 		Logger                    log.Logger
 		PayloadSerializer         p.PayloadSerializer
+		ConfigStoreManager        p.ConfigStoreManager
 	}
 
 	// TestBaseParams defines the input of TestBase
@@ -193,6 +194,11 @@ func (s *TestBase) Setup() {
 
 	s.ShardMgr, err = factory.NewShardManager()
 	s.fatalOnError("NewShardManager", err)
+
+	if cfg.DefaultStoreType() == config.StoreTypeCassandra {
+		s.ConfigStoreManager, err = factory.NewConfigStoreManager()
+		s.fatalOnError("NewConfigStoreManager", err)
+	}
 
 	s.ExecutionMgrFactory = factory
 	s.ExecutionManager, err = factory.NewExecutionManager(shardID)

@@ -52,4 +52,8 @@ type Client interface {
 	ResendReplicationTasks(context.Context, *types.ResendReplicationTasksRequest, ...yarpc.CallOption) error
 	ResetQueue(context.Context, *types.ResetQueueRequest, ...yarpc.CallOption) error
 	GetCrossClusterTasks(context.Context, *types.GetCrossClusterTasksRequest, ...yarpc.CallOption) (*types.GetCrossClusterTasksResponse, error)
+	GetDynamicConfig(context.Context, *types.GetDynamicConfigRequest, ...yarpc.CallOption) (*types.GetDynamicConfigResponse, error)
+	UpdateDynamicConfig(context.Context, *types.UpdateDynamicConfigRequest, ...yarpc.CallOption) error
+	RestoreDynamicConfig(context.Context, *types.RestoreDynamicConfigRequest, ...yarpc.CallOption) error
+	ListDynamicConfig(context.Context, *types.ListDynamicConfigRequest, ...yarpc.CallOption) (*types.ListDynamicConfigResponse, error)
 }

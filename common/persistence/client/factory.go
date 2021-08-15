@@ -62,6 +62,8 @@ type (
 		NewVisibilityManager(params *service.BootstrapParams, resourceConfig *rc.ResourceConfig) (p.VisibilityManager, error)
 		// NewDomainReplicationQueueManager returns a new queue for domain replication
 		NewDomainReplicationQueueManager() (p.QueueManager, error)
+		// NewConfigStoreManager returns a new config store manager
+		NewConfigStoreManager() (p.ConfigStoreManager, error)
 	}
 	// DataStoreFactory is a low level interface to be implemented by a datastore
 	// Examples of datastores are cassandra, mysql etc
@@ -83,6 +85,8 @@ type (
 		// be ordering by CloseTime. This will be removed when implementing https://github.com/uber/cadence/issues/3621
 		NewVisibilityStore(sortByCloseTime bool) (p.VisibilityStore, error)
 		NewQueue(queueType p.QueueType) (p.Queue, error)
+		// NewConfigStore returns a new config store
+		NewConfigStore() (p.ConfigStore, error)
 	}
 
 	// Datastore represents a datastore
@@ -110,6 +114,7 @@ const (
 	storeTypeExecution
 	storeTypeVisibility
 	storeTypeQueue
+	storeTypeConfigStore
 )
 
 var storeTypes = []storeType{
@@ -120,6 +125,7 @@ var storeTypes = []storeType{
 	storeTypeExecution,
 	storeTypeVisibility,
 	storeTypeQueue,
+	storeTypeConfigStore,
 }
 
 // NewFactory returns an implementation of factory that vends persistence objects based on
@@ -368,6 +374,26 @@ func (f *factoryImpl) NewDomainReplicationQueueManager() (p.QueueManager, error)
 	}
 	if f.metricsClient != nil {
 		result = p.NewQueuePersistenceMetricsClient(result, f.metricsClient, f.logger)
+	}
+
+	return result, nil
+}
+
+func (f *factoryImpl) NewConfigStoreManager() (p.ConfigStoreManager, error) {
+	ds := f.datastores[storeTypeConfigStore]
+	store, err := ds.factory.NewConfigStore()
+	if err != nil {
+		return nil, err
+	}
+	result := p.NewConfigStoreManagerImpl(store, f.logger)
+	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
+		result = p.NewConfigStoreErrorInjectionPersistenceClient(result, errorRate, f.logger)
+	}
+	if ds.ratelimit != nil {
+		result = p.NewConfigStorePersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+	}
+	if f.metricsClient != nil {
+		result = p.NewConfigStorePersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
 
 	return result, nil

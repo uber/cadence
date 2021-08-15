@@ -71,6 +71,12 @@ type (
 		persistence  QueueManager
 		logger       log.Logger
 	}
+
+	configStorePersistenceClient struct {
+		metricClient metrics.Client
+		persistence  ConfigStoreManager
+		logger       log.Logger
+	}
 )
 
 var _ ShardManager = (*shardPersistenceClient)(nil)
@@ -80,6 +86,7 @@ var _ HistoryManager = (*historyPersistenceClient)(nil)
 var _ DomainManager = (*metadataPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityPersistenceClient)(nil)
 var _ QueueManager = (*queuePersistenceClient)(nil)
+var _ ConfigStoreManager = (*configStorePersistenceClient)(nil)
 
 // NewShardPersistenceMetricsClient creates a client to manage shards
 func NewShardPersistenceMetricsClient(
@@ -166,6 +173,19 @@ func NewQueuePersistenceMetricsClient(
 	logger log.Logger,
 ) QueueManager {
 	return &queuePersistenceClient{
+		persistence:  persistence,
+		metricClient: metricClient,
+		logger:       logger,
+	}
+}
+
+// NewConfigStorePersistenceMetricsClient creates a client to manage config store
+func NewConfigStorePersistenceMetricsClient(
+	persistence ConfigStoreManager,
+	metricClient metrics.Client,
+	logger log.Logger,
+) ConfigStoreManager {
+	return &configStorePersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
 		logger:       logger,
@@ -1720,5 +1740,37 @@ func (p *queuePersistenceClient) updateErrorMetric(scope int, err error) {
 }
 
 func (p *queuePersistenceClient) Close() {
+	p.persistence.Close()
+}
+
+func (p *configStorePersistenceClient) FetchDynamicConfig(ctx context.Context) (*FetchDynamicConfigResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceFetchDynamicConfigScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceFetchDynamicConfigScope, metrics.PersistenceLatency)
+	result, err := p.persistence.FetchDynamicConfig(ctx)
+	sw.Stop()
+
+	if err != nil {
+		p.metricClient.IncCounter(metrics.PersistenceFetchDynamicConfigScope, metrics.PersistenceFailures)
+	}
+
+	return result, err
+}
+
+func (p *configStorePersistenceClient) UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest) error {
+	p.metricClient.IncCounter(metrics.PersistenceUpdateDynamicConfigScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceUpdateDynamicConfigScope, metrics.PersistenceLatency)
+	err := p.persistence.UpdateDynamicConfig(ctx, request)
+	sw.Stop()
+
+	if err != nil {
+		p.metricClient.IncCounter(metrics.PersistenceUpdateDynamicConfigScope, metrics.PersistenceFailures)
+	}
+
+	return err
+}
+
+func (p *configStorePersistenceClient) Close() {
 	p.persistence.Close()
 }

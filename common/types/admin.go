@@ -404,3 +404,93 @@ func (v *RingInfo) GetMembers() (o []*HostInfo) {
 	}
 	return
 }
+
+type GetDynamicConfigRequest struct {
+	ConfigName string                 `json:"configName,omitempty"`
+	Filters    []*DynamicConfigFilter `json:"filters,omitempty"`
+}
+
+func (v *GetDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil {
+		return v.ConfigName
+	}
+	return
+}
+
+func (v *GetDynamicConfigRequest) GetFilters() (o []*DynamicConfigFilter) {
+	if v != nil && v.Filters != nil {
+		return v.Filters
+	}
+	return
+}
+
+type GetDynamicConfigResponse struct {
+	Value *DataBlob `json:"value,omitempty"`
+}
+
+func (v *GetDynamicConfigResponse) GetValue() (o *DataBlob) {
+	if v != nil && v.Value != nil {
+		return v.Value
+	}
+	return
+}
+
+type UpdateDynamicConfigRequest struct {
+	ConfigName   string                `json:"configName,omitempty"`
+	ConfigValues []*DynamicConfigValue `json:"configValues,omitempty"`
+}
+
+func (v *UpdateDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil {
+		return v.ConfigName
+	}
+	return
+}
+
+func (v *UpdateDynamicConfigRequest) GetConfigValues() (o []*DynamicConfigValue) {
+	if v != nil && v.ConfigValues != nil {
+		return v.ConfigValues
+	}
+	return
+}
+
+type RestoreDynamicConfigRequest struct {
+	ConfigName string                 `json:"configName,omitempty"`
+	Filters    []*DynamicConfigFilter `json:"filters,omitempty"`
+}
+
+func (v *RestoreDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil {
+		return v.ConfigName
+	}
+	return
+}
+
+func (v *RestoreDynamicConfigRequest) GetFilters() (o []*DynamicConfigFilter) {
+	if v != nil && v.Filters != nil {
+		return v.Filters
+	}
+	return
+}
+
+type ListDynamicConfigRequest struct {
+	ConfigName string `json:"configName,omitempty"`
+}
+
+func (v *ListDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil {
+		return v.ConfigName
+	}
+	return
+}
+
+type ListDynamicConfigResponse struct {
+	Entries []*DynamicConfigEntry `json:"entries,omitempty"`
+}
+
+func (v *ListDynamicConfigResponse) GetEntries() (o []*DynamicConfigEntry) {
+	if v != nil && v.Entries != nil {
+		return v.Entries
+	}
+	return
+}

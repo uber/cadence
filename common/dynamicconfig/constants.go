@@ -24,9 +24,9 @@ package dynamicconfig
 type Key int
 
 func (k Key) String() string {
-	keyName, ok := keys[k]
+	keyName, ok := Keys[k]
 	if !ok {
-		return keys[unknownKey]
+		return Keys[UnknownKey]
 	}
 	return keyName
 }
@@ -37,22 +37,22 @@ func (k Key) String() string {
 * So that our go-docs can have the full [documentation](https://pkg.go.dev/github.com/uber/cadence@v0.19.1/common/service/dynamicconfig#Key).
 ***/
 const (
-	unknownKey Key = iota
+	UnknownKey Key = iota
 
 	// key for tests
-	testGetPropertyKey
-	testGetIntPropertyKey
-	testGetFloat64PropertyKey
-	testGetDurationPropertyKey
-	testGetBoolPropertyKey
-	testGetStringPropertyKey
-	testGetMapPropertyKey
-	testGetIntPropertyFilteredByDomainKey
-	testGetDurationPropertyFilteredByDomainKey
-	testGetIntPropertyFilteredByTaskListInfoKey
-	testGetDurationPropertyFilteredByTaskListInfoKey
-	testGetBoolPropertyFilteredByDomainIDKey
-	testGetBoolPropertyFilteredByTaskListInfoKey
+	TestGetPropertyKey
+	TestGetIntPropertyKey
+	TestGetFloat64PropertyKey
+	TestGetDurationPropertyKey
+	TestGetBoolPropertyKey
+	TestGetStringPropertyKey
+	TestGetMapPropertyKey
+	TestGetIntPropertyFilteredByDomainKey
+	TestGetDurationPropertyFilteredByDomainKey
+	TestGetIntPropertyFilteredByTaskListInfoKey
+	TestGetDurationPropertyFilteredByTaskListInfoKey
+	TestGetBoolPropertyFilteredByDomainIDKey
+	TestGetBoolPropertyFilteredByTaskListInfoKey
 
 	// key for common & admin
 
@@ -1927,28 +1927,28 @@ const (
 	// TODO: https://github.com/uber/cadence/issues/3861
 	WorkerBlobIntegrityCheckProbability
 
-	// lastKeyForTest must be the last one in this const group for testing purpose
-	lastKeyForTest
+	// LastKeyForTest must be the last one in this const group for testing purpose
+	LastKeyForTest
 )
 
 // Mapping from Key to keyName, where keyName are used dynamic config source.
-var keys = map[Key]string{
-	unknownKey: "unknownKey",
+var Keys = map[Key]string{
+	UnknownKey: "unknownKey",
 
 	// tests keys
-	testGetPropertyKey:                               "testGetPropertyKey",
-	testGetIntPropertyKey:                            "testGetIntPropertyKey",
-	testGetFloat64PropertyKey:                        "testGetFloat64PropertyKey",
-	testGetDurationPropertyKey:                       "testGetDurationPropertyKey",
-	testGetBoolPropertyKey:                           "testGetBoolPropertyKey",
-	testGetStringPropertyKey:                         "testGetStringPropertyKey",
-	testGetMapPropertyKey:                            "testGetMapPropertyKey",
-	testGetIntPropertyFilteredByDomainKey:            "testGetIntPropertyFilteredByDomainKey",
-	testGetDurationPropertyFilteredByDomainKey:       "testGetDurationPropertyFilteredByDomainKey",
-	testGetIntPropertyFilteredByTaskListInfoKey:      "testGetIntPropertyFilteredByTaskListInfoKey",
-	testGetDurationPropertyFilteredByTaskListInfoKey: "testGetDurationPropertyFilteredByTaskListInfoKey",
-	testGetBoolPropertyFilteredByDomainIDKey:         "testGetBoolPropertyFilteredByDomainIDKey",
-	testGetBoolPropertyFilteredByTaskListInfoKey:     "testGetBoolPropertyFilteredByTaskListInfoKey",
+	TestGetPropertyKey:                               "testGetPropertyKey",
+	TestGetIntPropertyKey:                            "testGetIntPropertyKey",
+	TestGetFloat64PropertyKey:                        "testGetFloat64PropertyKey",
+	TestGetDurationPropertyKey:                       "testGetDurationPropertyKey",
+	TestGetBoolPropertyKey:                           "testGetBoolPropertyKey",
+	TestGetStringPropertyKey:                         "testGetStringPropertyKey",
+	TestGetMapPropertyKey:                            "testGetMapPropertyKey",
+	TestGetIntPropertyFilteredByDomainKey:            "testGetIntPropertyFilteredByDomainKey",
+	TestGetDurationPropertyFilteredByDomainKey:       "testGetDurationPropertyFilteredByDomainKey",
+	TestGetIntPropertyFilteredByTaskListInfoKey:      "testGetIntPropertyFilteredByTaskListInfoKey",
+	TestGetDurationPropertyFilteredByTaskListInfoKey: "testGetDurationPropertyFilteredByTaskListInfoKey",
+	TestGetBoolPropertyFilteredByDomainIDKey:         "testGetBoolPropertyFilteredByDomainIDKey",
+	TestGetBoolPropertyFilteredByTaskListInfoKey:     "testGetBoolPropertyFilteredByTaskListInfoKey",
 
 	// system settings
 	EnableGlobalDomain:                  "system.enableGlobalDomain",
@@ -2281,4 +2281,13 @@ var keys = map[Key]string{
 	EnableArchivalCompression:                       "worker.EnableArchivalCompression",
 	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
 	WorkerBlobIntegrityCheckProbability:             "worker.BlobIntegrityCheckProbability",
+}
+
+var KeyNames map[string]Key
+
+func init() {
+	KeyNames = make(map[string]Key)
+	for k, v := range Keys {
+		KeyNames[v] = k
+	}
 }
