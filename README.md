@@ -55,10 +55,11 @@ Visit [cadenceworkflow.io](https://cadenceworkflow.io) for documentation.
  
 Join us in [Cadence Docs](https://github.com/uber/cadence-docs) project. Raise an Issue or Pull Request there.
 
-## Getting Help
-* [StackOverflow](https://stackoverflow.com/questions/tagged/cadence-workflow)
-* [Github Issues](https://github.com/uber/cadence/issues)
-* [Slack](http://t.uber.com/cadence-slack)
+## Community 
+* [Github Discussion](https://github.com/uber/cadence/discussions): preferred for Q&A, support/help, and general discusion
+* [StackOverflow](https://stackoverflow.com/questions/tagged/cadence-workflow): preferred for Q&A and general discusion
+* [Github Issues](https://github.com/uber/cadence/issues): preferred for reporting bugs and feature requests
+* [Slack](http://t.uber.com/cadence-slack): preferred for development discussion 
 
 ## Contributing
 
