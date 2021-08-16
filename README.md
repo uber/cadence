@@ -63,7 +63,7 @@ Join us in [Cadence Docs](https://github.com/uber/cadence-docs) project. Raise a
 * [Github Issues](https://github.com/uber/cadence/issues)
   * Best for reporting bugs and feature requests
 * [Slack](http://t.uber.com/cadence-slack)
-  * Best for development discussion 
+  * Best for contributing/development discussion 
 
 ## Contributing
 
