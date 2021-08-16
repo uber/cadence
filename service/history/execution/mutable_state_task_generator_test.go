@@ -205,13 +205,8 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateCrossClusterTaskFromTransfe
 			},
 			expectError: false,
 			expectedCrossClusterTask: &persistence.CrossClusterRecordChildWorkflowExecutionCompleteTask{
-				TargetCluster: targetCluster,
-				RecordWorkflowExecutionCompleteTask: persistence.RecordWorkflowExecutionCompleteTask{
-					TargetDomainID:   constants.TestTargetDomainID,
-					TargetWorkflowID: constants.TestWorkflowID,
-					TargetRunID:      constants.TestRunID,
-					InitiatedID:      int64(123),
-				},
+				TargetCluster:                       targetCluster,
+				RecordWorkflowExecutionCompleteTask: persistence.RecordWorkflowExecutionCompleteTask{},
 			},
 		},
 	}

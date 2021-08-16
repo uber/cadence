@@ -350,10 +350,6 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 
 		case p.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
 			targetCluster = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetCluster
-			targetDomainID = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetDomainID
-			targetWorkflowID = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetWorkflowID
-			targetRunID = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetRunID
-			scheduleID = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).InitiatedID
 
 		default:
 			return nil, &types.InternalServiceError{

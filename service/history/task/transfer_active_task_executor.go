@@ -383,12 +383,15 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	// TODO: pass crossClusterTaskGenerators to processParentClosePolicy to add new cross
 	// cluster tasks then move the call below after processParentClosePolicy call
 	if len(crossClusterTaskGenerators) > 0 {
-		t.generateCrossClusterTasks(
+		err = t.generateCrossClusterTasks(
 			ctx,
 			wfContext,
 			task,
 			crossClusterTaskGenerators,
 		)
+		if err != nil {
+			return err
+		}
 	}
 
 	return t.processParentClosePolicy(ctx, task.DomainID, domainName, children)
@@ -1253,8 +1256,14 @@ func (t *transferActiveTaskExecutor) generateCrossClusterTasks(
 		false,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if task.TaskType == persistence.TransferTaskTypeCloseExecution {
+				// IsWorkflowCompleted only returns true when the workflow is completed,
+				// !IsWorkflowExecutionRunning below returns true when the wf is zombie or corrupted too
 				if !mutableState.IsWorkflowCompleted() {
-					return &types.BadRequestError{Message: "Workflow execution is still running, should have been completed."}
+					t.logger.Error("generateCrossClusterTasks", tag.Error(types.BadRequestError{
+						Message: "Workflow has an invalid state for recordChildClose cross cluster task",
+					}))
+					// Returning nil to avoid infinite retry loop
+					return nil
 				}
 			} else if !mutableState.IsWorkflowExecutionRunning() {
 				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}

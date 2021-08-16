@@ -605,11 +605,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateCrossClusterTaskFromTransferTask
 			TargetCluster: targetCluster,
 			RecordWorkflowExecutionCompleteTask: persistence.RecordWorkflowExecutionCompleteTask{
 				// TaskID is set by shard context
-				TargetDomainID:   task.TargetDomainID,
-				TargetWorkflowID: task.TargetWorkflowID,
-				TargetRunID:      task.TargetRunID,
-				InitiatedID:      task.ScheduleID,
-				Version:          task.Version,
+				Version: task.Version,
 			},
 		}
 	default:
