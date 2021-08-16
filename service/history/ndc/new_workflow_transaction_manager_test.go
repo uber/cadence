@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 )
 
@@ -108,7 +109,16 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Brand
 	workflow.EXPECT().GetReleaseFn().Return(releaseFn).AnyTimes()
 
 	workflowSnapshot := &persistence.WorkflowSnapshot{}
-	workflowEventsSeq := []*persistence.WorkflowEvents{&persistence.WorkflowEvents{}}
+	workflowStartedType := types.EventTypeWorkflowExecutionStarted
+	workflowEventsSeq := []*persistence.WorkflowEvents{
+		&persistence.WorkflowEvents{
+			Events: []*types.HistoryEvent{
+				{
+					EventType: &workflowStartedType,
+				},
+			},
+		},
+	}
 	workflowHistorySize := int64(12345)
 	mutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
 		DomainID:   domainID,
@@ -123,7 +133,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Brand
 		ctx, domainID, workflowID,
 	).Return("", nil).Times(1)
 
-	context.EXPECT().PersistFirstWorkflowEvents(
+	context.EXPECT().PersistStartWorkflowBatchEvents(
 		gomock.Any(),
 		workflowEventsSeq[0],
 	).Return(workflowHistorySize, nil).Times(1)
@@ -170,7 +180,16 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Creat
 	currentWorkflow.EXPECT().GetReleaseFn().Return(currentReleaseFn).AnyTimes()
 
 	targetWorkflowSnapshot := &persistence.WorkflowSnapshot{}
-	targetWorkflowEventsSeq := []*persistence.WorkflowEvents{&persistence.WorkflowEvents{}}
+	workflowNonStartedType := types.EventTypeDecisionTaskScheduled // non workflow started event
+	targetWorkflowEventsSeq := []*persistence.WorkflowEvents{
+		&persistence.WorkflowEvents{
+			Events: []*types.HistoryEvent{
+				{
+					EventType: &workflowNonStartedType,
+				},
+			},
+		},
+	}
 	targetWorkflowHistorySize := int64(12345)
 	targetMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
 		DomainID:   domainID,
@@ -193,7 +212,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Creat
 	}).AnyTimes()
 	currentWorkflow.EXPECT().GetVectorClock().Return(currentLastWriteVersion, int64(0), nil)
 
-	targetContext.EXPECT().PersistFirstWorkflowEvents(
+	targetContext.EXPECT().PersistNonStartWorkflowBatchEvents(
 		gomock.Any(),
 		targetWorkflowEventsSeq[0],
 	).Return(targetWorkflowHistorySize, nil).Times(1)
@@ -243,7 +262,16 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Creat
 			WorkflowID: workflowID,
 		},
 	}
-	targetWorkflowEventsSeq := []*persistence.WorkflowEvents{&persistence.WorkflowEvents{}}
+	workflowStartedType := types.EventTypeWorkflowExecutionStarted
+	targetWorkflowEventsSeq := []*persistence.WorkflowEvents{
+		&persistence.WorkflowEvents{
+			Events: []*types.HistoryEvent{
+				{
+					EventType: &workflowStartedType,
+				},
+			},
+		},
+	}
 	targetWorkflowHistorySize := int64(12345)
 	targetMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
 		DomainID:   domainID,
@@ -260,7 +288,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Creat
 	targetWorkflow.EXPECT().HappensAfter(currentWorkflow).Return(false, nil)
 	targetWorkflow.EXPECT().SuppressBy(currentWorkflow).Return(execution.TransactionPolicyPassive, nil).Times(1)
 
-	targetContext.EXPECT().PersistFirstWorkflowEvents(
+	targetContext.EXPECT().PersistStartWorkflowBatchEvents(
 		gomock.Any(),
 		targetWorkflowEventsSeq[0],
 	).Return(targetWorkflowHistorySize, nil).Times(1)
@@ -311,7 +339,16 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Creat
 			WorkflowID: workflowID,
 		},
 	}
-	targetWorkflowEventsSeq := []*persistence.WorkflowEvents{&persistence.WorkflowEvents{}}
+	workflowNonStartedType := types.EventTypeDecisionTaskScheduled // non workflow started event
+	targetWorkflowEventsSeq := []*persistence.WorkflowEvents{
+		&persistence.WorkflowEvents{
+			Events: []*types.HistoryEvent{
+				{
+					EventType: &workflowNonStartedType,
+				},
+			},
+		},
+	}
 	targetWorkflowHistorySize := int64(12345)
 	targetMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
 		DomainID:   domainID,
@@ -328,7 +365,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Creat
 	targetWorkflow.EXPECT().HappensAfter(currentWorkflow).Return(false, nil)
 	targetWorkflow.EXPECT().SuppressBy(currentWorkflow).Return(execution.TransactionPolicyPassive, nil).Times(1)
 
-	targetContext.EXPECT().PersistFirstWorkflowEvents(
+	targetContext.EXPECT().PersistNonStartWorkflowBatchEvents(
 		gomock.Any(),
 		targetWorkflowEventsSeq[0],
 	).Return(targetWorkflowHistorySize, nil).Times(1)
