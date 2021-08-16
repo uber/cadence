@@ -911,7 +911,7 @@ func (d *handlerImpl) updateReplicationConfig(
 			config.Clusters,
 			clustersNew,
 		); err != nil {
-			return config, clusterUpdated, activeClusterUpdated, err
+			d.logger.Warn("removing replica clusters from domain replication group", tag.Error(err))
 		}
 		config.Clusters = clustersNew
 	}
