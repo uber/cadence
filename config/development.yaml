@@ -80,6 +80,7 @@ clusterMetadata:
     active:
       enabled: true
       initialFailoverVersion: 0
+      rpcAddress: "localhost:7933" # this is to let system worker connected to the fronted end service. In cluster setup, localhost will not work
 
 dcRedirectionPolicy:
   policy: "noop"
@@ -111,9 +112,6 @@ domainDefaults:
     visibility:
       status: "enabled"
       URI: "file:///tmp/cadence_vis_archival/development"
-
-publicClient:
-  hostPort: "localhost:7933"
 
 dynamicconfig:
   client: filebased
