@@ -120,7 +120,6 @@ type (
 
 var (
 	adminServiceRetryPolicy = common.CreateAdminServiceRetryPolicy()
-	resendStartEventID      = common.Int64Ptr(0)
 )
 
 // NewAdminHandler creates a thrift handler for the cadence admin service
@@ -1004,10 +1003,10 @@ func (adh *adminHandlerImpl) ResendReplicationTasks(
 		request.DomainID,
 		request.GetWorkflowID(),
 		request.GetRunID(),
-		resendStartEventID,
+		request.StartEventID,
 		request.StartVersion,
-		nil,
-		nil,
+		request.EndEventID,
+		request.EndVersion,
 	)
 }
 
@@ -1052,13 +1051,6 @@ func (adh *adminHandlerImpl) validateGetWorkflowExecutionRawHistoryV2Request(
 	pageSize := int(request.GetMaximumPageSize())
 	if pageSize <= 0 {
 		return &types.BadRequestError{Message: "Invalid PageSize."}
-	}
-
-	if request.StartEventID == nil &&
-		request.StartEventVersion == nil &&
-		request.EndEventID == nil &&
-		request.EndEventVersion == nil {
-		return &types.BadRequestError{Message: "Invalid event query range."}
 	}
 
 	if (request.StartEventID != nil && request.StartEventVersion == nil) ||

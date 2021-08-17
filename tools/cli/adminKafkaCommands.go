@@ -452,32 +452,15 @@ type ClustersConfig struct {
 
 func doRereplicate(
 	ctx context.Context,
-	shardID int,
 	domainID string,
 	wid string,
 	rid string,
-	endEventID int64,
-	endEventVersion int64,
+	endEventID *int64,
+	endEventVersion *int64,
 	sourceCluster string,
 	adminClient admin.Client,
-	exeMgr persistence.ExecutionManager,
 ) {
-	fmt.Printf("Start rereplicate for wid: %v, rid:%v \n", wid, rid)
-	resp, err := exeMgr.GetWorkflowExecution(ctx, &persistence.GetWorkflowExecutionRequest{
-		DomainID: domainID,
-		Execution: types.WorkflowExecution{
-			WorkflowID: wid,
-			RunID:      rid,
-		},
-	})
-	if err != nil {
-		ErrorAndExit("GetWorkflowExecution error", err)
-	}
-
-	versionHistories := resp.State.VersionHistories
-	if versionHistories == nil {
-		ErrorAndExit("The workflow is not a NDC workflow", nil)
-	}
+	fmt.Printf("Start rereplication for wid: %v, rid:%v \n", wid, rid)
 	if err := adminClient.ResendReplicationTasks(
 		ctx,
 		&types.ResendReplicationTasksRequest{
@@ -485,13 +468,13 @@ func doRereplicate(
 			WorkflowID:    wid,
 			RunID:         rid,
 			RemoteCluster: sourceCluster,
-			EndEventID:    common.Int64Ptr(endEventID + 1),
-			EndVersion:    common.Int64Ptr(endEventVersion),
+			EndEventID:    endEventID,
+			EndVersion:    endEventVersion,
 		},
 	); err != nil {
 		ErrorAndExit("Failed to resend ndc workflow", err)
 	}
-	fmt.Printf("Done rereplicate for wid: %v, rid:%v \n", wid, rid)
+	fmt.Printf("Done rereplication for wid: %v, rid:%v \n", wid, rid)
 }
 
 // AdminRereplicate parses will re-publish replication tasks to topic
@@ -502,23 +485,20 @@ func AdminRereplicate(c *cli.Context) {
 		return
 	}
 	sourceCluster := getRequiredOption(c, FlagSourceCluster)
-	if !c.IsSet(FlagMaxEventID) {
-		ErrorAndExit("End event ID is not defined", nil)
-	}
-	if !c.IsSet(FlagEndEventVersion) {
-		ErrorAndExit("End event version is not defined", nil)
-	}
 
 	adminClient := cFactory.ServerAdminClient(c)
-	endEventID := c.Int64(FlagMaxEventID)
-	endVersion := c.Int64(FlagEndEventVersion)
+	var endEventID, endVersion *int64
+	if c.IsSet(FlagMaxEventID) {
+		endEventID = common.Int64Ptr(c.Int64(FlagMaxEventID) + 1)
+	}
+	if c.IsSet(FlagEndEventVersion) {
+		endVersion = common.Int64Ptr(c.Int64(FlagEndEventVersion))
+	}
 	domainID := getRequiredOption(c, FlagDomainID)
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := getRequiredOption(c, FlagRunID)
-	shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
 	contextTimeout := defaultResendContextTimeout
-	executionManager := initializeExecutionStore(c, shardID, 0)
-	defer executionManager.Close()
+
 	if c.GlobalIsSet(FlagContextTimeout) {
 		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
 	}
@@ -527,7 +507,6 @@ func AdminRereplicate(c *cli.Context) {
 
 	doRereplicate(
 		ctx,
-		shardID,
 		domainID,
 		wid,
 		rid,
@@ -535,7 +514,6 @@ func AdminRereplicate(c *cli.Context) {
 		endVersion,
 		sourceCluster,
 		adminClient,
-		executionManager,
 	)
 }
 
