@@ -55,7 +55,6 @@ type (
 		// Archival is the config for archival
 		Archival Archival `yaml:"archival"`
 		// PublicClient is config for sys worker service connecting to cadence frontend
-		// Default to currentCluster's RPCAddress in ClusterInformation
 		PublicClient PublicClient `yaml:"publicClient"`
 		// DynamicConfigClient is the config for setting up the file based dynamic config client
 		// Filepath would be relative to the root directory when the path wasn't absolute.
@@ -427,6 +426,7 @@ type (
 	// PublicClient is config for connecting to cadence frontend
 	PublicClient struct {
 		// HostPort is the host port to connect on. Host can be DNS name
+		// Default to currentCluster's RPCAddress in ClusterInformation
 		HostPort string `yaml:"hostPort"`
 		// interval to refresh DNS. Default to 10s
 		RefreshInterval time.Duration `yaml:"RefreshInterval"`
