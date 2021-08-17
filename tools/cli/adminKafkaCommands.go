@@ -459,24 +459,8 @@ func doRereplicate(
 	endEventVersion *int64,
 	sourceCluster string,
 	adminClient admin.Client,
-	exeMgr persistence.ExecutionManager,
 ) {
 	fmt.Printf("Start rereplication for wid: %v, rid:%v \n", wid, rid)
-	resp, err := exeMgr.GetWorkflowExecution(ctx, &persistence.GetWorkflowExecutionRequest{
-		DomainID: domainID,
-		Execution: types.WorkflowExecution{
-			WorkflowID: wid,
-			RunID:      rid,
-		},
-	})
-	if err != nil {
-		ErrorAndExit("GetWorkflowExecution error", err)
-	}
-
-	versionHistories := resp.State.VersionHistories
-	if versionHistories == nil {
-		ErrorAndExit("The workflow is not a NDC workflow", nil)
-	}
 	if err := adminClient.ResendReplicationTasks(
 		ctx,
 		&types.ResendReplicationTasksRequest{
@@ -513,10 +497,7 @@ func AdminRereplicate(c *cli.Context) {
 	domainID := getRequiredOption(c, FlagDomainID)
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := getRequiredOption(c, FlagRunID)
-	shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
 	contextTimeout := defaultResendContextTimeout
-	executionManager := initializeExecutionStore(c, shardID, 0)
-	defer executionManager.Close()
 
 	if c.GlobalIsSet(FlagContextTimeout) {
 		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
@@ -533,7 +514,6 @@ func AdminRereplicate(c *cli.Context) {
 		endVersion,
 		sourceCluster,
 		adminClient,
-		executionManager,
 	)
 }
 
