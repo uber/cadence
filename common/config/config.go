@@ -512,8 +512,8 @@ func (c *Config) fillDefaults() error {
 		if cluster.RPCName == "" {
 			// filling RPCName with a default value if empty
 			cluster.RPCName = "cadence-frontend"
+			c.ClusterMetadata.ClusterInformation[name] = cluster
 		}
-		c.ClusterMetadata.ClusterInformation[name] = cluster
 	}
 
 	// filling publicClient with current cluster's RPC address if empty
