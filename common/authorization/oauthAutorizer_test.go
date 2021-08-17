@@ -139,6 +139,21 @@ func (s *oauthSuite) TestItIsAdmin() {
 	s.Equal(result.Decision, DecisionAllow)
 }
 
+func (s *oauthSuite) TestEmptyToken() {
+	ctx := context.Background()
+	ctx, call := encoding.NewInboundCall(ctx)
+	err := call.ReadFromRequest(&transport.Request{
+		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, ""),
+	})
+	s.NoError(err)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "token is not set in header"
+	}))
+	result, _ := authorizer.Authorize(ctx, &s.att)
+	s.Equal(result.Decision, DecisionDeny)
+}
+
 func (s *oauthSuite) TestGetDomainError() {
 	s.domainCache.EXPECT().GetDomain(s.att.DomainName).Return(nil, fmt.Errorf("error")).Times(1)
 	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
