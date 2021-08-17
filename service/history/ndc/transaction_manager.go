@@ -240,7 +240,7 @@ func (r *transactionManagerImpl) backfillWorkflow(
 		}
 	}()
 
-	if _, err := targetWorkflow.GetContext().PersistNonFirstWorkflowEvents(
+	if _, err := targetWorkflow.GetContext().PersistNonStartWorkflowBatchEvents(
 		ctx,
 		targetWorkflowEvents,
 	); err != nil {
