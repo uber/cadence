@@ -476,6 +476,35 @@ func (mr *MockEngineMockRecorder) GetDLQReplicationMessages(ctx, taskInfos inter
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDLQReplicationMessages", reflect.TypeOf((*MockEngine)(nil).GetDLQReplicationMessages), ctx, taskInfos)
 }
 
+// GetCrossClusterTasks mocks base method
+func (m *MockEngine) GetCrossClusterTasks(ctx context.Context, targetCluster string) ([]*types.CrossClusterTaskRequest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCrossClusterTasks", ctx, targetCluster)
+	ret0, _ := ret[0].([]*types.CrossClusterTaskRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCrossClusterTasks indicates an expected call of GetCrossClusterTasks
+func (mr *MockEngineMockRecorder) GetCrossClusterTasks(ctx, targetCluster interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterTasks", reflect.TypeOf((*MockEngine)(nil).GetCrossClusterTasks), ctx, targetCluster)
+}
+
+// RespondCrossClusterTasksCompleted mocks base method
+func (m *MockEngine) RespondCrossClusterTasksCompleted(ctx context.Context, targetCluster string, responses []*types.CrossClusterTaskResponse) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RespondCrossClusterTasksCompleted", ctx, targetCluster, responses)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RespondCrossClusterTasksCompleted indicates an expected call of RespondCrossClusterTasksCompleted
+func (mr *MockEngineMockRecorder) RespondCrossClusterTasksCompleted(ctx, targetCluster, responses interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondCrossClusterTasksCompleted", reflect.TypeOf((*MockEngine)(nil).RespondCrossClusterTasksCompleted), ctx, targetCluster, responses)
+}
+
 // QueryWorkflow mocks base method
 func (m *MockEngine) QueryWorkflow(ctx context.Context, request *types.HistoryQueryWorkflowRequest) (*types.HistoryQueryWorkflowResponse, error) {
 	m.ctrl.T.Helper()
@@ -684,4 +713,16 @@ func (m *MockEngine) NotifyNewTimerTasks(executionInfo *persistence.WorkflowExec
 func (mr *MockEngineMockRecorder) NotifyNewTimerTasks(executionInfo, tasks interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTimerTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewTimerTasks), executionInfo, tasks)
+}
+
+// NotifyNewCrossClusterTasks mocks base method
+func (m *MockEngine) NotifyNewCrossClusterTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "NotifyNewCrossClusterTasks", executionInfo, tasks)
+}
+
+// NotifyNewCrossClusterTasks indicates an expected call of NotifyNewCrossClusterTasks
+func (mr *MockEngineMockRecorder) NotifyNewCrossClusterTasks(executionInfo, tasks interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewCrossClusterTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewCrossClusterTasks), executionInfo, tasks)
 }

@@ -424,7 +424,7 @@ func initializeDynamicConfig(
 	doneChan := make(chan struct{})
 	close(doneChan)
 	dynamicConfigClient, err := dynamicconfig.NewFileBasedClient(
-		&serviceConfig.DynamicConfigClient,
+		&serviceConfig.DynamicConfig.FileBased,
 		logger,
 		doneChan,
 	)

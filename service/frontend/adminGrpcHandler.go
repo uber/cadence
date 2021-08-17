@@ -140,3 +140,23 @@ func (g adminGRPCHandler) GetCrossClusterTasks(ctx context.Context, request *adm
 	response, err := g.h.GetCrossClusterTasks(withGRPCTag(ctx), proto.ToAdminGetCrossClusterTasksRequest(request))
 	return proto.FromAdminGetCrossClusterTasksResponse(response), proto.FromError(err)
 }
+
+func (g adminGRPCHandler) GetDynamicConfig(ctx context.Context, request *adminv1.GetDynamicConfigRequest) (*adminv1.GetDynamicConfigResponse, error) {
+	response, err := g.h.GetDynamicConfig(withGRPCTag(ctx), proto.ToGetDynamicConfigRequest(request))
+	return proto.FromGetDynamicConfigResponse(response), proto.FromError(err)
+}
+
+func (g adminGRPCHandler) UpdateDynamicConfig(ctx context.Context, request *adminv1.UpdateDynamicConfigRequest) (*adminv1.UpdateDynamicConfigResponse, error) {
+	err := g.h.UpdateDynamicConfig(withGRPCTag(ctx), proto.ToUpdateDynamicConfigRequest(request))
+	return &adminv1.UpdateDynamicConfigResponse{}, proto.FromError(err)
+}
+
+func (g adminGRPCHandler) RestoreDynamicConfig(ctx context.Context, request *adminv1.RestoreDynamicConfigRequest) (*adminv1.RestoreDynamicConfigResponse, error) {
+	err := g.h.RestoreDynamicConfig(withGRPCTag(ctx), proto.ToRestoreDynamicConfigRequest(request))
+	return &adminv1.RestoreDynamicConfigResponse{}, proto.FromError(err)
+}
+
+func (g adminGRPCHandler) ListDynamicConfig(ctx context.Context, request *adminv1.ListDynamicConfigRequest) (*adminv1.ListDynamicConfigResponse, error) {
+	response, err := g.h.ListDynamicConfig(withGRPCTag(ctx), proto.ToListDynamicConfigRequest(request))
+	return proto.FromListDynamicConfigResponse(response), proto.FromError(err)
+}

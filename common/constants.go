@@ -169,6 +169,10 @@ const (
 	DomainDataKeyForManagedFailover = "IsManagedByCadence"
 	// DomainDataKeyForPreferredCluster is the key of DomainData for domain rebalance
 	DomainDataKeyForPreferredCluster = "PreferredCluster"
+	// DomainDataKeyForReadGroups stores which groups have read permission of the domain API
+	DomainDataKeyForReadGroups = "READ_GROUPS"
+	// DomainDataKeyForWriteGroups stores which groups have write permission of the domain API
+	DomainDataKeyForWriteGroups = "WRITE_GROUPS"
 )
 
 type (

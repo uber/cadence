@@ -63,6 +63,8 @@ type (
 		SyncActivity(ctx context.Context, request *types.SyncActivityRequest) error
 		GetReplicationMessages(ctx context.Context, pollingCluster string, lastReadMessageID int64) (*types.ReplicationMessages, error)
 		GetDLQReplicationMessages(ctx context.Context, taskInfos []*types.ReplicationTaskInfo) ([]*types.ReplicationTask, error)
+		GetCrossClusterTasks(ctx context.Context, targetCluster string) ([]*types.CrossClusterTaskRequest, error)
+		RespondCrossClusterTasksCompleted(ctx context.Context, targetCluster string, responses []*types.CrossClusterTaskResponse) error
 		QueryWorkflow(ctx context.Context, request *types.HistoryQueryWorkflowRequest) (*types.HistoryQueryWorkflowResponse, error)
 		ReapplyEvents(ctx context.Context, domainUUID string, workflowID string, runID string, events []*types.HistoryEvent) error
 		ReadDLQMessages(ctx context.Context, messagesRequest *types.ReadDLQMessagesRequest) (*types.ReadDLQMessagesResponse, error)
@@ -79,5 +81,6 @@ type (
 		NotifyNewHistoryEvent(event *events.Notification)
 		NotifyNewTransferTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
 		NotifyNewTimerTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
+		NotifyNewCrossClusterTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
 	}
 )

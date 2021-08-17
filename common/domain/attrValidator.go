@@ -91,6 +91,11 @@ func (d *AttrValidatorImpl) validateDomainReplicationConfigForLocalDomain(
 func (d *AttrValidatorImpl) validateDomainReplicationConfigForGlobalDomain(
 	replicationConfig *persistence.DomainReplicationConfig,
 ) error {
+	// TODO: https://github.com/uber/cadence/issues/4345 add checking for "pending active" as well
+	// Right now we only have checking if clusters to remove are "current active cluster" in this method.
+	// However, there could be edge cases that a cluster is in "pending active" state during graceful failover.
+	// It's better to do this check so that people won't make mistake.
+	// However, this is not critical -- even this happens, they can add the active cluster back
 
 	activeCluster := replicationConfig.ActiveClusterName
 	clusters := replicationConfig.Clusters

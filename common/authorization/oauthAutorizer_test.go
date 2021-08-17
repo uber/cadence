@@ -22,10 +22,10 @@ package authorization
 
 import (
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/cristalhq/jwt/v3"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/yarpc/api/encoding"
@@ -33,59 +33,25 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/persistence"
 )
-
-var pubKeyTest = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAscukltHilaq+o5gIVE4P
-GwWl+esvJ2EaEpWw6ogr98Un11YJ4oKkwIkLw4iIo0tveCINA3cZmxaW1RejRWKE
-qYFtQ1rYd6BsnFAHXWh2R3A1FtpG6ANUEGkE7OAJe2/L42E/ImJ+GQxRvartInDM
-yfiRfB7+L2n3wG+Ni+hBNMtAaX4Wwbj2hup21Jjuo96TuhcGImBFBATGWaYR2wqe
-/6by9wJexPHlY/1uDp3SnzF1dCLjp76SGCfyYqOGC/PxhQi7mDxeH9/tIC+lt/Sz
-wc1n8gZLtlRlZHinvYa8lhWXqVYw6WD8h4LTgALq9iY+beD1PFQSY1GkQtt0RhRw
-eQIDAQAB
------END PUBLIC KEY-----`
-
-var privKeyTest = `-----BEGIN PRIVATE KEY-----
-MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCxy6SW0eKVqr6j
-mAhUTg8bBaX56y8nYRoSlbDqiCv3xSfXVgnigqTAiQvDiIijS294Ig0DdxmbFpbV
-F6NFYoSpgW1DWth3oGycUAddaHZHcDUW2kboA1QQaQTs4Al7b8vjYT8iYn4ZDFG9
-qu0icMzJ+JF8Hv4vaffAb42L6EE0y0BpfhbBuPaG6nbUmO6j3pO6FwYiYEUEBMZZ
-phHbCp7/pvL3Al7E8eVj/W4OndKfMXV0IuOnvpIYJ/Jio4YL8/GFCLuYPF4f3+0g
-L6W39LPBzWfyBku2VGVkeKe9hryWFZepVjDpYPyHgtOAAur2Jj5t4PU8VBJjUaRC
-23RGFHB5AgMBAAECggEABj1T9Orf0W9nskDQ2QQ7cuVdZEJjpMrbTK1Aw1L8/Qc9
-TSkINDEayaV9mn1RXe61APcBSdP4ER7nXfTZiQ21LhLcWWg9T3cbh1b70oRqyI9z
-Pi6HSBeWz4kfUBX9izMQFBZKzjYn6qaJp1b8bGXKRWkcvPRZqLhmsRPmeH3xrOHe
-qsIDhYXMjRoOgEUxLbk8iPLP6nx0icPJl/tHK2l76R+1Ko6TBE69Md2krUIuh0u4
-nm9n+Az+0GuvkFsLw5KMGhSBeqB+ez5qtFa8T8CUCn98IjiUDOwgZdFrNldFLcZf
-putw7O2qCA9LT+mFBQ6CVsVu/9tKeXQ9sJ7p3lxhwQKBgQDjt7HNIabLncdXPMu0
-ByRyNVme0+Y1vbj9Q7iodk77hvlzWpD1p5Oyvq7cN+Cb4c1iO/ZQXMyUw+9hLgmf
-LNquH2d4hK1Jerzc/ciwu6dUBsCW8+0VJd4M2UNN15rJMPvbZGmqMq9Np1iCTCjE
-dvHo7xjPcJhsbhMbHq+PaUU7OQKBgQDH4KuaHBFTGUPkRaQGAZNRB8dDvSExV6ID
-Pblzr80g9kKHUnQCQfIDLjHVgDbTaSCdRw7+EXRyRmLy5mfPWEbUFfIemEpEcEcb
-3geWeVDx4Z/FwprWFuVifRopRSQ/FAbMXLIui7OHXWLEtzBvLkR/uS2VIVPm10PV
-pbh2EXifQQKBgQDbcOLbjelBYLt/euvGgfeCQ50orIS1Fy5UidVCKjh0tR5gJk95
-G1L+tjilqQc+0LtuReBYkwTm+2YMXSQSi1P05fh9MEYZgDjOMZYbkcpu887V6Rx3
-+7Te5uOv+OyFozmhs0MMK6m5iGGHtsK2iPUYBoj/Jj8MhorM4KZH6ic4KQKBgQCl
-3zIpg09xSc9Iue5juZz6qtzXvzWzkAj4bZnggq1VxGfzix6Q3Q8tSoG6r1tQWLbj
-Lpwnhm6/guAMud6+eIDW8ptqfnFrmE26t6hOXMEq6lXANT5vmrKj6DP0uddZrZHy
-uJ55+B91n68elvPP4HKiGBfW4cCSGmTGAXAyM0+JwQKBgQCz2cNiFrr+oEnlHDLg
-EqsiEufppT4FSZPy9/MtuWuMgEOBu34cckYaai+nahQLQvH62KskTK0EUjE1ywub
-NPORuXcugxIBMHWyseOS7lrtrlSBxU9gntS7jHdM3IMrrUy9YZBvPvFGP0wLdpKM
-nvt3vT46hs3n28XZpb18uRkSDw==
------END PRIVATE KEY-----`
 
 type (
 	oauthSuite struct {
 		suite.Suite
-		logger          *log.MockLogger
-		cfg             config.OAuthAuthorizer
-		att             Attributes
-		token           string
-		tokenExpiredIat string
-		ctx             context.Context
+		logger      *log.MockLogger
+		cfg         config.OAuthAuthorizer
+		att         Attributes
+		token       string
+		controller  *gomock.Controller
+		domainCache *cache.MockDomainCache
+		ctx         context.Context
+		domainEntry *cache.DomainCacheEntry
 	}
 )
 
@@ -99,32 +65,13 @@ func (s *oauthSuite) SetupTest() {
 		Enable: true,
 		JwtCredentials: config.JwtCredentials{
 			Algorithm:  jwt.RS256.String(),
-			PublicKey:  pubKeyTest,
-			PrivateKey: privKeyTest,
+			PublicKey:  "../../config/credentials/keytest.pub",
+			PrivateKey: "../../config/credentials/keytest",
 		},
 		MaxJwtTTL: 300000001,
 	}
-	// https://jwt.io/#debugger-io?token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwicGVybWlzc2lvbiI6InJlYWQiLCJkb21haW4iOiJ0ZXN0LWRvbWFpbiIsImlhdCI6MTYyNjMzNjQ2MywiVFRMIjozMDAwMDAwMDB9.r1e83j6J392u4oAM7S7RYEDpeEilGThev2rK6RxqRXJIYiQlqKo1siDQjgHmj5PNUyEAQJF54CcXiaWJpTPWiPOxuRGtfJbUjSTnU2TiLvUiYU9bYt5U1w_UdlGzOD0ULhXPv2bzujAgtuQiRutwpljuQZwqqSDzILAMZlD5NMhEajYbE1P_0kv7esHO4oofTh__G3VZ_2fEi52GA8lwqoqBH3tQ1RK5QblnK5zMG5zBy8yK6JUmdoAGnKugjkJdDu8ERI4lNeIaWhD6kV8lksmPY0CxLfbmqLP3BIhvRF7zOeI1ocwa_4lpk4U6QRZ2w4hyGSEtD3sMmz1wl_uQCw&publicKey=-----BEGIN%20PUBLIC%20KEY-----%0AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAscukltHilaq%2Bo5gIVE4P%0AGwWl%2BesvJ2EaEpWw6ogr98Un11YJ4oKkwIkLw4iIo0tveCINA3cZmxaW1RejRWKE%0AqYFtQ1rYd6BsnFAHXWh2R3A1FtpG6ANUEGkE7OAJe2%2FL42E%2FImJ%2BGQxRvartInDM%0AyfiRfB7%2BL2n3wG%2BNi%2BhBNMtAaX4Wwbj2hup21Jjuo96TuhcGImBFBATGWaYR2wqe%0A%2F6by9wJexPHlY%2F1uDp3SnzF1dCLjp76SGCfyYqOGC%2FPxhQi7mDxeH9%2FtIC%2Blt%2FSz%0Awc1n8gZLtlRlZHinvYa8lhWXqVYw6WD8h4LTgALq9iY%2BbeD1PFQSY1GkQtt0RhRw%0AeQIDAQAB%0A-----END%20PUBLIC%20KEY-----
-	s.token = `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik
-		pvaG4gRG9lIiwicGVybWlzc2lvbiI6InJlYWQiLCJkb21haW4iOiJ0ZXN0LWRvbWFpbiIsImlhdCI6MTYyNjMzNjQ
-		2MywiVFRMIjozMDAwMDAwMDB9.r1e83j6J392u4oAM7S7RYEDpeEilGThev2rK6RxqRXJIYiQlqKo1siDQjgHmj5P
-		NUyEAQJF54CcXiaWJpTPWiPOxuRGtfJbUjSTnU2TiLvUiYU9bYt5U1w_UdlGzOD0ULhXPv2bzujAgtuQiRutwplju
-		QZwqqSDzILAMZlD5NMhEajYbE1P_0kv7esHO4oofTh__G3VZ_2fEi52GA8lwqoqBH3tQ1RK5QblnK5zMG5zBy8yK6
-		JUmdoAGnKugjkJdDu8ERI4lNeIaWhD6kV8lksmPY0CxLfbmqLP3BIhvRF7zOeI1ocwa_4lpk4U6QRZ2w4hyGSEtD3
-		sMmz1wl_uQCw`
-	// https://jwt.io/#debugger-io?token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwicGVybWlzc2lvbiI6InJlYWQiLCJkb21haW4iOiJ0ZXN0LWRvbWFpbiIsImlhdCI6MTYyNjMzNjQ2MywiVFRMIjoxfQ.P_T3O54F_aiHcaMwyeh2GXtzgWhyKSLkuu8rtGAylK0HOsHYRIkbjdx251kaDEf2B-QP6KKCiXhDgZ_Q42Tb477zjl9IYGRqEj9JZ7PwGuRWCEZWUaFHgB4XmkviHDMamBB5jqg2I2XYklyNO3r2m45_AcQ3dAU4uLiwBwSVKy_YsMldEvGKMC86JvGcYPhu-LLvrJSViQVyuBGjUor6YREuadAZHyKuoMunLq5b_BW2hTf_67kGiyRL5_DxBBGbiNeHDPNoBUNUAx4Nbe1rAckREL8VULVFC_HZ0bDiM7KMJJ0t6zLcgP8Z3Q3341nfhv9r3qG_6U343ZgTPZfQNQ&publicKey=-----BEGIN%20PUBLIC%20KEY-----%0AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAscukltHilaq%2Bo5gIVE4P%0AGwWl%2BesvJ2EaEpWw6ogr98Un11YJ4oKkwIkLw4iIo0tveCINA3cZmxaW1RejRWKE%0AqYFtQ1rYd6BsnFAHXWh2R3A1FtpG6ANUEGkE7OAJe2%2FL42E%2FImJ%2BGQxRvartInDM%0AyfiRfB7%2BL2n3wG%2BNi%2BhBNMtAaX4Wwbj2hup21Jjuo96TuhcGImBFBATGWaYR2wqe%0A%2F6by9wJexPHlY%2F1uDp3SnzF1dCLjp76SGCfyYqOGC%2FPxhQi7mDxeH9%2FtIC%2Blt%2FSz%0Awc1n8gZLtlRlZHinvYa8lhWXqVYw6WD8h4LTgALq9iY%2BbeD1PFQSY1GkQtt0RhRw%0AeQIDAQAB%0A-----END%20PUBLIC%20KEY-----
-	s.tokenExpiredIat = `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwib
-		mFtZSI6IkpvaG4gRG9lIiwicGVybWlzc2lvbiI6InJlYWQiLCJkb21haW4iOiJ0ZXN0LWRvbWFpbiIsImlhdCI6MTY
-		yNjMzNjQ2MywiVFRMIjoxfQ.P_T3O54F_aiHcaMwyeh2GXtzgWhyKSLkuu8rtGAylK0HOsHYRIkbjdx251kaDEf2B-
-		QP6KKCiXhDgZ_Q42Tb477zjl9IYGRqEj9JZ7PwGuRWCEZWUaFHgB4XmkviHDMamBB5jqg2I2XYklyNO3r2m45_AcQ3
-		dAU4uLiwBwSVKy_YsMldEvGKMC86JvGcYPhu-LLvrJSViQVyuBGjUor6YREuadAZHyKuoMunLq5b_BW2hTf_67kGiy
-		RL5_DxBBGbiNeHDPNoBUNUAx4Nbe1rAckREL8VULVFC_HZ0bDiM7KMJJ0t6zLcgP8Z3Q3341nfhv9r3qG_6U343ZgT
-		PZfQNQ`
-
-	re := regexp.MustCompile(`\r?\n?\t`)
-	s.token = re.ReplaceAllString(s.token, "")
-	s.tokenExpiredIat = re.ReplaceAllString(s.tokenExpiredIat, "")
-
+	// https://jwt.io/#debugger-io?token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJTdWIiOiIxMjM0NTY3ODkwIiwiTmFtZSI6IkpvaG4gRG9lIiwiR3JvdXBzIjoiYSBiIGMiLCJBZG1pbiI6ZmFsc2UsIklhdCI6MTYyNzUzODcxMiwiVFRMIjozMDAwMDAwMDB9.bh4s8-l1bjG7-QFzuouPy9WPvkq3_9U2e815WFrN-M247NQROBii8ju_N21i6ixK0t-VZTgcJs2B4aN4w1uiCTCg6NyhdeeG8Xd8NcYw0Oq7fjSoFmOXzDzljY6oi9M1XXniNrDIMBLfKXx8tgseSBwOnWoT3vja3ioU6ReqD3Xsp-Wg_clDhb6vtA6pDtnaCVXJNStLSbgWyi-1Mxo9ar92zRDV5YsMaBdUjFUT2bW9QcFzMFAqpHin0QEIa6GPZezY-yn88k5S5cT6Yh7WA4C0Q6C3H1n3EOS05Phwpxt840w7zjh5XR0-rd8-kRX84pHMh0GwHfjV1K7jBQ2QnQ&publicKey=-----BEGIN%20PUBLIC%20KEY-----%0AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAscukltHilaq%2Bo5gIVE4P%0AGwWl%2BesvJ2EaEpWw6ogr98Un11YJ4oKkwIkLw4iIo0tveCINA3cZmxaW1RejRWKE%0AqYFtQ1rYd6BsnFAHXWh2R3A1FtpG6ANUEGkE7OAJe2%2FL42E%2FImJ%2BGQxRvartInDM%0AyfiRfB7%2BL2n3wG%2BNi%2BhBNMtAaX4Wwbj2hup21Jjuo96TuhcGImBFBATGWaYR2wqe%0A%2F6by9wJexPHlY%2F1uDp3SnzF1dCLjp76SGCfyYqOGC%2FPxhQi7mDxeH9%2FtIC%2Blt%2FSz%0Awc1n8gZLtlRlZHinvYa8lhWXqVYw6WD8h4LTgALq9iY%2BbeD1PFQSY1GkQtt0RhRw%0AeQIDAQAB%0A-----END%20PUBLIC%20KEY-----
+	s.token = `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJTdWIiOiIxMjM0NTY3ODkwIiwiTmFtZSI6IkpvaG4gRG9lIiwiR3JvdXBzIjoiYSBiIGMiLCJBZG1pbiI6ZmFsc2UsIklhdCI6MTYyNzUzODcxMiwiVFRMIjozMDAwMDAwMDB9.bh4s8-l1bjG7-QFzuouPy9WPvkq3_9U2e815WFrN-M247NQROBii8ju_N21i6ixK0t-VZTgcJs2B4aN4w1uiCTCg6NyhdeeG8Xd8NcYw0Oq7fjSoFmOXzDzljY6oi9M1XXniNrDIMBLfKXx8tgseSBwOnWoT3vja3ioU6ReqD3Xsp-Wg_clDhb6vtA6pDtnaCVXJNStLSbgWyi-1Mxo9ar92zRDV5YsMaBdUjFUT2bW9QcFzMFAqpHin0QEIa6GPZezY-yn88k5S5cT6Yh7WA4C0Q6C3H1n3EOS05Phwpxt840w7zjh5XR0-rd8-kRX84pHMh0GwHfjV1K7jBQ2QnQ`
 	ctx := context.Background()
 	ctx, call := encoding.NewInboundCall(ctx)
 	err := call.ReadFromRequest(&transport.Request{
@@ -138,31 +85,79 @@ func (s *oauthSuite) SetupTest() {
 		TaskList:   nil,
 		Permission: PermissionRead,
 	}
+
+	s.domainEntry = cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{
+			ID:   "test-domain-id",
+			Name: "test-domain",
+			Data: map[string]string{
+				common.DomainDataKeyForReadGroups: "c",
+			},
+		},
+		&persistence.DomainConfig{Retention: 1},
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestAlternativeClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+		1234, // not used
+		nil,
+	)
+
+	s.controller = gomock.NewController(s.T())
+	s.domainCache = cache.NewMockDomainCache(s.controller)
 	s.ctx = ctx
 }
 
 func (s *oauthSuite) TearDownTest() {
 	s.logger.AssertExpectations(s.T())
+	s.controller.Finish()
 }
 
 func (s *oauthSuite) TestCorrectPayload() {
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	s.domainCache.EXPECT().GetDomain(s.att.DomainName).Return(s.domainEntry, nil).Times(1)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	result, err := authorizer.Authorize(s.ctx, &s.att)
 	s.NoError(err)
 	s.Equal(result.Decision, DecisionAllow)
 }
 
+func (s *oauthSuite) TestItIsAdmin() {
+	ctx := context.Background()
+	ctx, call := encoding.NewInboundCall(ctx)
+	// https://jwt.io/#debugger-io?token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJTdWIiOiIxMjM0NTY3ODkwIiwiTmFtZSI6IkpvaG4gRG9lIiwiR3JvdXBzIjoiYSBiIGMiLCJBZG1pbiI6dHJ1ZSwiSWF0IjoxNjI3NTM4NzEyLCJUVEwiOjMwMDAwMDAwMH0.W_989GT8UWm-W7Hv0L2A3fND0Ly_CCuAdVMMoCs-l_GYxgxHP4_P5S9ejqh28AhUYllWNTRR_zM_hNakqnlufz09HP7mwlEKsxQrfoaycX20n8b7V-CktlysyVE2ZbCMt0Ef_MJF6bOOJ4JsayP6TQFXTP7QSUqNTpRYLZcBLlKHDZYm8uol_1EEs3kV5j3lP-WNcR18xBG0UIptakatm7aQEfPWOWnbRUpg9XVv3c4Bt8no4TW1z0XmFF9dD8vb2U-idPkPFstZwOZ0Ikn9nCt4W44kbeCC-i8uCe5SRiqNFWtvjnTBTVqXm27owT7ZbJwqvmMmhZ86Lz7eGtxgPQ&publicKey=-----BEGIN%20PUBLIC%20KEY-----%0AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAscukltHilaq%2Bo5gIVE4P%0AGwWl%2BesvJ2EaEpWw6ogr98Un11YJ4oKkwIkLw4iIo0tveCINA3cZmxaW1RejRWKE%0AqYFtQ1rYd6BsnFAHXWh2R3A1FtpG6ANUEGkE7OAJe2%2FL42E%2FImJ%2BGQxRvartInDM%0AyfiRfB7%2BL2n3wG%2BNi%2BhBNMtAaX4Wwbj2hup21Jjuo96TuhcGImBFBATGWaYR2wqe%0A%2F6by9wJexPHlY%2F1uDp3SnzF1dCLjp76SGCfyYqOGC%2FPxhQi7mDxeH9%2FtIC%2Blt%2FSz%0Awc1n8gZLtlRlZHinvYa8lhWXqVYw6WD8h4LTgALq9iY%2BbeD1PFQSY1GkQtt0RhRw%0AeQIDAQAB%0A-----END%20PUBLIC%20KEY-----
+	token := `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJTdWIiOiIxMjM0NTY3ODkwIiwiTmFtZSI6IkpvaG4gRG9lIiwiR3JvdXBzIjoiYSBiIGMiLCJBZG1pbiI6dHJ1ZSwiSWF0IjoxNjI3NTM4NzEyLCJUVEwiOjMwMDAwMDAwMH0.W_989GT8UWm-W7Hv0L2A3fND0Ly_CCuAdVMMoCs-l_GYxgxHP4_P5S9ejqh28AhUYllWNTRR_zM_hNakqnlufz09HP7mwlEKsxQrfoaycX20n8b7V-CktlysyVE2ZbCMt0Ef_MJF6bOOJ4JsayP6TQFXTP7QSUqNTpRYLZcBLlKHDZYm8uol_1EEs3kV5j3lP-WNcR18xBG0UIptakatm7aQEfPWOWnbRUpg9XVv3c4Bt8no4TW1z0XmFF9dD8vb2U-idPkPFstZwOZ0Ikn9nCt4W44kbeCC-i8uCe5SRiqNFWtvjnTBTVqXm27owT7ZbJwqvmMmhZ86Lz7eGtxgPQ`
+	err := call.ReadFromRequest(&transport.Request{
+		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, token),
+	})
+	s.NoError(err)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	result, err := authorizer.Authorize(ctx, &s.att)
+	s.NoError(err)
+	s.Equal(result.Decision, DecisionAllow)
+}
+
+func (s *oauthSuite) TestGetDomainError() {
+	s.domainCache.EXPECT().GetDomain(s.att.DomainName).Return(nil, fmt.Errorf("error")).Times(1)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	result, err := authorizer.Authorize(s.ctx, &s.att)
+	s.Equal(result.Decision, DecisionDeny)
+	s.EqualError(err, "error")
+}
+
 func (s *oauthSuite) TestIncorrectPublicKey() {
 	s.cfg.JwtCredentials.PublicKey = "incorrectPublicKey"
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	result, err := authorizer.Authorize(s.ctx, &s.att)
-	s.EqualError(err, "failed to parse PEM block containing the public key")
+	s.EqualError(err, "invalid public key path incorrectPublicKey")
 	s.Equal(result.Decision, DecisionDeny)
 }
 
 func (s *oauthSuite) TestIncorrectAlgorithm() {
 	s.cfg.JwtCredentials.Algorithm = "SHA256"
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	result, err := authorizer.Authorize(s.ctx, &s.att)
 	s.EqualError(err, "jwt: algorithm is not supported")
 	s.Equal(result.Decision, DecisionDeny)
@@ -170,7 +165,7 @@ func (s *oauthSuite) TestIncorrectAlgorithm() {
 
 func (s *oauthSuite) TestMaxTTLLargerInToken() {
 	s.cfg.MaxJwtTTL = 1
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
 		return fmt.Sprintf("%v", t[0].Field().Interface) == "TTL in token is larger than MaxTTL allowed"
 	}))
@@ -185,7 +180,7 @@ func (s *oauthSuite) TestIncorrectToken() {
 		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, "test"),
 	})
 	s.NoError(err)
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
 		return fmt.Sprintf("%v", t[0].Field().Interface) == "jwt: token format is not valid"
 	}))
@@ -196,11 +191,13 @@ func (s *oauthSuite) TestIncorrectToken() {
 func (s *oauthSuite) TestIatExpiredToken() {
 	ctx := context.Background()
 	ctx, call := encoding.NewInboundCall(ctx)
+	// https://jwt.io/#debugger-io?token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJTdWIiOiIxMjM0NTY3ODkwIiwiTmFtZSI6IkpvaG4gRG9lIiwiR3JvdXBzIjoiYSBiIGMiLCJBZG1pbiI6ZmFsc2UsIklhdCI6MTYyNzUzODcxMiwiVFRMIjoxfQ.KLOkzV6sIBFCctbcbK98qT5v7ifL_H_6DAzkKsIE4124m5-LtVClA71o5ZtHuoZoiN2xwvGGnkOYg-LbrMajSjsixhGhgz0sAzAomufKACNX1eW9vB5onfTw2q26rpBz0vkIzBYFqUFor3BS30p0V_lnVQGYWRoIcDYspgTyDqMcJ_T77NVBlsyl6ISGiRdv_COcpMEqE_jse7ZKwuoNnQRQp97J3fapPXd6w6qB_PAPlZSXHikvIXG-_9o60RFcB8GDn1lvjZC1NUzGvM2CpVzS4r1_ViKjnjXMuWEPKOyNjQ6LBV9JkRx86N-6jy5V74OyXi-YkiSMplxAKY2G5g&publicKey=-----BEGIN%20PUBLIC%20KEY-----%0AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAscukltHilaq%2Bo5gIVE4P%0AGwWl%2BesvJ2EaEpWw6ogr98Un11YJ4oKkwIkLw4iIo0tveCINA3cZmxaW1RejRWKE%0AqYFtQ1rYd6BsnFAHXWh2R3A1FtpG6ANUEGkE7OAJe2%2FL42E%2FImJ%2BGQxRvartInDM%0AyfiRfB7%2BL2n3wG%2BNi%2BhBNMtAaX4Wwbj2hup21Jjuo96TuhcGImBFBATGWaYR2wqe%0A%2F6by9wJexPHlY%2F1uDp3SnzF1dCLjp76SGCfyYqOGC%2FPxhQi7mDxeH9%2FtIC%2Blt%2FSz%0Awc1n8gZLtlRlZHinvYa8lhWXqVYw6WD8h4LTgALq9iY%2BbeD1PFQSY1GkQtt0RhRw%0AeQIDAQAB%0A-----END%20PUBLIC%20KEY-----
+	token := `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJTdWIiOiIxMjM0NTY3ODkwIiwiTmFtZSI6IkpvaG4gRG9lIiwiR3JvdXBzIjoiYSBiIGMiLCJBZG1pbiI6ZmFsc2UsIklhdCI6MTYyNzUzODcxMiwiVFRMIjoxfQ.KLOkzV6sIBFCctbcbK98qT5v7ifL_H_6DAzkKsIE4124m5-LtVClA71o5ZtHuoZoiN2xwvGGnkOYg-LbrMajSjsixhGhgz0sAzAomufKACNX1eW9vB5onfTw2q26rpBz0vkIzBYFqUFor3BS30p0V_lnVQGYWRoIcDYspgTyDqMcJ_T77NVBlsyl6ISGiRdv_COcpMEqE_jse7ZKwuoNnQRQp97J3fapPXd6w6qB_PAPlZSXHikvIXG-_9o60RFcB8GDn1lvjZC1NUzGvM2CpVzS4r1_ViKjnjXMuWEPKOyNjQ6LBV9JkRx86N-6jy5V74OyXi-YkiSMplxAKY2G5g`
 	err := call.ReadFromRequest(&transport.Request{
-		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, s.tokenExpiredIat),
+		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, token),
 	})
 	s.NoError(err)
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
 		return fmt.Sprintf("%v", t[0].Field().Interface) == "JWT has expired"
 	}))
@@ -208,22 +205,26 @@ func (s *oauthSuite) TestIatExpiredToken() {
 	s.Equal(result.Decision, DecisionDeny)
 }
 
-func (s *oauthSuite) TestIncorrectPermissionInAttributes() {
+func (s *oauthSuite) TestDifferentGroup() {
+	s.domainEntry.GetInfo().Data[common.DomainDataKeyForReadGroups] = "AdifferentGroup"
+	s.domainCache.EXPECT().GetDomain(s.att.DomainName).Return(s.domainEntry, nil).Times(1)
 	s.att.Permission = PermissionWrite
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
-		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have the right permission"
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have the right permission, jwt groups: [a b c], allowed groups: []"
 	}))
 	result, _ := authorizer.Authorize(s.ctx, &s.att)
 	s.Equal(result.Decision, DecisionDeny)
 }
 
-func (s *oauthSuite) TestIncorrectDomainInAttributes() {
-	s.att.DomainName = "myotherdomain"
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger)
+func (s *oauthSuite) TestIncorrectPermission() {
+	s.domainCache.EXPECT().GetDomain(s.att.DomainName).Return(s.domainEntry, nil).Times(1)
+	s.att.Permission = Permission(15)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
-		return fmt.Sprintf("%v", t[0].Field().Interface) == "domain in token doesn't match with current domain"
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have permission for 15 API"
 	}))
-	result, _ := authorizer.Authorize(s.ctx, &s.att)
+	result, err := authorizer.Authorize(s.ctx, &s.att)
+	s.NoError(err)
 	s.Equal(result.Decision, DecisionDeny)
 }

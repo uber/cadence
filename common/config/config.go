@@ -32,6 +32,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
+	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
 )
 
 type (
@@ -57,18 +58,29 @@ type (
 		PublicClient PublicClient `yaml:"publicClient"`
 		// DynamicConfigClient is the config for setting up the file based dynamic config client
 		// Filepath would be relative to the root directory when the path wasn't absolute.
+		// Included for backwards compatibility, please transition to DynamicConfig
+		// If both are specified, DynamicConig will be used.
 		DynamicConfigClient dynamicconfig.FileBasedClientConfig `yaml:"dynamicConfigClient"`
+		// DynamicConfig is the config for setting up all dynamic config clients
+		// Allows for changes in client without needing code change
+		DynamicConfig DynamicConfig `yaml:"dynamicconfig"`
 		// DomainDefaults is the default config for every domain
 		DomainDefaults DomainDefaults `yaml:"domainDefaults"`
 		// Blobstore is the config for setting up blobstore
 		Blobstore Blobstore `yaml:"blobstore"`
 		// Authorization is the config for setting up authorization
-		Authorization Authorization `yaml:authorization`
+		Authorization Authorization `yaml:"authorization"`
 	}
 
 	Authorization struct {
 		OAuthAuthorizer OAuthAuthorizer `yaml:"oauthAuthorizer"`
 		NoopAuthorizer  NoopAuthorizer  `yaml:"noopAuthorizer"`
+	}
+
+	DynamicConfig struct {
+		Client      string                              `yaml:"client"`
+		ConfigStore c.ClientConfig                      `yaml:"configstore"`
+		FileBased   dynamicconfig.FileBasedClientConfig `yaml:"filebased"`
 	}
 
 	NoopAuthorizer struct {
@@ -86,9 +98,9 @@ type (
 	JwtCredentials struct {
 		// support: RS256 (RSA using SHA256)
 		Algorithm string `yaml:"algorithm"`
-		// for verifying JWT token passed in from external clients
+		// Public Key Path for verifying JWT token passed in from external clients
 		PublicKey string `yaml:"publicKey"`
-		// for creating JWT token
+		// Private Key Path for creating JWT token
 		PrivateKey string `yaml:"privateKey"`
 	}
 
@@ -309,13 +321,6 @@ type (
 		RPCName string `yaml:"rpcName"`
 		// Address indicate the remote service address(Host:Port). Host can be DNS name.
 		RPCAddress string `yaml:"rpcAddress"`
-	}
-
-	// ReplicationTaskProcessorConfig is the config for replication task processor.
-	ReplicationTaskProcessorConfig struct {
-		NoTaskInitialWaitIntervalSecs int     `yaml:"noTaskInitialWaitIntervalSecs"`
-		NoTaskWaitBackoffCoefficient  float64 `yaml:"noTaskWaitBackoffCoefficient"`
-		NoTaskMaxWaitIntervalSecs     int     `yaml:"noTaskMaxWaitIntervalSecs"`
 	}
 
 	// DCRedirectionPolicy contains the frontend datacenter redirection policy

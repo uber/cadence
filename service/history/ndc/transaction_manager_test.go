@@ -164,7 +164,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Op
 	mutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	mutableState.EXPECT().GetDomainEntry().Return(s.domainEntry).AnyTimes()
 	mutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{RunID: runID}).Times(1)
-	context.EXPECT().PersistNonFirstWorkflowEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
+	context.EXPECT().PersistNonStartWorkflowBatchEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
 	context.EXPECT().UpdateWorkflowExecutionWithNew(
 		gomock.Any(), now, persistence.UpdateWorkflowModeUpdateCurrent, nil, nil, execution.TransactionPolicyActive, (*execution.TransactionPolicy)(nil),
 	).Return(nil).Times(1)
@@ -238,7 +238,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Cl
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{RunID: runID}, nil).Once()
 
-	context.EXPECT().PersistNonFirstWorkflowEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
+	context.EXPECT().PersistNonStartWorkflowBatchEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
 	context.EXPECT().UpdateWorkflowExecutionWithNew(
 		gomock.Any(), now, persistence.UpdateWorkflowModeBypassCurrent, nil, nil, execution.TransactionPolicyPassive, (*execution.TransactionPolicy)(nil),
 	).Return(nil).Times(1)
@@ -273,7 +273,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Passive_O
 	mutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	mutableState.EXPECT().GetDomainEntry().Return(s.domainEntry).AnyTimes()
 	context.EXPECT().ReapplyEvents([]*persistence.WorkflowEvents{workflowEvents}).Times(1)
-	context.EXPECT().PersistNonFirstWorkflowEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
+	context.EXPECT().PersistNonStartWorkflowBatchEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
 	context.EXPECT().UpdateWorkflowExecutionWithNew(
 		gomock.Any(), now, persistence.UpdateWorkflowModeUpdateCurrent, nil, nil, execution.TransactionPolicyPassive, (*execution.TransactionPolicy)(nil),
 	).Return(nil).Times(1)
@@ -320,7 +320,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Passive_C
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{RunID: runID}, nil).Once()
 	context.EXPECT().ReapplyEvents([]*persistence.WorkflowEvents{workflowEvents}).Times(1)
-	context.EXPECT().PersistNonFirstWorkflowEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
+	context.EXPECT().PersistNonStartWorkflowBatchEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
 	context.EXPECT().UpdateWorkflowExecutionWithNew(
 		gomock.Any(), now, persistence.UpdateWorkflowModeUpdateCurrent, nil, nil, execution.TransactionPolicyPassive, (*execution.TransactionPolicy)(nil),
 	).Return(nil).Times(1)
@@ -375,7 +375,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_NotCurrentWorkflow_Active
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{RunID: currentRunID}, nil).Once()
 	context.EXPECT().ReapplyEvents([]*persistence.WorkflowEvents{workflowEvents}).Times(1)
-	context.EXPECT().PersistNonFirstWorkflowEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
+	context.EXPECT().PersistNonStartWorkflowBatchEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
 	context.EXPECT().UpdateWorkflowExecutionWithNew(
 		gomock.Any(), now, persistence.UpdateWorkflowModeBypassCurrent, nil, nil, execution.TransactionPolicyPassive, (*execution.TransactionPolicy)(nil),
 	).Return(nil).Times(1)
@@ -429,7 +429,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_NotCurrentWorkflow_Passiv
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{RunID: currentRunID}, nil).Once()
 	context.EXPECT().ReapplyEvents([]*persistence.WorkflowEvents{workflowEvents}).Times(1)
-	context.EXPECT().PersistNonFirstWorkflowEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
+	context.EXPECT().PersistNonStartWorkflowBatchEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
 	context.EXPECT().UpdateWorkflowExecutionWithNew(
 		gomock.Any(), now, persistence.UpdateWorkflowModeBypassCurrent, nil, nil, execution.TransactionPolicyPassive, (*execution.TransactionPolicy)(nil),
 	).Return(nil).Times(1)

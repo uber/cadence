@@ -589,7 +589,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_GetTa
 	processorBase.handleActionNotification(notification)
 	select {
 	case res := <-notification.resultNotificationCh:
-		s.NotNil(res.result.GetTasksResult.tasks)
+		s.NotNil(res.result.GetTasksResult.TaskRequests)
 	default:
 		s.Fail("fail to receive result from notification channel")
 	}
@@ -625,7 +625,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_Updat
 		action: &Action{
 			ActionType: ActionTypeUpdateTask,
 			UpdateTaskAttributes: &UpdateTasksAttributes{
-				tasks: []*types.CrossClusterTaskResponse{
+				TaskResponses: []*types.CrossClusterTaskResponse{
 					{
 						TaskID:   int64(10),
 						TaskType: types.CrossClusterTaskType(1).Ptr(),
@@ -676,7 +676,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_Updat
 		action: &Action{
 			ActionType: ActionTypeUpdateTask,
 			UpdateTaskAttributes: &UpdateTasksAttributes{
-				tasks: []*types.CrossClusterTaskResponse{
+				TaskResponses: []*types.CrossClusterTaskResponse{
 					{
 						TaskID: int64(10),
 					},

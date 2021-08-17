@@ -1,4 +1,5 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2021 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -409,7 +410,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 		return err
 	}
 
-	if targetCluster, isCrossCluster := t.isCrossClusterTask(targetDomainEntry); isCrossCluster {
+	if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
 		return t.generateCrossClusterTask(ctx, wfContext, task, targetCluster)
 	}
 
@@ -509,7 +510,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		return err
 	}
 
-	if targetCluster, isCrossCluster := t.isCrossClusterTask(targetDomainEntry); isCrossCluster {
+	if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
 		return t.generateCrossClusterTask(ctx, wfContext, task, targetCluster)
 	}
 
@@ -630,7 +631,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		// it is possible that the domain got deleted. Use domainID instead as this is only needed for the history event
 		targetDomainName = task.TargetDomainID
 	} else {
-		if targetCluster, isCrossCluster := t.isCrossClusterTask(targetDomainEntry); isCrossCluster {
+		if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
 			return t.generateCrossClusterTask(ctx, wfContext, task, targetCluster)
 		}
 
@@ -644,7 +645,10 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 
 	// ChildExecution already started, just create DecisionTask and complete transfer task
 	if childInfo.StartedID != common.EmptyEventID {
-		// entity not exist error is checked and ignored in HandleErr() method in task.go
+		// NOTE: do not access anything related mutable state after this lock release
+		// release the context lock since we no longer need mutable state builder and
+		// the rest of logic is making RPC call, which takes time.
+		release(nil)
 		return createFirstDecisionTask(
 			ctx,
 			t.historyClient,
@@ -652,8 +656,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 			&types.WorkflowExecution{
 				WorkflowID: childInfo.StartedWorkflowID,
 				RunID:      childInfo.StartedRunID,
-			},
-		)
+			})
 	}
 
 	attributes := initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes
@@ -688,6 +691,10 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		return err
 	}
 
+	// NOTE: do not access anything related mutable state after this lock release
+	// release the context lock since we no longer need mutable state builder and
+	// the rest of logic is making RPC call, which takes time.
+	release(nil)
 	// Finally create first decision task for Child execution so it is really started
 	// entity not exist error is checked and ignored in HandleErr() method in task.go
 	return createFirstDecisionTask(
@@ -1194,8 +1201,13 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionFailed(
 }
 
 func (t *transferActiveTaskExecutor) isCrossClusterTask(
+	sourceDomainID string,
 	targetDomainEntry *cache.DomainCacheEntry,
 ) (string, bool) {
+	if sourceDomainID == targetDomainEntry.GetInfo().ID {
+		return "", false
+	}
+
 	targetCluster := targetDomainEntry.GetReplicationConfig().ActiveClusterName
 	if targetCluster != t.shard.GetClusterMetadata().GetCurrentClusterName() {
 		return targetCluster, true
