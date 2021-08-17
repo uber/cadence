@@ -645,15 +645,18 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 
 	// ChildExecution already started, just create DecisionTask and complete transfer task
 	if childInfo.StartedID != common.EmptyEventID {
-		childExecution := &types.WorkflowExecution{
-			WorkflowID: childInfo.StartedWorkflowID,
-			RunID:      childInfo.StartedRunID,
-		}
 		// NOTE: do not access anything related mutable state after this lock release
 		// release the context lock since we no longer need mutable state builder and
 		// the rest of logic is making RPC call, which takes time.
 		release(nil)
-		return t.createFirstDecisionTask(ctx, task.TargetDomainID, childExecution)
+		return createFirstDecisionTask(
+			ctx,
+			t.historyClient,
+			task.TargetDomainID,
+			&types.WorkflowExecution{
+				WorkflowID: childInfo.StartedWorkflowID,
+				RunID:      childInfo.StartedRunID,
+			})
 	}
 
 	attributes := initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes
@@ -687,7 +690,6 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	if err != nil {
 		return err
 	}
-
 
 	// NOTE: do not access anything related mutable state after this lock release
 	// release the context lock since we no longer need mutable state builder and
