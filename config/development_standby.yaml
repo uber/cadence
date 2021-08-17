@@ -70,8 +70,6 @@ services:
 
 clusterMetadata:
   enableGlobalDomain: true
-  replicationConsumer:
-    type: kafka
   failoverVersionIncrement: 10
   primaryClusterName: "active"
   currentClusterName: "standby"

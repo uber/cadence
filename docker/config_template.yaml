@@ -20,7 +20,7 @@ persistence:
                 keyspace: {{ default .Env.KEYSPACE "cadence" }}
                 user: {{ default .Env.CASSANDRA_USER "" }}
                 password: {{ default .Env.CASSANDRA_PASSWORD "" }}
-                protocolVersion: {{ default .Env.CASSANDRA_PROTOCOL_VERSION "4" }}
+                protoVersion: {{ default .Env.CASSANDRA_PROTO_VERSION "4" }}
         visibility:
             nosql:
                 pluginName: "cassandra"
@@ -28,7 +28,7 @@ persistence:
                 keyspace: {{ default .Env.VISIBILITY_KEYSPACE "cadence_visibility" }}
                 user: {{ default .Env.CASSANDRA_USER "" }}
                 password: {{ default .Env.CASSANDRA_PASSWORD "" }}
-                protocolVersion: {{ default .Env.CASSANDRA_PROTOCOL_VERSION "4" }}
+                protoVersion: {{ default .Env.CASSANDRA_PROTO_VERSION "4" }}
         {{- else if eq $db "mysql" }}
         default:
             sql:
@@ -273,7 +273,9 @@ kafka:
 publicClient:
     hostPort: {{ default .Env.FRONTEND_SERVICE "cadence" }}:{{ default .Env.FRONTEND_PORT "7933" }}
 
-dynamicConfigClient:
+dynamicconfig:
+  client: filebased
+  filebased:
     filepath: {{ default .Env.DYNAMIC_CONFIG_FILE_PATH "/etc/cadence/config/dynamicconfig/development.yaml" }}
     pollInterval: "60s"
 

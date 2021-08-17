@@ -35,14 +35,14 @@ var (
 	// Revision is the VCS revision associated with this build. Overridden using ldflags
 	// at compile time. Example:
 	// $ go build -ldflags "-X github.com/uber/cadence/common/metrics.Revision=abcdef" ...
-	// Adapted from: https://www.atatus.com/blog/golang-auto-build-versioning/
+	// see go-build-ldflags.sh for GIT_REVISION
 	Revision = "unknown"
 
 	// Branch is the VCS branch associated with this build.
 	Branch = "unknown"
 
-	// Version is the version associated with this build.
-	Version = "unknown"
+	// ReleaseVersion is the version associated with this build.
+	ReleaseVersion = "unknown"
 
 	// BuildDate is the date this build was created.
 	BuildDate = "unknown"
@@ -102,7 +102,7 @@ func NewRuntimeMetricsReporter(
 			revisionTag:     Revision,
 			branchTag:       Branch,
 			buildDateTag:    BuildDate,
-			buildVersionTag: Version,
+			buildVersionTag: ReleaseVersion,
 			goVersionTag:    goVersion,
 		},
 	)

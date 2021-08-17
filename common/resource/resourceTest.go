@@ -147,7 +147,7 @@ func NewTest(
 	domainReplicationQueue.EXPECT().Start().AnyTimes()
 	domainReplicationQueue.EXPECT().Stop().AnyTimes()
 	persistenceBean := persistenceClient.NewMockBean(controller)
-	persistenceBean.EXPECT().GetMetadataManager().Return(metadataMgr).AnyTimes()
+	persistenceBean.EXPECT().GetDomainManager().Return(metadataMgr).AnyTimes()
 	persistenceBean.EXPECT().GetTaskManager().Return(taskMgr).AnyTimes()
 	persistenceBean.EXPECT().GetVisibilityManager().Return(visibilityMgr).AnyTimes()
 	persistenceBean.EXPECT().GetHistoryManager().Return(historyMgr).AnyTimes()

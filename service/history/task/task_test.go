@@ -30,7 +30,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -55,7 +54,6 @@ type (
 		mockTaskInfo         *MockInfo
 
 		logger        log.Logger
-		timeSource    clock.TimeSource
 		maxRetryCount dynamicconfig.IntPropertyFn
 	}
 )
@@ -85,7 +83,6 @@ func (s *taskSuite) SetupTest() {
 	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
 
 	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
-	s.timeSource = clock.NewRealTimeSource()
 	s.maxRetryCount = dynamicconfig.GetIntPropertyFn(10)
 }
 
@@ -261,7 +258,6 @@ func (s *taskSuite) newTestTask(
 		taskFilter,
 		s.mockTaskExecutor,
 		s.mockTaskProcessor,
-		s.timeSource,
 		s.maxRetryCount,
 		redispatchFn,
 	)

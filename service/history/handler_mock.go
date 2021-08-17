@@ -29,7 +29,7 @@ package history
 import (
 	context "context"
 	reflect "reflect"
-	"time"
+	time "time"
 
 	gomock "github.com/golang/mock/gomock"
 

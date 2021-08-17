@@ -373,3 +373,61 @@ func (mr *MockAdminHandlerMockRecorder) GetCrossClusterTasks(arg0, arg1 interfac
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterTasks", reflect.TypeOf((*MockAdminHandler)(nil).GetCrossClusterTasks), arg0, arg1)
 }
+
+// GetDynamicConfig mocks base method
+func (m *MockAdminHandler) GetDynamicConfig(arg0 context.Context, arg1 *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDynamicConfig", arg0, arg1)
+	ret0, _ := ret[0].(*types.GetDynamicConfigResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDynamicConfig indicates an expected call of GetDynamicConfig
+func (mr *MockAdminHandlerMockRecorder) GetDynamicConfig(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDynamicConfig", reflect.TypeOf((*MockAdminHandler)(nil).GetDynamicConfig), arg0, arg1)
+}
+
+// UpdateDynamicConfig mocks base method
+func (m *MockAdminHandler) UpdateDynamicConfig(arg0 context.Context, arg1 *types.UpdateDynamicConfigRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateDynamicConfig", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateDynamicConfig indicates an expected call of UpdateDynamicConfig
+func (mr *MockAdminHandlerMockRecorder) UpdateDynamicConfig(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDynamicConfig", reflect.TypeOf((*MockAdminHandler)(nil).UpdateDynamicConfig), arg0, arg1)
+}
+
+// RestoreDynamicConfig mocks base method
+func (m *MockAdminHandler) RestoreDynamicConfig(arg0 context.Context, arg1 *types.RestoreDynamicConfigRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RestoreDynamicConfig", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RestoreDynamicConfig indicates an expected call of RestoreDynamicConfig
+func (mr *MockAdminHandlerMockRecorder) RestoreDynamicConfig(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreDynamicConfig", reflect.TypeOf((*MockAdminHandler)(nil).RestoreDynamicConfig), arg0, arg1)
+}
+
+// ListDynamicConfig mocks base method
+func (m *MockAdminHandler) ListDynamicConfig(arg0 context.Context, arg1 *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDynamicConfig", arg0, arg1)
+	ret0, _ := ret[0].(*types.ListDynamicConfigResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDynamicConfig indicates an expected call of ListDynamicConfig
+func (mr *MockAdminHandlerMockRecorder) ListDynamicConfig(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDynamicConfig", reflect.TypeOf((*MockAdminHandler)(nil).ListDynamicConfig), arg0, arg1)
+}

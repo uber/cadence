@@ -28,6 +28,13 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+const (
+	DynamicConfigConfigStoreClient = "configstore"
+	DynamicConfigFileBasedClient   = "filebased"
+	DynamicConfigInMemoryClient    = "memory"
+	DynamicConfigNopClient         = "nop"
+)
+
 // Client allows fetching values from a dynamic configuration system NOTE: This does not have async
 // options right now. In the interest of keeping it minimal, we can add when requirement arises.
 type Client interface {
@@ -46,8 +53,10 @@ type Client interface {
 	) (time.Duration, error)
 	// UpdateValue takes value as map and updates by overriding. It doesn't support update with filters.
 	UpdateValue(name Key, value interface{}) error
+	RestoreValue(name Key, filters map[Filter]interface{}) error
+	ListValue(name Key) ([]*types.DynamicConfigEntry, error)
 }
 
-var notFoundError = &types.EntityNotExistsError{
+var NotFoundError = &types.EntityNotExistsError{
 	Message: "unable to find key",
 }

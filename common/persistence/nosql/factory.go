@@ -26,11 +26,7 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
-
-	// NOTE: this package will be refactored and removed soon
-	cassandraOld "github.com/uber/cadence/common/persistence/cassandra"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
 type (
@@ -44,9 +40,8 @@ type (
 	}
 
 	executionStoreFactory struct {
-		client  gocql.Client
-		session gocql.Session
-		logger  log.Logger
+		db     nosqlplugin.DB
+		logger log.Logger
 	}
 )
 
@@ -99,6 +94,11 @@ func (f *Factory) NewQueue(queueType p.QueueType) (p.Queue, error) {
 	return newNoSQLQueueStore(f.cfg, f.logger, queueType)
 }
 
+// NewConfigStore returns a new config store
+func (f *Factory) NewConfigStore() (p.ConfigStore, error) {
+	return NewNoSQLConfigStore(f.cfg, f.logger)
+}
+
 // Close closes the factory
 func (f *Factory) Close() {
 	f.Lock()
@@ -134,25 +134,25 @@ func newExecutionStoreFactory(
 	cfg config.Cassandra,
 	logger log.Logger,
 ) (*executionStoreFactory, error) {
-	session, err := cassandra.CreateSession(cfg)
+
+	db, err := NewNoSQLDB(&cfg, logger)
 	if err != nil {
 		return nil, err
 	}
 
 	return &executionStoreFactory{
-		client:  gocql.NewClient(),
-		session: session,
-		logger:  logger,
+		db:     db,
+		logger: logger,
 	}, nil
 }
 
 func (f *executionStoreFactory) close() {
-	f.session.Close()
+	f.db.Close()
 }
 
 // new implements ExecutionStoreFactory interface
 func (f *executionStoreFactory) new(shardID int) (p.ExecutionStore, error) {
-	pmgr, err := cassandraOld.NewWorkflowExecutionPersistence(shardID, f.client, f.session, f.logger)
+	pmgr, err := NewExecutionStore(shardID, f.db, f.logger)
 	if err != nil {
 		return nil, err
 	}

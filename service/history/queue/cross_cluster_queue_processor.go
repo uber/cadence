@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/shard"
@@ -49,7 +50,6 @@ type (
 		status       int32
 		shutdownChan chan struct{}
 
-		taskExecutor    task.Executor
 		queueProcessors map[string]*crossClusterQueueProcessorBase
 	}
 )
@@ -59,7 +59,6 @@ func NewCrossClusterQueueProcessor(
 	shard shard.Context,
 	historyEngine engine.Engine,
 	taskProcessor task.Processor,
-	taskExecutor task.Executor,
 ) Processor {
 	logger := shard.GetLogger().WithTags(tag.ComponentCrossClusterQueueProcessor)
 	currentClusterName := shard.GetClusterMetadata().GetCurrentClusterName()
@@ -75,7 +74,7 @@ func NewCrossClusterQueueProcessor(
 			shard,
 			clusterName,
 			taskProcessor,
-			taskExecutor,
+			nil, // TODO: initialized the task executor for source cluster
 			logger,
 		)
 		queueProcessors[clusterName] = queueProcessor
@@ -90,7 +89,6 @@ func NewCrossClusterQueueProcessor(
 		logger:          logger,
 		status:          common.DaemonStatusInitialized,
 		shutdownChan:    make(chan struct{}),
-		taskExecutor:    taskExecutor,
 		queueProcessors: queueProcessors,
 	}
 }
@@ -142,7 +140,9 @@ func (c *crossClusterQueueProcessor) HandleAction(
 
 	queueProcessor, ok := c.queueProcessors[clusterName]
 	if !ok {
-		return nil, fmt.Errorf("failed to find the cross cluster queue with cluster name: %v", clusterName)
+		return nil, &types.BadRequestError{
+			Message: fmt.Sprintf("failed to find the cross cluster queue with cluster name: %v", clusterName),
+		}
 	}
 
 	resultNotificationCh, added := queueProcessor.addAction(action)

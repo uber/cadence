@@ -32,7 +32,8 @@ Other clients are developed by community:
 
 * Use [Cadence command-line tool](https://cadenceworkflow.io/docs/cli/) to perform various tasks on Cadence server cluster
   * Use brew to install CLI: `brew install cadence-workflow`
-  * Use docker image for CLI: `docker run --rm ubercadence/cli:master `. Be sure to update your image when you want to try new features: `docker pull ubercadence/cli:master `
+  * Use docker image for CLI: `docker run --rm ubercadence/cli:<releaseVersion>`  or `docker run --rm ubercadence/cli:master ` . Be sure to update your image when you want to try new features: `docker pull ubercadence/cli:master `
+  * Build the CLI image, see [instructions](docker/README.md#diy-building-an-image-for-any-tag-or-branch)
   * Check out the repo and run `make cadence` to build all tools. See [CONTRIBUTING](CONTRIBUTING.md) for prerequisite of make command.
   
   
@@ -54,10 +55,15 @@ Visit [cadenceworkflow.io](https://cadenceworkflow.io) for documentation.
  
 Join us in [Cadence Docs](https://github.com/uber/cadence-docs) project. Raise an Issue or Pull Request there.
 
-## Getting Help
+## Community 
+* [Github Discussion](https://github.com/uber/cadence/discussions)
+  * Best for Q&A, support/help, general discusion, and annoucement 
 * [StackOverflow](https://stackoverflow.com/questions/tagged/cadence-workflow)
+  * Best for Q&A and general discusion
 * [Github Issues](https://github.com/uber/cadence/issues)
+  * Best for reporting bugs and feature requests
 * [Slack](http://t.uber.com/cadence-slack)
+  * Best for contributing/development discussion 
 
 ## Contributing
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 // Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,88 +22,21 @@
 package cassandra
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
-	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 )
 
-func createReplicationTasks(
-	batch gocql.Batch,
-	replicationTasks []p.Task,
-	shardID int,
-	domainID string,
-	workflowID string,
-	runID string,
-) error {
-
-	for _, task := range replicationTasks {
-		// Replication task specific information
-		firstEventID := common.EmptyEventID
-		nextEventID := common.EmptyEventID
-		version := common.EmptyVersion //nolint:ineffassign
-		activityScheduleID := common.EmptyEventID
-		var branchToken, newRunBranchToken []byte
-
-		switch task.GetType() {
-		case p.ReplicationTaskTypeHistory:
-			histTask := task.(*p.HistoryReplicationTask)
-			branchToken = histTask.BranchToken
-			newRunBranchToken = histTask.NewRunBranchToken
-			firstEventID = histTask.FirstEventID
-			nextEventID = histTask.NextEventID
-			version = task.GetVersion()
-
-		case p.ReplicationTaskTypeSyncActivity:
-			version = task.GetVersion()
-			activityScheduleID = task.(*p.SyncActivityTask).ScheduledID
-
-		case p.ReplicationTaskTypeFailoverMarker:
-			version = task.GetVersion()
-
-		default:
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("Unknow replication type: %v", task.GetType()),
-			}
-		}
-
-		batch.Query(templateCreateReplicationTaskQuery,
-			shardID,
-			rowTypeReplicationTask,
-			rowTypeReplicationDomainID,
-			rowTypeReplicationWorkflowID,
-			rowTypeReplicationRunID,
-			domainID,
-			workflowID,
-			runID,
-			task.GetTaskID(),
-			task.GetType(),
-			firstEventID,
-			nextEventID,
-			version,
-			activityScheduleID,
-			p.EventStoreVersion,
-			branchToken,
-			p.EventStoreVersion,
-			newRunBranchToken,
-			task.GetVisibilityTimestamp().UnixNano(),
-			defaultVisibilityTimestamp,
-			task.GetTaskID())
-	}
-
-	return nil
-}
-
-func createWorkflowExecutionInfo(
+func parseWorkflowExecutionInfo(
 	result map[string]interface{},
-) *p.InternalWorkflowExecutionInfo {
+) *persistence.InternalWorkflowExecutionInfo {
 
-	info := &p.InternalWorkflowExecutionInfo{}
+	info := &persistence.InternalWorkflowExecutionInfo{}
 	var completionEventData []byte
 	var completionEventEncoding common.EncodingType
 	var autoResetPoints []byte
@@ -233,116 +166,66 @@ func createWorkflowExecutionInfo(
 			info.Memo = v.(map[string][]byte)
 		}
 	}
-	info.CompletionEvent = p.NewDataBlob(completionEventData, completionEventEncoding)
-	info.AutoResetPoints = p.NewDataBlob(autoResetPoints, autoResetPointsEncoding)
+	info.CompletionEvent = persistence.NewDataBlob(completionEventData, completionEventEncoding)
+	info.AutoResetPoints = persistence.NewDataBlob(autoResetPoints, autoResetPointsEncoding)
 	return info
 }
 
-func createTransferTaskInfo(
+// TODO: remove this after all 2DC workflows complete
+func parseReplicationState(
 	result map[string]interface{},
-) *p.TransferTaskInfo {
+) *persistence.ReplicationState {
 
-	info := &p.TransferTaskInfo{}
+	if len(result) == 0 {
+		return nil
+	}
+
+	info := &persistence.ReplicationState{}
 	for k, v := range result {
 		switch k {
-		case "domain_id":
-			info.DomainID = v.(gocql.UUID).String()
-		case "workflow_id":
-			info.WorkflowID = v.(string)
-		case "run_id":
-			info.RunID = v.(gocql.UUID).String()
-		case "visibility_ts":
-			info.VisibilityTimestamp = v.(time.Time)
-		case "task_id":
-			info.TaskID = v.(int64)
-		case "target_domain_id":
-			info.TargetDomainID = v.(gocql.UUID).String()
-		case "target_workflow_id":
-			info.TargetWorkflowID = v.(string)
-		case "target_run_id":
-			info.TargetRunID = v.(gocql.UUID).String()
-			if info.TargetRunID == p.TransferTaskTransferTargetRunID {
-				info.TargetRunID = ""
+		case "current_version":
+			info.CurrentVersion = v.(int64)
+		case "start_version":
+			info.StartVersion = v.(int64)
+		case "last_write_version":
+			info.LastWriteVersion = v.(int64)
+		case "last_write_event_id":
+			info.LastWriteEventID = v.(int64)
+		case "last_replication_info":
+			info.LastReplicationInfo = make(map[string]*persistence.ReplicationInfo)
+			replicationInfoMap := v.(map[string]map[string]interface{})
+			for key, value := range replicationInfoMap {
+				info.LastReplicationInfo[key] = parseReplicationInfo(value)
 			}
-		case "target_child_workflow_only":
-			info.TargetChildWorkflowOnly = v.(bool)
-		case "task_list":
-			info.TaskList = v.(string)
-		case "type":
-			info.TaskType = v.(int)
-		case "schedule_id":
-			info.ScheduleID = v.(int64)
-		case "record_visibility":
-			info.RecordVisibility = v.(bool)
-		case "version":
-			info.Version = v.(int64)
 		}
 	}
 
 	return info
 }
 
-func createCrossClusterTaskInfo(
+func parseReplicationInfo(
 	result map[string]interface{},
-) *p.CrossClusterTaskInfo {
-	info := (*p.CrossClusterTaskInfo)(createTransferTaskInfo(result))
-	if p.CrossClusterTaskDefaultTargetRunID == p.TransferTaskTransferTargetRunID {
-		return info
-	}
+) *persistence.ReplicationInfo {
 
-	// incase CrossClusterTaskDefaultTargetRunID is updated and not equal to TransferTaskTransferTargetRunID
-	if v, ok := result["target_run_id"]; ok {
-		info.TargetRunID = v.(gocql.UUID).String()
-		if info.TargetRunID == p.CrossClusterTaskDefaultTargetRunID {
-			info.TargetRunID = ""
-		}
-	}
-	return info
-}
-
-func createReplicationTaskInfo(
-	result map[string]interface{},
-) *p.InternalReplicationTaskInfo {
-
-	info := &p.InternalReplicationTaskInfo{}
+	info := &persistence.ReplicationInfo{}
 	for k, v := range result {
 		switch k {
-		case "domain_id":
-			info.DomainID = v.(gocql.UUID).String()
-		case "workflow_id":
-			info.WorkflowID = v.(string)
-		case "run_id":
-			info.RunID = v.(gocql.UUID).String()
-		case "task_id":
-			info.TaskID = v.(int64)
-		case "type":
-			info.TaskType = v.(int)
-		case "first_event_id":
-			info.FirstEventID = v.(int64)
-		case "next_event_id":
-			info.NextEventID = v.(int64)
 		case "version":
 			info.Version = v.(int64)
-		case "scheduled_id":
-			info.ScheduledID = v.(int64)
-		case "branch_token":
-			info.BranchToken = v.([]byte)
-		case "new_run_branch_token":
-			info.NewRunBranchToken = v.([]byte)
-		case "created_time":
-			info.CreationTime = time.Unix(0, v.(int64))
+		case "last_event_id":
+			info.LastEventID = v.(int64)
 		}
 	}
 
 	return info
 }
 
-func createActivityInfo(
+func parseActivityInfo(
 	domainID string,
 	result map[string]interface{},
-) *p.InternalActivityInfo {
+) *persistence.InternalActivityInfo {
 
-	info := &p.InternalActivityInfo{}
+	info := &persistence.InternalActivityInfo{}
 	var sharedEncoding common.EncodingType
 	var scheduledEventData, startedEventData []byte
 	for k, v := range result {
@@ -416,17 +299,17 @@ func createActivityInfo(
 		}
 	}
 	info.DomainID = domainID
-	info.ScheduledEvent = p.NewDataBlob(scheduledEventData, sharedEncoding)
-	info.StartedEvent = p.NewDataBlob(startedEventData, sharedEncoding)
+	info.ScheduledEvent = persistence.NewDataBlob(scheduledEventData, sharedEncoding)
+	info.StartedEvent = persistence.NewDataBlob(startedEventData, sharedEncoding)
 
 	return info
 }
 
-func createTimerInfo(
+func parseTimerInfo(
 	result map[string]interface{},
-) *p.TimerInfo {
+) *persistence.TimerInfo {
 
-	info := &p.TimerInfo{}
+	info := &persistence.TimerInfo{}
 	for k, v := range result {
 		switch k {
 		case "version":
@@ -447,11 +330,11 @@ func createTimerInfo(
 	return info
 }
 
-func createChildExecutionInfo(
+func parseChildExecutionInfo(
 	result map[string]interface{},
-) *p.InternalChildExecutionInfo {
+) *persistence.InternalChildExecutionInfo {
 
-	info := &p.InternalChildExecutionInfo{}
+	info := &persistence.InternalChildExecutionInfo{}
 	var encoding common.EncodingType
 	var initiatedData []byte
 	var startedData []byte
@@ -485,16 +368,16 @@ func createChildExecutionInfo(
 			info.ParentClosePolicy = types.ParentClosePolicy(v.(int))
 		}
 	}
-	info.InitiatedEvent = p.NewDataBlob(initiatedData, encoding)
-	info.StartedEvent = p.NewDataBlob(startedData, encoding)
+	info.InitiatedEvent = persistence.NewDataBlob(initiatedData, encoding)
+	info.StartedEvent = persistence.NewDataBlob(startedData, encoding)
 	return info
 }
 
-func createRequestCancelInfo(
+func parseRequestCancelInfo(
 	result map[string]interface{},
-) *p.RequestCancelInfo {
+) *persistence.RequestCancelInfo {
 
-	info := &p.RequestCancelInfo{}
+	info := &persistence.RequestCancelInfo{}
 	for k, v := range result {
 		switch k {
 		case "version":
@@ -511,11 +394,11 @@ func createRequestCancelInfo(
 	return info
 }
 
-func createSignalInfo(
+func parseSignalInfo(
 	result map[string]interface{},
-) *p.SignalInfo {
+) *persistence.SignalInfo {
 
-	info := &p.SignalInfo{}
+	info := &persistence.SignalInfo{}
 	for k, v := range result {
 		switch k {
 		case "version":
@@ -538,11 +421,11 @@ func createSignalInfo(
 	return info
 }
 
-func createHistoryEventBatchBlob(
+func parseHistoryEventBatchBlob(
 	result map[string]interface{},
-) *p.DataBlob {
+) *persistence.DataBlob {
 
-	eventBatch := &p.DataBlob{Encoding: common.EncodingTypeJSON}
+	eventBatch := &persistence.DataBlob{Encoding: common.EncodingTypeJSON}
 	for k, v := range result {
 		switch k {
 		case "encoding_type":
@@ -555,11 +438,11 @@ func createHistoryEventBatchBlob(
 	return eventBatch
 }
 
-func createTimerTaskInfo(
+func parseTimerTaskInfo(
 	result map[string]interface{},
-) *p.TimerTaskInfo {
+) *persistence.TimerTaskInfo {
 
-	info := &p.TimerTaskInfo{}
+	info := &persistence.TimerTaskInfo{}
 	for k, v := range result {
 		switch k {
 		case "domain_id":
@@ -588,24 +471,106 @@ func createTimerTaskInfo(
 	return info
 }
 
-func createReplicationInfo(
+func parseTransferTaskInfo(
 	result map[string]interface{},
-) *p.ReplicationInfo {
+) *persistence.TransferTaskInfo {
 
-	info := &p.ReplicationInfo{}
+	info := &persistence.TransferTaskInfo{}
 	for k, v := range result {
 		switch k {
+		case "domain_id":
+			info.DomainID = v.(gocql.UUID).String()
+		case "workflow_id":
+			info.WorkflowID = v.(string)
+		case "run_id":
+			info.RunID = v.(gocql.UUID).String()
+		case "visibility_ts":
+			info.VisibilityTimestamp = v.(time.Time)
+		case "task_id":
+			info.TaskID = v.(int64)
+		case "target_domain_id":
+			info.TargetDomainID = v.(gocql.UUID).String()
+		case "target_workflow_id":
+			info.TargetWorkflowID = v.(string)
+		case "target_run_id":
+			info.TargetRunID = v.(gocql.UUID).String()
+			if info.TargetRunID == persistence.TransferTaskTransferTargetRunID {
+				info.TargetRunID = ""
+			}
+		case "target_child_workflow_only":
+			info.TargetChildWorkflowOnly = v.(bool)
+		case "task_list":
+			info.TaskList = v.(string)
+		case "type":
+			info.TaskType = v.(int)
+		case "schedule_id":
+			info.ScheduleID = v.(int64)
+		case "record_visibility":
+			info.RecordVisibility = v.(bool)
 		case "version":
 			info.Version = v.(int64)
-		case "last_event_id":
-			info.LastEventID = v.(int64)
 		}
 	}
 
 	return info
 }
 
-func createChecksum(result map[string]interface{}) checksum.Checksum {
+func parseCrossClusterTaskInfo(
+	result map[string]interface{},
+) *persistence.CrossClusterTaskInfo {
+	info := (*persistence.CrossClusterTaskInfo)(parseTransferTaskInfo(result))
+	if persistence.CrossClusterTaskDefaultTargetRunID == persistence.TransferTaskTransferTargetRunID {
+		return info
+	}
+
+	// incase CrossClusterTaskDefaultTargetRunID is updated and not equal to TransferTaskTransferTargetRunID
+	if v, ok := result["target_run_id"]; ok {
+		info.TargetRunID = v.(gocql.UUID).String()
+		if info.TargetRunID == persistence.CrossClusterTaskDefaultTargetRunID {
+			info.TargetRunID = ""
+		}
+	}
+	return info
+}
+
+func parseReplicationTaskInfo(
+	result map[string]interface{},
+) *nosqlplugin.ReplicationTask {
+
+	info := &persistence.InternalReplicationTaskInfo{}
+	for k, v := range result {
+		switch k {
+		case "domain_id":
+			info.DomainID = v.(gocql.UUID).String()
+		case "workflow_id":
+			info.WorkflowID = v.(string)
+		case "run_id":
+			info.RunID = v.(gocql.UUID).String()
+		case "task_id":
+			info.TaskID = v.(int64)
+		case "type":
+			info.TaskType = v.(int)
+		case "first_event_id":
+			info.FirstEventID = v.(int64)
+		case "next_event_id":
+			info.NextEventID = v.(int64)
+		case "version":
+			info.Version = v.(int64)
+		case "scheduled_id":
+			info.ScheduledID = v.(int64)
+		case "branch_token":
+			info.BranchToken = v.([]byte)
+		case "new_run_branch_token":
+			info.NewRunBranchToken = v.([]byte)
+		case "created_time":
+			info.CreationTime = time.Unix(0, v.(int64))
+		}
+	}
+
+	return info
+}
+
+func parseChecksum(result map[string]interface{}) checksum.Checksum {
 	csum := checksum.Checksum{}
 	if len(result) == 0 {
 		return csum
@@ -621,30 +586,4 @@ func createChecksum(result map[string]interface{}) checksum.Checksum {
 		}
 	}
 	return csum
-}
-
-func convertCommonErrors(
-	errChecker nosqlplugin.ClientErrorChecker,
-	operation string,
-	err error,
-) error {
-	if errChecker.IsNotFoundError(err) {
-		return &types.EntityNotExistsError{
-			Message: fmt.Sprintf("%v failed. Error: %v ", operation, err),
-		}
-	}
-
-	if errChecker.IsTimeoutError(err) {
-		return &p.TimeoutError{Msg: fmt.Sprintf("%v timed out. Error: %v", operation, err)}
-	}
-
-	if errChecker.IsThrottlingError(err) {
-		return &types.ServiceBusyError{
-			Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
-		}
-	}
-
-	return &types.InternalServiceError{
-		Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
-	}
 }

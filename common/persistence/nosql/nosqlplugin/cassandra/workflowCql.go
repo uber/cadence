@@ -311,17 +311,6 @@ workflow_state = ? ` +
 		`WHERE shard_id = ? ` +
 		`and type = ?`
 
-	templateCheckWorkflowExecutionQuery = `UPDATE executions ` +
-		`SET next_event_id = ? ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ? ` +
-		`IF next_event_id = ?`
-
 	templateUpdateWorkflowExecutionWithVersionHistoriesQuery = `UPDATE executions ` +
 		`SET execution = ` + templateWorkflowExecutionType +
 		`, next_event_id = ? ` +
