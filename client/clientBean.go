@@ -25,13 +25,13 @@ package client
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"go.uber.org/cadence/internal/common/auth"
 	clientworker "go.uber.org/cadence/worker"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
@@ -43,6 +43,7 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -68,7 +69,7 @@ type (
 	}
 
 	DispatcherOptions struct {
-		AuthProvider *auth.AuthorizationProvider
+		AuthProvider *clientworker.AuthorizationProvider
 	}
 
 	// DispatcherProvider provides a dispatcher to a given address
@@ -122,8 +123,18 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 		if !info.Enabled {
 			continue
 		}
+		var authProvider clientworker.AuthorizationProvider
+		if info.AuthorizationProvider.Enable {
+			privateKey, err := ioutil.ReadFile(info.AuthorizationProvider.PrivateKey)
+			if err != nil {
+				return nil, fmt.Errorf("invalid private key path %s", info.AuthorizationProvider.PrivateKey)
+			}
+			authProvider = clientworker.NewJwtAuthorizationProvider(privateKey)
+		}
 
-		dispatcher, err := dispatcherProvider.Get(info.RPCName, info.RPCAddress)
+		dispatcher, err := dispatcherProvider.Get(info.RPCName, info.RPCAddress, &DispatcherOptions{
+			AuthProvider: &authProvider,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -291,12 +302,31 @@ func (p *dnsDispatcherProvider) Get(serviceName string, address string, options 
 				ServiceName: serviceName,
 			},
 		},
+		OutboundMiddleware: yarpc.OutboundMiddleware{
+			Unary: &outboundMiddleware{authProvider: options.AuthProvider},
+		},
 	})
 
 	if err := dispatcher.Start(); err != nil {
 		return nil, err
 	}
 	return dispatcher, nil
+}
+
+type outboundMiddleware struct {
+	authProvider *clientworker.AuthorizationProvider
+}
+
+func (om *outboundMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+	if om.authProvider != nil {
+		token, err := (*om.authProvider).GetAuthToken()
+		if err != nil {
+			return nil, err
+		}
+		request.Headers = request.Headers.
+			With(common.AuthorizationTokenHeaderName, string(token))
+	}
+	return out.Call(ctx, request)
 }
 
 func newDNSUpdater(list peer.List, dnsPort string, interval time.Duration, logger log.Logger) (*dnsUpdater, error) {

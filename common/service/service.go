@@ -215,7 +215,6 @@ func (h *serviceImpl) Start() {
 		client.NewRPCClientFactory(h.rpcFactory, h.membershipMonitor, h.metricsClient, h.dynamicCollection, h.numberOfHistoryShards, h.logger),
 		h.dispatcherProvider,
 		h.clusterMetadata,
-
 	)
 	if err != nil {
 		h.logger.WithTags(tag.Error(err)).Fatal("fail to initialize client bean")

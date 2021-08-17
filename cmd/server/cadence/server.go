@@ -21,6 +21,7 @@
 package cadence
 
 import (
+	"io/ioutil"
 	"log"
 	"time"
 
@@ -222,12 +223,16 @@ func (s *server) startService() common.Daemon {
 	}
 
 	// will return empty array if not enabled
-	privateKey, err := s.cfg.Authorization.OAuthAuthorizer.GetPrivateKey()
-	if err != nil {
-		log.Fatalf("invalid private key path %s", s.cfg.Authorization.OAuthAuthorizer.JwtCredentials.PrivateKey)
+	var authProvider clientworker.AuthorizationProvider
+	if s.cfg.Authorization.OAuthAuthorizer.Enable {
+		privateKey, err := ioutil.ReadFile(s.cfg.Authorization.OAuthAuthorizer.JwtCredentials.PrivateKey)
+		if err != nil {
+			log.Fatalf("invalid private key path %s", s.cfg.Authorization.OAuthAuthorizer.JwtCredentials.PrivateKey)
+		}
+		authProvider = clientworker.NewJwtAuthorizationProvider(privateKey)
 	}
-	authProvider := clientworker.NewJwtAuthorizationProvider(privateKey)
-	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, s.cfg.PublicClient.HostPort, &client.DispatcherOptions{AuthProvider: &authProvider}); if err != nil {
+	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, s.cfg.PublicClient.HostPort, &client.DispatcherOptions{AuthProvider: &authProvider})
+	if err != nil {
 		log.Fatalf("failed to construct dispatcher: %v", err)
 	}
 	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))

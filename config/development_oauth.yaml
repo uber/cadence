@@ -110,7 +110,7 @@ publicClient:
 dynamicconfig:
   client: filebased
   filebased:
-    filepath: "config/dynamicconfig/development_oauth.yaml"
+    filepath: "config/dynamicconfig/development.yaml"
 
 blobstore:
   filestore:

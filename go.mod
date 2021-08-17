@@ -91,3 +91,5 @@ replace github.com/apache/thrift => github.com/apache/thrift v0.0.0-201612212036
 
 // until new version is released we need to pick up https://github.com/yarpc/yarpc-go/pull/2047
 replace go.uber.org/yarpc => go.uber.org/yarpc v1.52.1-0.20210303193224-b2caa40d56b6
+
+replace go.uber.org/cadence v0.17.1-0.20210806184645-7c70757e7c7f => /home/rv/go/src/go.uber.org/cadence

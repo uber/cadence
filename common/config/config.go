@@ -100,12 +100,8 @@ type (
 		Algorithm string `yaml:"algorithm"`
 		// Public Key Path for verifying JWT token passed in from external clients
 		PublicKey string `yaml:"publicKey"`
-		// Public Key loaded once
-		PublicKeyLoaded []byte `yaml:"-"`
 		// Private Key Path for creating JWT token
 		PrivateKey string `yaml:"privateKey"`
-		// Private Key loaded once
-		PrivateKeyLoaded []byte `yaml:"-"`
 	}
 
 	// Service contains the service specific config items
@@ -325,8 +321,15 @@ type (
 		RPCName string `yaml:"rpcName"`
 		// Address indicate the remote service address(Host:Port). Host can be DNS name.
 		RPCAddress string `yaml:"rpcAddress"`
-		// Private Key Path
-		PrivateKey string `yaml:"privateKey"`
+		// AuthorizationProvider contains the information to authorize the cluster
+		AuthorizationProvider struct {
+			// Enable indicates if the auth provider is enabled
+			Enable bool `yaml:"enable"`
+			// Type auth provider type
+			Type string `yaml:"type"` // only supports OAuthAuthorization
+			// PrivateKey is the private key path
+			PrivateKey string `yaml:"privateKey"`
+		}
 	}
 
 	// DCRedirectionPolicy contains the frontend datacenter redirection policy

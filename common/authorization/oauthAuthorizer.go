@@ -78,6 +78,10 @@ func (a *oauthAuthority) Authorize(
 		return Result{Decision: DecisionDeny}, err
 	}
 	token := call.Header(common.AuthorizationTokenHeaderName)
+	if token != "" {
+		a.log.Debug("token is not set in header", tag.Error(err))
+		return Result{Decision: DecisionDeny}, nil
+	}
 	claims, err := a.parseToken(token, verifier)
 	if err != nil {
 		a.log.Debug("request is not authorized", tag.Error(err))
