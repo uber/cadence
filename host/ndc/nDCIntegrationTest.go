@@ -661,6 +661,613 @@ func (s *NDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 	)
 }
 
+func (s *NDCIntegrationTestSuite) TestHandcraftedResetWorkflow_Zombie() {
+
+	s.setupRemoteFrontendClients()
+	workflowID := "ndc-handcrafted-reset-workflow-test" + uuid.New()
+	runID := uuid.New()
+	newRunID := uuid.New()
+
+	workflowType := "event-generator-workflow-type"
+	tasklist := "event-generator-taskList"
+	identity := "worker-identity"
+
+	// active has initial version 0
+	historyClient := s.active.GetHistoryClient()
+
+	eventsBatch1 := []*types.History{
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   1,
+				Version:   21,
+				EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
+				WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+					WorkflowType:                        &types.WorkflowType{Name: workflowType},
+					TaskList:                            &types.TaskList{Name: tasklist},
+					Input:                               nil,
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1000),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1000),
+					FirstDecisionTaskBackoffSeconds:     common.Int32Ptr(100),
+				},
+			},
+			{
+				EventID:   2,
+				Version:   21,
+				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
+					TaskList:                   &types.TaskList{Name: tasklist},
+					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
+					Attempt:                    0,
+				},
+			},
+		}},
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   3,
+				Version:   21,
+				EventType: types.EventTypeDecisionTaskStarted.Ptr(),
+				DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
+					ScheduledEventID: 2,
+					Identity:         identity,
+					RequestID:        uuid.New(),
+				},
+			},
+		}},
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   4,
+				Version:   21,
+				EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+				DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
+					ScheduledEventID: 2,
+					StartedEventID:   3,
+					Identity:         identity,
+				},
+			},
+			{
+				EventID:   5,
+				Version:   21,
+				EventType: types.EventTypeMarkerRecorded.Ptr(),
+				MarkerRecordedEventAttributes: &types.MarkerRecordedEventAttributes{
+					MarkerName:                   "some marker name",
+					Details:                      []byte("some marker details"),
+					DecisionTaskCompletedEventID: 4,
+				},
+			},
+			{
+				EventID:   6,
+				Version:   21,
+				EventType: types.EventTypeActivityTaskScheduled.Ptr(),
+				ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
+					DecisionTaskCompletedEventID:  4,
+					ActivityID:                    "0",
+					ActivityType:                  &types.ActivityType{Name: "activity-type"},
+					TaskList:                      &types.TaskList{Name: tasklist},
+					Input:                         nil,
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(20),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(20),
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(20),
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(20),
+				},
+			},
+		}},
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   7,
+				Version:   21,
+				EventType: types.EventTypeActivityTaskStarted.Ptr(),
+				ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+					ScheduledEventID: 6,
+					Identity:         identity,
+					RequestID:        uuid.New(),
+					Attempt:          0,
+				},
+			},
+		}},
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   8,
+				Version:   21,
+				EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
+				WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
+					SignalName: "some signal name 1",
+					Input:      []byte("some signal details 1"),
+					Identity:   identity,
+				},
+			},
+			{
+				EventID:   9,
+				Version:   21,
+				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
+					TaskList:                   &types.TaskList{Name: tasklist},
+					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
+					Attempt:                    0,
+				},
+			},
+		}},
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   10,
+				Version:   21,
+				EventType: types.EventTypeDecisionTaskStarted.Ptr(),
+				DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
+					ScheduledEventID: 9,
+					Identity:         identity,
+					RequestID:        uuid.New(),
+				},
+			},
+		}},
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   11,
+				Version:   21,
+				EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+				DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
+					ScheduledEventID: 9,
+					StartedEventID:   10,
+					Identity:         identity,
+				},
+			},
+			{
+				EventID:   12,
+				Version:   21,
+				EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
+				WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
+					SignalName: "some signal name 2",
+					Input:      []byte("some signal details 2"),
+					Identity:   identity,
+				},
+			},
+			{
+				EventID:   13,
+				Version:   21,
+				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
+					TaskList:                   &types.TaskList{Name: tasklist},
+					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
+					Attempt:                    0,
+				},
+			},
+			{
+				EventID:   14,
+				Version:   21,
+				EventType: types.EventTypeDecisionTaskStarted.Ptr(),
+				DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
+					ScheduledEventID: 13,
+					Identity:         identity,
+					RequestID:        uuid.New(),
+				},
+			},
+		}},
+	}
+
+	eventsBatch2 := []*types.History{
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   15,
+				Version:   30,
+				EventType: types.EventTypeDecisionTaskTimedOut.Ptr(),
+				DecisionTaskTimedOutEventAttributes: &types.DecisionTaskTimedOutEventAttributes{
+					ScheduledEventID: 13,
+					StartedEventID:   14,
+					TimeoutType:      types.TimeoutTypeStartToClose.Ptr(),
+				},
+			},
+			{
+				EventID:   16,
+				Version:   30,
+				EventType: types.EventTypeActivityTaskTimedOut.Ptr(),
+				ActivityTaskTimedOutEventAttributes: &types.ActivityTaskTimedOutEventAttributes{
+					ScheduledEventID: 6,
+					StartedEventID:   7,
+					TimeoutType:      types.TimeoutTypeStartToClose.Ptr(),
+				},
+			},
+			{
+				EventID:   17,
+				Version:   30,
+				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
+					TaskList:                   &types.TaskList{Name: tasklist},
+					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
+					Attempt:                    0,
+				},
+			},
+		}},
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   18,
+				Version:   30,
+				EventType: types.EventTypeDecisionTaskStarted.Ptr(),
+				DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
+					ScheduledEventID: 17,
+					Identity:         identity,
+					RequestID:        uuid.New(),
+				},
+			},
+		}},
+	}
+
+	resetCause := types.DecisionTaskFailedCauseResetWorkflow
+	dtFailedReason := "events-reapplication"
+	eventsBatch3 := []*types.History{
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   11,
+				Version:   22,
+				EventType: types.EventTypeDecisionTaskFailed.Ptr(),
+				DecisionTaskFailedEventAttributes: &types.DecisionTaskFailedEventAttributes{
+					ScheduledEventID: 9,
+					StartedEventID:   10,
+					Identity:         identity,
+					Cause:            &resetCause,
+					Reason:           &dtFailedReason,
+					BaseRunID:        runID,
+					NewRunID:         newRunID,
+					ForkEventVersion: 21,
+				},
+			},
+		}},
+	}
+
+	versionHistory1 := s.eventBatchesToVersionHistory(nil, eventsBatch1)
+
+	versionHistory2, err := versionHistory1.DuplicateUntilLCAItem(
+		persistence.NewVersionHistoryItem(14, 21),
+	)
+	s.NoError(err)
+	versionHistory2 = s.eventBatchesToVersionHistory(versionHistory2, eventsBatch2)
+
+	versionHistory3, err := versionHistory1.DuplicateUntilLCAItem(
+		persistence.NewVersionHistoryItem(10, 21),
+	)
+	s.NoError(err)
+	versionHistory3 = s.eventBatchesToVersionHistory(versionHistory3, eventsBatch3)
+
+	s.applyEvents(
+		workflowID,
+		runID,
+		workflowType,
+		tasklist,
+		versionHistory1,
+		eventsBatch1,
+		historyClient,
+	)
+	s.applyEvents(
+		workflowID,
+		runID,
+		workflowType,
+		tasklist,
+		versionHistory2,
+		eventsBatch2,
+		historyClient,
+	)
+	s.applyEvents(
+		workflowID,
+		newRunID,
+		workflowType,
+		tasklist,
+		versionHistory3,
+		eventsBatch3,
+		historyClient,
+	)
+}
+func (s *NDCIntegrationTestSuite) TestHandcraftedResetWorkflow() {
+
+	s.setupRemoteFrontendClients()
+	workflowID := "ndc-handcrafted-reset-workflow-test" + uuid.New()
+	runID := uuid.New()
+	newRunID := uuid.New()
+
+	workflowType := "event-generator-workflow-type"
+	tasklist := "event-generator-taskList"
+	identity := "worker-identity"
+
+	// active has initial version 0
+	historyClient := s.active.GetHistoryClient()
+
+	eventsBatch1 := []*types.History{
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   1,
+				Version:   21,
+				EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
+				WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+					WorkflowType:                        &types.WorkflowType{Name: workflowType},
+					TaskList:                            &types.TaskList{Name: tasklist},
+					Input:                               nil,
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1000),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1000),
+					FirstDecisionTaskBackoffSeconds:     common.Int32Ptr(100),
+				},
+			},
+			{
+				EventID:   2,
+				Version:   21,
+				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
+					TaskList:                   &types.TaskList{Name: tasklist},
+					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
+					Attempt:                    0,
+				},
+			},
+		}},
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   3,
+				Version:   21,
+				EventType: types.EventTypeDecisionTaskStarted.Ptr(),
+				DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
+					ScheduledEventID: 2,
+					Identity:         identity,
+					RequestID:        uuid.New(),
+				},
+			},
+		}},
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   4,
+				Version:   21,
+				EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+				DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
+					ScheduledEventID: 2,
+					StartedEventID:   3,
+					Identity:         identity,
+				},
+			},
+			{
+				EventID:   5,
+				Version:   21,
+				EventType: types.EventTypeMarkerRecorded.Ptr(),
+				MarkerRecordedEventAttributes: &types.MarkerRecordedEventAttributes{
+					MarkerName:                   "some marker name",
+					Details:                      []byte("some marker details"),
+					DecisionTaskCompletedEventID: 4,
+				},
+			},
+			{
+				EventID:   6,
+				Version:   21,
+				EventType: types.EventTypeActivityTaskScheduled.Ptr(),
+				ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
+					DecisionTaskCompletedEventID:  4,
+					ActivityID:                    "0",
+					ActivityType:                  &types.ActivityType{Name: "activity-type"},
+					TaskList:                      &types.TaskList{Name: tasklist},
+					Input:                         nil,
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(20),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(20),
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(20),
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(20),
+				},
+			},
+		}},
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   7,
+				Version:   21,
+				EventType: types.EventTypeActivityTaskStarted.Ptr(),
+				ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+					ScheduledEventID: 6,
+					Identity:         identity,
+					RequestID:        uuid.New(),
+					Attempt:          0,
+				},
+			},
+		}},
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   8,
+				Version:   21,
+				EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
+				WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
+					SignalName: "some signal name 1",
+					Input:      []byte("some signal details 1"),
+					Identity:   identity,
+				},
+			},
+			{
+				EventID:   9,
+				Version:   21,
+				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
+					TaskList:                   &types.TaskList{Name: tasklist},
+					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
+					Attempt:                    0,
+				},
+			},
+		}},
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   10,
+				Version:   21,
+				EventType: types.EventTypeDecisionTaskStarted.Ptr(),
+				DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
+					ScheduledEventID: 9,
+					Identity:         identity,
+					RequestID:        uuid.New(),
+				},
+			},
+		}},
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   11,
+				Version:   21,
+				EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+				DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
+					ScheduledEventID: 9,
+					StartedEventID:   10,
+					Identity:         identity,
+				},
+			},
+			{
+				EventID:   12,
+				Version:   21,
+				EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
+				WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
+					SignalName: "some signal name 2",
+					Input:      []byte("some signal details 2"),
+					Identity:   identity,
+				},
+			},
+			{
+				EventID:   13,
+				Version:   21,
+				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
+					TaskList:                   &types.TaskList{Name: tasklist},
+					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
+					Attempt:                    0,
+				},
+			},
+			{
+				EventID:   14,
+				Version:   21,
+				EventType: types.EventTypeDecisionTaskStarted.Ptr(),
+				DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
+					ScheduledEventID: 13,
+					Identity:         identity,
+					RequestID:        uuid.New(),
+				},
+			},
+		}},
+	}
+
+	eventsBatch2 := []*types.History{
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   15,
+				Version:   30,
+				EventType: types.EventTypeDecisionTaskTimedOut.Ptr(),
+				DecisionTaskTimedOutEventAttributes: &types.DecisionTaskTimedOutEventAttributes{
+					ScheduledEventID: 13,
+					StartedEventID:   14,
+					TimeoutType:      types.TimeoutTypeStartToClose.Ptr(),
+				},
+			},
+			{
+				EventID:   16,
+				Version:   30,
+				EventType: types.EventTypeActivityTaskTimedOut.Ptr(),
+				ActivityTaskTimedOutEventAttributes: &types.ActivityTaskTimedOutEventAttributes{
+					ScheduledEventID: 6,
+					StartedEventID:   7,
+					TimeoutType:      types.TimeoutTypeStartToClose.Ptr(),
+				},
+			},
+			{
+				EventID:   17,
+				Version:   30,
+				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
+					TaskList:                   &types.TaskList{Name: tasklist},
+					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
+					Attempt:                    0,
+				},
+			},
+		}},
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   18,
+				Version:   30,
+				EventType: types.EventTypeDecisionTaskStarted.Ptr(),
+				DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
+					ScheduledEventID: 17,
+					Identity:         identity,
+					RequestID:        uuid.New(),
+				},
+			},
+		}},
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   19,
+				Version:   30,
+				EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+				DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
+					ScheduledEventID: 8,
+					StartedEventID:   9,
+					Identity:         identity,
+				},
+			},
+			{
+				EventID:   20,
+				Version:   30,
+				EventType: types.EventTypeWorkflowExecutionFailed.Ptr(),
+				WorkflowExecutionFailedEventAttributes: &types.WorkflowExecutionFailedEventAttributes{
+					DecisionTaskCompletedEventID: 19,
+					Reason:                       common.StringPtr("some random reason"),
+					Details:                      nil,
+				},
+			},
+		}},
+	}
+
+	resetCause := types.DecisionTaskFailedCauseResetWorkflow
+	dtFailedReason := "events-reapplication"
+	eventsBatch3 := []*types.History{
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   11,
+				Version:   22,
+				EventType: types.EventTypeDecisionTaskFailed.Ptr(),
+				DecisionTaskFailedEventAttributes: &types.DecisionTaskFailedEventAttributes{
+					ScheduledEventID: 9,
+					StartedEventID:   10,
+					Identity:         identity,
+					Cause:            &resetCause,
+					Reason:           &dtFailedReason,
+					BaseRunID:        runID,
+					NewRunID:         newRunID,
+					ForkEventVersion: 21,
+				},
+			},
+		}},
+	}
+
+	versionHistory1 := s.eventBatchesToVersionHistory(nil, eventsBatch1)
+
+	versionHistory2, err := versionHistory1.DuplicateUntilLCAItem(
+		persistence.NewVersionHistoryItem(14, 21),
+	)
+	s.NoError(err)
+	versionHistory2 = s.eventBatchesToVersionHistory(versionHistory2, eventsBatch2)
+
+	versionHistory3, err := versionHistory1.DuplicateUntilLCAItem(
+		persistence.NewVersionHistoryItem(10, 21),
+	)
+	s.NoError(err)
+	versionHistory3 = s.eventBatchesToVersionHistory(versionHistory3, eventsBatch3)
+
+	s.applyEvents(
+		workflowID,
+		runID,
+		workflowType,
+		tasklist,
+		versionHistory1,
+		eventsBatch1,
+		historyClient,
+	)
+	s.applyEvents(
+		workflowID,
+		runID,
+		workflowType,
+		tasklist,
+		versionHistory2,
+		eventsBatch2,
+		historyClient,
+	)
+	s.applyEvents(
+		workflowID,
+		newRunID,
+		workflowType,
+		tasklist,
+		versionHistory3,
+		eventsBatch3,
+		historyClient,
+	)
+}
+
 func (s *NDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieContinueAsNew() {
 
 	s.setupRemoteFrontendClients()

@@ -74,11 +74,11 @@ type (
 			eventBatches []*persistence.WorkflowEvents,
 		) error
 
-		PersistFirstWorkflowEvents(
+		PersistStartWorkflowBatchEvents(
 			ctx context.Context,
 			workflowEvents *persistence.WorkflowEvents,
 		) (int64, error)
-		PersistNonFirstWorkflowEvents(
+		PersistNonStartWorkflowBatchEvents(
 			ctx context.Context,
 			workflowEvents *persistence.WorkflowEvents,
 		) (int64, error)
@@ -458,7 +458,7 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 	}
 	resetHistorySize := c.GetHistorySize()
 	for _, workflowEvents := range resetWorkflowEventsSeq {
-		eventsSize, err := c.PersistNonFirstWorkflowEvents(ctx, workflowEvents)
+		eventsSize, err := c.PersistNonStartWorkflowBatchEvents(ctx, workflowEvents)
 		if err != nil {
 			return err
 		}
@@ -488,7 +488,7 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		}
 		newWorkflowSizeSize := newContext.GetHistorySize()
 		startEvents := newWorkflowEventsSeq[0]
-		eventsSize, err := c.PersistFirstWorkflowEvents(ctx, startEvents)
+		eventsSize, err := c.PersistStartWorkflowBatchEvents(ctx, startEvents)
 		if err != nil {
 			return err
 		}
@@ -518,7 +518,7 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		}
 		currentWorkflowSize := currentContext.GetHistorySize()
 		for _, workflowEvents := range currentWorkflowEventsSeq {
-			eventsSize, err := c.PersistNonFirstWorkflowEvents(ctx, workflowEvents)
+			eventsSize, err := c.PersistNonStartWorkflowBatchEvents(ctx, workflowEvents)
 			if err != nil {
 				return err
 			}
@@ -697,7 +697,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 
 	currentWorkflowSize := c.GetHistorySize()
 	for _, workflowEvents := range currentWorkflowEventsSeq {
-		eventsSize, err := c.PersistNonFirstWorkflowEvents(ctx, workflowEvents)
+		eventsSize, err := c.PersistNonStartWorkflowBatchEvents(ctx, workflowEvents)
 		if err != nil {
 			return err
 		}
@@ -730,13 +730,13 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		firstEventID := startEvents.Events[0].GetEventID()
 		var eventsSize int64
 		if firstEventID == common.FirstEventID {
-			eventsSize, err = c.PersistFirstWorkflowEvents(ctx, startEvents)
+			eventsSize, err = c.PersistStartWorkflowBatchEvents(ctx, startEvents)
 			if err != nil {
 				return err
 			}
 		} else {
 			// NOTE: This is the case for reset workflow, reset workflow already inserted a branch record
-			eventsSize, err = c.PersistNonFirstWorkflowEvents(ctx, startEvents)
+			eventsSize, err = c.PersistNonStartWorkflowBatchEvents(ctx, startEvents)
 			if err != nil {
 				return err
 			}
@@ -916,7 +916,7 @@ func (c *contextImpl) mergeContinueAsNewReplicationTasks(
 	return nil
 }
 
-func (c *contextImpl) PersistFirstWorkflowEvents(
+func (c *contextImpl) PersistStartWorkflowBatchEvents(
 	ctx context.Context,
 	workflowEvents *persistence.WorkflowEvents,
 ) (int64, error) {
@@ -952,7 +952,7 @@ func (c *contextImpl) PersistFirstWorkflowEvents(
 	return int64(size), err
 }
 
-func (c *contextImpl) PersistNonFirstWorkflowEvents(
+func (c *contextImpl) PersistNonStartWorkflowBatchEvents(
 	ctx context.Context,
 	workflowEvents *persistence.WorkflowEvents,
 ) (int64, error) {
