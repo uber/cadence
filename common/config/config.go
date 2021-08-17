@@ -55,6 +55,7 @@ type (
 		// Archival is the config for archival
 		Archival Archival `yaml:"archival"`
 		// PublicClient is config for sys worker service connecting to cadence frontend
+		// Default to currentCluster's RPCAddress in ClusterInformation
 		PublicClient PublicClient `yaml:"publicClient"`
 		// DynamicConfigClient is the config for setting up the file based dynamic config client
 		// Filepath would be relative to the root directory when the path wasn't absolute.
@@ -324,7 +325,6 @@ type (
 		RPCName string `yaml:"rpcName"`
 		// Address indicate the remote service address(Host:Port). Host can be DNS name.
 		// For currentCluster, it's usually the same as publicClient.hostPort
-		// Default to publicClient.hostPort if empty
 		RPCAddress string `yaml:"rpcAddress" validate:"nonzero"`
 	}
 
