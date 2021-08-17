@@ -574,6 +574,7 @@ message RemoveTaskRequest {
   shared.v1.TaskType task_type = 2;
   int64 task_id = 3;
   google.protobuf.Timestamp visibility_time = 4;
+  string cluster_name = 5;
 }
 
 message RemoveTaskResponse {

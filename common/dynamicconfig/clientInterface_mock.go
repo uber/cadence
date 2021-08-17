@@ -31,6 +31,8 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
+
+	types "github.com/uber/cadence/common/types"
 )
 
 // MockClient is a mock of Client interface
@@ -188,4 +190,33 @@ func (m *MockClient) UpdateValue(name Key, value interface{}) error {
 func (mr *MockClientMockRecorder) UpdateValue(name, value interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateValue", reflect.TypeOf((*MockClient)(nil).UpdateValue), name, value)
+}
+
+// RestoreValue mocks base method
+func (m *MockClient) RestoreValue(name Key, filters map[Filter]interface{}) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RestoreValue", name, filters)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RestoreValue indicates an expected call of RestoreValue
+func (mr *MockClientMockRecorder) RestoreValue(name, filters interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreValue", reflect.TypeOf((*MockClient)(nil).RestoreValue), name, filters)
+}
+
+// ListValue mocks base method
+func (m *MockClient) ListValue(name Key) ([]*types.DynamicConfigEntry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListValue", name)
+	ret0, _ := ret[0].([]*types.DynamicConfigEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListValue indicates an expected call of ListValue
+func (mr *MockClientMockRecorder) ListValue(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListValue", reflect.TypeOf((*MockClient)(nil).ListValue), name)
 }

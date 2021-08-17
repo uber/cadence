@@ -217,3 +217,31 @@ func TestValidateDomainUUID(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertErrToGetTaskFailedCause(t *testing.T) {
+	testCases := []struct {
+		err                 error
+		expectedFailedCause types.GetTaskFailedCause
+	}{
+		{
+			err:                 errors.New("some random error"),
+			expectedFailedCause: types.GetTaskFailedCauseUncategorized,
+		},
+		{
+			err:                 context.DeadlineExceeded,
+			expectedFailedCause: types.GetTaskFailedCauseTimeout,
+		},
+		{
+			err:                 &types.ServiceBusyError{},
+			expectedFailedCause: types.GetTaskFailedCauseServiceBusy,
+		},
+		{
+			err:                 &types.ShardOwnershipLostError{},
+			expectedFailedCause: types.GetTaskFailedCauseShardOwnershipLost,
+		},
+	}
+
+	for _, tc := range testCases {
+		require.Equal(t, tc.expectedFailedCause, ConvertErrToGetTaskFailedCause(tc.err))
+	}
+}

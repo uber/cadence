@@ -117,6 +117,7 @@ func (s *timerActiveTaskExecutorSuite) SetupTest() {
 	s.mockEngine.EXPECT().NotifyNewHistoryEvent(gomock.Any()).AnyTimes()
 	s.mockEngine.EXPECT().NotifyNewTransferTasks(gomock.Any(), gomock.Any()).AnyTimes()
 	s.mockEngine.EXPECT().NotifyNewTimerTasks(gomock.Any(), gomock.Any()).AnyTimes()
+	s.mockEngine.EXPECT().NotifyNewCrossClusterTasks(gomock.Any(), gomock.Any()).AnyTimes()
 	s.mockShard.SetEngine(s.mockEngine)
 
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
@@ -1445,5 +1446,5 @@ func (s *timerActiveTaskExecutorSuite) getMutableStateFromCache(
 func (s *timerActiveTaskExecutorSuite) newTimerTaskFromInfo(
 	info *persistence.TimerTaskInfo,
 ) Task {
-	return NewTimerTask(s.mockShard, info, QueueTypeActiveTimer, s.logger, nil, nil, nil, nil, s.mockShard.GetTimeSource(), nil)
+	return NewTimerTask(s.mockShard, info, QueueTypeActiveTimer, s.logger, nil, nil, nil, nil, nil)
 }

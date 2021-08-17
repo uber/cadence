@@ -4006,6 +4006,7 @@ func FromRemoveTaskRequest(t *types.RemoveTaskRequest) *shared.RemoveTaskRequest
 		Type:                t.Type,
 		TaskID:              &t.TaskID,
 		VisibilityTimestamp: t.VisibilityTimestamp,
+		ClusterName:         &t.ClusterName,
 	}
 }
 
@@ -4019,6 +4020,7 @@ func ToRemoveTaskRequest(t *shared.RemoveTaskRequest) *types.RemoveTaskRequest {
 		Type:                t.Type,
 		TaskID:              t.GetTaskID(),
 		VisibilityTimestamp: t.VisibilityTimestamp,
+		ClusterName:         t.GetClusterName(),
 	}
 }
 

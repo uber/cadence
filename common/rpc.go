@@ -51,6 +51,8 @@ const (
 	// to enforce DCRedirection(auto-forwarding)
 	// Will be removed in the future: https://github.com/uber/cadence/issues/2304
 	EnforceDCRedirection = "cadence-enforce-dc-redirection"
+	// AuthorizationTokenHeaderName refers to the jwt token in the request
+	AuthorizationTokenHeaderName = "cadence-authorization"
 )
 
 type (

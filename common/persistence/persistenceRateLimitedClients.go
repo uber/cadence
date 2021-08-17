@@ -75,6 +75,12 @@ type (
 		persistence QueueManager
 		logger      log.Logger
 	}
+
+	configStoreRateLimitedPersistenceClient struct {
+		rateLimiter quotas.Limiter
+		persistence ConfigStoreManager
+		logger      log.Logger
+	}
 )
 
 var _ ShardManager = (*shardRateLimitedPersistenceClient)(nil)
@@ -84,6 +90,7 @@ var _ HistoryManager = (*historyRateLimitedPersistenceClient)(nil)
 var _ DomainManager = (*metadataRateLimitedPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityRateLimitedPersistenceClient)(nil)
 var _ QueueManager = (*queueRateLimitedPersistenceClient)(nil)
+var _ ConfigStoreManager = (*configStoreRateLimitedPersistenceClient)(nil)
 
 // NewShardPersistenceRateLimitedClient creates a client to manage shards
 func NewShardPersistenceRateLimitedClient(
@@ -170,6 +177,19 @@ func NewQueuePersistenceRateLimitedClient(
 	logger log.Logger,
 ) QueueManager {
 	return &queueRateLimitedPersistenceClient{
+		persistence: persistence,
+		rateLimiter: rateLimiter,
+		logger:      logger,
+	}
+}
+
+// NewConfigStorePersistenceRateLimitedClient creates a client to manage config store
+func NewConfigStorePersistenceRateLimitedClient(
+	persistence ConfigStoreManager,
+	rateLimiter quotas.Limiter,
+	logger log.Logger,
+) ConfigStoreManager {
+	return &configStoreRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
 		logger:      logger,
@@ -1178,5 +1198,24 @@ func (p *queueRateLimitedPersistenceClient) DeleteMessageFromDLQ(
 }
 
 func (p *queueRateLimitedPersistenceClient) Close() {
+	p.persistence.Close()
+}
+
+func (p *configStoreRateLimitedPersistenceClient) FetchDynamicConfig(ctx context.Context) (*FetchDynamicConfigResponse, error) {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+
+	return p.persistence.FetchDynamicConfig(ctx)
+}
+
+func (p *configStoreRateLimitedPersistenceClient) UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest) error {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+	return p.persistence.UpdateDynamicConfig(ctx, request)
+}
+
+func (p *configStoreRateLimitedPersistenceClient) Close() {
 	p.persistence.Close()
 }

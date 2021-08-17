@@ -665,19 +665,6 @@ func (mr *MockClientMockRecorder) RespondActivityTaskFailed(arg0, arg1 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondActivityTaskFailed", reflect.TypeOf((*MockClient)(nil).RespondActivityTaskFailed), varargs...)
 }
 
-// RespondDecisionTaskCompleted mocks base method
-func (m *MockClient) RespondDecisionTaskCompleted(arg0 context.Context, arg1 *types.HistoryRespondDecisionTaskCompletedRequest, arg2 ...yarpc.CallOption) (*types.HistoryRespondDecisionTaskCompletedResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "RespondDecisionTaskCompleted", varargs...)
-	ret0, _ := ret[0].(*types.HistoryRespondDecisionTaskCompletedResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
 // RespondCrossClusterTasksCompleted mocks base method
 func (m *MockClient) RespondCrossClusterTasksCompleted(arg0 context.Context, arg1 *types.RespondCrossClusterTasksCompletedRequest, arg2 ...yarpc.CallOption) (*types.RespondCrossClusterTasksCompletedResponse, error) {
 	m.ctrl.T.Helper()
@@ -696,6 +683,19 @@ func (mr *MockClientMockRecorder) RespondCrossClusterTasksCompleted(arg0, arg1 i
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondCrossClusterTasksCompleted", reflect.TypeOf((*MockClient)(nil).RespondCrossClusterTasksCompleted), varargs...)
+}
+
+// RespondDecisionTaskCompleted mocks base method
+func (m *MockClient) RespondDecisionTaskCompleted(arg0 context.Context, arg1 *types.HistoryRespondDecisionTaskCompletedRequest, arg2 ...yarpc.CallOption) (*types.HistoryRespondDecisionTaskCompletedResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RespondDecisionTaskCompleted", varargs...)
+	ret0, _ := ret[0].(*types.HistoryRespondDecisionTaskCompletedResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // RespondDecisionTaskCompleted indicates an expected call of RespondDecisionTaskCompleted

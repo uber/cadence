@@ -899,6 +899,7 @@ func FromHistoryRemoveTaskRequest(t *types.RemoveTaskRequest) *historyv1.RemoveT
 		TaskType:       FromTaskType(t.Type),
 		TaskId:         t.TaskID,
 		VisibilityTime: unixNanoToTime(t.VisibilityTimestamp),
+		ClusterName:    t.ClusterName,
 	}
 }
 
@@ -911,6 +912,7 @@ func ToHistoryRemoveTaskRequest(t *historyv1.RemoveTaskRequest) *types.RemoveTas
 		Type:                ToTaskType(t.TaskType),
 		TaskID:              t.TaskId,
 		VisibilityTimestamp: timeToUnixNano(t.VisibilityTime),
+		ClusterName:         t.ClusterName,
 	}
 }
 

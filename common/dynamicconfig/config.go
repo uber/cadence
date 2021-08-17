@@ -510,7 +510,7 @@ func getFilteredKeyAsString(
 ) string {
 	var sb strings.Builder
 	sb.WriteString(key.String())
-	for filter := unknownFilter + 1; filter < lastFilterTypeForTest; filter++ {
+	for filter := UnknownFilter + 1; filter < LastFilterTypeForTest; filter++ {
 		if value, ok := filters[filter]; ok {
 			sb.WriteString(fmt.Sprintf(",%v:%v", filter.String(), value))
 		}

@@ -25,6 +25,7 @@ package client
 import (
 	"sync"
 
+	cconfig "github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
@@ -55,6 +56,9 @@ type (
 
 		GetExecutionManager(int) (persistence.ExecutionManager, error)
 		SetExecutionManager(int, persistence.ExecutionManager)
+
+		GetConfigStoreManager() persistence.ConfigStoreManager
+		SetConfigStoreManager(persistence.ConfigStoreManager)
 	}
 
 	// BeanImpl stores persistence managers
@@ -65,6 +69,7 @@ type (
 		domainReplicationQueueManager persistence.QueueManager
 		shardManager                  persistence.ShardManager
 		historyManager                persistence.HistoryManager
+		configStoreManager            persistence.ConfigStoreManager
 		executionManagerFactory       persistence.ExecutionManagerFactory
 
 		sync.RWMutex
@@ -109,6 +114,16 @@ func NewBeanFromFactory(
 		return nil, err
 	}
 
+	var configStoreMgr persistence.ConfigStoreManager
+	if datastore, ok := params.PersistenceConfig.DataStores[params.PersistenceConfig.DefaultStore]; ok {
+		if datastore.NoSQL != nil && datastore.NoSQL.PluginName == cconfig.StoreTypeCassandra {
+			configStoreMgr, err = factory.NewConfigStoreManager()
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return NewBean(
 		metadataMgr,
 		taskMgr,
@@ -116,6 +131,7 @@ func NewBeanFromFactory(
 		domainReplicationQueue,
 		shardMgr,
 		historyMgr,
+		configStoreMgr,
 		factory,
 	), nil
 }
@@ -128,6 +144,7 @@ func NewBean(
 	domainReplicationQueueManager persistence.QueueManager,
 	shardManager persistence.ShardManager,
 	historyManager persistence.HistoryManager,
+	configStoreManager persistence.ConfigStoreManager,
 	executionManagerFactory persistence.ExecutionManagerFactory,
 ) *BeanImpl {
 	return &BeanImpl{
@@ -137,6 +154,7 @@ func NewBean(
 		domainReplicationQueueManager: domainReplicationQueueManager,
 		shardManager:                  shardManager,
 		historyManager:                historyManager,
+		configStoreManager:            configStoreManager,
 		executionManagerFactory:       executionManagerFactory,
 
 		shardIDToExecutionManager: make(map[int]persistence.ExecutionManager),
@@ -303,6 +321,26 @@ func (s *BeanImpl) SetExecutionManager(
 	defer s.Unlock()
 
 	s.shardIDToExecutionManager[shardID] = executionManager
+}
+
+// GetConfigStoreManager gets ConfigStoreManager
+func (s *BeanImpl) GetConfigStoreManager() persistence.ConfigStoreManager {
+
+	s.RLock()
+	defer s.RUnlock()
+
+	return s.configStoreManager
+}
+
+// GetConfigStoreManager gets ConfigStoreManager
+func (s *BeanImpl) SetConfigStoreManager(
+	configStoreManager persistence.ConfigStoreManager,
+) {
+
+	s.Lock()
+	defer s.Unlock()
+
+	s.configStoreManager = configStoreManager
 }
 
 // Close cleanup connections

@@ -42,8 +42,9 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/client"
+	"github.com/uber/cadence/common/persistence/nosql"
+	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
@@ -57,7 +58,7 @@ type (
 
 	// TestBaseOptions options to configure workflow test base.
 	TestBaseOptions struct {
-		SQLDBPluginName string
+		DBPluginName    string
 		DBName          string
 		DBUsername      string
 		DBPassword      string
@@ -82,24 +83,18 @@ type (
 		ShardInfo                 *p.ShardInfo
 		TaskIDGenerator           TransferTaskIDGenerator
 		ClusterMetadata           cluster.Metadata
-		DefaultTestCluster        PersistenceTestCluster
-		VisibilityTestCluster     PersistenceTestCluster
+		DefaultTestCluster        testcluster.PersistenceTestCluster
+		VisibilityTestCluster     testcluster.PersistenceTestCluster
 		Logger                    log.Logger
 		PayloadSerializer         p.PayloadSerializer
+		ConfigStoreManager        p.ConfigStoreManager
 	}
 
 	// TestBaseParams defines the input of TestBase
 	TestBaseParams struct {
-		DefaultTestCluster    PersistenceTestCluster
-		VisibilityTestCluster PersistenceTestCluster
+		DefaultTestCluster    testcluster.PersistenceTestCluster
+		VisibilityTestCluster testcluster.PersistenceTestCluster
 		ClusterMetadata       cluster.Metadata
-	}
-
-	// PersistenceTestCluster exposes management operations on a database
-	PersistenceTestCluster interface {
-		SetupTestDatabase()
-		TearDownTestDatabase()
-		Config() config.Persistence
 	}
 
 	// TestTransferTaskIDGenerator helper
@@ -127,12 +122,12 @@ func NewTestBaseFromParams(params TestBaseParams) TestBase {
 	}
 }
 
-// NewTestBaseWithCassandra returns a persistence test base backed by cassandra datastore
-func NewTestBaseWithCassandra(options *TestBaseOptions) TestBase {
+// NewTestBaseWithNoSQL returns a persistence test base backed by nosql datastore
+func NewTestBaseWithNoSQL(options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
-	testCluster := cassandra.NewTestCluster(options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.SchemaDir, options.ProtoVersion)
+	testCluster := nosql.NewTestCluster(options.DBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.ProtoVersion)
 	metadata := options.ClusterMetadata
 	if metadata == nil {
 		metadata = cluster.GetTestClusterMetadata(false, false)
@@ -150,7 +145,7 @@ func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
-	testCluster := sql.NewTestCluster(options.SQLDBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.SchemaDir)
+	testCluster := sql.NewTestCluster(options.DBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.SchemaDir)
 	metadata := options.ClusterMetadata
 	if metadata == nil {
 		metadata = cluster.GetTestClusterMetadata(false, false)
@@ -161,18 +156,6 @@ func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
 		ClusterMetadata:       metadata,
 	}
 	return NewTestBaseFromParams(params)
-}
-
-// NewTestBase returns a persistence test base backed by either cassandra or sql
-func NewTestBase(options *TestBaseOptions) TestBase {
-	switch options.StoreType {
-	case config.StoreTypeSQL:
-		return NewTestBaseWithSQL(options)
-	case config.StoreTypeCassandra:
-		return NewTestBaseWithCassandra(options)
-	default:
-		panic("invalid storeType " + options.StoreType)
-	}
 }
 
 // Config returns the persistence configuration for this test
@@ -211,6 +194,11 @@ func (s *TestBase) Setup() {
 
 	s.ShardMgr, err = factory.NewShardManager()
 	s.fatalOnError("NewShardManager", err)
+
+	if cfg.DefaultStoreType() == config.StoreTypeCassandra {
+		s.ConfigStoreManager, err = factory.NewConfigStoreManager()
+		s.fatalOnError("NewConfigStoreManager", err)
+	}
 
 	s.ExecutionMgrFactory = factory
 	s.ExecutionManager, err = factory.NewExecutionManager(shardID)

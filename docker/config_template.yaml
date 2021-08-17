@@ -273,7 +273,9 @@ kafka:
 publicClient:
     hostPort: {{ default .Env.FRONTEND_SERVICE "cadence" }}:{{ default .Env.FRONTEND_PORT "7933" }}
 
-dynamicConfigClient:
+dynamicconfig:
+  client: filebased
+  filebased:
     filepath: {{ default .Env.DYNAMIC_CONFIG_FILE_PATH "/etc/cadence/config/dynamicconfig/development.yaml" }}
     pollInterval: "60s"
 

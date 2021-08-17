@@ -32,30 +32,19 @@ type cdb struct {
 	logger  log.Logger
 	client  gocql.Client
 	session gocql.Session
+	cfg     *config.NoSQL
 }
 
 var _ nosqlplugin.DB = (*cdb)(nil)
 
-// NewCassandraDBFromSession returns a DB from a session
-func NewCassandraDBFromSession(client gocql.Client, session gocql.Session, logger log.Logger) nosqlplugin.DB {
+// newCassandraDBFromSession returns a DB from a session
+func newCassandraDBFromSession(cfg *config.NoSQL, session gocql.Session, logger log.Logger) *cdb {
 	return &cdb{
-		client:  client,
+		client:  gocql.GetRegisteredClient(),
 		session: session,
 		logger:  logger,
+		cfg:     cfg,
 	}
-}
-
-// NewCassandraDB return a new DB
-func NewCassandraDB(cfg config.Cassandra, logger log.Logger) (nosqlplugin.DB, error) {
-	session, err := CreateSession(cfg)
-	if err != nil {
-		return nil, err
-	}
-	return &cdb{
-		client:  gocql.NewClient(),
-		session: session,
-		logger:  logger,
-	}, nil
 }
 
 func (db *cdb) Close() {

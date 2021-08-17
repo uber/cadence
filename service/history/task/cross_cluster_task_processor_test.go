@@ -76,6 +76,7 @@ func (s *crossClusterTaskProcessorSuite) SetupTest() {
 	)
 	s.mockProcessor = NewMockProcessor(s.controller)
 	s.mockShard.Resource.ClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
 
 	s.processorOptions = &CrossClusterTaskProcessorOptions{
 		MaxPendingTasks:            dynamicconfig.GetIntPropertyFn(100),
@@ -202,8 +203,11 @@ func (s *crossClusterTaskProcessorSuite) testProcessTaskRequests(failedToRespond
 	for id := pendingTaskID; id != pendingTaskID+numTasks; id++ {
 		tasksRequests = append(tasksRequests, &types.CrossClusterTaskRequest{
 			TaskInfo: &types.CrossClusterTaskInfo{
-				TaskID: int64(id),
+				TaskID:   int64(id),
+				DomainID: constants.TestDomainID,
+				TaskType: types.CrossClusterTaskTypeCancelExecution.Ptr(),
 			},
+			CancelExecutionAttributes: &types.CrossClusterCancelExecutionRequestAttributes{},
 		})
 	}
 
@@ -213,6 +217,9 @@ func (s *crossClusterTaskProcessorSuite) testProcessTaskRequests(failedToRespond
 			submitted := rand.Intn(2) == 0
 			if submitted {
 				completedTasks++
+				t.(*crossClusterTargetTask).response = &types.CrossClusterTaskResponse{
+					TaskID: t.GetTaskID(),
+				}
 				t.Ack()
 			}
 			// redispatcher interval is set to 1hr, basically disabled

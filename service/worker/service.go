@@ -155,7 +155,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
 			ClusterMetadata:     params.ClusterMetadata,
 		},
-		EnableBatcher:                     dc.GetBoolProperty(dynamicconfig.EnableBatcher, false),
+		EnableBatcher:                     dc.GetBoolProperty(dynamicconfig.EnableBatcher, true),
 		EnableParentClosePolicyWorker:     dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
 		EnableFailoverManager:             dc.GetBoolProperty(dynamicconfig.EnableFailoverManager, true),
 		EnableWorkflowShadower:            dc.GetBoolProperty(dynamicconfig.EnableWorkflowShadower, true),

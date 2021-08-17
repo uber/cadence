@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/uber/cadence/.gen/go/config"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -65,9 +66,13 @@ type (
 		SerializePendingFailoverMarkers(markers []*types.FailoverMarkerAttributes, encodingType common.EncodingType) (*DataBlob, error)
 		DeserializePendingFailoverMarkers(data *DataBlob) ([]*types.FailoverMarkerAttributes, error)
 
-		// serialize/deserialize processing queue states
+		// serialize/deserialize processing queue statesss
 		SerializeProcessingQueueStates(states *types.ProcessingQueueStates, encodingType common.EncodingType) (*DataBlob, error)
 		DeserializeProcessingQueueStates(data *DataBlob) (*types.ProcessingQueueStates, error)
+
+		// serialize/deserialize DynamicConfigBlob
+		SerializeDynamicConfigBlob(blob *types.DynamicConfigBlob, encodingType common.EncodingType) (*DataBlob, error)
+		DeserializeDynamicConfigBlob(data *DataBlob) (*types.DynamicConfigBlob, error)
 	}
 
 	// CadenceSerializationError is an error type for cadence serialization
@@ -234,6 +239,27 @@ func (t *serializerImpl) DeserializeProcessingQueueStates(
 	return &states, err
 }
 
+func (t *serializerImpl) SerializeDynamicConfigBlob(blob *types.DynamicConfigBlob, encodingType common.EncodingType) (*DataBlob, error) {
+	if blob == nil {
+		return nil, nil
+	}
+	return t.serialize(blob, encodingType)
+}
+
+func (t *serializerImpl) DeserializeDynamicConfigBlob(data *DataBlob) (*types.DynamicConfigBlob, error) {
+	if data == nil {
+		return nil, nil
+	}
+
+	var blob types.DynamicConfigBlob
+	if len(data.Data) == 0 {
+		return &blob, nil
+	}
+
+	err := t.deserialize(data, &blob)
+	return &blob, err
+}
+
 func (t *serializerImpl) serialize(input interface{}, encodingType common.EncodingType) (*DataBlob, error) {
 	if input == nil {
 		return nil, nil
@@ -276,6 +302,8 @@ func (t *serializerImpl) thriftrwEncode(input interface{}) ([]byte, error) {
 		return t.thriftrwEncoder.Encode(&replicator.FailoverMarkers{FailoverMarkers: thrift.FromFailoverMarkerAttributesArray(input)})
 	case *types.ProcessingQueueStates:
 		return t.thriftrwEncoder.Encode(thrift.FromProcessingQueueStates(input))
+	case *types.DynamicConfigBlob:
+		return t.thriftrwEncoder.Encode(thrift.FromDynamicConfigBlob(input))
 	default:
 		return nil, nil
 	}
@@ -362,6 +390,13 @@ func (t *serializerImpl) thriftrwDecode(data []byte, target interface{}) error {
 			return err
 		}
 		*target = *thrift.ToProcessingQueueStates(&thriftTarget)
+		return nil
+	case *types.DynamicConfigBlob:
+		thriftTarget := config.DynamicConfigBlob{}
+		if err := t.thriftrwEncoder.Decode(data, &thriftTarget); err != nil {
+			return err
+		}
+		*target = *thrift.ToDynamicConfigBlob(&thriftTarget)
 		return nil
 	default:
 		return nil

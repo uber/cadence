@@ -21,6 +21,7 @@
 package sql
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -129,6 +130,11 @@ func (f *Factory) NewQueue(queueType p.QueueType) (p.Queue, error) {
 	}
 
 	return newQueueStore(conn, f.logger, queueType)
+}
+
+//NewConfigStore returns a new config store backed by sql. Not Yet Implemented.
+func (f *Factory) NewConfigStore() (p.ConfigStore, error) {
+	return nil, errors.New("sql config store not yet implemented")
 }
 
 // Close closes the factory

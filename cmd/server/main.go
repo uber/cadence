@@ -25,6 +25,7 @@ import (
 
 	"github.com/uber/cadence/cmd/server/cadence"
 	"github.com/uber/cadence/common/metrics"
+	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"              // needed to load cassandra plugin
 	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public" // needed to load the default gocql client
 	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"                      // needed to load mysql plugin
 	_ "github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres"                   // needed to load postgres plugin
@@ -32,6 +33,6 @@ import (
 
 // main entry point for the cadence server
 func main() {
-	app := cadence.BuildCLI(metrics.Version, metrics.Revision)
+	app := cadence.BuildCLI(metrics.ReleaseVersion, metrics.Revision)
 	app.Run(os.Args)
 }
