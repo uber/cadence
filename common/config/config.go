@@ -325,7 +325,7 @@ type (
 		// Address indicate the remote service address(Host:Port). Host can be DNS name.
 		// For currentCluster, it's usually the same as publicClient.hostPort
 		// Default to publicClient.hostPort if empty
-		RPCAddress string `yaml:"rpcAddress"`
+		RPCAddress string `yaml:"rpcAddress" validate:"nonzero"`
 	}
 
 	// DCRedirectionPolicy contains the frontend datacenter redirection policy
@@ -427,7 +427,7 @@ type (
 	// PublicClient is config for connecting to cadence frontend
 	PublicClient struct {
 		// HostPort is the host port to connect on. Host can be DNS name
-		HostPort string `yaml:"hostPort" validate:"nonzero"`
+		HostPort string `yaml:"hostPort"`
 		// interval to refresh DNS. Default to 10s
 		RefreshInterval time.Duration `yaml:"RefreshInterval"`
 	}
@@ -478,9 +478,6 @@ func (c *Config) validate() error {
 	if err := c.Persistence.Validate(); err != nil {
 		return err
 	}
-	if c.PublicClient.HostPort == "" {
-		return fmt.Errorf("publicClient.hostPort cannot be empty")
-	}
 	if c.ClusterMetadata == nil {
 		return fmt.Errorf("ClusterMetadata cannot be empty")
 	}
@@ -516,13 +513,13 @@ func (c *Config) fillDefaults() error {
 			// filling RPCName with a default value if empty
 			cluster.RPCName = "cadence-frontend"
 		}
-		if name == c.ClusterMetadata.CurrentClusterName {
-			if cluster.RPCAddress == "" {
-				// filling current cluster's RPC address from publicClient if empty
-				cluster.RPCAddress = c.PublicClient.HostPort
-			}
-		}
 		c.ClusterMetadata.ClusterInformation[name] = cluster
+	}
+
+	// filling publicClient with current cluster's RPC address if empty
+	if c.PublicClient.HostPort == "" {
+		name := c.ClusterMetadata.CurrentClusterName
+		c.PublicClient.HostPort = c.ClusterMetadata.ClusterInformation[name].RPCAddress
 	}
 
 	return nil
