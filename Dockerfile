@@ -110,14 +110,14 @@ COPY --from=builder /cadence/cadence /usr/local/bin
 ENTRYPOINT ["cadence"]
 
 # Cadence Canary
-FROM alpine AS cadence-cli
+FROM alpine AS cadence-canary
 
 COPY --from=builder /cadence/cadence-canary /usr/local/bin
 
 ENTRYPOINT ["cadence-canary"]
 
 # Cadence Bench
-FROM alpine AS cadence-cli
+FROM alpine AS cadence-bench
 
 COPY --from=builder /cadence/cadence-bench /usr/local/bin
 
