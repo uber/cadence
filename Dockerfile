@@ -113,6 +113,7 @@ ENTRYPOINT ["cadence"]
 FROM alpine AS cadence-canary
 
 COPY --from=builder /cadence/cadence-canary /usr/local/bin
+COPY --from=builder /cadence/cadence /usr/local/bin
 
 CMD ["/usr/local/bin/cadence-canary", "--root", "/etc/cadence-canary", "start"]
 
@@ -120,6 +121,7 @@ CMD ["/usr/local/bin/cadence-canary", "--root", "/etc/cadence-canary", "start"]
 FROM alpine AS cadence-bench
 
 COPY --from=builder /cadence/cadence-bench /usr/local/bin
+COPY --from=builder /cadence/cadence /usr/local/bin
 
 CMD ["/usr/local/bin/cadence-bench", "--root", "/etc/cadence-bench", "start"]
 
