@@ -64,7 +64,9 @@ func workflowListFilterType(listFilterType string) Tag {
 // general
 
 // WorkflowError returns tag for WorkflowError
-func WorkflowError(error error) Tag { return newErrorTag("wf-error", error) }
+func WorkflowError(error error) Tag {
+	return newErrorTag("wf-error", error)
+}
 
 // WorkflowTimeoutType returns tag for WorkflowTimeoutType
 func WorkflowTimeoutType(timeoutType int64) Tag {
@@ -249,6 +251,11 @@ func WorkflowTaskListType(taskListType int) Tag {
 	return newInt("wf-task-list-type", taskListType)
 }
 
+// WorkflowTaskListKind returns tag for WorkflowTaskListKind
+func WorkflowTaskListKind(taskListKind int32) Tag {
+	return newInt32("wf-task-list-kind", taskListKind)
+}
+
 // WorkflowTaskListName returns tag for WorkflowTaskListName
 func WorkflowTaskListName(taskListName string) Tag {
 	return newStringTag("wf-task-list-name", taskListName)
@@ -284,32 +291,37 @@ func WorkflowEventCount(eventCount int) Tag {
 ///////////////////  System tags defined here:  ///////////////////
 // Tags with pre-define values
 
-// Component returns tag for Component
+// component returns tag for component
 func component(component string) Tag {
 	return newPredefinedStringTag("component", component)
 }
 
-// Lifecycle returns tag for Lifecycle
+// lifecycle returns tag for lifecycle
 func lifecycle(lifecycle string) Tag {
 	return newPredefinedStringTag("lifecycle", lifecycle)
 }
 
-// StoreOperation returns tag for StoreOperation
+// storeOperation returns tag for storeOperation
 func storeOperation(storeOperation string) Tag {
 	return newPredefinedStringTag("store-operation", storeOperation)
 }
 
-// OperationResult returns tag for OperationResult
+// clientOperation returns tag for clientOperation
+func clientOperation(clientOperation string) Tag {
+	return newPredefinedStringTag("client-operation", clientOperation)
+}
+
+// operationResult returns tag for operationResult
 func operationResult(operationResult string) Tag {
 	return newPredefinedStringTag("operation-result", operationResult)
 }
 
-// ErrorType returns tag for ErrorType
+// errorType returns tag for errorType
 func errorType(errorType string) Tag {
-	return newPredefinedStringTag("error", errorType)
+	return newPredefinedStringTag("error-type", errorType)
 }
 
-// Shardupdate returns tag for Shardupdate
+// shardupdate returns tag for shardupdate
 func shardupdate(shardupdate string) Tag {
 	return newPredefinedStringTag("shard-update", shardupdate)
 }
@@ -384,6 +396,16 @@ func MetricScope(metricScope int) Tag {
 // StoreType returns tag for StoreType
 func StoreType(storeType string) Tag {
 	return newPredefinedStringTag("store-type", storeType)
+}
+
+// StoreError returns tag for StoreError
+func StoreError(storeErr error) Tag {
+	return newErrorTag("store-error", storeErr)
+}
+
+// ClientError returns tag for ClientError
+func ClientError(clientErr error) Tag {
+	return newErrorTag("client-error", clientErr)
 }
 
 // DetailInfo returns tag for DetailInfo

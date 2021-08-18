@@ -24,13 +24,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/health"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 var _ Handler = (*DCRedirectionHandlerImpl)(nil)
@@ -71,7 +70,7 @@ func NewDCRedirectionHandler(
 }
 
 // Health is for health check
-func (handler *DCRedirectionHandlerImpl) Health(ctx context.Context) (*health.HealthStatus, error) {
+func (handler *DCRedirectionHandlerImpl) Health(ctx context.Context) (*types.HealthStatus, error) {
 	return handler.frontendHandler.Health(ctx)
 }
 
@@ -80,7 +79,7 @@ func (handler *DCRedirectionHandlerImpl) Health(ctx context.Context) (*health.He
 // DeprecateDomain API call
 func (handler *DCRedirectionHandlerImpl) DeprecateDomain(
 	ctx context.Context,
-	request *shared.DeprecateDomainRequest,
+	request *types.DeprecateDomainRequest,
 ) (retError error) {
 
 	var cluster = handler.currentClusterName
@@ -96,8 +95,8 @@ func (handler *DCRedirectionHandlerImpl) DeprecateDomain(
 // DescribeDomain API call
 func (handler *DCRedirectionHandlerImpl) DescribeDomain(
 	ctx context.Context,
-	request *shared.DescribeDomainRequest,
-) (resp *shared.DescribeDomainResponse, retError error) {
+	request *types.DescribeDomainRequest,
+) (resp *types.DescribeDomainResponse, retError error) {
 
 	var cluster = handler.currentClusterName
 
@@ -112,8 +111,8 @@ func (handler *DCRedirectionHandlerImpl) DescribeDomain(
 // ListDomains API call
 func (handler *DCRedirectionHandlerImpl) ListDomains(
 	ctx context.Context,
-	request *shared.ListDomainsRequest,
-) (resp *shared.ListDomainsResponse, retError error) {
+	request *types.ListDomainsRequest,
+) (resp *types.ListDomainsResponse, retError error) {
 
 	var cluster = handler.currentClusterName
 
@@ -128,7 +127,7 @@ func (handler *DCRedirectionHandlerImpl) ListDomains(
 // RegisterDomain API call
 func (handler *DCRedirectionHandlerImpl) RegisterDomain(
 	ctx context.Context,
-	request *shared.RegisterDomainRequest,
+	request *types.RegisterDomainRequest,
 ) (retError error) {
 
 	var cluster = handler.currentClusterName
@@ -144,8 +143,8 @@ func (handler *DCRedirectionHandlerImpl) RegisterDomain(
 // UpdateDomain API call
 func (handler *DCRedirectionHandlerImpl) UpdateDomain(
 	ctx context.Context,
-	request *shared.UpdateDomainRequest,
-) (resp *shared.UpdateDomainResponse, retError error) {
+	request *types.UpdateDomainRequest,
+) (resp *types.UpdateDomainResponse, retError error) {
 
 	var cluster = handler.currentClusterName
 
@@ -162,8 +161,8 @@ func (handler *DCRedirectionHandlerImpl) UpdateDomain(
 // DescribeTaskList API call
 func (handler *DCRedirectionHandlerImpl) DescribeTaskList(
 	ctx context.Context,
-	request *shared.DescribeTaskListRequest,
-) (resp *shared.DescribeTaskListResponse, retError error) {
+	request *types.DescribeTaskListRequest,
+) (resp *types.DescribeTaskListResponse, retError error) {
 
 	var apiName = "DescribeTaskList"
 	var err error
@@ -192,8 +191,8 @@ func (handler *DCRedirectionHandlerImpl) DescribeTaskList(
 // DescribeWorkflowExecution API call
 func (handler *DCRedirectionHandlerImpl) DescribeWorkflowExecution(
 	ctx context.Context,
-	request *shared.DescribeWorkflowExecutionRequest,
-) (resp *shared.DescribeWorkflowExecutionResponse, retError error) {
+	request *types.DescribeWorkflowExecutionRequest,
+) (resp *types.DescribeWorkflowExecutionResponse, retError error) {
 
 	var apiName = "DescribeWorkflowExecution"
 	var err error
@@ -222,8 +221,8 @@ func (handler *DCRedirectionHandlerImpl) DescribeWorkflowExecution(
 // GetWorkflowExecutionHistory API call
 func (handler *DCRedirectionHandlerImpl) GetWorkflowExecutionHistory(
 	ctx context.Context,
-	request *shared.GetWorkflowExecutionHistoryRequest,
-) (resp *shared.GetWorkflowExecutionHistoryResponse, retError error) {
+	request *types.GetWorkflowExecutionHistoryRequest,
+) (resp *types.GetWorkflowExecutionHistoryResponse, retError error) {
 
 	var apiName = "GetWorkflowExecutionHistory"
 	var err error
@@ -252,8 +251,8 @@ func (handler *DCRedirectionHandlerImpl) GetWorkflowExecutionHistory(
 // ListArchivedWorkflowExecutions API call
 func (handler *DCRedirectionHandlerImpl) ListArchivedWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListArchivedWorkflowExecutionsRequest,
-) (resp *shared.ListArchivedWorkflowExecutionsResponse, retError error) {
+	request *types.ListArchivedWorkflowExecutionsRequest,
+) (resp *types.ListArchivedWorkflowExecutionsResponse, retError error) {
 
 	var apiName = "ListArchivedWorkflowExecutions"
 	var err error
@@ -282,8 +281,8 @@ func (handler *DCRedirectionHandlerImpl) ListArchivedWorkflowExecutions(
 // ListClosedWorkflowExecutions API call
 func (handler *DCRedirectionHandlerImpl) ListClosedWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListClosedWorkflowExecutionsRequest,
-) (resp *shared.ListClosedWorkflowExecutionsResponse, retError error) {
+	request *types.ListClosedWorkflowExecutionsRequest,
+) (resp *types.ListClosedWorkflowExecutionsResponse, retError error) {
 
 	var apiName = "ListClosedWorkflowExecutions"
 	var err error
@@ -312,8 +311,8 @@ func (handler *DCRedirectionHandlerImpl) ListClosedWorkflowExecutions(
 // ListOpenWorkflowExecutions API call
 func (handler *DCRedirectionHandlerImpl) ListOpenWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListOpenWorkflowExecutionsRequest,
-) (resp *shared.ListOpenWorkflowExecutionsResponse, retError error) {
+	request *types.ListOpenWorkflowExecutionsRequest,
+) (resp *types.ListOpenWorkflowExecutionsResponse, retError error) {
 
 	var apiName = "ListOpenWorkflowExecutions"
 	var err error
@@ -342,8 +341,8 @@ func (handler *DCRedirectionHandlerImpl) ListOpenWorkflowExecutions(
 // ListWorkflowExecutions API call
 func (handler *DCRedirectionHandlerImpl) ListWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListWorkflowExecutionsRequest,
-) (resp *shared.ListWorkflowExecutionsResponse, retError error) {
+	request *types.ListWorkflowExecutionsRequest,
+) (resp *types.ListWorkflowExecutionsResponse, retError error) {
 
 	var apiName = "ListWorkflowExecutions"
 	var err error
@@ -372,8 +371,8 @@ func (handler *DCRedirectionHandlerImpl) ListWorkflowExecutions(
 // ScanWorkflowExecutions API call
 func (handler *DCRedirectionHandlerImpl) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListWorkflowExecutionsRequest,
-) (resp *shared.ListWorkflowExecutionsResponse, retError error) {
+	request *types.ListWorkflowExecutionsRequest,
+) (resp *types.ListWorkflowExecutionsResponse, retError error) {
 
 	var apiName = "ScanWorkflowExecutions"
 	var err error
@@ -401,8 +400,8 @@ func (handler *DCRedirectionHandlerImpl) ScanWorkflowExecutions(
 // CountWorkflowExecutions API call
 func (handler *DCRedirectionHandlerImpl) CountWorkflowExecutions(
 	ctx context.Context,
-	request *shared.CountWorkflowExecutionsRequest,
-) (resp *shared.CountWorkflowExecutionsResponse, retError error) {
+	request *types.CountWorkflowExecutionsRequest,
+) (resp *types.CountWorkflowExecutionsResponse, retError error) {
 
 	var apiName = "CountWorkflowExecutions"
 	var err error
@@ -431,7 +430,7 @@ func (handler *DCRedirectionHandlerImpl) CountWorkflowExecutions(
 // GetSearchAttributes API call
 func (handler *DCRedirectionHandlerImpl) GetSearchAttributes(
 	ctx context.Context,
-) (resp *shared.GetSearchAttributesResponse, retError error) {
+) (resp *types.GetSearchAttributesResponse, retError error) {
 
 	var cluster = handler.currentClusterName
 
@@ -446,8 +445,8 @@ func (handler *DCRedirectionHandlerImpl) GetSearchAttributes(
 // PollForActivityTask API call
 func (handler *DCRedirectionHandlerImpl) PollForActivityTask(
 	ctx context.Context,
-	request *shared.PollForActivityTaskRequest,
-) (resp *shared.PollForActivityTaskResponse, retError error) {
+	request *types.PollForActivityTaskRequest,
+) (resp *types.PollForActivityTaskResponse, retError error) {
 
 	var apiName = "PollForActivityTask"
 	var err error
@@ -476,8 +475,8 @@ func (handler *DCRedirectionHandlerImpl) PollForActivityTask(
 // PollForDecisionTask API call
 func (handler *DCRedirectionHandlerImpl) PollForDecisionTask(
 	ctx context.Context,
-	request *shared.PollForDecisionTaskRequest,
-) (resp *shared.PollForDecisionTaskResponse, retError error) {
+	request *types.PollForDecisionTaskRequest,
+) (resp *types.PollForDecisionTaskResponse, retError error) {
 
 	var apiName = "PollForDecisionTask"
 	var err error
@@ -506,8 +505,8 @@ func (handler *DCRedirectionHandlerImpl) PollForDecisionTask(
 // QueryWorkflow API call
 func (handler *DCRedirectionHandlerImpl) QueryWorkflow(
 	ctx context.Context,
-	request *shared.QueryWorkflowRequest,
-) (resp *shared.QueryWorkflowResponse, retError error) {
+	request *types.QueryWorkflowRequest,
+) (resp *types.QueryWorkflowResponse, retError error) {
 
 	var apiName = "QueryWorkflow"
 	var err error
@@ -527,7 +526,7 @@ func (handler *DCRedirectionHandlerImpl) QueryWorkflow(
 			// Only autofoward consistent queries, this is done for two reasons:
 			// 1. Query is meant to be fast, autoforwarding all queries will increase latency.
 			// 2. If eventual consistency was requested then the results from running out of local dc will be fine.
-			if request.GetQueryConsistencyLevel() == shared.QueryConsistencyLevelStrong {
+			if request.GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong {
 				remoteClient := handler.GetRemoteFrontendClient(targetDC)
 				resp, err = remoteClient.QueryWorkflow(ctx, request)
 			} else {
@@ -543,8 +542,8 @@ func (handler *DCRedirectionHandlerImpl) QueryWorkflow(
 // RecordActivityTaskHeartbeat API call
 func (handler *DCRedirectionHandlerImpl) RecordActivityTaskHeartbeat(
 	ctx context.Context,
-	request *shared.RecordActivityTaskHeartbeatRequest,
-) (resp *shared.RecordActivityTaskHeartbeatResponse, retError error) {
+	request *types.RecordActivityTaskHeartbeatRequest,
+) (resp *types.RecordActivityTaskHeartbeatResponse, retError error) {
 
 	var apiName = "RecordActivityTaskHeartbeat"
 	var err error
@@ -578,8 +577,8 @@ func (handler *DCRedirectionHandlerImpl) RecordActivityTaskHeartbeat(
 // RecordActivityTaskHeartbeatByID API call
 func (handler *DCRedirectionHandlerImpl) RecordActivityTaskHeartbeatByID(
 	ctx context.Context,
-	request *shared.RecordActivityTaskHeartbeatByIDRequest,
-) (resp *shared.RecordActivityTaskHeartbeatResponse, retError error) {
+	request *types.RecordActivityTaskHeartbeatByIDRequest,
+) (resp *types.RecordActivityTaskHeartbeatResponse, retError error) {
 
 	var apiName = "RecordActivityTaskHeartbeatByID"
 	var err error
@@ -608,7 +607,7 @@ func (handler *DCRedirectionHandlerImpl) RecordActivityTaskHeartbeatByID(
 // RequestCancelWorkflowExecution API call
 func (handler *DCRedirectionHandlerImpl) RequestCancelWorkflowExecution(
 	ctx context.Context,
-	request *shared.RequestCancelWorkflowExecutionRequest,
+	request *types.RequestCancelWorkflowExecutionRequest,
 ) (retError error) {
 
 	var apiName = "RequestCancelWorkflowExecution"
@@ -638,8 +637,8 @@ func (handler *DCRedirectionHandlerImpl) RequestCancelWorkflowExecution(
 // ResetStickyTaskList API call
 func (handler *DCRedirectionHandlerImpl) ResetStickyTaskList(
 	ctx context.Context,
-	request *shared.ResetStickyTaskListRequest,
-) (resp *shared.ResetStickyTaskListResponse, retError error) {
+	request *types.ResetStickyTaskListRequest,
+) (resp *types.ResetStickyTaskListResponse, retError error) {
 
 	var apiName = "ResetStickyTaskList"
 	var err error
@@ -668,8 +667,8 @@ func (handler *DCRedirectionHandlerImpl) ResetStickyTaskList(
 // ResetWorkflowExecution API call
 func (handler *DCRedirectionHandlerImpl) ResetWorkflowExecution(
 	ctx context.Context,
-	request *shared.ResetWorkflowExecutionRequest,
-) (resp *shared.ResetWorkflowExecutionResponse, retError error) {
+	request *types.ResetWorkflowExecutionRequest,
+) (resp *types.ResetWorkflowExecutionResponse, retError error) {
 
 	var apiName = "ResetWorkflowExecution"
 	var err error
@@ -698,7 +697,7 @@ func (handler *DCRedirectionHandlerImpl) ResetWorkflowExecution(
 // RespondActivityTaskCanceled API call
 func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCanceled(
 	ctx context.Context,
-	request *shared.RespondActivityTaskCanceledRequest,
+	request *types.RespondActivityTaskCanceledRequest,
 ) (retError error) {
 
 	var apiName = "RespondActivityTaskCanceled"
@@ -733,7 +732,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCanceled(
 // RespondActivityTaskCanceledByID API call
 func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCanceledByID(
 	ctx context.Context,
-	request *shared.RespondActivityTaskCanceledByIDRequest,
+	request *types.RespondActivityTaskCanceledByIDRequest,
 ) (retError error) {
 
 	var apiName = "RespondActivityTaskCanceledByID"
@@ -763,7 +762,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCanceledByID(
 // RespondActivityTaskCompleted API call
 func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCompleted(
 	ctx context.Context,
-	request *shared.RespondActivityTaskCompletedRequest,
+	request *types.RespondActivityTaskCompletedRequest,
 ) (retError error) {
 
 	var apiName = "RespondActivityTaskCompleted"
@@ -798,7 +797,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCompleted(
 // RespondActivityTaskCompletedByID API call
 func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCompletedByID(
 	ctx context.Context,
-	request *shared.RespondActivityTaskCompletedByIDRequest,
+	request *types.RespondActivityTaskCompletedByIDRequest,
 ) (retError error) {
 
 	var apiName = "RespondActivityTaskCompletedByID"
@@ -828,7 +827,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCompletedByID(
 // RespondActivityTaskFailed API call
 func (handler *DCRedirectionHandlerImpl) RespondActivityTaskFailed(
 	ctx context.Context,
-	request *shared.RespondActivityTaskFailedRequest,
+	request *types.RespondActivityTaskFailedRequest,
 ) (retError error) {
 
 	var apiName = "RespondActivityTaskFailed"
@@ -863,7 +862,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskFailed(
 // RespondActivityTaskFailedByID API call
 func (handler *DCRedirectionHandlerImpl) RespondActivityTaskFailedByID(
 	ctx context.Context,
-	request *shared.RespondActivityTaskFailedByIDRequest,
+	request *types.RespondActivityTaskFailedByIDRequest,
 ) (retError error) {
 
 	var apiName = "RespondActivityTaskFailedByID"
@@ -893,8 +892,8 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskFailedByID(
 // RespondDecisionTaskCompleted API call
 func (handler *DCRedirectionHandlerImpl) RespondDecisionTaskCompleted(
 	ctx context.Context,
-	request *shared.RespondDecisionTaskCompletedRequest,
-) (resp *shared.RespondDecisionTaskCompletedResponse, retError error) {
+	request *types.RespondDecisionTaskCompletedRequest,
+) (resp *types.RespondDecisionTaskCompletedResponse, retError error) {
 
 	var apiName = "RespondDecisionTaskCompleted"
 	var err error
@@ -928,7 +927,7 @@ func (handler *DCRedirectionHandlerImpl) RespondDecisionTaskCompleted(
 // RespondDecisionTaskFailed API call
 func (handler *DCRedirectionHandlerImpl) RespondDecisionTaskFailed(
 	ctx context.Context,
-	request *shared.RespondDecisionTaskFailedRequest,
+	request *types.RespondDecisionTaskFailedRequest,
 ) (retError error) {
 
 	var apiName = "RespondDecisionTaskFailed"
@@ -963,7 +962,7 @@ func (handler *DCRedirectionHandlerImpl) RespondDecisionTaskFailed(
 // RespondQueryTaskCompleted API call
 func (handler *DCRedirectionHandlerImpl) RespondQueryTaskCompleted(
 	ctx context.Context,
-	request *shared.RespondQueryTaskCompletedRequest,
+	request *types.RespondQueryTaskCompletedRequest,
 ) (retError error) {
 
 	var apiName = "RespondQueryTaskCompleted"
@@ -998,8 +997,8 @@ func (handler *DCRedirectionHandlerImpl) RespondQueryTaskCompleted(
 // SignalWithStartWorkflowExecution API call
 func (handler *DCRedirectionHandlerImpl) SignalWithStartWorkflowExecution(
 	ctx context.Context,
-	request *shared.SignalWithStartWorkflowExecutionRequest,
-) (resp *shared.StartWorkflowExecutionResponse, retError error) {
+	request *types.SignalWithStartWorkflowExecutionRequest,
+) (resp *types.StartWorkflowExecutionResponse, retError error) {
 
 	var apiName = "SignalWithStartWorkflowExecution"
 	var err error
@@ -1028,7 +1027,7 @@ func (handler *DCRedirectionHandlerImpl) SignalWithStartWorkflowExecution(
 // SignalWorkflowExecution API call
 func (handler *DCRedirectionHandlerImpl) SignalWorkflowExecution(
 	ctx context.Context,
-	request *shared.SignalWorkflowExecutionRequest,
+	request *types.SignalWorkflowExecutionRequest,
 ) (retError error) {
 
 	var apiName = "SignalWorkflowExecution"
@@ -1057,8 +1056,8 @@ func (handler *DCRedirectionHandlerImpl) SignalWorkflowExecution(
 // StartWorkflowExecution API call
 func (handler *DCRedirectionHandlerImpl) StartWorkflowExecution(
 	ctx context.Context,
-	request *shared.StartWorkflowExecutionRequest,
-) (resp *shared.StartWorkflowExecutionResponse, retError error) {
+	request *types.StartWorkflowExecutionRequest,
+) (resp *types.StartWorkflowExecutionResponse, retError error) {
 
 	var apiName = "StartWorkflowExecution"
 	var err error
@@ -1087,7 +1086,7 @@ func (handler *DCRedirectionHandlerImpl) StartWorkflowExecution(
 // TerminateWorkflowExecution API call
 func (handler *DCRedirectionHandlerImpl) TerminateWorkflowExecution(
 	ctx context.Context,
-	request *shared.TerminateWorkflowExecutionRequest,
+	request *types.TerminateWorkflowExecutionRequest,
 ) (retError error) {
 
 	var apiName = "TerminateWorkflowExecution"
@@ -1117,8 +1116,8 @@ func (handler *DCRedirectionHandlerImpl) TerminateWorkflowExecution(
 // ListTaskListPartitions API call
 func (handler *DCRedirectionHandlerImpl) ListTaskListPartitions(
 	ctx context.Context,
-	request *shared.ListTaskListPartitionsRequest,
-) (resp *shared.ListTaskListPartitionsResponse, retError error) {
+	request *types.ListTaskListPartitionsRequest,
+) (resp *types.ListTaskListPartitionsResponse, retError error) {
 
 	var apiName = "ListTaskListPartitions"
 	var err error
@@ -1144,10 +1143,40 @@ func (handler *DCRedirectionHandlerImpl) ListTaskListPartitions(
 	return resp, err
 }
 
+// GetTaskListsByDomain API call
+func (handler *DCRedirectionHandlerImpl) GetTaskListsByDomain(
+	ctx context.Context,
+	request *types.GetTaskListsByDomainRequest,
+) (resp *types.GetTaskListsByDomainResponse, retError error) {
+
+	var apiName = "GetTaskListsByDomain"
+	var err error
+	var cluster string
+
+	scope, startTime := handler.beforeCall(metrics.DCRedirectionGetTaskListsByDomainScope)
+	defer func() {
+		handler.afterCall(scope, startTime, cluster, &retError)
+	}()
+
+	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
+		cluster = targetDC
+		switch {
+		case targetDC == handler.currentClusterName:
+			resp, err = handler.frontendHandler.GetTaskListsByDomain(ctx, request)
+		default:
+			remoteClient := handler.GetRemoteFrontendClient(targetDC)
+			resp, err = remoteClient.GetTaskListsByDomain(ctx, request)
+		}
+		return err
+	})
+
+	return resp, err
+}
+
 // GetClusterInfo API call
 func (handler *DCRedirectionHandlerImpl) GetClusterInfo(
 	ctx context.Context,
-) (*shared.ClusterInfo, error) {
+) (*types.ClusterInfo, error) {
 	return handler.frontendHandler.GetClusterInfo(ctx)
 }
 

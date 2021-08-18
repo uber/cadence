@@ -28,13 +28,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/resource"
@@ -278,7 +278,7 @@ func (c *controller) getOrCreateHistoryShardItem(shardID int) (*historyShardsIte
 	if c.isShuttingDown() || atomic.LoadInt32(&c.status) == common.DaemonStatusStopped {
 		return nil, fmt.Errorf("controller for host '%v' shutting down", c.GetHostInfo().Identity())
 	}
-	info, err := c.GetHistoryServiceResolver().Lookup(string(shardID))
+	info, err := c.GetHistoryServiceResolver().Lookup(string(rune(shardID)))
 	if err != nil {
 		return nil, err
 	}
@@ -378,7 +378,7 @@ func (c *controller) acquireShards() {
 				if c.isShuttingDown() {
 					return
 				}
-				info, err := c.GetHistoryServiceResolver().Lookup(string(shardID))
+				info, err := c.GetHistoryServiceResolver().Lookup(string(rune(shardID)))
 				if err != nil {
 					c.logger.Error("Error looking up host for shardID", tag.Error(err), tag.OperationFailed, tag.ShardID(shardID))
 				} else {
@@ -517,11 +517,11 @@ func IsShardOwnershiptLostError(err error) bool {
 func CreateShardOwnershipLostError(
 	currentHost string,
 	ownerHost string,
-) *h.ShardOwnershipLostError {
+) *types.ShardOwnershipLostError {
 
-	shardLostErr := &h.ShardOwnershipLostError{}
-	shardLostErr.Message = common.StringPtr(fmt.Sprintf("Shard is not owned by host: %v", currentHost))
-	shardLostErr.Owner = common.StringPtr(ownerHost)
+	shardLostErr := &types.ShardOwnershipLostError{}
+	shardLostErr.Message = fmt.Sprintf("Shard is not owned by host: %v", currentHost)
+	shardLostErr.Owner = ownerHost
 
 	return shardLostErr
 }

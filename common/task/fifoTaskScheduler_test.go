@@ -31,9 +31,9 @@ import (
 	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -63,7 +63,7 @@ func (s *fifoTaskSchedulerSuite) SetupTest() {
 
 	s.queueSize = 2
 	s.scheduler = NewFIFOTaskScheduler(
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		metrics.NewClient(tally.NoopScope, metrics.Common),
 		&FIFOTaskSchedulerOptions{
 			QueueSize:       s.queueSize,

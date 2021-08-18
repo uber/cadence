@@ -27,12 +27,12 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -97,6 +97,9 @@ func (r *branchManagerImpl) prepareVersionHistory(
 	}
 
 	localVersionHistories := r.mutableState.GetVersionHistories()
+	if localVersionHistories == nil {
+		return false, 0, execution.ErrMissingVersionHistories
+	}
 	versionHistory, err := localVersionHistories.GetVersionHistory(versionHistoryIndex)
 	if err != nil {
 		return false, 0, err
@@ -151,7 +154,9 @@ func (r *branchManagerImpl) flushBufferedEvents(
 ) (int, *persistence.VersionHistoryItem, error) {
 
 	localVersionHistories := r.mutableState.GetVersionHistories()
-
+	if localVersionHistories == nil {
+		return 0, nil, execution.ErrMissingVersionHistories
+	}
 	versionHistoryIndex, lcaVersionHistoryItem, err := localVersionHistories.FindLCAVersionHistoryIndexAndItem(
 		incomingVersionHistory,
 	)
@@ -249,14 +254,18 @@ func (r *branchManagerImpl) createNewBranch(
 	if err := newVersionHistory.SetBranchToken(resp.NewBranchToken); err != nil {
 		return 0, err
 	}
-	branchChanged, newIndex, err := r.mutableState.GetVersionHistories().AddVersionHistory(
+	versionHistory := r.mutableState.GetVersionHistories()
+	if versionHistory == nil {
+		return 0, execution.ErrMissingVersionHistories
+	}
+	branchChanged, newIndex, err := versionHistory.AddVersionHistory(
 		newVersionHistory,
 	)
 	if err != nil {
 		return 0, err
 	}
 	if branchChanged {
-		return 0, &shared.BadRequestError{
+		return 0, &types.BadRequestError{
 			Message: "nDCBranchMgr encounter branch change during conflict resolution",
 		}
 	}

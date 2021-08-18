@@ -1,4 +1,5 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,12 +24,10 @@ package sql
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"github.com/uber/cadence/common"
-
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
@@ -36,11 +35,11 @@ func updateSignalsRequested(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	signalRequestedIDs []string,
-	deleteSignalRequestID string,
+	deleteSignalRequestIDs []string,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) error {
 
 	if len(signalRequestedIDs) > 0 {
@@ -55,23 +54,19 @@ func updateSignalsRequested(
 			}
 		}
 		if _, err := tx.InsertIntoSignalsRequestedSets(ctx, rows); err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update signals requested. Failed to execute update query. Error: %v", err),
-			}
+			return convertCommonErrors(tx, "updateSignalsRequested", "Failed to execute update query.", err)
 		}
 	}
 
-	if deleteSignalRequestID != "" {
+	for _, deldeleteSignalRequestID := range deleteSignalRequestIDs {
 		if _, err := tx.DeleteFromSignalsRequestedSets(ctx, &sqlplugin.SignalsRequestedSetsFilter{
 			ShardID:    int64(shardID),
 			DomainID:   domainID,
 			WorkflowID: workflowID,
 			RunID:      runID,
-			SignalID:   &deleteSignalRequestID,
+			SignalID:   common.StringPtr(deldeleteSignalRequestID),
 		}); err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update signals requested. Failed to execute delete query. Error: %v", err),
-			}
+			return convertCommonErrors(tx, "updateSignalsRequested", "Failed to execute delete query.", err)
 		}
 	}
 
@@ -82,9 +77,9 @@ func getSignalsRequested(
 	ctx context.Context,
 	db sqlplugin.DB,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) (map[string]struct{}, error) {
 
 	rows, err := db.SelectFromSignalsRequestedSets(ctx, &sqlplugin.SignalsRequestedSetsFilter{
@@ -94,9 +89,7 @@ func getSignalsRequested(
 		RunID:      runID,
 	})
 	if err != nil && err != sql.ErrNoRows {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("Failed to get signals requested. Error: %v", err),
-		}
+		return nil, convertCommonErrors(db, "getSignalsRequested", "", err)
 	}
 	var ret = make(map[string]struct{})
 	for _, s := range rows {
@@ -109,9 +102,9 @@ func deleteSignalsRequestedSet(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) error {
 
 	if _, err := tx.DeleteFromSignalsRequestedSets(ctx, &sqlplugin.SignalsRequestedSetsFilter{
@@ -120,9 +113,7 @@ func deleteSignalsRequestedSet(
 		WorkflowID: workflowID,
 		RunID:      runID,
 	}); err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("Failed to delete signals requested set. Error: %v", err),
-		}
+		return convertCommonErrors(tx, "deleteSignalsRequestedSet", "", err)
 	}
 	return nil
 }
@@ -132,9 +123,9 @@ func updateBufferedEvents(
 	tx sqlplugin.Tx,
 	batch *p.DataBlob,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) error {
 
 	if batch == nil {
@@ -150,9 +141,7 @@ func updateBufferedEvents(
 	}
 
 	if _, err := tx.InsertIntoBufferedEvents(ctx, []sqlplugin.BufferedEventsRow{row}); err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("updateBufferedEvents operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(tx, "updateBufferedEvents", "", err)
 	}
 	return nil
 }
@@ -161,9 +150,9 @@ func getBufferedEvents(
 	ctx context.Context,
 	db sqlplugin.DB,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) ([]*p.DataBlob, error) {
 
 	rows, err := db.SelectFromBufferedEvents(ctx, &sqlplugin.BufferedEventsFilter{
@@ -173,9 +162,7 @@ func getBufferedEvents(
 		RunID:      runID,
 	})
 	if err != nil && err != sql.ErrNoRows {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("getBufferedEvents operation failed. Select failed: %v", err),
-		}
+		return nil, convertCommonErrors(db, "getBufferedEvents", "", err)
 	}
 	var result []*p.DataBlob
 	for _, row := range rows {
@@ -188,9 +175,9 @@ func deleteBufferedEvents(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) error {
 
 	if _, err := tx.DeleteFromBufferedEvents(ctx, &sqlplugin.BufferedEventsFilter{
@@ -199,9 +186,7 @@ func deleteBufferedEvents(
 		WorkflowID: workflowID,
 		RunID:      runID,
 	}); err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("updateBufferedEvents delete operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(tx, "deleteBufferedEvents", "", err)
 	}
 	return nil
 }

@@ -30,9 +30,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/util"
 )
 
@@ -55,27 +55,27 @@ func (s *UtilSuite) SetupTest() {
 }
 
 func (s *UtilSuite) TestEncodeDecodeHistoryBatches() {
-	historyBatches := []*shared.History{
-		&shared.History{
-			Events: []*shared.HistoryEvent{
-				&shared.HistoryEvent{
-					EventId: common.Int64Ptr(common.FirstEventID),
-					Version: common.Int64Ptr(1),
+	historyBatches := []*types.History{
+		{
+			Events: []*types.HistoryEvent{
+				{
+					EventID: common.FirstEventID,
+					Version: 1,
 				},
 			},
 		},
-		&shared.History{
-			Events: []*shared.HistoryEvent{
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(common.FirstEventID + 1),
+		{
+			Events: []*types.HistoryEvent{
+				{
+					EventID:   common.FirstEventID + 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-					Version:   common.Int64Ptr(1),
+					Version:   1,
 				},
-				&shared.HistoryEvent{
-					EventId: common.Int64Ptr(common.FirstEventID + 2),
-					Version: common.Int64Ptr(2),
-					DecisionTaskStartedEventAttributes: &shared.DecisionTaskStartedEventAttributes{
-						Identity: common.StringPtr("some random identity"),
+				{
+					EventID: common.FirstEventID + 2,
+					Version: 2,
+					DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
+						Identity: "some random identity",
 					},
 				},
 			},
@@ -197,17 +197,17 @@ func (s *UtilSuite) TestExtractCloseFailoverVersion() {
 
 func (s *UtilSuite) TestHistoryMutated() {
 	testCases := []struct {
-		historyBatches []*shared.History
+		historyBatches []*types.History
 		request        *archiver.ArchiveHistoryRequest
 		isLast         bool
 		isMutated      bool
 	}{
 		{
-			historyBatches: []*shared.History{
-				&shared.History{
-					Events: []*shared.HistoryEvent{
-						&shared.HistoryEvent{
-							Version: common.Int64Ptr(15),
+			historyBatches: []*types.History{
+				{
+					Events: []*types.HistoryEvent{
+						{
+							Version: 15,
 						},
 					},
 				},
@@ -218,24 +218,24 @@ func (s *UtilSuite) TestHistoryMutated() {
 			isMutated: true,
 		},
 		{
-			historyBatches: []*shared.History{
-				&shared.History{
-					Events: []*shared.HistoryEvent{
-						&shared.HistoryEvent{
-							EventId: common.Int64Ptr(33),
-							Version: common.Int64Ptr(10),
+			historyBatches: []*types.History{
+				{
+					Events: []*types.HistoryEvent{
+						{
+							EventID: 33,
+							Version: 10,
 						},
 					},
 				},
-				&shared.History{
-					Events: []*shared.HistoryEvent{
-						&shared.HistoryEvent{
-							EventId: common.Int64Ptr(49),
-							Version: common.Int64Ptr(10),
+				{
+					Events: []*types.HistoryEvent{
+						{
+							EventID: 49,
+							Version: 10,
 						},
-						&shared.HistoryEvent{
-							EventId: common.Int64Ptr(50),
-							Version: common.Int64Ptr(10),
+						{
+							EventID: 50,
+							Version: 10,
 						},
 					},
 				},
@@ -248,11 +248,11 @@ func (s *UtilSuite) TestHistoryMutated() {
 			isMutated: true,
 		},
 		{
-			historyBatches: []*shared.History{
-				&shared.History{
-					Events: []*shared.HistoryEvent{
-						&shared.HistoryEvent{
-							Version: common.Int64Ptr(9),
+			historyBatches: []*types.History{
+				{
+					Events: []*types.HistoryEvent{
+						{
+							Version: 9,
 						},
 					},
 				},
@@ -264,20 +264,20 @@ func (s *UtilSuite) TestHistoryMutated() {
 			isMutated: true,
 		},
 		{
-			historyBatches: []*shared.History{
-				&shared.History{
-					Events: []*shared.HistoryEvent{
-						&shared.HistoryEvent{
-							EventId: common.Int64Ptr(20),
-							Version: common.Int64Ptr(10),
+			historyBatches: []*types.History{
+				{
+					Events: []*types.HistoryEvent{
+						{
+							EventID: 20,
+							Version: 10,
 						},
 					},
 				},
-				&shared.History{
-					Events: []*shared.HistoryEvent{
-						&shared.HistoryEvent{
-							EventId: common.Int64Ptr(33),
-							Version: common.Int64Ptr(10),
+				{
+					Events: []*types.HistoryEvent{
+						{
+							EventID: 33,
+							Version: 10,
 						},
 					},
 				},

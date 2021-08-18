@@ -302,7 +302,6 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 
 		c.deleteInternal(c.byAccess.Back())
 	}
-
 	return nil, nil
 }
 

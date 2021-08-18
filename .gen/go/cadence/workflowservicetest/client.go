@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,10 +27,12 @@ package workflowservicetest
 
 import (
 	context "context"
+
 	gomock "github.com/golang/mock/gomock"
+	yarpc "go.uber.org/yarpc"
+
 	workflowserviceclient "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	shared "github.com/uber/cadence/.gen/go/shared"
-	yarpc "go.uber.org/yarpc"
 )
 
 // MockClient implements a gomock-compatible mock client for service
@@ -287,6 +289,39 @@ func (mr *_MockClientRecorder) GetSearchAttributes(
 ) *gomock.Call {
 	args := append([]interface{}{ctx}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "GetSearchAttributes", args...)
+}
+
+// GetTaskListsByDomain responds to a GetTaskListsByDomain call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().GetTaskListsByDomain(gomock.Any(), ...).Return(...)
+// 	... := client.GetTaskListsByDomain(...)
+func (m *MockClient) GetTaskListsByDomain(
+	ctx context.Context,
+	_Request *shared.GetTaskListsByDomainRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetTaskListsByDomainResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "GetTaskListsByDomain", args...)
+	success, _ = ret[i].(*shared.GetTaskListsByDomainResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) GetTaskListsByDomain(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "GetTaskListsByDomain", args...)
 }
 
 // GetWorkflowExecutionHistory responds to a GetWorkflowExecutionHistory call based on the mock expectations. This

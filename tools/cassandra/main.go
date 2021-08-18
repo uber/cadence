@@ -30,16 +30,16 @@ import (
 
 // RunTool runs the cadence-cassandra-tool command line tool
 func RunTool(args []string) error {
-	app := buildCLIOptions()
+	app := BuildCLIOptions()
 	return app.Run(args)
 }
 
 // SetupSchema setups the cassandra schema
 func SetupSchema(config *SetupSchemaConfig) error {
-	if err := validateCQLClientConfig(&config.CQLClientConfig, false); err != nil {
+	if err := validateCQLClientConfig(&config.CQLClientConfig); err != nil {
 		return err
 	}
-	db, err := newCQLClient(&config.CQLClientConfig)
+	db, err := NewCQLClient(&config.CQLClientConfig)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func cliHandler(c *cli.Context, handler func(c *cli.Context) error) {
 	}
 }
 
-func buildCLIOptions() *cli.App {
+func BuildCLIOptions() *cli.App {
 
 	app := cli.NewApp()
 	app.Name = "cadence-cassandra-tool"
@@ -71,7 +71,7 @@ func buildCLIOptions() *cli.App {
 		},
 		cli.IntFlag{
 			Name:   schema.CLIFlagPort,
-			Value:  defaultCassandraPort,
+			Value:  DefaultCassandraPort,
 			Usage:  "Port of cassandra host to connect to",
 			EnvVar: "CASSANDRA_DB_PORT",
 		},
@@ -89,7 +89,7 @@ func buildCLIOptions() *cli.App {
 		},
 		cli.IntFlag{
 			Name:   schema.CLIFlagTimeout,
-			Value:  defaultTimeout,
+			Value:  DefaultTimeout,
 			Usage:  "request Timeout in seconds used for cql client",
 			EnvVar: "CASSANDRA_TIMEOUT",
 		},
@@ -102,6 +102,11 @@ func buildCLIOptions() *cli.App {
 		cli.BoolFlag{
 			Name:  schema.CLIFlagQuiet,
 			Usage: "Don't set exit status to 1 on error",
+		},
+		cli.IntFlag{
+			Name:   schema.CLIFlagProtoVersion,
+			Usage:  "Protocol Version to connect to cassandra host",
+			EnvVar: "CASSANDRA_PROTO_VERSION",
 		},
 
 		cli.BoolFlag{

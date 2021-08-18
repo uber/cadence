@@ -23,10 +23,9 @@ package execution
 import (
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 func emitWorkflowHistoryStats(
@@ -105,6 +104,9 @@ func emitSessionUpdateStats(
 	countScope.RecordTimer(metrics.DeleteChildInfoCount, time.Duration(stats.DeleteChildInfoCount))
 	countScope.RecordTimer(metrics.DeleteSignalInfoCount, time.Duration(stats.DeleteSignalInfoCount))
 	countScope.RecordTimer(metrics.DeleteRequestCancelInfoCount, time.Duration(stats.DeleteRequestCancelInfoCount))
+	countScope.RecordTimer(metrics.TransferTasksCount, time.Duration(stats.TransferTasksCount))
+	countScope.RecordTimer(metrics.TimerTasksCount, time.Duration(stats.TimerTasksCount))
+	countScope.RecordTimer(metrics.ReplicationTasksCount, time.Duration(stats.ReplicationTasksCount))
 }
 
 func emitWorkflowCompletionStats(
@@ -112,7 +114,7 @@ func emitWorkflowCompletionStats(
 	domainName string,
 	workflowType string,
 	taskList string,
-	event *workflow.HistoryEvent,
+	event *types.HistoryEvent,
 ) {
 
 	if event.EventType == nil {
@@ -127,15 +129,15 @@ func emitWorkflowCompletionStats(
 	)
 
 	switch *event.EventType {
-	case shared.EventTypeWorkflowExecutionCompleted:
+	case types.EventTypeWorkflowExecutionCompleted:
 		scope.IncCounter(metrics.WorkflowSuccessCount)
-	case shared.EventTypeWorkflowExecutionCanceled:
+	case types.EventTypeWorkflowExecutionCanceled:
 		scope.IncCounter(metrics.WorkflowCancelCount)
-	case shared.EventTypeWorkflowExecutionFailed:
+	case types.EventTypeWorkflowExecutionFailed:
 		scope.IncCounter(metrics.WorkflowFailedCount)
-	case shared.EventTypeWorkflowExecutionTimedOut:
+	case types.EventTypeWorkflowExecutionTimedOut:
 		scope.IncCounter(metrics.WorkflowTimeoutCount)
-	case shared.EventTypeWorkflowExecutionTerminated:
+	case types.EventTypeWorkflowExecutionTerminated:
 		scope.IncCounter(metrics.WorkflowTerminateCount)
 	}
 }

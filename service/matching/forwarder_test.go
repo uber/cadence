@@ -32,17 +32,16 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
 
-	gen "github.com/uber/cadence/.gen/go/matching"
-	"github.com/uber/cadence/.gen/go/matching/matchingservicetest"
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type ForwarderTestSuite struct {
 	suite.Suite
 	controller *gomock.Controller
-	client     *matchingservicetest.MockClient
+	client     *matching.MockClient
 	fwdr       *Forwarder
 	cfg        *forwarderConfig
 	taskList   *taskListID
@@ -54,7 +53,7 @@ func TestForwarderSuite(t *testing.T) {
 
 func (t *ForwarderTestSuite) SetupTest() {
 	t.controller = gomock.NewController(t.T())
-	t.client = matchingservicetest.NewMockClient(t.controller)
+	t.client = matching.NewMockClient(t.controller)
 	t.cfg = &forwarderConfig{
 		ForwarderMaxOutstandingPolls: func() int { return 1 },
 		ForwarderMaxRatePerSecond:    func() int { return 2 },
@@ -62,7 +61,7 @@ func (t *ForwarderTestSuite) SetupTest() {
 		ForwarderMaxOutstandingTasks: func() int { return 1 },
 	}
 	t.taskList = newTestTaskListID("fwdr", "tl0", persistence.TaskListTypeDecision)
-	t.fwdr = newForwarder(t.cfg, t.taskList, shared.TaskListKindNormal, t.client)
+	t.fwdr = newForwarder(t.cfg, t.taskList, types.TaskListKindNormal, t.client)
 }
 
 func (t *ForwarderTestSuite) TearDownTest() {
@@ -70,34 +69,34 @@ func (t *ForwarderTestSuite) TearDownTest() {
 }
 
 func (t *ForwarderTestSuite) TestForwardTaskError() {
-	task := newInternalTask(&persistence.TaskInfo{}, nil, gen.TaskSourceHistory, "", false)
+	task := newInternalTask(&persistence.TaskInfo{}, nil, types.TaskSourceHistory, "", false)
 	t.Equal(errNoParent, t.fwdr.ForwardTask(context.Background(), task))
 
 	t.usingTasklistPartition(persistence.TaskListTypeActivity)
-	t.fwdr.taskListKind = shared.TaskListKindSticky
+	t.fwdr.taskListKind = types.TaskListKindSticky
 	t.Equal(errTaskListKind, t.fwdr.ForwardTask(context.Background(), task))
 }
 
 func (t *ForwarderTestSuite) TestForwardDecisionTask() {
 	t.usingTasklistPartition(persistence.TaskListTypeDecision)
 
-	var request *gen.AddDecisionTaskRequest
+	var request *types.AddDecisionTaskRequest
 	t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.AddDecisionTaskRequest) {
+		func(arg0 context.Context, arg1 *types.AddDecisionTaskRequest) {
 			request = arg1
 		},
 	).Return(nil).Times(1)
 
 	taskInfo := t.newTaskInfo()
-	task := newInternalTask(taskInfo, nil, gen.TaskSourceHistory, "", false)
+	task := newInternalTask(taskInfo, nil, types.TaskSourceHistory, "", false)
 	t.NoError(t.fwdr.ForwardTask(context.Background(), task))
 	t.NotNil(request)
 	t.Equal(t.taskList.Parent(20), request.TaskList.GetName())
 	t.Equal(t.fwdr.taskListKind, request.TaskList.GetKind())
 	t.Equal(taskInfo.DomainID, request.GetDomainUUID())
-	t.Equal(taskInfo.WorkflowID, request.GetExecution().GetWorkflowId())
-	t.Equal(taskInfo.RunID, request.GetExecution().GetRunId())
-	t.Equal(taskInfo.ScheduleID, request.GetScheduleId())
+	t.Equal(taskInfo.WorkflowID, request.GetExecution().GetWorkflowID())
+	t.Equal(taskInfo.RunID, request.GetExecution().GetRunID())
+	t.Equal(taskInfo.ScheduleID, request.GetScheduleID())
 	t.Equal(taskInfo.ScheduleToStartTimeout, request.GetScheduleToStartTimeoutSeconds())
 	t.Equal(t.taskList.name, request.GetForwardedFrom())
 }
@@ -105,24 +104,24 @@ func (t *ForwarderTestSuite) TestForwardDecisionTask() {
 func (t *ForwarderTestSuite) TestForwardActivityTask() {
 	t.usingTasklistPartition(persistence.TaskListTypeActivity)
 
-	var request *gen.AddActivityTaskRequest
+	var request *types.AddActivityTaskRequest
 	t.client.EXPECT().AddActivityTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.AddActivityTaskRequest) {
+		func(arg0 context.Context, arg1 *types.AddActivityTaskRequest) {
 			request = arg1
 		},
 	).Return(nil).Times(1)
 
 	taskInfo := t.newTaskInfo()
-	task := newInternalTask(taskInfo, nil, gen.TaskSourceHistory, "", false)
+	task := newInternalTask(taskInfo, nil, types.TaskSourceHistory, "", false)
 	t.NoError(t.fwdr.ForwardTask(context.Background(), task))
 	t.NotNil(request)
 	t.Equal(t.taskList.Parent(20), request.TaskList.GetName())
 	t.Equal(t.fwdr.taskListKind, request.TaskList.GetKind())
 	t.Equal(t.taskList.domainID, request.GetDomainUUID())
 	t.Equal(taskInfo.DomainID, request.GetSourceDomainUUID())
-	t.Equal(taskInfo.WorkflowID, request.GetExecution().GetWorkflowId())
-	t.Equal(taskInfo.RunID, request.GetExecution().GetRunId())
-	t.Equal(taskInfo.ScheduleID, request.GetScheduleId())
+	t.Equal(taskInfo.WorkflowID, request.GetExecution().GetWorkflowID())
+	t.Equal(taskInfo.RunID, request.GetExecution().GetRunID())
+	t.Equal(taskInfo.ScheduleID, request.GetScheduleID())
 	t.Equal(taskInfo.ScheduleToStartTimeout, request.GetScheduleToStartTimeoutSeconds())
 	t.Equal(t.taskList.name, request.GetForwardedFrom())
 }
@@ -133,7 +132,7 @@ func (t *ForwarderTestSuite) TestForwardTaskRateExceeded() {
 	rps := 2
 	t.client.EXPECT().AddActivityTask(gomock.Any(), gomock.Any()).Return(nil).Times(rps)
 	taskInfo := t.newTaskInfo()
-	task := newInternalTask(taskInfo, nil, gen.TaskSourceHistory, "", false)
+	task := newInternalTask(taskInfo, nil, types.TaskSourceHistory, "", false)
 	for i := 0; i < rps; i++ {
 		t.NoError(t.fwdr.ForwardTask(context.Background(), task))
 	}
@@ -141,23 +140,23 @@ func (t *ForwarderTestSuite) TestForwardTaskRateExceeded() {
 }
 
 func (t *ForwarderTestSuite) TestForwardQueryTaskError() {
-	task := newInternalQueryTask("id1", &gen.QueryWorkflowRequest{})
+	task := newInternalQueryTask("id1", &types.MatchingQueryWorkflowRequest{})
 	_, err := t.fwdr.ForwardQueryTask(context.Background(), task)
 	t.Equal(errNoParent, err)
 
 	t.usingTasklistPartition(persistence.TaskListTypeDecision)
-	t.fwdr.taskListKind = shared.TaskListKindSticky
+	t.fwdr.taskListKind = types.TaskListKindSticky
 	_, err = t.fwdr.ForwardQueryTask(context.Background(), task)
 	t.Equal(errTaskListKind, err)
 }
 
 func (t *ForwarderTestSuite) TestForwardQueryTask() {
 	t.usingTasklistPartition(persistence.TaskListTypeDecision)
-	task := newInternalQueryTask("id1", &gen.QueryWorkflowRequest{})
-	resp := &shared.QueryWorkflowResponse{}
-	var request *gen.QueryWorkflowRequest
+	task := newInternalQueryTask("id1", &types.MatchingQueryWorkflowRequest{})
+	resp := &types.QueryWorkflowResponse{}
+	var request *types.MatchingQueryWorkflowRequest
 	t.client.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.QueryWorkflowRequest) {
+		func(arg0 context.Context, arg1 *types.MatchingQueryWorkflowRequest) {
 			request = arg1
 		},
 	).Return(resp, nil).Times(1)
@@ -167,13 +166,13 @@ func (t *ForwarderTestSuite) TestForwardQueryTask() {
 	t.Equal(t.taskList.Parent(20), request.TaskList.GetName())
 	t.Equal(t.fwdr.taskListKind, request.TaskList.GetKind())
 	t.True(task.query.request.QueryRequest == request.QueryRequest)
-	t.True(resp == gotResp)
+	t.Equal(resp, gotResp)
 }
 
 func (t *ForwarderTestSuite) TestForwardQueryTaskRateNotEnforced() {
 	t.usingTasklistPartition(persistence.TaskListTypeActivity)
-	task := newInternalQueryTask("id1", &gen.QueryWorkflowRequest{})
-	resp := &shared.QueryWorkflowResponse{}
+	task := newInternalQueryTask("id1", &types.MatchingQueryWorkflowRequest{})
+	resp := &types.QueryWorkflowResponse{}
 	rps := 2
 	t.client.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(resp, nil).Times(rps + 1)
 	for i := 0; i < rps; i++ {
@@ -189,7 +188,7 @@ func (t *ForwarderTestSuite) TestForwardPollError() {
 	t.Equal(errNoParent, err)
 
 	t.usingTasklistPartition(persistence.TaskListTypeActivity)
-	t.fwdr.taskListKind = shared.TaskListKindSticky
+	t.fwdr.taskListKind = types.TaskListKindSticky
 	_, err = t.fwdr.ForwardPoll(context.Background())
 	t.Equal(errTaskListKind, err)
 
@@ -201,11 +200,11 @@ func (t *ForwarderTestSuite) TestForwardPollForDecision() {
 	pollerID := uuid.New()
 	ctx := context.WithValue(context.Background(), pollerIDKey, pollerID)
 	ctx = context.WithValue(ctx, identityKey, "id1")
-	resp := &gen.PollForDecisionTaskResponse{}
+	resp := &types.MatchingPollForDecisionTaskResponse{}
 
-	var request *gen.PollForDecisionTaskRequest
+	var request *types.MatchingPollForDecisionTaskRequest
 	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.PollForDecisionTaskRequest) {
+		func(arg0 context.Context, arg1 *types.MatchingPollForDecisionTaskRequest) {
 			request = arg1
 		},
 	).Return(resp, nil).Times(1)
@@ -219,7 +218,7 @@ func (t *ForwarderTestSuite) TestForwardPollForDecision() {
 	t.Equal("id1", request.GetPollRequest().GetIdentity())
 	t.Equal(t.taskList.Parent(20), request.GetPollRequest().GetTaskList().GetName())
 	t.Equal(t.fwdr.taskListKind, request.GetPollRequest().GetTaskList().GetKind())
-	t.True(resp == task.pollForDecisionResponse())
+	t.Equal(resp, task.pollForDecisionResponse())
 	t.Nil(task.pollForActivityResponse())
 }
 
@@ -229,11 +228,11 @@ func (t *ForwarderTestSuite) TestForwardPollForActivity() {
 	pollerID := uuid.New()
 	ctx := context.WithValue(context.Background(), pollerIDKey, pollerID)
 	ctx = context.WithValue(ctx, identityKey, "id1")
-	resp := &shared.PollForActivityTaskResponse{}
+	resp := &types.PollForActivityTaskResponse{}
 
-	var request *gen.PollForActivityTaskRequest
+	var request *types.MatchingPollForActivityTaskRequest
 	t.client.EXPECT().PollForActivityTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.PollForActivityTaskRequest) {
+		func(arg0 context.Context, arg1 *types.MatchingPollForActivityTaskRequest) {
 			request = arg1
 		},
 	).Return(resp, nil).Times(1)
@@ -247,7 +246,7 @@ func (t *ForwarderTestSuite) TestForwardPollForActivity() {
 	t.Equal("id1", request.GetPollRequest().GetIdentity())
 	t.Equal(t.taskList.Parent(20), request.GetPollRequest().GetTaskList().GetName())
 	t.Equal(t.fwdr.taskListKind, request.GetPollRequest().GetTaskList().GetKind())
-	t.True(resp == task.pollForActivityResponse())
+	t.Equal(resp, task.pollForActivityResponse())
 	t.Nil(task.pollForDecisionResponse())
 }
 
@@ -332,7 +331,7 @@ func (t *ForwarderTestSuite) TestMaxOutstandingConfigUpdate() {
 }
 
 func (t *ForwarderTestSuite) usingTasklistPartition(taskType int) {
-	t.taskList = newTestTaskListID("fwdr", taskListPartitionPrefix+"tl0/1", taskType)
+	t.taskList = newTestTaskListID("fwdr", common.ReservedTaskListPrefix+"tl0/1", taskType)
 	t.fwdr.taskListID = t.taskList
 }
 

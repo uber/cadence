@@ -32,12 +32,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -119,7 +119,7 @@ func (s *markerNotifierSuite) TestNotifyPendingFailoverMarker() {
 		ActiveClusterName: s.mockClusterMetadata.GetCurrentClusterName(),
 		Clusters: []*persistence.ClusterReplicationConfig{
 			{
-				s.mockClusterMetadata.GetCurrentClusterName(),
+				ClusterName: s.mockClusterMetadata.GetCurrentClusterName(),
 			},
 		},
 	}
@@ -134,12 +134,12 @@ func (s *markerNotifierSuite) TestNotifyPendingFailoverMarker() {
 		s.mockClusterMetadata,
 	)
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(domainEntry, nil).AnyTimes()
-	task := &replicator.FailoverMarkerAttributes{
-		DomainID:        common.StringPtr(domainID),
-		FailoverVersion: common.Int64Ptr(1),
+	task := &types.FailoverMarkerAttributes{
+		DomainID:        domainID,
+		FailoverVersion: 1,
 		CreationTime:    common.Int64Ptr(1),
 	}
-	tasks := []*replicator.FailoverMarkerAttributes{task}
+	tasks := []*types.FailoverMarkerAttributes{task}
 	respCh := make(chan error, 1)
 	err := s.mockShard.AddingPendingFailoverMarker(task)
 	s.NoError(err)
@@ -151,7 +151,7 @@ func (s *markerNotifierSuite) TestNotifyPendingFailoverMarker() {
 	).Do(
 		func(
 			shardID int32,
-			markers []*replicator.FailoverMarkerAttributes,
+			markers []*types.FailoverMarkerAttributes,
 		) {
 			if count == 0 {
 				count++

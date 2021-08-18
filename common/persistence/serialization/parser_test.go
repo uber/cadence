@@ -27,15 +27,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 )
 
 func TestParse(t *testing.T) {
 	thriftParser, err := NewParser(common.EncodingTypeThriftRW, common.EncodingTypeThriftRW)
 	assert.NoError(t, err)
-	domainInfo := &sqlblobs.DomainInfo{
-		Name: common.StringPtr("test_name"),
+	domainInfo := &DomainInfo{
+		Name: "test_name",
 		Data: map[string]string{"test_key": "test_value"},
 	}
 	db, err := thriftParser.DomainInfoToBlob(domainInfo)
@@ -43,5 +42,5 @@ func TestParse(t *testing.T) {
 	assert.NotNil(t, db.Data)
 	decodedDomainInfo, err := thriftParser.DomainInfoFromBlob(db.Data, string(db.Encoding))
 	assert.NoError(t, err)
-	assert.Equal(t, decodedDomainInfo, domainInfo)
+	assert.Equal(t, domainInfo, decodedDomainInfo)
 }

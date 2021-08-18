@@ -38,6 +38,8 @@ import (
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -45,8 +47,6 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -76,7 +76,8 @@ type (
 		PublicClient        workflowserviceclient.Interface
 		ArchivalMetadata    archiver.ArchivalMetadata
 		ArchiverProvider    provider.ArchiverProvider
-		Authorizer          authorization.Authorizer
+		Authorizer          authorization.Authorizer // NOTE: this can be nil. If nil, AccessControlledHandlerImpl will initiate one with config.Authorization
+		AuthorizationConfig config.Authorization     // NOTE: empty(default) struct will get a authorization.NoopAuthorizer
 	}
 
 	// MembershipMonitorFactory provides a bootstrapped membership monitor
@@ -165,8 +166,12 @@ func New(params *BootstrapParams) Service {
 
 // UpdateLoggerWithServiceName tag logging with service name from the top level
 func (params *BootstrapParams) UpdateLoggerWithServiceName(name string) {
-	params.Logger = params.Logger.WithTags(tag.Service(name))
-	params.ThrottledLogger = params.ThrottledLogger.WithTags(tag.Service(name))
+	if params.Logger != nil {
+		params.Logger = params.Logger.WithTags(tag.Service(name))
+	}
+	if params.ThrottledLogger != nil {
+		params.ThrottledLogger = params.ThrottledLogger.WithTags(tag.Service(name))
+	}
 }
 
 // GetHostName returns the name of host running the service
@@ -308,7 +313,7 @@ func GetMetricsServiceIdx(serviceName string, logger log.Logger) metrics.Service
 	case common.WorkerServiceName:
 		return metrics.Worker
 	default:
-		logger.Fatal("Unknown service name for metrics!", tag.Service(serviceName))
+		logger.Fatal("Unknown service name for metrics!")
 	}
 
 	// this should never happen!

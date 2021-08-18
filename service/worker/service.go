@@ -28,17 +28,17 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
-	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
-	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/batcher"
 	"github.com/uber/cadence/service/worker/failovermanager"
@@ -47,6 +47,10 @@ import (
 	"github.com/uber/cadence/service/worker/replicator"
 	"github.com/uber/cadence/service/worker/scanner"
 	"github.com/uber/cadence/service/worker/scanner/executions"
+	"github.com/uber/cadence/service/worker/scanner/shardscanner"
+	"github.com/uber/cadence/service/worker/scanner/tasklist"
+	"github.com/uber/cadence/service/worker/scanner/timers"
+	"github.com/uber/cadence/service/worker/shadower"
 )
 
 type (
@@ -76,6 +80,7 @@ type (
 		EnableBatcher                     dynamicconfig.BoolPropertyFn
 		EnableParentClosePolicyWorker     dynamicconfig.BoolPropertyFn
 		EnableFailoverManager             dynamicconfig.BoolPropertyFn
+		EnableWorkflowShadower            dynamicconfig.BoolPropertyFn
 		DomainReplicationMaxRetryDuration dynamicconfig.DurationPropertyFn
 	}
 )
@@ -90,14 +95,11 @@ func NewService(
 	serviceResource, err := resource.New(
 		params,
 		common.WorkerServiceName,
-		serviceConfig.PersistenceMaxQPS,
-		serviceConfig.PersistenceGlobalMaxQPS,
-		serviceConfig.ThrottledLogRPS,
-		func(
-			persistenceBean persistenceClient.Bean,
-			logger log.Logger,
-		) (persistence.VisibilityManager, error) {
-			return persistenceBean.GetVisibilityManager(), nil
+		&config.ResourceConfig{
+			PersistenceMaxQPS:       serviceConfig.PersistenceMaxQPS,
+			PersistenceGlobalMaxQPS: serviceConfig.PersistenceGlobalMaxQPS,
+			ThrottledLoggerMaxRPS:   serviceConfig.ThrottledLogRPS,
+			// worker service doesn't need visibility config as it never call visibilityManager API
 		},
 	)
 	if err != nil {
@@ -127,33 +129,23 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			TimeLimitPerArchivalIteration: dc.GetDurationProperty(dynamicconfig.WorkerTimeLimitPerArchivalIteration, archiver.MaxArchivalIterationTimeout()),
 		},
 		ScannerCfg: &scanner.Config{
-			PersistenceMaxQPS:      dc.GetIntProperty(dynamicconfig.ScannerPersistenceMaxQPS, 100),
+			ScannerPersistenceMaxQPS: dc.GetIntProperty(dynamicconfig.ScannerPersistenceMaxQPS, 5),
+			TaskListScannerOptions: tasklist.Options{
+				GetOrphanTasksPageSizeFn: dc.GetIntProperty(dynamicconfig.ScannerGetOrphanTasksPageSize, tasklist.DefaultScannerGetOrphanTasksPageSize),
+				TaskBatchSizeFn:          dc.GetIntProperty(dynamicconfig.ScannerBatchSizeForTasklistHandler, tasklist.DefaultScannerGetOrphanTasksPageSize),
+				EnableCleaning:           dc.GetBoolProperty(dynamicconfig.EnableCleaningOrphanTaskInTasklistScavenger, false),
+				MaxTasksPerJobFn:         dc.GetIntProperty(dynamicconfig.ScannerMaxTasksProcessedPerTasklistJob, tasklist.DefaultScannerMaxTasksProcessedPerTasklistJob),
+			},
 			Persistence:            &params.PersistenceConfig,
 			ClusterMetadata:        params.ClusterMetadata,
 			TaskListScannerEnabled: dc.GetBoolProperty(dynamicconfig.TaskListScannerEnabled, true),
-			HistoryScannerEnabled:  dc.GetBoolProperty(dynamicconfig.HistoryScannerEnabled, true),
-			ConcreteExecutionScannerConfig: &executions.ScannerWorkflowDynamicConfig{
-				Enabled:                 dc.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerEnabled, false),
-				Concurrency:             dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerConcurrency, 25),
-				ExecutionsPageSize:      dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerPersistencePageSize, 1000),
-				BlobstoreFlushThreshold: dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerBlobstoreFlushThreshold, 100),
-				ActivityBatchSize:       dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerActivityBatchSize, 25),
-				DynamicConfigInvariantCollections: executions.DynamicConfigInvariantCollections{
-					InvariantCollectionMutableState: dc.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerInvariantCollectionMutableState, true),
-					InvariantCollectionHistory:      dc.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerInvariantCollectionHistory, true),
-				},
+			HistoryScannerEnabled:  dc.GetBoolProperty(dynamicconfig.HistoryScannerEnabled, false),
+			ShardScanners: []*shardscanner.ScannerConfig{
+				executions.ConcreteExecutionScannerConfig(dc),
+				executions.CurrentExecutionScannerConfig(dc),
+				timers.ScannerConfig(dc),
 			},
-			CurrentExecutionScannerConfig: &executions.ScannerWorkflowDynamicConfig{
-				Enabled:                 dc.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerEnabled, false),
-				Concurrency:             dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerConcurrency, 25),
-				ExecutionsPageSize:      dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerPersistencePageSize, 1000),
-				BlobstoreFlushThreshold: dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerBlobstoreFlushThreshold, 100),
-				ActivityBatchSize:       dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerActivityBatchSize, 25),
-				DynamicConfigInvariantCollections: executions.DynamicConfigInvariantCollections{
-					InvariantCollectionMutableState: dc.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerInvariantCollectionMutableState, true),
-					InvariantCollectionHistory:      dc.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerInvariantCollectionHistory, false),
-				},
-			},
+			MaxWorkflowRetentionInDays: dc.GetIntProperty(dynamicconfig.MaxRetentionDays, domain.DefaultMaxWorkflowRetentionInDays),
 		},
 		BatcherCfg: &batcher.Config{
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
@@ -163,9 +155,10 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
 			ClusterMetadata:     params.ClusterMetadata,
 		},
-		EnableBatcher:                     dc.GetBoolProperty(dynamicconfig.EnableBatcher, false),
+		EnableBatcher:                     dc.GetBoolProperty(dynamicconfig.EnableBatcher, true),
 		EnableParentClosePolicyWorker:     dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
 		EnableFailoverManager:             dc.GetBoolProperty(dynamicconfig.EnableFailoverManager, true),
+		EnableWorkflowShadower:            dc.GetBoolProperty(dynamicconfig.EnableWorkflowShadower, true),
 		ThrottledLogRPS:                   dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS, 20),
 		PersistenceGlobalMaxQPS:           dc.GetIntProperty(dynamicconfig.WorkerPersistenceGlobalMaxQPS, 0),
 		PersistenceMaxQPS:                 dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
@@ -197,6 +190,7 @@ func (s *Service) Start() {
 	logger.Info("worker starting", tag.ComponentWorker)
 
 	s.Resource.Start()
+	s.Resource.GetDomainReplicationQueue().Start()
 
 	s.ensureDomainExists(common.SystemLocalDomainName)
 	s.startScanner()
@@ -220,6 +214,10 @@ func (s *Service) Start() {
 	if s.config.EnableFailoverManager() {
 		s.startFailoverManager()
 	}
+	if s.config.EnableWorkflowShadower() {
+		s.ensureDomainExists(common.ShadowerLocalDomainName)
+		s.startWorkflowShadower()
+	}
 
 	logger.Info("worker started", tag.ComponentWorker)
 	<-s.stopC
@@ -234,17 +232,18 @@ func (s *Service) Stop() {
 	close(s.stopC)
 
 	s.Resource.Stop()
+	s.Resource.GetDomainReplicationQueue().Stop()
 
 	s.params.Logger.Info("worker stopped", tag.ComponentWorker)
 }
 
 func (s *Service) startParentClosePolicyProcessor() {
 	params := &parentclosepolicy.BootstrapParams{
-		ServiceClient: s.params.PublicClient,
-		MetricsClient: s.GetMetricsClient(),
-		Logger:        s.GetLogger(),
-		TallyScope:    s.params.MetricScope,
-		ClientBean:    s.GetClientBean(),
+		ServiceClient:  s.params.PublicClient,
+		MetricsClient:  s.GetMetricsClient(),
+		Logger:         s.GetLogger(),
+		TallyScope:     s.params.MetricScope,
+		FrontendClient: s.GetFrontendClient(), // frontend client with retry
 	}
 	processor := parentclosepolicy.New(params)
 	if err := processor.Start(); err != nil {
@@ -278,7 +277,7 @@ func (s *Service) startScanner() {
 
 func (s *Service) startReplicator() {
 	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
-		s.Resource.GetMetadataManager(),
+		s.Resource.GetDomainManager(),
 		s.Resource.GetTimeSource(),
 		s.Resource.GetLogger(),
 	)
@@ -346,12 +345,24 @@ func (s *Service) startFailoverManager() {
 	}
 }
 
+func (s *Service) startWorkflowShadower() {
+	params := &shadower.BootstrapParams{
+		ServiceClient: s.params.PublicClient,
+		DomainCache:   s.GetDomainCache(),
+		TallyScope:    s.params.MetricScope,
+	}
+	if err := shadower.New(params).Start(); err != nil {
+		s.Stop()
+		s.GetLogger().Fatal("error starting workflow shadower", tag.Error(err))
+	}
+}
+
 func (s *Service) ensureDomainExists(domain string) {
-	_, err := s.GetMetadataManager().GetDomain(context.Background(), &persistence.GetDomainRequest{Name: domain})
+	_, err := s.GetDomainManager().GetDomain(context.Background(), &persistence.GetDomainRequest{Name: domain})
 	switch err.(type) {
 	case nil:
 		// noop
-	case *shared.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		s.GetLogger().Info(fmt.Sprintf("domain %s does not exist, attempting to register domain", domain))
 		s.registerSystemDomain(domain)
 	default:
@@ -362,7 +373,7 @@ func (s *Service) ensureDomainExists(domain string) {
 func (s *Service) registerSystemDomain(domain string) {
 
 	currentClusterName := s.GetClusterMetadata().GetCurrentClusterName()
-	_, err := s.GetMetadataManager().CreateDomain(context.Background(), &persistence.CreateDomainRequest{
+	_, err := s.GetDomainManager().CreateDomain(context.Background(), &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          getDomainID(domain),
 			Name:        domain,
@@ -374,13 +385,13 @@ func (s *Service) registerSystemDomain(domain string) {
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: currentClusterName,
-			Clusters:          persistence.GetOrUseDefaultClusters(currentClusterName, nil),
+			Clusters:          cluster.GetOrUseDefaultClusters(currentClusterName, nil),
 		},
 		IsGlobalDomain:  false,
 		FailoverVersion: common.EmptyVersion,
 	})
 	if err != nil {
-		if _, ok := err.(*shared.DomainAlreadyExistsError); ok {
+		if _, ok := err.(*types.DomainAlreadyExistsError); ok {
 			return
 		}
 		s.GetLogger().Fatal("failed to register system domain", tag.Error(err))
@@ -394,6 +405,8 @@ func getDomainID(domain string) string {
 		domainID = common.SystemDomainID
 	case common.BatcherLocalDomainName:
 		domainID = common.BatcherDomainID
+	case common.ShadowerLocalDomainName:
+		domainID = common.ShadowerDomainID
 	}
 	return domainID
 }

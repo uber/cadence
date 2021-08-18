@@ -31,17 +31,18 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/collection"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/quotas"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	exec "github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
@@ -58,14 +59,14 @@ type (
 	TaskAckManager interface {
 		GetTask(
 			ctx ctx.Context,
-			taskInfo *replicator.ReplicationTaskInfo,
-		) (*replicator.ReplicationTask, error)
+			taskInfo *types.ReplicationTaskInfo,
+		) (*types.ReplicationTask, error)
 
 		GetTasks(
 			ctx ctx.Context,
 			pollingCluster string,
 			lastReadTaskID int64,
-		) (*replicator.ReplicationMessages, error)
+		) (*types.ReplicationMessages, error)
 	}
 
 	taskAckManagerImpl struct {
@@ -115,8 +116,8 @@ func NewTaskAckManager(
 
 func (t *taskAckManagerImpl) GetTask(
 	ctx ctx.Context,
-	taskInfo *replicator.ReplicationTaskInfo,
-) (*replicator.ReplicationTask, error) {
+	taskInfo *types.ReplicationTaskInfo,
+) (*types.ReplicationTask, error) {
 	task := &persistence.ReplicationTaskInfo{
 		DomainID:     taskInfo.GetDomainID(),
 		WorkflowID:   taskInfo.GetWorkflowID(),
@@ -135,7 +136,7 @@ func (t *taskAckManagerImpl) GetTasks(
 	ctx ctx.Context,
 	pollingCluster string,
 	lastReadTaskID int64,
-) (*replicator.ReplicationMessages, error) {
+) (*types.ReplicationMessages, error) {
 
 	if lastReadTaskID == common.EmptyMessageID {
 		lastReadTaskID = t.shard.GetClusterReplicationLevel(pollingCluster)
@@ -152,22 +153,37 @@ func (t *taskAckManagerImpl) GetTasks(
 		return nil, err
 	}
 
-	var replicationTasks []*replicator.ReplicationTask
+	var replicationTasks []*types.ReplicationTask
 	readLevel := lastReadTaskID
+TaskInfoLoop:
 	for _, taskInfo := range taskInfoList {
+		// filter task info by domain clusters.
+		domainEntity, err := t.shard.GetDomainCache().GetDomainByID(taskInfo.GetDomainID())
+		if err != nil {
+			return nil, err
+		}
+		if skipTask(pollingCluster, domainEntity) {
+			continue
+		}
+
+		// construct replication task from DB
 		_ = t.rateLimiter.Wait(ctx)
-		var replicationTask *replicator.ReplicationTask
+		var replicationTask *types.ReplicationTask
 		op := func() error {
 			var err error
 			replicationTask, err = t.toReplicationTask(ctx, taskInfo)
 			return err
 		}
-
-		err = backoff.Retry(op, t.retryPolicy, common.IsPersistenceTransientError)
-		if err != nil {
-			t.logger.Debug("Failed to get replication task. Return what we have so far.", tag.Error(err))
+		err = backoff.Retry(op, t.retryPolicy, persistence.IsTransientError)
+		switch err.(type) {
+		case nil:
+			// No action
+		case *types.BadRequestError, *types.InternalDataInconsistencyError, *types.EntityNotExistsError:
+			t.logger.Warn("Failed to get replication task.", tag.Error(err))
+		default:
+			t.logger.Error("Failed to get replication task. Return what we have so far.", tag.Error(err))
 			hasMore = true
-			break
+			break TaskInfoLoop
 		}
 		readLevel = taskInfo.GetTaskID()
 		if replicationTask != nil {
@@ -181,15 +197,17 @@ func (t *taskAckManagerImpl) GetTasks(
 		metrics.ReplicationTasksLag,
 		time.Duration(t.shard.GetTransferMaxReadLevel()-readLevel),
 	)
-
 	replicationScope.RecordTimer(
 		metrics.ReplicationTasksFetched,
 		time.Duration(len(taskInfoList)),
 	)
-
 	replicationScope.RecordTimer(
 		metrics.ReplicationTasksReturned,
 		time.Duration(len(replicationTasks)),
+	)
+	replicationScope.RecordTimer(
+		metrics.ReplicationTasksReturnedDiff,
+		time.Duration(len(taskInfoList)-len(replicationTasks)),
 	)
 
 	if err := t.shard.UpdateClusterReplicationLevel(
@@ -199,17 +217,17 @@ func (t *taskAckManagerImpl) GetTasks(
 		t.logger.Error("error updating replication level for shard", tag.Error(err), tag.OperationFailed)
 	}
 
-	return &replicator.ReplicationMessages{
+	return &types.ReplicationMessages{
 		ReplicationTasks:       replicationTasks,
-		HasMore:                common.BoolPtr(hasMore),
-		LastRetrievedMessageId: common.Int64Ptr(readLevel),
+		HasMore:                hasMore,
+		LastRetrievedMessageID: readLevel,
 	}, nil
 }
 
 func (t *taskAckManagerImpl) toReplicationTask(
 	ctx ctx.Context,
 	taskInfo task.Info,
-) (*replicator.ReplicationTask, error) {
+) (*types.ReplicationTask, error) {
 
 	task, ok := taskInfo.(*persistence.ReplicationTaskInfo)
 	if !ok {
@@ -220,19 +238,19 @@ func (t *taskAckManagerImpl) toReplicationTask(
 	case persistence.ReplicationTaskTypeSyncActivity:
 		task, err := t.generateSyncActivityTask(ctx, task)
 		if task != nil {
-			task.SourceTaskId = common.Int64Ptr(taskInfo.GetTaskID())
+			task.SourceTaskID = taskInfo.GetTaskID()
 		}
 		return task, err
 	case persistence.ReplicationTaskTypeHistory:
 		task, err := t.generateHistoryReplicationTask(ctx, task)
 		if task != nil {
-			task.SourceTaskId = common.Int64Ptr(taskInfo.GetTaskID())
+			task.SourceTaskID = taskInfo.GetTaskID()
 		}
 		return task, err
 	case persistence.ReplicationTaskTypeFailoverMarker:
 		task := t.generateFailoverMarkerTask(task)
 		if task != nil {
-			task.SourceTaskId = common.Int64Ptr(taskInfo.GetTaskID())
+			task.SourceTaskID = taskInfo.GetTaskID()
 		}
 		return task, nil
 	default:
@@ -247,12 +265,12 @@ func (t *taskAckManagerImpl) processReplication(
 	action func(
 		activityInfo *persistence.ActivityInfo,
 		versionHistories *persistence.VersionHistories,
-	) (*replicator.ReplicationTask, error),
-) (retReplicationTask *replicator.ReplicationTask, retError error) {
+	) (*types.ReplicationTask, error),
+) (retReplicationTask *types.ReplicationTask, retError error) {
 
-	execution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(taskInfo.GetWorkflowID()),
-		RunId:      common.StringPtr(taskInfo.GetRunID()),
+	execution := types.WorkflowExecution{
+		WorkflowID: taskInfo.GetWorkflowID(),
+		RunID:      taskInfo.GetRunID(),
 	}
 
 	context, release, err := t.executionCache.GetOrCreateWorkflowExecution(ctx, taskInfo.GetDomainID(), execution)
@@ -284,7 +302,7 @@ func (t *taskAckManagerImpl) processReplication(
 		release(nil)
 
 		return action(targetActivityInfo, targetVersionHistory)
-	case *shared.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		return nil, nil
 	default:
 		return nil, err
@@ -296,7 +314,7 @@ func (t *taskAckManagerImpl) getEventsBlob(
 	branchToken []byte,
 	firstEventID int64,
 	nextEventID int64,
-) (*shared.DataBlob, error) {
+) (*types.DataBlob, error) {
 
 	var eventBatchBlobs []*persistence.DataBlob
 	var pageToken []byte
@@ -325,12 +343,12 @@ func (t *taskAckManagerImpl) getEventsBlob(
 	}
 
 	if len(eventBatchBlobs) != 1 {
-		return nil, &shared.InternalServiceError{
+		return nil, &types.InternalDataInconsistencyError{
 			Message: "replicatorQueueProcessor encounter more than 1 NDC raw event batch",
 		}
 	}
 
-	return eventBatchBlobs[0].ToThrift(), nil
+	return eventBatchBlobs[0].ToInternal(), nil
 }
 
 func (t *taskAckManagerImpl) isNewRunNDCEnabled(
@@ -343,9 +361,9 @@ func (t *taskAckManagerImpl) isNewRunNDCEnabled(
 	context, release, err := t.executionCache.GetOrCreateWorkflowExecution(
 		ctx,
 		domainID,
-		shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	if err != nil {
@@ -392,11 +410,11 @@ func (t *taskAckManagerImpl) getAllHistory(
 	firstEventID int64,
 	nextEventID int64,
 	branchToken []byte,
-) (*shared.History, error) {
+) (*types.History, error) {
 
 	// overall result
 	shardID := t.shard.GetShardID()
-	var historyEvents []*shared.HistoryEvent
+	var historyEvents []*types.HistoryEvent
 	historySize := 0
 	iterator := collection.NewPagingIterator(
 		t.getPaginationFunc(
@@ -413,10 +431,10 @@ func (t *taskAckManagerImpl) getAllHistory(
 		if err != nil {
 			return nil, err
 		}
-		historyEvents = append(historyEvents, event.(*shared.HistoryEvent))
+		historyEvents = append(historyEvents, event.(*types.HistoryEvent))
 	}
 	t.metricsClient.RecordTimer(metrics.ReplicatorQueueProcessorScope, metrics.HistorySize, time.Duration(historySize))
-	history := &shared.History{
+	history := &types.History{
 		Events: historyEvents,
 	}
 	return history, nil
@@ -432,7 +450,7 @@ func (t *taskAckManagerImpl) getPaginationFunc(
 ) collection.PaginationFn {
 
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
-		events, _, pageToken, pageHistorySize, err := persistence.PaginateHistory(
+		events, _, pageToken, pageHistorySize, err := persistenceutils.PaginateHistory(
 			ctx,
 			t.historyManager,
 			false,
@@ -457,14 +475,14 @@ func (t *taskAckManagerImpl) getPaginationFunc(
 
 func (t *taskAckManagerImpl) generateFailoverMarkerTask(
 	taskInfo *persistence.ReplicationTaskInfo,
-) *replicator.ReplicationTask {
+) *types.ReplicationTask {
 
-	return &replicator.ReplicationTask{
-		TaskType:     replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeFailoverMarker),
-		SourceTaskId: common.Int64Ptr(taskInfo.GetTaskID()),
-		FailoverMarkerAttributes: &replicator.FailoverMarkerAttributes{
-			DomainID:        common.StringPtr(taskInfo.GetDomainID()),
-			FailoverVersion: common.Int64Ptr(taskInfo.GetVersion()),
+	return &types.ReplicationTask{
+		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeFailoverMarker),
+		SourceTaskID: taskInfo.GetTaskID(),
+		FailoverMarkerAttributes: &types.FailoverMarkerAttributes{
+			DomainID:        taskInfo.GetDomainID(),
+			FailoverVersion: taskInfo.GetVersion(),
 		},
 		CreationTime: common.Int64Ptr(taskInfo.CreationTime),
 	}
@@ -473,7 +491,7 @@ func (t *taskAckManagerImpl) generateFailoverMarkerTask(
 func (t *taskAckManagerImpl) generateSyncActivityTask(
 	ctx ctx.Context,
 	taskInfo *persistence.ReplicationTaskInfo,
-) (*replicator.ReplicationTask, error) {
+) (*types.ReplicationTask, error) {
 
 	return t.processReplication(
 		ctx,
@@ -482,7 +500,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 		func(
 			activityInfo *persistence.ActivityInfo,
 			versionHistories *persistence.VersionHistories,
-		) (*replicator.ReplicationTask, error) {
+		) (*types.ReplicationTask, error) {
 			if activityInfo == nil {
 				return nil, nil
 			}
@@ -497,31 +515,31 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 			heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
 
 			//Version history uses when replicate the sync activity task
-			var versionHistory *shared.VersionHistory
+			var versionHistory *types.VersionHistory
 			if versionHistories != nil {
 				rawVersionHistory, err := versionHistories.GetCurrentVersionHistory()
 				if err != nil {
 					return nil, err
 				}
-				versionHistory = rawVersionHistory.ToThrift()
+				versionHistory = rawVersionHistory.ToInternalType()
 			}
 
-			return &replicator.ReplicationTask{
-				TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncActivity),
-				SyncActivityTaskAttributes: &replicator.SyncActivityTaskAttributes{
-					DomainId:           common.StringPtr(taskInfo.GetDomainID()),
-					WorkflowId:         common.StringPtr(taskInfo.GetWorkflowID()),
-					RunId:              common.StringPtr(taskInfo.GetRunID()),
-					Version:            common.Int64Ptr(activityInfo.Version),
-					ScheduledId:        common.Int64Ptr(activityInfo.ScheduleID),
+			return &types.ReplicationTask{
+				TaskType: types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeSyncActivity),
+				SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
+					DomainID:           taskInfo.GetDomainID(),
+					WorkflowID:         taskInfo.GetWorkflowID(),
+					RunID:              taskInfo.GetRunID(),
+					Version:            activityInfo.Version,
+					ScheduledID:        activityInfo.ScheduleID,
 					ScheduledTime:      scheduledTime,
-					StartedId:          common.Int64Ptr(activityInfo.StartedID),
+					StartedID:          activityInfo.StartedID,
 					StartedTime:        startedTime,
 					LastHeartbeatTime:  heartbeatTime,
 					Details:            activityInfo.Details,
-					Attempt:            common.Int32Ptr(activityInfo.Attempt),
+					Attempt:            activityInfo.Attempt,
 					LastFailureReason:  common.StringPtr(activityInfo.LastFailureReason),
-					LastWorkerIdentity: common.StringPtr(activityInfo.LastWorkerIdentity),
+					LastWorkerIdentity: activityInfo.LastWorkerIdentity,
 					LastFailureDetails: activityInfo.LastFailureDetails,
 					VersionHistory:     versionHistory,
 				},
@@ -534,7 +552,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 	ctx ctx.Context,
 	task *persistence.ReplicationTaskInfo,
-) (*replicator.ReplicationTask, error) {
+) (*types.ReplicationTask, error) {
 
 	return t.processReplication(
 		ctx,
@@ -543,7 +561,14 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 		func(
 			activityInfo *persistence.ActivityInfo,
 			versionHistories *persistence.VersionHistories,
-		) (*replicator.ReplicationTask, error) {
+		) (*types.ReplicationTask, error) {
+			if versionHistories == nil {
+				t.logger.Error("encounter workflow without version histories",
+					tag.WorkflowDomainID(task.GetDomainID()),
+					tag.WorkflowID(task.GetWorkflowID()),
+					tag.WorkflowRunID(task.GetRunID()))
+				return nil, nil
+			}
 			versionHistoryItems, branchToken, err := getVersionHistoryItems(
 				versionHistories,
 				task.FirstEventID,
@@ -568,7 +593,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 				return nil, err
 			}
 
-			var newRunEventsBlob *shared.DataBlob
+			var newRunEventsBlob *types.DataBlob
 			if len(task.NewRunBranchToken) != 0 {
 				// only get the first batch
 				newRunEventsBlob, err = t.getEventsBlob(
@@ -582,13 +607,13 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 				}
 			}
 
-			replicationTask := &replicator.ReplicationTask{
-				TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeHistoryV2),
-				HistoryTaskV2Attributes: &replicator.HistoryTaskV2Attributes{
-					TaskId:              common.Int64Ptr(task.FirstEventID),
-					DomainId:            common.StringPtr(task.DomainID),
-					WorkflowId:          common.StringPtr(task.WorkflowID),
-					RunId:               common.StringPtr(task.RunID),
+			replicationTask := &types.ReplicationTask{
+				TaskType: types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeHistoryV2),
+				HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
+					TaskID:              task.FirstEventID,
+					DomainID:            task.DomainID,
+					WorkflowID:          task.WorkflowID,
+					RunID:               task.RunID,
 					VersionHistoryItems: versionHistoryItems,
 					Events:              eventsBlob,
 					NewRunEvents:        newRunEventsBlob,
@@ -600,14 +625,23 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 	)
 }
 
+func skipTask(pollingCluster string, domainEntity *cache.DomainCacheEntry) bool {
+	for _, cluster := range domainEntity.GetReplicationConfig().Clusters {
+		if cluster.ClusterName == pollingCluster {
+			return false
+		}
+	}
+	return true
+}
+
 func getVersionHistoryItems(
 	versionHistories *persistence.VersionHistories,
 	eventID int64,
 	version int64,
-) ([]*shared.VersionHistoryItem, []byte, error) {
+) ([]*types.VersionHistoryItem, []byte, error) {
 
 	if versionHistories == nil {
-		return nil, nil, &shared.InternalServiceError{
+		return nil, nil, &types.BadRequestError{
 			Message: "replicatorQueueProcessor encounter workflow without version histories",
 		}
 	}
@@ -626,5 +660,5 @@ func getVersionHistoryItems(
 	if err != nil {
 		return nil, nil, err
 	}
-	return versionHistory.ToThrift().Items, versionHistory.GetBranchToken(), nil
+	return versionHistory.ToInternalType().Items, versionHistory.GetBranchToken(), nil
 }

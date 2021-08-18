@@ -24,15 +24,19 @@ import (
 	"context"
 
 	"github.com/urfave/cli"
-	clientFrontend "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/zap"
 
+	clientFrontend "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+
 	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	serverFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
+	"github.com/uber/cadence/client/admin"
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	cc "github.com/uber/cadence/common/client"
 )
 
 const (
@@ -40,11 +44,19 @@ const (
 	cadenceFrontendService = "cadence-frontend"
 )
 
+// ContextKey is an alias for string, used as context key
+type ContextKey string
+
+const (
+	// CtxKeyJWT is the name of the context key for the JWT
+	CtxKeyJWT = ContextKey("ctxKeyJWT")
+)
+
 // ClientFactory is used to construct rpc clients
 type ClientFactory interface {
 	ClientFrontendClient(c *cli.Context) clientFrontend.Interface
-	ServerFrontendClient(c *cli.Context) serverFrontend.Interface
-	ServerAdminClient(c *cli.Context) serverAdmin.Interface
+	ServerFrontendClient(c *cli.Context) frontend.Client
+	ServerAdminClient(c *cli.Context) admin.Client
 }
 
 type clientFactory struct {
@@ -72,15 +84,15 @@ func (b *clientFactory) ClientFrontendClient(c *cli.Context) clientFrontend.Inte
 }
 
 // ServerFrontendClient builds a frontend client (based on server side thrift interface)
-func (b *clientFactory) ServerFrontendClient(c *cli.Context) serverFrontend.Interface {
+func (b *clientFactory) ServerFrontendClient(c *cli.Context) frontend.Client {
 	b.ensureDispatcher(c)
-	return serverFrontend.New(b.dispatcher.ClientConfig(cadenceFrontendService))
+	return frontend.NewThriftClient(serverFrontend.New(b.dispatcher.ClientConfig(cadenceFrontendService)))
 }
 
 // ServerAdminClient builds an admin client (based on server side thrift interface)
-func (b *clientFactory) ServerAdminClient(c *cli.Context) serverAdmin.Interface {
+func (b *clientFactory) ServerAdminClient(c *cli.Context) admin.Client {
 	b.ensureDispatcher(c)
-	return serverAdmin.New(b.dispatcher.ClientConfig(cadenceFrontendService))
+	return admin.NewThriftClient(serverAdmin.New(b.dispatcher.ClientConfig(cadenceFrontendService)))
 }
 
 func (b *clientFactory) ensureDispatcher(c *cli.Context) {
@@ -118,6 +130,19 @@ type versionMiddleware struct {
 }
 
 func (vm *versionMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
-	request.Headers = request.Headers.With(common.ClientImplHeaderName, "cli")
+	request.Headers = request.Headers.
+		With(common.ClientImplHeaderName, cc.CLI).
+		With(common.FeatureVersionHeaderName, cc.SupportedCLIVersion)
+	if jwtKey, ok := ctx.Value(CtxKeyJWT).(string); ok {
+		request.Headers = request.Headers.With(common.AuthorizationTokenHeaderName, jwtKey)
+	}
 	return out.Call(ctx, request)
+}
+
+func getJWT(c *cli.Context) string {
+	return c.GlobalString(FlagJWT)
+}
+
+func getJWTPrivateKey(c *cli.Context) string {
+	return c.GlobalString(FlagJWTPrivateKey)
 }

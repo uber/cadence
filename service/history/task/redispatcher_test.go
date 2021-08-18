@@ -31,10 +31,10 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -64,7 +64,7 @@ func (s *redispatcherSuite) SetupTest() {
 	s.mockProcessor = NewMockProcessor(s.controller)
 
 	s.metricsScope = metrics.NewClient(tally.NoopScope, metrics.History).Scope(0)
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 
 	s.redispatcher = s.newTestRedispatcher()
 	s.redispatcher.Start()
@@ -82,10 +82,12 @@ func (s *redispatcherSuite) TestRedispatch_ProcessorShutDown() {
 	numTasks := 5
 
 	successfullyRedispatched := 3
+	stopDoneCh := make(chan struct{})
 	s.mockProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).Times(successfullyRedispatched)
 	s.mockProcessor.EXPECT().TrySubmit(gomock.Any()).DoAndReturn(func(_ interface{}) (bool, error) {
 		go func() {
 			s.redispatcher.Stop()
+			close(stopDoneCh)
 		}()
 
 		<-s.redispatcher.shutdownCh
@@ -100,6 +102,7 @@ func (s *redispatcherSuite) TestRedispatch_ProcessorShutDown() {
 
 	s.Equal(numTasks, s.redispatcher.Size())
 	<-s.redispatcher.shutdownCh
+	<-stopDoneCh
 
 	s.Equal(numTasks-successfullyRedispatched-1, s.redispatcher.Size())
 }

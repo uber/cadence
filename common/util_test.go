@@ -25,6 +25,7 @@ package common
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -34,6 +35,7 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 func TestIsServiceTransientError_ContextTimeout(t *testing.T) {
@@ -60,7 +62,7 @@ func TestIsContextTimeoutError(t *testing.T) {
 	defer cancel()
 	time.Sleep(50 * time.Millisecond)
 	require.True(t, IsContextTimeoutError(ctx.Err()))
-	require.True(t, IsContextTimeoutError(&workflow.InternalServiceError{Message: ctx.Err().Error()}))
+	require.True(t, IsContextTimeoutError(&types.InternalServiceError{Message: ctx.Err().Error()}))
 
 	yarpcErr := yarpcerrors.DeadlineExceededErrorf("yarpc deadline exceeded")
 	require.True(t, IsContextTimeoutError(yarpcErr))
@@ -88,31 +90,83 @@ func TestConvertDynamicConfigMapPropertyToIntMap(t *testing.T) {
 
 func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) {
 	domainID := uuid.New()
-	request := &workflow.StartWorkflowExecutionRequest{
-		RetryPolicy: &workflow.RetryPolicy{
-			InitialIntervalInSeconds:    Int32Ptr(60),
-			ExpirationIntervalInSeconds: Int32Ptr(60),
+	request := &types.StartWorkflowExecutionRequest{
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    60,
+			ExpirationIntervalInSeconds: 60,
 		},
-		CronSchedule: StringPtr("@every 300s"),
+		CronSchedule: "@every 300s",
 	}
 	now := time.Now()
-	startRequest := CreateHistoryStartWorkflowRequest(domainID, request)
+	startRequest := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	require.NotNil(t, startRequest)
 
 	expirationTime := startRequest.GetExpirationTimestamp()
 	require.NotNil(t, expirationTime)
 	require.True(t, time.Unix(0, expirationTime).Sub(now) > 60*time.Second)
 }
 
+func TestCreateHistoryStartWorkflowRequest_DelayStart(t *testing.T) {
+	testDelayStart(t, 0)
+}
+
+func TestCreateHistoryStartWorkflowRequest_DelayStartWithCron(t *testing.T) {
+	testDelayStart(t, 300)
+}
+
+func testDelayStart(t *testing.T, cronSeconds int) {
+	domainID := uuid.New()
+	delayStartSeconds := 100
+	request := &types.StartWorkflowExecutionRequest{
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    60,
+			ExpirationIntervalInSeconds: 60,
+		},
+		DelayStartSeconds: Int32Ptr(int32(delayStartSeconds)),
+	}
+	if cronSeconds > 0 {
+		request.CronSchedule = fmt.Sprintf("@every %ds", cronSeconds)
+	}
+	minDelay := delayStartSeconds + cronSeconds
+	maxDelay := delayStartSeconds + 2*cronSeconds
+	now := time.Now()
+	startRequest := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	require.NotNil(t, startRequest)
+
+	expirationTime := startRequest.GetExpirationTimestamp()
+	require.NotNil(t, expirationTime)
+
+	// Since we assign the expiration time after we create the workflow request,
+	// There's a chance that the test thread might sleep or get deprioritized and
+	// expirationTime - now may not be equal to DelayStartSeconds. Adding 2 seconds
+	// buffer to avoid this test being flaky
+	require.True(
+		t,
+		time.Unix(0, expirationTime).Sub(now) >= (time.Duration(minDelay)+58)*time.Second,
+		"Integration test took too short: %f seconds vs %f seconds",
+		time.Duration(time.Unix(0, expirationTime).Sub(now)).Round(time.Millisecond).Seconds(),
+		time.Duration((time.Duration(minDelay)+58)*time.Second).Round(time.Millisecond).Seconds(),
+	)
+	require.True(
+		t,
+		time.Unix(0, expirationTime).Sub(now) < (time.Duration(maxDelay)+68)*time.Second,
+		"Integration test took too long: %f seconds vs %f seconds",
+		time.Duration(time.Unix(0, expirationTime).Sub(now)).Round(time.Millisecond).Seconds(),
+		time.Duration((time.Duration(minDelay)+68)*time.Second).Round(time.Millisecond).Seconds(),
+	)
+}
+
 func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.T) {
 	domainID := uuid.New()
-	request := &workflow.StartWorkflowExecutionRequest{
-		RetryPolicy: &workflow.RetryPolicy{
-			InitialIntervalInSeconds:    Int32Ptr(60),
-			ExpirationIntervalInSeconds: Int32Ptr(60),
+	request := &types.StartWorkflowExecutionRequest{
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    60,
+			ExpirationIntervalInSeconds: 60,
 		},
 	}
 	now := time.Now()
-	startRequest := CreateHistoryStartWorkflowRequest(domainID, request)
+	startRequest := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	require.NotNil(t, startRequest)
 
 	expirationTime := startRequest.GetExpirationTimestamp()
 	require.NotNil(t, expirationTime)
@@ -126,5 +180,68 @@ func TestConvertIndexedValueTypeToThriftType(t *testing.T) {
 	for i := 0; i < len(expected); i++ {
 		require.Equal(t, expected[i], ConvertIndexedValueTypeToThriftType(i, nil))
 		require.Equal(t, expected[i], ConvertIndexedValueTypeToThriftType(float64(i), nil))
+	}
+}
+
+func TestValidateDomainUUID(t *testing.T) {
+	testCases := []struct {
+		msg        string
+		domainUUID string
+		valid      bool
+	}{
+		{
+			msg:        "empty",
+			domainUUID: "",
+			valid:      false,
+		},
+		{
+			msg:        "invalid",
+			domainUUID: "some random uuid",
+			valid:      false,
+		},
+		{
+			msg:        "valid",
+			domainUUID: uuid.New(),
+			valid:      true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.msg, func(t *testing.T) {
+			err := ValidateDomainUUID(tc.domainUUID)
+			if tc.valid {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestConvertErrToGetTaskFailedCause(t *testing.T) {
+	testCases := []struct {
+		err                 error
+		expectedFailedCause types.GetTaskFailedCause
+	}{
+		{
+			err:                 errors.New("some random error"),
+			expectedFailedCause: types.GetTaskFailedCauseUncategorized,
+		},
+		{
+			err:                 context.DeadlineExceeded,
+			expectedFailedCause: types.GetTaskFailedCauseTimeout,
+		},
+		{
+			err:                 &types.ServiceBusyError{},
+			expectedFailedCause: types.GetTaskFailedCauseServiceBusy,
+		},
+		{
+			err:                 &types.ShardOwnershipLostError{},
+			expectedFailedCause: types.GetTaskFailedCauseShardOwnershipLost,
+		},
+	}
+
+	for _, tc := range testCases {
+		require.Equal(t, tc.expectedFailedCause, ConvertErrToGetTaskFailedCause(tc.err))
 	}
 }

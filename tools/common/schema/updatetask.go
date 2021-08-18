@@ -98,12 +98,6 @@ func (task *UpdateTask) Run() error {
 
 	log.Printf("UpdateSchemeTask started, config=%+v\n", config)
 
-	if config.IsDryRun {
-		if err := task.setupDryrunDatabase(); err != nil {
-			return fmt.Errorf("error creating dryrun database:%v", err.Error())
-		}
-	}
-
 	currVer, err := task.db.ReadSchemaVersion()
 	if err != nil {
 		return fmt.Errorf("error reading current schema version:%v", err.Error())
@@ -114,11 +108,23 @@ func (task *UpdateTask) Run() error {
 		return err
 	}
 
-	err = task.executeUpdates(currVer, updates)
-	if err != nil {
-		return err
+	if config.IsDryRun {
+		log.Println("In DryRun mode, this command will only print queries without executing.....")
+		if len(updates) == 0 {
+			log.Println("Found zero updates to run")
+		}
+		for _, upd := range updates {
+			log.Printf("DryRun of updating to version: %s, manifest: %s \n", upd.version, upd.manifest)
+			for _, stmt := range upd.cqlStmts {
+				log.Printf("DryRun query:%s \n", stmt)
+			}
+		}
+	} else {
+		err = task.executeUpdates(currVer, updates)
+		if err != nil {
+			return err
+		}
 	}
-
 	log.Printf("UpdateSchemeTask done\n")
 
 	return nil
@@ -415,17 +421,6 @@ func filterDirectories(dirNames []string, startVer string, endVer string) ([]str
 	sort.Sort(byVersion(result))
 
 	return result, squashes, nil
-}
-
-// sets up a temporary dryrun database for
-// executing the cassandra schema update
-func (task *UpdateTask) setupDryrunDatabase() error {
-	setupConfig := &SetupConfig{
-		Overwrite:      true,
-		InitialVersion: "0.0",
-	}
-	setupTask := newSetupSchemaTask(task.db, setupConfig)
-	return setupTask.Run()
 }
 
 func dirToVersion(dir string) string {

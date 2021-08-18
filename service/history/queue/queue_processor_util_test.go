@@ -27,8 +27,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -76,19 +76,19 @@ func (s *queueProcessorUtilSuite) TestConvertFromPersistenceTransferProcessingQu
 	levels := []int32{0, 1}
 	ackLevels := []int64{123, 456}
 	maxLevels := []int64{456, 789}
-	domainFilters := []*h.DomainFilter{
+	domainFilters := []*types.DomainFilter{
 		{
 			DomainIDs:    nil,
-			ReverseMatch: common.BoolPtr(true),
+			ReverseMatch: true,
 		},
 		{
 			DomainIDs:    []string{"domain 1", "domain 2"},
-			ReverseMatch: common.BoolPtr(false),
+			ReverseMatch: false,
 		},
 	}
-	pStates := []*h.ProcessingQueueState{}
+	pStates := []*types.ProcessingQueueState{}
 	for i := 0; i != len(levels); i++ {
-		pStates = append(pStates, &h.ProcessingQueueState{
+		pStates = append(pStates, &types.ProcessingQueueState{
 			Level:        common.Int32Ptr(levels[i]),
 			AckLevel:     common.Int64Ptr(ackLevels[i]),
 			MaxLevel:     common.Int64Ptr(maxLevels[i]),
@@ -132,19 +132,19 @@ func (s *queueProcessorUtilSuite) TestConvertFromPersistenceTimerProcessingQueue
 	levels := []int32{0, 1}
 	ackLevels := []time.Time{time.Now(), time.Now().Add(-time.Minute)}
 	maxLevels := []time.Time{time.Now().Add(time.Hour), time.Now().Add(time.Nanosecond)}
-	domainFilters := []*h.DomainFilter{
+	domainFilters := []*types.DomainFilter{
 		{
 			DomainIDs:    nil,
-			ReverseMatch: common.BoolPtr(true),
+			ReverseMatch: true,
 		},
 		{
 			DomainIDs:    []string{"domain 1", "domain 2"},
-			ReverseMatch: common.BoolPtr(false),
+			ReverseMatch: false,
 		},
 	}
-	pStates := []*h.ProcessingQueueState{}
+	pStates := []*types.ProcessingQueueState{}
 	for i := 0; i != len(levels); i++ {
-		pStates = append(pStates, &h.ProcessingQueueState{
+		pStates = append(pStates, &types.ProcessingQueueState{
 			Level:        common.Int32Ptr(levels[i]),
 			AckLevel:     common.Int64Ptr(ackLevels[i].UnixNano()),
 			MaxLevel:     common.Int64Ptr(maxLevels[i].UnixNano()),
@@ -161,7 +161,7 @@ func (s *queueProcessorUtilSuite) TestConvertFromPersistenceTimerProcessingQueue
 
 func (s *queueProcessorUtilSuite) assertProcessingQueueStateEqual(
 	state ProcessingQueueState,
-	pState *h.ProcessingQueueState,
+	pState *types.ProcessingQueueState,
 ) {
 	var ackLevel, maxLevel int64
 	switch taskKey := state.AckLevel().(type) {
@@ -186,9 +186,9 @@ func (s *queueProcessorUtilSuite) assertProcessingQueueStateEqual(
 
 func (s *queueProcessorUtilSuite) TestValidateProcessingQueueStates_Fail() {
 	ackLevels := []int64{123, 456}
-	pStates := []*h.ProcessingQueueState{}
+	pStates := []*types.ProcessingQueueState{}
 	for i := 0; i != len(ackLevels); i++ {
-		pStates = append(pStates, &h.ProcessingQueueState{
+		pStates = append(pStates, &types.ProcessingQueueState{
 			Level:        nil,
 			AckLevel:     common.Int64Ptr(ackLevels[i]),
 			MaxLevel:     nil,
@@ -202,9 +202,9 @@ func (s *queueProcessorUtilSuite) TestValidateProcessingQueueStates_Fail() {
 
 func (s *queueProcessorUtilSuite) TestValidateProcessingQueueStates_Success() {
 	ackLevels := []time.Time{time.Now(), time.Now().Add(-time.Minute)}
-	pStates := []*h.ProcessingQueueState{}
+	pStates := []*types.ProcessingQueueState{}
 	for i := 0; i != len(ackLevels); i++ {
-		pStates = append(pStates, &h.ProcessingQueueState{
+		pStates = append(pStates, &types.ProcessingQueueState{
 			Level:        nil,
 			AckLevel:     common.Int64Ptr(ackLevels[i].UnixNano()),
 			MaxLevel:     nil,
@@ -218,7 +218,7 @@ func (s *queueProcessorUtilSuite) TestValidateProcessingQueueStates_Success() {
 
 func (s *queueProcessorUtilSuite) assertDomainFilterEqual(
 	domainFilter DomainFilter,
-	pDomainFilter *h.DomainFilter,
+	pDomainFilter *types.DomainFilter,
 ) {
 	s.Equal(domainFilter.ReverseMatch, pDomainFilter.GetReverseMatch())
 	s.Equal(len(domainFilter.DomainIDs), len(pDomainFilter.GetDomainIDs()))

@@ -26,13 +26,13 @@ import (
 	"fmt"
 	"time"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -79,11 +79,11 @@ func NewTimerStandbyTaskExecutor(
 }
 
 func (t *timerStandbyTaskExecutor) Execute(
-	taskInfo Info,
+	task Task,
 	shouldProcessTask bool,
 ) error {
 
-	timerTask, ok := taskInfo.(*persistence.TimerTaskInfo)
+	timerTask, ok := task.GetInfo().(*persistence.TimerTaskInfo)
 	if !ok {
 		return errUnexpectedTask
 	}
@@ -135,7 +135,7 @@ func (t *timerStandbyTaskExecutor) executeUserTimerTimeoutTask(
 			if !ok {
 				errString := fmt.Sprintf("failed to find in user timer event ID: %v", timerSequenceID.EventID)
 				t.logger.Error(errString)
-				return nil, &workflow.InternalServiceError{Message: errString}
+				return nil, &types.InternalServiceError{Message: errString}
 			}
 
 			if isExpired := timerSequence.IsExpired(
@@ -195,7 +195,7 @@ func (t *timerStandbyTaskExecutor) executeActivityTimeoutTask(
 			if !ok {
 				errString := fmt.Sprintf("failed to find in memory activity timer: %v", timerSequenceID.EventID)
 				t.logger.Error(errString)
-				return nil, &workflow.InternalServiceError{Message: errString}
+				return nil, &types.InternalServiceError{Message: errString}
 			}
 
 			if isExpired := timerSequence.IsExpired(
@@ -223,7 +223,7 @@ func (t *timerStandbyTaskExecutor) executeActivityTimeoutTask(
 		// one heartbeat task was persisted multiple times with different taskIDs due to the retry logic
 		// for updating workflow execution. In that case, only one new heartbeat timeout task should be
 		// created.
-		isHeartBeatTask := timerTask.TimeoutType == int(workflow.TimeoutTypeHeartbeat)
+		isHeartBeatTask := timerTask.TimeoutType == int(types.TimeoutTypeHeartbeat)
 		activityInfo, ok := mutableState.GetActivityInfo(timerTask.EventID)
 		if isHeartBeatTask && ok && activityInfo.LastHeartbeatTimeoutVisibilityInSeconds <= timerTask.VisibilityTimestamp.Unix() {
 			activityInfo.TimerTaskStatus = activityInfo.TimerTaskStatus &^ execution.TimerTaskStatusCreatedHeartbeat
@@ -279,7 +279,7 @@ func (t *timerStandbyTaskExecutor) executeDecisionTimeoutTask(
 	// decision schedule to start timer task is a special snowflake.
 	// the schedule to start timer is for sticky decision, which is
 	// not applicable on the passive cluster
-	if timerTask.TimeoutType == int(workflow.TimeoutTypeScheduleToStart) {
+	if timerTask.TimeoutType == int(types.TimeoutTypeScheduleToStart) {
 		return nil
 	}
 
@@ -420,6 +420,9 @@ func (t *timerStandbyTaskExecutor) processTimer(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() {
@@ -484,7 +487,7 @@ func (t *timerStandbyTaskExecutor) fetchHistoryFromRemote(
 			nil,
 		)
 	} else {
-		err = &workflow.InternalServiceError{
+		err = &types.InternalServiceError{
 			Message: "timerQueueStandbyProcessor encounter empty historyResendInfo",
 		}
 	}

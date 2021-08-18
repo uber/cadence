@@ -34,14 +34,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/replicator"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -127,11 +126,11 @@ func (s *taskAckManagerSuite) TestGetPaginationFunc() {
 	pagingFunc := s.ackManager.getPaginationFunc(context.Background(), firstEventID, nextEventID, branchToken, shardID, &historyCount)
 
 	pageToken := []byte{1}
-	event := &workflow.HistoryEvent{
-		EventId: common.Int64Ptr(1),
+	event := &types.HistoryEvent{
+		EventID: 1,
 	}
 	s.mockHistoryMgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadHistoryBranchResponse{
-		HistoryEvents:    []*workflow.HistoryEvent{event},
+		HistoryEvents:    []*types.HistoryEvent{event},
 		NextPageToken:    pageToken,
 		Size:             1,
 		LastFirstEventID: 1,
@@ -140,7 +139,7 @@ func (s *taskAckManagerSuite) TestGetPaginationFunc() {
 	s.NoError(err)
 	s.Equal(pageToken, token)
 	s.Len(events, 1)
-	s.Equal(events[0].(*workflow.HistoryEvent), event)
+	s.Equal(events[0].(*types.HistoryEvent), event)
 	s.Equal(historyCount, 1)
 }
 
@@ -148,12 +147,12 @@ func (s *taskAckManagerSuite) TestGetAllHistory_OK() {
 	firstEventID := int64(0)
 	nextEventID := int64(1)
 	var branchToken []byte
-	event := &workflow.HistoryEvent{
-		EventId: common.Int64Ptr(1),
+	event := &types.HistoryEvent{
+		EventID: 1,
 	}
 
 	s.mockHistoryMgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadHistoryBranchResponse{
-		HistoryEvents:    []*workflow.HistoryEvent{event},
+		HistoryEvents:    []*types.HistoryEvent{event},
 		NextPageToken:    nil,
 		Size:             1,
 		LastFirstEventID: 1,
@@ -207,9 +206,9 @@ func (s *taskAckManagerSuite) TestIsNewRunNDCEnabled_True() {
 	runID := uuid.New()
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -248,9 +247,9 @@ func (s *taskAckManagerSuite) TestIsNewRunNDCEnabled_False() {
 	runID := uuid.New()
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -374,9 +373,9 @@ func (s *taskAckManagerSuite) TestProcessReplication_OK() {
 	}
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -407,12 +406,12 @@ func (s *taskAckManagerSuite) TestProcessReplication_OK() {
 		func(
 			activityInfo *persistence.ActivityInfo,
 			versionHistories *persistence.VersionHistories,
-		) (*replicator.ReplicationTask, error) {
+		) (*types.ReplicationTask, error) {
 			_, release, err := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 				domainID,
-				workflow.WorkflowExecution{
-					WorkflowId: common.StringPtr(workflowID),
-					RunId:      common.StringPtr(runID),
+				types.WorkflowExecution{
+					WorkflowID: workflowID,
+					RunID:      runID,
 				},
 			)
 			s.NoError(err)
@@ -423,9 +422,9 @@ func (s *taskAckManagerSuite) TestProcessReplication_OK() {
 	s.NoError(err)
 	_, release, err = s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	s.NoError(err)
@@ -438,12 +437,12 @@ func (s *taskAckManagerSuite) TestProcessReplication_OK() {
 		func(
 			activityInfo *persistence.ActivityInfo,
 			versionHistories *persistence.VersionHistories,
-		) (*replicator.ReplicationTask, error) {
+		) (*types.ReplicationTask, error) {
 			_, release, err := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 				domainID,
-				workflow.WorkflowExecution{
-					WorkflowId: common.StringPtr(workflowID),
-					RunId:      common.StringPtr(runID),
+				types.WorkflowExecution{
+					WorkflowID: workflowID,
+					RunID:      runID,
 				},
 			)
 			s.NoError(err)
@@ -454,9 +453,9 @@ func (s *taskAckManagerSuite) TestProcessReplication_OK() {
 	s.NoError(err)
 	_, release, err = s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	s.NoError(err)
@@ -474,9 +473,9 @@ func (s *taskAckManagerSuite) TestProcessReplication_Error() {
 	}
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -507,16 +506,16 @@ func (s *taskAckManagerSuite) TestProcessReplication_Error() {
 		func(
 			activityInfo *persistence.ActivityInfo,
 			versionHistories *persistence.VersionHistories,
-		) (*replicator.ReplicationTask, error) {
+		) (*types.ReplicationTask, error) {
 			return nil, nil
 		},
 	)
 	s.Error(err)
 	_, release, err = s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	s.NoError(err)
@@ -532,9 +531,9 @@ func (s *taskAckManagerSuite) TestGenerateFailoverMarkerTask() {
 		CreationTime: 3,
 	}
 	task := s.ackManager.generateFailoverMarkerTask(taskInfo)
-	s.Equal(task.GetSourceTaskId(), int64(1))
+	s.Equal(task.GetSourceTaskID(), int64(1))
 	s.NotNil(task.GetFailoverMarkerAttributes())
-	s.Equal(replicator.ReplicationTaskTypeFailoverMarker, task.GetTaskType())
+	s.Equal(types.ReplicationTaskTypeFailoverMarker, task.GetTaskType())
 	s.Equal(domainID, task.GetFailoverMarkerAttributes().GetDomainID())
 	s.Equal(int64(2), task.GetFailoverMarkerAttributes().GetFailoverVersion())
 	s.Equal(int64(3), task.GetCreationTime())
@@ -575,9 +574,9 @@ func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_OK() {
 	}
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -605,15 +604,15 @@ func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_OK() {
 	s.NoError(err)
 	s.NotNil(task)
 	s.NotNil(task.SyncActivityTaskAttributes)
-	s.Equal(replicator.ReplicationTaskTypeSyncActivity, task.GetTaskType())
-	s.Equal(activityInfo.DomainID, task.GetSyncActivityTaskAttributes().GetDomainId())
-	s.Equal(activityInfo.ScheduleID, task.GetSyncActivityTaskAttributes().GetScheduledId())
+	s.Equal(types.ReplicationTaskTypeSyncActivity, task.GetTaskType())
+	s.Equal(activityInfo.DomainID, task.GetSyncActivityTaskAttributes().GetDomainID())
+	s.Equal(activityInfo.ScheduleID, task.GetSyncActivityTaskAttributes().GetScheduledID())
 	s.Equal(activityInfo.ScheduledTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetScheduledTime())
-	s.Equal(activityInfo.StartedID, task.GetSyncActivityTaskAttributes().GetStartedId())
+	s.Equal(activityInfo.StartedID, task.GetSyncActivityTaskAttributes().GetStartedID())
 	s.Equal(activityInfo.StartedTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetStartedTime())
 	s.Equal(activityInfo.LastHeartBeatUpdatedTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetLastHeartbeatTime())
 	s.Equal(activityInfo.Version, task.GetSyncActivityTaskAttributes().GetVersion())
-	s.Equal(versionHistories.Histories[0].ToThrift(), task.GetSyncActivityTaskAttributes().GetVersionHistory())
+	s.Equal(versionHistories.Histories[0].ToInternalType(), task.GetSyncActivityTaskAttributes().GetVersionHistory())
 }
 
 func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_Empty() {
@@ -641,9 +640,9 @@ func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_Empty() {
 	}
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -699,9 +698,9 @@ func (s *taskAckManagerSuite) TestGenerateHistoryReplicationTask() {
 	}
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -741,7 +740,7 @@ func (s *taskAckManagerSuite) TestGenerateHistoryReplicationTask() {
 	s.NoError(err)
 	s.NotNil(task)
 	s.NotNil(task.HistoryTaskV2Attributes)
-	s.Equal(replicator.ReplicationTaskTypeHistoryV2, task.GetTaskType())
+	s.Equal(types.ReplicationTaskTypeHistoryV2, task.GetTaskType())
 }
 
 func (s *taskAckManagerSuite) TestToReplicationTask_FailoverMarker() {
@@ -760,7 +759,7 @@ func (s *taskAckManagerSuite) TestToReplicationTask_FailoverMarker() {
 	task, err := s.ackManager.toReplicationTask(context.Background(), taskInfo)
 	s.NoError(err)
 	s.NotNil(task)
-	s.Equal(replicator.ReplicationTaskTypeFailoverMarker, task.GetTaskType())
+	s.Equal(types.ReplicationTaskTypeFailoverMarker, task.GetTaskType())
 }
 
 func (s *taskAckManagerSuite) TestToReplicationTask_SyncActivity() {
@@ -799,9 +798,9 @@ func (s *taskAckManagerSuite) TestToReplicationTask_SyncActivity() {
 	}
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -829,15 +828,15 @@ func (s *taskAckManagerSuite) TestToReplicationTask_SyncActivity() {
 	s.NoError(err)
 	s.NotNil(task)
 	s.NotNil(task.SyncActivityTaskAttributes)
-	s.Equal(replicator.ReplicationTaskTypeSyncActivity, task.GetTaskType())
-	s.Equal(activityInfo.DomainID, task.GetSyncActivityTaskAttributes().GetDomainId())
-	s.Equal(activityInfo.ScheduleID, task.GetSyncActivityTaskAttributes().GetScheduledId())
+	s.Equal(types.ReplicationTaskTypeSyncActivity, task.GetTaskType())
+	s.Equal(activityInfo.DomainID, task.GetSyncActivityTaskAttributes().GetDomainID())
+	s.Equal(activityInfo.ScheduleID, task.GetSyncActivityTaskAttributes().GetScheduledID())
 	s.Equal(activityInfo.ScheduledTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetScheduledTime())
-	s.Equal(activityInfo.StartedID, task.GetSyncActivityTaskAttributes().GetStartedId())
+	s.Equal(activityInfo.StartedID, task.GetSyncActivityTaskAttributes().GetStartedID())
 	s.Equal(activityInfo.StartedTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetStartedTime())
 	s.Equal(activityInfo.LastHeartBeatUpdatedTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetLastHeartbeatTime())
 	s.Equal(activityInfo.Version, task.GetSyncActivityTaskAttributes().GetVersion())
-	s.Equal(versionHistories.Histories[0].ToThrift(), task.GetSyncActivityTaskAttributes().GetVersionHistory())
+	s.Equal(versionHistories.Histories[0].ToInternalType(), task.GetSyncActivityTaskAttributes().GetVersionHistory())
 }
 
 func (s *taskAckManagerSuite) TestToReplicationTask_History() {
@@ -868,9 +867,9 @@ func (s *taskAckManagerSuite) TestToReplicationTask_History() {
 	}
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -910,14 +909,14 @@ func (s *taskAckManagerSuite) TestToReplicationTask_History() {
 	s.NoError(err)
 	s.NotNil(task)
 	s.NotNil(task.HistoryTaskV2Attributes)
-	s.Equal(replicator.ReplicationTaskTypeHistoryV2, task.GetTaskType())
+	s.Equal(types.ReplicationTaskTypeHistoryV2, task.GetTaskType())
 }
 
 func (s *taskAckManagerSuite) TestGetTasks() {
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
-	clusterName := "cluster"
+	clusterName := cluster.TestCurrentClusterName
 	taskInfo := &persistence.ReplicationTaskInfo{
 		TaskType:     persistence.ReplicationTaskTypeFailoverMarker,
 		DomainID:     domainID,
@@ -931,9 +930,146 @@ func (s *taskAckManagerSuite) TestGetTasks() {
 		NextPageToken: []byte{1},
 	}, nil)
 	s.mockShard.Resource.ShardMgr.On("UpdateShard", mock.Anything, mock.Anything).Return(nil)
+	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
+		&persistence.DomainConfig{Retention: 1},
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+		1,
+		nil,
+	), nil).AnyTimes()
 
 	_, err := s.ackManager.GetTasks(context.Background(), clusterName, 10)
 	s.NoError(err)
 	ackLevel := s.mockShard.GetClusterReplicationLevel(clusterName)
 	s.Equal(int64(10), ackLevel)
+}
+
+func (s *taskAckManagerSuite) TestGetTasks_ReturnDataErrors() {
+	domainID := uuid.New()
+	workflowID := uuid.New()
+	runID := uuid.New()
+	clusterName := cluster.TestCurrentClusterName
+	taskID := int64(10)
+	taskInfo := &persistence.ReplicationTaskInfo{
+		TaskType:     persistence.ReplicationTaskTypeHistory,
+		TaskID:       taskID + 1,
+		DomainID:     domainID,
+		WorkflowID:   workflowID,
+		RunID:        runID,
+		FirstEventID: 6,
+		Version:      1,
+	}
+	versionHistories := &persistence.VersionHistories{
+		CurrentVersionHistoryIndex: 0,
+		Histories: []*persistence.VersionHistory{
+			{
+				BranchToken: []byte{1},
+				Items: []*persistence.VersionHistoryItem{
+					{
+						EventID: 6,
+						Version: 1,
+					},
+				},
+			},
+		},
+	}
+	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
+		domainID,
+		types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+	)
+	workflowContext.SetWorkflowExecution(s.mockMutableState)
+	release(nil)
+	s.mockMutableState.EXPECT().StartTransaction(gomock.Any()).Return(false, nil).AnyTimes()
+	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
+	s.mockMutableState.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
+	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
+		&persistence.DomainConfig{Retention: 1},
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+		1,
+		nil,
+	), nil).AnyTimes()
+	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything, mock.Anything).Return(&persistence.GetReplicationTasksResponse{
+		Tasks:         []*persistence.ReplicationTaskInfo{taskInfo},
+		NextPageToken: nil,
+	}, nil)
+	s.mockShard.Resource.ShardMgr.On("UpdateShard", mock.Anything, mock.Anything).Return(nil)
+	// Test BadRequestError
+	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
+		nil,
+		&types.BadRequestError{},
+	).Times(1)
+	msg, err := s.ackManager.GetTasks(context.Background(), clusterName, taskID)
+	s.NoError(err)
+	s.Equal(taskID+1, msg.GetLastRetrievedMessageID())
+
+	// Test InternalDataInconsistencyError
+	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
+		nil,
+		&types.InternalDataInconsistencyError{},
+	).Times(1)
+	msg, err = s.ackManager.GetTasks(context.Background(), clusterName, taskID)
+	s.NoError(err)
+	s.Equal(taskID+1, msg.GetLastRetrievedMessageID())
+
+	// Test EntityNotExistsError
+	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
+		nil,
+		&types.EntityNotExistsError{},
+	).Times(1)
+	msg, err = s.ackManager.GetTasks(context.Background(), clusterName, taskID)
+	s.NoError(err)
+	s.Equal(taskID+1, msg.GetLastRetrievedMessageID())
+}
+
+func (s *taskAckManagerSuite) TestSkipTask_ReturnTrue() {
+	domainID := uuid.New()
+	domainEntity := cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
+		&persistence.DomainConfig{Retention: 1},
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+		1,
+		nil,
+	)
+	s.True(skipTask("test", domainEntity))
+}
+
+func (s *taskAckManagerSuite) TestSkipTask_ReturnFalse() {
+	domainID := uuid.New()
+	domainEntity := cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
+		&persistence.DomainConfig{Retention: 1},
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+		1,
+		nil,
+	)
+	s.False(skipTask(cluster.TestAlternativeClusterName, domainEntity))
 }

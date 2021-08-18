@@ -28,10 +28,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -177,7 +177,7 @@ func (s *timerSequenceSuite) TestCreateNextActivityTimer_NotCreated() {
 		VisibilityTimestamp: activityInfo.ScheduledTime.Add(
 			time.Duration(activityInfo.ScheduleToStartTimeout) * time.Second,
 		),
-		TimeoutType: int(shared.TimeoutTypeScheduleToStart),
+		TimeoutType: int(types.TimeoutTypeScheduleToStart),
 		EventID:     activityInfo.ScheduleID,
 		Attempt:     int64(activityInfo.Attempt),
 		Version:     currentVersion,
@@ -222,7 +222,7 @@ func (s *timerSequenceSuite) TestCreateNextActivityTimer_HeartbeatTimer() {
 	s.mockMutableState.EXPECT().AddTimerTasks(&persistence.ActivityTimeoutTask{
 		// TaskID is set by shard
 		VisibilityTimestamp: taskVisibilityTimestamp,
-		TimeoutType:         int(shared.TimeoutTypeHeartbeat),
+		TimeoutType:         int(types.TimeoutTypeHeartbeat),
 		EventID:             activityInfo.ScheduleID,
 		Attempt:             int64(activityInfo.Attempt),
 		Version:             currentVersion,
@@ -1047,15 +1047,15 @@ func (s *timerSequenceSuite) TestGetActivityHeartbeatTimeout_WithoutHeartbeat_St
 }
 
 func (s *timerSequenceSuite) TestConversion() {
-	s.Equal(shared.TimeoutTypeStartToClose, TimerTypeToThrift(TimerTypeStartToClose))
-	s.Equal(shared.TimeoutTypeScheduleToStart, TimerTypeToThrift(TimerTypeScheduleToStart))
-	s.Equal(shared.TimeoutTypeScheduleToClose, TimerTypeToThrift(TimerTypeScheduleToClose))
-	s.Equal(shared.TimeoutTypeHeartbeat, TimerTypeToThrift(TimerTypeHeartbeat))
+	s.Equal(types.TimeoutTypeStartToClose, TimerTypeToInternal(TimerTypeStartToClose))
+	s.Equal(types.TimeoutTypeScheduleToStart, TimerTypeToInternal(TimerTypeScheduleToStart))
+	s.Equal(types.TimeoutTypeScheduleToClose, TimerTypeToInternal(TimerTypeScheduleToClose))
+	s.Equal(types.TimeoutTypeHeartbeat, TimerTypeToInternal(TimerTypeHeartbeat))
 
-	s.Equal(TimerTypeFromThrift(shared.TimeoutTypeStartToClose), TimerTypeStartToClose)
-	s.Equal(TimerTypeFromThrift(shared.TimeoutTypeScheduleToStart), TimerTypeScheduleToStart)
-	s.Equal(TimerTypeFromThrift(shared.TimeoutTypeScheduleToClose), TimerTypeScheduleToClose)
-	s.Equal(TimerTypeFromThrift(shared.TimeoutTypeHeartbeat), TimerTypeHeartbeat)
+	s.Equal(TimerTypeFromInternal(types.TimeoutTypeStartToClose), TimerTypeStartToClose)
+	s.Equal(TimerTypeFromInternal(types.TimeoutTypeScheduleToStart), TimerTypeScheduleToStart)
+	s.Equal(TimerTypeFromInternal(types.TimeoutTypeScheduleToClose), TimerTypeScheduleToClose)
+	s.Equal(TimerTypeFromInternal(types.TimeoutTypeHeartbeat), TimerTypeHeartbeat)
 
 	s.Equal(int32(TimerTaskStatusCreatedStartToClose), TimerTypeToTimerMask(TimerTypeStartToClose))
 	s.Equal(int32(TimerTaskStatusCreatedScheduleToStart), TimerTypeToTimerMask(TimerTypeScheduleToStart))

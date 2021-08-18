@@ -24,11 +24,14 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/uber/cadence/.gen/go/config"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -36,36 +39,40 @@ type (
 	// It will only be used inside persistence, so that serialize/deserialize is transparent for application
 	PayloadSerializer interface {
 		// serialize/deserialize history events
-		SerializeBatchEvents(batch []*workflow.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error)
-		DeserializeBatchEvents(data *DataBlob) ([]*workflow.HistoryEvent, error)
+		SerializeBatchEvents(batch []*types.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error)
+		DeserializeBatchEvents(data *DataBlob) ([]*types.HistoryEvent, error)
 
 		// serialize/deserialize a single history event
-		SerializeEvent(event *workflow.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error)
-		DeserializeEvent(data *DataBlob) (*workflow.HistoryEvent, error)
+		SerializeEvent(event *types.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error)
+		DeserializeEvent(data *DataBlob) (*types.HistoryEvent, error)
 
 		// serialize/deserialize visibility memo fields
-		SerializeVisibilityMemo(memo *workflow.Memo, encodingType common.EncodingType) (*DataBlob, error)
-		DeserializeVisibilityMemo(data *DataBlob) (*workflow.Memo, error)
+		SerializeVisibilityMemo(memo *types.Memo, encodingType common.EncodingType) (*DataBlob, error)
+		DeserializeVisibilityMemo(data *DataBlob) (*types.Memo, error)
 
 		// serialize/deserialize reset points
-		SerializeResetPoints(event *workflow.ResetPoints, encodingType common.EncodingType) (*DataBlob, error)
-		DeserializeResetPoints(data *DataBlob) (*workflow.ResetPoints, error)
+		SerializeResetPoints(event *types.ResetPoints, encodingType common.EncodingType) (*DataBlob, error)
+		DeserializeResetPoints(data *DataBlob) (*types.ResetPoints, error)
 
 		// serialize/deserialize bad binaries
-		SerializeBadBinaries(event *workflow.BadBinaries, encodingType common.EncodingType) (*DataBlob, error)
-		DeserializeBadBinaries(data *DataBlob) (*workflow.BadBinaries, error)
+		SerializeBadBinaries(event *types.BadBinaries, encodingType common.EncodingType) (*DataBlob, error)
+		DeserializeBadBinaries(data *DataBlob) (*types.BadBinaries, error)
 
 		// serialize/deserialize version histories
-		SerializeVersionHistories(histories *workflow.VersionHistories, encodingType common.EncodingType) (*DataBlob, error)
-		DeserializeVersionHistories(data *DataBlob) (*workflow.VersionHistories, error)
+		SerializeVersionHistories(histories *types.VersionHistories, encodingType common.EncodingType) (*DataBlob, error)
+		DeserializeVersionHistories(data *DataBlob) (*types.VersionHistories, error)
 
 		// serialize/deserialize pending failover markers
-		SerializePendingFailoverMarkers(markers []*replicator.FailoverMarkerAttributes, encodingType common.EncodingType) (*DataBlob, error)
-		DeserializePendingFailoverMarkers(data *DataBlob) ([]*replicator.FailoverMarkerAttributes, error)
+		SerializePendingFailoverMarkers(markers []*types.FailoverMarkerAttributes, encodingType common.EncodingType) (*DataBlob, error)
+		DeserializePendingFailoverMarkers(data *DataBlob) ([]*types.FailoverMarkerAttributes, error)
 
-		// serialize/deserialize processing queue states
-		SerializeProcessingQueueStates(states *history.ProcessingQueueStates, encodingType common.EncodingType) (*DataBlob, error)
-		DeserializeProcessingQueueStates(data *DataBlob) (*history.ProcessingQueueStates, error)
+		// serialize/deserialize processing queue statesss
+		SerializeProcessingQueueStates(states *types.ProcessingQueueStates, encodingType common.EncodingType) (*DataBlob, error)
+		DeserializeProcessingQueueStates(data *DataBlob) (*types.ProcessingQueueStates, error)
+
+		// serialize/deserialize DynamicConfigBlob
+		SerializeDynamicConfigBlob(blob *types.DynamicConfigBlob, encodingType common.EncodingType) (*DataBlob, error)
+		DeserializeDynamicConfigBlob(data *DataBlob) (*types.DynamicConfigBlob, error)
 	}
 
 	// CadenceSerializationError is an error type for cadence serialization
@@ -95,15 +102,15 @@ func NewPayloadSerializer() PayloadSerializer {
 	}
 }
 
-func (t *serializerImpl) SerializeBatchEvents(events []*workflow.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error) {
+func (t *serializerImpl) SerializeBatchEvents(events []*types.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error) {
 	return t.serialize(events, encodingType)
 }
 
-func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) ([]*workflow.HistoryEvent, error) {
+func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) ([]*types.HistoryEvent, error) {
 	if data == nil {
 		return nil, nil
 	}
-	var events []*workflow.HistoryEvent
+	var events []*types.HistoryEvent
 	if data != nil && len(data.Data) == 0 {
 		return events, nil
 	}
@@ -111,49 +118,49 @@ func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) ([]*workflow.His
 	return events, err
 }
 
-func (t *serializerImpl) SerializeEvent(event *workflow.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error) {
+func (t *serializerImpl) SerializeEvent(event *types.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error) {
 	if event == nil {
 		return nil, nil
 	}
 	return t.serialize(event, encodingType)
 }
 
-func (t *serializerImpl) DeserializeEvent(data *DataBlob) (*workflow.HistoryEvent, error) {
+func (t *serializerImpl) DeserializeEvent(data *DataBlob) (*types.HistoryEvent, error) {
 	if data == nil {
 		return nil, nil
 	}
-	var event workflow.HistoryEvent
+	var event types.HistoryEvent
 	err := t.deserialize(data, &event)
 	return &event, err
 }
 
-func (t *serializerImpl) SerializeResetPoints(rp *workflow.ResetPoints, encodingType common.EncodingType) (*DataBlob, error) {
+func (t *serializerImpl) SerializeResetPoints(rp *types.ResetPoints, encodingType common.EncodingType) (*DataBlob, error) {
 	if rp == nil {
-		rp = &workflow.ResetPoints{}
+		rp = &types.ResetPoints{}
 	}
 	return t.serialize(rp, encodingType)
 }
 
-func (t *serializerImpl) DeserializeResetPoints(data *DataBlob) (*workflow.ResetPoints, error) {
-	var rp workflow.ResetPoints
+func (t *serializerImpl) DeserializeResetPoints(data *DataBlob) (*types.ResetPoints, error) {
+	var rp types.ResetPoints
 	err := t.deserialize(data, &rp)
 	return &rp, err
 }
 
-func (t *serializerImpl) SerializeBadBinaries(bb *workflow.BadBinaries, encodingType common.EncodingType) (*DataBlob, error) {
+func (t *serializerImpl) SerializeBadBinaries(bb *types.BadBinaries, encodingType common.EncodingType) (*DataBlob, error) {
 	if bb == nil {
-		bb = &workflow.BadBinaries{}
+		bb = &types.BadBinaries{}
 	}
 	return t.serialize(bb, encodingType)
 }
 
-func (t *serializerImpl) DeserializeBadBinaries(data *DataBlob) (*workflow.BadBinaries, error) {
-	var bb workflow.BadBinaries
+func (t *serializerImpl) DeserializeBadBinaries(data *DataBlob) (*types.BadBinaries, error) {
+	var bb types.BadBinaries
 	err := t.deserialize(data, &bb)
 	return &bb, err
 }
 
-func (t *serializerImpl) SerializeVisibilityMemo(memo *workflow.Memo, encodingType common.EncodingType) (*DataBlob, error) {
+func (t *serializerImpl) SerializeVisibilityMemo(memo *types.Memo, encodingType common.EncodingType) (*DataBlob, error) {
 	if memo == nil {
 		// Return nil here to be consistent with Event
 		// This check is not duplicate as check in following serialize
@@ -162,27 +169,27 @@ func (t *serializerImpl) SerializeVisibilityMemo(memo *workflow.Memo, encodingTy
 	return t.serialize(memo, encodingType)
 }
 
-func (t *serializerImpl) DeserializeVisibilityMemo(data *DataBlob) (*workflow.Memo, error) {
-	var memo workflow.Memo
+func (t *serializerImpl) DeserializeVisibilityMemo(data *DataBlob) (*types.Memo, error) {
+	var memo types.Memo
 	err := t.deserialize(data, &memo)
 	return &memo, err
 }
 
-func (t *serializerImpl) SerializeVersionHistories(histories *workflow.VersionHistories, encodingType common.EncodingType) (*DataBlob, error) {
+func (t *serializerImpl) SerializeVersionHistories(histories *types.VersionHistories, encodingType common.EncodingType) (*DataBlob, error) {
 	if histories == nil {
 		return nil, nil
 	}
 	return t.serialize(histories, encodingType)
 }
 
-func (t *serializerImpl) DeserializeVersionHistories(data *DataBlob) (*workflow.VersionHistories, error) {
-	var histories workflow.VersionHistories
+func (t *serializerImpl) DeserializeVersionHistories(data *DataBlob) (*types.VersionHistories, error) {
+	var histories types.VersionHistories
 	err := t.deserialize(data, &histories)
 	return &histories, err
 }
 
 func (t *serializerImpl) SerializePendingFailoverMarkers(
-	markers []*replicator.FailoverMarkerAttributes,
+	markers []*types.FailoverMarkerAttributes,
 	encodingType common.EncodingType,
 ) (*DataBlob, error) {
 
@@ -194,12 +201,12 @@ func (t *serializerImpl) SerializePendingFailoverMarkers(
 
 func (t *serializerImpl) DeserializePendingFailoverMarkers(
 	data *DataBlob,
-) ([]*replicator.FailoverMarkerAttributes, error) {
+) ([]*types.FailoverMarkerAttributes, error) {
 
 	if data == nil {
 		return nil, nil
 	}
-	var markers []*replicator.FailoverMarkerAttributes
+	var markers []*types.FailoverMarkerAttributes
 	if data != nil && len(data.Data) == 0 {
 		return markers, nil
 	}
@@ -208,7 +215,7 @@ func (t *serializerImpl) DeserializePendingFailoverMarkers(
 }
 
 func (t *serializerImpl) SerializeProcessingQueueStates(
-	states *history.ProcessingQueueStates,
+	states *types.ProcessingQueueStates,
 	encodingType common.EncodingType,
 ) (*DataBlob, error) {
 	if states == nil {
@@ -219,17 +226,38 @@ func (t *serializerImpl) SerializeProcessingQueueStates(
 
 func (t *serializerImpl) DeserializeProcessingQueueStates(
 	data *DataBlob,
-) (*history.ProcessingQueueStates, error) {
+) (*types.ProcessingQueueStates, error) {
 	if data == nil {
 		return nil, nil
 	}
 
-	var states history.ProcessingQueueStates
+	var states types.ProcessingQueueStates
 	if data != nil && len(data.Data) == 0 {
 		return &states, nil
 	}
 	err := t.deserialize(data, &states)
 	return &states, err
+}
+
+func (t *serializerImpl) SerializeDynamicConfigBlob(blob *types.DynamicConfigBlob, encodingType common.EncodingType) (*DataBlob, error) {
+	if blob == nil {
+		return nil, nil
+	}
+	return t.serialize(blob, encodingType)
+}
+
+func (t *serializerImpl) DeserializeDynamicConfigBlob(data *DataBlob) (*types.DynamicConfigBlob, error) {
+	if data == nil {
+		return nil, nil
+	}
+
+	var blob types.DynamicConfigBlob
+	if len(data.Data) == 0 {
+		return &blob, nil
+	}
+
+	err := t.deserialize(data, &blob)
+	return &blob, err
 }
 
 func (t *serializerImpl) serialize(input interface{}, encodingType common.EncodingType) (*DataBlob, error) {
@@ -257,23 +285,25 @@ func (t *serializerImpl) serialize(input interface{}, encodingType common.Encodi
 }
 
 func (t *serializerImpl) thriftrwEncode(input interface{}) ([]byte, error) {
-	switch input.(type) {
-	case []*workflow.HistoryEvent:
-		return t.thriftrwEncoder.Encode(&workflow.History{Events: input.([]*workflow.HistoryEvent)})
-	case *workflow.HistoryEvent:
-		return t.thriftrwEncoder.Encode(input.(*workflow.HistoryEvent))
-	case *workflow.Memo:
-		return t.thriftrwEncoder.Encode(input.(*workflow.Memo))
-	case *workflow.ResetPoints:
-		return t.thriftrwEncoder.Encode(input.(*workflow.ResetPoints))
-	case *workflow.BadBinaries:
-		return t.thriftrwEncoder.Encode(input.(*workflow.BadBinaries))
-	case *workflow.VersionHistories:
-		return t.thriftrwEncoder.Encode(input.(*workflow.VersionHistories))
-	case []*replicator.FailoverMarkerAttributes:
-		return t.thriftrwEncoder.Encode(&replicator.FailoverMarkers{FailoverMarkers: input.([]*replicator.FailoverMarkerAttributes)})
-	case *history.ProcessingQueueStates:
-		return t.thriftrwEncoder.Encode(input.(*history.ProcessingQueueStates))
+	switch input := input.(type) {
+	case []*types.HistoryEvent:
+		return t.thriftrwEncoder.Encode(&workflow.History{Events: thrift.FromHistoryEventArray(input)})
+	case *types.HistoryEvent:
+		return t.thriftrwEncoder.Encode(thrift.FromHistoryEvent(input))
+	case *types.Memo:
+		return t.thriftrwEncoder.Encode(thrift.FromMemo(input))
+	case *types.ResetPoints:
+		return t.thriftrwEncoder.Encode(thrift.FromResetPoints(input))
+	case *types.BadBinaries:
+		return t.thriftrwEncoder.Encode(thrift.FromBadBinaries(input))
+	case *types.VersionHistories:
+		return t.thriftrwEncoder.Encode(thrift.FromVersionHistories(input))
+	case []*types.FailoverMarkerAttributes:
+		return t.thriftrwEncoder.Encode(&replicator.FailoverMarkers{FailoverMarkers: thrift.FromFailoverMarkerAttributesArray(input)})
+	case *types.ProcessingQueueStates:
+		return t.thriftrwEncoder.Encode(thrift.FromProcessingQueueStates(input))
+	case *types.DynamicConfigBlob:
+		return t.thriftrwEncoder.Encode(thrift.FromDynamicConfigBlob(input))
 	default:
 		return nil, nil
 	}
@@ -305,32 +335,69 @@ func (t *serializerImpl) deserialize(data *DataBlob, target interface{}) error {
 
 func (t *serializerImpl) thriftrwDecode(data []byte, target interface{}) error {
 	switch target := target.(type) {
-	case *[]*workflow.HistoryEvent:
-		history := workflow.History{Events: *target}
-		if err := t.thriftrwEncoder.Decode(data, &history); err != nil {
+	case *[]*types.HistoryEvent:
+		thriftTarget := workflow.History{}
+		if err := t.thriftrwEncoder.Decode(data, &thriftTarget); err != nil {
 			return err
 		}
-		*target = history.GetEvents()
+		*target = thrift.ToHistoryEventArray(thriftTarget.GetEvents())
 		return nil
-	case *workflow.HistoryEvent:
-		return t.thriftrwEncoder.Decode(data, target)
-	case *workflow.Memo:
-		return t.thriftrwEncoder.Decode(data, target)
-	case *workflow.ResetPoints:
-		return t.thriftrwEncoder.Decode(data, target)
-	case *workflow.BadBinaries:
-		return t.thriftrwEncoder.Decode(data, target)
-	case *workflow.VersionHistories:
-		return t.thriftrwEncoder.Decode(data, target)
-	case *[]*replicator.FailoverMarkerAttributes:
-		markers := replicator.FailoverMarkers{FailoverMarkers: *target}
-		if err := t.thriftrwEncoder.Decode(data, &markers); err != nil {
+	case *types.HistoryEvent:
+		thriftTarget := workflow.HistoryEvent{}
+		if err := t.thriftrwEncoder.Decode(data, &thriftTarget); err != nil {
 			return err
 		}
-		*target = markers.GetFailoverMarkers()
+		*target = *thrift.ToHistoryEvent(&thriftTarget)
 		return nil
-	case *history.ProcessingQueueStates:
-		return t.thriftrwEncoder.Decode(data, target)
+	case *types.Memo:
+		thriftTarget := workflow.Memo{}
+		if err := t.thriftrwEncoder.Decode(data, &thriftTarget); err != nil {
+			return err
+		}
+		*target = *thrift.ToMemo(&thriftTarget)
+		return nil
+	case *types.ResetPoints:
+		thriftTarget := workflow.ResetPoints{}
+		if err := t.thriftrwEncoder.Decode(data, &thriftTarget); err != nil {
+			return err
+		}
+		*target = *thrift.ToResetPoints(&thriftTarget)
+		return nil
+	case *types.BadBinaries:
+		thriftTarget := workflow.BadBinaries{}
+		if err := t.thriftrwEncoder.Decode(data, &thriftTarget); err != nil {
+			return err
+		}
+		*target = *thrift.ToBadBinaries(&thriftTarget)
+		return nil
+	case *types.VersionHistories:
+		thriftTarget := workflow.VersionHistories{}
+		if err := t.thriftrwEncoder.Decode(data, &thriftTarget); err != nil {
+			return err
+		}
+		*target = *thrift.ToVersionHistories(&thriftTarget)
+		return nil
+	case *[]*types.FailoverMarkerAttributes:
+		thriftTarget := replicator.FailoverMarkers{}
+		if err := t.thriftrwEncoder.Decode(data, &thriftTarget); err != nil {
+			return err
+		}
+		*target = thrift.ToFailoverMarkerAttributesArray(thriftTarget.GetFailoverMarkers())
+		return nil
+	case *types.ProcessingQueueStates:
+		thriftTarget := history.ProcessingQueueStates{}
+		if err := t.thriftrwEncoder.Decode(data, &thriftTarget); err != nil {
+			return err
+		}
+		*target = *thrift.ToProcessingQueueStates(&thriftTarget)
+		return nil
+	case *types.DynamicConfigBlob:
+		thriftTarget := config.DynamicConfigBlob{}
+		if err := t.thriftrwEncoder.Decode(data, &thriftTarget); err != nil {
+			return err
+		}
+		*target = *thrift.ToDynamicConfigBlob(&thriftTarget)
+		return nil
 	default:
 		return nil
 	}

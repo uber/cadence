@@ -23,16 +23,16 @@ package queue
 import (
 	"time"
 
-	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 func convertToPersistenceTransferProcessingQueueStates(
 	states []ProcessingQueueState,
-) []*h.ProcessingQueueState {
-	pStates := make([]*h.ProcessingQueueState, 0, len(states))
+) []*types.ProcessingQueueState {
+	pStates := make([]*types.ProcessingQueueState, 0, len(states))
 	for _, state := range states {
-		pStates = append(pStates, &h.ProcessingQueueState{
+		pStates = append(pStates, &types.ProcessingQueueState{
 			Level:        common.Int32Ptr(int32(state.Level())),
 			AckLevel:     common.Int64Ptr(state.AckLevel().(transferTaskKey).taskID),
 			MaxLevel:     common.Int64Ptr(state.MaxLevel().(transferTaskKey).taskID),
@@ -44,7 +44,7 @@ func convertToPersistenceTransferProcessingQueueStates(
 }
 
 func convertFromPersistenceTransferProcessingQueueStates(
-	pStates []*h.ProcessingQueueState,
+	pStates []*types.ProcessingQueueState,
 ) []ProcessingQueueState {
 	states := make([]ProcessingQueueState, 0, len(pStates))
 	for _, pState := range pStates {
@@ -61,10 +61,10 @@ func convertFromPersistenceTransferProcessingQueueStates(
 
 func convertToPersistenceTimerProcessingQueueStates(
 	states []ProcessingQueueState,
-) []*h.ProcessingQueueState {
-	pStates := make([]*h.ProcessingQueueState, 0, len(states))
+) []*types.ProcessingQueueState {
+	pStates := make([]*types.ProcessingQueueState, 0, len(states))
 	for _, state := range states {
-		pStates = append(pStates, &h.ProcessingQueueState{
+		pStates = append(pStates, &types.ProcessingQueueState{
 			Level:        common.Int32Ptr(int32(state.Level())),
 			AckLevel:     common.Int64Ptr(state.AckLevel().(timerTaskKey).visibilityTimestamp.UnixNano()),
 			MaxLevel:     common.Int64Ptr(state.MaxLevel().(timerTaskKey).visibilityTimestamp.UnixNano()),
@@ -76,7 +76,7 @@ func convertToPersistenceTimerProcessingQueueStates(
 }
 
 func convertFromPersistenceTimerProcessingQueueStates(
-	pStates []*h.ProcessingQueueState,
+	pStates []*types.ProcessingQueueState,
 ) []ProcessingQueueState {
 	states := make([]ProcessingQueueState, 0, len(pStates))
 	for _, pState := range pStates {
@@ -93,20 +93,20 @@ func convertFromPersistenceTimerProcessingQueueStates(
 
 func convertToPersistenceDomainFilter(
 	domainFilter DomainFilter,
-) *h.DomainFilter {
+) *types.DomainFilter {
 	domainIDs := make([]string, 0, len(domainFilter.DomainIDs))
 	for domainID := range domainFilter.DomainIDs {
 		domainIDs = append(domainIDs, domainID)
 	}
 
-	return &h.DomainFilter{
+	return &types.DomainFilter{
 		DomainIDs:    domainIDs,
-		ReverseMatch: common.BoolPtr(domainFilter.ReverseMatch),
+		ReverseMatch: domainFilter.ReverseMatch,
 	}
 }
 
 func convertFromPersistenceDomainFilter(
-	domainFilter *h.DomainFilter,
+	domainFilter *types.DomainFilter,
 ) DomainFilter {
 	domainIDs := make(map[string]struct{})
 	for _, domainID := range domainFilter.DomainIDs {
@@ -117,7 +117,7 @@ func convertFromPersistenceDomainFilter(
 }
 
 func validateProcessingQueueStates(
-	pStates []*h.ProcessingQueueState,
+	pStates []*types.ProcessingQueueState,
 	ackLevel interface{},
 ) bool {
 	if len(pStates) == 0 {

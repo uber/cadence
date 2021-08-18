@@ -32,19 +32,19 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/config"
+	dc "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
-	"github.com/uber/cadence/common/service/config"
-	dc "github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -54,7 +54,7 @@ type (
 
 		minRetentionDays     int
 		maxBadBinaryCount    int
-		metadataMgr          persistence.MetadataManager
+		domainManager        persistence.DomainManager
 		mockProducer         *mocks.KafkaProducer
 		mockDomainReplicator Replicator
 		archivalMetadata     archiver.ArchivalMetadata
@@ -76,7 +76,7 @@ func (s *domainHandlerCommonSuite) SetupSuite() {
 		log.SetOutput(os.Stdout)
 	}
 
-	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{
+	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(true, true),
 	})
 	s.TestBase.Setup()
@@ -91,7 +91,7 @@ func (s *domainHandlerCommonSuite) SetupTest() {
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1
 	s.maxBadBinaryCount = 10
-	s.metadataMgr = s.TestBase.MetadataManager
+	s.domainManager = s.TestBase.DomainManager
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockDomainReplicator = NewDomainReplicator(s.mockProducer, logger)
 	s.archivalMetadata = archiver.NewArchivalMetadata(
@@ -111,7 +111,7 @@ func (s *domainHandlerCommonSuite) SetupTest() {
 	s.handler = NewHandler(
 		domainConfig,
 		logger,
-		s.metadataMgr,
+		s.domainManager,
 		s.ClusterMetadata,
 		s.mockDomainReplicator,
 		s.archivalMetadata,
@@ -191,74 +191,74 @@ func (s *domainHandlerCommonSuite) TestMergeDomainData_Nil() {
 // test merging bad binaries
 func (s *domainHandlerCommonSuite) TestMergeBadBinaries_Overriding() {
 	out := s.handler.mergeBadBinaries(
-		map[string]*shared.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason0")},
+		map[string]*types.BadBinaryInfo{
+			"k0": {Reason: "reason0"},
 		},
-		map[string]*shared.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason2")},
+		map[string]*types.BadBinaryInfo{
+			"k0": {Reason: "reason2"},
 		}, nowInt64,
 	)
 
-	assert.True(s.T(), out.Equals(&shared.BadBinaries{
-		Binaries: map[string]*shared.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason2"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
+	assert.Equal(s.T(), types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
+			"k0": {Reason: "reason2", CreatedTimeNano: common.Int64Ptr(nowInt64)},
 		},
-	}))
+	}, out)
 }
 
 func (s *domainHandlerCommonSuite) TestMergeBadBinaries_Adding() {
 	out := s.handler.mergeBadBinaries(
-		map[string]*shared.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason0")},
+		map[string]*types.BadBinaryInfo{
+			"k0": {Reason: "reason0"},
 		},
-		map[string]*shared.BadBinaryInfo{
-			"k1": {Reason: common.StringPtr("reason2")},
+		map[string]*types.BadBinaryInfo{
+			"k1": {Reason: "reason2"},
 		}, nowInt64,
 	)
 
-	expected := &shared.BadBinaries{
-		Binaries: map[string]*shared.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason0")},
-			"k1": {Reason: common.StringPtr("reason2"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
+	expected := types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
+			"k0": {Reason: "reason0"},
+			"k1": {Reason: "reason2", CreatedTimeNano: common.Int64Ptr(nowInt64)},
 		},
 	}
-	assert.Equal(s.T(), out.String(), expected.String())
+	assert.Equal(s.T(), expected, out)
 }
 
 func (s *domainHandlerCommonSuite) TestMergeBadBinaries_Merging() {
 	out := s.handler.mergeBadBinaries(
-		map[string]*shared.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason0")},
+		map[string]*types.BadBinaryInfo{
+			"k0": {Reason: "reason0"},
 		},
-		map[string]*shared.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason1")},
-			"k1": {Reason: common.StringPtr("reason2")},
+		map[string]*types.BadBinaryInfo{
+			"k0": {Reason: "reason1"},
+			"k1": {Reason: "reason2"},
 		}, nowInt64,
 	)
 
-	assert.True(s.T(), out.Equals(&shared.BadBinaries{
-		Binaries: map[string]*shared.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason1"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
-			"k1": {Reason: common.StringPtr("reason2"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
+	assert.Equal(s.T(), types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
+			"k0": {Reason: "reason1", CreatedTimeNano: common.Int64Ptr(nowInt64)},
+			"k1": {Reason: "reason2", CreatedTimeNano: common.Int64Ptr(nowInt64)},
 		},
-	}))
+	}, out)
 }
 
 func (s *domainHandlerCommonSuite) TestMergeBadBinaries_Nil() {
 	out := s.handler.mergeBadBinaries(
 		nil,
-		map[string]*shared.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason1")},
-			"k1": {Reason: common.StringPtr("reason2")},
+		map[string]*types.BadBinaryInfo{
+			"k0": {Reason: "reason1"},
+			"k1": {Reason: "reason2"},
 		}, nowInt64,
 	)
 
-	assert.True(s.T(), out.Equals(&shared.BadBinaries{
-		Binaries: map[string]*shared.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason1"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
-			"k1": {Reason: common.StringPtr("reason2"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
+	assert.Equal(s.T(), types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
+			"k0": {Reason: "reason1", CreatedTimeNano: common.Int64Ptr(nowInt64)},
+			"k1": {Reason: "reason2", CreatedTimeNano: common.Int64Ptr(nowInt64)},
 		},
-	}))
+	}, out)
 }
 
 func (s *domainHandlerCommonSuite) TestListDomain() {
@@ -270,20 +270,20 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 	data1 := map[string]string{"some random key 1": "some random value 1"}
 	isGlobalDomain1 := false
 	activeClusterName1 := s.ClusterMetadata.GetCurrentClusterName()
-	var cluster1 []*shared.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
-		cluster1 = append(cluster1, &shared.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(replicationConfig.ClusterName),
+	var cluster1 []*types.ClusterReplicationConfiguration
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+		cluster1 = append(cluster1, &types.ClusterReplicationConfiguration{
+			ClusterName: replicationConfig.ClusterName,
 		})
 	}
-	err := s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName1),
-		Description:                            common.StringPtr(description1),
-		OwnerEmail:                             common.StringPtr(email1),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention1),
+	err := s.handler.RegisterDomain(context.Background(), &types.RegisterDomainRequest{
+		Name:                                   domainName1,
+		Description:                            description1,
+		OwnerEmail:                             email1,
+		WorkflowExecutionRetentionPeriodInDays: retention1,
 		EmitMetric:                             common.BoolPtr(emitMetric1),
 		Data:                                   data1,
-		IsGlobalDomain:                         common.BoolPtr(isGlobalDomain1),
+		IsGlobalDomain:                         isGlobalDomain1,
 	})
 	s.Nil(err)
 
@@ -295,35 +295,38 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 	data2 := map[string]string{"some random key 2": "some random value 2"}
 	isGlobalDomain2 := true
 	activeClusterName2 := ""
-	var cluster2 []*shared.ClusterReplicationConfiguration
-	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
+	var cluster2 []*types.ClusterReplicationConfiguration
+	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName2 = clusterName
 		}
-		cluster2 = append(cluster2, &shared.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterName),
+		cluster2 = append(cluster2, &types.ClusterReplicationConfiguration{
+			ClusterName: clusterName,
 		})
 	}
 	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
-	err = s.handler.RegisterDomain(context.Background(), &shared.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName2),
-		Description:                            common.StringPtr(description2),
-		OwnerEmail:                             common.StringPtr(email2),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention2),
+	err = s.handler.RegisterDomain(context.Background(), &types.RegisterDomainRequest{
+		Name:                                   domainName2,
+		Description:                            description2,
+		OwnerEmail:                             email2,
+		WorkflowExecutionRetentionPeriodInDays: retention2,
 		EmitMetric:                             common.BoolPtr(emitMetric2),
 		Clusters:                               cluster2,
-		ActiveClusterName:                      common.StringPtr(activeClusterName2),
+		ActiveClusterName:                      activeClusterName2,
 		Data:                                   data2,
-		IsGlobalDomain:                         common.BoolPtr(isGlobalDomain2),
+		IsGlobalDomain:                         isGlobalDomain2,
 	})
 	s.Nil(err)
 
-	domains := map[string]*shared.DescribeDomainResponse{}
+	domains := map[string]*types.DescribeDomainResponse{}
 	pagesize := int32(1)
 	var token []byte
 	for doPaging := true; doPaging; doPaging = len(token) > 0 {
-		resp, err := s.handler.ListDomains(context.Background(), &shared.ListDomainsRequest{
-			PageSize:      common.Int32Ptr(pagesize),
+		resp, err := s.handler.ListDomains(context.Background(), &types.ListDomainsRequest{
+			PageSize:      pagesize,
 			NextPageToken: token,
 		})
 		s.Nil(err)
@@ -331,71 +334,71 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 		s.True(len(resp.Domains) <= int(pagesize))
 		if len(resp.Domains) > 0 {
 			s.NotEmpty(resp.Domains[0].DomainInfo.GetUUID())
-			resp.Domains[0].DomainInfo.UUID = common.StringPtr("")
+			resp.Domains[0].DomainInfo.UUID = ""
 			domains[resp.Domains[0].DomainInfo.GetName()] = resp.Domains[0]
 		}
 	}
 	delete(domains, common.SystemLocalDomainName)
-	s.Equal(map[string]*shared.DescribeDomainResponse{
-		domainName1: &shared.DescribeDomainResponse{
-			DomainInfo: &shared.DomainInfo{
-				Name:        common.StringPtr(domainName1),
-				Status:      shared.DomainStatusRegistered.Ptr(),
-				Description: common.StringPtr(description1),
-				OwnerEmail:  common.StringPtr(email1),
+	s.Equal(map[string]*types.DescribeDomainResponse{
+		domainName1: {
+			DomainInfo: &types.DomainInfo{
+				Name:        domainName1,
+				Status:      types.DomainStatusRegistered.Ptr(),
+				Description: description1,
+				OwnerEmail:  email1,
 				Data:        data1,
-				UUID:        common.StringPtr(""),
+				UUID:        "",
 			},
-			Configuration: &shared.DomainConfiguration{
-				WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention1),
-				EmitMetric:                             common.BoolPtr(emitMetric1),
-				HistoryArchivalStatus:                  shared.ArchivalStatusDisabled.Ptr(),
-				HistoryArchivalURI:                     common.StringPtr(""),
-				VisibilityArchivalStatus:               shared.ArchivalStatusDisabled.Ptr(),
-				VisibilityArchivalURI:                  common.StringPtr(""),
-				BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
+			Configuration: &types.DomainConfiguration{
+				WorkflowExecutionRetentionPeriodInDays: retention1,
+				EmitMetric:                             emitMetric1,
+				HistoryArchivalStatus:                  types.ArchivalStatusDisabled.Ptr(),
+				HistoryArchivalURI:                     "",
+				VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
+				VisibilityArchivalURI:                  "",
+				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 			},
-			ReplicationConfiguration: &shared.DomainReplicationConfiguration{
-				ActiveClusterName: common.StringPtr(activeClusterName1),
+			ReplicationConfiguration: &types.DomainReplicationConfiguration{
+				ActiveClusterName: activeClusterName1,
 				Clusters:          cluster1,
 			},
-			FailoverVersion: common.Int64Ptr(common.EmptyVersion),
-			IsGlobalDomain:  common.BoolPtr(isGlobalDomain1),
+			FailoverVersion: common.EmptyVersion,
+			IsGlobalDomain:  isGlobalDomain1,
 		},
-		domainName2: &shared.DescribeDomainResponse{
-			DomainInfo: &shared.DomainInfo{
-				Name:        common.StringPtr(domainName2),
-				Status:      shared.DomainStatusRegistered.Ptr(),
-				Description: common.StringPtr(description2),
-				OwnerEmail:  common.StringPtr(email2),
+		domainName2: {
+			DomainInfo: &types.DomainInfo{
+				Name:        domainName2,
+				Status:      types.DomainStatusRegistered.Ptr(),
+				Description: description2,
+				OwnerEmail:  email2,
 				Data:        data2,
-				UUID:        common.StringPtr(""),
+				UUID:        "",
 			},
-			Configuration: &shared.DomainConfiguration{
-				WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention2),
-				EmitMetric:                             common.BoolPtr(emitMetric2),
-				HistoryArchivalStatus:                  shared.ArchivalStatusDisabled.Ptr(),
-				HistoryArchivalURI:                     common.StringPtr(""),
-				VisibilityArchivalStatus:               shared.ArchivalStatusDisabled.Ptr(),
-				VisibilityArchivalURI:                  common.StringPtr(""),
-				BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
+			Configuration: &types.DomainConfiguration{
+				WorkflowExecutionRetentionPeriodInDays: retention2,
+				EmitMetric:                             emitMetric2,
+				HistoryArchivalStatus:                  types.ArchivalStatusDisabled.Ptr(),
+				HistoryArchivalURI:                     "",
+				VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
+				VisibilityArchivalURI:                  "",
+				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 			},
-			ReplicationConfiguration: &shared.DomainReplicationConfiguration{
-				ActiveClusterName: common.StringPtr(activeClusterName2),
+			ReplicationConfiguration: &types.DomainReplicationConfiguration{
+				ActiveClusterName: activeClusterName2,
 				Clusters:          cluster2,
 			},
-			FailoverVersion: common.Int64Ptr(s.ClusterMetadata.GetNextFailoverVersion(activeClusterName2, 0)),
-			IsGlobalDomain:  common.BoolPtr(isGlobalDomain2),
+			FailoverVersion: s.ClusterMetadata.GetNextFailoverVersion(activeClusterName2, 0),
+			IsGlobalDomain:  isGlobalDomain2,
 		},
 	}, domains)
 }
 
 func (s *domainHandlerCommonSuite) TestRegisterDomain_InvalidRetentionPeriod() {
-	registerRequest := &workflow.RegisterDomainRequest{
-		Name:                                   common.StringPtr("random domain name"),
-		Description:                            common.StringPtr("random domain name"),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(0)),
-		IsGlobalDomain:                         common.BoolPtr(false),
+	registerRequest := &types.RegisterDomainRequest{
+		Name:                                   "random domain name",
+		Description:                            "random domain name",
+		WorkflowExecutionRetentionPeriodInDays: int32(0),
+		IsGlobalDomain:                         false,
 	}
 	err := s.handler.RegisterDomain(context.Background(), registerRequest)
 	s.Equal(errInvalidRetentionPeriod, err)
@@ -403,20 +406,18 @@ func (s *domainHandlerCommonSuite) TestRegisterDomain_InvalidRetentionPeriod() {
 
 func (s *domainHandlerCommonSuite) TestUpdateDomain_InvalidRetentionPeriod() {
 	domain := "random domain name"
-	registerRequest := &workflow.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domain),
-		Description:                            common.StringPtr(domain),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(10)),
-		IsGlobalDomain:                         common.BoolPtr(false),
+	registerRequest := &types.RegisterDomainRequest{
+		Name:                                   domain,
+		Description:                            domain,
+		WorkflowExecutionRetentionPeriodInDays: int32(10),
+		IsGlobalDomain:                         false,
 	}
 	err := s.handler.RegisterDomain(context.Background(), registerRequest)
 	s.NoError(err)
 
-	updateRequest := &workflow.UpdateDomainRequest{
-		Name: common.StringPtr(domain),
-		Configuration: &workflow.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(-1)),
-		},
+	updateRequest := &types.UpdateDomainRequest{
+		Name:                                   domain,
+		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(-1)),
 	}
 	_, err = s.handler.UpdateDomain(context.Background(), updateRequest)
 	s.Equal(errInvalidRetentionPeriod, err)
@@ -425,39 +426,33 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_InvalidRetentionPeriod() {
 func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_Success() {
 	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Twice()
 	domain := uuid.New()
-	registerRequest := &workflow.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domain),
-		Description:                            common.StringPtr(domain),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(10)),
-		IsGlobalDomain:                         common.BoolPtr(true),
-		ActiveClusterName:                      common.StringPtr("standby"),
-		Clusters: []*workflow.ClusterReplicationConfiguration{
-			{
-				common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-			},
-			{
-				common.StringPtr("standby"),
-			},
+	registerRequest := &types.RegisterDomainRequest{
+		Name:                                   domain,
+		Description:                            domain,
+		WorkflowExecutionRetentionPeriodInDays: int32(10),
+		IsGlobalDomain:                         true,
+		ActiveClusterName:                      "standby",
+		Clusters: []*types.ClusterReplicationConfiguration{
+			{ClusterName: s.ClusterMetadata.GetCurrentClusterName()},
+			{ClusterName: "standby"},
 		},
 	}
 	err := s.handler.RegisterDomain(context.Background(), registerRequest)
 	s.NoError(err)
-	resp1, _ := s.metadataMgr.GetDomain(context.Background(), &persistence.GetDomainRequest{
+	resp1, _ := s.domainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{
 		Name: domain,
 	})
 	s.Equal("standby", resp1.ReplicationConfig.ActiveClusterName)
 	s.Equal(cluster.TestAlternativeClusterInitialFailoverVersion, resp1.FailoverVersion)
 
-	updateRequest := &workflow.UpdateDomainRequest{
-		Name: common.StringPtr(domain),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-		},
+	updateRequest := &types.UpdateDomainRequest{
+		Name:                     domain,
+		ActiveClusterName:        common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
 		FailoverTimeoutInSeconds: common.Int32Ptr(100),
 	}
 	resp, err := s.handler.UpdateDomain(context.Background(), updateRequest)
 	s.NoError(err)
-	resp2, err := s.metadataMgr.GetDomain(context.Background(), &persistence.GetDomainRequest{
+	resp2, err := s.domainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{
 		ID: resp.GetDomainInfo().GetUUID(),
 	})
 	s.NoError(err)
@@ -469,29 +464,23 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_Success() {
 func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_NotCurrentActiveCluster() {
 	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
 	domain := uuid.New()
-	registerRequest := &workflow.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domain),
-		Description:                            common.StringPtr(domain),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(10)),
-		IsGlobalDomain:                         common.BoolPtr(true),
-		ActiveClusterName:                      common.StringPtr("active"),
-		Clusters: []*workflow.ClusterReplicationConfiguration{
-			{
-				common.StringPtr("active"),
-			},
-			{
-				common.StringPtr("standby"),
-			},
+	registerRequest := &types.RegisterDomainRequest{
+		Name:                                   domain,
+		Description:                            domain,
+		WorkflowExecutionRetentionPeriodInDays: int32(10),
+		IsGlobalDomain:                         true,
+		ActiveClusterName:                      "active",
+		Clusters: []*types.ClusterReplicationConfiguration{
+			{ClusterName: "active"},
+			{ClusterName: "standby"},
 		},
 	}
 	err := s.handler.RegisterDomain(context.Background(), registerRequest)
 	s.NoError(err)
 
-	updateRequest := &workflow.UpdateDomainRequest{
-		Name: common.StringPtr(domain),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr("standby"),
-		},
+	updateRequest := &types.UpdateDomainRequest{
+		Name:                     domain,
+		ActiveClusterName:        common.StringPtr("standby"),
 		FailoverTimeoutInSeconds: common.Int32Ptr(100),
 	}
 	_, err = s.handler.UpdateDomain(context.Background(), updateRequest)
@@ -501,29 +490,23 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_NotCurrentA
 func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_OngoingFailover() {
 	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Twice()
 	domain := uuid.New()
-	registerRequest := &workflow.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domain),
-		Description:                            common.StringPtr(domain),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(10)),
-		IsGlobalDomain:                         common.BoolPtr(true),
-		ActiveClusterName:                      common.StringPtr("standby"),
-		Clusters: []*workflow.ClusterReplicationConfiguration{
-			{
-				common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-			},
-			{
-				common.StringPtr("standby"),
-			},
+	registerRequest := &types.RegisterDomainRequest{
+		Name:                                   domain,
+		Description:                            domain,
+		WorkflowExecutionRetentionPeriodInDays: int32(10),
+		IsGlobalDomain:                         true,
+		ActiveClusterName:                      "standby",
+		Clusters: []*types.ClusterReplicationConfiguration{
+			{ClusterName: s.ClusterMetadata.GetCurrentClusterName()},
+			{ClusterName: "standby"},
 		},
 	}
 	err := s.handler.RegisterDomain(context.Background(), registerRequest)
 	s.NoError(err)
 
-	updateRequest := &workflow.UpdateDomainRequest{
-		Name: common.StringPtr(domain),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-		},
+	updateRequest := &types.UpdateDomainRequest{
+		Name:                     domain,
+		ActiveClusterName:        common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
 		FailoverTimeoutInSeconds: common.Int32Ptr(100),
 	}
 	_, err = s.handler.UpdateDomain(context.Background(), updateRequest)
@@ -535,29 +518,23 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_OngoingFail
 func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_NoUpdateActiveCluster() {
 	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
 	domain := uuid.New()
-	registerRequest := &workflow.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domain),
-		Description:                            common.StringPtr(domain),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(10)),
-		IsGlobalDomain:                         common.BoolPtr(true),
-		ActiveClusterName:                      common.StringPtr("standby"),
-		Clusters: []*workflow.ClusterReplicationConfiguration{
-			{
-				common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-			},
-			{
-				common.StringPtr("standby"),
-			},
+	registerRequest := &types.RegisterDomainRequest{
+		Name:                                   domain,
+		Description:                            domain,
+		WorkflowExecutionRetentionPeriodInDays: int32(10),
+		IsGlobalDomain:                         true,
+		ActiveClusterName:                      "standby",
+		Clusters: []*types.ClusterReplicationConfiguration{
+			{ClusterName: s.ClusterMetadata.GetCurrentClusterName()},
+			{ClusterName: "standby"},
 		},
 	}
 	err := s.handler.RegisterDomain(context.Background(), registerRequest)
 	s.NoError(err)
 
-	updateRequest := &workflow.UpdateDomainRequest{
-		Name: common.StringPtr(domain),
-		UpdatedInfo: &workflow.UpdateDomainInfo{
-			OwnerEmail: common.StringPtr("test"),
-		},
+	updateRequest := &types.UpdateDomainRequest{
+		Name:                     domain,
+		OwnerEmail:               common.StringPtr("test"),
 		FailoverTimeoutInSeconds: common.Int32Ptr(100),
 	}
 	_, err = s.handler.UpdateDomain(context.Background(), updateRequest)
@@ -567,45 +544,37 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_NoUpdateAct
 func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_After_ForceFailover() {
 	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Times(3)
 	domain := uuid.New()
-	registerRequest := &workflow.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domain),
-		Description:                            common.StringPtr(domain),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(10)),
-		IsGlobalDomain:                         common.BoolPtr(true),
-		ActiveClusterName:                      common.StringPtr("standby"),
-		Clusters: []*workflow.ClusterReplicationConfiguration{
-			{
-				common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-			},
-			{
-				common.StringPtr("standby"),
-			},
+	registerRequest := &types.RegisterDomainRequest{
+		Name:                                   domain,
+		Description:                            domain,
+		WorkflowExecutionRetentionPeriodInDays: int32(10),
+		IsGlobalDomain:                         true,
+		ActiveClusterName:                      "standby",
+		Clusters: []*types.ClusterReplicationConfiguration{
+			{ClusterName: s.ClusterMetadata.GetCurrentClusterName()},
+			{ClusterName: "standby"},
 		},
 	}
 	err := s.handler.RegisterDomain(context.Background(), registerRequest)
 	s.NoError(err)
 
 	// Start graceful failover
-	updateRequest := &workflow.UpdateDomainRequest{
-		Name: common.StringPtr(domain),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-		},
+	updateRequest := &types.UpdateDomainRequest{
+		Name:                     domain,
+		ActiveClusterName:        common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
 		FailoverTimeoutInSeconds: common.Int32Ptr(100),
 	}
 	resp, err := s.handler.UpdateDomain(context.Background(), updateRequest)
 	s.NoError(err)
 
 	// Force failover
-	updateRequest = &workflow.UpdateDomainRequest{
-		Name: common.StringPtr(domain),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-		},
+	updateRequest = &types.UpdateDomainRequest{
+		Name:              domain,
+		ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
 	}
 	_, err = s.handler.UpdateDomain(context.Background(), updateRequest)
 	s.NoError(err)
-	resp2, err := s.metadataMgr.GetDomain(context.Background(), &persistence.GetDomainRequest{
+	resp2, err := s.domainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{
 		ID: resp.GetDomainInfo().GetUUID(),
 	})
 	s.NoError(err)
@@ -615,30 +584,24 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_After_Force
 func (s *domainHandlerCommonSuite) TestUpdateDomain_ForceFailover_SameActiveCluster() {
 	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Twice()
 	domain := uuid.New()
-	registerRequest := &workflow.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domain),
-		Description:                            common.StringPtr(domain),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(10)),
-		IsGlobalDomain:                         common.BoolPtr(true),
-		ActiveClusterName:                      common.StringPtr("standby"),
-		Clusters: []*workflow.ClusterReplicationConfiguration{
-			{
-				common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-			},
-			{
-				common.StringPtr("standby"),
-			},
+	registerRequest := &types.RegisterDomainRequest{
+		Name:                                   domain,
+		Description:                            domain,
+		WorkflowExecutionRetentionPeriodInDays: int32(10),
+		IsGlobalDomain:                         true,
+		ActiveClusterName:                      "standby",
+		Clusters: []*types.ClusterReplicationConfiguration{
+			{ClusterName: s.ClusterMetadata.GetCurrentClusterName()},
+			{ClusterName: "standby"},
 		},
 	}
 	err := s.handler.RegisterDomain(context.Background(), registerRequest)
 	s.NoError(err)
 
 	// Start graceful failover
-	updateRequest := &workflow.UpdateDomainRequest{
-		Name: common.StringPtr(domain),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr("standby"),
-		},
+	updateRequest := &types.UpdateDomainRequest{
+		Name:              domain,
+		ActiveClusterName: common.StringPtr("standby"),
 	}
 	_, err = s.handler.UpdateDomain(context.Background(), updateRequest)
 	s.NoError(err)

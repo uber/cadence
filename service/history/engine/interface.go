@@ -25,11 +25,9 @@ package engine
 import (
 	"context"
 
-	h "github.com/uber/cadence/.gen/go/history"
-	r "github.com/uber/cadence/.gen/go/replicator"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/events"
 )
 
@@ -38,46 +36,51 @@ type (
 	Engine interface {
 		common.Daemon
 
-		StartWorkflowExecution(ctx context.Context, request *h.StartWorkflowExecutionRequest) (*workflow.StartWorkflowExecutionResponse, error)
-		GetMutableState(ctx context.Context, request *h.GetMutableStateRequest) (*h.GetMutableStateResponse, error)
-		PollMutableState(ctx context.Context, request *h.PollMutableStateRequest) (*h.PollMutableStateResponse, error)
-		DescribeMutableState(ctx context.Context, request *h.DescribeMutableStateRequest) (*h.DescribeMutableStateResponse, error)
-		ResetStickyTaskList(ctx context.Context, resetRequest *h.ResetStickyTaskListRequest) (*h.ResetStickyTaskListResponse, error)
-		DescribeWorkflowExecution(ctx context.Context, request *h.DescribeWorkflowExecutionRequest) (*workflow.DescribeWorkflowExecutionResponse, error)
-		RecordDecisionTaskStarted(ctx context.Context, request *h.RecordDecisionTaskStartedRequest) (*h.RecordDecisionTaskStartedResponse, error)
-		RecordActivityTaskStarted(ctx context.Context, request *h.RecordActivityTaskStartedRequest) (*h.RecordActivityTaskStartedResponse, error)
-		RespondDecisionTaskCompleted(ctx context.Context, request *h.RespondDecisionTaskCompletedRequest) (*h.RespondDecisionTaskCompletedResponse, error)
-		RespondDecisionTaskFailed(ctx context.Context, request *h.RespondDecisionTaskFailedRequest) error
-		RespondActivityTaskCompleted(ctx context.Context, request *h.RespondActivityTaskCompletedRequest) error
-		RespondActivityTaskFailed(ctx context.Context, request *h.RespondActivityTaskFailedRequest) error
-		RespondActivityTaskCanceled(ctx context.Context, request *h.RespondActivityTaskCanceledRequest) error
-		RecordActivityTaskHeartbeat(ctx context.Context, request *h.RecordActivityTaskHeartbeatRequest) (*workflow.RecordActivityTaskHeartbeatResponse, error)
-		RequestCancelWorkflowExecution(ctx context.Context, request *h.RequestCancelWorkflowExecutionRequest) error
-		SignalWorkflowExecution(ctx context.Context, request *h.SignalWorkflowExecutionRequest) error
-		SignalWithStartWorkflowExecution(ctx context.Context, request *h.SignalWithStartWorkflowExecutionRequest) (*workflow.StartWorkflowExecutionResponse, error)
-		RemoveSignalMutableState(ctx context.Context, request *h.RemoveSignalMutableStateRequest) error
-		TerminateWorkflowExecution(ctx context.Context, request *h.TerminateWorkflowExecutionRequest) error
-		ResetWorkflowExecution(ctx context.Context, request *h.ResetWorkflowExecutionRequest) (*workflow.ResetWorkflowExecutionResponse, error)
-		ScheduleDecisionTask(ctx context.Context, request *h.ScheduleDecisionTaskRequest) error
-		RecordChildExecutionCompleted(ctx context.Context, request *h.RecordChildExecutionCompletedRequest) error
-		ReplicateEventsV2(ctx context.Context, request *h.ReplicateEventsV2Request) error
-		SyncShardStatus(ctx context.Context, request *h.SyncShardStatusRequest) error
-		SyncActivity(ctx context.Context, request *h.SyncActivityRequest) error
-		GetReplicationMessages(ctx context.Context, pollingCluster string, lastReadMessageID int64) (*r.ReplicationMessages, error)
-		GetDLQReplicationMessages(ctx context.Context, taskInfos []*r.ReplicationTaskInfo) ([]*r.ReplicationTask, error)
-		QueryWorkflow(ctx context.Context, request *h.QueryWorkflowRequest) (*h.QueryWorkflowResponse, error)
-		ReapplyEvents(ctx context.Context, domainUUID string, workflowID string, runID string, events []*workflow.HistoryEvent) error
-		ReadDLQMessages(ctx context.Context, messagesRequest *r.ReadDLQMessagesRequest) (*r.ReadDLQMessagesResponse, error)
-		PurgeDLQMessages(ctx context.Context, messagesRequest *r.PurgeDLQMessagesRequest) error
-		MergeDLQMessages(ctx context.Context, messagesRequest *r.MergeDLQMessagesRequest) (*r.MergeDLQMessagesResponse, error)
-		RefreshWorkflowTasks(ctx context.Context, domainUUID string, execution workflow.WorkflowExecution) error
+		StartWorkflowExecution(ctx context.Context, request *types.HistoryStartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error)
+		GetMutableState(ctx context.Context, request *types.GetMutableStateRequest) (*types.GetMutableStateResponse, error)
+		PollMutableState(ctx context.Context, request *types.PollMutableStateRequest) (*types.PollMutableStateResponse, error)
+		DescribeMutableState(ctx context.Context, request *types.DescribeMutableStateRequest) (*types.DescribeMutableStateResponse, error)
+		ResetStickyTaskList(ctx context.Context, resetRequest *types.HistoryResetStickyTaskListRequest) (*types.HistoryResetStickyTaskListResponse, error)
+		DescribeWorkflowExecution(ctx context.Context, request *types.HistoryDescribeWorkflowExecutionRequest) (*types.DescribeWorkflowExecutionResponse, error)
+		RecordDecisionTaskStarted(ctx context.Context, request *types.RecordDecisionTaskStartedRequest) (*types.RecordDecisionTaskStartedResponse, error)
+		RecordActivityTaskStarted(ctx context.Context, request *types.RecordActivityTaskStartedRequest) (*types.RecordActivityTaskStartedResponse, error)
+		RespondDecisionTaskCompleted(ctx context.Context, request *types.HistoryRespondDecisionTaskCompletedRequest) (*types.HistoryRespondDecisionTaskCompletedResponse, error)
+		RespondDecisionTaskFailed(ctx context.Context, request *types.HistoryRespondDecisionTaskFailedRequest) error
+		RespondActivityTaskCompleted(ctx context.Context, request *types.HistoryRespondActivityTaskCompletedRequest) error
+		RespondActivityTaskFailed(ctx context.Context, request *types.HistoryRespondActivityTaskFailedRequest) error
+		RespondActivityTaskCanceled(ctx context.Context, request *types.HistoryRespondActivityTaskCanceledRequest) error
+		RecordActivityTaskHeartbeat(ctx context.Context, request *types.HistoryRecordActivityTaskHeartbeatRequest) (*types.RecordActivityTaskHeartbeatResponse, error)
+		RequestCancelWorkflowExecution(ctx context.Context, request *types.HistoryRequestCancelWorkflowExecutionRequest) error
+		SignalWorkflowExecution(ctx context.Context, request *types.HistorySignalWorkflowExecutionRequest) error
+		SignalWithStartWorkflowExecution(ctx context.Context, request *types.HistorySignalWithStartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error)
+		RemoveSignalMutableState(ctx context.Context, request *types.RemoveSignalMutableStateRequest) error
+		TerminateWorkflowExecution(ctx context.Context, request *types.HistoryTerminateWorkflowExecutionRequest) error
+		ResetWorkflowExecution(ctx context.Context, request *types.HistoryResetWorkflowExecutionRequest) (*types.ResetWorkflowExecutionResponse, error)
+		ScheduleDecisionTask(ctx context.Context, request *types.ScheduleDecisionTaskRequest) error
+		RecordChildExecutionCompleted(ctx context.Context, request *types.RecordChildExecutionCompletedRequest) error
+		ReplicateEventsV2(ctx context.Context, request *types.ReplicateEventsV2Request) error
+		SyncShardStatus(ctx context.Context, request *types.SyncShardStatusRequest) error
+		SyncActivity(ctx context.Context, request *types.SyncActivityRequest) error
+		GetReplicationMessages(ctx context.Context, pollingCluster string, lastReadMessageID int64) (*types.ReplicationMessages, error)
+		GetDLQReplicationMessages(ctx context.Context, taskInfos []*types.ReplicationTaskInfo) ([]*types.ReplicationTask, error)
+		GetCrossClusterTasks(ctx context.Context, targetCluster string) ([]*types.CrossClusterTaskRequest, error)
+		RespondCrossClusterTasksCompleted(ctx context.Context, targetCluster string, responses []*types.CrossClusterTaskResponse) error
+		QueryWorkflow(ctx context.Context, request *types.HistoryQueryWorkflowRequest) (*types.HistoryQueryWorkflowResponse, error)
+		ReapplyEvents(ctx context.Context, domainUUID string, workflowID string, runID string, events []*types.HistoryEvent) error
+		ReadDLQMessages(ctx context.Context, messagesRequest *types.ReadDLQMessagesRequest) (*types.ReadDLQMessagesResponse, error)
+		PurgeDLQMessages(ctx context.Context, messagesRequest *types.PurgeDLQMessagesRequest) error
+		MergeDLQMessages(ctx context.Context, messagesRequest *types.MergeDLQMessagesRequest) (*types.MergeDLQMessagesResponse, error)
+		RefreshWorkflowTasks(ctx context.Context, domainUUID string, execution types.WorkflowExecution) error
 		ResetTransferQueue(ctx context.Context, clusterName string) error
 		ResetTimerQueue(ctx context.Context, clusterName string) error
-		DescribeTransferQueue(ctx context.Context, clusterName string) (*workflow.DescribeQueueResponse, error)
-		DescribeTimerQueue(ctx context.Context, clusterName string) (*workflow.DescribeQueueResponse, error)
+		ResetCrossClusterQueue(ctx context.Context, clusterName string) error
+		DescribeTransferQueue(ctx context.Context, clusterName string) (*types.DescribeQueueResponse, error)
+		DescribeTimerQueue(ctx context.Context, clusterName string) (*types.DescribeQueueResponse, error)
+		DescribeCrossClusterQueue(ctx context.Context, clusterName string) (*types.DescribeQueueResponse, error)
 
 		NotifyNewHistoryEvent(event *events.Notification)
-		NotifyNewTransferTasks(tasks []persistence.Task)
-		NotifyNewTimerTasks(tasks []persistence.Task)
+		NotifyNewTransferTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
+		NotifyNewTimerTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
+		NotifyNewCrossClusterTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
 	}
 )

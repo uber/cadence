@@ -1,0 +1,34 @@
+archival:
+  history:
+    status: "disabled"
+    enableRead: false
+  visibility:
+    status: "disabled"
+    enableRead: false
+
+domainDefaults:
+  archival:
+    history:
+      status: "disabled"
+      URI: ""
+    visibility:
+      status: "disabled"
+      URI: ""
+
+dynamicconfig:
+  client: filebased
+  filebased:
+    filepath: "config/dynamicconfig/development_oauth.yaml"
+
+blobstore:
+  filestore:
+    outputDirectory: "/tmp/blobstore"
+
+authorization:
+  oauthAuthorizer:
+    enable: true
+    maxJwtTTL: 600000000
+    jwtCredentials:
+      algorithm: "RS256"
+      publicKey: "config/credentials/keytest.pub"
+      privateKey: "config/credentials/keytest"

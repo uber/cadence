@@ -26,12 +26,11 @@ import (
 	"sort"
 	"time"
 
-	"github.com/gocql/gocql"
-
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -78,15 +77,15 @@ func (db *cdb) InsertIntoHistoryTreeAndNode(ctx context.Context, treeRow *nosqlp
 		// Note: for perf, prefer using batch for inserting more than one records
 		batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 		batch.Query(v2templateInsertTree,
-			treeRow.TreeID, treeRow.BranchID, ancs, treeRow.CreateTimestampMilliseconds, treeRow.Info)
+			treeRow.TreeID, treeRow.BranchID, ancs, p.UnixNanoToDBTimestamp(treeRow.CreateTimestamp.UnixNano()), treeRow.Info)
 		batch.Query(v2templateUpsertData,
 			nodeRow.TreeID, nodeRow.BranchID, nodeRow.NodeID, nodeRow.TxnID, nodeRow.Data, nodeRow.DataEncoding)
 		err = db.session.ExecuteBatch(batch)
 	} else {
-		var query *gocql.Query
+		var query gocql.Query
 		if treeRow != nil {
 			query = db.session.Query(v2templateInsertTree,
-				treeRow.TreeID, treeRow.BranchID, ancs, treeRow.CreateTimestampMilliseconds, treeRow.Info).WithContext(ctx)
+				treeRow.TreeID, treeRow.BranchID, ancs, p.UnixNanoToDBTimestamp(treeRow.CreateTimestamp.UnixNano()), treeRow.Info).WithContext(ctx)
 		}
 		if nodeRow != nil {
 			query = db.session.Query(v2templateUpsertData,
@@ -104,7 +103,7 @@ func (db *cdb) SelectFromHistoryNode(ctx context.Context, filter *nosqlplugin.Hi
 
 	iter := query.PageSize(filter.PageSize).PageState(filter.NextPageToken).Iter()
 	if iter == nil {
-		return nil, nil, &shared.InternalServiceError{
+		return nil, nil, &types.InternalServiceError{
 			Message: "SelectFromHistoryNode operation failed.  Not able to create query iterator.",
 		}
 	}
@@ -141,20 +140,17 @@ func (db *cdb) SelectAllHistoryTrees(ctx context.Context, nextPageToken []byte, 
 
 	iter := query.PageSize(int(pageSize)).PageState(nextPageToken).Iter()
 	if iter == nil {
-		return nil, nil, &shared.InternalServiceError{
+		return nil, nil, &types.InternalServiceError{
 			Message: "SelectAllHistoryTrees operation failed.  Not able to create query iterator.",
 		}
 	}
 	pagingToken := iter.PageState()
 
-	// Ideally we should just use int64. But we have been using time.Time for a long time.
-	// I am not sure using a int64 will behave the same.
-	// Therefore, here still using a time.Time to read, and then convert to int64
 	createTime := time.Time{}
 	var rows []*nosqlplugin.HistoryTreeRow
 	row := &nosqlplugin.HistoryTreeRow{}
 	for iter.Scan(&row.TreeID, &row.BranchID, &createTime, &row.Info) {
-		row.CreateTimestampMilliseconds = p.UnixNanoToDBTimestamp(createTime.UnixNano())
+		row.CreateTimestamp = time.Unix(0, p.DBTimestampToUnixNano(p.UnixNanoToDBTimestamp(createTime.UnixNano())))
 		rows = append(rows, row)
 		row = &nosqlplugin.HistoryTreeRow{}
 	}
@@ -169,18 +165,18 @@ func (db *cdb) SelectAllHistoryTrees(ctx context.Context, nextPageToken []byte, 
 func (db *cdb) SelectFromHistoryTree(ctx context.Context, filter *nosqlplugin.HistoryTreeFilter) ([]*nosqlplugin.HistoryTreeRow, error) {
 	query := db.session.Query(v2templateReadAllBranches, filter.TreeID).WithContext(ctx)
 	var pagingToken []byte
-	var iter *gocql.Iter
+	var iter gocql.Iter
 	var rows []*nosqlplugin.HistoryTreeRow
 	for {
 		iter = query.PageSize(100).PageState(pagingToken).Iter()
 		if iter == nil {
-			return nil, &shared.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: "SelectFromHistoryTree operation failed.  Not able to create query iterator.",
 			}
 		}
 		pagingToken = iter.PageState()
 
-		branchUUID := gocql.UUID{}
+		branchUUID := ""
 		var ancsResult []map[string]interface{}
 		// Ideally we should just use int64. But we have been using time.Time for a long time.
 		// I am not sure using a int64 will behave the same.
@@ -192,12 +188,12 @@ func (db *cdb) SelectFromHistoryTree(ctx context.Context, filter *nosqlplugin.Hi
 			ancs := parseBranchAncestors(ancsResult)
 			row := &nosqlplugin.HistoryTreeRow{
 				TreeID:    filter.TreeID,
-				BranchID:  branchUUID.String(),
+				BranchID:  branchUUID,
 				Ancestors: ancs,
 			}
 			rows = append(rows, row)
 
-			branchUUID = gocql.UUID{}
+			branchUUID = ""
 			ancsResult = []map[string]interface{}{}
 			createTime = time.Time{}
 			info = ""
@@ -216,11 +212,11 @@ func (db *cdb) SelectFromHistoryTree(ctx context.Context, filter *nosqlplugin.Hi
 
 func parseBranchAncestors(
 	ancestors []map[string]interface{},
-) []*shared.HistoryBranchRange {
+) []*types.HistoryBranchRange {
 
-	ans := make([]*shared.HistoryBranchRange, 0, len(ancestors))
+	ans := make([]*types.HistoryBranchRange, 0, len(ancestors))
 	for _, e := range ancestors {
-		an := &shared.HistoryBranchRange{}
+		an := &types.HistoryBranchRange{}
 		for k, v := range e {
 			switch k {
 			case "branch_id":

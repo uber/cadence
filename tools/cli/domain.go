@@ -22,7 +22,6 @@ package cli
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/urfave/cli"
 )
@@ -46,22 +45,6 @@ func checkRequiredDomainDataKVs(domainData map[string]string) error {
 	return nil
 }
 
-func parseDomainDataKVs(domainDataStr string) (map[string]string, error) {
-	kvstrs := strings.Split(domainDataStr, ",")
-	kvMap := map[string]string{}
-	for _, kvstr := range kvstrs {
-		kv := strings.Split(kvstr, ":")
-		if len(kv) != 2 {
-			return kvMap, fmt.Errorf("domain data format error. It must be k1:v2,k2:v2,...,kn:vn")
-		}
-		k := strings.TrimSpace(kv[0])
-		v := strings.TrimSpace(kv[1])
-		kvMap[k] = v
-	}
-
-	return kvMap, nil
-}
-
 func newDomainCommands() []cli.Command {
 	return []cli.Command{
 		{
@@ -80,6 +63,15 @@ func newDomainCommands() []cli.Command {
 			Flags:   updateDomainFlags,
 			Action: func(c *cli.Context) {
 				newDomainCLI(c, false).UpdateDomain(c)
+			},
+		},
+		{
+			Name:    "deprecate",
+			Aliases: []string{"dep"},
+			Usage:   "Deprecate existing workflow domain",
+			Flags:   deprecateDomainFlags,
+			Action: func(c *cli.Context) {
+				newDomainCLI(c, false).DeprecateDomain(c)
 			},
 		},
 		{

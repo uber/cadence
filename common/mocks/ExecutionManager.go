@@ -1,3 +1,5 @@
+// The MIT License (MIT)
+
 // Copyright (c) 2017-2020 Uber Technologies Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -6,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,6 +28,7 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+
 	persistence "github.com/uber/cadence/common/persistence"
 )
 
@@ -37,6 +40,20 @@ type ExecutionManager struct {
 // Close provides a mock function with given fields:
 func (_m *ExecutionManager) Close() {
 	_m.Called()
+}
+
+// CompleteCrossClusterTask provides a mock function with given fields: ctx, request
+func (_m *ExecutionManager) CompleteCrossClusterTask(ctx context.Context, request *persistence.CompleteCrossClusterTaskRequest) error {
+	ret := _m.Called(ctx, request)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *persistence.CompleteCrossClusterTaskRequest) error); ok {
+		r0 = rf(ctx, request)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // CompleteReplicationTask provides a mock function with given fields: ctx, request
@@ -82,17 +99,26 @@ func (_m *ExecutionManager) CompleteTransferTask(ctx context.Context, request *p
 }
 
 // ConflictResolveWorkflowExecution provides a mock function with given fields: ctx, request
-func (_m *ExecutionManager) ConflictResolveWorkflowExecution(ctx context.Context, request *persistence.ConflictResolveWorkflowExecutionRequest) error {
+func (_m *ExecutionManager) ConflictResolveWorkflowExecution(ctx context.Context, request *persistence.ConflictResolveWorkflowExecutionRequest) (*persistence.ConflictResolveWorkflowExecutionResponse, error) {
 	ret := _m.Called(ctx, request)
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *persistence.ConflictResolveWorkflowExecutionRequest) error); ok {
+	var r0 *persistence.ConflictResolveWorkflowExecutionResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *persistence.ConflictResolveWorkflowExecutionRequest) *persistence.ConflictResolveWorkflowExecutionResponse); ok {
 		r0 = rf(ctx, request)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*persistence.ConflictResolveWorkflowExecutionResponse)
+		}
 	}
 
-	return r0
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *persistence.ConflictResolveWorkflowExecutionRequest) error); ok {
+		r1 = rf(ctx, request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // CreateFailoverMarkerTasks provides a mock function with given fields: ctx, request
@@ -172,6 +198,29 @@ func (_m *ExecutionManager) DeleteWorkflowExecution(ctx context.Context, request
 	}
 
 	return r0
+}
+
+// GetCrossClusterTasks provides a mock function with given fields: ctx, request
+func (_m *ExecutionManager) GetCrossClusterTasks(ctx context.Context, request *persistence.GetCrossClusterTasksRequest) (*persistence.GetCrossClusterTasksResponse, error) {
+	ret := _m.Called(ctx, request)
+
+	var r0 *persistence.GetCrossClusterTasksResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *persistence.GetCrossClusterTasksRequest) *persistence.GetCrossClusterTasksResponse); ok {
+		r0 = rf(ctx, request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*persistence.GetCrossClusterTasksResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *persistence.GetCrossClusterTasksRequest) error); ok {
+		r1 = rf(ctx, request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // GetCurrentExecution provides a mock function with given fields: ctx, request
@@ -446,6 +495,20 @@ func (_m *ExecutionManager) PutReplicationTaskToDLQ(ctx context.Context, request
 	return r0
 }
 
+// RangeCompleteCrossClusterTask provides a mock function with given fields: ctx, request
+func (_m *ExecutionManager) RangeCompleteCrossClusterTask(ctx context.Context, request *persistence.RangeCompleteCrossClusterTaskRequest) error {
+	ret := _m.Called(ctx, request)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *persistence.RangeCompleteCrossClusterTaskRequest) error); ok {
+		r0 = rf(ctx, request)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // RangeCompleteReplicationTask provides a mock function with given fields: ctx, request
 func (_m *ExecutionManager) RangeCompleteReplicationTask(ctx context.Context, request *persistence.RangeCompleteReplicationTaskRequest) error {
 	ret := _m.Called(ctx, request)
@@ -494,20 +557,6 @@ func (_m *ExecutionManager) RangeDeleteReplicationTaskFromDLQ(ctx context.Contex
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, *persistence.RangeDeleteReplicationTaskFromDLQRequest) error); ok {
-		r0 = rf(ctx, request)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// ResetWorkflowExecution provides a mock function with given fields: ctx, request
-func (_m *ExecutionManager) ResetWorkflowExecution(ctx context.Context, request *persistence.ResetWorkflowExecutionRequest) error {
-	ret := _m.Called(ctx, request)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *persistence.ResetWorkflowExecutionRequest) error); ok {
 		r0 = rf(ctx, request)
 	} else {
 		r0 = ret.Error(0)

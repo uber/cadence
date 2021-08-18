@@ -45,6 +45,7 @@ func NewIterator(
 	fetchFn FetchFn,
 ) Iterator {
 	itr := &iterator{
+		ctx: ctx,
 		page: Page{
 			Entities:     nil,
 			CurrentToken: nil,

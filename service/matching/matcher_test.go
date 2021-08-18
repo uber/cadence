@@ -30,19 +30,19 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
 
-	gen "github.com/uber/cadence/.gen/go/matching"
-	"github.com/uber/cadence/.gen/go/matching/matchingservicetest"
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type MatcherTestSuite struct {
 	suite.Suite
 	controller  *gomock.Controller
-	client      *matchingservicetest.MockClient
+	client      *matching.MockClient
 	fwdr        *Forwarder
 	cfg         *taskListConfig
 	taskList    *taskListID
@@ -56,9 +56,9 @@ func TestMatcherSuite(t *testing.T) {
 
 func (t *MatcherTestSuite) SetupTest() {
 	t.controller = gomock.NewController(t.T())
-	t.client = matchingservicetest.NewMockClient(t.controller)
+	t.client = matching.NewMockClient(t.controller)
 	cfg := NewConfig(dynamicconfig.NewNopCollection())
-	t.taskList = newTestTaskListID(uuid.New(), taskListPartitionPrefix+"tl0/1", persistence.TaskListTypeDecision)
+	t.taskList = newTestTaskListID(uuid.New(), common.ReservedTaskListPrefix+"tl0/1", persistence.TaskListTypeDecision)
 	tlCfg, err := newTaskListConfig(t.taskList, cfg, t.newDomainCache())
 	t.NoError(err)
 	tlCfg.forwarderConfig = forwarderConfig{
@@ -68,7 +68,7 @@ func (t *MatcherTestSuite) SetupTest() {
 		ForwarderMaxChildrenPerNode:  func() int { return 20 },
 	}
 	t.cfg = tlCfg
-	t.fwdr = newForwarder(&t.cfg.forwarderConfig, t.taskList, shared.TaskListKindNormal, t.client)
+	t.fwdr = newForwarder(&t.cfg.forwarderConfig, t.taskList, types.TaskListKindNormal, t.client)
 	t.matcher = newTaskMatcher(tlCfg, t.fwdr, func() metrics.Scope { return metrics.NoopScope(metrics.Matching) })
 
 	rootTaskList := newTestTaskListID(t.taskList.domainID, t.taskList.Parent(20), persistence.TaskListTypeDecision)
@@ -86,82 +86,74 @@ func (t *MatcherTestSuite) TestLocalSyncMatch() {
 	<-t.fwdr.AddReqTokenC()
 	<-t.fwdr.PollReqTokenC()
 
-	pollStarted := make(chan struct{})
-
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		close(pollStarted)
+	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.Poll(ctx)
-		cancel()
 		if err == nil {
 			task.finish(nil)
 		}
-	}()
+	})
 
-	<-pollStarted
-	time.Sleep(10 * time.Millisecond)
-	task := newInternalTask(t.newTaskInfo(), nil, gen.TaskSourceHistory, "", true)
+	task := newInternalTask(t.newTaskInfo(), nil, types.TaskSourceHistory, "", true)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	syncMatch, err := t.matcher.Offer(ctx, task)
 	cancel()
+	wait()
 	t.NoError(err)
 	t.True(syncMatch)
 }
 
 func (t *MatcherTestSuite) TestRemoteSyncMatch() {
-	t.testRemoteSyncMatch(gen.TaskSourceHistory)
+	t.testRemoteSyncMatch(types.TaskSourceHistory)
 }
 
 func (t *MatcherTestSuite) TestRemoteSyncMatchBlocking() {
-	t.testRemoteSyncMatch(gen.TaskSourceDbBacklog)
+	t.testRemoteSyncMatch(types.TaskSourceDbBacklog)
 }
 
-func (t *MatcherTestSuite) testRemoteSyncMatch(taskSource gen.TaskSource) {
+func (t *MatcherTestSuite) testRemoteSyncMatch(taskSource types.TaskSource) {
 	pollSigC := make(chan struct{})
 
+	bgctx, bgcancel := context.WithTimeout(context.Background(), time.Second)
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		<-pollSigC
-		if taskSource == gen.TaskSourceDbBacklog {
+		if taskSource == types.TaskSourceDbBacklog {
 			// when task is from dbBacklog, sync match SHOULD block
 			// so lets delay polling by a bit to verify that
 			time.Sleep(time.Millisecond * 10)
 		}
-		task, err := t.matcher.Poll(ctx)
-		cancel()
+		task, err := t.matcher.Poll(bgctx)
+		bgcancel()
 		if err == nil && !task.isStarted() {
 			task.finish(nil)
 		}
 	}()
 
-	var remotePollErr error
-	var remotePollResp gen.PollForDecisionTaskResponse
-	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.PollForDecisionTaskRequest) {
+	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(arg0 context.Context, arg1 *types.MatchingPollForDecisionTaskRequest) (*types.MatchingPollForDecisionTaskResponse, error) {
 			task, err := t.rootMatcher.Poll(arg0)
 			if err != nil {
-				remotePollErr = err
-			} else {
-				task.finish(nil)
-				remotePollResp = gen.PollForDecisionTaskResponse{
-					WorkflowExecution: task.workflowExecution(),
-				}
+				return nil, err
 			}
+
+			task.finish(nil)
+			return &types.MatchingPollForDecisionTaskResponse{
+				WorkflowExecution: task.workflowExecution(),
+			}, nil
 		},
-	).Return(&remotePollResp, remotePollErr).AnyTimes()
+	).AnyTimes()
 
 	task := newInternalTask(t.newTaskInfo(), nil, taskSource, "", true)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 
 	var err error
 	var remoteSyncMatch bool
-	var req *gen.AddDecisionTaskRequest
+	var req *types.AddDecisionTaskRequest
 	t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.AddDecisionTaskRequest) {
+		func(arg0 context.Context, arg1 *types.AddDecisionTaskRequest) {
 			req = arg1
 			task.forwardedFrom = req.GetForwardedFrom()
 			close(pollSigC)
-			if taskSource != gen.TaskSourceDbBacklog {
+			if taskSource != types.TaskSourceDbBacklog {
 				// when task is not from backlog, wait a bit for poller
 				// to arrive first - when task is from backlog, offer
 				// blocks - so we don't need to do this
@@ -174,6 +166,7 @@ func (t *MatcherTestSuite) testRemoteSyncMatch(taskSource gen.TaskSource) {
 	_, err0 := t.matcher.Offer(ctx, task)
 	t.NoError(err0)
 	cancel()
+	<-bgctx.Done() // wait for async work to finish
 	t.NotNil(req)
 	t.NoError(err)
 	t.True(remoteSyncMatch)
@@ -182,12 +175,12 @@ func (t *MatcherTestSuite) testRemoteSyncMatch(taskSource gen.TaskSource) {
 }
 
 func (t *MatcherTestSuite) TestSyncMatchFailure() {
-	task := newInternalTask(t.newTaskInfo(), nil, gen.TaskSourceHistory, "", true)
+	task := newInternalTask(t.newTaskInfo(), nil, types.TaskSourceHistory, "", true)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 
-	var req *gen.AddDecisionTaskRequest
+	var req *types.AddDecisionTaskRequest
 	t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.AddDecisionTaskRequest) {
+		func(arg0 context.Context, arg1 *types.AddDecisionTaskRequest) {
 			req = arg1
 		},
 	).Return(errMatchingHostThrottle)
@@ -204,73 +197,64 @@ func (t *MatcherTestSuite) TestQueryLocalSyncMatch() {
 	<-t.fwdr.AddReqTokenC()
 	<-t.fwdr.PollReqTokenC()
 
-	pollStarted := make(chan struct{})
-
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		close(pollStarted)
+	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.PollForQuery(ctx)
-		cancel()
 		if err == nil && task.isQuery() {
 			task.finish(nil)
 		}
-	}()
+	})
 
-	<-pollStarted
-	time.Sleep(10 * time.Millisecond)
-	task := newInternalQueryTask(uuid.New(), &gen.QueryWorkflowRequest{})
+	task := newInternalQueryTask(uuid.New(), &types.MatchingQueryWorkflowRequest{})
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	resp, err := t.matcher.OfferQuery(ctx, task)
 	cancel()
+	wait()
 	t.NoError(err)
 	t.Nil(resp)
 }
 
 func (t *MatcherTestSuite) TestQueryRemoteSyncMatch() {
-	pollSigC := make(chan struct{})
-
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		<-pollSigC
+	ready, wait := ensureAsyncAfterReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.PollForQuery(ctx)
-		cancel()
 		if err == nil && task.isQuery() {
 			task.finish(nil)
 		}
-	}()
+	})
 
-	var remotePollErr error
-	var remotePollResp gen.PollForDecisionTaskResponse
-	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.PollForDecisionTaskRequest) {
+	var remotePollResp *types.MatchingPollForDecisionTaskResponse
+	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(arg0 context.Context, arg1 *types.MatchingPollForDecisionTaskRequest) (*types.MatchingPollForDecisionTaskResponse, error) {
 			task, err := t.rootMatcher.PollForQuery(arg0)
 			if err != nil {
-				remotePollErr = err
+				return nil, err
 			} else if task.isQuery() {
 				task.finish(nil)
-				remotePollResp = gen.PollForDecisionTaskResponse{
-					Query: &shared.WorkflowQuery{},
+				res := &types.MatchingPollForDecisionTaskResponse{
+					Query: &types.WorkflowQuery{},
 				}
+				remotePollResp = res
+				return res, nil
 			}
+			return nil, nil
 		},
-	).Return(&remotePollResp, remotePollErr).AnyTimes()
+	).AnyTimes()
 
-	task := newInternalQueryTask(uuid.New(), &gen.QueryWorkflowRequest{})
+	task := newInternalQueryTask(uuid.New(), &types.MatchingQueryWorkflowRequest{})
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 
-	var req *gen.QueryWorkflowRequest
+	var req *types.MatchingQueryWorkflowRequest
 	t.client.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.QueryWorkflowRequest) {
+		func(arg0 context.Context, arg1 *types.MatchingQueryWorkflowRequest) {
 			req = arg1
 			task.forwardedFrom = req.GetForwardedFrom()
-			close(pollSigC)
-			time.Sleep(10 * time.Millisecond)
+			ready()
 			t.rootMatcher.OfferQuery(ctx, task)
 		},
-	).Return(&shared.QueryWorkflowResponse{QueryResult: []byte("answer")}, nil)
+	).Return(&types.QueryWorkflowResponse{QueryResult: []byte("answer")}, nil)
 
 	result, err := t.matcher.OfferQuery(ctx, task)
 	cancel()
+	wait()
 	t.NotNil(req)
 	t.NoError(err)
 	t.NotNil(result)
@@ -284,33 +268,28 @@ func (t *MatcherTestSuite) TestQueryRemoteSyncMatchError() {
 	<-t.fwdr.PollReqTokenC()
 
 	matched := false
-	pollSigC := make(chan struct{})
-
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		<-pollSigC
+	ready, wait := ensureAsyncAfterReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.PollForQuery(ctx)
-		cancel()
 		if err == nil && task.isQuery() {
 			matched = true
 			task.finish(nil)
 		}
-	}()
+	})
 
-	task := newInternalQueryTask(uuid.New(), &gen.QueryWorkflowRequest{})
+	task := newInternalQueryTask(uuid.New(), &types.MatchingQueryWorkflowRequest{})
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 
-	var req *gen.QueryWorkflowRequest
+	var req *types.MatchingQueryWorkflowRequest
 	t.client.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.QueryWorkflowRequest) {
+		func(arg0 context.Context, arg1 *types.MatchingQueryWorkflowRequest) {
 			req = arg1
-			close(pollSigC)
-			time.Sleep(10 * time.Millisecond)
+			ready()
 		},
 	).Return(nil, errMatchingHostThrottle)
 
 	result, err := t.matcher.OfferQuery(ctx, task)
 	cancel()
+	wait()
 	t.NotNil(req)
 	t.NoError(err)
 	t.Nil(result)
@@ -322,77 +301,71 @@ func (t *MatcherTestSuite) TestMustOfferLocalMatch() {
 	<-t.fwdr.AddReqTokenC()
 	<-t.fwdr.PollReqTokenC()
 
-	pollStarted := make(chan struct{})
-
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		close(pollStarted)
+	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.Poll(ctx)
-		cancel()
 		if err == nil {
 			task.finish(nil)
 		}
-	}()
+	})
 
-	<-pollStarted
-	time.Sleep(10 * time.Millisecond)
-	task := newInternalTask(t.newTaskInfo(), nil, gen.TaskSourceHistory, "", false)
+	task := newInternalTask(t.newTaskInfo(), nil, types.TaskSourceHistory, "", false)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	err := t.matcher.MustOffer(ctx, task)
 	cancel()
+	wait()
 	t.NoError(err)
 }
 
 func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 	pollSigC := make(chan struct{})
 
-	var remotePollErr error
-	var remotePollResp gen.PollForDecisionTaskResponse
-	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.PollForDecisionTaskRequest) {
+	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(arg0 context.Context, arg1 *types.MatchingPollForDecisionTaskRequest) (*types.MatchingPollForDecisionTaskResponse, error) {
 			<-pollSigC
 			time.Sleep(time.Millisecond * 500) // delay poll to verify that offer blocks on parent
 			task, err := t.rootMatcher.Poll(arg0)
 			if err != nil {
-				remotePollErr = err
-			} else {
-				task.finish(nil)
-				remotePollResp = gen.PollForDecisionTaskResponse{
-					WorkflowExecution: task.workflowExecution(),
-				}
+				return nil, err
 			}
-		},
-	).Return(&remotePollResp, remotePollErr).AnyTimes()
 
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
-		t.matcher.Poll(ctx)
-		cancel()
-	}()
+			task.finish(nil)
+			return &types.MatchingPollForDecisionTaskResponse{
+				WorkflowExecution: task.workflowExecution(),
+			}, nil
+		},
+	).AnyTimes()
 
 	taskCompleted := false
 	completionFunc := func(*persistence.TaskInfo, error) {
 		taskCompleted = true
 	}
 
-	task := newInternalTask(t.newTaskInfo(), completionFunc, gen.TaskSourceDbBacklog, "", false)
+	task := newInternalTask(t.newTaskInfo(), completionFunc, types.TaskSourceDbBacklog, "", false)
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 
 	var err error
 	var remoteSyncMatch bool
-	var req *gen.AddDecisionTaskRequest
+	var req *types.AddDecisionTaskRequest
 	t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Return(errMatchingHostThrottle).Times(1)
 	t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.AddDecisionTaskRequest) {
+		func(arg0 context.Context, arg1 *types.AddDecisionTaskRequest) {
 			req = arg1
-			task := newInternalTask(task.event.TaskInfo, nil, gen.TaskSourceDbBacklog, req.GetForwardedFrom(), true)
+			task := newInternalTask(task.event.TaskInfo, nil, types.TaskSourceDbBacklog, req.GetForwardedFrom(), true)
 			close(pollSigC)
 			remoteSyncMatch, err = t.rootMatcher.Offer(ctx, task)
 		},
 	).Return(nil)
 
+	// Poll needs to happen before MustOffer, or else it goes into the non-blocking path.
+	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
+		task, err := t.matcher.Poll(ctx)
+		t.Nil(err)
+		t.NotNil(task)
+	})
+
 	t.NoError(t.matcher.MustOffer(ctx, task))
 	cancel()
+	wait()
 	t.NotNil(req)
 	t.NoError(err)
 	t.True(remoteSyncMatch)
@@ -404,21 +377,23 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 func (t *MatcherTestSuite) TestRemotePoll() {
 	pollToken := <-t.fwdr.PollReqTokenC()
 
-	var req *gen.PollForDecisionTaskRequest
-	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.PollForDecisionTaskRequest) {
+	var req *types.MatchingPollForDecisionTaskRequest
+	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(arg0 context.Context, arg1 *types.MatchingPollForDecisionTaskRequest) (*types.MatchingPollForDecisionTaskResponse, error) {
 			req = arg1
+			return nil, nil
 		},
-	).Return(&gen.PollForDecisionTaskResponse{}, nil)
+	)
 
-	go func() {
-		time.Sleep(10 * time.Millisecond)
+	ready, wait := ensureAsyncAfterReady(0, func(_ context.Context) {
 		pollToken.release()
-	}()
+	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ready()
 	task, err := t.matcher.Poll(ctx)
 	cancel()
+	wait()
 	t.NoError(err)
 	t.NotNil(req)
 	t.NotNil(task)
@@ -428,21 +403,23 @@ func (t *MatcherTestSuite) TestRemotePoll() {
 func (t *MatcherTestSuite) TestRemotePollForQuery() {
 	pollToken := <-t.fwdr.PollReqTokenC()
 
-	var req *gen.PollForDecisionTaskRequest
-	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.PollForDecisionTaskRequest) {
+	var req *types.MatchingPollForDecisionTaskRequest
+	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(arg0 context.Context, arg1 *types.MatchingPollForDecisionTaskRequest) (*types.MatchingPollForDecisionTaskResponse, error) {
 			req = arg1
+			return nil, nil
 		},
-	).Return(&gen.PollForDecisionTaskResponse{}, nil)
+	)
 
-	go func() {
-		time.Sleep(10 * time.Millisecond)
+	ready, wait := ensureAsyncAfterReady(0, func(_ context.Context) {
 		pollToken.release()
-	}()
+	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	ready()
 	task, err := t.matcher.PollForQuery(ctx)
-	cancel()
+	wait()
 	t.NoError(err)
 	t.NotNil(req)
 	t.NotNil(task)
@@ -450,13 +427,9 @@ func (t *MatcherTestSuite) TestRemotePollForQuery() {
 }
 
 func (t *MatcherTestSuite) newDomainCache() cache.DomainCache {
-	entry := cache.NewLocalDomainCacheEntryForTest(
-		&persistence.DomainInfo{Name: "test-domain"},
-		&persistence.DomainConfig{},
-		"",
-		nil)
+	domainName := "test-domain"
 	dc := cache.NewMockDomainCache(t.controller)
-	dc.EXPECT().GetDomainByID(gomock.Any()).Return(entry, nil).AnyTimes()
+	dc.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil).AnyTimes()
 	return dc
 }
 
@@ -468,5 +441,65 @@ func (t *MatcherTestSuite) newTaskInfo() *persistence.TaskInfo {
 		TaskID:                 rand.Int63(),
 		ScheduleID:             rand.Int63(),
 		ScheduleToStartTimeout: rand.Int31(),
+	}
+}
+
+// Try to ensure a blocking callback in a goroutine is not running until the thing immediately
+// after `ready()` has blocked, so tests can ensure that the callback contents happen last.
+//
+// Try to delay calling `ready()` until *immediately* before the blocking call for best results.
+//
+// This is a best-effort technique, as there is no way to reliably synchronize this kind of thing
+// without exposing internal latches or having a more sophisticated locking library than Go offers.
+// In case of flakiness, increase the time.Sleep and hope for the best.
+//
+// Note that adding fmt.Println() calls touches synchronization code (for I/O), so it may change behavior.
+func ensureAsyncAfterReady(ctxTimeout time.Duration, cb func(ctx context.Context)) (ready func(), wait func()) {
+	ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+	ready = func() {
+		go func() {
+			defer cancel()
+
+			// since `go func()` is non-blocking, the ready()-ing goroutine should generally continue,
+			// and read whatever blocking point is relevant before this goroutine runs.
+			// in many cases this sleep is unnecessary (especially with -cpu=1), but it does help.
+			time.Sleep(1 * time.Millisecond)
+
+			cb(ctx)
+
+		}()
+	}
+	wait = func() {
+		<-ctx.Done()
+	}
+	return ready, wait
+}
+
+// Try to ensure a blocking callback is actively blocked in a goroutine before returning, so tests can
+// ensure that the callback contents happen first.
+//
+// This is a best-effort technique, as there is no way to reliably synchronize this kind of thing
+// without exposing internal latches or having a more sophisticated locking library than Go offers.
+// In case of flakiness, increase the time.Sleep and hope for the best.
+//
+// Note that adding fmt.Println() calls touches synchronization code (for I/O), so it may change behavior.
+func ensureAsyncReady(ctxTimeout time.Duration, cb func(ctx context.Context)) (wait func()) {
+	running := make(chan struct{})
+	ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+	go func() {
+		defer cancel()
+
+		close(running)
+		cb(ctx)
+	}()
+	<-running // ensure the goroutine is alive
+
+	// `close(running)` is non-blocking, so it should generally begin polling before yielding control to other goroutines,
+	// but there is still a race to reach whatever blocking sync point exists between the code being tested.
+	// In many cases this sleep is completely unnecessary (especially with -cpu=1), but it does help.
+	time.Sleep(1 * time.Millisecond)
+
+	return func() {
+		<-ctx.Done()
 	}
 }

@@ -26,6 +26,7 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+
 	elasticsearch "github.com/uber/cadence/common/elasticsearch"
 
 	persistence "github.com/uber/cadence/common/persistence"
@@ -71,27 +72,18 @@ func (_m *GenericClient) CreateIndex(ctx context.Context, index string) error {
 	return r0
 }
 
-// GetClosedWorkflowExecution provides a mock function with given fields: ctx, index, request
-func (_m *GenericClient) SearchForOneClosedExecution(ctx context.Context, index string, request *persistence.InternalGetClosedWorkflowExecutionRequest) (*persistence.InternalGetClosedWorkflowExecutionResponse, error) {
-	ret := _m.Called(ctx, index, request)
+// IsNotFoundError provides a mock function with given fields: err
+func (_m *GenericClient) IsNotFoundError(err error) bool {
+	ret := _m.Called(err)
 
-	var r0 *persistence.InternalGetClosedWorkflowExecutionResponse
-	if rf, ok := ret.Get(0).(func(context.Context, string, *persistence.InternalGetClosedWorkflowExecutionRequest) *persistence.InternalGetClosedWorkflowExecutionResponse); ok {
-		r0 = rf(ctx, index, request)
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(error) bool); ok {
+		r0 = rf(err)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*persistence.InternalGetClosedWorkflowExecutionResponse)
-		}
+		r0 = ret.Get(0).(bool)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, *persistence.InternalGetClosedWorkflowExecutionRequest) error); ok {
-		r1 = rf(ctx, index, request)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // PutMapping provides a mock function with given fields: ctx, index, root, key, valueType
@@ -193,6 +185,29 @@ func (_m *GenericClient) SearchByQuery(ctx context.Context, request *elasticsear
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *elasticsearch.SearchByQueryRequest) error); ok {
 		r1 = rf(ctx, request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// SearchForOneClosedExecution provides a mock function with given fields: ctx, index, request
+func (_m *GenericClient) SearchForOneClosedExecution(ctx context.Context, index string, request *persistence.InternalGetClosedWorkflowExecutionRequest) (*persistence.InternalGetClosedWorkflowExecutionResponse, error) {
+	ret := _m.Called(ctx, index, request)
+
+	var r0 *persistence.InternalGetClosedWorkflowExecutionResponse
+	if rf, ok := ret.Get(0).(func(context.Context, string, *persistence.InternalGetClosedWorkflowExecutionRequest) *persistence.InternalGetClosedWorkflowExecutionResponse); ok {
+		r0 = rf(ctx, index, request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*persistence.InternalGetClosedWorkflowExecutionResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, *persistence.InternalGetClosedWorkflowExecutionRequest) error); ok {
+		r1 = rf(ctx, index, request)
 	} else {
 		r1 = ret.Error(1)
 	}

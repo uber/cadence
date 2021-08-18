@@ -22,13 +22,16 @@
 package cli
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/urfave/cli"
 
+	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/service/worker/scanner/executions"
+	"github.com/uber/cadence/tools/common/flag"
 )
 
 func newAdminWorkflowCommands() []cli.Command {
@@ -138,6 +141,26 @@ func newAdminShardManagementCommands() []cli.Command {
 			},
 		},
 		{
+			Name:    "list",
+			Aliases: []string{"l"},
+			Usage:   "List shard distribution",
+			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name:  FlagPageSize,
+					Value: 100,
+					Usage: "Max number of results to return",
+				},
+				cli.IntFlag{
+					Name:  FlagPageID,
+					Value: 0,
+					Usage: "Option to show results offset from pagesize * page_id",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminDescribeShardDistribution(c)
+			},
+		},
+		{
 			Name:    "setRangeID",
 			Aliases: []string{"srid"},
 			Usage:   "Force update shard rangeID",
@@ -185,11 +208,15 @@ func newAdminShardManagementCommands() []cli.Command {
 				},
 				cli.IntFlag{
 					Name:  FlagTaskType,
-					Usage: "task type: 2 (transfer task), 3 (timer task) or 4 (replication task)",
+					Usage: "task type: 2 (transfer task), 3 (timer task), 4 (replication task) or 6 (cross-cluster task)",
 				},
 				cli.Int64Flag{
 					Name:  FlagTaskVisibilityTimestamp,
 					Usage: "task visibility timestamp in nano (required for removing timer task)",
+				},
+				cli.StringFlag{
+					Name:  FlagCluster,
+					Usage: "target cluster of the task (required for removing cross-cluster task)",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -340,6 +367,15 @@ func newAdminDomainCommands() []cli.Command {
 			},
 		},
 		{
+			Name:    "deprecate",
+			Aliases: []string{"dep"},
+			Usage:   "Deprecate existing workflow domain",
+			Flags:   adminDeprecateDomainFlags,
+			Action: func(c *cli.Context) {
+				newDomainCLI(c, true).DeprecateDomain(c)
+			},
+		},
+		{
 			Name:    "describe",
 			Aliases: []string{"desc"},
 			Usage:   "Describe existing workflow domain",
@@ -380,8 +416,21 @@ func newAdminDomainCommands() []cli.Command {
 					Usage: "List all domains, by default only domains in REGISTERED status are listed",
 				},
 				cli.BoolFlag{
+					Name:  FlagDeprecatedWithAlias,
+					Usage: "List deprecated domains only, by default only domains in REGISTERED status are listed",
+				},
+				cli.StringFlag{
+					Name:  FlagPrefix,
+					Usage: "List domains that are matching to the given prefix",
+					Value: "",
+				},
+				cli.BoolFlag{
 					Name:  FlagPrintFullyDetailWithAlias,
 					Usage: "Print full domain detail",
+				},
+				cli.BoolFlag{
+					Name:  FlagPrintJSONWithAlias,
+					Usage: "Print in raw json format",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -394,6 +443,7 @@ func newAdminDomainCommands() []cli.Command {
 func newAdminKafkaCommands() []cli.Command {
 	return []cli.Command{
 		{
+			// TODO: do we still need this command given that kafka replication has been deprecated?
 			Name:    "parse",
 			Aliases: []string{"par"},
 			Usage:   "Parse replication tasks from kafka messages",
@@ -433,9 +483,10 @@ func newAdminKafkaCommands() []cli.Command {
 			},
 		},
 		{
+			// TODO: move this command be a subcommand of admin workflow
 			Name:    "rereplicate",
 			Aliases: []string{"rrp"},
-			Usage:   "Rereplicate replication tasks to target topic from history tables",
+			Usage:   "Rereplicate replication tasks from history tables",
 			Flags: append(getDBFlags(),
 				cli.StringFlag{
 					Name:  FlagSourceCluster,
@@ -445,10 +496,9 @@ func newAdminKafkaCommands() []cli.Command {
 					Name:  FlagNumberOfShards,
 					Usage: "NumberOfShards is required to calculate shardID. (see server config for numHistoryShards)",
 				},
-				// for one workflow
-				cli.Int64Flag{
-					Name:  FlagMaxEventID,
-					Usage: "MaxEventID Optional, default to all events",
+				cli.StringFlag{
+					Name:  FlagDomainID,
+					Usage: "DomainID",
 				},
 				cli.StringFlag{
 					Name:  FlagWorkflowIDWithAlias,
@@ -458,13 +508,13 @@ func newAdminKafkaCommands() []cli.Command {
 					Name:  FlagRunIDWithAlias,
 					Usage: "RunID",
 				},
-				cli.StringFlag{
-					Name:  FlagDomainID,
-					Usage: "DomainID",
+				cli.Int64Flag{
+					Name:  FlagMaxEventID,
+					Usage: "MaxEventID Optional, default to all events",
 				},
 				cli.StringFlag{
 					Name:  FlagEndEventVersion,
-					Usage: "Workflow end event version",
+					Usage: "Workflow end event version, required if MaxEventID is specified",
 				}),
 			Action: func(c *cli.Context) {
 				AdminRereplicate(c)
@@ -671,6 +721,12 @@ func newAdminClusterCommands() []cli.Command {
 				newDomainCLI(c, false).FailoverDomains(c)
 			},
 		},
+		{
+			Name:        "rebalance",
+			Aliases:     []string{"rb"},
+			Usage:       "Rebalance the domains active cluster",
+			Subcommands: newAdminRebalanceCommands(),
+		},
 	}
 }
 
@@ -704,6 +760,10 @@ func newAdminDLQCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagOutputFilenameWithAlias,
 					Usage: "Output file to write to, if not provided output is written to stdout",
+				},
+				cli.BoolFlag{
+					Name:  FlagDLQRawTask,
+					Usage: "Show DLQ raw task information",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -833,6 +893,37 @@ func newDBCommands() []cli.Command {
 			},
 		},
 		{
+			Name:  "unsupported-workflow",
+			Usage: "use this command when upgrade the Cadence server from version less than 0.16.0. This scan database and detect unsupported workflow type.",
+			Flags: append(getDBFlags(),
+				cli.IntFlag{
+					Name:  FlagRPS,
+					Usage: "NumberOfShards for the cadence cluster (see config for numHistoryShards)",
+					Value: 1000,
+				},
+				cli.StringFlag{
+					Name:  FlagOutputFilenameWithAlias,
+					Usage: "Output file to write to, if not provided output is written to stdout",
+				},
+				cli.IntFlag{
+					Name:     FlagLowerShardBound,
+					Usage:    "FlagLowerShardBound for the start shard to scan. (Default: 0)",
+					Value:    0,
+					Required: true,
+				},
+				cli.IntFlag{
+					Name:     FlagUpperShardBound,
+					Usage:    "FlagLowerShardBound for the end shard to scan. (Default: 16383)",
+					Value:    16383,
+					Required: true,
+				},
+			),
+
+			Action: func(c *cli.Context) {
+				AdminDBScanUnsupportedWorkflow(c)
+			},
+		},
+		{
 			Name:  "clean",
 			Usage: "clean up corrupted workflows",
 			Flags: append(getDBFlags(),
@@ -850,9 +941,14 @@ func newDBCommands() []cli.Command {
 	}
 }
 
-// TODO need to support other database: https://github.com/uber/cadence/issues/2777
 func getDBFlags() []cli.Flag {
+	supportedDBs := append(sql.GetRegisteredPluginNames(), "cassandra")
 	return []cli.Flag{
+		cli.StringFlag{
+			Name:  FlagDBType,
+			Value: "cassandra",
+			Usage: fmt.Sprintf("persistence type. Current supported options are %v", supportedDBs),
+		},
 		cli.StringFlag{
 			Name:  FlagDBAddress,
 			Value: "127.0.0.1",
@@ -864,17 +960,43 @@ func getDBFlags() []cli.Flag {
 			Usage: "persistence port",
 		},
 		cli.StringFlag{
+			Name:  FlagDBRegion,
+			Usage: "persistence region",
+		},
+		cli.StringFlag{
 			Name:  FlagUsername,
-			Usage: "cassandra username",
+			Usage: "persistence username",
 		},
 		cli.StringFlag{
 			Name:  FlagPassword,
-			Usage: "cassandra password",
+			Usage: "persistence password",
 		},
 		cli.StringFlag{
 			Name:  FlagKeyspace,
 			Value: "cadence",
 			Usage: "cassandra keyspace",
+		},
+		cli.StringFlag{
+			Name:  FlagDatabaseName,
+			Value: "cadence",
+			Usage: "sql database name",
+		},
+		cli.StringFlag{
+			Name:  FlagEncodingType,
+			Value: "thriftrw",
+			Usage: "sql database encoding type",
+		},
+		cli.StringSliceFlag{
+			Name: FlagDecodingTypes,
+			Value: &cli.StringSlice{
+				"thriftrw",
+			},
+			Usage: "sql database decoding types",
+		},
+		cli.IntFlag{
+			Name:  FlagProtoVersion,
+			Value: 4,
+			Usage: "cassandra protocol version",
 		},
 		cli.BoolFlag{
 			Name:  FlagEnableTLS,
@@ -896,6 +1018,11 @@ func getDBFlags() []cli.Flag {
 			Name:  FlagTLSEnableHostVerification,
 			Usage: "cassandra tls verify hostname and server cert (tls must be enabled)",
 		},
+		cli.GenericFlag{
+			Name:  FlagConnectionAttributes,
+			Usage: "a key-value set of sql database connection attributes (must be in key1=value1,key2=value2,...,keyN=valueN format, e.g. cluster=dca or cluster=dca,instance=cadence)",
+			Value: &flag.StringMap{},
+		},
 	}
 }
 
@@ -911,7 +1038,7 @@ func getQueueCommandFlags() []cli.Flag {
 		},
 		cli.IntFlag{
 			Name:  FlagQueueType,
-			Usage: "queue type: 2 (transfer queue) or 3 (timer queue)",
+			Usage: "queue type: 2 (transfer queue), 3 (timer queue) or 6 (cross-cluster queue)",
 		},
 	}
 }
@@ -951,6 +1078,17 @@ func newAdminFailoverCommands() []cli.Command {
 					Usage: "Optional domains to failover, eg d1,d2..,dn. " +
 						"Only provided domains in source cluster will be failover.",
 				},
+				cli.IntFlag{
+					Name: FlagFailoverDrillWaitTimeWithAlias,
+					Usage: "Optional failover drill wait time. " +
+						"After the wait time, the domains will be reset to original regions." +
+						"This field is required if the cron schedule is specified.",
+				},
+				cli.StringFlag{
+					Name: FlagCronSchedule,
+					Usage: "Optional cron schedule on failover drill. Please specify failover drill wait time " +
+						"if this field is specific",
+				},
 			},
 			Action: func(c *cli.Context) {
 				AdminFailoverStart(c)
@@ -965,7 +1103,13 @@ func newAdminFailoverCommands() []cli.Command {
 					Name:  FlagRunIDWithAlias,
 					Usage: "Optional Failover workflow runID, default is latest runID",
 				},
+				cli.BoolFlag{
+					Name: FlagFailoverDrillWithAlias,
+					Usage: "Optional to pause failover workflow or failover drill workflow." +
+						" The default is normal failover workflow",
+				},
 			},
+
 			Action: func(c *cli.Context) {
 				AdminFailoverPause(c)
 			},
@@ -979,6 +1123,11 @@ func newAdminFailoverCommands() []cli.Command {
 					Name:  FlagRunIDWithAlias,
 					Usage: "Optional Failover workflow runID, default is latest runID",
 				},
+				cli.BoolFlag{
+					Name: FlagFailoverDrillWithAlias,
+					Usage: "Optional to resume failover workflow or failover drill workflow." +
+						" The default is normal failover workflow",
+				},
 			},
 			Action: func(c *cli.Context) {
 				AdminFailoverResume(c)
@@ -989,6 +1138,11 @@ func newAdminFailoverCommands() []cli.Command {
 			Aliases: []string{"q"},
 			Usage:   "query failover workflow state",
 			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name: FlagFailoverDrillWithAlias,
+					Usage: "Optional to query failover workflow or failover drill workflow." +
+						" The default is normal failover workflow",
+				},
 				cli.StringFlag{
 					Name:  FlagRunIDWithAlias,
 					Usage: "Optional Failover workflow runID, default is latest runID",
@@ -1010,6 +1164,11 @@ func newAdminFailoverCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagReasonWithAlias,
 					Usage: "Optional reason why abort",
+				},
+				cli.BoolFlag{
+					Name: FlagFailoverDrillWithAlias,
+					Usage: "Optional to abort failover workflow or failover drill workflow." +
+						" The default is normal failover workflow",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -1063,11 +1222,116 @@ func newAdminFailoverCommands() []cli.Command {
 					Name:  FlagWorkflowIDWithAlias,
 					Usage: "Ignore this. It is a dummy flag which will be forced overwrite",
 				},
+				cli.BoolFlag{
+					Name: FlagFailoverDrillWithAlias,
+					Usage: "Optional to query failover workflow or failover drill workflow." +
+						" The default is normal failover workflow",
+				},
 			},
 			Action: func(c *cli.Context) {
 				AdminFailoverList(c)
 			},
 		},
 	}
+}
 
+func newAdminRebalanceCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:    "start",
+			Aliases: []string{"s"},
+			Usage:   "start rebalance workflow",
+			Flags:   []cli.Flag{},
+			Action: func(c *cli.Context) {
+				AdminRebalanceStart(c)
+			},
+		},
+		{
+			Name:    "list",
+			Aliases: []string{"l"},
+			Usage:   "list rebalance workflow runs closed/open.",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  FlagOpenWithAlias,
+					Usage: "List for open workflow executions, default is to list for closed ones",
+				},
+				cli.IntFlag{
+					Name:  FlagPageSizeWithAlias,
+					Value: 10,
+					Usage: "Result page size",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminRebalanceList(c)
+			},
+		},
+	}
+}
+
+func newAdminConfigStoreCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:    "get-dynamic-config",
+			Aliases: []string{"getdc", "g"},
+			Usage:   "Get Dynamic Config Value",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagDynamicConfigName,
+					Usage: "Name of Dynamic Config parameter to get value of",
+				},
+				cli.StringSliceFlag{
+					Name:  FlagDynamicConfigFilter,
+					Usage: `Optional. Can be specified multiple times for multiple filters. ex: --dynamic-config-filter '{"Name":"domainName","Value":"global-samples-domain"}'`,
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminGetDynamicConfig(c)
+			},
+		},
+		{
+			Name:    "update-dynamic-config",
+			Aliases: []string{"updc", "u"},
+			Usage:   "Update Dynamic Config Value",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagDynamicConfigName,
+					Usage: "Name of Dynamic Config parameter to update value of",
+				},
+				cli.StringSliceFlag{
+					Name:  FlagDynamicConfigValue,
+					Usage: `Optional. Can be specified multiple times for multiple values. ex: --dynamic-config-value '{"Value":true,"Filters":[]}'`,
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminUpdateDynamicConfig(c)
+			},
+		},
+		{
+			Name:    "restore-dynamic-config",
+			Aliases: []string{"resdc", "r"},
+			Usage:   "Restore Dynamic Config Value",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagDynamicConfigName,
+					Usage: "Name of Dynamic Config parameter to restore",
+				},
+				cli.StringSliceFlag{
+					Name:  FlagDynamicConfigFilter,
+					Usage: `Optional. Can be specified multiple times for multiple filters. ex: --dynamic-config-filter '{"Name":"domainName","Value":"global-samples-domain"}'`,
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminRestoreDynamicConfig(c)
+			},
+		},
+		{
+			Name:    "list-dynamic-config",
+			Aliases: []string{"listdc", "l"},
+			Usage:   "List Dynamic Config Value",
+			Flags:   []cli.Flag{},
+			Action: func(c *cli.Context) {
+				AdminListDynamicConfig(c)
+			},
+		},
+	}
 }

@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,14 +27,16 @@ package historyserviceclient
 
 import (
 	context "context"
-	history "github.com/uber/cadence/.gen/go/history"
-	replicator "github.com/uber/cadence/.gen/go/replicator"
-	shared "github.com/uber/cadence/.gen/go/shared"
+	reflect "reflect"
+
 	wire "go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
-	reflect "reflect"
+
+	history "github.com/uber/cadence/.gen/go/history"
+	replicator "github.com/uber/cadence/.gen/go/replicator"
+	shared "github.com/uber/cadence/.gen/go/shared"
 )
 
 // Interface is a client for the HistoryService service.
@@ -68,6 +70,12 @@ type Interface interface {
 		DescribeRequest *history.DescribeWorkflowExecutionRequest,
 		opts ...yarpc.CallOption,
 	) (*shared.DescribeWorkflowExecutionResponse, error)
+
+	GetCrossClusterTasks(
+		ctx context.Context,
+		Request *shared.GetCrossClusterTasksRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.GetCrossClusterTasksResponse, error)
 
 	GetDLQReplicationMessages(
 		ctx context.Context,
@@ -218,6 +226,12 @@ type Interface interface {
 		FailRequest *history.RespondActivityTaskFailedRequest,
 		opts ...yarpc.CallOption,
 	) error
+
+	RespondCrossClusterTasksCompleted(
+		ctx context.Context,
+		Request *shared.RespondCrossClusterTasksCompletedRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.RespondCrossClusterTasksCompletedResponse, error)
 
 	RespondDecisionTaskCompleted(
 		ctx context.Context,
@@ -410,6 +424,29 @@ func (c client) DescribeWorkflowExecution(
 	}
 
 	success, err = history.HistoryService_DescribeWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetCrossClusterTasks(
+	ctx context.Context,
+	_Request *shared.GetCrossClusterTasksRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetCrossClusterTasksResponse, err error) {
+
+	args := history.HistoryService_GetCrossClusterTasks_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_GetCrossClusterTasks_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_GetCrossClusterTasks_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -985,6 +1022,29 @@ func (c client) RespondActivityTaskFailed(
 	}
 
 	err = history.HistoryService_RespondActivityTaskFailed_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	_Request *shared.RespondCrossClusterTasksCompletedRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.RespondCrossClusterTasksCompletedResponse, err error) {
+
+	args := history.HistoryService_RespondCrossClusterTasksCompleted_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_RespondCrossClusterTasksCompleted_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_RespondCrossClusterTasksCompleted_Helper.UnwrapResponse(&result)
 	return
 }
 

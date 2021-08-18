@@ -27,10 +27,10 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/uber/cadence/common/config"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
-	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/environment"
 
 	"github.com/iancoleman/strcase"
@@ -131,8 +131,12 @@ func generateCredentialString(user string, password string) string {
 func registerTLSConfig(cfg *config.SQL) (sslParams url.Values, err error) {
 	sslParams = url.Values{}
 	if cfg.TLS != nil && cfg.TLS.Enabled {
-		sslParams.Set("ssl", "true")
-		sslParams.Set("sslmode", "require")
+		sslMode := cfg.TLS.SSLMode
+		if sslMode == "" {
+			// NOTE: Default to require for backward compatibility for Cadence users.
+			sslMode = "require"
+		}
+		sslParams.Set("sslmode", sslMode)
 		sslParams.Set("sslrootcert", cfg.TLS.CaFile)
 		sslParams.Set("sslkey", cfg.TLS.KeyFile)
 		sslParams.Set("sslcert", cfg.TLS.CertFile)
@@ -165,11 +169,11 @@ func GetTestClusterOption() *pt.TestBaseOptions {
 	}
 
 	return &pt.TestBaseOptions{
-		SQLDBPluginName: PluginName,
-		DBUsername:      testUser,
-		DBPassword:      testPassword,
-		DBHost:          environment.GetPostgresAddress(),
-		DBPort:          environment.GetPostgresPort(),
-		SchemaDir:       testSchemaDir,
+		DBPluginName: PluginName,
+		DBUsername:   testUser,
+		DBPassword:   testPassword,
+		DBHost:       environment.GetPostgresAddress(),
+		DBPort:       environment.GetPostgresPort(),
+		SchemaDir:    testSchemaDir,
 	}
 }

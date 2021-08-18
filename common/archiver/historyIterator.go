@@ -27,9 +27,10 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
+	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -61,7 +62,7 @@ type (
 	// HistoryBlob is the serializable data that forms the body of a blob
 	HistoryBlob struct {
 		Header *HistoryBlobHeader `json:"header"`
-		Body   []*shared.History  `json:"body"`
+		Body   []*types.History   `json:"body"`
 	}
 
 	historyIteratorState struct {
@@ -157,10 +158,10 @@ func (i *historyIterator) Next() (*HistoryBlob, error) {
 		WorkflowID:           common.StringPtr(i.request.WorkflowID),
 		RunID:                common.StringPtr(i.request.RunID),
 		IsLast:               common.BoolPtr(i.FinishedIteration),
-		FirstFailoverVersion: firstEvent.Version,
-		LastFailoverVersion:  lastEvent.Version,
-		FirstEventID:         firstEvent.EventId,
-		LastEventID:          lastEvent.EventId,
+		FirstFailoverVersion: common.Int64Ptr(firstEvent.Version),
+		LastFailoverVersion:  common.Int64Ptr(lastEvent.Version),
+		FirstEventID:         common.Int64Ptr(firstEvent.EventID),
+		LastEventID:          common.Int64Ptr(lastEvent.EventID),
 		EventCount:           common.Int64Ptr(eventCount),
 	}
 
@@ -180,14 +181,14 @@ func (i *historyIterator) GetState() ([]byte, error) {
 	return json.Marshal(i.historyIteratorState)
 }
 
-func (i *historyIterator) readHistoryBatches(ctx context.Context, firstEventID int64) ([]*shared.History, historyIteratorState, error) {
+func (i *historyIterator) readHistoryBatches(ctx context.Context, firstEventID int64) ([]*types.History, historyIteratorState, error) {
 	size := 0
 	targetSize := i.targetHistoryBlobSize
-	var historyBatches []*shared.History
+	var historyBatches []*types.History
 	newIterState := historyIteratorState{}
 	for size < targetSize {
 		currHistoryBatches, err := i.readHistory(ctx, firstEventID)
-		if _, ok := err.(*shared.EntityNotExistsError); ok && firstEventID != common.FirstEventID {
+		if _, ok := err.(*types.EntityNotExistsError); ok && firstEventID != common.FirstEventID {
 			newIterState.FinishedIteration = true
 			return historyBatches, newIterState, nil
 		}
@@ -201,7 +202,7 @@ func (i *historyIterator) readHistoryBatches(ctx context.Context, firstEventID i
 			}
 			size += historyBatchSize
 			historyBatches = append(historyBatches, batch)
-			firstEventID = *batch.Events[len(batch.Events)-1].EventId + 1
+			firstEventID = batch.Events[len(batch.Events)-1].EventID + 1
 
 			// In case targetSize is satisfied before reaching the end of current set of batches, return immediately.
 			// Otherwise, we need to look ahead to see if there's more history batches.
@@ -216,7 +217,7 @@ func (i *historyIterator) readHistoryBatches(ctx context.Context, firstEventID i
 	// If you are here, it means the target size is met after adding the last batch of read history.
 	// We need to check if there's more history batches.
 	_, err := i.readHistory(ctx, firstEventID)
-	if _, ok := err.(*shared.EntityNotExistsError); ok && firstEventID != common.FirstEventID {
+	if _, ok := err.(*types.EntityNotExistsError); ok && firstEventID != common.FirstEventID {
 		newIterState.FinishedIteration = true
 		return historyBatches, newIterState, nil
 	}
@@ -228,7 +229,7 @@ func (i *historyIterator) readHistoryBatches(ctx context.Context, firstEventID i
 	return historyBatches, newIterState, nil
 }
 
-func (i *historyIterator) readHistory(ctx context.Context, firstEventID int64) ([]*shared.History, error) {
+func (i *historyIterator) readHistory(ctx context.Context, firstEventID int64) ([]*types.History, error) {
 	req := &persistence.ReadHistoryBranchRequest{
 		BranchToken: i.request.BranchToken,
 		MinEventID:  firstEventID,
@@ -236,7 +237,7 @@ func (i *historyIterator) readHistory(ctx context.Context, firstEventID int64) (
 		PageSize:    i.historyPageSize,
 		ShardID:     common.IntPtr(i.request.ShardID),
 	}
-	historyBatches, _, _, err := persistence.ReadFullPageV2EventsByBatch(ctx, i.historyV2Manager, req)
+	historyBatches, _, _, err := persistenceutils.ReadFullPageV2EventsByBatch(ctx, i.historyV2Manager, req)
 	return historyBatches, err
 
 }

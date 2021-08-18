@@ -25,23 +25,22 @@ import (
 	"time"
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
-	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/dynamicconfig/configstore"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
@@ -103,17 +102,42 @@ func (s *server) Stop() {
 
 // startService starts a service with the given name and config
 func (s *server) startService() common.Daemon {
-
-	var err error
-
 	params := service.BootstrapParams{}
 	params.Name = "cadence-" + s.name
-	params.Logger = loggerimpl.NewLogger(s.cfg.Log.NewZapLogger())
+
+	zapLogger, err := s.cfg.Log.NewZapLogger()
+	if err != nil {
+		log.Fatal("failed to create the zap logger, err: ", err.Error())
+	}
+	params.Logger = loggerimpl.NewLogger(zapLogger)
+	params.UpdateLoggerWithServiceName(params.Name)
 	params.PersistenceConfig = s.cfg.Persistence
 
-	params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger.WithTags(tag.Service(params.Name)), s.doneC)
+	err = nil
+	if s.cfg.DynamicConfig.Client == "" {
+		//try to fallback to legacy dynamicClientConfig
+		params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger, s.doneC)
+	} else {
+		switch s.cfg.DynamicConfig.Client {
+		case dynamicconfig.DynamicConfigConfigStoreClient:
+			log.Printf("Trying to initialize Config Store Dynamic Config Client\n")
+			params.DynamicConfig, err = configstore.NewConfigStoreClient(
+				&s.cfg.DynamicConfig.ConfigStore,
+				&s.cfg.Persistence,
+				params.Logger,
+				s.doneC,
+			)
+		case dynamicconfig.DynamicConfigFileBasedClient:
+			log.Printf("Trying to initialize File Based Dynamic Config Client\n")
+			params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfig.FileBased, params.Logger, s.doneC)
+		default:
+			log.Printf("Trying to initialize Nop Config Client\n")
+			params.DynamicConfig = dynamicconfig.NewNopClient()
+		}
+	}
+
 	if err != nil {
-		log.Printf("error creating file based dynamic config client, use no-op config client instead. error: %v", err)
+		log.Printf("error creating dynamic config client, using no-op config client instead. error: %v", err)
 		params.DynamicConfig = dynamicconfig.NewNopClient()
 	}
 	clusterMetadata := s.cfg.ClusterMetadata
@@ -124,8 +148,8 @@ func (s *server) startService() common.Daemon {
 	)
 
 	svcCfg := s.cfg.Services[s.name]
-	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger)
-	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger)
+	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger, params.Name)
+	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger, s.cfg.NewGRPCPorts())
 	params.MembershipFactory, err = s.cfg.Ringpop.NewFactory(
 		params.RPCFactory.GetDispatcher(),
 		params.Name,
@@ -140,11 +164,18 @@ func (s *server) startService() common.Daemon {
 
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 
+	//TODO: remove this after 0.23 and mention a breaking change in config.
+	primaryClusterName := clusterMetadata.PrimaryClusterName
+	if len(primaryClusterName) == 0 {
+		primaryClusterName = clusterMetadata.MasterClusterName
+		log.Println("[Warning]MasterClusterName config is deprecated. " +
+			"Please replace it with PrimaryClusterName.")
+	}
 	params.ClusterMetadata = cluster.NewMetadata(
 		params.Logger,
 		dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, clusterMetadata.EnableGlobalDomain),
 		clusterMetadata.FailoverVersionIncrement,
-		clusterMetadata.MasterClusterName,
+		primaryClusterName,
 		clusterMetadata.CurrentClusterName,
 		clusterMetadata.ClusterInformation,
 	)
@@ -161,7 +192,7 @@ func (s *server) startService() common.Daemon {
 	)()
 	isAdvancedVisEnabled := advancedVisMode != common.AdvancedVisibilityWritingModeOff
 	if isAdvancedVisEnabled {
-		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, params.MetricsClient, zap.NewNop(), params.Logger, params.MetricScope, isAdvancedVisEnabled)
+		params.MessagingClient = kafka.NewKafkaClient(&s.cfg.Kafka, params.MetricsClient, params.Logger, params.MetricScope, isAdvancedVisEnabled)
 	} else {
 		params.MessagingClient = nil
 	}
@@ -175,7 +206,8 @@ func (s *server) startService() common.Daemon {
 		}
 
 		params.ESConfig = advancedVisStore.ElasticSearch
-		esClient, err := elasticsearch.NewGenericClient(params.ESConfig, s.cfg.Persistence.VisibilityConfig, params.Logger)
+		params.ESConfig.SetUsernamePassword()
+		esClient, err := elasticsearch.NewGenericClient(params.ESConfig, params.Logger)
 		if err != nil {
 			log.Fatalf("error creating elastic search client: %v", err)
 		}
@@ -205,7 +237,8 @@ func (s *server) startService() common.Daemon {
 
 	params.ArchiverProvider = provider.NewArchiverProvider(s.cfg.Archival.History.Provider, s.cfg.Archival.Visibility.Provider)
 	params.PersistenceConfig.TransactionSizeLimit = dc.GetIntProperty(dynamicconfig.TransactionSizeLimit, common.DefaultTransactionSizeLimit)
-	params.Authorizer = authorization.NewNopAuthorizer()
+	params.PersistenceConfig.ErrorInjectionRate = dc.GetFloat64Property(dynamicconfig.PersistenceErrorInjectionRate, 0)
+	params.AuthorizationConfig = s.cfg.Authorization
 	params.BlobstoreClient, err = filestore.NewFilestoreClient(s.cfg.Blobstore.Filestore)
 	if err != nil {
 		log.Printf("failed to create file blobstore client, will continue startup without it: %v", err)

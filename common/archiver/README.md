@@ -30,6 +30,8 @@ type HistoryArchiver interface {
 	// to interact with these retries including giving the implementor the ability to cancel retries and record progress
   // between retry attempts. 
   // This method will be invoked after a workflow passes its retention period.
+  // It's possible that this method will be invoked for one workflow multiple times and potentially concurrently,
+  // implementation should correctly handle the workflow not exist case and return nil error.
     Archive(context.Context, URI, *ArchiveHistoryRequest, ...ArchiveOption) error
     
     // Get is used to access an archived history. When context expires method should stop trying to fetch history.
@@ -69,7 +71,7 @@ type VisibilityArchiver interface {
 
 Modify the `./provider/provider.go` file so that the `ArchiverProvider` knows how to create an instance of your archiver. 
 Also, add configs for you archiver to static yaml config files and modify the `HistoryArchiverProvider` 
-and `VisibilityArchiverProvider` struct in the `../common/service/config.go` accordingly.
+and `VisibilityArchiverProvider` struct in the `../common/config.go` accordingly.
 
 
 ## FAQ

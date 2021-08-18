@@ -31,13 +31,10 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/worker/scanner/executions"
 )
 
@@ -114,28 +111,14 @@ func fixExecution(
 	invariants []executions.InvariantFactory,
 	execution *store.ScanOutputEntity,
 ) invariant.ManagerFixResult {
-	session := connectToCassandra(c)
-	defer session.Close()
-	logger := loggerimpl.NewNopLogger()
+	execManager := initializeExecutionStore(c, execution.Execution.(entity.Entity).GetShardID(), 0)
+	defer execManager.Close()
 
-	execStore, err := cassandra.NewWorkflowExecutionPersistence(
-		execution.Execution.(entity.Entity).GetShardID(),
-		session,
-		logger,
-	)
-
-	if err != nil {
-		ErrorAndExit("Failed to get execution store", err)
-	}
-
-	historyV2Mgr := persistence.NewHistoryV2ManagerImpl(
-		cassandra.NewHistoryV2PersistenceFromSession(session, logger),
-		logger,
-		dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
-	)
+	historyV2Mgr := initializeHistoryManager(c)
+	defer historyV2Mgr.Close()
 
 	pr := persistence.NewPersistenceRetryer(
-		persistence.NewExecutionManagerImpl(execStore, logger),
+		execManager,
 		historyV2Mgr,
 		common.CreatePersistenceRetryPolicy(),
 	)

@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 type UtilSuite struct {
@@ -65,8 +65,8 @@ func (s *UtilSuite) TestHashDeterminism() {
 				ShardID:     0,
 				BranchToken: []byte{1, 2, 3},
 				NextEventID: int64(123),
-				CloseStatus: shared.WorkflowExecutionCloseStatusContinuedAsNew,
-				Memo: &shared.Memo{
+				CloseStatus: types.WorkflowExecutionCloseStatusContinuedAsNew,
+				Memo: &types.Memo{
 					Fields: map[string][]byte{
 						"memoKey1": []byte{1, 2, 3},
 						"memoKey2": []byte{4, 5, 6},

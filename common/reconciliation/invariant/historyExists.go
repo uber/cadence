@@ -25,10 +25,10 @@ package invariant
 import (
 	"context"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	c "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -93,7 +93,7 @@ func (h *historyExists) Check(
 	}
 	if readHistoryBranchErr != nil {
 		switch readHistoryBranchErr.(type) {
-		case *shared.EntityNotExistsError:
+		case *types.EntityNotExistsError:
 			return CheckResult{
 				CheckResultType: CheckResultTypeCorrupted,
 				InvariantName:   h.Name(),
@@ -153,9 +153,9 @@ func ExecutionStillExists(
 ) (bool, error) {
 	req := &persistence.GetWorkflowExecutionRequest{
 		DomainID: exec.DomainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: &exec.WorkflowID,
-			RunId:      &exec.RunID,
+		Execution: types.WorkflowExecution{
+			WorkflowID: exec.WorkflowID,
+			RunID:      exec.RunID,
 		},
 	}
 	_, err := pr.GetWorkflowExecution(ctx, req)
@@ -163,7 +163,7 @@ func ExecutionStillExists(
 		return true, nil
 	}
 	switch err.(type) {
-	case *shared.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		return false, nil
 	default:
 		return false, err

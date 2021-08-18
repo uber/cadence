@@ -32,7 +32,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	replicator "github.com/uber/cadence/.gen/go/replicator"
+	types "github.com/uber/cadence/common/types"
 )
 
 // MockDLQHandler is a mock of DLQHandler interface
@@ -59,13 +59,14 @@ func (m *MockDLQHandler) EXPECT() *MockDLQHandlerMockRecorder {
 }
 
 // ReadMessages mocks base method
-func (m *MockDLQHandler) ReadMessages(ctx context.Context, sourceCluster string, lastMessageID int64, pageSize int, pageToken []byte) ([]*replicator.ReplicationTask, []byte, error) {
+func (m *MockDLQHandler) ReadMessages(ctx context.Context, sourceCluster string, lastMessageID int64, pageSize int, pageToken []byte) ([]*types.ReplicationTask, []*types.ReplicationTaskInfo, []byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadMessages", ctx, sourceCluster, lastMessageID, pageSize, pageToken)
-	ret0, _ := ret[0].([]*replicator.ReplicationTask)
-	ret1, _ := ret[1].([]byte)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret0, _ := ret[0].([]*types.ReplicationTask)
+	ret1, _ := ret[1].([]*types.ReplicationTaskInfo)
+	ret2, _ := ret[2].([]byte)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
 }
 
 // ReadMessages indicates an expected call of ReadMessages

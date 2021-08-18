@@ -23,9 +23,9 @@ package domain
 import (
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -52,10 +52,10 @@ func (d *AttrValidatorImpl) validateDomainConfig(config *persistence.DomainConfi
 	if config.Retention < int32(d.minRetentionDays) {
 		return errInvalidRetentionPeriod
 	}
-	if config.HistoryArchivalStatus == shared.ArchivalStatusEnabled && len(config.HistoryArchivalURI) == 0 {
+	if config.HistoryArchivalStatus == types.ArchivalStatusEnabled && len(config.HistoryArchivalURI) == 0 {
 		return errInvalidArchivalConfig
 	}
-	if config.VisibilityArchivalStatus == shared.ArchivalStatusEnabled && len(config.VisibilityArchivalURI) == 0 {
+	if config.VisibilityArchivalStatus == types.ArchivalStatusEnabled && len(config.VisibilityArchivalURI) == 0 {
 		return errInvalidArchivalConfig
 	}
 	return nil
@@ -78,11 +78,11 @@ func (d *AttrValidatorImpl) validateDomainReplicationConfigForLocalDomain(
 	}
 
 	if activeCluster != d.clusterMetadata.GetCurrentClusterName() {
-		return &shared.BadRequestError{Message: "Invalid local domain active cluster"}
+		return &types.BadRequestError{Message: "Invalid local domain active cluster"}
 	}
 
 	if len(clusters) != 1 || clusters[0].ClusterName != activeCluster {
-		return &shared.BadRequestError{Message: "Invalid local domain clusters"}
+		return &types.BadRequestError{Message: "Invalid local domain clusters"}
 	}
 
 	return nil
@@ -91,6 +91,11 @@ func (d *AttrValidatorImpl) validateDomainReplicationConfigForLocalDomain(
 func (d *AttrValidatorImpl) validateDomainReplicationConfigForGlobalDomain(
 	replicationConfig *persistence.DomainReplicationConfig,
 ) error {
+	// TODO: https://github.com/uber/cadence/issues/4345 add checking for "pending active" as well
+	// Right now we only have checking if clusters to remove are "current active cluster" in this method.
+	// However, there could be edge cases that a cluster is in "pending active" state during graceful failover.
+	// It's better to do this check so that people won't make mistake.
+	// However, this is not critical -- even this happens, they can add the active cluster back
 
 	activeCluster := replicationConfig.ActiveClusterName
 	clusters := replicationConfig.Clusters
@@ -149,7 +154,7 @@ func (d *AttrValidatorImpl) validateClusterName(
 ) error {
 
 	if info, ok := d.clusterMetadata.GetAllClusterInfo()[clusterName]; !ok || !info.Enabled {
-		return &shared.BadRequestError{Message: fmt.Sprintf(
+		return &types.BadRequestError{Message: fmt.Sprintf(
 			"Invalid cluster name: %v",
 			clusterName,
 		)}

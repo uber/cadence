@@ -26,13 +26,13 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/bmizerany/assert"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli"
 
-	serverFrontendTest "github.com/uber/cadence/.gen/go/cadence/workflowservicetest"
-	serverShared "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 func TestAdminAddSearchAttribute_isValueTypeValid(t *testing.T) {
@@ -71,30 +71,30 @@ func TestAdminAddSearchAttribute_isValueTypeValid(t *testing.T) {
 func TestAdminFailover(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	serverFrontendClient := serverFrontendTest.NewMockClient(mockCtrl)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
 	domainCLI := &domainCLIImpl{
 		frontendClient: serverFrontendClient,
 	}
 
-	var listDomainsResponse = &serverShared.ListDomainsResponse{
-		Domains: []*serverShared.DescribeDomainResponse{
+	var listDomainsResponse = &types.ListDomainsResponse{
+		Domains: []*types.DescribeDomainResponse{
 			{
-				DomainInfo: &serverShared.DomainInfo{
-					Name:        common.StringPtr("test-domain"),
-					Description: common.StringPtr("a test domain"),
-					OwnerEmail:  common.StringPtr("test@uber.com"),
+				DomainInfo: &types.DomainInfo{
+					Name:        "test-domain",
+					Description: "a test domain",
+					OwnerEmail:  "test@uber.com",
 					Data: map[string]string{
 						common.DomainDataKeyForManagedFailover: "true",
 					},
 				},
-				ReplicationConfiguration: &serverShared.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("active"),
-					Clusters: []*serverShared.ClusterReplicationConfiguration{
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
+					ActiveClusterName: "active",
+					Clusters: []*types.ClusterReplicationConfiguration{
 						{
-							ClusterName: common.StringPtr("active"),
+							ClusterName: "active",
 						},
 						{
-							ClusterName: common.StringPtr("standby"),
+							ClusterName: "standby",
 						},
 					},
 				},

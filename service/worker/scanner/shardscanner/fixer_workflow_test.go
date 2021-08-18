@@ -23,6 +23,7 @@
 package shardscanner
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -93,9 +94,9 @@ func (s *fixerWorkflowSuite) TestNewFixerHooks() {
 		{
 			name: "invariant is nil",
 			manager: func(
+				ctx context.Context,
 				retryer persistence.Retryer,
 				params FixShardActivityParams,
-				config ScannerConfig,
 			) invariant.Manager {
 				return nil
 			},
@@ -105,13 +106,18 @@ func (s *fixerWorkflowSuite) TestNewFixerHooks() {
 		{
 			name: "both provided",
 			manager: func(
+				ctx context.Context,
 				retryer persistence.Retryer,
 				params FixShardActivityParams,
-				config ScannerConfig,
 			) invariant.Manager {
 				return nil
 			},
-			iterator: func(client blobstore.Client, keys store.Keys, params FixShardActivityParams, config ScannerConfig) store.ScanOutputIterator {
+			iterator: func(
+				ctx context.Context,
+				client blobstore.Client,
+				keys store.Keys,
+				params FixShardActivityParams,
+			) store.ScanOutputIterator {
 				return nil
 			},
 			wantErr: false,

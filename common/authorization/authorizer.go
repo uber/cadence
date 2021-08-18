@@ -22,13 +22,26 @@
 
 package authorization
 
-import "context"
+import (
+	"context"
+
+	"github.com/uber/cadence/common/types"
+)
 
 const (
 	// DecisionDeny means auth decision is deny
 	DecisionDeny Decision = iota + 1
 	// DecisionAllow means auth decision is allow
 	DecisionAllow
+)
+
+const (
+	// PermissionRead means the user can write on the domain level APIs
+	PermissionRead Permission = iota + 1
+	// PermissionWrite means the user can write on the domain level APIs
+	PermissionWrite
+	// PermissionAdmin means the user can read+write on the domain level APIs
+	PermissionAdmin
 )
 
 type (
@@ -38,6 +51,8 @@ type (
 		Actor      string
 		APIName    string
 		DomainName string
+		TaskList   *types.TaskList
+		Permission Permission
 	}
 
 	// Result is result from authority.
@@ -47,7 +62,23 @@ type (
 
 	// Decision is enum type for auth decision
 	Decision int
+
+	// Permission is enum type for auth permission
+	Permission int
 )
+
+func NewPermission(permission string) Permission {
+	switch permission {
+	case "read":
+		return PermissionRead
+	case "write":
+		return PermissionWrite
+	case "admin":
+		return PermissionAdmin
+	default:
+		return -1
+	}
+}
 
 // Authorizer is an interface for authorization
 type Authorizer interface {

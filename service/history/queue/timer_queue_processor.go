@@ -29,7 +29,6 @@ import (
 
 	"github.com/pborman/uuid"
 
-	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -37,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/execution"
@@ -114,7 +114,7 @@ func NewTimerQueueProcessor(
 		historyResender := ndc.NewHistoryResender(
 			shard.GetDomainCache(),
 			shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
-			func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
+			func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 				return historyEngine.ReplicateEventsV2(ctx, request)
 			},
 			shard.GetService().GetPayloadSerializer(),
@@ -201,6 +201,7 @@ func (t *timerQueueProcessor) Stop() {
 
 func (t *timerQueueProcessor) NotifyNewTask(
 	clusterName string,
+	_ *persistence.WorkflowExecutionInfo,
 	timerTasks []persistence.Task,
 ) {
 	if clusterName == t.currentClusterName {
@@ -544,7 +545,7 @@ func newTimerQueueStandbyProcessor(
 
 func newTimerQueueFailoverProcessor(
 	standbyClusterName string,
-	shard shard.Context,
+	shardContext shard.Context,
 	historyEngine engine.Engine,
 	taskProcessor task.Processor,
 	taskAllocator TaskAllocator,
@@ -553,11 +554,11 @@ func newTimerQueueFailoverProcessor(
 	minLevel, maxLevel time.Time,
 	domainIDs map[string]struct{},
 ) (updateClusterAckLevelFn, *timerQueueProcessorBase) {
-	config := shard.GetConfig()
+	config := shardContext.GetConfig()
 	options := newTimerQueueProcessorOptions(config, true, true)
 
-	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
-	failoverStartTime := shard.GetTimeSource().Now()
+	currentClusterName := shardContext.GetService().GetClusterMetadata().GetCurrentClusterName()
+	failoverStartTime := shardContext.GetTimeSource().Now()
 	failoverUUID := uuid.New()
 	logger = logger.WithTags(
 		tag.ClusterName(currentClusterName),
@@ -579,9 +580,9 @@ func newTimerQueueFailoverProcessor(
 	}
 
 	updateClusterAckLevel := func(ackLevel task.Key) error {
-		return shard.UpdateTimerFailoverLevel(
+		return shardContext.UpdateTimerFailoverLevel(
 			failoverUUID,
-			persistence.TimerFailoverLevel{
+			shard.TimerFailoverLevel{
 				StartTime:    failoverStartTime,
 				MinLevel:     minLevel,
 				CurrentLevel: ackLevel.(timerTaskKey).visibilityTimestamp,
@@ -592,7 +593,7 @@ func newTimerQueueFailoverProcessor(
 	}
 
 	queueShutdown := func() error {
-		return shard.DeleteTimerFailoverLevel(failoverUUID)
+		return shardContext.DeleteTimerFailoverLevel(failoverUUID)
 	}
 
 	processingQueueStates := []ProcessingQueueState{
@@ -606,10 +607,10 @@ func newTimerQueueFailoverProcessor(
 
 	return updateClusterAckLevel, newTimerQueueProcessorBase(
 		currentClusterName, // should use current cluster's time when doing domain failover
-		shard,
+		shardContext,
 		processingQueueStates,
 		taskProcessor,
-		NewLocalTimerGate(shard.GetTimeSource()),
+		NewLocalTimerGate(shardContext.GetTimeSource()),
 		options,
 		updateMaxReadLevel,
 		updateClusterAckLevel,
@@ -618,7 +619,7 @@ func newTimerQueueFailoverProcessor(
 		taskFilter,
 		taskExecutor,
 		logger,
-		shard.GetMetricsClient(),
+		shardContext.GetMetricsClient(),
 	)
 }
 

@@ -31,8 +31,8 @@ import (
 
 	"github.com/xwb1989/sqlparser"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -49,7 +49,7 @@ type (
 		workflowID        *string
 		runID             *string
 		workflowTypeName  *string
-		closeStatus       *shared.WorkflowExecutionCloseStatus
+		closeStatus       *types.WorkflowExecutionCloseStatus
 		emptyResult       bool
 	}
 )
@@ -241,21 +241,21 @@ func convertToTimestamp(timeStr string) (int64, error) {
 	return parsedTime.UnixNano(), nil
 }
 
-func convertStatusStr(statusStr string) (shared.WorkflowExecutionCloseStatus, error) {
+func convertStatusStr(statusStr string) (types.WorkflowExecutionCloseStatus, error) {
 	statusStr = strings.ToLower(strings.TrimSpace(statusStr))
 	switch statusStr {
-	case "completed", strconv.Itoa(int(shared.WorkflowExecutionCloseStatusCompleted)):
-		return shared.WorkflowExecutionCloseStatusCompleted, nil
-	case "failed", strconv.Itoa(int(shared.WorkflowExecutionCloseStatusFailed)):
-		return shared.WorkflowExecutionCloseStatusFailed, nil
-	case "canceled", strconv.Itoa(int(shared.WorkflowExecutionCloseStatusCanceled)):
-		return shared.WorkflowExecutionCloseStatusCanceled, nil
-	case "terminated", strconv.Itoa(int(shared.WorkflowExecutionCloseStatusTerminated)):
-		return shared.WorkflowExecutionCloseStatusTerminated, nil
-	case "continuedasnew", "continued_as_new", strconv.Itoa(int(shared.WorkflowExecutionCloseStatusContinuedAsNew)):
-		return shared.WorkflowExecutionCloseStatusContinuedAsNew, nil
-	case "timedout", "timed_out", strconv.Itoa(int(shared.WorkflowExecutionCloseStatusTimedOut)):
-		return shared.WorkflowExecutionCloseStatusTimedOut, nil
+	case "completed", strconv.Itoa(int(types.WorkflowExecutionCloseStatusCompleted)):
+		return types.WorkflowExecutionCloseStatusCompleted, nil
+	case "failed", strconv.Itoa(int(types.WorkflowExecutionCloseStatusFailed)):
+		return types.WorkflowExecutionCloseStatusFailed, nil
+	case "canceled", strconv.Itoa(int(types.WorkflowExecutionCloseStatusCanceled)):
+		return types.WorkflowExecutionCloseStatusCanceled, nil
+	case "terminated", strconv.Itoa(int(types.WorkflowExecutionCloseStatusTerminated)):
+		return types.WorkflowExecutionCloseStatusTerminated, nil
+	case "continuedasnew", "continued_as_new", strconv.Itoa(int(types.WorkflowExecutionCloseStatusContinuedAsNew)):
+		return types.WorkflowExecutionCloseStatusContinuedAsNew, nil
+	case "timedout", "timed_out", strconv.Itoa(int(types.WorkflowExecutionCloseStatusTimedOut)):
+		return types.WorkflowExecutionCloseStatusTimedOut, nil
 	default:
 		return 0, fmt.Errorf("unknown workflow close status: %s", statusStr)
 	}

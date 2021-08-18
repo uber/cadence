@@ -23,19 +23,20 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"time"
 
-	"github.com/gocql/gocql"
-
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
 	constDomainPartition     = 0
 	domainMetadataRecordName = "cadence-domain-metadata"
+	emptyFailoverEndTime     = int64(0)
 )
 
 const (
@@ -148,9 +149,13 @@ const (
 		`WHERE domains_partition = ? `
 )
 
-// Insert a new record to domain, return error if failed or already exists
-// Must return conditionFailed error if domainName already exists
-func (db *cdb) InsertDomain(ctx context.Context, row *nosqlplugin.DomainRow) error {
+// Insert a new record to domain
+// return types.DomainAlreadyExistsError error if failed or already exists
+// Must return ConditionFailure error if other condition doesn't match
+func (db *cdb) InsertDomain(
+	ctx context.Context,
+	row *nosqlplugin.DomainRow,
+) error {
 	query := db.session.Query(templateCreateDomainQuery, row.Info.ID, row.Info.Name).WithContext(ctx)
 	applied, err := query.MapScanCAS(make(map[string]interface{}))
 	if err != nil {
@@ -166,6 +171,10 @@ func (db *cdb) InsertDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 	}
 
 	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
+	failoverEndTime := emptyFailoverEndTime
+	if row.FailoverEndTime != nil {
+		failoverEndTime = row.FailoverEndTime.UnixNano()
+	}
 	batch.Query(templateCreateDomainByNameQueryWithinBatchV2,
 		constDomainPartition,
 		row.Info.Name,
@@ -175,7 +184,7 @@ func (db *cdb) InsertDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		row.Info.Description,
 		row.Info.OwnerEmail,
 		row.Info.Data,
-		row.Config.Retention,
+		common.DurationToDays(row.Config.Retention),
 		row.Config.EmitMetric,
 		row.Config.ArchivalBucket,
 		row.Config.ArchivalStatus,
@@ -192,11 +201,11 @@ func (db *cdb) InsertDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		row.FailoverVersion,
 		p.InitialFailoverNotificationVersion,
 		common.InitialPreviousFailoverVersion,
-		row.FailoverEndTime,
-		row.LastUpdatedTime,
+		failoverEndTime,
+		row.LastUpdatedTime.UnixNano(),
 		metadataNotificationVersion,
 	)
-	db.updateMetadataBatch(ctx, batch, metadataNotificationVersion)
+	db.updateMetadataBatch(batch, metadataNotificationVersion)
 
 	previous := make(map[string]interface{})
 	applied, iter, err := db.session.MapExecuteBatchCAS(batch, previous)
@@ -216,20 +225,32 @@ func (db *cdb) InsertDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 			db.logger.Warn("Unable to delete orphan domain record. Error", tag.Error(errDelete))
 		}
 
-		if domain, ok := previous["domain"].(map[string]interface{}); ok {
-			msg := fmt.Sprintf("Domain already exists.  DomainId: %v", domain)
-			db.logger.Warn(msg)
-			return errConditionFailed
+		for {
+			// first iter MapScan is done inside MapExecuteBatchCAS
+			if domain, ok := previous["name"].(string); ok && domain == row.Info.Name {
+				db.logger.Warn("Domain already exists", tag.WorkflowDomainName(domain))
+				return &types.DomainAlreadyExistsError{
+					Message: fmt.Sprintf("Domain %v already exists", previous["domain"]),
+				}
+			}
+
+			previous = make(map[string]interface{})
+			if !iter.MapScan(previous) {
+				break
+			}
 		}
 
-		db.logger.Warn("CreateDomain operation failed because of conditional failure.")
-		return errConditionFailed
+		db.logger.Warn("Create domain operation failed because of condition update failure on domain metadata record")
+		return nosqlplugin.NewConditionFailure("domain")
 	}
 
 	return nil
 }
 
-func (db *cdb) updateMetadataBatch(ctx context.Context, batch *gocql.Batch, notificationVersion int64) {
+func (db *cdb) updateMetadataBatch(
+	batch gocql.Batch,
+	notificationVersion int64,
+) {
 	var nextVersion int64 = 1
 	var currentVersion *int64
 	if notificationVersion > 0 {
@@ -245,8 +266,15 @@ func (db *cdb) updateMetadataBatch(ctx context.Context, batch *gocql.Batch, noti
 }
 
 // Update domain
-func (db *cdb) UpdateDomain(ctx context.Context, row *nosqlplugin.DomainRow) error {
+func (db *cdb) UpdateDomain(
+	ctx context.Context,
+	row *nosqlplugin.DomainRow,
+) error {
 	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
+	failoverEndTime := emptyFailoverEndTime
+	if row.FailoverEndTime != nil {
+		failoverEndTime = row.FailoverEndTime.UnixNano()
+	}
 	batch.Query(templateUpdateDomainByNameQueryWithinBatchV2,
 		row.Info.ID,
 		row.Info.Name,
@@ -254,7 +282,7 @@ func (db *cdb) UpdateDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		row.Info.Description,
 		row.Info.OwnerEmail,
 		row.Info.Data,
-		row.Config.Retention,
+		common.DurationToDays(row.Config.Retention),
 		row.Config.EmitMetric,
 		row.Config.ArchivalBucket,
 		row.Config.ArchivalStatus,
@@ -270,13 +298,13 @@ func (db *cdb) UpdateDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		row.FailoverVersion,
 		row.FailoverNotificationVersion,
 		row.PreviousFailoverVersion,
-		row.FailoverEndTime,
-		row.LastUpdatedTime,
+		failoverEndTime,
+		row.LastUpdatedTime.UnixNano(),
 		row.NotificationVersion,
 		constDomainPartition,
 		row.Info.Name,
 	)
-	db.updateMetadataBatch(ctx, batch, row.NotificationVersion)
+	db.updateMetadataBatch(batch, row.NotificationVersion)
 
 	previous := make(map[string]interface{})
 	applied, iter, err := db.session.MapExecuteBatchCAS(batch, previous)
@@ -290,20 +318,24 @@ func (db *cdb) UpdateDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		return err
 	}
 	if !applied {
-		return fmt.Errorf("UpdateDomain operation failed because of conditional failure")
+		return nosqlplugin.NewConditionFailure("domain")
 	}
 	return nil
 }
 
 // Get one domain data, either by domainID or domainName
-func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *string) (*nosqlplugin.DomainRow, error) {
+func (db *cdb) SelectDomain(
+	ctx context.Context,
+	domainID *string,
+	domainName *string,
+) (*nosqlplugin.DomainRow, error) {
 	if domainID != nil && domainName != nil {
 		return nil, fmt.Errorf("GetDomain operation failed.  Both ID and Name specified in request")
 	} else if domainID == nil && domainName == nil {
 		return nil, fmt.Errorf("GetDomain operation failed.  Both ID and Name are empty")
 	}
 
-	var query *gocql.Query
+	var query gocql.Query
 	var err error
 	if domainID != nil {
 		query = db.session.Query(templateGetDomainQuery, domainID).WithContext(ctx)
@@ -322,7 +354,6 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 	var badBinariesDataEncoding string
 	var replicationClusters []map[string]interface{}
 
-	// 6 integer + 1 boolean in specific columns
 	var failoverNotificationVersion int64
 	var notificationVersion int64
 	var failoverVersion int64
@@ -331,6 +362,7 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 	var lastUpdatedTime int64
 	var configVersion int64
 	var isGlobalDomain bool
+	var retentionDays int32
 
 	query = db.session.Query(templateGetDomainByNameQueryV2, constDomainPartition, domainName).WithContext(ctx)
 	err = query.Scan(
@@ -340,7 +372,7 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 		&info.Description,
 		&info.OwnerEmail,
 		&info.Data,
-		&config.Retention,
+		&retentionDays,
 		&config.EmitMetric,
 		&config.ArchivalBucket,
 		&config.ArchivalStatus,
@@ -367,9 +399,10 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 	}
 
 	config.BadBinaries = p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding))
+	config.Retention = common.DaysToDuration(retentionDays)
 	replicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 
-	return &nosqlplugin.DomainRow{
+	dr := &nosqlplugin.DomainRow{
 		Info:                        info,
 		Config:                      config,
 		ReplicationConfig:           replicationConfig,
@@ -378,19 +411,27 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 		FailoverNotificationVersion: failoverNotificationVersion,
 		PreviousFailoverVersion:     previousFailoverVersion,
 		NotificationVersion:         notificationVersion,
-		FailoverEndTime:             failoverEndTime,
-		LastUpdatedTime:             lastUpdatedTime,
+		LastUpdatedTime:             time.Unix(0, lastUpdatedTime),
 		IsGlobalDomain:              isGlobalDomain,
-	}, nil
+	}
+	if failoverEndTime > emptyFailoverEndTime {
+		dr.FailoverEndTime = common.TimePtr(time.Unix(0, failoverEndTime))
+	}
+
+	return dr, nil
 }
 
 // Get all domain data
-func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []byte) ([]*nosqlplugin.DomainRow, []byte, error) {
-	var query *gocql.Query
+func (db *cdb) SelectAllDomains(
+	ctx context.Context,
+	pageSize int,
+	pageToken []byte,
+) ([]*nosqlplugin.DomainRow, []byte, error) {
+	var query gocql.Query
 	query = db.session.Query(templateListDomainQueryV2, constDomainPartition).WithContext(ctx)
 	iter := query.PageSize(pageSize).PageState(pageToken).Iter()
 	if iter == nil {
-		return nil, nil, &workflow.InternalServiceError{
+		return nil, nil, &types.InternalServiceError{
 			Message: "SelectAllDomains operation failed.  Not able to create query iterator.",
 		}
 	}
@@ -404,6 +445,9 @@ func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []b
 	var replicationClusters []map[string]interface{}
 	var badBinariesData []byte
 	var badBinariesDataEncoding string
+	var retentionDays int32
+	var failoverEndTime int64
+	var lastUpdateTime int64
 	var rows []*nosqlplugin.DomainRow
 	for iter.Scan(
 		&name,
@@ -413,7 +457,7 @@ func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []b
 		&domain.Info.Description,
 		&domain.Info.OwnerEmail,
 		&domain.Info.Data,
-		&domain.Config.Retention,
+		&retentionDays,
 		&domain.Config.EmitMetric,
 		&domain.Config.ArchivalBucket,
 		&domain.Config.ArchivalStatus,
@@ -430,19 +474,27 @@ func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []b
 		&domain.FailoverVersion,
 		&domain.FailoverNotificationVersion,
 		&domain.PreviousFailoverVersion,
-		&domain.FailoverEndTime,
-		&domain.LastUpdatedTime,
+		&failoverEndTime,
+		&lastUpdateTime,
 		&domain.NotificationVersion,
 	) {
 		if name != domainMetadataRecordName {
 			// do not include the metadata record
 			domain.Config.BadBinaries = p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding))
 			domain.ReplicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
+			domain.Config.Retention = common.DaysToDuration(retentionDays)
+			domain.LastUpdatedTime = time.Unix(0, lastUpdateTime)
+			if failoverEndTime > emptyFailoverEndTime {
+				domain.FailoverEndTime = common.TimePtr(time.Unix(0, failoverEndTime))
+			}
 			rows = append(rows, domain)
 		}
 		replicationClusters = []map[string]interface{}{}
 		badBinariesData = []byte("")
 		badBinariesDataEncoding = ""
+		failoverEndTime = 0
+		lastUpdateTime = 0
+		retentionDays = 0
 		domain = &nosqlplugin.DomainRow{
 			Info:              &p.DomainInfo{},
 			Config:            &nosqlplugin.NoSQLInternalDomainConfig{},
@@ -458,7 +510,11 @@ func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []b
 }
 
 //  Delete a domain, either by domainID or domainName
-func (db *cdb) DeleteDomain(ctx context.Context, domainID *string, domainName *string) error {
+func (db *cdb) DeleteDomain(
+	ctx context.Context,
+	domainID *string,
+	domainName *string,
+) error {
 	if domainName == nil && domainID == nil {
 		return fmt.Errorf("must provide either domainID or domainName")
 	}
@@ -468,7 +524,7 @@ func (db *cdb) DeleteDomain(ctx context.Context, domainID *string, domainName *s
 		var name string
 		err := query.Scan(&name)
 		if err != nil {
-			if err == gocql.ErrNotFound {
+			if db.client.IsNotFoundError(err) {
 				return nil
 			}
 			return err
@@ -479,7 +535,7 @@ func (db *cdb) DeleteDomain(ctx context.Context, domainID *string, domainName *s
 		query := db.session.Query(templateGetDomainByNameQueryV2, constDomainPartition, *domainName).WithContext(ctx)
 		err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 		if err != nil {
-			if err == gocql.ErrNotFound {
+			if db.client.IsNotFoundError(err) {
 				return nil
 			}
 			return err
@@ -490,12 +546,14 @@ func (db *cdb) DeleteDomain(ctx context.Context, domainID *string, domainName *s
 	return db.deleteDomain(ctx, *domainName, *domainID)
 }
 
-func (db *cdb) SelectDomainMetadata(ctx context.Context) (int64, error) {
+func (db *cdb) SelectDomainMetadata(
+	ctx context.Context,
+) (int64, error) {
 	var notificationVersion int64
 	query := db.session.Query(templateGetMetadataQueryV2, constDomainPartition, domainMetadataRecordName)
 	err := query.Scan(&notificationVersion)
 	if err != nil {
-		if err == gocql.ErrNotFound {
+		if db.client.IsNotFoundError(err) {
 			// this error can be thrown in the very beginning,
 			// i.e. when domains_by_name_v2 is initialized
 			// TODO ??? really????
@@ -506,16 +564,15 @@ func (db *cdb) SelectDomainMetadata(ctx context.Context) (int64, error) {
 	return notificationVersion, nil
 }
 
-func (db *cdb) deleteDomain(ctx context.Context, name, ID string) error {
+func (db *cdb) deleteDomain(
+	ctx context.Context,
+	name, ID string,
+) error {
 	query := db.session.Query(templateDeleteDomainByNameQueryV2, constDomainPartition, name).WithContext(ctx)
 	if err := query.Exec(); err != nil {
 		return err
 	}
 
 	query = db.session.Query(templateDeleteDomainQuery, ID).WithContext(ctx)
-	if err := query.Exec(); err != nil {
-		return err
-	}
-
-	return nil
+	return query.Exec()
 }

@@ -29,8 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 type QueryRegistrySuite struct {
@@ -51,7 +50,7 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 	ids := make([]string, 100, 100)
 	termChans := make([]<-chan struct{}, 100, 100)
 	for i := 0; i < 100; i++ {
-		ids[i], termChans[i] = qr.BufferQuery(&shared.WorkflowQuery{})
+		ids[i], termChans[i] = qr.BufferQuery(&types.WorkflowQuery{})
 	}
 	s.assertBufferedState(qr, ids...)
 	s.assertHasQueries(qr, true, false, false, false)
@@ -61,8 +60,8 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 	for i := 0; i < 25; i++ {
 		err := qr.SetTerminationState(ids[i], &TerminationState{
 			TerminationType: TerminationTypeCompleted,
-			QueryResult: &shared.WorkflowQueryResult{
-				ResultType: common.QueryResultTypePtr(shared.QueryResultTypeAnswered),
+			QueryResult: &types.WorkflowQueryResult{
+				ResultType: types.QueryResultTypeAnswered.Ptr(),
 				Answer:     []byte{1, 2, 3},
 			},
 		})
@@ -110,7 +109,7 @@ func (s *QueryRegistrySuite) TestQueryRegistry() {
 		case 0:
 			s.Equal(errQueryNotExists, qr.SetTerminationState(ids[i], &TerminationState{
 				TerminationType: TerminationTypeCompleted,
-				QueryResult:     &shared.WorkflowQueryResult{},
+				QueryResult:     &types.WorkflowQueryResult{},
 			}))
 		case 1:
 			s.Equal(errQueryNotExists, qr.SetTerminationState(ids[i], &TerminationState{

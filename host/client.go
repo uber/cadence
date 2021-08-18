@@ -26,35 +26,38 @@ import (
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
+	"github.com/uber/cadence/client/admin"
+	"github.com/uber/cadence/client/frontend"
+	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 )
 
 // AdminClient is the interface exposed by admin service client
 type AdminClient interface {
-	adminserviceclient.Interface
+	admin.Client
 }
 
 // FrontendClient is the interface exposed by frontend service client
 type FrontendClient interface {
-	workflowserviceclient.Interface
+	frontend.Client
 }
 
 // HistoryClient is the interface exposed by history service client
 type HistoryClient interface {
-	historyserviceclient.Interface
+	history.Client
 }
 
 // NewAdminClient creates a client to cadence admin client
 func NewAdminClient(d *yarpc.Dispatcher) AdminClient {
-	return adminserviceclient.New(d.ClientConfig(common.FrontendServiceName))
+	return admin.NewThriftClient(adminserviceclient.New(d.ClientConfig(common.FrontendServiceName)))
 }
 
 // NewFrontendClient creates a client to cadence frontend client
 func NewFrontendClient(d *yarpc.Dispatcher) FrontendClient {
-	return workflowserviceclient.New(d.ClientConfig(common.FrontendServiceName))
+	return frontend.NewThriftClient(workflowserviceclient.New(d.ClientConfig(common.FrontendServiceName)))
 }
 
 // NewHistoryClient creates a client to cadence history service client
 func NewHistoryClient(d *yarpc.Dispatcher) HistoryClient {
-	return historyserviceclient.New(d.ClientConfig(common.HistoryServiceName))
+	return history.NewThriftClient(historyserviceclient.New(d.ClientConfig(common.HistoryServiceName)))
 }

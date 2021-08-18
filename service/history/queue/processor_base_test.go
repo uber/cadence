@@ -30,13 +30,13 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common/collection"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
@@ -79,7 +79,7 @@ func (s *processorBaseSuite) SetupTest() {
 	s.mockTaskProcessor = task.NewMockProcessor(s.controller)
 
 	s.redispatchQueue = collection.NewConcurrentQueue()
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 	s.metricsClient = metrics.NewClient(tally.NoopScope, metrics.History)
 	s.metricsScope = s.metricsClient.Scope(metrics.TransferQueueProcessorScope)
 }
@@ -207,8 +207,9 @@ func (s *processorBaseSuite) TestUpdateAckLevel_Transfer_ProcessedFinished() {
 		queueShutdownFn,
 	)
 
-	processFinished, err := processorBase.updateAckLevel()
+	processFinished, ackLevel, err := processorBase.updateAckLevel()
 	s.NoError(err)
+	s.Nil(ackLevel)
 	s.True(processFinished)
 	s.True(queueShutdown)
 }
@@ -248,10 +249,11 @@ func (s *processorBaseSuite) TestUpdateAckLevel_Tranfer_ProcessNotFinished() {
 		nil,
 	)
 
-	processFinished, err := processorBase.updateAckLevel()
+	processFinished, ackLevel, err := processorBase.updateAckLevel()
 	s.NoError(err)
 	s.False(processFinished)
 	s.Equal(int64(2), updateAckLevel)
+	s.Equal(int64(2), ackLevel.(transferTaskKey).taskID)
 }
 
 func (s *processorBaseSuite) TestUpdateAckLevel_Timer_UpdateAckLevel() {
@@ -284,10 +286,11 @@ func (s *processorBaseSuite) TestUpdateAckLevel_Timer_UpdateAckLevel() {
 
 	timerQueueProcessBase := s.newTestProcessorBase(processingQueueStates, nil, updateTransferAckLevelFn, nil, nil)
 	timerQueueProcessBase.options.EnablePersistQueueStates = dynamicconfig.GetBoolPropertyFn(true)
-	processFinished, err := timerQueueProcessBase.updateAckLevel()
+	processFinished, ackLevel, err := timerQueueProcessBase.updateAckLevel()
 	s.NoError(err)
 	s.False(processFinished)
 	s.Equal(now.Add(-5*time.Second), updateAckLevel)
+	s.Equal(now.Add(-5*time.Second), ackLevel.(timerTaskKey).visibilityTimestamp)
 }
 
 func (s *processorBaseSuite) TestUpdateAckLevel_Timer_UpdateQueueStates() {
@@ -313,7 +316,7 @@ func (s *processorBaseSuite) TestUpdateAckLevel_Timer_UpdateQueueStates() {
 		),
 	}
 
-	var pState []*h.ProcessingQueueState
+	var pState []*types.ProcessingQueueState
 	updateProcessingQueueStates := func(states []ProcessingQueueState) error {
 		pState = convertToPersistenceTimerProcessingQueueStates(states)
 		return nil
@@ -321,10 +324,11 @@ func (s *processorBaseSuite) TestUpdateAckLevel_Timer_UpdateQueueStates() {
 
 	timerQueueProcessBase := s.newTestProcessorBase(processingQueueStates, nil, nil, updateProcessingQueueStates, nil)
 	timerQueueProcessBase.options.EnablePersistQueueStates = dynamicconfig.GetBoolPropertyFn(true)
-	processFinished, err := timerQueueProcessBase.updateAckLevel()
+	processFinished, ackLevel, err := timerQueueProcessBase.updateAckLevel()
 	s.NoError(err)
 	s.False(processFinished)
 	s.Equal(len(processingQueueStates), len(pState))
+	s.Equal(now.Add(-5*time.Second), ackLevel.(timerTaskKey).visibilityTimestamp)
 }
 
 func (s *processorBaseSuite) newTestProcessorBase(

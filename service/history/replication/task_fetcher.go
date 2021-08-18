@@ -27,8 +27,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	r "github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
@@ -37,8 +35,11 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 )
+
+// TODO: reuse the interface and implementation defined in history/task package
 
 const (
 	fetchTaskRequestTimeout = 60 * time.Second
@@ -223,9 +224,9 @@ func (f *taskFetcherImpl) fetchTasks() {
 			// When timer fires, we collect all the requests we have so far and attempt to send them to remote.
 			err := f.fetchAndDistributeTasks(requestByShard)
 			if err != nil {
-				if _, ok := err.(*shared.ServiceBusyError); ok {
+				if _, ok := err.(*types.ServiceBusyError); ok {
 					// slow down replication when source cluster is busy
-					timer.Reset(f.config.ReplicationTaskFetcherErrorRetryWait())
+					timer.Reset(f.config.ReplicationTaskFetcherServiceBusyWait())
 				} else {
 					timer.Reset(backoff.JitDuration(
 						f.config.ReplicationTaskFetcherErrorRetryWait(),
@@ -254,7 +255,7 @@ func (f *taskFetcherImpl) fetchAndDistributeTasks(requestByShard map[int32]*requ
 
 	messagesByShard, err := f.getMessages(requestByShard)
 	if err != nil {
-		if _, ok := err.(*shared.ServiceBusyError); !ok {
+		if _, ok := err.(*types.ServiceBusyError); !ok {
 			f.logger.Error("Failed to get replication tasks", tag.Error(err))
 			return err
 		}
@@ -274,8 +275,8 @@ func (f *taskFetcherImpl) fetchAndDistributeTasks(requestByShard map[int32]*requ
 
 func (f *taskFetcherImpl) getMessages(
 	requestByShard map[int32]*request,
-) (map[int32]*r.ReplicationMessages, error) {
-	var tokens []*r.ReplicationToken
+) (map[int32]*types.ReplicationMessages, error) {
+	var tokens []*types.ReplicationToken
 	for _, request := range requestByShard {
 		tokens = append(tokens, request.token)
 	}
@@ -283,18 +284,16 @@ func (f *taskFetcherImpl) getMessages(
 	ctx, cancel := context.WithTimeout(context.Background(), fetchTaskRequestTimeout)
 	defer cancel()
 
-	request := &r.GetReplicationMessagesRequest{
+	request := &types.GetReplicationMessagesRequest{
 		Tokens:      tokens,
-		ClusterName: common.StringPtr(f.currentCluster),
+		ClusterName: f.currentCluster,
 	}
 	response, err := f.remotePeer.GetReplicationMessages(ctx, request)
 	if err != nil {
-		if _, ok := err.(*shared.ServiceBusyError); !ok {
-			return nil, err
-		}
+		return nil, err
 	}
 
-	return response.GetMessagesByShard(), err
+	return response.GetMessagesByShard(), nil
 }
 
 // GetSourceCluster returns the source cluster for the fetcher

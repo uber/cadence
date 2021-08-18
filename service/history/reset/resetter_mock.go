@@ -32,7 +32,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	shared "github.com/uber/cadence/.gen/go/shared"
+	types "github.com/uber/cadence/common/types"
 	execution "github.com/uber/cadence/service/history/execution"
 )
 
@@ -60,15 +60,15 @@ func (m *MockWorkflowResetter) EXPECT() *MockWorkflowResetterMockRecorder {
 }
 
 // ResetWorkflow mocks base method
-func (m *MockWorkflowResetter) ResetWorkflow(ctx context.Context, domainID, workflowID, baseRunID string, baseBranchToken []byte, baseRebuildLastEventID, baseRebuildLastEventVersion, baseNextEventID int64, resetRunID, resetRequestID string, currentWorkflow execution.Workflow, resetReason string, additionalReapplyEvents []*shared.HistoryEvent) error {
+func (m *MockWorkflowResetter) ResetWorkflow(ctx context.Context, domainID, workflowID, baseRunID string, baseBranchToken []byte, baseRebuildLastEventID, baseRebuildLastEventVersion, baseNextEventID int64, resetRunID, resetRequestID string, currentWorkflow execution.Workflow, resetReason string, additionalReapplyEvents []*types.HistoryEvent, skipSignalReapply bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResetWorkflow", ctx, domainID, workflowID, baseRunID, baseBranchToken, baseRebuildLastEventID, baseRebuildLastEventVersion, baseNextEventID, resetRunID, resetRequestID, currentWorkflow, resetReason, additionalReapplyEvents)
+	ret := m.ctrl.Call(m, "ResetWorkflow", ctx, domainID, workflowID, baseRunID, baseBranchToken, baseRebuildLastEventID, baseRebuildLastEventVersion, baseNextEventID, resetRunID, resetRequestID, currentWorkflow, resetReason, additionalReapplyEvents, skipSignalReapply)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ResetWorkflow indicates an expected call of ResetWorkflow
-func (mr *MockWorkflowResetterMockRecorder) ResetWorkflow(ctx, domainID, workflowID, baseRunID, baseBranchToken, baseRebuildLastEventID, baseRebuildLastEventVersion, baseNextEventID, resetRunID, resetRequestID, currentWorkflow, resetReason, additionalReapplyEvents interface{}) *gomock.Call {
+func (mr *MockWorkflowResetterMockRecorder) ResetWorkflow(ctx, domainID, workflowID, baseRunID, baseBranchToken, baseRebuildLastEventID, baseRebuildLastEventVersion, baseNextEventID, resetRunID, resetRequestID, currentWorkflow, resetReason, additionalReapplyEvents, skipSignalReapply interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetWorkflow", reflect.TypeOf((*MockWorkflowResetter)(nil).ResetWorkflow), ctx, domainID, workflowID, baseRunID, baseBranchToken, baseRebuildLastEventID, baseRebuildLastEventVersion, baseNextEventID, resetRunID, resetRequestID, currentWorkflow, resetReason, additionalReapplyEvents)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetWorkflow", reflect.TypeOf((*MockWorkflowResetter)(nil).ResetWorkflow), ctx, domainID, workflowID, baseRunID, baseBranchToken, baseRebuildLastEventID, baseRebuildLastEventVersion, baseNextEventID, resetRunID, resetRequestID, currentWorkflow, resetReason, additionalReapplyEvents, skipSignalReapply)
 }

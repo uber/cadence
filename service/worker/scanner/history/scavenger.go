@@ -27,14 +27,14 @@ import (
 	"go.uber.org/cadence/activity"
 	"golang.org/x/time/rate"
 
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -49,14 +49,15 @@ type (
 
 	// Scavenger is the type that holds the state for history scavenger daemon
 	Scavenger struct {
-		db       p.HistoryManager
-		client   historyserviceclient.Interface
-		hbd      ScavengerHeartbeatDetails
-		rps      int
-		limiter  *rate.Limiter
-		metrics  metrics.Client
-		logger   log.Logger
-		isInTest bool
+		db                         p.HistoryManager
+		client                     history.Client
+		hbd                        ScavengerHeartbeatDetails
+		rps                        int
+		limiter                    *rate.Limiter
+		maxWorkflowRetentionInDays dynamicconfig.IntPropertyFn
+		metrics                    metrics.Client
+		logger                     log.Logger
+		isInTest                   bool
 	}
 
 	taskDetail struct {
@@ -75,13 +76,16 @@ const (
 	// used this to decide how many goroutines to process
 	rpsPerConcurrency = 50
 	pageSize          = 1000
-	// only clean up history branches that older than this threshold
-	// we double the MaxWorkflowRetentionPeriodInDays to avoid racing condition with history archival.
-	// Our history archiver delete mutable state, and then upload history to blob store and then delete history.
-	// This scanner will face racing condition with archiver because it relys on describe mutable state returning entityNotExist error.
-	// That's why we need to keep MaxWorkflowRetentionPeriodInDays stable and not decreasing all the time.
-	cleanUpThreshold = time.Hour * 24 * common.MaxWorkflowRetentionPeriodInDays * 2
 )
+
+// only clean up history branches that older than this threshold
+// we double the MaxWorkflowRetentionPeriodInDays to avoid racing condition with history archival.
+// Our history archiver delete mutable state, and then upload history to blob store and then delete history.
+// This scanner will face racing condition with archiver because it relys on describe mutable state returning entityNotExist error.
+// That's why we need to keep MaxWorkflowRetentionPeriodInDays stable and not decreasing all the time.
+func getHistoryCleanupThreshold(maxWorkflowRetentionInDays int) time.Duration {
+	return time.Hour * 24 * time.Duration(maxWorkflowRetentionInDays) * 2
+}
 
 // NewScavenger returns an instance of history scavenger daemon
 // The Scavenger can be started by calling the Run() method on the
@@ -93,22 +97,24 @@ const (
 func NewScavenger(
 	db p.HistoryManager,
 	rps int,
-	client historyserviceclient.Interface,
+	client history.Client,
 	hbd ScavengerHeartbeatDetails,
 	metricsClient metrics.Client,
 	logger log.Logger,
+	maxWorkflowRetentionInDays dynamicconfig.IntPropertyFn,
 ) *Scavenger {
 
 	rateLimiter := rate.NewLimiter(rate.Limit(rps), rps)
 
 	return &Scavenger{
-		db:      db,
-		client:  client,
-		hbd:     hbd,
-		rps:     rps,
-		limiter: rateLimiter,
-		metrics: metricsClient,
-		logger:  logger,
+		db:                         db,
+		client:                     client,
+		hbd:                        hbd,
+		rps:                        rps,
+		limiter:                    rateLimiter,
+		maxWorkflowRetentionInDays: maxWorkflowRetentionInDays,
+		metrics:                    metricsClient,
+		logger:                     logger,
 	}
 }
 
@@ -136,7 +142,7 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 		errorsOnSplitting := 0
 		// send all tasks
 		for _, br := range resp.Branches {
-			if time.Now().Add(-cleanUpThreshold).Before(br.ForkTime) {
+			if time.Now().Add(-1 * getHistoryCleanupThreshold(s.maxWorkflowRetentionInDays())).Before(br.ForkTime) {
 				batchCount--
 				skips++
 				s.metrics.IncCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerSkipCount)
@@ -147,7 +153,7 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 			if err != nil {
 				batchCount--
 				errorsOnSplitting++
-				s.logger.Error("unable to parse the history cleanup info", tag.DetailInfo(br.Info))
+				s.logger.Error("scavenger: unable to parse the history cleanup info", tag.WorkflowTreeID(br.TreeID), tag.WorkflowBranchID(br.BranchID), tag.DetailInfo(br.Info))
 				s.metrics.IncCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerErrorCount)
 				continue
 			}
@@ -231,16 +237,16 @@ func (s *Scavenger) startTaskProcessor(
 
 			// this checks if the mutableState still exists
 			// if not then the history branch is garbage, we need to delete the history branch
-			_, err = s.client.DescribeMutableState(ctx, &history.DescribeMutableStateRequest{
-				DomainUUID: common.StringPtr(task.domainID),
-				Execution: &shared.WorkflowExecution{
-					WorkflowId: common.StringPtr(task.workflowID),
-					RunId:      common.StringPtr(task.runID),
+			_, err = s.client.DescribeMutableState(ctx, &types.DescribeMutableStateRequest{
+				DomainUUID: task.domainID,
+				Execution: &types.WorkflowExecution{
+					WorkflowID: task.workflowID,
+					RunID:      task.runID,
 				},
 			})
 
 			if err != nil {
-				if _, ok := err.(*shared.EntityNotExistsError); ok {
+				if _, ok := err.(*types.EntityNotExistsError); ok {
 					//deleting history branch
 					var branchToken []byte
 					branchToken, err = p.NewHistoryBranchTokenByBranchID(task.treeID, task.branchID)

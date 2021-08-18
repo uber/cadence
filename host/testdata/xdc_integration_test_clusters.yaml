@@ -2,19 +2,8 @@
     dbname: integration_active
   clustermetadata:
     enableGlobalDomain: true
-    replicationConsumer:
-      type: rpc
-      fetcher:
-        rpcParallelism: 1
-        aggregationIntervalSecs: 2
-        errorRetryWaitSecs: 1
-        timerJitterCoefficient: 0.15
-      processor:
-        noTaskInitialWaitIntervalSecs: 2
-        noTaskWaitBackoffCoefficient: 1
-        noTaskMaxWaitIntervalSecs: 2
     failoverVersionIncrement: 10
-    masterClusterName: "active"
+    primaryClusterName: "active"
     currentClusterName: "active"
     clusterInformation:
       active:
@@ -64,19 +53,8 @@
     dbname: integration_standby
   clustermetadata:
     enableGlobalDomain: true
-    replicationConsumer:
-      type: rpc
-      fetcher:
-        rpcParallelism: 1
-        aggregationIntervalSecs: 2
-        errorRetryWaitSecs: 1
-        timerJitterCoefficient: 0.15
-      processor:
-        noTaskInitialWaitIntervalSecs: 2
-        noTaskWaitBackoffCoefficient: 1
-        noTaskMaxWaitIntervalSecs: 2
     failoverVersionIncrement: 10
-    masterClusterName: "active"
+    primaryClusterName: "active"
     currentClusterName: "standby"
     clusterInformation:
       active:

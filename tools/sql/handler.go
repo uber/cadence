@@ -24,13 +24,15 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"net/url"
 
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/common/auth"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/config"
+	mysql_db "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
+	postgres_db "github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres"
 	"github.com/uber/cadence/schema/mysql"
+	"github.com/uber/cadence/schema/postgres"
+	cliflag "github.com/uber/cadence/tools/common/flag"
 	"github.com/uber/cadence/tools/common/schema"
 )
 
@@ -42,14 +44,28 @@ func VerifyCompatibleVersion(
 
 	ds, ok := cfg.DataStores[cfg.DefaultStore]
 	if ok && ds.SQL != nil {
-		err := CheckCompatibleVersion(*ds.SQL, mysql.Version)
+		expectedVersion := mysql.Version
+		switch ds.SQL.PluginName {
+		case mysql_db.PluginName:
+			expectedVersion = mysql.Version
+		case postgres_db.PluginName:
+			expectedVersion = postgres.Version
+		}
+		err := CheckCompatibleVersion(*ds.SQL, expectedVersion)
 		if err != nil {
 			return err
 		}
 	}
 	ds, ok = cfg.DataStores[cfg.VisibilityStore]
 	if ok && ds.SQL != nil {
-		err := CheckCompatibleVersion(*ds.SQL, mysql.VisibilityVersion)
+		expectedVersion := mysql.VisibilityVersion
+		switch ds.SQL.PluginName {
+		case mysql_db.PluginName:
+			expectedVersion = mysql.VisibilityVersion
+		case postgres_db.PluginName:
+			expectedVersion = postgres.VisibilityVersion
+		}
+		err := CheckCompatibleVersion(*ds.SQL, expectedVersion)
 		if err != nil {
 			return err
 		}
@@ -98,12 +114,6 @@ func updateSchema(cli *cli.Context) error {
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
-	if cfg.DatabaseName == schema.DryrunDBName {
-		if err := doCreateDatabase(cfg, cfg.DatabaseName); err != nil {
-			return handleErr(fmt.Errorf("error creating dryrun database: %v", err))
-		}
-		defer doDropDatabase(cfg, cfg.DatabaseName)
-	}
 	conn, err := NewConnection(cfg)
 	if err != nil {
 		return handleErr(err)
@@ -142,20 +152,6 @@ func doCreateDatabase(cfg *config.SQL, name string) error {
 	return conn.CreateDatabase(name)
 }
 
-func doDropDatabase(cfg *config.SQL, name string) {
-	cfg.DatabaseName = ""
-	conn, err := NewConnection(cfg)
-	if err != nil {
-		logErr(err)
-		return
-	}
-	err = conn.DropDatabase(name)
-	if err != nil {
-		logErr(err)
-	}
-	conn.Close()
-}
-
 func parseConnectConfig(cli *cli.Context) (*config.SQL, error) {
 	cfg := new(config.SQL)
 
@@ -166,28 +162,12 @@ func parseConnectConfig(cli *cli.Context) (*config.SQL, error) {
 	cfg.Password = cli.GlobalString(schema.CLIOptPassword)
 	cfg.DatabaseName = cli.GlobalString(schema.CLIOptDatabase)
 	cfg.PluginName = cli.GlobalString(schema.CLIOptPluginName)
-	isDryRun := cli.Bool(schema.CLIOptDryrun)
 
-	if cfg.ConnectAttributes == nil {
-		cfg.ConnectAttributes = map[string]string{}
-	}
-	connectAttributesQueryString := cli.GlobalString(schema.CLIOptConnectAttributes)
-	if connectAttributesQueryString != "" {
-		values, err := url.ParseQuery(connectAttributesQueryString)
-		if err != nil {
-			return nil, fmt.Errorf("invalid connect attributes: %v", err)
-		}
-		for key, vals := range values {
-			// check to ensure only one value is provider per key
-			if len(vals) > 1 {
-				return nil, fmt.Errorf("invalid connect attribute %v, only 1 value allowed: %v", key, vals)
-			}
-			cfg.ConnectAttributes[key] = vals[0]
-		}
-	}
+	connectAttributes := cli.GlobalGeneric(schema.CLIOptConnectAttributes).(*cliflag.StringMap)
+	cfg.ConnectAttributes = connectAttributes.Value()
 
 	if cli.GlobalBool(schema.CLIFlagEnableTLS) {
-		cfg.TLS = &auth.TLS{
+		cfg.TLS = &config.TLS{
 			Enabled:                true,
 			CertFile:               cli.GlobalString(schema.CLIFlagTLSCertFile),
 			KeyFile:                cli.GlobalString(schema.CLIFlagTLSKeyFile),
@@ -196,7 +176,7 @@ func parseConnectConfig(cli *cli.Context) (*config.SQL, error) {
 		}
 	}
 
-	if err := ValidateConnectConfig(cfg, isDryRun); err != nil {
+	if err := ValidateConnectConfig(cfg); err != nil {
 		return nil, err
 	}
 
@@ -204,7 +184,7 @@ func parseConnectConfig(cli *cli.Context) (*config.SQL, error) {
 }
 
 // ValidateConnectConfig validates params
-func ValidateConnectConfig(cfg *config.SQL, isDryRun bool) error {
+func ValidateConnectConfig(cfg *config.SQL) error {
 	host, _, err := net.SplitHostPort(cfg.ConnectAddr)
 	if err != nil {
 		return schema.NewConfigError("invalid host and port " + cfg.ConnectAddr)
@@ -213,10 +193,7 @@ func ValidateConnectConfig(cfg *config.SQL, isDryRun bool) error {
 		return schema.NewConfigError("missing sql endpoint argument " + flag(schema.CLIOptEndpoint))
 	}
 	if cfg.DatabaseName == "" {
-		if !isDryRun {
-			return schema.NewConfigError("missing " + flag(schema.CLIOptDatabase) + " argument")
-		}
-		cfg.DatabaseName = schema.DryrunDBName
+		return schema.NewConfigError("missing " + flag(schema.CLIOptDatabase) + " argument")
 	}
 	if cfg.TLS != nil && cfg.TLS.Enabled {
 		enabledCaFile := cfg.TLS.CaFile != ""

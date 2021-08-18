@@ -26,11 +26,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/shared"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -177,7 +176,7 @@ func (r *workflowImpl) SuppressBy(
 		lastEventTaskID,
 		incomingLastWriteVersion,
 		incomingLastEventTaskID) {
-		return TransactionPolicyActive, &shared.InternalServiceError{
+		return TransactionPolicyActive, &types.InternalServiceError{
 			Message: "nDCWorkflow cannot suppress workflow by older workflow",
 		}
 	}
@@ -215,7 +214,7 @@ func (r *workflowImpl) FlushBufferedEvents() error {
 	currentCluster := r.clusterMetadata.GetCurrentClusterName()
 
 	if lastWriteCluster != currentCluster {
-		return &shared.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: "nDCWorkflow encounter workflow with buffered events but last write not from current cluster",
 		}
 	}
@@ -240,7 +239,7 @@ func (r *workflowImpl) failDecision(
 	if _, err := r.mutableState.AddDecisionTaskFailedEvent(
 		decision.ScheduleID,
 		decision.StartedID,
-		workflow.DecisionTaskFailedCauseFailoverCloseDecision,
+		types.DecisionTaskFailedCauseFailoverCloseDecision,
 		nil,
 		IdentityHistoryService,
 		"",

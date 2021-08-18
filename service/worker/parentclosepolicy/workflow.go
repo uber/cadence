@@ -28,16 +28,18 @@ import (
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
 
-	h "github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
+)
+
+type (
+	contextKey string
 )
 
 const (
-	processorContextKey = "processorContext"
+	processorContextKey contextKey = "processorContext"
 	// processorTaskListName is the tasklist name
 	processorTaskListName = "cadence-sys-processor-parent-close-policy"
 	// processorWFTypeName is the workflow type
@@ -52,7 +54,7 @@ type (
 	RequestDetail struct {
 		WorkflowID string
 		RunID      string
-		Policy     shared.ParentClosePolicy
+		Policy     types.ParentClosePolicy
 	}
 
 	// Request defines the request for parent close policy
@@ -102,42 +104,36 @@ func ProcessorWorkflow(ctx workflow.Context) error {
 // ProcessorActivity is activity for processing batch operation
 func ProcessorActivity(ctx context.Context, request Request) error {
 	processor := ctx.Value(processorContextKey).(*Processor)
-	client := processor.clientBean.GetHistoryClient()
 	for _, execution := range request.Executions {
 		var err error
 		switch execution.Policy {
-		case shared.ParentClosePolicyAbandon:
+		case types.ParentClosePolicyAbandon:
 			//no-op
 			continue
-		case shared.ParentClosePolicyTerminate:
-			err = client.TerminateWorkflowExecution(nil, &h.TerminateWorkflowExecutionRequest{
-				DomainUUID: common.StringPtr(request.DomainUUID),
-				TerminateRequest: &shared.TerminateWorkflowExecutionRequest{
-					Domain: common.StringPtr(request.DomainName),
-					WorkflowExecution: &shared.WorkflowExecution{
-						WorkflowId: common.StringPtr(execution.WorkflowID),
-						RunId:      common.StringPtr(execution.RunID),
-					},
-					Reason:   common.StringPtr("by parent close policy"),
-					Identity: common.StringPtr(processorWFTypeName),
+		case types.ParentClosePolicyTerminate:
+			err = processor.frontendClient.TerminateWorkflowExecution(ctx, &types.TerminateWorkflowExecutionRequest{
+				Domain: request.DomainName,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: execution.WorkflowID,
+					RunID:      execution.RunID,
 				},
+				Reason:   "by parent close policy",
+				Identity: processorWFTypeName,
 			})
-		case shared.ParentClosePolicyRequestCancel:
-			err = client.RequestCancelWorkflowExecution(nil, &h.RequestCancelWorkflowExecutionRequest{
-				DomainUUID: common.StringPtr(request.DomainUUID),
-				CancelRequest: &shared.RequestCancelWorkflowExecutionRequest{
-					Domain: common.StringPtr(request.DomainName),
-					WorkflowExecution: &shared.WorkflowExecution{
-						WorkflowId: common.StringPtr(execution.WorkflowID),
-						RunId:      common.StringPtr(execution.RunID),
-					},
-					Identity: common.StringPtr(processorWFTypeName),
+		case types.ParentClosePolicyRequestCancel:
+			err = processor.frontendClient.RequestCancelWorkflowExecution(ctx, &types.RequestCancelWorkflowExecutionRequest{
+				Domain: request.DomainName,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: execution.WorkflowID,
+					RunID:      execution.RunID,
 				},
+				Identity: processorWFTypeName,
 			})
 		}
 
 		if err != nil {
-			if _, ok := err.(*shared.EntityNotExistsError); ok {
+			switch err.(type) {
+			case *types.EntityNotExistsError, *types.CancellationAlreadyRequestedError:
 				err = nil
 			}
 		}

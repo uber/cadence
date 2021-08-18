@@ -26,12 +26,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
 )
@@ -45,17 +46,19 @@ type (
 	}
 
 	mutableStateTaskRefresherImpl struct {
-		config      *config.Config
-		domainCache cache.DomainCache
-		eventsCache events.Cache
-		logger      log.Logger
-		shardID     int
+		config          *config.Config
+		clusterMetadata cluster.Metadata
+		domainCache     cache.DomainCache
+		eventsCache     events.Cache
+		logger          log.Logger
+		shardID         int
 	}
 )
 
 // NewMutableStateTaskRefresher creates a new task refresher for mutable state
 func NewMutableStateTaskRefresher(
 	config *config.Config,
+	clusterMetadata cluster.Metadata,
 	domainCache cache.DomainCache,
 	eventsCache events.Cache,
 	logger log.Logger,
@@ -63,11 +66,12 @@ func NewMutableStateTaskRefresher(
 ) MutableStateTaskRefresher {
 
 	return &mutableStateTaskRefresherImpl{
-		config:      config,
-		domainCache: domainCache,
-		eventsCache: eventsCache,
-		logger:      logger,
-		shardID:     shardID,
+		config:          config,
+		clusterMetadata: clusterMetadata,
+		domainCache:     domainCache,
+		eventsCache:     eventsCache,
+		logger:          logger,
+		shardID:         shardID,
 	}
 }
 
@@ -78,6 +82,7 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 ) error {
 
 	taskGenerator := NewMutableStateTaskGenerator(
+		r.clusterMetadata,
 		r.domainCache,
 		r.logger,
 		mutableState,
@@ -218,10 +223,14 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowClose(
 ) error {
 
 	executionInfo := mutableState.GetExecutionInfo()
-
 	if executionInfo.CloseStatus != persistence.WorkflowCloseStatusNone {
+		closeEvent, err := mutableState.GetCloseEvent(ctx)
+		if err != nil {
+			return err
+		}
 		return taskGenerator.GenerateWorkflowCloseTasks(
 			now,
+			closeEvent,
 		)
 	}
 
@@ -244,7 +253,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForRecordWorkflowStarted(
 
 	if executionInfo.CloseStatus == persistence.WorkflowCloseStatusNone {
 		return taskGenerator.GenerateRecordWorkflowStartedTasks(
-			now,
 			startEvent,
 		)
 	}
@@ -266,20 +274,18 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForDecision(
 
 	decision, ok := mutableState.GetPendingDecision()
 	if !ok {
-		return &shared.InternalServiceError{Message: "it could be a bug, cannot get pending decision"}
+		return &types.InternalServiceError{Message: "it could be a bug, cannot get pending decision"}
 	}
 
 	// decision already started
 	if decision.StartedID != common.EmptyEventID {
 		return taskGenerator.GenerateDecisionStartTasks(
-			now,
 			decision.ScheduleID,
 		)
 	}
 
 	// decision only scheduled
 	return taskGenerator.GenerateDecisionScheduleTasks(
-		now,
 		decision.ScheduleID,
 	)
 }
@@ -330,7 +336,6 @@ Loop:
 		}
 
 		if err := taskGenerator.GenerateActivityTransferTasks(
-			now,
 			scheduleEvent,
 		); err != nil {
 			return err
@@ -414,7 +419,6 @@ Loop:
 		}
 
 		if err := taskGenerator.GenerateChildWorkflowTasks(
-			now,
 			scheduleEvent,
 		); err != nil {
 			return err
@@ -455,7 +459,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForRequestCancelExternalWork
 		}
 
 		if err := taskGenerator.GenerateRequestCancelExternalTasks(
-			now,
 			initiateEvent,
 		); err != nil {
 			return err
@@ -496,7 +499,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForSignalExternalWorkflow(
 		}
 
 		if err := taskGenerator.GenerateSignalExternalTasks(
-			now,
 			initiateEvent,
 		); err != nil {
 			return err
@@ -513,9 +515,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowSearchAttr(
 	taskGenerator MutableStateTaskGenerator,
 ) error {
 
-	return taskGenerator.GenerateWorkflowSearchAttrTasks(
-		now,
-	)
+	return taskGenerator.GenerateWorkflowSearchAttrTasks()
 }
 
 func (r *mutableStateTaskRefresherImpl) getTimeSource(

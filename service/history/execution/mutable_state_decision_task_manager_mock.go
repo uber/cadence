@@ -31,7 +31,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	shared "github.com/uber/cadence/.gen/go/shared"
+	types "github.com/uber/cadence/common/types"
 )
 
 // MockmutableStateDecisionTaskManager is a mock of mutableStateDecisionTaskManager interface
@@ -103,7 +103,7 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) ReplicateDecisionTask
 }
 
 // ReplicateDecisionTaskCompletedEvent mocks base method
-func (m *MockmutableStateDecisionTaskManager) ReplicateDecisionTaskCompletedEvent(event *shared.HistoryEvent) error {
+func (m *MockmutableStateDecisionTaskManager) ReplicateDecisionTaskCompletedEvent(event *types.HistoryEvent) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReplicateDecisionTaskCompletedEvent", event)
 	ret0, _ := ret[0].(error)
@@ -131,7 +131,7 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) ReplicateDecisionTask
 }
 
 // ReplicateDecisionTaskTimedOutEvent mocks base method
-func (m *MockmutableStateDecisionTaskManager) ReplicateDecisionTaskTimedOutEvent(timeoutType shared.TimeoutType) error {
+func (m *MockmutableStateDecisionTaskManager) ReplicateDecisionTaskTimedOutEvent(timeoutType types.TimeoutType) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReplicateDecisionTaskTimedOutEvent", timeoutType)
 	ret0, _ := ret[0].(error)
@@ -145,10 +145,10 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) ReplicateDecisionTask
 }
 
 // AddDecisionTaskScheduleToStartTimeoutEvent mocks base method
-func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskScheduleToStartTimeoutEvent(scheduleEventID int64) (*shared.HistoryEvent, error) {
+func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskScheduleToStartTimeoutEvent(scheduleEventID int64) (*types.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddDecisionTaskScheduleToStartTimeoutEvent", scheduleEventID)
-	ret0, _ := ret[0].(*shared.HistoryEvent)
+	ret0, _ := ret[0].(*types.HistoryEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -190,7 +190,7 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) AddDecisionTaskSchedu
 }
 
 // AddFirstDecisionTaskScheduled mocks base method
-func (m *MockmutableStateDecisionTaskManager) AddFirstDecisionTaskScheduled(startEvent *shared.HistoryEvent) error {
+func (m *MockmutableStateDecisionTaskManager) AddFirstDecisionTaskScheduled(startEvent *types.HistoryEvent) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddFirstDecisionTaskScheduled", startEvent)
 	ret0, _ := ret[0].(error)
@@ -204,10 +204,10 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) AddFirstDecisionTaskS
 }
 
 // AddDecisionTaskStartedEvent mocks base method
-func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskStartedEvent(scheduleEventID int64, requestID string, request *shared.PollForDecisionTaskRequest) (*shared.HistoryEvent, *DecisionInfo, error) {
+func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskStartedEvent(scheduleEventID int64, requestID string, request *types.PollForDecisionTaskRequest) (*types.HistoryEvent, *DecisionInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddDecisionTaskStartedEvent", scheduleEventID, requestID, request)
-	ret0, _ := ret[0].(*shared.HistoryEvent)
+	ret0, _ := ret[0].(*types.HistoryEvent)
 	ret1, _ := ret[1].(*DecisionInfo)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
@@ -220,10 +220,10 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) AddDecisionTaskStarte
 }
 
 // AddDecisionTaskCompletedEvent mocks base method
-func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID int64, request *shared.RespondDecisionTaskCompletedRequest, maxResetPoints int) (*shared.HistoryEvent, error) {
+func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID int64, request *types.RespondDecisionTaskCompletedRequest, maxResetPoints int) (*types.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddDecisionTaskCompletedEvent", scheduleEventID, startedEventID, request, maxResetPoints)
-	ret0, _ := ret[0].(*shared.HistoryEvent)
+	ret0, _ := ret[0].(*types.HistoryEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -235,10 +235,10 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) AddDecisionTaskComple
 }
 
 // AddDecisionTaskFailedEvent mocks base method
-func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskFailedEvent(scheduleEventID, startedEventID int64, cause shared.DecisionTaskFailedCause, details []byte, identity, reason, binChecksum, baseRunID, newRunID string, forkEventVersion int64) (*shared.HistoryEvent, error) {
+func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskFailedEvent(scheduleEventID, startedEventID int64, cause types.DecisionTaskFailedCause, details []byte, identity, reason, binChecksum, baseRunID, newRunID string, forkEventVersion int64) (*types.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddDecisionTaskFailedEvent", scheduleEventID, startedEventID, cause, details, identity, reason, binChecksum, baseRunID, newRunID, forkEventVersion)
-	ret0, _ := ret[0].(*shared.HistoryEvent)
+	ret0, _ := ret[0].(*types.HistoryEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -250,10 +250,10 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) AddDecisionTaskFailed
 }
 
 // AddDecisionTaskTimedOutEvent mocks base method
-func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskTimedOutEvent(scheduleEventID, startedEventID int64) (*shared.HistoryEvent, error) {
+func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskTimedOutEvent(scheduleEventID, startedEventID int64) (*types.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddDecisionTaskTimedOutEvent", scheduleEventID, startedEventID)
-	ret0, _ := ret[0].(*shared.HistoryEvent)
+	ret0, _ := ret[0].(*types.HistoryEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -262,6 +262,21 @@ func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskTimedOutEvent(sched
 func (mr *MockmutableStateDecisionTaskManagerMockRecorder) AddDecisionTaskTimedOutEvent(scheduleEventID, startedEventID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDecisionTaskTimedOutEvent", reflect.TypeOf((*MockmutableStateDecisionTaskManager)(nil).AddDecisionTaskTimedOutEvent), scheduleEventID, startedEventID)
+}
+
+// AddDecisionTaskResetTimeoutEvent mocks base method
+func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskResetTimeoutEvent(scheduleEventID int64, baseRunID, newRunID string, forkEventVersion int64, reason string) (*types.HistoryEvent, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddDecisionTaskResetTimeoutEvent", scheduleEventID, baseRunID, newRunID, forkEventVersion, reason)
+	ret0, _ := ret[0].(*types.HistoryEvent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AddDecisionTaskResetTimeoutEvent indicates an expected call of AddDecisionTaskResetTimeoutEvent
+func (mr *MockmutableStateDecisionTaskManagerMockRecorder) AddDecisionTaskResetTimeoutEvent(scheduleEventID, baseRunID, newRunID, forkEventVersion, reason interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDecisionTaskResetTimeoutEvent", reflect.TypeOf((*MockmutableStateDecisionTaskManager)(nil).AddDecisionTaskResetTimeoutEvent), scheduleEventID, baseRunID, newRunID, forkEventVersion, reason)
 }
 
 // FailDecision mocks base method
@@ -388,11 +403,11 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) GetDecisionInfo(sched
 }
 
 // CreateTransientDecisionEvents mocks base method
-func (m *MockmutableStateDecisionTaskManager) CreateTransientDecisionEvents(decision *DecisionInfo, identity string) (*shared.HistoryEvent, *shared.HistoryEvent) {
+func (m *MockmutableStateDecisionTaskManager) CreateTransientDecisionEvents(decision *DecisionInfo, identity string) (*types.HistoryEvent, *types.HistoryEvent) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateTransientDecisionEvents", decision, identity)
-	ret0, _ := ret[0].(*shared.HistoryEvent)
-	ret1, _ := ret[1].(*shared.HistoryEvent)
+	ret0, _ := ret[0].(*types.HistoryEvent)
+	ret1, _ := ret[1].(*types.HistoryEvent)
 	return ret0, ret1
 }
 

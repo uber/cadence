@@ -26,7 +26,9 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/task"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -49,6 +51,15 @@ type (
 		GetQueueType() QueueType
 		GetShard() shard.Context
 		GetAttempt() int
+		GetInfo() Info
+	}
+
+	CrossClusterTask interface {
+		Task
+		IsReadyForPoll() bool
+		IsValid() bool
+		Update(interface{}) error //TODO: update interface once the cross cluster response idl lands
+		GetCrossClusterRequest() *types.CrossClusterTaskRequest
 	}
 
 	// Key identifies a Task and defines a total order among tasks
@@ -58,7 +69,7 @@ type (
 
 	// Executor contains the execution logic for Task
 	Executor interface {
-		Execute(taskInfo Info, shouldProcessTask bool) error
+		Execute(task Task, shouldProcessTask bool) error
 	}
 
 	// Filter filters Task
@@ -89,6 +100,18 @@ type (
 		Size() int
 	}
 
+	// Fetcher is a host level component for aggregating task fetch requests
+	// from all shards on the host and perform one fetching operation for
+	// aggregated requests.
+	Fetcher interface {
+		common.Daemon
+		GetSourceCluster() string
+		Fetch(shardID int, fetchParams ...interface{}) future.Future
+	}
+
+	//Fetchers is a group of Fetchers, one for each source cluster
+	Fetchers []Fetcher
+
 	// QueueType is the type of task queue
 	QueueType int
 )
@@ -104,4 +127,6 @@ const (
 	QueueTypeStandbyTimer
 	// QueueTypeReplication is the queue type for replication queue processor
 	QueueTypeReplication
+	// QueueTypeCrossCluster is the queue type for cross cluster queue processor
+	QueueTypeCrossCluster
 )

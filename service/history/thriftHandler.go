@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/.gen/go/history/historyserviceserver"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -50,241 +51,257 @@ func (t ThriftHandler) register(dispatcher *yarpc.Dispatcher) {
 }
 
 // Health forwards request to the underlying handler
-func (t ThriftHandler) Health(ctx context.Context) (response *health.HealthStatus, err error) {
-	response, err = t.h.Health(ctx)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
+	response, err := t.h.Health(withThriftTag(ctx))
+	return thrift.FromHealthStatus(response), thrift.FromError(err)
 }
 
 // CloseShard forwards request to the underlying handler
-func (t ThriftHandler) CloseShard(ctx context.Context, request *shared.CloseShardRequest) (err error) {
-	err = t.h.CloseShard(ctx, request)
+func (t ThriftHandler) CloseShard(ctx context.Context, request *shared.CloseShardRequest) error {
+	err := t.h.CloseShard(withThriftTag(ctx), thrift.ToCloseShardRequest(request))
 	return thrift.FromError(err)
 }
 
 // DescribeHistoryHost forwards request to the underlying handler
-func (t ThriftHandler) DescribeHistoryHost(ctx context.Context, request *shared.DescribeHistoryHostRequest) (response *shared.DescribeHistoryHostResponse, err error) {
-	response, err = t.h.DescribeHistoryHost(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) DescribeHistoryHost(ctx context.Context, request *shared.DescribeHistoryHostRequest) (*shared.DescribeHistoryHostResponse, error) {
+	response, err := t.h.DescribeHistoryHost(withThriftTag(ctx), thrift.ToDescribeHistoryHostRequest(request))
+	return thrift.FromDescribeHistoryHostResponse(response), thrift.FromError(err)
 }
 
 // DescribeMutableState forwards request to the underlying handler
-func (t ThriftHandler) DescribeMutableState(ctx context.Context, request *h.DescribeMutableStateRequest) (response *h.DescribeMutableStateResponse, err error) {
-	response, err = t.h.DescribeMutableState(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) DescribeMutableState(ctx context.Context, request *h.DescribeMutableStateRequest) (*h.DescribeMutableStateResponse, error) {
+	response, err := t.h.DescribeMutableState(withThriftTag(ctx), thrift.ToDescribeMutableStateRequest(request))
+	return thrift.FromDescribeMutableStateResponse(response), thrift.FromError(err)
 }
 
 // DescribeQueue forwards request to the underlying handler
-func (t ThriftHandler) DescribeQueue(ctx context.Context, request *shared.DescribeQueueRequest) (response *shared.DescribeQueueResponse, err error) {
-	response, err = t.h.DescribeQueue(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) DescribeQueue(ctx context.Context, request *shared.DescribeQueueRequest) (*shared.DescribeQueueResponse, error) {
+	response, err := t.h.DescribeQueue(withThriftTag(ctx), thrift.ToDescribeQueueRequest(request))
+	return thrift.FromDescribeQueueResponse(response), thrift.FromError(err)
 }
 
 // DescribeWorkflowExecution forwards request to the underlying handler
-func (t ThriftHandler) DescribeWorkflowExecution(ctx context.Context, request *h.DescribeWorkflowExecutionRequest) (response *shared.DescribeWorkflowExecutionResponse, err error) {
-	response, err = t.h.DescribeWorkflowExecution(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) DescribeWorkflowExecution(ctx context.Context, request *h.DescribeWorkflowExecutionRequest) (*shared.DescribeWorkflowExecutionResponse, error) {
+	response, err := t.h.DescribeWorkflowExecution(withThriftTag(ctx), thrift.ToHistoryDescribeWorkflowExecutionRequest(request))
+	return thrift.FromDescribeWorkflowExecutionResponse(response), thrift.FromError(err)
+}
+
+// GetCrossClusterTasks fetches cross cluster tasks
+func (t ThriftHandler) GetCrossClusterTasks(ctx context.Context, request *shared.GetCrossClusterTasksRequest) (*shared.GetCrossClusterTasksResponse, error) {
+	response, err := t.h.GetCrossClusterTasks(withThriftTag(ctx), thrift.ToGetCrossClusterTasksRequest(request))
+	return thrift.FromGetCrossClusterTasksResponse(response), thrift.FromError(err)
 }
 
 // GetDLQReplicationMessages forwards request to the underlying handler
-func (t ThriftHandler) GetDLQReplicationMessages(ctx context.Context, request *replicator.GetDLQReplicationMessagesRequest) (response *replicator.GetDLQReplicationMessagesResponse, err error) {
-	response, err = t.h.GetDLQReplicationMessages(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) GetDLQReplicationMessages(ctx context.Context, request *replicator.GetDLQReplicationMessagesRequest) (*replicator.GetDLQReplicationMessagesResponse, error) {
+	response, err := t.h.GetDLQReplicationMessages(withThriftTag(ctx), thrift.ToGetDLQReplicationMessagesRequest(request))
+	return thrift.FromGetDLQReplicationMessagesResponse(response), thrift.FromError(err)
 }
 
 // GetMutableState forwards request to the underlying handler
-func (t ThriftHandler) GetMutableState(ctx context.Context, request *h.GetMutableStateRequest) (response *h.GetMutableStateResponse, err error) {
-	response, err = t.h.GetMutableState(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) GetMutableState(ctx context.Context, request *h.GetMutableStateRequest) (*h.GetMutableStateResponse, error) {
+	response, err := t.h.GetMutableState(withThriftTag(ctx), thrift.ToGetMutableStateRequest(request))
+	return thrift.FromGetMutableStateResponse(response), thrift.FromError(err)
 }
 
 // GetReplicationMessages forwards request to the underlying handler
-func (t ThriftHandler) GetReplicationMessages(ctx context.Context, request *replicator.GetReplicationMessagesRequest) (response *replicator.GetReplicationMessagesResponse, err error) {
-	response, err = t.h.GetReplicationMessages(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) GetReplicationMessages(ctx context.Context, request *replicator.GetReplicationMessagesRequest) (*replicator.GetReplicationMessagesResponse, error) {
+	response, err := t.h.GetReplicationMessages(withThriftTag(ctx), thrift.ToGetReplicationMessagesRequest(request))
+	return thrift.FromGetReplicationMessagesResponse(response), thrift.FromError(err)
 }
 
 // MergeDLQMessages forwards request to the underlying handler
-func (t ThriftHandler) MergeDLQMessages(ctx context.Context, request *replicator.MergeDLQMessagesRequest) (response *replicator.MergeDLQMessagesResponse, err error) {
-	response, err = t.h.MergeDLQMessages(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) MergeDLQMessages(ctx context.Context, request *replicator.MergeDLQMessagesRequest) (*replicator.MergeDLQMessagesResponse, error) {
+	response, err := t.h.MergeDLQMessages(withThriftTag(ctx), thrift.ToMergeDLQMessagesRequest(request))
+	return thrift.FromMergeDLQMessagesResponse(response), thrift.FromError(err)
 }
 
 // NotifyFailoverMarkers forwards request to the underlying handler
-func (t ThriftHandler) NotifyFailoverMarkers(ctx context.Context, request *h.NotifyFailoverMarkersRequest) (err error) {
-	err = t.h.NotifyFailoverMarkers(ctx, request)
+func (t ThriftHandler) NotifyFailoverMarkers(ctx context.Context, request *h.NotifyFailoverMarkersRequest) error {
+	err := t.h.NotifyFailoverMarkers(withThriftTag(ctx), thrift.ToNotifyFailoverMarkersRequest(request))
 	return thrift.FromError(err)
 }
 
 // PollMutableState forwards request to the underlying handler
-func (t ThriftHandler) PollMutableState(ctx context.Context, request *h.PollMutableStateRequest) (response *h.PollMutableStateResponse, err error) {
-	response, err = t.h.PollMutableState(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) PollMutableState(ctx context.Context, request *h.PollMutableStateRequest) (*h.PollMutableStateResponse, error) {
+	response, err := t.h.PollMutableState(withThriftTag(ctx), thrift.ToPollMutableStateRequest(request))
+	return thrift.FromPollMutableStateResponse(response), thrift.FromError(err)
 }
 
 // PurgeDLQMessages forwards request to the underlying handler
-func (t ThriftHandler) PurgeDLQMessages(ctx context.Context, request *replicator.PurgeDLQMessagesRequest) (err error) {
-	err = t.h.PurgeDLQMessages(ctx, request)
+func (t ThriftHandler) PurgeDLQMessages(ctx context.Context, request *replicator.PurgeDLQMessagesRequest) error {
+	err := t.h.PurgeDLQMessages(withThriftTag(ctx), thrift.ToPurgeDLQMessagesRequest(request))
 	return thrift.FromError(err)
 }
 
 // QueryWorkflow forwards request to the underlying handler
-func (t ThriftHandler) QueryWorkflow(ctx context.Context, request *h.QueryWorkflowRequest) (response *h.QueryWorkflowResponse, err error) {
-	response, err = t.h.QueryWorkflow(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) QueryWorkflow(ctx context.Context, request *h.QueryWorkflowRequest) (*h.QueryWorkflowResponse, error) {
+	response, err := t.h.QueryWorkflow(withThriftTag(ctx), thrift.ToHistoryQueryWorkflowRequest(request))
+	return thrift.FromHistoryQueryWorkflowResponse(response), thrift.FromError(err)
 }
 
 // ReadDLQMessages forwards request to the underlying handler
-func (t ThriftHandler) ReadDLQMessages(ctx context.Context, request *replicator.ReadDLQMessagesRequest) (response *replicator.ReadDLQMessagesResponse, err error) {
-	response, err = t.h.ReadDLQMessages(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) ReadDLQMessages(ctx context.Context, request *replicator.ReadDLQMessagesRequest) (*replicator.ReadDLQMessagesResponse, error) {
+	response, err := t.h.ReadDLQMessages(withThriftTag(ctx), thrift.ToReadDLQMessagesRequest(request))
+	return thrift.FromReadDLQMessagesResponse(response), thrift.FromError(err)
 }
 
 // ReapplyEvents forwards request to the underlying handler
-func (t ThriftHandler) ReapplyEvents(ctx context.Context, request *h.ReapplyEventsRequest) (err error) {
-	err = t.h.ReapplyEvents(ctx, request)
+func (t ThriftHandler) ReapplyEvents(ctx context.Context, request *h.ReapplyEventsRequest) error {
+	err := t.h.ReapplyEvents(withThriftTag(ctx), thrift.ToHistoryReapplyEventsRequest(request))
 	return thrift.FromError(err)
 }
 
 // RecordActivityTaskHeartbeat forwards request to the underlying handler
-func (t ThriftHandler) RecordActivityTaskHeartbeat(ctx context.Context, request *h.RecordActivityTaskHeartbeatRequest) (response *shared.RecordActivityTaskHeartbeatResponse, err error) {
-	response, err = t.h.RecordActivityTaskHeartbeat(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) RecordActivityTaskHeartbeat(ctx context.Context, request *h.RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse, error) {
+	response, err := t.h.RecordActivityTaskHeartbeat(withThriftTag(ctx), thrift.ToHistoryRecordActivityTaskHeartbeatRequest(request))
+	return thrift.FromRecordActivityTaskHeartbeatResponse(response), thrift.FromError(err)
 }
 
 // RecordActivityTaskStarted forwards request to the underlying handler
-func (t ThriftHandler) RecordActivityTaskStarted(ctx context.Context, request *h.RecordActivityTaskStartedRequest) (response *h.RecordActivityTaskStartedResponse, err error) {
-	response, err = t.h.RecordActivityTaskStarted(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) RecordActivityTaskStarted(ctx context.Context, request *h.RecordActivityTaskStartedRequest) (*h.RecordActivityTaskStartedResponse, error) {
+	response, err := t.h.RecordActivityTaskStarted(withThriftTag(ctx), thrift.ToRecordActivityTaskStartedRequest(request))
+	return thrift.FromRecordActivityTaskStartedResponse(response), thrift.FromError(err)
 }
 
 // RecordChildExecutionCompleted forwards request to the underlying handler
-func (t ThriftHandler) RecordChildExecutionCompleted(ctx context.Context, request *h.RecordChildExecutionCompletedRequest) (err error) {
-	err = t.h.RecordChildExecutionCompleted(ctx, request)
+func (t ThriftHandler) RecordChildExecutionCompleted(ctx context.Context, request *h.RecordChildExecutionCompletedRequest) error {
+	err := t.h.RecordChildExecutionCompleted(withThriftTag(ctx), thrift.ToRecordChildExecutionCompletedRequest(request))
 	return thrift.FromError(err)
 }
 
 // RecordDecisionTaskStarted forwards request to the underlying handler
-func (t ThriftHandler) RecordDecisionTaskStarted(ctx context.Context, request *h.RecordDecisionTaskStartedRequest) (response *h.RecordDecisionTaskStartedResponse, err error) {
-	response, err = t.h.RecordDecisionTaskStarted(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) RecordDecisionTaskStarted(ctx context.Context, request *h.RecordDecisionTaskStartedRequest) (*h.RecordDecisionTaskStartedResponse, error) {
+	response, err := t.h.RecordDecisionTaskStarted(withThriftTag(ctx), thrift.ToRecordDecisionTaskStartedRequest(request))
+	return thrift.FromRecordDecisionTaskStartedResponse(response), thrift.FromError(err)
 }
 
 // RefreshWorkflowTasks forwards request to the underlying handler
-func (t ThriftHandler) RefreshWorkflowTasks(ctx context.Context, request *h.RefreshWorkflowTasksRequest) (err error) {
-	err = t.h.RefreshWorkflowTasks(ctx, request)
+func (t ThriftHandler) RefreshWorkflowTasks(ctx context.Context, request *h.RefreshWorkflowTasksRequest) error {
+	err := t.h.RefreshWorkflowTasks(withThriftTag(ctx), thrift.ToHistoryRefreshWorkflowTasksRequest(request))
 	return thrift.FromError(err)
 }
 
 // RemoveSignalMutableState forwards request to the underlying handler
-func (t ThriftHandler) RemoveSignalMutableState(ctx context.Context, request *h.RemoveSignalMutableStateRequest) (err error) {
-	err = t.h.RemoveSignalMutableState(ctx, request)
+func (t ThriftHandler) RemoveSignalMutableState(ctx context.Context, request *h.RemoveSignalMutableStateRequest) error {
+	err := t.h.RemoveSignalMutableState(withThriftTag(ctx), thrift.ToRemoveSignalMutableStateRequest(request))
 	return thrift.FromError(err)
 }
 
 // RemoveTask forwards request to the underlying handler
-func (t ThriftHandler) RemoveTask(ctx context.Context, request *shared.RemoveTaskRequest) (err error) {
-	err = t.h.RemoveTask(ctx, request)
+func (t ThriftHandler) RemoveTask(ctx context.Context, request *shared.RemoveTaskRequest) error {
+	err := t.h.RemoveTask(withThriftTag(ctx), thrift.ToRemoveTaskRequest(request))
 	return thrift.FromError(err)
 }
 
 // ReplicateEventsV2 forwards request to the underlying handler
-func (t ThriftHandler) ReplicateEventsV2(ctx context.Context, request *h.ReplicateEventsV2Request) (err error) {
-	err = t.h.ReplicateEventsV2(ctx, request)
+func (t ThriftHandler) ReplicateEventsV2(ctx context.Context, request *h.ReplicateEventsV2Request) error {
+	err := t.h.ReplicateEventsV2(withThriftTag(ctx), thrift.ToReplicateEventsV2Request(request))
 	return thrift.FromError(err)
 }
 
 // RequestCancelWorkflowExecution forwards request to the underlying handler
-func (t ThriftHandler) RequestCancelWorkflowExecution(ctx context.Context, request *h.RequestCancelWorkflowExecutionRequest) (err error) {
-	err = t.h.RequestCancelWorkflowExecution(ctx, request)
+func (t ThriftHandler) RequestCancelWorkflowExecution(ctx context.Context, request *h.RequestCancelWorkflowExecutionRequest) error {
+	err := t.h.RequestCancelWorkflowExecution(withThriftTag(ctx), thrift.ToHistoryRequestCancelWorkflowExecutionRequest(request))
 	return thrift.FromError(err)
 }
 
 // ResetQueue forwards request to the underlying handler
-func (t ThriftHandler) ResetQueue(ctx context.Context, request *shared.ResetQueueRequest) (err error) {
-	err = t.h.ResetQueue(ctx, request)
+func (t ThriftHandler) ResetQueue(ctx context.Context, request *shared.ResetQueueRequest) error {
+	err := t.h.ResetQueue(withThriftTag(ctx), thrift.ToResetQueueRequest(request))
 	return thrift.FromError(err)
 }
 
 // ResetStickyTaskList forwards request to the underlying handler
-func (t ThriftHandler) ResetStickyTaskList(ctx context.Context, request *h.ResetStickyTaskListRequest) (response *h.ResetStickyTaskListResponse, err error) {
-	response, err = t.h.ResetStickyTaskList(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) ResetStickyTaskList(ctx context.Context, request *h.ResetStickyTaskListRequest) (*h.ResetStickyTaskListResponse, error) {
+	response, err := t.h.ResetStickyTaskList(withThriftTag(ctx), thrift.ToHistoryResetStickyTaskListRequest(request))
+	return thrift.FromHistoryResetStickyTaskListResponse(response), thrift.FromError(err)
 }
 
 // ResetWorkflowExecution forwards request to the underlying handler
-func (t ThriftHandler) ResetWorkflowExecution(ctx context.Context, request *h.ResetWorkflowExecutionRequest) (response *shared.ResetWorkflowExecutionResponse, err error) {
-	response, err = t.h.ResetWorkflowExecution(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) ResetWorkflowExecution(ctx context.Context, request *h.ResetWorkflowExecutionRequest) (*shared.ResetWorkflowExecutionResponse, error) {
+	response, err := t.h.ResetWorkflowExecution(withThriftTag(ctx), thrift.ToHistoryResetWorkflowExecutionRequest(request))
+	return thrift.FromResetWorkflowExecutionResponse(response), thrift.FromError(err)
 }
 
 // RespondActivityTaskCanceled forwards request to the underlying handler
-func (t ThriftHandler) RespondActivityTaskCanceled(ctx context.Context, request *h.RespondActivityTaskCanceledRequest) (err error) {
-	err = t.h.RespondActivityTaskCanceled(ctx, request)
+func (t ThriftHandler) RespondActivityTaskCanceled(ctx context.Context, request *h.RespondActivityTaskCanceledRequest) error {
+	err := t.h.RespondActivityTaskCanceled(withThriftTag(ctx), thrift.ToHistoryRespondActivityTaskCanceledRequest(request))
 	return thrift.FromError(err)
 }
 
 // RespondActivityTaskCompleted forwards request to the underlying handler
-func (t ThriftHandler) RespondActivityTaskCompleted(ctx context.Context, request *h.RespondActivityTaskCompletedRequest) (err error) {
-	err = t.h.RespondActivityTaskCompleted(ctx, request)
+func (t ThriftHandler) RespondActivityTaskCompleted(ctx context.Context, request *h.RespondActivityTaskCompletedRequest) error {
+	err := t.h.RespondActivityTaskCompleted(withThriftTag(ctx), thrift.ToHistoryRespondActivityTaskCompletedRequest(request))
 	return thrift.FromError(err)
 }
 
 // RespondActivityTaskFailed forwards request to the underlying handler
-func (t ThriftHandler) RespondActivityTaskFailed(ctx context.Context, request *h.RespondActivityTaskFailedRequest) (err error) {
-	err = t.h.RespondActivityTaskFailed(ctx, request)
+func (t ThriftHandler) RespondActivityTaskFailed(ctx context.Context, request *h.RespondActivityTaskFailedRequest) error {
+	err := t.h.RespondActivityTaskFailed(withThriftTag(ctx), thrift.ToHistoryRespondActivityTaskFailedRequest(request))
 	return thrift.FromError(err)
 }
 
+// RespondCrossClusterTasksCompleted responds the result of processing cross cluster tasks
+func (t ThriftHandler) RespondCrossClusterTasksCompleted(ctx context.Context, request *shared.RespondCrossClusterTasksCompletedRequest) (*shared.RespondCrossClusterTasksCompletedResponse, error) {
+	response, err := t.h.RespondCrossClusterTasksCompleted(withThriftTag(ctx), thrift.ToRespondCrossClusterTasksCompletedRequest(request))
+	return thrift.FromRespondCrossClusterTasksCompletedResponse(response), thrift.FromError(err)
+}
+
 // RespondDecisionTaskCompleted forwards request to the underlying handler
-func (t ThriftHandler) RespondDecisionTaskCompleted(ctx context.Context, request *h.RespondDecisionTaskCompletedRequest) (response *h.RespondDecisionTaskCompletedResponse, err error) {
-	response, err = t.h.RespondDecisionTaskCompleted(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) RespondDecisionTaskCompleted(ctx context.Context, request *h.RespondDecisionTaskCompletedRequest) (*h.RespondDecisionTaskCompletedResponse, error) {
+	response, err := t.h.RespondDecisionTaskCompleted(withThriftTag(ctx), thrift.ToHistoryRespondDecisionTaskCompletedRequest(request))
+	return thrift.FromHistoryRespondDecisionTaskCompletedResponse(response), thrift.FromError(err)
 }
 
 // RespondDecisionTaskFailed forwards request to the underlying handler
-func (t ThriftHandler) RespondDecisionTaskFailed(ctx context.Context, request *h.RespondDecisionTaskFailedRequest) (err error) {
-	err = t.h.RespondDecisionTaskFailed(ctx, request)
+func (t ThriftHandler) RespondDecisionTaskFailed(ctx context.Context, request *h.RespondDecisionTaskFailedRequest) error {
+	err := t.h.RespondDecisionTaskFailed(withThriftTag(ctx), thrift.ToHistoryRespondDecisionTaskFailedRequest(request))
 	return thrift.FromError(err)
 }
 
 // ScheduleDecisionTask forwards request to the underlying handler
-func (t ThriftHandler) ScheduleDecisionTask(ctx context.Context, request *h.ScheduleDecisionTaskRequest) (err error) {
-	err = t.h.ScheduleDecisionTask(ctx, request)
+func (t ThriftHandler) ScheduleDecisionTask(ctx context.Context, request *h.ScheduleDecisionTaskRequest) error {
+	err := t.h.ScheduleDecisionTask(withThriftTag(ctx), thrift.ToScheduleDecisionTaskRequest(request))
 	return thrift.FromError(err)
 }
 
 // SignalWithStartWorkflowExecution forwards request to the underlying handler
-func (t ThriftHandler) SignalWithStartWorkflowExecution(ctx context.Context, request *h.SignalWithStartWorkflowExecutionRequest) (response *shared.StartWorkflowExecutionResponse, err error) {
-	response, err = t.h.SignalWithStartWorkflowExecution(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) SignalWithStartWorkflowExecution(ctx context.Context, request *h.SignalWithStartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error) {
+	response, err := t.h.SignalWithStartWorkflowExecution(withThriftTag(ctx), thrift.ToHistorySignalWithStartWorkflowExecutionRequest(request))
+	return thrift.FromStartWorkflowExecutionResponse(response), thrift.FromError(err)
 }
 
 // SignalWorkflowExecution forwards request to the underlying handler
-func (t ThriftHandler) SignalWorkflowExecution(ctx context.Context, request *h.SignalWorkflowExecutionRequest) (err error) {
-	err = t.h.SignalWorkflowExecution(ctx, request)
+func (t ThriftHandler) SignalWorkflowExecution(ctx context.Context, request *h.SignalWorkflowExecutionRequest) error {
+	err := t.h.SignalWorkflowExecution(withThriftTag(ctx), thrift.ToHistorySignalWorkflowExecutionRequest(request))
 	return thrift.FromError(err)
 }
 
 // StartWorkflowExecution forwards request to the underlying handler
-func (t ThriftHandler) StartWorkflowExecution(ctx context.Context, request *h.StartWorkflowExecutionRequest) (response *shared.StartWorkflowExecutionResponse, err error) {
-	response, err = t.h.StartWorkflowExecution(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) StartWorkflowExecution(ctx context.Context, request *h.StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error) {
+	response, err := t.h.StartWorkflowExecution(withThriftTag(ctx), thrift.ToHistoryStartWorkflowExecutionRequest(request))
+	return thrift.FromStartWorkflowExecutionResponse(response), thrift.FromError(err)
 }
 
 // SyncActivity forwards request to the underlying handler
-func (t ThriftHandler) SyncActivity(ctx context.Context, request *h.SyncActivityRequest) (err error) {
-	err = t.h.SyncActivity(ctx, request)
+func (t ThriftHandler) SyncActivity(ctx context.Context, request *h.SyncActivityRequest) error {
+	err := t.h.SyncActivity(withThriftTag(ctx), thrift.ToSyncActivityRequest(request))
 	return thrift.FromError(err)
 }
 
 // SyncShardStatus forwards request to the underlying handler
-func (t ThriftHandler) SyncShardStatus(ctx context.Context, request *h.SyncShardStatusRequest) (err error) {
-	err = t.h.SyncShardStatus(ctx, request)
+func (t ThriftHandler) SyncShardStatus(ctx context.Context, request *h.SyncShardStatusRequest) error {
+	err := t.h.SyncShardStatus(withThriftTag(ctx), thrift.ToSyncShardStatusRequest(request))
 	return thrift.FromError(err)
 }
 
 // TerminateWorkflowExecution forwards request to the underlying handler
-func (t ThriftHandler) TerminateWorkflowExecution(ctx context.Context, request *h.TerminateWorkflowExecutionRequest) (err error) {
-	err = t.h.TerminateWorkflowExecution(ctx, request)
+func (t ThriftHandler) TerminateWorkflowExecution(ctx context.Context, request *h.TerminateWorkflowExecutionRequest) error {
+	err := t.h.TerminateWorkflowExecution(withThriftTag(ctx), thrift.ToHistoryTerminateWorkflowExecutionRequest(request))
 	return thrift.FromError(err)
+}
+
+func withThriftTag(ctx context.Context) context.Context {
+	return metrics.TagContext(ctx, metrics.ThriftTransportTag())
 }

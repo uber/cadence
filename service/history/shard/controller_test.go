@@ -33,13 +33,14 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/resource"
@@ -112,7 +113,7 @@ func (s *controllerSuite) TestAcquireShardSuccess() {
 		if hostID == 0 {
 			myShards = append(myShards, shardID)
 			s.mockHistoryEngine.EXPECT().Start().Return().Times(1)
-			s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).Times(2)
+			s.mockServiceResolver.EXPECT().Lookup(string(rune(shardID))).Return(s.hostInfo, nil).Times(2)
 			s.mockEngineFactory.EXPECT().CreateEngine(gomock.Any()).Return(s.mockHistoryEngine).Times(1)
 			s.mockShardManager.On("GetShard", mock.Anything, &persistence.GetShardRequest{ShardID: shardID}).Return(
 				&persistence.GetShardResponse{
@@ -151,8 +152,15 @@ func (s *controllerSuite) TestAcquireShardSuccess() {
 						cluster.TestCurrentClusterName:     currentClusterTimerAck,
 						cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 					},
-					TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
-					TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
+					TransferProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
+					CrossClusterProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
+					TimerProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
 					ClusterReplicationLevel: map[string]int64{},
 					ReplicationDLQAckLevel:  map[string]int64{},
 				},
@@ -160,7 +168,7 @@ func (s *controllerSuite) TestAcquireShardSuccess() {
 			}).Return(nil).Once()
 		} else {
 			ownerHost := fmt.Sprintf("test-acquire-shard-host-%v", hostID)
-			s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(membership.NewHostInfo(ownerHost, nil), nil).Times(1)
+			s.mockServiceResolver.EXPECT().Lookup(string(rune(shardID))).Return(membership.NewHostInfo(ownerHost, nil), nil).Times(1)
 		}
 	}
 
@@ -195,7 +203,7 @@ func (s *controllerSuite) TestAcquireShardsConcurrently() {
 		if hostID == 0 {
 			myShards = append(myShards, shardID)
 			s.mockHistoryEngine.EXPECT().Start().Return().Times(1)
-			s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).Times(2)
+			s.mockServiceResolver.EXPECT().Lookup(string(rune(shardID))).Return(s.hostInfo, nil).Times(2)
 			s.mockEngineFactory.EXPECT().CreateEngine(gomock.Any()).Return(s.mockHistoryEngine).Times(1)
 			s.mockShardManager.On("GetShard", mock.Anything, &persistence.GetShardRequest{ShardID: shardID}).Return(
 				&persistence.GetShardResponse{
@@ -234,8 +242,15 @@ func (s *controllerSuite) TestAcquireShardsConcurrently() {
 						cluster.TestCurrentClusterName:     currentClusterTimerAck,
 						cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 					},
-					TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
-					TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
+					TransferProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
+					CrossClusterProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
+					TimerProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
 					ClusterReplicationLevel: map[string]int64{},
 					ReplicationDLQAckLevel:  map[string]int64{},
 				},
@@ -243,7 +258,7 @@ func (s *controllerSuite) TestAcquireShardsConcurrently() {
 			}).Return(nil).Once()
 		} else {
 			ownerHost := fmt.Sprintf("test-acquire-shard-host-%v", hostID)
-			s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(membership.NewHostInfo(ownerHost, nil), nil).Times(1)
+			s.mockServiceResolver.EXPECT().Lookup(string(rune(shardID))).Return(membership.NewHostInfo(ownerHost, nil), nil).Times(1)
 		}
 	}
 
@@ -263,12 +278,12 @@ func (s *controllerSuite) TestAcquireShardLookupFailure() {
 	numShards := 2
 	s.config.NumberOfShards = numShards
 	for shardID := 0; shardID < numShards; shardID++ {
-		s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(nil, errors.New("ring failure")).Times(1)
+		s.mockServiceResolver.EXPECT().Lookup(string(rune(shardID))).Return(nil, errors.New("ring failure")).Times(1)
 	}
 
 	s.shardController.acquireShards()
 	for shardID := 0; shardID < numShards; shardID++ {
-		s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(nil, errors.New("ring failure")).Times(1)
+		s.mockServiceResolver.EXPECT().Lookup(string(rune(shardID))).Return(nil, errors.New("ring failure")).Times(1)
 		s.Nil(s.shardController.GetEngineForShard(shardID))
 	}
 }
@@ -285,7 +300,7 @@ func (s *controllerSuite) TestAcquireShardRenewSuccess() {
 
 	for shardID := 0; shardID < numShards; shardID++ {
 		s.mockHistoryEngine.EXPECT().Start().Return().Times(1)
-		s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).Times(2)
+		s.mockServiceResolver.EXPECT().Lookup(string(rune(shardID))).Return(s.hostInfo, nil).Times(2)
 		s.mockEngineFactory.EXPECT().CreateEngine(gomock.Any()).Return(s.mockHistoryEngine).Times(1)
 		s.mockShardManager.On("GetShard", mock.Anything, &persistence.GetShardRequest{ShardID: shardID}).Return(
 			&persistence.GetShardResponse{
@@ -324,8 +339,15 @@ func (s *controllerSuite) TestAcquireShardRenewSuccess() {
 					cluster.TestCurrentClusterName:     currentClusterTimerAck,
 					cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 				},
-				TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
-				TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
+				TransferProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
+				CrossClusterProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
+				TimerProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
 				ClusterReplicationLevel: map[string]int64{},
 				ReplicationDLQAckLevel:  map[string]int64{},
 			},
@@ -339,7 +361,7 @@ func (s *controllerSuite) TestAcquireShardRenewSuccess() {
 	s.shardController.acquireShards()
 
 	for shardID := 0; shardID < numShards; shardID++ {
-		s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).Times(1)
+		s.mockServiceResolver.EXPECT().Lookup(string(rune(shardID))).Return(s.hostInfo, nil).Times(1)
 	}
 	s.shardController.acquireShards()
 
@@ -360,7 +382,7 @@ func (s *controllerSuite) TestAcquireShardRenewLookupFailed() {
 
 	for shardID := 0; shardID < numShards; shardID++ {
 		s.mockHistoryEngine.EXPECT().Start().Return().Times(1)
-		s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).Times(2)
+		s.mockServiceResolver.EXPECT().Lookup(string(rune(shardID))).Return(s.hostInfo, nil).Times(2)
 		s.mockEngineFactory.EXPECT().CreateEngine(gomock.Any()).Return(s.mockHistoryEngine).Times(1)
 		s.mockShardManager.On("GetShard", mock.Anything, &persistence.GetShardRequest{ShardID: shardID}).Return(
 			&persistence.GetShardResponse{
@@ -399,8 +421,15 @@ func (s *controllerSuite) TestAcquireShardRenewLookupFailed() {
 					cluster.TestCurrentClusterName:     currentClusterTimerAck,
 					cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 				},
-				TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
-				TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
+				TransferProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
+				CrossClusterProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
+				TimerProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
 				ClusterReplicationLevel: map[string]int64{},
 				ReplicationDLQAckLevel:  map[string]int64{},
 			},
@@ -414,7 +443,7 @@ func (s *controllerSuite) TestAcquireShardRenewLookupFailed() {
 	s.shardController.acquireShards()
 
 	for shardID := 0; shardID < numShards; shardID++ {
-		s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(nil, errors.New("ring failure")).Times(1)
+		s.mockServiceResolver.EXPECT().Lookup(string(rune(shardID))).Return(nil, errors.New("ring failure")).Times(1)
 	}
 	s.shardController.acquireShards()
 
@@ -461,7 +490,7 @@ func (s *controllerSuite) TestHistoryEngineClosed() {
 	for shardID := 0; shardID < 2; shardID++ {
 		mockEngine := historyEngines[shardID]
 		mockEngine.EXPECT().Stop().Return().Times(1)
-		s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(differentHostInfo, nil).AnyTimes()
+		s.mockServiceResolver.EXPECT().Lookup(string(rune(shardID))).Return(differentHostInfo, nil).AnyTimes()
 		s.shardController.shardClosedCallback(shardID, nil)
 	}
 
@@ -506,7 +535,7 @@ func (s *controllerSuite) TestHistoryEngineClosed() {
 	for shardID := 2; shardID < numShards; shardID++ {
 		mockEngine := historyEngines[shardID]
 		mockEngine.EXPECT().Stop().Return().Times(1)
-		s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).AnyTimes()
+		s.mockServiceResolver.EXPECT().Lookup(string(rune(shardID))).Return(s.hostInfo, nil).AnyTimes()
 	}
 	s.shardController.Stop()
 }
@@ -553,7 +582,7 @@ func (s *controllerSuite) TestShardControllerClosed() {
 	for shardID := 0; shardID < numShards; shardID++ {
 		mockEngine := historyEngines[shardID]
 		mockEngine.EXPECT().Stop().Times(1)
-		s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).AnyTimes()
+		s.mockServiceResolver.EXPECT().Lookup(string(rune(shardID))).Return(s.hostInfo, nil).AnyTimes()
 	}
 	s.shardController.Stop()
 	workerWG.Wait()
@@ -570,7 +599,7 @@ func (s *controllerSuite) setupMocksForAcquireShard(shardID int, mockEngine *eng
 
 	// s.mockResource.ExecutionMgr.On("Close").Return()
 	mockEngine.EXPECT().Start().Times(1)
-	s.mockServiceResolver.EXPECT().Lookup(string(shardID)).Return(s.hostInfo, nil).Times(2)
+	s.mockServiceResolver.EXPECT().Lookup(string(rune(shardID))).Return(s.hostInfo, nil).Times(2)
 	s.mockEngineFactory.EXPECT().CreateEngine(gomock.Any()).Return(mockEngine).Times(1)
 	s.mockShardManager.On("GetShard", mock.Anything, &persistence.GetShardRequest{ShardID: shardID}).Return(
 		&persistence.GetShardResponse{
@@ -609,8 +638,15 @@ func (s *controllerSuite) setupMocksForAcquireShard(shardID int, mockEngine *eng
 				cluster.TestCurrentClusterName:     currentClusterTimerAck,
 				cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 			},
-			TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
-			TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
+			TransferProcessingQueueStates: &types.ProcessingQueueStates{
+				StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+			},
+			CrossClusterProcessingQueueStates: &types.ProcessingQueueStates{
+				StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+			},
+			TimerProcessingQueueStates: &types.ProcessingQueueStates{
+				StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+			},
 			ClusterReplicationLevel: map[string]int64{},
 			ReplicationDLQAckLevel:  map[string]int64{},
 		},

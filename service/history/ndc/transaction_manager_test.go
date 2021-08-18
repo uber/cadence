@@ -32,13 +32,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/execution"
@@ -149,7 +148,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Op
 	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
-		Events: []*shared.HistoryEvent{{EventId: common.Int64Ptr(1)}},
+		Events: []*types.HistoryEvent{{EventID: 1}},
 	}
 
 	workflow.EXPECT().GetContext().Return(context).AnyTimes()
@@ -165,7 +164,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Op
 	mutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	mutableState.EXPECT().GetDomainEntry().Return(s.domainEntry).AnyTimes()
 	mutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{RunID: runID}).Times(1)
-	context.EXPECT().PersistNonFirstWorkflowEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
+	context.EXPECT().PersistNonStartWorkflowBatchEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
 	context.EXPECT().UpdateWorkflowExecutionWithNew(
 		gomock.Any(), now, persistence.UpdateWorkflowModeUpdateCurrent, nil, nil, execution.TransactionPolicyActive, (*execution.TransactionPolicy)(nil),
 	).Return(nil).Times(1)
@@ -231,6 +230,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Cl
 		workflow,
 		EventsReapplicationResetWorkflowReason,
 		workflowEvents.Events,
+		false,
 	).Return(nil).Times(1)
 
 	s.mockExecutionManager.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
@@ -238,7 +238,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Cl
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{RunID: runID}, nil).Once()
 
-	context.EXPECT().PersistNonFirstWorkflowEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
+	context.EXPECT().PersistNonStartWorkflowBatchEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
 	context.EXPECT().UpdateWorkflowExecutionWithNew(
 		gomock.Any(), now, persistence.UpdateWorkflowModeBypassCurrent, nil, nil, execution.TransactionPolicyPassive, (*execution.TransactionPolicy)(nil),
 	).Return(nil).Times(1)
@@ -259,7 +259,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Passive_O
 	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
-		Events: []*shared.HistoryEvent{{EventId: common.Int64Ptr(1)}},
+		Events: []*types.HistoryEvent{{EventID: 1}},
 	}
 
 	workflow.EXPECT().GetContext().Return(context).AnyTimes()
@@ -273,7 +273,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Passive_O
 	mutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	mutableState.EXPECT().GetDomainEntry().Return(s.domainEntry).AnyTimes()
 	context.EXPECT().ReapplyEvents([]*persistence.WorkflowEvents{workflowEvents}).Times(1)
-	context.EXPECT().PersistNonFirstWorkflowEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
+	context.EXPECT().PersistNonStartWorkflowBatchEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
 	context.EXPECT().UpdateWorkflowExecutionWithNew(
 		gomock.Any(), now, persistence.UpdateWorkflowModeUpdateCurrent, nil, nil, execution.TransactionPolicyPassive, (*execution.TransactionPolicy)(nil),
 	).Return(nil).Times(1)
@@ -320,7 +320,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Passive_C
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{RunID: runID}, nil).Once()
 	context.EXPECT().ReapplyEvents([]*persistence.WorkflowEvents{workflowEvents}).Times(1)
-	context.EXPECT().PersistNonFirstWorkflowEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
+	context.EXPECT().PersistNonStartWorkflowBatchEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
 	context.EXPECT().UpdateWorkflowExecutionWithNew(
 		gomock.Any(), now, persistence.UpdateWorkflowModeUpdateCurrent, nil, nil, execution.TransactionPolicyPassive, (*execution.TransactionPolicy)(nil),
 	).Return(nil).Times(1)
@@ -347,8 +347,8 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_NotCurrentWorkflow_Active
 	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
-		Events: []*shared.HistoryEvent{{
-			EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionSignaled),
+		Events: []*types.HistoryEvent{{
+			EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		}},
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -375,7 +375,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_NotCurrentWorkflow_Active
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{RunID: currentRunID}, nil).Once()
 	context.EXPECT().ReapplyEvents([]*persistence.WorkflowEvents{workflowEvents}).Times(1)
-	context.EXPECT().PersistNonFirstWorkflowEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
+	context.EXPECT().PersistNonStartWorkflowBatchEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
 	context.EXPECT().UpdateWorkflowExecutionWithNew(
 		gomock.Any(), now, persistence.UpdateWorkflowModeBypassCurrent, nil, nil, execution.TransactionPolicyPassive, (*execution.TransactionPolicy)(nil),
 	).Return(nil).Times(1)
@@ -401,8 +401,8 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_NotCurrentWorkflow_Passiv
 	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
-		Events: []*shared.HistoryEvent{{
-			EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionSignaled),
+		Events: []*types.HistoryEvent{{
+			EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		}},
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -429,7 +429,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_NotCurrentWorkflow_Passiv
 		WorkflowID: workflowID,
 	}).Return(&persistence.GetCurrentExecutionResponse{RunID: currentRunID}, nil).Once()
 	context.EXPECT().ReapplyEvents([]*persistence.WorkflowEvents{workflowEvents}).Times(1)
-	context.EXPECT().PersistNonFirstWorkflowEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
+	context.EXPECT().PersistNonStartWorkflowBatchEvents(gomock.Any(), workflowEvents).Return(int64(0), nil).Times(1)
 	context.EXPECT().UpdateWorkflowExecutionWithNew(
 		gomock.Any(), now, persistence.UpdateWorkflowModeBypassCurrent, nil, nil, execution.TransactionPolicyPassive, (*execution.TransactionPolicy)(nil),
 	).Return(nil).Times(1)
@@ -446,11 +446,11 @@ func (s *transactionManagerSuite) TestCheckWorkflowExists_DoesNotExists() {
 
 	s.mockExecutionManager.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		Execution: types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
-	}).Return(nil, &shared.EntityNotExistsError{}).Once()
+	}).Return(nil, &types.EntityNotExistsError{}).Once()
 
 	exists, err := s.transactionManager.checkWorkflowExists(ctx, domainID, workflowID, runID)
 	s.NoError(err)
@@ -465,9 +465,9 @@ func (s *transactionManagerSuite) TestCheckWorkflowExists_DoesExists() {
 
 	s.mockExecutionManager.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		Execution: types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	}).Return(&persistence.GetWorkflowExecutionResponse{}, nil).Once()
 
@@ -484,7 +484,7 @@ func (s *transactionManagerSuite) TestGetWorkflowCurrentRunID_Missing() {
 	s.mockExecutionManager.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
-	}).Return(nil, &shared.EntityNotExistsError{}).Once()
+	}).Return(nil, &types.EntityNotExistsError{}).Once()
 
 	currentRunID, err := s.transactionManager.getCurrentWorkflowRunID(ctx, domainID, workflowID)
 	s.NoError(err)

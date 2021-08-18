@@ -24,13 +24,13 @@ import (
 	"context"
 	"time"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -53,7 +53,6 @@ func NewTransferStandbyTaskExecutor(
 	executionCache *execution.Cache,
 	historyResender ndc.HistoryResender,
 	logger log.Logger,
-	metricsClient metrics.Client,
 	clusterName string,
 	config *config.Config,
 ) Executor {
@@ -63,7 +62,6 @@ func NewTransferStandbyTaskExecutor(
 			archiverClient,
 			executionCache,
 			logger,
-			metricsClient,
 			config,
 		),
 		clusterName:     clusterName,
@@ -72,11 +70,11 @@ func NewTransferStandbyTaskExecutor(
 }
 
 func (t *transferStandbyTaskExecutor) Execute(
-	taskInfo Info,
+	task Task,
 	shouldProcessTask bool,
 ) error {
 
-	transferTask, ok := taskInfo.(*persistence.TransferTaskInfo)
+	transferTask, ok := task.GetInfo().(*persistence.TransferTaskInfo)
 	if !ok {
 		return errUnexpectedTask
 	}
@@ -184,7 +182,7 @@ func (t *transferStandbyTaskExecutor) processDecisionTask(
 		if decisionInfo.StartedID == common.EmptyEventID {
 			return newPushDecisionToMatchingInfo(
 				decisionTimeout,
-				workflow.TaskList{Name: &transferTask.TaskList},
+				types.TaskList{Name: transferTask.TaskList},
 			), nil
 		}
 
@@ -229,7 +227,7 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 		executionInfo := mutableState.GetExecutionInfo()
 		workflowTypeName := executionInfo.WorkflowTypeName
 		workflowCloseTimestamp := wfCloseTime
-		workflowCloseStatus := persistence.ToThriftWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
+		workflowCloseStatus := persistence.ToInternalWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 		workflowHistoryLength := mutableState.GetNextEventID() - 1
 		startEvent, err := mutableState.GetStartEvent(ctx)
 		if err != nil {
@@ -239,6 +237,7 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 		workflowExecutionTimestamp := getWorkflowExecutionTimestamp(mutableState, startEvent)
 		visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 		searchAttr := executionInfo.SearchAttributes
+		isCron := len(executionInfo.CronSchedule) > 0
 
 		lastWriteVersion, err := mutableState.GetLastWriteVersion()
 		if err != nil {
@@ -260,11 +259,12 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 			workflowStartTimestamp,
 			workflowExecutionTimestamp.UnixNano(),
 			workflowCloseTimestamp,
-			workflowCloseStatus,
+			*workflowCloseStatus,
 			workflowHistoryLength,
 			transferTask.GetTaskID(),
 			visibilityMemo,
 			executionInfo.TaskList,
+			isCron,
 			searchAttr,
 		)
 	}
@@ -458,6 +458,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 	executionTimestamp := getWorkflowExecutionTimestamp(mutableState, startEvent)
 	visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
+	isCron := len(executionInfo.CronSchedule) > 0
 
 	if isRecordStart {
 		return t.recordWorkflowStarted(
@@ -471,6 +472,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 			workflowTimeout,
 			transferTask.GetTaskID(),
 			executionInfo.TaskList,
+			isCron,
 			visibilityMemo,
 			searchAttr,
 		)
@@ -487,6 +489,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 		transferTask.GetTaskID(),
 		executionInfo.TaskList,
 		visibilityMemo,
+		isCron,
 		searchAttr,
 	)
 
@@ -507,6 +510,9 @@ func (t *transferStandbyTaskExecutor) processTransfer(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() {
@@ -609,7 +615,7 @@ func (t *transferStandbyTaskExecutor) fetchHistoryFromRemote(
 			nil,
 		)
 	} else {
-		err = &workflow.InternalServiceError{
+		err = &types.InternalServiceError{
 			Message: "transferQueueStandbyProcessor encounter empty historyResendInfo",
 		}
 	}

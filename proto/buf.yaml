@@ -1,0 +1,10 @@
+version: v1beta1
+build:
+  roots:
+    - public
+    - internal
+lint: # Uber style rules: https://docs.buf.build/migration-prototool/#uber1-uber2
+  use:
+    - DEFAULT
+  enum_zero_value_suffix: _INVALID
+  service_suffix: API

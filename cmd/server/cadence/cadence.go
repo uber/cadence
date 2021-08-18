@@ -21,16 +21,19 @@
 package cadence
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/tools/cassandra"
 	"github.com/uber/cadence/tools/sql"
 )
@@ -43,6 +46,7 @@ func startHandler(c *cli.Context) {
 	env := getEnvironment(c)
 	zone := getZone(c)
 	configDir := getConfigDir(c)
+	rootDir := getRootDir(c)
 
 	log.Printf("Loading config; env=%v,zone=%v,configDir=%v\n", env, zone, configDir)
 
@@ -54,8 +58,13 @@ func startHandler(c *cli.Context) {
 	if cfg.Log.Level == "debug" {
 		log.Printf("config=\n%v\n", cfg.String())
 	}
+	if cfg.DynamicConfig.Client == "" {
+		cfg.DynamicConfigClient.Filepath = constructPathIfNeed(rootDir, cfg.DynamicConfigClient.Filepath)
+	} else {
+		cfg.DynamicConfig.FileBased.Filepath = constructPathIfNeed(rootDir, cfg.DynamicConfig.FileBased.Filepath)
+	}
 
-	if err := cfg.Validate(); err != nil {
+	if err := cfg.ValidateAndFillDefaults(); err != nil {
 		log.Fatalf("config validation failed: %v", err)
 	}
 	// cassandra schema version validation
@@ -130,7 +139,7 @@ func isValidService(in string) bool {
 }
 
 func getConfigDir(c *cli.Context) string {
-	return constructPath(getRootDir(c), c.GlobalString("config"))
+	return constructPathIfNeed(getRootDir(c), c.GlobalString("config"))
 }
 
 func getRootDir(c *cli.Context) string {
@@ -145,17 +154,29 @@ func getRootDir(c *cli.Context) string {
 	return dirpath
 }
 
-func constructPath(dir string, file string) string {
-	return dir + "/" + file
+// constructPathIfNeed would append the dir as the root dir
+// when the file wasn't absolute path.
+func constructPathIfNeed(dir string, file string) string {
+	if !filepath.IsAbs(file) {
+		return dir + "/" + file
+	}
+	return file
 }
 
 // BuildCLI is the main entry point for the cadence server
-func BuildCLI() *cli.App {
+func BuildCLI(releaseVersion string, gitRevision string) *cli.App {
+	version := fmt.Sprintf(" Release version: %v \n"+
+		"   Build commit: %v\n"+
+		"   Max Support CLI feature version: %v \n"+
+		"   Max Support GoSDK feature version: %v \n"+
+		"   Max Support JavaSDK feature version: %v \n"+
+		"   Note:  Feature version is for compatibility checking between server and clients if enabled feature checking. Server is always backward compatible to older CLI versions, but not accepting newer than it can support.",
+		releaseVersion, gitRevision, client.SupportedCLIVersion, client.SupportedGoSDKVersion, client.SupportedJavaSDKVersion)
 
 	app := cli.NewApp()
 	app.Name = "cadence"
 	app.Usage = "Cadence server"
-	app.Version = "0.0.1"
+	app.Version = version
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -167,7 +188,7 @@ func BuildCLI() *cli.App {
 		cli.StringFlag{
 			Name:   "config, c",
 			Value:  "config",
-			Usage:  "config dir path relative to root",
+			Usage:  "config dir is a path relative to root, or an absolute path",
 			EnvVar: config.EnvKeyConfigDir,
 		},
 		cli.StringFlag{

@@ -5,11 +5,15 @@ set -x
 DB="${DB:-cassandra}"
 ENABLE_ES="${ENABLE_ES:-false}"
 ES_PORT="${ES_PORT:-9200}"
+ES_VERSION="${ES_VERSION:-v6}"
 RF=${RF:-1}
 
 # cassandra env
+export CASSANDRA_USER="${CASSANDRA_USER:-cassandra}"
+export CASSANDRA_PASSWORD="${CASSANDRA_PASSWORD:-cassandra}"
 export KEYSPACE="${KEYSPACE:-cadence}"
 export VISIBILITY_KEYSPACE="${VISIBILITY_KEYSPACE:-cadence_visibility}"
+export CASSANDRA_PROTO_VERSION="${CASSANDRA_PROTO_VERSION:-4}"
 
 # mysql env
 export DBNAME="${DBNAME:-cadence}"
@@ -54,7 +58,7 @@ setup_postgres_schema() {
 
 
 setup_es_template() {
-    SCHEMA_FILE=$CADENCE_HOME/schema/elasticsearch/visibility/index_template.json
+    SCHEMA_FILE=$CADENCE_HOME/schema/elasticsearch/$ES_VERSION/visibility/index_template.json
     server=`echo $ES_SEEDS | awk -F ',' '{print $1}'`
     URL="http://$server:$ES_PORT/_template/cadence-visibility-template"
     curl -X PUT $URL -H 'Content-Type: application/json' --data-binary "@$SCHEMA_FILE"
@@ -81,11 +85,20 @@ setup_schema() {
 
 wait_for_cassandra() {
     server=`echo $CASSANDRA_SEEDS | awk -F ',' '{print $1}'`
-    until cqlsh --cqlversion=3.4.4 $server < /dev/null; do
+    until cqlsh -u $CASSANDRA_USER -p $CASSANDRA_PASSWORD --cqlversion=3.4.4 --protocol-version=$CASSANDRA_PROTO_VERSION $server < /dev/null; do
         echo 'waiting for cassandra to start up'
         sleep 1
     done
     echo 'cassandra started'
+}
+
+wait_for_scylla() {
+    server=`echo $CASSANDRA_SEEDS | awk -F ',' '{print $1}'`
+    until cqlsh -u $CASSANDRA_USER -p $CASSANDRA_PASSWORD --cqlversion=3.3.1 --protocol-version=$CASSANDRA_PROTO_VERSION $server < /dev/null; do
+        echo 'waiting for scylla to start up'
+        sleep 1
+    done
+    echo 'scylla started'
 }
 
 wait_for_mysql() {
@@ -128,6 +141,8 @@ wait_for_db() {
         wait_for_mysql
     elif [ "$DB" == "postgres" ]; then
         wait_for_postgres
+    elif [ "$DB" == "scylla" ]; then
+        wait_for_scylla
     else
         wait_for_cassandra
     fi

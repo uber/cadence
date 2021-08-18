@@ -31,7 +31,7 @@ import (
 
 const (
 	templateEnqueueMessageQuery            = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(:queue_type, :message_id, :message_payload)`
-	templateGetLastMessageIDQuery          = `SELECT message_id FROM queue WHERE message_id >= (SELECT message_id FROM queue WHERE queue_type=$1 ORDER BY message_id DESC LIMIT 1) FOR UPDATE`
+	templateGetLastMessageIDQuery          = `SELECT message_id FROM queue WHERE queue_type=$1 ORDER BY message_id DESC LIMIT 1 FOR UPDATE`
 	templateGetMessagesQuery               = `SELECT message_id, message_payload FROM queue WHERE queue_type = $1 and message_id > $2 ORDER BY message_id ASC LIMIT $3`
 	templateGetMessagesBetweenQuery        = `SELECT message_id, message_payload FROM queue WHERE queue_type = $1 and messageid > $2 and message_id <= $3 ORDER BY message_id ASC LIMIT $4`
 	templateDeleteMessageQuery             = `DELETE FROM queue WHERE queue_type = $1 and message_id = $2`
@@ -41,6 +41,7 @@ const (
 	templateGetQueueMetadataForUpdateQuery = templateGetQueueMetadataQuery + ` FOR UPDATE`
 	templateInsertQueueMetadataQuery       = `INSERT INTO queue_metadata (queue_type, data) VALUES(:queue_type, :data)`
 	templateUpdateQueueMetadataQuery       = `UPDATE queue_metadata SET data = $1 WHERE queue_type = $2`
+	templateGetQueueSizeQuery              = `SELECT COUNT(1) AS count FROM queue WHERE queue_type=$1`
 )
 
 // InsertIntoQueue inserts a new row into queue table
@@ -131,4 +132,22 @@ func (pdb *db) GetAckLevels(ctx context.Context, queueType persistence.QueueType
 	}
 
 	return clusterAckLevels, nil
+}
+
+// GetQueueSize returns the queue size
+func (pdb *db) GetQueueSize(
+	ctx context.Context,
+	queueType persistence.QueueType,
+) (int64, error) {
+
+	var size []int64
+	if err := pdb.conn.SelectContext(
+		ctx,
+		&size,
+		templateGetQueueSizeQuery,
+		queueType,
+	); err != nil {
+		return 0, err
+	}
+	return size[0], nil
 }

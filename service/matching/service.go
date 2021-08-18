@@ -25,12 +25,10 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/persistence"
-	persistenceClient "github.com/uber/cadence/common/persistence/client"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 // Service represents the cadence-matching service
@@ -38,7 +36,7 @@ type Service struct {
 	resource.Resource
 
 	status  int32
-	handler *handlerImpl
+	handler Handler
 	stopC   chan struct{}
 	config  *Config
 }
@@ -55,17 +53,15 @@ func NewService(
 			dynamicconfig.ClusterNameFilter(params.ClusterMetadata.GetCurrentClusterName()),
 		),
 	)
+
 	serviceResource, err := resource.New(
 		params,
 		common.MatchingServiceName,
-		serviceConfig.PersistenceMaxQPS,
-		serviceConfig.PersistenceGlobalMaxQPS,
-		serviceConfig.ThrottledLogRPS,
-		func(
-			persistenceBean persistenceClient.Bean,
-			logger log.Logger,
-		) (persistence.VisibilityManager, error) {
-			return persistenceBean.GetVisibilityManager(), nil
+		&config.ResourceConfig{
+			PersistenceMaxQPS:       serviceConfig.PersistenceMaxQPS,
+			PersistenceGlobalMaxQPS: serviceConfig.PersistenceGlobalMaxQPS,
+			ThrottledLoggerMaxRPS:   serviceConfig.ThrottledLogRPS,
+			// matching doesn't need visibility config as it never read or write visibility
 		},
 	)
 	if err != nil {
@@ -93,6 +89,9 @@ func (s *Service) Start() {
 
 	thriftHandler := NewThriftHandler(s.handler)
 	thriftHandler.register(s.GetDispatcher())
+
+	grpcHandler := newGRPCHandler(s.handler)
+	grpcHandler.register(s.GetDispatcher())
 
 	// must start base service first
 	s.Resource.Start()

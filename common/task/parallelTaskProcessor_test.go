@@ -34,9 +34,9 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -66,7 +66,7 @@ func (s *parallelTaskProcessorSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 
 	s.processor = NewParallelTaskProcessor(
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		metrics.NewClient(tally.NoopScope, metrics.Common),
 		&ParallelTaskProcessorOptions{
 			QueueSize:   0,
@@ -274,7 +274,7 @@ func (s *parallelTaskProcessorSuite) TestProcessorContract() {
 	}
 
 	processor := NewParallelTaskProcessor(
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		metrics.NewClient(tally.NoopScope, metrics.Common),
 		&ParallelTaskProcessorOptions{
 			QueueSize:   100,

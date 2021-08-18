@@ -29,8 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 type QuerySuite struct {
@@ -64,7 +63,7 @@ func (s *QuerySuite) TestValidateTerminationState() {
 		{
 			ts: &TerminationState{
 				TerminationType: TerminationTypeCompleted,
-				QueryResult:     &shared.WorkflowQueryResult{},
+				QueryResult:     &types.WorkflowQueryResult{},
 				Failure:         errors.New("err"),
 			},
 			expectErr: true,
@@ -72,8 +71,8 @@ func (s *QuerySuite) TestValidateTerminationState() {
 		{
 			ts: &TerminationState{
 				TerminationType: TerminationTypeCompleted,
-				QueryResult: &shared.WorkflowQueryResult{
-					ResultType: common.QueryResultTypePtr(shared.QueryResultTypeAnswered),
+				QueryResult: &types.WorkflowQueryResult{
+					ResultType: types.QueryResultTypeAnswered.Ptr(),
 				},
 			},
 			expectErr: true,
@@ -81,10 +80,10 @@ func (s *QuerySuite) TestValidateTerminationState() {
 		{
 			ts: &TerminationState{
 				TerminationType: TerminationTypeCompleted,
-				QueryResult: &shared.WorkflowQueryResult{
-					ResultType:   common.QueryResultTypePtr(shared.QueryResultTypeAnswered),
+				QueryResult: &types.WorkflowQueryResult{
+					ResultType:   types.QueryResultTypeAnswered.Ptr(),
 					Answer:       []byte{1, 2, 3},
-					ErrorMessage: common.StringPtr("err"),
+					ErrorMessage: "err",
 				},
 			},
 			expectErr: true,
@@ -92,8 +91,8 @@ func (s *QuerySuite) TestValidateTerminationState() {
 		{
 			ts: &TerminationState{
 				TerminationType: TerminationTypeCompleted,
-				QueryResult: &shared.WorkflowQueryResult{
-					ResultType: common.QueryResultTypePtr(shared.QueryResultTypeFailed),
+				QueryResult: &types.WorkflowQueryResult{
+					ResultType: types.QueryResultTypeFailed.Ptr(),
 					Answer:     []byte{1, 2, 3},
 				},
 			},
@@ -102,9 +101,9 @@ func (s *QuerySuite) TestValidateTerminationState() {
 		{
 			ts: &TerminationState{
 				TerminationType: TerminationTypeCompleted,
-				QueryResult: &shared.WorkflowQueryResult{
-					ResultType:   common.QueryResultTypePtr(shared.QueryResultTypeFailed),
-					ErrorMessage: common.StringPtr("err"),
+				QueryResult: &types.WorkflowQueryResult{
+					ResultType:   types.QueryResultTypeFailed.Ptr(),
+					ErrorMessage: "err",
 				},
 			},
 			expectErr: false,
@@ -112,8 +111,8 @@ func (s *QuerySuite) TestValidateTerminationState() {
 		{
 			ts: &TerminationState{
 				TerminationType: TerminationTypeCompleted,
-				QueryResult: &shared.WorkflowQueryResult{
-					ResultType: common.QueryResultTypePtr(shared.QueryResultTypeAnswered),
+				QueryResult: &types.WorkflowQueryResult{
+					ResultType: types.QueryResultTypeAnswered.Ptr(),
 					Answer:     []byte{1, 2, 3},
 				},
 			},
@@ -122,7 +121,7 @@ func (s *QuerySuite) TestValidateTerminationState() {
 		{
 			ts: &TerminationState{
 				TerminationType: TerminationTypeUnblocked,
-				QueryResult:     &shared.WorkflowQueryResult{},
+				QueryResult:     &types.WorkflowQueryResult{},
 			},
 			expectErr: true,
 		},
@@ -148,7 +147,7 @@ func (s *QuerySuite) TestValidateTerminationState() {
 		{
 			ts: &TerminationState{
 				TerminationType: TerminationTypeFailed,
-				QueryResult:     &shared.WorkflowQueryResult{},
+				QueryResult:     &types.WorkflowQueryResult{},
 			},
 			expectErr: true,
 		},
@@ -182,8 +181,8 @@ func (s *QuerySuite) TestTerminationState_Failed() {
 func (s *QuerySuite) TestTerminationState_Completed() {
 	answeredTerminationState := &TerminationState{
 		TerminationType: TerminationTypeCompleted,
-		QueryResult: &shared.WorkflowQueryResult{
-			ResultType: common.QueryResultTypePtr(shared.QueryResultTypeAnswered),
+		QueryResult: &types.WorkflowQueryResult{
+			ResultType: types.QueryResultTypeAnswered.Ptr(),
 			Answer:     []byte{1, 2, 3},
 		},
 	}
@@ -217,7 +216,7 @@ func (s *QuerySuite) assertTerminationStateEqual(expected *TerminationState, act
 		s.Equal(expected.Failure.Error(), actual.Failure.Error())
 	}
 	if expected.QueryResult != nil {
-		s.True(expected.QueryResult.Equals(actual.QueryResult))
+		s.Equal(expected.QueryResult, actual.QueryResult)
 	}
 }
 

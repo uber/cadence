@@ -31,18 +31,18 @@ import (
 
 	"github.com/dgryski/go-farm"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/gcloud/connector"
+	"github.com/uber/cadence/common/types"
 )
 
 func encode(v interface{}) ([]byte, error) {
 	return json.Marshal(v)
 }
 
-func decodeHistoryBatches(data []byte) ([]*shared.History, error) {
-	historyBatches := []*shared.History{}
+func decodeHistoryBatches(data []byte) ([]*types.History, error) {
+	historyBatches := []*types.History{}
 	err := json.Unmarshal(data, &historyBatches)
 	if err != nil {
 		return nil, err
@@ -155,22 +155,22 @@ func deserializeQueryVisibilityToken(bytes []byte) (*queryVisibilityToken, error
 	return token, err
 }
 
-func convertToExecutionInfo(record *visibilityRecord) *shared.WorkflowExecutionInfo {
-	return &shared.WorkflowExecutionInfo{
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(record.WorkflowID),
-			RunId:      common.StringPtr(record.RunID),
+func convertToExecutionInfo(record *visibilityRecord) *types.WorkflowExecutionInfo {
+	return &types.WorkflowExecutionInfo{
+		Execution: &types.WorkflowExecution{
+			WorkflowID: record.WorkflowID,
+			RunID:      record.RunID,
 		},
-		Type: &shared.WorkflowType{
-			Name: common.StringPtr(record.WorkflowTypeName),
+		Type: &types.WorkflowType{
+			Name: record.WorkflowTypeName,
 		},
 		StartTime:     common.Int64Ptr(record.StartTimestamp),
 		ExecutionTime: common.Int64Ptr(record.ExecutionTimestamp),
 		CloseTime:     common.Int64Ptr(record.CloseTimestamp),
 		CloseStatus:   record.CloseStatus.Ptr(),
-		HistoryLength: common.Int64Ptr(record.HistoryLength),
+		HistoryLength: record.HistoryLength,
 		Memo:          record.Memo,
-		SearchAttributes: &shared.SearchAttributes{
+		SearchAttributes: &types.SearchAttributes{
 			IndexedFields: archiver.ConvertSearchAttrToBytes(record.SearchAttributes),
 		},
 	}

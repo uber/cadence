@@ -27,25 +27,52 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/worker"
+	"go.uber.org/cadence/workflow"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/types"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/cadence/testsuite"
 )
 
+var clusters = []*types.ClusterReplicationConfiguration{
+	{
+		ClusterName: "c1",
+	},
+	{
+		ClusterName: "c2",
+	},
+}
+
 type failoverWorkflowTestSuite struct {
 	suite.Suite
 	testsuite.WorkflowTestSuite
+	activityEnv *testsuite.TestActivityEnvironment
+	workflowEnv *testsuite.TestWorkflowEnvironment
 }
 
 func TestFailoverWorkflowTestSuite(t *testing.T) {
 	suite.Run(t, new(failoverWorkflowTestSuite))
+}
+
+func (s *failoverWorkflowTestSuite) SetupTest() {
+	s.activityEnv = s.NewTestActivityEnvironment()
+	s.workflowEnv = s.NewTestWorkflowEnvironment()
+	s.workflowEnv.RegisterWorkflowWithOptions(FailoverWorkflow, workflow.RegisterOptions{Name: FailoverWorkflowTypeName})
+	s.workflowEnv.RegisterActivityWithOptions(FailoverActivity, activity.RegisterOptions{Name: failoverActivityName})
+	s.workflowEnv.RegisterActivityWithOptions(GetDomainsActivity, activity.RegisterOptions{Name: getDomainsActivityName})
+	s.activityEnv.RegisterActivityWithOptions(FailoverActivity, activity.RegisterOptions{Name: failoverActivityName})
+	s.activityEnv.RegisterActivityWithOptions(GetDomainsActivity, activity.RegisterOptions{Name: getDomainsActivityName})
+}
+
+func (s *failoverWorkflowTestSuite) TearDownTest() {
+	s.workflowEnv.AssertExpectations(s.T())
 }
 
 func (s *failoverWorkflowTestSuite) TestValidateParams() {
@@ -61,62 +88,58 @@ func (s *failoverWorkflowTestSuite) TestValidateParams() {
 }
 
 func (s *failoverWorkflowTestSuite) TestWorkflow_InvalidParams() {
-	env := s.NewTestWorkflowEnvironment()
 	params := &FailoverParams{}
-	env.ExecuteWorkflow(WorkflowTypeName, params)
-	s.True(env.IsWorkflowCompleted())
-	s.Error(env.GetWorkflowError())
+	s.workflowEnv.ExecuteWorkflow(FailoverWorkflowTypeName, params)
+	s.True(s.workflowEnv.IsWorkflowCompleted())
+	s.Error(s.workflowEnv.GetWorkflowError())
 }
 
 func (s *failoverWorkflowTestSuite) TestWorkflow_GetDomainActivityError() {
-	env := s.NewTestWorkflowEnvironment()
 	err := errors.New("mockErr")
-	env.OnActivity(getDomainsActivityName, mock.Anything, mock.Anything).Return(nil, err)
+	s.workflowEnv.OnActivity(getDomainsActivityName, mock.Anything, mock.Anything).Return(nil, err)
 	params := &FailoverParams{
 		TargetCluster: "t",
 		SourceCluster: "s",
 	}
-	env.ExecuteWorkflow(WorkflowTypeName, params)
-	s.True(env.IsWorkflowCompleted())
-	s.Equal("mockErr", env.GetWorkflowError().Error())
+	s.workflowEnv.ExecuteWorkflow(FailoverWorkflowTypeName, params)
+	s.True(s.workflowEnv.IsWorkflowCompleted())
+	s.Equal("mockErr", s.workflowEnv.GetWorkflowError().Error())
 }
 
 func (s *failoverWorkflowTestSuite) TestWorkflow_FailoverActivityError() {
-	env := s.NewTestWorkflowEnvironment()
 	domains := []string{"d1"}
 	err := errors.New("mockErr")
-	env.OnActivity(getDomainsActivityName, mock.Anything, mock.Anything).Return(domains, nil)
-	env.OnActivity(failoverActivityName, mock.Anything, mock.Anything).Return(nil, err)
+	s.workflowEnv.OnActivity(getDomainsActivityName, mock.Anything, mock.Anything).Return(domains, nil)
+	s.workflowEnv.OnActivity(failoverActivityName, mock.Anything, mock.Anything).Return(nil, err)
 	params := &FailoverParams{
 		TargetCluster: "t",
 		SourceCluster: "s",
 	}
-	env.ExecuteWorkflow(WorkflowTypeName, params)
+	s.workflowEnv.ExecuteWorkflow(FailoverWorkflowTypeName, params)
 	var result FailoverResult
-	s.NoError(env.GetWorkflowResult(&result))
+	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
 	s.Equal(0, len(result.SuccessDomains))
 	s.Equal(domains, result.FailedDomains)
 }
 
 func (s *failoverWorkflowTestSuite) TestWorkflow_Success() {
-	env := s.NewTestWorkflowEnvironment()
 	domains := []string{"d1"}
 	mockFailoverActivityResult := &FailoverActivityResult{
 		SuccessDomains: []string{"d1"},
 	}
-	env.OnActivity(getDomainsActivityName, mock.Anything, mock.Anything).Return(domains, nil)
-	env.OnActivity(failoverActivityName, mock.Anything, mock.Anything).Return(mockFailoverActivityResult, nil)
+	s.workflowEnv.OnActivity(getDomainsActivityName, mock.Anything, mock.Anything).Return(domains, nil)
+	s.workflowEnv.OnActivity(failoverActivityName, mock.Anything, mock.Anything).Return(mockFailoverActivityResult, nil)
 	params := &FailoverParams{
 		TargetCluster: "t",
 		SourceCluster: "s",
 	}
-	env.ExecuteWorkflow(WorkflowTypeName, params)
+	s.workflowEnv.ExecuteWorkflow(FailoverWorkflowTypeName, params)
 	var result FailoverResult
-	s.NoError(env.GetWorkflowResult(&result))
+	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
 	s.Equal(mockFailoverActivityResult.SuccessDomains, result.SuccessDomains)
 	s.Equal(mockFailoverActivityResult.FailedDomains, result.FailedDomains)
 
-	queryResult, err := env.QueryWorkflow(QueryType)
+	queryResult, err := s.workflowEnv.QueryWorkflow(QueryType)
 	s.NoError(err)
 	var res QueryResult
 	s.NoError(queryResult.Get(&res))
@@ -132,7 +155,6 @@ func (s *failoverWorkflowTestSuite) TestWorkflow_Success() {
 }
 
 func (s *failoverWorkflowTestSuite) TestWorkflow_Success_Batches() {
-	env := s.NewTestWorkflowEnvironment()
 	domains := []string{"d1", "d2", "d3"}
 	expectFailoverActivityParams1 := &FailoverActivityParams{
 		Domains:       []string{"d1", "d2"},
@@ -148,9 +170,9 @@ func (s *failoverWorkflowTestSuite) TestWorkflow_Success_Batches() {
 	mockFailoverActivityResult2 := &FailoverActivityResult{
 		FailedDomains: []string{"d3"},
 	}
-	env.OnActivity(getDomainsActivityName, mock.Anything, mock.Anything).Return(domains, nil)
-	env.OnActivity(failoverActivityName, mock.Anything, expectFailoverActivityParams1).Return(mockFailoverActivityResult1, nil).Once()
-	env.OnActivity(failoverActivityName, mock.Anything, expectFailoverActivityParams2).Return(mockFailoverActivityResult2, nil).Once()
+	s.workflowEnv.OnActivity(getDomainsActivityName, mock.Anything, mock.Anything).Return(domains, nil)
+	s.workflowEnv.OnActivity(failoverActivityName, mock.Anything, expectFailoverActivityParams1).Return(mockFailoverActivityResult1, nil).Once()
+	s.workflowEnv.OnActivity(failoverActivityName, mock.Anything, expectFailoverActivityParams2).Return(mockFailoverActivityResult2, nil).Once()
 
 	params := &FailoverParams{
 		TargetCluster:     "t",
@@ -158,34 +180,33 @@ func (s *failoverWorkflowTestSuite) TestWorkflow_Success_Batches() {
 		BatchFailoverSize: 2,
 		Domains:           domains,
 	}
-	env.ExecuteWorkflow(WorkflowTypeName, params)
+	s.workflowEnv.ExecuteWorkflow(FailoverWorkflowTypeName, params)
 
 	var result FailoverResult
-	s.NoError(env.GetWorkflowResult(&result))
+	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
 	s.Equal(mockFailoverActivityResult1.SuccessDomains, result.SuccessDomains)
 	s.Equal(mockFailoverActivityResult2.FailedDomains, result.FailedDomains)
 }
 
 func (s *failoverWorkflowTestSuite) TestWorkflow_Pause() {
-	env := s.NewTestWorkflowEnvironment()
 	domains := []string{"d1"}
 	mockFailoverActivityResult := &FailoverActivityResult{
 		SuccessDomains: []string{"d1"},
 	}
-	env.OnActivity(getDomainsActivityName, mock.Anything, mock.Anything).Return(domains, nil)
-	env.OnActivity(failoverActivityName, mock.Anything, mock.Anything).Return(mockFailoverActivityResult, nil).Once()
+	s.workflowEnv.OnActivity(getDomainsActivityName, mock.Anything, mock.Anything).Return(domains, nil)
+	s.workflowEnv.OnActivity(failoverActivityName, mock.Anything, mock.Anything).Return(mockFailoverActivityResult, nil).Once()
 
-	env.RegisterDelayedCallback(func() {
-		env.SignalWorkflow(PauseSignal, nil)
+	s.workflowEnv.RegisterDelayedCallback(func() {
+		s.workflowEnv.SignalWorkflow(PauseSignal, nil)
 	}, time.Millisecond*0)
-	env.RegisterDelayedCallback(func() {
-		s.assertQueryState(env, WorkflowPaused)
+	s.workflowEnv.RegisterDelayedCallback(func() {
+		s.assertQueryState(s.workflowEnv, WorkflowPaused)
 	}, time.Millisecond*100)
-	env.RegisterDelayedCallback(func() {
-		env.SignalWorkflow(ResumeSignal, nil)
+	s.workflowEnv.RegisterDelayedCallback(func() {
+		s.workflowEnv.SignalWorkflow(ResumeSignal, nil)
 	}, time.Millisecond*200)
-	env.RegisterDelayedCallback(func() {
-		s.assertQueryState(env, WorkflowRunning)
+	s.workflowEnv.RegisterDelayedCallback(func() {
+		s.assertQueryState(s.workflowEnv, WorkflowRunning)
 	}, time.Millisecond*300)
 
 	params := &FailoverParams{
@@ -194,49 +215,78 @@ func (s *failoverWorkflowTestSuite) TestWorkflow_Pause() {
 		BatchFailoverSize: 2,
 		Domains:           domains,
 	}
-	env.ExecuteWorkflow(WorkflowTypeName, params)
+	s.workflowEnv.ExecuteWorkflow(FailoverWorkflowTypeName, params)
 
 	var result FailoverResult
-	s.NoError(env.GetWorkflowResult(&result))
+	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
 	s.Equal(mockFailoverActivityResult.SuccessDomains, result.SuccessDomains)
 }
 
-func (s *failoverWorkflowTestSuite) assertQueryState(env *testsuite.TestWorkflowEnvironment, expectedState string) {
-	queryResult, err := env.QueryWorkflow(QueryType)
+func (s *failoverWorkflowTestSuite) TestWorkflow_WithDrillWaitTime_Success() {
+	domains := []string{"d1"}
+	mockFailoverActivityResult := &FailoverActivityResult{
+		SuccessDomains: []string{"d1"},
+	}
+	s.workflowEnv.OnActivity(getDomainsActivityName, mock.Anything, mock.Anything).Return(domains, nil)
+	s.workflowEnv.OnActivity(failoverActivityName, mock.Anything, mock.Anything).Return(mockFailoverActivityResult, nil)
+	params := &FailoverParams{
+		TargetCluster: "t",
+		SourceCluster: "s",
+		DrillWaitTime: 1 * time.Second,
+	}
+	var timerCount int
+	s.workflowEnv.SetOnTimerScheduledListener(func(timerID string, duration time.Duration) {
+		timerCount++
+		if duration != time.Second && duration != 30*time.Second {
+			s.Fail("Receive unknown timer.")
+		}
+	})
+	s.workflowEnv.SetOnTimerFiredListener(func(timerID string) {
+		timerCount--
+	})
+	s.workflowEnv.ExecuteWorkflow(FailoverWorkflowTypeName, params)
+	var result FailoverResult
+	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
+	s.Equal(mockFailoverActivityResult.SuccessDomains, result.SuccessDomains)
+	s.Equal(mockFailoverActivityResult.FailedDomains, result.FailedDomains)
+
+	queryResult, err := s.workflowEnv.QueryWorkflow(QueryType)
 	s.NoError(err)
+	s.Equal(0, timerCount)
 	var res QueryResult
 	s.NoError(queryResult.Get(&res))
-	s.Equal(expectedState, res.State)
-}
-
-var clusters = []*shared.ClusterReplicationConfiguration{
-	{
-		ClusterName: common.StringPtr("c1"),
-	},
-	{
-		ClusterName: common.StringPtr("c2"),
-	},
+	s.Equal(len(domains), res.TotalDomains)
+	s.Equal(len(domains), res.Success)
+	s.Equal(0, res.Failed)
+	s.Equal(WorkflowCompleted, res.State)
+	s.Equal("t", res.TargetCluster)
+	s.Equal("s", res.SourceCluster)
+	s.Equal(domains, res.SuccessDomains)
+	s.Equal(0, len(res.FailedDomains))
+	s.Equal(unknownOperator, res.Operator)
+	s.Equal(domains, res.SuccessResetDomains)
+	s.Equal(0, len(res.FailedResetDomains))
 }
 
 func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 
 	tests := []struct {
-		domain        *shared.DescribeDomainResponse
+		domain        *types.DescribeDomainResponse
 		sourceCluster string
 		expected      bool
 	}{
 		{
-			domain: &shared.DescribeDomainResponse{
-				IsGlobalDomain: common.BoolPtr(false),
+			domain: &types.DescribeDomainResponse{
+				IsGlobalDomain: false,
 			},
 			sourceCluster: "c1",
 			expected:      false,
 		},
 		{
-			domain: &shared.DescribeDomainResponse{
-				IsGlobalDomain: common.BoolPtr(true),
-				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c1"),
+			domain: &types.DescribeDomainResponse{
+				IsGlobalDomain: true,
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
+					ActiveClusterName: "c1",
 					Clusters:          clusters,
 				},
 			},
@@ -244,10 +294,10 @@ func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 			expected:      false,
 		},
 		{
-			domain: &shared.DescribeDomainResponse{
-				IsGlobalDomain: common.BoolPtr(true),
-				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c2"),
+			domain: &types.DescribeDomainResponse{
+				IsGlobalDomain: true,
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
+					ActiveClusterName: "c2",
 					Clusters:          clusters,
 				},
 			},
@@ -255,13 +305,13 @@ func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 			expected:      false,
 		},
 		{
-			domain: &shared.DescribeDomainResponse{
-				IsGlobalDomain: common.BoolPtr(true),
-				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c2"),
+			domain: &types.DescribeDomainResponse{
+				IsGlobalDomain: true,
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
+					ActiveClusterName: "c2",
 					Clusters:          clusters,
 				},
-				DomainInfo: &shared.DomainInfo{
+				DomainInfo: &types.DomainInfo{
 					Data: map[string]string{
 						common.DomainDataKeyForManagedFailover: "true",
 					},
@@ -276,38 +326,23 @@ func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 	}
 }
 
-func (s *failoverWorkflowTestSuite) prepareTestActivityEnv() (*testsuite.TestActivityEnvironment, *resource.Test, *gomock.Controller) {
-	env := s.NewTestActivityEnvironment()
-	controller := gomock.NewController(s.T())
-	mockResource := resource.NewTest(controller, metrics.Worker)
-
-	ctx := &FailoverManager{
-		svcClient:  mockResource.GetSDKClient(),
-		clientBean: mockResource.ClientBean,
-	}
-	env.SetTestTimeout(time.Second * 5)
-	env.SetWorkerOptions(worker.Options{
-		BackgroundActivityContext: context.WithValue(context.Background(), failoverManagerContextKey, ctx),
-	})
-	return env, mockResource, controller
-}
 func (s *failoverWorkflowTestSuite) TestGetDomainsActivity() {
 	env, mockResource, controller := s.prepareTestActivityEnv()
 	defer controller.Finish()
 	defer mockResource.Finish(s.T())
 
-	domains := &shared.ListDomainsResponse{
-		Domains: []*shared.DescribeDomainResponse{
+	domains := &types.ListDomainsResponse{
+		Domains: []*types.DescribeDomainResponse{
 			{
-				DomainInfo: &shared.DomainInfo{
-					Name: common.StringPtr("d1"),
+				DomainInfo: &types.DomainInfo{
+					Name: "d1",
 					Data: map[string]string{common.DomainDataKeyForManagedFailover: "true"},
 				},
-				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c1"),
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
+					ActiveClusterName: "c1",
 					Clusters:          clusters,
 				},
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 			},
 		},
 	}
@@ -329,39 +364,39 @@ func (s *failoverWorkflowTestSuite) TestGetDomainsActivity_WithTargetDomains() {
 	defer controller.Finish()
 	defer mockResource.Finish(s.T())
 
-	domains := &shared.ListDomainsResponse{
-		Domains: []*shared.DescribeDomainResponse{
+	domains := &types.ListDomainsResponse{
+		Domains: []*types.DescribeDomainResponse{
 			{
-				DomainInfo: &shared.DomainInfo{
-					Name: common.StringPtr("d1"),
+				DomainInfo: &types.DomainInfo{
+					Name: "d1",
 					Data: map[string]string{common.DomainDataKeyForManagedFailover: "true"},
 				},
-				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c1"),
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
+					ActiveClusterName: "c1",
 					Clusters:          clusters,
 				},
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 			},
 			{
-				DomainInfo: &shared.DomainInfo{
-					Name: common.StringPtr("d2"),
+				DomainInfo: &types.DomainInfo{
+					Name: "d2",
 					Data: map[string]string{common.DomainDataKeyForManagedFailover: "true"},
 				},
-				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c1"),
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
+					ActiveClusterName: "c1",
 					Clusters:          clusters,
 				},
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 			},
 			{
-				DomainInfo: &shared.DomainInfo{
-					Name: common.StringPtr("d3"),
+				DomainInfo: &types.DomainInfo{
+					Name: "d3",
 				},
-				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c1"),
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
+					ActiveClusterName: "c1",
 					Clusters:          clusters,
 				},
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 			},
 		},
 	}
@@ -406,16 +441,13 @@ func (s *failoverWorkflowTestSuite) TestFailoverActivity_Error() {
 
 	domains := []string{"d1", "d2"}
 	targetCluster := "c2"
-	replicationConfig := &shared.DomainReplicationConfiguration{
+	updateRequest1 := &types.UpdateDomainRequest{
+		Name:              "d1",
 		ActiveClusterName: common.StringPtr(targetCluster),
 	}
-	updateRequest1 := &shared.UpdateDomainRequest{
-		Name:                     common.StringPtr("d1"),
-		ReplicationConfiguration: replicationConfig,
-	}
-	updateRequest2 := &shared.UpdateDomainRequest{
-		Name:                     common.StringPtr("d2"),
-		ReplicationConfiguration: replicationConfig,
+	updateRequest2 := &types.UpdateDomainRequest{
+		Name:              "d2",
+		ActiveClusterName: common.StringPtr(targetCluster),
 	}
 	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), updateRequest1).Return(nil, nil)
 	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), updateRequest2).Return(nil, errors.New("mockErr"))
@@ -434,28 +466,49 @@ func (s *failoverWorkflowTestSuite) TestFailoverActivity_Error() {
 }
 
 func (s *failoverWorkflowTestSuite) TestGetOperator() {
-	env := s.NewTestWorkflowEnvironment()
-
 	operator := "testOperator"
-	env.SetMemoOnStart(map[string]interface{}{
+	s.workflowEnv.SetMemoOnStart(map[string]interface{}{
 		common.MemoKeyForOperator: operator,
 	})
 
-	env.OnActivity(getDomainsActivityName, mock.Anything, mock.Anything).Return(nil, nil)
-	env.OnActivity(failoverActivityName, mock.Anything, mock.Anything).Return(nil, nil)
+	s.workflowEnv.OnActivity(getDomainsActivityName, mock.Anything, mock.Anything).Return(nil, nil)
+	s.workflowEnv.OnActivity(failoverActivityName, mock.Anything, mock.Anything).Return(nil, nil)
 	params := &FailoverParams{
 		TargetCluster: "t",
 		SourceCluster: "s",
 	}
 
-	env.ExecuteWorkflow(WorkflowTypeName, params)
+	s.workflowEnv.ExecuteWorkflow(FailoverWorkflowTypeName, params)
 	var result FailoverResult
-	s.NoError(env.GetWorkflowResult(&result))
+	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
 
-	queryResult, err := env.QueryWorkflow(QueryType)
+	queryResult, err := s.workflowEnv.QueryWorkflow(QueryType)
 	s.NoError(err)
 	var res QueryResult
 	s.NoError(queryResult.Get(&res))
 
 	s.Equal(operator, res.Operator)
+}
+
+func (s *failoverWorkflowTestSuite) assertQueryState(env *testsuite.TestWorkflowEnvironment, expectedState string) {
+	queryResult, err := env.QueryWorkflow(QueryType)
+	s.NoError(err)
+	var res QueryResult
+	s.NoError(queryResult.Get(&res))
+	s.Equal(expectedState, res.State)
+}
+
+func (s *failoverWorkflowTestSuite) prepareTestActivityEnv() (*testsuite.TestActivityEnvironment, *resource.Test, *gomock.Controller) {
+	controller := gomock.NewController(s.T())
+	mockResource := resource.NewTest(controller, metrics.Worker)
+
+	ctx := &FailoverManager{
+		svcClient:  mockResource.GetSDKClient(),
+		clientBean: mockResource.ClientBean,
+	}
+	s.activityEnv.SetTestTimeout(time.Second * 5)
+	s.activityEnv.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.WithValue(context.Background(), failoverManagerContextKey, ctx),
+	})
+	return s.activityEnv, mockResource, controller
 }

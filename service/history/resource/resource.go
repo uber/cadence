@@ -26,6 +26,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/resource"
+	rc "github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
@@ -84,15 +85,28 @@ func New(
 	params *service.BootstrapParams,
 	serviceName string,
 	config *config.Config,
-	visibilityManagerInitializer resource.VisibilityManagerInitializer,
 ) (historyResource Resource, retError error) {
 	serviceResource, err := resource.New(
 		params,
 		serviceName,
-		config.PersistenceMaxQPS,
-		config.PersistenceGlobalMaxQPS,
-		config.ThrottledLogRPS,
-		visibilityManagerInitializer,
+		&rc.ResourceConfig{
+			PersistenceMaxQPS:       config.PersistenceMaxQPS,
+			PersistenceGlobalMaxQPS: config.PersistenceGlobalMaxQPS,
+			ThrottledLoggerMaxRPS:   config.ThrottledLogRPS,
+
+			EnableReadVisibilityFromES:    nil, // history service never read,
+			AdvancedVisibilityWritingMode: config.AdvancedVisibilityWritingMode,
+
+			EnableDBVisibilitySampling:                  config.EnableVisibilitySampling,
+			EnableReadDBVisibilityFromClosedExecutionV2: nil, // history service never read,
+			DBVisibilityListMaxQPS:                      nil, // history service never read,
+			WriteDBVisibilityOpenMaxQPS:                 config.VisibilityOpenMaxQPS,
+			WriteDBVisibilityClosedMaxQPS:               config.VisibilityClosedMaxQPS,
+
+			ESVisibilityListMaxQPS: nil, // history service never read,
+			ESIndexMaxResultWindow: nil, // history service never read,
+			ValidSearchAttributes:  nil, // history service never read,
+		},
 	)
 	if err != nil {
 		return nil, err

@@ -31,12 +31,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -121,9 +121,9 @@ func (s *timerQueueTaskExecutorBaseSuite) TestDeleteWorkflow_NoErr() {
 		TaskID:              12345,
 		VisibilityTimestamp: time.Now(),
 	}
-	executionInfo := workflow.WorkflowExecution{
-		WorkflowId: &task.WorkflowID,
-		RunId:      &task.RunID,
+	executionInfo := types.WorkflowExecution{
+		WorkflowID: task.WorkflowID,
+		RunID:      task.RunID,
 	}
 	wfContext := execution.NewContext(task.DomainID, executionInfo, s.mockShard, s.mockExecutionManager, log.NewNoop())
 

@@ -32,7 +32,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	shared "github.com/uber/cadence/.gen/go/shared"
+	types "github.com/uber/cadence/common/types"
 )
 
 // MockHandler is a mock of Handler interface
@@ -59,7 +59,7 @@ func (m *MockHandler) EXPECT() *MockHandlerMockRecorder {
 }
 
 // DeprecateDomain mocks base method
-func (m *MockHandler) DeprecateDomain(ctx context.Context, deprecateRequest *shared.DeprecateDomainRequest) error {
+func (m *MockHandler) DeprecateDomain(ctx context.Context, deprecateRequest *types.DeprecateDomainRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeprecateDomain", ctx, deprecateRequest)
 	ret0, _ := ret[0].(error)
@@ -73,10 +73,10 @@ func (mr *MockHandlerMockRecorder) DeprecateDomain(ctx, deprecateRequest interfa
 }
 
 // DescribeDomain mocks base method
-func (m *MockHandler) DescribeDomain(ctx context.Context, describeRequest *shared.DescribeDomainRequest) (*shared.DescribeDomainResponse, error) {
+func (m *MockHandler) DescribeDomain(ctx context.Context, describeRequest *types.DescribeDomainRequest) (*types.DescribeDomainResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeDomain", ctx, describeRequest)
-	ret0, _ := ret[0].(*shared.DescribeDomainResponse)
+	ret0, _ := ret[0].(*types.DescribeDomainResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -88,10 +88,10 @@ func (mr *MockHandlerMockRecorder) DescribeDomain(ctx, describeRequest interface
 }
 
 // ListDomains mocks base method
-func (m *MockHandler) ListDomains(ctx context.Context, listRequest *shared.ListDomainsRequest) (*shared.ListDomainsResponse, error) {
+func (m *MockHandler) ListDomains(ctx context.Context, listRequest *types.ListDomainsRequest) (*types.ListDomainsResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListDomains", ctx, listRequest)
-	ret0, _ := ret[0].(*shared.ListDomainsResponse)
+	ret0, _ := ret[0].(*types.ListDomainsResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -103,7 +103,7 @@ func (mr *MockHandlerMockRecorder) ListDomains(ctx, listRequest interface{}) *go
 }
 
 // RegisterDomain mocks base method
-func (m *MockHandler) RegisterDomain(ctx context.Context, registerRequest *shared.RegisterDomainRequest) error {
+func (m *MockHandler) RegisterDomain(ctx context.Context, registerRequest *types.RegisterDomainRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RegisterDomain", ctx, registerRequest)
 	ret0, _ := ret[0].(error)
@@ -117,10 +117,10 @@ func (mr *MockHandlerMockRecorder) RegisterDomain(ctx, registerRequest interface
 }
 
 // UpdateDomain mocks base method
-func (m *MockHandler) UpdateDomain(ctx context.Context, updateRequest *shared.UpdateDomainRequest) (*shared.UpdateDomainResponse, error) {
+func (m *MockHandler) UpdateDomain(ctx context.Context, updateRequest *types.UpdateDomainRequest) (*types.UpdateDomainResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateDomain", ctx, updateRequest)
-	ret0, _ := ret[0].(*shared.UpdateDomainResponse)
+	ret0, _ := ret[0].(*types.UpdateDomainResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

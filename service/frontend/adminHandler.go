@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination adminHandler_mock.go -package frontend github.com/uber/cadence/service/frontend AdminHandler
+
 package frontend
 
 import (
@@ -28,20 +30,16 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/olivere/elastic"
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
-	h "github.com/uber/cadence/.gen/go/history"
-	hist "github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/replicator"
-	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
+	"github.com/uber/cadence/common/dynamicconfig"
+	dc "github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -49,42 +47,49 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
-var _ adminserviceserver.Interface = (*adminHandlerImpl)(nil)
+var _ AdminHandler = (*adminHandlerImpl)(nil)
 
 const (
 	endMessageID int64 = 1<<63 - 1
 )
 
 var (
-	errMaxMessageIDNotSet = &gen.BadRequestError{Message: "Max messageID is not set."}
+	errMaxMessageIDNotSet = &types.BadRequestError{Message: "Max messageID is not set."}
+	errInvalidFilters     = &types.BadRequestError{Message: "Request Filters are invalid, unable to parse."}
 )
-
-//go:generate mockgen -copyright_file=../../LICENSE -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package frontend github.com/uber/cadence/service/frontend AdminHandler
 
 type (
 	// AdminHandler interface for admin service
 	AdminHandler interface {
-		AddSearchAttribute(context.Context, *admin.AddSearchAttributeRequest) error
-		CloseShard(context.Context, *gen.CloseShardRequest) error
-		DescribeCluster(context.Context) (*admin.DescribeClusterResponse, error)
-		DescribeHistoryHost(context.Context, *gen.DescribeHistoryHostRequest) (*gen.DescribeHistoryHostResponse, error)
-		DescribeQueue(context.Context, *gen.DescribeQueueRequest) (*gen.DescribeQueueResponse, error)
-		DescribeWorkflowExecution(context.Context, *admin.DescribeWorkflowExecutionRequest) (*admin.DescribeWorkflowExecutionResponse, error)
-		GetDLQReplicationMessages(context.Context, *replicator.GetDLQReplicationMessagesRequest) (*replicator.GetDLQReplicationMessagesResponse, error)
-		GetDomainReplicationMessages(context.Context, *replicator.GetDomainReplicationMessagesRequest) (*replicator.GetDomainReplicationMessagesResponse, error)
-		GetReplicationMessages(context.Context, *replicator.GetReplicationMessagesRequest) (*replicator.GetReplicationMessagesResponse, error)
-		GetWorkflowExecutionRawHistoryV2(context.Context, *admin.GetWorkflowExecutionRawHistoryV2Request) (*admin.GetWorkflowExecutionRawHistoryV2Response, error)
-		MergeDLQMessages(context.Context, *replicator.MergeDLQMessagesRequest) (*replicator.MergeDLQMessagesResponse, error)
-		PurgeDLQMessages(context.Context, *replicator.PurgeDLQMessagesRequest) error
-		ReadDLQMessages(context.Context, *replicator.ReadDLQMessagesRequest) (*replicator.ReadDLQMessagesResponse, error)
-		ReapplyEvents(context.Context, *gen.ReapplyEventsRequest) error
-		RefreshWorkflowTasks(context.Context, *gen.RefreshWorkflowTasksRequest) error
-		RemoveTask(context.Context, *gen.RemoveTaskRequest) error
-		ResendReplicationTasks(context.Context, *admin.ResendReplicationTasksRequest) error
-		ResetQueue(context.Context, *gen.ResetQueueRequest) error
+		common.Daemon
+
+		AddSearchAttribute(context.Context, *types.AddSearchAttributeRequest) error
+		CloseShard(context.Context, *types.CloseShardRequest) error
+		DescribeCluster(context.Context) (*types.DescribeClusterResponse, error)
+		DescribeShardDistribution(context.Context, *types.DescribeShardDistributionRequest) (*types.DescribeShardDistributionResponse, error)
+		DescribeHistoryHost(context.Context, *types.DescribeHistoryHostRequest) (*types.DescribeHistoryHostResponse, error)
+		DescribeQueue(context.Context, *types.DescribeQueueRequest) (*types.DescribeQueueResponse, error)
+		DescribeWorkflowExecution(context.Context, *types.AdminDescribeWorkflowExecutionRequest) (*types.AdminDescribeWorkflowExecutionResponse, error)
+		GetDLQReplicationMessages(context.Context, *types.GetDLQReplicationMessagesRequest) (*types.GetDLQReplicationMessagesResponse, error)
+		GetDomainReplicationMessages(context.Context, *types.GetDomainReplicationMessagesRequest) (*types.GetDomainReplicationMessagesResponse, error)
+		GetReplicationMessages(context.Context, *types.GetReplicationMessagesRequest) (*types.GetReplicationMessagesResponse, error)
+		GetWorkflowExecutionRawHistoryV2(context.Context, *types.GetWorkflowExecutionRawHistoryV2Request) (*types.GetWorkflowExecutionRawHistoryV2Response, error)
+		MergeDLQMessages(context.Context, *types.MergeDLQMessagesRequest) (*types.MergeDLQMessagesResponse, error)
+		PurgeDLQMessages(context.Context, *types.PurgeDLQMessagesRequest) error
+		ReadDLQMessages(context.Context, *types.ReadDLQMessagesRequest) (*types.ReadDLQMessagesResponse, error)
+		ReapplyEvents(context.Context, *types.ReapplyEventsRequest) error
+		RefreshWorkflowTasks(context.Context, *types.RefreshWorkflowTasksRequest) error
+		RemoveTask(context.Context, *types.RemoveTaskRequest) error
+		ResendReplicationTasks(context.Context, *types.ResendReplicationTasksRequest) error
+		ResetQueue(context.Context, *types.ResetQueueRequest) error
+		GetCrossClusterTasks(context.Context, *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error)
+		GetDynamicConfig(context.Context, *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error)
+		UpdateDynamicConfig(context.Context, *types.UpdateDynamicConfigRequest) error
+		RestoreDynamicConfig(context.Context, *types.RestoreDynamicConfigRequest) error
+		ListDynamicConfig(context.Context, *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error)
 	}
 
 	// adminHandlerImpl is an implementation for admin service independent of wire protocol
@@ -96,7 +101,8 @@ type (
 		config                *Config
 		domainDLQHandler      domain.DLQMessageHandler
 		domainFailoverWatcher domain.FailoverWatcher
-		eventSerializder      persistence.PayloadSerializer
+		eventSerializer       persistence.PayloadSerializer
+		esClient              elasticsearch.GenericClient
 	}
 
 	getWorkflowRawHistoryV2Token struct {
@@ -108,13 +114,12 @@ type (
 		EndEventID        int64
 		EndEventVersion   int64
 		PersistenceToken  []byte
-		VersionHistories  *gen.VersionHistories
+		VersionHistories  *types.VersionHistories
 	}
 )
 
 var (
 	adminServiceRetryPolicy = common.CreateAdminServiceRetryPolicy()
-	resendStartEventID      = common.Int64Ptr(0)
 )
 
 // NewAdminHandler creates a thrift handler for the cadence admin service
@@ -122,10 +127,10 @@ func NewAdminHandler(
 	resource resource.Resource,
 	params *service.BootstrapParams,
 	config *Config,
-) *adminHandlerImpl {
+) AdminHandler {
 
 	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
-		resource.GetMetadataManager(),
+		resource.GetDomainManager(),
 		resource.GetTimeSource(),
 		resource.GetLogger(),
 	)
@@ -141,21 +146,21 @@ func NewAdminHandler(
 		),
 		domainFailoverWatcher: domain.NewFailoverWatcher(
 			resource.GetDomainCache(),
-			resource.GetMetadataManager(),
+			resource.GetDomainManager(),
 			resource.GetTimeSource(),
 			config.DomainFailoverRefreshInterval,
 			config.DomainFailoverRefreshTimerJitterCoefficient,
 			resource.GetMetricsClient(),
 			resource.GetLogger(),
 		),
-		eventSerializder: persistence.NewPayloadSerializer(),
+		eventSerializer: persistence.NewPayloadSerializer(),
+		esClient:        params.ESClient,
 	}
 }
 
 // Start starts the handler
 func (adh *adminHandlerImpl) Start() {
 
-	adh.Resource.GetDomainReplicationQueue().Start()
 	if adh.config.EnableGracefulFailover() {
 		adh.domainFailoverWatcher.Start()
 	}
@@ -163,15 +168,13 @@ func (adh *adminHandlerImpl) Start() {
 
 // Stop stops the handler
 func (adh *adminHandlerImpl) Stop() {
-	// Calling stop if the queue does not start is ok
-	adh.Resource.GetDomainReplicationQueue().Stop()
 	adh.domainFailoverWatcher.Stop()
 }
 
 // AddSearchAttribute add search attribute to whitelist
 func (adh *adminHandlerImpl) AddSearchAttribute(
 	ctx context.Context,
-	request *admin.AddSearchAttributeRequest,
+	request *types.AddSearchAttributeRequest,
 ) (retError error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &retError)
@@ -186,30 +189,36 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 		return adh.error(errNoPermission, scope)
 	}
 	if len(request.GetSearchAttribute()) == 0 {
-		return adh.error(&gen.BadRequestError{Message: "SearchAttributes are not provided"}, scope)
+		return adh.error(&types.BadRequestError{Message: "SearchAttributes are not provided"}, scope)
 	}
 	if err := adh.validateConfigForAdvanceVisibility(); err != nil {
-		return adh.error(&gen.BadRequestError{Message: fmt.Sprintf("AdvancedVisibilityStore is not configured for this Cadence Cluster")}, scope)
+		return adh.error(&types.BadRequestError{Message: fmt.Sprintf("AdvancedVisibilityStore is not configured for this Cadence Cluster")}, scope)
 	}
 
 	searchAttr := request.GetSearchAttribute()
-	currentValidAttr, _ := adh.params.DynamicConfig.GetMapValue(
+	currentValidAttr, err := adh.params.DynamicConfig.GetMapValue(
 		dynamicconfig.ValidSearchAttributes, nil, definition.GetDefaultIndexedKeys())
-	for k, v := range searchAttr {
-		if definition.IsSystemIndexedKey(k) {
-			return adh.error(&gen.BadRequestError{Message: fmt.Sprintf("Key [%s] is reserved by system", k)}, scope)
-		}
-		if _, exist := currentValidAttr[k]; exist {
-			return adh.error(&gen.BadRequestError{Message: fmt.Sprintf("Key [%s] is already whitelist", k)}, scope)
-		}
-
-		currentValidAttr[k] = int(v)
+	if err != nil {
+		return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to get dynamic config, err: %v", err)}, scope)
 	}
 
-	// update dynamic config
-	err := adh.params.DynamicConfig.UpdateValue(dynamicconfig.ValidSearchAttributes, currentValidAttr)
+	for keyName, valueType := range searchAttr {
+		if definition.IsSystemIndexedKey(keyName) {
+			return adh.error(&types.BadRequestError{Message: fmt.Sprintf("Key [%s] is reserved by system", keyName)}, scope)
+		}
+		if currValType, exist := currentValidAttr[keyName]; exist {
+			if currValType != int(valueType) {
+				return adh.error(&types.BadRequestError{Message: fmt.Sprintf("Key [%s] is already whitelisted as a different type", keyName)}, scope)
+			}
+			adh.GetLogger().Warn("Adding a search attribute that is already existing in dynamicconfig, it's probably a noop if ElasticSearch is already added. Here will re-do it on ElasticSearch.")
+		}
+		currentValidAttr[keyName] = int(valueType)
+	}
+
+	// update dynamic config. Until the DB based dynamic config is implemented, we shouldn't fail the updating.
+	err = adh.params.DynamicConfig.UpdateValue(dynamicconfig.ValidSearchAttributes, currentValidAttr)
 	if err != nil {
-		return adh.error(&gen.InternalServiceError{Message: fmt.Sprintf("Failed to update dynamic config, err: %v", err)}, scope)
+		adh.GetLogger().Warn("Failed to update dynamicconfig. This is only useful in local dev environment. Please ignore this warn if this is in a real Cluster, because you dynamicconfig MUST be updated separately")
 	}
 
 	// update elasticsearch mapping, new added field will not be able to remove or update
@@ -217,18 +226,18 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 	for k, v := range searchAttr {
 		valueType := convertIndexedValueTypeToESDataType(v)
 		if len(valueType) == 0 {
-			return adh.error(&gen.BadRequestError{Message: fmt.Sprintf("Unknown value type, %v", v)}, scope)
+			return adh.error(&types.BadRequestError{Message: fmt.Sprintf("Unknown value type, %v", v)}, scope)
 		}
 		err := adh.params.ESClient.PutMapping(ctx, index, definition.Attr, k, valueType)
-		if elastic.IsNotFound(err) {
+		if adh.esClient.IsNotFoundError(err) {
 			err = adh.params.ESClient.CreateIndex(ctx, index)
 			if err != nil {
-				return adh.error(&gen.InternalServiceError{Message: fmt.Sprintf("Failed to create ES index, err: %v", err)}, scope)
+				return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to create ES index, err: %v", err)}, scope)
 			}
 			err = adh.params.ESClient.PutMapping(ctx, index, definition.Attr, k, valueType)
 		}
 		if err != nil {
-			return adh.error(&gen.InternalServiceError{Message: fmt.Sprintf("Failed to update ES mapping, err: %v", err)}, scope)
+			return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to update ES mapping, err: %v", err)}, scope)
 		}
 	}
 
@@ -238,8 +247,8 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 // DescribeWorkflowExecution returns information about the specified workflow execution.
 func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	ctx context.Context,
-	request *admin.DescribeWorkflowExecutionRequest,
-) (resp *admin.DescribeWorkflowExecutionResponse, retError error) {
+	request *types.AdminDescribeWorkflowExecutionRequest,
+) (resp *types.AdminDescribeWorkflowExecutionResponse, retError error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &retError)
 	scope, sw := adh.startRequestProfile(metrics.AdminDescribeWorkflowExecutionScope)
@@ -253,8 +262,8 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 		return nil, adh.error(err, scope)
 	}
 
-	shardID := common.WorkflowIDToHistoryShard(*request.Execution.WorkflowId, adh.numberOfHistoryShards)
-	shardIDstr := string(shardID)
+	shardID := common.WorkflowIDToHistoryShard(request.Execution.WorkflowID, adh.numberOfHistoryShards)
+	shardIDstr := string(rune(shardID)) // originally `string(int_shard_id)`, but changing it will change the ring hashing
 	shardIDForOutput := strconv.Itoa(shardID)
 
 	historyHost, err := adh.GetMembershipMonitor().Lookup(common.HistoryServiceName, shardIDstr)
@@ -265,16 +274,16 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	domainID, err := adh.GetDomainCache().GetDomainID(request.GetDomain())
 
 	historyAddr := historyHost.GetAddress()
-	resp2, err := adh.GetHistoryClient().DescribeMutableState(ctx, &hist.DescribeMutableStateRequest{
-		DomainUUID: &domainID,
+	resp2, err := adh.GetHistoryClient().DescribeMutableState(ctx, &types.DescribeMutableStateRequest{
+		DomainUUID: domainID,
 		Execution:  request.Execution,
 	})
 	if err != nil {
-		return &admin.DescribeWorkflowExecutionResponse{}, err
+		return &types.AdminDescribeWorkflowExecutionResponse{}, err
 	}
-	return &admin.DescribeWorkflowExecutionResponse{
-		ShardId:                common.StringPtr(shardIDForOutput),
-		HistoryAddr:            common.StringPtr(historyAddr),
+	return &types.AdminDescribeWorkflowExecutionResponse{
+		ShardID:                shardIDForOutput,
+		HistoryAddr:            historyAddr,
 		MutableStateInDatabase: resp2.MutableStateInDatabase,
 		MutableStateInCache:    resp2.MutableStateInCache,
 	}, err
@@ -283,90 +292,124 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 // RemoveTask returns information about the internal states of a history host
 func (adh *adminHandlerImpl) RemoveTask(
 	ctx context.Context,
-	request *gen.RemoveTaskRequest,
+	request *types.RemoveTaskRequest,
 ) (retError error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &retError)
 	scope, sw := adh.startRequestProfile(metrics.AdminRemoveTaskScope)
 	defer sw.Stop()
 
-	if request == nil || request.ShardID == nil || request.Type == nil || request.TaskID == nil {
+	if request == nil || request.Type == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
-	err := adh.GetHistoryClient().RemoveTask(ctx, request)
-	return err
+	if err := adh.GetHistoryClient().RemoveTask(ctx, request); err != nil {
+		return adh.error(err, scope)
+	}
+	return nil
 }
 
 // CloseShard returns information about the internal states of a history host
 func (adh *adminHandlerImpl) CloseShard(
 	ctx context.Context,
-	request *gen.CloseShardRequest,
+	request *types.CloseShardRequest,
 ) (retError error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &retError)
 	scope, sw := adh.startRequestProfile(metrics.AdminCloseShardScope)
 	defer sw.Stop()
 
-	if request == nil || request.ShardID == nil {
+	if request == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
-	err := adh.GetHistoryClient().CloseShard(ctx, request)
-	return err
+	if err := adh.GetHistoryClient().CloseShard(ctx, request); err != nil {
+		return adh.error(err, scope)
+	}
+	return nil
 }
 
 // ResetQueue resets processing queue states
 func (adh *adminHandlerImpl) ResetQueue(
 	ctx context.Context,
-	request *gen.ResetQueueRequest,
+	request *types.ResetQueueRequest,
 ) (retError error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &retError)
 	scope, sw := adh.startRequestProfile(metrics.AdminResetQueueScope)
 	defer sw.Stop()
 
-	if request == nil || request.ShardID == nil || request.ClusterName == nil || request.Type == nil {
+	if request == nil || request.Type == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
 	if request.GetClusterName() == "" {
 		return adh.error(errClusterNameNotSet, scope)
 	}
 
-	err := adh.GetHistoryClient().ResetQueue(ctx, request)
-	return err
+	if err := adh.GetHistoryClient().ResetQueue(ctx, request); err != nil {
+		return adh.error(err, scope)
+	}
+	return nil
 }
 
 // DescribeQueue describes processing queue states
 func (adh *adminHandlerImpl) DescribeQueue(
 	ctx context.Context,
-	request *gen.DescribeQueueRequest,
-) (resp *gen.DescribeQueueResponse, retError error) {
+	request *types.DescribeQueueRequest,
+) (resp *types.DescribeQueueResponse, retError error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &retError)
 	scope, sw := adh.startRequestProfile(metrics.AdminDescribeQueueScope)
 	defer sw.Stop()
 
-	if request == nil || request.ShardID == nil || request.ClusterName == nil || request.Type == nil {
+	if request == nil || request.Type == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 	if request.GetClusterName() == "" {
 		return nil, adh.error(errClusterNameNotSet, scope)
 	}
 
-	resp, err := adh.GetHistoryClient().DescribeQueue(ctx, request)
-	return resp, err
+	return adh.GetHistoryClient().DescribeQueue(ctx, request)
+}
+
+// DescribeShardDistribution returns information about history shard distribution
+func (adh *adminHandlerImpl) DescribeShardDistribution(
+	ctx context.Context,
+	request *types.DescribeShardDistributionRequest,
+) (resp *types.DescribeShardDistributionResponse, retError error) {
+
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	_, sw := adh.startRequestProfile(metrics.AdminDescribeShardDistributionScope)
+	defer sw.Stop()
+
+	numShards := adh.config.NumHistoryShards
+	resp = &types.DescribeShardDistributionResponse{
+		NumberOfShards: int32(numShards),
+		Shards:         make(map[int32]string),
+	}
+
+	offset := int(request.PageID * request.PageSize)
+	nextPageStart := offset + int(request.PageSize)
+	for shardID := offset; shardID < numShards && shardID < nextPageStart; shardID++ {
+		info, err := adh.GetHistoryServiceResolver().Lookup(string(rune(shardID)))
+		if err != nil {
+			resp.Shards[int32(shardID)] = "unknown"
+		} else {
+			resp.Shards[int32(shardID)] = info.Identity()
+		}
+	}
+	return resp, nil
 }
 
 // DescribeHistoryHost returns information about the internal states of a history host
 func (adh *adminHandlerImpl) DescribeHistoryHost(
 	ctx context.Context,
-	request *gen.DescribeHistoryHostRequest,
-) (resp *gen.DescribeHistoryHostResponse, retError error) {
+	request *types.DescribeHistoryHostRequest,
+) (resp *types.DescribeHistoryHostResponse, retError error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &retError)
 	scope, sw := adh.startRequestProfile(metrics.AdminDescribeHistoryHostScope)
 	defer sw.Stop()
 
-	if request == nil || (request.ShardIdForHost == nil && request.ExecutionForHost == nil && request.HostAddress == nil) {
+	if request == nil || (request.ShardIDForHost == nil && request.ExecutionForHost == nil && request.HostAddress == nil) {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 
@@ -376,15 +419,14 @@ func (adh *adminHandlerImpl) DescribeHistoryHost(
 		}
 	}
 
-	resp, err := adh.GetHistoryClient().DescribeHistoryHost(ctx, request)
-	return resp, err
+	return adh.GetHistoryClient().DescribeHistoryHost(ctx, request)
 }
 
 // GetWorkflowExecutionRawHistoryV2 - retrieves the history of workflow execution
 func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 	ctx context.Context,
-	request *admin.GetWorkflowExecutionRawHistoryV2Request,
-) (resp *admin.GetWorkflowExecutionRawHistoryV2Response, retError error) {
+	request *types.GetWorkflowExecutionRawHistoryV2Request,
+) (resp *types.GetWorkflowExecutionRawHistoryV2Response, retError error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &retError)
 	scope, sw := adh.startRequestProfile(metrics.AdminGetWorkflowExecutionRawHistoryV2Scope)
@@ -405,15 +447,15 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 	var pageToken *getWorkflowRawHistoryV2Token
 	var targetVersionHistory *persistence.VersionHistory
 	if request.NextPageToken == nil {
-		response, err := adh.GetHistoryClient().GetMutableState(ctx, &h.GetMutableStateRequest{
-			DomainUUID: common.StringPtr(domainID),
+		response, err := adh.GetHistoryClient().GetMutableState(ctx, &types.GetMutableStateRequest{
+			DomainUUID: domainID,
 			Execution:  execution,
 		})
 		if err != nil {
 			return nil, adh.error(err, scope)
 		}
 
-		versionHistories := persistence.NewVersionHistoriesFromThrift(
+		versionHistories := persistence.NewVersionHistoriesFromInternalType(
 			response.GetVersionHistories(),
 		)
 		targetVersionHistory, err = adh.setRequestDefaultValueAndGetTargetVersionHistory(
@@ -432,11 +474,11 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		}
 		versionHistories := pageToken.VersionHistories
 		if versionHistories == nil {
-			return nil, adh.error(&gen.BadRequestError{Message: "Invalid version histories."}, scope)
+			return nil, adh.error(&types.BadRequestError{Message: "Invalid version histories."}, scope)
 		}
 		targetVersionHistory, err = adh.setRequestDefaultValueAndGetTargetVersionHistory(
 			request,
-			persistence.NewVersionHistoriesFromThrift(versionHistories),
+			persistence.NewVersionHistoriesFromInternalType(versionHistories),
 		)
 		if err != nil {
 			return nil, adh.error(err, scope)
@@ -452,15 +494,15 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 
 	if pageToken.StartEventID+1 == pageToken.EndEventID {
 		// API is exclusive-exclusive. Return empty response here.
-		return &admin.GetWorkflowExecutionRawHistoryV2Response{
-			HistoryBatches: []*gen.DataBlob{},
+		return &types.GetWorkflowExecutionRawHistoryV2Response{
+			HistoryBatches: []*types.DataBlob{},
 			NextPageToken:  nil, // no further pagination
-			VersionHistory: targetVersionHistory.ToThrift(),
+			VersionHistory: targetVersionHistory.ToInternalType(),
 		}, nil
 	}
 	pageSize := int(request.GetMaximumPageSize())
 	shardID := common.WorkflowIDToHistoryShard(
-		execution.GetWorkflowId(),
+		execution.GetWorkflowID(),
 		adh.numberOfHistoryShards,
 	)
 	rawHistoryResponse, err := adh.GetHistoryManager().ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
@@ -474,13 +516,13 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		ShardID:       common.IntPtr(shardID),
 	})
 	if err != nil {
-		if _, ok := err.(*gen.EntityNotExistsError); ok {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
 			// when no events can be returned from DB, DB layer will return
 			// EntityNotExistsError, this API shall return empty response
-			return &admin.GetWorkflowExecutionRawHistoryV2Response{
-				HistoryBatches: []*gen.DataBlob{},
+			return &types.GetWorkflowExecutionRawHistoryV2Response{
+				HistoryBatches: []*types.DataBlob{},
 				NextPageToken:  nil, // no further pagination
-				VersionHistory: targetVersionHistory.ToThrift(),
+				VersionHistory: targetVersionHistory.ToInternalType(),
 			}, nil
 		}
 		return nil, err
@@ -488,20 +530,17 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 
 	pageToken.PersistenceToken = rawHistoryResponse.NextPageToken
 	size := rawHistoryResponse.Size
-	// N.B. - Dual emit is required here so that we can see aggregate timer stats across all
-	// domains along with the individual domains stats
-	adh.GetMetricsClient().RecordTimer(metrics.AdminGetWorkflowExecutionRawHistoryScope, metrics.HistorySize, time.Duration(size))
 	scope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
 	rawBlobs := rawHistoryResponse.HistoryEventBlobs
-	blobs := []*gen.DataBlob{}
+	blobs := []*types.DataBlob{}
 	for _, blob := range rawBlobs {
-		blobs = append(blobs, blob.ToThrift())
+		blobs = append(blobs, blob.ToInternal())
 	}
 
-	result := &admin.GetWorkflowExecutionRawHistoryV2Response{
+	result := &types.GetWorkflowExecutionRawHistoryV2Response{
 		HistoryBatches: blobs,
-		VersionHistory: targetVersionHistory.ToThrift(),
+		VersionHistory: targetVersionHistory.ToInternalType(),
 	}
 	if len(pageToken.PersistenceToken) == 0 {
 		result.NextPageToken = nil
@@ -518,21 +557,36 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 // DescribeCluster return information about cadence deployment
 func (adh *adminHandlerImpl) DescribeCluster(
 	ctx context.Context,
-) (resp *admin.DescribeClusterResponse, retError error) {
+) (resp *types.DescribeClusterResponse, retError error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &retError)
 	scope, sw := adh.startRequestProfile(metrics.AdminGetWorkflowExecutionRawHistoryV2Scope)
 	defer sw.Stop()
 
-	membershipInfo := &admin.MembershipInfo{}
+	// expose visibility store backend and if advanced options are available
+	ave := types.PersistenceFeature{
+		Key:     "advancedVisibilityEnabled",
+		Enabled: adh.params.ESConfig != nil,
+	}
+	visibilityStoreInfo := types.PersistenceInfo{
+		Backend:  adh.Resource.GetVisibilityManager().GetName(),
+		Features: []*types.PersistenceFeature{&ave},
+	}
+
+	// expose history store backend
+	historyStoreInfo := types.PersistenceInfo{
+		Backend: adh.GetHistoryManager().GetName(),
+	}
+
+	membershipInfo := types.MembershipInfo{}
 	if monitor := adh.GetMembershipMonitor(); monitor != nil {
 		currentHost, err := monitor.WhoAmI()
 		if err != nil {
 			return nil, adh.error(err, scope)
 		}
 
-		membershipInfo.CurrentHost = &admin.HostInfo{
-			Identity: common.StringPtr(currentHost.Identity()),
+		membershipInfo.CurrentHost = &types.HostInfo{
+			Identity: currentHost.Identity(),
 		}
 
 		members, err := monitor.GetReachableMembers()
@@ -542,43 +596,47 @@ func (adh *adminHandlerImpl) DescribeCluster(
 
 		membershipInfo.ReachableMembers = members
 
-		var rings []*admin.RingInfo
+		var rings []*types.RingInfo
 		for _, role := range []string{common.FrontendServiceName, common.HistoryServiceName, common.MatchingServiceName, common.WorkerServiceName} {
 			resolver, err := monitor.GetResolver(role)
 			if err != nil {
 				return nil, adh.error(err, scope)
 			}
 
-			var servers []*admin.HostInfo
+			var servers []*types.HostInfo
 			for _, server := range resolver.Members() {
-				servers = append(servers, &admin.HostInfo{
-					Identity: common.StringPtr(server.Identity()),
+				servers = append(servers, &types.HostInfo{
+					Identity: server.Identity(),
 				})
 			}
 
-			rings = append(rings, &admin.RingInfo{
-				Role:        common.StringPtr(role),
-				MemberCount: common.Int32Ptr(int32(resolver.MemberCount())),
+			rings = append(rings, &types.RingInfo{
+				Role:        role,
+				MemberCount: int32(resolver.MemberCount()),
 				Members:     servers,
 			})
 		}
 		membershipInfo.Rings = rings
 	}
 
-	return &admin.DescribeClusterResponse{
-		SupportedClientVersions: &gen.SupportedClientVersions{
-			GoSdk:   common.StringPtr(client.SupportedGoSDKVersion),
-			JavaSdk: common.StringPtr(client.SupportedJavaSDKVersion),
+	return &types.DescribeClusterResponse{
+		SupportedClientVersions: &types.SupportedClientVersions{
+			GoSdk:   client.SupportedGoSDKVersion,
+			JavaSdk: client.SupportedJavaSDKVersion,
 		},
-		MembershipInfo: membershipInfo,
+		MembershipInfo: &membershipInfo,
+		PersistenceInfo: map[string]*types.PersistenceInfo{
+			"visibilityStore": &visibilityStoreInfo,
+			"historyStore":    &historyStoreInfo,
+		},
 	}, nil
 }
 
 // GetReplicationMessages returns new replication tasks since the read level provided in the token.
 func (adh *adminHandlerImpl) GetReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetReplicationMessagesRequest,
-) (resp *replicator.GetReplicationMessagesResponse, err error) {
+	request *types.GetReplicationMessagesRequest,
+) (resp *types.GetReplicationMessagesResponse, err error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &err)
 	scope, sw := adh.startRequestProfile(metrics.AdminGetReplicationMessagesScope)
@@ -587,7 +645,7 @@ func (adh *adminHandlerImpl) GetReplicationMessages(
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
-	if !request.IsSetClusterName() {
+	if request.ClusterName == "" {
 		return nil, adh.error(errClusterNameNotSet, scope)
 	}
 
@@ -601,8 +659,8 @@ func (adh *adminHandlerImpl) GetReplicationMessages(
 // GetDomainReplicationMessages returns new domain replication tasks since last retrieved task ID.
 func (adh *adminHandlerImpl) GetDomainReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetDomainReplicationMessagesRequest,
-) (resp *replicator.GetDomainReplicationMessagesResponse, err error) {
+	request *types.GetDomainReplicationMessagesRequest,
+) (resp *types.GetDomainReplicationMessagesResponse, err error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &err)
 	scope, sw := adh.startRequestProfile(metrics.AdminGetDomainReplicationMessagesScope)
@@ -617,8 +675,8 @@ func (adh *adminHandlerImpl) GetDomainReplicationMessages(
 	}
 
 	lastMessageID := defaultLastMessageID
-	if request.IsSetLastRetrievedMessageId() {
-		lastMessageID = request.GetLastRetrievedMessageId()
+	if request.LastRetrievedMessageID != nil {
+		lastMessageID = request.GetLastRetrievedMessageID()
 	}
 
 	if lastMessageID == defaultLastMessageID {
@@ -640,23 +698,19 @@ func (adh *adminHandlerImpl) GetDomainReplicationMessages(
 	}
 
 	lastProcessedMessageID := defaultLastMessageID
-	if request.IsSetLastProcessedMessageId() {
-		lastProcessedMessageID = request.GetLastProcessedMessageId()
+	if request.LastProcessedMessageID != nil {
+		lastProcessedMessageID = request.GetLastProcessedMessageID()
+	}
+	if err := adh.GetDomainReplicationQueue().UpdateAckLevel(ctx, lastProcessedMessageID, request.GetClusterName()); err != nil {
+		adh.GetLogger().Warn("Failed to update domain replication queue ack level.",
+			tag.TaskID(int64(lastProcessedMessageID)),
+			tag.ClusterName(request.GetClusterName()))
 	}
 
-	if lastProcessedMessageID != defaultLastMessageID {
-		err := adh.GetDomainReplicationQueue().UpdateAckLevel(ctx, lastProcessedMessageID, request.GetClusterName())
-		if err != nil {
-			adh.GetLogger().Warn("Failed to update domain replication queue ack level.",
-				tag.TaskID(int64(lastProcessedMessageID)),
-				tag.ClusterName(request.GetClusterName()))
-		}
-	}
-
-	return &replicator.GetDomainReplicationMessagesResponse{
-		Messages: &replicator.ReplicationMessages{
+	return &types.GetDomainReplicationMessagesResponse{
+		Messages: &types.ReplicationMessages{
 			ReplicationTasks:       replicationTasks,
-			LastRetrievedMessageId: common.Int64Ptr(int64(lastMessageID)),
+			LastRetrievedMessageID: lastMessageID,
 		},
 	}, nil
 }
@@ -664,8 +718,8 @@ func (adh *adminHandlerImpl) GetDomainReplicationMessages(
 // GetDLQReplicationMessages returns new replication tasks based on the dlq info.
 func (adh *adminHandlerImpl) GetDLQReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetDLQReplicationMessagesRequest,
-) (resp *replicator.GetDLQReplicationMessagesResponse, err error) {
+	request *types.GetDLQReplicationMessagesRequest,
+) (resp *types.GetDLQReplicationMessagesResponse, err error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &err)
 	scope, sw := adh.startRequestProfile(metrics.AdminGetDLQReplicationMessagesScope)
@@ -688,7 +742,7 @@ func (adh *adminHandlerImpl) GetDLQReplicationMessages(
 // ReapplyEvents applies stale events to the current workflow and the current run
 func (adh *adminHandlerImpl) ReapplyEvents(
 	ctx context.Context,
-	request *gen.ReapplyEventsRequest,
+	request *types.ReapplyEventsRequest,
 ) (err error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &err)
@@ -698,13 +752,13 @@ func (adh *adminHandlerImpl) ReapplyEvents(
 	if request == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
-	if request.DomainName == nil || request.GetDomainName() == "" {
+	if request.GetDomainName() == "" {
 		return adh.error(errDomainNotSet, scope)
 	}
 	if request.WorkflowExecution == nil {
 		return adh.error(errExecutionNotSet, scope)
 	}
-	if request.GetWorkflowExecution().GetWorkflowId() == "" {
+	if request.GetWorkflowExecution().GetWorkflowID() == "" {
 		return adh.error(errWorkflowIDNotSet, scope)
 	}
 	if request.GetEvents() == nil {
@@ -715,8 +769,8 @@ func (adh *adminHandlerImpl) ReapplyEvents(
 		return adh.error(err, scope)
 	}
 
-	err = adh.GetHistoryClient().ReapplyEvents(ctx, &h.ReapplyEventsRequest{
-		DomainUUID: common.StringPtr(domainEntry.GetInfo().ID),
+	err = adh.GetHistoryClient().ReapplyEvents(ctx, &types.HistoryReapplyEventsRequest{
+		DomainUUID: domainEntry.GetInfo().ID,
 		Request:    request,
 	})
 	if err != nil {
@@ -728,8 +782,8 @@ func (adh *adminHandlerImpl) ReapplyEvents(
 // ReadDLQMessages reads messages from DLQ
 func (adh *adminHandlerImpl) ReadDLQMessages(
 	ctx context.Context,
-	request *replicator.ReadDLQMessagesRequest,
-) (resp *replicator.ReadDLQMessagesResponse, err error) {
+	request *types.ReadDLQMessagesRequest,
+) (resp *types.ReadDLQMessagesResponse, err error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &err)
 	scope, sw := adh.startRequestProfile(metrics.AdminReadDLQMessagesScope)
@@ -739,25 +793,25 @@ func (adh *adminHandlerImpl) ReadDLQMessages(
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 
-	if !request.IsSetType() {
+	if request.Type == nil {
 		return nil, adh.error(errEmptyQueueType, scope)
 	}
 
 	if request.GetMaximumPageSize() <= 0 {
-		request.MaximumPageSize = common.Int32Ptr(common.ReadDLQMessagesPageSize)
+		request.MaximumPageSize = common.ReadDLQMessagesPageSize
 	}
 
-	if !request.IsSetInclusiveEndMessageID() {
+	if request.InclusiveEndMessageID == nil {
 		request.InclusiveEndMessageID = common.Int64Ptr(common.EndMessageID)
 	}
 
-	var tasks []*replicator.ReplicationTask
+	var tasks []*types.ReplicationTask
 	var token []byte
 	var op func() error
 	switch request.GetType() {
-	case replicator.DLQTypeReplication:
+	case types.DLQTypeReplication:
 		return adh.GetHistoryClient().ReadDLQMessages(ctx, request)
-	case replicator.DLQTypeDomain:
+	case types.DLQTypeDomain:
 		op = func() error {
 			select {
 			case <-ctx.Done():
@@ -773,14 +827,14 @@ func (adh *adminHandlerImpl) ReadDLQMessages(
 			}
 		}
 	default:
-		return nil, &gen.BadRequestError{Message: "The DLQ type is not supported."}
+		return nil, &types.BadRequestError{Message: "The DLQ type is not supported."}
 	}
 	err = backoff.Retry(op, adminServiceRetryPolicy, common.IsServiceTransientError)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
 
-	return &replicator.ReadDLQMessagesResponse{
+	return &types.ReadDLQMessagesResponse{
 		ReplicationTasks: tasks,
 		NextPageToken:    token,
 	}, nil
@@ -789,7 +843,7 @@ func (adh *adminHandlerImpl) ReadDLQMessages(
 // PurgeDLQMessages purge messages from DLQ
 func (adh *adminHandlerImpl) PurgeDLQMessages(
 	ctx context.Context,
-	request *replicator.PurgeDLQMessagesRequest,
+	request *types.PurgeDLQMessagesRequest,
 ) (err error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &err)
@@ -800,19 +854,19 @@ func (adh *adminHandlerImpl) PurgeDLQMessages(
 		return adh.error(errRequestNotSet, scope)
 	}
 
-	if !request.IsSetType() {
+	if request.Type == nil {
 		return adh.error(errEmptyQueueType, scope)
 	}
 
-	if !request.IsSetInclusiveEndMessageID() {
+	if request.InclusiveEndMessageID == nil {
 		request.InclusiveEndMessageID = common.Int64Ptr(endMessageID)
 	}
 
 	var op func() error
 	switch request.GetType() {
-	case replicator.DLQTypeReplication:
+	case types.DLQTypeReplication:
 		return adh.GetHistoryClient().PurgeDLQMessages(ctx, request)
-	case replicator.DLQTypeDomain:
+	case types.DLQTypeDomain:
 		op = func() error {
 			select {
 			case <-ctx.Done():
@@ -825,7 +879,7 @@ func (adh *adminHandlerImpl) PurgeDLQMessages(
 			}
 		}
 	default:
-		return &gen.BadRequestError{Message: "The DLQ type is not supported."}
+		return &types.BadRequestError{Message: "The DLQ type is not supported."}
 	}
 	err = backoff.Retry(op, adminServiceRetryPolicy, common.IsServiceTransientError)
 	if err != nil {
@@ -838,8 +892,8 @@ func (adh *adminHandlerImpl) PurgeDLQMessages(
 // MergeDLQMessages merges DLQ messages
 func (adh *adminHandlerImpl) MergeDLQMessages(
 	ctx context.Context,
-	request *replicator.MergeDLQMessagesRequest,
-) (resp *replicator.MergeDLQMessagesResponse, err error) {
+	request *types.MergeDLQMessagesRequest,
+) (resp *types.MergeDLQMessagesResponse, err error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &err)
 	scope, sw := adh.startRequestProfile(metrics.AdminMergeDLQMessagesScope)
@@ -849,20 +903,20 @@ func (adh *adminHandlerImpl) MergeDLQMessages(
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 
-	if !request.IsSetType() {
+	if request.Type == nil {
 		return nil, adh.error(errEmptyQueueType, scope)
 	}
 
-	if !request.IsSetInclusiveEndMessageID() {
+	if request.InclusiveEndMessageID == nil {
 		request.InclusiveEndMessageID = common.Int64Ptr(endMessageID)
 	}
 
 	var token []byte
 	var op func() error
 	switch request.GetType() {
-	case replicator.DLQTypeReplication:
+	case types.DLQTypeReplication:
 		return adh.GetHistoryClient().MergeDLQMessages(ctx, request)
-	case replicator.DLQTypeDomain:
+	case types.DLQTypeDomain:
 
 		op = func() error {
 			select {
@@ -880,14 +934,14 @@ func (adh *adminHandlerImpl) MergeDLQMessages(
 			}
 		}
 	default:
-		return nil, &gen.BadRequestError{Message: "The DLQ type is not supported."}
+		return nil, &types.BadRequestError{Message: "The DLQ type is not supported."}
 	}
 	err = backoff.Retry(op, adminServiceRetryPolicy, common.IsServiceTransientError)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
 
-	return &replicator.MergeDLQMessagesResponse{
+	return &types.MergeDLQMessagesResponse{
 		NextPageToken: token,
 	}, nil
 }
@@ -895,7 +949,7 @@ func (adh *adminHandlerImpl) MergeDLQMessages(
 // RefreshWorkflowTasks re-generates the workflow tasks
 func (adh *adminHandlerImpl) RefreshWorkflowTasks(
 	ctx context.Context,
-	request *gen.RefreshWorkflowTasksRequest,
+	request *types.RefreshWorkflowTasksRequest,
 ) (err error) {
 	defer log.CapturePanic(adh.GetLogger(), &err)
 	scope, sw := adh.startRequestProfile(metrics.AdminRefreshWorkflowTasksScope)
@@ -912,8 +966,8 @@ func (adh *adminHandlerImpl) RefreshWorkflowTasks(
 		return adh.error(err, scope)
 	}
 
-	err = adh.GetHistoryClient().RefreshWorkflowTasks(ctx, &h.RefreshWorkflowTasksRequest{
-		DomainUIID: common.StringPtr(domainEntry.GetInfo().ID),
+	err = adh.GetHistoryClient().RefreshWorkflowTasks(ctx, &types.HistoryRefreshWorkflowTasksRequest{
+		DomainUIID: domainEntry.GetInfo().ID,
 		Request:    request,
 	})
 	if err != nil {
@@ -925,7 +979,7 @@ func (adh *adminHandlerImpl) RefreshWorkflowTasks(
 // ResendReplicationTasks requests replication task from remote cluster
 func (adh *adminHandlerImpl) ResendReplicationTasks(
 	ctx context.Context,
-	request *admin.ResendReplicationTasksRequest,
+	request *types.ResendReplicationTasksRequest,
 ) (err error) {
 	defer log.CapturePanic(adh.GetLogger(), &err)
 	scope, sw := adh.startRequestProfile(metrics.AdminResendReplicationTasksScope)
@@ -937,60 +991,76 @@ func (adh *adminHandlerImpl) ResendReplicationTasks(
 	resender := ndc.NewHistoryResender(
 		adh.GetDomainCache(),
 		adh.GetRemoteAdminClient(request.GetRemoteCluster()),
-		func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
+		func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 			return adh.GetHistoryClient().ReplicateEventsV2(ctx, request)
 		},
-		adh.eventSerializder,
+		adh.eventSerializer,
 		nil,
 		nil,
 		adh.GetLogger(),
 	)
 	return resender.SendSingleWorkflowHistory(
-		request.GetDomainID(),
+		request.DomainID,
 		request.GetWorkflowID(),
 		request.GetRunID(),
-		resendStartEventID,
+		request.StartEventID,
 		request.StartVersion,
-		nil,
-		nil,
+		request.EndEventID,
+		request.EndVersion,
 	)
 }
 
+func (adh *adminHandlerImpl) GetCrossClusterTasks(
+	ctx context.Context,
+	request *types.GetCrossClusterTasksRequest,
+) (resp *types.GetCrossClusterTasksResponse, err error) {
+
+	defer log.CapturePanic(adh.GetLogger(), &err)
+	scope, sw := adh.startRequestProfile(metrics.AdminGetCrossClusterTasksScope)
+	defer sw.Stop()
+
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+	if request.TargetCluster == "" {
+		return nil, adh.error(errClusterNameNotSet, scope)
+	}
+
+	resp, err = adh.GetHistoryRawClient().GetCrossClusterTasks(ctx, request)
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+	return resp, nil
+}
+
 func (adh *adminHandlerImpl) validateGetWorkflowExecutionRawHistoryV2Request(
-	request *admin.GetWorkflowExecutionRawHistoryV2Request,
+	request *types.GetWorkflowExecutionRawHistoryV2Request,
 ) error {
 
 	execution := request.Execution
-	if len(execution.GetWorkflowId()) == 0 {
-		return &gen.BadRequestError{Message: "Invalid WorkflowID."}
+	if len(execution.GetWorkflowID()) == 0 {
+		return &types.BadRequestError{Message: "Invalid WorkflowID."}
 	}
 	// TODO currently, this API is only going to be used by re-send history events
 	// to remote cluster if kafka is lossy again, in the future, this API can be used
 	// by CLI and client, then empty runID (meaning the current workflow) should be allowed
-	if len(execution.GetRunId()) == 0 || uuid.Parse(execution.GetRunId()) == nil {
-		return &gen.BadRequestError{Message: "Invalid RunID."}
+	if len(execution.GetRunID()) == 0 || uuid.Parse(execution.GetRunID()) == nil {
+		return &types.BadRequestError{Message: "Invalid RunID."}
 	}
 
 	pageSize := int(request.GetMaximumPageSize())
 	if pageSize <= 0 {
-		return &gen.BadRequestError{Message: "Invalid PageSize."}
+		return &types.BadRequestError{Message: "Invalid PageSize."}
 	}
 
-	if request.StartEventId == nil &&
-		request.StartEventVersion == nil &&
-		request.EndEventId == nil &&
-		request.EndEventVersion == nil {
-		return &gen.BadRequestError{Message: "Invalid event query range."}
+	if (request.StartEventID != nil && request.StartEventVersion == nil) ||
+		(request.StartEventID == nil && request.StartEventVersion != nil) {
+		return &types.BadRequestError{Message: "Invalid start event id and start event version combination."}
 	}
 
-	if (request.StartEventId != nil && request.StartEventVersion == nil) ||
-		(request.StartEventId == nil && request.StartEventVersion != nil) {
-		return &gen.BadRequestError{Message: "Invalid start event id and start event version combination."}
-	}
-
-	if (request.EndEventId != nil && request.EndEventVersion == nil) ||
-		(request.EndEventId == nil && request.EndEventVersion != nil) {
-		return &gen.BadRequestError{Message: "Invalid end event id and end event version combination."}
+	if (request.EndEventID != nil && request.EndEventVersion == nil) ||
+		(request.EndEventID == nil && request.EndEventVersion != nil) {
+		return &types.BadRequestError{Message: "Invalid end event id and end event version combination."}
 	}
 	return nil
 }
@@ -1003,7 +1073,7 @@ func (adh *adminHandlerImpl) validateConfigForAdvanceVisibility() error {
 }
 
 func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
-	request *admin.GetWorkflowExecutionRawHistoryV2Request,
+	request *types.GetWorkflowExecutionRawHistoryV2Request,
 	versionHistories *persistence.VersionHistories,
 ) (*persistence.VersionHistory, error) {
 
@@ -1020,29 +1090,29 @@ func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 		return nil, err
 	}
 
-	if request.StartEventId == nil || request.StartEventVersion == nil {
+	if request.StartEventID == nil || request.StartEventVersion == nil {
 		// If start event is not set, get the events from the first event
 		// As the API is exclusive-exclusive, use first event id - 1 here
-		request.StartEventId = common.Int64Ptr(common.FirstEventID - 1)
+		request.StartEventID = common.Int64Ptr(common.FirstEventID - 1)
 		request.StartEventVersion = common.Int64Ptr(firstItem.GetVersion())
 	}
-	if request.EndEventId == nil || request.EndEventVersion == nil {
+	if request.EndEventID == nil || request.EndEventVersion == nil {
 		// If end event is not set, get the events until the end event
 		// As the API is exclusive-exclusive, use end event id + 1 here
-		request.EndEventId = common.Int64Ptr(lastItem.GetEventID() + 1)
+		request.EndEventID = common.Int64Ptr(lastItem.GetEventID() + 1)
 		request.EndEventVersion = common.Int64Ptr(lastItem.GetVersion())
 	}
 
-	if request.GetStartEventId() < 0 {
-		return nil, &gen.BadRequestError{Message: "Invalid FirstEventID && NextEventID combination."}
+	if request.GetStartEventID() < 0 {
+		return nil, &types.BadRequestError{Message: "Invalid FirstEventID && NextEventID combination."}
 	}
 
 	// get branch based on the end event if end event is defined in the request
-	if request.GetEndEventId() == lastItem.GetEventID()+1 &&
+	if request.GetEndEventID() == lastItem.GetEventID()+1 &&
 		request.GetEndEventVersion() == lastItem.GetVersion() {
 		// this is a special case, target branch remains the same
 	} else {
-		endItem := persistence.NewVersionHistoryItem(request.GetEndEventId(), request.GetEndEventVersion())
+		endItem := persistence.NewVersionHistoryItem(request.GetEndEventID(), request.GetEndEventVersion())
 		idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(endItem)
 		if err != nil {
 			return nil, err
@@ -1054,10 +1124,10 @@ func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 		}
 	}
 
-	startItem := persistence.NewVersionHistoryItem(request.GetStartEventId(), request.GetStartEventVersion())
+	startItem := persistence.NewVersionHistoryItem(request.GetStartEventID(), request.GetStartEventVersion())
 	// If the request start event is defined. The start event may be on a different branch as current branch.
 	// We need to find the LCA of the start event and the current branch.
-	if request.GetStartEventId() == common.FirstEventID-1 &&
+	if request.GetStartEventID() == common.FirstEventID-1 &&
 		request.GetStartEventVersion() == firstItem.GetVersion() {
 		// this is a special case, start event is on the same branch as target branch
 	} else {
@@ -1074,7 +1144,7 @@ func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 			if err != nil {
 				return nil, err
 			}
-			request.StartEventId = common.Int64Ptr(startItem.GetEventID())
+			request.StartEventID = common.Int64Ptr(startItem.GetEventID())
 			request.StartEventVersion = common.Int64Ptr(startItem.GetVersion())
 		}
 	}
@@ -1083,38 +1153,38 @@ func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 }
 
 func (adh *adminHandlerImpl) generatePaginationToken(
-	request *admin.GetWorkflowExecutionRawHistoryV2Request,
+	request *types.GetWorkflowExecutionRawHistoryV2Request,
 	versionHistories *persistence.VersionHistories,
 ) *getWorkflowRawHistoryV2Token {
 
 	execution := request.Execution
 	return &getWorkflowRawHistoryV2Token{
 		DomainName:        request.GetDomain(),
-		WorkflowID:        execution.GetWorkflowId(),
-		RunID:             execution.GetRunId(),
-		StartEventID:      request.GetStartEventId(),
+		WorkflowID:        execution.GetWorkflowID(),
+		RunID:             execution.GetRunID(),
+		StartEventID:      request.GetStartEventID(),
 		StartEventVersion: request.GetStartEventVersion(),
-		EndEventID:        request.GetEndEventId(),
+		EndEventID:        request.GetEndEventID(),
 		EndEventVersion:   request.GetEndEventVersion(),
-		VersionHistories:  versionHistories.ToThrift(),
+		VersionHistories:  versionHistories.ToInternalType(),
 		PersistenceToken:  nil, // this is the initialized value
 	}
 }
 
 func (adh *adminHandlerImpl) validatePaginationToken(
-	request *admin.GetWorkflowExecutionRawHistoryV2Request,
+	request *types.GetWorkflowExecutionRawHistoryV2Request,
 	token *getWorkflowRawHistoryV2Token,
 ) error {
 
 	execution := request.Execution
 	if request.GetDomain() != token.DomainName ||
-		execution.GetWorkflowId() != token.WorkflowID ||
-		execution.GetRunId() != token.RunID ||
-		request.GetStartEventId() != token.StartEventID ||
+		execution.GetWorkflowID() != token.WorkflowID ||
+		execution.GetRunID() != token.RunID ||
+		request.GetStartEventID() != token.StartEventID ||
 		request.GetStartEventVersion() != token.StartEventVersion ||
-		request.GetEndEventId() != token.EndEventID ||
+		request.GetEndEventID() != token.EndEventID ||
 		request.GetEndEventVersion() != token.EndEventVersion {
-		return &gen.BadRequestError{Message: "Invalid pagination token."}
+		return &types.BadRequestError{Message: "Invalid pagination token."}
 	}
 	return nil
 }
@@ -1129,38 +1199,38 @@ func (adh *adminHandlerImpl) startRequestProfile(scope int) (metrics.Scope, metr
 
 func (adh *adminHandlerImpl) error(err error, scope metrics.Scope) error {
 	switch err.(type) {
-	case *gen.InternalServiceError:
+	case *types.InternalServiceError:
 		adh.GetLogger().Error("Internal service error", tag.Error(err))
 		scope.IncCounter(metrics.CadenceFailures)
 		return err
-	case *gen.BadRequestError:
+	case *types.BadRequestError:
 		scope.IncCounter(metrics.CadenceErrBadRequestCounter)
 		return err
-	case *gen.ServiceBusyError:
+	case *types.ServiceBusyError:
 		scope.IncCounter(metrics.CadenceErrServiceBusyCounter)
 		return err
-	case *gen.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		return err
 	default:
 		adh.GetLogger().Error("Uncategorized error", tag.Error(err))
 		scope.IncCounter(metrics.CadenceFailures)
-		return &gen.InternalServiceError{Message: err.Error()}
+		return &types.InternalServiceError{Message: err.Error()}
 	}
 }
 
-func convertIndexedValueTypeToESDataType(valueType gen.IndexedValueType) string {
+func convertIndexedValueTypeToESDataType(valueType types.IndexedValueType) string {
 	switch valueType {
-	case gen.IndexedValueTypeString:
+	case types.IndexedValueTypeString:
 		return "text"
-	case gen.IndexedValueTypeKeyword:
+	case types.IndexedValueTypeKeyword:
 		return "keyword"
-	case gen.IndexedValueTypeInt:
+	case types.IndexedValueTypeInt:
 		return "long"
-	case gen.IndexedValueTypeDouble:
+	case types.IndexedValueTypeDouble:
 		return "double"
-	case gen.IndexedValueTypeBool:
+	case types.IndexedValueTypeBool:
 		return "boolean"
-	case gen.IndexedValueTypeDatetime:
+	case types.IndexedValueTypeDatetime:
 		return "date"
 	default:
 		return ""
@@ -1180,4 +1250,152 @@ func deserializeRawHistoryToken(bytes []byte) (*getWorkflowRawHistoryV2Token, er
 	token := &getWorkflowRawHistoryV2Token{}
 	err := json.Unmarshal(bytes, token)
 	return token, err
+}
+
+func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *types.GetDynamicConfigRequest) (_ *types.GetDynamicConfigResponse, retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	scope, sw := adh.startRequestProfile(metrics.AdminGetDynamicConfigScope)
+	defer sw.Stop()
+
+	if request == nil || request.ConfigName == "" {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+
+	keyVal, err := checkValidKey(request.ConfigName)
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+
+	var value interface{}
+	if request.Filters == nil {
+		value, err = adh.params.DynamicConfig.GetValue(keyVal, nil)
+		if err != nil {
+			return nil, adh.error(err, scope)
+		}
+	} else {
+		convFilters, err := convertFilterListToMap(request.Filters)
+		if err != nil {
+			return nil, adh.error(err, scope)
+		}
+		value, err = adh.params.DynamicConfig.GetValueWithFilters(keyVal, convFilters, nil)
+	}
+
+	data, err := json.Marshal(value)
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+
+	return &types.GetDynamicConfigResponse{
+		Value: &types.DataBlob{
+			EncodingType: types.EncodingTypeJSON.Ptr(),
+			Data:         data,
+		},
+	}, nil
+}
+
+func (adh *adminHandlerImpl) UpdateDynamicConfig(ctx context.Context, request *types.UpdateDynamicConfigRequest) (retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	scope, sw := adh.startRequestProfile(metrics.AdminUpdateDynamicConfigScope)
+	defer sw.Stop()
+
+	if request == nil {
+		return adh.error(errRequestNotSet, scope)
+	}
+
+	keyVal, err := checkValidKey(request.ConfigName)
+	if err != nil {
+		return adh.error(err, scope)
+	}
+
+	return adh.params.DynamicConfig.UpdateValue(keyVal, request.ConfigValues)
+}
+
+func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *types.RestoreDynamicConfigRequest) (retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	scope, sw := adh.startRequestProfile(metrics.AdminRestoreDynamicConfigScope)
+	defer sw.Stop()
+
+	if request == nil || request.ConfigName == "" {
+		return adh.error(errRequestNotSet, scope)
+	}
+
+	keyVal, err := checkValidKey(request.ConfigName)
+	if err != nil {
+		return adh.error(err, scope)
+	}
+
+	var filters map[dc.Filter]interface{}
+
+	if request.Filters == nil {
+		filters = nil
+	} else {
+		filters, err = convertFilterListToMap(request.Filters)
+		if err != nil {
+			return adh.error(errInvalidFilters, scope)
+		}
+	}
+	return adh.params.DynamicConfig.RestoreValue(keyVal, filters)
+}
+
+func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest) (_ *types.ListDynamicConfigResponse, retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	scope, sw := adh.startRequestProfile(metrics.AdminListDynamicConfigScope)
+	defer sw.Stop()
+
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+
+	keyVal, err := checkValidKey(request.ConfigName)
+	if err != nil {
+		entries, err2 := adh.params.DynamicConfig.ListValue(dc.UnknownKey)
+		if err2 != nil {
+			return nil, adh.error(err2, scope)
+		}
+		return &types.ListDynamicConfigResponse{
+			Entries: entries,
+		}, nil
+	}
+
+	entries, err2 := adh.params.DynamicConfig.ListValue(keyVal)
+	if err2 != nil {
+		err = adh.error(err2, scope)
+		return nil, adh.error(err, scope)
+	}
+
+	return &types.ListDynamicConfigResponse{
+		Entries: entries,
+	}, nil
+}
+
+func checkValidKey(keyName string) (dynamicconfig.Key, error) {
+	keyVal, ok := dynamicconfig.KeyNames[keyName]
+	if !ok || keyVal == dynamicconfig.UnknownKey {
+		return dynamicconfig.UnknownKey, errors.New("invalid dynamic config parameter name")
+	}
+	return keyVal, nil
+}
+
+func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {
+	switch *blob.EncodingType {
+	case types.EncodingTypeJSON:
+		var v interface{}
+		err := json.Unmarshal(blob.Data, &v)
+		return v, err
+	default:
+		return nil, errors.New("unsupported blob encoding")
+	}
+}
+
+func convertFilterListToMap(filters []*types.DynamicConfigFilter) (map[dc.Filter]interface{}, error) {
+	newFilters := make(map[dc.Filter]interface{})
+
+	for _, filter := range filters {
+		val, err := convertFromDataBlob(filter.Value)
+		if err != nil {
+			return nil, err
+		}
+		newFilters[dc.ParseFilter(filter.Name)] = val
+	}
+	return newFilters, nil
 }

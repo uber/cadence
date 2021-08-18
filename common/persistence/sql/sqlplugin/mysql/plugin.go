@@ -34,10 +34,10 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
 
+	"github.com/uber/cadence/common/config"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
-	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/environment"
 )
 
@@ -169,7 +169,11 @@ func registerTLSConfig(cfg *config.SQL) error {
 	// If no `tls` connect attribute is provided then we override it to our newly registered tls config automatically.
 	// This allows users to simply provide a tls config without needing to remember to also set the connect attribute
 	if cfg.ConnectAttributes["tls"] == "" {
-		cfg.ConnectAttributes["tls"] = customTLSName
+		if cfg.TLS.SSLMode != "" {
+			cfg.ConnectAttributes["tls"] = cfg.TLS.SSLMode
+		} else {
+			cfg.ConnectAttributes["tls"] = customTLSName
+		}
 	}
 
 	return nil
@@ -244,12 +248,12 @@ const (
 // GetTestClusterOption return test options
 func GetTestClusterOption() *pt.TestBaseOptions {
 	return &pt.TestBaseOptions{
-		SQLDBPluginName: PluginName,
-		DBUsername:      testUser,
-		DBPassword:      testPassword,
-		DBHost:          environment.GetMySQLAddress(),
-		DBPort:          environment.GetMySQLPort(),
-		SchemaDir:       testSchemaDir,
-		StoreType:       config.StoreTypeSQL,
+		DBPluginName: PluginName,
+		DBUsername:   testUser,
+		DBPassword:   testPassword,
+		DBHost:       environment.GetMySQLAddress(),
+		DBPort:       environment.GetMySQLPort(),
+		SchemaDir:    testSchemaDir,
+		StoreType:    config.StoreTypeSQL,
 	}
 }

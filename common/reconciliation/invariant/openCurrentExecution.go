@@ -26,9 +26,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -89,7 +89,7 @@ func (o *openCurrentExecution) Check(
 	}
 	if currentExecErr != nil {
 		switch currentExecErr.(type) {
-		case *shared.EntityNotExistsError:
+		case *types.EntityNotExistsError:
 			return CheckResult{
 				CheckResultType: CheckResultTypeCorrupted,
 				InvariantName:   o.Name(),
@@ -150,15 +150,15 @@ func ExecutionStillOpen(
 ) (bool, error) {
 	req := &persistence.GetWorkflowExecutionRequest{
 		DomainID: exec.DomainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: &exec.WorkflowID,
-			RunId:      &exec.RunID,
+		Execution: types.WorkflowExecution{
+			WorkflowID: exec.WorkflowID,
+			RunID:      exec.RunID,
 		},
 	}
 	resp, err := pr.GetWorkflowExecution(ctx, req)
 	if err != nil {
 		switch err.(type) {
-		case *shared.EntityNotExistsError:
+		case *types.EntityNotExistsError:
 			return false, nil
 		default:
 			return false, err

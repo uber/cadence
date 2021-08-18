@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,14 +25,13 @@ package replication
 import (
 	"context"
 
-	"github.com/uber/cadence/.gen/go/history"
-	r "github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/ndc"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -40,7 +39,7 @@ import (
 type (
 	// TaskExecutor is the executor for replication task
 	TaskExecutor interface {
-		execute(replicationTask *r.ReplicationTask, forceApply bool) (int, error)
+		execute(replicationTask *types.ReplicationTask, forceApply bool) (int, error)
 	}
 
 	taskExecutorImpl struct {
@@ -79,20 +78,20 @@ func NewTaskExecutor(
 }
 
 func (e *taskExecutorImpl) execute(
-	replicationTask *r.ReplicationTask,
+	replicationTask *types.ReplicationTask,
 	forceApply bool,
 ) (int, error) {
 
 	var err error
 	var scope int
 	switch replicationTask.GetTaskType() {
-	case r.ReplicationTaskTypeSyncActivity:
+	case types.ReplicationTaskTypeSyncActivity:
 		scope = metrics.SyncActivityTaskScope
 		err = e.handleActivityTask(replicationTask, forceApply)
-	case r.ReplicationTaskTypeHistoryV2:
+	case types.ReplicationTaskTypeHistoryV2:
 		scope = metrics.HistoryReplicationV2TaskScope
 		err = e.handleHistoryReplicationTaskV2(replicationTask, forceApply)
-	case r.ReplicationTaskTypeFailoverMarker:
+	case types.ReplicationTaskTypeFailoverMarker:
 		scope = metrics.FailoverMarkerScope
 		err = e.handleFailoverReplicationTask(replicationTask)
 	default:
@@ -105,37 +104,51 @@ func (e *taskExecutorImpl) execute(
 }
 
 func (e *taskExecutorImpl) handleActivityTask(
-	task *r.ReplicationTask,
+	task *types.ReplicationTask,
 	forceApply bool,
 ) error {
 
 	attr := task.SyncActivityTaskAttributes
-	doContinue, err := e.filterTask(attr.GetDomainId(), forceApply)
+	doContinue, err := e.filterTask(attr.GetDomainID(), forceApply)
 	if err != nil || !doContinue {
 		return err
 	}
 
 	replicationStopWatch := e.metricsClient.StartTimer(metrics.SyncActivityTaskScope, metrics.CadenceLatency)
 	defer replicationStopWatch.Stop()
-	request := &history.SyncActivityRequest{
-		DomainId:           attr.DomainId,
-		WorkflowId:         attr.WorkflowId,
-		RunId:              attr.RunId,
+	request := &types.SyncActivityRequest{
+		DomainID:           attr.DomainID,
+		WorkflowID:         attr.WorkflowID,
+		RunID:              attr.RunID,
 		Version:            attr.Version,
-		ScheduledId:        attr.ScheduledId,
+		ScheduledID:        attr.ScheduledID,
 		ScheduledTime:      attr.ScheduledTime,
-		StartedId:          attr.StartedId,
+		StartedID:          attr.StartedID,
 		StartedTime:        attr.StartedTime,
 		LastHeartbeatTime:  attr.LastHeartbeatTime,
 		Details:            attr.Details,
 		Attempt:            attr.Attempt,
 		LastFailureReason:  attr.LastFailureReason,
+		LastFailureDetails: attr.LastFailureDetails,
 		LastWorkerIdentity: attr.LastWorkerIdentity,
 		VersionHistory:     attr.GetVersionHistory(),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
-	err = e.historyEngine.SyncActivity(ctx, request)
+
+	var syncActivityAction func() error
+	// Check if the number of shards between clusters are equal. If not, redirect the request.
+	if e.shard.GetShardID() != common.WorkflowIDToHistoryShard(attr.WorkflowID, e.shard.GetConfig().NumberOfShards) {
+		syncActivityAction = func() error {
+			return e.shard.GetService().GetClientBean().GetHistoryClient().SyncActivity(ctx, request)
+		}
+	} else {
+		syncActivityAction = func() error {
+			return e.historyEngine.SyncActivity(ctx, request)
+		}
+	}
+
+	err = syncActivityAction()
 	// Handle resend error
 	if retryErr, ok := e.convertRetryTaskV2Error(err); ok {
 		e.metricsClient.IncCounter(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientRequests)
@@ -143,12 +156,12 @@ func (e *taskExecutorImpl) handleActivityTask(
 		defer stopwatch.Stop()
 
 		resendErr := e.historyResender.SendSingleWorkflowHistory(
-			retryErr.GetDomainId(),
-			retryErr.GetWorkflowId(),
-			retryErr.GetRunId(),
-			retryErr.StartEventId,
+			retryErr.GetDomainID(),
+			retryErr.GetWorkflowID(),
+			retryErr.GetRunID(),
+			retryErr.StartEventID,
 			retryErr.StartEventVersion,
-			retryErr.EndEventId,
+			retryErr.EndEventID,
 			retryErr.EndEventVersion,
 		)
 		switch {
@@ -157,17 +170,17 @@ func (e *taskExecutorImpl) handleActivityTask(
 		case resendErr == ndc.ErrSkipTask:
 			e.logger.Error(
 				"skip replication sync activity task",
-				tag.WorkflowDomainID(retryErr.GetDomainId()),
-				tag.WorkflowID(retryErr.GetWorkflowId()),
-				tag.WorkflowRunID(retryErr.GetRunId()),
+				tag.WorkflowDomainID(retryErr.GetDomainID()),
+				tag.WorkflowID(retryErr.GetWorkflowID()),
+				tag.WorkflowRunID(retryErr.GetRunID()),
 			)
 			return nil
 		default:
 			e.logger.Error(
 				"error resend history for sync activity",
-				tag.WorkflowDomainID(retryErr.GetDomainId()),
-				tag.WorkflowID(retryErr.GetWorkflowId()),
-				tag.WorkflowRunID(retryErr.GetRunId()),
+				tag.WorkflowDomainID(retryErr.GetDomainID()),
+				tag.WorkflowID(retryErr.GetWorkflowID()),
+				tag.WorkflowRunID(retryErr.GetRunID()),
 				tag.Error(resendErr),
 			)
 			// should return the replication error, not the resending error
@@ -175,27 +188,27 @@ func (e *taskExecutorImpl) handleActivityTask(
 		}
 	}
 	// should try again after back fill the history
-	return e.historyEngine.SyncActivity(ctx, request)
+	return syncActivityAction()
 }
 
 func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
-	task *r.ReplicationTask,
+	task *types.ReplicationTask,
 	forceApply bool,
 ) error {
 
 	attr := task.HistoryTaskV2Attributes
-	doContinue, err := e.filterTask(attr.GetDomainId(), forceApply)
+	doContinue, err := e.filterTask(attr.GetDomainID(), forceApply)
 	if err != nil || !doContinue {
 		return err
 	}
 
 	replicationStopWatch := e.metricsClient.StartTimer(metrics.HistoryReplicationV2TaskScope, metrics.CadenceLatency)
 	defer replicationStopWatch.Stop()
-	request := &history.ReplicateEventsV2Request{
-		DomainUUID: attr.DomainId,
-		WorkflowExecution: &shared.WorkflowExecution{
-			WorkflowId: attr.WorkflowId,
-			RunId:      attr.RunId,
+	request := &types.ReplicateEventsV2Request{
+		DomainUUID: attr.DomainID,
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: attr.WorkflowID,
+			RunID:      attr.RunID,
 		},
 		VersionHistoryItems: attr.VersionHistoryItems,
 		Events:              attr.Events,
@@ -205,7 +218,19 @@ func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
 
-	err = e.historyEngine.ReplicateEventsV2(ctx, request)
+	var historyReplicationAction func() error
+	// Check if the number of shards between clusters are equal. If not, redirect the request.
+	if e.shard.GetShardID() != common.WorkflowIDToHistoryShard(attr.WorkflowID, e.shard.GetConfig().NumberOfShards) {
+		historyReplicationAction = func() error {
+			return e.shard.GetService().GetClientBean().GetHistoryClient().ReplicateEventsV2(ctx, request)
+		}
+	} else {
+		historyReplicationAction = func() error {
+			return e.historyEngine.ReplicateEventsV2(ctx, request)
+		}
+	}
+
+	err = historyReplicationAction()
 	retryErr, ok := e.convertRetryTaskV2Error(err)
 	if !ok {
 		return err
@@ -215,12 +240,12 @@ func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
 	defer resendStopWatch.Stop()
 
 	resendErr := e.historyResender.SendSingleWorkflowHistory(
-		retryErr.GetDomainId(),
-		retryErr.GetWorkflowId(),
-		retryErr.GetRunId(),
-		retryErr.StartEventId,
+		retryErr.GetDomainID(),
+		retryErr.GetWorkflowID(),
+		retryErr.GetRunID(),
+		retryErr.StartEventID,
 		retryErr.StartEventVersion,
-		retryErr.EndEventId,
+		retryErr.EndEventID,
 		retryErr.EndEventVersion,
 	)
 	switch {
@@ -229,28 +254,28 @@ func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
 	case resendErr == ndc.ErrSkipTask:
 		e.logger.Error(
 			"skip replication history task",
-			tag.WorkflowDomainID(retryErr.GetDomainId()),
-			tag.WorkflowID(retryErr.GetWorkflowId()),
-			tag.WorkflowRunID(retryErr.GetRunId()),
+			tag.WorkflowDomainID(retryErr.GetDomainID()),
+			tag.WorkflowID(retryErr.GetWorkflowID()),
+			tag.WorkflowRunID(retryErr.GetRunID()),
 		)
 		return nil
 	default:
 		e.logger.Error(
 			"error resend history for history event v2",
-			tag.WorkflowDomainID(retryErr.GetDomainId()),
-			tag.WorkflowID(retryErr.GetWorkflowId()),
-			tag.WorkflowRunID(retryErr.GetRunId()),
+			tag.WorkflowDomainID(retryErr.GetDomainID()),
+			tag.WorkflowID(retryErr.GetWorkflowID()),
+			tag.WorkflowRunID(retryErr.GetRunID()),
 			tag.Error(resendErr),
 		)
 		// should return the replication error, not the resending error
 		return err
 	}
 
-	return e.historyEngine.ReplicateEventsV2(ctx, request)
+	return historyReplicationAction()
 }
 
 func (e *taskExecutorImpl) handleFailoverReplicationTask(
-	task *r.ReplicationTask,
+	task *types.ReplicationTask,
 ) error {
 	failoverAttributes := task.GetFailoverMarkerAttributes()
 	failoverAttributes.CreationTime = task.CreationTime
@@ -284,8 +309,8 @@ FilterLoop:
 
 func (e *taskExecutorImpl) convertRetryTaskV2Error(
 	err error,
-) (*shared.RetryTaskV2Error, bool) {
+) (*types.RetryTaskV2Error, bool) {
 
-	retError, ok := err.(*shared.RetryTaskV2Error)
+	retError, ok := err.(*types.RetryTaskV2Error)
 	return retError, ok
 }

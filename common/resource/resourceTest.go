@@ -27,10 +27,6 @@ import (
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	publicservicetest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
 
-	"github.com/uber/cadence/.gen/go/admin/adminservicetest"
-	"github.com/uber/cadence/.gen/go/cadence/workflowservicetest"
-	"github.com/uber/cadence/.gen/go/history/historyservicetest"
-	"github.com/uber/cadence/.gen/go/matching/matchingservicetest"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
@@ -43,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/membership"
@@ -59,13 +56,14 @@ import (
 type (
 	// Test is the test implementation used for testing
 	Test struct {
-		MetricsScope    tally.Scope
+		MetricsScope    tally.TestScope
 		ClusterMetadata *cluster.MockMetadata
 
 		// other common resources
 
 		DomainCache             *cache.MockDomainCache
 		DomainMetricsScopeCache cache.DomainMetricsScopeCache
+		DomainReplicationQueue  *domain.MockReplicationQueue
 		TimeSource              clock.TimeSource
 		PayloadSerializer       persistence.PayloadSerializer
 		MetricsClient           metrics.Client
@@ -84,23 +82,22 @@ type (
 		// internal services clients
 
 		SDKClient            *publicservicetest.MockClient
-		FrontendClient       *workflowservicetest.MockClient
-		MatchingClient       *matchingservicetest.MockClient
-		HistoryClient        *historyservicetest.MockClient
-		RemoteAdminClient    *adminservicetest.MockClient
-		RemoteFrontendClient *workflowservicetest.MockClient
+		FrontendClient       *frontend.MockClient
+		MatchingClient       *matching.MockClient
+		HistoryClient        *history.MockClient
+		RemoteAdminClient    *admin.MockClient
+		RemoteFrontendClient *frontend.MockClient
 		ClientBean           *client.MockBean
 
 		// persistence clients
 
-		MetadataMgr            *mocks.MetadataManager
-		TaskMgr                *mocks.TaskManager
-		VisibilityMgr          *mocks.VisibilityManager
-		DomainReplicationQueue persistence.DomainReplicationQueue
-		ShardMgr               *mocks.ShardManager
-		HistoryMgr             *mocks.HistoryV2Manager
-		ExecutionMgr           *mocks.ExecutionManager
-		PersistenceBean        *persistenceClient.MockBean
+		MetadataMgr     *mocks.MetadataManager
+		TaskMgr         *mocks.TaskManager
+		VisibilityMgr   *mocks.VisibilityManager
+		ShardMgr        *mocks.ShardManager
+		HistoryMgr      *mocks.HistoryV2Manager
+		ExecutionMgr    *mocks.ExecutionManager
+		PersistenceBean *persistenceClient.MockBean
 
 		Logger log.Logger
 	}
@@ -128,11 +125,11 @@ func NewTest(
 	}
 	logger := loggerimpl.NewLogger(zapLogger)
 
-	frontendClient := workflowservicetest.NewMockClient(controller)
-	matchingClient := matchingservicetest.NewMockClient(controller)
-	historyClient := historyservicetest.NewMockClient(controller)
-	remoteFrontendClient := workflowservicetest.NewMockClient(controller)
-	remoteAdminClient := adminservicetest.NewMockClient(controller)
+	frontendClient := frontend.NewMockClient(controller)
+	matchingClient := matching.NewMockClient(controller)
+	historyClient := history.NewMockClient(controller)
+	remoteAdminClient := admin.NewMockClient(controller)
+	remoteFrontendClient := frontend.NewMockClient(controller)
 	clientBean := client.NewMockBean(controller)
 	clientBean.EXPECT().GetFrontendClient().Return(frontendClient).AnyTimes()
 	clientBean.EXPECT().GetMatchingClient(gomock.Any()).Return(matchingClient, nil).AnyTimes()
@@ -146,17 +143,16 @@ func NewTest(
 	shardMgr := &mocks.ShardManager{}
 	historyMgr := &mocks.HistoryV2Manager{}
 	executionMgr := &mocks.ExecutionManager{}
-	domainReplicationQueue := persistence.NewMockDomainReplicationQueue(controller)
+	domainReplicationQueue := domain.NewMockReplicationQueue(controller)
 	domainReplicationQueue.EXPECT().Start().AnyTimes()
 	domainReplicationQueue.EXPECT().Stop().AnyTimes()
 	persistenceBean := persistenceClient.NewMockBean(controller)
-	persistenceBean.EXPECT().GetMetadataManager().Return(metadataMgr).AnyTimes()
+	persistenceBean.EXPECT().GetDomainManager().Return(metadataMgr).AnyTimes()
 	persistenceBean.EXPECT().GetTaskManager().Return(taskMgr).AnyTimes()
 	persistenceBean.EXPECT().GetVisibilityManager().Return(visibilityMgr).AnyTimes()
 	persistenceBean.EXPECT().GetHistoryManager().Return(historyMgr).AnyTimes()
 	persistenceBean.EXPECT().GetShardManager().Return(shardMgr).AnyTimes()
 	persistenceBean.EXPECT().GetExecutionManager(gomock.Any()).Return(executionMgr, nil).AnyTimes()
-	persistenceBean.EXPECT().GetDomainReplicationQueue().Return(domainReplicationQueue).AnyTimes()
 
 	membershipMonitor := membership.NewMockMonitor(controller)
 	frontendServiceResolver := membership.NewMockServiceResolver(controller)
@@ -178,6 +174,7 @@ func NewTest(
 
 		DomainCache:             cache.NewMockDomainCache(controller),
 		DomainMetricsScopeCache: cache.NewDomainMetricsScopeCache(),
+		DomainReplicationQueue:  domainReplicationQueue,
 		TimeSource:              clock.NewRealTimeSource(),
 		PayloadSerializer:       persistence.NewPayloadSerializer(),
 		MetricsClient:           metrics.NewClient(scope, serviceMetricsIndex),
@@ -205,14 +202,13 @@ func NewTest(
 
 		// persistence clients
 
-		MetadataMgr:            metadataMgr,
-		TaskMgr:                taskMgr,
-		VisibilityMgr:          visibilityMgr,
-		DomainReplicationQueue: domainReplicationQueue,
-		ShardMgr:               shardMgr,
-		HistoryMgr:             historyMgr,
-		ExecutionMgr:           executionMgr,
-		PersistenceBean:        persistenceBean,
+		MetadataMgr:     metadataMgr,
+		TaskMgr:         taskMgr,
+		VisibilityMgr:   visibilityMgr,
+		ShardMgr:        shardMgr,
+		HistoryMgr:      historyMgr,
+		ExecutionMgr:    executionMgr,
+		PersistenceBean: persistenceBean,
 
 		// logger
 
@@ -262,6 +258,12 @@ func (s *Test) GetDomainCache() cache.DomainCache {
 // GetDomainMetricsScopeCache for testing
 func (s *Test) GetDomainMetricsScopeCache() cache.DomainMetricsScopeCache {
 	return s.DomainMetricsScopeCache
+}
+
+// GetDomainReplicationQueue for testing
+func (s *Test) GetDomainReplicationQueue() domain.ReplicationQueue {
+	// user should implement this method for test
+	return s.DomainReplicationQueue
 }
 
 // GetTimeSource for testing
@@ -387,7 +389,7 @@ func (s *Test) GetClientBean() client.Bean {
 // persistence clients
 
 // GetMetadataManager for testing
-func (s *Test) GetMetadataManager() persistence.MetadataManager {
+func (s *Test) GetDomainManager() persistence.DomainManager {
 	return s.MetadataMgr
 }
 
@@ -399,12 +401,6 @@ func (s *Test) GetTaskManager() persistence.TaskManager {
 // GetVisibilityManager for testing
 func (s *Test) GetVisibilityManager() persistence.VisibilityManager {
 	return s.VisibilityMgr
-}
-
-// GetDomainReplicationQueue for testing
-func (s *Test) GetDomainReplicationQueue() persistence.DomainReplicationQueue {
-	// user should implement this method for test
-	return s.DomainReplicationQueue
 }
 
 // GetShardManager for testing

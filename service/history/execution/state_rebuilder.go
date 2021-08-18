@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -37,6 +36,8 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -88,6 +89,7 @@ func NewStateRebuilder(
 		historyV2Mgr:    shard.GetHistoryManager(),
 		taskRefresher: NewMutableStateTaskRefresher(
 			shard.GetConfig(),
+			shard.GetClusterMetadata(),
 			shard.GetDomainCache(),
 			shard.GetEventsCache(),
 			logger,
@@ -128,7 +130,7 @@ func (r *stateRebuilderImpl) Rebuild(
 	if err != nil {
 		return nil, 0, err
 	}
-	firstEventBatch := batch.(*shared.History).Events
+	firstEventBatch := batch.(*types.History).Events
 	rebuiltMutableState, stateBuilder := r.initializeBuilders(
 		domainEntry,
 	)
@@ -141,7 +143,7 @@ func (r *stateRebuilderImpl) Rebuild(
 		if err != nil {
 			return nil, 0, err
 		}
-		events := batch.(*shared.History).Events
+		events := batch.(*types.History).Events
 		if err := r.applyEvents(targetWorkflowIdentifier, stateBuilder, events, requestID); err != nil {
 			return nil, 0, err
 		}
@@ -150,23 +152,30 @@ func (r *stateRebuilderImpl) Rebuild(
 	if err := rebuiltMutableState.SetCurrentBranchToken(targetBranchToken); err != nil {
 		return nil, 0, err
 	}
-	currentVersionHistory, err := rebuiltMutableState.GetVersionHistories().GetCurrentVersionHistory()
-	if err != nil {
-		return nil, 0, err
-	}
-	lastItem, err := currentVersionHistory.GetLastItem()
-	if err != nil {
-		return nil, 0, err
-	}
-	if !lastItem.Equals(persistence.NewVersionHistoryItem(
-		baseLastEventID,
-		baseLastEventVersion,
-	)) {
-		return nil, 0, &shared.InternalServiceError{Message: fmt.Sprintf(
-			"nDCStateRebuilder unable to rebuild mutable state to event ID: %v, version: %v",
+	rebuildVersionHistories := rebuiltMutableState.GetVersionHistories()
+	if rebuildVersionHistories != nil {
+		currentVersionHistory, err := rebuildVersionHistories.GetCurrentVersionHistory()
+		if err != nil {
+			return nil, 0, err
+		}
+		lastItem, err := currentVersionHistory.GetLastItem()
+		if err != nil {
+			return nil, 0, err
+		}
+		if !lastItem.Equals(persistence.NewVersionHistoryItem(
 			baseLastEventID,
 			baseLastEventVersion,
-		)}
+		)) {
+			return nil, 0, &types.BadRequestError{Message: fmt.Sprintf(
+				"nDCStateRebuilder unable to rebuild mutable state to event ID: %v, version: %v, "+
+					"baseLastEventID + baseLastEventVersion is not the same as the last event of the last "+
+					"batch, event ID: %v, version :%v ,typicaly because of attemptting to rebuild to a middle of a batch",
+				baseLastEventID,
+				baseLastEventVersion,
+				lastItem.EventID,
+				lastItem.Version,
+			)}
+		}
 	}
 
 	// close rebuilt mutable state transaction clearing all generated tasks, etc.
@@ -198,7 +207,7 @@ func (r *stateRebuilderImpl) initializeBuilders(
 		r.logger,
 		resetMutableStateBuilder,
 		func(mutableState MutableState) MutableStateTaskGenerator {
-			return NewMutableStateTaskGenerator(r.shard.GetDomainCache(), r.logger, mutableState)
+			return NewMutableStateTaskGenerator(r.shard.GetClusterMetadata(), r.shard.GetDomainCache(), r.logger, mutableState)
 		},
 	)
 	return resetMutableStateBuilder, stateBuilder
@@ -207,16 +216,16 @@ func (r *stateRebuilderImpl) initializeBuilders(
 func (r *stateRebuilderImpl) applyEvents(
 	workflowIdentifier definition.WorkflowIdentifier,
 	stateBuilder StateBuilder,
-	events []*shared.HistoryEvent,
+	events []*types.HistoryEvent,
 	requestID string,
 ) error {
 
 	_, err := stateBuilder.ApplyEvents(
 		workflowIdentifier.DomainID,
 		requestID,
-		shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowIdentifier.WorkflowID),
-			RunId:      common.StringPtr(workflowIdentifier.RunID),
+		types.WorkflowExecution{
+			WorkflowID: workflowIdentifier.WorkflowID,
+			RunID:      workflowIdentifier.RunID,
 		},
 		events,
 		nil, // no new run history when rebuilding mutable state
@@ -238,7 +247,7 @@ func (r *stateRebuilderImpl) getPaginationFn(
 
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 
-		_, historyBatches, token, size, err := persistence.PaginateHistory(
+		_, historyBatches, token, size, err := persistenceutils.PaginateHistory(
 			ctx,
 			r.historyV2Mgr,
 			true,

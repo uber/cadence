@@ -25,11 +25,11 @@ package query
 import (
 	"sync"
 
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 var (
-	errQueryNotExists = &shared.InternalServiceError{Message: "query does not exist"}
+	errQueryNotExists = &types.InternalServiceError{Message: "query does not exist"}
 )
 
 type (
@@ -45,10 +45,10 @@ type (
 		GetFailedIDs() []string
 
 		GetQueryTermCh(string) (<-chan struct{}, error)
-		GetQueryInput(string) (*shared.WorkflowQuery, error)
+		GetQueryInput(string) (*types.WorkflowQuery, error)
 		GetTerminationState(string) (*TerminationState, error)
 
-		BufferQuery(queryInput *shared.WorkflowQuery) (string, <-chan struct{})
+		BufferQuery(queryInput *types.WorkflowQuery) (string, <-chan struct{})
 		SetTerminationState(string, *TerminationState) error
 		RemoveQuery(id string)
 	}
@@ -131,7 +131,7 @@ func (r *registryImpl) GetQueryTermCh(id string) (<-chan struct{}, error) {
 	return q.getQueryTermCh(), nil
 }
 
-func (r *registryImpl) GetQueryInput(id string) (*shared.WorkflowQuery, error) {
+func (r *registryImpl) GetQueryInput(id string) (*types.WorkflowQuery, error) {
 	r.RLock()
 	defer r.RUnlock()
 	q, err := r.getQueryNoLock(id)
@@ -151,7 +151,7 @@ func (r *registryImpl) GetTerminationState(id string) (*TerminationState, error)
 	return q.getTerminationState()
 }
 
-func (r *registryImpl) BufferQuery(queryInput *shared.WorkflowQuery) (string, <-chan struct{}) {
+func (r *registryImpl) BufferQuery(queryInput *types.WorkflowQuery) (string, <-chan struct{}) {
 	r.Lock()
 	defer r.Unlock()
 	q := newQuery(queryInput)

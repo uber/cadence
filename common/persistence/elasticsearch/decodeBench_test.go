@@ -45,9 +45,10 @@ var (
          "StartTime": 1547596872371000000,
          "WorkflowID": "6bfbc1e5-6ce4-4e22-bbfb-e0faa9a7a604-1-2256",
          "WorkflowType": "TestWorkflowExecute",
- 		 "Encoding" : "thriftrw",
+         "Encoding" : "thriftrw",
          "TaskList" : "taskList",
- 	     "Memo" : "WQ0ACgsLAAAAAwAAAAJrMgAAAAkidmFuY2V4dSIAAAACazMAAAADMTIzAAAAAmsxAAAAUXsia2V5MSI6MTIzNDMyMSwia2V5MiI6ImEgc3RyaW5nIGlzIHZlcnkgbG9uZyIsIm1hcCI6eyJtS2V5IjoxMjM0MywiYXNkIjoiYXNkZiJ9fQA="}`)
+         "IsCron" : "false",
+         "Memo" : "WQ0ACgsLAAAAAwAAAAJrMgAAAAkidmFuY2V4dSIAAAACazMAAAADMTIzAAAAAmsxAAAAUXsia2V5MSI6MTIzNDMyMSwia2V5MiI6ImEgc3RyaW5nIGlzIHZlcnkgbG9uZyIsIm1hcCI6eyJtS2V5IjoxMjM0MywiYXNkIjoiYXNkZiJ9fQA="}`)
 )
 
 /*
@@ -58,19 +59,18 @@ BenchmarkJSONDecodeToMap-8        100000             12878 ns/op
 //nolint
 func BenchmarkJSONDecodeToType(b *testing.B) {
 	bytes := (*json.RawMessage)(&data)
-	serializer := p.NewPayloadSerializer()
 	for i := 0; i < b.N; i++ {
 		var source *es.VisibilityRecord
 		json.Unmarshal(*bytes, &source)
-		memo, _ := serializer.DeserializeVisibilityMemo(p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)))
 		record := &p.InternalVisibilityWorkflowExecutionInfo{
 			WorkflowID:    source.WorkflowID,
 			RunID:         source.RunID,
 			TypeName:      source.WorkflowType,
 			StartTime:     time.Unix(0, source.StartTime),
 			ExecutionTime: time.Unix(0, source.ExecutionTime),
-			Memo:          thrift.ToMemo(memo),
+			Memo:          p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
 			TaskList:      source.TaskList,
+			IsCron:        source.IsCron,
 		}
 		record.CloseTime = time.Unix(0, source.CloseTime)
 		record.Status = thrift.ToWorkflowExecutionCloseStatus(&source.CloseStatus)
@@ -80,7 +80,6 @@ func BenchmarkJSONDecodeToType(b *testing.B) {
 
 //nolint
 func BenchmarkJSONDecodeToMap(b *testing.B) {
-	serializer := p.NewPayloadSerializer()
 	for i := 0; i < b.N; i++ {
 		var source map[string]interface{}
 		d := json.NewDecoder(bytes.NewReader(data))
@@ -93,7 +92,6 @@ func BenchmarkJSONDecodeToMap(b *testing.B) {
 		closeStatus, _ := source[definition.CloseStatus].(json.Number).Int64()
 		historyLen, _ := source[definition.HistoryLength].(json.Number).Int64()
 
-		memo, _ := serializer.DeserializeVisibilityMemo(p.NewDataBlob([]byte(source[definition.Memo].(string)), common.EncodingType(source[definition.Encoding].(string))))
 		record := &p.InternalVisibilityWorkflowExecutionInfo{
 			WorkflowID:    source[definition.WorkflowID].(string),
 			RunID:         source[definition.RunID].(string),
@@ -101,7 +99,8 @@ func BenchmarkJSONDecodeToMap(b *testing.B) {
 			StartTime:     time.Unix(0, startTime),
 			ExecutionTime: time.Unix(0, executionTime),
 			TaskList:      source[definition.TaskList].(string),
-			Memo:          thrift.ToMemo(memo),
+			IsCron:        source[definition.IsCron].(bool),
+			Memo:          p.NewDataBlob([]byte(source[definition.Memo].(string)), common.EncodingType(source[definition.Encoding].(string))),
 		}
 		record.CloseTime = time.Unix(0, closeTime)
 		status := (shared.WorkflowExecutionCloseStatus)(int32(closeStatus))

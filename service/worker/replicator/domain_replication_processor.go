@@ -28,10 +28,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.uber.org/cadence/.gen/go/shared"
-
-	"github.com/uber/cadence/.gen/go/replicator"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -40,7 +36,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -53,13 +49,14 @@ const (
 
 func newDomainReplicationProcessor(
 	sourceCluster string,
+	currentCluster string,
 	logger log.Logger,
 	remotePeer admin.Client,
 	metricsClient metrics.Client,
 	taskExecutor domain.ReplicationTaskExecutor,
 	hostInfo *membership.HostInfo,
 	serviceResolver membership.ServiceResolver,
-	domainReplicationQueue persistence.DomainReplicationQueue,
+	domainReplicationQueue domain.ReplicationQueue,
 	replicationMaxRetry time.Duration,
 ) *domainReplicationProcessor {
 	retryPolicy := backoff.NewExponentialRetryPolicy(taskProcessorErrorRetryWait)
@@ -71,6 +68,7 @@ func newDomainReplicationProcessor(
 		serviceResolver:        serviceResolver,
 		status:                 common.DaemonStatusInitialized,
 		sourceCluster:          sourceCluster,
+		currentCluster:         currentCluster,
 		logger:                 logger,
 		remotePeer:             remotePeer,
 		taskExecutor:           taskExecutor,
@@ -89,6 +87,7 @@ type (
 		serviceResolver        membership.ServiceResolver
 		status                 int32
 		sourceCluster          string
+		currentCluster         string
 		logger                 log.Logger
 		remotePeer             admin.Client
 		taskExecutor           domain.ReplicationTaskExecutor
@@ -97,7 +96,7 @@ type (
 		lastProcessedMessageID int64
 		lastRetrievedMessageID int64
 		done                   chan struct{}
-		domainReplicationQueue persistence.DomainReplicationQueue
+		domainReplicationQueue domain.ReplicationQueue
 	}
 )
 
@@ -142,9 +141,10 @@ func (p *domainReplicationProcessor) fetchDomainReplicationTasks() {
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), fetchTaskRequestTimeout)
-	request := &replicator.GetDomainReplicationMessagesRequest{
-		LastRetrievedMessageId: common.Int64Ptr(p.lastRetrievedMessageID),
-		LastProcessedMessageId: common.Int64Ptr(p.lastProcessedMessageID),
+	request := &types.GetDomainReplicationMessagesRequest{
+		LastRetrievedMessageID: common.Int64Ptr(p.lastRetrievedMessageID),
+		LastProcessedMessageID: common.Int64Ptr(p.lastProcessedMessageID),
+		ClusterName:            p.currentCluster,
 	}
 	response, err := p.remotePeer.GetDomainReplicationMessages(ctx, request)
 	defer cancel()
@@ -176,17 +176,17 @@ func (p *domainReplicationProcessor) fetchDomainReplicationTasks() {
 		}
 	}
 
-	p.lastProcessedMessageID = response.Messages.GetLastRetrievedMessageId()
-	p.lastRetrievedMessageID = response.Messages.GetLastRetrievedMessageId()
+	p.lastProcessedMessageID = response.Messages.GetLastRetrievedMessageID()
+	p.lastRetrievedMessageID = response.Messages.GetLastRetrievedMessageID()
 }
 
 func (p *domainReplicationProcessor) putDomainReplicationTaskToDLQ(
-	task *replicator.ReplicationTask,
+	task *types.ReplicationTask,
 ) error {
 
 	domainAttribute := task.GetDomainTaskAttributes()
 	if domainAttribute == nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: "Domain replication task does not set domain task attribute",
 		}
 	}
@@ -198,7 +198,7 @@ func (p *domainReplicationProcessor) putDomainReplicationTaskToDLQ(
 }
 
 func (p *domainReplicationProcessor) handleDomainReplicationTask(
-	task *replicator.ReplicationTask,
+	task *types.ReplicationTask,
 ) error {
 	p.metricsClient.IncCounter(metrics.DomainReplicationTaskScope, metrics.ReplicatorMessages)
 	sw := p.metricsClient.StartTimer(metrics.DomainReplicationTaskScope, metrics.ReplicatorLatency)
@@ -221,7 +221,7 @@ func getWaitDuration() time.Duration {
 
 func isTransientRetryableError(err error) bool {
 	switch err.(type) {
-	case *shared.BadRequestError:
+	case *types.BadRequestError:
 		return false
 	default:
 		return true

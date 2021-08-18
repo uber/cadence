@@ -27,12 +27,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/admin/adminservicetest"
-	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 )
 
@@ -44,7 +43,7 @@ type (
 
 		mockResource   *resource.Test
 		config         *config.Config
-		frontendClient *adminservicetest.MockClient
+		frontendClient *admin.MockClient
 		taskFetcher    *taskFetcherImpl
 	}
 )
@@ -87,23 +86,23 @@ func (s *taskFetcherSuite) TearDownTest() {
 
 func (s *taskFetcherSuite) TestGetMessages() {
 	requestByShard := make(map[int32]*request)
-	token := &replicator.ReplicationToken{
-		ShardID:                common.Int32Ptr(0),
-		LastProcessedMessageId: common.Int64Ptr(1),
-		LastRetrievedMessageId: common.Int64Ptr(2),
+	token := &types.ReplicationToken{
+		ShardID:                0,
+		LastProcessedMessageID: 1,
+		LastRetrievedMessageID: 2,
 	}
 	requestByShard[0] = &request{
 		token: token,
 	}
-	replicationMessageRequest := &replicator.GetReplicationMessagesRequest{
-		Tokens: []*replicator.ReplicationToken{
+	replicationMessageRequest := &types.GetReplicationMessagesRequest{
+		Tokens: []*types.ReplicationToken{
 			token,
 		},
-		ClusterName: common.StringPtr("active"),
+		ClusterName: "active",
 	}
-	messageByShared := make(map[int32]*replicator.ReplicationMessages)
-	messageByShared[0] = &replicator.ReplicationMessages{}
-	expectedResponse := &replicator.GetReplicationMessagesResponse{
+	messageByShared := make(map[int32]*types.ReplicationMessages)
+	messageByShared[0] = &types.ReplicationMessages{}
+	expectedResponse := &types.GetReplicationMessagesResponse{
 		MessagesByShard: messageByShared,
 	}
 	s.frontendClient.EXPECT().GetReplicationMessages(gomock.Any(), replicationMessageRequest).Return(expectedResponse, nil)
@@ -114,25 +113,25 @@ func (s *taskFetcherSuite) TestGetMessages() {
 
 func (s *taskFetcherSuite) TestFetchAndDistributeTasks() {
 	requestByShard := make(map[int32]*request)
-	token := &replicator.ReplicationToken{
-		ShardID:                common.Int32Ptr(0),
-		LastProcessedMessageId: common.Int64Ptr(1),
-		LastRetrievedMessageId: common.Int64Ptr(2),
+	token := &types.ReplicationToken{
+		ShardID:                0,
+		LastProcessedMessageID: 1,
+		LastRetrievedMessageID: 2,
 	}
-	respChan := make(chan *replicator.ReplicationMessages, 1)
+	respChan := make(chan *types.ReplicationMessages, 1)
 	requestByShard[0] = &request{
 		token:    token,
 		respChan: respChan,
 	}
-	replicationMessageRequest := &replicator.GetReplicationMessagesRequest{
-		Tokens: []*replicator.ReplicationToken{
+	replicationMessageRequest := &types.GetReplicationMessagesRequest{
+		Tokens: []*types.ReplicationToken{
 			token,
 		},
-		ClusterName: common.StringPtr("active"),
+		ClusterName: "active",
 	}
-	messageByShared := make(map[int32]*replicator.ReplicationMessages)
-	messageByShared[0] = &replicator.ReplicationMessages{}
-	expectedResponse := &replicator.GetReplicationMessagesResponse{
+	messageByShared := make(map[int32]*types.ReplicationMessages)
+	messageByShared[0] = &types.ReplicationMessages{}
+	expectedResponse := &types.GetReplicationMessagesResponse{
 		MessagesByShard: messageByShared,
 	}
 	s.frontendClient.EXPECT().GetReplicationMessages(gomock.Any(), replicationMessageRequest).Return(expectedResponse, nil)

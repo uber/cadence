@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/.gen/go/indexer"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/definition"
@@ -37,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
 )
 
 type indexProcessor struct {
@@ -67,7 +67,7 @@ const (
 )
 
 var (
-	errUnknownMessageType = &shared.BadRequestError{Message: "unknown message type"}
+	errUnknownMessageType = &types.BadRequestError{Message: "unknown message type"}
 )
 
 func newIndexProcessor(appName, consumerName string, kafkaClient messaging.Client, esClient es.GenericClient,
@@ -93,7 +93,7 @@ func (p *indexProcessor) Start() error {
 	}
 
 	p.logger.Info("Index processor state changed", tag.LifeCycleStarting)
-	consumer, err := p.kafkaClient.NewConsumer(p.appName, p.consumerName, p.config.IndexerConcurrency())
+	consumer, err := p.kafkaClient.NewConsumer(p.appName, p.consumerName)
 	if err != nil {
 		p.logger.Info("Index processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
 		return err

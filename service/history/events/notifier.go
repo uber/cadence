@@ -26,12 +26,12 @@ import (
 
 	"github.com/pborman/uuid"
 
-	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -84,7 +84,7 @@ var _ Notifier = (*notifierImpl)(nil)
 // NewNotification creates a new history event notification
 func NewNotification(
 	domainID string,
-	workflowExecution *gen.WorkflowExecution,
+	workflowExecution *types.WorkflowExecution,
 	lastFirstEventID int64,
 	nextEventID int64,
 	previousStartedEventID int64,
@@ -96,8 +96,8 @@ func NewNotification(
 	return &Notification{
 		ID: definition.NewWorkflowIdentifier(
 			domainID,
-			workflowExecution.GetWorkflowId(),
-			workflowExecution.GetRunId(),
+			workflowExecution.GetWorkflowID(),
+			workflowExecution.GetRunID(),
 		),
 		LastFirstEventID:       lastFirstEventID,
 		NextEventID:            nextEventID,
@@ -149,7 +149,7 @@ func (notifier *notifierImpl) WatchHistoryEvent(
 
 		if _, ok := subscribers[subscriberID]; ok {
 			// UUID collision
-			return &gen.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: "Unable to watch on workflow execution.",
 			}
 		}
@@ -183,7 +183,7 @@ func (notifier *notifierImpl) UnwatchHistoryEvent(
 
 	if !success {
 		// cannot find the subscribe ID, which means there is a bug
-		return &gen.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: "Unable to unwatch on workflow execution.",
 		}
 	}

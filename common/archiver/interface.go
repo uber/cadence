@@ -23,12 +23,12 @@ package archiver
 import (
 	"context"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -56,7 +56,7 @@ type (
 
 	// GetHistoryResponse is the response of Get archived history
 	GetHistoryResponse struct {
-		HistoryBatches []*shared.History
+		HistoryBatches []*types.History
 		NextPageToken  []byte
 	}
 
@@ -94,9 +94,9 @@ type (
 		StartTimestamp     int64
 		ExecutionTimestamp int64
 		CloseTimestamp     int64
-		CloseStatus        shared.WorkflowExecutionCloseStatus
+		CloseStatus        types.WorkflowExecutionCloseStatus
 		HistoryLength      int64
-		Memo               *shared.Memo
+		Memo               *types.Memo
 		SearchAttributes   map[string]string
 		HistoryArchivalURI string
 	}
@@ -111,7 +111,7 @@ type (
 
 	// QueryVisibilityResponse is the response of querying archived visibility records
 	QueryVisibilityResponse struct {
-		Executions    []*shared.WorkflowExecutionInfo
+		Executions    []*types.WorkflowExecutionInfo
 		NextPageToken []byte
 	}
 

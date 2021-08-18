@@ -24,12 +24,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
+	"strconv"
 	"sync"
 	"time"
-
-	adminClient "github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/common/authorization"
-	"github.com/uber/cadence/common/domain"
 
 	"github.com/pborman/uuid"
 	"github.com/uber-go/tally"
@@ -37,19 +35,23 @@ import (
 	cwsc "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 
-	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
-	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
-	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
+	adminClient "github.com/uber/cadence/client/admin"
+	frontendClient "github.com/uber/cadence/client/frontend"
+	historyClient "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/cache"
 	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/domain"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -58,8 +60,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
@@ -73,10 +74,10 @@ import (
 type Cadence interface {
 	Start() error
 	Stop()
-	GetAdminClient() adminserviceclient.Interface
-	GetFrontendClient() workflowserviceclient.Interface
+	GetAdminClient() adminClient.Client
+	GetFrontendClient() frontendClient.Client
 	FrontendAddress() string
-	GetHistoryClient() historyserviceclient.Interface
+	GetHistoryClient() historyClient.Client
 	GetExecutionManagerFactory() persistence.ExecutionManagerFactory
 }
 
@@ -86,21 +87,18 @@ type (
 		matchingService common.Daemon
 		historyServices []common.Daemon
 
-		adminClient                   adminserviceclient.Interface
-		frontendClient                workflowserviceclient.Interface
-		historyClient                 historyserviceclient.Interface
+		adminClient                   adminClient.Client
+		frontendClient                frontendClient.Client
+		historyClient                 historyClient.Client
 		logger                        log.Logger
 		clusterMetadata               cluster.Metadata
 		persistenceConfig             config.Persistence
 		dispatcherProvider            client.DispatcherProvider
 		messagingClient               messaging.Client
-		metadataMgr                   persistence.MetadataManager
-		shardMgr                      persistence.ShardManager
+		domainManager                 persistence.DomainManager
 		historyV2Mgr                  persistence.HistoryManager
-		taskMgr                       persistence.TaskManager
-		visibilityMgr                 persistence.VisibilityManager
 		executionMgrFactory           persistence.ExecutionManagerFactory
-		domainReplicationQueue        persistence.DomainReplicationQueue
+		domainReplicationQueue        domain.ReplicationQueue
 		shutdownCh                    chan struct{}
 		shutdownWG                    sync.WaitGroup
 		clusterNo                     int // cluster number
@@ -115,6 +113,7 @@ type (
 		workerConfig                  *WorkerConfig
 		mockAdminClient               map[string]adminClient.Client
 		domainReplicationTaskExecutor domain.ReplicationTaskExecutor
+		authorizationConfig           config.Authorization
 	}
 
 	// HistoryConfig contains configs for history service
@@ -131,13 +130,10 @@ type (
 		PersistenceConfig             config.Persistence
 		DispatcherProvider            client.DispatcherProvider
 		MessagingClient               messaging.Client
-		MetadataMgr                   persistence.MetadataManager
-		ShardMgr                      persistence.ShardManager
+		DomainManager                 persistence.DomainManager
 		HistoryV2Mgr                  persistence.HistoryManager
 		ExecutionMgrFactory           persistence.ExecutionManagerFactory
-		TaskMgr                       persistence.TaskManager
-		VisibilityMgr                 persistence.VisibilityManager
-		DomainReplicationQueue        persistence.DomainReplicationQueue
+		DomainReplicationQueue        domain.ReplicationQueue
 		Logger                        log.Logger
 		ClusterNo                     int
 		ArchiverMetadata              carchiver.ArchivalMetadata
@@ -149,6 +145,7 @@ type (
 		WorkerConfig                  *WorkerConfig
 		MockAdminClient               map[string]adminClient.Client
 		DomainReplicationTaskExecutor domain.ReplicationTaskExecutor
+		AuthorizationConfig           config.Authorization
 	}
 
 	membershipFactoryImpl struct {
@@ -165,11 +162,8 @@ func NewCadence(params *CadenceParams) Cadence {
 		persistenceConfig:             params.PersistenceConfig,
 		dispatcherProvider:            params.DispatcherProvider,
 		messagingClient:               params.MessagingClient,
-		metadataMgr:                   params.MetadataMgr,
-		visibilityMgr:                 params.VisibilityMgr,
-		shardMgr:                      params.ShardMgr,
+		domainManager:                 params.DomainManager,
 		historyV2Mgr:                  params.HistoryV2Mgr,
-		taskMgr:                       params.TaskMgr,
 		executionMgrFactory:           params.ExecutionMgrFactory,
 		domainReplicationQueue:        params.DomainReplicationQueue,
 		shutdownCh:                    make(chan struct{}),
@@ -182,6 +176,7 @@ func NewCadence(params *CadenceParams) Cadence {
 		workerConfig:                  params.WorkerConfig,
 		mockAdminClient:               params.MockAdminClient,
 		domainReplicationTaskExecutor: params.DomainReplicationTaskExecutor,
+		authorizationConfig:           params.AuthorizationConfig,
 	}
 }
 
@@ -382,15 +377,15 @@ func (c *cadenceImpl) WorkerPProfPort() int {
 	}
 }
 
-func (c *cadenceImpl) GetAdminClient() adminserviceclient.Interface {
+func (c *cadenceImpl) GetAdminClient() adminClient.Client {
 	return c.adminClient
 }
 
-func (c *cadenceImpl) GetFrontendClient() workflowserviceclient.Interface {
+func (c *cadenceImpl) GetFrontendClient() frontendClient.Client {
 	return c.frontendClient
 }
 
-func (c *cadenceImpl) GetHistoryClient() historyserviceclient.Interface {
+func (c *cadenceImpl) GetHistoryClient() historyClient.Client {
 	return c.historyClient
 }
 
@@ -400,6 +395,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.Name = common.FrontendServiceName
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
+	params.UpdateLoggerWithServiceName(common.FrontendServiceName)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.FrontendServiceName, c.FrontendAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.FrontendServiceName, make(map[string]string))
@@ -413,7 +409,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.ArchiverProvider = c.archiverProvider
 	params.ESConfig = c.esConfig
 	params.ESClient = c.esClient
-	params.Authorizer = authorization.NewNopAuthorizer()
+	params.Authorizer = authorization.NewAuthorizer(c.authorizationConfig, params.Logger, nil)
 
 	var err error
 	params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)
@@ -463,6 +459,7 @@ func (c *cadenceImpl) startHistory(
 		params.Name = common.HistoryServiceName
 		params.Logger = c.logger
 		params.ThrottledLogger = c.logger
+		params.UpdateLoggerWithServiceName(common.HistoryServiceName)
 		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
 		params.RPCFactory = newRPCFactoryImpl(common.HistoryServiceName, hostport, c.logger)
 		params.MetricScope = tally.NewTestScope(common.HistoryServiceName, make(map[string]string))
@@ -532,6 +529,7 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 	params.Name = common.MatchingServiceName
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
+	params.UpdateLoggerWithServiceName(common.MatchingServiceName)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.MatchingPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.MatchingServiceName, c.MatchingServiceAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.MatchingServiceName, make(map[string]string))
@@ -574,6 +572,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	params.Name = common.WorkerServiceName
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
+	params.UpdateLoggerWithServiceName(common.WorkerServiceName)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.WorkerPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.WorkerServiceName, c.WorkerServiceAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.WorkerServiceName, make(map[string]string))
@@ -601,7 +600,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 
 	var replicatorDomainCache cache.DomainCache
 	if c.workerConfig.EnableReplicator {
-		metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgr, service.GetMetricsClient(), c.logger)
+		metadataManager := persistence.NewDomainPersistenceMetricsClient(c.domainManager, service.GetMetricsClient(), c.logger)
 		replicatorDomainCache = cache.NewDomainCache(metadataManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetLogger())
 		replicatorDomainCache.Start()
 		c.startWorkerReplicator(params, service, replicatorDomainCache)
@@ -609,7 +608,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 
 	var clientWorkerDomainCache cache.DomainCache
 	if c.workerConfig.EnableArchiver {
-		metadataProxyManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgr, service.GetMetricsClient(), c.logger)
+		metadataProxyManager := persistence.NewDomainPersistenceMetricsClient(c.domainManager, service.GetMetricsClient(), c.logger)
 		clientWorkerDomainCache = cache.NewDomainCache(metadataProxyManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetLogger())
 		clientWorkerDomainCache.Start()
 		c.startWorkerClientWorker(params, service, clientWorkerDomainCache)
@@ -703,7 +702,7 @@ func (c *cadenceImpl) createSystemDomain() error {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTestPersistenceTimeout)
 	defer cancel()
 
-	_, err := c.metadataMgr.CreateDomain(ctx, &persistence.CreateDomainRequest{
+	_, err := c.domainManager.CreateDomain(ctx, &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        "cadence-system",
@@ -712,14 +711,14 @@ func (c *cadenceImpl) createSystemDomain() error {
 		},
 		Config: &persistence.DomainConfig{
 			Retention:                1,
-			HistoryArchivalStatus:    shared.ArchivalStatusDisabled,
-			VisibilityArchivalStatus: shared.ArchivalStatusDisabled,
+			HistoryArchivalStatus:    types.ArchivalStatusDisabled,
+			VisibilityArchivalStatus: types.ArchivalStatusDisabled,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
 		FailoverVersion:   common.EmptyVersion,
 	})
 	if err != nil {
-		if _, ok := err.(*shared.DomainAlreadyExistsError); ok {
+		if _, ok := err.(*types.DomainAlreadyExistsError); ok {
 			return nil
 		}
 		return fmt.Errorf("failed to create cadence-system domain: %v", err)
@@ -791,6 +790,7 @@ func newPProfInitializerImpl(logger log.Logger, port int) common.PProfInitialize
 
 type rpcFactoryImpl struct {
 	ch          *tchannel.ChannelTransport
+	grpc        *grpc.Transport
 	serviceName string
 	hostPort    string
 	logger      log.Logger
@@ -821,15 +821,29 @@ func (c *rpcFactoryImpl) GetDispatcher() *yarpc.Dispatcher {
 
 func (c *rpcFactoryImpl) createDispatcher() *yarpc.Dispatcher {
 	// Setup dispatcher for onebox
+	inbounds := yarpc.Inbounds{}
 	var err error
 	c.ch, err = tchannel.NewChannelTransport(
 		tchannel.ServiceName(c.serviceName), tchannel.ListenAddr(c.hostPort))
 	if err != nil {
 		c.logger.Fatal("Failed to create transport channel", tag.Error(err))
 	}
+	inbounds = append(inbounds, c.ch.NewInbound())
+
+	grpcHostPort, err := c.ReplaceGRPCPort("", c.hostPort)
+	if err != nil {
+		c.logger.Fatal("Failed to obtain GRPC address", tag.Error(err))
+	}
+	c.grpc = grpc.NewTransport()
+	listener, err := net.Listen("tcp", grpcHostPort)
+	if err != nil {
+		c.logger.Fatal("Failed to listen for GRPC request", tag.Error(err))
+	}
+	inbounds = append(inbounds, c.grpc.NewInbound(listener))
+
 	return yarpc.NewDispatcher(yarpc.Config{
 		Name:     c.serviceName,
-		Inbounds: yarpc.Inbounds{c.ch.NewInbound()},
+		Inbounds: inbounds,
 		// For integration tests to generate client out of the same outbound.
 		Outbounds: yarpc.Outbounds{
 			c.serviceName: {Unary: c.ch.NewSingleOutbound(c.hostPort)},
@@ -844,12 +858,15 @@ type versionMiddleware struct {
 }
 
 func (vm *versionMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
-	req.Headers = req.Headers.With(common.LibraryVersionHeaderName, "1.0.0").With(common.FeatureVersionHeaderName, cc.GoWorkerRawHistoryQueryVersion).With(common.ClientImplHeaderName, cc.GoSDK)
+	req.Headers = req.Headers.With(common.LibraryVersionHeaderName, "1.0.0").
+		With(common.FeatureVersionHeaderName, cc.SupportedGoSDKVersion).
+		With(common.ClientImplHeaderName, cc.GoSDK)
+
 	return h.Handle(ctx, req, resw)
 }
 
 func (c *rpcFactoryImpl) CreateDispatcherForOutbound(
-	callerName, serviceName, hostName string) *yarpc.Dispatcher {
+	callerName, serviceName, hostName string) (*yarpc.Dispatcher, error) {
 	// Setup dispatcher(outbound) for onebox
 	d := yarpc.NewDispatcher(yarpc.Config{
 		Name: callerName,
@@ -858,7 +875,42 @@ func (c *rpcFactoryImpl) CreateDispatcherForOutbound(
 		},
 	})
 	if err := d.Start(); err != nil {
-		c.logger.Fatal("Failed to create outbound transport channel", tag.Error(err))
+		c.logger.Error("Failed to create outbound transport channel", tag.Error(err))
+		return nil, err
 	}
-	return d
+	return d, nil
+}
+
+func (c *rpcFactoryImpl) CreateGRPCDispatcherForOutbound(
+	callerName, serviceName, hostName string) (*yarpc.Dispatcher, error) {
+
+	// Setup dispatcher(outbound) for onebox
+	d := yarpc.NewDispatcher(yarpc.Config{
+		Name: callerName,
+		Outbounds: yarpc.Outbounds{
+			serviceName: {Unary: c.grpc.NewSingleOutbound(hostName)},
+		},
+	})
+	if err := d.Start(); err != nil {
+		c.logger.Error("Failed to create outbound GRPC", tag.Error(err))
+		return nil, err
+	}
+	return d, nil
+}
+
+const grpcPortOffset = 10
+
+func (c *rpcFactoryImpl) ReplaceGRPCPort(_, hostPort string) (string, error) {
+	host, port, err := net.SplitHostPort(hostPort)
+	if err != nil {
+		return "", err
+	}
+
+	portInt, err := strconv.Atoi(port)
+	if err != nil {
+		return "", err
+	}
+
+	grpcAddress := net.JoinHostPort(host, strconv.Itoa(portInt+grpcPortOffset))
+	return grpcAddress, nil
 }

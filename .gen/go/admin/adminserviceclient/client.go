@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,14 +27,16 @@ package adminserviceclient
 
 import (
 	context "context"
-	admin "github.com/uber/cadence/.gen/go/admin"
-	replicator "github.com/uber/cadence/.gen/go/replicator"
-	shared "github.com/uber/cadence/.gen/go/shared"
+	reflect "reflect"
+
 	wire "go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
-	reflect "reflect"
+
+	admin "github.com/uber/cadence/.gen/go/admin"
+	replicator "github.com/uber/cadence/.gen/go/replicator"
+	shared "github.com/uber/cadence/.gen/go/shared"
 )
 
 // Interface is a client for the AdminService service.
@@ -68,11 +70,23 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.DescribeQueueResponse, error)
 
+	DescribeShardDistribution(
+		ctx context.Context,
+		Request *shared.DescribeShardDistributionRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.DescribeShardDistributionResponse, error)
+
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		Request *admin.DescribeWorkflowExecutionRequest,
 		opts ...yarpc.CallOption,
 	) (*admin.DescribeWorkflowExecutionResponse, error)
+
+	GetCrossClusterTasks(
+		ctx context.Context,
+		Request *shared.GetCrossClusterTasksRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.GetCrossClusterTasksResponse, error)
 
 	GetDLQReplicationMessages(
 		ctx context.Context,
@@ -86,6 +100,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*replicator.GetDomainReplicationMessagesResponse, error)
 
+	GetDynamicConfig(
+		ctx context.Context,
+		Request *admin.GetDynamicConfigRequest,
+		opts ...yarpc.CallOption,
+	) (*admin.GetDynamicConfigResponse, error)
+
 	GetReplicationMessages(
 		ctx context.Context,
 		Request *replicator.GetReplicationMessagesRequest,
@@ -97,6 +117,12 @@ type Interface interface {
 		GetRequest *admin.GetWorkflowExecutionRawHistoryV2Request,
 		opts ...yarpc.CallOption,
 	) (*admin.GetWorkflowExecutionRawHistoryV2Response, error)
+
+	ListDynamicConfig(
+		ctx context.Context,
+		Request *admin.ListDynamicConfigRequest,
+		opts ...yarpc.CallOption,
+	) (*admin.ListDynamicConfigResponse, error)
 
 	MergeDLQMessages(
 		ctx context.Context,
@@ -143,6 +169,18 @@ type Interface interface {
 	ResetQueue(
 		ctx context.Context,
 		Request *shared.ResetQueueRequest,
+		opts ...yarpc.CallOption,
+	) error
+
+	RestoreDynamicConfig(
+		ctx context.Context,
+		Request *admin.RestoreDynamicConfigRequest,
+		opts ...yarpc.CallOption,
+	) error
+
+	UpdateDynamicConfig(
+		ctx context.Context,
+		Request *admin.UpdateDynamicConfigRequest,
 		opts ...yarpc.CallOption,
 	) error
 }
@@ -285,6 +323,29 @@ func (c client) DescribeQueue(
 	return
 }
 
+func (c client) DescribeShardDistribution(
+	ctx context.Context,
+	_Request *shared.DescribeShardDistributionRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.DescribeShardDistributionResponse, err error) {
+
+	args := admin.AdminService_DescribeShardDistribution_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_DescribeShardDistribution_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_DescribeShardDistribution_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) DescribeWorkflowExecution(
 	ctx context.Context,
 	_Request *admin.DescribeWorkflowExecutionRequest,
@@ -305,6 +366,29 @@ func (c client) DescribeWorkflowExecution(
 	}
 
 	success, err = admin.AdminService_DescribeWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetCrossClusterTasks(
+	ctx context.Context,
+	_Request *shared.GetCrossClusterTasksRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetCrossClusterTasksResponse, err error) {
+
+	args := admin.AdminService_GetCrossClusterTasks_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_GetCrossClusterTasks_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_GetCrossClusterTasks_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -354,6 +438,29 @@ func (c client) GetDomainReplicationMessages(
 	return
 }
 
+func (c client) GetDynamicConfig(
+	ctx context.Context,
+	_Request *admin.GetDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.GetDynamicConfigResponse, err error) {
+
+	args := admin.AdminService_GetDynamicConfig_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_GetDynamicConfig_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_GetDynamicConfig_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) GetReplicationMessages(
 	ctx context.Context,
 	_Request *replicator.GetReplicationMessagesRequest,
@@ -397,6 +504,29 @@ func (c client) GetWorkflowExecutionRawHistoryV2(
 	}
 
 	success, err = admin.AdminService_GetWorkflowExecutionRawHistoryV2_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ListDynamicConfig(
+	ctx context.Context,
+	_Request *admin.ListDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.ListDynamicConfigResponse, err error) {
+
+	args := admin.AdminService_ListDynamicConfig_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_ListDynamicConfig_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_ListDynamicConfig_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -581,5 +711,51 @@ func (c client) ResetQueue(
 	}
 
 	err = admin.AdminService_ResetQueue_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RestoreDynamicConfig(
+	ctx context.Context,
+	_Request *admin.RestoreDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := admin.AdminService_RestoreDynamicConfig_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_RestoreDynamicConfig_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = admin.AdminService_RestoreDynamicConfig_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) UpdateDynamicConfig(
+	ctx context.Context,
+	_Request *admin.UpdateDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := admin.AdminService_UpdateDynamicConfig_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_UpdateDynamicConfig_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = admin.AdminService_UpdateDynamicConfig_Helper.UnwrapResponse(&result)
 	return
 }

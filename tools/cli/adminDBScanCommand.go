@@ -23,22 +23,33 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/collection"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql"
+	"github.com/uber/cadence/common/persistence/serialization"
+	"github.com/uber/cadence/common/persistence/sql"
+	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/reconciliation/fetcher"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/worker/scanner/executions"
+)
+
+const (
+	listContextTimeout = time.Minute
 )
 
 // AdminDBScan is used to scan over executions in database and detect corruptions.
@@ -49,7 +60,7 @@ func AdminDBScan(c *cli.Context) {
 		ErrorAndExit("unknown scan type", err)
 	}
 
-	numberOfShards := c.Int(FlagNumberOfShards)
+	numberOfShards := getRequiredIntOption(c, FlagNumberOfShards)
 	collectionSlice := c.StringSlice(FlagInvariantCollection)
 
 	var collections []invariant.Collection
@@ -114,28 +125,14 @@ func checkExecution(
 	invariants []executions.InvariantFactory,
 	fetcher executions.ExecutionFetcher,
 ) (interface{}, invariant.ManagerCheckResult) {
-	session := connectToCassandra(c)
-	defer session.Close()
-	logger := loggerimpl.NewNopLogger()
+	execManager := initializeExecutionStore(c, common.WorkflowIDToHistoryShard(req.WorkflowID, numberOfShards), 0)
+	defer execManager.Close()
 
-	execStore, err := cassandra.NewWorkflowExecutionPersistence(
-		common.WorkflowIDToHistoryShard(req.WorkflowID, numberOfShards),
-		session,
-		logger,
-	)
-
-	if err != nil {
-		ErrorAndExit("Failed to get execution store", err)
-	}
-
-	historyV2Mgr := persistence.NewHistoryV2ManagerImpl(
-		cassandra.NewHistoryV2PersistenceFromSession(session, logger),
-		logger,
-		dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
-	)
+	historyV2Mgr := initializeHistoryManager(c)
+	defer historyV2Mgr.Close()
 
 	pr := persistence.NewPersistenceRetryer(
-		persistence.NewExecutionManagerImpl(execStore, logger),
+		execManager,
 		historyV2Mgr,
 		common.CreatePersistenceRetryPolicy(),
 	)
@@ -156,4 +153,248 @@ func checkExecution(
 	}
 
 	return execution, invariant.NewInvariantManager(ivs).RunChecks(ctx, execution)
+}
+
+// AdminDBScanUnsupportedWorkflow is to scan DB for unsupported workflow for a new release
+func AdminDBScanUnsupportedWorkflow(c *cli.Context) {
+	rps := c.Int(FlagRPS)
+	outputFile := getOutputFile(c.String(FlagOutputFilename))
+	startShardID := c.Int(FlagLowerShardBound)
+	endShardID := c.Int(FlagUpperShardBound)
+
+	defer outputFile.Close()
+	for i := startShardID; i <= endShardID; i++ {
+		listExecutionsByShardID(c, i, rps, outputFile)
+		fmt.Println(fmt.Sprintf("Shard %v scan operation is completed.", i))
+	}
+}
+
+func listExecutionsByShardID(
+	c *cli.Context,
+	shardID int,
+	rps int,
+	outputFile *os.File,
+) {
+
+	client := initializeExecutionStore(c, shardID, rps)
+	defer client.Close()
+
+	paginationFunc := func(paginationToken []byte) ([]interface{}, []byte, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), listContextTimeout)
+		defer cancel()
+
+		resp, err := client.ListConcreteExecutions(
+			ctx,
+			&persistence.ListConcreteExecutionsRequest{
+				PageSize:  1000,
+				PageToken: paginationToken,
+			},
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+		var paginateItems []interface{}
+		for _, history := range resp.Executions {
+			paginateItems = append(paginateItems, history)
+		}
+		return paginateItems, resp.PageToken, nil
+	}
+
+	executionIterator := collection.NewPagingIterator(paginationFunc)
+	for executionIterator.HasNext() {
+		result, err := executionIterator.Next()
+		if err != nil {
+			ErrorAndExit(fmt.Sprintf("Failed to scan shard ID: %v for unsupported workflow. Please retry.", shardID), err)
+		}
+		execution := result.(*persistence.ListConcreteExecutionsEntity)
+		executionInfo := execution.ExecutionInfo
+		if executionInfo != nil && executionInfo.CloseStatus == 0 && execution.VersionHistories == nil {
+
+			outStr := fmt.Sprintf("cadence --address <host>:<port> --domain <%v> workflow reset --wid %v --rid %v --reset_type LastDecisionCompleted --reason 'release 0.16 upgrade'\n",
+				executionInfo.DomainID,
+				executionInfo.WorkflowID,
+				executionInfo.RunID,
+			)
+			if _, err = outputFile.WriteString(outStr); err != nil {
+				ErrorAndExit("Failed to write data to file", err)
+			}
+			if err = outputFile.Sync(); err != nil {
+				ErrorAndExit("Failed to sync data to file", err)
+			}
+		}
+	}
+}
+
+func initializeExecutionStore(
+	c *cli.Context,
+	shardID int,
+	rps int,
+) persistence.ExecutionManager {
+
+	var execStore persistence.ExecutionStore
+	dbType := c.String(FlagDBType)
+	if !isDBTypeSupported(dbType) {
+		supportedDBs := append(sql.GetRegisteredPluginNames(), "cassandra")
+		ErrorAndExit(fmt.Sprintf("The DB type is not supported. Options are: %s.", supportedDBs), nil)
+	}
+	logger := loggerimpl.NewNopLogger()
+	switch dbType {
+	case "cassandra":
+		execStore = initializeCassandraExecutionClient(c, shardID, logger)
+	default:
+		execStore = initializeSQLExecutionStore(c, shardID, logger)
+	}
+
+	executionManager := persistence.NewExecutionManagerImpl(execStore, logger)
+	if rps == 0 {
+		return executionManager
+	}
+	rateLimiter := quotas.NewSimpleRateLimiter(rps)
+	return persistence.NewWorkflowExecutionPersistenceRateLimitedClient(executionManager, rateLimiter, logger)
+}
+
+func initializeCassandraExecutionClient(
+	c *cli.Context,
+	shardID int,
+	logger log.Logger,
+) persistence.ExecutionStore {
+
+	db, _ := connectToCassandra(c)
+	execStore, err := nosql.NewExecutionStore(
+		shardID,
+		db,
+		logger,
+	)
+	if err != nil {
+		ErrorAndExit("Failed to get execution store from cassandra config", err)
+	}
+	return execStore
+}
+
+func initializeSQLExecutionStore(
+	c *cli.Context,
+	shardID int,
+	logger log.Logger,
+) persistence.ExecutionStore {
+
+	sqlDB := connectToSQL(c)
+	encodingType := c.String(FlagEncodingType)
+	decodingTypesStr := c.StringSlice(FlagDecodingTypes)
+	var decodingTypes []common.EncodingType
+	for _, dt := range decodingTypesStr {
+		decodingTypes = append(decodingTypes, common.EncodingType(dt))
+	}
+	execStore, err := sql.NewSQLExecutionStore(sqlDB, logger, shardID, getSQLParser(common.EncodingType(encodingType), decodingTypes...))
+	if err != nil {
+		ErrorAndExit("Failed to get execution store from sql config", err)
+	}
+	return execStore
+}
+
+func initializeHistoryManager(c *cli.Context) persistence.HistoryManager {
+	var historyV2Mgr persistence.HistoryStore
+	dbType := c.String(FlagDBType)
+	if !isDBTypeSupported(dbType) {
+		supportedDBs := append(sql.GetRegisteredPluginNames(), "cassandra")
+		ErrorAndExit(fmt.Sprintf("The DB type is not supported. Options are: %s.", supportedDBs), nil)
+	}
+	logger := loggerimpl.NewNopLogger()
+	switch dbType {
+	case "cassandra":
+		historyV2Mgr = initializeCassandraHistoryStore(c, logger)
+	default:
+		historyV2Mgr = initializeSQLHistoryStore(c, logger)
+	}
+	historyStore := persistence.NewHistoryV2ManagerImpl(
+		historyV2Mgr,
+		logger,
+		dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
+	)
+	return historyStore
+}
+
+func initializeShardManager(c *cli.Context) persistence.ShardManager {
+	var shardStore persistence.ShardStore
+	dbType := c.String(FlagDBType)
+	if !isDBTypeSupported(dbType) {
+		supportedDBs := append(sql.GetRegisteredPluginNames(), "cassandra")
+		ErrorAndExit(fmt.Sprintf("The DB type is not supported. Options are: %s.", supportedDBs), nil)
+	}
+	logger := loggerimpl.NewNopLogger()
+	switch dbType {
+	case "cassandra":
+		shardStore = initializeCassandraShardStore(c, "current-cluster", logger)
+	default:
+		shardStore = initializeSQLShardStore(c, "current-cluster", logger)
+	}
+	return persistence.NewShardManager(shardStore)
+}
+
+func initializeCassandraHistoryStore(
+	c *cli.Context,
+	logger log.Logger,
+) persistence.HistoryStore {
+	db, _ := connectToCassandra(c)
+	return nosql.NewNoSQLHistoryStoreFromSession(db, logger)
+}
+
+func initializeSQLHistoryStore(
+	c *cli.Context,
+	logger log.Logger,
+) persistence.HistoryStore {
+	sqlDB := connectToSQL(c)
+	encodingType := c.String(FlagEncodingType)
+	decodingTypesStr := c.StringSlice(FlagDecodingTypes)
+	var decodingTypes []common.EncodingType
+	for _, dt := range decodingTypesStr {
+		decodingTypes = append(decodingTypes, common.EncodingType(dt))
+	}
+	historyV2Mgr, err := sql.NewHistoryV2Persistence(sqlDB, logger, getSQLParser(common.EncodingType(encodingType), decodingTypes...))
+	if err != nil {
+		ErrorAndExit("Failed to get history store from sql config", err)
+	}
+	return historyV2Mgr
+}
+
+func getSQLParser(encodingType common.EncodingType, decodingTypes ...common.EncodingType) serialization.Parser {
+	parser, err := serialization.NewParser(encodingType, decodingTypes...)
+	if err != nil {
+		ErrorAndExit("failed to initialize sql parser", err)
+	}
+	return parser
+}
+
+func initializeCassandraShardStore(
+	c *cli.Context,
+	currentClusterName string,
+	logger log.Logger,
+) persistence.ShardStore {
+	db, _ := connectToCassandra(c)
+	return nosql.NewNoSQLShardStoreFromSession(db, currentClusterName, logger)
+}
+
+func initializeSQLShardStore(
+	c *cli.Context,
+	currentClusterName string,
+	logger log.Logger,
+) persistence.ShardStore {
+	sqlDB := connectToSQL(c)
+	encodingType := c.String(FlagEncodingType)
+	decodingTypesStr := c.StringSlice(FlagDecodingTypes)
+	var decodingTypes []common.EncodingType
+	for _, dt := range decodingTypesStr {
+		decodingTypes = append(decodingTypes, common.EncodingType(dt))
+	}
+	shardStore, err := sql.NewShardPersistence(sqlDB, currentClusterName, logger, getSQLParser(common.EncodingType(encodingType), decodingTypes...))
+	if err != nil {
+		ErrorAndExit("Failed to get shard store from sql config", err)
+	}
+	return shardStore
+}
+
+func isDBTypeSupported(dbType string) bool {
+	if sql.PluginRegistered(dbType) || dbType == "cassandra" {
+		return true
+	}
+	return false
 }

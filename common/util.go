@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -32,15 +33,15 @@ import (
 	"time"
 
 	"github.com/dgryski/go-farm"
+	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
 
-	h "github.com/uber/cadence/.gen/go/history"
-	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -66,9 +67,9 @@ const (
 	adminServiceOperationMaxInterval        = 5 * time.Second
 	adminServiceOperationExpirationInterval = 15 * time.Second
 
-	retryKafkaOperationInitialInterval    = 50 * time.Millisecond
-	retryKafkaOperationMaxInterval        = 10 * time.Second
-	retryKafkaOperationExpirationInterval = 30 * time.Second
+	retryKafkaOperationInitialInterval = 50 * time.Millisecond
+	retryKafkaOperationMaxInterval     = 10 * time.Second
+	retryKafkaOperationMaxAttempts     = 10
 
 	retryTaskProcessingInitialInterval = 50 * time.Millisecond
 	retryTaskProcessingMaxInterval     = 100 * time.Millisecond
@@ -98,11 +99,11 @@ const (
 
 var (
 	// ErrBlobSizeExceedsLimit is error for event blob size exceeds limit
-	ErrBlobSizeExceedsLimit = &workflow.BadRequestError{Message: "Blob data size exceeds limit."}
+	ErrBlobSizeExceedsLimit = &types.BadRequestError{Message: "Blob data size exceeds limit."}
 	// ErrContextTimeoutTooShort is error for setting a very short context timeout when calling a long poll API
-	ErrContextTimeoutTooShort = &workflow.BadRequestError{Message: "Context timeout is too short."}
+	ErrContextTimeoutTooShort = &types.BadRequestError{Message: "Context timeout is too short."}
 	// ErrContextTimeoutNotSet is error for not setting a context timeout when calling a long poll API
-	ErrContextTimeoutNotSet = &workflow.BadRequestError{Message: "Context timeout is not set."}
+	ErrContextTimeoutNotSet = &types.BadRequestError{Message: "Context timeout is not set."}
 )
 
 // AwaitWaitGroup calls Wait on the given wait
@@ -137,6 +138,23 @@ func CreatePersistenceRetryPolicy() backoff.RetryPolicy {
 	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
 	policy.SetExpirationInterval(retryPersistenceOperationExpirationInterval)
 
+	return policy
+}
+
+// CreatePersistenceRetryPolicyWithContext create a retry policy for persistence layer operations
+// which has an expiration interval computed based on the context's deadline
+func CreatePersistenceRetryPolicyWithContext(ctx context.Context) backoff.RetryPolicy {
+	if ctx == nil {
+		return CreatePersistenceRetryPolicy()
+	}
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return CreatePersistenceRetryPolicy()
+	}
+
+	policy := backoff.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
+	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
+	policy.SetExpirationInterval(deadline.Sub(time.Now()))
 	return policy
 }
 
@@ -176,11 +194,11 @@ func CreateAdminServiceRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// CreateKafkaOperationRetryPolicy creates a retry policy for kafka operation
-func CreateKafkaOperationRetryPolicy() backoff.RetryPolicy {
+// CreateDlqPublishRetryPolicy creates a retry policy for kafka operation
+func CreateDlqPublishRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(retryKafkaOperationInitialInterval)
 	policy.SetMaximumInterval(retryKafkaOperationMaxInterval)
-	policy.SetExpirationInterval(retryKafkaOperationExpirationInterval)
+	policy.SetMaximumAttempts(retryKafkaOperationMaxAttempts)
 
 	return policy
 }
@@ -203,24 +221,29 @@ func CreateReplicationServiceBusyRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// IsPersistenceTransientError checks if the error is a transient persistence error
-func IsPersistenceTransientError(err error) bool {
-	switch err.(type) {
-	case *workflow.InternalServiceError, *workflow.ServiceBusyError:
-		return true
+// ValidIDLength checks if id is valid according to its length
+func ValidIDLength(
+	id string,
+	scope metrics.Scope,
+	warnLimit int,
+	errorLimit int,
+	metricsCounter int,
+) bool {
+	valid := len(id) <= errorLimit
+	if len(id) > warnLimit {
+		scope.IncCounter(metricsCounter)
 	}
-
-	return false
+	return valid
 }
 
 // IsServiceTransientError checks if the error is a transient error.
 func IsServiceTransientError(err error) bool {
 	switch err.(type) {
-	case *workflow.InternalServiceError:
+	case *types.InternalServiceError:
 		return true
-	case *workflow.ServiceBusyError:
+	case *types.ServiceBusyError:
 		return true
-	case *h.ShardOwnershipLostError:
+	case *types.ShardOwnershipLostError:
 		return true
 	case *yarpcerrors.Status:
 		// We only selectively retry the following yarpc errors client can safe retry with a backoff
@@ -235,10 +258,16 @@ func IsServiceTransientError(err error) bool {
 	return false
 }
 
+// IsEntityNotExistsError checks if the error is an entity not exists error.
+func IsEntityNotExistsError(err error) bool {
+	_, ok := err.(*types.EntityNotExistsError)
+	return ok
+}
+
 // IsServiceBusyError checks if the error is a service busy error.
 func IsServiceBusyError(err error) bool {
 	switch err.(type) {
-	case *workflow.ServiceBusyError:
+	case *types.ServiceBusyError:
 		return true
 	}
 	return false
@@ -247,7 +276,7 @@ func IsServiceBusyError(err error) bool {
 // IsContextTimeoutError checks if the error is context timeout error
 func IsContextTimeoutError(err error) bool {
 	switch err := err.(type) {
-	case *workflow.InternalServiceError:
+	case *types.InternalServiceError:
 		return err.Message == context.DeadlineExceeded.Error()
 	}
 	return err == context.DeadlineExceeded || yarpcerrors.IsDeadlineExceeded(err)
@@ -266,7 +295,7 @@ func DomainIDToHistoryShard(domainID string, numberOfShards int) int {
 }
 
 // PrettyPrintHistory prints history in human readable format
-func PrettyPrintHistory(history *workflow.History, logger log.Logger) {
+func PrettyPrintHistory(history *types.History, logger log.Logger) {
 	data, err := json.MarshalIndent(history, "", "    ")
 
 	if err != nil {
@@ -298,6 +327,31 @@ func IsValidContext(ctx context.Context) error {
 	return nil
 }
 
+// CreateChildContext creates a child context which shorted context timeout
+// from the given parent context
+// tailroom must be in range [0, 1] and
+// (1-tailroom) * parent timeout will be the new child context timeout
+func CreateChildContext(
+	parent context.Context,
+	tailroom float64,
+) (context.Context, context.CancelFunc) {
+	if parent == nil {
+		return nil, func() {}
+	}
+	if parent.Err() != nil {
+		return parent, func() {}
+	}
+
+	now := time.Now()
+	deadline, ok := parent.Deadline()
+	if !ok || deadline.Before(now) {
+		return parent, func() {}
+	}
+
+	newDeadline := now.Add(time.Duration(math.Ceil(float64(deadline.Sub(now)) * (1.0 - tailroom))))
+	return context.WithDeadline(parent, newDeadline)
+}
+
 // GenerateRandomString is used for generate test string
 func GenerateRandomString(n int) string {
 	rand.Seed(time.Now().UnixNano())
@@ -310,15 +364,15 @@ func GenerateRandomString(n int) string {
 }
 
 // CreateMatchingPollForDecisionTaskResponse create response for matching's PollForDecisionTask
-func CreateMatchingPollForDecisionTaskResponse(historyResponse *h.RecordDecisionTaskStartedResponse, workflowExecution *workflow.WorkflowExecution, token []byte) *m.PollForDecisionTaskResponse {
-	matchingResp := &m.PollForDecisionTaskResponse{
+func CreateMatchingPollForDecisionTaskResponse(historyResponse *types.RecordDecisionTaskStartedResponse, workflowExecution *types.WorkflowExecution, token []byte) *types.MatchingPollForDecisionTaskResponse {
+	matchingResp := &types.MatchingPollForDecisionTaskResponse{
 		WorkflowExecution:         workflowExecution,
 		TaskToken:                 token,
-		Attempt:                   Int64Ptr(historyResponse.GetAttempt()),
+		Attempt:                   historyResponse.GetAttempt(),
 		WorkflowType:              historyResponse.WorkflowType,
-		StartedEventId:            historyResponse.StartedEventId,
+		StartedEventID:            historyResponse.StartedEventID,
 		StickyExecutionEnabled:    historyResponse.StickyExecutionEnabled,
-		NextEventId:               historyResponse.NextEventId,
+		NextEventID:               historyResponse.NextEventID,
 		DecisionInfo:              historyResponse.DecisionInfo,
 		WorkflowExecutionTaskList: historyResponse.WorkflowExecutionTaskList,
 		BranchToken:               historyResponse.BranchToken,
@@ -326,8 +380,8 @@ func CreateMatchingPollForDecisionTaskResponse(historyResponse *h.RecordDecision
 		StartedTimestamp:          historyResponse.StartedTimestamp,
 		Queries:                   historyResponse.Queries,
 	}
-	if historyResponse.GetPreviousStartedEventId() != EmptyEventID {
-		matchingResp.PreviousStartedEventId = historyResponse.PreviousStartedEventId
+	if historyResponse.GetPreviousStartedEventID() != EmptyEventID {
+		matchingResp.PreviousStartedEventID = historyResponse.PreviousStartedEventID
 	}
 	return matchingResp
 }
@@ -397,31 +451,31 @@ func SortInt64Slice(slice []int64) {
 }
 
 // ValidateRetryPolicy validates a retry policy
-func ValidateRetryPolicy(policy *workflow.RetryPolicy) error {
+func ValidateRetryPolicy(policy *types.RetryPolicy) error {
 	if policy == nil {
 		// nil policy is valid which means no retry
 		return nil
 	}
 	if policy.GetInitialIntervalInSeconds() <= 0 {
-		return &workflow.BadRequestError{Message: "InitialIntervalInSeconds must be greater than 0 on retry policy."}
+		return &types.BadRequestError{Message: "InitialIntervalInSeconds must be greater than 0 on retry policy."}
 	}
 	if policy.GetBackoffCoefficient() < 1 {
-		return &workflow.BadRequestError{Message: "BackoffCoefficient cannot be less than 1 on retry policy."}
+		return &types.BadRequestError{Message: "BackoffCoefficient cannot be less than 1 on retry policy."}
 	}
 	if policy.GetMaximumIntervalInSeconds() < 0 {
-		return &workflow.BadRequestError{Message: "MaximumIntervalInSeconds cannot be less than 0 on retry policy."}
+		return &types.BadRequestError{Message: "MaximumIntervalInSeconds cannot be less than 0 on retry policy."}
 	}
 	if policy.GetMaximumIntervalInSeconds() > 0 && policy.GetMaximumIntervalInSeconds() < policy.GetInitialIntervalInSeconds() {
-		return &workflow.BadRequestError{Message: "MaximumIntervalInSeconds cannot be less than InitialIntervalInSeconds on retry policy."}
+		return &types.BadRequestError{Message: "MaximumIntervalInSeconds cannot be less than InitialIntervalInSeconds on retry policy."}
 	}
 	if policy.GetMaximumAttempts() < 0 {
-		return &workflow.BadRequestError{Message: "MaximumAttempts cannot be less than 0 on retry policy."}
+		return &types.BadRequestError{Message: "MaximumAttempts cannot be less than 0 on retry policy."}
 	}
 	if policy.GetExpirationIntervalInSeconds() < 0 {
-		return &workflow.BadRequestError{Message: "ExpirationIntervalInSeconds cannot be less than 0 on retry policy."}
+		return &types.BadRequestError{Message: "ExpirationIntervalInSeconds cannot be less than 0 on retry policy."}
 	}
 	if policy.GetMaximumAttempts() == 0 && policy.GetExpirationIntervalInSeconds() == 0 {
-		return &workflow.BadRequestError{Message: "MaximumAttempts and ExpirationIntervalInSeconds are both 0. At least one of them must be specified."}
+		return &types.BadRequestError{Message: "MaximumAttempts and ExpirationIntervalInSeconds are both 0. At least one of them must be specified."}
 	}
 	return nil
 }
@@ -429,21 +483,35 @@ func ValidateRetryPolicy(policy *workflow.RetryPolicy) error {
 // CreateHistoryStartWorkflowRequest create a start workflow request for history
 func CreateHistoryStartWorkflowRequest(
 	domainID string,
-	startRequest *workflow.StartWorkflowExecutionRequest,
-) *h.StartWorkflowExecutionRequest {
-	now := time.Now()
-	histRequest := &h.StartWorkflowExecutionRequest{
-		DomainUUID:   StringPtr(domainID),
+	startRequest *types.StartWorkflowExecutionRequest,
+	now time.Time,
+) *types.HistoryStartWorkflowExecutionRequest {
+	histRequest := &types.HistoryStartWorkflowExecutionRequest{
+		DomainUUID:   domainID,
 		StartRequest: startRequest,
 	}
-	firstDecisionTaskBackoffSeconds := backoff.GetBackoffForNextScheduleInSeconds(startRequest.GetCronSchedule(), now, now)
+
+	delayStartSeconds := startRequest.GetDelayStartSeconds()
+	firstDecisionTaskBackoffSeconds := delayStartSeconds
+	if len(startRequest.GetCronSchedule()) > 0 {
+		delayedStartTime := now.Add(time.Second * time.Duration(delayStartSeconds))
+		firstDecisionTaskBackoffSeconds = backoff.GetBackoffForNextScheduleInSeconds(
+			startRequest.GetCronSchedule(), delayedStartTime, delayedStartTime)
+
+		// backoff seconds was calculated based on delayed start time, so we need to
+		// add the delayStartSeconds to that backoff.
+		firstDecisionTaskBackoffSeconds += delayStartSeconds
+	}
+
+	histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(firstDecisionTaskBackoffSeconds)
+
 	if startRequest.RetryPolicy != nil && startRequest.RetryPolicy.GetExpirationIntervalInSeconds() > 0 {
 		expirationInSeconds := startRequest.RetryPolicy.GetExpirationIntervalInSeconds() + firstDecisionTaskBackoffSeconds
 		// expirationTime calculates from first decision task schedule to the end of the workflow
 		deadline := now.Add(time.Duration(expirationInSeconds) * time.Second)
 		histRequest.ExpirationTimestamp = Int64Ptr(deadline.Round(time.Millisecond).UnixNano())
 	}
-	histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(firstDecisionTaskBackoffSeconds)
+
 	return histRequest
 }
 
@@ -524,6 +592,19 @@ func ValidateLongPollContextTimeoutIsSet(
 	return deadline, nil
 }
 
+// ValidateDomainUUID checks if the given domainID string is a valid UUID
+func ValidateDomainUUID(
+	domainUUID string,
+) error {
+
+	if domainUUID == "" {
+		return &types.BadRequestError{Message: "Missing domain UUID."}
+	} else if uuid.Parse(domainUUID) == nil {
+		return &types.BadRequestError{Message: "Invalid domain UUID."}
+	}
+	return nil
+}
+
 // GetSizeOfMapStringToByteArray get size of map[string][]byte
 func GetSizeOfMapStringToByteArray(input map[string][]byte) int {
 	if input == nil {
@@ -538,14 +619,14 @@ func GetSizeOfMapStringToByteArray(input map[string][]byte) int {
 }
 
 // GetSizeOfHistoryEvent returns approximate size in bytes of the history event taking into account byte arrays only now
-func GetSizeOfHistoryEvent(event *workflow.HistoryEvent) uint64 {
+func GetSizeOfHistoryEvent(event *types.HistoryEvent) uint64 {
 	if event == nil {
 		return 0
 	}
 
 	res := 0
 	switch *event.EventType {
-	case workflow.EventTypeWorkflowExecutionStarted:
+	case types.EventTypeWorkflowExecutionStarted:
 		res += len(event.WorkflowExecutionStartedEventAttributes.Input)
 		res += len(event.WorkflowExecutionStartedEventAttributes.ContinuedFailureDetails)
 		res += len(event.WorkflowExecutionStartedEventAttributes.LastCompletionResult)
@@ -558,55 +639,55 @@ func GetSizeOfHistoryEvent(event *workflow.HistoryEvent) uint64 {
 		if event.WorkflowExecutionStartedEventAttributes.SearchAttributes != nil {
 			res += GetSizeOfMapStringToByteArray(event.WorkflowExecutionStartedEventAttributes.SearchAttributes.IndexedFields)
 		}
-	case workflow.EventTypeWorkflowExecutionCompleted:
+	case types.EventTypeWorkflowExecutionCompleted:
 		res += len(event.WorkflowExecutionCompletedEventAttributes.Result)
-	case workflow.EventTypeWorkflowExecutionFailed:
+	case types.EventTypeWorkflowExecutionFailed:
 		res += len(event.WorkflowExecutionFailedEventAttributes.Details)
-	case workflow.EventTypeWorkflowExecutionTimedOut:
-	case workflow.EventTypeDecisionTaskScheduled:
-	case workflow.EventTypeDecisionTaskStarted:
-	case workflow.EventTypeDecisionTaskCompleted:
+	case types.EventTypeWorkflowExecutionTimedOut:
+	case types.EventTypeDecisionTaskScheduled:
+	case types.EventTypeDecisionTaskStarted:
+	case types.EventTypeDecisionTaskCompleted:
 		res += len(event.DecisionTaskCompletedEventAttributes.ExecutionContext)
-	case workflow.EventTypeDecisionTaskTimedOut:
-	case workflow.EventTypeDecisionTaskFailed:
+	case types.EventTypeDecisionTaskTimedOut:
+	case types.EventTypeDecisionTaskFailed:
 		res += len(event.DecisionTaskFailedEventAttributes.Details)
-	case workflow.EventTypeActivityTaskScheduled:
+	case types.EventTypeActivityTaskScheduled:
 		res += len(event.ActivityTaskScheduledEventAttributes.Input)
 		if event.ActivityTaskScheduledEventAttributes.Header != nil {
 			res += GetSizeOfMapStringToByteArray(event.ActivityTaskScheduledEventAttributes.Header.Fields)
 		}
-	case workflow.EventTypeActivityTaskStarted:
+	case types.EventTypeActivityTaskStarted:
 		res += len(event.ActivityTaskStartedEventAttributes.LastFailureDetails)
-	case workflow.EventTypeActivityTaskCompleted:
+	case types.EventTypeActivityTaskCompleted:
 		res += len(event.ActivityTaskCompletedEventAttributes.Result)
-	case workflow.EventTypeActivityTaskFailed:
+	case types.EventTypeActivityTaskFailed:
 		res += len(event.ActivityTaskFailedEventAttributes.Details)
-	case workflow.EventTypeActivityTaskTimedOut:
+	case types.EventTypeActivityTaskTimedOut:
 		res += len(event.ActivityTaskTimedOutEventAttributes.Details)
 		res += len(event.ActivityTaskTimedOutEventAttributes.LastFailureDetails)
-	case workflow.EventTypeActivityTaskCancelRequested:
-	case workflow.EventTypeRequestCancelActivityTaskFailed:
-	case workflow.EventTypeActivityTaskCanceled:
+	case types.EventTypeActivityTaskCancelRequested:
+	case types.EventTypeRequestCancelActivityTaskFailed:
+	case types.EventTypeActivityTaskCanceled:
 		res += len(event.ActivityTaskCanceledEventAttributes.Details)
-	case workflow.EventTypeTimerStarted:
-	case workflow.EventTypeTimerFired:
-	case workflow.EventTypeCancelTimerFailed:
-	case workflow.EventTypeTimerCanceled:
-	case workflow.EventTypeWorkflowExecutionCancelRequested:
-	case workflow.EventTypeWorkflowExecutionCanceled:
+	case types.EventTypeTimerStarted:
+	case types.EventTypeTimerFired:
+	case types.EventTypeCancelTimerFailed:
+	case types.EventTypeTimerCanceled:
+	case types.EventTypeWorkflowExecutionCancelRequested:
+	case types.EventTypeWorkflowExecutionCanceled:
 		res += len(event.WorkflowExecutionCanceledEventAttributes.Details)
-	case workflow.EventTypeRequestCancelExternalWorkflowExecutionInitiated:
+	case types.EventTypeRequestCancelExternalWorkflowExecutionInitiated:
 		res += len(event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes.Control)
-	case workflow.EventTypeRequestCancelExternalWorkflowExecutionFailed:
+	case types.EventTypeRequestCancelExternalWorkflowExecutionFailed:
 		res += len(event.RequestCancelExternalWorkflowExecutionFailedEventAttributes.Control)
-	case workflow.EventTypeExternalWorkflowExecutionCancelRequested:
-	case workflow.EventTypeMarkerRecorded:
+	case types.EventTypeExternalWorkflowExecutionCancelRequested:
+	case types.EventTypeMarkerRecorded:
 		res += len(event.MarkerRecordedEventAttributes.Details)
-	case workflow.EventTypeWorkflowExecutionSignaled:
+	case types.EventTypeWorkflowExecutionSignaled:
 		res += len(event.WorkflowExecutionSignaledEventAttributes.Input)
-	case workflow.EventTypeWorkflowExecutionTerminated:
+	case types.EventTypeWorkflowExecutionTerminated:
 		res += len(event.WorkflowExecutionTerminatedEventAttributes.Details)
-	case workflow.EventTypeWorkflowExecutionContinuedAsNew:
+	case types.EventTypeWorkflowExecutionContinuedAsNew:
 		res += len(event.WorkflowExecutionContinuedAsNewEventAttributes.Input)
 		if event.WorkflowExecutionContinuedAsNewEventAttributes.Memo != nil {
 			res += GetSizeOfMapStringToByteArray(event.WorkflowExecutionContinuedAsNewEventAttributes.Memo.Fields)
@@ -617,7 +698,7 @@ func GetSizeOfHistoryEvent(event *workflow.HistoryEvent) uint64 {
 		if event.WorkflowExecutionContinuedAsNewEventAttributes.SearchAttributes != nil {
 			res += GetSizeOfMapStringToByteArray(event.WorkflowExecutionContinuedAsNewEventAttributes.SearchAttributes.IndexedFields)
 		}
-	case workflow.EventTypeStartChildWorkflowExecutionInitiated:
+	case types.EventTypeStartChildWorkflowExecutionInitiated:
 		res += len(event.StartChildWorkflowExecutionInitiatedEventAttributes.Input)
 		res += len(event.StartChildWorkflowExecutionInitiatedEventAttributes.Control)
 		if event.StartChildWorkflowExecutionInitiatedEventAttributes.Memo != nil {
@@ -629,31 +710,31 @@ func GetSizeOfHistoryEvent(event *workflow.HistoryEvent) uint64 {
 		if event.StartChildWorkflowExecutionInitiatedEventAttributes.SearchAttributes != nil {
 			res += GetSizeOfMapStringToByteArray(event.StartChildWorkflowExecutionInitiatedEventAttributes.SearchAttributes.IndexedFields)
 		}
-	case workflow.EventTypeStartChildWorkflowExecutionFailed:
+	case types.EventTypeStartChildWorkflowExecutionFailed:
 		res += len(event.StartChildWorkflowExecutionFailedEventAttributes.Control)
-	case workflow.EventTypeChildWorkflowExecutionStarted:
+	case types.EventTypeChildWorkflowExecutionStarted:
 		if event.ChildWorkflowExecutionStartedEventAttributes == nil {
 			return 0
 		}
 		if event.ChildWorkflowExecutionStartedEventAttributes.Header != nil {
 			res += GetSizeOfMapStringToByteArray(event.ChildWorkflowExecutionStartedEventAttributes.Header.Fields)
 		}
-	case workflow.EventTypeChildWorkflowExecutionCompleted:
+	case types.EventTypeChildWorkflowExecutionCompleted:
 		res += len(event.ChildWorkflowExecutionCompletedEventAttributes.Result)
-	case workflow.EventTypeChildWorkflowExecutionFailed:
+	case types.EventTypeChildWorkflowExecutionFailed:
 		res += len(event.ChildWorkflowExecutionFailedEventAttributes.Details)
-	case workflow.EventTypeChildWorkflowExecutionCanceled:
+	case types.EventTypeChildWorkflowExecutionCanceled:
 		res += len(event.ChildWorkflowExecutionCanceledEventAttributes.Details)
-	case workflow.EventTypeChildWorkflowExecutionTimedOut:
-	case workflow.EventTypeChildWorkflowExecutionTerminated:
-	case workflow.EventTypeSignalExternalWorkflowExecutionInitiated:
+	case types.EventTypeChildWorkflowExecutionTimedOut:
+	case types.EventTypeChildWorkflowExecutionTerminated:
+	case types.EventTypeSignalExternalWorkflowExecutionInitiated:
 		res += len(event.SignalExternalWorkflowExecutionInitiatedEventAttributes.Input)
 		res += len(event.SignalExternalWorkflowExecutionInitiatedEventAttributes.Control)
-	case workflow.EventTypeSignalExternalWorkflowExecutionFailed:
+	case types.EventTypeSignalExternalWorkflowExecutionFailed:
 		res += len(event.SignalExternalWorkflowExecutionFailedEventAttributes.Control)
-	case workflow.EventTypeExternalWorkflowExecutionSignaled:
+	case types.EventTypeExternalWorkflowExecutionSignaled:
 		res += len(event.ExternalWorkflowExecutionSignaledEventAttributes.Control)
-	case workflow.EventTypeUpsertWorkflowSearchAttributes:
+	case types.EventTypeUpsertWorkflowSearchAttributes:
 		if event.UpsertWorkflowSearchAttributesEventAttributes.SearchAttributes != nil {
 			res += GetSizeOfMapStringToByteArray(event.UpsertWorkflowSearchAttributesEventAttributes.SearchAttributes.IndexedFields)
 		}
@@ -787,8 +868,102 @@ func ConvertDynamicConfigMapPropertyToIntMap(
 
 // IsStickyTaskConditionError is error from matching engine
 func IsStickyTaskConditionError(err error) bool {
-	if e, ok := err.(*workflow.InternalServiceError); ok {
+	if e, ok := err.(*types.InternalServiceError); ok {
 		return e.GetMessage() == StickyTaskConditionFailedErrorMsg
 	}
 	return false
+}
+
+// DurationToDays converts time.Duration to number of 24 hour days
+func DurationToDays(d time.Duration) int32 {
+	return int32(d / (24 * time.Hour))
+}
+
+// DurationToHours converts time.Duration to number of hours
+func DurationToHours(d time.Duration) int64 {
+	return int64(d / time.Hour)
+}
+
+// DurationToMinutes converts time.Duration to number of minutes
+func DurationToMinutes(d time.Duration) int64 {
+	return int64(d / time.Minute)
+}
+
+// DurationToSeconds converts time.Duration to number of seconds
+func DurationToSeconds(d time.Duration) int64 {
+	return int64(d / time.Second)
+}
+
+// DurationToMilliseconds converts time.Duration to number of milliseconds
+func DurationToMilliseconds(d time.Duration) int64 {
+	return int64(d / time.Millisecond)
+}
+
+// DurationToMicroseconds converts time.Duration to number of microseconds
+func DurationToMicroseconds(d time.Duration) int64 {
+	return int64(d / time.Microsecond)
+}
+
+// DurationToNanoseconds converts time.Duration to number of nanoseconds
+func DurationToNanoseconds(d time.Duration) int64 {
+	return int64(d / time.Nanosecond)
+}
+
+// DaysToDuration converts number of 24 hour days to time.Duration
+func DaysToDuration(d int32) time.Duration {
+	return time.Duration(d) * (24 * time.Hour)
+}
+
+// HoursToDuration converts number of hours to time.Duration
+func HoursToDuration(d int64) time.Duration {
+	return time.Duration(d) * time.Hour
+}
+
+// MinutesToDuration converts number of minutes to time.Duration
+func MinutesToDuration(d int64) time.Duration {
+	return time.Duration(d) * time.Minute
+}
+
+// SecondsToDuration converts number of seconds to time.Duration
+func SecondsToDuration(d int64) time.Duration {
+	return time.Duration(d) * time.Second
+}
+
+// MillisecondsToDuration converts number of milliseconds to time.Duration
+func MillisecondsToDuration(d int64) time.Duration {
+	return time.Duration(d) * time.Millisecond
+}
+
+// MicrosecondsToDuration converts number of microseconds to time.Duration
+func MicrosecondsToDuration(d int64) time.Duration {
+	return time.Duration(d) * time.Microsecond
+}
+
+// NanosecondsToDuration converts number of nanoseconds to time.Duration
+func NanosecondsToDuration(d int64) time.Duration {
+	return time.Duration(d) * time.Nanosecond
+}
+
+// SleepWithMinDuration sleeps for the minimum of desired and available duration
+// returns the remaining available time duration
+func SleepWithMinDuration(desired time.Duration, available time.Duration) time.Duration {
+	d := MinDuration(desired, available)
+	if d > 0 {
+		time.Sleep(d)
+	}
+	return available - d
+}
+
+// ConvertErrToGetTaskFailedCause converts error to GetTaskFailedCause
+func ConvertErrToGetTaskFailedCause(err error) types.GetTaskFailedCause {
+	if IsContextTimeoutError(err) {
+		return types.GetTaskFailedCauseTimeout
+	}
+	if IsServiceBusyError(err) {
+		return types.GetTaskFailedCauseServiceBusy
+	}
+	if _, ok := err.(*types.ShardOwnershipLostError); ok {
+		return types.GetTaskFailedCauseShardOwnershipLost
+	}
+	return types.GetTaskFailedCauseUncategorized
 }

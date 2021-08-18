@@ -27,10 +27,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common/auth"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/environment"
-	"github.com/uber/cadence/tools/common/schema"
 	"github.com/uber/cadence/tools/sql"
 )
 
@@ -59,42 +57,33 @@ func (s *HandlerTestSuite) SetupTest() {
 func (s *HandlerTestSuite) TestValidateConnectConfig() {
 	cfg := new(config.SQL)
 
-	s.NotNil(sql.ValidateConnectConfig(cfg, false))
-	s.NotNil(sql.ValidateConnectConfig(cfg, true))
+	s.NotNil(sql.ValidateConnectConfig(cfg))
 
 	cfg.ConnectAddr = net.JoinHostPort(
 		environment.GetMySQLAddress(),
 		strconv.Itoa(environment.GetMySQLPort()),
 	)
-	s.NotNil(sql.ValidateConnectConfig(cfg, false))
-	s.Nil(sql.ValidateConnectConfig(cfg, true))
-	s.Equal(schema.DryrunDBName, cfg.DatabaseName)
+	s.NotNil(sql.ValidateConnectConfig(cfg))
 
 	cfg.DatabaseName = "foobar"
-	s.Nil(sql.ValidateConnectConfig(cfg, false))
-	s.Nil(sql.ValidateConnectConfig(cfg, true))
+	s.Nil(sql.ValidateConnectConfig(cfg))
 
-	cfg.TLS = &auth.TLS{}
+	cfg.TLS = &config.TLS{}
 	cfg.TLS.Enabled = true
-	s.NotNil(sql.ValidateConnectConfig(cfg, false))
-	s.NotNil(sql.ValidateConnectConfig(cfg, true))
+	s.NotNil(sql.ValidateConnectConfig(cfg))
 
 	cfg.TLS.CaFile = "ca.pem"
-	s.Nil(sql.ValidateConnectConfig(cfg, false))
-	s.Nil(sql.ValidateConnectConfig(cfg, true))
+	s.Nil(sql.ValidateConnectConfig(cfg))
 
 	cfg.TLS.KeyFile = "key_file"
 	cfg.TLS.CertFile = ""
-	s.NotNil(sql.ValidateConnectConfig(cfg, false))
-	s.NotNil(sql.ValidateConnectConfig(cfg, true))
+	s.NotNil(sql.ValidateConnectConfig(cfg))
 
 	cfg.TLS.KeyFile = ""
 	cfg.TLS.CertFile = "cert_file"
-	s.NotNil(sql.ValidateConnectConfig(cfg, false))
-	s.NotNil(sql.ValidateConnectConfig(cfg, true))
+	s.NotNil(sql.ValidateConnectConfig(cfg))
 
 	cfg.TLS.KeyFile = "key_file"
 	cfg.TLS.CertFile = "cert_file"
-	s.Nil(sql.ValidateConnectConfig(cfg, false))
-	s.Nil(sql.ValidateConnectConfig(cfg, true))
+	s.Nil(sql.ValidateConnectConfig(cfg))
 }

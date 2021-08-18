@@ -32,7 +32,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	history "github.com/uber/cadence/.gen/go/history"
+	types "github.com/uber/cadence/common/types"
 )
 
 // MockActivityReplicator is a mock of ActivityReplicator interface
@@ -59,7 +59,7 @@ func (m *MockActivityReplicator) EXPECT() *MockActivityReplicatorMockRecorder {
 }
 
 // SyncActivity mocks base method
-func (m *MockActivityReplicator) SyncActivity(ctx context.Context, request *history.SyncActivityRequest) error {
+func (m *MockActivityReplicator) SyncActivity(ctx context.Context, request *types.SyncActivityRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SyncActivity", ctx, request)
 	ret0, _ := ret[0].(error)

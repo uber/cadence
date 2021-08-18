@@ -26,11 +26,11 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
@@ -70,7 +70,11 @@ type (
 		PollBackoffIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 		EnablePersistQueueStates             dynamicconfig.BoolPropertyFn
 		EnableLoadQueueStates                dynamicconfig.BoolPropertyFn
-		MetricScope                          int
+		EnableValidator                      dynamicconfig.BoolPropertyFn
+		ValidationInterval                   dynamicconfig.DurationPropertyFn
+		// MaxPendingTaskSize is used in cross cluster queue to limit the pending task count
+		MaxPendingTaskSize dynamicconfig.IntPropertyFn
+		MetricScope        int
 	}
 
 	actionNotification struct {
@@ -163,7 +167,7 @@ func newProcessorBase(
 	}
 }
 
-func (p *processorBase) updateAckLevel() (bool, error) {
+func (p *processorBase) updateAckLevel() (bool, task.Key, error) {
 	p.metricsScope.IncCounter(metrics.AckLevelUpdateCounter)
 	var minAckLevel task.Key
 	totalPengingTasks := 0
@@ -189,9 +193,9 @@ func (p *processorBase) updateAckLevel() (bool, error) {
 		if err != nil {
 			p.logger.Error("Error shutdown queue", tag.Error(err))
 			// return error so that shutdown callback can be retried
-			return false, err
+			return false, nil, err
 		}
-		return true, nil
+		return true, nil, nil
 	}
 
 	if totalPengingTasks > warnPendingTasks {
@@ -205,17 +209,17 @@ func (p *processorBase) updateAckLevel() (bool, error) {
 		if err := p.updateProcessingQueueStates(states); err != nil {
 			p.logger.Error("Error persisting processing queue states", tag.Error(err), tag.OperationFailed)
 			p.metricsScope.IncCounter(metrics.AckLevelUpdateFailedCounter)
-			return false, err
+			return false, minAckLevel, err
 		}
 	} else {
 		if err := p.updateClusterAckLevel(minAckLevel); err != nil {
 			p.logger.Error("Error updating ack level for shard", tag.Error(err), tag.OperationFailed)
 			p.metricsScope.IncCounter(metrics.AckLevelUpdateFailedCounter)
-			return false, err
+			return false, minAckLevel, err
 		}
 	}
 
-	return false, nil
+	return false, minAckLevel, nil
 }
 
 func (p *processorBase) initializeSplitPolicy(

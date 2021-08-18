@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -28,31 +28,30 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	test "github.com/uber/cadence/common/testing"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
 	defaultTestPersistenceTimeout = 5 * time.Second
 )
 
-func (s *nDCIntegrationTestSuite) TestReplicationMessageApplication() {
+func (s *NDCIntegrationTestSuite) TestReplicationMessageApplication() {
 
 	workflowID := "replication-message-test" + uuid.New()
 	runID := uuid.New()
 	workflowType := "event-generator-workflow-type"
 	tasklist := "event-generator-taskList"
 
-	var historyBatch []*shared.History
+	var historyBatch []*types.History
 	s.generator = test.InitializeHistoryEventGenerator(s.domainName, 1)
 
 	for s.generator.HasNextVertex() {
 		events := s.generator.GetNextVertices()
-		historyEvents := &shared.History{}
+		historyEvents := &types.History{}
 		for _, event := range events {
-			historyEvents.Events = append(historyEvents.Events, event.GetData().(*shared.HistoryEvent))
+			historyEvents.Events = append(historyEvents.Events, event.GetData().(*types.HistoryEvent))
 		}
 		historyBatch = append(historyBatch, historyEvents)
 	}
@@ -81,27 +80,27 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageApplication() {
 	s.Fail("Verification of replicated messages failed")
 }
 
-func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
+func (s *NDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 
 	workflowID := "replication-message-dlq-test" + uuid.New()
 	runID := uuid.New()
 	workflowType := "event-generator-workflow-type"
 	tasklist := "event-generator-taskList"
 
-	var historyBatch []*shared.History
+	var historyBatch []*types.History
 	s.generator = test.InitializeHistoryEventGenerator(s.domainName, 1)
 
 	events := s.generator.GetNextVertices()
-	historyEvents := &shared.History{}
+	historyEvents := &types.History{}
 	for _, event := range events {
-		historyEvents.Events = append(historyEvents.Events, event.GetData().(*shared.HistoryEvent))
+		historyEvents.Events = append(historyEvents.Events, event.GetData().(*types.HistoryEvent))
 	}
 	historyBatch = append(historyBatch, historyEvents)
 
 	versionHistory := s.eventBatchesToVersionHistory(nil, historyBatch)
 
 	s.NotNil(historyBatch)
-	historyBatch[0].Events[1].Version = common.Int64Ptr(2)
+	historyBatch[0].Events[1].Version = 2
 
 	s.applyEventsThroughFetcher(
 		workflowID,
@@ -118,7 +117,7 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 
 	expectedDLQMsgs := map[int64]bool{}
 	for _, batch := range historyBatch {
-		firstEventID := batch.Events[0].GetEventId()
+		firstEventID := batch.Events[0].GetEventID()
 		expectedDLQMsgs[firstEventID] = true
 	}
 

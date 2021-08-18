@@ -22,16 +22,12 @@ package persistencetests
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"sync"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-
-	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/common"
 )
 
 type (
@@ -69,18 +65,11 @@ func (s *QueuePersistenceSuite) TestDomainReplicationQueue() {
 
 	numMessages := 100
 	concurrentSenders := 10
+	messageChan := make(chan []byte)
 
-	messageChan := make(chan interface{})
-
-	taskType := replicator.ReplicationTaskTypeDomain
 	go func() {
 		for i := 0; i < numMessages; i++ {
-			messageChan <- &replicator.ReplicationTask{
-				TaskType: &taskType,
-				DomainTaskAttributes: &replicator.DomainTaskAttributes{
-					ID: common.StringPtr(fmt.Sprintf("message-%v", i)),
-				},
-			}
+			messageChan <- []byte{1}
 		}
 		close(messageChan)
 	}()
@@ -100,10 +89,9 @@ func (s *QueuePersistenceSuite) TestDomainReplicationQueue() {
 
 	wg.Wait()
 
-	result, lastRetrievedMessageID, err := s.GetReplicationMessages(ctx, -1, numMessages)
+	result, err := s.GetReplicationMessages(ctx, -1, numMessages)
 	s.Nil(err, "GetReplicationMessages failed.")
 	s.Len(result, numMessages)
-	s.Equal(int64(numMessages-1), lastRetrievedMessageID)
 }
 
 // TestQueueMetadataOperations tests queue metadata operations
@@ -134,6 +122,9 @@ func (s *QueuePersistenceSuite) TestQueueMetadataOperations() {
 	err = s.UpdateAckLevel(ctx, 25, "test2")
 	s.Require().NoError(err)
 
+	err = s.UpdateAckLevel(ctx, 24, "test2")
+	s.Require().NoError(err)
+
 	clusterAckLevels, err = s.GetAckLevels(ctx)
 	s.Require().NoError(err)
 	s.Assert().Len(clusterAckLevels, 2)
@@ -149,18 +140,11 @@ func (s *QueuePersistenceSuite) TestDomainReplicationDLQ() {
 	maxMessageID := int64(100)
 	numMessages := 100
 	concurrentSenders := 10
+	messageChan := make(chan []byte)
 
-	messageChan := make(chan interface{})
-
-	taskType := replicator.ReplicationTaskTypeDomain
 	go func() {
 		for i := 0; i < numMessages; i++ {
-			messageChan <- &replicator.ReplicationTask{
-				TaskType: &taskType,
-				DomainTaskAttributes: &replicator.DomainTaskAttributes{
-					ID: common.StringPtr(fmt.Sprintf("message-%v", i)),
-				},
-			}
+			messageChan <- []byte{}
 		}
 		close(messageChan)
 	}()
@@ -191,15 +175,19 @@ func (s *QueuePersistenceSuite) TestDomainReplicationDLQ() {
 	s.NoError(err, "GetReplicationMessages failed.")
 	s.Equal(len(token), 0)
 
-	lastMessageID := result2[len(result2)-1].SourceTaskId
-	err = s.DeleteMessageFromDomainDLQ(ctx, *lastMessageID)
+	size, err := s.GetDomainDLQSize(ctx)
+	s.NoError(err, "GetDomainDLQSize failed")
+	s.Equal(int64(numMessages), size)
+
+	lastMessageID := result2[len(result2)-1].ID
+	err = s.DeleteMessageFromDomainDLQ(ctx, lastMessageID)
 	s.NoError(err)
 	result3, token, err := s.GetMessagesFromDomainDLQ(ctx, -1, maxMessageID, numMessages, token)
 	s.Nil(err, "GetReplicationMessages failed.")
 	s.Equal(len(token), 0)
 	s.Equal(len(result3), numMessages-1)
 
-	err = s.RangeDeleteMessagesFromDomainDLQ(ctx, -1, *lastMessageID)
+	err = s.RangeDeleteMessagesFromDomainDLQ(ctx, -1, lastMessageID)
 	s.NoError(err)
 	result4, token, err := s.GetMessagesFromDomainDLQ(ctx, -1, maxMessageID, numMessages, token)
 	s.Nil(err, "GetReplicationMessages failed.")
@@ -209,24 +197,25 @@ func (s *QueuePersistenceSuite) TestDomainReplicationDLQ() {
 
 // TestDomainDLQMetadataOperations tests queue metadata operations
 func (s *QueuePersistenceSuite) TestDomainDLQMetadataOperations() {
+	clusterName := "test"
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
 	ackLevel, err := s.GetDomainDLQAckLevel(ctx)
 	s.Require().NoError(err)
-	s.Equal(int64(-1), ackLevel)
+	s.Equal(0, len(ackLevel))
 
-	err = s.UpdateDomainDLQAckLevel(ctx, 10)
+	err = s.UpdateDomainDLQAckLevel(ctx, 10, clusterName)
 	s.NoError(err)
 
 	ackLevel, err = s.GetDomainDLQAckLevel(ctx)
 	s.Require().NoError(err)
-	s.Equal(int64(10), ackLevel)
+	s.Equal(int64(10), ackLevel[clusterName])
 
-	err = s.UpdateDomainDLQAckLevel(ctx, 1)
+	err = s.UpdateDomainDLQAckLevel(ctx, 1, clusterName)
 	s.NoError(err)
 
 	ackLevel, err = s.GetDomainDLQAckLevel(ctx)
 	s.Require().NoError(err)
-	s.Equal(int64(10), ackLevel)
+	s.Equal(int64(10), ackLevel[clusterName])
 }

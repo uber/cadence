@@ -27,7 +27,7 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -40,9 +40,9 @@ const (
 )
 
 var (
-	errTerminationStateInvalid = &shared.InternalServiceError{Message: "query termination state invalid"}
-	errAlreadyInTerminalState  = &shared.InternalServiceError{Message: "query already in terminal state"}
-	errQueryNotInTerminalState = &shared.InternalServiceError{Message: "query not in terminal state"}
+	errTerminationStateInvalid = &types.InternalServiceError{Message: "query termination state invalid"}
+	errAlreadyInTerminalState  = &types.InternalServiceError{Message: "query already in terminal state"}
+	errQueryNotInTerminalState = &types.InternalServiceError{Message: "query not in terminal state"}
 )
 
 type (
@@ -52,28 +52,28 @@ type (
 	// TerminationState describes a query's termination state
 	TerminationState struct {
 		TerminationType TerminationType
-		QueryResult     *shared.WorkflowQueryResult
+		QueryResult     *types.WorkflowQueryResult
 		Failure         error
 	}
 
 	query interface {
 		getQueryID() string
 		getQueryTermCh() <-chan struct{}
-		getQueryInput() *shared.WorkflowQuery
+		getQueryInput() *types.WorkflowQuery
 		getTerminationState() (*TerminationState, error)
 		setTerminationState(*TerminationState) error
 	}
 
 	queryImpl struct {
 		id         string
-		queryInput *shared.WorkflowQuery
+		queryInput *types.WorkflowQuery
 		termCh     chan struct{}
 
 		terminationState atomic.Value
 	}
 )
 
-func newQuery(queryInput *shared.WorkflowQuery) query {
+func newQuery(queryInput *types.WorkflowQuery) query {
 	return &queryImpl{
 		id:         uuid.New(),
 		queryInput: queryInput,
@@ -89,7 +89,7 @@ func (q *queryImpl) getQueryTermCh() <-chan struct{} {
 	return q.termCh
 }
 
-func (q *queryImpl) getQueryInput() *shared.WorkflowQuery {
+func (q *queryImpl) getQueryInput() *types.WorkflowQuery {
 	return q.queryInput
 }
 
@@ -126,12 +126,12 @@ func (q *queryImpl) validateTerminationState(
 			return errTerminationStateInvalid
 		}
 		queryResult := terminationState.QueryResult
-		validAnswered := queryResult.GetResultType().Equals(shared.QueryResultTypeAnswered) &&
+		validAnswered := queryResult.GetResultType() == types.QueryResultTypeAnswered &&
 			queryResult.Answer != nil &&
-			queryResult.ErrorMessage == nil
-		validFailed := queryResult.GetResultType().Equals(shared.QueryResultTypeFailed) &&
+			queryResult.ErrorMessage == ""
+		validFailed := queryResult.GetResultType() == types.QueryResultTypeFailed &&
 			queryResult.Answer == nil &&
-			queryResult.ErrorMessage != nil
+			queryResult.ErrorMessage != ""
 		if !validAnswered && !validFailed {
 			return errTerminationStateInvalid
 		}

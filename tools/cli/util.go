@@ -38,6 +38,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cristalhq/jwt/v3"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 	"github.com/valyala/fastjson"
@@ -45,6 +46,8 @@ import (
 	"go.uber.org/cadence/client"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/authorization"
+	cc "github.com/uber/cadence/common/client"
 )
 
 // JSONHistorySerializer is used to encode history event in JSON
@@ -550,7 +553,13 @@ func ErrorAndExit(msg string, err error) {
 
 func getWorkflowClient(c *cli.Context) client.Client {
 	domain := getRequiredGlobalOption(c, FlagDomain)
-	return client.NewClient(cFactory.ClientFrontendClient(c), domain, &client.Options{})
+	return client.NewClient(
+		cFactory.ClientFrontendClient(c),
+		domain,
+		&client.Options{
+			FeatureFlags: cc.ToClientFeatureFlags(&cc.DefaultCLIFeatureFlags),
+		},
+	)
 }
 
 func getWorkflowClientWithOptionalDomain(c *cli.Context) client.Client {
@@ -756,12 +765,37 @@ func getCliIdentity() string {
 	return fmt.Sprintf("cadence-cli@%s", hostName)
 }
 
+func processJWTFlags(ctx context.Context, cliCtx *cli.Context) context.Context {
+	path := getJWTPrivateKey(cliCtx)
+	t := getJWT(cliCtx)
+	var token string
+
+	if t != "" {
+		token = t
+	} else if path != "" {
+		createdToken, err := createJWT(path)
+		if err != nil {
+			ErrorAndExit("Error creating JWT token", err)
+		}
+		token = *createdToken
+	}
+
+	ctx = context.WithValue(ctx, CtxKeyJWT, token)
+	return ctx
+}
+
+func populateContextFromCLIContext(ctx context.Context, cliCtx *cli.Context) context.Context {
+	ctx = processJWTFlags(ctx, cliCtx)
+	return ctx
+}
+
 func newContext(c *cli.Context) (context.Context, context.CancelFunc) {
 	contextTimeout := defaultContextTimeout
 	if c.GlobalInt(FlagContextTimeout) > 0 {
 		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
 	}
-	return context.WithTimeout(context.Background(), contextTimeout)
+	ctx := populateContextFromCLIContext(context.Background(), c)
+	return context.WithTimeout(ctx, contextTimeout)
 }
 
 func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc) {
@@ -801,6 +835,9 @@ func processJSONInputHelper(c *cli.Context, jType jsonType) string {
 	case jsonTypeHeader:
 		flagNameOfRawInput = FlagHeaderValue
 		flagNameOfInputFileName = FlagHeaderFile
+	case jsonTypeSignal:
+		flagNameOfRawInput = FlagSignalInput
+		flagNameOfInputFileName = FlagSignalInputFile
 	default:
 		return ""
 	}
@@ -990,4 +1027,30 @@ func getInputFile(inputFile string) *os.File {
 		ErrorAndExit(fmt.Sprintf("Failed to open input file for reading: %v", inputFile), err)
 	}
 	return f
+}
+
+// createJWT defines the logic to create a JWT
+func createJWT(keyPath string) (*string, error) {
+	claims := authorization.JWTClaims{
+		Admin: true,
+		Iat:   time.Now().Unix(),
+		TTL:   60 * 10,
+	}
+
+	privateKey, err := common.LoadRSAPrivateKey(keyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	signer, err := jwt.NewSignerRS(jwt.RS256, privateKey)
+	if err != nil {
+		return nil, err
+	}
+	builder := jwt.NewBuilder(signer)
+	token, err := builder.Build(claims)
+	if token == nil {
+		return nil, err
+	}
+	tokenString := token.String()
+	return &tokenString, nil
 }

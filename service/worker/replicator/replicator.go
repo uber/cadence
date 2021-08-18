@@ -32,7 +32,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -46,7 +45,7 @@ type (
 		metricsClient                 metrics.Client
 		hostInfo                      *membership.HostInfo
 		serviceResolver               membership.ServiceResolver
-		domainReplicationQueue        persistence.DomainReplicationQueue
+		domainReplicationQueue        domain.ReplicationQueue
 		replicationMaxRetry           time.Duration
 	}
 )
@@ -59,7 +58,7 @@ func NewReplicator(
 	metricsClient metrics.Client,
 	hostInfo *membership.HostInfo,
 	serviceResolver membership.ServiceResolver,
-	domainReplicationQueue persistence.DomainReplicationQueue,
+	domainReplicationQueue domain.ReplicationQueue,
 	domainReplicationTaskExecutor domain.ReplicationTaskExecutor,
 	replicationMaxRetry time.Duration,
 ) *Replicator {
@@ -89,6 +88,7 @@ func (r *Replicator) Start() error {
 		if clusterName != currentClusterName {
 			processor := newDomainReplicationProcessor(
 				clusterName,
+				currentClusterName,
 				r.logger.WithTags(tag.ComponentReplicationTaskProcessor, tag.SourceCluster(clusterName)),
 				r.clientBean.GetRemoteAdminClient(clusterName),
 				r.metricsClient,

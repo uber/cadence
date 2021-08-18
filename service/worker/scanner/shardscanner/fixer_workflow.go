@@ -23,6 +23,7 @@
 package shardscanner
 
 import (
+	"context"
 	"errors"
 
 	"go.uber.org/cadence/workflow"
@@ -43,17 +44,17 @@ var (
 
 // FixerManagerCB is a function which returns invariant manager for fixer.
 type FixerManagerCB func(
+	context.Context,
 	persistence.Retryer,
 	FixShardActivityParams,
-	ScannerConfig,
 ) invariant.Manager
 
 // FixerIteratorCB is a function which returns ScanOutputIterator for fixer.
 type FixerIteratorCB func(
+	context.Context,
 	blobstore.Client,
 	store.Keys,
 	FixShardActivityParams,
-	ScannerConfig,
 ) store.ScanOutputIterator
 
 // FixerHooks holds callback functions for shard scanner workflow implementation.
@@ -63,7 +64,10 @@ type FixerHooks struct {
 }
 
 // NewFixerHooks returns initialized callbacks for shard scanner workflow implementation.
-func NewFixerHooks(manager FixerManagerCB, iterator FixerIteratorCB) (*FixerHooks, error) {
+func NewFixerHooks(
+	manager FixerManagerCB,
+	iterator FixerIteratorCB,
+) (*FixerHooks, error) {
 	if manager == nil || iterator == nil {
 		return nil, errors.New("manager or iterator not provided")
 	}
@@ -91,8 +95,6 @@ func NewFixerWorkflow(
 		return nil, errors.New("workflow name is not provided")
 	}
 
-	params.ContextKey = ScannerContextKey(name)
-
 	wf := FixerWorkflow{
 		Params: params,
 	}
@@ -101,6 +103,10 @@ func NewFixerWorkflow(
 	if err != nil {
 		return nil, err
 	}
+	if corruptKeys.CorruptedKeys == nil {
+		return nil, errors.New("corrupted keys not found")
+	}
+
 	wf.Keys = corruptKeys
 	wf.Aggregator = NewShardFixResultAggregator(corruptKeys.CorruptedKeys, *corruptKeys.MinShard, *corruptKeys.MaxShard)
 
@@ -129,7 +135,6 @@ func (fx *FixerWorkflow) Start(ctx workflow.Context) error {
 				if err := workflow.ExecuteActivity(activityCtx, ActivityFixShard, FixShardActivityParams{
 					CorruptedKeysEntries:        batch,
 					ResolvedFixerWorkflowConfig: resolvedConfig,
-					ContextKey:                  fx.Params.ContextKey,
 				}).Get(ctx, &reports); err != nil {
 					errStr := err.Error()
 					shardReportChan.Send(ctx, FixReportError{
@@ -203,6 +208,12 @@ func setHandlers(aggregator *ShardFixResultAggregator) map[string]interface{} {
 				return AggregateFixReportResult{}, errQueryNotReady
 			}
 			return aggregator.GetAggregation(), nil
+		},
+		DomainReportQuery: func(req DomainReportQueryRequest) (*DomainFixReportQueryResult, error) {
+			if aggregator == nil {
+				return nil, errQueryNotReady
+			}
+			return aggregator.GetDomainStatus(req)
 		},
 	}
 }

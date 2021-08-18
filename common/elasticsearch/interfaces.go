@@ -26,20 +26,28 @@ import (
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/config"
 )
 
 // NewGenericClient create a ES client
 func NewGenericClient(
 	connectConfig *config.ElasticSearchConfig,
-	visibilityConfig *config.VisibilityConfig,
 	logger log.Logger,
 ) (GenericClient, error) {
-	// TODO hardcoded to V6 for now
-	return newV6Client(connectConfig, visibilityConfig, logger)
+	if connectConfig.Version == "" {
+		connectConfig.Version = "v6"
+	}
+	switch connectConfig.Version {
+	case "v6":
+		return NewV6Client(connectConfig, logger)
+	case "v7":
+		return NewV7Client(connectConfig, logger)
+	default:
+		return nil, fmt.Errorf("not supported ElasticSearch version: %v", connectConfig.Version)
+	}
 }
 
 type (
@@ -65,15 +73,18 @@ type (
 		PutMapping(ctx context.Context, index, root, key, valueType string) error
 		// CreateIndex creates a new index
 		CreateIndex(ctx context.Context, index string) error
+
+		IsNotFoundError(err error) bool
 	}
 
 	// SearchRequest is request for Search
 	SearchRequest struct {
-		Index       string
-		ListRequest *p.InternalListWorkflowExecutionsRequest
-		IsOpen      bool
-		Filter      IsRecordValidFilter
-		MatchQuery  *GenericMatch
+		Index           string
+		ListRequest     *p.InternalListWorkflowExecutionsRequest
+		IsOpen          bool
+		Filter          IsRecordValidFilter
+		MatchQuery      *GenericMatch
+		MaxResultWindow int
 	}
 
 	// GenericMatch is a match struct
@@ -84,11 +95,12 @@ type (
 
 	// SearchByQueryRequest is request for SearchByQuery
 	SearchByQueryRequest struct {
-		Index         string
-		Query         string
-		NextPageToken []byte
-		PageSize      int
-		Filter        IsRecordValidFilter
+		Index           string
+		Query           string
+		NextPageToken   []byte
+		PageSize        int
+		Filter          IsRecordValidFilter
+		MaxResultWindow int
 	}
 
 	// ScanByQueryRequest is request for SearchByQuery
@@ -207,6 +219,7 @@ type (
 		Memo          []byte
 		Encoding      string
 		TaskList      string
+		IsCron        bool
 		Attr          map[string]interface{}
 	}
 )

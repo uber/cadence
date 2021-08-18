@@ -1,3 +1,4 @@
 log:
   stdout: true
   level: info
+  levelKey: "level" 

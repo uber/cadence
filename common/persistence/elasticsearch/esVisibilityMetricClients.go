@@ -23,11 +23,11 @@ package elasticsearch
 import (
 	"context"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type visibilityMetricsClient struct {
@@ -308,10 +308,10 @@ func (p *visibilityMetricsClient) DeleteWorkflowExecution(
 
 func (p *visibilityMetricsClient) updateErrorMetric(scope int, err error) {
 	switch err.(type) {
-	case *workflow.BadRequestError:
+	case *types.BadRequestError:
 		p.metricClient.IncCounter(scope, metrics.ElasticsearchErrBadRequestCounter)
 		p.metricClient.IncCounter(scope, metrics.ElasticsearchFailures)
-	case *workflow.ServiceBusyError:
+	case *types.ServiceBusyError:
 		p.metricClient.IncCounter(scope, metrics.ElasticsearchErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.ElasticsearchFailures)
 	default:

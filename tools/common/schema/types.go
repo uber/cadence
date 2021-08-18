@@ -104,6 +104,8 @@ const (
 	CLIOptReplicationFactor = "replication-factor"
 	// CLIOptQuiet is the cli option for quiet mode
 	CLIOptQuiet = "quiet"
+	// CLIOptProtoVersion is the cli option for protocol version
+	CLIOptProtoVersion = "protocol-version"
 
 	// CLIFlagEndpoint is the cli flag for endpoint
 	CLIFlagEndpoint = CLIOptEndpoint + ", ep"
@@ -134,13 +136,15 @@ const (
 	// CLIFlagTargetVersion is the cli flag for target version
 	CLIFlagTargetVersion = CLIOptTargetVersion + ", v"
 	// CLIFlagDryrun is the cli flag for dryrun
-	CLIFlagDryrun = CLIOptDryrun + ", y"
+	CLIFlagDryrun = CLIOptDryrun
 	// CLIFlagSchemaDir is the cli flag for schema directory
 	CLIFlagSchemaDir = CLIOptSchemaDir + ", d"
 	// CLIFlagReplicationFactor is the cli flag for replication factor
 	CLIFlagReplicationFactor = CLIOptReplicationFactor + ", rf"
 	// CLIFlagQuiet is the cli flag for quiet mode
 	CLIFlagQuiet = CLIOptQuiet + ", q"
+	// CLIFlagProtoVersion is the cli flag for protocol version
+	CLIFlagProtoVersion = CLIOptProtoVersion + ", pv"
 
 	// CLIFlagEnableTLS enables cassandra client TLS
 	CLIFlagEnableTLS = "tls"
@@ -153,9 +157,6 @@ const (
 	// CLIFlagTLSEnableHostVerification enables tls host verification (tls must be enabled)
 	CLIFlagTLSEnableHostVerification = "tls-enable-host-verification"
 )
-
-// DryrunDBName is the db name used for dryrun
-const DryrunDBName = "_cadence_dryrun_"
 
 var rmspaceRegex = regexp.MustCompile(`\s+`)
 

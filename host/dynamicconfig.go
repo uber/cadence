@@ -25,14 +25,15 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 var (
 	// Override values for dynamic configs
 	staticOverrides = map[dynamicconfig.Key]interface{}{
 		dynamicconfig.FrontendRPS:                                   3000,
-		dynamicconfig.FrontendVisibilityListMaxQPS:                  100,
+		dynamicconfig.FrontendVisibilityListMaxQPS:                  200,
 		dynamicconfig.FrontendESIndexMaxResultWindow:                defaultTestValueOfESIndexMaxResultWindow,
 		dynamicconfig.MatchingNumTasklistWritePartitions:            3,
 		dynamicconfig.MatchingNumTasklistReadPartitions:             3,
@@ -44,6 +45,8 @@ var (
 		dynamicconfig.ReplicationTaskFetcherErrorRetryWait:          50 * time.Millisecond,
 		dynamicconfig.ReplicationTaskProcessorErrorRetryWait:        time.Millisecond,
 		dynamicconfig.EnableConsistentQueryByDomain:                 true,
+		dynamicconfig.EnableGRPCOutbound:                            true,
+		dynamicconfig.MinRetentionDays:                              0,
 	}
 )
 
@@ -166,6 +169,14 @@ func (d *dynamicClient) OverrideValue(name dynamicconfig.Key, value interface{})
 	d.Lock()
 	defer d.Unlock()
 	d.overrides[name] = value
+}
+
+func (d *dynamicClient) ListValue(name dynamicconfig.Key) ([]*types.DynamicConfigEntry, error) {
+	return d.client.ListValue(name)
+}
+
+func (d *dynamicClient) RestoreValue(name dynamicconfig.Key, filters map[dynamicconfig.Filter]interface{}) error {
+	return d.client.RestoreValue(name, filters)
 }
 
 // newIntegrationConfigClient - returns a dynamic config client for integration testing

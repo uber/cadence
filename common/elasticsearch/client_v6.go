@@ -26,18 +26,23 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/olivere/elastic"
+	esaws "github.com/olivere/elastic/aws/v4"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -48,7 +53,6 @@ type (
 	// elasticV6 implements Client
 	elasticV6 struct {
 		client     *elastic.Client
-		config     *config.VisibilityConfig
 		logger     log.Logger
 		serializer p.PayloadSerializer
 	}
@@ -76,30 +80,86 @@ type (
 	}
 )
 
-// TODO https://github.com/uber/cadence/issues/3686
-const oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
+func (c *elasticV6) IsNotFoundError(err error) bool {
+	if elastic.IsNotFound(err) {
+		return true
+	}
+	return false
+}
 
-// NewWrapperClient returns a new implementation of Client
-func newV6Client(
+// NewV6Client returns a new implementation of GenericClient
+func NewV6Client(
 	connectConfig *config.ElasticSearchConfig,
-	visibilityConfig *config.VisibilityConfig,
 	logger log.Logger,
+	clientOptFuncs ...elastic.ClientOptionFunc,
 ) (GenericClient, error) {
-	client, err := elastic.NewClient(
+	clientOptFuncs = append(clientOptFuncs,
 		elastic.SetURL(connectConfig.URL.String()),
 		elastic.SetRetrier(elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))),
-		elastic.SetDecoder(&elastic.NumberDecoder{}), // critical to ensure decode of int64 won't lose precise
+		elastic.SetDecoder(&elastic.NumberDecoder{}), // critical to ensure decode of int64 won't lose precise)
 	)
+	if connectConfig.DisableSniff {
+		clientOptFuncs = append(clientOptFuncs, elastic.SetSniff(false))
+	}
+	if connectConfig.DisableHealthCheck {
+		clientOptFuncs = append(clientOptFuncs, elastic.SetHealthcheck(false))
+	}
+	if connectConfig.AWSSigning.Enable {
+		if err := config.CheckAWSSigningConfig(connectConfig.AWSSigning); err != nil {
+			return nil, err
+		}
+		var signingClient *http.Client
+		var err error
+		if connectConfig.AWSSigning.EnvironmentCredential != nil {
+			signingClient, err = buildSigningHTTPClientFromEnvironmentCredentialV6(*connectConfig.AWSSigning.EnvironmentCredential)
+		} else {
+			signingClient, err = buildSigningHTTPClientFromStaticCredentialV6(*connectConfig.AWSSigning.StaticCredential)
+		}
+		if err != nil {
+			return nil, err
+		}
+		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(signingClient))
+	}
+	if connectConfig.TLS.Enabled {
+		var tlsClient *http.Client
+		var err error
+		tlsClient, err = buildTLSHTTPClient(connectConfig.TLS)
+		if err != nil {
+			return nil, err
+		}
+		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(tlsClient))
+	}
+
+	client, err := elastic.NewClient(clientOptFuncs...)
 	if err != nil {
 		return nil, err
 	}
 
 	return &elasticV6{
 		client:     client,
-		config:     visibilityConfig,
 		logger:     logger,
 		serializer: p.NewPayloadSerializer(),
 	}, nil
+}
+
+// Refer to https://github.com/olivere/elastic/blob/release-branch.v6/recipes/aws-connect-v4/main.go
+func buildSigningHTTPClientFromStaticCredentialV6(credentialConfig config.AWSStaticCredential) (*http.Client, error) {
+	awsCredentials := credentials.NewStaticCredentials(
+		credentialConfig.AccessKey,
+		credentialConfig.SecretKey,
+		credentialConfig.SessionToken,
+	)
+	return esaws.NewV4SigningClient(awsCredentials, credentialConfig.Region), nil
+}
+
+func buildSigningHTTPClientFromEnvironmentCredentialV6(credentialConfig config.AWSEnvironmentCredential) (*http.Client, error) {
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String(credentialConfig.Region)},
+	)
+	if err != nil {
+		return nil, err
+	}
+	return esaws.NewV4SigningClient(sess.Config.Credentials, credentialConfig.Region), nil
 }
 
 // root is for nested object like Attr property for search attributes.
@@ -143,7 +203,7 @@ func (c *elasticV6) Search(ctx context.Context, request *SearchRequest) (*p.Inte
 		return nil, err
 	}
 
-	return c.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.ListRequest.PageSize, request.Filter)
+	return c.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.ListRequest.PageSize, request.MaxResultWindow, request.Filter)
 }
 
 func (c *elasticV6) SearchByQuery(ctx context.Context, request *SearchByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -157,7 +217,7 @@ func (c *elasticV6) SearchByQuery(ctx context.Context, request *SearchByQueryReq
 		return nil, err
 	}
 
-	return c.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.PageSize, request.Filter)
+	return c.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.PageSize, request.MaxResultWindow, request.Filter)
 }
 
 func (c *elasticV6) ScanByQuery(ctx context.Context, request *ScanByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -186,7 +246,7 @@ func (c *elasticV6) ScanByQuery(ctx context.Context, request *ScanByQueryRequest
 			}
 		}
 	} else if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ScanByQuery failed. Error: %v", err),
 		}
 	}
@@ -200,7 +260,7 @@ func (c *elasticV6) RunBulkProcessor(ctx context.Context, parameters *BulkProces
 	}
 
 	afterFunc := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
-		gerr := convertToGenericError(err)
+		gerr := convertV6ErrorToGenericError(err)
 		parameters.AfterFunc(
 			executionId,
 			fromV6ToGenericBulkableRequests(requests),
@@ -220,9 +280,7 @@ func (c *elasticV6) RunBulkProcessor(ctx context.Context, parameters *BulkProces
 	})
 }
 
-const unknownStatusCode = -1
-
-func convertToGenericError(err error) *GenericError {
+func convertV6ErrorToGenericError(err error) *GenericError {
 	if err == nil {
 		return nil
 	}
@@ -309,7 +367,7 @@ func (c *elasticV6) SearchForOneClosedExecution(
 	}
 	searchResult, err := c.search(ctx, params)
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("SearchForOneClosedExecution failed. Error: %v", err),
 		}
 	}
@@ -492,8 +550,13 @@ func buildPutMappingBodyV6(root, key, valueType string) map[string]interface{} {
 	return body
 }
 
-func (c *elasticV6) getListWorkflowExecutionsResponse(searchHits *elastic.SearchHits,
-	token *ElasticVisibilityPageToken, pageSize int, isRecordValid func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool) (*p.InternalListWorkflowExecutionsResponse, error) {
+func (c *elasticV6) getListWorkflowExecutionsResponse(
+	searchHits *elastic.SearchHits,
+	token *ElasticVisibilityPageToken,
+	pageSize int,
+	maxResultWindow int,
+	isRecordValid func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool,
+) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	actualHits := searchHits.Hits
@@ -515,7 +578,7 @@ func (c *elasticV6) getListWorkflowExecutionsResponse(searchHits *elastic.Search
 
 		// ES Search API support pagination using From and PageSize, but has limit that From+PageSize cannot exceed a threshold
 		// to retrieve deeper pages, use ES SearchAfter
-		if searchHits.TotalHits <= int64(c.config.ESIndexMaxResultWindow()-pageSize) { // use ES Search From+Size
+		if searchHits.TotalHits <= int64(maxResultWindow-pageSize) { // use ES Search From+Size
 			nextPageToken, err = SerializePageToken(&ElasticVisibilityPageToken{From: token.From + numOfActualHits})
 		} else { // use ES Search After
 			var sortVal interface{}
@@ -545,22 +608,15 @@ func (c *elasticV6) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit
 		return nil
 	}
 
-	memo, err := c.serializer.DeserializeVisibilityMemo(p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)))
-	if err != nil {
-		c.logger.Error("failed to deserialize memo",
-			tag.WorkflowID(source.WorkflowID),
-			tag.WorkflowRunID(source.RunID),
-			tag.Error(err))
-	}
-
 	record := &p.InternalVisibilityWorkflowExecutionInfo{
 		WorkflowID:       source.WorkflowID,
 		RunID:            source.RunID,
 		TypeName:         source.WorkflowType,
 		StartTime:        time.Unix(0, source.StartTime),
 		ExecutionTime:    time.Unix(0, source.ExecutionTime),
-		Memo:             thrift.ToMemo(memo),
+		Memo:             p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
 		TaskList:         source.TaskList,
+		IsCron:           source.IsCron,
 		SearchAttributes: source.Attr,
 	}
 	if source.CloseTime != 0 {
@@ -620,14 +676,14 @@ func (c *elasticV6) getSearchResult(
 	// ElasticSearch v6 is unable to precisely compare time, have to manually add resolution 1ms to time range.
 	// Also has to use string instead of int64 to avoid data conversion issue,
 	// 9223372036854775807 to 9223372036854776000 (long overflow)
-	if request.LatestTime > math.MaxInt64-oneMicroSecondInNano { // prevent latestTime overflow
-		request.LatestTime = math.MaxInt64 - oneMicroSecondInNano
+	if request.LatestTime.UnixNano() > math.MaxInt64-oneMicroSecondInNano { // prevent latestTime overflow
+		request.LatestTime = time.Unix(0, math.MaxInt64-oneMicroSecondInNano)
 	}
-	if request.EarliestTime < math.MinInt64+oneMicroSecondInNano { // prevent earliestTime overflow
-		request.EarliestTime = math.MinInt64 + oneMicroSecondInNano
+	if request.EarliestTime.UnixNano() < math.MinInt64+oneMicroSecondInNano { // prevent earliestTime overflow
+		request.EarliestTime = time.Unix(0, math.MinInt64+oneMicroSecondInNano)
 	}
-	earliestTimeStr := strconv.FormatInt(request.EarliestTime-oneMicroSecondInNano, 10)
-	latestTimeStr := strconv.FormatInt(request.LatestTime+oneMicroSecondInNano, 10)
+	earliestTimeStr := strconv.FormatInt(request.EarliestTime.UnixNano()-oneMicroSecondInNano, 10)
+	latestTimeStr := strconv.FormatInt(request.LatestTime.UnixNano()+oneMicroSecondInNano, 10)
 	rangeQuery = rangeQuery.
 		Gte(earliestTimeStr).
 		Lte(latestTimeStr)

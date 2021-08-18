@@ -16,6 +16,7 @@ frontend.validSearchAttributes:
       CloseStatus: 2
       HistoryLength: 2
       TaskList: 1
+      IsCron: 1
       CustomStringField: 0
       CustomKeywordField: 1
       CustomIntField: 2
@@ -33,5 +34,9 @@ frontend.validSearchAttributes:
       RolloutID: 1
       CadenceChangeVersion: 1
       BinaryChecksums: 1
+      Passed: 4
 system.minRetentionDays:
     - value: 0
+system.enableGRPCOutbound:
+    - value: true
+      constraints: {}

@@ -43,13 +43,13 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/zap"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/s3store/mocks"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -310,7 +310,7 @@ func (s *historyArchiverSuite) TestArchive_Fail_TimeoutWhenReadingHistory() {
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next().Return(nil, &shared.ServiceBusyError{}),
+		historyIterator.EXPECT().Next().Return(nil, &types.ServiceBusyError{}),
 	)
 
 	historyArchiver := s.newTestHistoryArchiver(historyIterator)
@@ -331,13 +331,13 @@ func (s *historyArchiverSuite) TestArchive_Fail_HistoryMutated() {
 	mockCtrl := gomock.NewController(s.T())
 	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
-	historyBatches := []*shared.History{
-		&shared.History{
-			Events: []*shared.HistoryEvent{
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(common.FirstEventID + 1),
+	historyBatches := []*types.History{
+		{
+			Events: []*types.HistoryEvent{
+				{
+					EventID:   common.FirstEventID + 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-					Version:   common.Int64Ptr(testCloseFailoverVersion + 1),
+					Version:   testCloseFailoverVersion + 1,
 				},
 			},
 		},
@@ -391,31 +391,77 @@ func (s *historyArchiverSuite) TestArchive_Fail_NonRetriableErrorOption() {
 	s.Equal(nonRetryableErr, err)
 }
 
+func (s *historyArchiverSuite) TestArchive_Skip() {
+	mockCtrl := gomock.NewController(s.T())
+	defer mockCtrl.Finish()
+	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
+	historyBlob := &archiver.HistoryBlob{
+		Header: &archiver.HistoryBlobHeader{
+			IsLast: common.BoolPtr(false),
+		},
+		Body: []*types.History{
+			{
+				Events: []*types.HistoryEvent{
+					{
+						EventID:   common.FirstEventID,
+						Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+						Version:   testCloseFailoverVersion,
+					},
+				},
+			},
+		},
+	}
+	gomock.InOrder(
+		historyIterator.EXPECT().HasNext().Return(true),
+		historyIterator.EXPECT().Next().Return(historyBlob, nil),
+		historyIterator.EXPECT().HasNext().Return(true),
+		historyIterator.EXPECT().Next().Return(nil, &types.EntityNotExistsError{Message: "workflow not found"}),
+	)
+
+	historyArchiver := s.newTestHistoryArchiver(historyIterator)
+	request := &archiver.ArchiveHistoryRequest{
+		DomainID:             testDomainID,
+		DomainName:           testDomainName,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		BranchToken:          testBranchToken,
+		NextEventID:          testNextEventID,
+		CloseFailoverVersion: testCloseFailoverVersion,
+	}
+	URI, err := archiver.NewURI(testBucketURI + "/TestArchive_Skip")
+	s.NoError(err)
+	err = historyArchiver.Archive(context.Background(), URI, request)
+	s.NoError(err)
+
+	expectedkey := constructHistoryKey("", testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, 0)
+	s.assertKeyExists(expectedkey)
+}
+
 func (s *historyArchiverSuite) TestArchive_Success() {
 	mockCtrl := gomock.NewController(s.T())
 	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
-	historyBatches := []*shared.History{
-		&shared.History{
-			Events: []*shared.HistoryEvent{
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(common.FirstEventID + 1),
+	historyBatches := []*types.History{
+		{
+			Events: []*types.HistoryEvent{
+				{
+					EventID:   common.FirstEventID + 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-					Version:   common.Int64Ptr(testCloseFailoverVersion),
+					Version:   testCloseFailoverVersion,
 				},
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(common.FirstEventID + 2),
+				{
+					EventID:   common.FirstEventID + 2,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-					Version:   common.Int64Ptr(testCloseFailoverVersion),
+					Version:   testCloseFailoverVersion,
 				},
 			},
 		},
-		&shared.History{
-			Events: []*shared.HistoryEvent{
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(testNextEventID - 1),
+		{
+			Events: []*types.HistoryEvent{
+				{
+					EventID:   testNextEventID - 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-					Version:   common.Int64Ptr(testCloseFailoverVersion),
+					Version:   testCloseFailoverVersion,
 				},
 			},
 		},
@@ -477,7 +523,7 @@ func (s *historyArchiverSuite) TestGet_Fail_InvalidRequest() {
 	response, err := historyArchiver.Get(context.Background(), s.testArchivalURI, request)
 	s.Nil(response)
 	s.Error(err)
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 }
 
 func (s *historyArchiverSuite) TestGet_Fail_InvalidToken() {
@@ -494,7 +540,7 @@ func (s *historyArchiverSuite) TestGet_Fail_InvalidToken() {
 	response, err := historyArchiver.Get(context.Background(), URI, request)
 	s.Nil(response)
 	s.Error(err)
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 }
 
 func (s *historyArchiverSuite) TestGet_Fail_KeyNotExist() {
@@ -511,7 +557,7 @@ func (s *historyArchiverSuite) TestGet_Fail_KeyNotExist() {
 	response, err := historyArchiver.Get(context.Background(), URI, request)
 	s.Nil(response)
 	s.Error(err)
-	s.IsType(&shared.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *historyArchiverSuite) TestGet_Success_PickHighestVersion() {
@@ -556,7 +602,7 @@ func (s *historyArchiverSuite) TestGet_Success_SmallPageSize() {
 		PageSize:             1,
 		CloseFailoverVersion: common.Int64Ptr(100),
 	}
-	combinedHistory := []*shared.History{}
+	combinedHistory := []*types.History{}
 
 	URI, err := archiver.NewURI(testBucketURI)
 	s.NoError(err)
@@ -637,13 +683,13 @@ func (s *historyArchiverSuite) setupHistoryDirectory() {
 			Header: &archiver.HistoryBlobHeader{
 				IsLast: common.BoolPtr(true),
 			},
-			Body: []*shared.History{
+			Body: []*types.History{
 				{
-					Events: []*shared.HistoryEvent{
-						&shared.HistoryEvent{
-							EventId:   common.Int64Ptr(testNextEventID - 1),
+					Events: []*types.HistoryEvent{
+						{
+							EventID:   testNextEventID - 1,
 							Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-							Version:   common.Int64Ptr(1),
+							Version:   1,
 						},
 					},
 				},
@@ -656,18 +702,18 @@ func (s *historyArchiverSuite) setupHistoryDirectory() {
 			Header: &archiver.HistoryBlobHeader{
 				IsLast: common.BoolPtr(false),
 			},
-			Body: []*shared.History{
-				&shared.History{
-					Events: []*shared.HistoryEvent{
-						&shared.HistoryEvent{
-							EventId:   common.Int64Ptr(common.FirstEventID + 1),
+			Body: []*types.History{
+				{
+					Events: []*types.HistoryEvent{
+						{
+							EventID:   common.FirstEventID + 1,
 							Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-							Version:   common.Int64Ptr(testCloseFailoverVersion),
+							Version:   testCloseFailoverVersion,
 						},
-						&shared.HistoryEvent{
-							EventId:   common.Int64Ptr(common.FirstEventID + 1),
+						{
+							EventID:   common.FirstEventID + 1,
 							Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-							Version:   common.Int64Ptr(testCloseFailoverVersion),
+							Version:   testCloseFailoverVersion,
 						},
 					},
 				},
@@ -677,13 +723,13 @@ func (s *historyArchiverSuite) setupHistoryDirectory() {
 			Header: &archiver.HistoryBlobHeader{
 				IsLast: common.BoolPtr(true),
 			},
-			Body: []*shared.History{
-				&shared.History{
-					Events: []*shared.HistoryEvent{
-						&shared.HistoryEvent{
-							EventId:   common.Int64Ptr(testNextEventID - 1),
+			Body: []*types.History{
+				{
+					Events: []*types.HistoryEvent{
+						{
+							EventID:   testNextEventID - 1,
 							Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-							Version:   common.Int64Ptr(testCloseFailoverVersion),
+							Version:   testCloseFailoverVersion,
 						},
 					},
 				},

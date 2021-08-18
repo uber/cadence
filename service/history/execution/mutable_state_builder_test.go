@@ -21,6 +21,8 @@
 package execution
 
 import (
+	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -31,16 +33,16 @@ import (
 
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/.gen/go/shared"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -93,10 +95,10 @@ func (s *mutableStateSuite) SetupTest() {
 
 	s.mockEventsCache = s.mockShard.GetEventsCache().(*events.MockCache)
 
-	s.testScope = s.mockShard.Resource.MetricsScope.(tally.TestScope)
+	s.testScope = s.mockShard.Resource.MetricsScope
 	s.logger = s.mockShard.GetLogger()
 
-	s.msBuilder = newMutableStateBuilder(s.mockShard, s.logger, testLocalDomainEntry)
+	s.msBuilder = newMutableStateBuilder(s.mockShard, s.logger, constants.TestLocalDomainEntry)
 }
 
 func (s *mutableStateSuite) TearDownTest() {
@@ -112,20 +114,20 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 		s.logger,
 		version,
 		runID,
-		testGlobalDomainEntry,
+		constants.TestGlobalDomainEntry,
 	).(*mutableStateBuilder)
 
 	newDecisionScheduleEvent, newDecisionStartedEvent := s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
 
-	newDecisionCompletedEvent := &shared.HistoryEvent{
-		Version:   common.Int64Ptr(version),
-		EventId:   common.Int64Ptr(newDecisionStartedEvent.GetEventId() + 1),
+	newDecisionCompletedEvent := &types.HistoryEvent{
+		Version:   version,
+		EventID:   newDecisionStartedEvent.GetEventID() + 1,
 		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-		EventType: shared.EventTypeDecisionTaskCompleted.Ptr(),
-		DecisionTaskCompletedEventAttributes: &shared.DecisionTaskCompletedEventAttributes{
-			ScheduledEventId: common.Int64Ptr(newDecisionScheduleEvent.GetEventId()),
-			StartedEventId:   common.Int64Ptr(newDecisionStartedEvent.GetEventId()),
-			Identity:         common.StringPtr("some random identity"),
+		EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
+			ScheduledEventID: newDecisionScheduleEvent.GetEventID(),
+			StartedEventID:   newDecisionStartedEvent.GetEventID(),
+			Identity:         "some random identity",
 		},
 	}
 	err := s.msBuilder.ReplicateDecisionTaskCompletedEvent(newDecisionCompletedEvent)
@@ -142,12 +144,12 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 		s.logger,
 		version,
 		runID,
-		testGlobalDomainEntry,
+		constants.TestGlobalDomainEntry,
 	).(*mutableStateBuilder)
 
 	newDecisionScheduleEvent, newDecisionStartedEvent := s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
 
-	s.NotNil(s.msBuilder.AddDecisionTaskTimedOutEvent(newDecisionScheduleEvent.GetEventId(), newDecisionStartedEvent.GetEventId()))
+	s.NotNil(s.msBuilder.AddDecisionTaskTimedOutEvent(newDecisionScheduleEvent.GetEventID(), newDecisionStartedEvent.GetEventID()))
 	s.Equal(0, len(s.msBuilder.GetHistoryBuilder().transientHistory))
 	s.Equal(1, len(s.msBuilder.GetHistoryBuilder().history))
 }
@@ -160,15 +162,15 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 		s.logger,
 		version,
 		runID,
-		testGlobalDomainEntry,
+		constants.TestGlobalDomainEntry,
 	).(*mutableStateBuilder)
 
 	newDecisionScheduleEvent, newDecisionStartedEvent := s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
 
 	s.NotNil(s.msBuilder.AddDecisionTaskFailedEvent(
-		newDecisionScheduleEvent.GetEventId(),
-		newDecisionStartedEvent.GetEventId(),
-		workflow.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure,
+		newDecisionScheduleEvent.GetEventID(),
+		newDecisionStartedEvent.GetEventID(),
+		types.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure,
 		[]byte("some random decision failure details"),
 		"some random decision failure identity",
 		"", "", "", "", 0,
@@ -179,47 +181,47 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 
 func (s *mutableStateSuite) TestShouldBufferEvent() {
 	// workflow status events will be assign event ID immediately
-	workflowEvents := map[workflow.EventType]bool{
-		workflow.EventTypeWorkflowExecutionStarted:        true,
-		workflow.EventTypeWorkflowExecutionCompleted:      true,
-		workflow.EventTypeWorkflowExecutionFailed:         true,
-		workflow.EventTypeWorkflowExecutionTimedOut:       true,
-		workflow.EventTypeWorkflowExecutionTerminated:     true,
-		workflow.EventTypeWorkflowExecutionContinuedAsNew: true,
-		workflow.EventTypeWorkflowExecutionCanceled:       true,
+	workflowEvents := map[types.EventType]bool{
+		types.EventTypeWorkflowExecutionStarted:        true,
+		types.EventTypeWorkflowExecutionCompleted:      true,
+		types.EventTypeWorkflowExecutionFailed:         true,
+		types.EventTypeWorkflowExecutionTimedOut:       true,
+		types.EventTypeWorkflowExecutionTerminated:     true,
+		types.EventTypeWorkflowExecutionContinuedAsNew: true,
+		types.EventTypeWorkflowExecutionCanceled:       true,
 	}
 
 	// decision events will be assign event ID immediately
-	decisionTaskEvents := map[workflow.EventType]bool{
-		workflow.EventTypeDecisionTaskScheduled: true,
-		workflow.EventTypeDecisionTaskStarted:   true,
-		workflow.EventTypeDecisionTaskCompleted: true,
-		workflow.EventTypeDecisionTaskFailed:    true,
-		workflow.EventTypeDecisionTaskTimedOut:  true,
+	decisionTaskEvents := map[types.EventType]bool{
+		types.EventTypeDecisionTaskScheduled: true,
+		types.EventTypeDecisionTaskStarted:   true,
+		types.EventTypeDecisionTaskCompleted: true,
+		types.EventTypeDecisionTaskFailed:    true,
+		types.EventTypeDecisionTaskTimedOut:  true,
 	}
 
 	// events corresponding to decisions from client will be assign event ID immediately
-	decisionEvents := map[workflow.EventType]bool{
-		workflow.EventTypeWorkflowExecutionCompleted:                      true,
-		workflow.EventTypeWorkflowExecutionFailed:                         true,
-		workflow.EventTypeWorkflowExecutionCanceled:                       true,
-		workflow.EventTypeWorkflowExecutionContinuedAsNew:                 true,
-		workflow.EventTypeActivityTaskScheduled:                           true,
-		workflow.EventTypeActivityTaskCancelRequested:                     true,
-		workflow.EventTypeTimerStarted:                                    true,
-		workflow.EventTypeTimerCanceled:                                   true,
-		workflow.EventTypeCancelTimerFailed:                               true,
-		workflow.EventTypeRequestCancelExternalWorkflowExecutionInitiated: true,
-		workflow.EventTypeMarkerRecorded:                                  true,
-		workflow.EventTypeStartChildWorkflowExecutionInitiated:            true,
-		workflow.EventTypeSignalExternalWorkflowExecutionInitiated:        true,
-		workflow.EventTypeUpsertWorkflowSearchAttributes:                  true,
+	decisionEvents := map[types.EventType]bool{
+		types.EventTypeWorkflowExecutionCompleted:                      true,
+		types.EventTypeWorkflowExecutionFailed:                         true,
+		types.EventTypeWorkflowExecutionCanceled:                       true,
+		types.EventTypeWorkflowExecutionContinuedAsNew:                 true,
+		types.EventTypeActivityTaskScheduled:                           true,
+		types.EventTypeActivityTaskCancelRequested:                     true,
+		types.EventTypeTimerStarted:                                    true,
+		types.EventTypeTimerCanceled:                                   true,
+		types.EventTypeCancelTimerFailed:                               true,
+		types.EventTypeRequestCancelExternalWorkflowExecutionInitiated: true,
+		types.EventTypeMarkerRecorded:                                  true,
+		types.EventTypeStartChildWorkflowExecutionInitiated:            true,
+		types.EventTypeSignalExternalWorkflowExecutionInitiated:        true,
+		types.EventTypeUpsertWorkflowSearchAttributes:                  true,
 	}
 
 	// other events will not be assign event ID immediately
-	otherEvents := map[workflow.EventType]bool{}
+	otherEvents := map[types.EventType]bool{}
 OtherEventsLoop:
-	for _, eventType := range workflow.EventType_Values() {
+	for _, eventType := range types.EventTypeValues() {
 		if _, ok := workflowEvents[eventType]; ok {
 			continue OtherEventsLoop
 		}
@@ -248,16 +250,16 @@ OtherEventsLoop:
 	}
 
 	// +1 is because DecisionTypeCancelTimer will be mapped
-	// to either workflow.EventTypeTimerCanceled, or workflow.EventTypeCancelTimerFailed.
-	s.Equal(len(workflow.DecisionType_Values())+1, len(decisionEvents),
+	// to either types.EventTypeTimerCanceled, or types.EventTypeCancelTimerFailed.
+	s.Equal(len(types.DecisionTypeValues())+1, len(decisionEvents),
 		"This assertaion will be broken a new decision is added and no corresponding logic added to shouldBufferEvent()")
 }
 
 func (s *mutableStateSuite) TestReorderEvents() {
-	domainID := testDomainID
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(testRunID),
+	domainID := constants.TestDomainID
+	we := types.WorkflowExecution{
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	activityID := "activity_id"
@@ -265,8 +267,8 @@ func (s *mutableStateSuite) TestReorderEvents() {
 
 	info := &persistence.WorkflowExecutionInfo{
 		DomainID:                    domainID,
-		WorkflowID:                  we.GetWorkflowId(),
-		RunID:                       we.GetRunId(),
+		WorkflowID:                  we.GetWorkflowID(),
+		RunID:                       we.GetRunID(),
 		TaskList:                    tl,
 		WorkflowTypeName:            "wType",
 		WorkflowTimeout:             200,
@@ -283,7 +285,7 @@ func (s *mutableStateSuite) TestReorderEvents() {
 	}
 
 	activityInfos := map[int64]*persistence.ActivityInfo{
-		5: &persistence.ActivityInfo{
+		5: {
 			Version:                int64(1),
 			ScheduleID:             int64(5),
 			ScheduledTime:          time.Now(),
@@ -297,24 +299,23 @@ func (s *mutableStateSuite) TestReorderEvents() {
 		},
 	}
 
-	bufferedEvents := []*workflow.HistoryEvent{
-		&workflow.HistoryEvent{
-			EventId:   common.Int64Ptr(common.BufferedEventID),
-			EventType: workflow.EventTypeActivityTaskCompleted.Ptr(),
-			Version:   common.Int64Ptr(1),
-			ActivityTaskCompletedEventAttributes: &workflow.ActivityTaskCompletedEventAttributes{
+	bufferedEvents := []*types.HistoryEvent{
+		{
+			EventID:   common.BufferedEventID,
+			EventType: types.EventTypeActivityTaskCompleted.Ptr(),
+			Version:   1,
+			ActivityTaskCompletedEventAttributes: &types.ActivityTaskCompletedEventAttributes{
 				Result:           []byte(activityResult),
-				ScheduledEventId: common.Int64Ptr(5),
-				StartedEventId:   common.Int64Ptr(common.BufferedEventID),
+				ScheduledEventID: 5,
+				StartedEventID:   common.BufferedEventID,
 			},
 		},
-
-		&workflow.HistoryEvent{
-			EventId:   common.Int64Ptr(common.BufferedEventID),
-			EventType: workflow.EventTypeActivityTaskStarted.Ptr(),
-			Version:   common.Int64Ptr(1),
-			ActivityTaskStartedEventAttributes: &workflow.ActivityTaskStartedEventAttributes{
-				ScheduledEventId: common.Int64Ptr(5),
+		{
+			EventID:   common.BufferedEventID,
+			EventType: types.EventTypeActivityTaskStarted.Ptr(),
+			Version:   1,
+			ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+				ScheduledEventID: 5,
 			},
 		},
 	}
@@ -326,18 +327,18 @@ func (s *mutableStateSuite) TestReorderEvents() {
 	}
 
 	s.msBuilder.Load(dbState)
-	s.Equal(workflow.EventTypeActivityTaskCompleted, s.msBuilder.bufferedEvents[0].GetEventType())
-	s.Equal(workflow.EventTypeActivityTaskStarted, s.msBuilder.bufferedEvents[1].GetEventType())
+	s.Equal(types.EventTypeActivityTaskCompleted, s.msBuilder.bufferedEvents[0].GetEventType())
+	s.Equal(types.EventTypeActivityTaskStarted, s.msBuilder.bufferedEvents[1].GetEventType())
 
 	err := s.msBuilder.FlushBufferedEvents()
 	s.Nil(err)
-	s.Equal(workflow.EventTypeActivityTaskStarted, s.msBuilder.hBuilder.history[0].GetEventType())
-	s.Equal(int64(8), s.msBuilder.hBuilder.history[0].GetEventId())
-	s.Equal(int64(5), s.msBuilder.hBuilder.history[0].ActivityTaskStartedEventAttributes.GetScheduledEventId())
-	s.Equal(workflow.EventTypeActivityTaskCompleted, s.msBuilder.hBuilder.history[1].GetEventType())
-	s.Equal(int64(9), s.msBuilder.hBuilder.history[1].GetEventId())
-	s.Equal(int64(8), s.msBuilder.hBuilder.history[1].ActivityTaskCompletedEventAttributes.GetStartedEventId())
-	s.Equal(int64(5), s.msBuilder.hBuilder.history[1].ActivityTaskCompletedEventAttributes.GetScheduledEventId())
+	s.Equal(types.EventTypeActivityTaskStarted, s.msBuilder.hBuilder.history[0].GetEventType())
+	s.Equal(int64(8), s.msBuilder.hBuilder.history[0].GetEventID())
+	s.Equal(int64(5), s.msBuilder.hBuilder.history[0].ActivityTaskStartedEventAttributes.GetScheduledEventID())
+	s.Equal(types.EventTypeActivityTaskCompleted, s.msBuilder.hBuilder.history[1].GetEventType())
+	s.Equal(int64(9), s.msBuilder.hBuilder.history[1].GetEventID())
+	s.Equal(int64(8), s.msBuilder.hBuilder.history[1].ActivityTaskCompletedEventAttributes.GetStartedEventID())
+	s.Equal(int64(5), s.msBuilder.hBuilder.history[1].ActivityTaskCompletedEventAttributes.GetScheduledEventID())
 }
 
 func (s *mutableStateSuite) TestChecksum() {
@@ -461,48 +462,48 @@ func (s *mutableStateSuite) TestChecksumShouldInvalidate() {
 }
 
 func (s *mutableStateSuite) TestTrimEvents() {
-	var input []*workflow.HistoryEvent
+	var input []*types.HistoryEvent
 	output := s.msBuilder.trimEventsAfterWorkflowClose(input)
 	s.Equal(input, output)
 
-	input = []*workflow.HistoryEvent{}
+	input = []*types.HistoryEvent{}
 	output = s.msBuilder.trimEventsAfterWorkflowClose(input)
 	s.Equal(input, output)
 
-	input = []*workflow.HistoryEvent{
-		&workflow.HistoryEvent{
-			EventType: workflow.EventTypeActivityTaskCanceled.Ptr(),
+	input = []*types.HistoryEvent{
+		{
+			EventType: types.EventTypeActivityTaskCanceled.Ptr(),
 		},
-		&workflow.HistoryEvent{
-			EventType: workflow.EventTypeWorkflowExecutionSignaled.Ptr(),
+		{
+			EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		},
 	}
 	output = s.msBuilder.trimEventsAfterWorkflowClose(input)
 	s.Equal(input, output)
 
-	input = []*workflow.HistoryEvent{
-		&workflow.HistoryEvent{
-			EventType: workflow.EventTypeActivityTaskCanceled.Ptr(),
+	input = []*types.HistoryEvent{
+		{
+			EventType: types.EventTypeActivityTaskCanceled.Ptr(),
 		},
-		&workflow.HistoryEvent{
-			EventType: workflow.EventTypeWorkflowExecutionCompleted.Ptr(),
+		{
+			EventType: types.EventTypeWorkflowExecutionCompleted.Ptr(),
 		},
 	}
 	output = s.msBuilder.trimEventsAfterWorkflowClose(input)
 	s.Equal(input, output)
 
-	input = []*workflow.HistoryEvent{
-		&workflow.HistoryEvent{
-			EventType: workflow.EventTypeWorkflowExecutionCompleted.Ptr(),
+	input = []*types.HistoryEvent{
+		{
+			EventType: types.EventTypeWorkflowExecutionCompleted.Ptr(),
 		},
-		&workflow.HistoryEvent{
-			EventType: workflow.EventTypeActivityTaskCanceled.Ptr(),
+		{
+			EventType: types.EventTypeActivityTaskCanceled.Ptr(),
 		},
 	}
 	output = s.msBuilder.trimEventsAfterWorkflowClose(input)
-	s.Equal([]*workflow.HistoryEvent{
-		&workflow.HistoryEvent{
-			EventType: workflow.EventTypeWorkflowExecutionCompleted.Ptr(),
+	s.Equal([]*types.HistoryEvent{
+		{
+			EventType: types.EventTypeWorkflowExecutionCompleted.Ptr(),
 		},
 	}, output)
 }
@@ -534,11 +535,110 @@ func (s *mutableStateSuite) TestEventReapplied() {
 	s.True(isReapplied)
 }
 
-func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicated(version int64, runID string) (*shared.HistoryEvent, *shared.HistoryEvent) {
-	domainID := testDomainID
-	execution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(runID),
+func (s *mutableStateSuite) TestTransientDecisionTaskSchedule_CurrentVersionChanged() {
+	version := int64(2000)
+	runID := uuid.New()
+	s.msBuilder = NewMutableStateBuilderWithVersionHistoriesWithEventV2(
+		s.mockShard,
+		s.logger,
+		version,
+		runID,
+		constants.TestGlobalDomainEntry,
+	).(*mutableStateBuilder)
+	_, _ = s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
+	err := s.msBuilder.ReplicateDecisionTaskFailedEvent()
+	s.NoError(err)
+
+	err = s.msBuilder.UpdateCurrentVersion(version+1, true)
+	s.NoError(err)
+	versionHistories := s.msBuilder.GetVersionHistories()
+	versionHistory, err := versionHistories.GetCurrentVersionHistory()
+	s.NoError(err)
+	versionHistory.AddOrUpdateItem(&persistence.VersionHistoryItem{
+		EventID: 3,
+		Version: version,
+	})
+
+	now := time.Now()
+	di, err := s.msBuilder.AddDecisionTaskScheduledEventAsHeartbeat(true, now.UnixNano())
+	s.NoError(err)
+	s.NotNil(di)
+
+	s.Equal(int64(0), s.msBuilder.GetExecutionInfo().DecisionAttempt)
+	s.Equal(0, len(s.msBuilder.GetHistoryBuilder().transientHistory))
+	s.Equal(1, len(s.msBuilder.GetHistoryBuilder().history))
+}
+
+func (s *mutableStateSuite) TestTransientDecisionTaskStart_CurrentVersionChanged() {
+	version := int64(2000)
+	runID := uuid.New()
+	s.msBuilder = NewMutableStateBuilderWithVersionHistoriesWithEventV2(
+		s.mockShard,
+		s.logger,
+		version,
+		runID,
+		constants.TestGlobalDomainEntry,
+	).(*mutableStateBuilder)
+	_, _ = s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
+	err := s.msBuilder.ReplicateDecisionTaskFailedEvent()
+	s.NoError(err)
+
+	decisionScheduleID := int64(4)
+	now := time.Now()
+	tasklist := "some random tasklist"
+	decisionTimeoutSecond := int32(11)
+	decisionAttempt := int64(2)
+	newDecisionScheduleEvent := &types.HistoryEvent{
+		Version:   version,
+		EventID:   decisionScheduleID,
+		Timestamp: common.Int64Ptr(now.UnixNano()),
+		EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
+			TaskList:                   &types.TaskList{Name: tasklist},
+			StartToCloseTimeoutSeconds: common.Int32Ptr(decisionTimeoutSecond),
+			Attempt:                    decisionAttempt,
+		},
+	}
+	di, err := s.msBuilder.ReplicateDecisionTaskScheduledEvent(
+		newDecisionScheduleEvent.GetVersion(),
+		newDecisionScheduleEvent.GetEventID(),
+		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.TaskList.GetName(),
+		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds(),
+		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetAttempt(),
+		0,
+		0,
+	)
+	s.NoError(err)
+	s.NotNil(di)
+
+	err = s.msBuilder.UpdateCurrentVersion(version+1, true)
+	s.NoError(err)
+	versionHistories := s.msBuilder.GetVersionHistories()
+	versionHistory, err := versionHistories.GetCurrentVersionHistory()
+	s.NoError(err)
+	versionHistory.AddOrUpdateItem(&persistence.VersionHistoryItem{
+		EventID: 3,
+		Version: version,
+	})
+
+	_, _, err = s.msBuilder.AddDecisionTaskStartedEvent(
+		decisionScheduleID,
+		uuid.New(),
+		&types.PollForDecisionTaskRequest{
+			Identity: IdentityHistoryService,
+		},
+	)
+	s.NoError(err)
+
+	s.Equal(0, len(s.msBuilder.GetHistoryBuilder().transientHistory))
+	s.Equal(2, len(s.msBuilder.GetHistoryBuilder().history))
+}
+
+func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicated(version int64, runID string) (*types.HistoryEvent, *types.HistoryEvent) {
+	domainID := constants.TestDomainID
+	execution := types.WorkflowExecution{
+		WorkflowID: "some random workflow ID",
+		RunID:      runID,
 	}
 
 	now := time.Now()
@@ -549,14 +649,14 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	decisionAttempt := int64(0)
 
 	eventID := int64(1)
-	workflowStartEvent := &shared.HistoryEvent{
-		Version:   common.Int64Ptr(version),
-		EventId:   common.Int64Ptr(eventID),
+	workflowStartEvent := &types.HistoryEvent{
+		Version:   version,
+		EventID:   eventID,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
-		EventType: shared.EventTypeWorkflowExecutionStarted.Ptr(),
-		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-			WorkflowType:                        &shared.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &shared.TaskList{Name: common.StringPtr(tasklist)},
+		EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
+		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: tasklist},
 			Input:                               nil,
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeoutSecond),
@@ -564,46 +664,46 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	}
 	eventID++
 
-	decisionScheduleEvent := &shared.HistoryEvent{
-		Version:   common.Int64Ptr(version),
-		EventId:   common.Int64Ptr(eventID),
+	decisionScheduleEvent := &types.HistoryEvent{
+		Version:   version,
+		EventID:   eventID,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
-		EventType: shared.EventTypeDecisionTaskScheduled.Ptr(),
-		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{
-			TaskList:                   &shared.TaskList{Name: common.StringPtr(tasklist)},
+		EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
+			TaskList:                   &types.TaskList{Name: tasklist},
 			StartToCloseTimeoutSeconds: common.Int32Ptr(decisionTimeoutSecond),
-			Attempt:                    common.Int64Ptr(decisionAttempt),
+			Attempt:                    decisionAttempt,
 		},
 	}
 	eventID++
 
-	decisionStartedEvent := &shared.HistoryEvent{
-		Version:   common.Int64Ptr(version),
-		EventId:   common.Int64Ptr(eventID),
+	decisionStartedEvent := &types.HistoryEvent{
+		Version:   version,
+		EventID:   eventID,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
-		EventType: shared.EventTypeDecisionTaskStarted.Ptr(),
-		DecisionTaskStartedEventAttributes: &shared.DecisionTaskStartedEventAttributes{
-			ScheduledEventId: common.Int64Ptr(decisionScheduleEvent.GetEventId()),
-			RequestId:        common.StringPtr(uuid.New()),
+		EventType: types.EventTypeDecisionTaskStarted.Ptr(),
+		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
+			ScheduledEventID: decisionScheduleEvent.GetEventID(),
+			RequestID:        uuid.New(),
 		},
 	}
 	eventID++
 
-	_ = &shared.HistoryEvent{
-		Version:   common.Int64Ptr(version),
-		EventId:   common.Int64Ptr(eventID),
+	_ = &types.HistoryEvent{
+		Version:   version,
+		EventID:   eventID,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
-		EventType: shared.EventTypeDecisionTaskFailed.Ptr(),
-		DecisionTaskFailedEventAttributes: &shared.DecisionTaskFailedEventAttributes{
-			ScheduledEventId: common.Int64Ptr(decisionScheduleEvent.GetEventId()),
-			StartedEventId:   common.Int64Ptr(decisionStartedEvent.GetEventId()),
+		EventType: types.EventTypeDecisionTaskFailed.Ptr(),
+		DecisionTaskFailedEventAttributes: &types.DecisionTaskFailedEventAttributes{
+			ScheduledEventID: decisionScheduleEvent.GetEventID(),
+			StartedEventID:   decisionStartedEvent.GetEventID(),
 		},
 	}
 	eventID++
 
 	s.mockEventsCache.EXPECT().PutEvent(
-		domainID, execution.GetWorkflowId(), execution.GetRunId(),
-		workflowStartEvent.GetEventId(), workflowStartEvent,
+		domainID, execution.GetWorkflowID(), execution.GetRunID(),
+		workflowStartEvent.GetEventID(), workflowStartEvent,
 	).Times(1)
 	err := s.msBuilder.ReplicateWorkflowExecutionStartedEvent(
 		nil,
@@ -616,7 +716,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	// setup transient decision
 	di, err := s.msBuilder.ReplicateDecisionTaskScheduledEvent(
 		decisionScheduleEvent.GetVersion(),
-		decisionScheduleEvent.GetEventId(),
+		decisionScheduleEvent.GetEventID(),
 		decisionScheduleEvent.DecisionTaskScheduledEventAttributes.TaskList.GetName(),
 		decisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds(),
 		decisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetAttempt(),
@@ -628,9 +728,9 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 
 	di, err = s.msBuilder.ReplicateDecisionTaskStartedEvent(nil,
 		decisionStartedEvent.GetVersion(),
-		decisionScheduleEvent.GetEventId(),
-		decisionStartedEvent.GetEventId(),
-		decisionStartedEvent.DecisionTaskStartedEventAttributes.GetRequestId(),
+		decisionScheduleEvent.GetEventID(),
+		decisionStartedEvent.GetEventID(),
+		decisionStartedEvent.DecisionTaskStartedEventAttributes.GetRequestID(),
 		decisionStartedEvent.GetTimestamp(),
 	)
 	s.Nil(err)
@@ -640,34 +740,34 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	s.Nil(err)
 
 	decisionAttempt = int64(123)
-	newDecisionScheduleEvent := &shared.HistoryEvent{
-		Version:   common.Int64Ptr(version),
-		EventId:   common.Int64Ptr(eventID),
+	newDecisionScheduleEvent := &types.HistoryEvent{
+		Version:   version,
+		EventID:   eventID,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
-		EventType: shared.EventTypeDecisionTaskScheduled.Ptr(),
-		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{
-			TaskList:                   &shared.TaskList{Name: common.StringPtr(tasklist)},
+		EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
+			TaskList:                   &types.TaskList{Name: tasklist},
 			StartToCloseTimeoutSeconds: common.Int32Ptr(decisionTimeoutSecond),
-			Attempt:                    common.Int64Ptr(decisionAttempt),
+			Attempt:                    decisionAttempt,
 		},
 	}
 	eventID++
 
-	newDecisionStartedEvent := &shared.HistoryEvent{
-		Version:   common.Int64Ptr(version),
-		EventId:   common.Int64Ptr(eventID),
+	newDecisionStartedEvent := &types.HistoryEvent{
+		Version:   version,
+		EventID:   eventID,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
-		EventType: shared.EventTypeDecisionTaskStarted.Ptr(),
-		DecisionTaskStartedEventAttributes: &shared.DecisionTaskStartedEventAttributes{
-			ScheduledEventId: common.Int64Ptr(decisionScheduleEvent.GetEventId()),
-			RequestId:        common.StringPtr(uuid.New()),
+		EventType: types.EventTypeDecisionTaskStarted.Ptr(),
+		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
+			ScheduledEventID: decisionScheduleEvent.GetEventID(),
+			RequestID:        uuid.New(),
 		},
 	}
 	eventID++ //nolint:ineffassign
 
 	di, err = s.msBuilder.ReplicateDecisionTaskScheduledEvent(
 		newDecisionScheduleEvent.GetVersion(),
-		newDecisionScheduleEvent.GetEventId(),
+		newDecisionScheduleEvent.GetEventID(),
 		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.TaskList.GetName(),
 		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds(),
 		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetAttempt(),
@@ -679,15 +779,67 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 
 	di, err = s.msBuilder.ReplicateDecisionTaskStartedEvent(nil,
 		newDecisionStartedEvent.GetVersion(),
-		newDecisionScheduleEvent.GetEventId(),
-		newDecisionStartedEvent.GetEventId(),
-		newDecisionStartedEvent.DecisionTaskStartedEventAttributes.GetRequestId(),
+		newDecisionScheduleEvent.GetEventID(),
+		newDecisionStartedEvent.GetEventID(),
+		newDecisionStartedEvent.DecisionTaskStartedEventAttributes.GetRequestID(),
 		newDecisionStartedEvent.GetTimestamp(),
 	)
 	s.Nil(err)
 	s.NotNil(di)
 
 	return newDecisionScheduleEvent, newDecisionStartedEvent
+}
+
+func (s *mutableStateSuite) TestGetCloseEvent_WorkflowIsOpen() {
+	mutableState := s.buildWorkflowMutableState()
+
+	s.msBuilder.Load(mutableState)
+
+	closeEvent, err := s.msBuilder.GetCloseEvent(context.Background())
+	s.Error(err)
+	s.Nil(closeEvent)
+}
+
+func (s *mutableStateSuite) TestGetCloseEvent_WorkflowIsClose() {
+	mutableState := s.buildWorkflowMutableState()
+	mutableState.ExecutionInfo.CloseStatus = persistence.WorkflowCloseStatusCompleted
+	s.msBuilder.Load(mutableState)
+
+	expectedCloseEvent := &types.HistoryEvent{}
+
+	s.mockEventsCache.EXPECT().GetEvent(
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+		common.FirstEventID,
+		s.msBuilder.GetNextEventID()-1,
+		gomock.Any(),
+	).Return(expectedCloseEvent, nil)
+	closeEvent, err := s.msBuilder.GetCloseEvent(context.Background())
+	s.NoError(err)
+	s.Equal(expectedCloseEvent, closeEvent)
+}
+
+func (s *mutableStateSuite) TestGetCloseEvent_Error() {
+	mutableState := s.buildWorkflowMutableState()
+	mutableState.ExecutionInfo.CloseStatus = persistence.WorkflowCloseStatusCompleted
+	s.msBuilder.Load(mutableState)
+
+	s.mockEventsCache.EXPECT().GetEvent(
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+		common.FirstEventID,
+		s.msBuilder.GetNextEventID()-1,
+		gomock.Any(),
+	).Return(nil, fmt.Errorf("test"))
+	closeEvent, err := s.msBuilder.GetCloseEvent(context.Background())
+	s.Error(err)
+	s.Nil(closeEvent)
 }
 
 func (s *mutableStateSuite) newDomainCacheEntry() *cache.DomainCacheEntry {
@@ -703,18 +855,18 @@ func (s *mutableStateSuite) newDomainCacheEntry() *cache.DomainCacheEntry {
 }
 
 func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMutableState {
-	domainID := testDomainID
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(testRunID),
+	domainID := constants.TestDomainID
+	we := types.WorkflowExecution{
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	failoverVersion := int64(300)
 
 	info := &persistence.WorkflowExecutionInfo{
 		DomainID:                    domainID,
-		WorkflowID:                  we.GetWorkflowId(),
-		RunID:                       we.GetRunId(),
+		WorkflowID:                  we.GetWorkflowID(),
+		RunID:                       we.GetRunID(),
 		TaskList:                    tl,
 		WorkflowTypeName:            "wType",
 		WorkflowTimeout:             200,
@@ -731,7 +883,7 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 	}
 
 	activityInfos := map[int64]*persistence.ActivityInfo{
-		5: &persistence.ActivityInfo{
+		5: {
 			Version:                failoverVersion,
 			ScheduleID:             int64(90),
 			ScheduledTime:          time.Now(),
@@ -746,7 +898,7 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 	}
 
 	timerInfos := map[string]*persistence.TimerInfo{
-		"25": &persistence.TimerInfo{
+		"25": {
 			Version:    failoverVersion,
 			TimerID:    "25",
 			StartedID:  85,
@@ -755,20 +907,20 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 	}
 
 	childInfos := map[int64]*persistence.ChildExecutionInfo{
-		80: &persistence.ChildExecutionInfo{
+		80: {
 			Version:               failoverVersion,
 			InitiatedID:           80,
 			InitiatedEventBatchID: 20,
-			InitiatedEvent:        &shared.HistoryEvent{},
+			InitiatedEvent:        &types.HistoryEvent{},
 			StartedID:             common.EmptyEventID,
 			CreateRequestID:       uuid.New(),
-			DomainName:            testDomainID,
+			DomainName:            constants.TestDomainID,
 			WorkflowTypeName:      "code.uber.internal/test/foobar",
 		},
 	}
 
 	signalInfos := map[int64]*persistence.SignalInfo{
-		75: &persistence.SignalInfo{
+		75: {
 			Version:               failoverVersion,
 			InitiatedID:           75,
 			InitiatedEventBatchID: 17,
@@ -779,16 +931,16 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 	}
 
 	signalRequestIDs := map[string]struct{}{
-		uuid.New(): struct{}{},
+		uuid.New(): {},
 	}
 
-	bufferedEvents := []*workflow.HistoryEvent{
-		&workflow.HistoryEvent{
-			EventId:   common.Int64Ptr(common.BufferedEventID),
-			EventType: workflow.EventTypeWorkflowExecutionSignaled.Ptr(),
-			Version:   common.Int64Ptr(failoverVersion),
-			WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
-				SignalName: common.StringPtr("test-signal-buffered"),
+	bufferedEvents := []*types.HistoryEvent{
+		{
+			EventID:   common.BufferedEventID,
+			EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
+			Version:   failoverVersion,
+			WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
+				SignalName: "test-signal-buffered",
 				Input:      []byte("test-signal-buffered-input"),
 			},
 		},

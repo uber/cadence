@@ -39,11 +39,15 @@ const (
 	templateGetQueueMetadataQuery           = `SELECT cluster_ack_level, version FROM queue_metadata WHERE queue_type = ?`
 	templateInsertQueueMetadataQuery        = `INSERT INTO queue_metadata (queue_type, cluster_ack_level, version) VALUES(?, ?, ?) IF NOT EXISTS`
 	templateUpdateQueueMetadataQuery        = `UPDATE queue_metadata SET cluster_ack_level = ?, version = ? WHERE queue_type = ? IF version = ?`
+	templateGetQueueSizeQuery               = `SELECT COUNT(1) AS count FROM queue WHERE queue_type=?`
 )
 
 //Insert message into queue, return error if failed or already exists
-// Must return conditionFailed error if row already exists
-func (db *cdb) InsertIntoQueue(ctx context.Context, row *nosqlplugin.QueueMessageRow) error {
+// Must return ConditionFailure error if row already exists
+func (db *cdb) InsertIntoQueue(
+	ctx context.Context,
+	row *nosqlplugin.QueueMessageRow,
+) error {
 	query := db.session.Query(templateEnqueueMessageQuery, row.QueueType, row.ID, row.Payload).WithContext(ctx)
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
@@ -52,13 +56,16 @@ func (db *cdb) InsertIntoQueue(ctx context.Context, row *nosqlplugin.QueueMessag
 	}
 
 	if !applied {
-		return errConditionFailed
+		return nosqlplugin.NewConditionFailure("queue")
 	}
 	return nil
 }
 
 // Get the ID of last message inserted into the queue
-func (db *cdb) SelectLastEnqueuedMessageID(ctx context.Context, queueType persistence.QueueType) (int64, error) {
+func (db *cdb) SelectLastEnqueuedMessageID(
+	ctx context.Context,
+	queueType persistence.QueueType,
+) (int64, error) {
 	query := db.session.Query(templateGetLastMessageIDQuery, queueType).WithContext(ctx)
 	result := make(map[string]interface{})
 	err := query.MapScan(result)
@@ -181,7 +188,11 @@ func (db *cdb) InsertQueueMetadata(
 ) error {
 	clusterAckLevels := map[string]int64{}
 	query := db.session.Query(templateInsertQueueMetadataQuery, queueType, clusterAckLevels, version).WithContext(ctx)
-	_, err := query.ScanCAS()
+
+	// NOTE: Must pass nils to be compatible with ScyllaDB's LWT behavior
+	// "Scylla always returns the old version of the row, regardless of whether the condition is true or not."
+	// See also https://docs.scylladb.com/kb/lwt-differences/
+	_, err := query.ScanCAS(nil, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -191,7 +202,7 @@ func (db *cdb) InsertQueueMetadata(
 
 // **Conditionally** update a queue metadata row, if current version is matched(meaning current == row.Version - 1),
 // then the current version will increase by one when updating the metadata row
-// it should return error if the condition is not met
+// it should return ConditionFailure if the condition is not met
 func (db *cdb) UpdateQueueMetadataCas(
 	ctx context.Context,
 	row nosqlplugin.QueueMetadataRow,
@@ -202,12 +213,16 @@ func (db *cdb) UpdateQueueMetadataCas(
 		row.QueueType,
 		row.Version-1,
 	).WithContext(ctx)
-	applied, err := query.ScanCAS()
+
+	// NOTE: Must pass nils to be compatible with ScyllaDB's LWT behavior
+	// "Scylla always returns the old version of the row, regardless of whether the condition is true or not."
+	// See also https://docs.scylladb.com/kb/lwt-differences/
+	applied, err := query.ScanCAS(nil, nil, nil, nil)
 	if err != nil {
 		return err
 	}
 	if !applied {
-		return errConditionFailed
+		return nosqlplugin.NewConditionFailure("queue")
 	}
 
 	return nil
@@ -235,6 +250,20 @@ func (db *cdb) SelectQueueMetadata(
 		ClusterAckLevels: ackLevels,
 		Version:          version,
 	}, nil
+}
+
+func (db *cdb) GetQueueSize(
+	ctx context.Context,
+	queueType persistence.QueueType,
+) (int64, error) {
+
+	query := db.session.Query(templateGetQueueSizeQuery, queueType).WithContext(ctx)
+	result := make(map[string]interface{})
+
+	if err := query.MapScan(result); err != nil {
+		return 0, err
+	}
+	return result["count"].(int64), nil
 }
 
 func getMessagePayload(

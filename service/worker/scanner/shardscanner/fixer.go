@@ -29,6 +29,9 @@ import (
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
 )
@@ -46,6 +49,7 @@ type (
 	// ShardFixer is a generic fixer which iterates over entities provided by iterator
 	// implementations of this fixer have to provided invariant manager and iterator.
 	ShardFixer struct {
+		ctx              context.Context
 		shardID          int
 		itr              store.ScanOutputIterator
 		skippedWriter    store.ExecutionWriter
@@ -53,21 +57,27 @@ type (
 		fixedWriter      store.ExecutionWriter
 		invariantManager invariant.Manager
 		progressReportFn func()
+		domainCache      cache.DomainCache
+		allowDomain      dynamicconfig.BoolPropertyFnWithDomainFilter
 	}
 )
 
 // NewFixer constructs a new shard fixer.
 func NewFixer(
+	ctx context.Context,
 	shardID int,
 	manager invariant.Manager,
 	iterator store.ScanOutputIterator,
 	blobstoreClient blobstore.Client,
 	blobstoreFlushThreshold int,
 	progressReportFn func(),
+	domainCache cache.DomainCache,
+	allowDomain dynamicconfig.BoolPropertyFnWithDomainFilter,
 ) *ShardFixer {
 	id := uuid.New()
 
 	return &ShardFixer{
+		ctx:              ctx,
 		shardID:          shardID,
 		itr:              iterator,
 		skippedWriter:    store.NewBlobstoreWriter(id, store.SkippedExtension, blobstoreClient, blobstoreFlushThreshold),
@@ -75,14 +85,19 @@ func NewFixer(
 		fixedWriter:      store.NewBlobstoreWriter(id, store.FixedExtension, blobstoreClient, blobstoreFlushThreshold),
 		invariantManager: manager,
 		progressReportFn: progressReportFn,
+		domainCache:      domainCache,
+		allowDomain:      allowDomain,
 	}
 }
 
 // Fix scans over all executions in shard and runs invariant fixes per execution.
-func (f *ShardFixer) Fix(ctx context.Context) FixReport {
+func (f *ShardFixer) Fix() FixReport {
+
 	result := FixReport{
-		ShardID: f.shardID,
+		ShardID:     f.shardID,
+		DomainStats: map[string]*FixStats{},
 	}
+
 	for f.itr.HasNext() {
 		f.progressReportFn()
 		soe, err := f.itr.Next()
@@ -93,8 +108,31 @@ func (f *ShardFixer) Fix(ctx context.Context) FixReport {
 			}
 			return result
 		}
-		fixResult := f.invariantManager.RunFixes(ctx, soe.Execution)
+
+		domainID := soe.Execution.(entity.Entity).GetDomainID()
+		domainName, err := f.domainCache.GetDomainName(domainID)
+		if err != nil {
+			result.Result.ControlFlowFailure = &ControlFlowFailure{
+				Info:        "failed to get domain name",
+				InfoDetails: err.Error(),
+			}
+			return result
+		}
+		if _, ok := result.DomainStats[domainID]; !ok {
+			result.DomainStats[domainID] = &FixStats{}
+		}
+
+		var fixResult invariant.ManagerFixResult
+
+		if f.allowDomain(domainName) {
+			fixResult = f.invariantManager.RunFixes(f.ctx, soe.Execution)
+		} else {
+			fixResult = invariant.ManagerFixResult{
+				FixResultType: invariant.FixResultTypeSkipped,
+			}
+		}
 		result.Stats.EntitiesCount++
+		result.DomainStats[domainID].EntitiesCount++
 		foe := store.FixOutputEntity{
 			Execution: soe.Execution,
 			Input:     *soe,
@@ -110,6 +148,7 @@ func (f *ShardFixer) Fix(ctx context.Context) FixReport {
 				return result
 			}
 			result.Stats.FixedCount++
+			result.DomainStats[domainID].FixedCount++
 		case invariant.FixResultTypeSkipped:
 			if err := f.skippedWriter.Add(foe); err != nil {
 				result.Result.ControlFlowFailure = &ControlFlowFailure{
@@ -119,6 +158,7 @@ func (f *ShardFixer) Fix(ctx context.Context) FixReport {
 				return result
 			}
 			result.Stats.SkippedCount++
+			result.DomainStats[domainID].SkippedCount++
 		case invariant.FixResultTypeFailed:
 			if err := f.failedWriter.Add(foe); err != nil {
 				result.Result.ControlFlowFailure = &ControlFlowFailure{
@@ -128,6 +168,7 @@ func (f *ShardFixer) Fix(ctx context.Context) FixReport {
 				return result
 			}
 			result.Stats.FailedCount++
+			result.DomainStats[domainID].FailedCount++
 		default:
 			panic(fmt.Sprintf("unknown FixResultType: %v", fixResult.FixResultType))
 		}

@@ -21,17 +21,16 @@
 package cli
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -51,6 +50,8 @@ func AdminGetDLQMessages(c *cli.Context) {
 	outputFile := getOutputFile(c.String(FlagOutputFilename))
 	defer outputFile.Close()
 
+	showRawTask := c.Bool(FlagDLQRawTask)
+	var rawTasksInfo []*types.ReplicationTaskInfo
 	remainingMessageCount := common.EndMessageID
 	if c.IsSet(FlagMaxMessageCount) {
 		remainingMessageCount = c.Int64(FlagMaxMessageCount)
@@ -61,12 +62,12 @@ func AdminGetDLQMessages(c *cli.Context) {
 	}
 
 	paginationFunc := func(paginationToken []byte) ([]interface{}, []byte, error) {
-		resp, err := adminClient.ReadDLQMessages(ctx, &replicator.ReadDLQMessagesRequest{
+		resp, err := adminClient.ReadDLQMessages(ctx, &types.ReadDLQMessagesRequest{
 			Type:                  toQueueType(dlqType),
-			SourceCluster:         common.StringPtr(sourceCluster),
-			ShardID:               common.Int32Ptr(int32(shardID)),
+			SourceCluster:         sourceCluster,
+			ShardID:               int32(shardID),
 			InclusiveEndMessageID: common.Int64Ptr(lastMessageID),
-			MaximumPageSize:       common.Int32Ptr(defaultPageSize),
+			MaximumPageSize:       defaultPageSize,
 			NextPageToken:         paginationToken,
 		})
 		if err != nil {
@@ -76,6 +77,10 @@ func AdminGetDLQMessages(c *cli.Context) {
 		for _, item := range resp.GetReplicationTasks() {
 			paginateItems = append(paginateItems, item)
 		}
+		if showRawTask {
+			rawTasksInfo = append(rawTasksInfo, resp.GetReplicationTasksInfo()...)
+		}
+
 		return paginateItems, resp.GetNextPageToken(), err
 	}
 
@@ -87,17 +92,42 @@ func AdminGetDLQMessages(c *cli.Context) {
 			ErrorAndExit(fmt.Sprintf("fail to read dlq message. Last read message id: %v", lastReadMessageID), err)
 		}
 
-		task := item.(*replicator.ReplicationTask)
+		task := item.(*types.ReplicationTask)
 		taskStr, err := decodeReplicationTask(task, serializer)
 		if err != nil {
 			ErrorAndExit(fmt.Sprintf("fail to encode dlq message. Last read message id: %v", lastReadMessageID), err)
 		}
 
-		lastReadMessageID = int(*task.SourceTaskId)
+		lastReadMessageID = int(task.SourceTaskID)
 		remainingMessageCount--
 		_, err = outputFile.WriteString(fmt.Sprintf("%v\n", string(taskStr)))
 		if err != nil {
 			ErrorAndExit("fail to print dlq messages.", err)
+		}
+	}
+
+	if showRawTask {
+		_, err := outputFile.WriteString(fmt.Sprintf("#### REPLICATION DLQ RAW TASKS INFO ####\n"))
+		if err != nil {
+			ErrorAndExit("fail to print dlq raw tasks.", err)
+		}
+		for _, info := range rawTasksInfo {
+			str, err := json.Marshal(info)
+			if err != nil {
+				ErrorAndExit("fail to encode dlq raw tasks.", err)
+			}
+
+			if _, err = outputFile.WriteString(fmt.Sprintf("%v\n", string(str))); err != nil {
+				ErrorAndExit("fail to print dlq raw tasks.", err)
+			}
+		}
+	} else {
+		if lastReadMessageID == 0 && len(rawTasksInfo) > 0 {
+			if _, err := outputFile.WriteString(
+				fmt.Sprintf("WARN: Received empty replication task but metadata is not empty. Please use %v to show metadata task.\n", FlagDLQRawTask),
+			); err != nil {
+				ErrorAndExit("fail to print warning message.", err)
+			}
 		}
 	}
 }
@@ -116,16 +146,17 @@ func AdminPurgeDLQMessages(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)
 	for shardID := lowerShardBound; shardID <= upperShardBound; shardID++ {
 		ctx, cancel := newContext(c)
-		if err := adminClient.PurgeDLQMessages(ctx, &replicator.PurgeDLQMessagesRequest{
+		err := adminClient.PurgeDLQMessages(ctx, &types.PurgeDLQMessagesRequest{
 			Type:                  toQueueType(dlqType),
-			SourceCluster:         common.StringPtr(sourceCluster),
-			ShardID:               common.Int32Ptr(int32(shardID)),
+			SourceCluster:         sourceCluster,
+			ShardID:               int32(shardID),
 			InclusiveEndMessageID: lastMessageID,
-		}); err != nil {
-			cancel()
-			ErrorAndExit("Failed to purge dlq", err)
-		}
+		})
 		cancel()
+		if err != nil {
+			fmt.Printf("Failed to purge DLQ message in shard %v with error: %v.\n", shardID, err)
+			continue
+		}
 		time.Sleep(10 * time.Millisecond)
 		fmt.Printf("Successfully purge DLQ Messages in shard %v.\n", shardID)
 	}
@@ -143,20 +174,23 @@ func AdminMergeDLQMessages(c *cli.Context) {
 	}
 
 	adminClient := cFactory.ServerAdminClient(c)
+ShardIDLoop:
 	for shardID := lowerShardBound; shardID <= upperShardBound; shardID++ {
-		ctx, cancel := newContext(c)
-		request := &replicator.MergeDLQMessagesRequest{
+		request := &types.MergeDLQMessagesRequest{
 			Type:                  toQueueType(dlqType),
-			SourceCluster:         common.StringPtr(sourceCluster),
-			ShardID:               common.Int32Ptr(int32(shardID)),
+			SourceCluster:         sourceCluster,
+			ShardID:               int32(shardID),
 			InclusiveEndMessageID: lastMessageID,
-			MaximumPageSize:       common.Int32Ptr(defaultPageSize),
+			MaximumPageSize:       defaultPageSize,
 		}
 
 		for {
+			ctx, cancel := newContext(c)
 			response, err := adminClient.MergeDLQMessages(ctx, request)
+			cancel()
 			if err != nil {
 				fmt.Printf("Failed to merge DLQ message in shard %v with error: %v.\n", shardID, err)
+				continue ShardIDLoop
 			}
 
 			if len(response.NextPageToken) == 0 {
@@ -165,31 +199,18 @@ func AdminMergeDLQMessages(c *cli.Context) {
 
 			request.NextPageToken = response.NextPageToken
 		}
-		cancel()
 		fmt.Printf("Successfully merged all messages in shard %v.\n", shardID)
 	}
 }
 
-func toQueueType(dlqType string) *replicator.DLQType {
+func toQueueType(dlqType string) *types.DLQType {
 	switch dlqType {
 	case "domain":
-		return replicator.DLQTypeDomain.Ptr()
+		return types.DLQTypeDomain.Ptr()
 	case "history":
-		return replicator.DLQTypeReplication.Ptr()
+		return types.DLQTypeReplication.Ptr()
 	default:
 		ErrorAndExit("The queue type is not supported.", fmt.Errorf("the queue type is not supported. Type: %v", dlqType))
 	}
 	return nil
-}
-
-func confirmOrExit(message string) {
-	fmt.Println(message + " (Y/n)")
-	reader := bufio.NewReader(os.Stdin)
-	confirm, err := reader.ReadByte()
-	if err != nil {
-		panic(err)
-	}
-	if confirm != 'Y' {
-		osExit(0)
-	}
 }

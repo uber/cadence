@@ -37,14 +37,14 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -128,7 +128,7 @@ func (h *historyArchiver) Archive(
 	defer func() {
 		sw.Stop()
 		if err != nil {
-			if common.IsPersistenceTransientError(err) || isRetryableError(err) {
+			if persistence.IsTransientError(err) || isRetryableError(err) {
 				scope.IncCounter(metrics.HistoryArchiverArchiveTransientErrorCount)
 			} else {
 				scope.IncCounter(metrics.HistoryArchiverArchiveNonRetryableErrorCount)
@@ -159,8 +159,17 @@ func (h *historyArchiver) Archive(
 	for historyIterator.HasNext() {
 		historyBlob, err := getNextHistoryBlob(ctx, historyIterator)
 		if err != nil {
+			if common.IsEntityNotExistsError(err) {
+				// workflow history no longer exists, may due to duplicated archival signal
+				// this may happen even in the middle of iterating history as two archival signals
+				// can be processed concurrently.
+				logger.Info(archiver.ArchiveSkippedInfoMsg)
+				scope.IncCounter(metrics.HistoryArchiverDuplicateArchivalsCount)
+				return nil
+			}
+
 			logger := logger.WithTags(tag.ArchivalArchiveFailReason(archiver.ErrReasonReadHistory), tag.Error(err))
-			if common.IsPersistenceTransientError(err) {
+			if persistence.IsTransientError(err) {
 				logger.Error(archiver.ArchiveTransientErrorMsg)
 			} else {
 				logger.Error(archiver.ArchiveNonRetriableErrorMsg)
@@ -259,11 +268,11 @@ func (h *historyArchiver) Get(
 	request *archiver.GetHistoryRequest,
 ) (*archiver.GetHistoryResponse, error) {
 	if err := softValidateURI(URI); err != nil {
-		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidURI.Error()}
+		return nil, &types.BadRequestError{Message: archiver.ErrInvalidURI.Error()}
 	}
 
 	if err := archiver.ValidateGetRequest(request); err != nil {
-		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidGetHistoryRequest.Error()}
+		return nil, &types.BadRequestError{Message: archiver.ErrInvalidGetHistoryRequest.Error()}
 	}
 
 	var err error
@@ -271,7 +280,7 @@ func (h *historyArchiver) Get(
 	if request.NextPageToken != nil {
 		token, err = deserializeGetHistoryToken(request.NextPageToken)
 		if err != nil {
-			return nil, &shared.BadRequestError{Message: archiver.ErrNextPageTokenCorrupted.Error()}
+			return nil, &types.BadRequestError{Message: archiver.ErrNextPageTokenCorrupted.Error()}
 		}
 	} else if request.CloseFailoverVersion != nil {
 		token = &getHistoryToken{
@@ -280,7 +289,7 @@ func (h *historyArchiver) Get(
 	} else {
 		highestVersion, err := h.getHighestVersion(ctx, URI, request)
 		if err != nil {
-			return nil, &shared.BadRequestError{Message: err.Error()}
+			return nil, &types.BadRequestError{Message: err.Error()}
 		}
 		token = &getHistoryToken{
 			CloseFailoverVersion: *highestVersion,
@@ -300,19 +309,19 @@ func (h *historyArchiver) Get(
 		encodedRecord, err := download(ctx, h.s3cli, URI, key)
 		if err != nil {
 			if isRetryableError(err) {
-				return nil, &shared.InternalServiceError{Message: err.Error()}
+				return nil, &types.InternalServiceError{Message: err.Error()}
 			}
 			switch err.(type) {
-			case *shared.BadRequestError, *shared.InternalServiceError, *shared.EntityNotExistsError:
+			case *types.BadRequestError, *types.InternalServiceError, *types.EntityNotExistsError:
 				return nil, err
 			default:
-				return nil, &shared.InternalServiceError{Message: err.Error()}
+				return nil, &types.InternalServiceError{Message: err.Error()}
 			}
 		}
 
 		historyBlob, err := decodeHistoryBlob(encodedRecord)
 		if err != nil {
-			return nil, &shared.InternalServiceError{Message: err.Error()}
+			return nil, &types.InternalServiceError{Message: err.Error()}
 		}
 
 		for _, batch := range historyBlob.Body {
@@ -329,7 +338,7 @@ func (h *historyArchiver) Get(
 	if isTruncated {
 		nextToken, err := serializeToken(token)
 		if err != nil {
-			return nil, &shared.InternalServiceError{Message: err.Error()}
+			return nil, &types.InternalServiceError{Message: err.Error()}
 		}
 		response.NextPageToken = nextToken
 	}
@@ -355,10 +364,10 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 		if contextExpired(ctx) {
 			return nil, archiver.ErrContextTimeout
 		}
-		if !common.IsPersistenceTransientError(err) {
+		if !persistence.IsTransientError(err) {
 			return nil, err
 		}
-		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), common.IsPersistenceTransientError)
+		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), persistence.IsTransientError)
 	}
 	return historyBlob, nil
 }
@@ -374,7 +383,7 @@ func (h *historyArchiver) getHighestVersion(ctx context.Context, URI archiver.UR
 	})
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == s3.ErrCodeNoSuchBucket {
-			return nil, &shared.BadRequestError{Message: errBucketNotExists.Error()}
+			return nil, &types.BadRequestError{Message: errBucketNotExists.Error()}
 		}
 		return nil, err
 	}

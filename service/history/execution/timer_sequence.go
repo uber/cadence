@@ -27,10 +27,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -40,13 +40,13 @@ type (
 
 const (
 	// TimerTypeStartToClose is the timer type for activity startToClose timer
-	TimerTypeStartToClose = TimerType(shared.TimeoutTypeStartToClose)
+	TimerTypeStartToClose = TimerType(types.TimeoutTypeStartToClose)
 	// TimerTypeScheduleToStart is the timer type for activity scheduleToStart timer
-	TimerTypeScheduleToStart = TimerType(shared.TimeoutTypeScheduleToStart)
+	TimerTypeScheduleToStart = TimerType(types.TimeoutTypeScheduleToStart)
 	// TimerTypeScheduleToClose is the timer type for activity scheduleToClose timer
-	TimerTypeScheduleToClose = TimerType(shared.TimeoutTypeScheduleToClose)
+	TimerTypeScheduleToClose = TimerType(types.TimeoutTypeScheduleToClose)
 	// TimerTypeHeartbeat is the timer type for activity heartbeat timer
-	TimerTypeHeartbeat = TimerType(shared.TimeoutTypeHeartbeat)
+	TimerTypeHeartbeat = TimerType(types.TimeoutTypeHeartbeat)
 )
 
 const (
@@ -136,7 +136,7 @@ func (t *timerSequenceImpl) CreateNextUserTimer() (bool, error) {
 
 	timerInfo, ok := t.mutableState.GetUserTimerInfoByEventID(firstTimerTask.EventID)
 	if !ok {
-		return false, &shared.InternalServiceError{
+		return false, &types.InternalServiceError{
 			Message: fmt.Sprintf("unable to load activity info %v", firstTimerTask.EventID),
 		}
 	}
@@ -171,7 +171,7 @@ func (t *timerSequenceImpl) CreateNextActivityTimer() (bool, error) {
 
 	activityInfo, ok := t.mutableState.GetActivityInfo(firstTimerTask.EventID)
 	if !ok {
-		return false, &shared.InternalServiceError{
+		return false, &types.InternalServiceError{
 			Message: fmt.Sprintf("unable to load activity info %v", firstTimerTask.EventID),
 		}
 	}
@@ -395,38 +395,38 @@ func TimerTypeToTimerMask(
 	}
 }
 
-// TimerTypeToThrift converts TimeType to its thrift representation
-func TimerTypeToThrift(
+// TimerTypeToInternal converts TimeType to its internal representation
+func TimerTypeToInternal(
 	TimerType TimerType,
-) shared.TimeoutType {
+) types.TimeoutType {
 
 	switch TimerType {
 	case TimerTypeStartToClose:
-		return shared.TimeoutTypeStartToClose
+		return types.TimeoutTypeStartToClose
 	case TimerTypeScheduleToStart:
-		return shared.TimeoutTypeScheduleToStart
+		return types.TimeoutTypeScheduleToStart
 	case TimerTypeScheduleToClose:
-		return shared.TimeoutTypeScheduleToClose
+		return types.TimeoutTypeScheduleToClose
 	case TimerTypeHeartbeat:
-		return shared.TimeoutTypeHeartbeat
+		return types.TimeoutTypeHeartbeat
 	default:
 		panic(fmt.Sprintf("invalid timer type: %v", TimerType))
 	}
 }
 
-// TimerTypeFromThrift gets TimerType from its thrift representation
-func TimerTypeFromThrift(
-	TimerType shared.TimeoutType,
+// TimerTypeFromInternal gets TimerType from internal type
+func TimerTypeFromInternal(
+	TimerType types.TimeoutType,
 ) TimerType {
 
 	switch TimerType {
-	case shared.TimeoutTypeStartToClose:
+	case types.TimeoutTypeStartToClose:
 		return TimerTypeStartToClose
-	case shared.TimeoutTypeScheduleToStart:
+	case types.TimeoutTypeScheduleToStart:
 		return TimerTypeScheduleToStart
-	case shared.TimeoutTypeScheduleToClose:
+	case types.TimeoutTypeScheduleToClose:
 		return TimerTypeScheduleToClose
-	case shared.TimeoutTypeHeartbeat:
+	case types.TimeoutTypeHeartbeat:
 		return TimerTypeHeartbeat
 	default:
 		panic(fmt.Sprintf("invalid timeout type: %v", TimerType))
@@ -437,7 +437,7 @@ func TimerTypeFromThrift(
 func TimerTypeToReason(
 	timerType TimerType,
 ) string {
-	return fmt.Sprintf("cadenceInternal:Timeout %v", TimerTypeToThrift(timerType))
+	return fmt.Sprintf("cadenceInternal:Timeout %v", TimerTypeToInternal(timerType))
 }
 
 // Len implements sort.Interface

@@ -28,15 +28,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/matching"
-	s "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -45,11 +45,16 @@ const (
 	returnEmptyTaskTimeBudget time.Duration = time.Second
 )
 
+var (
+	taskListActivityTypeTag = metrics.TaskListTypeTag("activity")
+	taskListDecisionTypeTag = metrics.TaskListTypeTag("decision")
+)
+
 type (
 	addTaskParams struct {
-		execution     *s.WorkflowExecution
+		execution     *types.WorkflowExecution
 		taskInfo      *persistence.TaskInfo
-		source        matching.TaskSource
+		source        types.TaskSource
 		forwardedFrom string
 	}
 
@@ -63,32 +68,33 @@ type (
 		// GetTask blocks waiting for a task Returns error when context deadline is exceeded
 		// maxDispatchPerSecond is the max rate at which tasks are allowed to be dispatched
 		// from this task list to pollers
-		GetTask(ctx context.Context, maxDispatchPerSecond *float64) (*internalTask, error)
+		GetTask(ctx context.Context, maxDispatchPerSecond *float64) (*InternalTask, error)
 		// DispatchTask dispatches a task to a poller. When there are no pollers to pick
 		// up the task, this method will return error. Task will not be persisted to db
-		DispatchTask(ctx context.Context, task *internalTask) error
+		DispatchTask(ctx context.Context, task *InternalTask) error
 		// DispatchQueryTask will dispatch query to local or remote poller. If forwarded then result or error is returned,
 		// if dispatched to local poller then nil and nil is returned.
-		DispatchQueryTask(ctx context.Context, taskID string, request *matching.QueryWorkflowRequest) (*s.QueryWorkflowResponse, error)
+		DispatchQueryTask(ctx context.Context, taskID string, request *types.MatchingQueryWorkflowRequest) (*types.QueryWorkflowResponse, error)
 		CancelPoller(pollerID string)
-		GetAllPollerInfo() []*s.PollerInfo
+		GetAllPollerInfo() []*types.PollerInfo
 		// DescribeTaskList returns information about the target tasklist
-		DescribeTaskList(includeTaskListStatus bool) *s.DescribeTaskListResponse
+		DescribeTaskList(includeTaskListStatus bool) *types.DescribeTaskListResponse
 		String() string
+		GetTaskListKind() types.TaskListKind
 	}
 
 	// Single task list in memory state
 	taskListManagerImpl struct {
 		taskListID       *taskListID
-		taskListKind     s.TaskListKind // sticky taskList has different process in persistence
+		taskListKind     types.TaskListKind // sticky taskList has different process in persistence
 		config           *taskListConfig
 		db               *taskListDB
 		engine           *matchingEngineImpl
 		taskWriter       *taskWriter
 		taskReader       *taskReader // reads tasks from db and async matches it with poller
 		taskGC           *taskGC
-		taskAckManager   ackManager   // tracks ackLevel for delivered messages
-		matcher          *TaskMatcher // for matching a task producer with a poller
+		taskAckManager   messaging.AckManager // tracks ackLevel for delivered messages
+		matcher          *TaskMatcher         // for matching a task producer with a poller
 		domainCache      cache.DomainCache
 		logger           log.Logger
 		metricsClient    metrics.Client
@@ -117,12 +123,12 @@ const (
 
 var _ taskListManager = (*taskListManagerImpl)(nil)
 
-var errRemoteSyncMatchFailed = &s.RemoteSyncMatchedError{Message: "remote sync match failed"}
+var errRemoteSyncMatchFailed = &types.RemoteSyncMatchedError{Message: "remote sync match failed"}
 
 func newTaskListManager(
 	e *matchingEngineImpl,
 	taskList *taskListID,
-	taskListKind *s.TaskListKind,
+	taskListKind *types.TaskListKind,
 	config *Config,
 ) (taskListManager, error) {
 
@@ -132,7 +138,8 @@ func newTaskListManager(
 	}
 
 	if taskListKind == nil {
-		taskListKind = common.TaskListKindPtr(s.TaskListKindNormal)
+		normalTaskListKind := types.TaskListKindNormal
+		taskListKind = &normalTaskListKind
 	}
 
 	db := newTaskListDB(e.taskManager, taskList.domainID, taskList.name, taskList.taskType, int(*taskListKind), e.logger)
@@ -147,10 +154,9 @@ func newTaskListManager(
 		logger: e.logger.WithTags(tag.WorkflowTaskListName(taskList.name),
 			tag.WorkflowTaskListType(taskList.taskType)),
 		db:                  db,
-		taskAckManager:      newAckManager(e.logger),
+		taskAckManager:      messaging.NewAckManager(e.logger),
 		taskGC:              newTaskGC(db, taskListConfig),
 		config:              taskListConfig,
-		pollerHistory:       newPollerHistory(),
 		outstandingPollsMap: make(map[string]context.CancelFunc),
 	}
 
@@ -165,7 +171,13 @@ func newTaskListManager(
 			metrics.MatchingTaskListMgrScope,
 		))
 	}
-
+	taskListTypeMetricScope := tlMgr.metricScope().Tagged(
+		getTaskListTypeTag(taskList.taskType),
+	)
+	tlMgr.pollerHistory = newPollerHistory(func() {
+		taskListTypeMetricScope.UpdateGauge(metrics.PollerPerTaskListCounter,
+			float64(len(tlMgr.pollerHistory.getAllPollerInfo())))
+	})
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.taskReader = newTaskReader(tlMgr)
 	var fwdr *Forwarder
@@ -189,7 +201,7 @@ func (c *taskListManagerImpl) Start() error {
 		return err
 	}
 
-	c.taskAckManager.setAckLevel(state.ackLevel)
+	c.taskAckManager.SetAckLevel(state.ackLevel)
 	c.taskWriter.Start(c.rangeIDToTaskIDBlock(state.rangeID))
 	c.taskReader.Start()
 
@@ -215,6 +227,9 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 	c.startWG.Wait()
 	var syncMatch bool
 	_, err := c.executeWithRetry(func() (interface{}, error) {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 
 		domainEntry, err := c.domainCache.GetDomainByID(params.taskInfo.DomainID)
 		if err != nil {
@@ -240,16 +255,24 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 
 		return c.taskWriter.appendTask(params.execution, params.taskInfo)
 	})
-	if err == nil {
+
+	if err != nil {
+		c.logger.Error("Failed to add task",
+			tag.Error(err),
+			tag.WorkflowTaskListName(c.taskListID.name),
+			tag.WorkflowTaskListType(c.taskListID.taskType),
+		)
+	} else {
 		c.taskReader.Signal()
 	}
+
 	return syncMatch, err
 }
 
 // DispatchTask dispatches a task to a poller. When there are no pollers to pick
 // up the task or if rate limit is exceeded, this method will return error. Task
 // *will not* be persisted to db
-func (c *taskListManagerImpl) DispatchTask(ctx context.Context, task *internalTask) error {
+func (c *taskListManagerImpl) DispatchTask(ctx context.Context, task *InternalTask) error {
 	return c.matcher.MustOffer(ctx, task)
 }
 
@@ -258,8 +281,8 @@ func (c *taskListManagerImpl) DispatchTask(ctx context.Context, task *internalTa
 func (c *taskListManagerImpl) DispatchQueryTask(
 	ctx context.Context,
 	taskID string,
-	request *matching.QueryWorkflowRequest,
-) (*s.QueryWorkflowResponse, error) {
+	request *types.MatchingQueryWorkflowRequest,
+) (*types.QueryWorkflowResponse, error) {
 	c.startWG.Wait()
 	task := newInternalQueryTask(taskID, request)
 	return c.matcher.OfferQuery(ctx, task)
@@ -272,17 +295,17 @@ func (c *taskListManagerImpl) DispatchQueryTask(
 func (c *taskListManagerImpl) GetTask(
 	ctx context.Context,
 	maxDispatchPerSecond *float64,
-) (*internalTask, error) {
+) (*InternalTask, error) {
 	task, err := c.getTask(ctx, maxDispatchPerSecond)
 	if err != nil {
 		return nil, err
 	}
 	task.domainName = c.domainName()
-	task.backlogCountHint = c.taskAckManager.getBacklogCountHint()
+	task.backlogCountHint = c.taskAckManager.GetBacklogCount()
 	return task, nil
 }
 
-func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond *float64) (*internalTask, error) {
+func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond *float64) (*InternalTask, error) {
 	// We need to set a shorter timeout than the original ctx; otherwise, by the time ctx deadline is
 	// reached, instead of emptyTask, context timeout error is returned to the frontend by the rpc stack,
 	// which counts against our SLO. By shortening the timeout by a very small amount, the emptyTask can be
@@ -329,7 +352,7 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 }
 
 // GetAllPollerInfo returns all pollers that polled from this tasklist in last few minutes
-func (c *taskListManagerImpl) GetAllPollerInfo() []*s.PollerInfo {
+func (c *taskListManagerImpl) GetAllPollerInfo() []*types.PollerInfo {
 	return c.pollerHistory.getAllPollerInfo()
 }
 
@@ -340,27 +363,28 @@ func (c *taskListManagerImpl) CancelPoller(pollerID string) {
 
 	if ok && cancel != nil {
 		cancel()
+		c.logger.Info("canceled outstanding poller", tag.WorkflowDomainName(c.domainName()))
 	}
 }
 
 // DescribeTaskList returns information about the target tasklist, right now this API returns the
 // pollers which polled this tasklist in last few minutes and status of tasklist's ackManager
 // (readLevel, ackLevel, backlogCountHint and taskIDBlock).
-func (c *taskListManagerImpl) DescribeTaskList(includeTaskListStatus bool) *s.DescribeTaskListResponse {
-	response := &s.DescribeTaskListResponse{Pollers: c.GetAllPollerInfo()}
+func (c *taskListManagerImpl) DescribeTaskList(includeTaskListStatus bool) *types.DescribeTaskListResponse {
+	response := &types.DescribeTaskListResponse{Pollers: c.GetAllPollerInfo()}
 	if !includeTaskListStatus {
 		return response
 	}
 
 	taskIDBlock := c.rangeIDToTaskIDBlock(c.db.RangeID())
-	response.TaskListStatus = &s.TaskListStatus{
-		ReadLevel:        common.Int64Ptr(c.taskAckManager.getReadLevel()),
-		AckLevel:         common.Int64Ptr(c.taskAckManager.getAckLevel()),
-		BacklogCountHint: common.Int64Ptr(c.taskAckManager.getBacklogCountHint()),
-		RatePerSecond:    common.Float64Ptr(c.matcher.Rate()),
-		TaskIDBlock: &s.TaskIDBlock{
-			StartID: common.Int64Ptr(taskIDBlock.start),
-			EndID:   common.Int64Ptr(taskIDBlock.end),
+	response.TaskListStatus = &types.TaskListStatus{
+		ReadLevel:        c.taskAckManager.GetReadLevel(),
+		AckLevel:         c.taskAckManager.GetAckLevel(),
+		BacklogCountHint: c.taskAckManager.GetBacklogCount(),
+		RatePerSecond:    c.matcher.Rate(),
+		TaskIDBlock: &types.TaskIDBlock{
+			StartID: taskIDBlock.start,
+			EndID:   taskIDBlock.end,
 		},
 	}
 
@@ -378,10 +402,14 @@ func (c *taskListManagerImpl) String() string {
 	fmt.Fprintf(buf, " task list %v\n", c.taskListID.name)
 	fmt.Fprintf(buf, "RangeID=%v\n", rangeID)
 	fmt.Fprintf(buf, "TaskIDBlock=%+v\n", c.rangeIDToTaskIDBlock(rangeID))
-	fmt.Fprintf(buf, "AckLevel=%v\n", c.taskAckManager.ackLevel)
-	fmt.Fprintf(buf, "MaxReadLevel=%v\n", c.taskAckManager.getReadLevel())
+	fmt.Fprintf(buf, "AckLevel=%v\n", c.taskAckManager.GetAckLevel())
+	fmt.Fprintf(buf, "MaxReadLevel=%v\n", c.taskAckManager.GetReadLevel())
 
 	return buf.String()
+}
+
+func (c *taskListManagerImpl) GetTaskListKind() types.TaskListKind {
+	return c.taskListKind
 }
 
 // completeTask marks a task as processed. Only tasks created by taskReader (i.e. backlog from db) reach
@@ -398,7 +426,7 @@ func (c *taskListManagerImpl) completeTask(task *persistence.TaskInfo, err error
 		// Note that RecordTaskStarted only fails after retrying for a long time, so a single task will not be
 		// re-written to persistence frequently.
 		_, err = c.executeWithRetry(func() (interface{}, error) {
-			wf := &s.WorkflowExecution{WorkflowId: &task.WorkflowID, RunId: &task.RunID}
+			wf := &types.WorkflowExecution{WorkflowID: task.WorkflowID, RunID: task.RunID}
 			return c.taskWriter.appendTask(wf, task)
 		})
 
@@ -406,8 +434,7 @@ func (c *taskListManagerImpl) completeTask(task *persistence.TaskInfo, err error
 			// OK, we also failed to write to persistence.
 			// This should only happen in very extreme cases where persistence is completely down.
 			// We still can't lose the old task so we just unload the entire task list
-			c.logger.Error("Persistent store operation failure",
-				tag.StoreOperationStopTaskList,
+			c.logger.Error("Failed to complete task",
 				tag.Error(err),
 				tag.WorkflowTaskListName(c.taskListID.name),
 				tag.WorkflowTaskListType(c.taskListID.taskType))
@@ -416,7 +443,7 @@ func (c *taskListManagerImpl) completeTask(task *persistence.TaskInfo, err error
 		}
 		c.taskReader.Signal()
 	}
-	ackLevel := c.taskAckManager.completeTask(task.TaskID)
+	ackLevel := c.taskAckManager.AckItem(task.TaskID)
 	c.taskGC.Run(ackLevel)
 }
 
@@ -427,7 +454,7 @@ func (c *taskListManagerImpl) renewLeaseWithRetry() (taskListState, error) {
 		return
 	}
 	c.metricScope().IncCounter(metrics.LeaseRequestPerTaskListCounter)
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	err := backoff.Retry(op, persistenceOperationRetryPolicy, persistence.IsTransientError)
 	if err != nil {
 		c.metricScope().IncCounter(metrics.LeaseFailurePerTaskListCounter)
 		c.engine.unloadTaskList(c.taskListID)
@@ -458,28 +485,27 @@ func (c *taskListManagerImpl) allocTaskIDBlock(prevBlockEnd int64) (taskIDBlock,
 
 // Retry operation on transient error. On rangeID update by another process calls c.Stop().
 func (c *taskListManagerImpl) executeWithRetry(
-	operation func() (interface{}, error)) (result interface{}, err error) {
+	operation func() (interface{}, error),
+) (result interface{}, err error) {
 
 	op := func() error {
 		result, err = operation()
 		return err
 	}
 
-	var retryCount int64
 	err = backoff.Retry(op, persistenceOperationRetryPolicy, func(err error) bool {
-		c.logger.Debug(fmt.Sprintf("Retry executeWithRetry as task list range has changed. retryCount=%v, errType=%T", retryCount, err))
 		if _, ok := err.(*persistence.ConditionFailedError); ok {
 			return false
 		}
-		return common.IsPersistenceTransientError(err)
+		return persistence.IsTransientError(err)
 	})
 
 	if _, ok := err.(*persistence.ConditionFailedError); ok {
 		c.metricScope().IncCounter(metrics.ConditionFailedErrorPerTaskListCounter)
-		c.logger.Debug(fmt.Sprintf("Stopping task list due to persistence condition failure. Err: %v", err))
+		c.logger.Debug("Stopping task list due to persistence condition failure.", tag.Error(err))
 		c.Stop()
-		if c.taskListKind == s.TaskListKindSticky {
-			err = &s.InternalServiceError{Message: common.StickyTaskConditionFailedErrorMsg}
+		if c.taskListKind == types.TaskListKindSticky {
+			err = &types.InternalServiceError{Message: common.StickyTaskConditionFailedErrorMsg}
 		}
 	}
 	return
@@ -526,8 +552,8 @@ func (c *taskListManagerImpl) newChildContext(
 	return context.WithTimeout(parent, timeout)
 }
 
-func (c *taskListManagerImpl) isFowardingAllowed(taskList *taskListID, kind s.TaskListKind) bool {
-	return !taskList.IsRoot() && kind != s.TaskListKindSticky
+func (c *taskListManagerImpl) isFowardingAllowed(taskList *taskListID, kind types.TaskListKind) bool {
+	return !taskList.IsRoot() && kind != types.TaskListKindSticky
 }
 
 func (c *taskListManagerImpl) metricScope() metrics.Scope {
@@ -551,12 +577,10 @@ func (c *taskListManagerImpl) tryInitDomainNameAndScope() {
 		return
 	}
 
-	entry, err := c.domainCache.GetDomainByID(c.taskListID.domainID)
+	domainName, err := c.domainCache.GetDomainName(c.taskListID.domainID)
 	if err != nil {
 		return
 	}
-
-	domainName = entry.GetInfo().Name
 
 	scope := newPerTaskListScope(
 		domainName,
@@ -570,6 +594,17 @@ func (c *taskListManagerImpl) tryInitDomainNameAndScope() {
 	c.domainNameValue.Store(domainName)
 }
 
-func createServiceBusyError(msg string) *s.ServiceBusyError {
-	return &s.ServiceBusyError{Message: msg}
+func getTaskListTypeTag(taskListType int) metrics.Tag {
+	switch taskListType {
+	case persistence.TaskListTypeActivity:
+		return taskListActivityTypeTag
+	case persistence.TaskListTypeDecision:
+		return taskListDecisionTypeTag
+	default:
+		return metrics.TaskListTypeTag("")
+	}
+}
+
+func createServiceBusyError(msg string) *types.ServiceBusyError {
+	return &types.ServiceBusyError{Message: msg}
 }

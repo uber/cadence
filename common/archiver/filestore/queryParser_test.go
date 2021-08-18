@@ -26,8 +26,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 type queryParserSuite struct {
@@ -151,28 +151,28 @@ func (s *queryParserSuite) TestParseCloseStatus() {
 			query:     "CloseStatus = \"Completed\"",
 			expectErr: false,
 			parsedQuery: &parsedQuery{
-				closeStatus: shared.WorkflowExecutionCloseStatusCompleted.Ptr(),
+				closeStatus: types.WorkflowExecutionCloseStatusCompleted.Ptr(),
 			},
 		},
 		{
 			query:     "CloseStatus = 'continuedasnew'",
 			expectErr: false,
 			parsedQuery: &parsedQuery{
-				closeStatus: shared.WorkflowExecutionCloseStatusContinuedAsNew.Ptr(),
+				closeStatus: types.WorkflowExecutionCloseStatusContinuedAsNew.Ptr(),
 			},
 		},
 		{
 			query:     "CloseStatus = 'TIMED_OUT'",
 			expectErr: false,
 			parsedQuery: &parsedQuery{
-				closeStatus: shared.WorkflowExecutionCloseStatusTimedOut.Ptr(),
+				closeStatus: types.WorkflowExecutionCloseStatusTimedOut.Ptr(),
 			},
 		},
 		{
 			query:     "CloseStatus = 'Failed' and CloseStatus = \"Failed\"",
 			expectErr: false,
 			parsedQuery: &parsedQuery{
-				closeStatus: shared.WorkflowExecutionCloseStatusFailed.Ptr(),
+				closeStatus: types.WorkflowExecutionCloseStatusFailed.Ptr(),
 			},
 		},
 		{
@@ -202,7 +202,7 @@ func (s *queryParserSuite) TestParseCloseStatus() {
 			query:     "CloseStatus = 1",
 			expectErr: false,
 			parsedQuery: &parsedQuery{
-				closeStatus: shared.WorkflowExecutionCloseStatusFailed.Ptr(),
+				closeStatus: types.WorkflowExecutionCloseStatusFailed.Ptr(),
 			},
 		},
 		{
@@ -314,7 +314,7 @@ func (s *queryParserSuite) TestParse() {
 				earliestCloseTime: 2000,
 				latestCloseTime:   9999,
 				runID:             common.StringPtr("random runID"),
-				closeStatus:       shared.WorkflowExecutionCloseStatusFailed.Ptr(),
+				closeStatus:       types.WorkflowExecutionCloseStatusFailed.Ptr(),
 			},
 		},
 		{

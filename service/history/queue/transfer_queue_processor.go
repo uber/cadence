@@ -31,7 +31,6 @@ import (
 
 	"github.com/pborman/uuid"
 
-	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -39,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/execution"
@@ -105,7 +105,6 @@ func NewTransferQueueProcessor(
 		executionCache,
 		workflowResetter,
 		logger,
-		shard.GetMetricsClient(),
 		config,
 	)
 
@@ -126,7 +125,7 @@ func NewTransferQueueProcessor(
 		historyResender := ndc.NewHistoryResender(
 			shard.GetDomainCache(),
 			shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
-			func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
+			func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 				return historyEngine.ReplicateEventsV2(ctx, request)
 			},
 			shard.GetService().GetPayloadSerializer(),
@@ -140,7 +139,6 @@ func NewTransferQueueProcessor(
 			executionCache,
 			historyResender,
 			logger,
-			shard.GetMetricsClient(),
 			clusterName,
 			config,
 		)
@@ -212,6 +210,7 @@ func (t *transferQueueProcessor) Stop() {
 
 func (t *transferQueueProcessor) NotifyNewTask(
 	clusterName string,
+	executionInfo *persistence.WorkflowExecutionInfo,
 	transferTasks []persistence.Task,
 ) {
 	if len(transferTasks) == 0 {
@@ -219,7 +218,7 @@ func (t *transferQueueProcessor) NotifyNewTask(
 	}
 
 	if clusterName == t.currentClusterName {
-		t.activeQueueProcessor.notifyNewTask()
+		t.activeQueueProcessor.notifyNewTask(executionInfo, transferTasks)
 		return
 	}
 
@@ -227,7 +226,7 @@ func (t *transferQueueProcessor) NotifyNewTask(
 	if !ok {
 		panic(fmt.Sprintf("Cannot find transfer processor for %s.", clusterName))
 	}
-	standbyQueueProcessor.notifyNewTask()
+	standbyQueueProcessor.notifyNewTask(executionInfo, transferTasks)
 }
 
 func (t *transferQueueProcessor) FailoverDomain(
@@ -551,7 +550,7 @@ func newTransferQueueStandbyProcessor(
 }
 
 func newTransferQueueFailoverProcessor(
-	shard shard.Context,
+	shardContext shard.Context,
 	historyEngine engine.Engine,
 	taskProcessor task.Processor,
 	taskAllocator TaskAllocator,
@@ -561,10 +560,10 @@ func newTransferQueueFailoverProcessor(
 	domainIDs map[string]struct{},
 	standbyClusterName string,
 ) (updateClusterAckLevelFn, *transferQueueProcessorBase) {
-	config := shard.GetConfig()
+	config := shardContext.GetConfig()
 	options := newTransferQueueProcessorOptions(config, true, true)
 
-	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
+	currentClusterName := shardContext.GetService().GetClusterMetadata().GetCurrentClusterName()
 	failoverUUID := uuid.New()
 	logger = logger.WithTags(
 		tag.ClusterName(currentClusterName),
@@ -587,10 +586,10 @@ func newTransferQueueFailoverProcessor(
 
 	updateClusterAckLevel := func(ackLevel task.Key) error {
 		taskID := ackLevel.(transferTaskKey).taskID
-		return shard.UpdateTransferFailoverLevel(
+		return shardContext.UpdateTransferFailoverLevel(
 			failoverUUID,
-			persistence.TransferFailoverLevel{
-				StartTime:    shard.GetTimeSource().Now(),
+			shard.TransferFailoverLevel{
+				StartTime:    shardContext.GetTimeSource().Now(),
 				MinLevel:     minLevel,
 				CurrentLevel: taskID,
 				MaxLevel:     maxLevel,
@@ -600,7 +599,7 @@ func newTransferQueueFailoverProcessor(
 	}
 
 	queueShutdown := func() error {
-		return shard.DeleteTransferFailoverLevel(failoverUUID)
+		return shardContext.DeleteTransferFailoverLevel(failoverUUID)
 	}
 
 	processingQueueStates := []ProcessingQueueState{
@@ -613,7 +612,7 @@ func newTransferQueueFailoverProcessor(
 	}
 
 	return updateClusterAckLevel, newTransferQueueProcessorBase(
-		shard,
+		shardContext,
 		processingQueueStates,
 		taskProcessor,
 		options,
@@ -624,7 +623,7 @@ func newTransferQueueFailoverProcessor(
 		taskFilter,
 		taskExecutor,
 		logger,
-		shard.GetMetricsClient(),
+		shardContext.GetMetricsClient(),
 	)
 }
 

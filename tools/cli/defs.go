@@ -75,11 +75,22 @@ var envKeysForUserName = []string{
 	"HOME",
 }
 
+const resetTypeFirstDecisionCompleted = "FirstDecisionCompleted"
+const resetTypeLastDecisionCompleted = "LastDecisionCompleted"
+const resetTypeLastContinuedAsNew = "LastContinuedAsNew"
+const resetTypeBadBinary = "BadBinary"
+const resetTypeDecisionCompletedTime = "DecisionCompletedTime"
+const resetTypeFirstDecisionScheduled = "FirstDecisionScheduled"
+const resetTypeLastDecisionScheduled = "LastDecisionScheduled"
+
 var resetTypesMap = map[string]string{
-	"FirstDecisionCompleted": "",
-	"LastDecisionCompleted":  "",
-	"LastContinuedAsNew":     "",
-	"BadBinary":              FlagResetBadBinaryChecksum,
+	resetTypeFirstDecisionCompleted: "",
+	resetTypeLastDecisionCompleted:  "",
+	resetTypeLastContinuedAsNew:     "",
+	resetTypeBadBinary:              FlagResetBadBinaryChecksum,
+	resetTypeDecisionCompletedTime:  FlagEarliestTime,
+	resetTypeFirstDecisionScheduled: "",
+	resetTypeLastDecisionScheduled:  "",
 }
 
 type jsonType int
@@ -88,6 +99,7 @@ const (
 	jsonTypeInput jsonType = iota
 	jsonTypeMemo
 	jsonTypeHeader
+	jsonTypeSignal
 )
 
 var (
@@ -101,23 +113,25 @@ var (
 	optionErr               = "there is something wrong with your command options"
 	osExit                  = os.Exit
 	workflowClosedStatusMap = map[string]s.WorkflowExecutionCloseStatus{
-		"completed":      s.WorkflowExecutionCloseStatusCompleted,
-		"failed":         s.WorkflowExecutionCloseStatusFailed,
-		"canceled":       s.WorkflowExecutionCloseStatusCanceled,
-		"terminated":     s.WorkflowExecutionCloseStatusTerminated,
+		"completed":        s.WorkflowExecutionCloseStatusCompleted,
+		"failed":           s.WorkflowExecutionCloseStatusFailed,
+		"canceled":         s.WorkflowExecutionCloseStatusCanceled,
+		"terminated":       s.WorkflowExecutionCloseStatusTerminated,
+		"continued_as_new": s.WorkflowExecutionCloseStatusContinuedAsNew,
+		"timed_out":        s.WorkflowExecutionCloseStatusTimedOut,
+		// below are some alias
+		"c":              s.WorkflowExecutionCloseStatusCompleted,
+		"complete":       s.WorkflowExecutionCloseStatusCompleted,
+		"f":              s.WorkflowExecutionCloseStatusFailed,
+		"fail":           s.WorkflowExecutionCloseStatusFailed,
+		"cancel":         s.WorkflowExecutionCloseStatusCanceled,
+		"terminate":      s.WorkflowExecutionCloseStatusTerminated,
+		"term":           s.WorkflowExecutionCloseStatusTerminated,
+		"continue":       s.WorkflowExecutionCloseStatusContinuedAsNew,
+		"cont":           s.WorkflowExecutionCloseStatusContinuedAsNew,
 		"continuedasnew": s.WorkflowExecutionCloseStatusContinuedAsNew,
 		"continueasnew":  s.WorkflowExecutionCloseStatusContinuedAsNew,
 		"timedout":       s.WorkflowExecutionCloseStatusTimedOut,
-		// below are some alias
-		"c":         s.WorkflowExecutionCloseStatusCompleted,
-		"complete":  s.WorkflowExecutionCloseStatusCompleted,
-		"f":         s.WorkflowExecutionCloseStatusFailed,
-		"fail":      s.WorkflowExecutionCloseStatusFailed,
-		"cancel":    s.WorkflowExecutionCloseStatusCanceled,
-		"terminate": s.WorkflowExecutionCloseStatusTerminated,
-		"term":      s.WorkflowExecutionCloseStatusTerminated,
-		"continue":  s.WorkflowExecutionCloseStatusContinuedAsNew,
-		"cont":      s.WorkflowExecutionCloseStatusContinuedAsNew,
-		"timeout":   s.WorkflowExecutionCloseStatusTimedOut,
+		"timeout":        s.WorkflowExecutionCloseStatusTimedOut,
 	}
 )

@@ -24,6 +24,7 @@ package mocks
 
 import (
 	mock "github.com/stretchr/testify/mock"
+
 	connector "github.com/uber/cadence/common/archiver/gcloud/connector"
 )
 

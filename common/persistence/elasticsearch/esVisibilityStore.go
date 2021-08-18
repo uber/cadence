@@ -43,7 +43,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/config"
+	rc "github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
@@ -54,12 +54,11 @@ const (
 
 type (
 	esVisibilityStore struct {
-		esClient   es.GenericClient
-		index      string
-		producer   messaging.Producer
-		logger     log.Logger
-		config     *config.VisibilityConfig
-		serializer p.PayloadSerializer
+		esClient es.GenericClient
+		index    string
+		producer messaging.Producer
+		logger   log.Logger
+		config   *rc.ResourceConfig
 	}
 )
 
@@ -70,16 +69,15 @@ func NewElasticSearchVisibilityStore(
 	esClient es.GenericClient,
 	index string,
 	producer messaging.Producer,
-	config *config.VisibilityConfig,
+	config *rc.ResourceConfig,
 	logger log.Logger,
 ) p.VisibilityStore {
 	return &esVisibilityStore{
-		esClient:   esClient,
-		index:      index,
-		producer:   producer,
-		logger:     logger.WithTags(tag.ComponentESVisibilityManager),
-		config:     config,
-		serializer: p.NewPayloadSerializer(),
+		esClient: esClient,
+		index:    index,
+		producer: producer,
+		logger:   logger.WithTags(tag.ComponentESVisibilityManager),
+		config:   config,
 	}
 }
 
@@ -94,18 +92,18 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
 	v.checkProducer()
-	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	msg := getVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
 		request.RunID,
 		request.WorkflowTypeName,
 		request.TaskList,
-		request.StartTimestamp,
-		request.ExecutionTimestamp,
+		request.StartTimestamp.UnixNano(),
+		request.ExecutionTimestamp.UnixNano(),
 		request.TaskID,
-		memo.Data,
-		memo.GetEncoding(),
+		request.Memo.Data,
+		request.Memo.GetEncoding(),
+		request.IsCron,
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
@@ -116,21 +114,21 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 	request *p.InternalRecordWorkflowExecutionClosedRequest,
 ) error {
 	v.checkProducer()
-	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	msg := getVisibilityMessageForCloseExecution(
 		request.DomainUUID,
 		request.WorkflowID,
 		request.RunID,
 		request.WorkflowTypeName,
-		request.StartTimestamp,
-		request.ExecutionTimestamp,
-		request.CloseTimestamp,
+		request.StartTimestamp.UnixNano(),
+		request.ExecutionTimestamp.UnixNano(),
+		request.CloseTimestamp.UnixNano(),
 		*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 		request.HistoryLength,
 		request.TaskID,
-		memo.Data,
+		request.Memo.Data,
 		request.TaskList,
-		memo.GetEncoding(),
+		request.Memo.GetEncoding(),
+		request.IsCron,
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
@@ -141,18 +139,18 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 	request *p.InternalUpsertWorkflowExecutionRequest,
 ) error {
 	v.checkProducer()
-	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	msg := getVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
 		request.RunID,
 		request.WorkflowTypeName,
 		request.TaskList,
-		request.StartTimestamp,
-		request.ExecutionTimestamp,
+		request.StartTimestamp.UnixNano(),
+		request.ExecutionTimestamp.UnixNano(),
 		request.TaskID,
-		memo.Data,
-		memo.GetEncoding(),
+		request.Memo.Data,
+		request.Memo.GetEncoding(),
+		request.IsCron,
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
@@ -163,19 +161,19 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutions(
 	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		startTime := rec.StartTime.UnixNano()
-		return request.EarliestTime <= startTime && startTime <= request.LatestTime
+		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
-		Index:       v.index,
-		ListRequest: request,
-		IsOpen:      true,
-		Filter:      isRecordValid,
-		MatchQuery:  nil,
+		Index:           v.index,
+		ListRequest:     request,
+		IsOpen:          true,
+		Filter:          isRecordValid,
+		MatchQuery:      nil,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListOpenWorkflowExecutions failed, %v", err),
 		}
 	}
@@ -187,19 +185,19 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutions(
 	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		closeTime := rec.CloseTime.UnixNano()
-		return request.EarliestTime <= closeTime && closeTime <= request.LatestTime
+		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
-		Index:       v.index,
-		ListRequest: request,
-		IsOpen:      false,
-		Filter:      isRecordValid,
-		MatchQuery:  nil,
+		Index:           v.index,
+		ListRequest:     request,
+		IsOpen:          false,
+		Filter:          isRecordValid,
+		MatchQuery:      nil,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
 		}
 	}
@@ -211,8 +209,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByType(
 	request *p.InternalListWorkflowExecutionsByTypeRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		startTime := rec.StartTime.UnixNano()
-		return request.EarliestTime <= startTime && startTime <= request.LatestTime
+		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
@@ -224,9 +221,10 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByType(
 			Name: es.WorkflowType,
 			Text: request.WorkflowTypeName,
 		},
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListOpenWorkflowExecutionsByType failed, %v", err),
 		}
 	}
@@ -238,8 +236,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByType(
 	request *p.InternalListWorkflowExecutionsByTypeRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		closeTime := rec.CloseTime.UnixNano()
-		return request.EarliestTime <= closeTime && closeTime <= request.LatestTime
+		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
@@ -251,9 +248,10 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByType(
 			Name: es.WorkflowType,
 			Text: request.WorkflowTypeName,
 		},
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByType failed, %v", err),
 		}
 	}
@@ -265,8 +263,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 	request *p.InternalListWorkflowExecutionsByWorkflowIDRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		startTime := rec.StartTime.UnixNano()
-		return request.EarliestTime <= startTime && startTime <= request.LatestTime
+		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
@@ -278,9 +275,10 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 			Name: es.WorkflowID,
 			Text: request.WorkflowID,
 		},
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListOpenWorkflowExecutionsByWorkflowID failed, %v", err),
 		}
 	}
@@ -292,8 +290,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 	request *p.InternalListWorkflowExecutionsByWorkflowIDRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		closeTime := rec.CloseTime.UnixNano()
-		return request.EarliestTime <= closeTime && closeTime <= request.LatestTime
+		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
@@ -305,9 +302,10 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 			Name: es.WorkflowID,
 			Text: request.WorkflowID,
 		},
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID failed, %v", err),
 		}
 	}
@@ -319,8 +317,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 	request *p.InternalListClosedWorkflowExecutionsByStatusRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		closeTime := rec.CloseTime.UnixNano()
-		return request.EarliestTime <= closeTime && closeTime <= request.LatestTime
+		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
@@ -332,9 +329,10 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 			Name: es.CloseStatus,
 			Text: int32(*thrift.FromWorkflowExecutionCloseStatus(&request.Status)),
 		},
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByStatus failed, %v", err),
 		}
 	}
@@ -347,7 +345,7 @@ func (v *esVisibilityStore) GetClosedWorkflowExecution(
 ) (*p.InternalGetClosedWorkflowExecutionResponse, error) {
 	resp, err := v.esClient.SearchForOneClosedExecution(ctx, v.index, request)
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("SearchForOneClosedExecution failed, %v", err),
 		}
 	}
@@ -382,18 +380,19 @@ func (v *esVisibilityStore) ListWorkflowExecutions(
 
 	queryDSL, err := v.getESQueryDSL(request, token)
 	if err != nil {
-		return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
+		return nil, &types.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
 	}
 
 	resp, err := v.esClient.SearchByQuery(ctx, &es.SearchByQueryRequest{
-		Index:         v.index,
-		Query:         queryDSL,
-		NextPageToken: request.NextPageToken,
-		PageSize:      request.PageSize,
-		Filter:        nil,
+		Index:           v.index,
+		Query:           queryDSL,
+		NextPageToken:   request.NextPageToken,
+		PageSize:        request.PageSize,
+		Filter:          nil,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListWorkflowExecutions failed, %v", err),
 		}
 	}
@@ -416,7 +415,7 @@ func (v *esVisibilityStore) ScanWorkflowExecutions(
 	if len(token.ScrollID) == 0 { // first call
 		queryDSL, err = getESQueryDSLForScan(request)
 		if err != nil {
-			return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
+			return nil, &types.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
 		}
 	}
 
@@ -427,7 +426,7 @@ func (v *esVisibilityStore) ScanWorkflowExecutions(
 		PageSize:      request.PageSize,
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ScanWorkflowExecutions failed, %v", err),
 		}
 	}
@@ -442,12 +441,12 @@ func (v *esVisibilityStore) CountWorkflowExecutions(
 
 	queryDSL, err := getESQueryDSLForCount(request)
 	if err != nil {
-		return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
+		return nil, &types.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
 	}
 
 	count, err := v.esClient.CountByQuery(ctx, v.index, queryDSL)
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("CountWorkflowExecutions failed. Error: %v", err),
 		}
 	}
@@ -472,9 +471,9 @@ const (
 
 var (
 	timeKeys = map[string]bool{
-		"StartTime":     true,
-		"CloseTime":     true,
-		"ExecutionTime": true,
+		es.StartTime:     true,
+		es.CloseTime:     true,
+		es.ExecutionTime: true,
 	}
 	rangeKeys = map[string]bool{
 		"from":  true,
@@ -579,7 +578,7 @@ func getCustomizedDSLFromSQL(sql string, domainID string) (*fastjson.Value, erro
 		addQueryForExecutionTime(dsl)
 	}
 	addDomainToQuery(dsl, domainID)
-	if err := processAllValuesForKey(dsl, timeKeyFilter, timeProcessFunc); err != nil {
+	if err := processAllValuesForKey(dsl, isCombinedKey, combinedProcessFunc); err != nil {
 		return nil, err
 	}
 	return dsl, nil
@@ -704,9 +703,20 @@ func (v *esVisibilityStore) checkProducer() {
 	}
 }
 
-func getVisibilityMessage(domainID string, wid, rid string, workflowTypeName string, taskList string,
-	startTimeUnixNano, executionTimeUnixNano int64, taskID int64, memo []byte, encoding common.EncodingType,
-	searchAttributes map[string][]byte) *indexer.Message {
+func getVisibilityMessage(
+	domainID string,
+	wid,
+	rid string,
+	workflowTypeName string,
+	taskList string,
+	startTimeUnixNano,
+	executionTimeUnixNano int64,
+	taskID int64,
+	memo []byte,
+	encoding common.EncodingType,
+	isCron bool,
+	searchAttributes map[string][]byte,
+) *indexer.Message {
 
 	msgType := indexer.MessageTypeIndex
 	fields := map[string]*indexer.Field{
@@ -714,6 +724,7 @@ func getVisibilityMessage(domainID string, wid, rid string, workflowTypeName str
 		es.StartTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
 		es.ExecutionTime: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
 		es.TaskList:      {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
+		es.IsCron:        {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
 	}
 	if len(memo) != 0 {
 		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}
@@ -734,10 +745,23 @@ func getVisibilityMessage(domainID string, wid, rid string, workflowTypeName str
 	return msg
 }
 
-func getVisibilityMessageForCloseExecution(domainID string, wid, rid string, workflowTypeName string,
-	startTimeUnixNano int64, executionTimeUnixNano int64, endTimeUnixNano int64, closeStatus workflow.WorkflowExecutionCloseStatus,
-	historyLength int64, taskID int64, memo []byte, taskList string, encoding common.EncodingType,
-	searchAttributes map[string][]byte) *indexer.Message {
+func getVisibilityMessageForCloseExecution(
+	domainID string,
+	wid,
+	rid string,
+	workflowTypeName string,
+	startTimeUnixNano int64,
+	executionTimeUnixNano int64,
+	endTimeUnixNano int64,
+	closeStatus workflow.WorkflowExecutionCloseStatus,
+	historyLength int64,
+	taskID int64,
+	memo []byte,
+	taskList string,
+	encoding common.EncodingType,
+	isCron bool,
+	searchAttributes map[string][]byte,
+) *indexer.Message {
 
 	msgType := indexer.MessageTypeIndex
 	fields := map[string]*indexer.Field{
@@ -748,6 +772,7 @@ func getVisibilityMessageForCloseExecution(domainID string, wid, rid string, wor
 		es.CloseStatus:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(closeStatus))},
 		es.HistoryLength: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(historyLength)},
 		es.TaskList:      {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
+		es.IsCron:        {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
 	}
 	if len(memo) != 0 {
 		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}
@@ -786,7 +811,9 @@ func checkPageSize(request *p.ListWorkflowExecutionsByQueryRequest) {
 	}
 }
 
-func processAllValuesForKey(dsl *fastjson.Value, keyFilter func(k string) bool,
+func processAllValuesForKey(
+	dsl *fastjson.Value,
+	keyFilter func(k string) bool,
 	processFunc func(obj *fastjson.Object, key string, v *fastjson.Value) error,
 ) error {
 	switch dsl.Type() {
@@ -821,7 +848,23 @@ func processAllValuesForKey(dsl *fastjson.Value, keyFilter func(k string) bool,
 	return nil
 }
 
-func timeKeyFilter(key string) bool {
+func isCombinedKey(key string) bool {
+	return isTimeKey(key) || isCloseStatusKey(key)
+}
+
+func combinedProcessFunc(obj *fastjson.Object, key string, value *fastjson.Value) error {
+	if isTimeKey(key) {
+		return timeProcessFunc(obj, key, value)
+	}
+
+	if isCloseStatusKey(key) {
+		return closeStatusProcessFunc(obj, key, value)
+	}
+
+	return fmt.Errorf("unknown es dsl key %v for processing value", key)
+}
+
+func isTimeKey(key string) bool {
 	return timeKeys[key]
 }
 
@@ -847,26 +890,37 @@ func timeProcessFunc(obj *fastjson.Object, key string, value *fastjson.Value) er
 	})
 }
 
+func isCloseStatusKey(key string) bool {
+	return key == es.CloseStatus
+}
+
+func closeStatusProcessFunc(obj *fastjson.Object, key string, value *fastjson.Value) error {
+	return processAllValuesForKey(value, func(key string) bool {
+		return rangeKeys[key]
+	}, func(obj *fastjson.Object, key string, v *fastjson.Value) error {
+		statusStr := string(v.GetStringBytes())
+
+		// first check if already in int64 format
+		if _, err := strconv.ParseInt(statusStr, 10, 64); err == nil {
+			return nil
+		}
+
+		// try to parse close status string
+		var parsedStatus types.WorkflowExecutionCloseStatus
+		err := parsedStatus.UnmarshalText([]byte(statusStr))
+		if err != nil {
+			return err
+		}
+
+		obj.Set(key, fastjson.MustParse(fmt.Sprintf(`"%d"`, parsedStatus)))
+		return nil
+	})
+}
+
 // elasticsql may transfer `Attr.Name` to "`Attr.Name`" instead of "Attr.Name" in dsl in some operator like "between and"
 // this function is used to clean up
 func cleanDSL(input string) string {
 	var re = regexp.MustCompile("(`)(Attr.\\w+)(`)")
 	result := re.ReplaceAllString(input, `$2`)
 	return result
-}
-
-func (v *esVisibilityStore) serializeMemo(visibilityMemo *types.Memo, domainID, wID, rID string) *p.DataBlob {
-	memo, err := v.serializer.SerializeVisibilityMemo(thrift.FromMemo(visibilityMemo), common.EncodingTypeThriftRW)
-	if err != nil {
-		v.logger.WithTags(
-			tag.WorkflowDomainID(domainID),
-			tag.WorkflowID(wID),
-			tag.WorkflowRunID(rID),
-			tag.Error(err)).
-			Error("Unable to encode visibility memo")
-	}
-	if memo == nil {
-		return &p.DataBlob{}
-	}
-	return memo
 }

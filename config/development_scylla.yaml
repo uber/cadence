@@ -1,0 +1,14 @@
+persistence:
+  defaultStore: scylla-default
+  visibilityStore: scylla-visibility
+  datastores:
+    scylla-default:
+      nosql:
+        pluginName: "cassandra"
+        hosts: "127.0.0.1"
+        keyspace: "cadence"
+    scylla-visibility:
+      nosql:
+        pluginName: "cassandra"
+        hosts: "127.0.0.1"
+        keyspace: "cadence_visibility"

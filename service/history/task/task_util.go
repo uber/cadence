@@ -26,12 +26,12 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -184,6 +184,23 @@ func GetTimerTaskMetricScope(
 	}
 }
 
+// GetCrossClusterTaskMetricsScope returns the metrics scope index for cross cluster task
+// TODO: define separate scope for source and target tasks
+func GetCrossClusterTaskMetricsScope(
+	taskType int,
+) int {
+	switch taskType {
+	case persistence.CrossClusterTaskTypeStartChildExecution:
+		return metrics.CrossClusterTaskStartChildExecutionScope
+	case persistence.CrossClusterTaskTypeCancelExecution:
+		return metrics.CrossClusterTaskCancelExecutionScope
+	case persistence.CrossClusterTaskTypeSignalExecution:
+		return metrics.CrossClusterTaskTypeSignalExecutionScope
+	default:
+		return metrics.CrossClusterQueueProcessorScope
+	}
+}
+
 // verifyTaskVersion, will return true if failover version check is successful
 func verifyTaskVersion(
 	shard shard.Context,
@@ -226,7 +243,7 @@ func loadMutableStateForTimerTask(
 ) (execution.MutableState, error) {
 	msBuilder, err := wfContext.LoadWorkflowExecution(ctx)
 	if err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); ok {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 			return nil, nil
 		}
@@ -251,9 +268,18 @@ func loadMutableStateForTimerTask(
 		}
 		// after refresh, still mutable state's next event ID <= task ID
 		if timerTask.EventID >= msBuilder.GetNextEventID() {
-			logger.Info("Timer Task Processor: task event ID >= MS NextEventID, skip.",
+			domainName := msBuilder.GetDomainEntry().GetInfo().Name
+			metricsClient.Scope(metrics.TimerQueueProcessorScope, metrics.DomainTag(domainName)).IncCounter(metrics.DataInconsistentCounter)
+			logger.Error("Timer Task Processor: task event ID >= MS NextEventID, skip.",
+				tag.WorkflowDomainName(domainName),
+				tag.WorkflowDomainID(timerTask.DomainID),
+				tag.WorkflowID(timerTask.WorkflowID),
+				tag.WorkflowRunID(timerTask.RunID),
+				tag.TaskType(timerTask.TaskType),
+				tag.TaskID(timerTask.TaskID),
 				tag.WorkflowEventID(timerTask.EventID),
-				tag.WorkflowNextEventID(msBuilder.GetNextEventID()))
+				tag.WorkflowNextEventID(msBuilder.GetNextEventID()),
+			)
 			return nil, nil
 		}
 	}
@@ -272,7 +298,7 @@ func loadMutableStateForTransferTask(
 
 	msBuilder, err := wfContext.LoadWorkflowExecution(ctx)
 	if err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); ok {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 			return nil, nil
 		}
@@ -297,9 +323,18 @@ func loadMutableStateForTransferTask(
 		}
 		// after refresh, still mutable state's next event ID <= task ID
 		if transferTask.ScheduleID >= msBuilder.GetNextEventID() {
-			logger.Info("Transfer Task Processor: task event ID >= MS NextEventID, skip.",
+			domainName := msBuilder.GetDomainEntry().GetInfo().Name
+			metricsClient.Scope(metrics.TransferQueueProcessorScope, metrics.DomainTag(domainName)).IncCounter(metrics.DataInconsistentCounter)
+			logger.Error("Transfer Task Processor: task event ID >= MS NextEventID, skip.",
+				tag.WorkflowDomainName(domainName),
+				tag.WorkflowDomainID(transferTask.DomainID),
+				tag.WorkflowID(transferTask.WorkflowID),
+				tag.WorkflowRunID(transferTask.RunID),
+				tag.TaskType(transferTask.TaskType),
+				tag.TaskID(transferTask.TaskID),
 				tag.WorkflowScheduleID(transferTask.ScheduleID),
-				tag.WorkflowNextEventID(msBuilder.GetNextEventID()))
+				tag.WorkflowNextEventID(msBuilder.GetNextEventID()),
+			)
 			return nil, nil
 		}
 	}
@@ -315,7 +350,7 @@ func timeoutWorkflow(
 		if err := execution.FailDecision(
 			mutableState,
 			decision,
-			workflow.DecisionTaskFailedCauseForceCloseDecision,
+			types.DecisionTaskFailedCauseForceCloseDecision,
 		); err != nil {
 			return err
 		}
@@ -332,14 +367,14 @@ func retryWorkflow(
 	mutableState execution.MutableState,
 	eventBatchFirstEventID int64,
 	parentDomainName string,
-	continueAsNewAttributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes,
+	continueAsNewAttributes *types.ContinueAsNewWorkflowExecutionDecisionAttributes,
 ) (execution.MutableState, error) {
 
 	if decision, ok := mutableState.GetInFlightDecision(); ok {
 		if err := execution.FailDecision(
 			mutableState,
 			decision,
-			workflow.DecisionTaskFailedCauseForceCloseDecision,
+			types.DecisionTaskFailedCauseForceCloseDecision,
 		); err != nil {
 			return nil, err
 		}
@@ -360,11 +395,11 @@ func retryWorkflow(
 
 func getWorkflowExecution(
 	taskInfo Info,
-) workflow.WorkflowExecution {
+) types.WorkflowExecution {
 
-	return workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(taskInfo.GetWorkflowID()),
-		RunId:      common.StringPtr(taskInfo.GetRunID()),
+	return types.WorkflowExecution{
+		WorkflowID: taskInfo.GetWorkflowID(),
+		RunID:      taskInfo.GetRunID(),
 	}
 }
 

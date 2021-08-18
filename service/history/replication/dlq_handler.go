@@ -25,11 +25,9 @@ package replication
 import (
 	"context"
 
-	"github.com/uber/cadence/.gen/go/replicator"
-	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -38,7 +36,7 @@ const (
 )
 
 var (
-	errInvalidCluster = &workflow.BadRequestError{Message: "Invalid target cluster name."}
+	errInvalidCluster = &types.BadRequestError{Message: "Invalid target cluster name."}
 )
 
 type (
@@ -50,7 +48,7 @@ type (
 			lastMessageID int64,
 			pageSize int,
 			pageToken []byte,
-		) ([]*replicator.ReplicationTask, []byte, error)
+		) ([]*types.ReplicationTask, []*types.ReplicationTaskInfo, []byte, error)
 		PurgeMessages(
 			ctx context.Context,
 			sourceCluster string,
@@ -97,7 +95,7 @@ func (r *dlqHandlerImpl) ReadMessages(
 	lastMessageID int64,
 	pageSize int,
 	pageToken []byte,
-) ([]*replicator.ReplicationTask, []byte, error) {
+) ([]*types.ReplicationTask, []*types.ReplicationTaskInfo, []byte, error) {
 
 	return r.readMessagesWithAckLevel(
 		ctx,
@@ -114,7 +112,7 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 	lastMessageID int64,
 	pageSize int,
 	pageToken []byte,
-) ([]*replicator.ReplicationTask, []byte, error) {
+) ([]*types.ReplicationTask, []*types.ReplicationTaskInfo, []byte, error) {
 
 	resp, err := r.shard.GetExecutionManager().GetReplicationTasksFromDLQ(
 		ctx,
@@ -129,42 +127,42 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 		},
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	remoteAdminClient := r.shard.GetService().GetClientBean().GetRemoteAdminClient(sourceCluster)
 	if remoteAdminClient == nil {
-		return nil, nil, errInvalidCluster
+		return nil, nil, nil, errInvalidCluster
 	}
 
-	taskInfo := make([]*replicator.ReplicationTaskInfo, 0, len(resp.Tasks))
+	taskInfo := make([]*types.ReplicationTaskInfo, 0, len(resp.Tasks))
 	for _, task := range resp.Tasks {
-		taskInfo = append(taskInfo, &replicator.ReplicationTaskInfo{
-			DomainID:     common.StringPtr(task.GetDomainID()),
-			WorkflowID:   common.StringPtr(task.GetWorkflowID()),
-			RunID:        common.StringPtr(task.GetRunID()),
-			TaskType:     common.Int16Ptr(int16(task.GetTaskType())),
-			TaskID:       common.Int64Ptr(task.GetTaskID()),
-			Version:      common.Int64Ptr(task.GetVersion()),
-			FirstEventID: common.Int64Ptr(task.FirstEventID),
-			NextEventID:  common.Int64Ptr(task.NextEventID),
-			ScheduledID:  common.Int64Ptr(task.ScheduledID),
+		taskInfo = append(taskInfo, &types.ReplicationTaskInfo{
+			DomainID:     task.GetDomainID(),
+			WorkflowID:   task.GetWorkflowID(),
+			RunID:        task.GetRunID(),
+			TaskType:     int16(task.GetTaskType()),
+			TaskID:       task.GetTaskID(),
+			Version:      task.GetVersion(),
+			FirstEventID: task.FirstEventID,
+			NextEventID:  task.NextEventID,
+			ScheduledID:  task.ScheduledID,
 		})
 	}
-	response := &replicator.GetDLQReplicationMessagesResponse{}
+	response := &types.GetDLQReplicationMessagesResponse{}
 	if len(taskInfo) > 0 {
 		response, err = remoteAdminClient.GetDLQReplicationMessages(
 			ctx,
-			&replicator.GetDLQReplicationMessagesRequest{
+			&types.GetDLQReplicationMessagesRequest{
 				TaskInfos: taskInfo,
 			},
 		)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
-	return response.ReplicationTasks, resp.NextPageToken, nil
+	return response.ReplicationTasks, taskInfo, resp.NextPageToken, nil
 }
 
 func (r *dlqHandlerImpl) PurgeMessages(
@@ -199,7 +197,7 @@ func (r *dlqHandlerImpl) MergeMessages(
 		return nil, errInvalidCluster
 	}
 
-	tasks, token, err := r.readMessagesWithAckLevel(
+	tasks, _, token, err := r.readMessagesWithAckLevel(
 		ctx,
 		sourceCluster,
 		lastMessageID,
@@ -216,8 +214,8 @@ func (r *dlqHandlerImpl) MergeMessages(
 			return nil, err
 		}
 
-		if lastMessageID < task.GetSourceTaskId() {
-			lastMessageID = task.GetSourceTaskId()
+		if lastMessageID < task.GetSourceTaskID() {
+			lastMessageID = task.GetSourceTaskID()
 		}
 	}
 

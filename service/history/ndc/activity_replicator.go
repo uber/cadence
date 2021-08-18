@@ -26,16 +26,13 @@ import (
 	ctx "context"
 	"time"
 
-	"go.uber.org/cadence/.gen/go/shared"
-
-	h "github.com/uber/cadence/.gen/go/history"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -51,7 +48,7 @@ type (
 	ActivityReplicator interface {
 		SyncActivity(
 			ctx ctx.Context,
-			request *h.SyncActivityRequest,
+			request *types.SyncActivityRequest,
 		) error
 	}
 
@@ -80,7 +77,7 @@ func NewActivityReplicator(
 
 func (r *activityReplicatorImpl) SyncActivity(
 	ctx ctx.Context,
-	request *h.SyncActivityRequest,
+	request *types.SyncActivityRequest,
 ) (retError error) {
 
 	// sync activity info will only be sent from active side, when
@@ -88,10 +85,10 @@ func (r *activityReplicatorImpl) SyncActivity(
 	// 2. activity heart beat
 	// no sync activity task will be sent when active side fail / timeout activity,
 	// since standby side does not have activity retry timer
-	domainID := request.GetDomainId()
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: request.WorkflowId,
-		RunId:      request.RunId,
+	domainID := request.GetDomainID()
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: request.WorkflowID,
+		RunID:      request.RunID,
 	}
 
 	context, release, err := r.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution)
@@ -104,7 +101,7 @@ func (r *activityReplicatorImpl) SyncActivity(
 
 	mutableState, err := context.LoadWorkflowExecution(ctx)
 	if err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); !ok {
+		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			return err
 		}
 
@@ -116,11 +113,11 @@ func (r *activityReplicatorImpl) SyncActivity(
 	}
 
 	version := request.GetVersion()
-	scheduleID := request.GetScheduledId()
+	scheduleID := request.GetScheduledID()
 	shouldApply, err := r.shouldApplySyncActivity(
 		domainID,
-		workflowExecution.GetWorkflowId(),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetWorkflowID(),
+		workflowExecution.GetRunID(),
 		scheduleID,
 		version,
 		mutableState,
@@ -219,7 +216,7 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 	scheduleID int64,
 	activityVersion int64,
 	mutableState execution.MutableState,
-	incomingRawVersionHistory *workflow.VersionHistory,
+	incomingRawVersionHistory *types.VersionHistory,
 ) (bool, error) {
 
 	if mutableState.GetVersionHistories() != nil {
@@ -237,7 +234,7 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 			return false, err
 		}
 
-		incomingVersionHistory := persistence.NewVersionHistoryFromThrift(incomingRawVersionHistory)
+		incomingVersionHistory := persistence.NewVersionHistoryFromInternalType(incomingRawVersionHistory)
 		lastIncomingItem, err := incomingVersionHistory.GetLastItem()
 		if err != nil {
 			return false, err
@@ -289,7 +286,7 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 			}
 		}
 	} else {
-		return false, &shared.InternalServiceError{Message: "The workflow version histories is corrupted."}
+		return false, &types.InternalServiceError{Message: "The workflow version histories is corrupted."}
 	}
 
 	return true, nil

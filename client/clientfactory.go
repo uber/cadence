@@ -29,15 +29,20 @@ import (
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
+
+	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
+	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
+	matchingv1 "github.com/uber/cadence/.gen/proto/matching/v1"
+
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 const (
@@ -76,6 +81,7 @@ type (
 		dynConfig             *dynamicconfig.Collection
 		numberOfHistoryShards int
 		logger                log.Logger
+		enableGRPCOutbound    bool
 	}
 )
 
@@ -88,6 +94,7 @@ func NewRPCClientFactory(
 	numberOfHistoryShards int,
 	logger log.Logger,
 ) Factory {
+	enableGRPCOutbound := dc.GetBoolProperty(dynamicconfig.EnableGRPCOutbound, false)()
 	return &rpcClientFactory{
 		rpcFactory:            rpcFactory,
 		monitor:               monitor,
@@ -95,6 +102,7 @@ func NewRPCClientFactory(
 		dynConfig:             dc,
 		numberOfHistoryShards: numberOfHistoryShards,
 		logger:                logger,
+		enableGRPCOutbound:    enableGRPCOutbound,
 	}
 }
 
@@ -110,26 +118,50 @@ func (cf *rpcClientFactory) NewFrontendClient() (frontend.Client, error) {
 	return cf.NewFrontendClientWithTimeout(frontend.DefaultTimeout, frontend.DefaultLongPollTimeout)
 }
 
-func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error) {
-	resolver, err := cf.monitor.GetResolver(common.HistoryServiceName)
+func (cf *rpcClientFactory) createKeyResolver(serviceName string) (func(key string) (string, error), error) {
+	resolver, err := cf.monitor.GetResolver(serviceName)
 	if err != nil {
 		return nil, err
 	}
 
-	keyResolver := func(key string) (string, error) {
+	return func(key string) (string, error) {
 		host, err := resolver.Lookup(key)
 		if err != nil {
 			return "", err
 		}
-		return host.GetAddress(), nil
+		hostAddress := host.GetAddress()
+		if cf.enableGRPCOutbound {
+			hostAddress, err = cf.rpcFactory.ReplaceGRPCPort(serviceName, hostAddress)
+			if err != nil {
+				return "", err
+			}
+		}
+		return hostAddress, nil
+	}, nil
+}
+
+func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error) {
+	keyResolver, err := cf.createKeyResolver(common.HistoryServiceName)
+	if err != nil {
+		return nil, err
 	}
 
 	clientProvider := func(clientKey string) (interface{}, error) {
-		dispatcher := cf.rpcFactory.CreateDispatcherForOutbound(historyCaller, common.HistoryServiceName, clientKey)
-		return historyserviceclient.New(dispatcher.ClientConfig(common.HistoryServiceName)), nil
+		if cf.enableGRPCOutbound {
+			return cf.newHistoryGRPCClient(clientKey)
+		}
+		return cf.newHistoryThriftClient(clientKey)
 	}
 
-	client := history.NewClient(cf.numberOfHistoryShards, timeout, common.NewClientCache(keyResolver, clientProvider), cf.logger)
+	client := history.NewClient(
+		cf.numberOfHistoryShards,
+		timeout,
+		common.NewClientCache(keyResolver, clientProvider),
+		cf.logger,
+	)
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.HistoryErrorInjectionRate, 0)(); errorRate != 0 {
+		client = history.NewErrorInjectionClient(client, errorRate, cf.logger)
+	}
 	if cf.metricsClient != nil {
 		client = history.NewMetricClient(client, cf.metricsClient)
 	}
@@ -141,22 +173,45 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 	timeout time.Duration,
 	longPollTimeout time.Duration,
 ) (matching.Client, error) {
-	resolver, err := cf.monitor.GetResolver(common.MatchingServiceName)
+	keyResolver, err := cf.createKeyResolver(common.MatchingServiceName)
 	if err != nil {
 		return nil, err
 	}
 
-	keyResolver := func(key string) (string, error) {
-		host, err := resolver.Lookup(key)
-		if err != nil {
-			return "", err
+	clientProvider := func(clientKey string) (interface{}, error) {
+		if cf.enableGRPCOutbound {
+			return cf.newMatchingGRPCClient(clientKey)
 		}
-		return host.GetAddress(), nil
+		return cf.newMatchingThriftClient(clientKey)
 	}
 
-	clientProvider := func(clientKey string) (interface{}, error) {
-		dispatcher := cf.rpcFactory.CreateDispatcherForOutbound(matchingCaller, common.MatchingServiceName, clientKey)
-		return matchingserviceclient.New(dispatcher.ClientConfig(common.MatchingServiceName)), nil
+	clientFetcher := func() ([]matching.Client, error) {
+		resolver, err := cf.monitor.GetResolver(common.MatchingServiceName)
+		if err != nil {
+			return nil, err
+		}
+
+		var result []matching.Client
+		for _, host := range resolver.Members() {
+			hostAddress := host.GetAddress()
+			if cf.enableGRPCOutbound {
+				hostAddress, err = cf.rpcFactory.ReplaceGRPCPort(common.MatchingServiceName, hostAddress)
+				if err != nil {
+					return nil, err
+				}
+				client, err := cf.newMatchingGRPCClient(hostAddress)
+				if err != nil {
+					return nil, err
+				}
+				result = append(result, client)
+			}
+			client, err := cf.newMatchingThriftClient(hostAddress)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, client)
+		}
+		return result, nil
 	}
 
 	client := matching.NewClient(
@@ -164,8 +219,11 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		longPollTimeout,
 		common.NewClientCache(keyResolver, clientProvider),
 		matching.NewLoadBalancer(domainIDToName, cf.dynConfig),
+		clientFetcher,
 	)
-
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.MatchingErrorInjectionRate, 0)(); errorRate != 0 {
+		client = matching.NewErrorInjectionClient(client, errorRate, cf.logger)
+	}
 	if cf.metricsClient != nil {
 		client = matching.NewMetricClient(client, cf.metricsClient)
 	}
@@ -177,26 +235,22 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeout(
 	timeout time.Duration,
 	longPollTimeout time.Duration,
 ) (frontend.Client, error) {
-
-	resolver, err := cf.monitor.GetResolver(common.FrontendServiceName)
+	keyResolver, err := cf.createKeyResolver(common.FrontendServiceName)
 	if err != nil {
 		return nil, err
 	}
 
-	keyResolver := func(key string) (string, error) {
-		host, err := resolver.Lookup(key)
-		if err != nil {
-			return "", err
-		}
-		return host.GetAddress(), nil
-	}
-
 	clientProvider := func(clientKey string) (interface{}, error) {
-		dispatcher := cf.rpcFactory.CreateDispatcherForOutbound(frontendCaller, common.FrontendServiceName, clientKey)
-		return workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName)), nil
+		if cf.enableGRPCOutbound {
+			return cf.newFrontendGRPCClient(clientKey)
+		}
+		return cf.newFrontendThriftClient(clientKey)
 	}
 
 	client := frontend.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider))
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate, 0)(); errorRate != 0 {
+		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
+	}
 	if cf.metricsClient != nil {
 		client = frontend.NewMetricClient(client, cf.metricsClient)
 	}
@@ -214,10 +268,13 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndDispatcher(
 	}
 
 	clientProvider := func(clientKey string) (interface{}, error) {
-		return adminserviceclient.New(dispatcher.ClientConfig(rpcName)), nil
+		return admin.NewThriftClient(adminserviceclient.New(dispatcher.ClientConfig(rpcName))), nil
 	}
 
 	client := admin.NewClient(timeout, largeTimeout, common.NewClientCache(keyResolver, clientProvider))
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate, 0)(); errorRate != 0 {
+		client = admin.NewErrorInjectionClient(client, errorRate, cf.logger)
+	}
 	if cf.metricsClient != nil {
 		client = admin.NewMetricClient(client, cf.metricsClient)
 	}
@@ -235,12 +292,69 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndDispatcher(
 	}
 
 	clientProvider := func(clientKey string) (interface{}, error) {
-		return workflowserviceclient.New(dispatcher.ClientConfig(rpcName)), nil
+		return frontend.NewThriftClient(workflowserviceclient.New(dispatcher.ClientConfig(rpcName))), nil
 	}
 
 	client := frontend.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider))
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate, 0)(); errorRate != 0 {
+		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
+	}
 	if cf.metricsClient != nil {
 		client = frontend.NewMetricClient(client, cf.metricsClient)
 	}
 	return client, nil
+}
+
+func (cf *rpcClientFactory) newHistoryThriftClient(hostAddress string) (history.Client, error) {
+	dispatcher, err := cf.rpcFactory.CreateDispatcherForOutbound(historyCaller, common.HistoryServiceName, hostAddress)
+	if err != nil {
+		return nil, err
+	}
+	return history.NewThriftClient(historyserviceclient.New(dispatcher.ClientConfig(common.HistoryServiceName))), nil
+}
+
+func (cf *rpcClientFactory) newMatchingThriftClient(hostAddress string) (matching.Client, error) {
+	dispatcher, err := cf.rpcFactory.CreateDispatcherForOutbound(matchingCaller, common.MatchingServiceName, hostAddress)
+	if err != nil {
+		return nil, err
+	}
+	return matching.NewThriftClient(matchingserviceclient.New(dispatcher.ClientConfig(common.MatchingServiceName))), nil
+}
+
+func (cf *rpcClientFactory) newFrontendThriftClient(hostAddress string) (frontend.Client, error) {
+	dispatcher, err := cf.rpcFactory.CreateDispatcherForOutbound(frontendCaller, common.FrontendServiceName, hostAddress)
+	if err != nil {
+		return nil, err
+	}
+	return frontend.NewThriftClient(workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))), nil
+}
+
+func (cf *rpcClientFactory) newHistoryGRPCClient(hostAddress string) (history.Client, error) {
+	dispatcher, err := cf.rpcFactory.CreateGRPCDispatcherForOutbound(historyCaller, common.HistoryServiceName, hostAddress)
+	if err != nil {
+		return nil, err
+	}
+	return history.NewGRPCClient(historyv1.NewHistoryAPIYARPCClient(dispatcher.ClientConfig(common.HistoryServiceName))), nil
+}
+
+func (cf *rpcClientFactory) newMatchingGRPCClient(hostAddress string) (matching.Client, error) {
+	dispatcher, err := cf.rpcFactory.CreateGRPCDispatcherForOutbound(matchingCaller, common.MatchingServiceName, hostAddress)
+	if err != nil {
+		return nil, err
+	}
+	return matching.NewGRPCClient(matchingv1.NewMatchingAPIYARPCClient(dispatcher.ClientConfig(common.MatchingServiceName))), nil
+}
+
+func (cf *rpcClientFactory) newFrontendGRPCClient(hostAddress string) (frontend.Client, error) {
+	dispatcher, err := cf.rpcFactory.CreateGRPCDispatcherForOutbound(frontendCaller, common.FrontendServiceName, hostAddress)
+	if err != nil {
+		return nil, err
+	}
+	config := dispatcher.ClientConfig(common.FrontendServiceName)
+	return frontend.NewGRPCClient(
+		apiv1.NewDomainAPIYARPCClient(config),
+		apiv1.NewWorkflowAPIYARPCClient(config),
+		apiv1.NewWorkerAPIYARPCClient(config),
+		apiv1.NewVisibilityAPIYARPCClient(config),
+	), nil
 }

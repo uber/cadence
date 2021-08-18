@@ -25,7 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -48,7 +48,7 @@ func DeserializePageToken(data []byte) (*ElasticVisibilityPageToken, error) {
 	dec.UseNumber()
 	err := dec.Decode(&token)
 	if err != nil {
-		return nil, &workflow.BadRequestError{
+		return nil, &types.BadRequestError{
 			Message: fmt.Sprintf("unable to deserialize page token. err: %v", err),
 		}
 	}
@@ -59,7 +59,7 @@ func DeserializePageToken(data []byte) (*ElasticVisibilityPageToken, error) {
 func SerializePageToken(token *ElasticVisibilityPageToken) ([]byte, error) {
 	data, err := json.Marshal(token)
 	if err != nil {
-		return nil, &workflow.BadRequestError{
+		return nil, &types.BadRequestError{
 			Message: fmt.Sprintf("unable to serialize page token. err: %v", err),
 		}
 	}

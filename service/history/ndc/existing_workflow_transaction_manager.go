@@ -27,8 +27,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 )
 
@@ -102,14 +102,14 @@ func (r *transactionManagerForExistingWorkflowImpl) dispatchForExistingWorkflow(
 	}
 	if currentRunID == "" {
 		// this means a bug in our code or DB is inconsistent...
-		return &shared.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: "nDCTransactionManager: unable to locate current workflow during update",
 		}
 	}
 
 	if currentRunID == targetRunID {
 		if !isWorkflowRebuilt {
-			return &shared.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: "nDCTransactionManager: encounter workflow not rebuilt & current workflow not guaranteed",
 			}
 		}
@@ -257,7 +257,7 @@ func (r *transactionManagerForExistingWorkflowImpl) updateAsZombie(
 		return err
 	}
 	if targetPolicy != execution.TransactionPolicyPassive {
-		return &shared.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: "nDCTransactionManagerForExistingWorkflow updateAsZombie encounter target workflow policy not being passive",
 		}
 	}
@@ -273,7 +273,7 @@ func (r *transactionManagerForExistingWorkflowImpl) updateAsZombie(
 			return err
 		}
 		if newWorkflowPolicy != execution.TransactionPolicyPassive {
-			return &shared.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: "nDCTransactionManagerForExistingWorkflow updateAsZombie encounter new workflow policy not being passive",
 			}
 		}
@@ -407,7 +407,7 @@ func (r *transactionManagerForExistingWorkflowImpl) conflictResolveAsZombie(
 		return err
 	}
 	if targetWorkflowPolicy != execution.TransactionPolicyPassive {
-		return &shared.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: "nDCTransactionManagerForExistingWorkflow conflictResolveAsZombie encounter target workflow policy not being passive",
 		}
 	}
@@ -422,7 +422,7 @@ func (r *transactionManagerForExistingWorkflowImpl) conflictResolveAsZombie(
 			return err
 		}
 		if newWorkflowPolicy != execution.TransactionPolicyPassive {
-			return &shared.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: "nDCTransactionManagerForExistingWorkflow conflictResolveAsZombie encounter new workflow policy not being passive",
 			}
 		}
@@ -531,7 +531,7 @@ func (r *transactionManagerForExistingWorkflowImpl) executeTransaction(
 		)
 
 	default:
-		return &shared.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("nDCTransactionManager: encounter unknown transaction type: %v", transactionPolicy),
 		}
 	}

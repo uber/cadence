@@ -27,19 +27,16 @@ import (
 	"errors"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/shared"
 	adminClient "github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/collection"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 var (
@@ -55,7 +52,7 @@ const (
 type (
 	// nDCHistoryReplicationFn provides the functionality to deliver replication raw history request to history
 	// the provided func should be thread safe
-	nDCHistoryReplicationFn func(ctx context.Context, request *history.ReplicateEventsV2Request) error
+	nDCHistoryReplicationFn func(ctx context.Context, request *types.ReplicateEventsV2Request) error
 
 	// HistoryResender is the interface for resending history events to remote
 	HistoryResender interface {
@@ -83,8 +80,8 @@ type (
 	}
 
 	historyBatch struct {
-		versionHistory *shared.VersionHistory
-		rawEventBatch  *shared.DataBlob
+		versionHistory *types.VersionHistory
+		rawEventBatch  *types.DataBlob
 	}
 )
 
@@ -164,7 +161,7 @@ func (n *HistoryResenderImpl) SendSingleWorkflowHistory(
 		case nil:
 			// continue to process the events
 			break
-		case *shared.EntityNotExistsError:
+		case *types.EntityNotExistsError:
 			// Case 1: the workflow pass the retention period
 			// Case 2: the workflow is corrupted
 			if skipTask := n.fixCurrentExecution(
@@ -234,15 +231,15 @@ func (n *HistoryResenderImpl) createReplicationRawRequest(
 	domainID string,
 	workflowID string,
 	runID string,
-	historyBlob *shared.DataBlob,
-	versionHistoryItems []*shared.VersionHistoryItem,
-) *history.ReplicateEventsV2Request {
+	historyBlob *types.DataBlob,
+	versionHistoryItems []*types.VersionHistoryItem,
+) *types.ReplicateEventsV2Request {
 
-	request := &history.ReplicateEventsV2Request{
-		DomainUUID: common.StringPtr(domainID),
-		WorkflowExecution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+	request := &types.ReplicateEventsV2Request{
+		DomainUUID: domainID,
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		Events:              historyBlob,
 		VersionHistoryItems: versionHistoryItems,
@@ -252,7 +249,7 @@ func (n *HistoryResenderImpl) createReplicationRawRequest(
 
 func (n *HistoryResenderImpl) sendReplicationRawRequest(
 	ctx context.Context,
-	request *history.ReplicateEventsV2Request,
+	request *types.ReplicateEventsV2Request,
 ) error {
 
 	ctx, cancel := context.WithTimeout(ctx, resendContextTimeout)
@@ -271,30 +268,29 @@ func (n *HistoryResenderImpl) getHistory(
 	endEventVersion *int64,
 	token []byte,
 	pageSize int32,
-) (*admin.GetWorkflowExecutionRawHistoryV2Response, error) {
+) (*types.GetWorkflowExecutionRawHistoryV2Response, error) {
 
 	logger := n.logger.WithTags(tag.WorkflowRunID(runID))
 
-	domainEntry, err := n.domainCache.GetDomainByID(domainID)
+	domainName, err := n.domainCache.GetDomainName(domainID)
 	if err != nil {
 		logger.Error("error getting domain", tag.Error(err))
 		return nil, err
 	}
-	domainName := domainEntry.GetInfo().Name
 
 	ctx, cancel := context.WithTimeout(ctx, resendContextTimeout)
 	defer cancel()
-	response, err := n.adminClient.GetWorkflowExecutionRawHistoryV2(ctx, &admin.GetWorkflowExecutionRawHistoryV2Request{
-		Domain: common.StringPtr(domainName),
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+	response, err := n.adminClient.GetWorkflowExecutionRawHistoryV2(ctx, &types.GetWorkflowExecutionRawHistoryV2Request{
+		Domain: domainName,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
-		StartEventId:      startEventID,
+		StartEventID:      startEventID,
 		StartEventVersion: startEventVersion,
-		EndEventId:        endEventID,
+		EndEventID:        endEventID,
 		EndEventVersion:   endEventVersion,
-		MaximumPageSize:   common.Int32Ptr(pageSize),
+		MaximumPageSize:   pageSize,
 		NextPageToken:     token,
 	})
 	if err != nil {

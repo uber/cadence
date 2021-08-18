@@ -29,13 +29,13 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/task"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 )
@@ -116,7 +116,7 @@ func (s *taskPriorityAssignerSuite) TestGetDomainInfo_Success_Local() {
 func (s *taskPriorityAssignerSuite) TestGetDomainInfo_Fail_DomainNotExist() {
 	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(
 		nil,
-		&workflow.EntityNotExistsError{Message: "domain not exist"},
+		&types.EntityNotExistsError{Message: "domain not exist"},
 	)
 
 	domainName, isActive, err := s.priorityAssigner.getDomainInfo(constants.TestDomainID)

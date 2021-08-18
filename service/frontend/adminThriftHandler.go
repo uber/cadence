@@ -47,109 +47,145 @@ func (t AdminThriftHandler) register(dispatcher *yarpc.Dispatcher) {
 }
 
 // AddSearchAttribute forwards request to the underlying handler
-func (t AdminThriftHandler) AddSearchAttribute(ctx context.Context, request *admin.AddSearchAttributeRequest) (err error) {
-	err = t.h.AddSearchAttribute(ctx, request)
+func (t AdminThriftHandler) AddSearchAttribute(ctx context.Context, request *admin.AddSearchAttributeRequest) error {
+	err := t.h.AddSearchAttribute(withThriftTag(ctx), thrift.ToAddSearchAttributeRequest(request))
 	return thrift.FromError(err)
 }
 
 // CloseShard forwards request to the underlying handler
-func (t AdminThriftHandler) CloseShard(ctx context.Context, request *shared.CloseShardRequest) (err error) {
-	err = t.h.CloseShard(ctx, request)
+func (t AdminThriftHandler) CloseShard(ctx context.Context, request *shared.CloseShardRequest) error {
+	err := t.h.CloseShard(withThriftTag(ctx), thrift.ToCloseShardRequest(request))
 	return thrift.FromError(err)
 }
 
 // DescribeCluster forwards request to the underlying handler
-func (t AdminThriftHandler) DescribeCluster(ctx context.Context) (response *admin.DescribeClusterResponse, err error) {
-	response, err = t.h.DescribeCluster(ctx)
-	return response, thrift.FromError(err)
+func (t AdminThriftHandler) DescribeCluster(ctx context.Context) (*admin.DescribeClusterResponse, error) {
+	response, err := t.h.DescribeCluster(withThriftTag(ctx))
+	return thrift.FromDescribeClusterResponse(response), thrift.FromError(err)
+}
+
+// DescribeShardDistribution forwards request to the underlying handler
+func (t AdminThriftHandler) DescribeShardDistribution(ctx context.Context, request *shared.DescribeShardDistributionRequest) (*shared.DescribeShardDistributionResponse, error) {
+	response, err := t.h.DescribeShardDistribution(withThriftTag(ctx), thrift.ToDescribeShardDistributionRequest(request))
+	return thrift.FromDescribeShardDistributionResponse(response), thrift.FromError(err)
 }
 
 // DescribeHistoryHost forwards request to the underlying handler
-func (t AdminThriftHandler) DescribeHistoryHost(ctx context.Context, request *shared.DescribeHistoryHostRequest) (response *shared.DescribeHistoryHostResponse, err error) {
-	response, err = t.h.DescribeHistoryHost(ctx, request)
-	return response, thrift.FromError(err)
+func (t AdminThriftHandler) DescribeHistoryHost(ctx context.Context, request *shared.DescribeHistoryHostRequest) (*shared.DescribeHistoryHostResponse, error) {
+	response, err := t.h.DescribeHistoryHost(withThriftTag(ctx), thrift.ToDescribeHistoryHostRequest(request))
+	return thrift.FromDescribeHistoryHostResponse(response), thrift.FromError(err)
 }
 
 // DescribeQueue forwards request to the underlying handler
-func (t AdminThriftHandler) DescribeQueue(ctx context.Context, request *shared.DescribeQueueRequest) (response *shared.DescribeQueueResponse, err error) {
-	response, err = t.h.DescribeQueue(ctx, request)
-	return response, thrift.FromError(err)
+func (t AdminThriftHandler) DescribeQueue(ctx context.Context, request *shared.DescribeQueueRequest) (*shared.DescribeQueueResponse, error) {
+	response, err := t.h.DescribeQueue(withThriftTag(ctx), thrift.ToDescribeQueueRequest(request))
+	return thrift.FromDescribeQueueResponse(response), thrift.FromError(err)
 }
 
 // DescribeWorkflowExecution forwards request to the underlying handler
-func (t AdminThriftHandler) DescribeWorkflowExecution(ctx context.Context, request *admin.DescribeWorkflowExecutionRequest) (response *admin.DescribeWorkflowExecutionResponse, err error) {
-	response, err = t.h.DescribeWorkflowExecution(ctx, request)
-	return response, thrift.FromError(err)
+func (t AdminThriftHandler) DescribeWorkflowExecution(ctx context.Context, request *admin.DescribeWorkflowExecutionRequest) (*admin.DescribeWorkflowExecutionResponse, error) {
+	response, err := t.h.DescribeWorkflowExecution(withThriftTag(ctx), thrift.ToAdminDescribeWorkflowExecutionRequest(request))
+	return thrift.FromAdminDescribeWorkflowExecutionResponse(response), thrift.FromError(err)
 }
 
 // GetDLQReplicationMessages forwards request to the underlying handler
-func (t AdminThriftHandler) GetDLQReplicationMessages(ctx context.Context, request *replicator.GetDLQReplicationMessagesRequest) (response *replicator.GetDLQReplicationMessagesResponse, err error) {
-	response, err = t.h.GetDLQReplicationMessages(ctx, request)
-	return response, thrift.FromError(err)
+func (t AdminThriftHandler) GetDLQReplicationMessages(ctx context.Context, request *replicator.GetDLQReplicationMessagesRequest) (*replicator.GetDLQReplicationMessagesResponse, error) {
+	response, err := t.h.GetDLQReplicationMessages(withThriftTag(ctx), thrift.ToGetDLQReplicationMessagesRequest(request))
+	return thrift.FromGetDLQReplicationMessagesResponse(response), thrift.FromError(err)
 }
 
 // GetDomainReplicationMessages forwards request to the underlying handler
-func (t AdminThriftHandler) GetDomainReplicationMessages(ctx context.Context, request *replicator.GetDomainReplicationMessagesRequest) (response *replicator.GetDomainReplicationMessagesResponse, err error) {
-	response, err = t.h.GetDomainReplicationMessages(ctx, request)
-	return response, thrift.FromError(err)
+func (t AdminThriftHandler) GetDomainReplicationMessages(ctx context.Context, request *replicator.GetDomainReplicationMessagesRequest) (*replicator.GetDomainReplicationMessagesResponse, error) {
+	response, err := t.h.GetDomainReplicationMessages(withThriftTag(ctx), thrift.ToGetDomainReplicationMessagesRequest(request))
+	return thrift.FromGetDomainReplicationMessagesResponse(response), thrift.FromError(err)
 }
 
 // GetReplicationMessages forwards request to the underlying handler
-func (t AdminThriftHandler) GetReplicationMessages(ctx context.Context, request *replicator.GetReplicationMessagesRequest) (response *replicator.GetReplicationMessagesResponse, err error) {
-	response, err = t.h.GetReplicationMessages(ctx, request)
-	return response, thrift.FromError(err)
+func (t AdminThriftHandler) GetReplicationMessages(ctx context.Context, request *replicator.GetReplicationMessagesRequest) (*replicator.GetReplicationMessagesResponse, error) {
+	response, err := t.h.GetReplicationMessages(withThriftTag(ctx), thrift.ToGetReplicationMessagesRequest(request))
+	return thrift.FromGetReplicationMessagesResponse(response), thrift.FromError(err)
 }
 
 // GetWorkflowExecutionRawHistoryV2 forwards request to the underlying handler
-func (t AdminThriftHandler) GetWorkflowExecutionRawHistoryV2(ctx context.Context, request *admin.GetWorkflowExecutionRawHistoryV2Request) (response *admin.GetWorkflowExecutionRawHistoryV2Response, err error) {
-	response, err = t.h.GetWorkflowExecutionRawHistoryV2(ctx, request)
-	return response, thrift.FromError(err)
+func (t AdminThriftHandler) GetWorkflowExecutionRawHistoryV2(ctx context.Context, request *admin.GetWorkflowExecutionRawHistoryV2Request) (*admin.GetWorkflowExecutionRawHistoryV2Response, error) {
+	response, err := t.h.GetWorkflowExecutionRawHistoryV2(withThriftTag(ctx), thrift.ToGetWorkflowExecutionRawHistoryV2Request(request))
+	return thrift.FromGetWorkflowExecutionRawHistoryV2Response(response), thrift.FromError(err)
 }
 
 // MergeDLQMessages forwards request to the underlying handler
-func (t AdminThriftHandler) MergeDLQMessages(ctx context.Context, request *replicator.MergeDLQMessagesRequest) (response *replicator.MergeDLQMessagesResponse, err error) {
-	response, err = t.h.MergeDLQMessages(ctx, request)
-	return response, thrift.FromError(err)
+func (t AdminThriftHandler) MergeDLQMessages(ctx context.Context, request *replicator.MergeDLQMessagesRequest) (*replicator.MergeDLQMessagesResponse, error) {
+	response, err := t.h.MergeDLQMessages(withThriftTag(ctx), thrift.ToMergeDLQMessagesRequest(request))
+	return thrift.FromMergeDLQMessagesResponse(response), thrift.FromError(err)
 }
 
 // PurgeDLQMessages forwards request to the underlying handler
-func (t AdminThriftHandler) PurgeDLQMessages(ctx context.Context, request *replicator.PurgeDLQMessagesRequest) (err error) {
-	err = t.h.PurgeDLQMessages(ctx, request)
+func (t AdminThriftHandler) PurgeDLQMessages(ctx context.Context, request *replicator.PurgeDLQMessagesRequest) error {
+	err := t.h.PurgeDLQMessages(withThriftTag(ctx), thrift.ToPurgeDLQMessagesRequest(request))
 	return thrift.FromError(err)
 }
 
 // ReadDLQMessages forwards request to the underlying handler
-func (t AdminThriftHandler) ReadDLQMessages(ctx context.Context, request *replicator.ReadDLQMessagesRequest) (response *replicator.ReadDLQMessagesResponse, err error) {
-	response, err = t.h.ReadDLQMessages(ctx, request)
-	return response, thrift.FromError(err)
+func (t AdminThriftHandler) ReadDLQMessages(ctx context.Context, request *replicator.ReadDLQMessagesRequest) (*replicator.ReadDLQMessagesResponse, error) {
+	response, err := t.h.ReadDLQMessages(withThriftTag(ctx), thrift.ToReadDLQMessagesRequest(request))
+	return thrift.FromReadDLQMessagesResponse(response), thrift.FromError(err)
 }
 
 // ReapplyEvents forwards request to the underlying handler
-func (t AdminThriftHandler) ReapplyEvents(ctx context.Context, request *shared.ReapplyEventsRequest) (err error) {
-	err = t.h.ReapplyEvents(ctx, request)
+func (t AdminThriftHandler) ReapplyEvents(ctx context.Context, request *shared.ReapplyEventsRequest) error {
+	err := t.h.ReapplyEvents(withThriftTag(ctx), thrift.ToReapplyEventsRequest(request))
 	return thrift.FromError(err)
 }
 
 // RefreshWorkflowTasks forwards request to the underlying handler
-func (t AdminThriftHandler) RefreshWorkflowTasks(ctx context.Context, request *shared.RefreshWorkflowTasksRequest) (err error) {
-	err = t.h.RefreshWorkflowTasks(ctx, request)
+func (t AdminThriftHandler) RefreshWorkflowTasks(ctx context.Context, request *shared.RefreshWorkflowTasksRequest) error {
+	err := t.h.RefreshWorkflowTasks(withThriftTag(ctx), thrift.ToRefreshWorkflowTasksRequest(request))
 	return thrift.FromError(err)
 }
 
 // RemoveTask forwards request to the underlying handler
-func (t AdminThriftHandler) RemoveTask(ctx context.Context, request *shared.RemoveTaskRequest) (err error) {
-	err = t.h.RemoveTask(ctx, request)
+func (t AdminThriftHandler) RemoveTask(ctx context.Context, request *shared.RemoveTaskRequest) error {
+	err := t.h.RemoveTask(withThriftTag(ctx), thrift.ToRemoveTaskRequest(request))
 	return thrift.FromError(err)
 }
 
 // ResendReplicationTasks forwards request to the underlying handler
-func (t AdminThriftHandler) ResendReplicationTasks(ctx context.Context, request *admin.ResendReplicationTasksRequest) (err error) {
-	err = t.h.ResendReplicationTasks(ctx, request)
+func (t AdminThriftHandler) ResendReplicationTasks(ctx context.Context, request *admin.ResendReplicationTasksRequest) error {
+	err := t.h.ResendReplicationTasks(withThriftTag(ctx), thrift.ToResendReplicationTasksRequest(request))
 	return thrift.FromError(err)
 }
 
 // ResetQueue forwards request to the underlying handler
-func (t AdminThriftHandler) ResetQueue(ctx context.Context, request *shared.ResetQueueRequest) (err error) {
-	err = t.h.ResetQueue(ctx, request)
+func (t AdminThriftHandler) ResetQueue(ctx context.Context, request *shared.ResetQueueRequest) error {
+	err := t.h.ResetQueue(withThriftTag(ctx), thrift.ToResetQueueRequest(request))
 	return thrift.FromError(err)
+}
+
+// GetCrossClusterTasks fetches cross cluster tasks
+func (t AdminThriftHandler) GetCrossClusterTasks(ctx context.Context, request *shared.GetCrossClusterTasksRequest) (*shared.GetCrossClusterTasksResponse, error) {
+	response, err := t.h.GetCrossClusterTasks(withThriftTag(ctx), thrift.ToGetCrossClusterTasksRequest(request))
+	return thrift.FromGetCrossClusterTasksResponse(response), thrift.FromError(err)
+}
+
+// GetDynamicConfig fetches dynamic config value
+func (t AdminThriftHandler) GetDynamicConfig(ctx context.Context, request *admin.GetDynamicConfigRequest) (*admin.GetDynamicConfigResponse, error) {
+	response, err := t.h.GetDynamicConfig(withThriftTag(ctx), thrift.ToGetDynamicConfigRequest(request))
+	return thrift.FromGetDynamicConfigResponse(response), thrift.FromError(err)
+}
+
+// UpdateDynamicConfig updates dynamic config value
+func (t AdminThriftHandler) UpdateDynamicConfig(ctx context.Context, request *admin.UpdateDynamicConfigRequest) error {
+	err := t.h.UpdateDynamicConfig(withThriftTag(ctx), thrift.ToUpdateDynamicConfigRequest(request))
+	return thrift.FromError(err)
+}
+
+// RestoreDynamicConfig deletes dynamic config value from config store based on filter
+func (t AdminThriftHandler) RestoreDynamicConfig(ctx context.Context, request *admin.RestoreDynamicConfigRequest) error {
+	err := t.h.RestoreDynamicConfig(withThriftTag(ctx), thrift.ToRestoreDynamicConfigRequest(request))
+	return thrift.FromError(err)
+}
+
+// ListDynamicConfig fetches all values associated to specified dc parameters or all otherwise
+func (t AdminThriftHandler) ListDynamicConfig(ctx context.Context, request *admin.ListDynamicConfigRequest) (*admin.ListDynamicConfigResponse, error) {
+	response, err := t.h.ListDynamicConfig(withThriftTag(ctx), thrift.ToListDynamicConfigRequest(request))
+	return thrift.FromListDynamicConfigResponse(response), thrift.FromError(err)
 }

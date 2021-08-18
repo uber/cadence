@@ -24,11 +24,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 )
 
@@ -120,7 +120,7 @@ type (
 
 	pushDecisionToMatchingInfo struct {
 		decisionScheduleToStartTimeout int32
-		tasklist                       shared.TaskList
+		tasklist                       types.TaskList
 	}
 )
 
@@ -145,7 +145,7 @@ func newPushActivityToMatchingInfo(
 
 func newPushDecisionToMatchingInfo(
 	decisionScheduleToStartTimeout int32,
-	tasklist shared.TaskList,
+	tasklist types.TaskList,
 ) *pushDecisionToMatchingInfo {
 
 	return &pushDecisionToMatchingInfo{
@@ -158,7 +158,11 @@ func getHistoryResendInfo(
 	mutableState execution.MutableState,
 ) (*historyResendInfo, error) {
 
-	currentBranch, err := mutableState.GetVersionHistories().GetCurrentVersionHistory()
+	versionHistories := mutableState.GetVersionHistories()
+	if versionHistories == nil {
+		return nil, execution.ErrMissingVersionHistories
+	}
+	currentBranch, err := versionHistories.GetCurrentVersionHistory()
 	if err != nil {
 		return nil, err
 	}

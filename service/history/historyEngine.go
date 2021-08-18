@@ -1,4 +1,5 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2017-2021 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2021 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +25,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -32,10 +32,6 @@ import (
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc/yarpcerrors"
 
-	h "github.com/uber/cadence/.gen/go/history"
-	m "github.com/uber/cadence/.gen/go/matching"
-	r "github.com/uber/cadence/.gen/go/replicator"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/admin"
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
@@ -52,7 +48,9 @@ import (
 	cndc "github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/decision"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/execution"
@@ -64,17 +62,15 @@ import (
 	"github.com/uber/cadence/service/history/reset"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
+	"github.com/uber/cadence/service/history/workflow"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 )
 
 const (
-	conditionalRetryCount                     = 5
-	activityCancellationMsgActivityIDUnknown  = "ACTIVITY_ID_UNKNOWN"
-	activityCancellationMsgActivityNotStarted = "ACTIVITY_ID_NOT_STARTED"
-	defaultQueryFirstDecisionTaskWaitTime     = time.Second
-	queryFirstDecisionTaskCheckInterval       = 200 * time.Millisecond
-	replicationTimeout                        = 30 * time.Second
-	contextLockTimeout                        = 500 * time.Millisecond
+	defaultQueryFirstDecisionTaskWaitTime = time.Second
+	queryFirstDecisionTaskCheckInterval   = 200 * time.Millisecond
+	replicationTimeout                    = 30 * time.Second
+	contextLockTimeout                    = 500 * time.Millisecond
 
 	// TerminateIfRunningReason reason for terminateIfRunning
 	TerminateIfRunningReason = "TerminateIfRunning Policy"
@@ -82,18 +78,26 @@ const (
 	TerminateIfRunningDetailsTemplate = "New runID: %s"
 )
 
+var (
+	errDomainDeprecated = &types.BadRequestError{Message: "Domain is deprecated."}
+
+	// TODO: remove this error when cross-cluster queue is wired up and initialized
+	errQueueNotInitialized = types.BadRequestError{Message: "Requested queue processor not initialized"}
+)
+
 type (
 	historyEngineImpl struct {
 		currentClusterName        string
 		shard                     shard.Context
 		timeSource                clock.TimeSource
-		decisionHandler           decisionHandler
+		decisionHandler           decision.Handler
 		clusterMetadata           cluster.Metadata
 		historyV2Mgr              persistence.HistoryManager
 		executionManager          persistence.ExecutionManager
 		visibilityMgr             persistence.VisibilityManager
 		txProcessor               queue.Processor
 		timerProcessor            queue.Processor
+		crossClusterProcessor     queue.Processor
 		nDCReplicator             ndc.HistoryReplicator
 		nDCActivityReplicator     ndc.ActivityReplicator
 		historyEventNotifier      events.Notifier
@@ -121,39 +125,6 @@ type (
 var _ engine.Engine = (*historyEngineImpl)(nil)
 
 var (
-	// ErrDuplicate is exported temporarily for integration test
-	ErrDuplicate = errors.New("duplicate task, completing it")
-	// ErrMaxAttemptsExceeded is exported temporarily for integration test
-	ErrMaxAttemptsExceeded = errors.New("maximum attempts exceeded to update history")
-	// ErrStaleState is the error returned during state update indicating that cached mutable state could be stale
-	ErrStaleState = errors.New("cache mutable state could potentially be stale")
-	// ErrActivityTaskNotFound is the error to indicate activity task could be duplicate and activity already completed
-	ErrActivityTaskNotFound = &workflow.EntityNotExistsError{Message: "activity task not found"}
-	// ErrWorkflowCompleted is the error to indicate workflow execution already completed
-	ErrWorkflowCompleted = &workflow.EntityNotExistsError{Message: "workflow execution already completed"}
-	// ErrWorkflowParent is the error to parent execution is given and mismatch
-	ErrWorkflowParent = &workflow.EntityNotExistsError{Message: "workflow parent does not match"}
-	// ErrDeserializingToken is the error to indicate task token is invalid
-	ErrDeserializingToken = &workflow.BadRequestError{Message: "error deserializing task token"}
-	// ErrSerializingToken is the error to indicate task token can not be serialized
-	ErrSerializingToken = &workflow.BadRequestError{Message: "error serializing task token"}
-	// ErrSignalOverSize is the error to indicate signal input size is > 256K
-	ErrSignalOverSize = &workflow.BadRequestError{Message: "signal input size is over 256K"}
-	// ErrCancellationAlreadyRequested is the error indicating cancellation for target workflow is already requested
-	ErrCancellationAlreadyRequested = &workflow.CancellationAlreadyRequestedError{Message: "cancellation already requested for this workflow execution"}
-	// ErrSignalsLimitExceeded is the error indicating limit reached for maximum number of signal events
-	ErrSignalsLimitExceeded = &workflow.LimitExceededError{Message: "exceeded workflow execution limit for signal events"}
-	// ErrQueryEnteredInvalidState is error indicating query entered invalid state
-	ErrQueryEnteredInvalidState = &workflow.BadRequestError{Message: "query entered invalid state, this should be impossible"}
-	// ErrQueryWorkflowBeforeFirstDecision is error indicating that query was attempted before first decision task completed
-	ErrQueryWorkflowBeforeFirstDecision = &workflow.QueryFailedError{Message: "workflow must handle at least one decision task before it can be queried"}
-	// ErrConsistentQueryNotEnabled is error indicating that consistent query was requested but either cluster or domain does not enable consistent query
-	ErrConsistentQueryNotEnabled = &workflow.BadRequestError{Message: "cluster or domain does not enable strongly consistent query but strongly consistent query was requested"}
-	// ErrConsistentQueryBufferExceeded is error indicating that too many consistent queries have been buffered and until buffered queries are finished new consistent queries cannot be buffered
-	ErrConsistentQueryBufferExceeded = &workflow.InternalServiceError{Message: "consistent query buffer is full, cannot accept new consistent queries"}
-	// ErrConcurrentStartRequest is error indicating there is an outstanding start workflow request. The incoming request fails to acquires the lock before the outstanding request finishes.
-	ErrConcurrentStartRequest = &workflow.ServiceBusyError{Message: "an outstanding start workflow request is in-progress. Failed to acquire the resource."}
-
 	// FailedWorkflowCloseState is a set of failed workflow close states, used for start workflow policy
 	// for start workflow execution API
 	FailedWorkflowCloseState = map[int]bool{
@@ -224,7 +195,11 @@ func NewEngineWithShardContext(
 			executionCache,
 		),
 	}
-	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
+	historyEngImpl.decisionHandler = decision.NewHandler(
+		shard,
+		historyEngImpl.executionCache,
+		historyEngImpl.tokenSerializer,
+	)
 	pRetry := persistence.NewPersistenceRetryer(
 		shard.GetExecutionManager(),
 		shard.GetHistoryManager(),
@@ -232,47 +207,33 @@ func NewEngineWithShardContext(
 	)
 	openExecutionCheck := invariant.NewConcreteExecutionExists(pRetry)
 
-	if config.TransferProcessorEnableMultiCurosrProcessor() {
-		historyEngImpl.txProcessor = queue.NewTransferQueueProcessor(
-			shard,
-			historyEngImpl,
-			queueTaskProcessor,
-			executionCache,
-			historyEngImpl.workflowResetter,
-			historyEngImpl.archivalClient,
-			openExecutionCheck,
-		)
-	} else {
-		historyEngImpl.txProcessor = newTransferQueueProcessor(
-			shard,
-			historyEngImpl,
-			visibilityMgr,
-			matching,
-			historyClient,
-			queueTaskProcessor,
-			openExecutionCheck,
-			logger,
-		)
-	}
-	if config.TimerProcessorEnableMultiCurosrProcessor() {
-		historyEngImpl.timerProcessor = queue.NewTimerQueueProcessor(
-			shard,
-			historyEngImpl,
-			queueTaskProcessor,
-			executionCache,
-			historyEngImpl.archivalClient,
-			openExecutionCheck,
-		)
-	} else {
-		historyEngImpl.timerProcessor = newTimerQueueProcessor(
-			shard,
-			historyEngImpl,
-			matching,
-			queueTaskProcessor,
-			openExecutionCheck,
-			logger,
-		)
-	}
+	historyEngImpl.txProcessor = queue.NewTransferQueueProcessor(
+		shard,
+		historyEngImpl,
+		queueTaskProcessor,
+		executionCache,
+		historyEngImpl.workflowResetter,
+		historyEngImpl.archivalClient,
+		openExecutionCheck,
+	)
+
+	historyEngImpl.timerProcessor = queue.NewTimerQueueProcessor(
+		shard,
+		historyEngImpl,
+		queueTaskProcessor,
+		executionCache,
+		historyEngImpl.archivalClient,
+		openExecutionCheck,
+	)
+
+	// TODO: uncomment the following when cross cluster queue processor impl is ready
+	// and also add necessary Start(), Stop(), NotifyFailover() call in this file.
+	// historyEngImpl.crossClusterProcessor = queue.NewCrossClusterQueueProcessor(
+	// 	shard,
+	// 	historyEngImpl,
+	// 	queueTaskProcessor,
+	// )
+
 	historyEngImpl.eventsReapplier = ndc.NewEventsReapplier(shard.GetMetricsClient(), logger)
 
 	// Only start the replicator processor if global domain is enabled
@@ -299,7 +260,7 @@ func NewEngineWithShardContext(
 		common.CreateReplicationServiceBusyRetryPolicy(),
 		common.IsServiceBusyError,
 	)
-	resendFunc := func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
+	resendFunc := func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 		return historyRetryableClient.ReplicateEventsV2(ctx, request)
 	}
 	for _, replicationTaskFetcher := range replicationTaskFetchers.GetFetchers() {
@@ -465,8 +426,8 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				// its length > 0 and has correct timestamp, to trigger a db scan
 				fakeDecisionTask := []persistence.Task{&persistence.DecisionTask{}}
 				fakeDecisionTimeoutTask := []persistence.Task{&persistence.DecisionTimeoutTask{VisibilityTimestamp: now}}
-				e.txProcessor.NotifyNewTask(e.currentClusterName, fakeDecisionTask)
-				e.timerProcessor.NotifyNewTask(e.currentClusterName, fakeDecisionTimeoutTask)
+				e.txProcessor.NotifyNewTask(e.currentClusterName, nil, fakeDecisionTask)
+				e.timerProcessor.NotifyNewTask(e.currentClusterName, nil, fakeDecisionTimeoutTask)
 			}
 
 			// handle graceful failover on active to passive
@@ -528,8 +489,8 @@ func (e *historyEngineImpl) createMutableState(
 
 func (e *historyEngineImpl) generateFirstDecisionTask(
 	mutableState execution.MutableState,
-	parentInfo *h.ParentExecutionInfo,
-	startEvent *workflow.HistoryEvent,
+	parentInfo *types.ParentExecutionInfo,
+	startEvent *types.HistoryEvent,
 ) error {
 
 	if parentInfo == nil {
@@ -546,10 +507,10 @@ func (e *historyEngineImpl) generateFirstDecisionTask(
 // StartWorkflowExecution starts a workflow execution
 func (e *historyEngineImpl) StartWorkflowExecution(
 	ctx context.Context,
-	startRequest *h.StartWorkflowExecutionRequest,
-) (resp *workflow.StartWorkflowExecutionResponse, retError error) {
+	startRequest *types.HistoryStartWorkflowExecutionRequest,
+) (resp *types.StartWorkflowExecutionResponse, retError error) {
 
-	domainEntry, err := e.getActiveDomainEntry(startRequest.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(startRequest.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -564,7 +525,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 
 // for startWorkflowHelper be reused by signalWithStart
 type signalWithStartArg struct {
-	signalWithStartRequest *h.SignalWithStartWorkflowExecutionRequest
+	signalWithStartRequest *types.HistorySignalWithStartWorkflowExecutionRequest
 	prevMutableState       execution.MutableState
 }
 
@@ -582,20 +543,24 @@ func (e *historyEngineImpl) newDomainNotActiveError(
 
 func (e *historyEngineImpl) startWorkflowHelper(
 	ctx context.Context,
-	startRequest *h.StartWorkflowExecutionRequest,
+	startRequest *types.HistoryStartWorkflowExecutionRequest,
 	domainEntry *cache.DomainCacheEntry,
 	metricsScope int,
 	signalWithStartArg *signalWithStartArg,
-) (resp *workflow.StartWorkflowExecutionResponse, retError error) {
+) (resp *types.StartWorkflowExecutionResponse, retError error) {
+
+	if domainEntry.GetInfo().Status != persistence.DomainStatusRegistered {
+		return nil, errDomainDeprecated
+	}
 
 	request := startRequest.StartRequest
-	err := validateStartWorkflowExecutionRequest(request, e.config.MaxIDLengthLimit())
+	err := e.validateStartWorkflowExecutionRequest(request, metricsScope)
 	if err != nil {
 		return nil, err
 	}
 	e.overrideStartWorkflowExecutionRequest(domainEntry, request, metricsScope)
 
-	workflowID := request.GetWorkflowId()
+	workflowID := request.GetWorkflowID()
 	domainID := domainEntry.GetInfo().ID
 
 	// grab the current context as a lock, nothing more
@@ -610,24 +575,24 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {
-			return nil, ErrConcurrentStartRequest
+			return nil, workflow.ErrConcurrentStartRequest
 		}
 		return nil, err
 	}
 	defer func() { currentRelease(retError) }()
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: workflowID,
+		RunID:      uuid.New(),
 	}
-	curMutableState, err := e.createMutableState(domainEntry, workflowExecution.GetRunId())
+	curMutableState, err := e.createMutableState(domainEntry, workflowExecution.GetRunID())
 	if err != nil {
 		return nil, err
 	}
 
 	// preprocess for signalWithStart
 	var prevMutableState execution.MutableState
-	var signalWithStartRequest *h.SignalWithStartWorkflowExecutionRequest
+	var signalWithStartRequest *types.HistorySignalWithStartWorkflowExecutionRequest
 	isSignalWithStart := signalWithStartArg != nil
 	if isSignalWithStart {
 		prevMutableState = signalWithStartArg.prevMutableState
@@ -647,7 +612,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		err = e.applyWorkflowIDReusePolicyForSigWithStart(
 			prevMutableState.GetExecutionInfo(),
 			workflowExecution,
-			request.GetWorkflowIdReusePolicy(),
+			request.GetWorkflowIDReusePolicy(),
 		)
 		if err != nil {
 			return nil, err
@@ -674,7 +639,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	if err != nil {
 		return nil, err
 	}
-	historySize, err := wfContext.PersistFirstWorkflowEvents(ctx, newWorkflowEventsSeq[0])
+	historySize, err := wfContext.PersistStartWorkflowBatchEvents(ctx, newWorkflowEventsSeq[0])
 	if err != nil {
 		return nil, err
 	}
@@ -704,9 +669,9 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	// handle already started error
 	if t, ok := err.(*persistence.WorkflowExecutionAlreadyStartedError); ok {
 
-		if t.StartRequestID == request.GetRequestId() {
-			return &workflow.StartWorkflowExecutionResponse{
-				RunId: common.StringPtr(t.RunID),
+		if t.StartRequestID == request.GetRequestID() {
+			return &types.StartWorkflowExecutionResponse{
+				RunID: t.RunID,
 			}, nil
 		}
 
@@ -723,13 +688,13 @@ func (e *historyEngineImpl) startWorkflowHelper(
 
 		prevRunID = t.RunID
 		if shouldTerminateAndStart(startRequest, t.State) {
-			runningWFCtx, err := e.loadWorkflowOnce(ctx, domainID, workflowID, prevRunID)
+			runningWFCtx, err := workflow.LoadOnce(ctx, e.executionCache, domainID, workflowID, prevRunID)
 			if err != nil {
 				return nil, err
 			}
-			defer func() { runningWFCtx.getReleaseFn()(retError) }()
+			defer func() { runningWFCtx.GetReleaseFn()(retError) }()
 
-			return e.terminateAndStartWorkflow(
+			resp, err = e.terminateAndStartWorkflow(
 				ctx,
 				runningWFCtx,
 				workflowExecution,
@@ -738,6 +703,14 @@ func (e *historyEngineImpl) startWorkflowHelper(
 				startRequest,
 				nil,
 			)
+			switch err.(type) {
+			// By the time we try to terminate the workflow, it was already terminated
+			// So continue as if we didn't need to terminate it in the first place
+			case *types.WorkflowExecutionAlreadyCompletedError:
+				e.shard.GetLogger().Warn("Workflow completed while trying to terminate, will continue starting workflow", tag.Error(err))
+			default:
+				return resp, err
+			}
 		}
 		if err = e.applyWorkflowIDReusePolicyHelper(
 			t.StartRequestID,
@@ -745,7 +718,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 			t.State,
 			t.CloseStatus,
 			workflowExecution,
-			startRequest.StartRequest.GetWorkflowIdReusePolicy(),
+			startRequest.StartRequest.GetWorkflowIDReusePolicy(),
 		); err != nil {
 			return nil, err
 		}
@@ -765,49 +738,49 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		return nil, err
 	}
 
-	return &workflow.StartWorkflowExecutionResponse{
-		RunId: workflowExecution.RunId,
+	return &types.StartWorkflowExecutionResponse{
+		RunID: workflowExecution.RunID,
 	}, nil
 }
 
 func shouldTerminateAndStart(
-	startRequest *h.StartWorkflowExecutionRequest,
+	startRequest *types.HistoryStartWorkflowExecutionRequest,
 	state int,
 ) bool {
-	return startRequest.StartRequest.GetWorkflowIdReusePolicy() == workflow.WorkflowIdReusePolicyTerminateIfRunning &&
+	return startRequest.StartRequest.GetWorkflowIDReusePolicy() == types.WorkflowIDReusePolicyTerminateIfRunning &&
 		(state == persistence.WorkflowStateRunning || state == persistence.WorkflowStateCreated)
 }
 
 // terminate running workflow then start a new run in one transaction
 func (e *historyEngineImpl) terminateAndStartWorkflow(
 	ctx context.Context,
-	runningWFCtx workflowContext,
-	workflowExecution workflow.WorkflowExecution,
+	runningWFCtx workflow.Context,
+	workflowExecution types.WorkflowExecution,
 	domainEntry *cache.DomainCacheEntry,
 	domainID string,
-	startRequest *h.StartWorkflowExecutionRequest,
-	signalWithStartRequest *h.SignalWithStartWorkflowExecutionRequest,
-) (*workflow.StartWorkflowExecutionResponse, error) {
-	runningMutableState := runningWFCtx.getMutableState()
+	startRequest *types.HistoryStartWorkflowExecutionRequest,
+	signalWithStartRequest *types.HistorySignalWithStartWorkflowExecutionRequest,
+) (*types.StartWorkflowExecutionResponse, error) {
+	runningMutableState := runningWFCtx.GetMutableState()
 UpdateWorkflowLoop:
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
+	for attempt := 0; attempt < workflow.ConditionalRetryCount; attempt++ {
 		if !runningMutableState.IsWorkflowExecutionRunning() {
-			return nil, ErrWorkflowCompleted
+			return nil, workflow.ErrAlreadyCompleted
 		}
 
 		if err := execution.TerminateWorkflow(
 			runningMutableState,
 			runningMutableState.GetNextEventID(),
 			TerminateIfRunningReason,
-			getTerminateIfRunningDetails(workflowExecution.GetRunId()),
+			getTerminateIfRunningDetails(workflowExecution.GetRunID()),
 			execution.IdentityHistoryService,
 		); err != nil {
-			if err == ErrStaleState {
+			if err == workflow.ErrStaleState {
 				// Handler detected that cached workflow mutable could potentially be stale
 				// Reload workflow execution history
-				runningWFCtx.getContext().Clear()
-				if attempt != conditionalRetryCount-1 {
-					_, err = runningWFCtx.reloadMutableState(ctx)
+				runningWFCtx.GetContext().Clear()
+				if attempt != workflow.ConditionalRetryCount-1 {
+					_, err = runningWFCtx.ReloadMutableState(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -818,13 +791,16 @@ UpdateWorkflowLoop:
 		}
 
 		// new mutable state
-		newMutableState, err := e.createMutableState(domainEntry, workflowExecution.GetRunId())
+		newMutableState, err := e.createMutableState(domainEntry, workflowExecution.GetRunID())
 		if err != nil {
 			return nil, err
 		}
 
 		if signalWithStartRequest != nil {
-			startRequest = getStartRequest(domainID, signalWithStartRequest.SignalWithStartRequest)
+			startRequest, err = getStartRequest(domainID, signalWithStartRequest.SignalWithStartRequest)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		err = e.addStartEventsAndTasks(
@@ -837,7 +813,7 @@ UpdateWorkflowLoop:
 			return nil, err
 		}
 
-		updateErr := runningWFCtx.getContext().UpdateWorkflowExecutionWithNewAsActive(
+		updateErr := runningWFCtx.GetContext().UpdateWorkflowExecutionWithNewAsActive(
 			ctx,
 			e.timeSource.Now(),
 			execution.NewContext(
@@ -858,16 +834,16 @@ UpdateWorkflowLoop:
 		}
 		break UpdateWorkflowLoop
 	}
-	return &workflow.StartWorkflowExecutionResponse{
-		RunId: workflowExecution.RunId,
+	return &types.StartWorkflowExecutionResponse{
+		RunID: workflowExecution.RunID,
 	}, nil
 }
 
 func (e *historyEngineImpl) addStartEventsAndTasks(
 	mutableState execution.MutableState,
-	workflowExecution workflow.WorkflowExecution,
-	startRequest *h.StartWorkflowExecutionRequest,
-	signalWithStartRequest *h.SignalWithStartWorkflowExecutionRequest,
+	workflowExecution types.WorkflowExecution,
+	startRequest *types.HistoryStartWorkflowExecutionRequest,
+	signalWithStartRequest *types.HistorySignalWithStartWorkflowExecutionRequest,
 ) error {
 	// Add WF start event
 	startEvent, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -875,7 +851,7 @@ func (e *historyEngineImpl) addStartEventsAndTasks(
 		startRequest,
 	)
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: "Failed to add workflow execution started event.",
 		}
 	}
@@ -888,7 +864,7 @@ func (e *historyEngineImpl) addStartEventsAndTasks(
 			sRequest.GetSignalInput(),
 			sRequest.GetIdentity())
 		if err != nil {
-			return &workflow.InternalServiceError{Message: "Failed to add workflow execution signaled event."}
+			return &types.InternalServiceError{Message: "Failed to add workflow execution signaled event."}
 		}
 	}
 
@@ -907,8 +883,8 @@ func getTerminateIfRunningDetails(newRunID string) []byte {
 // GetMutableState retrieves the mutable state of the workflow execution
 func (e *historyEngineImpl) GetMutableState(
 	ctx context.Context,
-	request *h.GetMutableStateRequest,
-) (*h.GetMutableStateResponse, error) {
+	request *types.GetMutableStateRequest,
+) (*types.GetMutableStateResponse, error) {
 
 	return e.getMutableStateOrPolling(ctx, request)
 }
@@ -916,25 +892,25 @@ func (e *historyEngineImpl) GetMutableState(
 // PollMutableState retrieves the mutable state of the workflow execution with long polling
 func (e *historyEngineImpl) PollMutableState(
 	ctx context.Context,
-	request *h.PollMutableStateRequest,
-) (*h.PollMutableStateResponse, error) {
+	request *types.PollMutableStateRequest,
+) (*types.PollMutableStateResponse, error) {
 
-	response, err := e.getMutableStateOrPolling(ctx, &h.GetMutableStateRequest{
+	response, err := e.getMutableStateOrPolling(ctx, &types.GetMutableStateRequest{
 		DomainUUID:          request.DomainUUID,
 		Execution:           request.Execution,
-		ExpectedNextEventId: request.ExpectedNextEventId,
+		ExpectedNextEventID: request.ExpectedNextEventID,
 		CurrentBranchToken:  request.CurrentBranchToken})
 
 	if err != nil {
 		return nil, e.updateEntityNotExistsErrorOnPassiveCluster(err, request.GetDomainUUID())
 	}
 
-	return &h.PollMutableStateResponse{
+	return &types.PollMutableStateResponse{
 		Execution:                            response.Execution,
 		WorkflowType:                         response.WorkflowType,
-		NextEventId:                          response.NextEventId,
-		PreviousStartedEventId:               response.PreviousStartedEventId,
-		LastFirstEventId:                     response.LastFirstEventId,
+		NextEventID:                          response.NextEventID,
+		PreviousStartedEventID:               response.PreviousStartedEventID,
+		LastFirstEventID:                     response.LastFirstEventID,
 		TaskList:                             response.TaskList,
 		StickyTaskList:                       response.StickyTaskList,
 		ClientLibraryVersion:                 response.ClientLibraryVersion,
@@ -950,18 +926,18 @@ func (e *historyEngineImpl) PollMutableState(
 
 func (e *historyEngineImpl) updateEntityNotExistsErrorOnPassiveCluster(err error, domainID string) error {
 	switch err.(type) {
-	case *workflow.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		domainCache, domainCacheErr := e.shard.GetDomainCache().GetDomainByID(domainID)
 		if domainCacheErr != nil {
 			return err // if could not access domain cache simply return original error
 		}
 
 		if domainNotActiveErr := domainCache.GetDomainNotActiveErr(); domainNotActiveErr != nil {
-			domainNotActiveErrCasted := domainNotActiveErr.(*workflow.DomainNotActiveError)
-			return &workflow.EntityNotExistsError{
+			domainNotActiveErrCasted := domainNotActiveErr.(*types.DomainNotActiveError)
+			return &types.EntityNotExistsError{
 				Message:        "Workflow execution not found in non-active cluster",
-				ActiveCluster:  common.StringPtr(domainNotActiveErrCasted.GetActiveCluster()),
-				CurrentCluster: common.StringPtr(domainNotActiveErrCasted.GetCurrentCluster()),
+				ActiveCluster:  domainNotActiveErrCasted.GetActiveCluster(),
+				CurrentCluster: domainNotActiveErrCasted.GetCurrentCluster(),
 			}
 		}
 	}
@@ -970,16 +946,16 @@ func (e *historyEngineImpl) updateEntityNotExistsErrorOnPassiveCluster(err error
 
 func (e *historyEngineImpl) getMutableStateOrPolling(
 	ctx context.Context,
-	request *h.GetMutableStateRequest,
-) (*h.GetMutableStateResponse, error) {
+	request *types.GetMutableStateRequest,
+) (*types.GetMutableStateResponse, error) {
 
-	domainID, err := validateDomainUUID(request.DomainUUID)
-	if err != nil {
+	if err := common.ValidateDomainUUID(request.DomainUUID); err != nil {
 		return nil, err
 	}
-	execution := workflow.WorkflowExecution{
-		WorkflowId: request.Execution.WorkflowId,
-		RunId:      request.Execution.RunId,
+	domainID := request.DomainUUID
+	execution := types.WorkflowExecution{
+		WorkflowID: request.Execution.WorkflowID,
+		RunID:      request.Execution.RunID,
 	}
 	response, err := e.getMutableState(ctx, domainID, execution)
 	if err != nil {
@@ -989,27 +965,27 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 		request.CurrentBranchToken = response.CurrentBranchToken
 	}
 	if !bytes.Equal(request.CurrentBranchToken, response.CurrentBranchToken) {
-		return nil, &workflow.CurrentBranchChangedError{
-			Message:            "current branch token and request branch token doesn't match.",
+		return nil, &types.CurrentBranchChangedError{
+			Message:            "current branch token and request branch token doesn't match",
 			CurrentBranchToken: response.CurrentBranchToken}
 	}
 	// set the run id in case query the current running workflow
-	execution.RunId = response.Execution.RunId
+	execution.RunID = response.Execution.RunID
 
 	// expectedNextEventID is 0 when caller want to get the current next event ID without blocking
 	expectedNextEventID := common.FirstEventID
-	if request.ExpectedNextEventId != nil {
-		expectedNextEventID = request.GetExpectedNextEventId()
+	if request.ExpectedNextEventID != 0 {
+		expectedNextEventID = request.GetExpectedNextEventID()
 	}
 
 	// if caller decide to long poll on workflow execution
 	// and the event ID we are looking for is smaller than current next event ID
-	if expectedNextEventID >= response.GetNextEventId() && response.GetIsWorkflowRunning() {
-		subscriberID, channel, err := e.historyEventNotifier.WatchHistoryEvent(definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowId(), execution.GetRunId()))
+	if expectedNextEventID >= response.GetNextEventID() && response.GetIsWorkflowRunning() {
+		subscriberID, channel, err := e.historyEventNotifier.WatchHistoryEvent(definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowID(), execution.GetRunID()))
 		if err != nil {
 			return nil, err
 		}
-		defer e.historyEventNotifier.UnwatchHistoryEvent(definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowId(), execution.GetRunId()), subscriberID) //nolint:errcheck
+		defer e.historyEventNotifier.UnwatchHistoryEvent(definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowID(), execution.GetRunID()), subscriberID) //nolint:errcheck
 		// check again in case the next event ID is updated
 		response, err = e.getMutableState(ctx, domainID, execution)
 		if err != nil {
@@ -1017,35 +993,35 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 		}
 		// check again if the current branch token changed
 		if !bytes.Equal(request.CurrentBranchToken, response.CurrentBranchToken) {
-			return nil, &workflow.CurrentBranchChangedError{
-				Message:            "current branch token and request branch token doesn't match.",
+			return nil, &types.CurrentBranchChangedError{
+				Message:            "current branch token and request branch token doesn't match",
 				CurrentBranchToken: response.CurrentBranchToken}
 		}
-		if expectedNextEventID < response.GetNextEventId() || !response.GetIsWorkflowRunning() {
+		if expectedNextEventID < response.GetNextEventID() || !response.GetIsWorkflowRunning() {
 			return response, nil
 		}
 
-		domainCache, err := e.shard.GetDomainCache().GetDomainByID(domainID)
+		domainName, err := e.shard.GetDomainCache().GetDomainName(domainID)
 		if err != nil {
 			return nil, err
 		}
-		timer := time.NewTimer(e.shard.GetConfig().LongPollExpirationInterval(domainCache.GetInfo().Name))
+		timer := time.NewTimer(e.shard.GetConfig().LongPollExpirationInterval(domainName))
 		defer timer.Stop()
 		for {
 			select {
 			case event := <-channel:
-				response.LastFirstEventId = common.Int64Ptr(event.LastFirstEventID)
-				response.NextEventId = common.Int64Ptr(event.NextEventID)
-				response.IsWorkflowRunning = common.BoolPtr(event.WorkflowCloseState == persistence.WorkflowCloseStatusNone)
-				response.PreviousStartedEventId = common.Int64Ptr(event.PreviousStartedEventID)
+				response.LastFirstEventID = event.LastFirstEventID
+				response.NextEventID = event.NextEventID
+				response.IsWorkflowRunning = event.WorkflowCloseState == persistence.WorkflowCloseStatusNone
+				response.PreviousStartedEventID = common.Int64Ptr(event.PreviousStartedEventID)
 				response.WorkflowState = common.Int32Ptr(int32(event.WorkflowState))
 				response.WorkflowCloseState = common.Int32Ptr(int32(event.WorkflowCloseState))
 				if !bytes.Equal(request.CurrentBranchToken, event.CurrentBranchToken) {
-					return nil, &workflow.CurrentBranchChangedError{
-						Message:            "Current branch token and request branch token doesn't match.",
+					return nil, &types.CurrentBranchChangedError{
+						Message:            "Current branch token and request branch token doesn't match",
 						CurrentBranchToken: event.CurrentBranchToken}
 				}
-				if expectedNextEventID < response.GetNextEventId() || !response.GetIsWorkflowRunning() {
+				if expectedNextEventID < response.GetNextEventID() || !response.GetIsWorkflowRunning() {
 					return response, nil
 				}
 			case <-timer.C:
@@ -1061,30 +1037,32 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 
 func (e *historyEngineImpl) QueryWorkflow(
 	ctx context.Context,
-	request *h.QueryWorkflowRequest,
-) (retResp *h.QueryWorkflowResponse, retErr error) {
+	request *types.HistoryQueryWorkflowRequest,
+) (retResp *types.HistoryQueryWorkflowResponse, retErr error) {
 
 	scope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope).Tagged(metrics.DomainTag(request.GetRequest().GetDomain()))
 
 	consistentQueryEnabled := e.config.EnableConsistentQuery() && e.config.EnableConsistentQueryByDomain(request.GetRequest().GetDomain())
-	if request.GetRequest().GetQueryConsistencyLevel() == workflow.QueryConsistencyLevelStrong && !consistentQueryEnabled {
-		return nil, ErrConsistentQueryNotEnabled
+	if request.GetRequest().GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong && !consistentQueryEnabled {
+		return nil, workflow.ErrConsistentQueryNotEnabled
 	}
 
-	mutableStateResp, err := e.getMutableState(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
+	execution := *request.GetRequest().GetExecution()
+
+	mutableStateResp, err := e.getMutableState(ctx, request.GetDomainUUID(), execution)
 	if err != nil {
 		return nil, err
 	}
 	req := request.GetRequest()
 	if !mutableStateResp.GetIsWorkflowRunning() && req.QueryRejectCondition != nil {
-		notOpenReject := req.GetQueryRejectCondition() == workflow.QueryRejectConditionNotOpen
+		notOpenReject := req.GetQueryRejectCondition() == types.QueryRejectConditionNotOpen
 		closeStatus := mutableStateResp.GetWorkflowCloseState()
-		notCompletedCleanlyReject := req.GetQueryRejectCondition() == workflow.QueryRejectConditionNotCompletedCleanly && closeStatus != persistence.WorkflowCloseStatusCompleted
+		notCompletedCleanlyReject := req.GetQueryRejectCondition() == types.QueryRejectConditionNotCompletedCleanly && closeStatus != persistence.WorkflowCloseStatusCompleted
 		if notOpenReject || notCompletedCleanlyReject {
-			return &h.QueryWorkflowResponse{
-				Response: &workflow.QueryWorkflowResponse{
-					QueryRejected: &workflow.QueryRejected{
-						CloseStatus: persistence.ToThriftWorkflowExecutionCloseStatus(int(closeStatus)).Ptr(),
+			return &types.HistoryQueryWorkflowResponse{
+				Response: &types.QueryWorkflowResponse{
+					QueryRejected: &types.QueryRejected{
+						CloseStatus: persistence.ToInternalWorkflowExecutionCloseStatus(int(closeStatus)),
 					},
 				},
 			}, nil
@@ -1102,17 +1080,17 @@ func (e *historyEngineImpl) QueryWorkflow(
 		}
 	}
 	deadline := time.Now().Add(queryFirstDecisionTaskWaitTime)
-	for mutableStateResp.GetPreviousStartedEventId() <= 0 && time.Now().Before(deadline) {
+	for mutableStateResp.GetPreviousStartedEventID() <= 0 && time.Now().Before(deadline) {
 		<-time.After(queryFirstDecisionTaskCheckInterval)
-		mutableStateResp, err = e.getMutableState(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
+		mutableStateResp, err = e.getMutableState(ctx, request.GetDomainUUID(), execution)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if mutableStateResp.GetPreviousStartedEventId() <= 0 {
+	if mutableStateResp.GetPreviousStartedEventID() <= 0 {
 		scope.IncCounter(metrics.QueryBeforeFirstDecisionCount)
-		return nil, ErrQueryWorkflowBeforeFirstDecision
+		return nil, workflow.ErrQueryWorkflowBeforeFirstDecision
 	}
 
 	de, err := e.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
@@ -1120,7 +1098,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 		return nil, err
 	}
 
-	wfContext, release, err := e.executionCache.GetOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
+	wfContext, release, err := e.executionCache.GetOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), execution)
 	if err != nil {
 		return nil, err
 	}
@@ -1143,15 +1121,15 @@ func (e *historyEngineImpl) QueryWorkflow(
 	// 4. if there is no pending or started decision it means no events came before query arrived, so its safe to dispatch directly
 	safeToDispatchDirectly := !de.IsDomainActive() ||
 		!mutableState.IsWorkflowExecutionRunning() ||
-		req.GetQueryConsistencyLevel() == workflow.QueryConsistencyLevelEventual ||
+		req.GetQueryConsistencyLevel() == types.QueryConsistencyLevelEventual ||
 		(!mutableState.HasPendingDecision() && !mutableState.HasInFlightDecision())
 	if safeToDispatchDirectly {
 		release(nil)
-		msResp, err := e.getMutableState(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
+		msResp, err := e.getMutableState(ctx, request.GetDomainUUID(), execution)
 		if err != nil {
 			return nil, err
 		}
-		req.Execution.RunId = msResp.Execution.RunId
+		req.Execution.RunID = msResp.Execution.RunID
 		return e.queryDirectlyThroughMatching(ctx, msResp, request.GetDomainUUID(), req, scope)
 	}
 
@@ -1162,7 +1140,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 	queryReg := mutableState.GetQueryRegistry()
 	if len(queryReg.GetBufferedIDs()) >= e.config.MaxBufferedQueryCount() {
 		scope.IncCounter(metrics.QueryBufferExceededCount)
-		return nil, ErrConsistentQueryBufferExceeded
+		return nil, workflow.ErrConsistentQueryBufferExceeded
 	}
 	queryID, termCh := queryReg.BufferQuery(req.GetQuery())
 	defer queryReg.RemoveQuery(queryID)
@@ -1178,30 +1156,30 @@ func (e *historyEngineImpl) QueryWorkflow(
 		case query.TerminationTypeCompleted:
 			result := state.QueryResult
 			switch result.GetResultType() {
-			case workflow.QueryResultTypeAnswered:
-				return &h.QueryWorkflowResponse{
-					Response: &workflow.QueryWorkflowResponse{
+			case types.QueryResultTypeAnswered:
+				return &types.HistoryQueryWorkflowResponse{
+					Response: &types.QueryWorkflowResponse{
 						QueryResult: result.GetAnswer(),
 					},
 				}, nil
-			case workflow.QueryResultTypeFailed:
-				return nil, &workflow.QueryFailedError{Message: result.GetErrorMessage()}
+			case types.QueryResultTypeFailed:
+				return nil, &types.QueryFailedError{Message: result.GetErrorMessage()}
 			default:
 				scope.IncCounter(metrics.QueryRegistryInvalidStateCount)
-				return nil, ErrQueryEnteredInvalidState
+				return nil, workflow.ErrQueryEnteredInvalidState
 			}
 		case query.TerminationTypeUnblocked:
-			msResp, err := e.getMutableState(ctx, request.GetDomainUUID(), *request.GetRequest().GetExecution())
+			msResp, err := e.getMutableState(ctx, request.GetDomainUUID(), execution)
 			if err != nil {
 				return nil, err
 			}
-			req.Execution.RunId = msResp.Execution.RunId
+			req.Execution.RunID = msResp.Execution.RunID
 			return e.queryDirectlyThroughMatching(ctx, msResp, request.GetDomainUUID(), req, scope)
 		case query.TerminationTypeFailed:
 			return nil, state.Failure
 		default:
 			scope.IncCounter(metrics.QueryRegistryInvalidStateCount)
-			return nil, ErrQueryEnteredInvalidState
+			return nil, workflow.ErrQueryEnteredInvalidState
 		}
 	case <-ctx.Done():
 		scope.IncCounter(metrics.ConsistentQueryTimeoutCount)
@@ -1211,11 +1189,11 @@ func (e *historyEngineImpl) QueryWorkflow(
 
 func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	ctx context.Context,
-	msResp *h.GetMutableStateResponse,
+	msResp *types.GetMutableStateResponse,
 	domainID string,
-	queryRequest *workflow.QueryWorkflowRequest,
+	queryRequest *types.QueryWorkflowRequest,
 	scope metrics.Scope,
-) (*h.QueryWorkflowResponse, error) {
+) (*types.HistoryQueryWorkflowResponse, error) {
 
 	sw := scope.StartTimer(metrics.DirectQueryDispatchLatency)
 	defer sw.Stop()
@@ -1237,8 +1215,8 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		e.config.EnableStickyQuery(queryRequest.GetDomain()) &&
 		de.IsDomainActive() {
 
-		stickyMatchingRequest := &m.QueryWorkflowRequest{
-			DomainUUID:   common.StringPtr(domainID),
+		stickyMatchingRequest := &types.MatchingQueryWorkflowRequest{
+			DomainUUID:   domainID,
 			QueryRequest: queryRequest,
 			TaskList:     msResp.GetStickyTaskList(),
 		}
@@ -1252,13 +1230,13 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		cancel()
 		if err == nil {
 			scope.IncCounter(metrics.DirectQueryDispatchStickySuccessCount)
-			return &h.QueryWorkflowResponse{Response: matchingResp}, nil
+			return &types.HistoryQueryWorkflowResponse{Response: matchingResp}, nil
 		}
 		if yarpcError, ok := err.(*yarpcerrors.Status); !ok || yarpcError.Code() != yarpcerrors.CodeDeadlineExceeded {
 			e.logger.Error("query directly though matching on sticky failed, will not attempt query on non-sticky",
 				tag.WorkflowDomainName(queryRequest.GetDomain()),
-				tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
-				tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
+				tag.WorkflowID(queryRequest.Execution.GetWorkflowID()),
+				tag.WorkflowRunID(queryRequest.Execution.GetRunID()),
 				tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
 				tag.Error(err))
 			return nil, err
@@ -1266,18 +1244,18 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		if msResp.GetIsWorkflowRunning() {
 			e.logger.Info("query direct through matching failed on sticky, clearing sticky before attempting on non-sticky",
 				tag.WorkflowDomainName(queryRequest.GetDomain()),
-				tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
-				tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
+				tag.WorkflowID(queryRequest.Execution.GetWorkflowID()),
+				tag.WorkflowRunID(queryRequest.Execution.GetRunID()),
 				tag.WorkflowQueryType(queryRequest.Query.GetQueryType()))
 			resetContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			clearStickinessStopWatch := scope.StartTimer(metrics.DirectQueryDispatchClearStickinessLatency)
-			_, err := e.ResetStickyTaskList(resetContext, &h.ResetStickyTaskListRequest{
-				DomainUUID: common.StringPtr(domainID),
+			_, err := e.ResetStickyTaskList(resetContext, &types.HistoryResetStickyTaskListRequest{
+				DomainUUID: domainID,
 				Execution:  queryRequest.GetExecution(),
 			})
 			clearStickinessStopWatch.Stop()
 			cancel()
-			if err != nil && err != ErrWorkflowCompleted {
+			if err != nil && err != workflow.ErrAlreadyCompleted && err != workflow.ErrNotExists {
 				return nil, err
 			}
 			scope.IncCounter(metrics.DirectQueryDispatchClearStickinessSuccessCount)
@@ -1287,8 +1265,8 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	if err := common.IsValidContext(ctx); err != nil {
 		e.logger.Info("query context timed out before query on non-sticky task list could be attempted",
 			tag.WorkflowDomainName(queryRequest.GetDomain()),
-			tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
-			tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
+			tag.WorkflowID(queryRequest.Execution.GetWorkflowID()),
+			tag.WorkflowRunID(queryRequest.Execution.GetRunID()),
 			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()))
 		scope.IncCounter(metrics.DirectQueryDispatchTimeoutBeforeNonStickyCount)
 		return nil, err
@@ -1296,14 +1274,14 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 
 	e.logger.Debug("query directly through matching on sticky timed out, attempting to query on non-sticky",
 		tag.WorkflowDomainName(queryRequest.GetDomain()),
-		tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
-		tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
+		tag.WorkflowID(queryRequest.Execution.GetWorkflowID()),
+		tag.WorkflowRunID(queryRequest.Execution.GetRunID()),
 		tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
 		tag.WorkflowTaskListName(msResp.GetStickyTaskList().GetName()),
-		tag.WorkflowNextEventID(msResp.GetNextEventId()))
+		tag.WorkflowNextEventID(msResp.GetNextEventID()))
 
-	nonStickyMatchingRequest := &m.QueryWorkflowRequest{
-		DomainUUID:   common.StringPtr(domainID),
+	nonStickyMatchingRequest := &types.MatchingQueryWorkflowRequest{
+		DomainUUID:   domainID,
 		QueryRequest: queryRequest,
 		TaskList:     msResp.TaskList,
 	}
@@ -1314,21 +1292,21 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	if err != nil {
 		e.logger.Error("query directly though matching on non-sticky failed",
 			tag.WorkflowDomainName(queryRequest.GetDomain()),
-			tag.WorkflowID(queryRequest.Execution.GetWorkflowId()),
-			tag.WorkflowRunID(queryRequest.Execution.GetRunId()),
+			tag.WorkflowID(queryRequest.Execution.GetWorkflowID()),
+			tag.WorkflowRunID(queryRequest.Execution.GetRunID()),
 			tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
 			tag.Error(err))
 		return nil, err
 	}
 	scope.IncCounter(metrics.DirectQueryDispatchNonStickySuccessCount)
-	return &h.QueryWorkflowResponse{Response: matchingResp}, err
+	return &types.HistoryQueryWorkflowResponse{Response: matchingResp}, err
 }
 
 func (e *historyEngineImpl) getMutableState(
 	ctx context.Context,
 	domainID string,
-	execution workflow.WorkflowExecution,
-) (retResp *h.GetMutableStateResponse, retError error) {
+	execution types.WorkflowExecution,
+) (retResp *types.GetMutableStateResponse, retError error) {
 
 	wfContext, release, retError := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, execution)
 	if retError != nil {
@@ -1347,46 +1325,46 @@ func (e *historyEngineImpl) getMutableState(
 	}
 
 	executionInfo := mutableState.GetExecutionInfo()
-	execution.RunId = wfContext.GetExecution().RunId
+	execution.RunID = wfContext.GetExecution().RunID
 	workflowState, workflowCloseState := mutableState.GetWorkflowStateCloseStatus()
-	retResp = &h.GetMutableStateResponse{
+	retResp = &types.GetMutableStateResponse{
 		Execution:                            &execution,
-		WorkflowType:                         &workflow.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
-		LastFirstEventId:                     common.Int64Ptr(mutableState.GetLastFirstEventID()),
-		NextEventId:                          common.Int64Ptr(mutableState.GetNextEventID()),
-		PreviousStartedEventId:               common.Int64Ptr(mutableState.GetPreviousStartedEventID()),
-		TaskList:                             &workflow.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
-		StickyTaskList:                       &workflow.TaskList{Name: common.StringPtr(executionInfo.StickyTaskList)},
-		ClientLibraryVersion:                 common.StringPtr(executionInfo.ClientLibraryVersion),
-		ClientFeatureVersion:                 common.StringPtr(executionInfo.ClientFeatureVersion),
-		ClientImpl:                           common.StringPtr(executionInfo.ClientImpl),
-		IsWorkflowRunning:                    common.BoolPtr(mutableState.IsWorkflowExecutionRunning()),
+		WorkflowType:                         &types.WorkflowType{Name: executionInfo.WorkflowTypeName},
+		LastFirstEventID:                     mutableState.GetLastFirstEventID(),
+		NextEventID:                          mutableState.GetNextEventID(),
+		PreviousStartedEventID:               common.Int64Ptr(mutableState.GetPreviousStartedEventID()),
+		TaskList:                             &types.TaskList{Name: executionInfo.TaskList},
+		StickyTaskList:                       &types.TaskList{Name: executionInfo.StickyTaskList, Kind: types.TaskListKindSticky.Ptr()},
+		ClientLibraryVersion:                 executionInfo.ClientLibraryVersion,
+		ClientFeatureVersion:                 executionInfo.ClientFeatureVersion,
+		ClientImpl:                           executionInfo.ClientImpl,
+		IsWorkflowRunning:                    mutableState.IsWorkflowExecutionRunning(),
 		StickyTaskListScheduleToStartTimeout: common.Int32Ptr(executionInfo.StickyScheduleToStartTimeout),
 		CurrentBranchToken:                   currentBranchToken,
 		WorkflowState:                        common.Int32Ptr(int32(workflowState)),
 		WorkflowCloseState:                   common.Int32Ptr(int32(workflowCloseState)),
-		IsStickyTaskListEnabled:              common.BoolPtr(mutableState.IsStickyTaskListEnabled()),
+		IsStickyTaskListEnabled:              mutableState.IsStickyTaskListEnabled(),
 	}
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories != nil {
-		retResp.VersionHistories = versionHistories.ToThrift()
+		retResp.VersionHistories = versionHistories.ToInternalType()
 	}
 	return
 }
 
 func (e *historyEngineImpl) DescribeMutableState(
 	ctx context.Context,
-	request *h.DescribeMutableStateRequest,
-) (response *h.DescribeMutableStateResponse, retError error) {
+	request *types.DescribeMutableStateRequest,
+) (response *types.DescribeMutableStateResponse, retError error) {
 
-	domainID, err := validateDomainUUID(request.DomainUUID)
-	if err != nil {
+	if err := common.ValidateDomainUUID(request.DomainUUID); err != nil {
 		return nil, err
 	}
 
-	execution := workflow.WorkflowExecution{
-		WorkflowId: request.Execution.WorkflowId,
-		RunId:      request.Execution.RunId,
+	domainID := request.DomainUUID
+	execution := types.WorkflowExecution{
+		WorkflowID: request.Execution.WorkflowID,
+		RunID:      request.Execution.RunID,
 	}
 
 	cacheCtx, dbCtx, release, cacheHit, err := e.executionCache.GetAndCreateWorkflowExecution(
@@ -1397,12 +1375,14 @@ func (e *historyEngineImpl) DescribeMutableState(
 	}
 	defer func() { release(retError) }()
 
-	response = &h.DescribeMutableStateResponse{}
+	response = &types.DescribeMutableStateResponse{}
 
-	if msb := cacheCtx.GetWorkflowExecution(); cacheHit && msb != nil {
-		response.MutableStateInCache, err = e.toMutableStateJSON(msb)
-		if err != nil {
-			return nil, err
+	if cacheHit {
+		if msb := cacheCtx.GetWorkflowExecution(); msb != nil {
+			response.MutableStateInCache, err = e.toMutableStateJSON(msb)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -1418,17 +1398,17 @@ func (e *historyEngineImpl) DescribeMutableState(
 	return response, nil
 }
 
-func (e *historyEngineImpl) toMutableStateJSON(msb execution.MutableState) (*string, error) {
+func (e *historyEngineImpl) toMutableStateJSON(msb execution.MutableState) (string, error) {
 	ms := msb.CopyToPersistence()
 
 	jsonBytes, err := json.Marshal(ms)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return common.StringPtr(string(jsonBytes)), nil
+	return string(jsonBytes), nil
 }
 
-// ResetStickyTaskList reset the volatile information in mutable state of a given workflow.
+// ResetStickyTaskList reset the volatile information in mutable state of a given types.
 // Volatile information are the information related to client, such as:
 // 1. StickyTaskList
 // 2. StickyScheduleToStartTimeout
@@ -1437,18 +1417,18 @@ func (e *historyEngineImpl) toMutableStateJSON(msb execution.MutableState) (*str
 // 5. ClientImpl
 func (e *historyEngineImpl) ResetStickyTaskList(
 	ctx context.Context,
-	resetRequest *h.ResetStickyTaskListRequest,
-) (*h.ResetStickyTaskListResponse, error) {
+	resetRequest *types.HistoryResetStickyTaskListRequest,
+) (*types.HistoryResetStickyTaskListResponse, error) {
 
-	domainID, err := validateDomainUUID(resetRequest.DomainUUID)
-	if err != nil {
+	if err := common.ValidateDomainUUID(resetRequest.DomainUUID); err != nil {
 		return nil, err
 	}
+	domainID := resetRequest.DomainUUID
 
-	err = e.updateWorkflowExecution(ctx, domainID, *resetRequest.Execution, false,
+	err := workflow.UpdateWithAction(ctx, e.executionCache, domainID, *resetRequest.Execution, false, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return ErrWorkflowCompleted
+				return workflow.ErrAlreadyCompleted
 			}
 			mutableState.ClearStickyness()
 			return nil
@@ -1458,20 +1438,20 @@ func (e *historyEngineImpl) ResetStickyTaskList(
 	if err != nil {
 		return nil, err
 	}
-	return &h.ResetStickyTaskListResponse{}, nil
+	return &types.HistoryResetStickyTaskListResponse{}, nil
 }
 
 // DescribeWorkflowExecution returns information about the specified workflow execution.
 func (e *historyEngineImpl) DescribeWorkflowExecution(
 	ctx context.Context,
-	request *h.DescribeWorkflowExecutionRequest,
-) (retResp *workflow.DescribeWorkflowExecutionResponse, retError error) {
+	request *types.HistoryDescribeWorkflowExecutionRequest,
+) (retResp *types.DescribeWorkflowExecutionResponse, retError error) {
 
-	domainID, err := validateDomainUUID(request.DomainUUID)
-	if err != nil {
+	if err := common.ValidateDomainUUID(request.DomainUUID); err != nil {
 		return nil, err
 	}
 
+	domainID := request.DomainUUID
 	execution := *request.Request.Execution
 
 	wfContext, release, err0 := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, execution)
@@ -1486,23 +1466,24 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	}
 	executionInfo := mutableState.GetExecutionInfo()
 
-	result := &workflow.DescribeWorkflowExecutionResponse{
-		ExecutionConfiguration: &workflow.WorkflowExecutionConfiguration{
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
+	result := &types.DescribeWorkflowExecutionResponse{
+		ExecutionConfiguration: &types.WorkflowExecutionConfiguration{
+			TaskList:                            &types.TaskList{Name: executionInfo.TaskList},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionInfo.WorkflowTimeout),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(executionInfo.DecisionStartToCloseTimeout),
 		},
-		WorkflowExecutionInfo: &workflow.WorkflowExecutionInfo{
-			Execution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(executionInfo.WorkflowID),
-				RunId:      common.StringPtr(executionInfo.RunID),
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{
+			Execution: &types.WorkflowExecution{
+				WorkflowID: executionInfo.WorkflowID,
+				RunID:      executionInfo.RunID,
 			},
-			Type:             &workflow.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
+			Type:             &types.WorkflowType{Name: executionInfo.WorkflowTypeName},
 			StartTime:        common.Int64Ptr(executionInfo.StartTimestamp.UnixNano()),
-			HistoryLength:    common.Int64Ptr(mutableState.GetNextEventID() - common.FirstEventID),
+			HistoryLength:    mutableState.GetNextEventID() - common.FirstEventID,
 			AutoResetPoints:  executionInfo.AutoResetPoints,
-			Memo:             &workflow.Memo{Fields: executionInfo.Memo},
-			SearchAttributes: &workflow.SearchAttributes{IndexedFields: executionInfo.SearchAttributes},
+			Memo:             &types.Memo{Fields: executionInfo.Memo},
+			IsCron:           len(executionInfo.CronSchedule) > 0,
+			SearchAttributes: &types.SearchAttributes{IndexedFields: executionInfo.SearchAttributes},
 		},
 	}
 
@@ -1517,16 +1498,21 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	result.WorkflowExecutionInfo.ExecutionTime = common.Int64Ptr(result.WorkflowExecutionInfo.GetStartTime() + backoffDuration.Nanoseconds())
 
 	if executionInfo.ParentRunID != "" {
-		result.WorkflowExecutionInfo.ParentExecution = &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(executionInfo.ParentWorkflowID),
-			RunId:      common.StringPtr(executionInfo.ParentRunID),
+		result.WorkflowExecutionInfo.ParentExecution = &types.WorkflowExecution{
+			WorkflowID: executionInfo.ParentWorkflowID,
+			RunID:      executionInfo.ParentRunID,
 		}
-		result.WorkflowExecutionInfo.ParentDomainId = common.StringPtr(executionInfo.ParentDomainID)
+		result.WorkflowExecutionInfo.ParentDomainID = common.StringPtr(executionInfo.ParentDomainID)
+		result.WorkflowExecutionInfo.ParentInitiatedID = common.Int64Ptr(executionInfo.InitiatedID)
+		parentDomain, err := e.shard.GetDomainCache().GetDomainName(executionInfo.ParentDomainID)
+		if err != nil {
+			return nil, err
+		}
+		result.WorkflowExecutionInfo.ParentDomain = common.StringPtr(parentDomain)
 	}
 	if executionInfo.State == persistence.WorkflowStateCompleted {
 		// for closed workflow
-		closeStatus := persistence.ToThriftWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
-		result.WorkflowExecutionInfo.CloseStatus = &closeStatus
+		result.WorkflowExecutionInfo.CloseStatus = persistence.ToInternalWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 		completionEvent, err := mutableState.GetCompletionEvent(ctx)
 		if err != nil {
 			return nil, err
@@ -1536,14 +1522,14 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 
 	if len(mutableState.GetPendingActivityInfos()) > 0 {
 		for _, ai := range mutableState.GetPendingActivityInfos() {
-			p := &workflow.PendingActivityInfo{
-				ActivityID: common.StringPtr(ai.ActivityID),
+			p := &types.PendingActivityInfo{
+				ActivityID: ai.ActivityID,
 			}
-			state := workflow.PendingActivityStateScheduled
+			state := types.PendingActivityStateScheduled
 			if ai.CancelRequested {
-				state = workflow.PendingActivityStateCancelRequested
+				state = types.PendingActivityStateCancelRequested
 			} else if ai.StartedID != common.EmptyEventID {
-				state = workflow.PendingActivityStateStarted
+				state = types.PendingActivityStateStarted
 			}
 			p.State = &state
 			lastHeartbeatUnixNano := ai.LastHeartBeatUpdatedTime.UnixNano()
@@ -1557,23 +1543,23 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 				return nil, err
 			}
 			p.ActivityType = scheduledEvent.ActivityTaskScheduledEventAttributes.ActivityType
-			if state == workflow.PendingActivityStateScheduled {
+			if state == types.PendingActivityStateScheduled {
 				p.ScheduledTimestamp = common.Int64Ptr(ai.ScheduledTime.UnixNano())
 			} else {
 				p.LastStartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
 			}
 			if ai.HasRetryPolicy {
-				p.Attempt = common.Int32Ptr(ai.Attempt)
+				p.Attempt = ai.Attempt
 				p.ExpirationTimestamp = common.Int64Ptr(ai.ExpirationTime.UnixNano())
 				if ai.MaximumAttempts != 0 {
-					p.MaximumAttempts = common.Int32Ptr(ai.MaximumAttempts)
+					p.MaximumAttempts = ai.MaximumAttempts
 				}
 				if ai.LastFailureReason != "" {
 					p.LastFailureReason = common.StringPtr(ai.LastFailureReason)
 					p.LastFailureDetails = ai.LastFailureDetails
 				}
 				if ai.LastWorkerIdentity != "" {
-					p.LastWorkerIdentity = common.StringPtr(ai.LastWorkerIdentity)
+					p.LastWorkerIdentity = ai.LastWorkerIdentity
 				}
 			}
 			result.PendingActivities = append(result.PendingActivities, p)
@@ -1582,26 +1568,26 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 
 	if len(mutableState.GetPendingChildExecutionInfos()) > 0 {
 		for _, ch := range mutableState.GetPendingChildExecutionInfos() {
-			p := &workflow.PendingChildExecutionInfo{
-				WorkflowID:        common.StringPtr(ch.StartedWorkflowID),
-				RunID:             common.StringPtr(ch.StartedRunID),
-				WorkflowTypName:   common.StringPtr(ch.WorkflowTypeName),
-				InitiatedID:       common.Int64Ptr(ch.InitiatedID),
-				ParentClosePolicy: common.ParentClosePolicyPtr(ch.ParentClosePolicy),
+			p := &types.PendingChildExecutionInfo{
+				WorkflowID:        ch.StartedWorkflowID,
+				RunID:             ch.StartedRunID,
+				WorkflowTypName:   ch.WorkflowTypeName,
+				InitiatedID:       ch.InitiatedID,
+				ParentClosePolicy: &ch.ParentClosePolicy,
 			}
 			result.PendingChildren = append(result.PendingChildren, p)
 		}
 	}
 
 	if di, ok := mutableState.GetPendingDecision(); ok {
-		pendingDecision := &workflow.PendingDecisionInfo{
-			State:                      workflow.PendingDecisionStateScheduled.Ptr(),
+		pendingDecision := &types.PendingDecisionInfo{
+			State:                      types.PendingDecisionStateScheduled.Ptr(),
 			ScheduledTimestamp:         common.Int64Ptr(di.ScheduledTimestamp),
-			Attempt:                    common.Int64Ptr(di.Attempt),
+			Attempt:                    di.Attempt,
 			OriginalScheduledTimestamp: common.Int64Ptr(di.OriginalScheduledTimestamp),
 		}
 		if di.StartedID != common.EmptyEventID {
-			pendingDecision.State = workflow.PendingDecisionStateStarted.Ptr()
+			pendingDecision.State = types.PendingDecisionStateStarted.Ptr()
 			pendingDecision.StartedTimestamp = common.Int64Ptr(di.StartedTimestamp)
 		}
 		result.PendingDecision = pendingDecision
@@ -1612,10 +1598,10 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 
 func (e *historyEngineImpl) RecordActivityTaskStarted(
 	ctx context.Context,
-	request *h.RecordActivityTaskStartedRequest,
-) (*h.RecordActivityTaskStartedResponse, error) {
+	request *types.RecordActivityTaskStartedRequest,
+) (*types.RecordActivityTaskStartedResponse, error) {
 
-	domainEntry, err := e.getActiveDomainEntry(request.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(request.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -1625,27 +1611,34 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 	domainID := domainInfo.ID
 	domainName := domainInfo.Name
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: request.WorkflowExecution.WorkflowId,
-		RunId:      request.WorkflowExecution.RunId,
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: request.WorkflowExecution.WorkflowID,
+		RunID:      request.WorkflowExecution.RunID,
 	}
 
-	response := &h.RecordActivityTaskStartedResponse{}
-	err = e.updateWorkflowExecution(ctx, domainID, workflowExecution, false,
+	response := &types.RecordActivityTaskStartedResponse{}
+	err = workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, false, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return ErrWorkflowCompleted
+				return workflow.ErrNotExists
 			}
 
-			scheduleID := request.GetScheduleId()
-			requestID := request.GetRequestId()
+			scheduleID := request.GetScheduleID()
+			requestID := request.GetRequestID()
 			ai, isRunning := mutableState.GetActivityInfo(scheduleID)
 
 			// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 			// some extreme cassandra failure cases.
 			if !isRunning && scheduleID >= mutableState.GetNextEventID() {
 				e.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskStartedScope, metrics.StaleMutableStateCounter)
-				return ErrStaleState
+				e.logger.Error("Encounter stale mutable state in RecordActivityTaskStarted",
+					tag.WorkflowDomainName(domainName),
+					tag.WorkflowID(workflowExecution.GetWorkflowID()),
+					tag.WorkflowRunID(workflowExecution.GetRunID()),
+					tag.WorkflowScheduleID(scheduleID),
+					tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+				)
+				return workflow.ErrStaleState
 			}
 
 			// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
@@ -1653,8 +1646,8 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			if !isRunning {
 				// Looks like ActivityTask already completed as a result of another call.
 				// It is OK to drop the task at this point.
-				e.logger.Debug("Potentially duplicate task.", tag.TaskID(request.GetTaskId()), tag.WorkflowScheduleID(scheduleID), tag.TaskType(persistence.TransferTaskTypeActivityTask))
-				return ErrActivityTaskNotFound
+				e.logger.Debug("Potentially duplicate task.", tag.TaskID(request.GetTaskID()), tag.WorkflowScheduleID(scheduleID), tag.TaskType(persistence.TransferTaskTypeActivityTask))
+				return workflow.ErrActivityTaskNotFound
 			}
 
 			scheduledEvent, err := mutableState.GetActivityScheduledEvent(ctx, scheduleID)
@@ -1664,11 +1657,11 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			response.ScheduledEvent = scheduledEvent
 			response.ScheduledTimestampOfThisAttempt = common.Int64Ptr(ai.ScheduledTime.UnixNano())
 
-			response.Attempt = common.Int64Ptr(int64(ai.Attempt))
+			response.Attempt = int64(ai.Attempt)
 			response.HeartbeatDetails = ai.Details
 
 			response.WorkflowType = mutableState.GetWorkflowType()
-			response.WorkflowDomain = common.StringPtr(domainName)
+			response.WorkflowDomain = domainName
 
 			if ai.StartedID != common.EmptyEventID {
 				// If activity is started as part of the current request scope then return a positive response
@@ -1679,8 +1672,8 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 
 				// Looks like ActivityTask already started as a result of another call.
 				// It is OK to drop the task at this point.
-				e.logger.Debug("Potentially duplicate task.", tag.TaskID(request.GetTaskId()), tag.WorkflowScheduleID(scheduleID), tag.TaskType(persistence.TransferTaskTypeActivityTask))
-				return &h.EventAlreadyStartedError{Message: "Activity task already started."}
+				e.logger.Debug("Potentially duplicate task.", tag.TaskID(request.GetTaskID()), tag.WorkflowScheduleID(scheduleID), tag.TaskType(persistence.TransferTaskTypeActivityTask))
+				return &types.EventAlreadyStartedError{Message: "Activity task already started."}
 			}
 
 			if _, err := mutableState.AddActivityTaskStartedEvent(
@@ -1704,42 +1697,42 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 // ScheduleDecisionTask schedules a decision if no outstanding decision found
 func (e *historyEngineImpl) ScheduleDecisionTask(
 	ctx context.Context,
-	req *h.ScheduleDecisionTaskRequest,
+	req *types.ScheduleDecisionTaskRequest,
 ) error {
-	return e.decisionHandler.handleDecisionTaskScheduled(ctx, req)
+	return e.decisionHandler.HandleDecisionTaskScheduled(ctx, req)
 }
 
 // RecordDecisionTaskStarted starts a decision
 func (e *historyEngineImpl) RecordDecisionTaskStarted(
 	ctx context.Context,
-	request *h.RecordDecisionTaskStartedRequest,
-) (*h.RecordDecisionTaskStartedResponse, error) {
-	return e.decisionHandler.handleDecisionTaskStarted(ctx, request)
+	request *types.RecordDecisionTaskStartedRequest,
+) (*types.RecordDecisionTaskStartedResponse, error) {
+	return e.decisionHandler.HandleDecisionTaskStarted(ctx, request)
 }
 
 // RespondDecisionTaskCompleted completes a decision task
 func (e *historyEngineImpl) RespondDecisionTaskCompleted(
 	ctx context.Context,
-	req *h.RespondDecisionTaskCompletedRequest,
-) (*h.RespondDecisionTaskCompletedResponse, error) {
-	return e.decisionHandler.handleDecisionTaskCompleted(ctx, req)
+	req *types.HistoryRespondDecisionTaskCompletedRequest,
+) (*types.HistoryRespondDecisionTaskCompletedResponse, error) {
+	return e.decisionHandler.HandleDecisionTaskCompleted(ctx, req)
 }
 
 // RespondDecisionTaskFailed fails a decision
 func (e *historyEngineImpl) RespondDecisionTaskFailed(
 	ctx context.Context,
-	req *h.RespondDecisionTaskFailedRequest,
+	req *types.HistoryRespondDecisionTaskFailedRequest,
 ) error {
-	return e.decisionHandler.handleDecisionTaskFailed(ctx, req)
+	return e.decisionHandler.HandleDecisionTaskFailed(ctx, req)
 }
 
 // RespondActivityTaskCompleted completes an activity task.
 func (e *historyEngineImpl) RespondActivityTaskCompleted(
 	ctx context.Context,
-	req *h.RespondActivityTaskCompletedRequest,
+	req *types.HistoryRespondActivityTaskCompletedRequest,
 ) error {
 
-	domainEntry, err := e.getActiveDomainEntry(req.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -1749,20 +1742,20 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 	request := req.CompleteRequest
 	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
 	if err0 != nil {
-		return ErrDeserializingToken
+		return workflow.ErrDeserializingToken
 	}
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(token.WorkflowID),
-		RunId:      common.StringPtr(token.RunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: token.WorkflowID,
+		RunID:      token.RunID,
 	}
 
 	var activityStartedTime time.Time
 	var taskList string
-	err = e.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
+	err = workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, true, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return ErrWorkflowCompleted
+				return workflow.ErrAlreadyCompleted
 			}
 
 			scheduleID := token.ScheduleID
@@ -1778,17 +1771,24 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 			// some extreme cassandra failure cases.
 			if !isRunning && scheduleID >= mutableState.GetNextEventID() {
 				e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCompletedScope, metrics.StaleMutableStateCounter)
-				return ErrStaleState
+				e.logger.Error("Encounter stale mutable state in RecordActivityTaskCompleted",
+					tag.WorkflowDomainName(domainName),
+					tag.WorkflowID(workflowExecution.GetWorkflowID()),
+					tag.WorkflowRunID(workflowExecution.GetRunID()),
+					tag.WorkflowScheduleID(scheduleID),
+					tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+				)
+				return workflow.ErrStaleState
 			}
 
 			if !isRunning || ai.StartedID == common.EmptyEventID ||
 				(token.ScheduleID != common.EmptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
-				return ErrActivityTaskNotFound
+				return workflow.ErrActivityTaskNotFound
 			}
 
 			if _, err := mutableState.AddActivityTaskCompletedEvent(scheduleID, ai.StartedID, request); err != nil {
 				// Unable to add ActivityTaskCompleted event to history
-				return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskCompleted event to history."}
+				return &types.InternalServiceError{Message: "Unable to add ActivityTaskCompleted event to history."}
 			}
 			activityStartedTime = ai.StartedTime
 			taskList = ai.TaskList
@@ -1810,10 +1810,10 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 // RespondActivityTaskFailed completes an activity task failure.
 func (e *historyEngineImpl) RespondActivityTaskFailed(
 	ctx context.Context,
-	req *h.RespondActivityTaskFailedRequest,
+	req *types.HistoryRespondActivityTaskFailedRequest,
 ) error {
 
-	domainEntry, err := e.getActiveDomainEntry(req.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -1823,20 +1823,25 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 	request := req.FailedRequest
 	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
 	if err0 != nil {
-		return ErrDeserializingToken
+		return workflow.ErrDeserializingToken
 	}
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(token.WorkflowID),
-		RunId:      common.StringPtr(token.RunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: token.WorkflowID,
+		RunID:      token.RunID,
 	}
 
 	var activityStartedTime time.Time
 	var taskList string
-	err = e.updateWorkflowExecutionWithAction(ctx, domainID, workflowExecution,
-		func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
+	err = workflow.UpdateWithActionFunc(
+		ctx,
+		e.executionCache,
+		domainID,
+		workflowExecution,
+		e.timeSource.Now(),
+		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, ErrWorkflowCompleted
+				return nil, workflow.ErrAlreadyCompleted
 			}
 
 			scheduleID := token.ScheduleID
@@ -1852,15 +1857,22 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 			// some extreme cassandra failure cases.
 			if !isRunning && scheduleID >= mutableState.GetNextEventID() {
 				e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskFailedScope, metrics.StaleMutableStateCounter)
-				return nil, ErrStaleState
+				e.logger.Error("Encounter stale mutable state in RecordActivityTaskFailed",
+					tag.WorkflowDomainName(domainName),
+					tag.WorkflowID(workflowExecution.GetWorkflowID()),
+					tag.WorkflowRunID(workflowExecution.GetRunID()),
+					tag.WorkflowScheduleID(scheduleID),
+					tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+				)
+				return nil, workflow.ErrStaleState
 			}
 
 			if !isRunning || ai.StartedID == common.EmptyEventID ||
 				(token.ScheduleID != common.EmptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
-				return nil, ErrActivityTaskNotFound
+				return nil, workflow.ErrActivityTaskNotFound
 			}
 
-			postActions := &updateWorkflowAction{}
+			postActions := &workflow.UpdateAction{}
 			ok, err := mutableState.RetryActivity(ai, req.FailedRequest.GetReason(), req.FailedRequest.GetDetails())
 			if err != nil {
 				return nil, err
@@ -1869,15 +1881,16 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 				// no more retry, and we want to record the failure event
 				if _, err := mutableState.AddActivityTaskFailedEvent(scheduleID, ai.StartedID, request); err != nil {
 					// Unable to add ActivityTaskFailed event to history
-					return nil, &workflow.InternalServiceError{Message: "Unable to add ActivityTaskFailed event to history."}
+					return nil, &types.InternalServiceError{Message: "Unable to add ActivityTaskFailed event to history."}
 				}
-				postActions.createDecision = true
+				postActions.CreateDecision = true
 			}
 
 			activityStartedTime = ai.StartedTime
 			taskList = ai.TaskList
 			return postActions, nil
-		})
+		},
+	)
 	if err == nil && !activityStartedTime.IsZero() {
 		scope := e.metricsClient.Scope(metrics.HistoryRespondActivityTaskFailedScope).
 			Tagged(
@@ -1894,10 +1907,10 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 // RespondActivityTaskCanceled completes an activity task failure.
 func (e *historyEngineImpl) RespondActivityTaskCanceled(
 	ctx context.Context,
-	req *h.RespondActivityTaskCanceledRequest,
+	req *types.HistoryRespondActivityTaskCanceledRequest,
 ) error {
 
-	domainEntry, err := e.getActiveDomainEntry(req.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -1907,20 +1920,20 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 	request := req.CancelRequest
 	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
 	if err0 != nil {
-		return ErrDeserializingToken
+		return workflow.ErrDeserializingToken
 	}
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(token.WorkflowID),
-		RunId:      common.StringPtr(token.RunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: token.WorkflowID,
+		RunID:      token.RunID,
 	}
 
 	var activityStartedTime time.Time
 	var taskList string
-	err = e.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
+	err = workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, true, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return ErrWorkflowCompleted
+				return workflow.ErrAlreadyCompleted
 			}
 
 			scheduleID := token.ScheduleID
@@ -1936,12 +1949,19 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 			// some extreme cassandra failure cases.
 			if !isRunning && scheduleID >= mutableState.GetNextEventID() {
 				e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCanceledScope, metrics.StaleMutableStateCounter)
-				return ErrStaleState
+				e.logger.Error("Encounter stale mutable state in RecordActivityTaskCanceled",
+					tag.WorkflowDomainName(domainName),
+					tag.WorkflowID(workflowExecution.GetWorkflowID()),
+					tag.WorkflowRunID(workflowExecution.GetRunID()),
+					tag.WorkflowScheduleID(scheduleID),
+					tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+				)
+				return workflow.ErrStaleState
 			}
 
 			if !isRunning || ai.StartedID == common.EmptyEventID ||
 				(token.ScheduleID != common.EmptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
-				return ErrActivityTaskNotFound
+				return workflow.ErrActivityTaskNotFound
 			}
 
 			if _, err := mutableState.AddActivityTaskCanceledEvent(
@@ -1949,9 +1969,9 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 				ai.StartedID,
 				ai.CancelRequestID,
 				request.Details,
-				common.StringDefault(request.Identity)); err != nil {
+				request.Identity); err != nil {
 				// Unable to add ActivityTaskCanceled event to history
-				return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskCanceled event to history."}
+				return &types.InternalServiceError{Message: "Unable to add ActivityTaskCanceled event to history."}
 			}
 
 			activityStartedTime = ai.StartedTime
@@ -1977,10 +1997,10 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 // - For reporting progress of the activity, this can be done even if the liveness is not configured.
 func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 	ctx context.Context,
-	req *h.RecordActivityTaskHeartbeatRequest,
-) (*workflow.RecordActivityTaskHeartbeatResponse, error) {
+	req *types.HistoryRecordActivityTaskHeartbeatRequest,
+) (*types.RecordActivityTaskHeartbeatResponse, error) {
 
-	domainEntry, err := e.getActiveDomainEntry(req.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -1989,20 +2009,20 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 	request := req.HeartbeatRequest
 	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
 	if err0 != nil {
-		return nil, ErrDeserializingToken
+		return nil, workflow.ErrDeserializingToken
 	}
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(token.WorkflowID),
-		RunId:      common.StringPtr(token.RunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: token.WorkflowID,
+		RunID:      token.RunID,
 	}
 
 	var cancelRequested bool
-	err = e.updateWorkflowExecution(ctx, domainID, workflowExecution, false,
+	err = workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, false, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				e.logger.Debug("Heartbeat failed")
-				return ErrWorkflowCompleted
+				return workflow.ErrAlreadyCompleted
 			}
 
 			scheduleID := token.ScheduleID
@@ -2018,12 +2038,19 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 			// some extreme cassandra failure cases.
 			if !isRunning && scheduleID >= mutableState.GetNextEventID() {
 				e.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskHeartbeatScope, metrics.StaleMutableStateCounter)
-				return ErrStaleState
+				e.logger.Error("Encounter stale mutable state in RecordActivityTaskHeartbeat",
+					tag.WorkflowDomainName(domainEntry.GetInfo().Name),
+					tag.WorkflowID(workflowExecution.GetWorkflowID()),
+					tag.WorkflowRunID(workflowExecution.GetRunID()),
+					tag.WorkflowScheduleID(scheduleID),
+					tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+				)
+				return workflow.ErrStaleState
 			}
 
 			if !isRunning || ai.StartedID == common.EmptyEventID ||
 				(token.ScheduleID != common.EmptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
-				return ErrActivityTaskNotFound
+				return workflow.ErrActivityTaskNotFound
 			}
 
 			cancelRequested = ai.CancelRequested
@@ -2038,19 +2065,19 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 		})
 
 	if err != nil {
-		return &workflow.RecordActivityTaskHeartbeatResponse{}, err
+		return &types.RecordActivityTaskHeartbeatResponse{}, err
 	}
 
-	return &workflow.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(cancelRequested)}, nil
+	return &types.RecordActivityTaskHeartbeatResponse{CancelRequested: cancelRequested}, nil
 }
 
 // RequestCancelWorkflowExecution records request cancellation event for workflow execution
 func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 	ctx context.Context,
-	req *h.RequestCancelWorkflowExecutionRequest,
+	req *types.HistoryRequestCancelWorkflowExecutionRequest,
 ) error {
 
-	domainEntry, err := e.getActiveDomainEntry(req.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2059,110 +2086,118 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 	request := req.CancelRequest
 	parentExecution := req.ExternalWorkflowExecution
 	childWorkflowOnly := req.GetChildWorkflowOnly()
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: request.WorkflowExecution.WorkflowId,
-		RunId:      request.WorkflowExecution.RunId,
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: request.WorkflowExecution.WorkflowID,
+		RunID:      request.WorkflowExecution.RunID,
 	}
 
-	return e.updateWorkflow(ctx, domainID, workflowExecution,
-		func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
+	return workflow.UpdateCurrentWithActionFunc(ctx, e.executionCache, e.executionManager, domainID, workflowExecution, e.timeSource.Now(),
+		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, ErrWorkflowCompleted
+				return nil, workflow.ErrAlreadyCompleted
 			}
 
 			executionInfo := mutableState.GetExecutionInfo()
 			if childWorkflowOnly {
 				parentWorkflowID := executionInfo.ParentWorkflowID
 				parentRunID := executionInfo.ParentRunID
-				if parentExecution.GetWorkflowId() != parentWorkflowID ||
-					parentExecution.GetRunId() != parentRunID {
-					return nil, ErrWorkflowParent
+				if parentExecution.GetWorkflowID() != parentWorkflowID ||
+					parentExecution.GetRunID() != parentRunID {
+					return nil, workflow.ErrParentMismatch
 				}
 			}
 
 			isCancelRequested, cancelRequestID := mutableState.IsCancelRequested()
 			if isCancelRequested {
 				cancelRequest := req.CancelRequest
-				if cancelRequest.RequestId != nil {
-					requestID := *cancelRequest.RequestId
-					if requestID != "" && cancelRequestID == requestID {
-						return updateWorkflowWithNewDecision, nil
-					}
+				if cancelRequest.RequestID != "" && cancelRequest.RequestID == cancelRequestID {
+					return workflow.UpdateWithNewDecision, nil
 				}
 				// if we consider workflow cancellation idempotent, then this error is redundant
 				// this error maybe useful if this API is invoked by external, not decision from transfer queue
-				return nil, ErrCancellationAlreadyRequested
+				return nil, workflow.ErrCancellationAlreadyRequested
 			}
 
 			if _, err := mutableState.AddWorkflowExecutionCancelRequestedEvent("", req); err != nil {
-				return nil, &workflow.InternalServiceError{Message: "Unable to cancel workflow execution."}
+				return nil, &types.InternalServiceError{Message: "Unable to cancel workflow execution."}
 			}
 
-			return updateWorkflowWithNewDecision, nil
+			return workflow.UpdateWithNewDecision, nil
 		})
 }
 
 func (e *historyEngineImpl) SignalWorkflowExecution(
 	ctx context.Context,
-	signalRequest *h.SignalWorkflowExecutionRequest,
+	signalRequest *types.HistorySignalWorkflowExecutionRequest,
 ) error {
 
-	domainEntry, err := e.getActiveDomainEntry(signalRequest.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(signalRequest.DomainUUID)
 	if err != nil {
 		return err
+	}
+	if domainEntry.GetInfo().Status != persistence.DomainStatusRegistered {
+		return errDomainDeprecated
 	}
 	domainID := domainEntry.GetInfo().ID
 
 	request := signalRequest.SignalRequest
 	parentExecution := signalRequest.ExternalWorkflowExecution
 	childWorkflowOnly := signalRequest.GetChildWorkflowOnly()
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: request.WorkflowExecution.WorkflowId,
-		RunId:      request.WorkflowExecution.RunId,
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: request.WorkflowExecution.WorkflowID,
+		RunID:      request.WorkflowExecution.RunID,
 	}
 
-	return e.updateWorkflow(
+	return workflow.UpdateCurrentWithActionFunc(
 		ctx,
+		e.executionCache,
+		e.executionManager,
 		domainID,
 		workflowExecution,
-		func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
+		e.timeSource.Now(),
+		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
+			// first deduplicate by request id for signal decision
+			// this is done before workflow running check so that already completed error
+			// won't be returned for duplicated signals even if the workflow is closed.
+			if requestID := request.GetRequestID(); requestID != "" {
+				if mutableState.IsSignalRequested(requestID) {
+					return &workflow.UpdateAction{
+						Noop:           true,
+						CreateDecision: false,
+					}, nil
+				}
+			}
+
+			if !mutableState.IsWorkflowExecutionRunning() {
+				return nil, workflow.ErrAlreadyCompleted
+			}
+
 			executionInfo := mutableState.GetExecutionInfo()
 			createDecisionTask := true
 			// Do not create decision task when the workflow is cron and the cron has not been started yet
 			if mutableState.GetExecutionInfo().CronSchedule != "" && !mutableState.HasProcessedOrPendingDecision() {
 				createDecisionTask = false
 			}
-			postActions := &updateWorkflowAction{
-				createDecision: createDecisionTask,
-			}
-
-			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, ErrWorkflowCompleted
-			}
 
 			maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
 			if maxAllowedSignals > 0 && int(executionInfo.SignalCount) >= maxAllowedSignals {
 				e.logger.Info("Execution limit reached for maximum signals", tag.WorkflowSignalCount(executionInfo.SignalCount),
-					tag.WorkflowID(workflowExecution.GetWorkflowId()),
-					tag.WorkflowRunID(workflowExecution.GetRunId()),
+					tag.WorkflowID(workflowExecution.GetWorkflowID()),
+					tag.WorkflowRunID(workflowExecution.GetRunID()),
 					tag.WorkflowDomainID(domainID))
-				return nil, ErrSignalsLimitExceeded
+				return nil, workflow.ErrSignalsLimitExceeded
 			}
 
 			if childWorkflowOnly {
 				parentWorkflowID := executionInfo.ParentWorkflowID
 				parentRunID := executionInfo.ParentRunID
-				if parentExecution.GetWorkflowId() != parentWorkflowID ||
-					parentExecution.GetRunId() != parentRunID {
-					return nil, ErrWorkflowParent
+				if parentExecution.GetWorkflowID() != parentWorkflowID ||
+					parentExecution.GetRunID() != parentRunID {
+					return nil, workflow.ErrParentMismatch
 				}
 			}
 
-			// deduplicate by request id for signal decision
-			if requestID := request.GetRequestId(); requestID != "" {
-				if mutableState.IsSignalRequested(requestID) {
-					return postActions, nil
-				}
+			if requestID := request.GetRequestID(); requestID != "" {
 				mutableState.AddSignalRequested(requestID)
 			}
 
@@ -2170,27 +2205,33 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 				request.GetSignalName(),
 				request.GetInput(),
 				request.GetIdentity()); err != nil {
-				return nil, &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
+				return nil, &types.InternalServiceError{Message: "Unable to signal workflow execution."}
 			}
 
-			return postActions, nil
+			return &workflow.UpdateAction{
+				Noop:           false,
+				CreateDecision: createDecisionTask,
+			}, nil
 		})
 }
 
 func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	ctx context.Context,
-	signalWithStartRequest *h.SignalWithStartWorkflowExecutionRequest,
-) (retResp *workflow.StartWorkflowExecutionResponse, retError error) {
+	signalWithStartRequest *types.HistorySignalWithStartWorkflowExecutionRequest,
+) (retResp *types.StartWorkflowExecutionResponse, retError error) {
 
-	domainEntry, err := e.getActiveDomainEntry(signalWithStartRequest.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(signalWithStartRequest.DomainUUID)
 	if err != nil {
 		return nil, err
+	}
+	if domainEntry.GetInfo().Status != persistence.DomainStatusRegistered {
+		return nil, errDomainDeprecated
 	}
 	domainID := domainEntry.GetInfo().ID
 
 	sRequest := signalWithStartRequest.SignalWithStartRequest
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: sRequest.WorkflowId,
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: sRequest.WorkflowID,
 	}
 
 	var prevMutableState execution.MutableState
@@ -2201,11 +2242,11 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	if err0 == nil {
 		defer func() { release(retError) }()
 	Just_Signal_Loop:
-		for ; attempt < conditionalRetryCount; attempt++ {
+		for ; attempt < workflow.ConditionalRetryCount; attempt++ {
 			// workflow not exist, will create workflow then signal
 			mutableState, err1 := wfContext.LoadWorkflowExecution(ctx)
 			if err1 != nil {
-				if _, ok := err1.(*workflow.EntityNotExistsError); ok {
+				if _, ok := err1.(*types.EntityNotExistsError); ok {
 					break
 				}
 				return nil, err1
@@ -2216,10 +2257,10 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 				break
 			}
 			// workflow is running, if policy is TerminateIfRunning, terminate current run then signalWithStart
-			if sRequest.GetWorkflowIdReusePolicy() == workflow.WorkflowIdReusePolicyTerminateIfRunning {
-				workflowExecution.RunId = common.StringPtr(uuid.New())
-				runningWFCtx := newWorkflowContext(wfContext, release, mutableState)
-				return e.terminateAndStartWorkflow(
+			if sRequest.GetWorkflowIDReusePolicy() == types.WorkflowIDReusePolicyTerminateIfRunning {
+				workflowExecution.RunID = uuid.New()
+				runningWFCtx := workflow.NewContext(wfContext, release, mutableState)
+				resp, errTerm := e.terminateAndStartWorkflow(
 					ctx,
 					runningWFCtx,
 					workflowExecution,
@@ -2228,30 +2269,35 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 					nil,
 					signalWithStartRequest,
 				)
+				// By the time we try to terminate the workflow, it was already terminated
+				// So continue as if we didn't need to terminate it in the first place
+				if _, ok := errTerm.(*types.WorkflowExecutionAlreadyCompletedError); !ok {
+					return resp, errTerm
+				}
 			}
 
 			executionInfo := mutableState.GetExecutionInfo()
 			maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
 			if maxAllowedSignals > 0 && int(executionInfo.SignalCount) >= maxAllowedSignals {
 				e.logger.Info("Execution limit reached for maximum signals", tag.WorkflowSignalCount(executionInfo.SignalCount),
-					tag.WorkflowID(workflowExecution.GetWorkflowId()),
-					tag.WorkflowRunID(workflowExecution.GetRunId()),
+					tag.WorkflowID(workflowExecution.GetWorkflowID()),
+					tag.WorkflowRunID(workflowExecution.GetRunID()),
 					tag.WorkflowDomainID(domainID))
-				return nil, ErrSignalsLimitExceeded
+				return nil, workflow.ErrSignalsLimitExceeded
 			}
 
 			if _, err := mutableState.AddWorkflowExecutionSignaled(
 				sRequest.GetSignalName(),
 				sRequest.GetSignalInput(),
 				sRequest.GetIdentity()); err != nil {
-				return nil, &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
+				return nil, &types.InternalServiceError{Message: "Unable to signal workflow execution."}
 			}
 
 			// Create a transfer task to schedule a decision task
 			if !mutableState.HasPendingDecision() {
 				_, err := mutableState.AddDecisionTaskScheduledEvent(false)
 				if err != nil {
-					return nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
+					return nil, &types.InternalServiceError{Message: "Failed to add decision scheduled event."}
 				}
 			}
 
@@ -2263,20 +2309,24 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 				}
 				return nil, err
 			}
-			return &workflow.StartWorkflowExecutionResponse{RunId: wfContext.GetExecution().RunId}, nil
+			return &types.StartWorkflowExecutionResponse{RunID: wfContext.GetExecution().RunID}, nil
 		} // end for Just_Signal_Loop
-		if attempt == conditionalRetryCount {
-			return nil, ErrMaxAttemptsExceeded
+		if attempt == workflow.ConditionalRetryCount {
+			return nil, workflow.ErrMaxAttemptsExceeded
 		}
 	} else {
-		if _, ok := err0.(*workflow.EntityNotExistsError); !ok {
+		if _, ok := err0.(*types.EntityNotExistsError); !ok {
 			return nil, err0
 		}
 		// workflow not exist, will create workflow then signal
 	}
 
 	// Start workflow and signal
-	startRequest := getStartRequest(domainID, sRequest)
+	startRequest, err := getStartRequest(domainID, sRequest)
+	if err != nil {
+		return nil, err
+	}
+
 	sigWithStartArg := &signalWithStartArg{
 		signalWithStartRequest: signalWithStartRequest,
 		prevMutableState:       prevMutableState,
@@ -2293,27 +2343,27 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 // RemoveSignalMutableState remove the signal request id in signal_requested for deduplicate
 func (e *historyEngineImpl) RemoveSignalMutableState(
 	ctx context.Context,
-	request *h.RemoveSignalMutableStateRequest,
+	request *types.RemoveSignalMutableStateRequest,
 ) error {
 
-	domainEntry, err := e.getActiveDomainEntry(request.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(request.DomainUUID)
 	if err != nil {
 		return err
 	}
 	domainID := domainEntry.GetInfo().ID
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: request.WorkflowExecution.WorkflowId,
-		RunId:      request.WorkflowExecution.RunId,
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: request.WorkflowExecution.WorkflowID,
+		RunID:      request.WorkflowExecution.RunID,
 	}
 
-	return e.updateWorkflowExecution(ctx, domainID, workflowExecution, false,
+	return workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, false, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return ErrWorkflowCompleted
+				return workflow.ErrNotExists
 			}
 
-			mutableState.DeleteSignalRequested(request.GetRequestId())
+			mutableState.DeleteSignalRequested(request.GetRequestID())
 
 			return nil
 		})
@@ -2321,32 +2371,35 @@ func (e *historyEngineImpl) RemoveSignalMutableState(
 
 func (e *historyEngineImpl) TerminateWorkflowExecution(
 	ctx context.Context,
-	terminateRequest *h.TerminateWorkflowExecutionRequest,
+	terminateRequest *types.HistoryTerminateWorkflowExecutionRequest,
 ) error {
 
-	domainEntry, err := e.getActiveDomainEntry(terminateRequest.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(terminateRequest.DomainUUID)
 	if err != nil {
 		return err
 	}
 	domainID := domainEntry.GetInfo().ID
 
 	request := terminateRequest.TerminateRequest
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: request.WorkflowExecution.WorkflowId,
-		RunId:      request.WorkflowExecution.RunId,
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: request.WorkflowExecution.WorkflowID,
+		RunID:      request.WorkflowExecution.RunID,
 	}
 
-	return e.updateWorkflow(
+	return workflow.UpdateCurrentWithActionFunc(
 		ctx,
+		e.executionCache,
+		e.executionManager,
 		domainID,
 		workflowExecution,
-		func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
+		e.timeSource.Now(),
+		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, ErrWorkflowCompleted
+				return nil, workflow.ErrAlreadyCompleted
 			}
 
 			eventBatchFirstEventID := mutableState.GetNextEventID()
-			return updateWorkflowWithoutDecision, execution.TerminateWorkflow(
+			return workflow.UpdateWithoutDecision, execution.TerminateWorkflow(
 				mutableState,
 				eventBatchFirstEventID,
 				request.GetReason(),
@@ -2359,50 +2412,53 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 // RecordChildExecutionCompleted records the completion of child execution into parent execution history
 func (e *historyEngineImpl) RecordChildExecutionCompleted(
 	ctx context.Context,
-	completionRequest *h.RecordChildExecutionCompletedRequest,
+	completionRequest *types.RecordChildExecutionCompletedRequest,
 ) error {
 
-	domainEntry, err := e.getActiveDomainEntry(completionRequest.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(completionRequest.DomainUUID)
 	if err != nil {
 		return err
 	}
 	domainID := domainEntry.GetInfo().ID
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: completionRequest.WorkflowExecution.WorkflowId,
-		RunId:      completionRequest.WorkflowExecution.RunId,
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: completionRequest.WorkflowExecution.WorkflowID,
+		RunID:      completionRequest.WorkflowExecution.RunID,
 	}
 
-	return e.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
+	return workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, true, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return ErrWorkflowCompleted
+				return workflow.ErrNotExists
 			}
 
-			initiatedID := *completionRequest.InitiatedId
+			initiatedID := completionRequest.InitiatedID
 			completedExecution := completionRequest.CompletedExecution
 			completionEvent := completionRequest.CompletionEvent
 
 			// Check mutable state to make sure child execution is in pending child executions
 			ci, isRunning := mutableState.GetChildExecutionInfo(initiatedID)
 			if !isRunning || ci.StartedID == common.EmptyEventID {
-				return &workflow.EntityNotExistsError{Message: "Pending child execution not found."}
+				return &types.EntityNotExistsError{Message: "Pending child execution not found."}
+			}
+			if ci.StartedWorkflowID != completedExecution.GetWorkflowID() {
+				return &types.EntityNotExistsError{Message: "Pending child execution not found."}
 			}
 
 			switch *completionEvent.EventType {
-			case workflow.EventTypeWorkflowExecutionCompleted:
+			case types.EventTypeWorkflowExecutionCompleted:
 				attributes := completionEvent.WorkflowExecutionCompletedEventAttributes
 				_, err = mutableState.AddChildWorkflowExecutionCompletedEvent(initiatedID, completedExecution, attributes)
-			case workflow.EventTypeWorkflowExecutionFailed:
+			case types.EventTypeWorkflowExecutionFailed:
 				attributes := completionEvent.WorkflowExecutionFailedEventAttributes
 				_, err = mutableState.AddChildWorkflowExecutionFailedEvent(initiatedID, completedExecution, attributes)
-			case workflow.EventTypeWorkflowExecutionCanceled:
+			case types.EventTypeWorkflowExecutionCanceled:
 				attributes := completionEvent.WorkflowExecutionCanceledEventAttributes
 				_, err = mutableState.AddChildWorkflowExecutionCanceledEvent(initiatedID, completedExecution, attributes)
-			case workflow.EventTypeWorkflowExecutionTerminated:
+			case types.EventTypeWorkflowExecutionTerminated:
 				attributes := completionEvent.WorkflowExecutionTerminatedEventAttributes
 				_, err = mutableState.AddChildWorkflowExecutionTerminatedEvent(initiatedID, completedExecution, attributes)
-			case workflow.EventTypeWorkflowExecutionTimedOut:
+			case types.EventTypeWorkflowExecutionTimedOut:
 				attributes := completionEvent.WorkflowExecutionTimedOutEventAttributes
 				_, err = mutableState.AddChildWorkflowExecutionTimedOutEvent(initiatedID, completedExecution, attributes)
 			}
@@ -2413,7 +2469,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 
 func (e *historyEngineImpl) ReplicateEventsV2(
 	ctx context.Context,
-	replicateRequest *h.ReplicateEventsV2Request,
+	replicateRequest *types.ReplicateEventsV2Request,
 ) error {
 
 	return e.nDCReplicator.ApplyEvents(ctx, replicateRequest)
@@ -2421,7 +2477,7 @@ func (e *historyEngineImpl) ReplicateEventsV2(
 
 func (e *historyEngineImpl) SyncShardStatus(
 	ctx context.Context,
-	request *h.SyncShardStatusRequest,
+	request *types.SyncShardStatusRequest,
 ) error {
 
 	clusterName := request.GetSourceCluster()
@@ -2432,14 +2488,14 @@ func (e *historyEngineImpl) SyncShardStatus(
 	// 2. notify the timer gate in the timer queue standby processor
 	// 3, notify the transfer (essentially a no op, just put it here so it looks symmetric)
 	e.shard.SetCurrentTime(clusterName, now)
-	e.txProcessor.NotifyNewTask(clusterName, []persistence.Task{})
-	e.timerProcessor.NotifyNewTask(clusterName, []persistence.Task{})
+	e.txProcessor.NotifyNewTask(clusterName, nil, []persistence.Task{})
+	e.timerProcessor.NotifyNewTask(clusterName, nil, []persistence.Task{})
 	return nil
 }
 
 func (e *historyEngineImpl) SyncActivity(
 	ctx context.Context,
-	request *h.SyncActivityRequest,
+	request *types.SyncActivityRequest,
 ) (retError error) {
 
 	return e.nDCActivityReplicator.SyncActivity(ctx, request)
@@ -2447,20 +2503,20 @@ func (e *historyEngineImpl) SyncActivity(
 
 func (e *historyEngineImpl) ResetWorkflowExecution(
 	ctx context.Context,
-	resetRequest *h.ResetWorkflowExecutionRequest,
-) (response *workflow.ResetWorkflowExecutionResponse, retError error) {
+	resetRequest *types.HistoryResetWorkflowExecutionRequest,
+) (response *types.ResetWorkflowExecutionResponse, retError error) {
 
 	request := resetRequest.ResetRequest
 	domainID := resetRequest.GetDomainUUID()
-	workflowID := request.WorkflowExecution.GetWorkflowId()
-	baseRunID := request.WorkflowExecution.GetRunId()
+	workflowID := request.WorkflowExecution.GetWorkflowID()
+	baseRunID := request.WorkflowExecution.GetRunID()
 
 	baseContext, baseReleaseFn, err := e.executionCache.GetOrCreateWorkflowExecution(
 		ctx,
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(baseRunID),
+		types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      baseRunID,
 		},
 	)
 	if err != nil {
@@ -2472,9 +2528,14 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	if err != nil {
 		return nil, err
 	}
-	if request.GetDecisionFinishEventId() <= common.FirstEventID ||
-		request.GetDecisionFinishEventId() >= baseMutableState.GetNextEventID() {
-		return nil, &workflow.BadRequestError{
+	if ok := baseMutableState.HasProcessedOrPendingDecision(); !ok {
+		return nil, &types.BadRequestError{
+			Message: "Cannot reset workflow without a decision task schedule.",
+		}
+	}
+	if request.GetDecisionFinishEventID() <= common.FirstEventID ||
+		request.GetDecisionFinishEventID() > baseMutableState.GetNextEventID() {
+		return nil, &types.BadRequestError{
 			Message: "Decision finish ID must be > 1 && <= workflow next event ID.",
 		}
 	}
@@ -2482,7 +2543,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	// also load the current run of the workflow, it can be different from the base runID
 	resp, err := e.executionManager.GetCurrentExecution(ctx, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
-		WorkflowID: request.WorkflowExecution.GetWorkflowId(),
+		WorkflowID: request.WorkflowExecution.GetWorkflowID(),
 	})
 	if err != nil {
 		return nil, err
@@ -2499,9 +2560,9 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		currentContext, currentReleaseFn, err = e.executionCache.GetOrCreateWorkflowExecution(
 			ctx,
 			domainID,
-			workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(workflowID),
-				RunId:      common.StringPtr(currentRunID),
+			types.WorkflowExecution{
+				WorkflowID: workflowID,
+				RunID:      currentRunID,
 			},
 		)
 		if err != nil {
@@ -2516,29 +2577,37 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	}
 
 	// dedup by requestID
-	if currentMutableState.GetExecutionInfo().CreateRequestID == request.GetRequestId() {
+	if currentMutableState.GetExecutionInfo().CreateRequestID == request.GetRequestID() {
 		e.logger.Info("Duplicated reset request",
 			tag.WorkflowID(workflowID),
 			tag.WorkflowRunID(currentRunID),
 			tag.WorkflowDomainID(domainID))
-		return &workflow.ResetWorkflowExecutionResponse{
-			RunId: common.StringPtr(currentRunID),
+		return &types.ResetWorkflowExecutionResponse{
+			RunID: currentRunID,
 		}, nil
 	}
 
 	resetRunID := uuid.New()
-	baseRebuildLastEventID := request.GetDecisionFinishEventId() - 1
+	baseRebuildLastEventID := request.GetDecisionFinishEventID() - 1
 	baseVersionHistories := baseMutableState.GetVersionHistories()
-	baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
+	baseCurrentBranchToken, err := baseMutableState.GetCurrentBranchToken()
 	if err != nil {
 		return nil, err
 	}
-	baseRebuildLastEventVersion, err := baseCurrentVersionHistory.GetEventVersion(baseRebuildLastEventID)
-	if err != nil {
-		return nil, err
-	}
-	baseCurrentBranchToken := baseCurrentVersionHistory.GetBranchToken()
+	baseRebuildLastEventVersion := baseMutableState.GetCurrentVersion()
 	baseNextEventID := baseMutableState.GetNextEventID()
+
+	if baseVersionHistories != nil {
+		baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
+		if err != nil {
+			return nil, err
+		}
+		baseRebuildLastEventVersion, err = baseCurrentVersionHistory.GetEventVersion(baseRebuildLastEventID)
+		if err != nil {
+			return nil, err
+		}
+		baseCurrentBranchToken = baseCurrentVersionHistory.GetBranchToken()
+	}
 
 	if err := e.workflowResetter.ResetWorkflow(
 		ctx,
@@ -2550,7 +2619,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		baseRebuildLastEventVersion,
 		baseNextEventID,
 		resetRunID,
-		request.GetRequestId(),
+		request.GetRequestID(),
 		execution.NewWorkflow(
 			ctx,
 			e.shard.GetDomainCache(),
@@ -2561,166 +2630,13 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		),
 		request.GetReason(),
 		nil,
+		request.GetSkipSignalReapply(),
 	); err != nil {
 		return nil, err
 	}
-	return &workflow.ResetWorkflowExecutionResponse{
-		RunId: common.StringPtr(resetRunID),
+	return &types.ResetWorkflowExecutionResponse{
+		RunID: resetRunID,
 	}, nil
-}
-
-func (e *historyEngineImpl) updateWorkflow(
-	ctx context.Context,
-	domainID string,
-	execution workflow.WorkflowExecution,
-	action updateWorkflowActionFunc,
-) (retError error) {
-
-	workflowContext, err := e.loadWorkflow(ctx, domainID, execution.GetWorkflowId(), execution.GetRunId())
-	if err != nil {
-		return err
-	}
-	defer func() { workflowContext.getReleaseFn()(retError) }()
-
-	return e.updateWorkflowHelper(ctx, workflowContext, action)
-}
-
-func (e *historyEngineImpl) updateWorkflowExecutionWithAction(
-	ctx context.Context,
-	domainID string,
-	execution workflow.WorkflowExecution,
-	action updateWorkflowActionFunc,
-) (retError error) {
-
-	workflowContext, err := e.loadWorkflowOnce(ctx, domainID, execution.GetWorkflowId(), execution.GetRunId())
-	if err != nil {
-		return err
-	}
-	defer func() { workflowContext.getReleaseFn()(retError) }()
-
-	return e.updateWorkflowHelper(ctx, workflowContext, action)
-}
-
-func (e *historyEngineImpl) updateWorkflowHelper(
-	ctx context.Context,
-	workflowContext workflowContext,
-	action updateWorkflowActionFunc,
-) (retError error) {
-
-UpdateHistoryLoop:
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		wfContext := workflowContext.getContext()
-		mutableState := workflowContext.getMutableState()
-
-		// conduct caller action
-		postActions, err := action(wfContext, mutableState)
-		if err != nil {
-			if err == ErrStaleState {
-				// Handler detected that cached workflow mutable could potentially be stale
-				// Reload workflow execution history
-				workflowContext.getContext().Clear()
-				if attempt != conditionalRetryCount-1 {
-					_, err = workflowContext.reloadMutableState(ctx)
-					if err != nil {
-						return err
-					}
-				}
-				continue UpdateHistoryLoop
-			}
-
-			// Returned error back to the caller
-			return err
-		}
-		if postActions.noop {
-			return nil
-		}
-
-		if postActions.createDecision {
-			// Create a transfer task to schedule a decision task
-			if !mutableState.HasPendingDecision() {
-				_, err := mutableState.AddDecisionTaskScheduledEvent(false)
-				if err != nil {
-					return &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
-				}
-			}
-		}
-
-		err = workflowContext.getContext().UpdateWorkflowExecutionAsActive(ctx, e.shard.GetTimeSource().Now())
-		if err == execution.ErrConflict {
-			if attempt != conditionalRetryCount-1 {
-				_, err = workflowContext.reloadMutableState(ctx)
-				if err != nil {
-					return err
-				}
-			}
-			continue UpdateHistoryLoop
-		}
-		return err
-	}
-	return ErrMaxAttemptsExceeded
-}
-
-// TODO: remove and use updateWorkflowExecutionWithAction
-func (e *historyEngineImpl) updateWorkflowExecution(
-	ctx context.Context,
-	domainID string,
-	execution workflow.WorkflowExecution,
-	createDecisionTask bool,
-	action func(wfContext execution.Context, mutableState execution.MutableState) error,
-) error {
-
-	return e.updateWorkflowExecutionWithAction(
-		ctx,
-		domainID,
-		execution,
-		getUpdateWorkflowActionFunc(createDecisionTask, action),
-	)
-}
-
-func getUpdateWorkflowActionFunc(
-	createDecisionTask bool,
-	action func(wfContext execution.Context, mutableState execution.MutableState) error,
-) updateWorkflowActionFunc {
-
-	return func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
-		err := action(wfContext, mutableState)
-		if err != nil {
-			return nil, err
-		}
-		postActions := &updateWorkflowAction{
-			createDecision: createDecisionTask,
-		}
-		return postActions, nil
-	}
-}
-
-func (e *historyEngineImpl) failDecision(
-	ctx context.Context,
-	wfContext execution.Context,
-	scheduleID int64,
-	startedID int64,
-	cause workflow.DecisionTaskFailedCause,
-	details []byte,
-	request *workflow.RespondDecisionTaskCompletedRequest,
-) (execution.MutableState, error) {
-
-	// Clear any updates we have accumulated so far
-	wfContext.Clear()
-
-	// Reload workflow execution so we can apply the decision task failure event
-	mutableState, err := wfContext.LoadWorkflowExecution(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if _, err = mutableState.AddDecisionTaskFailedEvent(
-		scheduleID, startedID, cause, details, request.GetIdentity(), "", request.GetBinaryChecksum(), "", "", 0,
-	); err != nil {
-		return nil, err
-	}
-
-	// Return new builder back to the caller for further updates
-	return mutableState, nil
 }
 
 func (e *historyEngineImpl) NotifyNewHistoryEvent(
@@ -2731,24 +2647,60 @@ func (e *historyEngineImpl) NotifyNewHistoryEvent(
 }
 
 func (e *historyEngineImpl) NotifyNewTransferTasks(
+	executionInfo *persistence.WorkflowExecutionInfo,
 	tasks []persistence.Task,
 ) {
 
 	if len(tasks) > 0 {
 		task := tasks[0]
 		clusterName := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
-		e.txProcessor.NotifyNewTask(clusterName, tasks)
+		e.txProcessor.NotifyNewTask(clusterName, executionInfo, tasks)
 	}
 }
 
 func (e *historyEngineImpl) NotifyNewTimerTasks(
+	executionInfo *persistence.WorkflowExecutionInfo,
 	tasks []persistence.Task,
 ) {
 
 	if len(tasks) > 0 {
 		task := tasks[0]
 		clusterName := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
-		e.timerProcessor.NotifyNewTask(clusterName, tasks)
+		e.timerProcessor.NotifyNewTask(clusterName, executionInfo, tasks)
+	}
+}
+
+func (e *historyEngineImpl) NotifyNewCrossClusterTasks(
+	executionInfo *persistence.WorkflowExecutionInfo,
+	tasks []persistence.Task,
+) {
+	if e.crossClusterProcessor == nil {
+		// TODO: remove this check when crossClusterProcessor is wired up and initialized
+		return
+	}
+
+	taskByTargetCluster := make(map[string][]persistence.Task)
+	for _, task := range tasks {
+		// TODO: consider defining a new interface in persistence package
+		// for cross cluster tasks and add a method for returning the target cluster
+		var targetCluster string
+		switch crossClusterTask := task.(type) {
+		case *persistence.CrossClusterStartChildExecutionTask:
+			targetCluster = crossClusterTask.TargetCluster
+		case *persistence.CrossClusterCancelExecutionTask:
+			targetCluster = crossClusterTask.TargetCluster
+		case *persistence.CrossClusterSignalExecutionTask:
+			targetCluster = crossClusterTask.TargetCluster
+		case *persistence.CrossClusterRecordChildWorkflowExecutionCompleteTask:
+			targetCluster = crossClusterTask.TargetCluster
+		default:
+			panic("encountered unknown cross cluster task type")
+		}
+		taskByTargetCluster[targetCluster] = append(taskByTargetCluster[targetCluster], task)
+	}
+
+	for targetCluster, tasks := range taskByTargetCluster {
+		e.crossClusterProcessor.NotifyNewTask(targetCluster, executionInfo, tasks)
 	}
 }
 
@@ -2768,24 +2720,47 @@ func (e *historyEngineImpl) ResetTimerQueue(
 	return err
 }
 
+func (e *historyEngineImpl) ResetCrossClusterQueue(
+	ctx context.Context,
+	clusterName string,
+) error {
+	if e.crossClusterProcessor == nil {
+		return errQueueNotInitialized
+	}
+
+	_, err := e.crossClusterProcessor.HandleAction(clusterName, queue.NewResetAction())
+	return err
+}
+
 func (e *historyEngineImpl) DescribeTransferQueue(
 	ctx context.Context,
 	clusterName string,
-) (*workflow.DescribeQueueResponse, error) {
+) (*types.DescribeQueueResponse, error) {
 	return e.describeQueue(e.txProcessor, clusterName)
 }
 
 func (e *historyEngineImpl) DescribeTimerQueue(
 	ctx context.Context,
 	clusterName string,
-) (*workflow.DescribeQueueResponse, error) {
+) (*types.DescribeQueueResponse, error) {
 	return e.describeQueue(e.timerProcessor, clusterName)
+}
+
+func (e *historyEngineImpl) DescribeCrossClusterQueue(
+	ctx context.Context,
+	clusterName string,
+) (*types.DescribeQueueResponse, error) {
+	if e.crossClusterProcessor == nil {
+		return nil, errQueueNotInitialized
+	}
+
+	return e.describeQueue(e.crossClusterProcessor, clusterName)
 }
 
 func (e *historyEngineImpl) describeQueue(
 	queueProcessor queue.Processor,
 	clusterName string,
-) (*workflow.DescribeQueueResponse, error) {
+) (*types.DescribeQueueResponse, error) {
 	resp, err := queueProcessor.HandleAction(clusterName, queue.NewGetStateAction())
 	if err != nil {
 		return nil, err
@@ -2795,7 +2770,7 @@ func (e *historyEngineImpl) describeQueue(
 	for _, state := range resp.GetStateActionResult.States {
 		serializedStates = append(serializedStates, e.serializeQueueState(state))
 	}
-	return &workflow.DescribeQueueResponse{
+	return &types.DescribeQueueResponse{
 		ProcessingQueueStates: serializedStates,
 	}, nil
 }
@@ -2806,37 +2781,59 @@ func (e *historyEngineImpl) serializeQueueState(
 	return fmt.Sprintf("%v", state)
 }
 
-func validateStartWorkflowExecutionRequest(
-	request *workflow.StartWorkflowExecutionRequest,
-	maxIDLengthLimit int,
+func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
+	request *types.StartWorkflowExecutionRequest,
+	metricsScope int,
 ) error {
 
-	if len(request.GetRequestId()) == 0 {
-		return &workflow.BadRequestError{Message: "Missing request ID."}
+	if len(request.GetRequestID()) == 0 {
+		return &types.BadRequestError{Message: "Missing request ID."}
 	}
 	if request.ExecutionStartToCloseTimeoutSeconds == nil || request.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
-		return &workflow.BadRequestError{Message: "Missing or invalid ExecutionStartToCloseTimeoutSeconds."}
+		return &types.BadRequestError{Message: "Missing or invalid ExecutionStartToCloseTimeoutSeconds."}
 	}
 	if request.TaskStartToCloseTimeoutSeconds == nil || request.GetTaskStartToCloseTimeoutSeconds() <= 0 {
-		return &workflow.BadRequestError{Message: "Missing or invalid TaskStartToCloseTimeoutSeconds."}
+		return &types.BadRequestError{Message: "Missing or invalid TaskStartToCloseTimeoutSeconds."}
 	}
-	if request.TaskList == nil || request.TaskList.Name == nil || request.TaskList.GetName() == "" {
-		return &workflow.BadRequestError{Message: "Missing Tasklist."}
+	if request.TaskList == nil || request.TaskList.GetName() == "" {
+		return &types.BadRequestError{Message: "Missing Tasklist."}
 	}
-	if request.WorkflowType == nil || request.WorkflowType.Name == nil || request.WorkflowType.GetName() == "" {
-		return &workflow.BadRequestError{Message: "Missing WorkflowType."}
+	if request.WorkflowType == nil || request.WorkflowType.GetName() == "" {
+		return &types.BadRequestError{Message: "Missing WorkflowType."}
 	}
-	if len(request.GetDomain()) > maxIDLengthLimit {
-		return &workflow.BadRequestError{Message: "Domain exceeds length limit."}
+
+	if !common.ValidIDLength(
+		request.GetDomain(),
+		e.metricsClient.Scope(metricsScope),
+		e.config.MaxIDLengthWarnLimit(),
+		e.config.DomainNameMaxLength(request.GetDomain()),
+		metrics.CadenceErrDomainNameExceededWarnLimit) {
+		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
-	if len(request.GetWorkflowId()) > maxIDLengthLimit {
-		return &workflow.BadRequestError{Message: "WorkflowId exceeds length limit."}
+
+	if !common.ValidIDLength(
+		request.GetWorkflowID(),
+		e.metricsClient.Scope(metricsScope),
+		e.config.MaxIDLengthWarnLimit(),
+		e.config.WorkflowIDMaxLength(request.GetDomain()),
+		metrics.CadenceErrWorkflowIDExceededWarnLimit) {
+		return &types.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
-	if len(request.TaskList.GetName()) > maxIDLengthLimit {
-		return &workflow.BadRequestError{Message: "TaskList exceeds length limit."}
+	if !common.ValidIDLength(
+		request.TaskList.GetName(),
+		e.metricsClient.Scope(metricsScope),
+		e.config.MaxIDLengthWarnLimit(),
+		e.config.TaskListNameMaxLength(request.GetDomain()),
+		metrics.CadenceErrTaskListNameExceededWarnLimit) {
+		return &types.BadRequestError{Message: "TaskList exceeds length limit."}
 	}
-	if len(request.WorkflowType.GetName()) > maxIDLengthLimit {
-		return &workflow.BadRequestError{Message: "WorkflowType exceeds length limit."}
+	if !common.ValidIDLength(
+		request.WorkflowType.GetName(),
+		e.metricsClient.Scope(metricsScope),
+		e.config.MaxIDLengthWarnLimit(),
+		e.config.WorkflowTypeMaxLength(request.GetDomain()),
+		metrics.CadenceErrWorkflowTypeExceededWarnLimit) {
+		return &types.BadRequestError{Message: "WorkflowType exceeds length limit."}
 	}
 
 	return common.ValidateRetryPolicy(request.RetryPolicy)
@@ -2844,7 +2841,7 @@ func validateStartWorkflowExecutionRequest(
 
 func (e *historyEngineImpl) overrideStartWorkflowExecutionRequest(
 	domainEntry *cache.DomainCacheEntry,
-	request *workflow.StartWorkflowExecutionRequest,
+	request *types.StartWorkflowExecutionRequest,
 	metricsScope int,
 ) {
 
@@ -2864,108 +2861,54 @@ func (e *historyEngineImpl) overrideStartWorkflowExecutionRequest(
 	}
 }
 
-func validateDomainUUID(
-	domainUUID *string,
-) (string, error) {
-
-	if domainUUID == nil {
-		return "", &workflow.BadRequestError{Message: "Missing domain UUID."}
-	} else if uuid.Parse(*domainUUID) == nil {
-		return "", &workflow.BadRequestError{Message: "Invalid domain UUID."}
-	}
-	return *domainUUID, nil
-}
-
-func (e *historyEngineImpl) getActiveDomainEntry(
-	domainUUID *string,
-) (*cache.DomainCacheEntry, error) {
-
-	return getActiveDomainEntryFromShard(e.shard, domainUUID)
-}
-
-func getActiveDomainEntryFromShard(
-	shard shard.Context,
-	domainUUID *string,
-) (*cache.DomainCacheEntry, error) {
-
-	domainID, err := validateDomainUUID(domainUUID)
-	if err != nil {
-		return nil, err
-	}
-
-	domainEntry, err := shard.GetDomainCache().GetDomainByID(domainID)
-	if err != nil {
-		return nil, err
-	}
-	if err = domainEntry.GetDomainNotActiveErr(); err != nil {
-		return domainEntry, err
-	}
-	return domainEntry, nil
-}
-
-func (e *historyEngineImpl) getPendingActiveDomainEntry(
-	domainUUID *string,
-) (bool, error) {
-
-	domainID, err := validateDomainUUID(domainUUID)
-	if err != nil {
-		return false, err
-	}
-
-	domainEntry, err := e.shard.GetDomainCache().GetDomainByID(domainID)
-	if err != nil {
-		return false, err
-	}
-
-	return domainEntry.IsDomainPendingActive(), nil
-}
-
 func getScheduleID(
 	activityID string,
 	mutableState execution.MutableState,
 ) (int64, error) {
 
 	if activityID == "" {
-		return 0, &workflow.BadRequestError{Message: "Neither ActivityID nor ScheduleID is provided"}
+		return 0, &types.BadRequestError{Message: "Neither ActivityID nor ScheduleID is provided"}
 	}
 	activityInfo, ok := mutableState.GetActivityByActivityID(activityID)
 	if !ok {
-		return 0, &workflow.BadRequestError{Message: "Cannot locate Activity ScheduleID"}
+		return 0, &types.BadRequestError{Message: "Cannot locate Activity ScheduleID"}
 	}
 	return activityInfo.ScheduleID, nil
 }
 
 func getStartRequest(
 	domainID string,
-	request *workflow.SignalWithStartWorkflowExecutionRequest,
-) *h.StartWorkflowExecutionRequest {
+	request *types.SignalWithStartWorkflowExecutionRequest,
+) (*types.HistoryStartWorkflowExecutionRequest, error) {
 
-	req := &workflow.StartWorkflowExecutionRequest{
+	req := &types.StartWorkflowExecutionRequest{
 		Domain:                              request.Domain,
-		WorkflowId:                          request.WorkflowId,
+		WorkflowID:                          request.WorkflowID,
 		WorkflowType:                        request.WorkflowType,
 		TaskList:                            request.TaskList,
 		Input:                               request.Input,
 		ExecutionStartToCloseTimeoutSeconds: request.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      request.TaskStartToCloseTimeoutSeconds,
 		Identity:                            request.Identity,
-		RequestId:                           request.RequestId,
-		WorkflowIdReusePolicy:               request.WorkflowIdReusePolicy,
+		RequestID:                           request.RequestID,
+		WorkflowIDReusePolicy:               request.WorkflowIDReusePolicy,
 		RetryPolicy:                         request.RetryPolicy,
 		CronSchedule:                        request.CronSchedule,
 		Memo:                                request.Memo,
 		SearchAttributes:                    request.SearchAttributes,
 		Header:                              request.Header,
+		DelayStartSeconds:                   request.DelayStartSeconds,
 	}
 
-	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req)
-	return startRequest
+	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
+
+	return startRequest, nil
 }
 
 func (e *historyEngineImpl) applyWorkflowIDReusePolicyForSigWithStart(
 	prevExecutionInfo *persistence.WorkflowExecutionInfo,
-	execution workflow.WorkflowExecution,
-	wfIDReusePolicy workflow.WorkflowIdReusePolicy,
+	execution types.WorkflowExecution,
+	wfIDReusePolicy types.WorkflowIDReusePolicy,
 ) error {
 
 	prevStartRequestID := prevExecutionInfo.CreateRequestID
@@ -2988,8 +2931,8 @@ func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(
 	prevRunID string,
 	prevState int,
 	prevCloseState int,
-	execution workflow.WorkflowExecution,
-	wfIDReusePolicy workflow.WorkflowIdReusePolicy,
+	execution types.WorkflowExecution,
+	wfIDReusePolicy types.WorkflowIDReusePolicy,
 ) error {
 
 	// here we know some information about the prev workflow, i.e. either running right now
@@ -2998,38 +2941,38 @@ func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(
 	case persistence.WorkflowStateCreated,
 		persistence.WorkflowStateRunning:
 		msg := "Workflow execution is already running. WorkflowId: %v, RunId: %v."
-		return getWorkflowAlreadyStartedError(msg, prevStartRequestID, execution.GetWorkflowId(), prevRunID)
+		return getWorkflowAlreadyStartedError(msg, prevStartRequestID, execution.GetWorkflowID(), prevRunID)
 	case persistence.WorkflowStateCompleted:
 		// previous workflow completed, proceed
 	default:
 		// persistence.WorkflowStateZombie or unknown type
-		return &workflow.InternalServiceError{Message: fmt.Sprintf("Failed to process workflow, workflow has invalid state: %v.", prevState)}
+		return &types.InternalServiceError{Message: fmt.Sprintf("Failed to process workflow, workflow has invalid state: %v.", prevState)}
 	}
 
 	switch wfIDReusePolicy {
-	case workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly:
+	case types.WorkflowIDReusePolicyAllowDuplicateFailedOnly:
 		if _, ok := FailedWorkflowCloseState[prevCloseState]; !ok {
 			msg := "Workflow execution already finished successfully. WorkflowId: %v, RunId: %v. Workflow ID reuse policy: allow duplicate workflow ID if last run failed."
-			return getWorkflowAlreadyStartedError(msg, prevStartRequestID, execution.GetWorkflowId(), prevRunID)
+			return getWorkflowAlreadyStartedError(msg, prevStartRequestID, execution.GetWorkflowID(), prevRunID)
 		}
-	case workflow.WorkflowIdReusePolicyAllowDuplicate,
-		workflow.WorkflowIdReusePolicyTerminateIfRunning:
+	case types.WorkflowIDReusePolicyAllowDuplicate,
+		types.WorkflowIDReusePolicyTerminateIfRunning:
 		// no check need here
-	case workflow.WorkflowIdReusePolicyRejectDuplicate:
+	case types.WorkflowIDReusePolicyRejectDuplicate:
 		msg := "Workflow execution already finished. WorkflowId: %v, RunId: %v. Workflow ID reuse policy: reject duplicate workflow ID."
-		return getWorkflowAlreadyStartedError(msg, prevStartRequestID, execution.GetWorkflowId(), prevRunID)
+		return getWorkflowAlreadyStartedError(msg, prevStartRequestID, execution.GetWorkflowID(), prevRunID)
 	default:
-		return &workflow.InternalServiceError{Message: "Failed to process start workflow reuse policy."}
+		return &types.InternalServiceError{Message: "Failed to process start workflow reuse policy."}
 	}
 
 	return nil
 }
 
 func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workflowID string, runID string) error {
-	return &workflow.WorkflowExecutionAlreadyStartedError{
-		Message:        common.StringPtr(fmt.Sprintf(errMsg, workflowID, runID)),
-		StartRequestId: common.StringPtr(fmt.Sprintf("%v", createRequestID)),
-		RunId:          common.StringPtr(fmt.Sprintf("%v", runID)),
+	return &types.WorkflowExecutionAlreadyStartedError{
+		Message:        fmt.Sprintf(errMsg, workflowID, runID),
+		StartRequestID: createRequestID,
+		RunID:          runID,
 	}
 }
 
@@ -3037,7 +2980,7 @@ func (e *historyEngineImpl) GetReplicationMessages(
 	ctx context.Context,
 	pollingCluster string,
 	lastReadMessageID int64,
-) (*r.ReplicationMessages, error) {
+) (*types.ReplicationMessages, error) {
 
 	scope := metrics.HistoryGetReplicationMessagesScope
 	sw := e.metricsClient.StartTimer(scope, metrics.GetReplicationMessagesForShardLatency)
@@ -3054,7 +2997,7 @@ func (e *historyEngineImpl) GetReplicationMessages(
 	}
 
 	//Set cluster status for sync shard info
-	replicationMessages.SyncShardStatus = &r.SyncShardStatus{
+	replicationMessages.SyncShardStatus = &types.SyncShardStatus{
 		Timestamp: common.Int64Ptr(e.timeSource.Now().UnixNano()),
 	}
 	e.logger.Debug("Successfully fetched replication messages.", tag.Counter(len(replicationMessages.ReplicationTasks)))
@@ -3063,14 +3006,14 @@ func (e *historyEngineImpl) GetReplicationMessages(
 
 func (e *historyEngineImpl) GetDLQReplicationMessages(
 	ctx context.Context,
-	taskInfos []*r.ReplicationTaskInfo,
-) ([]*r.ReplicationTask, error) {
+	taskInfos []*types.ReplicationTaskInfo,
+) ([]*types.ReplicationTask, error) {
 
 	scope := metrics.HistoryGetDLQReplicationMessagesScope
 	sw := e.metricsClient.StartTimer(scope, metrics.GetDLQReplicationMessagesLatency)
 	defer sw.Stop()
 
-	tasks := make([]*r.ReplicationTask, 0, len(taskInfos))
+	tasks := make([]*types.ReplicationTask, 0, len(taskInfos))
 	for _, taskInfo := range taskInfos {
 		task, err := e.replicationAckManager.GetTask(ctx, taskInfo)
 		if err != nil {
@@ -3090,10 +3033,10 @@ func (e *historyEngineImpl) ReapplyEvents(
 	domainUUID string,
 	workflowID string,
 	runID string,
-	reapplyEvents []*workflow.HistoryEvent,
+	reapplyEvents []*types.HistoryEvent,
 ) error {
 
-	domainEntry, err := e.getActiveDomainEntry(common.StringPtr(domainUUID))
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(domainUUID)
 	if err != nil {
 		switch {
 		case domainEntry != nil && domainEntry.IsDomainPendingActive():
@@ -3104,17 +3047,19 @@ func (e *historyEngineImpl) ReapplyEvents(
 	}
 	domainID := domainEntry.GetInfo().ID
 	// remove run id from the execution so that reapply events to the current run
-	currentExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
+	currentExecution := types.WorkflowExecution{
+		WorkflowID: workflowID,
 	}
 
-	return e.updateWorkflowExecutionWithAction(
+	return workflow.UpdateWithActionFunc(
 		ctx,
+		e.executionCache,
 		domainID,
 		currentExecution,
-		func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
+		e.timeSource.Now(),
+		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			// Filter out reapply event from the same cluster
-			toReapplyEvents := make([]*workflow.HistoryEvent, 0, len(reapplyEvents))
+			toReapplyEvents := make([]*types.HistoryEvent, 0, len(reapplyEvents))
 			lastWriteVersion, err := mutableState.GetLastWriteVersion()
 			if err != nil {
 				return nil, err
@@ -3124,7 +3069,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 					// The reapply is from the same cluster. Ignoring.
 					continue
 				}
-				dedupResource := definition.NewEventReappliedID(runID, event.GetEventId(), event.GetVersion())
+				dedupResource := definition.NewEventReappliedID(runID, event.GetEventID(), event.GetVersion())
 				if mutableState.IsResourceDuplicated(dedupResource) {
 					// already apply the signal
 					continue
@@ -3132,8 +3077,8 @@ func (e *historyEngineImpl) ReapplyEvents(
 				toReapplyEvents = append(toReapplyEvents, event)
 			}
 			if len(toReapplyEvents) == 0 {
-				return &updateWorkflowAction{
-					noop: true,
+				return &workflow.UpdateAction{
+					Noop: true,
 				}, nil
 			}
 
@@ -3149,13 +3094,16 @@ func (e *historyEngineImpl) ReapplyEvents(
 				if baseRebuildLastEventID == common.EmptyEventID {
 					e.logger.Warn("cannot reapply event to a finished workflow",
 						tag.WorkflowDomainID(domainID),
-						tag.WorkflowID(currentExecution.GetWorkflowId()),
+						tag.WorkflowID(currentExecution.GetWorkflowID()),
 					)
 					e.metricsClient.IncCounter(metrics.HistoryReapplyEventsScope, metrics.EventReapplySkippedCount)
-					return &updateWorkflowAction{noop: true}, nil
+					return &workflow.UpdateAction{Noop: true}, nil
 				}
 
 				baseVersionHistories := mutableState.GetVersionHistories()
+				if baseVersionHistories == nil {
+					return nil, execution.ErrMissingVersionHistories
+				}
 				baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
 				if err != nil {
 					return nil, err
@@ -3188,20 +3136,21 @@ func (e *historyEngineImpl) ReapplyEvents(
 					),
 					ndc.EventsReapplicationResetWorkflowReason,
 					toReapplyEvents,
+					false,
 				); err != nil {
 					return nil, err
 				}
-				return &updateWorkflowAction{
-					noop: true,
+				return &workflow.UpdateAction{
+					Noop: true,
 				}, nil
 			}
 
-			postActions := &updateWorkflowAction{
-				createDecision: true,
+			postActions := &workflow.UpdateAction{
+				CreateDecision: true,
 			}
 			// Do not create decision task when the workflow is cron and the cron has not been started yet
 			if mutableState.GetExecutionInfo().CronSchedule != "" && !mutableState.HasProcessedOrPendingDecision() {
-				postActions.createDecision = false
+				postActions.CreateDecision = false
 			}
 			reappliedEvents, err := e.eventsReapplier.ReapplyEvents(
 				ctx,
@@ -3211,23 +3160,24 @@ func (e *historyEngineImpl) ReapplyEvents(
 			)
 			if err != nil {
 				e.logger.Error("failed to re-apply stale events", tag.Error(err))
-				return nil, &workflow.InternalServiceError{Message: "unable to re-apply stale events"}
+				return nil, &types.InternalServiceError{Message: "unable to re-apply stale events"}
 			}
 			if len(reappliedEvents) == 0 {
-				return &updateWorkflowAction{
-					noop: true,
+				return &workflow.UpdateAction{
+					Noop: true,
 				}, nil
 			}
 			return postActions, nil
-		})
+		},
+	)
 }
 
 func (e *historyEngineImpl) ReadDLQMessages(
 	ctx context.Context,
-	request *r.ReadDLQMessagesRequest,
-) (*r.ReadDLQMessagesResponse, error) {
+	request *types.ReadDLQMessagesRequest,
+) (*types.ReadDLQMessagesResponse, error) {
 
-	tasks, token, err := e.replicationDLQHandler.ReadMessages(
+	tasks, taskInfo, token, err := e.replicationDLQHandler.ReadMessages(
 		ctx,
 		request.GetSourceCluster(),
 		request.GetInclusiveEndMessageID(),
@@ -3237,16 +3187,17 @@ func (e *historyEngineImpl) ReadDLQMessages(
 	if err != nil {
 		return nil, err
 	}
-	return &r.ReadDLQMessagesResponse{
-		Type:             request.GetType().Ptr(),
-		ReplicationTasks: tasks,
-		NextPageToken:    token,
+	return &types.ReadDLQMessagesResponse{
+		Type:                 request.GetType().Ptr(),
+		ReplicationTasks:     tasks,
+		ReplicationTasksInfo: taskInfo,
+		NextPageToken:        token,
 	}, nil
 }
 
 func (e *historyEngineImpl) PurgeDLQMessages(
 	ctx context.Context,
-	request *r.PurgeDLQMessagesRequest,
+	request *types.PurgeDLQMessagesRequest,
 ) error {
 
 	return e.replicationDLQHandler.PurgeMessages(
@@ -3258,8 +3209,8 @@ func (e *historyEngineImpl) PurgeDLQMessages(
 
 func (e *historyEngineImpl) MergeDLQMessages(
 	ctx context.Context,
-	request *r.MergeDLQMessagesRequest,
-) (*r.MergeDLQMessagesResponse, error) {
+	request *types.MergeDLQMessagesRequest,
+) (*types.MergeDLQMessagesResponse, error) {
 
 	token, err := e.replicationDLQHandler.MergeMessages(
 		ctx,
@@ -3271,7 +3222,7 @@ func (e *historyEngineImpl) MergeDLQMessages(
 	if err != nil {
 		return nil, err
 	}
-	return &r.MergeDLQMessagesResponse{
+	return &types.MergeDLQMessagesResponse{
 		NextPageToken: token,
 	}, nil
 }
@@ -3279,10 +3230,10 @@ func (e *historyEngineImpl) MergeDLQMessages(
 func (e *historyEngineImpl) RefreshWorkflowTasks(
 	ctx context.Context,
 	domainUUID string,
-	workflowExecution workflow.WorkflowExecution,
+	workflowExecution types.WorkflowExecution,
 ) (retError error) {
 
-	domainEntry, err := e.getActiveDomainEntry(common.StringPtr(domainUUID))
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(domainUUID)
 	if err != nil {
 		return err
 	}
@@ -3305,6 +3256,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 
 	mutableStateTaskRefresher := execution.NewMutableStateTaskRefresher(
 		e.shard.GetConfig(),
+		e.shard.GetClusterMetadata(),
 		e.shard.GetDomainCache(),
 		e.shard.GetEventsCache(),
 		e.shard.GetLogger(),
@@ -3325,76 +3277,33 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 	return nil
 }
 
-func (e *historyEngineImpl) loadWorkflowOnce(
+func (e *historyEngineImpl) GetCrossClusterTasks(
 	ctx context.Context,
-	domainID string,
-	workflowID string,
-	runID string,
-) (workflowContext, error) {
+	targetCluster string,
+) ([]*types.CrossClusterTaskRequest, error) {
+	if e.crossClusterProcessor == nil {
+		return nil, errQueueNotInitialized
+	}
 
-	wfContext, release, err := e.executionCache.GetOrCreateWorkflowExecution(
-		ctx,
-		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
-	)
+	actionResult, err := e.crossClusterProcessor.HandleAction(targetCluster, queue.NewGetTasksAction())
 	if err != nil {
 		return nil, err
 	}
 
-	mutableState, err := wfContext.LoadWorkflowExecution(ctx)
-	if err != nil {
-		release(err)
-		return nil, err
-	}
-
-	return newWorkflowContext(wfContext, release, mutableState), nil
+	return actionResult.GetTasksResult.TaskRequests, nil
 }
 
-func (e *historyEngineImpl) loadWorkflow(
+func (e *historyEngineImpl) RespondCrossClusterTasksCompleted(
 	ctx context.Context,
-	domainID string,
-	workflowID string,
-	runID string,
-) (workflowContext, error) {
-
-	if runID != "" {
-		return e.loadWorkflowOnce(ctx, domainID, workflowID, runID)
+	targetCluster string,
+	responses []*types.CrossClusterTaskResponse,
+) error {
+	if e.crossClusterProcessor == nil {
+		return errQueueNotInitialized
 	}
 
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-
-		workflowContext, err := e.loadWorkflowOnce(ctx, domainID, workflowID, "")
-		if err != nil {
-			return nil, err
-		}
-
-		if workflowContext.getMutableState().IsWorkflowExecutionRunning() {
-			return workflowContext, nil
-		}
-
-		// workflow not running, need to check current record
-		resp, err := e.shard.GetExecutionManager().GetCurrentExecution(
-			ctx,
-			&persistence.GetCurrentExecutionRequest{
-				DomainID:   domainID,
-				WorkflowID: workflowID,
-			},
-		)
-		if err != nil {
-			workflowContext.getReleaseFn()(err)
-			return nil, err
-		}
-
-		if resp.RunID == workflowContext.getRunID() {
-			return workflowContext, nil
-		}
-		workflowContext.getReleaseFn()(nil)
-	}
-
-	return nil, &workflow.InternalServiceError{Message: "unable to locate current workflow execution"}
+	_, err := e.crossClusterProcessor.HandleAction(targetCluster, queue.NewUpdateTasksAction(responses))
+	return err
 }
 
 func (e *historyEngineImpl) newChildContext(

@@ -25,25 +25,35 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
+	"os"
 	"strconv"
 	"time"
 
-	"github.com/gocql/gocql"
+	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/auth"
+	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/codec"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
-	cassp "github.com/uber/cadence/common/persistence/cassandra"
-	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/tools/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	cassandra_db "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+	"github.com/uber/cadence/common/persistence/sql"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
+	"github.com/uber/cadence/tools/common/flag"
 )
 
-const maxEventID = 9999
+const (
+	maxEventID      = 9999
+	tableRenderSize = 10
+)
 
 // AdminShowWorkflow shows history
 func AdminShowWorkflow(c *cli.Context) {
@@ -54,24 +64,30 @@ func AdminShowWorkflow(c *cli.Context) {
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	session := connectToCassandra(c)
 	serializer := persistence.NewPayloadSerializer()
 	var history []*persistence.DataBlob
 	if len(tid) != 0 {
-		histV2 := cassp.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
-		resp, err := histV2.ReadHistoryBranch(ctx, &persistence.InternalReadHistoryBranchRequest{
-			TreeID:    tid,
-			BranchID:  bid,
-			MinNodeID: 1,
-			MaxNodeID: maxEventID,
-			PageSize:  maxEventID,
-			ShardID:   sid,
+		thriftrwEncoder := codec.NewThriftRWEncoder()
+		histV2 := initializeHistoryManager(c)
+		branchToken, err := thriftrwEncoder.Encode(&shared.HistoryBranch{
+			TreeID:   &tid,
+			BranchID: &bid,
+		})
+		if err != nil {
+			ErrorAndExit("encoding branch token err", err)
+		}
+		resp, err := histV2.ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
+			BranchToken: branchToken,
+			MinEventID:  1,
+			MaxEventID:  maxEventID,
+			PageSize:    maxEventID,
+			ShardID:     &sid,
 		})
 		if err != nil {
 			ErrorAndExit("ReadHistoryBranch err", err)
 		}
 
-		history = resp.History
+		history = resp.HistoryEventBlobs
 	} else {
 		ErrorAndExit("need to specify TreeID/BranchID/ShardID", nil)
 	}
@@ -84,10 +100,11 @@ func AdminShowWorkflow(c *cli.Context) {
 	for idx, b := range history {
 		totalSize += len(b.Data)
 		fmt.Printf("======== batch %v, blob len: %v ======\n", idx+1, len(b.Data))
-		historyBatch, err := serializer.DeserializeBatchEvents(b)
+		internalHistoryBatch, err := serializer.DeserializeBatchEvents(b)
 		if err != nil {
 			ErrorAndExit("DeserializeBatchEvents err", err)
 		}
+		historyBatch := thrift.FromHistoryEventArray(internalHistoryBatch)
 		allEvents.Events = append(allEvents.Events, historyBatch...)
 		for _, e := range historyBatch {
 			jsonstr, err := json.Marshal(e)
@@ -145,13 +162,13 @@ func AdminDescribeWorkflow(c *cli.Context) {
 			for _, p := range ms.ExecutionInfo.AutoResetPoints.Points {
 				createT := time.Unix(0, p.GetCreatedTimeNano())
 				expireT := time.Unix(0, p.GetExpiringTimeNano())
-				fmt.Println(p.GetBinaryChecksum(), p.GetRunId(), p.GetFirstDecisionCompletedId(), p.GetResettable(), createT, expireT)
+				fmt.Println(p.GetBinaryChecksum(), p.GetRunID(), p.GetFirstDecisionCompletedID(), p.GetResettable(), createT, expireT)
 			}
 		}
 	}
 }
 
-func describeMutableState(c *cli.Context) *admin.DescribeWorkflowExecutionResponse {
+func describeMutableState(c *cli.Context) *types.AdminDescribeWorkflowExecutionResponse {
 	adminClient := cFactory.ServerAdminClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
@@ -161,13 +178,16 @@ func describeMutableState(c *cli.Context) *admin.DescribeWorkflowExecutionRespon
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	resp, err := adminClient.DescribeWorkflowExecution(ctx, &admin.DescribeWorkflowExecutionRequest{
-		Domain: common.StringPtr(domain),
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(wid),
-			RunId:      common.StringPtr(rid),
+	resp, err := adminClient.DescribeWorkflowExecution(
+		ctx,
+		&types.AdminDescribeWorkflowExecutionRequest{
+			Domain: domain,
+			Execution: &types.WorkflowExecution{
+				WorkflowID: wid,
+				RunID:      rid,
+			},
 		},
-	})
+		cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Get workflow mutableState failed", err)
 	}
@@ -189,14 +209,16 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	domainID := ms.ExecutionInfo.DomainID
 	skipError := c.Bool(FlagSkipErrorMode)
 
-	ctx, cancel := newContext(c)
-	defer cancel()
-	session := connectToCassandra(c)
-	shardID := resp.GetShardId()
+	shardID := resp.GetShardID()
 	shardIDInt, err := strconv.Atoi(shardID)
 	if err != nil {
 		ErrorAndExit("strconv.Atoi(shardID) err", err)
 	}
+	ctx, cancel := newContext(c)
+	defer cancel()
+	histV2 := initializeHistoryManager(c)
+	defer histV2.Close()
+	exeStore := initializeExecutionStore(c, shardIDInt, 0)
 
 	branchInfo := shared.HistoryBranch{}
 	thriftrwEncoder := codec.NewThriftRWEncoder()
@@ -204,7 +226,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	if ms.VersionHistories != nil {
 		// if VersionHistories is set, then all branch infos are stored in VersionHistories
 		branchTokens = [][]byte{}
-		for _, versionHistory := range ms.VersionHistories.ToThrift().Histories {
+		for _, versionHistory := range ms.VersionHistories.ToInternalType().Histories {
 			branchTokens = append(branchTokens, versionHistory.BranchToken)
 		}
 	}
@@ -216,10 +238,9 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		}
 		fmt.Println("deleting history events for ...")
 		prettyPrintJSONObject(branchInfo)
-		histV2 := cassp.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
-		err = histV2.DeleteHistoryBranch(ctx, &persistence.InternalDeleteHistoryBranchRequest{
-			BranchInfo: branchInfo,
-			ShardID:    shardIDInt,
+		err = histV2.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
+			BranchToken: branchToken,
+			ShardID:     &shardIDInt,
 		})
 		if err != nil {
 			if skipError {
@@ -230,7 +251,6 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		}
 	}
 
-	exeStore, _ := cassp.NewWorkflowExecutionPersistence(shardIDInt, session, loggerimpl.NewNopLogger())
 	req := &persistence.DeleteWorkflowExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: wid,
@@ -264,27 +284,25 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	fmt.Println("delete current row successfully")
 }
 
-func readOneRow(query *gocql.Query) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-	err := query.MapScan(result)
-	return result, err
-}
-
-func connectToCassandra(c *cli.Context) *gocql.Session {
+func connectToCassandra(c *cli.Context) (nosqlplugin.DB, nosqlplugin.AdminDB) {
 	host := getRequiredOption(c, FlagDBAddress)
 	if !c.IsSet(FlagDBPort) {
 		ErrorAndExit("cassandra port is required", nil)
 	}
 
-	cassandraConfig := &config.Cassandra{
-		Hosts:    host,
-		Port:     c.Int(FlagDBPort),
-		User:     c.String(FlagUsername),
-		Password: c.String(FlagPassword),
-		Keyspace: getRequiredOption(c, FlagKeyspace),
+	cfg := config.NoSQL{
+		PluginName:   cassandra_db.PluginName,
+		Hosts:        host,
+		Port:         c.Int(FlagDBPort),
+		Region:       c.String(FlagDBRegion),
+		User:         c.String(FlagUsername),
+		Password:     c.String(FlagPassword),
+		Keyspace:     getRequiredOption(c, FlagKeyspace),
+		ProtoVersion: c.Int(FlagProtoVersion),
+		MaxConns:     20,
 	}
 	if c.Bool(FlagEnableTLS) {
-		cassandraConfig.TLS = &auth.TLS{
+		cfg.TLS = &config.TLS{
 			Enabled:                true,
 			CertFile:               c.String(FlagTLSCertPath),
 			KeyFile:                c.String(FlagTLSKeyPath),
@@ -293,20 +311,55 @@ func connectToCassandra(c *cli.Context) *gocql.Session {
 		}
 	}
 
-	clusterCfg, err := cassandra.NewCassandraCluster(cassandraConfig, 10)
+	db, err := nosql.NewNoSQLDB(&cfg, loggerimpl.NewNopLogger())
 	if err != nil {
 		ErrorAndExit("connect to Cassandra failed", err)
 	}
-	clusterCfg.SerialConsistency = gocql.LocalSerial
-	clusterCfg.NumConns = 20
-	clusterCfg.PoolConfig.HostSelectionPolicy = nil
-	clusterCfg.Consistency = gocql.LocalQuorum
+	adminDB, err := nosql.NewNoSQLAdminDB(&cfg, loggerimpl.NewNopLogger())
+	if err != nil {
+		ErrorAndExit("connect to Cassandra failed", err)
+	}
+	return db, adminDB
+}
 
-	session, err := clusterCfg.CreateSession()
-	if err != nil {
-		ErrorAndExit("connect to Cassandra failed", err)
+func connectToSQL(c *cli.Context) sqlplugin.DB {
+	host := getRequiredOption(c, FlagDBAddress)
+	if !c.IsSet(FlagDBPort) {
+		ErrorAndExit("sql port is required", nil)
 	}
-	return session
+	encodingType := c.String(FlagEncodingType)
+	decodingTypesStr := c.StringSlice(FlagDecodingTypes)
+	connectAttributes := c.Generic(FlagConnectionAttributes).(*flag.StringMap)
+
+	sqlConfig := &config.SQL{
+		ConnectAddr: net.JoinHostPort(
+			host,
+			c.String(FlagDBPort),
+		),
+		PluginName:        c.String(FlagDBType),
+		User:              c.String(FlagUsername),
+		Password:          c.String(FlagPassword),
+		DatabaseName:      getRequiredOption(c, FlagDatabaseName),
+		EncodingType:      encodingType,
+		DecodingTypes:     decodingTypesStr,
+		ConnectAttributes: connectAttributes.Value(),
+	}
+
+	if c.Bool(FlagEnableTLS) {
+		sqlConfig.TLS = &config.TLS{
+			Enabled:                true,
+			CertFile:               c.String(FlagTLSCertPath),
+			KeyFile:                c.String(FlagTLSKeyPath),
+			CaFile:                 c.String(FlagTLSCaPath),
+			EnableHostVerification: c.Bool(FlagTLSEnableHostVerification),
+		}
+	}
+
+	db, err := sql.NewSQLDB(sqlConfig)
+	if err != nil {
+		ErrorAndExit("connect to SQL failed", err)
+	}
+	return db
 }
 
 // AdminGetDomainIDOrName map domain
@@ -317,40 +370,22 @@ func AdminGetDomainIDOrName(c *cli.Context) {
 		ErrorAndExit("Need either domainName or domainID", nil)
 	}
 
-	session := connectToCassandra(c)
+	db, _ := connectToCassandra(c)
 
+	ctx, cancel := newContext(c)
+	defer cancel()
 	if len(domainID) > 0 {
-		tmpl := "select domain from domains where id = ? "
-		query := session.Query(tmpl, domainID)
-		res, err := readOneRow(query)
+		domain, err := db.SelectDomain(ctx, &domainID, nil)
 		if err != nil {
-			ErrorAndExit("readOneRow", err)
+			ErrorAndExit("SelectDomain error", err)
 		}
-		domain := res["domain"].(map[string]interface{})
-		domainName := domain["name"].(string)
-		fmt.Printf("domainName for domainID %v is %v \n", domainID, domainName)
+		fmt.Printf("domainName for domainID %v is %v \n", domainID, domain.Info.Name)
 	} else {
-		tmpl := "select domain from domains_by_name where name = ?"
-		tmplV2 := "select domain from domains_by_name_v2 where domains_partition=0 and name = ?"
-
-		query := session.Query(tmpl, domainName)
-		res, err := readOneRow(query)
+		domain, err := db.SelectDomain(ctx, nil, &domainName)
 		if err != nil {
-			fmt.Printf("v1 return error: %v , trying v2...\n", err)
-
-			query := session.Query(tmplV2, domainName)
-			res, err := readOneRow(query)
-			if err != nil {
-				ErrorAndExit("readOneRow for v2", err)
-			}
-			domain := res["domain"].(map[string]interface{})
-			domainID := domain["id"].(gocql.UUID).String()
-			fmt.Printf("domainID for domainName %v is %v \n", domainName, domainID)
-		} else {
-			domain := res["domain"].(map[string]interface{})
-			domainID := domain["id"].(gocql.UUID).String()
-			fmt.Printf("domainID for domainName %v is %v \n", domainName, domainID)
+			ErrorAndExit("SelectDomain error", err)
 		}
+		fmt.Printf("domainID for domainName %v is %v \n", domain.Info.ID, domainID)
 	}
 }
 
@@ -378,15 +413,20 @@ func AdminRemoveTask(c *cli.Context) {
 	if common.TaskType(typeID) == common.TaskTypeTimer {
 		visibilityTimestamp = getRequiredInt64Option(c, FlagTaskVisibilityTimestamp)
 	}
+	var clusterName string
+	if common.TaskType(taskID) == common.TaskTypeCrossCluster {
+		clusterName = getRequiredOption(c, FlagCluster)
+	}
 
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	req := &shared.RemoveTaskRequest{
-		ShardID:             common.Int32Ptr(int32(shardID)),
+	req := &types.RemoveTaskRequest{
+		ShardID:             int32(shardID),
 		Type:                common.Int32Ptr(int32(typeID)),
-		TaskID:              common.Int64Ptr(taskID),
+		TaskID:              taskID,
 		VisibilityTimestamp: common.Int64Ptr(visibilityTimestamp),
+		ClusterName:         clusterName,
 	}
 
 	err := adminClient.RemoveTask(ctx, req)
@@ -401,9 +441,7 @@ func AdminDescribeShard(c *cli.Context) {
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	session := connectToCassandra(c)
-	shardStore := cassp.NewShardPersistenceFromSession(session, "current-cluster", loggerimpl.NewNopLogger())
-	shardManager := persistence.NewShardManager(shardStore)
+	shardManager := initializeShardManager(c)
 
 	getShardReq := &persistence.GetShardRequest{ShardID: sid}
 	shard, err := shardManager.GetShard(ctx, getShardReq)
@@ -421,9 +459,7 @@ func AdminSetShardRangeID(c *cli.Context) {
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	session := connectToCassandra(c)
-	shardStore := cassp.NewShardPersistenceFromSession(session, "current-cluster", loggerimpl.NewNopLogger())
-	shardManager := persistence.NewShardManager(shardStore)
+	shardManager := initializeShardManager(c)
 
 	getShardResp, err := shardManager.GetShard(ctx, &persistence.GetShardRequest{ShardID: sid})
 	if err != nil {
@@ -455,13 +491,64 @@ func AdminCloseShard(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	req := &shared.CloseShardRequest{}
-	req.ShardID = common.Int32Ptr(int32(sid))
+	req := &types.CloseShardRequest{}
+	req.ShardID = int32(sid)
 
 	err := adminClient.CloseShard(ctx, req)
 	if err != nil {
 		ErrorAndExit("Close shard task has failed", err)
 	}
+}
+
+// AdminDescribeShardDistribution describes shard distribution
+func AdminDescribeShardDistribution(c *cli.Context) {
+	adminClient := cFactory.ServerAdminClient(c)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	req := &types.DescribeShardDistributionRequest{
+		PageSize: int32(c.Int(FlagPageSize)),
+		PageID:   int32(c.Int(FlagPageID)),
+	}
+
+	resp, err := adminClient.DescribeShardDistribution(ctx, req)
+	if err != nil {
+		ErrorAndExit("Shard list failed", err)
+	}
+
+	fmt.Printf("Total Number of Shards: %d \n", resp.NumberOfShards)
+	fmt.Printf("Number of Shards Returned: %d \n", len(resp.Shards))
+
+	if len(resp.Shards) == 0 {
+		return
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetBorder(false)
+	table.SetColumnSeparator("|")
+	header := []string{"ShardID", "Identity"}
+	headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue}
+	table.SetHeader(header)
+	table.SetHeaderColor(headerColor...)
+	table.SetHeaderLine(false)
+
+	outputPageSize := tableRenderSize
+	for shardID, identity := range resp.Shards {
+		if outputPageSize == 0 {
+			table.Render()
+			table.ClearRows()
+			if !showNextPage() {
+				break
+			}
+			outputPageSize = tableRenderSize
+		}
+		table.Append([]string{strconv.Itoa(int(shardID)), identity})
+		outputPageSize--
+	}
+	// output the remaining rows
+	table.Render()
+	table.ClearRows()
 }
 
 // AdminDescribeHistoryHost describes history host
@@ -481,12 +568,12 @@ func AdminDescribeHistoryHost(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	req := &shared.DescribeHistoryHostRequest{}
+	req := &types.DescribeHistoryHostRequest{}
 	if len(wid) > 0 {
-		req.ExecutionForHost = &shared.WorkflowExecution{WorkflowId: common.StringPtr(wid)}
+		req.ExecutionForHost = &types.WorkflowExecution{WorkflowID: wid}
 	}
 	if c.IsSet(FlagShardID) {
-		req.ShardIdForHost = common.Int32Ptr(int32(sid))
+		req.ShardIDForHost = common.Int32Ptr(int32(sid))
 	}
 	if len(addr) > 0 {
 		req.HostAddress = common.StringPtr(addr)
@@ -514,11 +601,11 @@ func AdminRefreshWorkflowTasks(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	err := adminClient.RefreshWorkflowTasks(ctx, &shared.RefreshWorkflowTasksRequest{
-		Domain: common.StringPtr(domain),
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(wid),
-			RunId:      common.StringPtr(rid),
+	err := adminClient.RefreshWorkflowTasks(ctx, &types.RefreshWorkflowTasksRequest{
+		Domain: domain,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: wid,
+			RunID:      rid,
 		},
 	})
 	if err != nil {
@@ -539,9 +626,9 @@ func AdminResetQueue(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	req := &shared.ResetQueueRequest{
-		ShardID:     common.Int32Ptr(int32(shardID)),
-		ClusterName: common.StringPtr(clusterName),
+	req := &types.ResetQueueRequest{
+		ShardID:     int32(shardID),
+		ClusterName: clusterName,
 		Type:        common.Int32Ptr(int32(typeID)),
 	}
 
@@ -563,9 +650,9 @@ func AdminDescribeQueue(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	req := &shared.DescribeQueueRequest{
-		ShardID:     common.Int32Ptr(int32(shardID)),
-		ClusterName: common.StringPtr(clusterName),
+	req := &types.DescribeQueueRequest{
+		ShardID:     int32(shardID),
+		ClusterName: clusterName,
 		Type:        common.Int32Ptr(int32(typeID)),
 	}
 

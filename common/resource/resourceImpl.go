@@ -42,6 +42,8 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/domain"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -50,8 +52,8 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
+	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -87,6 +89,7 @@ type (
 		blobstoreClient         blobstore.Client
 		archivalMetadata        archiver.ArchivalMetadata
 		archiverProvider        provider.ArchiverProvider
+		domainReplicationQueue  domain.ReplicationQueue
 
 		// membership infos
 
@@ -108,12 +111,9 @@ type (
 		clientBean        client.Bean
 
 		// persistence clients
-
 		persistenceBean persistenceClient.Bean
-		visibilityMgr   persistence.VisibilityManager
 
 		// loggers
-
 		logger          log.Logger
 		throttledLogger log.Logger
 
@@ -135,14 +135,11 @@ var _ Resource = (*Impl)(nil)
 func New(
 	params *service.BootstrapParams,
 	serviceName string,
-	persistenceMaxQPS dynamicconfig.IntPropertyFn,
-	persistenceGlobalMaxQPS dynamicconfig.IntPropertyFn,
-	throttledLoggerMaxRPS dynamicconfig.IntPropertyFn,
-	visibilityManagerInitializer VisibilityManagerInitializer,
+	resourceConfig *config.ResourceConfig,
 ) (impl *Impl, retError error) {
 
-	logger := params.Logger.WithTags(tag.Service(serviceName))
-	throttledLogger := loggerimpl.NewThrottledLogger(logger, throttledLoggerMaxRPS)
+	logger := params.Logger
+	throttledLogger := loggerimpl.NewThrottledLogger(logger, resourceConfig.ThrottledLoggerMaxRPS)
 
 	numShards := params.PersistenceConfig.NumHistoryShards
 	hostName, err := os.Hostname()
@@ -201,38 +198,37 @@ func New(
 	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
 		&params.PersistenceConfig,
 		func(...dynamicconfig.FilterOption) int {
-			if persistenceGlobalMaxQPS() > 0 {
+			if resourceConfig.PersistenceGlobalMaxQPS() > 0 {
 				ringSize, err := membershipMonitor.GetMemberCount(serviceName)
 				if err == nil && ringSize > 0 {
-					avgQuota := common.MaxInt(persistenceGlobalMaxQPS()/ringSize, 1)
-					return common.MinInt(avgQuota, persistenceMaxQPS())
+					avgQuota := common.MaxInt(resourceConfig.PersistenceGlobalMaxQPS()/ringSize, 1)
+					return common.MinInt(avgQuota, resourceConfig.PersistenceMaxQPS())
 				}
 			}
-			return persistenceMaxQPS()
+			return resourceConfig.PersistenceMaxQPS()
 		},
 		params.ClusterMetadata.GetCurrentClusterName(),
 		params.MetricsClient,
 		logger,
-	))
-	if err != nil {
-		return nil, err
-	}
-	visibilityMgr, err := visibilityManagerInitializer(
-		persistenceBean,
-		logger,
-	)
+	), params, resourceConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	domainCache := cache.NewDomainCache(
-		persistenceBean.GetMetadataManager(),
+		persistenceBean.GetDomainManager(),
 		params.ClusterMetadata,
 		params.MetricsClient,
 		logger,
 	)
 
 	domainMetricsScopeCache := cache.NewDomainMetricsScopeCache()
+	domainReplicationQueue := domain.NewReplicationQueue(
+		persistenceBean.GetDomainReplicationQueueManager(),
+		params.ClusterMetadata.GetCurrentClusterName(),
+		params.MetricsClient,
+		logger,
+	)
 
 	frontendRawClient := clientBean.GetFrontendClient()
 	frontendClient := frontend.NewRetryableClient(
@@ -301,6 +297,7 @@ func New(
 		blobstoreClient:         params.BlobstoreClient,
 		archivalMetadata:        params.ArchivalMetadata,
 		archiverProvider:        params.ArchiverProvider,
+		domainReplicationQueue:  domainReplicationQueue,
 
 		// membership infos
 
@@ -322,9 +319,7 @@ func New(
 		clientBean:        clientBean,
 
 		// persistence clients
-
 		persistenceBean: persistenceBean,
-		visibilityMgr:   visibilityMgr,
 
 		// loggers
 
@@ -403,7 +398,6 @@ func (h *Impl) Stop() {
 	}
 	h.runtimeMetricsReporter.Stop()
 	h.persistenceBean.Close()
-	h.visibilityMgr.Close()
 }
 
 // GetServiceName return service name
@@ -471,6 +465,11 @@ func (h *Impl) GetArchivalMetadata() archiver.ArchivalMetadata {
 // GetArchiverProvider return archival provider
 func (h *Impl) GetArchiverProvider() provider.ArchiverProvider {
 	return h.archiverProvider
+}
+
+// GetDomainReplicationQueue return domain replication queue
+func (h *Impl) GetDomainReplicationQueue() domain.ReplicationQueue {
+	return h.domainReplicationQueue
 }
 
 // membership infos
@@ -561,8 +560,8 @@ func (h *Impl) GetClientBean() client.Bean {
 // persistence clients
 
 // GetMetadataManager return metadata manager
-func (h *Impl) GetMetadataManager() persistence.MetadataManager {
-	return h.persistenceBean.GetMetadataManager()
+func (h *Impl) GetDomainManager() persistence.DomainManager {
+	return h.persistenceBean.GetDomainManager()
 }
 
 // GetTaskManager return task manager
@@ -572,12 +571,7 @@ func (h *Impl) GetTaskManager() persistence.TaskManager {
 
 // GetVisibilityManager return visibility manager
 func (h *Impl) GetVisibilityManager() persistence.VisibilityManager {
-	return h.visibilityMgr
-}
-
-// GetDomainReplicationQueue return domain replication queue
-func (h *Impl) GetDomainReplicationQueue() persistence.DomainReplicationQueue {
-	return h.persistenceBean.GetDomainReplicationQueue()
+	return h.persistenceBean.GetVisibilityManager()
 }
 
 // GetShardManager return shard manager

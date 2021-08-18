@@ -30,12 +30,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -193,7 +193,7 @@ func (s *branchManagerSuite) TestFlushBufferedEvents() {
 	s.mockMutableState.EXPECT().AddDecisionTaskFailedEvent(
 		decisionInfo.ScheduleID,
 		decisionInfo.StartedID,
-		shared.DecisionTaskFailedCauseFailoverCloseDecision,
+		types.DecisionTaskFailedCauseFailoverCloseDecision,
 		[]byte(nil),
 		execution.IdentityHistoryService,
 		"",
@@ -201,7 +201,7 @@ func (s *branchManagerSuite) TestFlushBufferedEvents() {
 		"",
 		"",
 		int64(0),
-	).Return(&shared.HistoryEvent{}, nil).Times(1)
+	).Return(&types.HistoryEvent{}, nil).Times(1)
 	s.mockMutableState.EXPECT().FlushBufferedEvents().Return(nil).Times(1)
 
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(lastWriteVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
@@ -274,7 +274,7 @@ func (s *branchManagerSuite) TestPrepareVersionHistory_BranchAppendable_MissingE
 		incomingVersionHistory,
 		150+2,
 		300)
-	s.IsType(&shared.RetryTaskV2Error{}, err)
+	s.IsType(&types.RetryTaskV2Error{}, err)
 }
 
 func (s *branchManagerSuite) TestPrepareVersionHistory_BranchNotAppendable_NoMissingEventInBetween() {
@@ -368,5 +368,5 @@ func (s *branchManagerSuite) TestPrepareVersionHistory_BranchNotAppendable_Missi
 		baseBranchLCAEventID+2,
 		baseBranchLCAEventVersion,
 	)
-	s.IsType(&shared.RetryTaskV2Error{}, err)
+	s.IsType(&types.RetryTaskV2Error{}, err)
 }

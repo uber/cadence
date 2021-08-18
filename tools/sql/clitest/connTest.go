@@ -21,13 +21,15 @@
 package clitest
 
 import (
+	"fmt"
+	"log"
 	"net"
 	"strconv"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/tools/common/schema/test"
 	"github.com/uber/cadence/tools/sql"
@@ -64,7 +66,7 @@ func (s *SQLConnTestSuite) SetupTest() {
 func (s *SQLConnTestSuite) SetupSuite() {
 	conn, err := newTestConn("", s.pluginName)
 	if err != nil {
-		s.Log.Fatal("error creating sql conn, ", tag.Error(err))
+		log.Fatal(fmt.Sprintf("failed creating sql conn with error: %v", tag.Error(err)))
 	}
 	s.SetupSuiteBase(conn)
 }

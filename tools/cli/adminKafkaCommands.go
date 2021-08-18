@@ -33,34 +33,30 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gocql/gocql"
 	"github.com/urfave/cli"
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/auth"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
-	filterFn              func(*replicator.ReplicationTask) bool
+	filterFn              func(*types.ReplicationTask) bool
 	filterFnForVisibility func(*indexer.Message) bool
 
 	kafkaMessageType int
 
 	historyV2Task struct {
-		Task         *replicator.ReplicationTask
-		Events       []*shared.HistoryEvent
-		NewRunEvents []*shared.HistoryEvent
+		Task         *types.ReplicationTask
+		Events       []*types.HistoryEvent
+		NewRunEvents []*types.HistoryEvent
 	}
 )
 
@@ -84,7 +80,7 @@ var (
 
 type writerChannel struct {
 	Type                   kafkaMessageType
-	ReplicationTaskChannel chan *replicator.ReplicationTask
+	ReplicationTaskChannel chan *types.ReplicationTask
 	VisibilityMsgChannel   chan *indexer.Message
 }
 
@@ -94,7 +90,7 @@ func newWriterChannel(messageType kafkaMessageType) *writerChannel {
 	}
 	switch messageType {
 	case kafkaMessageTypeReplicationTask:
-		ch.ReplicationTaskChannel = make(chan *replicator.ReplicationTask, chanBufferSize)
+		ch.ReplicationTaskChannel = make(chan *types.ReplicationTask, chanBufferSize)
 	case kafkaMessageTypeVisibilityMsg:
 		ch.VisibilityMsgChannel = make(chan *indexer.Message, chanBufferSize)
 	}
@@ -138,16 +134,16 @@ func AdminKafkaParse(c *cli.Context) {
 }
 
 func buildFilterFn(workflowID, runID string) filterFn {
-	return func(task *replicator.ReplicationTask) bool {
+	return func(task *types.ReplicationTask) bool {
 		if len(workflowID) != 0 || len(runID) != 0 {
 			if task.GetHistoryTaskV2Attributes() == nil {
 				return false
 			}
 		}
-		if len(workflowID) != 0 && *task.GetHistoryTaskV2Attributes().WorkflowId != workflowID {
+		if len(workflowID) != 0 && task.GetHistoryTaskV2Attributes().WorkflowID != workflowID {
 			return false
 		}
-		if len(runID) != 0 && *task.GetHistoryTaskV2Attributes().RunId != runID {
+		if len(runID) != 0 && task.GetHistoryTaskV2Attributes().RunID != runID {
 			return false
 		}
 		return true
@@ -174,6 +170,7 @@ func getOutputFile(outputFile string) *os.File {
 	if err != nil {
 		ErrorAndExit("failed to create output file", err)
 	}
+
 	return f
 }
 
@@ -273,9 +270,9 @@ Loop:
 				} else {
 					outStr = fmt.Sprintf(
 						"%v, %v, %v",
-						*task.GetHistoryTaskV2Attributes().DomainId,
-						*task.GetHistoryTaskV2Attributes().WorkflowId,
-						*task.GetHistoryTaskV2Attributes().RunId,
+						task.GetHistoryTaskV2Attributes().DomainID,
+						task.GetHistoryTaskV2Attributes().WorkflowID,
+						task.GetHistoryTaskV2Attributes().RunID,
 					)
 				}
 				_, err = outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
@@ -391,8 +388,8 @@ func getMessages(data []byte, skipErrors bool) ([][]byte, int32) {
 	return rawMessages, skipped
 }
 
-func deserializeMessages(messages [][]byte, skipErrors bool) ([]*replicator.ReplicationTask, int32) {
-	var replicationTasks []*replicator.ReplicationTask
+func deserializeMessages(messages [][]byte, skipErrors bool) ([]*types.ReplicationTask, int32) {
+	var replicationTasks []*types.ReplicationTask
 	var skipped int32
 	for _, m := range messages {
 		var task replicator.ReplicationTask
@@ -405,7 +402,7 @@ func deserializeMessages(messages [][]byte, skipErrors bool) ([]*replicator.Repl
 				continue
 			}
 		}
-		replicationTasks = append(replicationTasks, &task)
+		replicationTasks = append(replicationTasks, thrift.ToReplicationTask(&task))
 	}
 	return replicationTasks, skipped
 }
@@ -449,56 +446,35 @@ func decodeVisibility(message []byte, val *indexer.Message) error {
 
 // ClustersConfig describes the kafka clusters
 type ClustersConfig struct {
-	Clusters map[string]messaging.ClusterConfig
-	TLS      auth.TLS
+	Clusters map[string]config.ClusterConfig
+	TLS      config.TLS
 }
 
 func doRereplicate(
 	ctx context.Context,
-	shardID int,
 	domainID string,
 	wid string,
 	rid string,
-	endEventID int64,
-	endEventVersion int64,
+	endEventID *int64,
+	endEventVersion *int64,
 	sourceCluster string,
-	session *gocql.Session,
-	adminClient serverAdmin.Interface,
+	adminClient admin.Client,
 ) {
-
-	exeM, _ := cassandra.NewWorkflowExecutionPersistence(shardID, session, loggerimpl.NewNopLogger())
-	exeMgr := persistence.NewExecutionManagerImpl(exeM, loggerimpl.NewNopLogger())
-
-	fmt.Printf("Start rereplicate for wid: %v, rid:%v \n", wid, rid)
-	resp, err := exeMgr.GetWorkflowExecution(ctx, &persistence.GetWorkflowExecutionRequest{
-		DomainID: domainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(wid),
-			RunId:      common.StringPtr(rid),
-		},
-	})
-	if err != nil {
-		ErrorAndExit("GetWorkflowExecution error", err)
-	}
-
-	versionHistories := resp.State.VersionHistories
-	if versionHistories == nil {
-		ErrorAndExit("The workflow is not a NDC workflow", nil)
-	}
+	fmt.Printf("Start rereplication for wid: %v, rid:%v \n", wid, rid)
 	if err := adminClient.ResendReplicationTasks(
 		ctx,
-		&admin.ResendReplicationTasksRequest{
-			DomainID:      common.StringPtr(domainID),
-			WorkflowID:    common.StringPtr(wid),
-			RunID:         common.StringPtr(rid),
-			RemoteCluster: common.StringPtr(sourceCluster),
-			EndEventID:    common.Int64Ptr(endEventID + 1),
-			EndVersion:    common.Int64Ptr(endEventVersion),
+		&types.ResendReplicationTasksRequest{
+			DomainID:      domainID,
+			WorkflowID:    wid,
+			RunID:         rid,
+			RemoteCluster: sourceCluster,
+			EndEventID:    endEventID,
+			EndVersion:    endEventVersion,
 		},
 	); err != nil {
 		ErrorAndExit("Failed to resend ndc workflow", err)
 	}
-	fmt.Printf("Done rereplicate for wid: %v, rid:%v \n", wid, rid)
+	fmt.Printf("Done rereplication for wid: %v, rid:%v \n", wid, rid)
 }
 
 // AdminRereplicate parses will re-publish replication tasks to topic
@@ -509,22 +485,20 @@ func AdminRereplicate(c *cli.Context) {
 		return
 	}
 	sourceCluster := getRequiredOption(c, FlagSourceCluster)
-	if !c.IsSet(FlagMaxEventID) {
-		ErrorAndExit("End event ID is not defined", nil)
-	}
-	if !c.IsSet(FlagEndEventVersion) {
-		ErrorAndExit("End event version is not defined", nil)
-	}
 
-	session := connectToCassandra(c)
 	adminClient := cFactory.ServerAdminClient(c)
-	endEventID := c.Int64(FlagMaxEventID)
-	endVersion := c.Int64(FlagEndEventVersion)
+	var endEventID, endVersion *int64
+	if c.IsSet(FlagMaxEventID) {
+		endEventID = common.Int64Ptr(c.Int64(FlagMaxEventID) + 1)
+	}
+	if c.IsSet(FlagEndEventVersion) {
+		endVersion = common.Int64Ptr(c.Int64(FlagEndEventVersion))
+	}
 	domainID := getRequiredOption(c, FlagDomainID)
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := getRequiredOption(c, FlagRunID)
-	shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
 	contextTimeout := defaultResendContextTimeout
+
 	if c.GlobalIsSet(FlagContextTimeout) {
 		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
 	}
@@ -533,36 +507,34 @@ func AdminRereplicate(c *cli.Context) {
 
 	doRereplicate(
 		ctx,
-		shardID,
 		domainID,
 		wid,
 		rid,
 		endEventID,
 		endVersion,
 		sourceCluster,
-		session,
 		adminClient,
 	)
 }
 
 func decodeReplicationTask(
-	task *replicator.ReplicationTask,
+	task *types.ReplicationTask,
 	serializer persistence.PayloadSerializer,
 ) ([]byte, error) {
 
 	switch task.GetTaskType() {
-	case replicator.ReplicationTaskTypeHistoryV2:
+	case types.ReplicationTaskTypeHistoryV2:
 		historyV2 := task.GetHistoryTaskV2Attributes()
 		events, err := serializer.DeserializeBatchEvents(
-			persistence.NewDataBlobFromThrift(historyV2.Events),
+			persistence.NewDataBlobFromInternal(historyV2.Events),
 		)
 		if err != nil {
 			return nil, err
 		}
-		var newRunEvents []*shared.HistoryEvent
-		if historyV2.IsSetNewRunEvents() {
+		var newRunEvents []*types.HistoryEvent
+		if historyV2.NewRunEvents != nil {
 			newRunEvents, err = serializer.DeserializeBatchEvents(
-				persistence.NewDataBlobFromThrift(historyV2.NewRunEvents),
+				persistence.NewDataBlobFromInternal(historyV2.NewRunEvents),
 			)
 			if err != nil {
 				return nil, err

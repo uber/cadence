@@ -4,11 +4,13 @@ persistence:
   numHistoryShards: 4
   datastores:
     cass-default:
-      cassandra:
+      nosql:
+        pluginName: "cassandra"
         hosts: "127.0.0.1"
         keyspace: "cadence_other"
     cass-visibility:
-      cassandra:
+      nosql:
+        pluginName: "cassandra"
         hosts: "127.0.0.1"
         keyspace: "cadence_visibility_other"
 
@@ -22,6 +24,7 @@ services:
   frontend:
     rpc:
       port: 9933
+      grpcPort: 9833
       bindOnLocalHost: true
     metrics:
       statsd:
@@ -33,6 +36,7 @@ services:
   matching:
     rpc:
       port: 9935
+      grpcPort: 9835
       bindOnLocalHost: true
     metrics:
       statsd:
@@ -44,6 +48,7 @@ services:
   history:
     rpc:
       port: 9934
+      grpcPort: 9834
       bindOnLocalHost: true
     metrics:
       statsd:
@@ -66,24 +71,24 @@ services:
 clusterMetadata:
   enableGlobalDomain: true
   failoverVersionIncrement: 10
-  masterClusterName: "active"
+  primaryClusterName: "active"
   currentClusterName: "other"
   clusterInformation:
     active:
       enabled: true
       initialFailoverVersion: 1
       rpcName: "cadence-frontend"
-      rpcAddress: "localhost:7933"
+      rpcAddress: "localhost:7933" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
     standby:
       enabled: true
       initialFailoverVersion: 0
       rpcName: "cadence-frontend"
-      rpcAddress: "localhost:8933"
+      rpcAddress: "localhost:8933" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
     other:
       enabled: true
       initialFailoverVersion: 2
       rpcName: "cadence-frontend"
-      rpcAddress: "localhost:9933"
+      rpcAddress: "localhost:9933" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
 
 dcRedirectionPolicy:
   policy: "selected-apis-forwarding"
@@ -113,9 +118,6 @@ domainDefaults:
     visibility:
       status: "enabled"
       URI: "file:///tmp/cadence_vis_archival/development"
-
-publicClient:
-  hostPort: "localhost:9933"
 
 blobstore:
   filestore:

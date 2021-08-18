@@ -23,8 +23,8 @@ package persistence
 import (
 	"testing"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -62,7 +62,7 @@ func (s *versionHistorySuite) TestConversion() {
 		Items:       Items,
 	}, history)
 
-	s.Equal(history, NewVersionHistoryFromThrift(history.ToThrift()))
+	s.Equal(history, NewVersionHistoryFromInternalType(history.ToInternalType()))
 }
 
 func (s *versionHistorySuite) TestDuplicateUntilLCAItem_Success() {
@@ -124,22 +124,22 @@ func (s *versionHistorySuite) TestDuplicateUntilLCAItem_Failure() {
 	history := NewVersionHistory(BranchToken, Items)
 
 	_, err := history.DuplicateUntilLCAItem(NewVersionHistoryItem(4, 0))
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 
 	_, err = history.DuplicateUntilLCAItem(NewVersionHistoryItem(2, 1))
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 
 	_, err = history.DuplicateUntilLCAItem(NewVersionHistoryItem(5, 3))
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 
 	_, err = history.DuplicateUntilLCAItem(NewVersionHistoryItem(7, 5))
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 
 	_, err = history.DuplicateUntilLCAItem(NewVersionHistoryItem(4, 0))
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 
 	_, err = history.DuplicateUntilLCAItem(NewVersionHistoryItem(7, 4))
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 }
 
 func (s *versionHistorySuite) TestSetBranchToken() {
@@ -413,7 +413,7 @@ func (s *versionHistorySuite) TestGetFirstItem_Failure() {
 	history := NewVersionHistory(BranchToken, []*VersionHistoryItem{})
 
 	_, err := history.GetFirstItem()
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 }
 
 func (s *versionHistorySuite) TestGetLastItem_Success() {
@@ -447,7 +447,7 @@ func (s *versionHistorySuite) TestGetLastItem_Failure() {
 	history := NewVersionHistory(BranchToken, []*VersionHistoryItem{})
 
 	_, err := history.GetLastItem()
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 }
 
 func (s *versionHistoriesSuite) TestGetVersion_Success() {
@@ -537,7 +537,7 @@ func (s *versionHistoriesSuite) TestConversion() {
 		Histories:                  []*VersionHistory{versionHistory},
 	}, histories)
 
-	s.Equal(histories, NewVersionHistoriesFromThrift(histories.ToThrift()))
+	s.Equal(histories, NewVersionHistoriesFromInternalType(histories.ToInternalType()))
 }
 
 func (s *versionHistoriesSuite) TestAddGetVersionHistory() {

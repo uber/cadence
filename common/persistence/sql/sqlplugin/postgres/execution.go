@@ -40,10 +40,13 @@ const (
 	getExecutionQuery = `SELECT ` + executionsColumns + ` FROM executions
  WHERE shard_id = $1 AND domain_id = $2 AND workflow_id = $3 AND run_id = $4`
 
-	deleteExecutionQuery = `DELETE FROM executions 
+	listExecutionQuery = `SELECT ` + executionsColumns + ` FROM executions
+ WHERE shard_id = $1 AND workflow_id > $2 ORDER BY workflow_id LIMIT $3`
+
+	deleteExecutionQuery = `DELETE FROM executions
  WHERE shard_id = $1 AND domain_id = $2 AND workflow_id = $3 AND run_id = $4`
 
-	lockExecutionQueryBase = `SELECT next_event_id FROM executions 
+	lockExecutionQueryBase = `SELECT next_event_id FROM executions
  WHERE shard_id = $1 AND domain_id = $2 AND workflow_id = $3 AND run_id = $4`
 
 	writeLockExecutionQuery = lockExecutionQueryBase + ` FOR UPDATE`
@@ -80,46 +83,55 @@ domain_id = :domain_id AND
 workflow_id = :workflow_id
 `
 
-	getTransferTasksQuery = `SELECT task_id, data, data_encoding 
+	getTransferTasksQuery = `SELECT task_id, data, data_encoding
  FROM transfer_tasks WHERE shard_id = $1 AND task_id > $2 AND task_id <= $3 ORDER BY shard_id, task_id`
 
-	createTransferTasksQuery = `INSERT INTO transfer_tasks(shard_id, task_id, data, data_encoding) 
+	createTransferTasksQuery = `INSERT INTO transfer_tasks(shard_id, task_id, data, data_encoding)
  VALUES(:shard_id, :task_id, :data, :data_encoding)`
 
 	deleteTransferTaskQuery      = `DELETE FROM transfer_tasks WHERE shard_id = $1 AND task_id = $2`
 	rangeDeleteTransferTaskQuery = `DELETE FROM transfer_tasks WHERE shard_id = $1 AND task_id > $2 AND task_id <= $3`
 
+	getCrossClusterTasksQuery = `SELECT task_id, data, data_encoding
+ FROM cross_cluster_tasks WHERE target_cluster = $1 AND shard_id = $2 AND task_id > $3 AND task_id <= $4 ORDER BY task_id`
+
+	createCrossClusterTasksQuery = `INSERT INTO cross_cluster_tasks(target_cluster, shard_id, task_id, data, data_encoding)
+ VALUES(:target_cluster, :shard_id, :task_id, :data, :data_encoding)`
+
+	deleteCrossClusterTaskQuery      = `DELETE FROM cross_cluster_tasks WHERE target_cluster = $1 AND shard_id = $2 AND task_id = $3`
+	rangeDeleteCrossClusterTaskQuery = `DELETE FROM cross_cluster_tasks WHERE target_cluster = $1 AND shard_id = $2 AND task_id > $3 AND task_id <= $4`
+
 	createTimerTasksQuery = `INSERT INTO timer_tasks (shard_id, visibility_timestamp, task_id, data, data_encoding)
   VALUES (:shard_id, :visibility_timestamp, :task_id, :data, :data_encoding)`
 
-	getTimerTasksQuery = `SELECT visibility_timestamp, task_id, data, data_encoding FROM timer_tasks 
-  WHERE shard_id = $1 
-  AND ((visibility_timestamp >= $2 AND task_id >= $3) OR visibility_timestamp > $4) 
+	getTimerTasksQuery = `SELECT visibility_timestamp, task_id, data, data_encoding FROM timer_tasks
+  WHERE shard_id = $1
+  AND ((visibility_timestamp >= $2 AND task_id >= $3) OR visibility_timestamp > $4)
   AND visibility_timestamp < $5
   ORDER BY visibility_timestamp,task_id LIMIT $6`
 
 	deleteTimerTaskQuery      = `DELETE FROM timer_tasks WHERE shard_id = $1 AND visibility_timestamp = $2 AND task_id = $3`
 	rangeDeleteTimerTaskQuery = `DELETE FROM timer_tasks WHERE shard_id = $1 AND visibility_timestamp >= $2 AND visibility_timestamp < $3`
 
-	createReplicationTasksQuery = `INSERT INTO replication_tasks (shard_id, task_id, data, data_encoding) 
+	createReplicationTasksQuery = `INSERT INTO replication_tasks (shard_id, task_id, data, data_encoding)
   VALUES(:shard_id, :task_id, :data, :data_encoding)`
 
-	getReplicationTasksQuery = `SELECT task_id, data, data_encoding FROM replication_tasks WHERE 
+	getReplicationTasksQuery = `SELECT task_id, data, data_encoding FROM replication_tasks WHERE
 shard_id = $1 AND
 task_id > $2 AND
-task_id <= $3 
+task_id <= $3
 ORDER BY task_id LIMIT $4`
 
 	deleteReplicationTaskQuery      = `DELETE FROM replication_tasks WHERE shard_id = $1 AND task_id = $2`
 	rangeDeleteReplicationTaskQuery = `DELETE FROM replication_tasks WHERE shard_id = $1 AND task_id <= $2`
 
-	getReplicationTasksDLQQuery = `SELECT task_id, data, data_encoding FROM replication_tasks_dlq WHERE 
+	getReplicationTasksDLQQuery = `SELECT task_id, data, data_encoding FROM replication_tasks_dlq WHERE
 source_cluster_name = $1 AND
 shard_id = $2 AND
 task_id > $3 AND
 task_id <= $4
 ORDER BY task_id LIMIT $5`
-	getReplicationTaskDLQQuery = `SELECT count(1) as count FROM replication_tasks_dlq WHERE 
+	getReplicationTaskDLQQuery = `SELECT count(1) as count FROM replication_tasks_dlq WHERE
 source_cluster_name = $1 AND
 shard_id = $2`
 
@@ -131,28 +143,28 @@ VALUES (:shard_id, :domain_id, :workflow_id, :run_id, :data, :data_encoding)`
 	getBufferedEventsQuery    = `SELECT data, data_encoding FROM buffered_events WHERE shard_id = $1 AND domain_id = $2 AND workflow_id = $3 AND run_id = $4`
 
 	insertReplicationTaskDLQQuery = `
-INSERT INTO replication_tasks_dlq 
-            (source_cluster_name, 
-             shard_id, 
-             task_id, 
-             data, 
-             data_encoding) 
-VALUES     (:source_cluster_name, 
-            :shard_id, 
-            :task_id, 
-            :data, 
+INSERT INTO replication_tasks_dlq
+            (source_cluster_name,
+             shard_id,
+             task_id,
+             data,
+             data_encoding)
+VALUES     (:source_cluster_name,
+            :shard_id,
+            :task_id,
+            :data,
             :data_encoding)
 `
 	deleteReplicationTaskFromDLQQuery = `
-	DELETE FROM replication_tasks_dlq 
-		WHERE source_cluster_name = $1 
-		AND shard_id = $2 
+	DELETE FROM replication_tasks_dlq
+		WHERE source_cluster_name = $1
+		AND shard_id = $2
 		AND task_id = $3`
 
 	rangeDeleteReplicationTaskFromDLQQuery = `
-	DELETE FROM replication_tasks_dlq 
-		WHERE source_cluster_name = $1 
-		AND shard_id = $2 
+	DELETE FROM replication_tasks_dlq
+		WHERE source_cluster_name = $1
+		AND shard_id = $2
 		AND task_id > $3
 		AND task_id <= $4`
 )
@@ -168,13 +180,25 @@ func (pdb *db) UpdateExecutions(ctx context.Context, row *sqlplugin.ExecutionsRo
 }
 
 // SelectFromExecutions reads a single row from executions table
-func (pdb *db) SelectFromExecutions(ctx context.Context, filter *sqlplugin.ExecutionsFilter) (*sqlplugin.ExecutionsRow, error) {
-	var row sqlplugin.ExecutionsRow
-	err := pdb.conn.GetContext(ctx, &row, getExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
-	if err != nil {
-		return nil, err
+// The list execution query result is order by workflow ID only. It may returns duplicate record with pagination.
+func (pdb *db) SelectFromExecutions(ctx context.Context, filter *sqlplugin.ExecutionsFilter) ([]sqlplugin.ExecutionsRow, error) {
+	var rows []sqlplugin.ExecutionsRow
+	var err error
+	if len(filter.DomainID) == 0 && filter.Size > 0 {
+		err = pdb.conn.SelectContext(ctx, &rows, listExecutionQuery, filter.ShardID, filter.WorkflowID, filter.Size)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		var row sqlplugin.ExecutionsRow
+		err = pdb.conn.GetContext(ctx, &row, getExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, row)
 	}
-	return &row, err
+
+	return rows, err
 }
 
 // DeleteFromExecutions deletes a single row from executions table
@@ -254,6 +278,29 @@ func (pdb *db) DeleteFromTransferTasks(ctx context.Context, filter *sqlplugin.Tr
 		return pdb.conn.ExecContext(ctx, rangeDeleteTransferTaskQuery, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
 	}
 	return pdb.conn.ExecContext(ctx, deleteTransferTaskQuery, filter.ShardID, *filter.TaskID)
+}
+
+// InsertIntoCrossClusterTasks inserts one or more rows into cross_cluster_tasks table
+func (pdb *db) InsertIntoCrossClusterTasks(ctx context.Context, rows []sqlplugin.CrossClusterTasksRow) (sql.Result, error) {
+	return pdb.conn.NamedExecContext(ctx, createCrossClusterTasksQuery, rows)
+}
+
+// SelectFromCrossClusterTasks reads one or more rows from cross_cluster_tasks table
+func (pdb *db) SelectFromCrossClusterTasks(ctx context.Context, filter *sqlplugin.CrossClusterTasksFilter) ([]sqlplugin.CrossClusterTasksRow, error) {
+	var rows []sqlplugin.CrossClusterTasksRow
+	err := pdb.conn.SelectContext(ctx, &rows, getCrossClusterTasksQuery, filter.TargetCluster, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
+	if err != nil {
+		return nil, err
+	}
+	return rows, err
+}
+
+// DeleteFromCrossClusterTasks deletes one or more rows from cross_cluster_tasks table
+func (pdb *db) DeleteFromCrossClusterTasks(ctx context.Context, filter *sqlplugin.CrossClusterTasksFilter) (sql.Result, error) {
+	if filter.MinTaskID != nil {
+		return pdb.conn.ExecContext(ctx, rangeDeleteCrossClusterTaskQuery, filter.TargetCluster, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
+	}
+	return pdb.conn.ExecContext(ctx, deleteCrossClusterTaskQuery, filter.TargetCluster, filter.ShardID, *filter.TaskID)
 }
 
 // InsertIntoTimerTasks inserts one or more rows into timer_tasks table

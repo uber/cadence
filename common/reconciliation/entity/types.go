@@ -25,6 +25,7 @@ package entity
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/uber/cadence/common/persistence"
 )
@@ -52,7 +53,51 @@ type (
 		CurrentRunID string
 		Execution
 	}
+
+	// Timer is a timer scheduled to be fired
+	Timer struct {
+		ShardID             int
+		WorkflowID          string
+		DomainID            string
+		RunID               string
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		TaskType            int
+		TimeoutType         int
+		EventID             int64
+		ScheduleAttempt     int64
+		Version             int64
+	}
 )
+
+func (t *Timer) Validate() error {
+	if t.ShardID < 0 {
+		return fmt.Errorf("invalid ShardID: %v", t.ShardID)
+	}
+	if len(t.DomainID) == 0 {
+		return errors.New("empty DomainID")
+	}
+	if len(t.WorkflowID) == 0 {
+		return errors.New("empty WorkflowID")
+	}
+	if len(t.RunID) == 0 {
+		return errors.New("empty RunID")
+	}
+
+	return nil
+}
+
+func (t *Timer) Clone() Entity {
+	return &Timer{}
+}
+
+func (t *Timer) GetShardID() int {
+	return t.ShardID
+}
+
+func (t *Timer) GetDomainID() string {
+	return t.DomainID
+}
 
 // ValidateExecution returns an error if Execution is not valid, nil otherwise.
 func validateExecution(execution *Execution) error {
@@ -125,9 +170,20 @@ func (curre *CurrentExecution) GetShardID() int {
 	return curre.Execution.ShardID
 }
 
+// GetDomainID returns the domain id
+func (ce *ConcreteExecution) GetDomainID() string {
+	return ce.DomainID
+}
+
+// GetDomainID returns the domain id
+func (curre *CurrentExecution) GetDomainID() string {
+	return curre.DomainID
+}
+
 // Entity allows to deserialize and validate different type of executions
 type Entity interface {
 	Validate() error
 	Clone() Entity
 	GetShardID() int
+	GetDomainID() string
 }

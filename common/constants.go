@@ -22,6 +22,8 @@ package common
 
 import (
 	"time"
+
+	"github.com/uber/cadence/.gen/go/shadower"
 )
 
 const (
@@ -116,6 +118,10 @@ const (
 	// BatcherLocalDomainName is domain name for batcher workflows running in local cluster
 	// Batcher cannot use SystemLocalDomain because auth
 	BatcherLocalDomainName = "cadence-batcher"
+	// ShadowerDomainID is domain id for workflow shadower local domain
+	ShadowerDomainID = "59c51119-1b41-4a28-986d-d6e377716f82"
+	// ShadowerLocalDomainName
+	ShadowerLocalDomainName = shadower.LocalDomainName
 )
 
 const (
@@ -125,15 +131,18 @@ const (
 	// CriticalLongPollTimeout is a threshold for the context timeout passed into long poll API,
 	// below which a warning will be logged
 	CriticalLongPollTimeout = time.Second * 20
-	// MaxWorkflowRetentionPeriodInDays is the maximum of workflow retention when registering domain
-	// !!! Do NOT simply decrease this number, because it is being used by history scavenger to avoid race condition against history archival.
-	// Check more details in history scanner(scavenger)
-	MaxWorkflowRetentionPeriodInDays = 30
 )
 
 const (
 	// DefaultTransactionSizeLimit is the largest allowed transaction size to persistence
 	DefaultTransactionSizeLimit = 14 * 1024 * 1024
+)
+
+const (
+	// DefaultIDLengthWarnLimit is the warning length for various ID types
+	DefaultIDLengthWarnLimit = 128
+	// DefaultIDLengthErrorLimit is the maximum length allowed for various ID types
+	DefaultIDLengthErrorLimit = 1000
 )
 
 const (
@@ -155,8 +164,16 @@ const (
 	AdvancedVisibilityWritingModeDual = "dual"
 )
 
-// DomainDataKeyForManagedFailover is key of DomainData for managed failover
-const DomainDataKeyForManagedFailover = "IsManagedByCadence"
+const (
+	// DomainDataKeyForManagedFailover is key of DomainData for managed failover
+	DomainDataKeyForManagedFailover = "IsManagedByCadence"
+	// DomainDataKeyForPreferredCluster is the key of DomainData for domain rebalance
+	DomainDataKeyForPreferredCluster = "PreferredCluster"
+	// DomainDataKeyForReadGroups stores which groups have read permission of the domain API
+	DomainDataKeyForReadGroups = "READ_GROUPS"
+	// DomainDataKeyForWriteGroups stores which groups have write permission of the domain API
+	DomainDataKeyForWriteGroups = "WRITE_GROUPS"
+)
 
 type (
 	// TaskType is the enum for representing different task types
@@ -165,11 +182,17 @@ type (
 
 const (
 	// TaskTypeTransfer is the task type for transfer task
-	TaskTypeTransfer TaskType = iota + 2 // starting from 2 here to be consistent with the row type define for cassandra
+	// starting from 2 here to be consistent with the row type define for cassandra
+	// TODO: we can remove +2 from the following definition
+	// we don't have to make them consistent with cassandra definition
+	// there's also no row type for sql or other nosql persistence implementation
+	TaskTypeTransfer TaskType = iota + 2
 	// TaskTypeTimer is the task type for timer task
 	TaskTypeTimer
 	// TaskTypeReplication is the task type for replication task
 	TaskTypeReplication
+	// TaskTypeCrossCluster is the task type for cross cluster task
+	TaskTypeCrossCluster TaskType = 6
 )
 
 // StickyTaskConditionFailedErrorMsg error msg for sticky task ConditionFailedError
@@ -177,3 +200,6 @@ const StickyTaskConditionFailedErrorMsg = "StickyTaskConditionFailedError"
 
 // MemoKeyForOperator is the memo key for operator
 const MemoKeyForOperator = "operator"
+
+// ReservedTaskListPrefix is the required naming prefix for any task list partition other than partition 0
+const ReservedTaskListPrefix = "/__cadence_sys/"

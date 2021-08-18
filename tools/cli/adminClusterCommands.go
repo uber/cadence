@@ -22,14 +22,21 @@ package cli
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
+	cclient "go.uber.org/cadence/client"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/service/worker/failovermanager"
+
+	cc "github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/types"
 )
+
+// An indirection for the prompt function so that it can be mocked in the unit tests
+var promptFn = prompt
 
 // AdminAddSearchAttribute to whitelist search attribute
 func AdminAddSearchAttribute(c *cli.Context) {
@@ -42,23 +49,23 @@ func AdminAddSearchAttribute(c *cli.Context) {
 	// ask user for confirmation
 	promptMsg := fmt.Sprintf("Are you trying to add key [%s] with Type [%s]? Y/N",
 		color.YellowString(key), color.YellowString(intValTypeToString(valType)))
-	prompt(promptMsg)
+	promptFn(promptMsg)
 
 	adminClient := cFactory.ServerAdminClient(c)
 	ctx, cancel := newContext(c)
 	defer cancel()
-	request := &admin.AddSearchAttributeRequest{
-		SearchAttribute: map[string]shared.IndexedValueType{
-			key: shared.IndexedValueType(valType),
+	request := &types.AddSearchAttributeRequest{
+		SearchAttribute: map[string]types.IndexedValueType{
+			key: types.IndexedValueType(valType),
 		},
-		SecurityToken: common.StringPtr(c.String(FlagSecurityToken)),
+		SecurityToken: c.String(FlagSecurityToken),
 	}
 
-	err := adminClient.AddSearchAttribute(ctx, request)
+	err := adminClient.AddSearchAttribute(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Add search attribute failed.", err)
 	}
-	fmt.Println("Success")
+	fmt.Println("Success. Note that for a multil-node Cadence cluster, DynamicConfig MUST be updated separately to whitelist the new attributes.")
 }
 
 // AdminDescribeCluster is used to dump information about the cluster
@@ -73,6 +80,40 @@ func AdminDescribeCluster(c *cli.Context) {
 	}
 
 	prettyPrintJSONObject(response)
+}
+
+func AdminRebalanceStart(c *cli.Context) {
+	client := getCadenceClient(c)
+	tcCtx, cancel := newContext(c)
+	defer cancel()
+
+	options := cclient.StartWorkflowOptions{
+		ID:                           failovermanager.RebalanceWorkflowID,
+		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
+		TaskList:                     failovermanager.TaskListName,
+		ExecutionStartToCloseTimeout: time.Minute,
+		Memo: map[string]interface{}{
+			common.MemoKeyForOperator: getOperator(),
+		},
+	}
+
+	rbParams := &failovermanager.RebalanceParams{
+		BatchFailoverSize:              100,
+		BatchFailoverWaitTimeInSeconds: 10,
+	}
+	wf, err := client.StartWorkflow(tcCtx, options, failovermanager.RebalanceWorkflowTypeName, rbParams)
+	if err != nil {
+		ErrorAndExit("Failed to start failover workflow", err)
+	}
+	fmt.Println("Rebalance workflow started")
+	fmt.Println("wid: " + wf.ID)
+	fmt.Println("rid: " + wf.RunID)
+}
+
+func AdminRebalanceList(c *cli.Context) {
+	c.Set(FlagWorkflowID, failovermanager.RebalanceWorkflowID)
+	c.GlobalSet(FlagDomain, common.SystemLocalDomainName)
+	ListWorkflow(c)
 }
 
 func intValTypeToString(valType int) string {

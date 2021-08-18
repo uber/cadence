@@ -30,7 +30,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/definition"
@@ -38,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/execution"
@@ -80,7 +80,7 @@ func (s *workflowResetterSuite) TearDownSuite() {
 func (s *workflowResetterSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 	s.controller = gomock.NewController(s.T())
 	s.mockStateRebuilder = execution.NewMockStateRebuilder(s.controller)
 
@@ -184,8 +184,8 @@ func (s *workflowResetterSuite) TestPersistToDB_CurrentNotTerminated() {
 		WorkflowID:  s.workflowID,
 		RunID:       s.resetRunID,
 		BranchToken: []byte("some random reset branch token"),
-		Events: []*shared.HistoryEvent{{
-			EventId: common.Int64Ptr(123),
+		Events: []*types.HistoryEvent{{
+			EventID: 123,
 		}},
 	}}
 	resetEventsSize := int64(4321)
@@ -193,7 +193,7 @@ func (s *workflowResetterSuite) TestPersistToDB_CurrentNotTerminated() {
 		gomock.Any(),
 		execution.TransactionPolicyActive,
 	).Return(resetSnapshot, resetEventsSeq, nil).Times(1)
-	resetContext.EXPECT().PersistNonFirstWorkflowEvents(gomock.Any(), resetEventsSeq[0]).Return(resetEventsSize, nil).Times(1)
+	resetContext.EXPECT().PersistNonStartWorkflowBatchEvents(gomock.Any(), resetEventsSeq[0]).Return(resetEventsSize, nil).Times(1)
 	resetContext.EXPECT().CreateWorkflowExecution(
 		gomock.Any(),
 		resetSnapshot,
@@ -291,12 +291,12 @@ func (s *workflowResetterSuite) TestFailInflightActivity() {
 	mutableState.EXPECT().AddActivityTaskFailedEvent(
 		activity1.ScheduleID,
 		activity1.StartedID,
-		&shared.RespondActivityTaskFailedRequest{
+		&types.RespondActivityTaskFailedRequest{
 			Reason:   common.StringPtr(terminateReason),
 			Details:  activity1.Details,
-			Identity: common.StringPtr(activity1.StartedIdentity),
+			Identity: activity1.StartedIdentity,
 		},
-	).Return(&shared.HistoryEvent{}, nil).Times(1)
+	).Return(&types.HistoryEvent{}, nil).Times(1)
 
 	err := s.workflowResetter.failInflightActivity(mutableState, terminateReason)
 	s.NoError(err)
@@ -338,7 +338,7 @@ func (s *workflowResetterSuite) TestTerminateWorkflow() {
 	mutableState.EXPECT().AddDecisionTaskFailedEvent(
 		decision.ScheduleID,
 		decision.StartedID,
-		shared.DecisionTaskFailedCauseForceCloseDecision,
+		types.DecisionTaskFailedCauseForceCloseDecision,
 		([]byte)(nil),
 		execution.IdentityHistoryService,
 		"",
@@ -346,14 +346,14 @@ func (s *workflowResetterSuite) TestTerminateWorkflow() {
 		"",
 		"",
 		int64(0),
-	).Return(&shared.HistoryEvent{}, nil).Times(1)
+	).Return(&types.HistoryEvent{}, nil).Times(1)
 	mutableState.EXPECT().FlushBufferedEvents().Return(nil).Times(1)
 	mutableState.EXPECT().AddWorkflowExecutionTerminatedEvent(
 		nextEventID,
 		terminateReason,
 		([]byte)(nil),
 		execution.IdentityHistoryService,
-	).Return(&shared.HistoryEvent{}, nil).Times(1)
+	).Return(&types.HistoryEvent{}, nil).Times(1)
 
 	err := s.workflowResetter.terminateWorkflow(mutableState, terminateReason)
 	s.NoError(err)
@@ -370,56 +370,56 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 	newNextEventID := int64(6)
 	newBranchToken := []byte("some random new branch token")
 
-	baseEvent1 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(124),
-		EventType:                            shared.EventTypeDecisionTaskScheduled.Ptr(),
-		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{},
+	baseEvent1 := &types.HistoryEvent{
+		EventID:                              124,
+		EventType:                            types.EventTypeDecisionTaskScheduled.Ptr(),
+		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{},
 	}
-	baseEvent2 := &shared.HistoryEvent{
-		EventId:                            common.Int64Ptr(125),
-		EventType:                          shared.EventTypeDecisionTaskStarted.Ptr(),
-		DecisionTaskStartedEventAttributes: &shared.DecisionTaskStartedEventAttributes{},
+	baseEvent2 := &types.HistoryEvent{
+		EventID:                            125,
+		EventType:                          types.EventTypeDecisionTaskStarted.Ptr(),
+		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{},
 	}
-	baseEvent3 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(126),
-		EventType:                            shared.EventTypeDecisionTaskCompleted.Ptr(),
-		DecisionTaskCompletedEventAttributes: &shared.DecisionTaskCompletedEventAttributes{},
+	baseEvent3 := &types.HistoryEvent{
+		EventID:                              126,
+		EventType:                            types.EventTypeDecisionTaskCompleted.Ptr(),
+		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{},
 	}
-	baseEvent4 := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(127),
-		EventType: shared.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
-		WorkflowExecutionContinuedAsNewEventAttributes: &shared.WorkflowExecutionContinuedAsNewEventAttributes{
-			NewExecutionRunId: common.StringPtr(newRunID),
+	baseEvent4 := &types.HistoryEvent{
+		EventID:   127,
+		EventType: types.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
+		WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
+			NewExecutionRunID: newRunID,
 		},
 	}
 
-	newEvent1 := &shared.HistoryEvent{
-		EventId:                                 common.Int64Ptr(1),
-		EventType:                               shared.EventTypeWorkflowExecutionStarted.Ptr(),
-		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{},
+	newEvent1 := &types.HistoryEvent{
+		EventID:                                 1,
+		EventType:                               types.EventTypeWorkflowExecutionStarted.Ptr(),
+		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
 	}
-	newEvent2 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(2),
-		EventType:                            shared.EventTypeDecisionTaskScheduled.Ptr(),
-		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{},
+	newEvent2 := &types.HistoryEvent{
+		EventID:                              2,
+		EventType:                            types.EventTypeDecisionTaskScheduled.Ptr(),
+		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{},
 	}
-	newEvent3 := &shared.HistoryEvent{
-		EventId:                            common.Int64Ptr(3),
-		EventType:                          shared.EventTypeDecisionTaskStarted.Ptr(),
-		DecisionTaskStartedEventAttributes: &shared.DecisionTaskStartedEventAttributes{},
+	newEvent3 := &types.HistoryEvent{
+		EventID:                            3,
+		EventType:                          types.EventTypeDecisionTaskStarted.Ptr(),
+		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{},
 	}
-	newEvent4 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(4),
-		EventType:                            shared.EventTypeDecisionTaskCompleted.Ptr(),
-		DecisionTaskCompletedEventAttributes: &shared.DecisionTaskCompletedEventAttributes{},
+	newEvent4 := &types.HistoryEvent{
+		EventID:                              4,
+		EventType:                            types.EventTypeDecisionTaskCompleted.Ptr(),
+		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{},
 	}
-	newEvent5 := &shared.HistoryEvent{
-		EventId:                                common.Int64Ptr(5),
-		EventType:                              shared.EventTypeWorkflowExecutionFailed.Ptr(),
-		WorkflowExecutionFailedEventAttributes: &shared.WorkflowExecutionFailedEventAttributes{},
+	newEvent5 := &types.HistoryEvent{
+		EventID:                                5,
+		EventType:                              types.EventTypeWorkflowExecutionFailed.Ptr(),
+		WorkflowExecutionFailedEventAttributes: &types.WorkflowExecutionFailedEventAttributes{},
 	}
 
-	baseEvents := []*shared.HistoryEvent{baseEvent1, baseEvent2, baseEvent3, baseEvent4}
+	baseEvents := []*types.HistoryEvent{baseEvent1, baseEvent2, baseEvent3, baseEvent4}
 	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   baseBranchToken,
 		MinEventID:    baseFirstEventID,
@@ -428,11 +428,11 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
-		History:       []*shared.History{{Events: baseEvents}},
+		History:       []*types.History{{Events: baseEvents}},
 		NextPageToken: nil,
 	}, nil).Once()
 
-	newEvents := []*shared.HistoryEvent{newEvent1, newEvent2, newEvent3, newEvent4, newEvent5}
+	newEvents := []*types.HistoryEvent{newEvent1, newEvent2, newEvent3, newEvent4, newEvent5}
 	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   newBranchToken,
 		MinEventID:    newFirstEventID,
@@ -441,7 +441,7 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
-		History:       []*shared.History{{Events: newEvents}},
+		History:       []*types.History{{Events: newEvents}},
 		NextPageToken: nil,
 	}, nil).Once()
 
@@ -457,7 +457,7 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 
 	mutableState := execution.NewMockMutableState(s.controller)
 
-	err := s.workflowResetter.reapplyContinueAsNewWorkflowEvents(
+	err := s.workflowResetter.reapplyResetAndContinueAsNewWorkflowEvents(
 		ctx,
 		mutableState,
 		s.domainID,
@@ -476,34 +476,34 @@ func (s *workflowResetterSuite) TestReapplyWorkflowEvents() {
 	branchToken := []byte("some random branch token")
 
 	newRunID := uuid.New()
-	event1 := &shared.HistoryEvent{
-		EventId:                                 common.Int64Ptr(1),
-		EventType:                               shared.EventTypeWorkflowExecutionStarted.Ptr(),
-		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{},
+	event1 := &types.HistoryEvent{
+		EventID:                                 1,
+		EventType:                               types.EventTypeWorkflowExecutionStarted.Ptr(),
+		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
 	}
-	event2 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(2),
-		EventType:                            shared.EventTypeDecisionTaskScheduled.Ptr(),
-		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{},
+	event2 := &types.HistoryEvent{
+		EventID:                              2,
+		EventType:                            types.EventTypeDecisionTaskScheduled.Ptr(),
+		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{},
 	}
-	event3 := &shared.HistoryEvent{
-		EventId:                            common.Int64Ptr(3),
-		EventType:                          shared.EventTypeDecisionTaskStarted.Ptr(),
-		DecisionTaskStartedEventAttributes: &shared.DecisionTaskStartedEventAttributes{},
+	event3 := &types.HistoryEvent{
+		EventID:                            3,
+		EventType:                          types.EventTypeDecisionTaskStarted.Ptr(),
+		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{},
 	}
-	event4 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(4),
-		EventType:                            shared.EventTypeDecisionTaskCompleted.Ptr(),
-		DecisionTaskCompletedEventAttributes: &shared.DecisionTaskCompletedEventAttributes{},
+	event4 := &types.HistoryEvent{
+		EventID:                              4,
+		EventType:                            types.EventTypeDecisionTaskCompleted.Ptr(),
+		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{},
 	}
-	event5 := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(5),
-		EventType: shared.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
-		WorkflowExecutionContinuedAsNewEventAttributes: &shared.WorkflowExecutionContinuedAsNewEventAttributes{
-			NewExecutionRunId: common.StringPtr(newRunID),
+	event5 := &types.HistoryEvent{
+		EventID:   5,
+		EventType: types.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
+		WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
+			NewExecutionRunID: newRunID,
 		},
 	}
-	events := []*shared.HistoryEvent{event1, event2, event3, event4, event5}
+	events := []*types.HistoryEvent{event1, event2, event3, event4, event5}
 	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
@@ -512,7 +512,7 @@ func (s *workflowResetterSuite) TestReapplyWorkflowEvents() {
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
-		History:       []*shared.History{{Events: events}},
+		History:       []*types.History{{Events: events}},
 		NextPageToken: nil,
 	}, nil).Once()
 
@@ -529,43 +529,101 @@ func (s *workflowResetterSuite) TestReapplyWorkflowEvents() {
 	s.Equal(newRunID, nextRunID)
 }
 
+func (s *workflowResetterSuite) TestClosePendingDecisionTask() {
+	sourceMutableState := execution.NewMockMutableState(s.controller)
+	baseRunID := uuid.New()
+	newRunID := uuid.New()
+	baseForkEventVerison := int64(10)
+	reason := "test"
+	decisionScheduleEventID := int64(2)
+	decisionStartEventID := decisionScheduleEventID + 1
+
+	// The workflow has decision schedule and decision start
+	sourceMutableState.EXPECT().GetInFlightDecision().Return(&execution.DecisionInfo{
+		ScheduleID: decisionScheduleEventID,
+		StartedID:  decisionStartEventID,
+	}, true).Times(1)
+	sourceMutableState.EXPECT().GetPendingChildExecutionInfos().Return(make(map[int64]*persistence.ChildExecutionInfo)).Times(1)
+	sourceMutableState.EXPECT().AddDecisionTaskFailedEvent(
+		decisionScheduleEventID,
+		decisionStartEventID,
+		types.DecisionTaskFailedCauseResetWorkflow,
+		nil,
+		execution.IdentityHistoryService,
+		reason,
+		"",
+		baseRunID,
+		newRunID,
+		baseForkEventVerison,
+	).Return(nil, nil).Times(1)
+
+	_, err := s.workflowResetter.closePendingDecisionTask(
+		sourceMutableState,
+		baseRunID,
+		newRunID,
+		baseForkEventVerison,
+		reason,
+	)
+	s.NoError(err)
+
+	// The workflow has only decision schedule
+	sourceMutableState.EXPECT().GetInFlightDecision().Return(nil, false).Times(1)
+	sourceMutableState.EXPECT().GetPendingDecision().Return(&execution.DecisionInfo{ScheduleID: decisionScheduleEventID}, true).Times(1)
+	sourceMutableState.EXPECT().GetPendingChildExecutionInfos().Return(make(map[int64]*persistence.ChildExecutionInfo)).Times(1)
+	sourceMutableState.EXPECT().AddDecisionTaskResetTimeoutEvent(
+		decisionScheduleEventID,
+		baseRunID,
+		newRunID,
+		baseForkEventVerison,
+		reason,
+	).Return(nil, nil).Times(1)
+	_, err = s.workflowResetter.closePendingDecisionTask(
+		sourceMutableState,
+		baseRunID,
+		newRunID,
+		baseForkEventVerison,
+		reason,
+	)
+	s.NoError(err)
+}
+
 func (s *workflowResetterSuite) TestReapplyEvents() {
 
-	event1 := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(101),
-		EventType: shared.EventTypeWorkflowExecutionSignaled.Ptr(),
-		WorkflowExecutionSignaledEventAttributes: &shared.WorkflowExecutionSignaledEventAttributes{
-			SignalName: common.StringPtr("some random signal name"),
+	event1 := &types.HistoryEvent{
+		EventID:   101,
+		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
+		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
+			SignalName: "some random signal name",
 			Input:      []byte("some random signal input"),
-			Identity:   common.StringPtr("some random signal identity"),
+			Identity:   "some random signal identity",
 		},
 	}
-	event2 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(102),
-		EventType:                            shared.EventTypeDecisionTaskScheduled.Ptr(),
-		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{},
+	event2 := &types.HistoryEvent{
+		EventID:                              102,
+		EventType:                            types.EventTypeDecisionTaskScheduled.Ptr(),
+		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{},
 	}
-	event3 := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(103),
-		EventType: shared.EventTypeWorkflowExecutionSignaled.Ptr(),
-		WorkflowExecutionSignaledEventAttributes: &shared.WorkflowExecutionSignaledEventAttributes{
-			SignalName: common.StringPtr("another random signal name"),
+	event3 := &types.HistoryEvent{
+		EventID:   103,
+		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
+		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
+			SignalName: "another random signal name",
 			Input:      []byte("another random signal input"),
-			Identity:   common.StringPtr("another random signal identity"),
+			Identity:   "another random signal identity",
 		},
 	}
-	events := []*shared.HistoryEvent{event1, event2, event3}
+	events := []*types.HistoryEvent{event1, event2, event3}
 
 	mutableState := execution.NewMockMutableState(s.controller)
 
 	for _, event := range events {
-		if event.GetEventType() == shared.EventTypeWorkflowExecutionSignaled {
+		if event.GetEventType() == types.EventTypeWorkflowExecutionSignaled {
 			attr := event.GetWorkflowExecutionSignaledEventAttributes()
 			mutableState.EXPECT().AddWorkflowExecutionSignaled(
 				attr.GetSignalName(),
 				attr.GetInput(),
 				attr.GetIdentity(),
-			).Return(&shared.HistoryEvent{}, nil).Times(1)
+			).Return(&types.HistoryEvent{}, nil).Times(1)
 		}
 	}
 
@@ -578,28 +636,28 @@ func (s *workflowResetterSuite) TestPagination() {
 	nextEventID := int64(101)
 	branchToken := []byte("some random branch token")
 
-	event1 := &shared.HistoryEvent{
-		EventId:                                 common.Int64Ptr(1),
-		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{},
+	event1 := &types.HistoryEvent{
+		EventID:                                 1,
+		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
 	}
-	event2 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(2),
-		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{},
+	event2 := &types.HistoryEvent{
+		EventID:                              2,
+		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{},
 	}
-	event3 := &shared.HistoryEvent{
-		EventId:                            common.Int64Ptr(3),
-		DecisionTaskStartedEventAttributes: &shared.DecisionTaskStartedEventAttributes{},
+	event3 := &types.HistoryEvent{
+		EventID:                            3,
+		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{},
 	}
-	event4 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(4),
-		DecisionTaskCompletedEventAttributes: &shared.DecisionTaskCompletedEventAttributes{},
+	event4 := &types.HistoryEvent{
+		EventID:                              4,
+		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{},
 	}
-	event5 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(5),
-		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
+	event5 := &types.HistoryEvent{
+		EventID:                              5,
+		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
 	}
-	history1 := []*shared.History{{[]*shared.HistoryEvent{event1, event2, event3}}}
-	history2 := []*shared.History{{[]*shared.HistoryEvent{event4, event5}}}
+	history1 := []*types.History{{[]*types.HistoryEvent{event1, event2, event3}}}
+	history2 := []*types.History{{[]*types.HistoryEvent{event4, event5}}}
 	history := append(history1, history2...)
 	pageToken := []byte("some random token")
 
@@ -631,11 +689,11 @@ func (s *workflowResetterSuite) TestPagination() {
 	paginationFn := s.workflowResetter.getPaginationFn(context.Background(), firstEventID, nextEventID, branchToken)
 	iter := collection.NewPagingIterator(paginationFn)
 
-	result := []*shared.History{}
+	result := []*types.History{}
 	for iter.HasNext() {
 		item, err := iter.Next()
 		s.NoError(err)
-		result = append(result, item.(*shared.History))
+		result = append(result, item.(*types.History))
 	}
 
 	s.Equal(history, result)

@@ -30,13 +30,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/admin/adminservicetest"
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/client"
-	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -50,7 +49,7 @@ type (
 		mockShard        *shard.TestContext
 		config           *config.Config
 		mockClientBean   *client.MockBean
-		adminClient      *adminservicetest.MockClient
+		adminClient      *admin.MockClient
 		clusterMetadata  *cluster.MockMetadata
 		executionManager *mocks.ExecutionManager
 		shardManager     *mocks.ShardManager
@@ -144,10 +143,13 @@ func (s *dlqHandlerSuite) TestReadMessages_OK() {
 	s.mockClientBean.EXPECT().GetRemoteAdminClient(s.sourceCluster).Return(s.adminClient).AnyTimes()
 	s.adminClient.EXPECT().
 		GetDLQReplicationMessages(ctx, gomock.Any()).
-		Return(&replicator.GetDLQReplicationMessagesResponse{}, nil)
-	tasks, token, err := s.messageHandler.ReadMessages(ctx, s.sourceCluster, lastMessageID, pageSize, pageToken)
+		Return(&types.GetDLQReplicationMessagesResponse{}, nil)
+	tasks, info, token, err := s.messageHandler.ReadMessages(ctx, s.sourceCluster, lastMessageID, pageSize, pageToken)
 	s.NoError(err)
 	s.Nil(token)
+	s.Equal(resp.Tasks[0].GetDomainID(), info[0].GetDomainID())
+	s.Equal(resp.Tasks[0].GetWorkflowID(), info[0].GetWorkflowID())
+	s.Equal(resp.Tasks[0].GetRunID(), info[0].GetRunID())
 	s.Nil(tasks)
 }
 
@@ -194,16 +196,14 @@ func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 	}).Return(resp, nil).Times(1)
 
 	s.mockClientBean.EXPECT().GetRemoteAdminClient(s.sourceCluster).Return(s.adminClient).AnyTimes()
-	replicationTask := &replicator.ReplicationTask{
-		TaskType:     replicator.ReplicationTaskTypeHistory.Ptr(),
-		SourceTaskId: common.Int64Ptr(lastMessageID),
+	replicationTask := &types.ReplicationTask{
+		TaskType:     types.ReplicationTaskTypeHistory.Ptr(),
+		SourceTaskID: lastMessageID,
 	}
 	s.adminClient.EXPECT().
 		GetDLQReplicationMessages(ctx, gomock.Any()).
-		Return(&replicator.GetDLQReplicationMessagesResponse{
-			ReplicationTasks: []*replicator.ReplicationTask{
-				replicationTask,
-			},
+		Return(&types.GetDLQReplicationMessagesResponse{
+			ReplicationTasks: []*types.ReplicationTask{replicationTask},
 		}, nil)
 	s.taskExecutor.EXPECT().execute(replicationTask, true).Return(0, nil).Times(1)
 	s.executionManager.On("RangeDeleteReplicationTaskFromDLQ", mock.Anything,

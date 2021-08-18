@@ -33,11 +33,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	c "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
+	"github.com/uber/cadence/common/types"
 )
 
 type ConcreteExecutionExistsSuite struct {
@@ -54,8 +54,8 @@ func (s *ConcreteExecutionExistsSuite) SetupTest() {
 }
 
 func (s *ConcreteExecutionExistsSuite) TestCheck() {
-	existsError := shared.EntityNotExistsError{}
-	unknownError := shared.BadRequestError{}
+	existsError := types.EntityNotExistsError{}
+	unknownError := types.BadRequestError{}
 	testCases := []struct {
 		execution       *entity.CurrentExecution
 		getConcreteResp *persistence.IsWorkflowExecutionExistsResponse
