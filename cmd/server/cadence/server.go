@@ -225,7 +225,7 @@ func (s *server) startService() common.Daemon {
 	var authProvider clientworker.AuthorizationProvider
 	if s.cfg.Authorization.OAuthAuthorizer.Enable {
 		authProvider, err = authorization.GetAuthProviderClient(s.cfg.Authorization.OAuthAuthorizer.JwtCredentials.PrivateKey)
-		if err != nil{
+		if err != nil {
 			log.Fatalf(err.Error())
 		}
 	}
