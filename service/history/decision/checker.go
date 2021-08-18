@@ -363,7 +363,9 @@ func (v *attrValidator) validateTimerScheduleAttributes(
 		return &types.BadRequestError{Message: "TimerId exceeds length limit."}
 	}
 	if attributes.GetStartToFireTimeoutSeconds() <= 0 {
-		return &types.BadRequestError{Message: "A valid StartToFireTimeoutSeconds is not set on decision."}
+		return &types.BadRequestError{
+			Message: fmt.Sprintf("Invalid StartToFireTimeoutSeconds: %v", attributes.GetStartToFireTimeoutSeconds()),
+		}
 	}
 	return nil
 }
