@@ -21,7 +21,6 @@
 package cadence
 
 import (
-	"io/ioutil"
 	"log"
 	"time"
 
@@ -32,6 +31,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
@@ -222,14 +222,12 @@ func (s *server) startService() common.Daemon {
 		}
 	}
 
-	// will return empty array if not enabled
 	var authProvider clientworker.AuthorizationProvider
 	if s.cfg.Authorization.OAuthAuthorizer.Enable {
-		privateKey, err := ioutil.ReadFile(s.cfg.Authorization.OAuthAuthorizer.JwtCredentials.PrivateKey)
-		if err != nil {
-			log.Fatalf("invalid private key path %s", s.cfg.Authorization.OAuthAuthorizer.JwtCredentials.PrivateKey)
+		authProvider, err = authorization.GetAuthProviderClient(s.cfg.Authorization.OAuthAuthorizer.JwtCredentials.PrivateKey)
+		if err != nil{
+			log.Fatalf(err.Error())
 		}
-		authProvider = clientworker.NewJwtAuthorizationProvider(privateKey)
 	}
 	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, s.cfg.PublicClient.HostPort, &client.DispatcherOptions{AuthProvider: &authProvider})
 	if err != nil {

@@ -24,6 +24,9 @@ package authorization
 
 import (
 	"context"
+	"fmt"
+	clientworker "go.uber.org/cadence/worker"
+	"io/ioutil"
 
 	"github.com/uber/cadence/common/types"
 )
@@ -83,4 +86,12 @@ func NewPermission(permission string) Permission {
 // Authorizer is an interface for authorization
 type Authorizer interface {
 	Authorize(ctx context.Context, attributes *Attributes) (Result, error)
+}
+
+func GetAuthProviderClient(privateKey string) (clientworker.AuthorizationProvider, error) {
+	pk, err := ioutil.ReadFile(privateKey)
+	if err != nil {
+		return nil, fmt.Errorf("invalid private key path %s", privateKey)
+	}
+	return clientworker.NewJwtAuthorizationProvider(pk), nil
 }

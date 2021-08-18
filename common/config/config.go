@@ -322,14 +322,16 @@ type (
 		// Address indicate the remote service address(Host:Port). Host can be DNS name.
 		RPCAddress string `yaml:"rpcAddress"`
 		// AuthorizationProvider contains the information to authorize the cluster
-		AuthorizationProvider struct {
-			// Enable indicates if the auth provider is enabled
-			Enable bool `yaml:"enable"`
-			// Type auth provider type
-			Type string `yaml:"type"` // only supports OAuthAuthorization
-			// PrivateKey is the private key path
-			PrivateKey string `yaml:"privateKey"`
-		}
+		AuthorizationProvider AuthorizationProvider `yaml:"authorizationProvider"`
+	}
+
+	AuthorizationProvider struct {
+		// Enable indicates if the auth provider is enabled
+		Enable bool `yaml:"enable"`
+		// Type auth provider type
+		Type string `yaml:"type"` // only supports OAuthAuthorization
+		// PrivateKey is the private key path
+		PrivateKey string `yaml:"privateKey"`
 	}
 
 	// DCRedirectionPolicy contains the frontend datacenter redirection policy

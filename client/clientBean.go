@@ -25,7 +25,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"strings"
 	"sync"
@@ -44,6 +43,7 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -125,11 +125,10 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 		}
 		var authProvider clientworker.AuthorizationProvider
 		if info.AuthorizationProvider.Enable {
-			privateKey, err := ioutil.ReadFile(info.AuthorizationProvider.PrivateKey)
-			if err != nil {
-				return nil, fmt.Errorf("invalid private key path %s", info.AuthorizationProvider.PrivateKey)
+			authProvider, err = authorization.GetAuthProviderClient(info.AuthorizationProvider.PrivateKey)
+			if err != nil{
+				return nil, err
 			}
-			authProvider = clientworker.NewJwtAuthorizationProvider(privateKey)
 		}
 
 		dispatcher, err := dispatcherProvider.Get(info.RPCName, info.RPCAddress, &DispatcherOptions{
@@ -291,6 +290,11 @@ func (p *dnsDispatcherProvider) Get(serviceName string, address string, options 
 	peerListUpdater.Start()
 	outbound := tchanTransport.NewOutbound(peerList)
 
+	var authProvider *clientworker.AuthorizationProvider
+	if options != nil && options.AuthProvider != nil {
+		authProvider = options.AuthProvider
+	}
+
 	p.logger.Info("Creating RPC dispatcher outbound", tag.Address(address))
 
 	// Attach the outbound to the dispatcher (this will add middleware/logging/etc)
@@ -303,7 +307,7 @@ func (p *dnsDispatcherProvider) Get(serviceName string, address string, options 
 			},
 		},
 		OutboundMiddleware: yarpc.OutboundMiddleware{
-			Unary: &outboundMiddleware{authProvider: options.AuthProvider},
+			Unary: &outboundMiddleware{authProvider: authProvider},
 		},
 	})
 
