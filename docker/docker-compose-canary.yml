@@ -3,4 +3,4 @@ services:
   cadence-canary:
     image: ubercadence/cadence-canary:latest
     volumes:
-      - ./config/bench:/etc/cadence-bench/config/bench
+      - ./config/canary:/etc/cadence-canary/config/canary
