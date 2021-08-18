@@ -297,6 +297,10 @@ func verifyResultActivity(
 	}
 	resp, err := cc.CountWorkflow(ctx, request)
 	if err != nil {
+		if _, ok := err.(*shared.BadRequestError); ok {
+			// when cluster doesn't have advanced visibility, don't do this step
+			return nil
+		}
 		return err
 	}
 	if resp.GetCount() > params.FailedWorkflowCount {
