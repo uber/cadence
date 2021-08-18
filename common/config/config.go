@@ -323,6 +323,7 @@ type (
 		// RPCName indicate the remote service name
 		RPCName string `yaml:"rpcName"`
 		// Address indicate the remote service address(Host:Port). Host can be DNS name.
+		// For currentCluster, it's usually the same as publicClient.hostPort
 		RPCAddress string `yaml:"rpcAddress" validate:"nonzero"`
 		// AuthorizationProvider contains the information to authorize the cluster
 		AuthorizationProvider AuthorizationProvider `yaml:"authorizationProvider"`
