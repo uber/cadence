@@ -24,12 +24,15 @@ import (
 	"time"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/transport/grpc"
 
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
 
+	adminv1 "github.com/uber/cadence/.gen/proto/admin/v1"
 	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
 	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
 	matchingv1 "github.com/uber/cadence/.gen/proto/matching/v1"
@@ -268,7 +271,11 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndDispatcher(
 	}
 
 	clientProvider := func(clientKey string) (interface{}, error) {
-		return admin.NewThriftClient(adminserviceclient.New(dispatcher.ClientConfig(rpcName))), nil
+		config := dispatcher.ClientConfig(rpcName)
+		if isGRPCOutbound(config) {
+			return admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(config)), nil
+		}
+		return admin.NewThriftClient(adminserviceclient.New(config)), nil
 	}
 
 	client := admin.NewClient(timeout, largeTimeout, common.NewClientCache(keyResolver, clientProvider))
@@ -292,7 +299,16 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndDispatcher(
 	}
 
 	clientProvider := func(clientKey string) (interface{}, error) {
-		return frontend.NewThriftClient(workflowserviceclient.New(dispatcher.ClientConfig(rpcName))), nil
+		config := dispatcher.ClientConfig(rpcName)
+		if isGRPCOutbound(config) {
+			return frontend.NewGRPCClient(
+				apiv1.NewDomainAPIYARPCClient(config),
+				apiv1.NewWorkflowAPIYARPCClient(config),
+				apiv1.NewWorkerAPIYARPCClient(config),
+				apiv1.NewVisibilityAPIYARPCClient(config),
+			), nil
+		}
+		return frontend.NewThriftClient(workflowserviceclient.New(config)), nil
 	}
 
 	client := frontend.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider))
@@ -357,4 +373,9 @@ func (cf *rpcClientFactory) newFrontendGRPCClient(hostAddress string) (frontend.
 		apiv1.NewWorkerAPIYARPCClient(config),
 		apiv1.NewVisibilityAPIYARPCClient(config),
 	), nil
+}
+
+func isGRPCOutbound(config transport.ClientConfig) bool {
+	namer, ok := config.GetUnaryOutbound().(transport.Namer)
+	return ok && namer.TransportName() == grpc.TransportName
 }
