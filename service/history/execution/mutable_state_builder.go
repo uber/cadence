@@ -1589,6 +1589,10 @@ func (e *mutableStateBuilder) IsWorkflowExecutionRunning() bool {
 	}
 }
 
+func (e *mutableStateBuilder) IsWorkflowCompleted() bool {
+	return e.executionInfo.State == persistence.WorkflowStateCompleted
+}
+
 func (e *mutableStateBuilder) IsCancelRequested() (bool, string) {
 	if e.executionInfo.CancelRequested {
 		return e.executionInfo.CancelRequested, e.executionInfo.CancelRequestID
