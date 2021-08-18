@@ -775,10 +775,7 @@ func (m *CurrentBranchChangedError) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthError
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {
@@ -829,10 +826,7 @@ func (m *InternalDataInconsistencyError) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthError
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {
@@ -883,10 +877,7 @@ func (m *EventAlreadyStartedError) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthError
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {
@@ -937,10 +928,7 @@ func (m *RemoteSyncMatchedError) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthError
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {
@@ -1131,10 +1119,7 @@ func (m *RetryTaskV2Error) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthError
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {
@@ -1217,10 +1202,7 @@ func (m *ShardOwnershipLostError) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthError
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {
