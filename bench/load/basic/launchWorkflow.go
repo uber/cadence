@@ -299,6 +299,7 @@ func verifyResultActivity(
 	if err != nil {
 		if _, ok := err.(*shared.BadRequestError); ok {
 			// when cluster doesn't have advanced visibility, don't do this step
+			// TODO use ListCloseWorkflow to implement it
 			return nil
 		}
 		return err
