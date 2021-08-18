@@ -1,0 +1,6 @@
+version: '3'
+services:
+  cadence-canary:
+    image: ubercadence/cadence-canary:latest
+    volumes:
+      - ./config/bench:/etc/cadence-bench/config/bench

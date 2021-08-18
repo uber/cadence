@@ -114,14 +114,14 @@ FROM alpine AS cadence-canary
 
 COPY --from=builder /cadence/cadence-canary /usr/local/bin
 
-ENTRYPOINT ["cadence-canary"]
+CMD ["/usr/local/bin/cadence-canary", "--root", "/etc/cadence-canary", "start"]
 
 # Cadence Bench
 FROM alpine AS cadence-bench
 
 COPY --from=builder /cadence/cadence-bench /usr/local/bin
 
-ENTRYPOINT ["cadence-bench"]
+CMD ["/usr/local/bin/cadence-bench", "--root", "/etc/cadence-bench", "start"]
 
 # Final image
 FROM cadence-${TARGET}
