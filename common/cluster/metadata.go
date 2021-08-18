@@ -81,44 +81,9 @@ func NewMetadata(
 	currentClusterName string,
 	clusterInfo map[string]config.ClusterInformation,
 ) Metadata {
-
-	if len(clusterInfo) == 0 {
-		panic("Empty cluster information")
-	} else if len(primaryClusterName) == 0 {
-		panic("Primary cluster name is empty")
-	} else if len(currentClusterName) == 0 {
-		panic("Current cluster name is empty")
-	} else if failoverVersionIncrement == 0 {
-		panic("Version increment is 0")
-	}
-
 	versionToClusterName := make(map[int64]string)
 	for clusterName, info := range clusterInfo {
-		if failoverVersionIncrement <= info.InitialFailoverVersion || info.InitialFailoverVersion < 0 {
-			panic(fmt.Sprintf(
-				"Version increment %v is smaller than initial version: %v.",
-				failoverVersionIncrement,
-				info.InitialFailoverVersion,
-			))
-		}
-		if len(clusterName) == 0 {
-			panic("Cluster name in all cluster names is empty")
-		}
 		versionToClusterName[info.InitialFailoverVersion] = clusterName
-
-		if info.Enabled && (len(info.RPCName) == 0 || len(info.RPCAddress) == 0) {
-			panic(fmt.Sprintf("Cluster %v: rpc name / address is empty", clusterName))
-		}
-	}
-
-	if _, ok := clusterInfo[currentClusterName]; !ok {
-		panic("Current cluster is not specified in cluster info")
-	}
-	if _, ok := clusterInfo[primaryClusterName]; !ok {
-		panic("Primary cluster is not specified in cluster info")
-	}
-	if len(versionToClusterName) != len(clusterInfo) {
-		panic("Cluster info initial versions have duplicates")
 	}
 
 	return &metadataImpl{
