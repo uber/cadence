@@ -239,7 +239,7 @@ func launcherActivity(ctx context.Context, params launcherActivityParams) (activ
 			logger.Debug("Created Workflow", zap.String("WorkflowID", we.ID), zap.String("RunID", we.RunID))
 		} else {
 			res.IncFailed()
-			logger.Error("Failed to start workflow execution", zap.String("WorkflowID", we.ID), zap.Error(err))
+			logger.Error("Failed to start workflow execution", zap.Error(err))
 		}
 		activity.RecordHeartbeat(ctx, i)
 		jitter := time.Duration(75 + rand.Intn(25))
