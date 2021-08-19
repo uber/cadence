@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/roundrobin"
+	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/uber/cadence/client/admin"
@@ -65,9 +66,10 @@ type (
 		SetRemoteFrontendClient(cluster string, client frontend.Client)
 	}
 
-	// DispatcherProvider provides a diapatcher to a given address
+	// DispatcherProvider provides a dispatcher to a given address
 	DispatcherProvider interface {
 		Get(name string, address string) (*yarpc.Dispatcher, error)
+		GetGRPC(name string, address string) (*yarpc.Dispatcher, error)
 	}
 
 	clientBeanImpl struct {
@@ -274,8 +276,26 @@ func (p *dnsDispatcherProvider) Get(serviceName string, address string) (*yarpc.
 	peerListUpdater.Start()
 	outbound := tchanTransport.NewOutbound(peerList)
 
-	p.logger.Info("Creating RPC dispatcher outbound", tag.Address(address))
+	p.logger.Info("Creating TChannel dispatcher outbound", tag.Address(address))
+	return p.createOutboundDispatcher(serviceName, outbound)
+}
 
+func (p *dnsDispatcherProvider) GetGRPC(serviceName string, address string) (*yarpc.Dispatcher, error) {
+	grpcTransport := grpc.NewTransport()
+
+	peerList := roundrobin.New(grpcTransport)
+	peerListUpdater, err := newDNSUpdater(peerList, address, p.interval, p.logger)
+	if err != nil {
+		return nil, err
+	}
+	peerListUpdater.Start()
+	outbound := grpcTransport.NewOutbound(peerList)
+
+	p.logger.Info("Creating GRPC dispatcher outbound", tag.Address(address))
+	return p.createOutboundDispatcher(serviceName, outbound)
+}
+
+func (p *dnsDispatcherProvider) createOutboundDispatcher(serviceName string, outbound transport.UnaryOutbound) (*yarpc.Dispatcher, error) {
 	// Attach the outbound to the dispatcher (this will add middleware/logging/etc)
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: crossDCCaller,
