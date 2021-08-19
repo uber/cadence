@@ -152,7 +152,6 @@ const (
 	TransferTaskTypeRecordWorkflowStarted
 	TransferTaskTypeResetWorkflow
 	TransferTaskTypeUpsertWorkflowSearchAttributes
-	TransferTaskTypeApplyParentPolicy
 )
 
 // Types of cross-cluster tasks
@@ -2340,11 +2339,6 @@ func (u *RecordWorkflowExecutionCompleteTask) GetVisibilityTimestamp() time.Time
 // SetVisibilityTimestamp set the visibility timestamp
 func (u *RecordWorkflowExecutionCompleteTask) SetVisibilityTimestamp(timestamp time.Time) {
 	u.VisibilityTimestamp = timestamp
-}
-
-// GetType returns the type of the cancel transfer task
-func (u *ApplyParentClosePolicyTask) GetType() int {
-	return TransferTaskTypeApplyParentPolicy
 }
 
 // GetVersion returns the version of the cancel transfer task
