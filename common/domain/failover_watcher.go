@@ -92,7 +92,7 @@ func NewFailoverWatcher(
 		domainCache:     domainCache,
 		domainManager:   domainManager,
 		timeSource:      timeSource,
-		scope:           metricsClient.Scope(metrics.FailoverMarkerScope),
+		scope:           metricsClient.Scope(metrics.DomainFailoverScope),
 		logger:          logger,
 	}
 }
