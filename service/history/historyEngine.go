@@ -426,13 +426,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
 				previousFailoverVersion := nextDomain.GetPreviousFailoverVersion()
 
-				if nextDomain.GetInfo().Name == "cadence-canary-global" {
-					e.logger.Info("Received domain failover callback",
-						tag.ShardID(e.shard.GetShardID()),
-						tag.FailoverVersion(previousFailoverVersion),
-						tag.CurrentVersion(shardNotificationVersion),
-						tag.IncomingVersion(domainFailoverNotificationVersion))
-				}
+				e.metricsClient.IncCounter(metrics.DomainFailoverScope, metrics.DomainFailoverCallbackCount)
 
 				if nextDomain.IsGlobalDomain() &&
 					domainFailoverNotificationVersion >= shardNotificationVersion &&
@@ -445,9 +439,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 						DomainID: nextDomain.GetInfo().ID,
 					})
 
-					if nextDomain.GetInfo().Name == "cadence-canary-global" {
-						e.logger.Info("Generate domain failover marker", tag.ShardID(e.shard.GetShardID()))
-					}
+					e.metricsClient.IncCounter(metrics.DomainFailoverScope, metrics.DomainFailoverCallbackCount)
 				}
 			}
 

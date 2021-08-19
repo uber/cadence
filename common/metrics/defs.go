@@ -1753,6 +1753,9 @@ const (
 	ParentClosePolicyProcessorSuccess
 	ParentClosePolicyProcessorFailures
 
+	DomainFailoverCallbackCount
+	GracefulFailoverCallbackCount
+
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
@@ -2260,6 +2263,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DomainReplicationQueueSizeErrorCount: {metricName: "domain_replication_queue_failed", metricType: Counter},
 		ParentClosePolicyProcessorSuccess:    {metricName: "parent_close_policy_processor_requests", metricType: Counter},
 		ParentClosePolicyProcessorFailures:   {metricName: "parent_close_policy_processor_errors", metricType: Counter},
+		DomainFailoverCallbackCount:          {metricName: "domain_failover_callback_requests", metricType: Counter},
+		GracefulFailoverCallbackCount:        {metricName: "graceful_failover_callback_requests", metricType: Counter},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
