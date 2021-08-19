@@ -1387,6 +1387,33 @@ func ToCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes(t *shar
 	}
 }
 
+// FromCrossClusterApplyParentClosePolicyRequestAttributes converts internal CrossClusterApplyParentClosePolicyRequestAttributes type to proto
+func FromCrossClusterApplyParentClosePolicyRequestAttributes(t *types.CrossClusterApplyParentClosePolicyRequestAttributes) *sharedv1.CrossClusterApplyParentClosePolicyRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.CrossClusterApplyParentClosePolicyRequestAttributes{
+		TargetDomainId:          t.TargetDomainID,
+		TargetWorkflowExecution: FromWorkflowRunPair(t.TargetWorkflowID, t.TargetRunID),
+		InitiatedEventId:        t.InitiatedEventID,
+		ParentClosePolicy:       FromParentClosePolicy(t.ParentClosePolicy),
+	}
+}
+
+// ToCrossClusterApplyParentClosePolicyRequestAttributes converts proto CrossClusterApplyParentClosePolicyRequestAttributes type to internal
+func ToCrossClusterApplyParentClosePolicyRequestAttributes(t *sharedv1.CrossClusterApplyParentClosePolicyRequestAttributes) *types.CrossClusterApplyParentClosePolicyRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterApplyParentClosePolicyRequestAttributes{
+		TargetDomainID:    t.TargetDomainId,
+		TargetWorkflowID:  ToWorkflowID(t.TargetWorkflowExecution),
+		TargetRunID:       ToRunID(t.TargetWorkflowExecution),
+		InitiatedEventID:  t.InitiatedEventId,
+		ParentClosePolicy: ToParentClosePolicy(t.ParentClosePolicy),
+	}
+}
+
 // FromCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes converts internal CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes type to proto
 func FromCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes(t *types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes) *sharedv1.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes {
 	if t == nil {

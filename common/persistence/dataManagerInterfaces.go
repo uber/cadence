@@ -152,6 +152,7 @@ const (
 	TransferTaskTypeRecordWorkflowStarted
 	TransferTaskTypeResetWorkflow
 	TransferTaskTypeUpsertWorkflowSearchAttributes
+	TransferTaskTypeApplyParentPolicy
 )
 
 // Types of cross-cluster tasks
@@ -160,6 +161,7 @@ const (
 	CrossClusterTaskTypeCancelExecution
 	CrossClusterTaskTypeSignalExecution
 	CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete
+	CrossClusterTaskTypeApplyParentPolicy
 )
 
 // Types of replication tasks
@@ -582,6 +584,13 @@ type (
 		Version             int64
 	}
 
+	// ApplyParentClosePolicyTask identifies a task for applying parent close policy
+	ApplyParentClosePolicyTask struct {
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		Version             int64
+	}
+
 	// CrossClusterStartChildExecutionTask is the cross-cluster version of StartChildExecutionTask
 	CrossClusterStartChildExecutionTask struct {
 		StartChildExecutionTask
@@ -606,6 +615,13 @@ type (
 	// CrossClusterRecordChildWorkflowExecutionCompleteTask is the cross-cluster version of RecordChildCompletionTask
 	CrossClusterRecordChildWorkflowExecutionCompleteTask struct {
 		RecordWorkflowExecutionCompleteTask
+
+		TargetCluster string
+	}
+
+	// CrossClusterApplyParentClosePolicyTask is the cross-cluster version of ApplyParentClosePolicyTask
+	CrossClusterApplyParentClosePolicyTask struct {
+		ApplyParentClosePolicyTask
 
 		TargetCluster string
 	}
@@ -2326,6 +2342,41 @@ func (u *RecordWorkflowExecutionCompleteTask) SetVisibilityTimestamp(timestamp t
 	u.VisibilityTimestamp = timestamp
 }
 
+// GetType returns the type of the cancel transfer task
+func (u *ApplyParentClosePolicyTask) GetType() int {
+	return TransferTaskTypeApplyParentPolicy
+}
+
+// GetVersion returns the version of the cancel transfer task
+func (u *ApplyParentClosePolicyTask) GetVersion() int64 {
+	return u.Version
+}
+
+// SetVersion returns the version of the cancel transfer task
+func (u *ApplyParentClosePolicyTask) SetVersion(version int64) {
+	u.Version = version
+}
+
+// GetTaskID returns the sequence ID of the cancel transfer task.
+func (u *ApplyParentClosePolicyTask) GetTaskID() int64 {
+	return u.TaskID
+}
+
+// SetTaskID sets the sequence ID of the cancel transfer task.
+func (u *ApplyParentClosePolicyTask) SetTaskID(id int64) {
+	u.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (u *ApplyParentClosePolicyTask) GetVisibilityTimestamp() time.Time {
+	return u.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (u *ApplyParentClosePolicyTask) SetVisibilityTimestamp(timestamp time.Time) {
+	u.VisibilityTimestamp = timestamp
+}
+
 // GetType returns the type of the upsert search attributes transfer task
 func (u *UpsertWorkflowSearchAttributesTask) GetType() int {
 	return TransferTaskTypeUpsertWorkflowSearchAttributes
@@ -2414,6 +2465,11 @@ func (c *CrossClusterSignalExecutionTask) GetType() int {
 // GetType returns of type of the cross-cluster record child workflow completion task
 func (c *CrossClusterRecordChildWorkflowExecutionCompleteTask) GetType() int {
 	return CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete
+}
+
+// GetType returns of type of the cross-cluster cancel task
+func (c *CrossClusterApplyParentClosePolicyTask) GetType() int {
+	return CrossClusterTaskTypeApplyParentPolicy
 }
 
 // GetType returns the type of the history replication task

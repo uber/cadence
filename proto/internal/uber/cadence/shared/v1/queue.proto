@@ -27,6 +27,7 @@ option go_package = "github.com/uber/cadence/.gen/proto/shared/v1;sharedv1";
 import "google/protobuf/timestamp.proto";
 import "uber/cadence/api/v1/common.proto";
 import "uber/cadence/api/v1/history.proto";
+import "uber/cadence/api/v1/workflow.proto";
 
 enum TaskType {
   TASK_TYPE_INVALID = 0;
@@ -119,6 +120,16 @@ message CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes {
 message CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes {
 }
 
+message CrossClusterApplyParentClosePolicyRequestAttributes {
+  string target_domain_id = 1;
+  api.v1.WorkflowExecution target_workflow_execution = 2;
+  int64 initiated_event_id = 3;
+  api.v1.ParentClosePolicy parent_close_policy = 4;
+}
+
+message CrossClusterApplyParentClosePolicyResponseAttributes {
+}
+
 message CrossClusterTaskRequest {
   CrossClusterTaskInfo task_info = 1;
   oneof attributes {
@@ -126,6 +137,7 @@ message CrossClusterTaskRequest {
     CrossClusterCancelExecutionRequestAttributes cancelExecutionAttributes = 3;
     CrossClusterSignalExecutionRequestAttributes signalExecutionAttributes = 4;
     CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes recordChildWorkflowExecutionCompleteRequestAttributes = 5;
+    CrossClusterApplyParentClosePolicyRequestAttributes applyParentClosePolicyRequestAttributes = 6;
   }
 }
 
@@ -138,6 +150,7 @@ message CrossClusterTaskResponse {
     CrossClusterCancelExecutionResponseAttributes cancelExecutionAttributes = 5;
     CrossClusterSignalExecutionResponseAttributes signalExecutionAttributes = 6;
     CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes recordChildWorkflowExecutionCompleteRequestAttributes = 7;
+    CrossClusterApplyParentClosePolicyResponseAttributes applyParentClosePolicyResponseAttributes = 8;
   }
 }
 
