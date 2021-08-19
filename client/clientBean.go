@@ -119,7 +119,14 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 			continue
 		}
 
-		dispatcher, err := dispatcherProvider.Get(info.RPCName, info.RPCAddress)
+		var dispatcher *yarpc.Dispatcher
+		var err error
+		switch info.RPCTransport {
+		case tchannel.TransportName:
+			dispatcher, err = dispatcherProvider.Get(info.RPCName, info.RPCAddress)
+		case grpc.TransportName:
+			dispatcher, err = dispatcherProvider.GetGRPC(info.RPCName, info.RPCAddress)
+		}
 		if err != nil {
 			return nil, err
 		}
