@@ -38,6 +38,7 @@ func TestClusterGroupMetadataDefaults(t *testing.T) {
 
 	assert.Equal(t, "active", config.PrimaryClusterName)
 	assert.Equal(t, "cadence-frontend", config.ClusterGroup["active"].RPCName)
+	assert.Equal(t, "tchannel", config.ClusterGroup["active"].RPCTransport)
 }
 
 func TestClusterGroupMetadataValidate(t *testing.T) {
@@ -135,6 +136,15 @@ func TestClusterGroupMetadataValidate(t *testing.T) {
 			err: "cluster active: rpc name / address is empty",
 		},
 		{
+			msg: "invalid rpc transport",
+			config: modify(validClusterGroupMetadata(), func(m *ClusterGroupMetadata) {
+				active := m.ClusterGroup["active"]
+				active.RPCTransport = "invalid"
+				m.ClusterGroup["active"] = active
+			}),
+			err: "cluster active: rpc transport must tchannel or grpc",
+		},
+		{
 			msg: "initial version duplicated",
 			config: modify(validClusterGroupMetadata(), func(m *ClusterGroupMetadata) {
 				standby := m.ClusterGroup["standby"]
@@ -176,12 +186,14 @@ func validClusterGroupMetadata() *ClusterGroupMetadata {
 				InitialFailoverVersion: 0,
 				RPCName:                "cadence-frontend",
 				RPCAddress:             "localhost:7933",
+				RPCTransport:           "grpc",
 			},
 			"standby": {
 				Enabled:                true,
 				InitialFailoverVersion: 2,
 				RPCName:                "cadence-frontend",
 				RPCAddress:             "localhost:7933",
+				RPCTransport:           "grpc",
 			},
 		},
 	}
