@@ -45,7 +45,7 @@ func TestFillingDefaultSQLEncodingDecodingTypes(t *testing.T) {
 				},
 			},
 		},
-		ClusterMetadata: &ClusterMetadata{},
+		ClusterGroupMetadata: &ClusterGroupMetadata{},
 	}
 	cfg.fillDefaults()
 	assert.Equal(t, string(common.EncodingTypeThriftRW), cfg.Persistence.DataStores["sql"].SQL.EncodingType)
@@ -53,9 +53,9 @@ func TestFillingDefaultSQLEncodingDecodingTypes(t *testing.T) {
 }
 
 func TestConfigFallbacks(t *testing.T) {
-	clusterMetadata := validClusterMetadata()
+	metadata := validClusterGroupMetadata()
 	cfg := &Config{
-		ClusterMetadata: clusterMetadata,
+		ClusterGroupMetadata: metadata,
 		Persistence: Persistence{
 			DefaultStore:    "default",
 			VisibilityStore: "cass",
@@ -84,7 +84,7 @@ func TestConfigFallbacks(t *testing.T) {
 	assert.NotEmpty(t, cfg.Persistence.DataStores["cass"].Cassandra, "cassandra config should remain after update")
 	assert.NotEmpty(t, cfg.Persistence.DataStores["cass"].NoSQL, "nosql config should contain cassandra config / not be empty")
 	assert.NotZero(t, cfg.Persistence.DataStores["default"].SQL.NumShards, "num shards should be nonzero")
-	assert.Equal(t, clusterMetadata.ClusterInformation[clusterMetadata.CurrentClusterName].RPCAddress, cfg.PublicClient.HostPort)
+	assert.Equal(t, metadata.ClusterGroup[metadata.CurrentClusterName].RPCAddress, cfg.PublicClient.HostPort)
 }
 
 func TestConfigErrorInAuthorizationConfig(t *testing.T) {

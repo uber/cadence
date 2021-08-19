@@ -152,8 +152,8 @@ func (s *NDCIntegrationTestSuite) SetupSuite() {
 
 	s.registerDomain()
 
-	s.version = s.clusterConfigs[1].ClusterMetadata.ClusterInformation[s.clusterConfigs[1].ClusterMetadata.CurrentClusterName].InitialFailoverVersion
-	s.versionIncrement = s.clusterConfigs[0].ClusterMetadata.FailoverVersionIncrement
+	s.version = s.clusterConfigs[1].ClusterGroupMetadata.ClusterGroup[s.clusterConfigs[1].ClusterGroupMetadata.CurrentClusterName].InitialFailoverVersion
+	s.versionIncrement = s.clusterConfigs[0].ClusterGroupMetadata.FailoverVersionIncrement
 	s.generator = test.InitializeHistoryEventGenerator(s.domainName, s.version)
 }
 

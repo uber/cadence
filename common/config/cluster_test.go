@@ -26,8 +26,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestClusterMetadataDefaults(t *testing.T) {
-	config := ClusterMetadata{
+func TestClusterGroupMetadataDefaults(t *testing.T) {
+	config := ClusterGroupMetadata{
 		MasterClusterName: "active",
 		ClusterInformation: map[string]ClusterInformation{
 			"active": {},
@@ -37,113 +37,118 @@ func TestClusterMetadataDefaults(t *testing.T) {
 	config.fillDefaults()
 
 	assert.Equal(t, "active", config.PrimaryClusterName)
-	assert.Equal(t, "cadence-frontend", config.ClusterInformation["active"].RPCName)
+	assert.Equal(t, "cadence-frontend", config.ClusterGroup["active"].RPCName)
 }
 
-func TestClusterMetadataValidate(t *testing.T) {
+func TestClusterGroupMetadataValidate(t *testing.T) {
+	modify := func(initial *ClusterGroupMetadata, modify func(metadata *ClusterGroupMetadata)) *ClusterGroupMetadata {
+		modify(initial)
+		return initial
+	}
+
 	tests := []struct {
 		msg    string
-		config *ClusterMetadata
+		config *ClusterGroupMetadata
 		err    string
 	}{
 		{
 			msg:    "valid",
-			config: validClusterMetadata(),
+			config: validClusterGroupMetadata(),
 		},
 		{
 			msg:    "empty",
 			config: nil,
-			err:    "ClusterMetadata cannot be empty",
+			err:    "ClusterGroupMetadata cannot be empty",
 		},
 		{
 			msg: "primary cluster name is empty",
-			config: modifyClusterMetadata(validClusterMetadata(), func(m *ClusterMetadata) {
+			config: modify(validClusterGroupMetadata(), func(m *ClusterGroupMetadata) {
 				m.PrimaryClusterName = ""
 			}),
 			err: "primary cluster name is empty",
 		},
 		{
 			msg: "current cluster name is empty",
-			config: modifyClusterMetadata(validClusterMetadata(), func(m *ClusterMetadata) {
+			config: modify(validClusterGroupMetadata(), func(m *ClusterGroupMetadata) {
 				m.CurrentClusterName = ""
 			}),
 			err: "current cluster name is empty",
 		},
 		{
-			msg: "primary cluster is not specified in cluster info",
-			config: modifyClusterMetadata(validClusterMetadata(), func(m *ClusterMetadata) {
+			msg: "primary cluster is not specified in the cluster group",
+			config: modify(validClusterGroupMetadata(), func(m *ClusterGroupMetadata) {
 				m.PrimaryClusterName = "non-existing"
 			}),
-			err: "primary cluster is not specified in cluster info",
+			err: "primary cluster is not specified in the cluster group",
 		},
 		{
-			msg: "current cluster is not specified in cluster info",
-			config: modifyClusterMetadata(validClusterMetadata(), func(m *ClusterMetadata) {
+			msg: "current cluster is not specified in the cluster group",
+			config: modify(validClusterGroupMetadata(), func(m *ClusterGroupMetadata) {
 				m.CurrentClusterName = "non-existing"
 			}),
-			err: "current cluster is not specified in cluster info",
+			err: "current cluster is not specified in the cluster group",
 		},
 		{
 			msg: "version increment is 0",
-			config: modifyClusterMetadata(validClusterMetadata(), func(m *ClusterMetadata) {
+			config: modify(validClusterGroupMetadata(), func(m *ClusterGroupMetadata) {
 				m.FailoverVersionIncrement = 0
 			}),
 			err: "version increment is 0",
 		},
 		{
-			msg: "empty cluster information",
-			config: modifyClusterMetadata(validClusterMetadata(), func(m *ClusterMetadata) {
-				m.ClusterInformation = nil
+			msg: "empty cluster group",
+			config: modify(validClusterGroupMetadata(), func(m *ClusterGroupMetadata) {
+				m.ClusterGroup = nil
 			}),
-			err: "empty cluster information",
+			err: "empty cluster group",
 		},
 		{
 			msg: "cluster with empty name defined",
-			config: modifyClusterMetadata(validClusterMetadata(), func(m *ClusterMetadata) {
-				m.ClusterInformation[""] = ClusterInformation{}
+			config: modify(validClusterGroupMetadata(), func(m *ClusterGroupMetadata) {
+				m.ClusterGroup[""] = ClusterInformation{}
 			}),
 			err: "cluster with empty name defined",
 		},
 		{
 			msg: "increment smaller than initial version",
-			config: modifyClusterMetadata(validClusterMetadata(), func(m *ClusterMetadata) {
+			config: modify(validClusterGroupMetadata(), func(m *ClusterGroupMetadata) {
 				m.FailoverVersionIncrement = 1
 			}),
 			err: "cluster standby: version increment 1 is smaller than initial version: 2",
 		},
 		{
 			msg: "empty rpc name",
-			config: modifyClusterMetadata(validClusterMetadata(), func(m *ClusterMetadata) {
-				active := m.ClusterInformation["active"]
+			config: modify(validClusterGroupMetadata(), func(m *ClusterGroupMetadata) {
+				active := m.ClusterGroup["active"]
 				active.RPCName = ""
-				m.ClusterInformation["active"] = active
+				m.ClusterGroup["active"] = active
 			}),
 			err: "cluster active: rpc name / address is empty",
 		},
 		{
 			msg: "empty rpc address",
-			config: modifyClusterMetadata(validClusterMetadata(), func(m *ClusterMetadata) {
-				active := m.ClusterInformation["active"]
+			config: modify(validClusterGroupMetadata(), func(m *ClusterGroupMetadata) {
+				active := m.ClusterGroup["active"]
 				active.RPCAddress = ""
-				m.ClusterInformation["active"] = active
+				m.ClusterGroup["active"] = active
 			}),
 			err: "cluster active: rpc name / address is empty",
 		},
 		{
 			msg: "initial version duplicated",
-			config: modifyClusterMetadata(validClusterMetadata(), func(m *ClusterMetadata) {
-				standby := m.ClusterInformation["standby"]
+			config: modify(validClusterGroupMetadata(), func(m *ClusterGroupMetadata) {
+				standby := m.ClusterGroup["standby"]
 				standby.InitialFailoverVersion = 0
-				m.ClusterInformation["standby"] = standby
+				m.ClusterGroup["standby"] = standby
 			}),
-			err: "cluster info initial versions have duplicates",
+			err: "initial versions of the cluster group have duplicates",
 		},
 		{
 			msg: "multiple errors",
-			config: modifyClusterMetadata(validClusterMetadata(), func(m *ClusterMetadata) {
-				*m = ClusterMetadata{}
+			config: modify(validClusterGroupMetadata(), func(m *ClusterGroupMetadata) {
+				*m = ClusterGroupMetadata{}
 			}),
-			err: "primary cluster name is empty; current cluster name is empty; version increment is 0; empty cluster information",
+			err: "primary cluster name is empty; current cluster name is empty; version increment is 0; empty cluster group",
 		},
 	}
 
@@ -159,13 +164,13 @@ func TestClusterMetadataValidate(t *testing.T) {
 	}
 }
 
-func validClusterMetadata() *ClusterMetadata {
-	return &ClusterMetadata{
+func validClusterGroupMetadata() *ClusterGroupMetadata {
+	return &ClusterGroupMetadata{
 		EnableGlobalDomain:       true,
 		FailoverVersionIncrement: 10,
 		PrimaryClusterName:       "active",
 		CurrentClusterName:       "standby",
-		ClusterInformation: map[string]ClusterInformation{
+		ClusterGroup: map[string]ClusterInformation{
 			"active": {
 				Enabled:                true,
 				InitialFailoverVersion: 0,
@@ -180,9 +185,4 @@ func validClusterMetadata() *ClusterMetadata {
 			},
 		},
 	}
-}
-
-func modifyClusterMetadata(initial *ClusterMetadata, modify func(metadata *ClusterMetadata)) *ClusterMetadata {
-	modify(initial)
-	return initial
 }

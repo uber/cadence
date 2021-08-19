@@ -22,6 +22,7 @@ package config
 
 import (
 	"encoding/json"
+	"log"
 	"time"
 
 	"github.com/uber-go/tally/m3"
@@ -42,8 +43,10 @@ type (
 		Persistence Persistence `yaml:"persistence"`
 		// Log is the logging config
 		Log Logger `yaml:"log"`
-		// ClusterMetadata is the config containing all valid clusters and active cluster
-		ClusterMetadata *ClusterMetadata `yaml:"clusterMetadata"`
+		// ClusterGroupMetadata is the config containing all valid clusters and active cluster
+		ClusterGroupMetadata *ClusterGroupMetadata `yaml:"clusterGroupMetadata"`
+		// ClusterMetadata is deprecated. Please use ClusterGroupMetadata
+		ClusterMetadata *ClusterGroupMetadata `yaml:"clusterMetadata"`
 		// DCRedirectionPolicy contains the frontend datacenter redirection policy
 		DCRedirectionPolicy DCRedirectionPolicy `yaml:"dcRedirectionPolicy"`
 		// Services is a map of service name to service config items
@@ -444,7 +447,7 @@ func (c *Config) validate() error {
 	if err := c.Persistence.Validate(); err != nil {
 		return err
 	}
-	if err := c.ClusterMetadata.validate(); err != nil {
+	if err := c.ClusterGroupMetadata.validate(); err != nil {
 		return err
 	}
 	if err := c.Archival.Validate(&c.DomainDefaults.Archival); err != nil {
@@ -470,12 +473,18 @@ func (c *Config) fillDefaults() {
 		}
 	}
 
-	c.ClusterMetadata.fillDefaults()
+	// TODO: remove this after 0.23 and mention a breaking change in config.
+	if c.ClusterGroupMetadata == nil && c.ClusterMetadata != nil {
+		c.ClusterGroupMetadata = c.ClusterMetadata
+		log.Println("[WARN] clusterMetadata config is deprecated. Please replace it with clusterGroupMetadata.")
+	}
+
+	c.ClusterGroupMetadata.fillDefaults()
 
 	// filling publicClient with current cluster's RPC address if empty
-	if c.PublicClient.HostPort == "" && c.ClusterMetadata != nil {
-		name := c.ClusterMetadata.CurrentClusterName
-		c.PublicClient.HostPort = c.ClusterMetadata.ClusterInformation[name].RPCAddress
+	if c.PublicClient.HostPort == "" && c.ClusterGroupMetadata != nil {
+		name := c.ClusterGroupMetadata.CurrentClusterName
+		c.PublicClient.HostPort = c.ClusterGroupMetadata.ClusterGroup[name].RPCAddress
 	}
 }
 

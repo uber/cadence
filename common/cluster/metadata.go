@@ -65,8 +65,8 @@ type (
 		primaryClusterName string
 		// currentClusterName is the name of the current cluster
 		currentClusterName string
-		// clusterInfo contains all cluster name -> corresponding information
-		clusterInfo map[string]config.ClusterInformation
+		// clusterGroup contains all cluster name -> corresponding information
+		clusterGroup map[string]config.ClusterInformation
 		// versionToClusterName contains all initial version -> corresponding cluster name
 		versionToClusterName map[int64]string
 	}
@@ -79,10 +79,10 @@ func NewMetadata(
 	failoverVersionIncrement int64,
 	primaryClusterName string,
 	currentClusterName string,
-	clusterInfo map[string]config.ClusterInformation,
+	clusterGroup map[string]config.ClusterInformation,
 ) Metadata {
 	versionToClusterName := make(map[int64]string)
-	for clusterName, info := range clusterInfo {
+	for clusterName, info := range clusterGroup {
 		versionToClusterName[info.InitialFailoverVersion] = clusterName
 	}
 
@@ -92,7 +92,7 @@ func NewMetadata(
 		failoverVersionIncrement: failoverVersionIncrement,
 		primaryClusterName:       primaryClusterName,
 		currentClusterName:       currentClusterName,
-		clusterInfo:              clusterInfo,
+		clusterGroup:             clusterGroup,
 		versionToClusterName:     versionToClusterName,
 	}
 }
@@ -105,12 +105,12 @@ func (metadata *metadataImpl) IsGlobalDomainEnabled() bool {
 
 // GetNextFailoverVersion return the next failover version based on input
 func (metadata *metadataImpl) GetNextFailoverVersion(cluster string, currentFailoverVersion int64) int64 {
-	info, ok := metadata.clusterInfo[cluster]
+	info, ok := metadata.clusterGroup[cluster]
 	if !ok {
 		panic(fmt.Sprintf(
 			"Unknown cluster name: %v with given cluster initial failover version map: %v.",
 			cluster,
-			metadata.clusterInfo,
+			metadata.clusterGroup,
 		))
 	}
 	failoverVersion := currentFailoverVersion/metadata.failoverVersionIncrement*metadata.failoverVersionIncrement + info.InitialFailoverVersion
@@ -141,7 +141,7 @@ func (metadata *metadataImpl) GetCurrentClusterName() string {
 
 // GetAllClusterInfo return the all cluster name -> corresponding information
 func (metadata *metadataImpl) GetAllClusterInfo() map[string]config.ClusterInformation {
-	return metadata.clusterInfo
+	return metadata.clusterGroup
 }
 
 // ClusterNameForFailoverVersion return the corresponding cluster name for a given failover version
@@ -156,7 +156,7 @@ func (metadata *metadataImpl) ClusterNameForFailoverVersion(failoverVersion int6
 		panic(fmt.Sprintf(
 			"Unknown initial failover version %v with given cluster initial failover version map: %v and failover version increment %v.",
 			initialFailoverVersion,
-			metadata.clusterInfo,
+			metadata.clusterGroup,
 			metadata.failoverVersionIncrement,
 		))
 	}

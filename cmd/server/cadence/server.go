@@ -140,11 +140,11 @@ func (s *server) startService() common.Daemon {
 		log.Printf("error creating dynamic config client, using no-op config client instead. error: %v", err)
 		params.DynamicConfig = dynamicconfig.NewNopClient()
 	}
-	clusterMetadata := s.cfg.ClusterMetadata
+	clusterGroupMetadata := s.cfg.ClusterGroupMetadata
 	dc := dynamicconfig.NewCollection(
 		params.DynamicConfig,
 		params.Logger,
-		dynamicconfig.ClusterNameFilter(clusterMetadata.CurrentClusterName),
+		dynamicconfig.ClusterNameFilter(clusterGroupMetadata.CurrentClusterName),
 	)
 
 	svcCfg := s.cfg.Services[s.name]
@@ -166,11 +166,11 @@ func (s *server) startService() common.Daemon {
 
 	params.ClusterMetadata = cluster.NewMetadata(
 		params.Logger,
-		dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, clusterMetadata.EnableGlobalDomain),
-		clusterMetadata.FailoverVersionIncrement,
-		clusterMetadata.PrimaryClusterName,
-		clusterMetadata.CurrentClusterName,
-		clusterMetadata.ClusterInformation,
+		dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, clusterGroupMetadata.EnableGlobalDomain),
+		clusterGroupMetadata.FailoverVersionIncrement,
+		clusterGroupMetadata.PrimaryClusterName,
+		clusterGroupMetadata.CurrentClusterName,
+		clusterGroupMetadata.ClusterGroup,
 	)
 
 	if s.cfg.PublicClient.HostPort != "" {
