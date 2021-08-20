@@ -60,7 +60,7 @@ require (
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.opencensus.io v0.22.5 // indirect
 	go.uber.org/atomic v1.7.0
-	go.uber.org/cadence v0.17.1-0.20210806184645-7c70757e7c7f
+	go.uber.org/cadence v0.17.1-0.20210820042115-b09692f6838f
 	go.uber.org/config v1.4.0
 	go.uber.org/fx v1.13.1
 	go.uber.org/multierr v1.6.0
@@ -91,5 +91,3 @@ replace github.com/apache/thrift => github.com/apache/thrift v0.0.0-201612212036
 
 // until new version is released we need to pick up https://github.com/yarpc/yarpc-go/pull/2047
 replace go.uber.org/yarpc => go.uber.org/yarpc v1.52.1-0.20210303193224-b2caa40d56b6
-
-replace go.uber.org/cadence v0.17.1-0.20210806184645-7c70757e7c7f => /home/rv/go/src/go.uber.org/cadence

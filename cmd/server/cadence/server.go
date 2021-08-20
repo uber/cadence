@@ -224,7 +224,8 @@ func (s *server) startService() common.Daemon {
 
 	var authProvider clientworker.AuthorizationProvider
 	if s.cfg.Authorization.OAuthAuthorizer.Enable {
-		authProvider, err = authorization.GetAuthProviderClient(s.cfg.Authorization.OAuthAuthorizer.JwtCredentials.PrivateKey)
+		clusterName := s.cfg.ClusterMetadata.CurrentClusterName
+		authProvider, err = authorization.GetAuthProviderClient(s.cfg.ClusterMetadata.ClusterInformation[clusterName].AuthorizationProvider.PrivateKey)
 		if err != nil {
 			log.Fatalf(err.Error())
 		}

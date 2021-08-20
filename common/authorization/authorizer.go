@@ -94,5 +94,5 @@ func GetAuthProviderClient(privateKey string) (clientworker.AuthorizationProvide
 	if err != nil {
 		return nil, fmt.Errorf("invalid private key path %s", privateKey)
 	}
-	return clientworker.NewJwtAuthorizationProvider(pk), nil
+	return clientworker.NewAdminJwtAuthorizationProvider(pk), nil
 }

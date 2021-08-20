@@ -100,8 +100,6 @@ type (
 		Algorithm string `yaml:"algorithm"`
 		// Public Key Path for verifying JWT token passed in from external clients
 		PublicKey string `yaml:"publicKey"`
-		// Private Key Path for creating JWT token
-		PrivateKey string `yaml:"privateKey"`
 	}
 
 	// Service contains the service specific config items
