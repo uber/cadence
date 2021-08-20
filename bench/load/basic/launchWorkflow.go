@@ -286,6 +286,7 @@ func verifyResultActivity(
 	}
 
 	// verify the number of failed workflows
+	moreFailedThanExpected := false
 	query := fmt.Sprintf(
 		failedWorkflowQuery,
 		stressWorkflowName,
@@ -298,13 +299,34 @@ func verifyResultActivity(
 	resp, err := cc.CountWorkflow(ctx, request)
 	if err != nil {
 		if _, ok := err.(*shared.BadRequestError); ok {
-			// when cluster doesn't have advanced visibility, don't do this step
-			// TODO use ListCloseWorkflow to implement it
+			// when cluster doesn't have advanced visibility, use ListCLoseWorkflow API instead
+			maxPageSize := int32(params.FailedWorkflowCount) + 1
+			listWorkflowRequest := &shared.ListClosedWorkflowExecutionsRequest{
+				Domain:          c.StringPtr(info.WorkflowDomain),
+				MaximumPageSize: &maxPageSize,
+				StartTimeFilter: &shared.StartTimeFilter{
+					EarliestTime: c.Int64Ptr(params.WorkflowStartTime),
+					LatestTime:   c.Int64Ptr(time.Now().UnixNano()),
+				},
+				TypeFilter: &shared.WorkflowTypeFilter{
+					Name: c.StringPtr(stressWorkflowName),
+				},
+			}
+			closedWorkflow, err := cc.ListClosedWorkflow(ctx, listWorkflowRequest)
+			if err != nil {
+				return err
+			}
+			if len(closedWorkflow.Executions) > int(params.FailedWorkflowCount) {
+				moreFailedThanExpected = true
+			}
 			return nil
 		}
 		return err
 	}
 	if resp.GetCount() > params.FailedWorkflowCount {
+		moreFailedThanExpected = true
+	}
+	if moreFailedThanExpected {
 		return cadence.NewCustomError(
 			errReasonValidationFailed,
 			fmt.Sprintf("found too many failed workflows(%v) after basic load test completed", params.FailedWorkflowCount),
