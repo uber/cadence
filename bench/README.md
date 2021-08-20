@@ -91,8 +91,10 @@ Result:
   Output: "SuccessCount: 100, FailedCount: 0"
 ```
 The test will return error if the test doesn't pass. There are two cases:
-* The stress workflow couldn't finish within the timeout
-* There are more failed worklfow than expected(configured by `failureThreshold`)
+* The started stressWorkflow couldn't finish within the timeout
+* There are more failed workflows than expected(`failureThreshold` * totalLaunchCount)
+
+The output result is how many stressWorkflow were started successfully, and failed.
 
 ### Cron
 `Cron` itself is not a test. It is responsible for running multiple other tests in parallel or sequential according a cron schedule. 

@@ -26,7 +26,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/pborman/uuid"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
@@ -51,48 +50,26 @@ const (
 	// LauncherVerifyActivityName is the verification activity name
 	LauncherVerifyActivityName = "basic-load-test-verify-activity"
 
-	stressWorkflowStartToCloseTimeout = 5 * time.Minute
-	failedWorkflowQuery               = "WorkflowType='%v' and CloseStatus=1 and StartTime > %v and CloseTime < %v"
-	workflowWaitTimeBuffer            = 5 * time.Minute
-	maxLauncherActivityRetryCount     = 5
-
-	errReasonValidationFailed = "validation failed"
+	defaultStressWorkflowStartToCloseTimeout = 5 * time.Minute  // default 5m may not be not enough for long running workflow
+	workflowWaitTimeBuffer                   = 10 * time.Second // time buffer of waiting for stressWorkflow execution. Hence the actual waiting time is  stressWorkflowStartToCloseTimeout + workflowWaitTimeBuffer
+	maxLauncherActivityRetryCount            = 5                // number of retry for launcher activity
 )
 
 var (
-	maxPageSize = int32(10)
+	maxPageSize = int32(100)
 )
 
 type (
-	verifyActivityParams struct {
-		FailedWorkflowCount int64
-		WorkflowStartTime   int64
-	}
-
 	launcherActivityParams struct {
-		RoutineID int
-		Count     int
-		StartID   int
-		Config    lib.BasicTestConfig
+		RoutineID int                 // the ID of the launchActivity
+		Count     int                 // stressWorkflows to start per launchActivity
+		Config    lib.BasicTestConfig // config of this load test
 	}
 
-	activityResult struct {
-		SuccessCount int64
-		FailedCount  int64
+	verifyActivityParams struct {
+		WorkflowStartTime int64
 	}
 )
-
-func (r *activityResult) IncSuccess() {
-	r.SuccessCount++
-}
-
-func (r *activityResult) IncFailed() {
-	r.FailedCount++
-}
-
-func (r *activityResult) String() string {
-	return fmt.Sprintf("SuccessCount: %v, FailedCount: %v", r.SuccessCount, r.FailedCount)
-}
 
 // RegisterLauncher registers workflows and activities for basic load launching
 func RegisterLauncher(w worker.Worker) {
@@ -109,157 +86,151 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    time.Duration(workflowTimeout) * time.Second,
 		HeartbeatTimeout:       20 * time.Second,
+		RetryPolicy: &workflow.RetryPolicy{
+			InitialInterval:    time.Second,
+			BackoffCoefficient: 1,
+			MaximumInterval:    time.Second,
+			ExpirationInterval: time.Second * time.Duration(workflowTimeout+1) * time.Second * maxLauncherActivityRetryCount,
+			MaximumAttempts:    maxLauncherActivityRetryCount,
+		},
 	}
 	ctx = workflow.WithActivityOptions(ctx, ao)
-	doneCh := workflow.NewChannel(ctx)
 	startTime := workflow.Now(ctx)
 
-	var result activityResult
 	for i := 0; i < config.RoutineCount; i++ {
-		var batchStartID int
-		workflow.Go(ctx, func(ctx workflow.Context) {
-			for j := 0; j < maxLauncherActivityRetryCount; j++ {
-				var runResult activityResult
-				actInput := launcherActivityParams{
-					RoutineID: i,
-					Count:     workflowPerActivity,
-					StartID:   batchStartID,
-					Config:    config,
-				}
-				f := workflow.ExecuteActivity(
-					ctx,
-					LauncherLaunchActivityName,
-					actInput,
-				)
-				err := f.Get(ctx, &runResult)
-				if err == nil {
-					result.SuccessCount += runResult.SuccessCount
-					result.FailedCount += runResult.FailedCount
-					break
-				}
-
-				logger.Error("basic test launcher activity execution error", zap.Error(err))
-				switch err := err.(type) {
-				case *workflow.TimeoutError:
-					if err.TimeoutType() == shared.TimeoutTypeHeartbeat && err.HasDetails() {
-						if err := err.Details(&batchStartID); err == nil {
-							batchStartID++
-						}
-					}
-				}
-				result.SuccessCount += runResult.SuccessCount
-				result.FailedCount += runResult.FailedCount
-			}
-			doneCh.Send(ctx, "done")
-		})
-	}
-	for i := 0; i < config.RoutineCount; i++ {
-		doneCh.Receive(ctx, nil)
+		actInput := launcherActivityParams{
+			RoutineID: i,
+			Count:     workflowPerActivity,
+			Config:    config,
+		}
+		f := workflow.ExecuteActivity(
+			ctx,
+			LauncherLaunchActivityName,
+			actInput,
+		)
+		err := f.Get(ctx, nil)
+		if err != nil {
+			return "", err
+		}
 	}
 
-	workflowWaitTime := stressWorkflowStartToCloseTimeout
+	workflowWaitTime := defaultStressWorkflowStartToCloseTimeout
 	if config.ExecutionStartToCloseTimeoutInSeconds > 0 {
-		workflowWaitTime = time.Duration(config.ExecutionStartToCloseTimeoutInSeconds) * time.Second
+		workflowWaitTime = time.Duration(config.ExecutionStartToCloseTimeoutInSeconds)*time.Second + workflowWaitTimeBuffer
 	}
-	if err := workflow.Sleep(ctx, workflowWaitTime+workflowWaitTimeBuffer); err != nil {
+	logger.Info(fmt.Sprintf("%v stressWorkflows are launched, now waiting for %v ...", config.TotalLaunchCount, workflowWaitTime))
+	if err := workflow.Sleep(ctx, workflowWaitTime); err != nil {
 		return "", fmt.Errorf("launcher workflow sleep failed: %v", err)
 	}
 
 	actInput := verifyActivityParams{
-		FailedWorkflowCount: int64(float64(config.TotalLaunchCount) * config.FailureThreshold),
-		WorkflowStartTime:   startTime.UnixNano(),
+		WorkflowStartTime: startTime.UnixNano(),
 	}
 	actOptions := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    time.Minute,
 		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:          time.Second,
-			BackoffCoefficient:       2,
-			MaximumAttempts:          5,
-			NonRetriableErrorReasons: []string{errReasonValidationFailed},
+			InitialInterval:    time.Second,
+			BackoffCoefficient: 2,
+			MaximumAttempts:    5,
 		},
 	}
+	var result string
 	ctx = workflow.WithActivityOptions(ctx, actOptions)
 	if err := workflow.ExecuteActivity(
 		ctx,
 		LauncherVerifyActivityName,
 		actInput,
-	).Get(ctx, nil); err != nil {
+	).Get(ctx, &result); err != nil {
 		return "", err
 	}
-	return result.String(), nil
+	return result, nil
 }
 
-func launcherActivity(ctx context.Context, params launcherActivityParams) (activityResult, error) {
+func launcherActivity(ctx context.Context, params launcherActivityParams) error {
 	logger := activity.GetLogger(ctx).With(zap.String("Test", TestName))
+
+	var lastStartedID int
+	if activity.HasHeartbeatDetails(ctx) {
+		err := activity.GetHeartbeatDetails(ctx, &lastStartedID)
+		if err != nil {
+			logger.Error("failed to resume from last  checkpoint...start from beginning...")
+		}
+		logger.Info("resume from last checkpoint", zap.Int("checkpoint", lastStartedID))
+	}
+
 	logger.Info("Start activity routineID", zap.Int("RoutineID", params.RoutineID))
 
 	cc := ctx.Value(lib.CtxKeyCadenceClient).(lib.CadenceClient)
 	rc := ctx.Value(lib.CtxKeyRuntimeContext).(*lib.RuntimeContext)
 	numTaskList := rc.Bench.NumTaskLists
-	config := params.Config
-	input := WorkflowParams{
-		ChainSequence:    config.ChainSequence,
-		ConcurrentCount:  config.ConcurrentCount,
-		PayloadSizeBytes: config.PayloadSizeBytes,
-		PanicWorkflow:    config.PanicStressWorkflow,
+	basicTestConfig := params.Config
+
+	stressWorkflowTimeout := defaultStressWorkflowStartToCloseTimeout
+	if basicTestConfig.ExecutionStartToCloseTimeoutInSeconds > 0 {
+		stressWorkflowTimeout = time.Duration(basicTestConfig.ExecutionStartToCloseTimeoutInSeconds) * time.Second
 	}
 	workflowOptions := client.StartWorkflowOptions{
-		ExecutionStartToCloseTimeout:    stressWorkflowStartToCloseTimeout,
-		DecisionTaskStartToCloseTimeout: 10 * time.Second,
+		ExecutionStartToCloseTimeout: stressWorkflowTimeout,
 	}
 
-	if config.ExecutionStartToCloseTimeoutInSeconds > 0 {
-		// default 5m is not enough for long running workflow
-		workflowOptions.ExecutionStartToCloseTimeout = time.Duration(config.ExecutionStartToCloseTimeoutInSeconds) * time.Second
-	}
-	if config.MinCadenceSleepInSeconds > 0 && config.MaxCadenceSleepInSeconds > 0 {
-		minSleep := time.Duration(config.MinCadenceSleepInSeconds) * time.Second
-		maxSleep := time.Duration(config.MaxCadenceSleepInSeconds) * time.Second
+	var sleepTime time.Duration
+	if basicTestConfig.MinCadenceSleepInSeconds > 0 && basicTestConfig.MaxCadenceSleepInSeconds > 0 {
+		minSleep := time.Duration(basicTestConfig.MinCadenceSleepInSeconds) * time.Second
+		maxSleep := time.Duration(basicTestConfig.MaxCadenceSleepInSeconds) * time.Second
 		jitter := rand.Float64() * float64(maxSleep-minSleep)
-		sleepTime := minSleep + time.Duration(int64(jitter))
-		input.CadenceSleep = sleepTime
+		sleepTime = minSleep + time.Duration(int64(jitter))
+	}
+	stressWorkflowInput := WorkflowParams{
+		ChainSequence:    basicTestConfig.ChainSequence,
+		ConcurrentCount:  basicTestConfig.ConcurrentCount,
+		PayloadSizeBytes: basicTestConfig.PayloadSizeBytes,
+		PanicWorkflow:    basicTestConfig.PanicStressWorkflow,
+		CadenceSleep:     sleepTime,
 	}
 
-	res := activityResult{}
-	if config.ContextTimeoutInSeconds == 0 {
-		config.ContextTimeoutInSeconds = int(common.DefaultContextTimeout.Seconds())
+	startWFCtxTimeout := common.DefaultContextTimeout
+	if basicTestConfig.ContextTimeoutInSeconds > 0 {
+		startWFCtxTimeout = time.Duration(basicTestConfig.ContextTimeoutInSeconds) * time.Second
 	}
-	for i := params.StartID; i < params.Count; i++ {
-		input.TaskListNumber = rand.Intn(numTaskList)
 
-		workflowOptions.ID = fmt.Sprintf("%s-%d-%d", uuid.New(), params.RoutineID, i)
-		workflowOptions.TaskList = common.GetTaskListName(input.TaskListNumber)
+	for startedID := lastStartedID; startedID < params.Count; startedID++ {
+		stressWorkflowInput.TaskListNumber = rand.Intn(numTaskList)
 
-		startWorkflowContext, cancelF := context.WithTimeout(context.Background(), time.Duration(config.ContextTimeoutInSeconds)*time.Second)
-		we, err := cc.StartWorkflow(startWorkflowContext, workflowOptions, stressWorkflowExecute, input)
+		workflowOptions.ID = fmt.Sprintf("%d-%d", params.RoutineID, startedID)
+		workflowOptions.TaskList = common.GetTaskListName(stressWorkflowInput.TaskListNumber)
+
+		startWorkflowContext, cancelF := context.WithTimeout(context.Background(), startWFCtxTimeout)
+		we, err := cc.StartWorkflow(startWorkflowContext, workflowOptions, stressWorkflowExecute, stressWorkflowInput)
 		cancelF()
 		if err == nil {
-			res.IncSuccess()
-			logger.Debug("Created Workflow", zap.String("WorkflowID", we.ID), zap.String("RunID", we.RunID))
+			logger.Debug("Created Workflow successfully", zap.String("WorkflowID", we.ID), zap.String("RunID", we.RunID))
 		} else {
-			res.IncFailed()
+			if _, ok := err.(*shared.WorkflowExecutionAlreadyStartedError); ok {
+				logger.Debug("Workflow already started in previous activity attempt")
+			}
 			logger.Error("Failed to start workflow execution", zap.Error(err))
+			return err
 		}
-		activity.RecordHeartbeat(ctx, i)
+		activity.RecordHeartbeat(ctx, startedID)
 		jitter := time.Duration(75 + rand.Intn(25))
 		time.Sleep(jitter * time.Millisecond)
 	}
 
-	logger.Info("Result of running launcher activity", zap.String("Result", res.String()))
-	return res, nil
+	logger.Info("finish running launcher activity", zap.Int("StartedCount", params.Count))
+	return nil
 }
 
 func verifyResultActivity(
 	ctx context.Context,
 	params verifyActivityParams,
-) error {
-
+) (string, error) {
 	cc := ctx.Value(lib.CtxKeyCadenceClient).(lib.CadenceClient)
 	info := activity.GetInfo(ctx)
+	var opens, timeouts, faileds string
 
 	// verify if any open workflow
-	listWorkflowRequest := &shared.ListOpenWorkflowExecutionsRequest{
+	listOpenWorkflowRequest := &shared.ListOpenWorkflowExecutionsRequest{
 		Domain:          c.StringPtr(info.WorkflowDomain),
 		MaximumPageSize: &maxPageSize,
 		StartTimeFilter: &shared.StartTimeFilter{
@@ -270,67 +241,58 @@ func verifyResultActivity(
 			Name: c.StringPtr(stressWorkflowName),
 		},
 	}
-	openWorkflow, err := cc.ListOpenWorkflow(ctx, listWorkflowRequest)
+	openWfs, err := cc.ListOpenWorkflow(ctx, listOpenWorkflowRequest)
 	if err != nil {
-		return err
-	}
-	if len(openWorkflow.Executions) > 0 {
-		return cadence.NewCustomError(
-			errReasonValidationFailed,
-			fmt.Sprintf("found open workflows after basic load test completed, workflowID: %v, runID: %v",
-				openWorkflow.Executions[0].Execution.GetWorkflowId(),
-				openWorkflow.Executions[0].Execution.GetRunId(),
-			),
-		)
-
+		return "", err
 	}
 
-	// verify the number of failed workflows
-	moreFailedThanExpected := false
-	query := fmt.Sprintf(
-		failedWorkflowQuery,
-		stressWorkflowName,
-		params.WorkflowStartTime,
-		time.Now().UnixNano())
-	request := &shared.CountWorkflowExecutionsRequest{
-		Domain: c.StringPtr(info.WorkflowDomain),
-		Query:  &query,
-	}
-	resp, err := cc.CountWorkflow(ctx, request)
-	if err != nil {
-		if _, ok := err.(*shared.BadRequestError); ok {
-			// when cluster doesn't have advanced visibility, use ListCLoseWorkflow API instead
-			maxPageSize := int32(params.FailedWorkflowCount) + 1
-			listWorkflowRequest := &shared.ListClosedWorkflowExecutionsRequest{
-				Domain:          c.StringPtr(info.WorkflowDomain),
-				MaximumPageSize: &maxPageSize,
-				StartTimeFilter: &shared.StartTimeFilter{
-					EarliestTime: c.Int64Ptr(params.WorkflowStartTime),
-					LatestTime:   c.Int64Ptr(time.Now().UnixNano()),
-				},
-				TypeFilter: &shared.WorkflowTypeFilter{
-					Name: c.StringPtr(stressWorkflowName),
-				},
-			}
-			closedWorkflow, err := cc.ListClosedWorkflow(ctx, listWorkflowRequest)
-			if err != nil {
-				return err
-			}
-			if len(closedWorkflow.Executions) > int(params.FailedWorkflowCount) {
-				moreFailedThanExpected = true
-			}
-			return nil
+	if len(openWfs.Executions) > 0 {
+		if len(openWfs.Executions) >= int(maxPageSize) {
+			opens = fmt.Sprintf(">=%v", maxPageSize)
 		}
-		return err
+		opens = fmt.Sprintf("%v", len(openWfs.Executions))
 	}
-	if resp.GetCount() > params.FailedWorkflowCount {
-		moreFailedThanExpected = true
+
+	// verify if any failed workflow
+	closeStatus := shared.WorkflowExecutionCloseStatusFailed
+	listWorkflowRequest := &shared.ListClosedWorkflowExecutionsRequest{
+		Domain:          c.StringPtr(info.WorkflowDomain),
+		MaximumPageSize: &maxPageSize,
+		StartTimeFilter: &shared.StartTimeFilter{
+			EarliestTime: c.Int64Ptr(params.WorkflowStartTime),
+			LatestTime:   c.Int64Ptr(time.Now().UnixNano()),
+		},
+		TypeFilter: &shared.WorkflowTypeFilter{
+			Name: c.StringPtr(stressWorkflowName),
+		},
+		StatusFilter: &closeStatus,
 	}
-	if moreFailedThanExpected {
-		return cadence.NewCustomError(
-			errReasonValidationFailed,
-			fmt.Sprintf("found too many failed workflows(%v) after basic load test completed", params.FailedWorkflowCount),
-		)
+	wfs, err := cc.ListClosedWorkflow(ctx, listWorkflowRequest)
+	if err != nil {
+		return "", err
 	}
-	return nil
+
+	if len(wfs.Executions) > 0 {
+		if len(wfs.Executions) >= int(maxPageSize) {
+			faileds = fmt.Sprintf(">=%v", maxPageSize)
+		}
+		faileds = fmt.Sprintf("%v", len(wfs.Executions))
+	}
+
+	// verify if any timeouted workflow
+	closeStatus = shared.WorkflowExecutionCloseStatusTimedOut
+	listWorkflowRequest.StatusFilter = &closeStatus
+	wfs, err = cc.ListClosedWorkflow(ctx, listWorkflowRequest)
+	if err != nil {
+		return "", err
+	}
+
+	if len(wfs.Executions) > 0 {
+		if len(wfs.Executions) >= int(maxPageSize) {
+			timeouts = fmt.Sprintf(">=%v", maxPageSize)
+		}
+		timeouts = fmt.Sprintf("%v", len(wfs.Executions))
+	}
+
+	return fmt.Sprintf("OpenCount: %v, TimeoutCount: %v, FailedCount: %v", opens, timeouts, faileds), nil
 }
