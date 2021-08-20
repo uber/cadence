@@ -61,8 +61,8 @@ func TestPrivateKeyIsEmpty(t *testing.T) {
 		OAuthAuthorizer: OAuthAuthorizer{
 			Enable: true,
 			JwtCredentials: JwtCredentials{
-				Algorithm: "",
-				PublicKey: "",
+				Algorithm:  "",
+				PublicKey:  "",
 			},
 			MaxJwtTTL: 1000000,
 		},
@@ -80,8 +80,8 @@ func TestPublicKeyIsEmpty(t *testing.T) {
 		OAuthAuthorizer: OAuthAuthorizer{
 			Enable: true,
 			JwtCredentials: JwtCredentials{
-				Algorithm: "",
-				PublicKey: "",
+				Algorithm:  "",
+				PublicKey:  "",
 			},
 			MaxJwtTTL: 1000000,
 		},
@@ -99,8 +99,8 @@ func TestAlgorithmIsInvalid(t *testing.T) {
 		OAuthAuthorizer: OAuthAuthorizer{
 			Enable: true,
 			JwtCredentials: JwtCredentials{
-				Algorithm: "SHA256",
-				PublicKey: "public",
+				Algorithm:  "SHA256",
+				PublicKey:  "public",
 			},
 			MaxJwtTTL: 1000000,
 		},
@@ -118,8 +118,8 @@ func TestCorrectValidation(t *testing.T) {
 		OAuthAuthorizer: OAuthAuthorizer{
 			Enable: true,
 			JwtCredentials: JwtCredentials{
-				Algorithm: "RS256",
-				PublicKey: "public",
+				Algorithm:  "RS256",
+				PublicKey:  "public",
 			},
 			MaxJwtTTL: 1000000,
 		},

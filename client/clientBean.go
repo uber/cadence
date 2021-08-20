@@ -126,7 +126,7 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 		var authProvider clientworker.AuthorizationProvider
 		if info.AuthorizationProvider.Enable {
 			authProvider, err = authorization.GetAuthProviderClient(info.AuthorizationProvider.PrivateKey)
-			if err != nil {
+			if err != nil{
 				return nil, err
 			}
 		}
