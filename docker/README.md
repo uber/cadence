@@ -47,6 +47,18 @@ docker-compose -f docker-compose-mysql.yml up
 
 Also feel free to make your own to combine the above features.
 
+Run canary and bench(load test)
+-----------------------
+After a local cadence server started, use the below command to run canary ro bench test
+```
+docker-compose -f docker-compose-bench.yml up
+``` 
+and 
+```
+docker-compose -f docker-compose-canary.yml up
+``` 
+
+
 Using a released image
 -----------------------
 The above compose files all using master image. It's taking the latest bits on the master branch of this repo.
