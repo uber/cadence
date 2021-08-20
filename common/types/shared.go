@@ -10696,50 +10696,54 @@ func (v *CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes) GetI
 type CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes struct {
 }
 
-type CrossClusterApplyParentClosePolicyRequestAttributes struct {
-	TargetDomainID    string             `json:"targetDomainID,omitempty"`
-	TargetWorkflowID  string             `json:"targetWorkflowID,omitempty"`
-	TargetRunID       string             `json:"targetRunID,omitempty"`
-	InitiatedEventID  int64              `json:"initiatedEventID,omitempty"`
+type AppyParentClosePolicyAttributes struct {
+	ChildDomainID     string             `json:"ChildDomainID,omitempty"`
+	ChildWorkflowID   string             `json:"ChildWorkflowID,omitempty"`
+	ChildRunID        string             `json:"ChildRunID,omitempty"`
 	ParentClosePolicy *ParentClosePolicy `json:"parentClosePolicy,omitempty"`
 }
 
-// GetTargetDomainID is an internal getter (TBD...)
-func (v *CrossClusterApplyParentClosePolicyRequestAttributes) GetTargetDomainID() (o string) {
+// GetDomainID is an internal getter (TBD...)
+func (v *AppyParentClosePolicyAttributes) GetDomainID() (o string) {
 	if v != nil {
-		return v.TargetDomainID
+		return v.ChildDomainID
 	}
 	return
 }
 
-// GetTargetWorkflowID is an internal getter (TBD...)
-func (v *CrossClusterApplyParentClosePolicyRequestAttributes) GetTargetWorkflowID() (o string) {
+// GetWorkflowID is an internal getter (TBD...)
+func (v *AppyParentClosePolicyAttributes) GetWorkflowID() (o string) {
 	if v != nil {
-		return v.TargetWorkflowID
+		return v.ChildWorkflowID
 	}
 	return
 }
 
-// GetTargetRunID is an internal getter (TBD...)
-func (v *CrossClusterApplyParentClosePolicyRequestAttributes) GetTargetRunID() (o string) {
+// GetRunID is an internal getter (TBD...)
+func (v *AppyParentClosePolicyAttributes) GetRunID() (o string) {
 	if v != nil {
-		return v.TargetRunID
-	}
-	return
-}
-
-// GetInitiatedEventID is an internal getter (TBD...)
-func (v *CrossClusterApplyParentClosePolicyRequestAttributes) GetInitiatedEventID() (o int64) {
-	if v != nil {
-		return v.InitiatedEventID
+		return v.ChildRunID
 	}
 	return
 }
 
 // GetParentClosePolicy is an internal getter (TBD...)
-func (v *CrossClusterApplyParentClosePolicyRequestAttributes) GetParentClosePolicy() (o *ParentClosePolicy) {
+func (v *AppyParentClosePolicyAttributes) GetParentClosePolicy() (o *ParentClosePolicy) {
 	if v != nil {
 		return v.ParentClosePolicy
+	}
+	return
+}
+
+type CrossClusterApplyParentClosePolicyRequestAttributes struct {
+	AppyParentClosePolicyAttributes []*AppyParentClosePolicyAttributes `json:"appyParentClosePolicyAttributes,omitempty"`
+	ParentClosePolicy               *ParentClosePolicy                 `json:"parentClosePolicy,omitempty"`
+}
+
+// GetInitiatedEventID is an internal getter (TBD...)
+func (v *CrossClusterApplyParentClosePolicyRequestAttributes) GetAppyParentClosePolicyAttributes() (o []*AppyParentClosePolicyAttributes) {
+	if v != nil {
+		return v.AppyParentClosePolicyAttributes
 	}
 	return
 }
