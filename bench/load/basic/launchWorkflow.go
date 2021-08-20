@@ -119,8 +119,9 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 
 	workflowWaitTime := defaultStressWorkflowStartToCloseTimeout
 	if config.ExecutionStartToCloseTimeoutInSeconds > 0 {
-		workflowWaitTime = time.Duration(config.ExecutionStartToCloseTimeoutInSeconds)*time.Second + workflowWaitTimeBuffer
+		workflowWaitTime = time.Duration(config.ExecutionStartToCloseTimeoutInSeconds) * time.Second
 	}
+	workflowWaitTime += workflowWaitTimeBuffer
 	logger.Info(fmt.Sprintf("%v stressWorkflows are launched, now waiting for %v ...", config.TotalLaunchCount, workflowWaitTime))
 	if err := workflow.Sleep(ctx, workflowWaitTime); err != nil {
 		return "", fmt.Errorf("launcher workflow sleep failed: %v", err)
@@ -150,12 +151,13 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 		return "", err
 	}
 	passed := (result.TimeoutCount + result.OpenCount + result.FailedCount) <= int(maxTolerantFailure)
-	finalResult := fmt.Sprintf("TEST PASSED: %v; \nDetails report: timeoutCount: %v, failedCount: %v, openCount:%v, launchCount: %v, maxThreshold:%v",
+	finalResult := fmt.Sprintf("TEST PASSED: %v; Details report: timeoutCount: %v, failedCount: %v, openCount:%v, launchCount: %v, maxThreshold:%v",
 		passed, result.TimeoutCount, result.FailedCount, result.OpenCount, config.TotalLaunchCount, maxTolerantFailure)
 	return finalResult, nil
 }
 
 func launcherActivity(ctx context.Context, params launcherActivityParams) error {
+	info := activity.GetInfo(ctx)
 	logger := activity.GetLogger(ctx).With(zap.String("Test", TestName))
 
 	var lastStartedID int
@@ -205,7 +207,7 @@ func launcherActivity(ctx context.Context, params launcherActivityParams) error 
 	for startedID := lastStartedID; startedID < params.Count; startedID++ {
 		stressWorkflowInput.TaskListNumber = rand.Intn(numTaskList)
 
-		workflowOptions.ID = fmt.Sprintf("%d-%d", params.RoutineID, startedID)
+		workflowOptions.ID = fmt.Sprintf("%v-%d-%d", info.WorkflowExecution.ID, params.RoutineID, startedID)
 		workflowOptions.TaskList = common.GetTaskListName(stressWorkflowInput.TaskListNumber)
 
 		startWorkflowContext, cancelF := context.WithTimeout(context.Background(), startWFCtxTimeout)
@@ -214,11 +216,12 @@ func launcherActivity(ctx context.Context, params launcherActivityParams) error 
 		if err == nil {
 			logger.Debug("Created Workflow successfully", zap.String("WorkflowID", we.ID), zap.String("RunID", we.RunID))
 		} else {
-			if _, ok := err.(*shared.WorkflowExecutionAlreadyStartedError); ok {
+			if cadence.IsWorkflowExecutionAlreadyStartedError(err) {
 				logger.Debug("Workflow already started in previous activity attempt")
+			} else {
+				logger.Error("Failed to start workflow execution", zap.Error(err))
+				return err
 			}
-			logger.Error("Failed to start workflow execution", zap.Error(err))
-			return err
 		}
 		activity.RecordHeartbeat(ctx, startedID)
 		jitter := time.Duration(75 + rand.Intn(25))
@@ -266,9 +269,6 @@ func verifyResultActivity(
 		StartTimeFilter: &shared.StartTimeFilter{
 			EarliestTime: c.Int64Ptr(params.WorkflowStartTime),
 			LatestTime:   c.Int64Ptr(time.Now().UnixNano()),
-		},
-		TypeFilter: &shared.WorkflowTypeFilter{
-			Name: c.StringPtr(stressWorkflowName),
 		},
 		StatusFilter: &closeStatus,
 	}

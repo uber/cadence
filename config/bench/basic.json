@@ -5,5 +5,6 @@
   "concurrentCount": 1,
   "payloadSizeBytes": 1024,
   "contextTimeoutInSeconds": 3,
-  "failureThreshold": 0.01
+  "failureThreshold": 0.01,
+  "executionStartToCloseTimeoutInSeconds": 10
 }

@@ -86,15 +86,32 @@ Progress:
   22, 2021-08-20T11:59:24-07:00, WorkflowExecutionCompleted
 
 Result:
-  Run Time: 526 seconds
+  Run Time: 26 seconds
   Status: COMPLETED
-  Output: "SuccessCount: 100, FailedCount: 0"
+  Output: "TEST PASSED: true; Details report: timeoutCount: 0, failedCount: 0, openCount:0, launchCount: 100, maxThreshold:1"
+
 ```
 The test will return error if the test doesn't pass. There are two cases:
 * The started stressWorkflow couldn't finish within the timeout
 * There are more failed workflows than expected(`failureThreshold` * totalLaunchCount)
 
 The output result is how many stressWorkflow were started successfully, and failed.
+
+Configuration explnation
+```
+totalLaunchCount	: total number of stressWorkflows that started by the launchWorkflow
+routineCount	: number of in-parallel launch activities that started by launchWorkflow, to start the stressWorkflows
+chainSequence	: number of steps in the stressWorkflow
+concurrentCount	: number of in-parallel activity(dummy activity only echo data) in a step of the stressWorkflow
+payloadSizeBytes	: payloadSize of echo data in the dummy activity
+minCadenceSleepInSeconds	: control sleep time between two steps in the stressWorkflow, actual sleep time = random(min,max), default: 0
+maxCadenceSleepInSeconds	: control sleep time between two steps in the stressWorkflow, actual sleep time = random(min,max), default: 0
+executionStartToCloseTimeoutInSeconds	: StartToCloseTimeout of stressWorkflow, default 5m
+contextTimeoutInSeconds	: RPC timeout for starting a stressWorkflow, default 3s
+panicStressWorkflow	: if true, stressWorkflow will always panic, default false
+failureThreshold	: the threshold of failed stressWorkflow for deciding whether or not the whole testSuite failed.
+
+``` 
 
 ### Cron
 `Cron` itself is not a test. It is responsible for running multiple other tests in parallel or sequential according a cron schedule. 
