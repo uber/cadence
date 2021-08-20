@@ -426,7 +426,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
 				previousFailoverVersion := nextDomain.GetPreviousFailoverVersion()
 
-				e.metricsClient.IncCounter(metrics.DomainFailoverScope, metrics.DomainFailoverCallbackCount)
+				e.metricsClient.IncCounter(metrics.FailoverMarkerScope, metrics.DomainFailoverCallbackCount)
 
 				if nextDomain.IsGlobalDomain() &&
 					domainFailoverNotificationVersion >= shardNotificationVersion &&
@@ -439,7 +439,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 						DomainID: nextDomain.GetInfo().ID,
 					})
 
-					e.metricsClient.IncCounter(metrics.DomainFailoverScope, metrics.DomainFailoverCallbackCount)
+					e.metricsClient.IncCounter(metrics.FailoverMarkerScope, metrics.GracefulFailoverCallbackCount)
 				}
 			}
 
