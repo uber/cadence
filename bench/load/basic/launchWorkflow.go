@@ -55,10 +55,6 @@ const (
 	maxLauncherActivityRetryCount            = 5                // number of retry for launcher activity
 )
 
-var (
-	maxPageSize = int32(100)
-)
-
 type (
 	launcherActivityParams struct {
 		RoutineID int                 // the ID of the launchActivity
@@ -67,7 +63,14 @@ type (
 	}
 
 	verifyActivityParams struct {
-		WorkflowStartTime int64
+		WorkflowStartTime    int64
+		ListWorkflowPageSize int32
+	}
+
+	verifyActivityResult struct {
+		OpenCount    int
+		TimeoutCount int
+		FailedCount  int
 	}
 )
 
@@ -123,8 +126,10 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 		return "", fmt.Errorf("launcher workflow sleep failed: %v", err)
 	}
 
+	maxTolerantFailure := int32(float64(config.TotalLaunchCount) * config.FailureThreshold)
 	actInput := verifyActivityParams{
-		WorkflowStartTime: startTime.UnixNano(),
+		WorkflowStartTime:    startTime.UnixNano(),
+		ListWorkflowPageSize: maxTolerantFailure + 10,
 	}
 	actOptions := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
@@ -135,7 +140,7 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 			MaximumAttempts:    5,
 		},
 	}
-	var result string
+	var result verifyActivityResult
 	ctx = workflow.WithActivityOptions(ctx, actOptions)
 	if err := workflow.ExecuteActivity(
 		ctx,
@@ -144,7 +149,10 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 	).Get(ctx, &result); err != nil {
 		return "", err
 	}
-	return result, nil
+	passed := (result.TimeoutCount + result.OpenCount + result.FailedCount) <= int(maxTolerantFailure)
+	finalResult := fmt.Sprintf("TEST PASSED: %v; \nDetails report: timeoutCount: %v, failedCount: %v, openCount:%v, launchCount: %v, maxThreshold:%v",
+		passed, result.TimeoutCount, result.FailedCount, result.OpenCount, config.TotalLaunchCount, maxTolerantFailure)
+	return finalResult, nil
 }
 
 func launcherActivity(ctx context.Context, params launcherActivityParams) error {
@@ -224,15 +232,15 @@ func launcherActivity(ctx context.Context, params launcherActivityParams) error 
 func verifyResultActivity(
 	ctx context.Context,
 	params verifyActivityParams,
-) (string, error) {
+) (verifyActivityResult, error) {
 	cc := ctx.Value(lib.CtxKeyCadenceClient).(lib.CadenceClient)
 	info := activity.GetInfo(ctx)
-	var opens, timeouts, faileds string
+	var opens, timeouts, faileds int
 
 	// verify if any open workflow
 	listOpenWorkflowRequest := &shared.ListOpenWorkflowExecutionsRequest{
 		Domain:          c.StringPtr(info.WorkflowDomain),
-		MaximumPageSize: &maxPageSize,
+		MaximumPageSize: &params.ListWorkflowPageSize,
 		StartTimeFilter: &shared.StartTimeFilter{
 			EarliestTime: c.Int64Ptr(params.WorkflowStartTime),
 			LatestTime:   c.Int64Ptr(time.Now().UnixNano()),
@@ -243,21 +251,18 @@ func verifyResultActivity(
 	}
 	openWfs, err := cc.ListOpenWorkflow(ctx, listOpenWorkflowRequest)
 	if err != nil {
-		return "", err
+		return verifyActivityResult{}, err
 	}
 
 	if len(openWfs.Executions) > 0 {
-		if len(openWfs.Executions) >= int(maxPageSize) {
-			opens = fmt.Sprintf(">=%v", maxPageSize)
-		}
-		opens = fmt.Sprintf("%v", len(openWfs.Executions))
+		opens = len(openWfs.Executions)
 	}
 
 	// verify if any failed workflow
 	closeStatus := shared.WorkflowExecutionCloseStatusFailed
 	listWorkflowRequest := &shared.ListClosedWorkflowExecutionsRequest{
 		Domain:          c.StringPtr(info.WorkflowDomain),
-		MaximumPageSize: &maxPageSize,
+		MaximumPageSize: &params.ListWorkflowPageSize,
 		StartTimeFilter: &shared.StartTimeFilter{
 			EarliestTime: c.Int64Ptr(params.WorkflowStartTime),
 			LatestTime:   c.Int64Ptr(time.Now().UnixNano()),
@@ -269,14 +274,11 @@ func verifyResultActivity(
 	}
 	wfs, err := cc.ListClosedWorkflow(ctx, listWorkflowRequest)
 	if err != nil {
-		return "", err
+		return verifyActivityResult{}, err
 	}
 
 	if len(wfs.Executions) > 0 {
-		if len(wfs.Executions) >= int(maxPageSize) {
-			faileds = fmt.Sprintf(">=%v", maxPageSize)
-		}
-		faileds = fmt.Sprintf("%v", len(wfs.Executions))
+		faileds = len(wfs.Executions)
 	}
 
 	// verify if any timeouted workflow
@@ -284,15 +286,16 @@ func verifyResultActivity(
 	listWorkflowRequest.StatusFilter = &closeStatus
 	wfs, err = cc.ListClosedWorkflow(ctx, listWorkflowRequest)
 	if err != nil {
-		return "", err
+		return verifyActivityResult{}, err
 	}
 
 	if len(wfs.Executions) > 0 {
-		if len(wfs.Executions) >= int(maxPageSize) {
-			timeouts = fmt.Sprintf(">=%v", maxPageSize)
-		}
-		timeouts = fmt.Sprintf("%v", len(wfs.Executions))
+		timeouts = len(wfs.Executions)
 	}
 
-	return fmt.Sprintf("OpenCount: %v, TimeoutCount: %v, FailedCount: %v", opens, timeouts, faileds), nil
+	return verifyActivityResult{
+		OpenCount:    opens,
+		FailedCount:  faileds,
+		TimeoutCount: timeouts,
+	}, nil
 }
