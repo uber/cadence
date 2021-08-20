@@ -56,25 +56,6 @@ func TestTTLIsZero(t *testing.T) {
 	assert.EqualError(t, err, "[OAuthConfig] MaxTTL must be greater than 0")
 }
 
-func TestPrivateKeyIsEmpty(t *testing.T) {
-	cfg := Authorization{
-		OAuthAuthorizer: OAuthAuthorizer{
-			Enable: true,
-			JwtCredentials: JwtCredentials{
-				Algorithm: "",
-				PublicKey: "",
-			},
-			MaxJwtTTL: 1000000,
-		},
-		NoopAuthorizer: NoopAuthorizer{
-			Enable: false,
-		},
-	}
-
-	err := cfg.Validate()
-	assert.EqualError(t, err, "[OAuthConfig] PrivateKey can't be empty")
-}
-
 func TestPublicKeyIsEmpty(t *testing.T) {
 	cfg := Authorization{
 		OAuthAuthorizer: OAuthAuthorizer{
