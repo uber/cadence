@@ -63,7 +63,6 @@ func TestPrivateKeyIsEmpty(t *testing.T) {
 			JwtCredentials: JwtCredentials{
 				Algorithm:  "",
 				PublicKey:  "",
-				PrivateKey: "",
 			},
 			MaxJwtTTL: 1000000,
 		},
@@ -83,7 +82,6 @@ func TestPublicKeyIsEmpty(t *testing.T) {
 			JwtCredentials: JwtCredentials{
 				Algorithm:  "",
 				PublicKey:  "",
-				PrivateKey: "private",
 			},
 			MaxJwtTTL: 1000000,
 		},
@@ -103,7 +101,6 @@ func TestAlgorithmIsInvalid(t *testing.T) {
 			JwtCredentials: JwtCredentials{
 				Algorithm:  "SHA256",
 				PublicKey:  "public",
-				PrivateKey: "private",
 			},
 			MaxJwtTTL: 1000000,
 		},
@@ -123,7 +120,6 @@ func TestCorrectValidation(t *testing.T) {
 			JwtCredentials: JwtCredentials{
 				Algorithm:  "RS256",
 				PublicKey:  "public",
-				PrivateKey: "private",
 			},
 			MaxJwtTTL: 1000000,
 		},

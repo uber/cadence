@@ -64,7 +64,6 @@ func cfgOAuth() config.Authorization {
 			JwtCredentials: config.JwtCredentials{
 				Algorithm:  jwt.RS256.String(),
 				PublicKey:  "public",
-				PrivateKey: "private",
 			},
 			MaxJwtTTL: 12345,
 		},
