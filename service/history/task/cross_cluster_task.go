@@ -21,6 +21,8 @@
 package task
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -35,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	ctask "github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -43,6 +46,11 @@ const (
 	processingStateInitialized processingState = iota + 1
 	processingStateResponseReported
 	processingStateResponseRecorded
+	processingStateInvalidated
+)
+
+var (
+	_ CrossClusterTask = (*crossClusterSourceTask)(nil)
 )
 
 type (
@@ -61,8 +69,14 @@ type (
 	crossClusterSourceTask struct {
 		*crossClusterTaskBase
 
-		// TODO: add more fields here for processing tasks
-		// in the source cluster
+		// targetCluster is the cluster name for which the task's owning
+		// queue processor is responsible for
+		// e.g if targetCluster is C, it means the task is loaded by
+		// the queue processor responsible for cluster C, and only cluster
+		// C is able to poll the task.
+		targetCluster  string
+		executionCache *execution.Cache
+		response       *types.CrossClusterTaskResponse
 	}
 
 	crossClusterTaskBase struct {
@@ -74,15 +88,16 @@ type (
 		priority        int
 		attempt         int
 
-		shard          shard.Context
-		timeSource     clock.TimeSource
-		submitTime     time.Time
-		logger         log.Logger
-		eventLogger    eventLogger
-		scope          metrics.Scope
-		taskExecutor   Executor
-		resubmitTaskFn func(task Task)
-		maxRetryCount  int
+		shard         shard.Context
+		timeSource    clock.TimeSource
+		submitTime    time.Time
+		logger        log.Logger
+		eventLogger   eventLogger
+		scope         metrics.Scope
+		taskExecutor  Executor
+		taskProcessor Processor
+		redispatchFn  func(task Task)
+		maxRetryCount int
 	}
 )
 
@@ -90,21 +105,27 @@ type (
 // for the processing it at the source cluster
 func NewCrossClusterSourceTask(
 	shard shard.Context,
+	targetCluster string,
+	executionCache *execution.Cache,
 	taskInfo Info,
 	taskExecutor Executor,
+	taskProcessor Processor,
 	logger log.Logger,
-	resubmitTaskFn func(task Task),
+	redispatchFn func(task Task),
 	maxRetryCount dynamicconfig.IntPropertyFn,
-) Task {
+) CrossClusterTask {
 	return &crossClusterSourceTask{
+		targetCluster:  targetCluster,
+		executionCache: executionCache,
 		crossClusterTaskBase: newCrossClusterTaskBase(
 			shard,
 			taskInfo,
 			processingStateInitialized,
 			taskExecutor,
+			taskProcessor,
 			logger,
 			shard.GetTimeSource(),
-			resubmitTaskFn,
+			redispatchFn,
 			maxRetryCount,
 		),
 	}
@@ -120,8 +141,9 @@ func NewCrossClusterTargetTask(
 	shard shard.Context,
 	taskRequest *types.CrossClusterTaskRequest,
 	taskExecutor Executor,
+	taskProcessor Processor,
 	logger log.Logger,
-	resubmitTaskFn func(task Task),
+	redispatchFn func(task Task),
 	maxRetryCount dynamicconfig.IntPropertyFn,
 ) (Task, future.Future) {
 	info := &persistence.CrossClusterTaskInfo{
@@ -164,9 +186,10 @@ func NewCrossClusterTargetTask(
 			info,
 			processingState(taskRequest.TaskInfo.TaskState),
 			taskExecutor,
+			taskProcessor,
 			logger,
 			shard.GetTimeSource(),
-			resubmitTaskFn,
+			redispatchFn,
 			maxRetryCount,
 		),
 		request:  taskRequest,
@@ -179,9 +202,10 @@ func newCrossClusterTaskBase(
 	taskInfo Info,
 	processingState processingState,
 	taskExecutor Executor,
+	taskProcessor Processor,
 	logger log.Logger,
 	timeSource clock.TimeSource,
-	resubmitTaskFn func(task Task),
+	redispatchFn func(task Task),
 	maxRetryCount dynamicconfig.IntPropertyFn,
 ) *crossClusterTaskBase {
 	var eventLogger eventLogger
@@ -207,35 +231,127 @@ func newCrossClusterTaskBase(
 			GetCrossClusterTaskMetricsScope(taskInfo.GetTaskType()), taskInfo.GetDomainID(),
 			logger,
 		),
-		resubmitTaskFn: resubmitTaskFn,
-		maxRetryCount:  maxRetryCount(),
+		taskExecutor:  taskExecutor,
+		taskProcessor: taskProcessor,
+		redispatchFn:  redispatchFn,
+		maxRetryCount: maxRetryCount(),
 	}
 }
 
 // cross cluster source task methods
 
 func (t *crossClusterSourceTask) Execute() error {
-	panic("Not implement")
+	executionStartTime := t.timeSource.Now()
+
+	defer func() {
+		t.scope.IncCounter(metrics.TaskRequestsPerDomain)
+		t.scope.RecordTimer(metrics.TaskProcessingLatencyPerDomain, time.Since(executionStartTime))
+	}()
+
+	logEvent(t.eventLogger, "Executing task")
+	return t.taskExecutor.Execute(t, true)
 }
 
 func (t *crossClusterSourceTask) Ack() {
-	panic("Not implement")
+	// don't set t.state to Acked, which will prevent the task from being fetched
+	// state and processingState will be updated by the task executor
+	t.Lock()
+	state := t.state
+	processingState := t.processingState
+	t.Unlock()
+
+	logEvent(t.eventLogger, "executed task", "processing state", processingState)
+
+	if state == ctask.TaskStateAcked {
+		t.scope.RecordTimer(metrics.TaskAttemptTimerPerDomain, time.Duration(t.attempt))
+		t.scope.RecordTimer(metrics.TaskLatencyPerDomain, time.Since(t.submitTime))
+		t.scope.RecordTimer(metrics.TaskQueueLatencyPerDomain, time.Since(t.GetVisibilityTimestamp()))
+
+		if t.eventLogger != nil && t.attempt != 0 {
+			// only dump events when the task has been retried
+			t.eventLogger.FlushEvents("Task processing events")
+		}
+	}
 }
 
 func (t *crossClusterSourceTask) Nack() {
-	panic("Not implement")
+	// Nack will be called when we are unable to move the next step for processing
+	// basically add the task to redispatch queue, so it can be retried later.
+	// wether the task state is setting to Nacked or not is not important, since
+	// task will be retried forever
+	logEvent(t.eventLogger, "Nacked task")
+
+	if t.GetAttempt() < activeTaskResubmitMaxAttempts {
+		if submitted, _ := t.taskProcessor.TrySubmit(t); submitted {
+			return
+		}
+	}
+
+	t.redispatchFn(t)
 }
 
 func (t *crossClusterSourceTask) HandleErr(
 	err error,
 ) (retErr error) {
-	panic("Not implement")
+	defer func() {
+		if retErr != nil {
+			logEvent(t.eventLogger, "Failed to handle error", retErr)
+
+			t.Lock()
+			t.attempt++
+			attempt := t.attempt
+			t.Unlock()
+
+			if attempt > t.maxRetryCount {
+				t.scope.RecordTimer(metrics.TaskAttemptTimerPerDomain, time.Duration(attempt))
+				t.logger.Error("Critical error processing task, retrying.",
+					tag.Error(err), tag.OperationCritical, tag.TaskType(t.GetTaskType()))
+			}
+		}
+	}()
+
+	if err == nil {
+		return nil
+	}
+
+	logEvent(t.eventLogger, "Handling task processing error", err)
+
+	if _, ok := err.(*types.EntityNotExistsError); ok {
+		return nil
+	}
+	if _, ok := err.(*types.WorkflowExecutionAlreadyCompletedError); ok {
+		return nil
+	}
+
+	if err == errWorkflowBusy {
+		t.scope.IncCounter(metrics.TaskWorkflowBusyPerDomain)
+		return err
+	}
+	if err == ErrTaskPendingActive {
+		t.scope.IncCounter(metrics.TaskPendingActiveCounterPerDomain)
+		return err
+	}
+	if err == execution.ErrMissingVersionHistories {
+		t.logger.Error("Encounter 2DC workflow during task processing.")
+		t.scope.IncCounter(metrics.TaskUnsupportedPerDomain)
+		err = nil
+	}
+	// return domain not active error here so that the cross-cluster task can be
+	// convert to a (passive) transfer task
+
+	t.scope.IncCounter(metrics.TaskFailuresPerDomain)
+	if _, ok := err.(*persistence.CurrentWorkflowConditionFailedError); ok {
+		t.logger.Error("More than 2 workflow are running.", tag.Error(err), tag.LifeCycleProcessingFailed)
+		return nil
+	}
+	t.logger.Error("Fail to process task", tag.Error(err), tag.LifeCycleProcessingFailed)
+	return err
 }
 
 func (t *crossClusterSourceTask) RetryErr(
 	err error,
 ) bool {
-	panic("Not implement")
+	return err != errWorkflowBusy && err != ErrTaskPendingActive && common.IsContextTimeoutError(err)
 }
 
 func (t *crossClusterSourceTask) IsReadyForPoll() bool {
@@ -243,11 +359,250 @@ func (t *crossClusterSourceTask) IsReadyForPoll() bool {
 	defer t.Unlock()
 
 	return t.state == ctask.TaskStatePending &&
-		(t.processingState == processingStateInitialized || t.processingState == processingStateResponseRecorded)
+		(t.processingState == processingStateInitialized ||
+			t.processingState == processingStateResponseRecorded)
 }
 
-func (t *crossClusterSourceTask) GetCrossClusterRequest() *types.CrossClusterTaskRequest {
-	panic("Not implement")
+func (t *crossClusterSourceTask) GetCrossClusterRequest() (request *types.CrossClusterTaskRequest, retError error) {
+	t.Lock()
+	defer func() {
+		if retError == nil && request == nil {
+			t.state = ctask.TaskStateAcked
+		}
+		t.Unlock()
+	}()
+
+	if !t.isValidLocked() {
+		return nil, errors.New("task invalidated")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), taskDefaultTimeout)
+	defer cancel()
+
+	taskInfo := t.GetInfo().(*persistence.CrossClusterTaskInfo)
+	_, mutableState, release, err := loadWorkflowForCrossClusterTask(ctx, t.executionCache, taskInfo, t.shard.GetMetricsClient(), t.logger)
+	if err != nil || mutableState == nil {
+		return nil, err
+	}
+	defer func() { release(retError) }()
+
+	request = &types.CrossClusterTaskRequest{
+		TaskInfo: &types.CrossClusterTaskInfo{
+			DomainID:            t.GetDomainID(),
+			WorkflowID:          t.GetWorkflowID(),
+			RunID:               t.GetRunID(),
+			TaskID:              t.GetTaskID(),
+			VisibilityTimestamp: common.Int64Ptr(t.GetVisibilityTimestamp().UnixNano()),
+		},
+	}
+
+	switch t.GetTaskType() {
+	case persistence.CrossClusterTaskTypeStartChildExecution:
+		attributes, taskState, err := t.getRequestForStartChildExecution(ctx, taskInfo, mutableState)
+		if err != nil || attributes == nil {
+			return nil, err
+		}
+		request.TaskInfo.TaskType = types.CrossClusterTaskTypeStartChildExecution.Ptr()
+		request.TaskInfo.TaskState = int16(taskState)
+		request.StartChildExecutionAttributes = attributes
+	case persistence.CrossClusterTaskTypeCancelExecution:
+		attributes, taskState, err := t.getRequestForCancelExecution(ctx, taskInfo, mutableState)
+		if err != nil || attributes == nil {
+			return nil, err
+		}
+		request.TaskInfo.TaskType = types.CrossClusterTaskTypeCancelExecution.Ptr()
+		request.TaskInfo.TaskState = int16(taskState)
+		request.CancelExecutionAttributes = attributes
+	case persistence.CrossClusterTaskTypeSignalExecution:
+		attributes, taskState, err := t.getRequestForSignalExecution(ctx, taskInfo, mutableState)
+		if err != nil || attributes == nil {
+			return nil, err
+		}
+		request.TaskInfo.TaskType = types.CrossClusterTaskTypeSignalExecution.Ptr()
+		request.TaskInfo.TaskState = int16(taskState)
+		request.SignalExecutionAttributes = attributes
+	default:
+		return nil, errUnknownCrossClusterTask
+	}
+
+	return request, nil
+}
+
+func (t *crossClusterSourceTask) getRequestForStartChildExecution(
+	ctx context.Context,
+	taskInfo *persistence.CrossClusterTaskInfo,
+	mutableState execution.MutableState,
+) (*types.CrossClusterStartChildExecutionRequestAttributes, processingState, error) {
+	initiatedEventID := taskInfo.ScheduleID
+	childInfo, ok := mutableState.GetChildExecutionInfo(initiatedEventID)
+	if !ok {
+		return nil, t.processingState, nil
+	}
+	ok, err := verifyTaskVersion(t.shard, t.logger, taskInfo.DomainID, childInfo.Version, taskInfo.Version, taskInfo)
+	if err != nil || !ok {
+		return nil, t.processingState, err
+	}
+
+	initiatedEvent, err := mutableState.GetChildExecutionInitiatedEvent(ctx, initiatedEventID)
+	if err != nil {
+		return nil, t.processingState, err
+	}
+
+	attributes := &types.CrossClusterStartChildExecutionRequestAttributes{
+		TargetDomainID:           taskInfo.TargetDomainID,
+		RequestID:                childInfo.CreateRequestID,
+		InitiatedEventID:         initiatedEventID,
+		InitiatedEventAttributes: initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes,
+	}
+	if childInfo.StartedID != common.EmptyEventID {
+		// childExecution already started, advance to next state
+		t.processingState = processingStateResponseRecorded
+		attributes.TargetRunID = common.StringPtr(childInfo.StartedRunID)
+	}
+
+	return attributes, t.processingState, nil
+}
+
+func (t *crossClusterSourceTask) getRequestForCancelExecution(
+	ctx context.Context,
+	taskInfo *persistence.CrossClusterTaskInfo,
+	mutableState execution.MutableState,
+) (*types.CrossClusterCancelExecutionRequestAttributes, processingState, error) {
+	initiatedEventID := taskInfo.ScheduleID
+	requestCancelInfo, ok := mutableState.GetRequestCancelInfo(initiatedEventID)
+	if !ok {
+		return nil, t.processingState, nil
+	}
+	ok, err := verifyTaskVersion(t.shard, t.logger, taskInfo.DomainID, requestCancelInfo.Version, taskInfo.Version, taskInfo)
+	if err != nil || !ok {
+		return nil, t.processingState, err
+	}
+
+	return &types.CrossClusterCancelExecutionRequestAttributes{
+		TargetDomainID:    taskInfo.TargetDomainID,
+		TargetWorkflowID:  taskInfo.TargetWorkflowID,
+		TargetRunID:       taskInfo.RunID,
+		RequestID:         requestCancelInfo.CancelRequestID,
+		InitiatedEventID:  initiatedEventID,
+		ChildWorkflowOnly: taskInfo.TargetChildWorkflowOnly,
+	}, t.processingState, nil
+}
+
+func (t *crossClusterSourceTask) getRequestForSignalExecution(
+	ctx context.Context,
+	taskInfo *persistence.CrossClusterTaskInfo,
+	mutableState execution.MutableState,
+) (*types.CrossClusterSignalExecutionRequestAttributes, processingState, error) {
+	initiatedEventID := taskInfo.ScheduleID
+	signalInfo, ok := mutableState.GetSignalInfo(initiatedEventID)
+	if !ok {
+		return nil, t.processingState, nil
+	}
+	ok, err := verifyTaskVersion(t.shard, t.logger, taskInfo.DomainID, signalInfo.Version, taskInfo.Version, taskInfo)
+	if err != nil || !ok {
+		return nil, t.processingState, err
+	}
+
+	return &types.CrossClusterSignalExecutionRequestAttributes{
+		TargetDomainID:    taskInfo.TargetDomainID,
+		TargetWorkflowID:  taskInfo.TargetWorkflowID,
+		TargetRunID:       taskInfo.RunID,
+		RequestID:         signalInfo.SignalRequestID,
+		InitiatedEventID:  initiatedEventID,
+		ChildWorkflowOnly: taskInfo.TargetChildWorkflowOnly,
+		SignalName:        signalInfo.SignalName,
+		SignalInput:       signalInfo.Input,
+		Control:           signalInfo.Control,
+	}, t.processingState, nil
+}
+
+func (t *crossClusterSourceTask) IsValid() bool {
+	t.Lock()
+	defer t.Unlock()
+
+	return t.isValidLocked()
+}
+
+func (t *crossClusterSourceTask) isValidLocked() bool {
+	if t.processingState == processingStateInvalidated {
+		return false
+	}
+
+	domainCache := t.shard.GetDomainCache()
+	sourceEntry, err := domainCache.GetDomainByID(t.GetDomainID())
+	if err != nil {
+		// unable to tell, treat the task as valid
+		t.logger.Error("Failed to load domain entry", tag.Error(err))
+		return true
+	}
+	targetEntry, err := domainCache.GetDomainByID(t.Info.(*persistence.CrossClusterTaskInfo).TargetDomainID)
+	if err != nil {
+		return true
+	}
+
+	// pending active state is treated as valid
+	if sourceEntry.GetReplicationConfig().ActiveClusterName != t.shard.GetClusterMetadata().GetCurrentClusterName() ||
+		targetEntry.GetReplicationConfig().ActiveClusterName != t.targetCluster {
+		t.processingState = processingStateInvalidated
+		return false
+	}
+
+	return true
+}
+
+func (t *crossClusterSourceTask) Update(response *types.CrossClusterTaskResponse) error {
+	t.Lock()
+	defer t.Unlock()
+
+	if t.state != ctask.TaskStatePending || t.processingState != processingState(response.TaskState) {
+		// this might happen when:
+		// 1. duplicated response (shard movement in target cluster)
+		// 2. shard movement in source cluster causing task to be re-processed
+		// 3. task got invalidated during domain failover callback
+		return fmt.Errorf("unexpected task state, expected: %v, actual: %v", t.processingState, response.TaskState)
+	}
+
+	if t.GetTaskType() != int(response.GetTaskType()) {
+		return fmt.Errorf("unexpected task type, expected: %v, actual: %v", t.GetTaskType(), response.GetTaskType())
+	}
+
+	if response.FailedCause != nil {
+		unexpectedFailedCause := false
+		switch response.GetFailedCause() {
+		case types.CrossClusterTaskFailedCauseUncategorized:
+			unexpectedFailedCause = true
+		case types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning:
+			unexpectedFailedCause = (t.GetTaskType() == persistence.CrossClusterTaskTypeCancelExecution ||
+				t.GetTaskType() == persistence.CrossClusterTaskTypeSignalExecution)
+		}
+		if unexpectedFailedCause {
+			// nothing needs to be done for unexpectedFailedCause
+			// leave the task state as is, so it's available for next poll
+			// before it's fetched we will also verify if the task still need to be processed
+			// if so task will be fetched and executed again in the target cluster
+			return fmt.Errorf("unexpected cross cluster task failed cause: %v", response.GetFailedCause())
+		}
+	}
+
+	var emptyResponse bool
+	switch t.GetTaskType() {
+	case persistence.CrossClusterTaskTypeStartChildExecution:
+		emptyResponse = response.StartChildExecutionAttributes != nil
+	case persistence.CrossClusterTaskTypeCancelExecution:
+		emptyResponse = response.CancelExecutionAttributes != nil
+	case persistence.CrossClusterTaskTypeSignalExecution:
+		emptyResponse = response.SignalExecutionAttributes != nil
+	}
+
+	if emptyResponse && response.FailedCause == nil {
+		return errors.New("empty cross cluster task response")
+	}
+
+	// set state to reported so that the task won't be pulled
+	// while it's being processed at the source cluster
+	t.processingState = processingStateResponseReported
+	t.response = response
+	return nil
 }
 
 // cross cluster target task methods
@@ -276,7 +631,7 @@ func (t *crossClusterTargetTask) Ack() {
 func (t *crossClusterTargetTask) Nack() {
 	t.Lock()
 	if t.attempt < t.maxRetryCount {
-		t.resubmitTaskFn(t)
+		t.redispatchFn(t)
 		t.Unlock()
 		return
 	}
@@ -366,4 +721,11 @@ func (t *crossClusterTaskBase) GetAttempt() int {
 
 func (t *crossClusterTaskBase) GetQueueType() QueueType {
 	return QueueTypeCrossCluster
+}
+
+func (t *crossClusterTaskBase) ProcessingState() processingState {
+	t.Lock()
+	defer t.Unlock()
+
+	return t.processingState
 }

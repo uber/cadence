@@ -1413,6 +1413,7 @@ func FromCrossClusterTaskResponse(t *types.CrossClusterTaskResponse) *sharedv1.C
 	response := sharedv1.CrossClusterTaskResponse{
 		TaskId:      t.TaskID,
 		TaskType:    FromCrossClusterTaskType(t.TaskType),
+		TaskState:   int32(t.TaskState),
 		FailedCause: FromCrossClusterTaskFailedCause(t.FailedCause),
 	}
 	if t.StartChildExecutionAttributes != nil {
@@ -1441,6 +1442,7 @@ func ToCrossClusterTaskResponse(t *sharedv1.CrossClusterTaskResponse) *types.Cro
 	response := types.CrossClusterTaskResponse{
 		TaskID:      t.TaskId,
 		TaskType:    ToCrossClusterTaskType(t.TaskType),
+		TaskState:   int16(t.TaskState),
 		FailedCause: ToCrossClusterTaskFailedCause(t.FailedCause),
 	}
 	switch attr := t.Attributes.(type) {

@@ -279,6 +279,8 @@ func (t *taskImpl) HandleErr(
 	// TODO remove this error check special case
 	//  since the new task life cycle will not give up until task processed / verified
 	if _, ok := err.(*types.DomainNotActiveError); ok {
+		// TODO: check if this check applies to cross-cluster task
+		// may result in cross-cluster task being discarded
 		if t.timeSource.Now().Sub(t.submitTime) > 2*cache.DomainCacheRefreshInterval {
 			t.scope.IncCounter(metrics.TaskNotActiveCounterPerDomain)
 			return nil

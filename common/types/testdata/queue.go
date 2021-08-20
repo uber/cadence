@@ -77,16 +77,19 @@ var (
 	CrossClusterTaskResponseStartChildExecution = types.CrossClusterTaskResponse{
 		TaskID:                        TaskID,
 		TaskType:                      types.CrossClusterTaskTypeStartChildExecution.Ptr(),
+		TaskState:                     1,
 		StartChildExecutionAttributes: &CrossClusterStartChildExecutionResponseAttributes,
 	}
 	CrossClusterTaskResponseCancelExecution = types.CrossClusterTaskResponse{
 		TaskID:      TaskID,
 		TaskType:    types.CrossClusterTaskTypeCancelExecution.Ptr(),
+		TaskState:   3,
 		FailedCause: types.CrossClusterTaskFailedCauseDomainNotActive.Ptr(),
 	}
 	CrossClusterTaskResponseSignalExecution = types.CrossClusterTaskResponse{
 		TaskID:      TaskID,
 		TaskType:    types.CrossClusterTaskTypeSignalExecution.Ptr(),
+		TaskState:   3,
 		FailedCause: types.CrossClusterTaskFailedCauseWorkflowNotExists.Ptr(),
 	}
 	CrossClusterTaskRequestArray = []*types.CrossClusterTaskRequest{

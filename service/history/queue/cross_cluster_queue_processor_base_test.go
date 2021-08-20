@@ -32,16 +32,13 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/common/types"
-
-	ctask "github.com/uber/cadence/common/task"
-
 	"github.com/uber/cadence/common/dynamicconfig"
-
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	ctask "github.com/uber/cadence/common/task"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/shard"
@@ -705,6 +702,7 @@ func (s *crossClusterQueueProcessorBaseSuite) newTestCrossClusterQueueProcessorB
 	processorBase := newCrossClusterQueueProcessorBaseHelper(
 		s.mockShard,
 		clusterName,
+		nil,
 		processingQueueStates,
 		s.mockTaskProcessor,
 		newCrossClusterQueueProcessorOptions(s.mockShard.GetConfig()),

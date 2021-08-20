@@ -754,7 +754,7 @@ func (mr *MockCrossClusterTaskMockRecorder) IsValid() *gomock.Call {
 }
 
 // Update mocks base method
-func (m *MockCrossClusterTask) Update(arg0 interface{}) error {
+func (m *MockCrossClusterTask) Update(arg0 *types.CrossClusterTaskResponse) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", arg0)
 	ret0, _ := ret[0].(error)

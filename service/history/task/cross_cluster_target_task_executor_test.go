@@ -401,6 +401,7 @@ func (s *crossClusterTargetTaskExecutorSuite) getTestCrossClusterTargetTask(
 		s.executor,
 		nil,
 		nil,
+		nil,
 		dynamicconfig.GetIntPropertyFn(1),
 	)
 	return task.(*crossClusterTargetTask)
