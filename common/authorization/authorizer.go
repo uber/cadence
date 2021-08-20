@@ -25,9 +25,8 @@ package authorization
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-
 	clientworker "go.uber.org/cadence/worker"
+	"io/ioutil"
 
 	"github.com/uber/cadence/common/types"
 )
