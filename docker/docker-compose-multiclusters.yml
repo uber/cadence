@@ -41,7 +41,7 @@ services:
       - cassandra
       - prometheus
   cadence-secondary:
-    image: ubercadence/server:master-auto-setup
+    image: ubercadence/server:0.22.0-auto-setup
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -70,7 +70,7 @@ services:
       - cassandra
       - prometheus
   cadence-web:
-    image: ubercadence/web:latest
+    image: ubercadence/web:v3.28.5
     environment:
       - "CADENCE_TCHANNEL_PEERS=cadence:7933"
     ports:
