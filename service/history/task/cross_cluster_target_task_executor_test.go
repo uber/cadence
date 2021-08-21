@@ -85,6 +85,7 @@ func (s *crossClusterTargetTaskExecutorSuite) SetupTest() {
 
 func (s *crossClusterTargetTaskExecutorSuite) TearDownTest() {
 	s.controller.Finish()
+	s.mockShard.Finish(s.T())
 }
 
 func (s *crossClusterTargetTaskExecutorSuite) TestExecute_UnexpectedTask() {

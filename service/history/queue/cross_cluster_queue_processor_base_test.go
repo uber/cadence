@@ -300,7 +300,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestPollTasks_OneTaskReady_ReturnO
 	readyTask.EXPECT().GetTaskType().Return(1).AnyTimes()
 	readyTask.EXPECT().State().Return(ctask.State(0)).AnyTimes()
 	readyTask.EXPECT().GetTaskID().Return(int64(0)).AnyTimes()
-	readyTask.EXPECT().GetCrossClusterRequest().Return(nil).AnyTimes()
+	readyTask.EXPECT().GetCrossClusterRequest().Return(&types.CrossClusterTaskRequest{}, nil).AnyTimes()
 	notReadyTask := task.NewMockCrossClusterTask(s.controller)
 	notReadyTask.EXPECT().GetDomainID().Return(uuid.New()).AnyTimes()
 	notReadyTask.EXPECT().IsReadyForPoll().Return(false)
@@ -572,7 +572,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_GetTa
 	mockTask.EXPECT().GetTaskType().Return(1).AnyTimes()
 	mockTask.EXPECT().State().Return(ctask.State(0)).AnyTimes()
 	mockTask.EXPECT().GetTaskID().Return(int64(0)).AnyTimes()
-	mockTask.EXPECT().GetCrossClusterRequest().Return(nil).AnyTimes()
+	mockTask.EXPECT().GetCrossClusterRequest().Return(&types.CrossClusterTaskRequest{}, nil).AnyTimes()
 	taskKey := testKey{ID: 10}
 	newTaskMap := map[task.Key]task.Task{taskKey: mockTask}
 	processorBase.processingQueueCollections[0].AddTasks(newTaskMap, testKey{ID: 11})

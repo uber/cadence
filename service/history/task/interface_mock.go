@@ -725,20 +725,6 @@ func (mr *MockCrossClusterTaskMockRecorder) GetInfo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInfo", reflect.TypeOf((*MockCrossClusterTask)(nil).GetInfo))
 }
 
-// IsReadyForPoll mocks base method
-func (m *MockCrossClusterTask) IsReadyForPoll() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsReadyForPoll")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// IsReadyForPoll indicates an expected call of IsReadyForPoll
-func (mr *MockCrossClusterTaskMockRecorder) IsReadyForPoll() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReadyForPoll", reflect.TypeOf((*MockCrossClusterTask)(nil).IsReadyForPoll))
-}
-
 // IsValid mocks base method
 func (m *MockCrossClusterTask) IsValid() bool {
 	m.ctrl.T.Helper()
@@ -753,6 +739,35 @@ func (mr *MockCrossClusterTaskMockRecorder) IsValid() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsValid", reflect.TypeOf((*MockCrossClusterTask)(nil).IsValid))
 }
 
+// IsReadyForPoll mocks base method
+func (m *MockCrossClusterTask) IsReadyForPoll() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsReadyForPoll")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsReadyForPoll indicates an expected call of IsReadyForPoll
+func (mr *MockCrossClusterTaskMockRecorder) IsReadyForPoll() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReadyForPoll", reflect.TypeOf((*MockCrossClusterTask)(nil).IsReadyForPoll))
+}
+
+// GetCrossClusterRequest mocks base method
+func (m *MockCrossClusterTask) GetCrossClusterRequest() (*types.CrossClusterTaskRequest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCrossClusterRequest")
+	ret0, _ := ret[0].(*types.CrossClusterTaskRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCrossClusterRequest indicates an expected call of GetCrossClusterRequest
+func (mr *MockCrossClusterTaskMockRecorder) GetCrossClusterRequest() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterRequest", reflect.TypeOf((*MockCrossClusterTask)(nil).GetCrossClusterRequest))
+}
+
 // Update mocks base method
 func (m *MockCrossClusterTask) Update(arg0 *types.CrossClusterTaskResponse) error {
 	m.ctrl.T.Helper()
@@ -765,20 +780,6 @@ func (m *MockCrossClusterTask) Update(arg0 *types.CrossClusterTaskResponse) erro
 func (mr *MockCrossClusterTaskMockRecorder) Update(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockCrossClusterTask)(nil).Update), arg0)
-}
-
-// GetCrossClusterRequest mocks base method
-func (m *MockCrossClusterTask) GetCrossClusterRequest() *types.CrossClusterTaskRequest {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCrossClusterRequest")
-	ret0, _ := ret[0].(*types.CrossClusterTaskRequest)
-	return ret0
-}
-
-// GetCrossClusterRequest indicates an expected call of GetCrossClusterRequest
-func (mr *MockCrossClusterTaskMockRecorder) GetCrossClusterRequest() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterRequest", reflect.TypeOf((*MockCrossClusterTask)(nil).GetCrossClusterRequest))
 }
 
 // MockKey is a mock of Key interface

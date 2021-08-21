@@ -25,6 +25,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -33,6 +34,10 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
+)
+
+var (
+	errContinueExecution = errors.New("cross cluster task should continue execution")
 )
 
 type (
@@ -96,6 +101,12 @@ func (t *crossClusterSourceTaskExecutor) Execute(
 		err = errUnknownCrossClusterTask
 	}
 
+	if err == nil {
+		t.setTaskState(sourceTask, ctask.TaskStateAcked, processingStateResponseReported)
+	} else if err == errContinueExecution {
+		err = nil
+	}
+
 	return err
 }
 
@@ -145,23 +156,24 @@ func (t *crossClusterSourceTaskExecutor) executeStartChildExecutionTask(
 			// ideally this case should not happen
 			// crossClusterSourceTask.Update() will reject response with this failed cause
 			t.setTaskState(task, ctask.TaskStatePending, processingState(task.response.TaskState))
-			return nil
+			return errContinueExecution
 		}
 	}
 
 	switch processingState(task.response.TaskState) {
 	case processingStateInitialized:
+		if childInfo.StartedID != common.EmptyEventID {
+			// TODO: explain when this may happen
+			t.setTaskState(task, ctask.TaskStatePending, processingStateResponseRecorded)
+			return errContinueExecution
+		}
+
 		attributes := initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes
 		now := t.shard.GetTimeSource().Now()
 		if failedCause != nil &&
 			(*failedCause == types.CrossClusterTaskFailedCauseDomainNotExists ||
 				*failedCause == types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning) {
-			if err := recordStartChildExecutionFailed(ctx, taskInfo, wfContext, attributes, now); err != nil {
-				return err
-			}
-
-			t.setTaskState(task, ctask.TaskStateAcked, processingStateResponseRecorded)
-			return nil
+			return recordStartChildExecutionFailed(ctx, taskInfo, wfContext, attributes, now)
 		}
 
 		childRunID := task.response.StartChildExecutionAttributes.GetRunID()
@@ -172,11 +184,10 @@ func (t *crossClusterSourceTaskExecutor) executeStartChildExecutionTask(
 
 		// advance the task state so that it will be available for polling again
 		t.setTaskState(task, ctask.TaskStatePending, processingStateResponseRecorded)
-		return nil
+		return errContinueExecution
 	case processingStateResponseRecorded:
 		// there's nothing we need to do for the remaining two failed causes
 		// ack the task
-		t.setTaskState(task, ctask.TaskStateAcked, processingStateResponseRecorded)
 		return nil
 	default:
 		return errUnknownTaskProcessingState
@@ -220,7 +231,7 @@ func (t *crossClusterSourceTaskExecutor) executeCancelExecutionTask(
 			// ideally this case should not happen
 			// crossClusterSourceTask.Update() will reject response with those failed causes
 			t.setTaskState(task, ctask.TaskStatePending, processingState(task.response.TaskState))
-			return nil
+			return errContinueExecution
 		}
 	}
 
@@ -234,17 +245,7 @@ func (t *crossClusterSourceTaskExecutor) executeCancelExecutionTask(
 
 		if failedCause != nil {
 			// remaining errors are non-retryable
-			err = requestCancelExternalExecutionFailed(
-				ctx,
-				taskInfo,
-				wfContext,
-				targetDomainName,
-				taskInfo.TargetWorkflowID,
-				taskInfo.TargetRunID,
-				now,
-			)
-		} else {
-			err = requestCancelExternalExecutionCompleted(
+			return requestCancelExternalExecutionFailed(
 				ctx,
 				taskInfo,
 				wfContext,
@@ -254,12 +255,16 @@ func (t *crossClusterSourceTaskExecutor) executeCancelExecutionTask(
 				now,
 			)
 		}
-		if err != nil {
-			return err
-		}
+		return requestCancelExternalExecutionCompleted(
+			ctx,
+			taskInfo,
+			wfContext,
+			targetDomainName,
+			taskInfo.TargetWorkflowID,
+			taskInfo.TargetRunID,
+			now,
+		)
 
-		t.setTaskState(task, ctask.TaskStateAcked, processingStateResponseRecorded)
-		return nil
 	default:
 		return errUnknownTaskProcessingState
 	}
@@ -305,7 +310,7 @@ func (t *crossClusterSourceTaskExecutor) executeSignalExecutionTask(
 			// ideally this case should not happen
 			// crossClusterSourceTask.Update() will reject response with those failed causes
 			t.setTaskState(task, ctask.TaskStatePending, processingState(task.response.TaskState))
-			return nil
+			return errContinueExecution
 		}
 	}
 
@@ -319,7 +324,7 @@ func (t *crossClusterSourceTaskExecutor) executeSignalExecutionTask(
 
 		if failedCause != nil {
 			// remaining errors are non-retryable
-			if err := signalExternalExecutionFailed(
+			return signalExternalExecutionFailed(
 				ctx,
 				taskInfo,
 				wfContext,
@@ -328,12 +333,7 @@ func (t *crossClusterSourceTaskExecutor) executeSignalExecutionTask(
 				taskInfo.TargetRunID,
 				signalInfo.Control,
 				now,
-			); err != nil {
-				return err
-			}
-
-			t.setTaskState(task, ctask.TaskStateAcked, processingStateResponseRecorded)
-			return nil
+			)
 		}
 
 		if err := signalExternalExecutionCompleted(
@@ -351,11 +351,10 @@ func (t *crossClusterSourceTaskExecutor) executeSignalExecutionTask(
 
 		// advance the task state so that it will be available for polling again
 		t.setTaskState(task, ctask.TaskStatePending, processingStateResponseRecorded)
-		return nil
+		return errContinueExecution
 	case processingStateResponseRecorded:
-		// there's nothing we need to do for the remaining failed cause
+		// there's nothing we need to do for the response or remaining failed cause
 		// ack the task
-		t.setTaskState(task, ctask.TaskStateAcked, processingStateResponseRecorded)
 		return nil
 	default:
 		return errUnknownTaskProcessingState
