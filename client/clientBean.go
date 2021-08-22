@@ -69,7 +69,7 @@ type (
 	}
 
 	DispatcherOptions struct {
-		AuthProvider *clientworker.AuthorizationProvider
+		AuthProvider clientworker.AuthorizationProvider
 	}
 
 	// DispatcherProvider provides a dispatcher to a given address
@@ -132,7 +132,7 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 		}
 
 		dispatcher, err := dispatcherProvider.Get(info.RPCName, info.RPCAddress, &DispatcherOptions{
-			AuthProvider: &authProvider,
+			AuthProvider: authProvider,
 		})
 		if err != nil {
 			return nil, err
@@ -290,7 +290,7 @@ func (p *dnsDispatcherProvider) Get(serviceName string, address string, options 
 	peerListUpdater.Start()
 	outbound := tchanTransport.NewOutbound(peerList)
 
-	var authProvider *clientworker.AuthorizationProvider
+	var authProvider clientworker.AuthorizationProvider
 	if options != nil && options.AuthProvider != nil {
 		authProvider = options.AuthProvider
 	}
@@ -318,12 +318,12 @@ func (p *dnsDispatcherProvider) Get(serviceName string, address string, options 
 }
 
 type outboundMiddleware struct {
-	authProvider *clientworker.AuthorizationProvider
+	authProvider clientworker.AuthorizationProvider
 }
 
 func (om *outboundMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	if om.authProvider != nil {
-		token, err := (*om.authProvider).GetAuthToken()
+		token, err := om.authProvider.GetAuthToken()
 		if err != nil {
 			return nil, err
 		}

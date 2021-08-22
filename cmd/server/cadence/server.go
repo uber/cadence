@@ -230,7 +230,7 @@ func (s *server) startService() common.Daemon {
 			log.Fatalf(err.Error())
 		}
 	}
-	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, s.cfg.PublicClient.HostPort, &client.DispatcherOptions{AuthProvider: &authProvider})
+	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, s.cfg.PublicClient.HostPort, &client.DispatcherOptions{AuthProvider: authProvider})
 	if err != nil {
 		log.Fatalf("failed to construct dispatcher: %v", err)
 	}

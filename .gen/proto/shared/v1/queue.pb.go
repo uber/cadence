@@ -2600,10 +2600,7 @@ func (m *CrossClusterTaskInfo) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -2805,10 +2802,7 @@ func (m *CrossClusterStartChildExecutionRequestAttributes) Unmarshal(dAtA []byte
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -2891,10 +2885,7 @@ func (m *CrossClusterStartChildExecutionResponseAttributes) Unmarshal(dAtA []byt
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -3084,10 +3075,7 @@ func (m *CrossClusterCancelExecutionRequestAttributes) Unmarshal(dAtA []byte) er
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -3138,10 +3126,7 @@ func (m *CrossClusterCancelExecutionResponseAttributes) Unmarshal(dAtA []byte) e
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -3433,10 +3418,7 @@ func (m *CrossClusterSignalExecutionRequestAttributes) Unmarshal(dAtA []byte) er
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -3487,10 +3469,7 @@ func (m *CrossClusterSignalExecutionResponseAttributes) Unmarshal(dAtA []byte) e
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -3664,10 +3643,7 @@ func (m *CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes) Unma
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -3718,10 +3694,7 @@ func (m *CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes) Unm
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -3948,10 +3921,7 @@ func (m *CrossClusterTaskRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -4199,10 +4169,7 @@ func (m *CrossClusterTaskResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -4287,10 +4254,7 @@ func (m *CrossClusterTaskRequests) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
