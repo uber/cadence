@@ -29,7 +29,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -49,11 +48,10 @@ type (
 // newNoSQLVisibilityStore is used to create an instance of VisibilityStore implementation
 func newNoSQLVisibilityStore(
 	listClosedOrderingByCloseTime bool,
-	cfg config.Cassandra,
+	cfg config.NoSQL,
 	logger log.Logger,
 ) (p.VisibilityStore, error) {
-	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
-	db, err := cassandra.NewCassandraDB(cfg, logger)
+	db, err := NewNoSQLDB(&cfg, logger)
 	if err != nil {
 		return nil, err
 	}

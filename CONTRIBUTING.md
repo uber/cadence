@@ -6,6 +6,9 @@ Join our Slack channel(invite link in the [home page](https://github.com/uber/ca
 >Note: All contributors need to fill out the [Uber Contributor License Agreement](http://t.uber.com/cla) before we can merge in any of your changes
 
 ## Development Environment
+Below are the instructions of how to set up a development Environment.
+
+### 1. Building Environment
 
 * Golang. Install on OS X with.
 ```
@@ -29,55 +32,87 @@ go mod download
 After check out and go to the Cadence repo, compile the `cadence` service and helper tools without running test:
 
 ```bash
+git submodule update --init --recursive
+
 make bins
 ``` 
 
->Note: If running into any compiling issue, 
->1. Make sure you upgrade to the latest stable version of Golang.
-> 2. Check if this document is outdated by comparing with the building steps in [Dockerfile](https://github.com/uber/cadence/blob/master/Dockerfile)
-* Database. The default setup of Cadence depends on Cassandra. Before running the Cadence or tests you must have `cassandra` dependency(or equivalent database in the below notes)
+You should be able to get all the binaries of this repo:
+* cadence-server: the server binary
+* cadence: the CLI binary
+* cadence-cassandra-tool: the Cassandra schema tools
+* cadence-sql-tool: the SQL schema tools(for now only supports MySQL and Postgres)
+* cadence-canary: the canary test binary
+* cadence-bench: the benchmark test binary
 
->Note: This section assumes you are working with Cassandra. Please refer to [persistence documentation](https://github.com/uber/cadence/blob/master/docs/persistence.md) if you want to test with others like MySQL/Postgres.
-> Also, you don't need those local stores if you want to connect to your existing staging/QA environment. 
 
-```bash
-# install cassandra
-# you can reduce memory used by cassandra (by default 4GB), by following instructions here: http://codefoundries.com/developer/cassandra/cassandra-installation-mac.html
-brew install cassandra
+:warning: Note: 
 
-# start services
-brew services start cassandra 
-# or 
-cassandra -f
+If running into any compiling issue
+>1. For proto/thrift errors, run `git submodule update --init --recursive` to fix  
+>2. Make sure you upgrade to the latest stable version of Golang.
+>3. Check if this document is outdated by comparing with the building steps in [Dockerfile](https://github.com/uber/cadence/blob/master/Dockerfile)
 
-# after a short while, then use cqlsh to login, to make sure Cassandra is up  
-cqlsh 
-Connected to Test Cluster at 127.0.0.1:9042.
-[cqlsh 5.0.1 | Cassandra 3.11.8 | CQL spec 3.4.4 | Native protocol v4]
-Use HELP for help.
-cqlsh>
+### 2. Setup Dependency
+NOTE: you may skip this section if you have installed the dependencies in any other ways, for example, using homebrew.
+
+Cadence's core data model can be running with different persistence storages, including Cassandra,MySQL and Postgres.
+Please refer to [persistence documentation](https://github.com/uber/cadence/blob/master/docs/persistence.md) if you want to learn more.
+Cadence's visibility data model can be running with either Cassandra/MySQL/Postgres database, or ElasticSearch+Kafka. The latter provides [advanced visibility feature](./docs/visibility-on-elasticsearch.md)
+
+We recommend to use [docker-compose](https://docs.docker.com/compose/) to start those dependencies:
+
+* If you want to start Cassandra dependency, use `./docker/dev/cassandra.yml`:
 ```
->If you are running Cadence on top of [Mysql](docs/setup/MYSQL_SETUP.md) or [Postgres](docs/setup/POSTGRES_SETUP.md), you can follow the instructions to run the SQL DB and then run:
-
-Now you can setup the database schema
-```bash
-make install-schema
-
-# If you use SQL DB, then run:
-make install-schema-mysql OR make install-schema-postgres
+docker-compose -f ./docker/dev/cassandra.yml up
 ```
+You will use `CTRL+C` to stop it. Then `docker-compose -f ./docker/dev/cassandra.yml down` to clean up the resources. 
 
+Or to run in the background
+```
+docker-compose -f ./docker/dev/cassandra.yml up -d 
+```
+Also use `docker-compose -f ./docker/dev/cassandra.yml down` to stop and clean up the resources.
+
+* Alternatively, use `./docker/dev/mysql.yml` for MySQL dependency
+* Alternatively, use `./docker/dev/postgres.yml` for PostgreSQL dependency 
+* Alternatively, use `./docker/dev/cassandra-esv7-kafka.yml` for Cassandra, ElasticSearch(v7) and Kafka/ZooKeeper dependencies
+
+### 3. Schema installation 
+Based on the above dependency setup, you also need to install the schemas. 
+
+* If you use `cassandra.yml` or `cassandra-esv7-kafka.yml`, then run `make install-schema` to install Casandra schemas 
+* If you use `mysql.yml` then run `install-schema-mysql` to install MySQL schemas
+* If you use `postgres.yml` then run `install-schema-postgres` to install Postgres schemas
+
+Beside database schema, you will also need to install ElasticSearch schema if you use  `cassandra-esv7-kafka.yml`:
+Run below commands:
+```bash
+export ES_SCHEMA_FILE=./schema/elasticsearch/v7/visibility/index_template.json
+curl -X PUT "http://127.0.0.1:9200/_template/cadence-visibility-template" -H 'Content-Type: application/json' --data-binary "@$ES_SCHEMA_FILE"
+curl -X PUT "http://127.0.0.1:9200/cadence-visibility-dev"
+```
+They will create an index template and an index in ElasticSearch. 
+
+### 4. Run  
+Once you have done all above, try running the local binaries:
+
+* If you use `cassandra.yml` for above steps:
 Then you will be able to run a basic local Cadence server for development:
 ```bash
 ./cadence-server start
-
-# If you use SQL DB, then run:
-./cadence-server --zone <mysql/postgres> start
+```
+  * If you use `mysql.yml` then run `./cadence-server --zone mysql start`
+  * If you use `postgres.yml` then run `./cadence-server --zone postgres start`   
+  * If you use `cassandra-esv7-kafka.yml` then run `./cadence-server --zone es_v7 start`
+  
+Then register a domain:
+```
+./cadence --do samples-domain domain register
 ```
 
-You can run some workflow [samples](https://github.com/uber-common/cadence-samples) to test the development server.
- 
-> This basic local server doesn't have some features like advanced visibility, archival, which require more dependency than Cassandra/Database and setup. 
+Then run a helloworld from [Go Client Sample](https://github.com/uber-common/cadence-samples/) or [Java Client Sample](https://github.com/uber/cadence-java-samples) 
+
 
 ## Issues to start with
 

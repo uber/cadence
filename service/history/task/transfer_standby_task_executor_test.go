@@ -158,7 +158,6 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 		execution.NewCache(s.mockShard),
 		s.mockNDCHistoryResender,
 		s.logger,
-		s.mockShard.GetMetricsClient(),
 		s.clusterName,
 		config,
 	).(*transferStandbyTaskExecutor)
@@ -1277,5 +1276,5 @@ func (s *transferStandbyTaskExecutorSuite) createPersistenceMutableState(
 func (s *transferStandbyTaskExecutorSuite) newTransferTaskFromInfo(
 	info *persistence.TransferTaskInfo,
 ) Task {
-	return NewTransferTask(s.mockShard, info, QueueTypeStandbyTransfer, s.logger, nil, nil, nil, nil, s.mockShard.GetTimeSource(), nil)
+	return NewTransferTask(s.mockShard, info, QueueTypeStandbyTransfer, s.logger, nil, nil, nil, nil, nil)
 }

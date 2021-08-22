@@ -13,6 +13,7 @@ require (
 	github.com/benbjohnson/clock v0.0.0-20161215174838-7dc76406b6d3 // indirect
 	github.com/cactus/go-statsd-client/statsd v0.0.0-20191106001114-12b4e2b38748
 	github.com/cch123/elasticsql v0.0.0-20190321073543-a1a440758eb9
+	github.com/cristalhq/jwt/v3 v3.0.14
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13
 	github.com/dmarkham/enumer v1.5.1
@@ -68,6 +69,7 @@ require (
 	go.uber.org/zap v1.13.0
 	golang.org/x/net v0.0.0-20201031054903-ff519b6c9102
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/text v0.3.4 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 	golang.org/x/tools v0.1.0

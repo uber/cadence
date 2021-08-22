@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2017 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,35 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package config
 
-import (
-	"time"
+import "time"
 
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
-)
+//This package is necessary to avoid import cycle as config_store_client imports common/config
+//while common/config imports this ClientConfig definition
 
-const (
-	defaultSessionTimeout = 10 * time.Second
-)
-
-// CreateSession creates a new session
-// TODO this will be converted to private later, after all cassandra code moved to plugin pkg
-func CreateSession(cfg config.Cassandra) (gocql.Session, error) {
-	return gocql.NewClient().CreateSession(gocql.ClusterConfig{
-		Hosts:             cfg.Hosts,
-		Port:              cfg.Port,
-		User:              cfg.User,
-		Password:          cfg.Password,
-		Keyspace:          cfg.Keyspace,
-		Region:            cfg.Region,
-		Datacenter:        cfg.Datacenter,
-		MaxConns:          cfg.MaxConns,
-		TLS:               cfg.TLS,
-		ProtoVersion:      cfg.ProtoVersion,
-		Consistency:       gocql.LocalQuorum,
-		SerialConsistency: gocql.LocalSerial,
-		Timeout:           defaultSessionTimeout,
-	})
+// ClientConfig is the config for the config store based dynamic config client.
+// It specifies how often the cached config should be updated by checking underlying database.
+type ClientConfig struct {
+	PollInterval        time.Duration `yaml:"pollInterval"`
+	UpdateRetryAttempts int           `yaml:"updateRetryAttempts"`
+	FetchTimeout        time.Duration `yaml:"FetchTimeout"`
+	UpdateTimeout       time.Duration `yaml:"UpdateTimeout"`
 }

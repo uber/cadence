@@ -276,6 +276,12 @@ const (
 	FlagBucketSize                        = "bucket_size"
 	DelayStartSeconds                     = "delay_start_seconds"
 	FlagConnectionAttributes              = "conn_attrs"
+	FlagJWT                               = "jwt"
+	FlagJWTPrivateKey                     = "jwt-private-key"
+	FlagJWTPrivateKeyWithAlias            = FlagJWTPrivateKey + ", jwt-pk"
+	FlagDynamicConfigName                 = "dynamic_config_name"
+	FlagDynamicConfigFilter               = "dynamic_config_filter"
+	FlagDynamicConfigValue                = "dynamic_config_value"
 )
 
 var flagsForExecution = []cli.Flag{

@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
+	dc "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -57,6 +58,7 @@ const (
 
 var (
 	errMaxMessageIDNotSet = &types.BadRequestError{Message: "Max messageID is not set."}
+	errInvalidFilters     = &types.BadRequestError{Message: "Request Filters are invalid, unable to parse."}
 )
 
 type (
@@ -84,6 +86,10 @@ type (
 		ResendReplicationTasks(context.Context, *types.ResendReplicationTasksRequest) error
 		ResetQueue(context.Context, *types.ResetQueueRequest) error
 		GetCrossClusterTasks(context.Context, *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error)
+		GetDynamicConfig(context.Context, *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error)
+		UpdateDynamicConfig(context.Context, *types.UpdateDynamicConfigRequest) error
+		RestoreDynamicConfig(context.Context, *types.RestoreDynamicConfigRequest) error
+		ListDynamicConfig(context.Context, *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error)
 	}
 
 	// adminHandlerImpl is an implementation for admin service independent of wire protocol
@@ -95,7 +101,7 @@ type (
 		config                *Config
 		domainDLQHandler      domain.DLQMessageHandler
 		domainFailoverWatcher domain.FailoverWatcher
-		eventSerializder      persistence.PayloadSerializer
+		eventSerializer       persistence.PayloadSerializer
 		esClient              elasticsearch.GenericClient
 	}
 
@@ -148,8 +154,8 @@ func NewAdminHandler(
 			resource.GetMetricsClient(),
 			resource.GetLogger(),
 		),
-		eventSerializder: persistence.NewPayloadSerializer(),
-		esClient:         params.ESClient,
+		eventSerializer: persistence.NewPayloadSerializer(),
+		esClient:        params.ESClient,
 	}
 }
 
@@ -989,7 +995,7 @@ func (adh *adminHandlerImpl) ResendReplicationTasks(
 		func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 			return adh.GetHistoryClient().ReplicateEventsV2(ctx, request)
 		},
-		adh.eventSerializder,
+		adh.eventSerializer,
 		nil,
 		nil,
 		adh.GetLogger(),
@@ -1252,4 +1258,152 @@ func deserializeRawHistoryToken(bytes []byte) (*getWorkflowRawHistoryV2Token, er
 	token := &getWorkflowRawHistoryV2Token{}
 	err := json.Unmarshal(bytes, token)
 	return token, err
+}
+
+func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *types.GetDynamicConfigRequest) (_ *types.GetDynamicConfigResponse, retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	scope, sw := adh.startRequestProfile(metrics.AdminGetDynamicConfigScope)
+	defer sw.Stop()
+
+	if request == nil || request.ConfigName == "" {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+
+	keyVal, err := checkValidKey(request.ConfigName)
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+
+	var value interface{}
+	if request.Filters == nil {
+		value, err = adh.params.DynamicConfig.GetValue(keyVal, nil)
+		if err != nil {
+			return nil, adh.error(err, scope)
+		}
+	} else {
+		convFilters, err := convertFilterListToMap(request.Filters)
+		if err != nil {
+			return nil, adh.error(err, scope)
+		}
+		value, err = adh.params.DynamicConfig.GetValueWithFilters(keyVal, convFilters, nil)
+	}
+
+	data, err := json.Marshal(value)
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+
+	return &types.GetDynamicConfigResponse{
+		Value: &types.DataBlob{
+			EncodingType: types.EncodingTypeJSON.Ptr(),
+			Data:         data,
+		},
+	}, nil
+}
+
+func (adh *adminHandlerImpl) UpdateDynamicConfig(ctx context.Context, request *types.UpdateDynamicConfigRequest) (retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	scope, sw := adh.startRequestProfile(metrics.AdminUpdateDynamicConfigScope)
+	defer sw.Stop()
+
+	if request == nil {
+		return adh.error(errRequestNotSet, scope)
+	}
+
+	keyVal, err := checkValidKey(request.ConfigName)
+	if err != nil {
+		return adh.error(err, scope)
+	}
+
+	return adh.params.DynamicConfig.UpdateValue(keyVal, request.ConfigValues)
+}
+
+func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *types.RestoreDynamicConfigRequest) (retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	scope, sw := adh.startRequestProfile(metrics.AdminRestoreDynamicConfigScope)
+	defer sw.Stop()
+
+	if request == nil || request.ConfigName == "" {
+		return adh.error(errRequestNotSet, scope)
+	}
+
+	keyVal, err := checkValidKey(request.ConfigName)
+	if err != nil {
+		return adh.error(err, scope)
+	}
+
+	var filters map[dc.Filter]interface{}
+
+	if request.Filters == nil {
+		filters = nil
+	} else {
+		filters, err = convertFilterListToMap(request.Filters)
+		if err != nil {
+			return adh.error(errInvalidFilters, scope)
+		}
+	}
+	return adh.params.DynamicConfig.RestoreValue(keyVal, filters)
+}
+
+func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest) (_ *types.ListDynamicConfigResponse, retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	scope, sw := adh.startRequestProfile(metrics.AdminListDynamicConfigScope)
+	defer sw.Stop()
+
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+
+	keyVal, err := checkValidKey(request.ConfigName)
+	if err != nil {
+		entries, err2 := adh.params.DynamicConfig.ListValue(dc.UnknownKey)
+		if err2 != nil {
+			return nil, adh.error(err2, scope)
+		}
+		return &types.ListDynamicConfigResponse{
+			Entries: entries,
+		}, nil
+	}
+
+	entries, err2 := adh.params.DynamicConfig.ListValue(keyVal)
+	if err2 != nil {
+		err = adh.error(err2, scope)
+		return nil, adh.error(err, scope)
+	}
+
+	return &types.ListDynamicConfigResponse{
+		Entries: entries,
+	}, nil
+}
+
+func checkValidKey(keyName string) (dynamicconfig.Key, error) {
+	keyVal, ok := dynamicconfig.KeyNames[keyName]
+	if !ok || keyVal == dynamicconfig.UnknownKey {
+		return dynamicconfig.UnknownKey, errors.New("invalid dynamic config parameter name")
+	}
+	return keyVal, nil
+}
+
+func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {
+	switch *blob.EncodingType {
+	case types.EncodingTypeJSON:
+		var v interface{}
+		err := json.Unmarshal(blob.Data, &v)
+		return v, err
+	default:
+		return nil, errors.New("unsupported blob encoding")
+	}
+}
+
+func convertFilterListToMap(filters []*types.DynamicConfigFilter) (map[dc.Filter]interface{}, error) {
+	newFilters := make(map[dc.Filter]interface{})
+
+	for _, filter := range filters {
+		val, err := convertFromDataBlob(filter.Value)
+		if err != nil {
+			return nil, err
+		}
+		newFilters[dc.ParseFilter(filter.Name)] = val
+	}
+	return newFilters, nil
 }

@@ -169,11 +169,11 @@ func GetTestClusterOption() *pt.TestBaseOptions {
 	}
 
 	return &pt.TestBaseOptions{
-		SQLDBPluginName: PluginName,
-		DBUsername:      testUser,
-		DBPassword:      testPassword,
-		DBHost:          environment.GetPostgresAddress(),
-		DBPort:          environment.GetPostgresPort(),
-		SchemaDir:       testSchemaDir,
+		DBPluginName: PluginName,
+		DBUsername:   testUser,
+		DBPassword:   testPassword,
+		DBHost:       environment.GetPostgresAddress(),
+		DBPort:       environment.GetPostgresPort(),
+		SchemaDir:    testSchemaDir,
 	}
 }

@@ -121,7 +121,6 @@ func newTransferQueueProcessorBase(
 				taskExecutor,
 				taskProcessor,
 				processorBase.redispatcher.AddTask,
-				shard.GetTimeSource(),
 				shard.GetConfig().TransferTaskMaxRetryCount,
 			)
 		},
@@ -139,7 +138,6 @@ func newTransferQueueProcessorBase(
 	if shard.GetConfig().EnableDebugMode && options.EnableValidator() {
 		transferQueueProcessorBase.validator = newTransferQueueValidator(
 			transferQueueProcessorBase,
-			shard.GetTimeSource(),
 			options.ValidationInterval,
 			logger,
 			metricsClient.Scope(options.MetricScope),
@@ -228,14 +226,14 @@ func (t *transferQueueProcessorBase) setupBackoffTimer(level int) {
 	t.processingLock.Lock()
 	defer t.processingLock.Unlock()
 
-	t.metricsScope.IncCounter(metrics.ProcessingQueueThrottledCounter)
-	t.logger.Info("Throttled processing queue", tag.QueueLevel(level))
-
 	if _, ok := t.backoffTimer[level]; ok {
 		// there's an existing backoff timer, no-op
 		// this case should not happen
 		return
 	}
+
+	t.metricsScope.IncCounter(metrics.ProcessingQueueThrottledCounter)
+	t.logger.Info("Throttled processing queue", tag.QueueLevel(level))
 
 	backoffDuration := backoff.JitDuration(
 		t.options.PollBackoffInterval(),
@@ -355,6 +353,7 @@ func (t *transferQueueProcessorBase) processQueueCollections() {
 		level := queueCollection.Level()
 		t.processingLock.Lock()
 		if shouldProcess, ok := t.shouldProcess[level]; !ok || !shouldProcess {
+			t.processingLock.Unlock()
 			continue
 		}
 		t.shouldProcess[level] = false

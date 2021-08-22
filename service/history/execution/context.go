@@ -842,6 +842,7 @@ func (c *contextImpl) notifyTasksFromWorkflowSnapshot(
 		workflowSnapShot.ExecutionInfo,
 		workflowSnapShot.TransferTasks,
 		workflowSnapShot.TimerTasks,
+		workflowSnapShot.CrossClusterTasks,
 	)
 }
 
@@ -856,6 +857,7 @@ func (c *contextImpl) notifyTasksFromWorkflowMutation(
 		workflowMutation.ExecutionInfo,
 		workflowMutation.TransferTasks,
 		workflowMutation.TimerTasks,
+		workflowMutation.CrossClusterTasks,
 	)
 }
 
@@ -863,9 +865,11 @@ func (c *contextImpl) notifyTasks(
 	executionInfo *persistence.WorkflowExecutionInfo,
 	transferTasks []persistence.Task,
 	timerTasks []persistence.Task,
+	crossClusterTasks []persistence.Task,
 ) {
 	c.shard.GetEngine().NotifyNewTransferTasks(executionInfo, transferTasks)
 	c.shard.GetEngine().NotifyNewTimerTasks(executionInfo, timerTasks)
+	c.shard.GetEngine().NotifyNewCrossClusterTasks(executionInfo, crossClusterTasks)
 }
 
 func (c *contextImpl) mergeContinueAsNewReplicationTasks(

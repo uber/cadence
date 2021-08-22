@@ -113,6 +113,7 @@ type (
 		workerConfig                  *WorkerConfig
 		mockAdminClient               map[string]adminClient.Client
 		domainReplicationTaskExecutor domain.ReplicationTaskExecutor
+		authorizationConfig           config.Authorization
 	}
 
 	// HistoryConfig contains configs for history service
@@ -144,6 +145,7 @@ type (
 		WorkerConfig                  *WorkerConfig
 		MockAdminClient               map[string]adminClient.Client
 		DomainReplicationTaskExecutor domain.ReplicationTaskExecutor
+		AuthorizationConfig           config.Authorization
 	}
 
 	membershipFactoryImpl struct {
@@ -174,6 +176,7 @@ func NewCadence(params *CadenceParams) Cadence {
 		workerConfig:                  params.WorkerConfig,
 		mockAdminClient:               params.MockAdminClient,
 		domainReplicationTaskExecutor: params.DomainReplicationTaskExecutor,
+		authorizationConfig:           params.AuthorizationConfig,
 	}
 }
 
@@ -406,7 +409,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.ArchiverProvider = c.archiverProvider
 	params.ESConfig = c.esConfig
 	params.ESClient = c.esClient
-	params.Authorizer = authorization.NewNopAuthorizer()
+	params.Authorizer = authorization.NewAuthorizer(c.authorizationConfig, params.Logger, nil)
 
 	var err error
 	params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)

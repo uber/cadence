@@ -32,6 +32,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
+	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
 )
 
 type (
@@ -57,11 +58,50 @@ type (
 		PublicClient PublicClient `yaml:"publicClient"`
 		// DynamicConfigClient is the config for setting up the file based dynamic config client
 		// Filepath would be relative to the root directory when the path wasn't absolute.
+		// Included for backwards compatibility, please transition to DynamicConfig
+		// If both are specified, DynamicConig will be used.
 		DynamicConfigClient dynamicconfig.FileBasedClientConfig `yaml:"dynamicConfigClient"`
+		// DynamicConfig is the config for setting up all dynamic config clients
+		// Allows for changes in client without needing code change
+		DynamicConfig DynamicConfig `yaml:"dynamicconfig"`
 		// DomainDefaults is the default config for every domain
 		DomainDefaults DomainDefaults `yaml:"domainDefaults"`
 		// Blobstore is the config for setting up blobstore
 		Blobstore Blobstore `yaml:"blobstore"`
+		// Authorization is the config for setting up authorization
+		Authorization Authorization `yaml:"authorization"`
+	}
+
+	Authorization struct {
+		OAuthAuthorizer OAuthAuthorizer `yaml:"oauthAuthorizer"`
+		NoopAuthorizer  NoopAuthorizer  `yaml:"noopAuthorizer"`
+	}
+
+	DynamicConfig struct {
+		Client      string                              `yaml:"client"`
+		ConfigStore c.ClientConfig                      `yaml:"configstore"`
+		FileBased   dynamicconfig.FileBasedClientConfig `yaml:"filebased"`
+	}
+
+	NoopAuthorizer struct {
+		Enable bool `yaml:"enable"`
+	}
+
+	OAuthAuthorizer struct {
+		Enable bool `yaml:"enable"`
+		// Credentials to verify/create the JWT
+		JwtCredentials JwtCredentials `yaml:"jwtCredentials"`
+		// Max of TTL in the claim
+		MaxJwtTTL int64 `yaml:"maxJwtTTL"`
+	}
+
+	JwtCredentials struct {
+		// support: RS256 (RSA using SHA256)
+		Algorithm string `yaml:"algorithm"`
+		// Public Key Path for verifying JWT token passed in from external clients
+		PublicKey string `yaml:"publicKey"`
+		// Private Key Path for creating JWT token
+		PrivateKey string `yaml:"privateKey"`
 	}
 
 	// Service contains the service specific config items
@@ -283,13 +323,6 @@ type (
 		RPCAddress string `yaml:"rpcAddress"`
 	}
 
-	// ReplicationTaskProcessorConfig is the config for replication task processor.
-	ReplicationTaskProcessorConfig struct {
-		NoTaskInitialWaitIntervalSecs int     `yaml:"noTaskInitialWaitIntervalSecs"`
-		NoTaskWaitBackoffCoefficient  float64 `yaml:"noTaskWaitBackoffCoefficient"`
-		NoTaskMaxWaitIntervalSecs     int     `yaml:"noTaskMaxWaitIntervalSecs"`
-	}
-
 	// DCRedirectionPolicy contains the frontend datacenter redirection policy
 	DCRedirectionPolicy struct {
 		Policy string `yaml:"policy"`
@@ -447,7 +480,11 @@ func (c *Config) validate() error {
 		log.Println("[WARN] Local domain is now deprecated. Please update config to enable global domain(ClusterMetadata->EnableGlobalDomain)." +
 			"Global domain of single cluster has zero overhead, but only advantages for future migration and fail over. Please check Cadence documentation for more details.")
 	}
-	return c.Archival.Validate(&c.DomainDefaults.Archival)
+	if err := c.Archival.Validate(&c.DomainDefaults.Archival); err != nil {
+		return err
+	}
+
+	return c.Authorization.Validate()
 }
 
 func (c *Config) fillDefaults() error {

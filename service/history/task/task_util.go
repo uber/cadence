@@ -185,6 +185,7 @@ func GetTimerTaskMetricScope(
 }
 
 // GetCrossClusterTaskMetricsScope returns the metrics scope index for cross cluster task
+// TODO: define separate scope for source and target tasks
 func GetCrossClusterTaskMetricsScope(
 	taskType int,
 ) int {

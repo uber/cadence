@@ -87,7 +87,7 @@ func (db *ddb) IsWorkflowExecutionExists(ctx context.Context, shardID int, domai
 	panic("TODO")
 }
 
-func (db *ddb) SelectTransferTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64, ) ([]*nosqlplugin.TransferTask, []byte, error) {
+func (db *ddb) SelectTransferTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*nosqlplugin.TransferTask, []byte, error) {
 	panic("TODO")
 }
 
