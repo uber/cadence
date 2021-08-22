@@ -366,6 +366,12 @@ const (
 	// Default value: 0
 	// Allowed filters: DomainName
 	FrontendGlobalDomainRPS
+	// FrontendDecisionResultCountLimit is max number of decisions per RespondDecisionTaskCompleted request
+	// KeyName: frontend.decisionResultCountLimit
+	// Value type: Int
+	// Default value: 0
+	// Allowed filters: DomainName
+	FrontendDecisionResultCountLimit
 	// FrontendHistoryMgrNumConns is for persistence cluster.NumConns
 	// KeyName: frontend.historyMgrNumConns
 	// Value type: Int
@@ -2007,6 +2013,7 @@ var Keys = map[Key]string{
 	FrontendHistoryMaxPageSize:                  "frontend.historyMaxPageSize",
 	FrontendRPS:                                 "frontend.rps",
 	FrontendMaxDomainRPSPerInstance:             "frontend.domainrps",
+	FrontendDecisionResultCountLimit:            "frontend.decisionResultCountLimit",
 	FrontendGlobalDomainRPS:                     "frontend.globalDomainrps",
 	FrontendHistoryMgrNumConns:                  "frontend.historyMgrNumConns",
 	FrontendShutdownDrainDuration:               "frontend.shutdownDrainDuration",
