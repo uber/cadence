@@ -32,7 +32,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -85,7 +84,7 @@ func (s *failoverWatcherSuite) SetupTest() {
 
 	logger := loggerimpl.NewNopLogger()
 	scope := tally.NewTestScope("failover_test", nil)
-	metricsClient := metrics.NewClient(scope, metrics.DomainFailoverScope)
+	metricsClient := metrics.NewClient(scope, metrics.Frontend)
 	s.watcher = NewFailoverWatcher(
 		s.mockDomainCache,
 		s.mockMetadataMgr,

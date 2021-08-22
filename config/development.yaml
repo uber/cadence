@@ -80,8 +80,7 @@ clusterMetadata:
     active:
       enabled: true
       initialFailoverVersion: 0
-      rpcName: "cadence-frontend"
-      rpcAddress: "localhost:7933"
+      rpcAddress: "localhost:7933" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
 
 dcRedirectionPolicy:
   policy: "noop"
@@ -113,9 +112,6 @@ domainDefaults:
     visibility:
       status: "enabled"
       URI: "file:///tmp/cadence_vis_archival/development"
-
-publicClient:
-  hostPort: "localhost:7933"
 
 dynamicconfig:
   client: filebased
