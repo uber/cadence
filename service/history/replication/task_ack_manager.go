@@ -80,7 +80,7 @@ type (
 		retryPolicy      backoff.RetryPolicy
 
 		lastTaskCreationTime atomic.Value
-		maxAllowedLatencyFn  dynamicconfig.IntPropertyFn
+		maxAllowedLatencyFn  dynamicconfig.DurationPropertyFn
 
 		metricsClient metrics.Client
 		logger        log.Logger
@@ -106,9 +106,6 @@ func NewTaskAckManager(
 	retryPolicy.SetMaximumAttempts(config.ReplicatorReadTaskMaxRetryCount())
 	retryPolicy.SetBackoffCoefficient(1)
 
-	taskCreatedTime := atomic.Value{}
-	taskCreatedTime.Store(time.Now())
-
 	return &taskAckManagerImpl{
 		shard:                shard,
 		executionCache:       executionCache,
@@ -116,8 +113,8 @@ func NewTaskAckManager(
 		historyManager:       shard.GetHistoryManager(),
 		rateLimiter:          rateLimiter,
 		retryPolicy:          retryPolicy,
-		lastTaskCreationTime: taskCreatedTime,
-		maxAllowedLatencyFn:  config.ReplicatorUpperLatency,
+		lastTaskCreationTime: atomic.Value{},
+		maxAllowedLatencyFn:  config.ReplicatorUpperLatencyInSeconds,
 		metricsClient:        shard.GetMetricsClient(),
 		logger:               shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
 		fetchTasksBatchSize:  config.ReplicatorProcessorFetchTasksBatchSize,
@@ -642,14 +639,18 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 
 func (t *taskAckManagerImpl) getBatchSize() int {
 
-	taskLatency := int(time.Now().Sub(t.lastTaskCreationTime.Load().(time.Time)) / time.Second)
-	if taskLatency < 0 {
-		taskLatency = 0
-	}
-
 	shardID := t.shard.GetShardID()
 	defaultBatchSize := t.fetchTasksBatchSize(shardID)
 	maxReplicationLatency := t.maxAllowedLatencyFn()
+	now := t.shard.GetTimeSource().Now()
+
+	if t.lastTaskCreationTime.Load() == nil {
+		return defaultBatchSize
+	}
+	taskLatency := now.Sub(t.lastTaskCreationTime.Load().(time.Time)) / time.Second
+	if taskLatency < 0 {
+		taskLatency = 0
+	}
 	if taskLatency >= maxReplicationLatency {
 		return defaultBatchSize
 	}
