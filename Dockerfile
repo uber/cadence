@@ -34,7 +34,7 @@ ENV CADENCE_RELEASE_VERSION=$RELEASE_VERSION
 
 # bypass codegen, use committed files.  must be run separately, before building things.
 RUN make .fake-codegen
-RUN CGO_ENABLED=0 make copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server
+RUN CGO_ENABLED=0 make copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server cadence-bench cadence-canary
 
 
 # Download dockerize
@@ -109,6 +109,21 @@ COPY --from=builder /cadence/cadence /usr/local/bin
 
 ENTRYPOINT ["cadence"]
 
+# Cadence Canary
+FROM alpine AS cadence-canary
+
+COPY --from=builder /cadence/cadence-canary /usr/local/bin
+COPY --from=builder /cadence/cadence /usr/local/bin
+
+CMD ["/usr/local/bin/cadence-canary", "--root", "/etc/cadence-canary", "start"]
+
+# Cadence Bench
+FROM alpine AS cadence-bench
+
+COPY --from=builder /cadence/cadence-bench /usr/local/bin
+COPY --from=builder /cadence/cadence /usr/local/bin
+
+CMD ["/usr/local/bin/cadence-bench", "--root", "/etc/cadence-bench", "start"]
 
 # Final image
 FROM cadence-${TARGET}
