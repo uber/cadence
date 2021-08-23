@@ -157,7 +157,8 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecute_DomainNotActive() {
 				transferTask Task,
 				requestCancelInfo *p.RequestCancelInfo,
 			) {
-				persistenceMutableState := s.createPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+				persistenceMutableState, err := createTestPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+				s.NoError(err)
 				s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 				s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
 					func(req *p.UpdateWorkflowExecutionRequest) bool {
@@ -194,7 +195,8 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteCancelExecution_Success
 			transferTask Task,
 			requestCancelInfo *p.RequestCancelInfo,
 		) {
-			persistenceMutableState := s.createPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			persistenceMutableState, err := createTestPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 			s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.MatchedBy(
 				func(req *p.AppendHistoryNodesRequest) bool {
@@ -231,7 +233,8 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteCancelExecution_Failure
 			transferTask Task,
 			requestCancelInfo *p.RequestCancelInfo,
 		) {
-			persistenceMutableState := s.createPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			persistenceMutableState, err := createTestPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 			s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.MatchedBy(
 				func(req *p.AppendHistoryNodesRequest) bool {
@@ -272,7 +275,8 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteCancelExecution_Duplica
 			lastEvent = test.AddCancelRequestedEvent(mutableState, lastEvent.GetEventID(), constants.TestTargetDomainID, targetExecution.GetWorkflowID(), targetExecution.GetRunID())
 			mutableState.FlushBufferedEvents()
 
-			persistenceMutableState := s.createPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			persistenceMutableState, err := createTestPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 		},
 		func(task *crossClusterSourceTask) {
@@ -297,7 +301,8 @@ func (s *crossClusterSourceTaskExecutorSuite) testProcessCancelExecution(
 	),
 ) {
 
-	workflowExecution, mutableState, decisionCompletionID := s.setupTestWorkflow(sourceDomainID)
+	workflowExecution, mutableState, decisionCompletionID, err := setupTestWorkflow(s.mockShard, sourceDomainID)
+	s.NoError(err)
 	targetExecution := types.WorkflowExecution{
 		WorkflowID: "some random target workflow ID",
 		RunID:      "some random target runID",
@@ -332,7 +337,7 @@ func (s *crossClusterSourceTaskExecutorSuite) testProcessCancelExecution(
 
 	setupMockFn(mutableState, workflowExecution, targetExecution, event, crossClusterTask, rci)
 
-	err := s.executor.Execute(crossClusterTask, true)
+	err = s.executor.Execute(crossClusterTask, true)
 	s.Nil(err)
 
 	if taskStateValidationFn != nil {
@@ -357,7 +362,8 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteSignalExecution_InitSta
 			transferTask Task,
 			signalInfo *p.SignalInfo,
 		) {
-			persistenceMutableState := s.createPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			persistenceMutableState, err := createTestPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 			s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.MatchedBy(
 				func(req *p.AppendHistoryNodesRequest) bool {
@@ -395,7 +401,8 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteSignalExecution_InitSta
 			transferTask Task,
 			signalInfo *p.SignalInfo,
 		) {
-			persistenceMutableState := s.createPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			persistenceMutableState, err := createTestPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 			s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.MatchedBy(
 				func(req *p.AppendHistoryNodesRequest) bool {
@@ -435,7 +442,8 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteSignalExecution_InitSta
 			lastEvent = test.AddSignaledEvent(mutableState, lastEvent.GetEventID(), constants.TestTargetDomainID, targetExecution.GetWorkflowID(), targetExecution.GetRunID(), signalInfo.Control)
 			mutableState.FlushBufferedEvents()
 
-			persistenceMutableState := s.createPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			persistenceMutableState, err := createTestPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 		},
 		func(task *crossClusterSourceTask) {
@@ -460,7 +468,8 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteSignalExecution_Recorde
 			transferTask Task,
 			signalInfo *p.SignalInfo,
 		) {
-			persistenceMutableState := s.createPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			persistenceMutableState, err := createTestPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 		},
 		func(task *crossClusterSourceTask) {
@@ -488,7 +497,8 @@ func (s *crossClusterSourceTaskExecutorSuite) testProcessSignalExecution(
 		WorkflowID: constants.TestWorkflowID,
 		RunID:      constants.TestRunID,
 	}
-	workflowExecution, mutableState, decisionCompletionID := s.setupTestWorkflow(sourceDomainID)
+	workflowExecution, mutableState, decisionCompletionID, err := setupTestWorkflow(s.mockShard, sourceDomainID)
+	s.NoError(err)
 	targetExecution := types.WorkflowExecution{
 		WorkflowID: "some random target workflow ID",
 		RunID:      "some random target runID",
@@ -526,7 +536,7 @@ func (s *crossClusterSourceTaskExecutorSuite) testProcessSignalExecution(
 
 	setupMockFn(mutableState, workflowExecution, targetExecution, event, crossClusterTask, signalInfo)
 
-	err := s.executor.Execute(crossClusterTask, true)
+	err = s.executor.Execute(crossClusterTask, true)
 	s.Nil(err)
 
 	if taskStateValidationFn != nil {
@@ -553,7 +563,8 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteStartChildExecution_Ini
 			crossClusterTask Task,
 			childInfo *p.ChildExecutionInfo,
 		) {
-			persistenceMutableState := s.createPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			persistenceMutableState, err := createTestPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 			s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.MatchedBy(
 				func(req *p.AppendHistoryNodesRequest) bool {
@@ -591,7 +602,8 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteStartChildExecution_Ini
 			crossClusterTask Task,
 			childInfo *p.ChildExecutionInfo,
 		) {
-			persistenceMutableState := s.createPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			persistenceMutableState, err := createTestPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 			s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.MatchedBy(
 				func(req *p.AppendHistoryNodesRequest) bool {
@@ -631,7 +643,8 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteStartChildExecution_Ini
 			lastEvent = test.AddChildWorkflowExecutionStartedEvent(mutableState, lastEvent.GetEventID(), constants.TestTargetDomainID, targetExecution.GetWorkflowID(), targetExecution.GetRunID(), childInfo.WorkflowTypeName)
 			mutableState.FlushBufferedEvents()
 
-			persistenceMutableState := s.createPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			persistenceMutableState, err := createTestPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 		},
 		func(task *crossClusterSourceTask) {
@@ -663,7 +676,8 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteStartChildExecution_Rec
 			lastEvent = test.AddChildWorkflowExecutionStartedEvent(mutableState, lastEvent.GetEventID(), constants.TestTargetDomainID, targetExecution.GetWorkflowID(), targetExecution.GetRunID(), childInfo.WorkflowTypeName)
 			mutableState.FlushBufferedEvents()
 
-			persistenceMutableState := s.createPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			persistenceMutableState, err := createTestPersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 		},
 		func(task *crossClusterSourceTask) {
@@ -687,7 +701,8 @@ func (s *crossClusterSourceTaskExecutorSuite) testProcessStartChildExecution(
 		task *crossClusterSourceTask,
 	),
 ) {
-	workflowExecution, mutableState, decisionCompletionID := s.setupTestWorkflow(sourceDomainID)
+	workflowExecution, mutableState, decisionCompletionID, err := setupTestWorkflow(s.mockShard, sourceDomainID)
+	s.NoError(err)
 	targetExecution := types.WorkflowExecution{
 		WorkflowID: "some random target workflow ID",
 	}
@@ -731,7 +746,7 @@ func (s *crossClusterSourceTaskExecutorSuite) testProcessStartChildExecution(
 
 	setupMockFn(mutableState, workflowExecution, targetExecution, event, crossClusterTask, childInfo)
 
-	err := s.executor.Execute(crossClusterTask, true)
+	err = s.executor.Execute(crossClusterTask, true)
 	s.Nil(err)
 
 	if taskStateValidationFn != nil {
@@ -739,9 +754,10 @@ func (s *crossClusterSourceTaskExecutorSuite) testProcessStartChildExecution(
 	}
 }
 
-func (s *crossClusterSourceTaskExecutorSuite) setupTestWorkflow(
+func setupTestWorkflow(
+	mockShard *shard.TestContext,
 	sourceDomainID string,
-) (types.WorkflowExecution, execution.MutableState, int64) {
+) (types.WorkflowExecution, execution.MutableState, int64, error) {
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: constants.TestWorkflowID,
 		RunID:      constants.TestRunID,
@@ -749,12 +765,14 @@ func (s *crossClusterSourceTaskExecutorSuite) setupTestWorkflow(
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	entry, err := s.mockDomainCache.GetDomainByID(sourceDomainID)
-	s.NoError(err)
+	entry, err := mockShard.GetDomainCache().GetDomainByID(sourceDomainID)
+	if err != nil {
+		return types.WorkflowExecution{}, nil, 0, err
+	}
 	version := entry.GetFailoverVersion()
 	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
-		s.mockShard,
-		s.mockShard.GetLogger(),
+		mockShard,
+		mockShard.GetLogger(),
 		version,
 		workflowExecution.GetRunID(),
 		entry,
@@ -771,14 +789,16 @@ func (s *crossClusterSourceTaskExecutorSuite) setupTestWorkflow(
 			},
 		},
 	)
-	s.Nil(err)
+	if err != nil {
+		return types.WorkflowExecution{}, nil, 0, err
+	}
 
 	di := test.AddDecisionTaskScheduledEvent(mutableState)
 	event := test.AddDecisionTaskStartedEvent(mutableState, di.ScheduleID, taskListName, uuid.New())
 	di.StartedID = event.GetEventID()
 	event = test.AddDecisionTaskCompletedEvent(mutableState, di.ScheduleID, di.StartedID, nil, "some random identity")
 
-	return workflowExecution, mutableState, event.GetEventID()
+	return workflowExecution, mutableState, event.GetEventID(), nil
 }
 
 func (s *crossClusterSourceTaskExecutorSuite) getTestCrossClusterSourceTask(
@@ -802,21 +822,26 @@ func (s *crossClusterSourceTaskExecutorSuite) getTestCrossClusterSourceTask(
 	return task
 }
 
-func (s *crossClusterSourceTaskExecutorSuite) createPersistenceMutableState(
+func createTestPersistenceMutableState(
 	ms execution.MutableState,
 	lastEventID int64,
 	lastEventVersion int64,
-) *p.WorkflowMutableState {
+) (*p.WorkflowMutableState, error) {
 
 	if ms.GetVersionHistories() != nil {
 		currentVersionHistory, err := ms.GetVersionHistories().GetCurrentVersionHistory()
-		s.NoError(err)
+		if err != nil {
+			return nil, err
+		}
+
 		err = currentVersionHistory.AddOrUpdateItem(p.NewVersionHistoryItem(
 			lastEventID,
 			lastEventVersion,
 		))
-		s.NoError(err)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return execution.CreatePersistenceMutableState(ms)
+	return execution.CreatePersistenceMutableState(ms), nil
 }

@@ -74,6 +74,9 @@ type (
 		// e.g if targetCluster is C, it means the task is loaded by
 		// the queue processor responsible for cluster C, and only cluster
 		// C is able to poll the task.
+		// targetCluster may not match the current active cluster of the
+		// targetDomain if the targetDomain performed a failover after
+		// the task is loaded.
 		targetCluster  string
 		executionCache *execution.Cache
 		response       *types.CrossClusterTaskResponse
@@ -83,7 +86,12 @@ type (
 		Info
 
 		sync.Mutex
-		state           ctask.State
+		// state is used by the general processing queue implementation (the ack manager)
+		// to determine if the execution has finished for the task
+		state ctask.State
+		// processingState is used by cross cluster task's specific task executor
+		// to determine should be done next
+		// the value of processingState only matters when state = TaskStatePending
 		processingState processingState
 		priority        int
 		attempt         int
@@ -253,7 +261,7 @@ func (t *crossClusterSourceTask) Execute() error {
 }
 
 func (t *crossClusterSourceTask) Ack() {
-	// don't set t.state to Acked, which will prevent the task from being fetched
+	// do not set t.state to Acked, which will prevent the task from being fetched again
 	// state and processingState will be updated by the task executor
 	t.Lock()
 	state := t.state
@@ -363,6 +371,16 @@ func (t *crossClusterSourceTask) IsReadyForPoll() bool {
 			t.processingState == processingStateResponseRecorded)
 }
 
+// GetCrossClusterRequest returns a CrossClusterTaskRequest and error if there's any
+// If the returned error is not nil:
+// - there might be error while loading the request, we can retry the function call
+// - task may be invalidated, in which case caller should submit the task for processing
+//   so that a new task can be created.
+// If both returned error and request are nil:
+// - there's nothing need to be done for the task, task already acked and is not available
+//   for polling again
+// If the returned request is not nil
+// - the request can be returned to the target cluster
 func (t *crossClusterSourceTask) GetCrossClusterRequest() (request *types.CrossClusterTaskRequest, retError error) {
 	t.Lock()
 	defer func() {
@@ -481,7 +499,7 @@ func (t *crossClusterSourceTask) getRequestForCancelExecution(
 	return &types.CrossClusterCancelExecutionRequestAttributes{
 		TargetDomainID:    taskInfo.TargetDomainID,
 		TargetWorkflowID:  taskInfo.TargetWorkflowID,
-		TargetRunID:       taskInfo.RunID,
+		TargetRunID:       taskInfo.TargetRunID,
 		RequestID:         requestCancelInfo.CancelRequestID,
 		InitiatedEventID:  initiatedEventID,
 		ChildWorkflowOnly: taskInfo.TargetChildWorkflowOnly,
@@ -506,7 +524,7 @@ func (t *crossClusterSourceTask) getRequestForSignalExecution(
 	return &types.CrossClusterSignalExecutionRequestAttributes{
 		TargetDomainID:    taskInfo.TargetDomainID,
 		TargetWorkflowID:  taskInfo.TargetWorkflowID,
-		TargetRunID:       taskInfo.RunID,
+		TargetRunID:       taskInfo.TargetRunID,
 		RequestID:         signalInfo.SignalRequestID,
 		InitiatedEventID:  initiatedEventID,
 		ChildWorkflowOnly: taskInfo.TargetChildWorkflowOnly,
@@ -550,6 +568,11 @@ func (t *crossClusterSourceTask) isValidLocked() bool {
 	return true
 }
 
+// Update records the response of processing cross cluster task at the target cluster
+// If an error is returned, the Update operation is failed, task state will remain unchanged
+// and task is still be available for polling
+// If not error is returned, operation is successful, task won't be available for polling
+// and caller should submit the task for processing.
 func (t *crossClusterSourceTask) Update(response *types.CrossClusterTaskResponse) error {
 	t.Lock()
 	defer t.Unlock()
@@ -562,8 +585,30 @@ func (t *crossClusterSourceTask) Update(response *types.CrossClusterTaskResponse
 		return fmt.Errorf("unexpected task state, expected: %v, actual: %v", t.processingState, response.TaskState)
 	}
 
-	if t.GetTaskType() != int(response.GetTaskType()) {
+	if t.GetTaskID() != response.GetTaskID() {
+		return fmt.Errorf("unexpected taskID, expected: %v, actual: %v", t.GetTaskID(), response.GetTaskID())
+	}
+
+	var emptyResponse bool
+	var taskTypeMatch bool
+	switch t.GetTaskType() {
+	case persistence.CrossClusterTaskTypeStartChildExecution:
+		taskTypeMatch = response.GetTaskType() == types.CrossClusterTaskTypeStartChildExecution
+		emptyResponse = response.StartChildExecutionAttributes == nil
+	case persistence.CrossClusterTaskTypeCancelExecution:
+		taskTypeMatch = response.GetTaskType() == types.CrossClusterTaskTypeCancelExecution
+		emptyResponse = response.CancelExecutionAttributes == nil
+	case persistence.CrossClusterTaskTypeSignalExecution:
+		taskTypeMatch = response.GetTaskType() == types.CrossClusterTaskTypeSignalExecution
+		emptyResponse = response.SignalExecutionAttributes == nil
+	}
+
+	if !taskTypeMatch {
 		return fmt.Errorf("unexpected task type, expected: %v, actual: %v", t.GetTaskType(), response.GetTaskType())
+	}
+
+	if emptyResponse && response.FailedCause == nil {
+		return errors.New("empty cross cluster task response")
 	}
 
 	if response.FailedCause != nil {
@@ -582,20 +627,6 @@ func (t *crossClusterSourceTask) Update(response *types.CrossClusterTaskResponse
 			// if so task will be fetched and executed again in the target cluster
 			return fmt.Errorf("unexpected cross cluster task failed cause: %v", response.GetFailedCause())
 		}
-	}
-
-	var emptyResponse bool
-	switch t.GetTaskType() {
-	case persistence.CrossClusterTaskTypeStartChildExecution:
-		emptyResponse = response.StartChildExecutionAttributes != nil
-	case persistence.CrossClusterTaskTypeCancelExecution:
-		emptyResponse = response.CancelExecutionAttributes != nil
-	case persistence.CrossClusterTaskTypeSignalExecution:
-		emptyResponse = response.SignalExecutionAttributes != nil
-	}
-
-	if emptyResponse && response.FailedCause == nil {
-		return errors.New("empty cross cluster task response")
 	}
 
 	// set state to reported so that the task won't be pulled
