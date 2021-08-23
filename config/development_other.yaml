@@ -68,12 +68,12 @@ services:
     pprof:
       port: 9941
 
-clusterMetadata:
+clusterGroupMetadata:
   enableGlobalDomain: true
   failoverVersionIncrement: 10
   primaryClusterName: "active"
   currentClusterName: "other"
-  clusterInformation:
+  clusterGroup:
     active:
       enabled: true
       initialFailoverVersion: 1
