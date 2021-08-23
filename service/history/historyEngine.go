@@ -26,6 +26,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -342,6 +343,9 @@ func (e *historyEngineImpl) Stop() {
 
 	// unset the failover callback
 	e.shard.GetDomainCache().UnregisterDomainChangeCallback(e.shard.GetShardID())
+
+	subScope := e.metricsClient.Scope(metrics.FailoverMarkerScope, metrics.InstanceTag(strconv.Itoa(e.shard.GetShardID())))
+	subScope.UpdateGauge(metrics.RegisterCallbackCount, 0)
 }
 
 func (e *historyEngineImpl) registerDomainFailoverCallback() {
@@ -364,7 +368,8 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 	//		task -> release of shard lock
 	//		failover min / max task levels calculated & updated to shard (using shard lock) -> failover start
 	// above 2 guarantees that failover start is after persistence of the task.
-
+	subScope := e.metricsClient.Scope(metrics.FailoverMarkerScope, metrics.InstanceTag(strconv.Itoa(e.shard.GetShardID())))
+	subScope.UpdateGauge(metrics.RegisterCallbackCount, 1)
 	failoverPredicate := func(shardNotificationVersion int64, nextDomain *cache.DomainCacheEntry, action func()) {
 		domainFailoverNotificationVersion := nextDomain.GetFailoverNotificationVersion()
 		domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName

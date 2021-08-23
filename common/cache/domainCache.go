@@ -312,7 +312,7 @@ func (c *domainCache) RegisterDomainChangeCallback(
 	for _, domain := range c.GetAllDomain() {
 		domains = append(domains, domain)
 	}
-	// we mush notify the change in a ordered fashion
+	// we mush notify the change in an ordered fashion
 	// since history shard have to update the shard info
 	// with domain change version.
 	sort.Sort(domains)
@@ -696,6 +696,9 @@ func (c *domainCache) triggerDomainChangeCallbackLocked(
 	defer sw.Stop()
 
 	for _, callback := range c.callbacks {
+		if len(nextDomains) > 0 {
+			c.metricsClient.IncCounter(metrics.DomainCacheScope, metrics.DomainCacheCallbackCount)
+		}
 		callback(prevDomains, nextDomains)
 	}
 }

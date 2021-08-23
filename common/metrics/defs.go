@@ -1662,6 +1662,7 @@ const (
 
 	DomainCachePrepareCallbacksLatency
 	DomainCacheCallbacksLatency
+	DomainCacheCallbackCount
 
 	HistorySize
 	HistoryCount
@@ -1755,6 +1756,7 @@ const (
 
 	DomainFailoverCallbackCount
 	GracefulFailoverCallbackCount
+	RegisterCallbackCount
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -2145,6 +2147,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceAuthorizationLatency:                         {metricName: "cadence_authorization_latency", metricType: Timer},
 		DomainCachePrepareCallbacksLatency:                  {metricName: "domain_cache_prepare_callbacks_latency", metricType: Timer},
 		DomainCacheCallbacksLatency:                         {metricName: "domain_cache_callbacks_latency", metricType: Timer},
+		DomainCacheCallbackCount:                            {metricName: "domain_cache_callbacks_count", metricType: Counter},
 		HistorySize:                                         {metricName: "history_size", metricType: Timer},
 		HistoryCount:                                        {metricName: "history_count", metricType: Timer},
 		EventBlobSize:                                       {metricName: "event_blob_size", metricType: Timer},
@@ -2264,8 +2267,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ParentClosePolicyProcessorSuccess:    {metricName: "parent_close_policy_processor_requests", metricType: Counter},
 		ParentClosePolicyProcessorFailures:   {metricName: "parent_close_policy_processor_errors", metricType: Counter},
 
-		DomainFailoverCallbackCount:          {metricName: "domain_failover_callback_requests", metricType: Counter},
-		GracefulFailoverCallbackCount:        {metricName: "graceful_failover_callback_requests", metricType: Counter},
+		DomainFailoverCallbackCount:   {metricName: "domain_failover_callback_requests", metricType: Counter},
+		GracefulFailoverCallbackCount: {metricName: "graceful_failover_callback_requests", metricType: Counter},
+		RegisterCallbackCount:         {metricName: "register_callback_requests", metricType: Gauge},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
