@@ -45,7 +45,7 @@ type (
 		Log Logger `yaml:"log"`
 		// ClusterGroupMetadata is the config containing all valid clusters and active cluster
 		ClusterGroupMetadata *ClusterGroupMetadata `yaml:"clusterGroupMetadata"`
-		// ClusterMetadata is deprecated. Please use ClusterGroupMetadata
+		// Deprecated: please use ClusterGroupMetadata
 		ClusterMetadata *ClusterGroupMetadata `yaml:"clusterMetadata"`
 		// DCRedirectionPolicy contains the frontend datacenter redirection policy
 		DCRedirectionPolicy DCRedirectionPolicy `yaml:"dcRedirectionPolicy"`

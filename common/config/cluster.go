@@ -38,14 +38,14 @@ type (
 		// PrimaryClusterName is the primary cluster name, only the primary cluster can register / update domain
 		// all clusters can do domain failover
 		PrimaryClusterName string `yaml:"primaryClusterName"`
-		// MasterClusterName is deprecated. Please use PrimaryClusterName.
+		// Deprecated: please use PrimaryClusterName
 		MasterClusterName string `yaml:"masterClusterName"`
 		// CurrentClusterName is the name of the cluster of current deployment
 		CurrentClusterName string `yaml:"currentClusterName"`
 		// ClusterGroup contains information for each cluster within the replication group
 		// Key is the clusterName
 		ClusterGroup map[string]ClusterInformation `yaml:"clusterGroup"`
-		// ClusterInformation is deprecated. Please use ClusterGroup.
+		// Deprecated: please use ClusterGroup
 		ClusterInformation map[string]ClusterInformation `yaml:"clusterInformation"`
 	}
 
