@@ -1736,6 +1736,8 @@ const (
 	HistoryCount
 	EventBlobSize
 
+	DecisionResultCount
+
 	ArchivalConfigFailures
 	ActiveClusterGauge
 
@@ -2216,6 +2218,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistorySize:                                         {metricName: "history_size", metricType: Timer},
 		HistoryCount:                                        {metricName: "history_count", metricType: Timer},
 		EventBlobSize:                                       {metricName: "event_blob_size", metricType: Timer},
+		DecisionResultCount:                                 {metricName: "decision_result_count", metricType: Timer},
 		ArchivalConfigFailures:                              {metricName: "archivalconfig_failures", metricType: Counter},
 		ActiveClusterGauge:                                  {metricName: "active_cluster", metricType: Gauge},
 		ElasticsearchRequests:                               {metricName: "elasticsearch_requests", metricType: Counter},
