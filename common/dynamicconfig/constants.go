@@ -62,10 +62,10 @@ const (
 	// Default value: FALSE
 	// Allowed filters: N/A
 	EnableGlobalDomain
-	// EnableVisibilitySampling is key for enable visibility sampling
+	// EnableVisibilitySampling is key for enable visibility sampling for basic(DB based) visibility
 	// KeyName: system.enableVisibilitySampling
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: FALSE
 	// Allowed filters: N/A
 	EnableVisibilitySampling
 	// EnableReadFromClosedExecutionV2 is key for enable read from cadence_visibility.closed_executions_v2
