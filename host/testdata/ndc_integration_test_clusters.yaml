@@ -1,11 +1,11 @@
 - persistence:
     dbname: integration_active
-  clustermetadata:
+  clustergroupmetadata:
     enableGlobalDomain: true
     failoverVersionIncrement: 10
     primaryClusterName: "active"
     currentClusterName: "active"
-    clusterInformation:
+    clusterGroup:
       active:
         enabled: true
         initialFailoverVersion: 0
@@ -63,12 +63,12 @@
       applications: { }
 - persistence:
     dbname: integration_standby
-  clustermetadata:
+  clustergroupmetadata:
     enableGlobalDomain: true
     failoverVersionIncrement: 10
     primaryClusterName: "active"
     currentClusterName: "standby"
-    clusterInformation:
+    clusterGroup:
       active:
         enabled: true
         initialFailoverVersion: 0
@@ -126,12 +126,12 @@
       applications: { }
 - persistence:
     dbname: integration_other
-  clustermetadata:
+  clustergroupmetadata:
     enableGlobalDomain: true
     failoverVersionIncrement: 10
     primaryClusterName: "active"
     currentClusterName: "other"
-    clusterInformation:
+    clusterGroup:
       active:
         enabled: true
         initialFailoverVersion: 0

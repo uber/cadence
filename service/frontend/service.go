@@ -98,6 +98,9 @@ type Config struct {
 	VisibilityArchivalQueryMaxPageSize dynamicconfig.IntPropertyFn
 
 	SendRawWorkflowHistory dynamicconfig.BoolPropertyFnWithDomainFilter
+
+	// max number of decisions per RespondDecisionTaskCompleted request (unlimited by default)
+	DecisionResultCountLimit dynamicconfig.IntPropertyFnWithDomainFilter
 }
 
 // NewConfig returns new service config with default values
@@ -145,6 +148,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		VisibilityArchivalQueryMaxPageSize:          dc.GetIntProperty(dynamicconfig.VisibilityArchivalQueryMaxPageSize, 10000),
 		DisallowQuery:                               dc.GetBoolPropertyFilteredByDomain(dynamicconfig.DisallowQuery, false),
 		SendRawWorkflowHistory:                      dc.GetBoolPropertyFilteredByDomain(dynamicconfig.SendRawWorkflowHistory, sendRawWorkflowHistory),
+		DecisionResultCountLimit:                    dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendDecisionResultCountLimit, 0),
 		domainConfig: domain.Config{
 			MaxBadBinaryCount:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries, domain.MaxBadBinaries),
 			MinRetentionDays:       dc.GetIntProperty(dynamicconfig.MinRetentionDays, domain.DefaultMinWorkflowRetentionInDays),

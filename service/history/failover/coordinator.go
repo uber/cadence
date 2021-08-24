@@ -75,7 +75,7 @@ type (
 		config        *config.Config
 		timeSource    clock.TimeSource
 		domainCache   cache.DomainCache
-		metrics       metrics.Client
+		scope         metrics.Scope
 		logger        log.Logger
 	}
 
@@ -103,7 +103,7 @@ func NewCoordinator(
 	timeSource clock.TimeSource,
 	domainCache cache.DomainCache,
 	config *config.Config,
-	metrics metrics.Client,
+	metricsClient metrics.Client,
 	logger log.Logger,
 ) Coordinator {
 
@@ -123,7 +123,7 @@ func NewCoordinator(
 		timeSource:       timeSource,
 		domainCache:      domainCache,
 		config:           config,
-		metrics:          metrics,
+		scope:            metricsClient.Scope(metrics.FailoverMarkerScope),
 		logger:           logger.WithTags(tag.ComponentFailoverCoordinator),
 	}
 }
@@ -263,7 +263,7 @@ func (c *coordinatorImpl) handleFailoverMarkers(
 	if err != nil {
 		c.logger.Error("Coordinator failed to get domain after receiving all failover markers",
 			tag.WorkflowDomainID(domainID))
-		c.metrics.IncCounter(metrics.FailoverMarkerScope, metrics.GracefulFailoverFailure)
+		c.scope.Tagged(metrics.DomainTag(domainName)).IncCounter(metrics.CadenceFailures)
 		return
 	}
 
@@ -276,13 +276,12 @@ func (c *coordinatorImpl) handleFailoverMarkers(
 		); err != nil {
 			c.logger.Error("Coordinator failed to update domain after receiving all failover markers",
 				tag.WorkflowDomainID(domainID))
-			c.metrics.IncCounter(metrics.FailoverMarkerScope, metrics.GracefulFailoverFailure)
+			c.scope.IncCounter(metrics.CadenceFailures)
 			return
 		}
 		delete(c.recorder, domainID)
 		now := c.timeSource.Now()
-		c.metrics.Scope(
-			metrics.FailoverMarkerScope,
+		c.scope.Tagged(
 			metrics.DomainTag(domainName),
 		).RecordTimer(
 			metrics.GracefulFailoverLatency,
@@ -293,8 +292,7 @@ func (c *coordinatorImpl) handleFailoverMarkers(
 			tag.FailoverVersion(marker.FailoverVersion),
 		)
 	} else {
-		c.metrics.Scope(
-			metrics.FailoverMarkerScope,
+		c.scope.Tagged(
 			metrics.DomainTag(domainName),
 		).RecordTimer(
 			metrics.FailoverMarkerCount,
@@ -331,7 +329,7 @@ func (c *coordinatorImpl) notifyRemoteCoordinator(
 			},
 		)
 		if err != nil {
-			c.metrics.IncCounter(metrics.FailoverMarkerScope, metrics.FailoverMarkerNotificationFailure)
+			c.scope.IncCounter(metrics.FailoverMarkerNotificationFailure)
 			c.logger.Error("Failed to notify failover markers", tag.Error(err))
 		}
 

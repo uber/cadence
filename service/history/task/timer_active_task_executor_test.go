@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
@@ -284,6 +285,110 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Noop() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
 	s.timeSource.Update(s.now.Add(2 * timerTimeout))
+	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
+	s.NoError(err)
+}
+
+func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Resurrected() {
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
+	}
+	workflowType := "some random workflow type"
+	taskListName := "some random task list"
+
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
+		s.mockShard,
+		s.logger,
+		s.version,
+		workflowExecution.GetRunID(),
+		constants.TestGlobalDomainEntry,
+	)
+	_, err := mutableState.AddWorkflowExecutionStartedEvent(
+		workflowExecution,
+		&types.HistoryStartWorkflowExecutionRequest{
+			DomainUUID: s.domainID,
+			StartRequest: &types.StartWorkflowExecutionRequest{
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
+				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
+				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+			},
+		},
+	)
+	s.Nil(err)
+
+	di := test.AddDecisionTaskScheduledEvent(mutableState)
+	event := test.AddDecisionTaskStartedEvent(mutableState, di.ScheduleID, taskListName, uuid.New())
+	di.StartedID = event.GetEventID()
+	event = test.AddDecisionTaskCompletedEvent(mutableState, di.ScheduleID, di.StartedID, nil, "some random identity")
+
+	// schedule two timers
+	timerID1 := "timer1"
+	timerTimeout1 := 2 * time.Second
+	startEvent1, _ := test.AddTimerStartedEvent(mutableState, event.GetEventID(), timerID1, int64(timerTimeout1.Seconds()))
+	timerID2 := "timer2"
+	timerTimeout2 := 5 * time.Second
+	startEvent2, _ := test.AddTimerStartedEvent(mutableState, event.GetEventID(), timerID2, int64(timerTimeout2.Seconds()))
+
+	// fire timer 1
+	firedEvent1 := test.AddTimerFiredEvent(mutableState, timerID1)
+	mutableState.FlushBufferedEvents()
+	// there should be a decision scheduled event after timer1 is fired
+	// omitted here to make the test easier to read
+
+	// create timer task for timer2
+	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	mutableState.DeleteTimerTasks() // remove existing timer task for timerID1
+	modified, err := timerSequence.CreateNextUserTimer()
+	s.NoError(err)
+	s.True(modified)
+	task := mutableState.GetTimerTasks()[0]
+	timerTask := s.newTimerTaskFromInfo(&persistence.TimerTaskInfo{
+		Version:             s.version,
+		DomainID:            s.domainID,
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
+		TaskID:              int64(100),
+		TaskType:            persistence.TaskTypeUserTimer,
+		TimeoutType:         int(types.TimeoutTypeStartToClose),
+		VisibilityTimestamp: task.(*persistence.UserTimerTask).GetVisibilityTimestamp(),
+		EventID:             startEvent2.GetEventID(),
+	})
+
+	persistenceMutableState := s.createPersistenceMutableState(mutableState, firedEvent1.GetEventID(), event.GetVersion())
+	// add resurrected timer info for timer1
+	persistenceMutableState.TimerInfos[timerID1] = &persistence.TimerInfo{
+		Version:    startEvent1.GetVersion(),
+		TimerID:    timerID1,
+		ExpiryTime: time.Unix(0, startEvent1.GetTimestamp()).Add(timerTimeout1),
+		StartedID:  startEvent1.GetEventID(),
+		TaskStatus: execution.TimerTaskStatusNone,
+	}
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, mock.MatchedBy(func(req *persistence.ReadHistoryBranchRequest) bool {
+		return req.MinEventID == startEvent1.GetEventID() && req.NextPageToken == nil
+	})).Return(&persistence.ReadHistoryBranchResponse{
+		HistoryEvents: []*types.HistoryEvent{startEvent1, startEvent2, firedEvent1},
+		NextPageToken: nil,
+	}, nil).Once()
+	// only timer2 should be fired
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.MatchedBy(func(req *persistence.AppendHistoryNodesRequest) bool {
+		numTimerFiredEvents := 0
+		for _, event := range req.Events {
+			if event.GetEventType() == types.EventTypeTimerFired {
+				numTimerFiredEvents++
+			}
+		}
+		return numTimerFiredEvents == 1
+	})).Return(&persistence.AppendHistoryNodesResponse{Size: 0}, nil).Once()
+	// both timerInfo should be deleted
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(req *persistence.UpdateWorkflowExecutionRequest) bool {
+		return len(req.UpdateWorkflowMutation.DeleteTimerInfos) == 2
+	})).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
+
+	s.timerActiveTaskExecutor.config.ResurrectionCheckMinDelay = dynamicconfig.GetDurationPropertyFn(timerTimeout2 - timerTimeout1)
+	s.timeSource.Update(s.now.Add(timerTimeout2))
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
 	s.NoError(err)
 }
@@ -821,6 +926,146 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noop
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, scheduledEvent.GetEventID(), scheduledEvent.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
+	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
+	s.NoError(err)
+}
+
+func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Resurrected() {
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
+	}
+	workflowType := "some random workflow type"
+	taskListName := "some random task list"
+
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
+		s.mockShard,
+		s.logger,
+		s.version,
+		workflowExecution.GetRunID(),
+		constants.TestGlobalDomainEntry,
+	)
+	_, err := mutableState.AddWorkflowExecutionStartedEvent(
+		workflowExecution,
+		&types.HistoryStartWorkflowExecutionRequest{
+			DomainUUID: s.domainID,
+			StartRequest: &types.StartWorkflowExecutionRequest{
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
+				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
+				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+			},
+		},
+	)
+	s.Nil(err)
+
+	di := test.AddDecisionTaskScheduledEvent(mutableState)
+	event := test.AddDecisionTaskStartedEvent(mutableState, di.ScheduleID, taskListName, uuid.New())
+	di.StartedID = event.GetEventID()
+	event = test.AddDecisionTaskCompletedEvent(mutableState, di.ScheduleID, di.StartedID, nil, "some random identity")
+
+	identity := "identity"
+	tasklist := "tasklist"
+	activityID1 := "activity1"
+	activityID2 := "activity2"
+	activityType := "activity type"
+	timerTimeout1 := 2 * time.Second
+	timerTimeout2 := 5 * time.Second
+	// schedule 2 activities
+	scheduledEvent1, _ := test.AddActivityTaskScheduledEvent(
+		mutableState,
+		event.GetEventID(),
+		activityID1,
+		activityType,
+		tasklist,
+		[]byte(nil),
+		int32(timerTimeout1.Seconds()),
+		int32(timerTimeout1.Seconds()),
+		int32(timerTimeout1.Seconds()),
+		int32(timerTimeout1.Seconds()),
+	)
+	scheduledEvent2, _ := test.AddActivityTaskScheduledEvent(
+		mutableState,
+		event.GetEventID(),
+		activityID2,
+		activityType,
+		tasklist,
+		[]byte(nil),
+		int32(timerTimeout2.Seconds()),
+		int32(timerTimeout2.Seconds()),
+		int32(timerTimeout2.Seconds()),
+		int32(timerTimeout2.Seconds()),
+	)
+
+	startedEvent1 := test.AddActivityTaskStartedEvent(mutableState, scheduledEvent1.GetEventID(), identity)
+	completeEvent1 := test.AddActivityTaskCompletedEvent(mutableState, scheduledEvent1.GetEventID(), startedEvent1.GetEventID(), []byte(nil), identity)
+	mutableState.FlushBufferedEvents()
+	// there should be a decision scheduled event after activity1 is completed
+	// omitted here to make the test easier to read
+
+	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	mutableState.DeleteTimerTasks()
+	modified, err := timerSequence.CreateNextActivityTimer()
+	s.NoError(err)
+	s.True(modified)
+	task := mutableState.GetTimerTasks()[0]
+	timerTask := s.newTimerTaskFromInfo(&persistence.TimerTaskInfo{
+		Version:             s.version,
+		DomainID:            s.domainID,
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
+		TaskID:              int64(100),
+		TaskType:            persistence.TaskTypeActivityTimeout,
+		TimeoutType:         int(types.TimeoutTypeScheduleToClose),
+		VisibilityTimestamp: task.(*persistence.ActivityTimeoutTask).GetVisibilityTimestamp(),
+		EventID:             scheduledEvent2.GetEventID(),
+	})
+
+	persistenceMutableState := s.createPersistenceMutableState(mutableState, completeEvent1.GetEventID(), event.GetVersion())
+	// add resurrected activity info for activity1
+	persistenceMutableState.ActivityInfos[scheduledEvent1.GetEventID()] = &persistence.ActivityInfo{
+		Version:                  scheduledEvent1.GetVersion(),
+		ScheduleID:               scheduledEvent1.GetEventID(),
+		ScheduledEventBatchID:    event.GetEventID(),
+		ScheduledTime:            time.Unix(0, event.GetTimestamp()),
+		StartedID:                common.EmptyEventID,
+		StartedTime:              time.Time{},
+		ActivityID:               activityID1,
+		DomainID:                 s.domainID,
+		ScheduleToStartTimeout:   int32(timerTimeout1.Seconds()),
+		ScheduleToCloseTimeout:   int32(timerTimeout1.Seconds()),
+		StartToCloseTimeout:      int32(timerTimeout1.Seconds()),
+		HeartbeatTimeout:         int32(timerTimeout1.Seconds()),
+		CancelRequested:          false,
+		CancelRequestID:          common.EmptyEventID,
+		LastHeartBeatUpdatedTime: time.Time{},
+		TimerTaskStatus:          execution.TimerTaskStatusNone,
+		TaskList:                 tasklist,
+	}
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, mock.MatchedBy(func(req *persistence.ReadHistoryBranchRequest) bool {
+		return req.MinEventID == scheduledEvent1.GetEventID() && req.NextPageToken == nil
+	})).Return(&persistence.ReadHistoryBranchResponse{
+		HistoryEvents: []*types.HistoryEvent{scheduledEvent1, scheduledEvent2, startedEvent1, completeEvent1},
+		NextPageToken: nil,
+	}, nil).Once()
+	// only activity timer for activity2 should be fired
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.MatchedBy(func(req *persistence.AppendHistoryNodesRequest) bool {
+		numActivityTimeoutEvents := 0
+		for _, event := range req.Events {
+			if event.GetEventType() == types.EventTypeActivityTaskTimedOut {
+				numActivityTimeoutEvents++
+			}
+		}
+		return numActivityTimeoutEvents == 1
+	})).Return(&persistence.AppendHistoryNodesResponse{Size: 0}, nil).Once()
+	// both activityInfo should be deleted
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(req *persistence.UpdateWorkflowExecutionRequest) bool {
+		return len(req.UpdateWorkflowMutation.DeleteActivityInfos) == 2
+	})).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
+
+	s.timerActiveTaskExecutor.config.ResurrectionCheckMinDelay = dynamicconfig.GetDurationPropertyFn(timerTimeout2 - timerTimeout1)
+	s.timeSource.Update(s.now.Add(timerTimeout2))
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
 	s.NoError(err)
 }

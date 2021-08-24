@@ -99,6 +99,7 @@ type Config struct {
 	TaskRedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 	StandbyTaskReReplicationContextTimeout  dynamicconfig.DurationPropertyFnWithDomainIDFilter
 	EnableDropStuckTaskByDomainID           dynamicconfig.BoolPropertyFnWithDomainIDFilter
+	ResurrectionCheckMinDelay               dynamicconfig.DurationPropertyFn
 
 	// QueueProcessor settings
 	QueueProcessorEnableSplit                          dynamicconfig.BoolPropertyFn
@@ -378,6 +379,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TaskRedispatchIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TaskRedispatchIntervalJitterCoefficient, 0.15),
 		StandbyTaskReReplicationContextTimeout:  dc.GetDurationPropertyFilteredByDomainID(dynamicconfig.StandbyTaskReReplicationContextTimeout, 3*time.Minute),
 		EnableDropStuckTaskByDomainID:           dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.EnableDropStuckTaskByDomainID, false),
+		ResurrectionCheckMinDelay:               dc.GetDurationProperty(dynamicconfig.ResurrectionCheckMinDelay, 24*time.Hour),
 
 		QueueProcessorEnableSplit:                          dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableSplit, false),
 		QueueProcessorSplitMaxLevel:                        dc.GetIntProperty(dynamicconfig.QueueProcessorSplitMaxLevel, 2), // 3 levels, start from 0

@@ -200,7 +200,7 @@ services:
                 listenAddress: {{ .Env.PROMETHEUS_ENDPOINT_3 }}
         {{- end }}
 
-clusterMetadata:
+clusterGroupMetadata:
     enableGlobalDomain: {{ default .Env.ENABLE_GLOBAL_DOMAIN "true" }}
     failoverVersionIncrement: 10
     primaryClusterName: "primary"
@@ -209,7 +209,7 @@ clusterMetadata:
     {{- else }}
     currentClusterName: "primary"
     {{- end }}
-    clusterInformation:
+    clusterGroup:
         primary:
             enabled: true
             initialFailoverVersion: 0

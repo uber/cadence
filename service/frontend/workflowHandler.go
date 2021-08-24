@@ -1631,6 +1631,13 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		return nil, wh.error(errIdentityTooLong, scope, tags...)
 	}
 
+	if err := common.CheckDecisionResultLimit(
+		len(completeRequest.Decisions),
+		wh.config.DecisionResultCountLimit(domainName),
+		scope); err != nil {
+		return nil, wh.error(err, scope)
+	}
+
 	histResp, err := wh.GetHistoryClient().RespondDecisionTaskCompleted(ctx, &types.HistoryRespondDecisionTaskCompletedRequest{
 		DomainUUID:      taskToken.DomainID,
 		CompleteRequest: completeRequest},
