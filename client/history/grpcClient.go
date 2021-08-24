@@ -25,6 +25,8 @@ import (
 
 	"go.uber.org/yarpc"
 
+	"github.com/uber/cadence/common/types/mapper/thrift"
+
 	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/proto"
@@ -241,4 +243,9 @@ func (g grpcClient) SyncShardStatus(ctx context.Context, request *types.SyncShar
 func (g grpcClient) TerminateWorkflowExecution(ctx context.Context, request *types.HistoryTerminateWorkflowExecutionRequest, opts ...yarpc.CallOption) error {
 	_, err := g.c.TerminateWorkflowExecution(ctx, proto.FromHistoryTerminateWorkflowExecutionRequest(request), opts...)
 	return proto.ToError(err)
+}
+
+func (g grpcClient) GetFailoverInfoByDomainID(ctx context.Context, request *types.GetFailoverInfoByDomainIDRequest, opts ...yarpc.CallOption) (*types.GetFailoverInfoByDomainIDResponse, error) {
+	response, err := g.c.GetFailoverInfoByDomainID(ctx, proto.FromHistoryGetFailoverInfoByDomainIDRequest(request), opts...)
+	return proto.ToHistoryGetFailoverInfoByDomainIDResponse(response), thrift.ToError(err)
 }

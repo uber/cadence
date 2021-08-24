@@ -297,6 +297,39 @@ func (mr *_MockClientRecorder) GetDLQReplicationMessages(
 	return mr.mock.ctrl.RecordCall(mr.mock, "GetDLQReplicationMessages", args...)
 }
 
+// GetFailoverInfoByDomainID responds to a GetFailoverInfoByDomainID call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().GetFailoverInfoByDomainID(gomock.Any(), ...).Return(...)
+// 	... := client.GetFailoverInfoByDomainID(...)
+func (m *MockClient) GetFailoverInfoByDomainID(
+	ctx context.Context,
+	_Request *history.GetFailoverInfoByDomainIDRequest,
+	opts ...yarpc.CallOption,
+) (success *history.GetFailoverInfoByDomainIDResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "GetFailoverInfoByDomainID", args...)
+	success, _ = ret[i].(*history.GetFailoverInfoByDomainIDResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) GetFailoverInfoByDomainID(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "GetFailoverInfoByDomainID", args...)
+}
+
 // GetMutableState responds to a GetMutableState call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.

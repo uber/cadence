@@ -26,17 +26,17 @@
 package historyserviceclient
 
 import (
-	context "context"
-	reflect "reflect"
+	"context"
+	"reflect"
 
-	wire "go.uber.org/thriftrw/wire"
-	yarpc "go.uber.org/yarpc"
-	transport "go.uber.org/yarpc/api/transport"
-	thrift "go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/thrift"
 
-	history "github.com/uber/cadence/.gen/go/history"
-	replicator "github.com/uber/cadence/.gen/go/replicator"
-	shared "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/.gen/go/history"
+	"github.com/uber/cadence/.gen/go/replicator"
+	"github.com/uber/cadence/.gen/go/shared"
 )
 
 // Interface is a client for the HistoryService service.
@@ -82,6 +82,12 @@ type Interface interface {
 		Request *replicator.GetDLQReplicationMessagesRequest,
 		opts ...yarpc.CallOption,
 	) (*replicator.GetDLQReplicationMessagesResponse, error)
+
+	GetFailoverInfoByDomainID(
+		ctx context.Context,
+		Request *history.GetFailoverInfoByDomainIDRequest,
+		opts ...yarpc.CallOption,
+	) (*history.GetFailoverInfoByDomainIDResponse, error)
 
 	GetMutableState(
 		ctx context.Context,
@@ -470,6 +476,29 @@ func (c client) GetDLQReplicationMessages(
 	}
 
 	success, err = history.HistoryService_GetDLQReplicationMessages_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetFailoverInfoByDomainID(
+	ctx context.Context,
+	_Request *history.GetFailoverInfoByDomainIDRequest,
+	opts ...yarpc.CallOption,
+) (success *history.GetFailoverInfoByDomainIDResponse, err error) {
+
+	args := history.HistoryService_GetFailoverInfoByDomainID_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_GetFailoverInfoByDomainID_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_GetFailoverInfoByDomainID_Helper.UnwrapResponse(&result)
 	return
 }
 

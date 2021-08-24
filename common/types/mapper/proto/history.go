@@ -249,6 +249,44 @@ func ToHistoryGetDLQReplicationMessagesResponse(t *historyv1.GetDLQReplicationMe
 	}
 }
 
+func FromHistoryGetFailoverInfoByDomainIDRequest(t *types.GetFailoverInfoByDomainIDRequest) *historyv1.GetFailoverInfoByDomainIDRequest {
+	if t == nil {
+		return nil
+	}
+	return &historyv1.GetFailoverInfoByDomainIDRequest{
+		DomainId: t.GetDomainID(),
+	}
+}
+
+func ToHistoryGetFailoverInfoByDomainIDRequest(t *historyv1.GetFailoverInfoByDomainIDRequest) *types.GetFailoverInfoByDomainIDRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetFailoverInfoByDomainIDRequest{
+		DomainID: t.GetDomainId(),
+	}
+}
+
+func FromHistoryGetFailoverInfoByDomainIDResponse(t *types.GetFailoverInfoByDomainIDResponse) *historyv1.GetFailoverInfoByDomainIDResponse {
+	if t == nil {
+		return nil
+	}
+	return &historyv1.GetFailoverInfoByDomainIDResponse{
+		CompletedShardCount: t.GetCompletedShardCount(),
+		PendingShards:       t.GetPendingShards(),
+	}
+}
+
+func ToHistoryGetFailoverInfoByDomainIDResponse(t *historyv1.GetFailoverInfoByDomainIDResponse) *types.GetFailoverInfoByDomainIDResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.GetFailoverInfoByDomainIDResponse{
+		CompletedShardCount: t.GetCompletedShardCount(),
+		PendingShards:       t.GetPendingShards(),
+	}
+}
+
 func FromHistoryGetMutableStateRequest(t *types.GetMutableStateRequest) *historyv1.GetMutableStateRequest {
 	if t == nil {
 		return nil

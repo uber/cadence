@@ -1245,3 +1245,45 @@ func ToProcessingQueueStateArrayMap(t map[string][]*history.ProcessingQueueState
 	}
 	return v
 }
+
+// FromGetFailoverInfoByDomainIDRequest converts internal GetFailoverInfoByDomainIDRequest type to thrift
+func FromGetFailoverInfoByDomainIDRequest(t *types.GetFailoverInfoByDomainIDRequest) *history.GetFailoverInfoByDomainIDRequest {
+	if t == nil {
+		return nil
+	}
+	return &history.GetFailoverInfoByDomainIDRequest{
+		DomainID: &t.DomainID,
+	}
+}
+
+// ToGetFailoverInfoByDomainIDRequest converts thrift GetFailoverInfoByDomainIDRequest type to internal
+func ToGetFailoverInfoByDomainIDRequest(t *history.GetFailoverInfoByDomainIDRequest) *types.GetFailoverInfoByDomainIDRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetFailoverInfoByDomainIDRequest{
+		DomainID: t.GetDomainID(),
+	}
+}
+
+// FromGetFailoverInfoByDomainIDResponse converts internal GetFailoverInfoByDomainIDRequest type to thrift
+func FromGetFailoverInfoByDomainIDResponse(t *types.GetFailoverInfoByDomainIDResponse) *history.GetFailoverInfoByDomainIDResponse {
+	if t == nil {
+		return nil
+	}
+	return &history.GetFailoverInfoByDomainIDResponse{
+		CompletedShardCount: &t.CompletedShardCount,
+		PendingShards:       t.GetPendingShards(),
+	}
+}
+
+// ToGetFailoverInfoByDomainIDResponse converts thrift GetFailoverInfoByDomainIDResponse type to internal
+func ToGetFailoverInfoByDomainIDResponse(t *history.GetFailoverInfoByDomainIDResponse) *types.GetFailoverInfoByDomainIDResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.GetFailoverInfoByDomainIDResponse{
+		CompletedShardCount: t.GetCompletedShardCount(),
+		PendingShards:       t.GetPendingShards(),
+	}
+}

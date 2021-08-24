@@ -302,6 +302,12 @@ func (t ThriftHandler) TerminateWorkflowExecution(ctx context.Context, request *
 	return thrift.FromError(err)
 }
 
+// TerminateWorkflowExecution forwards request to the underlying handler
+func (t ThriftHandler) GetFailoverInfoByDomainID(ctx context.Context, request *h.GetFailoverInfoByDomainIDRequest) (*h.GetFailoverInfoByDomainIDResponse, error) {
+	response, err := t.h.GetFailoverInfoByDomainID(withThriftTag(ctx), thrift.ToGetFailoverInfoByDomainIDRequest(request))
+	return thrift.FromGetFailoverInfoByDomainIDResponse(response), thrift.FromError(err)
+}
+
 func withThriftTag(ctx context.Context) context.Context {
 	return metrics.TagContext(ctx, metrics.ThriftTransportTag())
 }
