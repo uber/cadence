@@ -52,7 +52,6 @@ If running into any compiling issue
 >1. For proto/thrift errors, run `git submodule update --init --recursive` to fix  
 >2. Make sure you upgrade to the latest stable version of Golang.
 >3. Check if this document is outdated by comparing with the building steps in [Dockerfile](https://github.com/uber/cadence/blob/master/Dockerfile)
-* Database. The default setup of Cadence depends on Cassandra. Before running the Cadence or tests you must have `cassandra` dependency(or equivalent database in the below notes)
 
 ### 2. Setup Dependency
 NOTE: you may skip this section if you have installed the dependencies in any other ways, for example, using homebrew.

@@ -104,6 +104,8 @@ var (
 	ErrContextTimeoutTooShort = &types.BadRequestError{Message: "Context timeout is too short."}
 	// ErrContextTimeoutNotSet is error for not setting a context timeout when calling a long poll API
 	ErrContextTimeoutNotSet = &types.BadRequestError{Message: "Context timeout is not set."}
+	// ErrDecisionResultCountTooLarge error for decision result count exceeds limit
+	ErrDecisionResultCountTooLarge = &types.BadRequestError{Message: "Decision result count exceeds limit."}
 )
 
 // AwaitWaitGroup calls Wait on the given wait
@@ -234,6 +236,19 @@ func ValidIDLength(
 		scope.IncCounter(metricsCounter)
 	}
 	return valid
+}
+
+// CheckDecisionResultLimit checks if decision result count exceeds limits.
+func CheckDecisionResultLimit(
+	actualSize int,
+	limit int,
+	scope metrics.Scope,
+) error {
+	scope.RecordTimer(metrics.DecisionResultCount, time.Duration(actualSize))
+	if limit > 0 && actualSize > limit {
+		return ErrDecisionResultCountTooLarge
+	}
+	return nil
 }
 
 // IsServiceTransientError checks if the error is a transient error.

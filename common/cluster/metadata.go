@@ -65,8 +65,8 @@ type (
 		primaryClusterName string
 		// currentClusterName is the name of the current cluster
 		currentClusterName string
-		// clusterInfo contains all cluster name -> corresponding information
-		clusterInfo map[string]config.ClusterInformation
+		// clusterGroup contains all cluster name -> corresponding information
+		clusterGroup map[string]config.ClusterInformation
 		// versionToClusterName contains all initial version -> corresponding cluster name
 		versionToClusterName map[int64]string
 	}
@@ -79,46 +79,11 @@ func NewMetadata(
 	failoverVersionIncrement int64,
 	primaryClusterName string,
 	currentClusterName string,
-	clusterInfo map[string]config.ClusterInformation,
+	clusterGroup map[string]config.ClusterInformation,
 ) Metadata {
-
-	if len(clusterInfo) == 0 {
-		panic("Empty cluster information")
-	} else if len(primaryClusterName) == 0 {
-		panic("Primary cluster name is empty")
-	} else if len(currentClusterName) == 0 {
-		panic("Current cluster name is empty")
-	} else if failoverVersionIncrement == 0 {
-		panic("Version increment is 0")
-	}
-
 	versionToClusterName := make(map[int64]string)
-	for clusterName, info := range clusterInfo {
-		if failoverVersionIncrement <= info.InitialFailoverVersion || info.InitialFailoverVersion < 0 {
-			panic(fmt.Sprintf(
-				"Version increment %v is smaller than initial version: %v.",
-				failoverVersionIncrement,
-				info.InitialFailoverVersion,
-			))
-		}
-		if len(clusterName) == 0 {
-			panic("Cluster name in all cluster names is empty")
-		}
+	for clusterName, info := range clusterGroup {
 		versionToClusterName[info.InitialFailoverVersion] = clusterName
-
-		if info.Enabled && (len(info.RPCName) == 0 || len(info.RPCAddress) == 0) {
-			panic(fmt.Sprintf("Cluster %v: rpc name / address is empty", clusterName))
-		}
-	}
-
-	if _, ok := clusterInfo[currentClusterName]; !ok {
-		panic("Current cluster is not specified in cluster info")
-	}
-	if _, ok := clusterInfo[primaryClusterName]; !ok {
-		panic("Primary cluster is not specified in cluster info")
-	}
-	if len(versionToClusterName) != len(clusterInfo) {
-		panic("Cluster info initial versions have duplicates")
 	}
 
 	return &metadataImpl{
@@ -127,7 +92,7 @@ func NewMetadata(
 		failoverVersionIncrement: failoverVersionIncrement,
 		primaryClusterName:       primaryClusterName,
 		currentClusterName:       currentClusterName,
-		clusterInfo:              clusterInfo,
+		clusterGroup:             clusterGroup,
 		versionToClusterName:     versionToClusterName,
 	}
 }
@@ -140,12 +105,12 @@ func (metadata *metadataImpl) IsGlobalDomainEnabled() bool {
 
 // GetNextFailoverVersion return the next failover version based on input
 func (metadata *metadataImpl) GetNextFailoverVersion(cluster string, currentFailoverVersion int64) int64 {
-	info, ok := metadata.clusterInfo[cluster]
+	info, ok := metadata.clusterGroup[cluster]
 	if !ok {
 		panic(fmt.Sprintf(
 			"Unknown cluster name: %v with given cluster initial failover version map: %v.",
 			cluster,
-			metadata.clusterInfo,
+			metadata.clusterGroup,
 		))
 	}
 	failoverVersion := currentFailoverVersion/metadata.failoverVersionIncrement*metadata.failoverVersionIncrement + info.InitialFailoverVersion
@@ -176,7 +141,7 @@ func (metadata *metadataImpl) GetCurrentClusterName() string {
 
 // GetAllClusterInfo return the all cluster name -> corresponding information
 func (metadata *metadataImpl) GetAllClusterInfo() map[string]config.ClusterInformation {
-	return metadata.clusterInfo
+	return metadata.clusterGroup
 }
 
 // ClusterNameForFailoverVersion return the corresponding cluster name for a given failover version
@@ -191,7 +156,7 @@ func (metadata *metadataImpl) ClusterNameForFailoverVersion(failoverVersion int6
 		panic(fmt.Sprintf(
 			"Unknown initial failover version %v with given cluster initial failover version map: %v and failover version increment %v.",
 			initialFailoverVersion,
-			metadata.clusterInfo,
+			metadata.clusterGroup,
 			metadata.failoverVersionIncrement,
 		))
 	}

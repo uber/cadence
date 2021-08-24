@@ -1620,6 +1620,13 @@ func (m *MockMutableState) IsWorkflowExecutionRunning() bool {
 	return ret0
 }
 
+func (m *MockMutableState) IsWorkflowCompleted() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsWorkflowExecutionRunning")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
 // IsWorkflowExecutionRunning indicates an expected call of IsWorkflowExecutionRunning
 func (mr *MockMutableStateMockRecorder) IsWorkflowExecutionRunning() *gomock.Call {
 	mr.mock.ctrl.T.Helper()

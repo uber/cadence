@@ -443,6 +443,7 @@ func newAdminDomainCommands() []cli.Command {
 func newAdminKafkaCommands() []cli.Command {
 	return []cli.Command{
 		{
+			// TODO: do we still need this command given that kafka replication has been deprecated?
 			Name:    "parse",
 			Aliases: []string{"par"},
 			Usage:   "Parse replication tasks from kafka messages",
@@ -482,6 +483,7 @@ func newAdminKafkaCommands() []cli.Command {
 			},
 		},
 		{
+			// TODO: move this command be a subcommand of admin workflow
 			Name:    "rereplicate",
 			Aliases: []string{"rrp"},
 			Usage:   "Rereplicate replication tasks from history tables",
@@ -494,10 +496,9 @@ func newAdminKafkaCommands() []cli.Command {
 					Name:  FlagNumberOfShards,
 					Usage: "NumberOfShards is required to calculate shardID. (see server config for numHistoryShards)",
 				},
-				// for one workflow
-				cli.Int64Flag{
-					Name:  FlagMaxEventID,
-					Usage: "MaxEventID Optional, default to all events",
+				cli.StringFlag{
+					Name:  FlagDomainID,
+					Usage: "DomainID",
 				},
 				cli.StringFlag{
 					Name:  FlagWorkflowIDWithAlias,
@@ -507,13 +508,13 @@ func newAdminKafkaCommands() []cli.Command {
 					Name:  FlagRunIDWithAlias,
 					Usage: "RunID",
 				},
-				cli.StringFlag{
-					Name:  FlagDomainID,
-					Usage: "DomainID",
+				cli.Int64Flag{
+					Name:  FlagMaxEventID,
+					Usage: "MaxEventID Optional, default to all events",
 				},
 				cli.StringFlag{
 					Name:  FlagEndEventVersion,
-					Usage: "Workflow end event version",
+					Usage: "Workflow end event version, required if MaxEventID is specified",
 				}),
 			Action: func(c *cli.Context) {
 				AdminRereplicate(c)
