@@ -377,5 +377,9 @@ func (cf *rpcClientFactory) newFrontendGRPCClient(hostAddress string) (frontend.
 
 func isGRPCOutbound(config transport.ClientConfig) bool {
 	namer, ok := config.GetUnaryOutbound().(transport.Namer)
-	return ok && namer.TransportName() == grpc.TransportName
+	if !ok {
+		// This should not happen, unless yarpc older than v1.43.0 is used
+		panic("Outbound does not implement transport.Namer")
+	}
+	return namer.TransportName() == grpc.TransportName
 }
