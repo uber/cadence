@@ -94,6 +94,14 @@ curl -X PUT "http://127.0.0.1:9200/cadence-visibility-dev"
 ```
 They will create an index template and an index in ElasticSearch. 
 
+:warning: Note: 
+You will run into error of `InternalServiceError{Message: ListClosedWorkflowExecutions failed, elastic: Error 400 (Bad Request): all shards failed [type=search_phase_execution_exception]}`
+if ElasticSearch index template was not created before using. As there will be a wrong index created by default. 
+You will have to delete the wrong index and then create the right one:
+```
+curl -X DELETE "http://127.0.0.1:9200/cadence-visibility-dev"
+```
+
 ### 4. Run  
 Once you have done all above, try running the local binaries:
 
