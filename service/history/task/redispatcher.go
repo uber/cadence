@@ -21,12 +21,14 @@
 package task
 
 import (
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -35,6 +37,9 @@ import (
 
 const (
 	defaultBufferSize = 200
+
+	redispatchBackoffCoefficient  = 1.05
+	redispatchMaxBackoffInternval = 2 * time.Minute
 )
 
 type (
@@ -53,6 +58,7 @@ type (
 		sync.Mutex
 
 		taskProcessor Processor
+		timeSource    clock.TimeSource
 		options       *RedispatcherOptions
 		logger        log.Logger
 		metricsScope  metrics.Scope
@@ -62,19 +68,33 @@ type (
 		shutdownWG      sync.WaitGroup
 		redispatchCh    chan redispatchNotification
 		redispatchTimer *time.Timer
-		taskQueues      map[int][]Task // priority -> redispatch queue
+		backoffPolicy   backoff.RetryPolicy
+		taskQueues      map[int][]redispatchTask // priority -> redispatch queue
+		taskChFull      map[int]bool             // priority -> if taskCh is full
+	}
+
+	redispatchTask struct {
+		task           Task
+		redispatchTime time.Time
 	}
 )
 
 // NewRedispatcher creates a new task Redispatcher
 func NewRedispatcher(
 	taskProcessor Processor,
+	timeSource clock.TimeSource,
 	options *RedispatcherOptions,
 	logger log.Logger,
 	metricsScope metrics.Scope,
 ) Redispatcher {
+	backoffPolicy := backoff.NewExponentialRetryPolicy(options.TaskRedispatchInterval())
+	backoffPolicy.SetBackoffCoefficient(redispatchBackoffCoefficient)
+	backoffPolicy.SetMaximumInterval(redispatchMaxBackoffInternval)
+	backoffPolicy.SetExpirationInterval(backoff.NoInterval)
+
 	return &redispatcherImpl{
 		taskProcessor:   taskProcessor,
+		timeSource:      timeSource,
 		options:         options,
 		logger:          logger,
 		metricsScope:    metricsScope,
@@ -82,7 +102,9 @@ func NewRedispatcher(
 		shutdownCh:      make(chan struct{}),
 		redispatchCh:    make(chan redispatchNotification, 1),
 		redispatchTimer: nil,
-		taskQueues:      make(map[int][]Task),
+		backoffPolicy:   backoffPolicy,
+		taskQueues:      make(map[int][]redispatchTask),
+		taskChFull:      make(map[int]bool),
 	}
 }
 
@@ -121,15 +143,19 @@ func (r *redispatcherImpl) Stop() {
 func (r *redispatcherImpl) AddTask(
 	task Task,
 ) {
+	priority := task.Priority()
+	attempt := task.GetAttempt()
+
 	r.Lock()
 	defer r.Unlock()
-
-	priority := task.Priority()
 	queue, ok := r.taskQueues[priority]
 	if !ok {
-		queue = make([]Task, 0)
+		queue = make([]redispatchTask, 0)
 	}
-	r.taskQueues[priority] = append(queue, task)
+	r.taskQueues[priority] = append(queue, redispatchTask{
+		task:           task,
+		redispatchTime: r.getRedispatchTime(attempt),
+	})
 
 	r.setupTimerLocked()
 }
@@ -203,43 +229,58 @@ func (r *redispatcherImpl) redispatchTasks(
 	}
 
 	totalRedispatched := 0
+	now := r.timeSource.Now()
+	for priority := range r.taskQueues {
+		r.taskChFull[priority] = false
+	}
+
 	for priority, queue := range r.taskQueues {
-		queueLen := len(queue)
-		for i := 0; i != queueLen; i++ {
-			if totalRedispatched >= targetRedispatched {
+		// sort by redispatch time
+		sort.Slice(queue, func(i, j int) bool {
+			return queue[i].redispatchTime.Before(queue[j].redispatchTime)
+		})
+
+		newStartIdx := 0
+		for _, redispatchTask := range queue {
+			if totalRedispatched >= targetRedispatched ||
+				r.taskChFull[priority] ||
+				redispatchTask.redispatchTime.After(now) {
+				// Note the second condition regarding taskChFull is not 100% accurate
+				// since task may get a new, lower priority upon redispatch, and
+				// the taskCh for the new priority may not be full.
+				// But the current estimation should be good enough as task with
+				// lower priority should be executed after high priority ones,
+				// so it's ok to leave them in the queue
 				break
 			}
 
-			task := queue[0]
-			queue[0] = nil
-			queue = queue[1:]
-
-			submitted, err := r.taskProcessor.TrySubmit(task)
+			submitted, err := r.taskProcessor.TrySubmit(redispatchTask.task)
 			if err != nil {
 				if r.isStopped() {
 					// if error is due to shard shutdown
 					break
-				} else {
-					// otherwise it might be error from domain cache etc, add
-					// the task to redispatch queue so that it can be retried
-					r.logger.Error("Failed to redispatch task", tag.Error(err))
 				}
+				// otherwise it might be error from domain cache etc, add
+				// the task to redispatch queue so that it can be retried
+				r.logger.Error("Failed to redispatch task", tag.Error(err))
 			}
 
+			newStartIdx++ // task will be either redispatched or enqueued again at here
+			newPriority := redispatchTask.task.Priority()
 			if err != nil || !submitted {
 				// failed to submit, enqueue again
-				queue = append(queue, task)
+				r.taskQueues[newPriority] = append(r.taskQueues[newPriority], redispatchTask)
 			}
-
 			if err == nil && !submitted {
-				// task chan is full for this priority, continue to next priority
-				break
+				// task chan is full for the new priority
+				r.taskChFull[newPriority] = true
 			}
-
-			totalRedispatched++
+			if submitted {
+				totalRedispatched++
+			}
 		}
 
-		r.taskQueues[priority] = queue
+		r.taskQueues[priority] = r.taskQueues[priority][newStartIdx:]
 
 		if r.isStopped() {
 			return
@@ -282,4 +323,10 @@ func (r *redispatcherImpl) sizeLocked() int {
 
 func (r *redispatcherImpl) isStopped() bool {
 	return atomic.LoadInt32(&r.status) == common.DaemonStatusStopped
+}
+
+func (r *redispatcherImpl) getRedispatchTime(attempt int) time.Time {
+	// note that elapsedTime (the first parameter) is not relevant when
+	// the retry policy has not expiration interval
+	return r.timeSource.Now().Add(r.backoffPolicy.ComputeNextDelay(0, attempt))
 }
