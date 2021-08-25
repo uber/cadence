@@ -75,7 +75,7 @@ message CrossClusterStartChildExecutionRequestAttributes {
   string request_id = 2;
   int64 initiated_event_id = 3;
   api.v1.StartChildWorkflowExecutionInitiatedEventAttributes initiated_event_attributes = 4;
-  // targetRunID is for scheduling first decision task 
+  // targetRunID is for scheduling first decision task
   // targetWorkflowID is available in initiatedEventAttributes
   string target_run_id = 5;
 }
@@ -109,12 +109,23 @@ message CrossClusterSignalExecutionRequestAttributes {
 message CrossClusterSignalExecutionResponseAttributes {
 }
 
+message CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes {
+  string target_domain_id = 1;
+  api.v1.WorkflowExecution target_workflow_execution = 2;
+  int64 initiated_event_id = 3;
+  api.v1.HistoryEvent completion_event = 4;
+}
+
+message CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes {
+}
+
 message CrossClusterTaskRequest {
   CrossClusterTaskInfo task_info = 1;
   oneof attributes {
     CrossClusterStartChildExecutionRequestAttributes startChildExecutionAttributes = 2;
     CrossClusterCancelExecutionRequestAttributes cancelExecutionAttributes = 3;
     CrossClusterSignalExecutionRequestAttributes signalExecutionAttributes = 4;
+    CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes recordChildWorkflowExecutionCompleteRequestAttributes = 5;
   }
 }
 
@@ -127,6 +138,7 @@ message CrossClusterTaskResponse {
     CrossClusterStartChildExecutionResponseAttributes startChildExecutionAttributes = 5;
     CrossClusterCancelExecutionResponseAttributes cancelExecutionAttributes = 6;
     CrossClusterSignalExecutionResponseAttributes signalExecutionAttributes = 7;
+    CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes recordChildWorkflowExecutionCompleteRequestAttributes = 8;
   }
 }
 

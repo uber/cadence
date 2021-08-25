@@ -69,7 +69,6 @@ var (
 		OwnerEmail:                             common.StringPtr(DomainOwnerEmail),
 		Data:                                   DomainData,
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(DomainRetention),
-		EmitMetric:                             common.BoolPtr(DomainEmitMetric),
 		BadBinaries:                            &BadBinaries,
 		HistoryArchivalStatus:                  &ArchivalStatus,
 		HistoryArchivalURI:                     common.StringPtr(HistoryArchivalURI),
