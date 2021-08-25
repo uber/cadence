@@ -68,7 +68,7 @@ type (
 
 	// DispatcherProvider provides a dispatcher to a given address
 	DispatcherProvider interface {
-		Get(name string, address string) (*yarpc.Dispatcher, error)
+		GetTChannel(name string, address string) (*yarpc.Dispatcher, error)
 		GetGRPC(name string, address string) (*yarpc.Dispatcher, error)
 	}
 
@@ -123,7 +123,7 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 		var err error
 		switch info.RPCTransport {
 		case tchannel.TransportName:
-			dispatcher, err = dispatcherProvider.Get(info.RPCName, info.RPCAddress)
+			dispatcher, err = dispatcherProvider.GetTChannel(info.RPCName, info.RPCAddress)
 		case grpc.TransportName:
 			dispatcher, err = dispatcherProvider.GetGRPC(info.RPCName, info.RPCAddress)
 		}
@@ -265,7 +265,7 @@ func NewDNSYarpcDispatcherProvider(logger log.Logger, interval time.Duration) Di
 	}
 }
 
-func (p *dnsDispatcherProvider) Get(serviceName string, address string) (*yarpc.Dispatcher, error) {
+func (p *dnsDispatcherProvider) GetTChannel(serviceName string, address string) (*yarpc.Dispatcher, error) {
 	tchanTransport, err := tchannel.NewTransport(
 		tchannel.ServiceName(serviceName),
 		// this aim to get rid of the annoying popup about accepting incoming network connections

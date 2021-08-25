@@ -23,9 +23,10 @@ package config
 import (
 	"errors"
 	"fmt"
+	"log"
+
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
-	"log"
 
 	"go.uber.org/multierr"
 )
