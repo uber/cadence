@@ -800,7 +800,7 @@ func (v *attrValidator) validateCrossDomainCall(
 	// - domainCluster contains only one cluster
 	// case 1 can be actually be combined with this case
 	if len(sourceClusters) == 1 && len(targetClusters) == 1 {
-		if *sourceClusters[0] == *targetClusters[0] {
+		if sourceClusters[0].ClusterName == targetClusters[0].ClusterName {
 			return nil
 		}
 		return v.createCrossDomainCallError(sourceDomainEntry, targetDomainEntry)
