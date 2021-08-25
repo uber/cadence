@@ -760,3 +760,35 @@ func (t *crossClusterTaskBase) ProcessingState() processingState {
 
 	return t.processingState
 }
+
+func loadWorkflowForCrossClusterTask(
+	ctx context.Context,
+	executionCache *execution.Cache,
+	taskInfo *persistence.CrossClusterTaskInfo,
+	metricsClient metrics.Client,
+	logger log.Logger,
+) (execution.Context, execution.MutableState, execution.ReleaseFunc, error) {
+	wfContext, release, err := executionCache.GetOrCreateWorkflowExecutionWithTimeout(
+		taskInfo.GetDomainID(),
+		getWorkflowExecution(taskInfo),
+		taskGetExecutionContextTimeout,
+	)
+	if err != nil {
+		if err == context.DeadlineExceeded {
+			return nil, nil, nil, errWorkflowBusy
+		}
+		return nil, nil, nil, err
+	}
+
+	mutableState, err := loadMutableStateForCrossClusterTask(ctx, wfContext, taskInfo, metricsClient, logger)
+	if err != nil {
+		release(err)
+		return nil, nil, nil, err
+	}
+	if mutableState == nil || !mutableState.IsWorkflowExecutionRunning() {
+		release(nil)
+		return nil, nil, nil, nil
+	}
+
+	return wfContext, mutableState, release, nil
+}
