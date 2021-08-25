@@ -213,7 +213,7 @@ func (s *server) startService() common.Daemon {
 		}
 	}
 
-	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, s.cfg.PublicClient.HostPort)
+	dispatcher, err := params.DispatcherProvider.GetTChannel(common.FrontendServiceName, s.cfg.PublicClient.HostPort)
 	if err != nil {
 		log.Fatalf("failed to construct dispatcher: %v", err)
 	}

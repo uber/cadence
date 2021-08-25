@@ -78,17 +78,20 @@ clusterGroupMetadata:
       enabled: true
       initialFailoverVersion: 1
       rpcName: "cadence-frontend"
-      rpcAddress: "localhost:7933" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
+      rpcAddress: "localhost:7833" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
+      rpcTransport: "grpc"
     standby:
       enabled: true
       initialFailoverVersion: 0
       rpcName: "cadence-frontend"
-      rpcAddress: "localhost:8933" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
+      rpcAddress: "localhost:8833" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
+      rpcTransport: "grpc"
     other:
       enabled: true
       initialFailoverVersion: 2
       rpcName: "cadence-frontend"
-      rpcAddress: "localhost:9933" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
+      rpcAddress: "localhost:9833" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
+      rpcTransport: "grpc"
 
 dcRedirectionPolicy:
   policy: "selected-apis-forwarding"
