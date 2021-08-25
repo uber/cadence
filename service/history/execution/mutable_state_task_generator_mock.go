@@ -255,20 +255,6 @@ func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateCrossClusterTaskFro
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateCrossClusterTaskFromTransferTask", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateCrossClusterTaskFromTransferTask), transferTask, targetCluster)
 }
 
-// GenerateFromCrossClusterTask mocks base method
-func (m *MockMutableStateTaskGenerator) GenerateFromCrossClusterTask(crossClusterTask *persistence.TransferTaskInfo) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateFromCrossClusterTask", crossClusterTask)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// GenerateFromCrossClusterTask indicates an expected call of GenerateFromCrossClusterTask
-func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateFromCrossClusterTask(crossClusterTask interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateFromCrossClusterTask", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateFromCrossClusterTask), crossClusterTask)
-}
-
 // GenerateActivityTimerTasks mocks base method
 func (m *MockMutableStateTaskGenerator) GenerateActivityTimerTasks(now time.Time) error {
 	m.ctrl.T.Helper()
