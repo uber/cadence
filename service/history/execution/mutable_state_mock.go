@@ -883,6 +883,34 @@ func (mr *MockMutableStateMockRecorder) DeleteDecision() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDecision", reflect.TypeOf((*MockMutableState)(nil).DeleteDecision))
 }
 
+// DeleteUserTimer mocks base method
+func (m *MockMutableState) DeleteUserTimer(timerID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteUserTimer", timerID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteUserTimer indicates an expected call of DeleteUserTimer
+func (mr *MockMutableStateMockRecorder) DeleteUserTimer(timerID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUserTimer", reflect.TypeOf((*MockMutableState)(nil).DeleteUserTimer), timerID)
+}
+
+// DeleteActivity mocks base method
+func (m *MockMutableState) DeleteActivity(scheduleEventID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteActivity", scheduleEventID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteActivity indicates an expected call of DeleteActivity
+func (mr *MockMutableStateMockRecorder) DeleteActivity(scheduleEventID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteActivity", reflect.TypeOf((*MockMutableState)(nil).DeleteActivity), scheduleEventID)
+}
+
 // DeleteSignalRequested mocks base method
 func (m *MockMutableState) DeleteSignalRequested(requestID string) {
 	m.ctrl.T.Helper()
