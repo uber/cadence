@@ -138,7 +138,7 @@ func (t *timerStandbyTaskExecutor) executeUserTimerTimeoutTask(
 				return nil, &types.InternalServiceError{Message: errString}
 			}
 
-			if isExpired := timerSequence.IsExpired(
+			if _, isExpired := timerSequence.IsExpired(
 				timerTask.VisibilityTimestamp,
 				timerSequenceID,
 			); isExpired {
@@ -198,7 +198,7 @@ func (t *timerStandbyTaskExecutor) executeActivityTimeoutTask(
 				return nil, &types.InternalServiceError{Message: errString}
 			}
 
-			if isExpired := timerSequence.IsExpired(
+			if _, isExpired := timerSequence.IsExpired(
 				timerTask.VisibilityTimestamp,
 				timerSequenceID,
 			); isExpired {

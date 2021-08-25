@@ -6,7 +6,10 @@ This README describes how to set up Cadence bench, different types of bench load
 Setup
 -----------
 ### Cadence server
-Bench tests requires Cadence server with ElasticSearch. You can run it through:
+
+Basic bench test don't require Advanced Visibility. 
+ 
+Other advanced bench tests requires Cadence server with Advanced Visibility. You can run it through:
 - Docker: Instructions for running Cadence server through docker can be found in `docker/README.md`. Either `docker-compose-es-v7.yml` or `docker-compose-es.yml` can be used to start the server.
 - Build from source: Please check [CONTRIBUTING](/CONTRIBUTING.md) for how to build and run Cadence server from source. Please also make sure Kafka and ElasticSearch are running before starting the server with `./cadence-server --zone es start`. If ElasticSearch v7 is used, change the value for `--zone` flag to `es_v7`.
 
@@ -56,6 +59,41 @@ This section briefly describes the purpose of each bench load and provides a sam
 
 Please note that all load configurations in `config/bench` is for only local development and illustration purpose, it does not reflect the actual capability of Cadence server.
 
+### Basic
+This is the only bench test that don't require advanced visibility.
+
+As the name suggests, this load tests the basic case of starting workflows and running activities in sequential/parallel. Once all test workflows are started, it will wait test workflow timeout + 5 mins before checking the status of all test workflows. If the failure rate is too high, or if there's any open workflows found, the test will fail.
+
+The basic load can also be run in "panic" mode by setting `"panicStressWorkflow": true,` to test if server can handle large number of panic workflows (which can be caused by a bad worker deployment).
+
+Sample configuration can be found in `config/bench/basic.json` and `config/ben/basic_panic.json`. To start the test, a sample command can be
+```
+cadence --do <domain> wf start --tl cadence-bench-tl-0 --wt basic-load-test-workflow --dt 30 --et 3600 --if config/bench/basic.json
+```
+
+`<domain>` needs to be one of the domains in bench config (by default  ./config/bench/development.yaml), e.g. `cadence-bench`. 
+
+Then wait for the bench test result. 
+```
+$cadence --do cadence-bench wf ob -w a2813321-a1bd-40c6-934f-88ad0ded6037
+Progress:
+  1, 2021-08-20T11:49:14-07:00, WorkflowExecutionStarted
+  2, 2021-08-20T11:49:14-07:00, DecisionTaskScheduled
+...
+...
+  20, 2021-08-20T11:59:24-07:00, DecisionTaskStarted
+  21, 2021-08-20T11:59:24-07:00, DecisionTaskCompleted
+  22, 2021-08-20T11:59:24-07:00, WorkflowExecutionCompleted
+
+Result:
+  Run Time: 526 seconds
+  Status: COMPLETED
+  Output: "SuccessCount: 100, FailedCount: 0"
+```
+The test will return error if the test doesn't pass. There are two cases:
+* The stress workflow couldn't finish within the timeout
+* There are more failed worklfow than expected(configured by `failureThreshold`)
+
 ### Cron
 `Cron` itself is not a test. It is responsible for running multiple other tests in parallel or sequential according a cron schedule. 
 
@@ -72,16 +110,6 @@ When all tests complete, `Cron` will update the value of the `Passed` search att
 A sample cron configuration is in `config/bench/cron.json`, and it can be started with
 ```
 cadence --do <domain> wf start --tl cadence-bench-tl-0 --wt cron-test-workflow --dt 30 --et 7200 --if config/bench/cron.json
-```
-
-### Basic
-As the name suggests, this load tests the basic case of starting workflows and running activities in sequential/parallel. Once all test workflows are started, it will wait test workflow timeout + 5 mins before checking the status of all test workflows. If the failure rate is too high, or if there's any open workflows found, the test will fail.
-
-The basic load can also be run in "panic" mode by setting `"panicStressWorkflow": true,` to test if server can handle large number of panic workflows (which can be caused by a bad worker deployment).
-
-Sample configuration can be found in `config/bench/basic.json` and `config/ben/basic_panic.json`. To start the test, a sample command can be
-```
-cadence --do <domain> wf start --tl cadence-bench-tl-0 --wt basic-load-test-workflow --dt 30 --et 3600 --if config/bench/basic.json
 ```
 
 ### Cancellation

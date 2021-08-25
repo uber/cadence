@@ -85,7 +85,7 @@ func (s *failoverWatcherSuite) SetupTest() {
 
 	logger := loggerimpl.NewNopLogger()
 	scope := tally.NewTestScope("failover_test", nil)
-	metricsClient := metrics.NewClient(scope, metrics.DomainFailoverScope)
+	metricsClient := metrics.NewClient(scope, metrics.Frontend)
 	s.watcher = NewFailoverWatcher(
 		s.mockDomainCache,
 		s.mockMetadataMgr,

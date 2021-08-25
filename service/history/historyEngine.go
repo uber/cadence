@@ -639,7 +639,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	if err != nil {
 		return nil, err
 	}
-	historySize, err := wfContext.PersistFirstWorkflowEvents(ctx, newWorkflowEventsSeq[0])
+	historySize, err := wfContext.PersistStartWorkflowBatchEvents(ctx, newWorkflowEventsSeq[0])
 	if err != nil {
 		return nil, err
 	}
@@ -2690,6 +2690,8 @@ func (e *historyEngineImpl) NotifyNewCrossClusterTasks(
 		case *persistence.CrossClusterCancelExecutionTask:
 			targetCluster = crossClusterTask.TargetCluster
 		case *persistence.CrossClusterSignalExecutionTask:
+			targetCluster = crossClusterTask.TargetCluster
+		case *persistence.CrossClusterRecordChildWorkflowExecutionCompleteTask:
 			targetCluster = crossClusterTask.TargetCluster
 		default:
 			panic("encountered unknown cross cluster task type")

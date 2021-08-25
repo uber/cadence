@@ -22,7 +22,6 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"time"
 
@@ -44,8 +43,10 @@ type (
 		Persistence Persistence `yaml:"persistence"`
 		// Log is the logging config
 		Log Logger `yaml:"log"`
-		// ClusterMetadata is the config containing all valid clusters and active cluster
-		ClusterMetadata *ClusterMetadata `yaml:"clusterMetadata"`
+		// ClusterGroupMetadata is the config containing all valid clusters and active cluster
+		ClusterGroupMetadata *ClusterGroupMetadata `yaml:"clusterGroupMetadata"`
+		// Deprecated: please use ClusterGroupMetadata
+		ClusterMetadata *ClusterGroupMetadata `yaml:"clusterMetadata"`
 		// DCRedirectionPolicy contains the frontend datacenter redirection policy
 		DCRedirectionPolicy DCRedirectionPolicy `yaml:"dcRedirectionPolicy"`
 		// Services is a map of service name to service config items
@@ -54,7 +55,7 @@ type (
 		Kafka KafkaConfig `yaml:"kafka"`
 		// Archival is the config for archival
 		Archival Archival `yaml:"archival"`
-		// PublicClient is config for connecting to cadence frontend
+		// PublicClient is config for sys worker service connecting to cadence frontend
 		PublicClient PublicClient `yaml:"publicClient"`
 		// DynamicConfigClient is the config for setting up the file based dynamic config client
 		// Filepath would be relative to the root directory when the path wasn't absolute.
@@ -297,32 +298,6 @@ type (
 		LevelKey string `yaml:"levelKey"`
 	}
 
-	// ClusterMetadata contains the all cluster which participated in cross DC
-	ClusterMetadata struct {
-		EnableGlobalDomain bool `yaml:"enableGlobalDomain"`
-		// FailoverVersionIncrement is the increment of each cluster version when failover happens
-		FailoverVersionIncrement int64 `yaml:"failoverVersionIncrement"`
-		// PrimaryClusterName is the primary cluster name, only the primary cluster can register / update domain
-		// all clusters can do domain failover
-		PrimaryClusterName string `yaml:"primaryClusterName"`
-		// MasterClusterName is deprecated. Please use PrimaryClusterName.
-		MasterClusterName string `yaml:"masterClusterName"`
-		// CurrentClusterName is the name of the current cluster
-		CurrentClusterName string `yaml:"currentClusterName"`
-		// ClusterInformation contains all cluster names to corresponding information about that cluster
-		ClusterInformation map[string]ClusterInformation `yaml:"clusterInformation"`
-	}
-
-	// ClusterInformation contains the information about each cluster which participated in cross DC
-	ClusterInformation struct {
-		Enabled                bool  `yaml:"enabled"`
-		InitialFailoverVersion int64 `yaml:"initialFailoverVersion"`
-		// RPCName indicate the remote service name
-		RPCName string `yaml:"rpcName"`
-		// Address indicate the remote service address(Host:Port). Host can be DNS name.
-		RPCAddress string `yaml:"rpcAddress"`
-	}
-
 	// DCRedirectionPolicy contains the frontend datacenter redirection policy
 	DCRedirectionPolicy struct {
 		Policy string `yaml:"policy"`
@@ -422,7 +397,8 @@ type (
 	// PublicClient is config for connecting to cadence frontend
 	PublicClient struct {
 		// HostPort is the host port to connect on. Host can be DNS name
-		HostPort string `yaml:"hostPort" validate:"nonzero"`
+		// Default to currentCluster's RPCAddress in ClusterInformation
+		HostPort string `yaml:"hostPort"`
 		// interval to refresh DNS. Default to 10s
 		RefreshInterval time.Duration `yaml:"RefreshInterval"`
 	}
@@ -463,22 +439,16 @@ type (
 
 // ValidateAndFillDefaults validates this config and fills default values if needed
 func (c *Config) ValidateAndFillDefaults() error {
-	if err := c.validate(); err != nil {
-		return err
-	}
-	return c.fillDefaults()
+	c.fillDefaults()
+	return c.validate()
 }
 
 func (c *Config) validate() error {
 	if err := c.Persistence.Validate(); err != nil {
 		return err
 	}
-	if c.ClusterMetadata == nil {
-		return fmt.Errorf("ClusterMetadata cannot be empty")
-	}
-	if !c.ClusterMetadata.EnableGlobalDomain {
-		log.Println("[WARN] Local domain is now deprecated. Please update config to enable global domain(ClusterMetadata->EnableGlobalDomain)." +
-			"Global domain of single cluster has zero overhead, but only advantages for future migration and fail over. Please check Cadence documentation for more details.")
+	if err := c.ClusterGroupMetadata.validate(); err != nil {
+		return err
 	}
 	if err := c.Archival.Validate(&c.DomainDefaults.Archival); err != nil {
 		return err
@@ -487,7 +457,7 @@ func (c *Config) validate() error {
 	return c.Authorization.Validate()
 }
 
-func (c *Config) fillDefaults() error {
+func (c *Config) fillDefaults() {
 	// filling default encodingType/decodingTypes for SQL persistence
 	for k, store := range c.Persistence.DataStores {
 		if store.SQL != nil {
@@ -502,16 +472,20 @@ func (c *Config) fillDefaults() error {
 			c.Persistence.DataStores[k] = store
 		}
 	}
-	// filling RPCName with a default value if empty
-	if c.ClusterMetadata != nil {
-		for k, cluster := range c.ClusterMetadata.ClusterInformation {
-			if cluster.RPCName == "" {
-				cluster.RPCName = "cadence-frontend"
-				c.ClusterMetadata.ClusterInformation[k] = cluster
-			}
-		}
+
+	// TODO: remove this after 0.23 and mention a breaking change in config.
+	if c.ClusterGroupMetadata == nil && c.ClusterMetadata != nil {
+		c.ClusterGroupMetadata = c.ClusterMetadata
+		log.Println("[WARN] clusterMetadata config is deprecated. Please replace it with clusterGroupMetadata.")
 	}
-	return nil
+
+	c.ClusterGroupMetadata.fillDefaults()
+
+	// filling publicClient with current cluster's RPC address if empty
+	if c.PublicClient.HostPort == "" && c.ClusterGroupMetadata != nil {
+		name := c.ClusterGroupMetadata.CurrentClusterName
+		c.PublicClient.HostPort = c.ClusterGroupMetadata.ClusterGroup[name].RPCAddress
+	}
 }
 
 // String converts the config object into a string

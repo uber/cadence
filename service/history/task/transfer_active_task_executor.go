@@ -1,4 +1,5 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2021 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -70,6 +71,8 @@ type (
 		parentClosePolicyClient parentclosepolicy.Client
 		workflowResetter        reset.WorkflowResetter
 	}
+
+	generatorF = func(taskGenerator execution.MutableStateTaskGenerator) error
 )
 
 // NewTransferActiveTaskExecutor creates a new task executor for active transfer task
@@ -335,23 +338,36 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		return err
 	}
 
+	var crossClusterTaskGenerators []generatorF
 	// Communicate the result to parent execution if this is Child Workflow execution
 	if replyToParentWorkflow {
-		recordChildCompletionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
-		defer cancel()
-		err = t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &types.RecordChildExecutionCompletedRequest{
-			DomainUUID: parentDomainID,
-			WorkflowExecution: &types.WorkflowExecution{
-				WorkflowID: parentWorkflowID,
-				RunID:      parentRunID,
-			},
-			InitiatedID: initiatedID,
-			CompletedExecution: &types.WorkflowExecution{
-				WorkflowID: task.WorkflowID,
-				RunID:      task.RunID,
-			},
-			CompletionEvent: completionEvent,
-		})
+		targetDomainEntry, err := t.shard.GetDomainCache().GetDomainByID(parentDomainID)
+		if err != nil {
+			return err
+		}
+		if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
+			// TODO: consider moving this logic to GenerateWorkflowCloseTasks and uxxse here as a back-up to save latency
+			crossClusterTaskGenerators = append(crossClusterTaskGenerators,
+				func(taskGenerator execution.MutableStateTaskGenerator) error {
+					return taskGenerator.GenerateCrossClusterTaskFromTransferTask(task, targetCluster)
+				})
+		} else {
+			recordChildCompletionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
+			defer cancel()
+			err = t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &types.RecordChildExecutionCompletedRequest{
+				DomainUUID: parentDomainID,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: parentWorkflowID,
+					RunID:      parentRunID,
+				},
+				InitiatedID: initiatedID,
+				CompletedExecution: &types.WorkflowExecution{
+					WorkflowID: task.WorkflowID,
+					RunID:      task.RunID,
+				},
+				CompletionEvent: completionEvent,
+			})
+		}
 
 		// Check to see if the error is non-transient, in which case reset the error and continue with processing
 		switch err.(type) {
@@ -362,6 +378,20 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 
 	if err != nil {
 		return err
+	}
+
+	// TODO: pass crossClusterTaskGenerators to processParentClosePolicy to add new cross
+	// cluster tasks then move the call below after processParentClosePolicy call
+	if len(crossClusterTaskGenerators) > 0 {
+		err = t.generateCrossClusterTasks(
+			ctx,
+			wfContext,
+			task,
+			crossClusterTaskGenerators,
+		)
+		if err != nil {
+			return err
+		}
 	}
 
 	return t.processParentClosePolicy(ctx, task.DomainID, domainName, children)
@@ -410,7 +440,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 	}
 
 	if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
-		return t.generateCrossClusterTask(ctx, wfContext, task, targetCluster)
+		return t.generateCrossClusterTaskFromTransferTask(ctx, wfContext, task, targetCluster)
 	}
 
 	targetDomainName := targetDomainEntry.GetInfo().Name
@@ -510,7 +540,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 	}
 
 	if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
-		return t.generateCrossClusterTask(ctx, wfContext, task, targetCluster)
+		return t.generateCrossClusterTaskFromTransferTask(ctx, wfContext, task, targetCluster)
 	}
 
 	targetDomainName := targetDomainEntry.GetInfo().Name
@@ -631,7 +661,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		targetDomainName = task.TargetDomainID
 	} else {
 		if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
-			return t.generateCrossClusterTask(ctx, wfContext, task, targetCluster)
+			return t.generateCrossClusterTaskFromTransferTask(ctx, wfContext, task, targetCluster)
 		}
 
 		targetDomainName = targetDomainEntry.GetInfo().Name
@@ -644,7 +674,10 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 
 	// ChildExecution already started, just create DecisionTask and complete transfer task
 	if childInfo.StartedID != common.EmptyEventID {
-		// entity not exist error is checked and ignored in HandleErr() method in task.go
+		// NOTE: do not access anything related mutable state after this lock release
+		// release the context lock since we no longer need mutable state builder and
+		// the rest of logic is making RPC call, which takes time.
+		release(nil)
 		return createFirstDecisionTask(
 			ctx,
 			t.historyClient,
@@ -652,8 +685,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 			&types.WorkflowExecution{
 				WorkflowID: childInfo.StartedWorkflowID,
 				RunID:      childInfo.StartedRunID,
-			},
-		)
+			})
 	}
 
 	attributes := initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes
@@ -688,6 +720,10 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		return err
 	}
 
+	// NOTE: do not access anything related mutable state after this lock release
+	// release the context lock since we no longer need mutable state builder and
+	// the rest of logic is making RPC call, which takes time.
+	release(nil)
 	// Finally create first decision task for Child execution so it is really started
 	// entity not exist error is checked and ignored in HandleErr() method in task.go
 	return createFirstDecisionTask(
@@ -1208,18 +1244,28 @@ func (t *transferActiveTaskExecutor) isCrossClusterTask(
 	return "", false
 }
 
-func (t *transferActiveTaskExecutor) generateCrossClusterTask(
+func (t *transferActiveTaskExecutor) generateCrossClusterTasks(
 	ctx context.Context,
 	wfContext execution.Context,
 	task *persistence.TransferTaskInfo,
-	targetCluster string,
+	generators []generatorF,
 ) error {
 	return t.updateWorkflowExecution(
 		ctx,
 		wfContext,
 		false,
 		func(ctx context.Context, mutableState execution.MutableState) error {
-			if !mutableState.IsWorkflowExecutionRunning() {
+			if task.TaskType == persistence.TransferTaskTypeCloseExecution {
+				// IsWorkflowCompleted only returns true when the workflow is completed,
+				// !IsWorkflowExecutionRunning below returns true when the wf is zombie or corrupted too
+				if !mutableState.IsWorkflowCompleted() {
+					t.logger.Error("generateCrossClusterTasks", tag.Error(types.BadRequestError{
+						Message: "Workflow has an invalid state for recordChildClose cross cluster task",
+					}))
+					// Returning nil to avoid infinite retry loop
+					return nil
+				}
+			} else if !mutableState.IsWorkflowExecutionRunning() {
 				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
 			}
 
@@ -1229,7 +1275,31 @@ func (t *transferActiveTaskExecutor) generateCrossClusterTask(
 				t.logger,
 				mutableState,
 			)
-			return taskGenerator.GenerateCrossClusterTaskFromTransferTask(task, targetCluster)
+			for _, generator := range generators {
+				err := generator(taskGenerator)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	)
+}
+
+func (t *transferActiveTaskExecutor) generateCrossClusterTaskFromTransferTask(
+	ctx context.Context,
+	wfContext execution.Context,
+	task *persistence.TransferTaskInfo,
+	targetCluster string,
+) error {
+	return t.generateCrossClusterTasks(
+		ctx,
+		wfContext,
+		task,
+		[]generatorF{
+			func(taskGenerator execution.MutableStateTaskGenerator) error {
+				return taskGenerator.GenerateCrossClusterTaskFromTransferTask(task, targetCluster)
+			},
 		},
 	)
 }

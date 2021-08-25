@@ -62,10 +62,10 @@ const (
 	// Default value: FALSE
 	// Allowed filters: N/A
 	EnableGlobalDomain
-	// EnableVisibilitySampling is key for enable visibility sampling
+	// EnableVisibilitySampling is key for enable visibility sampling for basic(DB based) visibility
 	// KeyName: system.enableVisibilitySampling
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: FALSE
 	// Allowed filters: N/A
 	EnableVisibilitySampling
 	// EnableReadFromClosedExecutionV2 is key for enable read from cadence_visibility.closed_executions_v2
@@ -366,6 +366,12 @@ const (
 	// Default value: 0
 	// Allowed filters: DomainName
 	FrontendGlobalDomainRPS
+	// FrontendDecisionResultCountLimit is max number of decisions per RespondDecisionTaskCompleted request
+	// KeyName: frontend.decisionResultCountLimit
+	// Value type: Int
+	// Default value: 0
+	// Allowed filters: DomainName
+	FrontendDecisionResultCountLimit
 	// FrontendHistoryMgrNumConns is for persistence cluster.NumConns
 	// KeyName: frontend.historyMgrNumConns
 	// Value type: Int
@@ -813,6 +819,13 @@ const (
 	// Default value: 3*time.Minute
 	// Allowed filters: DomainID
 	StandbyTaskReReplicationContextTimeout
+	// ResurrectionCheckMinDelay is the minimal timer processing delay before scanning history to see
+	// if there's a resurrected timer/activity
+	// KeyName: history.resurrectionCheckMinDelay
+	// Value type: Duration
+	// Default value: 24*time.Hour
+	// Allowed filters: N/A
+	ResurrectionCheckMinDelay
 	// QueueProcessorEnableSplit is indicates whether processing queue split policy should be enabled
 	// KeyName: history.queueProcessorEnableSplit
 	// Value type: Bool
@@ -1992,6 +2005,7 @@ var Keys = map[Key]string{
 	FrontendHistoryMaxPageSize:                  "frontend.historyMaxPageSize",
 	FrontendRPS:                                 "frontend.rps",
 	FrontendMaxDomainRPSPerInstance:             "frontend.domainrps",
+	FrontendDecisionResultCountLimit:            "frontend.decisionResultCountLimit",
 	FrontendGlobalDomainRPS:                     "frontend.globalDomainrps",
 	FrontendHistoryMgrNumConns:                  "frontend.historyMgrNumConns",
 	FrontendShutdownDrainDuration:               "frontend.shutdownDrainDuration",
@@ -2070,6 +2084,7 @@ var Keys = map[Key]string{
 	StandbyTaskRedispatchInterval:                      "history.standbyTaskRedispatchInterval",
 	TaskRedispatchIntervalJitterCoefficient:            "history.taskRedispatchIntervalJitterCoefficient",
 	StandbyTaskReReplicationContextTimeout:             "history.standbyTaskReReplicationContextTimeout",
+	ResurrectionCheckMinDelay:                          "history.resurrectionCheckMinDelay",
 	QueueProcessorEnableSplit:                          "history.queueProcessorEnableSplit",
 	QueueProcessorSplitMaxLevel:                        "history.queueProcessorSplitMaxLevel",
 	QueueProcessorEnableRandomSplitByDomainID:          "history.queueProcessorEnableRandomSplitByDomainID",
