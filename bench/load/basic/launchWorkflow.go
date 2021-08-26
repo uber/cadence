@@ -169,9 +169,8 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 		passed, result.TimeoutCount, result.FailedCount, result.OpenCount, config.TotalLaunchCount, maxTolerantFailure)
 	if passed {
 		return finalResult, nil
-	} else {
-		return "", fmt.Errorf(finalResult)
 	}
+	return "", fmt.Errorf(finalResult)
 }
 
 func launcherActivity(ctx context.Context, params launcherActivityParams) error {
