@@ -1,4 +1,5 @@
 {
+  "useBasicVisibilityValidation": true,
   "totalLaunchCount": 100,
   "routineCount": 1,
   "chainSequence": 4,
