@@ -164,7 +164,11 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 	passed := (result.TimeoutCount + result.OpenCount + result.FailedCount) <= int(maxTolerantFailure)
 	finalResult := fmt.Sprintf("TEST PASSED: %v; Details report: timeoutCount: %v, failedCount: %v, openCount:%v, launchCount: %v, maxThreshold:%v",
 		passed, result.TimeoutCount, result.FailedCount, result.OpenCount, config.TotalLaunchCount, maxTolerantFailure)
-	return finalResult, nil
+	if passed {
+		return finalResult, nil
+	} else {
+		return "", fmt.Errorf(finalResult)
+	}
 }
 
 func launcherActivity(ctx context.Context, params launcherActivityParams) error {
