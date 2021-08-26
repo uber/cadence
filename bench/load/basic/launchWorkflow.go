@@ -272,8 +272,7 @@ func verifyByAdvancedVisibility(ctx context.Context, params verifyActivityParams
 	query := fmt.Sprintf(
 		openWorkflowQuery,
 		stressWorkflowName,
-		params.WorkflowStartTime,
-		time.Now().UnixNano())
+		params.WorkflowStartTime)
 	request := &shared.CountWorkflowExecutionsRequest{
 		Domain: c.StringPtr(info.WorkflowDomain),
 		Query:  &query,
