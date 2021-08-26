@@ -1314,6 +1314,7 @@ func (t *transferActiveTaskExecutor) generateCrossClusterTasks(
 			}
 			return nil
 		},
+		t.shard.GetTimeSource().Now(),
 	)
 }
 
@@ -1332,7 +1333,6 @@ func (t *transferActiveTaskExecutor) generateCrossClusterTaskFromTransferTask(
 				return taskGenerator.GenerateCrossClusterTaskFromTransferTask(task, targetCluster)
 			},
 		},
-		t.shard.GetTimeSource().Now(),
 	)
 }
 
