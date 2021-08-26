@@ -63,8 +63,9 @@ type (
 	}
 
 	verifyActivityParams struct {
-		WorkflowStartTime    int64
-		ListWorkflowPageSize int32
+		WorkflowStartTime            int64
+		ListWorkflowPageSize         int32
+		UseBasicVisibilityValidation bool
 	}
 
 	verifyActivityResult struct {
@@ -100,6 +101,7 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 	ctx = workflow.WithActivityOptions(ctx, ao)
 	startTime := workflow.Now(ctx)
 
+	futures := make([]workflow.Future, 0, config.RoutineCount)
 	for i := 0; i < config.RoutineCount; i++ {
 		actInput := launcherActivityParams{
 			RoutineID: i,
@@ -111,6 +113,10 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 			LauncherLaunchActivityName,
 			actInput,
 		)
+		futures = append(futures, f)
+	}
+
+	for _, f := range futures {
 		err := f.Get(ctx, nil)
 		if err != nil {
 			return "", err
@@ -129,8 +135,9 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 
 	maxTolerantFailure := int32(float64(config.TotalLaunchCount) * config.FailureThreshold)
 	actInput := verifyActivityParams{
-		WorkflowStartTime:    startTime.UnixNano(),
-		ListWorkflowPageSize: maxTolerantFailure + 10,
+		WorkflowStartTime:            startTime.UnixNano(),
+		ListWorkflowPageSize:         maxTolerantFailure + 10,
+		UseBasicVisibilityValidation: config.UseBasicVisibilityValidation,
 	}
 	actOptions := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
@@ -238,8 +245,76 @@ func verifyResultActivity(
 ) (verifyActivityResult, error) {
 	cc := ctx.Value(lib.CtxKeyCadenceClient).(lib.CadenceClient)
 	info := activity.GetInfo(ctx)
-	var opens, timeouts, faileds int
 
+	var opens, timeouts, faileds int
+	var err error
+
+	if params.UseBasicVisibilityValidation {
+		opens, timeouts, faileds, err = verifyByBasicVisibility(ctx, params, cc, info)
+	} else {
+		opens, timeouts, faileds, err = verifyByAdvancedVisibility(ctx, params, cc, info)
+	}
+
+	return verifyActivityResult{
+		OpenCount:    opens,
+		FailedCount:  faileds,
+		TimeoutCount: timeouts,
+	}, err
+}
+
+func verifyByAdvancedVisibility(ctx context.Context, params verifyActivityParams, cc lib.CadenceClient, info activity.Info) (opens, timeouts, faileds int, err error) {
+	openWorkflowQuery := "WorkflowType='%v' and StartTime > %v and CloseTime = missing"
+	timeoutWorkflowQuery := "WorkflowType='%v' and CloseStatus=5 and StartTime > %v and CloseTime < %v"
+	failedWorkflowQuery := "WorkflowType='%v' and CloseStatus=1 and StartTime > %v and CloseTime < %v"
+
+	query := fmt.Sprintf(
+		openWorkflowQuery,
+		stressWorkflowName,
+		params.WorkflowStartTime,
+		time.Now().UnixNano())
+	request := &shared.CountWorkflowExecutionsRequest{
+		Domain: c.StringPtr(info.WorkflowDomain),
+		Query:  &query,
+	}
+	resp, err := cc.CountWorkflow(ctx, request)
+	if err != nil {
+		return
+	}
+	opens = int(resp.GetCount())
+
+	query = fmt.Sprintf(
+		timeoutWorkflowQuery,
+		stressWorkflowName,
+		params.WorkflowStartTime,
+		time.Now().UnixNano())
+	request = &shared.CountWorkflowExecutionsRequest{
+		Domain: c.StringPtr(info.WorkflowDomain),
+		Query:  &query,
+	}
+	resp, err = cc.CountWorkflow(ctx, request)
+	if err != nil {
+		return
+	}
+	timeouts = int(resp.GetCount())
+
+	query = fmt.Sprintf(
+		failedWorkflowQuery,
+		stressWorkflowName,
+		params.WorkflowStartTime,
+		time.Now().UnixNano())
+	request = &shared.CountWorkflowExecutionsRequest{
+		Domain: c.StringPtr(info.WorkflowDomain),
+		Query:  &query,
+	}
+	resp, err = cc.CountWorkflow(ctx, request)
+	if err != nil {
+		return
+	}
+	faileds = int(resp.GetCount())
+	return
+}
+
+func verifyByBasicVisibility(ctx context.Context, params verifyActivityParams, cc lib.CadenceClient, info activity.Info) (opens, timeouts, faileds int, err error) {
 	// verify if any open workflow
 	listOpenWorkflowRequest := &shared.ListOpenWorkflowExecutionsRequest{
 		Domain:          c.StringPtr(info.WorkflowDomain),
@@ -254,7 +329,7 @@ func verifyResultActivity(
 	}
 	openWfs, err := cc.ListOpenWorkflow(ctx, listOpenWorkflowRequest)
 	if err != nil {
-		return verifyActivityResult{}, err
+		return
 	}
 
 	if len(openWfs.Executions) > 0 {
@@ -274,7 +349,7 @@ func verifyResultActivity(
 	}
 	wfs, err := cc.ListClosedWorkflow(ctx, listWorkflowRequest)
 	if err != nil {
-		return verifyActivityResult{}, err
+		return
 	}
 
 	if len(wfs.Executions) > 0 {
@@ -286,16 +361,11 @@ func verifyResultActivity(
 	listWorkflowRequest.StatusFilter = &closeStatus
 	wfs, err = cc.ListClosedWorkflow(ctx, listWorkflowRequest)
 	if err != nil {
-		return verifyActivityResult{}, err
+		return
 	}
 
 	if len(wfs.Executions) > 0 {
 		timeouts = len(wfs.Executions)
 	}
-
-	return verifyActivityResult{
-		OpenCount:    opens,
-		FailedCount:  faileds,
-		TimeoutCount: timeouts,
-	}, nil
+	return
 }

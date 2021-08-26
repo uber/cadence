@@ -89,6 +89,7 @@ type (
 
 	// BasicTestConfig contains the configuration for running the Basic test scenario
 	BasicTestConfig struct {
+		UseBasicVisibilityValidation          bool    `yaml:"useBasicVisibilityValidation"`          // use basic(db based) visibility to verify the stress workflows, default false which requires advanced visibility on the server
 		TotalLaunchCount                      int     `yaml:"totalLaunchCount"`                      // total number of stressWorkflows that started by the launchWorkflow
 		RoutineCount                          int     `yaml:"routineCount"`                          // number of in-parallel launch activities that started by launchWorkflow, to start the stressWorkflows
 		ChainSequence                         int     `yaml:"chainSequence"`                         // number of steps in the stressWorkflow

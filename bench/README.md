@@ -70,7 +70,8 @@ This section briefly describes the purpose of each bench load and provides a sam
 Please note that all load configurations in `config/bench` is for only local development and illustration purpose, it does not reflect the actual capability of Cadence server.
 
 ### Basic
-:warning: NOTE: This is the only bench test which doesn't require advanced visibility feature on the server. Make sure you set `basicValidation` to run with basic(db) visibility.
+:warning: NOTE: This is the only bench test which doesn't require advanced visibility feature on the server. Make sure you set `useBasicVisibilityValidation` to true if run with basic(db) visibility.  
+Also basicVisibilityValidation requires only one test load run in the same domain. This is because of the limitation of basic visibility now allow using workflowType and status filters at the same time.  
 
 As the name suggests, this load tests the basic case of starting workflows and running activities in sequential/parallel. Once all test workflows are started, it will wait test workflow timeout + 5 mins before checking the status of all test workflows. If the failure rate is too high, or if there's any open workflows found, the test will fail.
 
@@ -109,7 +110,7 @@ The output result is how many stressWorkflow were started successfully, and fail
 
 Configuration explnation
 ```
-basicValidation: using basic(db) visibility to verify the results, default false
+useBasicVisibilityValidation: use basic(db based) visibility to verify the stress workflows, default false which requires advanced visibility on the server
 totalLaunchCount	: total number of stressWorkflows that started by the launchWorkflow
 routineCount	: number of in-parallel launch activities that started by launchWorkflow, to start the stressWorkflows
 chainSequence	: number of steps in the stressWorkflow
