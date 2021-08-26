@@ -87,6 +87,12 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 	if config.MaxLauncherActivityRetryCount == 0 {
 		config.MaxLauncherActivityRetryCount = defaultMaxLauncherActivityRetryCount
 	}
+	if config.ContextTimeoutInSeconds == 0 {
+		config.ContextTimeoutInSeconds = int(common.DefaultContextTimeout / time.Second)
+	}
+	if config.ExecutionStartToCloseTimeoutInSeconds == 0 {
+		config.ExecutionStartToCloseTimeoutInSeconds = int(defaultStressWorkflowStartToCloseTimeout / time.Second)
+	}
 
 	workflowPerActivity := config.TotalLaunchCount / config.RoutineCount
 	workflowTimeout := workflow.GetInfo(ctx).ExecutionStartToCloseTimeoutSeconds
@@ -127,10 +133,7 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 		}
 	}
 
-	workflowWaitTime := defaultStressWorkflowStartToCloseTimeout
-	if config.ExecutionStartToCloseTimeoutInSeconds > 0 {
-		workflowWaitTime = time.Duration(config.ExecutionStartToCloseTimeoutInSeconds) * time.Second
-	}
+	workflowWaitTime := time.Duration(config.ExecutionStartToCloseTimeoutInSeconds) * time.Second
 	workflowWaitTime += workflowWaitTimeBuffer
 	logger.Info(fmt.Sprintf("%v stressWorkflows are launched, now waiting for %v ...", config.TotalLaunchCount, workflowWaitTime))
 	if err := workflow.Sleep(ctx, workflowWaitTime); err != nil {
@@ -191,10 +194,7 @@ func launcherActivity(ctx context.Context, params launcherActivityParams) error 
 	numTaskList := rc.Bench.NumTaskLists
 	basicTestConfig := params.Config
 
-	stressWorkflowTimeout := defaultStressWorkflowStartToCloseTimeout
-	if basicTestConfig.ExecutionStartToCloseTimeoutInSeconds > 0 {
-		stressWorkflowTimeout = time.Duration(basicTestConfig.ExecutionStartToCloseTimeoutInSeconds) * time.Second
-	}
+	stressWorkflowTimeout := time.Duration(basicTestConfig.ExecutionStartToCloseTimeoutInSeconds) * time.Second
 	workflowOptions := client.StartWorkflowOptions{
 		ExecutionStartToCloseTimeout: stressWorkflowTimeout,
 	}
@@ -214,18 +214,13 @@ func launcherActivity(ctx context.Context, params launcherActivityParams) error 
 		CadenceSleep:     sleepTime,
 	}
 
-	startWFCtxTimeout := common.DefaultContextTimeout
-	if basicTestConfig.ContextTimeoutInSeconds > 0 {
-		startWFCtxTimeout = time.Duration(basicTestConfig.ContextTimeoutInSeconds) * time.Second
-	}
-
 	for startedID := lastStartedID; startedID < params.Count; startedID++ {
 		stressWorkflowInput.TaskListNumber = rand.Intn(numTaskList)
 
 		workflowOptions.ID = fmt.Sprintf("%v-%d-%d", info.WorkflowExecution.ID, params.RoutineID, startedID)
 		workflowOptions.TaskList = common.GetTaskListName(stressWorkflowInput.TaskListNumber)
 
-		startWorkflowContext, cancelF := context.WithTimeout(context.Background(), startWFCtxTimeout)
+		startWorkflowContext, cancelF := context.WithTimeout(context.Background(), time.Duration(basicTestConfig.ContextTimeoutInSeconds)*time.Second)
 		we, err := cc.StartWorkflow(startWorkflowContext, workflowOptions, stressWorkflowExecute, stressWorkflowInput)
 		cancelF()
 		if err == nil {

@@ -119,7 +119,7 @@ payloadSizeBytes	: payloadSize of echo data in the dummy activity
 minCadenceSleepInSeconds	: control sleep time between two steps in the stressWorkflow, actual sleep time = random(min,max), default: 0
 maxCadenceSleepInSeconds	: control sleep time between two steps in the stressWorkflow, actual sleep time = random(min,max), default: 0
 executionStartToCloseTimeoutInSeconds	: StartToCloseTimeout of stressWorkflow, default 5m
-contextTimeoutInSeconds	: RPC timeout for starting a stressWorkflow, default 3s
+contextTimeoutInSeconds	: RPC timeout inside activities(e.g. starting a stressWorkflow) default 3s
 panicStressWorkflow	: if true, stressWorkflow will always panic, default false
 failureThreshold	: the threshold of failed stressWorkflow for deciding whether or not the whole testSuite failed.
 maxLauncherActivityRetryCount   : the max retry on launcher activity to start stress workflows, default: 5

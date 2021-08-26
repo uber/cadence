@@ -98,7 +98,7 @@ type (
 		MinCadenceSleepInSeconds              int     `yaml:"minCadenceSleepInSeconds"`              // control sleep time between two steps in the stressWorkflow, actual sleep time = random(min,max), default: 0
 		MaxCadenceSleepInSeconds              int     `yaml:"maxCadenceSleepInSeconds"`              // control sleep time between two steps in the stressWorkflow, actual sleep time = random(min,max), default: 0
 		ExecutionStartToCloseTimeoutInSeconds int     `yaml:"executionStartToCloseTimeoutInSeconds"` // StartToCloseTimeout of stressWorkflow, default 5m
-		ContextTimeoutInSeconds               int     `yaml:"contextTimeoutInSeconds"`               // RPC timeout for starting a stressWorkflow, default 3s
+		ContextTimeoutInSeconds               int     `yaml:"contextTimeoutInSeconds"`               // RPC timeout inside activities(e.g. starting a stressWorkflow) default 3s
 		PanicStressWorkflow                   bool    `yaml:"panicStressWorkflow"`                   // if true, stressWorkflow will always panic, default false
 		FailureThreshold                      float64 `yaml:"failureThreshold"`                      // the threshold of failed stressWorkflow for deciding whether or not the whole testSuite failed.
 		MaxLauncherActivityRetryCount         int     `yaml:"maxLauncherActivityRetryCount"`         // the max retry on launcher activity to start stress workflows, default: 5
