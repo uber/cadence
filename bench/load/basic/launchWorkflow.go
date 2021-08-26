@@ -52,7 +52,7 @@ const (
 
 	defaultStressWorkflowStartToCloseTimeout = 5 * time.Minute  // default 5m may not be not enough for long running workflow
 	workflowWaitTimeBuffer                   = 10 * time.Second // time buffer of waiting for stressWorkflow execution. Hence the actual waiting time is  stressWorkflowStartToCloseTimeout + workflowWaitTimeBuffer
-	maxLauncherActivityRetryCount            = 5                // number of retry for launcher activity
+	defaultMaxLauncherActivityRetryCount     = 5                // number of retry for launcher activity
 )
 
 type (
@@ -84,6 +84,10 @@ func RegisterLauncher(w worker.Worker) {
 
 func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string, error) {
 	logger := workflow.GetLogger(ctx).With(zap.String("Test", TestName))
+	if config.MaxLauncherActivityRetryCount == 0 {
+		config.MaxLauncherActivityRetryCount = defaultMaxLauncherActivityRetryCount
+	}
+
 	workflowPerActivity := config.TotalLaunchCount / config.RoutineCount
 	workflowTimeout := workflow.GetInfo(ctx).ExecutionStartToCloseTimeoutSeconds
 	ao := workflow.ActivityOptions{
@@ -94,8 +98,8 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 			InitialInterval:    time.Second,
 			BackoffCoefficient: 1,
 			MaximumInterval:    time.Second,
-			ExpirationInterval: time.Second * time.Duration(workflowTimeout+1) * time.Second * maxLauncherActivityRetryCount,
-			MaximumAttempts:    maxLauncherActivityRetryCount,
+			ExpirationInterval: time.Second * time.Duration(workflowTimeout+1) * time.Second * time.Duration(config.MaxLauncherActivityRetryCount),
+			MaximumAttempts:    int32(config.MaxLauncherActivityRetryCount),
 		},
 	}
 	ctx = workflow.WithActivityOptions(ctx, ao)

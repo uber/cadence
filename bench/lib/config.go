@@ -101,6 +101,7 @@ type (
 		ContextTimeoutInSeconds               int     `yaml:"contextTimeoutInSeconds"`               // RPC timeout for starting a stressWorkflow, default 3s
 		PanicStressWorkflow                   bool    `yaml:"panicStressWorkflow"`                   // if true, stressWorkflow will always panic, default false
 		FailureThreshold                      float64 `yaml:"failureThreshold"`                      // the threshold of failed stressWorkflow for deciding whether or not the whole testSuite failed.
+		MaxLauncherActivityRetryCount         int     `yaml:"maxLauncherActivityRetryCount"`         // the max retry on launcher activity to start stress workflows, default: 5
 	}
 
 	// SignalTestConfig is the parameters for signalLoadTestWorkflow

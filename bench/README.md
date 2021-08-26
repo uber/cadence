@@ -110,7 +110,7 @@ The output result is how many stressWorkflow were started successfully, and fail
 
 Configuration explnation
 ```
-useBasicVisibilityValidation: use basic(db based) visibility to verify the stress workflows, default false which requires advanced visibility on the server
+useBasicVisibilityValidation:   use basic(db based) visibility to verify the stress workflows, default false which requires advanced visibility on the server
 totalLaunchCount	: total number of stressWorkflows that started by the launchWorkflow
 routineCount	: number of in-parallel launch activities that started by launchWorkflow, to start the stressWorkflows
 chainSequence	: number of steps in the stressWorkflow
@@ -122,7 +122,7 @@ executionStartToCloseTimeoutInSeconds	: StartToCloseTimeout of stressWorkflow, d
 contextTimeoutInSeconds	: RPC timeout for starting a stressWorkflow, default 3s
 panicStressWorkflow	: if true, stressWorkflow will always panic, default false
 failureThreshold	: the threshold of failed stressWorkflow for deciding whether or not the whole testSuite failed.
-
+maxLauncherActivityRetryCount   : the max retry on launcher activity to start stress workflows, default: 5
 ``` 
 
 ### Cancellation
