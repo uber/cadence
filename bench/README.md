@@ -26,7 +26,7 @@ Different ways of start the bench workers:
 
 #### 1. Use docker image `ubercadence/cadence-bench:latest`
 
-For now, this image has on release versions for simplified the release process. Always use `latest` tag for the image. 
+For now, this image has no release versions for simplified the release process. Always use `latest` tag for the image. 
 
 You can [pre-built docker-compose file](../docker/docker-compose-bench.yml) to run against local server
 In the `docker/` directory, run:
