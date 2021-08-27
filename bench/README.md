@@ -57,11 +57,24 @@ Worker Configurations
 ----------------------
 Bench workers configuration contains two parts:
 - **Bench**: this part controls the client side, including the bench service name, which domains bench workers are responsible for and how many taskLists each domain should use.
-- **Cadence**: this control how bench worker should talk to Cadence server, which includes the server's service name and address.
+```yaml 
+bench:
+  name: "cadence-bench" # bench name
+  domains: ["cadence-bench", "cadence-bench-sync", "cadence-bench-batch"] # it will start workers on all those domains(also try to register if not exists) 
+  numTaskLists: 3 # it will start workers listening on cadence-bench-tl-0, cadence-bench-tl-1,  cadence-bench-tl-2
+``` 
+1. Bench workers will only poll from task lists whose name start with `cadence-bench-tl-`. If in the configuration, `numTaskLists` is specified to be 2, then workers will only listen to `cadence-bench-tl-0` and `cadence-bench-tl-1`. So make sure you use a valid task list name when starting the bench load.
+2. When starting bench workers, it will try to register a **local domain with archival feature disabled** for each domain name listed in the configuration, if not already exists. If your want to test the performance of global domains and/or archival feature, please register the domains first before starting the worker.
 
-Note:
-1.  When starting bench workers, it will try to register a **local domain with archival feature disabled** for each domain name listed in the configuration, if not already exists. If your want to test the performance of global domains and/or archival feature, please register the domains first before starting the worker.
-2.  Bench workers will only poll from task lists whose name start with `cadence-bench-tl-`. If in the configuration, `numTaskLists` is specified to be 2, then workers will only listen to `cadence-bench-tl-0` and `cadence-bench-tl-1`. So make sure you use a valid task list name when starting the bench load.
+- **Cadence**: this control how bench worker should talk to Cadence server, which includes the server's service name and address.
+```yaml
+cadence:
+  service: "cadence-frontend" # frontend service name
+  host: "127.0.0.1:7933" # frontend address
+```
+- **Metrics**: metrics configuration. Similar to server metric emitter, only M3/Statsd/Prometheus is supported. 
+- **Log**: logging configuration.  Similar to server logging configuration. 
+
 
 Bench Load Types
 -----------
