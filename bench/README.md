@@ -88,8 +88,11 @@ Also basicVisibilityValidation requires only one test load run in the same domai
 
 As the name suggests, this load tests the basic case of load testing. 
 You will start a `launchWorkflow` which will execute some `launchActivities` to start `stressWorkflows`. Then the stressWorkflows running activities in sequential/parallel.
- Once all stressWorkflows are started, launchWorkflow will wait stressWorkflows timeout + 5 mins before checking the status of all test workflows. 
-If the failure rate is too high, or if there's any open workflows found, the test will fail.
+Once all stressWorkflows are started, launchWorkflow will wait stressWorkflows timeout + buffer time(default to 5 mins) before checking the status of all test workflows. 
+
+Two criteria must be met to pass the verification:
+1. No open workflows(this means server may lose some tasks and not able to close the stressWorkflows)
+2. Failed/timeouted workflows <= threshold(totalLaunchCount * failureThreshold )
 
 The basic load can also be run in "panic" mode by setting `"panicStressWorkflow": true,` to test if server can handle large number of panic workflows (which can be caused by a bad worker deployment).
 
