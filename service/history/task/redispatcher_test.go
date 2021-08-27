@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -42,8 +43,9 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller    *gomock.Controller
-		mockProcessor *MockProcessor
+		controller     *gomock.Controller
+		mockProcessor  *MockProcessor
+		mockTimeSource *clock.EventTimeSource
 
 		metricsScope metrics.Scope
 		logger       log.Logger
@@ -62,12 +64,12 @@ func (s *redispatcherSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 	s.mockProcessor = NewMockProcessor(s.controller)
+	s.mockTimeSource = clock.NewEventTimeSource()
 
 	s.metricsScope = metrics.NewClient(tally.NoopScope, metrics.History).Scope(0)
 	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 
 	s.redispatcher = s.newTestRedispatcher()
-	s.redispatcher.Start()
 }
 
 func (s *redispatcherSuite) TearDownTest() {
@@ -97,14 +99,17 @@ func (s *redispatcherSuite) TestRedispatch_ProcessorShutDown() {
 	for i := 0; i != numTasks; i++ {
 		mockTask := NewMockTask(s.controller)
 		mockTask.EXPECT().Priority().Return(rand.Intn(5)).AnyTimes()
+		mockTask.EXPECT().GetAttempt().Return(0).Times(1)
 		s.redispatcher.AddTask(mockTask)
 	}
 
 	s.Equal(numTasks, s.redispatcher.Size())
+	s.mockTimeSource.Update(s.mockTimeSource.Now().Add(2 * s.redispatcher.options.TaskRedispatchInterval()))
+	s.redispatcher.Start()
 	<-s.redispatcher.shutdownCh
 	<-stopDoneCh
 
-	s.Equal(numTasks-successfullyRedispatched-1, s.redispatcher.Size())
+	s.Equal(numTasks-successfullyRedispatched, s.redispatcher.Size())
 }
 
 func (s *redispatcherSuite) TestRedispatch_WithTargetSize() {
@@ -114,10 +119,13 @@ func (s *redispatcherSuite) TestRedispatch_WithTargetSize() {
 	for i := 0; i != numTasks; i++ {
 		mockTask := NewMockTask(s.controller)
 		mockTask.EXPECT().Priority().Return(rand.Intn(5)).AnyTimes()
+		mockTask.EXPECT().GetAttempt().Return(0).Times(1)
 		s.redispatcher.AddTask(mockTask)
 		s.mockProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).MaxTimes(1)
 	}
 
+	s.mockTimeSource.Update(s.mockTimeSource.Now().Add(2 * s.redispatcher.options.TaskRedispatchInterval()))
+	s.redispatcher.Start()
 	s.redispatcher.Redispatch(targetSize)
 
 	// implementation can choose to redispatch more tasks than needed
@@ -125,22 +133,57 @@ func (s *redispatcherSuite) TestRedispatch_WithTargetSize() {
 	s.True(s.redispatcher.Size() > 0)
 }
 
+func (s *redispatcherSuite) TestRedispatch_Backoff() {
+	numTasks := 50
+	numLowAttemptTasks := 0
+	numHighAttemptTasks := 0
+	for i := 0; i != numTasks; i++ {
+		attempt := 100
+		if rand.Intn(2) == 0 {
+			numLowAttemptTasks++
+			attempt = 0
+		} else {
+			numHighAttemptTasks++
+		}
+
+		mockTask := NewMockTask(s.controller)
+		mockTask.EXPECT().Priority().Return(rand.Intn(5)).AnyTimes()
+		mockTask.EXPECT().GetAttempt().Return(attempt).Times(1)
+		s.redispatcher.AddTask(mockTask)
+		s.mockProcessor.EXPECT().TrySubmit(NewMockTaskMatcher(mockTask)).Return(true, nil).MaxTimes(1)
+	}
+
+	s.mockTimeSource.Update(s.mockTimeSource.Now().Add(2 * s.redispatcher.options.TaskRedispatchInterval()))
+	s.redispatcher.Start()
+	s.redispatcher.Redispatch(0)
+
+	s.Equal(numHighAttemptTasks, s.redispatcher.Size())
+}
+
 func (s *redispatcherSuite) TestRedispatch_Random() {
-	numTasks := 10
+	numTasks := 100
 	dispatched := 0
 
 	for i := 0; i != numTasks; i++ {
-		mockTask := NewMockTask(s.controller)
-		mockTask.EXPECT().Priority().Return(rand.Intn(5)).AnyTimes()
-		s.redispatcher.AddTask(mockTask)
 		submitted := false
+		attempt := 100
 		if rand.Intn(2) == 0 {
 			submitted = true
-			dispatched++
+			if rand.Intn(2) == 0 {
+				dispatched++
+				attempt = 0
+			}
 		}
+
+		mockTask := NewMockTask(s.controller)
+		mockTask.EXPECT().Priority().Return(rand.Intn(5)).AnyTimes()
+		mockTask.EXPECT().GetAttempt().Return(attempt).Times(1)
+		s.redispatcher.AddTask(mockTask)
 		s.mockProcessor.EXPECT().TrySubmit(NewMockTaskMatcher(mockTask)).Return(submitted, nil).MaxTimes(1)
 	}
 
+	s.mockTimeSource.Update(s.mockTimeSource.Now().Add(2 * s.redispatcher.options.TaskRedispatchInterval()))
+	s.redispatcher.Start()
 	s.redispatcher.Redispatch(0)
 
 	// implementation can choose to stop redispatch for a certain priority when previous submit has failed
@@ -150,6 +193,7 @@ func (s *redispatcherSuite) TestRedispatch_Random() {
 func (s *redispatcherSuite) newTestRedispatcher() *redispatcherImpl {
 	return NewRedispatcher(
 		s.mockProcessor,
+		s.mockTimeSource,
 		&RedispatcherOptions{
 			TaskRedispatchInterval:                  dynamicconfig.GetDurationPropertyFn(time.Millisecond * 50),
 			TaskRedispatchIntervalJitterCoefficient: dynamicconfig.GetFloatPropertyFn(0.15),
