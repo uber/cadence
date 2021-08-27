@@ -164,13 +164,18 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 	).Get(ctx, &result); err != nil {
 		return "", err
 	}
-	passed := (result.TimeoutCount + result.OpenCount + result.FailedCount) <= int(maxTolerantFailure)
-	finalResult := fmt.Sprintf("TEST PASSED: %v; Details report: timeoutCount: %v, failedCount: %v, openCount:%v, launchCount: %v, maxThreshold:%v",
-		passed, result.TimeoutCount, result.FailedCount, result.OpenCount, config.TotalLaunchCount, maxTolerantFailure)
+
+	// Passing criteria:
+	//    1. No open workflows(this means server may lose some tasks and not able to close the stressWorkflows)
+	//    2. Failed workflows <= threshold
+	passed := (result.TimeoutCount+result.FailedCount) <= int(maxTolerantFailure) && result.OpenCount == 0
+
+	detailResult := fmt.Sprintf("Details report: timeoutCount: %v, failedCount: %v, openCount:%v, launchCount: %v, maxThreshold:%v",
+		result.TimeoutCount, result.FailedCount, result.OpenCount, config.TotalLaunchCount, maxTolerantFailure)
 	if passed {
-		return finalResult, nil
+		return fmt.Sprintf("TEST PASSED. %v", detailResult), nil
 	}
-	return "", fmt.Errorf(finalResult)
+	return "", fmt.Errorf("TEST FAILED. %v", detailResult)
 }
 
 func launcherActivity(ctx context.Context, params launcherActivityParams) error {
