@@ -26,17 +26,17 @@
 package historyserviceclient
 
 import (
-	"context"
-	"reflect"
+	context "context"
+	reflect "reflect"
 
-	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
+	wire "go.uber.org/thriftrw/wire"
+	yarpc "go.uber.org/yarpc"
+	transport "go.uber.org/yarpc/api/transport"
+	thrift "go.uber.org/yarpc/encoding/thrift"
 
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
+	history "github.com/uber/cadence/.gen/go/history"
+	replicator "github.com/uber/cadence/.gen/go/replicator"
+	shared "github.com/uber/cadence/.gen/go/shared"
 )
 
 // Interface is a client for the HistoryService service.
@@ -83,11 +83,11 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*replicator.GetDLQReplicationMessagesResponse, error)
 
-	GetFailoverInfoByDomainID(
+	GetFailoverInfo(
 		ctx context.Context,
-		Request *history.GetFailoverInfoByDomainIDRequest,
+		Request *history.GetFailoverInfoRequest,
 		opts ...yarpc.CallOption,
-	) (*history.GetFailoverInfoByDomainIDResponse, error)
+	) (*history.GetFailoverInfoResponse, error)
 
 	GetMutableState(
 		ctx context.Context,
@@ -479,13 +479,13 @@ func (c client) GetDLQReplicationMessages(
 	return
 }
 
-func (c client) GetFailoverInfoByDomainID(
+func (c client) GetFailoverInfo(
 	ctx context.Context,
-	_Request *history.GetFailoverInfoByDomainIDRequest,
+	_Request *history.GetFailoverInfoRequest,
 	opts ...yarpc.CallOption,
-) (success *history.GetFailoverInfoByDomainIDResponse, err error) {
+) (success *history.GetFailoverInfoResponse, err error) {
 
-	args := history.HistoryService_GetFailoverInfoByDomainID_Helper.Args(_Request)
+	args := history.HistoryService_GetFailoverInfo_Helper.Args(_Request)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -493,12 +493,12 @@ func (c client) GetFailoverInfoByDomainID(
 		return
 	}
 
-	var result history.HistoryService_GetFailoverInfoByDomainID_Result
+	var result history.HistoryService_GetFailoverInfo_Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	success, err = history.HistoryService_GetFailoverInfoByDomainID_Helper.UnwrapResponse(&result)
+	success, err = history.HistoryService_GetFailoverInfo_Helper.UnwrapResponse(&result)
 	return
 }
 

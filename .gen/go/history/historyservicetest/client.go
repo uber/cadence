@@ -297,37 +297,37 @@ func (mr *_MockClientRecorder) GetDLQReplicationMessages(
 	return mr.mock.ctrl.RecordCall(mr.mock, "GetDLQReplicationMessages", args...)
 }
 
-// GetFailoverInfoByDomainID responds to a GetFailoverInfoByDomainID call based on the mock expectations. This
+// GetFailoverInfo responds to a GetFailoverInfo call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().GetFailoverInfoByDomainID(gomock.Any(), ...).Return(...)
-// 	... := client.GetFailoverInfoByDomainID(...)
-func (m *MockClient) GetFailoverInfoByDomainID(
+// 	client.EXPECT().GetFailoverInfo(gomock.Any(), ...).Return(...)
+// 	... := client.GetFailoverInfo(...)
+func (m *MockClient) GetFailoverInfo(
 	ctx context.Context,
-	_Request *history.GetFailoverInfoByDomainIDRequest,
+	_Request *history.GetFailoverInfoRequest,
 	opts ...yarpc.CallOption,
-) (success *history.GetFailoverInfoByDomainIDResponse, err error) {
+) (success *history.GetFailoverInfoResponse, err error) {
 
 	args := []interface{}{ctx, _Request}
 	for _, o := range opts {
 		args = append(args, o)
 	}
 	i := 0
-	ret := m.ctrl.Call(m, "GetFailoverInfoByDomainID", args...)
-	success, _ = ret[i].(*history.GetFailoverInfoByDomainIDResponse)
+	ret := m.ctrl.Call(m, "GetFailoverInfo", args...)
+	success, _ = ret[i].(*history.GetFailoverInfoResponse)
 	i++
 	err, _ = ret[i].(error)
 	return
 }
 
-func (mr *_MockClientRecorder) GetFailoverInfoByDomainID(
+func (mr *_MockClientRecorder) GetFailoverInfo(
 	ctx interface{},
 	_Request interface{},
 	opts ...interface{},
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _Request}, opts...)
-	return mr.mock.ctrl.RecordCall(mr.mock, "GetFailoverInfoByDomainID", args...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "GetFailoverInfo", args...)
 }
 
 // GetMutableState responds to a GetMutableState call based on the mock expectations. This

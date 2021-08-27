@@ -1807,27 +1807,27 @@ func (v *HistoryTerminateWorkflowExecutionRequest) GetTerminateRequest() (o *Ter
 	return
 }
 
-// GetFailoverInfoByDomainIDRequest is an internal type (TBD...)
-type GetFailoverInfoByDomainIDRequest struct {
+// GetFailoverInfoRequest is an internal type (TBD...)
+type GetFailoverInfoRequest struct {
 	DomainID string `json:"domainID,omitempty"`
 }
 
 // GetDomainID is an internal getter (TBD...)
-func (v *GetFailoverInfoByDomainIDRequest) GetDomainID() (o string) {
+func (v *GetFailoverInfoRequest) GetDomainID() (o string) {
 	if v != nil {
 		return v.DomainID
 	}
 	return
 }
 
-// GetFailoverInfoByDomainIDResponse is an internal type (TBD...)
-type GetFailoverInfoByDomainIDResponse struct {
+// GetFailoverInfoResponse is an internal type (TBD...)
+type GetFailoverInfoResponse struct {
 	CompletedShardCount int32   `json:"completedShardCount,omitempty"`
 	PendingShards       []int32 `json:"pendingShards,omitempty"`
 }
 
 // GetCompletedShardCount is an internal getter (TBD...)
-func (v *GetFailoverInfoByDomainIDResponse) GetCompletedShardCount() (o int32) {
+func (v *GetFailoverInfoResponse) GetCompletedShardCount() (o int32) {
 	if v != nil {
 		return v.CompletedShardCount
 	}
@@ -1835,7 +1835,7 @@ func (v *GetFailoverInfoByDomainIDResponse) GetCompletedShardCount() (o int32) {
 }
 
 // GetPendingShards is an internal getter (TBD...)
-func (v *GetFailoverInfoByDomainIDResponse) GetPendingShards() (o []int32) {
+func (v *GetFailoverInfoResponse) GetPendingShards() (o []int32) {
 	if v != nil {
 		return v.PendingShards
 	}

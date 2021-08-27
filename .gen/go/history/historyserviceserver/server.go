@@ -75,10 +75,10 @@ type Interface interface {
 		Request *replicator.GetDLQReplicationMessagesRequest,
 	) (*replicator.GetDLQReplicationMessagesResponse, error)
 
-	GetFailoverInfoByDomainID(
+	GetFailoverInfo(
 		ctx context.Context,
-		Request *history.GetFailoverInfoByDomainIDRequest,
-	) (*history.GetFailoverInfoByDomainIDResponse, error)
+		Request *history.GetFailoverInfoRequest,
+	) (*history.GetFailoverInfoResponse, error)
 
 	GetMutableState(
 		ctx context.Context,
@@ -340,13 +340,13 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "GetFailoverInfoByDomainID",
+				Name: "GetFailoverInfo",
 				HandlerSpec: thrift.HandlerSpec{
 
 					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetFailoverInfoByDomainID),
+					Unary: thrift.UnaryHandler(h.GetFailoverInfo),
 				},
-				Signature:    "GetFailoverInfoByDomainID(Request *history.GetFailoverInfoByDomainIDRequest) (*history.GetFailoverInfoByDomainIDResponse)",
+				Signature:    "GetFailoverInfo(Request *history.GetFailoverInfoRequest) (*history.GetFailoverInfoResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -947,17 +947,17 @@ func (h handler) GetDLQReplicationMessages(ctx context.Context, body wire.Value)
 	return response, err
 }
 
-func (h handler) GetFailoverInfoByDomainID(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args history.HistoryService_GetFailoverInfoByDomainID_Args
+func (h handler) GetFailoverInfo(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_GetFailoverInfo_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
-			"could not decode Thrift request for service 'HistoryService' procedure 'GetFailoverInfoByDomainID': %w", err)
+			"could not decode Thrift request for service 'HistoryService' procedure 'GetFailoverInfo': %w", err)
 	}
 
-	success, appErr := h.impl.GetFailoverInfoByDomainID(ctx, args.Request)
+	success, appErr := h.impl.GetFailoverInfo(ctx, args.Request)
 
 	hadError := appErr != nil
-	result, err := history.HistoryService_GetFailoverInfoByDomainID_Helper.WrapResponse(success, appErr)
+	result, err := history.HistoryService_GetFailoverInfo_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {

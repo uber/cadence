@@ -776,19 +776,19 @@ func (c *metricClient) RespondCrossClusterTasksCompleted(
 	return resp, err
 }
 
-func (c *metricClient) GetFailoverInfoByDomainID(
+func (c *metricClient) GetFailoverInfo(
 	ctx context.Context,
-	request *types.GetFailoverInfoByDomainIDRequest,
+	request *types.GetFailoverInfoRequest,
 	opts ...yarpc.CallOption,
-) (*types.GetFailoverInfoByDomainIDResponse, error) {
-	c.metricsClient.IncCounter(metrics.HistoryClientGetFailoverInfoByDomainIDScope, metrics.CadenceClientRequests)
+) (*types.GetFailoverInfoResponse, error) {
+	c.metricsClient.IncCounter(metrics.HistoryClientGetFailoverInfoScope, metrics.CadenceClientRequests)
 
-	sw := c.metricsClient.StartTimer(metrics.HistoryClientGetFailoverInfoByDomainIDScope, metrics.CadenceClientLatency)
-	resp, err := c.client.GetFailoverInfoByDomainID(ctx, request, opts...)
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientGetFailoverInfoScope, metrics.CadenceClientLatency)
+	resp, err := c.client.GetFailoverInfo(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.HistoryClientGetFailoverInfoByDomainIDScope, metrics.CadenceClientFailures)
+		c.metricsClient.IncCounter(metrics.HistoryClientGetFailoverInfoScope, metrics.CadenceClientFailures)
 	}
 
 	return resp, err

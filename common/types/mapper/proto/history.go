@@ -249,39 +249,39 @@ func ToHistoryGetDLQReplicationMessagesResponse(t *historyv1.GetDLQReplicationMe
 	}
 }
 
-func FromHistoryGetFailoverInfoByDomainIDRequest(t *types.GetFailoverInfoByDomainIDRequest) *historyv1.GetFailoverInfoByDomainIDRequest {
+func FromHistoryGetFailoverInfoRequest(t *types.GetFailoverInfoRequest) *historyv1.GetFailoverInfoRequest {
 	if t == nil {
 		return nil
 	}
-	return &historyv1.GetFailoverInfoByDomainIDRequest{
+	return &historyv1.GetFailoverInfoRequest{
 		DomainId: t.GetDomainID(),
 	}
 }
 
-func ToHistoryGetFailoverInfoByDomainIDRequest(t *historyv1.GetFailoverInfoByDomainIDRequest) *types.GetFailoverInfoByDomainIDRequest {
+func ToHistoryGetFailoverInfoRequest(t *historyv1.GetFailoverInfoRequest) *types.GetFailoverInfoRequest {
 	if t == nil {
 		return nil
 	}
-	return &types.GetFailoverInfoByDomainIDRequest{
+	return &types.GetFailoverInfoRequest{
 		DomainID: t.GetDomainId(),
 	}
 }
 
-func FromHistoryGetFailoverInfoByDomainIDResponse(t *types.GetFailoverInfoByDomainIDResponse) *historyv1.GetFailoverInfoByDomainIDResponse {
+func FromHistoryGetFailoverInfoResponse(t *types.GetFailoverInfoResponse) *historyv1.GetFailoverInfoResponse {
 	if t == nil {
 		return nil
 	}
-	return &historyv1.GetFailoverInfoByDomainIDResponse{
+	return &historyv1.GetFailoverInfoResponse{
 		CompletedShardCount: t.GetCompletedShardCount(),
 		PendingShards:       t.GetPendingShards(),
 	}
 }
 
-func ToHistoryGetFailoverInfoByDomainIDResponse(t *historyv1.GetFailoverInfoByDomainIDResponse) *types.GetFailoverInfoByDomainIDResponse {
+func ToHistoryGetFailoverInfoResponse(t *historyv1.GetFailoverInfoResponse) *types.GetFailoverInfoResponse {
 	if t == nil {
 		return nil
 	}
-	return &types.GetFailoverInfoByDomainIDResponse{
+	return &types.GetFailoverInfoResponse{
 		CompletedShardCount: t.GetCompletedShardCount(),
 		PendingShards:       t.GetPendingShards(),
 	}

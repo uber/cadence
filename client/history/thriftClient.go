@@ -244,7 +244,7 @@ func (t thriftClient) TerminateWorkflowExecution(ctx context.Context, request *t
 	return thrift.ToError(err)
 }
 
-func (t thriftClient) GetFailoverInfoByDomainID(ctx context.Context, request *types.GetFailoverInfoByDomainIDRequest, opts ...yarpc.CallOption) (*types.GetFailoverInfoByDomainIDResponse, error) {
-	response, err := t.c.GetFailoverInfoByDomainID(ctx, thrift.FromGetFailoverInfoByDomainIDRequest(request), opts...)
-	return thrift.ToGetFailoverInfoByDomainIDResponse(response), thrift.ToError(err)
+func (t thriftClient) GetFailoverInfo(ctx context.Context, request *types.GetFailoverInfoRequest, opts ...yarpc.CallOption) (*types.GetFailoverInfoResponse, error) {
+	response, err := t.c.GetFailoverInfo(ctx, thrift.FromGetFailoverInfoRequest(request), opts...)
+	return thrift.ToGetFailoverInfoResponse(response), thrift.ToError(err)
 }

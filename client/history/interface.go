@@ -73,5 +73,5 @@ type Client interface {
 	SyncActivity(context.Context, *types.SyncActivityRequest, ...yarpc.CallOption) error
 	SyncShardStatus(context.Context, *types.SyncShardStatusRequest, ...yarpc.CallOption) error
 	TerminateWorkflowExecution(context.Context, *types.HistoryTerminateWorkflowExecutionRequest, ...yarpc.CallOption) error
-	GetFailoverInfoByDomainID(context.Context, *types.GetFailoverInfoByDomainIDRequest, ...yarpc.CallOption) (*types.GetFailoverInfoByDomainIDResponse, error)
+	GetFailoverInfo(context.Context, *types.GetFailoverInfoRequest, ...yarpc.CallOption) (*types.GetFailoverInfoResponse, error)
 }

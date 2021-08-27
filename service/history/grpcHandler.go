@@ -84,9 +84,9 @@ func (g grpcHandler) GetDLQReplicationMessages(ctx context.Context, request *his
 	return proto.FromHistoryGetDLQReplicationMessagesResponse(response), proto.FromError(err)
 }
 
-func (g grpcHandler) GetFailoverInfoByDomainID(ctx context.Context, request *historyv1.GetFailoverInfoByDomainIDRequest) (*historyv1.GetFailoverInfoByDomainIDResponse, error) {
-	response, err := g.h.GetFailoverInfoByDomainID(withGRPCTag(ctx), proto.ToHistoryGetFailoverInfoByDomainIDRequest(request))
-	return proto.FromHistoryGetFailoverInfoByDomainIDResponse(response), proto.FromError(err)
+func (g grpcHandler) GetFailoverInfo(ctx context.Context, request *historyv1.GetFailoverInfoRequest) (*historyv1.GetFailoverInfoResponse, error) {
+	response, err := g.h.GetFailoverInfo(withGRPCTag(ctx), proto.ToHistoryGetFailoverInfoRequest(request))
+	return proto.FromHistoryGetFailoverInfoResponse(response), proto.FromError(err)
 }
 
 func (g grpcHandler) GetMutableState(ctx context.Context, request *historyv1.GetMutableStateRequest) (*historyv1.GetMutableStateResponse, error) {

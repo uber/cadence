@@ -65,7 +65,7 @@ type (
 
 		NotifyFailoverMarkers(shardID int32, markers []*types.FailoverMarkerAttributes)
 		ReceiveFailoverMarkers(shardIDs []int32, marker *types.FailoverMarkerAttributes)
-		GetFailoverInfo(domainID string) (int, []int32, error)
+		GetFailoverInfo(domainID string) (*types.GetFailoverInfoResponse, error)
 	}
 
 	coordinatorImpl struct {
@@ -190,13 +190,13 @@ func (c *coordinatorImpl) ReceiveFailoverMarkers(
 
 func (c *coordinatorImpl) GetFailoverInfo(
 	domainID string,
-) (int, []int32, error) {
+) (*types.GetFailoverInfoResponse, error) {
 	c.recorderLock.Lock()
 	defer c.recorderLock.Unlock()
 
 	record, ok := c.recorder[domainID]
 	if !ok {
-		return 0, []int32{}, errRecordNotFound
+		return nil, errRecordNotFound
 	}
 
 	var pendingShards []int32
@@ -205,7 +205,10 @@ func (c *coordinatorImpl) GetFailoverInfo(
 			pendingShards = append(pendingShards, int32(i))
 		}
 	}
-	return len(record.shards), pendingShards, nil
+	return &types.GetFailoverInfoResponse{
+		CompletedShardCount: int32(len(record.shards)),
+		PendingShards:       pendingShards,
+	}, nil
 }
 
 func (c *coordinatorImpl) receiveFailoverMarkersLoop() {
@@ -232,7 +235,7 @@ func (c *coordinatorImpl) notifyFailoverMarkerLoop() {
 		c.config.NotifyFailoverMarkerTimerJitterCoefficient(),
 	))
 	defer timer.Stop()
-	requestByMarker := make(map[*types.FailoverMarkerAttributes]*receiveRequest)
+	requestByMarker := make(map[types.FailoverMarkerAttributes]*receiveRequest)
 
 	for {
 		select {
@@ -243,7 +246,9 @@ func (c *coordinatorImpl) notifyFailoverMarkerLoop() {
 			// The receiver side will de-dup the shard IDs. See: handleFailoverMarkers
 			aggregateNotificationRequests(notificationReq, requestByMarker)
 		case <-timer.C:
-			c.notifyRemoteCoordinator(requestByMarker)
+			if err := c.notifyRemoteCoordinator(requestByMarker); err == nil {
+				requestByMarker = make(map[types.FailoverMarkerAttributes]*receiveRequest)
+			}
 			timer.Reset(backoff.JitDuration(
 				c.config.NotifyFailoverMarkerInterval(),
 				c.config.NotifyFailoverMarkerTimerJitterCoefficient(),
@@ -343,8 +348,8 @@ func (c *coordinatorImpl) cleanupInvalidMarkers() {
 }
 
 func (c *coordinatorImpl) notifyRemoteCoordinator(
-	requestByMarker map[*types.FailoverMarkerAttributes]*receiveRequest,
-) {
+	requestByMarker map[types.FailoverMarkerAttributes]*receiveRequest,
+) error {
 
 	if len(requestByMarker) > 0 {
 		var tokens []*types.FailoverMarkerToken
@@ -364,25 +369,27 @@ func (c *coordinatorImpl) notifyRemoteCoordinator(
 		if err != nil {
 			c.scope.IncCounter(metrics.FailoverMarkerNotificationFailure)
 			c.logger.Error("Failed to notify failover markers", tag.Error(err))
-			return
-		}
-
-		for marker := range requestByMarker {
-			delete(requestByMarker, marker)
+			return err
 		}
 	}
+	return nil
 }
 
 func aggregateNotificationRequests(
 	request *notificationRequest,
-	requestByMarker map[*types.FailoverMarkerAttributes]*receiveRequest,
+	requestByMarker map[types.FailoverMarkerAttributes]*receiveRequest,
 ) {
 
-	for _, marker := range request.markers {
+	for _, m := range request.markers {
+		marker := types.FailoverMarkerAttributes{
+			DomainID:        m.DomainID,
+			FailoverVersion: m.FailoverVersion,
+		}
 		if _, ok := requestByMarker[marker]; !ok {
+
 			requestByMarker[marker] = &receiveRequest{
 				shardIDs: []int32{},
-				marker:   marker,
+				marker:   &marker,
 			}
 		}
 		req := requestByMarker[marker]

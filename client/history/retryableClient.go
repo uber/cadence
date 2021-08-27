@@ -668,15 +668,15 @@ func (c *retryableClient) RespondCrossClusterTasksCompleted(
 	return resp, err
 }
 
-func (c *retryableClient) GetFailoverInfoByDomainID(
+func (c *retryableClient) GetFailoverInfo(
 	ctx context.Context,
-	request *types.GetFailoverInfoByDomainIDRequest,
+	request *types.GetFailoverInfoRequest,
 	opts ...yarpc.CallOption,
-) (*types.GetFailoverInfoByDomainIDResponse, error) {
-	var resp *types.GetFailoverInfoByDomainIDResponse
+) (*types.GetFailoverInfoResponse, error) {
+	var resp *types.GetFailoverInfoResponse
 	op := func() error {
 		var err error
-		resp, err = c.client.GetFailoverInfoByDomainID(ctx, request, opts...)
+		resp, err = c.client.GetFailoverInfo(ctx, request, opts...)
 		return err
 	}
 
