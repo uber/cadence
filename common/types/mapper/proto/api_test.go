@@ -686,7 +686,7 @@ func TestTimerStartedEventAttributes(t *testing.T) {
 	}
 }
 func TestUpdateDomainRequest(t *testing.T) {
-	for _, item := range []*types.UpdateDomainRequest{nil, {EmitMetric: common.BoolPtr(true)}, &testdata.UpdateDomainRequest} {
+	for _, item := range []*types.UpdateDomainRequest{nil, {}, &testdata.UpdateDomainRequest} {
 		assert.Equal(t, item, ToUpdateDomainRequest(FromUpdateDomainRequest(item)))
 	}
 }

@@ -140,18 +140,16 @@ func (s *workflowHandlerSuite) getWorkflowHandler(config *Config) *WorkflowHandl
 }
 
 func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
-	domain := "test-domain"
-	domainID := uuid.New()
 	config := s.newConfig(dc.NewInMemoryClient())
 	config.DisableListVisibilityByFilter = dc.GetBoolPropertyFnFilteredByDomain(true)
 
 	wh := s.getWorkflowHandler(config)
 
-	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(domainID, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
 
 	// test list open by wid
 	listRequest := &types.ListOpenWorkflowExecutionsRequest{
-		Domain: domain,
+		Domain: s.testDomain,
 		StartTimeFilter: &types.StartTimeFilter{
 			EarliestTime: common.Int64Ptr(0),
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
@@ -175,7 +173,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 
 	// test list close by wid
 	listRequest2 := &types.ListClosedWorkflowExecutionsRequest{
-		Domain: domain,
+		Domain: s.testDomain,
 		StartTimeFilter: &types.StartTimeFilter{
 			EarliestTime: common.Int64Ptr(0),
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
@@ -211,22 +209,30 @@ func (s *workflowHandlerSuite) TestPollForTask_Failed_ContextTimeoutTooShort() {
 	wh := s.getWorkflowHandler(config)
 
 	bgCtx := context.Background()
-	_, err := wh.PollForDecisionTask(bgCtx, &types.PollForDecisionTaskRequest{})
+	_, err := wh.PollForDecisionTask(bgCtx, &types.PollForDecisionTaskRequest{
+		Domain: s.testDomain,
+	})
 	s.Error(err)
 	s.Equal(common.ErrContextTimeoutNotSet, err)
 
-	_, err = wh.PollForActivityTask(bgCtx, &types.PollForActivityTaskRequest{})
+	_, err = wh.PollForActivityTask(bgCtx, &types.PollForActivityTaskRequest{
+		Domain: s.testDomain,
+	})
 	s.Error(err)
 	s.Equal(common.ErrContextTimeoutNotSet, err)
 
 	shortCtx, cancel := context.WithTimeout(bgCtx, common.MinLongPollTimeout-time.Millisecond)
 	defer cancel()
 
-	_, err = wh.PollForDecisionTask(shortCtx, &types.PollForDecisionTaskRequest{})
+	_, err = wh.PollForDecisionTask(shortCtx, &types.PollForDecisionTaskRequest{
+		Domain: s.testDomain,
+	})
 	s.Error(err)
 	s.Equal(common.ErrContextTimeoutTooShort, err)
 
-	_, err = wh.PollForActivityTask(shortCtx, &types.PollForActivityTaskRequest{})
+	_, err = wh.PollForActivityTask(shortCtx, &types.PollForActivityTaskRequest{
+		Domain: s.testDomain,
+	})
 	s.Error(err)
 	s.Equal(common.ErrContextTimeoutTooShort, err)
 }
@@ -237,7 +243,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_RequestIdNotSet
 	wh := s.getWorkflowHandler(config)
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
-		Domain:     "test-domain",
+		Domain:     s.testDomain,
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
 			Name: "workflow-type",
@@ -266,7 +272,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_BadDelayStartSe
 	wh := s.getWorkflowHandler(config)
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
-		Domain:     "test-domain",
+		Domain:     s.testDomain,
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
 			Name: "workflow-type",
@@ -336,7 +342,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowIdNotSe
 	wh := s.getWorkflowHandler(config)
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
-		Domain: "test-domain",
+		Domain: s.testDomain,
 		WorkflowType: &types.WorkflowType{
 			Name: "workflow-type",
 		},
@@ -365,7 +371,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowTypeNot
 	wh := s.getWorkflowHandler(config)
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
-		Domain:     "test-domain",
+		Domain:     s.testDomain,
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
 			Name: "",
@@ -395,7 +401,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_TaskListNotSet(
 	wh := s.getWorkflowHandler(config)
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
-		Domain:     "test-domain",
+		Domain:     s.testDomain,
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
 			Name: "workflow-type",
@@ -425,7 +431,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidExecutio
 	wh := s.getWorkflowHandler(config)
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
-		Domain:     "test-domain",
+		Domain:     s.testDomain,
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
 			Name: "workflow-type",
@@ -455,7 +461,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStar
 	wh := s.getWorkflowHandler(config)
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
-		Domain:     "test-domain",
+		Domain:     s.testDomain,
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
 			Name: "workflow-type",
@@ -619,7 +625,7 @@ func (s *workflowHandlerSuite) TestDescribeDomain_Success_ArchivalDisabled() {
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 
 	req := &types.DescribeDomainRequest{
-		Name: common.StringPtr("test-domain"),
+		Name: common.StringPtr(s.testDomain),
 	}
 	result, err := wh.DescribeDomain(context.Background(), req)
 
@@ -642,7 +648,7 @@ func (s *workflowHandlerSuite) TestDescribeDomain_Success_ArchivalEnabled() {
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 
 	req := &types.DescribeDomainRequest{
-		Name: common.StringPtr("test-domain"),
+		Name: common.StringPtr(s.testDomain),
 	}
 	result, err := wh.DescribeDomain(context.Background(), req)
 
@@ -884,12 +890,12 @@ func (s *workflowHandlerSuite) TestHistoryArchived() {
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 
 	getHistoryRequest := &types.GetWorkflowExecutionHistoryRequest{}
-	s.False(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
+	s.False(wh.historyArchived(context.Background(), getHistoryRequest, s.testDomain))
 
 	getHistoryRequest = &types.GetWorkflowExecutionHistoryRequest{
 		Execution: &types.WorkflowExecution{},
 	}
-	s.False(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
+	s.False(wh.historyArchived(context.Background(), getHistoryRequest, s.testDomain))
 
 	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
 	getHistoryRequest = &types.GetWorkflowExecutionHistoryRequest{
@@ -898,7 +904,7 @@ func (s *workflowHandlerSuite) TestHistoryArchived() {
 			RunID:      testRunID,
 		},
 	}
-	s.False(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
+	s.False(wh.historyArchived(context.Background(), getHistoryRequest, s.testDomain))
 
 	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(nil, &types.EntityNotExistsError{Message: "got archival indication error"}).Times(1)
 	getHistoryRequest = &types.GetWorkflowExecutionHistoryRequest{
@@ -907,7 +913,7 @@ func (s *workflowHandlerSuite) TestHistoryArchived() {
 			RunID:      testRunID,
 		},
 	}
-	s.True(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
+	s.True(wh.historyArchived(context.Background(), getHistoryRequest, s.testDomain))
 
 	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(nil, errors.New("got non-archival indication error")).Times(1)
 	getHistoryRequest = &types.GetWorkflowExecutionHistoryRequest{
@@ -916,7 +922,7 @@ func (s *workflowHandlerSuite) TestHistoryArchived() {
 			RunID:      testRunID,
 		},
 	}
-	s.False(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
+	s.False(wh.historyArchived(context.Background(), getHistoryRequest, s.testDomain))
 }
 
 func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_DomainCacheEntryError() {
@@ -931,7 +937,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_DomainCacheEntryEr
 
 func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_ArchivalURIEmpty() {
 	domainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&persistence.DomainInfo{Name: "test-domain"},
+		&persistence.DomainInfo{Name: s.testDomain},
 		&persistence.DomainConfig{
 			HistoryArchivalStatus:    types.ArchivalStatusDisabled,
 			HistoryArchivalURI:       "",
@@ -951,7 +957,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_ArchivalURIEmpty()
 
 func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_InvalidURI() {
 	domainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&persistence.DomainInfo{Name: "test-domain"},
+		&persistence.DomainInfo{Name: s.testDomain},
 		&persistence.DomainConfig{
 			HistoryArchivalStatus:    types.ArchivalStatusEnabled,
 			HistoryArchivalURI:       "uri without scheme",
@@ -971,7 +977,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_InvalidURI() {
 
 func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetFirstPage() {
 	domainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&persistence.DomainInfo{Name: "test-domain"},
+		&persistence.DomainInfo{Name: s.testDomain},
 		&persistence.DomainConfig{
 			HistoryArchivalStatus:    types.ArchivalStatusEnabled,
 			HistoryArchivalURI:       testHistoryArchivalURI,
@@ -1103,7 +1109,7 @@ func (s *workflowHandlerSuite) TestListArchivedVisibility_Failure_DomainNotConfi
 
 func (s *workflowHandlerSuite) TestListArchivedVisibility_Failure_InvalidURI() {
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewLocalDomainCacheEntryForTest(
-		&persistence.DomainInfo{Name: "test-domain"},
+		&persistence.DomainInfo{Name: s.testDomain},
 		&persistence.DomainConfig{
 			VisibilityArchivalStatus: types.ArchivalStatusDisabled,
 			VisibilityArchivalURI:    "uri without scheme",
@@ -1122,7 +1128,7 @@ func (s *workflowHandlerSuite) TestListArchivedVisibility_Failure_InvalidURI() {
 
 func (s *workflowHandlerSuite) TestListArchivedVisibility_Success() {
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewLocalDomainCacheEntryForTest(
-		&persistence.DomainInfo{Name: "test-domain"},
+		&persistence.DomainInfo{Name: s.testDomain},
 		&persistence.DomainConfig{
 			VisibilityArchivalStatus: types.ArchivalStatusEnabled,
 			VisibilityArchivalURI:    testVisibilityArchivalURI,

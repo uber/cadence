@@ -4025,7 +4025,6 @@ func ToUpdateDomainRequest(t *apiv1.UpdateDomainRequest) *types.UpdateDomainRequ
 	request := types.UpdateDomainRequest{
 		Name:          t.Name,
 		SecurityToken: t.SecurityToken,
-		EmitMetric:    common.BoolPtr(true), // DEPRECATED - defaults to true
 	}
 	fs := newFieldSet(t.UpdateMask)
 

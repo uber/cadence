@@ -1736,6 +1736,8 @@ const (
 	HistoryCount
 	EventBlobSize
 
+	DecisionResultCount
+
 	ArchivalConfigFailures
 	ActiveClusterGauge
 
@@ -1899,6 +1901,8 @@ const (
 	DecisionAttemptTimer
 	StaleMutableStateCounter
 	DataInconsistentCounter
+	TimerResurrectionCounter
+	ActivityResurrectionCounter
 	AutoResetPointsLimitExceededCounter
 	AutoResetPointCorruptionCounter
 	ConcurrencyUpdateFailureCounter
@@ -2216,6 +2220,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistorySize:                                         {metricName: "history_size", metricType: Timer},
 		HistoryCount:                                        {metricName: "history_count", metricType: Timer},
 		EventBlobSize:                                       {metricName: "event_blob_size", metricType: Timer},
+		DecisionResultCount:                                 {metricName: "decision_result_count", metricType: Timer},
 		ArchivalConfigFailures:                              {metricName: "archivalconfig_failures", metricType: Counter},
 		ActiveClusterGauge:                                  {metricName: "active_cluster", metricType: Gauge},
 		ElasticsearchRequests:                               {metricName: "elasticsearch_requests", metricType: Counter},
@@ -2402,6 +2407,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DecisionAttemptTimer:                              {metricName: "decision_attempt", metricType: Timer},
 		StaleMutableStateCounter:                          {metricName: "stale_mutable_state", metricType: Counter},
 		DataInconsistentCounter:                           {metricName: "data_inconsistent", metricType: Counter},
+		TimerResurrectionCounter:                          {metricName: "timer_resurrection", metricType: Counter},
+		ActivityResurrectionCounter:                       {metricName: "activity_resurrection", metricType: Counter},
 		AutoResetPointsLimitExceededCounter:               {metricName: "auto_reset_points_exceed_limit", metricType: Counter},
 		AutoResetPointCorruptionCounter:                   {metricName: "auto_reset_point_corruption", metricType: Counter},
 		ConcurrencyUpdateFailureCounter:                   {metricName: "concurrency_update_failure", metricType: Counter},

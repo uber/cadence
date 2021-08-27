@@ -81,7 +81,7 @@ type (
 		EnableArchival        bool
 		IsPrimaryCluster      bool
 		ClusterNo             int
-		ClusterMetadata       config.ClusterMetadata
+		ClusterGroupMetadata  config.ClusterGroupMetadata
 		MessagingClientConfig *MessagingClientConfig
 		Persistence           persistencetests.TestBaseOptions
 		HistoryConfig         *HistoryConfig
@@ -131,7 +131,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 	metricsClient := metrics.NewClient(scope, metrics.ServiceIdx(0))
 	domainReplicationQueue := domain.NewReplicationQueue(
 		testBase.DomainReplicationQueueMgr,
-		options.ClusterMetadata.CurrentClusterName,
+		options.ClusterGroupMetadata.CurrentClusterName,
 		metricsClient,
 		logger,
 	)
@@ -179,17 +179,17 @@ func noopAuthorizationConfig() config.Authorization {
 // NewClusterMetadata returns cluster metdata from config
 func NewClusterMetadata(options *TestClusterConfig, logger log.Logger) cluster.Metadata {
 	clusterMetadata := cluster.GetTestClusterMetadata(
-		options.ClusterMetadata.EnableGlobalDomain,
+		options.ClusterGroupMetadata.EnableGlobalDomain,
 		options.IsPrimaryCluster,
 	)
-	if !options.IsPrimaryCluster && options.ClusterMetadata.PrimaryClusterName != "" { // xdc cluster metadata setup
+	if !options.IsPrimaryCluster && options.ClusterGroupMetadata.PrimaryClusterName != "" { // xdc cluster metadata setup
 		clusterMetadata = cluster.NewMetadata(
 			logger,
-			dynamicconfig.GetBoolPropertyFn(options.ClusterMetadata.EnableGlobalDomain),
-			options.ClusterMetadata.FailoverVersionIncrement,
-			options.ClusterMetadata.PrimaryClusterName,
-			options.ClusterMetadata.CurrentClusterName,
-			options.ClusterMetadata.ClusterInformation,
+			dynamicconfig.GetBoolPropertyFn(options.ClusterGroupMetadata.EnableGlobalDomain),
+			options.ClusterGroupMetadata.FailoverVersionIncrement,
+			options.ClusterGroupMetadata.PrimaryClusterName,
+			options.ClusterGroupMetadata.CurrentClusterName,
+			options.ClusterGroupMetadata.ClusterGroup,
 		)
 	}
 	return clusterMetadata
