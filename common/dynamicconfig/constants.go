@@ -1257,9 +1257,9 @@ const (
 	// Allowed filters: N/A
 	ReplicatorProcessorEnablePriorityTaskProcessor
 	// ReplicatorUpperLatency indicates the max allowed replication latency between clusters
-	// KeyName: history.replicatorUpperLatencyInSeconds
+	// KeyName: history.replicatorUpperLatency
 	// Value type: Duration
-	// Default value: 40
+	// Default value: 40 * time.Second
 	// Allowed filters: N/A
 	ReplicatorUpperLatency
 

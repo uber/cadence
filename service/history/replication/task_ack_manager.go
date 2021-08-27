@@ -114,7 +114,7 @@ func NewTaskAckManager(
 		rateLimiter:          rateLimiter,
 		retryPolicy:          retryPolicy,
 		lastTaskCreationTime: atomic.Value{},
-		maxAllowedLatencyFn:  config.ReplicatorUpperLatencyInSeconds,
+		maxAllowedLatencyFn:  config.ReplicatorUpperLatency,
 		metricsClient:        shard.GetMetricsClient(),
 		logger:               shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
 		fetchTasksBatchSize:  config.ReplicatorProcessorFetchTasksBatchSize,
@@ -647,7 +647,7 @@ func (t *taskAckManagerImpl) getBatchSize() int {
 	if t.lastTaskCreationTime.Load() == nil {
 		return defaultBatchSize
 	}
-	taskLatency := now.Sub(t.lastTaskCreationTime.Load().(time.Time)) / time.Second
+	taskLatency := now.Sub(t.lastTaskCreationTime.Load().(time.Time))
 	if taskLatency < 0 {
 		taskLatency = 0
 	}
