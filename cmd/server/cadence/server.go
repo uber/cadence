@@ -24,6 +24,8 @@ import (
 	"log"
 	"time"
 
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
@@ -44,7 +46,6 @@ import (
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
 	"github.com/uber/cadence/service/worker"
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 )
 
 type (
