@@ -227,7 +227,7 @@ func launcherActivity(ctx context.Context, params launcherActivityParams) error 
 		workflowOptions.TaskList = common.GetTaskListName(stressWorkflowInput.TaskListNumber)
 
 		startWorkflowContext, cancelF := context.WithTimeout(context.Background(), time.Duration(basicTestConfig.ContextTimeoutInSeconds)*time.Second)
-		we, err := cc.StartWorkflow(startWorkflowContext, workflowOptions, stressWorkflowExecute, stressWorkflowInput)
+		we, err := cc.StartWorkflow(startWorkflowContext, workflowOptions, stressWorkflowName, stressWorkflowInput)
 		cancelF()
 		if err == nil {
 			logger.Debug("Created Workflow successfully", zap.String("WorkflowID", we.ID), zap.String("RunID", we.RunID))
