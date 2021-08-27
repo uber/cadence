@@ -24,9 +24,11 @@ See more [documentation here](https://cadenceworkflow.io/docs/concepts/search-wo
 
 Different ways of start the bench workers:
 
-#### 1. Use docker image `ubercadence/cadence-bench:latest`
+#### 1. Use docker image `ubercadence/cadence-bench:master`
 
-For now, this image has no release versions for simplified the release process. Always use `latest` tag for the image. 
+For now, this image has no release versions for simplified the release process. Always use `master` tag for the image. 
+
+Similar to server/CLI images, the bench image will be built and published automatically by Github on every commit onto the `master` branch. 
 
 You can [pre-built docker-compose file](../docker/docker-compose-bench.yml) to run against local server
 In the `docker/` directory, run:
