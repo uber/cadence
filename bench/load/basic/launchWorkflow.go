@@ -50,9 +50,9 @@ const (
 	// LauncherVerifyActivityName is the verification activity name
 	LauncherVerifyActivityName = "basic-load-test-verify-activity"
 
-	defaultStressWorkflowStartToCloseTimeout = 5 * time.Minute  // default 5m may not be not enough for long running workflow
-	workflowWaitTimeBuffer                   = 10 * time.Second // time buffer of waiting for stressWorkflow execution. Hence the actual waiting time is  stressWorkflowStartToCloseTimeout + workflowWaitTimeBuffer
-	defaultMaxLauncherActivityRetryCount     = 5                // number of retry for launcher activity
+	defaultStressWorkflowStartToCloseTimeout = 5 * time.Minute // default 5m may not be not enough for long running workflow
+	defaultStressWorkflowWaitTimeBuffer      = 5 * time.Minute // time buffer of waiting for stressWorkflow execution. Hence the actual waiting time is  stressWorkflowStartToCloseTimeout + defaultStressWorkflowWaitTimeBuffer
+	defaultMaxLauncherActivityRetryCount     = 5               // number of retry for launcher activity
 )
 
 type (
@@ -92,6 +92,9 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 	}
 	if config.ExecutionStartToCloseTimeoutInSeconds == 0 {
 		config.ExecutionStartToCloseTimeoutInSeconds = int(defaultStressWorkflowStartToCloseTimeout / time.Second)
+	}
+	if config.WaitTimeBufferInSeconds == 0 {
+		config.WaitTimeBufferInSeconds = int(defaultStressWorkflowWaitTimeBuffer / time.Second)
 	}
 
 	workflowPerActivity := config.TotalLaunchCount / config.RoutineCount
@@ -133,8 +136,7 @@ func launcherWorkflow(ctx workflow.Context, config lib.BasicTestConfig) (string,
 		}
 	}
 
-	workflowWaitTime := time.Duration(config.ExecutionStartToCloseTimeoutInSeconds) * time.Second
-	workflowWaitTime += workflowWaitTimeBuffer
+	workflowWaitTime := time.Duration(config.ExecutionStartToCloseTimeoutInSeconds+config.WaitTimeBufferInSeconds) * time.Second
 	logger.Info(fmt.Sprintf("%v stressWorkflows are launched, now waiting for %v ...", config.TotalLaunchCount, workflowWaitTime))
 	if err := workflow.Sleep(ctx, workflowWaitTime); err != nil {
 		return "", fmt.Errorf("launcher workflow sleep failed: %v", err)

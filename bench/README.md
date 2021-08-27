@@ -86,7 +86,10 @@ Please note that all load configurations in `config/bench` is for only local dev
 :warning: NOTE: This is the only bench test which doesn't require advanced visibility feature on the server. Make sure you set `useBasicVisibilityValidation` to true if run with basic(db) visibility.  
 Also basicVisibilityValidation requires only one test load run in the same domain. This is because of the limitation of basic visibility now allow using workflowType and status filters at the same time.  
 
-As the name suggests, this load tests the basic case of starting workflows and running activities in sequential/parallel. Once all test workflows are started, it will wait test workflow timeout + 5 mins before checking the status of all test workflows. If the failure rate is too high, or if there's any open workflows found, the test will fail.
+As the name suggests, this load tests the basic case of load testing. 
+You will start a `launchWorkflow` which will execute some `launchActivities` to start `stressWorkflows`. Then the stressWorkflows running activities in sequential/parallel.
+ Once all stressWorkflows are started, launchWorkflow will wait stressWorkflows timeout + 5 mins before checking the status of all test workflows. 
+If the failure rate is too high, or if there's any open workflows found, the test will fail.
 
 The basic load can also be run in "panic" mode by setting `"panicStressWorkflow": true,` to test if server can handle large number of panic workflows (which can be caused by a bad worker deployment).
 
@@ -112,7 +115,7 @@ Progress:
 Result:
   Run Time: 26 seconds
   Status: COMPLETED
-  Output: "TEST PASSED: true; Details report: timeoutCount: 0, failedCount: 0, openCount:0, launchCount: 100, maxThreshold:1"
+  Output: "TEST PASSED. Details report: timeoutCount: 0, failedCount: 0, openCount:0, launchCount: 100, maxThreshold:1"
 
 ```
 The test will return error if the test doesn't pass. There are two cases:
@@ -122,20 +125,24 @@ The test will return error if the test doesn't pass. There are two cases:
 The output result is how many stressWorkflow were started successfully, and failed.
 
 Configuration explnation
-```
+```yaml
+# configuration for launch workflow
 useBasicVisibilityValidation:   use basic(db based) visibility to verify the stress workflows, default false which requires advanced visibility on the server
 totalLaunchCount	: total number of stressWorkflows that started by the launchWorkflow
+waitTimeBufferInSeconds : buffer time in addition of ExecutionStartToCloseTimeoutInSeconds to wait for stressWorkflows before verification, default 300(5 minutes)
 routineCount	: number of in-parallel launch activities that started by launchWorkflow, to start the stressWorkflows
+failureThreshold	: the threshold of failed stressWorkflow for deciding whether or not the whole testSuite failed.
+maxLauncherActivityRetryCount   : the max retry on launcher activity to start stress workflows, default: 5
+contextTimeoutInSeconds	: RPC timeout inside activities(e.g. starting a stressWorkflow) default 3s
+
+# configuration for stress workflow
+executionStartToCloseTimeoutInSeconds	: StartToCloseTimeout of stressWorkflow, default 5m
 chainSequence	: number of steps in the stressWorkflow
 concurrentCount	: number of in-parallel activity(dummy activity only echo data) in a step of the stressWorkflow
 payloadSizeBytes	: payloadSize of echo data in the dummy activity
 minCadenceSleepInSeconds	: control sleep time between two steps in the stressWorkflow, actual sleep time = random(min,max), default: 0
 maxCadenceSleepInSeconds	: control sleep time between two steps in the stressWorkflow, actual sleep time = random(min,max), default: 0
-executionStartToCloseTimeoutInSeconds	: StartToCloseTimeout of stressWorkflow, default 5m
-contextTimeoutInSeconds	: RPC timeout inside activities(e.g. starting a stressWorkflow) default 3s
 panicStressWorkflow	: if true, stressWorkflow will always panic, default false
-failureThreshold	: the threshold of failed stressWorkflow for deciding whether or not the whole testSuite failed.
-maxLauncherActivityRetryCount   : the max retry on launcher activity to start stress workflows, default: 5
 ``` 
 
 ### Cancellation
