@@ -1,6 +1,4 @@
-// The MIT License (MIT)
-
-// Copyright (c) 2017-2020 Uber Technologies Inc.
+// Copyright (c) 2021 Uber Technologies Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -33,11 +31,11 @@ import (
 	"github.com/uber/cadence/service/history/shard"
 )
 
-// SetupWorkflow setup a workflow for testing purpose
-func SetupWorkflow(
+// StartWorkflow setup a workflow for testing purpose
+func StartWorkflow(
 	mockShard *shard.TestContext,
 	sourceDomainID string,
-) (types.WorkflowExecution, execution.MutableState, int64, error) {
+) (types.WorkflowExecution, execution.MutableState, error) {
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: constants.TestWorkflowID,
 		RunID:      constants.TestRunID,
@@ -47,7 +45,7 @@ func SetupWorkflow(
 
 	entry, err := mockShard.GetDomainCache().GetDomainByID(sourceDomainID)
 	if err != nil {
-		return types.WorkflowExecution{}, nil, 0, err
+		return types.WorkflowExecution{}, nil, err
 	}
 	version := entry.GetFailoverVersion()
 	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
@@ -70,11 +68,24 @@ func SetupWorkflow(
 		},
 	)
 	if err != nil {
+		return types.WorkflowExecution{}, nil, err
+	}
+
+	return workflowExecution, mutableState, nil
+}
+
+// SetupWorkflowWithCompletedDecision setup a workflow with a completed decision task for testing purpose
+func SetupWorkflowWithCompletedDecision(
+	mockShard *shard.TestContext,
+	sourceDomainID string,
+) (types.WorkflowExecution, execution.MutableState, int64, error) {
+	workflowExecution, mutableState, err := StartWorkflow(mockShard, sourceDomainID)
+	if err != nil {
 		return types.WorkflowExecution{}, nil, 0, err
 	}
 
 	di := AddDecisionTaskScheduledEvent(mutableState)
-	event := AddDecisionTaskStartedEvent(mutableState, di.ScheduleID, taskListName, uuid.New())
+	event := AddDecisionTaskStartedEvent(mutableState, di.ScheduleID, mutableState.GetExecutionInfo().TaskList, uuid.New())
 	di.StartedID = event.GetEventID()
 	event = AddDecisionTaskCompletedEvent(mutableState, di.ScheduleID, di.StartedID, nil, "some random identity")
 

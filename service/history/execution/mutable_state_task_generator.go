@@ -603,7 +603,14 @@ func (r *mutableStateTaskGeneratorImpl) GenerateCrossClusterTaskFromTransferTask
 				Version:          task.Version,
 			},
 		}
-	// TODO: add the case for TransferTaskTypeCloseExecution
+	case persistence.TransferTaskTypeCloseExecution:
+		crossClusterTask = &persistence.CrossClusterRecordChildWorkflowExecutionCompleteTask{
+			TargetCluster: targetCluster,
+			RecordWorkflowExecutionCompleteTask: persistence.RecordWorkflowExecutionCompleteTask{
+				// TaskID is set by shard context
+				Version: task.Version,
+			},
+		}
 	default:
 		return fmt.Errorf("unable to convert transfer task of type %v to cross-cluster task", task.TaskType)
 	}

@@ -271,6 +271,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	if err != nil {
 		return err
 	}
+	fmt.Println("currentVersion", mutableState.GetCurrentVersion())
 	if mutableState == nil || mutableState.IsWorkflowExecutionRunning() {
 		return nil
 	}

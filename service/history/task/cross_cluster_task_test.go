@@ -584,7 +584,7 @@ func (s *crossClusterTaskSuite) testGetStartChildExecutionRequest(
 		initiatedEvent *types.HistoryEvent,
 	),
 ) {
-	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflow(s.mockShard, sourceDomainID)
+	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, sourceDomainID)
 	s.NoError(err)
 	targetExecution := types.WorkflowExecution{
 		WorkflowID: "some random target workflow ID",
@@ -726,7 +726,7 @@ func (s *crossClusterTaskSuite) testGetCancelExecutionRequest(
 		cancelInfo *p.RequestCancelInfo,
 	),
 ) {
-	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflow(s.mockShard, sourceDomainID)
+	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, sourceDomainID)
 	s.NoError(err)
 	targetExecution := types.WorkflowExecution{
 		WorkflowID: "some random target workflow ID",
@@ -889,7 +889,7 @@ func (s *crossClusterTaskSuite) testGetSignalExecutionRequest(
 		signalInfo *p.SignalInfo,
 	),
 ) {
-	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflow(s.mockShard, sourceDomainID)
+	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, sourceDomainID)
 	s.NoError(err)
 	targetExecution := types.WorkflowExecution{
 		WorkflowID: "some random target workflow ID",
