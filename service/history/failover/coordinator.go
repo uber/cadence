@@ -380,19 +380,18 @@ func aggregateNotificationRequests(
 	requestByMarker map[types.FailoverMarkerAttributes]*receiveRequest,
 ) {
 
-	for _, m := range request.markers {
-		marker := types.FailoverMarkerAttributes{
-			DomainID:        m.DomainID,
-			FailoverVersion: m.FailoverVersion,
+	for _, marker := range request.markers {
+		markerMask := types.FailoverMarkerAttributes{
+			DomainID:        marker.DomainID,
+			FailoverVersion: marker.FailoverVersion,
 		}
-		if _, ok := requestByMarker[marker]; !ok {
-
-			requestByMarker[marker] = &receiveRequest{
+		if _, ok := requestByMarker[markerMask]; !ok {
+			requestByMarker[markerMask] = &receiveRequest{
 				shardIDs: []int32{},
-				marker:   &marker,
+				marker:   marker,
 			}
 		}
-		req := requestByMarker[marker]
+		req := requestByMarker[markerMask]
 		req.shardIDs = append(req.shardIDs, request.shardID)
 	}
 }
