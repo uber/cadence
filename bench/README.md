@@ -123,13 +123,11 @@ Result:
   Output: "TEST PASSED. Details report: timeoutCount: 0, failedCount: 0, openCount:0, launchCount: 100, maxThreshold:1"
 
 ```
-The test will return error if the test doesn't pass. There are two cases:
-* The started stressWorkflow couldn't finish within the timeout
-* There are more failed workflows than expected(`failureThreshold` * totalLaunchCount)
 
-The output result is how many stressWorkflow were started successfully, and failed.
+The output/error result shows whether the test passes with detailed report.
 
-Configuration explnation
+Configuration of basic load type. The config is passed as the launch workflow input parameter using a JSON file. 
+ 
 ```yaml
 # configuration for launch workflow
 useBasicVisibilityValidation:   use basic(db based) visibility to verify the stress workflows, default false which requires advanced visibility on the server
