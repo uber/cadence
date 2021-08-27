@@ -131,6 +131,7 @@ func newProcessorBase(
 		taskProcessor: taskProcessor,
 		redispatcher: task.NewRedispatcher(
 			taskProcessor,
+			shard.GetTimeSource(),
 			&task.RedispatcherOptions{
 				TaskRedispatchInterval:                  options.RedispatchInterval,
 				TaskRedispatchIntervalJitterCoefficient: options.RedispatchIntervalJitterCoefficient,
