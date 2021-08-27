@@ -1256,6 +1256,12 @@ const (
 	// Default value: FALSE
 	// Allowed filters: N/A
 	ReplicatorProcessorEnablePriorityTaskProcessor
+	// ReplicatorUpperLatency indicates the max allowed replication latency between clusters
+	// KeyName: history.replicatorUpperLatency
+	// Value type: Duration
+	// Default value: 40 * time.Second
+	// Allowed filters: N/A
+	ReplicatorUpperLatency
 
 	// ExecutionMgrNumConns is persistence connections number for ExecutionManager
 	// KeyName: history.executionMgrNumConns
@@ -2160,6 +2166,7 @@ var Keys = map[Key]string{
 	ReplicatorProcessorUpdateAckIntervalJitterCoefficient: "history.replicatorProcessorUpdateAckIntervalJitterCoefficient",
 	ReplicatorProcessorMaxRedispatchQueueSize:             "history.replicatorProcessorMaxRedispatchQueueSize",
 	ReplicatorProcessorEnablePriorityTaskProcessor:        "history.replicatorProcessorEnablePriorityTaskProcessor",
+	ReplicatorUpperLatency:                                "history.replicatorUpperLatency",
 
 	ExecutionMgrNumConns:                               "history.executionMgrNumConns",
 	HistoryMgrNumConns:                                 "history.historyMgrNumConns",
