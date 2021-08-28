@@ -48,6 +48,7 @@ type (
 		controller      *gomock.Controller
 		mockDomainCache *cache.MockDomainCache
 
+		config             *config.Config
 		priorityAssigner   *priorityAssignerImpl
 		testTaskProcessRPS int
 	}
@@ -66,15 +67,15 @@ func (s *taskPriorityAssignerSuite) SetupTest() {
 
 	s.testTaskProcessRPS = 10
 	dc := dynamicconfig.NewNopCollection()
-	config := config.NewForTest()
-	config.TaskProcessRPS = dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskProcessRPS, s.testTaskProcessRPS)
+	s.config = config.NewForTest()
+	s.config.TaskProcessRPS = dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskProcessRPS, s.testTaskProcessRPS)
 
 	s.priorityAssigner = NewPriorityAssigner(
 		cluster.TestCurrentClusterName,
 		s.mockDomainCache,
 		log.NewNoop(),
 		metrics.NewClient(tally.NoopScope, metrics.History),
-		config,
+		s.config,
 	).(*priorityAssignerImpl)
 }
 
@@ -242,12 +243,19 @@ func (s *taskPriorityAssignerSuite) TestAssign_ThrottledTask() {
 func (s *taskPriorityAssignerSuite) TestAssign_AlreadyAssigned() {
 	priority := 5
 
+	// case 1: task attempt less than critical retry count
 	mockTask := NewMockTask(s.controller)
-	mockTask.EXPECT().Priority().Return(priority).AnyTimes()
-
+	mockTask.EXPECT().Priority().Return(priority).Times(1)
+	mockTask.EXPECT().GetAttempt().Return(s.config.TaskCriticalRetryCount() - 1).Times(1)
 	err := s.priorityAssigner.Assign(mockTask)
 	s.NoError(err)
-	s.Equal(priority, mockTask.Priority())
+
+	// case 2: task attempt higher than critical retry count
+	mockTask.EXPECT().Priority().Return(priority).Times(1)
+	mockTask.EXPECT().GetAttempt().Return(s.config.TaskCriticalRetryCount() + 1).Times(1)
+	mockTask.EXPECT().SetPriority(lowTaskPriority).Times(1)
+	err = s.priorityAssigner.Assign(mockTask)
+	s.NoError(err)
 }
 
 func (s *taskPriorityAssignerSuite) TestGetTaskPriority() {

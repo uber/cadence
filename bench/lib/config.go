@@ -89,17 +89,22 @@ type (
 
 	// BasicTestConfig contains the configuration for running the Basic test scenario
 	BasicTestConfig struct {
-		TotalLaunchCount                      int     `yaml:"totalLaunchCount"`
-		RoutineCount                          int     `yaml:"routineCount"`
-		ChainSequence                         int     `yaml:"chainSequence"`
-		ConcurrentCount                       int     `yaml:"concurrentCount"`
-		PayloadSizeBytes                      int     `yaml:"payloadSizeBytes"`
-		MinCadenceSleepInSeconds              int     `yaml:"minCadenceSleepInSeconds"`
-		MaxCadenceSleepInSeconds              int     `yaml:"maxCadenceSleepInSeconds"`
-		ExecutionStartToCloseTimeoutInSeconds int     `yaml:"executionStartToCloseTimeoutInSeconds"` // default 5m
-		ContextTimeoutInSeconds               int     `yaml:"contextTimeoutInSeconds"`               // default 3s
-		PanicStressWorkflow                   bool    `yaml:"panicStressWorkflow"`                   // default false
-		FailureThreshold                      float64 `yaml:"failureThreshold"`
+		// Launch workflow config
+		UseBasicVisibilityValidation  bool    `yaml:"useBasicVisibilityValidation"`  // use basic(db based) visibility to verify the stress workflows, default false which requires advanced visibility on the server
+		TotalLaunchCount              int     `yaml:"totalLaunchCount"`              // total number of stressWorkflows that started by the launchWorkflow
+		RoutineCount                  int     `yaml:"routineCount"`                  // number of in-parallel launch activities that started by launchWorkflow, to start the stressWorkflows
+		FailureThreshold              float64 `yaml:"failureThreshold"`              // the threshold of failed stressWorkflow for deciding whether or not the whole testSuite failed.
+		MaxLauncherActivityRetryCount int     `yaml:"maxLauncherActivityRetryCount"` // the max retry on launcher activity to start stress workflows, default: 5
+		ContextTimeoutInSeconds       int     `yaml:"contextTimeoutInSeconds"`       // RPC timeout inside activities(e.g. starting a stressWorkflow) default 3s
+		WaitTimeBufferInSeconds       int     `yaml:"waitTimeBufferInSeconds"`       // buffer time in addition of ExecutionStartToCloseTimeoutInSeconds to wait for stressWorkflows before verification, default 300(5 minutes)
+		// Stress workflow config
+		ExecutionStartToCloseTimeoutInSeconds int  `yaml:"executionStartToCloseTimeoutInSeconds"` // StartToCloseTimeout of stressWorkflow, default 5m
+		ChainSequence                         int  `yaml:"chainSequence"`                         // number of steps in the stressWorkflow
+		ConcurrentCount                       int  `yaml:"concurrentCount"`                       // number of in-parallel activity(dummy activity only echo data) in a step of the stressWorkflow
+		PayloadSizeBytes                      int  `yaml:"payloadSizeBytes"`                      // payloadSize of echo data in the dummy activity
+		MinCadenceSleepInSeconds              int  `yaml:"minCadenceSleepInSeconds"`              // control sleep time between two steps in the stressWorkflow, actual sleep time = random(min,max), default: 0
+		MaxCadenceSleepInSeconds              int  `yaml:"maxCadenceSleepInSeconds"`              // control sleep time between two steps in the stressWorkflow, actual sleep time = random(min,max), default: 0
+		PanicStressWorkflow                   bool `yaml:"panicStressWorkflow"`                   // if true, stressWorkflow will always panic, default false
 	}
 
 	// SignalTestConfig is the parameters for signalLoadTestWorkflow

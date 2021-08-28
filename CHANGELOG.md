@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 You can find a list of previous releases on the [github releases](https://github.com/uber/cadence/releases) page.
 
 ## [Unreleased]
+### Added
+- Added gRPC support for cross domain traffic. This can be enabled in `ClusterGroupMetadata` config section with `rpcTransport: "grpc"` option. By default, tchannel is used. (#4390)
 
 ## [0.21.3] - 2021-07-17
 ### Added
