@@ -30,7 +30,7 @@ docker build . -f Dockerfile -t ubercadence/cli:master --build-arg TARGET=cli
 docker push ubercadence/cli:master
 
 docker build . -f Dockerfile -t ubercadence/cadence-bench:master --build-arg TARGET=bench
-docker push ubercadence/bench:master
+docker push ubercadence/cadence-bench:master
 
 docker build . -f Dockerfile -t ubercadence/cadence-canary:master --build-arg TARGET=canary
-docker push ubercadence/canary:master
+docker push ubercadence/cadence-canary:master
