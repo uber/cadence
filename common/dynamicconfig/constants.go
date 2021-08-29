@@ -1421,12 +1421,6 @@ const (
 	// Default value: 0
 	// Allowed filters: N/A
 	MutableStateChecksumInvalidateBefore
-	// ReplicationEventsFromCurrentCluster is a feature flag to allow cross DC replicate events that generated from the current cluster
-	// KeyName: history.ReplicationEventsFromCurrentCluster
-	// Value type: Bool
-	// Default value: FALSE
-	// Allowed filters: DomainName
-	ReplicationEventsFromCurrentCluster
 	// NotifyFailoverMarkerInterval is determines the frequency to notify failover marker
 	// KeyName: history.NotifyFailoverMarkerInterval
 	// Value type: Duration
@@ -2215,7 +2209,6 @@ var Keys = map[Key]string{
 	MutableStateChecksumGenProbability:                 "history.mutableStateChecksumGenProbability",
 	MutableStateChecksumVerifyProbability:              "history.mutableStateChecksumVerifyProbability",
 	MutableStateChecksumInvalidateBefore:               "history.mutableStateChecksumInvalidateBefore",
-	ReplicationEventsFromCurrentCluster:                "history.ReplicationEventsFromCurrentCluster",
 	NotifyFailoverMarkerInterval:                       "history.NotifyFailoverMarkerInterval",
 	NotifyFailoverMarkerTimerJitterCoefficient:         "history.NotifyFailoverMarkerTimerJitterCoefficient",
 	EnableDropStuckTaskByDomainID:                      "history.DropStuckTaskByDomain",

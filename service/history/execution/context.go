@@ -264,40 +264,28 @@ func (c *contextImpl) LoadWorkflowExecutionForReplication(
 		)
 	}
 
-	lastWriteVersion, err := c.mutableState.GetLastWriteVersion()
+	flushBeforeReady, err := c.mutableState.StartTransaction(domainEntry, incomingVersion)
 	if err != nil {
 		return nil, err
 	}
+	if !flushBeforeReady {
+		return c.mutableState, nil
+	}
 
-	if lastWriteVersion == incomingVersion {
-		err = c.mutableState.StartTransactionSkipDecisionFail(domainEntry)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		flushBeforeReady, err := c.mutableState.StartTransaction(domainEntry)
-		if err != nil {
-			return nil, err
-		}
-		if !flushBeforeReady {
-			return c.mutableState, nil
-		}
+	if err = c.UpdateWorkflowExecutionAsActive(
+		ctx,
+		c.shard.GetTimeSource().Now(),
+	); err != nil {
+		return nil, err
+	}
 
-		if err = c.UpdateWorkflowExecutionAsActive(
-			ctx,
-			c.shard.GetTimeSource().Now(),
-		); err != nil {
-			return nil, err
-		}
-
-		flushBeforeReady, err = c.mutableState.StartTransaction(domainEntry)
-		if err != nil {
-			return nil, err
-		}
-		if flushBeforeReady {
-			return nil, &types.InternalServiceError{
-				Message: "workflowExecutionContext counter flushBeforeReady status after loading mutable state from DB",
-			}
+	flushBeforeReady, err = c.mutableState.StartTransaction(domainEntry, incomingVersion)
+	if err != nil {
+		return nil, err
+	}
+	if flushBeforeReady {
+		return nil, &types.InternalServiceError{
+			Message: "workflowExecutionContext counter flushBeforeReady status after loading mutable state from DB",
 		}
 	}
 	return c.mutableState, nil
@@ -349,31 +337,6 @@ func (c *contextImpl) LoadWorkflowExecution(
 			response.MutableStateStats,
 			c.stats.HistorySize,
 		)
-	}
-
-	flushBeforeReady, err := c.mutableState.StartTransaction(domainEntry)
-	if err != nil {
-		return nil, err
-	}
-	if !flushBeforeReady {
-		return c.mutableState, nil
-	}
-
-	if err = c.UpdateWorkflowExecutionAsActive(
-		ctx,
-		c.shard.GetTimeSource().Now(),
-	); err != nil {
-		return nil, err
-	}
-
-	flushBeforeReady, err = c.mutableState.StartTransaction(domainEntry)
-	if err != nil {
-		return nil, err
-	}
-	if flushBeforeReady {
-		return nil, &types.InternalServiceError{
-			Message: "workflowExecutionContext counter flushBeforeReady status after loading mutable state from DB",
-		}
 	}
 
 	return c.mutableState, nil
