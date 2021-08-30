@@ -772,16 +772,16 @@ func (v *attrValidator) validatedTaskList(
 }
 
 func (v *attrValidator) validateCrossDomainCall(
-	domainID string,
+	sourceDomainID string,
 	targetDomainID string,
 ) error {
 
 	// same name, no check needed
-	if domainID == targetDomainID {
+	if sourceDomainID == targetDomainID {
 		return nil
 	}
 
-	domainEntry, err := v.domainCache.GetDomainByID(domainID)
+	sourceDomainEntry, err := v.domainCache.GetDomainByID(sourceDomainID)
 	if err != nil {
 		return err
 	}
@@ -791,23 +791,42 @@ func (v *attrValidator) validateCrossDomainCall(
 		return err
 	}
 
-	// both local domain
-	if !domainEntry.IsGlobalDomain() && !targetDomainEntry.IsGlobalDomain() {
+	sourceClusters := sourceDomainEntry.GetReplicationConfig().Clusters
+	targetClusters := targetDomainEntry.GetReplicationConfig().Clusters
+
+	// both "local domain"
+	// here a domain is "local domain" when:
+	// - IsGlobalDomain() returns false
+	// - domainCluster contains only one cluster
+	// case 1 can be actually be combined with this case
+	if len(sourceClusters) == 1 && len(targetClusters) == 1 {
+		if sourceClusters[0].ClusterName == targetClusters[0].ClusterName {
+			return nil
+		}
+		return v.createCrossDomainCallError(sourceDomainEntry, targetDomainEntry)
+	}
+
+	// both global domain with > 1 replication cluster
+	// when code reaches here, at least one domain has more than one cluster
+	if len(sourceClusters) == len(targetClusters) &&
+		v.config.EnableCrossClusterOperations(sourceDomainEntry.GetInfo().Name) {
+		// check if the source domain cluster matches those for the target domain
+		for _, sourceCluster := range sourceClusters {
+			found := false
+			for _, targetCluster := range targetClusters {
+				if sourceCluster.ClusterName == targetCluster.ClusterName {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return v.createCrossDomainCallError(sourceDomainEntry, targetDomainEntry)
+			}
+		}
 		return nil
 	}
 
-	domainClusters := domainEntry.GetReplicationConfig().Clusters
-	targetDomainClusters := targetDomainEntry.GetReplicationConfig().Clusters
-
-	// one is local domain, another one is global domain or both global domain
-	// treat global domain with one replication cluster as local domain
-	if len(domainClusters) == 1 && len(targetDomainClusters) == 1 {
-		if *domainClusters[0] == *targetDomainClusters[0] {
-			return nil
-		}
-		return v.createCrossDomainCallError(domainEntry, targetDomainEntry)
-	}
-	return v.createCrossDomainCallError(domainEntry, targetDomainEntry)
+	return v.createCrossDomainCallError(sourceDomainEntry, targetDomainEntry)
 }
 
 func (v *attrValidator) createCrossDomainCallError(
