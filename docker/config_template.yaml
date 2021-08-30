@@ -214,13 +214,15 @@ clusterGroupMetadata:
             enabled: true
             initialFailoverVersion: 0
             rpcName: "cadence-frontend"
-            rpcAddress: {{ default .Env.PRIMARY_FRONTEND_SERVICE "cadence" }}:{{ default .Env.FRONTEND_PORT "7933" }}
+            rpcAddress: {{ default .Env.PRIMARY_FRONTEND_SERVICE "cadence" }}:{{ default .Env.FRONTEND_PORT "7833" }}
+            rpcTransport: "grpc"
         {{- if .Env.ENABLE_GLOBAL_DOMAIN }}
         secondary:
             enabled: true
             initialFailoverVersion: 2
             rpcName: "cadence-frontend"
-            rpcAddress: {{ default .Env.SECONDARY_FRONTEND_SERVICE "cadence-secondary" }}:{{ default .Env.FRONTEND_PORT "7933" }}
+            rpcAddress: {{ default .Env.SECONDARY_FRONTEND_SERVICE "cadence-secondary" }}:{{ default .Env.FRONTEND_PORT "7833" }}
+            rpcTransport: "grpc"
         {{- end }}
 
 

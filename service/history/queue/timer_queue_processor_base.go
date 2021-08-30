@@ -128,7 +128,7 @@ func newTimerQueueProcessorBase(
 				taskExecutor,
 				taskProcessor,
 				processorBase.redispatcher.AddTask,
-				shard.GetConfig().TimerTaskMaxRetryCount,
+				shard.GetConfig().TaskCriticalRetryCount,
 			)
 		},
 
