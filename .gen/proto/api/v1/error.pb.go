@@ -1281,7 +1281,10 @@ func (m *WorkflowExecutionAlreadyStartedError) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthError
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {
@@ -1396,7 +1399,10 @@ func (m *EntityNotExistsError) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthError
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {
@@ -1447,7 +1453,10 @@ func (m *WorkflowExecutionAlreadyCompletedError) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthError
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {
@@ -1594,7 +1603,10 @@ func (m *DomainNotActiveError) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthError
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {
@@ -1741,7 +1753,10 @@ func (m *ClientVersionNotSupportedError) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthError
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {
@@ -1824,7 +1839,10 @@ func (m *FeatureNotEnabledError) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthError
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {
@@ -1875,7 +1893,10 @@ func (m *CancellationAlreadyRequestedError) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthError
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {
@@ -1926,7 +1947,10 @@ func (m *DomainAlreadyExistsError) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthError
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {
@@ -1977,7 +2001,10 @@ func (m *LimitExceededError) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthError
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {
@@ -2028,7 +2055,10 @@ func (m *QueryFailedError) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthError
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {
@@ -2079,7 +2109,10 @@ func (m *ServiceBusyError) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthError
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthError
 			}
 			if (iNdEx + skippy) > l {

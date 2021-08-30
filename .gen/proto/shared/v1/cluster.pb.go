@@ -1067,7 +1067,10 @@ func (m *HostInfo) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthCluster
 			}
 			if (iNdEx + skippy) > l {
@@ -1203,7 +1206,10 @@ func (m *RingInfo) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthCluster
 			}
 			if (iNdEx + skippy) > l {
@@ -1356,7 +1362,10 @@ func (m *MembershipInfo) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthCluster
 			}
 			if (iNdEx + skippy) > l {
@@ -1445,7 +1454,10 @@ func (m *DomainCacheInfo) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthCluster
 			}
 			if (iNdEx + skippy) > l {
@@ -1560,7 +1572,10 @@ func (m *PersistenceSetting) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthCluster
 			}
 			if (iNdEx + skippy) > l {
@@ -1663,7 +1678,10 @@ func (m *PersistenceFeature) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthCluster
 			}
 			if (iNdEx + skippy) > l {
@@ -1814,7 +1832,10 @@ func (m *PersistenceInfo) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
+			if skippy < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthCluster
 			}
 			if (iNdEx + skippy) > l {
