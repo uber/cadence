@@ -65,7 +65,7 @@ require (
 	go.uber.org/fx v1.10.0
 	go.uber.org/multierr v1.6.0
 	go.uber.org/thriftrw v1.25.0
-	go.uber.org/yarpc v1.53.2
+	go.uber.org/yarpc v1.56.0
 	go.uber.org/zap v1.13.0
 	golang.org/x/net v0.0.0-20201031054903-ff519b6c9102
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
@@ -88,6 +88,3 @@ require (
 
 // ringpop-go and tchannel-go depends on older version of thrift, yarpc brings up newer version
 replace github.com/apache/thrift => github.com/apache/thrift v0.0.0-20161221203622-b2a4d4ae21c7
-
-// until new version is released we need to pick up https://github.com/yarpc/yarpc-go/pull/2047
-replace go.uber.org/yarpc => go.uber.org/yarpc v1.52.1-0.20210303193224-b2caa40d56b6

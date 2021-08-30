@@ -1,7 +1,7 @@
 bench:
   name: "cadence-bench"
-  domains: ["cadence-bench", "cadence-bench-sync", "cadence-bench-batch"]
-  numTaskLists: 2
+  domains: ["cadence-bench", "cadence-bench-sync", "cadence-bench-batch"] # it will start workers on all those domains(also try to register if not exists)
+  numTaskLists: 3 # it will start workers listening on cadence-bench-tl-0, cadence-bench-tl-1,  cadence-bench-tl-2
 
 cadence:
   service: "cadence-frontend"
