@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:build !race && esintegration
-// +build !race,esintegration
+// +build !race
+// +build esintegration
 
 // to run locally, make sure kafka and es is running,
 // then run cmd `go test -v ./host/xdc -run TestESCrossDCTestSuite -tags esintegration`
