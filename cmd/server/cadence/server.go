@@ -219,7 +219,7 @@ func (s *server) startService() common.Daemon {
 		clusterName := s.cfg.ClusterGroupMetadata.CurrentClusterName
 		authProvider, err := authorization.GetAuthProviderClient(s.cfg.ClusterGroupMetadata.ClusterGroup[clusterName].AuthorizationProvider.PrivateKey)
 		if err != nil {
-			log.Fatalf(err.Error())
+			log.Fatalf("failed to create AuthProvider: %v", err.Error())
 		}
 		options = &client.DispatcherOptions{
 			AuthProvider: authProvider,
