@@ -37,6 +37,7 @@ services:
       - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml"
       - "ENABLE_OAUTH=true"
       - "OAUTH_PUBLIC_KEY=config/credentials/keytest.pub"
+      - "OAUTH_PRIVATE_KEY=config/credentials/keytest"
     depends_on:
       - cassandra
       - prometheus
