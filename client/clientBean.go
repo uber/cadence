@@ -322,12 +322,7 @@ func (p *dnsDispatcherProvider) GetGRPC(serviceName string, address string, opti
 }
 
 func (p *dnsDispatcherProvider) createOutboundDispatcher(serviceName string, outbound transport.UnaryOutbound, options *DispatcherOptions) (*yarpc.Dispatcher, error) {
-	var authProvider clientworker.AuthorizationProvider
-	if options != nil && options.AuthProvider != nil {
-		authProvider = options.AuthProvider
-	}
-	// Attach the outbound to the dispatcher (this will add middleware/logging/etc)
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+	cfg := yarpc.Config{
 		Name: crossDCCaller,
 		Outbounds: yarpc.Outbounds{
 			serviceName: transport.Outbounds{
@@ -335,10 +330,15 @@ func (p *dnsDispatcherProvider) createOutboundDispatcher(serviceName string, out
 				ServiceName: serviceName,
 			},
 		},
-		OutboundMiddleware: yarpc.OutboundMiddleware{
-			Unary: &outboundMiddleware{authProvider: authProvider},
-		},
-	})
+	}
+	if options != nil && options.AuthProvider != nil {
+		cfg.OutboundMiddleware = yarpc.OutboundMiddleware{
+			Unary: &outboundMiddleware{authProvider: options.AuthProvider},
+		}
+	}
+
+	// Attach the outbound to the dispatcher (this will add middleware/logging/etc)
+	dispatcher := yarpc.NewDispatcher(cfg)
 
 	if err := dispatcher.Start(); err != nil {
 		return nil, err
