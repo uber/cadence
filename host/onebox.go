@@ -471,7 +471,7 @@ func (c *cadenceImpl) startHistory(
 		integrationClient := newIntegrationConfigClient(dynamicconfig.NewNopClient())
 		c.overrideHistoryDynamicConfig(integrationClient)
 		params.DynamicConfig = integrationClient
-		dispatcher, err := params.DispatcherProvider.GetTChannel(common.FrontendServiceName, c.FrontendAddress())
+		dispatcher, err := params.DispatcherProvider.GetTChannel(common.FrontendServiceName, c.FrontendAddress(), nil)
 		if err != nil {
 			c.logger.Fatal("Failed to get dispatcher for history", tag.Error(err))
 		}
@@ -589,8 +589,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	if err != nil {
 		c.logger.Fatal("Failed to copy persistence config for worker", tag.Error(err))
 	}
-
-	dispatcher, err := params.DispatcherProvider.GetTChannel(common.FrontendServiceName, c.FrontendAddress())
+	dispatcher, err := params.DispatcherProvider.GetTChannel(common.FrontendServiceName, c.FrontendAddress(), nil)
 	if err != nil {
 		c.logger.Fatal("Failed to get dispatcher for worker", tag.Error(err))
 	}

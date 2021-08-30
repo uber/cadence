@@ -18,7 +18,7 @@ domainDefaults:
 dynamicconfig:
   client: filebased
   filebased:
-    filepath: "config/dynamicconfig/development_oauth.yaml"
+    filepath: "config/dynamicconfig/development.yaml"
 
 blobstore:
   filestore:
@@ -31,4 +31,3 @@ authorization:
     jwtCredentials:
       algorithm: "RS256"
       publicKey: "config/credentials/keytest.pub"
-      privateKey: "config/credentials/keytest"
