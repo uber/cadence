@@ -292,4 +292,3 @@ authorization:
         jwtCredentials:
             algorithm: "RS256"
             publicKey: {{ default .Env.OAUTH_PUBLIC_KEY "" }}
-            privateKey: {{ default .Env.OAUTH_PRIVATE_KEY "" }}
