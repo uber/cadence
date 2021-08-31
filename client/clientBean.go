@@ -31,16 +31,20 @@ import (
 	"sync/atomic"
 	"time"
 
+	clientworker "go.uber.org/cadence/worker"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/roundrobin"
+	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -65,9 +69,14 @@ type (
 		SetRemoteFrontendClient(cluster string, client frontend.Client)
 	}
 
-	// DispatcherProvider provides a diapatcher to a given address
+	DispatcherOptions struct {
+		AuthProvider clientworker.AuthorizationProvider
+	}
+
+	// DispatcherProvider provides a dispatcher to a given address
 	DispatcherProvider interface {
-		Get(name string, address string) (*yarpc.Dispatcher, error)
+		GetTChannel(name string, address string, options *DispatcherOptions) (*yarpc.Dispatcher, error)
+		GetGRPC(name string, address string, options *DispatcherOptions) (*yarpc.Dispatcher, error)
 	}
 
 	clientBeanImpl struct {
@@ -117,7 +126,26 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 			continue
 		}
 
-		dispatcher, err := dispatcherProvider.Get(info.RPCName, info.RPCAddress)
+		var dispatcherOptions *DispatcherOptions
+		if info.AuthorizationProvider.Enable {
+			authProvider, err := authorization.GetAuthProviderClient(info.AuthorizationProvider.PrivateKey)
+			if err != nil {
+				return nil, err
+			}
+			dispatcherOptions = &DispatcherOptions{
+				AuthProvider: authProvider,
+			}
+		}
+
+		var dispatcher *yarpc.Dispatcher
+		var err error
+		switch info.RPCTransport {
+		case tchannel.TransportName:
+			dispatcher, err = dispatcherProvider.GetTChannel(info.RPCName, info.RPCAddress, dispatcherOptions)
+		case grpc.TransportName:
+			dispatcher, err = dispatcherProvider.GetGRPC(info.RPCName, info.RPCAddress, dispatcherOptions)
+		}
+
 		if err != nil {
 			return nil, err
 		}
@@ -256,7 +284,7 @@ func NewDNSYarpcDispatcherProvider(logger log.Logger, interval time.Duration) Di
 	}
 }
 
-func (p *dnsDispatcherProvider) Get(serviceName string, address string) (*yarpc.Dispatcher, error) {
+func (p *dnsDispatcherProvider) GetTChannel(serviceName string, address string, options *DispatcherOptions) (*yarpc.Dispatcher, error) {
 	tchanTransport, err := tchannel.NewTransport(
 		tchannel.ServiceName(serviceName),
 		// this aim to get rid of the annoying popup about accepting incoming network connections
@@ -274,10 +302,27 @@ func (p *dnsDispatcherProvider) Get(serviceName string, address string) (*yarpc.
 	peerListUpdater.Start()
 	outbound := tchanTransport.NewOutbound(peerList)
 
-	p.logger.Info("Creating RPC dispatcher outbound", tag.Address(address))
+	p.logger.Info("Creating TChannel dispatcher outbound", tag.Address(address))
+	return p.createOutboundDispatcher(serviceName, outbound, options)
+}
 
-	// Attach the outbound to the dispatcher (this will add middleware/logging/etc)
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+func (p *dnsDispatcherProvider) GetGRPC(serviceName string, address string, options *DispatcherOptions) (*yarpc.Dispatcher, error) {
+	grpcTransport := grpc.NewTransport()
+
+	peerList := roundrobin.New(grpcTransport)
+	peerListUpdater, err := newDNSUpdater(peerList, address, p.interval, p.logger)
+	if err != nil {
+		return nil, err
+	}
+	peerListUpdater.Start()
+	outbound := grpcTransport.NewOutbound(peerList)
+
+	p.logger.Info("Creating GRPC dispatcher outbound", tag.Address(address))
+	return p.createOutboundDispatcher(serviceName, outbound, options)
+}
+
+func (p *dnsDispatcherProvider) createOutboundDispatcher(serviceName string, outbound transport.UnaryOutbound, options *DispatcherOptions) (*yarpc.Dispatcher, error) {
+	cfg := yarpc.Config{
 		Name: crossDCCaller,
 		Outbounds: yarpc.Outbounds{
 			serviceName: transport.Outbounds{
@@ -285,12 +330,36 @@ func (p *dnsDispatcherProvider) Get(serviceName string, address string) (*yarpc.
 				ServiceName: serviceName,
 			},
 		},
-	})
+	}
+	if options != nil && options.AuthProvider != nil {
+		cfg.OutboundMiddleware = yarpc.OutboundMiddleware{
+			Unary: &outboundMiddleware{authProvider: options.AuthProvider},
+		}
+	}
+
+	// Attach the outbound to the dispatcher (this will add middleware/logging/etc)
+	dispatcher := yarpc.NewDispatcher(cfg)
 
 	if err := dispatcher.Start(); err != nil {
 		return nil, err
 	}
 	return dispatcher, nil
+}
+
+type outboundMiddleware struct {
+	authProvider clientworker.AuthorizationProvider
+}
+
+func (om *outboundMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+	if om.authProvider != nil {
+		token, err := om.authProvider.GetAuthToken()
+		if err != nil {
+			return nil, err
+		}
+		request.Headers = request.Headers.
+			With(common.AuthorizationTokenHeaderName, string(token))
+	}
+	return out.Call(ctx, request)
 }
 
 func newDNSUpdater(list peer.List, dnsPort string, interval time.Duration, logger log.Logger) (*dnsUpdater, error) {

@@ -215,17 +215,32 @@ func (m *MockDispatcherProvider) EXPECT() *MockDispatcherProviderMockRecorder {
 	return m.recorder
 }
 
-// Get mocks base method
-func (m *MockDispatcherProvider) Get(name, address string) (*yarpc.Dispatcher, error) {
+// GetTChannel mocks base method
+func (m *MockDispatcherProvider) GetTChannel(name, address string, options *DispatcherOptions) (*yarpc.Dispatcher, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", name, address)
+	ret := m.ctrl.Call(m, "GetTChannel", name, address, options)
 	ret0, _ := ret[0].(*yarpc.Dispatcher)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get
-func (mr *MockDispatcherProviderMockRecorder) Get(name, address interface{}) *gomock.Call {
+// GetTChannel indicates an expected call of GetTChannel
+func (mr *MockDispatcherProviderMockRecorder) GetTChannel(name, address, options interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDispatcherProvider)(nil).Get), name, address)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTChannel", reflect.TypeOf((*MockDispatcherProvider)(nil).GetTChannel), name, address, options)
+}
+
+// GetGRPC mocks base method
+func (m *MockDispatcherProvider) GetGRPC(name, address string, options *DispatcherOptions) (*yarpc.Dispatcher, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetGRPC", name, address, options)
+	ret0, _ := ret[0].(*yarpc.Dispatcher)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetGRPC indicates an expected call of GetGRPC
+func (mr *MockDispatcherProviderMockRecorder) GetGRPC(name, address, options interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGRPC", reflect.TypeOf((*MockDispatcherProvider)(nil).GetGRPC), name, address, options)
 }

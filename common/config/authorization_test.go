@@ -56,34 +56,13 @@ func TestTTLIsZero(t *testing.T) {
 	assert.EqualError(t, err, "[OAuthConfig] MaxTTL must be greater than 0")
 }
 
-func TestPrivateKeyIsEmpty(t *testing.T) {
-	cfg := Authorization{
-		OAuthAuthorizer: OAuthAuthorizer{
-			Enable: true,
-			JwtCredentials: JwtCredentials{
-				Algorithm:  "",
-				PublicKey:  "",
-				PrivateKey: "",
-			},
-			MaxJwtTTL: 1000000,
-		},
-		NoopAuthorizer: NoopAuthorizer{
-			Enable: false,
-		},
-	}
-
-	err := cfg.Validate()
-	assert.EqualError(t, err, "[OAuthConfig] PrivateKey can't be empty")
-}
-
 func TestPublicKeyIsEmpty(t *testing.T) {
 	cfg := Authorization{
 		OAuthAuthorizer: OAuthAuthorizer{
 			Enable: true,
 			JwtCredentials: JwtCredentials{
-				Algorithm:  "",
-				PublicKey:  "",
-				PrivateKey: "private",
+				Algorithm: "",
+				PublicKey: "",
 			},
 			MaxJwtTTL: 1000000,
 		},
@@ -101,9 +80,8 @@ func TestAlgorithmIsInvalid(t *testing.T) {
 		OAuthAuthorizer: OAuthAuthorizer{
 			Enable: true,
 			JwtCredentials: JwtCredentials{
-				Algorithm:  "SHA256",
-				PublicKey:  "public",
-				PrivateKey: "private",
+				Algorithm: "SHA256",
+				PublicKey: "public",
 			},
 			MaxJwtTTL: 1000000,
 		},
@@ -121,9 +99,8 @@ func TestCorrectValidation(t *testing.T) {
 		OAuthAuthorizer: OAuthAuthorizer{
 			Enable: true,
 			JwtCredentials: JwtCredentials{
-				Algorithm:  "RS256",
-				PublicKey:  "public",
-				PrivateKey: "private",
+				Algorithm: "RS256",
+				PublicKey: "public",
 			},
 			MaxJwtTTL: 1000000,
 		},

@@ -377,6 +377,7 @@ var (
 	HistoryClientOperationNotifyFailoverMarkers             = clientOperation("history-notify-failover-markers")
 	HistoryClientOperationGetCrossClusterTasks              = clientOperation("history-get-cross-cluster-tasks")
 	HistoryClientOperationRespondCrossClusterTasksCompleted = clientOperation("history-respond-cross-cluster-tasks-completed")
+	HistoryClientOperationGetFailoverInfo                   = clientOperation("history-get-failover-info")
 
 	MatchingClientOperationAddActivityTask        = clientOperation("matching-add-activity-task")
 	MatchingClientOperationAddDecisionTask        = clientOperation("matching-add-decision-task")

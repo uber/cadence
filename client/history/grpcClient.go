@@ -242,3 +242,8 @@ func (g grpcClient) TerminateWorkflowExecution(ctx context.Context, request *typ
 	_, err := g.c.TerminateWorkflowExecution(ctx, proto.FromHistoryTerminateWorkflowExecutionRequest(request), opts...)
 	return proto.ToError(err)
 }
+
+func (g grpcClient) GetFailoverInfo(ctx context.Context, request *types.GetFailoverInfoRequest, opts ...yarpc.CallOption) (*types.GetFailoverInfoResponse, error) {
+	response, err := g.c.GetFailoverInfo(ctx, proto.FromHistoryGetFailoverInfoRequest(request), opts...)
+	return proto.ToHistoryGetFailoverInfoResponse(response), proto.ToError(err)
+}

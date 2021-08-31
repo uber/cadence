@@ -62,10 +62,10 @@ const (
 	// Default value: FALSE
 	// Allowed filters: N/A
 	EnableGlobalDomain
-	// EnableVisibilitySampling is key for enable visibility sampling
+	// EnableVisibilitySampling is key for enable visibility sampling for basic(DB based) visibility
 	// KeyName: system.enableVisibilitySampling
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: FALSE
 	// Allowed filters: N/A
 	EnableVisibilitySampling
 	// EnableReadFromClosedExecutionV2 is key for enable read from cadence_visibility.closed_executions_v2
@@ -462,6 +462,12 @@ const (
 	// Default value: 0
 	// Allowed filters: N/A
 	FrontendErrorInjectionRate
+	// FrontendEmitSignalNameMetricsTag enables emitting signal name tag in metrics in frontend client
+	// KeyName: frontend.emitSignalNameMetricsTag
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	FrontendEmitSignalNameMetricsTag
 
 	// key for matching
 
@@ -786,6 +792,15 @@ const (
 	// Default value: common.ConvertIntMapToDynamicConfigMapProperty(DefaultTaskPriorityWeight)
 	// Allowed filters: N/A
 	TaskSchedulerRoundRobinWeights
+	// TaskCriticalRetryCount is the critical retry count for background tasks
+	// when task attempt exceeds this threshold:
+	// - task attempt metrics and additional error logs will be emitted
+	// - task priority will be lowered
+	// KeyName: history.taskCriticalRetryCount
+	// Value type: Int
+	// Default value: 20
+	// Allowed filters: N/A
+	TaskCriticalRetryCount
 	// ActiveTaskRedispatchInterval is the active task redispatch interval
 	// KeyName: history.activeTaskRedispatchInterval
 	// Value type: Duration
@@ -810,6 +825,13 @@ const (
 	// Default value: 3*time.Minute
 	// Allowed filters: DomainID
 	StandbyTaskReReplicationContextTimeout
+	// ResurrectionCheckMinDelay is the minimal timer processing delay before scanning history to see
+	// if there's a resurrected timer/activity
+	// KeyName: history.resurrectionCheckMinDelay
+	// Value type: Duration
+	// Default value: 24*time.Hour
+	// Allowed filters: N/A
+	ResurrectionCheckMinDelay
 	// QueueProcessorEnableSplit is indicates whether processing queue split policy should be enabled
 	// KeyName: history.queueProcessorEnableSplit
 	// Value type: Bool
@@ -901,12 +923,6 @@ const (
 	// Default value: 10
 	// Allowed filters: N/A
 	TimerTaskWorkerCount
-	// TimerTaskMaxRetryCount is max retry count for timer processor
-	// KeyName: history.timerTaskMaxRetryCount
-	// Value type: Int
-	// Default value: 100
-	// Allowed filters: N/A
-	TimerTaskMaxRetryCount
 	// TimerProcessorGetFailureRetryCount is retry count for timer processor get failure operation
 	// KeyName: history.timerProcessorGetFailureRetryCount
 	// Value type: Int
@@ -1022,12 +1038,6 @@ const (
 	// Default value: 10
 	// Allowed filters: N/A
 	TransferTaskWorkerCount
-	// TransferTaskMaxRetryCount is max times of retry for transferQueueProcessor
-	// KeyName: history.transferTaskMaxRetryCount
-	// Value type: Int
-	// Default value: 100
-	// Allowed filters: N/A
-	TransferTaskMaxRetryCount
 	// TransferProcessorCompleteTransferFailureRetryCount is times of retry for failure
 	// KeyName: history.transferProcessorCompleteTransferFailureRetryCount
 	// Value type: Int
@@ -1119,12 +1129,6 @@ const (
 	// Default value: 10
 	// Allowed filters: N/A
 	CrossClusterTaskWorkerCount
-	// CrossClusterTaskMaxRetryCount is max times of retry for crossClusterQueueProcessor
-	// KeyName: history.crossClusterTaskMaxRetryCount
-	// Value type: Int
-	// Default value: 100
-	// Allowed filters: N/A
-	CrossClusterTaskMaxRetryCount
 	// CrossClusterProcessorCompleteTaskFailureRetryCount is times of retry for failure
 	// KeyName: history.crossClusterProcessorCompleteTaskFailureRetryCount
 	// Value type: Int
@@ -1216,12 +1220,6 @@ const (
 	// Default value: 3
 	// Allowed filters: N/A
 	ReplicatorReadTaskMaxRetryCount
-	// ReplicatorTaskMaxRetryCount is max times of retry for ReplicatorProcessor
-	// KeyName: history.replicatorTaskMaxRetryCount
-	// Value type: Int
-	// Default value: 100
-	// Allowed filters: N/A
-	ReplicatorTaskMaxRetryCount
 	// ReplicatorProcessorMaxPollRPS is max poll rate per second for ReplicatorProcessor
 	// KeyName: history.replicatorProcessorMaxPollRPS
 	// Value type: Int
@@ -1264,6 +1262,12 @@ const (
 	// Default value: FALSE
 	// Allowed filters: N/A
 	ReplicatorProcessorEnablePriorityTaskProcessor
+	// ReplicatorUpperLatency indicates the max allowed replication latency between clusters
+	// KeyName: history.replicatorUpperLatency
+	// Value type: Duration
+	// Default value: 40 * time.Second
+	// Allowed filters: N/A
+	ReplicatorUpperLatency
 
 	// ExecutionMgrNumConns is persistence connections number for ExecutionManager
 	// KeyName: history.executionMgrNumConns
@@ -1385,19 +1389,25 @@ const (
 	// Default value: FALSE
 	// Allowed filters: DomainID
 	EnableDropStuckTaskByDomainID
-	// EnableConsistentQuery is indicates if consistent query is enabled for the cluster
+	// EnableConsistentQuery indicates if consistent query is enabled for the cluster
 	// KeyName: history.EnableConsistentQuery
 	// Value type: Bool
 	// Default value: TRUE
 	// Allowed filters: N/A
 	EnableConsistentQuery
-	// EnableConsistentQueryByDomain is indicates if consistent query is enabled for a domain
+	// EnableConsistentQueryByDomain indicates if consistent query is enabled for a domain
 	// KeyName: history.EnableConsistentQueryByDomain
 	// Value type: Bool
 	// Default value: FALSE
 	// Allowed filters: DomainName
 	EnableConsistentQueryByDomain
-	// MaxBufferedQueryCount is indicates the maximum number of queries which can be buffered at a given time for a single workflow
+	// EnableCrossClusterOperations indicates if cross cluster operations can be scheduled for a domain
+	// KeyName: history.enableCrossClusterOperations
+	// Value type: Bool
+	// Default value: FALSE
+	// Allowed filters: DomainName
+	EnableCrossClusterOperations
+	// MaxBufferedQueryCount indicates the maximum number of queries which can be buffered at a given time for a single workflow
 	// KeyName: history.MaxBufferedQueryCount
 	// Value type: Int
 	// Default value: 1
@@ -2023,7 +2033,7 @@ var Keys = map[Key]string{
 	DomainFailoverRefreshInterval:               "frontend.domainFailoverRefreshInterval",
 	DomainFailoverRefreshTimerJitterCoefficient: "frontend.domainFailoverRefreshTimerJitterCoefficient",
 	FrontendErrorInjectionRate:                  "frontend.errorInjectionRate",
-
+	FrontendEmitSignalNameMetricsTag:            "frontend.emitSignalNameMetricsTag",
 	// matching settings
 	MatchingRPS:                             "matching.rps",
 	MatchingPersistenceMaxQPS:               "matching.persistenceMaxQPS",
@@ -2081,10 +2091,12 @@ var Keys = map[Key]string{
 	TaskSchedulerShardQueueSize:                        "history.taskSchedulerShardQueueSize",
 	TaskSchedulerDispatcherCount:                       "history.taskSchedulerDispatcherCount",
 	TaskSchedulerRoundRobinWeights:                     "history.taskSchedulerRoundRobinWeight",
+	TaskCriticalRetryCount:                             "history.taskCriticalRetryCount",
 	ActiveTaskRedispatchInterval:                       "history.activeTaskRedispatchInterval",
 	StandbyTaskRedispatchInterval:                      "history.standbyTaskRedispatchInterval",
 	TaskRedispatchIntervalJitterCoefficient:            "history.taskRedispatchIntervalJitterCoefficient",
 	StandbyTaskReReplicationContextTimeout:             "history.standbyTaskReReplicationContextTimeout",
+	ResurrectionCheckMinDelay:                          "history.resurrectionCheckMinDelay",
 	QueueProcessorEnableSplit:                          "history.queueProcessorEnableSplit",
 	QueueProcessorSplitMaxLevel:                        "history.queueProcessorSplitMaxLevel",
 	QueueProcessorEnableRandomSplitByDomainID:          "history.queueProcessorEnableRandomSplitByDomainID",
@@ -2101,7 +2113,6 @@ var Keys = map[Key]string{
 
 	TimerTaskBatchSize:                                "history.timerTaskBatchSize",
 	TimerTaskWorkerCount:                              "history.timerTaskWorkerCount",
-	TimerTaskMaxRetryCount:                            "history.timerTaskMaxRetryCount",
 	TimerProcessorGetFailureRetryCount:                "history.timerProcessorGetFailureRetryCount",
 	TimerProcessorCompleteTimerFailureRetryCount:      "history.timerProcessorCompleteTimerFailureRetryCount",
 	TimerProcessorUpdateAckInterval:                   "history.timerProcessorUpdateAckInterval",
@@ -2122,7 +2133,6 @@ var Keys = map[Key]string{
 	TransferProcessorFailoverMaxPollRPS:                  "history.transferProcessorFailoverMaxPollRPS",
 	TransferProcessorMaxPollRPS:                          "history.transferProcessorMaxPollRPS",
 	TransferTaskWorkerCount:                              "history.transferTaskWorkerCount",
-	TransferTaskMaxRetryCount:                            "history.transferTaskMaxRetryCount",
 	TransferProcessorCompleteTransferFailureRetryCount:   "history.transferProcessorCompleteTransferFailureRetryCount",
 	TransferProcessorMaxPollInterval:                     "history.transferProcessorMaxPollInterval",
 	TransferProcessorMaxPollIntervalJitterCoefficient:    "history.transferProcessorMaxPollIntervalJitterCoefficient",
@@ -2139,7 +2149,6 @@ var Keys = map[Key]string{
 	CrossClusterTaskBatchSize:                                "history.crossClusterTaskBatchSize",
 	CrossClusterProcessorMaxPollRPS:                          "history.crossClusterProcessorMaxPollRPS",
 	CrossClusterTaskWorkerCount:                              "history.crossClusterTaskWorkerCount",
-	CrossClusterTaskMaxRetryCount:                            "history.crossClusterTaskMaxRetryCount",
 	CrossClusterProcessorCompleteTaskFailureRetryCount:       "history.crossClusterProcessorCompleteTaskFailureRetryCount",
 	CrossClusterProcessorMaxPollInterval:                     "history.crossClusterProcessorMaxPollInterval",
 	CrossClusterProcessorMaxPollIntervalJitterCoefficient:    "history.crossClusterProcessorMaxPollIntervalJitterCoefficient",
@@ -2156,7 +2165,6 @@ var Keys = map[Key]string{
 	ReplicatorTaskBatchSize:                               "history.replicatorTaskBatchSize",
 	ReplicatorTaskWorkerCount:                             "history.replicatorTaskWorkerCount",
 	ReplicatorReadTaskMaxRetryCount:                       "history.replicatorReadTaskMaxRetryCount",
-	ReplicatorTaskMaxRetryCount:                           "history.replicatorTaskMaxRetryCount",
 	ReplicatorProcessorMaxPollRPS:                         "history.replicatorProcessorMaxPollRPS",
 	ReplicatorProcessorMaxPollInterval:                    "history.replicatorProcessorMaxPollInterval",
 	ReplicatorProcessorMaxPollIntervalJitterCoefficient:   "history.replicatorProcessorMaxPollIntervalJitterCoefficient",
@@ -2164,6 +2172,7 @@ var Keys = map[Key]string{
 	ReplicatorProcessorUpdateAckIntervalJitterCoefficient: "history.replicatorProcessorUpdateAckIntervalJitterCoefficient",
 	ReplicatorProcessorMaxRedispatchQueueSize:             "history.replicatorProcessorMaxRedispatchQueueSize",
 	ReplicatorProcessorEnablePriorityTaskProcessor:        "history.replicatorProcessorEnablePriorityTaskProcessor",
+	ReplicatorUpperLatency:                                "history.replicatorUpperLatency",
 
 	ExecutionMgrNumConns:                               "history.executionMgrNumConns",
 	HistoryMgrNumConns:                                 "history.historyMgrNumConns",
@@ -2205,6 +2214,7 @@ var Keys = map[Key]string{
 	ReplicationTaskGenerationQPS:                       "history.ReplicationTaskGenerationQPS",
 	EnableConsistentQuery:                              "history.EnableConsistentQuery",
 	EnableConsistentQueryByDomain:                      "history.EnableConsistentQueryByDomain",
+	EnableCrossClusterOperations:                       "history.enableCrossClusterOperations",
 	MaxBufferedQueryCount:                              "history.MaxBufferedQueryCount",
 	MutableStateChecksumGenProbability:                 "history.mutableStateChecksumGenProbability",
 	MutableStateChecksumVerifyProbability:              "history.mutableStateChecksumVerifyProbability",

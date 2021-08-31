@@ -341,3 +341,15 @@ func TestHistoryRespondCrossClusterTasksCompletedResponse(t *testing.T) {
 		assert.Equal(t, item, ToHistoryRespondCrossClusterTasksCompletedResponse(FromHistoryRespondCrossClusterTasksCompletedResponse(item)))
 	}
 }
+
+func TestHistoryGetTaskInfoRequest(t *testing.T) {
+	for _, item := range []*types.GetFailoverInfoRequest{nil, {}, &testdata.GetFailoverInfoRequest} {
+		assert.Equal(t, item, ToHistoryGetFailoverInfoRequest(FromHistoryGetFailoverInfoRequest(item)))
+	}
+}
+
+func TestHistoryGetTaskInfoResponse(t *testing.T) {
+	for _, item := range []*types.GetFailoverInfoResponse{nil, {}, &testdata.GetFailoverInfoResponse} {
+		assert.Equal(t, item, ToHistoryGetFailoverInfoResponse(FromHistoryGetFailoverInfoResponse(item)))
+	}
+}
