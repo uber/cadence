@@ -808,6 +808,9 @@ func createCrossClusterTasks(
 		case p.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
 			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetCluster
 
+		case p.CrossClusterTaskTypeApplyParentPolicy:
+			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetCluster
+
 		default:
 			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Unknown cross-cluster task type: %v", task.GetType()),

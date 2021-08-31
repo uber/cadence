@@ -82,6 +82,14 @@ type (
 			transferTask *persistence.TransferTaskInfo,
 			targetCluster string,
 		) error
+		// TODO: Consider merging below with GenerateCrossClusterTaskFromTransferTask.
+		// Close event generates both recordChildCompletion and ApplyParentPolicy
+		// tasks. That's why we currently have a separate function for applying
+		// parent policy
+		GenerateCrossClusterApplyParentClosePolicyTask(
+			transferTask *persistence.TransferTaskInfo,
+			targetCluster string,
+		) error
 
 		// these 2 APIs should only be called when mutable state transaction is being closed
 		GenerateActivityTimerTasks(
@@ -548,6 +556,30 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowResetTasks() error {
 		// TaskID and VisibilityTimestamp are set by shard context
 		Version: currentVersion,
 	})
+
+	return nil
+}
+
+func (r *mutableStateTaskGeneratorImpl) GenerateCrossClusterApplyParentClosePolicyTask(
+	task *persistence.TransferTaskInfo,
+	targetCluster string,
+) error {
+	if targetCluster == r.clusterMetadata.GetCurrentClusterName() {
+		// this should not happen
+		return errors.New("unable to create cross-cluster task for current cluster")
+	}
+
+	crossClusterTask := &persistence.CrossClusterApplyParentClosePolicyTask{
+		TargetCluster: targetCluster,
+		ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
+			// TaskID is set by shard context
+			// Domain, workflow and run ids will be collected from mutableState
+			// when processing the apply parent policy tasks.
+			Version:             task.Version,
+			VisibilityTimestamp: task.VisibilityTimestamp,
+		},
+	}
+	r.mutableState.AddCrossClusterTasks(crossClusterTask)
 
 	return nil
 }
