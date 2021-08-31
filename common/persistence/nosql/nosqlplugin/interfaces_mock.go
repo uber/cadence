@@ -113,17 +113,17 @@ func (m *MockAdminDB) EXPECT() *MockAdminDBMockRecorder {
 }
 
 // SetupTestDatabase mocks base method.
-func (m *MockAdminDB) SetupTestDatabase() error {
+func (m *MockAdminDB) SetupTestDatabase(schemaDir string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetupTestDatabase")
+	ret := m.ctrl.Call(m, "SetupTestDatabase", schemaDir)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SetupTestDatabase indicates an expected call of SetupTestDatabase.
-func (mr *MockAdminDBMockRecorder) SetupTestDatabase() *gomock.Call {
+func (mr *MockAdminDBMockRecorder) SetupTestDatabase(schemaDir string) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetupTestDatabase", reflect.TypeOf((*MockAdminDB)(nil).SetupTestDatabase))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetupTestDatabase", reflect.TypeOf((*MockAdminDB)(nil).SetupTestDatabase), schemaDir)
 }
 
 // TeardownTestDatabase mocks base method.

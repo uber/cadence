@@ -40,7 +40,7 @@ import (
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/encoded"
-	cworker "go.uber.org/cadence/worker"
+	"go.uber.org/cadence/worker"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
@@ -57,18 +57,7 @@ func init() {
 	workflow.Register(testChildWorkflow)
 }
 
-type (
-	ClientIntegrationSuite struct {
-		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
-		// not merely log an error
-		*require.Assertions
-		IntegrationBase
-		wfService workflowserviceclient.Interface
-		wfClient  client.Client
-		worker    cworker.Worker
-		taskList  string
-	}
-)
+type ()
 
 func TestClientIntegrationSuite(t *testing.T) {
 	flag.Parse()
@@ -100,7 +89,7 @@ func (s *ClientIntegrationSuite) SetupSuite() {
 	s.wfClient = client.NewClient(s.wfService, s.domainName, nil)
 
 	s.taskList = "client-integration-test-tasklist"
-	s.worker = cworker.New(s.wfService, s.domainName, s.taskList, cworker.Options{})
+	s.worker = worker.New(s.wfService, s.domainName, s.taskList, worker.Options{})
 	if err := s.worker.Start(); err != nil {
 		s.Logger.Fatal("Error when start worker", tag.Error(err))
 	}
@@ -208,12 +197,12 @@ func testDataConverterWorkflow(ctx workflow.Context, tl string) (string, error) 
 	return result + "," + result1, nil
 }
 
-func (s *ClientIntegrationSuite) startWorkerWithDataConverter(tl string, dataConverter encoded.DataConverter) cworker.Worker {
-	opts := cworker.Options{}
+func (s *ClientIntegrationSuite) startWorkerWithDataConverter(tl string, dataConverter encoded.DataConverter) worker.Worker {
+	opts := worker.Options{}
 	if dataConverter != nil {
 		opts.DataConverter = dataConverter
 	}
-	worker := cworker.New(s.wfService, s.domainName, tl, opts)
+	worker := worker.New(s.wfService, s.domainName, tl, opts)
 	if err := worker.Start(); err != nil {
 		s.Logger.Fatal("Error when start worker with data converter", tag.Error(err))
 	}
