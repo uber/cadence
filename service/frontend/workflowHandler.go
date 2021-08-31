@@ -2274,7 +2274,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 }
 
 func withSignalName(ctx context.Context, signalName string) context.Context {
-	return metrics.TagContext(ctx, metrics.SignalNameTag(signalName))
+	return metrics.TagContexts(ctx, metrics.SignalNameTag(signalName), metrics.SignalNameAllTag())
 }
 
 // SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in
