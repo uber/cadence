@@ -82,6 +82,10 @@ type (
 			transferTask *persistence.TransferTaskInfo,
 			targetCluster string,
 		) error
+		// TODO: Consider merging below with GenerateCrossClusterTaskFromTransferTask.
+		// Close event generates both recordChildCompletion and ApplyParentPolicy
+		// tasks. That's why we currently have a separate function for applying
+		// parent policy
 		GenerateCrossClusterApplyParentClosePolicyTask(
 			transferTask *persistence.TransferTaskInfo,
 			targetCluster string,

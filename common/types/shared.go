@@ -10737,7 +10737,6 @@ func (v *AppyParentClosePolicyAttributes) GetParentClosePolicy() (o *ParentClose
 
 type CrossClusterApplyParentClosePolicyRequestAttributes struct {
 	AppyParentClosePolicyAttributes []*AppyParentClosePolicyAttributes `json:"appyParentClosePolicyAttributes,omitempty"`
-	ParentClosePolicy               *ParentClosePolicy                 `json:"parentClosePolicy,omitempty"`
 }
 
 // GetInitiatedEventID is an internal getter (TBD...)
