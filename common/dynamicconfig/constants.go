@@ -462,6 +462,12 @@ const (
 	// Default value: 0
 	// Allowed filters: N/A
 	FrontendErrorInjectionRate
+	// FrontendEmitSignalNameMetricsTag enables emitting signal name tag in metrics in frontend client
+	// KeyName: frontend.emitSignalNameMetricsTag
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	FrontendEmitSignalNameMetricsTag
 
 	// key for matching
 
@@ -1383,19 +1389,25 @@ const (
 	// Default value: FALSE
 	// Allowed filters: DomainID
 	EnableDropStuckTaskByDomainID
-	// EnableConsistentQuery is indicates if consistent query is enabled for the cluster
+	// EnableConsistentQuery indicates if consistent query is enabled for the cluster
 	// KeyName: history.EnableConsistentQuery
 	// Value type: Bool
 	// Default value: TRUE
 	// Allowed filters: N/A
 	EnableConsistentQuery
-	// EnableConsistentQueryByDomain is indicates if consistent query is enabled for a domain
+	// EnableConsistentQueryByDomain indicates if consistent query is enabled for a domain
 	// KeyName: history.EnableConsistentQueryByDomain
 	// Value type: Bool
 	// Default value: FALSE
 	// Allowed filters: DomainName
 	EnableConsistentQueryByDomain
-	// MaxBufferedQueryCount is indicates the maximum number of queries which can be buffered at a given time for a single workflow
+	// EnableCrossClusterOperations indicates if cross cluster operations can be scheduled for a domain
+	// KeyName: history.enableCrossClusterOperations
+	// Value type: Bool
+	// Default value: FALSE
+	// Allowed filters: DomainName
+	EnableCrossClusterOperations
+	// MaxBufferedQueryCount indicates the maximum number of queries which can be buffered at a given time for a single workflow
 	// KeyName: history.MaxBufferedQueryCount
 	// Value type: Int
 	// Default value: 1
@@ -2027,7 +2039,7 @@ var Keys = map[Key]string{
 	DomainFailoverRefreshInterval:               "frontend.domainFailoverRefreshInterval",
 	DomainFailoverRefreshTimerJitterCoefficient: "frontend.domainFailoverRefreshTimerJitterCoefficient",
 	FrontendErrorInjectionRate:                  "frontend.errorInjectionRate",
-
+	FrontendEmitSignalNameMetricsTag:            "frontend.emitSignalNameMetricsTag",
 	// matching settings
 	MatchingRPS:                             "matching.rps",
 	MatchingPersistenceMaxQPS:               "matching.persistenceMaxQPS",
@@ -2208,6 +2220,7 @@ var Keys = map[Key]string{
 	ReplicationTaskGenerationQPS:                       "history.ReplicationTaskGenerationQPS",
 	EnableConsistentQuery:                              "history.EnableConsistentQuery",
 	EnableConsistentQueryByDomain:                      "history.EnableConsistentQueryByDomain",
+	EnableCrossClusterOperations:                       "history.enableCrossClusterOperations",
 	MaxBufferedQueryCount:                              "history.MaxBufferedQueryCount",
 	MutableStateChecksumGenProbability:                 "history.mutableStateChecksumGenProbability",
 	MutableStateChecksumVerifyProbability:              "history.mutableStateChecksumVerifyProbability",

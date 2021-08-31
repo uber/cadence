@@ -1459,7 +1459,7 @@ func (s *workflowHandlerSuite) TestSignalMetricHasSignalName() {
 }
 
 func (s *workflowHandlerSuite) newConfig(dynamicClient dc.Client) *Config {
-	return NewConfig(
+	config := NewConfig(
 		dc.NewCollection(
 			dynamicClient,
 			s.mockResource.GetLogger(),
@@ -1468,6 +1468,8 @@ func (s *workflowHandlerSuite) newConfig(dynamicClient dc.Client) *Config {
 		false,
 		false,
 	)
+	config.EmitSignalNameMetricsTag = dc.GetBoolPropertyFnFilteredByDomain(true)
+	return config
 }
 
 func updateRequest(

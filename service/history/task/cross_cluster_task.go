@@ -154,6 +154,7 @@ func NewCrossClusterTargetTask(
 		info.ScheduleID = taskRequest.SignalExecutionAttributes.InitiatedEventID
 		info.TargetChildWorkflowOnly = taskRequest.SignalExecutionAttributes.ChildWorkflowOnly
 	// TODO: implement recordChildWorkflowExeuctionComplete
+	// TODO: implement applyParentClosePolicyComplete
 	default:
 		panic(fmt.Sprintf("unknown cross cluster task type: %v", taskRequest.TaskInfo.GetTaskType()))
 	}

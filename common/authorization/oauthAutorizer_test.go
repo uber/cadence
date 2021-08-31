@@ -64,9 +64,8 @@ func (s *oauthSuite) SetupTest() {
 	s.cfg = config.OAuthAuthorizer{
 		Enable: true,
 		JwtCredentials: config.JwtCredentials{
-			Algorithm:  jwt.RS256.String(),
-			PublicKey:  "../../config/credentials/keytest.pub",
-			PrivateKey: "../../config/credentials/keytest",
+			Algorithm: jwt.RS256.String(),
+			PublicKey: "../../config/credentials/keytest.pub",
 		},
 		MaxJwtTTL: 300000001,
 	}
@@ -137,6 +136,21 @@ func (s *oauthSuite) TestItIsAdmin() {
 	result, err := authorizer.Authorize(ctx, &s.att)
 	s.NoError(err)
 	s.Equal(result.Decision, DecisionAllow)
+}
+
+func (s *oauthSuite) TestEmptyToken() {
+	ctx := context.Background()
+	ctx, call := encoding.NewInboundCall(ctx)
+	err := call.ReadFromRequest(&transport.Request{
+		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, ""),
+	})
+	s.NoError(err)
+	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "token is not set in header"
+	}))
+	result, _ := authorizer.Authorize(ctx, &s.att)
+	s.Equal(result.Decision, DecisionDeny)
 }
 
 func (s *oauthSuite) TestGetDomainError() {

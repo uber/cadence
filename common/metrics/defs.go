@@ -1026,6 +1026,8 @@ const (
 	CrossClusterTaskTypeSignalExecutionScope
 	// CrossClusterTaskTypeRecordChildWorkflowExeuctionCompleteScope is the scope used by metric emitted by cross cluster queue processor for processing signal workflow task.
 	CrossClusterTaskTypeRecordChildWorkflowExeuctionCompleteScope
+	// CrossClusterTaskTypeApplyParentClosePolicyScope is the scope used by metric emitted by cross cluster queue processor for processing applying parent close policy
+	CrossClusterTaskTypeApplyParentClosePolicyScope
 	// HistoryEventNotificationScope is the scope used by shard history event notification
 	HistoryEventNotificationScope
 	// ReplicatorQueueProcessorScope is the scope used by all metric emitted by replicator queue processor
@@ -1611,6 +1613,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		CrossClusterTaskCancelExecutionScope:                          {operation: "CrossClusterTaskCancelExecution"},
 		CrossClusterTaskTypeSignalExecutionScope:                      {operation: "CrossClusterTaskTypeSignalExecution"},
 		CrossClusterTaskTypeRecordChildWorkflowExeuctionCompleteScope: {operation: "CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete"},
+		CrossClusterTaskTypeApplyParentClosePolicyScope:               {operation: "CrossClusterTaskTypeApplyParentClosePolicy"},
 		HistoryEventNotificationScope:                                 {operation: "HistoryEventNotification"},
 		ReplicatorQueueProcessorScope:                                 {operation: "ReplicatorQueueProcessor"},
 		ReplicatorTaskHistoryScope:                                    {operation: "ReplicatorTaskHistory"},

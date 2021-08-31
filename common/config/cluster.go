@@ -66,6 +66,17 @@ type (
 		// Allowed values: tchannel|grpc
 		// Default: tchannel
 		RPCTransport string `yaml:"rpcTransport"`
+		// AuthorizationProvider contains the information to authorize the cluster
+		AuthorizationProvider AuthorizationProvider `yaml:"authorizationProvider"`
+	}
+
+	AuthorizationProvider struct {
+		// Enable indicates if the auth provider is enabled
+		Enable bool `yaml:"enable"`
+		// Type auth provider type
+		Type string `yaml:"type"` // only supports OAuthAuthorization
+		// PrivateKey is the private key path
+		PrivateKey string `yaml:"privateKey"`
 	}
 )
 

@@ -38,4 +38,9 @@ func TestContextTags(t *testing.T) {
 	tag2 := ThriftTransportTag()
 	ctx = TagContext(ctx, tag2)
 	assert.Equal(t, []Tag{tag1, tag2}, GetContextTags(ctx))
+
+	ctx1 := context.Background()
+	ctx1 = TagContexts(ctx1, tag1, tag2)
+	assert.Contains(t, GetContextTags(ctx1), tag1)
+	assert.Contains(t, GetContextTags(ctx1), tag2)
 }
