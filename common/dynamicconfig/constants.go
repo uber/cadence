@@ -2039,7 +2039,7 @@ var Keys = map[Key]string{
 	DomainFailoverRefreshInterval:               "frontend.domainFailoverRefreshInterval",
 	DomainFailoverRefreshTimerJitterCoefficient: "frontend.domainFailoverRefreshTimerJitterCoefficient",
 	FrontendErrorInjectionRate:                  "frontend.errorInjectionRate",
-
+	FrontendEmitSignalNameMetricsTag:            "frontend.emitSignalNameMetricsTag",
 	// matching settings
 	MatchingRPS:                             "matching.rps",
 	MatchingPersistenceMaxQPS:               "matching.persistenceMaxQPS",

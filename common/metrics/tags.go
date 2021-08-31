@@ -45,8 +45,8 @@ const (
 	transport      = "transport"
 	signalName     = "signalName"
 
-	domainAllValue = "all"
-	unknownValue   = "_unknown_"
+	allValue     = "all"
+	unknownValue = "_unknown_"
 
 	transportThrift = "thrift"
 	transportGRPC   = "grpc"
@@ -158,4 +158,9 @@ func GPRCTransportTag() Tag {
 // SignalNameTag returns a new SignalName tag
 func SignalNameTag(value string) Tag {
 	return metricWithUnknown(signalName, value)
+}
+
+// SignalNameAllTag returns a new SignalName tag with all value
+func SignalNameAllTag() Tag {
+	return metricWithUnknown(signalName, allValue)
 }

@@ -83,7 +83,7 @@ func (m *metricsScope) StartTimer(id int) Stopwatch {
 	case !def.metricRollupName.Empty():
 		return NewStopwatch(timer, m.rootScope.Timer(def.metricRollupName.String()))
 	case m.isDomainTagged:
-		timerAll := m.scope.Tagged(map[string]string{domain: domainAllValue}).Timer(def.metricName.String())
+		timerAll := m.scope.Tagged(map[string]string{domain: allValue}).Timer(def.metricName.String())
 		return NewStopwatch(timer, timerAll)
 	default:
 		return NewStopwatch(timer)
@@ -99,7 +99,7 @@ func (m *metricsScope) RecordTimer(id int, d time.Duration) {
 	case m.isDomainTagged:
 		// N.B. - Dual emit here so that we can see aggregate timer stats across all
 		// domains along with the individual domains stats
-		m.scope.Tagged(map[string]string{domain: domainAllValue}).Timer(def.metricName.String()).Record(d)
+		m.scope.Tagged(map[string]string{domain: allValue}).Timer(def.metricName.String()).Record(d)
 	}
 }
 
@@ -139,5 +139,5 @@ func (m *metricsScope) getBuckets(id int) tally.Buckets {
 }
 
 func isDomainTagged(tag Tag) bool {
-	return tag.Key() == domain && tag.Value() != domainAllValue
+	return tag.Key() == domain && tag.Value() != allValue
 }
