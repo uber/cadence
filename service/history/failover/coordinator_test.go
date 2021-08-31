@@ -418,3 +418,31 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Err
 	s.coordinator.handleFailoverMarkers(request2)
 	s.Equal(1, len(s.coordinator.recorder))
 }
+
+func (s *coordinatorSuite) TestGetFailoverInfo_Success() {
+	domainID := uuid.New()
+
+	//Add failover marker
+	attributes := &types.FailoverMarkerAttributes{
+		DomainID:        domainID,
+		FailoverVersion: 2,
+		CreationTime:    common.Int64Ptr(1),
+	}
+	request := &receiveRequest{
+		shardIDs: []int32{1},
+		marker:   attributes,
+	}
+	s.coordinator.handleFailoverMarkers(request)
+
+	resp, err := s.coordinator.GetFailoverInfo(domainID)
+	s.NoError(err)
+	s.Equal(int32(1), resp.GetCompletedShardCount())
+	s.Contains(resp.GetPendingShards(), int32(0))
+}
+
+func (s *coordinatorSuite) TestGetFailoverInfo_DomainIDNotFound_Error() {
+	domainID := uuid.New()
+	resp, err := s.coordinator.GetFailoverInfo(domainID)
+	s.Nil(resp)
+	s.Error(err)
+}
