@@ -25,6 +25,9 @@ import (
 	"fmt"
 	"log"
 
+	"go.uber.org/yarpc/transport/grpc"
+	"go.uber.org/yarpc/transport/tchannel"
+
 	"go.uber.org/multierr"
 )
 
@@ -59,6 +62,21 @@ type (
 		// Address indicate the remote service address(Host:Port). Host can be DNS name.
 		// For currentCluster, it's usually the same as publicClient.hostPort
 		RPCAddress string `yaml:"rpcAddress" validate:"nonzero"`
+		// RPCTransport specifies transport to use for replication traffic.
+		// Allowed values: tchannel|grpc
+		// Default: tchannel
+		RPCTransport string `yaml:"rpcTransport"`
+		// AuthorizationProvider contains the information to authorize the cluster
+		AuthorizationProvider AuthorizationProvider `yaml:"authorizationProvider"`
+	}
+
+	AuthorizationProvider struct {
+		// Enable indicates if the auth provider is enabled
+		Enable bool `yaml:"enable"`
+		// Type auth provider type
+		Type string `yaml:"type"` // only supports OAuthAuthorization
+		// PrivateKey is the private key path
+		PrivateKey string `yaml:"privateKey"`
 	}
 )
 
@@ -112,6 +130,10 @@ func (m *ClusterGroupMetadata) validate() error {
 		if info.Enabled && (len(info.RPCName) == 0 || len(info.RPCAddress) == 0) {
 			errs = multierr.Append(errs, fmt.Errorf("cluster %v: rpc name / address is empty", clusterName))
 		}
+		if info.RPCTransport != tchannel.TransportName && info.RPCTransport != grpc.TransportName {
+			errs = multierr.Append(errs, fmt.Errorf("cluster %v: rpc transport must %v or %v",
+				clusterName, tchannel.TransportName, grpc.TransportName))
+		}
 	}
 	if len(versionToClusterName) != len(m.ClusterGroup) {
 		errs = multierr.Append(errs, errors.New("initial versions of the cluster group have duplicates"))
@@ -141,7 +163,10 @@ func (m *ClusterGroupMetadata) fillDefaults() {
 		if cluster.RPCName == "" {
 			// filling RPCName with a default value if empty
 			cluster.RPCName = "cadence-frontend"
-			m.ClusterGroup[name] = cluster
 		}
+		if cluster.RPCTransport == "" {
+			cluster.RPCTransport = tchannel.TransportName
+		}
+		m.ClusterGroup[name] = cluster
 	}
 }

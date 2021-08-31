@@ -858,3 +858,23 @@ func (mr *MockClientMockRecorder) TerminateWorkflowExecution(arg0, arg1 interfac
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateWorkflowExecution", reflect.TypeOf((*MockClient)(nil).TerminateWorkflowExecution), varargs...)
 }
+
+// GetFailoverInfo mocks base method
+func (m *MockClient) GetFailoverInfo(arg0 context.Context, arg1 *types.GetFailoverInfoRequest, arg2 ...yarpc.CallOption) (*types.GetFailoverInfoResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetFailoverInfo", varargs...)
+	ret0, _ := ret[0].(*types.GetFailoverInfoResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetFailoverInfo indicates an expected call of GetFailoverInfo
+func (mr *MockClientMockRecorder) GetFailoverInfo(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFailoverInfo", reflect.TypeOf((*MockClient)(nil).GetFailoverInfo), varargs...)
+}

@@ -21,6 +21,8 @@
 package testdata
 
 import (
+	"github.com/pborman/uuid"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
@@ -566,6 +568,13 @@ var (
 	UpsertWorkflowSearchAttributesEventAttributes = types.UpsertWorkflowSearchAttributesEventAttributes{
 		DecisionTaskCompletedEventID: EventID1,
 		SearchAttributes:             &SearchAttributes,
+	}
+	GetFailoverInfoRequest = types.GetFailoverInfoRequest{
+		DomainID: uuid.NewUUID().String(),
+	}
+	GetFailoverInfoResponse = types.GetFailoverInfoResponse{
+		CompletedShardCount: 0,
+		PendingShards:       []int32{1, 2, 3},
 	}
 )
 
