@@ -231,7 +231,7 @@ func (r *historyReplicatorImpl) applyEvents(
 	default:
 		// apply events, other than simple start workflow execution
 		// the continue as new + start workflow execution combination will also be processed here
-		mutableState, err := context.LoadWorkflowExecutionForReplication(ctx, task.getVersion())
+		mutableState, err := context.LoadWorkflowExecutionWithTaskVersion(ctx, task.getVersion())
 		switch err.(type) {
 		case nil:
 			// Sanity check to make only 3DC mutable state here

@@ -4433,8 +4433,10 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
 	// is missing and the missing history replicate back from remote cluster via resending approach => nothing to do
 
 	//handle case 5
-	incomingTaskSourceCLuster := e.clusterMetadata.ClusterNameForFailoverVersion(incomingTaskVersion)
-	if currentVersionCluster != currentCluster && incomingTaskSourceCLuster == currentCluster {
+	incomingTaskSourceCluster := e.clusterMetadata.ClusterNameForFailoverVersion(incomingTaskVersion)
+	if incomingTaskVersion != common.EmptyVersion &&
+		currentVersionCluster != currentCluster &&
+		incomingTaskSourceCluster == currentCluster {
 		return false, nil
 	}
 
