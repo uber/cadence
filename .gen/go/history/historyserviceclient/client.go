@@ -83,6 +83,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*replicator.GetDLQReplicationMessagesResponse, error)
 
+	GetFailoverInfo(
+		ctx context.Context,
+		Request *history.GetFailoverInfoRequest,
+		opts ...yarpc.CallOption,
+	) (*history.GetFailoverInfoResponse, error)
+
 	GetMutableState(
 		ctx context.Context,
 		GetRequest *history.GetMutableStateRequest,
@@ -470,6 +476,29 @@ func (c client) GetDLQReplicationMessages(
 	}
 
 	success, err = history.HistoryService_GetDLQReplicationMessages_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetFailoverInfo(
+	ctx context.Context,
+	_Request *history.GetFailoverInfoRequest,
+	opts ...yarpc.CallOption,
+) (success *history.GetFailoverInfoResponse, err error) {
+
+	args := history.HistoryService_GetFailoverInfo_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_GetFailoverInfo_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_GetFailoverInfo_Helper.UnwrapResponse(&result)
 	return
 }
 

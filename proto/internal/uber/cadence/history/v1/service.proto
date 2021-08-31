@@ -221,6 +221,9 @@ service HistoryAPI {
 
   // RespondCrossClusterTasksCompleted responds the result of processing cross cluster tasks.
   rpc RespondCrossClusterTasksCompleted(RespondCrossClusterTasksCompletedRequest) returns (RespondCrossClusterTasksCompletedResponse);
+
+  // GetFailoverInfo returns information about on-going failover.
+  rpc GetFailoverInfo(GetFailoverInfoRequest) returns(GetFailoverInfoResponse);
 }
 
 
@@ -700,4 +703,13 @@ message RespondCrossClusterTasksCompletedRequest {
 
 message RespondCrossClusterTasksCompletedResponse {
   shared.v1.CrossClusterTaskRequests tasks = 1;
+}
+
+message GetFailoverInfoRequest {
+    string domain_id = 1;
+}
+
+message GetFailoverInfoResponse {
+    int32 completed_shard_count = 1;
+    repeated int32 pending_shards = 2;
 }

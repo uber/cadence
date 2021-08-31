@@ -374,6 +374,8 @@ const (
 	HistoryClientGetCrossClusterTasksScope
 	// HistoryClientRespondCrossClusterTasksCompletedScope tracks RPC calls to history service
 	HistoryClientRespondCrossClusterTasksCompletedScope
+	// HistoryClientGetFailoverInfoScope tracks RPC calls to history service
+	HistoryClientGetFailoverInfoScope
 	// MatchingClientPollForDecisionTaskScope tracks RPC calls to matching service
 	MatchingClientPollForDecisionTaskScope
 	// MatchingClientPollForActivityTaskScope tracks RPC calls to matching service
@@ -932,6 +934,8 @@ const (
 	HistoryGetCrossClusterTasksScope
 	// HistoryRespondCrossClusterTasksCompletedScope tracks RespondCrossClusterTasksCompleted API calls received by service
 	HistoryRespondCrossClusterTasksCompletedScope
+	// HistoryGetFailoverInfoScope tracks HistoryGetFailoverInfo API calls received by service
+	HistoryGetFailoverInfoScope
 	// TaskPriorityAssignerScope is the scope used by all metric emitted by task priority assigner
 	TaskPriorityAssignerScope
 	// TransferQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
@@ -1289,6 +1293,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientNotifyFailoverMarkersScope:               {operation: "HistoryClientNotifyFailoverMarkersScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientGetCrossClusterTasksScope:                {operation: "HistoryClientGetCrossClusterTasks", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientRespondCrossClusterTasksCompletedScope:   {operation: "HistoryClientRespondCrossClusterTasksCompleted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientGetFailoverInfoScope:                     {operation: "HistoryClientGetFailoverInfo", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		MatchingClientPollForDecisionTaskScope:                {operation: "MatchingClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
 		MatchingClientPollForActivityTaskScope:                {operation: "MatchingClientPollForActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
 		MatchingClientAddActivityTaskScope:                    {operation: "MatchingClientAddActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
@@ -1562,6 +1567,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryNotifyFailoverMarkersScope:                             {operation: "NotifyFailoverMarkers"},
 		HistoryGetCrossClusterTasksScope:                              {operation: "GetCrossClusterTasks"},
 		HistoryRespondCrossClusterTasksCompletedScope:                 {operation: "RespondCrossClusterTasksCompleted"},
+		HistoryGetFailoverInfoScope:                                   {operation: "GetFailoverInfo"},
 		TaskPriorityAssignerScope:                                     {operation: "TaskPriorityAssigner"},
 		TransferQueueProcessorScope:                                   {operation: "TransferQueueProcessor"},
 		TransferActiveQueueProcessorScope:                             {operation: "TransferActiveQueueProcessor"},
