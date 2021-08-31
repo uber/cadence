@@ -2273,8 +2273,15 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	}, nil
 }
 
-func withSignalName(ctx context.Context, signalName string) context.Context {
-	return metrics.TagContext(ctx, metrics.SignalNameTag(signalName))
+func (wh *WorkflowHandler) withSignalName(
+	ctx context.Context,
+	domainName string,
+	signalName string,
+) context.Context {
+	if wh.config.EmitSignalNameMetricsTag(domainName) {
+		return metrics.TagContext(ctx, metrics.SignalNameTag(signalName))
+	}
+	return ctx
 }
 
 // SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in
@@ -2285,7 +2292,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	ctx = withSignalName(ctx, signalRequest.GetSignalName())
+	ctx = wh.withSignalName(ctx, signalRequest.GetDomain(), signalRequest.GetSignalName())
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendSignalWorkflowExecutionScope, signalRequest)
 	defer sw.Stop()
 

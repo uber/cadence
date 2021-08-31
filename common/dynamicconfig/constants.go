@@ -462,6 +462,12 @@ const (
 	// Default value: 0
 	// Allowed filters: N/A
 	FrontendErrorInjectionRate
+	// FrontendEmitSignalNameMetricsTag enables emitting signal name tag in metrics in frontend client
+	// KeyName: frontend.emitSignalNameMetricsTag
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	FrontendEmitSignalNameMetricsTag
 
 	// key for matching
 
@@ -2033,7 +2039,7 @@ var Keys = map[Key]string{
 	DomainFailoverRefreshInterval:               "frontend.domainFailoverRefreshInterval",
 	DomainFailoverRefreshTimerJitterCoefficient: "frontend.domainFailoverRefreshTimerJitterCoefficient",
 	FrontendErrorInjectionRate:                  "frontend.errorInjectionRate",
-
+	FrontendEmitSignalNameMetricsTag:            "frontend.emitSignalNameMetricsTag",
 	// matching settings
 	MatchingRPS:                             "matching.rps",
 	MatchingPersistenceMaxQPS:               "matching.persistenceMaxQPS",
