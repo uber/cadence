@@ -953,7 +953,7 @@ func (c *contextImpl) PersistStartWorkflowBatchEvents(
 			// TransactionID is set by shard context
 		},
 	)
-	return int64(size), err
+	return size, err
 }
 
 func (c *contextImpl) PersistNonStartWorkflowBatchEvents(
