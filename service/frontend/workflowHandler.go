@@ -737,9 +737,9 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 	)
 	defer sw.Stop()
 
-	// Count the request in the RPS towards the requested domain,
+	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(domainWrapper)
+	wh.allow(nil)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -820,9 +820,9 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 		return nil, wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	// Count the request in the RPS towards the requested domain,
+	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(heartbeatRequest)
+	wh.allow(nil)
 
 	wh.GetLogger().Debug("Received RecordActivityTaskHeartbeatByID")
 	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
@@ -950,9 +950,9 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 	)
 	defer sw.Stop()
 
-	// Count the request in the RPS towards the requested domain,
+	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(domainWrapper)
+	wh.allow(nil)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -1041,9 +1041,9 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 		return wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	// Count the request in the RPS towards the requested domain,
+	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(completeRequest)
+	wh.allow(nil)
 
 	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
 	if err != nil {
@@ -1178,9 +1178,9 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 	)
 	defer sw.Stop()
 
-	// Count the request in the RPS towards the requested domain,
+	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(domainWrapper)
+	wh.allow(nil)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -1257,9 +1257,9 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 		return wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	// Count the request in the RPS towards the requested domain,
+	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(failedRequest)
+	wh.allow(nil)
 
 	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
 	if err != nil {
@@ -1385,9 +1385,9 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 	)
 	defer sw.Stop()
 
-	// Count the request in the RPS towards the requested domain,
+	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(domainWrapper)
+	wh.allow(nil)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -1476,9 +1476,9 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 		return wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	// Count the request in the RPS towards the requested domain,
+	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(cancelRequest)
+	wh.allow(nil)
 
 	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
 	if err != nil {
@@ -1613,9 +1613,9 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	)
 	defer sw.Stop()
 
-	// Count the request in the RPS towards the requested domain,
+	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(domainWrapper)
+	wh.allow(nil)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -1720,9 +1720,9 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 	)
 	defer sw.Stop()
 
-	// Count the request in the RPS towards the requested domain,
+	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(domainWrapper)
+	wh.allow(nil)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -1813,9 +1813,9 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	)
 	defer sw.Stop()
 
-	// Count the request in the RPS towards the requested domain,
+	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(domainWrapper)
+	wh.allow(nil)
 
 	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
