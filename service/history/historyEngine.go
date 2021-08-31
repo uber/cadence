@@ -2711,6 +2711,8 @@ func (e *historyEngineImpl) NotifyNewCrossClusterTasks(
 			targetCluster = crossClusterTask.TargetCluster
 		case *persistence.CrossClusterRecordChildWorkflowExecutionCompleteTask:
 			targetCluster = crossClusterTask.TargetCluster
+		case *persistence.CrossClusterApplyParentClosePolicyTask:
+			targetCluster = crossClusterTask.TargetCluster
 		default:
 			panic("encountered unknown cross cluster task type")
 		}
