@@ -1102,3 +1102,29 @@ func (c *errorInjectionClient) RespondCrossClusterTasksCompleted(
 	}
 	return resp, clientErr
 }
+
+func (c *errorInjectionClient) GetFailoverInfo(
+	ctx context.Context,
+	request *types.GetFailoverInfoRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetFailoverInfoResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.GetFailoverInfoResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.GetFailoverInfo(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.HistoryClientOperationGetFailoverInfo,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}

@@ -39,46 +39,13 @@ import (
 	adminClient "github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
-	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
 	test "github.com/uber/cadence/common/testing"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/host"
-)
-
-type (
-	NDCIntegrationTestSuite struct {
-		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
-		// not merely log an error
-		*require.Assertions
-		suite.Suite
-		active     *host.TestCluster
-		generator  test.Generator
-		serializer persistence.PayloadSerializer
-		logger     log.Logger
-
-		domainName                  string
-		domainID                    string
-		version                     int64
-		versionIncrement            int64
-		mockAdminClient             map[string]adminClient.Client
-		standByReplicationTasksChan chan *types.ReplicationTask
-		standByTaskID               int64
-
-		clusterConfigs        []*host.TestClusterConfig
-		defaultTestCluster    testcluster.PersistenceTestCluster
-		visibilityTestCluster testcluster.PersistenceTestCluster
-	}
-
-	NDCIntegrationTestSuiteParams struct {
-		ClusterConfigs        []*host.TestClusterConfig
-		DefaultTestCluster    testcluster.PersistenceTestCluster
-		VisibilityTestCluster testcluster.PersistenceTestCluster
-	}
 )
 
 var (
@@ -107,14 +74,6 @@ func TestNDCIntegrationTestSuite(t *testing.T) {
 	}
 	s := NewNDCIntegrationTestSuite(params)
 	suite.Run(t, s)
-}
-
-func NewNDCIntegrationTestSuite(params NDCIntegrationTestSuiteParams) *NDCIntegrationTestSuite {
-	return &NDCIntegrationTestSuite{
-		clusterConfigs:        params.ClusterConfigs,
-		defaultTestCluster:    params.DefaultTestCluster,
-		visibilityTestCluster: params.VisibilityTestCluster,
-	}
 }
 
 func (s *NDCIntegrationTestSuite) SetupSuite() {

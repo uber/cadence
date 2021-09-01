@@ -1101,6 +1101,19 @@ func (c *clientImpl) RespondCrossClusterTasksCompleted(
 	return response, nil
 }
 
+func (c *clientImpl) GetFailoverInfo(
+	ctx context.Context,
+	request *types.GetFailoverInfoRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetFailoverInfoResponse, error) {
+	client, err := c.getClientForDomainID(request.GetDomainID())
+	if err != nil {
+		return nil, err
+	}
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	return client.GetFailoverInfo(ctx, request, opts...)
+}
+
 func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {
 	if parent == nil {
 		return context.WithTimeout(context.Background(), c.timeout)

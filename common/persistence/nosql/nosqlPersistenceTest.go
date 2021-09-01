@@ -32,27 +32,35 @@ import (
 
 // testCluster allows executing cassandra operations in testing.
 type testCluster struct {
-	keyspace string
-	cfg      config.NoSQL
+	keyspace      string
+	schemaBaseDir string
+	cfg           config.NoSQL
 }
 
 var _ testcluster.PersistenceTestCluster = (*testCluster)(nil)
 
 // NewTestCluster returns a new cassandra test cluster
-func NewTestCluster(pluginName, keyspace, username, password, host string, port int, protoVersion int) testcluster.PersistenceTestCluster {
-	var tc testCluster
-	tc.keyspace = keyspace
-	tc.cfg = config.NoSQL{
-		PluginName:   pluginName,
-		User:         username,
-		Password:     password,
-		Hosts:        host,
-		Port:         port,
-		MaxConns:     2,
-		Keyspace:     keyspace,
-		ProtoVersion: protoVersion,
+// if schemaBaseDir is empty, it will be auto-resolved based on os.Getwd()
+// otherwise the specified value will be used (used by internal tests)
+func NewTestCluster(
+	pluginName, keyspace, username, password, host string,
+	port, protoVersion int,
+	schemaBaseDir string,
+) testcluster.PersistenceTestCluster {
+	return &testCluster{
+		keyspace:      keyspace,
+		schemaBaseDir: schemaBaseDir,
+		cfg: config.NoSQL{
+			PluginName:   pluginName,
+			User:         username,
+			Password:     password,
+			Hosts:        host,
+			Port:         port,
+			MaxConns:     2,
+			Keyspace:     keyspace,
+			ProtoVersion: protoVersion,
+		},
 	}
-	return &tc
 }
 
 // Config returns the persistence config for connecting to this test cluster
@@ -78,7 +86,7 @@ func (s *testCluster) SetupTestDatabase() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = adminDB.SetupTestDatabase()
+	err = adminDB.SetupTestDatabase(s.schemaBaseDir)
 	if err != nil {
 		log.Fatal(err)
 	}
