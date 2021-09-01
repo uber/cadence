@@ -85,7 +85,7 @@ func NewHandler(
 				return float64(config.RPS())
 			},
 			func(domain string) float64 {
-				domainRPS := float64(config.DomainRPS())
+				domainRPS := float64(config.DomainRPS(domain))
 				if domainRPS > 0 {
 					return domainRPS
 				}
