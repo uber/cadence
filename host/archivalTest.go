@@ -41,7 +41,7 @@ const (
 	retryBackoffTime = 200 * time.Millisecond
 )
 
-func (s *IntegrationSuite) TestArchival_TimerQueueProcessor() {
+func (s *IntegrationSuite) TestArchivalTimerQueueProcessor() {
 	s.True(s.testCluster.archiverBase.metadata.GetHistoryConfig().ClusterConfiguredForArchival())
 
 	domainID := s.getDomainID(s.archivalDomainName)
@@ -61,7 +61,7 @@ func (s *IntegrationSuite) TestArchival_TimerQueueProcessor() {
 	s.True(s.isMutableStateDeleted(domainID, execution))
 }
 
-func (s *IntegrationSuite) TestArchival_ContinueAsNew() {
+func (s *IntegrationSuite) TestArchivalContinueAsNew() {
 	s.True(s.testCluster.archiverBase.metadata.GetHistoryConfig().ClusterConfiguredForArchival())
 
 	domainID := s.getDomainID(s.archivalDomainName)
@@ -83,7 +83,7 @@ func (s *IntegrationSuite) TestArchival_ContinueAsNew() {
 	}
 }
 
-func (s *IntegrationSuite) TestArchival_ArchiverWorker() {
+func (s *IntegrationSuite) TestArchivalArchiverWorker() {
 	s.True(s.testCluster.archiverBase.metadata.GetHistoryConfig().ClusterConfiguredForArchival())
 
 	domainID := s.getDomainID(s.archivalDomainName)

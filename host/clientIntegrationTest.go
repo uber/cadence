@@ -252,7 +252,7 @@ func (s *ClientIntegrationSuite) TestClientDataConverter() {
 	s.Equal(1, d.NumOfCallFromData)
 }
 
-func (s *ClientIntegrationSuite) TestClientDataConverter_Failed() {
+func (s *ClientIntegrationSuite) TestClientDataConverterFailed() {
 	tl := "client-integration-data-converter-activity-failed-tasklist"
 	worker := s.startWorkerWithDataConverter(tl, nil) // mismatch of data converter
 	defer worker.Stop()
@@ -355,7 +355,7 @@ func testChildWorkflow(ctx workflow.Context, totalCount, runCount int) (string, 
 	return "", workflow.NewContinueAsNewError(ctx, testChildWorkflow, totalCount, runCount)
 }
 
-func (s *ClientIntegrationSuite) TestClientDataConverter_WithChild() {
+func (s *ClientIntegrationSuite) TestClientDataConverterWithChild() {
 	dc := newTestDataConverter()
 	worker := s.startWorkerWithDataConverter(childTaskList, dc)
 	defer worker.Stop()

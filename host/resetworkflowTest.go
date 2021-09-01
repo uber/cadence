@@ -247,7 +247,7 @@ func (s *IntegrationSuite) TestResetWorkflow() {
 	s.NoError(err)
 }
 
-func (s *IntegrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
+func (s *IntegrationSuite) TestResetWorkflowNoDecisionTaskCompleted() {
 	id := "integration-reset-workflow-test-no-decision-completed"
 	wt := "integration-reset-workflow-test-type--no-decision-completed"
 	tl := "integration-reset-workflow-test-taskqueue-no-decision-completed"

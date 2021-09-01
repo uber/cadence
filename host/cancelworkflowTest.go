@@ -404,7 +404,7 @@ GetHistoryLoop:
 	s.True(executionCancelled)
 }
 
-func (s *IntegrationSuite) TestRequestCancelWorkflowDecisionExecution_UnKnownTarget() {
+func (s *IntegrationSuite) TestRequestCancelWorkflowDecisionExecutionUnKnownTarget() {
 	id := "integration-cancel-unknown-workflow-decision-test"
 	wt := "integration-cancel-unknown-workflow-decision-test-type"
 	tl := "integration-cancel-unknown-workflow-decision-test-tasklist"

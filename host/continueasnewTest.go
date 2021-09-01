@@ -139,7 +139,7 @@ func (s *IntegrationSuite) TestContinueAsNewWorkflow() {
 	s.Equal(searchAttr, lastRunStartedEvent.WorkflowExecutionStartedEventAttributes.SearchAttributes)
 }
 
-func (s *IntegrationSuite) TestContinueAsNewWorkflow_Timeout() {
+func (s *IntegrationSuite) TestContinueAsNewWorkflowTimeout() {
 	id := "integration-continue-as-new-workflow-timeout-test"
 	wt := "integration-continue-as-new-workflow-timeout-test-type"
 	tl := "integration-continue-as-new-workflow-timeout-test-tasklist"
@@ -244,7 +244,7 @@ GetHistoryLoop:
 	s.True(workflowComplete)
 }
 
-func (s *IntegrationSuite) TestWorkflowContinueAsNew_TaskID() {
+func (s *IntegrationSuite) TestWorkflowContinueAsNewTaskID() {
 	id := "integration-wf-continue-as-new-task-id-test"
 	wt := "integration-wf-continue-as-new-task-id-type"
 	tl := "integration-wf-continue-as-new-task-id-tasklist"

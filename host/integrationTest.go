@@ -142,7 +142,7 @@ func (s *IntegrationSuite) TestStartWorkflowExecution() {
 	s.Nil(we2)
 }
 
-func (s *IntegrationSuite) TestStartWorkflowExecution_IDReusePolicy() {
+func (s *IntegrationSuite) TestStartWorkflowExecutionIDReusePolicy() {
 	id := "integration-start-workflow-id-reuse-test"
 	wt := "integration-start-workflow-id-reuse-type"
 	tl := "integration-start-workflow-id-reuse-tasklist"
@@ -1391,7 +1391,7 @@ func (s *IntegrationSuite) TestCronWorkflowTimeout() {
 	s.NoError(terminateErr)
 }
 
-func (s *IntegrationSuite) TestSequential_UserTimers() {
+func (s *IntegrationSuite) TestSequentialUserTimers() {
 	id := "integration-sequential-user-timers-test"
 	wt := "integration-sequential-user-timers-test-type"
 	tl := "integration-sequential-user-timers-test-tasklist"
@@ -3164,7 +3164,7 @@ func (s *IntegrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 	s.Equal(102, signalCount)
 }
 
-func (s *IntegrationSuite) TestStickyTimeout_NonTransientDecision() {
+func (s *IntegrationSuite) TestStickyTimeoutNonTransientDecision() {
 	id := "integration-sticky-timeout-non-transient-decision"
 	wt := "integration-sticky-timeout-non-transient-decision-type"
 	tl := "integration-sticky-timeout-non-transient-decision-tasklist"
@@ -3882,7 +3882,7 @@ func (s *IntegrationSuite) TestCancelTimer() {
 	}
 }
 
-func (s *IntegrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
+func (s *IntegrationSuite) TestCancelTimerCancelFiredAndBuffered() {
 	id := "integration-cancel-timer-fired-and-buffered-test"
 	wt := "integration-cancel-timer-fired-and-buffered-test-type"
 	tl := "integration-cancel-timer-fired-and-buffered-test-tasklist"

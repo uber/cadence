@@ -37,7 +37,7 @@ import (
 	"github.com/uber/cadence/service/matching"
 )
 
-func (s *IntegrationSuite) TestActivityHeartBeatWorkflow_Success() {
+func (s *IntegrationSuite) TestActivityHeartBeatWorkflowSuccess() {
 	id := "integration-heartbeat-test"
 	wt := "integration-heartbeat-test-type"
 	tl := "integration-heartbeat-test-tasklist"
@@ -552,7 +552,7 @@ func (s *IntegrationSuite) TestActivityRetry() {
 	s.True(activityExecutedCount == 2)
 }
 
-func (s *IntegrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
+func (s *IntegrationSuite) TestActivityHeartBeatWorkflowTimeout() {
 	id := "integration-heartbeat-timeout-test"
 	wt := "integration-heartbeat-timeout-test-type"
 	tl := "integration-heartbeat-timeout-test-tasklist"

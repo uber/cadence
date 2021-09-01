@@ -683,7 +683,7 @@ func (s *NDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 	)
 }
 
-func (s *NDCIntegrationTestSuite) TestHandcraftedResetWorkflow_Zombie() {
+func (s *NDCIntegrationTestSuite) TestHandcraftedResetWorkflowZombie() {
 
 	s.setupRemoteFrontendClients()
 	workflowID := "ndc-handcrafted-reset-workflow-test" + uuid.New()
@@ -1559,7 +1559,7 @@ func (s *NDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 	)
 }
 
-func (s *NDCIntegrationTestSuite) TestEventsReapply_ZombieWorkflow() {
+func (s *NDCIntegrationTestSuite) TestEventsReapplyZombieWorkflow() {
 
 	workflowID := "ndc-single-branch-test" + uuid.New()
 
@@ -1622,7 +1622,7 @@ func (s *NDCIntegrationTestSuite) TestEventsReapply_ZombieWorkflow() {
 	)
 }
 
-func (s *NDCIntegrationTestSuite) TestEventsReapply_UpdateNonCurrentBranch() {
+func (s *NDCIntegrationTestSuite) TestEventsReapplyUpdateNonCurrentBranch() {
 
 	workflowID := "ndc-single-branch-test" + uuid.New()
 	runID := uuid.New()
