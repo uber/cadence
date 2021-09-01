@@ -7,15 +7,15 @@ persistence:
       nosql:
         pluginName: "cassandra"
         hosts: "127.0.0.1"
-        keyspace: "cadence_other"
+        keyspace: "cadence_cluster_2"
     cass-visibility:
       nosql:
         pluginName: "cassandra"
         hosts: "127.0.0.1"
-        keyspace: "cadence_visibility_other"
+        keyspace: "cadence_visibility_cluster_2"
 
 ringpop:
-  name: cadence_other
+  name: cadence_cluster_2
   bootstrapMode: hosts
   bootstrapHosts: [ "127.0.0.1:9933", "127.0.0.1:9934", "127.0.0.1:9935", "127.0.0.1:9940" ]
   maxJoinDuration: 30s
@@ -29,7 +29,7 @@ services:
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
-        prefix: "cadence_other"
+        prefix: "cadence_cluster_2"
     pprof:
       port: 9936
 
@@ -41,7 +41,7 @@ services:
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
-        prefix: "cadence_other"
+        prefix: "cadence_cluster_2"
     pprof:
       port: 9938
 
@@ -53,7 +53,7 @@ services:
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
-        prefix: "cadence_other"
+        prefix: "cadence_cluster_2"
     pprof:
       port: 9937
 
@@ -64,7 +64,7 @@ services:
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
-        prefix: "cadence_other"
+        prefix: "cadence_cluster_2"
     pprof:
       port: 9941
 
