@@ -436,35 +436,37 @@ func (t *crossClusterSourceTask) GetCrossClusterRequest() (request *types.CrossC
 		},
 	}
 
+	var taskState processingState
 	switch t.GetTaskType() {
 	case persistence.CrossClusterTaskTypeStartChildExecution:
-		attributes, taskState, err := t.getRequestForStartChildExecution(ctx, taskInfo, mutableState)
+		var attributes *types.CrossClusterStartChildExecutionRequestAttributes
+		attributes, taskState, err = t.getRequestForStartChildExecution(ctx, taskInfo, mutableState)
 		if err != nil || attributes == nil {
 			return nil, err
 		}
 		request.TaskInfo.TaskType = types.CrossClusterTaskTypeStartChildExecution.Ptr()
-		request.TaskInfo.TaskState = int16(taskState)
 		request.StartChildExecutionAttributes = attributes
 	case persistence.CrossClusterTaskTypeCancelExecution:
-		attributes, taskState, err := t.getRequestForCancelExecution(ctx, taskInfo, mutableState)
+		var attributes *types.CrossClusterCancelExecutionRequestAttributes
+		attributes, taskState, err = t.getRequestForCancelExecution(ctx, taskInfo, mutableState)
 		if err != nil || attributes == nil {
 			return nil, err
 		}
 		request.TaskInfo.TaskType = types.CrossClusterTaskTypeCancelExecution.Ptr()
-		request.TaskInfo.TaskState = int16(taskState)
 		request.CancelExecutionAttributes = attributes
 	case persistence.CrossClusterTaskTypeSignalExecution:
-		attributes, taskState, err := t.getRequestForSignalExecution(ctx, taskInfo, mutableState)
+		var attributes *types.CrossClusterSignalExecutionRequestAttributes
+		attributes, taskState, err = t.getRequestForSignalExecution(ctx, taskInfo, mutableState)
 		if err != nil || attributes == nil {
 			return nil, err
 		}
 		request.TaskInfo.TaskType = types.CrossClusterTaskTypeSignalExecution.Ptr()
-		request.TaskInfo.TaskState = int16(taskState)
 		request.SignalExecutionAttributes = attributes
 	default:
 		return nil, errUnknownCrossClusterTask
 	}
 
+	request.TaskInfo.TaskState = int16(taskState)
 	return request, nil
 }
 
