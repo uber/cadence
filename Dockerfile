@@ -78,6 +78,7 @@ COPY --from=builder /cadence/schema /etc/cadence/schema
 
 COPY docker/entrypoint.sh /docker-entrypoint.sh
 COPY config/dynamicconfig /etc/cadence/config/dynamicconfig
+COPY config/credentials /etc/cadence/config/credentials
 COPY docker/config_template.yaml /etc/cadence/config
 COPY docker/start-cadence.sh /start-cadence.sh
 

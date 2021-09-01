@@ -102,6 +102,7 @@ type (
 		SyncActivity(context.Context, *types.SyncActivityRequest) error
 		SyncShardStatus(context.Context, *types.SyncShardStatusRequest) error
 		TerminateWorkflowExecution(context.Context, *types.HistoryTerminateWorkflowExecutionRequest) error
+		GetFailoverInfo(context.Context, *types.GetFailoverInfoRequest) (*types.GetFailoverInfoResponse, error)
 	}
 
 	// handlerImpl is an implementation for history service independent of wire protocol
@@ -1957,6 +1958,27 @@ func (h *handlerImpl) RespondCrossClusterTasksCompleted(
 		}
 	}
 	return response, nil
+}
+
+func (h *handlerImpl) GetFailoverInfo(
+	ctx context.Context,
+	request *types.GetFailoverInfoRequest,
+) (resp *types.GetFailoverInfoResponse, retError error) {
+	defer log.CapturePanic(h.GetLogger(), &retError)
+	h.startWG.Wait()
+
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryGetFailoverInfoScope)
+	defer sw.Stop()
+
+	if h.isShuttingDown() {
+		return nil, errShuttingDown
+	}
+
+	resp, err := h.failoverCoordinator.GetFailoverInfo(request.GetDomainID())
+	if err != nil {
+		return nil, h.error(err, scope, request.GetDomainID(), "")
+	}
+	return resp, nil
 }
 
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various

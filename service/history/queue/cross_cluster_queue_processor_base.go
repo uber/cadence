@@ -160,7 +160,7 @@ func newCrossClusterQueueProcessorBaseHelper(
 			func(t task.Task) {
 				_, _ = base.submitTask(t)
 			},
-			shard.GetConfig().CrossClusterTaskMaxRetryCount,
+			shard.GetConfig().TaskCriticalRetryCount,
 		)
 	}
 	return base

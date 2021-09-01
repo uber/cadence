@@ -75,6 +75,11 @@ type Interface interface {
 		Request *replicator.GetDLQReplicationMessagesRequest,
 	) (*replicator.GetDLQReplicationMessagesResponse, error)
 
+	GetFailoverInfo(
+		ctx context.Context,
+		Request *history.GetFailoverInfoRequest,
+	) (*history.GetFailoverInfoResponse, error)
+
 	GetMutableState(
 		ctx context.Context,
 		GetRequest *history.GetMutableStateRequest,
@@ -331,6 +336,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.GetDLQReplicationMessages),
 				},
 				Signature:    "GetDLQReplicationMessages(Request *replicator.GetDLQReplicationMessagesRequest) (*replicator.GetDLQReplicationMessagesResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "GetFailoverInfo",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.GetFailoverInfo),
+				},
+				Signature:    "GetFailoverInfo(Request *history.GetFailoverInfoRequest) (*history.GetFailoverInfoResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -710,7 +726,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 41)
+	procedures := make([]transport.Procedure, 0, 42)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -912,6 +928,36 @@ func (h handler) GetDLQReplicationMessages(ctx context.Context, body wire.Value)
 
 	hadError := appErr != nil
 	result, err := history.HistoryService_GetDLQReplicationMessages_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) GetFailoverInfo(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_GetFailoverInfo_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'GetFailoverInfo': %w", err)
+	}
+
+	success, appErr := h.impl.GetFailoverInfo(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_GetFailoverInfo_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {

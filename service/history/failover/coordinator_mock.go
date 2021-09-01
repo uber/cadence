@@ -104,3 +104,18 @@ func (mr *MockCoordinatorMockRecorder) ReceiveFailoverMarkers(shardIDs, marker i
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReceiveFailoverMarkers", reflect.TypeOf((*MockCoordinator)(nil).ReceiveFailoverMarkers), shardIDs, marker)
 }
+
+// GetFailoverInfo mocks base method
+func (m *MockCoordinator) GetFailoverInfo(domainID string) (*types.GetFailoverInfoResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFailoverInfo", domainID)
+	ret0, _ := ret[0].(*types.GetFailoverInfoResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetFailoverInfo indicates an expected call of GetFailoverInfo
+func (mr *MockCoordinatorMockRecorder) GetFailoverInfo(domainID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFailoverInfo", reflect.TypeOf((*MockCoordinator)(nil).GetFailoverInfo), domainID)
+}

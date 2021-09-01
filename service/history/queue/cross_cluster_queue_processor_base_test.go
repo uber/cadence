@@ -397,6 +397,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestUpdateTask_SubmitTask_Redispat
 	crossClusterTask.EXPECT().GetDomainID().Return(uuid.New()).AnyTimes()
 	crossClusterTask.EXPECT().RecordResponse(gomock.Any()).Return(nil).Times(1)
 	crossClusterTask.EXPECT().Priority().Return(0).AnyTimes()
+	crossClusterTask.EXPECT().GetAttempt().Return(0).Times(1)
 	crossClusterTask.EXPECT().GetTaskType().Return(1).AnyTimes()
 	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(false, errors.New("test")).Times(1)
 	newTaskMap := map[task.Key]task.Task{newCrossClusterTaskKey(2): crossClusterTask}

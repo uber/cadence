@@ -706,3 +706,18 @@ func (mr *MockHandlerMockRecorder) TerminateWorkflowExecution(arg0, arg1 interfa
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateWorkflowExecution", reflect.TypeOf((*MockHandler)(nil).TerminateWorkflowExecution), arg0, arg1)
 }
+
+// GetFailoverInfo mocks base method
+func (m *MockHandler) GetFailoverInfo(arg0 context.Context, arg1 *types.GetFailoverInfoRequest) (*types.GetFailoverInfoResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFailoverInfo", arg0, arg1)
+	ret0, _ := ret[0].(*types.GetFailoverInfoResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetFailoverInfo indicates an expected call of GetFailoverInfo
+func (mr *MockHandlerMockRecorder) GetFailoverInfo(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFailoverInfo", reflect.TypeOf((*MockHandler)(nil).GetFailoverInfo), arg0, arg1)
+}

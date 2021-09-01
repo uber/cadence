@@ -2602,10 +2602,7 @@ func (m *ReplicationMessages) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthReplication
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthReplication
 			}
 			if (iNdEx + skippy) > l {
@@ -2905,10 +2902,7 @@ func (m *ReplicationTask) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthReplication
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthReplication
 			}
 			if (iNdEx + skippy) > l {
@@ -3103,10 +3097,7 @@ func (m *DomainTaskAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthReplication
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthReplication
 			}
 			if (iNdEx + skippy) > l {
@@ -3244,10 +3235,7 @@ func (m *SyncShardStatusTaskAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthReplication
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthReplication
 			}
 			if (iNdEx + skippy) > l {
@@ -3690,10 +3678,7 @@ func (m *SyncActivityTaskAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthReplication
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthReplication
 			}
 			if (iNdEx + skippy) > l {
@@ -3937,10 +3922,7 @@ func (m *HistoryTaskV2Attributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthReplication
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthReplication
 			}
 			if (iNdEx + skippy) > l {
@@ -4078,10 +4060,7 @@ func (m *FailoverMarkerAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthReplication
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthReplication
 			}
 			if (iNdEx + skippy) > l {
@@ -4244,10 +4223,7 @@ func (m *FailoverMarkerToken) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthReplication
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthReplication
 			}
 			if (iNdEx + skippy) > l {
@@ -4480,10 +4456,7 @@ func (m *ReplicationTaskInfo) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthReplication
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthReplication
 			}
 			if (iNdEx + skippy) > l {
@@ -4591,10 +4564,7 @@ func (m *ReplicationToken) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthReplication
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthReplication
 			}
 			if (iNdEx + skippy) > l {
@@ -4681,10 +4651,7 @@ func (m *SyncShardStatus) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthReplication
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthReplication
 			}
 			if (iNdEx + skippy) > l {

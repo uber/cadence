@@ -1,5 +1,4 @@
 // Copyright (c) 2021 Uber Technologies, Inc.
-// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,18 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package dynamodb
+package host
 
 import (
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+	"go.uber.org/cadence/client"
+	"go.uber.org/cadence/worker"
+
+	"github.com/stretchr/testify/require"
 )
 
-var _ nosqlplugin.AdminDB = (*ddb)(nil)
+// NOTE: the following definitions can't be defined in *_test.go
+// since they need to be exported and used by our internal tests
 
-func (db *ddb) SetupTestDatabase(schemaBaseDir string) error {
-	panic("TODO")
-}
+type (
+	IntegrationSuite struct {
+		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
+		// not merely log an error
+		*require.Assertions
+		IntegrationBase
+	}
 
-func (db *ddb) TeardownTestDatabase() error {
-	panic("TODO")
-}
+	SizeLimitIntegrationSuite struct {
+		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
+		// not merely log an error
+		*require.Assertions
+		IntegrationBase
+	}
+
+	ClientIntegrationSuite struct {
+		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
+		// not merely log an error
+		*require.Assertions
+		IntegrationBase
+		wfService workflowserviceclient.Interface
+		wfClient  client.Client
+		worker    worker.Worker
+		taskList  string
+	}
+)
