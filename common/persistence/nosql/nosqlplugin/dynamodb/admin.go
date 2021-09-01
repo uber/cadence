@@ -27,7 +27,7 @@ import (
 
 var _ nosqlplugin.AdminDB = (*ddb)(nil)
 
-func (db *ddb) SetupTestDatabase(schemaDir string) error {
+func (db *ddb) SetupTestDatabase(schemaBaseDir string) error {
 	panic("TODO")
 }
 

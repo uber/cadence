@@ -42,24 +42,24 @@ const (
 
 var _ nosqlplugin.AdminDB = (*cdb)(nil)
 
-func (db *cdb) SetupTestDatabase(schemaDir string) error {
+func (db *cdb) SetupTestDatabase(schemaBaseDir string) error {
 	err := createCassandraKeyspace(db.session, db.cfg.Keyspace, 1, true)
 	if err != nil {
 		return err
 	}
-	if schemaDir == "" {
+	if schemaBaseDir == "" {
 		cadencePackageDir, err := getCadencePackageDir()
 		if err != nil {
 			log.Fatal(err)
 		}
-		schemaDir = cadencePackageDir + testSchemaDir
+		schemaBaseDir = cadencePackageDir + testSchemaDir
 	}
 
-	err = db.loadSchema([]string{"schema.cql"}, schemaDir)
+	err = db.loadSchema([]string{"schema.cql"}, schemaBaseDir)
 	if err != nil {
 		return err
 	}
-	err = db.loadVisibilitySchema([]string{"schema.cql"}, schemaDir)
+	err = db.loadVisibilitySchema([]string{"schema.cql"}, schemaBaseDir)
 	if err != nil {
 		return err
 	}
@@ -67,8 +67,8 @@ func (db *cdb) SetupTestDatabase(schemaDir string) error {
 }
 
 // loadSchema from PersistenceTestCluster interface
-func (db *cdb) loadSchema(fileNames []string, schemaDir string) error {
-	workflowSchemaDir := schemaDir + "/cadence"
+func (db *cdb) loadSchema(fileNames []string, schemaBaseDir string) error {
+	workflowSchemaDir := schemaBaseDir + "/cadence"
 	err := loadCassandraSchema(workflowSchemaDir, fileNames, db.cfg.Hosts, db.cfg.Port, db.cfg.Keyspace, true, nil, db.cfg.ProtoVersion)
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		// TODO: should we remove the second condition?
@@ -78,8 +78,8 @@ func (db *cdb) loadSchema(fileNames []string, schemaDir string) error {
 }
 
 // loadVisibilitySchema from PersistenceTestCluster interface
-func (db *cdb) loadVisibilitySchema(fileNames []string, schemaDir string) error {
-	workflowSchemaDir := schemaDir + "/visibility"
+func (db *cdb) loadVisibilitySchema(fileNames []string, schemaBaseDir string) error {
+	workflowSchemaDir := schemaBaseDir + "/visibility"
 	err := loadCassandraSchema(workflowSchemaDir, fileNames, db.cfg.Hosts, db.cfg.Port, db.cfg.Keyspace, false, nil, db.cfg.ProtoVersion)
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		// TODO: should we remove the second condition?

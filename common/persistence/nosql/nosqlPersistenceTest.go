@@ -32,24 +32,24 @@ import (
 
 // testCluster allows executing cassandra operations in testing.
 type testCluster struct {
-	keyspace  string
-	schemaDir string
-	cfg       config.NoSQL
+	keyspace      string
+	schemaBaseDir string
+	cfg           config.NoSQL
 }
 
 var _ testcluster.PersistenceTestCluster = (*testCluster)(nil)
 
 // NewTestCluster returns a new cassandra test cluster
-// if schemaDir is empty, it will be auto-resolved based on os.Getwd()
+// if schemaBaseDir is empty, it will be auto-resolved based on os.Getwd()
 // otherwise the specified value will be used (used by internal tests)
 func NewTestCluster(
 	pluginName, keyspace, username, password, host string,
 	port, protoVersion int,
-	schemaDir string,
+	schemaBaseDir string,
 ) testcluster.PersistenceTestCluster {
 	return &testCluster{
-		keyspace:  keyspace,
-		schemaDir: schemaDir,
+		keyspace:      keyspace,
+		schemaBaseDir: schemaBaseDir,
 		cfg: config.NoSQL{
 			PluginName:   pluginName,
 			User:         username,
@@ -86,7 +86,7 @@ func (s *testCluster) SetupTestDatabase() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = adminDB.SetupTestDatabase(s.schemaDir)
+	err = adminDB.SetupTestDatabase(s.schemaBaseDir)
 	if err != nil {
 		log.Fatal(err)
 	}
