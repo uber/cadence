@@ -14,28 +14,41 @@ can be applied to local Cadence cluster.
 
 Quickstart for localhost development of XDC
 ====================================
+1. Start dependency using docker if you don't one running:
+```
+docker-compose -f docker/dev/cassandra.yml up
+```
+Then install the schemas:
+```
+make install-schema-cdc
+```
 
-1. Start Cadence development server for cluster_0, cluster_1 and cluster_2:
+2. Start Cadence development server for cluster_0, cluster_1 and cluster_2:
 ```
 ./cadence-server --zone xdc_cluster_0 start
 ./cadence-server --zone xdc_cluster_1 start
 ./cadence-server --zone xdc_cluster_2 start
 ```
 
-2. Create global domains
+3. Create a domain with replication
 ```
 cadence --do sample domain register --ac cluster_0 --cl cluster_0 cluster_1 cluster_2
 ```
+Then run a helloworld from [Go Client Sample](https://github.com/uber-common/cadence-samples/) or [Java Client Sample](https://github.com/uber/cadence-java-samples)
 
-6. Failover between zones:
+4. Failover a domain between clusters:
 
 Failover to cluster_1:
 ```
-cadence --do sample domain update --ac cluster_1
+cadence --do samples-domain domain update --ac cluster_1
 ```
-Failback to cluster_2:
+or failover to cluster_2:
+   ```
+   cadence --do samples-domain domain update --ac cluster_2
+   ```
+Failback to cluster_0:
 ```
-cadence --do sample domain update --ac cluster_0
+cadence --do sample samples-domain update --ac cluster_0
 ```
 
 Archiver

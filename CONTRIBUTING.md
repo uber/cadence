@@ -121,6 +121,7 @@ Then register a domain:
 
 Then run a helloworld from [Go Client Sample](https://github.com/uber-common/cadence-samples/) or [Java Client Sample](https://github.com/uber/cadence-java-samples) 
 
+See [instructions](service/worker/README.md) for setting up replication(XDC). 
 
 ## Issues to start with
 
