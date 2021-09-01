@@ -212,10 +212,6 @@ func (s *crossClusterTaskSuite) TestSourceTask_HandleError() {
 			expectRetErr: &types.DomainNotActiveError{},
 		},
 		{
-			err:          execution.ErrMissingVersionHistories,
-			expectRetErr: nil,
-		},
-		{
 			err:          context.DeadlineExceeded,
 			expectRetErr: context.DeadlineExceeded,
 		},
