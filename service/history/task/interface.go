@@ -54,12 +54,14 @@ type (
 		GetInfo() Info
 	}
 
+	// CrossClusterTask is the interface for processing cross cluster task in the source cluster
 	CrossClusterTask interface {
 		Task
-		IsReadyForPoll() bool
+
 		IsValid() bool
-		Update(interface{}) error //TODO: update interface once the cross cluster response idl lands
-		GetCrossClusterRequest() *types.CrossClusterTaskRequest
+		IsReadyForPoll() bool
+		GetCrossClusterRequest() (*types.CrossClusterTaskRequest, error)
+		RecordResponse(*types.CrossClusterTaskResponse) error
 	}
 
 	// Key identifies a Task and defines a total order among tasks
