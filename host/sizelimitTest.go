@@ -44,25 +44,6 @@ type SizeLimitIntegrationSuite struct {
 	IntegrationBase
 }
 
-func TestSizeLimitIntegrationSuite(t *testing.T) {
-	flag.Parse()
-
-	clusterConfig, err := GetTestClusterConfig("testdata/integration_sizelimit_cluster.yaml")
-	if err != nil {
-		panic(err)
-	}
-	testCluster := NewPersistenceTestCluster(clusterConfig)
-
-	s := new(SizeLimitIntegrationSuite)
-	params := IntegrationBaseParams{
-		DefaultTestCluster:    testCluster,
-		VisibilityTestCluster: testCluster,
-		TestClusterConfig:     clusterConfig,
-	}
-	s.IntegrationBase = NewIntegrationBase(params)
-	suite.Run(t, s)
-}
-
 // This cluster use customized threshold for history config
 func (s *SizeLimitIntegrationSuite) SetupSuite() {
 	s.setupSuite()

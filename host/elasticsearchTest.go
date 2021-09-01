@@ -62,25 +62,6 @@ type ElasticSearchIntegrationSuite struct {
 	testSearchAttributeVal string
 }
 
-func TestElasticsearchIntegrationSuite(t *testing.T) {
-	flag.Parse()
-
-	clusterConfig, err := GetTestClusterConfig("testdata/integration_elasticsearch_" + environment.GetESVersion() + "_cluster.yaml")
-	if err != nil {
-		panic(err)
-	}
-	testCluster := NewPersistenceTestCluster(clusterConfig)
-
-	s := new(ElasticSearchIntegrationSuite)
-	params := IntegrationBaseParams{
-		DefaultTestCluster:    testCluster,
-		VisibilityTestCluster: testCluster,
-		TestClusterConfig:     clusterConfig,
-	}
-	s.IntegrationBase = NewIntegrationBase(params)
-	suite.Run(t, s)
-}
-
 // This cluster use customized threshold for history config
 func (s *ElasticSearchIntegrationSuite) SetupSuite() {
 	s.setupSuite()

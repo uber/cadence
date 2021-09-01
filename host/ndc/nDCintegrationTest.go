@@ -90,25 +90,6 @@ var (
 	}
 )
 
-func TestNDCIntegrationTestSuite(t *testing.T) {
-	flag.Parse()
-
-	clusterConfigs, err := host.GetTestClusterConfigs("../testdata/ndc_integration_test_clusters.yaml")
-	if err != nil {
-		panic(err)
-	}
-	clusterConfigs[0].WorkerConfig = &host.WorkerConfig{}
-	clusterConfigs[1].WorkerConfig = &host.WorkerConfig{}
-	testCluster := host.NewPersistenceTestCluster(clusterConfigs[0])
-	params := NDCIntegrationTestSuiteParams{
-		ClusterConfigs:        clusterConfigs,
-		DefaultTestCluster:    testCluster,
-		VisibilityTestCluster: testCluster,
-	}
-	s := NewNDCIntegrationTestSuite(params)
-	suite.Run(t, s)
-}
-
 func NewNDCIntegrationTestSuite(params NDCIntegrationTestSuiteParams) *NDCIntegrationTestSuite {
 	return &NDCIntegrationTestSuite{
 		clusterConfigs:        params.ClusterConfigs,
@@ -683,7 +664,7 @@ func (s *NDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 	)
 }
 
-func (s *NDCIntegrationTestSuite) TestHandcraftedResetWorkflow_Zombie() {
+func (s *NDCIntegrationTestSuite) TestHandcraftedResetWorkflowZombie() {
 
 	s.setupRemoteFrontendClients()
 	workflowID := "ndc-handcrafted-reset-workflow-test" + uuid.New()
@@ -1559,7 +1540,7 @@ func (s *NDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 	)
 }
 
-func (s *NDCIntegrationTestSuite) TestEventsReapply_ZombieWorkflow() {
+func (s *NDCIntegrationTestSuite) TestEventsReapplyZombieWorkflow() {
 
 	workflowID := "ndc-single-branch-test" + uuid.New()
 
@@ -1622,7 +1603,7 @@ func (s *NDCIntegrationTestSuite) TestEventsReapply_ZombieWorkflow() {
 	)
 }
 
-func (s *NDCIntegrationTestSuite) TestEventsReapply_UpdateNonCurrentBranch() {
+func (s *NDCIntegrationTestSuite) TestEventsReapplyUpdateNonCurrentBranch() {
 
 	workflowID := "ndc-single-branch-test" + uuid.New()
 	runID := uuid.New()

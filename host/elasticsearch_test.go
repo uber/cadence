@@ -18,6 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// +build esintegration
+
+// to run locally, make sure kafka and es is running,
+// then run cmd `go test -v ./host -run TestElasticsearchIntegrationSuite -tags esintegration`
 package host
 
 import (
@@ -25,18 +29,20 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
+	"github.com/uber/cadence/environment"
 )
 
-func TestIntegrationSuite(t *testing.T) {
+func TestElasticsearchIntegrationSuite(t *testing.T) {
 	flag.Parse()
 
-	clusterConfig, err := GetTestClusterConfig("testdata/integration_test_cluster.yaml")
+	clusterConfig, err := GetTestClusterConfig("testdata/integration_elasticsearch_" + environment.GetESVersion() + "_cluster.yaml")
 	if err != nil {
 		panic(err)
 	}
 	testCluster := NewPersistenceTestCluster(clusterConfig)
 
-	s := new(IntegrationSuite)
+	s := new(ElasticSearchIntegrationSuite)
 	params := IntegrationBaseParams{
 		DefaultTestCluster:    testCluster,
 		VisibilityTestCluster: testCluster,

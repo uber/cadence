@@ -18,30 +18,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package host
+package ndc
 
 import (
 	"flag"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
+	"github.com/uber/cadence/host"
 )
 
-func TestIntegrationSuite(t *testing.T) {
+func TestNDCIntegrationTestSuite(t *testing.T) {
 	flag.Parse()
 
-	clusterConfig, err := GetTestClusterConfig("testdata/integration_test_cluster.yaml")
+	clusterConfigs, err := host.GetTestClusterConfigs("../testdata/ndc_integration_test_clusters.yaml")
 	if err != nil {
 		panic(err)
 	}
-	testCluster := NewPersistenceTestCluster(clusterConfig)
-
-	s := new(IntegrationSuite)
-	params := IntegrationBaseParams{
+	clusterConfigs[0].WorkerConfig = &host.WorkerConfig{}
+	clusterConfigs[1].WorkerConfig = &host.WorkerConfig{}
+	testCluster := host.NewPersistenceTestCluster(clusterConfigs[0])
+	params := NDCIntegrationTestSuiteParams{
+		ClusterConfigs:        clusterConfigs,
 		DefaultTestCluster:    testCluster,
 		VisibilityTestCluster: testCluster,
-		TestClusterConfig:     clusterConfig,
 	}
-	s.IntegrationBase = NewIntegrationBase(params)
+	s := NewNDCIntegrationTestSuite(params)
 	suite.Run(t, s)
 }

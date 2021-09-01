@@ -27,16 +27,16 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-func TestIntegrationSuite(t *testing.T) {
+func TestSizeLimitIntegrationSuite(t *testing.T) {
 	flag.Parse()
 
-	clusterConfig, err := GetTestClusterConfig("testdata/integration_test_cluster.yaml")
+	clusterConfig, err := GetTestClusterConfig("testdata/integration_sizelimit_cluster.yaml")
 	if err != nil {
 		panic(err)
 	}
 	testCluster := NewPersistenceTestCluster(clusterConfig)
 
-	s := new(IntegrationSuite)
+	s := new(SizeLimitIntegrationSuite)
 	params := IntegrationBaseParams{
 		DefaultTestCluster:    testCluster,
 		VisibilityTestCluster: testCluster,
