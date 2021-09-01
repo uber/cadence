@@ -57,8 +57,6 @@ func init() {
 	workflow.Register(testChildWorkflow)
 }
 
-type ()
-
 func TestClientIntegrationSuite(t *testing.T) {
 	flag.Parse()
 
