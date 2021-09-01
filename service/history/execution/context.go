@@ -60,7 +60,7 @@ type (
 		GetWorkflowExecution() MutableState
 		SetWorkflowExecution(mutableState MutableState)
 		LoadWorkflowExecution(ctx context.Context) (MutableState, error)
-		LoadWorkflowExecutionForReplication(ctx context.Context, incomingVersion int64) (MutableState, error)
+		LoadWorkflowExecutionWithTaskVersion(ctx context.Context, incomingVersion int64) (MutableState, error)
 		LoadExecutionStats(ctx context.Context) (*persistence.ExecutionStats, error)
 		Clear()
 
@@ -225,7 +225,7 @@ func (c *contextImpl) LoadExecutionStats(
 	return c.stats, nil
 }
 
-func (c *contextImpl) LoadWorkflowExecutionForReplication(
+func (c *contextImpl) LoadWorkflowExecutionWithTaskVersion(
 	ctx context.Context,
 	incomingVersion int64,
 ) (MutableState, error) {
@@ -264,40 +264,28 @@ func (c *contextImpl) LoadWorkflowExecutionForReplication(
 		)
 	}
 
-	lastWriteVersion, err := c.mutableState.GetLastWriteVersion()
+	flushBeforeReady, err := c.mutableState.StartTransaction(domainEntry, incomingVersion)
 	if err != nil {
 		return nil, err
 	}
+	if !flushBeforeReady {
+		return c.mutableState, nil
+	}
 
-	if lastWriteVersion == incomingVersion {
-		err = c.mutableState.StartTransactionSkipDecisionFail(domainEntry)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		flushBeforeReady, err := c.mutableState.StartTransaction(domainEntry)
-		if err != nil {
-			return nil, err
-		}
-		if !flushBeforeReady {
-			return c.mutableState, nil
-		}
+	if err = c.UpdateWorkflowExecutionAsActive(
+		ctx,
+		c.shard.GetTimeSource().Now(),
+	); err != nil {
+		return nil, err
+	}
 
-		if err = c.UpdateWorkflowExecutionAsActive(
-			ctx,
-			c.shard.GetTimeSource().Now(),
-		); err != nil {
-			return nil, err
-		}
-
-		flushBeforeReady, err = c.mutableState.StartTransaction(domainEntry)
-		if err != nil {
-			return nil, err
-		}
-		if flushBeforeReady {
-			return nil, &types.InternalServiceError{
-				Message: "workflowExecutionContext counter flushBeforeReady status after loading mutable state from DB",
-			}
+	flushBeforeReady, err = c.mutableState.StartTransaction(domainEntry, incomingVersion)
+	if err != nil {
+		return nil, err
+	}
+	if flushBeforeReady {
+		return nil, &types.InternalServiceError{
+			Message: "workflowExecutionContext counter flushBeforeReady status after loading mutable state from DB",
 		}
 	}
 	return c.mutableState, nil
@@ -317,66 +305,8 @@ func (c *contextImpl) LoadWorkflowExecution(
 	ctx context.Context,
 ) (MutableState, error) {
 
-	domainEntry, err := c.shard.GetDomainCache().GetDomainByID(c.domainID)
-	if err != nil {
-		return nil, err
-	}
-
-	if c.mutableState == nil {
-		response, err := c.getWorkflowExecutionWithRetry(ctx, &persistence.GetWorkflowExecutionRequest{
-			DomainID:  c.domainID,
-			Execution: c.workflowExecution,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		c.mutableState = NewMutableStateBuilder(
-			c.shard,
-			c.logger,
-			domainEntry,
-		)
-
-		c.mutableState.Load(response.State)
-
-		c.stats = response.State.ExecutionStats
-		c.updateCondition = response.State.ExecutionInfo.NextEventID
-
-		// finally emit execution and session stats
-		emitWorkflowExecutionStats(
-			c.metricsClient,
-			c.GetDomainName(),
-			response.MutableStateStats,
-			c.stats.HistorySize,
-		)
-	}
-
-	flushBeforeReady, err := c.mutableState.StartTransaction(domainEntry)
-	if err != nil {
-		return nil, err
-	}
-	if !flushBeforeReady {
-		return c.mutableState, nil
-	}
-
-	if err = c.UpdateWorkflowExecutionAsActive(
-		ctx,
-		c.shard.GetTimeSource().Now(),
-	); err != nil {
-		return nil, err
-	}
-
-	flushBeforeReady, err = c.mutableState.StartTransaction(domainEntry)
-	if err != nil {
-		return nil, err
-	}
-	if flushBeforeReady {
-		return nil, &types.InternalServiceError{
-			Message: "workflowExecutionContext counter flushBeforeReady status after loading mutable state from DB",
-		}
-	}
-
-	return c.mutableState, nil
+	// Use empty version to skip incoming task version validation
+	return c.LoadWorkflowExecutionWithTaskVersion(ctx, common.EmptyVersion)
 }
 
 func (c *contextImpl) CreateWorkflowExecution(
