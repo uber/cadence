@@ -2314,6 +2314,7 @@ type DescribeDomainResponse struct {
 	ReplicationConfiguration *DomainReplicationConfiguration `json:"replicationConfiguration,omitempty"`
 	FailoverVersion          int64                           `json:"failoverVersion,omitempty"`
 	IsGlobalDomain           bool                            `json:"isGlobalDomain,omitempty"`
+	FailoverInfo             *FailoverInfo                   `json:"failoverInfo,omitempty"`
 }
 
 // GetDomainInfo is an internal getter (TBD...)
@@ -2352,6 +2353,14 @@ func (v *DescribeDomainResponse) GetFailoverVersion() (o int64) {
 func (v *DescribeDomainResponse) GetIsGlobalDomain() (o bool) {
 	if v != nil {
 		return v.IsGlobalDomain
+	}
+	return
+}
+
+// GetFailoverInfo is an internal getter (TBD...)
+func (v *DescribeDomainResponse) GetFailoverInfo() (o *FailoverInfo) {
+	if v != nil {
+		return v.FailoverInfo
 	}
 	return
 }
@@ -3556,6 +3565,55 @@ func (v *GetWorkflowExecutionHistoryResponse) GetNextPageToken() (o []byte) {
 func (v *GetWorkflowExecutionHistoryResponse) GetArchived() (o bool) {
 	if v != nil {
 		return v.Archived
+	}
+	return
+}
+
+// FailoverInfo is an internal type (TBD...)
+type FailoverInfo struct {
+	FailoverVersion         int64   `json:"failoverVersion,omitempty"`
+	FailoverStartTimestamp  int64   `json:"failoverStartTimestamp,omitempty"`
+	FailoverExpireTimestamp int64   `json:"failoverExpireTimestamp,omitempty"`
+	CompletedShardCount     int32   `json:"completedShardCount,omitempty"`
+	PendingShards           []int32 `json:"pendingShards,omitempty"`
+}
+
+// GetFailoverVersion is an internal getter (TBD...)
+func (v *FailoverInfo) GetFailoverVersion() (o int64) {
+	if v != nil {
+		return v.FailoverVersion
+	}
+	return
+}
+
+// GetFailoverStartTimestamp is an internal getter (TBD...)
+func (v *FailoverInfo) GetFailoverStartTimestamp() (o int64) {
+	if v != nil {
+		return v.FailoverStartTimestamp
+	}
+	return
+}
+
+// GetFailoverExpireTimestamp is an internal getter (TBD...)
+func (v *FailoverInfo) GetFailoverExpireTimestamp() (o int64) {
+	if v != nil {
+		return v.FailoverExpireTimestamp
+	}
+	return
+}
+
+// GetCompletedShardCount is an internal getter (TBD...)
+func (v *FailoverInfo) GetCompletedShardCount() (o int32) {
+	if v != nil {
+		return v.CompletedShardCount
+	}
+	return
+}
+
+// GetPendingShards is an internal getter (TBD...)
+func (v *FailoverInfo) GetPendingShards() (o []int32) {
+	if v != nil {
+		return v.PendingShards
 	}
 	return
 }

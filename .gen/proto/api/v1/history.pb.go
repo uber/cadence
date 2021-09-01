@@ -10690,10 +10690,7 @@ func (m *History) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -12307,10 +12304,7 @@ func (m *HistoryEvent) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -13099,10 +13093,7 @@ func (m *WorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -13208,10 +13199,7 @@ func (m *WorkflowExecutionCompletedEventAttributes) Unmarshal(dAtA []byte) error
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -13317,10 +13305,7 @@ func (m *WorkflowExecutionFailedEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -13390,10 +13375,7 @@ func (m *WorkflowExecutionTimedOutEventAttributes) Unmarshal(dAtA []byte) error 
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -13535,10 +13517,7 @@ func (m *DecisionTaskScheduledEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -13672,10 +13651,7 @@ func (m *DecisionTaskStartedEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -13862,10 +13838,7 @@ func (m *DecisionTaskCompletedEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -14107,10 +14080,7 @@ func (m *DecisionTaskTimedOutEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -14401,10 +14371,7 @@ func (m *DecisionTaskFailedEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -14862,10 +14829,7 @@ func (m *ActivityTaskScheduledEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -15054,10 +15018,7 @@ func (m *ActivityTaskStartedEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -15214,10 +15175,7 @@ func (m *ActivityTaskCompletedEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -15374,10 +15332,7 @@ func (m *ActivityTaskFailedEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -15557,10 +15512,7 @@ func (m *ActivityTaskTimedOutEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -15662,10 +15614,7 @@ func (m *ActivityTaskCancelRequestedEventAttributes) Unmarshal(dAtA []byte) erro
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -15799,10 +15748,7 @@ func (m *RequestCancelActivityTaskFailedEventAttributes) Unmarshal(dAtA []byte) 
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -15978,10 +15924,7 @@ func (m *ActivityTaskCanceledEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -16119,10 +16062,7 @@ func (m *TimerStartedEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -16224,10 +16164,7 @@ func (m *TimerFiredEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -16380,10 +16317,7 @@ func (m *TimerCanceledEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -16549,10 +16483,7 @@ func (m *CancelTimerFailedEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -17069,10 +17000,7 @@ func (m *WorkflowExecutionContinuedAsNewEventAttributes) Unmarshal(dAtA []byte) 
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -17223,10 +17151,7 @@ func (m *WorkflowExecutionCancelRequestedEventAttributes) Unmarshal(dAtA []byte)
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -17332,10 +17257,7 @@ func (m *WorkflowExecutionCanceledEventAttributes) Unmarshal(dAtA []byte) error 
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -17509,10 +17431,7 @@ func (m *MarkerRecordedEventAttributes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -17663,10 +17582,7 @@ func (m *WorkflowExecutionSignaledEventAttributes) Unmarshal(dAtA []byte) error 
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -17817,10 +17733,7 @@ func (m *WorkflowExecutionTerminatedEventAttributes) Unmarshal(dAtA []byte) erro
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -18012,10 +17925,7 @@ func (m *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) Unmarsh
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -18225,10 +18135,7 @@ func (m *RequestCancelExternalWorkflowExecutionFailedEventAttributes) Unmarshal(
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -18366,10 +18273,7 @@ func (m *ExternalWorkflowExecutionCancelRequestedEventAttributes) Unmarshal(dAtA
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -18629,10 +18533,7 @@ func (m *SignalExternalWorkflowExecutionInitiatedEventAttributes) Unmarshal(dAtA
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -18842,10 +18743,7 @@ func (m *SignalExternalWorkflowExecutionFailedEventAttributes) Unmarshal(dAtA []
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -19017,10 +18915,7 @@ func (m *ExternalWorkflowExecutionSignaledEventAttributes) Unmarshal(dAtA []byte
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -19126,10 +19021,7 @@ func (m *UpsertWorkflowSearchAttributesEventAttributes) Unmarshal(dAtA []byte) e
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -19727,10 +19619,7 @@ func (m *StartChildWorkflowExecutionInitiatedEventAttributes) Unmarshal(dAtA []b
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -19972,10 +19861,7 @@ func (m *StartChildWorkflowExecutionFailedEventAttributes) Unmarshal(dAtA []byte
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -20185,10 +20071,7 @@ func (m *ChildWorkflowExecutionStartedEventAttributes) Unmarshal(dAtA []byte) er
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -20417,10 +20300,7 @@ func (m *ChildWorkflowExecutionCompletedEventAttributes) Unmarshal(dAtA []byte) 
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -20649,10 +20529,7 @@ func (m *ChildWorkflowExecutionFailedEventAttributes) Unmarshal(dAtA []byte) err
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -20881,10 +20758,7 @@ func (m *ChildWorkflowExecutionCanceledEventAttributes) Unmarshal(dAtA []byte) e
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -21096,10 +20970,7 @@ func (m *ChildWorkflowExecutionTimedOutEventAttributes) Unmarshal(dAtA []byte) e
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {
@@ -21292,10 +21163,7 @@ func (m *ChildWorkflowExecutionTerminatedEventAttributes) Unmarshal(dAtA []byte)
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthHistory
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthHistory
 			}
 			if (iNdEx + skippy) > l {

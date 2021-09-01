@@ -454,6 +454,13 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 		}
 		table.Render()
 	}
+	if resp.GetFailoverInfo() != nil {
+		jsonStr, err := json.Marshal(resp.GetFailoverInfo())
+		if err != nil {
+			ErrorAndExit("Failed to format failover info", err)
+		}
+		fmt.Println(fmt.Sprintf("Graceful failover info: %s", string(jsonStr)))
+	}
 }
 
 func (d *domainCLIImpl) ListDomains(c *cli.Context) {

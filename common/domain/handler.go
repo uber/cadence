@@ -345,6 +345,13 @@ func (d *handlerImpl) DescribeDomain(
 		IsGlobalDomain:  resp.IsGlobalDomain,
 		FailoverVersion: resp.FailoverVersion,
 	}
+	if resp.FailoverEndTime != nil {
+		response.FailoverInfo = &types.FailoverInfo{
+			FailoverVersion:         resp.FailoverVersion,
+			FailoverStartTimestamp:  resp.LastUpdatedTime,
+			FailoverExpireTimestamp: *resp.FailoverEndTime,
+		}
+	}
 	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = d.createResponse(resp.Info, resp.Config, resp.ReplicationConfig)
 	return response, nil
 }

@@ -4723,10 +4723,7 @@ func (m *StartWorkflowExecutionRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -4809,10 +4806,7 @@ func (m *StartWorkflowExecutionResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -5097,10 +5091,7 @@ func (m *SignalWorkflowExecutionRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -5151,10 +5142,7 @@ func (m *SignalWorkflowExecutionResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -5343,10 +5331,7 @@ func (m *SignalWithStartWorkflowExecutionRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -5429,10 +5414,7 @@ func (m *SignalWithStartWorkflowExecutionResponse) Unmarshal(dAtA []byte) error 
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -5654,10 +5636,7 @@ func (m *ResetWorkflowExecutionRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -5740,10 +5719,7 @@ func (m *ResetWorkflowExecutionResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -5926,10 +5902,7 @@ func (m *RequestCancelWorkflowExecutionRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -5980,10 +5953,7 @@ func (m *RequestCancelWorkflowExecutionResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -6202,10 +6172,7 @@ func (m *TerminateWorkflowExecutionRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -6256,10 +6223,7 @@ func (m *TerminateWorkflowExecutionResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -6378,10 +6342,7 @@ func (m *DescribeWorkflowExecutionRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -6608,10 +6569,7 @@ func (m *DescribeWorkflowExecutionResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -6804,10 +6762,7 @@ func (m *QueryWorkflowRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -6930,10 +6885,7 @@ func (m *QueryWorkflowResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -7091,10 +7043,7 @@ func (m *DescribeTaskListRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -7215,10 +7164,7 @@ func (m *DescribeTaskListResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -7301,10 +7247,7 @@ func (m *GetTaskListsByDomainRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -7387,10 +7330,7 @@ func (m *GetTaskListsByDomainResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -7509,10 +7449,7 @@ func (m *ListTaskListPartitionsRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -7631,10 +7568,7 @@ func (m *ListTaskListPartitionsResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -7685,10 +7619,7 @@ func (m *GetClusterInfoRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -7775,10 +7706,7 @@ func (m *GetClusterInfoResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -8009,10 +7937,7 @@ func (m *GetWorkflowExecutionHistoryRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -8187,10 +8112,7 @@ func (m *GetWorkflowExecutionHistoryResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
@@ -8261,10 +8183,7 @@ func (m *FeatureFlags) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceWorkflow
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceWorkflow
 			}
 			if (iNdEx + skippy) > l {
