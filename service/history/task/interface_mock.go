@@ -768,18 +768,18 @@ func (mr *MockCrossClusterTaskMockRecorder) GetCrossClusterRequest() *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterRequest", reflect.TypeOf((*MockCrossClusterTask)(nil).GetCrossClusterRequest))
 }
 
-// Update mocks base method
-func (m *MockCrossClusterTask) Update(arg0 *types.CrossClusterTaskResponse) error {
+// RecordResponse mocks base method
+func (m *MockCrossClusterTask) RecordResponse(arg0 *types.CrossClusterTaskResponse) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", arg0)
+	ret := m.ctrl.Call(m, "RecordResponse", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Update indicates an expected call of Update
-func (mr *MockCrossClusterTaskMockRecorder) Update(arg0 interface{}) *gomock.Call {
+// RecordResponse indicates an expected call of RecordResponse
+func (mr *MockCrossClusterTaskMockRecorder) RecordResponse(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockCrossClusterTask)(nil).Update), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordResponse", reflect.TypeOf((*MockCrossClusterTask)(nil).RecordResponse), arg0)
 }
 
 // MockKey is a mock of Key interface

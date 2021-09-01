@@ -404,7 +404,7 @@ func (c *crossClusterQueueProcessorBase) updateTask(
 		panic("Received non cross cluster task.")
 	}
 
-	if err := crossClusterTask.Update(response); err != nil {
+	if err := crossClusterTask.RecordResponse(response); err != nil {
 		c.logger.Error("failed to update cross cluster task",
 			tag.TaskID(crossClusterTask.GetTaskID()),
 			tag.WorkflowDomainID(crossClusterTask.GetDomainID()),

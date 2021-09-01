@@ -332,7 +332,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_IsValid() {
 	}
 }
 
-func (s *crossClusterTaskSuite) TestSourceTask_Update() {
+func (s *crossClusterTaskSuite) TestSourceTask_RecordResponse() {
 	testCases := []struct {
 		response        *types.CrossClusterTaskResponse
 		taskType        int
@@ -445,7 +445,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_Update() {
 		sourceTask.state = tc.state
 		sourceTask.processingState = tc.processingState
 
-		err := sourceTask.Update(tc.response)
+		err := sourceTask.RecordResponse(tc.response)
 		if tc.expectErr {
 			s.Error(err)
 			// state should not be changed

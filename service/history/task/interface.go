@@ -61,7 +61,7 @@ type (
 		IsValid() bool
 		IsReadyForPoll() bool
 		GetCrossClusterRequest() (*types.CrossClusterTaskRequest, error)
-		Update(*types.CrossClusterTaskResponse) error
+		RecordResponse(*types.CrossClusterTaskResponse) error
 	}
 
 	// Key identifies a Task and defines a total order among tasks
