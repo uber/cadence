@@ -78,11 +78,16 @@ An error result of the sanity workflow indicates at least one of the test case f
 
 You can start the sanity workflow as one-off run:
 ```
-cadence --do <the domain you configured> workflow start --tl canary-task-queue --et 1200 --wt workflow.sanity
+cadence --do <the domain you configured> workflow start --tl canary-task-queue --et 1200 --wt workflow.sanity -i 0
 ``` 
+Note:
+* tasklist(tl) is fixed to `canary-task-queue`
+* execution timeout(et) is recommended to 20 minutes(`1200` seconds) but you can adjust it 
+* the only required input is the scheduled unix timestamp, and `0` will uses the workflow starting time
+
 Or using a cron job(e.g. every minute):
 ```
-cadence --do <the domain you configured> workflow start --tl canary-task-queue --et 1200 --wt workflow.sanity --cron "* * * * *"
+cadence --do <the domain you configured> workflow start --tl canary-task-queue --et 1200 --wt workflow.sanity -i 0 --cron "* * * * *"
 ```
 
 This is [the list of the test cases](./sanity.go) that it will start all supported test cases by default if no excludes are configured. 
