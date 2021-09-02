@@ -592,13 +592,13 @@ install-schema-cdc: cadence-cassandra-tool
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster2 setup-schema -v 0.0
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster2 update-schema -d ./schema/cassandra/visibility/versioned
 
-start-cdc-cluster0: bins
+start-xdc-cluster0: bins
 	./cadence-server --zone xdc_cluster0 start
 
-start-cdc-cluster1: bins
+start-xdc-cluster1: bins
 	./cadence-server --zone xdc_cluster1 start
 
-start-cdc-cluster2: bins
+start-xdc-cluster2: bins
 	./cadence-server --zone xdc_cluster2 start
 
 start-canary: bins
