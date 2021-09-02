@@ -20,7 +20,7 @@ docker-compose -f docker/dev/cassandra.yml up
 ```
 Then install the schemas:
 ```
-make install-schema-cdc
+make install-schema-xdc
 ```
 
 2. Start Cadence development server for cluster0, cluster1 and cluster2:
