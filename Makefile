@@ -554,6 +554,16 @@ install-schema-postgres: cadence-sql-tool
 	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres --db cadence_visibility setup-schema -v 0.0
 	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres --db cadence_visibility update-schema -d ./schema/postgres/visibility/versioned
 
+install-schema-es-v7:
+	export ES_SCHEMA_FILE=./schema/elasticsearch/v7/visibility/index_template.json
+	curl -X PUT "http://127.0.0.1:9200/_template/cadence-visibility-template" -H 'Content-Type: application/json' --data-binary "@$(ES_SCHEMA_FILE)"
+	curl -X PUT "http://127.0.0.1:9200/cadence-visibility-dev"
+
+install-schema-es-v6:
+	export ES_SCHEMA_FILE=./schema/elasticsearch/v6/visibility/index_template.json
+	curl -X PUT "http://127.0.0.1:9200/_template/cadence-visibility-template" -H 'Content-Type: application/json' --data-binary "@$(ES_SCHEMA_FILE)"
+	curl -X PUT "http://127.0.0.1:9200/cadence-visibility-dev"
+
 start: bins
 	./cadence-server start
 

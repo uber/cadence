@@ -81,23 +81,14 @@ Also use `docker-compose -f ./docker/dev/cassandra.yml down` to stop and clean u
 ### 3. Schema installation 
 Based on the above dependency setup, you also need to install the schemas. 
 
-* If you use `cassandra.yml` or `cassandra-esv7-kafka.yml`, then run `make install-schema` to install Casandra schemas 
+* If you use `cassandra.yml` then run `make install-schema` to install Casandra schemas
+* If you use `cassandra-esv7-kafka.yml` then run `make install-schema && make install-schema-es-v7` to install Casandra & ElasticSearch schemas 
 * If you use `mysql.yml` then run `install-schema-mysql` to install MySQL schemas
 * If you use `postgres.yml` then run `install-schema-postgres` to install Postgres schemas
 
-Beside database schema, you will also need to install ElasticSearch schema if you use  `cassandra-esv7-kafka.yml`:
-Run below commands:
-```bash
-export ES_SCHEMA_FILE=./schema/elasticsearch/v7/visibility/index_template.json
-curl -X PUT "http://127.0.0.1:9200/_template/cadence-visibility-template" -H 'Content-Type: application/json' --data-binary "@$ES_SCHEMA_FILE"
-curl -X PUT "http://127.0.0.1:9200/cadence-visibility-dev"
-```
-They will create an index template and an index in ElasticSearch. 
-
 :warning: Note: 
-You will run into error of `InternalServiceError{Message: ListClosedWorkflowExecutions failed, elastic: Error 400 (Bad Request): all shards failed [type=search_phase_execution_exception]}`
-if ElasticSearch index template was not created before using. As there will be a wrong index created by default. 
-You will have to delete the wrong index and then create the right one:
+>If you use `cassandra-esv7-kafka.yml` and start server before `make install-schema-es-v7`, ElasticSearch may create a wrong index on demand. 
+You will have to delete the wrong index and then run the `make install-schema-es-v7` again. To delete the wrong index:
 ```
 curl -X DELETE "http://127.0.0.1:9200/cadence-visibility-dev"
 ```
