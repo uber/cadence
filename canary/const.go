@@ -51,10 +51,6 @@ const (
 const workflowVersion = workflow.Version(3)
 const workflowChangeID = "initial version"
 
-const (
-	cronWFExecutionTimeout = 18 * time.Minute
-)
-
 // wfType/activityType refers to the friendly short names given to
 // workflows and activities - at the time of registration, these names
 // will be used to associate with a workflow or activity function

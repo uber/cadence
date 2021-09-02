@@ -52,8 +52,8 @@ func init() {
 // exercises the frontend APIs and the basic functionality of the
 // client library - each probe / test MUST be implemented as a
 // child workflow of this workflow
-func sanityWorkflow(ctx workflow.Context) error {
-	scheduledTimeNanos := workflow.Now(ctx).UnixNano()
+func sanityWorkflow(ctx workflow.Context, inputScheduledTimeNanos int64) error {
+	scheduledTimeNanos := getScheduledTimeFromInputIfNonZero(ctx, inputScheduledTimeNanos)
 	domain := workflow.GetInfo(ctx).Domain
 
 	var err error
@@ -89,7 +89,7 @@ func forkChildWorkflows(ctx workflow.Context, domain string, names []string) (wo
 	for _, childName := range names {
 		cwo := newChildWorkflowOptions(domain, concat(myID, childName))
 		childCtx := workflow.WithChildOptions(ctx, cwo)
-		future := workflow.ExecuteChildWorkflow(childCtx, childName, now, domain)
+		future := workflow.ExecuteChildWorkflow(childCtx, childName, now)
 		selector.AddFuture(future, func(f workflow.Future) {
 			if err := f.Get(ctx, nil); err != nil {
 				workflow.GetLogger(ctx).Error("child workflow failed", zap.Error(err))
