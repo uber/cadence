@@ -29,12 +29,12 @@ import (
 func TestClusterGroupMetadataDefaults(t *testing.T) {
 	config := ClusterGroupMetadata{
 		MasterClusterName: "active",
-		ClusterInformation: map[string]ClusterInformation{
+		ClusterInformation: map[string]ClusterGroup{
 			"active": {},
 		},
 	}
 
-	config.fillDefaults()
+	config.FillDefaults()
 
 	assert.Equal(t, "active", config.PrimaryClusterName)
 	assert.Equal(t, "cadence-frontend", config.ClusterGroup["active"].RPCName)
@@ -106,7 +106,7 @@ func TestClusterGroupMetadataValidate(t *testing.T) {
 		{
 			msg: "cluster with empty name defined",
 			config: modify(validClusterGroupMetadata(), func(m *ClusterGroupMetadata) {
-				m.ClusterGroup[""] = ClusterInformation{}
+				m.ClusterGroup[""] = ClusterGroup{}
 			}),
 			err: "cluster with empty name defined",
 		},
@@ -164,7 +164,7 @@ func TestClusterGroupMetadataValidate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			err := tt.config.validate()
+			err := tt.config.Validate()
 			if tt.err == "" {
 				assert.NoError(t, err)
 			} else {
@@ -180,7 +180,7 @@ func validClusterGroupMetadata() *ClusterGroupMetadata {
 		FailoverVersionIncrement: 10,
 		PrimaryClusterName:       "active",
 		CurrentClusterName:       "standby",
-		ClusterGroup: map[string]ClusterInformation{
+		ClusterGroup: map[string]ClusterGroup{
 			"active": {
 				Enabled:                true,
 				InitialFailoverVersion: 0,

@@ -52,7 +52,7 @@ var (
 	// TestAllClusterNames is the all cluster names used for test
 	TestAllClusterNames = []string{TestCurrentClusterName, TestAlternativeClusterName}
 	// TestAllClusterInfo is the same as above, just convenient for test mocking
-	TestAllClusterInfo = map[string]config.ClusterInformation{
+	TestAllClusterInfo = map[string]config.ClusterGroup{
 		TestCurrentClusterName: {
 			Enabled:                true,
 			InitialFailoverVersion: TestCurrentClusterInitialFailoverVersion,
@@ -74,7 +74,7 @@ var (
 	// TestSingleDCAllClusterNames is the all cluster names used for test
 	TestSingleDCAllClusterNames = []string{TestCurrentClusterName}
 	// TestSingleDCClusterInfo is the same as above, just convenient for test mocking
-	TestSingleDCClusterInfo = map[string]config.ClusterInformation{
+	TestSingleDCClusterInfo = map[string]config.ClusterGroup{
 		TestCurrentClusterName: {
 			Enabled:                true,
 			InitialFailoverVersion: TestCurrentClusterInitialFailoverVersion,
