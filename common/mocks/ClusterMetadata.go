@@ -46,15 +46,15 @@ func (_m *ClusterMetadata) ClusterNameForFailoverVersion(failoverVersion int64) 
 }
 
 // GetAllClusterInfo provides a mock function with given fields:
-func (_m *ClusterMetadata) GetAllClusterInfo() map[string]config.ClusterInformation {
+func (_m *ClusterMetadata) GetAllClusterInfo() map[string]config.ClusterGroup {
 	ret := _m.Called()
 
-	var r0 map[string]config.ClusterInformation
-	if rf, ok := ret.Get(0).(func() map[string]config.ClusterInformation); ok {
+	var r0 map[string]config.ClusterGroup
+	if rf, ok := ret.Get(0).(func() map[string]config.ClusterGroup); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]config.ClusterInformation)
+			r0 = ret.Get(0).(map[string]config.ClusterGroup)
 		}
 	}
 
