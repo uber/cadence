@@ -1,6 +1,6 @@
 # Periodical feature health check workflow tools(aka Canary)
 
-This README describes how to set up Cadence bench, different types of bench loads, and how to start the load.
+This README describes how to set up Cadence canary, different types of canary test cases, and how to start the canary.
 
 Setup
 -----------
@@ -18,7 +18,7 @@ For local server env you can run it through:
 
 :warning: NOTE: Starting this canary worker will not automatically start a canary test. Next two sections will cover how to start and configure it.
 
-Different ways of start the bench workers:
+Different ways of start the canary workers:
 
 #### 1. Use docker image `ubercadence/cadence-canary:master`
 
@@ -54,13 +54,13 @@ Worker Configurations
 Canary workers configuration contains two parts:
 - **Canary**: this part controls which domains canary workers are responsible for what tests the sanity workflow will exclude.
 ```yaml 
-bench:
-  domains: ["cadence-bench", "cadence-bench-sync", "cadence-bench-batch"] # it will start workers on all those domains(also try to register if not exists) 
+canary:
+  domains: ["cadence-canary"] # it will start workers on all those domains(also try to register if not exists) 
   excludes: ["workflow.searchAttributes", "workflow.batch", "workflow.archival.visibility"] # it will exclude the three test cases
 ``` 
 An exception here is `HistoryArchival` and `VisibilityArchival` test cases will always use `canary-archival-domain` domain. 
 
-- **Cadence**: this control how bench worker should talk to Cadence server, which includes the server's service name and address.
+- **Cadence**: this control how canary worker should talk to Cadence server, which includes the server's service name and address.
 ```yaml
 cadence:
   service: "cadence-frontend" # frontend service name
