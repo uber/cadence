@@ -1,5 +1,5 @@
 ---
-name: Help/Support
+name: QA/Help/Support
 about: Please use [Discussion](https://github.com/uber/cadence/discussions) or [StackOverflow](https://stackoverflow.com/questions/tagged/cadence-workflow) for QA/Help/Support
 title: ''
 labels: ''
