@@ -58,6 +58,7 @@ bench:
   domains: ["cadence-bench", "cadence-bench-sync", "cadence-bench-batch"] # it will start workers on all those domains(also try to register if not exists) 
   excludes: ["workflow.searchAttributes", "workflow.batch", "workflow.archival.visibility"] # it will exclude the three test cases
 ``` 
+An exception here is `HistoryArchival` and `VisibilityArchival` test cases will always use `canary-archival-domain` domain. 
 
 - **Cadence**: this control how bench worker should talk to Cadence server, which includes the server's service name and address.
 ```yaml
@@ -70,20 +71,25 @@ cadence:
 
 Canary Test Cases
 ----------------------
-#### Sanity Test 
+#### Test case starter & Sanity suite 
 The sanity workflow is test suite workflow. It will kick off a bunch of childWorkflows for all the test to verify that Cadence server is operating correctly. 
-
-This is [the list of the test cases](./sanity.go) that it will start all supported test cases by default if no excludes are configured. 
 
 An error result of the sanity workflow indicates at least one of the test case fails.
 
-You can start the sanity workflow as one-off:
+You can start the sanity workflow as one-off run:
 ```
-
+cadence --do <the domain you configured> workflow start --et 600 --wt workflow.sanity
 ``` 
-Or using a cron job:
+Or using a cron job(e.g. every minute):
+```
+cadence --do <the domain you configured> workflow start --et 600 --wt workflow.sanity --cron "* * * * *"
 ```
 
+This is [the list of the test cases](./sanity.go) that it will start all supported test cases by default if no excludes are configured. 
+You can find [the workflow names of the tests cases in this file](./const.go) if you want to manually start certain test cases.  
+For example, manually start an `Echo` test case:
+```
+cadence --do <> workflow start --et 10 --wt workflow.echo
 ```
 
 #### Echo
@@ -121,6 +127,7 @@ Reset workflow tests reset feature.
 
 #### HistoryArchival
 HistoryArchival tests history archival feature. Make sure history archival feature is configured on the server. Otherwise, it should be excluded from the sanity test suite/case. 
+This test case always uses `canary-archival-domain` domain.
  
 #### VisibilityArchival
 VisibilityArchival tests visibility archival feature. Make sure visibility feature is configured on the server. Otherwise, it should be excluded from the sanity test suite/case.

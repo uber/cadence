@@ -52,7 +52,10 @@ func init() {
 // exercises the frontend APIs and the basic functionality of the
 // client library - each probe / test MUST be implemented as a
 // child workflow of this workflow
-func sanityWorkflow(ctx workflow.Context, scheduledTimeNanos int64, domain string) error {
+func sanityWorkflow(ctx workflow.Context) error {
+	scheduledTimeNanos := workflow.Now(ctx).UnixNano()
+	domain := workflow.GetInfo(ctx).Domain
+
 	var err error
 	profile, err := beginWorkflow(ctx, wfTypeSanity, scheduledTimeNanos)
 	if err != nil {

@@ -52,7 +52,6 @@ const workflowVersion = workflow.Version(3)
 const workflowChangeID = "initial version"
 
 const (
-	cronJobTimeout         = 9 * time.Minute
 	cronWFExecutionTimeout = 18 * time.Minute
 )
 
@@ -60,7 +59,6 @@ const (
 // workflows and activities - at the time of registration, these names
 // will be used to associate with a workflow or activity function
 const (
-	wfTypeCron                 = "workflow.cron"
 	wfTypeSanity               = "workflow.sanity"
 	wfTypeEcho                 = "workflow.echo"
 	wfTypeSignal               = "workflow.signal"
@@ -84,7 +82,6 @@ const (
 	wfTypeBatchChild           = "workflow.batch.child"
 
 	activityTypeEcho               = "activity.echo"
-	activityTypeCron               = "activity.cron"
 	activityTypeSignal             = "activity.signal"
 	activityTypeVisibility         = "activity.visibility"
 	activityTypeSearchAttributes   = "activity.searchAttributes"

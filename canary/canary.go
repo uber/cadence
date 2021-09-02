@@ -85,9 +85,6 @@ func (c *canaryImpl) Run() error {
 		return err
 	}
 
-	// start the initial cron workflow
-	c.startCronWorkflow()
-
 	err = c.startWorker()
 	if err != nil {
 		log.Error("start worker failed", zap.Error(err))
@@ -112,23 +109,6 @@ func (c *canaryImpl) startWorker() error {
 	}
 	canaryWorker := worker.New(c.canaryClient.Service, c.canaryDomain, taskListName, options)
 	return canaryWorker.Run()
-}
-
-func (c *canaryImpl) startCronWorkflow() {
-	wfID := "cadence.canary.cron"
-	opts := newWorkflowOptions(wfID, cronWFExecutionTimeout)
-	opts.CronSchedule = "@every 30s" // run every 30s
-	// create the cron workflow span
-	ctx := context.Background()
-	span := opentracing.StartSpan("start-cron-workflow-span")
-	defer span.Finish()
-	ctx = opentracing.ContextWithSpan(ctx, span)
-	_, err := c.canaryClient.StartWorkflow(ctx, opts, cronWorkflow, c.canaryDomain, wfTypeSanity)
-	if err != nil {
-		if _, ok := err.(*shared.WorkflowExecutionAlreadyStartedError); !ok {
-			c.runtime.logger.Error("error starting cron workflow", zap.Error(err))
-		}
-	}
 }
 
 // newActivityContext builds an activity context containing
