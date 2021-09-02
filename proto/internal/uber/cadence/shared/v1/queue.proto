@@ -148,13 +148,14 @@ message CrossClusterTaskRequest {
 message CrossClusterTaskResponse {
   int64 task_id = 1;
   CrossClusterTaskType task_type = 2;
-  CrossClusterTaskFailedCause failed_cause = 3;
+  int32 task_state = 3;
+  CrossClusterTaskFailedCause failed_cause = 4;
   oneof attributes {
-    CrossClusterStartChildExecutionResponseAttributes startChildExecutionAttributes = 4;
-    CrossClusterCancelExecutionResponseAttributes cancelExecutionAttributes = 5;
-    CrossClusterSignalExecutionResponseAttributes signalExecutionAttributes = 6;
-    CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes recordChildWorkflowExecutionCompleteRequestAttributes = 7;
-    CrossClusterApplyParentClosePolicyResponseAttributes applyParentClosePolicyResponseAttributes = 8;
+    CrossClusterStartChildExecutionResponseAttributes startChildExecutionAttributes = 5;
+    CrossClusterCancelExecutionResponseAttributes cancelExecutionAttributes = 6;
+    CrossClusterSignalExecutionResponseAttributes signalExecutionAttributes = 7;
+    CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes recordChildWorkflowExecutionCompleteRequestAttributes = 8;
+    CrossClusterApplyParentClosePolicyResponseAttributes applyParentClosePolicyResponseAttributes = 9;
   }
 }
 

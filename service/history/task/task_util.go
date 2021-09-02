@@ -341,6 +341,54 @@ func loadMutableStateForTransferTask(
 	return msBuilder, nil
 }
 
+// load mutable state, if mutable state's next event ID <= task ID, will attempt to refresh
+// if still mutable state's next event ID <= task ID, will return nil, nil
+// TODO: refactor loadMutableStateForXXXTask function implementation to avoid duplication
+func loadMutableStateForCrossClusterTask(
+	ctx context.Context,
+	wfContext execution.Context,
+	crossClusterTask *persistence.CrossClusterTaskInfo,
+	metricsClient metrics.Client,
+	logger log.Logger,
+) (execution.MutableState, error) {
+
+	msBuilder, err := wfContext.LoadWorkflowExecution(ctx)
+	if err != nil {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
+			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	if crossClusterTask.ScheduleID >= msBuilder.GetNextEventID() {
+		metricsClient.IncCounter(metrics.CrossClusterQueueProcessorScope, metrics.StaleMutableStateCounter)
+		wfContext.Clear()
+
+		msBuilder, err = wfContext.LoadWorkflowExecution(ctx)
+		if err != nil {
+			return nil, err
+		}
+		// after refresh, still mutable state's next event ID <= task ID
+		if crossClusterTask.ScheduleID >= msBuilder.GetNextEventID() {
+			domainName := msBuilder.GetDomainEntry().GetInfo().Name
+			metricsClient.Scope(metrics.CrossClusterQueueProcessorScope, metrics.DomainTag(domainName)).IncCounter(metrics.DataInconsistentCounter)
+			logger.Error("Cross Cluster Task Processor: task event ID >= MS NextEventID, skip.",
+				tag.WorkflowDomainName(domainName),
+				tag.WorkflowDomainID(crossClusterTask.DomainID),
+				tag.WorkflowID(crossClusterTask.WorkflowID),
+				tag.WorkflowRunID(crossClusterTask.RunID),
+				tag.TaskType(crossClusterTask.TaskType),
+				tag.TaskID(crossClusterTask.TaskID),
+				tag.WorkflowScheduleID(crossClusterTask.ScheduleID),
+				tag.WorkflowNextEventID(msBuilder.GetNextEventID()),
+			)
+			return nil, nil
+		}
+	}
+	return msBuilder, nil
+}
+
 func timeoutWorkflow(
 	mutableState execution.MutableState,
 	eventBatchFirstEventID int64,

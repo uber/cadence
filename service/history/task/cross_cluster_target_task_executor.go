@@ -98,12 +98,13 @@ func (t *crossClusterTargetTaskExecutor) Execute(
 	}
 
 	response := &types.CrossClusterTaskResponse{
-		TaskID:   targetTask.GetTaskID(),
-		TaskType: targetTask.request.TaskInfo.TaskType,
+		TaskID:    targetTask.GetTaskID(),
+		TaskType:  targetTask.request.TaskInfo.TaskType,
+		TaskState: targetTask.request.TaskInfo.TaskState,
 	}
 
 	if !shouldProcessTask {
-		// this should not happen,
+		// this should not happen for cross cluster task
 		// shouldProcessTask parameter will be deprecated after
 		// 3+DC task lifecycle is done.
 		response.FailedCause = types.CrossClusterTaskFailedCauseUncategorized.Ptr()
