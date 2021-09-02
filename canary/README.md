@@ -97,6 +97,11 @@ For example, manually start an `Echo` test case:
 cadence --do <> workflow start --tl canary-task-queue --et 10 --wt workflow.echo
 ```
 
+Once you start the test cases, you can observe the progress:
+```
+cadence --do cadence-canary workflow ob -w <...workflowID form the start command output>
+```
+
 #### Echo
 Echo workflow tests the very basic workflow functionality. It executes an activity to return some output and verifies it as the workflow result. 
 
