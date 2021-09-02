@@ -23,32 +23,32 @@ Then install the schemas:
 make install-schema-cdc
 ```
 
-2. Start Cadence development server for cluster_0, cluster_1 and cluster_2:
+2. Start Cadence development server for cluster0, cluster1 and cluster2:
 ```
-./cadence-server --zone xdc_cluster_0 start
-./cadence-server --zone xdc_cluster_1 start
-./cadence-server --zone xdc_cluster_2 start
+./cadence-server --zone xdc_cluster0 start
+./cadence-server --zone xdc_cluster1 start
+./cadence-server --zone xdc_cluster2 start
 ```
 
 3. Create a domain with replication
 ```
-cadence --do sample domain register --ac cluster_0 --cl cluster_0 cluster_1 cluster_2
+cadence --do sample domain register --ac cluster0 --cl cluster0 cluster1 cluster2
 ```
 Then run a helloworld from [Go Client Sample](https://github.com/uber-common/cadence-samples/) or [Java Client Sample](https://github.com/uber/cadence-java-samples)
 
 4. Failover a domain between clusters:
 
-Failover to cluster_1:
+Failover to cluster1:
 ```
-cadence --do samples-domain domain update --ac cluster_1
+cadence --do samples-domain domain update --ac cluster1
 ```
-or failover to cluster_2:
+or failover to cluster2:
    ```
-   cadence --do samples-domain domain update --ac cluster_2
+   cadence --do samples-domain domain update --ac cluster2
    ```
-Failback to cluster_0:
+Failback to cluster0:
 ```
-cadence --do sample samples-domain update --ac cluster_0
+cadence --do sample samples-domain update --ac cluster0
 ```
 
 Archiver

@@ -558,38 +558,38 @@ start: bins
 	./cadence-server start
 
 install-schema-cdc: cadence-cassandra-tool
-	@echo Setting up cadence_cluster_0 key space
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_cluster_0 --rf 1
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster_0 setup-schema -v 0.0
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster_0 update-schema -d ./schema/cassandra/cadence/versioned
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility_cluster_0 --rf 1
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster_0 setup-schema -v 0.0
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster_0 update-schema -d ./schema/cassandra/visibility/versioned
+	@echo Setting up cadence_cluster0 key space
+	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_cluster0 --rf 1
+	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster0 setup-schema -v 0.0
+	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster0 update-schema -d ./schema/cassandra/cadence/versioned
+	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility_cluster0 --rf 1
+	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster0 setup-schema -v 0.0
+	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster0 update-schema -d ./schema/cassandra/visibility/versioned
 
-	@echo Setting up cadence_cluster_1 key space
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_cluster_1 --rf 1
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster_1 setup-schema -v 0.0
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster_1 update-schema -d ./schema/cassandra/cadence/versioned
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility_cluster_1 --rf 1
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster_1 setup-schema -v 0.0
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster_1 update-schema -d ./schema/cassandra/visibility/versioned
+	@echo Setting up cadence_cluster1 key space
+	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_cluster1 --rf 1
+	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster1 setup-schema -v 0.0
+	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster1 update-schema -d ./schema/cassandra/cadence/versioned
+	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility_cluster1 --rf 1
+	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster1 setup-schema -v 0.0
+	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster1 update-schema -d ./schema/cassandra/visibility/versioned
 
-	@echo Setting up cadence_cluster_2 key space
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_cluster_2 --rf 1
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster_2 setup-schema -v 0.0
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster_2 update-schema -d ./schema/cassandra/cadence/versioned
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility_cluster_2 --rf 1
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster_2 setup-schema -v 0.0
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster_2 update-schema -d ./schema/cassandra/visibility/versioned
+	@echo Setting up cadence_cluster2 key space
+	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_cluster2 --rf 1
+	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster2 setup-schema -v 0.0
+	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster2 update-schema -d ./schema/cassandra/cadence/versioned
+	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility_cluster2 --rf 1
+	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster2 setup-schema -v 0.0
+	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster2 update-schema -d ./schema/cassandra/visibility/versioned
 
-start-cdc-cluster_0: bins
-	./cadence-server --zone cluster_0 start
+start-cdc-cluster0: bins
+	./cadence-server --zone cluster0 start
 
-start-cdc-cluster_1: bins
-	./cadence-server --zone cluster_1 start
+start-cdc-cluster1: bins
+	./cadence-server --zone cluster1 start
 
-start-cdc-cluster_2: bins
-	./cadence-server --zone cluster_2 start
+start-cdc-cluster2: bins
+	./cadence-server --zone cluster2 start
 
 start-canary: bins
 	./cadence-canary start
