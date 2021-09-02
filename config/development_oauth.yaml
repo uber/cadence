@@ -43,10 +43,10 @@ authorization:
 clusterGroupMetadata:
   enableGlobalDomain: true
   failoverVersionIncrement: 10
-  masterClusterName: "cluster_0"
-  currentClusterName: "cluster_0"
+  masterClusterName: "cluster0"
+  currentClusterName: "cluster0"
   clusterGroup:
-    cluster_0:
+    cluster0:
       enabled: true
       initialFailoverVersion: 0
       rpcAddress: "localhost:7933" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work

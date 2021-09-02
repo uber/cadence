@@ -7,15 +7,15 @@ persistence:
       nosql:
         pluginName: "cassandra"
         hosts: "127.0.0.1"
-        keyspace: "cadence_cluster_1"
+        keyspace: "cadence_cluster1"
     cass-visibility:
       nosql:
         pluginName: "cassandra"
         hosts: "127.0.0.1"
-        keyspace: "cadence_visibility_cluster_1"
+        keyspace: "cadence_visibility_cluster1"
 
 ringpop:
-  name: cadence_cluster_1
+  name: cadence_cluster1
   bootstrapMode: hosts
   bootstrapHosts: [ "127.0.0.1:8933", "127.0.0.1:8934", "127.0.0.1:8935", "127.0.0.1:8940" ]
   maxJoinDuration: 30s
@@ -29,7 +29,7 @@ services:
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
-        prefix: "cadence_cluster_1"
+        prefix: "cadence_cluster1"
     pprof:
       port: 8936
 
@@ -41,7 +41,7 @@ services:
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
-        prefix: "cadence_cluster_1"
+        prefix: "cadence_cluster1"
     pprof:
       port: 8938
 
@@ -53,7 +53,7 @@ services:
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
-        prefix: "cadence_cluster_1"
+        prefix: "cadence_cluster1"
     pprof:
       port: 8937
 
@@ -64,29 +64,29 @@ services:
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
-        prefix: "cadence_cluster_1"
+        prefix: "cadence_cluster1"
     pprof:
       port: 8941
 
 clusterGroupMetadata:
   enableGlobalDomain: true
   failoverVersionIncrement: 10
-  primaryClusterName: "cluster_0"
-  currentClusterName: "cluster_1"
+  primaryClusterName: "cluster0"
+  currentClusterName: "cluster1"
   clusterGroup:
-    cluster_0:
+    cluster0:
       enabled: true
       initialFailoverVersion: 1
       rpcName: "cadence-frontend"
       rpcAddress: "localhost:7833" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
       rpcTransport: "grpc"
-    cluster_1:
+    cluster1:
       enabled: true
       initialFailoverVersion: 0
       rpcName: "cadence-frontend"
       rpcAddress: "localhost:8833" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
       rpcTransport: "grpc"
-    cluster_2:
+    cluster2:
       enabled: true
       initialFailoverVersion: 2
       rpcName: "cadence-frontend"
