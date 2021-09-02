@@ -48,7 +48,7 @@ type (
 		// GetCurrentClusterName return the current cluster name
 		GetCurrentClusterName() string
 		// GetAllClusterInfo return the all cluster name -> corresponding info
-		GetAllClusterInfo() map[string]config.ClusterGroup
+		GetAllClusterInfo() map[string]config.ClusterInformation
 		// ClusterNameForFailoverVersion return the corresponding cluster name for a given failover version
 		ClusterNameForFailoverVersion(failoverVersion int64) string
 	}
@@ -66,7 +66,7 @@ type (
 		// currentClusterName is the name of the current cluster
 		currentClusterName string
 		// clusterGroup contains all cluster name -> corresponding information
-		clusterGroup map[string]config.ClusterGroup
+		clusterGroup map[string]config.ClusterInformation
 		// versionToClusterName contains all initial version -> corresponding cluster name
 		versionToClusterName map[int64]string
 	}
@@ -79,7 +79,7 @@ func NewMetadata(
 	failoverVersionIncrement int64,
 	primaryClusterName string,
 	currentClusterName string,
-	clusterGroup map[string]config.ClusterGroup,
+	clusterGroup map[string]config.ClusterInformation,
 ) Metadata {
 	versionToClusterName := make(map[int64]string)
 	for clusterName, info := range clusterGroup {
@@ -140,7 +140,7 @@ func (metadata *metadataImpl) GetCurrentClusterName() string {
 }
 
 // GetAllClusterInfo return the all cluster name -> corresponding information
-func (metadata *metadataImpl) GetAllClusterInfo() map[string]config.ClusterGroup {
+func (metadata *metadataImpl) GetAllClusterInfo() map[string]config.ClusterInformation {
 	return metadata.clusterGroup
 }
 

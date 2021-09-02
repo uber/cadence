@@ -142,10 +142,10 @@ func (mr *MockMetadataMockRecorder) GetCurrentClusterName() *gomock.Call {
 }
 
 // GetAllClusterInfo mocks base method
-func (m *MockMetadata) GetAllClusterInfo() map[string]config.ClusterGroup {
+func (m *MockMetadata) GetAllClusterInfo() map[string]config.ClusterInformation {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAllClusterInfo")
-	ret0, _ := ret[0].(map[string]config.ClusterGroup)
+	ret0, _ := ret[0].(map[string]config.ClusterInformation)
 	return ret0
 }
 

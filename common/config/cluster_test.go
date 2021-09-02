@@ -29,7 +29,7 @@ import (
 func TestClusterGroupMetadataDefaults(t *testing.T) {
 	config := ClusterGroupMetadata{
 		MasterClusterName: "active",
-		ClusterInformation: map[string]ClusterGroup{
+		ClusterInformation: map[string]ClusterInformation{
 			"active": {},
 		},
 	}
@@ -106,7 +106,7 @@ func TestClusterGroupMetadataValidate(t *testing.T) {
 		{
 			msg: "cluster with empty name defined",
 			config: modify(validClusterGroupMetadata(), func(m *ClusterGroupMetadata) {
-				m.ClusterGroup[""] = ClusterGroup{}
+				m.ClusterGroup[""] = ClusterInformation{}
 			}),
 			err: "cluster with empty name defined",
 		},
@@ -180,7 +180,7 @@ func validClusterGroupMetadata() *ClusterGroupMetadata {
 		FailoverVersionIncrement: 10,
 		PrimaryClusterName:       "active",
 		CurrentClusterName:       "standby",
-		ClusterGroup: map[string]ClusterGroup{
+		ClusterGroup: map[string]ClusterInformation{
 			"active": {
 				Enabled:                true,
 				InitialFailoverVersion: 0,

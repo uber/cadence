@@ -47,13 +47,13 @@ type (
 		CurrentClusterName string `yaml:"currentClusterName"`
 		// ClusterGroup contains information for each cluster within the replication group
 		// Key is the clusterName
-		ClusterGroup map[string]ClusterGroup `yaml:"clusterGroup"`
+		ClusterGroup map[string]ClusterInformation `yaml:"clusterGroup"`
 		// Deprecated: please use ClusterGroup
-		ClusterInformation map[string]ClusterGroup `yaml:"clusterInformation"`
+		ClusterInformation map[string]ClusterInformation `yaml:"clusterInformation"`
 	}
 
-	// ClusterGroup contains the information about each cluster participating in cross DC
-	ClusterGroup struct {
+	// ClusterInformation contains the information about each cluster participating in cross DC
+	ClusterInformation struct {
 		Enabled bool `yaml:"enabled"`
 		// InitialFailoverVersion is the identifier of each cluster. 0 <= the value < failoverVersionIncrement
 		InitialFailoverVersion int64 `yaml:"initialFailoverVersion"`
