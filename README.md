@@ -5,8 +5,9 @@
 
 This repo contains the source code of the Cadence server and other tooling including CLI, schema tools, bench and canary. 
 
-To implement workflows, use [Go client](https://github.com/uber-go/cadence-client) or [Java client](https://github.com/uber-java/cadence-client) by Cadence, 
-or [Python client](https://github.com/firdaus/cadence-python) and [Ruby client](https://github.com/coinbase/cadence-ruby) developed by community projects. 
+You can implement your workflows with one of our client libraries. 
+The [Go](https://github.com/uber-go/cadence-client) and [Java](https://github.com/uber-java/cadence-client) libraries are officially maintained by the Cadence team, 
+while the [Python](https://github.com/firdaus/cadence-python) and [Ruby](https://github.com/coinbase/cadence-ruby) client libraries are developed by the community.
 
 See Maxim's talk at [Data@Scale Conference](https://atscaleconference.com/videos/cadence-microservice-architecture-beyond-requestreply) for an architectural overview of Cadence.
 
@@ -26,8 +27,8 @@ Visit [cadenceworkflow.io](https://cadenceworkflow.io) to learn more about Caden
 
 ### Start the cadence-server
 
-To try out locally, we highly recommend that you use [Cadence service docker](docker/README.md) to run the service.
-Or follow the [instructions](./CONTRIBUTING.md) to build and run it. 
+To run Cadence services locally, we highly recommend that you use [Cadence service docker](docker/README.md) to run the service.
+You can also follow the [instructions](./CONTRIBUTING.md) to build and run it. 
 
 Please visit our [documentation](https://cadenceworkflow.io/docs/operation-guide/) site for production/cluster setup.
 
@@ -37,7 +38,7 @@ Try out the sample recipes for [Go](https://github.com/uber-common/cadence-sampl
 
 ### Use [Cadence CLI](https://cadenceworkflow.io/docs/cli/) to perform various tasks on Cadence server cluster
 
-Different options to install CLI:
+You can use the following ways to install Cadence CLI:
 * Use brew to install CLI: `brew install cadence-workflow`
 * Use docker image for CLI: `docker run --rm ubercadence/cli:<releaseVersion>`  or `docker run --rm ubercadence/cli:master ` . Be sure to update your image when you want to try new features: `docker pull ubercadence/cli:master `
 * Build the CLI binary yourself, check out the repo and run `make cadence` to build all tools. See [CONTRIBUTING](CONTRIBUTING.md) for prerequisite of make command.
