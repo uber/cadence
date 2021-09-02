@@ -117,6 +117,8 @@ type (
 		refreshLock     sync.Mutex
 		lastRefreshTime time.Time
 
+		lastMetricsEmitTime time.Time
+
 		callbackLock     sync.Mutex
 		prepareCallbacks map[int]PrepareCallbackFn
 		callbacks        map[int]CallbackFn
@@ -499,6 +501,9 @@ UpdateLoop:
 
 			// the domain change events after the domainNotificationVersion
 			// will be loaded into cache in the next refresh
+			c.metricsClient.Scope(metrics.DomainCacheScope).IncCounter(metrics.DomainNotificationVersionExceedCount)
+			c.logger.Warn("Unexpected domain notification version handling",
+				tag.WorkflowDomainName(domain.GetInfo().Name))
 			break UpdateLoop
 		}
 		prevEntry, nextEntry, err := c.updateIDToDomainCache(newCacheByID, domain.info.ID, domain)
@@ -530,6 +535,13 @@ UpdateLoop:
 
 	// only update last refresh time when refresh succeeded
 	c.lastRefreshTime = now
+
+	if now.Sub(c.lastMetricsEmitTime) > 30*time.Minute {
+		for range c.callbacks {
+			c.metricsClient.IncCounter(metrics.DomainCacheScope, metrics.DomainCacheCallbackCount)
+		}
+		c.lastMetricsEmitTime = now
+	}
 
 	return nil
 }
@@ -696,9 +708,6 @@ func (c *domainCache) triggerDomainChangeCallbackLocked(
 	defer sw.Stop()
 
 	for _, callback := range c.callbacks {
-		if len(nextDomains) > 0 {
-			c.metricsClient.IncCounter(metrics.DomainCacheScope, metrics.DomainCacheCallbackCount)
-		}
 		callback(prevDomains, nextDomains)
 	}
 }

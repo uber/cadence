@@ -1663,6 +1663,7 @@ const (
 	DomainCachePrepareCallbacksLatency
 	DomainCacheCallbacksLatency
 	DomainCacheCallbackCount
+	DomainNotificationVersionExceedCount
 
 	HistorySize
 	HistoryCount
@@ -2148,6 +2149,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DomainCachePrepareCallbacksLatency:                  {metricName: "domain_cache_prepare_callbacks_latency", metricType: Timer},
 		DomainCacheCallbacksLatency:                         {metricName: "domain_cache_callbacks_latency", metricType: Timer},
 		DomainCacheCallbackCount:                            {metricName: "domain_cache_callbacks_count", metricType: Counter},
+		DomainNotificationVersionExceedCount:                {metricName: "domain_notification_version_exceed_count", metricType: Counter},
 		HistorySize:                                         {metricName: "history_size", metricType: Timer},
 		HistoryCount:                                        {metricName: "history_count", metricType: Timer},
 		EventBlobSize:                                       {metricName: "event_blob_size", metricType: Timer},
