@@ -20,7 +20,11 @@
 
 package config
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/uber/cadence/common"
+)
 
 const (
 	// StoreTypeSQL refers to sql based storage as persistence store
@@ -37,6 +41,36 @@ func (c *Persistence) DefaultStoreType() string {
 	return StoreTypeCassandra
 }
 
+// FillDefaults populates default values for unspecified fields in persistence config
+func (c *Persistence) FillDefaults() {
+	for k, store := range c.DataStores {
+		if store.Cassandra != nil && store.NoSQL == nil {
+			// for backward-compatibility
+			store.NoSQL = store.Cassandra
+			store.NoSQL.PluginName = "cassandra"
+		}
+
+		if store.SQL != nil {
+			// filling default encodingType/decodingTypes for SQL persistence
+			if store.SQL.EncodingType == "" {
+				store.SQL.EncodingType = string(common.EncodingTypeThriftRW)
+			}
+			if len(store.SQL.DecodingTypes) == 0 {
+				store.SQL.DecodingTypes = []string{
+					string(common.EncodingTypeThriftRW),
+				}
+			}
+
+			if store.SQL.NumShards == 0 {
+				store.SQL.NumShards = 1
+			}
+		}
+
+		// write changes back to DataStores, as ds is a value object
+		c.DataStores[k] = store
+	}
+}
+
 // Validate validates the persistence config
 func (c *Persistence) Validate() error {
 	dbStoreKeys := []string{c.DefaultStore}
@@ -45,7 +79,7 @@ func (c *Persistence) Validate() error {
 		dbStoreKeys = append(dbStoreKeys, c.VisibilityStore)
 	} else {
 		if _, ok := c.DataStores[c.AdvancedVisibilityStore]; !ok {
-			return fmt.Errorf(" Must provide one of VisibilityStore and AdvancedVisibilityStore")
+			return fmt.Errorf("must provide one of VisibilityStore and AdvancedVisibilityStore")
 		}
 	}
 
@@ -54,13 +88,8 @@ func (c *Persistence) Validate() error {
 		if !ok {
 			return fmt.Errorf("persistence config: missing config for datastore %v", st)
 		}
-		if ds.Cassandra != nil {
-			if ds.NoSQL != nil {
-				return fmt.Errorf("persistence config: datastore %v: only one of Cassandra or NoSQL can be specified", st)
-			}
-			// for backward-compatibility
-			ds.NoSQL = ds.Cassandra
-			ds.NoSQL.PluginName = "cassandra"
+		if ds.Cassandra != nil && ds.NoSQL != nil && ds.Cassandra != ds.NoSQL {
+			return fmt.Errorf("persistence config: datastore %v: only one of Cassandra or NoSQL can be specified", st)
 		}
 		if ds.SQL == nil && ds.NoSQL == nil {
 			return fmt.Errorf("persistence config: datastore %v: must provide config for one of SQL or NoSQL stores", st)
@@ -68,12 +97,8 @@ func (c *Persistence) Validate() error {
 		if ds.SQL != nil && ds.NoSQL != nil {
 			return fmt.Errorf("persistence config: datastore %v: only one of SQL or NoSQL can be specified", st)
 		}
-		if ds.SQL != nil && ds.SQL.NumShards == 0 {
-			ds.SQL.NumShards = 1
-		}
-		// write changes back to DataStores, as ds is a value object
-		c.DataStores[st] = ds
 	}
+
 	return nil
 }
 

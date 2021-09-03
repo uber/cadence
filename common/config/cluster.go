@@ -80,7 +80,8 @@ type (
 	}
 )
 
-func (m *ClusterGroupMetadata) validate() error {
+// Validate validates ClusterGroupMetadata
+func (m *ClusterGroupMetadata) Validate() error {
 	if m == nil {
 		return errors.New("ClusterGroupMetadata cannot be empty")
 	}
@@ -142,7 +143,8 @@ func (m *ClusterGroupMetadata) validate() error {
 	return errs
 }
 
-func (m *ClusterGroupMetadata) fillDefaults() {
+// FillDefaults populates default values for unspecified fields
+func (m *ClusterGroupMetadata) FillDefaults() {
 	if m == nil {
 		return
 	}
