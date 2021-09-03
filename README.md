@@ -48,7 +48,7 @@ You can use the following ways to install Cadence CLI:
   
 Cadence CLI is a powerful tool. The commands are organized by **tabs**. E.g. `workflow`->`batch`->`start`, or `admin`->`workflow`->`describe`.
 
-Please read the [documentation](https://cadenceworkflow.io/docs/cli/#documentation) to learn & explore.  
+Please read the [documentation](https://cadenceworkflow.io/docs/cli/#documentation) and always try out `--help` on any tab to learn & explore.  
   
 ### Use Cadence Web
 
