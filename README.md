@@ -69,13 +69,16 @@ See [bench documentation](./bench/README.md).
 See [canary documentation](./canary/README.md).
 
 #### Schema tools for SQL and Cassandra
-* For [manual setup or upgrading](docs/persistence.md) server schema 
-  * Use brew to install CLI: `brew install cadence-workflow` which also includes `cadence-sql-tool` and `cadence-cassandra-tool`. 
-    * The schema files are located at `/usr/local/etc/cadence/schema/`.
-  * If server runs with Cassandra, Use [Cadence Cassandra tool](tools/cassandra/README.md) to perform various tasks on database schema of Cassandra persistence
-  * If server runs with SQL database, Use [Cadence SQL tool](tools/sql/README.md) to perform various tasks on database schema of SQL based persistence
+The tools are for [manual setup or upgrading database schema](docs/persistence.md)  
+ 
+  * If server runs with Cassandra, Use [Cadence Cassandra tool](tools/cassandra/README.md) 
+  * If server runs with SQL database, Use [Cadence SQL tool](tools/sql/README.md) 
 
+The easiest way to get the schema tool is via homebrew.
 
+`brew install cadence-workflow` also includes `cadence-sql-tool` and `cadence-cassandra-tool`. 
+ * The schema files are located at `/usr/local/etc/cadence/schema/`.
+    
 ## License
 
 MIT License, please see [LICENSE](https://github.com/uber/cadence/blob/master/LICENSE) for details.
