@@ -419,13 +419,12 @@ func (p *workflowExecutionRateLimitedPersistenceClient) CompleteTransferTask(
 func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteTransferTask(
 	ctx context.Context,
 	request *RangeCompleteTransferTaskRequest,
-) error {
+) (*RangeCompleteTransferTaskResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
-		return ErrPersistenceLimitExceeded
+		return nil, ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.RangeCompleteTransferTask(ctx, request)
-	return err
+	return p.persistence.RangeCompleteTransferTask(ctx, request)
 }
 
 func (p *workflowExecutionRateLimitedPersistenceClient) CompleteCrossClusterTask(
@@ -443,13 +442,12 @@ func (p *workflowExecutionRateLimitedPersistenceClient) CompleteCrossClusterTask
 func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteCrossClusterTask(
 	ctx context.Context,
 	request *RangeCompleteCrossClusterTaskRequest,
-) error {
+) (*RangeCompleteCrossClusterTaskResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
-		return ErrPersistenceLimitExceeded
+		return nil, ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.RangeCompleteCrossClusterTask(ctx, request)
-	return err
+	return p.persistence.RangeCompleteCrossClusterTask(ctx, request)
 }
 
 func (p *workflowExecutionRateLimitedPersistenceClient) CompleteReplicationTask(
@@ -467,13 +465,12 @@ func (p *workflowExecutionRateLimitedPersistenceClient) CompleteReplicationTask(
 func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteReplicationTask(
 	ctx context.Context,
 	request *RangeCompleteReplicationTaskRequest,
-) error {
+) (*RangeCompleteReplicationTaskResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
-		return ErrPersistenceLimitExceeded
+		return nil, ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.RangeCompleteReplicationTask(ctx, request)
-	return err
+	return p.persistence.RangeCompleteReplicationTask(ctx, request)
 }
 
 func (p *workflowExecutionRateLimitedPersistenceClient) PutReplicationTaskToDLQ(
@@ -523,9 +520,9 @@ func (p *workflowExecutionRateLimitedPersistenceClient) DeleteReplicationTaskFro
 func (p *workflowExecutionRateLimitedPersistenceClient) RangeDeleteReplicationTaskFromDLQ(
 	ctx context.Context,
 	request *RangeDeleteReplicationTaskFromDLQRequest,
-) error {
+) (*RangeDeleteReplicationTaskFromDLQResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
-		return ErrPersistenceLimitExceeded
+		return nil, ErrPersistenceLimitExceeded
 	}
 
 	return p.persistence.RangeDeleteReplicationTaskFromDLQ(ctx, request)
@@ -570,13 +567,12 @@ func (p *workflowExecutionRateLimitedPersistenceClient) CompleteTimerTask(
 func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteTimerTask(
 	ctx context.Context,
 	request *RangeCompleteTimerTaskRequest,
-) error {
+) (*RangeCompleteTimerTaskResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
-		return ErrPersistenceLimitExceeded
+		return nil, ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.RangeCompleteTimerTask(ctx, request)
-	return err
+	return p.persistence.RangeCompleteTimerTask(ctx, request)
 }
 
 func (p *workflowExecutionRateLimitedPersistenceClient) Close() {
@@ -626,9 +622,9 @@ func (p *taskRateLimitedPersistenceClient) CompleteTask(
 func (p *taskRateLimitedPersistenceClient) CompleteTasksLessThan(
 	ctx context.Context,
 	request *CompleteTasksLessThanRequest,
-) (int, error) {
+) (*CompleteTasksLessThanResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
-		return 0, ErrPersistenceLimitExceeded
+		return nil, ErrPersistenceLimitExceeded
 	}
 	return p.persistence.CompleteTasksLessThan(ctx, request)
 }

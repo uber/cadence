@@ -89,8 +89,9 @@ FROM transfer_tasks WHERE shard_id = ? AND task_id > ? AND task_id <= ? ORDER BY
 	createTransferTasksQuery = `INSERT INTO transfer_tasks(shard_id, task_id, data, data_encoding)
  VALUES(:shard_id, :task_id, :data, :data_encoding)`
 
-	deleteTransferTaskQuery      = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id = ?`
-	rangeDeleteTransferTaskQuery = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id > ? AND task_id <= ?`
+	deleteTransferTaskQuery             = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id = ?`
+	rangeDeleteTransferTaskQuery        = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id > ? AND task_id <= ?`
+	rangeDeleteTransferTaskByBatchQuery = rangeDeleteTransferTaskQuery + ` ORDER BY task_id LIMIT ?`
 
 	getCrossClusterTasksQuery = `SELECT task_id, data, data_encoding
 FROM cross_cluster_tasks WHERE target_cluster = ? AND shard_id = ? AND task_id > ? AND task_id <= ? ORDER BY task_id`
@@ -98,8 +99,9 @@ FROM cross_cluster_tasks WHERE target_cluster = ? AND shard_id = ? AND task_id >
 	createCrossClusterTasksQuery = `INSERT INTO cross_cluster_tasks(target_cluster, shard_id, task_id, data, data_encoding)
 VALUES(:target_cluster, :shard_id, :task_id, :data, :data_encoding)`
 
-	deleteCrossClusterTaskQuery      = `DELETE FROM cross_cluster_tasks WHERE target_cluster = ? AND shard_id = ? AND task_id = ?`
-	rangeDeleteCrossClusterTaskQuery = `DELETE FROM cross_cluster_tasks WHERE target_cluster = ? AND shard_id = ? AND task_id > ? AND task_id <= ?`
+	deleteCrossClusterTaskQuery             = `DELETE FROM cross_cluster_tasks WHERE target_cluster = ? AND shard_id = ? AND task_id = ?`
+	rangeDeleteCrossClusterTaskQuery        = `DELETE FROM cross_cluster_tasks WHERE target_cluster = ? AND shard_id = ? AND task_id > ? AND task_id <= ?`
+	rangeDeleteCrossClusterTaskByBatchQuery = rangeDeleteCrossClusterTaskQuery + ` ORDER BY task_id LIMIT ?`
 
 	createTimerTasksQuery = `INSERT INTO timer_tasks (shard_id, visibility_timestamp, task_id, data, data_encoding)
   VALUES (:shard_id, :visibility_timestamp, :task_id, :data, :data_encoding)`
@@ -110,8 +112,9 @@ VALUES(:target_cluster, :shard_id, :task_id, :data, :data_encoding)`
   AND visibility_timestamp < ?
   ORDER BY visibility_timestamp,task_id LIMIT ?`
 
-	deleteTimerTaskQuery      = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp = ? AND task_id = ?`
-	rangeDeleteTimerTaskQuery = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp >= ? AND visibility_timestamp < ?`
+	deleteTimerTaskQuery             = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp = ? AND task_id = ?`
+	rangeDeleteTimerTaskQuery        = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp >= ? AND visibility_timestamp < ?`
+	rangeDeleteTimerTaskByBatchQuery = rangeDeleteTimerTaskQuery + ` ORDER BY visibility_timestamp,task_id LIMIT ?`
 
 	createReplicationTasksQuery = `INSERT INTO replication_tasks (shard_id, task_id, data, data_encoding)
   VALUES(:shard_id, :task_id, :data, :data_encoding)`
@@ -122,8 +125,9 @@ task_id > ? AND
 task_id <= ?
 ORDER BY task_id LIMIT ?`
 
-	deleteReplicationTaskQuery      = `DELETE FROM replication_tasks WHERE shard_id = ? AND task_id = ?`
-	rangeDeleteReplicationTaskQuery = `DELETE FROM replication_tasks WHERE shard_id = ? AND task_id <= ?`
+	deleteReplicationTaskQuery             = `DELETE FROM replication_tasks WHERE shard_id = ? AND task_id = ?`
+	rangeDeleteReplicationTaskQuery        = `DELETE FROM replication_tasks WHERE shard_id = ? AND task_id <= ?`
+	rangeDeleteReplicationTaskByBatchQuery = rangeDeleteReplicationTaskQuery + ` ORDER BY task_id LIMIT ?`
 
 	getReplicationTasksDLQQuery = `SELECT task_id, data, data_encoding FROM replication_tasks_dlq WHERE
 source_cluster_name = ? AND
@@ -169,6 +173,7 @@ VALUES     (:source_cluster_name,
 		AND shard_id = ?
 		AND task_id > ?
 		AND task_id <= ?`
+	rangeDeleteReplicationTaskFromDLQByBatchQuery = rangeDeleteReplicationTaskFromDLQQuery + ` ORDER BY task_id LIMIT ?`
 )
 
 // InsertIntoExecutions inserts a row into executions table
@@ -267,19 +272,24 @@ func (mdb *db) InsertIntoTransferTasks(ctx context.Context, rows []sqlplugin.Tra
 // SelectFromTransferTasks reads one or more rows from transfer_tasks table
 func (mdb *db) SelectFromTransferTasks(ctx context.Context, filter *sqlplugin.TransferTasksFilter) ([]sqlplugin.TransferTasksRow, error) {
 	var rows []sqlplugin.TransferTasksRow
-	err := mdb.conn.SelectContext(ctx, &rows, getTransferTasksQuery, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
+	err := mdb.conn.SelectContext(ctx, &rows, getTransferTasksQuery, filter.ShardID, filter.MinTaskID, filter.MaxTaskID)
 	if err != nil {
 		return nil, err
 	}
 	return rows, err
 }
 
-// DeleteFromTransferTasks deletes one or more rows from transfer_tasks table
+// DeleteFromTransferTasks deletes one row from transfer_tasks table
 func (mdb *db) DeleteFromTransferTasks(ctx context.Context, filter *sqlplugin.TransferTasksFilter) (sql.Result, error) {
-	if filter.MinTaskID != nil {
-		return mdb.conn.ExecContext(ctx, rangeDeleteTransferTaskQuery, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
+	return mdb.conn.ExecContext(ctx, deleteTransferTaskQuery, filter.ShardID, filter.TaskID)
+}
+
+// RangeDeleteFromTransferTasks deletes multi rows from transfer_tasks table
+func (mdb *db) RangeDeleteFromTransferTasks(ctx context.Context, filter *sqlplugin.TransferTasksFilter) (sql.Result, error) {
+	if filter.PageSize > 0 {
+		return mdb.conn.ExecContext(ctx, rangeDeleteTransferTaskByBatchQuery, filter.ShardID, filter.MinTaskID, filter.MaxTaskID, filter.PageSize)
 	}
-	return mdb.conn.ExecContext(ctx, deleteTransferTaskQuery, filter.ShardID, *filter.TaskID)
+	return mdb.conn.ExecContext(ctx, rangeDeleteTransferTaskQuery, filter.ShardID, filter.MinTaskID, filter.MaxTaskID)
 }
 
 // InsertIntoCrossClusterTasks inserts one or more rows into cross_cluster_tasks table
@@ -290,19 +300,24 @@ func (mdb *db) InsertIntoCrossClusterTasks(ctx context.Context, rows []sqlplugin
 // SelectFromCrossClusterTasks reads one or more rows from cross_cluster_tasks table
 func (mdb *db) SelectFromCrossClusterTasks(ctx context.Context, filter *sqlplugin.CrossClusterTasksFilter) ([]sqlplugin.CrossClusterTasksRow, error) {
 	var rows []sqlplugin.CrossClusterTasksRow
-	err := mdb.conn.SelectContext(ctx, &rows, getCrossClusterTasksQuery, filter.TargetCluster, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
+	err := mdb.conn.SelectContext(ctx, &rows, getCrossClusterTasksQuery, filter.TargetCluster, filter.ShardID, filter.MinTaskID, filter.MaxTaskID)
 	if err != nil {
 		return nil, err
 	}
 	return rows, err
 }
 
-// DeleteFromCrossClusterTasks deletes one or more rows from cross_cluster_tasks table
+// DeleteFromCrossClusterTasks deletes one row from cross_cluster_tasks table
 func (mdb *db) DeleteFromCrossClusterTasks(ctx context.Context, filter *sqlplugin.CrossClusterTasksFilter) (sql.Result, error) {
-	if filter.MinTaskID != nil {
-		return mdb.conn.ExecContext(ctx, rangeDeleteCrossClusterTaskQuery, filter.TargetCluster, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
+	return mdb.conn.ExecContext(ctx, deleteCrossClusterTaskQuery, filter.TargetCluster, filter.ShardID, filter.TaskID)
+}
+
+// RangeDeleteFromCrossClusterTasks deletes multi rows from cross_cluster_tasks table
+func (mdb *db) RangeDeleteFromCrossClusterTasks(ctx context.Context, filter *sqlplugin.CrossClusterTasksFilter) (sql.Result, error) {
+	if filter.PageSize > 0 {
+		return mdb.conn.ExecContext(ctx, rangeDeleteCrossClusterTaskByBatchQuery, filter.TargetCluster, filter.ShardID, filter.MinTaskID, filter.MaxTaskID, filter.PageSize)
 	}
-	return mdb.conn.ExecContext(ctx, deleteCrossClusterTaskQuery, filter.TargetCluster, filter.ShardID, *filter.TaskID)
+	return mdb.conn.ExecContext(ctx, rangeDeleteCrossClusterTaskQuery, filter.TargetCluster, filter.ShardID, filter.MinTaskID, filter.MaxTaskID)
 }
 
 // InsertIntoTimerTasks inserts one or more rows into timer_tasks table
@@ -316,10 +331,10 @@ func (mdb *db) InsertIntoTimerTasks(ctx context.Context, rows []sqlplugin.TimerT
 // SelectFromTimerTasks reads one or more rows from timer_tasks table
 func (mdb *db) SelectFromTimerTasks(ctx context.Context, filter *sqlplugin.TimerTasksFilter) ([]sqlplugin.TimerTasksRow, error) {
 	var rows []sqlplugin.TimerTasksRow
-	*filter.MinVisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.MinVisibilityTimestamp)
-	*filter.MaxVisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.MaxVisibilityTimestamp)
-	err := mdb.conn.SelectContext(ctx, &rows, getTimerTasksQuery, filter.ShardID, *filter.MinVisibilityTimestamp,
-		filter.TaskID, *filter.MinVisibilityTimestamp, *filter.MaxVisibilityTimestamp, *filter.PageSize)
+	filter.MinVisibilityTimestamp = mdb.converter.ToMySQLDateTime(filter.MinVisibilityTimestamp)
+	filter.MaxVisibilityTimestamp = mdb.converter.ToMySQLDateTime(filter.MaxVisibilityTimestamp)
+	err := mdb.conn.SelectContext(ctx, &rows, getTimerTasksQuery, filter.ShardID, filter.MinVisibilityTimestamp,
+		filter.TaskID, filter.MinVisibilityTimestamp, filter.MaxVisibilityTimestamp, filter.PageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -329,15 +344,20 @@ func (mdb *db) SelectFromTimerTasks(ctx context.Context, filter *sqlplugin.Timer
 	return rows, err
 }
 
-// DeleteFromTimerTasks deletes one or more rows from timer_tasks table
+// DeleteFromTimerTasks deletes one row from timer_tasks table
 func (mdb *db) DeleteFromTimerTasks(ctx context.Context, filter *sqlplugin.TimerTasksFilter) (sql.Result, error) {
-	if filter.MinVisibilityTimestamp != nil {
-		*filter.MinVisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.MinVisibilityTimestamp)
-		*filter.MaxVisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.MaxVisibilityTimestamp)
-		return mdb.conn.ExecContext(ctx, rangeDeleteTimerTaskQuery, filter.ShardID, *filter.MinVisibilityTimestamp, *filter.MaxVisibilityTimestamp)
+	filter.VisibilityTimestamp = mdb.converter.ToMySQLDateTime(filter.VisibilityTimestamp)
+	return mdb.conn.ExecContext(ctx, deleteTimerTaskQuery, filter.ShardID, filter.VisibilityTimestamp, filter.TaskID)
+}
+
+// RangeDeleteFromTimerTasks deletes multi rows from timer_tasks table
+func (mdb *db) RangeDeleteFromTimerTasks(ctx context.Context, filter *sqlplugin.TimerTasksFilter) (sql.Result, error) {
+	filter.MinVisibilityTimestamp = mdb.converter.ToMySQLDateTime(filter.MinVisibilityTimestamp)
+	filter.MaxVisibilityTimestamp = mdb.converter.ToMySQLDateTime(filter.MaxVisibilityTimestamp)
+	if filter.PageSize > 0 {
+		return mdb.conn.ExecContext(ctx, rangeDeleteTimerTaskByBatchQuery, filter.ShardID, filter.MinVisibilityTimestamp, filter.MaxVisibilityTimestamp, filter.PageSize)
 	}
-	*filter.VisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.VisibilityTimestamp)
-	return mdb.conn.ExecContext(ctx, deleteTimerTaskQuery, filter.ShardID, *filter.VisibilityTimestamp, filter.TaskID)
+	return mdb.conn.ExecContext(ctx, rangeDeleteTimerTaskQuery, filter.ShardID, filter.MinVisibilityTimestamp, filter.MaxVisibilityTimestamp)
 }
 
 // InsertIntoBufferedEvents inserts one or more rows into buffered_events table
@@ -382,6 +402,9 @@ func (mdb *db) DeleteFromReplicationTasks(ctx context.Context, filter *sqlplugin
 
 // RangeDeleteFromReplicationTasks deletes multi rows from replication_tasks table
 func (mdb *db) RangeDeleteFromReplicationTasks(ctx context.Context, filter *sqlplugin.ReplicationTasksFilter) (sql.Result, error) {
+	if filter.PageSize > 0 {
+		return mdb.conn.ExecContext(ctx, rangeDeleteReplicationTaskByBatchQuery, filter.ShardID, filter.InclusiveEndTaskID, filter.PageSize)
+	}
 	return mdb.conn.ExecContext(ctx, rangeDeleteReplicationTaskQuery, filter.ShardID, filter.InclusiveEndTaskID)
 }
 
@@ -440,6 +463,17 @@ func (mdb *db) RangeDeleteMessageFromReplicationTasksDLQ(
 	ctx context.Context,
 	filter *sqlplugin.ReplicationTasksDLQFilter,
 ) (sql.Result, error) {
+	if filter.PageSize > 0 {
+		return mdb.conn.ExecContext(
+			ctx,
+			rangeDeleteReplicationTaskFromDLQByBatchQuery,
+			filter.SourceClusterName,
+			filter.ShardID,
+			filter.TaskID,
+			filter.InclusiveEndTaskID,
+			filter.PageSize,
+		)
+	}
 
 	return mdb.conn.ExecContext(
 		ctx,

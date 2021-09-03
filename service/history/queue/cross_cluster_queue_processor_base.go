@@ -306,7 +306,7 @@ func (c *crossClusterQueueProcessorBase) completeAckTasks(nextAckLevel int64) (i
 	ctx, cancel := context.WithTimeout(context.Background(), taskCleanupTimeout)
 	defer cancel()
 
-	if err := c.shard.GetExecutionManager().RangeCompleteCrossClusterTask(ctx, &persistence.RangeCompleteCrossClusterTaskRequest{
+	if _, err := c.shard.GetExecutionManager().RangeCompleteCrossClusterTask(ctx, &persistence.RangeCompleteCrossClusterTaskRequest{
 		TargetCluster:        c.targetCluster,
 		ExclusiveBeginTaskID: c.ackLevel,
 		InclusiveEndTaskID:   nextAckLevel,

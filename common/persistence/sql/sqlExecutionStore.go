@@ -742,7 +742,9 @@ func (m *sqlExecutionStore) GetTransferTasks(
 ) (*p.GetTransferTasksResponse, error) {
 
 	rows, err := m.db.SelectFromTransferTasks(ctx, &sqlplugin.TransferTasksFilter{
-		ShardID: m.shardID, MinTaskID: &request.ReadLevel, MaxTaskID: &request.MaxReadLevel})
+		ShardID:   m.shardID,
+		MinTaskID: request.ReadLevel,
+		MaxTaskID: request.MaxReadLevel})
 	if err != nil {
 		if err != sql.ErrNoRows {
 			return nil, convertCommonErrors(m.db, "GetTransferTasks", "", err)
@@ -780,7 +782,7 @@ func (m *sqlExecutionStore) CompleteTransferTask(
 
 	if _, err := m.db.DeleteFromTransferTasks(ctx, &sqlplugin.TransferTasksFilter{
 		ShardID: m.shardID,
-		TaskID:  &request.TaskID,
+		TaskID:  request.TaskID,
 	}); err != nil {
 		return convertCommonErrors(m.db, "CompleteTransferTask", "", err)
 	}
@@ -790,15 +792,21 @@ func (m *sqlExecutionStore) CompleteTransferTask(
 func (m *sqlExecutionStore) RangeCompleteTransferTask(
 	ctx context.Context,
 	request *p.RangeCompleteTransferTaskRequest,
-) error {
-
-	if _, err := m.db.DeleteFromTransferTasks(ctx, &sqlplugin.TransferTasksFilter{
+) (*p.RangeCompleteTransferTaskResponse, error) {
+	result, err := m.db.RangeDeleteFromTransferTasks(ctx, &sqlplugin.TransferTasksFilter{
 		ShardID:   m.shardID,
-		MinTaskID: &request.ExclusiveBeginTaskID,
-		MaxTaskID: &request.InclusiveEndTaskID}); err != nil {
-		return convertCommonErrors(m.db, "RangeCompleteTransferTask", "", err)
+		MinTaskID: request.ExclusiveBeginTaskID,
+		MaxTaskID: request.InclusiveEndTaskID,
+		PageSize:  request.PageSize,
+	})
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "RangeCompleteTransferTask", "", err)
 	}
-	return nil
+	rowsDeleted, err := result.RowsAffected()
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "RangeCompleteTransferTask", "", err)
+	}
+	return &p.RangeCompleteTransferTaskResponse{TasksCompleted: int(rowsDeleted)}, nil
 }
 
 func (m *sqlExecutionStore) GetCrossClusterTasks(
@@ -808,8 +816,8 @@ func (m *sqlExecutionStore) GetCrossClusterTasks(
 	rows, err := m.db.SelectFromCrossClusterTasks(ctx, &sqlplugin.CrossClusterTasksFilter{
 		TargetCluster: request.TargetCluster,
 		ShardID:       m.shardID,
-		MinTaskID:     &request.ReadLevel,
-		MaxTaskID:     &request.MaxReadLevel,
+		MinTaskID:     request.ReadLevel,
+		MaxTaskID:     request.MaxReadLevel,
 	})
 	if err != nil {
 		if err != sql.ErrNoRows {
@@ -849,7 +857,7 @@ func (m *sqlExecutionStore) CompleteCrossClusterTask(
 	if _, err := m.db.DeleteFromCrossClusterTasks(ctx, &sqlplugin.CrossClusterTasksFilter{
 		TargetCluster: request.TargetCluster,
 		ShardID:       m.shardID,
-		TaskID:        &request.TaskID,
+		TaskID:        request.TaskID,
 	}); err != nil {
 		return convertCommonErrors(m.db, "CompleteCrossClusterTask", "", err)
 	}
@@ -859,15 +867,22 @@ func (m *sqlExecutionStore) CompleteCrossClusterTask(
 func (m *sqlExecutionStore) RangeCompleteCrossClusterTask(
 	ctx context.Context,
 	request *p.RangeCompleteCrossClusterTaskRequest,
-) error {
-	if _, err := m.db.DeleteFromCrossClusterTasks(ctx, &sqlplugin.CrossClusterTasksFilter{
+) (*p.RangeCompleteCrossClusterTaskResponse, error) {
+	result, err := m.db.RangeDeleteFromCrossClusterTasks(ctx, &sqlplugin.CrossClusterTasksFilter{
 		TargetCluster: request.TargetCluster,
 		ShardID:       m.shardID,
-		MinTaskID:     &request.ExclusiveBeginTaskID,
-		MaxTaskID:     &request.InclusiveEndTaskID}); err != nil {
-		return convertCommonErrors(m.db, "RangeCompleteCrossClusterTask", "", err)
+		MinTaskID:     request.ExclusiveBeginTaskID,
+		MaxTaskID:     request.InclusiveEndTaskID,
+		PageSize:      request.PageSize,
+	})
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "RangeCompleteCrossClusterTask", "", err)
 	}
-	return nil
+	rowsDeleted, err := result.RowsAffected()
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "RangeCompleteCrossClusterTask", "", err)
+	}
+	return &p.RangeCompleteCrossClusterTaskResponse{TasksCompleted: int(rowsDeleted)}, nil
 }
 
 func (m *sqlExecutionStore) GetReplicationTasks(
@@ -970,15 +985,20 @@ func (m *sqlExecutionStore) CompleteReplicationTask(
 func (m *sqlExecutionStore) RangeCompleteReplicationTask(
 	ctx context.Context,
 	request *p.RangeCompleteReplicationTaskRequest,
-) error {
-
-	if _, err := m.db.RangeDeleteFromReplicationTasks(ctx, &sqlplugin.ReplicationTasksFilter{
+) (*p.RangeCompleteReplicationTaskResponse, error) {
+	result, err := m.db.RangeDeleteFromReplicationTasks(ctx, &sqlplugin.ReplicationTasksFilter{
 		ShardID:            m.shardID,
 		InclusiveEndTaskID: request.InclusiveEndTaskID,
-	}); err != nil {
-		return convertCommonErrors(m.db, "RangeCompleteReplicationTask", "", err)
+		PageSize:           request.PageSize,
+	})
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "RangeCompleteReplicationTask", "", err)
 	}
-	return nil
+	rowsDeleted, err := result.RowsAffected()
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "RangeCompleteReplicationTask", "", err)
+	}
+	return &p.RangeCompleteReplicationTaskResponse{TasksCompleted: int(rowsDeleted)}, nil
 }
 
 func (m *sqlExecutionStore) GetReplicationTasksFromDLQ(
@@ -1058,21 +1078,25 @@ func (m *sqlExecutionStore) DeleteReplicationTaskFromDLQ(
 func (m *sqlExecutionStore) RangeDeleteReplicationTaskFromDLQ(
 	ctx context.Context,
 	request *p.RangeDeleteReplicationTaskFromDLQRequest,
-) error {
-
+) (*p.RangeDeleteReplicationTaskFromDLQResponse, error) {
 	filter := sqlplugin.ReplicationTasksFilter{
 		ShardID:            m.shardID,
 		TaskID:             request.ExclusiveBeginTaskID,
 		InclusiveEndTaskID: request.InclusiveEndTaskID,
+		PageSize:           request.PageSize,
 	}
-
-	if _, err := m.db.RangeDeleteMessageFromReplicationTasksDLQ(ctx, &sqlplugin.ReplicationTasksDLQFilter{
+	result, err := m.db.RangeDeleteMessageFromReplicationTasksDLQ(ctx, &sqlplugin.ReplicationTasksDLQFilter{
 		ReplicationTasksFilter: filter,
 		SourceClusterName:      request.SourceClusterName,
-	}); err != nil {
-		return convertCommonErrors(m.db, "RangeDeleteReplicationTaskFromDLQ", "", err)
+	})
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "RangeDeleteReplicationTaskFromDLQ", "", err)
 	}
-	return nil
+	rowsDeleted, err := result.RowsAffected()
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "RangeDeleteReplicationTaskFromDLQ", "", err)
+	}
+	return &p.RangeDeleteReplicationTaskFromDLQResponse{TasksCompleted: int(rowsDeleted)}, nil
 }
 
 func (m *sqlExecutionStore) CreateFailoverMarkerTasks(
@@ -1133,10 +1157,10 @@ func (m *sqlExecutionStore) GetTimerIndexTasks(
 
 	rows, err := m.db.SelectFromTimerTasks(ctx, &sqlplugin.TimerTasksFilter{
 		ShardID:                m.shardID,
-		MinVisibilityTimestamp: &pageToken.Timestamp,
+		MinVisibilityTimestamp: pageToken.Timestamp,
 		TaskID:                 pageToken.TaskID,
-		MaxVisibilityTimestamp: &request.MaxTimestamp,
-		PageSize:               common.IntPtr(request.BatchSize + 1),
+		MaxVisibilityTimestamp: request.MaxTimestamp,
+		PageSize:               request.BatchSize + 1,
 	})
 
 	if err != nil && err != sql.ErrNoRows {
@@ -1188,7 +1212,7 @@ func (m *sqlExecutionStore) CompleteTimerTask(
 
 	if _, err := m.db.DeleteFromTimerTasks(ctx, &sqlplugin.TimerTasksFilter{
 		ShardID:             m.shardID,
-		VisibilityTimestamp: &request.VisibilityTimestamp,
+		VisibilityTimestamp: request.VisibilityTimestamp,
 		TaskID:              request.TaskID,
 	}); err != nil {
 		return convertCommonErrors(m.db, "CompleteTimerTask", "", err)
@@ -1199,18 +1223,21 @@ func (m *sqlExecutionStore) CompleteTimerTask(
 func (m *sqlExecutionStore) RangeCompleteTimerTask(
 	ctx context.Context,
 	request *p.RangeCompleteTimerTaskRequest,
-) error {
-
-	start := request.InclusiveBeginTimestamp
-	end := request.ExclusiveEndTimestamp
-	if _, err := m.db.DeleteFromTimerTasks(ctx, &sqlplugin.TimerTasksFilter{
+) (*p.RangeCompleteTimerTaskResponse, error) {
+	result, err := m.db.RangeDeleteFromTimerTasks(ctx, &sqlplugin.TimerTasksFilter{
 		ShardID:                m.shardID,
-		MinVisibilityTimestamp: &start,
-		MaxVisibilityTimestamp: &end,
-	}); err != nil {
-		return convertCommonErrors(m.db, "RangeCompleteTimerTask", "", err)
+		MinVisibilityTimestamp: request.InclusiveBeginTimestamp,
+		MaxVisibilityTimestamp: request.ExclusiveEndTimestamp,
+		PageSize:               request.PageSize,
+	})
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "RangeCompleteTimerTask", "", err)
 	}
-	return nil
+	rowsDeleted, err := result.RowsAffected()
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "RangeCompleteTimerTask", "", err)
+	}
+	return &p.RangeCompleteTimerTaskResponse{TasksCompleted: int(rowsDeleted)}, nil
 }
 
 func (m *sqlExecutionStore) PutReplicationTaskToDLQ(

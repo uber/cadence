@@ -261,12 +261,13 @@ func (p *taskProcessorImpl) cleanupAckedReplicationTasks() error {
 		metrics.ReplicationTasksLag,
 		time.Duration(p.shard.GetTransferMaxReadLevel()-minAckLevel),
 	)
-	return p.shard.GetExecutionManager().RangeCompleteReplicationTask(
+	_, err := p.shard.GetExecutionManager().RangeCompleteReplicationTask(
 		context.Background(),
 		&persistence.RangeCompleteReplicationTaskRequest{
 			InclusiveEndTaskID: minAckLevel,
 		},
 	)
+	return err
 }
 
 func (p *taskProcessorImpl) sendFetchMessageRequest() <-chan *types.ReplicationMessages {

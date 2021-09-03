@@ -1794,7 +1794,7 @@ func (m *testTaskManager) CompleteTask(
 func (m *testTaskManager) CompleteTasksLessThan(
 	_ context.Context,
 	request *persistence.CompleteTasksLessThanRequest,
-) (int, error) {
+) (*persistence.CompleteTasksLessThanResponse, error) {
 	tlm := m.getTaskListManager(newTestTaskListID(request.DomainID, request.TaskListName, request.TaskType))
 	tlm.Lock()
 	defer tlm.Unlock()
@@ -1805,7 +1805,7 @@ func (m *testTaskManager) CompleteTasksLessThan(
 			tlm.tasks.Remove(id)
 		}
 	}
-	return persistence.UnknownNumRowsAffected, nil
+	return &persistence.CompleteTasksLessThanResponse{TasksCompleted: persistence.UnknownNumRowsAffected}, nil
 }
 
 // ListTaskList provides a mock function with given fields: ctx, request

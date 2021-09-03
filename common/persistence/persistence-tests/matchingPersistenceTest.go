@@ -282,15 +282,15 @@ func (s *MatchingPersistenceSuite) TestCompleteTasksLessThan() {
 	for _, tc := range testCases {
 		req.TaskID = tc.taskID
 		req.Limit = tc.limit
-		nRows, err := s.TaskMgr.CompleteTasksLessThan(ctx, req)
+		result, err := s.TaskMgr.CompleteTasksLessThan(ctx, req)
 		s.NoError(err)
 		resp, err := s.GetTasks(ctx, domainID, taskList, p.TaskListTypeActivity, 10)
 		s.NoError(err)
-		if nRows == p.UnknownNumRowsAffected {
+		if result.TasksCompleted == p.UnknownNumRowsAffected {
 			s.Equal(0, len(resp.Tasks), "expected all tasks to be deleted")
 			break
 		}
-		s.Equal(remaining-len(tc.output), nRows, "expected only LIMIT number of rows to be deleted")
+		s.Equal(remaining-len(tc.output), result.TasksCompleted, "expected only LIMIT number of rows to be deleted")
 		s.Equal(len(tc.output), len(resp.Tasks), "rangeCompleteTask deleted wrong set of tasks")
 		for i := range tc.output {
 			s.Equal(tc.output[i], resp.Tasks[i].TaskID)

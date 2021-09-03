@@ -351,7 +351,7 @@ func (t *nosqlTaskStore) CompleteTask(
 func (t *nosqlTaskStore) CompleteTasksLessThan(
 	ctx context.Context,
 	request *p.CompleteTasksLessThanRequest,
-) (int, error) {
+) (*p.CompleteTasksLessThanResponse, error) {
 	num, err := t.db.RangeDeleteTasks(ctx, &nosqlplugin.TasksFilter{
 		TaskListFilter: nosqlplugin.TaskListFilter{
 			DomainID:     request.DomainID,
@@ -370,7 +370,7 @@ func (t *nosqlTaskStore) CompleteTasksLessThan(
 		BatchSize: request.Limit,
 	})
 	if err != nil {
-		return 0, convertCommonErrors(t.db, "CompleteTasksLessThan", err)
+		return nil, convertCommonErrors(t.db, "CompleteTasksLessThan", err)
 	}
-	return num, nil
+	return &p.CompleteTasksLessThanResponse{TasksCompleted: num}, nil
 }
