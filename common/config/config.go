@@ -29,7 +29,6 @@ import (
 	"github.com/uber-go/tally/prometheus"
 	"github.com/uber/ringpop-go/discovery"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
 )
@@ -447,7 +446,7 @@ func (c *Config) validate() error {
 	if err := c.Persistence.Validate(); err != nil {
 		return err
 	}
-	if err := c.ClusterGroupMetadata.validate(); err != nil {
+	if err := c.ClusterGroupMetadata.Validate(); err != nil {
 		return err
 	}
 	if err := c.Archival.Validate(&c.DomainDefaults.Archival); err != nil {
@@ -458,20 +457,7 @@ func (c *Config) validate() error {
 }
 
 func (c *Config) fillDefaults() {
-	// filling default encodingType/decodingTypes for SQL persistence
-	for k, store := range c.Persistence.DataStores {
-		if store.SQL != nil {
-			if store.SQL.EncodingType == "" {
-				store.SQL.EncodingType = string(common.EncodingTypeThriftRW)
-			}
-			if len(store.SQL.DecodingTypes) == 0 {
-				store.SQL.DecodingTypes = []string{
-					string(common.EncodingTypeThriftRW),
-				}
-			}
-			c.Persistence.DataStores[k] = store
-		}
-	}
+	c.Persistence.FillDefaults()
 
 	// TODO: remove this after 0.23 and mention a breaking change in config.
 	if c.ClusterGroupMetadata == nil && c.ClusterMetadata != nil {
@@ -479,7 +465,7 @@ func (c *Config) fillDefaults() {
 		log.Println("[WARN] clusterMetadata config is deprecated. Please replace it with clusterGroupMetadata.")
 	}
 
-	c.ClusterGroupMetadata.fillDefaults()
+	c.ClusterGroupMetadata.FillDefaults()
 
 	// filling publicClient with current cluster's RPC address if empty
 	if c.PublicClient.HostPort == "" && c.ClusterGroupMetadata != nil {
