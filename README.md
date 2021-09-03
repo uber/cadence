@@ -44,6 +44,10 @@ You can use the following ways to install Cadence CLI:
 * Build the CLI binary yourself, check out the repo and run `make cadence` to build all tools. See [CONTRIBUTING](CONTRIBUTING.md) for prerequisite of make command.
 * Build the CLI image yourself, see [instructions](docker/README.md#diy-building-an-image-for-any-tag-or-branch)
   
+Cadence CLI is a powerful tool. The commands are organized by **tabs**. E.g. `workflow`->`batch`->`start`, or `admin`->`workflow`->`describe`.
+
+Please read the [documentation](https://cadenceworkflow.io/docs/cli/#documentation) to learn & explore.  
+  
 ### Use Cadence Web
 
 Try out [Cadence Web UI](https://github.com/uber/cadence-web) to view your workflows on Cadence.
