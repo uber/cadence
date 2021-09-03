@@ -36,7 +36,9 @@ Please visit our [documentation](https://cadenceworkflow.io/docs/operation-guide
 
 Try out the sample recipes for [Go](https://github.com/uber-common/cadence-samples) or [Java](https://github.com/uber/cadence-java-samples) to get started.
 
-### Use [Cadence CLI](https://cadenceworkflow.io/docs/cli/) to perform various tasks on Cadence server cluster
+### Use [Cadence CLI](https://cadenceworkflow.io/docs/cli/) 
+
+Cadence CLI can be used to operate workflows, tasklist, domain and even the clusters.
 
 You can use the following ways to install Cadence CLI:
 * Use brew to install CLI: `brew install cadence-workflow`
