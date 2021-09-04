@@ -42,7 +42,7 @@ type oauthAuthority struct {
 	authorizationCfg config.OAuthAuthorizer
 	domainCache      cache.DomainCache
 	log              log.Logger
-	publicKey		 *rsa.PublicKey
+	publicKey        *rsa.PublicKey
 }
 
 type JWTClaims struct {
@@ -70,7 +70,7 @@ func NewOAuthAuthorizer(
 		authorizationCfg: authorizationCfg,
 		domainCache:      domainCache,
 		log:              log,
-		publicKey:		  publicKey,
+		publicKey:        publicKey,
 	}, nil
 }
 

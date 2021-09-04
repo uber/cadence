@@ -21,12 +21,12 @@
 package authorization
 
 import (
-	"github.com/uber/cadence/common"
 	"testing"
 
 	"github.com/cristalhq/jwt/v3"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -77,7 +77,7 @@ func (s *factorySuite) TestFactoryNoopAuthorizer() {
 	var tests = []struct {
 		cfg      config.Authorization
 		expected Authorizer
-		err    error
+		err      error
 	}{
 		{cfgNoop(), &nopAuthority{}, nil},
 		{cfgOAuthVar, &oauthAuthority{authorizationCfg: cfgOAuthVar.OAuthAuthorizer, log: s.logger, publicKey: publicKey}, nil},

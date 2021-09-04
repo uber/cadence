@@ -25,6 +25,7 @@ import (
 
 	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/types"
@@ -45,7 +46,11 @@ var _ Handler = (*AccessControlledWorkflowHandler)(nil)
 // NewAccessControlledHandlerImpl creates frontend handler with authentication support
 func NewAccessControlledHandlerImpl(wfHandler Handler, resource resource.Resource, authorizer authorization.Authorizer, cfg config.Authorization) *AccessControlledWorkflowHandler {
 	if authorizer == nil {
-		authorizer = authorization.NewAuthorizer(cfg, resource.GetLogger(), resource.GetDomainCache())
+		var err error
+		authorizer, err = authorization.NewAuthorizer(cfg, resource.GetLogger(), resource.GetDomainCache())
+		if err != nil {
+			resource.GetLogger().Fatal("Error when initiating the Authorizer", tag.Error(err))
+		}
 	}
 	return &AccessControlledWorkflowHandler{
 		Resource:        resource,
