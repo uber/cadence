@@ -261,13 +261,25 @@ func (p *taskProcessorImpl) cleanupAckedReplicationTasks() error {
 		metrics.ReplicationTasksLag,
 		time.Duration(p.shard.GetTransferMaxReadLevel()-minAckLevel),
 	)
-	_, err := p.shard.GetExecutionManager().RangeCompleteReplicationTask(
-		context.Background(),
-		&persistence.RangeCompleteReplicationTaskRequest{
-			InclusiveEndTaskID: minAckLevel,
-		},
-	)
-	return err
+	for {
+		pageSize := p.config.ReplicatorTaskDeleteBatchSize()
+		resp, err := p.shard.GetExecutionManager().RangeCompleteReplicationTask(
+			context.Background(),
+			&persistence.RangeCompleteReplicationTaskRequest{
+				InclusiveEndTaskID: minAckLevel,
+				PageSize:           pageSize, // pageSize may or may not be honored
+			},
+		)
+		if err != nil {
+			return err
+		}
+		if resp.TasksCompleted < pageSize || // all target tasks are deleted
+			resp.TasksCompleted == persistence.UnknownNumRowsAffected || // underlying database does not support rows affected, so pageSize is not honored and all target tasks are deleted
+			resp.TasksCompleted > pageSize { // pageSize is not honored and all tasks are deleted
+			break
+		}
+	}
+	return nil
 }
 
 func (p *taskProcessorImpl) sendFetchMessageRequest() <-chan *types.ReplicationMessages {

@@ -630,6 +630,7 @@ func newTimerQueueProcessorOptions(
 ) *queueProcessorOptions {
 	options := &queueProcessorOptions{
 		BatchSize:                            config.TimerTaskBatchSize,
+		DeleteBatchSize:                      config.TimerTaskDeleteBatchSize,
 		MaxPollRPS:                           config.TimerProcessorMaxPollRPS,
 		MaxPollInterval:                      config.TimerProcessorMaxPollInterval,
 		MaxPollIntervalJitterCoefficient:     config.TimerProcessorMaxPollIntervalJitterCoefficient,

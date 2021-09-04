@@ -425,11 +425,21 @@ func (t *transferQueueProcessor) completeTransfer() error {
 
 	t.metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.TaskBatchCompleteCounter)
 
-	if _, err := t.shard.GetExecutionManager().RangeCompleteTransferTask(context.Background(), &persistence.RangeCompleteTransferTaskRequest{
-		ExclusiveBeginTaskID: t.ackLevel,
-		InclusiveEndTaskID:   newAckLevelTaskID,
-	}); err != nil {
-		return err
+	for {
+		pageSize := t.config.TransferTaskDeleteBatchSize()
+		resp, err := t.shard.GetExecutionManager().RangeCompleteTransferTask(context.Background(), &persistence.RangeCompleteTransferTaskRequest{
+			ExclusiveBeginTaskID: t.ackLevel,
+			InclusiveEndTaskID:   newAckLevelTaskID,
+			PageSize:             pageSize, // pageSize may or may not be honored
+		})
+		if err != nil {
+			return err
+		}
+		if resp.TasksCompleted < pageSize || // all target tasks are deleted
+			resp.TasksCompleted == persistence.UnknownNumRowsAffected || // underlying database does not support rows affected, so pageSize is not honored and all target tasks are deleted
+			resp.TasksCompleted > pageSize { // pageSize is not honored and all tasks are deleted
+			break
+		}
 	}
 
 	t.ackLevel = newAckLevelTaskID
