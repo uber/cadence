@@ -740,11 +740,20 @@ func (m *sqlExecutionStore) GetTransferTasks(
 	ctx context.Context,
 	request *p.GetTransferTasksRequest,
 ) (*p.GetTransferTasksResponse, error) {
-
+	minReadLevel := request.ReadLevel
+	if len(request.NextPageToken) > 0 {
+		readLevel, err := deserializePageToken(request.NextPageToken)
+		if err != nil {
+			return nil, convertCommonErrors(m.db, "GetTransferTasks", "failed to deserialize page token", err)
+		}
+		minReadLevel = readLevel
+	}
 	rows, err := m.db.SelectFromTransferTasks(ctx, &sqlplugin.TransferTasksFilter{
 		ShardID:   m.shardID,
-		MinTaskID: request.ReadLevel,
-		MaxTaskID: request.MaxReadLevel})
+		MinTaskID: minReadLevel,
+		MaxTaskID: request.MaxReadLevel,
+		PageSize:  request.BatchSize,
+	})
 	if err != nil {
 		if err != sql.ErrNoRows {
 			return nil, convertCommonErrors(m.db, "GetTransferTasks", "", err)
@@ -770,6 +779,12 @@ func (m *sqlExecutionStore) GetTransferTasks(
 			TaskType:                int(info.GetTaskType()),
 			ScheduleID:              info.GetScheduleID(),
 			Version:                 info.GetVersion(),
+		}
+	}
+	if len(rows) > 0 {
+		lastTaskID := rows[len(rows)-1].TaskID
+		if lastTaskID < request.MaxReadLevel {
+			resp.NextPageToken = serializePageToken(lastTaskID)
 		}
 	}
 	return resp, nil
@@ -813,11 +828,20 @@ func (m *sqlExecutionStore) GetCrossClusterTasks(
 	ctx context.Context,
 	request *p.GetCrossClusterTasksRequest,
 ) (*p.GetCrossClusterTasksResponse, error) {
+	minReadLevel := request.ReadLevel
+	if len(request.NextPageToken) > 0 {
+		readLevel, err := deserializePageToken(request.NextPageToken)
+		if err != nil {
+			return nil, convertCommonErrors(m.db, "GetCrossClusterTasks", "failed to deserialize page token", err)
+		}
+		minReadLevel = readLevel
+	}
 	rows, err := m.db.SelectFromCrossClusterTasks(ctx, &sqlplugin.CrossClusterTasksFilter{
 		TargetCluster: request.TargetCluster,
 		ShardID:       m.shardID,
-		MinTaskID:     request.ReadLevel,
+		MinTaskID:     minReadLevel,
 		MaxTaskID:     request.MaxReadLevel,
+		PageSize:      request.BatchSize,
 	})
 	if err != nil {
 		if err != sql.ErrNoRows {
@@ -844,6 +868,12 @@ func (m *sqlExecutionStore) GetCrossClusterTasks(
 			TaskType:                int(info.GetTaskType()),
 			ScheduleID:              info.GetScheduleID(),
 			Version:                 info.GetVersion(),
+		}
+	}
+	if len(rows) > 0 {
+		lastTaskID := rows[len(rows)-1].TaskID
+		if lastTaskID < request.MaxReadLevel {
+			resp.NextPageToken = serializePageToken(lastTaskID)
 		}
 	}
 	return resp, nil
