@@ -317,9 +317,7 @@ func (c *crossClusterQueueProcessorBase) completeAckTasks(nextAckLevel int64) (i
 		if err != nil {
 			return c.ackLevel, err
 		}
-		if resp.TasksCompleted < pageSize || // all target tasks are deleted
-			resp.TasksCompleted == persistence.UnknownNumRowsAffected || // underlying database does not support rows affected, so pageSize is not honored and all target tasks are deleted
-			resp.TasksCompleted > pageSize { // pageSize is not honored and all tasks are deleted
+		if !persistence.HasMoreRowsToDelete(resp.TasksCompleted, pageSize) {
 			break
 		}
 	}

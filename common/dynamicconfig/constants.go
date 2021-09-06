@@ -916,19 +916,18 @@ const (
 	// Default value: FALSE
 	// Allowed filters: N/A
 	QueueProcessorEnableLoadQueueStates
+
 	// TimerTaskBatchSize is batch size for timer processor to process tasks
 	// KeyName: history.timerTaskBatchSize
 	// Value type: Int
 	// Default value: 100
 	// Allowed filters: N/A
-
 	TimerTaskBatchSize
 	// TimerTaskDeleteBatchSize is batch size for timer processor to delete timer tasks
 	// KeyName: history.timerTaskDeleteBatchSize
 	// Value type: Int
 	// Default value: 4000
 	// Allowed filters: N/A
-
 	TimerTaskDeleteBatchSize
 	// TimerTaskWorkerCount is number of task workers for timer processor
 	// KeyName: history.timerTaskWorkerCount
@@ -1026,19 +1025,18 @@ const (
 	// Default value: 1*time.Second
 	// Allowed filters: N/A
 	TimerProcessorArchivalTimeLimit
+
 	// TransferTaskBatchSize is batch size for transferQueueProcessor
 	// KeyName: history.transferTaskBatchSize
 	// Value type: Int
 	// Default value: 100
 	// Allowed filters: N/A
-
 	TransferTaskBatchSize
 	// TransferTaskDeleteBatchSize is batch size for transferQueueProcessor to delete transfer tasks
 	// KeyName: history.transferTaskDeleteBatchSize
 	// Value type: Int
 	// Default value: 4000
 	// Allowed filters: N/A
-
 	TransferTaskDeleteBatchSize
 	// TransferProcessorFailoverMaxPollRPS is max poll rate per second for transferQueueProcessor
 	// KeyName: history.transferProcessorFailoverMaxPollRPS
@@ -1237,7 +1235,7 @@ const (
 	// ReplicatorTaskDeleteBatchSize is batch size for ReplicatorProcessor to delete replication tasks
 	// KeyName: history.replicatorTaskDeleteBatchSize
 	// Value type: Int
-	// Default value: 100
+	// Default value: 4000
 	// Allowed filters: N/A
 	ReplicatorTaskDeleteBatchSize
 	// ReplicatorTaskWorkerCount is number of worker for ReplicatorProcessor

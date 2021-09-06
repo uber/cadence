@@ -435,9 +435,7 @@ func (t *transferQueueProcessor) completeTransfer() error {
 		if err != nil {
 			return err
 		}
-		if resp.TasksCompleted < pageSize || // all target tasks are deleted
-			resp.TasksCompleted == persistence.UnknownNumRowsAffected || // underlying database does not support rows affected, so pageSize is not honored and all target tasks are deleted
-			resp.TasksCompleted > pageSize { // pageSize is not honored and all tasks are deleted
+		if !persistence.HasMoreRowsToDelete(resp.TasksCompleted, pageSize) {
 			break
 		}
 	}

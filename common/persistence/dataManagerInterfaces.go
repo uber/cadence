@@ -2923,3 +2923,13 @@ func IsBackgroundTransientError(err error) bool {
 
 	return false
 }
+
+// HasMoreRowsToDelete checks if there is more data need to be deleted
+func HasMoreRowsToDelete(rowsDeleted, batchSize int) bool {
+	if rowsDeleted < batchSize || // all target tasks are deleted
+		rowsDeleted == UnknownNumRowsAffected || // underlying database does not support rows affected, so pageSize is not honored and all target tasks are deleted
+		rowsDeleted > batchSize { // pageSize is not honored and all tasks are deleted
+		return false
+	}
+	return true
+}

@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/persistence"
 	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/types"
@@ -34,6 +35,10 @@ import (
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+)
+
+const (
+	_defaultHistoryNodeDeleteBatch = 1000
 )
 
 type sqlHistoryStore struct {
@@ -178,7 +183,7 @@ func (m *sqlHistoryStore) ReadHistoryBranch(
 		BranchID:  serialization.MustParseUUID(request.BranchID),
 		MinNodeID: &minNodeID,
 		MaxNodeID: &maxNodeID,
-		PageSize:  &request.PageSize,
+		PageSize:  request.PageSize,
 		ShardID:   request.ShardID,
 	}
 
@@ -424,6 +429,7 @@ func (m *sqlHistoryStore) DeleteHistoryBranch(
 				TreeID:   serialization.MustParseUUID(treeID),
 				BranchID: serialization.MustParseUUID(*br.BranchID),
 				ShardID:  request.ShardID,
+				PageSize: _defaultHistoryNodeDeleteBatch,
 			}
 
 			if ok {
@@ -434,9 +440,20 @@ func (m *sqlHistoryStore) DeleteHistoryBranch(
 				// No any branch is using this range, we can delete all of it
 				nodeFilter.MinNodeID = br.BeginNodeID
 			}
-			_, err := tx.DeleteFromHistoryNode(ctx, nodeFilter)
-			if err != nil {
-				return err
+			for {
+				result, err := tx.DeleteFromHistoryNode(ctx, nodeFilter)
+				if err != nil {
+					return err
+				}
+				rowsAffected, err := result.RowsAffected()
+				if err != nil {
+					return err
+				}
+				if rowsAffected < _defaultHistoryNodeDeleteBatch ||
+					rowsAffected == persistence.UnknownNumRowsAffected ||
+					rowsAffected > _defaultHistoryNodeDeleteBatch {
+					break
+				}
 			}
 			if done {
 				break

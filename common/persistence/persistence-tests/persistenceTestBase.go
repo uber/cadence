@@ -1353,10 +1353,19 @@ Loop:
 
 // RangeCompleteReplicationTask is a utility method to complete a range of replication tasks
 func (s *TestBase) RangeCompleteReplicationTask(ctx context.Context, inclusiveEndTaskID int64) error {
-	_, err := s.ExecutionManager.RangeCompleteReplicationTask(ctx, &p.RangeCompleteReplicationTaskRequest{
-		InclusiveEndTaskID: inclusiveEndTaskID,
-	})
-	return err
+	for {
+		resp, err := s.ExecutionManager.RangeCompleteReplicationTask(ctx, &p.RangeCompleteReplicationTaskRequest{
+			InclusiveEndTaskID: inclusiveEndTaskID,
+			PageSize:           1,
+		})
+		if err != nil {
+			return err
+		}
+		if !p.HasMoreRowsToDelete(resp.TasksCompleted, 1) {
+			break
+		}
+	}
+	return nil
 }
 
 // PutReplicationTaskToDLQ is a utility method to insert a replication task info
@@ -1455,11 +1464,20 @@ func (s *TestBase) CompleteTransferTask(ctx context.Context, taskID int64) error
 
 // RangeCompleteTransferTask is a utility method to complete a range of transfer tasks
 func (s *TestBase) RangeCompleteTransferTask(ctx context.Context, exclusiveBeginTaskID int64, inclusiveEndTaskID int64) error {
-	_, err := s.ExecutionManager.RangeCompleteTransferTask(ctx, &p.RangeCompleteTransferTaskRequest{
-		ExclusiveBeginTaskID: exclusiveBeginTaskID,
-		InclusiveEndTaskID:   inclusiveEndTaskID,
-	})
-	return err
+	for {
+		resp, err := s.ExecutionManager.RangeCompleteTransferTask(ctx, &p.RangeCompleteTransferTaskRequest{
+			ExclusiveBeginTaskID: exclusiveBeginTaskID,
+			InclusiveEndTaskID:   inclusiveEndTaskID,
+			PageSize:             1,
+		})
+		if err != nil {
+			return err
+		}
+		if !p.HasMoreRowsToDelete(resp.TasksCompleted, 1) {
+			break
+		}
+	}
+	return nil
 }
 
 // CompleteCrossClusterTask is a utility method to complete a cross-cluster task
@@ -1472,12 +1490,21 @@ func (s *TestBase) CompleteCrossClusterTask(ctx context.Context, targetCluster s
 
 // RangeCompleteCrossClusterTask is a utility method to complete a range of cross-cluster tasks
 func (s *TestBase) RangeCompleteCrossClusterTask(ctx context.Context, targetCluster string, exclusiveBeginTaskID int64, inclusiveEndTaskID int64) error {
-	_, err := s.ExecutionManager.RangeCompleteCrossClusterTask(ctx, &p.RangeCompleteCrossClusterTaskRequest{
-		TargetCluster:        targetCluster,
-		ExclusiveBeginTaskID: exclusiveBeginTaskID,
-		InclusiveEndTaskID:   inclusiveEndTaskID,
-	})
-	return err
+	for {
+		resp, err := s.ExecutionManager.RangeCompleteCrossClusterTask(ctx, &p.RangeCompleteCrossClusterTaskRequest{
+			TargetCluster:        targetCluster,
+			ExclusiveBeginTaskID: exclusiveBeginTaskID,
+			InclusiveEndTaskID:   inclusiveEndTaskID,
+			PageSize:             1,
+		})
+		if err != nil {
+			return err
+		}
+		if !p.HasMoreRowsToDelete(resp.TasksCompleted, 1) {
+			break
+		}
+	}
+	return nil
 }
 
 // CompleteReplicationTask is a utility method to complete a replication task
@@ -1525,11 +1552,20 @@ func (s *TestBase) CompleteTimerTask(ctx context.Context, ts time.Time, taskID i
 
 // RangeCompleteTimerTask is a utility method to complete a range of timer tasks
 func (s *TestBase) RangeCompleteTimerTask(ctx context.Context, inclusiveBeginTimestamp time.Time, exclusiveEndTimestamp time.Time) error {
-	_, err := s.ExecutionManager.RangeCompleteTimerTask(ctx, &p.RangeCompleteTimerTaskRequest{
-		InclusiveBeginTimestamp: inclusiveBeginTimestamp,
-		ExclusiveEndTimestamp:   exclusiveEndTimestamp,
-	})
-	return err
+	for {
+		resp, err := s.ExecutionManager.RangeCompleteTimerTask(ctx, &p.RangeCompleteTimerTaskRequest{
+			InclusiveBeginTimestamp: inclusiveBeginTimestamp,
+			ExclusiveEndTimestamp:   exclusiveEndTimestamp,
+			PageSize:                1,
+		})
+		if err != nil {
+			return err
+		}
+		if !p.HasMoreRowsToDelete(resp.TasksCompleted, 1) {
+			break
+		}
+	}
+	return nil
 }
 
 // CreateDecisionTask is a utility method to create a task

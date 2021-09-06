@@ -1798,14 +1798,16 @@ func (m *testTaskManager) CompleteTasksLessThan(
 	tlm := m.getTaskListManager(newTestTaskListID(request.DomainID, request.TaskListName, request.TaskType))
 	tlm.Lock()
 	defer tlm.Unlock()
+	rowsDeleted := 0
 	keys := tlm.tasks.Keys()
 	for _, key := range keys {
 		id := key.(int64)
 		if id <= request.TaskID {
 			tlm.tasks.Remove(id)
+			rowsDeleted++
 		}
 	}
-	return &persistence.CompleteTasksLessThanResponse{TasksCompleted: persistence.UnknownNumRowsAffected}, nil
+	return &persistence.CompleteTasksLessThanResponse{TasksCompleted: rowsDeleted}, nil
 }
 
 // ListTaskList provides a mock function with given fields: ctx, request
