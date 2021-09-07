@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
+	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
@@ -58,6 +59,7 @@ type (
 func NewCrossClusterQueueProcessor(
 	shard shard.Context,
 	historyEngine engine.Engine,
+	executionCache *execution.Cache,
 	taskProcessor task.Processor,
 ) Processor {
 	logger := shard.GetLogger().WithTags(tag.ComponentCrossClusterQueueProcessor)
@@ -70,11 +72,19 @@ func NewCrossClusterQueueProcessor(
 			continue
 		}
 
+		taskExecutor := task.NewCrossClusterSourceTaskExecutor(
+			shard,
+			executionCache,
+			logger,
+			shard.GetConfig(),
+		)
+
 		queueProcessor := newCrossClusterQueueProcessorBase(
 			shard,
 			clusterName,
+			executionCache,
 			taskProcessor,
-			nil, // TODO: initialized the task executor for source cluster
+			taskExecutor,
 			logger,
 		)
 		queueProcessors[clusterName] = queueProcessor

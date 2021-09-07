@@ -127,7 +127,7 @@ func NewTestBaseWithNoSQL(options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
-	testCluster := nosql.NewTestCluster(options.DBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.ProtoVersion)
+	testCluster := nosql.NewTestCluster(options.DBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.ProtoVersion, "")
 	metadata := options.ClusterMetadata
 	if metadata == nil {
 		metadata = cluster.GetTestClusterMetadata(false, false)

@@ -322,10 +322,7 @@ func (m *HealthRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceMeta
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceMeta
 			}
 			if (iNdEx + skippy) > l {
@@ -428,10 +425,7 @@ func (m *HealthResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthServiceMeta
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthServiceMeta
 			}
 			if (iNdEx + skippy) > l {
