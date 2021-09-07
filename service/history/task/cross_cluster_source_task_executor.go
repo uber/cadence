@@ -1,5 +1,5 @@
 // Copyright (c) 2021 Uber Technologies, Inc.
-// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
+// Portions of the Software are attributed to Copyright (c) 2021 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,18 +19,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package dynamodb
+package task
 
 import (
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 )
 
-var _ nosqlplugin.AdminDB = (*ddb)(nil)
+type (
+	crossClusterSourceTaskExecutor struct{}
+)
 
-func (db *ddb) SetupTestDatabase(schemaBaseDir string) error {
-	panic("TODO")
+// NewCrossClusterSourceTaskExecutor creates a new executor for processing
+// cross cluster tasks at source cluster
+func NewCrossClusterSourceTaskExecutor(
+	shard shard.Context,
+	executionCache *execution.Cache,
+	logger log.Logger,
+	config *config.Config,
+) Executor {
+	return &crossClusterSourceTaskExecutor{}
 }
 
-func (db *ddb) TeardownTestDatabase() error {
-	panic("TODO")
+func (t *crossClusterSourceTaskExecutor) Execute(
+	task Task,
+	shouldProcessTask bool,
+) error {
+	panic("crossClusterSourceTaskExecutor not implemented")
 }
