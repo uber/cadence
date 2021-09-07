@@ -1661,19 +1661,20 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		ContinueAsNewInitiator:          attributes.Initiator,
 		FirstDecisionTaskBackoffSeconds: attributes.BackoffStartIntervalInSeconds,
 	}
+
+	// if ContinueAsNew as Cron or decider, recalculate the expiration timestamp and set attempts to 0
+	req.Attempt = 0
+	if attributes.RetryPolicy != nil && attributes.RetryPolicy.GetExpirationIntervalInSeconds() > 0 {
+		// expirationTime calculates from first decision task schedule to the end of the workflow
+		expirationInSeconds := attributes.RetryPolicy.GetExpirationIntervalInSeconds() + req.GetFirstDecisionTaskBackoffSeconds()
+		expirationTime := e.timeSource.Now().Add(time.Second * time.Duration(expirationInSeconds))
+		req.ExpirationTimestamp = common.Int64Ptr(expirationTime.UnixNano())
+	}
+	// if ContinueAsNew as retry use the same expiration timestamp and increment attempts from previous execution state
 	if attributes.GetInitiator() == types.ContinueAsNewInitiatorRetryPolicy {
 		req.Attempt = previousExecutionState.GetExecutionInfo().Attempt + 1
 		expirationTime := previousExecutionState.GetExecutionInfo().ExpirationTime
 		if !expirationTime.IsZero() {
-			req.ExpirationTimestamp = common.Int64Ptr(expirationTime.UnixNano())
-		}
-	} else {
-		// ContinueAsNew by decider or cron
-		req.Attempt = 0
-		if attributes.RetryPolicy != nil && attributes.RetryPolicy.GetExpirationIntervalInSeconds() > 0 {
-			// has retry policy and expiration time.
-			expirationSeconds := attributes.RetryPolicy.GetExpirationIntervalInSeconds() + req.GetFirstDecisionTaskBackoffSeconds()
-			expirationTime := e.timeSource.Now().Add(time.Second * time.Duration(expirationSeconds))
 			req.ExpirationTimestamp = common.Int64Ptr(expirationTime.UnixNano())
 		}
 	}
