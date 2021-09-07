@@ -117,7 +117,8 @@ func (s *oauthSuite) TearDownTest() {
 
 func (s *oauthSuite) TestCorrectPayload() {
 	s.domainCache.EXPECT().GetDomain(s.att.DomainName).Return(s.domainEntry, nil).Times(1)
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	s.NoError(err)
 	result, err := authorizer.Authorize(s.ctx, &s.att)
 	s.NoError(err)
 	s.Equal(result.Decision, DecisionAllow)
@@ -132,7 +133,8 @@ func (s *oauthSuite) TestItIsAdmin() {
 		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, token),
 	})
 	s.NoError(err)
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	s.NoError(err)
 	result, err := authorizer.Authorize(ctx, &s.att)
 	s.NoError(err)
 	s.Equal(result.Decision, DecisionAllow)
@@ -145,7 +147,8 @@ func (s *oauthSuite) TestEmptyToken() {
 		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, ""),
 	})
 	s.NoError(err)
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	s.NoError(err)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
 		return fmt.Sprintf("%v", t[0].Field().Interface) == "token is not set in header"
 	}))
@@ -155,7 +158,8 @@ func (s *oauthSuite) TestEmptyToken() {
 
 func (s *oauthSuite) TestGetDomainError() {
 	s.domainCache.EXPECT().GetDomain(s.att.DomainName).Return(nil, fmt.Errorf("error")).Times(1)
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	s.NoError(err)
 	result, err := authorizer.Authorize(s.ctx, &s.att)
 	s.Equal(result.Decision, DecisionDeny)
 	s.EqualError(err, "error")
@@ -163,15 +167,15 @@ func (s *oauthSuite) TestGetDomainError() {
 
 func (s *oauthSuite) TestIncorrectPublicKey() {
 	s.cfg.JwtCredentials.PublicKey = "incorrectPublicKey"
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
-	result, err := authorizer.Authorize(s.ctx, &s.att)
+	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	s.Equal(authorizer, nil)
 	s.EqualError(err, "invalid public key path incorrectPublicKey")
-	s.Equal(result.Decision, DecisionDeny)
 }
 
 func (s *oauthSuite) TestIncorrectAlgorithm() {
 	s.cfg.JwtCredentials.Algorithm = "SHA256"
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	s.NoError(err)
 	result, err := authorizer.Authorize(s.ctx, &s.att)
 	s.EqualError(err, "jwt: algorithm is not supported")
 	s.Equal(result.Decision, DecisionDeny)
@@ -179,7 +183,8 @@ func (s *oauthSuite) TestIncorrectAlgorithm() {
 
 func (s *oauthSuite) TestMaxTTLLargerInToken() {
 	s.cfg.MaxJwtTTL = 1
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	s.NoError(err)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
 		return fmt.Sprintf("%v", t[0].Field().Interface) == "TTL in token is larger than MaxTTL allowed"
 	}))
@@ -194,7 +199,8 @@ func (s *oauthSuite) TestIncorrectToken() {
 		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, "test"),
 	})
 	s.NoError(err)
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	s.NoError(err)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
 		return fmt.Sprintf("%v", t[0].Field().Interface) == "jwt: token format is not valid"
 	}))
@@ -211,7 +217,8 @@ func (s *oauthSuite) TestIatExpiredToken() {
 		Headers: transport.NewHeaders().With(common.AuthorizationTokenHeaderName, token),
 	})
 	s.NoError(err)
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	s.NoError(err)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
 		return fmt.Sprintf("%v", t[0].Field().Interface) == "JWT has expired"
 	}))
@@ -223,7 +230,8 @@ func (s *oauthSuite) TestDifferentGroup() {
 	s.domainEntry.GetInfo().Data[common.DomainDataKeyForReadGroups] = "AdifferentGroup"
 	s.domainCache.EXPECT().GetDomain(s.att.DomainName).Return(s.domainEntry, nil).Times(1)
 	s.att.Permission = PermissionWrite
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	s.NoError(err)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
 		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have the right permission, jwt groups: [a b c], allowed groups: []"
 	}))
@@ -234,7 +242,8 @@ func (s *oauthSuite) TestDifferentGroup() {
 func (s *oauthSuite) TestIncorrectPermission() {
 	s.domainCache.EXPECT().GetDomain(s.att.DomainName).Return(s.domainEntry, nil).Times(1)
 	s.att.Permission = Permission(15)
-	authorizer := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
+	s.NoError(err)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
 		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have permission for 15 API"
 	}))

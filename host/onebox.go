@@ -409,9 +409,12 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.ArchiverProvider = c.archiverProvider
 	params.ESConfig = c.esConfig
 	params.ESClient = c.esClient
-	params.Authorizer = authorization.NewAuthorizer(c.authorizationConfig, params.Logger, nil)
-
 	var err error
+	authorizer, err := authorization.NewAuthorizer(c.authorizationConfig, params.Logger, nil)
+	if err != nil {
+		c.logger.Fatal("Unable to create authorizer", tag.Error(err))
+	}
+	params.Authorizer = authorizer
 	params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)
 	if err != nil {
 		c.logger.Fatal("Failed to copy persistence config for frontend", tag.Error(err))
