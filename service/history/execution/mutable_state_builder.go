@@ -1161,36 +1161,6 @@ func (e *mutableStateBuilder) GetStartEvent(
 	return startEvent, nil
 }
 
-// GetCloseEvent returns the last event in history
-func (e *mutableStateBuilder) GetCloseEvent(
-	ctx context.Context,
-) (*types.HistoryEvent, error) {
-
-	if e.GetExecutionInfo().CloseStatus == persistence.WorkflowCloseStatusNone {
-		return nil, ErrMissingWorkflowCloseEvent
-	}
-
-	currentBranchToken, err := e.GetCurrentBranchToken()
-	if err != nil {
-		return nil, err
-	}
-
-	closeEvent, err := e.eventsCache.GetEvent(
-		ctx,
-		e.shard.GetShardID(),
-		e.executionInfo.DomainID,
-		e.executionInfo.WorkflowID,
-		e.executionInfo.RunID,
-		common.FirstEventID,
-		e.GetNextEventID()-1,
-		currentBranchToken,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return closeEvent, nil
-}
-
 // DeletePendingChildExecution deletes details about a ChildExecutionInfo.
 func (e *mutableStateBuilder) DeletePendingChildExecution(
 	initiatedEventID int64,
