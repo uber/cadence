@@ -254,10 +254,7 @@ func (c *clientImpl) GetTaskListsByDomain(
 	var futures []future.Future
 	for _, client := range clients {
 		future, settable := future.NewFuture()
-		go func(client Client) {
-			settable.Set(client.GetTaskListsByDomain(ctx, request, opts...))
-		}(client)
-
+		settable.Set(client.GetTaskListsByDomain(ctx, request, opts...))
 		futures = append(futures, future)
 	}
 
@@ -273,7 +270,6 @@ func (c *clientImpl) GetTaskListsByDomain(
 			}
 		}
 	}
-
 	var taskListNames []string
 	for tl := range taskListMap {
 		taskListNames = append(taskListNames, tl)

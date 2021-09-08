@@ -667,7 +667,7 @@ func newAdminTaskListCommands() []cli.Command {
 		},
 		{
 			Name:    "list",
-			Aliases: []string{"ls"},
+			Aliases: []string{"l"},
 			Usage:   "List active tasklist under a domain",
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -676,7 +676,7 @@ func newAdminTaskListCommands() []cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) {
-				AdminDescribeTaskList(c)
+				AdminListTaskList(c)
 			},
 		},
 	}

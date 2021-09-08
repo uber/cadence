@@ -207,12 +207,13 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 					return nil, err
 				}
 				result = append(result, client)
+			} else {
+				client, err := cf.newMatchingThriftClient(hostAddress)
+				if err != nil {
+					return nil, err
+				}
+				result = append(result, client)
 			}
-			client, err := cf.newMatchingThriftClient(hostAddress)
-			if err != nil {
-				return nil, err
-			}
-			result = append(result, client)
 		}
 		return result, nil
 	}
