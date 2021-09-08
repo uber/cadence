@@ -306,14 +306,21 @@ func (c *crossClusterQueueProcessorBase) completeAckTasks(nextAckLevel int64) (i
 	ctx, cancel := context.WithTimeout(context.Background(), taskCleanupTimeout)
 	defer cancel()
 
-	if err := c.shard.GetExecutionManager().RangeCompleteCrossClusterTask(ctx, &persistence.RangeCompleteCrossClusterTaskRequest{
-		TargetCluster:        c.targetCluster,
-		ExclusiveBeginTaskID: c.ackLevel,
-		InclusiveEndTaskID:   nextAckLevel,
-	}); err != nil {
-		return c.ackLevel, err
+	for {
+		pageSize := c.options.DeleteBatchSize()
+		resp, err := c.shard.GetExecutionManager().RangeCompleteCrossClusterTask(ctx, &persistence.RangeCompleteCrossClusterTaskRequest{
+			TargetCluster:        c.targetCluster,
+			ExclusiveBeginTaskID: c.ackLevel,
+			InclusiveEndTaskID:   nextAckLevel,
+			PageSize:             pageSize, // pageSize may or may not be honored
+		})
+		if err != nil {
+			return c.ackLevel, err
+		}
+		if !persistence.HasMoreRowsToDelete(resp.TasksCompleted, pageSize) {
+			break
+		}
 	}
-
 	return nextAckLevel, nil
 }
 
@@ -671,6 +678,7 @@ func newCrossClusterQueueProcessorOptions(
 ) *queueProcessorOptions {
 	options := &queueProcessorOptions{
 		BatchSize:                            config.CrossClusterTaskBatchSize,
+		DeleteBatchSize:                      config.CrossClusterTaskDeleteBatchSize,
 		MaxPollRPS:                           config.CrossClusterProcessorMaxPollRPS,
 		MaxPollInterval:                      config.CrossClusterProcessorMaxPollInterval,
 		MaxPollIntervalJitterCoefficient:     config.CrossClusterProcessorMaxPollIntervalJitterCoefficient,

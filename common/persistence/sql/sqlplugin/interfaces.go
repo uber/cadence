@@ -104,9 +104,10 @@ type (
 	// can be used to filter results through a WHERE clause
 	TransferTasksFilter struct {
 		ShardID   int
-		TaskID    *int64
-		MinTaskID *int64
-		MaxTaskID *int64
+		TaskID    int64
+		MinTaskID int64
+		MaxTaskID int64
+		PageSize  int
 	}
 
 	// CrossClusterTasksFilter contains the column names within cross_cluster_tasks table that
@@ -114,9 +115,10 @@ type (
 	CrossClusterTasksFilter struct {
 		TargetCluster string
 		ShardID       int
-		TaskID        *int64
-		MinTaskID     *int64
-		MaxTaskID     *int64
+		TaskID        int64
+		MinTaskID     int64
+		MaxTaskID     int64
+		PageSize      int
 	}
 
 	// ExecutionsRow represents a row in executions table
@@ -322,10 +324,10 @@ type (
 	TimerTasksFilter struct {
 		ShardID                int
 		TaskID                 int64
-		VisibilityTimestamp    *time.Time
-		MinVisibilityTimestamp *time.Time
-		MaxVisibilityTimestamp *time.Time
-		PageSize               *int
+		VisibilityTimestamp    time.Time
+		MinVisibilityTimestamp time.Time
+		MaxVisibilityTimestamp time.Time
+		PageSize               int
 	}
 
 	// EventsRow represents a row in events table
@@ -374,7 +376,7 @@ type (
 		MinNodeID *int64
 		// Exclusive
 		MaxNodeID *int64
-		PageSize  *int
+		PageSize  int
 	}
 
 	// HistoryTreeRow represents a row in history_tree table
@@ -648,9 +650,11 @@ type (
 		// Required filter params - {shardID, minTaskID, maxTaskID}
 		SelectFromTransferTasks(ctx context.Context, filter *TransferTasksFilter) ([]TransferTasksRow, error)
 		// DeleteFromTransferTasks deletes one or more rows from transfer_tasks table.
-		// Filter params - shardID is required. If TaskID is not nil, a single row is deleted.
-		// When MinTaskID and MaxTaskID are not-nil, a range of rows are deleted.
+		// Required filter params - {shardID, taskID}
 		DeleteFromTransferTasks(ctx context.Context, filter *TransferTasksFilter) (sql.Result, error)
+		// RangeDeleteFromTransferTasks deletes one or more rows from transfer_tasks table.
+		// Required filter params - {shardID, minTaskID, maxTaskID}
+		RangeDeleteFromTransferTasks(ctx context.Context, filter *TransferTasksFilter) (sql.Result, error)
 
 		// TODO: add cross-cluster tasks methods
 		// InsertIntoCrossClusterTasks adds a new row to the cross_cluster_tasks table
@@ -659,19 +663,22 @@ type (
 		// Required filter params - {shardID, minTaskID, maxTaskID}
 		SelectFromCrossClusterTasks(ctx context.Context, filter *CrossClusterTasksFilter) ([]CrossClusterTasksRow, error)
 		// DeleteFromCrossClusterTasks deletes one or more rows from cross_cluster_tasks table.
-		// Filter params - shardID is required. If TaskID is not nil, a single row is deleted.
-		// When MinTaskID and MaxTaskID are not-nil, a range of rows are deleted.
+		// Required filter params - {shardID, taskID}
 		DeleteFromCrossClusterTasks(ctx context.Context, filter *CrossClusterTasksFilter) (sql.Result, error)
+		// RangeDeleteFromCrossClusterTasks deletes one or more rows from cross_cluster_tasks table.
+		// Required filter params - {shardID, minTaskID, maxTaskID}
+		RangeDeleteFromCrossClusterTasks(ctx context.Context, filter *CrossClusterTasksFilter) (sql.Result, error)
 
 		InsertIntoTimerTasks(ctx context.Context, rows []TimerTasksRow) (sql.Result, error)
 		// SelectFromTimerTasks returns one or more rows from timer_tasks table
 		// Required filter Params - {shardID, taskID, minVisibilityTimestamp, maxVisibilityTimestamp, pageSize}
 		SelectFromTimerTasks(ctx context.Context, filter *TimerTasksFilter) ([]TimerTasksRow, error)
 		// DeleteFromTimerTasks deletes one or more rows from timer_tasks table
-		// Required filter Params:
-		//  - to delete one row - {shardID, visibilityTimestamp, taskID}
-		//  - to delete multiple rows - {shardID, minVisibilityTimestamp, maxVisibilityTimestamp}
+		// Required filter Params: {shardID, visibilityTimestamp, taskID}
 		DeleteFromTimerTasks(ctx context.Context, filter *TimerTasksFilter) (sql.Result, error)
+		// RangeDeleteFromTimerTasks deletes one or more rows from timer_tasks table
+		// Required filter Params: {shardID, minVisibilityTimestamp, maxVisibilityTimestamp}
+		RangeDeleteFromTimerTasks(ctx context.Context, filter *TimerTasksFilter) (sql.Result, error)
 
 		InsertIntoBufferedEvents(ctx context.Context, rows []BufferedEventsRow) (sql.Result, error)
 		SelectFromBufferedEvents(ctx context.Context, filter *BufferedEventsFilter) ([]BufferedEventsRow, error)
@@ -682,7 +689,7 @@ type (
 		// Required filter params - {shardID, minTaskID, maxTaskID, pageSize}
 		SelectFromReplicationTasks(ctx context.Context, filter *ReplicationTasksFilter) ([]ReplicationTasksRow, error)
 		// DeleteFromReplicationTasks deletes a row from replication_tasks table
-		// Required filter params - {shardID, inclusiveEndTaskID}
+		// Required filter params - {shardID, taskID}
 		DeleteFromReplicationTasks(ctx context.Context, filter *ReplicationTasksFilter) (sql.Result, error)
 		// DeleteFromReplicationTasks deletes multi rows from replication_tasks table
 		// Required filter params - {shardID, inclusiveEndTaskID}

@@ -916,13 +916,19 @@ const (
 	// Default value: FALSE
 	// Allowed filters: N/A
 	QueueProcessorEnableLoadQueueStates
+
 	// TimerTaskBatchSize is batch size for timer processor to process tasks
 	// KeyName: history.timerTaskBatchSize
 	// Value type: Int
 	// Default value: 100
 	// Allowed filters: N/A
-
 	TimerTaskBatchSize
+	// TimerTaskDeleteBatchSize is batch size for timer processor to delete timer tasks
+	// KeyName: history.timerTaskDeleteBatchSize
+	// Value type: Int
+	// Default value: 4000
+	// Allowed filters: N/A
+	TimerTaskDeleteBatchSize
 	// TimerTaskWorkerCount is number of task workers for timer processor
 	// KeyName: history.timerTaskWorkerCount
 	// Value type: Int
@@ -1019,13 +1025,19 @@ const (
 	// Default value: 1*time.Second
 	// Allowed filters: N/A
 	TimerProcessorArchivalTimeLimit
+
 	// TransferTaskBatchSize is batch size for transferQueueProcessor
 	// KeyName: history.transferTaskBatchSize
 	// Value type: Int
 	// Default value: 100
 	// Allowed filters: N/A
-
 	TransferTaskBatchSize
+	// TransferTaskDeleteBatchSize is batch size for transferQueueProcessor to delete transfer tasks
+	// KeyName: history.transferTaskDeleteBatchSize
+	// Value type: Int
+	// Default value: 4000
+	// Allowed filters: N/A
+	TransferTaskDeleteBatchSize
 	// TransferProcessorFailoverMaxPollRPS is max poll rate per second for transferQueueProcessor
 	// KeyName: history.transferProcessorFailoverMaxPollRPS
 	// Value type: Int
@@ -1123,6 +1135,12 @@ const (
 	// Default value: 100
 	// Allowed filters: N/A
 	CrossClusterTaskBatchSize
+	// CrossClusterTaskDeleteBatchSize is batch size for crossClusterQueueProcessor to delete cross cluster tasks
+	// KeyName: history.crossClusterTaskDeleteBatchSize
+	// Value type: Int
+	// Default value: 4000
+	// Allowed filters: N/A
+	CrossClusterTaskDeleteBatchSize
 	// CrossClusterProcessorMaxPollRPS is max poll rate per second for crossClusterQueueProcessor
 	// KeyName: history.crossClusterProcessorMaxPollRPS
 	// Value type: Int
@@ -1214,6 +1232,12 @@ const (
 	// Default value: 100
 	// Allowed filters: N/A
 	ReplicatorTaskBatchSize
+	// ReplicatorTaskDeleteBatchSize is batch size for ReplicatorProcessor to delete replication tasks
+	// KeyName: history.replicatorTaskDeleteBatchSize
+	// Value type: Int
+	// Default value: 4000
+	// Allowed filters: N/A
+	ReplicatorTaskDeleteBatchSize
 	// ReplicatorTaskWorkerCount is number of worker for ReplicatorProcessor
 	// KeyName: history.replicatorTaskWorkerCount
 	// Value type: Int
@@ -2119,6 +2143,7 @@ var Keys = map[Key]string{
 	QueueProcessorEnableLoadQueueStates:                "history.queueProcessorEnableLoadQueueStates",
 
 	TimerTaskBatchSize:                                "history.timerTaskBatchSize",
+	TimerTaskDeleteBatchSize:                          "history.timerTaskDeleteBatchSize",
 	TimerTaskWorkerCount:                              "history.timerTaskWorkerCount",
 	TimerProcessorGetFailureRetryCount:                "history.timerProcessorGetFailureRetryCount",
 	TimerProcessorCompleteTimerFailureRetryCount:      "history.timerProcessorCompleteTimerFailureRetryCount",
@@ -2137,6 +2162,7 @@ var Keys = map[Key]string{
 	TimerProcessorArchivalTimeLimit:                   "history.timerProcessorArchivalTimeLimit",
 
 	TransferTaskBatchSize:                                "history.transferTaskBatchSize",
+	TransferTaskDeleteBatchSize:                          "history.transferTaskDeleteBatchSize",
 	TransferProcessorFailoverMaxPollRPS:                  "history.transferProcessorFailoverMaxPollRPS",
 	TransferProcessorMaxPollRPS:                          "history.transferProcessorMaxPollRPS",
 	TransferTaskWorkerCount:                              "history.transferTaskWorkerCount",
@@ -2154,6 +2180,7 @@ var Keys = map[Key]string{
 	TransferProcessorVisibilityArchivalTimeLimit:         "history.transferProcessorVisibilityArchivalTimeLimit",
 
 	CrossClusterTaskBatchSize:                                "history.crossClusterTaskBatchSize",
+	CrossClusterTaskDeleteBatchSize:                          "history.crossClusterTaskDeleteBatchSize",
 	CrossClusterProcessorMaxPollRPS:                          "history.crossClusterProcessorMaxPollRPS",
 	CrossClusterTaskWorkerCount:                              "history.crossClusterTaskWorkerCount",
 	CrossClusterProcessorCompleteTaskFailureRetryCount:       "history.crossClusterProcessorCompleteTaskFailureRetryCount",
@@ -2170,6 +2197,7 @@ var Keys = map[Key]string{
 	CrossClusterProcessorValidationIntervalJitterCoefficient: "history.crossClusterProcessorValidationIntervalJitterCoefficient",
 
 	ReplicatorTaskBatchSize:                               "history.replicatorTaskBatchSize",
+	ReplicatorTaskDeleteBatchSize:                         "history.replicatorTaskDeleteBatchSize",
 	ReplicatorTaskWorkerCount:                             "history.replicatorTaskWorkerCount",
 	ReplicatorReadTaskMaxRetryCount:                       "history.replicatorReadTaskMaxRetryCount",
 	ReplicatorProcessorMaxPollRPS:                         "history.replicatorProcessorMaxPollRPS",

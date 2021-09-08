@@ -214,8 +214,9 @@ func (s *ScavengerTestSuite) setupTaskMgrMocks() {
 			return &p.GetTasksResponse{Tasks: result}
 		}, nil)
 	s.taskMgr.On("CompleteTasksLessThan", mock.Anything, mock.Anything).Return(
-		func(_ context.Context, req *p.CompleteTasksLessThanRequest) int {
-			return s.taskTables[req.TaskListName].deleteLessThan(req.TaskID, req.Limit)
+		func(_ context.Context, req *p.CompleteTasksLessThanRequest) *p.CompleteTasksLessThanResponse {
+			rowsDeleted := s.taskTables[req.TaskListName].deleteLessThan(req.TaskID, req.Limit)
+			return &p.CompleteTasksLessThanResponse{TasksCompleted: rowsDeleted}
 		}, nil)
 	s.taskMgr.On("GetOrphanTasks", mock.Anything, mock.Anything).Return(
 		func(_ context.Context, req *p.GetOrphanTasksRequest) *p.GetOrphanTasksResponse {
@@ -228,7 +229,7 @@ func (s *ScavengerTestSuite) setupTaskMgrMocks() {
 func (s *ScavengerTestSuite) setupTaskMgrMocksWithErrors() {
 	s.taskMgr.On("ListTaskList", mock.Anything, mock.Anything).Return(nil, errTest).Once()
 	s.taskMgr.On("GetTasks", mock.Anything, mock.Anything).Return(nil, errTest).Once()
-	s.taskMgr.On("CompleteTasksLessThan", mock.Anything, mock.Anything).Return(0, errTest).Once()
+	s.taskMgr.On("CompleteTasksLessThan", mock.Anything, mock.Anything).Return(nil, errTest).Once()
 	s.taskMgr.On("DeleteTaskList", mock.Anything, mock.Anything).Return(errTest).Once()
 	s.taskMgr.On("GetOrphanTasks", mock.Anything, mock.Anything).Return(nil, errTest).Once()
 	s.setupTaskMgrMocks()
