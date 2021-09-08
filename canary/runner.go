@@ -23,6 +23,7 @@ package canary
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
@@ -91,6 +92,16 @@ func (r *canaryRunner) Run(mode string) error {
 	r.metrics.Counter("restarts").Inc(1)
 	if len(r.config.Excludes) != 0 {
 		updateSanityChildWFList(r.config.Excludes)
+	}
+
+	if r.config.Cron.CronSchedule == "" {
+		r.config.Cron.CronSchedule = "@every 30s"
+	}
+	if r.config.Cron.CronExecutionTimeout == 0 {
+		r.config.Cron.CronExecutionTimeout = 18 * time.Minute
+	}
+	if r.config.Cron.StartJobTimeout == 0 {
+		r.config.Cron.StartJobTimeout = 9 * time.Minute
 	}
 
 	var wg sync.WaitGroup

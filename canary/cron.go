@@ -85,7 +85,8 @@ func cronActivity(
 	parentID := activity.GetInfo(ctx).WorkflowExecution.ID
 
 	jobID := fmt.Sprintf("%s-%s-%v", parentID, jobName, time.Now().Format(time.RFC3339))
-	wf, err := startJob(&cadenceClient, scope, jobID, jobName, domain)
+	config := getContextValue(ctx, ctxKeyConfig).(*Canary)
+	wf, err := startJob(&cadenceClient, scope, jobID, jobName, domain, config)
 	if err != nil {
 		logger.Error("cronActivity: failed to start job", zap.Error(err))
 		if isDomainNotActiveErr(err) {
@@ -104,7 +105,8 @@ func startJob(
 	scope tally.Scope,
 	jobID string,
 	jobName string,
-	domain string) (*workflow.Execution, error) {
+	domain string,
+	config *Canary) (*workflow.Execution, error) {
 
 	scope.Counter(startWorkflowCount).Inc(1)
 	sw := scope.Timer(startWorkflowLatency).Start()
@@ -115,8 +117,6 @@ func startJob(
 	span := opentracing.StartSpan(fmt.Sprintf("start-%v", jobName))
 	defer span.Finish()
 	ctx = opentracing.ContextWithSpan(ctx, span)
-
-	config := getContextValue(ctx, ctxKeyConfig).(*Canary)
 
 	opts := newWorkflowOptions(jobID, config.Cron.StartJobTimeout)
 	wf, err := cadenceClient.StartWorkflow(ctx, opts, jobName, time.Now().UnixNano(), domain)

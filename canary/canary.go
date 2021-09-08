@@ -22,6 +22,7 @@ package canary
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/cadence/.gen/go/shared"
@@ -74,6 +75,9 @@ func newCanary(domain string, rc *RuntimeContext, canaryConfig *Canary) Runnable
 
 // Run runs the canary
 func (c *canaryImpl) Run(mode string) error {
+	if mode != ModeCronCanary && mode != ModeAll && mode != ModeWorker {
+		return fmt.Errorf("wrong mode to start canary")
+	}
 	var err error
 	log := c.runtime.logger
 
@@ -87,6 +91,11 @@ func (c *canaryImpl) Run(mode string) error {
 		return err
 	}
 
+	if mode == ModeAll || mode == ModeCronCanary {
+		// start the initial cron workflow
+		c.startCronWorkflow()
+	}
+
 	if mode == ModeAll || mode == ModeWorker {
 		err = c.startWorker()
 		if err != nil {
@@ -95,15 +104,12 @@ func (c *canaryImpl) Run(mode string) error {
 		}
 	}
 
-	if mode == ModeAll || mode == ModeCronCanary {
-		// start the initial cron workflow
-		c.startCronWorkflow()
-	}
-
 	return nil
 }
 
 func (c *canaryImpl) startWorker() error {
+	c.runtime.logger.Info("starting canary worker...")
+
 	options := worker.Options{
 		Logger:                             c.runtime.logger,
 		MetricsScope:                       c.runtime.metrics,
@@ -122,6 +128,7 @@ func (c *canaryImpl) startWorker() error {
 }
 
 func (c *canaryImpl) startCronWorkflow() {
+	c.runtime.logger.Info("starting canary cron workflow...")
 	wfID := "cadence.canary.cron"
 	opts := newWorkflowOptions(wfID, c.canaryConfig.Cron.CronExecutionTimeout)
 	opts.CronSchedule = c.canaryConfig.Cron.CronSchedule
@@ -136,6 +143,8 @@ func (c *canaryImpl) startCronWorkflow() {
 		// TODO: improvement: compare the cron schedule to decide whether or not terminating the current one
 		if _, ok := err.(*shared.WorkflowExecutionAlreadyStartedError); !ok {
 			c.runtime.logger.Error("error starting cron workflow", zap.Error(err))
+		} else {
+			c.runtime.logger.Info("cron workflow already started, you may need to terminate and restart if cron schedule is changed...")
 		}
 	}
 }
