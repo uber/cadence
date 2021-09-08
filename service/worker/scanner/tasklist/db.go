@@ -31,10 +31,10 @@ import (
 var retryForeverPolicy = newRetryForeverPolicy()
 
 func (s *Scavenger) completeTasks(info *p.TaskListInfo, taskID int64, limit int) (int, error) {
-	var n int
+	var resp *p.CompleteTasksLessThanResponse
 	var err error
 	err = s.retryForever(func() error {
-		n, err = s.db.CompleteTasksLessThan(s.ctx, &p.CompleteTasksLessThanRequest{
+		resp, err = s.db.CompleteTasksLessThan(s.ctx, &p.CompleteTasksLessThanRequest{
 			DomainID:     info.DomainID,
 			TaskListName: info.Name,
 			TaskType:     info.TaskType,
@@ -43,7 +43,10 @@ func (s *Scavenger) completeTasks(info *p.TaskListInfo, taskID int64, limit int)
 		})
 		return err
 	})
-	return n, err
+	if resp != nil {
+		return resp.TasksCompleted, err
+	}
+	return 0, err
 }
 
 func (s *Scavenger) getOrphanTasks(limit int) (*p.GetOrphanTasksResponse, error) {

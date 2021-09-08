@@ -1062,6 +1062,12 @@ type (
 	RangeCompleteTransferTaskRequest struct {
 		ExclusiveBeginTaskID int64
 		InclusiveEndTaskID   int64
+		PageSize             int
+	}
+
+	// RangeCompleteTransferTaskResponse is the response of RangeCompleteTransferTask
+	RangeCompleteTransferTaskResponse struct {
+		TasksCompleted int
 	}
 
 	// CompleteCrossClusterTaskRequest is used to complete a task in the cross-cluster task queue
@@ -1075,6 +1081,12 @@ type (
 		TargetCluster        string
 		ExclusiveBeginTaskID int64
 		InclusiveEndTaskID   int64
+		PageSize             int
+	}
+
+	// RangeCompleteCrossClusterTaskResponse is the response of RangeCompleteCrossClusterTask
+	RangeCompleteCrossClusterTaskResponse struct {
+		TasksCompleted int
 	}
 
 	// CompleteReplicationTaskRequest is used to complete a task in the replication task queue
@@ -1085,6 +1097,12 @@ type (
 	// RangeCompleteReplicationTaskRequest is used to complete a range of task in the replication task queue
 	RangeCompleteReplicationTaskRequest struct {
 		InclusiveEndTaskID int64
+		PageSize           int
+	}
+
+	// RangeCompleteReplicationTaskResponse is the response of RangeCompleteReplicationTask
+	RangeCompleteReplicationTaskResponse struct {
+		TasksCompleted int
 	}
 
 	// PutReplicationTaskToDLQRequest is used to put a replication task to dlq
@@ -1115,6 +1133,12 @@ type (
 		SourceClusterName    string
 		ExclusiveBeginTaskID int64
 		InclusiveEndTaskID   int64
+		PageSize             int
+	}
+
+	//RangeDeleteReplicationTaskFromDLQResponse is the response of RangeDeleteReplicationTaskFromDLQ
+	RangeDeleteReplicationTaskFromDLQResponse struct {
+		TasksCompleted int
 	}
 
 	// GetReplicationTasksFromDLQResponse is the response for GetReplicationTasksFromDLQ
@@ -1129,6 +1153,12 @@ type (
 	RangeCompleteTimerTaskRequest struct {
 		InclusiveBeginTimestamp time.Time
 		ExclusiveEndTimestamp   time.Time
+		PageSize                int
+	}
+
+	// RangeCompleteTimerTaskResponse is the response of RangeCompleteTimerTask
+	RangeCompleteTimerTaskResponse struct {
+		TasksCompleted int
 	}
 
 	// CompleteTimerTaskRequest is used to complete a task in the timer task queue
@@ -1225,6 +1255,11 @@ type (
 		TaskType     int
 		TaskID       int64 // Tasks less than or equal to this ID will be completed
 		Limit        int   // Limit on the max number of tasks that can be completed. Required param
+	}
+
+	// CompleteTasksLessThanResponse is the response of CompleteTasksLessThan
+	CompleteTasksLessThanResponse struct {
+		TasksCompleted int
 	}
 
 	// GetOrphanTasksRequest contains the request params need to invoke the GetOrphanTasks API
@@ -1640,28 +1675,28 @@ type (
 		// Transfer task related methods
 		GetTransferTasks(ctx context.Context, request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)
 		CompleteTransferTask(ctx context.Context, request *CompleteTransferTaskRequest) error
-		RangeCompleteTransferTask(ctx context.Context, request *RangeCompleteTransferTaskRequest) error
+		RangeCompleteTransferTask(ctx context.Context, request *RangeCompleteTransferTaskRequest) (*RangeCompleteTransferTaskResponse, error)
 
 		// Cross-cluster related methods
 		GetCrossClusterTasks(ctx context.Context, request *GetCrossClusterTasksRequest) (*GetCrossClusterTasksResponse, error)
 		CompleteCrossClusterTask(ctx context.Context, request *CompleteCrossClusterTaskRequest) error
-		RangeCompleteCrossClusterTask(ctx context.Context, request *RangeCompleteCrossClusterTaskRequest) error
+		RangeCompleteCrossClusterTask(ctx context.Context, request *RangeCompleteCrossClusterTaskRequest) (*RangeCompleteCrossClusterTaskResponse, error)
 
 		// Replication task related methods
 		GetReplicationTasks(ctx context.Context, request *GetReplicationTasksRequest) (*GetReplicationTasksResponse, error)
 		CompleteReplicationTask(ctx context.Context, request *CompleteReplicationTaskRequest) error
-		RangeCompleteReplicationTask(ctx context.Context, request *RangeCompleteReplicationTaskRequest) error
+		RangeCompleteReplicationTask(ctx context.Context, request *RangeCompleteReplicationTaskRequest) (*RangeCompleteReplicationTaskResponse, error)
 		PutReplicationTaskToDLQ(ctx context.Context, request *PutReplicationTaskToDLQRequest) error
 		GetReplicationTasksFromDLQ(ctx context.Context, request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
 		GetReplicationDLQSize(ctx context.Context, request *GetReplicationDLQSizeRequest) (*GetReplicationDLQSizeResponse, error)
 		DeleteReplicationTaskFromDLQ(ctx context.Context, request *DeleteReplicationTaskFromDLQRequest) error
-		RangeDeleteReplicationTaskFromDLQ(ctx context.Context, request *RangeDeleteReplicationTaskFromDLQRequest) error
+		RangeDeleteReplicationTaskFromDLQ(ctx context.Context, request *RangeDeleteReplicationTaskFromDLQRequest) (*RangeDeleteReplicationTaskFromDLQResponse, error)
 		CreateFailoverMarkerTasks(ctx context.Context, request *CreateFailoverMarkersRequest) error
 
 		// Timer related methods.
 		GetTimerIndexTasks(ctx context.Context, request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
 		CompleteTimerTask(ctx context.Context, request *CompleteTimerTaskRequest) error
-		RangeCompleteTimerTask(ctx context.Context, request *RangeCompleteTimerTaskRequest) error
+		RangeCompleteTimerTask(ctx context.Context, request *RangeCompleteTimerTaskRequest) (*RangeCompleteTimerTaskResponse, error)
 
 		// Scan operations
 		ListConcreteExecutions(ctx context.Context, request *ListConcreteExecutionsRequest) (*ListConcreteExecutionsResponse, error)
@@ -1685,7 +1720,7 @@ type (
 		CreateTasks(ctx context.Context, request *CreateTasksRequest) (*CreateTasksResponse, error)
 		GetTasks(ctx context.Context, request *GetTasksRequest) (*GetTasksResponse, error)
 		CompleteTask(ctx context.Context, request *CompleteTaskRequest) error
-		CompleteTasksLessThan(ctx context.Context, request *CompleteTasksLessThanRequest) (int, error)
+		CompleteTasksLessThan(ctx context.Context, request *CompleteTasksLessThanRequest) (*CompleteTasksLessThanResponse, error)
 		GetOrphanTasks(ctx context.Context, request *GetOrphanTasksRequest) (*GetOrphanTasksResponse, error)
 	}
 
@@ -2837,4 +2872,14 @@ func IsBackgroundTransientError(err error) bool {
 	}
 
 	return false
+}
+
+// HasMoreRowsToDelete checks if there is more data need to be deleted
+func HasMoreRowsToDelete(rowsDeleted, batchSize int) bool {
+	if rowsDeleted < batchSize || // all target tasks are deleted
+		rowsDeleted == UnknownNumRowsAffected || // underlying database does not support rows affected, so pageSize is not honored and all target tasks are deleted
+		rowsDeleted > batchSize { // pageSize is not honored and all tasks are deleted
+		return false
+	}
+	return true
 }
