@@ -202,17 +202,12 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 				if err != nil {
 					return nil, err
 				}
-				client, err := cf.newMatchingGRPCClient(hostAddress)
-				if err != nil {
-					return nil, err
-				}
-				result = append(result, client)
 			}
-			client, err := cf.newMatchingThriftClient(hostAddress)
+			client, err := clientProvider(hostAddress)
 			if err != nil {
 				return nil, err
 			}
-			result = append(result, client)
+			result = append(result, client.(matching.Client))
 		}
 		return result, nil
 	}
