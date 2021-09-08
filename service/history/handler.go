@@ -255,7 +255,6 @@ func (h *handlerImpl) CreateEngine(
 		shardContext,
 		h.GetVisibilityManager(),
 		h.GetMatchingClient(),
-		h.GetHistoryClient(),
 		h.GetSDKClient(),
 		h.historyEventNotifier,
 		h.config,
