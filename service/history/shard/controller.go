@@ -260,7 +260,7 @@ func (c *controller) shardClosedCallback(shardID int, shardItem *historyShardsIt
 }
 
 func (c *controller) getOrCreateHistoryShardItem(shardID int) (*historyShardsItem, error) {
-	if shardID >= c.config.NumberOfShards { // zero based shard ID
+	if shardID >= c.config.NumberOfShards || shardID < 0 { // zero based shard ID
 		c.logger.Error(fmt.Sprintf("Received shard ID: %v is larger than supported shard number %v",
 			shardID,
 			c.config.NumberOfShards,
