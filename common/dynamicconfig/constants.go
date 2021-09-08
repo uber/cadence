@@ -477,6 +477,12 @@ const (
 	// Default value: 1200
 	// Allowed filters: N/A
 	MatchingRPS
+	// MatchingDomainRPS is request rate per domain per second for each matching host
+	// KeyName: matching.domainrps
+	// Value type: Int
+	// Default value: 1200
+	// Allowed filters: N/A
+	MatchingDomainRPS
 	// MatchingPersistenceMaxQPS is the max qps matching host can query DB
 	// KeyName: matching.persistenceMaxQPS
 	// Value type: Int
@@ -2036,6 +2042,7 @@ var Keys = map[Key]string{
 	FrontendEmitSignalNameMetricsTag:            "frontend.emitSignalNameMetricsTag",
 	// matching settings
 	MatchingRPS:                             "matching.rps",
+	MatchingDomainRPS:                       "matching.domainrps",
 	MatchingPersistenceMaxQPS:               "matching.persistenceMaxQPS",
 	MatchingPersistenceGlobalMaxQPS:         "matching.persistenceGlobalMaxQPS",
 	MatchingMinTaskThrottlingBurstSize:      "matching.minTaskThrottlingBurstSize",
