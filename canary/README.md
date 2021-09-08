@@ -14,9 +14,9 @@ For local server env you can run it through:
 - Docker: Instructions for running Cadence server through docker can be found in `docker/README.md`. Either `docker-compose-es-v7.yml` or `docker-compose-es.yml` can be used to start the server.
 - Build from source: Please check [CONTRIBUTING](/CONTRIBUTING.md) for how to build and run Cadence server from source. Please also make sure Kafka and ElasticSearch are running before starting the server with `./cadence-server --zone es start`. If ElasticSearch v7 is used, change the value for `--zone` flag to `es_v7`.
 
-### Start canary worker 
+### Start canary
 
-:warning: NOTE: Starting this canary worker will not automatically start a canary test. Next two sections will cover how to start and configure it.
+:warning: NOTE: By default, starting this canary worker will not automatically start a canary test. Next two sections will cover how to start and configure it.
 
 Different ways of start the canary workers:
 
@@ -34,22 +34,27 @@ docker-compose -f docker-compose-canary.yml up
 You can modify [the canary worker config](../docker/config/canary/development.yaml) to run against a prod server cluster. 
 
 
-#### 2.  Build & Run the binary 
+#### 2.  Build & Run the worker/canary 
 
 In the project root, build cadence canary binary:
  ```
  make cadence-canary
  ```
 
-Then start canary worker & workflow:
+Then start canary worker:
  ```
  ./cadence-canary start
  ```
+This is essentially the same as 
+```
+ ./cadence-canary start -mode worker
+ ```
+
 By default, it will load [the configuration in `config/canary/development.yaml`](../config/canary/development.yaml). 
 Run `./cadence-canary -h` for details to understand the start options of how to change the loading directory if needed. 
+This will only start the workers. 
 
-
-Worker Configurations
+Configurations
 ----------------------
 Canary workers configuration contains two parts:
 - **Canary**: this part controls which domains canary workers are responsible for what tests the sanity workflow will exclude.
@@ -57,6 +62,10 @@ Canary workers configuration contains two parts:
 canary:
   domains: ["cadence-canary"] # it will start workers on all those domains(also try to register if not exists) 
   excludes: ["workflow.searchAttributes", "workflow.batch", "workflow.archival.visibility"] # it will exclude the three test cases
+  cron: 
+    cronSchedule: #the schedule of cron canary, default to "@every 30s"
+    cronExecutionTimeout: #the timeout of each run of the cron execution, default to 18 minutes
+    startJobTimeout: #the timeout of each run of the sanity test suite, default to 9 minutes
 ``` 
 An exception here is `HistoryArchival` and `VisibilityArchival` test cases will always use `canary-archival-domain` domain. 
 
@@ -71,6 +80,20 @@ cadence:
 
 Canary Test Cases
 ----------------------
+
+#### Cron Canary: periodically running Sanity test suite 
+
+The Cron workflow is not a test case. It's a top level workflow to kick off the Sanity suite(described below) periodically.  
+To start the cron canary:
+```
+ ./cadence-canary start -mode cronCanary
+ ```
+
+For local development, you can also start the cron canary workflows along with the worker:
+```
+ ./cadence-canary start -m all
+ ```
+
 #### Test case starter & Sanity suite 
 The sanity workflow is test suite workflow. It will kick off a bunch of childWorkflows for all the test to verify that Cadence server is operating correctly. 
 
