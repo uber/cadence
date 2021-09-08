@@ -397,7 +397,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 			e.txProcessor.LockTaskProcessing()
 			e.timerProcessor.LockTaskProcessing()
 		},
-		func(prevDomains []*cache.DomainCacheEntry, nextDomains []*cache.DomainCacheEntry) {
+		func(nextDomains []*cache.DomainCacheEntry) {
 			defer func() {
 				e.txProcessor.UnlockTaskProcessing()
 				e.timerProcessor.UnlockTaskProcessing()

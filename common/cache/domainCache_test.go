@@ -463,11 +463,8 @@ func (s *domainCacheSuite) TestRegisterCallback_CatchUp() {
 		func() {
 			prepareCallbacckInvoked = true
 		},
-		func(prevDomains []*DomainCacheEntry, nextDomains []*DomainCacheEntry) {
-			s.Equal(len(prevDomains), len(nextDomains))
-			for index := range prevDomains {
-				s.Nil(prevDomains[index])
-			}
+		func(nextDomains []*DomainCacheEntry) {
+			s.Equal(2, len(nextDomains))
 			entriesNotification = nextDomains
 		},
 	)
@@ -498,7 +495,6 @@ func (s *domainCacheSuite) TestUpdateCache_TriggerCallBack() {
 		FailoverNotificationVersion: 0,
 		NotificationVersion:         domainNotificationVersion,
 	}
-	entry1Old := s.buildEntryFromRecord(domainRecord1Old)
 	domainNotificationVersion++
 
 	domainRecord2Old := &persistence.GetDomainResponse{
@@ -520,7 +516,6 @@ func (s *domainCacheSuite) TestUpdateCache_TriggerCallBack() {
 		FailoverNotificationVersion: 0,
 		NotificationVersion:         domainNotificationVersion,
 	}
-	entry2Old := s.buildEntryFromRecord(domainRecord2Old)
 	domainNotificationVersion++
 
 	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil).Once()
@@ -573,7 +568,6 @@ func (s *domainCacheSuite) TestUpdateCache_TriggerCallBack() {
 	domainNotificationVersion++
 
 	prepareCallbacckInvoked := false
-	entriesOld := []*DomainCacheEntry{}
 	entriesNew := []*DomainCacheEntry{}
 	// we are not testing catching up, so make this really large
 	currentDomainNotificationVersion := int64(9999999)
@@ -583,13 +577,11 @@ func (s *domainCacheSuite) TestUpdateCache_TriggerCallBack() {
 		func() {
 			prepareCallbacckInvoked = true
 		},
-		func(prevDomains []*DomainCacheEntry, nextDomains []*DomainCacheEntry) {
-			entriesOld = prevDomains
+		func(nextDomains []*DomainCacheEntry) {
 			entriesNew = nextDomains
 		},
 	)
 	s.False(prepareCallbacckInvoked)
-	s.Empty(entriesOld)
 	s.Empty(entriesNew)
 
 	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil).Once()
@@ -609,7 +601,6 @@ func (s *domainCacheSuite) TestUpdateCache_TriggerCallBack() {
 	// making sure notifying from lower to higher version helps the shard to keep track the
 	// domain change events
 	s.True(prepareCallbacckInvoked)
-	s.Equal([]*DomainCacheEntry{entry2Old, entry1Old}, entriesOld)
 	s.Equal([]*DomainCacheEntry{entry2New, entry1New}, entriesNew)
 }
 
