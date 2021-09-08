@@ -94,6 +94,10 @@ For local development, you can also start the cron canary workflows along with t
  ./cadence-canary start -m all
  ```
 
+The Cron Schedule is from the Configuration. 
+However, changing the schedule requires you manually terminate the existing cron workflow to take into effect.
+It can be [improved](https://github.com/uber/cadence/issues/4469) in the future.   
+
 #### Test case starter & Sanity suite 
 The sanity workflow is test suite workflow. It will kick off a bunch of childWorkflows for all the test to verify that Cadence server is operating correctly. 
 

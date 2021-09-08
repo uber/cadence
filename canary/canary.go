@@ -141,6 +141,7 @@ func (c *canaryImpl) startCronWorkflow() {
 	_, err := c.canaryClient.StartWorkflow(ctx, opts, cronWorkflow, wfTypeSanity)
 	if err != nil {
 		// TODO: improvement: compare the cron schedule to decide whether or not terminating the current one
+		// https://github.com/uber/cadence/issues/4469
 		if _, ok := err.(*shared.WorkflowExecutionAlreadyStartedError); !ok {
 			c.runtime.logger.Error("error starting cron workflow", zap.Error(err))
 		} else {
