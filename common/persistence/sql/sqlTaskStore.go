@@ -501,7 +501,7 @@ func (m *sqlTaskStore) CompleteTask(
 func (m *sqlTaskStore) CompleteTasksLessThan(
 	ctx context.Context,
 	request *persistence.CompleteTasksLessThanRequest,
-) (int, error) {
+) (*persistence.CompleteTasksLessThanResponse, error) {
 	result, err := m.db.DeleteFromTasks(ctx, &sqlplugin.TasksFilter{
 		ShardID:              m.shardID(request.DomainID, request.TaskListName),
 		DomainID:             serialization.MustParseUUID(request.DomainID),
@@ -511,15 +511,15 @@ func (m *sqlTaskStore) CompleteTasksLessThan(
 		Limit:                &request.Limit,
 	})
 	if err != nil {
-		return 0, convertCommonErrors(m.db, "CompleteTasksLessThan", "", err)
+		return nil, convertCommonErrors(m.db, "CompleteTasksLessThan", "", err)
 	}
 	nRows, err := result.RowsAffected()
 	if err != nil {
-		return 0, &types.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("rowsAffected returned error: %v", err),
 		}
 	}
-	return int(nRows), nil
+	return &persistence.CompleteTasksLessThanResponse{TasksCompleted: int(nRows)}, nil
 }
 
 // GetOrphanTasks gets tasks from the tasks table that belong to a task_list no longer present

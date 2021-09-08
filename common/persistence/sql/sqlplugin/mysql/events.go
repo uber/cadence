@@ -36,7 +36,7 @@ const (
 	getHistoryNodesQuery = `SELECT node_id, txn_id, data, data_encoding FROM history_node ` +
 		`WHERE shard_id = ? AND tree_id = ? AND branch_id = ? AND node_id >= ? and node_id < ? ORDER BY shard_id, tree_id, branch_id, node_id, txn_id LIMIT ? `
 
-	deleteHistoryNodesQuery = `DELETE FROM history_node WHERE shard_id = ? AND tree_id = ? AND branch_id = ? AND node_id >= ? `
+	deleteHistoryNodesQuery = `DELETE FROM history_node WHERE shard_id = ? AND tree_id = ? AND branch_id = ? AND node_id >= ? ORDER BY shard_id, tree_id, branch_id, node_id, txn_id LIMIT ? `
 
 	// below are templates for history_tree table
 	addHistoryTreeQuery = `INSERT INTO history_tree (` +
@@ -63,7 +63,7 @@ func (mdb *db) InsertIntoHistoryNode(ctx context.Context, row *sqlplugin.History
 func (mdb *db) SelectFromHistoryNode(ctx context.Context, filter *sqlplugin.HistoryNodeFilter) ([]sqlplugin.HistoryNodeRow, error) {
 	var rows []sqlplugin.HistoryNodeRow
 	err := mdb.conn.SelectContext(ctx, &rows, getHistoryNodesQuery,
-		filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID, *filter.MaxNodeID, *filter.PageSize)
+		filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID, *filter.MaxNodeID, filter.PageSize)
 	// NOTE: since we let txn_id multiple by -1 when inserting, we have to revert it back here
 	for _, row := range rows {
 		*row.TxnID *= -1
@@ -73,7 +73,7 @@ func (mdb *db) SelectFromHistoryNode(ctx context.Context, filter *sqlplugin.Hist
 
 // DeleteFromHistoryNode deletes one or more rows from history_node table
 func (mdb *db) DeleteFromHistoryNode(ctx context.Context, filter *sqlplugin.HistoryNodeFilter) (sql.Result, error) {
-	return mdb.conn.ExecContext(ctx, deleteHistoryNodesQuery, filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID)
+	return mdb.conn.ExecContext(ctx, deleteHistoryNodesQuery, filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID, filter.PageSize)
 }
 
 // For history_tree table:

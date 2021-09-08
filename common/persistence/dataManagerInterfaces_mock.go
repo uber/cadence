@@ -487,11 +487,12 @@ func (mr *MockExecutionManagerMockRecorder) CompleteTransferTask(ctx, request in
 }
 
 // RangeCompleteTransferTask mocks base method
-func (m *MockExecutionManager) RangeCompleteTransferTask(ctx context.Context, request *RangeCompleteTransferTaskRequest) error {
+func (m *MockExecutionManager) RangeCompleteTransferTask(ctx context.Context, request *RangeCompleteTransferTaskRequest) (*RangeCompleteTransferTaskResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RangeCompleteTransferTask", ctx, request)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*RangeCompleteTransferTaskResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // RangeCompleteTransferTask indicates an expected call of RangeCompleteTransferTask
@@ -530,11 +531,12 @@ func (mr *MockExecutionManagerMockRecorder) CompleteCrossClusterTask(ctx, reques
 }
 
 // RangeCompleteCrossClusterTask mocks base method
-func (m *MockExecutionManager) RangeCompleteCrossClusterTask(ctx context.Context, request *RangeCompleteCrossClusterTaskRequest) error {
+func (m *MockExecutionManager) RangeCompleteCrossClusterTask(ctx context.Context, request *RangeCompleteCrossClusterTaskRequest) (*RangeCompleteCrossClusterTaskResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RangeCompleteCrossClusterTask", ctx, request)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*RangeCompleteCrossClusterTaskResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // RangeCompleteCrossClusterTask indicates an expected call of RangeCompleteCrossClusterTask
@@ -573,11 +575,12 @@ func (mr *MockExecutionManagerMockRecorder) CompleteReplicationTask(ctx, request
 }
 
 // RangeCompleteReplicationTask mocks base method
-func (m *MockExecutionManager) RangeCompleteReplicationTask(ctx context.Context, request *RangeCompleteReplicationTaskRequest) error {
+func (m *MockExecutionManager) RangeCompleteReplicationTask(ctx context.Context, request *RangeCompleteReplicationTaskRequest) (*RangeCompleteReplicationTaskResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RangeCompleteReplicationTask", ctx, request)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*RangeCompleteReplicationTaskResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // RangeCompleteReplicationTask indicates an expected call of RangeCompleteReplicationTask
@@ -645,11 +648,12 @@ func (mr *MockExecutionManagerMockRecorder) DeleteReplicationTaskFromDLQ(ctx, re
 }
 
 // RangeDeleteReplicationTaskFromDLQ mocks base method
-func (m *MockExecutionManager) RangeDeleteReplicationTaskFromDLQ(ctx context.Context, request *RangeDeleteReplicationTaskFromDLQRequest) error {
+func (m *MockExecutionManager) RangeDeleteReplicationTaskFromDLQ(ctx context.Context, request *RangeDeleteReplicationTaskFromDLQRequest) (*RangeDeleteReplicationTaskFromDLQResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RangeDeleteReplicationTaskFromDLQ", ctx, request)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*RangeDeleteReplicationTaskFromDLQResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // RangeDeleteReplicationTaskFromDLQ indicates an expected call of RangeDeleteReplicationTaskFromDLQ
@@ -702,11 +706,12 @@ func (mr *MockExecutionManagerMockRecorder) CompleteTimerTask(ctx, request inter
 }
 
 // RangeCompleteTimerTask mocks base method
-func (m *MockExecutionManager) RangeCompleteTimerTask(ctx context.Context, request *RangeCompleteTimerTaskRequest) error {
+func (m *MockExecutionManager) RangeCompleteTimerTask(ctx context.Context, request *RangeCompleteTimerTaskRequest) (*RangeCompleteTimerTaskResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RangeCompleteTimerTask", ctx, request)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*RangeCompleteTimerTaskResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // RangeCompleteTimerTask indicates an expected call of RangeCompleteTimerTask
@@ -948,10 +953,10 @@ func (mr *MockTaskManagerMockRecorder) CompleteTask(ctx, request interface{}) *g
 }
 
 // CompleteTasksLessThan mocks base method
-func (m *MockTaskManager) CompleteTasksLessThan(ctx context.Context, request *CompleteTasksLessThanRequest) (int, error) {
+func (m *MockTaskManager) CompleteTasksLessThan(ctx context.Context, request *CompleteTasksLessThanRequest) (*CompleteTasksLessThanResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CompleteTasksLessThan", ctx, request)
-	ret0, _ := ret[0].(int)
+	ret0, _ := ret[0].(*CompleteTasksLessThanResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

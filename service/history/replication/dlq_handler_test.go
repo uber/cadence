@@ -162,7 +162,7 @@ func (s *dlqHandlerSuite) TestPurgeMessages_OK() {
 			SourceClusterName:    sourceCluster,
 			ExclusiveBeginTaskID: -1,
 			InclusiveEndTaskID:   lastMessageID,
-		}).Return(nil).Times(1)
+		}).Return(&persistence.RangeDeleteReplicationTaskFromDLQResponse{TasksCompleted: persistence.UnknownNumRowsAffected}, nil).Times(1)
 
 	err := s.messageHandler.PurgeMessages(context.Background(), sourceCluster, lastMessageID)
 	s.NoError(err)
@@ -211,7 +211,7 @@ func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 			SourceClusterName:    s.sourceCluster,
 			ExclusiveBeginTaskID: -1,
 			InclusiveEndTaskID:   lastMessageID,
-		}).Return(nil).Times(1)
+		}).Return(&persistence.RangeDeleteReplicationTaskFromDLQResponse{TasksCompleted: persistence.UnknownNumRowsAffected}, nil).Times(1)
 
 	token, err := s.messageHandler.MergeMessages(ctx, s.sourceCluster, lastMessageID, pageSize, pageToken)
 	s.NoError(err)

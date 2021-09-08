@@ -47,6 +47,7 @@ type (
 
 	queueProcessorOptions struct {
 		BatchSize                            dynamicconfig.IntPropertyFn
+		DeleteBatchSize                      dynamicconfig.IntPropertyFn
 		MaxPollRPS                           dynamicconfig.IntPropertyFn
 		MaxPollInterval                      dynamicconfig.DurationPropertyFn
 		MaxPollIntervalJitterCoefficient     dynamicconfig.FloatPropertyFn
