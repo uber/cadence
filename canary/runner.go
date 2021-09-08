@@ -87,7 +87,7 @@ func NewCanaryRunner(cfg *Config) (Runnable, error) {
 }
 
 // Run runs the canaries
-func (r *canaryRunner) Run() error {
+func (r *canaryRunner) Run(mode string) error {
 	r.metrics.Counter("restarts").Inc(1)
 	if len(r.config.Excludes) != 0 {
 		updateSanityChildWFList(r.config.Excludes)
@@ -95,18 +95,18 @@ func (r *canaryRunner) Run() error {
 
 	var wg sync.WaitGroup
 	for _, d := range r.config.Domains {
-		canary := newCanary(d, r.RuntimeContext)
+		canary := newCanary(d, r.RuntimeContext, r.config)
 		r.logger.Info("starting canary", zap.String("domain", d))
-		r.execute(canary, &wg)
+		r.execute(canary, mode, &wg)
 	}
 	wg.Wait()
 	return nil
 }
 
-func (r *canaryRunner) execute(task Runnable, wg *sync.WaitGroup) {
+func (r *canaryRunner) execute(task Runnable, mode string, wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
-		task.Run()
+		task.Run(mode)
 		wg.Done()
 	}()
 }

@@ -32,7 +32,7 @@ import (
 type (
 	// Runnable is an interface for anything that exposes a Run method
 	Runnable interface {
-		Run() error
+		Run(mode string) error
 	}
 
 	canaryImpl struct {
@@ -41,6 +41,7 @@ type (
 		archivalClient cadenceClient
 		systemClient   cadenceClient
 		runtime        *RuntimeContext
+		canaryConfig   *Canary
 	}
 
 	activityContext struct {
@@ -57,7 +58,7 @@ const (
 )
 
 // new returns a new instance of Canary runnable
-func newCanary(domain string, rc *RuntimeContext) Runnable {
+func newCanary(domain string, rc *RuntimeContext, canaryConfig *Canary) Runnable {
 	canaryClient := newCadenceClient(domain, rc)
 	archivalClient := newCadenceClient(archivalDomain, rc)
 	systemClient := newCadenceClient(systemDomain, rc)
@@ -67,11 +68,12 @@ func newCanary(domain string, rc *RuntimeContext) Runnable {
 		archivalClient: archivalClient,
 		systemClient:   systemClient,
 		runtime:        rc,
+		canaryConfig:   canaryConfig,
 	}
 }
 
 // Run runs the canary
-func (c *canaryImpl) Run() error {
+func (c *canaryImpl) Run(mode string) error {
 	var err error
 	log := c.runtime.logger
 
@@ -85,11 +87,19 @@ func (c *canaryImpl) Run() error {
 		return err
 	}
 
-	err = c.startWorker()
-	if err != nil {
-		log.Error("start worker failed", zap.Error(err))
-		return err
+	if mode == ModeAll || mode == ModeWorker {
+		err = c.startWorker()
+		if err != nil {
+			log.Error("start worker failed", zap.Error(err))
+			return err
+		}
 	}
+
+	if mode == ModeAll || mode == ModeCronCanary {
+		// start the initial cron workflow
+		c.startCronWorkflow()
+	}
+
 	return nil
 }
 
@@ -111,12 +121,32 @@ func (c *canaryImpl) startWorker() error {
 	return canaryWorker.Run()
 }
 
+func (c *canaryImpl) startCronWorkflow() {
+	wfID := "cadence.canary.cron"
+	opts := newWorkflowOptions(wfID, c.canaryConfig.Cron.CronExecutionTimeout)
+	opts.CronSchedule = c.canaryConfig.Cron.CronSchedule
+
+	// create the cron workflow span
+	ctx := context.Background()
+	span := opentracing.StartSpan("start-cron-workflow-span")
+	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
+	_, err := c.canaryClient.StartWorkflow(ctx, opts, cronWorkflow, wfTypeSanity)
+	if err != nil {
+		// TODO: improvement: compare the cron schedule to decide whether or not terminating the current one
+		if _, ok := err.(*shared.WorkflowExecutionAlreadyStartedError); !ok {
+			c.runtime.logger.Error("error starting cron workflow", zap.Error(err))
+		}
+	}
+}
+
 // newActivityContext builds an activity context containing
 // logger, metricsClient and cadenceClient
 func (c *canaryImpl) newActivityContext() context.Context {
 	ctx := context.WithValue(context.Background(), ctxKeyActivityRuntime, &activityContext{cadence: c.canaryClient})
 	ctx = context.WithValue(ctx, ctxKeyActivityArchivalRuntime, &activityContext{cadence: c.archivalClient})
 	ctx = context.WithValue(ctx, ctxKeyActivitySystemClient, &activityContext{cadence: c.systemClient})
+	ctx = context.WithValue(ctx, ctxKeyConfig, c.canaryConfig)
 	return overrideWorkerOptions(ctx)
 }
 

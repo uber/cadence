@@ -38,9 +38,17 @@ const (
 	ctxKeyActivityRuntime         = "runtime"
 	ctxKeyActivityArchivalRuntime = "runtime-archival"
 	ctxKeyActivitySystemClient    = "system-client"
+	ctxKeyConfig                  = "runtime-config"
 	archivalDomain                = "canary-archival-domain"
 	systemDomain                  = "cadence-system"
 	archivalTaskListName          = "canary-archival-task-queue"
+)
+
+// canary running modes
+const (
+	ModeAll        = "all"
+	ModeWorker     = "worker"
+	ModeCronCanary = "cronCanary"
 )
 
 // workflowVersion represents the current version of every single
@@ -55,6 +63,7 @@ const workflowChangeID = "initial version"
 // workflows and activities - at the time of registration, these names
 // will be used to associate with a workflow or activity function
 const (
+	wfTypeCron                 = "workflow.cron"
 	wfTypeSanity               = "workflow.sanity"
 	wfTypeEcho                 = "workflow.echo"
 	wfTypeSignal               = "workflow.signal"
@@ -78,6 +87,7 @@ const (
 	wfTypeBatchChild           = "workflow.batch.child"
 
 	activityTypeEcho               = "activity.echo"
+	activityTypeCron               = "activity.cron"
 	activityTypeSignal             = "activity.signal"
 	activityTypeVisibility         = "activity.visibility"
 	activityTypeSearchAttributes   = "activity.searchAttributes"
