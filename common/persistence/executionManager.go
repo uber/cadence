@@ -826,7 +826,7 @@ func (m *executionManagerImpl) CompleteTransferTask(
 func (m *executionManagerImpl) RangeCompleteTransferTask(
 	ctx context.Context,
 	request *RangeCompleteTransferTaskRequest,
-) error {
+) (*RangeCompleteTransferTaskResponse, error) {
 	return m.persistence.RangeCompleteTransferTask(ctx, request)
 }
 
@@ -848,7 +848,7 @@ func (m *executionManagerImpl) CompleteCrossClusterTask(
 func (m *executionManagerImpl) RangeCompleteCrossClusterTask(
 	ctx context.Context,
 	request *RangeCompleteCrossClusterTaskRequest,
-) error {
+) (*RangeCompleteCrossClusterTaskResponse, error) {
 	return m.persistence.RangeCompleteCrossClusterTask(ctx, request)
 }
 
@@ -878,7 +878,7 @@ func (m *executionManagerImpl) CompleteReplicationTask(
 func (m *executionManagerImpl) RangeCompleteReplicationTask(
 	ctx context.Context,
 	request *RangeCompleteReplicationTaskRequest,
-) error {
+) (*RangeCompleteReplicationTaskResponse, error) {
 	return m.persistence.RangeCompleteReplicationTask(ctx, request)
 }
 
@@ -924,7 +924,7 @@ func (m *executionManagerImpl) DeleteReplicationTaskFromDLQ(
 func (m *executionManagerImpl) RangeDeleteReplicationTaskFromDLQ(
 	ctx context.Context,
 	request *RangeDeleteReplicationTaskFromDLQRequest,
-) error {
+) (*RangeDeleteReplicationTaskFromDLQResponse, error) {
 	return m.persistence.RangeDeleteReplicationTaskFromDLQ(ctx, request)
 }
 
@@ -953,7 +953,7 @@ func (m *executionManagerImpl) CompleteTimerTask(
 func (m *executionManagerImpl) RangeCompleteTimerTask(
 	ctx context.Context,
 	request *RangeCompleteTimerTaskRequest,
-) error {
+) (*RangeCompleteTimerTaskResponse, error) {
 	return m.persistence.RangeCompleteTimerTask(ctx, request)
 }
 

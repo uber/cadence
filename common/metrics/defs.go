@@ -374,6 +374,8 @@ const (
 	HistoryClientGetCrossClusterTasksScope
 	// HistoryClientRespondCrossClusterTasksCompletedScope tracks RPC calls to history service
 	HistoryClientRespondCrossClusterTasksCompletedScope
+	// HistoryClientGetFailoverInfoScope tracks RPC calls to history service
+	HistoryClientGetFailoverInfoScope
 	// MatchingClientPollForDecisionTaskScope tracks RPC calls to matching service
 	MatchingClientPollForDecisionTaskScope
 	// MatchingClientPollForActivityTaskScope tracks RPC calls to matching service
@@ -932,6 +934,8 @@ const (
 	HistoryGetCrossClusterTasksScope
 	// HistoryRespondCrossClusterTasksCompletedScope tracks RespondCrossClusterTasksCompleted API calls received by service
 	HistoryRespondCrossClusterTasksCompletedScope
+	// HistoryGetFailoverInfoScope tracks HistoryGetFailoverInfo API calls received by service
+	HistoryGetFailoverInfoScope
 	// TaskPriorityAssignerScope is the scope used by all metric emitted by task priority assigner
 	TaskPriorityAssignerScope
 	// TransferQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
@@ -1022,6 +1026,8 @@ const (
 	CrossClusterTaskTypeSignalExecutionScope
 	// CrossClusterTaskTypeRecordChildWorkflowExeuctionCompleteScope is the scope used by metric emitted by cross cluster queue processor for processing signal workflow task.
 	CrossClusterTaskTypeRecordChildWorkflowExeuctionCompleteScope
+	// CrossClusterTaskTypeApplyParentClosePolicyScope is the scope used by metric emitted by cross cluster queue processor for processing applying parent close policy
+	CrossClusterTaskTypeApplyParentClosePolicyScope
 	// HistoryEventNotificationScope is the scope used by shard history event notification
 	HistoryEventNotificationScope
 	// ReplicatorQueueProcessorScope is the scope used by all metric emitted by replicator queue processor
@@ -1287,6 +1293,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientNotifyFailoverMarkersScope:               {operation: "HistoryClientNotifyFailoverMarkersScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientGetCrossClusterTasksScope:                {operation: "HistoryClientGetCrossClusterTasks", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientRespondCrossClusterTasksCompletedScope:   {operation: "HistoryClientRespondCrossClusterTasksCompleted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientGetFailoverInfoScope:                     {operation: "HistoryClientGetFailoverInfo", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		MatchingClientPollForDecisionTaskScope:                {operation: "MatchingClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
 		MatchingClientPollForActivityTaskScope:                {operation: "MatchingClientPollForActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
 		MatchingClientAddActivityTaskScope:                    {operation: "MatchingClientAddActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
@@ -1560,6 +1567,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryNotifyFailoverMarkersScope:                             {operation: "NotifyFailoverMarkers"},
 		HistoryGetCrossClusterTasksScope:                              {operation: "GetCrossClusterTasks"},
 		HistoryRespondCrossClusterTasksCompletedScope:                 {operation: "RespondCrossClusterTasksCompleted"},
+		HistoryGetFailoverInfoScope:                                   {operation: "GetFailoverInfo"},
 		TaskPriorityAssignerScope:                                     {operation: "TaskPriorityAssigner"},
 		TransferQueueProcessorScope:                                   {operation: "TransferQueueProcessor"},
 		TransferActiveQueueProcessorScope:                             {operation: "TransferActiveQueueProcessor"},
@@ -1605,6 +1613,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		CrossClusterTaskCancelExecutionScope:                          {operation: "CrossClusterTaskCancelExecution"},
 		CrossClusterTaskTypeSignalExecutionScope:                      {operation: "CrossClusterTaskTypeSignalExecution"},
 		CrossClusterTaskTypeRecordChildWorkflowExeuctionCompleteScope: {operation: "CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete"},
+		CrossClusterTaskTypeApplyParentClosePolicyScope:               {operation: "CrossClusterTaskTypeApplyParentClosePolicy"},
 		HistoryEventNotificationScope:                                 {operation: "HistoryEventNotification"},
 		ReplicatorQueueProcessorScope:                                 {operation: "ReplicatorQueueProcessor"},
 		ReplicatorTaskHistoryScope:                                    {operation: "ReplicatorTaskHistory"},
@@ -1735,6 +1744,8 @@ const (
 	HistorySize
 	HistoryCount
 	EventBlobSize
+
+	DecisionResultCount
 
 	ArchivalConfigFailures
 	ActiveClusterGauge
@@ -1899,6 +1910,8 @@ const (
 	DecisionAttemptTimer
 	StaleMutableStateCounter
 	DataInconsistentCounter
+	TimerResurrectionCounter
+	ActivityResurrectionCounter
 	AutoResetPointsLimitExceededCounter
 	AutoResetPointCorruptionCounter
 	ConcurrencyUpdateFailureCounter
@@ -2216,6 +2229,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistorySize:                                         {metricName: "history_size", metricType: Timer},
 		HistoryCount:                                        {metricName: "history_count", metricType: Timer},
 		EventBlobSize:                                       {metricName: "event_blob_size", metricType: Timer},
+		DecisionResultCount:                                 {metricName: "decision_result_count", metricType: Timer},
 		ArchivalConfigFailures:                              {metricName: "archivalconfig_failures", metricType: Counter},
 		ActiveClusterGauge:                                  {metricName: "active_cluster", metricType: Gauge},
 		ElasticsearchRequests:                               {metricName: "elasticsearch_requests", metricType: Counter},
@@ -2402,6 +2416,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DecisionAttemptTimer:                              {metricName: "decision_attempt", metricType: Timer},
 		StaleMutableStateCounter:                          {metricName: "stale_mutable_state", metricType: Counter},
 		DataInconsistentCounter:                           {metricName: "data_inconsistent", metricType: Counter},
+		TimerResurrectionCounter:                          {metricName: "timer_resurrection", metricType: Counter},
+		ActivityResurrectionCounter:                       {metricName: "activity_resurrection", metricType: Counter},
 		AutoResetPointsLimitExceededCounter:               {metricName: "auto_reset_points_exceed_limit", metricType: Counter},
 		AutoResetPointCorruptionCounter:                   {metricName: "auto_reset_point_corruption", metricType: Counter},
 		ConcurrencyUpdateFailureCounter:                   {metricName: "concurrency_update_failure", metricType: Counter},

@@ -380,6 +380,11 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		return err
 	}
 
+	err = t.processParentClosePolicy(ctx, wfContext, task, domainName, children, &crossClusterTaskGenerators)
+	if err != nil {
+		return err
+	}
+
 	// TODO: pass crossClusterTaskGenerators to processParentClosePolicy to add new cross
 	// cluster tasks then move the call below after processParentClosePolicy call
 	if len(crossClusterTaskGenerators) > 0 {
@@ -393,8 +398,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 			return err
 		}
 	}
-
-	return t.processParentClosePolicy(ctx, task.DomainID, domainName, children)
+	return nil
 }
 
 func (t *transferActiveTaskExecutor) processCancelExecution(
@@ -448,7 +452,15 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 	// handle workflow cancel itself
 	if task.DomainID == task.TargetDomainID && task.WorkflowID == task.TargetWorkflowID {
 		// it does not matter if the run ID is a mismatch
-		err = t.requestCancelExternalExecutionFailed(ctx, task, wfContext, targetDomainName, task.TargetWorkflowID, task.TargetRunID)
+		err = requestCancelExternalExecutionFailed(
+			ctx,
+			task,
+			wfContext,
+			targetDomainName,
+			task.TargetWorkflowID,
+			task.TargetRunID,
+			t.shard.GetTimeSource().Now(),
+		)
 		return err
 	}
 
@@ -467,13 +479,14 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 			// for retryable error just return
 			return err
 		}
-		return t.requestCancelExternalExecutionFailed(
+		return requestCancelExternalExecutionFailed(
 			ctx,
 			task,
 			wfContext,
 			targetDomainName,
 			task.TargetWorkflowID,
 			task.TargetRunID,
+			t.shard.GetTimeSource().Now(),
 		)
 	}
 
@@ -484,13 +497,14 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 	))
 
 	// Record ExternalWorkflowExecutionCancelRequested in source execution
-	return t.requestCancelExternalExecutionCompleted(
+	return requestCancelExternalExecutionCompleted(
 		ctx,
 		task,
 		wfContext,
 		targetDomainName,
 		task.TargetWorkflowID,
 		task.TargetRunID,
+		t.shard.GetTimeSource().Now(),
 	)
 }
 
@@ -548,7 +562,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 	// handle workflow signal itself
 	if task.DomainID == task.TargetDomainID && task.WorkflowID == task.TargetWorkflowID {
 		// it does not matter if the run ID is a mismatch
-		return t.signalExternalExecutionFailed(
+		return signalExternalExecutionFailed(
 			ctx,
 			task,
 			wfContext,
@@ -556,6 +570,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 			task.TargetWorkflowID,
 			task.TargetRunID,
 			signalInfo.Control,
+			t.shard.GetTimeSource().Now(),
 		)
 	}
 
@@ -574,7 +589,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 			// for retryable error just return
 			return err
 		}
-		return t.signalExternalExecutionFailed(
+		return signalExternalExecutionFailed(
 			ctx,
 			task,
 			wfContext,
@@ -582,6 +597,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 			task.TargetWorkflowID,
 			task.TargetRunID,
 			signalInfo.Control,
+			t.shard.GetTimeSource().Now(),
 		)
 	}
 
@@ -591,7 +607,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		task.TargetRunID,
 	))
 
-	err = t.signalExternalExecutionCompleted(
+	err = signalExternalExecutionCompleted(
 		ctx,
 		task,
 		wfContext,
@@ -599,6 +615,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		task.TargetWorkflowID,
 		task.TargetRunID,
 		signalInfo.Control,
+		t.shard.GetTimeSource().Now(),
 	)
 	if err != nil {
 		return err
@@ -706,7 +723,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		// event and complete transfer task by setting the err = nil
 		switch err.(type) {
 		case *types.WorkflowExecutionAlreadyStartedError:
-			err = t.recordStartChildExecutionFailed(ctx, task, wfContext, attributes)
+			err = recordStartChildExecutionFailed(ctx, task, wfContext, attributes, t.shard.GetTimeSource().Now())
 		}
 		return err
 	}
@@ -715,7 +732,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		attributes.WorkflowID, childRunID))
 
 	// Child execution is successfully started, record ChildExecutionStartedEvent in parent execution
-	err = t.recordChildExecutionStarted(ctx, task, wfContext, attributes, childRunID)
+	err = recordChildExecutionStarted(ctx, task, wfContext, attributes, childRunID, t.shard.GetTimeSource().Now())
 	if err != nil {
 		return err
 	}
@@ -970,15 +987,16 @@ func (t *transferActiveTaskExecutor) processResetWorkflow(
 	)
 }
 
-func (t *transferActiveTaskExecutor) recordChildExecutionStarted(
+func recordChildExecutionStarted(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 	wfContext execution.Context,
 	initiatedAttributes *types.StartChildWorkflowExecutionInitiatedEventAttributes,
 	runID string,
+	now time.Time,
 ) error {
 
-	return t.updateWorkflowExecution(ctx, wfContext, true,
+	return updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
@@ -1003,17 +1021,20 @@ func (t *transferActiveTaskExecutor) recordChildExecutionStarted(
 			)
 
 			return err
-		})
+		},
+		now,
+	)
 }
 
-func (t *transferActiveTaskExecutor) recordStartChildExecutionFailed(
+func recordStartChildExecutionFailed(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 	wfContext execution.Context,
 	initiatedAttributes *types.StartChildWorkflowExecutionInitiatedEventAttributes,
+	now time.Time,
 ) error {
 
-	return t.updateWorkflowExecution(ctx, wfContext, true,
+	return updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
@@ -1029,7 +1050,9 @@ func (t *transferActiveTaskExecutor) recordStartChildExecutionFailed(
 				types.ChildWorkflowExecutionFailedCauseWorkflowAlreadyRunning, initiatedAttributes)
 
 			return err
-		})
+		},
+		now,
+	)
 }
 
 // createFirstDecisionTask is used by StartChildExecution transfer task to create the first decision task for
@@ -1063,16 +1086,17 @@ func createFirstDecisionTask(
 	return err
 }
 
-func (t *transferActiveTaskExecutor) requestCancelExternalExecutionCompleted(
+func requestCancelExternalExecutionCompleted(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 	wfContext execution.Context,
 	targetDomain string,
 	targetWorkflowID string,
 	targetRunID string,
+	now time.Time,
 ) error {
 
-	err := t.updateWorkflowExecution(ctx, wfContext, true,
+	err := updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
@@ -1091,7 +1115,9 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionCompleted(
 				targetRunID,
 			)
 			return err
-		})
+		},
+		now,
+	)
 
 	switch err.(type) {
 	// this could happen if this is a duplicate processing of the task,
@@ -1102,7 +1128,7 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionCompleted(
 	return err
 }
 
-func (t *transferActiveTaskExecutor) signalExternalExecutionCompleted(
+func signalExternalExecutionCompleted(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 	wfContext execution.Context,
@@ -1110,9 +1136,10 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionCompleted(
 	targetWorkflowID string,
 	targetRunID string,
 	control []byte,
+	now time.Time,
 ) error {
 
-	err := t.updateWorkflowExecution(ctx, wfContext, true,
+	err := updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
@@ -1132,7 +1159,9 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionCompleted(
 				control,
 			)
 			return err
-		})
+		},
+		now,
+	)
 
 	switch err.(type) {
 	// this could happen if this is a duplicate processing of the task,
@@ -1144,16 +1173,17 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionCompleted(
 	return err
 }
 
-func (t *transferActiveTaskExecutor) requestCancelExternalExecutionFailed(
+func requestCancelExternalExecutionFailed(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 	wfContext execution.Context,
 	targetDomain string,
 	targetWorkflowID string,
 	targetRunID string,
+	now time.Time,
 ) error {
 
-	err := t.updateWorkflowExecution(ctx, wfContext, true,
+	err := updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
@@ -1174,7 +1204,9 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionFailed(
 				types.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution,
 			)
 			return err
-		})
+		},
+		now,
+	)
 
 	switch err.(type) {
 	// this could happen if this is a duplicate processing of the task,
@@ -1185,7 +1217,7 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionFailed(
 	return err
 }
 
-func (t *transferActiveTaskExecutor) signalExternalExecutionFailed(
+func signalExternalExecutionFailed(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 	wfContext execution.Context,
@@ -1193,9 +1225,10 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionFailed(
 	targetWorkflowID string,
 	targetRunID string,
 	control []byte,
+	now time.Time,
 ) error {
 
-	err := t.updateWorkflowExecution(ctx, wfContext, true,
+	err := updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
@@ -1217,7 +1250,9 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionFailed(
 				types.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution,
 			)
 			return err
-		})
+		},
+		now,
+	)
 
 	switch err.(type) {
 	// this could happen if this is a duplicate processing of the task,
@@ -1250,7 +1285,7 @@ func (t *transferActiveTaskExecutor) generateCrossClusterTasks(
 	task *persistence.TransferTaskInfo,
 	generators []generatorF,
 ) error {
-	return t.updateWorkflowExecution(
+	return updateWorkflowExecution(
 		ctx,
 		wfContext,
 		false,
@@ -1283,6 +1318,7 @@ func (t *transferActiveTaskExecutor) generateCrossClusterTasks(
 			}
 			return nil
 		},
+		t.shard.GetTimeSource().Now(),
 	)
 }
 
@@ -1304,11 +1340,12 @@ func (t *transferActiveTaskExecutor) generateCrossClusterTaskFromTransferTask(
 	)
 }
 
-func (t *transferActiveTaskExecutor) updateWorkflowExecution(
+func updateWorkflowExecution(
 	ctx context.Context,
 	wfContext execution.Context,
 	createDecisionTask bool,
 	action func(ctx context.Context, builder execution.MutableState) error,
+	now time.Time,
 ) error {
 
 	mutableState, err := wfContext.LoadWorkflowExecution(ctx)
@@ -1328,7 +1365,7 @@ func (t *transferActiveTaskExecutor) updateWorkflowExecution(
 		}
 	}
 
-	return wfContext.UpdateWorkflowExecutionAsActive(ctx, t.shard.GetTimeSource().Now())
+	return wfContext.UpdateWorkflowExecutionAsActive(ctx, now)
 }
 
 func requestCancelExternalExecutionWithRetry(
@@ -1591,10 +1628,13 @@ func (t *transferActiveTaskExecutor) resetWorkflow(
 
 func (t *transferActiveTaskExecutor) processParentClosePolicy(
 	ctx context.Context,
-	domainID string,
+	wfContext execution.Context,
+	task *persistence.TransferTaskInfo,
 	domainName string,
 	childInfos map[int64]*persistence.ChildExecutionInfo,
+	crossClusterTaskGenerators *[]generatorF,
 ) error {
+	domainID := task.DomainID
 
 	if len(childInfos) == 0 {
 		return nil
@@ -1627,10 +1667,36 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 			DomainName: domainName,
 			Executions: executions,
 		}
+
+		// Cross cluster requests will be handled via signal API, no need to treat them differently here
 		return t.parentClosePolicyClient.SendParentClosePolicyRequest(ctx, request)
 	}
 
+	var sameClusterChildInfos []*persistence.ChildExecutionInfo
+	remoteClusters := make(map[string]bool)
+
 	for _, childInfo := range childInfos {
+		targetDomainEntry, err := t.shard.GetDomainCache().GetDomain(childInfo.DomainName)
+		if err != nil {
+			return err
+		}
+		targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry)
+		if isCrossCluster {
+			remoteClusters[targetCluster] = true
+		} else {
+			sameClusterChildInfos = append(sameClusterChildInfos, childInfo)
+		}
+	}
+
+	for remoteCluster := range remoteClusters {
+		*crossClusterTaskGenerators = append(
+			*crossClusterTaskGenerators,
+			func(taskGenerator execution.MutableStateTaskGenerator) error {
+				return taskGenerator.GenerateCrossClusterApplyParentClosePolicyTask(task, remoteCluster)
+			})
+	}
+
+	for _, childInfo := range sameClusterChildInfos {
 		if err := t.applyParentClosePolicy(
 			ctx,
 			domainID,

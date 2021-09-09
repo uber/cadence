@@ -45,6 +45,8 @@ const (
 	activeTaskResubmitMaxAttempts = 10
 
 	defaultTaskEventLoggerSize = 100
+
+	stickyTaskMaxRetryCount = 100
 )
 
 var (
@@ -61,20 +63,20 @@ type (
 		sync.Mutex
 		Info
 
-		shard         shard.Context
-		state         ctask.State
-		priority      int
-		attempt       int
-		timeSource    clock.TimeSource
-		submitTime    time.Time
-		logger        log.Logger
-		eventLogger   eventLogger
-		scopeIdx      int
-		scope         metrics.Scope // initialized when processing task to make the initialization parallel
-		taskExecutor  Executor
-		taskProcessor Processor
-		redispatchFn  func(task Task)
-		maxRetryCount dynamicconfig.IntPropertyFn
+		shard              shard.Context
+		state              ctask.State
+		priority           int
+		attempt            int
+		timeSource         clock.TimeSource
+		submitTime         time.Time
+		logger             log.Logger
+		eventLogger        eventLogger
+		scopeIdx           int
+		scope              metrics.Scope // initialized when processing task to make the initialization parallel
+		taskExecutor       Executor
+		taskProcessor      Processor
+		redispatchFn       func(task Task)
+		criticalRetryCount dynamicconfig.IntPropertyFn
 
 		// TODO: following three fields should be removed after new task lifecycle is implemented
 		taskFilter        Filter
@@ -93,7 +95,7 @@ func NewTimerTask(
 	taskExecutor Executor,
 	taskProcessor Processor,
 	redispatchFn func(task Task),
-	maxRetryCount dynamicconfig.IntPropertyFn,
+	criticalRetryCount dynamicconfig.IntPropertyFn,
 ) Task {
 	return newTask(
 		shard,
@@ -104,7 +106,7 @@ func NewTimerTask(
 		taskFilter,
 		taskExecutor,
 		taskProcessor,
-		maxRetryCount,
+		criticalRetryCount,
 		redispatchFn,
 	)
 }
@@ -119,7 +121,7 @@ func NewTransferTask(
 	taskExecutor Executor,
 	taskProcessor Processor,
 	redispatchFn func(task Task),
-	maxRetryCount dynamicconfig.IntPropertyFn,
+	criticalRetryCount dynamicconfig.IntPropertyFn,
 ) Task {
 	return newTask(
 		shard,
@@ -130,7 +132,7 @@ func NewTransferTask(
 		taskFilter,
 		taskExecutor,
 		taskProcessor,
-		maxRetryCount,
+		criticalRetryCount,
 		redispatchFn,
 	)
 }
@@ -144,7 +146,7 @@ func newTask(
 	taskFilter Filter,
 	taskExecutor Executor,
 	taskProcessor Processor,
-	maxRetryCount dynamicconfig.IntPropertyFn,
+	criticalRetryCount dynamicconfig.IntPropertyFn,
 	redispatchFn func(task Task),
 ) *taskImpl {
 	timeSource := shard.GetTimeSource()
@@ -157,23 +159,23 @@ func newTask(
 	}
 
 	return &taskImpl{
-		Info:          taskInfo,
-		shard:         shard,
-		state:         ctask.TaskStatePending,
-		priority:      ctask.NoPriority,
-		queueType:     queueType,
-		scopeIdx:      scopeIdx,
-		scope:         nil,
-		logger:        logger,
-		eventLogger:   eventLogger,
-		attempt:       0,
-		submitTime:    timeSource.Now(),
-		timeSource:    timeSource,
-		maxRetryCount: maxRetryCount,
-		redispatchFn:  redispatchFn,
-		taskFilter:    taskFilter,
-		taskExecutor:  taskExecutor,
-		taskProcessor: taskProcessor,
+		Info:               taskInfo,
+		shard:              shard,
+		state:              ctask.TaskStatePending,
+		priority:           ctask.NoPriority,
+		queueType:          queueType,
+		scopeIdx:           scopeIdx,
+		scope:              nil,
+		logger:             logger,
+		eventLogger:        eventLogger,
+		attempt:            0,
+		submitTime:         timeSource.Now(),
+		timeSource:         timeSource,
+		criticalRetryCount: criticalRetryCount,
+		redispatchFn:       redispatchFn,
+		taskFilter:         taskFilter,
+		taskExecutor:       taskExecutor,
+		taskProcessor:      taskProcessor,
 	}
 }
 
@@ -218,7 +220,7 @@ func (t *taskImpl) HandleErr(
 			defer t.Unlock()
 
 			t.attempt++
-			if t.attempt > t.maxRetryCount() {
+			if t.attempt > t.criticalRetryCount() {
 				t.scope.RecordTimer(metrics.TaskAttemptTimerPerDomain, time.Duration(t.attempt))
 				t.logger.Error("Critical error processing task, retrying.",
 					tag.Error(err), tag.OperationCritical, tag.TaskType(t.GetTaskType()))
@@ -279,6 +281,8 @@ func (t *taskImpl) HandleErr(
 	// TODO remove this error check special case
 	//  since the new task life cycle will not give up until task processed / verified
 	if _, ok := err.(*types.DomainNotActiveError); ok {
+		// TODO: check if this check applies to cross-cluster task
+		// may result in cross-cluster task being discarded
 		if t.timeSource.Now().Sub(t.submitTime) > 2*cache.DomainCacheRefreshInterval {
 			t.scope.IncCounter(metrics.TaskNotActiveCounterPerDomain)
 			return nil
@@ -294,7 +298,7 @@ func (t *taskImpl) HandleErr(
 		return nil
 	}
 
-	if t.GetAttempt() > t.maxRetryCount() && common.IsStickyTaskConditionError(err) {
+	if t.GetAttempt() > stickyTaskMaxRetryCount && common.IsStickyTaskConditionError(err) {
 		// sticky task could end up into endless loop in rare cases and
 		// cause worker to keep getting decision timeout unless restart.
 		// return nil here to break the endless loop

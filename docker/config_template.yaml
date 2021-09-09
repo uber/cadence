@@ -200,7 +200,7 @@ services:
                 listenAddress: {{ .Env.PROMETHEUS_ENDPOINT_3 }}
         {{- end }}
 
-clusterMetadata:
+clusterGroupMetadata:
     enableGlobalDomain: {{ default .Env.ENABLE_GLOBAL_DOMAIN "true" }}
     failoverVersionIncrement: 10
     primaryClusterName: "primary"
@@ -209,18 +209,28 @@ clusterMetadata:
     {{- else }}
     currentClusterName: "primary"
     {{- end }}
-    clusterInformation:
+    clusterGroup:
         primary:
             enabled: true
             initialFailoverVersion: 0
             rpcName: "cadence-frontend"
-            rpcAddress: {{ default .Env.PRIMARY_FRONTEND_SERVICE "cadence" }}:{{ default .Env.FRONTEND_PORT "7933" }}
+            rpcAddress: {{ default .Env.PRIMARY_FRONTEND_SERVICE "cadence" }}:{{ default .Env.FRONTEND_PORT "7833" }}
+            rpcTransport: "grpc"
+            authorizationProvider:
+                enable: {{ default .Env.ENABLE_OAUTH "false" }}
+                type: "OAuthAuthorization"
+                privateKey: {{ default .Env.OAUTH_PRIVATE_KEY "" }}
         {{- if .Env.ENABLE_GLOBAL_DOMAIN }}
         secondary:
             enabled: true
             initialFailoverVersion: 2
             rpcName: "cadence-frontend"
-            rpcAddress: {{ default .Env.SECONDARY_FRONTEND_SERVICE "cadence-secondary" }}:{{ default .Env.FRONTEND_PORT "7933" }}
+            rpcAddress: {{ default .Env.SECONDARY_FRONTEND_SERVICE "cadence-secondary" }}:{{ default .Env.FRONTEND_PORT "7833" }}
+            rpcTransport: "grpc"
+            authorizationProvider:
+                enable: { { default .Env.ENABLE_OAUTH "false" } }
+                type: "OAuthAuthorization"
+                privateKey: { { default .Env.OAUTH_PRIVATE_KEY "" } }
         {{- end }}
 
 
@@ -282,3 +292,11 @@ dynamicconfig:
 blobstore:
   filestore:
     outputDirectory: {{ default .Env.FILE_BLOB_STORE_OUTPUT_DIRECTYORY "" }}
+
+authorization:
+    oauthAuthorizer:
+        enable: {{ default .Env.ENABLE_OAUTH "false" }}
+        maxJwtTTL: {{ default .Env.OAUTH_MAX_JWT_TTL "86400" }}
+        jwtCredentials:
+            algorithm: "RS256"
+            publicKey: {{ default .Env.OAUTH_PUBLIC_KEY "" }}

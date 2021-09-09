@@ -35,6 +35,7 @@ type (
 		PersistenceGlobalMaxQPS dynamicconfig.IntPropertyFn
 		EnableSyncMatch         dynamicconfig.BoolPropertyFnWithTaskListInfoFilters
 		RPS                     dynamicconfig.IntPropertyFn
+		DomainRPS               dynamicconfig.IntPropertyFnWithDomainFilter
 		ShutdownDrainDuration   dynamicconfig.DurationPropertyFn
 
 		// taskListManager configuration
@@ -100,6 +101,7 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		PersistenceGlobalMaxQPS:         dc.GetIntProperty(dynamicconfig.MatchingPersistenceGlobalMaxQPS, 0),
 		EnableSyncMatch:                 dc.GetBoolPropertyFilteredByTaskListInfo(dynamicconfig.MatchingEnableSyncMatch, true),
 		RPS:                             dc.GetIntProperty(dynamicconfig.MatchingRPS, 1200),
+		DomainRPS:                       dc.GetIntPropertyFilteredByDomain(dynamicconfig.MatchingDomainRPS, 0),
 		RangeSize:                       100000,
 		GetTasksBatchSize:               dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingGetTasksBatchSize, 1000),
 		UpdateAckInterval:               dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.MatchingUpdateAckInterval, 1*time.Minute),

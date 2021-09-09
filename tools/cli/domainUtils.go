@@ -342,14 +342,14 @@ func initializeClusterMetadata(
 	logger log.Logger,
 ) cluster.Metadata {
 
-	clusterMetadata := serviceConfig.ClusterMetadata
+	clusterGroupMetadata := serviceConfig.ClusterGroupMetadata
 	return cluster.NewMetadata(
 		logger,
-		dynamicconfig.GetBoolPropertyFn(clusterMetadata.EnableGlobalDomain),
-		clusterMetadata.FailoverVersionIncrement,
-		clusterMetadata.PrimaryClusterName,
-		clusterMetadata.CurrentClusterName,
-		clusterMetadata.ClusterInformation,
+		dynamicconfig.GetBoolPropertyFn(clusterGroupMetadata.EnableGlobalDomain),
+		clusterGroupMetadata.FailoverVersionIncrement,
+		clusterGroupMetadata.PrimaryClusterName,
+		clusterGroupMetadata.CurrentClusterName,
+		clusterGroupMetadata.ClusterGroup,
 	)
 }
 

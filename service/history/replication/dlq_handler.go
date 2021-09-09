@@ -171,7 +171,7 @@ func (r *dlqHandlerImpl) PurgeMessages(
 	lastMessageID int64,
 ) error {
 
-	err := r.shard.GetExecutionManager().RangeDeleteReplicationTaskFromDLQ(
+	_, err := r.shard.GetExecutionManager().RangeDeleteReplicationTaskFromDLQ(
 		ctx,
 		&persistence.RangeDeleteReplicationTaskFromDLQRequest{
 			SourceClusterName:    sourceCluster,
@@ -219,7 +219,7 @@ func (r *dlqHandlerImpl) MergeMessages(
 		}
 	}
 
-	err = r.shard.GetExecutionManager().RangeDeleteReplicationTaskFromDLQ(
+	_, err = r.shard.GetExecutionManager().RangeDeleteReplicationTaskFromDLQ(
 		ctx,
 		&persistence.RangeDeleteReplicationTaskFromDLQRequest{
 			SourceClusterName:    sourceCluster,

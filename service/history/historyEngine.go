@@ -69,8 +69,8 @@ import (
 const (
 	defaultQueryFirstDecisionTaskWaitTime = time.Second
 	queryFirstDecisionTaskCheckInterval   = 200 * time.Millisecond
-	replicationTimeout                    = 30 * time.Second
 	contextLockTimeout                    = 500 * time.Millisecond
+	longPollCompletionBuffer              = 50 * time.Millisecond
 
 	// TerminateIfRunningReason reason for terminateIfRunning
 	TerminateIfRunningReason = "TerminateIfRunning Policy"
@@ -140,7 +140,6 @@ func NewEngineWithShardContext(
 	shard shard.Context,
 	visibilityMgr persistence.VisibilityManager,
 	matching matching.Client,
-	historyClient hc.Client,
 	publicClient workflowserviceclient.Interface,
 	historyEventNotifier events.Notifier,
 	config *config.Config,
@@ -396,7 +395,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 			e.txProcessor.LockTaskProcessing()
 			e.timerProcessor.LockTaskProcessing()
 		},
-		func(prevDomains []*cache.DomainCacheEntry, nextDomains []*cache.DomainCacheEntry) {
+		func(nextDomains []*cache.DomainCacheEntry) {
 			defer func() {
 				e.txProcessor.UnlockTaskProcessing()
 				e.timerProcessor.UnlockTaskProcessing()
@@ -1005,7 +1004,26 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 		if err != nil {
 			return nil, err
 		}
-		timer := time.NewTimer(e.shard.GetConfig().LongPollExpirationInterval(domainName))
+
+		expirationInterval := e.shard.GetConfig().LongPollExpirationInterval(domainName)
+		if deadline, ok := ctx.Deadline(); ok {
+			remainingTime := deadline.Sub(e.shard.GetTimeSource().Now())
+			// Here we return a safeguard error, to ensure that older clients are not stuck in long poll loop until context fully expires.
+			// Otherwise it results in multiple additional requests being made that returns empty responses.
+			// Newer clients will not make request with too small timeout remaining.
+			if remainingTime < longPollCompletionBuffer {
+				return nil, context.DeadlineExceeded
+			}
+			// longPollCompletionBuffer is here to leave some room to finish current request without its timeout.
+			expirationInterval = common.MinDuration(
+				expirationInterval,
+				remainingTime-longPollCompletionBuffer,
+			)
+		}
+		if expirationInterval <= 0 {
+			return response, nil
+		}
+		timer := time.NewTimer(expirationInterval)
 		defer timer.Stop()
 		for {
 			select {
@@ -1026,8 +1044,6 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 				}
 			case <-timer.C:
 				return response, nil
-			case <-ctx.Done():
-				return nil, ctx.Err()
 			}
 		}
 	}
@@ -2692,6 +2708,8 @@ func (e *historyEngineImpl) NotifyNewCrossClusterTasks(
 		case *persistence.CrossClusterSignalExecutionTask:
 			targetCluster = crossClusterTask.TargetCluster
 		case *persistence.CrossClusterRecordChildWorkflowExecutionCompleteTask:
+			targetCluster = crossClusterTask.TargetCluster
+		case *persistence.CrossClusterApplyParentClosePolicyTask:
 			targetCluster = crossClusterTask.TargetCluster
 		default:
 			panic("encountered unknown cross cluster task type")

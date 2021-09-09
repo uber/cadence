@@ -22,7 +22,6 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"time"
 
@@ -30,7 +29,6 @@ import (
 	"github.com/uber-go/tally/prometheus"
 	"github.com/uber/ringpop-go/discovery"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
 )
@@ -44,8 +42,10 @@ type (
 		Persistence Persistence `yaml:"persistence"`
 		// Log is the logging config
 		Log Logger `yaml:"log"`
-		// ClusterMetadata is the config containing all valid clusters and active cluster
-		ClusterMetadata *ClusterMetadata `yaml:"clusterMetadata"`
+		// ClusterGroupMetadata is the config containing all valid clusters and active cluster
+		ClusterGroupMetadata *ClusterGroupMetadata `yaml:"clusterGroupMetadata"`
+		// Deprecated: please use ClusterGroupMetadata
+		ClusterMetadata *ClusterGroupMetadata `yaml:"clusterMetadata"`
 		// DCRedirectionPolicy contains the frontend datacenter redirection policy
 		DCRedirectionPolicy DCRedirectionPolicy `yaml:"dcRedirectionPolicy"`
 		// Services is a map of service name to service config items
@@ -100,8 +100,6 @@ type (
 		Algorithm string `yaml:"algorithm"`
 		// Public Key Path for verifying JWT token passed in from external clients
 		PublicKey string `yaml:"publicKey"`
-		// Private Key Path for creating JWT token
-		PrivateKey string `yaml:"privateKey"`
 	}
 
 	// Service contains the service specific config items
@@ -297,36 +295,6 @@ type (
 		LevelKey string `yaml:"levelKey"`
 	}
 
-	// ClusterMetadata contains the all clusters participated in a replication group(aka XDC/GlobalDomain)
-	ClusterMetadata struct {
-		EnableGlobalDomain bool `yaml:"enableGlobalDomain"`
-		// FailoverVersionIncrement is the increment of each cluster version when failover happens
-		// It decides the maximum number clusters in this replication groups
-		FailoverVersionIncrement int64 `yaml:"failoverVersionIncrement"`
-		// PrimaryClusterName is the primary cluster name, only the primary cluster can register / update domain
-		// all clusters can do domain failover
-		PrimaryClusterName string `yaml:"primaryClusterName"`
-		// MasterClusterName is deprecated. Please use PrimaryClusterName.
-		MasterClusterName string `yaml:"masterClusterName"`
-		// CurrentClusterName is the name of the cluster of current deployment
-		CurrentClusterName string `yaml:"currentClusterName"`
-		// ClusterInformation contains information for each cluster within the replication group
-		// Key is the clusterName
-		ClusterInformation map[string]ClusterInformation `yaml:"clusterInformation"`
-	}
-
-	// ClusterInformation contains the information about each cluster which participated in cross DC
-	ClusterInformation struct {
-		Enabled bool `yaml:"enabled"`
-		// InitialFailoverVersion is the identifier of each cluster. 0 <= the value < failoverVersionIncrement
-		InitialFailoverVersion int64 `yaml:"initialFailoverVersion"`
-		// RPCName indicate the remote service name
-		RPCName string `yaml:"rpcName"`
-		// Address indicate the remote service address(Host:Port). Host can be DNS name.
-		// For currentCluster, it's usually the same as publicClient.hostPort
-		RPCAddress string `yaml:"rpcAddress" validate:"nonzero"`
-	}
-
 	// DCRedirectionPolicy contains the frontend datacenter redirection policy
 	DCRedirectionPolicy struct {
 		Policy string `yaml:"policy"`
@@ -468,22 +436,16 @@ type (
 
 // ValidateAndFillDefaults validates this config and fills default values if needed
 func (c *Config) ValidateAndFillDefaults() error {
-	if err := c.validate(); err != nil {
-		return err
-	}
-	return c.fillDefaults()
+	c.fillDefaults()
+	return c.validate()
 }
 
 func (c *Config) validate() error {
 	if err := c.Persistence.Validate(); err != nil {
 		return err
 	}
-	if c.ClusterMetadata == nil {
-		return fmt.Errorf("ClusterMetadata cannot be empty")
-	}
-	if !c.ClusterMetadata.EnableGlobalDomain {
-		log.Println("[WARN] Local domain is now deprecated. Please update config to enable global domain(ClusterMetadata->EnableGlobalDomain)." +
-			"Global domain of single cluster has zero overhead, but only advantages for future migration and fail over. Please check Cadence documentation for more details.")
+	if err := c.ClusterGroupMetadata.Validate(); err != nil {
+		return err
 	}
 	if err := c.Archival.Validate(&c.DomainDefaults.Archival); err != nil {
 		return err
@@ -492,37 +454,22 @@ func (c *Config) validate() error {
 	return c.Authorization.Validate()
 }
 
-func (c *Config) fillDefaults() error {
-	// filling default encodingType/decodingTypes for SQL persistence
-	for k, store := range c.Persistence.DataStores {
-		if store.SQL != nil {
-			if store.SQL.EncodingType == "" {
-				store.SQL.EncodingType = string(common.EncodingTypeThriftRW)
-			}
-			if len(store.SQL.DecodingTypes) == 0 {
-				store.SQL.DecodingTypes = []string{
-					string(common.EncodingTypeThriftRW),
-				}
-			}
-			c.Persistence.DataStores[k] = store
-		}
+func (c *Config) fillDefaults() {
+	c.Persistence.FillDefaults()
+
+	// TODO: remove this after 0.23 and mention a breaking change in config.
+	if c.ClusterGroupMetadata == nil && c.ClusterMetadata != nil {
+		c.ClusterGroupMetadata = c.ClusterMetadata
+		log.Println("[WARN] clusterMetadata config is deprecated. Please replace it with clusterGroupMetadata.")
 	}
 
-	for name, cluster := range c.ClusterMetadata.ClusterInformation {
-		if cluster.RPCName == "" {
-			// filling RPCName with a default value if empty
-			cluster.RPCName = "cadence-frontend"
-			c.ClusterMetadata.ClusterInformation[name] = cluster
-		}
-	}
+	c.ClusterGroupMetadata.FillDefaults()
 
 	// filling publicClient with current cluster's RPC address if empty
-	if c.PublicClient.HostPort == "" {
-		name := c.ClusterMetadata.CurrentClusterName
-		c.PublicClient.HostPort = c.ClusterMetadata.ClusterInformation[name].RPCAddress
+	if c.PublicClient.HostPort == "" && c.ClusterGroupMetadata != nil {
+		name := c.ClusterGroupMetadata.CurrentClusterName
+		c.PublicClient.HostPort = c.ClusterGroupMetadata.ClusterGroup[name].RPCAddress
 	}
-
-	return nil
 }
 
 // String converts the config object into a string

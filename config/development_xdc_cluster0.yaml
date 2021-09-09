@@ -7,88 +7,91 @@ persistence:
       nosql:
         pluginName: "cassandra"
         hosts: "127.0.0.1"
-        keyspace: "cadence_other"
+        keyspace: "cadence_cluster0"
     cass-visibility:
       nosql:
         pluginName: "cassandra"
         hosts: "127.0.0.1"
-        keyspace: "cadence_visibility_other"
+        keyspace: "cadence_visibility_cluster0"
 
 ringpop:
-  name: cadence_other
+  name: cadence_cluster0
   bootstrapMode: hosts
-  bootstrapHosts: [ "127.0.0.1:9933", "127.0.0.1:9934", "127.0.0.1:9935", "127.0.0.1:9940" ]
+  bootstrapHosts: [ "127.0.0.1:7933", "127.0.0.1:7934", "127.0.0.1:7935", "127.0.0.1:7940" ]
   maxJoinDuration: 30s
 
 services:
   frontend:
     rpc:
-      port: 9933
-      grpcPort: 9833
+      port: 7933
+      grpcPort: 7833
       bindOnLocalHost: true
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
-        prefix: "cadence_other"
+        prefix: "cadence_cluster0"
     pprof:
-      port: 9936
+      port: 7936
 
   matching:
     rpc:
-      port: 9935
-      grpcPort: 9835
+      port: 7935
+      grpcPort: 7835
       bindOnLocalHost: true
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
-        prefix: "cadence_other"
+        prefix: "cadence_cluster0"
     pprof:
-      port: 9938
+      port: 7938
 
   history:
     rpc:
-      port: 9934
-      grpcPort: 9834
+      port: 7934
+      grpcPort: 7834
       bindOnLocalHost: true
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
-        prefix: "cadence_other"
+        prefix: "cadence_cluster0"
     pprof:
-      port: 9937
+      port: 7937
 
   worker:
     rpc:
-      port: 9940
+      port: 7940
       bindOnLocalHost: true
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
-        prefix: "cadence_other"
+        prefix: "cadence_cluster0"
     pprof:
-      port: 9941
+      port: 7941
 
-clusterMetadata:
+clusterGroupMetadata:
   enableGlobalDomain: true
   failoverVersionIncrement: 10
-  primaryClusterName: "active"
-  currentClusterName: "other"
-  clusterInformation:
-    active:
+  primaryClusterName: "cluster0"
+  currentClusterName: "cluster0"
+  clusterGroup:
+    cluster0:
       enabled: true
       initialFailoverVersion: 1
       rpcName: "cadence-frontend"
-      rpcAddress: "localhost:7933" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
-    standby:
+      rpcAddress: "localhost:7833" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
+      rpcTransport: "grpc"
+    cluster1:
       enabled: true
       initialFailoverVersion: 0
       rpcName: "cadence-frontend"
-      rpcAddress: "localhost:8933" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
-    other:
+      rpcAddress: "localhost:8833" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
+      rpcTransport: "grpc"
+    cluster2:
       enabled: true
       initialFailoverVersion: 2
       rpcName: "cadence-frontend"
-      rpcAddress: "localhost:9933" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
+      rpcAddress: "localhost:9833" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
+      rpcTransport: "grpc"
 
 dcRedirectionPolicy:
   policy: "selected-apis-forwarding"

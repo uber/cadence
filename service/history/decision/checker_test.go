@@ -97,6 +97,7 @@ func (s *attrValidatorSuite) SetupTest() {
 		ActivityMaxScheduleToStartTimeoutForRetry: dynamicconfig.GetDurationPropertyFnFilteredByDomain(
 			time.Duration(s.testActivityMaxScheduleToStartTimeoutForRetryInSeconds) * time.Second,
 		),
+		EnableCrossClusterOperations: dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
 	}
 	s.validator = newAttrValidator(
 		s.mockDomainCache,
@@ -478,7 +479,14 @@ func (s *attrValidatorSuite) TestValidateCrossDomainCall_GlobalToEffectiveLocal(
 	s.IsType(&types.BadRequestError{}, err)
 }
 
-func (s *attrValidatorSuite) TestValidateCrossDomainCall_GlobalToGlobal_DiffDomain() {
+func (s *attrValidatorSuite) TestValidateCrossDomainCall_GlobalToGlobal_SameDomain() {
+	targetDomainID := s.testDomainID
+
+	err := s.validator.validateCrossDomainCall(s.testDomainID, targetDomainID)
+	s.Nil(err)
+}
+
+func (s *attrValidatorSuite) TestValidateCrossDomainCall_GlobalToGlobal_DiffDomain_SameCluster() {
 	domainEntry := cache.NewGlobalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: s.testDomainID},
 		nil,
@@ -506,18 +514,52 @@ func (s *attrValidatorSuite) TestValidateCrossDomainCall_GlobalToGlobal_DiffDoma
 		nil,
 	)
 
+	s.mockDomainCache.EXPECT().GetDomainByID(s.testDomainID).Return(domainEntry, nil).Times(2)
+	s.mockDomainCache.EXPECT().GetDomainByID(s.testTargetDomainID).Return(targetDomainEntry, nil).Times(2)
+
+	err := s.validator.validateCrossDomainCall(s.testDomainID, s.testTargetDomainID)
+	s.IsType(&types.BadRequestError{}, err)
+
+	s.validator.config.EnableCrossClusterOperations = dynamicconfig.GetBoolPropertyFnFilteredByDomain(true)
+	err = s.validator.validateCrossDomainCall(s.testDomainID, s.testTargetDomainID)
+	s.Nil(err)
+}
+
+func (s *attrValidatorSuite) TestValidateCrossDomainCall_GlobalToGlobal_DiffDomain_DiffCluster() {
+	domainEntry := cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{Name: s.testDomainID},
+		nil,
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestAlternativeClusterName},
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: "cluster name for s.testDomainID"},
+			},
+		},
+		1234,
+		nil,
+	)
+	targetDomainEntry := cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{Name: s.testTargetDomainID},
+		nil,
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: cluster.TestAlternativeClusterName},
+				{ClusterName: "cluster name for s.testTargetDomainID"},
+			},
+		},
+		1234,
+		nil,
+	)
+
 	s.mockDomainCache.EXPECT().GetDomainByID(s.testDomainID).Return(domainEntry, nil).Times(1)
 	s.mockDomainCache.EXPECT().GetDomainByID(s.testTargetDomainID).Return(targetDomainEntry, nil).Times(1)
 
 	err := s.validator.validateCrossDomainCall(s.testDomainID, s.testTargetDomainID)
 	s.IsType(&types.BadRequestError{}, err)
-}
-
-func (s *attrValidatorSuite) TestValidateCrossDomainCall_GlobalToGlobal_SameDomain() {
-	targetDomainID := s.testDomainID
-
-	err := s.validator.validateCrossDomainCall(s.testDomainID, targetDomainID)
-	s.Nil(err)
 }
 
 func (s *attrValidatorSuite) TestValidateTaskListName() {

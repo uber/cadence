@@ -133,6 +133,7 @@ func newCrossClusterTaskProcessor(
 		taskFetcher: taskFetcher,
 		redispatcher: NewRedispatcher(
 			taskProcessor,
+			shard.GetTimeSource(),
 			&RedispatcherOptions{
 				TaskRedispatchInterval:                  options.TaskRedispatchInterval,
 				TaskRedispatchIntervalJitterCoefficient: options.TimerJitterCoefficient,
@@ -229,6 +230,7 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 				p.shard,
 				taskRequest,
 				p.taskExecutor,
+				p.taskProcessor,
 				p.logger,
 				func(t Task) {
 					// the only possible error is processor shutdown which is safe to discard

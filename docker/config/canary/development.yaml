@@ -1,0 +1,11 @@
+log:
+  stdout: true
+  level: info
+
+canary:
+  domains: ["cadence-canary"]
+  excludes: ["workflow.searchAttributes", "workflow.batch", "workflow.archival.visibility"]
+
+cadence:
+  service: "cadence-frontend"
+  host: "host.docker.internal:7933" # see https://docs.docker.com/desktop/mac/networking/

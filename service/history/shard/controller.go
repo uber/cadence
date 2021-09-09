@@ -28,6 +28,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -42,6 +43,10 @@ import (
 
 const (
 	shardControllerMembershipUpdateListenerName = "ShardController"
+)
+
+var (
+	errShardIDOutOfBoundary = &workflow.BadRequestError{Message: "shard ID is out of boundary"}
 )
 
 type (
@@ -255,6 +260,15 @@ func (c *controller) shardClosedCallback(shardID int, shardItem *historyShardsIt
 }
 
 func (c *controller) getOrCreateHistoryShardItem(shardID int) (*historyShardsItem, error) {
+	if shardID >= c.config.NumberOfShards || shardID < 0 { // zero based shard ID
+		c.logger.Error(fmt.Sprintf("Received shard ID: %v is larger than supported shard number %v",
+			shardID,
+			c.config.NumberOfShards,
+		),
+		)
+		return nil, errShardIDOutOfBoundary
+	}
+
 	c.RLock()
 	if item, ok := c.historyShards[shardID]; ok {
 		if item.isValid() {

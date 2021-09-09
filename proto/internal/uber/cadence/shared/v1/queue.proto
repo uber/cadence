@@ -27,6 +27,7 @@ option go_package = "github.com/uber/cadence/.gen/proto/shared/v1;sharedv1";
 import "google/protobuf/timestamp.proto";
 import "uber/cadence/api/v1/common.proto";
 import "uber/cadence/api/v1/history.proto";
+import "uber/cadence/api/v1/workflow.proto";
 
 enum TaskType {
   TASK_TYPE_INVALID = 0;
@@ -119,6 +120,20 @@ message CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes {
 message CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes {
 }
 
+message AppyParentClosePolicyAttributes {
+  string child_domain_id = 1;
+  string child_workflow_id = 2;
+  string child_run_id = 3;
+  api.v1.ParentClosePolicy parent_close_policy = 4;
+}
+
+message CrossClusterApplyParentClosePolicyRequestAttributes {
+  repeated AppyParentClosePolicyAttributes appy_parent_close_policy_attributes = 1;
+}
+
+message CrossClusterApplyParentClosePolicyResponseAttributes {
+}
+
 message CrossClusterTaskRequest {
   CrossClusterTaskInfo task_info = 1;
   oneof attributes {
@@ -126,18 +141,21 @@ message CrossClusterTaskRequest {
     CrossClusterCancelExecutionRequestAttributes cancelExecutionAttributes = 3;
     CrossClusterSignalExecutionRequestAttributes signalExecutionAttributes = 4;
     CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes recordChildWorkflowExecutionCompleteRequestAttributes = 5;
+    CrossClusterApplyParentClosePolicyRequestAttributes applyParentClosePolicyRequestAttributes = 6;
   }
 }
 
 message CrossClusterTaskResponse {
   int64 task_id = 1;
   CrossClusterTaskType task_type = 2;
-  CrossClusterTaskFailedCause failed_cause = 3;
+  int32 task_state = 3;
+  CrossClusterTaskFailedCause failed_cause = 4;
   oneof attributes {
-    CrossClusterStartChildExecutionResponseAttributes startChildExecutionAttributes = 4;
-    CrossClusterCancelExecutionResponseAttributes cancelExecutionAttributes = 5;
-    CrossClusterSignalExecutionResponseAttributes signalExecutionAttributes = 6;
-    CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes recordChildWorkflowExecutionCompleteRequestAttributes = 7;
+    CrossClusterStartChildExecutionResponseAttributes startChildExecutionAttributes = 5;
+    CrossClusterCancelExecutionResponseAttributes cancelExecutionAttributes = 6;
+    CrossClusterSignalExecutionResponseAttributes signalExecutionAttributes = 7;
+    CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes recordChildWorkflowExecutionCompleteRequestAttributes = 8;
+    CrossClusterApplyParentClosePolicyResponseAttributes applyParentClosePolicyResponseAttributes = 9;
   }
 }
 

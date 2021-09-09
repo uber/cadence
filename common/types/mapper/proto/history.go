@@ -249,6 +249,44 @@ func ToHistoryGetDLQReplicationMessagesResponse(t *historyv1.GetDLQReplicationMe
 	}
 }
 
+func FromHistoryGetFailoverInfoRequest(t *types.GetFailoverInfoRequest) *historyv1.GetFailoverInfoRequest {
+	if t == nil {
+		return nil
+	}
+	return &historyv1.GetFailoverInfoRequest{
+		DomainId: t.GetDomainID(),
+	}
+}
+
+func ToHistoryGetFailoverInfoRequest(t *historyv1.GetFailoverInfoRequest) *types.GetFailoverInfoRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetFailoverInfoRequest{
+		DomainID: t.GetDomainId(),
+	}
+}
+
+func FromHistoryGetFailoverInfoResponse(t *types.GetFailoverInfoResponse) *historyv1.GetFailoverInfoResponse {
+	if t == nil {
+		return nil
+	}
+	return &historyv1.GetFailoverInfoResponse{
+		CompletedShardCount: t.GetCompletedShardCount(),
+		PendingShards:       t.GetPendingShards(),
+	}
+}
+
+func ToHistoryGetFailoverInfoResponse(t *historyv1.GetFailoverInfoResponse) *types.GetFailoverInfoResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.GetFailoverInfoResponse{
+		CompletedShardCount: t.GetCompletedShardCount(),
+		PendingShards:       t.GetPendingShards(),
+	}
+}
+
 func FromHistoryGetMutableStateRequest(t *types.GetMutableStateRequest) *historyv1.GetMutableStateRequest {
 	if t == nil {
 		return nil

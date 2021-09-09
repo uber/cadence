@@ -1,0 +1,12 @@
+log:
+  stdout: true
+  level: info
+
+bench:
+  name: "cadence-bench"
+  domains: ["cadence-bench", "cadence-bench-sync", "cadence-bench-batch"]
+  numTaskLists: 3
+
+cadence:
+  service: "cadence-frontend"
+  host: "host.docker.internal:7933" # see https://docs.docker.com/desktop/mac/networking/

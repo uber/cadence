@@ -60,7 +60,7 @@ type (
 		domainManager persistence.DomainManager
 		domainCache   cache.DomainCache
 		timeSource    clock.TimeSource
-		metrics       metrics.Client
+		scope         metrics.Scope
 		logger        log.Logger
 	}
 )
@@ -74,7 +74,7 @@ func NewFailoverWatcher(
 	timeSource clock.TimeSource,
 	refreshInterval dynamicconfig.DurationPropertyFn,
 	refreshJitter dynamicconfig.FloatPropertyFn,
-	metrics metrics.Client,
+	metricsClient metrics.Client,
 	logger log.Logger,
 ) FailoverWatcher {
 
@@ -92,7 +92,7 @@ func NewFailoverWatcher(
 		domainCache:     domainCache,
 		domainManager:   domainManager,
 		timeSource:      timeSource,
-		metrics:         metrics,
+		scope:           metricsClient.Scope(metrics.DomainFailoverScope),
 		logger:          logger,
 	}
 }
@@ -162,9 +162,10 @@ func (p *failoverWatcherImpl) handleFailoverTimeout(
 			domain.GetFailoverVersion(),
 			p.retryPolicy,
 		); err != nil {
-			p.metrics.IncCounter(metrics.DomainFailoverScope, metrics.CadenceFailures)
-			p.logger.Error("Failed to update pending-active domain to active.", tag.WorkflowDomainID(domainID), tag.Error(err))
+			p.logger.Error("Failed to update pending-active domain to active", tag.WorkflowDomainID(domainID), tag.Error(err))
+			return
 		}
+		p.scope.Tagged(metrics.DomainTag(domain.GetInfo().Name)).IncCounter(metrics.GracefulFailoverFailure)
 	}
 }
 

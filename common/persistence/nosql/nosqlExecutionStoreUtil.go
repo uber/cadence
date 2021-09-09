@@ -351,6 +351,9 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 		case p.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
 			targetCluster = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetCluster
 
+		case p.CrossClusterTaskTypeApplyParentPolicy:
+			targetCluster = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetCluster
+
 		default:
 			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("Unknown cross-cluster task type: %v", task.GetType()),

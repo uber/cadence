@@ -804,6 +804,171 @@ func (m *CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes) XXX
 
 var xxx_messageInfo_CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes proto.InternalMessageInfo
 
+type AppyParentClosePolicyAttributes struct {
+	ChildDomainId        string               `protobuf:"bytes,1,opt,name=child_domain_id,json=childDomainId,proto3" json:"child_domain_id,omitempty"`
+	ChildWorkflowId      string               `protobuf:"bytes,2,opt,name=child_workflow_id,json=childWorkflowId,proto3" json:"child_workflow_id,omitempty"`
+	ChildRunId           string               `protobuf:"bytes,3,opt,name=child_run_id,json=childRunId,proto3" json:"child_run_id,omitempty"`
+	ParentClosePolicy    v1.ParentClosePolicy `protobuf:"varint,4,opt,name=parent_close_policy,json=parentClosePolicy,proto3,enum=uber.cadence.api.v1.ParentClosePolicy" json:"parent_close_policy,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
+}
+
+func (m *AppyParentClosePolicyAttributes) Reset()         { *m = AppyParentClosePolicyAttributes{} }
+func (m *AppyParentClosePolicyAttributes) String() string { return proto.CompactTextString(m) }
+func (*AppyParentClosePolicyAttributes) ProtoMessage()    {}
+func (*AppyParentClosePolicyAttributes) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8958fa454fc8f819, []int{9}
+}
+func (m *AppyParentClosePolicyAttributes) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AppyParentClosePolicyAttributes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AppyParentClosePolicyAttributes.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AppyParentClosePolicyAttributes) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AppyParentClosePolicyAttributes.Merge(m, src)
+}
+func (m *AppyParentClosePolicyAttributes) XXX_Size() int {
+	return m.Size()
+}
+func (m *AppyParentClosePolicyAttributes) XXX_DiscardUnknown() {
+	xxx_messageInfo_AppyParentClosePolicyAttributes.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AppyParentClosePolicyAttributes proto.InternalMessageInfo
+
+func (m *AppyParentClosePolicyAttributes) GetChildDomainId() string {
+	if m != nil {
+		return m.ChildDomainId
+	}
+	return ""
+}
+
+func (m *AppyParentClosePolicyAttributes) GetChildWorkflowId() string {
+	if m != nil {
+		return m.ChildWorkflowId
+	}
+	return ""
+}
+
+func (m *AppyParentClosePolicyAttributes) GetChildRunId() string {
+	if m != nil {
+		return m.ChildRunId
+	}
+	return ""
+}
+
+func (m *AppyParentClosePolicyAttributes) GetParentClosePolicy() v1.ParentClosePolicy {
+	if m != nil {
+		return m.ParentClosePolicy
+	}
+	return v1.ParentClosePolicy_PARENT_CLOSE_POLICY_INVALID
+}
+
+type CrossClusterApplyParentClosePolicyRequestAttributes struct {
+	AppyParentClosePolicyAttributes []*AppyParentClosePolicyAttributes `protobuf:"bytes,1,rep,name=appy_parent_close_policy_attributes,json=appyParentClosePolicyAttributes,proto3" json:"appy_parent_close_policy_attributes,omitempty"`
+	XXX_NoUnkeyedLiteral            struct{}                           `json:"-"`
+	XXX_unrecognized                []byte                             `json:"-"`
+	XXX_sizecache                   int32                              `json:"-"`
+}
+
+func (m *CrossClusterApplyParentClosePolicyRequestAttributes) Reset() {
+	*m = CrossClusterApplyParentClosePolicyRequestAttributes{}
+}
+func (m *CrossClusterApplyParentClosePolicyRequestAttributes) String() string {
+	return proto.CompactTextString(m)
+}
+func (*CrossClusterApplyParentClosePolicyRequestAttributes) ProtoMessage() {}
+func (*CrossClusterApplyParentClosePolicyRequestAttributes) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8958fa454fc8f819, []int{10}
+}
+func (m *CrossClusterApplyParentClosePolicyRequestAttributes) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CrossClusterApplyParentClosePolicyRequestAttributes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CrossClusterApplyParentClosePolicyRequestAttributes.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CrossClusterApplyParentClosePolicyRequestAttributes) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CrossClusterApplyParentClosePolicyRequestAttributes.Merge(m, src)
+}
+func (m *CrossClusterApplyParentClosePolicyRequestAttributes) XXX_Size() int {
+	return m.Size()
+}
+func (m *CrossClusterApplyParentClosePolicyRequestAttributes) XXX_DiscardUnknown() {
+	xxx_messageInfo_CrossClusterApplyParentClosePolicyRequestAttributes.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CrossClusterApplyParentClosePolicyRequestAttributes proto.InternalMessageInfo
+
+func (m *CrossClusterApplyParentClosePolicyRequestAttributes) GetAppyParentClosePolicyAttributes() []*AppyParentClosePolicyAttributes {
+	if m != nil {
+		return m.AppyParentClosePolicyAttributes
+	}
+	return nil
+}
+
+type CrossClusterApplyParentClosePolicyResponseAttributes struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CrossClusterApplyParentClosePolicyResponseAttributes) Reset() {
+	*m = CrossClusterApplyParentClosePolicyResponseAttributes{}
+}
+func (m *CrossClusterApplyParentClosePolicyResponseAttributes) String() string {
+	return proto.CompactTextString(m)
+}
+func (*CrossClusterApplyParentClosePolicyResponseAttributes) ProtoMessage() {}
+func (*CrossClusterApplyParentClosePolicyResponseAttributes) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8958fa454fc8f819, []int{11}
+}
+func (m *CrossClusterApplyParentClosePolicyResponseAttributes) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CrossClusterApplyParentClosePolicyResponseAttributes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CrossClusterApplyParentClosePolicyResponseAttributes.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CrossClusterApplyParentClosePolicyResponseAttributes) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CrossClusterApplyParentClosePolicyResponseAttributes.Merge(m, src)
+}
+func (m *CrossClusterApplyParentClosePolicyResponseAttributes) XXX_Size() int {
+	return m.Size()
+}
+func (m *CrossClusterApplyParentClosePolicyResponseAttributes) XXX_DiscardUnknown() {
+	xxx_messageInfo_CrossClusterApplyParentClosePolicyResponseAttributes.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CrossClusterApplyParentClosePolicyResponseAttributes proto.InternalMessageInfo
+
 type CrossClusterTaskRequest struct {
 	TaskInfo *CrossClusterTaskInfo `protobuf:"bytes,1,opt,name=task_info,json=taskInfo,proto3" json:"task_info,omitempty"`
 	// Types that are valid to be assigned to Attributes:
@@ -811,6 +976,7 @@ type CrossClusterTaskRequest struct {
 	//	*CrossClusterTaskRequest_CancelExecutionAttributes
 	//	*CrossClusterTaskRequest_SignalExecutionAttributes
 	//	*CrossClusterTaskRequest_RecordChildWorkflowExecutionCompleteRequestAttributes
+	//	*CrossClusterTaskRequest_ApplyParentClosePolicyRequestAttributes
 	Attributes           isCrossClusterTaskRequest_Attributes `protobuf_oneof:"attributes"`
 	XXX_NoUnkeyedLiteral struct{}                             `json:"-"`
 	XXX_unrecognized     []byte                               `json:"-"`
@@ -821,7 +987,7 @@ func (m *CrossClusterTaskRequest) Reset()         { *m = CrossClusterTaskRequest
 func (m *CrossClusterTaskRequest) String() string { return proto.CompactTextString(m) }
 func (*CrossClusterTaskRequest) ProtoMessage()    {}
 func (*CrossClusterTaskRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8958fa454fc8f819, []int{9}
+	return fileDescriptor_8958fa454fc8f819, []int{12}
 }
 func (m *CrossClusterTaskRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -868,12 +1034,17 @@ type CrossClusterTaskRequest_SignalExecutionAttributes struct {
 type CrossClusterTaskRequest_RecordChildWorkflowExecutionCompleteRequestAttributes struct {
 	RecordChildWorkflowExecutionCompleteRequestAttributes *CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes `protobuf:"bytes,5,opt,name=recordChildWorkflowExecutionCompleteRequestAttributes,proto3,oneof" json:"recordChildWorkflowExecutionCompleteRequestAttributes,omitempty"`
 }
+type CrossClusterTaskRequest_ApplyParentClosePolicyRequestAttributes struct {
+	ApplyParentClosePolicyRequestAttributes *CrossClusterApplyParentClosePolicyRequestAttributes `protobuf:"bytes,6,opt,name=applyParentClosePolicyRequestAttributes,proto3,oneof" json:"applyParentClosePolicyRequestAttributes,omitempty"`
+}
 
 func (*CrossClusterTaskRequest_StartChildExecutionAttributes) isCrossClusterTaskRequest_Attributes() {
 }
 func (*CrossClusterTaskRequest_CancelExecutionAttributes) isCrossClusterTaskRequest_Attributes() {}
 func (*CrossClusterTaskRequest_SignalExecutionAttributes) isCrossClusterTaskRequest_Attributes() {}
 func (*CrossClusterTaskRequest_RecordChildWorkflowExecutionCompleteRequestAttributes) isCrossClusterTaskRequest_Attributes() {
+}
+func (*CrossClusterTaskRequest_ApplyParentClosePolicyRequestAttributes) isCrossClusterTaskRequest_Attributes() {
 }
 
 func (m *CrossClusterTaskRequest) GetAttributes() isCrossClusterTaskRequest_Attributes {
@@ -918,6 +1089,13 @@ func (m *CrossClusterTaskRequest) GetRecordChildWorkflowExecutionCompleteRequest
 	return nil
 }
 
+func (m *CrossClusterTaskRequest) GetApplyParentClosePolicyRequestAttributes() *CrossClusterApplyParentClosePolicyRequestAttributes {
+	if x, ok := m.GetAttributes().(*CrossClusterTaskRequest_ApplyParentClosePolicyRequestAttributes); ok {
+		return x.ApplyParentClosePolicyRequestAttributes
+	}
+	return nil
+}
+
 // XXX_OneofWrappers is for the internal use of the proto package.
 func (*CrossClusterTaskRequest) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
@@ -925,18 +1103,21 @@ func (*CrossClusterTaskRequest) XXX_OneofWrappers() []interface{} {
 		(*CrossClusterTaskRequest_CancelExecutionAttributes)(nil),
 		(*CrossClusterTaskRequest_SignalExecutionAttributes)(nil),
 		(*CrossClusterTaskRequest_RecordChildWorkflowExecutionCompleteRequestAttributes)(nil),
+		(*CrossClusterTaskRequest_ApplyParentClosePolicyRequestAttributes)(nil),
 	}
 }
 
 type CrossClusterTaskResponse struct {
 	TaskId      int64                       `protobuf:"varint,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	TaskType    CrossClusterTaskType        `protobuf:"varint,2,opt,name=task_type,json=taskType,proto3,enum=uber.cadence.shared.v1.CrossClusterTaskType" json:"task_type,omitempty"`
-	FailedCause CrossClusterTaskFailedCause `protobuf:"varint,3,opt,name=failed_cause,json=failedCause,proto3,enum=uber.cadence.shared.v1.CrossClusterTaskFailedCause" json:"failed_cause,omitempty"`
+	TaskState   int32                       `protobuf:"varint,3,opt,name=task_state,json=taskState,proto3" json:"task_state,omitempty"`
+	FailedCause CrossClusterTaskFailedCause `protobuf:"varint,4,opt,name=failed_cause,json=failedCause,proto3,enum=uber.cadence.shared.v1.CrossClusterTaskFailedCause" json:"failed_cause,omitempty"`
 	// Types that are valid to be assigned to Attributes:
 	//	*CrossClusterTaskResponse_StartChildExecutionAttributes
 	//	*CrossClusterTaskResponse_CancelExecutionAttributes
 	//	*CrossClusterTaskResponse_SignalExecutionAttributes
 	//	*CrossClusterTaskResponse_RecordChildWorkflowExecutionCompleteRequestAttributes
+	//	*CrossClusterTaskResponse_ApplyParentClosePolicyResponseAttributes
 	Attributes           isCrossClusterTaskResponse_Attributes `protobuf_oneof:"attributes"`
 	XXX_NoUnkeyedLiteral struct{}                              `json:"-"`
 	XXX_unrecognized     []byte                                `json:"-"`
@@ -947,7 +1128,7 @@ func (m *CrossClusterTaskResponse) Reset()         { *m = CrossClusterTaskRespon
 func (m *CrossClusterTaskResponse) String() string { return proto.CompactTextString(m) }
 func (*CrossClusterTaskResponse) ProtoMessage()    {}
 func (*CrossClusterTaskResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8958fa454fc8f819, []int{10}
+	return fileDescriptor_8958fa454fc8f819, []int{13}
 }
 func (m *CrossClusterTaskResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -983,16 +1164,19 @@ type isCrossClusterTaskResponse_Attributes interface {
 }
 
 type CrossClusterTaskResponse_StartChildExecutionAttributes struct {
-	StartChildExecutionAttributes *CrossClusterStartChildExecutionResponseAttributes `protobuf:"bytes,4,opt,name=startChildExecutionAttributes,proto3,oneof" json:"startChildExecutionAttributes,omitempty"`
+	StartChildExecutionAttributes *CrossClusterStartChildExecutionResponseAttributes `protobuf:"bytes,5,opt,name=startChildExecutionAttributes,proto3,oneof" json:"startChildExecutionAttributes,omitempty"`
 }
 type CrossClusterTaskResponse_CancelExecutionAttributes struct {
-	CancelExecutionAttributes *CrossClusterCancelExecutionResponseAttributes `protobuf:"bytes,5,opt,name=cancelExecutionAttributes,proto3,oneof" json:"cancelExecutionAttributes,omitempty"`
+	CancelExecutionAttributes *CrossClusterCancelExecutionResponseAttributes `protobuf:"bytes,6,opt,name=cancelExecutionAttributes,proto3,oneof" json:"cancelExecutionAttributes,omitempty"`
 }
 type CrossClusterTaskResponse_SignalExecutionAttributes struct {
-	SignalExecutionAttributes *CrossClusterSignalExecutionResponseAttributes `protobuf:"bytes,6,opt,name=signalExecutionAttributes,proto3,oneof" json:"signalExecutionAttributes,omitempty"`
+	SignalExecutionAttributes *CrossClusterSignalExecutionResponseAttributes `protobuf:"bytes,7,opt,name=signalExecutionAttributes,proto3,oneof" json:"signalExecutionAttributes,omitempty"`
 }
 type CrossClusterTaskResponse_RecordChildWorkflowExecutionCompleteRequestAttributes struct {
-	RecordChildWorkflowExecutionCompleteRequestAttributes *CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes `protobuf:"bytes,7,opt,name=recordChildWorkflowExecutionCompleteRequestAttributes,proto3,oneof" json:"recordChildWorkflowExecutionCompleteRequestAttributes,omitempty"`
+	RecordChildWorkflowExecutionCompleteRequestAttributes *CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes `protobuf:"bytes,8,opt,name=recordChildWorkflowExecutionCompleteRequestAttributes,proto3,oneof" json:"recordChildWorkflowExecutionCompleteRequestAttributes,omitempty"`
+}
+type CrossClusterTaskResponse_ApplyParentClosePolicyResponseAttributes struct {
+	ApplyParentClosePolicyResponseAttributes *CrossClusterApplyParentClosePolicyResponseAttributes `protobuf:"bytes,9,opt,name=applyParentClosePolicyResponseAttributes,proto3,oneof" json:"applyParentClosePolicyResponseAttributes,omitempty"`
 }
 
 func (*CrossClusterTaskResponse_StartChildExecutionAttributes) isCrossClusterTaskResponse_Attributes() {
@@ -1000,6 +1184,8 @@ func (*CrossClusterTaskResponse_StartChildExecutionAttributes) isCrossClusterTas
 func (*CrossClusterTaskResponse_CancelExecutionAttributes) isCrossClusterTaskResponse_Attributes() {}
 func (*CrossClusterTaskResponse_SignalExecutionAttributes) isCrossClusterTaskResponse_Attributes() {}
 func (*CrossClusterTaskResponse_RecordChildWorkflowExecutionCompleteRequestAttributes) isCrossClusterTaskResponse_Attributes() {
+}
+func (*CrossClusterTaskResponse_ApplyParentClosePolicyResponseAttributes) isCrossClusterTaskResponse_Attributes() {
 }
 
 func (m *CrossClusterTaskResponse) GetAttributes() isCrossClusterTaskResponse_Attributes {
@@ -1021,6 +1207,13 @@ func (m *CrossClusterTaskResponse) GetTaskType() CrossClusterTaskType {
 		return m.TaskType
 	}
 	return CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_INVALID
+}
+
+func (m *CrossClusterTaskResponse) GetTaskState() int32 {
+	if m != nil {
+		return m.TaskState
+	}
+	return 0
 }
 
 func (m *CrossClusterTaskResponse) GetFailedCause() CrossClusterTaskFailedCause {
@@ -1058,6 +1251,13 @@ func (m *CrossClusterTaskResponse) GetRecordChildWorkflowExecutionCompleteReques
 	return nil
 }
 
+func (m *CrossClusterTaskResponse) GetApplyParentClosePolicyResponseAttributes() *CrossClusterApplyParentClosePolicyResponseAttributes {
+	if x, ok := m.GetAttributes().(*CrossClusterTaskResponse_ApplyParentClosePolicyResponseAttributes); ok {
+		return x.ApplyParentClosePolicyResponseAttributes
+	}
+	return nil
+}
+
 // XXX_OneofWrappers is for the internal use of the proto package.
 func (*CrossClusterTaskResponse) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
@@ -1065,6 +1265,7 @@ func (*CrossClusterTaskResponse) XXX_OneofWrappers() []interface{} {
 		(*CrossClusterTaskResponse_CancelExecutionAttributes)(nil),
 		(*CrossClusterTaskResponse_SignalExecutionAttributes)(nil),
 		(*CrossClusterTaskResponse_RecordChildWorkflowExecutionCompleteRequestAttributes)(nil),
+		(*CrossClusterTaskResponse_ApplyParentClosePolicyResponseAttributes)(nil),
 	}
 }
 
@@ -1079,7 +1280,7 @@ func (m *CrossClusterTaskRequests) Reset()         { *m = CrossClusterTaskReques
 func (m *CrossClusterTaskRequests) String() string { return proto.CompactTextString(m) }
 func (*CrossClusterTaskRequests) ProtoMessage()    {}
 func (*CrossClusterTaskRequests) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8958fa454fc8f819, []int{11}
+	return fileDescriptor_8958fa454fc8f819, []int{14}
 }
 func (m *CrossClusterTaskRequests) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1129,6 +1330,9 @@ func init() {
 	proto.RegisterType((*CrossClusterSignalExecutionResponseAttributes)(nil), "uber.cadence.shared.v1.CrossClusterSignalExecutionResponseAttributes")
 	proto.RegisterType((*CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes)(nil), "uber.cadence.shared.v1.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes")
 	proto.RegisterType((*CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes)(nil), "uber.cadence.shared.v1.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes")
+	proto.RegisterType((*AppyParentClosePolicyAttributes)(nil), "uber.cadence.shared.v1.AppyParentClosePolicyAttributes")
+	proto.RegisterType((*CrossClusterApplyParentClosePolicyRequestAttributes)(nil), "uber.cadence.shared.v1.CrossClusterApplyParentClosePolicyRequestAttributes")
+	proto.RegisterType((*CrossClusterApplyParentClosePolicyResponseAttributes)(nil), "uber.cadence.shared.v1.CrossClusterApplyParentClosePolicyResponseAttributes")
 	proto.RegisterType((*CrossClusterTaskRequest)(nil), "uber.cadence.shared.v1.CrossClusterTaskRequest")
 	proto.RegisterType((*CrossClusterTaskResponse)(nil), "uber.cadence.shared.v1.CrossClusterTaskResponse")
 	proto.RegisterType((*CrossClusterTaskRequests)(nil), "uber.cadence.shared.v1.CrossClusterTaskRequests")
@@ -1139,94 +1343,106 @@ func init() {
 }
 
 var fileDescriptor_8958fa454fc8f819 = []byte{
-	// 1383 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x58, 0xcd, 0x6e, 0xdb, 0xc6,
-	0x13, 0x37, 0x25, 0x5b, 0xb1, 0x47, 0xfe, 0x27, 0xcc, 0xe6, 0x9f, 0x58, 0x71, 0xea, 0x44, 0x51,
-	0x80, 0x44, 0x70, 0x1d, 0xaa, 0x72, 0x10, 0xb4, 0x68, 0x8b, 0x16, 0x34, 0x45, 0x5b, 0x6c, 0x14,
-	0xc9, 0x58, 0x52, 0x76, 0x9c, 0x0b, 0x41, 0x89, 0x6b, 0x9b, 0xb0, 0x44, 0x2a, 0xe4, 0xca, 0xa9,
-	0xee, 0x4d, 0xce, 0xed, 0x2b, 0xf4, 0x1d, 0x7a, 0xe8, 0x1b, 0x14, 0x05, 0x0a, 0xb4, 0x3d, 0xf4,
-	0x12, 0x14, 0x28, 0x72, 0xe9, 0x6b, 0x14, 0x5a, 0x52, 0x16, 0x25, 0x51, 0x1f, 0x76, 0x72, 0xe8,
-	0xa1, 0x37, 0x6b, 0xf6, 0x37, 0xb3, 0xbf, 0x99, 0xd9, 0xf9, 0x30, 0x21, 0xd3, 0xae, 0x11, 0x37,
-	0x57, 0x37, 0x4c, 0x62, 0xd7, 0x49, 0xce, 0x3b, 0x36, 0x5c, 0x62, 0xe6, 0x4e, 0xf3, 0xb9, 0x17,
-	0x6d, 0xd2, 0x26, 0x42, 0xcb, 0x75, 0xa8, 0x83, 0x6e, 0x74, 0x31, 0x42, 0x80, 0x11, 0x7c, 0x8c,
-	0x70, 0x9a, 0x5f, 0xbd, 0x73, 0xe4, 0x38, 0x47, 0x0d, 0x92, 0x63, 0xa8, 0x5a, 0xfb, 0x30, 0x47,
-	0xad, 0x26, 0xf1, 0xa8, 0xd1, 0x6c, 0xf9, 0x8a, 0xab, 0xe9, 0x01, 0xe3, 0x46, 0xcb, 0xea, 0x5a,
-	0xae, 0x3b, 0xcd, 0xa6, 0x63, 0x07, 0x88, 0xbb, 0x51, 0x88, 0x63, 0xcb, 0xa3, 0x8e, 0xdb, 0xf1,
-	0x21, 0x99, 0x37, 0x31, 0xf8, 0xbf, 0xe4, 0x3a, 0x9e, 0x27, 0x35, 0xda, 0x1e, 0x25, 0xae, 0x66,
-	0x78, 0x27, 0x8a, 0x7d, 0xe8, 0xa0, 0x5b, 0xb0, 0x64, 0x3a, 0x4d, 0xc3, 0xb2, 0x75, 0xcb, 0x4c,
-	0x71, 0x69, 0x2e, 0xbb, 0x84, 0x17, 0x7d, 0x81, 0x62, 0xa2, 0x2a, 0xa0, 0x97, 0x8e, 0x7b, 0x72,
-	0xd8, 0x70, 0x5e, 0xea, 0xe4, 0x6b, 0x52, 0x6f, 0x53, 0xcb, 0xb1, 0x53, 0xb1, 0x34, 0x97, 0x4d,
-	0x6e, 0xde, 0x17, 0x06, 0x1c, 0x32, 0x5a, 0x96, 0x70, 0x9a, 0x17, 0xf6, 0x03, 0xb8, 0xdc, 0x43,
-	0xe3, 0xab, 0x2f, 0x87, 0x45, 0x48, 0x81, 0x25, 0x6a, 0x78, 0x27, 0x3a, 0xed, 0xb4, 0x48, 0x2a,
-	0x9e, 0xe6, 0xb2, 0x97, 0x37, 0x37, 0x84, 0xe8, 0xf0, 0x08, 0xc3, 0xa4, 0xb5, 0x4e, 0x8b, 0xe0,
-	0x45, 0x1a, 0xfc, 0x85, 0xd6, 0x00, 0x98, 0x29, 0x8f, 0x1a, 0x94, 0xa4, 0xe6, 0xd3, 0x5c, 0x76,
-	0x01, 0x33, 0xe3, 0x6a, 0x57, 0x80, 0x56, 0xe0, 0x12, 0x3b, 0xb6, 0xcc, 0xd4, 0x42, 0x9a, 0xcb,
-	0xc6, 0x71, 0xa2, 0xfb, 0x53, 0x31, 0x51, 0x09, 0xae, 0x9d, 0x5a, 0x9e, 0x55, 0xb3, 0x1a, 0x16,
-	0xed, 0x68, 0xbd, 0x88, 0xa7, 0x12, 0xcc, 0xb5, 0x55, 0xc1, 0xcf, 0x89, 0xd0, 0xcb, 0x89, 0x70,
-	0x86, 0xc0, 0x51, 0x6a, 0x99, 0x3f, 0x62, 0xf0, 0x51, 0x98, 0xa8, 0x4a, 0x0d, 0x97, 0x4a, 0xc7,
-	0x56, 0xc3, 0xec, 0xc7, 0x81, 0xbc, 0x68, 0x13, 0x8f, 0x8a, 0x94, 0xba, 0x56, 0xad, 0x4d, 0x89,
-	0x87, 0xb2, 0xc0, 0x53, 0xc3, 0x3d, 0x22, 0x54, 0x1f, 0x4e, 0xc0, 0x65, 0x5f, 0x5e, 0xe8, 0xa5,
-	0x61, 0x0d, 0xc0, 0xf5, 0xd5, 0xbb, 0x98, 0x18, 0xc3, 0x2c, 0x05, 0x12, 0xc5, 0x44, 0x1b, 0x80,
-	0x2c, 0xdb, 0xa2, 0x96, 0x41, 0x89, 0xa9, 0x93, 0x53, 0x62, 0x33, 0x58, 0x9c, 0xf9, 0xcb, 0x9f,
-	0x9d, 0xc8, 0xdd, 0x03, 0xc5, 0x44, 0xaf, 0x39, 0x58, 0x1d, 0x86, 0x1b, 0x67, 0xac, 0x58, 0x08,
-	0x93, 0x9b, 0xc5, 0xc8, 0xe4, 0xf6, 0xdd, 0x1a, 0x49, 0xb3, 0x32, 0x70, 0x4d, 0xdf, 0x4b, 0x9c,
-	0xb2, 0xc6, 0x9c, 0xa0, 0x0c, 0xfc, 0x2f, 0xf0, 0xdf, 0x6d, 0xdb, 0xbd, 0x0c, 0x2d, 0xe1, 0xa4,
-	0x2f, 0xc4, 0x6d, 0x5b, 0x31, 0x33, 0x5f, 0x41, 0x7e, 0x6a, 0x5c, 0xbd, 0x96, 0x63, 0x7b, 0x24,
-	0x64, 0xf8, 0x3a, 0x24, 0x02, 0x8b, 0x7e, 0x38, 0x17, 0x5c, 0x66, 0xeb, 0xc7, 0x18, 0x6c, 0x84,
-	0x8d, 0x49, 0x86, 0x5d, 0x27, 0x8d, 0xf7, 0x92, 0xa0, 0x1a, 0xdc, 0x0c, 0x90, 0xef, 0x5c, 0x2e,
-	0x2b, 0xbe, 0xa1, 0x91, 0x83, 0xa1, 0x47, 0x10, 0x9f, 0xed, 0x11, 0xcc, 0x8f, 0x79, 0x04, 0x02,
-	0x5c, 0xab, 0x77, 0xc3, 0xd8, 0xe7, 0xeb, 0xd8, 0x8d, 0x0e, 0xcb, 0xc0, 0x22, 0xbe, 0x5a, 0x0f,
-	0xa7, 0xb8, 0x62, 0x37, 0x3a, 0x99, 0x1c, 0x3c, 0x9c, 0x18, 0xba, 0xe1, 0x1c, 0x64, 0x7e, 0x88,
-	0x0f, 0x06, 0x5b, 0xb5, 0x8e, 0x6c, 0xe3, 0xbf, 0x60, 0xcf, 0x12, 0x6c, 0x74, 0x07, 0x92, 0x1e,
-	0x0b, 0x97, 0x6e, 0x1b, 0x4d, 0xc2, 0x7a, 0xd2, 0x12, 0x06, 0x5f, 0x54, 0x36, 0x9a, 0x04, 0x7d,
-	0x09, 0xcb, 0x01, 0xc0, 0xb2, 0x5b, 0x6d, 0x9a, 0xba, 0xc4, 0x9c, 0xfe, 0x20, 0xd2, 0xe9, 0x5d,
-	0xa3, 0xd3, 0x70, 0x0c, 0x13, 0x07, 0x26, 0x95, 0xae, 0x02, 0x4a, 0xc1, 0xa5, 0xba, 0x63, 0x53,
-	0xd7, 0x69, 0xa4, 0x16, 0xd3, 0x5c, 0x76, 0x19, 0xf7, 0x7e, 0x0e, 0x27, 0x7a, 0x24, 0x6d, 0x23,
-	0x89, 0xfe, 0x25, 0x06, 0x62, 0x58, 0x03, 0x93, 0xba, 0xe3, 0x9a, 0xd1, 0x4d, 0x42, 0x72, 0x9a,
-	0xad, 0x06, 0xa1, 0xe4, 0xdf, 0x9e, 0xfd, 0xf3, 0x35, 0xd4, 0x12, 0xf0, 0x75, 0xdf, 0x31, 0xcb,
-	0xb1, 0x7d, 0x78, 0xd0, 0x45, 0xef, 0x46, 0x12, 0x29, 0xfa, 0x83, 0x99, 0xa9, 0xe3, 0x2b, 0x7d,
-	0x55, 0x26, 0xc8, 0x14, 0x60, 0xeb, 0xfc, 0xe1, 0x1c, 0xc9, 0xca, 0xdf, 0x0b, 0xb0, 0x32, 0x3c,
-	0x39, 0x83, 0xa8, 0x9f, 0x4d, 0x5f, 0xcb, 0x3e, 0x74, 0x58, 0x90, 0x93, 0xb3, 0x4f, 0xdf, 0xee,
-	0xca, 0xe0, 0x4f, 0x5f, 0xb6, 0x3c, 0x7c, 0xcb, 0xc1, 0x9a, 0x37, 0xda, 0x93, 0xfb, 0x44, 0x82,
-	0x8c, 0x14, 0x67, 0xb1, 0x3f, 0xcb, 0xd0, 0x2c, 0xce, 0xe1, 0xc9, 0x17, 0xa2, 0x6f, 0x38, 0xb8,
-	0x59, 0x1f, 0x6c, 0x4f, 0x21, 0x3a, 0x71, 0x46, 0xa7, 0x30, 0x0b, 0x9d, 0x69, 0xe3, 0xa1, 0x38,
-	0x87, 0xc7, 0x5f, 0xc4, 0x68, 0x78, 0x83, 0xc5, 0x23, 0x0e, 0x0f, 0xd9, 0x99, 0x68, 0x4c, 0x6b,
-	0x9c, 0x5d, 0x1a, 0x63, 0x2f, 0x42, 0xbf, 0x71, 0xf0, 0xd8, 0xbd, 0x48, 0x45, 0xb2, 0xee, 0x94,
-	0xdc, 0x3c, 0x98, 0x85, 0xe2, 0x85, 0x4a, 0xbe, 0x38, 0x87, 0x2f, 0xc6, 0x6c, 0x6b, 0x19, 0xa0,
-	0xbf, 0xaf, 0x64, 0xfe, 0x4c, 0x40, 0x6a, 0xf4, 0xa5, 0xfb, 0x05, 0x11, 0x5e, 0xff, 0xb8, 0x81,
-	0xf5, 0x6f, 0x60, 0x03, 0x8d, 0xbd, 0xd3, 0x06, 0xba, 0x07, 0xcb, 0x87, 0x86, 0xd5, 0x20, 0xa6,
-	0x5e, 0x37, 0xda, 0x5e, 0x6f, 0x9f, 0x7d, 0x34, 0xab, 0xb5, 0x6d, 0xa6, 0x2b, 0x75, 0x55, 0x71,
-	0xf2, 0xb0, 0xff, 0x03, 0x7d, 0x37, 0xb5, 0xb6, 0xfc, 0x57, 0xa4, 0x5c, 0xb8, 0xb6, 0x86, 0xbb,
-	0xc6, 0xf4, 0xe2, 0x7a, 0x35, 0xb1, 0xb8, 0xfc, 0x27, 0x23, 0x5f, 0xa8, 0xb8, 0x22, 0xb8, 0x4c,
-	0xa8, 0xae, 0x57, 0x13, 0xab, 0x2b, 0x31, 0x3b, 0x8f, 0xa9, 0xf3, 0x6d, 0x72, 0x79, 0xfd, 0x7e,
-	0xe1, 0xf2, 0xf2, 0x47, 0xf6, 0xf3, 0xf7, 0x57, 0x5e, 0x11, 0xc4, 0xdf, 0x4b, 0x7d, 0xb5, 0xa2,
-	0xca, 0x8b, 0xa9, 0x78, 0x48, 0xeb, 0x6e, 0xf0, 0xde, 0x89, 0x1e, 0x2c, 0x46, 0x5e, 0x8a, 0x4b,
-	0xc7, 0xb3, 0xc9, 0xcd, 0xdc, 0xac, 0x6f, 0x3f, 0x30, 0x84, 0x97, 0x69, 0xc8, 0xea, 0xfa, 0x6b,
-	0x0e, 0x16, 0x7b, 0x75, 0x86, 0xae, 0xc3, 0x55, 0x4d, 0x54, 0x9f, 0xe8, 0xda, 0xc1, 0xae, 0xac,
-	0x2b, 0xe5, 0x3d, 0xb1, 0xa4, 0x14, 0xf8, 0x39, 0x74, 0x03, 0x50, 0x5f, 0xac, 0x61, 0xb1, 0xac,
-	0x6e, 0xcb, 0x98, 0xe7, 0xd0, 0x35, 0xb8, 0x12, 0x92, 0x2b, 0x4f, 0x65, 0xcc, 0xc7, 0xd0, 0x4d,
-	0xb8, 0xde, 0x17, 0x62, 0x79, 0xb7, 0xa4, 0x48, 0xa2, 0xa6, 0x54, 0xca, 0x7c, 0x1c, 0xdd, 0x82,
-	0x95, 0xfe, 0x91, 0x84, 0x2b, 0xaa, 0xaa, 0x4b, 0xa5, 0xaa, 0xaa, 0xc9, 0x98, 0x9f, 0x5f, 0xff,
-	0x99, 0x1b, 0xfd, 0x9f, 0x99, 0x91, 0xba, 0x07, 0x77, 0x06, 0xb0, 0x7a, 0x14, 0xc5, 0x3c, 0x3c,
-	0x1c, 0x07, 0x52, 0x35, 0x11, 0x6b, 0xba, 0x54, 0x54, 0x4a, 0x05, 0x5d, 0x7e, 0x26, 0x4b, 0x55,
-	0xc6, 0x86, 0x43, 0x1b, 0x90, 0x1d, 0xa7, 0x22, 0x89, 0x65, 0x49, 0x2e, 0x85, 0xd0, 0xb1, 0x49,
-	0x68, 0x55, 0xd9, 0x29, 0x8b, 0x61, 0x74, 0x7c, 0xfd, 0xfb, 0x38, 0xdc, 0x9a, 0xd0, 0x7b, 0xd0,
-	0x87, 0xf0, 0x20, 0xc2, 0xda, 0xb6, 0xa8, 0x94, 0xe4, 0x82, 0x2e, 0x89, 0x55, 0x35, 0xec, 0xdb,
-	0x63, 0xc8, 0x4f, 0x03, 0x17, 0x2a, 0x4f, 0x45, 0xa5, 0xac, 0x97, 0x2b, 0x9a, 0x2e, 0x4a, 0x9a,
-	0xb2, 0x27, 0xf3, 0xdc, 0x39, 0xd5, 0xe4, 0x67, 0x8a, 0xaa, 0xa9, 0x7c, 0x0c, 0x7d, 0x0e, 0x9f,
-	0x4c, 0x53, 0xdb, 0xaf, 0xe0, 0x27, 0xdb, 0xa5, 0xca, 0xbe, 0x2e, 0x96, 0xb0, 0x2c, 0x16, 0x0e,
-	0x74, 0x5c, 0x2d, 0x97, 0x95, 0xf2, 0x0e, 0x1f, 0x47, 0x1f, 0xc3, 0xa3, 0x99, 0xb5, 0x43, 0xd7,
-	0xce, 0xa3, 0x2f, 0xe0, 0xd3, 0x73, 0x5f, 0x2b, 0x55, 0x9e, 0xee, 0x96, 0x64, 0x4d, 0x2e, 0xf0,
-	0x0b, 0x63, 0x1e, 0xc0, 0x80, 0x7e, 0xb5, 0x2c, 0x89, 0x9a, 0xbc, 0x53, 0xc1, 0xca, 0x73, 0xb9,
-	0xc0, 0x27, 0xd6, 0xdf, 0x70, 0x80, 0x76, 0x08, 0x1d, 0xce, 0xcd, 0x5d, 0x58, 0xdb, 0x91, 0xb5,
-	0x89, 0x19, 0xb9, 0x0f, 0x99, 0x68, 0x88, 0x2a, 0xe3, 0x3d, 0x45, 0x92, 0xf5, 0xad, 0xaa, 0x7a,
-	0xc0, 0x73, 0xe3, 0x4d, 0x75, 0x8b, 0xa5, 0x52, 0xd5, 0xf8, 0x18, 0x12, 0x60, 0x7d, 0x8c, 0xa9,
-	0xa2, 0x88, 0x0b, 0x7a, 0x65, 0xbf, 0x2c, 0x63, 0xb5, 0xa8, 0xec, 0xea, 0xa5, 0x8a, 0xaa, 0xf1,
-	0x71, 0xf4, 0x00, 0xee, 0x45, 0xe3, 0x07, 0xbd, 0x9b, 0xdf, 0x92, 0x7e, 0x7a, 0x7b, 0x9b, 0xfb,
-	0xf5, 0xed, 0x6d, 0xee, 0xaf, 0xb7, 0xb7, 0xb9, 0xe7, 0x8f, 0x8f, 0x2c, 0x7a, 0xdc, 0xae, 0x09,
-	0x75, 0xa7, 0x99, 0x1b, 0xf8, 0x7e, 0x25, 0x1c, 0x11, 0xdb, 0xff, 0x1a, 0xd6, 0xff, 0x92, 0xf6,
-	0x99, 0xff, 0xd7, 0x69, 0xbe, 0x96, 0x60, 0x27, 0x8f, 0xfe, 0x09, 0x00, 0x00, 0xff, 0xff, 0xae,
-	0xe9, 0x4c, 0x44, 0x73, 0x13, 0x00, 0x00,
+	// 1577 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x58, 0xcf, 0x73, 0xdb, 0x4e,
+	0x15, 0x8f, 0xec, 0xfc, 0x7c, 0x4e, 0x1b, 0x65, 0x43, 0x1b, 0x37, 0x25, 0x8d, 0xeb, 0xce, 0xb4,
+	0x9e, 0x90, 0xca, 0x24, 0xa1, 0x94, 0x01, 0x06, 0x46, 0x91, 0x95, 0x58, 0xd4, 0xb5, 0x33, 0x2b,
+	0x39, 0x69, 0x7a, 0xd1, 0x28, 0xd6, 0x26, 0xd1, 0xc4, 0x96, 0x54, 0x49, 0x4e, 0xf1, 0x9d, 0xf6,
+	0x4c, 0xff, 0x05, 0x2e, 0x0c, 0xdc, 0x39, 0x70, 0xe0, 0xce, 0x30, 0xc3, 0x0c, 0x70, 0xe0, 0xd2,
+	0x0b, 0xd3, 0x7f, 0x80, 0x7f, 0x81, 0xf1, 0x4a, 0x8e, 0x65, 0x59, 0xb6, 0x95, 0xb4, 0x07, 0x0e,
+	0xdf, 0x9b, 0xfd, 0xf6, 0xf3, 0xde, 0x7e, 0xde, 0x7b, 0xbb, 0x9f, 0xdd, 0x15, 0xe4, 0xdb, 0xa7,
+	0xc4, 0x29, 0x36, 0x34, 0x9d, 0x98, 0x0d, 0x52, 0x74, 0x2f, 0x34, 0x87, 0xe8, 0xc5, 0xab, 0xed,
+	0xe2, 0xbb, 0x36, 0x69, 0x13, 0xce, 0x76, 0x2c, 0xcf, 0x42, 0xf7, 0xbb, 0x18, 0x2e, 0xc0, 0x70,
+	0x3e, 0x86, 0xbb, 0xda, 0x5e, 0xdb, 0x38, 0xb7, 0xac, 0xf3, 0x26, 0x29, 0x52, 0xd4, 0x69, 0xfb,
+	0xac, 0xe8, 0x19, 0x2d, 0xe2, 0x7a, 0x5a, 0xcb, 0xf6, 0x1d, 0xd7, 0x72, 0x03, 0xc1, 0x35, 0xdb,
+	0xe8, 0x46, 0x6e, 0x58, 0xad, 0x96, 0x65, 0x06, 0x88, 0xc7, 0x71, 0x88, 0x0b, 0xc3, 0xf5, 0x2c,
+	0xa7, 0x13, 0x40, 0xf2, 0x71, 0x90, 0xf7, 0x96, 0x73, 0x79, 0xd6, 0xb4, 0xde, 0xfb, 0x98, 0xfc,
+	0xe7, 0x14, 0x7c, 0x4f, 0x70, 0x2c, 0xd7, 0x15, 0x9a, 0x6d, 0xd7, 0x23, 0x8e, 0xa2, 0xb9, 0x97,
+	0x92, 0x79, 0x66, 0xa1, 0x87, 0xb0, 0xa0, 0x5b, 0x2d, 0xcd, 0x30, 0x55, 0x43, 0xcf, 0x32, 0x39,
+	0xa6, 0xb0, 0x80, 0xe7, 0x7d, 0x83, 0xa4, 0xa3, 0x3a, 0xa0, 0x5e, 0x1c, 0x95, 0xfc, 0x9a, 0x34,
+	0xda, 0x9e, 0x61, 0x99, 0xd9, 0x54, 0x8e, 0x29, 0x64, 0x76, 0x9e, 0x72, 0x03, 0x49, 0x6b, 0xb6,
+	0xc1, 0x5d, 0x6d, 0x73, 0xc7, 0x01, 0x5c, 0xec, 0xa1, 0xf1, 0xf2, 0xfb, 0xa8, 0x09, 0x49, 0xb0,
+	0xe0, 0x69, 0xee, 0xa5, 0xea, 0x75, 0x6c, 0x92, 0x4d, 0xe7, 0x98, 0xc2, 0xdd, 0x9d, 0x2d, 0x2e,
+	0xbe, 0x84, 0x5c, 0x94, 0xb4, 0xd2, 0xb1, 0x09, 0x9e, 0xf7, 0x82, 0x5f, 0x68, 0x1d, 0x80, 0x86,
+	0x72, 0x3d, 0xcd, 0x23, 0xd9, 0xe9, 0x1c, 0x53, 0x98, 0xc1, 0x34, 0xb8, 0xdc, 0x35, 0xa0, 0x55,
+	0x98, 0xa3, 0xc3, 0x86, 0x9e, 0x9d, 0xc9, 0x31, 0x85, 0x34, 0x9e, 0xed, 0xfe, 0x95, 0x74, 0x54,
+	0x81, 0x95, 0x2b, 0xc3, 0x35, 0x4e, 0x8d, 0xa6, 0xe1, 0x75, 0x94, 0x5e, 0x57, 0xb2, 0xb3, 0x34,
+	0xb5, 0x35, 0xce, 0xef, 0x1b, 0xd7, 0xeb, 0x1b, 0x77, 0x8d, 0xc0, 0x71, 0x6e, 0xf9, 0x7f, 0xa7,
+	0xe0, 0x87, 0x61, 0xa2, 0xb2, 0xa7, 0x39, 0x9e, 0x70, 0x61, 0x34, 0xf5, 0x7e, 0x1d, 0xc8, 0xbb,
+	0x36, 0x71, 0x3d, 0xde, 0xf3, 0x1c, 0xe3, 0xb4, 0xed, 0x11, 0x17, 0x15, 0x80, 0xf5, 0x34, 0xe7,
+	0x9c, 0x78, 0x6a, 0xb4, 0x01, 0x77, 0x7d, 0x7b, 0xa9, 0xd7, 0x86, 0x75, 0x00, 0xc7, 0x77, 0xef,
+	0x62, 0x52, 0x14, 0xb3, 0x10, 0x58, 0x24, 0x1d, 0x6d, 0x01, 0x32, 0x4c, 0xc3, 0x33, 0x34, 0x8f,
+	0xe8, 0x2a, 0xb9, 0x22, 0x26, 0x85, 0xa5, 0x69, 0xbe, 0xec, 0xf5, 0x88, 0xd8, 0x1d, 0x90, 0x74,
+	0xf4, 0x91, 0x81, 0xb5, 0x28, 0x5c, 0xbb, 0x66, 0x45, 0x4b, 0x98, 0xd9, 0x29, 0xc7, 0x36, 0xb7,
+	0x9f, 0xd6, 0x50, 0x9b, 0xa5, 0x81, 0x69, 0xfa, 0x59, 0xe2, 0xac, 0x31, 0x62, 0x04, 0xe5, 0xe1,
+	0x4e, 0x90, 0xbf, 0xd3, 0x36, 0x7b, 0x1d, 0x5a, 0xc0, 0x19, 0xdf, 0x88, 0xdb, 0xa6, 0xa4, 0xe7,
+	0x7f, 0x05, 0xdb, 0x13, 0xeb, 0xea, 0xda, 0x96, 0xe9, 0x92, 0x50, 0xe0, 0x7b, 0x30, 0x1b, 0x44,
+	0xf4, 0xcb, 0x39, 0xe3, 0xd0, 0x58, 0x7f, 0x4e, 0xc1, 0x56, 0x38, 0x98, 0xa0, 0x99, 0x0d, 0xd2,
+	0xfc, 0x26, 0x0d, 0x3a, 0x85, 0x07, 0x01, 0xf2, 0xab, 0xb7, 0xcb, 0xaa, 0x1f, 0x68, 0x68, 0x20,
+	0xb2, 0x08, 0xd2, 0xc9, 0x16, 0xc1, 0xf4, 0x88, 0x45, 0xc0, 0xc1, 0x4a, 0xa3, 0x5b, 0xc6, 0x3e,
+	0x5f, 0xcb, 0x6c, 0x76, 0x68, 0x07, 0xe6, 0xf1, 0x72, 0x23, 0xdc, 0xe2, 0x9a, 0xd9, 0xec, 0xe4,
+	0x8b, 0xf0, 0x7c, 0x6c, 0xe9, 0xa2, 0x3d, 0xc8, 0xff, 0x29, 0x3d, 0x58, 0x6c, 0xd9, 0x38, 0x37,
+	0xb5, 0xef, 0x8a, 0x9d, 0xa4, 0xd8, 0x68, 0x03, 0x32, 0x2e, 0x2d, 0x97, 0x6a, 0x6a, 0x2d, 0x42,
+	0x35, 0x69, 0x01, 0x83, 0x6f, 0xaa, 0x6a, 0x2d, 0x82, 0x7e, 0x09, 0x8b, 0x01, 0xc0, 0x30, 0xed,
+	0xb6, 0x97, 0x9d, 0xa3, 0x49, 0x7f, 0x3f, 0x36, 0xe9, 0x43, 0xad, 0xd3, 0xb4, 0x34, 0x1d, 0x07,
+	0x21, 0xa5, 0xae, 0x03, 0xca, 0xc2, 0x5c, 0xc3, 0x32, 0x3d, 0xc7, 0x6a, 0x66, 0xe7, 0x73, 0x4c,
+	0x61, 0x11, 0xf7, 0xfe, 0x46, 0x1b, 0x3d, 0xd4, 0xb6, 0xa1, 0x46, 0xff, 0x3d, 0x05, 0x7c, 0xd8,
+	0x03, 0x93, 0x86, 0xe5, 0xe8, 0xf1, 0x22, 0x21, 0x58, 0x2d, 0xbb, 0x49, 0x3c, 0xf2, 0xff, 0xde,
+	0xfd, 0x9b, 0x09, 0x6a, 0x05, 0xd8, 0x86, 0x9f, 0x98, 0x61, 0x99, 0x3e, 0x3c, 0x50, 0xd1, 0xc7,
+	0xb1, 0x44, 0xca, 0xfe, 0xe1, 0x4d, 0xdd, 0xf1, 0x52, 0xdf, 0x95, 0x1a, 0xf2, 0x25, 0xd8, 0xbb,
+	0x79, 0x39, 0x87, 0xba, 0xf2, 0x5f, 0x06, 0x36, 0x78, 0xdb, 0xee, 0x1c, 0x6a, 0x0e, 0x31, 0x3d,
+	0xa1, 0x69, 0xb9, 0xe4, 0xd0, 0x6a, 0x1a, 0x8d, 0x4e, 0xa8, 0xe6, 0x4f, 0x61, 0xc9, 0x5f, 0x96,
+	0xd1, 0x92, 0xdf, 0xa1, 0xe6, 0xeb, 0x8a, 0x6f, 0xc2, 0x72, 0x64, 0xf9, 0x5e, 0x1f, 0x42, 0x4b,
+	0x03, 0x8b, 0x57, 0xd2, 0x51, 0x0e, 0x16, 0x7d, 0x6c, 0x20, 0xc0, 0xfe, 0xce, 0x01, 0x6a, 0xa3,
+	0x8a, 0x8e, 0x8e, 0x60, 0xc5, 0xa6, 0xa4, 0xd4, 0x46, 0x97, 0x95, 0x6a, 0x53, 0x5a, 0xb4, 0x60,
+	0x77, 0x47, 0x74, 0x6e, 0x28, 0x09, 0xbc, 0x6c, 0x47, 0x4d, 0xf9, 0xbf, 0x30, 0xb0, 0x1b, 0x2e,
+	0x1c, 0x6f, 0xdb, 0xcd, 0xe1, 0xf4, 0x87, 0x57, 0xde, 0x07, 0x06, 0x9e, 0x68, 0xb6, 0xdd, 0x51,
+	0x63, 0x58, 0x85, 0xcf, 0x45, 0x26, 0x97, 0x2e, 0x64, 0x76, 0x5e, 0x8e, 0xba, 0xa6, 0x4c, 0x28,
+	0x36, 0xde, 0xd0, 0xc6, 0x03, 0xf2, 0x3f, 0x86, 0x1f, 0x25, 0xa1, 0x3f, 0xd4, 0xe9, 0x4f, 0x73,
+	0xb0, 0x1a, 0xbd, 0x23, 0x05, 0x59, 0x5e, 0xdf, 0xb3, 0x0c, 0xf3, 0xcc, 0xa2, 0xbd, 0xcd, 0x24,
+	0xbf, 0x67, 0x75, 0x2f, 0x87, 0xfe, 0x3d, 0x8b, 0x5e, 0x13, 0x7f, 0xcb, 0xc0, 0xba, 0x3b, 0x7c,
+	0xfa, 0xf6, 0x89, 0x04, 0x7b, 0xaf, 0x9c, 0x24, 0x7e, 0x92, 0xeb, 0x51, 0x79, 0x0a, 0x8f, 0x9f,
+	0x10, 0xfd, 0x86, 0x81, 0x07, 0x8d, 0xc1, 0x83, 0x28, 0x44, 0x27, 0x4d, 0xe9, 0x94, 0x92, 0xd0,
+	0x99, 0x74, 0x11, 0x28, 0x4f, 0xe1, 0xd1, 0x13, 0x51, 0x1a, 0xee, 0xa0, 0x4c, 0xf2, 0xd1, 0xeb,
+	0x54, 0x22, 0x1a, 0x93, 0x8e, 0xc8, 0x2e, 0x8d, 0x91, 0x13, 0xa1, 0x7f, 0x32, 0xf0, 0xc2, 0xb9,
+	0x8d, 0xf6, 0xd2, 0x73, 0x28, 0xb3, 0x73, 0x92, 0x84, 0xe2, 0xad, 0xc4, 0xbd, 0x3c, 0x85, 0x6f,
+	0xc7, 0x0c, 0xfd, 0x9e, 0x81, 0x67, 0x5a, 0xb2, 0x7d, 0x1c, 0xdc, 0xdc, 0x5f, 0x25, 0xc9, 0x22,
+	0xa1, 0x34, 0x94, 0xa7, 0x70, 0xd2, 0xd9, 0xf7, 0x16, 0x01, 0xfa, 0x5a, 0x91, 0xff, 0xc3, 0x3c,
+	0x64, 0x87, 0xf7, 0xa4, 0xbf, 0x75, 0xc3, 0x4f, 0x12, 0x66, 0xe0, 0x49, 0x32, 0xf0, 0x2a, 0x4a,
+	0x7d, 0xc3, 0x57, 0x51, 0x3a, 0xfa, 0x2a, 0x3a, 0x82, 0xc5, 0x33, 0xcd, 0x68, 0x12, 0x5d, 0x6d,
+	0x68, 0x6d, 0x97, 0x04, 0xe2, 0xbb, 0x9b, 0x74, 0xb2, 0x7d, 0xea, 0x2b, 0x74, 0x5d, 0x71, 0xe6,
+	0xac, 0xff, 0x07, 0x7d, 0x9a, 0x28, 0x12, 0xfe, 0x5a, 0x93, 0x6e, 0x2d, 0x12, 0x51, 0xf9, 0x9b,
+	0xac, 0x12, 0x1f, 0xc6, 0xaa, 0x84, 0xbf, 0x6a, 0xc4, 0x5b, 0xa9, 0x44, 0x0c, 0x97, 0x31, 0x32,
+	0xf1, 0x61, 0xac, 0x4c, 0xcc, 0x25, 0xe7, 0x31, 0xf1, 0x4a, 0x36, 0x5e, 0x27, 0xfe, 0x75, 0x6b,
+	0x9d, 0x98, 0xa7, 0x1c, 0xdf, 0x7e, 0x3b, 0x9d, 0x88, 0x21, 0x7e, 0x4b, 0xa1, 0xf8, 0x23, 0x03,
+	0x05, 0x2d, 0xe1, 0x89, 0x99, 0x5d, 0xa0, 0x79, 0x54, 0xbe, 0x46, 0x29, 0x62, 0x98, 0x27, 0x9e,
+	0x3f, 0xa2, 0x15, 0x76, 0x9c, 0x54, 0xd0, 0xfc, 0x5c, 0xa4, 0x74, 0x5f, 0xc8, 0xee, 0xa5, 0x1a,
+	0x3c, 0x3c, 0x7a, 0x97, 0x90, 0x62, 0xd2, 0x8d, 0x1a, 0x04, 0xc2, 0x8b, 0x5e, 0x28, 0xea, 0xe6,
+	0x47, 0x06, 0xe6, 0x7b, 0x9a, 0x81, 0xee, 0xc1, 0xb2, 0xc2, 0xcb, 0xaf, 0x54, 0xe5, 0xe4, 0x50,
+	0x54, 0xa5, 0xea, 0x11, 0x5f, 0x91, 0x4a, 0xec, 0x14, 0xba, 0x0f, 0xa8, 0x6f, 0x56, 0x30, 0x5f,
+	0x95, 0xf7, 0x45, 0xcc, 0x32, 0x68, 0x05, 0x96, 0x42, 0x76, 0xe9, 0xb5, 0x88, 0xd9, 0x14, 0x7a,
+	0x00, 0xf7, 0xfa, 0x46, 0x2c, 0x1e, 0x56, 0x24, 0x81, 0x57, 0xa4, 0x5a, 0x95, 0x4d, 0xa3, 0x87,
+	0xb0, 0xda, 0x1f, 0x12, 0x70, 0x4d, 0x96, 0x55, 0xa1, 0x52, 0x97, 0x15, 0x11, 0xb3, 0xd3, 0x9b,
+	0x7f, 0x63, 0x86, 0xbf, 0x49, 0x51, 0x52, 0x4f, 0x60, 0x63, 0x00, 0xab, 0xc6, 0x51, 0xdc, 0x86,
+	0xe7, 0xa3, 0x40, 0xb2, 0xc2, 0x63, 0x45, 0x15, 0xca, 0x52, 0xa5, 0xa4, 0x8a, 0x6f, 0x44, 0xa1,
+	0x4e, 0xd9, 0x30, 0x68, 0x0b, 0x0a, 0xa3, 0x5c, 0x04, 0xbe, 0x2a, 0x88, 0x95, 0x10, 0x3a, 0x35,
+	0x0e, 0x2d, 0x4b, 0x07, 0x55, 0x3e, 0x8c, 0x4e, 0x6f, 0xfe, 0x2e, 0x0d, 0x0f, 0xc7, 0x08, 0x25,
+	0xfa, 0x01, 0x3c, 0x8b, 0x89, 0xb6, 0xcf, 0x4b, 0x15, 0xb1, 0xa4, 0x0a, 0x7c, 0x5d, 0x0e, 0xe7,
+	0xf6, 0x02, 0xb6, 0x27, 0x81, 0x4b, 0xb5, 0xd7, 0xbc, 0x54, 0x55, 0xab, 0x35, 0x45, 0xe5, 0x05,
+	0x45, 0x3a, 0x12, 0x59, 0xe6, 0x86, 0x6e, 0xe2, 0x1b, 0x49, 0x56, 0x64, 0x36, 0x85, 0x7e, 0x0e,
+	0x3f, 0x99, 0xe4, 0x76, 0x5c, 0xc3, 0xaf, 0xf6, 0x2b, 0xb5, 0x63, 0x95, 0xaf, 0x60, 0x91, 0x2f,
+	0x9d, 0xa8, 0xb8, 0x5e, 0xad, 0x4a, 0xd5, 0x03, 0x36, 0x8d, 0x5e, 0xc2, 0x6e, 0x62, 0xef, 0xd0,
+	0xb4, 0xd3, 0xe8, 0x17, 0xf0, 0xd3, 0x1b, 0x4f, 0x2b, 0xd4, 0x5e, 0x1f, 0x56, 0x44, 0x45, 0x2c,
+	0xb1, 0x33, 0x23, 0x16, 0xc0, 0x80, 0x7f, 0xbd, 0x2a, 0xf0, 0x8a, 0x78, 0x50, 0xc3, 0xd2, 0x5b,
+	0xb1, 0xc4, 0xce, 0x6e, 0x7e, 0x66, 0x00, 0x1d, 0x10, 0x2f, 0xda, 0x9b, 0xc7, 0xb0, 0x7e, 0x20,
+	0x2a, 0x63, 0x3b, 0xf2, 0x14, 0xf2, 0xf1, 0x10, 0x59, 0xc4, 0x47, 0x92, 0x20, 0xaa, 0x7b, 0x75,
+	0xf9, 0x84, 0x65, 0x46, 0x87, 0xea, 0x6e, 0x96, 0x5a, 0x5d, 0x61, 0x53, 0x88, 0x83, 0xcd, 0x11,
+	0xa1, 0xca, 0x3c, 0x2e, 0xa9, 0xb5, 0xe3, 0xaa, 0x88, 0xe5, 0xb2, 0x74, 0xa8, 0x56, 0x6a, 0xb2,
+	0xc2, 0xa6, 0xd1, 0x33, 0x78, 0x12, 0x8f, 0x1f, 0xcc, 0x6e, 0x7a, 0x4f, 0xf8, 0xeb, 0x97, 0x47,
+	0xcc, 0x3f, 0xbe, 0x3c, 0x62, 0xfe, 0xf3, 0xe5, 0x11, 0xf3, 0xf6, 0xc5, 0xb9, 0xe1, 0x5d, 0xb4,
+	0x4f, 0xb9, 0x86, 0xd5, 0x2a, 0x0e, 0x7c, 0x20, 0xe6, 0xce, 0x89, 0xe9, 0x7f, 0x91, 0xee, 0x7f,
+	0xcd, 0xfe, 0x99, 0xff, 0xeb, 0x6a, 0xfb, 0x74, 0x96, 0x8e, 0xec, 0xfe, 0x2f, 0x00, 0x00, 0xff,
+	0xff, 0x15, 0xa2, 0xc9, 0x8a, 0xf7, 0x16, 0x00, 0x00,
 }
 
 func (m *CrossClusterTaskInfo) Marshal() (dAtA []byte, err error) {
@@ -1707,6 +1923,127 @@ func (m *CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes) Mar
 	return len(dAtA) - i, nil
 }
 
+func (m *AppyParentClosePolicyAttributes) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AppyParentClosePolicyAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AppyParentClosePolicyAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.ParentClosePolicy != 0 {
+		i = encodeVarintQueue(dAtA, i, uint64(m.ParentClosePolicy))
+		i--
+		dAtA[i] = 0x20
+	}
+	if len(m.ChildRunId) > 0 {
+		i -= len(m.ChildRunId)
+		copy(dAtA[i:], m.ChildRunId)
+		i = encodeVarintQueue(dAtA, i, uint64(len(m.ChildRunId)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.ChildWorkflowId) > 0 {
+		i -= len(m.ChildWorkflowId)
+		copy(dAtA[i:], m.ChildWorkflowId)
+		i = encodeVarintQueue(dAtA, i, uint64(len(m.ChildWorkflowId)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.ChildDomainId) > 0 {
+		i -= len(m.ChildDomainId)
+		copy(dAtA[i:], m.ChildDomainId)
+		i = encodeVarintQueue(dAtA, i, uint64(len(m.ChildDomainId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CrossClusterApplyParentClosePolicyRequestAttributes) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CrossClusterApplyParentClosePolicyRequestAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterApplyParentClosePolicyRequestAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.AppyParentClosePolicyAttributes) > 0 {
+		for iNdEx := len(m.AppyParentClosePolicyAttributes) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.AppyParentClosePolicyAttributes[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintQueue(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CrossClusterApplyParentClosePolicyResponseAttributes) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CrossClusterApplyParentClosePolicyResponseAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterApplyParentClosePolicyResponseAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *CrossClusterTaskRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -1839,6 +2176,27 @@ func (m *CrossClusterTaskRequest_RecordChildWorkflowExecutionCompleteRequestAttr
 	}
 	return len(dAtA) - i, nil
 }
+func (m *CrossClusterTaskRequest_ApplyParentClosePolicyRequestAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterTaskRequest_ApplyParentClosePolicyRequestAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.ApplyParentClosePolicyRequestAttributes != nil {
+		{
+			size, err := m.ApplyParentClosePolicyRequestAttributes.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintQueue(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x32
+	}
+	return len(dAtA) - i, nil
+}
 func (m *CrossClusterTaskResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -1875,6 +2233,11 @@ func (m *CrossClusterTaskResponse) MarshalToSizedBuffer(dAtA []byte) (int, error
 	if m.FailedCause != 0 {
 		i = encodeVarintQueue(dAtA, i, uint64(m.FailedCause))
 		i--
+		dAtA[i] = 0x20
+	}
+	if m.TaskState != 0 {
+		i = encodeVarintQueue(dAtA, i, uint64(m.TaskState))
+		i--
 		dAtA[i] = 0x18
 	}
 	if m.TaskType != 0 {
@@ -1907,7 +2270,7 @@ func (m *CrossClusterTaskResponse_StartChildExecutionAttributes) MarshalToSizedB
 			i = encodeVarintQueue(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0x22
+		dAtA[i] = 0x2a
 	}
 	return len(dAtA) - i, nil
 }
@@ -1928,7 +2291,7 @@ func (m *CrossClusterTaskResponse_CancelExecutionAttributes) MarshalToSizedBuffe
 			i = encodeVarintQueue(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0x2a
+		dAtA[i] = 0x32
 	}
 	return len(dAtA) - i, nil
 }
@@ -1949,7 +2312,7 @@ func (m *CrossClusterTaskResponse_SignalExecutionAttributes) MarshalToSizedBuffe
 			i = encodeVarintQueue(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0x32
+		dAtA[i] = 0x3a
 	}
 	return len(dAtA) - i, nil
 }
@@ -1970,7 +2333,28 @@ func (m *CrossClusterTaskResponse_RecordChildWorkflowExecutionCompleteRequestAtt
 			i = encodeVarintQueue(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0x3a
+		dAtA[i] = 0x42
+	}
+	return len(dAtA) - i, nil
+}
+func (m *CrossClusterTaskResponse_ApplyParentClosePolicyResponseAttributes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CrossClusterTaskResponse_ApplyParentClosePolicyResponseAttributes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.ApplyParentClosePolicyResponseAttributes != nil {
+		{
+			size, err := m.ApplyParentClosePolicyResponseAttributes.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintQueue(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x4a
 	}
 	return len(dAtA) - i, nil
 }
@@ -2241,6 +2625,63 @@ func (m *CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes) Siz
 	return n
 }
 
+func (m *AppyParentClosePolicyAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.ChildDomainId)
+	if l > 0 {
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	l = len(m.ChildWorkflowId)
+	if l > 0 {
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	l = len(m.ChildRunId)
+	if l > 0 {
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	if m.ParentClosePolicy != 0 {
+		n += 1 + sovQueue(uint64(m.ParentClosePolicy))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *CrossClusterApplyParentClosePolicyRequestAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.AppyParentClosePolicyAttributes) > 0 {
+		for _, e := range m.AppyParentClosePolicyAttributes {
+			l = e.Size()
+			n += 1 + l + sovQueue(uint64(l))
+		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *CrossClusterApplyParentClosePolicyResponseAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
 func (m *CrossClusterTaskRequest) Size() (n int) {
 	if m == nil {
 		return 0
@@ -2308,6 +2749,18 @@ func (m *CrossClusterTaskRequest_RecordChildWorkflowExecutionCompleteRequestAttr
 	}
 	return n
 }
+func (m *CrossClusterTaskRequest_ApplyParentClosePolicyRequestAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.ApplyParentClosePolicyRequestAttributes != nil {
+		l = m.ApplyParentClosePolicyRequestAttributes.Size()
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	return n
+}
 func (m *CrossClusterTaskResponse) Size() (n int) {
 	if m == nil {
 		return 0
@@ -2319,6 +2772,9 @@ func (m *CrossClusterTaskResponse) Size() (n int) {
 	}
 	if m.TaskType != 0 {
 		n += 1 + sovQueue(uint64(m.TaskType))
+	}
+	if m.TaskState != 0 {
+		n += 1 + sovQueue(uint64(m.TaskState))
 	}
 	if m.FailedCause != 0 {
 		n += 1 + sovQueue(uint64(m.FailedCause))
@@ -2376,6 +2832,18 @@ func (m *CrossClusterTaskResponse_RecordChildWorkflowExecutionCompleteRequestAtt
 	_ = l
 	if m.RecordChildWorkflowExecutionCompleteRequestAttributes != nil {
 		l = m.RecordChildWorkflowExecutionCompleteRequestAttributes.Size()
+		n += 1 + l + sovQueue(uint64(l))
+	}
+	return n
+}
+func (m *CrossClusterTaskResponse_ApplyParentClosePolicyResponseAttributes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.ApplyParentClosePolicyResponseAttributes != nil {
+		l = m.ApplyParentClosePolicyResponseAttributes.Size()
 		n += 1 + l + sovQueue(uint64(l))
 	}
 	return n
@@ -2600,10 +3068,7 @@ func (m *CrossClusterTaskInfo) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -2805,10 +3270,7 @@ func (m *CrossClusterStartChildExecutionRequestAttributes) Unmarshal(dAtA []byte
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -2891,10 +3353,7 @@ func (m *CrossClusterStartChildExecutionResponseAttributes) Unmarshal(dAtA []byt
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -3084,10 +3543,7 @@ func (m *CrossClusterCancelExecutionRequestAttributes) Unmarshal(dAtA []byte) er
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -3138,10 +3594,7 @@ func (m *CrossClusterCancelExecutionResponseAttributes) Unmarshal(dAtA []byte) e
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -3433,10 +3886,7 @@ func (m *CrossClusterSignalExecutionRequestAttributes) Unmarshal(dAtA []byte) er
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -3487,10 +3937,7 @@ func (m *CrossClusterSignalExecutionResponseAttributes) Unmarshal(dAtA []byte) e
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -3664,10 +4111,7 @@ func (m *CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes) Unma
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -3718,10 +4162,309 @@ func (m *CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes) Unm
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
-			if (iNdEx + skippy) < 0 {
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AppyParentClosePolicyAttributes) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQueue
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AppyParentClosePolicyAttributes: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AppyParentClosePolicyAttributes: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChildDomainId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ChildDomainId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChildWorkflowId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ChildWorkflowId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChildRunId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ChildRunId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ParentClosePolicy", wireType)
+			}
+			m.ParentClosePolicy = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ParentClosePolicy |= v1.ParentClosePolicy(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQueue(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CrossClusterApplyParentClosePolicyRequestAttributes) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQueue
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CrossClusterApplyParentClosePolicyRequestAttributes: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CrossClusterApplyParentClosePolicyRequestAttributes: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AppyParentClosePolicyAttributes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AppyParentClosePolicyAttributes = append(m.AppyParentClosePolicyAttributes, &AppyParentClosePolicyAttributes{})
+			if err := m.AppyParentClosePolicyAttributes[len(m.AppyParentClosePolicyAttributes)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQueue(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CrossClusterApplyParentClosePolicyResponseAttributes) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowQueue
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CrossClusterApplyParentClosePolicyResponseAttributes: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CrossClusterApplyParentClosePolicyResponseAttributes: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipQueue(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -3942,16 +4685,48 @@ func (m *CrossClusterTaskRequest) Unmarshal(dAtA []byte) error {
 			}
 			m.Attributes = &CrossClusterTaskRequest_RecordChildWorkflowExecutionCompleteRequestAttributes{v}
 			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ApplyParentClosePolicyRequestAttributes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &CrossClusterApplyParentClosePolicyRequestAttributes{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Attributes = &CrossClusterTaskRequest_ApplyParentClosePolicyRequestAttributes{v}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipQueue(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -4036,6 +4811,25 @@ func (m *CrossClusterTaskResponse) Unmarshal(dAtA []byte) error {
 			}
 		case 3:
 			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TaskState", wireType)
+			}
+			m.TaskState = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TaskState |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field FailedCause", wireType)
 			}
 			m.FailedCause = 0
@@ -4053,7 +4847,7 @@ func (m *CrossClusterTaskResponse) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 4:
+		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field StartChildExecutionAttributes", wireType)
 			}
@@ -4088,7 +4882,7 @@ func (m *CrossClusterTaskResponse) Unmarshal(dAtA []byte) error {
 			}
 			m.Attributes = &CrossClusterTaskResponse_StartChildExecutionAttributes{v}
 			iNdEx = postIndex
-		case 5:
+		case 6:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field CancelExecutionAttributes", wireType)
 			}
@@ -4123,7 +4917,7 @@ func (m *CrossClusterTaskResponse) Unmarshal(dAtA []byte) error {
 			}
 			m.Attributes = &CrossClusterTaskResponse_CancelExecutionAttributes{v}
 			iNdEx = postIndex
-		case 6:
+		case 7:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field SignalExecutionAttributes", wireType)
 			}
@@ -4158,7 +4952,7 @@ func (m *CrossClusterTaskResponse) Unmarshal(dAtA []byte) error {
 			}
 			m.Attributes = &CrossClusterTaskResponse_SignalExecutionAttributes{v}
 			iNdEx = postIndex
-		case 7:
+		case 8:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field RecordChildWorkflowExecutionCompleteRequestAttributes", wireType)
 			}
@@ -4193,16 +4987,48 @@ func (m *CrossClusterTaskResponse) Unmarshal(dAtA []byte) error {
 			}
 			m.Attributes = &CrossClusterTaskResponse_RecordChildWorkflowExecutionCompleteRequestAttributes{v}
 			iNdEx = postIndex
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ApplyParentClosePolicyResponseAttributes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowQueue
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthQueue
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthQueue
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &CrossClusterApplyParentClosePolicyResponseAttributes{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Attributes = &CrossClusterTaskResponse_ApplyParentClosePolicyResponseAttributes{v}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipQueue(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {
@@ -4287,10 +5113,7 @@ func (m *CrossClusterTaskRequests) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthQueue
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthQueue
 			}
 			if (iNdEx + skippy) > l {

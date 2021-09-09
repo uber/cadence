@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
@@ -140,11 +141,11 @@ func (s *server) startService() common.Daemon {
 		log.Printf("error creating dynamic config client, using no-op config client instead. error: %v", err)
 		params.DynamicConfig = dynamicconfig.NewNopClient()
 	}
-	clusterMetadata := s.cfg.ClusterMetadata
+	clusterGroupMetadata := s.cfg.ClusterGroupMetadata
 	dc := dynamicconfig.NewCollection(
 		params.DynamicConfig,
 		params.Logger,
-		dynamicconfig.ClusterNameFilter(clusterMetadata.CurrentClusterName),
+		dynamicconfig.ClusterNameFilter(clusterGroupMetadata.CurrentClusterName),
 	)
 
 	svcCfg := s.cfg.Services[s.name]
@@ -164,20 +165,13 @@ func (s *server) startService() common.Daemon {
 
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 
-	//TODO: remove this after 0.23 and mention a breaking change in config.
-	primaryClusterName := clusterMetadata.PrimaryClusterName
-	if len(primaryClusterName) == 0 {
-		primaryClusterName = clusterMetadata.MasterClusterName
-		log.Println("[Warning]MasterClusterName config is deprecated. " +
-			"Please replace it with PrimaryClusterName.")
-	}
 	params.ClusterMetadata = cluster.NewMetadata(
 		params.Logger,
-		dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, clusterMetadata.EnableGlobalDomain),
-		clusterMetadata.FailoverVersionIncrement,
-		primaryClusterName,
-		clusterMetadata.CurrentClusterName,
-		clusterMetadata.ClusterInformation,
+		dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, clusterGroupMetadata.EnableGlobalDomain),
+		clusterGroupMetadata.FailoverVersionIncrement,
+		clusterGroupMetadata.PrimaryClusterName,
+		clusterGroupMetadata.CurrentClusterName,
+		clusterGroupMetadata.ClusterGroup,
 	)
 
 	if s.cfg.PublicClient.HostPort != "" {
@@ -220,7 +214,18 @@ func (s *server) startService() common.Daemon {
 		}
 	}
 
-	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, s.cfg.PublicClient.HostPort)
+	var options *client.DispatcherOptions
+	if s.cfg.Authorization.OAuthAuthorizer.Enable {
+		clusterName := s.cfg.ClusterGroupMetadata.CurrentClusterName
+		authProvider, err := authorization.GetAuthProviderClient(s.cfg.ClusterGroupMetadata.ClusterGroup[clusterName].AuthorizationProvider.PrivateKey)
+		if err != nil {
+			log.Fatalf("failed to create AuthProvider: %v", err.Error())
+		}
+		options = &client.DispatcherOptions{
+			AuthProvider: authProvider,
+		}
+	}
+	dispatcher, err := params.DispatcherProvider.GetTChannel(common.FrontendServiceName, s.cfg.PublicClient.HostPort, options)
 	if err != nil {
 		log.Fatalf("failed to construct dispatcher: %v", err)
 	}

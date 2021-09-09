@@ -128,6 +128,8 @@ var (
 	ComponentFailoverMarkerNotifier     = component("failover-marker-notifier")
 	ComponentCrossClusterQueueProcessor = component("cross-cluster-queue-processor")
 	ComponentCrossClusterTaskProcessor  = component("cross-cluster-task-processor")
+	ComponentShardScanner               = component("shardscanner-scanner")
+	ComponentShardFixer                 = component("shardscanner-fixer")
 )
 
 // Pre-defined values for TagSysLifecycle
@@ -377,6 +379,7 @@ var (
 	HistoryClientOperationNotifyFailoverMarkers             = clientOperation("history-notify-failover-markers")
 	HistoryClientOperationGetCrossClusterTasks              = clientOperation("history-get-cross-cluster-tasks")
 	HistoryClientOperationRespondCrossClusterTasksCompleted = clientOperation("history-respond-cross-cluster-tasks-completed")
+	HistoryClientOperationGetFailoverInfo                   = clientOperation("history-get-failover-info")
 
 	MatchingClientOperationAddActivityTask        = clientOperation("matching-add-activity-task")
 	MatchingClientOperationAddDecisionTask        = clientOperation("matching-add-decision-task")

@@ -131,3 +131,15 @@ func TestGetTaskListsByDomainResponse(t *testing.T) {
 		assert.Equal(t, item, thrift.ToGetTaskListsByDomainResponse(thrift.FromGetTaskListsByDomainResponse(item)))
 	}
 }
+
+func TestGetFailoverInfoRequest(t *testing.T) {
+	for _, item := range []*types.GetFailoverInfoRequest{nil, {}, &testdata.GetFailoverInfoRequest} {
+		assert.Equal(t, item, thrift.ToGetFailoverInfoRequest(thrift.FromGetFailoverInfoRequest(item)))
+	}
+}
+
+func TestGetFailoverInfoResponse(t *testing.T) {
+	for _, item := range []*types.GetFailoverInfoResponse{nil, {}, &testdata.GetFailoverInfoResponse} {
+		assert.Equal(t, item, thrift.ToGetFailoverInfoResponse(thrift.FromGetFailoverInfoResponse(item)))
+	}
+}

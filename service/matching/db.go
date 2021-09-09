@@ -170,7 +170,7 @@ func (db *taskListDB) CompleteTask(taskID int64) error {
 // the upper bound of number of tasks that can be deleted by this method. It may
 // or may not be honored
 func (db *taskListDB) CompleteTasksLessThan(taskID int64, limit int) (int, error) {
-	n, err := db.store.CompleteTasksLessThan(context.Background(), &persistence.CompleteTasksLessThanRequest{
+	resp, err := db.store.CompleteTasksLessThan(context.Background(), &persistence.CompleteTasksLessThanRequest{
 		DomainID:     db.domainID,
 		TaskListName: db.taskListName,
 		TaskType:     db.taskType,
@@ -185,5 +185,5 @@ func (db *taskListDB) CompleteTasksLessThan(taskID int64, limit int) (int, error
 			tag.TaskType(db.taskType),
 			tag.WorkflowTaskListName(db.taskListName))
 	}
-	return n, err
+	return resp.TasksCompleted, err
 }

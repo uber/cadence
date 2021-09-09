@@ -112,6 +112,8 @@ type (
 		CreateNewHistoryEventWithTimestamp(eventType types.EventType, timestamp int64) *types.HistoryEvent
 		CreateTransientDecisionEvents(di *DecisionInfo, identity string) (*types.HistoryEvent, *types.HistoryEvent)
 		DeleteDecision()
+		DeleteUserTimer(timerID string) error
+		DeleteActivity(scheduleEventID int64) error
 		DeleteSignalRequested(requestID string)
 		FailDecision(bool)
 		FlushBufferedEvents() error
@@ -231,8 +233,7 @@ type (
 		SetUpdateCondition(int64)
 		GetUpdateCondition() int64
 
-		StartTransaction(entry *cache.DomainCacheEntry) (bool, error)
-		StartTransactionSkipDecisionFail(entry *cache.DomainCacheEntry) error
+		StartTransaction(entry *cache.DomainCacheEntry, incomingTaskVersion int64) (bool, error)
 		CloseTransactionAsMutation(now time.Time, transactionPolicy TransactionPolicy) (*persistence.WorkflowMutation, []*persistence.WorkflowEvents, error)
 		CloseTransactionAsSnapshot(now time.Time, transactionPolicy TransactionPolicy) (*persistence.WorkflowSnapshot, []*persistence.WorkflowEvents, error)
 	}

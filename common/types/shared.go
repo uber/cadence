@@ -10696,6 +10696,61 @@ func (v *CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes) GetI
 type CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes struct {
 }
 
+type AppyParentClosePolicyAttributes struct {
+	ChildDomainID     string             `json:"ChildDomainID,omitempty"`
+	ChildWorkflowID   string             `json:"ChildWorkflowID,omitempty"`
+	ChildRunID        string             `json:"ChildRunID,omitempty"`
+	ParentClosePolicy *ParentClosePolicy `json:"parentClosePolicy,omitempty"`
+}
+
+// GetDomainID is an internal getter (TBD...)
+func (v *AppyParentClosePolicyAttributes) GetDomainID() (o string) {
+	if v != nil {
+		return v.ChildDomainID
+	}
+	return
+}
+
+// GetWorkflowID is an internal getter (TBD...)
+func (v *AppyParentClosePolicyAttributes) GetWorkflowID() (o string) {
+	if v != nil {
+		return v.ChildWorkflowID
+	}
+	return
+}
+
+// GetRunID is an internal getter (TBD...)
+func (v *AppyParentClosePolicyAttributes) GetRunID() (o string) {
+	if v != nil {
+		return v.ChildRunID
+	}
+	return
+}
+
+// GetParentClosePolicy is an internal getter (TBD...)
+func (v *AppyParentClosePolicyAttributes) GetParentClosePolicy() (o *ParentClosePolicy) {
+	if v != nil {
+		return v.ParentClosePolicy
+	}
+	return
+}
+
+type CrossClusterApplyParentClosePolicyRequestAttributes struct {
+	AppyParentClosePolicyAttributes []*AppyParentClosePolicyAttributes `json:"appyParentClosePolicyAttributes,omitempty"`
+}
+
+// GetInitiatedEventID is an internal getter (TBD...)
+func (v *CrossClusterApplyParentClosePolicyRequestAttributes) GetAppyParentClosePolicyAttributes() (o []*AppyParentClosePolicyAttributes) {
+	if v != nil {
+		return v.AppyParentClosePolicyAttributes
+	}
+	return
+}
+
+// CrossClusterApplyParentClosePolicyResponseAttributes is an internal type (TBD...)
+type CrossClusterApplyParentClosePolicyResponseAttributes struct {
+}
+
 // CrossClusterTaskRequest is an internal type (TBD...)
 type CrossClusterTaskRequest struct {
 	TaskInfo                                       *CrossClusterTaskInfo                                              `json:"taskInfo,omitempty"`
@@ -10703,6 +10758,7 @@ type CrossClusterTaskRequest struct {
 	CancelExecutionAttributes                      *CrossClusterCancelExecutionRequestAttributes                      `json:"cancelExecutionAttributes,omitempty"`
 	SignalExecutionAttributes                      *CrossClusterSignalExecutionRequestAttributes                      `json:"signalExecutionAttributes,omitempty"`
 	RecordChildWorkflowExecutionCompleteAttributes *CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes `json:"RecordChildWorkflowExecutionCompleteAttributes,omitempty"`
+	ApplyParentClosePolicyAttributes               *CrossClusterApplyParentClosePolicyRequestAttributes               `json:"ApplyParentClosePolicyAttributes,omitempty"`
 }
 
 // GetTaskInfo is an internal getter (TBD...)
@@ -10745,15 +10801,25 @@ func (v *CrossClusterTaskRequest) GetRecordChildWorkflowExecutionCompleteAttribu
 	return
 }
 
+// GetSignalExecutionAttributes is an internal getter (TBD...)
+func (v *CrossClusterTaskRequest) GetApplyParentClosePolicyAttributes() (o *CrossClusterApplyParentClosePolicyRequestAttributes) {
+	if v != nil && v.RecordChildWorkflowExecutionCompleteAttributes != nil {
+		return v.ApplyParentClosePolicyAttributes
+	}
+	return
+}
+
 // CrossClusterTaskResponse is an internal type (TBD...)
 type CrossClusterTaskResponse struct {
 	TaskID                                         int64                                                               `json:"taskID,omitempty"`
 	TaskType                                       *CrossClusterTaskType                                               `json:"taskType,omitempty"`
+	TaskState                                      int16                                                               `json:"taskState,omitempty"`
 	FailedCause                                    *CrossClusterTaskFailedCause                                        `json:"failedCause,omitempty"`
 	StartChildExecutionAttributes                  *CrossClusterStartChildExecutionResponseAttributes                  `json:"startChildExecutionAttributes,omitempty"`
 	CancelExecutionAttributes                      *CrossClusterCancelExecutionResponseAttributes                      `json:"cancelExecutionAttributes,omitempty"`
 	SignalExecutionAttributes                      *CrossClusterSignalExecutionResponseAttributes                      `json:"signalExecutionAttributes,omitempty"`
 	RecordChildWorkflowExecutionCompleteAttributes *CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes `json:"RecordChildWorkflowExecutionCompleteAttributes,omitempty"`
+	ApplyParentClosePolicyAttributes               *CrossClusterApplyParentClosePolicyResponseAttributes               `json:"ApplyParentClosePolicyAttributes,omitempty"`
 }
 
 // GetTaskID is an internal getter (TBD...)
@@ -10768,6 +10834,14 @@ func (v *CrossClusterTaskResponse) GetTaskID() (o int64) {
 func (v *CrossClusterTaskResponse) GetTaskType() (o CrossClusterTaskType) {
 	if v != nil && v.TaskType != nil {
 		return *v.TaskType
+	}
+	return
+}
+
+// GetTaskState is an internal getter (TBD...)
+func (v *CrossClusterTaskResponse) GetTaskState() (o int16) {
+	if v != nil {
+		return v.TaskState
 	}
 	return
 }
@@ -10808,6 +10882,14 @@ func (v *CrossClusterTaskResponse) GetSignalExecutionAttributes() (o *CrossClust
 func (v *CrossClusterTaskResponse) GetRecordChildWorkflowExecutionCompleteAttributes() (o *CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes) {
 	if v != nil && v.RecordChildWorkflowExecutionCompleteAttributes != nil {
 		return v.RecordChildWorkflowExecutionCompleteAttributes
+	}
+	return
+}
+
+// GetSignalExecutionAttributes is an internal getter (TBD...)
+func (v *CrossClusterTaskResponse) GetApplyParenctClosePolicyAttributes() (o *CrossClusterApplyParentClosePolicyResponseAttributes) {
+	if v != nil && v.ApplyParentClosePolicyAttributes != nil {
+		return v.ApplyParentClosePolicyAttributes
 	}
 	return
 }
