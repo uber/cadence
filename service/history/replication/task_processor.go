@@ -586,7 +586,7 @@ func (p *taskProcessorImpl) triggerDataInconsistencyScan(replicationTask *types.
 		RunID:      runID,
 		State:      persistence.WorkflowStateCorrupted,
 	}
-	jsArray, err := json.Marshal(fixExecution)
+	fixExecutionInput, err := json.Marshal(fixExecution)
 	if err != nil {
 		return err
 	}
@@ -601,7 +601,7 @@ func (p *taskProcessorImpl) triggerDataInconsistencyScan(replicationTask *types.
 		RequestID:                           uuid.New(),
 		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
 		SignalName:                          reconciliation.ExecutionFixerWorkflowSignalName,
-		SignalInput:                         jsArray,
+		SignalInput:                         fixExecutionInput,
 	})
 	return err
 }
