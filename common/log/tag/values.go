@@ -128,6 +128,8 @@ var (
 	ComponentFailoverMarkerNotifier     = component("failover-marker-notifier")
 	ComponentCrossClusterQueueProcessor = component("cross-cluster-queue-processor")
 	ComponentCrossClusterTaskProcessor  = component("cross-cluster-task-processor")
+	ComponentShardScanner               = component("shardscanner-scanner")
+	ComponentShardFixer                 = component("shardscanner-fixer")
 )
 
 // Pre-defined values for TagSysLifecycle

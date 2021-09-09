@@ -40,7 +40,7 @@ var stickyTaskListMetricTag = metrics.TaskListTag("__sticky__")
 
 func newHandlerContext(
 	ctx context.Context,
-	domain string,
+	domainName string,
 	taskList *types.TaskList,
 	metricsClient metrics.Client,
 	metricsScope int,
@@ -48,13 +48,13 @@ func newHandlerContext(
 ) *handlerContext {
 	return &handlerContext{
 		Context: ctx,
-		scope:   newPerTaskListScope(domain, taskList.GetName(), taskList.GetKind(), metricsClient, metricsScope).Tagged(metrics.GetContextTags(ctx)...),
-		logger:  logger.WithTags(tag.WorkflowDomainName(domain), tag.WorkflowTaskListName(taskList.GetName())),
+		scope:   newPerTaskListScope(domainName, taskList.GetName(), taskList.GetKind(), metricsClient, metricsScope).Tagged(metrics.GetContextTags(ctx)...),
+		logger:  logger.WithTags(tag.WorkflowDomainName(domainName), tag.WorkflowTaskListName(taskList.GetName())),
 	}
 }
 
 func newPerTaskListScope(
-	domain string,
+	domainName string,
 	taskListName string,
 	taskListKind types.TaskListKind,
 	client metrics.Client,
@@ -62,8 +62,8 @@ func newPerTaskListScope(
 ) metrics.Scope {
 	domainTag := metrics.DomainUnknownTag()
 	taskListTag := metrics.TaskListUnknownTag()
-	if domain != "" {
-		domainTag = metrics.DomainTag(domain)
+	if domainName != "" {
+		domainTag = metrics.DomainTag(domainName)
 	}
 	if taskListName != "" && taskListKind != types.TaskListKindSticky {
 		taskListTag = metrics.TaskListTag(taskListName)

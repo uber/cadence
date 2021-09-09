@@ -70,6 +70,28 @@ func AdminDescribeTaskList(c *cli.Context) {
 	printPollerInfo(pollers, taskListType)
 }
 
+// AdminListTaskList displays all task lists under a domain.
+func AdminListTaskList(c *cli.Context) {
+	frontendClient := cFactory.ServerFrontendClient(c)
+	domain := getRequiredGlobalOption(c, FlagDomain)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+	request := &types.GetTaskListsByDomainRequest{
+		Domain: domain,
+	}
+
+	response, err := frontendClient.GetTaskListsByDomain(ctx, request)
+	if err != nil {
+		ErrorAndExit("Operation GetTaskListByDomain failed.", err)
+	}
+
+	fmt.Println("Task Lists for domain " + domain + ":")
+	for _, taskList := range response.GetTaskListNames() {
+		fmt.Println(taskList)
+	}
+}
+
 func printTaskListStatus(taskListStatus *types.TaskListStatus) {
 	taskIDBlock := taskListStatus.GetTaskIDBlock()
 

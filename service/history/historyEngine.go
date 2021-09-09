@@ -69,7 +69,6 @@ import (
 const (
 	defaultQueryFirstDecisionTaskWaitTime = time.Second
 	queryFirstDecisionTaskCheckInterval   = 200 * time.Millisecond
-	replicationTimeout                    = 30 * time.Second
 	contextLockTimeout                    = 500 * time.Millisecond
 	longPollCompletionBuffer              = 50 * time.Millisecond
 
@@ -141,7 +140,6 @@ func NewEngineWithShardContext(
 	shard shard.Context,
 	visibilityMgr persistence.VisibilityManager,
 	matching matching.Client,
-	historyClient hc.Client,
 	publicClient workflowserviceclient.Interface,
 	historyEventNotifier events.Notifier,
 	config *config.Config,
@@ -397,7 +395,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 			e.txProcessor.LockTaskProcessing()
 			e.timerProcessor.LockTaskProcessing()
 		},
-		func(prevDomains []*cache.DomainCacheEntry, nextDomains []*cache.DomainCacheEntry) {
+		func(nextDomains []*cache.DomainCacheEntry) {
 			defer func() {
 				e.txProcessor.UnlockTaskProcessing()
 				e.timerProcessor.UnlockTaskProcessing()

@@ -414,11 +414,19 @@ func (t *timerQueueProcessor) completeTimer() error {
 
 	t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.TaskBatchCompleteCounter)
 
-	if err := t.shard.GetExecutionManager().RangeCompleteTimerTask(context.Background(), &persistence.RangeCompleteTimerTaskRequest{
-		InclusiveBeginTimestamp: t.ackLevel,
-		ExclusiveEndTimestamp:   newAckLevelTimestamp,
-	}); err != nil {
-		return err
+	for {
+		pageSize := t.config.TimerTaskDeleteBatchSize()
+		resp, err := t.shard.GetExecutionManager().RangeCompleteTimerTask(context.Background(), &persistence.RangeCompleteTimerTaskRequest{
+			InclusiveBeginTimestamp: t.ackLevel,
+			ExclusiveEndTimestamp:   newAckLevelTimestamp,
+			PageSize:                pageSize, // pageSize may or may not be honored
+		})
+		if err != nil {
+			return err
+		}
+		if !persistence.HasMoreRowsToDelete(resp.TasksCompleted, pageSize) {
+			break
+		}
 	}
 
 	t.ackLevel = newAckLevelTimestamp

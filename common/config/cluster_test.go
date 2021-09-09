@@ -34,7 +34,7 @@ func TestClusterGroupMetadataDefaults(t *testing.T) {
 		},
 	}
 
-	config.fillDefaults()
+	config.FillDefaults()
 
 	assert.Equal(t, "active", config.PrimaryClusterName)
 	assert.Equal(t, "cadence-frontend", config.ClusterGroup["active"].RPCName)
@@ -164,7 +164,7 @@ func TestClusterGroupMetadataValidate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			err := tt.config.validate()
+			err := tt.config.Validate()
 			if tt.err == "" {
 				assert.NoError(t, err)
 			} else {

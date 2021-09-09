@@ -22,6 +22,7 @@ package authorization
 
 import (
 	"context"
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -41,6 +42,7 @@ type oauthAuthority struct {
 	authorizationCfg config.OAuthAuthorizer
 	domainCache      cache.DomainCache
 	log              log.Logger
+	publicKey        *rsa.PublicKey
 }
 
 type JWTClaims struct {
@@ -59,12 +61,17 @@ func NewOAuthAuthorizer(
 	authorizationCfg config.OAuthAuthorizer,
 	log log.Logger,
 	domainCache cache.DomainCache,
-) Authorizer {
+) (Authorizer, error) {
+	publicKey, err := common.LoadRSAPublicKey(authorizationCfg.JwtCredentials.PublicKey)
+	if err != nil {
+		return nil, err
+	}
 	return &oauthAuthority{
 		authorizationCfg: authorizationCfg,
 		domainCache:      domainCache,
 		log:              log,
-	}
+		publicKey:        publicKey,
+	}, nil
 }
 
 // Authorize defines the logic to verify get claims from token
@@ -109,12 +116,9 @@ func (a *oauthAuthority) Authorize(
 }
 
 func (a *oauthAuthority) getVerifier() (jwt.Verifier, error) {
-	publicKey, err := common.LoadRSAPublicKey(a.authorizationCfg.JwtCredentials.PublicKey)
-	if err != nil {
-		return nil, err
-	}
+
 	algorithm := jwt.Algorithm(a.authorizationCfg.JwtCredentials.Algorithm)
-	verifier, err := jwt.NewVerifierRS(algorithm, publicKey)
+	verifier, err := jwt.NewVerifierRS(algorithm, a.publicKey)
 	if err != nil {
 		return nil, err
 	}
