@@ -24,12 +24,14 @@ package replication
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
 	"sync/atomic"
 	"time"
 
+	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common"
@@ -427,6 +429,10 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *types.Replication
 			tag.TaskID(replicationTask.GetSourceTaskID()),
 			tag.Error(err),
 		)
+		if err = p.triggerDataInconsistencyScan(replicationTask); err != nil {
+			p.logger.Warn("Failed to trigger data scan", tag.Error(err))
+			p.metricsClient.IncCounter(metrics.ReplicationDLQStatsScope, metrics.ReplicationDLQValidationFailed)
+		}
 		return p.putReplicationTaskToDLQ(replicationTask)
 	}
 }
@@ -538,6 +544,36 @@ func (p *taskProcessorImpl) generateDLQRequest(
 	default:
 		return nil, fmt.Errorf("unknown replication task type")
 	}
+}
+
+func (p *taskProcessorImpl) triggerDataInconsistencyScan(replicationTask *types.ReplicationTask) error {
+
+	var failoverVersion int64
+	switch {
+	case replicationTask.GetHistoryTaskV2Attributes() != nil:
+		versionHistoryItems := replicationTask.GetHistoryTaskV2Attributes().GetVersionHistoryItems()
+		if versionHistoryItems == nil || len(versionHistoryItems) == 0 {
+			return errors.New("failed to trigger data scan due to invalid version history")
+		}
+		// version history items in same batch should be the same
+		failoverVersion = versionHistoryItems[0].GetVersion()
+	case replicationTask.GetSyncActivityTaskAttributes() != nil:
+		failoverVersion = replicationTask.GetSyncActivityTaskAttributes().Version
+	default:
+		return nil
+	}
+	clusterName := p.shard.GetClusterMetadata().ClusterNameForFailoverVersion(failoverVersion)
+	client := p.shard.GetService().GetClientBean().GetRemoteFrontendClient(clusterName)
+
+	//TODO: complete the signal request once the scan execution workflow is defined
+	return client.SignalWorkflowExecution(context.Background(), &types.SignalWorkflowExecutionRequest{
+		//Domain:            "",
+		//WorkflowExecution: nil,
+		//SignalName:        "",
+		//Input:             nil,
+		Identity:  "cadence-history-replication",
+		RequestID: uuid.New(),
+	})
 }
 
 func (p *taskProcessorImpl) emitDLQSizeMetricsLoop() {
