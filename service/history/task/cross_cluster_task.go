@@ -478,12 +478,76 @@ func (t *crossClusterSourceTask) GetCrossClusterRequest() (request *types.CrossC
 		}
 		request.TaskInfo.TaskType = types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete.Ptr()
 		request.RecordChildWorkflowExecutionCompleteAttributes = attributes
+	case persistence.CrossClusterTaskTypeApplyParentPolicy:
+		var attributes *types.CrossClusterApplyParentClosePolicyRequestAttributes
+		attributes, taskState, err = t.getRequestForApplyParentPolicy(ctx, taskInfo, mutableState)
+		if err != nil || attributes == nil {
+			return nil, err
+		}
+		request.TaskInfo.TaskType = types.CrossClusterTaskTypeApplyParentPolicy.Ptr()
+		request.ApplyParentClosePolicyAttributes = attributes
 	default:
 		return nil, errUnknownCrossClusterTask
 	}
 
 	request.TaskInfo.TaskState = int16(taskState)
 	return request, nil
+}
+
+func (t *crossClusterSourceTask) verifyTaskFailoverVersion(
+	mutableState execution.MutableState,
+	taskInfo *persistence.CrossClusterTaskInfo,
+) error {
+	lastWriteVersion, err := mutableState.GetLastWriteVersion()
+	if err != nil {
+		return err
+	}
+	ok, err := verifyTaskVersion(t.shard, t.logger, taskInfo.DomainID, lastWriteVersion, taskInfo.Version, taskInfo)
+	if err != nil || !ok {
+		return err
+	}
+	return nil
+}
+
+func (t *crossClusterSourceTask) getRequestForApplyParentPolicy(
+	ctx context.Context,
+	taskInfo *persistence.CrossClusterTaskInfo,
+	mutableState execution.MutableState,
+) (*types.CrossClusterApplyParentClosePolicyRequestAttributes, processingState, error) {
+
+	// No need to check the target failovers, only the active cluster should poll tasks
+	// if active cluster changes during polling, target should return error to the source
+	err := t.verifyTaskFailoverVersion(mutableState, taskInfo)
+	if err != nil {
+		return nil, t.processingState, err
+	}
+
+	attributes := &types.CrossClusterApplyParentClosePolicyRequestAttributes{}
+	children := mutableState.GetPendingChildExecutionInfos()
+	for _, childInfo := range children {
+		targetDomainEntry, err := t.shard.GetDomainCache().GetDomain(childInfo.DomainName)
+		if err != nil {
+			return nil, t.processingState, err
+		}
+		targetCluster := targetDomainEntry.GetReplicationConfig().ActiveClusterName
+		if targetCluster == t.targetCluster {
+			domainID, domainErr := t.shard.GetDomainCache().GetDomainID(childInfo.DomainName)
+			if domainErr != nil {
+				return nil, t.processingState, domainErr
+			}
+
+			attributes.AppyParentClosePolicyAttributes = append(
+				attributes.AppyParentClosePolicyAttributes,
+				&types.AppyParentClosePolicyAttributes{
+					ChildDomainID:     domainID,
+					ChildWorkflowID:   childInfo.StartedWorkflowID,
+					ChildRunID:        childInfo.StartedRunID,
+					ParentClosePolicy: &childInfo.ParentClosePolicy,
+				},
+			)
+		}
+	}
+	return attributes, t.processingState, nil
 }
 
 func (t *crossClusterSourceTask) getRequestForRecordChildWorkflowCompletion(
@@ -493,12 +557,8 @@ func (t *crossClusterSourceTask) getRequestForRecordChildWorkflowCompletion(
 ) (*types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes, processingState, error) {
 	initiatedEventID := taskInfo.ScheduleID
 
-	lastWriteVersion, err := mutableState.GetLastWriteVersion()
+	err := t.verifyTaskFailoverVersion(mutableState, taskInfo)
 	if err != nil {
-		return nil, t.processingState, err
-	}
-	ok, err := verifyTaskVersion(t.shard, t.logger, taskInfo.DomainID, lastWriteVersion, taskInfo.Version, taskInfo)
-	if err != nil || !ok {
 		return nil, t.processingState, err
 	}
 
@@ -674,6 +734,9 @@ func (t *crossClusterSourceTask) RecordResponse(response *types.CrossClusterTask
 	case persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
 		taskTypeMatch = response.GetTaskType() == types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete
 		emptyResponse = response.RecordChildWorkflowExecutionCompleteAttributes == nil
+	case persistence.CrossClusterTaskTypeApplyParentPolicy:
+		taskTypeMatch = response.GetTaskType() == types.CrossClusterTaskTypeApplyParentPolicy
+		emptyResponse = response.ApplyParentClosePolicyAttributes == nil
 	}
 
 	if !taskTypeMatch {

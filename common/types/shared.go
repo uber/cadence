@@ -10300,6 +10300,8 @@ const (
 	CrossClusterTaskTypeSignalExecution
 	// CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete is an option for CrossClusterTaskType
 	CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete
+	// CrossClusterTaskTypeApplyParentPolicy is an option for CrossClusterTaskType
+	CrossClusterTaskTypeApplyParentPolicy
 )
 
 // CrossClusterTaskFailedCause is an internal type (TBD...)
