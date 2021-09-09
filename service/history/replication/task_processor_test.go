@@ -21,6 +21,7 @@
 package replication
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -33,6 +34,7 @@ import (
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -41,6 +43,9 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/reconciliation"
+	"github.com/uber/cadence/common/reconciliation/entity"
+	ctesting "github.com/uber/cadence/common/testing"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
@@ -53,17 +58,18 @@ type (
 		*require.Assertions
 		controller *gomock.Controller
 
-		mockShard        *shard.TestContext
-		mockEngine       *engine.MockEngine
-		config           *config.Config
-		taskFetcher      *MockTaskFetcher
-		mockDomainCache  *cache.MockDomainCache
-		mockClientBean   *client.MockBean
-		adminClient      *admin.MockClient
-		clusterMetadata  *cluster.MockMetadata
-		executionManager *mocks.ExecutionManager
-		requestChan      chan *request
-		taskExecutor     *MockTaskExecutor
+		mockShard          *shard.TestContext
+		mockEngine         *engine.MockEngine
+		config             *config.Config
+		taskFetcher        *MockTaskFetcher
+		mockDomainCache    *cache.MockDomainCache
+		mockClientBean     *client.MockBean
+		mockFrontendClient *frontend.MockClient
+		adminClient        *admin.MockClient
+		clusterMetadata    *cluster.MockMetadata
+		executionManager   *mocks.ExecutionManager
+		requestChan        chan *request
+		taskExecutor       *MockTaskExecutor
 
 		taskProcessor *taskProcessorImpl
 	}
@@ -98,6 +104,7 @@ func (s *taskProcessorSuite) SetupTest() {
 
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
 	s.mockClientBean = s.mockShard.Resource.ClientBean
+	s.mockFrontendClient = s.mockShard.Resource.RemoteFrontendClient
 	s.adminClient = s.mockShard.Resource.RemoteAdminClient
 	s.clusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.executionManager = s.mockShard.Resource.ExecutionMgr
@@ -292,4 +299,47 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeSyncActiv
 	s.Equal(workflowID, request.TaskInfo.GetWorkflowID())
 	s.Equal(runID, request.TaskInfo.GetRunID())
 	s.Equal(persistence.ReplicationTaskTypeSyncActivity, request.TaskInfo.GetTaskType())
+}
+
+func (s *taskProcessorSuite) TestTriggerDataInconsistencyScan_Success() {
+	domainID := uuid.New()
+	workflowID := uuid.New()
+	runID := uuid.New()
+	task := &types.ReplicationTask{
+		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
+		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
+			DomainID:    domainID,
+			WorkflowID:  workflowID,
+			RunID:       runID,
+			ScheduledID: 1,
+			Version:     100,
+		},
+	}
+	fixExecution := entity.Execution{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+		State:      persistence.WorkflowStateCorrupted,
+	}
+	jsArray, err := json.Marshal(fixExecution)
+	s.NoError(err)
+	requestMatcher := ctesting.NewMatcher(func(x interface{}) bool {
+		req, ok := x.(*types.SignalWithStartWorkflowExecutionRequest)
+		if !ok {
+			return false
+		}
+		s.Equal(common.SystemLocalDomainName, req.GetDomain())
+		s.Equal(reconciliation.ExecutionFixerWorkflowID, req.GetWorkflowID())
+		s.Equal(reconciliation.ExecutionFixerWorkflowType, req.GetWorkflowType().GetName())
+		s.Equal(reconciliation.ExecutionFixerWorkflowTaskList, req.GetTaskList().GetName())
+		s.Equal(types.WorkflowIDReusePolicyAllowDuplicate.String(), req.GetWorkflowIDReusePolicy().String())
+		s.Equal(reconciliation.ExecutionFixerWorkflowSignalName, req.GetSignalName())
+		s.Equal(jsArray, req.GetSignalInput())
+		return true
+	})
+	s.mockFrontendClient.EXPECT().SignalWithStartWorkflowExecution(gomock.Any(), requestMatcher).Return(&types.StartWorkflowExecutionResponse{}, nil)
+	s.clusterMetadata.EXPECT().ClusterNameForFailoverVersion(int64(100)).Return("active")
+
+	err = s.taskProcessor.triggerDataInconsistencyScan(task)
+	s.NoError(err)
 }
