@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -39,9 +38,8 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller          *gomock.Controller
-		mockMutableState    *MockMutableState
-		mockEventTimeSource clock.TimeSource
+		controller       *gomock.Controller
+		mockMutableState *MockMutableState
 
 		timerSequence *timerSequenceImpl
 	}
@@ -65,9 +63,8 @@ func (s *timerSequenceSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 	s.mockMutableState = NewMockMutableState(s.controller)
-	s.mockEventTimeSource = clock.NewEventTimeSource()
 
-	s.timerSequence = NewTimerSequence(s.mockEventTimeSource, s.mockMutableState).(*timerSequenceImpl)
+	s.timerSequence = NewTimerSequence(s.mockMutableState).(*timerSequenceImpl)
 }
 
 func (s *timerSequenceSuite) TearDownTest() {

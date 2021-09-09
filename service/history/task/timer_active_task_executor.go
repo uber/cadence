@@ -133,7 +133,7 @@ func (t *timerActiveTaskExecutor) executeUserTimerTimeoutTask(
 		return nil
 	}
 
-	timerSequence := t.getTimerSequence(mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	referenceTime := t.shard.GetTimeSource().Now()
 	resurrectionCheckMinDelay := t.config.ResurrectionCheckMinDelay()
 	updateMutableState := false
@@ -235,7 +235,7 @@ func (t *timerActiveTaskExecutor) executeActivityTimeoutTask(
 		return nil
 	}
 
-	timerSequence := t.getTimerSequence(mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	referenceTime := t.shard.GetTimeSource().Now()
 	resurrectionCheckMinDelay := t.config.ResurrectionCheckMinDelay()
 	updateMutableState := false
@@ -687,14 +687,6 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 		),
 		newMutableState,
 	)
-}
-
-func (t *timerActiveTaskExecutor) getTimerSequence(
-	mutableState execution.MutableState,
-) execution.TimerSequence {
-
-	timeSource := t.shard.GetTimeSource()
-	return execution.NewTimerSequence(timeSource, mutableState)
 }
 
 func (t *timerActiveTaskExecutor) getResurrectedTimer(

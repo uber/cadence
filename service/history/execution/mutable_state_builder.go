@@ -67,8 +67,6 @@ var (
 	ErrMissingChildWorkflowInfo = &types.InternalServiceError{Message: "unable to get child workflow info"}
 	// ErrMissingWorkflowStartEvent indicates missing workflow start event
 	ErrMissingWorkflowStartEvent = &types.InternalServiceError{Message: "unable to get workflow start event"}
-	// ErrMissingWorkflowCloseEvent indicates missing workflow close event
-	ErrMissingWorkflowCloseEvent = &types.InternalServiceError{Message: "unable to get workflow close event"}
 	// ErrMissingWorkflowCompletionEvent indicates missing workflow completion event
 	ErrMissingWorkflowCompletionEvent = &types.InternalServiceError{Message: "unable to get workflow completion event"}
 	// ErrMissingActivityScheduledEvent indicates missing workflow activity scheduled event
@@ -1702,7 +1700,6 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowStartTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, err
@@ -1756,7 +1753,6 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowStartTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, err
@@ -2571,7 +2567,6 @@ func (e *mutableStateBuilder) AddCompletedWorkflowEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, err
@@ -2612,7 +2607,6 @@ func (e *mutableStateBuilder) AddFailWorkflowEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, err
@@ -2652,7 +2646,6 @@ func (e *mutableStateBuilder) AddTimeoutWorkflowEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, err
@@ -2732,7 +2725,6 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, err
@@ -3239,7 +3231,6 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, err
@@ -3357,7 +3348,6 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		e.unixNanoToTime(continueAsNewEvent.GetTimestamp()),
 		continueAsNewEvent,
 	); err != nil {
 		return nil, nil, err
@@ -3913,7 +3903,6 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 ) (*persistence.WorkflowMutation, []*persistence.WorkflowEvents, error) {
 
 	if err := e.prepareCloseTransaction(
-		now,
 		transactionPolicy,
 	); err != nil {
 		return nil, nil, err
@@ -3988,7 +3977,6 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 ) (*persistence.WorkflowSnapshot, []*persistence.WorkflowEvents, error) {
 
 	if err := e.prepareCloseTransaction(
-		now,
 		transactionPolicy,
 	); err != nil {
 		return nil, nil, err
@@ -4077,7 +4065,6 @@ func (e *mutableStateBuilder) UpdateDuplicatedResource(
 }
 
 func (e *mutableStateBuilder) prepareCloseTransaction(
-	now time.Time,
 	transactionPolicy TransactionPolicy,
 ) error {
 
@@ -4094,7 +4081,6 @@ func (e *mutableStateBuilder) prepareCloseTransaction(
 	}
 
 	if err := e.closeTransactionHandleWorkflowReset(
-		now,
 		transactionPolicy,
 	); err != nil {
 		return err
@@ -4113,7 +4099,6 @@ func (e *mutableStateBuilder) prepareCloseTransaction(
 	//  regardless of how many activity & user timer created
 	//  so the calculation must be at the very end
 	return e.closeTransactionHandleActivityUserTimerTasks(
-		now,
 		transactionPolicy,
 	)
 }
@@ -4515,7 +4500,6 @@ func (e *mutableStateBuilder) closeTransactionHandleBufferedEventsLimit(
 }
 
 func (e *mutableStateBuilder) closeTransactionHandleWorkflowReset(
-	now time.Time,
 	transactionPolicy TransactionPolicy,
 ) error {
 
@@ -4558,7 +4542,6 @@ func (e *mutableStateBuilder) closeTransactionHandleWorkflowReset(
 }
 
 func (e *mutableStateBuilder) closeTransactionHandleActivityUserTimerTasks(
-	now time.Time,
 	transactionPolicy TransactionPolicy,
 ) error {
 
@@ -4567,15 +4550,11 @@ func (e *mutableStateBuilder) closeTransactionHandleActivityUserTimerTasks(
 		return nil
 	}
 
-	if err := e.taskGenerator.GenerateActivityTimerTasks(
-		e.unixNanoToTime(now.UnixNano()),
-	); err != nil {
+	if err := e.taskGenerator.GenerateActivityTimerTasks(); err != nil {
 		return err
 	}
 
-	return e.taskGenerator.GenerateUserTimerTasks(
-		e.unixNanoToTime(now.UnixNano()),
-	)
+	return e.taskGenerator.GenerateUserTimerTasks()
 }
 
 func (e *mutableStateBuilder) checkMutability(

@@ -24,11 +24,9 @@ package execution
 
 import (
 	"context"
-	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
@@ -42,7 +40,7 @@ var emptyTasks = []persistence.Task{}
 type (
 	// MutableStateTaskRefresher refreshes workflow transfer and timer tasks
 	MutableStateTaskRefresher interface {
-		RefreshTasks(ctx context.Context, now time.Time, mutableState MutableState) error
+		RefreshTasks(ctx context.Context, mutableState MutableState) error
 	}
 
 	mutableStateTaskRefresherImpl struct {
@@ -77,7 +75,6 @@ func NewMutableStateTaskRefresher(
 
 func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 	ctx context.Context,
-	now time.Time,
 	mutableState MutableState,
 ) error {
 
@@ -90,7 +87,6 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 
 	if err := r.refreshTasksForWorkflowStart(
 		ctx,
-		now,
 		mutableState,
 		taskGenerator,
 	); err != nil {
@@ -99,7 +95,6 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 
 	if err := r.refreshTasksForWorkflowClose(
 		ctx,
-		now,
 		mutableState,
 		taskGenerator,
 	); err != nil {
@@ -108,7 +103,6 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 
 	if err := r.refreshTasksForRecordWorkflowStarted(
 		ctx,
-		now,
 		mutableState,
 		taskGenerator,
 	); err != nil {
@@ -117,7 +111,6 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 
 	if err := r.refreshTasksForDecision(
 		ctx,
-		now,
 		mutableState,
 		taskGenerator,
 	); err != nil {
@@ -126,7 +119,6 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 
 	if err := r.refreshTasksForActivity(
 		ctx,
-		now,
 		mutableState,
 		taskGenerator,
 	); err != nil {
@@ -135,7 +127,6 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 
 	if err := r.refreshTasksForTimer(
 		ctx,
-		now,
 		mutableState,
 		taskGenerator,
 	); err != nil {
@@ -144,7 +135,6 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 
 	if err := r.refreshTasksForChildWorkflow(
 		ctx,
-		now,
 		mutableState,
 		taskGenerator,
 	); err != nil {
@@ -153,7 +143,6 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 
 	if err := r.refreshTasksForRequestCancelExternalWorkflow(
 		ctx,
-		now,
 		mutableState,
 		taskGenerator,
 	); err != nil {
@@ -162,7 +151,6 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 
 	if err := r.refreshTasksForSignalExternalWorkflow(
 		ctx,
-		now,
 		mutableState,
 		taskGenerator,
 	); err != nil {
@@ -172,7 +160,6 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 	if r.config.AdvancedVisibilityWritingMode() != common.AdvancedVisibilityWritingModeOff {
 		if err := r.refreshTasksForWorkflowSearchAttr(
 			ctx,
-			now,
 			mutableState,
 			taskGenerator,
 		); err != nil {
@@ -185,7 +172,6 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowStart(
 	ctx context.Context,
-	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
 ) error {
@@ -196,7 +182,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowStart(
 	}
 
 	if err := taskGenerator.GenerateWorkflowStartTasks(
-		now,
 		startEvent,
 	); err != nil {
 		return err
@@ -205,7 +190,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowStart(
 	startAttr := startEvent.WorkflowExecutionStartedEventAttributes
 	if !mutableState.HasProcessedOrPendingDecision() && startAttr.GetFirstDecisionTaskBackoffSeconds() > 0 {
 		if err := taskGenerator.GenerateDelayedDecisionTasks(
-			now,
 			startEvent,
 		); err != nil {
 			return err
@@ -217,7 +201,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowStart(
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowClose(
 	ctx context.Context,
-	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
 ) error {
@@ -229,7 +212,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowClose(
 			return err
 		}
 		return taskGenerator.GenerateWorkflowCloseTasks(
-			now,
 			closeEvent,
 		)
 	}
@@ -239,7 +221,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowClose(
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForRecordWorkflowStarted(
 	ctx context.Context,
-	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
 ) error {
@@ -262,7 +243,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForRecordWorkflowStarted(
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForDecision(
 	ctx context.Context,
-	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
 ) error {
@@ -292,7 +272,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForDecision(
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForActivity(
 	ctx context.Context,
-	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
 ) error {
@@ -343,7 +322,6 @@ Loop:
 	}
 
 	if _, err := NewTimerSequence(
-		r.getTimeSource(now),
 		mutableState,
 	).CreateNextActivityTimer(); err != nil {
 		return err
@@ -354,7 +332,6 @@ Loop:
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForTimer(
 	ctx context.Context,
-	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
 ) error {
@@ -374,7 +351,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForTimer(
 	}
 
 	if _, err := NewTimerSequence(
-		r.getTimeSource(now),
 		mutableState,
 	).CreateNextUserTimer(); err != nil {
 		return err
@@ -385,7 +361,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForTimer(
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForChildWorkflow(
 	ctx context.Context,
-	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
 ) error {
@@ -430,7 +405,6 @@ Loop:
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForRequestCancelExternalWorkflow(
 	ctx context.Context,
-	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
 ) error {
@@ -470,7 +444,6 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForRequestCancelExternalWork
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForSignalExternalWorkflow(
 	ctx context.Context,
-	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
 ) error {
@@ -510,19 +483,9 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForSignalExternalWorkflow(
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowSearchAttr(
 	ctx context.Context,
-	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
 ) error {
 
 	return taskGenerator.GenerateWorkflowSearchAttrTasks()
-}
-
-func (r *mutableStateTaskRefresherImpl) getTimeSource(
-	now time.Time,
-) clock.TimeSource {
-
-	timeSource := clock.NewEventTimeSource()
-	timeSource.Update(now)
-	return timeSource
 }

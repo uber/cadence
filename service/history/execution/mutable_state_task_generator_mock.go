@@ -28,7 +28,6 @@ package execution
 
 import (
 	reflect "reflect"
-	time "time"
 
 	gomock "github.com/golang/mock/gomock"
 
@@ -60,31 +59,31 @@ func (m *MockMutableStateTaskGenerator) EXPECT() *MockMutableStateTaskGeneratorM
 }
 
 // GenerateWorkflowStartTasks mocks base method
-func (m *MockMutableStateTaskGenerator) GenerateWorkflowStartTasks(now time.Time, startEvent *types.HistoryEvent) error {
+func (m *MockMutableStateTaskGenerator) GenerateWorkflowStartTasks(startEvent *types.HistoryEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateWorkflowStartTasks", now, startEvent)
+	ret := m.ctrl.Call(m, "GenerateWorkflowStartTasks", startEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // GenerateWorkflowStartTasks indicates an expected call of GenerateWorkflowStartTasks
-func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateWorkflowStartTasks(now, startEvent interface{}) *gomock.Call {
+func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateWorkflowStartTasks(startEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateWorkflowStartTasks", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateWorkflowStartTasks), now, startEvent)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateWorkflowStartTasks", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateWorkflowStartTasks), startEvent)
 }
 
 // GenerateWorkflowCloseTasks mocks base method
-func (m *MockMutableStateTaskGenerator) GenerateWorkflowCloseTasks(now time.Time, closeEvent *types.HistoryEvent) error {
+func (m *MockMutableStateTaskGenerator) GenerateWorkflowCloseTasks(closeEvent *types.HistoryEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateWorkflowCloseTasks", now, closeEvent)
+	ret := m.ctrl.Call(m, "GenerateWorkflowCloseTasks", closeEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // GenerateWorkflowCloseTasks indicates an expected call of GenerateWorkflowCloseTasks
-func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateWorkflowCloseTasks(now, closeEvent interface{}) *gomock.Call {
+func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateWorkflowCloseTasks(closeEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateWorkflowCloseTasks", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateWorkflowCloseTasks), now, closeEvent)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateWorkflowCloseTasks", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateWorkflowCloseTasks), closeEvent)
 }
 
 // GenerateRecordWorkflowStartedTasks mocks base method
@@ -102,17 +101,17 @@ func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateRecordWorkflowStart
 }
 
 // GenerateDelayedDecisionTasks mocks base method
-func (m *MockMutableStateTaskGenerator) GenerateDelayedDecisionTasks(now time.Time, startEvent *types.HistoryEvent) error {
+func (m *MockMutableStateTaskGenerator) GenerateDelayedDecisionTasks(startEvent *types.HistoryEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateDelayedDecisionTasks", now, startEvent)
+	ret := m.ctrl.Call(m, "GenerateDelayedDecisionTasks", startEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // GenerateDelayedDecisionTasks indicates an expected call of GenerateDelayedDecisionTasks
-func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateDelayedDecisionTasks(now, startEvent interface{}) *gomock.Call {
+func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateDelayedDecisionTasks(startEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateDelayedDecisionTasks", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateDelayedDecisionTasks), now, startEvent)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateDelayedDecisionTasks", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateDelayedDecisionTasks), startEvent)
 }
 
 // GenerateDecisionScheduleTasks mocks base method
@@ -270,29 +269,29 @@ func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateCrossClusterApplyPa
 }
 
 // GenerateActivityTimerTasks mocks base method
-func (m *MockMutableStateTaskGenerator) GenerateActivityTimerTasks(now time.Time) error {
+func (m *MockMutableStateTaskGenerator) GenerateActivityTimerTasks() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateActivityTimerTasks", now)
+	ret := m.ctrl.Call(m, "GenerateActivityTimerTasks")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // GenerateActivityTimerTasks indicates an expected call of GenerateActivityTimerTasks
-func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateActivityTimerTasks(now interface{}) *gomock.Call {
+func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateActivityTimerTasks() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateActivityTimerTasks", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateActivityTimerTasks), now)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateActivityTimerTasks", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateActivityTimerTasks))
 }
 
 // GenerateUserTimerTasks mocks base method
-func (m *MockMutableStateTaskGenerator) GenerateUserTimerTasks(now time.Time) error {
+func (m *MockMutableStateTaskGenerator) GenerateUserTimerTasks() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateUserTimerTasks", now)
+	ret := m.ctrl.Call(m, "GenerateUserTimerTasks")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // GenerateUserTimerTasks indicates an expected call of GenerateUserTimerTasks
-func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateUserTimerTasks(now interface{}) *gomock.Call {
+func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateUserTimerTasks() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateUserTimerTasks", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateUserTimerTasks), now)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateUserTimerTasks", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateUserTimerTasks))
 }

@@ -3276,14 +3276,12 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		e.shard.GetShardID(),
 	)
 
-	now := e.shard.GetTimeSource().Now()
-
-	err = mutableStateTaskRefresher.RefreshTasks(ctx, now, mutableState)
+	err = mutableStateTaskRefresher.RefreshTasks(ctx, mutableState)
 	if err != nil {
 		return err
 	}
 
-	err = wfContext.UpdateWorkflowExecutionAsActive(ctx, now)
+	err = wfContext.UpdateWorkflowExecutionAsActive(ctx, e.shard.GetTimeSource().Now())
 	if err != nil {
 		return err
 	}
