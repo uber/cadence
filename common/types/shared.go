@@ -10255,6 +10255,8 @@ func (e CrossClusterTaskType) String() string {
 		return "CancelExecution"
 	case 2:
 		return "SignalExecution"
+	case 3:
+		return "RecordChildWorkflowExecutionComplete"
 	}
 	return fmt.Sprintf("CrossClusterTaskType(%d)", w)
 }
@@ -10270,6 +10272,9 @@ func (e *CrossClusterTaskType) UnmarshalText(value []byte) error {
 		return nil
 	case "SIGNALEXECUTION":
 		*e = CrossClusterTaskTypeSignalExecution
+		return nil
+	case "RECORDCHILDWORKLOWEXECUTIONCOMPLETE":
+		*e = CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete
 		return nil
 	default:
 		val, err := strconv.ParseInt(s, 10, 32)
@@ -10293,6 +10298,8 @@ const (
 	CrossClusterTaskTypeCancelExecution
 	// CrossClusterTaskTypeSignalExecution is an option for CrossClusterTaskType
 	CrossClusterTaskTypeSignalExecution
+	// CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete is an option for CrossClusterTaskType
+	CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete
 )
 
 // CrossClusterTaskFailedCause is an internal type (TBD...)

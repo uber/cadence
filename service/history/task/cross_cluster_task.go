@@ -169,9 +169,9 @@ func NewCrossClusterSourceTask(
 
 // NewCrossClusterTargetTask is called at the target cluster
 // to process the cross cluster task
-// the returned the Future will be unblocked when after the task
+// the returned the Future will be unblocked after the task
 // is processed. The future value has type types.CrossClusterTaskResponse
-// and there will be not error returned for this future. All errors will
+// and there won't be any error returned for this future. All errors will
 // be recorded by the FailedCause field in the response.
 func NewCrossClusterTargetTask(
 	shard shard.Context,
@@ -470,12 +470,50 @@ func (t *crossClusterSourceTask) GetCrossClusterRequest() (request *types.CrossC
 		}
 		request.TaskInfo.TaskType = types.CrossClusterTaskTypeSignalExecution.Ptr()
 		request.SignalExecutionAttributes = attributes
+	case persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+		var attributes *types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes
+		attributes, taskState, err = t.getRequestForRecordChildWorkflowCompletion(ctx, taskInfo, mutableState)
+		if err != nil || attributes == nil {
+			return nil, err
+		}
+		request.TaskInfo.TaskType = types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete.Ptr()
+		request.RecordChildWorkflowExecutionCompleteAttributes = attributes
 	default:
 		return nil, errUnknownCrossClusterTask
 	}
 
 	request.TaskInfo.TaskState = int16(taskState)
 	return request, nil
+}
+
+func (t *crossClusterSourceTask) getRequestForRecordChildWorkflowCompletion(
+	ctx context.Context,
+	taskInfo *persistence.CrossClusterTaskInfo,
+	mutableState execution.MutableState,
+) (*types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes, processingState, error) {
+	initiatedEventID := taskInfo.ScheduleID
+
+	lastWriteVersion, err := mutableState.GetLastWriteVersion()
+	if err != nil {
+		return nil, t.processingState, err
+	}
+	ok, err := verifyTaskVersion(t.shard, t.logger, taskInfo.DomainID, lastWriteVersion, taskInfo.Version, taskInfo)
+	if err != nil || !ok {
+		return nil, t.processingState, err
+	}
+
+	completionEvent, err := mutableState.GetCompletionEvent(ctx)
+	if err != nil {
+		return nil, t.processingState, err
+	}
+
+	attributes := &types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes{
+		TargetDomainID:   taskInfo.TargetDomainID,
+		InitiatedEventID: initiatedEventID,
+		CompletionEvent:  completionEvent,
+	}
+
+	return attributes, t.processingState, nil
 }
 
 func (t *crossClusterSourceTask) getRequestForStartChildExecution(
@@ -633,6 +671,9 @@ func (t *crossClusterSourceTask) RecordResponse(response *types.CrossClusterTask
 	case persistence.CrossClusterTaskTypeSignalExecution:
 		taskTypeMatch = response.GetTaskType() == types.CrossClusterTaskTypeSignalExecution
 		emptyResponse = response.SignalExecutionAttributes == nil
+	case persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+		taskTypeMatch = response.GetTaskType() == types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete
+		emptyResponse = response.RecordChildWorkflowExecutionCompleteAttributes == nil
 	}
 
 	if !taskTypeMatch {
@@ -668,7 +709,7 @@ func (t *crossClusterSourceTask) RecordResponse(response *types.CrossClusterTask
 	return nil
 }
 
-// cross cluster target task methods
+// CROSS CLUSTER TARGET TASK METHODS
 
 func (t *crossClusterTargetTask) Execute() error {
 	executionStartTime := t.timeSource.Now()
@@ -722,11 +763,7 @@ func (t *crossClusterTargetTask) HandleErr(
 func (t *crossClusterTargetTask) RetryErr(
 	err error,
 ) bool {
-	if err == ErrTaskPendingActive {
-		return false
-	}
-
-	return true
+	return err != ErrTaskPendingActive
 }
 
 func (t *crossClusterTargetTask) completeTask() {
