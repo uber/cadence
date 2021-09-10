@@ -319,7 +319,6 @@ func (s *taskProcessorSuite) TestTriggerDataInconsistencyScan_Success() {
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 		RunID:      runID,
-		State:      persistence.WorkflowStateCorrupted,
 	}
 	jsArray, err := json.Marshal(fixExecution)
 	s.NoError(err)
