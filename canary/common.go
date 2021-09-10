@@ -105,3 +105,10 @@ func beginWorkflow(ctx workflow.Context, wfType string, scheduledTimeNanos int64
 func concat(first string, second string) string {
 	return first + "/" + second
 }
+
+func getScheduledTimeFromInputIfNonZero(ctx workflow.Context, nanos int64) int64 {
+	if nanos == 0 {
+		return workflow.Now(ctx).UnixNano()
+	}
+	return nanos
+}

@@ -57,7 +57,9 @@ func init() {
 	registerActivity(visibilityArchivalActivity, activityTypeVisibilityArchival)
 }
 
-func visibilityArchivalWorkflow(ctx workflow.Context, scheduledTimeNanos int64) error {
+func visibilityArchivalWorkflow(ctx workflow.Context, inputScheduledTimeNanos int64) error {
+	scheduledTimeNanos := getScheduledTimeFromInputIfNonZero(ctx, inputScheduledTimeNanos)
+
 	profile, err := beginWorkflow(ctx, wfTypeVisibilityArchival, scheduledTimeNanos)
 	if err != nil {
 		return err

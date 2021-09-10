@@ -43,7 +43,10 @@ func init() {
 }
 
 // cancellationWorkflow is the workflow implementation to test for cancellation of workflows
-func cancellationWorkflow(ctx workflow.Context, scheduledTimeNanos int64, domain string) error {
+func cancellationWorkflow(ctx workflow.Context, inputScheduledTimeNanos int64) error {
+	scheduledTimeNanos := getScheduledTimeFromInputIfNonZero(ctx, inputScheduledTimeNanos)
+	domain := workflow.GetInfo(ctx).Domain
+
 	profile, err := beginWorkflow(ctx, wfTypeCancellation, scheduledTimeNanos)
 	if err != nil {
 		return err
