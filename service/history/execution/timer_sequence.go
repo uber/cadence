@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -92,7 +91,6 @@ type (
 	}
 
 	timerSequenceImpl struct {
-		timeSource   clock.TimeSource
 		mutableState MutableState
 	}
 )
@@ -101,11 +99,9 @@ var _ TimerSequence = (*timerSequenceImpl)(nil)
 
 // NewTimerSequence creates a new timer sequence
 func NewTimerSequence(
-	timeSource clock.TimeSource,
 	mutableState MutableState,
 ) TimerSequence {
 	return &timerSequenceImpl{
-		timeSource:   timeSource,
 		mutableState: mutableState,
 	}
 }

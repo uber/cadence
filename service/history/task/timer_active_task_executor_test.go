@@ -161,7 +161,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Fire() {
 	timerTimeout := 2 * time.Second
 	event, _ := test.AddTimerStartedEvent(mutableState, decisionCompletionID, timerID, int64(timerTimeout.Seconds()))
 
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks()
 	modified, err := timerSequence.CreateNextUserTimer()
 	s.NoError(err)
@@ -202,7 +202,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Noop() {
 	timerTimeout := 2 * time.Second
 	event, _ := test.AddTimerStartedEvent(mutableState, decisionCompletionID, timerID, int64(timerTimeout.Seconds()))
 
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks()
 	modified, err := timerSequence.CreateNextUserTimer()
 	s.NoError(err)
@@ -252,7 +252,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Resurrected()
 	// omitted here to make the test easier to read
 
 	// create timer task for timer2
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks() // remove existing timer task for timerID1
 	modified, err := timerSequence.CreateNextUserTimer()
 	s.NoError(err)
@@ -327,7 +327,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_
 		int32(timerTimeout.Seconds()),
 	)
 
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks()
 	modified, err := timerSequence.CreateNextActivityTimer()
 	s.NoError(err)
@@ -380,7 +380,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_
 	)
 	startedEvent := test.AddActivityTaskStartedEvent(mutableState, scheduledEvent.GetEventID(), identity)
 
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks()
 	modified, err := timerSequence.CreateNextActivityTimer()
 	s.NoError(err)
@@ -439,7 +439,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 	startedEvent := test.AddActivityTaskStartedEvent(mutableState, scheduledEvent.GetEventID(), "identity")
 	s.Nil(startedEvent)
 
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks()
 	modified, err := timerSequence.CreateNextActivityTimer()
 	s.NoError(err)
@@ -501,7 +501,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 		},
 	)
 
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks()
 	modified, err := timerSequence.CreateNextActivityTimer()
 	s.NoError(err)
@@ -566,7 +566,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_No
 	startedEvent := test.AddActivityTaskStartedEvent(mutableState, scheduledEvent.GetEventID(), identity)
 	s.Nil(startedEvent)
 
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks()
 	modified, err := timerSequence.CreateNextActivityTimer()
 	s.NoError(err)
@@ -627,7 +627,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noop
 	startedEvent := test.AddActivityTaskStartedEvent(mutableState, scheduledEvent.GetEventID(), identity)
 	s.Nil(startedEvent)
 
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks()
 	modified, err := timerSequence.CreateNextActivityTimer()
 	s.NoError(err)
@@ -694,7 +694,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Resurrected() 
 	// there should be a decision scheduled event after activity1 is completed
 	// omitted here to make the test easier to read
 
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks()
 	modified, err := timerSequence.CreateNextActivityTimer()
 	s.NoError(err)

@@ -170,7 +170,6 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 			if attributes.GetFirstDecisionTaskBackoffSeconds() > 0 {
 				if err := taskGenerator.GenerateDelayedDecisionTasks(
-					b.unixNanoToTime(event.GetTimestamp()),
 					event,
 				); err != nil {
 					return nil, err
@@ -524,7 +523,6 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
-				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
 				return nil, err
@@ -539,7 +537,6 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
-				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
 				return nil, err
@@ -554,7 +551,6 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
-				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
 				return nil, err
@@ -569,7 +565,6 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
-				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
 				return nil, err
@@ -584,7 +579,6 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
-				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
 				return nil, err
@@ -627,7 +621,6 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
-				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
 				return nil, err
@@ -639,14 +632,10 @@ func (b *stateBuilderImpl) ApplyEvents(
 	}
 
 	// must generate the activity timer / user timer at the very end
-	if err := taskGenerator.GenerateActivityTimerTasks(
-		b.unixNanoToTime(lastEvent.GetTimestamp()),
-	); err != nil {
+	if err := taskGenerator.GenerateActivityTimerTasks(); err != nil {
 		return nil, err
 	}
-	if err := taskGenerator.GenerateUserTimerTasks(
-		b.unixNanoToTime(lastEvent.GetTimestamp()),
-	); err != nil {
+	if err := taskGenerator.GenerateUserTimerTasks(); err != nil {
 		return nil, err
 	}
 

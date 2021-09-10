@@ -166,7 +166,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Pending() {
 	event, _ := test.AddTimerStartedEvent(mutableState, decisionCompletionID, timerID, int64(timerTimeout.Seconds()))
 	nextEventID := event.GetEventID()
 
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks()
 	modified, err := timerSequence.CreateNextUserTimer()
 	s.NoError(err)
@@ -220,7 +220,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Success() {
 	timerTimeout := 2 * time.Second
 	event, _ := test.AddTimerStartedEvent(mutableState, decisionCompletionID, timerID, int64(timerTimeout.Seconds()))
 
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks()
 	modified, err := timerSequence.CreateNextUserTimer()
 	s.NoError(err)
@@ -263,7 +263,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Multiple() {
 	timerTimeout2 := 50 * time.Second
 	_, _ = test.AddTimerStartedEvent(mutableState, decisionCompletionID, timerID2, int64(timerTimeout2.Seconds()))
 
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks()
 	modified, err := timerSequence.CreateNextUserTimer()
 	s.NoError(err)
@@ -313,7 +313,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Pending() {
 	)
 	nextEventID := scheduledEvent.GetEventID()
 
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks()
 	modified, err := timerSequence.CreateNextActivityTimer()
 	s.NoError(err)
@@ -378,7 +378,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Success() {
 	)
 	startedEvent := test.AddActivityTaskStartedEvent(mutableState, scheduledEvent.GetEventID(), identity)
 
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks()
 	modified, err := timerSequence.CreateNextActivityTimer()
 	s.NoError(err)
@@ -430,7 +430,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noo
 	startedEvent := test.AddActivityTaskStartedEvent(mutableState, scheduledEvent.GetEventID(), "identity")
 	mutableState.FlushBufferedEvents()
 
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks()
 	modified, err := timerSequence.CreateNextActivityTimer()
 	s.NoError(err)
@@ -482,7 +482,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Multiple_CanU
 	activityInfo2.TimerTaskStatus |= execution.TimerTaskStatusCreatedHeartbeat
 	activityInfo2.LastHeartBeatUpdatedTime = time.Now()
 
-	timerSequence := execution.NewTimerSequence(s.timeSource, mutableState)
+	timerSequence := execution.NewTimerSequence(mutableState)
 	mutableState.DeleteTimerTasks()
 	modified, err := timerSequence.CreateNextActivityTimer()
 	s.NoError(err)
