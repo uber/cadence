@@ -553,12 +553,12 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	s.testProcessCloseExecution_NoParent_HasFewChildren(
 		map[string]string{
 			"child_abandon":   s.domainName,
-			"child_terminate": s.domainName,
+			"child_terminate": s.childDomainName,
 			"child_cancel":    s.domainName,
 		},
 		func() {
-			s.expectCancelRequest()
-			s.expectTerminateRequest()
+			s.expectCancelRequest(s.domainName)
+			s.expectTerminateRequest(s.childDomainName)
 		},
 	)
 }
@@ -572,8 +572,8 @@ func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChil
 		},
 		func() {
 			s.expectCrossClusterApplyParentPolicyCalls()
-			s.expectCancelRequest()
-			s.expectTerminateRequest()
+			s.expectCancelRequest(s.domainName)
+			s.expectTerminateRequest(s.domainName)
 		},
 	)
 }
@@ -583,11 +583,11 @@ func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChil
 		map[string]string{
 			"child_abandon":   s.domainName,
 			"child_terminate": s.remoteTargetDomainName,
-			"child_cancel":    s.domainName,
+			"child_cancel":    s.childDomainName,
 		},
 		func() {
 			s.expectCrossClusterApplyParentPolicyCalls()
-			s.expectCancelRequest()
+			s.expectCancelRequest(s.childDomainName)
 		},
 	)
 }
@@ -601,7 +601,7 @@ func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChil
 		},
 		func() {
 			s.expectCrossClusterApplyParentPolicyCalls()
-			s.expectTerminateRequest()
+			s.expectTerminateRequest(s.domainName)
 		},
 	)
 }
@@ -619,18 +619,30 @@ func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChil
 	)
 }
 
-func (s *transferActiveTaskExecutorSuite) expectCancelRequest() {
-	s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(func(_, _ interface{}) error {
-		errors := []error{nil, &types.CancellationAlreadyRequestedError{}, &types.EntityNotExistsError{}}
-		return errors[rand.Intn(len(errors))]
-	}).Times(1)
+func (s *transferActiveTaskExecutorSuite) expectCancelRequest(childDomainName string) {
+	childDomainID, err := s.mockDomainCache.GetDomainID(childDomainName)
+	s.NoError(err)
+	s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, request *types.HistoryRequestCancelWorkflowExecutionRequest) error {
+			s.Equal(request.DomainUUID, childDomainID)
+			s.Equal(request.CancelRequest.Domain, childDomainName)
+			errors := []error{nil, &types.CancellationAlreadyRequestedError{}, &types.EntityNotExistsError{}}
+			return errors[rand.Intn(len(errors))]
+		},
+	).Times(1)
 }
 
-func (s *transferActiveTaskExecutorSuite) expectTerminateRequest() {
-	s.mockHistoryClient.EXPECT().TerminateWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(func(_, _ interface{}) error {
-		errors := []error{nil, &types.EntityNotExistsError{}}
-		return errors[rand.Intn(len(errors))]
-	}).Times(1)
+func (s *transferActiveTaskExecutorSuite) expectTerminateRequest(childDomainName string) {
+	childDomainID, err := s.mockDomainCache.GetDomainID(childDomainName)
+	s.NoError(err)
+	s.mockHistoryClient.EXPECT().TerminateWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, request *types.HistoryTerminateWorkflowExecutionRequest) error {
+			s.Equal(request.DomainUUID, childDomainID)
+			s.Equal(request.TerminateRequest.Domain, childDomainName)
+			errors := []error{nil, &types.EntityNotExistsError{}}
+			return errors[rand.Intn(len(errors))]
+		},
+	).Times(1)
 }
 
 func (s *transferActiveTaskExecutorSuite) expectCrossClusterApplyParentPolicyCalls() {
@@ -720,8 +732,10 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
 	s.NoError(err)
 
-	for i := 0; i < 10; i++ {
+	numChildWorkflows := 10
+	for i := 0; i < numChildWorkflows; i++ {
 		_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletionID, uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
+			Domain:     s.childDomainName,
 			WorkflowID: "child workflow" + strconv.Itoa(i),
 			WorkflowType: &types.WorkflowType{
 				Name: "child workflow type",
@@ -753,7 +767,19 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything, mock.Anything).Return(nil).Once()
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
-	s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything, mock.Anything).Return(nil).Times(1)
+	s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything, mock.MatchedBy(
+		func(request parentclosepolicy.Request) bool {
+			if len(request.Executions) != numChildWorkflows {
+				return false
+			}
+			for _, executions := range request.Executions {
+				if executions.DomainName != s.childDomainName {
+					return false
+				}
+			}
+			return true
+		},
+	)).Return(nil).Times(1)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
 	s.Nil(err)
