@@ -23,10 +23,10 @@ package reconciliation
 // Execution fixer workflow relates
 
 const (
-	ExecutionFixerWorkflowType        = "execution-fixer-workflow"
-	ExecutionFixerWorkflowTaskList    = "execution-fixer-tl"
-	ExecutionFixerWorkflowSignalName  = "execution-fixer-signal"
-	ExecutionFixerWorkflowID          = "execution-fixer-workflow-id"
-	ExecutionFixerWorkflowTimeout     = 24 * 60 * 60
-	ExecutionFixerWorkflowTaskTimeout = 60
+	ExecutionFixerWorkflowType                 = "execution-fixer-workflow"
+	ExecutionFixerWorkflowTaskList             = "execution-fixer-tl"
+	ExecutionFixerWorkflowSignalName           = "execution-fixer-signal"
+	ExecutionFixerWorkflowID                   = "execution-fixer-workflow-id"
+	ExecutionFixerWorkflowTimeout              = 24 * 60 * 60
+	ExecutionFixerWorkflowTaskTimeoutInSeconds = 60
 )

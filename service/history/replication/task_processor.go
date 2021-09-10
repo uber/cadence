@@ -35,9 +35,6 @@ import (
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
 
-	"github.com/uber/cadence/common/reconciliation"
-	"github.com/uber/cadence/common/reconciliation/entity"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
@@ -45,6 +42,8 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/reconciliation"
+	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
@@ -584,19 +583,19 @@ func (p *taskProcessorImpl) triggerDataInconsistencyScan(replicationTask *types.
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 		RunID:      runID,
-		State:      persistence.WorkflowStateCorrupted,
 	}
 	fixExecutionInput, err := json.Marshal(fixExecution)
 	if err != nil {
 		return err
 	}
+	// Assume the workflow is corrupted, rely on invariant to validate it
 	_, err = client.SignalWithStartWorkflowExecution(context.Background(), &types.SignalWithStartWorkflowExecutionRequest{
 		Domain:                              common.SystemLocalDomainName,
 		WorkflowID:                          reconciliation.ExecutionFixerWorkflowID,
 		WorkflowType:                        &types.WorkflowType{Name: reconciliation.ExecutionFixerWorkflowType},
 		TaskList:                            &types.TaskList{Name: reconciliation.ExecutionFixerWorkflowTaskList},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(reconciliation.ExecutionFixerWorkflowTimeout),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(reconciliation.ExecutionFixerWorkflowTaskTimeout),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(reconciliation.ExecutionFixerWorkflowTaskTimeoutInSeconds),
 		Identity:                            "cadence-history-replication",
 		RequestID:                           uuid.New(),
 		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),

@@ -21,6 +21,7 @@
 package replication
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -45,7 +46,6 @@ import (
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/reconciliation"
 	"github.com/uber/cadence/common/reconciliation/entity"
-	ctesting "github.com/uber/cadence/common/testing"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
@@ -323,21 +323,16 @@ func (s *taskProcessorSuite) TestTriggerDataInconsistencyScan_Success() {
 	}
 	jsArray, err := json.Marshal(fixExecution)
 	s.NoError(err)
-	requestMatcher := ctesting.NewMatcher(func(x interface{}) bool {
-		req, ok := x.(*types.SignalWithStartWorkflowExecutionRequest)
-		if !ok {
-			return false
-		}
-		s.Equal(common.SystemLocalDomainName, req.GetDomain())
-		s.Equal(reconciliation.ExecutionFixerWorkflowID, req.GetWorkflowID())
-		s.Equal(reconciliation.ExecutionFixerWorkflowType, req.GetWorkflowType().GetName())
-		s.Equal(reconciliation.ExecutionFixerWorkflowTaskList, req.GetTaskList().GetName())
-		s.Equal(types.WorkflowIDReusePolicyAllowDuplicate.String(), req.GetWorkflowIDReusePolicy().String())
-		s.Equal(reconciliation.ExecutionFixerWorkflowSignalName, req.GetSignalName())
-		s.Equal(jsArray, req.GetSignalInput())
-		return true
-	})
-	s.mockFrontendClient.EXPECT().SignalWithStartWorkflowExecution(gomock.Any(), requestMatcher).Return(&types.StartWorkflowExecutionResponse{}, nil)
+	s.mockFrontendClient.EXPECT().SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, request *types.SignalWithStartWorkflowExecutionRequest) {
+			s.Equal(common.SystemLocalDomainName, request.GetDomain())
+			s.Equal(reconciliation.ExecutionFixerWorkflowID, request.GetWorkflowID())
+			s.Equal(reconciliation.ExecutionFixerWorkflowType, request.GetWorkflowType().GetName())
+			s.Equal(reconciliation.ExecutionFixerWorkflowTaskList, request.GetTaskList().GetName())
+			s.Equal(types.WorkflowIDReusePolicyAllowDuplicate.String(), request.GetWorkflowIDReusePolicy().String())
+			s.Equal(reconciliation.ExecutionFixerWorkflowSignalName, request.GetSignalName())
+			s.Equal(jsArray, request.GetSignalInput())
+		}).Return(&types.StartWorkflowExecutionResponse{}, nil)
 	s.clusterMetadata.EXPECT().ClusterNameForFailoverVersion(int64(100)).Return("active")
 
 	err = s.taskProcessor.triggerDataInconsistencyScan(task)
