@@ -39,8 +39,11 @@ import (
 type (
 	// MutableStateTaskGenerator generates workflow transfer and timer tasks
 	MutableStateTaskGenerator interface {
+		// for workflow reset startTime should be the reset time instead of
+		// the startEvent time, so that workflow timeout timestamp can be
+		// re-calculated.
 		GenerateWorkflowStartTasks(
-			now time.Time,
+			startTime time.Time,
 			startEvent *types.HistoryEvent,
 		) error
 		GenerateWorkflowCloseTasks(
@@ -132,7 +135,7 @@ func NewMutableStateTaskGenerator(
 }
 
 func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowStartTasks(
-	now time.Time,
+	startTime time.Time,
 	startEvent *types.HistoryEvent,
 ) error {
 
@@ -144,7 +147,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowStartTasks(
 
 	workflowTimeoutDuration := time.Duration(executionInfo.WorkflowTimeout) * time.Second
 	workflowTimeoutDuration = workflowTimeoutDuration + firstDecisionDelayDuration
-	workflowTimeoutTimestamp := now.Add(workflowTimeoutDuration)
+	workflowTimeoutTimestamp := startTime.Add(workflowTimeoutDuration)
 	if !executionInfo.ExpirationTime.IsZero() && workflowTimeoutTimestamp.After(executionInfo.ExpirationTime) {
 		workflowTimeoutTimestamp = executionInfo.ExpirationTime
 	}
