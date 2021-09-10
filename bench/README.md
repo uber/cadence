@@ -7,7 +7,7 @@ Setup
 -----------
 ### Cadence server
 
-Bench suite is running against a Cadence server/cluster. 
+Bench suite is running against a Cadence server/cluster. See [documentation](https://cadenceworkflow.io/docs/operation-guide/setup/) for Cadence server cluster setup.
 
 Note that only the Basic bench test don't require Advanced Visibility. 
  
@@ -20,7 +20,7 @@ For local env you can run it through:
 See more [documentation here](https://cadenceworkflow.io/docs/concepts/search-workflows/).
 
 ### Bench Workers
-:warning: NOTE: unlike canary, starting bench worker will not automatically start a bench test. Next two sections will cover how to start and configure it.
+:warning: NOTE: Starting this bench worker will not automatically start a bench test. Next two sections will cover how to start and configure it.
 
 Different ways of start the bench workers:
 
