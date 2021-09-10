@@ -2025,6 +2025,7 @@ const (
 	ReplicationDLQAckLevelGauge
 	ReplicationDLQProbeFailed
 	ReplicationDLQSize
+	ReplicationDLQValidationFailed
 	GetReplicationMessagesForShardLatency
 	GetDLQReplicationMessagesLatency
 	EventReapplySkippedCount
@@ -2528,6 +2529,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationDLQAckLevelGauge:                       {metricName: "replication_dlq_ack_level", metricType: Gauge},
 		ReplicationDLQProbeFailed:                         {metricName: "replication_dlq_probe_failed", metricType: Counter},
 		ReplicationDLQSize:                                {metricName: "replication_dlq_size", metricType: Gauge},
+		ReplicationDLQValidationFailed:                    {metricName: "replication_dlq_validation_failed", metricType: Counter},
 		GetReplicationMessagesForShardLatency:             {metricName: "get_replication_messages_for_shard", metricType: Timer},
 		GetDLQReplicationMessagesLatency:                  {metricName: "get_dlq_replication_messages", metricType: Timer},
 		EventReapplySkippedCount:                          {metricName: "event_reapply_skipped_count", metricType: Counter},
