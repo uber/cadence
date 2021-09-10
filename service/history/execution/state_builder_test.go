@@ -176,6 +176,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_No
 		event,
 	).Return(nil).Times(1)
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowStartTasks(
+		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
 		event,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
@@ -226,6 +227,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_Wi
 		event,
 	).Return(nil).Times(1)
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowStartTasks(
+		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
 		event,
 	).Return(nil).Times(1)
 	s.mockTaskGenerator.EXPECT().GenerateDelayedDecisionTasks(
@@ -484,6 +486,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		newRunStartedEvent,
 	).Return(nil).Times(1)
 	s.mockTaskGeneratorForNew.EXPECT().GenerateWorkflowStartTasks(
+		s.stateBuilder.unixNanoToTime(newRunStartedEvent.GetTimestamp()),
 		newRunStartedEvent,
 	).Return(nil).Times(1)
 	s.mockTaskGeneratorForNew.EXPECT().GenerateDecisionScheduleTasks(

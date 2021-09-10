@@ -40,6 +40,7 @@ type (
 	// MutableStateTaskGenerator generates workflow transfer and timer tasks
 	MutableStateTaskGenerator interface {
 		GenerateWorkflowStartTasks(
+			now time.Time,
 			startEvent *types.HistoryEvent,
 		) error
 		GenerateWorkflowCloseTasks(
@@ -131,6 +132,7 @@ func NewMutableStateTaskGenerator(
 }
 
 func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowStartTasks(
+	now time.Time,
 	startEvent *types.HistoryEvent,
 ) error {
 
@@ -139,11 +141,10 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowStartTasks(
 
 	executionInfo := r.mutableState.GetExecutionInfo()
 	startVersion := startEvent.GetVersion()
-	startTimestamp := time.Unix(0, startEvent.GetTimestamp())
 
 	workflowTimeoutDuration := time.Duration(executionInfo.WorkflowTimeout) * time.Second
 	workflowTimeoutDuration = workflowTimeoutDuration + firstDecisionDelayDuration
-	workflowTimeoutTimestamp := startTimestamp.Add(workflowTimeoutDuration)
+	workflowTimeoutTimestamp := now.Add(workflowTimeoutDuration)
 	if !executionInfo.ExpirationTime.IsZero() && workflowTimeoutTimestamp.After(executionInfo.ExpirationTime) {
 		workflowTimeoutTimestamp = executionInfo.ExpirationTime
 	}

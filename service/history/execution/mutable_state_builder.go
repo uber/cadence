@@ -1700,6 +1700,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowStartTasks(
+		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, err
@@ -1753,6 +1754,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowStartTasks(
+		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, err

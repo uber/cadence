@@ -28,6 +28,7 @@ package execution
 
 import (
 	reflect "reflect"
+	time "time"
 
 	gomock "github.com/golang/mock/gomock"
 
@@ -59,17 +60,17 @@ func (m *MockMutableStateTaskGenerator) EXPECT() *MockMutableStateTaskGeneratorM
 }
 
 // GenerateWorkflowStartTasks mocks base method
-func (m *MockMutableStateTaskGenerator) GenerateWorkflowStartTasks(startEvent *types.HistoryEvent) error {
+func (m *MockMutableStateTaskGenerator) GenerateWorkflowStartTasks(now time.Time, startEvent *types.HistoryEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateWorkflowStartTasks", startEvent)
+	ret := m.ctrl.Call(m, "GenerateWorkflowStartTasks", now, startEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // GenerateWorkflowStartTasks indicates an expected call of GenerateWorkflowStartTasks
-func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateWorkflowStartTasks(startEvent interface{}) *gomock.Call {
+func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateWorkflowStartTasks(now, startEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateWorkflowStartTasks", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateWorkflowStartTasks), startEvent)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateWorkflowStartTasks", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateWorkflowStartTasks), now, startEvent)
 }
 
 // GenerateWorkflowCloseTasks mocks base method

@@ -24,6 +24,7 @@ package execution
 
 import (
 	"context"
+	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -182,6 +183,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowStart(
 	}
 
 	if err := taskGenerator.GenerateWorkflowStartTasks(
+		time.Unix(0, startEvent.GetTimestamp()),
 		startEvent,
 	); err != nil {
 		return err

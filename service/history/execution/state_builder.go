@@ -162,6 +162,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateWorkflowStartTasks(
+				b.unixNanoToTime(event.GetTimestamp()),
 				event,
 			); err != nil {
 				return nil, err
