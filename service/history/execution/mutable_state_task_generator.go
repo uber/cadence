@@ -86,6 +86,9 @@ type (
 			transferTask *persistence.TransferTaskInfo,
 			targetCluster string,
 		) error
+		GenerateFromCrossClusterTask(
+			crossClusterTask *persistence.CrossClusterTaskInfo,
+		) error
 
 		// these 2 APIs should only be called when mutable state transaction is being closed
 		GenerateActivityTimerTasks() error
@@ -639,6 +642,100 @@ func (r *mutableStateTaskGeneratorImpl) GenerateCrossClusterTaskFromTransferTask
 	// can include the latency for the original transfer task.
 	crossClusterTask.SetVisibilityTimestamp(task.VisibilityTimestamp)
 	r.mutableState.AddCrossClusterTasks(crossClusterTask)
+
+	return nil
+}
+
+func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
+	task *persistence.CrossClusterTaskInfo,
+) error {
+	generateTransferTask := false
+	var targetCluster string
+
+	sourceDomainEntry := r.mutableState.GetDomainEntry()
+	if !sourceDomainEntry.IsDomainActive() && !sourceDomainEntry.IsDomainPendingActive() {
+		// domain is passive, generate (passive) transfer task
+		generateTransferTask = true
+	}
+
+	if !generateTransferTask {
+		targetDomainEntry, err := r.domainCache.GetDomainByID(task.TargetDomainID)
+		if err != nil {
+			return err
+		}
+		targetCluster = targetDomainEntry.GetReplicationConfig().ActiveClusterName
+		if targetCluster == r.clusterMetadata.GetCurrentClusterName() {
+			generateTransferTask = true
+		}
+	}
+
+	var newTask persistence.Task
+	switch task.GetTaskType() {
+	case persistence.CrossClusterTaskTypeCancelExecution:
+		cancelExecutionTask := &persistence.CancelExecutionTask{
+			// TaskID is set by shard context
+			TargetDomainID:          task.TargetDomainID,
+			TargetWorkflowID:        task.TargetWorkflowID,
+			TargetRunID:             task.TargetRunID,
+			TargetChildWorkflowOnly: task.TargetChildWorkflowOnly,
+			InitiatedID:             task.ScheduleID,
+			Version:                 task.Version,
+		}
+		if generateTransferTask {
+			newTask = cancelExecutionTask
+		} else {
+			newTask = &persistence.CrossClusterCancelExecutionTask{
+				TargetCluster:       targetCluster,
+				CancelExecutionTask: *cancelExecutionTask,
+			}
+		}
+	case persistence.CrossClusterTaskTypeSignalExecution:
+		signalExecutionTask := &persistence.SignalExecutionTask{
+			// TaskID is set by shard context
+			TargetDomainID:          task.TargetDomainID,
+			TargetWorkflowID:        task.TargetWorkflowID,
+			TargetRunID:             task.TargetRunID,
+			TargetChildWorkflowOnly: task.TargetChildWorkflowOnly,
+			InitiatedID:             task.ScheduleID,
+			Version:                 task.Version,
+		}
+		if generateTransferTask {
+			newTask = signalExecutionTask
+		} else {
+			newTask = &persistence.CrossClusterSignalExecutionTask{
+				TargetCluster:       targetCluster,
+				SignalExecutionTask: *signalExecutionTask,
+			}
+		}
+	case persistence.CrossClusterTaskTypeStartChildExecution:
+		startChildExecutionTask := &persistence.StartChildExecutionTask{
+			// TaskID is set by shard context
+			TargetDomainID:   task.TargetDomainID,
+			TargetWorkflowID: task.TargetWorkflowID,
+			InitiatedID:      task.ScheduleID,
+			Version:          task.Version,
+		}
+		if generateTransferTask {
+			newTask = startChildExecutionTask
+		} else {
+			newTask = &persistence.CrossClusterStartChildExecutionTask{
+				TargetCluster:           targetCluster,
+				StartChildExecutionTask: *startChildExecutionTask,
+			}
+		}
+	// TODO: add the case for CrossClusterTaskTypeRecordChildComplete and ApplyParentClosePolicy
+	default:
+		return fmt.Errorf("unable to convert cross-cluster task of type %v", task.TaskType)
+	}
+
+	// set visibility timestamp here so we the metric for task latency
+	// can include the latency for the original transfer task.
+	newTask.SetVisibilityTimestamp(task.VisibilityTimestamp)
+	if generateTransferTask {
+		r.mutableState.AddTransferTasks(newTask)
+	} else {
+		r.mutableState.AddCrossClusterTasks(newTask)
+	}
 
 	return nil
 }

@@ -54,8 +54,10 @@ var checks = []conditionAndAction{
 	{checkCondition4, activityForCondition4},
 }
 
-func localActivityWorkfow(ctx workflow.Context) (string, error) {
-	profile, err := beginWorkflow(ctx, wfTypeSignal, workflow.Now(ctx).UnixNano())
+func localActivityWorkfow(ctx workflow.Context, inputScheduledTimeNanos int64) (string, error) {
+	scheduledTimeNanos := getScheduledTimeFromInputIfNonZero(ctx, inputScheduledTimeNanos)
+
+	profile, err := beginWorkflow(ctx, wfTypeSignal, scheduledTimeNanos)
 	if err != nil {
 		return "", err
 	}
