@@ -184,6 +184,7 @@ func (db *taskListDB) CompleteTasksLessThan(taskID int64, limit int) (int, error
 			tag.TaskID(taskID),
 			tag.TaskType(db.taskType),
 			tag.WorkflowTaskListName(db.taskListName))
+		return 0, err
 	}
-	return resp.TasksCompleted, err
+	return resp.TasksCompleted, nil
 }
