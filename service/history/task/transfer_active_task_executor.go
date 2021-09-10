@@ -271,7 +271,6 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	if err != nil {
 		return err
 	}
-	fmt.Println("currentVersion", mutableState.GetCurrentVersion())
 	if mutableState == nil || mutableState.IsWorkflowExecutionRunning() {
 		return nil
 	}
@@ -381,6 +380,11 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		return err
 	}
 
+	err = t.processParentClosePolicy(ctx, wfContext, task, domainName, children, &crossClusterTaskGenerators)
+	if err != nil {
+		return err
+	}
+
 	// TODO: pass crossClusterTaskGenerators to processParentClosePolicy to add new cross
 	// cluster tasks then move the call below after processParentClosePolicy call
 	if len(crossClusterTaskGenerators) > 0 {
@@ -394,8 +398,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 			return err
 		}
 	}
-
-	return t.processParentClosePolicy(ctx, task.DomainID, domainName, children)
+	return nil
 }
 
 func (t *transferActiveTaskExecutor) processCancelExecution(
@@ -1625,10 +1628,13 @@ func (t *transferActiveTaskExecutor) resetWorkflow(
 
 func (t *transferActiveTaskExecutor) processParentClosePolicy(
 	ctx context.Context,
-	domainID string,
+	wfContext execution.Context,
+	task *persistence.TransferTaskInfo,
 	domainName string,
 	childInfos map[int64]*persistence.ChildExecutionInfo,
+	crossClusterTaskGenerators *[]generatorF,
 ) error {
+	domainID := task.DomainID
 
 	if len(childInfos) == 0 {
 		return nil
@@ -1661,10 +1667,36 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 			DomainName: domainName,
 			Executions: executions,
 		}
+
+		// Cross cluster requests will be handled via signal API, no need to treat them differently here
 		return t.parentClosePolicyClient.SendParentClosePolicyRequest(ctx, request)
 	}
 
+	var sameClusterChildInfos []*persistence.ChildExecutionInfo
+	remoteClusters := make(map[string]bool)
+
 	for _, childInfo := range childInfos {
+		targetDomainEntry, err := t.shard.GetDomainCache().GetDomain(childInfo.DomainName)
+		if err != nil {
+			return err
+		}
+		targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry)
+		if isCrossCluster {
+			remoteClusters[targetCluster] = true
+		} else {
+			sameClusterChildInfos = append(sameClusterChildInfos, childInfo)
+		}
+	}
+
+	for remoteCluster := range remoteClusters {
+		*crossClusterTaskGenerators = append(
+			*crossClusterTaskGenerators,
+			func(taskGenerator execution.MutableStateTaskGenerator) error {
+				return taskGenerator.GenerateCrossClusterApplyParentClosePolicyTask(task, remoteCluster)
+			})
+	}
+
+	for _, childInfo := range sameClusterChildInfos {
 		if err := t.applyParentClosePolicy(
 			ctx,
 			domainID,

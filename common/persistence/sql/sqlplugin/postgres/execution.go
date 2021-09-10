@@ -84,22 +84,26 @@ workflow_id = :workflow_id
 `
 
 	getTransferTasksQuery = `SELECT task_id, data, data_encoding
- FROM transfer_tasks WHERE shard_id = $1 AND task_id > $2 AND task_id <= $3 ORDER BY shard_id, task_id`
+ FROM transfer_tasks WHERE shard_id = $1 AND task_id > $2 AND task_id <= $3 ORDER BY shard_id, task_id LIMIT $4`
 
 	createTransferTasksQuery = `INSERT INTO transfer_tasks(shard_id, task_id, data, data_encoding)
  VALUES(:shard_id, :task_id, :data, :data_encoding)`
 
-	deleteTransferTaskQuery      = `DELETE FROM transfer_tasks WHERE shard_id = $1 AND task_id = $2`
-	rangeDeleteTransferTaskQuery = `DELETE FROM transfer_tasks WHERE shard_id = $1 AND task_id > $2 AND task_id <= $3`
+	deleteTransferTaskQuery             = `DELETE FROM transfer_tasks WHERE shard_id = $1 AND task_id = $2`
+	rangeDeleteTransferTaskQuery        = `DELETE FROM transfer_tasks WHERE shard_id = $1 AND task_id > $2 AND task_id <= $3`
+	rangeDeleteTransferTaskByBatchQuery = `DELETE FROM transfer_tasks WHERE shard_id = $1 AND task_id IN (SELECT task_id FROM
+		transfer_tasks WHERE shard_id = $1 AND task_id > $2 AND task_id <= $3 ORDER BY task_id LIMIT $4)`
 
 	getCrossClusterTasksQuery = `SELECT task_id, data, data_encoding
- FROM cross_cluster_tasks WHERE target_cluster = $1 AND shard_id = $2 AND task_id > $3 AND task_id <= $4 ORDER BY task_id`
+ FROM cross_cluster_tasks WHERE target_cluster = $1 AND shard_id = $2 AND task_id > $3 AND task_id <= $4 ORDER BY task_id LIMIT $5`
 
 	createCrossClusterTasksQuery = `INSERT INTO cross_cluster_tasks(target_cluster, shard_id, task_id, data, data_encoding)
  VALUES(:target_cluster, :shard_id, :task_id, :data, :data_encoding)`
 
-	deleteCrossClusterTaskQuery      = `DELETE FROM cross_cluster_tasks WHERE target_cluster = $1 AND shard_id = $2 AND task_id = $3`
-	rangeDeleteCrossClusterTaskQuery = `DELETE FROM cross_cluster_tasks WHERE target_cluster = $1 AND shard_id = $2 AND task_id > $3 AND task_id <= $4`
+	deleteCrossClusterTaskQuery             = `DELETE FROM cross_cluster_tasks WHERE target_cluster = $1 AND shard_id = $2 AND task_id = $3`
+	rangeDeleteCrossClusterTaskQuery        = `DELETE FROM cross_cluster_tasks WHERE target_cluster = $1 AND shard_id = $2 AND task_id > $3 AND task_id <= $4`
+	rangeDeleteCrossClusterTaskByBatchQuery = `DELETE FROM cross_cluster_tasks WHERE target_cluster = $1 AND shard_id = $2 AND task_id IN (SELECT task_id FROM
+		cross_cluster_tasks WHERE target_cluster = $1 AND shard_id = $2 AND task_id > $3 AND task_id <= $4 ORDER BY task_id LIMIT $5)`
 
 	createTimerTasksQuery = `INSERT INTO timer_tasks (shard_id, visibility_timestamp, task_id, data, data_encoding)
   VALUES (:shard_id, :visibility_timestamp, :task_id, :data, :data_encoding)`
@@ -110,8 +114,10 @@ workflow_id = :workflow_id
   AND visibility_timestamp < $5
   ORDER BY visibility_timestamp,task_id LIMIT $6`
 
-	deleteTimerTaskQuery      = `DELETE FROM timer_tasks WHERE shard_id = $1 AND visibility_timestamp = $2 AND task_id = $3`
-	rangeDeleteTimerTaskQuery = `DELETE FROM timer_tasks WHERE shard_id = $1 AND visibility_timestamp >= $2 AND visibility_timestamp < $3`
+	deleteTimerTaskQuery             = `DELETE FROM timer_tasks WHERE shard_id = $1 AND visibility_timestamp = $2 AND task_id = $3`
+	rangeDeleteTimerTaskQuery        = `DELETE FROM timer_tasks WHERE shard_id = $1 AND visibility_timestamp >= $2 AND visibility_timestamp < $3`
+	rangeDeleteTimerTaskByBatchQuery = `DELETE FROM timer_tasks WHERE shard_id = $1 AND (visibility_timestamp,task_id) IN (SELECT visibility_timestamp,task_id FROM
+		timer_tasks WHERE shard_id = $1 AND visibility_timestamp >= $2 AND visibility_timestamp < $3 ORDER BY visibility_timestamp,task_id LIMIT $4)`
 
 	createReplicationTasksQuery = `INSERT INTO replication_tasks (shard_id, task_id, data, data_encoding)
   VALUES(:shard_id, :task_id, :data, :data_encoding)`
@@ -122,8 +128,10 @@ task_id > $2 AND
 task_id <= $3
 ORDER BY task_id LIMIT $4`
 
-	deleteReplicationTaskQuery      = `DELETE FROM replication_tasks WHERE shard_id = $1 AND task_id = $2`
-	rangeDeleteReplicationTaskQuery = `DELETE FROM replication_tasks WHERE shard_id = $1 AND task_id <= $2`
+	deleteReplicationTaskQuery             = `DELETE FROM replication_tasks WHERE shard_id = $1 AND task_id = $2`
+	rangeDeleteReplicationTaskQuery        = `DELETE FROM replication_tasks WHERE shard_id = $1 AND task_id <= $2`
+	rangeDeleteReplicationTaskByBatchQuery = `DELETE FROM replication_tasks WHERE shard_id = $1 AND task_id IN (SELECT task_id FROM
+		replication_tasks WHERE task_id <= $2 ORDER BY task_id LIMIT $3)`
 
 	getReplicationTasksDLQQuery = `SELECT task_id, data, data_encoding FROM replication_tasks_dlq WHERE
 source_cluster_name = $1 AND
@@ -167,6 +175,8 @@ VALUES     (:source_cluster_name,
 		AND shard_id = $2
 		AND task_id > $3
 		AND task_id <= $4`
+	rangeDeleteReplicationTaskFromDLQByBatchQuery = `DELETE FROM replication_tasks_dlq WHERE source_cluster_name = $1 AND shard_id = $2 AND task_id IN (SELECT task_id FROM
+		replication_tasks_dlq WHERE source_cluster_name = $1 AND shard_id = $2 AND task_id > $3 AND task_id <= $4 ORDER BY task_id LIMIT $5)`
 )
 
 // InsertIntoExecutions inserts a row into executions table
@@ -265,7 +275,7 @@ func (pdb *db) InsertIntoTransferTasks(ctx context.Context, rows []sqlplugin.Tra
 // SelectFromTransferTasks reads one or more rows from transfer_tasks table
 func (pdb *db) SelectFromTransferTasks(ctx context.Context, filter *sqlplugin.TransferTasksFilter) ([]sqlplugin.TransferTasksRow, error) {
 	var rows []sqlplugin.TransferTasksRow
-	err := pdb.conn.SelectContext(ctx, &rows, getTransferTasksQuery, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
+	err := pdb.conn.SelectContext(ctx, &rows, getTransferTasksQuery, filter.ShardID, filter.MinTaskID, filter.MaxTaskID, filter.PageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -274,10 +284,15 @@ func (pdb *db) SelectFromTransferTasks(ctx context.Context, filter *sqlplugin.Tr
 
 // DeleteFromTransferTasks deletes one or more rows from transfer_tasks table
 func (pdb *db) DeleteFromTransferTasks(ctx context.Context, filter *sqlplugin.TransferTasksFilter) (sql.Result, error) {
-	if filter.MinTaskID != nil {
-		return pdb.conn.ExecContext(ctx, rangeDeleteTransferTaskQuery, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
+	return pdb.conn.ExecContext(ctx, deleteTransferTaskQuery, filter.ShardID, filter.TaskID)
+}
+
+// RangeDeleteFromTransferTasks deletes multi rows from transfer_tasks table
+func (pdb *db) RangeDeleteFromTransferTasks(ctx context.Context, filter *sqlplugin.TransferTasksFilter) (sql.Result, error) {
+	if filter.PageSize > 0 {
+		return pdb.conn.ExecContext(ctx, rangeDeleteTransferTaskByBatchQuery, filter.ShardID, filter.MinTaskID, filter.MaxTaskID, filter.PageSize)
 	}
-	return pdb.conn.ExecContext(ctx, deleteTransferTaskQuery, filter.ShardID, *filter.TaskID)
+	return pdb.conn.ExecContext(ctx, rangeDeleteTransferTaskQuery, filter.ShardID, filter.MinTaskID, filter.MaxTaskID)
 }
 
 // InsertIntoCrossClusterTasks inserts one or more rows into cross_cluster_tasks table
@@ -288,7 +303,7 @@ func (pdb *db) InsertIntoCrossClusterTasks(ctx context.Context, rows []sqlplugin
 // SelectFromCrossClusterTasks reads one or more rows from cross_cluster_tasks table
 func (pdb *db) SelectFromCrossClusterTasks(ctx context.Context, filter *sqlplugin.CrossClusterTasksFilter) ([]sqlplugin.CrossClusterTasksRow, error) {
 	var rows []sqlplugin.CrossClusterTasksRow
-	err := pdb.conn.SelectContext(ctx, &rows, getCrossClusterTasksQuery, filter.TargetCluster, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
+	err := pdb.conn.SelectContext(ctx, &rows, getCrossClusterTasksQuery, filter.TargetCluster, filter.ShardID, filter.MinTaskID, filter.MaxTaskID, filter.PageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -297,10 +312,15 @@ func (pdb *db) SelectFromCrossClusterTasks(ctx context.Context, filter *sqlplugi
 
 // DeleteFromCrossClusterTasks deletes one or more rows from cross_cluster_tasks table
 func (pdb *db) DeleteFromCrossClusterTasks(ctx context.Context, filter *sqlplugin.CrossClusterTasksFilter) (sql.Result, error) {
-	if filter.MinTaskID != nil {
-		return pdb.conn.ExecContext(ctx, rangeDeleteCrossClusterTaskQuery, filter.TargetCluster, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
+	return pdb.conn.ExecContext(ctx, deleteCrossClusterTaskQuery, filter.TargetCluster, filter.ShardID, filter.TaskID)
+}
+
+// RangeDeleteFromCrossClusterTasks deletes multi rows from cross_cluster_tasks table
+func (pdb *db) RangeDeleteFromCrossClusterTasks(ctx context.Context, filter *sqlplugin.CrossClusterTasksFilter) (sql.Result, error) {
+	if filter.PageSize > 0 {
+		return pdb.conn.ExecContext(ctx, rangeDeleteCrossClusterTaskByBatchQuery, filter.TargetCluster, filter.ShardID, filter.MinTaskID, filter.MaxTaskID, filter.PageSize)
 	}
-	return pdb.conn.ExecContext(ctx, deleteCrossClusterTaskQuery, filter.TargetCluster, filter.ShardID, *filter.TaskID)
+	return pdb.conn.ExecContext(ctx, rangeDeleteCrossClusterTaskQuery, filter.TargetCluster, filter.ShardID, filter.MinTaskID, filter.MaxTaskID)
 }
 
 // InsertIntoTimerTasks inserts one or more rows into timer_tasks table
@@ -314,10 +334,10 @@ func (pdb *db) InsertIntoTimerTasks(ctx context.Context, rows []sqlplugin.TimerT
 // SelectFromTimerTasks reads one or more rows from timer_tasks table
 func (pdb *db) SelectFromTimerTasks(ctx context.Context, filter *sqlplugin.TimerTasksFilter) ([]sqlplugin.TimerTasksRow, error) {
 	var rows []sqlplugin.TimerTasksRow
-	*filter.MinVisibilityTimestamp = pdb.converter.ToPostgresDateTime(*filter.MinVisibilityTimestamp)
-	*filter.MaxVisibilityTimestamp = pdb.converter.ToPostgresDateTime(*filter.MaxVisibilityTimestamp)
-	err := pdb.conn.SelectContext(ctx, &rows, getTimerTasksQuery, filter.ShardID, *filter.MinVisibilityTimestamp,
-		filter.TaskID, *filter.MinVisibilityTimestamp, *filter.MaxVisibilityTimestamp, *filter.PageSize)
+	filter.MinVisibilityTimestamp = pdb.converter.ToPostgresDateTime(filter.MinVisibilityTimestamp)
+	filter.MaxVisibilityTimestamp = pdb.converter.ToPostgresDateTime(filter.MaxVisibilityTimestamp)
+	err := pdb.conn.SelectContext(ctx, &rows, getTimerTasksQuery, filter.ShardID, filter.MinVisibilityTimestamp,
+		filter.TaskID, filter.MinVisibilityTimestamp, filter.MaxVisibilityTimestamp, filter.PageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -329,13 +349,18 @@ func (pdb *db) SelectFromTimerTasks(ctx context.Context, filter *sqlplugin.Timer
 
 // DeleteFromTimerTasks deletes one or more rows from timer_tasks table
 func (pdb *db) DeleteFromTimerTasks(ctx context.Context, filter *sqlplugin.TimerTasksFilter) (sql.Result, error) {
-	if filter.MinVisibilityTimestamp != nil {
-		*filter.MinVisibilityTimestamp = pdb.converter.ToPostgresDateTime(*filter.MinVisibilityTimestamp)
-		*filter.MaxVisibilityTimestamp = pdb.converter.ToPostgresDateTime(*filter.MaxVisibilityTimestamp)
-		return pdb.conn.ExecContext(ctx, rangeDeleteTimerTaskQuery, filter.ShardID, *filter.MinVisibilityTimestamp, *filter.MaxVisibilityTimestamp)
+	filter.VisibilityTimestamp = pdb.converter.ToPostgresDateTime(filter.VisibilityTimestamp)
+	return pdb.conn.ExecContext(ctx, deleteTimerTaskQuery, filter.ShardID, filter.VisibilityTimestamp, filter.TaskID)
+}
+
+// RangeDeleteFromTimerTasks deletes multi rows from timer_tasks table
+func (pdb *db) RangeDeleteFromTimerTasks(ctx context.Context, filter *sqlplugin.TimerTasksFilter) (sql.Result, error) {
+	filter.MinVisibilityTimestamp = pdb.converter.ToPostgresDateTime(filter.MinVisibilityTimestamp)
+	filter.MaxVisibilityTimestamp = pdb.converter.ToPostgresDateTime(filter.MaxVisibilityTimestamp)
+	if filter.PageSize > 0 {
+		return pdb.conn.ExecContext(ctx, rangeDeleteTimerTaskByBatchQuery, filter.ShardID, filter.MinVisibilityTimestamp, filter.MaxVisibilityTimestamp, filter.PageSize)
 	}
-	*filter.VisibilityTimestamp = pdb.converter.ToPostgresDateTime(*filter.VisibilityTimestamp)
-	return pdb.conn.ExecContext(ctx, deleteTimerTaskQuery, filter.ShardID, *filter.VisibilityTimestamp, filter.TaskID)
+	return pdb.conn.ExecContext(ctx, rangeDeleteTimerTaskQuery, filter.ShardID, filter.MinVisibilityTimestamp, filter.MaxVisibilityTimestamp)
 }
 
 // InsertIntoBufferedEvents inserts one or more rows into buffered_events table
@@ -380,6 +405,9 @@ func (pdb *db) DeleteFromReplicationTasks(ctx context.Context, filter *sqlplugin
 
 // RangeDeleteFromReplicationTasks deletes multi rows from replication_tasks table
 func (pdb *db) RangeDeleteFromReplicationTasks(ctx context.Context, filter *sqlplugin.ReplicationTasksFilter) (sql.Result, error) {
+	if filter.PageSize > 0 {
+		return pdb.conn.ExecContext(ctx, rangeDeleteReplicationTaskByBatchQuery, filter.ShardID, filter.InclusiveEndTaskID, filter.PageSize)
+	}
 	return pdb.conn.ExecContext(ctx, rangeDeleteReplicationTaskQuery, filter.ShardID, filter.InclusiveEndTaskID)
 }
 
@@ -436,6 +464,17 @@ func (pdb *db) RangeDeleteMessageFromReplicationTasksDLQ(
 	ctx context.Context,
 	filter *sqlplugin.ReplicationTasksDLQFilter,
 ) (sql.Result, error) {
+	if filter.PageSize > 0 {
+		return pdb.conn.ExecContext(
+			ctx,
+			rangeDeleteReplicationTaskFromDLQByBatchQuery,
+			filter.SourceClusterName,
+			filter.ShardID,
+			filter.TaskID,
+			filter.InclusiveEndTaskID,
+			filter.PageSize,
+		)
+	}
 
 	return pdb.conn.ExecContext(
 		ctx,

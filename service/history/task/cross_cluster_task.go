@@ -42,11 +42,36 @@ import (
 )
 
 // cross cluster task state
+// a typically state transition will be:
+// Initialized -> Reported -> Recorded -> Reported
+// if task has two stages (e.g. first start childworkflow and
+// then schedule first decision task)
+// or
+// Initialized -> Reported
+// if task has only one stage (e.g. cancel external workflow)
+//
+// NOTE: DO NOT change the value for each state
+// new states must be added at the end to ensure backward compatibility
+// across clusters.
 const (
-	processingStateInitialized processingState = iota + 1
-	processingStateResponseReported
-	processingStateResponseRecorded
-	processingStateInvalidated
+	// processingStateInitialized is the initial state after a task is loaded
+	// task is available for poll at this state
+	processingStateInitialized processingState = 1
+	// processingStateResponseRecorded is the state when a response
+	// for processing the task at target cluster is received
+	// task is NOT available for polling at this state.
+	// task can reach this state from either processingStateInitialized
+	// or processingStateResponseRecorded
+	processingStateResponseReported processingState = 2
+	// processingStateResponseRecorded is the state after target response
+	// is recorded in source workflow's history
+	// task is available for poll at this state
+	processingStateResponseRecorded processingState = 3
+	// processingStateInvalidated is the state for a cross-cluster task
+	// that is no longer valid and should be either converted to a transfer
+	// task or move to the cross-cluster queue for another target cluster.
+	// task is NOT available for poll at this state
+	processingStateInvalidated processingState = 4
 )
 
 var (
@@ -184,6 +209,7 @@ func NewCrossClusterTargetTask(
 		info.ScheduleID = taskRequest.SignalExecutionAttributes.InitiatedEventID
 		info.TargetChildWorkflowOnly = taskRequest.SignalExecutionAttributes.ChildWorkflowOnly
 	// TODO: implement recordChildWorkflowExeuctionComplete
+	// TODO: implement applyParentClosePolicyComplete
 	default:
 		panic(fmt.Sprintf("unknown cross cluster task type: %v", taskRequest.TaskInfo.GetTaskType()))
 	}
@@ -340,11 +366,6 @@ func (t *crossClusterSourceTask) HandleErr(
 		t.scope.IncCounter(metrics.TaskPendingActiveCounterPerDomain)
 		return err
 	}
-	if err == execution.ErrMissingVersionHistories {
-		t.logger.Error("Encounter 2DC workflow during task processing.")
-		t.scope.IncCounter(metrics.TaskUnsupportedPerDomain)
-		err = nil
-	}
 	// return domain not active error here so that the cross-cluster task can be
 	// convert to a (passive) transfer task
 
@@ -360,7 +381,7 @@ func (t *crossClusterSourceTask) HandleErr(
 func (t *crossClusterSourceTask) RetryErr(
 	err error,
 ) bool {
-	return err != errWorkflowBusy && err != ErrTaskPendingActive && common.IsContextTimeoutError(err)
+	return err != errWorkflowBusy && err != ErrTaskPendingActive && !common.IsContextTimeoutError(err)
 }
 
 func (t *crossClusterSourceTask) IsReadyForPoll() bool {
@@ -415,35 +436,37 @@ func (t *crossClusterSourceTask) GetCrossClusterRequest() (request *types.CrossC
 		},
 	}
 
+	var taskState processingState
 	switch t.GetTaskType() {
 	case persistence.CrossClusterTaskTypeStartChildExecution:
-		attributes, taskState, err := t.getRequestForStartChildExecution(ctx, taskInfo, mutableState)
+		var attributes *types.CrossClusterStartChildExecutionRequestAttributes
+		attributes, taskState, err = t.getRequestForStartChildExecution(ctx, taskInfo, mutableState)
 		if err != nil || attributes == nil {
 			return nil, err
 		}
 		request.TaskInfo.TaskType = types.CrossClusterTaskTypeStartChildExecution.Ptr()
-		request.TaskInfo.TaskState = int16(taskState)
 		request.StartChildExecutionAttributes = attributes
 	case persistence.CrossClusterTaskTypeCancelExecution:
-		attributes, taskState, err := t.getRequestForCancelExecution(ctx, taskInfo, mutableState)
+		var attributes *types.CrossClusterCancelExecutionRequestAttributes
+		attributes, taskState, err = t.getRequestForCancelExecution(ctx, taskInfo, mutableState)
 		if err != nil || attributes == nil {
 			return nil, err
 		}
 		request.TaskInfo.TaskType = types.CrossClusterTaskTypeCancelExecution.Ptr()
-		request.TaskInfo.TaskState = int16(taskState)
 		request.CancelExecutionAttributes = attributes
 	case persistence.CrossClusterTaskTypeSignalExecution:
-		attributes, taskState, err := t.getRequestForSignalExecution(ctx, taskInfo, mutableState)
+		var attributes *types.CrossClusterSignalExecutionRequestAttributes
+		attributes, taskState, err = t.getRequestForSignalExecution(ctx, taskInfo, mutableState)
 		if err != nil || attributes == nil {
 			return nil, err
 		}
 		request.TaskInfo.TaskType = types.CrossClusterTaskTypeSignalExecution.Ptr()
-		request.TaskInfo.TaskState = int16(taskState)
 		request.SignalExecutionAttributes = attributes
 	default:
 		return nil, errUnknownCrossClusterTask
 	}
 
+	request.TaskInfo.TaskState = int16(taskState)
 	return request, nil
 }
 
@@ -569,12 +592,12 @@ func (t *crossClusterSourceTask) isValidLocked() bool {
 	return true
 }
 
-// Update records the response of processing cross cluster task at the target cluster
-// If an error is returned, the Update operation is failed, task state will remain unchanged
+// RecordResponse records the response of processing cross cluster task at the target cluster
+// If an error is returned, the operation is failed, task state will remain unchanged
 // and task is still be available for polling
 // If not error is returned, operation is successful, task won't be available for polling
 // and caller should submit the task for processing.
-func (t *crossClusterSourceTask) Update(response *types.CrossClusterTaskResponse) error {
+func (t *crossClusterSourceTask) RecordResponse(response *types.CrossClusterTaskResponse) error {
 	t.Lock()
 	defer t.Unlock()
 

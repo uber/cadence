@@ -66,10 +66,22 @@ type (
 		// Allowed values: tchannel|grpc
 		// Default: tchannel
 		RPCTransport string `yaml:"rpcTransport"`
+		// AuthorizationProvider contains the information to authorize the cluster
+		AuthorizationProvider AuthorizationProvider `yaml:"authorizationProvider"`
+	}
+
+	AuthorizationProvider struct {
+		// Enable indicates if the auth provider is enabled
+		Enable bool `yaml:"enable"`
+		// Type auth provider type
+		Type string `yaml:"type"` // only supports OAuthAuthorization
+		// PrivateKey is the private key path
+		PrivateKey string `yaml:"privateKey"`
 	}
 )
 
-func (m *ClusterGroupMetadata) validate() error {
+// Validate validates ClusterGroupMetadata
+func (m *ClusterGroupMetadata) Validate() error {
 	if m == nil {
 		return errors.New("ClusterGroupMetadata cannot be empty")
 	}
@@ -131,7 +143,8 @@ func (m *ClusterGroupMetadata) validate() error {
 	return errs
 }
 
-func (m *ClusterGroupMetadata) fillDefaults() {
+// FillDefaults populates default values for unspecified fields
+func (m *ClusterGroupMetadata) FillDefaults() {
 	if m == nil {
 		return
 	}

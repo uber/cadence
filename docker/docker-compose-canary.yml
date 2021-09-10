@@ -1,6 +1,6 @@
 version: '3'
 services:
   cadence-canary:
-    image: ubercadence/cadence-canary:latest
+    image: ubercadence/cadence-canary:master
     volumes:
       - ./config/canary:/etc/cadence-canary/config/canary

@@ -3417,10 +3417,10 @@ func (s *ExecutionManagerSuite) TestReplicationTransferTaskRangeComplete() {
 	)
 	s.NoError(err)
 
-	tasks1, err := s.GetReplicationTasks(ctx, 1, false)
+	tasks1, err := s.GetReplicationTasks(ctx, 2, false)
 	s.NoError(err)
 	s.NotNil(tasks1, "expected valid list of tasks.")
-	s.Equal(1, len(tasks1), "Expected 1 replication task.")
+	s.Equal(2, len(tasks1), "Expected 2 replication tasks.")
 	task1 := tasks1[0]
 	s.Equal(p.ReplicationTaskTypeHistory, task1.TaskType)
 	s.Equal(domainID, task1.DomainID)
@@ -3430,12 +3430,7 @@ func (s *ExecutionManagerSuite) TestReplicationTransferTaskRangeComplete() {
 	s.Equal(int64(3), task1.NextEventID)
 	s.Equal(int64(9), task1.Version)
 
-	err = s.RangeCompleteReplicationTask(ctx, task1.TaskID)
-	s.NoError(err)
-	tasks2, err := s.GetReplicationTasks(ctx, 1, false)
-	s.NoError(err)
-	s.NotNil(tasks2, "expected valid list of tasks.")
-	task2 := tasks2[0]
+	task2 := tasks1[1]
 	s.Equal(p.ReplicationTaskTypeHistory, task2.TaskType)
 	s.Equal(domainID, task2.DomainID)
 	s.Equal(workflowExecution.GetWorkflowID(), task2.WorkflowID)
@@ -3443,11 +3438,11 @@ func (s *ExecutionManagerSuite) TestReplicationTransferTaskRangeComplete() {
 	s.Equal(int64(4), task2.FirstEventID)
 	s.Equal(int64(5), task2.NextEventID)
 	s.Equal(int64(9), task2.Version)
-	err = s.CompleteReplicationTask(ctx, task2.TaskID)
+	err = s.RangeCompleteReplicationTask(ctx, task2.TaskID)
 	s.NoError(err)
-	tasks3, err := s.GetReplicationTasks(ctx, 1, false)
+	tasks2, err := s.GetReplicationTasks(ctx, 1, false)
 	s.NoError(err)
-	s.Equal(0, len(tasks3))
+	s.Equal(0, len(tasks2))
 }
 
 // TestUpdateAndClearBufferedEvents test

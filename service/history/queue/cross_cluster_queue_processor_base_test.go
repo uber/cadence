@@ -330,7 +330,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestUpdateTask_Success() {
 
 	crossClusterTask := task.NewMockCrossClusterTask(s.controller)
 	crossClusterTask.EXPECT().GetDomainID().Return(uuid.New()).AnyTimes()
-	crossClusterTask.EXPECT().Update(gomock.Any()).Return(nil).Times(1)
+	crossClusterTask.EXPECT().RecordResponse(gomock.Any()).Return(nil).Times(1)
 	crossClusterTask.EXPECT().GetTaskType().Return(1).AnyTimes()
 	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).Times(1)
 	newTaskMap := map[task.Key]task.Task{newCrossClusterTaskKey(2): crossClusterTask}
@@ -364,7 +364,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestUpdateTask_UpdateTask_Fail() {
 	crossClusterTask.EXPECT().GetTaskID().Return(int64(2)).Times(1)
 	crossClusterTask.EXPECT().GetWorkflowID().Return("workflowID").Times(1)
 	crossClusterTask.EXPECT().GetRunID().Return("runID").Times(1)
-	crossClusterTask.EXPECT().Update(gomock.Any()).Return(errors.New("test")).Times(1)
+	crossClusterTask.EXPECT().RecordResponse(gomock.Any()).Return(errors.New("test")).Times(1)
 	crossClusterTask.EXPECT().GetTaskType().Return(1).AnyTimes()
 	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).Times(0)
 	newTaskMap := map[task.Key]task.Task{newCrossClusterTaskKey(2): crossClusterTask}
@@ -395,8 +395,9 @@ func (s *crossClusterQueueProcessorBaseSuite) TestUpdateTask_SubmitTask_Redispat
 
 	crossClusterTask := task.NewMockCrossClusterTask(s.controller)
 	crossClusterTask.EXPECT().GetDomainID().Return(uuid.New()).AnyTimes()
-	crossClusterTask.EXPECT().Update(gomock.Any()).Return(nil).Times(1)
+	crossClusterTask.EXPECT().RecordResponse(gomock.Any()).Return(nil).Times(1)
 	crossClusterTask.EXPECT().Priority().Return(0).AnyTimes()
+	crossClusterTask.EXPECT().GetAttempt().Return(0).Times(1)
 	crossClusterTask.EXPECT().GetTaskType().Return(1).AnyTimes()
 	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(false, errors.New("test")).Times(1)
 	newTaskMap := map[task.Key]task.Task{newCrossClusterTaskKey(2): crossClusterTask}
@@ -612,7 +613,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_Updat
 	mockTask := task.NewMockCrossClusterTask(s.controller)
 	mockTask.EXPECT().GetDomainID().Return(uuid.New()).AnyTimes()
 	mockTask.EXPECT().GetTaskID().Return(int64(10)).AnyTimes()
-	mockTask.EXPECT().Update(gomock.Any()).Return(nil).AnyTimes()
+	mockTask.EXPECT().RecordResponse(gomock.Any()).Return(nil).AnyTimes()
 	mockTask.EXPECT().GetTaskType().Return(1).AnyTimes()
 	s.mockTaskProcessor.EXPECT().TrySubmit(gomock.Any()).Return(true, nil).AnyTimes()
 	taskKey := newCrossClusterTaskKey(10)
@@ -661,7 +662,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_Updat
 	mockTask := task.NewMockCrossClusterTask(s.controller)
 	mockTask.EXPECT().GetDomainID().Return(uuid.New()).AnyTimes()
 	mockTask.EXPECT().GetTaskID().Return(int64(10)).AnyTimes()
-	mockTask.EXPECT().Update(gomock.Any()).Return(errors.New("test")).AnyTimes()
+	mockTask.EXPECT().RecordResponse(gomock.Any()).Return(errors.New("test")).AnyTimes()
 	mockTask.EXPECT().GetWorkflowID().Return("workflowID").AnyTimes()
 	mockTask.EXPECT().GetRunID().Return("runID").AnyTimes()
 	mockTask.EXPECT().GetTaskType().Return(1).AnyTimes()

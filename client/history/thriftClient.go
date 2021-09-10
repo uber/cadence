@@ -243,3 +243,8 @@ func (t thriftClient) TerminateWorkflowExecution(ctx context.Context, request *t
 	err := t.c.TerminateWorkflowExecution(ctx, thrift.FromHistoryTerminateWorkflowExecutionRequest(request), opts...)
 	return thrift.ToError(err)
 }
+
+func (t thriftClient) GetFailoverInfo(ctx context.Context, request *types.GetFailoverInfoRequest, opts ...yarpc.CallOption) (*types.GetFailoverInfoResponse, error) {
+	response, err := t.c.GetFailoverInfo(ctx, thrift.FromGetFailoverInfoRequest(request), opts...)
+	return thrift.ToGetFailoverInfoResponse(response), thrift.ToError(err)
+}

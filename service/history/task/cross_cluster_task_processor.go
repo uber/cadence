@@ -133,6 +133,7 @@ func newCrossClusterTaskProcessor(
 		taskFetcher: taskFetcher,
 		redispatcher: NewRedispatcher(
 			taskProcessor,
+			shard.GetTimeSource(),
 			&RedispatcherOptions{
 				TaskRedispatchInterval:                  options.TaskRedispatchInterval,
 				TaskRedispatchIntervalJitterCoefficient: options.TimerJitterCoefficient,

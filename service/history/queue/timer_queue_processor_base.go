@@ -128,7 +128,7 @@ func newTimerQueueProcessorBase(
 				taskExecutor,
 				taskProcessor,
 				processorBase.redispatcher.AddTask,
-				shard.GetConfig().TimerTaskMaxRetryCount,
+				shard.GetConfig().TaskCriticalRetryCount,
 			)
 		},
 
@@ -630,6 +630,7 @@ func newTimerQueueProcessorOptions(
 ) *queueProcessorOptions {
 	options := &queueProcessorOptions{
 		BatchSize:                            config.TimerTaskBatchSize,
+		DeleteBatchSize:                      config.TimerTaskDeleteBatchSize,
 		MaxPollRPS:                           config.TimerProcessorMaxPollRPS,
 		MaxPollInterval:                      config.TimerProcessorMaxPollInterval,
 		MaxPollIntervalJitterCoefficient:     config.TimerProcessorMaxPollIntervalJitterCoefficient,

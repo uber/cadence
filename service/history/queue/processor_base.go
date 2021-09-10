@@ -47,6 +47,7 @@ type (
 
 	queueProcessorOptions struct {
 		BatchSize                            dynamicconfig.IntPropertyFn
+		DeleteBatchSize                      dynamicconfig.IntPropertyFn
 		MaxPollRPS                           dynamicconfig.IntPropertyFn
 		MaxPollInterval                      dynamicconfig.DurationPropertyFn
 		MaxPollIntervalJitterCoefficient     dynamicconfig.FloatPropertyFn
@@ -131,6 +132,7 @@ func newProcessorBase(
 		taskProcessor: taskProcessor,
 		redispatcher: task.NewRedispatcher(
 			taskProcessor,
+			shard.GetTimeSource(),
 			&task.RedispatcherOptions{
 				TaskRedispatchInterval:                  options.RedispatchInterval,
 				TaskRedispatchIntervalJitterCoefficient: options.RedispatchIntervalJitterCoefficient,

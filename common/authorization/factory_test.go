@@ -26,6 +26,7 @@ import (
 	"github.com/cristalhq/jwt/v3"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -62,9 +63,8 @@ func cfgOAuth() config.Authorization {
 		OAuthAuthorizer: config.OAuthAuthorizer{
 			Enable: true,
 			JwtCredentials: config.JwtCredentials{
-				Algorithm:  jwt.RS256.String(),
-				PublicKey:  "public",
-				PrivateKey: "private",
+				Algorithm: jwt.RS256.String(),
+				PublicKey: "../../config/credentials/keytest.pub",
 			},
 			MaxJwtTTL: 12345,
 		},
@@ -73,16 +73,19 @@ func cfgOAuth() config.Authorization {
 
 func (s *factorySuite) TestFactoryNoopAuthorizer() {
 	cfgOAuthVar := cfgOAuth()
+	publicKey, _ := common.LoadRSAPublicKey(cfgOAuthVar.OAuthAuthorizer.JwtCredentials.PublicKey)
 	var tests = []struct {
 		cfg      config.Authorization
 		expected Authorizer
+		err      error
 	}{
-		{cfgNoop(), &nopAuthority{}},
-		{cfgOAuthVar, &oauthAuthority{authorizationCfg: cfgOAuthVar.OAuthAuthorizer, log: s.logger}},
+		{cfgNoop(), &nopAuthority{}, nil},
+		{cfgOAuthVar, &oauthAuthority{authorizationCfg: cfgOAuthVar.OAuthAuthorizer, log: s.logger, publicKey: publicKey}, nil},
 	}
 
 	for _, test := range tests {
-		authorizer := NewAuthorizer(test.cfg, s.logger, nil)
+		authorizer, err := NewAuthorizer(test.cfg, s.logger, nil)
 		s.Equal(authorizer, test.expected)
+		s.Equal(err, test.err)
 	}
 }

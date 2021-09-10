@@ -25,6 +25,7 @@ package replication
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -214,7 +215,7 @@ func (s *taskAckManagerSuite) TestIsNewRunNDCEnabled_True() {
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
 	release(nil)
 
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any()).Return(false, nil).Times(1)
+	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(false).AnyTimes()
 	s.mockMutableState.EXPECT().GetVersionHistories().Return(&persistence.VersionHistories{})
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(cache.NewGlobalDomainCacheEntryForTest(
@@ -255,7 +256,7 @@ func (s *taskAckManagerSuite) TestIsNewRunNDCEnabled_False() {
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
 	release(nil)
 
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any()).Return(false, nil).Times(1)
+	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(false).AnyTimes()
 	s.mockMutableState.EXPECT().GetVersionHistories().Return(nil)
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(cache.NewGlobalDomainCacheEntryForTest(
@@ -381,7 +382,7 @@ func (s *taskAckManagerSuite) TestProcessReplication_OK() {
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
 	release(nil)
 
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any()).Return(false, nil).AnyTimes()
+	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(false).AnyTimes()
 	s.mockMutableState.EXPECT().GetVersionHistories().Return(nil).AnyTimes()
 	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false).AnyTimes()
@@ -481,7 +482,7 @@ func (s *taskAckManagerSuite) TestProcessReplication_Error() {
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
 	release(nil)
 
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any()).Return(false, errors.New("test")).Times(1)
+	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, errors.New("test")).Times(1)
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(false).AnyTimes()
 	s.mockMutableState.EXPECT().GetVersionHistories().Return(nil).AnyTimes()
 	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false).AnyTimes()
@@ -582,7 +583,7 @@ func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_OK() {
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
 	release(nil)
 
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any()).Return(false, nil).AnyTimes()
+	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	s.mockMutableState.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
 	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(activityInfo, true).AnyTimes()
@@ -648,7 +649,7 @@ func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_Empty() {
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
 	release(nil)
 
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any()).Return(false, nil).AnyTimes()
+	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	s.mockMutableState.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
 	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false).AnyTimes()
@@ -706,7 +707,7 @@ func (s *taskAckManagerSuite) TestGenerateHistoryReplicationTask() {
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
 	release(nil)
 
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any()).Return(false, nil).AnyTimes()
+	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	s.mockMutableState.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
 	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false).AnyTimes()
@@ -806,7 +807,7 @@ func (s *taskAckManagerSuite) TestToReplicationTask_SyncActivity() {
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
 	release(nil)
 
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any()).Return(false, nil).AnyTimes()
+	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	s.mockMutableState.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
 	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(activityInfo, true).AnyTimes()
@@ -875,7 +876,7 @@ func (s *taskAckManagerSuite) TestToReplicationTask_History() {
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
 	release(nil)
 
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any()).Return(false, nil).AnyTimes()
+	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	s.mockMutableState.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
 	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false).AnyTimes()
@@ -988,7 +989,7 @@ func (s *taskAckManagerSuite) TestGetTasks_ReturnDataErrors() {
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
 	release(nil)
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any()).Return(false, nil).AnyTimes()
+	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	s.mockMutableState.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
 	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false).AnyTimes()
@@ -1072,4 +1073,25 @@ func (s *taskAckManagerSuite) TestSkipTask_ReturnFalse() {
 		nil,
 	)
 	s.False(skipTask(cluster.TestAlternativeClusterName, domainEntity))
+}
+
+func (s *taskAckManagerSuite) TestGetBatchSize_UpperLimit() {
+	s.ackManager.lastTaskCreationTime = atomic.Value{}
+	s.ackManager.lastTaskCreationTime.Store(time.Now().Add(time.Duration(-s.ackManager.maxAllowedLatencyFn()) * time.Second))
+	size := s.ackManager.getBatchSize()
+	s.Equal(s.ackManager.fetchTasksBatchSize(0), size)
+}
+
+func (s *taskAckManagerSuite) TestGetBatchSize_ValidRange() {
+	s.ackManager.lastTaskCreationTime = atomic.Value{}
+	s.ackManager.lastTaskCreationTime.Store(time.Now().Add(-8 * time.Second))
+	size := s.ackManager.getBatchSize()
+	s.True(minReadTaskSize+5 <= size)
+}
+
+func (s *taskAckManagerSuite) TestGetBatchSize_InvalidRange() {
+	s.ackManager.lastTaskCreationTime = atomic.Value{}
+	s.ackManager.lastTaskCreationTime.Store(time.Now().Add(time.Minute))
+	size := s.ackManager.getBatchSize()
+	s.Equal(minReadTaskSize, size)
 }

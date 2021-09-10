@@ -24,6 +24,10 @@ package authorization
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
+
+	clientworker "go.uber.org/cadence/worker"
 
 	"github.com/uber/cadence/common/types"
 )
@@ -48,11 +52,12 @@ type (
 	// Attributes is input for authority to make decision.
 	// It can be extended in future if required auth on resources like WorkflowType and TaskList
 	Attributes struct {
-		Actor      string
-		APIName    string
-		DomainName string
-		TaskList   *types.TaskList
-		Permission Permission
+		Actor        string
+		APIName      string
+		DomainName   string
+		WorkflowType *types.WorkflowType
+		TaskList     *types.TaskList
+		Permission   Permission
 	}
 
 	// Result is result from authority.
@@ -83,4 +88,12 @@ func NewPermission(permission string) Permission {
 // Authorizer is an interface for authorization
 type Authorizer interface {
 	Authorize(ctx context.Context, attributes *Attributes) (Result, error)
+}
+
+func GetAuthProviderClient(privateKey string) (clientworker.AuthorizationProvider, error) {
+	pk, err := ioutil.ReadFile(privateKey)
+	if err != nil {
+		return nil, fmt.Errorf("invalid private key path %s", privateKey)
+	}
+	return clientworker.NewAdminJwtAuthorizationProvider(pk), nil
 }

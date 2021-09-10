@@ -36,7 +36,8 @@ const (
 	getHistoryNodesQuery = `SELECT node_id, txn_id, data, data_encoding FROM history_node ` +
 		`WHERE shard_id = $1 AND tree_id = $2 AND branch_id = $3 AND node_id >= $4 and node_id < $5 ORDER BY shard_id, tree_id, branch_id, node_id, txn_id LIMIT $6 `
 
-	deleteHistoryNodesQuery = `DELETE FROM history_node WHERE shard_id = $1 AND tree_id = $2 AND branch_id = $3 AND node_id >= $4 `
+	deleteHistoryNodesQuery = `DELETE FROM history_node WHERE shard_id = $1 AND tree_id = $2 AND branch_id = $3 AND (node_id,txn_id) IN (SELECT node_id,txn_id FROM
+		history_node WHERE shard_id = $1 AND tree_id = $2 AND branch_id = $3 AND node_id >= $4 LIMIT $5)`
 
 	// below are templates for history_tree table
 	addHistoryTreeQuery = `INSERT INTO history_tree (` +
@@ -63,7 +64,7 @@ func (pdb *db) InsertIntoHistoryNode(ctx context.Context, row *sqlplugin.History
 func (pdb *db) SelectFromHistoryNode(ctx context.Context, filter *sqlplugin.HistoryNodeFilter) ([]sqlplugin.HistoryNodeRow, error) {
 	var rows []sqlplugin.HistoryNodeRow
 	err := pdb.conn.SelectContext(ctx, &rows, getHistoryNodesQuery,
-		filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID, *filter.MaxNodeID, *filter.PageSize)
+		filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID, *filter.MaxNodeID, filter.PageSize)
 	// NOTE: since we let txn_id multiple by -1 when inserting, we have to revert it back here
 	for _, row := range rows {
 		*row.TxnID *= -1
@@ -73,7 +74,7 @@ func (pdb *db) SelectFromHistoryNode(ctx context.Context, filter *sqlplugin.Hist
 
 // DeleteFromHistoryNode deletes one or more rows from history_node table
 func (pdb *db) DeleteFromHistoryNode(ctx context.Context, filter *sqlplugin.HistoryNodeFilter) (sql.Result, error) {
-	return pdb.conn.ExecContext(ctx, deleteHistoryNodesQuery, filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID)
+	return pdb.conn.ExecContext(ctx, deleteHistoryNodesQuery, filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID, filter.PageSize)
 }
 
 // For history_tree table:

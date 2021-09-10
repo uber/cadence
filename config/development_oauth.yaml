@@ -1,28 +1,36 @@
-archival:
-  history:
-    status: "disabled"
-    enableRead: false
-  visibility:
-    status: "disabled"
-    enableRead: false
+persistence:
+  advancedVisibilityStore: es-visibility
+  datastores:
+    es-visibility:
+      elasticsearch:
+        version: "v7"
+        url:
+          scheme: "http"
+          host: "127.0.0.1:9200"
+        indices:
+          visibility: cadence-visibility-dev
 
-domainDefaults:
-  archival:
-    history:
-      status: "disabled"
-      URI: ""
+kafka:
+  tls:
+    enabled: false
+  clusters:
+    test:
+      brokers:
+        - 127.0.0.1:9092
+  topics:
+    cadence-visibility-dev:
+      cluster: test
+    cadence-visibility-dev-dlq:
+      cluster: test
+  applications:
     visibility:
-      status: "disabled"
-      URI: ""
+      topic: cadence-visibility-dev
+      dlq-topic: cadence-visibility-dev-dlq
 
 dynamicconfig:
   client: filebased
   filebased:
-    filepath: "config/dynamicconfig/development_oauth.yaml"
-
-blobstore:
-  filestore:
-    outputDirectory: "/tmp/blobstore"
+    filepath: "config/dynamicconfig/development_es.yaml"
 
 authorization:
   oauthAuthorizer:
@@ -31,4 +39,18 @@ authorization:
     jwtCredentials:
       algorithm: "RS256"
       publicKey: "config/credentials/keytest.pub"
-      privateKey: "config/credentials/keytest"
+
+clusterGroupMetadata:
+  enableGlobalDomain: true
+  failoverVersionIncrement: 10
+  masterClusterName: "cluster0"
+  currentClusterName: "cluster0"
+  clusterGroup:
+    cluster0:
+      enabled: true
+      initialFailoverVersion: 0
+      rpcAddress: "localhost:7933" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
+      authorizationProvider:
+        enable: true
+        type: "OAuthAuthorization"
+        privateKey: "config/credentials/keytest"

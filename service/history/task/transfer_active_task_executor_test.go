@@ -173,18 +173,23 @@ func (s *transferActiveTaskExecutorSuite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomainByID(s.domainID).Return(s.domainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(s.domainID).Return(s.domainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainID(s.domainName).Return(s.domainID, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomain(s.domainName).Return(s.domainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainByID(s.targetDomainID).Return(s.targetDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(s.targetDomainID).Return(s.targetDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainID(s.targetDomainName).Return(s.targetDomainID, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomain(s.targetDomainName).Return(s.targetDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainByID(s.remoteTargetDomainID).Return(s.remoteTargetDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(s.remoteTargetDomainID).Return(s.remoteTargetDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainID(s.remoteTargetDomainName).Return(s.remoteTargetDomainID, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomain(s.remoteTargetDomainName).Return(s.remoteTargetDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestParentDomainID).Return(constants.TestGlobalParentDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(constants.TestParentDomainID).Return(constants.TestParentDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainID(constants.TestParentDomainName).Return(constants.TestParentDomainID, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomain(constants.TestParentDomainName).Return(constants.TestGlobalParentDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainByID(s.childDomainID).Return(s.childDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(s.childDomainID).Return(s.childDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainID(s.childDomainName).Return(s.childDomainID, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomain(s.childDomainName).Return(s.childDomainEntry, nil).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
 	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
@@ -545,6 +550,104 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent() {
 }
 
 func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_HasFewChildren() {
+	s.testProcessCloseExecution_NoParent_HasFewChildren(
+		map[string]string{
+			"child_abandon":   s.domainName,
+			"child_terminate": s.domainName,
+			"child_cancel":    s.domainName,
+		},
+		func() {
+			s.expectCancelRequest()
+			s.expectTerminateRequest()
+		},
+	)
+}
+
+func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChild_Abandon() {
+	s.testProcessCloseExecution_NoParent_HasFewChildren(
+		map[string]string{
+			"child_abandon":   s.remoteTargetDomainName,
+			"child_terminate": s.domainName,
+			"child_cancel":    s.domainName,
+		},
+		func() {
+			s.expectCrossClusterApplyParentPolicyCalls()
+			s.expectCancelRequest()
+			s.expectTerminateRequest()
+		},
+	)
+}
+
+func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChild_Terminate() {
+	s.testProcessCloseExecution_NoParent_HasFewChildren(
+		map[string]string{
+			"child_abandon":   s.domainName,
+			"child_terminate": s.remoteTargetDomainName,
+			"child_cancel":    s.domainName,
+		},
+		func() {
+			s.expectCrossClusterApplyParentPolicyCalls()
+			s.expectCancelRequest()
+		},
+	)
+}
+
+func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChild_Cancel() {
+	s.testProcessCloseExecution_NoParent_HasFewChildren(
+		map[string]string{
+			"child_abandon":   s.domainName,
+			"child_terminate": s.domainName,
+			"child_cancel":    s.remoteTargetDomainName,
+		},
+		func() {
+			s.expectCrossClusterApplyParentPolicyCalls()
+			s.expectTerminateRequest()
+		},
+	)
+}
+
+func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChildren_Mixed() {
+	s.testProcessCloseExecution_NoParent_HasFewChildren(
+		map[string]string{
+			"child_abandon":   s.remoteTargetDomainName,
+			"child_terminate": s.remoteTargetDomainName,
+			"child_cancel":    s.remoteTargetDomainName,
+		},
+		func() {
+			s.expectCrossClusterApplyParentPolicyCalls()
+		},
+	)
+}
+
+func (s *transferActiveTaskExecutorSuite) expectCancelRequest() {
+	s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(func(_, _ interface{}) error {
+		errors := []error{nil, &types.CancellationAlreadyRequestedError{}, &types.EntityNotExistsError{}}
+		return errors[rand.Intn(len(errors))]
+	}).Times(1)
+}
+
+func (s *transferActiveTaskExecutorSuite) expectTerminateRequest() {
+	s.mockHistoryClient.EXPECT().TerminateWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(func(_, _ interface{}) error {
+		errors := []error{nil, &types.EntityNotExistsError{}}
+		return errors[rand.Intn(len(errors))]
+	}).Times(1)
+}
+
+func (s *transferActiveTaskExecutorSuite) expectCrossClusterApplyParentPolicyCalls() {
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
+		crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
+		s.Len(crossClusterTasks, 1)
+		s.Equal(persistence.CrossClusterTaskTypeApplyParentPolicy, crossClusterTasks[0].GetType())
+		return true
+	})).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(int64(common.EmptyVersion)).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomain(s.remoteTargetDomainName).Return(s.remoteTargetDomainEntry, nil).AnyTimes()
+}
+
+func (s *transferActiveTaskExecutorSuite) testProcessCloseExecution_NoParent_HasFewChildren(
+	childrenDomainNames map[string]string,
+	setupMockFn func(),
+) {
 
 	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
 	s.NoError(err)
@@ -554,6 +657,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	parentClosePolicy3 := types.ParentClosePolicyRequestCancel
 
 	_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletionID, uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
+		Domain:     childrenDomainNames["child_abandon"],
 		WorkflowID: "child workflow1",
 		WorkflowType: &types.WorkflowType{
 			Name: "child workflow type",
@@ -564,6 +668,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	})
 	s.Nil(err)
 	_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletionID, uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
+		Domain:     childrenDomainNames["child_terminate"],
 		WorkflowID: "child workflow2",
 		WorkflowType: &types.WorkflowType{
 			Name: "child workflow type",
@@ -574,6 +679,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	})
 	s.Nil(err)
 	_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletionID, uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
+		Domain:     childrenDomainNames["child_cancel"],
 		WorkflowID: "child workflow3",
 		WorkflowType: &types.WorkflowType{
 			Name: "child workflow type",
@@ -603,14 +709,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything, mock.Anything).Return(nil).Once()
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
-	s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(func(_, _ interface{}) error {
-		errors := []error{nil, &types.CancellationAlreadyRequestedError{}, &types.EntityNotExistsError{}}
-		return errors[rand.Intn(len(errors))]
-	}).Times(1)
-	s.mockHistoryClient.EXPECT().TerminateWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(func(_, _ interface{}) error {
-		errors := []error{nil, &types.EntityNotExistsError{}}
-		return errors[rand.Intn(len(errors))]
-	}).Times(1)
+	setupMockFn()
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
 	s.Nil(err)

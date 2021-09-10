@@ -163,7 +163,6 @@ func (t *crossClusterSourceTaskExecutor) executeStartChildExecutionTask(
 	switch processingState(task.response.TaskState) {
 	case processingStateInitialized:
 		if childInfo.StartedID != common.EmptyEventID {
-			// TODO: explain when this may happen
 			t.setTaskState(task, ctask.TaskStatePending, processingStateResponseRecorded)
 			return errContinueExecution
 		}
