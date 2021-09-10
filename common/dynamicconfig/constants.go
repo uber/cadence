@@ -1934,6 +1934,11 @@ const (
 	// Default value: N/A
 	// TODO: https://github.com/uber/cadence/issues/3861
 	EnableServiceAuthorization
+	// EnableServiceAuthorizationLogOnly is the key to enable authorization logging for a service, only for extension binary:
+	// KeyName: N/A
+	// Default value: N/A
+	// TODO: https://github.com/uber/cadence/issues/3861
+	EnableServiceAuthorizationLogOnly
 	// Usage: VisibilityArchivalQueryMaxRangeInDays is the maximum number of days for a visibility archival query
 	// KeyName: N/A
 	// Default value: N/A
@@ -2313,6 +2318,7 @@ var Keys = map[Key]string{
 	// TODO https://github.com/uber/cadence/issues/3861
 	EnableAuthorization:                             "system.enableAuthorization",
 	EnableServiceAuthorization:                      "system.enableServiceAuthorization",
+	EnableServiceAuthorizationLogOnly:               "system.enableServiceAuthorizationLogOnly",
 	VisibilityArchivalQueryMaxRangeInDays:           "frontend.visibilityArchivalQueryMaxRangeInDays",
 	VisibilityArchivalQueryMaxQPS:                   "frontend.visibilityArchivalQueryMaxQPS",
 	EnableArchivalCompression:                       "worker.EnableArchivalCompression",
