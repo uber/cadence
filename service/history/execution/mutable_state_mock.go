@@ -1083,21 +1083,6 @@ func (mr *MockMutableStateMockRecorder) GetStartEvent(arg0 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStartEvent", reflect.TypeOf((*MockMutableState)(nil).GetStartEvent), arg0)
 }
 
-// GetCloseEvent mocks base method
-func (m *MockMutableState) GetCloseEvent(arg0 context.Context) (*types.HistoryEvent, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCloseEvent", arg0)
-	ret0, _ := ret[0].(*types.HistoryEvent)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetCloseEvent indicates an expected call of GetCloseEvent
-func (mr *MockMutableStateMockRecorder) GetCloseEvent(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCloseEvent", reflect.TypeOf((*MockMutableState)(nil).GetCloseEvent), arg0)
-}
-
 // GetCurrentBranchToken mocks base method
 func (m *MockMutableState) GetCurrentBranchToken() ([]byte, error) {
 	m.ctrl.T.Helper()

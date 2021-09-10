@@ -126,7 +126,6 @@ type (
 		GetDecisionInfo(int64) (*DecisionInfo, bool)
 		GetDomainEntry() *cache.DomainCacheEntry
 		GetStartEvent(context.Context) (*types.HistoryEvent, error)
-		GetCloseEvent(context.Context) (*types.HistoryEvent, error)
 		GetCurrentBranchToken() ([]byte, error)
 		GetVersionHistories() *persistence.VersionHistories
 		GetCurrentVersion() int64

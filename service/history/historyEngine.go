@@ -3250,7 +3250,6 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 	domainUUID string,
 	workflowExecution types.WorkflowExecution,
 ) (retError error) {
-
 	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(domainUUID)
 	if err != nil {
 		return err
@@ -3268,10 +3267,6 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		return err
 	}
 
-	if !mutableState.IsWorkflowExecutionRunning() {
-		return nil
-	}
-
 	mutableStateTaskRefresher := execution.NewMutableStateTaskRefresher(
 		e.shard.GetConfig(),
 		e.shard.GetClusterMetadata(),
@@ -3281,14 +3276,12 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		e.shard.GetShardID(),
 	)
 
-	now := e.shard.GetTimeSource().Now()
-
-	err = mutableStateTaskRefresher.RefreshTasks(ctx, now, mutableState)
+	err = mutableStateTaskRefresher.RefreshTasks(ctx, mutableState)
 	if err != nil {
 		return err
 	}
 
-	err = wfContext.UpdateWorkflowExecutionAsActive(ctx, now)
+	err = wfContext.UpdateWorkflowExecutionAsActive(ctx, e.shard.GetTimeSource().Now())
 	if err != nil {
 		return err
 	}
