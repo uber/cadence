@@ -48,7 +48,10 @@ func init() {
 	registerActivity(resetBaseActivity, activityTypeResetBase)
 }
 
-func resetWorkflow(ctx workflow.Context, scheduledTimeNanos int64, domain string) error {
+func resetWorkflow(ctx workflow.Context, inputScheduledTimeNanos int64) error {
+	scheduledTimeNanos := getScheduledTimeFromInputIfNonZero(ctx, inputScheduledTimeNanos)
+	domain := workflow.GetInfo(ctx).Domain
+
 	profile, err := beginWorkflow(ctx, wfTypeReset, scheduledTimeNanos)
 	if err != nil {
 		return err

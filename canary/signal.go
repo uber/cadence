@@ -43,7 +43,10 @@ func init() {
 
 // signalWorkflow is the workflow implementation to test SignalWorkflowExecution API
 // it simply spins up an activity which sends a signal to the parent
-func signalWorkflow(ctx workflow.Context, scheduledTimeNanos int64, domain string) error {
+func signalWorkflow(ctx workflow.Context, inputScheduledTimeNanos int64) error {
+	scheduledTimeNanos := getScheduledTimeFromInputIfNonZero(ctx, inputScheduledTimeNanos)
+	domain := workflow.GetInfo(ctx).Domain
+
 	var err error
 	profile, err := beginWorkflow(ctx, wfTypeSignal, scheduledTimeNanos)
 	if err != nil {

@@ -63,7 +63,10 @@ type (
 	}
 )
 
-func batchWorkflow(ctx workflow.Context, scheduledTimeNanos int64, domain string) error {
+func batchWorkflow(ctx workflow.Context, inputScheduledTimeNanos int64) error {
+	scheduledTimeNanos := getScheduledTimeFromInputIfNonZero(ctx, inputScheduledTimeNanos)
+	domain := workflow.GetInfo(ctx).Domain
+
 	profile, err := beginWorkflow(ctx, wfTypeBatch, scheduledTimeNanos)
 	if err != nil {
 		return err
