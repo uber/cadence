@@ -120,7 +120,7 @@ func TestMatchingGetTaskListsByDomainRequest(t *testing.T) {
 }
 
 func TestMatchingGetTaskListsByDomainResponse(t *testing.T) {
-	for _, item := range []*types.GetTaskListsByDomainResponse{nil, {}, &testdata.MatchingGetTaskListsByDomainResponse} {
+	for _, item := range []*types.GetTaskListsByDomainResponse{nil, {}, &testdata.GetTaskListsByDomainResponse} {
 		assert.Equal(t, item, ToMatchingGetTaskListsByDomainResponse(FromMatchingGetTaskListsByDomainResponse(item)))
 	}
 }

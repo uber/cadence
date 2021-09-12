@@ -141,7 +141,7 @@ var (
 		Domain: DomainName,
 	}
 
-	MatchingGetTaskListsByDomainResponse = types.GetTaskListsByDomainResponse{
-		TaskListNames: []string{},
+	GetTaskListsByDomainResponse = types.GetTaskListsByDomainResponse{
+		TaskListMap: map[string]*types.DescribeTaskListResponse{DomainName:&MatchingDescribeTaskListResponse},
 	}
 )

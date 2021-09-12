@@ -222,26 +222,32 @@ func FromMatchingGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainRespo
 	if t == nil {
 		return nil
 	}
+	resp := &matchingv1.GetTaskListsByDomainResponse{}
+	if t.GetTaskListMap() == nil {
+		return resp
+	}
 	taskListResponse := make(map[string]*matchingv1.DescribeTaskListResponse, len(t.GetTaskListMap()))
 	for name, tl := range t.GetTaskListMap() {
 		taskListResponse[name] = FromMatchingDescribeTaskListResponse(tl)
 	}
-	return &matchingv1.GetTaskListsByDomainResponse{
-		TaskListMap: taskListResponse,
-	}
+	resp.TaskListMap = taskListResponse
+	return resp
 }
 
 func ToMatchingGetTaskListsByDomainResponse(t *matchingv1.GetTaskListsByDomainResponse) *types.GetTaskListsByDomainResponse {
 	if t == nil {
 		return nil
 	}
+	resp := &types.GetTaskListsByDomainResponse{}
+	if t.GetTaskListMap() == nil {
+		return resp
+	}
 	taskListResponse := make(map[string]*types.DescribeTaskListResponse, len(t.GetTaskListMap()))
 	for name, tl := range t.GetTaskListMap() {
 		taskListResponse[name] = ToMatchingDescribeTaskListResponse(tl)
 	}
-	return &types.GetTaskListsByDomainResponse{
-		TaskListMap: taskListResponse,
-	}
+	resp.TaskListMap = taskListResponse
+	return resp
 }
 
 func FromMatchingPollForActivityTaskRequest(t *types.MatchingPollForActivityTaskRequest) *matchingv1.PollForActivityTaskRequest {

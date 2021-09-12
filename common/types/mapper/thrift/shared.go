@@ -3077,13 +3077,16 @@ func FromGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainResponse) *sh
 	if t == nil {
 		return nil
 	}
+	resp := &shared.GetTaskListsByDomainResponse{}
+	if t.GetTaskListMap() == nil {
+		return resp
+	}
 	taskListResponse := make(map[string]*shared.DescribeTaskListResponse, len(t.GetTaskListMap()))
 	for name, tl := range t.GetTaskListMap() {
 		taskListResponse[name] = FromDescribeTaskListResponse(tl)
 	}
-	return &shared.GetTaskListsByDomainResponse{
-		TaskListMap: taskListResponse,
-	}
+	resp.TaskListMap = taskListResponse
+	return resp
 }
 
 // ToGetTaskListsByDomainResponse converts thrift GetTaskListsByDomainResponse type to internal
@@ -3091,13 +3094,16 @@ func ToGetTaskListsByDomainResponse(t *shared.GetTaskListsByDomainResponse) *typ
 	if t == nil {
 		return nil
 	}
+	resp := &types.GetTaskListsByDomainResponse{}
+	if t.GetTaskListMap() == nil {
+		return resp
+	}
 	taskListResponse := make(map[string]*types.DescribeTaskListResponse, len(t.GetTaskListMap()))
 	for name, tl := range t.GetTaskListMap() {
 		taskListResponse[name] = ToDescribeTaskListResponse(tl)
 	}
-	return &types.GetTaskListsByDomainResponse{
-		TaskListMap: taskListResponse,
-	}
+	resp.TaskListMap = taskListResponse
+	return resp
 }
 
 // FromListWorkflowExecutionsRequest converts internal ListWorkflowExecutionsRequest type to thrift

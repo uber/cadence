@@ -1735,26 +1735,32 @@ func FromGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainResponse) *ap
 	if t == nil {
 		return nil
 	}
+	resp := &apiv1.GetTaskListsByDomainResponse{}
+	if t.GetTaskListMap() == nil {
+		return resp
+	}
 	taskListResponse := make(map[string]*apiv1.DescribeTaskListResponse, len(t.GetTaskListMap()))
 	for name, tl := range t.GetTaskListMap() {
 		taskListResponse[name] = FromDescribeTaskListResponse(tl)
 	}
-	return &apiv1.GetTaskListsByDomainResponse{
-		TaskListMap: taskListResponse,
-	}
+	resp.TaskListMap = taskListResponse
+	return resp
 }
 
 func ToGetTaskListsByDomainResponse(t *apiv1.GetTaskListsByDomainResponse) *types.GetTaskListsByDomainResponse {
 	if t == nil {
 		return nil
 	}
+	resp := &types.GetTaskListsByDomainResponse{}
+	if t.GetTaskListMap() == nil {
+		return resp
+	}
 	taskListResponse := make(map[string]*types.DescribeTaskListResponse, len(t.GetTaskListMap()))
 	for name, tl := range t.GetTaskListMap() {
 		taskListResponse[name] = ToDescribeTaskListResponse(tl)
 	}
-	return &types.GetTaskListsByDomainResponse{
-		TaskListMap: taskListResponse,
-	}
+	resp.TaskListMap = taskListResponse
+	return resp
 }
 
 func FromListWorkflowExecutionsRequest(t *types.ListWorkflowExecutionsRequest) *apiv1.ListWorkflowExecutionsRequest {
