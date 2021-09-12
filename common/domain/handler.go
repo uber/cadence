@@ -347,7 +347,8 @@ func (d *handlerImpl) DescribeDomain(
 	}
 	if resp.FailoverEndTime != nil {
 		response.FailoverInfo = &types.FailoverInfo{
-			FailoverVersion:         resp.FailoverVersion,
+			FailoverVersion: resp.FailoverVersion,
+			// This reflects that last domain update time. If there is a domain config update, this won't be accurate.
 			FailoverStartTimestamp:  resp.LastUpdatedTime,
 			FailoverExpireTimestamp: *resp.FailoverEndTime,
 		}
