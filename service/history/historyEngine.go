@@ -3276,7 +3276,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		e.shard.GetShardID(),
 	)
 
-	err = mutableStateTaskRefresher.RefreshTasks(ctx, mutableState)
+	err = mutableStateTaskRefresher.RefreshTasks(ctx, mutableState.GetExecutionInfo().StartTimestamp, mutableState)
 	if err != nil {
 		return err
 	}
