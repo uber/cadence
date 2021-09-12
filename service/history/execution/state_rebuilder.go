@@ -169,7 +169,7 @@ func (r *stateRebuilderImpl) Rebuild(
 			return nil, 0, &types.BadRequestError{Message: fmt.Sprintf(
 				"nDCStateRebuilder unable to rebuild mutable state to event ID: %v, version: %v, "+
 					"baseLastEventID + baseLastEventVersion is not the same as the last event of the last "+
-					"batch, event ID: %v, version :%v ,typicaly because of attemptting to rebuild to a middle of a batch",
+					"batch, event ID: %v, version :%v ,typically because of attemptting to rebuild to a middle of a batch",
 				baseLastEventID,
 				baseLastEventVersion,
 				lastItem.EventID,
@@ -185,7 +185,7 @@ func (r *stateRebuilderImpl) Rebuild(
 	}
 
 	// refresh tasks to be generated
-	if err := r.taskRefresher.RefreshTasks(ctx, now, rebuiltMutableState); err != nil {
+	if err := r.taskRefresher.RefreshTasks(ctx, rebuiltMutableState); err != nil {
 		return nil, 0, err
 	}
 

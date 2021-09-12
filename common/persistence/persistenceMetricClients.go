@@ -517,18 +517,18 @@ func (p *workflowExecutionPersistenceClient) CompleteTransferTask(
 func (p *workflowExecutionPersistenceClient) RangeCompleteTransferTask(
 	ctx context.Context,
 	request *RangeCompleteTransferTaskRequest,
-) error {
+) (*RangeCompleteTransferTaskResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceRangeCompleteTransferTaskScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceRangeCompleteTransferTaskScope, metrics.PersistenceLatency)
-	err := p.persistence.RangeCompleteTransferTask(ctx, request)
+	response, err := p.persistence.RangeCompleteTransferTask(ctx, request)
 	sw.Stop()
 
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceRangeCompleteTransferTaskScope, err)
 	}
 
-	return err
+	return response, err
 }
 
 func (p *workflowExecutionPersistenceClient) CompleteCrossClusterTask(
@@ -551,18 +551,18 @@ func (p *workflowExecutionPersistenceClient) CompleteCrossClusterTask(
 func (p *workflowExecutionPersistenceClient) RangeCompleteCrossClusterTask(
 	ctx context.Context,
 	request *RangeCompleteCrossClusterTaskRequest,
-) error {
+) (*RangeCompleteCrossClusterTaskResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceRangeCompleteCrossClusterTaskScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceRangeCompleteCrossClusterTaskScope, metrics.PersistenceLatency)
-	err := p.persistence.RangeCompleteCrossClusterTask(ctx, request)
+	response, err := p.persistence.RangeCompleteCrossClusterTask(ctx, request)
 	sw.Stop()
 
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceRangeCompleteCrossClusterTaskScope, err)
 	}
 
-	return err
+	return response, err
 }
 
 func (p *workflowExecutionPersistenceClient) CompleteReplicationTask(
@@ -585,18 +585,18 @@ func (p *workflowExecutionPersistenceClient) CompleteReplicationTask(
 func (p *workflowExecutionPersistenceClient) RangeCompleteReplicationTask(
 	ctx context.Context,
 	request *RangeCompleteReplicationTaskRequest,
-) error {
+) (*RangeCompleteReplicationTaskResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceRangeCompleteReplicationTaskScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceRangeCompleteReplicationTaskScope, metrics.PersistenceLatency)
-	err := p.persistence.RangeCompleteReplicationTask(ctx, request)
+	response, err := p.persistence.RangeCompleteReplicationTask(ctx, request)
 	sw.Stop()
 
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceRangeCompleteReplicationTaskScope, err)
 	}
 
-	return err
+	return response, err
 }
 
 func (p *workflowExecutionPersistenceClient) PutReplicationTaskToDLQ(
@@ -664,24 +664,24 @@ func (p *workflowExecutionPersistenceClient) DeleteReplicationTaskFromDLQ(
 		p.updateErrorMetric(metrics.PersistenceDeleteReplicationTaskFromDLQScope, err)
 	}
 
-	return nil
+	return err
 }
 
 func (p *workflowExecutionPersistenceClient) RangeDeleteReplicationTaskFromDLQ(
 	ctx context.Context,
 	request *RangeDeleteReplicationTaskFromDLQRequest,
-) error {
+) (*RangeDeleteReplicationTaskFromDLQResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceRangeDeleteReplicationTaskFromDLQScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceRangeDeleteReplicationTaskFromDLQScope, metrics.PersistenceLatency)
-	err := p.persistence.RangeDeleteReplicationTaskFromDLQ(ctx, request)
+	response, err := p.persistence.RangeDeleteReplicationTaskFromDLQ(ctx, request)
 	sw.Stop()
 
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceRangeDeleteReplicationTaskFromDLQScope, err)
 	}
 
-	return nil
+	return response, err
 }
 
 func (p *workflowExecutionPersistenceClient) CreateFailoverMarkerTasks(
@@ -738,18 +738,18 @@ func (p *workflowExecutionPersistenceClient) CompleteTimerTask(
 func (p *workflowExecutionPersistenceClient) RangeCompleteTimerTask(
 	ctx context.Context,
 	request *RangeCompleteTimerTaskRequest,
-) error {
+) (*RangeCompleteTimerTaskResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceRangeCompleteTimerTaskScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceRangeCompleteTimerTaskScope, metrics.PersistenceLatency)
-	err := p.persistence.RangeCompleteTimerTask(ctx, request)
+	response, err := p.persistence.RangeCompleteTimerTask(ctx, request)
 	sw.Stop()
 
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceRangeCompleteTimerTaskScope, err)
 	}
 
-	return err
+	return response, err
 }
 
 func (p *workflowExecutionPersistenceClient) updateErrorMetric(scope int, err error) {
@@ -839,7 +839,7 @@ func (p *taskPersistenceClient) CompleteTask(
 func (p *taskPersistenceClient) CompleteTasksLessThan(
 	ctx context.Context,
 	request *CompleteTasksLessThanRequest,
-) (int, error) {
+) (*CompleteTasksLessThanResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceCompleteTasksLessThanScope, metrics.PersistenceRequests)
 	sw := p.metricClient.StartTimer(metrics.PersistenceCompleteTasksLessThanScope, metrics.PersistenceLatency)
 	result, err := p.persistence.CompleteTasksLessThan(ctx, request)

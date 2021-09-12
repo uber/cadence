@@ -37,13 +37,6 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-type SizeLimitIntegrationSuite struct {
-	// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
-	// not merely log an error
-	*require.Assertions
-	IntegrationBase
-}
-
 func TestSizeLimitIntegrationSuite(t *testing.T) {
 	flag.Parse()
 

@@ -10871,6 +10871,7 @@ func (v *CrossClusterTaskRequest) GetApplyParentClosePolicyAttributes() (o *Cros
 type CrossClusterTaskResponse struct {
 	TaskID                                         int64                                                               `json:"taskID,omitempty"`
 	TaskType                                       *CrossClusterTaskType                                               `json:"taskType,omitempty"`
+	TaskState                                      int16                                                               `json:"taskState,omitempty"`
 	FailedCause                                    *CrossClusterTaskFailedCause                                        `json:"failedCause,omitempty"`
 	StartChildExecutionAttributes                  *CrossClusterStartChildExecutionResponseAttributes                  `json:"startChildExecutionAttributes,omitempty"`
 	CancelExecutionAttributes                      *CrossClusterCancelExecutionResponseAttributes                      `json:"cancelExecutionAttributes,omitempty"`
@@ -10891,6 +10892,14 @@ func (v *CrossClusterTaskResponse) GetTaskID() (o int64) {
 func (v *CrossClusterTaskResponse) GetTaskType() (o CrossClusterTaskType) {
 	if v != nil && v.TaskType != nil {
 		return *v.TaskType
+	}
+	return
+}
+
+// GetTaskState is an internal getter (TBD...)
+func (v *CrossClusterTaskResponse) GetTaskState() (o int16) {
+	if v != nil {
+		return v.TaskState
 	}
 	return
 }

@@ -24,12 +24,15 @@ package replication
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
 	"sync/atomic"
 	"time"
 
+	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common"
@@ -39,6 +42,8 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/reconciliation"
+	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
@@ -261,12 +266,23 @@ func (p *taskProcessorImpl) cleanupAckedReplicationTasks() error {
 		metrics.ReplicationTasksLag,
 		time.Duration(p.shard.GetTransferMaxReadLevel()-minAckLevel),
 	)
-	return p.shard.GetExecutionManager().RangeCompleteReplicationTask(
-		context.Background(),
-		&persistence.RangeCompleteReplicationTaskRequest{
-			InclusiveEndTaskID: minAckLevel,
-		},
-	)
+	for {
+		pageSize := p.config.ReplicatorTaskDeleteBatchSize()
+		resp, err := p.shard.GetExecutionManager().RangeCompleteReplicationTask(
+			context.Background(),
+			&persistence.RangeCompleteReplicationTaskRequest{
+				InclusiveEndTaskID: minAckLevel,
+				PageSize:           pageSize, // pageSize may or may not be honored
+			},
+		)
+		if err != nil {
+			return err
+		}
+		if !persistence.HasMoreRowsToDelete(resp.TasksCompleted, pageSize) {
+			break
+		}
+	}
+	return nil
 }
 
 func (p *taskProcessorImpl) sendFetchMessageRequest() <-chan *types.ReplicationMessages {
@@ -416,6 +432,11 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *types.Replication
 			tag.TaskID(replicationTask.GetSourceTaskID()),
 			tag.Error(err),
 		)
+		//TODO: uncomment this when the execution fixer workflow is ready
+		//if err = p.triggerDataInconsistencyScan(replicationTask); err != nil {
+		//	p.logger.Warn("Failed to trigger data scan", tag.Error(err))
+		//	p.metricsClient.IncCounter(metrics.ReplicationDLQStatsScope, metrics.ReplicationDLQValidationFailed)
+		//}
 		return p.putReplicationTaskToDLQ(replicationTask)
 	}
 }
@@ -527,6 +548,61 @@ func (p *taskProcessorImpl) generateDLQRequest(
 	default:
 		return nil, fmt.Errorf("unknown replication task type")
 	}
+}
+
+func (p *taskProcessorImpl) triggerDataInconsistencyScan(replicationTask *types.ReplicationTask) error {
+
+	var failoverVersion int64
+	var domainID string
+	var workflowID string
+	var runID string
+	switch {
+	case replicationTask.GetHistoryTaskV2Attributes() != nil:
+		attr := replicationTask.GetHistoryTaskV2Attributes()
+		versionHistoryItems := attr.GetVersionHistoryItems()
+		if versionHistoryItems == nil || len(versionHistoryItems) == 0 {
+			return errors.New("failed to trigger data scan due to invalid version history")
+		}
+		// version history items in same batch should be the same
+		failoverVersion = versionHistoryItems[0].GetVersion()
+		domainID = attr.GetDomainID()
+		workflowID = attr.GetWorkflowID()
+		runID = attr.GetRunID()
+	case replicationTask.GetSyncActivityTaskAttributes() != nil:
+		attr := replicationTask.GetSyncActivityTaskAttributes()
+		failoverVersion = replicationTask.GetSyncActivityTaskAttributes().Version
+		domainID = attr.GetDomainID()
+		workflowID = attr.GetWorkflowID()
+		runID = attr.GetRunID()
+	default:
+		return nil
+	}
+	clusterName := p.shard.GetClusterMetadata().ClusterNameForFailoverVersion(failoverVersion)
+	client := p.shard.GetService().GetClientBean().GetRemoteFrontendClient(clusterName)
+	fixExecution := entity.Execution{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}
+	fixExecutionInput, err := json.Marshal(fixExecution)
+	if err != nil {
+		return err
+	}
+	// Assume the workflow is corrupted, rely on invariant to validate it
+	_, err = client.SignalWithStartWorkflowExecution(context.Background(), &types.SignalWithStartWorkflowExecutionRequest{
+		Domain:                              common.SystemLocalDomainName,
+		WorkflowID:                          reconciliation.ExecutionFixerWorkflowID,
+		WorkflowType:                        &types.WorkflowType{Name: reconciliation.ExecutionFixerWorkflowType},
+		TaskList:                            &types.TaskList{Name: reconciliation.ExecutionFixerWorkflowTaskList},
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(reconciliation.ExecutionFixerWorkflowTimeout),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(reconciliation.ExecutionFixerWorkflowTaskTimeoutInSeconds),
+		Identity:                            "cadence-history-replication",
+		RequestID:                           uuid.New(),
+		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
+		SignalName:                          reconciliation.ExecutionFixerWorkflowSignalName,
+		SignalInput:                         fixExecutionInput,
+	})
+	return err
 }
 
 func (p *taskProcessorImpl) emitDLQSizeMetricsLoop() {

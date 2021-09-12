@@ -7300,6 +7300,7 @@ func FromCrossClusterTaskResponse(t *types.CrossClusterTaskResponse) *shared.Cro
 	return &shared.CrossClusterTaskResponse{
 		TaskID:                        &t.TaskID,
 		TaskType:                      FromCrossClusterTaskType(t.TaskType),
+		TaskState:                     &t.TaskState,
 		FailedCause:                   FromCrossClusterTaskFailedCause(t.FailedCause),
 		StartChildExecutionAttributes: FromCrossClusterStartChildExecutionResponseAttributes(t.StartChildExecutionAttributes),
 		CancelExecutionAttributes:     FromCrossClusterCancelExecutionResponseAttributes(t.CancelExecutionAttributes),
@@ -7315,6 +7316,7 @@ func ToCrossClusterTaskResponse(t *shared.CrossClusterTaskResponse) *types.Cross
 	return &types.CrossClusterTaskResponse{
 		TaskID:                        t.GetTaskID(),
 		TaskType:                      ToCrossClusterTaskType(t.TaskType),
+		TaskState:                     t.GetTaskState(),
 		FailedCause:                   ToCrossClusterTaskFailedCause(t.FailedCause),
 		StartChildExecutionAttributes: ToCrossClusterStartChildExecutionResponseAttributes(t.StartChildExecutionAttributes),
 		CancelExecutionAttributes:     ToCrossClusterCancelExecutionResponseAttributes(t.CancelExecutionAttributes),

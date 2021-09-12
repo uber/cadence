@@ -953,6 +953,9 @@ func (c *clientImpl) RefreshWorkflowTasks(
 	opts ...yarpc.CallOption,
 ) error {
 	client, err := c.getClientForWorkflowID(request.GetRequest().GetExecution().GetWorkflowID())
+	if err != nil {
+		return err
+	}
 	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()

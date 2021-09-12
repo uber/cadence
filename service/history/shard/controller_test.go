@@ -588,6 +588,19 @@ func (s *controllerSuite) TestShardControllerClosed() {
 	workerWG.Wait()
 }
 
+func (s *controllerSuite) TestGetOrCreateHistoryShardItem_InvalidShardID_Error() {
+	s.config.NumberOfShards = 4
+	s.shardController = NewShardController(s.mockResource, s.mockEngineFactory, s.config).(*controller)
+
+	eng, err := s.shardController.GetEngineForShard(-1)
+	s.Nil(eng)
+	s.Error(err)
+
+	eng, err = s.shardController.GetEngineForShard(s.config.NumberOfShards)
+	s.Nil(eng)
+	s.Error(err)
+}
+
 func (s *controllerSuite) setupMocksForAcquireShard(shardID int, mockEngine *engine.MockEngine, currentRangeID,
 	newRangeID int64) {
 

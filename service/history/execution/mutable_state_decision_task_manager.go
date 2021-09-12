@@ -444,7 +444,6 @@ func (m *mutableStateDecisionTaskManagerImpl) AddFirstDecisionTaskScheduled(
 	var err error
 	if decisionBackoffDuration != 0 {
 		if err = m.msb.taskGenerator.GenerateDelayedDecisionTasks(
-			m.msb.unixNanoToTime(startEvent.GetTimestamp()),
 			startEvent,
 		); err != nil {
 			return err

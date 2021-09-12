@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
@@ -48,7 +49,7 @@ type (
 	crossClusterTaskKey = transferTaskKey
 
 	crossClusterQueueProcessorBase struct {
-		sync.Mutex
+		sync.Mutex // TODO: rename this to outstandingTaskCount lock
 
 		*processorBase
 		targetCluster   string
@@ -58,7 +59,7 @@ type (
 		backoffTimer   map[int]*time.Timer
 		shouldProcess  map[int]bool
 
-		outstandingTaskCount int
+		outstandingTaskCount int // maybe use atomic.Value?
 		ackLevel             int64
 
 		notifyCh         chan struct{}
@@ -70,6 +71,7 @@ type (
 func newCrossClusterQueueProcessorBase(
 	shard shard.Context,
 	clusterName string,
+	executionCache *execution.Cache,
 	taskProcessor task.Processor,
 	taskExecutor task.Executor,
 	logger log.Logger,
@@ -95,6 +97,7 @@ func newCrossClusterQueueProcessorBase(
 	return newCrossClusterQueueProcessorBaseHelper(
 		shard,
 		clusterName,
+		executionCache,
 		convertFromPersistenceTransferProcessingQueueStates(shard.GetCrossClusterProcessingQueueStates(clusterName)),
 		taskProcessor,
 		options,
@@ -110,6 +113,7 @@ func newCrossClusterQueueProcessorBase(
 func newCrossClusterQueueProcessorBaseHelper(
 	shard shard.Context,
 	targetCluster string,
+	executionCache *execution.Cache,
 	processingQueueStates []ProcessingQueueState,
 	taskProcessor task.Processor,
 	options *queueProcessorOptions,
@@ -147,8 +151,11 @@ func newCrossClusterQueueProcessorBaseHelper(
 	base.taskInitializer = func(taskInfo task.Info) task.Task {
 		return task.NewCrossClusterSourceTask(
 			shard,
+			targetCluster,
+			executionCache,
 			taskInfo,
 			taskExecutor,
+			taskProcessor,
 			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
 			func(t task.Task) {
 				_, _ = base.submitTask(t)
@@ -299,14 +306,21 @@ func (c *crossClusterQueueProcessorBase) completeAckTasks(nextAckLevel int64) (i
 	ctx, cancel := context.WithTimeout(context.Background(), taskCleanupTimeout)
 	defer cancel()
 
-	if err := c.shard.GetExecutionManager().RangeCompleteCrossClusterTask(ctx, &persistence.RangeCompleteCrossClusterTaskRequest{
-		TargetCluster:        c.targetCluster,
-		ExclusiveBeginTaskID: c.ackLevel,
-		InclusiveEndTaskID:   nextAckLevel,
-	}); err != nil {
-		return c.ackLevel, err
+	for {
+		pageSize := c.options.DeleteBatchSize()
+		resp, err := c.shard.GetExecutionManager().RangeCompleteCrossClusterTask(ctx, &persistence.RangeCompleteCrossClusterTaskRequest{
+			TargetCluster:        c.targetCluster,
+			ExclusiveBeginTaskID: c.ackLevel,
+			InclusiveEndTaskID:   nextAckLevel,
+			PageSize:             pageSize, // pageSize may or may not be honored
+		})
+		if err != nil {
+			return c.ackLevel, err
+		}
+		if !persistence.HasMoreRowsToDelete(resp.TasksCompleted, pageSize) {
+			break
+		}
 	}
-
 	return nextAckLevel, nil
 }
 
@@ -339,6 +353,7 @@ func (c *crossClusterQueueProcessorBase) readTasks(
 
 func (c *crossClusterQueueProcessorBase) pollTasks() []*types.CrossClusterTaskRequest {
 
+	// TODO: control the number of tasks returned
 	var result []*types.CrossClusterTaskRequest
 	for _, queueTask := range c.getTasks() {
 		crossClusterTask, ok := queueTask.(task.CrossClusterTask)
@@ -346,7 +361,20 @@ func (c *crossClusterQueueProcessorBase) pollTasks() []*types.CrossClusterTaskRe
 			panic("received non cross cluster task")
 		}
 		if crossClusterTask.IsReadyForPoll() {
-			result = append(result, crossClusterTask.GetCrossClusterRequest())
+			request, err := crossClusterTask.GetCrossClusterRequest()
+			if err != nil {
+				if !crossClusterTask.IsValid() {
+					if _, err := c.submitTask(crossClusterTask); err != nil {
+						break
+					}
+				}
+				c.logger.Error("Failed to get cross cluster request", tag.Error(err))
+			}
+			if request != nil {
+				// if request is nil, nothing need to be done for the task,
+				// task already acked in GetCrossClusterRequest()
+				result = append(result, request)
+			}
 		}
 	}
 	return result
@@ -374,38 +402,27 @@ func (c *crossClusterQueueProcessorBase) updateTask(
 ) error {
 
 	queueTask, err := c.getTask(newCrossClusterTaskKey(response.GetTaskID()))
+	// TODO: if task not found, should not return error, it's expected
 	if err != nil {
 		return err
 	}
 	crossClusterTask, ok := queueTask.(task.CrossClusterTask)
-	if ok {
-
-		var responseResult interface{}
-		switch crossClusterTask.GetTaskType() {
-		case persistence.CrossClusterTaskTypeStartChildExecution:
-			responseResult = response.StartChildExecutionAttributes
-		case persistence.CrossClusterTaskTypeSignalExecution:
-			responseResult = response.SignalExecutionAttributes
-		case persistence.CrossClusterTaskTypeCancelExecution:
-			responseResult = response.CancelExecutionAttributes
-		default:
-			panic(fmt.Sprintf("received unsupported cross cluster task type: %v", crossClusterTask.GetTaskType()))
-		}
-
-		if err := crossClusterTask.Update(responseResult); err != nil {
-			c.logger.Error("failed to update cross cluster task",
-				tag.TaskID(crossClusterTask.GetTaskID()),
-				tag.WorkflowDomainID(crossClusterTask.GetDomainID()),
-				tag.WorkflowID(crossClusterTask.GetWorkflowID()),
-				tag.WorkflowRunID(crossClusterTask.GetRunID()),
-				tag.Error(err))
-			return err
-		}
-	} else {
+	if !ok {
 		panic("Received non cross cluster task.")
 	}
 
+	if err := crossClusterTask.RecordResponse(response); err != nil {
+		c.logger.Error("failed to update cross cluster task",
+			tag.TaskID(crossClusterTask.GetTaskID()),
+			tag.WorkflowDomainID(crossClusterTask.GetDomainID()),
+			tag.WorkflowID(crossClusterTask.GetWorkflowID()),
+			tag.WorkflowRunID(crossClusterTask.GetRunID()),
+			tag.Error(err))
+		return err
+	}
+
 	// if the task fails to submit to main queue, it will use redispatch queue
+	// note the only possible error here is shutdown
 	_, err = c.submitTask(crossClusterTask)
 	return err
 }
@@ -511,6 +528,7 @@ func (c *crossClusterQueueProcessorBase) handleActionNotification(notification a
 		var err error
 		for _, task := range actionAttr.TaskResponses {
 			if err = c.updateTask(task); err != nil {
+				// TODO: log the error and keep updating the rest of the tasks
 				break
 			}
 		}
@@ -536,6 +554,7 @@ func (c *crossClusterQueueProcessorBase) processQueueCollections() {
 		level := queueCollection.Level()
 		c.processingLock.Lock()
 		if shouldProcess, ok := c.shouldProcess[level]; !ok || !shouldProcess {
+			c.processingLock.Unlock()
 			continue
 		}
 		c.shouldProcess[level] = false
@@ -630,6 +649,9 @@ func (c *crossClusterQueueProcessorBase) notifyDomainFailover() {
 }
 
 // validateOutstandingTasks will be triggered when the cluster received a domain fail over event
+// TODO: this function should only check tasks that are not yet submitted to the taskProcessor
+// (or in the redispatch queue), i.e. the task should currently be available for poll
+// otherwise, we may end up submitting the task twice
 func (c *crossClusterQueueProcessorBase) validateOutstandingTasks() {
 	tasks := c.getTasks()
 	for _, t := range tasks {
@@ -656,6 +678,7 @@ func newCrossClusterQueueProcessorOptions(
 ) *queueProcessorOptions {
 	options := &queueProcessorOptions{
 		BatchSize:                            config.CrossClusterTaskBatchSize,
+		DeleteBatchSize:                      config.CrossClusterTaskDeleteBatchSize,
 		MaxPollRPS:                           config.CrossClusterProcessorMaxPollRPS,
 		MaxPollInterval:                      config.CrossClusterProcessorMaxPollInterval,
 		MaxPollIntervalJitterCoefficient:     config.CrossClusterProcessorMaxPollIntervalJitterCoefficient,

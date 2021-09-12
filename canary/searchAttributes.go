@@ -42,7 +42,9 @@ func init() {
 }
 
 // searchAttributesWorkflow tests the search attributes apis
-func searchAttributesWorkflow(ctx workflow.Context, scheduledTimeNanos int64, domain string) error {
+func searchAttributesWorkflow(ctx workflow.Context, inputScheduledTimeNanos int64) error {
+	scheduledTimeNanos := getScheduledTimeFromInputIfNonZero(ctx, inputScheduledTimeNanos)
+
 	var err error
 	profile, err := beginWorkflow(ctx, wfTypeSearchAttributes, scheduledTimeNanos)
 	if err != nil {

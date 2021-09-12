@@ -21,8 +21,6 @@
 package execution
 
 import (
-	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -787,60 +785,6 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	s.NotNil(di)
 
 	return newDecisionScheduleEvent, newDecisionStartedEvent
-}
-
-func (s *mutableStateSuite) TestGetCloseEvent_WorkflowIsOpen() {
-	mutableState := s.buildWorkflowMutableState()
-
-	s.msBuilder.Load(mutableState)
-
-	closeEvent, err := s.msBuilder.GetCloseEvent(context.Background())
-	s.Error(err)
-	s.Nil(closeEvent)
-}
-
-func (s *mutableStateSuite) TestGetCloseEvent_WorkflowIsClose() {
-	mutableState := s.buildWorkflowMutableState()
-	mutableState.ExecutionInfo.State = persistence.WorkflowStateCompleted
-	mutableState.ExecutionInfo.CloseStatus = persistence.WorkflowCloseStatusCompleted
-	s.msBuilder.Load(mutableState)
-
-	expectedCloseEvent := &types.HistoryEvent{}
-
-	s.mockEventsCache.EXPECT().GetEvent(
-		gomock.Any(),
-		gomock.Any(),
-		gomock.Any(),
-		gomock.Any(),
-		gomock.Any(),
-		common.FirstEventID,
-		s.msBuilder.GetNextEventID()-1,
-		gomock.Any(),
-	).Return(expectedCloseEvent, nil)
-	closeEvent, err := s.msBuilder.GetCloseEvent(context.Background())
-	s.NoError(err)
-	s.Equal(expectedCloseEvent, closeEvent)
-}
-
-func (s *mutableStateSuite) TestGetCloseEvent_Error() {
-	mutableState := s.buildWorkflowMutableState()
-	mutableState.ExecutionInfo.State = persistence.WorkflowStateCompleted
-	mutableState.ExecutionInfo.CloseStatus = persistence.WorkflowCloseStatusCompleted
-	s.msBuilder.Load(mutableState)
-
-	s.mockEventsCache.EXPECT().GetEvent(
-		gomock.Any(),
-		gomock.Any(),
-		gomock.Any(),
-		gomock.Any(),
-		gomock.Any(),
-		common.FirstEventID,
-		s.msBuilder.GetNextEventID()-1,
-		gomock.Any(),
-	).Return(nil, fmt.Errorf("test"))
-	closeEvent, err := s.msBuilder.GetCloseEvent(context.Background())
-	s.Error(err)
-	s.Nil(closeEvent)
 }
 
 func (s *mutableStateSuite) TestUpdateCurrentVersion_WorkflowOpen() {

@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -187,7 +186,6 @@ func (r *activityReplicatorImpl) SyncActivity(
 	// passive logic need to explicitly call create timer
 	now := time.Unix(0, eventTime)
 	if _, err := execution.NewTimerSequence(
-		clock.NewEventTimeSource().Update(now),
 		mutableState,
 	).CreateNextActivityTimer(); err != nil {
 		return err

@@ -537,6 +537,7 @@ func newTransferQueueProcessorOptions(
 ) *queueProcessorOptions {
 	options := &queueProcessorOptions{
 		BatchSize:                            config.TransferTaskBatchSize,
+		DeleteBatchSize:                      config.TransferTaskDeleteBatchSize,
 		MaxPollRPS:                           config.TransferProcessorMaxPollRPS,
 		MaxPollInterval:                      config.TransferProcessorMaxPollInterval,
 		MaxPollIntervalJitterCoefficient:     config.TransferProcessorMaxPollIntervalJitterCoefficient,

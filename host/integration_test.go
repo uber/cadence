@@ -46,15 +46,6 @@ import (
 	"github.com/uber/cadence/service/matching"
 )
 
-type (
-	IntegrationSuite struct {
-		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
-		// not merely log an error
-		*require.Assertions
-		IntegrationBase
-	}
-)
-
 func TestIntegrationSuite(t *testing.T) {
 	flag.Parse()
 

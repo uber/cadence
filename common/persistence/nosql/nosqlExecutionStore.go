@@ -624,13 +624,13 @@ func (d *nosqlExecutionStore) CompleteTransferTask(
 func (d *nosqlExecutionStore) RangeCompleteTransferTask(
 	ctx context.Context,
 	request *p.RangeCompleteTransferTaskRequest,
-) error {
+) (*p.RangeCompleteTransferTaskResponse, error) {
 	err := d.db.RangeDeleteTransferTasks(ctx, d.shardID, request.ExclusiveBeginTaskID, request.InclusiveEndTaskID)
 	if err != nil {
-		return convertCommonErrors(d.db, "RangeCompleteTransferTask", err)
+		return nil, convertCommonErrors(d.db, "RangeCompleteTransferTask", err)
 	}
 
-	return nil
+	return &p.RangeCompleteTransferTaskResponse{TasksCompleted: p.UnknownNumRowsAffected}, nil
 }
 
 func (d *nosqlExecutionStore) CompleteCrossClusterTask(
@@ -649,14 +649,14 @@ func (d *nosqlExecutionStore) CompleteCrossClusterTask(
 func (d *nosqlExecutionStore) RangeCompleteCrossClusterTask(
 	ctx context.Context,
 	request *p.RangeCompleteCrossClusterTaskRequest,
-) error {
+) (*p.RangeCompleteCrossClusterTaskResponse, error) {
 
 	err := d.db.RangeDeleteCrossClusterTasks(ctx, d.shardID, request.TargetCluster, request.ExclusiveBeginTaskID, request.InclusiveEndTaskID)
 	if err != nil {
-		return convertCommonErrors(d.db, "RangeCompleteCrossClusterTask", err)
+		return nil, convertCommonErrors(d.db, "RangeCompleteCrossClusterTask", err)
 	}
 
-	return nil
+	return &p.RangeCompleteCrossClusterTaskResponse{TasksCompleted: p.UnknownNumRowsAffected}, nil
 }
 
 func (d *nosqlExecutionStore) CompleteReplicationTask(
@@ -674,14 +674,14 @@ func (d *nosqlExecutionStore) CompleteReplicationTask(
 func (d *nosqlExecutionStore) RangeCompleteReplicationTask(
 	ctx context.Context,
 	request *p.RangeCompleteReplicationTaskRequest,
-) error {
+) (*p.RangeCompleteReplicationTaskResponse, error) {
 
 	err := d.db.RangeDeleteReplicationTasks(ctx, d.shardID, request.InclusiveEndTaskID)
 	if err != nil {
-		return convertCommonErrors(d.db, "RangeCompleteReplicationTask", err)
+		return nil, convertCommonErrors(d.db, "RangeCompleteReplicationTask", err)
 	}
 
-	return nil
+	return &p.RangeCompleteReplicationTaskResponse{TasksCompleted: p.UnknownNumRowsAffected}, nil
 }
 
 func (d *nosqlExecutionStore) CompleteTimerTask(
@@ -699,13 +699,13 @@ func (d *nosqlExecutionStore) CompleteTimerTask(
 func (d *nosqlExecutionStore) RangeCompleteTimerTask(
 	ctx context.Context,
 	request *p.RangeCompleteTimerTaskRequest,
-) error {
+) (*p.RangeCompleteTimerTaskResponse, error) {
 	err := d.db.RangeDeleteTimerTasks(ctx, d.shardID, request.InclusiveBeginTimestamp, request.ExclusiveEndTimestamp)
 	if err != nil {
-		return convertCommonErrors(d.db, "RangeCompleteTimerTask", err)
+		return nil, convertCommonErrors(d.db, "RangeCompleteTimerTask", err)
 	}
 
-	return nil
+	return &p.RangeCompleteTimerTaskResponse{TasksCompleted: p.UnknownNumRowsAffected}, nil
 }
 
 func (d *nosqlExecutionStore) GetTimerIndexTasks(
@@ -781,14 +781,14 @@ func (d *nosqlExecutionStore) DeleteReplicationTaskFromDLQ(
 func (d *nosqlExecutionStore) RangeDeleteReplicationTaskFromDLQ(
 	ctx context.Context,
 	request *p.RangeDeleteReplicationTaskFromDLQRequest,
-) error {
+) (*p.RangeDeleteReplicationTaskFromDLQResponse, error) {
 
 	err := d.db.RangeDeleteReplicationDLQTasks(ctx, d.shardID, request.SourceClusterName, request.ExclusiveBeginTaskID, request.InclusiveEndTaskID)
 	if err != nil {
-		return convertCommonErrors(d.db, "RangeDeleteReplicationTaskFromDLQ", err)
+		return nil, convertCommonErrors(d.db, "RangeDeleteReplicationTaskFromDLQ", err)
 	}
 
-	return nil
+	return &p.RangeDeleteReplicationTaskFromDLQResponse{TasksCompleted: p.UnknownNumRowsAffected}, nil
 }
 
 func (d *nosqlExecutionStore) CreateFailoverMarkerTasks(

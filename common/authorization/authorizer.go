@@ -52,11 +52,12 @@ type (
 	// Attributes is input for authority to make decision.
 	// It can be extended in future if required auth on resources like WorkflowType and TaskList
 	Attributes struct {
-		Actor      string
-		APIName    string
-		DomainName string
-		TaskList   *types.TaskList
-		Permission Permission
+		Actor        string
+		APIName      string
+		DomainName   string
+		WorkflowType *types.WorkflowType
+		TaskList     *types.TaskList
+		Permission   Permission
 	}
 
 	// Result is result from authority.

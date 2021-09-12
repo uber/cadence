@@ -205,7 +205,7 @@ func NewPersistenceTestCluster(clusterConfig *TestClusterConfig) testcluster.Per
 		// TODO refactor to support other NoSQL
 		ops := clusterConfig.Persistence
 		ops.DBPluginName = "cassandra"
-		testCluster = nosql.NewTestCluster(ops.DBPluginName, ops.DBName, ops.DBUsername, ops.DBPassword, ops.DBHost, ops.DBPort, ops.ProtoVersion)
+		testCluster = nosql.NewTestCluster(ops.DBPluginName, ops.DBName, ops.DBUsername, ops.DBPassword, ops.DBHost, ops.DBPort, ops.ProtoVersion, "")
 	} else if TestFlags.PersistenceType == config.StoreTypeSQL {
 		var ops *persistencetests.TestBaseOptions
 		if TestFlags.SQLPluginName == mysql.PluginName {
