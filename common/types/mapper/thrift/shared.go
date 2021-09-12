@@ -3077,8 +3077,12 @@ func FromGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainResponse) *sh
 	if t == nil {
 		return nil
 	}
+	taskListResponse := make(map[string]*shared.DescribeTaskListResponse, len(t.GetTaskListMap()))
+	for name, tl := range t.GetTaskListMap() {
+		taskListResponse[name] = FromDescribeTaskListResponse(tl)
+	}
 	return &shared.GetTaskListsByDomainResponse{
-		TaskListNames: t.GetTaskListNames(),
+		TaskListMap: taskListResponse,
 	}
 }
 
@@ -3087,8 +3091,12 @@ func ToGetTaskListsByDomainResponse(t *shared.GetTaskListsByDomainResponse) *typ
 	if t == nil {
 		return nil
 	}
+	taskListResponse := make(map[string]*types.DescribeTaskListResponse, len(t.GetTaskListMap()))
+	for name, tl := range t.GetTaskListMap() {
+		taskListResponse[name] = ToDescribeTaskListResponse(tl)
+	}
 	return &types.GetTaskListsByDomainResponse{
-		TaskListNames: t.GetTaskListNames(),
+		TaskListMap: taskListResponse,
 	}
 }
 

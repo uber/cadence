@@ -217,14 +217,14 @@ func (e *matchingEngineImpl) getTaskListManager(
 
 func (e *matchingEngineImpl) getTaskListByDomainLocked(
 	domainID string,
-) []string {
-	var taskLists []string
+) map[string]*types.DescribeTaskListResponse {
+	taskListMap := make(map[string]*types.DescribeTaskListResponse)
 	for tl, tlm := range e.taskLists {
 		if tlm.GetTaskListKind() == types.TaskListKindNormal && tl.domainID == domainID {
-			taskLists = append(taskLists, tl.qualifiedTaskListName.baseName)
+			taskListMap[fmt.Sprintf("%v-%v", tl.baseName, tl.taskType)] = tlm.DescribeTaskList(false)
 		}
 	}
-	return taskLists
+	return taskListMap
 }
 
 // For use in tests
@@ -707,7 +707,7 @@ func (e *matchingEngineImpl) GetTaskListsByDomain(
 	defer e.taskListsLock.RUnlock()
 	taskLists := e.getTaskListByDomainLocked(domainID)
 	return &types.GetTaskListsByDomainResponse{
-		TaskListNames: taskLists,
+		TaskListMap: taskLists,
 	}, nil
 }
 

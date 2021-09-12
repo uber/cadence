@@ -87,8 +87,24 @@ func AdminListTaskList(c *cli.Context) {
 	}
 
 	fmt.Println("Task Lists for domain " + domain + ":")
-	for _, taskList := range response.GetTaskListNames() {
-		fmt.Println(taskList)
+	for name, taskList := range response.GetTaskListMap() {
+		taskListNameType := strings.Split(name, "-")
+		if len(taskListNameType) != 2 {
+			ErrorAndExit(fmt.Sprintf("Invalid task list value %v received.", name), nil)
+		}
+
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetBorder(true)
+		table.SetColumnSeparator("|")
+		table.SetHeader([]string{"Task List Name", "Type", "Poller Number"})
+		table.SetHeaderLine(true)
+		table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue, tableHeaderBlue)
+		table.Append([]string{
+			taskListNameType[0],
+			taskListNameType[1],
+			strconv.Itoa(len(taskList.GetPollers())),
+		})
+		table.Render()
 	}
 }
 

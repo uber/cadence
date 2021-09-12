@@ -258,24 +258,20 @@ func (c *clientImpl) GetTaskListsByDomain(
 		futures = append(futures, future)
 	}
 
-	taskListMap := make(map[string]struct{})
+	taskListMap := make(map[string]*types.DescribeTaskListResponse)
 	for _, future := range futures {
 		var resp *types.GetTaskListsByDomainResponse
 		if err = future.Get(ctx, &resp); err != nil {
 			return nil, err
 		}
-		for _, tl := range resp.TaskListNames {
-			if _, ok := taskListMap[tl]; !ok {
-				taskListMap[tl] = struct{}{}
+		for name, tl := range resp.GetTaskListMap() {
+			if _, ok := taskListMap[name]; !ok {
+				taskListMap[name] = tl
 			}
 		}
 	}
-	var taskListNames []string
-	for tl := range taskListMap {
-		taskListNames = append(taskListNames, tl)
-	}
 
-	return &types.GetTaskListsByDomainResponse{TaskListNames: taskListNames}, nil
+	return &types.GetTaskListsByDomainResponse{TaskListMap: taskListMap}, nil
 }
 
 func (c *clientImpl) createContext(
