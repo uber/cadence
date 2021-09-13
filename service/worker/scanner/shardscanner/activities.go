@@ -179,6 +179,8 @@ func scanShard(
 		params.BlobstoreFlushThreshold,
 		ctx.Hooks.Manager(activityCtx, pr, params),
 		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
+		scope,
+		resources.GetDomainCache(),
 	)
 	report := scanner.Scan(activityCtx)
 	if report.Result.ControlFlowFailure != nil {
@@ -373,6 +375,7 @@ func fixShard(
 		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
 		resource.GetDomainCache(),
 		ctx.Config.DynamicParams.AllowDomain,
+		scope,
 	)
 	report := fixer.Fix()
 	if report.Result.ControlFlowFailure != nil {
