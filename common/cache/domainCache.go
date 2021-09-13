@@ -528,7 +528,9 @@ UpdateLoop:
 	c.lastRefreshTime = now
 	if now.Sub(c.lastCallbackEmitTime) > 30*time.Minute {
 		c.lastCallbackEmitTime = now
-		c.metricsClient.IncCounter(metrics.DomainCacheScope, metrics.DomainCacheCallbacksCount)
+		for range c.callbacks {
+			c.metricsClient.IncCounter(metrics.DomainCacheScope, metrics.DomainCacheCallbacksCount)
+		}
 	}
 
 	return nil
