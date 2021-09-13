@@ -33,16 +33,20 @@ import (
 
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
+	"github.com/uber/cadence/common/resource"
 )
 
 type FixerSuite struct {
 	*require.Assertions
 	suite.Suite
-	controller *gomock.Controller
+
+	mockResource *resource.Test
+	controller   *gomock.Controller
 }
 
 func TestFixerSuite(t *testing.T) {
@@ -52,6 +56,7 @@ func TestFixerSuite(t *testing.T) {
 func (s *FixerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 	s.controller = gomock.NewController(s.T())
+	s.mockResource = resource.NewTest(s.controller, metrics.Worker)
 }
 
 func (s *FixerSuite) TearDownTest() {
@@ -117,6 +122,7 @@ func (s *FixerSuite) TestFix_Failure_NonFirstError() {
 		progressReportFn: func() {},
 		domainCache:      domainCache,
 		allowDomain:      dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+		scope:            metrics.NoopScope(metrics.Worker),
 	}
 	result := fixer.Fix()
 	s.Equal(FixReport{
@@ -168,6 +174,7 @@ func (s *FixerSuite) TestFix_Failure_SkippedWriterError() {
 		progressReportFn: func() {},
 		domainCache:      domainCache,
 		allowDomain:      dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+		scope:            metrics.NoopScope(metrics.Worker),
 	}
 	result := fixer.Fix()
 	s.Equal(FixReport{
@@ -218,6 +225,7 @@ func (s *FixerSuite) TestFix_Failure_FailedWriterError() {
 		progressReportFn: func() {},
 		domainCache:      domainCache,
 		allowDomain:      dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+		scope:            metrics.NoopScope(metrics.Worker),
 	}
 	result := fixer.Fix()
 	s.Equal(FixReport{
@@ -268,6 +276,7 @@ func (s *FixerSuite) TestFix_Failure_FixedWriterError() {
 		progressReportFn: func() {},
 		domainCache:      domainCache,
 		allowDomain:      dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+		scope:            metrics.NoopScope(metrics.Worker),
 	}
 	result := fixer.Fix()
 	s.Equal(FixReport{
@@ -708,6 +717,7 @@ func (s *FixerSuite) TestFix_Success() {
 		progressReportFn: func() {},
 		domainCache:      domainCache,
 		allowDomain:      allowDomain,
+		scope:            metrics.NoopScope(metrics.Worker),
 	}
 	result := fixer.Fix()
 	s.Equal(FixReport{
