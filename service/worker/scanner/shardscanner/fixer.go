@@ -151,8 +151,8 @@ func (f *ShardFixer) Fix() FixReport {
 		f.scope.Tagged(
 			metrics.DomainTag(domainName),
 			metrics.InvariantTypeTag(invariantName),
-			metrics.ShardscannerFixResult(string(fixResult.FixResultType)),
-		).IncCounter(metrics.ShardscannerFix)
+			metrics.ShardScannerFixResult(string(fixResult.FixResultType)),
+		).IncCounter(metrics.ShardScannerFix)
 
 		switch fixResult.FixResultType {
 		case invariant.FixResultTypeFixed:

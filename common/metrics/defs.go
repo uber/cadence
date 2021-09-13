@@ -2163,8 +2163,8 @@ const (
 	ScannerShardSizeSeventyFiveGauge
 	ScannerShardSizeTwentyFiveGauge
 	ScannerShardSizeTenGauge
-	ShardscannerScan
-	ShardscannerFix
+	ShardScannerScan
+	ShardScannerFix
 
 	NumWorkerMetrics
 )
@@ -2664,8 +2664,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ScannerShardSizeSeventyFiveGauge:              {metricName: "scanner_shard_size_seventy_five", metricType: Gauge},
 		ScannerShardSizeTwentyFiveGauge:               {metricName: "scanner_shard_size_twenty_five", metricType: Gauge},
 		ScannerShardSizeTenGauge:                      {metricName: "scanner_shard_size_ten", metricType: Gauge},
-		ShardscannerScan:                              {metricName: "shardscanner_scan", metricType: Counter},
-		ShardscannerFix:                               {metricName: "shardscanner_fix", metricType: Counter},
+		ShardScannerScan:                              {metricName: "shardscanner_scan", metricType: Counter},
+		ShardScannerFix:                               {metricName: "shardscanner_fix", metricType: Counter},
 	},
 }
 

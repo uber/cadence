@@ -41,8 +41,8 @@ const (
 	activityType           = "activityType"
 	decisionType           = "decisionType"
 	invariantType          = "invariantType"
-	shardscannerScanResult = "shardscanner_scan_result"
-	shardscannerFixResult  = "shardscanner_fix_result"
+	shardScannerScanResult = "shardscanner_scan_result"
+	shardScannerFixResult  = "shardscanner_fix_result"
 	kafkaPartition         = "kafkaPartition"
 	transport              = "transport"
 	signalName             = "signalName"
@@ -137,14 +137,14 @@ func DecisionTypeTag(value string) Tag {
 	return metricWithUnknown(decisionType, value)
 }
 
-// ShardscannerScanResult returns a new shardscanner scan result type tag.
-func ShardscannerScanResult(value string) Tag {
-	return metricWithUnknown(shardscannerScanResult, value)
+// ShardScannerScanResult returns a new shardscanner scan result type tag.
+func ShardScannerScanResult(value string) Tag {
+	return metricWithUnknown(shardScannerScanResult, value)
 }
 
-// ShardscannerFixResult returns a new shardscanner fix result type tag.
-func ShardscannerFixResult(value string) Tag {
-	return metricWithUnknown(shardscannerFixResult, value)
+// ShardScannerFixResult returns a new shardscanner fix result type tag.
+func ShardScannerFixResult(value string) Tag {
+	return metricWithUnknown(shardScannerFixResult, value)
 }
 
 // InvariantTypeTag returns a new invariant type tag.

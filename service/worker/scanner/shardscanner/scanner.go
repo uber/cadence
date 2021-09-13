@@ -136,8 +136,8 @@ func (s *ShardScanner) Scan(ctx context.Context) ScanReport {
 		s.scope.Tagged(
 			metrics.DomainTag(domainName),
 			metrics.InvariantTypeTag(invariantName),
-			metrics.ShardscannerScanResult(string(checkResult.CheckResultType)),
-		).IncCounter(metrics.ShardscannerScan)
+			metrics.ShardScannerScanResult(string(checkResult.CheckResultType)),
+		).IncCounter(metrics.ShardScannerScan)
 
 		switch checkResult.CheckResultType {
 		case invariant.CheckResultTypeHealthy:
