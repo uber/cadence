@@ -726,6 +726,26 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 				StartChildExecutionTask: *startChildExecutionTask,
 			}
 		}
+	case persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+		if generateTransferTask {
+			// We don't have a separate transfer task for record child completion or
+			// apply parent close policy. They are both created through close exuection task.
+			// TODO: closeExecutionTask will be created and added twice when we have both
+			// record child completion and apply parent close policy x-cluster tasks.
+			// Technically, it shouldn't cause issues but better find a way to dedup this...
+			newTask = &persistence.CloseExecutionTask{
+				// TaskID is set by shard context
+				Version: task.Version,
+			}
+		} else {
+			newTask = &persistence.CrossClusterRecordChildWorkflowExecutionCompleteTask{
+				TargetCluster: targetCluster,
+				RecordWorkflowExecutionCompleteTask: persistence.RecordWorkflowExecutionCompleteTask{
+					// TaskID is set by shard context
+					Version: task.Version,
+				},
+			}
+		}
 	// TODO: add the case for CrossClusterTaskTypeRecordChildComplete and ApplyParentClosePolicy
 	default:
 		return fmt.Errorf("unable to convert cross-cluster task of type %v", task.TaskType)

@@ -1700,6 +1700,7 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 
 	for initiatedID, childDomainID := range sameClusterChildDomainIDs {
 		childInfo := childInfos[initiatedID]
+		// TODO: move this to the executor function
 		if err := t.applyParentClosePolicy(
 			ctx,
 			childDomainID,

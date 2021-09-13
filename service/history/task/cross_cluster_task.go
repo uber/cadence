@@ -494,7 +494,7 @@ func (t *crossClusterSourceTask) GetCrossClusterRequest() (request *types.CrossC
 	return request, nil
 }
 
-func (t *crossClusterSourceTask) verifyTaskFailoverVersion(
+func (t *crossClusterSourceTask) VerifyTaskFailoverVersion(
 	mutableState execution.MutableState,
 	taskInfo *persistence.CrossClusterTaskInfo,
 ) error {
@@ -517,7 +517,7 @@ func (t *crossClusterSourceTask) getRequestForApplyParentPolicy(
 
 	// No need to check the target failovers, only the active cluster should poll tasks
 	// if active cluster changes during polling, target should return error to the source
-	err := t.verifyTaskFailoverVersion(mutableState, taskInfo)
+	err := t.VerifyTaskFailoverVersion(mutableState, taskInfo)
 	if err != nil {
 		return nil, t.processingState, err
 	}
@@ -557,7 +557,7 @@ func (t *crossClusterSourceTask) getRequestForRecordChildWorkflowCompletion(
 ) (*types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes, processingState, error) {
 	initiatedEventID := taskInfo.ScheduleID
 
-	err := t.verifyTaskFailoverVersion(mutableState, taskInfo)
+	err := t.VerifyTaskFailoverVersion(mutableState, taskInfo)
 	if err != nil {
 		return nil, t.processingState, err
 	}

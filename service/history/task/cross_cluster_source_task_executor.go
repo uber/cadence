@@ -96,6 +96,8 @@ func (t *crossClusterSourceTaskExecutor) Execute(
 		err = t.executeCancelExecutionTask(ctx, sourceTask)
 	case persistence.CrossClusterTaskTypeSignalExecution:
 		err = t.executeSignalExecutionTask(ctx, sourceTask)
+	case persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+		err = t.executeRecordChildWorkflowExecutionCompleteTask(ctx, sourceTask)
 	// TODO: implement the execution logic for recordChildCompleted and applyParentClosePolicy task
 	default:
 		err = errUnknownCrossClusterTask
@@ -143,21 +145,9 @@ func (t *crossClusterSourceTaskExecutor) executeStartChildExecutionTask(
 	}
 
 	// handle common errors
-	failedCause := task.response.FailedCause
-	if failedCause != nil {
-		switch *failedCause {
-		case types.CrossClusterTaskFailedCauseDomainNotActive:
-			return t.generateNewTask(ctx, wfContext, mutableState, task)
-		case types.CrossClusterTaskFailedCauseWorkflowNotExists:
-			return &types.EntityNotExistsError{}
-		case types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
-			return &types.WorkflowExecutionAlreadyCompletedError{}
-		case types.CrossClusterTaskFailedCauseUncategorized:
-			// ideally this case should not happen
-			// crossClusterSourceTask.Update() will reject response with this failed cause
-			t.setTaskState(task, ctask.TaskStatePending, processingState(task.response.TaskState))
-			return errContinueExecution
-		}
+	err = t.getCommonError(ctx, wfContext, mutableState, task)
+	if err != nil {
+		return err
 	}
 
 	switch processingState(task.response.TaskState) {
@@ -169,6 +159,7 @@ func (t *crossClusterSourceTaskExecutor) executeStartChildExecutionTask(
 
 		attributes := initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes
 		now := t.shard.GetTimeSource().Now()
+		failedCause := task.response.FailedCause
 		if failedCause != nil &&
 			(*failedCause == types.CrossClusterTaskFailedCauseDomainNotExists ||
 				*failedCause == types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning) {
@@ -264,6 +255,67 @@ func (t *crossClusterSourceTaskExecutor) executeCancelExecutionTask(
 			now,
 		)
 
+	default:
+		return errUnknownTaskProcessingState
+	}
+}
+
+func (t *crossClusterSourceTaskExecutor) getCommonError(
+	ctx context.Context,
+	wfContext execution.Context,
+	mutableState execution.MutableState,
+	task *crossClusterSourceTask,
+) error {
+	// handle common errors
+	failedCause := task.response.FailedCause
+	if failedCause != nil {
+		switch *failedCause {
+		case types.CrossClusterTaskFailedCauseDomainNotActive:
+			return t.generateNewTask(ctx, wfContext, mutableState, task)
+		case types.CrossClusterTaskFailedCauseWorkflowNotExists:
+			return &types.EntityNotExistsError{}
+		case types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
+			return &types.WorkflowExecutionAlreadyCompletedError{}
+		case types.CrossClusterTaskFailedCauseUncategorized:
+			// ideally this case should not happen
+			// crossClusterSourceTask.Update() will reject response with this failed cause
+			t.setTaskState(task, ctask.TaskStatePending, processingState(task.response.TaskState))
+			return errContinueExecution
+		}
+	}
+	return nil
+}
+
+func (t *crossClusterSourceTaskExecutor) executeRecordChildWorkflowExecutionCompleteTask(
+	ctx context.Context,
+	task *crossClusterSourceTask,
+) (retError error) {
+	taskInfo := task.GetInfo().(*persistence.CrossClusterTaskInfo)
+	wfContext, mutableState, release, err := loadWorkflowForCrossClusterTask(ctx, t.executionCache, taskInfo, t.metricsClient, t.logger)
+	if err != nil || mutableState == nil {
+		return err
+	}
+	defer func() { release(retError) }()
+
+	err = task.VerifyTaskFailoverVersion(mutableState, taskInfo)
+	if err != nil {
+		return err
+	}
+
+	if task.ProcessingState() == processingStateInvalidated {
+		return t.generateNewTask(ctx, wfContext, mutableState, task)
+	}
+
+	err = t.getCommonError(ctx, wfContext, mutableState, task)
+	if err != nil {
+		return err
+	}
+
+	switch processingState(task.response.TaskState) {
+	case processingStateInitialized, processingStateResponseRecorded:
+		// there's nothing we need to do when record child completion is complete
+		// ack the task
+		return nil
 	default:
 		return errUnknownTaskProcessingState
 	}
