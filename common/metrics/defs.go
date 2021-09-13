@@ -1731,6 +1731,7 @@ const (
 
 	DomainCachePrepareCallbacksLatency
 	DomainCacheCallbacksLatency
+	DomainCacheCallbacksCount
 
 	HistorySize
 	HistoryCount
@@ -1767,6 +1768,9 @@ const (
 	KafkaConsumerMessageNack
 	KafkaConsumerMessageNackDlqErr
 	KafkaConsumerSessionStart
+
+	GracefulFailoverLatency
+	GracefulFailoverFailure
 
 	HistoryArchiverArchiveNonRetryableErrorCount
 	HistoryArchiverArchiveTransientErrorCount
@@ -2039,13 +2043,13 @@ const (
 	ReplicationTaskLatency
 	MutableStateChecksumMismatch
 	MutableStateChecksumInvalidated
-	GracefulFailoverLatency
-	GracefulFailoverFailure
 	FailoverMarkerCount
 	FailoverMarkerReplicationLatency
 	FailoverMarkerInsertFailure
 	FailoverMarkerNotificationFailure
 	FailoverMarkerUpdateShardFailure
+	FailoverMarkerCallbackCount
+	HistoryFailoverCallbackCount
 
 	NumHistoryMetrics
 )
@@ -2217,6 +2221,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceAuthorizationLatency:                         {metricName: "cadence_authorization_latency", metricType: Timer},
 		DomainCachePrepareCallbacksLatency:                  {metricName: "domain_cache_prepare_callbacks_latency", metricType: Timer},
 		DomainCacheCallbacksLatency:                         {metricName: "domain_cache_callbacks_latency", metricType: Timer},
+		DomainCacheCallbacksCount:                           {metricName: "domain_cache_callbacks_count", metricType: Counter},
 		HistorySize:                                         {metricName: "history_size", metricType: Timer},
 		HistoryCount:                                        {metricName: "history_count", metricType: Timer},
 		EventBlobSize:                                       {metricName: "event_blob_size", metricType: Timer},
@@ -2245,6 +2250,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		KafkaConsumerMessageNack:                            {metricName: "kafka_consumer_message_nack", metricType: Counter},
 		KafkaConsumerMessageNackDlqErr:                      {metricName: "kafka_consumer_message_nack_dlq_err", metricType: Counter},
 		KafkaConsumerSessionStart:                           {metricName: "kafka_consumer_session_start", metricType: Counter},
+		GracefulFailoverLatency:                             {metricName: "graceful_failover_latency", metricType: Timer},
+		GracefulFailoverFailure:                             {metricName: "graceful_failover_failures", metricType: Counter},
 
 		HistoryArchiverArchiveNonRetryableErrorCount:              {metricName: "history_archiver_archive_non_retryable_error", metricType: Counter},
 		HistoryArchiverArchiveTransientErrorCount:                 {metricName: "history_archiver_archive_transient_error", metricType: Counter},
@@ -2542,13 +2549,13 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTaskLatency:                            {metricName: "replication_task_latency", metricType: Timer},
 		MutableStateChecksumMismatch:                      {metricName: "mutable_state_checksum_mismatch", metricType: Counter},
 		MutableStateChecksumInvalidated:                   {metricName: "mutable_state_checksum_invalidated", metricType: Counter},
-		GracefulFailoverLatency:                           {metricName: "graceful_failover_latency", metricType: Timer},
-		GracefulFailoverFailure:                           {metricName: "graceful_failover_failures", metricType: Counter},
 		FailoverMarkerCount:                               {metricName: "failover_marker_count", metricType: Counter},
 		FailoverMarkerReplicationLatency:                  {metricName: "failover_marker_replication_latency", metricType: Timer},
 		FailoverMarkerInsertFailure:                       {metricName: "failover_marker_insert_failures", metricType: Counter},
 		FailoverMarkerNotificationFailure:                 {metricName: "failover_marker_notification_failures", metricType: Counter},
 		FailoverMarkerUpdateShardFailure:                  {metricName: "failover_marker_update_shard_failures", metricType: Counter},
+		FailoverMarkerCallbackCount:                       {metricName: "failover_marker_callback_count", metricType: Counter},
+		HistoryFailoverCallbackCount:                      {metricName: "failover_callback_handler_count", metricType: Counter},
 		TransferTasksCount:                                {metricName: "transfer_tasks_count", metricType: Timer},
 		TimerTasksCount:                                   {metricName: "timer_tasks_count", metricType: Timer},
 		ReplicationTasksCount:                             {metricName: "replication_tasks_count", metricType: Timer},

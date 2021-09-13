@@ -116,6 +116,8 @@ type (
 		// coroutine is doing domain refreshment
 		refreshLock     sync.Mutex
 		lastRefreshTime time.Time
+		// This is debug field to emit callback count
+		lastCallbackEmitTime time.Time
 
 		callbackLock     sync.Mutex
 		prepareCallbacks map[int]PrepareCallbackFn
@@ -499,6 +501,7 @@ UpdateLoop:
 
 			// the domain change events after the domainNotificationVersion
 			// will be loaded into cache in the next refresh
+			c.logger.Info("Received larger domain notification version", tag.WorkflowDomainName(domain.GetInfo().Name))
 			break UpdateLoop
 		}
 		prevEntry, nextEntry, err := c.updateIDToDomainCache(newCacheByID, domain.info.ID, domain)
@@ -530,6 +533,12 @@ UpdateLoop:
 
 	// only update last refresh time when refresh succeeded
 	c.lastRefreshTime = now
+	if now.Sub(c.lastCallbackEmitTime) > 30*time.Minute {
+		c.lastCallbackEmitTime = now
+		for range c.callbacks {
+			c.metricsClient.IncCounter(metrics.DomainCacheScope, metrics.DomainCacheCallbacksCount)
+		}
+	}
 
 	return nil
 }
