@@ -49,6 +49,7 @@ func init() {
 const (
 	workflowTimer   = 5 * time.Minute
 	maxSignalNumber = 1000
+	fixerActivityTimeout =  time.Minute
 )
 
 // CheckDataCorruptionWorkflow is invoked by remote cluster via signals
@@ -81,15 +82,16 @@ func CheckDataCorruptionWorkflow(ctx workflow.Context) error {
 		})
 
 		selector.Select(ctx)
-		if timerFire {
+		if timerFire && len(fixList) == 0{
 			return nil
 		}
 		timerCancel()
 
+		timeout := fixerActivityTimeout * time.Duration(len(fixList))
 		activityOptions = workflow.ActivityOptions{
 			ScheduleToStartTimeout: time.Minute,
-			StartToCloseTimeout:    60 * time.Minute,
-			HeartbeatTimeout:       5 * time.Minute,
+			StartToCloseTimeout:    timeout,
+			HeartbeatTimeout:       fixerActivityTimeout,
 			RetryPolicy:            &activityRetryPolicy,
 		}
 		activityCtx := workflow.WithActivityOptions(ctx, activityOptions)
