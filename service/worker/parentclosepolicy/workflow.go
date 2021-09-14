@@ -52,6 +52,7 @@ const (
 type (
 	// RequestDetail defines detail of each workflow to process
 	RequestDetail struct {
+		DomainName string
 		WorkflowID string
 		RunID      string
 		Policy     types.ParentClosePolicy
@@ -60,8 +61,10 @@ type (
 	// Request defines the request for parent close policy
 	Request struct {
 		Executions []RequestDetail
+
+		// DEPRECATED: the following field is deprecated since childworkflow
+		// might in a different domain, use the DomainName field in RequestDetail
 		DomainName string
-		DomainUUID string
 	}
 )
 
@@ -105,6 +108,11 @@ func ProcessorWorkflow(ctx workflow.Context) error {
 func ProcessorActivity(ctx context.Context, request Request) error {
 	processor := ctx.Value(processorContextKey).(*Processor)
 	for _, execution := range request.Executions {
+		domainName := execution.DomainName
+		if domainName == "" {
+			// for backward compatibility
+			domainName = request.DomainName
+		}
 		var err error
 		switch execution.Policy {
 		case types.ParentClosePolicyAbandon:
@@ -112,7 +120,7 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 			continue
 		case types.ParentClosePolicyTerminate:
 			err = processor.frontendClient.TerminateWorkflowExecution(ctx, &types.TerminateWorkflowExecutionRequest{
-				Domain: request.DomainName,
+				Domain: domainName,
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: execution.WorkflowID,
 					RunID:      execution.RunID,
@@ -122,7 +130,7 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 			})
 		case types.ParentClosePolicyRequestCancel:
 			err = processor.frontendClient.RequestCancelWorkflowExecution(ctx, &types.RequestCancelWorkflowExecutionRequest{
-				Domain: request.DomainName,
+				Domain: domainName,
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: execution.WorkflowID,
 					RunID:      execution.RunID,

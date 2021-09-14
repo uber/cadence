@@ -1634,8 +1634,6 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 	childInfos map[int64]*persistence.ChildExecutionInfo,
 	crossClusterTaskGenerators *[]generatorF,
 ) error {
-	domainID := task.DomainID
-
 	if len(childInfos) == 0 {
 		return nil
 	}
@@ -1652,6 +1650,7 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 			}
 
 			executions = append(executions, parentclosepolicy.RequestDetail{
+				DomainName: childInfo.DomainName,
 				WorkflowID: childInfo.StartedWorkflowID,
 				RunID:      childInfo.StartedRunID,
 				Policy:     childInfo.ParentClosePolicy,
@@ -1663,8 +1662,6 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 		}
 
 		request := parentclosepolicy.Request{
-			DomainUUID: domainID,
-			DomainName: domainName,
 			Executions: executions,
 		}
 
@@ -1672,19 +1669,24 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 		return t.parentClosePolicyClient.SendParentClosePolicyRequest(ctx, request)
 	}
 
-	var sameClusterChildInfos []*persistence.ChildExecutionInfo
-	remoteClusters := make(map[string]bool)
+	sameClusterChildDomainIDs := make(map[int64]string) // child init eventID -> child domainID
+	remoteClusters := make(map[string]struct{})
 
-	for _, childInfo := range childInfos {
+	for initiatedID, childInfo := range childInfos {
 		targetDomainEntry, err := t.shard.GetDomainCache().GetDomain(childInfo.DomainName)
 		if err != nil {
+			if common.IsEntityNotExistsError(err) {
+				// if domain no longer exists, ignore the child
+				// don't return error here, otherwise the entire close execution task will get skipped.
+				continue
+			}
 			return err
 		}
 		targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry)
 		if isCrossCluster {
-			remoteClusters[targetCluster] = true
+			remoteClusters[targetCluster] = struct{}{}
 		} else {
-			sameClusterChildInfos = append(sameClusterChildInfos, childInfo)
+			sameClusterChildDomainIDs[initiatedID] = targetDomainEntry.GetInfo().ID
 		}
 	}
 
@@ -1696,11 +1698,12 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 			})
 	}
 
-	for _, childInfo := range sameClusterChildInfos {
+	for initiatedID, childDomainID := range sameClusterChildDomainIDs {
+		childInfo := childInfos[initiatedID]
 		if err := t.applyParentClosePolicy(
 			ctx,
-			domainID,
-			domainName,
+			childDomainID,
+			childInfo.DomainName,
 			childInfo,
 		); err != nil {
 			switch err.(type) {
@@ -1719,8 +1722,8 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 
 func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 	ctx context.Context,
-	domainID string,
-	domainName string,
+	childDomainID string,
+	childDomainName string,
 	childInfo *persistence.ChildExecutionInfo,
 ) error {
 
@@ -1734,9 +1737,9 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 
 	case types.ParentClosePolicyTerminate:
 		return t.historyClient.TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
-			DomainUUID: domainID,
+			DomainUUID: childDomainID,
 			TerminateRequest: &types.TerminateWorkflowExecutionRequest{
-				Domain: domainName,
+				Domain: childDomainName,
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: childInfo.StartedWorkflowID,
 					RunID:      childInfo.StartedRunID,
@@ -1748,9 +1751,9 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 
 	case types.ParentClosePolicyRequestCancel:
 		return t.historyClient.RequestCancelWorkflowExecution(ctx, &types.HistoryRequestCancelWorkflowExecutionRequest{
-			DomainUUID: domainID,
+			DomainUUID: childDomainID,
 			CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
-				Domain: domainName,
+				Domain: childDomainName,
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: childInfo.StartedWorkflowID,
 					RunID:      childInfo.StartedRunID,

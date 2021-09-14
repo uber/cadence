@@ -447,9 +447,13 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 						Version:  nextDomain.GetFailoverVersion(),
 						DomainID: nextDomain.GetInfo().ID,
 					})
+					// This is a debug metric
+					e.metricsClient.IncCounter(metrics.FailoverMarkerScope, metrics.FailoverMarkerCallbackCount)
 				}
 			}
 
+			// This is a debug metric
+			e.metricsClient.IncCounter(metrics.FailoverMarkerScope, metrics.HistoryFailoverCallbackCount)
 			if len(failoverMarkerTasks) > 0 {
 				if err := e.shard.ReplicateFailoverMarkers(
 					context.Background(),
@@ -3276,7 +3280,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		e.shard.GetShardID(),
 	)
 
-	err = mutableStateTaskRefresher.RefreshTasks(ctx, mutableState)
+	err = mutableStateTaskRefresher.RefreshTasks(ctx, mutableState.GetExecutionInfo().StartTimestamp, mutableState)
 	if err != nil {
 		return err
 	}
