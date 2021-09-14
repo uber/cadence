@@ -454,6 +454,23 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 		}
 		table.Render()
 	}
+	if resp.GetFailoverInfo() != nil {
+		info := resp.GetFailoverInfo()
+		fmt.Println("Graceful failover info:")
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetBorder(true)
+		table.SetColumnSeparator("|")
+		header := []string{"Failover Version", "Start Time", "Expire Time", "Completed Shard Count", "Pending Shard"}
+		table.SetHeader(header)
+		row := []string{}
+		row = append(row, fmt.Sprintf("%v", info.GetFailoverVersion()))
+		row = append(row, time.Unix(0, info.GetFailoverStartTimestamp()).String())
+		row = append(row, time.Unix(0, info.GetFailoverExpireTimestamp()).String())
+		row = append(row, fmt.Sprintf("%v", info.GetCompletedShardCount()))
+		row = append(row, fmt.Sprintf("%v", info.GetPendingShards()))
+		table.Append(row)
+		table.Render()
+	}
 }
 
 func (d *domainCLIImpl) ListDomains(c *cli.Context) {

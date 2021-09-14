@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
@@ -59,6 +60,7 @@ type (
 		progressReportFn func()
 		domainCache      cache.DomainCache
 		allowDomain      dynamicconfig.BoolPropertyFnWithDomainFilter
+		scope            metrics.Scope
 	}
 )
 
@@ -73,6 +75,7 @@ func NewFixer(
 	progressReportFn func(),
 	domainCache cache.DomainCache,
 	allowDomain dynamicconfig.BoolPropertyFnWithDomainFilter,
+	scope metrics.Scope,
 ) *ShardFixer {
 	id := uuid.New()
 
@@ -87,6 +90,7 @@ func NewFixer(
 		progressReportFn: progressReportFn,
 		domainCache:      domainCache,
 		allowDomain:      allowDomain,
+		scope:            scope,
 	}
 }
 
@@ -138,6 +142,18 @@ func (f *ShardFixer) Fix() FixReport {
 			Input:     *soe,
 			Result:    fixResult,
 		}
+
+		invariantName := ""
+		if fixResult.DeterminingInvariantName != nil {
+			invariantName = string(*fixResult.DeterminingInvariantName)
+		}
+
+		f.scope.Tagged(
+			metrics.DomainTag(domainName),
+			metrics.InvariantTypeTag(invariantName),
+			metrics.ShardScannerFixResult(string(fixResult.FixResultType)),
+		).IncCounter(metrics.ShardScannerFix)
+
 		switch fixResult.FixResultType {
 		case invariant.FixResultTypeFixed:
 			if err := f.fixedWriter.Add(foe); err != nil {

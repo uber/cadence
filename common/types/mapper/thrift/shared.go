@@ -1535,6 +1535,7 @@ func FromDescribeDomainResponse(t *types.DescribeDomainResponse) *shared.Describ
 		ReplicationConfiguration: FromDomainReplicationConfiguration(t.ReplicationConfiguration),
 		FailoverVersion:          &t.FailoverVersion,
 		IsGlobalDomain:           &t.IsGlobalDomain,
+		FailoverInfo:             FromFailoverInfo(t.GetFailoverInfo()),
 	}
 }
 
@@ -1549,6 +1550,7 @@ func ToDescribeDomainResponse(t *shared.DescribeDomainResponse) *types.DescribeD
 		ReplicationConfiguration: ToDomainReplicationConfiguration(t.ReplicationConfiguration),
 		FailoverVersion:          t.GetFailoverVersion(),
 		IsGlobalDomain:           t.GetIsGlobalDomain(),
+		FailoverInfo:             ToFailoverInfo(t.FailoverInfo),
 	}
 }
 
@@ -1891,6 +1893,34 @@ func ToDomainInfo(t *shared.DomainInfo) *types.DomainInfo {
 		OwnerEmail:  t.GetOwnerEmail(),
 		Data:        t.Data,
 		UUID:        t.GetUUID(),
+	}
+}
+
+// FromFailoverInfo converts internal FailoverInfo type to thrift
+func FromFailoverInfo(t *types.FailoverInfo) *shared.FailoverInfo {
+	if t == nil {
+		return nil
+	}
+	return &shared.FailoverInfo{
+		FailoverVersion:         &t.FailoverVersion,
+		FailoverStartTimestamp:  &t.FailoverStartTimestamp,
+		FailoverExpireTimestamp: &t.FailoverExpireTimestamp,
+		CompletedShardCount:     &t.CompletedShardCount,
+		PendingShards:           t.GetPendingShards(),
+	}
+}
+
+// ToFailoverInfo converts thrift FailoverInfo type to internal
+func ToFailoverInfo(t *shared.FailoverInfo) *types.FailoverInfo {
+	if t == nil {
+		return nil
+	}
+	return &types.FailoverInfo{
+		FailoverVersion:         t.GetFailoverVersion(),
+		FailoverStartTimestamp:  t.GetFailoverStartTimestamp(),
+		FailoverExpireTimestamp: t.GetFailoverExpireTimestamp(),
+		CompletedShardCount:     t.GetCompletedShardCount(),
+		PendingShards:           t.GetPendingShards(),
 	}
 }
 

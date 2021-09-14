@@ -144,3 +144,9 @@ func TestGetFailoverInfoResponse(t *testing.T) {
 		assert.Equal(t, item, thrift.ToGetFailoverInfoResponse(thrift.FromGetFailoverInfoResponse(item)))
 	}
 }
+
+func TestFailoverInfo(t *testing.T) {
+	for _, item := range []*types.FailoverInfo{nil, {}, &testdata.FailoverInfo} {
+		assert.Equal(t, item, thrift.ToFailoverInfo(thrift.FromFailoverInfo(item)))
+	}
+}
