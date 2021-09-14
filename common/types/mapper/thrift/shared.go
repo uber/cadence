@@ -3077,26 +3077,11 @@ func FromGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainResponse) *sh
 	if t == nil {
 		return nil
 	}
-	resp := &shared.GetTaskListsByDomainResponse{}
-	decisionTaskList := t.GetDecisionTaskListMap()
-	activityTaskList := t.GetActivityTaskListMap()
-	var decisionTaskListMap, activityTaskListMap map[string]*shared.DescribeTaskListResponse
-	if len(decisionTaskList) > 0 {
-		decisionTaskListMap = make(map[string]*shared.DescribeTaskListResponse, len(decisionTaskList))
-		for name, tl := range decisionTaskList {
-			decisionTaskListMap[name] = FromDescribeTaskListResponse(tl)
-		}
-	}
-	if len(activityTaskList) > 0 {
-		activityTaskListMap = make(map[string]*shared.DescribeTaskListResponse, len(activityTaskList))
-		for name, tl := range activityTaskList {
-			activityTaskListMap[name] = FromDescribeTaskListResponse(tl)
-		}
-	}
 
-	resp.DecisionTaskListMap = decisionTaskListMap
-	resp.ActivityTaskListMap = activityTaskListMap
-	return resp
+	return &shared.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: FromDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: FromDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
+	}
 }
 
 // ToGetTaskListsByDomainResponse converts thrift GetTaskListsByDomainResponse type to internal
@@ -3104,26 +3089,35 @@ func ToGetTaskListsByDomainResponse(t *shared.GetTaskListsByDomainResponse) *typ
 	if t == nil {
 		return nil
 	}
-	resp := &types.GetTaskListsByDomainResponse{}
-	decisionTaskList := t.GetDecisionTaskListMap()
-	activityTaskList := t.GetActivityTaskListMap()
-	var decisionTaskListMap, activityTaskListMap map[string]*types.DescribeTaskListResponse
-	if len(decisionTaskList) > 0 {
-		decisionTaskListMap = make(map[string]*types.DescribeTaskListResponse, len(decisionTaskList))
-		for name, tl := range decisionTaskList {
-			decisionTaskListMap[name] = ToDescribeTaskListResponse(tl)
-		}
-	}
-	if len(activityTaskList) > 0 {
-		activityTaskListMap = make(map[string]*types.DescribeTaskListResponse, len(activityTaskList))
-		for name, tl := range activityTaskList {
-			activityTaskListMap[name] = ToDescribeTaskListResponse(tl)
-		}
-	}
 
-	resp.DecisionTaskListMap = decisionTaskListMap
-	resp.ActivityTaskListMap = activityTaskListMap
-	return resp
+	return &types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: ToDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: ToDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
+	}
+}
+
+// FromDescribeTaskListResponseMap converts internal DescribeTaskListResponse map type to thrift
+func FromDescribeTaskListResponseMap(t map[string]*types.DescribeTaskListResponse) map[string]*shared.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*shared.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = FromDescribeTaskListResponse(value)
+	}
+	return taskListMap
+}
+
+// ToDescribeTaskListResponseMap converts thrift DescribeTaskListResponse map type to internal
+func ToDescribeTaskListResponseMap(t map[string]*shared.DescribeTaskListResponse) map[string]*types.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*types.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = ToDescribeTaskListResponse(value)
+	}
+	return taskListMap
 }
 
 // FromListWorkflowExecutionsRequest converts internal ListWorkflowExecutionsRequest type to thrift

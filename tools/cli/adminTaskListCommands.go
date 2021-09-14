@@ -90,26 +90,14 @@ func AdminListTaskList(c *cli.Context) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetBorder(true)
 	table.SetColumnSeparator("|")
-	table.SetHeader([]string{"Task List Name", "Type", "Poller Number"})
+	table.SetHeader([]string{"Task List Name", "Type", "Poller Count"})
 	table.SetHeaderLine(true)
 	table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue, tableHeaderBlue)
 	for name, taskList := range response.GetDecisionTaskListMap() {
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetBorder(true)
-		table.SetColumnSeparator("|")
-		table.SetHeader([]string{"Task List Name", "Type", "Poller Number"})
-		table.SetHeaderLine(true)
-		table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue, tableHeaderBlue)
 		table.Append([]string{name, strconv.Itoa(len(taskList.GetPollers()))})
 		table.Render()
 	}
 	for name, taskList := range response.GetActivityTaskListMap() {
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetBorder(true)
-		table.SetColumnSeparator("|")
-		table.SetHeader([]string{"Task List Name", "Type", "Poller Number"})
-		table.SetHeaderLine(true)
-		table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue, tableHeaderBlue)
 		table.Append([]string{name, strconv.Itoa(len(taskList.GetPollers()))})
 		table.Render()
 	}

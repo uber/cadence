@@ -142,7 +142,9 @@ var (
 	}
 
 	GetTaskListsByDomainResponse = types.GetTaskListsByDomainResponse{
-		DecisionTaskListMap: map[string]*types.DescribeTaskListResponse{DomainName: &MatchingDescribeTaskListResponse},
-		ActivityTaskListMap: map[string]*types.DescribeTaskListResponse{DomainName: &MatchingDescribeTaskListResponse},
+		DecisionTaskListMap: DescribeTaskListResponseMap,
+		ActivityTaskListMap: DescribeTaskListResponseMap,
 	}
+
+	DescribeTaskListResponseMap = map[string]*types.DescribeTaskListResponse{DomainName: &MatchingDescribeTaskListResponse}
 )

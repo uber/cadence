@@ -222,52 +222,44 @@ func FromMatchingGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainRespo
 	if t == nil {
 		return nil
 	}
-	resp := &matchingv1.GetTaskListsByDomainResponse{}
-	decisionTaskList := t.GetDecisionTaskListMap()
-	activityTaskList := t.GetActivityTaskListMap()
-	var decisionTaskListMap, activityTaskListMap map[string]*matchingv1.DescribeTaskListResponse
-	if len(decisionTaskList) > 0 {
-		decisionTaskListMap = make(map[string]*matchingv1.DescribeTaskListResponse, len(decisionTaskList))
-		for name, tl := range decisionTaskList {
-			decisionTaskListMap[name] = FromMatchingDescribeTaskListResponse(tl)
-		}
-	}
-	if len(activityTaskList) > 0 {
-		activityTaskListMap = make(map[string]*matchingv1.DescribeTaskListResponse, len(activityTaskList))
-		for name, tl := range activityTaskList {
-			activityTaskListMap[name] = FromMatchingDescribeTaskListResponse(tl)
-		}
-	}
 
-	resp.DecisionTaskListMap = decisionTaskListMap
-	resp.ActivityTaskListMap = activityTaskListMap
-	return resp
+	return &matchingv1.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: FromMatchingDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: FromMatchingDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
+	}
 }
 
 func ToMatchingGetTaskListsByDomainResponse(t *matchingv1.GetTaskListsByDomainResponse) *types.GetTaskListsByDomainResponse {
 	if t == nil {
 		return nil
 	}
-	resp := &types.GetTaskListsByDomainResponse{}
-	decisionTaskList := t.GetDecisionTaskListMap()
-	activityTaskList := t.GetActivityTaskListMap()
-	var decisionTaskListMap, activityTaskListMap map[string]*types.DescribeTaskListResponse
-	if len(decisionTaskList) > 0 {
-		decisionTaskListMap = make(map[string]*types.DescribeTaskListResponse, len(decisionTaskList))
-		for name, tl := range decisionTaskList {
-			decisionTaskListMap[name] = ToMatchingDescribeTaskListResponse(tl)
-		}
-	}
-	if len(activityTaskList) > 0 {
-		activityTaskListMap = make(map[string]*types.DescribeTaskListResponse, len(activityTaskList))
-		for name, tl := range activityTaskList {
-			activityTaskListMap[name] = ToMatchingDescribeTaskListResponse(tl)
-		}
-	}
 
-	resp.DecisionTaskListMap = decisionTaskListMap
-	resp.ActivityTaskListMap = activityTaskListMap
-	return resp
+	return &types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: ToMatchingDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: ToMatchingDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
+	}
+}
+
+func FromMatchingDescribeTaskListResponseMap(t map[string]*types.DescribeTaskListResponse) map[string]*matchingv1.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*matchingv1.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = FromMatchingDescribeTaskListResponse(value)
+	}
+	return taskListMap
+}
+
+func ToMatchingDescribeTaskListResponseMap(t map[string]*matchingv1.DescribeTaskListResponse) map[string]*types.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*types.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = ToMatchingDescribeTaskListResponse(value)
+	}
+	return taskListMap
 }
 
 func FromMatchingPollForActivityTaskRequest(t *types.MatchingPollForActivityTaskRequest) *matchingv1.PollForActivityTaskRequest {

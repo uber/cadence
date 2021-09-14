@@ -133,6 +133,13 @@ func TestGetTaskListsByDomainResponse(t *testing.T) {
 	}
 }
 
+func TestDescribeTaskListResponseMap(t *testing.T) {
+	for _, item := range []map[string]*types.DescribeTaskListResponse{nil, {}, testdata.DescribeTaskListResponseMap} {
+		i := thrift.FromDescribeTaskListResponseMap(item)
+		assert.Equal(t, item, thrift.ToDescribeTaskListResponseMap(i))
+	}
+}
+
 func TestGetFailoverInfoRequest(t *testing.T) {
 	for _, item := range []*types.GetFailoverInfoRequest{nil, {}, &testdata.GetFailoverInfoRequest} {
 		assert.Equal(t, item, thrift.ToGetFailoverInfoRequest(thrift.FromGetFailoverInfoRequest(item)))
