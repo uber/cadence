@@ -1008,6 +1008,7 @@ func TestListClosedWorkflowExecutionsRequest(t *testing.T) {
 		assert.Equal(t, item, ToListClosedWorkflowExecutionsRequest(FromListClosedWorkflowExecutionsRequest(item)))
 	}
 }
+
 func TestListOpenWorkflowExecutionsRequest(t *testing.T) {
 	for _, item := range []*types.ListOpenWorkflowExecutionsRequest{
 		nil,
@@ -1016,5 +1017,15 @@ func TestListOpenWorkflowExecutionsRequest(t *testing.T) {
 		&testdata.ListOpenWorkflowExecutionsRequest_TypeFilter,
 	} {
 		assert.Equal(t, item, ToListOpenWorkflowExecutionsRequest(FromListOpenWorkflowExecutionsRequest(item)))
+	}
+}
+
+func TestFailoverInfo(t *testing.T) {
+	for _, item := range []*types.FailoverInfo{
+		nil,
+		{},
+		&testdata.FailoverInfo,
+	} {
+		assert.Equal(t, item, ToFailoverInfo(FromFailoverInfo(item)))
 	}
 }
