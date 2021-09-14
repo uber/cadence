@@ -40,8 +40,6 @@ import (
 )
 
 const (
-	// ActivityScannerEmitMetrics is the activity name for ScannerEmitMetricsActivity
-	ActivityScannerEmitMetrics = "cadence-sys-shardscanner-emit-metrics-activity"
 	// ActivityScannerConfig is the activity name ScannerConfigActivity
 	ActivityScannerConfig = "cadence-sys-shardscanner-config-activity"
 	// ActivityScanShard is the activity name for ScanShardActivity
@@ -382,40 +380,4 @@ func fixShard(
 		scope.IncCounter(metrics.CadenceFailures)
 	}
 	return &report, nil
-}
-
-// ScannerEmitMetricsActivity will emit metrics for a complete run of ShardScanner
-func ScannerEmitMetricsActivity(
-	activityCtx context.Context,
-	params ScannerEmitMetricsActivityParams,
-) error {
-	ctx, err := GetScannerContext(activityCtx)
-	if err != nil {
-		return err
-	}
-	info := activity.GetInfo(activityCtx)
-	scope := ctx.Scope.Tagged(
-		metrics.ActivityTypeTag(ActivityScannerEmitMetrics),
-		metrics.WorkflowTypeTag(info.WorkflowType.Name),
-		metrics.DomainTag(c.SystemLocalDomainName),
-	)
-	scope.UpdateGauge(metrics.CadenceShardSuccessGauge, float64(params.ShardSuccessCount))
-	scope.UpdateGauge(metrics.CadenceShardFailureGauge, float64(params.ShardControlFlowFailureCount))
-
-	agg := params.AggregateReportResult
-	scope.UpdateGauge(metrics.ScannerExecutionsGauge, float64(agg.EntitiesCount))
-	scope.UpdateGauge(metrics.ScannerCorruptedGauge, float64(agg.CorruptedCount))
-	scope.UpdateGauge(metrics.ScannerCheckFailedGauge, float64(agg.CheckFailedCount))
-	for k, v := range agg.CorruptionByType {
-		scope.Tagged(metrics.InvariantTypeTag(string(k))).UpdateGauge(metrics.ScannerCorruptionByTypeGauge, float64(v))
-	}
-	shardStats := params.ShardDistributionStats
-	scope.UpdateGauge(metrics.ScannerShardSizeMaxGauge, float64(shardStats.Max))
-	scope.UpdateGauge(metrics.ScannerShardSizeMedianGauge, float64(shardStats.Median))
-	scope.UpdateGauge(metrics.ScannerShardSizeMinGauge, float64(shardStats.Min))
-	scope.UpdateGauge(metrics.ScannerShardSizeNinetyGauge, float64(shardStats.P90))
-	scope.UpdateGauge(metrics.ScannerShardSizeSeventyFiveGauge, float64(shardStats.P75))
-	scope.UpdateGauge(metrics.ScannerShardSizeTwentyFiveGauge, float64(shardStats.P25))
-	scope.UpdateGauge(metrics.ScannerShardSizeTenGauge, float64(shardStats.P10))
-	return nil
 }

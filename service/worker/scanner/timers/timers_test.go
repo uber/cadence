@@ -35,7 +35,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/service/worker/scanner/shardscanner"
 )
@@ -79,7 +78,6 @@ func (s *timersWorkflowsSuite) TestScannerWorkflow_Success() {
 		},
 		CustomScannerConfig: cconfig,
 	}, nil)
-	env.OnActivity(shardscanner.ActivityScannerEmitMetrics, mock.Anything, mock.Anything).Return(nil)
 	shards := shardscanner.Shards{
 		Range: &shardscanner.ShardRange{
 			Min: 0,
@@ -102,9 +100,6 @@ func (s *timersWorkflowsSuite) TestScannerWorkflow_Success() {
 			if i == 0 {
 				reports = append(reports, shardscanner.ScanReport{
 					ShardID: batch[i],
-					Stats: shardscanner.ScanStats{
-						EntitiesCount: 10,
-					},
 					Result: shardscanner.ScanResult{
 						ControlFlowFailure: &shardscanner.ControlFlowFailure{
 							Info: "got control flow failure",
@@ -114,12 +109,6 @@ func (s *timersWorkflowsSuite) TestScannerWorkflow_Success() {
 			} else {
 				reports = append(reports, shardscanner.ScanReport{
 					ShardID: batch[i],
-					Stats: shardscanner.ScanStats{
-						EntitiesCount:    10,
-						CorruptedCount:   2,
-						CheckFailedCount: 1,
-						CorruptionByType: map[invariant.Name]int64{},
-					},
 					Result: shardscanner.ScanResult{
 						ShardScanKeys: &shardscanner.ScanKeys{
 							Corrupt: &store.Keys{
@@ -145,17 +134,6 @@ func (s *timersWorkflowsSuite) TestScannerWorkflow_Success() {
 	s.True(env.IsWorkflowCompleted())
 	s.NoError(env.GetWorkflowError())
 
-	aggValue, err := env.QueryWorkflow(shardscanner.AggregateReportQuery)
-	s.NoError(err)
-	var agg shardscanner.AggregateScanReportResult
-	s.NoError(aggValue.Get(&agg))
-	s.Equal(shardscanner.AggregateScanReportResult{
-		EntitiesCount:    240,
-		CorruptedCount:   48,
-		CheckFailedCount: 24,
-		CorruptionByType: map[invariant.Name]int64{},
-	}, agg)
-
 	for i := 0; i < 30; i++ {
 		shardReportValue, err := env.QueryWorkflow(shardscanner.ShardReportQuery, i)
 		s.NoError(err)
@@ -164,9 +142,6 @@ func (s *timersWorkflowsSuite) TestScannerWorkflow_Success() {
 		if i == 0 || i == 1 || i == 2 || i == 15 || i == 16 || i == 17 {
 			s.Equal(&shardscanner.ScanReport{
 				ShardID: i,
-				Stats: shardscanner.ScanStats{
-					EntitiesCount: 10,
-				},
 				Result: shardscanner.ScanResult{
 					ControlFlowFailure: &shardscanner.ControlFlowFailure{
 						Info: "got control flow failure",
@@ -176,12 +151,6 @@ func (s *timersWorkflowsSuite) TestScannerWorkflow_Success() {
 		} else {
 			s.Equal(&shardscanner.ScanReport{
 				ShardID: i,
-				Stats: shardscanner.ScanStats{
-					EntitiesCount:    10,
-					CorruptedCount:   2,
-					CheckFailedCount: 1,
-					CorruptionByType: map[invariant.Name]int64{},
-				},
 				Result: shardscanner.ScanResult{
 					ShardScanKeys: &shardscanner.ScanKeys{
 						Corrupt: &store.Keys{

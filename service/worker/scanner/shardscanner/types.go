@@ -37,7 +37,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/common/resource"
 )
@@ -70,14 +69,6 @@ type (
 		Scope    metrics.Scope
 		Config   *ScannerConfig
 		Logger   log.Logger
-	}
-
-	// ScannerEmitMetricsActivityParams is the parameter for ScannerEmitMetricsActivity
-	ScannerEmitMetricsActivityParams struct {
-		ShardSuccessCount            int
-		ShardControlFlowFailureCount int
-		AggregateReportResult        AggregateScanReportResult
-		ShardDistributionStats       ShardDistributionStats
 	}
 
 	// ShardRange identifies a set of shards based on min (inclusive) and max (exclusive)
@@ -121,30 +112,8 @@ type (
 
 	// ScanReport is the report of running Scan on a single shard.
 	ScanReport struct {
-		ShardID     int
-		Stats       ScanStats
-		Result      ScanResult
-		DomainStats map[string]*ScanStats
-	}
-
-	// DomainStats is the report of stats for one domain
-	DomainScanStats struct {
-		DomainID string
-		Stats    ScanStats
-	}
-
-	// DomainStats is the report of stats for one domain
-	DomainFixStats struct {
-		DomainID string
-		Stats    FixStats
-	}
-
-	// ScanStats indicates the stats of entities which were handled by shard Scan.
-	ScanStats struct {
-		EntitiesCount    int64
-		CorruptedCount   int64
-		CheckFailedCount int64
-		CorruptionByType map[invariant.Name]int64
+		ShardID int
+		Result  ScanResult
 	}
 
 	// ScanResult indicates the result of running scan on a shard.
@@ -163,18 +132,8 @@ type (
 
 	// FixReport is the report of running Fix on a single shard
 	FixReport struct {
-		ShardID     int
-		Stats       FixStats
-		Result      FixResult
-		DomainStats map[string]*FixStats
-	}
-
-	// FixStats indicates the stats of executions that were handled by shard Fix.
-	FixStats struct {
-		EntitiesCount int64
-		FixedCount    int64
-		SkippedCount  int64
-		FailedCount   int64
+		ShardID int
+		Result  FixResult
 	}
 
 	// FixResult indicates the result of running fix on a shard.

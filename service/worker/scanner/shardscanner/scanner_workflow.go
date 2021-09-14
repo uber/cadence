@@ -42,10 +42,6 @@ const (
 	ShardStatusSummaryQuery = "shard_status_summary"
 	// AggregateReportQuery is the query name for the query used to get the aggregate result of all finished shards
 	AggregateReportQuery = "aggregate_report"
-	// ShardSizeQuery is the query name for the query used to get the number of executions per shard in sorted order
-	ShardSizeQuery = "shard_size"
-	// DomainReportQuery is the query name for the query used to get the reports per domains for all finished shards
-	DomainReportQuery = "domain_report"
 
 	scanShardReportChan = "scanShardReportChan"
 )
@@ -169,16 +165,7 @@ func (wf *ScannerWorkflow) Start(ctx workflow.Context) error {
 		}
 	}
 
-	activityCtx = getShortActivityContext(ctx)
-	summary := wf.Aggregator.GetStatusSummary()
-
-	return workflow.ExecuteActivity(activityCtx, ActivityScannerEmitMetrics, ScannerEmitMetricsActivityParams{
-		ShardSuccessCount:            summary[ShardStatusSuccess],
-		ShardControlFlowFailureCount: summary[ShardStatusControlFlowFailure],
-		AggregateReportResult:        wf.Aggregator.GetAggregateReport(),
-		ShardDistributionStats:       wf.Aggregator.GetShardDistributionStats(),
-	}).Get(ctx, nil)
-
+	return nil
 }
 
 func getScanHandlers(aggregator *ShardScanResultAggregator) map[string]interface{} {
@@ -192,17 +179,8 @@ func getScanHandlers(aggregator *ShardScanResultAggregator) map[string]interface
 		ShardStatusSummaryQuery: func() (ShardStatusSummaryResult, error) {
 			return aggregator.GetStatusSummary(), nil
 		},
-		AggregateReportQuery: func() (AggregateScanReportResult, error) {
-			return aggregator.GetAggregateReport(), nil
-		},
 		ShardCorruptKeysQuery: func(req PaginatedShardQueryRequest) (*ShardCorruptKeysQueryResult, error) {
 			return aggregator.GetCorruptionKeys(req)
-		},
-		ShardSizeQuery: func(req ShardSizeQueryRequest) (ShardSizeQueryResult, error) {
-			return aggregator.GetShardSizeQueryResult(req)
-		},
-		DomainReportQuery: func(req DomainReportQueryRequest) (*DomainScanReportQueryResult, error) {
-			return aggregator.GetDomainStatus(req)
 		},
 	}
 }

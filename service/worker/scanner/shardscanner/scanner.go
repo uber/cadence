@@ -89,10 +89,6 @@ func NewScanner(
 func (s *ShardScanner) Scan(ctx context.Context) ScanReport {
 	result := ScanReport{
 		ShardID: s.shardID,
-		Stats: ScanStats{
-			CorruptionByType: make(map[invariant.Name]int64),
-		},
-		DomainStats: map[string]*ScanStats{},
 	}
 	for s.itr.HasNext() {
 		s.progressReportFn()
@@ -122,13 +118,6 @@ func (s *ShardScanner) Scan(ctx context.Context) ScanReport {
 			return result
 		}
 
-		if _, ok := result.DomainStats[*domainID]; !ok {
-			result.DomainStats[*domainID] = &ScanStats{
-				CorruptionByType: make(map[invariant.Name]int64),
-			}
-		}
-		result.DomainStats[*domainID].EntitiesCount++
-		result.Stats.EntitiesCount++
 		invariantName := ""
 		if checkResult.DeterminingInvariantType != nil {
 			invariantName = string(*checkResult.DeterminingInvariantType)
@@ -153,10 +142,6 @@ func (s *ShardScanner) Scan(ctx context.Context) ScanReport {
 				}
 				return result
 			}
-			result.Stats.CorruptedCount++
-			result.Stats.CorruptionByType[*checkResult.DeterminingInvariantType]++
-			result.DomainStats[*domainID].CorruptedCount++
-			result.DomainStats[*domainID].CorruptionByType[*checkResult.DeterminingInvariantType]++
 		case invariant.CheckResultTypeFailed:
 			if err := s.failedWriter.Add(store.ScanOutputEntity{
 				Execution: execution,
@@ -168,8 +153,6 @@ func (s *ShardScanner) Scan(ctx context.Context) ScanReport {
 				}
 				return result
 			}
-			result.Stats.CheckFailedCount++
-			result.DomainStats[*domainID].CheckFailedCount++
 		default:
 			panic(fmt.Sprintf("unknown CheckResultType: %v", checkResult.CheckResultType))
 		}

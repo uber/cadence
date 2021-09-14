@@ -2158,15 +2158,6 @@ const (
 	ScannerExecutionsGauge
 	ScannerCorruptedGauge
 	ScannerCheckFailedGauge
-	ScannerCorruptionByTypeGauge
-	ScannerCorruptedOpenExecutionGauge
-	ScannerShardSizeMaxGauge
-	ScannerShardSizeMedianGauge
-	ScannerShardSizeMinGauge
-	ScannerShardSizeNinetyGauge
-	ScannerShardSizeSeventyFiveGauge
-	ScannerShardSizeTwentyFiveGauge
-	ScannerShardSizeTenGauge
 	ShardScannerScan
 	ShardScannerFix
 
@@ -2662,15 +2653,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ScannerExecutionsGauge:                        {metricName: "scanner_executions", metricType: Gauge},
 		ScannerCorruptedGauge:                         {metricName: "scanner_corrupted", metricType: Gauge},
 		ScannerCheckFailedGauge:                       {metricName: "scanner_check_failed", metricType: Gauge},
-		ScannerCorruptionByTypeGauge:                  {metricName: "scanner_corruption_by_type", metricType: Gauge},
-		ScannerCorruptedOpenExecutionGauge:            {metricName: "scanner_corrupted_open_execution", metricType: Gauge},
-		ScannerShardSizeMaxGauge:                      {metricName: "scanner_shard_size_max", metricType: Gauge},
-		ScannerShardSizeMedianGauge:                   {metricName: "scanner_shard_size_median", metricType: Gauge},
-		ScannerShardSizeMinGauge:                      {metricName: "scanner_shard_size_min", metricType: Gauge},
-		ScannerShardSizeNinetyGauge:                   {metricName: "scanner_shard_size_ninety", metricType: Gauge},
-		ScannerShardSizeSeventyFiveGauge:              {metricName: "scanner_shard_size_seventy_five", metricType: Gauge},
-		ScannerShardSizeTwentyFiveGauge:               {metricName: "scanner_shard_size_twenty_five", metricType: Gauge},
-		ScannerShardSizeTenGauge:                      {metricName: "scanner_shard_size_ten", metricType: Gauge},
 		ShardScannerScan:                              {metricName: "shardscanner_scan", metricType: Counter},
 		ShardScannerFix:                               {metricName: "shardscanner_fix", metricType: Counter},
 	},

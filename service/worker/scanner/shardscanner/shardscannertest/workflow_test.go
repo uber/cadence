@@ -89,9 +89,6 @@ func (s *workflowsSuite) TestScannerWorkflow_Failure_ScanShard() {
 			for _, s := range batch {
 				reports = append(reports, shardscanner.ScanReport{
 					ShardID: s,
-					Stats: shardscanner.ScanStats{
-						EntitiesCount: 10,
-					},
 					Result: shardscanner.ScanResult{
 						ControlFlowFailure: &shardscanner.ControlFlowFailure{
 							Info: "got control flow failure",
@@ -210,9 +207,7 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 			if i == 0 {
 				reports = append(reports, shardscanner.FixReport{
 					ShardID: s,
-					Stats: shardscanner.FixStats{
-						EntitiesCount: 10,
-					},
+
 					Result: shardscanner.FixResult{
 						ControlFlowFailure: &shardscanner.ControlFlowFailure{
 							Info: "got control flow failure",
@@ -222,12 +217,6 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 			} else {
 				reports = append(reports, shardscanner.FixReport{
 					ShardID: s,
-					Stats: shardscanner.FixStats{
-						EntitiesCount: 10,
-						FixedCount:    2,
-						SkippedCount:  1,
-						FailedCount:   1,
-					},
 					Result: shardscanner.FixResult{
 						ShardFixKeys: &shardscanner.FixKeys{
 							Skipped: &store.Keys{
@@ -258,17 +247,6 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 	s.True(env.IsWorkflowCompleted())
 	s.NoError(env.GetWorkflowError())
 
-	aggValue, err := env.QueryWorkflow(shardscanner.AggregateReportQuery)
-	s.NoError(err)
-	var agg shardscanner.AggregateFixReportResult
-	s.NoError(aggValue.Get(&agg))
-	s.Equal(shardscanner.AggregateFixReportResult{
-		EntitiesCount: 240,
-		FixedCount:    48,
-		FailedCount:   24,
-		SkippedCount:  24,
-	}, agg)
-
 	for i := 0; i < 30; i++ {
 		shardReportValue, err := env.QueryWorkflow(shardscanner.ShardReportQuery, i)
 		s.NoError(err)
@@ -277,9 +255,6 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 		if i == 0 || i == 1 || i == 2 || i == 15 || i == 16 || i == 17 {
 			s.Equal(&shardscanner.FixReport{
 				ShardID: i,
-				Stats: shardscanner.FixStats{
-					EntitiesCount: 10,
-				},
 				Result: shardscanner.FixResult{
 					ControlFlowFailure: &shardscanner.ControlFlowFailure{
 						Info: "got control flow failure",
@@ -289,12 +264,6 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 		} else {
 			s.Equal(&shardscanner.FixReport{
 				ShardID: i,
-				Stats: shardscanner.FixStats{
-					EntitiesCount: 10,
-					FixedCount:    2,
-					FailedCount:   1,
-					SkippedCount:  1,
-				},
 				Result: shardscanner.FixResult{
 					ShardFixKeys: &shardscanner.FixKeys{
 						Skipped: &store.Keys{

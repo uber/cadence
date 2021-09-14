@@ -28,7 +28,6 @@ import (
 
 func init() {
 	// shardscanner activities
-	activity.RegisterWithOptions(ScannerEmitMetricsActivity, activity.RegisterOptions{Name: ActivityScannerEmitMetrics})
 	activity.RegisterWithOptions(ScanShardActivity, activity.RegisterOptions{Name: ActivityScanShard})
 	activity.RegisterWithOptions(ScannerConfigActivity, activity.RegisterOptions{Name: ActivityScannerConfig})
 	activity.RegisterWithOptions(FixerCorruptedKeysActivity, activity.RegisterOptions{Name: ActivityFixerCorruptedKeys})
