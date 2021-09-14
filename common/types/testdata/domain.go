@@ -89,4 +89,11 @@ var (
 	ClusterReplicationConfigurationArray = []*types.ClusterReplicationConfiguration{
 		&ClusterReplicationConfiguration,
 	}
+	FailoverInfo = types.FailoverInfo{
+		FailoverVersion:         1,
+		FailoverStartTimestamp:  1,
+		FailoverExpireTimestamp: 10,
+		CompletedShardCount:     10,
+		PendingShards:           []int32{1, 2, 3},
+	}
 )

@@ -32,6 +32,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
@@ -102,11 +104,16 @@ func (s *ScannerSuite) TestScan_Failure_NonFirstError() {
 	mockInvariantManager.EXPECT().RunChecks(gomock.Any(), gomock.Any()).Return(invariant.ManagerCheckResult{
 		CheckResultType: invariant.CheckResultTypeHealthy,
 	}).Times(4)
+	domainCache := cache.NewMockDomainCache(s.controller)
+	domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil).Times(4)
+
 	scanner := &ShardScanner{
 		shardID:          0,
 		itr:              mockItr,
 		invariantManager: mockInvariantManager,
 		progressReportFn: func() {},
+		domainCache:      domainCache,
+		scope:            metrics.NoopScope(metrics.Worker),
 	}
 	result := scanner.Scan(context.Background())
 	s.Equal(ScanReport{
@@ -140,12 +147,17 @@ func (s *ScannerSuite) TestScan_Failure_CorruptedWriterError() {
 	}).Times(1)
 	corruptedWriter := store.NewMockExecutionWriter(s.controller)
 	corruptedWriter.EXPECT().Add(gomock.Any()).Return(errors.New("corrupted writer add failed")).Times(1)
+	domainCache := cache.NewMockDomainCache(s.controller)
+	domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil).AnyTimes()
+
 	scanner := &ShardScanner{
 		shardID:          0,
 		itr:              mockItr,
 		invariantManager: mockInvariantManager,
 		corruptedWriter:  corruptedWriter,
 		progressReportFn: func() {},
+		domainCache:      domainCache,
+		scope:            metrics.NoopScope(metrics.Worker),
 	}
 	result := scanner.Scan(context.Background())
 	s.Equal(ScanReport{
@@ -179,12 +191,17 @@ func (s *ScannerSuite) TestScan_Failure_FailedWriterError() {
 	}).Times(1)
 	failedWriter := store.NewMockExecutionWriter(s.controller)
 	failedWriter.EXPECT().Add(gomock.Any()).Return(errors.New("failed writer add failed")).Times(1)
+	domainCache := cache.NewMockDomainCache(s.controller)
+	domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil).AnyTimes()
+
 	scanner := &ShardScanner{
 		shardID:          0,
 		itr:              mockItr,
 		invariantManager: mockInvariantManager,
 		failedWriter:     failedWriter,
 		progressReportFn: func() {},
+		domainCache:      domainCache,
+		scope:            metrics.NoopScope(metrics.Worker),
 	}
 	result := scanner.Scan(context.Background())
 	s.Equal(ScanReport{
@@ -429,6 +446,8 @@ func (s *ScannerSuite) TestScan_Success() {
 	mockFailedWriter.EXPECT().Flush().Return(nil)
 	mockCorruptedWriter.EXPECT().FlushedKeys().Return(&store.Keys{UUID: "corrupt_keys_uuid"})
 	mockFailedWriter.EXPECT().FlushedKeys().Return(&store.Keys{UUID: "failed_keys_uuid"})
+	domainCache := cache.NewMockDomainCache(s.controller)
+	domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil).AnyTimes()
 
 	scanner := &ShardScanner{
 		shardID:          0,
@@ -437,6 +456,8 @@ func (s *ScannerSuite) TestScan_Success() {
 		failedWriter:     mockFailedWriter,
 		itr:              mockItr,
 		progressReportFn: func() {},
+		domainCache:      domainCache,
+		scope:            metrics.NoopScope(metrics.Worker),
 	}
 	result := scanner.Scan(context.Background())
 	s.Equal(ScanReport{
