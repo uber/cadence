@@ -1709,7 +1709,6 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 			childInfo.StartedRunID,
 			childInfo.ParentClosePolicy,
 		); err != nil {
-			// TODO: section below will be the source executor part
 			switch err.(type) {
 			case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.CancellationAlreadyRequestedError:
 				// expected error, no-op

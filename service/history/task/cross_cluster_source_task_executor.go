@@ -38,6 +38,7 @@ import (
 
 var (
 	errContinueExecution = errors.New("cross cluster task should continue execution")
+	errNewTask           = errors.New("retry task generated")
 )
 
 type (
@@ -98,6 +99,8 @@ func (t *crossClusterSourceTaskExecutor) Execute(
 		err = t.executeSignalExecutionTask(ctx, sourceTask)
 	case persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
 		err = t.executeRecordChildWorkflowExecutionCompleteTask(ctx, sourceTask)
+	case persistence.CrossClusterTaskTypeApplyParentPolicy:
+		err = t.executeApplyParentClosePolicyTask(ctx, sourceTask)
 	// TODO: implement the execution logic for recordChildCompleted and applyParentClosePolicy task
 	default:
 		err = errUnknownCrossClusterTask
@@ -145,8 +148,10 @@ func (t *crossClusterSourceTaskExecutor) executeStartChildExecutionTask(
 	}
 
 	// handle common errors
-	err = t.getCommonError(ctx, wfContext, mutableState, task)
-	if err != nil {
+	switch err := t.getCommonError(ctx, wfContext, mutableState, task); {
+	case err == errNewTask:
+		return nil
+	case err != nil:
 		return err
 	}
 
@@ -271,7 +276,12 @@ func (t *crossClusterSourceTaskExecutor) getCommonError(
 	if failedCause != nil {
 		switch *failedCause {
 		case types.CrossClusterTaskFailedCauseDomainNotActive:
-			return t.generateNewTask(ctx, wfContext, mutableState, task)
+			switch err := t.generateNewTask(ctx, wfContext, mutableState, task); {
+			case err != nil:
+				return err
+			default:
+				return errNewTask
+			}
 		case types.CrossClusterTaskFailedCauseWorkflowNotExists:
 			return &types.EntityNotExistsError{}
 		case types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
@@ -284,6 +294,44 @@ func (t *crossClusterSourceTaskExecutor) getCommonError(
 		}
 	}
 	return nil
+}
+
+func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
+	ctx context.Context,
+	task *crossClusterSourceTask,
+) (retError error) {
+	taskInfo := task.GetInfo().(*persistence.CrossClusterTaskInfo)
+	wfContext, mutableState, release, err := loadWorkflowForCrossClusterTask(ctx, t.executionCache, taskInfo, t.metricsClient, t.logger)
+	if err != nil || mutableState == nil {
+		return err
+	}
+	defer func() { release(retError) }()
+
+	err = task.VerifyTaskFailoverVersion(mutableState, taskInfo)
+	if err != nil {
+		return err
+	}
+
+	if task.ProcessingState() == processingStateInvalidated {
+		return t.generateNewTask(ctx, wfContext, mutableState, task)
+	}
+
+	switch err := t.getCommonError(ctx, wfContext, mutableState, task); {
+	case err == errNewTask:
+		return nil
+	case err != nil:
+		return err
+	}
+
+	switch processingState(task.response.TaskState) {
+	case processingStateInitialized:
+		// there's nothing we need to do when record child completion is complete
+		// ack the task
+		return nil
+	// processingStateResponseRecorded state is invalid for this operation
+	default:
+		return errUnknownTaskProcessingState
+	}
 }
 
 func (t *crossClusterSourceTaskExecutor) executeRecordChildWorkflowExecutionCompleteTask(
@@ -306,8 +354,10 @@ func (t *crossClusterSourceTaskExecutor) executeRecordChildWorkflowExecutionComp
 		return t.generateNewTask(ctx, wfContext, mutableState, task)
 	}
 
-	err = t.getCommonError(ctx, wfContext, mutableState, task)
-	if err != nil {
+	switch err := t.getCommonError(ctx, wfContext, mutableState, task); {
+	case err == errNewTask:
+		return nil
+	case err != nil:
 		return err
 	}
 

@@ -241,6 +241,7 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 			return nil, err
 		}
 
+		scope := t.metricsClient.Scope(metrics.CrossClusterTaskTypeApplyParentClosePolicyScope)
 		err = applyParentClosePolicy(
 			ctx,
 			t.historyClient,
@@ -250,9 +251,15 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 			childAttrs.ChildRunID,
 			*childAttrs.ParentClosePolicy,
 		)
-		if err != nil {
+		switch err.(type) {
+		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.CancellationAlreadyRequestedError:
+			// expected error, no-op
+			break
+		default:
+			scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
 			return nil, err
 		}
+		scope.IncCounter(metrics.ParentClosePolicyProcessorSuccess)
 	}
 
 	// TODO: Consider going through all the children, even if some fail to apply the parent policy,

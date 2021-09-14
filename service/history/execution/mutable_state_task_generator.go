@@ -746,6 +746,23 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 				},
 			}
 		}
+	case persistence.CrossClusterTaskTypeApplyParentPolicy:
+		if generateTransferTask {
+			// Creating close exeuction task due to the same reason above.
+			// TODO: dedup this request if we also created one through record child complete
+			newTask = &persistence.CloseExecutionTask{
+				// TaskID is set by shard context
+				Version: task.Version,
+			}
+		} else {
+			newTask = &persistence.CrossClusterApplyParentClosePolicyTask{
+				TargetCluster: targetCluster,
+				ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
+					// TaskID is set by shard context
+					Version: task.Version,
+				},
+			}
+		}
 	// TODO: add the case for CrossClusterTaskTypeRecordChildComplete and ApplyParentClosePolicy
 	default:
 		return fmt.Errorf("unable to convert cross-cluster task of type %v", task.TaskType)
