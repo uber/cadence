@@ -1736,14 +1736,24 @@ func FromGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainResponse) *ap
 		return nil
 	}
 	resp := &apiv1.GetTaskListsByDomainResponse{}
-	if t.GetTaskListMap() == nil {
-		return resp
+	decisionTaskList := t.GetDecisionTaskListMap()
+	activityTaskList := t.GetActivityTaskListMap()
+	var decisionTaskListMap, activityTaskListMap map[string]*apiv1.DescribeTaskListResponse
+	if len(decisionTaskList) > 0 {
+		decisionTaskListMap = make(map[string]*apiv1.DescribeTaskListResponse, len(decisionTaskList))
+		for name, tl := range decisionTaskList {
+			decisionTaskListMap[name] = FromDescribeTaskListResponse(tl)
+		}
 	}
-	taskListResponse := make(map[string]*apiv1.DescribeTaskListResponse, len(t.GetTaskListMap()))
-	for name, tl := range t.GetTaskListMap() {
-		taskListResponse[name] = FromDescribeTaskListResponse(tl)
+	if len(activityTaskList) > 0 {
+		activityTaskListMap = make(map[string]*apiv1.DescribeTaskListResponse, len(activityTaskList))
+		for name, tl := range activityTaskList {
+			activityTaskListMap[name] = FromDescribeTaskListResponse(tl)
+		}
 	}
-	resp.TaskListMap = taskListResponse
+
+	resp.DecisionTaskListMap = decisionTaskListMap
+	resp.ActivityTaskListMap = activityTaskListMap
 	return resp
 }
 
@@ -1752,14 +1762,24 @@ func ToGetTaskListsByDomainResponse(t *apiv1.GetTaskListsByDomainResponse) *type
 		return nil
 	}
 	resp := &types.GetTaskListsByDomainResponse{}
-	if t.GetTaskListMap() == nil {
-		return resp
+	decisionTaskList := t.GetDecisionTaskListMap()
+	activityTaskList := t.GetActivityTaskListMap()
+	var decisionTaskListMap, activityTaskListMap map[string]*types.DescribeTaskListResponse
+	if len(decisionTaskList) > 0 {
+		decisionTaskListMap = make(map[string]*types.DescribeTaskListResponse, len(decisionTaskList))
+		for name, tl := range decisionTaskList {
+			decisionTaskListMap[name] = ToDescribeTaskListResponse(tl)
+		}
 	}
-	taskListResponse := make(map[string]*types.DescribeTaskListResponse, len(t.GetTaskListMap()))
-	for name, tl := range t.GetTaskListMap() {
-		taskListResponse[name] = ToDescribeTaskListResponse(tl)
+	if len(activityTaskList) > 0 {
+		activityTaskListMap = make(map[string]*types.DescribeTaskListResponse, len(activityTaskList))
+		for name, tl := range activityTaskList {
+			activityTaskListMap[name] = ToDescribeTaskListResponse(tl)
+		}
 	}
-	resp.TaskListMap = taskListResponse
+
+	resp.DecisionTaskListMap = decisionTaskListMap
+	resp.ActivityTaskListMap = activityTaskListMap
 	return resp
 }
 

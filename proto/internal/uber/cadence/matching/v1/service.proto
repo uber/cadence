@@ -221,6 +221,7 @@ message GetTaskListsByDomainRequest {
 }
 
 message GetTaskListsByDomainResponse {
-  map <string,DescribeTaskListResponse> task_list_map = 1;
+  map <string,DescribeTaskListResponse> decision_task_list_map = 1;
+  map <string,DescribeTaskListResponse> activity_task_list_map = 2;
 }
 

@@ -4578,13 +4578,22 @@ func (v *GetTaskListsByDomainRequest) GetDomain() (o string) {
 
 // GetTaskListsByDomainResponse is an internal type (TBD...)
 type GetTaskListsByDomainResponse struct {
-	TaskListMap map[string]*DescribeTaskListResponse `json:"taskListMap,omitempty"`
+	DecisionTaskListMap map[string]*DescribeTaskListResponse `json:"decisionTaskListMap,omitempty"`
+	ActivityTaskListMap map[string]*DescribeTaskListResponse `json:"activityTaskListMap,omitempty"`
 }
 
-// GetTaskListNames is an internal getter (TBD...)
-func (v *GetTaskListsByDomainResponse) GetTaskListMap() (o map[string]*DescribeTaskListResponse) {
-	if v != nil && v.TaskListMap != nil {
-		return v.TaskListMap
+// GetDecisionTaskListMap is an internal getter (TBD...)
+func (v *GetTaskListsByDomainResponse) GetDecisionTaskListMap() (o map[string]*DescribeTaskListResponse) {
+	if v != nil && v.DecisionTaskListMap != nil {
+		return v.DecisionTaskListMap
+	}
+	return
+}
+
+// GetActivityTaskListMap is an internal getter (TBD...)
+func (v *GetTaskListsByDomainResponse) GetActivityTaskListMap() (o map[string]*DescribeTaskListResponse) {
+	if v != nil && v.ActivityTaskListMap != nil {
+		return v.ActivityTaskListMap
 	}
 	return
 }
