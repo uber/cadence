@@ -123,6 +123,8 @@ func (t *crossClusterTargetTaskExecutor) Execute(
 		response.CancelExecutionAttributes, err = t.executeCancelExecutionTask(ctx, targetTask)
 	case persistence.CrossClusterTaskTypeSignalExecution:
 		response.SignalExecutionAttributes, err = t.executeSignalExecutionTask(ctx, targetTask)
+	case persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+		response.RecordChildWorkflowExecutionCompleteAttributes, err = t.executeRecordChildWorkflowExecutionCompleteTask(ctx, targetTask)
 	default:
 		err = errUnknownCrossClusterTask
 	}
@@ -220,6 +222,55 @@ func (t *crossClusterTargetTaskExecutor) executeCancelExecutionTask(
 		return nil, err
 	}
 	return &types.CrossClusterCancelExecutionResponseAttributes{}, nil
+}
+
+func (t *crossClusterTargetTaskExecutor) executeRecordChildWorkflowExecutionCompleteTask(
+	ctx context.Context,
+	task *crossClusterTargetTask,
+) (*types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes, error) {
+	// parent info is in attributes
+	attributes := task.request.RecordChildWorkflowExecutionCompleteAttributes
+	if attributes == nil {
+		return nil, errMissingTaskRequestAttributes
+	}
+
+	_, err := t.verifyDomainActive(attributes.TargetDomainID)
+	if err != nil {
+		return nil, err
+	}
+
+	// child info is in taskInfo
+	taskInfo, ok := task.Info.(*persistence.CrossClusterTaskInfo)
+	if !ok {
+		return nil, errUnexpectedTask
+	}
+
+	switch task.processingState {
+	case processingStateInitialized:
+		recordChildCompletionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
+		defer cancel()
+		err = t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &types.RecordChildExecutionCompletedRequest{
+			DomainUUID: attributes.TargetDomainID, // parent domain id
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: attributes.TargetWorkflowID,
+				RunID:      attributes.TargetRunID,
+			},
+			InitiatedID: attributes.InitiatedEventID,
+			CompletedExecution: &types.WorkflowExecution{
+				WorkflowID: taskInfo.WorkflowID,
+				RunID:      taskInfo.RunID,
+			},
+			CompletionEvent: attributes.CompletionEvent,
+		})
+	// processingStateResponseRecorded is invalid for this op
+	default:
+		err = errUnknownTaskProcessingState
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	return &types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes{}, nil
 }
 
 func (t *crossClusterTargetTaskExecutor) executeSignalExecutionTask(

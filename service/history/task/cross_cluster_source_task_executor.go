@@ -312,10 +312,11 @@ func (t *crossClusterSourceTaskExecutor) executeRecordChildWorkflowExecutionComp
 	}
 
 	switch processingState(task.response.TaskState) {
-	case processingStateInitialized, processingStateResponseRecorded:
+	case processingStateInitialized:
 		// there's nothing we need to do when record child completion is complete
 		// ack the task
 		return nil
+	// processingStateResponseRecorded state is invalid for this operation
 	default:
 		return errUnknownTaskProcessingState
 	}
