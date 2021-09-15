@@ -95,12 +95,11 @@ func AdminListTaskList(c *cli.Context) {
 	table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue, tableHeaderBlue)
 	for name, taskList := range response.GetDecisionTaskListMap() {
 		table.Append([]string{name, strconv.Itoa(len(taskList.GetPollers()))})
-		table.Render()
 	}
 	for name, taskList := range response.GetActivityTaskListMap() {
 		table.Append([]string{name, strconv.Itoa(len(taskList.GetPollers()))})
-		table.Render()
 	}
+	table.Render()
 }
 
 func printTaskListStatus(taskListStatus *types.TaskListStatus) {

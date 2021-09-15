@@ -268,14 +268,16 @@ func (c *clientImpl) GetTaskListsByDomain(
 		for name, tl := range resp.GetDecisionTaskListMap() {
 			if _, ok := decisionTaskListMap[name]; !ok {
 				decisionTaskListMap[name] = tl
+			} else {
+				decisionTaskListMap[name].Pollers = append(decisionTaskListMap[name].Pollers, tl.GetPollers()...)
 			}
-			decisionTaskListMap[name].Pollers = append(decisionTaskListMap[name].Pollers, tl.GetPollers()...)
 		}
 		for name, tl := range resp.GetActivityTaskListMap() {
 			if _, ok := activityTaskListMap[name]; !ok {
 				activityTaskListMap[name] = tl
+			} else {
+				activityTaskListMap[name].Pollers = append(activityTaskListMap[name].Pollers, tl.GetPollers()...)
 			}
-			activityTaskListMap[name].Pollers = append(activityTaskListMap[name].Pollers, tl.GetPollers()...)
 		}
 	}
 
