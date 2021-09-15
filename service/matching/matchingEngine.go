@@ -217,14 +217,22 @@ func (e *matchingEngineImpl) getTaskListManager(
 
 func (e *matchingEngineImpl) getTaskListByDomainLocked(
 	domainID string,
-) []string {
-	var taskLists []string
+) *types.GetTaskListsByDomainResponse {
+	decisionTaskListMap := make(map[string]*types.DescribeTaskListResponse)
+	activityTaskListMap := make(map[string]*types.DescribeTaskListResponse)
 	for tl, tlm := range e.taskLists {
 		if tlm.GetTaskListKind() == types.TaskListKindNormal && tl.domainID == domainID {
-			taskLists = append(taskLists, tl.qualifiedTaskListName.baseName)
+			if types.TaskListType(tl.taskType) == types.TaskListTypeDecision {
+				decisionTaskListMap[tl.baseName] = tlm.DescribeTaskList(false)
+			}
+			activityTaskListMap[tl.baseName] = tlm.DescribeTaskList(false)
 		}
 	}
-	return taskLists
+
+	return &types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: decisionTaskListMap,
+		ActivityTaskListMap: activityTaskListMap,
+	}
 }
 
 // For use in tests
@@ -705,10 +713,7 @@ func (e *matchingEngineImpl) GetTaskListsByDomain(
 
 	e.taskListsLock.RLock()
 	defer e.taskListsLock.RUnlock()
-	taskLists := e.getTaskListByDomainLocked(domainID)
-	return &types.GetTaskListsByDomainResponse{
-		TaskListNames: taskLists,
-	}, nil
+	return e.getTaskListByDomainLocked(domainID), nil
 }
 
 func (e *matchingEngineImpl) getHostInfo(partitionKey string) (string, error) {

@@ -1535,6 +1535,7 @@ func FromDescribeDomainResponse(t *types.DescribeDomainResponse) *shared.Describ
 		ReplicationConfiguration: FromDomainReplicationConfiguration(t.ReplicationConfiguration),
 		FailoverVersion:          &t.FailoverVersion,
 		IsGlobalDomain:           &t.IsGlobalDomain,
+		FailoverInfo:             FromFailoverInfo(t.GetFailoverInfo()),
 	}
 }
 
@@ -1549,6 +1550,7 @@ func ToDescribeDomainResponse(t *shared.DescribeDomainResponse) *types.DescribeD
 		ReplicationConfiguration: ToDomainReplicationConfiguration(t.ReplicationConfiguration),
 		FailoverVersion:          t.GetFailoverVersion(),
 		IsGlobalDomain:           t.GetIsGlobalDomain(),
+		FailoverInfo:             ToFailoverInfo(t.FailoverInfo),
 	}
 }
 
@@ -1891,6 +1893,34 @@ func ToDomainInfo(t *shared.DomainInfo) *types.DomainInfo {
 		OwnerEmail:  t.GetOwnerEmail(),
 		Data:        t.Data,
 		UUID:        t.GetUUID(),
+	}
+}
+
+// FromFailoverInfo converts internal FailoverInfo type to thrift
+func FromFailoverInfo(t *types.FailoverInfo) *shared.FailoverInfo {
+	if t == nil {
+		return nil
+	}
+	return &shared.FailoverInfo{
+		FailoverVersion:         &t.FailoverVersion,
+		FailoverStartTimestamp:  &t.FailoverStartTimestamp,
+		FailoverExpireTimestamp: &t.FailoverExpireTimestamp,
+		CompletedShardCount:     &t.CompletedShardCount,
+		PendingShards:           t.GetPendingShards(),
+	}
+}
+
+// ToFailoverInfo converts thrift FailoverInfo type to internal
+func ToFailoverInfo(t *shared.FailoverInfo) *types.FailoverInfo {
+	if t == nil {
+		return nil
+	}
+	return &types.FailoverInfo{
+		FailoverVersion:         t.GetFailoverVersion(),
+		FailoverStartTimestamp:  t.GetFailoverStartTimestamp(),
+		FailoverExpireTimestamp: t.GetFailoverExpireTimestamp(),
+		CompletedShardCount:     t.GetCompletedShardCount(),
+		PendingShards:           t.GetPendingShards(),
 	}
 }
 
@@ -3077,8 +3107,10 @@ func FromGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainResponse) *sh
 	if t == nil {
 		return nil
 	}
+
 	return &shared.GetTaskListsByDomainResponse{
-		TaskListNames: t.GetTaskListNames(),
+		DecisionTaskListMap: FromDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: FromDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
 	}
 }
 
@@ -3087,9 +3119,35 @@ func ToGetTaskListsByDomainResponse(t *shared.GetTaskListsByDomainResponse) *typ
 	if t == nil {
 		return nil
 	}
+
 	return &types.GetTaskListsByDomainResponse{
-		TaskListNames: t.GetTaskListNames(),
+		DecisionTaskListMap: ToDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: ToDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
 	}
+}
+
+// FromDescribeTaskListResponseMap converts internal DescribeTaskListResponse map type to thrift
+func FromDescribeTaskListResponseMap(t map[string]*types.DescribeTaskListResponse) map[string]*shared.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*shared.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = FromDescribeTaskListResponse(value)
+	}
+	return taskListMap
+}
+
+// ToDescribeTaskListResponseMap converts thrift DescribeTaskListResponse map type to internal
+func ToDescribeTaskListResponseMap(t map[string]*shared.DescribeTaskListResponse) map[string]*types.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*types.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = ToDescribeTaskListResponse(value)
+	}
+	return taskListMap
 }
 
 // FromListWorkflowExecutionsRequest converts internal ListWorkflowExecutionsRequest type to thrift
