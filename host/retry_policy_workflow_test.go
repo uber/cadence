@@ -83,8 +83,8 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyTimeout() {
 	expirationTime := history.Events[0].WorkflowExecutionStartedEventAttributes.ExpirationTimestamp
 	s.NotNil(expirationTime)
 	delta := time.Unix(0, *expirationTime).Sub(now)
-	s.True(delta > 9*time.Second)
-	s.True(delta < 11*time.Second)
+	s.True(delta > 5*time.Second)
+	s.True(delta < 6*time.Second)
 
 	wfExecution, err := s.engine.DescribeWorkflowExecution(createContext(), &types.DescribeWorkflowExecutionRequest{
 		Domain: s.domainName,
@@ -113,8 +113,8 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsRetry() {
 	retryPolicy := &types.RetryPolicy{
 		InitialIntervalInSeconds:    1,
 		BackoffCoefficient:          2.0,
-		MaximumIntervalInSeconds:    10,
-		ExpirationIntervalInSeconds: 10,
+		MaximumIntervalInSeconds:    5,
+		ExpirationIntervalInSeconds: 5,
 		MaximumAttempts:             0,
 		NonRetriableErrorReasons:    []string{"bad-error"},
 	}
@@ -125,8 +125,112 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsRetry() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(5),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(5),
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		Identity:                            identity,
+		RetryPolicy:                         retryPolicy,
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
+	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
+		buf := new(bytes.Buffer)
+		return []byte(strconv.Itoa(0)), []*types.Decision{{
+			DecisionType: types.DecisionTypeContinueAsNewWorkflowExecution.Ptr(),
+			ContinueAsNewWorkflowExecutionDecisionAttributes: &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
+				WorkflowType:                        workflowType,
+				TaskList:                            &types.TaskList{Name: tl},
+				Input:                               buf.Bytes(),
+				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
+				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+				RetryPolicy:                         retryPolicy,
+				Initiator:                           types.ContinueAsNewInitiatorRetryPolicy.Ptr(),
+			},
+		}}, nil
+	}
+
+	poller := &TaskPoller{
+		Engine:          s.engine,
+		Domain:          s.domainName,
+		TaskList:        taskList,
+		Identity:        identity,
+		DecisionHandler: dtHandler,
+		Logger:          s.Logger,
+		T:               s.T(),
+	}
+
+	_, err := poller.PollAndProcessDecisionTask(false, false)
+	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
+	s.Nil(err)
+	time.Sleep(10 * time.Second) // wait 1 second for timeout
+
+GetHistoryLoop:
+	for i := 0; i < 20; i++ {
+		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
+			Domain: s.domainName,
+			Execution: &types.WorkflowExecution{
+				WorkflowID: id,
+			},
+		})
+		s.Nil(err)
+		history := historyResponse.History
+
+		lastEvent := history.Events[len(history.Events)-1]
+		if *lastEvent.EventType != types.EventTypeWorkflowExecutionTimedOut {
+			s.Logger.Warn("Execution not timedout yet.")
+			time.Sleep(200 * time.Millisecond)
+			continue GetHistoryLoop
+		}
+
+		timeoutEventAttributes := lastEvent.WorkflowExecutionTimedOutEventAttributes
+		s.Equal(types.TimeoutTypeStartToClose, *timeoutEventAttributes.TimeoutType)
+		break GetHistoryLoop
+	}
+
+	wfExecution, err := s.engine.DescribeWorkflowExecution(createContext(), &types.DescribeWorkflowExecutionRequest{
+		Domain: s.domainName,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: id,
+		},
+	})
+	s.NotNil(wfExecution)
+	delta := time.Unix(0, *wfExecution.WorkflowExecutionInfo.CloseTime).Sub(time.Unix(0, *wfExecution.WorkflowExecutionInfo.StartTime))
+	s.True(delta > 4*time.Second)
+	s.True(delta < 6*time.Second)
+}
+
+func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsCron() {
+	id := "integration-workflow-retry-policy-continue-as-new-cron-test"
+	wt := "integration-workflow-retry-policy-continue-as-new-cron-test-type"
+	tl := "integration-workflow-retry-policy-continue-as-new-cron-test-tasklist"
+	identity := "worker1"
+
+	workflowType := &types.WorkflowType{}
+	workflowType.Name = wt
+
+	taskList := &types.TaskList{}
+	taskList.Name = tl
+
+	retryPolicy := &types.RetryPolicy{
+		InitialIntervalInSeconds:    1,
+		BackoffCoefficient:          2.0,
+		MaximumIntervalInSeconds:    5,
+		ExpirationIntervalInSeconds: 5,
+		MaximumAttempts:             0,
+		NonRetriableErrorReasons:    []string{"bad-error"},
+	}
+	request := &types.StartWorkflowExecutionRequest{
+		RequestID:                           uuid.New(),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            identity,
 		RetryPolicy:                         retryPolicy,
 	}
@@ -146,15 +250,8 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsRetry() {
 				Input:                               buf.Bytes(),
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(15),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(15),
-				RetryPolicy: &types.RetryPolicy{
-					InitialIntervalInSeconds:    1,
-					BackoffCoefficient:          2.0,
-					MaximumIntervalInSeconds:    10,
-					ExpirationIntervalInSeconds: 20,
-					MaximumAttempts:             0,
-					NonRetriableErrorReasons:    []string{"bad-error"},
-				},
-				Initiator: types.ContinueAsNewInitiatorRetryPolicy.Ptr(),
+				RetryPolicy:                         retryPolicy,
+				Initiator:                           types.ContinueAsNewInitiatorCronSchedule.Ptr(),
 			},
 		}}, nil
 	}
@@ -196,6 +293,7 @@ GetHistoryLoop:
 		s.Equal(types.TimeoutTypeStartToClose, *timeoutEventAttributes.TimeoutType)
 		break GetHistoryLoop
 	}
+
 	wfExecution, err := s.engine.DescribeWorkflowExecution(createContext(), &types.DescribeWorkflowExecutionRequest{
 		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
