@@ -1020,6 +1020,12 @@ func TestListOpenWorkflowExecutionsRequest(t *testing.T) {
 	}
 }
 
+func TestGetTaskListsByDomainResponse(t *testing.T) {
+	for _, item := range []*types.GetTaskListsByDomainResponse{nil, {}, &testdata.GetTaskListsByDomainResponse} {
+		assert.Equal(t, item, ToMatchingGetTaskListsByDomainResponse(FromMatchingGetTaskListsByDomainResponse(item)))
+  }
+}
+
 func TestFailoverInfo(t *testing.T) {
 	for _, item := range []*types.FailoverInfo{
 		nil,
@@ -1027,5 +1033,11 @@ func TestFailoverInfo(t *testing.T) {
 		&testdata.FailoverInfo,
 	} {
 		assert.Equal(t, item, ToFailoverInfo(FromFailoverInfo(item)))
+	}
+}
+
+func TestDescribeTaskListResponseMap(t *testing.T) {
+	for _, item := range []map[string]*types.DescribeTaskListResponse{nil, {}, testdata.DescribeTaskListResponseMap} {
+		assert.Equal(t, item, ToDescribeTaskListResponseMap(FromDescribeTaskListResponseMap(item)))
 	}
 }

@@ -1766,8 +1766,10 @@ func FromGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainResponse) *ap
 	if t == nil {
 		return nil
 	}
+
 	return &apiv1.GetTaskListsByDomainResponse{
-		TaskListNames: t.GetTaskListNames(),
+		DecisionTaskListMap: FromDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: FromDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
 	}
 }
 
@@ -1775,9 +1777,33 @@ func ToGetTaskListsByDomainResponse(t *apiv1.GetTaskListsByDomainResponse) *type
 	if t == nil {
 		return nil
 	}
+
 	return &types.GetTaskListsByDomainResponse{
-		TaskListNames: t.GetTaskListNames(),
+		DecisionTaskListMap: ToDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: ToDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
 	}
+}
+
+func FromDescribeTaskListResponseMap(t map[string]*types.DescribeTaskListResponse) map[string]*apiv1.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*apiv1.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = FromDescribeTaskListResponse(value)
+	}
+	return taskListMap
+}
+
+func ToDescribeTaskListResponseMap(t map[string]*apiv1.DescribeTaskListResponse) map[string]*types.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*types.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = ToDescribeTaskListResponse(value)
+	}
+	return taskListMap
 }
 
 func FromListWorkflowExecutionsRequest(t *types.ListWorkflowExecutionsRequest) *apiv1.ListWorkflowExecutionsRequest {
