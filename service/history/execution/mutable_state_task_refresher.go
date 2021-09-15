@@ -41,7 +41,7 @@ var emptyTasks = []persistence.Task{}
 type (
 	// MutableStateTaskRefresher refreshes workflow transfer and timer tasks
 	MutableStateTaskRefresher interface {
-		RefreshTasks(ctx context.Context, mutableState MutableState) error
+		RefreshTasks(ctx context.Context, startTime time.Time, mutableState MutableState) error
 	}
 
 	mutableStateTaskRefresherImpl struct {
@@ -76,6 +76,7 @@ func NewMutableStateTaskRefresher(
 
 func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 	ctx context.Context,
+	startTime time.Time,
 	mutableState MutableState,
 ) error {
 
@@ -88,6 +89,7 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 
 	if err := r.refreshTasksForWorkflowStart(
 		ctx,
+		startTime,
 		mutableState,
 		taskGenerator,
 	); err != nil {
@@ -173,6 +175,7 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowStart(
 	ctx context.Context,
+	startTime time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
 ) error {
@@ -183,7 +186,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowStart(
 	}
 
 	if err := taskGenerator.GenerateWorkflowStartTasks(
-		time.Unix(0, startEvent.GetTimestamp()),
+		startTime,
 		startEvent,
 	); err != nil {
 		return err

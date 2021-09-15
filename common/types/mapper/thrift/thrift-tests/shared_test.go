@@ -127,8 +127,16 @@ func TestGetTaskListsByDomainRequest(t *testing.T) {
 }
 
 func TestGetTaskListsByDomainResponse(t *testing.T) {
-	for _, item := range []*types.GetTaskListsByDomainResponse{nil, {}, &testdata.MatchingGetTaskListsByDomainResponse} {
-		assert.Equal(t, item, thrift.ToGetTaskListsByDomainResponse(thrift.FromGetTaskListsByDomainResponse(item)))
+	for _, item := range []*types.GetTaskListsByDomainResponse{nil, {}, &testdata.GetTaskListsByDomainResponse} {
+		i := thrift.FromGetTaskListsByDomainResponse(item)
+		assert.Equal(t, item, thrift.ToGetTaskListsByDomainResponse(i))
+	}
+}
+
+func TestDescribeTaskListResponseMap(t *testing.T) {
+	for _, item := range []map[string]*types.DescribeTaskListResponse{nil, {}, testdata.DescribeTaskListResponseMap} {
+		i := thrift.FromDescribeTaskListResponseMap(item)
+		assert.Equal(t, item, thrift.ToDescribeTaskListResponseMap(i))
 	}
 }
 
@@ -141,5 +149,11 @@ func TestGetFailoverInfoRequest(t *testing.T) {
 func TestGetFailoverInfoResponse(t *testing.T) {
 	for _, item := range []*types.GetFailoverInfoResponse{nil, {}, &testdata.GetFailoverInfoResponse} {
 		assert.Equal(t, item, thrift.ToGetFailoverInfoResponse(thrift.FromGetFailoverInfoResponse(item)))
+	}
+}
+
+func TestFailoverInfo(t *testing.T) {
+	for _, item := range []*types.FailoverInfo{nil, {}, &testdata.FailoverInfo} {
+		assert.Equal(t, item, thrift.ToFailoverInfo(thrift.FromFailoverInfo(item)))
 	}
 }

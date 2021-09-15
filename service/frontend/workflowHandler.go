@@ -348,6 +348,23 @@ func (wh *WorkflowHandler) DescribeDomain(
 	if err != nil {
 		return resp, wh.error(err, scope)
 	}
+
+	if resp.GetFailoverInfo() != nil && resp.GetFailoverInfo().GetFailoverExpireTimestamp() > 0 {
+		// fetch ongoing failover info from history service
+		failoverResp, err := wh.GetHistoryClient().GetFailoverInfo(ctx, &types.GetFailoverInfoRequest{
+			DomainID: resp.GetDomainInfo().UUID,
+		})
+		if err != nil {
+			// despite the error from history, return describe domain response
+			wh.GetLogger().Error(
+				fmt.Sprintf("Failed to get failover info for domain %s", resp.DomainInfo.GetName()),
+				tag.Error(err),
+			)
+			return resp, nil
+		}
+		resp.FailoverInfo.CompletedShardCount = failoverResp.GetCompletedShardCount()
+		resp.FailoverInfo.PendingShards = failoverResp.GetPendingShards()
+	}
 	return resp, err
 }
 
