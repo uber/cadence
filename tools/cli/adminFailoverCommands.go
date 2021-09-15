@@ -210,7 +210,7 @@ func failoverStart(c *cli.Context, params *startParams) {
 	sourceCluster := params.sourceCluster
 	batchFailoverSize := params.batchFailoverSize
 	batchFailoverWaitTimeInSeconds := params.batchFailoverWaitTimeInSeconds
-	workflowTimeout := time.Duration(params.failoverTimeout) * time.Second
+	workflowTimeout := time.Duration(params.failoverWorkflowTimeout) * time.Second
 	domains := params.domains
 	drillWaitTime := time.Duration(params.drillWaitTime) * time.Second
 	var gracefulFailoverTimeoutInSeconds *int32
