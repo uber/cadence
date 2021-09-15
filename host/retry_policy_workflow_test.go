@@ -189,6 +189,18 @@ GetHistoryLoop:
 		s.Equal(types.TimeoutTypeStartToClose, *timeoutEventAttributes.TimeoutType)
 		break GetHistoryLoop
 	}
+	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
+		Domain: s.domainName,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: id,
+		},
+	})
+	s.Nil(err)
+	history := historyResponse.History
+	s.NotNil(history.Events[0])
+	s.Equal(history.Events[0].EventType, types.EventTypeWorkflowExecutionStarted.Ptr())
+	numAttempts := history.Events[0].WorkflowExecutionStartedEventAttributes.Attempt
+	s.Equal(numAttempts, int32(1))
 
 	wfExecution, err := s.engine.DescribeWorkflowExecution(createContext(), &types.DescribeWorkflowExecutionRequest{
 		Domain: s.domainName,
