@@ -480,7 +480,8 @@ Update_History_Loop:
 				tag.WorkflowID(token.WorkflowID),
 				tag.WorkflowRunID(token.RunID),
 				tag.WorkflowDomainID(domainID))
-			msBuilder, err = failDecisionHelper(ctx, wfContext, scheduleID, startedID, failCause, []byte(failMessage), request)
+			msBuilder, err = handler.failDecisionHelper(ctx, wfContext, scheduleID, startedID, failCause,
+				[]byte(failMessage), request, domainEntry)
 			if err != nil {
 				return nil, err
 			}
@@ -816,7 +817,7 @@ func (handler *handlerImpl) handleBufferedQueries(
 	}
 }
 
-func failDecisionHelper(
+func (handler *handlerImpl) failDecisionHelper(
 	ctx context.Context,
 	wfContext execution.Context,
 	scheduleID int64,
@@ -824,6 +825,7 @@ func failDecisionHelper(
 	cause types.DecisionTaskFailedCause,
 	details []byte,
 	request *types.RespondDecisionTaskCompletedRequest,
+	domainEntry *cache.DomainCacheEntry,
 ) (execution.MutableState, error) {
 
 	// Clear any updates we have accumulated so far
@@ -839,6 +841,25 @@ func failDecisionHelper(
 		scheduleID, startedID, cause, details, request.GetIdentity(), "", request.GetBinaryChecksum(), "", "", 0,
 	); err != nil {
 		return nil, err
+	}
+
+	domainName := domainEntry.GetInfo().Name
+	maxAttempts := handler.config.DecisionRetryMaxAttempts(domainName)
+	if mutableState.GetExecutionInfo().DecisionAttempt > int64(maxAttempts) {
+		executionInfo := mutableState.GetExecutionInfo()
+		handler.logger.Error("Decision attempt exceeds limit.",
+			tag.WorkflowDomainID(executionInfo.DomainID),
+			tag.WorkflowID(executionInfo.WorkflowID),
+			tag.WorkflowRunID(executionInfo.RunID))
+
+		if _, err := mutableState.AddWorkflowExecutionTerminatedEvent(
+			mutableState.GetNextEventID(),
+			common.FailureReasonDecisionAttemptsExceedsLimit,
+			[]byte("Decision attempt exceeded limit."),
+			execution.IdentityHistoryService,
+		); err != nil {
+			return nil, err
+		}
 	}
 
 	// Return new builder back to the caller for further updates
