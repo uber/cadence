@@ -845,7 +845,7 @@ func (handler *handlerImpl) failDecisionHelper(
 
 	domainName := domainEntry.GetInfo().Name
 	maxAttempts := handler.config.DecisionRetryMaxAttempts(domainName)
-	if mutableState.GetExecutionInfo().DecisionAttempt > int64(maxAttempts) {
+	if maxAttempts > 0 && mutableState.GetExecutionInfo().DecisionAttempt > int64(maxAttempts) {
 		executionInfo := mutableState.GetExecutionInfo()
 		handler.logger.Error("Decision attempt exceeds limit.",
 			tag.WorkflowDomainID(executionInfo.DomainID),

@@ -1447,10 +1447,10 @@ const (
 	// Default value: 10
 	// Allowed filters: N/A
 	DecisionRetryCriticalAttempts
-	// DecisionRetryMaxAttempts is the max limit for decision retry attempts
+	// DecisionRetryMaxAttempts is the max limit for decision retry attempts. 0 indicates infinite number of attempts.
 	// KeyName: history.decisionRetryMaxAttempts
 	// Value type: Int
-	// Default value: 50
+	// Default value: 1000
 	// Allowed filters: DomainName
 	DecisionRetryMaxAttempts
 	// EnableDropStuckTaskByDomainID is whether stuck timer/transfer task should be dropped for a domain
