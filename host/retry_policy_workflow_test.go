@@ -46,8 +46,8 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyTimeout() {
 	retryPolicy := &types.RetryPolicy{
 		InitialIntervalInSeconds:    1,
 		BackoffCoefficient:          2.0,
-		MaximumIntervalInSeconds:    5,
-		ExpirationIntervalInSeconds: 5,
+		MaximumIntervalInSeconds:    1,
+		ExpirationIntervalInSeconds: 1,
 		MaximumAttempts:             0,
 		NonRetriableErrorReasons:    []string{"bad-error"},
 	}
@@ -58,8 +58,8 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyTimeout() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(3),
 		Identity:                            identity,
 		RetryPolicy:                         retryPolicy,
 	}
@@ -68,7 +68,7 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyTimeout() {
 	s.Nil(err0)
 
 	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
-	time.Sleep(11 * time.Second) // wait 1 second for timeout
+	time.Sleep(3 * time.Second) // wait 1 second for timeout
 
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 		Domain: s.domainName,
@@ -78,24 +78,19 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyTimeout() {
 	})
 	s.Nil(err)
 	history := historyResponse.History
-	s.NotNil(history.Events[0])
-	s.Equal(history.Events[0].EventType, types.EventTypeWorkflowExecutionStarted.Ptr())
-	expirationTime := history.Events[0].WorkflowExecutionStartedEventAttributes.ExpirationTimestamp
+	firstEvent := history.Events[0]
+	s.NotNil(firstEvent)
+	s.Equal(firstEvent.EventType, types.EventTypeWorkflowExecutionStarted.Ptr())
+	expirationTime := firstEvent.WorkflowExecutionStartedEventAttributes.ExpirationTimestamp
 	s.NotNil(expirationTime)
 	delta := time.Unix(0, *expirationTime).Sub(now)
-	s.True(delta > 5*time.Second)
-	s.True(delta < 6*time.Second)
+	s.True(delta > 0*time.Second)
+	s.True(delta < 2*time.Second)
 
-	wfExecution, err := s.engine.DescribeWorkflowExecution(createContext(), &types.DescribeWorkflowExecutionRequest{
-		Domain: s.domainName,
-		Execution: &types.WorkflowExecution{
-			WorkflowID: id,
-		},
-	})
-	s.NotNil(wfExecution)
-	delta = time.Unix(0, *wfExecution.WorkflowExecutionInfo.CloseTime).Sub(time.Unix(0, *wfExecution.WorkflowExecutionInfo.StartTime))
-	s.True(delta > 9*time.Second)
-	s.True(delta < 11*time.Second)
+	lastEvent := history.Events[len(history.Events)-1]
+	delta = time.Unix(0, common.Int64Default(lastEvent.Timestamp)).Sub(time.Unix(0, common.Int64Default(firstEvent.Timestamp)))
+	s.True(delta > 2*time.Second)
+	s.True(delta < 4*time.Second)
 }
 
 func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsRetry() {
@@ -113,8 +108,8 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsRetry() {
 	retryPolicy := &types.RetryPolicy{
 		InitialIntervalInSeconds:    1,
 		BackoffCoefficient:          2.0,
-		MaximumIntervalInSeconds:    5,
-		ExpirationIntervalInSeconds: 5,
+		MaximumIntervalInSeconds:    3,
+		ExpirationIntervalInSeconds: 3,
 		MaximumAttempts:             0,
 		NonRetriableErrorReasons:    []string{"bad-error"},
 	}
@@ -125,29 +120,22 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsRetry() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
 		RetryPolicy:                         retryPolicy,
 	}
-
+	now := time.Now()
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
 	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
-		buf := new(bytes.Buffer)
 		return []byte(strconv.Itoa(0)), []*types.Decision{{
-			DecisionType: types.DecisionTypeContinueAsNewWorkflowExecution.Ptr(),
-			ContinueAsNewWorkflowExecutionDecisionAttributes: &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
-				WorkflowType:                        workflowType,
-				TaskList:                            &types.TaskList{Name: tl},
-				Input:                               buf.Bytes(),
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
-				RetryPolicy:                         retryPolicy,
-				Initiator:                           types.ContinueAsNewInitiatorRetryPolicy.Ptr(),
+			DecisionType: types.DecisionTypeFailWorkflowExecution.Ptr(),
+			FailWorkflowExecutionDecisionAttributes: &types.FailWorkflowExecutionDecisionAttributes{
+				Reason: common.StringPtr("fail-reason"),
 			},
 		}}, nil
 	}
@@ -165,7 +153,10 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsRetry() {
 	_, err := poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
-	time.Sleep(10 * time.Second) // wait 1 second for timeout
+	time.Sleep(3 * time.Second) // wait 1 second for timeout
+
+	var history *types.History
+	var lastEvent *types.HistoryEvent
 
 GetHistoryLoop:
 	for i := 0; i < 20; i++ {
@@ -176,9 +167,9 @@ GetHistoryLoop:
 			},
 		})
 		s.Nil(err)
-		history := historyResponse.History
+		history = historyResponse.History
 
-		lastEvent := history.Events[len(history.Events)-1]
+		lastEvent = history.Events[len(history.Events)-1]
 		if *lastEvent.EventType != types.EventTypeWorkflowExecutionTimedOut {
 			s.Logger.Warn("Execution not timedout yet.")
 			time.Sleep(200 * time.Millisecond)
@@ -189,29 +180,13 @@ GetHistoryLoop:
 		s.Equal(types.TimeoutTypeStartToClose, *timeoutEventAttributes.TimeoutType)
 		break GetHistoryLoop
 	}
-	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-		Domain: s.domainName,
-		Execution: &types.WorkflowExecution{
-			WorkflowID: id,
-		},
-	})
-	s.Nil(err)
-	history := historyResponse.History
-	s.NotNil(history.Events[0])
-	s.Equal(history.Events[0].EventType, types.EventTypeWorkflowExecutionStarted.Ptr())
-	numAttempts := history.Events[0].WorkflowExecutionStartedEventAttributes.Attempt
-	s.Equal(numAttempts, int32(1))
 
-	wfExecution, err := s.engine.DescribeWorkflowExecution(createContext(), &types.DescribeWorkflowExecutionRequest{
-		Domain: s.domainName,
-		Execution: &types.WorkflowExecution{
-			WorkflowID: id,
-		},
-	})
-	s.NotNil(wfExecution)
-	delta := time.Unix(0, *wfExecution.WorkflowExecutionInfo.CloseTime).Sub(time.Unix(0, *wfExecution.WorkflowExecutionInfo.StartTime))
-	s.True(delta > 4*time.Second)
-	s.True(delta < 6*time.Second)
+	firstEvent := history.Events[0]
+	s.Equal(firstEvent.WorkflowExecutionStartedEventAttributes.Attempt, int32(1))
+
+	delta := time.Unix(0, common.Int64Default(firstEvent.WorkflowExecutionStartedEventAttributes.ExpirationTimestamp)).Sub(now)
+	s.True(delta > 2*time.Second)
+	s.True(delta < 4*time.Second)
 }
 
 func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsCron() {
@@ -229,8 +204,8 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsCron() {
 	retryPolicy := &types.RetryPolicy{
 		InitialIntervalInSeconds:    1,
 		BackoffCoefficient:          2.0,
-		MaximumIntervalInSeconds:    5,
-		ExpirationIntervalInSeconds: 5,
+		MaximumIntervalInSeconds:    1,
+		ExpirationIntervalInSeconds: 1,
 		MaximumAttempts:             0,
 		NonRetriableErrorReasons:    []string{"bad-error"},
 	}
@@ -241,8 +216,8 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsCron() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(3),
 		Identity:                            identity,
 		RetryPolicy:                         retryPolicy,
 	}
@@ -260,8 +235,8 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsCron() {
 				WorkflowType:                        workflowType,
 				TaskList:                            &types.TaskList{Name: tl},
 				Input:                               buf.Bytes(),
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(15),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(15),
+				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(4),
+				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(4),
 				RetryPolicy:                         retryPolicy,
 				Initiator:                           types.ContinueAsNewInitiatorCronSchedule.Ptr(),
 			},
@@ -281,7 +256,10 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsCron() {
 	_, err := poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
-	time.Sleep(15 * time.Second) // wait 1 second for timeout
+	time.Sleep(5 * time.Second) // wait 1 second for timeout
+
+	var history *types.History
+	var lastEvent *types.HistoryEvent
 
 GetHistoryLoop:
 	for i := 0; i < 20; i++ {
@@ -292,9 +270,8 @@ GetHistoryLoop:
 			},
 		})
 		s.Nil(err)
-		history := historyResponse.History
-
-		lastEvent := history.Events[len(history.Events)-1]
+		history = historyResponse.History
+		lastEvent = history.Events[len(history.Events)-1]
 		if *lastEvent.EventType != types.EventTypeWorkflowExecutionTimedOut {
 			s.Logger.Warn("Execution not timedout yet.")
 			time.Sleep(200 * time.Millisecond)
@@ -306,14 +283,8 @@ GetHistoryLoop:
 		break GetHistoryLoop
 	}
 
-	wfExecution, err := s.engine.DescribeWorkflowExecution(createContext(), &types.DescribeWorkflowExecutionRequest{
-		Domain: s.domainName,
-		Execution: &types.WorkflowExecution{
-			WorkflowID: id,
-		},
-	})
-	s.NotNil(wfExecution)
-	delta := time.Unix(0, *wfExecution.WorkflowExecutionInfo.CloseTime).Sub(time.Unix(0, *wfExecution.WorkflowExecutionInfo.StartTime))
-	s.True(delta > 14*time.Second)
-	s.True(delta < 16*time.Second)
+	firstEvent := history.Events[0]
+	delta := time.Unix(0, common.Int64Default(lastEvent.Timestamp)).Sub(time.Unix(0, common.Int64Default(firstEvent.Timestamp)))
+	s.True(delta > 3*time.Second)
+	s.True(delta < 5*time.Second)
 }
