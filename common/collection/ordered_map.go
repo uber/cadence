@@ -26,12 +26,21 @@ import (
 )
 
 type (
+	// OrderedMap is an interface for a dictionary which during iteration
+	// return all values in their insertion order
 	OrderedMap interface {
+		// Get returns the value for the given key
 		Get(key interface{}) (interface{}, bool)
+		// Contains returns true if the key exist and false otherwise
 		Contains(key interface{}) bool
+		// Put records the mapping from given key to value
 		Put(key interface{}, value interface{})
+		// Remove deletes the key from the map
 		Remove(key interface{})
+		// Iter returns an iterator to the map which iterates over map entries
+		// in insertion order
 		Iter() MapIterator
+		// Len returns the number of items in the map
 		Len() int
 	}
 
@@ -53,6 +62,8 @@ type (
 	}
 )
 
+// NewOrderedMap creates a new OrderedMap
+// implementation has O(1) complexity for all methods
 func NewOrderedMap() OrderedMap {
 	return &orderedMap{
 		items: make(map[interface{}]orderedMapValue),
@@ -109,7 +120,8 @@ func (m *orderedMap) Len() int {
 	return len(m.items)
 }
 
-func NewConcurrentOrderedMap() *concurrentOrderedMap {
+// NewConcurrentOrderedMap creates a new thread safe OrderedMap
+func NewConcurrentOrderedMap() OrderedMap {
 	return &concurrentOrderedMap{
 		orderedMap: NewOrderedMap().(*orderedMap),
 	}
@@ -143,6 +155,9 @@ func (m *concurrentOrderedMap) Remove(key interface{}) {
 	m.orderedMap.Remove(key)
 }
 
+// Iter returns an iterator to the map.
+// NOTE that any modification to the map during iteration
+// will lead to a dead lock.
 func (m *concurrentOrderedMap) Iter() MapIterator {
 	iterator := newMapIterator()
 
