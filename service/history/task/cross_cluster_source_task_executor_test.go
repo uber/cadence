@@ -766,6 +766,7 @@ func (s *crossClusterSourceTaskExecutorSuite) getTestCrossClusterSourceTask(
 		nil,
 		s.mockShard.GetLogger(),
 		nil,
+		nil,
 		dynamicconfig.GetIntPropertyFn(1),
 	).(*crossClusterSourceTask)
 	task.response = response

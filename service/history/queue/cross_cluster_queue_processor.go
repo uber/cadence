@@ -168,9 +168,11 @@ func (c *crossClusterQueueProcessor) HandleAction(
 	}
 }
 
-func (c *crossClusterQueueProcessor) FailoverDomain(map[string]struct{}) {
+func (c *crossClusterQueueProcessor) FailoverDomain(
+	domains map[string]struct{},
+) {
 	for _, queueBase := range c.queueProcessors {
-		queueBase.notifyDomainFailover()
+		queueBase.notifyDomainFailover(domains)
 	}
 }
 
