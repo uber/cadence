@@ -29,6 +29,8 @@ import (
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 
+	"github.com/uber/cadence/common/metrics"
+
 	c "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation"
@@ -44,12 +46,13 @@ func init() {
 		workflow.RegisterOptions{Name: reconciliation.CheckDataCorruptionWorkflowType},
 	)
 	activity.Register(ExecutionFixerActivity)
+	activity.Register(EmitResultMetricsActivity)
 }
 
 const (
-	workflowTimer   = 5 * time.Minute
-	maxSignalNumber = 1000
-	fixerActivityTimeout =  time.Minute
+	workflowTimer        = 5 * time.Minute
+	maxSignalNumber      = 1000
+	fixerActivityTimeout = time.Minute
 )
 
 // CheckDataCorruptionWorkflow is invoked by remote cluster via signals
@@ -75,14 +78,14 @@ func CheckDataCorruptionWorkflow(ctx workflow.Context) error {
 		var fixList []entity.Execution
 		selector.AddReceive(signalCh, func(c workflow.Channel, more bool) {
 			var fixExecution entity.Execution
-			for c.Receive(ctx, &fixExecution) {
+			for c.ReceiveAsync(&fixExecution) {
 				signalCount++
 				fixList = append(fixList, fixExecution)
 			}
 		})
 
 		selector.Select(ctx)
-		if timerFire && len(fixList) == 0{
+		if timerFire && len(fixList) == 0 {
 			return nil
 		}
 		timerCancel()
@@ -95,11 +98,25 @@ func CheckDataCorruptionWorkflow(ctx workflow.Context) error {
 			RetryPolicy:            &activityRetryPolicy,
 		}
 		activityCtx := workflow.WithActivityOptions(ctx, activityOptions)
-		err := workflow.ExecuteActivity(activityCtx, ExecutionFixerActivity, fixList).Get(activityCtx, nil)
+		var fixResults []invariant.FixResult
+		err := workflow.ExecuteActivity(activityCtx, ExecutionFixerActivity, fixList).Get(activityCtx, &fixResults)
 		if err != nil {
 			logger.Error("failed to run execution fixer activity", zap.Error(err))
 			return err
 		}
+
+		activityOptions = workflow.ActivityOptions{
+			ScheduleToStartTimeout: time.Minute,
+			StartToCloseTimeout:    time.Minute,
+		}
+		activityCtx = workflow.WithActivityOptions(ctx, activityOptions)
+		err = workflow.ExecuteActivity(activityCtx, EmitResultMetricsActivity, fixResults).Get(activityCtx, nil)
+		if err != nil {
+			logger.Error("failed to run execution fixer activity", zap.Error(err))
+			return err
+		}
+
+		workflow.GetMetricsScope(ctx)
 		if signalCount > maxSignalNumber {
 			return workflow.NewContinueAsNewError(ctx, reconciliation.CheckDataCorruptionWorkflowType)
 		}
@@ -129,8 +146,8 @@ func ExecutionFixerActivity(ctx context.Context, fixList []entity.Execution) ([]
 			return nil, err
 		}
 
-		concreteExecutionInvariant := invariant.NewConcreteExecutionExists(pr)
-		fixResult := concreteExecutionInvariant.Fix(ctx, concreteExecution)
+		currentExecutionInvariant := invariant.NewOpenCurrentExecution(pr)
+		fixResult := currentExecutionInvariant.Fix(ctx, concreteExecution)
 		result = append(result, fixResult)
 		historyInvariant := invariant.NewHistoryExists(pr)
 		fixResult = historyInvariant.Fix(ctx, concreteExecution)
@@ -156,4 +173,24 @@ func getDefaultDAO(
 	}
 	pr := persistence.NewPersistenceRetryer(execManager, res.GetHistoryManager(), c.CreatePersistenceRetryPolicy())
 	return pr, nil
+}
+
+func EmitResultMetricsActivity(ctx context.Context, fixResults []invariant.FixResult) error {
+	res, ok := ctx.Value(reconciliation.CheckDataCorruptionWorkflowType).(resource.Resource)
+	if !ok {
+		return fmt.Errorf("cannot find key %v in context", reconciliation.CheckDataCorruptionWorkflowType)
+	}
+	scope := res.GetMetricsClient().Scope(metrics.CheckDataCorruptionWorkflowScope)
+	for _, result := range fixResults {
+		scope.IncCounter(metrics.DataCorruptionWorkflowCount)
+		switch result.FixResultType {
+		case invariant.FixResultTypeFailed:
+			scope.IncCounter(metrics.DataCorruptionWorkflowFailure)
+		case invariant.FixResultTypeFixed:
+			scope.IncCounter(metrics.DataCorruptionWorkflowSuccessCount)
+		case invariant.FixResultTypeSkipped:
+			scope.IncCounter(metrics.DataCorruptionWorkflowSkipCount)
+		}
+	}
+	return nil
 }
