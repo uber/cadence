@@ -1154,6 +1154,8 @@ const (
 	ParentClosePolicyProcessorScope
 	// ShardScannerScope is scope used by all metrics emitted by worker.shardscanner module
 	ShardScannerScope
+	// CheckDataCorruptionWorkflowScope is scope used by the data corruption workflow
+	CheckDataCorruptionWorkflowScope
 
 	NumWorkerScopes
 )
@@ -1670,6 +1672,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TaskListScavengerScope:                 {operation: "tasklistscavenger"},
 		ExecutionsScannerScope:                 {operation: "ExecutionsScanner"},
 		ShardScannerScope:                      {operation: "ShardScanner"},
+		CheckDataCorruptionWorkflowScope:       {operation: "CheckDataCorruptionWorkflow"},
 		ExecutionsFixerScope:                   {operation: "ExecutionsFixer"},
 		HistoryScavengerScope:                  {operation: "historyscavenger"},
 		BatcherScope:                           {operation: "batcher"},
@@ -2169,6 +2172,10 @@ const (
 	ScannerShardSizeTenGauge
 	ShardScannerScan
 	ShardScannerFix
+	DataCorruptionWorkflowCount
+	DataCorruptionWorkflowFailure
+	DataCorruptionWorkflowSuccessCount
+	DataCorruptionWorkflowSkipCount
 
 	NumWorkerMetrics
 )
@@ -2673,6 +2680,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ScannerShardSizeTenGauge:                      {metricName: "scanner_shard_size_ten", metricType: Gauge},
 		ShardScannerScan:                              {metricName: "shardscanner_scan", metricType: Counter},
 		ShardScannerFix:                               {metricName: "shardscanner_fix", metricType: Counter},
+		DataCorruptionWorkflowFailure:                 {metricName: "data_corruption_workflow_failure", metricType: Counter},
+		DataCorruptionWorkflowSuccessCount:            {metricName: "data_corruption_workflow_success", metricType: Counter},
+		DataCorruptionWorkflowCount:                   {metricName: "data_corruption_workflow_count", metricType: Counter},
+		DataCorruptionWorkflowSkipCount:               {metricName: "data_corruption_workflow_skips", metricType: Counter},
 	},
 }
 
