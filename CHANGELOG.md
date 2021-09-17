@@ -13,7 +13,7 @@ You can find a list of previous releases on the [github releases](https://github
 ## [0.23.0] - TBD
 ### Added
 - Added gRPC support for cross domain traffic. This can be enabled in `ClusterGroupMetadata` config section with `rpcTransport: "grpc"` option. By default, tchannel is used. (#4390)
-
+- Fixed an Issue with workflows timing out early if the RetryPolicy timeout is less than  the workflow timeout. Now on the first attempt, a workflow will only timeout if the workflow timeout is exceeded. (#4467)
 ## [0.21.3] - 2021-07-17
 ### Added
 - Added GRPC support. Cadence server will accept requests on both TChannel and GRPC. With dynamic config flag `system.enableGRPCOutbound` it will also switch to GRPC communication internally between server components.
