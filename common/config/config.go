@@ -177,8 +177,9 @@ type (
 		// HistoryMaxConns is the desired number of conns to history store. Value specified
 		// here overrides the MaxConns config specified as part of datastore
 		HistoryMaxConns int `yaml:"historyMaxConns"`
-		// NumHistoryShards is the desired number of history shards. This config doesn't
-		// belong here, needs refactoring
+		// NumHistoryShards is the desired number of history shards. It's for computing the shardID from workflowID into [0, NumHistoryShards)
+		// Therefore, the value cannot be changed once set.
+		// TODO This config doesn't belong here, needs refactoring
 		NumHistoryShards int `yaml:"numHistoryShards" validate:"nonzero"`
 		// DataStores contains the configuration for all datastores
 		DataStores map[string]DataStore `yaml:"datastores"`
@@ -260,8 +261,12 @@ type (
 		MaxIdleConns int `yaml:"maxIdleConns"`
 		// MaxConnLifetime is the maximum time a connection can be alive
 		MaxConnLifetime time.Duration `yaml:"maxConnLifetime"`
-		// NumShards is the number of storage shards to use for tables
-		// in a sharded sql database. The default value for this param is 1
+		// NumShards is the number of storage shards to use for tables in a sharded sql database. Default is 1
+		// It's for computing the shardID from strings into a value of [0,NumShards).
+		// This is only being used for non-workflow entities because History service using NumHistoryShards config for workflow sharding.
+		// Currently the only use case is tasklist sharding by Matching service.
+		// Similar to NumHistoryShards, the value cannot be changed once set. 
+		// TODO This config doesn't belong here, needs refactoring
 		NumShards int `yaml:"nShards"`
 		// TLS is the configuration for TLS connections
 		TLS *TLS `yaml:"tls"`
