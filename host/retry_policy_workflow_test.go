@@ -21,7 +21,6 @@
 package host
 
 import (
-	"bytes"
 	"strconv"
 	"time"
 
@@ -220,26 +219,17 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsCron() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(3),
 		Identity:                            identity,
 		RetryPolicy:                         retryPolicy,
+		CronSchedule:                        "@every 3s",
 	}
-
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
 	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
-		buf := new(bytes.Buffer)
 		return []byte(strconv.Itoa(0)), []*types.Decision{{
-			DecisionType: types.DecisionTypeContinueAsNewWorkflowExecution.Ptr(),
-			ContinueAsNewWorkflowExecutionDecisionAttributes: &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
-				WorkflowType:                        workflowType,
-				TaskList:                            &types.TaskList{Name: tl},
-				Input:                               buf.Bytes(),
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(4),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(4),
-				RetryPolicy:                         retryPolicy,
-				Initiator:                           types.ContinueAsNewInitiatorCronSchedule.Ptr(),
-			},
+			DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
+			CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{},
 		}}, nil
 	}
 
@@ -256,10 +246,9 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsCron() {
 	_, err := poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
-	time.Sleep(5 * time.Second) // wait 1 second for timeout
 
-	var history *types.History
-	var lastEvent *types.HistoryEvent
+	var firstAttemptEvent *types.HistoryEvent
+	var continueAsCronEvent *types.HistoryEvent
 
 GetHistoryLoop:
 	for i := 0; i < 20; i++ {
@@ -270,21 +259,33 @@ GetHistoryLoop:
 			},
 		})
 		s.Nil(err)
-		history = historyResponse.History
-		lastEvent = history.Events[len(history.Events)-1]
-		if *lastEvent.EventType != types.EventTypeWorkflowExecutionTimedOut {
-			s.Logger.Warn("Execution not timedout yet.")
-			time.Sleep(200 * time.Millisecond)
-			continue GetHistoryLoop
+
+		history := historyResponse.History
+		firstEvent := history.Events[0]
+		if *firstEvent.EventType == types.EventTypeWorkflowExecutionStarted {
+			if firstAttemptEvent == nil {
+				firstAttemptEvent = firstEvent
+				continue GetHistoryLoop
+			} else {
+				if firstEvent.WorkflowExecutionStartedEventAttributes.Initiator != nil &&
+					common.Int64Default(firstEvent.Timestamp) != common.Int64Default(firstAttemptEvent.Timestamp) &&
+					*firstEvent.WorkflowExecutionStartedEventAttributes.Initiator == types.ContinueAsNewInitiatorCronSchedule {
+					continueAsCronEvent = firstEvent
+					break GetHistoryLoop
+				}
+			}
 		}
-
-		timeoutEventAttributes := lastEvent.WorkflowExecutionTimedOutEventAttributes
-		s.Equal(types.TimeoutTypeStartToClose, *timeoutEventAttributes.TimeoutType)
-		break GetHistoryLoop
+		time.Sleep(500 * time.Millisecond)
 	}
+	s.NotNil(firstAttemptEvent)
+	s.NotNil(continueAsCronEvent)
+	delta := time.Unix(0, common.Int64Default(firstAttemptEvent.WorkflowExecutionStartedEventAttributes.ExpirationTimestamp)).Sub(
+		time.Unix(0, common.Int64Default(firstAttemptEvent.Timestamp)))
+	s.True(delta > 3*time.Second)
+	s.True(delta < 5*time.Second)
 
-	firstEvent := history.Events[0]
-	delta := time.Unix(0, common.Int64Default(lastEvent.Timestamp)).Sub(time.Unix(0, common.Int64Default(firstEvent.Timestamp)))
+	delta = time.Unix(0, common.Int64Default(continueAsCronEvent.WorkflowExecutionStartedEventAttributes.ExpirationTimestamp)).Sub(
+		time.Unix(0, common.Int64Default(continueAsCronEvent.Timestamp)))
 	s.True(delta > 3*time.Second)
 	s.True(delta < 5*time.Second)
 }
