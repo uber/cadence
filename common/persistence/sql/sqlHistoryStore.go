@@ -398,15 +398,7 @@ func (m *sqlHistoryStore) DeleteHistoryBranch(
 	}
 
 	// validBRsMaxEndNode is to for each branch range that is being used, we want to know what is the max nodeID referred by other valid branch
-	validBRsMaxEndNode := map[string]int64{}
-	for _, b := range rsp.Branches {
-		for _, br := range b.Ancestors {
-			curr, ok := validBRsMaxEndNode[*br.BranchID]
-			if !ok || curr < *br.EndNodeID {
-				validBRsMaxEndNode[*br.BranchID] = *br.EndNodeID
-			}
-		}
-	}
+	validBRsMaxEndNode := persistenceutils.GetBranchesMaxReferredNodeIDs(rsp.Branches)
 
 	return m.txExecute(ctx, "DeleteHistoryBranch", func(tx sqlplugin.Tx) error {
 		branchID := serialization.MustParseUUID(*branch.BranchID)
