@@ -353,7 +353,7 @@ func (c *crossClusterQueueProcessorBase) readTasks(
 
 func (c *crossClusterQueueProcessorBase) pollTasks() []*types.CrossClusterTaskRequest {
 
-	// TODO: control the number of tasks returned
+	batchSize := c.shard.GetConfig().CrossClusterTaskFetchBatchSize(c.shard.GetShardID())
 	var result []*types.CrossClusterTaskRequest
 	for _, queueTask := range c.getTasks() {
 		crossClusterTask, ok := queueTask.(task.CrossClusterTask)
@@ -374,6 +374,9 @@ func (c *crossClusterQueueProcessorBase) pollTasks() []*types.CrossClusterTaskRe
 				// if request is nil, nothing need to be done for the task,
 				// task already acked in GetCrossClusterRequest()
 				result = append(result, request)
+				if len(result) >= batchSize {
+					break
+				}
 			}
 		}
 	}
@@ -511,6 +514,7 @@ func (c *crossClusterQueueProcessorBase) setupBackoffTimer(level int) {
 	})
 }
 
+// TODO: we should pass in a context for handling actions
 func (c *crossClusterQueueProcessorBase) handleActionNotification(notification actionNotification) {
 	switch notification.action.ActionType {
 	case ActionTypeGetTasks:

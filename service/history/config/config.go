@@ -159,6 +159,7 @@ type Config struct {
 	// CrossClusterQueueProcessor settings
 	CrossClusterTaskBatchSize                                dynamicconfig.IntPropertyFn
 	CrossClusterTaskDeleteBatchSize                          dynamicconfig.IntPropertyFn
+	CrossClusterTaskFetchBatchSize                           dynamicconfig.IntPropertyFnWithShardIDFilter
 	CrossClusterTaskWorkerCount                              dynamicconfig.IntPropertyFn
 	CrossClusterProcessorCompleteTaskFailureRetryCount       dynamicconfig.IntPropertyFn
 	CrossClusterProcessorMaxPollRPS                          dynamicconfig.IntPropertyFn
@@ -436,6 +437,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 
 		CrossClusterTaskBatchSize:                                dc.GetIntProperty(dynamicconfig.CrossClusterTaskBatchSize, 100),
 		CrossClusterTaskDeleteBatchSize:                          dc.GetIntProperty(dynamicconfig.CrossClusterTaskDeleteBatchSize, 4000),
+		CrossClusterTaskFetchBatchSize:                           dc.GetIntPropertyFilteredByShardID(dynamicconfig.CrossClusterTaskFetchBatchSize, 100),
 		CrossClusterProcessorMaxPollRPS:                          dc.GetIntProperty(dynamicconfig.CrossClusterProcessorMaxPollRPS, 20),
 		CrossClusterTaskWorkerCount:                              dc.GetIntProperty(dynamicconfig.CrossClusterTaskWorkerCount, 10),
 		CrossClusterProcessorCompleteTaskFailureRetryCount:       dc.GetIntProperty(dynamicconfig.CrossClusterProcessorCompleteTaskFailureRetryCount, 10),
