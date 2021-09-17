@@ -632,9 +632,10 @@ func (a *AccessControlledWorkflowHandler) SignalWithStartWorkflowExecution(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendSignalWithStartWorkflowExecutionScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "SignalWithStartWorkflowExecution",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionWrite,
+		APIName:      "SignalWithStartWorkflowExecution",
+		DomainName:   request.GetDomain(),
+		Permission:   authorization.PermissionWrite,
+		WorkflowType: request.WorkflowType,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
