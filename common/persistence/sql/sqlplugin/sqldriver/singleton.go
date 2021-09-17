@@ -30,9 +30,9 @@ import (
 type (
 	// singleton is the driver querying a single SQL database, which is the default driver
 	singleton struct {
-		db   *sqlx.DB
-		tx   *sqlx.Tx
-		conn conn
+		db   *sqlx.DB // this is for starting a transaction, or executing any non transaction query
+		tx   *sqlx.Tx // this is a reference of a started transaction
+		conn conn     // this is a merged of the above two. In some case it' either db or tx depends on whether or not a transaction has started
 	}
 )
 

@@ -98,7 +98,7 @@ func newDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
 	db := &db{
 		converter:  &converter{},
 		driver:     driver,
-		originalDB: xdb,
+		originalDB: xdb, // this is kept because newDB will be called again when starting a transaction
 	}
 	return db
 }
