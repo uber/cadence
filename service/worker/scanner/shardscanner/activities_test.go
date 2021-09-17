@@ -74,6 +74,9 @@ func (s *activitiesSuite) SetupSuite() {
 func (s *activitiesSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockResource = resource.NewTest(s.controller, metrics.Worker)
+	domainCache := cache.NewMockDomainCache(s.controller)
+	domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil).AnyTimes()
+	s.mockResource.DomainCache = domainCache
 }
 
 func (s *activitiesSuite) TearDownTest() {

@@ -185,7 +185,7 @@ const (
 	// EnableGRPCOutbound is the key for enabling outbound GRPC traffic
 	// KeyName: system.enableGRPCOutbound
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: TRUE
 	// Allowed filters: N/A
 	EnableGRPCOutbound
 	// BlobSizeLimitError is the per event blob size limit
