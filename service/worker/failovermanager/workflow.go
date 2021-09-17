@@ -446,14 +446,13 @@ func getAllDomains(ctx context.Context, targetDomains []string) ([]*types.Descri
 func FailoverActivity(ctx context.Context, params *FailoverActivityParams) (*FailoverActivityResult, error) {
 
 	logger := activity.GetLogger(ctx)
-	remoteFrontendClient := getRemoteClient(ctx, params.TargetCluster)
 	frontendClient := getClient(ctx)
 	domains := params.Domains
 	var successDomains []string
 	var failedDomains []string
 	for _, domain := range domains {
 		// Check if poller exist
-		if err := validateTaskListPollerInfo(ctx, remoteFrontendClient, domain); err != nil {
+		if err := validateTaskListPollerInfo(ctx, params.TargetCluster, domain); err != nil {
 			logger.Error("Failed to validate task list poller info", zap.Error(err))
 			failedDomains = append(failedDomains, domain)
 			continue
@@ -487,20 +486,32 @@ func cleanupChannel(channel workflow.Channel) {
 	}
 }
 
-func validateTaskListPollerInfo(ctx context.Context, feClient frontend.Client, domain string) error {
-	resp, err := feClient.GetTaskListsByDomain(ctx, &types.GetTaskListsByDomainRequest{Domain: domain})
+func validateTaskListPollerInfo(ctx context.Context, targetCluster string, domain string) error {
+	remoteFrontendClient := getRemoteClient(ctx, targetCluster)
+	frontendClient := getClient(ctx)
+	localTaskListResponse, err := frontendClient.GetTaskListsByDomain(ctx, &types.GetTaskListsByDomainRequest{Domain: domain})
 	if err != nil {
 		return fmt.Errorf("failed to get task list for domain %s", domain)
 	}
-	for name, tl := range resp.GetDecisionTaskListMap() {
-		if len(tl.GetPollers()) == 0 {
 
-			return fmt.Errorf("received zero poller in decision task list %s with domain %s", name, domain)
+	remoteTaskListRepsonse, err := remoteFrontendClient.GetTaskListsByDomain(ctx, &types.GetTaskListsByDomainRequest{Domain: domain})
+	if err != nil {
+		return fmt.Errorf("failed to get task list for domain %s", domain)
+	}
+	for name, tl := range localTaskListResponse.GetDecisionTaskListMap() {
+		if len(tl.GetPollers()) != 0 {
+			remoteTaskList, ok := remoteTaskListRepsonse.GetDecisionTaskListMap()[name]
+			if !ok || len(remoteTaskList.GetPollers()) == 0 {
+				return fmt.Errorf("received zero poller in decision task list %s with domain %s", name, domain)
+			}
 		}
 	}
-	for name, tl := range resp.GetActivityTaskListMap() {
-		if len(tl.GetPollers()) == 0 {
-			return fmt.Errorf("received zero poller in activity task list%s with domain %s", name, domain)
+	for name, tl := range localTaskListResponse.GetActivityTaskListMap() {
+		if len(tl.GetPollers()) != 0 {
+			remoteTaskList, ok := remoteTaskListRepsonse.GetActivityTaskListMap()[name]
+			if !ok || len(remoteTaskList.GetPollers()) == 0 {
+				return fmt.Errorf("received zero poller in decision task list %s with domain %s", name, domain)
+			}
 		}
 	}
 	return nil
