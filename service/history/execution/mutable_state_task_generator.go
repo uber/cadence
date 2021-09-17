@@ -138,7 +138,6 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowStartTasks(
 	startTime time.Time,
 	startEvent *types.HistoryEvent,
 ) error {
-
 	attr := startEvent.WorkflowExecutionStartedEventAttributes
 	firstDecisionDelayDuration := time.Duration(attr.GetFirstDecisionTaskBackoffSeconds()) * time.Second
 
@@ -146,9 +145,9 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowStartTasks(
 	startVersion := startEvent.GetVersion()
 
 	workflowTimeoutDuration := time.Duration(executionInfo.WorkflowTimeout) * time.Second
-	workflowTimeoutDuration = workflowTimeoutDuration + firstDecisionDelayDuration
-	workflowTimeoutTimestamp := startTime.Add(workflowTimeoutDuration)
-	if !executionInfo.ExpirationTime.IsZero() && workflowTimeoutTimestamp.After(executionInfo.ExpirationTime) {
+	workflowTimeoutTimestamp := startTime.Add(workflowTimeoutDuration + firstDecisionDelayDuration)
+	// ensure that the first attempt does not time out early based on retry policy timeout
+	if attr.Attempt > 0 && !executionInfo.ExpirationTime.IsZero() && workflowTimeoutTimestamp.After(executionInfo.ExpirationTime) {
 		workflowTimeoutTimestamp = executionInfo.ExpirationTime
 	}
 	r.mutableState.AddTimerTasks(&persistence.WorkflowTimeoutTask{
