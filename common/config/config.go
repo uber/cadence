@@ -265,8 +265,9 @@ type (
 		// It's for computing the shardID from strings into a value of [0,NumShards).
 		// This is only being used for non-workflow entities because History service using NumHistoryShards config for workflow sharding.
 		// Currently the only use case is tasklist sharding by Matching service.
-		// Similar to NumHistoryShards, the value cannot be changed once set. 
+		// Similar to NumHistoryShards, the value cannot be changed once set.
 		// TODO This config doesn't belong here, needs refactoring
+		// TODO probably we should unify it with NumHistoryShards to simplify the configuration
 		NumShards int `yaml:"nShards"`
 		// TLS is the configuration for TLS connections
 		TLS *TLS `yaml:"tls"`
