@@ -32,20 +32,20 @@ type (
 	//The layer is added so that we can have a adapter to support multiple SQL databases behind a single Cadence cluster
 	Driver interface {
 
-		// refactored from conn
+		// refactored from conn(xdb)
 		ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 		NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
 		GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
 		SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
 
-		// refactored from db
+		// refactored from db(xdb)
 		Exec(query string, args ...interface{}) (sql.Result, error)
 		Select(dest interface{}, query string, args ...interface{}) error
 		Get(dest interface{}, query string, args ...interface{}) error
 		BeginTxx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error)
 		Close() error
 
-		// refactored from tx
+		// refactored from tx(tx)
 		Commit() error
 		Rollback() error
 	}
