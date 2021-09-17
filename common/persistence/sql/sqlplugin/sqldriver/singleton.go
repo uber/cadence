@@ -30,17 +30,24 @@ import (
 type (
 	// singleton is the driver querying a single SQL database, which is the default driver
 	singleton struct {
-		db *sqlx.DB
-		tx *sqlx.Tx
+		db   *sqlx.DB
+		tx   *sqlx.Tx
+		conn conn
 	}
 )
 
 // NewSingletonSQLDriver returns a driver querying a single SQL database, which is the default driver
-func NewSingletonSQLDriver(db *sqlx.DB, tx *sqlx.Tx) Driver {
-	return &singleton{
-		db: db,
-		tx: tx,
+func NewSingletonSQLDriver(xdb *sqlx.DB, tx *sqlx.Tx) Driver {
+	driver := &singleton{
+		db:   xdb,
+		tx:   tx,
+		conn: xdb,
 	}
+	if tx != nil {
+		// when tx is not nil, conn will be same as tx
+		driver.conn = tx
+	}
+	return driver
 }
 
 func (s *singleton) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {

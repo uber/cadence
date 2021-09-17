@@ -30,21 +30,14 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin/sqldriver"
 )
 
 type (
 	db struct {
-		db        *sqlx.DB
-		tx        *sqlx.Tx
-		converter DataConverter
-		conn      conn
-	}
-
-	conn interface {
-		ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-		NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
-		GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
-		SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+		converter  DataConverter
+		driver     sqldriver.Driver
+		originalDB *sqlx.DB
 	}
 )
 
@@ -101,40 +94,37 @@ func (mdb *db) IsThrottlingError(err error) bool {
 // newDB returns an instance of DB, which is a logical
 // connection to the underlying mysql database
 func newDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
+	driver := sqldriver.NewSingletonSQLDriver(xdb, tx)
 	db := &db{
-		db:        xdb,
-		tx:        tx,
-		converter: &converter{},
-		conn:      xdb,
-	}
-	if tx != nil {
-		db.conn = tx
+		converter:  &converter{},
+		driver:     driver,
+		originalDB: xdb,
 	}
 	return db
 }
 
 // BeginTx starts a new transaction and returns a reference to the Tx object
 func (mdb *db) BeginTx(ctx context.Context) (sqlplugin.Tx, error) {
-	xtx, err := mdb.db.BeginTxx(ctx, nil)
+	xtx, err := mdb.driver.BeginTxx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	return newDB(mdb.db, xtx), nil
+	return newDB(mdb.originalDB, xtx), nil
 }
 
 // Commit commits a previously started transaction
 func (mdb *db) Commit() error {
-	return mdb.tx.Commit()
+	return mdb.driver.Commit()
 }
 
 // Rollback triggers rollback of a previously started transaction
 func (mdb *db) Rollback() error {
-	return mdb.tx.Rollback()
+	return mdb.driver.Rollback()
 }
 
 // Close closes the connection to the mysql db
 func (mdb *db) Close() error {
-	return mdb.db.Close()
+	return mdb.driver.Close()
 }
 
 // PluginName returns the name of the mysql plugin

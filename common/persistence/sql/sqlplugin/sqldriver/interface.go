@@ -33,10 +33,7 @@ type (
 	Driver interface {
 
 		// refactored from conn(xdb)
-		ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-		NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
-		GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
-		SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+		conn
 
 		// refactored from db(xdb)
 		Exec(query string, args ...interface{}) (sql.Result, error)
@@ -48,5 +45,12 @@ type (
 		// refactored from tx(tx)
 		Commit() error
 		Rollback() error
+	}
+
+	conn interface {
+		ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+		NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
+		GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+		SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
 	}
 )
