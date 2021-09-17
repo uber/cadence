@@ -1299,6 +1299,14 @@ func (s *IntegrationSuite) TestCronWorkflowTimeout() {
 	searchAttr := &types.SearchAttributes{
 		IndexedFields: map[string][]byte{"CustomKeywordField": []byte(`"1"`)},
 	}
+	retryPolicy := &types.RetryPolicy{
+		InitialIntervalInSeconds:    1,
+		BackoffCoefficient:          2.0,
+		MaximumIntervalInSeconds:    1,
+		ExpirationIntervalInSeconds: 1,
+		MaximumAttempts:             0,
+		NonRetriableErrorReasons:    []string{"bad-error"},
+	}
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           uuid.New(),
@@ -1313,6 +1321,7 @@ func (s *IntegrationSuite) TestCronWorkflowTimeout() {
 		CronSchedule:                        cronSchedule, //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
 		Memo:                                memo,
 		SearchAttributes:                    searchAttr,
+		RetryPolicy:                         retryPolicy,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -1361,6 +1370,9 @@ func (s *IntegrationSuite) TestCronWorkflowTimeout() {
 	s.Equal(memo, attributes.Memo)
 	s.Equal(searchAttr, attributes.SearchAttributes)
 
+	firstStartWorkflowEvent := events[0]
+	s.NotNil(firstStartWorkflowEvent.WorkflowExecutionStartedEventAttributes.ExpirationTimestamp)
+
 	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.True(err == nil, err)
 
@@ -1371,6 +1383,11 @@ func (s *IntegrationSuite) TestCronWorkflowTimeout() {
 	startAttributes := firstEvent.WorkflowExecutionStartedEventAttributes
 	s.Equal(memo, startAttributes.Memo)
 	s.Equal(searchAttr, startAttributes.SearchAttributes)
+
+	s.NotNil(firstEvent.WorkflowExecutionStartedEventAttributes.ExpirationTimestamp)
+	// test that the new workflow has a different expiration timestamp from the first workflow
+	s.True(*firstEvent.WorkflowExecutionStartedEventAttributes.ExpirationTimestamp >
+		*firstStartWorkflowEvent.WorkflowExecutionStartedEventAttributes.ExpirationTimestamp)
 
 	// terminate cron
 	terminateErr := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
