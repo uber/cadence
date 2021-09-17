@@ -74,7 +74,7 @@ func (pdb *db) CreateSchemaVersionTables() error {
 // ReadSchemaVersion returns the current schema version for the keyspace
 func (pdb *db) ReadSchemaVersion(database string) (string, error) {
 	var version string
-	err := pdb.db.Get(&version, readSchemaVersionQuery, database)
+	err := pdb.driver.Get(&version, readSchemaVersionQuery, database)
 	return version, err
 }
 
@@ -91,14 +91,14 @@ func (pdb *db) WriteSchemaUpdateLog(oldVersion string, newVersion string, manife
 
 // Exec executes a sql statement
 func (pdb *db) Exec(stmt string, args ...interface{}) error {
-	_, err := pdb.db.Exec(stmt, args...)
+	_, err := pdb.driver.Exec(stmt, args...)
 	return err
 }
 
 // ListTables returns a list of tables in this database
 func (pdb *db) ListTables(database string) ([]string, error) {
 	var tables []string
-	err := pdb.db.Select(&tables, listTablesQuery)
+	err := pdb.driver.Select(&tables, listTablesQuery)
 	return tables, err
 }
 

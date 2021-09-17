@@ -45,18 +45,18 @@ const (
 
 // InsertIntoShards inserts one or more rows into shards table
 func (pdb *db) InsertIntoShards(ctx context.Context, row *sqlplugin.ShardsRow) (sql.Result, error) {
-	return pdb.conn.ExecContext(ctx, createShardQry, row.ShardID, row.RangeID, row.Data, row.DataEncoding)
+	return pdb.driver.ExecContext(ctx, createShardQry, row.ShardID, row.RangeID, row.Data, row.DataEncoding)
 }
 
 // UpdateShards updates one or more rows into shards table
 func (pdb *db) UpdateShards(ctx context.Context, row *sqlplugin.ShardsRow) (sql.Result, error) {
-	return pdb.conn.ExecContext(ctx, updateShardQry, row.RangeID, row.Data, row.DataEncoding, row.ShardID)
+	return pdb.driver.ExecContext(ctx, updateShardQry, row.RangeID, row.Data, row.DataEncoding, row.ShardID)
 }
 
 // SelectFromShards reads one or more rows from shards table
 func (pdb *db) SelectFromShards(ctx context.Context, filter *sqlplugin.ShardsFilter) (*sqlplugin.ShardsRow, error) {
 	var row sqlplugin.ShardsRow
-	err := pdb.conn.GetContext(ctx, &row, getShardQry, filter.ShardID)
+	err := pdb.driver.GetContext(ctx, &row, getShardQry, filter.ShardID)
 	if err != nil {
 		return nil, err
 	}
@@ -66,13 +66,13 @@ func (pdb *db) SelectFromShards(ctx context.Context, filter *sqlplugin.ShardsFil
 // ReadLockShards acquires a read lock on a single row in shards table
 func (pdb *db) ReadLockShards(ctx context.Context, filter *sqlplugin.ShardsFilter) (int, error) {
 	var rangeID int
-	err := pdb.conn.GetContext(ctx, &rangeID, readLockShardQry, filter.ShardID)
+	err := pdb.driver.GetContext(ctx, &rangeID, readLockShardQry, filter.ShardID)
 	return rangeID, err
 }
 
 // WriteLockShards acquires a write lock on a single row in shards table
 func (pdb *db) WriteLockShards(ctx context.Context, filter *sqlplugin.ShardsFilter) (int, error) {
 	var rangeID int
-	err := pdb.conn.GetContext(ctx, &rangeID, lockShardQry, filter.ShardID)
+	err := pdb.driver.GetContext(ctx, &rangeID, lockShardQry, filter.ShardID)
 	return rangeID, err
 }
