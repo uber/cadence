@@ -33,24 +33,25 @@ type (
 	Driver interface {
 
 		// refactored from conn(xdb)
+		// this is for shared methods of both non-transactional DB and transactional one
 		conn
 
 		// refactored from db(xdb)
-		Exec(query string, args ...interface{}) (sql.Result, error)
-		Select(dest interface{}, query string, args ...interface{}) error
-		Get(dest interface{}, query string, args ...interface{}) error
-		BeginTxx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error)
-		Close() error
+		Exec(dbShardID int, query string, args ...interface{}) (sql.Result, error)
+		Select(dbShardID int, dest interface{}, query string, args ...interface{}) error
+		Get(dbShardID int, dest interface{}, query string, args ...interface{}) error
+		BeginTxx(dbShardID int, ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error)
+		Close(dbShardID int, ) error
 
 		// refactored from tx(tx)
-		Commit() error
-		Rollback() error
+		Commit(dbShardID int, ) error
+		Rollback(dbShardID int, ) error
 	}
 
 	conn interface {
-		ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-		NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
-		GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
-		SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+		ExecContext(dbShardID int, ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+		NamedExecContext(dbShardID int, ctx context.Context, query string, arg interface{}) (sql.Result, error)
+		GetContext(dbShardID int, ctx context.Context, dest interface{}, query string, args ...interface{}) error
+		SelectContext(dbShardID int, ctx context.Context, dest interface{}, query string, args ...interface{}) error
 	}
 )
