@@ -97,7 +97,7 @@ func NewRPCClientFactory(
 	numberOfHistoryShards int,
 	logger log.Logger,
 ) Factory {
-	enableGRPCOutbound := dc.GetBoolProperty(dynamicconfig.EnableGRPCOutbound, false)()
+	enableGRPCOutbound := dc.GetBoolProperty(dynamicconfig.EnableGRPCOutbound, true)()
 	return &rpcClientFactory{
 		rpcFactory:            rpcFactory,
 		monitor:               monitor,
