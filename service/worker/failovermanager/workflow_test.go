@@ -430,6 +430,10 @@ func (s *failoverWorkflowTestSuite) TestFailoverActivity_ForceFailover_Success()
 	}
 
 	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, nil).Times(len(domains))
+	mockResource.FrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), gomock.Any()).Return(&types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: taskListMap,
+		ActivityTaskListMap: taskListMap,
+	}, nil).Times(len(domains))
 	mockResource.RemoteFrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), gomock.Any()).Return(&types.GetTaskListsByDomainResponse{
 		DecisionTaskListMap: taskListMap,
 		ActivityTaskListMap: taskListMap,
@@ -479,6 +483,10 @@ func (s *failoverWorkflowTestSuite) TestFailoverActivity_GracefulFailover_Succes
 	}
 	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), updateRequest1).Return(nil, nil).Times(1)
 	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), updateRequest2).Return(nil, nil).Times(1)
+	mockResource.FrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), gomock.Any()).Return(&types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: taskListMap,
+		ActivityTaskListMap: taskListMap,
+	}, nil).Times(len(domains))
 	mockResource.RemoteFrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), gomock.Any()).Return(&types.GetTaskListsByDomainResponse{
 		DecisionTaskListMap: taskListMap,
 		ActivityTaskListMap: taskListMap,
@@ -517,6 +525,10 @@ func (s *failoverWorkflowTestSuite) TestFailoverActivity_Error() {
 
 	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), updateRequest1).Return(nil, nil)
 	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), updateRequest2).Return(nil, errors.New("mockErr"))
+	mockResource.FrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), gomock.Any()).Return(&types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: taskListMap,
+		ActivityTaskListMap: taskListMap,
+	}, nil).Times(len(domains))
 	mockResource.RemoteFrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), gomock.Any()).Return(&types.GetTaskListsByDomainResponse{
 		DecisionTaskListMap: taskListMap,
 		ActivityTaskListMap: taskListMap,
@@ -542,15 +554,27 @@ func (s *failoverWorkflowTestSuite) TestFailoverActivity_NoPoller_Error() {
 
 	domains := []string{"d1", "d2"}
 	targetCluster := "c2"
-	describeTaskListResp := &types.DescribeTaskListResponse{Pollers: []*types.PollerInfo{}}
-	taskListMap := map[string]*types.DescribeTaskListResponse{
-		"tl": describeTaskListResp,
+	describeTaskListResp1 := &types.DescribeTaskListResponse{Pollers: []*types.PollerInfo{
+		{
+			Identity: "test",
+		},
+	}}
+	taskListMap1 := map[string]*types.DescribeTaskListResponse{
+		"tl": describeTaskListResp1,
+	}
+	describeTaskListResp2 := &types.DescribeTaskListResponse{Pollers: []*types.PollerInfo{}}
+	taskListMap2 := map[string]*types.DescribeTaskListResponse{
+		"tl": describeTaskListResp2,
 	}
 
 	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Times(0)
+	mockResource.FrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), gomock.Any()).Return(&types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: taskListMap1,
+		ActivityTaskListMap: taskListMap1,
+	}, nil).Times(len(domains))
 	mockResource.RemoteFrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), gomock.Any()).Return(&types.GetTaskListsByDomainResponse{
-		DecisionTaskListMap: taskListMap,
-		ActivityTaskListMap: taskListMap,
+		DecisionTaskListMap: taskListMap2,
+		ActivityTaskListMap: taskListMap2,
 	}, nil).Times(len(domains))
 
 	params := &FailoverActivityParams{
