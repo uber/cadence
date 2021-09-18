@@ -1079,6 +1079,9 @@ func FromDescribeDomainResponseDomain(t *types.DescribeDomainResponse) *apiv1.Do
 		domain.ActiveClusterName = repl.ActiveClusterName
 		domain.Clusters = FromClusterReplicationConfigurationArray(repl.Clusters)
 	}
+	if info := t.GetFailoverInfo(); info != nil {
+		domain.FailoverInfo = FromFailoverInfo(t.GetFailoverInfo())
+	}
 	return &domain
 }
 
@@ -1119,6 +1122,7 @@ func ToDescribeDomainResponseDomain(t *apiv1.Domain) *types.DescribeDomainRespon
 		},
 		FailoverVersion: t.FailoverVersion,
 		IsGlobalDomain:  t.IsGlobalDomain,
+		FailoverInfo:    ToFailoverInfo(t.FailoverInfo),
 	}
 }
 
@@ -1126,7 +1130,34 @@ func ToDescribeDomainResponse(t *apiv1.DescribeDomainResponse) *types.DescribeDo
 	if t == nil {
 		return nil
 	}
-	return ToDescribeDomainResponseDomain(t.Domain)
+	response := ToDescribeDomainResponseDomain(t.Domain)
+	return response
+}
+
+func FromFailoverInfo(t *types.FailoverInfo) *apiv1.FailoverInfo {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.FailoverInfo{
+		FailoverVersion:         t.GetFailoverVersion(),
+		FailoverStartTimestamp:  unixNanoToTime(&t.FailoverStartTimestamp),
+		FailoverExpireTimestamp: unixNanoToTime(&t.FailoverExpireTimestamp),
+		CompletedShardCount:     t.GetCompletedShardCount(),
+		PendingShards:           t.GetPendingShards(),
+	}
+}
+
+func ToFailoverInfo(t *apiv1.FailoverInfo) *types.FailoverInfo {
+	if t == nil {
+		return nil
+	}
+	return &types.FailoverInfo{
+		FailoverVersion:         t.GetFailoverVersion(),
+		FailoverStartTimestamp:  *timeToUnixNano(t.GetFailoverStartTimestamp()),
+		FailoverExpireTimestamp: *timeToUnixNano(t.GetFailoverExpireTimestamp()),
+		CompletedShardCount:     t.GetCompletedShardCount(),
+		PendingShards:           t.GetPendingShards(),
+	}
 }
 
 func FromDescribeTaskListRequest(t *types.DescribeTaskListRequest) *apiv1.DescribeTaskListRequest {
@@ -1735,8 +1766,10 @@ func FromGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainResponse) *ap
 	if t == nil {
 		return nil
 	}
+
 	return &apiv1.GetTaskListsByDomainResponse{
-		TaskListNames: t.GetTaskListNames(),
+		DecisionTaskListMap: FromDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: FromDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
 	}
 }
 
@@ -1744,9 +1777,33 @@ func ToGetTaskListsByDomainResponse(t *apiv1.GetTaskListsByDomainResponse) *type
 	if t == nil {
 		return nil
 	}
+
 	return &types.GetTaskListsByDomainResponse{
-		TaskListNames: t.GetTaskListNames(),
+		DecisionTaskListMap: ToDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: ToDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
 	}
+}
+
+func FromDescribeTaskListResponseMap(t map[string]*types.DescribeTaskListResponse) map[string]*apiv1.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*apiv1.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = FromDescribeTaskListResponse(value)
+	}
+	return taskListMap
+}
+
+func ToDescribeTaskListResponseMap(t map[string]*apiv1.DescribeTaskListResponse) map[string]*types.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*types.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = ToDescribeTaskListResponse(value)
+	}
+	return taskListMap
 }
 
 func FromListWorkflowExecutionsRequest(t *types.ListWorkflowExecutionsRequest) *apiv1.ListWorkflowExecutionsRequest {

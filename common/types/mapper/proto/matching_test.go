@@ -59,6 +59,12 @@ func TestMatchingDescribeTaskListResponse(t *testing.T) {
 	}
 }
 
+func TestMatchingDescribeTaskListResponseMap(t *testing.T) {
+	for _, item := range []map[string]*types.DescribeTaskListResponse{nil, {}, testdata.DescribeTaskListResponseMap} {
+		assert.Equal(t, item, ToMatchingDescribeTaskListResponseMap(FromMatchingDescribeTaskListResponseMap(item)))
+	}
+}
+
 func TestMatchingListTaskListPartitionsRequest(t *testing.T) {
 	for _, item := range []*types.MatchingListTaskListPartitionsRequest{nil, {}, &testdata.MatchingListTaskListPartitionsRequest} {
 		assert.Equal(t, item, ToMatchingListTaskListPartitionsRequest(FromMatchingListTaskListPartitionsRequest(item)))
@@ -120,7 +126,7 @@ func TestMatchingGetTaskListsByDomainRequest(t *testing.T) {
 }
 
 func TestMatchingGetTaskListsByDomainResponse(t *testing.T) {
-	for _, item := range []*types.GetTaskListsByDomainResponse{nil, {}, &testdata.MatchingGetTaskListsByDomainResponse} {
+	for _, item := range []*types.GetTaskListsByDomainResponse{nil, {}, &testdata.GetTaskListsByDomainResponse} {
 		assert.Equal(t, item, ToMatchingGetTaskListsByDomainResponse(FromMatchingGetTaskListsByDomainResponse(item)))
 	}
 }

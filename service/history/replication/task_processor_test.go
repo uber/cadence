@@ -112,7 +112,7 @@ func (s *taskProcessorSuite) SetupTest() {
 
 	s.mockEngine = engine.NewMockEngine(s.controller)
 	s.config = config.NewForTest()
-	s.config.ReplicationTaskProcessorNoTaskRetryWait = dynamicconfig.GetDurationPropertyFnFilteredByTShardID(1 * time.Millisecond)
+	s.config.ReplicationTaskProcessorNoTaskRetryWait = dynamicconfig.GetDurationPropertyFnFilteredByShardID(1 * time.Millisecond)
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.requestChan = make(chan *request, 10)
 

@@ -87,9 +87,19 @@ func AdminListTaskList(c *cli.Context) {
 	}
 
 	fmt.Println("Task Lists for domain " + domain + ":")
-	for _, taskList := range response.GetTaskListNames() {
-		fmt.Println(taskList)
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetBorder(true)
+	table.SetColumnSeparator("|")
+	table.SetHeader([]string{"Task List Name", "Type", "Poller Count"})
+	table.SetHeaderLine(true)
+	table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue, tableHeaderBlue)
+	for name, taskList := range response.GetDecisionTaskListMap() {
+		table.Append([]string{name, strconv.Itoa(len(taskList.GetPollers()))})
 	}
+	for name, taskList := range response.GetActivityTaskListMap() {
+		table.Append([]string{name, strconv.Itoa(len(taskList.GetPollers()))})
+	}
+	table.Render()
 }
 
 func printTaskListStatus(taskListStatus *types.TaskListStatus) {

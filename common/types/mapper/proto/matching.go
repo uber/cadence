@@ -222,8 +222,10 @@ func FromMatchingGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainRespo
 	if t == nil {
 		return nil
 	}
+
 	return &matchingv1.GetTaskListsByDomainResponse{
-		TaskListNames: t.GetTaskListNames(),
+		DecisionTaskListMap: FromMatchingDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: FromMatchingDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
 	}
 }
 
@@ -231,9 +233,33 @@ func ToMatchingGetTaskListsByDomainResponse(t *matchingv1.GetTaskListsByDomainRe
 	if t == nil {
 		return nil
 	}
+
 	return &types.GetTaskListsByDomainResponse{
-		TaskListNames: t.GetTaskListNames(),
+		DecisionTaskListMap: ToMatchingDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: ToMatchingDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
 	}
+}
+
+func FromMatchingDescribeTaskListResponseMap(t map[string]*types.DescribeTaskListResponse) map[string]*matchingv1.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*matchingv1.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = FromMatchingDescribeTaskListResponse(value)
+	}
+	return taskListMap
+}
+
+func ToMatchingDescribeTaskListResponseMap(t map[string]*matchingv1.DescribeTaskListResponse) map[string]*types.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*types.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = ToMatchingDescribeTaskListResponse(value)
+	}
+	return taskListMap
 }
 
 func FromMatchingPollForActivityTaskRequest(t *types.MatchingPollForActivityTaskRequest) *matchingv1.PollForActivityTaskRequest {
