@@ -135,7 +135,7 @@ func (t *timerActiveTaskExecutor) executeUserTimerTimeoutTask(
 
 	timerSequence := execution.NewTimerSequence(mutableState)
 	referenceTime := t.shard.GetTimeSource().Now()
-	resurrectionCheckMinDelay := t.config.ResurrectionCheckMinDelay()
+	resurrectionCheckMinDelay := t.config.ResurrectionCheckMinDelay(mutableState.GetDomainEntry().GetInfo().Name)
 	updateMutableState := false
 
 	// initialized when a timer with delay >= resurrectionCheckMinDelay
@@ -237,7 +237,7 @@ func (t *timerActiveTaskExecutor) executeActivityTimeoutTask(
 
 	timerSequence := execution.NewTimerSequence(mutableState)
 	referenceTime := t.shard.GetTimeSource().Now()
-	resurrectionCheckMinDelay := t.config.ResurrectionCheckMinDelay()
+	resurrectionCheckMinDelay := t.config.ResurrectionCheckMinDelay(mutableState.GetDomainEntry().GetInfo().Name)
 	updateMutableState := false
 	scheduleDecision := false
 
@@ -702,6 +702,12 @@ func (t *timerActiveTaskExecutor) getResurrectedTimer(
 
 	// 2. scan history from minTimerStartedID and see if any
 	// TimerFiredEvent or TimerCancelledEvent matches pending timer
+	// NOTE: since we can't read from middle of an events batch,
+	// history returned by persistence layer won't actually start
+	// from minTimerStartedID, but start from the batch whose nodeID is
+	// larger than minTimerStartedID.
+	// This is ok since the event types we are interested in must in batches
+	// later than the timer started events.
 	resurrectedTimer := make(map[string]struct{})
 	branchToken, err := mutableState.GetCurrentBranchToken()
 	if err != nil {
@@ -747,6 +753,12 @@ func (t *timerActiveTaskExecutor) getResurrectedActivity(
 
 	// 2. scan history from minActivityScheduledID and see if any
 	// activity termination events matches pending activity
+	// NOTE: since we can't read from middle of an events batch,
+	// history returned by persistence layer won't actually start
+	// from minActivityScheduledID, but start from the batch whose nodeID is
+	// larger than minActivityScheduledID.
+	// This is ok since the event types we are interested in must in batches
+	// later than the activity scheduled events.
 	resurrectedActivity := make(map[int64]struct{})
 	branchToken, err := mutableState.GetCurrentBranchToken()
 	if err != nil {
@@ -797,7 +809,7 @@ func (t *timerActiveTaskExecutor) getHistoryPaginationFn(
 			branchToken,
 			firstEventID,
 			nextEventID,
-			nil,
+			token,
 			execution.NDCDefaultPageSize,
 			common.IntPtr(t.shard.GetShardID()),
 		)
