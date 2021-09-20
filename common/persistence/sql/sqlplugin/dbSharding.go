@@ -20,7 +20,11 @@
 
 package sqlplugin
 
-import "github.com/dgryski/go-farm"
+import (
+	"github.com/dgryski/go-farm"
+
+	"github.com/uber/cadence/common/persistence/serialization"
+)
 
 // This section defines the special dbShardID, they must all below 0
 const (
@@ -38,13 +42,19 @@ func GetDBShardIDFromHistoryShardID(historyShardID int, numDBShards int) int{
 }
 
 // GetDBShardIDFromDomainIDAndTasklist maps <domainID, tasklistName> to a DBShardID
-func GetDBShardIDFromDomainIDAndTasklist(domainID, tasklistName string, numDBShards int) int{
+func GetDBShardIDFromDomainIDAndTasklist(domainID, tasklistName string, numDBShards int) int {
 	hash := farm.Hash32([]byte(domainID+"_"+tasklistName)) % uint32(numDBShards)
 	return int(hash) % numDBShards
 }
 
 // GetDBShardIDFromDomainID maps domainID to a DBShardID
-func GetDBShardIDFromDomainID(domainID string, numDBShards int) int{
+func GetDBShardIDFromDomainID(domainID string, numDBShards int) int {
 	hash := farm.Hash32([]byte(domainID)) % uint32(numDBShards)
+	return int(hash) % numDBShards
+}
+
+// GetDBShardIDFromTreeID maps treeID to a DBShardID
+func GetDBShardIDFromTreeID(treeID serialization.UUID, numDBShards int) int {
+	hash := farm.Hash32(treeID) % uint32(numDBShards)
 	return int(hash) % numDBShards
 }
