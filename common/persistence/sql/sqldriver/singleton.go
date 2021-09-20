@@ -30,19 +30,9 @@ import (
 type (
 	// singleton is the driver querying a single SQL database, which is the default driver
 	singleton struct {
-		db   *sqlx.DB        // this is for starting a transaction, or executing any non transaction query
-		tx   *sqlx.Tx        // this is a reference of a started transaction
-		conn commonOfDbAndTx // this is a merged of the above two. In some case it' either db or tx depends on whether or not a transaction has started
-	}
-
-	// a wrapper to help xdb to fit commonOfDbAndTx interface
-	xdbWrapper struct {
-		xdb *sqlx.DB
-	}
-
-	// a wrapper to help xtx to fit commonOfDbAndTx interface
-	xtxWrapper struct {
-		xtx *sqlx.Tx
+		db    *sqlx.DB // this is for starting a transaction, or executing any non transaction query
+		tx    *sqlx.Tx // this is a reference of a started transaction
+		useTx bool     // if tx is not nil, the methods from commonOfDbAndTx should use tx
 	}
 )
 
@@ -53,31 +43,41 @@ func NewSingletonSQLDriver(xdb *sqlx.DB, xtx *sqlx.Tx, _ int) Driver {
 	driver := &singleton{
 		db:   xdb,
 		tx:   xtx,
-		conn: newXdbWrapper(xdb),
 	}
 	if xtx != nil {
-		// when tx is not nil, commonOfDbAndTx will be same as tx
-		driver.conn = newXtxWrapper(xtx)
+		driver.useTx = true
 	}
 	return driver
 }
 
-// below are shared by transactional and non-transactional
+// below are shared by transactional and non-transactional, if s.tx is not nil then use s.tx, otherwise use s.db
 
-func (s *singleton) ExecContext(ctx context.Context, dbShardID int, query string, args ...interface{}) (sql.Result, error) {
-	return s.conn.ExecContext(ctx, dbShardID, query, args...)
+func (s *singleton) ExecContext(ctx context.Context, _ int, query string, args ...interface{}) (sql.Result, error) {
+	if s.useTx {
+		return s.tx.ExecContext(ctx, query, args...)
+	}
+	return s.db.ExecContext(ctx, query, args...)
 }
 
-func (s *singleton) NamedExecContext(ctx context.Context, dbShardID int, query string, arg interface{}) (sql.Result, error) {
-	return s.conn.NamedExecContext(ctx, dbShardID, query, arg)
+func (s *singleton) NamedExecContext(ctx context.Context, _ int, query string, arg interface{}) (sql.Result, error) {
+	if s.useTx {
+		return s.tx.NamedExecContext(ctx, query, arg)
+	}
+	return s.db.NamedExecContext(ctx, query, arg)
 }
 
-func (s *singleton) GetContext(ctx context.Context, dbShardID int, dest interface{}, query string, args ...interface{}) error {
-	return s.conn.GetContext(ctx, dbShardID, dest, query, args...)
+func (s *singleton) GetContext(ctx context.Context, _ int, dest interface{}, query string, args ...interface{}) error {
+	if s.useTx {
+		return s.tx.GetContext(ctx, dest, query, args...)
+	}
+	return s.db.GetContext(ctx, dest, query, args...)
 }
 
-func (s *singleton) SelectContext(ctx context.Context, dbShardID int, dest interface{}, query string, args ...interface{}) error {
-	return s.conn.SelectContext(ctx, dbShardID, dest, query, args...)
+func (s *singleton) SelectContext(ctx context.Context, _ int, dest interface{}, query string, args ...interface{}) error {
+	if s.useTx {
+		return s.tx.SelectContext(ctx, dest, query, args...)
+	}
+	return s.db.SelectContext(ctx, dest, query, args...)
 }
 
 // below are non-transactional methods only
@@ -110,50 +110,4 @@ func (s *singleton) Commit() error {
 
 func (s *singleton) Rollback() error {
 	return s.tx.Rollback()
-}
-
-// below are wrappers for xdb and xtx to commonOfDbAndTx interface
-
-func newXdbWrapper(xdb *sqlx.DB, ) commonOfDbAndTx {
-	return &xdbWrapper{
-		xdb: xdb,
-	}
-}
-
-func (x *xdbWrapper) ExecContext(ctx context.Context, _ int, query string, args ...interface{}) (sql.Result, error) {
-	return x.xdb.ExecContext(ctx, query, args...)
-}
-
-func (x *xdbWrapper) NamedExecContext(ctx context.Context, _ int, query string, arg interface{}) (sql.Result, error) {
-	return x.xdb.NamedExecContext(ctx, query, arg)
-}
-
-func (x *xdbWrapper) GetContext(ctx context.Context, _ int, dest interface{}, query string, args ...interface{}) error {
-	return x.xdb.GetContext(ctx, dest, query, args...)
-}
-
-func (x *xdbWrapper) SelectContext(ctx context.Context, _ int, dest interface{}, query string, args ...interface{}) error {
-	return x.xdb.SelectContext(ctx, dest, query, args...)
-}
-
-func newXtxWrapper(xtx *sqlx.Tx, ) commonOfDbAndTx {
-	return &xtxWrapper{
-		xtx: xtx,
-	}
-}
-
-func (x *xtxWrapper) ExecContext(ctx context.Context, _ int, query string, args ...interface{}) (sql.Result, error) {
-	return x.xtx.ExecContext(ctx, query, args...)
-}
-
-func (x xtxWrapper) NamedExecContext(ctx context.Context, _ int, query string, arg interface{}) (sql.Result, error) {
-	return x.xtx.NamedExecContext(ctx, query, arg)
-}
-
-func (x xtxWrapper) GetContext(ctx context.Context, _ int, dest interface{}, query string, args ...interface{}) error {
-	return x.xtx.GetContext(ctx, dest, query, args...)
-}
-
-func (x xtxWrapper) SelectContext(ctx context.Context, _ int, dest interface{}, query string, args ...interface{}) error {
-	return x.xtx.SelectContext(ctx, dest, query, args...)
 }
