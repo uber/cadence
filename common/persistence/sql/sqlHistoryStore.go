@@ -117,7 +117,8 @@ func (m *sqlHistoryStore) AppendHistoryNodes(
 			DataEncoding: string(blob.Encoding),
 		}
 
-		dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(request.ShardID, m.db.GetTotalNumDBShards())
+		treeUUID := serialization.MustParseUUID(branchInfo.GetTreeID())
+		dbShardID := sqlplugin.GetDBShardIDFromTreeID(treeUUID, m.db.GetTotalNumDBShards())
 		return m.txExecute(dbShardID, ctx, "AppendHistoryNodes", func(tx sqlplugin.Tx) error {
 			result, err := tx.InsertIntoHistoryNode(ctx, nodeRow)
 			if err != nil {
@@ -409,11 +410,12 @@ func (m *sqlHistoryStore) DeleteHistoryBranch(
 		}
 	}
 
-	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(request.ShardID, m.db.GetTotalNumDBShards())
+	treeUUID := serialization.MustParseUUID(treeID)
+	dbShardID := sqlplugin.GetDBShardIDFromTreeID(treeUUID, m.db.GetTotalNumDBShards())
 	return m.txExecute(dbShardID, ctx, "DeleteHistoryBranch", func(tx sqlplugin.Tx) error {
 		branchID := serialization.MustParseUUID(*branch.BranchID)
 		treeFilter := &sqlplugin.HistoryTreeFilter{
-			TreeID:   serialization.MustParseUUID(treeID),
+			TreeID:   treeUUID,
 			BranchID: &branchID,
 			ShardID:  request.ShardID,
 		}
