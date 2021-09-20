@@ -106,20 +106,20 @@ func (x *xdbWrapper) SelectContext(ctx context.Context, _ int, dest interface{},
 	return x.xdb.SelectContext(ctx, dest, query, args...)
 }
 
-func (s *singleton) ExecContext(ctx context.Context, _ int, query string, args ...interface{}) (sql.Result, error) {
-	return s.db.ExecContext(ctx, query, args...)
+func (s *singleton) ExecContext(ctx context.Context, dbShardID int, query string, args ...interface{}) (sql.Result, error) {
+	return s.conn.ExecContext(ctx, dbShardID, query, args...)
 }
 
-func (s *singleton) NamedExecContext(ctx context.Context, _ int, query string, arg interface{}) (sql.Result, error) {
-	return s.db.NamedExecContext(ctx, query, arg)
+func (s *singleton) NamedExecContext(ctx context.Context, dbShardID int, query string, arg interface{}) (sql.Result, error) {
+	return s.conn.NamedExecContext(ctx, dbShardID, query, arg)
 }
 
-func (s *singleton) GetContext(ctx context.Context, _ int, dest interface{}, query string, args ...interface{}) error {
-	return s.db.GetContext(ctx, dest, query, args...)
+func (s *singleton) GetContext(ctx context.Context, dbShardID int, dest interface{}, query string, args ...interface{}) error {
+	return s.conn.GetContext(ctx, dbShardID, dest, query, args...)
 }
 
-func (s *singleton) SelectContext(ctx context.Context, _ int, dest interface{}, query string, args ...interface{}) error {
-	return s.db.SelectContext(ctx, dest, query, args...)
+func (s *singleton) SelectContext(ctx context.Context, dbShardID int, dest interface{}, query string, args ...interface{}) error {
+	return s.conn.SelectContext(ctx, dbShardID, dest, query, args...)
 }
 
 func (s *singleton) Exec(_ int, query string, args ...interface{}) (sql.Result, error) {
