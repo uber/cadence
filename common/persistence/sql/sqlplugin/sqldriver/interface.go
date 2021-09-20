@@ -40,18 +40,18 @@ type (
 		Exec(dbShardID int, query string, args ...interface{}) (sql.Result, error)
 		Select(dbShardID int, dest interface{}, query string, args ...interface{}) error
 		Get(dbShardID int, dest interface{}, query string, args ...interface{}) error
-		BeginTxx(dbShardID int, ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error)
-		Close(dbShardID int, ) error
+		BeginTxx(ctx context.Context, dbShardID int, opts *sql.TxOptions) (*sqlx.Tx, error)
+		Close() error
 
 		// refactored from tx(tx)
-		Commit(dbShardID int, ) error
-		Rollback(dbShardID int, ) error
+		Commit() error
+		Rollback() error
 	}
 
 	conn interface {
-		ExecContext(dbShardID int, ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-		NamedExecContext(dbShardID int, ctx context.Context, query string, arg interface{}) (sql.Result, error)
-		GetContext(dbShardID int, ctx context.Context, dest interface{}, query string, args ...interface{}) error
-		SelectContext(dbShardID int, ctx context.Context, dest interface{}, query string, args ...interface{}) error
+		ExecContext(ctx context.Context, dbShardID int, query string, args ...interface{}) (sql.Result, error)
+		NamedExecContext(ctx context.Context, dbShardID int, query string, arg interface{}) (sql.Result, error)
+		GetContext(ctx context.Context, dbShardID int, dest interface{}, query string, args ...interface{}) error
+		SelectContext(ctx context.Context, dbShardID int, dest interface{}, query string, args ...interface{}) error
 	}
 )

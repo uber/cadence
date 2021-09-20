@@ -62,7 +62,7 @@ func (q *sqlQueueStore) EnqueueMessage(
 	ctx context.Context,
 	messagePayload []byte,
 ) error {
-	return q.txExecute(ctx, "EnqueueMessage", func(tx sqlplugin.Tx) error {
+	return q.txExecute(sqlplugin.DbDefaultShard, ctx, "EnqueueMessage", func(tx sqlplugin.Tx) error {
 		lastMessageID, err := tx.GetLastEnqueuedMessageIDForUpdate(ctx, q.queueType)
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -121,7 +121,7 @@ func (q *sqlQueueStore) UpdateAckLevel(
 	messageID int64,
 	clusterName string,
 ) error {
-	return q.txExecute(ctx, "UpdateAckLevel", func(tx sqlplugin.Tx) error {
+	return q.txExecute(sqlplugin.DbDefaultShard, ctx, "UpdateAckLevel", func(tx sqlplugin.Tx) error {
 		clusterAckLevels, err := tx.GetAckLevels(ctx, q.queueType, true)
 		if err != nil {
 			return err
@@ -155,7 +155,7 @@ func (q *sqlQueueStore) EnqueueMessageToDLQ(
 	ctx context.Context,
 	messagePayload []byte,
 ) error {
-	return q.txExecute(ctx, "EnqueueMessageToDLQ", func(tx sqlplugin.Tx) error {
+	return q.txExecute(sqlplugin.DbDefaultShard, ctx, "EnqueueMessageToDLQ", func(tx sqlplugin.Tx) error {
 		var err error
 		lastMessageID, err := tx.GetLastEnqueuedMessageIDForUpdate(ctx, q.getDLQTypeFromQueueType())
 		if err != nil {
@@ -233,7 +233,7 @@ func (q *sqlQueueStore) UpdateDLQAckLevel(
 	messageID int64,
 	clusterName string,
 ) error {
-	return q.txExecute(ctx, "UpdateDLQAckLevel", func(tx sqlplugin.Tx) error {
+	return q.txExecute(sqlplugin.DbDefaultShard, ctx, "UpdateDLQAckLevel", func(tx sqlplugin.Tx) error {
 		clusterAckLevels, err := tx.GetAckLevels(ctx, q.getDLQTypeFromQueueType(), true)
 		if err != nil {
 			return err

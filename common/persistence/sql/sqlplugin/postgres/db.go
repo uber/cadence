@@ -82,8 +82,9 @@ func (pdb *db) IsThrottlingError(err error) bool {
 
 // newDB returns an instance of DB, which is a logical
 // connection to the underlying postgres database
-func newDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
-	driver := sqldriver.NewSingletonSQLDriver(xdb, tx)
+// dbShardID is needed when tx is not nil
+func newDB(xdb *sqlx.DB, tx *sqlx.Tx, dbShardID int) *db {
+	driver := sqldriver.NewSingletonSQLDriver(xdb, tx, dbShardID)
 	db := &db{
 		converter:  &converter{},
 		driver:     driver,
@@ -93,12 +94,12 @@ func newDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
 }
 
 // BeginTx starts a new transaction and returns a reference to the Tx object
-func (pdb *db) BeginTx(ctx context.Context) (sqlplugin.Tx, error) {
-	xtx, err := pdb.driver.BeginTxx(ctx, nil)
+func (pdb *db) BeginTx(dbShardID int, ctx context.Context) (sqlplugin.Tx, error) {
+	xtx, err := pdb.driver.BeginTxx(dbShardID, ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	return newDB(pdb.originalDB, xtx), nil
+	return newDB(pdb.originalDB, xtx, dbShardID), nil
 }
 
 // Commit commits a previously started transaction
