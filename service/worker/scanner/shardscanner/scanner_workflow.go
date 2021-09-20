@@ -109,10 +109,9 @@ func NewScannerWorkflow(
 
 // Start starts a shard scanner workflow.
 func (wf *ScannerWorkflow) Start(ctx workflow.Context) error {
-	activityCtx := getShortActivityContext(ctx)
 
 	var resolvedConfig ResolvedScannerWorkflowConfig
-	if err := workflow.ExecuteActivity(activityCtx, ActivityScannerConfig, ScannerConfigActivityParams{
+	if err := workflow.ExecuteActivity(getShortActivityContext(ctx), ActivityScannerConfig, ScannerConfigActivityParams{
 		Overwrites: wf.Params.ScannerWorkflowConfigOverwrites,
 	}).Get(ctx, &resolvedConfig); err != nil {
 		return err
@@ -128,9 +127,8 @@ func (wf *ScannerWorkflow) Start(ctx workflow.Context) error {
 		workflow.Go(ctx, func(ctx workflow.Context) {
 			batches := getShardBatches(resolvedConfig.GenericScannerConfig.ActivityBatchSize, resolvedConfig.GenericScannerConfig.Concurrency, wf.Shards, idx)
 			for _, batch := range batches {
-				activityCtx = getLongActivityContext(ctx)
 				var reports []ScanReport
-				if err := workflow.ExecuteActivity(activityCtx, ActivityScanShard, ScanShardActivityParams{
+				if err := workflow.ExecuteActivity(getLongActivityContext(ctx), ActivityScanShard, ScanShardActivityParams{
 					Shards:                  batch,
 					PageSize:                resolvedConfig.GenericScannerConfig.PageSize,
 					BlobstoreFlushThreshold: resolvedConfig.GenericScannerConfig.BlobstoreFlushThreshold,
@@ -166,7 +164,7 @@ func (wf *ScannerWorkflow) Start(ctx workflow.Context) error {
 	}
 	summary := wf.Aggregator.GetStatusSummary()
 
-	return workflow.ExecuteActivity(activityCtx, ActivityScannerEmitMetrics, ScannerEmitMetricsActivityParams{
+	return workflow.ExecuteActivity(getShortActivityContext(ctx), ActivityScannerEmitMetrics, ScannerEmitMetricsActivityParams{
 		ShardSuccessCount:            summary[ShardStatusSuccess],
 		ShardControlFlowFailureCount: summary[ShardStatusControlFlowFailure],
 	}).Get(ctx, nil)
