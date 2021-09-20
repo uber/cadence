@@ -75,7 +75,7 @@ func newXtxWrapper(xtx *sqlx.Tx, ) conn {
 }
 
 func (x *xtxWrapper) ExecContext(ctx context.Context, _ int, query string, args ...interface{}) (sql.Result, error) {
-	return x.xtx.ExecContext(ctx, query, args)
+	return x.xtx.ExecContext(ctx, query, args...)
 }
 
 func (x xtxWrapper) NamedExecContext(ctx context.Context, _ int, query string, arg interface{}) (sql.Result, error) {
@@ -83,15 +83,15 @@ func (x xtxWrapper) NamedExecContext(ctx context.Context, _ int, query string, a
 }
 
 func (x xtxWrapper) GetContext(ctx context.Context, _ int, dest interface{}, query string, args ...interface{}) error {
-	return x.xtx.GetContext(ctx, dest, query, args)
+	return x.xtx.GetContext(ctx, dest, query, args...)
 }
 
 func (x xtxWrapper) SelectContext(ctx context.Context, _ int, dest interface{}, query string, args ...interface{}) error {
-	return x.xtx.SelectContext(ctx, dest, query, args)
+	return x.xtx.SelectContext(ctx, dest, query, args...)
 }
 
 func (x *xdbWrapper) ExecContext(ctx context.Context, _ int, query string, args ...interface{}) (sql.Result, error) {
-	return x.xdb.ExecContext(ctx, query, args)
+	return x.xdb.ExecContext(ctx, query, args...)
 }
 
 func (x *xdbWrapper) NamedExecContext(ctx context.Context, _ int, query string, arg interface{}) (sql.Result, error) {
@@ -99,15 +99,15 @@ func (x *xdbWrapper) NamedExecContext(ctx context.Context, _ int, query string, 
 }
 
 func (x *xdbWrapper) GetContext(ctx context.Context, _ int, dest interface{}, query string, args ...interface{}) error {
-	return x.xdb.GetContext(ctx, dest, query, args)
+	return x.xdb.GetContext(ctx, dest, query, args...)
 }
 
 func (x *xdbWrapper) SelectContext(ctx context.Context, _ int, dest interface{}, query string, args ...interface{}) error {
-	return x.xdb.SelectContext(ctx, dest, query, args)
+	return x.xdb.SelectContext(ctx, dest, query, args...)
 }
 
 func (s *singleton) ExecContext(ctx context.Context, _ int, query string, args ...interface{}) (sql.Result, error) {
-	return s.db.ExecContext(ctx, query, args)
+	return s.db.ExecContext(ctx, query, args...)
 }
 
 func (s *singleton) NamedExecContext(ctx context.Context, _ int, query string, arg interface{}) (sql.Result, error) {
@@ -115,23 +115,23 @@ func (s *singleton) NamedExecContext(ctx context.Context, _ int, query string, a
 }
 
 func (s *singleton) GetContext(ctx context.Context, _ int, dest interface{}, query string, args ...interface{}) error {
-	return s.db.GetContext(ctx, dest, query, args)
+	return s.db.GetContext(ctx, dest, query, args...)
 }
 
 func (s *singleton) SelectContext(ctx context.Context, _ int, dest interface{}, query string, args ...interface{}) error {
-	return s.db.SelectContext(ctx, dest, query, args)
+	return s.db.SelectContext(ctx, dest, query, args...)
 }
 
 func (s *singleton) Exec(_ int, query string, args ...interface{}) (sql.Result, error) {
-	return s.db.Exec(query, args)
+	return s.db.Exec(query, args...)
 }
 
 func (s *singleton) Select(_ int, dest interface{}, query string, args ...interface{}) error {
-	return s.db.Select(dest, query, args)
+	return s.db.Select(dest, query, args...)
 }
 
 func (s *singleton) Get(_ int, dest interface{}, query string, args ...interface{}) error {
-	return s.db.Get(dest, query, args)
+	return s.db.Get(dest, query, args...)
 }
 
 func (s *singleton) BeginTxx(ctx context.Context, _ int, opts *sql.TxOptions) (*sqlx.Tx, error) {
