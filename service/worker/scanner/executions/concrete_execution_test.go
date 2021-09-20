@@ -26,13 +26,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/reconciliation/store"
-
 	"github.com/uber/cadence/service/worker/scanner/shardscanner"
 
-	"github.com/stretchr/testify/suite"
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/workflow"
 )
@@ -60,6 +59,7 @@ func (s *concreteExectionsWorkflowsSuite) TestScannerWorkflow_Success() {
 			ActivityBatchSize: 5,
 		},
 	}, nil)
+	env.OnActivity(shardscanner.ActivityScannerEmitMetrics, mock.Anything, mock.Anything).Return(nil)
 	shards := shardscanner.Shards{
 		Range: &shardscanner.ShardRange{
 			Min: 0,

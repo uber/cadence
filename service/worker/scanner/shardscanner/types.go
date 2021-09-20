@@ -71,6 +71,12 @@ type (
 		Logger   log.Logger
 	}
 
+	// ScannerEmitMetricsActivityParams is the parameter for ScannerEmitMetricsActivity
+	ScannerEmitMetricsActivityParams struct {
+		ShardSuccessCount            int
+		ShardControlFlowFailureCount int
+	}
+
 	// ShardRange identifies a set of shards based on min (inclusive) and max (exclusive)
 	ShardRange struct {
 		Min int

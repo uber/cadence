@@ -164,8 +164,13 @@ func (wf *ScannerWorkflow) Start(ctx workflow.Context) error {
 			i++
 		}
 	}
+	summary := wf.Aggregator.GetStatusSummary()
 
-	return nil
+	return workflow.ExecuteActivity(activityCtx, ActivityScannerEmitMetrics, ScannerEmitMetricsActivityParams{
+		ShardSuccessCount:            summary[ShardStatusSuccess],
+		ShardControlFlowFailureCount: summary[ShardStatusControlFlowFailure],
+	}).Get(ctx, nil)
+
 }
 
 func getScanHandlers(aggregator *ShardScanResultAggregator) map[string]interface{} {

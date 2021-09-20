@@ -26,7 +26,6 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/cadence/testsuite"
@@ -78,6 +77,7 @@ func (s *timersWorkflowsSuite) TestScannerWorkflow_Success() {
 		},
 		CustomScannerConfig: cconfig,
 	}, nil)
+	env.OnActivity(shardscanner.ActivityScannerEmitMetrics, mock.Anything, mock.Anything).Return(nil)
 	shards := shardscanner.Shards{
 		Range: &shardscanner.ShardRange{
 			Min: 0,
