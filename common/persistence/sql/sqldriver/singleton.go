@@ -30,17 +30,17 @@ import (
 type (
 	// singleton is the driver querying a single SQL database, which is the default driver
 	singleton struct {
-		db   *sqlx.DB // this is for starting a transaction, or executing any non transaction query
-		tx   *sqlx.Tx // this is a reference of a started transaction
-		conn conn     // this is a merged of the above two. In some case it' either db or tx depends on whether or not a transaction has started
+		db   *sqlx.DB        // this is for starting a transaction, or executing any non transaction query
+		tx   *sqlx.Tx        // this is a reference of a started transaction
+		conn commonOfDbAndTx // this is a merged of the above two. In some case it' either db or tx depends on whether or not a transaction has started
 	}
 
-	// a wrapper to help xdb to fit conn interface
+	// a wrapper to help xdb to fit commonOfDbAndTx interface
 	xdbWrapper struct {
 		xdb *sqlx.DB
 	}
 
-	// a wrapper to help xtx to fit conn interface
+	// a wrapper to help xtx to fit commonOfDbAndTx interface
 	xtxWrapper struct {
 		xtx *sqlx.Tx
 	}
@@ -56,19 +56,19 @@ func NewSingletonSQLDriver(xdb *sqlx.DB, xtx *sqlx.Tx, _ int) Driver {
 		conn: newXdbWrapper(xdb),
 	}
 	if xtx != nil {
-		// when tx is not nil, conn will be same as tx
+		// when tx is not nil, commonOfDbAndTx will be same as tx
 		driver.conn = newXtxWrapper(xtx)
 	}
 	return driver
 }
 
-func newXdbWrapper(xdb *sqlx.DB, ) conn {
+func newXdbWrapper(xdb *sqlx.DB, ) commonOfDbAndTx {
 	return &xdbWrapper{
 		xdb: xdb,
 	}
 }
 
-func newXtxWrapper(xtx *sqlx.Tx, ) conn {
+func newXtxWrapper(xtx *sqlx.Tx, ) commonOfDbAndTx {
 	return &xtxWrapper{
 		xtx: xtx,
 	}

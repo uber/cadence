@@ -32,23 +32,22 @@ type (
 	//The layer is added so that we can have a adapter to support multiple SQL databases behind a single Cadence cluster
 	Driver interface {
 
-		// refactored from conn(xdb)
-		// this is for shared methods of both non-transactional DB and transactional one
-		conn
+		// shared methods of both non-transactional sqlx.DB and transactional sqlx.Tx
+		commonOfDbAndTx
 
-		// refactored from db(xdb)
+		// From sqlx.DB
 		Exec(dbShardID int, query string, args ...interface{}) (sql.Result, error)
 		Select(dbShardID int, dest interface{}, query string, args ...interface{}) error
 		Get(dbShardID int, dest interface{}, query string, args ...interface{}) error
 		BeginTxx(ctx context.Context, dbShardID int, opts *sql.TxOptions) (*sqlx.Tx, error)
 		Close() error
 
-		// refactored from tx(tx)
+		// sqlx.Tx
 		Commit() error
 		Rollback() error
 	}
 
-	conn interface {
+	commonOfDbAndTx interface {
 		ExecContext(ctx context.Context, dbShardID int, query string, args ...interface{}) (sql.Result, error)
 		NamedExecContext(ctx context.Context, dbShardID int, query string, arg interface{}) (sql.Result, error)
 		GetContext(ctx context.Context, dbShardID int, dest interface{}, query string, args ...interface{}) error
