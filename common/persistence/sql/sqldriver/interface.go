@@ -35,7 +35,8 @@ type (
 		// shared methods of both non-transactional sqlx.DB and transactional sqlx.Tx
 		commonOfDbAndTx
 
-		// From sqlx.DB
+		// From sqlx.DB: those methods are executed without starting a transaction
+		// TODO: maybe rename to make it more clear
 		Exec(dbShardID int, query string, args ...interface{}) (sql.Result, error)
 		Select(dbShardID int, dest interface{}, query string, args ...interface{}) error
 		Get(dbShardID int, dest interface{}, query string, args ...interface{}) error
@@ -47,6 +48,7 @@ type (
 		Rollback() error
 	}
 
+	// the methods can be executed from either a started or transaction(then need to call Commit/Rollback), or without a transaction
 	commonOfDbAndTx interface {
 		ExecContext(ctx context.Context, dbShardID int, query string, args ...interface{}) (sql.Result, error)
 		NamedExecContext(ctx context.Context, dbShardID int, query string, arg interface{}) (sql.Result, error)
