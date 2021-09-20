@@ -112,6 +112,8 @@ func (s *singleton) Rollback() error {
 	return s.tx.Rollback()
 }
 
+// below are wrappers for xdb and xtx to commonOfDbAndTx interface
+
 func newXdbWrapper(xdb *sqlx.DB, ) commonOfDbAndTx {
 	return &xdbWrapper{
 		xdb: xdb,
