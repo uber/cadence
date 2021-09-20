@@ -830,7 +830,7 @@ const (
 	// KeyName: history.resurrectionCheckMinDelay
 	// Value type: Duration
 	// Default value: 24*time.Hour
-	// Allowed filters: N/A
+	// Allowed filters: DomainName
 	ResurrectionCheckMinDelay
 	// QueueProcessorEnableSplit is indicates whether processing queue split policy should be enabled
 	// KeyName: history.queueProcessorEnableSplit
