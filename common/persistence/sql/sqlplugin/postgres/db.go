@@ -34,11 +34,16 @@ import (
 
 type (
 	db struct {
-		converter  DataConverter
-		driver     sqldriver.Driver
-		originalDB *sqlx.DB
+		converter   DataConverter
+		driver      sqldriver.Driver
+		originalDB  *sqlx.DB
+		numDBShards int
 	}
 )
+
+func (pdb *db) GetTotalNumDBShards() int {
+	return pdb.numDBShards
+}
 
 var _ sqlplugin.DB = (*db)(nil)
 var _ sqlplugin.Tx = (*db)(nil)
@@ -83,23 +88,24 @@ func (pdb *db) IsThrottlingError(err error) bool {
 // newDB returns an instance of DB, which is a logical
 // connection to the underlying postgres database
 // dbShardID is needed when tx is not nil
-func newDB(xdb *sqlx.DB, tx *sqlx.Tx, dbShardID int) *db {
+func newDB(xdb *sqlx.DB, tx *sqlx.Tx, dbShardID int, numDBShards int) *db {
 	driver := sqldriver.NewSingletonSQLDriver(xdb, tx, dbShardID)
 	db := &db{
-		converter:  &converter{},
-		driver:     driver,
-		originalDB: xdb, // this is kept because newDB will be called again when starting a transaction
+		converter:   &converter{},
+		driver:      driver,
+		originalDB:  xdb, // this is kept because newDB will be called again when starting a transaction
+		numDBShards: numDBShards,
 	}
 	return db
 }
 
 // BeginTx starts a new transaction and returns a reference to the Tx object
 func (pdb *db) BeginTx(dbShardID int, ctx context.Context) (sqlplugin.Tx, error) {
-	xtx, err := pdb.driver.BeginTxx(dbShardID, ctx, nil)
+	xtx, err := pdb.driver.BeginTxx(ctx, dbShardID, nil)
 	if err != nil {
 		return nil, err
 	}
-	return newDB(pdb.originalDB, xtx, dbShardID), nil
+	return newDB(pdb.originalDB, xtx, dbShardID, pdb.numDBShards), nil
 }
 
 // Commit commits a previously started transaction

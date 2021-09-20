@@ -23,6 +23,8 @@ package postgres
 import (
 	"fmt"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
 const (
@@ -74,7 +76,7 @@ func (pdb *db) CreateSchemaVersionTables() error {
 // ReadSchemaVersion returns the current schema version for the keyspace
 func (pdb *db) ReadSchemaVersion(database string) (string, error) {
 	var version string
-	err := pdb.driver.Get(&version, readSchemaVersionQuery, database)
+	err := pdb.driver.Get(sqlplugin.DbAllShards, &version, readSchemaVersionQuery, database)
 	return version, err
 }
 
@@ -90,15 +92,17 @@ func (pdb *db) WriteSchemaUpdateLog(oldVersion string, newVersion string, manife
 }
 
 // Exec executes a sql statement
+// For Sharded SQL, it will execute the statement for all shards
+// TODO: rename to ExecSchemaQuery so that we know it should use DB_ALL_SHARDS
 func (pdb *db) Exec(stmt string, args ...interface{}) error {
-	_, err := pdb.driver.Exec(stmt, args...)
+	_, err := pdb.driver.Exec(sqlplugin.DbAllShards, stmt, args...)
 	return err
 }
 
 // ListTables returns a list of tables in this database
 func (pdb *db) ListTables(database string) ([]string, error) {
 	var tables []string
-	err := pdb.driver.Select(&tables, listTablesQuery)
+	err := pdb.driver.Select(sqlplugin.DbDefaultShard, &tables, listTablesQuery)
 	return tables, err
 }
 

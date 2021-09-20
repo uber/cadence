@@ -470,14 +470,16 @@ func (m *sqlHistoryStore) GetAllHistoryTreeBranches(
 	ctx context.Context,
 	request *p.GetAllHistoryTreeBranchesRequest,
 ) (*p.GetAllHistoryTreeBranchesResponse, error) {
-	page := historyTreePageToken{
-		ShardID:  0,
-		TreeID:   serialization.UUID{},
-		BranchID: serialization.UUID{},
-	}
+	page := historyTreePageToken{}
 	if request.NextPageToken != nil {
 		if err := gobDeserialize(request.NextPageToken, &page); err != nil {
 			return nil, fmt.Errorf("unable to decode next page token")
+		}
+	} else {
+		page = historyTreePageToken{
+			ShardID:  0, // First page starting from ShardID 0, and increase if finish reading current shard
+			TreeID:   serialization.UUID{},
+			BranchID: serialization.UUID{},
 		}
 	}
 	filter := sqlplugin.HistoryTreeFilter{
@@ -514,6 +516,8 @@ func (m *sqlHistoryStore) GetAllHistoryTreeBranches(
 			BranchID: lastRow.BranchID,
 		})
 	}
+	// TODO: this is broken for multi-sharding: the shardID should increase if there are less rows than request pageSize,
+	// until loop over all shards
 	return resp, nil
 }
 

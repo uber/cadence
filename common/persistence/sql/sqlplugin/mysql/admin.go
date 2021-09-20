@@ -86,6 +86,7 @@ func (mdb *db) WriteSchemaUpdateLog(oldVersion string, newVersion string, manife
 }
 
 // Exec executes a sql statement
+// For Sharded SQL, it will execute the statement for all shards
 // TODO: rename to ExecSchemaQuery so that we know it should use DB_ALL_SHARDS
 func (mdb *db) Exec(stmt string, args ...interface{}) error {
 	_, err := mdb.driver.Exec(sqlplugin.DbAllShards, stmt, args...)
