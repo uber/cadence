@@ -50,7 +50,7 @@ func (mdb *db) InsertIntoQueue(
 	row *sqlplugin.QueueRow,
 ) (sql.Result, error) {
 
-	return mdb.conn.NamedExecContext(ctx, templateEnqueueMessageQuery, row)
+	return mdb.driver.NamedExecContext(ctx, sqlplugin.DbDefaultShard, templateEnqueueMessageQuery, row)
 }
 
 // GetLastEnqueuedMessageIDForUpdate returns the last enqueued message ID
@@ -60,7 +60,7 @@ func (mdb *db) GetLastEnqueuedMessageIDForUpdate(
 ) (int64, error) {
 
 	var lastMessageID int64
-	err := mdb.conn.GetContext(ctx, &lastMessageID, templateGetLastMessageIDQuery, queueType)
+	err := mdb.driver.GetContext(ctx, sqlplugin.DbDefaultShard, &lastMessageID, templateGetLastMessageIDQuery, queueType)
 	return lastMessageID, err
 }
 
@@ -73,7 +73,7 @@ func (mdb *db) GetMessagesFromQueue(
 ) ([]sqlplugin.QueueRow, error) {
 
 	var rows []sqlplugin.QueueRow
-	err := mdb.conn.SelectContext(ctx, &rows, templateGetMessagesQuery, queueType, lastMessageID, maxRows)
+	err := mdb.driver.SelectContext(ctx, sqlplugin.DbDefaultShard, &rows, templateGetMessagesQuery, queueType, lastMessageID, maxRows)
 	return rows, err
 }
 
@@ -87,7 +87,7 @@ func (mdb *db) GetMessagesBetween(
 ) ([]sqlplugin.QueueRow, error) {
 
 	var rows []sqlplugin.QueueRow
-	err := mdb.conn.SelectContext(ctx, &rows, templateGetMessagesBetweenQuery, queueType, firstMessageID, lastMessageID, maxRows)
+	err := mdb.driver.SelectContext(ctx, sqlplugin.DbDefaultShard, &rows, templateGetMessagesBetweenQuery, queueType, firstMessageID, lastMessageID, maxRows)
 	return rows, err
 }
 
@@ -98,7 +98,7 @@ func (mdb *db) DeleteMessagesBefore(
 	messageID int64,
 ) (sql.Result, error) {
 
-	return mdb.conn.ExecContext(ctx, templateDeleteMessagesBeforeQuery, queueType, messageID)
+	return mdb.driver.ExecContext(ctx, sqlplugin.DbDefaultShard, templateDeleteMessagesBeforeQuery, queueType, messageID)
 }
 
 // RangeDeleteMessages deletes messages before messageID from the queue
@@ -109,7 +109,7 @@ func (mdb *db) RangeDeleteMessages(
 	inclusiveEndMessageID int64,
 ) (sql.Result, error) {
 
-	return mdb.conn.ExecContext(ctx, templateRangeDeleteMessagesQuery, queueType, exclusiveBeginMessageID, inclusiveEndMessageID)
+	return mdb.driver.ExecContext(ctx, sqlplugin.DbDefaultShard, templateRangeDeleteMessagesQuery, queueType, exclusiveBeginMessageID, inclusiveEndMessageID)
 }
 
 // DeleteMessage deletes message with a messageID from the queue
@@ -119,7 +119,7 @@ func (mdb *db) DeleteMessage(
 	messageID int64,
 ) (sql.Result, error) {
 
-	return mdb.conn.ExecContext(ctx, templateDeleteMessageQuery, queueType, messageID)
+	return mdb.driver.ExecContext(ctx, sqlplugin.DbDefaultShard, templateDeleteMessageQuery, queueType, messageID)
 }
 
 // InsertAckLevel inserts ack level
@@ -136,7 +136,7 @@ func (mdb *db) InsertAckLevel(
 		return err
 	}
 
-	_, err = mdb.conn.NamedExecContext(ctx, templateInsertQueueMetadataQuery, sqlplugin.QueueMetadataRow{QueueType: queueType, Data: data})
+	_, err = mdb.driver.NamedExecContext(ctx, sqlplugin.DbDefaultShard, templateInsertQueueMetadataQuery, sqlplugin.QueueMetadataRow{QueueType: queueType, Data: data})
 	return err
 
 }
@@ -153,7 +153,7 @@ func (mdb *db) UpdateAckLevels(
 		return err
 	}
 
-	_, err = mdb.conn.ExecContext(ctx, templateUpdateQueueMetadataQuery, data, queueType)
+	_, err = mdb.driver.ExecContext(ctx, sqlplugin.DbDefaultShard, templateUpdateQueueMetadataQuery, data, queueType)
 	return err
 }
 
@@ -170,7 +170,7 @@ func (mdb *db) GetAckLevels(
 	}
 
 	var data []byte
-	err := mdb.conn.GetContext(ctx, &data, queryStr, queueType)
+	err := mdb.driver.GetContext(ctx, sqlplugin.DbDefaultShard, &data, queryStr, queueType)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -194,8 +194,9 @@ func (mdb *db) GetQueueSize(
 ) (int64, error) {
 
 	var size []int64
-	if err := mdb.conn.SelectContext(
+	if err := mdb.driver.SelectContext(
 		ctx,
+		sqlplugin.DbDefaultShard,
 		&size,
 		templateGetQueueSizeQuery,
 		queueType,

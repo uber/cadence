@@ -102,7 +102,10 @@ task_type = :task_type
 
 // InsertIntoTasks inserts one or more rows into tasks table
 func (mdb *db) InsertIntoTasks(ctx context.Context, rows []sqlplugin.TasksRow) (sql.Result, error) {
-	return mdb.conn.NamedExecContext(ctx, createTaskQry, rows)
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	return mdb.driver.NamedExecContext(ctx, rows[0].ShardID, createTaskQry, rows)
 }
 
 // SelectFromTasks reads one or more rows from tasks table
@@ -111,10 +114,10 @@ func (mdb *db) SelectFromTasks(ctx context.Context, filter *sqlplugin.TasksFilte
 	var rows []sqlplugin.TasksRow
 	switch {
 	case filter.MaxTaskID != nil:
-		err = mdb.conn.SelectContext(ctx, &rows, getTaskMinMaxQry, filter.DomainID,
+		err = mdb.driver.SelectContext(ctx, filter.ShardID, &rows, getTaskMinMaxQry, filter.DomainID,
 			filter.TaskListName, filter.TaskType, *filter.MinTaskID, *filter.MaxTaskID, *filter.PageSize)
 	default:
-		err = mdb.conn.SelectContext(ctx, &rows, getTaskMinQry, filter.DomainID,
+		err = mdb.driver.SelectContext(ctx, filter.ShardID, &rows, getTaskMinQry, filter.DomainID,
 			filter.TaskListName, filter.TaskType, *filter.MinTaskID, *filter.PageSize)
 	}
 	if err != nil {
@@ -129,10 +132,10 @@ func (mdb *db) DeleteFromTasks(ctx context.Context, filter *sqlplugin.TasksFilte
 		if filter.Limit == nil || *filter.Limit == 0 {
 			return nil, fmt.Errorf("missing limit parameter")
 		}
-		return mdb.conn.ExecContext(ctx, rangeDeleteTaskQry,
+		return mdb.driver.ExecContext(ctx, filter.ShardID, rangeDeleteTaskQry,
 			filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskIDLessThanEquals, *filter.Limit)
 	}
-	return mdb.conn.ExecContext(ctx, deleteTaskQry, filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskID)
+	return mdb.driver.ExecContext(ctx, filter.ShardID, deleteTaskQry, filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskID)
 }
 
 func (mdb *db) GetOrphanTasks(ctx context.Context, filter *sqlplugin.OrphanTasksFilter) ([]sqlplugin.TaskKeyRow, error) {
@@ -141,7 +144,7 @@ func (mdb *db) GetOrphanTasks(ctx context.Context, filter *sqlplugin.OrphanTasks
 	}
 	var rows []sqlplugin.TaskKeyRow
 
-	err := mdb.conn.SelectContext(ctx, &rows, getOrphanTaskQry, *filter.Limit)
+	err := mdb.driver.SelectContext(ctx, sqlplugin.DbAllShards, &rows, getOrphanTaskQry, *filter.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -150,12 +153,12 @@ func (mdb *db) GetOrphanTasks(ctx context.Context, filter *sqlplugin.OrphanTasks
 
 // InsertIntoTaskLists inserts one or more rows into task_lists table
 func (mdb *db) InsertIntoTaskLists(ctx context.Context, row *sqlplugin.TaskListsRow) (sql.Result, error) {
-	return mdb.conn.NamedExecContext(ctx, createTaskListQry, row)
+	return mdb.driver.NamedExecContext(ctx, row.ShardID, createTaskListQry, row)
 }
 
 // UpdateTaskLists updates a row in task_lists table
 func (mdb *db) UpdateTaskLists(ctx context.Context, row *sqlplugin.TaskListsRow) (sql.Result, error) {
-	return mdb.conn.NamedExecContext(ctx, updateTaskListQry, row)
+	return mdb.driver.NamedExecContext(ctx, row.ShardID, updateTaskListQry, row)
 }
 
 // SelectFromTaskLists reads one or more rows from task_lists table
@@ -173,7 +176,7 @@ func (mdb *db) SelectFromTaskLists(ctx context.Context, filter *sqlplugin.TaskLi
 func (mdb *db) selectFromTaskLists(ctx context.Context, filter *sqlplugin.TaskListsFilter) ([]sqlplugin.TaskListsRow, error) {
 	var err error
 	var row sqlplugin.TaskListsRow
-	err = mdb.conn.GetContext(ctx, &row, getTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType)
+	err = mdb.driver.GetContext(ctx, filter.ShardID, &row, getTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +186,7 @@ func (mdb *db) selectFromTaskLists(ctx context.Context, filter *sqlplugin.TaskLi
 func (mdb *db) rangeSelectFromTaskLists(ctx context.Context, filter *sqlplugin.TaskListsFilter) ([]sqlplugin.TaskListsRow, error) {
 	var err error
 	var rows []sqlplugin.TaskListsRow
-	err = mdb.conn.SelectContext(ctx, &rows, listTaskListQry,
+	err = mdb.driver.SelectContext(ctx, filter.ShardID, &rows, listTaskListQry,
 		filter.ShardID, *filter.DomainIDGreaterThan, *filter.NameGreaterThan, *filter.TaskTypeGreaterThan, *filter.DomainIDGreaterThan, *filter.NameGreaterThan, *filter.DomainIDGreaterThan, *filter.PageSize)
 	if err != nil {
 		return nil, err
@@ -196,13 +199,13 @@ func (mdb *db) rangeSelectFromTaskLists(ctx context.Context, filter *sqlplugin.T
 
 // DeleteFromTaskLists deletes a row from task_lists table
 func (mdb *db) DeleteFromTaskLists(ctx context.Context, filter *sqlplugin.TaskListsFilter) (sql.Result, error) {
-	return mdb.conn.ExecContext(ctx, deleteTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType, *filter.RangeID)
+	return mdb.driver.ExecContext(ctx, filter.ShardID, deleteTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType, *filter.RangeID)
 }
 
 // LockTaskLists locks a row in task_lists table
 func (mdb *db) LockTaskLists(ctx context.Context, filter *sqlplugin.TaskListsFilter) (int64, error) {
 	var rangeID int64
-	err := mdb.conn.GetContext(ctx, &rangeID, lockTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType)
+	err := mdb.driver.GetContext(ctx, filter.ShardID, &rangeID, lockTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType)
 	return rangeID, err
 }
 

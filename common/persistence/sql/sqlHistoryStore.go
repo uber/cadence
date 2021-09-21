@@ -117,7 +117,9 @@ func (m *sqlHistoryStore) AppendHistoryNodes(
 			DataEncoding: string(blob.Encoding),
 		}
 
-		return m.txExecute(ctx, "AppendHistoryNodes", func(tx sqlplugin.Tx) error {
+		treeUUID := serialization.MustParseUUID(branchInfo.GetTreeID())
+		dbShardID := sqlplugin.GetDBShardIDFromTreeID(treeUUID, m.db.GetTotalNumDBShards())
+		return m.txExecute(ctx, dbShardID, "AppendHistoryNodes", func(tx sqlplugin.Tx) error {
 			result, err := tx.InsertIntoHistoryNode(ctx, nodeRow)
 			if err != nil {
 				return err
@@ -408,10 +410,12 @@ func (m *sqlHistoryStore) DeleteHistoryBranch(
 		}
 	}
 
-	return m.txExecute(ctx, "DeleteHistoryBranch", func(tx sqlplugin.Tx) error {
+	treeUUID := serialization.MustParseUUID(treeID)
+	dbShardID := sqlplugin.GetDBShardIDFromTreeID(treeUUID, m.db.GetTotalNumDBShards())
+	return m.txExecute(ctx, dbShardID, "DeleteHistoryBranch", func(tx sqlplugin.Tx) error {
 		branchID := serialization.MustParseUUID(*branch.BranchID)
 		treeFilter := &sqlplugin.HistoryTreeFilter{
-			TreeID:   serialization.MustParseUUID(treeID),
+			TreeID:   treeUUID,
 			BranchID: &branchID,
 			ShardID:  request.ShardID,
 		}
@@ -468,14 +472,16 @@ func (m *sqlHistoryStore) GetAllHistoryTreeBranches(
 	ctx context.Context,
 	request *p.GetAllHistoryTreeBranchesRequest,
 ) (*p.GetAllHistoryTreeBranchesResponse, error) {
-	page := historyTreePageToken{
-		ShardID:  0,
-		TreeID:   serialization.UUID{},
-		BranchID: serialization.UUID{},
-	}
+	page := historyTreePageToken{}
 	if request.NextPageToken != nil {
 		if err := gobDeserialize(request.NextPageToken, &page); err != nil {
 			return nil, fmt.Errorf("unable to decode next page token")
+		}
+	} else {
+		page = historyTreePageToken{
+			ShardID:  0, // First page starting from ShardID 0, and increase if finish reading current shard
+			TreeID:   serialization.UUID{},
+			BranchID: serialization.UUID{},
 		}
 	}
 	filter := sqlplugin.HistoryTreeFilter{
@@ -512,6 +518,8 @@ func (m *sqlHistoryStore) GetAllHistoryTreeBranches(
 			BranchID: lastRow.BranchID,
 		})
 	}
+	// TODO: this is broken for multi-sharding: the shardID should increase if there are less rows than request pageSize,
+	// until loop over all shards
 	return resp, nil
 }
 
