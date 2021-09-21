@@ -61,12 +61,12 @@ var errMissingArgs = errors.New("missing one or more args for API")
 
 // InsertIntoDomain inserts a single row into domains table
 func (mdb *db) InsertIntoDomain(ctx context.Context, row *sqlplugin.DomainRow) (sql.Result, error) {
-	return mdb.conn.ExecContext(ctx, createDomainQuery, row.ID, row.Name, row.IsGlobal, row.Data, row.DataEncoding)
+	return mdb.driver.ExecContext(ctx, sqlplugin.DbDefaultShard, createDomainQuery, row.ID, row.Name, row.IsGlobal, row.Data, row.DataEncoding)
 }
 
 // UpdateDomain updates a single row in domains table
 func (mdb *db) UpdateDomain(ctx context.Context, row *sqlplugin.DomainRow) (sql.Result, error) {
-	return mdb.conn.ExecContext(ctx, updateDomainQuery, row.Name, row.Data, row.DataEncoding, row.ID)
+	return mdb.driver.ExecContext(ctx, sqlplugin.DbDefaultShard, updateDomainQuery, row.Name, row.Data, row.DataEncoding, row.ID)
 }
 
 // SelectFromDomain reads one or more rows from domains table
@@ -86,9 +86,9 @@ func (mdb *db) selectFromDomain(ctx context.Context, filter *sqlplugin.DomainFil
 	var row sqlplugin.DomainRow
 	switch {
 	case filter.ID != nil:
-		err = mdb.conn.GetContext(ctx, &row, getDomainByIDQuery, shardID, *filter.ID)
+		err = mdb.driver.GetContext(ctx, sqlplugin.DbDefaultShard, &row, getDomainByIDQuery, shardID, *filter.ID)
 	case filter.Name != nil:
-		err = mdb.conn.GetContext(ctx, &row, getDomainByNameQuery, shardID, *filter.Name)
+		err = mdb.driver.GetContext(ctx, sqlplugin.DbDefaultShard, &row, getDomainByNameQuery, shardID, *filter.Name)
 	}
 	if err != nil {
 		return nil, err
@@ -101,9 +101,9 @@ func (mdb *db) selectAllFromDomain(ctx context.Context, filter *sqlplugin.Domain
 	var rows []sqlplugin.DomainRow
 	switch {
 	case filter.GreaterThanID != nil:
-		err = mdb.conn.SelectContext(ctx, &rows, listDomainsRangeQuery, shardID, *filter.GreaterThanID, *filter.PageSize)
+		err = mdb.driver.SelectContext(ctx, sqlplugin.DbDefaultShard, &rows, listDomainsRangeQuery, shardID, *filter.GreaterThanID, *filter.PageSize)
 	default:
-		err = mdb.conn.SelectContext(ctx, &rows, listDomainsQuery, shardID, filter.PageSize)
+		err = mdb.driver.SelectContext(ctx, sqlplugin.DbDefaultShard, &rows, listDomainsQuery, shardID, filter.PageSize)
 	}
 	return rows, err
 }
@@ -114,9 +114,9 @@ func (mdb *db) DeleteFromDomain(ctx context.Context, filter *sqlplugin.DomainFil
 	var result sql.Result
 	switch {
 	case filter.ID != nil:
-		result, err = mdb.conn.ExecContext(ctx, deleteDomainByIDQuery, shardID, filter.ID)
+		result, err = mdb.driver.ExecContext(ctx, sqlplugin.DbDefaultShard, deleteDomainByIDQuery, shardID, filter.ID)
 	default:
-		result, err = mdb.conn.ExecContext(ctx, deleteDomainByNameQuery, shardID, filter.Name)
+		result, err = mdb.driver.ExecContext(ctx, sqlplugin.DbDefaultShard, deleteDomainByNameQuery, shardID, filter.Name)
 	}
 	return result, err
 }
@@ -124,18 +124,18 @@ func (mdb *db) DeleteFromDomain(ctx context.Context, filter *sqlplugin.DomainFil
 // LockDomainMetadata acquires a write lock on a single row in domain_metadata table
 func (mdb *db) LockDomainMetadata(ctx context.Context) error {
 	var row sqlplugin.DomainMetadataRow
-	err := mdb.conn.GetContext(ctx, &row.NotificationVersion, lockDomainMetadataQuery)
+	err := mdb.driver.GetContext(ctx, sqlplugin.DbDefaultShard, &row.NotificationVersion, lockDomainMetadataQuery)
 	return err
 }
 
 // SelectFromDomainMetadata reads a single row in domain_metadata table
 func (mdb *db) SelectFromDomainMetadata(ctx context.Context) (*sqlplugin.DomainMetadataRow, error) {
 	var row sqlplugin.DomainMetadataRow
-	err := mdb.conn.GetContext(ctx, &row.NotificationVersion, getDomainMetadataQuery)
+	err := mdb.driver.GetContext(ctx, sqlplugin.DbDefaultShard, &row.NotificationVersion, getDomainMetadataQuery)
 	return &row, err
 }
 
 // UpdateDomainMetadata updates a single row in domain_metadata table
 func (mdb *db) UpdateDomainMetadata(ctx context.Context, row *sqlplugin.DomainMetadataRow) (sql.Result, error) {
-	return mdb.conn.ExecContext(ctx, updateDomainMetadataQuery, row.NotificationVersion+1, row.NotificationVersion)
+	return mdb.driver.ExecContext(ctx, sqlplugin.DbDefaultShard, updateDomainMetadataQuery, row.NotificationVersion+1, row.NotificationVersion)
 }

@@ -72,7 +72,7 @@ func (p *plugin) CreateDB(cfg *config.SQL) (sqlplugin.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db := newDB(conn, nil)
+	db := newDB(conn, nil, sqlplugin.DbShardUndefined, cfg.NumShards)
 	return db, nil
 }
 
@@ -82,7 +82,7 @@ func (p *plugin) CreateAdminDB(cfg *config.SQL) (sqlplugin.AdminDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db := newDB(conn, nil)
+	db := newDB(conn, nil, sqlplugin.DbShardUndefined, cfg.NumShards)
 	return db, nil
 }
 
