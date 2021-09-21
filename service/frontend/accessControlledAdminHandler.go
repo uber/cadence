@@ -34,7 +34,6 @@ import (
 type AccessControlledWorkflowAdminHandler struct {
 	AdminHandler
 
-	resource   resource.Resource
 	authorizer authorization.Authorizer
 }
 
@@ -51,18 +50,9 @@ func NewAccessControlledAdminHandlerImpl(adminHandler AdminHandler, resource res
 	}
 	return &AccessControlledWorkflowAdminHandler{
 		AdminHandler: adminHandler,
-		resource:     resource,
 		authorizer:   authorizer,
 	}
 }
-
-//func (a *AccessControlledWorkflowAdminHandler) Start() {
-//	a.AdminHandler.Start()
-//}
-//
-//func (a *AccessControlledWorkflowAdminHandler) Stop() {
-//	a.AdminHandler.Stop()
-//}
 
 func (a *AccessControlledWorkflowAdminHandler) AddSearchAttribute(ctx context.Context, request *types.AddSearchAttributeRequest) error {
 	attr := &authorization.Attributes{
