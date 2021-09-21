@@ -137,7 +137,7 @@ func (m *sqlDomainStore) CreateDomain(
 	}
 
 	var resp *persistence.CreateDomainResponse
-	err = m.txExecute(sqlplugin.DbDefaultShard, ctx, "CreateDomain", func(tx sqlplugin.Tx) error {
+	err = m.txExecute(ctx, sqlplugin.DbDefaultShard, "CreateDomain", func(tx sqlplugin.Tx) error {
 		if _, err1 := tx.InsertIntoDomain(ctx, &sqlplugin.DomainRow{
 			Name:         request.Info.Name,
 			ID:           serialization.MustParseUUID(request.Info.ID),
@@ -309,7 +309,7 @@ func (m *sqlDomainStore) UpdateDomain(
 		return err
 	}
 
-	return m.txExecute(sqlplugin.DbDefaultShard, ctx, "UpdateDomain", func(tx sqlplugin.Tx) error {
+	return m.txExecute(ctx, sqlplugin.DbDefaultShard, "UpdateDomain", func(tx sqlplugin.Tx) error {
 		result, err := tx.UpdateDomain(ctx, &sqlplugin.DomainRow{
 			Name:         request.Info.Name,
 			ID:           serialization.MustParseUUID(request.Info.ID),
@@ -337,7 +337,7 @@ func (m *sqlDomainStore) DeleteDomain(
 	ctx context.Context,
 	request *persistence.DeleteDomainRequest,
 ) error {
-	return m.txExecute(sqlplugin.DbDefaultShard, ctx, "DeleteDomain", func(tx sqlplugin.Tx) error {
+	return m.txExecute(ctx, sqlplugin.DbDefaultShard, "DeleteDomain", func(tx sqlplugin.Tx) error {
 		_, err := tx.DeleteFromDomain(ctx, &sqlplugin.DomainFilter{ID: serialization.UUIDPtr(serialization.MustParseUUID(request.ID))})
 		return err
 	})
@@ -347,7 +347,7 @@ func (m *sqlDomainStore) DeleteDomainByName(
 	ctx context.Context,
 	request *persistence.DeleteDomainByNameRequest,
 ) error {
-	return m.txExecute(sqlplugin.DbDefaultShard, ctx, "DeleteDomainByName", func(tx sqlplugin.Tx) error {
+	return m.txExecute(ctx, sqlplugin.DbDefaultShard, "DeleteDomainByName", func(tx sqlplugin.Tx) error {
 		_, err := tx.DeleteFromDomain(ctx, &sqlplugin.DomainFilter{Name: &request.Name})
 		return err
 	})

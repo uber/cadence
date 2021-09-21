@@ -81,7 +81,7 @@ func (m *sqlExecutionStore) txExecuteShardLocked(
 	fn func(tx sqlplugin.Tx) error,
 ) error {
 
-	return m.txExecute(dbShardID, ctx, operation, func(tx sqlplugin.Tx) error {
+	return m.txExecute(ctx, dbShardID, operation, func(tx sqlplugin.Tx) error {
 		if err := readLockShard(ctx, tx, m.shardID, rangeID); err != nil {
 			return err
 		}

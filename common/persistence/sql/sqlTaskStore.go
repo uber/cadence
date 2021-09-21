@@ -68,11 +68,11 @@ func (m *sqlTaskStore) LeaseTaskList(
 ) (*persistence.LeaseTaskListResponse, error) {
 	var rangeID int64
 	var ackLevel int64
-	shardID := sqlplugin.GetDBShardIDFromDomainIDAndTasklist(request.DomainID, request.TaskList, m.db.GetTotalNumDBShards())
+	dbShardID := sqlplugin.GetDBShardIDFromDomainIDAndTasklist(request.DomainID, request.TaskList, m.db.GetTotalNumDBShards())
 
 	domainID := serialization.MustParseUUID(request.DomainID)
 	rows, err := m.db.SelectFromTaskLists(ctx, &sqlplugin.TaskListsFilter{
-		ShardID:  shardID,
+		ShardID:  dbShardID,
 		DomainID: &domainID,
 		Name:     &request.TaskList,
 		TaskType: common.Int64Ptr(int64(request.TaskType))})
@@ -89,7 +89,7 @@ func (m *sqlTaskStore) LeaseTaskList(
 				return nil, err
 			}
 			row := sqlplugin.TaskListsRow{
-				ShardID:      shardID,
+				ShardID:      dbShardID,
 				DomainID:     domainID,
 				Name:         request.TaskList,
 				TaskType:     int64(request.TaskType),
@@ -129,13 +129,13 @@ func (m *sqlTaskStore) LeaseTaskList(
 	}
 
 	var resp *persistence.LeaseTaskListResponse
-	err = m.txExecute(shardID, ctx, "LeaseTaskList", func(tx sqlplugin.Tx) error {
+	err = m.txExecute(ctx, dbShardID, "LeaseTaskList", func(tx sqlplugin.Tx) error {
 		rangeID = row.RangeID
 		ackLevel = tlInfo.GetAckLevel()
 		// We need to separately check the condition and do the
 		// update because we want to throw different error codes.
 		// Since we need to do things separately (in a transaction), we need to take a lock.
-		err1 := lockTaskList(ctx, tx, shardID, domainID, request.TaskList, request.TaskType, rangeID)
+		err1 := lockTaskList(ctx, tx, dbShardID, domainID, request.TaskList, request.TaskType, rangeID)
 		if err1 != nil {
 			return err1
 		}
@@ -146,7 +146,7 @@ func (m *sqlTaskStore) LeaseTaskList(
 			return err1
 		}
 		row := &sqlplugin.TaskListsRow{
-			ShardID:      shardID,
+			ShardID:      dbShardID,
 			DomainID:     row.DomainID,
 			RangeID:      row.RangeID + 1,
 			Name:         row.Name,
@@ -191,7 +191,7 @@ func (m *sqlTaskStore) UpdateTaskList(
 	ctx context.Context,
 	request *persistence.UpdateTaskListRequest,
 ) (*persistence.UpdateTaskListResponse, error) {
-	shardID := sqlplugin.GetDBShardIDFromDomainIDAndTasklist(request.TaskListInfo.DomainID, request.TaskListInfo.Name, m.db.GetTotalNumDBShards())
+	dbShardID := sqlplugin.GetDBShardIDFromDomainIDAndTasklist(request.TaskListInfo.DomainID, request.TaskListInfo.Name, m.db.GetTotalNumDBShards())
 	domainID := serialization.MustParseUUID(request.TaskListInfo.DomainID)
 	tlInfo := &serialization.TaskListInfo{
 		AckLevel:        request.TaskListInfo.AckLevel,
@@ -208,15 +208,15 @@ func (m *sqlTaskStore) UpdateTaskList(
 	if err != nil {
 		return nil, err
 	}
-	err = m.txExecute(shardID, ctx, "UpdateTaskList", func(tx sqlplugin.Tx) error {
+	err = m.txExecute(ctx, dbShardID, "UpdateTaskList", func(tx sqlplugin.Tx) error {
 		err1 := lockTaskList(
-			ctx, tx, shardID, domainID, request.TaskListInfo.Name, request.TaskListInfo.TaskType, request.TaskListInfo.RangeID)
+			ctx, tx, dbShardID, domainID, request.TaskListInfo.Name, request.TaskListInfo.TaskType, request.TaskListInfo.RangeID)
 		if err1 != nil {
 			return err1
 		}
 		var result sql.Result
 		row := &sqlplugin.TaskListsRow{
-			ShardID:      shardID,
+			ShardID:      dbShardID,
 			DomainID:     domainID,
 			RangeID:      request.TaskListInfo.RangeID,
 			Name:         request.TaskListInfo.Name,
@@ -368,7 +368,7 @@ func (m *sqlTaskStore) CreateTasks(
 		tasksRows = make([]sqlplugin.TasksRow, len(request.Tasks))
 	}
 
-	shardID := sqlplugin.GetDBShardIDFromDomainIDAndTasklist(request.TaskListInfo.DomainID, request.TaskListInfo.Name, m.db.GetTotalNumDBShards())
+	dbShardID := sqlplugin.GetDBShardIDFromDomainIDAndTasklist(request.TaskListInfo.DomainID, request.TaskListInfo.Name, m.db.GetTotalNumDBShards())
 
 	for i, v := range request.Tasks {
 		var expiryTime time.Time
@@ -398,7 +398,7 @@ func (m *sqlTaskStore) CreateTasks(
 		}
 
 		currTasksRow := sqlplugin.TasksRow{
-			ShardID:      shardID,
+			ShardID:      dbShardID,
 			DomainID:     serialization.MustParseUUID(v.Data.DomainID),
 			TaskListName: request.TaskListInfo.Name,
 			TaskType:     int64(request.TaskListInfo.TaskType),
@@ -420,7 +420,7 @@ func (m *sqlTaskStore) CreateTasks(
 
 	}
 	var resp *persistence.CreateTasksResponse
-	err := m.txExecute(shardID, ctx, "CreateTasks", func(tx sqlplugin.Tx) error {
+	err := m.txExecute(ctx, dbShardID, "CreateTasks", func(tx sqlplugin.Tx) error {
 		if m.db.SupportsTTL() {
 			if _, err := tx.InsertIntoTasksWithTTL(ctx, tasksRowsWithTTL); err != nil {
 				return err
@@ -433,7 +433,7 @@ func (m *sqlTaskStore) CreateTasks(
 
 		// Lock task list before committing.
 		err1 := lockTaskList(ctx, tx,
-			shardID,
+			dbShardID,
 			serialization.MustParseUUID(request.TaskListInfo.DomainID),
 			request.TaskListInfo.Name,
 			request.TaskListInfo.TaskType, request.TaskListInfo.RangeID)

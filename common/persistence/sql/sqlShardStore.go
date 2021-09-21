@@ -178,7 +178,7 @@ func (m *sqlShardStore) UpdateShard(
 		}
 	}
 	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(request.ShardInfo.ShardID, m.db.GetTotalNumDBShards())
-	return m.txExecute(dbShardID, ctx, "UpdateShard", func(tx sqlplugin.Tx) error {
+	return m.txExecute(ctx, dbShardID, "UpdateShard", func(tx sqlplugin.Tx) error {
 		if err := lockShard(ctx, tx, request.ShardInfo.ShardID, request.PreviousRangeID); err != nil {
 			return err
 		}
