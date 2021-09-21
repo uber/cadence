@@ -32,15 +32,15 @@ import (
 
 // AccessControlledWorkflowAdminHandler frontend handler wrapper for authentication and authorization
 type AccessControlledWorkflowAdminHandler struct {
-	resource.Resource
+	AdminHandler
 
-	adminHandler AdminHandler
-	authorizer   authorization.Authorizer
+	resource   resource.Resource
+	authorizer authorization.Authorizer
 }
 
 var _ AdminHandler = (*AccessControlledWorkflowAdminHandler)(nil)
 
-// NewAccessControlledHandlerImpl creates frontend handler with authentication support
+// NewAccessControlledAdminHandlerImpl creates frontend handler with authentication support
 func NewAccessControlledAdminHandlerImpl(adminHandler AdminHandler, resource resource.Resource, authorizer authorization.Authorizer, cfg config.Authorization) *AccessControlledWorkflowAdminHandler {
 	if authorizer == nil {
 		var err error
@@ -50,11 +50,19 @@ func NewAccessControlledAdminHandlerImpl(adminHandler AdminHandler, resource res
 		}
 	}
 	return &AccessControlledWorkflowAdminHandler{
-		Resource:     resource,
-		adminHandler: adminHandler,
+		AdminHandler: adminHandler,
+		resource:     resource,
 		authorizer:   authorizer,
 	}
 }
+
+//func (a *AccessControlledWorkflowAdminHandler) Start() {
+//	a.AdminHandler.Start()
+//}
+//
+//func (a *AccessControlledWorkflowAdminHandler) Stop() {
+//	a.AdminHandler.Stop()
+//}
 
 func (a *AccessControlledWorkflowAdminHandler) AddSearchAttribute(ctx context.Context, request *types.AddSearchAttributeRequest) error {
 	attr := &authorization.Attributes{
@@ -69,7 +77,7 @@ func (a *AccessControlledWorkflowAdminHandler) AddSearchAttribute(ctx context.Co
 		return errUnauthorized
 	}
 
-	return a.adminHandler.AddSearchAttribute(ctx, request)
+	return a.AdminHandler.AddSearchAttribute(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) CloseShard(ctx context.Context, request *types.CloseShardRequest) error {
@@ -85,7 +93,7 @@ func (a *AccessControlledWorkflowAdminHandler) CloseShard(ctx context.Context, r
 		return errUnauthorized
 	}
 
-	return a.adminHandler.CloseShard(ctx, request)
+	return a.AdminHandler.CloseShard(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) DescribeCluster(ctx context.Context) (*types.DescribeClusterResponse, error) {
@@ -101,7 +109,7 @@ func (a *AccessControlledWorkflowAdminHandler) DescribeCluster(ctx context.Conte
 		return nil, errUnauthorized
 	}
 
-	return a.adminHandler.DescribeCluster(ctx)
+	return a.AdminHandler.DescribeCluster(ctx)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) DescribeShardDistribution(ctx context.Context, request *types.DescribeShardDistributionRequest) (*types.DescribeShardDistributionResponse, error) {
@@ -117,7 +125,7 @@ func (a *AccessControlledWorkflowAdminHandler) DescribeShardDistribution(ctx con
 		return nil, errUnauthorized
 	}
 
-	return a.adminHandler.DescribeShardDistribution(ctx, request)
+	return a.AdminHandler.DescribeShardDistribution(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) DescribeHistoryHost(ctx context.Context, request *types.DescribeHistoryHostRequest) (*types.DescribeHistoryHostResponse, error) {
@@ -133,7 +141,7 @@ func (a *AccessControlledWorkflowAdminHandler) DescribeHistoryHost(ctx context.C
 		return nil, errUnauthorized
 	}
 
-	return a.adminHandler.DescribeHistoryHost(ctx, request)
+	return a.AdminHandler.DescribeHistoryHost(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) DescribeQueue(ctx context.Context, request *types.DescribeQueueRequest) (*types.DescribeQueueResponse, error) {
@@ -149,7 +157,7 @@ func (a *AccessControlledWorkflowAdminHandler) DescribeQueue(ctx context.Context
 		return nil, errUnauthorized
 	}
 
-	return a.adminHandler.DescribeQueue(ctx, request)
+	return a.AdminHandler.DescribeQueue(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) DescribeWorkflowExecution(ctx context.Context, request *types.AdminDescribeWorkflowExecutionRequest) (*types.AdminDescribeWorkflowExecutionResponse, error) {
@@ -165,7 +173,7 @@ func (a *AccessControlledWorkflowAdminHandler) DescribeWorkflowExecution(ctx con
 		return nil, errUnauthorized
 	}
 
-	return a.adminHandler.DescribeWorkflowExecution(ctx, request)
+	return a.AdminHandler.DescribeWorkflowExecution(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) GetDLQReplicationMessages(ctx context.Context, request *types.GetDLQReplicationMessagesRequest) (*types.GetDLQReplicationMessagesResponse, error) {
@@ -181,7 +189,7 @@ func (a *AccessControlledWorkflowAdminHandler) GetDLQReplicationMessages(ctx con
 		return nil, errUnauthorized
 	}
 
-	return a.adminHandler.GetDLQReplicationMessages(ctx, request)
+	return a.AdminHandler.GetDLQReplicationMessages(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) GetDomainReplicationMessages(ctx context.Context, request *types.GetDomainReplicationMessagesRequest) (*types.GetDomainReplicationMessagesResponse, error) {
@@ -197,7 +205,7 @@ func (a *AccessControlledWorkflowAdminHandler) GetDomainReplicationMessages(ctx 
 		return nil, errUnauthorized
 	}
 
-	return a.adminHandler.GetDomainReplicationMessages(ctx, request)
+	return a.AdminHandler.GetDomainReplicationMessages(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) GetReplicationMessages(ctx context.Context, request *types.GetReplicationMessagesRequest) (*types.GetReplicationMessagesResponse, error) {
@@ -213,7 +221,7 @@ func (a *AccessControlledWorkflowAdminHandler) GetReplicationMessages(ctx contex
 		return nil, errUnauthorized
 	}
 
-	return a.adminHandler.GetReplicationMessages(ctx, request)
+	return a.AdminHandler.GetReplicationMessages(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) GetWorkflowExecutionRawHistoryV2(ctx context.Context, request *types.GetWorkflowExecutionRawHistoryV2Request) (*types.GetWorkflowExecutionRawHistoryV2Response, error) {
@@ -229,7 +237,7 @@ func (a *AccessControlledWorkflowAdminHandler) GetWorkflowExecutionRawHistoryV2(
 		return nil, errUnauthorized
 	}
 
-	return a.adminHandler.GetWorkflowExecutionRawHistoryV2(ctx, request)
+	return a.AdminHandler.GetWorkflowExecutionRawHistoryV2(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) MergeDLQMessages(ctx context.Context, request *types.MergeDLQMessagesRequest) (*types.MergeDLQMessagesResponse, error) {
@@ -245,7 +253,7 @@ func (a *AccessControlledWorkflowAdminHandler) MergeDLQMessages(ctx context.Cont
 		return nil, errUnauthorized
 	}
 
-	return a.adminHandler.MergeDLQMessages(ctx, request)
+	return a.AdminHandler.MergeDLQMessages(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) PurgeDLQMessages(ctx context.Context, request *types.PurgeDLQMessagesRequest) error {
@@ -261,7 +269,7 @@ func (a *AccessControlledWorkflowAdminHandler) PurgeDLQMessages(ctx context.Cont
 		return errUnauthorized
 	}
 
-	return a.adminHandler.PurgeDLQMessages(ctx, request)
+	return a.AdminHandler.PurgeDLQMessages(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) ReadDLQMessages(ctx context.Context, request *types.ReadDLQMessagesRequest) (*types.ReadDLQMessagesResponse, error) {
@@ -277,7 +285,7 @@ func (a *AccessControlledWorkflowAdminHandler) ReadDLQMessages(ctx context.Conte
 		return nil, errUnauthorized
 	}
 
-	return a.adminHandler.ReadDLQMessages(ctx, request)
+	return a.AdminHandler.ReadDLQMessages(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) ReapplyEvents(ctx context.Context, request *types.ReapplyEventsRequest) error {
@@ -293,7 +301,7 @@ func (a *AccessControlledWorkflowAdminHandler) ReapplyEvents(ctx context.Context
 		return errUnauthorized
 	}
 
-	return a.adminHandler.ReapplyEvents(ctx, request)
+	return a.AdminHandler.ReapplyEvents(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) RefreshWorkflowTasks(ctx context.Context, request *types.RefreshWorkflowTasksRequest) error {
@@ -309,7 +317,7 @@ func (a *AccessControlledWorkflowAdminHandler) RefreshWorkflowTasks(ctx context.
 		return errUnauthorized
 	}
 
-	return a.adminHandler.RefreshWorkflowTasks(ctx, request)
+	return a.AdminHandler.RefreshWorkflowTasks(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) RemoveTask(ctx context.Context, request *types.RemoveTaskRequest) error {
@@ -325,7 +333,7 @@ func (a *AccessControlledWorkflowAdminHandler) RemoveTask(ctx context.Context, r
 		return errUnauthorized
 	}
 
-	return a.adminHandler.RemoveTask(ctx, request)
+	return a.AdminHandler.RemoveTask(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) ResendReplicationTasks(ctx context.Context, request *types.ResendReplicationTasksRequest) error {
@@ -341,7 +349,7 @@ func (a *AccessControlledWorkflowAdminHandler) ResendReplicationTasks(ctx contex
 		return errUnauthorized
 	}
 
-	return a.adminHandler.ResendReplicationTasks(ctx, request)
+	return a.AdminHandler.ResendReplicationTasks(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) ResetQueue(ctx context.Context, request *types.ResetQueueRequest) error {
@@ -357,7 +365,7 @@ func (a *AccessControlledWorkflowAdminHandler) ResetQueue(ctx context.Context, r
 		return errUnauthorized
 	}
 
-	return a.adminHandler.ResetQueue(ctx, request)
+	return a.AdminHandler.ResetQueue(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) GetCrossClusterTasks(ctx context.Context, request *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error) {
@@ -373,7 +381,7 @@ func (a *AccessControlledWorkflowAdminHandler) GetCrossClusterTasks(ctx context.
 		return nil, errUnauthorized
 	}
 
-	return a.adminHandler.GetCrossClusterTasks(ctx, request)
+	return a.AdminHandler.GetCrossClusterTasks(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) GetDynamicConfig(ctx context.Context, request *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error) {
@@ -389,7 +397,7 @@ func (a *AccessControlledWorkflowAdminHandler) GetDynamicConfig(ctx context.Cont
 		return nil, errUnauthorized
 	}
 
-	return a.adminHandler.GetDynamicConfig(ctx, request)
+	return a.AdminHandler.GetDynamicConfig(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) UpdateDynamicConfig(ctx context.Context, request *types.UpdateDynamicConfigRequest) error {
@@ -405,7 +413,7 @@ func (a *AccessControlledWorkflowAdminHandler) UpdateDynamicConfig(ctx context.C
 		return errUnauthorized
 	}
 
-	return a.adminHandler.UpdateDynamicConfig(ctx, request)
+	return a.AdminHandler.UpdateDynamicConfig(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) RestoreDynamicConfig(ctx context.Context, request *types.RestoreDynamicConfigRequest) error {
@@ -421,7 +429,7 @@ func (a *AccessControlledWorkflowAdminHandler) RestoreDynamicConfig(ctx context.
 		return errUnauthorized
 	}
 
-	return a.adminHandler.RestoreDynamicConfig(ctx, request)
+	return a.AdminHandler.RestoreDynamicConfig(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error) {
@@ -437,7 +445,7 @@ func (a *AccessControlledWorkflowAdminHandler) ListDynamicConfig(ctx context.Con
 		return nil, errUnauthorized
 	}
 
-	return a.adminHandler.ListDynamicConfig(ctx, request)
+	return a.AdminHandler.ListDynamicConfig(ctx, request)
 }
 
 func (a *AccessControlledWorkflowAdminHandler) isAuthorized(

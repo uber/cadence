@@ -274,6 +274,7 @@ func (s *Service) Start() {
 	grpcHandler.register(s.GetDispatcher())
 
 	s.adminHandler = NewAdminHandler(s, s.params, s.config)
+	s.adminHandler = NewAccessControlledAdminHandlerImpl(s.adminHandler, s, s.params.Authorizer, s.params.AuthorizationConfig)
 
 	adminThriftHandler := NewAdminThriftHandler(s.adminHandler)
 	adminThriftHandler.register(s.GetDispatcher())
@@ -286,8 +287,6 @@ func (s *Service) Start() {
 	s.handler.Start()
 	s.adminHandler.Start()
 
-	// access control admin handler has to initialize after resource and admin handler start
-	s.adminHandler = NewAccessControlledAdminHandlerImpl(s.adminHandler, s, s.params.Authorizer, s.params.AuthorizationConfig)
 	// base (service is not started in frontend or admin handler) in case of race condition in yarpc registration function
 
 	logger.Info("frontend started")

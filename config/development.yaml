@@ -74,7 +74,7 @@ services:
 clusterGroupMetadata:
   enableGlobalDomain: true
   failoverVersionIncrement: 10
-  masterClusterName: "cluster0"
+  primaryClusterName: "cluster0"
   currentClusterName: "cluster0"
   clusterGroup:
     cluster0:
