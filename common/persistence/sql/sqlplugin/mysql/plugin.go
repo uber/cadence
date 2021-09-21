@@ -58,8 +58,7 @@ var dsnAttrOverrides = map[string]string{
 	"multiStatements": "true",
 }
 
-type plugin struct {
-}
+type plugin struct{}
 
 var _ sqlplugin.Plugin = (*plugin)(nil)
 
