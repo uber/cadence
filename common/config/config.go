@@ -273,6 +273,25 @@ type (
 		// DecodingTypes is the configuration for all the sql blob decoding types which need to be supported
 		// DecodingTypes should not be removed unless there are no blobs in database with the encoding type
 		DecodingTypes []string `yaml:"decodingTypes"`
+		// UseMultipleDatabases enables using multiple databases as a sharding SQL database, default is false
+		// When enabled, connection will be established using MultipleDatabasesConfig in favor of single values
+		// of  User, Password, DatabaseName, ConnectAddr.
+		UseMultipleDatabases bool `yaml:"useMultipleDatabases"`
+		// Required when UseMultipleDatabases is true
+		// the length of the list should be exactly the same as NumShards
+		MultipleDatabasesConfig []MultipleDatabasesConfigEntry `yaml:"multipleDatabasesConfig"`
+	}
+
+	// MultipleDatabasesConfigEntry is an entry for MultipleDatabasesConfig to connect to a single SQL database
+	MultipleDatabasesConfigEntry struct {
+		// User is the username to be used for the conn
+		User string `yaml:"user"`
+		// Password is the password corresponding to the user name
+		Password string `yaml:"password"`
+		// DatabaseName is the name of SQL database to connect to
+		DatabaseName string `yaml:"databaseName" validate:"nonzero"`
+		// ConnectAddr is the remote addr of the database
+		ConnectAddr string `yaml:"connectAddr" validate:"nonzero"`
 	}
 
 	// CustomDatastoreConfig is the configuration for connecting to a custom datastore that is not supported by cadence core
