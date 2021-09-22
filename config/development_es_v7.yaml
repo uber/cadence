@@ -3,6 +3,7 @@ persistence:
   datastores:
     es-visibility:
       elasticsearch:
+        disableSniff: true
         version: "v7"
         url:
           scheme: "http"
