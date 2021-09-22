@@ -601,6 +601,11 @@ Update_History_Loop:
 		}
 
 		resp = &types.HistoryRespondDecisionTaskCompletedResponse{}
+		if !msBuilder.IsWorkflowExecutionRunning() {
+			// Workflow has been completed/terminated, so there is no need to dispatch more activity/decision tasks.
+			return resp, nil
+		}
+
 		activitiesToDispatchLocally := make(map[string]*types.ActivityLocalDispatchInfo)
 		for _, dr := range decisionResults {
 			if dr.activityDispatchInfo != nil {
@@ -846,8 +851,9 @@ func (handler *handlerImpl) failDecisionHelper(
 	domainName := domainEntry.GetInfo().Name
 	maxAttempts := handler.config.DecisionRetryMaxAttempts(domainName)
 	if maxAttempts > 0 && mutableState.GetExecutionInfo().DecisionAttempt > int64(maxAttempts) {
+		message := "Decision attempt exceeds limit"
 		executionInfo := mutableState.GetExecutionInfo()
-		handler.logger.Error("Decision attempt exceeds limit.",
+		handler.logger.Error(message,
 			tag.WorkflowDomainID(executionInfo.DomainID),
 			tag.WorkflowID(executionInfo.WorkflowID),
 			tag.WorkflowRunID(executionInfo.RunID))
@@ -855,7 +861,7 @@ func (handler *handlerImpl) failDecisionHelper(
 		if _, err := mutableState.AddWorkflowExecutionTerminatedEvent(
 			mutableState.GetNextEventID(),
 			common.FailureReasonDecisionAttemptsExceedsLimit,
-			[]byte("Decision attempt exceeded limit."),
+			[]byte(message),
 			execution.IdentityHistoryService,
 		); err != nil {
 			return nil, err
