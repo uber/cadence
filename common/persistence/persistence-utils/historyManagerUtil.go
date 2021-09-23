@@ -140,3 +140,17 @@ func PaginateHistory(
 
 	return historyEvents, historyBatches, tokenOut, historySize, nil
 }
+
+// Get the maximum referenced node id of each branch
+func GetBranchesMaxReferredNodeIDs(branches []*types.HistoryBranch) map[string]int64 {
+	validBRsMaxEndNode := map[string]int64{}
+	for _, b := range branches {
+		for _, br := range b.Ancestors {
+			curr, ok := validBRsMaxEndNode[*br.BranchID]
+			if !ok || curr < *br.EndNodeID {
+				validBRsMaxEndNode[*br.BranchID] = *br.EndNodeID
+			}
+		}
+	}
+	return validBRsMaxEndNode
+}

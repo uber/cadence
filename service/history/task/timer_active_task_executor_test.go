@@ -21,6 +21,7 @@
 package task
 
 import (
+	"bytes"
 	"context"
 	"testing"
 	"time"
@@ -281,10 +282,17 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Resurrected()
 		TaskStatus: execution.TimerTaskStatusNone,
 	}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+	nextPageToken := []byte{1, 2, 3}
 	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, mock.MatchedBy(func(req *persistence.ReadHistoryBranchRequest) bool {
 		return req.MinEventID == startEvent1.GetEventID() && req.NextPageToken == nil
 	})).Return(&persistence.ReadHistoryBranchResponse{
-		HistoryEvents: []*types.HistoryEvent{startEvent1, startEvent2, firedEvent1},
+		HistoryEvents: []*types.HistoryEvent{startEvent1, startEvent2},
+		NextPageToken: nextPageToken,
+	}, nil).Once()
+	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, mock.MatchedBy(func(req *persistence.ReadHistoryBranchRequest) bool {
+		return req.MinEventID == startEvent1.GetEventID() && bytes.Equal(req.NextPageToken, nextPageToken)
+	})).Return(&persistence.ReadHistoryBranchResponse{
+		HistoryEvents: []*types.HistoryEvent{firedEvent1},
 		NextPageToken: nil,
 	}, nil).Once()
 	// only timer2 should be fired
@@ -302,7 +310,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Resurrected()
 		return len(req.UpdateWorkflowMutation.DeleteTimerInfos) == 2
 	})).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
 
-	s.timerActiveTaskExecutor.config.ResurrectionCheckMinDelay = dynamicconfig.GetDurationPropertyFn(timerTimeout2 - timerTimeout1)
+	s.timerActiveTaskExecutor.config.ResurrectionCheckMinDelay = dynamicconfig.GetDurationPropertyFnFilteredByDomain(timerTimeout2 - timerTimeout1)
 	s.timeSource.Update(s.now.Add(timerTimeout2))
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
 	s.NoError(err)
@@ -735,8 +743,15 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Resurrected() 
 		TaskList:                 mutableState.GetExecutionInfo().TaskList,
 	}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+	nextPageToken := []byte{1, 2, 3}
 	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, mock.MatchedBy(func(req *persistence.ReadHistoryBranchRequest) bool {
 		return req.MinEventID == scheduledEvent1.GetEventID() && req.NextPageToken == nil
+	})).Return(&persistence.ReadHistoryBranchResponse{
+		HistoryEvents: []*types.HistoryEvent{scheduledEvent1, scheduledEvent2, startedEvent1, completeEvent1},
+		NextPageToken: nextPageToken,
+	}, nil).Once()
+	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, mock.MatchedBy(func(req *persistence.ReadHistoryBranchRequest) bool {
+		return req.MinEventID == scheduledEvent1.GetEventID() && bytes.Equal(req.NextPageToken, nextPageToken)
 	})).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents: []*types.HistoryEvent{scheduledEvent1, scheduledEvent2, startedEvent1, completeEvent1},
 		NextPageToken: nil,
@@ -756,7 +771,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Resurrected() 
 		return len(req.UpdateWorkflowMutation.DeleteActivityInfos) == 2
 	})).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
 
-	s.timerActiveTaskExecutor.config.ResurrectionCheckMinDelay = dynamicconfig.GetDurationPropertyFn(timerTimeout2 - timerTimeout1)
+	s.timerActiveTaskExecutor.config.ResurrectionCheckMinDelay = dynamicconfig.GetDurationPropertyFnFilteredByDomain(timerTimeout2 - timerTimeout1)
 	s.timeSource.Update(s.now.Add(timerTimeout2))
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
 	s.NoError(err)
