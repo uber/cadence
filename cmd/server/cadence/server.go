@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
@@ -150,7 +151,7 @@ func (s *server) startService() common.Daemon {
 
 	svcCfg := s.cfg.Services[s.name]
 	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger, params.Name)
-	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger, s.cfg.NewGRPCPorts())
+	params.RPCFactory = rpc.NewFactory(params.Name, svcCfg.RPC, params.Logger, rpc.NewGRPCPorts(s.cfg))
 	params.MembershipFactory, err = s.cfg.Ringpop.NewFactory(
 		params.RPCFactory.GetDispatcher(),
 		params.Name,
