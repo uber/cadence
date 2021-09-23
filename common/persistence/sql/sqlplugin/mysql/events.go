@@ -56,13 +56,15 @@ const (
 func (mdb *db) InsertIntoHistoryNode(ctx context.Context, row *sqlplugin.HistoryNodeRow) (sql.Result, error) {
 	// NOTE: Query 5.6 doesn't support clustering order, to workaround, we let txn_id multiple by -1
 	*row.TxnID *= -1
-	return mdb.conn.NamedExecContext(ctx, addHistoryNodesQuery, row)
+	dbShardID := sqlplugin.GetDBShardIDFromTreeID(row.TreeID, mdb.GetTotalNumDBShards())
+	return mdb.driver.NamedExecContext(ctx, dbShardID, addHistoryNodesQuery, row)
 }
 
 // SelectFromHistoryNode reads one or more rows from history_node table
 func (mdb *db) SelectFromHistoryNode(ctx context.Context, filter *sqlplugin.HistoryNodeFilter) ([]sqlplugin.HistoryNodeRow, error) {
 	var rows []sqlplugin.HistoryNodeRow
-	err := mdb.conn.SelectContext(ctx, &rows, getHistoryNodesQuery,
+	dbShardID := sqlplugin.GetDBShardIDFromTreeID(filter.TreeID, mdb.GetTotalNumDBShards())
+	err := mdb.driver.SelectContext(ctx, dbShardID, &rows, getHistoryNodesQuery,
 		filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID, *filter.MaxNodeID, filter.PageSize)
 	// NOTE: since we let txn_id multiple by -1 when inserting, we have to revert it back here
 	for _, row := range rows {
@@ -73,30 +75,35 @@ func (mdb *db) SelectFromHistoryNode(ctx context.Context, filter *sqlplugin.Hist
 
 // DeleteFromHistoryNode deletes one or more rows from history_node table
 func (mdb *db) DeleteFromHistoryNode(ctx context.Context, filter *sqlplugin.HistoryNodeFilter) (sql.Result, error) {
-	return mdb.conn.ExecContext(ctx, deleteHistoryNodesQuery, filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID, filter.PageSize)
+	dbShardID := sqlplugin.GetDBShardIDFromTreeID(filter.TreeID, mdb.GetTotalNumDBShards())
+	return mdb.driver.ExecContext(ctx, dbShardID, deleteHistoryNodesQuery, filter.ShardID, filter.TreeID, filter.BranchID, *filter.MinNodeID, filter.PageSize)
 }
 
 // For history_tree table:
 
 // InsertIntoHistoryTree inserts a row into history_tree table
 func (mdb *db) InsertIntoHistoryTree(ctx context.Context, row *sqlplugin.HistoryTreeRow) (sql.Result, error) {
-	return mdb.conn.NamedExecContext(ctx, addHistoryTreeQuery, row)
+	dbShardID := sqlplugin.GetDBShardIDFromTreeID(row.TreeID, mdb.GetTotalNumDBShards())
+	return mdb.driver.NamedExecContext(ctx, dbShardID, addHistoryTreeQuery, row)
 }
 
 // SelectFromHistoryTree reads one or more rows from history_tree table
 func (mdb *db) SelectFromHistoryTree(ctx context.Context, filter *sqlplugin.HistoryTreeFilter) ([]sqlplugin.HistoryTreeRow, error) {
 	var rows []sqlplugin.HistoryTreeRow
-	err := mdb.conn.SelectContext(ctx, &rows, getHistoryTreeQuery, filter.ShardID, filter.TreeID)
+	dbShardID := sqlplugin.GetDBShardIDFromTreeID(filter.TreeID, mdb.GetTotalNumDBShards())
+	err := mdb.driver.SelectContext(ctx, dbShardID, &rows, getHistoryTreeQuery, filter.ShardID, filter.TreeID)
 	return rows, err
 }
 
 // DeleteFromHistoryTree deletes one or more rows from history_tree table
 func (mdb *db) DeleteFromHistoryTree(ctx context.Context, filter *sqlplugin.HistoryTreeFilter) (sql.Result, error) {
-	return mdb.conn.ExecContext(ctx, deleteHistoryTreeQuery, filter.ShardID, filter.TreeID, *filter.BranchID)
+	dbShardID := sqlplugin.GetDBShardIDFromTreeID(filter.TreeID, mdb.GetTotalNumDBShards())
+	return mdb.driver.ExecContext(ctx, dbShardID, deleteHistoryTreeQuery, filter.ShardID, filter.TreeID, *filter.BranchID)
 }
 
 func (mdb *db) GetAllHistoryTreeBranches(ctx context.Context, filter *sqlplugin.HistoryTreeFilter) ([]sqlplugin.HistoryTreeRow, error) {
 	var rows []sqlplugin.HistoryTreeRow
-	err := mdb.conn.SelectContext(ctx, &rows, getAllHistoryTreeQuery, filter.ShardID, filter.TreeID, *filter.BranchID, filter.ShardID, filter.TreeID, filter.ShardID, filter.PageSize)
+	dbShardID := sqlplugin.GetDBShardIDFromTreeID(filter.TreeID, mdb.GetTotalNumDBShards())
+	err := mdb.driver.SelectContext(ctx, dbShardID, &rows, getAllHistoryTreeQuery, filter.ShardID, filter.TreeID, *filter.BranchID, filter.ShardID, filter.TreeID, filter.ShardID, filter.PageSize)
 	return rows, err
 }
