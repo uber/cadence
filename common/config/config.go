@@ -295,6 +295,7 @@ type (
 	}
 
 	// CustomDatastoreConfig is the configuration for connecting to a custom datastore that is not supported by cadence core
+	// TODO can we remove it?
 	CustomDatastoreConfig struct {
 		// Name of the custom datastore
 		Name string `yaml:"name"`
@@ -303,6 +304,7 @@ type (
 	}
 
 	// Replicator describes the configuration of replicator
+	// TODO can we remove it?
 	Replicator struct{}
 
 	// Logger contains the config items for logger

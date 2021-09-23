@@ -23,6 +23,7 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/VividCortex/mysqlerr"
@@ -37,7 +38,7 @@ type (
 	db struct {
 		converter   DataConverter
 		driver      sqldriver.Driver
-		originalDB  *sqlx.DB
+		originalDBs []*sqlx.DB
 		numDBShards int
 	}
 )
@@ -99,15 +100,30 @@ func (mdb *db) IsThrottlingError(err error) bool {
 // newDB returns an instance of DB, which is a logical
 // connection to the underlying mysql database
 // dbShardID is needed when tx is not nil
-func newDB(xdb *sqlx.DB, tx *sqlx.Tx, dbShardID int, numDBShards int) *db {
-	driver := sqldriver.NewSingletonSQLDriver(xdb, tx, dbShardID)
-	db := &db{
-		converter:   &converter{},
-		driver:      driver,
-		originalDB:  xdb, // this is kept because newDB will be called again when starting a transaction
-		numDBShards: numDBShards,
+func newDB(xdbs []*sqlx.DB, tx *sqlx.Tx, dbShardID int, numDBShards int) (*db, error) {
+	if len(xdbs) == 1 {
+		driver := sqldriver.NewSingletonSQLDriver(xdbs[0], tx, dbShardID)
+		db := &db{
+			converter:   &converter{},
+			driver:      driver,
+			originalDBs: xdbs, // this is kept because newDB will be called again when starting a transaction
+			numDBShards: numDBShards,
+		}
+		return db, nil
+	} else {
+		if len(xdbs) <= 1 {
+			return nil, fmt.Errorf("invalid number of connection for sharded SQL driver")
+		}
+		// this is the case of multiple database with sharding
+		driver := sqldriver.NewShardedSQLDriver(xdbs, tx, dbShardID)
+		db := &db{
+			converter:   &converter{},
+			driver:      driver,
+			originalDBs: xdbs, // this is kept because newDB will be called again when starting a transaction
+			numDBShards: numDBShards,
+		}
+		return db, nil
 	}
-	return db
 }
 
 // BeginTx starts a new transaction and returns a reference to the Tx object
@@ -116,7 +132,7 @@ func (mdb *db) BeginTx(dbShardID int, ctx context.Context) (sqlplugin.Tx, error)
 	if err != nil {
 		return nil, err
 	}
-	return newDB(mdb.originalDB, xtx, dbShardID, mdb.numDBShards), nil
+	return newDB(mdb.originalDBs, xtx, dbShardID, mdb.numDBShards)
 }
 
 // Commit commits a previously started transaction
