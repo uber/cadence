@@ -23,7 +23,6 @@ package client
 import (
 	"time"
 
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/grpc"
 
@@ -70,8 +69,8 @@ type (
 		NewMatchingClientWithTimeout(domainIDToName DomainIDToNameFunc, timeout time.Duration, longPollTimeout time.Duration) (matching.Client, error)
 		NewFrontendClientWithTimeout(timeout time.Duration, longPollTimeout time.Duration) (frontend.Client, error)
 
-		NewAdminClientWithTimeoutAndDispatcher(rpcName string, timeout time.Duration, largeTimeout time.Duration, dispatcher *yarpc.Dispatcher) (admin.Client, error)
-		NewFrontendClientWithTimeoutAndDispatcher(rpcName string, timeout time.Duration, longPollTimeout time.Duration, dispatcher *yarpc.Dispatcher) (frontend.Client, error)
+		NewAdminClientWithTimeoutAndConfig(config transport.ClientConfig, timeout time.Duration, largeTimeout time.Duration) (admin.Client, error)
+		NewFrontendClientWithTimeoutAndConfig(config transport.ClientConfig, timeout time.Duration, longPollTimeout time.Duration) (frontend.Client, error)
 	}
 
 	// DomainIDToNameFunc maps a domainID to domain name. Returns error when mapping is not possible.
@@ -255,18 +254,16 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeout(
 	return client, nil
 }
 
-func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndDispatcher(
-	rpcName string,
+func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
+	config transport.ClientConfig,
 	timeout time.Duration,
 	largeTimeout time.Duration,
-	dispatcher *yarpc.Dispatcher,
 ) (admin.Client, error) {
 	keyResolver := func(key string) (string, error) {
 		return clientKeyDispatcher, nil
 	}
 
 	clientProvider := func(clientKey string) (interface{}, error) {
-		config := dispatcher.ClientConfig(rpcName)
 		if isGRPCOutbound(config) {
 			return admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(config)), nil
 		}
@@ -283,18 +280,16 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndDispatcher(
 	return client, nil
 }
 
-func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndDispatcher(
-	rpcName string,
+func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
+	config transport.ClientConfig,
 	timeout time.Duration,
 	longPollTimeout time.Duration,
-	dispatcher *yarpc.Dispatcher,
 ) (frontend.Client, error) {
 	keyResolver := func(key string) (string, error) {
 		return clientKeyDispatcher, nil
 	}
 
 	clientProvider := func(clientKey string) (interface{}, error) {
-		config := dispatcher.ClientConfig(rpcName)
 		if isGRPCOutbound(config) {
 			return frontend.NewGRPCClient(
 				apiv1.NewDomainAPIYARPCClient(config),

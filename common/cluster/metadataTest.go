@@ -46,6 +46,8 @@ const (
 	TestCurrentClusterFrontendAddress = "127.0.0.1:7104"
 	// TestAlternativeClusterFrontendAddress is the ip port address of alternative cluster
 	TestAlternativeClusterFrontendAddress = "127.0.0.1:8104"
+	// TestClusterXDCTransport is the RPC transport used for XDC traffic <tchannel|grpc>
+	TestClusterXDCTransport = "grpc"
 )
 
 var (
@@ -58,12 +60,14 @@ var (
 			InitialFailoverVersion: TestCurrentClusterInitialFailoverVersion,
 			RPCName:                common.FrontendServiceName,
 			RPCAddress:             TestCurrentClusterFrontendAddress,
+			RPCTransport:           TestClusterXDCTransport,
 		},
 		TestAlternativeClusterName: {
 			Enabled:                true,
 			InitialFailoverVersion: TestAlternativeClusterInitialFailoverVersion,
 			RPCName:                common.FrontendServiceName,
 			RPCAddress:             TestAlternativeClusterFrontendAddress,
+			RPCTransport:           TestClusterXDCTransport,
 		},
 		TestDisabledClusterName: {
 			Enabled:                false,
@@ -80,6 +84,7 @@ var (
 			InitialFailoverVersion: TestCurrentClusterInitialFailoverVersion,
 			RPCName:                common.FrontendServiceName,
 			RPCAddress:             TestCurrentClusterFrontendAddress,
+			RPCTransport:           TestClusterXDCTransport,
 		},
 	}
 )

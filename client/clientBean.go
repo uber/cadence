@@ -150,21 +150,21 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 			return nil, err
 		}
 
-		adminClient, err := factory.NewAdminClientWithTimeoutAndDispatcher(
-			info.RPCName,
+		clientConfig := dispatcher.ClientConfig(info.RPCName)
+
+		adminClient, err := factory.NewAdminClientWithTimeoutAndConfig(
+			clientConfig,
 			admin.DefaultTimeout,
 			admin.DefaultLargeTimeout,
-			dispatcher,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		frontendClient, err := factory.NewFrontendClientWithTimeoutAndDispatcher(
-			info.RPCName,
+		frontendClient, err := factory.NewFrontendClientWithTimeoutAndConfig(
+			clientConfig,
 			frontend.DefaultTimeout,
 			frontend.DefaultLongPollTimeout,
-			dispatcher,
 		)
 		if err != nil {
 			return nil, err
