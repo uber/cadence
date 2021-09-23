@@ -25,15 +25,12 @@ package client
 import (
 	"context"
 	"fmt"
-	"net"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	clientworker "go.uber.org/cadence/worker"
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/roundrobin"
 	"go.uber.org/yarpc/transport/grpc"
@@ -48,6 +45,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/rpc"
 )
 
 const (
@@ -92,22 +90,6 @@ type (
 	dnsDispatcherProvider struct {
 		interval time.Duration
 		logger   log.Logger
-	}
-	dnsUpdater struct {
-		interval     time.Duration
-		dnsAddress   string
-		port         string
-		currentPeers map[string]struct{}
-		list         peer.List
-		logger       log.Logger
-	}
-	dnsRefreshResult struct {
-		updates  peer.ListUpdates
-		newPeers map[string]struct{}
-		changed  bool
-	}
-	aPeer struct {
-		addrPort string
 	}
 )
 
@@ -295,7 +277,7 @@ func (p *dnsDispatcherProvider) GetTChannel(serviceName string, address string, 
 	}
 
 	peerList := roundrobin.New(tchanTransport)
-	peerListUpdater, err := newDNSUpdater(peerList, address, p.interval, p.logger)
+	peerListUpdater, err := rpc.NewDNSUpdater(peerList, address, p.interval, p.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +292,7 @@ func (p *dnsDispatcherProvider) GetGRPC(serviceName string, address string, opti
 	grpcTransport := grpc.NewTransport()
 
 	peerList := roundrobin.New(grpcTransport)
-	peerListUpdater, err := newDNSUpdater(peerList, address, p.interval, p.logger)
+	peerListUpdater, err := rpc.NewDNSUpdater(peerList, address, p.interval, p.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -360,105 +342,4 @@ func (om *outboundMiddleware) Call(ctx context.Context, request *transport.Reque
 			With(common.AuthorizationTokenHeaderName, string(token))
 	}
 	return out.Call(ctx, request)
-}
-
-func newDNSUpdater(list peer.List, dnsPort string, interval time.Duration, logger log.Logger) (*dnsUpdater, error) {
-	ss := strings.Split(dnsPort, ":")
-	if len(ss) != 2 {
-		return nil, fmt.Errorf("incorrect DNS:Port format")
-	}
-	return &dnsUpdater{
-		interval:     interval,
-		logger:       logger,
-		list:         list,
-		dnsAddress:   ss[0],
-		port:         ss[1],
-		currentPeers: make(map[string]struct{}),
-	}, nil
-}
-
-func (d *dnsUpdater) Start() {
-	go func() {
-		for {
-			now := time.Now()
-			res, err := d.refresh()
-			if err != nil {
-				d.logger.Error("Failed to update DNS", tag.Error(err), tag.Address(d.dnsAddress))
-			}
-			if res != nil && res.changed {
-				if len(res.updates.Additions) > 0 {
-					d.logger.Info("Add new peers by DNS lookup", tag.Address(d.dnsAddress), tag.Addresses(identifiersToStringList(res.updates.Additions)))
-				}
-				if len(res.updates.Removals) > 0 {
-					d.logger.Info("Remove stale peers by DNS lookup", tag.Address(d.dnsAddress), tag.Addresses(identifiersToStringList(res.updates.Removals)))
-				}
-
-				err := d.list.Update(res.updates)
-				if err != nil {
-					d.logger.Error("Failed to update peerList", tag.Error(err), tag.Address(d.dnsAddress))
-				}
-				d.currentPeers = res.newPeers
-			}
-			sleepDu := now.Add(d.interval).Sub(now)
-			time.Sleep(sleepDu)
-		}
-	}()
-}
-
-func (d *dnsUpdater) refresh() (*dnsRefreshResult, error) {
-	resolver := net.DefaultResolver
-	ips, err := resolver.LookupHost(context.Background(), d.dnsAddress)
-	if err != nil {
-		return nil, err
-	}
-	newPeers := map[string]struct{}{}
-	for _, ip := range ips {
-		adr := fmt.Sprintf("%v:%v", ip, d.port)
-		newPeers[adr] = struct{}{}
-	}
-
-	updates := peer.ListUpdates{
-		Additions: make([]peer.Identifier, 0),
-		Removals:  make([]peer.Identifier, 0),
-	}
-	changed := false
-	// remove if it doesn't exist anymore
-	for addr := range d.currentPeers {
-		if _, ok := newPeers[addr]; !ok {
-			changed = true
-			updates.Removals = append(
-				updates.Removals,
-				aPeer{addrPort: addr},
-			)
-		}
-	}
-
-	// add if it doesn't exist before
-	for addr := range newPeers {
-		if _, ok := d.currentPeers[addr]; !ok {
-			changed = true
-			updates.Additions = append(
-				updates.Additions,
-				aPeer{addrPort: addr},
-			)
-		}
-	}
-
-	return &dnsRefreshResult{
-		updates:  updates,
-		newPeers: newPeers,
-		changed:  changed,
-	}, nil
-}
-
-func (a aPeer) Identifier() string {
-	return a.addrPort
-}
-
-func identifiersToStringList(ids []peer.Identifier) []string {
-	ss := make([]string, 0, len(ids))
-	for _, id := range ids {
-		ss = append(ss, id.Identifier())
-	}
-	return ss
 }
