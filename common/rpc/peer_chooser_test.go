@@ -27,9 +27,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/uber/cadence/common/log"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+
+	"github.com/uber/cadence/common/log"
 )
 
 func TestDNSPeerChooserFactory(t *testing.T) {
