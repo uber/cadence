@@ -39,7 +39,7 @@ import (
 type Factory struct {
 	config      config.RPC
 	serviceName string
-	ch          *tchannel.ChannelTransport
+	tchannel    *tchannel.ChannelTransport
 	grpc        *grpc.Transport
 	logger      log.Logger
 	grpcPorts   GRPCPorts
@@ -50,8 +50,8 @@ type Factory struct {
 
 // NewFactory builds a new rpc.Factory
 // conforming to the underlying configuration
-func NewFactory(sName string, cfg config.RPC, logger log.Logger, grpcPorts GRPCPorts) *Factory {
-	return &Factory{config: cfg, serviceName: sName, logger: logger, grpcPorts: grpcPorts}
+func NewFactory(service string, cfg config.RPC, logger log.Logger, grpcPorts GRPCPorts) *Factory {
+	return &Factory{config: cfg, serviceName: service, logger: logger, grpcPorts: grpcPorts}
 }
 
 // GetDispatcher return a cached dispatcher
@@ -74,13 +74,13 @@ func (d *Factory) createInboundDispatcher() *yarpc.Dispatcher {
 	inbounds := yarpc.Inbounds{}
 
 	hostAddress := fmt.Sprintf("%v:%v", d.getListenIP(), d.config.Port)
-	d.ch, err = tchannel.NewChannelTransport(
+	d.tchannel, err = tchannel.NewChannelTransport(
 		tchannel.ServiceName(d.serviceName),
 		tchannel.ListenAddr(hostAddress))
 	if err != nil {
 		d.logger.Fatal("Failed to create transport channel", tag.Error(err))
 	}
-	inbounds = append(inbounds, d.ch.NewInbound())
+	inbounds = append(inbounds, d.tchannel.NewInbound())
 	d.logger.Info("Listening for TChannel requests", tag.Address(hostAddress))
 
 	var options []grpc.TransportOption
@@ -112,7 +112,7 @@ func (d *Factory) CreateDispatcherForOutbound(
 	serviceName string,
 	hostName string,
 ) (*yarpc.Dispatcher, error) {
-	return d.createOutboundDispatcher(callerName, serviceName, hostName, d.ch.NewSingleOutbound(hostName))
+	return d.createOutboundDispatcher(callerName, serviceName, hostName, d.tchannel.NewSingleOutbound(hostName))
 }
 
 // CreateGRPCDispatcherForOutbound creates a dispatcher for GRPC outbound connection
