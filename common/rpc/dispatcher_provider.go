@@ -22,7 +22,6 @@ package rpc
 
 import (
 	"context"
-	"time"
 
 	clientworker "go.uber.org/cadence/worker"
 
@@ -32,14 +31,12 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/peer/roundrobin"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 )
 
 const (
-	defaultRefreshInterval = time.Second * 10
-	crossDCCaller          = "cadence-xdc-client"
+	crossDCCaller = "cadence-xdc-client"
 )
 
 type (
@@ -53,24 +50,21 @@ type (
 		GetGRPC(name string, address string, options *DispatcherOptions) (*yarpc.Dispatcher, error)
 	}
 
-	dnsDispatcherProvider struct {
-		interval time.Duration
-		logger   log.Logger
+	dispatcherProvider struct {
+		pcf    PeerChooserFactory
+		logger log.Logger
 	}
 )
 
-// NewDNSYarpcDispatcherProvider create a dispatcher provider which handles with IP address
-func NewDNSYarpcDispatcherProvider(logger log.Logger, interval time.Duration) DispatcherProvider {
-	if interval <= 0 {
-		interval = defaultRefreshInterval
-	}
-	return &dnsDispatcherProvider{
-		interval: interval,
-		logger:   logger,
+// NewDispatcherProvider create a dispatcher provider which handles with IP address
+func NewDispatcherProvider(logger log.Logger, pcf PeerChooserFactory) DispatcherProvider {
+	return &dispatcherProvider{
+		pcf:    pcf,
+		logger: logger,
 	}
 }
 
-func (p *dnsDispatcherProvider) GetTChannel(serviceName string, address string, options *DispatcherOptions) (*yarpc.Dispatcher, error) {
+func (p *dispatcherProvider) GetTChannel(serviceName string, address string, options *DispatcherOptions) (*yarpc.Dispatcher, error) {
 	tchanTransport, err := tchannel.NewTransport(
 		tchannel.ServiceName(serviceName),
 		// this aim to get rid of the annoying popup about accepting incoming network connections
@@ -80,34 +74,30 @@ func (p *dnsDispatcherProvider) GetTChannel(serviceName string, address string, 
 		return nil, err
 	}
 
-	peerList := roundrobin.New(tchanTransport)
-	peerListUpdater, err := newDNSUpdater(peerList, address, p.interval, p.logger)
+	peerChooser, err := p.pcf.CreatePeerChooser(tchanTransport, address)
 	if err != nil {
 		return nil, err
 	}
-	peerListUpdater.Start()
-	outbound := tchanTransport.NewOutbound(peerList)
+	outbound := tchanTransport.NewOutbound(peerChooser)
 
 	p.logger.Info("Creating TChannel dispatcher outbound", tag.Address(address))
 	return p.createOutboundDispatcher(serviceName, outbound, options)
 }
 
-func (p *dnsDispatcherProvider) GetGRPC(serviceName string, address string, options *DispatcherOptions) (*yarpc.Dispatcher, error) {
+func (p *dispatcherProvider) GetGRPC(serviceName string, address string, options *DispatcherOptions) (*yarpc.Dispatcher, error) {
 	grpcTransport := grpc.NewTransport()
 
-	peerList := roundrobin.New(grpcTransport)
-	peerListUpdater, err := newDNSUpdater(peerList, address, p.interval, p.logger)
+	peerChooser, err := p.pcf.CreatePeerChooser(grpcTransport, address)
 	if err != nil {
 		return nil, err
 	}
-	peerListUpdater.Start()
-	outbound := grpcTransport.NewOutbound(peerList)
+	outbound := grpcTransport.NewOutbound(peerChooser)
 
 	p.logger.Info("Creating GRPC dispatcher outbound", tag.Address(address))
 	return p.createOutboundDispatcher(serviceName, outbound, options)
 }
 
-func (p *dnsDispatcherProvider) createOutboundDispatcher(serviceName string, outbound transport.UnaryOutbound, options *DispatcherOptions) (*yarpc.Dispatcher, error) {
+func (p *dispatcherProvider) createOutboundDispatcher(serviceName string, outbound transport.UnaryOutbound, options *DispatcherOptions) (*yarpc.Dispatcher, error) {
 	cfg := yarpc.Config{
 		Name: crossDCCaller,
 		Outbounds: yarpc.Outbounds{
