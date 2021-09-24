@@ -31,6 +31,15 @@ import (
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
+/**
+* How data is sharded in multiple SQL databases of Cadence --
+* Workflow execution and shardInfo is sharded based on historyShardID(which is calculated  historyShardID =hash(workflowID) % numHistoryShards ), dbShardID = historyShardID % numDBShards
+* Workflow History is sharded based on history treeID(a treeID usually is the runID unless it has reset. In case of reset, it will share the same tree as the base run). In that case, dbShardID = hash(treeID) % numDBShards
+* Workflow tasks(for workflow/activity workers) is sharded based on domainID + tasklistName.  dbShardID = hash(domainID + tasklistName ) % numDBShards
+* Workflow visibility is  sharded based on domainID like we said above.  dbShardID = hash(domainID ) % numDBShards
+* Internal domain records is using single shard, it’s only writing when register/update domain, and read is protected by domainCache  dbShardID = DefaultShardID(0)
+* Internal queue records is using single shard. Similarly, the read/write is low enough so it’s okay to not sharded. dbShardID = DefaultShardID(0)
+ */
 type (
 	// sharded is the driver querying a group of SQL databases as sharded solution
 	sharded struct {

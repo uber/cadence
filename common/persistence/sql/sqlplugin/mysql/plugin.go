@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/config"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/sql"
+	"github.com/uber/cadence/common/persistence/sql/sqldriver"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/environment"
 )
@@ -68,7 +69,9 @@ func init() {
 
 // CreateDB initialize the db object
 func (p *plugin) CreateDB(cfg *config.SQL) (sqlplugin.DB, error) {
-	conns, err := p.createDBConnections(cfg)
+	conns, err := sqldriver.CreateDBConnections(cfg, func(cfg *config.SQL) (*sqlx.DB, error) {
+		return p.createSingleDBConn(cfg)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -77,56 +80,13 @@ func (p *plugin) CreateDB(cfg *config.SQL) (sqlplugin.DB, error) {
 
 // CreateAdminDB initialize the adminDb object
 func (p *plugin) CreateAdminDB(cfg *config.SQL) (sqlplugin.AdminDB, error) {
-	conns, err := p.createDBConnections(cfg)
+	conns, err := sqldriver.CreateDBConnections(cfg, func(cfg *config.SQL) (*sqlx.DB, error) {
+		return p.createSingleDBConn(cfg)
+	})
 	if err != nil {
 		return nil, err
 	}
 	return newDB(conns, nil, sqlplugin.DbShardUndefined, cfg.NumShards)
-}
-
-// CreateDBConnection returns references to logical connections to the  underlying SQL databases.
-// By default(UseMultipleDatabases == false), the returned object is to tied to a single
-// SQL database and the object can be used to perform CRUD operations on the tables in the database.
-// If UseMultipleDatabases == true then return connections to all the databases
-func (p *plugin) createDBConnections(cfg *config.SQL) ([]*sqlx.DB, error) {
-	if !cfg.UseMultipleDatabases {
-		xdb, err := p.createSingleDBConn(cfg)
-		if err != nil {
-			return nil, err
-		}
-		return []*sqlx.DB{xdb}, nil
-	}
-	if cfg.NumShards <= 1 || len(cfg.MultipleDatabasesConfig) != cfg.NumShards {
-		return nil, fmt.Errorf("invalid SQL config. NumShards should be > 1 and equal to the length of MultipleDatabasesConfig")
-	}
-
-	originalCfgEntry := &config.MultipleDatabasesConfigEntry{
-		User:         cfg.User,
-		Password:     cfg.Password,
-		ConnectAddr:  cfg.ConnectAddr,
-		DatabaseName: cfg.DatabaseName,
-	}
-	// recover from the original at the end
-	defer func() {
-		cfg.User = originalCfgEntry.User
-		cfg.Password = originalCfgEntry.Password
-		cfg.DatabaseName = originalCfgEntry.DatabaseName
-		cfg.ConnectAddr = originalCfgEntry.ConnectAddr
-	}()
-
-	xdbs := make([]*sqlx.DB, cfg.NumShards, cfg.NumShards)
-	for idx, entry := range cfg.MultipleDatabasesConfig {
-		cfg.User = entry.User
-		cfg.Password = entry.Password
-		cfg.DatabaseName = entry.DatabaseName
-		cfg.ConnectAddr = entry.ConnectAddr
-		xdb, err := p.createSingleDBConn(cfg)
-		if err != nil {
-			return nil, fmt.Errorf("got error of %v to connect to %v database with config %v", err, idx, cfg)
-		}
-		xdbs[idx] = xdb
-	}
-	return xdbs, nil
 }
 
 func (p *plugin) createSingleDBConn(cfg *config.SQL) (*sqlx.DB, error) {
