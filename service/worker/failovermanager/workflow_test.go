@@ -414,18 +414,83 @@ func (s *failoverWorkflowTestSuite) TestGetDomainsActivity_WithTargetDomains() {
 	s.Equal([]string{"d1"}, result) // d3 filtered out because not managed
 }
 
-func (s *failoverWorkflowTestSuite) TestFailoverActivity() {
+func (s *failoverWorkflowTestSuite) TestFailoverActivity_ForceFailover_Success() {
 	env, mockResource, controller := s.prepareTestActivityEnv()
 	defer controller.Finish()
 	defer mockResource.Finish(s.T())
 
 	domains := []string{"d1", "d2"}
+	describeTaskListResp := &types.DescribeTaskListResponse{Pollers: []*types.PollerInfo{
+		{
+			Identity: "test",
+		},
+	}}
+	taskListMap := map[string]*types.DescribeTaskListResponse{
+		"tl": describeTaskListResp,
+	}
+
 	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, nil).Times(len(domains))
+	mockResource.FrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), gomock.Any()).Return(&types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: taskListMap,
+		ActivityTaskListMap: taskListMap,
+	}, nil).Times(len(domains))
+	mockResource.RemoteFrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), gomock.Any()).Return(&types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: taskListMap,
+		ActivityTaskListMap: taskListMap,
+	}, nil).Times(len(domains))
 
 	params := &FailoverActivityParams{
 		Domains:       domains,
 		TargetCluster: "c2",
 	}
+
+	actResult, err := env.ExecuteActivity(failoverActivityName, params)
+	s.NoError(err)
+	var result FailoverActivityResult
+	s.NoError(actResult.Get(&result))
+	s.Equal(domains, result.SuccessDomains)
+}
+
+func (s *failoverWorkflowTestSuite) TestFailoverActivity_GracefulFailover_Success() {
+	env, mockResource, controller := s.prepareTestActivityEnv()
+	defer controller.Finish()
+	defer mockResource.Finish(s.T())
+
+	domains := []string{"d1", "d2"}
+	describeTaskListResp := &types.DescribeTaskListResponse{Pollers: []*types.PollerInfo{
+		{
+			Identity: "test",
+		},
+	}}
+	taskListMap := map[string]*types.DescribeTaskListResponse{
+		"tl": describeTaskListResp,
+	}
+	params := &FailoverActivityParams{
+		Domains:                          domains,
+		TargetCluster:                    "c2",
+		GracefulFailoverTimeoutInSeconds: common.Int32Ptr(int32(10)),
+	}
+
+	updateRequest1 := &types.UpdateDomainRequest{
+		Name:                     "d1",
+		ActiveClusterName:        common.StringPtr("c2"),
+		FailoverTimeoutInSeconds: params.GracefulFailoverTimeoutInSeconds,
+	}
+	updateRequest2 := &types.UpdateDomainRequest{
+		Name:                     "d2",
+		ActiveClusterName:        common.StringPtr("c2"),
+		FailoverTimeoutInSeconds: params.GracefulFailoverTimeoutInSeconds,
+	}
+	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), updateRequest1).Return(nil, nil).Times(1)
+	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), updateRequest2).Return(nil, nil).Times(1)
+	mockResource.FrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), gomock.Any()).Return(&types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: taskListMap,
+		ActivityTaskListMap: taskListMap,
+	}, nil).Times(len(domains))
+	mockResource.RemoteFrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), gomock.Any()).Return(&types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: taskListMap,
+		ActivityTaskListMap: taskListMap,
+	}, nil).Times(len(domains))
 
 	actResult, err := env.ExecuteActivity(failoverActivityName, params)
 	s.NoError(err)
@@ -449,8 +514,25 @@ func (s *failoverWorkflowTestSuite) TestFailoverActivity_Error() {
 		Name:              "d2",
 		ActiveClusterName: common.StringPtr(targetCluster),
 	}
+	describeTaskListResp := &types.DescribeTaskListResponse{Pollers: []*types.PollerInfo{
+		{
+			Identity: "test",
+		},
+	}}
+	taskListMap := map[string]*types.DescribeTaskListResponse{
+		"tl": describeTaskListResp,
+	}
+
 	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), updateRequest1).Return(nil, nil)
 	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), updateRequest2).Return(nil, errors.New("mockErr"))
+	mockResource.FrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), gomock.Any()).Return(&types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: taskListMap,
+		ActivityTaskListMap: taskListMap,
+	}, nil).Times(len(domains))
+	mockResource.RemoteFrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), gomock.Any()).Return(&types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: taskListMap,
+		ActivityTaskListMap: taskListMap,
+	}, nil).Times(len(domains))
 
 	params := &FailoverActivityParams{
 		Domains:       domains,
@@ -463,6 +545,49 @@ func (s *failoverWorkflowTestSuite) TestFailoverActivity_Error() {
 	s.NoError(actResult.Get(&result))
 	s.Equal([]string{"d1"}, result.SuccessDomains)
 	s.Equal([]string{"d2"}, result.FailedDomains)
+}
+
+func (s *failoverWorkflowTestSuite) TestFailoverActivity_NoPoller_Error() {
+	env, mockResource, controller := s.prepareTestActivityEnv()
+	defer controller.Finish()
+	defer mockResource.Finish(s.T())
+
+	domains := []string{"d1", "d2"}
+	targetCluster := "c2"
+	describeTaskListResp1 := &types.DescribeTaskListResponse{Pollers: []*types.PollerInfo{
+		{
+			Identity: "test",
+		},
+	}}
+	taskListMap1 := map[string]*types.DescribeTaskListResponse{
+		"tl": describeTaskListResp1,
+	}
+	describeTaskListResp2 := &types.DescribeTaskListResponse{Pollers: []*types.PollerInfo{}}
+	taskListMap2 := map[string]*types.DescribeTaskListResponse{
+		"tl": describeTaskListResp2,
+	}
+
+	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Times(0)
+	mockResource.FrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), gomock.Any()).Return(&types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: taskListMap1,
+		ActivityTaskListMap: taskListMap1,
+	}, nil).Times(len(domains))
+	mockResource.RemoteFrontendClient.EXPECT().GetTaskListsByDomain(gomock.Any(), gomock.Any()).Return(&types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: taskListMap2,
+		ActivityTaskListMap: taskListMap2,
+	}, nil).Times(len(domains))
+
+	params := &FailoverActivityParams{
+		Domains:       domains,
+		TargetCluster: targetCluster,
+	}
+
+	actResult, err := env.ExecuteActivity(failoverActivityName, params)
+	s.NoError(err)
+	var result FailoverActivityResult
+	s.NoError(actResult.Get(&result))
+	s.Equal(0, len(result.SuccessDomains))
+	s.Equal([]string{"d1", "d2"}, result.FailedDomains)
 }
 
 func (s *failoverWorkflowTestSuite) TestGetOperator() {
