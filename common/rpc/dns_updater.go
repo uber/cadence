@@ -52,7 +52,7 @@ type (
 	}
 )
 
-func NewDNSUpdater(list peer.List, dnsPort string, interval time.Duration, logger log.Logger) (*dnsUpdater, error) {
+func newDNSUpdater(list peer.List, dnsPort string, interval time.Duration, logger log.Logger) (*dnsUpdater, error) {
 	ss := strings.Split(dnsPort, ":")
 	if len(ss) != 2 {
 		return nil, fmt.Errorf("incorrect DNS:Port format")

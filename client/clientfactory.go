@@ -52,7 +52,6 @@ const (
 	frontendCaller = "cadence-frontend-client"
 	historyCaller  = "history-service-client"
 	matchingCaller = "matching-service-client"
-	crossDCCaller  = "cadence-xdc-client"
 )
 
 const (

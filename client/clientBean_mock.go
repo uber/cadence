@@ -30,7 +30,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	yarpc "go.uber.org/yarpc"
 
 	admin "github.com/uber/cadence/client/admin"
 	frontend "github.com/uber/cadence/client/frontend"
@@ -190,57 +189,4 @@ func (m *MockBean) SetRemoteFrontendClient(cluster string, client frontend.Clien
 func (mr *MockBeanMockRecorder) SetRemoteFrontendClient(cluster, client interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRemoteFrontendClient", reflect.TypeOf((*MockBean)(nil).SetRemoteFrontendClient), cluster, client)
-}
-
-// MockDispatcherProvider is a mock of DispatcherProvider interface
-type MockDispatcherProvider struct {
-	ctrl     *gomock.Controller
-	recorder *MockDispatcherProviderMockRecorder
-}
-
-// MockDispatcherProviderMockRecorder is the mock recorder for MockDispatcherProvider
-type MockDispatcherProviderMockRecorder struct {
-	mock *MockDispatcherProvider
-}
-
-// NewMockDispatcherProvider creates a new mock instance
-func NewMockDispatcherProvider(ctrl *gomock.Controller) *MockDispatcherProvider {
-	mock := &MockDispatcherProvider{ctrl: ctrl}
-	mock.recorder = &MockDispatcherProviderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockDispatcherProvider) EXPECT() *MockDispatcherProviderMockRecorder {
-	return m.recorder
-}
-
-// GetTChannel mocks base method
-func (m *MockDispatcherProvider) GetTChannel(name, address string, options *DispatcherOptions) (*yarpc.Dispatcher, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTChannel", name, address, options)
-	ret0, _ := ret[0].(*yarpc.Dispatcher)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetTChannel indicates an expected call of GetTChannel
-func (mr *MockDispatcherProviderMockRecorder) GetTChannel(name, address, options interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTChannel", reflect.TypeOf((*MockDispatcherProvider)(nil).GetTChannel), name, address, options)
-}
-
-// GetGRPC mocks base method
-func (m *MockDispatcherProvider) GetGRPC(name, address string, options *DispatcherOptions) (*yarpc.Dispatcher, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetGRPC", name, address, options)
-	ret0, _ := ret[0].(*yarpc.Dispatcher)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetGRPC indicates an expected call of GetGRPC
-func (mr *MockDispatcherProviderMockRecorder) GetGRPC(name, address, options interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGRPC", reflect.TypeOf((*MockDispatcherProvider)(nil).GetGRPC), name, address, options)
 }
