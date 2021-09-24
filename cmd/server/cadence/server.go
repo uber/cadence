@@ -26,7 +26,6 @@ import (
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 
-	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -176,7 +175,7 @@ func (s *server) startService() common.Daemon {
 	)
 
 	if s.cfg.PublicClient.HostPort != "" {
-		params.DispatcherProvider = client.NewDNSYarpcDispatcherProvider(params.Logger, s.cfg.PublicClient.RefreshInterval)
+		params.DispatcherProvider = rpc.NewDNSYarpcDispatcherProvider(params.Logger, s.cfg.PublicClient.RefreshInterval)
 	} else {
 		log.Fatalf("need to provide an endpoint config for PublicClient")
 	}
@@ -215,14 +214,14 @@ func (s *server) startService() common.Daemon {
 		}
 	}
 
-	var options *client.DispatcherOptions
+	var options *rpc.DispatcherOptions
 	if s.cfg.Authorization.OAuthAuthorizer.Enable {
 		clusterName := s.cfg.ClusterGroupMetadata.CurrentClusterName
 		authProvider, err := authorization.GetAuthProviderClient(s.cfg.ClusterGroupMetadata.ClusterGroup[clusterName].AuthorizationProvider.PrivateKey)
 		if err != nil {
 			log.Fatalf("failed to create AuthProvider: %v", err.Error())
 		}
-		options = &client.DispatcherOptions{
+		options = &rpc.DispatcherOptions{
 			AuthProvider: authProvider,
 		}
 	}
