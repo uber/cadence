@@ -55,10 +55,10 @@ type (
 // use shard 0 as the default shard
 const defaultShard = 0
 
-// NewShardedSQLDriver returns a driver querying a group of SQL databases as sharded solution.
+// newShardedSQLDriver returns a driver querying a group of SQL databases as sharded solution.
 // xdbs is the list of connections to the sql instances. The length of the list of the list is the totalNumShards
 // dbShardID is needed when tx is not nil. It means a started transaction in the shard.
-func NewShardedSQLDriver(xdbs []*sqlx.DB, xtx *sqlx.Tx, dbShardID int) Driver {
+func newShardedSQLDriver(xdbs []*sqlx.DB, xtx *sqlx.Tx, dbShardID int) Driver {
 	driver := &sharded{
 		dbs: xdbs,
 		tx:  xtx,
