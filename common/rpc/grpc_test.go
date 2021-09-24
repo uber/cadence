@@ -18,24 +18,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package rpc
 
 import (
 	"testing"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGRPCPorts(t *testing.T) {
-	config := Config{
-		Services: map[string]Service{
-			"frontend": {RPC: RPC{GRPCPort: 9999}},
-			"history":  {RPC: RPC{}},
+	config := config.Config{
+		Services: map[string]config.Service{
+			"frontend": {RPC: config.RPC{GRPCPort: 9999}},
+			"history":  {RPC: config.RPC{}},
 		},
 	}
-	grpcPorts := config.NewGRPCPorts()
+	grpcPorts := NewGRPCPorts(&config)
 
 	_, err := grpcPorts.GetGRPCAddress("some-service", "1.2.3.4")
 	assert.EqualError(t, err, "unknown service: some-service")

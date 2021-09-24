@@ -41,8 +41,8 @@ type (
 // But this singleton doesn't have sharding so omitting it.
 func NewSingletonSQLDriver(xdb *sqlx.DB, xtx *sqlx.Tx, _ int) Driver {
 	driver := &singleton{
-		db:   xdb,
-		tx:   xtx,
+		db: xdb,
+		tx: xtx,
 	}
 	if xtx != nil {
 		driver.useTx = true

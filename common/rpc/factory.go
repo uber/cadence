@@ -18,13 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package rpc
 
 import (
-	"errors"
 	"fmt"
 	"net"
-	"strings"
 	"sync"
 
 	"go.uber.org/yarpc"
@@ -32,15 +30,16 @@ import (
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 )
 
-// RPCFactory is an implementation of service.RPCFactory interface
-type RPCFactory struct {
-	config      *RPC
+// Factory is an implementation of service.RPCFactory interface
+type Factory struct {
+	config      config.RPC
 	serviceName string
-	ch          *tchannel.ChannelTransport
+	tchannel    *tchannel.ChannelTransport
 	grpc        *grpc.Transport
 	logger      log.Logger
 	grpcPorts   GRPCPorts
@@ -49,19 +48,14 @@ type RPCFactory struct {
 	dispatcher *yarpc.Dispatcher
 }
 
-// NewFactory builds a new RPCFactory
+// NewFactory builds a new rpc.Factory
 // conforming to the underlying configuration
-func (cfg *RPC) NewFactory(sName string, logger log.Logger, grpcPorts GRPCPorts) *RPCFactory {
-	return newRPCFactory(cfg, sName, logger, grpcPorts)
-}
-
-func newRPCFactory(cfg *RPC, sName string, logger log.Logger, grpcPorts GRPCPorts) *RPCFactory {
-	factory := &RPCFactory{config: cfg, serviceName: sName, logger: logger, grpcPorts: grpcPorts}
-	return factory
+func NewFactory(service string, cfg config.RPC, logger log.Logger, grpcPorts GRPCPorts) *Factory {
+	return &Factory{config: cfg, serviceName: service, logger: logger, grpcPorts: grpcPorts}
 }
 
 // GetDispatcher return a cached dispatcher
-func (d *RPCFactory) GetDispatcher() *yarpc.Dispatcher {
+func (d *Factory) GetDispatcher() *yarpc.Dispatcher {
 	d.Lock()
 	defer d.Unlock()
 
@@ -74,19 +68,19 @@ func (d *RPCFactory) GetDispatcher() *yarpc.Dispatcher {
 }
 
 // createInboundDispatcher creates a dispatcher for inbound
-func (d *RPCFactory) createInboundDispatcher() *yarpc.Dispatcher {
+func (d *Factory) createInboundDispatcher() *yarpc.Dispatcher {
 	// Setup dispatcher for onebox
 	var err error
 	inbounds := yarpc.Inbounds{}
 
 	hostAddress := fmt.Sprintf("%v:%v", d.getListenIP(), d.config.Port)
-	d.ch, err = tchannel.NewChannelTransport(
+	d.tchannel, err = tchannel.NewChannelTransport(
 		tchannel.ServiceName(d.serviceName),
 		tchannel.ListenAddr(hostAddress))
 	if err != nil {
 		d.logger.Fatal("Failed to create transport channel", tag.Error(err))
 	}
-	inbounds = append(inbounds, d.ch.NewInbound())
+	inbounds = append(inbounds, d.tchannel.NewInbound())
 	d.logger.Info("Listening for TChannel requests", tag.Address(hostAddress))
 
 	var options []grpc.TransportOption
@@ -113,16 +107,16 @@ func (d *RPCFactory) createInboundDispatcher() *yarpc.Dispatcher {
 }
 
 // CreateDispatcherForOutbound creates a dispatcher for outbound connection
-func (d *RPCFactory) CreateDispatcherForOutbound(
+func (d *Factory) CreateDispatcherForOutbound(
 	callerName string,
 	serviceName string,
 	hostName string,
 ) (*yarpc.Dispatcher, error) {
-	return d.createOutboundDispatcher(callerName, serviceName, hostName, d.ch.NewSingleOutbound(hostName))
+	return d.createOutboundDispatcher(callerName, serviceName, hostName, d.tchannel.NewSingleOutbound(hostName))
 }
 
 // CreateGRPCDispatcherForOutbound creates a dispatcher for GRPC outbound connection
-func (d *RPCFactory) CreateGRPCDispatcherForOutbound(
+func (d *Factory) CreateGRPCDispatcherForOutbound(
 	callerName string,
 	serviceName string,
 	hostName string,
@@ -131,11 +125,11 @@ func (d *RPCFactory) CreateGRPCDispatcherForOutbound(
 }
 
 // ReplaceGRPCPort replaces port in the address to grpc for a given service
-func (d *RPCFactory) ReplaceGRPCPort(serviceName, hostAddress string) (string, error) {
+func (d *Factory) ReplaceGRPCPort(serviceName, hostAddress string) (string, error) {
 	return d.grpcPorts.GetGRPCAddress(serviceName, hostAddress)
 }
 
-func (d *RPCFactory) createOutboundDispatcher(
+func (d *Factory) createOutboundDispatcher(
 	callerName string,
 	serviceName string,
 	hostName string,
@@ -157,7 +151,7 @@ func (d *RPCFactory) createOutboundDispatcher(
 	return dispatcher, nil
 }
 
-func (d *RPCFactory) getListenIP() net.IP {
+func (d *Factory) getListenIP() net.IP {
 	if d.config.BindOnLocalHost && len(d.config.BindOnIP) > 0 {
 		d.logger.Fatal("ListenIP failed, bindOnLocalHost and bindOnIP are mutually exclusive")
 	}
@@ -178,31 +172,4 @@ func (d *RPCFactory) getListenIP() net.IP {
 		d.logger.Fatal("ListenIP failed", tag.Error(err))
 	}
 	return ip
-}
-
-type GRPCPorts map[string]int
-
-func (c *Config) NewGRPCPorts() GRPCPorts {
-	grpcPorts := map[string]int{}
-	for service, config := range c.Services {
-		grpcPorts["cadence-"+service] = config.RPC.GRPCPort
-	}
-	return grpcPorts
-}
-
-func (p GRPCPorts) GetGRPCAddress(service, hostAddress string) (string, error) {
-	port, ok := p[service]
-	if !ok {
-		return hostAddress, errors.New("unknown service: " + service)
-	}
-	if port == 0 {
-		return hostAddress, errors.New("GRPC port not configured for service: " + service)
-	}
-
-	// Drop port if provided
-	if index := strings.Index(hostAddress, ":"); index > 0 {
-		hostAddress = hostAddress[:index]
-	}
-
-	return fmt.Sprintf("%s:%d", hostAddress, port), nil
 }
