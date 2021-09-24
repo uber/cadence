@@ -47,6 +47,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/rpc"
 )
 
 type (
@@ -71,7 +72,7 @@ type (
 		ESClient            es.GenericClient
 		ESConfig            *config.ElasticSearchConfig
 		DynamicConfig       dynamicconfig.Client
-		DispatcherProvider  client.DispatcherProvider
+		DispatcherProvider  rpc.DispatcherProvider
 		DCRedirectionPolicy config.DCRedirectionPolicy
 		PublicClient        workflowserviceclient.Interface
 		ArchivalMetadata    archiver.ArchivalMetadata
@@ -111,7 +112,7 @@ type (
 		messagingClient        messaging.Client
 		blobstoreClient        blobstore.Client
 		dynamicCollection      *dynamicconfig.Collection
-		dispatcherProvider     client.DispatcherProvider
+		dispatcherProvider     rpc.DispatcherProvider
 		archivalMetadata       archiver.ArchivalMetadata
 		archiverProvider       provider.ArchiverProvider
 		serializer             persistence.PayloadSerializer

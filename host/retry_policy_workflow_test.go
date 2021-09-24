@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
@@ -186,106 +187,4 @@ GetHistoryLoop:
 	delta := time.Unix(0, common.Int64Default(firstEvent.WorkflowExecutionStartedEventAttributes.ExpirationTimestamp)).Sub(now)
 	s.True(delta > 2*time.Second)
 	s.True(delta < 4*time.Second)
-}
-
-func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsCron() {
-	id := "integration-workflow-retry-policy-continue-as-new-cron-test"
-	wt := "integration-workflow-retry-policy-continue-as-new-cron-test-type"
-	tl := "integration-workflow-retry-policy-continue-as-new-cron-test-tasklist"
-	identity := "worker1"
-
-	workflowType := &types.WorkflowType{}
-	workflowType.Name = wt
-
-	taskList := &types.TaskList{}
-	taskList.Name = tl
-
-	retryPolicy := &types.RetryPolicy{
-		InitialIntervalInSeconds:    1,
-		BackoffCoefficient:          2.0,
-		MaximumIntervalInSeconds:    1,
-		ExpirationIntervalInSeconds: 1,
-		MaximumAttempts:             0,
-		NonRetriableErrorReasons:    []string{"bad-error"},
-	}
-	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           uuid.New(),
-		Domain:                              s.domainName,
-		WorkflowID:                          id,
-		WorkflowType:                        workflowType,
-		TaskList:                            taskList,
-		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(3),
-		Identity:                            identity,
-		RetryPolicy:                         retryPolicy,
-		CronSchedule:                        "@every 3s",
-	}
-	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
-	s.Nil(err0)
-
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
-	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
-		return []byte(strconv.Itoa(0)), []*types.Decision{{
-			DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
-			CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{},
-		}}, nil
-	}
-
-	poller := &TaskPoller{
-		Engine:          s.engine,
-		Domain:          s.domainName,
-		TaskList:        taskList,
-		Identity:        identity,
-		DecisionHandler: dtHandler,
-		Logger:          s.Logger,
-		T:               s.T(),
-	}
-
-	_, err := poller.PollAndProcessDecisionTask(false, false)
-	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
-	s.Nil(err)
-
-	var firstAttemptEvent *types.HistoryEvent
-	var continueAsCronEvent *types.HistoryEvent
-
-GetHistoryLoop:
-	for i := 0; i < 20; i++ {
-		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-			Domain: s.domainName,
-			Execution: &types.WorkflowExecution{
-				WorkflowID: id,
-			},
-		})
-		s.Nil(err)
-
-		history := historyResponse.History
-		firstEvent := history.Events[0]
-		if *firstEvent.EventType == types.EventTypeWorkflowExecutionStarted {
-			if firstAttemptEvent == nil {
-				firstAttemptEvent = firstEvent
-				continue GetHistoryLoop
-			} else {
-				if firstEvent.WorkflowExecutionStartedEventAttributes.Initiator != nil &&
-					common.Int64Default(firstEvent.Timestamp) != common.Int64Default(firstAttemptEvent.Timestamp) &&
-					*firstEvent.WorkflowExecutionStartedEventAttributes.Initiator == types.ContinueAsNewInitiatorCronSchedule {
-					continueAsCronEvent = firstEvent
-					break GetHistoryLoop
-				}
-			}
-		}
-		time.Sleep(500 * time.Millisecond)
-	}
-	s.NotNil(firstAttemptEvent)
-	s.NotNil(continueAsCronEvent)
-	delta := time.Unix(0, common.Int64Default(firstAttemptEvent.WorkflowExecutionStartedEventAttributes.ExpirationTimestamp)).Sub(
-		time.Unix(0, common.Int64Default(firstAttemptEvent.Timestamp)))
-	s.True(delta > 3*time.Second)
-	s.True(delta < 5*time.Second)
-
-	delta = time.Unix(0, common.Int64Default(continueAsCronEvent.WorkflowExecutionStartedEventAttributes.ExpirationTimestamp)).Sub(
-		time.Unix(0, common.Int64Default(continueAsCronEvent.Timestamp)))
-	s.True(delta > 3*time.Second)
-	s.True(delta < 5*time.Second)
 }

@@ -26,7 +26,6 @@ import (
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 
-	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -41,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
@@ -150,7 +150,7 @@ func (s *server) startService() common.Daemon {
 
 	svcCfg := s.cfg.Services[s.name]
 	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger, params.Name)
-	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger, s.cfg.NewGRPCPorts())
+	params.RPCFactory = rpc.NewFactory(params.Name, svcCfg.RPC, params.Logger, rpc.NewGRPCPorts(s.cfg))
 	params.MembershipFactory, err = s.cfg.Ringpop.NewFactory(
 		params.RPCFactory.GetDispatcher(),
 		params.Name,
@@ -175,7 +175,7 @@ func (s *server) startService() common.Daemon {
 	)
 
 	if s.cfg.PublicClient.HostPort != "" {
-		params.DispatcherProvider = client.NewDNSYarpcDispatcherProvider(params.Logger, s.cfg.PublicClient.RefreshInterval)
+		params.DispatcherProvider = rpc.NewDNSYarpcDispatcherProvider(params.Logger, s.cfg.PublicClient.RefreshInterval)
 	} else {
 		log.Fatalf("need to provide an endpoint config for PublicClient")
 	}
@@ -214,14 +214,14 @@ func (s *server) startService() common.Daemon {
 		}
 	}
 
-	var options *client.DispatcherOptions
+	var options *rpc.DispatcherOptions
 	if s.cfg.Authorization.OAuthAuthorizer.Enable {
 		clusterName := s.cfg.ClusterGroupMetadata.CurrentClusterName
 		authProvider, err := authorization.GetAuthProviderClient(s.cfg.ClusterGroupMetadata.ClusterGroup[clusterName].AuthorizationProvider.PrivateKey)
 		if err != nil {
 			log.Fatalf("failed to create AuthProvider: %v", err.Error())
 		}
-		options = &client.DispatcherOptions{
+		options = &rpc.DispatcherOptions{
 			AuthProvider: authProvider,
 		}
 	}
