@@ -42,6 +42,7 @@ var (
 	errMissingTaskRequestAttributes = errors.New("request attributes not specified")
 	errDomainNotExists              = errors.New("domain not exists")
 	errDomainStandby                = errors.New("domain is standby in current cluster")
+	errUnexpectedErrorFromTarget    = errors.New("unexpected target error")
 )
 
 type (

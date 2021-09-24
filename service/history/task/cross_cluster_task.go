@@ -917,7 +917,16 @@ func loadWorkflowForCrossClusterTask(
 		release(err)
 		return nil, nil, nil, err
 	}
-	if mutableState == nil || !mutableState.IsWorkflowExecutionRunning() {
+	if mutableState == nil {
+		release(nil)
+		return nil, nil, nil, nil
+	}
+
+	// we still want to load the mutable state even if the workflow is closed when
+	// the cross cluster task is for recording child completion or applying parent close policy
+	if !mutableState.IsWorkflowExecutionRunning() &&
+		taskInfo.GetTaskType() != persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete &&
+		taskInfo.GetTaskType() != persistence.CrossClusterTaskTypeApplyParentPolicy {
 		release(nil)
 		return nil, nil, nil, nil
 	}

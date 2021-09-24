@@ -38,7 +38,12 @@ import (
 
 var (
 	errContinueExecution = errors.New("cross cluster task should continue execution")
-	errNewTask           = errors.New("retry task generated")
+
+	expectedCloseErrors = map[types.CrossClusterTaskFailedCause]bool{
+		types.CrossClusterTaskFailedCauseDomainNotActive:          true,
+		types.CrossClusterTaskFailedCauseWorkflowNotExists:        true,
+		types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted: true,
+	}
 )
 
 type (
@@ -148,11 +153,23 @@ func (t *crossClusterSourceTaskExecutor) executeStartChildExecutionTask(
 	}
 
 	// handle common errors
-	switch err := t.getCommonError(ctx, wfContext, mutableState, task); {
-	case err == errNewTask:
-		return nil
-	case err != nil:
-		return err
+
+	// handle common errors
+	failedCause := task.response.FailedCause
+	if failedCause != nil {
+		switch *failedCause {
+		case types.CrossClusterTaskFailedCauseDomainNotActive:
+			return t.generateNewTask(ctx, wfContext, mutableState, task)
+		case types.CrossClusterTaskFailedCauseWorkflowNotExists:
+			return &types.EntityNotExistsError{}
+		case types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
+			return &types.WorkflowExecutionAlreadyCompletedError{}
+		case types.CrossClusterTaskFailedCauseUncategorized:
+			// ideally this case should not happen
+			// crossClusterSourceTask.Update() will reject response with this failed cause
+			t.setTaskState(task, ctask.TaskStatePending, processingState(task.response.TaskState))
+			return errContinueExecution
+		}
 	}
 
 	switch processingState(task.response.TaskState) {
@@ -265,37 +282,6 @@ func (t *crossClusterSourceTaskExecutor) executeCancelExecutionTask(
 	}
 }
 
-func (t *crossClusterSourceTaskExecutor) getCommonError(
-	ctx context.Context,
-	wfContext execution.Context,
-	mutableState execution.MutableState,
-	task *crossClusterSourceTask,
-) error {
-	// handle common errors
-	failedCause := task.response.FailedCause
-	if failedCause != nil {
-		switch *failedCause {
-		case types.CrossClusterTaskFailedCauseDomainNotActive:
-			switch err := t.generateNewTask(ctx, wfContext, mutableState, task); {
-			case err != nil:
-				return err
-			default:
-				return errNewTask
-			}
-		case types.CrossClusterTaskFailedCauseWorkflowNotExists:
-			return &types.EntityNotExistsError{}
-		case types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
-			return &types.WorkflowExecutionAlreadyCompletedError{}
-		case types.CrossClusterTaskFailedCauseUncategorized:
-			// ideally this case should not happen
-			// crossClusterSourceTask.Update() will reject response with this failed cause
-			t.setTaskState(task, ctask.TaskStatePending, processingState(task.response.TaskState))
-			return errContinueExecution
-		}
-	}
-	return nil
-}
-
 func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
 	ctx context.Context,
 	task *crossClusterSourceTask,
@@ -316,11 +302,12 @@ func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
 		return t.generateNewTask(ctx, wfContext, mutableState, task)
 	}
 
-	switch err := t.getCommonError(ctx, wfContext, mutableState, task); {
-	case err == errNewTask:
-		return nil
-	case err != nil:
-		return err
+	// handle common errors
+	failedCause := task.response.FailedCause
+	if failedCause != nil {
+		if _, ok := expectedCloseErrors[*failedCause]; !ok {
+			return errUnexpectedErrorFromTarget
+		}
 	}
 
 	switch processingState(task.response.TaskState) {
@@ -354,11 +341,12 @@ func (t *crossClusterSourceTaskExecutor) executeRecordChildWorkflowExecutionComp
 		return t.generateNewTask(ctx, wfContext, mutableState, task)
 	}
 
-	switch err := t.getCommonError(ctx, wfContext, mutableState, task); {
-	case err == errNewTask:
-		return nil
-	case err != nil:
-		return err
+	// handle common errors
+	failedCause := task.response.FailedCause
+	if failedCause != nil {
+		if _, ok := expectedCloseErrors[*failedCause]; !ok {
+			return errUnexpectedErrorFromTarget
+		}
 	}
 
 	switch processingState(task.response.TaskState) {
