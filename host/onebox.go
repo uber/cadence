@@ -38,7 +38,6 @@ import (
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 
-	"github.com/uber/cadence/client"
 	adminClient "github.com/uber/cadence/client/admin"
 	frontendClient "github.com/uber/cadence/client/frontend"
 	historyClient "github.com/uber/cadence/client/history"
@@ -59,6 +58,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/frontend"
@@ -93,7 +93,7 @@ type (
 		logger                        log.Logger
 		clusterMetadata               cluster.Metadata
 		persistenceConfig             config.Persistence
-		dispatcherProvider            client.DispatcherProvider
+		dispatcherProvider            rpc.DispatcherProvider
 		messagingClient               messaging.Client
 		domainManager                 persistence.DomainManager
 		historyV2Mgr                  persistence.HistoryManager
@@ -128,7 +128,7 @@ type (
 	CadenceParams struct {
 		ClusterMetadata               cluster.Metadata
 		PersistenceConfig             config.Persistence
-		DispatcherProvider            client.DispatcherProvider
+		DispatcherProvider            rpc.DispatcherProvider
 		MessagingClient               messaging.Client
 		DomainManager                 persistence.DomainManager
 		HistoryV2Mgr                  persistence.HistoryManager
