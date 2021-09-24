@@ -175,7 +175,7 @@ func (s *server) startService() common.Daemon {
 	)
 
 	if s.cfg.PublicClient.HostPort != "" {
-		params.DispatcherProvider = rpc.NewDNSYarpcDispatcherProvider(params.Logger, s.cfg.PublicClient.RefreshInterval)
+		params.DispatcherProvider = rpc.NewDispatcherProvider(params.Logger, rpc.NewDNSPeerChooserFactory(s.cfg.PublicClient.RefreshInterval, params.Logger))
 	} else {
 		log.Fatalf("need to provide an endpoint config for PublicClient")
 	}

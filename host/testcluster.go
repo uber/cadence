@@ -139,7 +139,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 	cadenceParams := &CadenceParams{
 		ClusterMetadata:               params.ClusterMetadata,
 		PersistenceConfig:             pConfig,
-		DispatcherProvider:            rpc.NewDNSYarpcDispatcherProvider(logger, 0),
+		DispatcherProvider:            rpc.NewDispatcherProvider(logger, rpc.NewDNSPeerChooserFactory(0, logger)),
 		MessagingClient:               messagingClient,
 		DomainManager:                 testBase.DomainManager,
 		HistoryV2Mgr:                  testBase.HistoryV2Mgr,
