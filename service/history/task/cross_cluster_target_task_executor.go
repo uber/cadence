@@ -231,13 +231,17 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 	ctx context.Context,
 	task *crossClusterTargetTask,
 ) (*types.CrossClusterApplyParentClosePolicyResponseAttributes, error) {
+	if task.processingState != processingStateInitialized {
+		return nil, errUnknownTaskProcessingState
+	}
+
 	attributes := task.request.ApplyParentClosePolicyAttributes
 	if attributes == nil {
 		return nil, errMissingTaskRequestAttributes
 	}
 
 	for _, childAttrs := range attributes.AppyParentClosePolicyAttributes {
-		tagetDomainName, err := t.verifyDomainActive(childAttrs.ChildDomainID)
+		targetDomainName, err := t.verifyDomainActive(childAttrs.ChildDomainID)
 		if err != nil {
 			return nil, err
 		}
@@ -247,7 +251,7 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 			ctx,
 			t.historyClient,
 			childAttrs.ChildDomainID,
-			tagetDomainName,
+			targetDomainName,
 			childAttrs.ChildWorkflowID,
 			childAttrs.ChildRunID,
 			*childAttrs.ParentClosePolicy,
@@ -273,6 +277,10 @@ func (t *crossClusterTargetTaskExecutor) executeRecordChildWorkflowExecutionComp
 	ctx context.Context,
 	task *crossClusterTargetTask,
 ) (*types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes, error) {
+	if task.processingState != processingStateInitialized {
+		return nil, errUnknownTaskProcessingState
+	}
+
 	// parent info is in attributes
 	attributes := task.request.RecordChildWorkflowExecutionCompleteAttributes
 	if attributes == nil {

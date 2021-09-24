@@ -106,7 +106,6 @@ func (t *crossClusterSourceTaskExecutor) Execute(
 		err = t.executeRecordChildWorkflowExecutionCompleteTask(ctx, sourceTask)
 	case persistence.CrossClusterTaskTypeApplyParentPolicy:
 		err = t.executeApplyParentClosePolicyTask(ctx, sourceTask)
-	// TODO: implement the execution logic for recordChildCompleted and applyParentClosePolicy task
 	default:
 		err = errUnknownCrossClusterTask
 	}
@@ -293,8 +292,8 @@ func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
 	}
 	defer func() { release(retError) }()
 
-	err = task.VerifyTaskFailoverVersion(mutableState, taskInfo)
-	if err != nil {
+	verified, err := task.VerifyLastWriteVersion(mutableState, taskInfo)
+	if err != nil || !verified {
 		return err
 	}
 
@@ -332,8 +331,8 @@ func (t *crossClusterSourceTaskExecutor) executeRecordChildWorkflowExecutionComp
 	}
 	defer func() { release(retError) }()
 
-	err = task.VerifyTaskFailoverVersion(mutableState, taskInfo)
-	if err != nil {
+	verified, err := task.VerifyLastWriteVersion(mutableState, taskInfo)
+	if err != nil || !verified {
 		return err
 	}
 

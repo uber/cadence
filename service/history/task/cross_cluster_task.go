@@ -494,19 +494,19 @@ func (t *crossClusterSourceTask) GetCrossClusterRequest() (request *types.CrossC
 	return request, nil
 }
 
-func (t *crossClusterSourceTask) VerifyTaskFailoverVersion(
+func (t *crossClusterSourceTask) VerifyLastWriteVersion(
 	mutableState execution.MutableState,
 	taskInfo *persistence.CrossClusterTaskInfo,
-) error {
+) (bool, error) {
 	lastWriteVersion, err := mutableState.GetLastWriteVersion()
 	if err != nil {
-		return err
+		return false, err
 	}
 	ok, err := verifyTaskVersion(t.shard, t.logger, taskInfo.DomainID, lastWriteVersion, taskInfo.Version, taskInfo)
 	if err != nil || !ok {
-		return err
+		return false, err
 	}
-	return nil
+	return true, nil
 }
 
 func (t *crossClusterSourceTask) getRequestForApplyParentPolicy(
@@ -517,8 +517,8 @@ func (t *crossClusterSourceTask) getRequestForApplyParentPolicy(
 
 	// No need to check the target failovers, only the active cluster should poll tasks
 	// if active cluster changes during polling, target should return error to the source
-	err := t.VerifyTaskFailoverVersion(mutableState, taskInfo)
-	if err != nil {
+	verified, err := t.VerifyLastWriteVersion(mutableState, taskInfo)
+	if err != nil || !verified {
 		return nil, t.processingState, err
 	}
 
@@ -557,8 +557,8 @@ func (t *crossClusterSourceTask) getRequestForRecordChildWorkflowCompletion(
 ) (*types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes, processingState, error) {
 	initiatedEventID := taskInfo.ScheduleID
 
-	err := t.VerifyTaskFailoverVersion(mutableState, taskInfo)
-	if err != nil {
+	verified, err := t.VerifyLastWriteVersion(mutableState, taskInfo)
+	if err != nil || !verified {
 		return nil, t.processingState, err
 	}
 
@@ -569,6 +569,8 @@ func (t *crossClusterSourceTask) getRequestForRecordChildWorkflowCompletion(
 
 	attributes := &types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes{
 		TargetDomainID:   taskInfo.TargetDomainID,
+		TargetWorkflowID: taskInfo.TargetWorkflowID,
+		TargetRunID:      taskInfo.TargetRunID,
 		InitiatedEventID: initiatedEventID,
 		CompletionEvent:  completionEvent,
 	}

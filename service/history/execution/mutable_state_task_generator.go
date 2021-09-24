@@ -763,7 +763,6 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 				},
 			}
 		}
-	// TODO: add the case for CrossClusterTaskTypeRecordChildComplete and ApplyParentClosePolicy
 	default:
 		return fmt.Errorf("unable to convert cross-cluster task of type %v", task.TaskType)
 	}
