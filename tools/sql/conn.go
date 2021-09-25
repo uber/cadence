@@ -44,9 +44,13 @@ func NewConnection(cfg *config.SQL) (*Connection, error) {
 		return nil, err
 	}
 
+	dbName := cfg.DatabaseName
+	if cfg.UseMultipleDatabases {
+		dbName = cfg.MultipleDatabasesConfig[sqlplugin.DbDefaultShard].DatabaseName
+	}
 	return &Connection{
 		adminDb: db,
-		dbName:  cfg.DatabaseName,
+		dbName:  dbName,
 	}, nil
 }
 

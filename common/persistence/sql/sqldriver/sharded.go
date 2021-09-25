@@ -43,9 +43,6 @@ type (
 	shardedSqlExecResult struct{}
 )
 
-// use shard 0 as the default shard
-const defaultShard = 0
-
 // newShardedSQLDriver returns a driver querying a group of SQL databases as sharded solution.
 // xdbs is the list of connections to the sql instances. The length of the list of the list is the totalNumShards
 // dbShardID is needed when tx is not nil. It means a started transaction in the shard.
@@ -67,9 +64,6 @@ func (s *sharded) ExecContext(ctx context.Context, dbShardID int, query string, 
 	if dbShardID == sqlplugin.DbShardUndefined || dbShardID == sqlplugin.DbAllShards {
 		return nil, fmt.Errorf("invalid dbShardID %v shouldn't be used to ExecContext, there must be a bug", dbShardID)
 	}
-	if dbShardID == sqlplugin.DbDefaultShard {
-		dbShardID = defaultShard
-	}
 	if s.useTx {
 		if s.currTxShardID != dbShardID {
 			return nil, fmt.Errorf("dbShardID %v doesn't match with started transaction %v, must be a bug", dbShardID, s.currTxShardID)
@@ -82,9 +76,6 @@ func (s *sharded) ExecContext(ctx context.Context, dbShardID int, query string, 
 func (s *sharded) NamedExecContext(ctx context.Context, dbShardID int, query string, arg interface{}) (sql.Result, error) {
 	if dbShardID == sqlplugin.DbShardUndefined || dbShardID == sqlplugin.DbAllShards {
 		return nil, fmt.Errorf("invalid dbShardID %v shouldn't be used to NamedExecContext, there must be a bug", dbShardID)
-	}
-	if dbShardID == sqlplugin.DbDefaultShard {
-		dbShardID = defaultShard
 	}
 	if s.useTx {
 		if s.currTxShardID != dbShardID {
@@ -99,9 +90,6 @@ func (s *sharded) GetContext(ctx context.Context, dbShardID int, dest interface{
 	if dbShardID == sqlplugin.DbShardUndefined || dbShardID == sqlplugin.DbAllShards {
 		return fmt.Errorf("invalid dbShardID %v shouldn't be used to GetContext, there must be a bug", dbShardID)
 	}
-	if dbShardID == sqlplugin.DbDefaultShard {
-		dbShardID = defaultShard
-	}
 	if s.useTx {
 		if s.currTxShardID != dbShardID {
 			return fmt.Errorf("dbShardID %v doesn't match with started transaction %v, must be a bug", dbShardID, s.currTxShardID)
@@ -114,9 +102,6 @@ func (s *sharded) GetContext(ctx context.Context, dbShardID int, dest interface{
 func (s *sharded) SelectContext(ctx context.Context, dbShardID int, dest interface{}, query string, args ...interface{}) error {
 	if dbShardID == sqlplugin.DbShardUndefined || dbShardID == sqlplugin.DbAllShards {
 		return fmt.Errorf("invalid dbShardID %v shouldn't be used to SelectContext, there must be a bug", dbShardID)
-	}
-	if dbShardID == sqlplugin.DbDefaultShard {
-		dbShardID = defaultShard
 	}
 	if s.useTx {
 		if s.currTxShardID != dbShardID {
@@ -133,9 +118,6 @@ func (s *sharded) SelectContext(ctx context.Context, dbShardID int, dest interfa
 func (s *sharded) Exec(dbShardID int, query string, args ...interface{}) (sql.Result, error) {
 	if dbShardID == sqlplugin.DbShardUndefined {
 		return nil, fmt.Errorf("DbShardUndefined shouldn't be used to Exec, there must be a bug")
-	}
-	if dbShardID == sqlplugin.DbDefaultShard {
-		dbShardID = defaultShard
 	}
 	if dbShardID == sqlplugin.DbAllShards {
 		// NOTE: this can only be safely used for schema operation
@@ -159,9 +141,6 @@ func (s *sharded) Select(dbShardID int, dest interface{}, query string, args ...
 	if dbShardID == sqlplugin.DbShardUndefined || dbShardID == sqlplugin.DbAllShards {
 		return fmt.Errorf("invalid dbShardID %v shouldn't be used to Select, there must be a bug", dbShardID)
 	}
-	if dbShardID == sqlplugin.DbDefaultShard {
-		dbShardID = defaultShard
-	}
 	return s.dbs[dbShardID].Select(dest, query, args...)
 }
 
@@ -169,18 +148,12 @@ func (s *sharded) Get(dbShardID int, dest interface{}, query string, args ...int
 	if dbShardID == sqlplugin.DbShardUndefined || dbShardID == sqlplugin.DbAllShards {
 		return fmt.Errorf("invalid dbShardID %v shouldn't be used to Get, there must be a bug", dbShardID)
 	}
-	if dbShardID == sqlplugin.DbDefaultShard {
-		dbShardID = defaultShard
-	}
 	return s.dbs[dbShardID].Get(dest, query, args...)
 }
 
 func (s *sharded) BeginTxx(ctx context.Context, dbShardID int, opts *sql.TxOptions) (*sqlx.Tx, error) {
 	if dbShardID == sqlplugin.DbShardUndefined || dbShardID == sqlplugin.DbAllShards {
 		return nil, fmt.Errorf("invalid dbShardID %v shouldn't be used to BeginTxx, there must be a bug", dbShardID)
-	}
-	if dbShardID == sqlplugin.DbDefaultShard {
-		dbShardID = defaultShard
 	}
 	return s.dbs[dbShardID].BeginTxx(ctx, opts)
 }

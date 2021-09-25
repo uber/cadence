@@ -46,18 +46,12 @@ func CreateDBConnections(cfg *config.SQL, createConnFunc CreateSingleDBConn) ([]
 		return nil, fmt.Errorf("invalid SQL config. NumShards should be > 1 and equal to the length of MultipleDatabasesConfig")
 	}
 
-	originalCfgEntry := &config.MultipleDatabasesConfigEntry{
-		User:         cfg.User,
-		Password:     cfg.Password,
-		ConnectAddr:  cfg.ConnectAddr,
-		DatabaseName: cfg.DatabaseName,
-	}
 	// recover from the original at the end
 	defer func() {
-		cfg.User = originalCfgEntry.User
-		cfg.Password = originalCfgEntry.Password
-		cfg.DatabaseName = originalCfgEntry.DatabaseName
-		cfg.ConnectAddr = originalCfgEntry.ConnectAddr
+		cfg.User = ""
+		cfg.Password = ""
+		cfg.DatabaseName = ""
+		cfg.ConnectAddr = ""
 	}()
 
 	xdbs := make([]*sqlx.DB, cfg.NumShards, cfg.NumShards)
