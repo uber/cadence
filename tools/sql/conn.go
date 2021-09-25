@@ -46,6 +46,7 @@ func NewConnection(cfg *config.SQL) (*Connection, error) {
 
 	dbName := cfg.DatabaseName
 	if cfg.UseMultipleDatabases {
+		// TODO: we should validate schemas on all shards(SQL databases) to be safe
 		dbName = cfg.MultipleDatabasesConfig[sqlplugin.DbDefaultShard].DatabaseName
 	}
 	return &Connection{
