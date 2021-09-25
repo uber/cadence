@@ -70,7 +70,7 @@ func (mdb *db) CreateSchemaVersionTables() error {
 // ReadSchemaVersion returns the current schema version for the keyspace
 func (mdb *db) ReadSchemaVersion(database string) (string, error) {
 	var version string
-	err := mdb.driver.Get(sqlplugin.DbAllShards, &version, readSchemaVersionQuery, database)
+	err := mdb.driver.Get(sqlplugin.DbDefaultShard, &version, readSchemaVersionQuery, database)
 	return version, err
 }
 

@@ -1,15 +1,12 @@
 persistence:
   defaultStore: mysql-default
+  visibilityStore: "" # useMultipleDatabases must use advancedVisibilityStore only. Due to deep merging with development.yaml, this need to override to empty
   advancedVisibilityStore: es-visibility
   datastores:
     mysql-default:
       sql:
         pluginName: "mysql"
-        databaseName: "cadence"
-        connectAddr: "127.0.0.1:3306"
         connectProtocol: "tcp"
-        user: "root"
-        password: "cadence"
         maxConns: 20
         maxIdleConns: 20
         maxConnLifetime: "1h"
@@ -21,17 +18,17 @@ persistence:
           connectAddr: "127.0.0.1:3306"
           databaseName: "cadence0"
         - user: "root"
-            password: "cadence"
-            connectAddr: "127.0.0.1:3306"
-            databaseName: "cadence1"
+          password: "cadence"
+          connectAddr: "127.0.0.1:3306"
+          databaseName: "cadence1"
         - user: "root"
-            password: "cadence"
-            connectAddr: "127.0.0.1:3306"
-            databaseName: "cadence2"
+          password: "cadence"
+          connectAddr: "127.0.0.1:3306"
+          databaseName: "cadence2"
         - user: "root"
-            password: "cadence"
-            connectAddr: "127.0.0.1:3306"
-            databaseName: "cadence3"
+          password: "cadence"
+          connectAddr: "127.0.0.1:3306"
+          databaseName: "cadence3"
     es-visibility:
       elasticsearch:
         version: "v7"

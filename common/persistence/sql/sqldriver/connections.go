@@ -28,7 +28,7 @@ import (
 	"github.com/uber/cadence/common/config"
 )
 
-type CreateSingleDBConn func (cfg *config.SQL) (*sqlx.DB, error)
+type CreateSingleDBConn func(cfg *config.SQL) (*sqlx.DB, error)
 
 // CreateDBConnections returns references to logical connections to the underlying SQL databases.
 // By default when UseMultipleDatabases == false, the returned object is to tied to a single
@@ -74,4 +74,3 @@ func CreateDBConnections(cfg *config.SQL, createConnFunc CreateSingleDBConn) ([]
 	}
 	return xdbs, nil
 }
-
