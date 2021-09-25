@@ -2451,20 +2451,31 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 	return workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, true, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return workflow.ErrNotExists
+				return &types.EntityNotExistsError{Message: "parent workflow execution already completed"}
 			}
 
 			initiatedID := completionRequest.InitiatedID
 			completedExecution := completionRequest.CompletedExecution
 			completionEvent := completionRequest.CompletionEvent
 
+			logger := e.logger.WithTags(
+				tag.ChildWorkflowID(completedExecution.GetWorkflowID()),
+				tag.ChildWorkflowRunID(completedExecution.GetRunID()),
+				tag.WorkflowInitiatedID(initiatedID),
+			)
 			// Check mutable state to make sure child execution is in pending child executions
 			ci, isRunning := mutableState.GetChildExecutionInfo(initiatedID)
-			if !isRunning || ci.StartedID == common.EmptyEventID {
-				return &types.EntityNotExistsError{Message: "Pending child execution not found."}
+			if !isRunning {
+				logger.Error("Child workflow execution already completed")
+				return &types.EntityNotExistsError{Message: "Child workflow execution already completed."}
+			}
+			if ci.StartedID == common.EmptyEventID {
+				logger.Error("Child workflow execution not started")
+				return &types.EntityNotExistsError{Message: "Child workflow execution not started."}
 			}
 			if ci.StartedWorkflowID != completedExecution.GetWorkflowID() {
-				return &types.EntityNotExistsError{Message: "Pending child execution not found."}
+				logger.Error("Child workflow execution workflowID mismatch", tag.Key("StartedWorkflowID"), tag.Value(ci.StartedWorkflowID))
+				return &types.EntityNotExistsError{Message: "Child workflow execution workflowID mismatch"}
 			}
 
 			switch *completionEvent.EventType {
@@ -2485,6 +2496,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 				_, err = mutableState.AddChildWorkflowExecutionTimedOutEvent(initiatedID, completedExecution, attributes)
 			}
 
+			logger.Error("Failed to record child completion event", tag.Error(err))
 			return err
 		})
 }

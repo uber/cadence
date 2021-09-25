@@ -2051,6 +2051,12 @@ const (
 	FailoverMarkerCallbackCount
 	HistoryFailoverCallbackCount
 
+	RecordChildCompletedCount
+	RecordChildCompletedSucceed
+	RecordChildCompletedFailed
+	RecordChildCompletedCrossCluster
+	RecordChildCompletedDomainError
+
 	NumHistoryMetrics
 )
 
@@ -2556,6 +2562,11 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		FailoverMarkerUpdateShardFailure:                  {metricName: "failover_marker_update_shard_failures", metricType: Counter},
 		FailoverMarkerCallbackCount:                       {metricName: "failover_marker_callback_count", metricType: Counter},
 		HistoryFailoverCallbackCount:                      {metricName: "failover_callback_handler_count", metricType: Counter},
+		RecordChildCompletedCount:                         {metricName: "record_child_completed_count", metricType: Counter},
+		RecordChildCompletedSucceed:                       {metricName: "record_child_completed_succeed", metricType: Counter},
+		RecordChildCompletedFailed:                        {metricName: "record_child_completed_failed", metricType: Counter},
+		RecordChildCompletedCrossCluster:                  {metricName: "record_child_completed_cross_cluster", metricType: Counter},
+		RecordChildCompletedDomainError:                   {metricName: "record_child_completed_domain_error", metricType: Counter},
 		TransferTasksCount:                                {metricName: "transfer_tasks_count", metricType: Timer},
 		TimerTasksCount:                                   {metricName: "timer_tasks_count", metricType: Timer},
 		ReplicationTasksCount:                             {metricName: "replication_tasks_count", metricType: Timer},

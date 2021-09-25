@@ -103,6 +103,14 @@ func WorkflowRunID(runID string) Tag {
 	return newStringTag("wf-run-id", runID)
 }
 
+func ChildWorkflowID(workflowID string) Tag {
+	return newStringTag("child-wf-id", workflowID)
+}
+
+func ChildWorkflowRunID(runID string) Tag {
+	return newStringTag("child-wf-run-id", runID)
+}
+
 // WorkflowResetBaseRunID returns tag for WorkflowResetBaseRunID
 func WorkflowResetBaseRunID(runID string) Tag {
 	return newStringTag("wf-reset-base-run-id", runID)

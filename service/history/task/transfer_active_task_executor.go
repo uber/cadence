@@ -316,6 +316,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
+	// TODO: we can't release ms lock here
 	release(nil)
 	err = t.recordWorkflowClosed(
 		ctx,
@@ -338,14 +339,26 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		return err
 	}
 
+	logger := InitializeLoggerForTask(
+		t.shard.GetShardID(),
+		task,
+		t.logger,
+	)
+	scope := t.metricsClient.Scope(metrics.TransferActiveTaskCloseExecutionScope)
+
 	var crossClusterTaskGenerators []generatorF
 	// Communicate the result to parent execution if this is Child Workflow execution
 	if replyToParentWorkflow {
+		scope.IncCounter(metrics.RecordChildCompletedCount)
 		targetDomainEntry, err := t.shard.GetDomainCache().GetDomainByID(parentDomainID)
 		if err != nil {
+			logger.Error("Failed to get parent domain entry", tag.Error(err), tag.Key("ParentDomainID"), tag.Value(parentDomainID))
+			scope.IncCounter(metrics.RecordChildCompletedDomainError)
 			return err
 		}
 		if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
+			logger.Error("Encountered cross cluster task")
+			scope.IncCounter(metrics.RecordChildCompletedCrossCluster)
 			// TODO: consider moving this logic to GenerateWorkflowCloseTasks and uxxse here as a back-up to save latency
 			crossClusterTaskGenerators = append(crossClusterTaskGenerators,
 				func(taskGenerator execution.MutableStateTaskGenerator) error {
@@ -369,6 +382,11 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 			})
 		}
 
+		if err != nil {
+			logger.Error("RecordChildExecutionCompleted failed", tag.Error(err))
+			scope.IncCounter(metrics.RecordChildCompletedFailed)
+		}
+
 		// Check to see if the error is non-transient, in which case reset the error and continue with processing
 		switch err.(type) {
 		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError:
@@ -379,6 +397,9 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	if err != nil {
 		return err
 	}
+
+	logger.Info("RecordChildExecutionCompleted succeed")
+	scope.IncCounter(metrics.RecordChildCompletedSucceed)
 
 	// TODO: pass crossClusterTaskGenerators to processParentClosePolicy to add new cross
 	// cluster tasks then move the call below after processParentClosePolicy call
