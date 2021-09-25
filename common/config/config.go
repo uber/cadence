@@ -248,9 +248,9 @@ type (
 		// PluginName is the name of SQL plugin
 		PluginName string `yaml:"pluginName" validate:"nonzero"`
 		// DatabaseName is the name of SQL database to connect to
-		DatabaseName string `yaml:"databaseName" validate:"nonzero"`
+		DatabaseName string `yaml:"databaseName"`
 		// ConnectAddr is the remote addr of the database
-		ConnectAddr string `yaml:"connectAddr" validate:"nonzero"`
+		ConnectAddr string `yaml:"connectAddr"`
 		// ConnectProtocol is the protocol that goes with the ConnectAddr ex - tcp, unix
 		ConnectProtocol string `yaml:"connectProtocol" validate:"nonzero"`
 		// ConnectAttributes is a set of key-value attributes to be sent as part of connect data_source_name url

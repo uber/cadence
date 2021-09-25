@@ -75,12 +75,14 @@ func (c *Persistence) FillDefaults() {
 func (c *Persistence) Validate() error {
 	dbStoreKeys := []string{c.DefaultStore}
 
+	useAdvancedVisibilityOnly := false
 	if _, ok := c.DataStores[c.VisibilityStore]; ok {
 		dbStoreKeys = append(dbStoreKeys, c.VisibilityStore)
 	} else {
 		if _, ok := c.DataStores[c.AdvancedVisibilityStore]; !ok {
 			return fmt.Errorf("must provide one of VisibilityStore and AdvancedVisibilityStore")
 		}
+		useAdvancedVisibilityOnly = true
 	}
 
 	for _, st := range dbStoreKeys {
@@ -96,6 +98,43 @@ func (c *Persistence) Validate() error {
 		}
 		if ds.SQL != nil && ds.NoSQL != nil {
 			return fmt.Errorf("persistence config: datastore %v: only one of SQL or NoSQL can be specified", st)
+		}
+		if ds.SQL != nil {
+			if ds.SQL.UseMultipleDatabases {
+				if !useAdvancedVisibilityOnly {
+					return fmt.Errorf("sql persistence config: multipleSQLDatabases can only be used with advanced visibility only")
+				}
+				if ds.SQL.DatabaseName != "" {
+					return fmt.Errorf("sql persistence config: databaseName can only be configured in multipleDatabasesConfig when UseMultipleDatabases is true ")
+				}
+				if ds.SQL.ConnectAddr != "" {
+					return fmt.Errorf("sql persistence config: connectAddr can only be configured ini multipleDatabasesConfig when UseMultipleDatabases is true ")
+				}
+				if ds.SQL.User != "" {
+					return fmt.Errorf("sql persistence config: user can only be configured ini multipleDatabasesConfig when UseMultipleDatabases is true ")
+				}
+				if ds.SQL.Password != "" {
+					return fmt.Errorf("sql persistence config: password can only be configured ini multipleDatabasesConfig when UseMultipleDatabases is true ")
+				}
+				if ds.SQL.NumShards <= 1 || len(ds.SQL.MultipleDatabasesConfig) != ds.SQL.NumShards {
+					return fmt.Errorf("sql persistence config: nShards must be greater than one and equal to the length of multipleDatabasesConfig")
+				}
+				for _, entry := range ds.SQL.MultipleDatabasesConfig {
+					if entry.DatabaseName == "" {
+						return fmt.Errorf("sql multipleDatabasesConfig persistence config: databaseName can not be empty")
+					}
+					if entry.ConnectAddr == "" {
+						return fmt.Errorf("sql multipleDatabasesConfig persistence config: connectAddr can not be empty")
+					}
+				}
+			} else {
+				if ds.SQL.DatabaseName == "" {
+					return fmt.Errorf("sql persistence config: databaseName can not be empty")
+				}
+				if ds.SQL.ConnectAddr == "" {
+					return fmt.Errorf("sql persistence config: connectAddr can not be empty")
+				}
+			}
 		}
 	}
 
