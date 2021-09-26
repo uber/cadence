@@ -61,16 +61,18 @@ setup_postgres_schema() {
 setup_es_template() {
     SCHEMA_FILE=$CADENCE_HOME/schema/elasticsearch/$ES_VERSION/visibility/index_template.json
     server=`echo $ES_SEEDS | awk -F ',' '{print $1}'`
-    httpFix=''
-    curlFix=''
     if [ "$ES_TYPE" == "opensearch" ]; then
-        httpFix='s'
-        curlFix=' -u admin:admin --insecure'
+        URL="https://$server:$ES_PORT/_template/cadence-visibility-template"
+        curl -X PUT $URL -H 'Content-Type: application/json' --data-binary "@$SCHEMA_FILE" -u admin:admin --insecure
+        URL="https://$server:$ES_PORT/cadence-visibility-dev"
+        curl -X PUT $URL -u admin:admin --insecure
+    else
+        URL="http://$server:$ES_PORT/_template/cadence-visibility-template"
+        curl -X PUT $URL -H 'Content-Type: application/json' --data-binary "@$SCHEMA_FILE"
+        URL="http://$server:$ES_PORT/cadence-visibility-dev"
+        curl -X PUT $URL
     fi
-    URL="http$httpFix://$server:$ES_PORT/_template/cadence-visibility-template $curlFix"
-    curl -X PUT $URL -H 'Content-Type: application/json' --data-binary "@$SCHEMA_FILE"
-    URL="http$httpFix://$server:$ES_PORT/cadence-visibility-dev $curlFix"
-    curl -X PUT $URL
+
 }
 
 setup_schema() {
