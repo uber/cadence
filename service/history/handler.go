@@ -109,16 +109,17 @@ type (
 	handlerImpl struct {
 		resource.Resource
 
-		shuttingDown            int32
-		controller              shard.Controller
-		tokenSerializer         common.TaskTokenSerializer
-		startWG                 sync.WaitGroup
-		config                  *config.Config
-		historyEventNotifier    events.Notifier
-		rateLimiter             quotas.Limiter
-		replicationTaskFetchers replication.TaskFetchers
-		queueTaskProcessor      task.Processor
-		failoverCoordinator     failover.Coordinator
+		shuttingDown             int32
+		controller               shard.Controller
+		tokenSerializer          common.TaskTokenSerializer
+		startWG                  sync.WaitGroup
+		config                   *config.Config
+		historyEventNotifier     events.Notifier
+		rateLimiter              quotas.Limiter
+		crossClusterTaskFetchers task.Fetchers
+		replicationTaskFetchers  replication.TaskFetchers
+		queueTaskProcessor       task.Processor
+		failoverCoordinator      failover.Coordinator
 	}
 )
 
@@ -161,6 +162,13 @@ func NewHandler(
 
 // Start starts the handler
 func (h *handlerImpl) Start() {
+	h.crossClusterTaskFetchers = task.NewCrossClusterTaskFetchers(
+		h.GetClusterMetadata(),
+		h.GetClientBean(),
+		&task.FetcherOptions{}, // TODO: specify options
+		h.GetLogger(),
+	)
+	h.crossClusterTaskFetchers.Start()
 
 	h.replicationTaskFetchers = replication.NewTaskFetchers(
 		h.GetLogger(),
@@ -221,6 +229,7 @@ func (h *handlerImpl) Start() {
 // Stop stops the handler
 func (h *handlerImpl) Stop() {
 	h.prepareToShutDown()
+	h.crossClusterTaskFetchers.Stop()
 	h.replicationTaskFetchers.Stop()
 	h.queueTaskProcessor.Stop()
 	h.controller.Stop()
@@ -258,6 +267,7 @@ func (h *handlerImpl) CreateEngine(
 		h.GetSDKClient(),
 		h.historyEventNotifier,
 		h.config,
+		h.crossClusterTaskFetchers,
 		h.replicationTaskFetchers,
 		h.GetMatchingRawClient(),
 		h.queueTaskProcessor,

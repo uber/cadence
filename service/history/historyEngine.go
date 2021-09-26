@@ -80,45 +80,43 @@ const (
 
 var (
 	errDomainDeprecated = &types.BadRequestError{Message: "Domain is deprecated."}
-
-	// TODO: remove this error when cross-cluster queue is wired up and initialized
-	errQueueNotInitialized = types.BadRequestError{Message: "Requested queue processor not initialized"}
 )
 
 type (
 	historyEngineImpl struct {
-		currentClusterName        string
-		shard                     shard.Context
-		timeSource                clock.TimeSource
-		decisionHandler           decision.Handler
-		clusterMetadata           cluster.Metadata
-		historyV2Mgr              persistence.HistoryManager
-		executionManager          persistence.ExecutionManager
-		visibilityMgr             persistence.VisibilityManager
-		txProcessor               queue.Processor
-		timerProcessor            queue.Processor
-		crossClusterProcessor     queue.Processor
-		nDCReplicator             ndc.HistoryReplicator
-		nDCActivityReplicator     ndc.ActivityReplicator
-		historyEventNotifier      events.Notifier
-		tokenSerializer           common.TaskTokenSerializer
-		executionCache            *execution.Cache
-		metricsClient             metrics.Client
-		logger                    log.Logger
-		throttledLogger           log.Logger
-		config                    *config.Config
-		archivalClient            warchiver.Client
-		workflowResetter          reset.WorkflowResetter
-		queueTaskProcessor        task.Processor
-		replicationTaskProcessors []replication.TaskProcessor
-		replicationAckManager     replication.TaskAckManager
-		publicClient              workflowserviceclient.Interface
-		eventsReapplier           ndc.EventsReapplier
-		matchingClient            matching.Client
-		rawMatchingClient         matching.Client
-		clientChecker             client.VersionChecker
-		replicationDLQHandler     replication.DLQHandler
-		failoverMarkerNotifier    failover.MarkerNotifier
+		currentClusterName         string
+		shard                      shard.Context
+		timeSource                 clock.TimeSource
+		decisionHandler            decision.Handler
+		clusterMetadata            cluster.Metadata
+		historyV2Mgr               persistence.HistoryManager
+		executionManager           persistence.ExecutionManager
+		visibilityMgr              persistence.VisibilityManager
+		txProcessor                queue.Processor
+		timerProcessor             queue.Processor
+		crossClusterProcessor      queue.Processor
+		nDCReplicator              ndc.HistoryReplicator
+		nDCActivityReplicator      ndc.ActivityReplicator
+		historyEventNotifier       events.Notifier
+		tokenSerializer            common.TaskTokenSerializer
+		executionCache             *execution.Cache
+		metricsClient              metrics.Client
+		logger                     log.Logger
+		throttledLogger            log.Logger
+		config                     *config.Config
+		archivalClient             warchiver.Client
+		workflowResetter           reset.WorkflowResetter
+		queueTaskProcessor         task.Processor
+		crossClusterTaskProcessors common.Daemon
+		replicationTaskProcessors  []replication.TaskProcessor
+		replicationAckManager      replication.TaskAckManager
+		publicClient               workflowserviceclient.Interface
+		eventsReapplier            ndc.EventsReapplier
+		matchingClient             matching.Client
+		rawMatchingClient          matching.Client
+		clientChecker              client.VersionChecker
+		replicationDLQHandler      replication.DLQHandler
+		failoverMarkerNotifier     failover.MarkerNotifier
 	}
 )
 
@@ -143,6 +141,7 @@ func NewEngineWithShardContext(
 	publicClient workflowserviceclient.Interface,
 	historyEventNotifier events.Notifier,
 	config *config.Config,
+	crossClusterTaskFetchers task.Fetchers,
 	replicationTaskFetchers replication.TaskFetchers,
 	rawMatchingClient matching.Client,
 	queueTaskProcessor task.Processor,
@@ -225,13 +224,12 @@ func NewEngineWithShardContext(
 		openExecutionCheck,
 	)
 
-	// TODO: uncomment the following when cross cluster queue processor impl is ready
-	// and also add necessary Start(), Stop(), NotifyFailover() call in this file.
-	// historyEngImpl.crossClusterProcessor = queue.NewCrossClusterQueueProcessor(
-	// 	shard,
-	// 	historyEngImpl,
-	// 	queueTaskProcessor,
-	// )
+	historyEngImpl.crossClusterProcessor = queue.NewCrossClusterQueueProcessor(
+		shard,
+		historyEngImpl,
+		executionCache,
+		queueTaskProcessor,
+	)
 
 	historyEngImpl.eventsReapplier = ndc.NewEventsReapplier(shard.GetMetricsClient(), logger)
 
@@ -249,6 +247,13 @@ func NewEngineWithShardContext(
 			logger,
 		)
 	}
+
+	historyEngImpl.crossClusterTaskProcessors = task.NewCrossClusterTaskProcessors(
+		shard,
+		queueTaskProcessor,
+		crossClusterTaskFetchers,
+		&task.CrossClusterTaskProcessorOptions{}, // TODO: specify options
+	)
 
 	var replicationTaskProcessors []replication.TaskProcessor
 	replicationTaskExecutors := make(map[string]replication.TaskExecutor)
@@ -317,6 +322,7 @@ func (e *historyEngineImpl) Start() {
 
 	e.txProcessor.Start()
 	e.timerProcessor.Start()
+	e.crossClusterProcessor.Start()
 
 	// failover callback will try to create a failover queue processor to scan all inflight tasks
 	// if domain needs to be failovered. However, in the multicursor queue logic, the scan range
@@ -324,6 +330,8 @@ func (e *historyEngineImpl) Start() {
 	// before queue processor is started, it may result in a deadline as to create the failover queue,
 	// queue processor need to be started.
 	e.registerDomainFailoverCallback()
+
+	e.crossClusterTaskProcessors.Start()
 
 	for _, replicationTaskProcessor := range e.replicationTaskProcessors {
 		replicationTaskProcessor.Start()
@@ -340,6 +348,9 @@ func (e *historyEngineImpl) Stop() {
 
 	e.txProcessor.Stop()
 	e.timerProcessor.Stop()
+	e.crossClusterProcessor.Stop()
+
+	e.crossClusterTaskProcessors.Stop()
 
 	for _, replicationTaskProcessor := range e.replicationTaskProcessors {
 		replicationTaskProcessor.Stop()
@@ -394,11 +405,13 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 		func() {
 			e.txProcessor.LockTaskProcessing()
 			e.timerProcessor.LockTaskProcessing()
+			// there no lock/unlock for crossClusterProcessor
 		},
 		func(nextDomains []*cache.DomainCacheEntry) {
 			defer func() {
 				e.txProcessor.UnlockTaskProcessing()
 				e.timerProcessor.UnlockTaskProcessing()
+				// there no lock/unlock for crossClusterProcessor
 			}()
 
 			if len(nextDomains) == 0 {
@@ -419,6 +432,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 
 				e.txProcessor.FailoverDomain(failoverDomainIDs)
 				e.timerProcessor.FailoverDomain(failoverDomainIDs)
+				e.crossClusterProcessor.FailoverDomain(failoverDomainIDs)
 
 				now := e.shard.GetTimeSource().Now()
 				// the fake tasks will not be actually used, we just need to make sure
@@ -427,6 +441,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				fakeDecisionTimeoutTask := []persistence.Task{&persistence.DecisionTimeoutTask{VisibilityTimestamp: now}}
 				e.txProcessor.NotifyNewTask(e.currentClusterName, nil, fakeDecisionTask)
 				e.timerProcessor.NotifyNewTask(e.currentClusterName, nil, fakeDecisionTimeoutTask)
+				// TODO: do we need to notify? No?
 			}
 
 			// handle graceful failover on active to passive
@@ -2506,10 +2521,12 @@ func (e *historyEngineImpl) SyncShardStatus(
 	// here there are 3 main things
 	// 1. update the view of remote cluster's shard time
 	// 2. notify the timer gate in the timer queue standby processor
-	// 3, notify the transfer (essentially a no op, just put it here so it looks symmetric)
+	// 3. notify the transfer (essentially a no op, just put it here so it looks symmetric)
+	// 4. notify the cross cluster (essentially a no op, just put it here so it looks symmetric)
 	e.shard.SetCurrentTime(clusterName, now)
 	e.txProcessor.NotifyNewTask(clusterName, nil, []persistence.Task{})
 	e.timerProcessor.NotifyNewTask(clusterName, nil, []persistence.Task{})
+	e.crossClusterProcessor.NotifyNewTask(clusterName, nil, []persistence.Task{})
 	return nil
 }
 
@@ -2694,11 +2711,6 @@ func (e *historyEngineImpl) NotifyNewCrossClusterTasks(
 	executionInfo *persistence.WorkflowExecutionInfo,
 	tasks []persistence.Task,
 ) {
-	if e.crossClusterProcessor == nil {
-		// TODO: remove this check when crossClusterProcessor is wired up and initialized
-		return
-	}
-
 	taskByTargetCluster := make(map[string][]persistence.Task)
 	for _, task := range tasks {
 		// TODO: consider defining a new interface in persistence package
@@ -2746,10 +2758,6 @@ func (e *historyEngineImpl) ResetCrossClusterQueue(
 	ctx context.Context,
 	clusterName string,
 ) error {
-	if e.crossClusterProcessor == nil {
-		return errQueueNotInitialized
-	}
-
 	_, err := e.crossClusterProcessor.HandleAction(clusterName, queue.NewResetAction())
 	return err
 }
@@ -2772,10 +2780,6 @@ func (e *historyEngineImpl) DescribeCrossClusterQueue(
 	ctx context.Context,
 	clusterName string,
 ) (*types.DescribeQueueResponse, error) {
-	if e.crossClusterProcessor == nil {
-		return nil, errQueueNotInitialized
-	}
-
 	return e.describeQueue(e.crossClusterProcessor, clusterName)
 }
 
@@ -3296,10 +3300,6 @@ func (e *historyEngineImpl) GetCrossClusterTasks(
 	ctx context.Context,
 	targetCluster string,
 ) ([]*types.CrossClusterTaskRequest, error) {
-	if e.crossClusterProcessor == nil {
-		return nil, errQueueNotInitialized
-	}
-
 	actionResult, err := e.crossClusterProcessor.HandleAction(targetCluster, queue.NewGetTasksAction())
 	if err != nil {
 		return nil, err
@@ -3313,10 +3313,6 @@ func (e *historyEngineImpl) RespondCrossClusterTasksCompleted(
 	targetCluster string,
 	responses []*types.CrossClusterTaskResponse,
 ) error {
-	if e.crossClusterProcessor == nil {
-		return errQueueNotInitialized
-	}
-
 	_, err := e.crossClusterProcessor.HandleAction(targetCluster, queue.NewUpdateTasksAction(responses))
 	return err
 }
