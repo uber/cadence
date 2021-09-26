@@ -316,6 +316,8 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
+	// TODO: we can't release mutable state lock here when cross cluster operation
+	// is enabled, as we may update mutable state after this point.
 	release(nil)
 	err = t.recordWorkflowClosed(
 		ctx,
@@ -341,12 +343,13 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	var crossClusterTaskGenerators []generatorF
 	// Communicate the result to parent execution if this is Child Workflow execution
 	if replyToParentWorkflow {
-		targetDomainEntry, err := t.shard.GetDomainCache().GetDomainByID(parentDomainID)
+		var targetDomainEntry *cache.DomainCacheEntry
+		targetDomainEntry, err = t.shard.GetDomainCache().GetDomainByID(parentDomainID)
 		if err != nil {
 			return err
 		}
 		if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
-			// TODO: consider moving this logic to GenerateWorkflowCloseTasks and uxxse here as a back-up to save latency
+			// TODO: consider moving this logic to GenerateWorkflowCloseTasks and use here as a back-up to save latency
 			crossClusterTaskGenerators = append(crossClusterTaskGenerators,
 				func(taskGenerator execution.MutableStateTaskGenerator) error {
 					return taskGenerator.GenerateCrossClusterTaskFromTransferTask(task, targetCluster)
@@ -385,8 +388,6 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		return err
 	}
 
-	// TODO: pass crossClusterTaskGenerators to processParentClosePolicy to add new cross
-	// cluster tasks then move the call below after processParentClosePolicy call
 	if len(crossClusterTaskGenerators) > 0 {
 		err = t.generateCrossClusterTasks(
 			ctx,
