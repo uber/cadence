@@ -6,6 +6,7 @@ DB="${DB:-cassandra}"
 ENABLE_ES="${ENABLE_ES:-false}"
 ES_PORT="${ES_PORT:-9200}"
 ES_VERSION="${ES_VERSION:-v6}"
+ES_TYPE="${ES_TYPE:-elasticsearch}" # elasticsearch or opensearch
 RF=${RF:-1}
 
 # cassandra env
@@ -60,9 +61,15 @@ setup_postgres_schema() {
 setup_es_template() {
     SCHEMA_FILE=$CADENCE_HOME/schema/elasticsearch/$ES_VERSION/visibility/index_template.json
     server=`echo $ES_SEEDS | awk -F ',' '{print $1}'`
-    URL="http://$server:$ES_PORT/_template/cadence-visibility-template"
+    httpFix=''
+    curlFix=''
+    if [ "$ES_TYPE" == "opensearch" ]; then
+        httpFix='s'
+        curlFix=' -u admin:admin --insecure'
+    fi
+    URL="http$httpFix://$server:$ES_PORT/_template/cadence-visibility-template $curlFix"
     curl -X PUT $URL -H 'Content-Type: application/json' --data-binary "@$SCHEMA_FILE"
-    URL="http://$server:$ES_PORT/cadence-visibility-dev"
+    URL="http$httpFix://$server:$ES_PORT/cadence-visibility-dev $curlFix"
     curl -X PUT $URL
 }
 
