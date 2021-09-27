@@ -36,6 +36,7 @@ const (
 )
 
 func TestNewRateLimiter(t *testing.T) {
+	t.Parallel()
 	maxDispatch := 0.01
 	rl := NewRateLimiter(&maxDispatch, time.Second, _minBurst)
 	limiter := rl.goRateLimiter.Load().(*rate.Limiter)
@@ -43,47 +44,54 @@ func TestNewRateLimiter(t *testing.T) {
 }
 
 func TestMultiStageRateLimiterBlockedByDomainRps(t *testing.T) {
+	t.Parallel()
 	policy := newFixedRpsMultiStageRateLimiter(2, 1)
-	var result []bool
-	for n := 0; n < 5; n++ {
-		result = append(result, policy.Allow(Info{Domain: defaultDomain}))
+	check := func(suffix string) {
+		assert.True(t, policy.Allow(Info{Domain: defaultDomain}), "first should work"+suffix)
+		assert.False(t, policy.Allow(Info{Domain: defaultDomain}), "second should be limited"+suffix) // smaller local limit applies
+		assert.False(t, policy.Allow(Info{Domain: defaultDomain}), "third should be limited"+suffix)
 	}
 
+	check("")
+	// allow bucket to refill
 	time.Sleep(time.Second)
-	for n := 0; n < 5; n++ {
-		result = append(result, policy.Allow(Info{Domain: defaultDomain}))
-	}
-
-	var numAllowed int
-	for _, allowed := range result {
-		if allowed {
-			numAllowed++
-		}
-	}
-
-	assert.Equal(t, 2, numAllowed)
+	check(" after refresh")
 }
 
 func TestMultiStageRateLimiterBlockedByGlobalRps(t *testing.T) {
+	t.Parallel()
 	policy := newFixedRpsMultiStageRateLimiter(1, 2)
-	var result []bool
-	for n := 0; n < 5; n++ {
-		result = append(result, policy.Allow(Info{Domain: defaultDomain}))
+	check := func(suffix string) {
+		assert.True(t, policy.Allow(Info{Domain: defaultDomain}), "first should work"+suffix)
+		assert.False(t, policy.Allow(Info{Domain: defaultDomain}), "second should be limited"+suffix) // smaller global limit applies
+		assert.False(t, policy.Allow(Info{Domain: defaultDomain}), "third should be limited"+suffix)
 	}
 
+	check("")
+	// allow bucket to refill
 	time.Sleep(time.Second)
-	for n := 0; n < 5; n++ {
-		result = append(result, policy.Allow(Info{Domain: defaultDomain}))
+	check(" after refill")
+}
+
+func TestMultiStageRateLimitingMultipleDomains(t *testing.T) {
+	t.Parallel()
+	policy := newFixedRpsMultiStageRateLimiter(2, 1) // should allow 1/s per domain, 2/s total
+
+	check := func(suffix string) {
+		assert.True(t, policy.Allow(Info{Domain: "one"}), "1:1 should work"+suffix)
+		assert.False(t, policy.Allow(Info{Domain: "one"}), "1:2 should be limited"+suffix) // per domain limited
+
+		assert.True(t, policy.Allow(Info{Domain: "two"}), "2:1 should work"+suffix)
+		assert.False(t, policy.Allow(Info{Domain: "two"}), "2:2 should be limited"+suffix) // per domain limited + global limited
+
+		// third domain should be entirely cut off by global and cannot perform any requests
+		assert.False(t, policy.Allow(Info{Domain: "three"}), "3:1 should be limited"+suffix) // allowed by domain, but limited by global
 	}
 
-	var numAllowed int
-	for _, allowed := range result {
-		if allowed {
-			numAllowed++
-		}
-	}
-
-	assert.Equal(t, 2, numAllowed)
+	check("")
+	// allow bucket to refill
+	time.Sleep(time.Second)
+	check(" after refill")
 }
 
 func BenchmarkRateLimiter(b *testing.B) {

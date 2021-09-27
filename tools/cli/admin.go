@@ -1074,8 +1074,12 @@ func newAdminFailoverCommands() []cli.Command {
 				},
 				cli.IntFlag{
 					Name:  FlagFailoverTimeoutWithAlias,
+					Usage: "Optional graceful failover timeout in seconds. If this field is define, the failover will use graceful failover.",
+				},
+				cli.IntFlag{
+					Name:  FlagExecutionTimeoutWithAlias,
 					Usage: "Optional Failover workflow timeout in seconds",
-					Value: defaultFailoverTimeoutInSeconds,
+					Value: defaultFailoverWorkflowTimeoutInSeconds,
 				},
 				cli.IntFlag{
 					Name:  FlagFailoverWaitTimeWithAlias,
@@ -1200,8 +1204,12 @@ func newAdminFailoverCommands() []cli.Command {
 				},
 				cli.IntFlag{
 					Name:  FlagFailoverTimeoutWithAlias,
+					Usage: "Optional graceful failover timeout in seconds. If this field is define, the failover will use graceful failover.",
+				},
+				cli.IntFlag{
+					Name:  FlagExecutionTimeoutWithAlias,
 					Usage: "Optional Failover workflow timeout in seconds",
-					Value: defaultFailoverTimeoutInSeconds,
+					Value: defaultFailoverWorkflowTimeoutInSeconds,
 				},
 				cli.IntFlag{
 					Name:  FlagFailoverWaitTimeWithAlias,

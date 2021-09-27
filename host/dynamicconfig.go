@@ -45,7 +45,6 @@ var (
 		dynamicconfig.ReplicationTaskFetcherErrorRetryWait:          50 * time.Millisecond,
 		dynamicconfig.ReplicationTaskProcessorErrorRetryWait:        time.Millisecond,
 		dynamicconfig.EnableConsistentQueryByDomain:                 true,
-		dynamicconfig.EnableGRPCOutbound:                            true,
 		dynamicconfig.MinRetentionDays:                              0,
 	}
 )

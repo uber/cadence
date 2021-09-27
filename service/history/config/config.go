@@ -100,7 +100,7 @@ type Config struct {
 	TaskRedispatchIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 	StandbyTaskReReplicationContextTimeout  dynamicconfig.DurationPropertyFnWithDomainIDFilter
 	EnableDropStuckTaskByDomainID           dynamicconfig.BoolPropertyFnWithDomainIDFilter
-	ResurrectionCheckMinDelay               dynamicconfig.DurationPropertyFn
+	ResurrectionCheckMinDelay               dynamicconfig.DurationPropertyFnWithDomainFilter
 
 	// QueueProcessor settings
 	QueueProcessorEnableSplit                          dynamicconfig.BoolPropertyFn
@@ -159,6 +159,7 @@ type Config struct {
 	// CrossClusterQueueProcessor settings
 	CrossClusterTaskBatchSize                                dynamicconfig.IntPropertyFn
 	CrossClusterTaskDeleteBatchSize                          dynamicconfig.IntPropertyFn
+	CrossClusterTaskFetchBatchSize                           dynamicconfig.IntPropertyFnWithShardIDFilter
 	CrossClusterTaskWorkerCount                              dynamicconfig.IntPropertyFn
 	CrossClusterProcessorCompleteTaskFailureRetryCount       dynamicconfig.IntPropertyFn
 	CrossClusterProcessorMaxPollRPS                          dynamicconfig.IntPropertyFn
@@ -381,7 +382,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TaskRedispatchIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.TaskRedispatchIntervalJitterCoefficient, 0.15),
 		StandbyTaskReReplicationContextTimeout:  dc.GetDurationPropertyFilteredByDomainID(dynamicconfig.StandbyTaskReReplicationContextTimeout, 3*time.Minute),
 		EnableDropStuckTaskByDomainID:           dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.EnableDropStuckTaskByDomainID, false),
-		ResurrectionCheckMinDelay:               dc.GetDurationProperty(dynamicconfig.ResurrectionCheckMinDelay, 24*time.Hour),
+		ResurrectionCheckMinDelay:               dc.GetDurationPropertyFilteredByDomain(dynamicconfig.ResurrectionCheckMinDelay, 24*time.Hour),
 
 		QueueProcessorEnableSplit:                          dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableSplit, false),
 		QueueProcessorSplitMaxLevel:                        dc.GetIntProperty(dynamicconfig.QueueProcessorSplitMaxLevel, 2), // 3 levels, start from 0
@@ -436,6 +437,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 
 		CrossClusterTaskBatchSize:                                dc.GetIntProperty(dynamicconfig.CrossClusterTaskBatchSize, 100),
 		CrossClusterTaskDeleteBatchSize:                          dc.GetIntProperty(dynamicconfig.CrossClusterTaskDeleteBatchSize, 4000),
+		CrossClusterTaskFetchBatchSize:                           dc.GetIntPropertyFilteredByShardID(dynamicconfig.CrossClusterTaskFetchBatchSize, 100),
 		CrossClusterProcessorMaxPollRPS:                          dc.GetIntProperty(dynamicconfig.CrossClusterProcessorMaxPollRPS, 20),
 		CrossClusterTaskWorkerCount:                              dc.GetIntProperty(dynamicconfig.CrossClusterTaskWorkerCount, 10),
 		CrossClusterProcessorCompleteTaskFailureRetryCount:       dc.GetIntProperty(dynamicconfig.CrossClusterProcessorCompleteTaskFailureRetryCount, 10),

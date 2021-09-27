@@ -46,43 +46,43 @@ const (
 
 // InsertIntoQueue inserts a new row into queue table
 func (pdb *db) InsertIntoQueue(ctx context.Context, row *sqlplugin.QueueRow) (sql.Result, error) {
-	return pdb.conn.NamedExecContext(ctx, templateEnqueueMessageQuery, row)
+	return pdb.driver.NamedExecContext(ctx, sqlplugin.DbDefaultShard, templateEnqueueMessageQuery, row)
 }
 
 // GetLastEnqueuedMessageIDForUpdate returns the last enqueued message ID
 func (pdb *db) GetLastEnqueuedMessageIDForUpdate(ctx context.Context, queueType persistence.QueueType) (int64, error) {
 	var lastMessageID int64
-	err := pdb.conn.GetContext(ctx, &lastMessageID, templateGetLastMessageIDQuery, queueType)
+	err := pdb.driver.GetContext(ctx, sqlplugin.DbDefaultShard, &lastMessageID, templateGetLastMessageIDQuery, queueType)
 	return lastMessageID, err
 }
 
 // GetMessagesFromQueue retrieves messages from the queue
 func (pdb *db) GetMessagesFromQueue(ctx context.Context, queueType persistence.QueueType, lastMessageID int64, maxRows int) ([]sqlplugin.QueueRow, error) {
 	var rows []sqlplugin.QueueRow
-	err := pdb.conn.SelectContext(ctx, &rows, templateGetMessagesQuery, queueType, lastMessageID, maxRows)
+	err := pdb.driver.SelectContext(ctx, sqlplugin.DbDefaultShard, &rows, templateGetMessagesQuery, queueType, lastMessageID, maxRows)
 	return rows, err
 }
 
 // GetMessagesBetween retrieves messages from the queue
 func (pdb *db) GetMessagesBetween(ctx context.Context, queueType persistence.QueueType, firstMessageID int64, lastMessageID int64, maxRows int) ([]sqlplugin.QueueRow, error) {
 	var rows []sqlplugin.QueueRow
-	err := pdb.conn.SelectContext(ctx, &rows, templateGetMessagesBetweenQuery, queueType, firstMessageID, lastMessageID, maxRows)
+	err := pdb.driver.SelectContext(ctx, sqlplugin.DbDefaultShard, &rows, templateGetMessagesBetweenQuery, queueType, firstMessageID, lastMessageID, maxRows)
 	return rows, err
 }
 
 // DeleteMessagesBefore deletes messages before messageID from the queue
 func (pdb *db) DeleteMessagesBefore(ctx context.Context, queueType persistence.QueueType, messageID int64) (sql.Result, error) {
-	return pdb.conn.ExecContext(ctx, templateDeleteMessagesBeforeQuery, queueType, messageID)
+	return pdb.driver.ExecContext(ctx, sqlplugin.DbDefaultShard, templateDeleteMessagesBeforeQuery, queueType, messageID)
 }
 
 // RangeDeleteMessages deletes messages before messageID from the queue
 func (pdb *db) RangeDeleteMessages(ctx context.Context, queueType persistence.QueueType, exclusiveBeginMessageID int64, inclusiveEndMessageID int64) (sql.Result, error) {
-	return pdb.conn.ExecContext(ctx, templateRangeDeleteMessagesQuery, queueType, exclusiveBeginMessageID, inclusiveEndMessageID)
+	return pdb.driver.ExecContext(ctx, sqlplugin.DbDefaultShard, templateRangeDeleteMessagesQuery, queueType, exclusiveBeginMessageID, inclusiveEndMessageID)
 }
 
 // DeleteMessage deletes message with a messageID from the queue
 func (pdb *db) DeleteMessage(ctx context.Context, queueType persistence.QueueType, messageID int64) (sql.Result, error) {
-	return pdb.conn.ExecContext(ctx, templateDeleteMessageQuery, queueType, messageID)
+	return pdb.driver.ExecContext(ctx, sqlplugin.DbDefaultShard, templateDeleteMessageQuery, queueType, messageID)
 }
 
 // InsertAckLevel inserts ack level
@@ -93,7 +93,7 @@ func (pdb *db) InsertAckLevel(ctx context.Context, queueType persistence.QueueTy
 		return err
 	}
 
-	_, err = pdb.conn.NamedExecContext(ctx, templateInsertQueueMetadataQuery, sqlplugin.QueueMetadataRow{QueueType: queueType, Data: data})
+	_, err = pdb.driver.NamedExecContext(ctx, sqlplugin.DbDefaultShard, templateInsertQueueMetadataQuery, sqlplugin.QueueMetadataRow{QueueType: queueType, Data: data})
 	return err
 
 }
@@ -105,7 +105,7 @@ func (pdb *db) UpdateAckLevels(ctx context.Context, queueType persistence.QueueT
 		return err
 	}
 
-	_, err = pdb.conn.ExecContext(ctx, templateUpdateQueueMetadataQuery, data, queueType)
+	_, err = pdb.driver.ExecContext(ctx, sqlplugin.DbDefaultShard, templateUpdateQueueMetadataQuery, data, queueType)
 	return err
 }
 
@@ -117,7 +117,7 @@ func (pdb *db) GetAckLevels(ctx context.Context, queueType persistence.QueueType
 	}
 
 	var data []byte
-	err := pdb.conn.GetContext(ctx, &data, queryStr, queueType)
+	err := pdb.driver.GetContext(ctx, sqlplugin.DbDefaultShard, &data, queryStr, queueType)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -141,8 +141,9 @@ func (pdb *db) GetQueueSize(
 ) (int64, error) {
 
 	var size []int64
-	if err := pdb.conn.SelectContext(
+	if err := pdb.driver.SelectContext(
 		ctx,
+		sqlplugin.DbDefaultShard,
 		&size,
 		templateGetQueueSizeQuery,
 		queueType,

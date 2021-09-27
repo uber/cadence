@@ -334,15 +334,7 @@ func (h *nosqlHistoryStore) DeleteHistoryBranch(
 	var nodeFilters []*nosqlplugin.HistoryNodeFilter
 
 	// validBRsMaxEndNode is to know each branch range that is being used, we want to know what is the max nodeID referred by other valid branch
-	validBRsMaxEndNode := map[string]int64{}
-	for _, b := range rsp.Branches {
-		for _, br := range b.Ancestors {
-			curr, ok := validBRsMaxEndNode[*br.BranchID]
-			if !ok || curr < *br.EndNodeID {
-				validBRsMaxEndNode[*br.BranchID] = *br.EndNodeID
-			}
-		}
-	}
+	validBRsMaxEndNode := persistenceutils.GetBranchesMaxReferredNodeIDs(rsp.Branches)
 
 	// for each branch range to delete, we iterate from bottom to up, and delete up to the point according to validBRsEndNode
 	for i := len(brsToDelete) - 1; i >= 0; i-- {

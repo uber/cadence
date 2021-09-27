@@ -185,7 +185,7 @@ const (
 	// EnableGRPCOutbound is the key for enabling outbound GRPC traffic
 	// KeyName: system.enableGRPCOutbound
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: TRUE
 	// Allowed filters: N/A
 	EnableGRPCOutbound
 	// BlobSizeLimitError is the per event blob size limit
@@ -836,7 +836,7 @@ const (
 	// KeyName: history.resurrectionCheckMinDelay
 	// Value type: Duration
 	// Default value: 24*time.Hour
-	// Allowed filters: N/A
+	// Allowed filters: DomainName
 	ResurrectionCheckMinDelay
 	// QueueProcessorEnableSplit is indicates whether processing queue split policy should be enabled
 	// KeyName: history.queueProcessorEnableSplit
@@ -1129,18 +1129,24 @@ const (
 	// Allowed filters: N/A
 	TransferProcessorVisibilityArchivalTimeLimit
 
-	// CrossClusterTaskBatchSize is batch size for crossClusterQueueProcessor
+	// CrossClusterTaskBatchSize is the batch size for loading cross cluster tasks from persistence in crossClusterQueueProcessor
 	// KeyName: history.crossClusterTaskBatchSize
 	// Value type: Int
 	// Default value: 100
 	// Allowed filters: N/A
 	CrossClusterTaskBatchSize
-	// CrossClusterTaskDeleteBatchSize is batch size for crossClusterQueueProcessor to delete cross cluster tasks
+	// CrossClusterTaskDeleteBatchSize is the batch size for deleting cross cluster tasks from persistence in crossClusterQueueProcessor
 	// KeyName: history.crossClusterTaskDeleteBatchSize
 	// Value type: Int
 	// Default value: 4000
 	// Allowed filters: N/A
 	CrossClusterTaskDeleteBatchSize
+	// CrossClusterTaskFetchBatchSize is batch size for dispatching cross cluster tasks to target cluster in crossClusterQueueProcessor
+	// KeyName: history.crossClusterTaskFetchBatchSize
+	// Value type: Int
+	// Default value: 100
+	// Allowed filters: ShardID
+	CrossClusterTaskFetchBatchSize
 	// CrossClusterProcessorMaxPollRPS is max poll rate per second for crossClusterQueueProcessor
 	// KeyName: history.crossClusterProcessorMaxPollRPS
 	// Value type: Int
@@ -2186,6 +2192,7 @@ var Keys = map[Key]string{
 
 	CrossClusterTaskBatchSize:                                "history.crossClusterTaskBatchSize",
 	CrossClusterTaskDeleteBatchSize:                          "history.crossClusterTaskDeleteBatchSize",
+	CrossClusterTaskFetchBatchSize:                           "history.crossClusterTaskFetchBatchSize",
 	CrossClusterProcessorMaxPollRPS:                          "history.crossClusterProcessorMaxPollRPS",
 	CrossClusterTaskWorkerCount:                              "history.crossClusterTaskWorkerCount",
 	CrossClusterProcessorCompleteTaskFailureRetryCount:       "history.crossClusterProcessorCompleteTaskFailureRetryCount",

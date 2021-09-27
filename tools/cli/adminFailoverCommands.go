@@ -36,10 +36,10 @@ import (
 )
 
 const (
-	defaultAbortReason                    = "Failover aborted through admin CLI"
-	defaultBatchFailoverSize              = 20
-	defaultBatchFailoverWaitTimeInSeconds = 30
-	defaultFailoverTimeoutInSeconds       = 1200
+	defaultAbortReason                      = "Failover aborted through admin CLI"
+	defaultBatchFailoverSize                = 20
+	defaultBatchFailoverWaitTimeInSeconds   = 30
+	defaultFailoverWorkflowTimeoutInSeconds = 1200
 )
 
 type startParams struct {
@@ -47,6 +47,7 @@ type startParams struct {
 	sourceCluster                  string
 	batchFailoverSize              int
 	batchFailoverWaitTimeInSeconds int
+	failoverWorkflowTimeout        int
 	failoverTimeout                int
 	domains                        []string
 	drillWaitTime                  int
@@ -61,6 +62,7 @@ func AdminFailoverStart(c *cli.Context) {
 		batchFailoverSize:              c.Int(FlagFailoverBatchSize),
 		batchFailoverWaitTimeInSeconds: c.Int(FlagFailoverWaitTime),
 		failoverTimeout:                c.Int(FlagFailoverTimeout),
+		failoverWorkflowTimeout:        c.Int(FlagExecutionTimeout),
 		domains:                        c.StringSlice(FlagFailoverDomains),
 		drillWaitTime:                  c.Int(FlagFailoverDrillWaitTime),
 		cron:                           c.String(FlagCronSchedule),
@@ -155,6 +157,7 @@ func AdminFailoverRollback(c *cli.Context) {
 		batchFailoverSize:              c.Int(FlagFailoverBatchSize),
 		batchFailoverWaitTimeInSeconds: c.Int(FlagFailoverWaitTime),
 		failoverTimeout:                c.Int(FlagFailoverTimeout),
+		failoverWorkflowTimeout:        c.Int(FlagExecutionTimeout),
 	}
 	failoverStart(c, params)
 }
@@ -207,9 +210,13 @@ func failoverStart(c *cli.Context, params *startParams) {
 	sourceCluster := params.sourceCluster
 	batchFailoverSize := params.batchFailoverSize
 	batchFailoverWaitTimeInSeconds := params.batchFailoverWaitTimeInSeconds
-	workflowTimeout := time.Duration(params.failoverTimeout) * time.Second
+	workflowTimeout := time.Duration(params.failoverWorkflowTimeout) * time.Second
 	domains := params.domains
 	drillWaitTime := time.Duration(params.drillWaitTime) * time.Second
+	var gracefulFailoverTimeoutInSeconds *int32
+	if params.failoverTimeout > 0 {
+		gracefulFailoverTimeoutInSeconds = common.Int32Ptr(int32(params.failoverTimeout))
+	}
 
 	client := getCadenceClient(c)
 	tcCtx, cancel := newContext(c)
@@ -249,12 +256,13 @@ func failoverStart(c *cli.Context, params *startParams) {
 	}
 
 	foParams := failovermanager.FailoverParams{
-		TargetCluster:                  targetCluster,
-		SourceCluster:                  sourceCluster,
-		BatchFailoverSize:              batchFailoverSize,
-		BatchFailoverWaitTimeInSeconds: batchFailoverWaitTimeInSeconds,
-		Domains:                        domains,
-		DrillWaitTime:                  drillWaitTime,
+		TargetCluster:                    targetCluster,
+		SourceCluster:                    sourceCluster,
+		BatchFailoverSize:                batchFailoverSize,
+		BatchFailoverWaitTimeInSeconds:   batchFailoverWaitTimeInSeconds,
+		Domains:                          domains,
+		DrillWaitTime:                    drillWaitTime,
+		GracefulFailoverTimeoutInSeconds: gracefulFailoverTimeoutInSeconds,
 	}
 	wf, err := client.StartWorkflow(tcCtx, options, failovermanager.FailoverWorkflowTypeName, foParams)
 	if err != nil {
@@ -318,7 +326,7 @@ func validateStartParams(params *startParams) {
 	if params.batchFailoverWaitTimeInSeconds <= 0 {
 		params.batchFailoverWaitTimeInSeconds = defaultBatchFailoverWaitTimeInSeconds
 	}
-	if params.failoverTimeout <= 0 {
-		params.failoverTimeout = defaultFailoverTimeoutInSeconds
+	if params.failoverWorkflowTimeout <= 0 {
+		params.failoverWorkflowTimeout = defaultFailoverWorkflowTimeoutInSeconds
 	}
 }

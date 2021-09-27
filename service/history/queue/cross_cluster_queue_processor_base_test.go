@@ -294,12 +294,6 @@ func (s *crossClusterQueueProcessorBaseSuite) TestPollTasks_OneTaskReady_ReturnO
 	readyTask := task.NewMockCrossClusterTask(s.controller)
 	readyTask.EXPECT().GetDomainID().Return(uuid.New()).AnyTimes()
 	readyTask.EXPECT().IsReadyForPoll().Return(true)
-	readyTask.EXPECT().GetVisibilityTimestamp().Return(time.Time{}).AnyTimes()
-	readyTask.EXPECT().GetWorkflowID().Return(uuid.New()).AnyTimes()
-	readyTask.EXPECT().GetRunID().Return(uuid.New()).AnyTimes()
-	readyTask.EXPECT().GetTaskType().Return(1).AnyTimes()
-	readyTask.EXPECT().State().Return(ctask.State(0)).AnyTimes()
-	readyTask.EXPECT().GetTaskID().Return(int64(0)).AnyTimes()
 	readyTask.EXPECT().GetCrossClusterRequest().Return(&types.CrossClusterTaskRequest{}, nil).AnyTimes()
 	notReadyTask := task.NewMockCrossClusterTask(s.controller)
 	notReadyTask.EXPECT().GetDomainID().Return(uuid.New()).AnyTimes()
@@ -308,6 +302,42 @@ func (s *crossClusterQueueProcessorBaseSuite) TestPollTasks_OneTaskReady_ReturnO
 	processorBase.processingQueueCollections[0].AddTasks(newTaskMap, testKey{ID: 10})
 	tasks := processorBase.pollTasks()
 	s.Equal(1, len(tasks))
+}
+
+func (s *crossClusterQueueProcessorBaseSuite) TestPollTasks_FetchBatchSizeLimit() {
+	fetchBatchSize := 10
+	s.mockShard.GetConfig().CrossClusterTaskFetchBatchSize = dynamicconfig.GetIntPropertyFilteredByShardID(fetchBatchSize)
+	numReadyTasks := fetchBatchSize * 2
+
+	clusterName := "test"
+	processingQueueState := newProcessingQueueState(
+		0,
+		testKey{ID: 0},
+		testKey{ID: 0},
+		testKey{ID: numReadyTasks},
+		NewDomainFilter(map[string]struct{}{}, true),
+	)
+
+	processorBase := s.newTestCrossClusterQueueProcessorBase(
+		[]ProcessingQueueState{processingQueueState},
+		clusterName,
+		nil,
+		nil,
+		nil,
+	)
+
+	readyTasksMap := make(map[task.Key]task.Task)
+	for i := 0; i != numReadyTasks; i++ {
+		readyTask := task.NewMockCrossClusterTask(s.controller)
+		readyTask.EXPECT().GetDomainID().Return(uuid.New()).AnyTimes()
+		readyTask.EXPECT().IsReadyForPoll().Return(true).AnyTimes()
+		readyTask.EXPECT().GetCrossClusterRequest().Return(&types.CrossClusterTaskRequest{}, nil).AnyTimes()
+		readyTasksMap[testKey{ID: i + 1}] = readyTask
+	}
+	processorBase.processingQueueCollections[0].AddTasks(readyTasksMap, testKey{ID: numReadyTasks})
+
+	tasks := processorBase.pollTasks()
+	s.Len(tasks, fetchBatchSize)
 }
 
 func (s *crossClusterQueueProcessorBaseSuite) TestUpdateTask_Success() {
