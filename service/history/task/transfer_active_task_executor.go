@@ -343,8 +343,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	var crossClusterTaskGenerators []generatorF
 	// Communicate the result to parent execution if this is Child Workflow execution
 	if replyToParentWorkflow {
-		var targetDomainEntry *cache.DomainCacheEntry
-		targetDomainEntry, err = t.shard.GetDomainCache().GetDomainByID(parentDomainID)
+		targetDomainEntry, err := t.shard.GetDomainCache().GetDomainByID(parentDomainID)
 		if err != nil {
 			return err
 		}
@@ -357,7 +356,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		} else {
 			recordChildCompletionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 			defer cancel()
-			err = t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &types.RecordChildExecutionCompletedRequest{
+			err := t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &types.RecordChildExecutionCompletedRequest{
 				DomainUUID: parentDomainID,
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: parentWorkflowID,
@@ -370,17 +369,17 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 				},
 				CompletionEvent: completionEvent,
 			})
-		}
 
-		// Check to see if the error is non-transient, in which case reset the error and continue with processing
-		switch err.(type) {
-		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError:
-			err = nil
-		}
-	}
+			// Check to see if the error is non-transient, in which case reset the error and continue with processing
+			switch err.(type) {
+			case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError:
+				err = nil
+			}
 
-	if err != nil {
-		return err
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	err = t.processParentClosePolicy(ctx, wfContext, task, domainName, children, &crossClusterTaskGenerators)
