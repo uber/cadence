@@ -597,7 +597,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 		c.logger.Fatal("Failed to get dispatcher for worker", tag.Error(err))
 	}
 	params.PublicClient = cwsc.New(dispatcher.ClientConfig(common.FrontendServiceName))
-	service := service.New(params)
+	service := NewService(params)
 	service.Start()
 
 	var replicatorDomainCache cache.DomainCache
@@ -631,7 +631,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	c.shutdownWG.Done()
 }
 
-func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, service service.Service, domainCache cache.DomainCache) {
+func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, service Service, domainCache cache.DomainCache) {
 	serviceResolver, err := service.GetMembershipMonitor().GetResolver(common.WorkerServiceName)
 	if err != nil {
 		c.logger.Fatal("Fail to start replicator when start worker", tag.Error(err))
@@ -653,7 +653,7 @@ func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, ser
 	}
 }
 
-func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, service service.Service, domainCache cache.DomainCache) {
+func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, service Service, domainCache cache.DomainCache) {
 	workerConfig := worker.NewConfig(params)
 	workerConfig.ArchiverConfig.ArchiverConcurrency = dynamicconfig.GetIntPropertyFn(10)
 	historyArchiverBootstrapContainer := &carchiver.HistoryBootstrapContainer{
@@ -684,7 +684,7 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 	}
 }
 
-func (c *cadenceImpl) startWorkerIndexer(params *service.BootstrapParams, service service.Service) {
+func (c *cadenceImpl) startWorkerIndexer(params *service.BootstrapParams, service Service) {
 	params.DynamicConfig.UpdateValue(dynamicconfig.AdvancedVisibilityWritingMode, common.AdvancedVisibilityWritingModeDual)
 	workerConfig := worker.NewConfig(params)
 	c.indexer = indexer.NewIndexer(
