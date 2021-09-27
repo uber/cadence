@@ -58,13 +58,6 @@ type (
 	}
 )
 
-const (
-	frontendService = "frontend"
-	historyService  = "history"
-	matchingService = "matching"
-	workerService   = "worker"
-)
-
 // newServer returns a new instance of a daemon
 // that represents a cadence service
 func newServer(service string, cfg *config.Config) common.Daemon {
@@ -105,7 +98,7 @@ func (s *server) Stop() {
 // startService starts a service with the given name and config
 func (s *server) startService() common.Daemon {
 	params := resource.Params{}
-	params.Name = "cadence-" + s.name
+	params.Name = service.FullName(s.name)
 
 	zapLogger, err := s.cfg.Log.NewZapLogger()
 	if err != nil {
@@ -226,11 +219,11 @@ func (s *server) startService() common.Daemon {
 			AuthProvider: authProvider,
 		}
 	}
-	dispatcher, err := params.DispatcherProvider.GetTChannel(common.FrontendServiceName, s.cfg.PublicClient.HostPort, options)
+	dispatcher, err := params.DispatcherProvider.GetTChannel(service.Frontend, s.cfg.PublicClient.HostPort, options)
 	if err != nil {
 		log.Fatalf("failed to construct dispatcher: %v", err)
 	}
-	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))
+	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(service.Frontend))
 
 	params.ArchivalMetadata = archiver.NewArchivalMetadata(
 		dc,
@@ -255,14 +248,14 @@ func (s *server) startService() common.Daemon {
 
 	var daemon common.Daemon
 
-	switch s.name {
-	case frontendService:
+	switch params.Name {
+	case service.Frontend:
 		daemon, err = frontend.NewService(&params)
-	case historyService:
+	case service.History:
 		daemon, err = history.NewService(&params)
-	case matchingService:
+	case service.Matching:
 		daemon, err = matching.NewService(&params)
-	case workerService:
+	case service.Worker:
 		daemon, err = worker.NewService(&params)
 	}
 	if err != nil {

@@ -46,6 +46,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/service"
 )
 
 const (
@@ -143,7 +144,7 @@ func (cf *rpcClientFactory) createKeyResolver(serviceName string) (func(key stri
 }
 
 func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error) {
-	keyResolver, err := cf.createKeyResolver(common.HistoryServiceName)
+	keyResolver, err := cf.createKeyResolver(service.History)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +176,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 	timeout time.Duration,
 	longPollTimeout time.Duration,
 ) (matching.Client, error) {
-	keyResolver, err := cf.createKeyResolver(common.MatchingServiceName)
+	keyResolver, err := cf.createKeyResolver(service.Matching)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +189,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 	}
 
 	clientFetcher := func() ([]matching.Client, error) {
-		resolver, err := cf.monitor.GetResolver(common.MatchingServiceName)
+		resolver, err := cf.monitor.GetResolver(service.Matching)
 		if err != nil {
 			return nil, err
 		}
@@ -197,7 +198,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		for _, host := range resolver.Members() {
 			hostAddress := host.GetAddress()
 			if cf.enableGRPCOutbound {
-				hostAddress, err = cf.rpcFactory.ReplaceGRPCPort(common.MatchingServiceName, hostAddress)
+				hostAddress, err = cf.rpcFactory.ReplaceGRPCPort(service.Matching, hostAddress)
 				if err != nil {
 					return nil, err
 				}
@@ -232,7 +233,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeout(
 	timeout time.Duration,
 	longPollTimeout time.Duration,
 ) (frontend.Client, error) {
-	keyResolver, err := cf.createKeyResolver(common.FrontendServiceName)
+	keyResolver, err := cf.createKeyResolver(service.Frontend)
 	if err != nil {
 		return nil, err
 	}
@@ -316,51 +317,51 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndDispatcher(
 }
 
 func (cf *rpcClientFactory) newHistoryThriftClient(hostAddress string) (history.Client, error) {
-	dispatcher, err := cf.rpcFactory.CreateDispatcherForOutbound(historyCaller, common.HistoryServiceName, hostAddress)
+	dispatcher, err := cf.rpcFactory.CreateDispatcherForOutbound(historyCaller, service.History, hostAddress)
 	if err != nil {
 		return nil, err
 	}
-	return history.NewThriftClient(historyserviceclient.New(dispatcher.ClientConfig(common.HistoryServiceName))), nil
+	return history.NewThriftClient(historyserviceclient.New(dispatcher.ClientConfig(service.History))), nil
 }
 
 func (cf *rpcClientFactory) newMatchingThriftClient(hostAddress string) (matching.Client, error) {
-	dispatcher, err := cf.rpcFactory.CreateDispatcherForOutbound(matchingCaller, common.MatchingServiceName, hostAddress)
+	dispatcher, err := cf.rpcFactory.CreateDispatcherForOutbound(matchingCaller, service.Matching, hostAddress)
 	if err != nil {
 		return nil, err
 	}
-	return matching.NewThriftClient(matchingserviceclient.New(dispatcher.ClientConfig(common.MatchingServiceName))), nil
+	return matching.NewThriftClient(matchingserviceclient.New(dispatcher.ClientConfig(service.Matching))), nil
 }
 
 func (cf *rpcClientFactory) newFrontendThriftClient(hostAddress string) (frontend.Client, error) {
-	dispatcher, err := cf.rpcFactory.CreateDispatcherForOutbound(frontendCaller, common.FrontendServiceName, hostAddress)
+	dispatcher, err := cf.rpcFactory.CreateDispatcherForOutbound(frontendCaller, service.Frontend, hostAddress)
 	if err != nil {
 		return nil, err
 	}
-	return frontend.NewThriftClient(workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))), nil
+	return frontend.NewThriftClient(workflowserviceclient.New(dispatcher.ClientConfig(service.Frontend))), nil
 }
 
 func (cf *rpcClientFactory) newHistoryGRPCClient(hostAddress string) (history.Client, error) {
-	dispatcher, err := cf.rpcFactory.CreateGRPCDispatcherForOutbound(historyCaller, common.HistoryServiceName, hostAddress)
+	dispatcher, err := cf.rpcFactory.CreateGRPCDispatcherForOutbound(historyCaller, service.History, hostAddress)
 	if err != nil {
 		return nil, err
 	}
-	return history.NewGRPCClient(historyv1.NewHistoryAPIYARPCClient(dispatcher.ClientConfig(common.HistoryServiceName))), nil
+	return history.NewGRPCClient(historyv1.NewHistoryAPIYARPCClient(dispatcher.ClientConfig(service.History))), nil
 }
 
 func (cf *rpcClientFactory) newMatchingGRPCClient(hostAddress string) (matching.Client, error) {
-	dispatcher, err := cf.rpcFactory.CreateGRPCDispatcherForOutbound(matchingCaller, common.MatchingServiceName, hostAddress)
+	dispatcher, err := cf.rpcFactory.CreateGRPCDispatcherForOutbound(matchingCaller, service.Matching, hostAddress)
 	if err != nil {
 		return nil, err
 	}
-	return matching.NewGRPCClient(matchingv1.NewMatchingAPIYARPCClient(dispatcher.ClientConfig(common.MatchingServiceName))), nil
+	return matching.NewGRPCClient(matchingv1.NewMatchingAPIYARPCClient(dispatcher.ClientConfig(service.Matching))), nil
 }
 
 func (cf *rpcClientFactory) newFrontendGRPCClient(hostAddress string) (frontend.Client, error) {
-	dispatcher, err := cf.rpcFactory.CreateGRPCDispatcherForOutbound(frontendCaller, common.FrontendServiceName, hostAddress)
+	dispatcher, err := cf.rpcFactory.CreateGRPCDispatcherForOutbound(frontendCaller, service.Frontend, hostAddress)
 	if err != nil {
 		return nil, err
 	}
-	config := dispatcher.ClientConfig(common.FrontendServiceName)
+	config := dispatcher.ClientConfig(service.Frontend)
 	return frontend.NewGRPCClient(
 		apiv1.NewDomainAPIYARPCClient(config),
 		apiv1.NewWorkflowAPIYARPCClient(config),

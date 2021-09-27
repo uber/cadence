@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Uber Technologies, Inc.
+// Copyright (c) 2017 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,40 +18,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package rpc
+package service
 
 import (
-	"errors"
-	"fmt"
-	"strings"
-
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
 )
 
-type GRPCPorts map[string]int
-
-func NewGRPCPorts(c *config.Config) GRPCPorts {
-	grpcPorts := map[string]int{}
-	for name, config := range c.Services {
-		grpcPorts[service.FullName(name)] = config.RPC.GRPCPort
-	}
-	return grpcPorts
-}
-
-func (p GRPCPorts) GetGRPCAddress(service, hostAddress string) (string, error) {
-	port, ok := p[service]
-	if !ok {
-		return hostAddress, errors.New("unknown service: " + service)
-	}
-	if port == 0 {
-		return hostAddress, errors.New("GRPC port not configured for service: " + service)
+// GetMetricsServiceIdx returns the metrics name
+func GetMetricsServiceIdx(serviceName string, logger log.Logger) metrics.ServiceIdx {
+	switch serviceName {
+	case Frontend:
+		return metrics.Frontend
+	case History:
+		return metrics.History
+	case Matching:
+		return metrics.Matching
+	case Worker:
+		return metrics.Worker
+	default:
+		logger.Fatal("Unknown service name for metrics!")
 	}
 
-	// Drop port if provided
-	if index := strings.Index(hostAddress, ":"); index > 0 {
-		hostAddress = hostAddress[:index]
-	}
-
-	return fmt.Sprintf("%s:%d", hostAddress, port), nil
+	// this should never happen!
+	return metrics.NumServices
 }

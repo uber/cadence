@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,27 +20,41 @@
 
 package service
 
-import (
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/metrics"
+import "strings"
+
+const (
+	_servicePrefix = "cadence-"
+
+	// Frontend is the name of the frontend service
+	Frontend = "cadence-frontend"
+	// History is the name of the history service
+	History = "cadence-history"
+	// Matching is the name of the matching service
+	Matching = "cadence-matching"
+	// Worker is the name of the worker service
+	Worker = "cadence-worker"
 )
 
-// GetMetricsServiceIdx returns the metrics name
-func GetMetricsServiceIdx(serviceName string, logger log.Logger) metrics.ServiceIdx {
-	switch serviceName {
-	case common.FrontendServiceName:
-		return metrics.Frontend
-	case common.HistoryServiceName:
-		return metrics.History
-	case common.MatchingServiceName:
-		return metrics.Matching
-	case common.WorkerServiceName:
-		return metrics.Worker
-	default:
-		logger.Fatal("Unknown service name for metrics!")
-	}
+// List contains the list of all cadence services
+var List = []string{Frontend, History, Matching, Worker}
 
-	// this should never happen!
-	return metrics.NumServices
+// ShortName returns cadence service name without "cadence-" prefix
+func ShortName(name string) string {
+	return strings.TrimPrefix(name, _servicePrefix)
+}
+
+// FullName returns cadence service name with "cadence-" prefix
+func FullName(name string) string {
+	if strings.HasPrefix(name, _servicePrefix) {
+		return name
+	}
+	return _servicePrefix + name
+}
+
+func ShortNames(names []string) []string {
+	result := make([]string, len(names))
+	for i := range names {
+		result[i] = ShortName(names[i])
+	}
+	return result
 }

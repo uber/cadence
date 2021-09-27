@@ -207,7 +207,7 @@ func NewService(
 
 	serviceResource, err := resource.New(
 		params,
-		common.FrontendServiceName,
+		service.Frontend,
 		&service.Config{
 			PersistenceMaxQPS:       serviceConfig.PersistenceMaxQPS,
 			PersistenceGlobalMaxQPS: serviceConfig.PersistenceGlobalMaxQPS,

@@ -39,10 +39,10 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/service"
 )
 
 const (
@@ -62,14 +62,6 @@ const (
 const (
 	defaultMaxJoinDuration = 10 * time.Second
 )
-
-// CadenceServices indicate the list of cadence services
-var CadenceServices = []string{
-	common.FrontendServiceName,
-	common.HistoryServiceName,
-	common.MatchingServiceName,
-	common.WorkerServiceName,
-}
 
 // RingpopFactory implements the RingpopFactory interface
 type RingpopFactory struct {
@@ -206,7 +198,7 @@ func (factory *RingpopFactory) createMembership() (membership.Monitor, error) {
 		return nil, fmt.Errorf("ringpop creation failed: %v", err)
 	}
 
-	membershipMonitor := membership.NewRingpopMonitor(factory.serviceName, CadenceServices, rp, factory.logger)
+	membershipMonitor := membership.NewRingpopMonitor(factory.serviceName, service.List, rp, factory.logger)
 	return membershipMonitor, nil
 }
 

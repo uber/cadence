@@ -28,6 +28,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/tag"
 	commonResource "github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/resource"
 )
@@ -61,7 +62,7 @@ func NewService(
 
 	serviceResource, err := resource.New(
 		params,
-		common.HistoryServiceName,
+		service.History,
 		serviceConfig,
 	)
 	if err != nil {

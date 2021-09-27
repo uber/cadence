@@ -46,6 +46,7 @@ import (
 	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -265,7 +266,7 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	shardIDstr := string(rune(shardID)) // originally `string(int_shard_id)`, but changing it will change the ring hashing
 	shardIDForOutput := strconv.Itoa(shardID)
 
-	historyHost, err := adh.GetMembershipMonitor().Lookup(common.HistoryServiceName, shardIDstr)
+	historyHost, err := adh.GetMembershipMonitor().Lookup(service.History, shardIDstr)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -596,7 +597,7 @@ func (adh *adminHandlerImpl) DescribeCluster(
 		membershipInfo.ReachableMembers = members
 
 		var rings []*types.RingInfo
-		for _, role := range []string{common.FrontendServiceName, common.HistoryServiceName, common.MatchingServiceName, common.WorkerServiceName} {
+		for _, role := range service.List {
 			resolver, err := monitor.GetResolver(role)
 			if err != nil {
 				return nil, adh.error(err, scope)
