@@ -58,6 +58,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
@@ -390,7 +391,7 @@ func (c *cadenceImpl) GetHistoryClient() historyClient.Client {
 }
 
 func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.WaitGroup) {
-	params := new(service.BootstrapParams)
+	params := new(resource.Params)
 	params.DCRedirectionPolicy = config.DCRedirectionPolicy{}
 	params.Name = common.FrontendServiceName
 	params.Logger = c.logger
@@ -458,7 +459,7 @@ func (c *cadenceImpl) startHistory(
 ) {
 	pprofPorts := c.HistoryPProfPort()
 	for i, hostport := range c.HistoryServiceAddress() {
-		params := new(service.BootstrapParams)
+		params := new(resource.Params)
 		params.Name = common.HistoryServiceName
 		params.Logger = c.logger
 		params.ThrottledLogger = c.logger
@@ -528,7 +529,7 @@ func (c *cadenceImpl) startHistory(
 
 func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.WaitGroup) {
 
-	params := new(service.BootstrapParams)
+	params := new(resource.Params)
 	params.Name = common.MatchingServiceName
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
@@ -571,7 +572,7 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 }
 
 func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitGroup) {
-	params := new(service.BootstrapParams)
+	params := new(resource.Params)
 	params.Name = common.WorkerServiceName
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
@@ -631,7 +632,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	c.shutdownWG.Done()
 }
 
-func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, service Service, domainCache cache.DomainCache) {
+func (c *cadenceImpl) startWorkerReplicator(params *resource.Params, service Service, domainCache cache.DomainCache) {
 	serviceResolver, err := service.GetMembershipMonitor().GetResolver(common.WorkerServiceName)
 	if err != nil {
 		c.logger.Fatal("Fail to start replicator when start worker", tag.Error(err))
@@ -653,7 +654,7 @@ func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, ser
 	}
 }
 
-func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, service Service, domainCache cache.DomainCache) {
+func (c *cadenceImpl) startWorkerClientWorker(params *resource.Params, service Service, domainCache cache.DomainCache) {
 	workerConfig := worker.NewConfig(params)
 	workerConfig.ArchiverConfig.ArchiverConcurrency = dynamicconfig.GetIntPropertyFn(10)
 	historyArchiverBootstrapContainer := &carchiver.HistoryBootstrapContainer{
@@ -684,7 +685,7 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 	}
 }
 
-func (c *cadenceImpl) startWorkerIndexer(params *service.BootstrapParams, service Service) {
+func (c *cadenceImpl) startWorkerIndexer(params *resource.Params, service Service) {
 	params.DynamicConfig.UpdateValue(dynamicconfig.AdvancedVisibilityWritingMode, common.AdvancedVisibilityWritingModeDual)
 	workerConfig := worker.NewConfig(params)
 	c.indexer = indexer.NewIndexer(
@@ -770,7 +771,7 @@ func copyPersistenceConfig(pConfig config.Persistence) (config.Persistence, erro
 	return pConfig, nil
 }
 
-func newMembershipFactory(serviceName string, hosts map[string][]string) service.MembershipMonitorFactory {
+func newMembershipFactory(serviceName string, hosts map[string][]string) resource.MembershipMonitorFactory {
 	return &membershipFactoryImpl{
 		serviceName: serviceName,
 		hosts:       hosts,
