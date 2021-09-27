@@ -28,9 +28,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.uber.org/cadence/worker"
-	"go.uber.org/zap"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
@@ -38,7 +35,6 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/reconciliation"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
@@ -281,23 +277,12 @@ func (s *Service) startScanner() {
 }
 
 func (s *Service) startFixerWorkflowWorker() {
-	zapLogger, err := zap.NewProduction()
-	if err != nil {
-		s.GetLogger().Fatal("failed to initialize zap logger", tag.Error(err))
+	params := &scanner.BootstrapParams{
+		Config:     *s.config.ScannerCfg,
+		TallyScope: s.params.MetricScope,
 	}
-	ctx := context.WithValue(context.Background(), reconciliation.CheckDataCorruptionWorkflowType, s.Resource)
-	workerOpts := worker.Options{
-		Logger:                    zapLogger,
-		MetricsScope:              s.params.MetricScope,
-		BackgroundActivityContext: ctx,
-	}
-	if err := worker.New(
-		s.GetSDKClient(),
-		common.SystemLocalDomainName,
-		reconciliation.CheckDataCorruptionWorkflowTaskList,
-		workerOpts,
-	).Start(); err != nil {
-		s.GetLogger().Fatal("error starting fixer workflow", tag.Error(err))
+	if err := scanner.NewDataCorruptionWorkflowWorker(s.Resource, params).StartDataCorruptionWorkflowWorker(); err != nil {
+		s.GetLogger().Fatal("error starting fixer workflow worker", tag.Error(err))
 	}
 }
 

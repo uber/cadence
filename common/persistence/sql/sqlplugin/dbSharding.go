@@ -37,7 +37,7 @@ const (
 )
 
 // GetDBShardIDFromHistoryShardID maps  historyShardID to a DBShardID
-func GetDBShardIDFromHistoryShardID(historyShardID int, numDBShards int) int{
+func GetDBShardIDFromHistoryShardID(historyShardID int, numDBShards int) int {
 	return historyShardID % numDBShards
 }
 

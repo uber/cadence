@@ -26,8 +26,11 @@ import (
 	"time"
 
 	"go.uber.org/cadence/activity"
+	"go.uber.org/cadence/worker"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
+
+	"github.com/uber/cadence/common/log/tag"
 
 	"github.com/uber/cadence/common/metrics"
 
@@ -56,7 +59,7 @@ const (
 )
 
 // CheckDataCorruptionWorkflow is invoked by remote cluster via signals
-func CheckDataCorruptionWorkflow(ctx workflow.Context) error {
+func CheckDataCorruptionWorkflow(ctx workflow.Context, fixList []entity.Execution) error {
 
 	logger := workflow.GetLogger(ctx)
 	signalCh := workflow.GetSignalChannel(ctx, reconciliation.CheckDataCorruptionWorkflowSignalName)
@@ -67,15 +70,11 @@ func CheckDataCorruptionWorkflow(ctx workflow.Context) error {
 		// timer
 		timerCtx, timerCancel := workflow.WithCancel(ctx)
 		waitTimer := workflow.NewTimer(timerCtx, workflowTimer)
-		timerFire := false
 		selector.AddFuture(waitTimer, func(f workflow.Future) {
-			if f.Get(timerCtx, nil) != workflow.ErrCanceled {
-				timerFire = true
-			}
+			// do nothing. Unblock the selector
 		})
 
 		// signal
-		var fixList []entity.Execution
 		selector.AddReceive(signalCh, func(c workflow.Channel, more bool) {
 			var fixExecution entity.Execution
 			for c.ReceiveAsync(&fixExecution) {
@@ -85,7 +84,7 @@ func CheckDataCorruptionWorkflow(ctx workflow.Context) error {
 		})
 
 		selector.Select(ctx)
-		if timerFire && len(fixList) == 0 {
+		if len(fixList) == 0 {
 			return nil
 		}
 		timerCancel()
@@ -118,7 +117,11 @@ func CheckDataCorruptionWorkflow(ctx workflow.Context) error {
 
 		workflow.GetMetricsScope(ctx)
 		if signalCount > maxSignalNumber {
-			return workflow.NewContinueAsNewError(ctx, reconciliation.CheckDataCorruptionWorkflowType)
+			var fixExecution entity.Execution
+			for signalCh.ReceiveAsync(&fixExecution) {
+				fixList = append(fixList, fixExecution)
+			}
+			return workflow.NewContinueAsNewError(ctx, reconciliation.CheckDataCorruptionWorkflowType, fixList)
 		}
 	}
 }
@@ -162,10 +165,11 @@ func getDefaultDAO(
 	ctx context.Context,
 	shardID int,
 ) (persistence.Retryer, error) {
-	res, ok := ctx.Value(reconciliation.CheckDataCorruptionWorkflowType).(resource.Resource)
-	if !ok {
+	sc, err := getScannerContext(ctx)
+	if err != nil {
 		return nil, fmt.Errorf("cannot find key %v in context", reconciliation.CheckDataCorruptionWorkflowType)
 	}
+	res := sc.resource
 
 	execManager, err := res.GetExecutionManager(shardID)
 	if err != nil {
@@ -176,12 +180,17 @@ func getDefaultDAO(
 }
 
 func EmitResultMetricsActivity(ctx context.Context, fixResults []invariant.FixResult) error {
-	res, ok := ctx.Value(reconciliation.CheckDataCorruptionWorkflowType).(resource.Resource)
-	if !ok {
+	sc, err := getScannerContext(ctx)
+	if err != nil {
 		return fmt.Errorf("cannot find key %v in context", reconciliation.CheckDataCorruptionWorkflowType)
 	}
-	scope := res.GetMetricsClient().Scope(metrics.CheckDataCorruptionWorkflowScope)
+	res := sc.resource
+
 	for _, result := range fixResults {
+		scope := res.GetMetricsClient().Scope(
+			metrics.CheckDataCorruptionWorkflowScope,
+			metrics.InvariantTypeTag(string(result.InvariantName)))
+
 		scope.IncCounter(metrics.DataCorruptionWorkflowCount)
 		switch result.FixResultType {
 		case invariant.FixResultTypeFailed:
@@ -191,6 +200,46 @@ func EmitResultMetricsActivity(ctx context.Context, fixResults []invariant.FixRe
 		case invariant.FixResultTypeSkipped:
 			scope.IncCounter(metrics.DataCorruptionWorkflowSkipCount)
 		}
+	}
+	return nil
+}
+
+func NewDataCorruptionWorkflowWorker(
+	resource resource.Resource,
+	params *BootstrapParams,
+) *Scanner {
+
+	zapLogger, err := zap.NewProduction()
+	if err != nil {
+		resource.GetLogger().Fatal("failed to initialize zap logger", tag.Error(err))
+	}
+	return &Scanner{
+		context: scannerContext{
+			resource: resource,
+		},
+		tallyScope: params.TallyScope,
+		zapLogger:  zapLogger.Named("data-corruption-workflow"),
+	}
+
+}
+
+func (s *Scanner) StartDataCorruptionWorkflowWorker() error {
+	ctx := context.WithValue(context.Background(), contextKey(reconciliation.CheckDataCorruptionWorkflowType), s.context)
+	workerOpts := worker.Options{
+		Logger:                                 s.zapLogger,
+		MetricsScope:                           s.tallyScope,
+		MaxConcurrentActivityExecutionSize:     maxConcurrentActivityExecutionSize,
+		MaxConcurrentDecisionTaskExecutionSize: maxConcurrentDecisionTaskExecutionSize,
+		BackgroundActivityContext:              ctx,
+	}
+
+	if err := worker.New(
+		s.context.resource.GetSDKClient(),
+		c.SystemLocalDomainName,
+		reconciliation.CheckDataCorruptionWorkflowTaskList,
+		workerOpts,
+	).Start(); err != nil {
+		return err
 	}
 	return nil
 }
