@@ -46,7 +46,6 @@ import (
 	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -97,7 +96,7 @@ type (
 		resource.Resource
 
 		numberOfHistoryShards int
-		params                *service.BootstrapParams
+		params                *resource.Params
 		config                *Config
 		domainDLQHandler      domain.DLQMessageHandler
 		domainFailoverWatcher domain.FailoverWatcher
@@ -125,7 +124,7 @@ var (
 // NewAdminHandler creates a thrift handler for the cadence admin service
 func NewAdminHandler(
 	resource resource.Resource,
-	params *service.BootstrapParams,
+	params *resource.Params,
 	config *Config,
 ) AdminHandler {
 

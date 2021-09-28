@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/frontend"
@@ -103,7 +104,7 @@ func (s *server) Stop() {
 
 // startService starts a service with the given name and config
 func (s *server) startService() common.Daemon {
-	params := service.BootstrapParams{}
+	params := resource.Params{}
 	params.Name = "cadence-" + s.name
 
 	zapLogger, err := s.cfg.Log.NewZapLogger()

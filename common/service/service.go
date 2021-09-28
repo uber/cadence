@@ -21,73 +21,10 @@
 package service
 
 import (
-	"github.com/uber-go/tally"
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/archiver"
-	"github.com/uber/cadence/common/archiver/provider"
-	"github.com/uber/cadence/common/authorization"
-	"github.com/uber/cadence/common/blobstore"
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/dynamicconfig"
-	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/membership"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/rpc"
 )
-
-type (
-	// BootstrapParams holds the set of parameters
-	// needed to bootstrap a service
-	BootstrapParams struct {
-		Name            string
-		InstanceID      string
-		Logger          log.Logger
-		ThrottledLogger log.Logger
-
-		MetricScope         tally.Scope
-		MembershipFactory   MembershipMonitorFactory
-		RPCFactory          common.RPCFactory
-		PProfInitializer    common.PProfInitializer
-		PersistenceConfig   config.Persistence
-		ClusterMetadata     cluster.Metadata
-		ReplicatorConfig    config.Replicator
-		MetricsClient       metrics.Client
-		MessagingClient     messaging.Client
-		BlobstoreClient     blobstore.Client
-		ESClient            es.GenericClient
-		ESConfig            *config.ElasticSearchConfig
-		DynamicConfig       dynamicconfig.Client
-		DispatcherProvider  rpc.DispatcherProvider
-		DCRedirectionPolicy config.DCRedirectionPolicy
-		PublicClient        workflowserviceclient.Interface
-		ArchivalMetadata    archiver.ArchivalMetadata
-		ArchiverProvider    provider.ArchiverProvider
-		Authorizer          authorization.Authorizer // NOTE: this can be nil. If nil, AccessControlledHandlerImpl will initiate one with config.Authorization
-		AuthorizationConfig config.Authorization     // NOTE: empty(default) struct will get a authorization.NoopAuthorizer
-	}
-
-	// MembershipMonitorFactory provides a bootstrapped membership monitor
-	MembershipMonitorFactory interface {
-		// GetMembershipMonitor return a membership monitor
-		GetMembershipMonitor() (membership.Monitor, error)
-	}
-)
-
-// UpdateLoggerWithServiceName tag logging with service name from the top level
-func (params *BootstrapParams) UpdateLoggerWithServiceName(name string) {
-	if params.Logger != nil {
-		params.Logger = params.Logger.WithTags(tag.Service(name))
-	}
-	if params.ThrottledLogger != nil {
-		params.ThrottledLogger = params.ThrottledLogger.WithTags(tag.Service(name))
-	}
-}
 
 // GetMetricsServiceIdx returns the metrics name
 func GetMetricsServiceIdx(serviceName string, logger log.Logger) metrics.ServiceIdx {

@@ -52,7 +52,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
-	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -124,7 +123,7 @@ type (
 
 		pprofInitializer       common.PProfInitializer
 		runtimeMetricsReporter *metrics.RuntimeMetricsReporter
-		membershipFactory      service.MembershipMonitorFactory
+		membershipFactory      MembershipMonitorFactory
 		rpcFactory             common.RPCFactory
 	}
 )
@@ -133,13 +132,13 @@ var _ Resource = (*Impl)(nil)
 
 // New create a new resource containing common dependencies
 func New(
-	params *service.BootstrapParams,
+	params *Params,
 	serviceName string,
-	resourceConfig *config.ResourceConfig,
+	serviceConfig *service.Config,
 ) (impl *Impl, retError error) {
 
 	logger := params.Logger
-	throttledLogger := loggerimpl.NewThrottledLogger(logger, resourceConfig.ThrottledLoggerMaxRPS)
+	throttledLogger := loggerimpl.NewThrottledLogger(logger, serviceConfig.ThrottledLoggerMaxRPS)
 
 	numShards := params.PersistenceConfig.NumHistoryShards
 	hostName, err := os.Hostname()
@@ -198,19 +197,25 @@ func New(
 	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
 		&params.PersistenceConfig,
 		func(...dynamicconfig.FilterOption) int {
-			if resourceConfig.PersistenceGlobalMaxQPS() > 0 {
+			if serviceConfig.PersistenceGlobalMaxQPS() > 0 {
 				ringSize, err := membershipMonitor.GetMemberCount(serviceName)
 				if err == nil && ringSize > 0 {
-					avgQuota := common.MaxInt(resourceConfig.PersistenceGlobalMaxQPS()/ringSize, 1)
-					return common.MinInt(avgQuota, resourceConfig.PersistenceMaxQPS())
+					avgQuota := common.MaxInt(serviceConfig.PersistenceGlobalMaxQPS()/ringSize, 1)
+					return common.MinInt(avgQuota, serviceConfig.PersistenceMaxQPS())
 				}
 			}
-			return resourceConfig.PersistenceMaxQPS()
+			return serviceConfig.PersistenceMaxQPS()
 		},
 		params.ClusterMetadata.GetCurrentClusterName(),
 		params.MetricsClient,
 		logger,
-	), params, resourceConfig)
+	), &persistenceClient.Params{
+		PersistenceConfig: params.PersistenceConfig,
+		MetricsClient:     params.MetricsClient,
+		MessagingClient:   params.MessagingClient,
+		ESClient:          params.ESClient,
+		ESConfig:          params.ESConfig,
+	}, serviceConfig)
 	if err != nil {
 		return nil, err
 	}

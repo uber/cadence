@@ -33,7 +33,6 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -185,12 +184,12 @@ type Service struct {
 	adminHandler AdminHandler
 	stopC        chan struct{}
 	config       *Config
-	params       *service.BootstrapParams
+	params       *resource.Params
 }
 
 // NewService builds a new cadence-frontend service
 func NewService(
-	params *service.BootstrapParams,
+	params *resource.Params,
 ) (resource.Resource, error) {
 
 	isAdvancedVisExistInConfig := len(params.PersistenceConfig.AdvancedVisibilityStore) != 0
@@ -209,7 +208,7 @@ func NewService(
 	serviceResource, err := resource.New(
 		params,
 		common.FrontendServiceName,
-		&config.ResourceConfig{
+		&service.Config{
 			PersistenceMaxQPS:       serviceConfig.PersistenceMaxQPS,
 			PersistenceGlobalMaxQPS: serviceConfig.PersistenceGlobalMaxQPS,
 			ThrottledLoggerMaxRPS:   serviceConfig.ThrottledLogRPS,

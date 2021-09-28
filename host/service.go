@@ -43,8 +43,8 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/rpc"
-	"github.com/uber/cadence/common/service"
 )
 
 type (
@@ -77,7 +77,7 @@ type (
 		hostName              string
 		hostInfo              *membership.HostInfo
 		dispatcher            *yarpc.Dispatcher
-		membershipFactory     service.MembershipMonitorFactory
+		membershipFactory     resource.MembershipMonitorFactory
 		membershipMonitor     membership.Monitor
 		rpcFactory            common.RPCFactory
 		pprofInitializer      common.PProfInitializer
@@ -106,7 +106,7 @@ var _ Service = (*serviceImpl)(nil)
 
 // NewService instantiates a Service Instance
 // TODO: have a better name for Service.
-func NewService(params *service.BootstrapParams) Service {
+func NewService(params *resource.Params) Service {
 	sVice := &serviceImpl{
 		status:                common.DaemonStatusInitialized,
 		sName:                 params.Name,

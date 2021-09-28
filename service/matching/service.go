@@ -27,7 +27,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -43,7 +42,7 @@ type Service struct {
 
 // NewService builds a new cadence-matching service
 func NewService(
-	params *service.BootstrapParams,
+	params *resource.Params,
 ) (resource.Resource, error) {
 
 	serviceConfig := NewConfig(
@@ -57,7 +56,7 @@ func NewService(
 	serviceResource, err := resource.New(
 		params,
 		common.MatchingServiceName,
-		&config.ResourceConfig{
+		&service.Config{
 			PersistenceMaxQPS:       serviceConfig.PersistenceMaxQPS,
 			PersistenceGlobalMaxQPS: serviceConfig.PersistenceGlobalMaxQPS,
 			ThrottledLoggerMaxRPS:   serviceConfig.ThrottledLogRPS,
