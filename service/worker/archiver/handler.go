@@ -138,7 +138,7 @@ func (h *handler) handleHistoryRequest(ctx workflow.Context, request *ArchiveReq
 		ScheduleToStartTimeout: 1 * time.Minute,
 		StartToCloseTimeout:    1 * time.Minute,
 		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:          time.Second,
+			InitialInterval:          5 * time.Second,
 			BackoffCoefficient:       2.0,
 			ExpirationInterval:       5 * time.Minute,
 			NonRetriableErrorReasons: uploadHistoryActivityNonRetryableErrors,
