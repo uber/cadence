@@ -32,7 +32,6 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/blobstore"
@@ -48,6 +47,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
+	"github.com/uber/cadence/common/service"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/zap"
@@ -159,10 +159,10 @@ func NewTest(
 	matchingServiceResolver := membership.NewMockServiceResolver(controller)
 	historyServiceResolver := membership.NewMockServiceResolver(controller)
 	workerServiceResolver := membership.NewMockServiceResolver(controller)
-	membershipMonitor.EXPECT().GetResolver(common.FrontendServiceName).Return(frontendServiceResolver, nil).AnyTimes()
-	membershipMonitor.EXPECT().GetResolver(common.MatchingServiceName).Return(matchingServiceResolver, nil).AnyTimes()
-	membershipMonitor.EXPECT().GetResolver(common.HistoryServiceName).Return(historyServiceResolver, nil).AnyTimes()
-	membershipMonitor.EXPECT().GetResolver(common.WorkerServiceName).Return(workerServiceResolver, nil).AnyTimes()
+	membershipMonitor.EXPECT().GetResolver(service.Frontend).Return(frontendServiceResolver, nil).AnyTimes()
+	membershipMonitor.EXPECT().GetResolver(service.Matching).Return(matchingServiceResolver, nil).AnyTimes()
+	membershipMonitor.EXPECT().GetResolver(service.History).Return(historyServiceResolver, nil).AnyTimes()
+	membershipMonitor.EXPECT().GetResolver(service.Worker).Return(workerServiceResolver, nil).AnyTimes()
 
 	scope := tally.NewTestScope("test", nil)
 

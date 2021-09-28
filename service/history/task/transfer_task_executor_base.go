@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
@@ -317,7 +318,7 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 				URI:                domainEntry.GetConfig().HistoryArchivalURI,
 				Targets:            []archiver.ArchivalTarget{archiver.ArchiveTargetVisibility},
 			},
-			CallerService:        common.HistoryServiceName,
+			CallerService:        service.History,
 			AttemptArchiveInline: true, // archive visibility inline by default
 		})
 		return err

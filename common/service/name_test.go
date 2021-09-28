@@ -18,40 +18,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package rpc
+package service
 
 import (
-	"errors"
-	"fmt"
-	"strings"
+	"testing"
 
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/service"
+	"github.com/stretchr/testify/assert"
 )
 
-type GRPCPorts map[string]int
+func TestServiceNames(t *testing.T) {
+	shortName := "frontend"
+	fullName := "cadence-frontend"
 
-func NewGRPCPorts(c *config.Config) GRPCPorts {
-	grpcPorts := map[string]int{}
-	for name, config := range c.Services {
-		grpcPorts[service.FullName(name)] = config.RPC.GRPCPort
-	}
-	return grpcPorts
-}
+	assert.Equal(t, shortName, ShortName(shortName))
+	assert.Equal(t, shortName, ShortName(fullName))
 
-func (p GRPCPorts) GetGRPCAddress(service, hostAddress string) (string, error) {
-	port, ok := p[service]
-	if !ok {
-		return hostAddress, errors.New("unknown service: " + service)
-	}
-	if port == 0 {
-		return hostAddress, errors.New("GRPC port not configured for service: " + service)
-	}
+	assert.Equal(t, fullName, FullName(shortName))
+	assert.Equal(t, fullName, FullName(fullName))
 
-	// Drop port if provided
-	if index := strings.Index(hostAddress, ":"); index > 0 {
-		hostAddress = hostAddress[:index]
-	}
-
-	return fmt.Sprintf("%s:%d", hostAddress, port), nil
+	assert.Equal(t, []string{"cadence-frontend", "cadence-history", "cadence-matching", "cadence-worker"}, List)
+	assert.Equal(t, []string{"frontend", "history", "matching", "worker"}, ShortNames(List))
 }

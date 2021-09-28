@@ -174,22 +174,22 @@ func New(
 		return nil, err
 	}
 
-	frontendServiceResolver, err := membershipMonitor.GetResolver(common.FrontendServiceName)
+	frontendServiceResolver, err := membershipMonitor.GetResolver(service.Frontend)
 	if err != nil {
 		return nil, err
 	}
 
-	matchingServiceResolver, err := membershipMonitor.GetResolver(common.MatchingServiceName)
+	matchingServiceResolver, err := membershipMonitor.GetResolver(service.Matching)
 	if err != nil {
 		return nil, err
 	}
 
-	historyServiceResolver, err := membershipMonitor.GetResolver(common.HistoryServiceName)
+	historyServiceResolver, err := membershipMonitor.GetResolver(service.History)
 	if err != nil {
 		return nil, err
 	}
 
-	workerServiceResolver, err := membershipMonitor.GetResolver(common.WorkerServiceName)
+	workerServiceResolver, err := membershipMonitor.GetResolver(service.Worker)
 	if err != nil {
 		return nil, err
 	}

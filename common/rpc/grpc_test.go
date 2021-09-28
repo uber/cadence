@@ -23,8 +23,8 @@ package rpc
 import (
 	"testing"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/service"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -41,14 +41,14 @@ func TestGRPCPorts(t *testing.T) {
 	_, err := grpcPorts.GetGRPCAddress("some-service", "1.2.3.4")
 	assert.EqualError(t, err, "unknown service: some-service")
 
-	_, err = grpcPorts.GetGRPCAddress(common.HistoryServiceName, "1.2.3.4")
+	_, err = grpcPorts.GetGRPCAddress(service.History, "1.2.3.4")
 	assert.EqualError(t, err, "GRPC port not configured for service: cadence-history")
 
-	grpcAddress, err := grpcPorts.GetGRPCAddress(common.FrontendServiceName, "1.2.3.4")
+	grpcAddress, err := grpcPorts.GetGRPCAddress(service.Frontend, "1.2.3.4")
 	assert.Nil(t, err)
 	assert.Equal(t, grpcAddress, "1.2.3.4:9999")
 
-	grpcAddress, err = grpcPorts.GetGRPCAddress(common.FrontendServiceName, "1.2.3.4:8888")
+	grpcAddress, err = grpcPorts.GetGRPCAddress(service.Frontend, "1.2.3.4:8888")
 	assert.Nil(t, err)
 	assert.Equal(t, grpcAddress, "1.2.3.4:9999")
 }
