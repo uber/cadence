@@ -21,89 +21,93 @@
 package rpc
 
 import (
-	"fmt"
 	"net"
-	"sync"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 )
 
-// Factory is an implementation of service.RPCFactory interface
+// Factory is an implementation of common.RPCFactory interface
 type Factory struct {
-	config      config.RPC
-	serviceName string
-	tchannel    *tchannel.ChannelTransport
-	grpc        *grpc.Transport
-	logger      log.Logger
-	grpcPorts   GRPCPorts
-
-	sync.Mutex
-	dispatcher *yarpc.Dispatcher
+	logger           log.Logger
+	grpcPortResolver GRPCPortResolver
+	tchannel         *tchannel.Transport
+	grpc             *grpc.Transport
+	dispatcher       *yarpc.Dispatcher
 }
 
 // NewFactory builds a new rpc.Factory
-// conforming to the underlying configuration
-func NewFactory(service string, cfg config.RPC, logger log.Logger, grpcPorts GRPCPorts) *Factory {
-	return &Factory{config: cfg, serviceName: service, logger: logger, grpcPorts: grpcPorts}
+func NewFactory(logger log.Logger, p Params) *Factory {
+	inbounds := yarpc.Inbounds{}
+
+	// Create TChannel transport
+	// This is here only because ringpop extracts inbound from the dispatcher and expects tchannel.ChannelTransport,
+	// everywhere else we use regular tchannel.Transport.
+	ch, err := tchannel.NewChannelTransport(
+		tchannel.ServiceName(p.ServiceName),
+		tchannel.ListenAddr(p.TChannelAddress))
+	if err != nil {
+		logger.Fatal("Failed to create transport channel", tag.Error(err))
+	}
+	tchannel, err := tchannel.NewTransport(tchannel.ServiceName(p.ServiceName))
+	if err != nil {
+		logger.Fatal("Failed to create tchannel transport", tag.Error(err))
+	}
+
+	inbounds = append(inbounds, ch.NewInbound())
+	logger.Info("Listening for TChannel requests", tag.Address(p.TChannelAddress))
+
+	// Create gRPC transport
+	var options []grpc.TransportOption
+	if p.GRPCMaxMsgSize > 0 {
+		options = append(options, grpc.ServerMaxRecvMsgSize(p.GRPCMaxMsgSize))
+		options = append(options, grpc.ClientMaxRecvMsgSize(p.GRPCMaxMsgSize))
+	}
+	grpc := grpc.NewTransport(options...)
+	if len(p.GRPCAddress) > 0 {
+		listener, err := net.Listen("tcp", p.GRPCAddress)
+		if err != nil {
+			logger.Fatal("Failed to listen on GRPC port", tag.Error(err))
+		}
+
+		inbounds = append(inbounds, grpc.NewInbound(listener))
+		logger.Info("Listening for GRPC requests", tag.Address(p.GRPCAddress))
+	}
+
+	// Create outbounds
+	outbounds := yarpc.Outbounds{}
+	if p.OutboundsBuilder != nil {
+		outbounds, err = p.OutboundsBuilder.Build(grpc, tchannel)
+		if err != nil {
+			logger.Fatal("Failed to create outbounds", tag.Error(err))
+		}
+	}
+
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name:               p.ServiceName,
+		Inbounds:           inbounds,
+		Outbounds:          outbounds,
+		InboundMiddleware:  p.InboundMiddleware,
+		OutboundMiddleware: p.OutboundMiddleware,
+	})
+
+	return &Factory{
+		logger:           logger,
+		grpcPortResolver: p.GRPCPortResolver,
+		tchannel:         tchannel,
+		grpc:             grpc,
+		dispatcher:       dispatcher,
+	}
 }
 
 // GetDispatcher return a cached dispatcher
 func (d *Factory) GetDispatcher() *yarpc.Dispatcher {
-	d.Lock()
-	defer d.Unlock()
-
-	if d.dispatcher != nil {
-		return d.dispatcher
-	}
-
-	d.dispatcher = d.createInboundDispatcher()
 	return d.dispatcher
-}
-
-// createInboundDispatcher creates a dispatcher for inbound
-func (d *Factory) createInboundDispatcher() *yarpc.Dispatcher {
-	// Setup dispatcher for onebox
-	var err error
-	inbounds := yarpc.Inbounds{}
-
-	hostAddress := fmt.Sprintf("%v:%v", d.getListenIP(), d.config.Port)
-	d.tchannel, err = tchannel.NewChannelTransport(
-		tchannel.ServiceName(d.serviceName),
-		tchannel.ListenAddr(hostAddress))
-	if err != nil {
-		d.logger.Fatal("Failed to create transport channel", tag.Error(err))
-	}
-	inbounds = append(inbounds, d.tchannel.NewInbound())
-	d.logger.Info("Listening for TChannel requests", tag.Address(hostAddress))
-
-	var options []grpc.TransportOption
-	if d.config.GRPCMaxMsgSize > 0 {
-		options = append(options, grpc.ServerMaxRecvMsgSize(d.config.GRPCMaxMsgSize))
-		options = append(options, grpc.ClientMaxRecvMsgSize(d.config.GRPCMaxMsgSize))
-	}
-	d.grpc = grpc.NewTransport(options...)
-	if d.config.GRPCPort > 0 {
-		grpcAddress := fmt.Sprintf("%v:%v", d.getListenIP(), d.config.GRPCPort)
-		listener, err := net.Listen("tcp", grpcAddress)
-		if err != nil {
-			d.logger.Fatal("Failed to listen on GRPC port", tag.Error(err))
-		}
-
-		inbounds = append(inbounds, d.grpc.NewInbound(listener))
-		d.logger.Info("Listening for GRPC requests", tag.Address(grpcAddress))
-	}
-
-	return yarpc.NewDispatcher(yarpc.Config{
-		Name:     d.serviceName,
-		Inbounds: inbounds,
-	})
 }
 
 // CreateDispatcherForOutbound creates a dispatcher for outbound connection
@@ -126,7 +130,7 @@ func (d *Factory) CreateGRPCDispatcherForOutbound(
 
 // ReplaceGRPCPort replaces port in the address to grpc for a given service
 func (d *Factory) ReplaceGRPCPort(serviceName, hostAddress string) (string, error) {
-	return d.grpcPorts.GetGRPCAddress(serviceName, hostAddress)
+	return d.grpcPortResolver.GetGRPCAddress(serviceName, hostAddress)
 }
 
 func (d *Factory) createOutboundDispatcher(
@@ -149,27 +153,4 @@ func (d *Factory) createOutboundDispatcher(
 		return nil, err
 	}
 	return dispatcher, nil
-}
-
-func (d *Factory) getListenIP() net.IP {
-	if d.config.BindOnLocalHost && len(d.config.BindOnIP) > 0 {
-		d.logger.Fatal("ListenIP failed, bindOnLocalHost and bindOnIP are mutually exclusive")
-	}
-
-	if d.config.BindOnLocalHost {
-		return net.IPv4(127, 0, 0, 1)
-	}
-
-	if len(d.config.BindOnIP) > 0 {
-		ip := net.ParseIP(d.config.BindOnIP)
-		if ip != nil && ip.To4() != nil {
-			return ip.To4()
-		}
-		d.logger.Fatal("ListenIP failed, unable to parse bindOnIP value or it is not an IPv4 address", tag.Address(d.config.BindOnIP))
-	}
-	ip, err := ListenIP()
-	if err != nil {
-		d.logger.Fatal("ListenIP failed", tag.Error(err))
-	}
-	return ip
 }

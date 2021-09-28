@@ -70,9 +70,6 @@ func newServer(service string, cfg *config.Config) common.Daemon {
 
 // Start starts the server
 func (s *server) Start() {
-	if _, ok := s.cfg.Services[s.name]; !ok {
-		log.Fatalf("`%v` service missing config", s)
-	}
 	s.daemon = s.startService()
 }
 
@@ -97,6 +94,11 @@ func (s *server) Stop() {
 
 // startService starts a service with the given name and config
 func (s *server) startService() common.Daemon {
+	svcCfg, err := s.cfg.GetServiceConfig(s.name)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
 	params := resource.Params{}
 	params.Name = service.FullName(s.name)
 
@@ -142,9 +144,14 @@ func (s *server) startService() common.Daemon {
 		dynamicconfig.ClusterNameFilter(clusterGroupMetadata.CurrentClusterName),
 	)
 
-	svcCfg := s.cfg.Services[s.name]
 	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger, params.Name)
-	params.RPCFactory = rpc.NewFactory(params.Name, svcCfg.RPC, params.Logger, rpc.NewGRPCPorts(s.cfg))
+
+	rpcParams, err := rpc.NewParams(params.Name, s.cfg)
+	if err != nil {
+		log.Fatalf("error creating rpc factory params: %v", err)
+	}
+	params.RPCFactory = rpc.NewFactory(params.Logger, rpcParams)
+
 	params.MembershipFactory, err = s.cfg.Ringpop.NewFactory(
 		params.RPCFactory.GetDispatcher(),
 		params.Name,
