@@ -28,24 +28,22 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 
+	"github.com/uber/cadence/common/persistence/sql/sqldriver"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
 type (
-	conn interface {
-		ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-		NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
-		GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
-		SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
-	}
-
 	db struct {
-		db        *sqlx.DB
-		tx        *sqlx.Tx
-		conn      conn
-		converter DataConverter
+		converter   DataConverter
+		driver      sqldriver.Driver
+		originalDB  *sqlx.DB
+		numDBShards int
 	}
 )
+
+func (pdb *db) GetTotalNumDBShards() int {
+	return pdb.numDBShards
+}
 
 var _ sqlplugin.DB = (*db)(nil)
 var _ sqlplugin.Tx = (*db)(nil)
@@ -89,41 +87,40 @@ func (pdb *db) IsThrottlingError(err error) bool {
 
 // newDB returns an instance of DB, which is a logical
 // connection to the underlying postgres database
-func newDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
+// dbShardID is needed when tx is not nil
+func newDB(xdb *sqlx.DB, tx *sqlx.Tx, dbShardID int, numDBShards int) *db {
+	driver := sqldriver.NewSingletonSQLDriver(xdb, tx, dbShardID)
 	db := &db{
-		db:        xdb,
-		tx:        tx,
-		converter: &converter{},
-		conn:      xdb,
-	}
-	if tx != nil {
-		db.conn = tx
+		converter:   &converter{},
+		driver:      driver,
+		originalDB:  xdb, // this is kept because newDB will be called again when starting a transaction
+		numDBShards: numDBShards,
 	}
 	return db
 }
 
 // BeginTx starts a new transaction and returns a reference to the Tx object
-func (pdb *db) BeginTx(ctx context.Context) (sqlplugin.Tx, error) {
-	xtx, err := pdb.db.BeginTxx(ctx, nil)
+func (pdb *db) BeginTx(dbShardID int, ctx context.Context) (sqlplugin.Tx, error) {
+	xtx, err := pdb.driver.BeginTxx(ctx, dbShardID, nil)
 	if err != nil {
 		return nil, err
 	}
-	return newDB(pdb.db, xtx), nil
+	return newDB(pdb.originalDB, xtx, dbShardID, pdb.numDBShards), nil
 }
 
 // Commit commits a previously started transaction
 func (pdb *db) Commit() error {
-	return pdb.tx.Commit()
+	return pdb.driver.Commit()
 }
 
 // Rollback triggers rollback of a previously started transaction
 func (pdb *db) Rollback() error {
-	return pdb.tx.Rollback()
+	return pdb.driver.Rollback()
 }
 
 // Close closes the connection to the mysql db
 func (pdb *db) Close() error {
-	return pdb.db.Close()
+	return pdb.driver.Close()
 }
 
 // PluginName returns the name of the mysql plugin

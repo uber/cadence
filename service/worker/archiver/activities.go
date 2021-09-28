@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service"
 )
 
 const (
@@ -68,7 +69,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get history archival uri"), tag.ArchivalURI(request.URI), tag.Error(err))
 		return errUploadNonRetriable
 	}
-	historyArchiver, err := container.ArchiverProvider.GetHistoryArchiver(URI.Scheme(), common.WorkerServiceName)
+	historyArchiver, err := container.ArchiverProvider.GetHistoryArchiver(URI.Scheme(), service.Worker)
 	if err != nil {
 		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get history archiver"), tag.Error(err))
 		return errUploadNonRetriable
@@ -141,7 +142,7 @@ func archiveVisibilityActivity(ctx context.Context, request ArchiveRequest) (err
 		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get visibility archival uri"), tag.ArchivalURI(request.VisibilityURI), tag.Error(err))
 		return errArchiveVisibilityNonRetriable
 	}
-	visibilityArchiver, err := container.ArchiverProvider.GetVisibilityArchiver(URI.Scheme(), common.WorkerServiceName)
+	visibilityArchiver, err := container.ArchiverProvider.GetVisibilityArchiver(URI.Scheme(), service.Worker)
 	if err != nil {
 		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get visibility archiver"), tag.Error(err))
 		return errArchiveVisibilityNonRetriable

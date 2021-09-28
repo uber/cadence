@@ -18,36 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package rpc
 
 import (
-	"testing"
+	"errors"
+	"fmt"
+	"strings"
 
-	"github.com/uber/cadence/common"
-
-	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/service"
 )
 
-func TestGRPCPorts(t *testing.T) {
-	config := Config{
-		Services: map[string]Service{
-			"frontend": {RPC: RPC{GRPCPort: 9999}},
-			"history":  {RPC: RPC{}},
-		},
+type GRPCPorts map[string]int
+
+func NewGRPCPorts(c *config.Config) GRPCPorts {
+	grpcPorts := map[string]int{}
+	for name, config := range c.Services {
+		grpcPorts[service.FullName(name)] = config.RPC.GRPCPort
 	}
-	grpcPorts := config.NewGRPCPorts()
+	return grpcPorts
+}
 
-	_, err := grpcPorts.GetGRPCAddress("some-service", "1.2.3.4")
-	assert.EqualError(t, err, "unknown service: some-service")
+func (p GRPCPorts) GetGRPCAddress(service, hostAddress string) (string, error) {
+	port, ok := p[service]
+	if !ok {
+		return hostAddress, errors.New("unknown service: " + service)
+	}
+	if port == 0 {
+		return hostAddress, errors.New("GRPC port not configured for service: " + service)
+	}
 
-	_, err = grpcPorts.GetGRPCAddress(common.HistoryServiceName, "1.2.3.4")
-	assert.EqualError(t, err, "GRPC port not configured for service: cadence-history")
+	// Drop port if provided
+	if index := strings.Index(hostAddress, ":"); index > 0 {
+		hostAddress = hostAddress[:index]
+	}
 
-	grpcAddress, err := grpcPorts.GetGRPCAddress(common.FrontendServiceName, "1.2.3.4")
-	assert.Nil(t, err)
-	assert.Equal(t, grpcAddress, "1.2.3.4:9999")
-
-	grpcAddress, err = grpcPorts.GetGRPCAddress(common.FrontendServiceName, "1.2.3.4:8888")
-	assert.Nil(t, err)
-	assert.Equal(t, grpcAddress, "1.2.3.4:9999")
+	return fmt.Sprintf("%s:%d", hostAddress, port), nil
 }

@@ -177,7 +177,8 @@ func (m *sqlShardStore) UpdateShard(
 			Message: fmt.Sprintf("UpdateShard operation failed. Error: %v", err),
 		}
 	}
-	return m.txExecute(ctx, "UpdateShard", func(tx sqlplugin.Tx) error {
+	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(request.ShardInfo.ShardID, m.db.GetTotalNumDBShards())
+	return m.txExecute(ctx, dbShardID, "UpdateShard", func(tx sqlplugin.Tx) error {
 		if err := lockShard(ctx, tx, request.ShardInfo.ShardID, request.PreviousRangeID); err != nil {
 			return err
 		}

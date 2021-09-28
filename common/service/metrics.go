@@ -21,41 +21,25 @@
 package service
 
 import (
-	"github.com/uber/cadence/client"
-	"github.com/uber/cadence/common/archiver"
-	"github.com/uber/cadence/common/archiver/provider"
-	"github.com/uber/cadence/common/blobstore"
-	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/membership"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
-
-	"go.uber.org/yarpc"
 )
 
-type (
-	// Service is the interface which must be implemented by all the services
-	// TODO: Service contains many methods that are not used now that we have resource bean, these should be cleaned up
-	Service interface {
-		GetHostName() string
-		Start()
-		Stop()
-		GetLogger() log.Logger
-		GetThrottledLogger() log.Logger
-		GetMetricsClient() metrics.Client
-		GetClientBean() client.Bean
-		GetTimeSource() clock.TimeSource
-		GetDispatcher() *yarpc.Dispatcher
-		GetMembershipMonitor() membership.Monitor
-		GetHostInfo() *membership.HostInfo
-		GetClusterMetadata() cluster.Metadata
-		GetMessagingClient() messaging.Client
-		GetBlobstoreClient() blobstore.Client
-		GetArchivalMetadata() archiver.ArchivalMetadata
-		GetArchiverProvider() provider.ArchiverProvider
-		GetPayloadSerializer() persistence.PayloadSerializer
+// GetMetricsServiceIdx returns the metrics name
+func GetMetricsServiceIdx(serviceName string, logger log.Logger) metrics.ServiceIdx {
+	switch serviceName {
+	case Frontend:
+		return metrics.Frontend
+	case History:
+		return metrics.History
+	case Matching:
+		return metrics.Matching
+	case Worker:
+		return metrics.Worker
+	default:
+		logger.Fatal("Unknown service name for metrics!")
 	}
-)
+
+	// this should never happen!
+	return metrics.NumServices
+}

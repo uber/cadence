@@ -18,14 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package service
 
 import "github.com/uber/cadence/common/dynamicconfig"
 
 type (
-	// ResourceConfig is a subset of the service dynamic config for resource
-	// It's under a separate package to avoid circular dependency
-	ResourceConfig struct {
+	// Config is a subset of the service dynamic config for single service
+	Config struct {
 		PersistenceMaxQPS       dynamicconfig.IntPropertyFn
 		PersistenceGlobalMaxQPS dynamicconfig.IntPropertyFn
 		ThrottledLoggerMaxRPS   dynamicconfig.IntPropertyFn

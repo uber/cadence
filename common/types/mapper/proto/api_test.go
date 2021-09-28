@@ -1023,7 +1023,7 @@ func TestListOpenWorkflowExecutionsRequest(t *testing.T) {
 func TestGetTaskListsByDomainResponse(t *testing.T) {
 	for _, item := range []*types.GetTaskListsByDomainResponse{nil, {}, &testdata.GetTaskListsByDomainResponse} {
 		assert.Equal(t, item, ToMatchingGetTaskListsByDomainResponse(FromMatchingGetTaskListsByDomainResponse(item)))
-  }
+	}
 }
 
 func TestFailoverInfo(t *testing.T) {
