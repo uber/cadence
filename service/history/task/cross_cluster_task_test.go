@@ -141,14 +141,28 @@ func (s *crossClusterTaskSuite) TestSourceTask_Ack() {
 			DomainID: constants.TestDomainID,
 		},
 	)
+
+	readyForPollFnCalled := false
+	sourceTask.readyForPollFn = func(t CrossClusterTask) {
+		readyForPollFnCalled = true
+		s.Equal(sourceTask, t)
+	}
+
+	// case 1: task execution finished, not available for polling
+	sourceTask.state = ctask.TaskStateAcked
+	sourceTask.Ack()
+	// make sure task state is not changed by the Ack function
+	s.Equal(ctask.TaskStateAcked, sourceTask.state)
+	s.False(readyForPollFnCalled)
+
+	// case 2: task execution not finished, still available for polling
 	sourceTask.state = ctask.TaskStatePending
 	sourceTask.processingState = processingStateResponseRecorded
-
 	sourceTask.Ack()
-
 	// make sure task state is not changed by the Ack function
 	s.Equal(ctask.TaskStatePending, sourceTask.state)
 	s.Equal(processingStateResponseRecorded, sourceTask.processingState)
+	s.True(readyForPollFnCalled)
 }
 
 func (s *crossClusterTaskSuite) TestSourceTask_Nack() {
@@ -944,6 +958,7 @@ func (s *crossClusterTaskSuite) newTestSourceTask(
 		func(t Task) {
 			s.mockRedispatcher.AddTask(t)
 		},
+		nil,
 		dynamicconfig.GetIntPropertyFn(1),
 	).(*crossClusterSourceTask)
 }
