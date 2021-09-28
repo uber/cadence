@@ -115,6 +115,7 @@ func CheckDataCorruptionWorkflow(ctx workflow.Context, fixList []entity.Executio
 			return err
 		}
 
+		fixList = []entity.Execution{}
 		workflow.GetMetricsScope(ctx)
 		if signalCount > maxSignalNumber {
 			var fixExecution entity.Execution

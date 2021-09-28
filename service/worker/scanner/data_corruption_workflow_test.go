@@ -41,6 +41,8 @@ import (
 	"go.uber.org/cadence/testsuite"
 )
 
+const testWorkflowName = "default-test-workflow-type-name"
+
 type dataCorruptionWorkflowTestSuite struct {
 	suite.Suite
 	testsuite.WorkflowTestSuite
@@ -51,25 +53,23 @@ func TestDataCorruptionWorkflowTestSuite(t *testing.T) {
 }
 
 func (s *dataCorruptionWorkflowTestSuite) TestWorkflow_SignalWorkflow_Success() {
-	s.T().Skip("Workflow test env does not support delay timer fire")
-	isTimerFire := false
+	signalOnce := false
 	env := s.NewTestWorkflowEnvironment()
 	env.OnActivity(ExecutionFixerActivity, mock.Anything, mock.Anything).Return([]invariant.FixResult{}, nil).Times(1)
 	env.OnActivity(EmitResultMetricsActivity, mock.Anything, mock.Anything).Return(nil).Times(1)
-	env.SetOnTimerFiredListener(func(timerID string) {
-		isTimerFire = true
+	env.SetOnTimerScheduledListener(func(timerID string, duration time.Duration) {
+		if !signalOnce {
+			env.SignalWorkflow(reconciliation.CheckDataCorruptionWorkflowSignalName, entity.Execution{
+				ShardID:    0,
+				DomainID:   uuid.New(),
+				WorkflowID: uuid.New(),
+				RunID:      uuid.New(),
+			})
+			signalOnce = true
+		}
 	})
-	env.SetStartTime(time.Now().Truncate(10 * time.Minute))
-	env.ExecuteWorkflow(reconciliation.CheckDataCorruptionWorkflowType)
-	env.SignalWorkflow(reconciliation.CheckDataCorruptionWorkflowSignalName, entity.Execution{
-		ShardID:    0,
-		DomainID:   uuid.New(),
-		WorkflowID: uuid.New(),
-		RunID:      uuid.New(),
-	})
-
+	env.ExecuteWorkflow(reconciliation.CheckDataCorruptionWorkflowType, nil)
 	s.True(env.IsWorkflowCompleted())
-	s.False(isTimerFire)
 	env.AssertExpectations(s.T())
 }
 
@@ -79,7 +79,7 @@ func (s *dataCorruptionWorkflowTestSuite) TestWorkflow_TimerFire_Success() {
 	env.SetOnTimerFiredListener(func(timerID string) {
 		isTimerFire = true
 	})
-	env.ExecuteWorkflow(reconciliation.CheckDataCorruptionWorkflowType)
+	env.ExecuteWorkflow(reconciliation.CheckDataCorruptionWorkflowType, nil)
 	s.True(env.IsWorkflowCompleted())
 	s.True(isTimerFire)
 	env.AssertExpectations(s.T())
@@ -127,7 +127,7 @@ func (s *dataCorruptionWorkflowTestSuite) TestExecutionFixerActivity_Success() {
 	mockResource.ExecutionMgr.On("DeleteCurrentWorkflowExecution", mock.Anything, mock.Anything).Return(nil)
 	mockResource.HistoryMgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(&p.ReadHistoryBranchResponse{}, nil)
 
-	ctx := context.WithValue(context.Background(), reconciliation.CheckDataCorruptionWorkflowType, mockResource)
+	ctx := context.WithValue(context.Background(), contextKey(testWorkflowName), scannerContext{resource: mockResource})
 	env.SetTestTimeout(time.Second * 5)
 	env.SetWorkerOptions(worker.Options{
 		BackgroundActivityContext: ctx,
