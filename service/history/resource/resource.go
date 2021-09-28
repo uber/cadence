@@ -26,7 +26,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/resource"
-	rc "github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
@@ -82,14 +81,14 @@ func (h *resourceImpl) GetEventCache() events.Cache {
 
 // New create a new resource containing common history dependencies
 func New(
-	params *service.BootstrapParams,
+	params *resource.Params,
 	serviceName string,
 	config *config.Config,
 ) (historyResource Resource, retError error) {
 	serviceResource, err := resource.New(
 		params,
 		serviceName,
-		&rc.ResourceConfig{
+		&service.Config{
 			PersistenceMaxQPS:       config.PersistenceMaxQPS,
 			PersistenceGlobalMaxQPS: config.PersistenceGlobalMaxQPS,
 			ThrottledLoggerMaxRPS:   config.ThrottledLogRPS,

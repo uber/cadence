@@ -30,7 +30,6 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/client/frontend"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/clock"
@@ -44,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/client"
+	"github.com/uber/cadence/common/service"
 )
 
 const (
@@ -395,7 +395,7 @@ func initializeArchivalProvider(
 	}
 
 	err := archiverProvider.RegisterBootstrapContainer(
-		common.FrontendServiceName,
+		service.Frontend,
 		historyArchiverBootstrapContainer,
 		visibilityArchiverBootstrapContainer,
 	)

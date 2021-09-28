@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,30 +18,43 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package rpc
+
+import (
+	"time"
+
+	"github.com/uber/cadence/common/log"
+
+	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/peer/roundrobin"
+)
+
+const defaultDNSRefreshInterval = time.Second * 10
 
 type (
-	// TLS describe TLS configuration 
-	TLS struct {
-		Enabled bool `yaml:"enabled"`
-
-		// For Postgres(https://www.postgresql.org/docs/9.1/libpq-ssl.html) and MySQL
-		// default to require if Enable is true.
-		// For MySQL: https://github.com/go-sql-driver/mysql , it also can be set in ConnectAttributes, default is tls-custom
-		SSLMode string `yaml:"sslmode" `
-
-		// CertPath and KeyPath are optional depending on server
-		// config, but both fields must be omitted to avoid using a
-		// client certificate
-		CertFile string `yaml:"certFile"`
-		KeyFile  string `yaml:"keyFile"`
-
-		CaFile string `yaml:"caFile"` //optional depending on server config
-		// If you want to verify the hostname and server cert (like a wildcard for cass cluster) then you should turn this on
-		// This option is basically the inverse of InSecureSkipVerify
-		// See InSecureSkipVerify in http://golang.org/pkg/crypto/tls/ for more info
-		EnableHostVerification bool `yaml:"enableHostVerification"`
-
-		ServerName string `yaml:"serverName"`
+	PeerChooserFactory interface {
+		CreatePeerChooser(transport peer.Transport, address string) (peer.Chooser, error)
+	}
+	dnsPeerChooserFactory struct {
+		interval time.Duration
+		logger   log.Logger
 	}
 )
+
+func NewDNSPeerChooserFactory(interval time.Duration, logger log.Logger) *dnsPeerChooserFactory {
+	if interval <= 0 {
+		interval = defaultDNSRefreshInterval
+	}
+
+	return &dnsPeerChooserFactory{interval, logger}
+}
+
+func (f *dnsPeerChooserFactory) CreatePeerChooser(transport peer.Transport, address string) (peer.Chooser, error) {
+	peerList := roundrobin.New(transport)
+	peerListUpdater, err := newDNSUpdater(peerList, address, f.interval, f.logger)
+	if err != nil {
+		return nil, err
+	}
+	peerListUpdater.Start()
+	return peerList, nil
+}
