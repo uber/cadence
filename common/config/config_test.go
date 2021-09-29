@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/service"
 )
 
 func TestToString(t *testing.T) {
@@ -101,4 +102,15 @@ func TestConfigErrorInAuthorizationConfig(t *testing.T) {
 
 	err := cfg.ValidateAndFillDefaults()
 	require.Error(t, err)
+}
+
+func TestGetServiceConfig(t *testing.T) {
+	cfg := Config{}
+	_, err := cfg.GetServiceConfig(service.Frontend)
+	assert.EqualError(t, err, "no config section for service: frontend")
+
+	cfg = Config{Services: map[string]Service{"frontend": {RPC: RPC{GRPCPort: 123}}}}
+	svc, err := cfg.GetServiceConfig(service.Frontend)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, svc)
 }
