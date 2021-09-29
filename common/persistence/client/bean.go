@@ -25,9 +25,12 @@ package client
 import (
 	"sync"
 
+	"github.com/uber/cadence/common/config"
 	cconfig "github.com/uber/cadence/common/config"
+	es "github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -75,13 +78,22 @@ type (
 		sync.RWMutex
 		shardIDToExecutionManager map[int]persistence.ExecutionManager
 	}
+
+	// Params contains dependencies for persistence
+	Params struct {
+		PersistenceConfig config.Persistence
+		MetricsClient     metrics.Client
+		MessagingClient   messaging.Client
+		ESClient          es.GenericClient
+		ESConfig          *config.ElasticSearchConfig
+	}
 )
 
 // NewBeanFromFactory crate a new store bean using factory
 func NewBeanFromFactory(
 	factory Factory,
-	params *service.BootstrapParams,
-	resourceConfig *config.ResourceConfig,
+	params *Params,
+	serviceConfig *service.Config,
 ) (*BeanImpl, error) {
 
 	metadataMgr, err := factory.NewDomainManager()
@@ -94,7 +106,7 @@ func NewBeanFromFactory(
 		return nil, err
 	}
 
-	visibilityMgr, err := factory.NewVisibilityManager(params, resourceConfig)
+	visibilityMgr, err := factory.NewVisibilityManager(params, serviceConfig)
 	if err != nil {
 		return nil, err
 	}

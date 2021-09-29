@@ -97,7 +97,7 @@ type (
 		resource.Resource
 
 		numberOfHistoryShards int
-		params                *service.BootstrapParams
+		params                *resource.Params
 		config                *Config
 		domainDLQHandler      domain.DLQMessageHandler
 		domainFailoverWatcher domain.FailoverWatcher
@@ -125,7 +125,7 @@ var (
 // NewAdminHandler creates a thrift handler for the cadence admin service
 func NewAdminHandler(
 	resource resource.Resource,
-	params *service.BootstrapParams,
+	params *resource.Params,
 	config *Config,
 ) AdminHandler {
 
@@ -266,7 +266,7 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	shardIDstr := string(rune(shardID)) // originally `string(int_shard_id)`, but changing it will change the ring hashing
 	shardIDForOutput := strconv.Itoa(shardID)
 
-	historyHost, err := adh.GetMembershipMonitor().Lookup(common.HistoryServiceName, shardIDstr)
+	historyHost, err := adh.GetMembershipMonitor().Lookup(service.History, shardIDstr)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -597,7 +597,7 @@ func (adh *adminHandlerImpl) DescribeCluster(
 		membershipInfo.ReachableMembers = members
 
 		var rings []*types.RingInfo
-		for _, role := range []string{common.FrontendServiceName, common.HistoryServiceName, common.MatchingServiceName, common.WorkerServiceName} {
+		for _, role := range service.List {
 			resolver, err := monitor.GetResolver(role)
 			if err != nil {
 				return nil, adh.error(err, scope)

@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
@@ -176,7 +177,7 @@ func (t *timerTaskExecutorBase) archiveWorkflow(
 			BranchToken:          branchToken,
 			CloseFailoverVersion: closeFailoverVersion,
 		},
-		CallerService:        common.HistoryServiceName,
+		CallerService:        service.History,
 		AttemptArchiveInline: false, // archive in workflow by default
 	}
 	executionStats, err := workflowContext.LoadExecutionStats(ctx)

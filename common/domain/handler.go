@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -761,7 +762,7 @@ func (d *handlerImpl) validateHistoryArchivalURI(URIString string) error {
 		return err
 	}
 
-	archiver, err := d.archiverProvider.GetHistoryArchiver(URI.Scheme(), common.FrontendServiceName)
+	archiver, err := d.archiverProvider.GetHistoryArchiver(URI.Scheme(), service.Frontend)
 	if err != nil {
 		return err
 	}
@@ -775,7 +776,7 @@ func (d *handlerImpl) validateVisibilityArchivalURI(URIString string) error {
 		return err
 	}
 
-	archiver, err := d.archiverProvider.GetVisibilityArchiver(URI.Scheme(), common.FrontendServiceName)
+	archiver, err := d.archiverProvider.GetVisibilityArchiver(URI.Scheme(), service.Frontend)
 	if err != nil {
 		return err
 	}

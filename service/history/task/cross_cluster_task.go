@@ -105,6 +105,7 @@ type (
 		targetCluster  string
 		executionCache *execution.Cache
 		response       *types.CrossClusterTaskResponse
+		readyForPollFn func(task CrossClusterTask)
 	}
 
 	crossClusterTaskBase struct {
@@ -145,11 +146,13 @@ func NewCrossClusterSourceTask(
 	taskProcessor Processor,
 	logger log.Logger,
 	redispatchFn func(task Task),
+	readyForPollFn func(task CrossClusterTask),
 	maxRetryCount dynamicconfig.IntPropertyFn,
 ) CrossClusterTask {
 	return &crossClusterSourceTask{
 		targetCluster:  targetCluster,
 		executionCache: executionCache,
+		readyForPollFn: readyForPollFn,
 		crossClusterTaskBase: newCrossClusterTaskBase(
 			shard,
 			taskInfo,
@@ -306,6 +309,11 @@ func (t *crossClusterSourceTask) Ack() {
 			// only dump events when the task has been retried
 			t.eventLogger.FlushEvents("Task processing events")
 		}
+	} else {
+		if !t.IsReadyForPoll() {
+			panic(fmt.Sprintf("Unexpected task state in CrossClusterSourceTask Ack method, state: %v, processing state: %v", t.State(), t.ProcessingState()))
+		}
+		t.readyForPollFn(t)
 	}
 }
 

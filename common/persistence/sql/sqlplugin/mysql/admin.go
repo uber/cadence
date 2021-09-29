@@ -23,6 +23,8 @@ package mysql
 import (
 	"fmt"
 	"time"
+
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
 const (
@@ -68,7 +70,7 @@ func (mdb *db) CreateSchemaVersionTables() error {
 // ReadSchemaVersion returns the current schema version for the keyspace
 func (mdb *db) ReadSchemaVersion(database string) (string, error) {
 	var version string
-	err := mdb.db.Get(&version, readSchemaVersionQuery, database)
+	err := mdb.driver.Get(sqlplugin.DbAllShards, &version, readSchemaVersionQuery, database)
 	return version, err
 }
 
@@ -84,15 +86,17 @@ func (mdb *db) WriteSchemaUpdateLog(oldVersion string, newVersion string, manife
 }
 
 // Exec executes a sql statement
+// For Sharded SQL, it will execute the statement for all shards
+// TODO: rename to ExecSchemaQuery so that we know it should use DB_ALL_SHARDS
 func (mdb *db) Exec(stmt string, args ...interface{}) error {
-	_, err := mdb.db.Exec(stmt, args...)
+	_, err := mdb.driver.Exec(sqlplugin.DbAllShards, stmt, args...)
 	return err
 }
 
 // ListTables returns a list of tables in this database
 func (mdb *db) ListTables(database string) ([]string, error) {
 	var tables []string
-	err := mdb.db.Select(&tables, fmt.Sprintf(listTablesQuery, database))
+	err := mdb.driver.Select(sqlplugin.DbDefaultShard, &tables, fmt.Sprintf(listTablesQuery, database))
 	return tables, err
 }
 

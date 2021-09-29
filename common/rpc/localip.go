@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package rpc
 
 // ** This code is copied from tchannel, we would like to not take dependency on tchannel code **
 

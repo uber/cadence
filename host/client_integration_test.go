@@ -46,8 +46,8 @@ import (
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/zap"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/service"
 )
 
 func init() {
@@ -99,7 +99,7 @@ func (s *ClientIntegrationSuite) TearDownSuite() {
 
 func (s *ClientIntegrationSuite) buildServiceClient() (workflowserviceclient.Interface, error) {
 	cadenceClientName := "cadence-client"
-	cadenceFrontendService := common.FrontendServiceName
+	cadenceFrontendService := service.Frontend
 	hostPort := "127.0.0.1:7104"
 	if TestFlags.FrontendAddr != "" {
 		hostPort = TestFlags.FrontendAddr

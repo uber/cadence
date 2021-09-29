@@ -74,13 +74,14 @@ func NewSQLExecutionStore(
 
 // txExecuteShardLocked executes f under transaction and with read lock on shard row
 func (m *sqlExecutionStore) txExecuteShardLocked(
+	dbShardID int,
 	ctx context.Context,
 	operation string,
 	rangeID int64,
 	fn func(tx sqlplugin.Tx) error,
 ) error {
 
-	return m.txExecute(ctx, operation, func(tx sqlplugin.Tx) error {
+	return m.txExecute(ctx, dbShardID, operation, func(tx sqlplugin.Tx) error {
 		if err := readLockShard(ctx, tx, m.shardID, rangeID); err != nil {
 			return err
 		}
@@ -100,8 +101,9 @@ func (m *sqlExecutionStore) CreateWorkflowExecution(
 	ctx context.Context,
 	request *p.InternalCreateWorkflowExecutionRequest,
 ) (response *p.CreateWorkflowExecutionResponse, err error) {
+	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(m.shardID, m.db.GetTotalNumDBShards())
 
-	err = m.txExecuteShardLocked(ctx, "CreateWorkflowExecution", request.RangeID, func(tx sqlplugin.Tx) error {
+	err = m.txExecuteShardLocked(dbShardID, ctx, "CreateWorkflowExecution", request.RangeID, func(tx sqlplugin.Tx) error {
 		response, err = m.createWorkflowExecutionTx(ctx, tx, request)
 		return err
 	})
@@ -373,8 +375,8 @@ func (m *sqlExecutionStore) UpdateWorkflowExecution(
 	ctx context.Context,
 	request *p.InternalUpdateWorkflowExecutionRequest,
 ) error {
-
-	return m.txExecuteShardLocked(ctx, "UpdateWorkflowExecution", request.RangeID, func(tx sqlplugin.Tx) error {
+	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(m.shardID, m.db.GetTotalNumDBShards())
+	return m.txExecuteShardLocked(dbShardID, ctx, "UpdateWorkflowExecution", request.RangeID, func(tx sqlplugin.Tx) error {
 		return m.updateWorkflowExecutionTx(ctx, tx, request)
 	})
 }
@@ -485,8 +487,8 @@ func (m *sqlExecutionStore) ConflictResolveWorkflowExecution(
 	ctx context.Context,
 	request *p.InternalConflictResolveWorkflowExecutionRequest,
 ) error {
-
-	return m.txExecuteShardLocked(ctx, "ConflictResolveWorkflowExecution", request.RangeID, func(tx sqlplugin.Tx) error {
+	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(m.shardID, m.db.GetTotalNumDBShards())
+	return m.txExecuteShardLocked(dbShardID, ctx, "ConflictResolveWorkflowExecution", request.RangeID, func(tx sqlplugin.Tx) error {
 		return m.conflictResolveWorkflowExecutionTx(ctx, tx, request)
 	})
 }
@@ -1133,8 +1135,8 @@ func (m *sqlExecutionStore) CreateFailoverMarkerTasks(
 	ctx context.Context,
 	request *p.CreateFailoverMarkersRequest,
 ) error {
-
-	return m.txExecuteShardLocked(ctx, "CreateFailoverMarkerTasks", request.RangeID, func(tx sqlplugin.Tx) error {
+	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(m.shardID, m.db.GetTotalNumDBShards())
+	return m.txExecuteShardLocked(dbShardID, ctx, "CreateFailoverMarkerTasks", request.RangeID, func(tx sqlplugin.Tx) error {
 		for _, task := range request.Markers {
 			t := []p.Task{task}
 			if err := createReplicationTasks(
