@@ -31,11 +31,11 @@ import (
 
 // Params allows to configure rpc.Factory
 type Params struct {
-	ServiceName      string
-	TChannelAddress  string
-	GRPCAddress      string
-	GRPCMaxMsgSize   int
-	GRPCPortResolver GRPCPortResolver
+	ServiceName       string
+	TChannelAddress   string
+	GRPCAddress       string
+	GRPCMaxMsgSize    int
+	HostAddressMapper HostAddressMapper
 
 	InboundMiddleware  yarpc.InboundMiddleware
 	OutboundMiddleware yarpc.OutboundMiddleware
@@ -55,11 +55,11 @@ func NewParams(serviceName string, config *config.Config) (Params, error) {
 		return Params{}, fmt.Errorf("failed to get listen IP: %v", err)
 	}
 	return Params{
-		ServiceName:      serviceName,
-		TChannelAddress:  fmt.Sprintf("%v:%v", listenIP, serviceConfig.RPC.Port),
-		GRPCAddress:      fmt.Sprintf("%v:%v", listenIP, serviceConfig.RPC.GRPCPort),
-		GRPCMaxMsgSize:   serviceConfig.RPC.GRPCMaxMsgSize,
-		GRPCPortResolver: NewGRPCPorts(config),
+		ServiceName:       serviceName,
+		TChannelAddress:   fmt.Sprintf("%v:%v", listenIP, serviceConfig.RPC.Port),
+		GRPCAddress:       fmt.Sprintf("%v:%v", listenIP, serviceConfig.RPC.GRPCPort),
+		GRPCMaxMsgSize:    serviceConfig.RPC.GRPCMaxMsgSize,
+		HostAddressMapper: NewGRPCPorts(config),
 	}, nil
 }
 

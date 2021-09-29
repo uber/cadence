@@ -34,11 +34,11 @@ import (
 
 // Factory is an implementation of common.RPCFactory interface
 type Factory struct {
-	logger           log.Logger
-	grpcPortResolver GRPCPortResolver
-	tchannel         *tchannel.Transport
-	grpc             *grpc.Transport
-	dispatcher       *yarpc.Dispatcher
+	logger            log.Logger
+	hostAddressMapper HostAddressMapper
+	tchannel          *tchannel.Transport
+	grpc              *grpc.Transport
+	dispatcher        *yarpc.Dispatcher
 }
 
 // NewFactory builds a new rpc.Factory
@@ -97,11 +97,11 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 	})
 
 	return &Factory{
-		logger:           logger,
-		grpcPortResolver: p.GRPCPortResolver,
-		tchannel:         tchannel,
-		grpc:             grpc,
-		dispatcher:       dispatcher,
+		logger:            logger,
+		hostAddressMapper: p.HostAddressMapper,
+		tchannel:          tchannel,
+		grpc:              grpc,
+		dispatcher:        dispatcher,
 	}
 }
 
@@ -130,7 +130,7 @@ func (d *Factory) CreateGRPCDispatcherForOutbound(
 
 // ReplaceGRPCPort replaces port in the address to grpc for a given service
 func (d *Factory) ReplaceGRPCPort(serviceName, hostAddress string) (string, error) {
-	return d.grpcPortResolver.GetGRPCAddress(serviceName, hostAddress)
+	return d.hostAddressMapper.GetGRPCAddress(serviceName, hostAddress)
 }
 
 func (d *Factory) createOutboundDispatcher(

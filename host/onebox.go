@@ -799,10 +799,10 @@ func newRPCFactory(serviceName string, tchannelHostPort string, logger log.Logge
 	}
 
 	return rpc.NewFactory(logger, rpc.Params{
-		ServiceName:      serviceName,
-		TChannelAddress:  tchannelHostPort,
-		GRPCAddress:      grpcHostPort,
-		GRPCPortResolver: &grpcPortResolver,
+		ServiceName:       serviceName,
+		TChannelAddress:   tchannelHostPort,
+		GRPCAddress:       grpcHostPort,
+		HostAddressMapper: &grpcPortResolver,
 		InboundMiddleware: yarpc.InboundMiddleware{
 			Unary: &versionMiddleware{},
 		},

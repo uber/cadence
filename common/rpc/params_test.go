@@ -50,7 +50,7 @@ func TestNewParams(t *testing.T) {
 	assert.Equal(t, "127.0.0.1:1111", params.TChannelAddress)
 	assert.Equal(t, "127.0.0.1:2222", params.GRPCAddress)
 	assert.Equal(t, 3333, params.GRPCMaxMsgSize)
-	assert.IsType(t, GRPCPorts{}, params.GRPCPortResolver)
+	assert.IsType(t, GRPCPorts{}, params.HostAddressMapper)
 
 	params, err = NewParams(serviceName, makeConfig(config.Service{RPC: config.RPC{BindOnIP: "1.2.3.4", GRPCPort: 2222}}))
 	assert.NoError(t, err)

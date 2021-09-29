@@ -30,7 +30,7 @@ import (
 )
 
 type (
-	GRPCPortResolver interface {
+	HostAddressMapper interface {
 		GetGRPCAddress(service, hostAddress string) (string, error)
 	}
 
