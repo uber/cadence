@@ -502,11 +502,7 @@ func (t *crossClusterSourceTask) VerifyLastWriteVersion(
 	if err != nil {
 		return false, err
 	}
-	ok, err := verifyTaskVersion(t.shard, t.logger, taskInfo.DomainID, lastWriteVersion, taskInfo.Version, taskInfo)
-	if err != nil || !ok {
-		return false, err
-	}
-	return true, nil
+	return verifyTaskVersion(t.shard, t.logger, taskInfo.DomainID, lastWriteVersion, taskInfo.Version, taskInfo)
 }
 
 func (t *crossClusterSourceTask) getRequestForApplyParentPolicy(
@@ -530,6 +526,8 @@ func (t *crossClusterSourceTask) getRequestForApplyParentPolicy(
 			return nil, t.processingState, err
 		}
 		targetCluster := targetDomainEntry.GetReplicationConfig().ActiveClusterName
+		// TODO: there's a race condition that can make this organization by clusters buggy
+		// when the child is failing over to another region. This will be handled later.
 		if targetCluster == t.targetCluster {
 			domainID, domainErr := t.shard.GetDomainCache().GetDomainID(childInfo.DomainName)
 			if domainErr != nil {

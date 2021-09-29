@@ -314,32 +314,6 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	domainName := mutableState.GetDomainEntry().GetInfo().Name
 	children := mutableState.GetPendingChildExecutionInfos()
 
-	// release the context lock since we no longer need mutable state builder and
-	// the rest of logic is making RPC call, which takes time.
-	// TODO: we can't release mutable state lock here when cross cluster operation
-	// is enabled, as we may update mutable state after this point.
-	release(nil)
-	err = t.recordWorkflowClosed(
-		ctx,
-		task.DomainID,
-		task.WorkflowID,
-		task.RunID,
-		workflowTypeName,
-		workflowStartTimestamp,
-		workflowExecutionTimestamp.UnixNano(),
-		workflowCloseTimestamp,
-		*workflowCloseStatus,
-		workflowHistoryLength,
-		task.GetTaskID(),
-		visibilityMemo,
-		executionInfo.TaskList,
-		isCron,
-		searchAttr,
-	)
-	if err != nil {
-		return err
-	}
-
 	var crossClusterTaskGenerators []generatorF
 	// Communicate the result to parent execution if this is Child Workflow execution
 	if replyToParentWorkflow {
@@ -398,7 +372,28 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 			return err
 		}
 	}
-	return nil
+
+	// release the context lock since we no longer need mutable state builder and
+	// the rest of logic is making RPC call, which takes time.
+	release(nil)
+	err = t.recordWorkflowClosed(
+		ctx,
+		task.DomainID,
+		task.WorkflowID,
+		task.RunID,
+		workflowTypeName,
+		workflowStartTimestamp,
+		workflowExecutionTimestamp.UnixNano(),
+		workflowCloseTimestamp,
+		*workflowCloseStatus,
+		workflowHistoryLength,
+		task.GetTaskID(),
+		visibilityMemo,
+		executionInfo.TaskList,
+		isCron,
+		searchAttr,
+	)
+	return err
 }
 
 func (t *transferActiveTaskExecutor) processCancelExecution(

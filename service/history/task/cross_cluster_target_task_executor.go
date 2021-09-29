@@ -298,27 +298,21 @@ func (t *crossClusterTargetTaskExecutor) executeRecordChildWorkflowExecutionComp
 		return nil, errUnexpectedTask
 	}
 
-	switch task.processingState {
-	case processingStateInitialized:
-		recordChildCompletionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
-		defer cancel()
-		err = t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &types.RecordChildExecutionCompletedRequest{
-			DomainUUID: attributes.TargetDomainID, // parent domain id
-			WorkflowExecution: &types.WorkflowExecution{
-				WorkflowID: attributes.TargetWorkflowID,
-				RunID:      attributes.TargetRunID,
-			},
-			InitiatedID: attributes.InitiatedEventID,
-			CompletedExecution: &types.WorkflowExecution{
-				WorkflowID: taskInfo.WorkflowID,
-				RunID:      taskInfo.RunID,
-			},
-			CompletionEvent: attributes.CompletionEvent,
-		})
-	// processingStateResponseRecorded is invalid for this op
-	default:
-		err = errUnknownTaskProcessingState
-	}
+	recordChildCompletionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
+	defer cancel()
+	err = t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &types.RecordChildExecutionCompletedRequest{
+		DomainUUID: attributes.TargetDomainID, // parent domain id
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: attributes.TargetWorkflowID,
+			RunID:      attributes.TargetRunID,
+		},
+		InitiatedID: attributes.InitiatedEventID,
+		CompletedExecution: &types.WorkflowExecution{
+			WorkflowID: taskInfo.WorkflowID,
+			RunID:      taskInfo.RunID,
+		},
+		CompletionEvent: attributes.CompletionEvent,
+	})
 
 	if err != nil {
 		return nil, err

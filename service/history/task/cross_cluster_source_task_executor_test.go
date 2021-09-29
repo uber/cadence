@@ -177,42 +177,49 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecute_DomainNotActive() {
 }
 
 func getWorkflowCloseTestCases() []struct {
-	targetError       *types.CrossClusterTaskFailedCause
-	expectedError     error
-	expectedTaskState ctask.State
+	targetError         *types.CrossClusterTaskFailedCause
+	expectedError       error
+	expectedTaskState   ctask.State
+	willGenerateNewTask bool
 } {
 	return []struct {
-		targetError       *types.CrossClusterTaskFailedCause
-		expectedError     error
-		expectedTaskState ctask.State
+		targetError         *types.CrossClusterTaskFailedCause
+		expectedError       error
+		expectedTaskState   ctask.State
+		willGenerateNewTask bool
 	}{
 		// SUCCESS
 		{
-			targetError:       nil,
-			expectedError:     nil,
-			expectedTaskState: ctask.TaskStateAcked,
+			targetError:         nil,
+			expectedError:       nil,
+			expectedTaskState:   ctask.TaskStateAcked,
+			willGenerateNewTask: false,
 		},
 		// EXPECTED ERRORS
 		{
-			targetError:       types.CrossClusterTaskFailedCauseWorkflowNotExists.Ptr(),
-			expectedError:     nil,
-			expectedTaskState: ctask.TaskStateAcked,
+			targetError:         types.CrossClusterTaskFailedCauseWorkflowNotExists.Ptr(),
+			expectedError:       nil,
+			expectedTaskState:   ctask.TaskStateAcked,
+			willGenerateNewTask: false,
 		},
 		{
-			targetError:       types.CrossClusterTaskFailedCauseDomainNotActive.Ptr(),
-			expectedError:     nil,
-			expectedTaskState: ctask.TaskStateAcked,
+			targetError:         types.CrossClusterTaskFailedCauseDomainNotActive.Ptr(),
+			expectedError:       nil,
+			expectedTaskState:   ctask.TaskStateAcked,
+			willGenerateNewTask: true,
 		},
 		{
-			targetError:       types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted.Ptr(),
-			expectedError:     nil,
-			expectedTaskState: ctask.TaskStateAcked,
+			targetError:         types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted.Ptr(),
+			expectedError:       nil,
+			expectedTaskState:   ctask.TaskStateAcked,
+			willGenerateNewTask: false,
 		},
 		// UNEXPECTED ERROR
 		{
-			targetError:       types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning.Ptr(),
-			expectedError:     errUnexpectedErrorFromTarget,
-			expectedTaskState: ctask.TaskStatePending,
+			targetError:         types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning.Ptr(),
+			expectedError:       errUnexpectedErrorFromTarget,
+			expectedTaskState:   ctask.TaskStatePending,
+			willGenerateNewTask: false,
 		},
 	}
 }
@@ -237,9 +244,22 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteRecordChildCompleteExec
 			) {
 				persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
 				s.NoError(err)
-				s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-				s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
-				// UpdateWorkflowExecution isn't called for x-cluster close operations since event wf execution is already closed
+				s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(
+					&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+				s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()).Return(
+					s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
+				if tc.willGenerateNewTask {
+					s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
+						func(request *p.UpdateWorkflowExecutionRequest) bool {
+							if true {
+								return true
+							}
+							crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
+							s.Len(crossClusterTasks, 1)
+							s.Equal(p.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete, crossClusterTasks[0].GetType())
+							return true
+						})).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
+				}
 			},
 			func(task *crossClusterSourceTask) {
 				s.Equal(tc.expectedTaskState, task.state)
@@ -333,7 +353,18 @@ func (s *crossClusterSourceTaskExecutorSuite) TestApplyParentClosePolicy() {
 					s.NoError(err)
 					s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 					s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
-					// UpdateWorkflowExecution isn't called for x-cluster close operations since event wf execution is already closed
+					if tc.willGenerateNewTask {
+						s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
+							func(request *p.UpdateWorkflowExecutionRequest) bool {
+								if true {
+									return true
+								}
+								crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
+								s.Len(crossClusterTasks, 1)
+								s.Equal(p.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete, crossClusterTasks[0].GetType())
+								return true
+							})).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
+					}
 				},
 				func(task *crossClusterSourceTask) {
 					s.Equal(tc.expectedTaskState, task.state)

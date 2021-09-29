@@ -38,12 +38,6 @@ import (
 
 var (
 	errContinueExecution = errors.New("cross cluster task should continue execution")
-
-	expectedCloseErrors = map[types.CrossClusterTaskFailedCause]bool{
-		types.CrossClusterTaskFailedCauseDomainNotActive:          true,
-		types.CrossClusterTaskFailedCauseWorkflowNotExists:        true,
-		types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted: true,
-	}
 )
 
 type (
@@ -152,8 +146,6 @@ func (t *crossClusterSourceTaskExecutor) executeStartChildExecutionTask(
 	}
 
 	// handle common errors
-
-	// handle common errors
 	failedCause := task.response.FailedCause
 	if failedCause != nil {
 		switch *failedCause {
@@ -180,7 +172,6 @@ func (t *crossClusterSourceTaskExecutor) executeStartChildExecutionTask(
 
 		attributes := initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes
 		now := t.shard.GetTimeSource().Now()
-		failedCause := task.response.FailedCause
 		if failedCause != nil &&
 			(*failedCause == types.CrossClusterTaskFailedCauseDomainNotExists ||
 				*failedCause == types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning) {
@@ -304,7 +295,13 @@ func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
 	// handle common errors
 	failedCause := task.response.FailedCause
 	if failedCause != nil {
-		if _, ok := expectedCloseErrors[*failedCause]; !ok {
+		switch *failedCause {
+		case types.CrossClusterTaskFailedCauseDomainNotActive:
+			return t.generateNewTask(ctx, wfContext, mutableState, task)
+		case types.CrossClusterTaskFailedCauseWorkflowNotExists,
+			types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
+			// Do nothing, these errors are expected if the target workflow is already closed
+		default:
 			return errUnexpectedErrorFromTarget
 		}
 	}
@@ -343,7 +340,13 @@ func (t *crossClusterSourceTaskExecutor) executeRecordChildWorkflowExecutionComp
 	// handle common errors
 	failedCause := task.response.FailedCause
 	if failedCause != nil {
-		if _, ok := expectedCloseErrors[*failedCause]; !ok {
+		switch *failedCause {
+		case types.CrossClusterTaskFailedCauseDomainNotActive:
+			return t.generateNewTask(ctx, wfContext, mutableState, task)
+		case types.CrossClusterTaskFailedCauseWorkflowNotExists,
+			types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
+			// Do nothing, these errors are expected if the target workflow is already closed
+		default:
 			return errUnexpectedErrorFromTarget
 		}
 	}
