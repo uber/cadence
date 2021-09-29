@@ -21,43 +21,12 @@
 package rpc
 
 import (
-	"errors"
-	"fmt"
-	"strings"
-
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/service"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/transport/grpc"
+	"go.uber.org/yarpc/transport/tchannel"
 )
 
-type (
-	HostAddressMapper interface {
-		GetGRPCAddress(service, hostAddress string) (string, error)
-	}
-
-	GRPCPorts map[string]int
-)
-
-func NewGRPCPorts(c *config.Config) GRPCPorts {
-	grpcPorts := map[string]int{}
-	for name, config := range c.Services {
-		grpcPorts[service.FullName(name)] = config.RPC.GRPCPort
-	}
-	return grpcPorts
-}
-
-func (p GRPCPorts) GetGRPCAddress(service, hostAddress string) (string, error) {
-	port, ok := p[service]
-	if !ok {
-		return hostAddress, errors.New("unknown service: " + service)
-	}
-	if port == 0 {
-		return hostAddress, errors.New("GRPC port not configured for service: " + service)
-	}
-
-	// Drop port if provided
-	if index := strings.Index(hostAddress, ":"); index > 0 {
-		hostAddress = hostAddress[:index]
-	}
-
-	return fmt.Sprintf("%s:%d", hostAddress, port), nil
+// OutboundsBuilder allows defining outbounds for the dispatcher
+type OutboundsBuilder interface {
+	Build(*grpc.Transport, *tchannel.Transport) (yarpc.Outbounds, error)
 }

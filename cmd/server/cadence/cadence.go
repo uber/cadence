@@ -82,9 +82,6 @@ func startHandler(c *cli.Context) {
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, syscall.SIGTERM)
 	for _, svc := range services {
-		if _, ok := cfg.Services[svc]; !ok {
-			log.Fatalf("`%v` service missing config", svc)
-		}
 		server := newServer(svc, &cfg)
 		daemons = append(daemons, server)
 		server.Start()
