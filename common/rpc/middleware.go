@@ -34,13 +34,16 @@ type authOutboundMiddleware struct {
 }
 
 func (m *authOutboundMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
-	if m.authProvider != nil {
-		token, err := m.authProvider.GetAuthToken()
-		if err != nil {
-			return nil, err
-		}
-		request.Headers = request.Headers.
-			With(common.AuthorizationTokenHeaderName, string(token))
+	if m.authProvider == nil {
+		return out.Call(ctx, request)
 	}
+
+	token, err := m.authProvider.GetAuthToken()
+	if err != nil {
+		return nil, err
+	}
+	request.Headers = request.Headers.
+		With(common.AuthorizationTokenHeaderName, string(token))
+
 	return out.Call(ctx, request)
 }
