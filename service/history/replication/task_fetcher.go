@@ -269,6 +269,7 @@ func (f *taskFetcherImpl) fetchAndDistributeTasks(requestByShard map[int32]*requ
 		close(request.respChan)
 		delete(requestByShard, shardID)
 	}
+
 	return err
 }
 

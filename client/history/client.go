@@ -27,14 +27,12 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/common/rpc"
-
-	"github.com/uber/cadence/common/dynamicconfig"
-
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -880,8 +878,7 @@ func (c *clientImpl) GetReplicationMessages(
 
 	for resp := range respChan {
 		// return partial response if the response size exceeded supported max size
-		responseSize := resp.size
-		responseTotalSize += responseSize
+		responseTotalSize += resp.size
 		if responseTotalSize >= c.rpcMaxSizeInBytes() {
 			return response, err
 		}

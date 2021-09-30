@@ -110,7 +110,6 @@ func NewRPCClientFactory(
 }
 
 func (cf *rpcClientFactory) NewHistoryClient() (history.Client, error) {
-
 	return cf.NewHistoryClientWithTimeout(history.DefaultTimeout)
 }
 

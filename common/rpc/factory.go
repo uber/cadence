@@ -28,12 +28,11 @@ import (
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 
-	"github.com/uber/cadence/common"
-
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 )
 
+const defaultGRPCSizeLimit = 4 * 1024 * 1024
 // Factory is an implementation of common.RPCFactory interface
 type Factory struct {
 	maxMessageSize int
@@ -140,7 +139,7 @@ func (d *Factory) ReplaceGRPCPort(serviceName, hostAddress string) (string, erro
 
 func (d *Factory) GetMaxMessageSize() int {
 	if d.maxMessageSize == 0 {
-		return common.DefaultGRPCSizeLimit
+		return defaultGRPCSizeLimit
 	}
 	return d.maxMessageSize
 }
