@@ -165,7 +165,13 @@ func (h *handlerImpl) Start() {
 	h.crossClusterTaskFetchers = task.NewCrossClusterTaskFetchers(
 		h.GetClusterMetadata(),
 		h.GetClientBean(),
-		&task.FetcherOptions{}, // TODO: specify options
+		&task.FetcherOptions{
+			Parallelism:                h.config.CrossClusterFetcherParallelism,
+			AggregationInterval:        h.config.CrossClusterFetcherAggregationInterval,
+			ServiceBusyBackoffInterval: h.config.CrossClusterFetcherServiceBusyBackoffInterval,
+			ErrorRetryInterval:         h.config.CrossClusterFetcherErrorBackoffInterval,
+			TimerJitterCoefficient:     h.config.CrossClusterFetcherJitterCoefficient,
+		},
 		h.GetLogger(),
 	)
 	h.crossClusterTaskFetchers.Start()

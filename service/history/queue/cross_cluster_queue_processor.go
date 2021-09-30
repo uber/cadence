@@ -30,7 +30,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -42,8 +41,6 @@ type (
 		shard         shard.Context
 		historyEngine engine.Engine
 		taskProcessor task.Processor
-
-		config *config.Config
 
 		metricsClient metrics.Client
 		logger        log.Logger
@@ -64,7 +61,6 @@ func NewCrossClusterQueueProcessor(
 ) Processor {
 	logger := shard.GetLogger().WithTags(tag.ComponentCrossClusterQueueProcessor)
 	currentClusterName := shard.GetClusterMetadata().GetCurrentClusterName()
-	config := shard.GetConfig()
 
 	queueProcessors := make(map[string]*crossClusterQueueProcessorBase)
 	for clusterName, info := range shard.GetClusterMetadata().GetAllClusterInfo() {
@@ -76,7 +72,6 @@ func NewCrossClusterQueueProcessor(
 			shard,
 			executionCache,
 			logger,
-			shard.GetConfig(),
 		)
 
 		queueProcessor := newCrossClusterQueueProcessorBase(
@@ -94,7 +89,6 @@ func NewCrossClusterQueueProcessor(
 		shard:           shard,
 		historyEngine:   historyEngine,
 		taskProcessor:   taskProcessor,
-		config:          config,
 		metricsClient:   shard.GetMetricsClient(),
 		logger:          logger,
 		status:          common.DaemonStatusInitialized,

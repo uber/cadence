@@ -31,7 +31,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	ctask "github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -46,7 +45,6 @@ type (
 		executionCache *execution.Cache
 		logger         log.Logger
 		metricsClient  metrics.Client
-		config         *config.Config
 	}
 )
 
@@ -54,14 +52,12 @@ func NewCrossClusterSourceTaskExecutor(
 	shard shard.Context,
 	executionCache *execution.Cache,
 	logger log.Logger,
-	config *config.Config,
 ) Executor {
 	return &crossClusterSourceTaskExecutor{
 		shard:          shard,
 		executionCache: executionCache,
 		logger:         logger,
 		metricsClient:  shard.GetMetricsClient(),
-		config:         config,
 	}
 }
 

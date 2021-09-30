@@ -1938,6 +1938,7 @@ const (
 	ShardInfoTransferStandbyPendingTasksTimer
 	ShardInfoTimerActivePendingTasksTimer
 	ShardInfoTimerStandbyPendingTasksTimer
+	ShardInfoCrossClusterPendingTasksTimer
 	ShardInfoReplicationLagTimer
 	ShardInfoTransferLagTimer
 	ShardInfoTimerLagTimer
@@ -2450,6 +2451,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ShardInfoTransferStandbyPendingTasksTimer:         {metricName: "shardinfo_transfer_standby_pending_task", metricType: Timer},
 		ShardInfoTimerActivePendingTasksTimer:             {metricName: "shardinfo_timer_active_pending_task", metricType: Timer},
 		ShardInfoTimerStandbyPendingTasksTimer:            {metricName: "shardinfo_timer_standby_pending_task", metricType: Timer},
+		ShardInfoCrossClusterPendingTasksTimer:            {metricName: "shardinfo_cross_cluster_pending_task", metricType: Timer},
 		ShardInfoReplicationLagTimer:                      {metricName: "shardinfo_replication_lag", metricType: Timer},
 		ShardInfoTransferLagTimer:                         {metricName: "shardinfo_transfer_lag", metricType: Timer},
 		ShardInfoTimerLagTimer:                            {metricName: "shardinfo_timer_lag", metricType: Timer},

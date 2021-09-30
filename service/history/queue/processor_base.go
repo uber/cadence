@@ -513,6 +513,8 @@ func getPendingTasksMetricIdx(
 		return metrics.ShardInfoTransferActivePendingTasksTimer
 	case metrics.TransferStandbyQueueProcessorScope:
 		return metrics.ShardInfoTransferStandbyPendingTasksTimer
+	case metrics.CrossClusterQueueProcessorScope:
+		return metrics.ShardInfoCrossClusterPendingTasksTimer
 	case metrics.ReplicatorQueueProcessorScope:
 		return metrics.ShardInfoReplicationPendingTasksTimer
 	default:
