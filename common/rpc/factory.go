@@ -147,6 +147,9 @@ func (d *Factory) createOutboundDispatcher(
 		Outbounds: yarpc.Outbounds{
 			serviceName: {Unary: outbound},
 		},
+		OutboundMiddleware: yarpc.OutboundMiddleware{
+			Unary: &responseInfoMiddleware{},
+		},
 	})
 	if err := dispatcher.Start(); err != nil {
 		d.logger.Error("Failed to create outbound transport channel", tag.Error(err))

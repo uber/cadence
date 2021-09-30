@@ -48,15 +48,24 @@ func TestAuthOubboundMiddleware(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestResponseInfoMiddleware(t *testing.T) {
+	m := responseInfoMiddleware{}
+	ctx, responseInfo := ContextWithResponseInfo(context.Background())
+	_, err := m.Call(ctx, &transport.Request{}, &fakeOutbound{response: &transport.Response{BodySize: 12345}})
+	assert.NoError(t, err)
+	assert.Equal(t, 12345, responseInfo.Size)
+}
+
 type fakeOutbound struct {
-	verify func(*transport.Request)
+	verify   func(*transport.Request)
+	response *transport.Response
 }
 
 func (o fakeOutbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	if o.verify != nil {
 		o.verify(request)
 	}
-	return nil, nil
+	return o.response, nil
 }
 func (o fakeOutbound) Start() error                      { return nil }
 func (o fakeOutbound) Stop() error                       { return nil }
