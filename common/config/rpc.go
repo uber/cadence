@@ -32,6 +32,8 @@ import (
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 
+	"github.com/uber/cadence/common/rpc"
+
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 )
@@ -148,6 +150,9 @@ func (d *RPCFactory) createOutboundDispatcher(
 		Name: callerName,
 		Outbounds: yarpc.Outbounds{
 			serviceName: {Unary: outbound},
+		},
+		OutboundMiddleware: yarpc.OutboundMiddleware{
+			Unary: &rpc.ResponseInfoMiddleware{},
 		},
 	})
 	if err := dispatcher.Start(); err != nil {
