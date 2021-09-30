@@ -269,11 +269,6 @@ func (f *taskFetcherImpl) fetchAndDistributeTasks(requestByShard map[int32]*requ
 		close(request.respChan)
 		delete(requestByShard, shardID)
 	}
-
-	// Close all request channel without a response
-	for _, request := range requestByShard {
-		close(request.respChan)
-	}
 	return err
 }
 
