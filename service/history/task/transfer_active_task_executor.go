@@ -1695,6 +1695,8 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 
 	for initiatedID, childDomainID := range sameClusterChildDomainIDs {
 		childInfo := childInfos[initiatedID]
+		// TODO: Consider sending a signal to system workflow for processing parent close policy
+		// if some children may be cross cluster
 		if err := applyParentClosePolicy(
 			ctx,
 			t.historyClient,
