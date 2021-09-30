@@ -49,6 +49,7 @@ import (
 	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
@@ -165,7 +166,7 @@ func NewWorkflowHandler(
 			},
 			func(domain string) float64 {
 				if monitor := resource.GetMembershipMonitor(); monitor != nil && config.GlobalDomainRPS(domain) > 0 {
-					ringSize, err := monitor.GetMemberCount(common.FrontendServiceName)
+					ringSize, err := monitor.GetMemberCount(service.Frontend)
 					if err == nil && ringSize > 0 {
 						avgQuota := common.MaxInt(config.GlobalDomainRPS(domain)/ringSize, 1)
 						return float64(common.MinInt(avgQuota, config.MaxDomainRPSPerInstance(domain)))
@@ -2916,7 +2917,7 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
-	visibilityArchiver, err := wh.GetArchiverProvider().GetVisibilityArchiver(URI.Scheme(), common.FrontendServiceName)
+	visibilityArchiver, err := wh.GetArchiverProvider().GetVisibilityArchiver(URI.Scheme(), service.Frontend)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -4168,7 +4169,7 @@ func (wh *WorkflowHandler) getArchivedHistory(
 		return nil, wh.error(err, scope, tags...)
 	}
 
-	historyArchiver, err := wh.GetArchiverProvider().GetHistoryArchiver(URI.Scheme(), common.FrontendServiceName)
+	historyArchiver, err := wh.GetArchiverProvider().GetHistoryArchiver(URI.Scheme(), service.Frontend)
 	if err != nil {
 		return nil, wh.error(err, scope, tags...)
 	}

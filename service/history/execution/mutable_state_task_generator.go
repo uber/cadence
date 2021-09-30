@@ -726,7 +726,43 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 				StartChildExecutionTask: *startChildExecutionTask,
 			}
 		}
-	// TODO: add the case for CrossClusterTaskTypeRecordChildComplete and ApplyParentClosePolicy
+	case persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+		if generateTransferTask {
+			// We don't have a separate transfer task for record child completion or
+			// apply parent close policy. They are both created through close exuection task.
+			// TODO: closeExecutionTask will be created and added twice when we have both
+			// record child completion and apply parent close policy x-cluster tasks.
+			// Technically, it shouldn't cause issues but better find a way to dedup this...
+			newTask = &persistence.CloseExecutionTask{
+				// TaskID is set by shard context
+				Version: task.Version,
+			}
+		} else {
+			newTask = &persistence.CrossClusterRecordChildWorkflowExecutionCompleteTask{
+				TargetCluster: targetCluster,
+				RecordWorkflowExecutionCompleteTask: persistence.RecordWorkflowExecutionCompleteTask{
+					// TaskID is set by shard context
+					Version: task.Version,
+				},
+			}
+		}
+	case persistence.CrossClusterTaskTypeApplyParentPolicy:
+		if generateTransferTask {
+			// Creating close exeuction task due to the same reason above.
+			// TODO: dedup this request if we also created one through record child complete
+			newTask = &persistence.CloseExecutionTask{
+				// TaskID is set by shard context
+				Version: task.Version,
+			}
+		} else {
+			newTask = &persistence.CrossClusterApplyParentClosePolicyTask{
+				TargetCluster: targetCluster,
+				ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
+					// TaskID is set by shard context
+					Version: task.Version,
+				},
+			}
+		}
 	default:
 		return fmt.Errorf("unable to convert cross-cluster task of type %v", task.TaskType)
 	}

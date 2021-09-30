@@ -44,7 +44,6 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -84,7 +83,7 @@ func (s *adminHandlerSuite) SetupTest() {
 	s.mockHistoryClient = s.mockResource.HistoryClient
 	s.mockHistoryV2Mgr = s.mockResource.HistoryMgr
 
-	params := &service.BootstrapParams{
+	params := &resource.Params{
 		PersistenceConfig: config.Persistence{
 			NumHistoryShards: 1,
 		},
@@ -430,7 +429,7 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 
 func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 	handler := s.handler
-	handler.params = &service.BootstrapParams{}
+	handler.params = &resource.Params{}
 	ctx := context.Background()
 
 	type test struct {

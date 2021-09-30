@@ -191,7 +191,7 @@ type (
 
 	// TasksRow represents a row in tasks table
 	TasksRow struct {
-		ShardID      int
+		ShardID      int // this is DBShardID, not historyShardID (TODO: maybe rename it for clarification)
 		DomainID     serialization.UUID
 		TaskType     int64
 		TaskID       int64
@@ -220,7 +220,7 @@ type (
 	// TasksFilter contains the column names within tasks table that
 	// can be used to filter results through a WHERE clause
 	TasksFilter struct {
-		ShardID              int
+		ShardID              int // this is DBShardID, not historyShardID (TODO: maybe rename it for clarification)
 		DomainID             serialization.UUID
 		TaskListName         string
 		TaskType             int64
@@ -239,7 +239,7 @@ type (
 
 	// TaskListsRow represents a row in task_lists table
 	TaskListsRow struct {
-		ShardID      int
+		ShardID      int // this is DBShardID, not historyShardID (TODO: maybe rename it for clarification)
 		DomainID     serialization.UUID
 		Name         string
 		TaskType     int64
@@ -257,7 +257,7 @@ type (
 	// TaskListsFilter contains the column names within task_lists table that
 	// can be used to filter results through a WHERE clause
 	TaskListsFilter struct {
-		ShardID             int
+		ShardID             int // this is DBShardID, not historyShardID (TODO: maybe rename it for clarification)
 		DomainID            *serialization.UUID
 		Name                *string
 		TaskType            *int64
@@ -830,7 +830,8 @@ type (
 		tableCRUD
 		ErrorChecker
 
-		BeginTx(ctx context.Context) (Tx, error)
+		GetTotalNumDBShards() int
+		BeginTx(dbShardID int, ctx context.Context) (Tx, error)
 		PluginName() string
 		Close() error
 	}

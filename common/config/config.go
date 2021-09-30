@@ -22,6 +22,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -31,6 +32,7 @@ import (
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
+	"github.com/uber/cadence/common/service"
 )
 
 type (
@@ -177,8 +179,9 @@ type (
 		// HistoryMaxConns is the desired number of conns to history store. Value specified
 		// here overrides the MaxConns config specified as part of datastore
 		HistoryMaxConns int `yaml:"historyMaxConns"`
-		// NumHistoryShards is the desired number of history shards. This config doesn't
-		// belong here, needs refactoring
+		// NumHistoryShards is the desired number of history shards. It's for computing the historyShardID from workflowID into [0, NumHistoryShards)
+		// Therefore, the value cannot be changed once set.
+		// TODO This config doesn't belong here, needs refactoring
 		NumHistoryShards int `yaml:"numHistoryShards" validate:"nonzero"`
 		// DataStores contains the configuration for all datastores
 		DataStores map[string]DataStore `yaml:"datastores"`
@@ -260,8 +263,10 @@ type (
 		MaxIdleConns int `yaml:"maxIdleConns"`
 		// MaxConnLifetime is the maximum time a connection can be alive
 		MaxConnLifetime time.Duration `yaml:"maxConnLifetime"`
-		// NumShards is the number of storage shards to use for tables
-		// in a sharded sql database. The default value for this param is 1
+		// NumShards is the number of DB shards in a sharded sql database. Default is 1 for single SQL database setup.
+		// It's for computing a shardID value of [0,NumShards) to decide which shard of DB to query.
+		// Relationship with NumHistoryShards, both values cannot be changed once set in the same cluster,
+		// and the historyShardID value calculated from NumHistoryShards will be calculated using this NumShards to get a dbShardID
 		NumShards int `yaml:"nShards"`
 		// TLS is the configuration for TLS connections
 		TLS *TLS `yaml:"tls"`
@@ -476,4 +481,13 @@ func (c *Config) fillDefaults() {
 func (c *Config) String() string {
 	out, _ := json.MarshalIndent(c, "", "    ")
 	return string(out)
+}
+
+func (c *Config) GetServiceConfig(serviceName string) (Service, error) {
+	shortName := service.ShortName(serviceName)
+	serviceConfig, ok := c.Services[shortName]
+	if !ok {
+		return Service{}, fmt.Errorf("no config section for service: %s", shortName)
+	}
+	return serviceConfig, nil
 }

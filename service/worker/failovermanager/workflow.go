@@ -24,12 +24,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
+	"go.uber.org/zap"
 
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
@@ -102,6 +104,8 @@ type (
 		Domains []string
 		// DrillWaitTime defines the wait time of a failover drill
 		DrillWaitTime time.Duration
+		// GracefulFailoverTimeoutInSeconds
+		GracefulFailoverTimeoutInSeconds *int32
 	}
 
 	// FailoverResult is workflow result
@@ -121,8 +125,9 @@ type (
 
 	// FailoverActivityParams params for activity
 	FailoverActivityParams struct {
-		Domains       []string
-		TargetCluster string
+		Domains                          []string
+		TargetCluster                    string
+		GracefulFailoverTimeoutInSeconds *int32
 	}
 
 	// FailoverActivityResult result for failover activity
@@ -254,8 +259,9 @@ func failoverDomainsByBatch(
 		pauseSignalHandler()
 
 		failoverActivityParams := &FailoverActivityParams{
-			Domains:       domains[i*batchSize : common.MinInt((i+1)*batchSize, totalNumOfDomains)],
-			TargetCluster: targetCluster,
+			Domains:                          domains[i*batchSize : common.MinInt((i+1)*batchSize, totalNumOfDomains)],
+			TargetCluster:                    targetCluster,
+			GracefulFailoverTimeoutInSeconds: params.GracefulFailoverTimeoutInSeconds,
 		}
 		var actResult FailoverActivityResult
 		err := workflow.ExecuteActivity(ao, FailoverActivity, failoverActivityParams).Get(ctx, &actResult)
@@ -390,6 +396,12 @@ func getClient(ctx context.Context) frontend.Client {
 	return feClient
 }
 
+func getRemoteClient(ctx context.Context, clusterName string) frontend.Client {
+	manager := ctx.Value(failoverManagerContextKey).(*FailoverManager)
+	feClient := manager.clientBean.GetRemoteFrontendClient(clusterName)
+	return feClient
+}
+
 func getAllDomains(ctx context.Context, targetDomains []string) ([]*types.DescribeDomainResponse, error) {
 	feClient := getClient(ctx)
 	var res []*types.DescribeDomainResponse
@@ -432,16 +444,28 @@ func getAllDomains(ctx context.Context, targetDomains []string) ([]*types.Descri
 
 // FailoverActivity activity def
 func FailoverActivity(ctx context.Context, params *FailoverActivityParams) (*FailoverActivityResult, error) {
-	feClient := getClient(ctx)
+
+	logger := activity.GetLogger(ctx)
+	frontendClient := getClient(ctx)
 	domains := params.Domains
 	var successDomains []string
 	var failedDomains []string
 	for _, domain := range domains {
+		// Check if poller exist
+		if err := validateTaskListPollerInfo(ctx, params.TargetCluster, domain); err != nil {
+			logger.Error("Failed to validate task list poller info", zap.Error(err))
+			failedDomains = append(failedDomains, domain)
+			continue
+		}
 		updateRequest := &types.UpdateDomainRequest{
 			Name:              domain,
 			ActiveClusterName: common.StringPtr(params.TargetCluster),
 		}
-		_, err := feClient.UpdateDomain(ctx, updateRequest)
+		if params.GracefulFailoverTimeoutInSeconds != nil {
+			updateRequest.FailoverTimeoutInSeconds = params.GracefulFailoverTimeoutInSeconds
+		}
+
+		_, err := frontendClient.UpdateDomain(ctx, updateRequest)
 		if err != nil {
 			failedDomains = append(failedDomains, domain)
 		} else {
@@ -460,4 +484,35 @@ func cleanupChannel(channel workflow.Channel) {
 			return
 		}
 	}
+}
+
+func validateTaskListPollerInfo(ctx context.Context, targetCluster string, domain string) error {
+	remoteFrontendClient := getRemoteClient(ctx, targetCluster)
+	frontendClient := getClient(ctx)
+	localTaskListResponse, err := frontendClient.GetTaskListsByDomain(ctx, &types.GetTaskListsByDomainRequest{Domain: domain})
+	if err != nil {
+		return fmt.Errorf("failed to get task list for domain %s", domain)
+	}
+
+	remoteTaskListRepsonse, err := remoteFrontendClient.GetTaskListsByDomain(ctx, &types.GetTaskListsByDomainRequest{Domain: domain})
+	if err != nil {
+		return fmt.Errorf("failed to get task list for domain %s", domain)
+	}
+	for name, tl := range localTaskListResponse.GetDecisionTaskListMap() {
+		if len(tl.GetPollers()) != 0 {
+			remoteTaskList, ok := remoteTaskListRepsonse.GetDecisionTaskListMap()[name]
+			if !ok || len(remoteTaskList.GetPollers()) == 0 {
+				return fmt.Errorf("received zero poller in decision task list %s with domain %s", name, domain)
+			}
+		}
+	}
+	for name, tl := range localTaskListResponse.GetActivityTaskListMap() {
+		if len(tl.GetPollers()) != 0 {
+			remoteTaskList, ok := remoteTaskListRepsonse.GetActivityTaskListMap()[name]
+			if !ok || len(remoteTaskList.GetPollers()) == 0 {
+				return fmt.Errorf("received zero poller in decision task list %s with domain %s", name, domain)
+			}
+		}
+	}
+	return nil
 }

@@ -58,17 +58,6 @@ const (
 	EmptyUUID = "emptyUuid"
 )
 
-const (
-	// FrontendServiceName is the name of the frontend service
-	FrontendServiceName = "cadence-frontend"
-	// HistoryServiceName is the name of the history service
-	HistoryServiceName = "cadence-history"
-	// MatchingServiceName is the name of the matching service
-	MatchingServiceName = "cadence-matching"
-	// WorkerServiceName is the name of the worker service
-	WorkerServiceName = "cadence-worker"
-)
-
 // Data encoding types
 const (
 	EncodingTypeJSON     EncodingType = "json"

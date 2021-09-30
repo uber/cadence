@@ -1091,6 +1091,10 @@ func FromCrossClusterTaskType(t *types.CrossClusterTaskType) sharedv1.CrossClust
 		return sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_CANCEL_EXECUTION
 	case types.CrossClusterTaskTypeSignalExecution:
 		return sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_SIGNAL_EXECUTION
+	case types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+		return sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_RECORD_CHILD_WORKKLOW_EXECUTION_COMPLETE
+	case types.CrossClusterTaskTypeApplyParentPolicy:
+		return sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_APPLY_PARENT_CLOSE_POLICY
 	}
 	panic("unexpected enum value")
 }
@@ -1106,6 +1110,10 @@ func ToCrossClusterTaskType(t sharedv1.CrossClusterTaskType) *types.CrossCluster
 		return types.CrossClusterTaskTypeCancelExecution.Ptr()
 	case sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_SIGNAL_EXECUTION:
 		return types.CrossClusterTaskTypeSignalExecution.Ptr()
+	case sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_RECORD_CHILD_WORKKLOW_EXECUTION_COMPLETE:
+		return types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete.Ptr()
+	case sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_APPLY_PARENT_CLOSE_POLICY:
+		return types.CrossClusterTaskTypeApplyParentPolicy.Ptr()
 	}
 	panic("unexpected enum value")
 }

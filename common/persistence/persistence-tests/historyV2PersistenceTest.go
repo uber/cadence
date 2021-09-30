@@ -22,6 +22,7 @@ package persistencetests
 
 import (
 	"context"
+	"math"
 	"math/rand"
 	"os"
 	"sync"
@@ -37,8 +38,11 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/codec"
 	p "github.com/uber/cadence/common/persistence"
+	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -54,7 +58,10 @@ type (
 
 const testForkRunID = "11220000-0000-f000-f000-000000000000"
 
-var historyTestRetryPolicy = createHistoryTestRetryPolicy()
+var (
+	historyTestRetryPolicy = createHistoryTestRetryPolicy()
+	thriftEncoder          = codec.NewThriftRWEncoder()
+)
 
 func createHistoryTestRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(time.Millisecond * 50)
@@ -712,17 +719,58 @@ func (s *HistoryV2PersistenceSuite) newHistoryBranch(treeID string) ([]byte, err
 }
 
 // persistence helper
-func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(ctx context.Context, branch []byte) error {
+func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(ctx context.Context, branchToken []byte) error {
+	var branchThrift workflow.HistoryBranch
+	err := thriftEncoder.Decode(branchToken, &branchThrift)
+	if err != nil {
+		return err
+	}
+	branch := thrift.ToHistoryBranch(&branchThrift)
+	beginNodeID := persistenceutils.GetBeginNodeID(*branch)
+	brsToDelete := append(branch.Ancestors, &types.HistoryBranchRange{
+		BranchID:    branch.BranchID,
+		BeginNodeID: common.Int64Ptr(beginNodeID),
+	})
+
+	branches := s.descTreeByToken(ctx, branchToken)
+	// validBRsMaxEndNode is to for each branch range that is being used, we want to know what is the max nodeID referred by other valid branch
+	var brs []*types.HistoryBranch
+	for _, br := range branches {
+		brs = append(brs, thrift.ToHistoryBranch(br))
+	}
+	validBRsMaxEndNode := persistenceutils.GetBranchesMaxReferredNodeIDs(brs)
+
+	minNodeID := beginNodeID
+	for i := len(brsToDelete) - 1; i >= 0; i-- {
+		br := brsToDelete[i]
+		maxReferredEndNodeID, ok := validBRsMaxEndNode[*br.BranchID]
+		if ok {
+			minNodeID = maxReferredEndNodeID
+			break
+		} else {
+			minNodeID = *br.BeginNodeID
+		}
+	}
+
 	op := func() error {
 		var err error
 		err = s.HistoryV2Mgr.DeleteHistoryBranch(ctx, &p.DeleteHistoryBranchRequest{
-			BranchToken: branch,
+			BranchToken: branchToken,
 			ShardID:     common.IntPtr(s.ShardInfo.ShardID),
 		})
 		return err
 	}
 
-	return backoff.Retry(op, historyTestRetryPolicy, isConditionFail)
+	if err := backoff.Retry(op, historyTestRetryPolicy, isConditionFail); err != nil {
+		return err
+	}
+	res, err := s.readWithError(ctx, branchToken, minNodeID, math.MaxInt64)
+	if err != nil {
+		s.IsType(&types.EntityNotExistsError{}, err)
+	} else {
+		s.Equal(0, len(res))
+	}
+	return nil
 }
 
 // persistence helper

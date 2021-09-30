@@ -99,8 +99,9 @@ var errCloseParams = errors.New("missing one of {closeStatus, closeTime, history
 // InsertIntoVisibility inserts a row into visibility table. If an row already exist,
 // its left as such and no update will be made
 func (pdb *db) InsertIntoVisibility(ctx context.Context, row *sqlplugin.VisibilityRow) (sql.Result, error) {
+	dbShardID := sqlplugin.GetDBShardIDFromDomainID(row.DomainID, pdb.GetTotalNumDBShards())
 	row.StartTime = pdb.converter.ToPostgresDateTime(row.StartTime)
-	return pdb.conn.ExecContext(ctx, templateCreateWorkflowExecutionStarted,
+	return pdb.driver.ExecContext(ctx, dbShardID, templateCreateWorkflowExecutionStarted,
 		row.DomainID,
 		row.WorkflowID,
 		row.RunID,
@@ -114,11 +115,12 @@ func (pdb *db) InsertIntoVisibility(ctx context.Context, row *sqlplugin.Visibili
 
 // ReplaceIntoVisibility replaces an existing row if it exist or creates a new row in visibility table
 func (pdb *db) ReplaceIntoVisibility(ctx context.Context, row *sqlplugin.VisibilityRow) (sql.Result, error) {
+	dbShardID := sqlplugin.GetDBShardIDFromDomainID(row.DomainID, pdb.GetTotalNumDBShards())
 	switch {
 	case row.CloseStatus != nil && row.CloseTime != nil && row.HistoryLength != nil:
 		row.StartTime = pdb.converter.ToPostgresDateTime(row.StartTime)
 		closeTime := pdb.converter.ToPostgresDateTime(*row.CloseTime)
-		return pdb.conn.ExecContext(ctx, templateCreateWorkflowExecutionClosed,
+		return pdb.driver.ExecContext(ctx, dbShardID, templateCreateWorkflowExecutionClosed,
 			row.DomainID,
 			row.WorkflowID,
 			row.RunID,
@@ -138,11 +140,13 @@ func (pdb *db) ReplaceIntoVisibility(ctx context.Context, row *sqlplugin.Visibil
 
 // DeleteFromVisibility deletes a row from visibility table if it exist
 func (pdb *db) DeleteFromVisibility(ctx context.Context, filter *sqlplugin.VisibilityFilter) (sql.Result, error) {
-	return pdb.conn.ExecContext(ctx, templateDeleteWorkflowExecution, filter.DomainID, filter.RunID)
+	dbShardID := sqlplugin.GetDBShardIDFromDomainID(filter.DomainID, pdb.GetTotalNumDBShards())
+	return pdb.driver.ExecContext(ctx, dbShardID, templateDeleteWorkflowExecution, filter.DomainID, filter.RunID)
 }
 
 // SelectFromVisibility reads one or more rows from visibility table
 func (pdb *db) SelectFromVisibility(ctx context.Context, filter *sqlplugin.VisibilityFilter) ([]sqlplugin.VisibilityRow, error) {
+	dbShardID := sqlplugin.GetDBShardIDFromDomainID(filter.DomainID, pdb.GetTotalNumDBShards())
 	var err error
 	var rows []sqlplugin.VisibilityRow
 	if filter.MinStartTime != nil {
@@ -154,7 +158,7 @@ func (pdb *db) SelectFromVisibility(ctx context.Context, filter *sqlplugin.Visib
 	switch {
 	case filter.MinStartTime == nil && filter.RunID != nil && filter.Closed:
 		var row sqlplugin.VisibilityRow
-		err = pdb.conn.GetContext(ctx, &row, templateGetClosedWorkflowExecution, filter.DomainID, *filter.RunID)
+		err = pdb.driver.GetContext(ctx, dbShardID, &row, templateGetClosedWorkflowExecution, filter.DomainID, *filter.RunID)
 		if err == nil {
 			rows = append(rows, row)
 		}
@@ -163,7 +167,7 @@ func (pdb *db) SelectFromVisibility(ctx context.Context, filter *sqlplugin.Visib
 		if filter.Closed {
 			qry = templateGetClosedWorkflowExecutionsByID
 		}
-		err = pdb.conn.SelectContext(ctx, &rows,
+		err = pdb.driver.SelectContext(ctx, dbShardID, &rows,
 			qry,
 			*filter.WorkflowID,
 			filter.DomainID,
@@ -177,7 +181,7 @@ func (pdb *db) SelectFromVisibility(ctx context.Context, filter *sqlplugin.Visib
 		if filter.Closed {
 			qry = templateGetClosedWorkflowExecutionsByType
 		}
-		err = pdb.conn.SelectContext(ctx, &rows,
+		err = pdb.driver.SelectContext(ctx, dbShardID, &rows,
 			qry,
 			*filter.WorkflowTypeName,
 			filter.DomainID,
@@ -187,7 +191,7 @@ func (pdb *db) SelectFromVisibility(ctx context.Context, filter *sqlplugin.Visib
 			*filter.MaxStartTime,
 			*filter.PageSize)
 	case filter.MinStartTime != nil && filter.CloseStatus != nil:
-		err = pdb.conn.SelectContext(ctx, &rows,
+		err = pdb.driver.SelectContext(ctx, dbShardID, &rows,
 			templateGetClosedWorkflowExecutionsByStatus,
 			*filter.CloseStatus,
 			filter.DomainID,
@@ -203,7 +207,7 @@ func (pdb *db) SelectFromVisibility(ctx context.Context, filter *sqlplugin.Visib
 		}
 		minSt := pdb.converter.ToPostgresDateTime(*filter.MinStartTime)
 		maxSt := pdb.converter.ToPostgresDateTime(*filter.MaxStartTime)
-		err = pdb.conn.SelectContext(ctx, &rows,
+		err = pdb.driver.SelectContext(ctx, dbShardID, &rows,
 			qry,
 			filter.DomainID,
 			minSt,

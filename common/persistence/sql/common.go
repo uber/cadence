@@ -53,8 +53,8 @@ func (m *sqlStore) Close() {
 	}
 }
 
-func (m *sqlStore) txExecute(ctx context.Context, operation string, f func(tx sqlplugin.Tx) error) error {
-	tx, err := m.db.BeginTx(ctx)
+func (m *sqlStore) txExecute(ctx context.Context, dbShardID int, operation string, f func(tx sqlplugin.Tx) error) error {
+	tx, err := m.db.BeginTx(dbShardID, ctx)
 	if err != nil {
 		return convertCommonErrors(m.db, operation, "Failed to start transaction.", err)
 	}
