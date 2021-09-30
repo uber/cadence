@@ -456,8 +456,6 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent_Fa
 			mutableState execution.MutableState,
 			workflowExecution, targetExecution types.WorkflowExecution,
 		) {
-			s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything, mock.Anything).Return(nil).Once()
-			s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
 		},
 		true,
 	)
