@@ -166,7 +166,6 @@ func (t *taskAckManagerImpl) GetTasks(
 
 	var lastTaskCreationTime time.Time
 	var replicationTasks []*types.ReplicationTask
-	taskSize := int64(0)
 	readLevel := lastReadTaskID
 TaskInfoLoop:
 	for _, taskInfo := range taskInfoList {
@@ -200,7 +199,6 @@ TaskInfoLoop:
 		}
 		readLevel = taskInfo.GetTaskID()
 		if replicationTask != nil {
-			taskSize += replicationTask.GetSizeInByte()
 			replicationTasks = append(replicationTasks, replicationTask)
 		}
 		if taskInfo.GetVisibilityTimestamp().After(lastTaskCreationTime) {
@@ -238,7 +236,6 @@ TaskInfoLoop:
 		ReplicationTasks:       replicationTasks,
 		HasMore:                hasMore,
 		LastRetrievedMessageID: readLevel,
-		Size:                   taskSize,
 	}, nil
 }
 
@@ -503,7 +500,6 @@ func (t *taskAckManagerImpl) generateFailoverMarkerTask(
 			FailoverVersion: taskInfo.GetVersion(),
 		},
 		CreationTime: common.Int64Ptr(taskInfo.CreationTime),
-		Size:         int64(defaultFailoverMarkerSizeInByte),
 	}
 }
 
@@ -563,7 +559,6 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 					VersionHistory:     versionHistory,
 				},
 				CreationTime: common.Int64Ptr(taskInfo.CreationTime),
-				Size:         int64(defaultSyncActivitySizeInByte + len(activityInfo.Details) + len(activityInfo.LastFailureDetails)),
 			}, nil
 		},
 	)
@@ -639,7 +634,6 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 					NewRunEvents:        newRunEventsBlob,
 				},
 				CreationTime: common.Int64Ptr(task.CreationTime),
-				Size:         int64(defaultHistorySizeInByte + len(eventsBlob.GetData()) + len(newRunEventsBlob.GetData())),
 			}
 			return replicationTask, nil
 		},

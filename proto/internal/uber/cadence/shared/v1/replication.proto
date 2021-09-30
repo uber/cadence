@@ -40,8 +40,6 @@ message ReplicationMessages {
   bool has_more  = 3;
 
   SyncShardStatus sync_shard_status = 4;
-
-  int64 size = 5;
 }
 
 message ReplicationTask {
@@ -55,7 +53,6 @@ message ReplicationTask {
     HistoryTaskV2Attributes history_task_v2_attributes = 7;
     FailoverMarkerAttributes failover_marker_attributes = 8;
   }
-  int64 size = 9;
 }
 
 message DomainTaskAttributes {

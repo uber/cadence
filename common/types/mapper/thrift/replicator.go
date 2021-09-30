@@ -21,7 +21,6 @@
 package thrift
 
 import (
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/.gen/go/replicator"
@@ -469,7 +468,6 @@ func FromReplicationMessages(t *types.ReplicationMessages) *replicator.Replicati
 		LastRetrievedMessageId: &t.LastRetrievedMessageID,
 		HasMore:                &t.HasMore,
 		SyncShardStatus:        FromSyncShardStatus(t.SyncShardStatus),
-		Size:                   common.Int64Ptr(t.Size),
 	}
 }
 
@@ -483,7 +481,6 @@ func ToReplicationMessages(t *replicator.ReplicationMessages) *types.Replication
 		LastRetrievedMessageID: t.GetLastRetrievedMessageId(),
 		HasMore:                t.GetHasMore(),
 		SyncShardStatus:        ToSyncShardStatus(t.SyncShardStatus),
-		Size:                   *t.Size,
 	}
 }
 
@@ -501,7 +498,6 @@ func FromReplicationTask(t *types.ReplicationTask) *replicator.ReplicationTask {
 		HistoryTaskV2Attributes:       FromHistoryTaskV2Attributes(t.HistoryTaskV2Attributes),
 		FailoverMarkerAttributes:      FromFailoverMarkerAttributes(t.FailoverMarkerAttributes),
 		CreationTime:                  t.CreationTime,
-		Size:                          common.Int64Ptr(t.Size),
 	}
 }
 
@@ -519,7 +515,6 @@ func ToReplicationTask(t *replicator.ReplicationTask) *types.ReplicationTask {
 		HistoryTaskV2Attributes:       ToHistoryTaskV2Attributes(t.HistoryTaskV2Attributes),
 		FailoverMarkerAttributes:      ToFailoverMarkerAttributes(t.FailoverMarkerAttributes),
 		CreationTime:                  t.CreationTime,
-		Size:                          *t.Size,
 	}
 }
 

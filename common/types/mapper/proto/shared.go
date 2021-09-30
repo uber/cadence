@@ -624,7 +624,6 @@ func FromReplicationMessages(t *types.ReplicationMessages) *sharedv1.Replication
 		LastRetrievedMessageId: t.LastRetrievedMessageID,
 		HasMore:                t.HasMore,
 		SyncShardStatus:        FromSyncShardStatus(t.SyncShardStatus),
-		Size_:                  t.Size,
 	}
 }
 
@@ -637,7 +636,6 @@ func ToReplicationMessages(t *sharedv1.ReplicationMessages) *types.ReplicationMe
 		LastRetrievedMessageID: t.LastRetrievedMessageId,
 		HasMore:                t.HasMore,
 		SyncShardStatus:        ToSyncShardStatus(t.SyncShardStatus),
-		Size:                   t.Size_,
 	}
 }
 
@@ -921,7 +919,6 @@ func FromReplicationTask(t *types.ReplicationTask) *sharedv1.ReplicationTask {
 		TaskType:     FromReplicationTaskType(t.TaskType),
 		SourceTaskId: t.SourceTaskID,
 		CreationTime: unixNanoToTime(t.CreationTime),
-		Size_:        t.Size,
 	}
 	if t.DomainTaskAttributes != nil {
 		task.Attributes = &sharedv1.ReplicationTask_DomainTaskAttributes{
@@ -960,7 +957,6 @@ func ToReplicationTask(t *sharedv1.ReplicationTask) *types.ReplicationTask {
 		TaskType:     ToReplicationTaskType(t.TaskType),
 		SourceTaskID: t.SourceTaskId,
 		CreationTime: timeToUnixNano(t.CreationTime),
-		Size:         t.Size_,
 	}
 
 	switch attr := t.Attributes.(type) {
