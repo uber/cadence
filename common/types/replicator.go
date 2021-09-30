@@ -635,6 +635,7 @@ type ReplicationMessages struct {
 	LastRetrievedMessageID int64              `json:"lastRetrievedMessageId,omitempty"`
 	HasMore                bool               `json:"hasMore,omitempty"`
 	SyncShardStatus        *SyncShardStatus   `json:"syncShardStatus,omitempty"`
+	Size                   int64              `json:"size,omitempty"`
 }
 
 // GetReplicationTasks is an internal getter (TBD...)
@@ -669,6 +670,14 @@ func (v *ReplicationMessages) GetSyncShardStatus() (o *SyncShardStatus) {
 	return
 }
 
+// GetSizeInByte is an internal getter (TBD...)
+func (v *ReplicationMessages) GetSizeInByte() (o int64) {
+	if v != nil {
+		return v.Size
+	}
+	return
+}
+
 // ReplicationTask is an internal type (TBD...)
 type ReplicationTask struct {
 	TaskType                      *ReplicationTaskType           `json:"taskType,omitempty"`
@@ -679,6 +688,7 @@ type ReplicationTask struct {
 	HistoryTaskV2Attributes       *HistoryTaskV2Attributes       `json:"historyTaskV2Attributes,omitempty"`
 	FailoverMarkerAttributes      *FailoverMarkerAttributes      `json:"failoverMarkerAttributes,omitempty"`
 	CreationTime                  *int64                         `json:"creationTime,omitempty"`
+	Size                          int64                          `json:"size,omitempty"`
 }
 
 // GetTaskType is an internal getter (TBD...)
@@ -741,6 +751,14 @@ func (v *ReplicationTask) GetFailoverMarkerAttributes() (o *FailoverMarkerAttrib
 func (v *ReplicationTask) GetCreationTime() (o int64) {
 	if v != nil && v.CreationTime != nil {
 		return *v.CreationTime
+	}
+	return
+}
+
+// GetSizeInByte is an internal getter (TBD...)
+func (v *ReplicationTask) GetSizeInByte() (o int64) {
+	if v != nil {
+		return v.Size
 	}
 	return
 }

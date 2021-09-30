@@ -146,6 +146,11 @@ const (
 )
 
 const (
+	// DefaultGRPCSizeLimit is the default value of GRPC supports
+	DefaultGRPCSizeLimit = 4 * 1024 * 1024
+)
+
+const (
 	// ArchivalEnabled is the status for enabling archival
 	ArchivalEnabled = "enabled"
 	// ArchivalDisabled is the status for disabling archival

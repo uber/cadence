@@ -27,6 +27,8 @@ import (
 
 	"go.uber.org/yarpc"
 
+	"github.com/uber/cadence/common/dynamicconfig"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
@@ -42,26 +44,29 @@ const (
 )
 
 type clientImpl struct {
-	numberOfShards  int
-	tokenSerializer common.TaskTokenSerializer
-	timeout         time.Duration
-	clients         common.ClientCache
-	logger          log.Logger
+	numberOfShards    int
+	rpcMaxSizeInBytes dynamicconfig.IntPropertyFn // This value currently only used in GetReplicationMessage API
+	tokenSerializer   common.TaskTokenSerializer
+	timeout           time.Duration
+	clients           common.ClientCache
+	logger            log.Logger
 }
 
 // NewClient creates a new history service TChannel client
 func NewClient(
 	numberOfShards int,
+	rpcMaxSizeInBytes dynamicconfig.IntPropertyFn,
 	timeout time.Duration,
 	clients common.ClientCache,
 	logger log.Logger,
 ) Client {
 	return &clientImpl{
-		numberOfShards:  numberOfShards,
-		tokenSerializer: common.NewJSONTaskTokenSerializer(),
-		timeout:         timeout,
-		clients:         clients,
-		logger:          logger,
+		numberOfShards:    numberOfShards,
+		rpcMaxSizeInBytes: rpcMaxSizeInBytes,
+		tokenSerializer:   common.NewJSONTaskTokenSerializer(),
+		timeout:           timeout,
+		clients:           clients,
+		logger:            logger,
 	}
 }
 
@@ -854,15 +859,21 @@ func (c *clientImpl) GetReplicationMessages(
 	close(respChan)
 	close(errChan)
 
-	response := &types.GetReplicationMessagesResponse{MessagesByShard: make(map[int32]*types.ReplicationMessages)}
-	for resp := range respChan {
-		for shardID, tasks := range resp.MessagesByShard {
-			response.MessagesByShard[shardID] = tasks
-		}
-	}
 	var err error
 	if len(errChan) > 0 {
 		err = <-errChan
+	}
+
+	response := &types.GetReplicationMessagesResponse{MessagesByShard: make(map[int32]*types.ReplicationMessages)}
+	responseSize := int64(0)
+	for resp := range respChan {
+		for shardID, tasks := range resp.MessagesByShard {
+			responseSize += tasks.GetSizeInByte()
+			if responseSize > int64(c.rpcMaxSizeInBytes()) {
+				return response, err
+			}
+			response.MessagesByShard[shardID] = tasks
+		}
 	}
 	return response, err
 }

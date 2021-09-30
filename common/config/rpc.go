@@ -135,6 +135,10 @@ func (d *RPCFactory) ReplaceGRPCPort(serviceName, hostAddress string) (string, e
 	return d.grpcPorts.GetGRPCAddress(serviceName, hostAddress)
 }
 
+func (d *RPCFactory) GetGRPCMaxSizeInBytes() int {
+	return d.config.GRPCMaxMsgSize
+}
+
 func (d *RPCFactory) createOutboundDispatcher(
 	callerName string,
 	serviceName string,

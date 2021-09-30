@@ -110,6 +110,7 @@ func NewRPCClientFactory(
 }
 
 func (cf *rpcClientFactory) NewHistoryClient() (history.Client, error) {
+
 	return cf.NewHistoryClientWithTimeout(history.DefaultTimeout)
 }
 
@@ -156,8 +157,13 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 		return cf.newHistoryThriftClient(clientKey)
 	}
 
+	defaultMessageSize := cf.rpcFactory.GetGRPCMaxSizeInBytes()
+	if cf.enableGRPCOutbound && defaultMessageSize == 0 {
+		defaultMessageSize = common.DefaultGRPCSizeLimit
+	}
 	client := history.NewClient(
 		cf.numberOfHistoryShards,
+		cf.dynConfig.GetIntProperty(dynamicconfig.GRPCMaxSizeInByte, defaultMessageSize),
 		timeout,
 		common.NewClientCache(keyResolver, clientProvider),
 		cf.logger,
