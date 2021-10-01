@@ -50,13 +50,10 @@ import (
 )
 
 var (
-	errUnknownQueueTask             = errors.New("unknown task type")
-	errUnknownReplicationTask       = errors.New("unknown replication task")
-	defaultHistoryPageSize          = 1000
-	minReadTaskSize                 = 20
-	defaultSyncActivitySizeInByte   = 480
-	defaultFailoverMarkerSizeInByte = 150
-	defaultHistorySizeInByte        = 300
+	errUnknownQueueTask       = errors.New("unknown task type")
+	errUnknownReplicationTask = errors.New("unknown replication task")
+	defaultHistoryPageSize    = 1000
+	minReadTaskSize           = 20
 )
 
 type (

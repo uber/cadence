@@ -844,6 +844,7 @@ func (c *clientImpl) GetReplicationMessages(
 			defer wg.Done()
 			requestContext, cancel := common.CreateChildContext(ctx, 0.05)
 			defer cancel()
+			requestContext, responseInfo := rpc.ContextWithResponseInfo(requestContext)
 			resp, err := client.GetReplicationMessages(requestContext, request, opts...)
 			if err != nil {
 				c.logger.Warn("Failed to get replication tasks from client", tag.Error(err))
@@ -856,7 +857,6 @@ func (c *clientImpl) GetReplicationMessages(
 				}
 				return
 			}
-			_, responseInfo := rpc.ContextWithResponseInfo(requestContext)
 			respChan <- &getReplicationMessagesWithSize{
 				response: resp,
 				size:     responseInfo.Size,
@@ -868,9 +868,9 @@ func (c *clientImpl) GetReplicationMessages(
 	close(respChan)
 	close(errChan)
 
-	var err error
 	if len(errChan) > 0 {
-		err = <-errChan
+		err := <-errChan
+		return nil, err
 	}
 
 	response := &types.GetReplicationMessagesResponse{MessagesByShard: make(map[int32]*types.ReplicationMessages)}
@@ -880,14 +880,14 @@ func (c *clientImpl) GetReplicationMessages(
 		// return partial response if the response size exceeded supported max size
 		responseTotalSize += resp.size
 		if responseTotalSize >= c.rpcMaxSizeInBytes() {
-			return response, err
+			return response, nil
 		}
 
 		for shardID, tasks := range resp.response.GetMessagesByShard() {
 			response.MessagesByShard[shardID] = tasks
 		}
 	}
-	return response, err
+	return response, nil
 }
 
 func (c *clientImpl) GetDLQReplicationMessages(

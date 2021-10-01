@@ -33,6 +33,7 @@ import (
 )
 
 const defaultGRPCSizeLimit = 4 * 1024 * 1024
+
 // Factory is an implementation of common.RPCFactory interface
 type Factory struct {
 	maxMessageSize int
