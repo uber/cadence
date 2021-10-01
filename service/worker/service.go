@@ -36,7 +36,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/resource/config"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/archiver"
@@ -63,7 +62,7 @@ type (
 
 		status int32
 		stopC  chan struct{}
-		params *service.BootstrapParams
+		params *resource.Params
 		config *Config
 	}
 
@@ -87,15 +86,15 @@ type (
 
 // NewService builds a new cadence-worker service
 func NewService(
-	params *service.BootstrapParams,
+	params *resource.Params,
 ) (resource.Resource, error) {
 
 	serviceConfig := NewConfig(params)
 
 	serviceResource, err := resource.New(
 		params,
-		common.WorkerServiceName,
-		&config.ResourceConfig{
+		service.Worker,
+		&service.Config{
 			PersistenceMaxQPS:       serviceConfig.PersistenceMaxQPS,
 			PersistenceGlobalMaxQPS: serviceConfig.PersistenceGlobalMaxQPS,
 			ThrottledLoggerMaxRPS:   serviceConfig.ThrottledLogRPS,
@@ -116,7 +115,7 @@ func NewService(
 }
 
 // NewConfig builds the new Config for cadence-worker service
-func NewConfig(params *service.BootstrapParams) *Config {
+func NewConfig(params *resource.Params) *Config {
 	dc := dynamicconfig.NewCollection(
 		params.DynamicConfig,
 		params.Logger,

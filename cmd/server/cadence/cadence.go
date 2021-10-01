@@ -34,12 +34,13 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/tools/cassandra"
 	"github.com/uber/cadence/tools/sql"
 )
 
 // validServices is the list of all valid cadence services
-var validServices = []string{frontendService, historyService, matchingService, workerService}
+var validServices = service.ShortNames(service.List)
 
 // startHandler is the handler for the cli start command
 func startHandler(c *cli.Context) {
@@ -81,9 +82,6 @@ func startHandler(c *cli.Context) {
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, syscall.SIGTERM)
 	for _, svc := range services {
-		if _, ok := cfg.Services[svc]; !ok {
-			log.Fatalf("`%v` service missing config", svc)
-		}
 		server := newServer(svc, &cfg)
 		daemons = append(daemons, server)
 		server.Start()

@@ -176,6 +176,296 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecute_DomainNotActive() {
 	}
 }
 
+func getWorkflowCloseTestCases() []struct {
+	targetError         *types.CrossClusterTaskFailedCause
+	expectedError       error
+	expectedTaskState   ctask.State
+	willGenerateNewTask bool
+} {
+	return []struct {
+		targetError         *types.CrossClusterTaskFailedCause
+		expectedError       error
+		expectedTaskState   ctask.State
+		willGenerateNewTask bool
+	}{
+		// SUCCESS
+		{
+			targetError:         nil,
+			expectedError:       nil,
+			expectedTaskState:   ctask.TaskStateAcked,
+			willGenerateNewTask: false,
+		},
+		// EXPECTED ERRORS
+		{
+			targetError:         types.CrossClusterTaskFailedCauseWorkflowNotExists.Ptr(),
+			expectedError:       nil,
+			expectedTaskState:   ctask.TaskStateAcked,
+			willGenerateNewTask: false,
+		},
+		{
+			targetError:         types.CrossClusterTaskFailedCauseDomainNotActive.Ptr(),
+			expectedError:       nil,
+			expectedTaskState:   ctask.TaskStateAcked,
+			willGenerateNewTask: true,
+		},
+		{
+			targetError:         types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted.Ptr(),
+			expectedError:       nil,
+			expectedTaskState:   ctask.TaskStateAcked,
+			willGenerateNewTask: false,
+		},
+		// UNEXPECTED ERROR
+		{
+			targetError:         types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning.Ptr(),
+			expectedError:       errUnexpectedErrorFromTarget,
+			expectedTaskState:   ctask.TaskStatePending,
+			willGenerateNewTask: false,
+		},
+	}
+}
+
+func (s *crossClusterSourceTaskExecutorSuite) TestExecuteRecordChildCompleteExecution() {
+	testCases := getWorkflowCloseTestCases()
+	for _, tc := range testCases {
+		s.testRecordChildComplete(
+			constants.TestDomainID,
+			constants.TestRemoteTargetDomainID,
+			processingStateResponseReported,
+			&types.CrossClusterTaskResponse{
+				TaskType:    types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete.Ptr(),
+				TaskState:   int16(processingStateInitialized),
+				FailedCause: tc.targetError,
+			},
+			tc.expectedError,
+			func(
+				mutableState execution.MutableState,
+				workflowExecution types.WorkflowExecution,
+				lastEvent *types.HistoryEvent,
+			) {
+				persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+				s.NoError(err)
+				s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(
+					&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+				s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()).Return(
+					s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
+				if tc.willGenerateNewTask {
+					s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
+						func(request *p.UpdateWorkflowExecutionRequest) bool {
+							if true {
+								return true
+							}
+							crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
+							s.Len(crossClusterTasks, 1)
+							s.Equal(p.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete, crossClusterTasks[0].GetType())
+							return true
+						})).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
+				}
+			},
+			func(task *crossClusterSourceTask) {
+				s.Equal(tc.expectedTaskState, task.state)
+			},
+		)
+	}
+}
+
+func (s *crossClusterSourceTaskExecutorSuite) testRecordChildComplete(
+	sourceDomainID string,
+	targetDomainID string,
+	proessingState processingState,
+	response *types.CrossClusterTaskResponse,
+	expectedError error,
+	setupMockFn func(
+		mutableState execution.MutableState,
+		workflowExecution types.WorkflowExecution,
+		lastEvent *types.HistoryEvent,
+	),
+	taskStateValidationFn func(
+		task *crossClusterSourceTask,
+	),
+) {
+
+	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, sourceDomainID)
+	s.NoError(err)
+	executionInfo := mutableState.GetExecutionInfo()
+	parentInitiatedID := int64(3222)
+	parentExecution := types.WorkflowExecution{
+		WorkflowID: "some random parent workflow ID",
+		RunID:      uuid.New(),
+	}
+	executionInfo.ParentDomainID = targetDomainID
+	executionInfo.ParentWorkflowID = parentExecution.WorkflowID
+	executionInfo.ParentRunID = parentExecution.RunID
+	executionInfo.InitiatedID = parentInitiatedID
+
+	event := test.AddCompleteWorkflowEvent(mutableState, decisionCompletionID, nil)
+
+	crossClusterTask := s.getTestCrossClusterSourceTask(
+		&p.CrossClusterTaskInfo{
+			Version:          mutableState.GetCurrentVersion(),
+			DomainID:         sourceDomainID,
+			WorkflowID:       workflowExecution.GetWorkflowID(),
+			RunID:            workflowExecution.GetRunID(),
+			TargetDomainID:   executionInfo.ParentDomainID,
+			TargetWorkflowID: executionInfo.ParentWorkflowID,
+			TargetRunID:      executionInfo.ParentRunID,
+			TaskID:           int64(59),
+			TaskList:         mutableState.GetExecutionInfo().TaskList,
+			TaskType:         p.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete,
+			ScheduleID:       event.GetEventID(),
+		},
+		response,
+		proessingState,
+	)
+
+	setupMockFn(mutableState, workflowExecution, event)
+
+	err = s.executor.Execute(crossClusterTask, true)
+	s.Equal(err, expectedError)
+
+	if taskStateValidationFn != nil {
+		taskStateValidationFn(crossClusterTask)
+	}
+}
+
+func (s *crossClusterSourceTaskExecutorSuite) TestApplyParentClosePolicy() {
+	testCases := getWorkflowCloseTestCases()
+	childWorkflows := []string{"child_workflow_cancel", "child_workflow_terminate", "child_workflow_abandon"}
+
+	for _, childWF := range childWorkflows {
+		for _, tc := range testCases {
+			s.testApplyParentClosePolicy(
+				constants.TestDomainID,
+				constants.TestRemoteTargetDomainID,
+				childWF,
+				processingStateResponseReported,
+				&types.CrossClusterTaskResponse{
+					TaskType:    types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete.Ptr(),
+					TaskState:   int16(processingStateInitialized),
+					FailedCause: tc.targetError,
+				},
+				tc.expectedError,
+				func(
+					mutableState execution.MutableState,
+					workflowExecution types.WorkflowExecution,
+					lastEvent *types.HistoryEvent,
+				) {
+					persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+					s.NoError(err)
+					s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+					s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
+					if tc.willGenerateNewTask {
+						s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
+							func(request *p.UpdateWorkflowExecutionRequest) bool {
+								if true {
+									return true
+								}
+								crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
+								s.Len(crossClusterTasks, 1)
+								s.Equal(p.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete, crossClusterTasks[0].GetType())
+								return true
+							})).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
+					}
+				},
+				func(task *crossClusterSourceTask) {
+					s.Equal(tc.expectedTaskState, task.state)
+				},
+			)
+		}
+	}
+}
+
+func (s *crossClusterSourceTaskExecutorSuite) testApplyParentClosePolicy(
+	sourceDomainID string,
+	targetDomainID string,
+	targetWorkflowID string,
+	proessingState processingState,
+	response *types.CrossClusterTaskResponse,
+	expectedError error,
+	setupMockFn func(
+		mutableState execution.MutableState,
+		workflowExecution types.WorkflowExecution,
+		lastEvent *types.HistoryEvent,
+	),
+	taskStateValidationFn func(
+		task *crossClusterSourceTask,
+	),
+) {
+
+	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, sourceDomainID)
+	s.NoError(err)
+
+	parentClosePolicy1 := types.ParentClosePolicyAbandon
+	parentClosePolicy2 := types.ParentClosePolicyTerminate
+	parentClosePolicy3 := types.ParentClosePolicyRequestCancel
+
+	_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(
+		decisionCompletionID, uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
+			Domain:     constants.TestRemoteTargetDomainName,
+			WorkflowID: "child_workflow_abandon",
+			WorkflowType: &types.WorkflowType{
+				Name: "child workflow type",
+			},
+			TaskList:          &types.TaskList{Name: mutableState.GetExecutionInfo().TaskList},
+			Input:             []byte("random input"),
+			ParentClosePolicy: &parentClosePolicy1,
+		})
+	s.Nil(err)
+	_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(
+		decisionCompletionID, uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
+			Domain:     constants.TestRemoteTargetDomainName,
+			WorkflowID: "child_workflow_terminate",
+			WorkflowType: &types.WorkflowType{
+				Name: "child workflow type",
+			},
+			TaskList:          &types.TaskList{Name: mutableState.GetExecutionInfo().TaskList},
+			Input:             []byte("random input"),
+			ParentClosePolicy: &parentClosePolicy2,
+		})
+	s.Nil(err)
+	_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(
+		decisionCompletionID, uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
+			Domain:     constants.TestRemoteTargetDomainName,
+			WorkflowID: "child_workflow_cancel",
+			WorkflowType: &types.WorkflowType{
+				Name: "child workflow type",
+			},
+			TaskList:          &types.TaskList{Name: mutableState.GetExecutionInfo().TaskList},
+			Input:             []byte("random input"),
+			ParentClosePolicy: &parentClosePolicy3,
+		})
+	s.Nil(err)
+	s.NoError(mutableState.FlushBufferedEvents())
+
+	event := test.AddCompleteWorkflowEvent(mutableState, decisionCompletionID, nil)
+
+	crossClusterTask := s.getTestCrossClusterSourceTask(
+		&p.CrossClusterTaskInfo{
+			Version:          mutableState.GetCurrentVersion(),
+			DomainID:         sourceDomainID,
+			WorkflowID:       workflowExecution.GetWorkflowID(),
+			RunID:            workflowExecution.GetRunID(),
+			TargetDomainID:   constants.TestRemoteTargetDomainID,
+			TargetWorkflowID: targetWorkflowID,
+			TargetRunID:      "random_run_id",
+			TaskID:           int64(59),
+			TaskList:         mutableState.GetExecutionInfo().TaskList,
+			TaskType:         p.CrossClusterTaskTypeApplyParentPolicy,
+			ScheduleID:       event.GetEventID(),
+		},
+		response,
+		proessingState,
+	)
+
+	setupMockFn(mutableState, workflowExecution, event)
+
+	err = s.executor.Execute(crossClusterTask, true)
+	s.Equal(err, expectedError)
+
+	if taskStateValidationFn != nil {
+		taskStateValidationFn(crossClusterTask)
+	}
+}
+
 func (s *crossClusterSourceTaskExecutorSuite) TestExecuteCancelExecution_Success() {
 	s.testProcessCancelExecution(
 		constants.TestDomainID,
@@ -765,6 +1055,7 @@ func (s *crossClusterSourceTaskExecutorSuite) getTestCrossClusterSourceTask(
 		s.executor,
 		nil,
 		s.mockShard.GetLogger(),
+		nil,
 		nil,
 		dynamicconfig.GetIntPropertyFn(1),
 	).(*crossClusterSourceTask)

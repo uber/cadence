@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package service
+package resource
 
 import (
 	"github.com/uber-go/tally"
@@ -42,9 +42,8 @@ import (
 )
 
 type (
-	// BootstrapParams holds the set of parameters
-	// needed to bootstrap a service
-	BootstrapParams struct {
+	// Params holds the set of parameters needed to initialize common service resources
+	Params struct {
 		Name            string
 		InstanceID      string
 		Logger          log.Logger
@@ -80,30 +79,11 @@ type (
 )
 
 // UpdateLoggerWithServiceName tag logging with service name from the top level
-func (params *BootstrapParams) UpdateLoggerWithServiceName(name string) {
+func (params *Params) UpdateLoggerWithServiceName(name string) {
 	if params.Logger != nil {
 		params.Logger = params.Logger.WithTags(tag.Service(name))
 	}
 	if params.ThrottledLogger != nil {
 		params.ThrottledLogger = params.ThrottledLogger.WithTags(tag.Service(name))
 	}
-}
-
-// GetMetricsServiceIdx returns the metrics name
-func GetMetricsServiceIdx(serviceName string, logger log.Logger) metrics.ServiceIdx {
-	switch serviceName {
-	case common.FrontendServiceName:
-		return metrics.Frontend
-	case common.HistoryServiceName:
-		return metrics.History
-	case common.MatchingServiceName:
-		return metrics.Matching
-	case common.WorkerServiceName:
-		return metrics.Worker
-	default:
-		logger.Fatal("Unknown service name for metrics!")
-	}
-
-	// this should never happen!
-	return metrics.NumServices
 }

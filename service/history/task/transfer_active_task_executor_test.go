@@ -22,6 +22,7 @@ package task
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -434,7 +435,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_Duplication() 
 	s.Nil(err)
 }
 
-func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent() {
+func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent_Success() {
 	s.testProcessCloseExecutionWithParent(
 		s.targetDomainID,
 		func(
@@ -444,6 +445,19 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent() 
 			s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything, mock.Anything).Return(nil).Once()
 			s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
 		},
+		false,
+	)
+}
+
+func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent_Failure() {
+	s.testProcessCloseExecutionWithParent(
+		s.targetDomainID,
+		func(
+			mutableState execution.MutableState,
+			workflowExecution, targetExecution types.WorkflowExecution,
+		) {
+		},
+		true,
 	)
 }
 
@@ -464,6 +478,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParentCro
 				return true
 			})).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 		},
+		false,
 	)
 }
 
@@ -473,6 +488,7 @@ func (s *transferActiveTaskExecutorSuite) testProcessCloseExecutionWithParent(
 		mutableState execution.MutableState,
 		workflowExecution, targetExecution types.WorkflowExecution,
 	),
+	failRecordChild bool,
 ) {
 
 	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
@@ -505,19 +521,27 @@ func (s *transferActiveTaskExecutorSuite) testProcessCloseExecutionWithParent(
 	s.NoError(err)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	if targetDomainID == s.targetDomainID {
+		var recordChildErr error
+		if failRecordChild {
+			recordChildErr = errors.New("some random record child completion error")
+		}
 		s.mockHistoryClient.EXPECT().RecordChildExecutionCompleted(gomock.Any(), &types.RecordChildExecutionCompletedRequest{
 			DomainUUID:         targetDomainID,
 			WorkflowExecution:  &parentExecution,
 			InitiatedID:        parentInitiatedID,
 			CompletedExecution: &workflowExecution,
 			CompletionEvent:    event,
-		}).Return(nil).Times(1)
+		}).Return(recordChildErr).Times(1)
 	}
 
 	setupMockFn(mutableState, workflowExecution, parentExecution)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
-	s.Nil(err)
+	if failRecordChild {
+		s.Error(err)
+	} else {
+		s.NoError(err)
+	}
 }
 
 func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent() {

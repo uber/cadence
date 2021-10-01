@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Uber Technologies, Inc.
+// Copyright (c) 2017 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,37 +18,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package rpc
+package service
 
 import (
-	"testing"
-
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/service"
-
-	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
 )
 
-func TestGRPCPorts(t *testing.T) {
-	config := config.Config{
-		Services: map[string]config.Service{
-			"frontend": {RPC: config.RPC{GRPCPort: 9999}},
-			"history":  {RPC: config.RPC{}},
-		},
+// GetMetricsServiceIdx returns the metrics name
+func GetMetricsServiceIdx(serviceName string, logger log.Logger) metrics.ServiceIdx {
+	switch serviceName {
+	case Frontend:
+		return metrics.Frontend
+	case History:
+		return metrics.History
+	case Matching:
+		return metrics.Matching
+	case Worker:
+		return metrics.Worker
+	default:
+		logger.Fatal("Unknown service name for metrics!")
 	}
-	grpcPorts := NewGRPCPorts(&config)
 
-	_, err := grpcPorts.GetGRPCAddress("some-service", "1.2.3.4")
-	assert.EqualError(t, err, "unknown service: some-service")
-
-	_, err = grpcPorts.GetGRPCAddress(service.History, "1.2.3.4")
-	assert.EqualError(t, err, "GRPC port not configured for service: cadence-history")
-
-	grpcAddress, err := grpcPorts.GetGRPCAddress(service.Frontend, "1.2.3.4")
-	assert.Nil(t, err)
-	assert.Equal(t, grpcAddress, "1.2.3.4:9999")
-
-	grpcAddress, err = grpcPorts.GetGRPCAddress(service.Frontend, "1.2.3.4:8888")
-	assert.Nil(t, err)
-	assert.Equal(t, grpcAddress, "1.2.3.4:9999")
+	// this should never happen!
+	return metrics.NumServices
 }

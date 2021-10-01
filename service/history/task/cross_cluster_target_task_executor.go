@@ -42,6 +42,7 @@ var (
 	errMissingTaskRequestAttributes = errors.New("request attributes not specified")
 	errDomainNotExists              = errors.New("domain not exists")
 	errDomainStandby                = errors.New("domain is standby in current cluster")
+	errUnexpectedErrorFromTarget    = errors.New("unexpected target error")
 )
 
 type (
@@ -123,6 +124,10 @@ func (t *crossClusterTargetTaskExecutor) Execute(
 		response.CancelExecutionAttributes, err = t.executeCancelExecutionTask(ctx, targetTask)
 	case persistence.CrossClusterTaskTypeSignalExecution:
 		response.SignalExecutionAttributes, err = t.executeSignalExecutionTask(ctx, targetTask)
+	case persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+		response.RecordChildWorkflowExecutionCompleteAttributes, err = t.executeRecordChildWorkflowExecutionCompleteTask(ctx, targetTask)
+	case persistence.CrossClusterTaskTypeApplyParentPolicy:
+		response.ApplyParentClosePolicyAttributes, err = t.executeApplyParentClosePolicyTask(ctx, targetTask)
 	default:
 		err = errUnknownCrossClusterTask
 	}
@@ -220,6 +225,99 @@ func (t *crossClusterTargetTaskExecutor) executeCancelExecutionTask(
 		return nil, err
 	}
 	return &types.CrossClusterCancelExecutionResponseAttributes{}, nil
+}
+
+func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
+	ctx context.Context,
+	task *crossClusterTargetTask,
+) (*types.CrossClusterApplyParentClosePolicyResponseAttributes, error) {
+	if task.processingState != processingStateInitialized {
+		return nil, errUnknownTaskProcessingState
+	}
+
+	attributes := task.request.ApplyParentClosePolicyAttributes
+	if attributes == nil {
+		return nil, errMissingTaskRequestAttributes
+	}
+
+	for _, childAttrs := range attributes.AppyParentClosePolicyAttributes {
+		targetDomainName, err := t.verifyDomainActive(childAttrs.ChildDomainID)
+		if err != nil {
+			return nil, err
+		}
+
+		scope := t.metricsClient.Scope(metrics.CrossClusterTaskTypeApplyParentClosePolicyScope)
+		err = applyParentClosePolicy(
+			ctx,
+			t.historyClient,
+			childAttrs.ChildDomainID,
+			targetDomainName,
+			childAttrs.ChildWorkflowID,
+			childAttrs.ChildRunID,
+			*childAttrs.ParentClosePolicy,
+		)
+		switch err.(type) {
+		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.CancellationAlreadyRequestedError:
+			// expected error, no-op
+			break
+		default:
+			scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
+			return nil, err
+		}
+		scope.IncCounter(metrics.ParentClosePolicyProcessorSuccess)
+	}
+
+	// TODO: Consider going through all the children, even if some fail to apply the parent policy,
+	// and add the policy application status by a child identifier (domain-wf-run id)
+	// Right now, return value is all or none even if we were able apply the policy on some children successfuly
+	return &types.CrossClusterApplyParentClosePolicyResponseAttributes{}, nil
+}
+
+func (t *crossClusterTargetTaskExecutor) executeRecordChildWorkflowExecutionCompleteTask(
+	ctx context.Context,
+	task *crossClusterTargetTask,
+) (*types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes, error) {
+	if task.processingState != processingStateInitialized {
+		return nil, errUnknownTaskProcessingState
+	}
+
+	// parent info is in attributes
+	attributes := task.request.RecordChildWorkflowExecutionCompleteAttributes
+	if attributes == nil {
+		return nil, errMissingTaskRequestAttributes
+	}
+
+	_, err := t.verifyDomainActive(attributes.TargetDomainID)
+	if err != nil {
+		return nil, err
+	}
+
+	// child info is in taskInfo
+	taskInfo, ok := task.Info.(*persistence.CrossClusterTaskInfo)
+	if !ok {
+		return nil, errUnexpectedTask
+	}
+
+	recordChildCompletionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
+	defer cancel()
+	err = t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &types.RecordChildExecutionCompletedRequest{
+		DomainUUID: attributes.TargetDomainID, // parent domain id
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: attributes.TargetWorkflowID,
+			RunID:      attributes.TargetRunID,
+		},
+		InitiatedID: attributes.InitiatedEventID,
+		CompletedExecution: &types.WorkflowExecution{
+			WorkflowID: taskInfo.WorkflowID,
+			RunID:      taskInfo.RunID,
+		},
+		CompletionEvent: attributes.CompletionEvent,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return &types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes{}, nil
 }
 
 func (t *crossClusterTargetTaskExecutor) executeSignalExecutionTask(
