@@ -239,12 +239,21 @@ func (f *fetcherImpl) Fetch(
 ) future.Future {
 	future, settable := future.NewFuture()
 
-	f.requestChan <- fetchRequest{
+	select {
+	case f.requestChan <- fetchRequest{
 		shardID:  int32(shardID),
 		params:   fetchParams,
 		settable: settable,
+	}:
+		// no-op
+	case <-f.shutdownCh:
+		settable.Set(nil, errTaskFetcherShutdown)
+		return future
 	}
 
+	// we need to check again here
+	// since even if shutdownCh is closed, the above select may still
+	// push the request to requestChan
 	select {
 	case <-f.shutdownCh:
 		f.drainRequestCh()
