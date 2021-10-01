@@ -29,7 +29,7 @@ import (
 )
 
 func TestResponseInfoMiddleware(t *testing.T) {
-	m := responseInfoMiddleware{}
+	m := ResponseInfoMiddleware{}
 	ctx, responseInfo := ContextWithResponseInfo(context.Background())
 	_, err := m.Call(ctx, &transport.Request{}, &fakeOutbound{response: &transport.Response{BodySize: 12345}})
 	assert.NoError(t, err)

@@ -914,3 +914,9 @@ func (c *rpcFactoryImpl) ReplaceGRPCPort(_, hostPort string) (string, error) {
 	grpcAddress := net.JoinHostPort(host, strconv.Itoa(portInt+grpcPortOffset))
 	return grpcAddress, nil
 }
+
+const maxMessageSize = 4 * 1024 * 1024
+
+func (c *rpcFactoryImpl) GetMaxMessageSize() int {
+	return maxMessageSize
+}

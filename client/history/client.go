@@ -28,9 +28,11 @@ import (
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -41,27 +43,37 @@ const (
 	DefaultTimeout = time.Second * 30
 )
 
-type clientImpl struct {
-	numberOfShards  int
-	tokenSerializer common.TaskTokenSerializer
-	timeout         time.Duration
-	clients         common.ClientCache
-	logger          log.Logger
-}
+type (
+	clientImpl struct {
+		numberOfShards    int
+		rpcMaxSizeInBytes dynamicconfig.IntPropertyFn // This value currently only used in GetReplicationMessage API
+		tokenSerializer   common.TaskTokenSerializer
+		timeout           time.Duration
+		clients           common.ClientCache
+		logger            log.Logger
+	}
+
+	getReplicationMessagesWithSize struct {
+		response *types.GetReplicationMessagesResponse
+		size     int
+	}
+)
 
 // NewClient creates a new history service TChannel client
 func NewClient(
 	numberOfShards int,
+	rpcMaxSizeInBytes dynamicconfig.IntPropertyFn,
 	timeout time.Duration,
 	clients common.ClientCache,
 	logger log.Logger,
 ) Client {
 	return &clientImpl{
-		numberOfShards:  numberOfShards,
-		tokenSerializer: common.NewJSONTaskTokenSerializer(),
-		timeout:         timeout,
-		clients:         clients,
-		logger:          logger,
+		numberOfShards:    numberOfShards,
+		rpcMaxSizeInBytes: rpcMaxSizeInBytes,
+		tokenSerializer:   common.NewJSONTaskTokenSerializer(),
+		timeout:           timeout,
+		clients:           clients,
+		logger:            logger,
 	}
 }
 
@@ -822,19 +834,18 @@ func (c *clientImpl) GetReplicationMessages(
 		req.Tokens = append(req.Tokens, token)
 	}
 
-	// preserve 5% timeout to return partial of the result if context is timing out
-	requestContext, cancel := common.CreateChildContext(ctx, 0.05)
-	defer cancel()
-
 	var wg sync.WaitGroup
 	wg.Add(len(requestsByClient))
-	respChan := make(chan *types.GetReplicationMessagesResponse, len(requestsByClient))
+	respChan := make(chan *getReplicationMessagesWithSize, len(requestsByClient))
 	errChan := make(chan error, 1)
 
 	for client, req := range requestsByClient {
 		go func(ctx context.Context, client Client, request *types.GetReplicationMessagesRequest) {
 			defer wg.Done()
-			resp, err := client.GetReplicationMessages(ctx, request, opts...)
+			requestContext, cancel := common.CreateChildContext(ctx, 0.05)
+			defer cancel()
+			requestContext, responseInfo := rpc.ContextWithResponseInfo(requestContext)
+			resp, err := client.GetReplicationMessages(requestContext, request, opts...)
 			if err != nil {
 				c.logger.Warn("Failed to get replication tasks from client", tag.Error(err))
 				// Returns service busy error to notify replication
@@ -846,25 +857,37 @@ func (c *clientImpl) GetReplicationMessages(
 				}
 				return
 			}
-			respChan <- resp
-		}(requestContext, client, req)
+			respChan <- &getReplicationMessagesWithSize{
+				response: resp,
+				size:     responseInfo.Size,
+			}
+		}(ctx, client, req)
 	}
 
 	wg.Wait()
 	close(respChan)
 	close(errChan)
 
+	if len(errChan) > 0 {
+		err := <-errChan
+		return nil, err
+	}
+
 	response := &types.GetReplicationMessagesResponse{MessagesByShard: make(map[int32]*types.ReplicationMessages)}
+	responseTotalSize := 0
+
 	for resp := range respChan {
-		for shardID, tasks := range resp.MessagesByShard {
+		// return partial response if the response size exceeded supported max size
+		responseTotalSize += resp.size
+		if responseTotalSize >= c.rpcMaxSizeInBytes() {
+			return response, nil
+		}
+
+		for shardID, tasks := range resp.response.GetMessagesByShard() {
 			response.MessagesByShard[shardID] = tasks
 		}
 	}
-	var err error
-	if len(errChan) > 0 {
-		err = <-errChan
-	}
-	return response, err
+	return response, nil
 }
 
 func (c *clientImpl) GetDLQReplicationMessages(

@@ -188,6 +188,12 @@ const (
 	// Default value: FALSE
 	// Allowed filters: N/A
 	EnableGRPCOutbound
+	// GRPCMaxSizeInByte is the key for config GRPC response size
+	// KeyName: system.grpcMaxSizeInByte
+	// Value type: Int
+	// Default value: 4*1024*1024
+	// Allowed filters: N/A
+	GRPCMaxSizeInByte
 	// BlobSizeLimitError is the per event blob size limit
 	// KeyName: limit.blobSize.error
 	// Value type: Int
@@ -2008,6 +2014,7 @@ var Keys = map[Key]string{
 	EnableDebugMode:                     "system.enableDebugMode",
 	RequiredDomainDataKeys:              "system.requiredDomainDataKeys",
 	EnableGRPCOutbound:                  "system.enableGRPCOutbound",
+	GRPCMaxSizeInByte:                   "system.grpcMaxSizeInByte",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
