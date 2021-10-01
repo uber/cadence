@@ -29,6 +29,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/cluster"
@@ -49,8 +50,9 @@ type (
 
 		controller *gomock.Controller
 
-		options *FetcherOptions
-		logger  log.Logger
+		options       *FetcherOptions
+		metricsClient metrics.Client
+		logger        log.Logger
 	}
 
 	testFetchResult struct {
@@ -73,6 +75,7 @@ func (s *fetcherSuite) SetupTest() {
 		AggregationInterval:    dynamicconfig.GetDurationPropertyFn(time.Millisecond * 100),
 		TimerJitterCoefficient: dynamicconfig.GetFloatPropertyFn(0.5),
 	}
+	s.metricsClient = metrics.NewClient(tally.NoopScope, metrics.History)
 	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 }
 
@@ -119,6 +122,7 @@ func (s *fetcherSuite) TestCrossClusterTaskFetchers() {
 		constants.TestClusterMetadata,
 		mockResource.GetClientBean(),
 		s.options,
+		s.metricsClient,
 		s.logger,
 	)
 	var fetcher Fetcher
@@ -149,7 +153,7 @@ func (s *fetcherSuite) TestCrossClusterTaskFetchers() {
 
 func (s *fetcherSuite) TestNewTaskFetchers() {
 	clusterMetadata := constants.TestClusterMetadata
-	fetchers := newTaskFetchers(clusterMetadata, nil, nil, s.options, s.logger)
+	fetchers := newTaskFetchers(clusterMetadata, nil, nil, s.options, s.metricsClient, s.logger)
 
 	var sourceClusters []string
 	for _, f := range fetchers {
@@ -170,6 +174,7 @@ func (s *fetcherSuite) TestFetch() {
 		nil,
 		s.testFetchTaskFn,
 		s.options,
+		s.metricsClient,
 		s.logger,
 	)
 	fetcher.Start()
@@ -192,6 +197,7 @@ func (s *fetcherSuite) TestAggregator() {
 		nil,
 		s.testFetchTaskFn,
 		s.options,
+		s.metricsClient,
 		s.logger,
 	)
 	fetcher.Start()

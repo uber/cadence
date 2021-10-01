@@ -276,7 +276,9 @@ processorPumpLoop:
 				continue processorPumpLoop
 			}
 
-			if c.readyForPollTasks.Len() > c.options.MaxPendingTaskSize() {
+			numReadyForPoll := c.readyForPollTasks.Len()
+			c.metricsScope.RecordTimer(metrics.CrossClusterTaskPendingTimer, time.Duration(numReadyForPoll))
+			if numReadyForPoll > c.options.MaxPendingTaskSize() {
 				c.logger.Warn("too many outstanding ready for poll tasks in cross cluster queue.")
 				c.backoffAllQueueCollections()
 				continue processorPumpLoop

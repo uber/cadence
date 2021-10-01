@@ -232,7 +232,6 @@ func (sc *statsComputer) computeWorkflowSnapshotStats(req *InternalWorkflowSnaps
 	requestCancelInfoCount := len(req.RequestCancelInfos)
 
 	transferTasksCount := len(req.TransferTasks)
-	// TODO: cross-region task count
 	crossClusterTasksCount := len(req.CrossClusterTasks)
 	timerTasksCount := len(req.TimerTasks)
 	replicationTasksCount := len(req.ReplicationTasks)
@@ -287,6 +286,7 @@ func mergeMutableStateUpdateSessionStats(stats ...*MutableStateUpdateSessionStat
 		result.DeleteRequestCancelInfoCount += s.DeleteRequestCancelInfoCount
 
 		result.TransferTasksCount += s.TransferTasksCount
+		result.CrossClusterTaskCount += s.CrossClusterTaskCount
 		result.TimerInfoCount += s.TimerInfoCount
 		result.ReplicationTasksCount += s.ReplicationTasksCount
 	}
