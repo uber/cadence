@@ -33,7 +33,9 @@ import (
 func TestNewParams(t *testing.T) {
 	serviceName := service.Frontend
 	makeConfig := func(svc config.Service) *config.Config {
-		return &config.Config{Services: map[string]config.Service{"frontend": svc}}
+		return &config.Config{
+			PublicClient: config.PublicClient{HostPort: "localhost:9999"},
+			Services:     map[string]config.Service{"frontend": svc}}
 	}
 
 	_, err := NewParams(serviceName, &config.Config{})
@@ -44,6 +46,9 @@ func TestNewParams(t *testing.T) {
 
 	_, err = NewParams(serviceName, makeConfig(config.Service{RPC: config.RPC{BindOnIP: "invalidIP"}}))
 	assert.EqualError(t, err, "failed to get listen IP: unable to parse bindOnIP value or it is not an IPv4 address: invalidIP")
+
+	_, err = NewParams(serviceName, &config.Config{Services: map[string]config.Service{"frontend": {}}})
+	assert.EqualError(t, err, "failed to create public client outbound: need to provide an endpoint config for PublicClient")
 
 	params, err := NewParams(serviceName, makeConfig(config.Service{RPC: config.RPC{BindOnLocalHost: true, Port: 1111, GRPCPort: 2222, GRPCMaxMsgSize: 3333}}))
 	assert.NoError(t, err)
