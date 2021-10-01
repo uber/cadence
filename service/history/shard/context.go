@@ -1184,7 +1184,7 @@ func (s *contextImpl) emitShardInfoMetricsLogsLocked() {
 	transferLag := s.transferMaxReadLevel - s.shardInfo.TransferAckLevel
 	timerLag := time.Since(s.shardInfo.TimerAckLevel)
 
-	minCrossClusterLevel := int64(0)
+	minCrossClusterLevel := int64(math.MaxInt64)
 	crossClusterLevelByCluster := make(map[string]int64)
 	for cluster, pqs := range s.shardInfo.CrossClusterProcessingQueueStates.StatesByCluster {
 		crossClusterLevel := int64(math.MaxInt64)
@@ -1213,7 +1213,9 @@ func (s *contextImpl) emitShardInfoMetricsLogsLocked() {
 			tag.ShardTime(s.remoteClusterCurrentTime),
 			tag.ShardReplicationAck(s.shardInfo.ReplicationAckLevel),
 			tag.ShardTimerAcks(s.shardInfo.ClusterTimerAckLevel),
-			tag.ShardTransferAcks(s.shardInfo.ClusterTransferAckLevel))
+			tag.ShardTransferAcks(s.shardInfo.ClusterTransferAckLevel),
+			tag.ShardCrossClusterAcks(crossClusterLevelByCluster),
+		)
 
 		logger.Warn("Shard ack levels diff exceeds warn threshold.")
 	}
