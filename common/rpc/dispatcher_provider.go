@@ -21,11 +21,8 @@
 package rpc
 
 import (
-	"context"
-
 	clientworker "go.uber.org/cadence/worker"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 
@@ -109,7 +106,7 @@ func (p *dispatcherProvider) createOutboundDispatcher(serviceName string, outbou
 	}
 	if options != nil && options.AuthProvider != nil {
 		cfg.OutboundMiddleware = yarpc.OutboundMiddleware{
-			Unary: &outboundMiddleware{authProvider: options.AuthProvider},
+			Unary: &authOutboundMiddleware{options.AuthProvider},
 		}
 	}
 
@@ -120,20 +117,4 @@ func (p *dispatcherProvider) createOutboundDispatcher(serviceName string, outbou
 		return nil, err
 	}
 	return dispatcher, nil
-}
-
-type outboundMiddleware struct {
-	authProvider clientworker.AuthorizationProvider
-}
-
-func (om *outboundMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
-	if om.authProvider != nil {
-		token, err := om.authProvider.GetAuthToken()
-		if err != nil {
-			return nil, err
-		}
-		request.Headers = request.Headers.
-			With(common.AuthorizationTokenHeaderName, string(token))
-	}
-	return out.Call(ctx, request)
 }

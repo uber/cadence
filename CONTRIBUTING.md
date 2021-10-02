@@ -78,12 +78,14 @@ Also use `docker-compose -f ./docker/dev/cassandra.yml down` to stop and clean u
 * Alternatively, use `./docker/dev/postgres.yml` for PostgreSQL dependency 
 * Alternatively, use `./docker/dev/cassandra-esv7-kafka.yml` for Cassandra, ElasticSearch(v7) and Kafka/ZooKeeper dependencies
 * Alternatively, use `./docker/dev/mysql-esv7-kafka.yml` for MySQL, ElasticSearch(v7) and Kafka/ZooKeeper dependencies
+* Alternatively, use `./docker/dev/cassandra-opensearch-kafka.yml` for Cassandra, OpenSearch(compatible with ElasticSearch v7) and Kafka/ZooKeeper dependencies
 
 ### 3. Schema installation 
 Based on the above dependency setup, you also need to install the schemas. 
 
 * If you use `cassandra.yml` then run `make install-schema` to install Casandra schemas
-* If you use `cassandra-esv7-kafka.yml` then run `make install-schema && make install-schema-es-v7` to install Casandra & ElasticSearch schemas 
+* If you use `cassandra-esv7-kafka.yml` then run `make install-schema && make install-schema-es-v7` to install Casandra & ElasticSearch schemas
+* If you use `cassandra-opensearch-kafka.yml` then run `make install-schema && make install-schema-opensearch` to install Casandra & ElasticSearch schemas 
 * If you use `mysql.yml` then run `install-schema-mysql` to install MySQL schemas
 * If you use `postgres.yml` then run `install-schema-postgres` to install Postgres schemas
 * `mysql-esv7-kafka.yml` can be used for single MySQL + ElasticSearch or multiple MySQL + ElasticSearch mode
@@ -100,15 +102,17 @@ curl -X DELETE "http://127.0.0.1:9200/cadence-visibility-dev"
 ### 4. Run  
 Once you have done all above, try running the local binaries:
 
-* If you use `cassandra.yml` for above steps:
+
 Then you will be able to run a basic local Cadence server for development. 
 
   * If you use `cassandra.yml`, then run `./cadence-server start`, which will load `config/development.yaml` as config  
   * If you use `mysql.yml` then run `./cadence-server --zone mysql start`, which will load `config/development.yaml` + `config/development_mysql.yaml` as config
   * If you use `postgres.yml` then run `./cadence-server --zone postgres start` , which will load `config/development.yaml` + `config/development_postgres.yaml` as config  
   * If you use `cassandra-esv7-kafka.yml` then run `./cadence-server --zone es_v7 start`, which will load `config/development.yaml` + `config/development_es_v7.yaml` as config
+  * If you use `cassandra-opensearch-kafka.yml` then run `./cadence-server --zone es_opensearch start` , which will load `config/development.yaml` + `config/development_es_opensearch.yaml` as config
   * If you use `mysql-esv7-kafka.yaml` 
     * To run with multiple MySQL : `./cadence-server --zone multiple_mysql start`, which will load `config/development.yaml` + `config/development_multiple_mysql.yaml` as config
+
 Then register a domain:
 ```
 ./cadence --do samples-domain domain register

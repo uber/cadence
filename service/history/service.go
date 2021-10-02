@@ -27,6 +27,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/tag"
+	commonResource "github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/resource"
@@ -39,13 +40,13 @@ type Service struct {
 	status  int32
 	handler Handler
 	stopC   chan struct{}
-	params  *service.BootstrapParams
+	params  *commonResource.Params
 	config  *config.Config
 }
 
 // NewService builds a new cadence-history service
 func NewService(
-	params *service.BootstrapParams,
+	params *commonResource.Params,
 ) (resource.Resource, error) {
 	serviceConfig := config.New(
 		dynamicconfig.NewCollection(
@@ -61,7 +62,7 @@ func NewService(
 
 	serviceResource, err := resource.New(
 		params,
-		common.HistoryServiceName,
+		service.History,
 		serviceConfig,
 	)
 	if err != nil {

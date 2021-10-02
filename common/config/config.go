@@ -22,6 +22,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -31,6 +32,7 @@ import (
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
+	"github.com/uber/cadence/common/service"
 )
 
 type (
@@ -506,4 +508,13 @@ func (c *Config) fillDefaults() {
 func (c *Config) String() string {
 	out, _ := json.MarshalIndent(c, "", "    ")
 	return string(out)
+}
+
+func (c *Config) GetServiceConfig(serviceName string) (Service, error) {
+	shortName := service.ShortName(serviceName)
+	serviceConfig, ok := c.Services[shortName]
+	if !ok {
+		return Service{}, fmt.Errorf("no config section for service: %s", shortName)
+	}
+	return serviceConfig, nil
 }

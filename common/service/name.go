@@ -18,37 +18,43 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package rpc
+package service
 
-import (
-	"testing"
+import "strings"
 
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/service"
+const (
+	_servicePrefix = "cadence-"
 
-	"github.com/stretchr/testify/assert"
+	// Frontend is the name of the frontend service
+	Frontend = "cadence-frontend"
+	// History is the name of the history service
+	History = "cadence-history"
+	// Matching is the name of the matching service
+	Matching = "cadence-matching"
+	// Worker is the name of the worker service
+	Worker = "cadence-worker"
 )
 
-func TestGRPCPorts(t *testing.T) {
-	config := config.Config{
-		Services: map[string]config.Service{
-			"frontend": {RPC: config.RPC{GRPCPort: 9999}},
-			"history":  {RPC: config.RPC{}},
-		},
+// List contains the list of all cadence services
+var List = []string{Frontend, History, Matching, Worker}
+
+// ShortName returns cadence service name without "cadence-" prefix
+func ShortName(name string) string {
+	return strings.TrimPrefix(name, _servicePrefix)
+}
+
+// FullName returns cadence service name with "cadence-" prefix
+func FullName(name string) string {
+	if strings.HasPrefix(name, _servicePrefix) {
+		return name
 	}
-	grpcPorts := NewGRPCPorts(&config)
+	return _servicePrefix + name
+}
 
-	_, err := grpcPorts.GetGRPCAddress("some-service", "1.2.3.4")
-	assert.EqualError(t, err, "unknown service: some-service")
-
-	_, err = grpcPorts.GetGRPCAddress(service.History, "1.2.3.4")
-	assert.EqualError(t, err, "GRPC port not configured for service: cadence-history")
-
-	grpcAddress, err := grpcPorts.GetGRPCAddress(service.Frontend, "1.2.3.4")
-	assert.Nil(t, err)
-	assert.Equal(t, grpcAddress, "1.2.3.4:9999")
-
-	grpcAddress, err = grpcPorts.GetGRPCAddress(service.Frontend, "1.2.3.4:8888")
-	assert.Nil(t, err)
-	assert.Equal(t, grpcAddress, "1.2.3.4:9999")
+func ShortNames(names []string) []string {
+	result := make([]string, len(names))
+	for i := range names {
+		result[i] = ShortName(names[i])
+	}
+	return result
 }
