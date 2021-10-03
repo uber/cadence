@@ -38,15 +38,18 @@ const (
 	DCRedirectionPolicyDefault = ""
 	// DCRedirectionPolicyNoop means no redirection
 	DCRedirectionPolicyNoop = "noop"
-	// DCRedirectionPolicySelectedAPIsForwarding means forwarding the following APIs based domain
+	// DCRedirectionPolicySelectedAPIsForwarding means forwarding the following non-worker APIs based domain
 	// 1. StartWorkflowExecution
 	// 2. SignalWithStartWorkflowExecution
 	// 3. SignalWorkflowExecution
 	// 4. RequestCancelWorkflowExecution
 	// 5. TerminateWorkflowExecution
 	// 6. QueryWorkflow
-	// please also reference selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs
+	// 7. ResetWorkflow
+	// please also reference selectedAPIsForwardingRedirectionPolicyAPIAllowlist
 	DCRedirectionPolicySelectedAPIsForwarding = "selected-apis-forwarding"
+	// DCRedirectionPolicyAllDomainAPIsForwarding means forwarding all the worker and non-worker APIs based domain
+	DCRedirectionPolicyAllDomainAPIsForwarding = "all-domain-apis-forwarding"
 )
 
 type (
@@ -70,8 +73,8 @@ type (
 	}
 )
 
-// selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs contains a list of APIs which can be redirected
-var selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs = map[string]struct{}{
+// selectedAPIsForwardingRedirectionPolicyAPIAllowlist contains a list of APIs which can be redirected
+var selectedAPIsForwardingRedirectionPolicyAPIAllowlist = map[string]struct{}{
 	"StartWorkflowExecution":           {},
 	"SignalWithStartWorkflowExecution": {},
 	"SignalWorkflowExecution":          {},
@@ -87,19 +90,19 @@ func RedirectionPolicyGenerator(clusterMetadata cluster.Metadata, config *Config
 	switch policy.Policy {
 	case DCRedirectionPolicyDefault:
 		// default policy, noop
-		return NewNoopRedirectionPolicy(clusterMetadata.GetCurrentClusterName())
+		return newNoopRedirectionPolicy(clusterMetadata.GetCurrentClusterName())
 	case DCRedirectionPolicyNoop:
-		return NewNoopRedirectionPolicy(clusterMetadata.GetCurrentClusterName())
+		return newNoopRedirectionPolicy(clusterMetadata.GetCurrentClusterName())
 	case DCRedirectionPolicySelectedAPIsForwarding:
 		currentClusterName := clusterMetadata.GetCurrentClusterName()
-		return NewSelectedAPIsForwardingPolicy(currentClusterName, config, domainCache)
+		return newSelectedAPIsForwardingPolicy(currentClusterName, config, domainCache)
 	default:
 		panic(fmt.Sprintf("Unknown DC redirection policy %v", policy.Policy))
 	}
 }
 
-// NewNoopRedirectionPolicy is DC redirection policy which does nothing
-func NewNoopRedirectionPolicy(currentClusterName string) *NoopRedirectionPolicy {
+// newNoopRedirectionPolicy is DC redirection policy which does nothing
+func newNoopRedirectionPolicy(currentClusterName string) *NoopRedirectionPolicy {
 	return &NoopRedirectionPolicy{
 		currentClusterName: currentClusterName,
 	}
@@ -115,8 +118,8 @@ func (policy *NoopRedirectionPolicy) WithDomainNameRedirect(ctx context.Context,
 	return call(policy.currentClusterName)
 }
 
-// NewSelectedAPIsForwardingPolicy creates a forwarding policy for selected APIs based on domain
-func NewSelectedAPIsForwardingPolicy(currentClusterName string, config *Config, domainCache cache.DomainCache) *SelectedAPIsForwardingRedirectionPolicy {
+// newSelectedAPIsForwardingPolicy creates a forwarding policy for selected APIs based on domain
+func newSelectedAPIsForwardingPolicy(currentClusterName string, config *Config, domainCache cache.DomainCache) *SelectedAPIsForwardingRedirectionPolicy {
 	return &SelectedAPIsForwardingRedirectionPolicy{
 		currentClusterName: currentClusterName,
 		config:             config,
@@ -179,7 +182,7 @@ func (policy *SelectedAPIsForwardingRedirectionPolicy) getTargetClusterAndIsDoma
 		return policy.currentClusterName, false
 	}
 
-	_, ok := selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs[apiName]
+	_, ok := selectedAPIsForwardingRedirectionPolicyAPIAllowlist[apiName]
 	if !ok {
 		// do not do dc redirection if API is not whitelisted
 		return policy.currentClusterName, false

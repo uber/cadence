@@ -81,7 +81,7 @@ func (s *noopDCRedirectionPolicySuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.currentClusterName = cluster.TestCurrentClusterName
-	s.policy = NewNoopRedirectionPolicy(s.currentClusterName)
+	s.policy = newNoopRedirectionPolicy(s.currentClusterName)
 }
 
 func (s *noopDCRedirectionPolicySuite) TearDownTest() {
@@ -144,7 +144,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) SetupTest() {
 	)
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
-	s.policy = NewSelectedAPIsForwardingPolicy(
+	s.policy = newSelectedAPIsForwardingPolicy(
 		s.currentClusterName,
 		s.mockConfig,
 		s.mockDomainCache,
@@ -225,7 +225,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestWithDomainRedirect_Gl
 		return nil
 	}
 
-	for apiName := range selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs {
+	for apiName := range selectedAPIsForwardingRedirectionPolicyAPIAllowlist {
 		err := s.policy.WithDomainIDRedirect(context.Background(), s.domainID, apiName, callFn)
 		s.Nil(err)
 
@@ -233,7 +233,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestWithDomainRedirect_Gl
 		s.Nil(err)
 	}
 
-	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs), callCount)
+	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyAPIAllowlist), callCount)
 }
 
 func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_GlobalDomain_Forwarding_CurrentCluster() {
@@ -246,7 +246,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 		return nil
 	}
 
-	for apiName := range selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs {
+	for apiName := range selectedAPIsForwardingRedirectionPolicyAPIAllowlist {
 		err := s.policy.WithDomainIDRedirect(context.Background(), s.domainID, apiName, callFn)
 		s.Nil(err)
 
@@ -254,7 +254,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 		s.Nil(err)
 	}
 
-	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs), callCount)
+	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyAPIAllowlist), callCount)
 }
 
 func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_GlobalDomain_Forwarding_AlternativeCluster() {
@@ -267,7 +267,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 		return nil
 	}
 
-	for apiName := range selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs {
+	for apiName := range selectedAPIsForwardingRedirectionPolicyAPIAllowlist {
 		err := s.policy.WithDomainIDRedirect(context.Background(), s.domainID, apiName, callFn)
 		s.Nil(err)
 
@@ -275,7 +275,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 		s.Nil(err)
 	}
 
-	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs), callCount)
+	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyAPIAllowlist), callCount)
 }
 
 func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_GlobalDomain_Forwarding_CurrentClusterToAlternativeCluster() {
@@ -299,7 +299,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 		}
 	}
 
-	for apiName := range selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs {
+	for apiName := range selectedAPIsForwardingRedirectionPolicyAPIAllowlist {
 		err := s.policy.WithDomainIDRedirect(context.Background(), s.domainID, apiName, callFn)
 		s.Nil(err)
 
@@ -307,8 +307,8 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 		s.Nil(err)
 	}
 
-	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs), currentClustercallCount)
-	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs), alternativeClustercallCount)
+	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyAPIAllowlist), currentClustercallCount)
+	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyAPIAllowlist), alternativeClustercallCount)
 }
 
 func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_GlobalDomain_Forwarding_AlternativeClusterToCurrentCluster() {
@@ -332,7 +332,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 		}
 	}
 
-	for apiName := range selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs {
+	for apiName := range selectedAPIsForwardingRedirectionPolicyAPIAllowlist {
 		err := s.policy.WithDomainIDRedirect(context.Background(), s.domainID, apiName, callFn)
 		s.Nil(err)
 
@@ -340,8 +340,8 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 		s.Nil(err)
 	}
 
-	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs), currentClustercallCount)
-	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs), alternativeClustercallCount)
+	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyAPIAllowlist), currentClustercallCount)
+	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyAPIAllowlist), alternativeClustercallCount)
 }
 
 func (s *selectedAPIsForwardingRedirectionPolicySuite) setupLocalDomain() {

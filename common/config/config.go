@@ -335,9 +335,30 @@ type (
 	}
 
 	// DCRedirectionPolicy contains the frontend datacenter redirection policy
+	// When using XDC (global domain) feature to failover a domain from one cluster to another one, client may call the passive cluster to start /signal workflows etc.
+	// To have a seamless failover experience, cluster should use this forwarding option to forward those APIs to the active cluster.
 	DCRedirectionPolicy struct {
+		// Support "noop", "selected-apis-forwarding" and "all-apis", default (when empty) is "noop"
+		// "noop" will not do any forwarding
+		// "all-domain-apis" will forward all domain specific APIs(worker and non worker)
+		// "selected-apis-forwarding" will forward non-worker APIs including
+		// 1. StartWorkflowExecution
+		// 2. SignalWithStartWorkflowExecution
+		// 3. SignalWorkflowExecution
+		// 4. RequestCancelWorkflowExecution
+		// 5. TerminateWorkflowExecution
+		// 6. QueryWorkflow
+		// 7. ResetWorkflow
+		//
+		// Recommendation: when enabling XDC(global domain) feature, either "all-domain-apis-forwarding" or "selected-apis-forwarding" should be used to ensure seamless domain failover(high availability)
+		// Depending on the cost of cross cluster calls --
+		// If the network communication overhead is high(e.g., clusters are in remote datacenters of different region), then should use "selected-apis-forwarding".
+		// But you must ensure a different set of workflow & activity workers are available to each Cadence cluster.
+		// If the network communication overhead is low (e.g. in the same datacenter, mostly for cluster migration usage), then you can use "all-domain-apis-forwarding". Then only one set of
+		// workflow & activity worker connected of one of the Cadence cluster is enough as all domain APIs are forwarded. See more details in documentation of cluster migration section.
 		Policy string `yaml:"policy"`
-		ToDC   string `yaml:"toDC"`
+		// TODO not being used, should remove it?
+		ToDC string `yaml:"toDC"`
 	}
 
 	// Metrics contains the config items for metrics subsystem
