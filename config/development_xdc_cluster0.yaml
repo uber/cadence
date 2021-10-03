@@ -94,8 +94,7 @@ clusterGroupMetadata:
       rpcTransport: "grpc"
 
 dcRedirectionPolicy:
-  policy: "selected-apis-forwarding"
-  toDC: ""
+  policy: "all-domain-apis-forwarding" # if network communication overhead between clusters is high, consider use "selected-apis-forwarding" instead, but workflow/activity workers need to be connected to each cluster to keep high availability
 
 archival:
   history:
