@@ -36,10 +36,10 @@ type (
 	}
 )
 
-// NewSingletonSQLDriver returns a driver querying a single SQL database, which is the default driver
+// newSingletonSQLDriver returns a driver querying a single SQL database, which is the default driver
 // typically dbShardID is needed when tx is not nil, because it means a started transaction in a shard.
 // But this singleton doesn't have sharding so omitting it.
-func NewSingletonSQLDriver(xdb *sqlx.DB, xtx *sqlx.Tx, _ int) Driver {
+func newSingletonSQLDriver(xdb *sqlx.DB, xtx *sqlx.Tx, _ int) Driver {
 	driver := &singleton{
 		db: xdb,
 		tx: xtx,

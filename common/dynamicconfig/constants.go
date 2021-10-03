@@ -1720,6 +1720,7 @@ const (
 	// Allowed filters: N/A
 	ScannerBatchSizeForTasklistHandler
 	// EnableCleaningOrphanTaskInTasklistScavenger indicates if enabling the scanner to clean up orphan tasks
+	// Only implemented for single SQL database. TODO https://github.com/uber/cadence/issues/4064 for supporting multiple/sharded SQL database and NoSQL
 	// KeyName: worker.enableCleaningOrphanTaskInTasklistScavenger
 	// Value type: Bool
 	// Default value: FALSE
