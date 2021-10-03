@@ -122,7 +122,7 @@ const (
 	// Default value: the value in static config: common.Config.Archival.Visibility.EnableRead
 	// Allowed filters: N/A
 	EnableReadFromVisibilityArchival
-	// EnableDomainNotActiveAutoForwarding is whether enabling DC auto forwarding to active cluster for signal / start / signal with start API if domain is not active
+	// EnableDomainNotActiveAutoForwarding is whether enabling DC auto forwarding to active cluster for domain specific API if domain is not active based on DCRedirectionPolicy(in static config)
 	// KeyName: system.enableDomainNotActiveAutoForwarding
 	// Value type: Bool
 	// Default value: TRUE

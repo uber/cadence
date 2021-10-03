@@ -47,10 +47,6 @@ const (
 	// ClientImplHeaderName refers to the name of the
 	// header that contains the client implementation
 	ClientImplHeaderName = "cadence-client-name"
-	// EnforceDCRedirection refers to a boolean string of whether
-	// to enforce DCRedirection(auto-forwarding)
-	// Will be removed in the future: https://github.com/uber/cadence/issues/2304
-	EnforceDCRedirection = "cadence-enforce-dc-redirection"
 	// AuthorizationTokenHeaderName refers to the jwt token in the request
 	AuthorizationTokenHeaderName = "cadence-authorization"
 )

@@ -44,7 +44,7 @@ type (
 		*require.Assertions
 
 		currentClusterName string
-		policy             *NoopRedirectionPolicy
+		policy             *noopRedirectionPolicy
 	}
 
 	selectedAPIsForwardingRedirectionPolicySuite struct {
@@ -61,7 +61,7 @@ type (
 		mockConfig             *Config
 
 		mockClusterMetadata *mocks.ClusterMetadata
-		policy              *SelectedAPIsForwardingRedirectionPolicy
+		policy              *selectedOrAllAPIsForwardingRedirectionPolicy
 	}
 )
 
@@ -144,10 +144,11 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) SetupTest() {
 	)
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
-	s.policy = newSelectedAPIsForwardingPolicy(
+	s.policy = newSelectedOrAllAPIsForwardingPolicy(
 		s.currentClusterName,
 		s.mockConfig,
 		s.mockDomainCache,
+		false,
 	)
 }
 
