@@ -66,7 +66,7 @@ func (s *sharded) ExecContext(ctx context.Context, dbShardID int, query string, 
 	}
 	if s.useTx {
 		if s.currTxShardID != dbShardID {
-			return nil, fmt.Errorf("dbShardID %v doesn't match with started transaction %v, must be a bug", dbShardID, s.currTxShardID)
+			return nil, getUnmatchedTxnError(dbShardID, s.currTxShardID)
 		}
 		return s.tx.ExecContext(ctx, query, args...)
 	}
@@ -79,7 +79,7 @@ func (s *sharded) NamedExecContext(ctx context.Context, dbShardID int, query str
 	}
 	if s.useTx {
 		if s.currTxShardID != dbShardID {
-			return nil, fmt.Errorf("dbShardID %v doesn't match with started transaction %v, must be a bug", dbShardID, s.currTxShardID)
+			return nil, getUnmatchedTxnError(dbShardID, s.currTxShardID)
 		}
 		return s.tx.NamedExecContext(ctx, query, arg)
 	}
@@ -92,7 +92,7 @@ func (s *sharded) GetContext(ctx context.Context, dbShardID int, dest interface{
 	}
 	if s.useTx {
 		if s.currTxShardID != dbShardID {
-			return fmt.Errorf("dbShardID %v doesn't match with started transaction %v, must be a bug", dbShardID, s.currTxShardID)
+			return getUnmatchedTxnError(dbShardID, s.currTxShardID)
 		}
 		return s.tx.GetContext(ctx, dest, query, args...)
 	}
@@ -105,7 +105,7 @@ func (s *sharded) SelectContext(ctx context.Context, dbShardID int, dest interfa
 	}
 	if s.useTx {
 		if s.currTxShardID != dbShardID {
-			return fmt.Errorf("dbShardID %v doesn't match with started transaction %v, must be a bug", dbShardID, s.currTxShardID)
+			return getUnmatchedTxnError(dbShardID, s.currTxShardID)
 		}
 		return s.tx.SelectContext(ctx, dest, query, args...)
 	}
@@ -192,4 +192,8 @@ func (s shardedSqlExecResult) LastInsertId() (int64, error) {
 
 func (s shardedSqlExecResult) RowsAffected() (int64, error) {
 	return 0, fmt.Errorf("not implemented for sharded SQL driver")
+}
+
+func getUnmatchedTxnError(requestShardID, startedShardId int) error {
+	return fmt.Errorf("requested dbShardID %v doesn't match with started transaction shardID %v, must be a bug", requestShardID, startedShardId)
 }
