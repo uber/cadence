@@ -105,16 +105,16 @@ func (c *Persistence) Validate() error {
 					return fmt.Errorf("sql persistence config: multipleSQLDatabases can only be used with advanced visibility only")
 				}
 				if ds.SQL.DatabaseName != "" {
-					return fmt.Errorf("sql persistence config: databaseName can only be configured in multipleDatabasesConfig when UseMultipleDatabases is true ")
+					return fmt.Errorf("sql persistence config: databaseName can only be configured in multipleDatabasesConfig when UseMultipleDatabases is true")
 				}
 				if ds.SQL.ConnectAddr != "" {
-					return fmt.Errorf("sql persistence config: connectAddr can only be configured ini multipleDatabasesConfig when UseMultipleDatabases is true ")
+					return fmt.Errorf("sql persistence config: connectAddr can only be configured in multipleDatabasesConfig when UseMultipleDatabases is true")
 				}
 				if ds.SQL.User != "" {
-					return fmt.Errorf("sql persistence config: user can only be configured ini multipleDatabasesConfig when UseMultipleDatabases is true ")
+					return fmt.Errorf("sql persistence config: user can only be configured in multipleDatabasesConfig when UseMultipleDatabases is true")
 				}
 				if ds.SQL.Password != "" {
-					return fmt.Errorf("sql persistence config: password can only be configured ini multipleDatabasesConfig when UseMultipleDatabases is true ")
+					return fmt.Errorf("sql persistence config: password can only be configured in multipleDatabasesConfig when UseMultipleDatabases is true")
 				}
 				if ds.SQL.NumShards <= 1 || len(ds.SQL.MultipleDatabasesConfig) != ds.SQL.NumShards {
 					return fmt.Errorf("sql persistence config: nShards must be greater than one and equal to the length of multipleDatabasesConfig")
