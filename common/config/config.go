@@ -353,7 +353,7 @@ type (
 		// Recommendation: when enabling XDC(global domain) feature, either "all-domain-apis-forwarding" or "selected-apis-forwarding" should be used to ensure seamless domain failover(high availability)
 		// Depending on the cost of cross cluster calls --
 		// If the network communication overhead is high(e.g., clusters are in remote datacenters of different region), then should use "selected-apis-forwarding".
-		// But you must ensure a different set of workflow & activity workers are available to each Cadence cluster.
+		// But you must ensure a different set of workers with the same workflow & activity code are connected to each Cadence cluster.
 		// If the network communication overhead is low (e.g. in the same datacenter, mostly for cluster migration usage), then you can use "all-domain-apis-forwarding". Then only one set of
 		// workflow & activity worker connected of one of the Cadence cluster is enough as all domain APIs are forwarded. See more details in documentation of cluster migration section.
 		Policy string `yaml:"policy"`
