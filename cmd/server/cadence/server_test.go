@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// +build !race
+
 package cadence
 
 import (
@@ -25,16 +27,32 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/tools/cassandra"
 )
 
+type ServerSuite struct {
+	*require.Assertions
+	suite.Suite
+}
+
+func TestServerSuite(t *testing.T) {
+	suite.Run(t, new(ServerSuite))
+}
+
+func (s *ServerSuite) SetupTest() {
+	s.Assertions = require.New(s.T())
+}
+
 /*
 TestServerStartup tests the startup logic for the binary. When this fails, you should be able to reproduce by running "cadence-server start"
 */
-func TestServerStartup(t *testing.T) {
+func (s *ServerSuite) TestServerStartup() {
 	// If you want to test it locally, change it to false
 	runInBuildKite := true
 
