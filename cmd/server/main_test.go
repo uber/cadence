@@ -30,9 +30,11 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/tools/cassandra"
-	"github.com/uber/cadence/tools/sql"
 )
 
+/*
+TestServerStartup tests the startup logic for the binary. When this fails, you should be able to reproduce by running "cadence-server start"
+*/
 func TestServerStartup(t *testing.T) {
 	env := "development"
 	zone := ""
@@ -56,10 +58,6 @@ func TestServerStartup(t *testing.T) {
 	// cassandra schema version validation
 	if err := cassandra.VerifyCompatibleVersion(cfg.Persistence); err != nil {
 		log.Fatal("cassandra schema version compatibility check failed: ", err)
-	}
-	// sql schema version validation
-	if err := sql.VerifyCompatibleVersion(cfg.Persistence); err != nil {
-		log.Fatal("sql schema version compatibility check failed: ", err)
 	}
 
 	var daemons []common.Daemon
