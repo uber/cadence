@@ -531,12 +531,12 @@ cover_ci: $(COVER_ROOT)/cover.out $(BIN)/goveralls
 	$(BIN)/goveralls -coverprofile=$(COVER_ROOT)/cover.out -service=buildkite || echo Coveralls failed;
 
 install-schema: cadence-cassandra-tool
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence --rf 1
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence setup-schema -v 0.0
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence update-schema -d ./schema/cassandra/cadence/versioned
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility --rf 1
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility setup-schema -v 0.0
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility update-schema -d ./schema/cassandra/visibility/versioned
+	./cadence-cassandra-tool create -k cadence --rf 1
+	./cadence-cassandra-tool -k cadence setup-schema -v 0.0
+	./cadence-cassandra-tool -k cadence update-schema -d ./schema/cassandra/cadence/versioned
+	./cadence-cassandra-tool create -k cadence_visibility --rf 1
+	./cadence-cassandra-tool -k cadence_visibility setup-schema -v 0.0
+	./cadence-cassandra-tool -k cadence_visibility update-schema -d ./schema/cassandra/visibility/versioned
 
 install-schema-mysql: cadence-sql-tool
 	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence create --db cadence
