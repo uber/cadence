@@ -21,57 +21,12 @@
 package rpc
 
 import (
-	"fmt"
-
-	"github.com/uber/cadence/common/authorization"
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/service"
-
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
-)
-
-const (
-	// OutboundPublicClient is the name of configured public client outbound
-	OutboundPublicClient = "public-client"
 )
 
 // OutboundsBuilder allows defining outbounds for the dispatcher
 type OutboundsBuilder interface {
 	Build(*grpc.Transport, *tchannel.Transport) (yarpc.Outbounds, error)
-}
-
-func newPublicClientOutbound(config *config.Config) (publicClientOutbound, error) {
-	if len(config.PublicClient.HostPort) == 0 {
-		return publicClientOutbound{}, fmt.Errorf("need to provide an endpoint config for PublicClient")
-	}
-
-	var authMiddleware *authOutboundMiddleware
-	if config.Authorization.OAuthAuthorizer.Enable {
-		clusterName := config.ClusterGroupMetadata.CurrentClusterName
-		clusterInfo := config.ClusterGroupMetadata.ClusterGroup[clusterName]
-		authProvider, err := authorization.GetAuthProviderClient(clusterInfo.AuthorizationProvider.PrivateKey)
-		if err != nil {
-			return publicClientOutbound{}, fmt.Errorf("create AuthProvider: %v", err)
-		}
-		authMiddleware = &authOutboundMiddleware{authProvider}
-	}
-
-	return publicClientOutbound{config.PublicClient.HostPort, authMiddleware}, nil
-}
-
-type publicClientOutbound struct {
-	address        string
-	authMiddleware *authOutboundMiddleware
-}
-
-func (b publicClientOutbound) Build(_ *grpc.Transport, tchannel *tchannel.Transport) (yarpc.Outbounds, error) {
-	return yarpc.Outbounds{
-		OutboundPublicClient: {
-			ServiceName: service.Frontend,
-			Unary:       middleware.ApplyUnaryOutbound(tchannel.NewSingleOutbound(b.address), b.authMiddleware),
-		},
-	}, nil
 }

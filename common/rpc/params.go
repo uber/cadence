@@ -52,21 +52,14 @@ func NewParams(serviceName string, config *config.Config) (Params, error) {
 
 	listenIP, err := getListenIP(serviceConfig.RPC)
 	if err != nil {
-		return Params{}, fmt.Errorf("get listen IP: %v", err)
+		return Params{}, fmt.Errorf("failed to get listen IP: %v", err)
 	}
-
-	publicClientOutbound, err := newPublicClientOutbound(config)
-	if err != nil {
-		return Params{}, fmt.Errorf("public client outbound: %v", err)
-	}
-
 	return Params{
 		ServiceName:       serviceName,
 		TChannelAddress:   fmt.Sprintf("%v:%v", listenIP, serviceConfig.RPC.Port),
 		GRPCAddress:       fmt.Sprintf("%v:%v", listenIP, serviceConfig.RPC.GRPCPort),
 		GRPCMaxMsgSize:    serviceConfig.RPC.GRPCMaxMsgSize,
 		HostAddressMapper: NewGRPCPorts(config),
-		OutboundsBuilder:  publicClientOutbound,
 	}, nil
 }
 
