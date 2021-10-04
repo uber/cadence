@@ -57,9 +57,9 @@ type (
 	}
 )
 
-// newServer returns a new instance of a daemon
+// NewServer returns a new instance of a daemon
 // that represents a cadence service
-func newServer(service string, cfg *config.Config) common.Daemon {
+func NewServer(service string, cfg *config.Config) common.Daemon {
 	return &server{
 		cfg:   cfg,
 		name:  service,

@@ -60,9 +60,9 @@ func startHandler(c *cli.Context) {
 		log.Printf("config=\n%v\n", cfg.String())
 	}
 	if cfg.DynamicConfig.Client == "" {
-		cfg.DynamicConfigClient.Filepath = constructPathIfNeed(rootDir, cfg.DynamicConfigClient.Filepath)
+		cfg.DynamicConfigClient.Filepath = ConstructPathIfNeed(rootDir, cfg.DynamicConfigClient.Filepath)
 	} else {
-		cfg.DynamicConfig.FileBased.Filepath = constructPathIfNeed(rootDir, cfg.DynamicConfig.FileBased.Filepath)
+		cfg.DynamicConfig.FileBased.Filepath = ConstructPathIfNeed(rootDir, cfg.DynamicConfig.FileBased.Filepath)
 	}
 
 	if err := cfg.ValidateAndFillDefaults(); err != nil {
@@ -82,7 +82,7 @@ func startHandler(c *cli.Context) {
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, syscall.SIGTERM)
 	for _, svc := range services {
-		server := newServer(svc, &cfg)
+		server := NewServer(svc, &cfg)
 		daemons = append(daemons, server)
 		server.Start()
 	}
@@ -137,7 +137,7 @@ func isValidService(in string) bool {
 }
 
 func getConfigDir(c *cli.Context) string {
-	return constructPathIfNeed(getRootDir(c), c.GlobalString("config"))
+	return ConstructPathIfNeed(getRootDir(c), c.GlobalString("config"))
 }
 
 func getRootDir(c *cli.Context) string {
@@ -152,9 +152,9 @@ func getRootDir(c *cli.Context) string {
 	return dirpath
 }
 
-// constructPathIfNeed would append the dir as the root dir
+// ConstructPathIfNeed would append the dir as the root dir
 // when the file wasn't absolute path.
-func constructPathIfNeed(dir string, file string) string {
+func ConstructPathIfNeed(dir string, file string) string {
 	if !filepath.IsAbs(file) {
 		return dir + "/" + file
 	}

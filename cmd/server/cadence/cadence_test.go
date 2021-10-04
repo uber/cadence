@@ -51,6 +51,6 @@ func (s *CadenceSuite) TestIsValidService() {
 }
 
 func (s *CadenceSuite) TestPath() {
-	s.Equal("foo/bar", constructPathIfNeed("foo", "bar"))
-	s.Equal("/bar", constructPathIfNeed("foo", "/bar"))
+	s.Equal("foo/bar", ConstructPathIfNeed("foo", "bar"))
+	s.Equal("/bar", ConstructPathIfNeed("foo", "/bar"))
 }
