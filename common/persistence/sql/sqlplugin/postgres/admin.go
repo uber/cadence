@@ -76,7 +76,7 @@ func (pdb *db) CreateSchemaVersionTables() error {
 // ReadSchemaVersion returns the current schema version for the keyspace
 func (pdb *db) ReadSchemaVersion(database string) (string, error) {
 	var version string
-	err := pdb.driver.Get(sqlplugin.DbAllShards, &version, readSchemaVersionQuery, database)
+	err := pdb.driver.Get(sqlplugin.DbDefaultShard, &version, readSchemaVersionQuery, database)
 	return version, err
 }
 

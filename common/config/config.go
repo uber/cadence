@@ -244,15 +244,21 @@ type (
 	// SQL is the configuration for connecting to a SQL backed datastore
 	SQL struct {
 		// User is the username to be used for the conn
+		// If useMultipleDatabases, must be empty and provide it via multipleDatabasesConfig instead
 		User string `yaml:"user"`
 		// Password is the password corresponding to the user name
+		// If useMultipleDatabases, must be empty and provide it via multipleDatabasesConfig instead
 		Password string `yaml:"password"`
 		// PluginName is the name of SQL plugin
 		PluginName string `yaml:"pluginName" validate:"nonzero"`
 		// DatabaseName is the name of SQL database to connect to
-		DatabaseName string `yaml:"databaseName" validate:"nonzero"`
+		// If useMultipleDatabases, must be empty and provide it via multipleDatabasesConfig instead
+		// Required if not useMultipleDatabases
+		DatabaseName string `yaml:"databaseName"`
 		// ConnectAddr is the remote addr of the database
-		ConnectAddr string `yaml:"connectAddr" validate:"nonzero"`
+		// If useMultipleDatabases, must be empty and provide it via multipleDatabasesConfig instead
+		// Required if not useMultipleDatabases
+		ConnectAddr string `yaml:"connectAddr"`
 		// ConnectProtocol is the protocol that goes with the ConnectAddr ex - tcp, unix
 		ConnectProtocol string `yaml:"connectProtocol" validate:"nonzero"`
 		// ConnectAttributes is a set of key-value attributes to be sent as part of connect data_source_name url
@@ -275,9 +281,29 @@ type (
 		// DecodingTypes is the configuration for all the sql blob decoding types which need to be supported
 		// DecodingTypes should not be removed unless there are no blobs in database with the encoding type
 		DecodingTypes []string `yaml:"decodingTypes"`
+		// UseMultipleDatabases enables using multiple databases as a sharding SQL database, default is false
+		// When enabled, connection will be established using MultipleDatabasesConfig in favor of single values
+		// of  User, Password, DatabaseName, ConnectAddr.
+		UseMultipleDatabases bool `yaml:"useMultipleDatabases"`
+		// Required when UseMultipleDatabases is true
+		// the length of the list should be exactly the same as NumShards
+		MultipleDatabasesConfig []MultipleDatabasesConfigEntry `yaml:"multipleDatabasesConfig"`
+	}
+
+	// MultipleDatabasesConfigEntry is an entry for MultipleDatabasesConfig to connect to a single SQL database
+	MultipleDatabasesConfigEntry struct {
+		// User is the username to be used for the conn
+		User string `yaml:"user"`
+		// Password is the password corresponding to the user name
+		Password string `yaml:"password"`
+		// DatabaseName is the name of SQL database to connect to
+		DatabaseName string `yaml:"databaseName" validate:"nonzero"`
+		// ConnectAddr is the remote addr of the database
+		ConnectAddr string `yaml:"connectAddr" validate:"nonzero"`
 	}
 
 	// CustomDatastoreConfig is the configuration for connecting to a custom datastore that is not supported by cadence core
+	// TODO can we remove it?
 	CustomDatastoreConfig struct {
 		// Name of the custom datastore
 		Name string `yaml:"name"`
@@ -286,6 +312,7 @@ type (
 	}
 
 	// Replicator describes the configuration of replicator
+	// TODO can we remove it?
 	Replicator struct{}
 
 	// Logger contains the config items for logger
