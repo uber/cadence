@@ -18,8 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// +build !race
-
 package cadence
 
 import (
@@ -56,7 +54,7 @@ TestServerStartup tests the startup logic for the binary. When this fails, you s
 */
 func (s *ServerSuite) TestServerStartup() {
 	// If you want to test it locally, change it to false
-	runInBuildKite := false
+	runInBuildKite := true
 
 	env := "development"
 	zone := ""
