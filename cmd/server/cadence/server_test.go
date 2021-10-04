@@ -20,14 +20,13 @@
 
 // +build !race
 
-package main
+package cadence
 
 import (
 	"log"
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/cmd/server/cadence"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/service"
@@ -43,8 +42,8 @@ func TestServerStartup(t *testing.T) {
 
 	env := "development"
 	zone := ""
-	rootDir := "../../"
-	configDir := cadence.ConstructPathIfNeed(rootDir, "config")
+	rootDir := "../../../"
+	configDir := ConstructPathIfNeed(rootDir, "config")
 
 	log.Printf("Loading config; env=%v,zone=%v,configDir=%v\n", env, zone, configDir)
 
@@ -66,7 +65,7 @@ func TestServerStartup(t *testing.T) {
 
 	log.Printf("config=\n%v\n", cfg.String())
 
-	cfg.DynamicConfig.FileBased.Filepath = cadence.ConstructPathIfNeed(rootDir, cfg.DynamicConfig.FileBased.Filepath)
+	cfg.DynamicConfig.FileBased.Filepath = ConstructPathIfNeed(rootDir, cfg.DynamicConfig.FileBased.Filepath)
 
 	if err := cfg.ValidateAndFillDefaults(); err != nil {
 		log.Fatalf("config validation failed: %v", err)
@@ -79,7 +78,7 @@ func TestServerStartup(t *testing.T) {
 	var daemons []common.Daemon
 	services := service.ShortNames(service.List)
 	for _, svc := range services {
-		server := cadence.NewServer(svc, &cfg)
+		server := NewServer(svc, &cfg)
 		daemons = append(daemons, server)
 		server.Start()
 	}
