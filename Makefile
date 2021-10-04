@@ -460,9 +460,10 @@ COVER_PKGS = client common host service tools
 # pkg -> pkg/... -> github.com/uber/cadence/pkg/... -> join with commas
 GOCOVERPKG_ARG := -coverpkg="$(subst $(SPACE),$(COMMA),$(addprefix $(PROJECT_ROOT)/,$(addsuffix /...,$(COVER_PKGS))))"
 
-test: bins ## Build and run all tests
+test: bins ## Build and run all tests. This target is for local development. The pipeline is using cover_profile target
 	@rm -f test
 	@rm -f test.log
+	@echo Running special test cases without race detector:
 	@go test -v ./cmd/server/cadence/
 	@for dir in $(PKG_TEST_DIRS); do \
 		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
@@ -488,6 +489,8 @@ cover_profile: bins
 	@mkdir -p $(COVER_ROOT)
 	@echo "mode: atomic" > $(UNIT_COVER_FILE)
 
+	@echo Running special test cases without race detector:
+	@go test -v ./cmd/server/cadence/
 	@echo Running package tests:
 	@for dir in $(PKG_TEST_DIRS); do \
 		mkdir -p $(BUILD)/"$$dir"; \
