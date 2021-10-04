@@ -52,12 +52,12 @@ func NewParams(serviceName string, config *config.Config) (Params, error) {
 
 	listenIP, err := getListenIP(serviceConfig.RPC)
 	if err != nil {
-		return Params{}, fmt.Errorf("failed to get listen IP: %v", err)
+		return Params{}, fmt.Errorf("get listen IP: %v", err)
 	}
 
 	publicClientOutbound, err := newPublicClientOutbound(config)
 	if err != nil {
-		return Params{}, fmt.Errorf("failed to create public client outbound: %v", err)
+		return Params{}, fmt.Errorf("public client outbound: %v", err)
 	}
 
 	return Params{
