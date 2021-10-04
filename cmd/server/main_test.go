@@ -36,6 +36,9 @@ import (
 TestServerStartup tests the startup logic for the binary. When this fails, you should be able to reproduce by running "cadence-server start"
 */
 func TestServerStartup(t *testing.T) {
+	// If you want to test it locally, change it to false
+	runInBuildKite := true
+
 	env := "development"
 	zone := ""
 	rootDir := "../../"
@@ -48,6 +51,17 @@ func TestServerStartup(t *testing.T) {
 	if err != nil {
 		log.Fatal("Config file corrupted.", err)
 	}
+	// replace local host to docker network
+	if runInBuildKite {
+		ds := cfg.Persistence.DataStores[cfg.Persistence.DefaultStore]
+		ds.NoSQL.Hosts = "cassandra"
+		cfg.Persistence.DataStores[cfg.Persistence.DefaultStore] = ds
+
+		ds = cfg.Persistence.DataStores[cfg.Persistence.VisibilityStore]
+		ds.NoSQL.Hosts = "cassandra"
+		cfg.Persistence.DataStores[cfg.Persistence.VisibilityStore] = ds
+	}
+
 	log.Printf("config=\n%v\n", cfg.String())
 
 	cfg.DynamicConfig.FileBased.Filepath = cadence.ConstructPathIfNeed(rootDir, cfg.DynamicConfig.FileBased.Filepath)

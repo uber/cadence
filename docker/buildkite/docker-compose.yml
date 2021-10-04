@@ -3,8 +3,6 @@ version: "3.5"
 services:
   cassandra:
     image: cassandra:3.11
-    ports:
-      - "9042:9042"
     networks:
       services-network:
         aliases:
