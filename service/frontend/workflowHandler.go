@@ -1877,6 +1877,15 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	return nil
 }
 
+func (wh *WorkflowHandler) withIsGlobal(ctx context.Context, domainName string) (context.Context, error) {
+	domainEntry, err := wh.GetDomainCache().GetDomain(domainName)
+	if err != nil {
+		return nil, err
+	}
+
+	return metrics.TagContext(ctx, metrics.IsGlobalTag(domainEntry.IsGlobalDomain())), nil
+}
+
 // StartWorkflowExecution - Creates a new workflow execution
 func (wh *WorkflowHandler) StartWorkflowExecution(
 	ctx context.Context,
@@ -1884,6 +1893,10 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 ) (resp *types.StartWorkflowExecutionResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
+	ctx, retError = wh.withIsGlobal(ctx, startRequest.GetDomain())
+	if retError != nil {
+		return nil, retError
+	}
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendStartWorkflowExecutionScope, startRequest)
 	defer sw.Stop()
 
@@ -2311,6 +2324,11 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	ctx = wh.withSignalName(ctx, signalRequest.GetDomain(), signalRequest.GetSignalName())
+	ctx, retError = wh.withIsGlobal(ctx, signalRequest.GetDomain())
+	if retError != nil {
+		return retError
+	}
+
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendSignalWorkflowExecutionScope, signalRequest)
 	defer sw.Stop()
 
@@ -2417,6 +2435,10 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 ) (resp *types.StartWorkflowExecutionResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
+	ctx, retError = wh.withIsGlobal(ctx, signalWithStartRequest.GetDomain())
+	if retError != nil {
+		return nil, retError
+	}
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendSignalWithStartWorkflowExecutionScope, signalWithStartRequest)
 	defer sw.Stop()
 
@@ -2582,6 +2604,10 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
+	ctx, retError = wh.withIsGlobal(ctx, terminateRequest.GetDomain())
+	if retError != nil {
+		return retError
+	}
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendTerminateWorkflowExecutionScope, terminateRequest)
 	defer sw.Stop()
 
@@ -2637,6 +2663,10 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(
 ) (resp *types.ResetWorkflowExecutionResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
+	ctx, retError = wh.withIsGlobal(ctx, resetRequest.GetDomain())
+	if retError != nil {
+		return nil, retError
+	}
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendResetWorkflowExecutionScope, resetRequest)
 	defer sw.Stop()
 
@@ -2691,6 +2721,10 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
+	ctx, retError = wh.withIsGlobal(ctx, cancelRequest.GetDomain())
+	if retError != nil {
+		return retError
+	}
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendRequestCancelWorkflowExecutionScope, cancelRequest)
 	defer sw.Stop()
 

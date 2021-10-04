@@ -21,6 +21,7 @@
 package metrics
 
 import (
+	"fmt"
 	"strconv"
 )
 
@@ -46,6 +47,7 @@ const (
 	kafkaPartition         = "kafkaPartition"
 	transport              = "transport"
 	signalName             = "signalName"
+	isGlobal               = "isGlobal"
 
 	allValue     = "all"
 	unknownValue = "_unknown_"
@@ -170,6 +172,11 @@ func GPRCTransportTag() Tag {
 // SignalNameTag returns a new SignalName tag
 func SignalNameTag(value string) Tag {
 	return metricWithUnknown(signalName, value)
+}
+
+// IsGlobalTag returns a new IsGlobal tag
+func IsGlobalTag(value bool) Tag {
+	return metricWithUnknown(isGlobal, fmt.Sprintf("%v", value))
 }
 
 // SignalNameAllTag returns a new SignalName tag with all value

@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -1457,6 +1458,94 @@ func (s *workflowHandlerSuite) TestSignalMetricHasSignalName() {
 	}
 	s.True(expectedMetrics["test.cadence_requests"])
 	s.True(expectedMetrics["test.cadence_errors_bad_request"])
+}
+
+func (s *workflowHandlerSuite) validateMetric(operation string, isGlobal bool, domains map[bool]string) {
+	snapshot := s.mockResource.MetricsScope.Snapshot()
+	fmt.Printf("Counters: %v \n", snapshot.Counters())
+
+	validated := false
+	for _, counter := range snapshot.Counters() {
+		op := counter.Tags()["operation"]
+		domainName := counter.Tags()["domain"]
+		if counter.Name() == "test.cadence_requests" &&
+			operation == op &&
+			domainName == domains[isGlobal] {
+			metricIsGlobal, ok := counter.Tags()["isGlobal"]
+			s.True(ok)
+			s.Equal(metricIsGlobal, fmt.Sprintf("%v", isGlobal))
+			validated = true
+		}
+	}
+	s.True(validated)
+}
+
+func (s *workflowHandlerSuite) TestIsGlobalTag() {
+	globalDomain := "global-domain"
+	localDomain := "local-domain"
+	domains := map[bool]string{
+		true:  globalDomain,
+		false: localDomain,
+	}
+	s.mockDomainCache.EXPECT().GetDomain(globalDomain).Return(
+		cache.NewGlobalDomainCacheEntryForTest(nil, nil, nil, 0, nil), nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomain(localDomain).Return(
+		cache.NewLocalDomainCacheEntryForTest(nil, nil, "cluster", nil), nil).AnyTimes()
+
+	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
+
+	testCases := map[string]func(domainName string){
+		"StartWorkflowExecution": func(domainName string) {
+			startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
+				Domain: domainName,
+			}
+			_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
+			s.Error(err)
+		},
+		"SignalWorkflowExecution": func(domainName string) {
+			signalWorkflowRequest := &types.SignalWorkflowExecutionRequest{
+				Domain: domainName,
+			}
+			err := wh.SignalWorkflowExecution(context.Background(), signalWorkflowRequest)
+			s.Error(err)
+		},
+		"SignalWithStartWorkflowExecution": func(domainName string) {
+			signalWithStartWorkflowRequest := &types.SignalWithStartWorkflowExecutionRequest{
+				Domain: domainName,
+			}
+			_, err := wh.SignalWithStartWorkflowExecution(context.Background(), signalWithStartWorkflowRequest)
+			s.Error(err)
+		},
+		"TerminateWorkflowExecution": func(domainName string) {
+			terminateWorkflowRequest := &types.TerminateWorkflowExecutionRequest{
+				Domain: domainName,
+			}
+			err := wh.TerminateWorkflowExecution(context.Background(), terminateWorkflowRequest)
+			s.Error(err)
+		},
+		"ResetWorkflowExecution": func(domainName string) {
+			resetWorkflowRequest := &types.ResetWorkflowExecutionRequest{
+				Domain: domainName,
+			}
+			_, err := wh.ResetWorkflowExecution(context.Background(), resetWorkflowRequest)
+			s.Error(err)
+		},
+		"RequestCancelWorkflowExecution": func(domainName string) {
+			requestCancelWorkflowRequest := &types.RequestCancelWorkflowExecutionRequest{
+				Domain: domainName,
+			}
+			err := wh.RequestCancelWorkflowExecution(context.Background(), requestCancelWorkflowRequest)
+			s.Error(err)
+		},
+	}
+
+	for operation, f := range testCases {
+		for _, isGlobal := range []bool{true, false} {
+			fmt.Printf("Testing for: %v \n", domains[isGlobal])
+			f(domains[isGlobal])
+			s.validateMetric(operation, isGlobal, domains)
+		}
+	}
 }
 
 func (s *workflowHandlerSuite) newConfig(dynamicClient dc.Client) *Config {
