@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
@@ -150,10 +151,9 @@ func (s *server) startService() common.Daemon {
 		log.Fatalf("error creating rpc factory params: %v", err)
 	}
 	params.RPCFactory = rpc.NewFactory(params.Logger, rpcParams)
-	dispatcher := params.RPCFactory.GetDispatcher()
 
 	params.MembershipFactory, err = s.cfg.Ringpop.NewFactory(
-		dispatcher,
+		params.RPCFactory.GetDispatcher(),
 		params.Name,
 		params.Logger,
 	)
@@ -174,6 +174,10 @@ func (s *server) startService() common.Daemon {
 		clusterGroupMetadata.CurrentClusterName,
 		clusterGroupMetadata.ClusterGroup,
 	)
+
+	if len(s.cfg.PublicClient.HostPort) == 0 {
+		log.Fatalf("need to provide an endpoint config for PublicClient")
+	}
 
 	params.DispatcherProvider = rpc.NewDispatcherProvider(params.Logger, rpc.NewDNSPeerChooserFactory(s.cfg.PublicClient.RefreshInterval, params.Logger))
 
@@ -211,7 +215,22 @@ func (s *server) startService() common.Daemon {
 		}
 	}
 
-	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(rpc.OutboundPublicClient))
+	var options *rpc.DispatcherOptions
+	if s.cfg.Authorization.OAuthAuthorizer.Enable {
+		clusterName := s.cfg.ClusterGroupMetadata.CurrentClusterName
+		authProvider, err := authorization.GetAuthProviderClient(s.cfg.ClusterGroupMetadata.ClusterGroup[clusterName].AuthorizationProvider.PrivateKey)
+		if err != nil {
+			log.Fatalf("failed to create AuthProvider: %v", err.Error())
+		}
+		options = &rpc.DispatcherOptions{
+			AuthProvider: authProvider,
+		}
+	}
+	dispatcher, err := params.DispatcherProvider.GetTChannel(service.Frontend, s.cfg.PublicClient.HostPort, options)
+	if err != nil {
+		log.Fatalf("failed to construct dispatcher: %v", err)
+	}
+	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(service.Frontend))
 
 	params.ArchivalMetadata = archiver.NewArchivalMetadata(
 		dc,
