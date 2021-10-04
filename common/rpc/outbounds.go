@@ -54,7 +54,7 @@ func newPublicClientOutbound(config *config.Config) (publicClientOutbound, error
 		clusterInfo := config.ClusterGroupMetadata.ClusterGroup[clusterName]
 		authProvider, err := authorization.GetAuthProviderClient(clusterInfo.AuthorizationProvider.PrivateKey)
 		if err != nil {
-			return publicClientOutbound{}, fmt.Errorf("failed to create AuthProvider: %v", err)
+			return publicClientOutbound{}, fmt.Errorf("create AuthProvider: %v", err)
 		}
 		authMiddleware = &authOutboundMiddleware{authProvider}
 	}

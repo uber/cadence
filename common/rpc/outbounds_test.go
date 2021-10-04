@@ -61,7 +61,7 @@ func TestPublicClientOutbound(t *testing.T) {
 	require.Nil(t, builder.authMiddleware)
 
 	builder, err = newPublicClientOutbound(makeConfig("localhost:1234", true, "invalid"))
-	require.EqualError(t, err, "failed to create AuthProvider: invalid private key path invalid")
+	require.EqualError(t, err, "create AuthProvider: invalid private key path invalid")
 
 	builder, err = newPublicClientOutbound(makeConfig("localhost:1234", true, tempFile(t, "private-key")))
 	require.NoError(t, err)
