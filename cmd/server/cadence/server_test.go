@@ -56,7 +56,7 @@ TestServerStartup tests the startup logic for the binary. When this fails, you s
 */
 func (s *ServerSuite) TestServerStartup() {
 	// If you want to test it locally, change it to false
-	runInBuildKite := true
+	runInBuildKite := false
 
 	env := "development"
 	zone := ""
@@ -104,7 +104,4 @@ func (s *ServerSuite) TestServerStartup() {
 	timer := time.NewTimer(time.Second * 10)
 
 	<- timer.C
-	for _, daemon := range daemons{
-		daemon.Stop()
-	}
 }
