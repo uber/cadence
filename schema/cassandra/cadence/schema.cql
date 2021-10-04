@@ -355,6 +355,7 @@ CREATE TABLE executions (
   version_histories              blob, -- the metadata of history branching
   version_histories_encoding     text,
   checksum                       frozen<checksum>,
+  domain_list                    list<text>,
   PRIMARY KEY  (shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id)
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'

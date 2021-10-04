@@ -353,6 +353,7 @@ func (s *crossClusterSourceTaskExecutorSuite) TestApplyParentClosePolicy() {
 					s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 					s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
 					if tc.willGenerateNewTask {
+						s.mockDomainCache.EXPECT().GetDomain(constants.TestRemoteTargetDomainName).Return(constants.TestGlobalRemoteTargetDomainEntry, nil).AnyTimes()
 						s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
 							func(request *p.UpdateWorkflowExecutionRequest) bool {
 								if true {
@@ -439,17 +440,15 @@ func (s *crossClusterSourceTaskExecutorSuite) testApplyParentClosePolicy(
 
 	crossClusterTask := s.getTestCrossClusterSourceTask(
 		&p.CrossClusterTaskInfo{
-			Version:          mutableState.GetCurrentVersion(),
-			DomainID:         sourceDomainID,
-			WorkflowID:       workflowExecution.GetWorkflowID(),
-			RunID:            workflowExecution.GetRunID(),
-			TargetDomainID:   constants.TestRemoteTargetDomainID,
-			TargetWorkflowID: targetWorkflowID,
-			TargetRunID:      "random_run_id",
-			TaskID:           int64(59),
-			TaskList:         mutableState.GetExecutionInfo().TaskList,
-			TaskType:         p.CrossClusterTaskTypeApplyParentPolicy,
-			ScheduleID:       event.GetEventID(),
+			Version:         mutableState.GetCurrentVersion(),
+			DomainID:        sourceDomainID,
+			WorkflowID:      workflowExecution.GetWorkflowID(),
+			RunID:           workflowExecution.GetRunID(),
+			TargetDomainIDs: []string{constants.TestRemoteTargetDomainID},
+			TaskID:          int64(59),
+			TaskList:        mutableState.GetExecutionInfo().TaskList,
+			TaskType:        p.CrossClusterTaskTypeApplyParentPolicy,
+			ScheduleID:      event.GetEventID(),
 		},
 		response,
 		proessingState,

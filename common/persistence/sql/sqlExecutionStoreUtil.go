@@ -809,6 +809,7 @@ func createCrossClusterTasks(
 			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetCluster
 
 		case p.CrossClusterTaskTypeApplyParentPolicy:
+			info.TargetDomainIDs = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetDomainIDs
 			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetCluster
 
 		default:

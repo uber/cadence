@@ -1,0 +1,8 @@
+{
+  "CurrVersion": "0.33",
+  "MinCompatibleVersion": "0.33",
+  "Description": "Added domain list to the executions table",
+  "SchemaUpdateCqlFiles": [
+    "domain_list.cql"
+  ]
+}

@@ -333,41 +333,49 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromCrossClusterTask() {
 		{
 			sourceActive: true,
 			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:         persistence.CrossClusterTaskTypeApplyParentPolicy,
-				TargetDomainID:   constants.TestRemoteTargetDomainID,
-				TargetWorkflowID: constants.TestWorkflowID,
-				TargetRunID:      constants.TestRunID,
-				ScheduleID:       int64(123),
+				TaskType:        persistence.CrossClusterTaskTypeApplyParentPolicy,
+				TargetDomainIDs: []string{constants.TestRemoteTargetDomainID},
+				ScheduleID:      int64(123),
 			},
 			generatedTask: &persistence.CrossClusterApplyParentClosePolicyTask{
-				TargetCluster:              cluster.TestAlternativeClusterName,
-				ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{},
+				TargetCluster: cluster.TestAlternativeClusterName,
+				ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
+					TargetDomainIDs: []string{constants.TestRemoteTargetDomainID},
+				},
 			},
 		},
 		{
 			sourceActive: false,
 			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:         persistence.CrossClusterTaskTypeApplyParentPolicy,
-				TargetDomainID:   constants.TestRemoteTargetDomainID,
-				TargetWorkflowID: constants.TestWorkflowID,
-				TargetRunID:      constants.TestRunID,
-				ScheduleID:       int64(123),
+				TaskType:        persistence.CrossClusterTaskTypeApplyParentPolicy,
+				TargetDomainIDs: []string{constants.TestRemoteTargetDomainID},
+				ScheduleID:      int64(123),
 			},
 			generatedTask: &persistence.CloseExecutionTask{},
 		},
 		{
 			sourceActive: true,
 			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:         persistence.CrossClusterTaskTypeApplyParentPolicy,
-				TargetDomainID:   constants.TestTargetDomainID,
-				TargetWorkflowID: constants.TestWorkflowID,
-				TargetRunID:      constants.TestRunID,
-				ScheduleID:       int64(123),
+				TaskType:        persistence.CrossClusterTaskTypeApplyParentPolicy,
+				TargetDomainIDs: []string{constants.TestTargetDomainID},
+				ScheduleID:      int64(123),
+			},
+			generatedTask: &persistence.CloseExecutionTask{},
+		},
+		// TODO: this case later will generate 2 different tasks: 1 transfer and 1 xcluster
+		{
+			sourceActive: true,
+			crossClusterTask: &persistence.CrossClusterTaskInfo{
+				TaskType:        persistence.CrossClusterTaskTypeApplyParentPolicy,
+				TargetDomainIDs: []string{constants.TestTargetDomainID, constants.TestRemoteTargetDomainID},
+				ScheduleID:      int64(123),
 			},
 			generatedTask: &persistence.CloseExecutionTask{},
 		},
 	}
 
+	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestRemoteTargetDomainID).Return(constants.TestGlobalRemoteTargetDomainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestTargetDomainID).Return(constants.TestGlobalTargetDomainEntry, nil).AnyTimes()
 	for _, tc := range testCases {
 		if tc.sourceActive {
 			tc.crossClusterTask.DomainID = constants.TestDomainID
@@ -376,13 +384,23 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromCrossClusterTask() {
 			tc.crossClusterTask.DomainID = constants.TestRemoteTargetDomainID
 			s.mockMutableState.EXPECT().GetDomainEntry().Return(constants.TestGlobalRemoteTargetDomainEntry).Times(1)
 		}
-		targetActive := tc.crossClusterTask.TargetDomainID == constants.TestTargetDomainID
+
+		shouldAddTransferTasks := !tc.sourceActive
+		if !shouldAddTransferTasks {
+			if tc.crossClusterTask.TaskType == persistence.CrossClusterTaskTypeApplyParentPolicy {
+				for _, domainID := range tc.crossClusterTask.TargetDomainIDs {
+					shouldAddTransferTasks = shouldAddTransferTasks || domainID == constants.TestTargetDomainID
+				}
+			} else {
+				shouldAddTransferTasks = tc.crossClusterTask.TargetDomainID == constants.TestTargetDomainID
+			}
+		}
 
 		var actualGeneratedTask persistence.Task
 		mockDoFn := func(tasks ...persistence.Task) {
 			actualGeneratedTask = tasks[0]
 		}
-		if !tc.sourceActive || targetActive {
+		if shouldAddTransferTasks {
 			s.mockMutableState.EXPECT().AddTransferTasks(gomock.Any()).Do(mockDoFn).Times(1)
 		} else {
 			s.mockMutableState.EXPECT().AddCrossClusterTasks(gomock.Any()).Do(mockDoFn).Times(1)
