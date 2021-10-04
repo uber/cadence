@@ -466,6 +466,8 @@ test: bins ## Build and run all tests
 	@for dir in $(PKG_TEST_DIRS); do \
 		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
+	# special test case without race detector
+	go test -v ./cmd/server/cadence/
 
 test_e2e: bins
 	@rm -f test
