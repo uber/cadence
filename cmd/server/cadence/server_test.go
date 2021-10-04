@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// +build !race
+
 package cadence
 
 import (
@@ -101,5 +103,8 @@ func (s *ServerSuite) TestServerStartup() {
 
 	timer := time.NewTimer(time.Second * 10)
 
-	<- timer.C
+	<-timer.C
+	for _, daemon := range daemons {
+		daemon.Stop()
+	}
 }
