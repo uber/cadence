@@ -463,7 +463,7 @@ GOCOVERPKG_ARG := -coverpkg="$(subst $(SPACE),$(COMMA),$(addprefix $(PROJECT_ROO
 test: bins ## Build and run all tests
 	@rm -f test
 	@rm -f test.log
-    @go test -v ./cmd/server/cadence/
+	@go test -v ./cmd/server/cadence/
 	@for dir in $(PKG_TEST_DIRS); do \
 		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
