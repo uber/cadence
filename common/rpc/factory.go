@@ -32,8 +32,12 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 )
 
+const defaultGRPCSizeLimit = 4 * 1024 * 1024
+
 // Factory is an implementation of common.RPCFactory interface
 type Factory struct {
+	maxMessageSize int
+
 	logger            log.Logger
 	hostAddressMapper HostAddressMapper
 	tchannel          *tchannel.Transport
@@ -97,6 +101,7 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 	})
 
 	return &Factory{
+		maxMessageSize:    p.GRPCMaxMsgSize,
 		logger:            logger,
 		hostAddressMapper: p.HostAddressMapper,
 		tchannel:          tchannel,
@@ -131,6 +136,13 @@ func (d *Factory) CreateGRPCDispatcherForOutbound(
 // ReplaceGRPCPort replaces port in the address to grpc for a given service
 func (d *Factory) ReplaceGRPCPort(serviceName, hostAddress string) (string, error) {
 	return d.hostAddressMapper.GetGRPCAddress(serviceName, hostAddress)
+}
+
+func (d *Factory) GetMaxMessageSize() int {
+	if d.maxMessageSize == 0 {
+		return defaultGRPCSizeLimit
+	}
+	return d.maxMessageSize
 }
 
 func (d *Factory) createOutboundDispatcher(

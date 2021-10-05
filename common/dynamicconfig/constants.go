@@ -188,6 +188,12 @@ const (
 	// Default value: TRUE
 	// Allowed filters: N/A
 	EnableGRPCOutbound
+	// GRPCMaxSizeInByte is the key for config GRPC response size
+	// KeyName: system.grpcMaxSizeInByte
+	// Value type: Int
+	// Default value: 4*1024*1024
+	// Allowed filters: N/A
+	GRPCMaxSizeInByte
 	// BlobSizeLimitError is the per event blob size limit
 	// KeyName: limit.blobSize.error
 	// Value type: Int
@@ -1714,6 +1720,7 @@ const (
 	// Allowed filters: N/A
 	ScannerBatchSizeForTasklistHandler
 	// EnableCleaningOrphanTaskInTasklistScavenger indicates if enabling the scanner to clean up orphan tasks
+	// Only implemented for single SQL database. TODO https://github.com/uber/cadence/issues/4064 for supporting multiple/sharded SQL database and NoSQL
 	// KeyName: worker.enableCleaningOrphanTaskInTasklistScavenger
 	// Value type: Bool
 	// Default value: FALSE
@@ -2020,6 +2027,7 @@ var Keys = map[Key]string{
 	EnableDebugMode:                     "system.enableDebugMode",
 	RequiredDomainDataKeys:              "system.requiredDomainDataKeys",
 	EnableGRPCOutbound:                  "system.enableGRPCOutbound",
+	GRPCMaxSizeInByte:                   "system.grpcMaxSizeInByte",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
