@@ -2480,7 +2480,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 			// Check mutable state to make sure child execution is in pending child executions
 			ci, isRunning := mutableState.GetChildExecutionInfo(initiatedID)
 			if !isRunning || ci.StartedID == common.EmptyEventID {
-				return &types.EntityNotExistsError{Message: "Pendin child execution not found."}
+				return &types.EntityNotExistsError{Message: "Pending child execution not found."}
 			}
 			if ci.StartedWorkflowID != completedExecution.GetWorkflowID() {
 				return &types.EntityNotExistsError{Message: "Pending child execution not found."}
