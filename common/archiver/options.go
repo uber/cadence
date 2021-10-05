@@ -35,8 +35,9 @@ type (
 	// ArchiveFeatureCatalog is a collection features for the Archive method of
 	// History/Visibility Archiver
 	ArchiveFeatureCatalog struct {
-		ProgressManager   ProgressManager
-		NonRetriableError NonRetriableError
+		ProgressManager          ProgressManager
+		NonRetriableError        NonRetriableError
+		ArchiveIncompleteHistory bool
 	}
 
 	// NonRetriableError returns an error indicating archiver has encountered an non-retriable error
@@ -93,5 +94,12 @@ func GetNonRetriableErrorOption(nonRetryableErr error) ArchiveOption {
 		catalog.NonRetriableError = func() error {
 			return nonRetryableErr
 		}
+	}
+}
+
+// GetArchivingIncompleteHistoryOption returns an ArchiveOption so that archiver would archive incomplete history
+func GetArchivingIncompleteHistoryOption(allow bool) ArchiveOption {
+	return func(catalog *ArchiveFeatureCatalog) {
+		catalog.ArchiveIncompleteHistory = allow
 	}
 }

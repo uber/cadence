@@ -236,21 +236,6 @@ func download(ctx context.Context, s3cli s3iface.S3API, URI archiver.URI, key st
 	return body, nil
 }
 
-func historyMutated(request *archiver.ArchiveHistoryRequest, historyBatches []*types.History, isLast bool) bool {
-	lastBatch := historyBatches[len(historyBatches)-1].Events
-	lastEvent := lastBatch[len(lastBatch)-1]
-	lastFailoverVersion := lastEvent.GetVersion()
-	if lastFailoverVersion > request.CloseFailoverVersion {
-		return true
-	}
-
-	if !isLast {
-		return false
-	}
-	lastEventID := lastEvent.GetEventID()
-	return lastFailoverVersion != request.CloseFailoverVersion || lastEventID+1 != request.NextEventID
-}
-
 func contextExpired(ctx context.Context) bool {
 	select {
 	case <-ctx.Done():

@@ -31,7 +31,6 @@ import (
 
 	"github.com/dgryski/go-farm"
 
-	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/util"
 )
@@ -131,21 +130,6 @@ func extractCloseFailoverVersion(filename string) (int64, error) {
 		return -1, errors.New("unknown filename structure")
 	}
 	return strconv.ParseInt(filenameParts[1], 10, 64)
-}
-
-func historyMutated(request *archiver.ArchiveHistoryRequest, historyBatches []*types.History, isLast bool) bool {
-	lastBatch := historyBatches[len(historyBatches)-1].Events
-	lastEvent := lastBatch[len(lastBatch)-1]
-	lastFailoverVersion := lastEvent.GetVersion()
-	if lastFailoverVersion > request.CloseFailoverVersion {
-		return true
-	}
-
-	if !isLast {
-		return false
-	}
-	lastEventID := lastEvent.GetEventID()
-	return lastFailoverVersion != request.CloseFailoverVersion || lastEventID+1 != request.NextEventID
 }
 
 func contextExpired(ctx context.Context) bool {

@@ -163,9 +163,10 @@ func (h *historyArchiver) Archive(
 			return err
 		}
 
-		if historyMutated(request, historyBlob.Body, *historyBlob.Header.IsLast) {
-			logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonHistoryMutated))
-			return archiver.ErrHistoryMutated
+		if archiver.IsHistoryMutated(request, historyBlob.Body, *historyBlob.Header.IsLast, logger) {
+			if !featureCatalog.ArchiveIncompleteHistory {
+				return archiver.ErrHistoryMutated
+			}
 		}
 
 		historyBatches = append(historyBatches, historyBlob.Body...)
