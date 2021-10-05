@@ -61,7 +61,7 @@ func (s *ServerSuite) TestServerStartup() {
 	env := "development"
 	zone := ""
 	rootDir := "../../../"
-	configDir := ConstructPathIfNeed(rootDir, "config")
+	configDir := constructPathIfNeed(rootDir, "config")
 
 	log.Printf("Loading config; env=%v,zone=%v,configDir=%v\n", env, zone, configDir)
 
@@ -83,7 +83,7 @@ func (s *ServerSuite) TestServerStartup() {
 
 	log.Printf("config=\n%v\n", cfg.String())
 
-	cfg.DynamicConfig.FileBased.Filepath = ConstructPathIfNeed(rootDir, cfg.DynamicConfig.FileBased.Filepath)
+	cfg.DynamicConfig.FileBased.Filepath = constructPathIfNeed(rootDir, cfg.DynamicConfig.FileBased.Filepath)
 
 	if err := cfg.ValidateAndFillDefaults(); err != nil {
 		log.Fatalf("config validation failed: %v", err)
@@ -96,7 +96,7 @@ func (s *ServerSuite) TestServerStartup() {
 	var daemons []common.Daemon
 	services := service.ShortNames(service.List)
 	for _, svc := range services {
-		server := NewServer(svc, &cfg)
+		server := newServer(svc, &cfg)
 		daemons = append(daemons, server)
 		server.Start()
 	}
