@@ -315,7 +315,9 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	children := mutableState.GetPendingChildExecutionInfos()
 
 	// generate cross cluster task for applying parent close policy
-	crossClusterTaskGenerators, sameClusterChildDomainIDs, signalParentClosePolicyWorker, err := t.applyParentClosePolicyDomainActiveCheck(
+	crossClusterTaskGenerators,
+		sameClusterChildDomainIDs,
+		signalParentClosePolicyWorker, err := t.applyParentClosePolicyDomainActiveCheck(
 		task,
 		domainName,
 		children,
