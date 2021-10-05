@@ -27,6 +27,7 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/service"
 
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/transport/grpc"
@@ -41,6 +42,36 @@ const (
 // OutboundsBuilder allows defining outbounds for the dispatcher
 type OutboundsBuilder interface {
 	Build(*grpc.Transport, *tchannel.Transport) (yarpc.Outbounds, error)
+}
+
+type multiOutbounds struct {
+	builders []OutboundsBuilder
+}
+
+// CombineOutbounds takes multiple outbound builders and combines them
+func CombineOutbounds(builders ...OutboundsBuilder) OutboundsBuilder {
+	return multiOutbounds{builders}
+}
+
+func (b multiOutbounds) Build(grpc *grpc.Transport, tchannel *tchannel.Transport) (yarpc.Outbounds, error) {
+	outbounds := yarpc.Outbounds{}
+	var errs error
+	for _, builder := range b.builders {
+		builderOutbounds, err := builder.Build(grpc, tchannel)
+		if err != nil {
+			errs = multierr.Append(errs, err)
+			continue
+		}
+
+		for name, outbound := range builderOutbounds {
+			if _, exists := outbounds[name]; exists {
+				errs = multierr.Append(errs, fmt.Errorf("outbound %s already configured", name))
+				break
+			}
+			outbounds[name] = outbound
+		}
+	}
+	return outbounds, errs
 }
 
 type publicClientOutbound struct {
