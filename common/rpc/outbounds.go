@@ -43,6 +43,11 @@ type OutboundsBuilder interface {
 	Build(*grpc.Transport, *tchannel.Transport) (yarpc.Outbounds, error)
 }
 
+type publicClientOutbound struct {
+	address        string
+	authMiddleware middleware.UnaryOutbound
+}
+
 func newPublicClientOutbound(config *config.Config) (publicClientOutbound, error) {
 	if len(config.PublicClient.HostPort) == 0 {
 		return publicClientOutbound{}, fmt.Errorf("need to provide an endpoint config for PublicClient")
@@ -60,11 +65,6 @@ func newPublicClientOutbound(config *config.Config) (publicClientOutbound, error
 	}
 
 	return publicClientOutbound{config.PublicClient.HostPort, authMiddleware}, nil
-}
-
-type publicClientOutbound struct {
-	address        string
-	authMiddleware middleware.UnaryOutbound
 }
 
 func (b publicClientOutbound) Build(_ *grpc.Transport, tchannel *tchannel.Transport) (yarpc.Outbounds, error) {
