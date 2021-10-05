@@ -9673,6 +9673,7 @@ type WorkflowExecutionInfo struct {
 	AutoResetPoints   *ResetPoints                  `json:"autoResetPoints,omitempty"`
 	TaskList          string                        `json:"taskList,omitempty"`
 	IsCron            bool                          `json:"isCron,omitempty"`
+	IsGlobal          bool                          `json:"isGlobal,omitempty"`
 }
 
 // GetExecution is an internal getter (TBD...)
@@ -9783,6 +9784,14 @@ func (v *WorkflowExecutionInfo) GetTaskList() (o string) {
 func (v *WorkflowExecutionInfo) GetIsCron() (o bool) {
 	if v != nil {
 		return v.IsCron
+	}
+	return
+}
+
+// GetIsGlobal is an internal getter (TBD...)
+func (v *WorkflowExecutionInfo) GetIsGlobal() (o bool) {
+	if v != nil {
+		return v.IsGlobal
 	}
 	return
 }

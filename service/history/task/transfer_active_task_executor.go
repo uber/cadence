@@ -284,6 +284,11 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		return err
 	}
 
+	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(task.DomainID)
+	if err != nil {
+		return err
+	}
+
 	executionInfo := mutableState.GetExecutionInfo()
 	replyToParentWorkflow := mutableState.HasParentExecution() && executionInfo.CloseStatus != persistence.WorkflowCloseStatusContinuedAsNew
 	completionEvent, err := mutableState.GetCompletionEvent(ctx)
@@ -302,6 +307,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	workflowCloseStatus := persistence.ToInternalWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 	workflowHistoryLength := mutableState.GetNextEventID() - 1
 	isCron := len(executionInfo.CronSchedule) > 0
+	isGlobal := domainEntry.IsGlobalDomain()
 
 	startEvent, err := mutableState.GetStartEvent(ctx)
 	if err != nil {
@@ -364,6 +370,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		visibilityMemo,
 		executionInfo.TaskList,
 		isCron,
+		isGlobal,
 		searchAttr,
 	); err != nil {
 		fmt.Println(err)
@@ -832,6 +839,11 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 		}
 	}
 
+	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(task.DomainID)
+	if err != nil {
+		return err
+	}
+
 	executionInfo := mutableState.GetExecutionInfo()
 	workflowTimeout := executionInfo.WorkflowTimeout
 	wfTypeName := executionInfo.WorkflowTypeName
@@ -844,6 +856,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
 	isCron := len(executionInfo.CronSchedule) > 0
+	isGlobal := domainEntry.IsGlobalDomain()
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
@@ -862,6 +875,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 			task.GetTaskID(),
 			executionInfo.TaskList,
 			isCron,
+			isGlobal,
 			visibilityMemo,
 			searchAttr,
 		)
@@ -879,6 +893,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 		executionInfo.TaskList,
 		visibilityMemo,
 		isCron,
+		isGlobal,
 		searchAttr,
 	)
 }

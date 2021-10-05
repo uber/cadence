@@ -265,6 +265,7 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 			visibilityMemo,
 			executionInfo.TaskList,
 			isCron,
+			true, // isGlobal, standby only exists for global domains
 			searchAttr,
 		)
 	}
@@ -473,6 +474,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 			transferTask.GetTaskID(),
 			executionInfo.TaskList,
 			isCron,
+			true, // isGlobal, standby only exists for global domains
 			visibilityMemo,
 			searchAttr,
 		)
@@ -490,6 +492,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 		executionInfo.TaskList,
 		visibilityMemo,
 		isCron,
+		true, // isGlobal, standby only exists for global domains
 		searchAttr,
 	)
 

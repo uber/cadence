@@ -49,6 +49,9 @@
         "IsCron": {
           "type": "boolean"
         },
+        "IsGlobal": {
+          "type": "boolean"
+        },
         "Attr": {
           "properties": {
             "CadenceChangeVersion":  { "type": "keyword" },

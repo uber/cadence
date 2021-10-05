@@ -48,6 +48,7 @@ type (
 		Memo               *types.Memo
 		TaskList           string
 		IsCron             bool
+		IsGlobal           bool
 		SearchAttributes   map[string][]byte
 	}
 
@@ -68,6 +69,7 @@ type (
 		Memo               *types.Memo
 		TaskList           string
 		IsCron             bool
+		IsGlobal           bool
 		SearchAttributes   map[string][]byte
 	}
 
@@ -84,6 +86,7 @@ type (
 		Memo               *types.Memo
 		TaskList           string
 		IsCron             bool
+		IsGlobal           bool
 		SearchAttributes   map[string][]byte
 	}
 

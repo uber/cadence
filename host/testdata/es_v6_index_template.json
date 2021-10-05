@@ -43,6 +43,9 @@
         "IsCron": {
           "type": "boolean"
         },
+        "IsGlobal": {
+          "type": "boolean"
+        },
         "KafkaKey": {
           "type": "keyword"
         },

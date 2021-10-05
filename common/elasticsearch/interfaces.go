@@ -220,6 +220,7 @@ type (
 		Encoding      string
 		TaskList      string
 		IsCron        bool
+		IsGlobal      bool
 		Attr          map[string]interface{}
 	}
 )

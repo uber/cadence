@@ -128,6 +128,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 	request.ExecutionTimestamp = time.Unix(0, int64(321))
 	request.TaskID = int64(111)
 	request.IsCron = true
+	request.IsGlobal = true
 	memoBytes := []byte(`test bytes`)
 	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
 
@@ -143,6 +144,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 		s.Equal(memoBytes, fields[es.Memo].GetBinaryData())
 		s.Equal(string(common.EncodingTypeThriftRW), fields[es.Encoding].GetStringData())
 		s.Equal(request.IsCron, fields[es.IsCron].GetBoolData())
+		s.Equal(request.IsGlobal, fields[es.IsGlobal].GetBoolData())
 		return true
 	})).Return(nil).Once()
 
@@ -191,6 +193,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 	request.Status = *thrift.ToWorkflowExecutionCloseStatus(&closeStatus)
 	request.HistoryLength = int64(20)
 	request.IsCron = false
+	request.IsGlobal = true
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
 		s.Equal(request.DomainUUID, input.GetDomainID())

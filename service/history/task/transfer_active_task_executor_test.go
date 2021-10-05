@@ -1385,7 +1385,12 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask()
 	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, decisionCompletionID, mutableState.GetCurrentVersion())
 	s.NoError(err)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", mock.Anything, createRecordWorkflowExecutionStartedRequest(s.domainName, startEvent, transferTask, mutableState)).Once().Return(nil)
+	s.mockVisibilityMgr.On(
+		"RecordWorkflowExecutionStarted",
+		mock.Anything,
+		createRecordWorkflowExecutionStartedRequest(
+			s.domainName, startEvent, transferTask, mutableState, true),
+	).Once().Return(nil)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
 	s.Nil(err)
@@ -1411,7 +1416,12 @@ func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttribu
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	startEvent, err := mutableState.GetStartEvent(context.Background())
 	s.NoError(err)
-	s.mockVisibilityMgr.On("UpsertWorkflowExecution", mock.Anything, createUpsertWorkflowSearchAttributesRequest(s.domainName, startEvent, transferTask, mutableState)).Once().Return(nil)
+	s.mockVisibilityMgr.On(
+		"UpsertWorkflowExecution",
+		mock.Anything,
+		createUpsertWorkflowSearchAttributesRequest(
+			s.domainName, startEvent, transferTask, mutableState, true),
+	).Once().Return(nil)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
 	s.Nil(err)
@@ -1493,6 +1503,7 @@ func createRecordWorkflowExecutionStartedRequest(
 	startEvent *types.HistoryEvent,
 	transferTask Task,
 	mutableState execution.MutableState,
+	isGlobal bool,
 ) *persistence.RecordWorkflowExecutionStartedRequest {
 	taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
 	workflowExecution := types.WorkflowExecution{
@@ -1516,6 +1527,7 @@ func createRecordWorkflowExecutionStartedRequest(
 		TaskID:             taskInfo.TaskID,
 		TaskList:           taskInfo.TaskList,
 		IsCron:             len(executionInfo.CronSchedule) > 0,
+		IsGlobal:           isGlobal,
 	}
 }
 
@@ -1626,6 +1638,7 @@ func createUpsertWorkflowSearchAttributesRequest(
 	startEvent *types.HistoryEvent,
 	transferTask Task,
 	mutableState execution.MutableState,
+	isGlobal bool,
 ) *persistence.UpsertWorkflowExecutionRequest {
 
 	taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
@@ -1651,5 +1664,6 @@ func createUpsertWorkflowSearchAttributesRequest(
 		TaskID:             taskInfo.TaskID,
 		TaskList:           taskInfo.TaskList,
 		IsCron:             len(executionInfo.CronSchedule) > 0,
+		IsGlobal:           isGlobal,
 	}
 }
