@@ -16,6 +16,8 @@ unit tests:
 docker-compose -f docker/buildkite/docker-compose-local.yml build unit-test
 ```
 
+NOTE: You would expect TestServerStartup to fail here as we don't have a way to install the schema like we do in pipeline.yml 
+
 integration tests:
 ```bash
 docker-compose -f docker/buildkite/docker-compose-local.yml build integration-test-cassandra

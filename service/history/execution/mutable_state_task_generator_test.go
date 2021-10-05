@@ -294,6 +294,78 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromCrossClusterTask() {
 				InitiatedID:             int64(123),
 			},
 		},
+		{
+			sourceActive: true,
+			crossClusterTask: &persistence.CrossClusterTaskInfo{
+				TaskType:         persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete,
+				TargetDomainID:   constants.TestRemoteTargetDomainID,
+				TargetWorkflowID: constants.TestWorkflowID,
+				TargetRunID:      constants.TestRunID,
+				ScheduleID:       int64(123),
+			},
+			generatedTask: &persistence.CrossClusterRecordChildWorkflowExecutionCompleteTask{
+				TargetCluster:                       cluster.TestAlternativeClusterName,
+				RecordWorkflowExecutionCompleteTask: persistence.RecordWorkflowExecutionCompleteTask{},
+			},
+		},
+		{
+			sourceActive: false,
+			crossClusterTask: &persistence.CrossClusterTaskInfo{
+				TaskType:         persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete,
+				TargetDomainID:   constants.TestRemoteTargetDomainID,
+				TargetWorkflowID: constants.TestWorkflowID,
+				TargetRunID:      constants.TestRunID,
+				ScheduleID:       int64(123),
+			},
+			generatedTask: &persistence.CloseExecutionTask{},
+		},
+		{
+			sourceActive: true,
+			crossClusterTask: &persistence.CrossClusterTaskInfo{
+				TaskType:         persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete,
+				TargetDomainID:   constants.TestTargetDomainID,
+				TargetWorkflowID: constants.TestWorkflowID,
+				TargetRunID:      constants.TestRunID,
+				ScheduleID:       int64(123),
+			},
+			generatedTask: &persistence.CloseExecutionTask{},
+		},
+		{
+			sourceActive: true,
+			crossClusterTask: &persistence.CrossClusterTaskInfo{
+				TaskType:         persistence.CrossClusterTaskTypeApplyParentPolicy,
+				TargetDomainID:   constants.TestRemoteTargetDomainID,
+				TargetWorkflowID: constants.TestWorkflowID,
+				TargetRunID:      constants.TestRunID,
+				ScheduleID:       int64(123),
+			},
+			generatedTask: &persistence.CrossClusterApplyParentClosePolicyTask{
+				TargetCluster:              cluster.TestAlternativeClusterName,
+				ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{},
+			},
+		},
+		{
+			sourceActive: false,
+			crossClusterTask: &persistence.CrossClusterTaskInfo{
+				TaskType:         persistence.CrossClusterTaskTypeApplyParentPolicy,
+				TargetDomainID:   constants.TestRemoteTargetDomainID,
+				TargetWorkflowID: constants.TestWorkflowID,
+				TargetRunID:      constants.TestRunID,
+				ScheduleID:       int64(123),
+			},
+			generatedTask: &persistence.CloseExecutionTask{},
+		},
+		{
+			sourceActive: true,
+			crossClusterTask: &persistence.CrossClusterTaskInfo{
+				TaskType:         persistence.CrossClusterTaskTypeApplyParentPolicy,
+				TargetDomainID:   constants.TestTargetDomainID,
+				TargetWorkflowID: constants.TestWorkflowID,
+				TargetRunID:      constants.TestRunID,
+				ScheduleID:       int64(123),
+			},
+			generatedTask: &persistence.CloseExecutionTask{},
+		},
 	}
 
 	for _, tc := range testCases {

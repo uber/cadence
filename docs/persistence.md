@@ -131,8 +131,10 @@ persistence:
         maxConns: 2                   -- Number of tcp conns to cassandra server (single sub-system on one host) (optional)
 ```
 
-## MySQL
-The default isolation level for MySQL is READ-COMMITTED. For MySQL 5.6 and below only, the isolation level needs to be 
+## MySQL/Postgres
+The default isolation level for MySQL/Postgres is READ-COMMITTED. 
+
+Note that for MySQL 5.6 and below only, the isolation level needs to be 
 specified explicitly in the config via connectAttributes.
  
 ```
@@ -155,6 +157,51 @@ persistence:
           tx_isolation: "READ-COMMITTED"   -- required only for mysql 5.6 and below, optional otherwise
 ```
 
+## Multiple SQL(MySQL/Postgres) databases
+To run Cadence clusters in a much larger scale using SQL database, multiple databases can be used as a sharded SQL database cluster. 
+
+Set `useMultipleDatabases` to `true` and specify all databases' user/password/address using `multipleDatabasesConfig`: 
+```yaml
+persistence:
+  ...
+  datastores:
+    datastore1:
+      sql:
+        pluginName: "mysql"            -- name of the go sql plugin
+        connectProtocol: "tcp"         -- connection protocol, tcp or anything that SQL Data Source Name accepts
+        maxConnLifetime: "1h"          -- max connection lifetime before it is discarded (optional)
+        useMultipleDatabases: true     -- this enabled the multiple SQL databases as sharded SQL cluster
+        nShards: 4                     -- the number of shards -- in this mode, it needs to be greater than one and equalt to the length of multipleDatabasesConfig
+        multipleDatabasesConfig:       -- each entry will represent a shard of the cluster 
+        - user: "root"
+          password: "cadence"
+          connectAddr: "127.0.0.1:3306"
+          databaseName: "cadence0"
+        - user: "root"
+          password: "cadence"
+          connectAddr: "127.0.0.1:3306"
+          databaseName: "cadence1"
+        - user: "root"
+          password: "cadence"
+          connectAddr: "127.0.0.1:3306"
+          databaseName: "cadence2"
+        - user: "root"
+          password: "cadence"
+          connectAddr: "127.0.0.1:3306"
+          databaseName: "cadence3"    
+```
+
+
+How Cadence implement the sharding:
+
+* Workflow execution and historyShard records are sharded based on historyShardID(which is calculated  `historyShardID =hash(workflowID) % numHistoryShards` ), `dbShardID = historyShardID % numDBShards`
+* Workflow History is sharded based on history treeID(a treeID usually is the runID unless it has reset. In case of reset, it will share the same tree as the base run). In that case, `dbShardID = hash(treeID) % numDBShards`
+* Workflow tasks(for workflow/activity workers) is sharded based on domainID + tasklistName.  `dbShardID = hash(domainID + tasklistName ) % numDBShards`
+* Workflow visibility is  sharded based on domainID like we said above.  `dbShardID = hash(domainID ) % numDBShards` 
+  * However, due to potential scalability issue, Cadence requires advanced visibility to run with multiple SQL database mode.  
+* Internal domain records is using single shard, it’s only writing when register/update domain, and read is protected by domainCache  `dbShardID = DefaultShardID(0)`
+* Internal queue records is using single shard. Similarly, the read/write is low enough that it’s okay to not sharded. `dbShardID = DefaultShardID(0)`
+
 # Adding support for new database
 
 ## For SQL Database
@@ -168,6 +215,7 @@ can be found [here](https://github.com/uber/cadence/blob/master/schema/mysql/v57
 
 Any database that supports this interface can be plugged in with cadence server. 
 We have implemented Postgres within the repo, and also here is [**an example**](https://github.com/longquanzheng/cadence-extensions/tree/master/cadence-sqlite) to implement any database externally. 
+
 
 ## For other Non-SQL Database
 For databases that don't support SQL operations like explicit transaction(with pessimistic locking),

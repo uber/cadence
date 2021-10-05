@@ -92,7 +92,10 @@ func (t *crossClusterSourceTaskExecutor) Execute(
 		err = t.executeCancelExecutionTask(ctx, sourceTask)
 	case persistence.CrossClusterTaskTypeSignalExecution:
 		err = t.executeSignalExecutionTask(ctx, sourceTask)
-	// TODO: implement the execution logic for recordChildCompleted and applyParentClosePolicy task
+	case persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+		err = t.executeRecordChildWorkflowExecutionCompleteTask(ctx, sourceTask)
+	case persistence.CrossClusterTaskTypeApplyParentPolicy:
+		err = t.executeApplyParentClosePolicyTask(ctx, sourceTask)
 	default:
 		err = errUnknownCrossClusterTask
 	}
@@ -260,6 +263,96 @@ func (t *crossClusterSourceTaskExecutor) executeCancelExecutionTask(
 			now,
 		)
 
+	default:
+		return errUnknownTaskProcessingState
+	}
+}
+
+func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
+	ctx context.Context,
+	task *crossClusterSourceTask,
+) (retError error) {
+	taskInfo := task.GetInfo().(*persistence.CrossClusterTaskInfo)
+	wfContext, mutableState, release, err := loadWorkflowForCrossClusterTask(ctx, t.executionCache, taskInfo, t.metricsClient, t.logger)
+	if err != nil || mutableState == nil {
+		return err
+	}
+	defer func() { release(retError) }()
+
+	verified, err := task.VerifyLastWriteVersion(mutableState, taskInfo)
+	if err != nil || !verified {
+		return err
+	}
+
+	if task.ProcessingState() == processingStateInvalidated {
+		return t.generateNewTask(ctx, wfContext, mutableState, task)
+	}
+
+	// handle common errors
+	failedCause := task.response.FailedCause
+	if failedCause != nil {
+		switch *failedCause {
+		case types.CrossClusterTaskFailedCauseDomainNotActive:
+			return t.generateNewTask(ctx, wfContext, mutableState, task)
+		case types.CrossClusterTaskFailedCauseWorkflowNotExists,
+			types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
+			// Do nothing, these errors are expected if the target workflow is already closed
+		default:
+			return errUnexpectedErrorFromTarget
+		}
+	}
+
+	switch processingState(task.response.TaskState) {
+	case processingStateInitialized:
+		// there's nothing we need to do when record child completion is complete
+		// ack the task
+		return nil
+	// processingStateResponseRecorded state is invalid for this operation
+	default:
+		return errUnknownTaskProcessingState
+	}
+}
+
+func (t *crossClusterSourceTaskExecutor) executeRecordChildWorkflowExecutionCompleteTask(
+	ctx context.Context,
+	task *crossClusterSourceTask,
+) (retError error) {
+	taskInfo := task.GetInfo().(*persistence.CrossClusterTaskInfo)
+	wfContext, mutableState, release, err := loadWorkflowForCrossClusterTask(ctx, t.executionCache, taskInfo, t.metricsClient, t.logger)
+	if err != nil || mutableState == nil {
+		return err
+	}
+	defer func() { release(retError) }()
+
+	verified, err := task.VerifyLastWriteVersion(mutableState, taskInfo)
+	if err != nil || !verified {
+		return err
+	}
+
+	if task.ProcessingState() == processingStateInvalidated {
+		return t.generateNewTask(ctx, wfContext, mutableState, task)
+	}
+
+	// handle common errors
+	failedCause := task.response.FailedCause
+	if failedCause != nil {
+		switch *failedCause {
+		case types.CrossClusterTaskFailedCauseDomainNotActive:
+			return t.generateNewTask(ctx, wfContext, mutableState, task)
+		case types.CrossClusterTaskFailedCauseWorkflowNotExists,
+			types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
+			// Do nothing, these errors are expected if the target workflow is already closed
+		default:
+			return errUnexpectedErrorFromTarget
+		}
+	}
+
+	switch processingState(task.response.TaskState) {
+	case processingStateInitialized:
+		// there's nothing we need to do when record child completion is complete
+		// ack the task
+		return nil
+	// processingStateResponseRecorded state is invalid for this operation
 	default:
 		return errUnknownTaskProcessingState
 	}
