@@ -48,7 +48,7 @@ func newPublicClientOutbound(config *config.Config) (publicClientOutbound, error
 		return publicClientOutbound{}, fmt.Errorf("need to provide an endpoint config for PublicClient")
 	}
 
-	var authMiddleware *authOutboundMiddleware
+	var authMiddleware middleware.UnaryOutbound
 	if config.Authorization.OAuthAuthorizer.Enable {
 		clusterName := config.ClusterGroupMetadata.CurrentClusterName
 		clusterInfo := config.ClusterGroupMetadata.ClusterGroup[clusterName]
@@ -64,7 +64,7 @@ func newPublicClientOutbound(config *config.Config) (publicClientOutbound, error
 
 type publicClientOutbound struct {
 	address        string
-	authMiddleware *authOutboundMiddleware
+	authMiddleware middleware.UnaryOutbound
 }
 
 func (b publicClientOutbound) Build(_ *grpc.Transport, tchannel *tchannel.Transport) (yarpc.Outbounds, error) {
