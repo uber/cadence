@@ -53,7 +53,7 @@ func TestCombineOutbounds(t *testing.T) {
 		fakeOutboundBuilder{outbounds: yarpc.Outbounds{"A": {}}},
 	)
 	_, err = combined.Build(grpc, tchannel)
-	assert.EqualError(t, err, "outbound A already configured")
+	assert.EqualError(t, err, "outbound \"A\" already configured")
 
 	combined = CombineOutbounds(
 		fakeOutboundBuilder{err: errors.New("err-A")},

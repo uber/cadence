@@ -65,7 +65,7 @@ func (b multiOutbounds) Build(grpc *grpc.Transport, tchannel *tchannel.Transport
 
 		for name, outbound := range builderOutbounds {
 			if _, exists := outbounds[name]; exists {
-				errs = multierr.Append(errs, fmt.Errorf("outbound %s already configured", name))
+				errs = multierr.Append(errs, fmt.Errorf("outbound %q already configured", name))
 				break
 			}
 			outbounds[name] = outbound
