@@ -172,6 +172,7 @@ func (h *handlerImpl) Start() {
 			ErrorRetryInterval:         h.config.CrossClusterFetcherErrorBackoffInterval,
 			TimerJitterCoefficient:     h.config.CrossClusterFetcherJitterCoefficient,
 		},
+		h.GetMetricsClient(),
 		h.GetLogger(),
 	)
 	h.crossClusterTaskFetchers.Start()
