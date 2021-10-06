@@ -180,10 +180,12 @@ var (
 )
 
 const (
-	conditionalRetryCount       = 5
+	conditionalRetryCount = 5
+	// transfer/cross cluster diff/lag is in terms of taskID, which is calculated based on shard rangeID
+	// on shard movement, taskID will increase by around 1 million
 	logWarnTransferLevelDiff    = 3000000 // 3 million
+	logWarnCrossClusterLevelLag = 3000000 // 3 million
 	logWarnTimerLevelDiff       = time.Duration(30 * time.Minute)
-	logWarnCrossClusterLevelLag = 3000000
 	historySizeLogThreshold     = 10 * 1024 * 1024
 	minContextTimeout           = 1 * time.Second
 )
