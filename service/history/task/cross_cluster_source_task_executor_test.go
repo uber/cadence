@@ -121,7 +121,6 @@ func (s *crossClusterSourceTaskExecutorSuite) SetupTest() {
 		s.mockShard,
 		s.executionCache,
 		s.mockShard.GetLogger(),
-		config,
 	)
 }
 
