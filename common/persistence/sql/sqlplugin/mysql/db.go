@@ -37,7 +37,7 @@ type (
 	db struct {
 		converter   DataConverter
 		driver      sqldriver.Driver
-		originalDB  *sqlx.DB
+		originalDBs []*sqlx.DB
 		numDBShards int
 	}
 )
@@ -99,15 +99,20 @@ func (mdb *db) IsThrottlingError(err error) bool {
 // newDB returns an instance of DB, which is a logical
 // connection to the underlying mysql database
 // dbShardID is needed when tx is not nil
-func newDB(xdb *sqlx.DB, tx *sqlx.Tx, dbShardID int, numDBShards int) *db {
-	driver := sqldriver.NewSingletonSQLDriver(xdb, tx, dbShardID)
+func newDB(xdbs []*sqlx.DB, tx *sqlx.Tx, dbShardID int, numDBShards int) (*db, error) {
+	driver, err := sqldriver.NewDriver(xdbs, tx, dbShardID)
+	if err != nil {
+		return nil, err
+	}
+
 	db := &db{
 		converter:   &converter{},
+		originalDBs: xdbs, // this is kept because newDB will be called again when starting a transaction
 		driver:      driver,
-		originalDB:  xdb, // this is kept because newDB will be called again when starting a transaction
 		numDBShards: numDBShards,
 	}
-	return db
+
+	return db, nil
 }
 
 // BeginTx starts a new transaction and returns a reference to the Tx object
@@ -116,7 +121,7 @@ func (mdb *db) BeginTx(dbShardID int, ctx context.Context) (sqlplugin.Tx, error)
 	if err != nil {
 		return nil, err
 	}
-	return newDB(mdb.originalDB, xtx, dbShardID, mdb.numDBShards), nil
+	return newDB(mdb.originalDBs, xtx, dbShardID, mdb.numDBShards)
 }
 
 // Commit commits a previously started transaction

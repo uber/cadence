@@ -77,6 +77,7 @@ Also use `docker-compose -f ./docker/dev/cassandra.yml down` to stop and clean u
 * Alternatively, use `./docker/dev/mysql.yml` for MySQL dependency
 * Alternatively, use `./docker/dev/postgres.yml` for PostgreSQL dependency 
 * Alternatively, use `./docker/dev/cassandra-esv7-kafka.yml` for Cassandra, ElasticSearch(v7) and Kafka/ZooKeeper dependencies
+* Alternatively, use `./docker/dev/mysql-esv7-kafka.yml` for MySQL, ElasticSearch(v7) and Kafka/ZooKeeper dependencies
 * Alternatively, use `./docker/dev/cassandra-opensearch-kafka.yml` for Cassandra, OpenSearch(compatible with ElasticSearch v7) and Kafka/ZooKeeper dependencies
 
 ### 3. Schema installation 
@@ -87,6 +88,9 @@ Based on the above dependency setup, you also need to install the schemas.
 * If you use `cassandra-opensearch-kafka.yml` then run `make install-schema && make install-schema-opensearch` to install Casandra & ElasticSearch schemas 
 * If you use `mysql.yml` then run `install-schema-mysql` to install MySQL schemas
 * If you use `postgres.yml` then run `install-schema-postgres` to install Postgres schemas
+* `mysql-esv7-kafka.yml` can be used for single MySQL + ElasticSearch or multiple MySQL + ElasticSearch mode
+  * for single MySQL: run `install-schema-mysql && make install-schema-es-v7`
+  * for multiple MySQL: run `make install-schema-multiple-mysql` which will install schemas for 4 mysql databases and ElasticSearch 
 
 :warning: Note: 
 >If you use `cassandra-esv7-kafka.yml` and start server before `make install-schema-es-v7`, ElasticSearch may create a wrong index on demand. 
@@ -98,22 +102,61 @@ curl -X DELETE "http://127.0.0.1:9200/cadence-visibility-dev"
 ### 4. Run  
 Once you have done all above, try running the local binaries:
 
-* If you use `cassandra.yml` for above steps:
-Then you will be able to run a basic local Cadence server for development:
-```bash
-./cadence-server start
-```
-  * If you use `mysql.yml` then run `./cadence-server --zone mysql start`
-  * If you use `postgres.yml` then run `./cadence-server --zone postgres start`   
-  * If you use `cassandra-esv7-kafka.yml` then run `./cadence-server --zone es_v7 start`
-  * If you use `cassandra-opensearch-kafka.yml` then run `./cadence-server --zone es_opensearch start`
-  
+
+Then you will be able to run a basic local Cadence server for development. 
+
+  * If you use `cassandra.yml`, then run `./cadence-server start`, which will load `config/development.yaml` as config  
+  * If you use `mysql.yml` then run `./cadence-server --zone mysql start`, which will load `config/development.yaml` + `config/development_mysql.yaml` as config
+  * If you use `postgres.yml` then run `./cadence-server --zone postgres start` , which will load `config/development.yaml` + `config/development_postgres.yaml` as config  
+  * If you use `cassandra-esv7-kafka.yml` then run `./cadence-server --zone es_v7 start`, which will load `config/development.yaml` + `config/development_es_v7.yaml` as config
+  * If you use `cassandra-opensearch-kafka.yml` then run `./cadence-server --zone es_opensearch start` , which will load `config/development.yaml` + `config/development_es_opensearch.yaml` as config
+  * If you use `mysql-esv7-kafka.yaml` 
+    * To run with multiple MySQL : `./cadence-server --zone multiple_mysql start`, which will load `config/development.yaml` + `config/development_multiple_mysql.yaml` as config
+
 Then register a domain:
 ```
 ./cadence --do samples-domain domain register
 ```
 
-Then run a helloworld from [Go Client Sample](https://github.com/uber-common/cadence-samples/) or [Java Client Sample](https://github.com/uber/cadence-java-samples) 
+Then run a helloworld from [Go Client Sample](https://github.com/uber-common/cadence-samples/) or [Java Client Sample](https://github.com/uber/cadence-java-samples)
+
+```
+make bins
+```
+will build all the samples. 
+
+Then 
+```
+./bin/helloworld -m worker & 
+``` 
+will start a worker for helloworld workflow.
+You will see like:
+```
+$./bin/helloworld -m worker &
+[1] 16520
+2021-09-24T21:07:03.242-0700	INFO	common/sample_helper.go:109	Logger created.
+2021-09-24T21:07:03.243-0700	DEBUG	common/factory.go:151	Creating RPC dispatcher outbound	{"ServiceName": "cadence-frontend", "HostPort": "127.0.0.1:7933"}
+2021-09-24T21:07:03.250-0700	INFO	common/sample_helper.go:161	Domain successfully registered.	{"Domain": "samples-domain"}
+2021-09-24T21:07:03.291-0700	INFO	internal/internal_worker.go:833	Started Workflow Worker	{"Domain": "samples-domain", "TaskList": "helloWorldGroup", "WorkerID": "16520@IT-USA-25920@helloWorldGroup"}
+2021-09-24T21:07:03.300-0700	INFO	internal/internal_worker.go:858	Started Activity Worker	{"Domain": "samples-domain", "TaskList": "helloWorldGroup", "WorkerID": "16520@IT-USA-25920@helloWorldGroup"}
+``` 
+Then 
+```
+./bin/helloworld
+```
+to start a helloworld workflow.
+You will see the result like :
+```
+$./bin/helloworld
+2021-09-24T21:07:06.220-0700	INFO	common/sample_helper.go:109	Logger created.
+2021-09-24T21:07:06.220-0700	DEBUG	common/factory.go:151	Creating RPC dispatcher outbound	{"ServiceName": "cadence-frontend", "HostPort": "127.0.0.1:7933"}
+2021-09-24T21:07:06.226-0700	INFO	common/sample_helper.go:161	Domain successfully registered.	{"Domain": "samples-domain"}
+2021-09-24T21:07:06.272-0700	INFO	common/sample_helper.go:195	Started Workflow	{"WorkflowID": "helloworld_75cf142b-c0de-407e-9115-1d33e9b7551a", "RunID": "98a229b8-8fdd-4d1f-bf41-df00fb06f441"}
+2021-09-24T21:07:06.347-0700	INFO	helloworld/helloworld_workflow.go:31	helloworld workflow started	{"Domain": "samples-domain", "TaskList": "helloWorldGroup", "WorkerID": "16520@IT-USA-25920@helloWorldGroup", "WorkflowType": "helloWorldWorkflow", "WorkflowID": "helloworld_75cf142b-c0de-407e-9115-1d33e9b7551a", "RunID": "98a229b8-8fdd-4d1f-bf41-df00fb06f441"}
+2021-09-24T21:07:06.347-0700	DEBUG	internal/internal_event_handlers.go:489	ExecuteActivity	{"Domain": "samples-domain", "TaskList": "helloWorldGroup", "WorkerID": "16520@IT-USA-25920@helloWorldGroup", "WorkflowType": "helloWorldWorkflow", "WorkflowID": "helloworld_75cf142b-c0de-407e-9115-1d33e9b7551a", "RunID": "98a229b8-8fdd-4d1f-bf41-df00fb06f441", "ActivityID": "0", "ActivityType": "main.helloWorldActivity"}
+2021-09-24T21:07:06.437-0700	INFO	helloworld/helloworld_workflow.go:62	helloworld activity started	{"Domain": "samples-domain", "TaskList": "helloWorldGroup", "WorkerID": "16520@IT-USA-25920@helloWorldGroup", "ActivityID": "0", "ActivityType": "main.helloWorldActivity", "WorkflowType": "helloWorldWorkflow", "WorkflowID": "helloworld_75cf142b-c0de-407e-9115-1d33e9b7551a", "RunID": "98a229b8-8fdd-4d1f-bf41-df00fb06f441"}
+2021-09-24T21:07:06.513-0700	INFO	helloworld/helloworld_workflow.go:55	Workflow completed.	{"Domain": "samples-domain", "TaskList": "helloWorldGroup", "WorkerID": "16520@IT-USA-25920@helloWorldGroup", "WorkflowType": "helloWorldWorkflow", "WorkflowID": "helloworld_75cf142b-c0de-407e-9115-1d33e9b7551a", "RunID": "98a229b8-8fdd-4d1f-bf41-df00fb06f441", "Result": "Hello Cadence!"}
+```
 
 See [instructions](service/worker/README.md) for setting up replication(XDC). 
 

@@ -460,9 +460,11 @@ COVER_PKGS = client common host service tools
 # pkg -> pkg/... -> github.com/uber/cadence/pkg/... -> join with commas
 GOCOVERPKG_ARG := -coverpkg="$(subst $(SPACE),$(COMMA),$(addprefix $(PROJECT_ROOT)/,$(addsuffix /...,$(COVER_PKGS))))"
 
-test: bins ## Build and run all tests
+test: bins ## Build and run all tests. This target is for local development. The pipeline is using cover_profile target
 	@rm -f test
 	@rm -f test.log
+	@echo Running special test cases without race detector:
+	@go test -v ./cmd/server/cadence/
 	@for dir in $(PKG_TEST_DIRS); do \
 		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
@@ -487,6 +489,8 @@ cover_profile: bins
 	@mkdir -p $(COVER_ROOT)
 	@echo "mode: atomic" > $(UNIT_COVER_FILE)
 
+	@echo Running special test cases without race detector:
+	@go test -v ./cmd/server/cadence/
 	@echo Running package tests:
 	@for dir in $(PKG_TEST_DIRS); do \
 		mkdir -p $(BUILD)/"$$dir"; \
@@ -531,12 +535,12 @@ cover_ci: $(COVER_ROOT)/cover.out $(BIN)/goveralls
 	$(BIN)/goveralls -coverprofile=$(COVER_ROOT)/cover.out -service=buildkite || echo Coveralls failed;
 
 install-schema: cadence-cassandra-tool
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence --rf 1
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence setup-schema -v 0.0
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence update-schema -d ./schema/cassandra/cadence/versioned
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility --rf 1
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility setup-schema -v 0.0
-	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility update-schema -d ./schema/cassandra/visibility/versioned
+	./cadence-cassandra-tool create -k cadence --rf 1
+	./cadence-cassandra-tool -k cadence setup-schema -v 0.0
+	./cadence-cassandra-tool -k cadence update-schema -d ./schema/cassandra/cadence/versioned
+	./cadence-cassandra-tool create -k cadence_visibility --rf 1
+	./cadence-cassandra-tool -k cadence_visibility setup-schema -v 0.0
+	./cadence-cassandra-tool -k cadence_visibility update-schema -d ./schema/cassandra/visibility/versioned
 
 install-schema-mysql: cadence-sql-tool
 	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence create --db cadence
@@ -545,6 +549,20 @@ install-schema-mysql: cadence-sql-tool
 	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence create --db cadence_visibility
 	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence_visibility setup-schema -v 0.0
 	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence_visibility update-schema -d ./schema/mysql/v57/visibility/versioned
+
+install-schema-multiple-mysql: cadence-sql-tool install-schema-es-v7
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence create --db cadence0
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence0 setup-schema -v 0.0
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence0 update-schema -d ./schema/mysql/v57/cadence/versioned
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence create --db cadence1
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence1 setup-schema -v 0.0
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence1 update-schema -d ./schema/mysql/v57/cadence/versioned
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence create --db cadence2
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence2 setup-schema -v 0.0
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence2 update-schema -d ./schema/mysql/v57/cadence/versioned
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence create --db cadence3
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence3 setup-schema -v 0.0
+	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence3 update-schema -d ./schema/mysql/v57/cadence/versioned
 
 install-schema-postgres: cadence-sql-tool
 	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres create --db cadence

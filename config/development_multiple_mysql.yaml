@@ -1,0 +1,61 @@
+persistence:
+  defaultStore: mysql-default
+  visibilityStore: "" # useMultipleDatabases must use advancedVisibilityStore only. Due to deep merging with development.yaml, this need to override to empty
+  advancedVisibilityStore: es-visibility
+  datastores:
+    mysql-default:
+      sql:
+        pluginName: "mysql"
+        connectProtocol: "tcp"
+        maxConns: 20
+        maxIdleConns: 20
+        maxConnLifetime: "1h"
+        useMultipleDatabases: true
+        nShards: 4
+        multipleDatabasesConfig:
+        - user: "root"
+          password: "cadence"
+          connectAddr: "127.0.0.1:3306"
+          databaseName: "cadence0"
+        - user: "root"
+          password: "cadence"
+          connectAddr: "127.0.0.1:3306"
+          databaseName: "cadence1"
+        - user: "root"
+          password: "cadence"
+          connectAddr: "127.0.0.1:3306"
+          databaseName: "cadence2"
+        - user: "root"
+          password: "cadence"
+          connectAddr: "127.0.0.1:3306"
+          databaseName: "cadence3"
+    es-visibility:
+      elasticsearch:
+        version: "v7"
+        url:
+          scheme: "http"
+          host: "127.0.0.1:9200"
+        indices:
+          visibility: cadence-visibility-dev
+
+kafka:
+  tls:
+    enabled: false
+  clusters:
+    test:
+      brokers:
+        - 127.0.0.1:9092
+  topics:
+    cadence-visibility-dev:
+      cluster: test
+    cadence-visibility-dev-dlq:
+      cluster: test
+  applications:
+    visibility:
+      topic: cadence-visibility-dev
+      dlq-topic: cadence-visibility-dev-dlq
+
+dynamicconfig:
+  client: filebased
+  filebased:
+    filepath: "config/dynamicconfig/development_es.yaml"
