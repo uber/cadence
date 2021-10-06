@@ -27,7 +27,6 @@ import (
 
 	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
 	matchingv1 "github.com/uber/cadence/.gen/proto/matching/v1"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types/mapper/proto"
 )
 
@@ -45,60 +44,56 @@ func (g grpcHandler) register(dispatcher *yarpc.Dispatcher) {
 }
 
 func (g grpcHandler) Health(ctx context.Context, _ *apiv1.HealthRequest) (*apiv1.HealthResponse, error) {
-	response, err := g.h.Health(withGRPCTag(ctx))
+	response, err := g.h.Health(ctx)
 	return proto.FromHealthResponse(response), proto.FromError(err)
 }
 
 func (g grpcHandler) AddActivityTask(ctx context.Context, request *matchingv1.AddActivityTaskRequest) (*matchingv1.AddActivityTaskResponse, error) {
-	err := g.h.AddActivityTask(withGRPCTag(ctx), proto.ToMatchingAddActivityTaskRequest(request))
+	err := g.h.AddActivityTask(ctx, proto.ToMatchingAddActivityTaskRequest(request))
 	return &matchingv1.AddActivityTaskResponse{}, proto.FromError(err)
 }
 
 func (g grpcHandler) AddDecisionTask(ctx context.Context, request *matchingv1.AddDecisionTaskRequest) (*matchingv1.AddDecisionTaskResponse, error) {
-	err := g.h.AddDecisionTask(withGRPCTag(ctx), proto.ToMatchingAddDecisionTaskRequest(request))
+	err := g.h.AddDecisionTask(ctx, proto.ToMatchingAddDecisionTaskRequest(request))
 	return &matchingv1.AddDecisionTaskResponse{}, proto.FromError(err)
 }
 
 func (g grpcHandler) CancelOutstandingPoll(ctx context.Context, request *matchingv1.CancelOutstandingPollRequest) (*matchingv1.CancelOutstandingPollResponse, error) {
-	err := g.h.CancelOutstandingPoll(withGRPCTag(ctx), proto.ToMatchingCancelOutstandingPollRequest(request))
+	err := g.h.CancelOutstandingPoll(ctx, proto.ToMatchingCancelOutstandingPollRequest(request))
 	return &matchingv1.CancelOutstandingPollResponse{}, proto.FromError(err)
 }
 
 func (g grpcHandler) DescribeTaskList(ctx context.Context, request *matchingv1.DescribeTaskListRequest) (*matchingv1.DescribeTaskListResponse, error) {
-	response, err := g.h.DescribeTaskList(withGRPCTag(ctx), proto.ToMatchingDescribeTaskListRequest(request))
+	response, err := g.h.DescribeTaskList(ctx, proto.ToMatchingDescribeTaskListRequest(request))
 	return proto.FromMatchingDescribeTaskListResponse(response), proto.FromError(err)
 }
 
 func (g grpcHandler) ListTaskListPartitions(ctx context.Context, request *matchingv1.ListTaskListPartitionsRequest) (*matchingv1.ListTaskListPartitionsResponse, error) {
-	response, err := g.h.ListTaskListPartitions(withGRPCTag(ctx), proto.ToMatchingListTaskListPartitionsRequest(request))
+	response, err := g.h.ListTaskListPartitions(ctx, proto.ToMatchingListTaskListPartitionsRequest(request))
 	return proto.FromMatchingListTaskListPartitionsResponse(response), proto.FromError(err)
 }
 
 func (g grpcHandler) GetTaskListsByDomain(ctx context.Context, request *matchingv1.GetTaskListsByDomainRequest) (*matchingv1.GetTaskListsByDomainResponse, error) {
-	response, err := g.h.GetTaskListsByDomain(withGRPCTag(ctx), proto.ToMatchingGetTaskListsByDomainRequest(request))
+	response, err := g.h.GetTaskListsByDomain(ctx, proto.ToMatchingGetTaskListsByDomainRequest(request))
 	return proto.FromMatchingGetTaskListsByDomainResponse(response), proto.FromError(err)
 }
 
 func (g grpcHandler) PollForActivityTask(ctx context.Context, request *matchingv1.PollForActivityTaskRequest) (*matchingv1.PollForActivityTaskResponse, error) {
-	response, err := g.h.PollForActivityTask(withGRPCTag(ctx), proto.ToMatchingPollForActivityTaskRequest(request))
+	response, err := g.h.PollForActivityTask(ctx, proto.ToMatchingPollForActivityTaskRequest(request))
 	return proto.FromMatchingPollForActivityTaskResponse(response), proto.FromError(err)
 }
 
 func (g grpcHandler) PollForDecisionTask(ctx context.Context, request *matchingv1.PollForDecisionTaskRequest) (*matchingv1.PollForDecisionTaskResponse, error) {
-	response, err := g.h.PollForDecisionTask(withGRPCTag(ctx), proto.ToMatchingPollForDecisionTaskRequest(request))
+	response, err := g.h.PollForDecisionTask(ctx, proto.ToMatchingPollForDecisionTaskRequest(request))
 	return proto.FromMatchingPollForDecisionTaskResponse(response), proto.FromError(err)
 }
 
 func (g grpcHandler) QueryWorkflow(ctx context.Context, request *matchingv1.QueryWorkflowRequest) (*matchingv1.QueryWorkflowResponse, error) {
-	response, err := g.h.QueryWorkflow(withGRPCTag(ctx), proto.ToMatchingQueryWorkflowRequest(request))
+	response, err := g.h.QueryWorkflow(ctx, proto.ToMatchingQueryWorkflowRequest(request))
 	return proto.FromMatchingQueryWorkflowResponse(response), proto.FromError(err)
 }
 
 func (g grpcHandler) RespondQueryTaskCompleted(ctx context.Context, request *matchingv1.RespondQueryTaskCompletedRequest) (*matchingv1.RespondQueryTaskCompletedResponse, error) {
-	err := g.h.RespondQueryTaskCompleted(withGRPCTag(ctx), proto.ToMatchingRespondQueryTaskCompletedRequest(request))
+	err := g.h.RespondQueryTaskCompleted(ctx, proto.ToMatchingRespondQueryTaskCompletedRequest(request))
 	return &matchingv1.RespondQueryTaskCompletedResponse{}, proto.FromError(err)
-}
-
-func withGRPCTag(ctx context.Context) context.Context {
-	return metrics.TagContext(ctx, metrics.GPRCTransportTag())
 }

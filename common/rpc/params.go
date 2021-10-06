@@ -67,6 +67,9 @@ func NewParams(serviceName string, config *config.Config) (Params, error) {
 		GRPCMaxMsgSize:    serviceConfig.RPC.GRPCMaxMsgSize,
 		HostAddressMapper: NewGRPCPorts(config),
 		OutboundsBuilder:  publicClientOutbound,
+		InboundMiddleware: yarpc.InboundMiddleware{
+			Unary: &inboundMetricsMiddleware{},
+		},
 	}, nil
 }
 
