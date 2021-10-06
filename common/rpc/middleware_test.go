@@ -28,6 +28,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/metrics"
 )
 
 func TestAuthOubboundMiddleware(t *testing.T) {
@@ -54,6 +55,26 @@ func TestResponseInfoMiddleware(t *testing.T) {
 	_, err := m.Call(ctx, &transport.Request{}, &fakeOutbound{response: &transport.Response{BodySize: 12345}})
 	assert.NoError(t, err)
 	assert.Equal(t, 12345, responseInfo.Size)
+}
+
+func TestInboundMetricsMiddleware(t *testing.T) {
+	m := inboundMetricsMiddleware{}
+	h := &fakeHandler{}
+	err := m.Handle(context.Background(), &transport.Request{Transport: "grpc", Caller: "x-caller"}, nil, h)
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, metrics.GetContextTags(h.ctx), []metrics.Tag{
+		metrics.TransportTag("grpc"),
+		metrics.CallerTag("x-caller"),
+	})
+}
+
+type fakeHandler struct {
+	ctx context.Context
+}
+
+func (h *fakeHandler) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
+	h.ctx = ctx
+	return nil
 }
 
 type fakeOutbound struct {

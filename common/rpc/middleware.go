@@ -24,6 +24,7 @@ import (
 	"context"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/metrics"
 
 	"go.uber.org/cadence/worker"
 	"go.uber.org/yarpc/api/transport"
@@ -75,4 +76,14 @@ func (m *responseInfoMiddleware) Call(ctx context.Context, request *transport.Re
 	}
 
 	return response, err
+}
+
+type inboundMetricsMiddleware struct{}
+
+func (m *inboundMetricsMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	ctx = metrics.TagContext(ctx,
+		metrics.CallerTag(req.Caller),
+		metrics.TransportTag(req.Transport),
+	)
+	return h.Handle(ctx, req, resw)
 }
