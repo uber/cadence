@@ -159,6 +159,7 @@ func NewCrossClusterSourceTask(
 			processingStateInitialized,
 			taskExecutor,
 			taskProcessor,
+			getCrossClusterTaskMetricsScope(taskInfo.GetTaskType(), true),
 			logger,
 			shard.GetTimeSource(),
 			redispatchFn,
@@ -211,8 +212,14 @@ func NewCrossClusterTargetTask(
 		info.TargetRunID = taskRequest.SignalExecutionAttributes.TargetRunID
 		info.ScheduleID = taskRequest.SignalExecutionAttributes.InitiatedEventID
 		info.TargetChildWorkflowOnly = taskRequest.SignalExecutionAttributes.ChildWorkflowOnly
-	// TODO: implement recordChildWorkflowExeuctionComplete
-	// TODO: implement applyParentClosePolicyComplete
+	case types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+		info.TaskType = persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete
+		info.TargetDomainID = taskRequest.RecordChildWorkflowExecutionCompleteAttributes.TargetDomainID
+		info.TargetWorkflowID = taskRequest.RecordChildWorkflowExecutionCompleteAttributes.TargetWorkflowID
+		info.TargetRunID = taskRequest.RecordChildWorkflowExecutionCompleteAttributes.TargetRunID
+		info.ScheduleID = taskRequest.RecordChildWorkflowExecutionCompleteAttributes.InitiatedEventID
+	case types.CrossClusterTaskTypeApplyParentPolicy:
+		info.TaskType = persistence.CrossClusterTaskTypeApplyParentPolicy
 	default:
 		panic(fmt.Sprintf("unknown cross cluster task type: %v", taskRequest.TaskInfo.GetTaskType()))
 	}
@@ -225,6 +232,7 @@ func NewCrossClusterTargetTask(
 			processingState(taskRequest.TaskInfo.TaskState),
 			taskExecutor,
 			taskProcessor,
+			getCrossClusterTaskMetricsScope(info.GetTaskType(), false),
 			logger,
 			shard.GetTimeSource(),
 			redispatchFn,
@@ -241,6 +249,7 @@ func newCrossClusterTaskBase(
 	processingState processingState,
 	taskExecutor Executor,
 	taskProcessor Processor,
+	metricScopeIdx int,
 	logger log.Logger,
 	timeSource clock.TimeSource,
 	redispatchFn func(task Task),
@@ -266,7 +275,8 @@ func newCrossClusterTaskBase(
 		eventLogger:     eventLogger,
 		scope: getOrCreateDomainTaggedScope(
 			shard,
-			GetCrossClusterTaskMetricsScope(taskInfo.GetTaskType()), taskInfo.GetDomainID(),
+			metricScopeIdx,
+			taskInfo.GetDomainID(),
 			logger,
 		),
 		taskExecutor:  taskExecutor,

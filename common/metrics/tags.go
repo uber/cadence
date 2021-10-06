@@ -45,13 +45,11 @@ const (
 	shardScannerFixResult  = "shardscanner_fix_result"
 	kafkaPartition         = "kafkaPartition"
 	transport              = "transport"
+	caller                 = "caller"
 	signalName             = "signalName"
 
 	allValue     = "all"
 	unknownValue = "_unknown_"
-
-	transportThrift = "thrift"
-	transportGRPC   = "grpc"
 )
 
 // Tag is an interface to define metrics tags
@@ -157,14 +155,14 @@ func KafkaPartitionTag(value int32) Tag {
 	return simpleMetric{key: kafkaPartition, value: strconv.Itoa(int(value))}
 }
 
-// ThriftTransportTag returns a new Thrift transport type tag.
-func ThriftTransportTag() Tag {
-	return simpleMetric{key: transport, value: transportThrift}
+// TransportTag returns a new RPC Transport type tag.
+func TransportTag(value string) Tag {
+	return simpleMetric{key: transport, value: value}
 }
 
-// GPRCTransportTag returns a new GRPC transport type tag.
-func GPRCTransportTag() Tag {
-	return simpleMetric{key: transport, value: transportGRPC}
+// CallerTag returns a new RPC Caller type tag.
+func CallerTag(value string) Tag {
+	return simpleMetric{key: caller, value: value}
 }
 
 // SignalNameTag returns a new SignalName tag

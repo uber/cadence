@@ -184,18 +184,37 @@ func GetTimerTaskMetricScope(
 	}
 }
 
-// GetCrossClusterTaskMetricsScope returns the metrics scope index for cross cluster task
-// TODO: define separate scope for source and target tasks
-func GetCrossClusterTaskMetricsScope(
+// getCrossClusterTaskMetricsScope returns the metrics scope index for cross cluster task
+func getCrossClusterTaskMetricsScope(
 	taskType int,
+	isSource bool,
 ) int {
 	switch taskType {
 	case persistence.CrossClusterTaskTypeStartChildExecution:
-		return metrics.CrossClusterTaskStartChildExecutionScope
+		if isSource {
+			return metrics.CrossClusterSourceTaskStartChildExecutionScope
+		}
+		return metrics.CrossClusterTargetTaskStartChildExecutionScope
 	case persistence.CrossClusterTaskTypeCancelExecution:
-		return metrics.CrossClusterTaskCancelExecutionScope
+		if isSource {
+			return metrics.CrossClusterSourceTaskCancelExecutionScope
+		}
+		return metrics.CrossClusterTargetTaskCancelExecutionScope
 	case persistence.CrossClusterTaskTypeSignalExecution:
-		return metrics.CrossClusterTaskTypeSignalExecutionScope
+		if isSource {
+			return metrics.CrossClusterSourceTaskSignalExecutionScope
+		}
+		return metrics.CrossClusterTargetTaskSignalExecutionScope
+	case persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+		if isSource {
+			return metrics.CrossClusterSourceTaskRecordChildWorkflowExecutionCompleteScope
+		}
+		return metrics.CrossClusterTargetTaskRecordChildWorkflowExecutionCompleteScope
+	case persistence.CrossClusterTaskTypeApplyParentPolicy:
+		if isSource {
+			return metrics.CrossClusterSourceTaskApplyParentClosePolicyScope
+		}
+		return metrics.CrossClusterTargetTaskApplyParentClosePolicyScope
 	default:
 		return metrics.CrossClusterQueueProcessorScope
 	}
