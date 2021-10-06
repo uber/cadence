@@ -180,11 +180,14 @@ var (
 )
 
 const (
-	conditionalRetryCount    = 5
-	logWarnTransferLevelDiff = 3000000 // 3 million
-	logWarnTimerLevelDiff    = time.Duration(30 * time.Minute)
-	historySizeLogThreshold  = 10 * 1024 * 1024
-	minContextTimeout        = 1 * time.Second
+	conditionalRetryCount = 5
+	// transfer/cross cluster diff/lag is in terms of taskID, which is calculated based on shard rangeID
+	// on shard movement, taskID will increase by around 1 million
+	logWarnTransferLevelDiff    = 3000000 // 3 million
+	logWarnCrossClusterLevelLag = 3000000 // 3 million
+	logWarnTimerLevelDiff       = time.Duration(30 * time.Minute)
+	historySizeLogThreshold     = 10 * 1024 * 1024
+	minContextTimeout           = 1 * time.Second
 )
 
 func (s *contextImpl) GetShardID() int {
@@ -1183,6 +1186,21 @@ func (s *contextImpl) emitShardInfoMetricsLogsLocked() {
 	transferLag := s.transferMaxReadLevel - s.shardInfo.TransferAckLevel
 	timerLag := time.Since(s.shardInfo.TimerAckLevel)
 
+	minCrossClusterLevel := int64(math.MaxInt64)
+	crossClusterLevelByCluster := make(map[string]int64)
+	for cluster, pqs := range s.shardInfo.CrossClusterProcessingQueueStates.StatesByCluster {
+		crossClusterLevel := int64(math.MaxInt64)
+		for _, queueState := range pqs {
+			crossClusterLevel = common.MinInt64(crossClusterLevel, queueState.GetAckLevel())
+		}
+		crossClusterLevelByCluster[cluster] = crossClusterLevel
+		minCrossClusterLevel = common.MinInt64(minCrossClusterLevel, crossClusterLevel)
+	}
+	crossClusterLag := s.transferMaxReadLevel - minCrossClusterLevel
+	if minCrossClusterLevel == 0 {
+		crossClusterLag = 0
+	}
+
 	transferFailoverInProgress := len(s.transferFailoverLevels)
 	timerFailoverInProgress := len(s.timerFailoverLevels)
 
@@ -1190,26 +1208,33 @@ func (s *contextImpl) emitShardInfoMetricsLogsLocked() {
 		(logWarnTransferLevelDiff < diffTransferLevel ||
 			logWarnTimerLevelDiff < diffTimerLevel ||
 			logWarnTransferLevelDiff < transferLag ||
-			logWarnTimerLevelDiff < timerLag) {
+			logWarnTimerLevelDiff < timerLag ||
+			logWarnCrossClusterLevelLag < crossClusterLag) {
 
 		logger := s.logger.WithTags(
 			tag.ShardTime(s.remoteClusterCurrentTime),
 			tag.ShardReplicationAck(s.shardInfo.ReplicationAckLevel),
 			tag.ShardTimerAcks(s.shardInfo.ClusterTimerAckLevel),
-			tag.ShardTransferAcks(s.shardInfo.ClusterTransferAckLevel))
+			tag.ShardTransferAcks(s.shardInfo.ClusterTransferAckLevel),
+			tag.ShardCrossClusterAcks(crossClusterLevelByCluster),
+		)
 
 		logger.Warn("Shard ack levels diff exceeds warn threshold.")
 	}
 
-	s.GetMetricsClient().RecordTimer(metrics.ShardInfoScope, metrics.ShardInfoTransferDiffTimer, time.Duration(diffTransferLevel))
-	s.GetMetricsClient().RecordTimer(metrics.ShardInfoScope, metrics.ShardInfoTimerDiffTimer, diffTimerLevel)
+	metricsScope := s.GetMetricsClient().Scope(metrics.ShardInfoScope)
+	metricsScope.RecordTimer(metrics.ShardInfoTransferDiffTimer, time.Duration(diffTransferLevel))
+	metricsScope.RecordTimer(metrics.ShardInfoTimerDiffTimer, diffTimerLevel)
 
-	s.GetMetricsClient().RecordTimer(metrics.ShardInfoScope, metrics.ShardInfoReplicationLagTimer, time.Duration(replicationLag))
-	s.GetMetricsClient().RecordTimer(metrics.ShardInfoScope, metrics.ShardInfoTransferLagTimer, time.Duration(transferLag))
-	s.GetMetricsClient().RecordTimer(metrics.ShardInfoScope, metrics.ShardInfoTimerLagTimer, timerLag)
+	metricsScope.RecordTimer(metrics.ShardInfoReplicationLagTimer, time.Duration(replicationLag))
+	metricsScope.RecordTimer(metrics.ShardInfoTransferLagTimer, time.Duration(transferLag))
+	metricsScope.RecordTimer(metrics.ShardInfoTimerLagTimer, timerLag)
+	for cluster, crossClusterLag := range crossClusterLevelByCluster {
+		metricsScope.Tagged(metrics.TargetClusterTag(cluster)).RecordTimer(metrics.ShardInfoCrossClusterLagTimer, time.Duration(crossClusterLag))
+	}
 
-	s.GetMetricsClient().RecordTimer(metrics.ShardInfoScope, metrics.ShardInfoTransferFailoverInProgressTimer, time.Duration(transferFailoverInProgress))
-	s.GetMetricsClient().RecordTimer(metrics.ShardInfoScope, metrics.ShardInfoTimerFailoverInProgressTimer, time.Duration(timerFailoverInProgress))
+	metricsScope.RecordTimer(metrics.ShardInfoTransferFailoverInProgressTimer, time.Duration(transferFailoverInProgress))
+	metricsScope.RecordTimer(metrics.ShardInfoTimerFailoverInProgressTimer, time.Duration(timerFailoverInProgress))
 }
 
 func (s *contextImpl) allocateTaskIDsLocked(

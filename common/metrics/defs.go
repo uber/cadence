@@ -1018,16 +1018,28 @@ const (
 	CrossClusterQueueProcessorScope
 	// CrossClusterTaskProcessorScope is the scope used by all metric emitted by cross cluster task processor in the target cluster
 	CrossClusterTaskProcessorScope
-	// CrossClusterTaskStartChildExecutionScope is the scope used by metric emitted by cross cluster queue processor for processing start child workflow task.
-	CrossClusterTaskStartChildExecutionScope
-	// CrossClusterTaskCancelExecutionScope is the scope used by metric emitted by cross cluster queue processor for processing cancel workflow task.
-	CrossClusterTaskCancelExecutionScope
-	// CrossClusterTaskTypeSignalExecutionScope is the scope used by metric emitted by cross cluster queue processor for processing signal workflow task.
-	CrossClusterTaskTypeSignalExecutionScope
-	// CrossClusterTaskTypeRecordChildWorkflowExeuctionCompleteScope is the scope used by metric emitted by cross cluster queue processor for processing signal workflow task.
-	CrossClusterTaskTypeRecordChildWorkflowExeuctionCompleteScope
-	// CrossClusterTaskTypeApplyParentClosePolicyScope is the scope used by metric emitted by cross cluster queue processor for processing applying parent close policy
-	CrossClusterTaskTypeApplyParentClosePolicyScope
+	// CrossClusterTaskFetcherScope is the scope used by all metrics emitted by cross cluster task fetcher in the target cluster
+	CrossClusterTaskFetcherScope
+	// CrossClusterSourceTaskStartChildExecutionScope is the scope used by metric emitted by cross cluster queue processor for processing start child workflow task.
+	CrossClusterSourceTaskStartChildExecutionScope
+	// CrossClusterSourceTaskCancelExecutionScope is the scope used by metric emitted by cross cluster queue processor for processing cancel workflow task.
+	CrossClusterSourceTaskCancelExecutionScope
+	// CrossClusterSourceTaskSignalExecutionScope is the scope used by metric emitted by cross cluster queue processor for processing signal workflow task.
+	CrossClusterSourceTaskSignalExecutionScope
+	// CrossClusterSourceTaskRecordChildWorkflowExecutionCompleteScope is the scope used by metric emitted by cross cluster queue processor for recording child workflow completion task.
+	CrossClusterSourceTaskRecordChildWorkflowExecutionCompleteScope
+	// CrossClusterSourceTaskApplyParentClosePolicyScope is the scope used by metric emitted by cross cluster queue processor for processing applying parent close policy
+	CrossClusterSourceTaskApplyParentClosePolicyScope
+	// CrossClusterTargetTaskStartChildExecutionScope is the scope used by metric emitted by cross cluster queue processor for processing start child workflow task.
+	CrossClusterTargetTaskStartChildExecutionScope
+	// CrossClusterTargetTaskCancelExecutionScope is the scope used by metric emitted by cross cluster queue processor for processing cancel workflow task.
+	CrossClusterTargetTaskCancelExecutionScope
+	// CrossClusterTargetTaskSignalExecutionScope is the scope used by metric emitted by cross cluster queue processor for processing signal workflow task.
+	CrossClusterTargetTaskSignalExecutionScope
+	// CrossClusterTargetTaskRecordChildWorkflowExecutionCompleteScope is the scope used by metric emitted by cross cluster queue processor for recording child workflow completion task.
+	CrossClusterTargetTaskRecordChildWorkflowExecutionCompleteScope
+	// CrossClusterTargetTaskApplyParentClosePolicyScope is the scope used by metric emitted by cross cluster queue processor for processing applying parent close policy
+	CrossClusterTargetTaskApplyParentClosePolicyScope
 	// HistoryEventNotificationScope is the scope used by shard history event notification
 	HistoryEventNotificationScope
 	// ReplicatorQueueProcessorScope is the scope used by all metric emitted by replicator queue processor
@@ -1524,122 +1536,128 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	},
 	// History Scope Names
 	History: {
-		HistoryStartWorkflowExecutionScope:                            {operation: "StartWorkflowExecution"},
-		HistoryRecordActivityTaskHeartbeatScope:                       {operation: "RecordActivityTaskHeartbeat"},
-		HistoryRespondDecisionTaskCompletedScope:                      {operation: "RespondDecisionTaskCompleted"},
-		HistoryRespondDecisionTaskFailedScope:                         {operation: "RespondDecisionTaskFailed"},
-		HistoryRespondActivityTaskCompletedScope:                      {operation: "RespondActivityTaskCompleted"},
-		HistoryRespondActivityTaskFailedScope:                         {operation: "RespondActivityTaskFailed"},
-		HistoryRespondActivityTaskCanceledScope:                       {operation: "RespondActivityTaskCanceled"},
-		HistoryResetQueueScope:                                        {operation: "ResetQueue"},
-		HistoryDescribeQueueScope:                                     {operation: "DescribeQueue"},
-		HistoryDescribeMutabelStateScope:                              {operation: "DescribeMutableState"},
-		HistoryGetMutableStateScope:                                   {operation: "GetMutableState"},
-		HistoryPollMutableStateScope:                                  {operation: "PollMutableState"},
-		HistoryResetStickyTaskListScope:                               {operation: "ResetStickyTaskListScope"},
-		HistoryDescribeWorkflowExecutionScope:                         {operation: "DescribeWorkflowExecution"},
-		HistoryRecordDecisionTaskStartedScope:                         {operation: "RecordDecisionTaskStarted"},
-		HistoryRecordActivityTaskStartedScope:                         {operation: "RecordActivityTaskStarted"},
-		HistorySignalWorkflowExecutionScope:                           {operation: "SignalWorkflowExecution"},
-		HistorySignalWithStartWorkflowExecutionScope:                  {operation: "SignalWithStartWorkflowExecution"},
-		HistoryRemoveSignalMutableStateScope:                          {operation: "RemoveSignalMutableState"},
-		HistoryTerminateWorkflowExecutionScope:                        {operation: "TerminateWorkflowExecution"},
-		HistoryResetWorkflowExecutionScope:                            {operation: "ResetWorkflowExecution"},
-		HistoryQueryWorkflowScope:                                     {operation: "QueryWorkflow"},
-		HistoryProcessDeleteHistoryEventScope:                         {operation: "ProcessDeleteHistoryEvent"},
-		HistoryScheduleDecisionTaskScope:                              {operation: "ScheduleDecisionTask"},
-		HistoryRecordChildExecutionCompletedScope:                     {operation: "RecordChildExecutionCompleted"},
-		HistoryRequestCancelWorkflowExecutionScope:                    {operation: "RequestCancelWorkflowExecution"},
-		HistoryReplicateEventsScope:                                   {operation: "ReplicateEvents"},
-		HistoryReplicateRawEventsScope:                                {operation: "ReplicateRawEvents"},
-		HistoryReplicateEventsV2Scope:                                 {operation: "ReplicateEventsV2"},
-		HistorySyncShardStatusScope:                                   {operation: "SyncShardStatus"},
-		HistorySyncActivityScope:                                      {operation: "SyncActivity"},
-		HistoryDescribeMutableStateScope:                              {operation: "DescribeMutableState"},
-		HistoryGetReplicationMessagesScope:                            {operation: "GetReplicationMessages"},
-		HistoryGetDLQReplicationMessagesScope:                         {operation: "GetDLQReplicationMessages"},
-		HistoryReadDLQMessagesScope:                                   {operation: "ReadDLQMessages"},
-		HistoryPurgeDLQMessagesScope:                                  {operation: "PurgeDLQMessages"},
-		HistoryMergeDLQMessagesScope:                                  {operation: "MergeDLQMessages"},
-		HistoryShardControllerScope:                                   {operation: "ShardController"},
-		HistoryReapplyEventsScope:                                     {operation: "EventReapplication"},
-		HistoryRefreshWorkflowTasksScope:                              {operation: "RefreshWorkflowTasks"},
-		HistoryNotifyFailoverMarkersScope:                             {operation: "NotifyFailoverMarkers"},
-		HistoryGetCrossClusterTasksScope:                              {operation: "GetCrossClusterTasks"},
-		HistoryRespondCrossClusterTasksCompletedScope:                 {operation: "RespondCrossClusterTasksCompleted"},
-		HistoryGetFailoverInfoScope:                                   {operation: "GetFailoverInfo"},
-		TaskPriorityAssignerScope:                                     {operation: "TaskPriorityAssigner"},
-		TransferQueueProcessorScope:                                   {operation: "TransferQueueProcessor"},
-		TransferActiveQueueProcessorScope:                             {operation: "TransferActiveQueueProcessor"},
-		TransferStandbyQueueProcessorScope:                            {operation: "TransferStandbyQueueProcessor"},
-		TransferActiveTaskActivityScope:                               {operation: "TransferActiveTaskActivity"},
-		TransferActiveTaskDecisionScope:                               {operation: "TransferActiveTaskDecision"},
-		TransferActiveTaskCloseExecutionScope:                         {operation: "TransferActiveTaskCloseExecution"},
-		TransferActiveTaskCancelExecutionScope:                        {operation: "TransferActiveTaskCancelExecution"},
-		TransferActiveTaskSignalExecutionScope:                        {operation: "TransferActiveTaskSignalExecution"},
-		TransferActiveTaskStartChildExecutionScope:                    {operation: "TransferActiveTaskStartChildExecution"},
-		TransferActiveTaskRecordWorkflowStartedScope:                  {operation: "TransferActiveTaskRecordWorkflowStarted"},
-		TransferActiveTaskResetWorkflowScope:                          {operation: "TransferActiveTaskResetWorkflow"},
-		TransferActiveTaskUpsertWorkflowSearchAttributesScope:         {operation: "TransferActiveTaskUpsertWorkflowSearchAttributes"},
-		TransferStandbyTaskActivityScope:                              {operation: "TransferStandbyTaskActivity"},
-		TransferStandbyTaskDecisionScope:                              {operation: "TransferStandbyTaskDecision"},
-		TransferStandbyTaskCloseExecutionScope:                        {operation: "TransferStandbyTaskCloseExecution"},
-		TransferStandbyTaskCancelExecutionScope:                       {operation: "TransferStandbyTaskCancelExecution"},
-		TransferStandbyTaskSignalExecutionScope:                       {operation: "TransferStandbyTaskSignalExecution"},
-		TransferStandbyTaskStartChildExecutionScope:                   {operation: "TransferStandbyTaskStartChildExecution"},
-		TransferStandbyTaskRecordWorkflowStartedScope:                 {operation: "TransferStandbyTaskRecordWorkflowStarted"},
-		TransferStandbyTaskResetWorkflowScope:                         {operation: "TransferStandbyTaskResetWorkflow"},
-		TransferStandbyTaskUpsertWorkflowSearchAttributesScope:        {operation: "TransferStandbyTaskUpsertWorkflowSearchAttributes"},
-		TimerQueueProcessorScope:                                      {operation: "TimerQueueProcessor"},
-		TimerActiveQueueProcessorScope:                                {operation: "TimerActiveQueueProcessor"},
-		TimerStandbyQueueProcessorScope:                               {operation: "TimerStandbyQueueProcessor"},
-		TimerActiveTaskActivityTimeoutScope:                           {operation: "TimerActiveTaskActivityTimeout"},
-		TimerActiveTaskDecisionTimeoutScope:                           {operation: "TimerActiveTaskDecisionTimeout"},
-		TimerActiveTaskUserTimerScope:                                 {operation: "TimerActiveTaskUserTimer"},
-		TimerActiveTaskWorkflowTimeoutScope:                           {operation: "TimerActiveTaskWorkflowTimeout"},
-		TimerActiveTaskActivityRetryTimerScope:                        {operation: "TimerActiveTaskActivityRetryTimer"},
-		TimerActiveTaskWorkflowBackoffTimerScope:                      {operation: "TimerActiveTaskWorkflowBackoffTimer"},
-		TimerActiveTaskDeleteHistoryEventScope:                        {operation: "TimerActiveTaskDeleteHistoryEvent"},
-		TimerStandbyTaskActivityTimeoutScope:                          {operation: "TimerStandbyTaskActivityTimeout"},
-		TimerStandbyTaskDecisionTimeoutScope:                          {operation: "TimerStandbyTaskDecisionTimeout"},
-		TimerStandbyTaskUserTimerScope:                                {operation: "TimerStandbyTaskUserTimer"},
-		TimerStandbyTaskWorkflowTimeoutScope:                          {operation: "TimerStandbyTaskWorkflowTimeout"},
-		TimerStandbyTaskActivityRetryTimerScope:                       {operation: "TimerStandbyTaskActivityRetryTimer"},
-		TimerStandbyTaskWorkflowBackoffTimerScope:                     {operation: "TimerStandbyTaskWorkflowBackoffTimer"},
-		TimerStandbyTaskDeleteHistoryEventScope:                       {operation: "TimerStandbyTaskDeleteHistoryEvent"},
-		CrossClusterQueueProcessorScope:                               {operation: "CrossClusterQueueProcessor"},
-		CrossClusterTaskProcessorScope:                                {operation: "CrossClusterTaskProcessor"},
-		CrossClusterTaskStartChildExecutionScope:                      {operation: "CrossClusterTaskStartChildExecution"},
-		CrossClusterTaskCancelExecutionScope:                          {operation: "CrossClusterTaskCancelExecution"},
-		CrossClusterTaskTypeSignalExecutionScope:                      {operation: "CrossClusterTaskTypeSignalExecution"},
-		CrossClusterTaskTypeRecordChildWorkflowExeuctionCompleteScope: {operation: "CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete"},
-		CrossClusterTaskTypeApplyParentClosePolicyScope:               {operation: "CrossClusterTaskTypeApplyParentClosePolicy"},
-		HistoryEventNotificationScope:                                 {operation: "HistoryEventNotification"},
-		ReplicatorQueueProcessorScope:                                 {operation: "ReplicatorQueueProcessor"},
-		ReplicatorTaskHistoryScope:                                    {operation: "ReplicatorTaskHistory"},
-		ReplicatorTaskSyncActivityScope:                               {operation: "ReplicatorTaskSyncActivity"},
-		ReplicateHistoryEventsScope:                                   {operation: "ReplicateHistoryEvents"},
-		ShardInfoScope:                                                {operation: "ShardInfo"},
-		WorkflowContextScope:                                          {operation: "WorkflowContext"},
-		HistoryCacheGetAndCreateScope:                                 {operation: "HistoryCacheGetAndCreate", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
-		HistoryCacheGetOrCreateScope:                                  {operation: "HistoryCacheGetOrCreate", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
-		HistoryCacheGetOrCreateCurrentScope:                           {operation: "HistoryCacheGetOrCreateCurrent", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
-		HistoryCacheGetCurrentExecutionScope:                          {operation: "HistoryCacheGetCurrentExecution", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
-		EventsCacheGetEventScope:                                      {operation: "EventsCacheGetEvent", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
-		EventsCachePutEventScope:                                      {operation: "EventsCachePutEvent", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
-		EventsCacheGetFromStoreScope:                                  {operation: "EventsCacheGetFromStore", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
-		ExecutionSizeStatsScope:                                       {operation: "ExecutionStats", tags: map[string]string{StatsTypeTagName: SizeStatsTypeTagValue}},
-		ExecutionCountStatsScope:                                      {operation: "ExecutionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
-		SessionSizeStatsScope:                                         {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: SizeStatsTypeTagValue}},
-		SessionCountStatsScope:                                        {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
-		WorkflowCompletionStatsScope:                                  {operation: "CompletionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
-		ArchiverClientScope:                                           {operation: "ArchiverClient"},
-		ReplicationTaskFetcherScope:                                   {operation: "ReplicationTaskFetcher"},
-		ReplicationTaskCleanupScope:                                   {operation: "ReplicationTaskCleanup"},
-		ReplicationDLQStatsScope:                                      {operation: "ReplicationDLQStats"},
-		FailoverMarkerScope:                                           {operation: "FailoverMarker"},
-		HistoryReplicationV2TaskScope:                                 {operation: "HistoryReplicationV2Task"},
-		SyncActivityTaskScope:                                         {operation: "SyncActivityTask"},
+		HistoryStartWorkflowExecutionScope:                              {operation: "StartWorkflowExecution"},
+		HistoryRecordActivityTaskHeartbeatScope:                         {operation: "RecordActivityTaskHeartbeat"},
+		HistoryRespondDecisionTaskCompletedScope:                        {operation: "RespondDecisionTaskCompleted"},
+		HistoryRespondDecisionTaskFailedScope:                           {operation: "RespondDecisionTaskFailed"},
+		HistoryRespondActivityTaskCompletedScope:                        {operation: "RespondActivityTaskCompleted"},
+		HistoryRespondActivityTaskFailedScope:                           {operation: "RespondActivityTaskFailed"},
+		HistoryRespondActivityTaskCanceledScope:                         {operation: "RespondActivityTaskCanceled"},
+		HistoryResetQueueScope:                                          {operation: "ResetQueue"},
+		HistoryDescribeQueueScope:                                       {operation: "DescribeQueue"},
+		HistoryDescribeMutabelStateScope:                                {operation: "DescribeMutableState"},
+		HistoryGetMutableStateScope:                                     {operation: "GetMutableState"},
+		HistoryPollMutableStateScope:                                    {operation: "PollMutableState"},
+		HistoryResetStickyTaskListScope:                                 {operation: "ResetStickyTaskListScope"},
+		HistoryDescribeWorkflowExecutionScope:                           {operation: "DescribeWorkflowExecution"},
+		HistoryRecordDecisionTaskStartedScope:                           {operation: "RecordDecisionTaskStarted"},
+		HistoryRecordActivityTaskStartedScope:                           {operation: "RecordActivityTaskStarted"},
+		HistorySignalWorkflowExecutionScope:                             {operation: "SignalWorkflowExecution"},
+		HistorySignalWithStartWorkflowExecutionScope:                    {operation: "SignalWithStartWorkflowExecution"},
+		HistoryRemoveSignalMutableStateScope:                            {operation: "RemoveSignalMutableState"},
+		HistoryTerminateWorkflowExecutionScope:                          {operation: "TerminateWorkflowExecution"},
+		HistoryResetWorkflowExecutionScope:                              {operation: "ResetWorkflowExecution"},
+		HistoryQueryWorkflowScope:                                       {operation: "QueryWorkflow"},
+		HistoryProcessDeleteHistoryEventScope:                           {operation: "ProcessDeleteHistoryEvent"},
+		HistoryScheduleDecisionTaskScope:                                {operation: "ScheduleDecisionTask"},
+		HistoryRecordChildExecutionCompletedScope:                       {operation: "RecordChildExecutionCompleted"},
+		HistoryRequestCancelWorkflowExecutionScope:                      {operation: "RequestCancelWorkflowExecution"},
+		HistoryReplicateEventsScope:                                     {operation: "ReplicateEvents"},
+		HistoryReplicateRawEventsScope:                                  {operation: "ReplicateRawEvents"},
+		HistoryReplicateEventsV2Scope:                                   {operation: "ReplicateEventsV2"},
+		HistorySyncShardStatusScope:                                     {operation: "SyncShardStatus"},
+		HistorySyncActivityScope:                                        {operation: "SyncActivity"},
+		HistoryDescribeMutableStateScope:                                {operation: "DescribeMutableState"},
+		HistoryGetReplicationMessagesScope:                              {operation: "GetReplicationMessages"},
+		HistoryGetDLQReplicationMessagesScope:                           {operation: "GetDLQReplicationMessages"},
+		HistoryReadDLQMessagesScope:                                     {operation: "ReadDLQMessages"},
+		HistoryPurgeDLQMessagesScope:                                    {operation: "PurgeDLQMessages"},
+		HistoryMergeDLQMessagesScope:                                    {operation: "MergeDLQMessages"},
+		HistoryShardControllerScope:                                     {operation: "ShardController"},
+		HistoryReapplyEventsScope:                                       {operation: "EventReapplication"},
+		HistoryRefreshWorkflowTasksScope:                                {operation: "RefreshWorkflowTasks"},
+		HistoryNotifyFailoverMarkersScope:                               {operation: "NotifyFailoverMarkers"},
+		HistoryGetCrossClusterTasksScope:                                {operation: "GetCrossClusterTasks"},
+		HistoryRespondCrossClusterTasksCompletedScope:                   {operation: "RespondCrossClusterTasksCompleted"},
+		HistoryGetFailoverInfoScope:                                     {operation: "GetFailoverInfo"},
+		TaskPriorityAssignerScope:                                       {operation: "TaskPriorityAssigner"},
+		TransferQueueProcessorScope:                                     {operation: "TransferQueueProcessor"},
+		TransferActiveQueueProcessorScope:                               {operation: "TransferActiveQueueProcessor"},
+		TransferStandbyQueueProcessorScope:                              {operation: "TransferStandbyQueueProcessor"},
+		TransferActiveTaskActivityScope:                                 {operation: "TransferActiveTaskActivity"},
+		TransferActiveTaskDecisionScope:                                 {operation: "TransferActiveTaskDecision"},
+		TransferActiveTaskCloseExecutionScope:                           {operation: "TransferActiveTaskCloseExecution"},
+		TransferActiveTaskCancelExecutionScope:                          {operation: "TransferActiveTaskCancelExecution"},
+		TransferActiveTaskSignalExecutionScope:                          {operation: "TransferActiveTaskSignalExecution"},
+		TransferActiveTaskStartChildExecutionScope:                      {operation: "TransferActiveTaskStartChildExecution"},
+		TransferActiveTaskRecordWorkflowStartedScope:                    {operation: "TransferActiveTaskRecordWorkflowStarted"},
+		TransferActiveTaskResetWorkflowScope:                            {operation: "TransferActiveTaskResetWorkflow"},
+		TransferActiveTaskUpsertWorkflowSearchAttributesScope:           {operation: "TransferActiveTaskUpsertWorkflowSearchAttributes"},
+		TransferStandbyTaskActivityScope:                                {operation: "TransferStandbyTaskActivity"},
+		TransferStandbyTaskDecisionScope:                                {operation: "TransferStandbyTaskDecision"},
+		TransferStandbyTaskCloseExecutionScope:                          {operation: "TransferStandbyTaskCloseExecution"},
+		TransferStandbyTaskCancelExecutionScope:                         {operation: "TransferStandbyTaskCancelExecution"},
+		TransferStandbyTaskSignalExecutionScope:                         {operation: "TransferStandbyTaskSignalExecution"},
+		TransferStandbyTaskStartChildExecutionScope:                     {operation: "TransferStandbyTaskStartChildExecution"},
+		TransferStandbyTaskRecordWorkflowStartedScope:                   {operation: "TransferStandbyTaskRecordWorkflowStarted"},
+		TransferStandbyTaskResetWorkflowScope:                           {operation: "TransferStandbyTaskResetWorkflow"},
+		TransferStandbyTaskUpsertWorkflowSearchAttributesScope:          {operation: "TransferStandbyTaskUpsertWorkflowSearchAttributes"},
+		TimerQueueProcessorScope:                                        {operation: "TimerQueueProcessor"},
+		TimerActiveQueueProcessorScope:                                  {operation: "TimerActiveQueueProcessor"},
+		TimerStandbyQueueProcessorScope:                                 {operation: "TimerStandbyQueueProcessor"},
+		TimerActiveTaskActivityTimeoutScope:                             {operation: "TimerActiveTaskActivityTimeout"},
+		TimerActiveTaskDecisionTimeoutScope:                             {operation: "TimerActiveTaskDecisionTimeout"},
+		TimerActiveTaskUserTimerScope:                                   {operation: "TimerActiveTaskUserTimer"},
+		TimerActiveTaskWorkflowTimeoutScope:                             {operation: "TimerActiveTaskWorkflowTimeout"},
+		TimerActiveTaskActivityRetryTimerScope:                          {operation: "TimerActiveTaskActivityRetryTimer"},
+		TimerActiveTaskWorkflowBackoffTimerScope:                        {operation: "TimerActiveTaskWorkflowBackoffTimer"},
+		TimerActiveTaskDeleteHistoryEventScope:                          {operation: "TimerActiveTaskDeleteHistoryEvent"},
+		TimerStandbyTaskActivityTimeoutScope:                            {operation: "TimerStandbyTaskActivityTimeout"},
+		TimerStandbyTaskDecisionTimeoutScope:                            {operation: "TimerStandbyTaskDecisionTimeout"},
+		TimerStandbyTaskUserTimerScope:                                  {operation: "TimerStandbyTaskUserTimer"},
+		TimerStandbyTaskWorkflowTimeoutScope:                            {operation: "TimerStandbyTaskWorkflowTimeout"},
+		TimerStandbyTaskActivityRetryTimerScope:                         {operation: "TimerStandbyTaskActivityRetryTimer"},
+		TimerStandbyTaskWorkflowBackoffTimerScope:                       {operation: "TimerStandbyTaskWorkflowBackoffTimer"},
+		TimerStandbyTaskDeleteHistoryEventScope:                         {operation: "TimerStandbyTaskDeleteHistoryEvent"},
+		CrossClusterQueueProcessorScope:                                 {operation: "CrossClusterQueueProcessor"},
+		CrossClusterTaskProcessorScope:                                  {operation: "CrossClusterTaskProcessor"},
+		CrossClusterTaskFetcherScope:                                    {operation: "CrossClusterTaskFetcher"},
+		CrossClusterSourceTaskStartChildExecutionScope:                  {operation: "CrossClusterSourceTaskStartChildExecution"},
+		CrossClusterSourceTaskCancelExecutionScope:                      {operation: "CrossClusterSourceTaskCancelExecution"},
+		CrossClusterSourceTaskSignalExecutionScope:                      {operation: "CrossClusterSourceTaskSignalExecution"},
+		CrossClusterSourceTaskRecordChildWorkflowExecutionCompleteScope: {operation: "CrossClusterSourceTaskTypeRecordChildWorkflowExecutionComplete"},
+		CrossClusterSourceTaskApplyParentClosePolicyScope:               {operation: "CrossClusterSourceTaskTypeApplyParentClosePolicy"},
+		CrossClusterTargetTaskStartChildExecutionScope:                  {operation: "CrossClusterTargetTaskStartChildExecution"},
+		CrossClusterTargetTaskCancelExecutionScope:                      {operation: "CrossClusterTargetTaskCancelExecution"},
+		CrossClusterTargetTaskSignalExecutionScope:                      {operation: "CrossClusterTargetTaskSignalExecution"},
+		CrossClusterTargetTaskRecordChildWorkflowExecutionCompleteScope: {operation: "CrossClusterTargetTaskTypeRecordChildWorkflowExecutionComplete"},
+		CrossClusterTargetTaskApplyParentClosePolicyScope:               {operation: "CrossClusterTargetTaskTypeApplyParentClosePolicy"},
+		HistoryEventNotificationScope:                                   {operation: "HistoryEventNotification"},
+		ReplicatorQueueProcessorScope:                                   {operation: "ReplicatorQueueProcessor"},
+		ReplicatorTaskHistoryScope:                                      {operation: "ReplicatorTaskHistory"},
+		ReplicatorTaskSyncActivityScope:                                 {operation: "ReplicatorTaskSyncActivity"},
+		ReplicateHistoryEventsScope:                                     {operation: "ReplicateHistoryEvents"},
+		ShardInfoScope:                                                  {operation: "ShardInfo"},
+		WorkflowContextScope:                                            {operation: "WorkflowContext"},
+		HistoryCacheGetAndCreateScope:                                   {operation: "HistoryCacheGetAndCreate", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
+		HistoryCacheGetOrCreateScope:                                    {operation: "HistoryCacheGetOrCreate", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
+		HistoryCacheGetOrCreateCurrentScope:                             {operation: "HistoryCacheGetOrCreateCurrent", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
+		HistoryCacheGetCurrentExecutionScope:                            {operation: "HistoryCacheGetCurrentExecution", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
+		EventsCacheGetEventScope:                                        {operation: "EventsCacheGetEvent", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
+		EventsCachePutEventScope:                                        {operation: "EventsCachePutEvent", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
+		EventsCacheGetFromStoreScope:                                    {operation: "EventsCacheGetFromStore", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
+		ExecutionSizeStatsScope:                                         {operation: "ExecutionStats", tags: map[string]string{StatsTypeTagName: SizeStatsTypeTagValue}},
+		ExecutionCountStatsScope:                                        {operation: "ExecutionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
+		SessionSizeStatsScope:                                           {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: SizeStatsTypeTagValue}},
+		SessionCountStatsScope:                                          {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
+		WorkflowCompletionStatsScope:                                    {operation: "CompletionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
+		ArchiverClientScope:                                             {operation: "ArchiverClient"},
+		ReplicationTaskFetcherScope:                                     {operation: "ReplicationTaskFetcher"},
+		ReplicationTaskCleanupScope:                                     {operation: "ReplicationTaskCleanup"},
+		ReplicationDLQStatsScope:                                        {operation: "ReplicationDLQStats"},
+		FailoverMarkerScope:                                             {operation: "FailoverMarker"},
+		HistoryReplicationV2TaskScope:                                   {operation: "HistoryReplicationV2Task"},
+		SyncActivityTaskScope:                                           {operation: "SyncActivityTask"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -1874,6 +1892,7 @@ const (
 
 	TransferTaskThrottledCounter
 	TimerTaskThrottledCounter
+	CrossClusterTaskThrottledCounter
 
 	TransferTaskMissingEventCounter
 
@@ -1890,6 +1909,16 @@ const (
 	QueueValidatorInvalidLoadCounter
 	QueueValidatorValidationCounter
 	QueueValidatorValidationFailure
+
+	CrossClusterFetchLatency
+	CrossClusterFetchRequests
+	CrossClusterFetchFailures
+	CrossClusterFetchServiceBusyFailures
+	CrossClusterTaskRespondLatency
+	CrossClusterTaskRespondRequests
+	CrossClusterTaskRespondFailures
+	CrossClusterTaskFetchedTimer
+	CrossClusterTaskPendingTimer
 
 	ActivityE2ELatency
 	ActivityLostCounter
@@ -1941,6 +1970,7 @@ const (
 	ShardInfoReplicationLagTimer
 	ShardInfoTransferLagTimer
 	ShardInfoTimerLagTimer
+	ShardInfoCrossClusterLagTimer
 	ShardInfoTransferDiffTimer
 	ShardInfoTimerDiffTimer
 	ShardInfoTransferFailoverInProgressTimer
@@ -1990,6 +2020,7 @@ const (
 	BufferedEventsCount
 	TransferTasksCount
 	TimerTasksCount
+	CrossClusterTasksCount
 	ReplicationTasksCount
 	DeleteActivityInfoCount
 	DeleteTimerInfoCount
@@ -2390,6 +2421,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskRedispatchQueuePendingTasksTimer:              {metricName: "task_redispatch_queue_pending_tasks", metricType: Timer},
 		TransferTaskThrottledCounter:                      {metricName: "transfer_task_throttled_counter", metricType: Counter},
 		TimerTaskThrottledCounter:                         {metricName: "timer_task_throttled_counter", metricType: Counter},
+		CrossClusterTaskThrottledCounter:                  {metricName: "cross_cluster_task_throttled_counter", metricType: Counter},
 		TransferTaskMissingEventCounter:                   {metricName: "transfer_task_missing_event_counter", metricType: Counter},
 		ProcessingQueueNumTimer:                           {metricName: "processing_queue_num", metricType: Timer},
 		ProcessingQueueMaxLevelTimer:                      {metricName: "processing_queue_max_level", metricType: Timer},
@@ -2403,6 +2435,15 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		QueueValidatorInvalidLoadCounter:                  {metricName: "queue_validator_invalid_load_counter", metricType: Counter},
 		QueueValidatorValidationCounter:                   {metricName: "queue_validator_validation_counter", metricType: Counter},
 		QueueValidatorValidationFailure:                   {metricName: "queue_validator_validation_error", metricType: Counter},
+		CrossClusterFetchLatency:                          {metricName: "cross_cluster_fetch_latency", metricType: Timer},
+		CrossClusterFetchRequests:                         {metricName: "cross_cluster_fetch_requests", metricType: Counter},
+		CrossClusterFetchFailures:                         {metricName: "cross_cluster_fetch_errors", metricType: Counter},
+		CrossClusterFetchServiceBusyFailures:              {metricName: "cross_cluster_fetch_errors_service_busy", metricType: Counter},
+		CrossClusterTaskRespondLatency:                    {metricName: "cross_cluster_respond_latency", metricType: Timer},
+		CrossClusterTaskRespondRequests:                   {metricName: "cross_cluster_respond_requests", metricType: Counter},
+		CrossClusterTaskRespondFailures:                   {metricName: "cross_cluster_fetch_errors", metricType: Counter},
+		CrossClusterTaskFetchedTimer:                      {metricName: "cross_cluster_task_fetched", metricType: Timer},
+		CrossClusterTaskPendingTimer:                      {metricName: "cross_cluster_task_pending", metricType: Timer},
 		ActivityE2ELatency:                                {metricName: "activity_end_to_end_latency", metricType: Timer},
 		ActivityLostCounter:                               {metricName: "activity_lost", metricType: Counter},
 		AckLevelUpdateCounter:                             {metricName: "ack_level_update", metricType: Counter},
@@ -2453,6 +2494,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ShardInfoReplicationLagTimer:                      {metricName: "shardinfo_replication_lag", metricType: Timer},
 		ShardInfoTransferLagTimer:                         {metricName: "shardinfo_transfer_lag", metricType: Timer},
 		ShardInfoTimerLagTimer:                            {metricName: "shardinfo_timer_lag", metricType: Timer},
+		ShardInfoCrossClusterLagTimer:                     {metricName: "shardinfo_cross_cluster_lag", metricType: Timer},
 		ShardInfoTransferDiffTimer:                        {metricName: "shardinfo_transfer_diff", metricType: Timer},
 		ShardInfoTimerDiffTimer:                           {metricName: "shardinfo_timer_diff", metricType: Timer},
 		ShardInfoTransferFailoverInProgressTimer:          {metricName: "shardinfo_transfer_failover_in_progress", metricType: Timer},
@@ -2571,6 +2613,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryFailoverCallbackCount:                      {metricName: "failover_callback_handler_count", metricType: Counter},
 		TransferTasksCount:                                {metricName: "transfer_tasks_count", metricType: Timer},
 		TimerTasksCount:                                   {metricName: "timer_tasks_count", metricType: Timer},
+		CrossClusterTasksCount:                            {metricName: "cross_cluster_tasks_count", metricType: Timer},
 		ReplicationTasksCount:                             {metricName: "replication_tasks_count", metricType: Timer},
 	},
 	Matching: {

@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -67,8 +68,9 @@ type (
 		sourceCluster  string
 		clientBean     client.Bean
 
-		options *FetcherOptions
-		logger  log.Logger
+		options      *FetcherOptions
+		metricsScope metrics.Scope
+		logger       log.Logger
 
 		shutdownWG  sync.WaitGroup
 		shutdownCh  chan struct{}
@@ -95,6 +97,7 @@ func NewCrossClusterTaskFetchers(
 	clusterMetadata cluster.Metadata,
 	clientBean client.Bean,
 	options *FetcherOptions,
+	metricsClient metrics.Client,
 	logger log.Logger,
 ) Fetchers {
 	return newTaskFetchers(
@@ -102,6 +105,7 @@ func NewCrossClusterTaskFetchers(
 		clientBean,
 		crossClusterTaskFetchFn,
 		options,
+		metricsClient,
 		logger,
 	)
 }
@@ -135,6 +139,9 @@ func crossClusterTaskFetchFn(
 	for shardID, tasks := range resp.TasksByShard {
 		responseByShard[shardID] = tasks
 	}
+	for shardID, failedCause := range resp.FailedCauseByShard {
+		responseByShard[shardID] = common.ConvertGetTaskFailedCauseToErr(failedCause)
+	}
 	return responseByShard, nil
 }
 
@@ -143,6 +150,7 @@ func newTaskFetchers(
 	clientBean client.Bean,
 	fetchTaskFunc fetchTaskFunc,
 	options *FetcherOptions,
+	metricsClient metrics.Client,
 	logger log.Logger,
 ) Fetchers {
 	currentClusterName := clusterMetadata.GetCurrentClusterName()
@@ -160,6 +168,7 @@ func newTaskFetchers(
 			clientBean,
 			fetchTaskFunc,
 			options,
+			metricsClient,
 			logger,
 		))
 	}
@@ -187,6 +196,7 @@ func newTaskFetcher(
 	clientBean client.Bean,
 	fetchTaskFunc fetchTaskFunc,
 	options *FetcherOptions,
+	metricsClient metrics.Client,
 	logger log.Logger,
 ) *fetcherImpl {
 	return &fetcherImpl{
@@ -195,10 +205,17 @@ func newTaskFetcher(
 		sourceCluster:  sourceCluster,
 		clientBean:     clientBean,
 		options:        options,
-		logger:         logger,
-		shutdownCh:     make(chan struct{}),
-		requestChan:    make(chan fetchRequest, defaultRequestChanBufferSize),
-		fetchTaskFunc:  fetchTaskFunc,
+		metricsScope: metricsClient.Scope(
+			metrics.CrossClusterTaskFetcherScope,
+			metrics.ActiveClusterTag(sourceCluster),
+		),
+		logger: logger.WithTags(
+			tag.ComponentCrossClusterTaskFetcher,
+			tag.SourceCluster(sourceCluster),
+		),
+		shutdownCh:    make(chan struct{}),
+		requestChan:   make(chan fetchRequest, defaultRequestChanBufferSize),
+		fetchTaskFunc: fetchTaskFunc,
 	}
 }
 
@@ -281,10 +298,13 @@ func (f *fetcherImpl) aggregator() {
 		case <-fetchTimer.C:
 			var nextFetchInterval time.Duration
 			if err := f.fetch(outstandingRequests); err != nil {
+				f.logger.Error("Failed to fetch cross cluster tasks", tag.Error(err))
 				if common.IsServiceBusyError(err) {
 					nextFetchInterval = f.options.ServiceBusyBackoffInterval()
+					f.metricsScope.IncCounter(metrics.CrossClusterFetchServiceBusyFailures)
 				} else {
 					nextFetchInterval = f.options.ErrorRetryInterval()
+					f.metricsScope.IncCounter(metrics.CrossClusterFetchFailures)
 				}
 			} else {
 				nextFetchInterval = f.options.AggregationInterval()
@@ -305,15 +325,23 @@ func (f *fetcherImpl) fetch(
 		return nil
 	}
 
-	tasksByShard, err := f.fetchTaskFunc(f.clientBean, f.sourceCluster, f.currentCluster, outstandingRequests)
+	f.metricsScope.IncCounter(metrics.CrossClusterFetchRequests)
+	sw := f.metricsScope.StartTimer(metrics.CrossClusterFetchLatency)
+	defer sw.Stop()
+
+	responseByShard, err := f.fetchTaskFunc(f.clientBean, f.sourceCluster, f.currentCluster, outstandingRequests)
 	if err != nil {
-		f.logger.Error("Failed to fetch tasks", tag.Error(err))
 		return err
 	}
 
-	for shardID, tasks := range tasksByShard {
+	for shardID, response := range responseByShard {
 		if request, ok := outstandingRequests[shardID]; ok {
-			request.settable.Set(tasks, nil)
+			if fetchErr, ok := response.(error); ok {
+				request.settable.Set(nil, fetchErr)
+			} else {
+				request.settable.Set(response, nil)
+			}
+
 			delete(outstandingRequests, shardID)
 		}
 	}

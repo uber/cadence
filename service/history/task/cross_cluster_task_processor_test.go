@@ -99,9 +99,10 @@ func (s *crossClusterTaskProcessorSuite) SetupTest() {
 func (s *crossClusterTaskProcessorSuite) TestCrossClusterTaskProcessorStartStop() {
 	taskFetchers := NewCrossClusterTaskFetchers(
 		constants.TestClusterMetadata,
-		s.mockShard.Resource.GetClientBean(),
+		s.mockShard.GetClientBean(),
 		s.fetcherOptions,
-		s.mockShard.Resource.GetLogger(),
+		s.mockShard.GetMetricsClient(),
+		s.mockShard.GetLogger(),
 	)
 	taskProcessors := NewCrossClusterTaskProcessors(s.mockShard, s.mockProcessor, taskFetchers, s.processorOptions)
 	s.Len(taskProcessors, len(taskFetchers))
@@ -130,7 +131,9 @@ func (s *crossClusterTaskProcessorSuite) testRespondPendingTasks(failedToRespond
 	fetcher := newTaskFetcher(
 		cluster.TestAlternativeClusterName,
 		cluster.TestCurrentClusterName,
-		nil, nil, nil, nil,
+		nil, nil, nil,
+		s.mockShard.GetMetricsClient(),
+		s.mockShard.GetLogger(),
 	)
 	processor := newCrossClusterTaskProcessor(s.mockShard, s.mockProcessor, fetcher, s.processorOptions)
 	numPendingTasks := 10
@@ -191,7 +194,9 @@ func (s *crossClusterTaskProcessorSuite) testProcessTaskRequests(failedToRespond
 	fetcher := newTaskFetcher(
 		cluster.TestAlternativeClusterName,
 		cluster.TestCurrentClusterName,
-		nil, nil, nil, nil,
+		nil, nil, nil,
+		s.mockShard.GetMetricsClient(),
+		s.mockShard.GetLogger(),
 	)
 	processor := newCrossClusterTaskProcessor(s.mockShard, s.mockProcessor, fetcher, s.processorOptions)
 	pendingTaskID := 0
@@ -263,12 +268,13 @@ func (s *crossClusterTaskProcessorSuite) testProcessTaskRequests(failedToRespond
 func (s *crossClusterTaskProcessorSuite) TestProcessLoop() {
 	crossClusterTaskFetchers := NewCrossClusterTaskFetchers(
 		constants.TestClusterMetadata,
-		s.mockShard.Resource.GetClientBean(),
+		s.mockShard.GetClientBean(),
 		&FetcherOptions{
 			Parallelism:            dynamicconfig.GetIntPropertyFn(3),
 			AggregationInterval:    dynamicconfig.GetDurationPropertyFn(time.Millisecond * 100),
 			TimerJitterCoefficient: dynamicconfig.GetFloatPropertyFn(0.5),
 		},
+		s.mockShard.GetMetricsClient(),
 		s.mockShard.GetLogger(),
 	)
 	var fetcher Fetcher
