@@ -128,6 +128,7 @@ var (
 	ComponentFailoverMarkerNotifier     = component("failover-marker-notifier")
 	ComponentCrossClusterQueueProcessor = component("cross-cluster-queue-processor")
 	ComponentCrossClusterTaskProcessor  = component("cross-cluster-task-processor")
+	ComponentCrossClusterTaskFetcher    = component("cross-cluster-task-fetcher")
 	ComponentShardScanner               = component("shardscanner-scanner")
 	ComponentShardFixer                 = component("shardscanner-fixer")
 )

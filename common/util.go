@@ -982,3 +982,17 @@ func ConvertErrToGetTaskFailedCause(err error) types.GetTaskFailedCause {
 	}
 	return types.GetTaskFailedCauseUncategorized
 }
+
+// ConvertGetTaskFailedCauseToErr converts GetTaskFailedCause to error
+func ConvertGetTaskFailedCauseToErr(failedCause types.GetTaskFailedCause) error {
+	switch failedCause {
+	case types.GetTaskFailedCauseServiceBusy:
+		return &types.ServiceBusyError{}
+	case types.GetTaskFailedCauseTimeout:
+		return context.DeadlineExceeded
+	case types.GetTaskFailedCauseShardOwnershipLost:
+		return &types.ShardOwnershipLostError{}
+	default:
+		return &types.InternalServiceError{Message: "uncategorized error"}
+	}
+}

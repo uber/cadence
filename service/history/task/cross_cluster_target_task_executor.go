@@ -246,7 +246,7 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 			return nil, err
 		}
 
-		scope := t.metricsClient.Scope(metrics.CrossClusterTaskTypeApplyParentClosePolicyScope)
+		scope := t.metricsClient.Scope(metrics.CrossClusterSourceTaskApplyParentClosePolicyScope)
 		err = applyParentClosePolicy(
 			ctx,
 			t.historyClient,
