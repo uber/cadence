@@ -21,6 +21,7 @@
 package rpc
 
 import (
+	"errors"
 	"io/ioutil"
 	"testing"
 
@@ -29,9 +30,50 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 )
+
+func TestCombineOutbounds(t *testing.T) {
+	grpc := &grpc.Transport{}
+	tchannel := &tchannel.Transport{}
+
+	combined := CombineOutbounds()
+	outbounds, err := combined.Build(grpc, tchannel)
+	assert.NoError(t, err)
+	assert.Empty(t, outbounds)
+
+	combined = CombineOutbounds(fakeOutboundBuilder{err: errors.New("err-A")})
+	_, err = combined.Build(grpc, tchannel)
+	assert.EqualError(t, err, "err-A")
+
+	combined = CombineOutbounds(
+		fakeOutboundBuilder{outbounds: yarpc.Outbounds{"A": {}}},
+		fakeOutboundBuilder{outbounds: yarpc.Outbounds{"A": {}}},
+	)
+	_, err = combined.Build(grpc, tchannel)
+	assert.EqualError(t, err, "outbound \"A\" already configured")
+
+	combined = CombineOutbounds(
+		fakeOutboundBuilder{err: errors.New("err-A")},
+		fakeOutboundBuilder{err: errors.New("err-B")},
+	)
+	_, err = combined.Build(grpc, tchannel)
+	assert.EqualError(t, err, "err-A; err-B")
+
+	combined = CombineOutbounds(
+		fakeOutboundBuilder{outbounds: yarpc.Outbounds{"A": {}}},
+		fakeOutboundBuilder{outbounds: yarpc.Outbounds{"B": {}, "C": {}}},
+	)
+	outbounds, err = combined.Build(grpc, tchannel)
+	assert.NoError(t, err)
+	assert.Equal(t, yarpc.Outbounds{
+		"A": {},
+		"B": {},
+		"C": {},
+	}, outbounds)
+}
 
 func TestPublicClientOutbound(t *testing.T) {
 	makeConfig := func(hostPort string, enableAuth bool, keyPath string) *config.Config {
@@ -88,4 +130,13 @@ func tempFile(t *testing.T, content string) string {
 	require.NoError(t, err)
 
 	return f.Name()
+}
+
+type fakeOutboundBuilder struct {
+	outbounds yarpc.Outbounds
+	err       error
+}
+
+func (b fakeOutboundBuilder) Build(*grpc.Transport, *tchannel.Transport) (yarpc.Outbounds, error) {
+	return b.outbounds, b.err
 }
