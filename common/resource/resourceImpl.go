@@ -167,7 +167,7 @@ func New(
 			numShards,
 			logger,
 		),
-		params.DispatcherProvider,
+		params.RPCFactory.GetDispatcher(),
 		params.ClusterMetadata,
 	)
 	if err != nil {

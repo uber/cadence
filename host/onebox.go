@@ -398,7 +398,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.ThrottledLogger = c.logger
 	params.UpdateLoggerWithServiceName(service.Frontend)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())
-	params.RPCFactory = newRPCFactory(service.Frontend, c.FrontendAddress(), c.logger)
+	params.RPCFactory = newRPCFactory(service.Frontend, c.FrontendAddress(), c.logger, c.clusterMetadata)
 	params.MetricScope = tally.NewTestScope(service.Frontend, make(map[string]string))
 	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
@@ -465,7 +465,7 @@ func (c *cadenceImpl) startHistory(
 		params.ThrottledLogger = c.logger
 		params.UpdateLoggerWithServiceName(service.History)
 		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
-		params.RPCFactory = newRPCFactory(service.History, hostport, c.logger)
+		params.RPCFactory = newRPCFactory(service.History, hostport, c.logger, c.clusterMetadata)
 		params.MetricScope = tally.NewTestScope(service.History, make(map[string]string))
 		params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 		params.ClusterMetadata = c.clusterMetadata
@@ -535,7 +535,7 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 	params.ThrottledLogger = c.logger
 	params.UpdateLoggerWithServiceName(service.Matching)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.MatchingPProfPort())
-	params.RPCFactory = newRPCFactory(service.Matching, c.MatchingServiceAddress(), c.logger)
+	params.RPCFactory = newRPCFactory(service.Matching, c.MatchingServiceAddress(), c.logger, c.clusterMetadata)
 	params.MetricScope = tally.NewTestScope(service.Matching, make(map[string]string))
 	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
@@ -578,7 +578,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	params.ThrottledLogger = c.logger
 	params.UpdateLoggerWithServiceName(service.Worker)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.WorkerPProfPort())
-	params.RPCFactory = newRPCFactory(service.Worker, c.WorkerServiceAddress(), c.logger)
+	params.RPCFactory = newRPCFactory(service.Worker, c.WorkerServiceAddress(), c.logger, c.clusterMetadata)
 	params.MetricScope = tally.NewTestScope(service.Worker, make(map[string]string))
 	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
@@ -791,7 +791,7 @@ func newPProfInitializerImpl(logger log.Logger, port int) common.PProfInitialize
 	}
 }
 
-func newRPCFactory(serviceName string, tchannelHostPort string, logger log.Logger) common.RPCFactory {
+func newRPCFactory(serviceName string, tchannelHostPort string, logger log.Logger, cluster cluster.Metadata) common.RPCFactory {
 	grpcPortResolver := grpcPortResolver{}
 	grpcHostPort, err := grpcPortResolver.GetGRPCAddress("", tchannelHostPort)
 	if err != nil {
@@ -807,7 +807,9 @@ func newRPCFactory(serviceName string, tchannelHostPort string, logger log.Logge
 			Unary: &versionMiddleware{},
 		},
 		// For integration tests to generate client out of the same outbound.
-		OutboundsBuilder: &singleTChannelOutbound{serviceName, tchannelHostPort},
+		OutboundsBuilder: rpc.CombineOutbounds(
+			&singleTChannelOutbound{serviceName, tchannelHostPort},
+			rpc.NewCrossDCOutbounds(cluster.GetAllClusterInfo(), rpc.NewDNSPeerChooserFactory(0, logger))),
 	})
 }
 

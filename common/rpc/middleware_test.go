@@ -68,6 +68,14 @@ func TestInboundMetricsMiddleware(t *testing.T) {
 	})
 }
 
+func TestOverrideCallerMiddleware(t *testing.T) {
+	m := overrideCallerMiddleware{"x-caller"}
+	_, err := m.Call(context.Background(), &transport.Request{Caller: "service"}, &fakeOutbound{verify: func(r *transport.Request) {
+		assert.Equal(t, "x-caller", r.Caller)
+	}})
+	assert.NoError(t, err)
+}
+
 type fakeHandler struct {
 	ctx context.Context
 }
