@@ -61,11 +61,13 @@ func (cfg *Logger) NewZapLogger() (*zap.Logger, error) {
 		}
 	}
 
-	encoding := "json"
-	if cfg.Encoding == "json" || cfg.Encoding == "console" {
-		encoding = cfg.Encoding
-	} else {
-		return nil, fmt.Errorf("invalid encoding for log, only supporting json or console")
+	encoding := "console"
+	if cfg.Encoding != "" {
+		if cfg.Encoding == "json" || cfg.Encoding == "console" {
+			encoding = cfg.Encoding
+		} else {
+			return nil, fmt.Errorf("invalid encoding for log, only supporting json or console")
+		}
 	}
 
 	config := zap.Config{
