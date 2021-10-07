@@ -79,8 +79,7 @@ func newCrossClusterQueueProcessorBase(
 	taskExecutor task.Executor,
 	logger log.Logger,
 ) *crossClusterQueueProcessorBase {
-	config := shard.GetConfig()
-	options := newCrossClusterQueueProcessorOptions(config)
+	options := newCrossClusterQueueProcessorOptions(shard.GetConfig())
 
 	logger = logger.WithTags(tag.ClusterName(clusterName))
 
@@ -276,7 +275,9 @@ processorPumpLoop:
 				continue processorPumpLoop
 			}
 
-			if c.readyForPollTasks.Len() > c.options.MaxPendingTaskSize() {
+			numReadyForPoll := c.readyForPollTasks.Len()
+			c.metricsScope.RecordTimer(metrics.CrossClusterTaskPendingTimer, time.Duration(numReadyForPoll))
+			if numReadyForPoll > c.options.MaxPendingTaskSize() {
 				c.logger.Warn("too many outstanding ready for poll tasks in cross cluster queue.")
 				c.backoffAllQueueCollections()
 				continue processorPumpLoop
@@ -703,38 +704,24 @@ func newCrossClusterTaskKey(
 func newCrossClusterQueueProcessorOptions(
 	config *config.Config,
 ) *queueProcessorOptions {
-	options := &queueProcessorOptions{
+	return &queueProcessorOptions{
 		BatchSize:                            config.CrossClusterTaskBatchSize,
 		DeleteBatchSize:                      config.CrossClusterTaskDeleteBatchSize,
-		MaxPollRPS:                           config.CrossClusterProcessorMaxPollRPS,
-		MaxPollInterval:                      config.CrossClusterProcessorMaxPollInterval,
-		MaxPollIntervalJitterCoefficient:     config.CrossClusterProcessorMaxPollIntervalJitterCoefficient,
-		UpdateAckInterval:                    config.CrossClusterProcessorUpdateAckInterval,
-		UpdateAckIntervalJitterCoefficient:   config.CrossClusterProcessorUpdateAckIntervalJitterCoefficient,
+		MaxPollRPS:                           config.CrossClusterSourceProcessorMaxPollRPS,
+		MaxPollInterval:                      config.CrossClusterSourceProcessorMaxPollInterval,
+		MaxPollIntervalJitterCoefficient:     config.CrossClusterSourceProcessorMaxPollIntervalJitterCoefficient,
+		UpdateAckInterval:                    config.CrossClusterSourceProcessorUpdateAckInterval,
+		UpdateAckIntervalJitterCoefficient:   config.CrossClusterSourceProcessorUpdateAckIntervalJitterCoefficient,
+		RedispatchInterval:                   config.ActiveTaskRedispatchInterval,
 		RedispatchIntervalJitterCoefficient:  config.TaskRedispatchIntervalJitterCoefficient,
-		MaxRedispatchQueueSize:               config.CrossClusterProcessorMaxRedispatchQueueSize,
-		SplitQueueInterval:                   config.CrossClusterProcessorSplitQueueInterval,
-		SplitQueueIntervalJitterCoefficient:  config.CrossClusterProcessorSplitQueueIntervalJitterCoefficient,
+		MaxRedispatchQueueSize:               config.CrossClusterSourceProcessorMaxRedispatchQueueSize,
 		PollBackoffInterval:                  config.QueueProcessorPollBackoffInterval,
 		PollBackoffIntervalJitterCoefficient: config.QueueProcessorPollBackoffIntervalJitterCoefficient,
-		EnableValidator:                      config.CrossClusterProcessorEnableValidator,
-		ValidationInterval:                   config.CrossClusterProcessorValidationInterval,
+		EnableValidator:                      dynamicconfig.GetBoolPropertyFn(false),
+		EnableSplit:                          dynamicconfig.GetBoolPropertyFn(false),
+		EnablePersistQueueStates:             dynamicconfig.GetBoolPropertyFn(true),
+		EnableLoadQueueStates:                dynamicconfig.GetBoolPropertyFn(true),
+		MaxPendingTaskSize:                   config.CrossClusterSourceProcessorMaxPendingTaskSize,
+		MetricScope:                          metrics.CrossClusterQueueProcessorScope,
 	}
-
-	options.EnableSplit = dynamicconfig.GetBoolPropertyFn(false)
-	options.SplitMaxLevel = config.QueueProcessorSplitMaxLevel
-	options.EnableRandomSplitByDomainID = config.QueueProcessorEnableRandomSplitByDomainID
-	options.RandomSplitProbability = config.QueueProcessorRandomSplitProbability
-	options.EnablePendingTaskSplitByDomainID = config.QueueProcessorEnablePendingTaskSplitByDomainID
-	options.PendingTaskSplitThreshold = config.QueueProcessorPendingTaskSplitThreshold
-	options.EnableStuckTaskSplitByDomainID = config.QueueProcessorEnableStuckTaskSplitByDomainID
-	options.StuckTaskSplitThreshold = config.QueueProcessorStuckTaskSplitThreshold
-	options.SplitLookAheadDurationByDomainID = config.QueueProcessorSplitLookAheadDurationByDomainID
-
-	options.EnablePersistQueueStates = dynamicconfig.GetBoolPropertyFn(true)
-	options.EnableLoadQueueStates = dynamicconfig.GetBoolPropertyFn(true)
-
-	options.MetricScope = metrics.CrossClusterQueueProcessorScope
-	options.RedispatchInterval = config.ActiveTaskRedispatchInterval
-	return options
 }

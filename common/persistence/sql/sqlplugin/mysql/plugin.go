@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/config"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/sql"
+	"github.com/uber/cadence/common/persistence/sql/sqldriver"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/environment"
 )
@@ -68,29 +69,27 @@ func init() {
 
 // CreateDB initialize the db object
 func (p *plugin) CreateDB(cfg *config.SQL) (sqlplugin.DB, error) {
-	conn, err := p.createDBConnection(cfg)
+	conns, err := sqldriver.CreateDBConnections(cfg, func(cfg *config.SQL) (*sqlx.DB, error) {
+		return p.createSingleDBConn(cfg)
+	})
 	if err != nil {
 		return nil, err
 	}
-	db := newDB(conn, nil, sqlplugin.DbShardUndefined, cfg.NumShards)
-	return db, nil
+	return newDB(conns, nil, sqlplugin.DbShardUndefined, cfg.NumShards)
 }
 
-// CreateAdminDB initialize the db object
+// CreateAdminDB initialize the adminDb object
 func (p *plugin) CreateAdminDB(cfg *config.SQL) (sqlplugin.AdminDB, error) {
-	conn, err := p.createDBConnection(cfg)
+	conns, err := sqldriver.CreateDBConnections(cfg, func(cfg *config.SQL) (*sqlx.DB, error) {
+		return p.createSingleDBConn(cfg)
+	})
 	if err != nil {
 		return nil, err
 	}
-	db := newDB(conn, nil, sqlplugin.DbShardUndefined, cfg.NumShards)
-	return db, nil
+	return newDB(conns, nil, sqlplugin.DbShardUndefined, cfg.NumShards)
 }
 
-// CreateDBConnection creates a returns a reference to a logical connection to the
-// underlying SQL database. The returned object is to tied to a single
-// SQL database and the object can be used to perform CRUD operations on
-// the tables in the database
-func (p *plugin) createDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
+func (p *plugin) createSingleDBConn(cfg *config.SQL) (*sqlx.DB, error) {
 	err := registerTLSConfig(cfg)
 	if err != nil {
 		return nil, err

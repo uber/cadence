@@ -118,7 +118,10 @@ func newCrossClusterTaskProcessor(
 		tag.ComponentCrossClusterTaskProcessor,
 		tag.SourceCluster(taskFetcher.GetSourceCluster()),
 	)
-	metricsScope := shard.GetMetricsClient().Scope(metrics.CrossClusterTaskProcessorScope)
+	metricsScope := shard.GetMetricsClient().Scope(
+		metrics.CrossClusterTaskProcessorScope,
+		metrics.ActiveClusterTag(taskFetcher.GetSourceCluster()),
+	)
 	retryPolicy := backoff.NewExponentialRetryPolicy(time.Millisecond * 100)
 	retryPolicy.SetMaximumInterval(time.Second)
 	retryPolicy.SetExpirationInterval(options.TaskWaitInterval())
@@ -198,16 +201,22 @@ func (p *crossClusterTaskProcessor) processLoop() {
 		}
 
 		// this will submit the fetching request to the host level task fetcher for batching
-		fetchFuture := p.taskFetcher.Fetch(p.shard.GetShardID())
+		p.metricsScope.IncCounter(metrics.CrossClusterFetchRequests)
+		sw := p.metricsScope.StartTimer(metrics.CrossClusterFetchLatency)
 
 		var taskRequests []*types.CrossClusterTaskRequest
-		if err := fetchFuture.Get(context.Background(), &taskRequests); err != nil {
+		err := p.taskFetcher.Fetch(p.shard.GetShardID()).Get(context.Background(), &taskRequests)
+		sw.Stop()
+		if err != nil {
 			p.logger.Error("Unable to fetch cross cluster tasks", tag.Error(err))
 			if common.IsServiceBusyError(err) {
+				p.metricsScope.IncCounter(metrics.CrossClusterFetchServiceBusyFailures)
 				time.Sleep(backoff.JitDuration(
 					p.options.ServiceBusyBackoffInterval(),
 					p.options.TimerJitterCoefficient(),
 				))
+			} else {
+				p.metricsScope.IncCounter(metrics.CrossClusterFetchFailures)
 			}
 			continue
 		}
@@ -329,6 +338,7 @@ func (p *crossClusterTaskProcessor) respondPendingTaskLoop() {
 				p.options.TimerJitterCoefficient(),
 			))
 			p.taskLock.Lock()
+			p.metricsScope.RecordTimer(metrics.CrossClusterTaskPendingTimer, time.Duration(len(p.pendingTasks)))
 			respondRequest := &types.RespondCrossClusterTasksCompletedRequest{
 				ShardID:       int32(p.shard.GetShardID()),
 				TargetCluster: p.shard.GetClusterMetadata().GetCurrentClusterName(),
@@ -378,6 +388,8 @@ func (p *crossClusterTaskProcessor) respondPendingTaskLoop() {
 func (p *crossClusterTaskProcessor) dedupTaskRequests(
 	taskRequests []*types.CrossClusterTaskRequest,
 ) []*types.CrossClusterTaskRequest {
+	p.metricsScope.RecordTimer(metrics.CrossClusterTaskFetchedTimer, time.Duration(len(taskRequests)))
+
 	// NOTE: this is only best effort dedup for reducing the number unnecessary task executions.
 	// it's possible that a task is removed from the pendingTasks maps before this dedup logic
 	// is executed for that task. In that case, that task will be executed multiple times. This
@@ -401,6 +413,10 @@ func (p *crossClusterTaskProcessor) dedupTaskRequests(
 func (p *crossClusterTaskProcessor) respondTaskCompletedWithRetry(
 	request *types.RespondCrossClusterTasksCompletedRequest,
 ) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	p.metricsScope.IncCounter(metrics.CrossClusterTaskRespondRequests)
+	sw := p.metricsScope.StartTimer(metrics.CrossClusterTaskRespondLatency)
+	defer sw.Stop()
+
 	var response *types.RespondCrossClusterTasksCompletedResponse
 	err := backoff.Retry(
 		func() error {
@@ -409,6 +425,10 @@ func (p *crossClusterTaskProcessor) respondTaskCompletedWithRetry(
 
 			var err error
 			response, err = p.shard.GetService().GetHistoryRawClient().RespondCrossClusterTasksCompleted(ctx, request)
+			if err != nil {
+				p.logger.Error("Failed to respond cross cluster tasks completed", tag.Error(err))
+				p.metricsScope.IncCounter(metrics.CrossClusterTaskRespondFailures)
+			}
 			return err
 		},
 		p.retryPolicy,

@@ -6993,6 +6993,12 @@ func FromCrossClusterTaskType(t *types.CrossClusterTaskType) *shared.CrossCluste
 	case types.CrossClusterTaskTypeSignalExecution:
 		v := shared.CrossClusterTaskTypeSignalExecution
 		return &v
+	case types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+		v := shared.CrossClusterTaskTypeRecordChildWorkflowExecutionComplete
+		return &v
+	case types.CrossClusterTaskTypeApplyParentPolicy:
+		v := shared.CrossClusterTaskTypeApplyParentClosePolicy
+		return &v
 	}
 	panic("unexpected enum value")
 }
@@ -7011,6 +7017,12 @@ func ToCrossClusterTaskType(t *shared.CrossClusterTaskType) *types.CrossClusterT
 		return &v
 	case shared.CrossClusterTaskTypeSignalExecution:
 		v := types.CrossClusterTaskTypeSignalExecution
+		return &v
+	case shared.CrossClusterTaskTypeRecordChildWorkflowExecutionComplete:
+		v := types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete
+		return &v
+	case shared.CrossClusterTaskTypeApplyParentClosePolicy:
+		v := types.CrossClusterTaskTypeApplyParentPolicy
 		return &v
 	}
 	panic("unexpected enum value")

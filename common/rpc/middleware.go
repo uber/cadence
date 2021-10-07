@@ -24,6 +24,7 @@ import (
 	"context"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/metrics"
 
 	"go.uber.org/cadence/worker"
 	"go.uber.org/yarpc/api/transport"
@@ -46,4 +47,43 @@ func (m *authOutboundMiddleware) Call(ctx context.Context, request *transport.Re
 		With(common.AuthorizationTokenHeaderName, string(token))
 
 	return out.Call(ctx, request)
+}
+
+const _responseInfoContextKey = "response-info"
+
+// ContextWithResponseInfo will create a child context that has ResponseInfo set as value.
+// This value will get filled after the call is made and can be used later to retrieve some info of interest.
+func ContextWithResponseInfo(parent context.Context) (context.Context, *ResponseInfo) {
+	responseInfo := &ResponseInfo{}
+	return context.WithValue(parent, _responseInfoContextKey, responseInfo), responseInfo
+}
+
+// ResponseInfo structure is filled with data after the RPC call.
+// It can be obtained with rpc.ContextWithResponseInfo function.
+type ResponseInfo struct {
+	Size int
+}
+
+type responseInfoMiddleware struct{}
+
+func (m *responseInfoMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+	response, err := out.Call(ctx, request)
+
+	if value := ctx.Value(_responseInfoContextKey); value != nil {
+		if responseInfo, ok := value.(*ResponseInfo); ok {
+			responseInfo.Size = response.BodySize
+		}
+	}
+
+	return response, err
+}
+
+type inboundMetricsMiddleware struct{}
+
+func (m *inboundMetricsMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	ctx = metrics.TagContext(ctx,
+		metrics.CallerTag(req.Caller),
+		metrics.TransportTag(req.Transport),
+	)
+	return h.Handle(ctx, req, resw)
 }

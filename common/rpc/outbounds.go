@@ -21,12 +21,88 @@
 package rpc
 
 import (
+	"fmt"
+
+	"github.com/uber/cadence/common/authorization"
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/service"
+
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
+)
+
+const (
+	// OutboundPublicClient is the name of configured public client outbound
+	OutboundPublicClient = "public-client"
 )
 
 // OutboundsBuilder allows defining outbounds for the dispatcher
 type OutboundsBuilder interface {
 	Build(*grpc.Transport, *tchannel.Transport) (yarpc.Outbounds, error)
+}
+
+type multiOutbounds struct {
+	builders []OutboundsBuilder
+}
+
+// CombineOutbounds takes multiple outbound builders and combines them
+func CombineOutbounds(builders ...OutboundsBuilder) OutboundsBuilder {
+	return multiOutbounds{builders}
+}
+
+func (b multiOutbounds) Build(grpc *grpc.Transport, tchannel *tchannel.Transport) (yarpc.Outbounds, error) {
+	outbounds := yarpc.Outbounds{}
+	var errs error
+	for _, builder := range b.builders {
+		builderOutbounds, err := builder.Build(grpc, tchannel)
+		if err != nil {
+			errs = multierr.Append(errs, err)
+			continue
+		}
+
+		for name, outbound := range builderOutbounds {
+			if _, exists := outbounds[name]; exists {
+				errs = multierr.Append(errs, fmt.Errorf("outbound %q already configured", name))
+				break
+			}
+			outbounds[name] = outbound
+		}
+	}
+	return outbounds, errs
+}
+
+type publicClientOutbound struct {
+	address        string
+	authMiddleware middleware.UnaryOutbound
+}
+
+func newPublicClientOutbound(config *config.Config) (publicClientOutbound, error) {
+	if len(config.PublicClient.HostPort) == 0 {
+		return publicClientOutbound{}, fmt.Errorf("need to provide an endpoint config for PublicClient")
+	}
+
+	var authMiddleware middleware.UnaryOutbound
+	if config.Authorization.OAuthAuthorizer.Enable {
+		clusterName := config.ClusterGroupMetadata.CurrentClusterName
+		clusterInfo := config.ClusterGroupMetadata.ClusterGroup[clusterName]
+		authProvider, err := authorization.GetAuthProviderClient(clusterInfo.AuthorizationProvider.PrivateKey)
+		if err != nil {
+			return publicClientOutbound{}, fmt.Errorf("create AuthProvider: %v", err)
+		}
+		authMiddleware = &authOutboundMiddleware{authProvider}
+	}
+
+	return publicClientOutbound{config.PublicClient.HostPort, authMiddleware}, nil
+}
+
+func (b publicClientOutbound) Build(_ *grpc.Transport, tchannel *tchannel.Transport) (yarpc.Outbounds, error) {
+	return yarpc.Outbounds{
+		OutboundPublicClient: {
+			ServiceName: service.Frontend,
+			Unary:       middleware.ApplyUnaryOutbound(tchannel.NewSingleOutbound(b.address), b.authMiddleware),
+		},
+	}, nil
 }

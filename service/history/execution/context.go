@@ -526,7 +526,9 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		if event, err := resetMutableState.GetCompletionEvent(ctx); err == nil {
 			workflowType := resetWorkflow.ExecutionInfo.WorkflowTypeName
 			taskList := resetWorkflow.ExecutionInfo.TaskList
-			emitWorkflowCompletionStats(c.metricsClient, domainName, workflowType, taskList, event)
+			emitWorkflowCompletionStats(c.metricsClient, c.logger,
+				domainName, workflowType, c.workflowExecution.GetWorkflowID(), c.workflowExecution.GetRunID(),
+				taskList, event)
 		}
 	}
 
@@ -754,7 +756,9 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		if event, err := c.mutableState.GetCompletionEvent(ctx); err == nil {
 			workflowType := currentWorkflow.ExecutionInfo.WorkflowTypeName
 			taskList := currentWorkflow.ExecutionInfo.TaskList
-			emitWorkflowCompletionStats(c.metricsClient, domainName, workflowType, taskList, event)
+			emitWorkflowCompletionStats(c.metricsClient, c.logger,
+				domainName, workflowType, c.workflowExecution.GetWorkflowID(), c.workflowExecution.GetRunID(),
+				taskList, event)
 		}
 	}
 

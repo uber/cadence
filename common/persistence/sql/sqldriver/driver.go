@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,32 +18,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:build tools
-// +build tools
-
-package tools
+package sqldriver
 
 import (
-	// thriftrw code gen
-	_ "go.uber.org/thriftrw"
-	// yarpc plugin for thriftrw code gen
-	_ "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc"
+	"fmt"
 
-	// protobuf stuff
-	_ "github.com/gogo/protobuf/protoc-gen-gofast"
-	_ "go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go"
-
-	// goimports
-	_ "golang.org/x/tools/cmd/goimports"
-	// mockgen for generating mocks
-	_ "github.com/golang/mock/mockgen"
-	// enumer for generating utility methods for const enums
-	_ "github.com/dmarkham/enumer"
-	// replaces golint - configurable and much faster
-	_ "github.com/mgechev/revive"
-	// coverage reporting
-	_ "github.com/mattn/goveralls"
-
-	// health check for docker containers
-	_ "github.com/uber/tcheck"
+	"github.com/jmoiron/sqlx"
 )
+
+// NewDriver returns a driver to SQL, either using singleton Driver or sharded Driver
+func NewDriver(xdbs []*sqlx.DB, tx *sqlx.Tx, dbShardID int) (Driver, error) {
+
+	if len(xdbs) == 1 {
+		return newSingletonSQLDriver(xdbs[0], tx, dbShardID), nil
+	}
+
+	if len(xdbs) <= 1 {
+		return nil, fmt.Errorf("invalid number of connection for sharded SQL driver")
+	}
+	// this is the case of multiple database with sharding
+	return newShardedSQLDriver(xdbs, tx, dbShardID), nil
+}
