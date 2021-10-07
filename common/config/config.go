@@ -247,14 +247,20 @@ type (
 
 	// Logger contains the config items for logger
 	Logger struct {
-		// Stdout is true if the output needs to goto standard out
+		// Stdout is true then the output needs to goto standard out
+		// By default this is false and output will go to standard error
 		Stdout bool `yaml:"stdout"`
 		// Level is the desired log level
 		Level string `yaml:"level"`
 		// OutputFile is the path to the log output file
+		// Stdout must be false, otherwise Stdout will take precedence
 		OutputFile string `yaml:"outputFile"`
-		// levelKey is the desired log level, defaults to "level"
+		// LevelKey is the desired log level, defaults to "level"
 		LevelKey string `yaml:"levelKey"`
+		// Encoding decides the format, supports "console" and "json".
+		// "json" will print the log in JSON format(better for machine), while "console" will print in plain-text format(more human friendly)
+		// Default is "json"
+		Encoding string `yaml:"encoding"`
 	}
 
 	// ClusterMetadata contains the all cluster which participated in cross DC
@@ -303,6 +309,12 @@ type (
 		// Statsd is the configuration for statsd reporter
 		Statsd *Statsd `yaml:"statsd"`
 		// Prometheus is the configuration for prometheus reporter
+		// Some documentation below because the tally library is missing it:
+		// In this configuration, default timerType is "histogram", alternatively "summary" is also supported.
+		// In some cases, summary is better. Choose it wisely.
+		// For histogram, default buckets are defined in https://github.com/uber/cadence/blob/master/common/metrics/tally/prometheus/buckets.go#L34
+		// For summary, default objectives are defined in https://github.com/uber-go/tally/blob/137973e539cd3589f904c23d0b3a28c579fd0ae4/prometheus/reporter.go#L70
+		// You can customize the buckets/objectives if the default is not good enough.
 		Prometheus *prometheus.Configuration `yaml:"prometheus"`
 		// Tags is the set of key-value pairs to be reported
 		// as part of every metric
