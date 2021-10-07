@@ -21,6 +21,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -60,11 +61,20 @@ func (cfg *Logger) NewZapLogger() (*zap.Logger, error) {
 		}
 	}
 
+	encoding := "json"
+	if cfg.Encoding != "" {
+		if cfg.Encoding == "json" || cfg.Encoding == "console" {
+			encoding = cfg.Encoding
+		} else {
+			return nil, fmt.Errorf("invalid encoding for log, only supporting json or console")
+		}
+	}
+
 	config := zap.Config{
 		Level:            zap.NewAtomicLevelAt(parseZapLevel(cfg.Level)),
 		Development:      false,
 		Sampling:         nil, // consider exposing this to config for our external customer
-		Encoding:         "json",
+		Encoding:         encoding,
 		EncoderConfig:    encodeConfig,
 		OutputPaths:      []string{outputPath},
 		ErrorOutputPaths: []string{outputPath},
