@@ -248,6 +248,11 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 			return nil, err
 		}
 
+		domainEntry, err := t.shard.GetDomainCache().GetDomainByID(transferTask.DomainID)
+		if err != nil {
+			return nil, err
+		}
+
 		// DO NOT REPLY TO PARENT
 		// since event replication should be done by active cluster
 		return nil, t.recordWorkflowClosed(
@@ -265,7 +270,7 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 			visibilityMemo,
 			executionInfo.TaskList,
 			isCron,
-			true, // isGlobal, standby only exists for global domains
+			domainEntry.IsGlobalDomain(),
 			searchAttr,
 		)
 	}
@@ -461,6 +466,11 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
 	isCron := len(executionInfo.CronSchedule) > 0
 
+	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(transferTask.DomainID)
+	if err != nil {
+		return err
+	}
+
 	if isRecordStart {
 		return t.recordWorkflowStarted(
 			ctx,
@@ -474,7 +484,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 			transferTask.GetTaskID(),
 			executionInfo.TaskList,
 			isCron,
-			true, // isGlobal, standby only exists for global domains
+			domainEntry.IsGlobalDomain(),
 			visibilityMemo,
 			searchAttr,
 		)
@@ -492,7 +502,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 		executionInfo.TaskList,
 		visibilityMemo,
 		isCron,
-		true, // isGlobal, standby only exists for global domains
+		domainEntry.IsGlobalDomain(),
 		searchAttr,
 	)
 
