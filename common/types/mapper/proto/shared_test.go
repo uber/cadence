@@ -219,7 +219,8 @@ func TestCrossClusterTaskResponse(t *testing.T) {
 }
 
 func TestCrossClusterTaskRequestArray(t *testing.T) {
-	for _, item := range [][]*types.CrossClusterTaskRequest{nil, {}, testdata.CrossClusterTaskRequestArray} {
+	assert.Equal(t, []*types.CrossClusterTaskRequest{}, ToCrossClusterTaskRequestArray(FromCrossClusterTaskRequestArray(nil)))
+	for _, item := range [][]*types.CrossClusterTaskRequest{{}, testdata.CrossClusterTaskRequestArray} {
 		assert.Equal(t, item, ToCrossClusterTaskRequestArray(FromCrossClusterTaskRequestArray(item)))
 	}
 }

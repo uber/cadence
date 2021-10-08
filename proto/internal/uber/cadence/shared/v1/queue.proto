@@ -122,7 +122,7 @@ message CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes {
 message CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes {
 }
 
-message AppyParentClosePolicyAttributes {
+message ApplyParentClosePolicyAttributes {
   string child_domain_id = 1;
   string child_workflow_id = 2;
   string child_run_id = 3;
@@ -130,7 +130,7 @@ message AppyParentClosePolicyAttributes {
 }
 
 message CrossClusterApplyParentClosePolicyRequestAttributes {
-  repeated AppyParentClosePolicyAttributes appy_parent_close_policy_attributes = 1;
+  repeated ApplyParentClosePolicyAttributes apply_parent_close_policy_attributes = 1;
 }
 
 message CrossClusterApplyParentClosePolicyResponseAttributes {
