@@ -1624,13 +1624,7 @@ func FromCrossClusterTaskRequestArray(t []*types.CrossClusterTaskRequest) *share
 // ToCrossClusterTaskRequestArray converts proto CrossClusterTaskRequest type array to internal
 func ToCrossClusterTaskRequestArray(t *sharedv1.CrossClusterTaskRequests) []*types.CrossClusterTaskRequest {
 	if t == nil || t.TaskRequests == nil {
-		// grpc can't differentiate between empty array or nil array
-		// our application logic ensure no nil array will be returned
-		// for CrossClusterTaskRequest, so always convert to empty array
-		// we only need the special handling here as this array is used
-		// as a map value in GetCrossClusterTasksResponse,
-		// and if the map value is nil, THRIFT won't be able to encode the value
-		return []*types.CrossClusterTaskRequest{}
+		return nil
 	}
 	v := make([]*types.CrossClusterTaskRequest, len(t.TaskRequests))
 	for i := range t.TaskRequests {
@@ -1658,7 +1652,18 @@ func ToCrossClusterTaskRequestMap(t map[int32]*sharedv1.CrossClusterTaskRequests
 	}
 	v := make(map[int32][]*types.CrossClusterTaskRequest, len(t))
 	for key := range t {
-		v[key] = ToCrossClusterTaskRequestArray(t[key])
+		value := ToCrossClusterTaskRequestArray(t[key])
+		if value == nil {
+			// grpc can't differentiate between empty array or nil array
+			// our application logic ensure no nil array will be returned
+			// for CrossClusterTaskRequest, so always convert to empty array
+			// we only need the special handling here as this array is used
+			// as a map value in GetCrossClusterTasksResponse,
+			// and if the map value is nil, THRIFT won't be able to encode the value
+			// this may happen when we are using grpc within a cluster but thrift across cluster
+			value = []*types.CrossClusterTaskRequest{}
+		}
+		v[key] = value
 	}
 	return v
 }
