@@ -124,9 +124,9 @@ func buildDSN(cfg *config.SQL, host string, port string, sslParams url.Values) s
 }
 
 func generateCredentialString(user string, password string) string {
-	userPass := user
+	userPass := url.PathEscape(user)
 	if password != "" {
-		userPass += ":" + password
+		userPass += ":" + url.PathEscape(password)
 	}
 	return userPass
 }
