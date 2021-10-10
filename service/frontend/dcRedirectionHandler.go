@@ -51,7 +51,7 @@ func NewDCRedirectionHandler(
 	wfHandler Handler,
 	resource resource.Resource,
 	config *Config,
-	policy config.DCRedirectionPolicy,
+	policy config.ClusterRedirectionPolicy,
 ) *DCRedirectionHandlerImpl {
 	dcRedirectionPolicy := RedirectionPolicyGenerator(
 		resource.GetClusterMetadata(),

@@ -48,25 +48,25 @@ type (
 		Logger          log.Logger
 		ThrottledLogger log.Logger
 
-		MetricScope         tally.Scope
-		MembershipFactory   MembershipMonitorFactory
-		RPCFactory          common.RPCFactory
-		PProfInitializer    common.PProfInitializer
-		PersistenceConfig   config.Persistence
-		ClusterMetadata     cluster.Metadata
-		ReplicatorConfig    config.Replicator
-		MetricsClient       metrics.Client
-		MessagingClient     messaging.Client
-		BlobstoreClient     blobstore.Client
-		ESClient            es.GenericClient
-		ESConfig            *config.ElasticSearchConfig
-		DynamicConfig       dynamicconfig.Client
-		DCRedirectionPolicy config.DCRedirectionPolicy
-		PublicClient        workflowserviceclient.Interface
-		ArchivalMetadata    archiver.ArchivalMetadata
-		ArchiverProvider    provider.ArchiverProvider
-		Authorizer          authorization.Authorizer // NOTE: this can be nil. If nil, AccessControlledHandlerImpl will initiate one with config.Authorization
-		AuthorizationConfig config.Authorization     // NOTE: empty(default) struct will get a authorization.NoopAuthorizer
+		MetricScope              tally.Scope
+		MembershipFactory        MembershipMonitorFactory
+		RPCFactory               common.RPCFactory
+		PProfInitializer         common.PProfInitializer
+		PersistenceConfig        config.Persistence
+		ClusterMetadata          cluster.Metadata
+		ReplicatorConfig         config.Replicator
+		MetricsClient            metrics.Client
+		MessagingClient          messaging.Client
+		BlobstoreClient          blobstore.Client
+		ESClient                 es.GenericClient
+		ESConfig                 *config.ElasticSearchConfig
+		DynamicConfig            dynamicconfig.Client
+		ClusterRedirectionPolicy *config.ClusterRedirectionPolicy
+		PublicClient             workflowserviceclient.Interface
+		ArchivalMetadata         archiver.ArchivalMetadata
+		ArchiverProvider         provider.ArchiverProvider
+		Authorizer               authorization.Authorizer // NOTE: this can be nil. If nil, AccessControlledHandlerImpl will initiate one with config.Authorization
+		AuthorizationConfig      config.Authorization     // NOTE: empty(default) struct will get a authorization.NoopAuthorizer
 	}
 
 	// MembershipMonitorFactory provides a bootstrapped membership monitor

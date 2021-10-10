@@ -84,7 +84,7 @@ var selectedAPIsForwardingRedirectionPolicyAPIAllowlist = map[string]struct{}{
 
 // RedirectionPolicyGenerator generate corresponding redirection policy
 func RedirectionPolicyGenerator(clusterMetadata cluster.Metadata, config *Config,
-	domainCache cache.DomainCache, policy config.DCRedirectionPolicy) DCRedirectionPolicy {
+	domainCache cache.DomainCache, policy config.ClusterRedirectionPolicy) DCRedirectionPolicy {
 	switch policy.Policy {
 	case DCRedirectionPolicyDefault:
 		// default policy, noop
