@@ -32,27 +32,27 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-var _ Handler = (*DCRedirectionHandlerImpl)(nil)
+var _ Handler = (*ClusterRedirectionHandlerImpl)(nil)
 
 type (
-	// DCRedirectionHandlerImpl is simple wrapper over frontend service, doing redirection based on policy
-	DCRedirectionHandlerImpl struct {
+	// ClusterRedirectionHandlerImpl is simple wrapper over frontend service, doing redirection based on policy for global domains not being active in current cluster
+	ClusterRedirectionHandlerImpl struct {
 		resource.Resource
 
 		currentClusterName string
-		redirectionPolicy  DCRedirectionPolicy
+		redirectionPolicy  ClusterRedirectionPolicy
 		tokenSerializer    common.TaskTokenSerializer
 		frontendHandler    Handler
 	}
 )
 
-// NewDCRedirectionHandler creates a thrift handler for the cadence service, frontend
-func NewDCRedirectionHandler(
+// NewClusterRedirectionHandler creates a frontend handler to handle cluster redirection for global domains not being active in current cluster
+func NewClusterRedirectionHandler(
 	wfHandler Handler,
 	resource resource.Resource,
 	config *Config,
 	policy config.ClusterRedirectionPolicy,
-) *DCRedirectionHandlerImpl {
+) *ClusterRedirectionHandlerImpl {
 	dcRedirectionPolicy := RedirectionPolicyGenerator(
 		resource.GetClusterMetadata(),
 		config,
@@ -60,7 +60,7 @@ func NewDCRedirectionHandler(
 		policy,
 	)
 
-	return &DCRedirectionHandlerImpl{
+	return &ClusterRedirectionHandlerImpl{
 		Resource:           resource,
 		currentClusterName: resource.GetClusterMetadata().GetCurrentClusterName(),
 		redirectionPolicy:  dcRedirectionPolicy,
@@ -70,14 +70,14 @@ func NewDCRedirectionHandler(
 }
 
 // Health is for health check
-func (handler *DCRedirectionHandlerImpl) Health(ctx context.Context) (*types.HealthStatus, error) {
+func (handler *ClusterRedirectionHandlerImpl) Health(ctx context.Context) (*types.HealthStatus, error) {
 	return handler.frontendHandler.Health(ctx)
 }
 
 // Domain APIs, domain APIs does not require redirection
 
 // DeprecateDomain API call
-func (handler *DCRedirectionHandlerImpl) DeprecateDomain(
+func (handler *ClusterRedirectionHandlerImpl) DeprecateDomain(
 	ctx context.Context,
 	request *types.DeprecateDomainRequest,
 ) (retError error) {
@@ -93,7 +93,7 @@ func (handler *DCRedirectionHandlerImpl) DeprecateDomain(
 }
 
 // DescribeDomain API call
-func (handler *DCRedirectionHandlerImpl) DescribeDomain(
+func (handler *ClusterRedirectionHandlerImpl) DescribeDomain(
 	ctx context.Context,
 	request *types.DescribeDomainRequest,
 ) (resp *types.DescribeDomainResponse, retError error) {
@@ -109,7 +109,7 @@ func (handler *DCRedirectionHandlerImpl) DescribeDomain(
 }
 
 // ListDomains API call
-func (handler *DCRedirectionHandlerImpl) ListDomains(
+func (handler *ClusterRedirectionHandlerImpl) ListDomains(
 	ctx context.Context,
 	request *types.ListDomainsRequest,
 ) (resp *types.ListDomainsResponse, retError error) {
@@ -125,7 +125,7 @@ func (handler *DCRedirectionHandlerImpl) ListDomains(
 }
 
 // RegisterDomain API call
-func (handler *DCRedirectionHandlerImpl) RegisterDomain(
+func (handler *ClusterRedirectionHandlerImpl) RegisterDomain(
 	ctx context.Context,
 	request *types.RegisterDomainRequest,
 ) (retError error) {
@@ -141,7 +141,7 @@ func (handler *DCRedirectionHandlerImpl) RegisterDomain(
 }
 
 // UpdateDomain API call
-func (handler *DCRedirectionHandlerImpl) UpdateDomain(
+func (handler *ClusterRedirectionHandlerImpl) UpdateDomain(
 	ctx context.Context,
 	request *types.UpdateDomainRequest,
 ) (resp *types.UpdateDomainResponse, retError error) {
@@ -159,7 +159,7 @@ func (handler *DCRedirectionHandlerImpl) UpdateDomain(
 // Other APIs
 
 // DescribeTaskList API call
-func (handler *DCRedirectionHandlerImpl) DescribeTaskList(
+func (handler *ClusterRedirectionHandlerImpl) DescribeTaskList(
 	ctx context.Context,
 	request *types.DescribeTaskListRequest,
 ) (resp *types.DescribeTaskListResponse, retError error) {
@@ -189,7 +189,7 @@ func (handler *DCRedirectionHandlerImpl) DescribeTaskList(
 }
 
 // DescribeWorkflowExecution API call
-func (handler *DCRedirectionHandlerImpl) DescribeWorkflowExecution(
+func (handler *ClusterRedirectionHandlerImpl) DescribeWorkflowExecution(
 	ctx context.Context,
 	request *types.DescribeWorkflowExecutionRequest,
 ) (resp *types.DescribeWorkflowExecutionResponse, retError error) {
@@ -219,7 +219,7 @@ func (handler *DCRedirectionHandlerImpl) DescribeWorkflowExecution(
 }
 
 // GetWorkflowExecutionHistory API call
-func (handler *DCRedirectionHandlerImpl) GetWorkflowExecutionHistory(
+func (handler *ClusterRedirectionHandlerImpl) GetWorkflowExecutionHistory(
 	ctx context.Context,
 	request *types.GetWorkflowExecutionHistoryRequest,
 ) (resp *types.GetWorkflowExecutionHistoryResponse, retError error) {
@@ -249,7 +249,7 @@ func (handler *DCRedirectionHandlerImpl) GetWorkflowExecutionHistory(
 }
 
 // ListArchivedWorkflowExecutions API call
-func (handler *DCRedirectionHandlerImpl) ListArchivedWorkflowExecutions(
+func (handler *ClusterRedirectionHandlerImpl) ListArchivedWorkflowExecutions(
 	ctx context.Context,
 	request *types.ListArchivedWorkflowExecutionsRequest,
 ) (resp *types.ListArchivedWorkflowExecutionsResponse, retError error) {
@@ -279,7 +279,7 @@ func (handler *DCRedirectionHandlerImpl) ListArchivedWorkflowExecutions(
 }
 
 // ListClosedWorkflowExecutions API call
-func (handler *DCRedirectionHandlerImpl) ListClosedWorkflowExecutions(
+func (handler *ClusterRedirectionHandlerImpl) ListClosedWorkflowExecutions(
 	ctx context.Context,
 	request *types.ListClosedWorkflowExecutionsRequest,
 ) (resp *types.ListClosedWorkflowExecutionsResponse, retError error) {
@@ -309,7 +309,7 @@ func (handler *DCRedirectionHandlerImpl) ListClosedWorkflowExecutions(
 }
 
 // ListOpenWorkflowExecutions API call
-func (handler *DCRedirectionHandlerImpl) ListOpenWorkflowExecutions(
+func (handler *ClusterRedirectionHandlerImpl) ListOpenWorkflowExecutions(
 	ctx context.Context,
 	request *types.ListOpenWorkflowExecutionsRequest,
 ) (resp *types.ListOpenWorkflowExecutionsResponse, retError error) {
@@ -339,7 +339,7 @@ func (handler *DCRedirectionHandlerImpl) ListOpenWorkflowExecutions(
 }
 
 // ListWorkflowExecutions API call
-func (handler *DCRedirectionHandlerImpl) ListWorkflowExecutions(
+func (handler *ClusterRedirectionHandlerImpl) ListWorkflowExecutions(
 	ctx context.Context,
 	request *types.ListWorkflowExecutionsRequest,
 ) (resp *types.ListWorkflowExecutionsResponse, retError error) {
@@ -369,7 +369,7 @@ func (handler *DCRedirectionHandlerImpl) ListWorkflowExecutions(
 }
 
 // ScanWorkflowExecutions API call
-func (handler *DCRedirectionHandlerImpl) ScanWorkflowExecutions(
+func (handler *ClusterRedirectionHandlerImpl) ScanWorkflowExecutions(
 	ctx context.Context,
 	request *types.ListWorkflowExecutionsRequest,
 ) (resp *types.ListWorkflowExecutionsResponse, retError error) {
@@ -398,7 +398,7 @@ func (handler *DCRedirectionHandlerImpl) ScanWorkflowExecutions(
 }
 
 // CountWorkflowExecutions API call
-func (handler *DCRedirectionHandlerImpl) CountWorkflowExecutions(
+func (handler *ClusterRedirectionHandlerImpl) CountWorkflowExecutions(
 	ctx context.Context,
 	request *types.CountWorkflowExecutionsRequest,
 ) (resp *types.CountWorkflowExecutionsResponse, retError error) {
@@ -428,7 +428,7 @@ func (handler *DCRedirectionHandlerImpl) CountWorkflowExecutions(
 }
 
 // GetSearchAttributes API call
-func (handler *DCRedirectionHandlerImpl) GetSearchAttributes(
+func (handler *ClusterRedirectionHandlerImpl) GetSearchAttributes(
 	ctx context.Context,
 ) (resp *types.GetSearchAttributesResponse, retError error) {
 
@@ -443,7 +443,7 @@ func (handler *DCRedirectionHandlerImpl) GetSearchAttributes(
 }
 
 // PollForActivityTask API call
-func (handler *DCRedirectionHandlerImpl) PollForActivityTask(
+func (handler *ClusterRedirectionHandlerImpl) PollForActivityTask(
 	ctx context.Context,
 	request *types.PollForActivityTaskRequest,
 ) (resp *types.PollForActivityTaskResponse, retError error) {
@@ -473,7 +473,7 @@ func (handler *DCRedirectionHandlerImpl) PollForActivityTask(
 }
 
 // PollForDecisionTask API call
-func (handler *DCRedirectionHandlerImpl) PollForDecisionTask(
+func (handler *ClusterRedirectionHandlerImpl) PollForDecisionTask(
 	ctx context.Context,
 	request *types.PollForDecisionTaskRequest,
 ) (resp *types.PollForDecisionTaskResponse, retError error) {
@@ -503,7 +503,7 @@ func (handler *DCRedirectionHandlerImpl) PollForDecisionTask(
 }
 
 // QueryWorkflow API call
-func (handler *DCRedirectionHandlerImpl) QueryWorkflow(
+func (handler *ClusterRedirectionHandlerImpl) QueryWorkflow(
 	ctx context.Context,
 	request *types.QueryWorkflowRequest,
 ) (resp *types.QueryWorkflowResponse, retError error) {
@@ -540,7 +540,7 @@ func (handler *DCRedirectionHandlerImpl) QueryWorkflow(
 }
 
 // RecordActivityTaskHeartbeat API call
-func (handler *DCRedirectionHandlerImpl) RecordActivityTaskHeartbeat(
+func (handler *ClusterRedirectionHandlerImpl) RecordActivityTaskHeartbeat(
 	ctx context.Context,
 	request *types.RecordActivityTaskHeartbeatRequest,
 ) (resp *types.RecordActivityTaskHeartbeatResponse, retError error) {
@@ -575,7 +575,7 @@ func (handler *DCRedirectionHandlerImpl) RecordActivityTaskHeartbeat(
 }
 
 // RecordActivityTaskHeartbeatByID API call
-func (handler *DCRedirectionHandlerImpl) RecordActivityTaskHeartbeatByID(
+func (handler *ClusterRedirectionHandlerImpl) RecordActivityTaskHeartbeatByID(
 	ctx context.Context,
 	request *types.RecordActivityTaskHeartbeatByIDRequest,
 ) (resp *types.RecordActivityTaskHeartbeatResponse, retError error) {
@@ -605,7 +605,7 @@ func (handler *DCRedirectionHandlerImpl) RecordActivityTaskHeartbeatByID(
 }
 
 // RequestCancelWorkflowExecution API call
-func (handler *DCRedirectionHandlerImpl) RequestCancelWorkflowExecution(
+func (handler *ClusterRedirectionHandlerImpl) RequestCancelWorkflowExecution(
 	ctx context.Context,
 	request *types.RequestCancelWorkflowExecutionRequest,
 ) (retError error) {
@@ -635,7 +635,7 @@ func (handler *DCRedirectionHandlerImpl) RequestCancelWorkflowExecution(
 }
 
 // ResetStickyTaskList API call
-func (handler *DCRedirectionHandlerImpl) ResetStickyTaskList(
+func (handler *ClusterRedirectionHandlerImpl) ResetStickyTaskList(
 	ctx context.Context,
 	request *types.ResetStickyTaskListRequest,
 ) (resp *types.ResetStickyTaskListResponse, retError error) {
@@ -665,7 +665,7 @@ func (handler *DCRedirectionHandlerImpl) ResetStickyTaskList(
 }
 
 // ResetWorkflowExecution API call
-func (handler *DCRedirectionHandlerImpl) ResetWorkflowExecution(
+func (handler *ClusterRedirectionHandlerImpl) ResetWorkflowExecution(
 	ctx context.Context,
 	request *types.ResetWorkflowExecutionRequest,
 ) (resp *types.ResetWorkflowExecutionResponse, retError error) {
@@ -695,7 +695,7 @@ func (handler *DCRedirectionHandlerImpl) ResetWorkflowExecution(
 }
 
 // RespondActivityTaskCanceled API call
-func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCanceled(
+func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskCanceled(
 	ctx context.Context,
 	request *types.RespondActivityTaskCanceledRequest,
 ) (retError error) {
@@ -730,7 +730,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCanceled(
 }
 
 // RespondActivityTaskCanceledByID API call
-func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCanceledByID(
+func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskCanceledByID(
 	ctx context.Context,
 	request *types.RespondActivityTaskCanceledByIDRequest,
 ) (retError error) {
@@ -760,7 +760,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCanceledByID(
 }
 
 // RespondActivityTaskCompleted API call
-func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCompleted(
+func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskCompleted(
 	ctx context.Context,
 	request *types.RespondActivityTaskCompletedRequest,
 ) (retError error) {
@@ -795,7 +795,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCompleted(
 }
 
 // RespondActivityTaskCompletedByID API call
-func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCompletedByID(
+func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskCompletedByID(
 	ctx context.Context,
 	request *types.RespondActivityTaskCompletedByIDRequest,
 ) (retError error) {
@@ -825,7 +825,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCompletedByID(
 }
 
 // RespondActivityTaskFailed API call
-func (handler *DCRedirectionHandlerImpl) RespondActivityTaskFailed(
+func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskFailed(
 	ctx context.Context,
 	request *types.RespondActivityTaskFailedRequest,
 ) (retError error) {
@@ -860,7 +860,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskFailed(
 }
 
 // RespondActivityTaskFailedByID API call
-func (handler *DCRedirectionHandlerImpl) RespondActivityTaskFailedByID(
+func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskFailedByID(
 	ctx context.Context,
 	request *types.RespondActivityTaskFailedByIDRequest,
 ) (retError error) {
@@ -890,7 +890,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskFailedByID(
 }
 
 // RespondDecisionTaskCompleted API call
-func (handler *DCRedirectionHandlerImpl) RespondDecisionTaskCompleted(
+func (handler *ClusterRedirectionHandlerImpl) RespondDecisionTaskCompleted(
 	ctx context.Context,
 	request *types.RespondDecisionTaskCompletedRequest,
 ) (resp *types.RespondDecisionTaskCompletedResponse, retError error) {
@@ -925,7 +925,7 @@ func (handler *DCRedirectionHandlerImpl) RespondDecisionTaskCompleted(
 }
 
 // RespondDecisionTaskFailed API call
-func (handler *DCRedirectionHandlerImpl) RespondDecisionTaskFailed(
+func (handler *ClusterRedirectionHandlerImpl) RespondDecisionTaskFailed(
 	ctx context.Context,
 	request *types.RespondDecisionTaskFailedRequest,
 ) (retError error) {
@@ -960,7 +960,7 @@ func (handler *DCRedirectionHandlerImpl) RespondDecisionTaskFailed(
 }
 
 // RespondQueryTaskCompleted API call
-func (handler *DCRedirectionHandlerImpl) RespondQueryTaskCompleted(
+func (handler *ClusterRedirectionHandlerImpl) RespondQueryTaskCompleted(
 	ctx context.Context,
 	request *types.RespondQueryTaskCompletedRequest,
 ) (retError error) {
@@ -995,7 +995,7 @@ func (handler *DCRedirectionHandlerImpl) RespondQueryTaskCompleted(
 }
 
 // SignalWithStartWorkflowExecution API call
-func (handler *DCRedirectionHandlerImpl) SignalWithStartWorkflowExecution(
+func (handler *ClusterRedirectionHandlerImpl) SignalWithStartWorkflowExecution(
 	ctx context.Context,
 	request *types.SignalWithStartWorkflowExecutionRequest,
 ) (resp *types.StartWorkflowExecutionResponse, retError error) {
@@ -1025,7 +1025,7 @@ func (handler *DCRedirectionHandlerImpl) SignalWithStartWorkflowExecution(
 }
 
 // SignalWorkflowExecution API call
-func (handler *DCRedirectionHandlerImpl) SignalWorkflowExecution(
+func (handler *ClusterRedirectionHandlerImpl) SignalWorkflowExecution(
 	ctx context.Context,
 	request *types.SignalWorkflowExecutionRequest,
 ) (retError error) {
@@ -1054,7 +1054,7 @@ func (handler *DCRedirectionHandlerImpl) SignalWorkflowExecution(
 }
 
 // StartWorkflowExecution API call
-func (handler *DCRedirectionHandlerImpl) StartWorkflowExecution(
+func (handler *ClusterRedirectionHandlerImpl) StartWorkflowExecution(
 	ctx context.Context,
 	request *types.StartWorkflowExecutionRequest,
 ) (resp *types.StartWorkflowExecutionResponse, retError error) {
@@ -1084,7 +1084,7 @@ func (handler *DCRedirectionHandlerImpl) StartWorkflowExecution(
 }
 
 // TerminateWorkflowExecution API call
-func (handler *DCRedirectionHandlerImpl) TerminateWorkflowExecution(
+func (handler *ClusterRedirectionHandlerImpl) TerminateWorkflowExecution(
 	ctx context.Context,
 	request *types.TerminateWorkflowExecutionRequest,
 ) (retError error) {
@@ -1114,7 +1114,7 @@ func (handler *DCRedirectionHandlerImpl) TerminateWorkflowExecution(
 }
 
 // ListTaskListPartitions API call
-func (handler *DCRedirectionHandlerImpl) ListTaskListPartitions(
+func (handler *ClusterRedirectionHandlerImpl) ListTaskListPartitions(
 	ctx context.Context,
 	request *types.ListTaskListPartitionsRequest,
 ) (resp *types.ListTaskListPartitionsResponse, retError error) {
@@ -1144,7 +1144,7 @@ func (handler *DCRedirectionHandlerImpl) ListTaskListPartitions(
 }
 
 // GetTaskListsByDomain API call
-func (handler *DCRedirectionHandlerImpl) GetTaskListsByDomain(
+func (handler *ClusterRedirectionHandlerImpl) GetTaskListsByDomain(
 	ctx context.Context,
 	request *types.GetTaskListsByDomainRequest,
 ) (resp *types.GetTaskListsByDomainResponse, retError error) {
@@ -1174,20 +1174,20 @@ func (handler *DCRedirectionHandlerImpl) GetTaskListsByDomain(
 }
 
 // GetClusterInfo API call
-func (handler *DCRedirectionHandlerImpl) GetClusterInfo(
+func (handler *ClusterRedirectionHandlerImpl) GetClusterInfo(
 	ctx context.Context,
 ) (*types.ClusterInfo, error) {
 	return handler.frontendHandler.GetClusterInfo(ctx)
 }
 
-func (handler *DCRedirectionHandlerImpl) beforeCall(
+func (handler *ClusterRedirectionHandlerImpl) beforeCall(
 	scope int,
 ) (metrics.Scope, time.Time) {
 
 	return handler.GetMetricsClient().Scope(scope), handler.GetTimeSource().Now()
 }
 
-func (handler *DCRedirectionHandlerImpl) afterCall(
+func (handler *ClusterRedirectionHandlerImpl) afterCall(
 	scope metrics.Scope,
 	startTime time.Time,
 	cluster string,

@@ -262,7 +262,10 @@ func (s *Service) Start() {
 
 	// Additional decorations
 	var handler Handler = s.handler
-	handler = NewDCRedirectionHandler(handler, s, s.config, s.params.ClusterRedirectionPolicy)
+	if s.params.ClusterRedirectionPolicy != nil {
+		handler = NewClusterRedirectionHandler(handler, s, s.config, *s.params.ClusterRedirectionPolicy)
+	}
+
 	handler = NewAccessControlledHandlerImpl(handler, s, s.params.Authorizer, s.params.AuthorizationConfig)
 
 	// Register the latest (most decorated) handler

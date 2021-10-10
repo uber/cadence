@@ -50,8 +50,8 @@ const (
 )
 
 type (
-	// DCRedirectionPolicy is a DC redirection policy interface
-	DCRedirectionPolicy interface {
+	// ClusterRedirectionPolicy is a DC redirection policy interface
+	ClusterRedirectionPolicy interface {
 		WithDomainIDRedirect(ctx context.Context, domainID string, apiName string, call func(string) error) error
 		WithDomainNameRedirect(ctx context.Context, domainName string, apiName string, call func(string) error) error
 	}
@@ -68,6 +68,7 @@ type (
 		config             *Config
 		domainCache        cache.DomainCache
 		allDomainAPIs      bool
+		targetCluster      string
 	}
 )
 
@@ -84,7 +85,7 @@ var selectedAPIsForwardingRedirectionPolicyAPIAllowlist = map[string]struct{}{
 
 // RedirectionPolicyGenerator generate corresponding redirection policy
 func RedirectionPolicyGenerator(clusterMetadata cluster.Metadata, config *Config,
-	domainCache cache.DomainCache, policy config.ClusterRedirectionPolicy) DCRedirectionPolicy {
+	domainCache cache.DomainCache, policy config.ClusterRedirectionPolicy) ClusterRedirectionPolicy {
 	switch policy.Policy {
 	case DCRedirectionPolicyDefault:
 		// default policy, noop
@@ -93,10 +94,10 @@ func RedirectionPolicyGenerator(clusterMetadata cluster.Metadata, config *Config
 		return newNoopRedirectionPolicy(clusterMetadata.GetCurrentClusterName())
 	case DCRedirectionPolicySelectedAPIsForwarding:
 		currentClusterName := clusterMetadata.GetCurrentClusterName()
-		return newSelectedOrAllAPIsForwardingPolicy(currentClusterName, config, domainCache, false)
+		return newSelectedOrAllAPIsForwardingPolicy(currentClusterName, config, domainCache, false, "")
 	case DCRedirectionPolicyAllDomainAPIsForwarding:
 		currentClusterName := clusterMetadata.GetCurrentClusterName()
-		return newSelectedOrAllAPIsForwardingPolicy(currentClusterName, config, domainCache, true)
+		return newSelectedOrAllAPIsForwardingPolicy(currentClusterName, config, domainCache, true, policy.AllDomainApisForwardingTargetCluster)
 	default:
 		panic(fmt.Sprintf("Unknown DC redirection policy %v", policy.Policy))
 	}
@@ -120,12 +121,13 @@ func (policy *noopRedirectionPolicy) WithDomainNameRedirect(ctx context.Context,
 }
 
 // newSelectedOrAllAPIsForwardingPolicy creates a forwarding policy for selected APIs based on domain
-func newSelectedOrAllAPIsForwardingPolicy(currentClusterName string, config *Config, domainCache cache.DomainCache, allDoaminAPIs bool) *selectedOrAllAPIsForwardingRedirectionPolicy {
+func newSelectedOrAllAPIsForwardingPolicy(currentClusterName string, config *Config, domainCache cache.DomainCache, allDoaminAPIs bool, targetCluster string) *selectedOrAllAPIsForwardingRedirectionPolicy {
 	return &selectedOrAllAPIsForwardingRedirectionPolicy{
 		currentClusterName: currentClusterName,
 		config:             config,
 		domainCache:        domainCache,
 		allDomainAPIs:      allDoaminAPIs,
+		targetCluster:      targetCluster,
 	}
 }
 
@@ -183,8 +185,16 @@ func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) getTargetClusterAndI
 		return policy.currentClusterName, false
 	}
 
+	currentActiveCluster := domainEntry.GetReplicationConfig().ActiveClusterName
 	if policy.allDomainAPIs {
-		return domainEntry.GetReplicationConfig().ActiveClusterName, true
+		if policy.targetCluster == "" {
+			return domainEntry.GetReplicationConfig().ActiveClusterName, true
+		} else {
+			if policy.targetCluster == currentActiveCluster {
+				return domainEntry.GetReplicationConfig().ActiveClusterName, true
+			}
+			// fallback to selectedAPIsForwardingRedirectionPolicy if targetCluster is not empty and not the same as currentActiveCluster
+		}
 	}
 
 	_, ok := selectedAPIsForwardingRedirectionPolicyAPIAllowlist[apiName]
