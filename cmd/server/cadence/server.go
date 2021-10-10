@@ -166,7 +166,7 @@ func (s *server) startService() common.Daemon {
 	}
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
 
-	params.ClusterRedirectionPolicy = s.cfg.ClusterRedirectionPolicy
+	params.ClusterRedirectionPolicy = s.cfg.ClusterGroupMetadata.ClusterRedirectionPolicy
 
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 

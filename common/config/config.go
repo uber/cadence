@@ -49,10 +49,8 @@ type (
 		ClusterGroupMetadata *ClusterGroupMetadata `yaml:"clusterGroupMetadata"`
 		// Deprecated: please use ClusterGroupMetadata
 		ClusterMetadata *ClusterGroupMetadata `yaml:"clusterMetadata"`
-		// Deprecated: please use ClusterRedirectionPolicy
+		// Deprecated: please use ClusterRedirectionPolicy under ClusterGroupMetadata
 		DCRedirectionPolicy *ClusterRedirectionPolicy `yaml:"dcRedirectionPolicy"`
-		// ClusterRedirectionPolicy contains the cluster redirection policy for global domains
-		ClusterRedirectionPolicy *ClusterRedirectionPolicy `yaml:"clusterRedirectionPolicy"`
 		// Services is a map of service name to service config items
 		Services map[string]Service `yaml:"services"`
 		// Kafka is the config for connecting to kafka
@@ -562,9 +560,9 @@ func (c *Config) fillDefaults() {
 		}
 	}
 
-	if c.ClusterRedirectionPolicy == nil && c.DCRedirectionPolicy != nil {
+	if c.ClusterGroupMetadata.ClusterRedirectionPolicy == nil && c.DCRedirectionPolicy != nil {
 		log.Println("[WARN] dcRedirectionPolicy config is deprecated. Please replace it with clusterRedirectionPolicy.")
-		c.ClusterRedirectionPolicy = c.DCRedirectionPolicy
+		c.ClusterGroupMetadata.ClusterRedirectionPolicy = c.DCRedirectionPolicy
 	}
 }
 

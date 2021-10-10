@@ -45,6 +45,8 @@ type (
 		MasterClusterName string `yaml:"masterClusterName"`
 		// CurrentClusterName is the name of the cluster of current deployment
 		CurrentClusterName string `yaml:"currentClusterName"`
+		// ClusterRedirectionPolicy contains the cluster redirection policy for global domains
+		ClusterRedirectionPolicy *ClusterRedirectionPolicy `yaml:"clusterRedirectionPolicy"`
 		// ClusterGroup contains information for each cluster within the replication group
 		// Key is the clusterName
 		ClusterGroup map[string]ClusterInformation `yaml:"clusterGroup"`
