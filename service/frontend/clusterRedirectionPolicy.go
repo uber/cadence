@@ -188,10 +188,10 @@ func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) getTargetClusterAndI
 	currentActiveCluster := domainEntry.GetReplicationConfig().ActiveClusterName
 	if policy.allDomainAPIs {
 		if policy.targetCluster == "" {
-			return domainEntry.GetReplicationConfig().ActiveClusterName, true
+			return currentActiveCluster, true
 		} else {
 			if policy.targetCluster == currentActiveCluster {
-				return domainEntry.GetReplicationConfig().ActiveClusterName, true
+				return currentActiveCluster, true
 			}
 			// fallback to selectedAPIsForwardingRedirectionPolicy if targetCluster is not empty and not the same as currentActiveCluster
 		}
@@ -203,5 +203,5 @@ func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) getTargetClusterAndI
 		return policy.currentClusterName, false
 	}
 
-	return domainEntry.GetReplicationConfig().ActiveClusterName, true
+	return currentActiveCluster, true
 }
