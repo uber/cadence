@@ -149,6 +149,10 @@ func (s *server) startService() common.Daemon {
 	if err != nil {
 		log.Fatalf("error creating rpc factory params: %v", err)
 	}
+	rpcParams.OutboundsBuilder = rpc.CombineOutbounds(
+		rpcParams.OutboundsBuilder,
+		rpc.NewCrossDCOutbounds(clusterGroupMetadata.ClusterGroup, rpc.NewDNSPeerChooserFactory(s.cfg.PublicClient.RefreshInterval, params.Logger)),
+	)
 	params.RPCFactory = rpc.NewFactory(params.Logger, rpcParams)
 	dispatcher := params.RPCFactory.GetDispatcher()
 
