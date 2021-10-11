@@ -76,7 +76,7 @@ func (pdb *db) CreateSchemaVersionTables() error {
 // ReadSchemaVersion returns the current schema version for the keyspace
 func (pdb *db) ReadSchemaVersion(database string) (string, error) {
 	var version string
-	err := pdb.driver.Get(sqlplugin.DbDefaultShard, &version, readSchemaVersionQuery, database)
+	err := pdb.driver.GetForSchemaQuery(sqlplugin.DbDefaultShard, &version, readSchemaVersionQuery, database)
 	return version, err
 }
 
@@ -94,14 +94,14 @@ func (pdb *db) WriteSchemaUpdateLog(oldVersion string, newVersion string, manife
 // ExecSchemaOperationQuery executes a sql statement for schema ONLY. DO NOT use it in other cases, otherwise it will not work for multiple SQL database.
 // For Sharded SQL, it will execute the statement for all shards
 func (pdb *db) ExecSchemaOperationQuery(stmt string, args ...interface{}) error {
-	_, err := pdb.driver.Exec(sqlplugin.DbAllShards, stmt, args...)
+	_, err := pdb.driver.ExecDDL(sqlplugin.DbAllShards, stmt, args...)
 	return err
 }
 
 // ListTables returns a list of tables in this database
 func (pdb *db) ListTables(database string) ([]string, error) {
 	var tables []string
-	err := pdb.driver.Select(sqlplugin.DbDefaultShard, &tables, listTablesQuery)
+	err := pdb.driver.SelectForSchemaQuery(sqlplugin.DbDefaultShard, &tables, listTablesQuery)
 	return tables, err
 }
 

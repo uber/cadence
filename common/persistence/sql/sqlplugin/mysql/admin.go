@@ -70,7 +70,7 @@ func (mdb *db) CreateSchemaVersionTables() error {
 // ReadSchemaVersion returns the current schema version for the keyspace
 func (mdb *db) ReadSchemaVersion(database string) (string, error) {
 	var version string
-	err := mdb.driver.Get(sqlplugin.DbDefaultShard, &version, readSchemaVersionQuery, database)
+	err := mdb.driver.GetForSchemaQuery(sqlplugin.DbDefaultShard, &version, readSchemaVersionQuery, database)
 	return version, err
 }
 
@@ -88,14 +88,14 @@ func (mdb *db) WriteSchemaUpdateLog(oldVersion string, newVersion string, manife
 // ExecSchemaOperationQuery executes a sql statement for schema ONLY. DO NOT use it in other cases, otherwise it will not work for multiple SQL database.
 // For Sharded SQL, it will execute the statement for all shards
 func (mdb *db) ExecSchemaOperationQuery(stmt string, args ...interface{}) error {
-	_, err := mdb.driver.Exec(sqlplugin.DbAllShards, stmt, args...)
+	_, err := mdb.driver.ExecDDL(sqlplugin.DbAllShards, stmt, args...)
 	return err
 }
 
 // ListTables returns a list of tables in this database
 func (mdb *db) ListTables(database string) ([]string, error) {
 	var tables []string
-	err := mdb.driver.Select(sqlplugin.DbDefaultShard, &tables, fmt.Sprintf(listTablesQuery, database))
+	err := mdb.driver.SelectForSchemaQuery(sqlplugin.DbDefaultShard, &tables, fmt.Sprintf(listTablesQuery, database))
 	return tables, err
 }
 

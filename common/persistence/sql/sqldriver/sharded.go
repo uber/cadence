@@ -115,9 +115,9 @@ func (s *sharded) SelectContext(ctx context.Context, dbShardID int, dest interfa
 
 // below are non-transactional methods only
 
-func (s *sharded) Exec(dbShardID int, query string, args ...interface{}) (sql.Result, error) {
+func (s *sharded) ExecDDL(dbShardID int, query string, args ...interface{}) (sql.Result, error) {
 	if dbShardID == sqlplugin.DbShardUndefined {
-		return nil, fmt.Errorf("DbShardUndefined shouldn't be used to Exec, there must be a bug")
+		return nil, fmt.Errorf("DbShardUndefined shouldn't be used to ExecDDL, there must be a bug")
 	}
 	if dbShardID == sqlplugin.DbAllShards {
 		// NOTE: this can only be safely used for schema operation
@@ -137,14 +137,14 @@ func (s *sharded) Exec(dbShardID int, query string, args ...interface{}) (sql.Re
 	return s.dbs[dbShardID].Exec(query, args...)
 }
 
-func (s *sharded) Select(dbShardID int, dest interface{}, query string, args ...interface{}) error {
+func (s *sharded) SelectForSchemaQuery(dbShardID int, dest interface{}, query string, args ...interface{}) error {
 	if dbShardID == sqlplugin.DbShardUndefined || dbShardID == sqlplugin.DbAllShards {
-		return fmt.Errorf("invalid dbShardID %v shouldn't be used to Select, there must be a bug", dbShardID)
+		return fmt.Errorf("invalid dbShardID %v shouldn't be used to SelectForSchemaQuery, there must be a bug", dbShardID)
 	}
 	return s.dbs[dbShardID].Select(dest, query, args...)
 }
 
-func (s *sharded) Get(dbShardID int, dest interface{}, query string, args ...interface{}) error {
+func (s *sharded) GetForSchemaQuery(dbShardID int, dest interface{}, query string, args ...interface{}) error {
 	if dbShardID == sqlplugin.DbShardUndefined || dbShardID == sqlplugin.DbAllShards {
 		return fmt.Errorf("invalid dbShardID %v shouldn't be used to Get, there must be a bug", dbShardID)
 	}

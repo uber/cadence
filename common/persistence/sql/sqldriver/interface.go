@@ -45,10 +45,15 @@ type (
 		// Close closes this driver(and underlying connections)
 		Close() error
 
-		// Exec executes
-		Exec(dbShardID int, query string, args ...interface{}) (sql.Result, error)
-		Select(dbShardID int, dest interface{}, query string, args ...interface{}) error
-		Get(dbShardID int, dest interface{}, query string, args ...interface{}) error
+		// ExecDDL executes a DDL query
+		// For multiple databases, it will execute the query in all of them
+		ExecDDL(dbShardID int, query string, args ...interface{}) (sql.Result, error)
+		// SelectForSchemaQuery executes a select query for schema(returning multiple rows).
+		// For multiple databases, it will execute the query in all of them and validate they are the same using deep equal
+		SelectForSchemaQuery(dbShardID int, dest interface{}, query string, args ...interface{}) error
+		// GetForSchemaQuery executes a get query for schema(returning single row).
+		// For multiple databases, it will execute the query in all of them and validate they are the same using deep equal
+		GetForSchemaQuery(dbShardID int, dest interface{}, query string, args ...interface{}) error
 	}
 
 	// the methods can be executed from either a started or transaction(then need to call Commit/Rollback), or without a transaction
