@@ -211,6 +211,7 @@ func TestConfigErrorInAuthorizationConfig(t *testing.T) {
 				Enable: true,
 			},
 		},
+		ClusterGroupMetadata: &ClusterGroupMetadata{},
 	}
 
 	err := cfg.ValidateAndFillDefaults()

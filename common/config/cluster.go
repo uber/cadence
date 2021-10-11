@@ -84,10 +84,6 @@ type (
 
 // Validate validates ClusterGroupMetadata
 func (m *ClusterGroupMetadata) Validate() error {
-	if m == nil {
-		return errors.New("ClusterGroupMetadata cannot be empty")
-	}
-
 	if !m.EnableGlobalDomain {
 		log.Println("[WARN] Local domain is now deprecated. Please update config to enable global domain(ClusterGroupMetadata->EnableGlobalDomain)." +
 			"Global domain of single cluster has zero overhead, but only advantages for future migration and fail over. Please check Cadence documentation for more details.")
@@ -148,7 +144,7 @@ func (m *ClusterGroupMetadata) Validate() error {
 // FillDefaults populates default values for unspecified fields
 func (m *ClusterGroupMetadata) FillDefaults() {
 	if m == nil {
-		return
+		log.Fatal("ClusterGroupMetadata cannot be empty")
 	}
 
 	// TODO: remove this after 0.23 and mention a breaking change in config.
