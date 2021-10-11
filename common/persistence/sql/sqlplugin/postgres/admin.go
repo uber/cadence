@@ -67,10 +67,10 @@ const (
 
 // CreateSchemaVersionTables sets up the schema version tables
 func (pdb *db) CreateSchemaVersionTables() error {
-	if err := pdb.Exec(createSchemaVersionTableQuery); err != nil {
+	if err := pdb.ExecSchemaOperationQuery(createSchemaVersionTableQuery); err != nil {
 		return err
 	}
-	return pdb.Exec(createSchemaUpdateHistoryTableQuery)
+	return pdb.ExecSchemaOperationQuery(createSchemaUpdateHistoryTableQuery)
 }
 
 // ReadSchemaVersion returns the current schema version for the keyspace
@@ -82,19 +82,19 @@ func (pdb *db) ReadSchemaVersion(database string) (string, error) {
 
 // UpdateSchemaVersion updates the schema version for the keyspace
 func (pdb *db) UpdateSchemaVersion(database string, newVersion string, minCompatibleVersion string) error {
-	return pdb.Exec(writeSchemaVersionQuery, database, time.Now(), newVersion, minCompatibleVersion)
+	return pdb.ExecSchemaOperationQuery(writeSchemaVersionQuery, database, time.Now(), newVersion, minCompatibleVersion)
 }
 
 // WriteSchemaUpdateLog adds an entry to the schema update history table
 func (pdb *db) WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error {
 	now := time.Now().UTC()
-	return pdb.Exec(writeSchemaUpdateHistoryQuery, now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
+	return pdb.ExecSchemaOperationQuery(writeSchemaUpdateHistoryQuery, now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
 }
 
 // Exec executes a sql statement
 // For Sharded SQL, it will execute the statement for all shards
 // TODO: rename to ExecSchemaQuery so that we know it should use DB_ALL_SHARDS
-func (pdb *db) Exec(stmt string, args ...interface{}) error {
+func (pdb *db) ExecSchemaOperationQuery(stmt string, args ...interface{}) error {
 	_, err := pdb.driver.Exec(sqlplugin.DbAllShards, stmt, args...)
 	return err
 }
@@ -108,7 +108,7 @@ func (pdb *db) ListTables(database string) ([]string, error) {
 
 // DropTable drops a given table from the database
 func (pdb *db) DropTable(name string) error {
-	return pdb.Exec(fmt.Sprintf(dropTableQuery, name))
+	return pdb.ExecSchemaOperationQuery(fmt.Sprintf(dropTableQuery, name))
 }
 
 // DropAllTables drops all tables from this database
@@ -127,10 +127,10 @@ func (pdb *db) DropAllTables(database string) error {
 
 // CreateDatabase creates a database if it doesn't exist
 func (pdb *db) CreateDatabase(name string) error {
-	return pdb.Exec(fmt.Sprintf(createDatabaseQuery, name))
+	return pdb.ExecSchemaOperationQuery(fmt.Sprintf(createDatabaseQuery, name))
 }
 
 // DropDatabase drops a database
 func (pdb *db) DropDatabase(name string) error {
-	return pdb.Exec(fmt.Sprintf(dropDatabaseQuery, name))
+	return pdb.ExecSchemaOperationQuery(fmt.Sprintf(dropDatabaseQuery, name))
 }

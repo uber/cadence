@@ -814,7 +814,8 @@ type (
 		DropAllTables(database string) error
 		CreateDatabase(database string) error
 		DropDatabase(database string) error
-		Exec(stmt string, args ...interface{}) error
+		// ExecSchemaOperationQuery allows passing in any query, but it must be schema operation (DDL)
+		ExecSchemaOperationQuery(stmt string, args ...interface{}) error
 	}
 
 	// Tx defines the API for a SQL transaction
