@@ -85,9 +85,8 @@ func (mdb *db) WriteSchemaUpdateLog(oldVersion string, newVersion string, manife
 	return mdb.ExecSchemaOperationQuery(writeSchemaUpdateHistoryQuery, now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
 }
 
-// Exec executes a sql statement
+// ExecSchemaOperationQuery executes a sql statement for schema ONLY. DO NOT use it in other cases, otherwise it will not work for multiple SQL database.
 // For Sharded SQL, it will execute the statement for all shards
-// TODO: rename to ExecSchemaQuery so that we know it should use DB_ALL_SHARDS
 func (mdb *db) ExecSchemaOperationQuery(stmt string, args ...interface{}) error {
 	_, err := mdb.driver.Exec(sqlplugin.DbAllShards, stmt, args...)
 	return err
