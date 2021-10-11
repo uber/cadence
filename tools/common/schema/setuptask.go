@@ -65,7 +65,7 @@ func (task *SetupTask) Run() error {
 		log.Println("----- Creating types and tables -----")
 		for _, stmt := range stmts {
 			log.Println(rmspaceRegex.ReplaceAllString(stmt, " "))
-			if err := task.db.Exec(stmt); err != nil {
+			if err := task.db.ExecDDLQuery(stmt); err != nil {
 				return err
 			}
 		}

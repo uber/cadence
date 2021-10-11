@@ -51,7 +51,7 @@ type (
 	// for the schema-tool to work
 	SchemaClient interface {
 		// Exec executes a schema statement
-		Exec(stmt string, args ...interface{}) error
+		ExecDDLQuery(stmt string, args ...interface{}) error
 		// DropAllTables drops all tables
 		DropAllTables() error
 		// CreateSchemaVersionTables sets up the schema version tables
