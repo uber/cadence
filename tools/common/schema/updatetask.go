@@ -39,7 +39,7 @@ type (
 	// UpdateTask represents a task
 	// that executes a cassandra schema upgrade
 	UpdateTask struct {
-		db     DB
+		db     SchemaClient
 		config *UpdateConfig
 	}
 
@@ -85,7 +85,7 @@ var (
 )
 
 // NewUpdateSchemaTask returns a new instance of UpdateTask
-func newUpdateSchemaTask(db DB, config *UpdateConfig) *UpdateTask {
+func newUpdateSchemaTask(db SchemaClient, config *UpdateConfig) *UpdateTask {
 	return &UpdateTask{
 		db:     db,
 		config: config,

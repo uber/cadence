@@ -35,7 +35,7 @@ type (
 	}
 )
 
-var _ schema.DB = (*Connection)(nil)
+var _ schema.SchemaClient = (*Connection)(nil)
 
 // NewConnection creates a new connection to database
 func NewConnection(cfg *config.SQL) (*Connection, error) {

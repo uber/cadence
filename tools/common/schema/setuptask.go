@@ -26,11 +26,11 @@ import "log"
 // that sets up cassandra schema on
 // a specified keyspace
 type SetupTask struct {
-	db     DB
+	db     SchemaClient
 	config *SetupConfig
 }
 
-func newSetupSchemaTask(db DB, config *SetupConfig) *SetupTask {
+func newSetupSchemaTask(db SchemaClient, config *SetupConfig) *SetupTask {
 	return &SetupTask{
 		db:     db,
 		config: config,

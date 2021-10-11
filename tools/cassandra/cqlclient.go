@@ -87,7 +87,7 @@ const (
 		`WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %v};`
 )
 
-var _ schema.DB = (*CqlClient)(nil)
+var _ schema.SchemaClient = (*CqlClient)(nil)
 
 // NewCQLClient returns a new instance of CQLClient
 func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
