@@ -38,6 +38,8 @@ import (
 const (
 	// OutboundPublicClient is the name of configured public client outbound
 	OutboundPublicClient = "public-client"
+
+	crossDCCaller = "cadence-xdc-client"
 )
 
 // OutboundsBuilder allows defining outbounds for the dispatcher
