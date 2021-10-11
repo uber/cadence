@@ -64,11 +64,9 @@ type (
 	Factory interface {
 		NewHistoryClient() (history.Client, error)
 		NewMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error)
-		NewFrontendClient() (frontend.Client, error)
 
 		NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error)
 		NewMatchingClientWithTimeout(domainIDToName DomainIDToNameFunc, timeout time.Duration, longPollTimeout time.Duration) (matching.Client, error)
-		NewFrontendClientWithTimeout(timeout time.Duration, longPollTimeout time.Duration) (frontend.Client, error)
 
 		NewAdminClientWithTimeoutAndConfig(config transport.ClientConfig, timeout time.Duration, largeTimeout time.Duration) (admin.Client, error)
 		NewFrontendClientWithTimeoutAndConfig(config transport.ClientConfig, timeout time.Duration, longPollTimeout time.Duration) (frontend.Client, error)
@@ -115,10 +113,6 @@ func (cf *rpcClientFactory) NewHistoryClient() (history.Client, error) {
 
 func (cf *rpcClientFactory) NewMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error) {
 	return cf.NewMatchingClientWithTimeout(domainIDToName, matching.DefaultTimeout, matching.DefaultLongPollTimeout)
-}
-
-func (cf *rpcClientFactory) NewFrontendClient() (frontend.Client, error) {
-	return cf.NewFrontendClientWithTimeout(frontend.DefaultTimeout, frontend.DefaultLongPollTimeout)
 }
 
 func (cf *rpcClientFactory) createKeyResolver(serviceName string) (func(key string) (string, error), error) {
@@ -237,32 +231,6 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 	}
 	return client, nil
 
-}
-
-func (cf *rpcClientFactory) NewFrontendClientWithTimeout(
-	timeout time.Duration,
-	longPollTimeout time.Duration,
-) (frontend.Client, error) {
-	keyResolver, err := cf.createKeyResolver(service.Frontend)
-	if err != nil {
-		return nil, err
-	}
-
-	clientProvider := func(clientKey string) (interface{}, error) {
-		if cf.enableGRPCOutbound {
-			return cf.newFrontendGRPCClient(clientKey)
-		}
-		return cf.newFrontendThriftClient(clientKey)
-	}
-
-	client := frontend.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider))
-	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate, 0)(); errorRate != 0 {
-		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
-	}
-	if cf.metricsClient != nil {
-		client = frontend.NewMetricClient(client, cf.metricsClient)
-	}
-	return client, nil
 }
 
 func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
