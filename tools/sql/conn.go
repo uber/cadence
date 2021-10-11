@@ -76,7 +76,7 @@ func (c *Connection) WriteSchemaUpdateLog(oldVersion string, newVersion string, 
 	return c.adminDb.WriteSchemaUpdateLog(oldVersion, newVersion, manifestMD5, desc)
 }
 
-// Exec executes a sql statement
+// ExecDDLQuery executes a sql statement
 func (c *Connection) ExecDDLQuery(stmt string, args ...interface{}) error {
 	err := c.adminDb.ExecSchemaOperationQuery(stmt, args...)
 	return err

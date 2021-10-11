@@ -50,7 +50,7 @@ type (
 	// SchemaClient is the database interface that's required to be implemented
 	// for the schema-tool to work
 	SchemaClient interface {
-		// Exec executes a schema statement
+		// ExecDDLQuery executes a schema statement
 		ExecDDLQuery(stmt string, args ...interface{}) error
 		// DropAllTables drops all tables
 		DropAllTables() error

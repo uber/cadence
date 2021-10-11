@@ -172,7 +172,7 @@ func (client *CqlClient) WriteSchemaUpdateLog(oldVersion string, newVersion stri
 	return query.Exec()
 }
 
-// Exec executes a cql statement
+// ExecDDLQuery executes a cql statement
 func (client *CqlClient) ExecDDLQuery(stmt string, args ...interface{}) error {
 	return client.session.Query(stmt, args...).Exec()
 }

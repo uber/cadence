@@ -32,20 +32,23 @@ type (
 	//The layer is added so that we can have a adapter to support multiple SQL databases behind a single Cadence cluster
 	Driver interface {
 
-		// shared methods of both non-transactional sqlx.DB and transactional sqlx.Tx
+		// shared methods are for both non-transactional (using sqlx.DB) and transactional (using sqlx.Tx) operation --
+		// if a transaction is started(using BeginTxx), then query are executed in the transaction mode. Otherwise executed in normal mode.
 		commonOfDbAndTx
 
-		// From sqlx.DB: those methods are executed without starting a transaction
-		// TODO: maybe rename to make it more clear
+		// BeginTxx starts a new transaction in the shard of dbShardID
+		BeginTxx(ctx context.Context, dbShardID int, opts *sql.TxOptions) (*sqlx.Tx, error)
+		// Commit commits the current transaction(started by BeginTxx)
+		Commit() error
+		// Rollback rollbacks the current transaction(started by BeginTxx)
+		Rollback() error
+		// Close closes this driver(and underlying connections)
+		Close() error
+
+		// Exec executes
 		Exec(dbShardID int, query string, args ...interface{}) (sql.Result, error)
 		Select(dbShardID int, dest interface{}, query string, args ...interface{}) error
 		Get(dbShardID int, dest interface{}, query string, args ...interface{}) error
-		BeginTxx(ctx context.Context, dbShardID int, opts *sql.TxOptions) (*sqlx.Tx, error)
-		Close() error
-
-		// sqlx.Tx
-		Commit() error
-		Rollback() error
 	}
 
 	// the methods can be executed from either a started or transaction(then need to call Commit/Rollback), or without a transaction
