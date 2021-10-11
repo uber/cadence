@@ -70,14 +70,10 @@ func (s *ServerSuite) TestServerStartup() {
 	if err != nil {
 		log.Fatal("Config file corrupted.", err)
 	}
-
-	envs := os.Environ()
-	for _, e := range envs {
-		log.Println(e)
-	}
-	if os.Getenv("CASSANDRA_HOST") == "cassandra" {
+	
+	if os.Getenv("CASSANDRA_SEEDS") == "cassandra" {
 		// replace local host to docker network
-		// this env variable value is set in pipeline.yml
+		// this env variable value is set by buildkite's docker-compose
 		ds := cfg.Persistence.DataStores[cfg.Persistence.DefaultStore]
 		ds.NoSQL.Hosts = "cassandra"
 		cfg.Persistence.DataStores[cfg.Persistence.DefaultStore] = ds
