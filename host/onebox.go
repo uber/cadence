@@ -389,7 +389,7 @@ func (c *cadenceImpl) GetHistoryClient() historyClient.Client {
 
 func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.WaitGroup) {
 	params := new(resource.Params)
-	params.ClusterRedirectionPolicy = config.ClusterRedirectionPolicy{}
+	params.ClusterRedirectionPolicy = &config.ClusterRedirectionPolicy{}
 	params.Name = service.Frontend
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
